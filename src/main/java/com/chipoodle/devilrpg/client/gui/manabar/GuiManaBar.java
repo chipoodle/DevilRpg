@@ -32,9 +32,6 @@ public class GuiManaBar extends AbstractGui {
 			return;
 		}
 		
-		if( mc.player== null)
-			return;
-		
 		LazyOptional<IBaseManaCapability> playerCapability =  mc.player.getCapability(PlayerManaCapabilityProvider.MANA_CAP);
 		if(!playerCapability.isPresent())
 			return;

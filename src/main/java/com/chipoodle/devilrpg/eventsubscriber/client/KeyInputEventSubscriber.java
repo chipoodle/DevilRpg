@@ -21,6 +21,7 @@ import net.minecraftforge.client.event.InputEvent.KeyInputEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.client.registry.ClientRegistry;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 
 /**
  * Subscribe to events that should be handled on the PHYSICAL CLIENT in this
@@ -28,7 +29,7 @@ import net.minecraftforge.fml.common.Mod;
  *
  * @author Christian
  */
-@Mod.EventBusSubscriber(modid = DevilRpg.MODID, value = Dist.CLIENT)
+@EventBusSubscriber(modid = DevilRpg.MODID, value = Dist.CLIENT)
 public class KeyInputEventSubscriber {
 
     private static final KeyBinding[] KEYS = new KeyBinding[5];
