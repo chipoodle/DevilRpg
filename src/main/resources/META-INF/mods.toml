@@ -13,7 +13,7 @@ modLoader="javafml" #mandatory
 loaderVersion="[31,)" #mandatory
 
 # A URL to refer people to when problems occur with this mod
-issueTrackerURL="http://github.com/YourName/Your-Mod-Name/issues" #optional
+issueTrackerURL="https://github.com/chipoodle/DevilRpg/issues" #optional
 
 # A list of mods - how many allowed here is determined by the individual mod loader
 [[mods]] #mandatory
