@@ -37,7 +37,6 @@ public class PlayerManaClientServerHandler {
 
 	public static void onMessage(final PlayerManaClientServerHandler msg,
 			final Supplier<NetworkEvent.Context> contextSupplier) {
-		LOGGER.info("On message mana. Direction:" + contextSupplier.get().getDirection());
 		if (contextSupplier.get().getDirection().equals(NetworkDirection.PLAY_TO_SERVER)) {
 			contextSupplier.get().enqueueWork(() -> /* DistExecutor.runWhenOn(Dist.DEDICATED_SERVER, () -> () -> */ {
 				ServerPlayerEntity serverPlayer = contextSupplier.get().getSender();
