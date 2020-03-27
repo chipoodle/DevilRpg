@@ -15,11 +15,11 @@ public class ServerSkillTranslator {
 
     }
 
-    public IPowerContainer getSkill(World worldIn, PlayerEntity playerIn, ConstantesPower triggeredPower) {
-        return getCurrentPowerFromUserCapability(playerIn, triggeredPower);
+    public ISkillContainer getSkill(World worldIn, PlayerEntity playerIn, ConstantesPower triggeredPower) {
+        return getCurrentSkillFromUserCapability(playerIn, triggeredPower);
     }
 
-    public float getManaCost(IPowerContainer power, PlayerEntity playerIn) {
+    public float getManaCost(ISkillContainer power, PlayerEntity playerIn) {
         if (power instanceof PowerSummonSoulWolf) {
             return 20f;
         }
@@ -34,8 +34,8 @@ public class ServerSkillTranslator {
         return 50f;
     }
 
-    public IPowerContainer getCurrentPowerFromUserCapability(PlayerEntity playerIn, ConstantesPower power) {
-        LazyOptional<IBaseSkillCapability> skill = playerIn.getCapability(PlayerSkillCapabilityProvider.SKILL_CAP, null);
+    public ISkillContainer getCurrentSkillFromUserCapability(PlayerEntity playerIn, ConstantesPower power) {
+        LazyOptional<IBaseSkillCapability> skill = playerIn.getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
 
         if (power.equals(ConstantesPower.POWER1)) {
             return getPowerByName(skill.map(x -> x.getPower1Name()).orElse(""));
@@ -49,10 +49,10 @@ public class ServerSkillTranslator {
         if (power.equals(ConstantesPower.POWER4)) {
             return getPowerByName(skill.map(x -> x.getPower4Name()).orElse(""));
         }
-        throw new IndexOutOfBoundsException("No existe el poder con ese nombre o no est√° inicializado");
+        throw new IndexOutOfBoundsException("No existe el poder con ese nombre o no est· inicializado");
     }
 
-    private IPowerContainer getPowerByName(String name) {
+    private ISkillContainer getPowerByName(String name) {
         if (name.equals(ConstantesSkillName.SUMMON_SOUL_WOLF.getName())) {
             return PowerSummonSoulWolf.getInstance();
         }
@@ -71,7 +71,7 @@ public class ServerSkillTranslator {
 
     }
 
-    public int getSkillLevelFromUserCapability(PlayerEntity playerIn, IPowerContainer power) {
+    public int getSkillLevelFromUserCapability(PlayerEntity playerIn, ISkillContainer power) {
 
         LazyOptional<IBaseSkillCapability> skill = playerIn.getCapability(PlayerSkillCapabilityProvider.SKILL_CAP, null);
 

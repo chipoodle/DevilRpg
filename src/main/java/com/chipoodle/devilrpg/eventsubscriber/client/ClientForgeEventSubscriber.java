@@ -6,24 +6,15 @@
 package com.chipoodle.devilrpg.eventsubscriber.client;
 
 import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.capability.mana.IBaseManaCapability;
-import com.chipoodle.devilrpg.capability.mana.PlayerManaCapabilityProvider;
-import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
-import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
 import com.chipoodle.devilrpg.client.gui.manabar.GuiManaBar;
-import com.chipoodle.devilrpg.init.ModCapability;
 
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.text.StringTextComponent;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.event.entity.living.LivingEvent.LivingJumpEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
-import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
-import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 
 /**
  * Subscribe to events from the FORGE EventBus that should be handled on the
@@ -41,4 +32,10 @@ public final class ClientForgeEventSubscriber {
 		manaBar.draw(event);
 	}
 
+	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
+	public void onEvent(LivingJumpEvent event) {
+		if (event.getEntity() instanceof PlayerEntity) {
+			System.out.println("Boing");
+		}
+	}
 }

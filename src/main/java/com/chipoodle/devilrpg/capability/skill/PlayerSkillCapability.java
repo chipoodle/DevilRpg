@@ -1,9 +1,9 @@
 package com.chipoodle.devilrpg.capability.skill;
 
 import com.chipoodle.devilrpg.init.ModNetwork;
-import com.chipoodle.devilrpg.network.handler.PlayerManaClientServerHandler;
+import com.chipoodle.devilrpg.network.handler.PlayerSkillClientServerHandler;
+
 import net.minecraft.nbt.CompoundNBT;
-import net.minecraftforge.fml.common.thread.SidedThreadGroups;
 
 public class PlayerSkillCapability implements IBaseSkillCapability {
 
@@ -245,6 +245,6 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
 	}
 
 	private void sendSkillChangesToServer() {
-		ModNetwork.CHANNEL.sendToServer(new PlayerManaClientServerHandler(getNBTData()));
+		ModNetwork.CHANNEL.sendToServer(new PlayerSkillClientServerHandler(getNBTData()));
 	}
 }

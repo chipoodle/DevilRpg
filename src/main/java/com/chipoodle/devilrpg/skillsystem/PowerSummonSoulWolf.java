@@ -6,7 +6,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.world.World;
 
-public class PowerSummonSoulWolf implements IPowerContainer {
+public class PowerSummonSoulWolf implements ISkillContainer {
 
     //public static ConcurrentHashMap<PlayerEntity, ConcurrentLinkedQueue<EntitySoulWolf>> playerWolves = new ConcurrentHashMap<>();
     public static ConcurrentHashMap<PlayerEntity, Integer> numberOfSummonsHash = new ConcurrentHashMap<>();

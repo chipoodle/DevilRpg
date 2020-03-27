@@ -1,14 +1,14 @@
 package com.chipoodle.devilrpg.network.handler;
 
-import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
 import java.util.function.Supplier;
+
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.network.PacketBuffer;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.fml.network.NetworkDirection;
 import net.minecraftforge.fml.network.NetworkEvent;
 

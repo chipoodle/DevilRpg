@@ -2,9 +2,11 @@ package com.chipoodle.devilrpg.init;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.network.handler.KeyboardSkillServerHandler;
+import com.chipoodle.devilrpg.network.handler.PlayerExperienceClientServerHandler;
 import com.chipoodle.devilrpg.network.handler.PlayerManaClientServerHandler;
 import com.chipoodle.devilrpg.network.handler.PlayerSkillClientServerHandler;
 import com.chipoodle.devilrpg.network.handler.WerewolfAttackServerHandler;
+
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.fml.network.NetworkRegistry;
 import net.minecraftforge.fml.network.simple.SimpleChannel;
@@ -49,6 +51,12 @@ public class ModNetwork {
                 WerewolfAttackServerHandler::encode,
                 WerewolfAttackServerHandler::decode,
                 WerewolfAttackServerHandler::onMessage);
+        
+        CHANNEL.registerMessage(networkId++,
+                PlayerExperienceClientServerHandler.class, 
+                PlayerExperienceClientServerHandler::encode,
+                PlayerExperienceClientServerHandler::decode,
+                PlayerExperienceClientServerHandler::onMessage);
     }
 
 }

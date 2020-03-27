@@ -1,14 +1,11 @@
 package com.chipoodle.devilrpg.network.handler;
 
-import static com.chipoodle.devilrpg.DevilRpg.LOGGER;
-
 import java.util.function.Supplier;
 
 import com.chipoodle.devilrpg.capability.mana.PlayerManaCapabilityProvider;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.player.PlayerEntity;
-//import net.minecraft.client.entity.EntityPlayerSP;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.network.PacketBuffer;

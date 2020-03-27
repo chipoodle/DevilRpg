@@ -24,7 +24,7 @@ public class ServerSkillTrigger {
     public void triggerAction(ServerPlayerEntity playerIn, ConstantesPower triggeredPower) {
         LOGGER.info("----------------->Trigger Action. Is remote? "+playerIn.world.isRemote);
         if (!playerIn.world.isRemote) {
-            IPowerContainer poder = SERVER_DB_SKILLS.getSkill(playerIn.world, playerIn, triggeredPower);
+            ISkillContainer poder = SERVER_DB_SKILLS.getSkill(playerIn.world, playerIn, triggeredPower);
             LOGGER.info("-----------------> is remote?"+playerIn.world.isRemote);
             if (SERVER_DB_SKILLS.getSkillLevelFromUserCapability(playerIn, poder) != 0) {
                 if (consumeMana(playerIn, poder)) {
@@ -34,7 +34,7 @@ public class ServerSkillTrigger {
         }
     }
 
-    private boolean consumeMana(ServerPlayerEntity playerIn, IPowerContainer poder) {
+    private boolean consumeMana(ServerPlayerEntity playerIn, ISkillContainer poder) {
         float consumedMana = SERVER_DB_SKILLS.getManaCost(poder, playerIn);
         LazyOptional<IBaseManaCapability> mana = playerIn.getCapability(PlayerManaCapabilityProvider.MANA_CAP, null);
         if (mana.map(x -> x.getMana()).orElse(null) - consumedMana >= 0) {
