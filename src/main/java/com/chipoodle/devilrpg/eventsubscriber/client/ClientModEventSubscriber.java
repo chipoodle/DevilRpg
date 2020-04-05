@@ -6,13 +6,11 @@
 package com.chipoodle.devilrpg.eventsubscriber.client;
 
 import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.client.gui.manabar.GuiManaBar;
+import com.chipoodle.devilrpg.client.render.entity.SoulWolfRenderer;
 import com.chipoodle.devilrpg.client.render.entity.WildBoarRenderer;
 import com.chipoodle.devilrpg.init.ModEntityTypes;
 
 import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.RenderGameOverlayEvent;
-import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.DeferredWorkQueue;
 import net.minecraftforge.fml.client.registry.RenderingRegistry;
@@ -49,6 +47,7 @@ public final class ClientModEventSubscriber {
 
         // Register Entity Renderers
         RenderingRegistry.registerEntityRenderingHandler(ModEntityTypes.WILD_BOAR.get(), WildBoarRenderer::new);
+        RenderingRegistry.registerEntityRenderingHandler(ModEntityTypes.SOUL_WOLF.get(), SoulWolfRenderer::new);
         DevilRpg.LOGGER.debug("Registered Entity Renderers");
 
         // Register ContainerType Screens

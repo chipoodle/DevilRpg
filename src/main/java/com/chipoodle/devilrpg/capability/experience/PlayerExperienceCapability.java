@@ -1,9 +1,13 @@
 package com.chipoodle.devilrpg.capability.experience;
 
+import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.network.handler.PlayerExperienceClientServerHandler;
 
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.nbt.CompoundNBT;
+import net.minecraftforge.fml.network.PacketDistributor;
 
 public class PlayerExperienceCapability implements IBaseExperienceCapability {
 
@@ -27,18 +31,23 @@ public class PlayerExperienceCapability implements IBaseExperienceCapability {
 	}
 
 	@Override
-	public void setCurrentLevel(int currentLevel) {
+	public void setCurrentLevel(int currentLevel, PlayerEntity pe) {
 		this.currentLevel = currentLevel;
 		if(this.currentLevel > maximumLevel) {
 			unspentPoints+= this.currentLevel-maximumLevel;
 			maximumLevel = this.currentLevel;
 		}	
-		sendMExperienceChangesToServer();
+		if(!pe.world.isRemote)
+			sendExperienceChangesToClient((ServerPlayerEntity) pe);
+		else
+			sendExperienceChangesToServer();
 	}
+
 
 	@Override
 	public int consumePoint() {
 		unspentPoints--;
+		sendExperienceChangesToServer();
 		return 1;
 	}
 
@@ -58,7 +67,13 @@ public class PlayerExperienceCapability implements IBaseExperienceCapability {
 		unspentPoints = compound.getInt("unspentPoints");
 	}
 
-	private void sendMExperienceChangesToServer() {
+	private void sendExperienceChangesToServer() {
 		ModNetwork.CHANNEL.sendToServer(new PlayerExperienceClientServerHandler(getNBTData()));
+	}
+	
+	private void sendExperienceChangesToClient(ServerPlayerEntity pe) {
+		DevilRpg.LOGGER.info("----------> sendExperienceChangesToClient. unspentPoints: "+unspentPoints);
+		ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(()->pe),new PlayerExperienceClientServerHandler(getNBTData()));
+		
 	}
 }

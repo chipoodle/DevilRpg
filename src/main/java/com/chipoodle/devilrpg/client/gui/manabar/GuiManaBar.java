@@ -13,6 +13,7 @@ import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent.ElementType;
 import net.minecraftforge.common.util.LazyOptional;
 
+//@OnlyIn(Dist.CLIENT)
 public class GuiManaBar extends AbstractGui {
 	private Minecraft mc;
 	private float manaRun;

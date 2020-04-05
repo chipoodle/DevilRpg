@@ -1,11 +1,12 @@
 package com.chipoodle.devilrpg.config;
 
-import com.chipoodle.devilrpg.DevilRpg;
-import net.minecraft.item.DyeColor;
-import net.minecraftforge.common.ForgeConfigSpec;
-
 import java.util.ArrayList;
 import java.util.List;
+
+import com.chipoodle.devilrpg.DevilRpg;
+
+import net.minecraft.item.DyeColor;
+import net.minecraftforge.common.ForgeConfigSpec;
 
 /**
  * For configuration settings that change the behaviour of code on the LOGICAL

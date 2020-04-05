@@ -5,9 +5,12 @@
  */
 package com.chipoodle.devilrpg.init;
 
-import com.chipoodle.devilrpg.DevilRpg;
 import java.util.function.Supplier;
+
 import javax.annotation.Nonnull;
+
+import com.chipoodle.devilrpg.DevilRpg;
+
 import net.minecraft.item.ItemGroup;
 import net.minecraft.item.ItemStack;
 

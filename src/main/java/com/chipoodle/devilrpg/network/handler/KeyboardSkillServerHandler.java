@@ -4,22 +4,24 @@ import static com.chipoodle.devilrpg.DevilRpg.LOGGER;
 
 import java.util.function.Supplier;
 
-import com.chipoodle.devilrpg.skillsystem.ServerSkillTrigger;
-import com.chipoodle.devilrpg.util.ConstantesPower;
+import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
+import com.chipoodle.devilrpg.util.PowerEnum;
 
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.network.PacketBuffer;
+import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.fml.network.NetworkDirection;
 import net.minecraftforge.fml.network.NetworkEvent;
 
 public class KeyboardSkillServerHandler {
-	private final ConstantesPower poder;
+	private final PowerEnum poder;
 
-	public KeyboardSkillServerHandler(ConstantesPower poder) {
+	public KeyboardSkillServerHandler(PowerEnum poder) {
 		this.poder = poder;
 	}
 
-	public ConstantesPower getPoder() {
+	public PowerEnum getPoder() {
 		return poder;
 	}
 
@@ -28,7 +30,7 @@ public class KeyboardSkillServerHandler {
 	}
 
 	public static KeyboardSkillServerHandler decode(final PacketBuffer packetBuffer) {
-		return new KeyboardSkillServerHandler(ConstantesPower.valueOf(packetBuffer.readString()));
+		return new KeyboardSkillServerHandler(PowerEnum.valueOf(packetBuffer.readString()));
 	}
 
 	public static void onMessage(final KeyboardSkillServerHandler msg,
@@ -36,8 +38,8 @@ public class KeyboardSkillServerHandler {
 		if (contextSupplier.get().getDirection().equals(NetworkDirection.PLAY_TO_SERVER)) {
 			contextSupplier.get().enqueueWork(() -> {
 				ServerPlayerEntity sender = contextSupplier.get().getSender(); // the client that sent this packet
-				LOGGER.info("keypress message recieved. User: " + sender.getScoreboardName());
-				ServerSkillTrigger.SKILL_TRIGGER.triggerAction(sender, msg.getPoder());
+				LazyOptional<IBaseSkillCapability> skill = sender.getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
+				skill.ifPresent(x->x.triggerAction(sender, msg.getPoder()));
 			});
 			contextSupplier.get().setPacketHandled(true);
 		}

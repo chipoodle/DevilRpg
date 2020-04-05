@@ -1,250 +1,174 @@
 package com.chipoodle.devilrpg.capability.skill;
 
-import com.chipoodle.devilrpg.init.ModNetwork;
-import com.chipoodle.devilrpg.network.handler.PlayerSkillClientServerHandler;
+import static com.chipoodle.devilrpg.DevilRpg.LOGGER;
 
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashMap;
+
+import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.capability.mana.IBaseManaCapability;
+import com.chipoodle.devilrpg.capability.mana.PlayerManaCapabilityProvider;
+import com.chipoodle.devilrpg.init.ModNetwork;
+import com.chipoodle.devilrpg.network.handler.PlayerManaClientServerHandler;
+import com.chipoodle.devilrpg.network.handler.PlayerSkillClientServerHandler;
+import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
+import com.chipoodle.devilrpg.util.BytesUtil;
+import com.chipoodle.devilrpg.util.PowerEnum;
+import com.chipoodle.devilrpg.util.SkillEnum;
+
+import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.util.text.StringTextComponent;
+import net.minecraftforge.common.util.LazyOptional;
+import net.minecraftforge.fml.network.PacketDistributor;
 
 public class PlayerSkillCapability implements IBaseSkillCapability {
+	public final static String POWERS_KEY = "Powers";
+	public final static String SKILLS_KEY = "Skills";
+	public final static String MAX_SKILLS_KEY = "MaxSkills";
+	
+	private CompoundNBT nbt = new CompoundNBT();
+	private ServerSkillTranslator serverSkillTranslator;
 
-	protected int paSoulWolf;
-	protected int paWispHealth;
-	protected int paWispSpeed;
-	protected int paFireBall;
-	protected int paSoulBear;
-	protected int paWereWolf;
-	protected int maxSoulWolf = 20;
-	protected int maxWispHealth = 20;
-	protected int maxWispSpeed = 20;
-	protected int maxFireBall = 20;
-	protected int maxSoulBear = 20;
-	protected int maxWereWolf = 20;
-	protected String power1Name = "";
-	protected String power2Name = "";
-	protected String power3Name = "";
-	protected String power4Name = "";
+	public PlayerSkillCapability() {
+		if (nbt.isEmpty()) {
+			HashMap<PowerEnum, SkillEnum> powers = new HashMap<>();
+			HashMap<SkillEnum, Integer> skills = new HashMap<>();
+			HashMap<SkillEnum, Integer> maxSkills = new HashMap<>();
 
+			for (PowerEnum p : Arrays.asList(PowerEnum.values())) {
+				powers.put(p, null);
+			}
+			for (SkillEnum s : Arrays.asList(SkillEnum.values())) {
+				skills.put(s, 0);
+				maxSkills.put(s, 20);
+			}
+
+			try {
+				nbt.putByteArray(POWERS_KEY, BytesUtil.toByteArray(powers));
+				nbt.putByteArray(SKILLS_KEY, BytesUtil.toByteArray(skills));
+				nbt.putByteArray(MAX_SKILLS_KEY, BytesUtil.toByteArray(maxSkills));
+			} catch (IOException e) {
+				DevilRpg.LOGGER.error("Error en constructor PlayerSkillCapability", e);
+			}
+		}
+		serverSkillTranslator = new ServerSkillTranslator(this);
+	}
+
+	@SuppressWarnings("unchecked")
 	@Override
-	public int getPaSoulWolf() {
-		return paSoulWolf;
+	public HashMap<PowerEnum, SkillEnum> getSkillsNameOfPowers() {
+		try {
+			return (HashMap<PowerEnum, SkillEnum>) BytesUtil.toObject(nbt.getByteArray(POWERS_KEY));
+		} catch (ClassNotFoundException | IOException e) {
+			DevilRpg.LOGGER.error("Error en getSkillsNameOfPowers", e);
+			return null;
+		}
 	}
 
 	@Override
-	public int getPaWispHealth() {
-		return paWispHealth;
+	public void setSkillsNameOfPowers(HashMap<PowerEnum, SkillEnum> names) {
+		try {
+			nbt.putByteArray(POWERS_KEY, BytesUtil.toByteArray(names));
+			 //DevilRpg.LOGGER.info("--->setSkillsNameOfPowers "+ nbt+" is Client?: " +
+			 //Minecraft.getInstance().world.isRemote);
+			sendSkillChangesToServer();
+		} catch (IOException e) {
+			DevilRpg.LOGGER.error("Error en setSkillsNameOfPowers", e);
+		}
+
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public HashMap<SkillEnum, Integer> getSkillsPoints() {
+		try {
+			return (HashMap<SkillEnum, Integer>) BytesUtil.toObject(nbt.getByteArray(SKILLS_KEY));
+		} catch (ClassNotFoundException | IOException e) {
+			DevilRpg.LOGGER.error("Error en getSkillsNameOfPowers", e);
+			return null;
+		}
 	}
 
 	@Override
-	public int getPaWispSpeed() {
-		return paWispSpeed;
+	public void setSkillsPoints(HashMap<SkillEnum, Integer> points) {
+		try {
+			nbt.putByteArray(SKILLS_KEY, BytesUtil.toByteArray(points));
+			 //DevilRpg.LOGGER.info("--->setSkillsPoints "+ nbt+" is Client?: " +
+			 //Minecraft.getInstance().world.isRemote);
+			sendSkillChangesToServer();
+		} catch (IOException e) {
+			DevilRpg.LOGGER.error("Error en setSkillsNameOfPowers", e);
+		}
+
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public HashMap<SkillEnum, Integer> getMaxSkillsPoints() {
+		try {
+			return (HashMap<SkillEnum, Integer>) BytesUtil.toObject(nbt.getByteArray(MAX_SKILLS_KEY));
+		} catch (ClassNotFoundException | IOException e) {
+			DevilRpg.LOGGER.error("Error en getMaxSkillsNameOfPowers", e);
+			return null;
+		}
 	}
 
 	@Override
-	public int getPaFireBall() {
-		return paFireBall;
+	public void setMaxSkillsPoints(HashMap<SkillEnum, Integer> points) {
+		try {
+			nbt.putByteArray(MAX_SKILLS_KEY, BytesUtil.toByteArray(points));
+			 //DevilRpg.LOGGER.info("--->setSkillsPoints "+ nbt+" is Client?: " +
+			 //Minecraft.getInstance().world.isRemote);
+			sendSkillChangesToServer();
+		} catch (IOException e) {
+			DevilRpg.LOGGER.error("Error en setMaxSkillsNameOfPowers", e);
+		}
+
 	}
 
 	@Override
-	public int getPaSoulBear() {
-		return paSoulBear;
-	}
-
-	@Override
-	public int getPaWereWolf() {
-		return paWereWolf;
-	}
-
-	@Override
-	public int getMaxSoulWolf() {
-		return maxSoulWolf;
-	}
-
-	@Override
-	public int getMaxWispHealth() {
-		return maxWispHealth;
-	}
-
-	@Override
-	public int getMaxWispSpeed() {
-		return maxWispSpeed;
-	}
-
-	@Override
-	public int getMaxFireBall() {
-		return maxFireBall;
-	}
-
-	@Override
-	public int getMaxSoulBear() {
-		return maxSoulBear;
-	}
-
-	@Override
-	public int getMaxWereWolf() {
-
-		return maxWereWolf;
-	}
-
-	@Override
-	public String getPower1Name() {
-		return power1Name;
-	}
-
-	@Override
-	public String getPower2Name() {
-		return power2Name;
-	}
-
-	@Override
-	public String getPower3Name() {
-		return power3Name;
-	}
-
-	@Override
-	public String getPower4Name() {
-		return power4Name;
-	}
-
-	@Override
-	public void setPaSoulWolf(int paSoulWolf) {
-		this.paSoulWolf = paSoulWolf;
-		sendSkillChangesToServer();
-	}
-
-	@Override
-	public void setPaWispHealth(int paWispHealth) {
-		this.paWispHealth = paWispHealth;
-		sendSkillChangesToServer();
-	}
-
-	@Override
-	public void setPaWispSpeed(int paWispSpeed) {
-		this.paWispSpeed = paWispSpeed;
-		sendSkillChangesToServer();
-	}
-
-	@Override
-	public void setPaFireBall(int paFireBall) {
-		this.paFireBall = paFireBall;
-
-		sendSkillChangesToServer();
-	}
-
-	@Override
-	public void setPaSoulBear(int paSoulBear) {
-		this.paSoulBear = paSoulBear;
-		sendSkillChangesToServer();
-	}
-
-	@Override
-	public void setPaWereWolf(int paWereWolf) {
-		this.paWereWolf = paWereWolf;
-		sendSkillChangesToServer();
-	}
-
-	@Override
-	public void setMaxSoulWolf(int maxPoints) {
-		this.maxSoulWolf = maxPoints;
-		sendSkillChangesToServer();
-	}
-
-	@Override
-	public void setMaxWispHealth(int maxPoints) {
-		this.maxWispHealth = maxPoints;
-		sendSkillChangesToServer();
-	}
-
-	@Override
-	public void setMaxWispSpeed(int maxPoints) {
-		this.maxWispSpeed = maxPoints;
-		sendSkillChangesToServer();
-	}
-
-	@Override
-	public void setMaxFireBall(int maxPoints) {
-		this.maxFireBall = maxPoints;
-		sendSkillChangesToServer();
-	}
-
-	@Override
-	public void setMaxSoulBear(int maxPoints) {
-		this.maxSoulBear = maxPoints;
-		sendSkillChangesToServer();
-	}
-
-	@Override
-	public void setMaxWereWolf(int maxPoints) {
-		this.maxWereWolf = maxPoints;
-		sendSkillChangesToServer();
-	}
-
-	@Override
-	public void setPower1Name(String name) {
-		this.power1Name = name;
-		sendSkillChangesToServer();
-	}
-
-	@Override
-	public void setPower2Name(String name) {
-		this.power2Name = name;
-		sendSkillChangesToServer();
-	}
-
-	@Override
-	public void setPower3Name(String name) {
-		this.power3Name = name;
-		sendSkillChangesToServer();
-	}
-
-	@Override
-	public void setPower4Name(String name) {
-		this.power4Name = name;
-		sendSkillChangesToServer();
-	}
-
+	public void triggerAction(ServerPlayerEntity playerIn, PowerEnum triggeredPower) {
+        LOGGER.info("----------------->Trigger Action. Is Client? "+playerIn.world.isRemote);
+        if (!playerIn.world.isRemote) {
+            if (serverSkillTranslator.getSkillLevelFromUserCapability(playerIn, triggeredPower) != 0) {
+            	ISkillContainer poder = serverSkillTranslator.getSkill(triggeredPower);
+                if (consumeMana(playerIn, poder)) {
+                    poder.execute(playerIn.world, playerIn);
+                }
+                else {
+                	String message = "Not enought mana.";
+                	playerIn.sendMessage(new StringTextComponent(message));
+                }
+            }
+        }
+    }
+	
+	private boolean consumeMana(ServerPlayerEntity playerIn, ISkillContainer poder) {
+        float consumedMana = serverSkillTranslator.getManaCost(poder.getSkillEnum(), playerIn);
+        LazyOptional<IBaseManaCapability> mana = playerIn.getCapability(PlayerManaCapabilityProvider.MANA_CAP, null);
+        if (mana.map(x -> x.getMana()).orElse(null) - consumedMana >= 0) {
+            mana.ifPresent(m -> m.setMana(mana.map(x -> x.getMana()).orElse(null) - consumedMana));
+            LOGGER.info("=====Sending to player mana consumed " + mana.map(x -> x.getMana()).orElse(null) + " Cost: " + consumedMana + " player: " + playerIn.getName());
+            ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> playerIn), new PlayerManaClientServerHandler(mana.map(x -> x.getNBTData()).orElse(null)));
+            return true;
+        }
+        return false;
+    }
+	
 	@Override
 	public CompoundNBT getNBTData() {
-		CompoundNBT nbt = new CompoundNBT();
-		nbt.putInt("paSoulWolf", paSoulWolf);
-		nbt.putInt("paWispHealth", paWispHealth);
-		nbt.putInt("paWispSpeed", paWispSpeed);
-		nbt.putInt("paFireBall", paFireBall);
-		nbt.putInt("paSoulBear", paSoulBear);
-		nbt.putInt("paWereWolf", paWereWolf);
-		nbt.putInt("maxSoulWolf", maxSoulWolf);
-		nbt.putInt("maxWispHealth", maxWispHealth);
-		nbt.putInt("maxWispSpeed", maxWispSpeed);
-		nbt.putInt("maxFireBall", maxFireBall);
-		nbt.putInt("maxSoulBear", maxSoulBear);
-		nbt.putInt("maxWereWolf", maxWereWolf);
-		nbt.putString("power1Name", power1Name);
-		nbt.putString("power2Name", power2Name);
-		nbt.putString("power3Name", power3Name);
-		nbt.putString("power4Name", power4Name);
 		return nbt;
 	}
 
 	@Override
-	public void setNBTData(CompoundNBT compound) {
-		paSoulWolf = compound.getInt("paSoulWolf");
-		paWispHealth = compound.getInt("paWispHealth");
-		paWispSpeed = compound.getInt("paWispSpeed");
-		paFireBall = compound.getInt("paFireBall");
-		paSoulBear = compound.getInt("paSoulBear");
-		paWereWolf = compound.getInt("paWereWolf");
-		maxSoulWolf = compound.getInt("maxSoulWolf");
-		maxWispHealth = compound.getInt("maxWispHealth");
-		maxWispSpeed = compound.getInt("maxWispSpeed");
-		maxFireBall = compound.getInt("maxFireBall");
-		maxSoulBear = compound.getInt("maxSoulBear");
-		maxWereWolf = compound.getInt("maxWereWolf");
-		power1Name = compound.getString("power1Name");
-		power2Name = compound.getString("power2Name");
-		power3Name = compound.getString("power3Name");
-		power4Name = compound.getString("power4Name");
+	public void setNBTData(CompoundNBT nbt) {
+		this.nbt = nbt;
 	}
 
 	private void sendSkillChangesToServer() {
 		ModNetwork.CHANNEL.sendToServer(new PlayerSkillClientServerHandler(getNBTData()));
 	}
+
 }

@@ -1,8 +1,10 @@
 package com.chipoodle.devilrpg.capability.mana;
 
+import com.chipoodle.devilrpg.capability.IGenericCapability;
+
 import net.minecraft.nbt.CompoundNBT;
 
-public interface IBaseManaCapability {
+public interface IBaseManaCapability extends IGenericCapability{
 	public float getMana();
 	public void setMana(float mana);
 	public float getMaxMana();

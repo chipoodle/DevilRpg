@@ -1,7 +1,9 @@
 package com.chipoodle.devilrpg.init;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.entity.soulwolf.SoulWolfEntity;
 import com.chipoodle.devilrpg.entity.wildboar.WildBoarEntity;
+
 import net.minecraft.entity.EntityClassification;
 import net.minecraft.entity.EntityType;
 import net.minecraft.util.ResourceLocation;
@@ -28,9 +30,14 @@ public final class ModEntityTypes {
 
 	public static final String WILD_BOAR_NAME = "wild_boar";
 	public static final String SOUL_WOLF_NAME = "soul_wolf";
+
 	public static final RegistryObject<EntityType<WildBoarEntity>> WILD_BOAR = ENTITY_TYPES.register(WILD_BOAR_NAME,
 			() -> EntityType.Builder.<WildBoarEntity>create(WildBoarEntity::new, EntityClassification.CREATURE)
 					.size(EntityType.PIG.getWidth(), EntityType.PIG.getHeight())
 					.build(new ResourceLocation(DevilRpg.MODID, WILD_BOAR_NAME).toString()));
+	public static final RegistryObject<EntityType<SoulWolfEntity>> SOUL_WOLF = ENTITY_TYPES.register(SOUL_WOLF_NAME,
+			() -> EntityType.Builder.<SoulWolfEntity>create(SoulWolfEntity::new, EntityClassification.CREATURE)
+					.size(EntityType.WOLF.getWidth(), EntityType.WOLF.getHeight())
+					.build(new ResourceLocation(DevilRpg.MODID, SOUL_WOLF_NAME).toString()));
 
 }

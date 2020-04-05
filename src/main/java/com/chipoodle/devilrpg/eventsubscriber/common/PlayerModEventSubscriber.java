@@ -1,14 +1,8 @@
 package com.chipoodle.devilrpg.eventsubscriber.common;
 
 import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.capability.experience.IBaseExperienceCapability;
-import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapabilityProvider;
 import com.chipoodle.devilrpg.init.ModCapability;
 
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.event.entity.player.PlayerXpEvent;
-import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
@@ -26,19 +20,6 @@ public class PlayerModEventSubscriber {
 		DevilRpg.LOGGER.info("----------------------->PlayerModEventSubscriber.onCommonSetup()");
 		ModCapability.register();
 	}
-
-	@SubscribeEvent
-	public static void playerPickupXP(PlayerXpEvent.LevelChange e) {
-		PlayerEntity player = e.getPlayer();
-		LazyOptional<IBaseExperienceCapability> skill = player.getCapability(PlayerExperienceCapabilityProvider.EXPERIENCE_CAP);
-		skill.ifPresent(x->x.setCurrentLevel(e.getLevels()));
-	}
-	
-	@SubscribeEvent(priority = EventPriority.NORMAL)
-    public void onPlayerPickupXP(PlayerXpEvent.PickupXp e) {
-        e.getOrb().xpValue /= 2;
-    }
-	
 	
 
 	/*

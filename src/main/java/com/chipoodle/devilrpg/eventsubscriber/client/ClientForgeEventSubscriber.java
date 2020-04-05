@@ -35,7 +35,7 @@ public final class ClientForgeEventSubscriber {
 	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
 	public void onEvent(LivingJumpEvent event) {
 		if (event.getEntity() instanceof PlayerEntity) {
-			System.out.println("Boing");
+			DevilRpg.LOGGER.info("Boing");
 		}
 	}
 }

@@ -1,0 +1,399 @@
+package com.chipoodle.devilrpg.util;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import net.minecraft.client.Minecraft;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.util.math.AxisAlignedBB;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.EntityRayTraceResult;
+import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.RayTraceResult;
+import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.World;
+
+/**
+ * 
+ * A collection of methods related to target acquisition Source:
+ * https://github.com/coolAlias/ZeldaSwordSkills/blob/1.8/src/main/java/zeldaswordskills/util/TargetUtils.java#L189
+ */
+public class TargetUtils {
+	/** Maximum range within which to search for targets */
+	private static final int MAX_DISTANCE = 256;
+	/**
+	 * Max distance squared, used for comparing target distances (avoids having to
+	 * call sqrt)
+	 */
+	private static final double MAX_DISTANCE_SQ = MAX_DISTANCE * MAX_DISTANCE;
+
+	// TODO write general MovingObjectPosition method, then have specific methods
+	// return blockHit or entityHit from that
+	// TODO methods for acquiring multiple targets (beam, sphere, etc) with optional
+	// number of targets to acquire
+
+	/**
+	 * Returns the player's current reach distance, taking held item into account if
+	 * applicable
+	 */
+	// Packet7UseEntity uses 36.0D for determining if an attack should hit, or 9.0D
+	// if the entity cannot be seen
+	// EntityRenderer uses 36.0D for creative mode, otherwise 9.0D, in calculating
+	// whether mouseover entity should be null
+	// but using this exactly results in some attacks that in reality hit, being
+	// counted as a miss
+	// Unlike Creative Mode, the mouseover is always null when an attack should miss
+	// when in Survival
+	public static double getReachDistanceSq(PlayerEntity player) {
+		return 38.5D; // seems to be just about right for Creative Mode hit detection
+	}
+
+	/**
+	 * Returns true if current target is within the player's reach distance; does
+	 * NOT check mouse over
+	 */
+	public static boolean canReachTarget(PlayerEntity player, Entity target) {
+		return (player.canEntityBeSeen(target) && player.getDistanceSq(target) < getReachDistanceSq(player));
+	}
+
+	/**
+	 * Returns MovingObjectPosition of Entity or Block impacted, or null if nothing
+	 * was struck
+	 * 
+	 * @param entity  The entity checking for impact, e.g. an arrow
+	 * @param shooter An entity not to be collided with, generally the shooter
+	 * @param hitBox  The amount by which to expand the collided entities' bounding
+	 *                boxes when checking for impact (may be negative)
+	 * @param flag    Optional flag to allow collision with shooter, e.g.
+	 *                (ticksInAir >= 5)
+	 */
+	/*public static RayTraceResult checkForImpact(World world, Entity entity, Entity shooter, double hitBox,
+			boolean flag) {
+		double posY = entity.getPosY() + (entity.getHeight() / 2); // fix for Dash
+		Vec3d vec3 = new Vec3d(entity.getPosX(), posY, entity.getPosZ());
+		Vec3d motion = entity.getMotion();
+		Vec3d vec31 = new Vec3d(entity.getPosX() + motion.getX(), posY + motion.getY(),entity.getPosZ() + motion.getZ());
+		BlockMode b;
+		RayTraceContext r = new RayTraceContext(vec3, vec31, BlockMode.COLLIDER, FluidMode.ANY, entity);
+		// RayTraceResult mop = world.rayTraceBlocks(vec3, vec31, false, true, false);
+		RayTraceResult mop = world.rayTraceBlocks(r);
+		vec3 = new Vec3d(entity.getPosX(), posY, entity.getPosZ());
+
+		motion = entity.getMotion();
+		vec31 = new Vec3d(entity.getPosX() + motion.getX(), posY + motion.getY(), entity.getPosZ() + motion.getZ());
+		if (mop != null) {
+			
+			vec31 = new Vec3d(mop.getHitVec().x, mop.getHitVec().y, mop.getHitVec().z);
+		}
+		Entity target = null;
+		motion = entity.getMotion();
+		List<Entity> list = world.getEntitiesWithinAABBExcludingEntity(entity, entity.getBoundingBox()
+				.expand(motion.getX(), motion.getY(), motion.getZ()).grow(1.0D, 1.0D, 1.0D));
+		double d0 = 0.0D;
+		for (int i = 0; i < list.size(); ++i) {
+			Entity entity1 = (Entity) list.get(i);
+			if (entity1.canBeCollidedWith() && (entity1 != shooter || flag)) {
+				AxisAlignedBB axisalignedbb = entity1.getBoundingBox().expand(hitBox, hitBox, hitBox);
+				RayTraceResult mop1 = axisalignedbb.calculateIntercept(vec3, vec31);
+				if (mop1 != null) {
+					double d1 = vec3.distanceTo(mop1.getHitVec());
+					if (d1 < d0 || d0 == 0.0D) {
+						target = entity1;
+						d0 = d1;
+					}
+				}
+			}
+		}
+		if (target != null) {
+			mop = new RayTraceResult(target);
+		}
+		if (mop != null && mop.entityHit instanceof PlayerEntity) {
+			PlayerEntity player = (PlayerEntity) mop.entityHit;
+			if (player.capabilities.disableDamage
+					|| (shooter instanceof PlayerEntity && !((PlayerEntity) shooter).canAttackPlayer(player))) {
+				mop = null;
+			}
+		}
+		return mop;
+	}*/
+
+	/**
+	 * Returns true if the entity is directly in the crosshairs
+	 */
+	@SuppressWarnings("resource")
+	public static boolean isMouseOverEntity(Entity entity) {
+		RayTraceResult mop = Minecraft.getInstance().objectMouseOver;
+		return (mop != null && mop.getType().equals(RayTraceResult.Type.ENTITY));
+	}
+
+	/**
+	 * Returns the Entity that the mouse is currently over, or null
+	 */
+	@SuppressWarnings("resource")
+	public static Entity getMouseOverEntity() {
+		RayTraceResult mop = Minecraft.getInstance().objectMouseOver;
+		if (mop != null && mop.getType().equals(RayTraceResult.Type.ENTITY))
+			((EntityRayTraceResult) mop).getEntity();
+		return null;
+	}
+
+	/**
+	 * Returns the LivingEntity closest to the point at which the seeker is looking
+	 * and within the distance and radius specified
+	 */
+	public static final LivingEntity acquireLookTarget(LivingEntity seeker, int distance, double radius) {
+		return acquireLookTarget(seeker, distance, radius, false);
+	}
+
+	/**
+	 * Returns the LivingEntity closest to the point at which the entity is looking
+	 * and within the distance and radius specified
+	 * 
+	 * @param distance        max distance to check for target, in blocks; negative
+	 *                        value will check to MAX_DISTANCE
+	 * @param radius          max distance, in blocks, to search on either side of
+	 *                        the vector's path
+	 * @param closestToEntity if true, the target closest to the seeker and still
+	 *                        within the line of sight search radius is returned
+	 * @return the entity the seeker is looking at or null if no entity within sight
+	 *         search range
+	 */
+	public static final LivingEntity acquireLookTarget(LivingEntity seeker, int distance, double radius,
+			boolean closestToSeeker) {
+		if (distance < 0 || distance > MAX_DISTANCE) {
+			distance = MAX_DISTANCE;
+		}
+		LivingEntity currentTarget = null;
+		double currentDistance = MAX_DISTANCE_SQ;
+		Vec3d vec3 = seeker.getLookVec();
+		double targetX = seeker.getPosX();
+		double targetY = seeker.getPosY() + seeker.getEyeHeight() - 0.10000000149011612D;
+		double targetZ = seeker.getPosZ();
+		double distanceTraveled = 0;
+
+		while ((int) distanceTraveled < distance) {
+			targetX += vec3.x;
+			targetY += vec3.y;
+			targetZ += vec3.z;
+			distanceTraveled += vec3.length();
+			AxisAlignedBB bb = new AxisAlignedBB(targetX - radius, targetY - radius, targetZ - radius, targetX + radius,
+					targetY + radius, targetZ + radius);
+			List<LivingEntity> list = seeker.world.getEntitiesWithinAABB(LivingEntity.class, bb);
+			for (LivingEntity target : list) {
+				if (target != seeker && target.canBeCollidedWith() && isTargetInSight(vec3, seeker, target)) {
+					double newDistance = (closestToSeeker ? target.getDistanceSq(seeker)
+							: target.getDistanceSq(targetX, targetY, targetZ));
+					if (newDistance < currentDistance) {
+						currentTarget = target;
+						currentDistance = newDistance;
+					}
+				}
+			}
+		}
+
+		return currentTarget;
+	}
+
+	/**
+	 * Similar to the single entity version, but this method returns a List of all
+	 * LivingEntity entities that are within the entity's field of vision, up to a
+	 * certain range and distance away
+	 */
+	public static final List<LivingEntity> acquireAllLookTargets(LivingEntity seeker, int distance, double radius) {
+		if (distance < 0 || distance > MAX_DISTANCE) {
+			distance = MAX_DISTANCE;
+		}
+		List<LivingEntity> targets = new ArrayList<LivingEntity>();
+		Vec3d vec3 = seeker.getLookVec();
+		double targetX = seeker.getPosX();
+		double targetY = seeker.getPosY() + seeker.getEyeHeight() - 0.10000000149011612D;
+		double targetZ = seeker.getPosZ();
+		double distanceTraveled = 0;
+
+		while ((int) distanceTraveled < distance) {
+			targetX += vec3.x;
+			targetY += vec3.y;
+			targetZ += vec3.z;
+			distanceTraveled += vec3.length();
+			AxisAlignedBB bb = new AxisAlignedBB(targetX - radius, targetY - radius, targetZ - radius, targetX + radius,
+					targetY + radius, targetZ + radius);
+			List<LivingEntity> list = seeker.world.getEntitiesWithinAABB(LivingEntity.class, bb);
+			for (LivingEntity target : list) {
+				if (target != seeker && target.canBeCollidedWith() && isTargetInSight(vec3, seeker, target)) {
+					if (!targets.contains(target)) {
+						targets.add(target);
+					}
+				}
+			}
+		}
+
+		return targets;
+	}
+
+	/**
+	 * Similar to the single entity version, but this method returns a List of all
+	 * entities of certain class that are within the entity's field of vision, up to
+	 * a certain range and distance away
+	 */
+	public static final List<LivingEntity> acquireAllLookTargetsByClass(LivingEntity seeker,
+			Class<? extends LivingEntity> classEntity, int distance, double radius) {
+		if (distance < 0 || distance > MAX_DISTANCE) {
+			distance = MAX_DISTANCE;
+		}
+		List<LivingEntity> targets = new ArrayList<LivingEntity>();
+		Vec3d vec3 = seeker.getLookVec();
+		double targetX = seeker.getPosX();
+		double targetY = seeker.getPosY() + seeker.getEyeHeight() - 0.10000000149011612D;
+		double targetZ = seeker.getPosZ();
+		double distanceTraveled = 0;
+
+		while ((int) distanceTraveled < distance) {
+			targetX += vec3.x;
+			targetY += vec3.y;
+			targetZ += vec3.z;
+			distanceTraveled += vec3.length();
+			AxisAlignedBB bb = new AxisAlignedBB(targetX - radius, targetY - radius, targetZ - radius, targetX + radius,
+					targetY + radius, targetZ + radius);
+			List<LivingEntity> list = seeker.world.getEntitiesWithinAABB(classEntity, bb);
+			for (LivingEntity target : list) {
+				if (target != seeker && target.canBeCollidedWith() && isTargetInSight(vec3, seeker, target)) {
+					if (!targets.contains(target)) {
+						targets.add(target);
+					}
+				}
+			}
+		}
+
+		return targets;
+	}
+
+	/**
+	 * Returns whether the target is in the seeker's field of view based on relative
+	 * position
+	 * 
+	 * @param fov seeker's field of view; a wider angle returns true more often
+	 */
+	public static final boolean isTargetInFrontOf(Entity seeker, Entity target, float fov) {
+		// thanks again to Battlegear2 for the following code snippet
+		double dx = target.getPosX() - seeker.getPosX();
+		double dz;
+		for (dz = target.getPosZ() - seeker.getPosZ(); dx * dx + dz * dz < 1.0E-4D; dz = (Math.random() - Math.random())
+				* 0.01D) {
+			dx = (Math.random() - Math.random()) * 0.01D;
+		}
+		while (seeker.rotationYaw > 360) {
+			seeker.rotationYaw -= 360;
+		}
+		while (seeker.rotationYaw < -360) {
+			seeker.rotationYaw += 360;
+		}
+		float yaw = (float) (Math.atan2(dz, dx) * 180.0D / Math.PI) - seeker.rotationYaw;
+		yaw = yaw - 90;
+		while (yaw < -180) {
+			yaw += 360;
+		}
+		while (yaw >= 180) {
+			yaw -= 360;
+		}
+		return yaw < fov && yaw > -fov;
+	}
+
+	/**
+	 * Returns true if the target's position is within the area that the seeker is
+	 * facing and the target can be seen
+	 */
+	public static final boolean isTargetInSight(LivingEntity seeker, Entity target) {
+		return isTargetInSight(seeker.getLookVec(), seeker, target);
+	}
+
+	/**
+	 * Returns true if the target's position is within the area that the seeker is
+	 * facing and the target can be seen
+	 */
+	private static final boolean isTargetInSight(Vec3d vec3, LivingEntity seeker, Entity target) {
+		return seeker.canEntityBeSeen(target) && isTargetInFrontOf(seeker, target, 60);
+	}
+
+	/**
+	 * Applies all vanilla modifiers to passed in arrow (e.g. enchantment bonuses,
+	 * critical, etc)
+	 * 
+	 * @param charge should be a value between 0.0F and 1.0F, inclusive
+	 */
+	/*
+	 * public static final void applyArrowSettings(EntityArrow arrow, ItemStack bow,
+	 * float charge) { if (charge < 0.0F) { charge = 0.0F; } if (charge > 1.0F) {
+	 * charge = 1.0F; }
+	 * 
+	 * if (charge == 1.0F) { arrow.setIsCritical(true); }
+	 * 
+	 * int k = EnchantmentHelper.getEnchantmentLevel(Enchantment.power.effectId,
+	 * bow);
+	 * 
+	 * if (k > 0) { arrow.setDamage(arrow.getDamage() + (double) k * 0.5D + 0.5D); }
+	 * 
+	 * int l = EnchantmentHelper.getEnchantmentLevel(Enchantment.punch.effectId,
+	 * bow);
+	 * 
+	 * if (l > 0) { arrow.setKnockbackStrength(l); }
+	 * 
+	 * if (EnchantmentHelper.getEnchantmentLevel(Enchantment.flame.effectId, bow) >
+	 * 0) { arrow.setFire(100); } }
+	 */
+
+	/**
+	 * Sets an entity's motion along the given vector at the given velocity, with
+	 * wobble being an amount of variation applied to the course.
+	 * 
+	 * @param wobble    set to 0.0F for a true heading
+	 * @param backwards if true, will set the entity's rotation to the opposite
+	 *                  direction
+	 */
+	public static void setEntityHeading(Entity entity, double vecX, double vecY, double vecZ, float velocity,
+			float wobble, boolean backwards) {
+		float vectorLength = MathHelper.sqrt(vecX * vecX + vecY * vecY + vecZ * vecZ);
+		vecX /= vectorLength;
+		vecY /= vectorLength;
+		vecZ /= vectorLength;
+		vecX += entity.world.rand.nextGaussian() * (entity.world.rand.nextBoolean() ? -1 : 1) * 0.007499999832361937D
+				* wobble;
+		vecY += entity.world.rand.nextGaussian() * (entity.world.rand.nextBoolean() ? -1 : 1) * 0.007499999832361937D
+				* wobble;
+		vecZ += entity.world.rand.nextGaussian() * (entity.world.rand.nextBoolean() ? -1 : 1) * 0.007499999832361937D
+				* wobble;
+		vecX *= velocity;
+		vecY *= velocity;
+		vecZ *= velocity;
+		entity.setMotion(vecX, vecY, vecZ);
+		float f = MathHelper.sqrt(vecX * vecX + vecZ * vecZ);
+		entity.prevRotationYaw = entity.rotationYaw = (backwards ? -1 : 1)
+				* (float) (Math.atan2(vecX, vecZ) * 180.0D / Math.PI);
+		entity.prevRotationPitch = entity.rotationPitch = (backwards ? -1 : 1)
+				* (float) (Math.atan2(vecY, f) * 180.0D / Math.PI);
+	}
+
+	/**
+	 * Returns true if the entity has an unimpeded view of the sky
+	 */
+	public static boolean canEntitySeeSky(World world, Entity entity) {
+		BlockPos pos = new BlockPos(entity);
+		while (pos.getY() < world.getActualHeight()) {
+			if (!world.isAirBlock(pos)) {
+				return false;
+			}
+			pos = pos.up();
+		}
+		return true;
+	}
+
+	/**
+	 * Whether the entity is currently standing in any liquid
+	 */
+	/*
+	 * public static boolean isInLiquid(Entity entity) { IBlockState state =
+	 * entity.world.getBlockState(new BlockPos(entity)); return
+	 * state.getBlock().getMaterial().isLiquid(); }
+	 */
+}

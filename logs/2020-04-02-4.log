@@ -1,0 +1,172 @@
+[02abr2020 21:30:31.479] [main/INFO] [com.mojang.authlib.yggdrasil.YggdrasilUserAuthentication/]: Logging in with username & password
+[02abr2020 21:30:32.706] [main/INFO] [cpw.mods.modlauncher.Launcher/MODLAUNCHER]: ModLauncher running: args [--username=chipoodle, --gameDir, ., --launchTarget, fmluserdevclient, --fml.mcpVersion, 20200122.131323, --fml.mcVersion, 1.15.2, --fml.forgeGroup, net.minecraftforge, --fml.forgeVersion, 31.1.0, --version, MOD_DEV, --assetIndex, 1.15, --assetsDir, C:\Users\fox136h\.gradle\caches\forge_gradle\assets, --uuid, a7c8e9c906b64fe1953f5ec6f5563374, --accessToken, ❄❄❄❄❄❄❄❄, --userProperties, {}]
+[02abr2020 21:30:32.709] [main/INFO] [cpw.mods.modlauncher.Launcher/MODLAUNCHER]: ModLauncher 5.0.0-milestone.4+67+b1a340b starting: java version 1.8.0_241 by Oracle Corporation
+[02abr2020 21:30:32.922] [main/INFO] [net.minecraftforge.fml.loading.FixSSL/CORE]: Added Lets Encrypt root certificates as additional trust
+[02abr2020 21:30:34.369] [main/INFO] [cpw.mods.modlauncher.LaunchServiceHandler/MODLAUNCHER]: Launching target 'fmluserdevclient' with arguments [--version, MOD_DEV, --gameDir, ., --assetsDir, C:\Users\fox136h\.gradle\caches\forge_gradle\assets, --uuid, a7c8e9c906b64fe1953f5ec6f5563374, --username=chipoodle, --assetIndex, 1.15, --accessToken, ❄❄❄❄❄❄❄❄, --userProperties, {}]
+[02abr2020 21:30:38.063] [Render thread/INFO] [net.minecraft.client.Minecraft/]: Setting user: chipoodle
+[02abr2020 21:30:58.081] [Render thread/INFO] [net.minecraft.client.Minecraft/]: Backend library: LWJGL version 3.2.2 build 10
+[02abr2020 21:31:00.092] [modloading-worker-1/INFO] [devilrpg/]: Initializing DevilRpg
+[02abr2020 21:31:00.098] [modloading-worker-3/INFO] [net.minecraftforge.common.ForgeMod/FORGEMOD]: Forge mod loading, version 31.1.0, for MC 1.15.2 with MCP 20200122.131323
+[02abr2020 21:31:00.098] [modloading-worker-3/INFO] [net.minecraftforge.common.MinecraftForge/FORGE]: MinecraftForge v31.1.0 Initialized
+[02abr2020 21:31:00.525] [Render thread/WARN] [net.minecraft.entity.EntityType/]: No data fixer registered for entity devilrpg:wild_boar
+[02abr2020 21:31:00.528] [Render thread/WARN] [net.minecraft.entity.EntityType/]: No data fixer registered for entity devilrpg:soul_wolf
+[02abr2020 21:31:05.724] [Render thread/INFO] [com.mojang.text2speech.NarratorWindows/]: Narrator library for x64 successfully loaded
+[02abr2020 21:31:05.876] [Render thread/INFO] [net.minecraft.resources.SimpleReloadableResourceManager/]: Reloading ResourceManager: Default, Mod Resources
+[02abr2020 21:31:06.083] [modloading-worker-1/INFO] [devilrpg/]: ----------------------->PlayerModEventSubscriber.onCommonSetup()
+[02abr2020 21:31:06.128] [modloading-worker-1/INFO] [devilrpg/]: -----> Capabilities registrados
+[02abr2020 21:31:06.348] [Forge Version Check/INFO] [net.minecraftforge.fml.VersionChecker/]: [devilrpg] Starting version check at https://github.com/chipoodle/DevilRpg/update.json
+[02abr2020 21:31:06.422] [Server-Worker-4/INFO] [net.minecraftforge.fml.DeferredWorkQueue/LOADING]: Dispatching synchronous work after SIDED_SETUP: 1 jobs
+[02abr2020 21:31:06.937] [Server-Worker-4/INFO] [net.minecraftforge.fml.DeferredWorkQueue/LOADING]: Synchronous work queue completed in 00:00:00.503
+[02abr2020 21:31:07.112] [Forge Version Check/WARN] [net.minecraftforge.fml.VersionChecker/]: Failed to process update information
+java.io.FileNotFoundException: https://github.com/chipoodle/DevilRpg/update.json
+	at sun.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method) ~[?:1.8.0_241]
+	at sun.reflect.NativeConstructorAccessorImpl.newInstance(Unknown Source) ~[?:1.8.0_241]
+	at sun.reflect.DelegatingConstructorAccessorImpl.newInstance(Unknown Source) ~[?:1.8.0_241]
+	at java.lang.reflect.Constructor.newInstance(Unknown Source) ~[?:1.8.0_241]
+	at sun.net.www.protocol.http.HttpURLConnection$10.run(Unknown Source) ~[?:1.8.0_241]
+	at sun.net.www.protocol.http.HttpURLConnection$10.run(Unknown Source) ~[?:1.8.0_241]
+	at java.security.AccessController.doPrivileged(Native Method) ~[?:1.8.0_241]
+	at sun.net.www.protocol.http.HttpURLConnection.getChainedException(Unknown Source) ~[?:1.8.0_241]
+	at sun.net.www.protocol.http.HttpURLConnection.getInputStream0(Unknown Source) ~[?:1.8.0_241]
+	at sun.net.www.protocol.http.HttpURLConnection.getInputStream(Unknown Source) ~[?:1.8.0_241]
+	at sun.net.www.protocol.https.HttpsURLConnectionImpl.getInputStream(Unknown Source) ~[?:1.8.0_241]
+	at net.minecraftforge.fml.VersionChecker$1.openUrlStream(VersionChecker.java:189) ~[?:?]
+	at net.minecraftforge.fml.VersionChecker$1.process(VersionChecker.java:206) ~[?:?]
+	at java.lang.Iterable.forEach(Unknown Source) [?:1.8.0_241]
+	at net.minecraftforge.fml.VersionChecker$1.run(VersionChecker.java:157) [?:?]
+Caused by: java.io.FileNotFoundException: https://github.com/chipoodle/DevilRpg/update.json
+	at sun.net.www.protocol.http.HttpURLConnection.getInputStream0(Unknown Source) ~[?:1.8.0_241]
+	at sun.net.www.protocol.http.HttpURLConnection.getInputStream(Unknown Source) ~[?:1.8.0_241]
+	at java.net.HttpURLConnection.getResponseCode(Unknown Source) ~[?:1.8.0_241]
+	at sun.net.www.protocol.https.HttpsURLConnectionImpl.getResponseCode(Unknown Source) ~[?:1.8.0_241]
+	at net.minecraftforge.fml.VersionChecker$1.openUrlStream(VersionChecker.java:173) ~[?:?]
+	... 3 more
+[02abr2020 21:31:07.114] [Forge Version Check/INFO] [net.minecraftforge.fml.VersionChecker/]: [forge] Starting version check at https://files.minecraftforge.net/maven/net/minecraftforge/forge/promotions_slim.json
+[02abr2020 21:31:07.729] [Forge Version Check/INFO] [net.minecraftforge.fml.VersionChecker/]: [forge] Found status: UP_TO_DATE Current: 31.1.0 Target: null
+[02abr2020 21:31:10.119] [Server-Worker-3/WARN] [net.minecraft.client.renderer.model.ModelBakery/]: Exception loading blockstate definition: devilrpg:blockstates/example_ore.json: java.io.FileNotFoundException: devilrpg:blockstates/example_ore.json
+[02abr2020 21:31:10.120] [Server-Worker-3/WARN] [net.minecraft.client.renderer.model.ModelBakery/]: Exception loading blockstate definition: 'devilrpg:blockstates/example_ore.json' missing model for variant: 'devilrpg:example_ore#'
+[02abr2020 21:31:10.124] [Server-Worker-3/WARN] [net.minecraft.client.renderer.model.ModelBakery/]: Exception loading blockstate definition: devilrpg:blockstates/example_block.json: java.io.FileNotFoundException: devilrpg:blockstates/example_block.json
+[02abr2020 21:31:10.124] [Server-Worker-3/WARN] [net.minecraft.client.renderer.model.ModelBakery/]: Exception loading blockstate definition: 'devilrpg:blockstates/example_block.json' missing model for variant: 'devilrpg:example_block#'
+[02abr2020 21:31:11.004] [Server-Worker-3/WARN] [net.minecraft.client.renderer.model.ModelBakery/]: Unable to load model: 'devilrpg:wild_boar_spawn_egg#inventory' referenced from: devilrpg:wild_boar_spawn_egg#inventory: java.io.FileNotFoundException: devilrpg:models/item/wild_boar_spawn_egg.json
+[02abr2020 21:31:11.006] [Server-Worker-3/WARN] [net.minecraft.client.renderer.model.ModelBakery/]: Unable to load model: 'devilrpg:example_ore#inventory' referenced from: devilrpg:example_ore#inventory: java.io.FileNotFoundException: devilrpg:models/item/example_ore.json
+[02abr2020 21:31:11.007] [Server-Worker-3/WARN] [net.minecraft.client.renderer.model.ModelBakery/]: Unable to load model: 'devilrpg:example_block#inventory' referenced from: devilrpg:example_block#inventory: java.io.FileNotFoundException: devilrpg:models/item/example_block.json
+[02abr2020 21:31:13.200] [Render thread/INFO] [net.minecraft.client.audio.SoundSystem/]: OpenAL initialized.
+[02abr2020 21:31:13.201] [Render thread/INFO] [net.minecraft.client.audio.SoundEngine/SOUNDS]: Sound engine started
+[02abr2020 21:31:13.382] [Render thread/INFO] [net.minecraft.client.renderer.texture.AtlasTexture/]: Created: 1024x512x4 minecraft:textures/atlas/blocks.png-atlas
+[02abr2020 21:31:13.562] [Render thread/INFO] [net.minecraft.client.renderer.texture.AtlasTexture/]: Created: 128x128x4 minecraft:textures/atlas/signs.png-atlas
+[02abr2020 21:31:13.564] [Render thread/INFO] [net.minecraft.client.renderer.texture.AtlasTexture/]: Created: 512x512x4 minecraft:textures/atlas/banner_patterns.png-atlas
+[02abr2020 21:31:13.568] [Render thread/INFO] [net.minecraft.client.renderer.texture.AtlasTexture/]: Created: 512x512x4 minecraft:textures/atlas/shield_patterns.png-atlas
+[02abr2020 21:31:13.580] [Render thread/INFO] [net.minecraft.client.renderer.texture.AtlasTexture/]: Created: 256x256x4 minecraft:textures/atlas/chest.png-atlas
+[02abr2020 21:31:13.583] [Render thread/INFO] [net.minecraft.client.renderer.texture.AtlasTexture/]: Created: 512x256x4 minecraft:textures/atlas/beds.png-atlas
+[02abr2020 21:31:13.586] [Render thread/INFO] [net.minecraft.client.renderer.texture.AtlasTexture/]: Created: 512x256x4 minecraft:textures/atlas/shulker_boxes.png-atlas
+[02abr2020 21:31:14.367] [Render thread/INFO] [net.minecraft.client.renderer.texture.AtlasTexture/]: Created: 256x256x0 minecraft:textures/atlas/particles.png-atlas
+[02abr2020 21:31:14.392] [Render thread/INFO] [net.minecraft.client.renderer.texture.AtlasTexture/]: Created: 256x256x0 minecraft:textures/atlas/paintings.png-atlas
+[02abr2020 21:31:14.395] [Render thread/INFO] [net.minecraft.client.renderer.texture.AtlasTexture/]: Created: 128x128x0 minecraft:textures/atlas/mob_effects.png-atlas
+[02abr2020 21:32:13.433] [Render thread/WARN] [net.minecraft.command.Commands/]: Ambiguity between arguments [teleport, destination] and [teleport, targets] with inputs: [Player, 0123, @e, dd12be42-52a9-4a91-a8a1-11c01849e498]
+[02abr2020 21:32:13.434] [Render thread/WARN] [net.minecraft.command.Commands/]: Ambiguity between arguments [teleport, location] and [teleport, destination] with inputs: [0.1 -0.5 .9, 0 0 0]
+[02abr2020 21:32:13.435] [Render thread/WARN] [net.minecraft.command.Commands/]: Ambiguity between arguments [teleport, location] and [teleport, targets] with inputs: [0.1 -0.5 .9, 0 0 0]
+[02abr2020 21:32:13.436] [Render thread/WARN] [net.minecraft.command.Commands/]: Ambiguity between arguments [teleport, targets] and [teleport, destination] with inputs: [Player, 0123, dd12be42-52a9-4a91-a8a1-11c01849e498]
+[02abr2020 21:32:13.437] [Render thread/WARN] [net.minecraft.command.Commands/]: Ambiguity between arguments [teleport, targets, location] and [teleport, targets, destination] with inputs: [0.1 -0.5 .9, 0 0 0]
+[02abr2020 21:32:13.799] [Server thread/INFO] [net.minecraft.server.integrated.IntegratedServer/]: Starting integrated minecraft server version 1.15.2
+[02abr2020 21:32:13.800] [Server thread/INFO] [net.minecraft.server.integrated.IntegratedServer/]: Generating keypair
+[02abr2020 21:32:14.083] [Server thread/INFO] [net.minecraftforge.registries.GameData/REGISTRIES]: Injecting existing registry data into this SERVER instance
+[02abr2020 21:32:14.273] [Server thread/INFO] [net.minecraft.resources.SimpleReloadableResourceManager/]: Reloading ResourceManager: Default, main, forge-1.15.2-31.1.0_mapped_snapshot_20200131-1.15.1-recomp.jar
+[02abr2020 21:32:15.651] [Server thread/INFO] [net.minecraft.item.crafting.RecipeManager/]: Loaded 6 recipes
+[02abr2020 21:32:17.466] [Server thread/INFO] [net.minecraft.advancements.AdvancementList/]: Loaded 825 advancements
+[02abr2020 21:32:18.360] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Preparing start region for dimension minecraft:overworld
+[02abr2020 21:32:19.631] [Render thread/INFO] [net.minecraft.world.chunk.listener.LoggingChunkStatusListener/]: Preparing spawn area: 0%
+[02abr2020 21:32:19.632] [Render thread/INFO] [net.minecraft.world.chunk.listener.LoggingChunkStatusListener/]: Preparing spawn area: 0%
+[02abr2020 21:32:19.632] [Render thread/INFO] [net.minecraft.world.chunk.listener.LoggingChunkStatusListener/]: Preparing spawn area: 0%
+[02abr2020 21:32:19.930] [Render thread/INFO] [net.minecraft.world.chunk.listener.LoggingChunkStatusListener/]: Preparing spawn area: 0%
+[02abr2020 21:32:20.495] [Render thread/INFO] [net.minecraft.world.chunk.listener.LoggingChunkStatusListener/]: Time elapsed: 2117 ms
+[02abr2020 21:32:21.122] [Server thread/INFO] [net.minecraft.world.server.ChunkManager/]: ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[02abr2020 21:32:21.124] [Server thread/INFO] [net.minecraft.world.server.ChunkManager/]: ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[02abr2020 21:32:21.130] [Server thread/INFO] [net.minecraft.server.integrated.IntegratedServer/]: Changing view distance to 11, from 10
+[02abr2020 21:32:24.061] [Netty Local Client IO #0/INFO] [net.minecraftforge.fml.network.NetworkHooks/]: Connected to a modded server.
+[02abr2020 21:32:24.101] [Server thread/INFO] [devilrpg/]: ----------------------->PlayerForgeEventSubscriber.attachCapability()
+[02abr2020 21:32:24.101] [Server thread/INFO] [devilrpg/]: ------------------------>Capabilities attached
+[02abr2020 21:32:24.209] [Server thread/INFO] [net.minecraft.server.management.PlayerList/]: chipoodle[local:E:c51cea21] logged in with entity id 167 at (-156.13208656930874, 73.0, 64.62217072567609)
+[02abr2020 21:32:24.255] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: chipoodle joined the game
+[02abr2020 21:32:24.259] [Server thread/INFO] [devilrpg/]: ----------------------->PlayerForgeEventSubscriber.onEntityJoinWorld()
+[02abr2020 21:32:24.269] [Server thread/INFO] [devilrpg/]: |||------>onEntityJoinWorld 167 Mana cap = net.minecraftforge.common.util.LazyOptional@1c60f75 Cliente? false Mana: 50.0 MaxMana: 50.0
+[02abr2020 21:32:24.273] [Server thread/INFO] [devilrpg/]: |||------>onEntityJoinWorld 167 Skill cap = net.minecraftforge.common.util.LazyOptional@3e9f307 Cliente? false getPaSoulWolf: 10 getMaxSoulWolf: 20
+[02abr2020 21:32:24.276] [Server thread/INFO] [devilrpg/]: |||------>onEntityJoinWorld 167 Exp cap = net.minecraftforge.common.util.LazyOptional@3e9f307 Cliente? false unspent points: 0 actual xp: 44
+[02abr2020 21:32:24.282] [Render thread/INFO] [devilrpg/]: ||----------- ENVIANDO CAP DE SERVIDOR A CLIENTE: TextComponent{text='chipoodle', siblings=[], style=Style{hasParent=false, color=null, bold=null, italic=null, underlined=null, obfuscated=null, clickEvent=null, hoverEvent=null, insertion=null}}
+[02abr2020 21:32:24.297] [Render thread/INFO] [devilrpg/]: ||----------- ENVIANDO CAP DE SERVIDOR A CLIENTE: TextComponent{text='chipoodle', siblings=[], style=Style{hasParent=false, color=null, bold=null, italic=null, underlined=null, obfuscated=null, clickEvent=null, hoverEvent=null, insertion=null}}
+[02abr2020 21:32:24.299] [Render thread/INFO] [devilrpg/]: ||----------- ENVIANDO CAP DE SERVIDOR A CLIENTE: TextComponent{text='chipoodle', siblings=[], style=Style{hasParent=false, color=null, bold=null, italic=null, underlined=null, obfuscated=null, clickEvent=null, hoverEvent=null, insertion=null}}
+[02abr2020 21:32:24.337] [Render thread/ERROR] [net.minecraftforge.fml.network.simple.IndexedMessageCodec/SIMPLENET]: Received empty payload on channel fml:handshake
+[02abr2020 21:32:24.440] [Server thread/INFO] [devilrpg/]: ----------------------->PlayerForgeEventSubscriber.onPlayerLogsIn()
+[02abr2020 21:32:24.910] [Render thread/INFO] [devilrpg/]: ----------------------->PlayerForgeEventSubscriber.attachCapability()
+[02abr2020 21:32:24.910] [Render thread/INFO] [devilrpg/]: ------------------------>Capabilities attached
+[02abr2020 21:32:24.930] [Render thread/INFO] [devilrpg/]: ----------------------->PlayerForgeEventSubscriber.onEntityJoinWorld()
+[02abr2020 21:32:24.932] [Render thread/INFO] [devilrpg/]: |||------>onEntityJoinWorld 168 Mana cap = net.minecraftforge.common.util.LazyOptional@35daccb8 Cliente? true Mana: 0.0 MaxMana: 50.0
+[02abr2020 21:32:24.932] [Render thread/INFO] [devilrpg/]: |||------>onEntityJoinWorld 168 Skill cap = net.minecraftforge.common.util.LazyOptional@23ac3788 Cliente? true getPaSoulWolf: 0 getMaxSoulWolf: 20
+[02abr2020 21:32:24.932] [Render thread/INFO] [devilrpg/]: |||------>onEntityJoinWorld 168 Exp cap = net.minecraftforge.common.util.LazyOptional@23ac3788 Cliente? true unspent points: 0 actual xp: 0
+[02abr2020 21:32:24.948] [Server thread/ERROR] [net.minecraftforge.fml.network.simple.IndexedMessageCodec/SIMPLENET]: Received empty payload on channel fml:handshake
+[02abr2020 21:32:24.948] [Server thread/INFO] [net.minecraft.server.integrated.IntegratedServer/]: Saving and pausing game...
+[02abr2020 21:32:24.979] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'New World'/minecraft:overworld
+[02abr2020 21:32:25.250] [Render thread/INFO] [net.minecraft.client.gui.NewChatGui/]: [CHAT] Hello there, you have mana 50.000000 left.
+[02abr2020 21:32:25.250] [Render thread/INFO] [net.minecraft.client.gui.NewChatGui/]: [CHAT] You have skills.
+[02abr2020 21:32:25.250] [Render thread/INFO] [net.minecraft.client.gui.NewChatGui/]: [CHAT] You are lvl. 44 
+[02abr2020 21:32:25.251] [Render thread/INFO] [net.minecraft.advancements.AdvancementList/]: Loaded 0 advancements
+[02abr2020 21:32:42.534] [Server thread/INFO] [devilrpg/]: SERVER: keypress message recieved. User: chipoodle
+[02abr2020 21:32:42.534] [Server thread/INFO] [devilrpg/]: ----------------->Trigger Action. Is Client? false
+[02abr2020 21:32:42.551] [Server thread/INFO] [devilrpg/]: =====Sending to player mana consumed 30.0 Cost: 20.0 player: TextComponent{text='chipoodle', siblings=[], style=Style{hasParent=false, color=null, bold=null, italic=null, underlined=null, obfuscated=null, clickEvent=null, hoverEvent=null, insertion=null}}
+[02abr2020 21:32:42.552] [Server thread/INFO] [devilrpg/]: ------------------>Summon soulWolf
+[02abr2020 21:32:42.563] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: chipoodle has made the advancement [Best Friends Forever]
+[02abr2020 21:32:42.565] [Server thread/INFO] [STDOUT/]: [com.chipoodle.devilrpg.skillsystem.skillinstance.SkillSummonSoulWolf:summonWolf:65]: Summoned soulWolf. is Client? false
+[02abr2020 21:32:42.596] [Render thread/INFO] [net.minecraft.client.gui.NewChatGui/]: [CHAT] chipoodle has made the advancement [Best Friends Forever]
+[02abr2020 21:32:42.597] [Render thread/INFO] [net.minecraft.advancements.AdvancementList/]: Loaded 3 advancements
+[02abr2020 21:32:47.776] [Server thread/INFO] [devilrpg/]: SERVER: keypress message recieved. User: chipoodle
+[02abr2020 21:32:47.777] [Server thread/INFO] [devilrpg/]: ----------------->Trigger Action. Is Client? false
+[02abr2020 21:32:47.778] [Server thread/INFO] [devilrpg/]: =====Sending to player mana consumed 30.0 Cost: 20.0 player: TextComponent{text='chipoodle', siblings=[], style=Style{hasParent=false, color=null, bold=null, italic=null, underlined=null, obfuscated=null, clickEvent=null, hoverEvent=null, insertion=null}}
+[02abr2020 21:32:47.779] [Server thread/INFO] [devilrpg/]: ------------------>Summon soulWolf
+[02abr2020 21:32:47.779] [Server thread/INFO] [STDOUT/]: [com.chipoodle.devilrpg.skillsystem.skillinstance.SkillSummonSoulWolf:summonWolf:65]: Summoned soulWolf. is Client? false
+[02abr2020 21:32:52.429] [Server thread/INFO] [devilrpg/]: SERVER: keypress message recieved. User: chipoodle
+[02abr2020 21:32:52.429] [Server thread/INFO] [devilrpg/]: ----------------->Trigger Action. Is Client? false
+[02abr2020 21:32:52.430] [Server thread/INFO] [devilrpg/]: =====Sending to player mana consumed 30.0 Cost: 20.0 player: TextComponent{text='chipoodle', siblings=[], style=Style{hasParent=false, color=null, bold=null, italic=null, underlined=null, obfuscated=null, clickEvent=null, hoverEvent=null, insertion=null}}
+[02abr2020 21:32:52.430] [Server thread/INFO] [devilrpg/]: ------------------>Summon soulWolf
+[02abr2020 21:32:52.432] [Server thread/INFO] [STDOUT/]: [com.chipoodle.devilrpg.skillsystem.skillinstance.SkillSummonSoulWolf:summonWolf:65]: Summoned soulWolf. is Client? false
+[02abr2020 21:32:57.671] [Server thread/INFO] [devilrpg/]: SERVER: keypress message recieved. User: chipoodle
+[02abr2020 21:32:57.672] [Server thread/INFO] [devilrpg/]: ----------------->Trigger Action. Is Client? false
+[02abr2020 21:32:57.676] [Server thread/INFO] [devilrpg/]: =====Sending to player mana consumed 28.89975 Cost: 20.0 player: TextComponent{text='chipoodle', siblings=[], style=Style{hasParent=false, color=null, bold=null, italic=null, underlined=null, obfuscated=null, clickEvent=null, hoverEvent=null, insertion=null}}
+[02abr2020 21:32:57.676] [Server thread/INFO] [devilrpg/]: ------------------>Summon soulWolf
+[02abr2020 21:32:57.678] [Server thread/INFO] [STDOUT/]: [com.chipoodle.devilrpg.skillsystem.skillinstance.SkillSummonSoulWolf:summonWolf:65]: Summoned soulWolf. is Client? false
+[02abr2020 21:33:00.559] [Server thread/INFO] [devilrpg/]: SERVER: keypress message recieved. User: chipoodle
+[02abr2020 21:33:00.559] [Server thread/INFO] [devilrpg/]: ----------------->Trigger Action. Is Client? false
+[02abr2020 21:33:00.560] [Server thread/INFO] [devilrpg/]: =====Sending to player mana consumed 19.999641 Cost: 20.0 player: TextComponent{text='chipoodle', siblings=[], style=Style{hasParent=false, color=null, bold=null, italic=null, underlined=null, obfuscated=null, clickEvent=null, hoverEvent=null, insertion=null}}
+[02abr2020 21:33:00.560] [Server thread/INFO] [devilrpg/]: ------------------>Summon soulWolf
+[02abr2020 21:33:00.561] [Server thread/INFO] [STDOUT/]: [com.chipoodle.devilrpg.skillsystem.skillinstance.SkillSummonSoulWolf:summonWolf:65]: Summoned soulWolf. is Client? false
+[02abr2020 21:33:01.497] [Server thread/INFO] [devilrpg/]: SERVER: keypress message recieved. User: chipoodle
+[02abr2020 21:33:01.498] [Server thread/INFO] [devilrpg/]: ----------------->Trigger Action. Is Client? false
+[02abr2020 21:33:01.498] [Server thread/INFO] [devilrpg/]: =====Sending to player mana consumed 4.89966 Cost: 20.0 player: TextComponent{text='chipoodle', siblings=[], style=Style{hasParent=false, color=null, bold=null, italic=null, underlined=null, obfuscated=null, clickEvent=null, hoverEvent=null, insertion=null}}
+[02abr2020 21:33:01.498] [Server thread/INFO] [devilrpg/]: ------------------>Summon soulWolf
+[02abr2020 21:33:01.499] [Server thread/INFO] [STDOUT/]: [com.chipoodle.devilrpg.skillsystem.skillinstance.SkillSummonSoulWolf:summonWolf:65]: Summoned soulWolf. is Client? false
+[02abr2020 21:33:03.217] [Server thread/INFO] [devilrpg/]: SERVER: keypress message recieved. User: chipoodle
+[02abr2020 21:33:03.217] [Server thread/INFO] [devilrpg/]: ----------------->Trigger Action. Is Client? false
+[02abr2020 21:33:03.240] [Render thread/INFO] [net.minecraft.client.gui.NewChatGui/]: [CHAT] Not enought mana.
+[02abr2020 21:33:03.846] [Server thread/INFO] [devilrpg/]: SERVER: keypress message recieved. User: chipoodle
+[02abr2020 21:33:03.846] [Server thread/INFO] [devilrpg/]: ----------------->Trigger Action. Is Client? false
+[02abr2020 21:33:03.857] [Render thread/INFO] [net.minecraft.client.gui.NewChatGui/]: [CHAT] Not enought mana.
+[02abr2020 21:33:11.207] [Render thread/INFO] [net.minecraft.client.gui.NewChatGui/]: [CHAT] entity.devilrpg.soul_wolf suffocated in a wall
+[02abr2020 21:33:13.128] [Server thread/INFO] [devilrpg/]: SERVER: keypress message recieved. User: chipoodle
+[02abr2020 21:33:13.129] [Server thread/INFO] [devilrpg/]: ----------------->Trigger Action. Is Client? false
+[02abr2020 21:33:13.130] [Server thread/INFO] [devilrpg/]: =====Sending to player mana consumed 30.0 Cost: 20.0 player: TextComponent{text='chipoodle', siblings=[], style=Style{hasParent=false, color=null, bold=null, italic=null, underlined=null, obfuscated=null, clickEvent=null, hoverEvent=null, insertion=null}}
+[02abr2020 21:33:13.130] [Server thread/INFO] [devilrpg/]: ------------------>Summon soulWolf
+[02abr2020 21:33:13.131] [Server thread/INFO] [STDOUT/]: [com.chipoodle.devilrpg.skillsystem.skillinstance.SkillSummonSoulWolf:summonWolf:65]: Summoned soulWolf. is Client? false
+[02abr2020 21:33:16.711] [Server thread/INFO] [devilrpg/]: SERVER: keypress message recieved. User: chipoodle
+[02abr2020 21:33:16.711] [Server thread/INFO] [devilrpg/]: ----------------->Trigger Action. Is Client? false
+[02abr2020 21:33:16.712] [Server thread/INFO] [devilrpg/]: =====Sending to player mana consumed 27.799767 Cost: 20.0 player: TextComponent{text='chipoodle', siblings=[], style=Style{hasParent=false, color=null, bold=null, italic=null, underlined=null, obfuscated=null, clickEvent=null, hoverEvent=null, insertion=null}}
+[02abr2020 21:33:16.712] [Server thread/INFO] [devilrpg/]: ------------------>Summon soulWolf
+[02abr2020 21:33:16.713] [Server thread/INFO] [STDOUT/]: [com.chipoodle.devilrpg.skillsystem.skillinstance.SkillSummonSoulWolf:summonWolf:65]: Summoned soulWolf. is Client? false
+[02abr2020 21:33:21.341] [Server thread/INFO] [net.minecraft.server.integrated.IntegratedServer/]: Saving and pausing game...
+[02abr2020 21:33:21.359] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'New World'/minecraft:overworld
+[02abr2020 21:33:22.959] [Server thread/INFO] [net.minecraft.network.play.ServerPlayNetHandler/]: chipoodle lost connection: Disconnected
+[02abr2020 21:33:22.960] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: chipoodle left the game
+[02abr2020 21:33:22.974] [Server thread/INFO] [net.minecraft.network.play.ServerPlayNetHandler/]: Stopping singleplayer server as player logged out
+[02abr2020 21:33:23.001] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Stopping server
+[02abr2020 21:33:23.002] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving players
+[02abr2020 21:33:23.003] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving worlds
+[02abr2020 21:33:23.003] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'New World'/minecraft:overworld
+[02abr2020 21:33:23.181] [Server thread/INFO] [net.minecraft.world.server.ChunkManager/]: ThreadedAnvilChunkStorage (New World): All chunks are saved
+[02abr2020 21:33:23.214] [Server thread/INFO] [net.minecraft.world.server.ChunkManager/]: ThreadedAnvilChunkStorage (New World): All chunks are saved

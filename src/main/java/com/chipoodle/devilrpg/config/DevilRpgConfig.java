@@ -1,8 +1,8 @@
 package com.chipoodle.devilrpg.config;
 
-import net.minecraft.item.DyeColor;
-
 import java.util.List;
+
+import net.minecraft.item.DyeColor;
 
 /**
  * This holds the baked (runtime) values for our config. These values should

@@ -1,46 +1,33 @@
 package com.chipoodle.devilrpg.capability.skill;
 
-import net.minecraft.nbt.CompoundNBT;
+import static com.chipoodle.devilrpg.DevilRpg.LOGGER;
 
-public interface IBaseSkillCapability {
-	public int getPaSoulWolf();
-	public int getPaWispHealth();
-	public int getPaWispSpeed();
-	public int getPaFireBall();
-	public int getPaSoulBear();
-	public int getPaWereWolf();
+import java.util.HashMap;
+
+import com.chipoodle.devilrpg.capability.IGenericCapability;
+import com.chipoodle.devilrpg.capability.mana.IBaseManaCapability;
+import com.chipoodle.devilrpg.capability.mana.PlayerManaCapabilityProvider;
+import com.chipoodle.devilrpg.init.ModNetwork;
+import com.chipoodle.devilrpg.network.handler.PlayerManaClientServerHandler;
+import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
+import com.chipoodle.devilrpg.util.PowerEnum;
+import com.chipoodle.devilrpg.util.SkillEnum;
+
+import net.minecraft.entity.player.ServerPlayerEntity;
+import net.minecraft.nbt.CompoundNBT;
+import net.minecraftforge.common.util.LazyOptional;
+import net.minecraftforge.fml.network.PacketDistributor;
+
+public interface IBaseSkillCapability extends IGenericCapability{
+		
+	public HashMap<PowerEnum,SkillEnum> getSkillsNameOfPowers();
+	public void setSkillsNameOfPowers(HashMap<PowerEnum,SkillEnum> names);
+	public HashMap<SkillEnum,Integer> getSkillsPoints();
+	public void setSkillsPoints(HashMap<SkillEnum,Integer> points);
+	public HashMap<SkillEnum,Integer> getMaxSkillsPoints();
+	public void setMaxSkillsPoints(HashMap<SkillEnum,Integer> points);
 	
-	public void setPaSoulWolf(int paSoulWolf);
-	public void setPaWispHealth(int paWispHealth);
-	public void setPaWispSpeed(int paWispSpeed);
-	public void setPaFireBall(int paFireBall);
-	public void setPaSoulBear(int paSoulBear);
-	public void setPaWereWolf(int paWereWolf);
-	
-	public int getMaxSoulWolf();
-	public int getMaxWispHealth();
-	public int getMaxWispSpeed();
-	public int getMaxFireBall();
-	public int getMaxSoulBear();
-	public int getMaxWereWolf();
-	
-	public void setMaxSoulWolf(int maxPoints);
-	public void setMaxWispHealth(int maxPoints);
-	public void setMaxWispSpeed(int maxPoints);
-	public void setMaxFireBall(int maxPoints);
-	public void setMaxSoulBear(int maxPoints);
-	public void setMaxWereWolf(int maxPoints);
-	
-	public String getPower1Name();
-	public String getPower2Name();
-	public String getPower3Name();
-	public String getPower4Name();
-	
-	public void setPower1Name(String name);
-	public void setPower2Name(String name);
-	public void setPower3Name(String name);
-	public void setPower4Name(String name);
-	
+	public void triggerAction(ServerPlayerEntity playerIn, PowerEnum triggeredPower) ;
 	
 	public CompoundNBT getNBTData();
 	public void setNBTData(CompoundNBT nbt);

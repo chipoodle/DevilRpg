@@ -4,6 +4,7 @@ package com.chipoodle.devilrpg.client.render.entity;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.client.render.entity.layer.WildBoarSaddleLayer;
 import com.chipoodle.devilrpg.entity.wildboar.WildBoarEntity;
+
 import net.minecraft.client.renderer.entity.EntityRendererManager;
 import net.minecraft.client.renderer.entity.MobRenderer;
 import net.minecraft.client.renderer.entity.model.PigModel;

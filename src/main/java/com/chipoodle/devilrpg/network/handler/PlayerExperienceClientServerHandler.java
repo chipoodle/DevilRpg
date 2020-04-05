@@ -20,12 +20,12 @@ public class PlayerExperienceClientServerHandler {
 		this.experienceCompound = manaCompound;
 	}
 
-	public CompoundNBT getManaCompound() {
+	public CompoundNBT getExperienceCompound() {
 		return experienceCompound;
 	}
 
 	public static void encode(final PlayerExperienceClientServerHandler msg, final PacketBuffer packetBuffer) {
-		packetBuffer.writeCompoundTag(msg.getManaCompound());
+		packetBuffer.writeCompoundTag(msg.getExperienceCompound());
 	}
 
 	public static PlayerExperienceClientServerHandler decode(final PacketBuffer packetBuffer) {
@@ -39,7 +39,7 @@ public class PlayerExperienceClientServerHandler {
 				ServerPlayerEntity serverPlayer = contextSupplier.get().getSender();
 				if (serverPlayer != null) {
 					serverPlayer.getCapability(PlayerExperienceCapabilityProvider.EXPERIENCE_CAP)
-							.ifPresent(x -> x.setNBTData(msg.getManaCompound()));
+							.ifPresent(x -> x.setNBTData(msg.getExperienceCompound()));
 				}
 			});
 			contextSupplier.get().setPacketHandled(true);
@@ -51,7 +51,7 @@ public class PlayerExperienceClientServerHandler {
 				PlayerEntity clientPlayer = m.player;
 				if (clientPlayer != null) {
 					clientPlayer.getCapability(PlayerExperienceCapabilityProvider.EXPERIENCE_CAP)
-							.ifPresent(x -> x.setNBTData(msg.getManaCompound()));
+							.ifPresent(x -> x.setNBTData(msg.getExperienceCompound()));
 				}
 
 			});

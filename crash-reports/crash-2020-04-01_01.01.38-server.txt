@@ -1,0 +1,113 @@
+---- Minecraft Crash Report ----
+// Hey, that tickles! Hehehe!
+
+Time: 1/04/20 01:01 AM
+Description: Ticking memory connection
+
+java.lang.NullPointerException: Ticking memory connection
+	at net.minecraftforge.fml.network.simple.SimpleChannel.sendToServer(SimpleChannel.java:98) ~[forge-1.15.2-31.1.0_mapped_snapshot_20200131-1.15.1-recomp.jar:?] {re:classloading}
+	at com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability.sendSkillChangesToServer(PlayerSkillCapability.java:249) ~[main/:?] {re:classloading}
+	at com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability.setSkillsNameOfPowers(PlayerSkillCapability.java:184) ~[main/:?] {re:classloading}
+	at com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability.<init>(PlayerSkillCapability.java:162) ~[main/:?] {re:classloading}
+	at com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityFactory.call(PlayerSkillCapabilityFactory.java:9) ~[main/:?] {re:classloading}
+	at com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityFactory.call(PlayerSkillCapabilityFactory.java:1) ~[main/:?] {re:classloading}
+	at net.minecraftforge.common.capabilities.Capability.getDefaultInstance(Capability.java:131) ~[forge-1.15.2-31.1.0_mapped_snapshot_20200131-1.15.1-recomp.jar:?] {re:classloading}
+	at com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider.lambda$0(PlayerSkillCapabilityProvider.java:18) ~[main/:?] {re:classloading}
+	at net.minecraftforge.common.util.LazyOptional.getValue(LazyOptional.java:116) ~[forge-1.15.2-31.1.0_mapped_snapshot_20200131-1.15.1-recomp.jar:?] {re:classloading}
+	at net.minecraftforge.common.util.LazyOptional.getValueUnsafe(LazyOptional.java:130) ~[forge-1.15.2-31.1.0_mapped_snapshot_20200131-1.15.1-recomp.jar:?] {re:classloading}
+	at net.minecraftforge.common.util.LazyOptional.lambda$map$0(LazyOptional.java:184) ~[forge-1.15.2-31.1.0_mapped_snapshot_20200131-1.15.1-recomp.jar:?] {re:classloading}
+	at net.minecraftforge.common.util.LazyOptional.getValue(LazyOptional.java:116) ~[forge-1.15.2-31.1.0_mapped_snapshot_20200131-1.15.1-recomp.jar:?] {re:classloading}
+	at net.minecraftforge.common.util.LazyOptional.orElse(LazyOptional.java:219) ~[forge-1.15.2-31.1.0_mapped_snapshot_20200131-1.15.1-recomp.jar:?] {re:classloading}
+	at com.chipoodle.devilrpg.eventsubscriber.common.PlayerForgeEventSubscriber.onEntityJoinWorld(PlayerForgeEventSubscriber.java:162) ~[main/:?] {re:classloading}
+	at net.minecraftforge.eventbus.ASMEventHandler_11_PlayerForgeEventSubscriber_onEntityJoinWorld_EntityJoinWorldEvent.invoke(.dynamic) ~[?:?] {}
+	at net.minecraftforge.eventbus.ASMEventHandler.invoke(ASMEventHandler.java:80) ~[eventbus-2.0.0-milestone.1-service.jar:?] {}
+	at net.minecraftforge.eventbus.EventBus.post(EventBus.java:258) ~[eventbus-2.0.0-milestone.1-service.jar:?] {}
+	at net.minecraft.world.server.ServerWorld.addPlayer(ServerWorld.java:901) ~[?:?] {re:classloading}
+	at net.minecraft.world.server.ServerWorld.addNewPlayer(ServerWorld.java:893) ~[?:?] {re:classloading}
+	at net.minecraft.server.management.PlayerList.initializeConnectionToPlayer(PlayerList.java:167) ~[?:?] {re:classloading}
+	at net.minecraft.network.login.ServerLoginNetHandler.tryAcceptPlayer(ServerLoginNetHandler.java:119) ~[?:?] {re:classloading}
+	at net.minecraft.network.login.ServerLoginNetHandler.tick(ServerLoginNetHandler.java:63) ~[?:?] {re:classloading}
+	at net.minecraft.network.NetworkManager.tick(NetworkManager.java:241) ~[?:?] {re:classloading}
+	at net.minecraft.network.NetworkSystem.tick(NetworkSystem.java:148) ~[?:?] {re:classloading}
+	at net.minecraft.server.MinecraftServer.updateTimeLightAndEntities(MinecraftServer.java:900) ~[?:?] {re:classloading,pl:accesstransformer:B}
+	at net.minecraft.server.MinecraftServer.tick(MinecraftServer.java:818) ~[?:?] {re:classloading,pl:accesstransformer:B}
+	at net.minecraft.server.integrated.IntegratedServer.tick(IntegratedServer.java:120) ~[?:?] {re:classloading,pl:runtimedistcleaner:A}
+	at net.minecraft.server.MinecraftServer.run(MinecraftServer.java:659) [?:?] {re:classloading,pl:accesstransformer:B}
+	at java.lang.Thread.run(Unknown Source) [?:1.8.0_241] {}
+
+
+A detailed walkthrough of the error, its code path and all known details is as follows:
+---------------------------------------------------------------------------------------
+
+-- Head --
+Thread: Server thread
+Stacktrace:
+	at net.minecraftforge.fml.network.simple.SimpleChannel.sendToServer(SimpleChannel.java:98)
+	at com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability.sendSkillChangesToServer(PlayerSkillCapability.java:249)
+	at com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability.setSkillsNameOfPowers(PlayerSkillCapability.java:184)
+	at com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability.<init>(PlayerSkillCapability.java:162)
+	at com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityFactory.call(PlayerSkillCapabilityFactory.java:9)
+	at com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityFactory.call(PlayerSkillCapabilityFactory.java:1)
+	at net.minecraftforge.common.capabilities.Capability.getDefaultInstance(Capability.java:131)
+	at com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider.lambda$0(PlayerSkillCapabilityProvider.java:18)
+	at net.minecraftforge.common.util.LazyOptional.getValue(LazyOptional.java:116)
+	at net.minecraftforge.common.util.LazyOptional.getValueUnsafe(LazyOptional.java:130)
+	at net.minecraftforge.common.util.LazyOptional.lambda$map$0(LazyOptional.java:184)
+	at net.minecraftforge.common.util.LazyOptional.getValue(LazyOptional.java:116)
+	at net.minecraftforge.common.util.LazyOptional.orElse(LazyOptional.java:219)
+	at com.chipoodle.devilrpg.eventsubscriber.common.PlayerForgeEventSubscriber.onEntityJoinWorld(PlayerForgeEventSubscriber.java:162)
+	at net.minecraftforge.eventbus.ASMEventHandler_11_PlayerForgeEventSubscriber_onEntityJoinWorld_EntityJoinWorldEvent.invoke(.dynamic)
+	at net.minecraftforge.eventbus.ASMEventHandler.invoke(ASMEventHandler.java:80)
+	at net.minecraftforge.eventbus.EventBus.post(EventBus.java:258)
+	at net.minecraft.world.server.ServerWorld.addPlayer(ServerWorld.java:901)
+	at net.minecraft.world.server.ServerWorld.addNewPlayer(ServerWorld.java:893)
+	at net.minecraft.server.management.PlayerList.initializeConnectionToPlayer(PlayerList.java:167)
+	at net.minecraft.network.login.ServerLoginNetHandler.tryAcceptPlayer(ServerLoginNetHandler.java:119)
+	at net.minecraft.network.login.ServerLoginNetHandler.tick(ServerLoginNetHandler.java:63)
+	at net.minecraft.network.NetworkManager.tick(NetworkManager.java:241)
+
+-- Ticking connection --
+Details:
+	Connection: net.minecraft.network.NetworkManager@47a389a8
+Stacktrace:
+	at net.minecraft.network.NetworkSystem.tick(NetworkSystem.java:148)
+	at net.minecraft.server.MinecraftServer.updateTimeLightAndEntities(MinecraftServer.java:900)
+	at net.minecraft.server.MinecraftServer.tick(MinecraftServer.java:818)
+	at net.minecraft.server.integrated.IntegratedServer.tick(IntegratedServer.java:120)
+	at net.minecraft.server.MinecraftServer.run(MinecraftServer.java:659)
+	at java.lang.Thread.run(Unknown Source)
+
+-- System Details --
+Details:
+	Minecraft Version: 1.15.2
+	Minecraft Version ID: 1.15.2
+	Operating System: Windows 10 (amd64) version 10.0
+	Java Version: 1.8.0_241, Oracle Corporation
+	Java VM Version: Java HotSpot(TM) 64-Bit Server VM (mixed mode), Oracle Corporation
+	Memory: 233567912 bytes (222 MB) / 1082654720 bytes (1032 MB) up to 1873805312 bytes (1787 MB)
+	CPUs: 8
+	JVM Flags: 1 total; -XX:HeapDumpPath=MojangTricksIntelDriversForPerformance_javaw.exe_minecraft.exe.heapdump
+	ModLauncher: 5.0.0-milestone.4+67+b1a340b
+	ModLauncher launch target: fmluserdevclient
+	ModLauncher naming: mcp
+	ModLauncher services: 
+		/eventbus-2.0.0-milestone.1-service.jar eventbus PLUGINSERVICE 
+		/forge-1.15.2-31.1.0_mapped_snapshot_20200131-1.15.1-launcher.jar object_holder_definalize PLUGINSERVICE 
+		/forge-1.15.2-31.1.0_mapped_snapshot_20200131-1.15.1-launcher.jar runtime_enum_extender PLUGINSERVICE 
+		/accesstransformers-2.0.0-milestone.1-shadowed.jar accesstransformer PLUGINSERVICE 
+		/forge-1.15.2-31.1.0_mapped_snapshot_20200131-1.15.1-launcher.jar capability_inject_definalize PLUGINSERVICE 
+		/forge-1.15.2-31.1.0_mapped_snapshot_20200131-1.15.1-launcher.jar runtimedistcleaner PLUGINSERVICE 
+		/forge-1.15.2-31.1.0_mapped_snapshot_20200131-1.15.1-launcher.jar fml TRANSFORMATIONSERVICE 
+	FML: 31.1
+	Forge: net.minecraftforge:31.1.0
+	FML Language Providers: 
+		javafml@31.1
+		minecraft@1
+	Mod List: 
+		client-extra.jar Minecraft {minecraft@1.15.2 DONE}
+		main Devil RPG {devilrpg@version DONE}
+		forge-1.15.2-31.1.0_mapped_snapshot_20200131-1.15.1-recomp.jar Forge {forge@31.1.0 DONE}
+	Player Count: 1 / 8; [ServerPlayerEntity['chipoodle'/309, l='New World', x=-23.50, y=64.00, z=248.50]]
+	Data Packs: vanilla, mod:devilrpg, mod:forge (incompatible)
+	Type: Integrated Server (map_client.txt)
+	Is Modded: Definitely; Client brand changed to 'forge'

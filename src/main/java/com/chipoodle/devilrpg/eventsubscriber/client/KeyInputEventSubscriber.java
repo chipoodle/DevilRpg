@@ -1,26 +1,18 @@
 package com.chipoodle.devilrpg.eventsubscriber.client;
 
-import java.util.List;
-import java.util.stream.Stream;
-
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.client.gui.skill.SkillScreen;
 import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.network.handler.KeyboardSkillServerHandler;
-import com.chipoodle.devilrpg.util.ConstantesPower;
+import com.chipoodle.devilrpg.util.PowerEnum;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.settings.KeyBinding;
-import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.Style;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.InputEvent.KeyInputEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.client.registry.ClientRegistry;
-import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 
 /**
@@ -46,7 +38,7 @@ public class KeyInputEventSubscriber {
         }
     }
 
-    //Evento que sólo se ejecuta en el cliente
+    //Evento que sï¿½lo se ejecuta en el cliente
     @SubscribeEvent
     public static void onKeyInput(KeyInputEvent event) {
         Minecraft instance = Minecraft.getInstance();
@@ -55,19 +47,19 @@ public class KeyInputEventSubscriber {
 
         if (KEYS[0].isPressed()) {
         	DevilRpg.LOGGER.debug(KEYS[0].getLocalizedName() + "pressed. " + KEYS[0].getKey().getKeyCode());        
-            ModNetwork.CHANNEL.sendToServer(new KeyboardSkillServerHandler(ConstantesPower.POWER1));
+            ModNetwork.CHANNEL.sendToServer(new KeyboardSkillServerHandler(PowerEnum.POWER1));
         }
         if (KEYS[1].isPressed()) {
         	DevilRpg.LOGGER.debug(KEYS[1].getLocalizedName() + "pressed. " + KEYS[1].getKey().getKeyCode());
-            ModNetwork.CHANNEL.sendToServer(new KeyboardSkillServerHandler(ConstantesPower.POWER2));
+            ModNetwork.CHANNEL.sendToServer(new KeyboardSkillServerHandler(PowerEnum.POWER2));
         }
         if (KEYS[2].isPressed()) {
         	DevilRpg.LOGGER.debug(KEYS[2].getLocalizedName() + "pressed. " + KEYS[2].getKey().getKeyCode());
-            ModNetwork.CHANNEL.sendToServer(new KeyboardSkillServerHandler(ConstantesPower.POWER3));
+            ModNetwork.CHANNEL.sendToServer(new KeyboardSkillServerHandler(PowerEnum.POWER3));
         }
         if (KEYS[3].isPressed()) {
         	DevilRpg.LOGGER.debug(KEYS[3].getLocalizedName() + "pressed. " + KEYS[3].getKey().getKeyCode());
-            ModNetwork.CHANNEL.sendToServer(new KeyboardSkillServerHandler(ConstantesPower.POWER4));
+            ModNetwork.CHANNEL.sendToServer(new KeyboardSkillServerHandler(PowerEnum.POWER4));
         }
         if (KEYS[4].isPressed()) {
         	DevilRpg.LOGGER.debug(KEYS[4].getLocalizedName() + "pressed. " + KEYS[4].getKey().getKeyCode());

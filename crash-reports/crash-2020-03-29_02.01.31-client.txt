@@ -1,0 +1,151 @@
+---- Minecraft Crash Report ----
+// Hi. I'm Minecraft, and I'm a crashaholic.
+
+Time: 29/03/20 02:01 AM
+Description: mouseClicked event handler
+
+java.lang.IndexOutOfBoundsException: Index: 0, Size: 0
+	at java.util.ArrayList.rangeCheck(Unknown Source) ~[?:1.8.0_241] {}
+	at java.util.ArrayList.get(Unknown Source) ~[?:1.8.0_241] {}
+	at com.chipoodle.devilrpg.client.gui.skill.SkillScreen.updateButtons(SkillScreen.java:99) ~[main/:?] {re:classloading}
+	at com.chipoodle.devilrpg.client.gui.skill.BaseBookScreen.nextPage(BaseBookScreen.java:152) ~[main/:?] {re:classloading,pl:runtimedistcleaner:A}
+	at com.chipoodle.devilrpg.client.gui.skill.BaseBookScreen.lambda$1(BaseBookScreen.java:121) ~[main/:?] {re:classloading,pl:runtimedistcleaner:A}
+	at net.minecraft.client.gui.widget.button.Button.onPress(Button.java:16) ~[forge-1.15.2-31.1.0_mapped_snapshot_20200131-1.15.1-recomp.jar:?] {re:classloading,pl:runtimedistcleaner:A}
+	at net.minecraft.client.gui.widget.button.AbstractButton.onClick(AbstractButton.java:17) ~[forge-1.15.2-31.1.0_mapped_snapshot_20200131-1.15.1-recomp.jar:?] {re:classloading,pl:runtimedistcleaner:A}
+	at net.minecraft.client.gui.widget.Widget.mouseClicked(Widget.java:136) ~[forge-1.15.2-31.1.0_mapped_snapshot_20200131-1.15.1-recomp.jar:?] {re:classloading,pl:runtimedistcleaner:A}
+	at net.minecraft.client.gui.INestedGuiEventHandler.mouseClicked(INestedGuiEventHandler.java:31) ~[forge-1.15.2-31.1.0_mapped_snapshot_20200131-1.15.1-recomp.jar:?] {re:classloading,pl:runtimedistcleaner:A}
+	at com.chipoodle.devilrpg.client.gui.skill.BaseBookScreen.mouseClicked(BaseBookScreen.java:220) ~[main/:?] {re:classloading,pl:runtimedistcleaner:A}
+	at net.minecraft.client.MouseHelper.lambda$mouseButtonCallback$0(MouseHelper.java:87) ~[forge-1.15.2-31.1.0_mapped_snapshot_20200131-1.15.1-recomp.jar:?] {re:classloading,pl:runtimedistcleaner:A}
+	at net.minecraft.client.gui.screen.Screen.wrapScreenError(Screen.java:446) ~[forge-1.15.2-31.1.0_mapped_snapshot_20200131-1.15.1-recomp.jar:?] {re:classloading,pl:runtimedistcleaner:A}
+	at net.minecraft.client.MouseHelper.mouseButtonCallback(MouseHelper.java:85) ~[forge-1.15.2-31.1.0_mapped_snapshot_20200131-1.15.1-recomp.jar:?] {re:classloading,pl:runtimedistcleaner:A}
+	at net.minecraft.client.MouseHelper.lambda$null$4(MouseHelper.java:173) ~[forge-1.15.2-31.1.0_mapped_snapshot_20200131-1.15.1-recomp.jar:?] {re:classloading,pl:runtimedistcleaner:A}
+	at net.minecraft.util.concurrent.ThreadTaskExecutor.execute(ThreadTaskExecutor.java:86) ~[forge-1.15.2-31.1.0_mapped_snapshot_20200131-1.15.1-recomp.jar:?] {re:classloading,pl:accesstransformer:B}
+	at net.minecraft.client.MouseHelper.lambda$registerCallbacks$5(MouseHelper.java:172) ~[forge-1.15.2-31.1.0_mapped_snapshot_20200131-1.15.1-recomp.jar:?] {re:classloading,pl:runtimedistcleaner:A}
+	at org.lwjgl.glfw.GLFWMouseButtonCallbackI.callback(GLFWMouseButtonCallbackI.java:36) ~[lwjgl-glfw-3.2.2.jar:build 10] {}
+	at org.lwjgl.system.JNI.invokeV(Native Method) ~[lwjgl-3.2.2.jar:build 10] {}
+	at org.lwjgl.glfw.GLFW.glfwPollEvents(GLFW.java:3101) ~[lwjgl-glfw-3.2.2.jar:build 10] {}
+	at com.mojang.blaze3d.systems.RenderSystem.flipFrame(RenderSystem.java:85) ~[forge-1.15.2-31.1.0_mapped_snapshot_20200131-1.15.1-recomp.jar:?] {re:classloading,pl:runtimedistcleaner:A}
+	at net.minecraft.client.MainWindow.flipFrame(MainWindow.java:296) ~[forge-1.15.2-31.1.0_mapped_snapshot_20200131-1.15.1-recomp.jar:?] {re:classloading,pl:runtimedistcleaner:A}
+	at net.minecraft.client.Minecraft.runGameLoop(Minecraft.java:979) ~[forge-1.15.2-31.1.0_mapped_snapshot_20200131-1.15.1-recomp.jar:?] {re:classloading,pl:accesstransformer:B,pl:runtimedistcleaner:A}
+	at net.minecraft.client.Minecraft.run(Minecraft.java:554) ~[forge-1.15.2-31.1.0_mapped_snapshot_20200131-1.15.1-recomp.jar:?] {re:classloading,pl:accesstransformer:B,pl:runtimedistcleaner:A}
+	at net.minecraft.client.main.Main.main(Main.java:177) ~[forge-1.15.2-31.1.0_mapped_snapshot_20200131-1.15.1-recomp.jar:?] {re:classloading,pl:runtimedistcleaner:A}
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method) ~[?:1.8.0_241] {}
+	at sun.reflect.NativeMethodAccessorImpl.invoke(Unknown Source) ~[?:1.8.0_241] {}
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(Unknown Source) ~[?:1.8.0_241] {}
+	at java.lang.reflect.Method.invoke(Unknown Source) ~[?:1.8.0_241] {}
+	at net.minecraftforge.userdev.FMLUserdevClientLaunchProvider.lambda$launchService$0(FMLUserdevClientLaunchProvider.java:55) ~[forge-1.15.2-31.1.0_mapped_snapshot_20200131-1.15.1-recomp.jar:?] {}
+	at cpw.mods.modlauncher.LaunchServiceHandlerDecorator.launch(LaunchServiceHandlerDecorator.java:37) [modlauncher-5.0.0-milestone.4.jar:?] {}
+	at cpw.mods.modlauncher.LaunchServiceHandler.launch(LaunchServiceHandler.java:54) [modlauncher-5.0.0-milestone.4.jar:?] {}
+	at cpw.mods.modlauncher.LaunchServiceHandler.launch(LaunchServiceHandler.java:72) [modlauncher-5.0.0-milestone.4.jar:?] {}
+	at cpw.mods.modlauncher.Launcher.run(Launcher.java:81) [modlauncher-5.0.0-milestone.4.jar:?] {}
+	at cpw.mods.modlauncher.Launcher.main(Launcher.java:65) [modlauncher-5.0.0-milestone.4.jar:?] {}
+	at net.minecraftforge.userdev.LaunchTesting.main(LaunchTesting.java:102) [forge-1.15.2-31.1.0_mapped_snapshot_20200131-1.15.1-recomp.jar:?] {}
+
+
+A detailed walkthrough of the error, its code path and all known details is as follows:
+---------------------------------------------------------------------------------------
+
+-- Head --
+Thread: Render thread
+Stacktrace:
+	at java.util.ArrayList.rangeCheck(Unknown Source)
+	at java.util.ArrayList.get(Unknown Source)
+	at com.chipoodle.devilrpg.client.gui.skill.SkillScreen.updateButtons(SkillScreen.java:99)
+	at com.chipoodle.devilrpg.client.gui.skill.BaseBookScreen.nextPage(BaseBookScreen.java:152)
+	at com.chipoodle.devilrpg.client.gui.skill.BaseBookScreen.lambda$1(BaseBookScreen.java:121)
+	at net.minecraft.client.gui.widget.button.Button.onPress(Button.java:16)
+	at net.minecraft.client.gui.widget.button.AbstractButton.onClick(AbstractButton.java:17)
+	at net.minecraft.client.gui.widget.Widget.mouseClicked(Widget.java:136)
+	at net.minecraft.client.gui.INestedGuiEventHandler.mouseClicked(INestedGuiEventHandler.java:31)
+	at com.chipoodle.devilrpg.client.gui.skill.BaseBookScreen.mouseClicked(BaseBookScreen.java:220)
+	at net.minecraft.client.MouseHelper.lambda$mouseButtonCallback$0(MouseHelper.java:87)
+
+-- Affected screen --
+Details:
+	Screen name: com.chipoodle.devilrpg.client.gui.skill.SkillScreen
+Stacktrace:
+	at net.minecraft.client.gui.screen.Screen.wrapScreenError(Screen.java:446)
+	at net.minecraft.client.MouseHelper.mouseButtonCallback(MouseHelper.java:85)
+	at net.minecraft.client.MouseHelper.lambda$null$4(MouseHelper.java:173)
+	at net.minecraft.util.concurrent.ThreadTaskExecutor.execute(ThreadTaskExecutor.java:86)
+	at net.minecraft.client.MouseHelper.lambda$registerCallbacks$5(MouseHelper.java:172)
+	at org.lwjgl.glfw.GLFWMouseButtonCallbackI.callback(GLFWMouseButtonCallbackI.java:36)
+	at org.lwjgl.system.JNI.invokeV(Native Method)
+	at org.lwjgl.glfw.GLFW.glfwPollEvents(GLFW.java:3101)
+	at com.mojang.blaze3d.systems.RenderSystem.flipFrame(RenderSystem.java:85)
+
+-- Affected level --
+Details:
+	All players: 1 total; [ClientPlayerEntity['chipoodle'/654, l='MpServer', x=-69.50, y=77.00, z=-7.50]]
+	Chunk stats: Client Chunk Cache: 841, 529
+	Level dimension: DimensionType{minecraft:overworld}
+	Level name: MpServer
+	Level seed: -9062960474346633153
+	Level generator: ID 00 - default, ver 1. Features enabled: false
+	Level generator options: {}
+	Level spawn location: World: (-64,73,0), Chunk: (at 0,4,0 in -4,0; contains blocks -64,0,0 to -49,255,15), Region: (-1,0; contains chunks -32,0 to -1,31, blocks -512,0,0 to -1,255,511)
+	Level time: 406 game time, 406 day time
+	Known server brands: 
+	Level was modded: false
+	Level storage version: 0x00000 - Unknown?
+	Level weather: Rain time: 0 (now: false), thunder time: 0 (now: false)
+	Level game mode: Game mode: survival (ID 0). Hardcore: false. Cheats: false
+	Server brand: forge
+	Server type: Integrated singleplayer server
+Stacktrace:
+	at net.minecraft.client.world.ClientWorld.fillCrashReport(ClientWorld.java:457)
+	at net.minecraft.client.Minecraft.addGraphicsAndWorldToCrashReport(Minecraft.java:1835)
+	at net.minecraft.client.Minecraft.run(Minecraft.java:568)
+	at net.minecraft.client.main.Main.main(Main.java:177)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(Unknown Source)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(Unknown Source)
+	at java.lang.reflect.Method.invoke(Unknown Source)
+	at net.minecraftforge.userdev.FMLUserdevClientLaunchProvider.lambda$launchService$0(FMLUserdevClientLaunchProvider.java:55)
+	at cpw.mods.modlauncher.LaunchServiceHandlerDecorator.launch(LaunchServiceHandlerDecorator.java:37)
+	at cpw.mods.modlauncher.LaunchServiceHandler.launch(LaunchServiceHandler.java:54)
+	at cpw.mods.modlauncher.LaunchServiceHandler.launch(LaunchServiceHandler.java:72)
+	at cpw.mods.modlauncher.Launcher.run(Launcher.java:81)
+	at cpw.mods.modlauncher.Launcher.main(Launcher.java:65)
+	at net.minecraftforge.userdev.LaunchTesting.main(LaunchTesting.java:102)
+
+-- System Details --
+Details:
+	Minecraft Version: 1.15.2
+	Minecraft Version ID: 1.15.2
+	Operating System: Windows 10 (amd64) version 10.0
+	Java Version: 1.8.0_241, Oracle Corporation
+	Java VM Version: Java HotSpot(TM) 64-Bit Server VM (mixed mode), Oracle Corporation
+	Memory: 278218160 bytes (265 MB) / 1236271104 bytes (1179 MB) up to 1873805312 bytes (1787 MB)
+	CPUs: 8
+	JVM Flags: 1 total; -XX:HeapDumpPath=MojangTricksIntelDriversForPerformance_javaw.exe_minecraft.exe.heapdump
+	ModLauncher: 5.0.0-milestone.4+67+b1a340b
+	ModLauncher launch target: fmluserdevclient
+	ModLauncher naming: mcp
+	ModLauncher services: 
+		/eventbus-2.0.0-milestone.1-service.jar eventbus PLUGINSERVICE 
+		/forge-1.15.2-31.1.0_mapped_snapshot_20200131-1.15.1-launcher.jar object_holder_definalize PLUGINSERVICE 
+		/forge-1.15.2-31.1.0_mapped_snapshot_20200131-1.15.1-launcher.jar runtime_enum_extender PLUGINSERVICE 
+		/accesstransformers-2.0.0-milestone.1-shadowed.jar accesstransformer PLUGINSERVICE 
+		/forge-1.15.2-31.1.0_mapped_snapshot_20200131-1.15.1-launcher.jar capability_inject_definalize PLUGINSERVICE 
+		/forge-1.15.2-31.1.0_mapped_snapshot_20200131-1.15.1-launcher.jar runtimedistcleaner PLUGINSERVICE 
+		/forge-1.15.2-31.1.0_mapped_snapshot_20200131-1.15.1-launcher.jar fml TRANSFORMATIONSERVICE 
+	FML: 31.1
+	Forge: net.minecraftforge:31.1.0
+	FML Language Providers: 
+		javafml@31.1
+		minecraft@1
+	Mod List: 
+		client-extra.jar Minecraft {minecraft@1.15.2 DONE}
+		main Devil RPG {devilrpg@version DONE}
+		forge-1.15.2-31.1.0_mapped_snapshot_20200131-1.15.1-recomp.jar Forge {forge@31.1.0 DONE}
+	Launched Version: MOD_DEV
+	Backend library: LWJGL version 3.2.2 build 10
+	Backend API: Intel(R) UHD Graphics 620 GL version 4.6.0 - Build 26.20.100.7263, Intel
+	GL Caps: Using framebuffer using OpenGL 3.0
+	Using VBOs: Yes
+	Is Modded: Definitely; Client brand changed to 'forge'
+	Type: Client (map_client.txt)
+	Resource Packs: 
+	Current Language: English (US)
+	CPU: 8x Intel(R) Core(TM) i5-8350U CPU @ 1.70GHz

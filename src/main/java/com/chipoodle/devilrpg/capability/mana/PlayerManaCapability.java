@@ -3,9 +3,7 @@ package com.chipoodle.devilrpg.capability.mana;
 import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.network.handler.PlayerManaClientServerHandler;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.nbt.CompoundNBT;
-import net.minecraftforge.fml.common.thread.SidedThreadGroups;
 
 public class PlayerManaCapability implements IBaseManaCapability {
 

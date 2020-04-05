@@ -1,11 +1,12 @@
 package com.chipoodle.devilrpg.skillsystem;
 
 import static com.chipoodle.devilrpg.DevilRpg.LOGGER;
+
 import com.chipoodle.devilrpg.capability.mana.IBaseManaCapability;
 import com.chipoodle.devilrpg.capability.mana.PlayerManaCapabilityProvider;
 import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.network.handler.PlayerManaClientServerHandler;
-import com.chipoodle.devilrpg.util.ConstantesPower;
+import com.chipoodle.devilrpg.util.PowerEnum;
 
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraftforge.common.util.LazyOptional;
@@ -21,7 +22,7 @@ public class ServerSkillTrigger {
         SERVER_DB_SKILLS = new ServerSkillTranslator();
     }
 
-    public void triggerAction(ServerPlayerEntity playerIn, ConstantesPower triggeredPower) {
+    public void triggerAction(ServerPlayerEntity playerIn, PowerEnum triggeredPower) {
         LOGGER.info("----------------->Trigger Action. Is remote? "+playerIn.world.isRemote);
         if (!playerIn.world.isRemote) {
             ISkillContainer poder = SERVER_DB_SKILLS.getSkill(playerIn.world, playerIn, triggeredPower);

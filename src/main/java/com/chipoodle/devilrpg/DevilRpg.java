@@ -10,7 +10,6 @@ import com.chipoodle.devilrpg.init.ModEntityTypes;
 import com.chipoodle.devilrpg.init.ModItems;
 import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.init.ModTileEntityTypes;
-import com.chipoodle.devilrpg.skillsystem.ServerSkillTrigger;
 
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.ModLoadingContext;
@@ -45,6 +44,5 @@ public class DevilRpg {
         modLoadingContext.registerConfig(ModConfig.Type.SERVER, ConfigHolder.SERVER_SPEC);
         
         ModNetwork.register();
-        ServerSkillTrigger.register();
     }
 }
