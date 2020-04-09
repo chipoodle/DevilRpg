@@ -1,7 +1,7 @@
 package com.chipoodle.devilrpg.eventsubscriber.client;
 
 import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.client.gui.skill.SkillScreen;
+import com.chipoodle.devilrpg.client.gui.skillbook.SkillScreen;
 import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.network.handler.KeyboardSkillServerHandler;
 import com.chipoodle.devilrpg.util.PowerEnum;

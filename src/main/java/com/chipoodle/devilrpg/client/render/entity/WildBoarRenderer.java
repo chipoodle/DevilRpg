@@ -9,6 +9,8 @@ import net.minecraft.client.renderer.entity.EntityRendererManager;
 import net.minecraft.client.renderer.entity.MobRenderer;
 import net.minecraft.client.renderer.entity.model.PigModel;
 import net.minecraft.util.ResourceLocation;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
 
 /**
  * Handles rendering all WildBoar Entities.
@@ -18,6 +20,7 @@ import net.minecraft.util.ResourceLocation;
  *
  * @author Cadiboo
  */
+@OnlyIn(Dist.CLIENT)
 public class WildBoarRenderer extends MobRenderer<WildBoarEntity, PigModel<WildBoarEntity>> {
 
 	private static final ResourceLocation WILD_BOAR_TEXTURE = new ResourceLocation(DevilRpg.MODID, "textures/entity/wild_boar/wild_boar.png");

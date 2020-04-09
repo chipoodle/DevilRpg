@@ -2,18 +2,36 @@ package com.chipoodle.devilrpg.util;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.enchantment.EnchantmentHelper;
+import net.minecraft.entity.CreatureAttribute;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.SharedMonsterAttributes;
+import net.minecraft.entity.boss.dragon.EnderDragonPartEntity;
+import net.minecraft.entity.item.ArmorStandEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.player.ServerPlayerEntity;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.SwordItem;
+import net.minecraft.network.play.server.SEntityVelocityPacket;
+import net.minecraft.particles.ParticleTypes;
+import net.minecraft.potion.Effects;
+import net.minecraft.stats.Stats;
+import net.minecraft.util.DamageSource;
+import net.minecraft.util.Hand;
+import net.minecraft.util.SoundEvents;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.EntityRayTraceResult;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.GameType;
 import net.minecraft.world.World;
+import net.minecraft.world.server.ServerWorld;
 
 /**
  * 
@@ -69,55 +87,39 @@ public class TargetUtils {
 	 * @param flag    Optional flag to allow collision with shooter, e.g.
 	 *                (ticksInAir >= 5)
 	 */
-	/*public static RayTraceResult checkForImpact(World world, Entity entity, Entity shooter, double hitBox,
-			boolean flag) {
-		double posY = entity.getPosY() + (entity.getHeight() / 2); // fix for Dash
-		Vec3d vec3 = new Vec3d(entity.getPosX(), posY, entity.getPosZ());
-		Vec3d motion = entity.getMotion();
-		Vec3d vec31 = new Vec3d(entity.getPosX() + motion.getX(), posY + motion.getY(),entity.getPosZ() + motion.getZ());
-		BlockMode b;
-		RayTraceContext r = new RayTraceContext(vec3, vec31, BlockMode.COLLIDER, FluidMode.ANY, entity);
-		// RayTraceResult mop = world.rayTraceBlocks(vec3, vec31, false, true, false);
-		RayTraceResult mop = world.rayTraceBlocks(r);
-		vec3 = new Vec3d(entity.getPosX(), posY, entity.getPosZ());
-
-		motion = entity.getMotion();
-		vec31 = new Vec3d(entity.getPosX() + motion.getX(), posY + motion.getY(), entity.getPosZ() + motion.getZ());
-		if (mop != null) {
-			
-			vec31 = new Vec3d(mop.getHitVec().x, mop.getHitVec().y, mop.getHitVec().z);
-		}
-		Entity target = null;
-		motion = entity.getMotion();
-		List<Entity> list = world.getEntitiesWithinAABBExcludingEntity(entity, entity.getBoundingBox()
-				.expand(motion.getX(), motion.getY(), motion.getZ()).grow(1.0D, 1.0D, 1.0D));
-		double d0 = 0.0D;
-		for (int i = 0; i < list.size(); ++i) {
-			Entity entity1 = (Entity) list.get(i);
-			if (entity1.canBeCollidedWith() && (entity1 != shooter || flag)) {
-				AxisAlignedBB axisalignedbb = entity1.getBoundingBox().expand(hitBox, hitBox, hitBox);
-				RayTraceResult mop1 = axisalignedbb.calculateIntercept(vec3, vec31);
-				if (mop1 != null) {
-					double d1 = vec3.distanceTo(mop1.getHitVec());
-					if (d1 < d0 || d0 == 0.0D) {
-						target = entity1;
-						d0 = d1;
-					}
-				}
-			}
-		}
-		if (target != null) {
-			mop = new RayTraceResult(target);
-		}
-		if (mop != null && mop.entityHit instanceof PlayerEntity) {
-			PlayerEntity player = (PlayerEntity) mop.entityHit;
-			if (player.capabilities.disableDamage
-					|| (shooter instanceof PlayerEntity && !((PlayerEntity) shooter).canAttackPlayer(player))) {
-				mop = null;
-			}
-		}
-		return mop;
-	}*/
+	/*
+	 * public static RayTraceResult checkForImpact(World world, Entity entity,
+	 * Entity shooter, double hitBox, boolean flag) { double posY = entity.getPosY()
+	 * + (entity.getHeight() / 2); // fix for Dash Vec3d vec3 = new
+	 * Vec3d(entity.getPosX(), posY, entity.getPosZ()); Vec3d motion =
+	 * entity.getMotion(); Vec3d vec31 = new Vec3d(entity.getPosX() + motion.getX(),
+	 * posY + motion.getY(),entity.getPosZ() + motion.getZ()); BlockMode b;
+	 * RayTraceContext r = new RayTraceContext(vec3, vec31, BlockMode.COLLIDER,
+	 * FluidMode.ANY, entity); // RayTraceResult mop = world.rayTraceBlocks(vec3,
+	 * vec31, false, true, false); RayTraceResult mop = world.rayTraceBlocks(r);
+	 * vec3 = new Vec3d(entity.getPosX(), posY, entity.getPosZ());
+	 * 
+	 * motion = entity.getMotion(); vec31 = new Vec3d(entity.getPosX() +
+	 * motion.getX(), posY + motion.getY(), entity.getPosZ() + motion.getZ()); if
+	 * (mop != null) {
+	 * 
+	 * vec31 = new Vec3d(mop.getHitVec().x, mop.getHitVec().y, mop.getHitVec().z); }
+	 * Entity target = null; motion = entity.getMotion(); List<Entity> list =
+	 * world.getEntitiesWithinAABBExcludingEntity(entity, entity.getBoundingBox()
+	 * .expand(motion.getX(), motion.getY(), motion.getZ()).grow(1.0D, 1.0D, 1.0D));
+	 * double d0 = 0.0D; for (int i = 0; i < list.size(); ++i) { Entity entity1 =
+	 * (Entity) list.get(i); if (entity1.canBeCollidedWith() && (entity1 != shooter
+	 * || flag)) { AxisAlignedBB axisalignedbb =
+	 * entity1.getBoundingBox().expand(hitBox, hitBox, hitBox); RayTraceResult mop1
+	 * = axisalignedbb.calculateIntercept(vec3, vec31); if (mop1 != null) { double
+	 * d1 = vec3.distanceTo(mop1.getHitVec()); if (d1 < d0 || d0 == 0.0D) { target =
+	 * entity1; d0 = d1; } } } } if (target != null) { mop = new
+	 * RayTraceResult(target); } if (mop != null && mop.entityHit instanceof
+	 * PlayerEntity) { PlayerEntity player = (PlayerEntity) mop.entityHit; if
+	 * (player.capabilities.disableDamage || (shooter instanceof PlayerEntity &&
+	 * !((PlayerEntity) shooter).canAttackPlayer(player))) { mop = null; } } return
+	 * mop; }
+	 */
 
 	/**
 	 * Returns true if the entity is directly in the crosshairs
@@ -220,13 +222,11 @@ public class TargetUtils {
 			AxisAlignedBB bb = new AxisAlignedBB(targetX - radius, targetY - radius, targetZ - radius, targetX + radius,
 					targetY + radius, targetZ + radius);
 			List<LivingEntity> list = seeker.world.getEntitiesWithinAABB(LivingEntity.class, bb);
-			for (LivingEntity target : list) {
-				if (target != seeker && target.canBeCollidedWith() && isTargetInSight(vec3, seeker, target)) {
-					if (!targets.contains(target)) {
-						targets.add(target);
-					}
-				}
-			}
+
+			return list.stream().filter(
+					target -> target != seeker && target.canBeCollidedWith() && isTargetInSight(vec3, seeker, target))
+					.distinct().collect(Collectors.toList());
+
 		}
 
 		return targets;
@@ -396,4 +396,210 @@ public class TargetUtils {
 	 * entity.world.getBlockState(new BlockPos(entity)); return
 	 * state.getBlock().getMaterial().isLiquid(); }
 	 */
+
+	/**
+	 * Attacks for the player the targeted entity with the currently equipped item.
+	 * The equipped item has hitEntity called on it. Args: targetEntity
+	 */
+	public static void attackTargetEntityWithItem(ServerPlayerEntity player, Entity targetEntity, ItemStack heldItem) {
+		if (player.interactionManager.getGameType() == GameType.SPECTATOR) {
+			player.setSpectatingEntity(targetEntity);
+		} else {
+			// player.attackTargetEntityWithCurrentItem(targetEntity);
+			attackTargetEntity(player, targetEntity, heldItem);
+		}
+
+	}
+
+	/**
+	 * Attacks for the player the targeted entity with the currently equipped item.
+	 * The equipped item has hitEntity called on it. Args: targetEntity
+	 */
+	private static void attackTargetEntity(ServerPlayerEntity player, Entity targetEntity, ItemStack heldItem) {
+		/*if (!net.minecraftforge.common.ForgeHooks.onPlayerAttackTarget(player, targetEntity))
+			return;*/
+		if (targetEntity.canBeAttackedWithItem()) {
+			if (!targetEntity.hitByEntity(player)) {
+				float f = (float) player.getAttribute(SharedMonsterAttributes.ATTACK_DAMAGE).getValue();
+				float f1;
+				if (targetEntity instanceof LivingEntity) {
+					f1 = EnchantmentHelper.getModifierForCreature(heldItem,
+							((LivingEntity) targetEntity).getCreatureAttribute());
+				} else {
+					f1 = EnchantmentHelper.getModifierForCreature(heldItem, CreatureAttribute.UNDEFINED);
+				}
+
+				float f2 = player.getCooledAttackStrength(0.5F);
+				f = f * (0.2F + f2 * f2 * 0.8F);
+				f1 = f1 * f2;
+				player.resetCooldown();
+				if (f > 0.0F || f1 > 0.0F) {
+					boolean flag = f2 > 0.9F;
+					boolean flag1 = false;
+					int i = 0;
+					i = i + EnchantmentHelper.getKnockbackModifier(player);
+					if (player.isSprinting() && flag) {
+						player.world.playSound((PlayerEntity) null, player.getPosX(), player.getPosY(),
+								player.getPosZ(), SoundEvents.ENTITY_PLAYER_ATTACK_KNOCKBACK, player.getSoundCategory(),
+								1.0F, 1.0F);
+						++i;
+						flag1 = true;
+					}
+
+					boolean flag2 = flag && player.fallDistance > 0.0F && !player.onGround && !player.isOnLadder()
+							&& !player.isInWater() && !player.isPotionActive(Effects.BLINDNESS) && !player.isPassenger()
+							&& targetEntity instanceof LivingEntity;
+					flag2 = flag2 && !player.isSprinting();
+					net.minecraftforge.event.entity.player.CriticalHitEvent hitResult = net.minecraftforge.common.ForgeHooks
+							.getCriticalHit(player, targetEntity, flag2, flag2 ? 1.5F : 1.0F);
+					flag2 = hitResult != null;
+					if (flag2) {
+						f *= hitResult.getDamageModifier();
+					}
+
+					f = f + f1;
+					boolean flag3 = false;
+					double d0 = (double) (player.distanceWalkedModified - player.prevDistanceWalkedModified);
+					if (flag && !flag2 && !flag1 && player.onGround && d0 < (double) player.getAIMoveSpeed()) {
+						ItemStack itemstack = heldItem;//player.getHeldItem(Hand.MAIN_HAND);
+						if (itemstack.getItem() instanceof SwordItem) {
+							flag3 = true;
+						}
+					}
+
+					float f4 = 0.0F;
+					boolean flag4 = false;
+					int j = EnchantmentHelper.getFireAspectModifier(player);
+					if (targetEntity instanceof LivingEntity) {
+						f4 = ((LivingEntity) targetEntity).getHealth();
+						if (j > 0 && !targetEntity.isBurning()) {
+							flag4 = true;
+							targetEntity.setFire(1);
+						}
+					}
+
+					Vec3d vec3d = targetEntity.getMotion();
+					boolean flag5 = targetEntity.attackEntityFrom(DamageSource.causePlayerDamage(player), f);
+					if (flag5) {
+						if (i > 0) {
+							if (targetEntity instanceof LivingEntity) {
+								((LivingEntity) targetEntity).knockBack(player, (float) i * 0.5F,
+										(double) MathHelper.sin(player.rotationYaw * ((float) Math.PI / 180F)),
+										(double) (-MathHelper.cos(player.rotationYaw * ((float) Math.PI / 180F))));
+							} else {
+								targetEntity.addVelocity(
+										(double) (-MathHelper.sin(player.rotationYaw * ((float) Math.PI / 180F))
+												* (float) i * 0.5F),
+										0.1D, (double) (MathHelper.cos(player.rotationYaw * ((float) Math.PI / 180F))
+												* (float) i * 0.5F));
+							}
+
+							player.setMotion(player.getMotion().mul(0.6D, 1.0D, 0.6D));
+							player.setSprinting(false);
+						}
+
+						if (flag3) {
+							float f3 = 1.0F + EnchantmentHelper.getSweepingDamageRatio(player) * f;
+
+							for (LivingEntity livingentity : player.world.getEntitiesWithinAABB(LivingEntity.class,
+									targetEntity.getBoundingBox().grow(1.0D, 0.25D, 1.0D))) {
+								if (livingentity != player && livingentity != targetEntity
+										&& !player.isOnSameTeam(livingentity)
+										&& (!(livingentity instanceof ArmorStandEntity)
+												|| !((ArmorStandEntity) livingentity).hasMarker())
+										&& player.getDistanceSq(livingentity) < 9.0D) {
+									livingentity.knockBack(player, 0.4F,
+											(double) MathHelper.sin(player.rotationYaw * ((float) Math.PI / 180F)),
+											(double) (-MathHelper.cos(player.rotationYaw * ((float) Math.PI / 180F))));
+									livingentity.attackEntityFrom(DamageSource.causePlayerDamage(player), f3);
+								}
+							}
+
+							player.world.playSound((PlayerEntity) null, player.getPosX(), player.getPosY(),
+									player.getPosZ(), SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP, player.getSoundCategory(),
+									1.0F, 1.0F);
+							player.spawnSweepParticles();
+						}
+
+						if (targetEntity instanceof ServerPlayerEntity && targetEntity.velocityChanged) {
+							((ServerPlayerEntity) targetEntity).connection
+									.sendPacket(new SEntityVelocityPacket(targetEntity));
+							targetEntity.velocityChanged = false;
+							targetEntity.setMotion(vec3d);
+						}
+
+						if (flag2) {
+							player.world.playSound((PlayerEntity) null, player.getPosX(), player.getPosY(),
+									player.getPosZ(), SoundEvents.ENTITY_PLAYER_ATTACK_CRIT, player.getSoundCategory(),
+									1.0F, 1.0F);
+							player.onCriticalHit(targetEntity);
+						}
+
+						if (!flag2 && !flag3) {
+							if (flag) {
+								player.world.playSound((PlayerEntity) null, player.getPosX(), player.getPosY(),
+										player.getPosZ(), SoundEvents.ENTITY_PLAYER_ATTACK_STRONG,
+										player.getSoundCategory(), 1.0F, 1.0F);
+							} else {
+								player.world.playSound((PlayerEntity) null, player.getPosX(), player.getPosY(),
+										player.getPosZ(), SoundEvents.ENTITY_PLAYER_ATTACK_WEAK,
+										player.getSoundCategory(), 1.0F, 1.0F);
+							}
+						}
+
+						if (f1 > 0.0F) {
+							player.onEnchantmentCritical(targetEntity);
+						}
+
+						player.setLastAttackedEntity(targetEntity);
+						if (targetEntity instanceof LivingEntity) {
+							EnchantmentHelper.applyThornEnchantments((LivingEntity) targetEntity, player);
+						}
+
+						EnchantmentHelper.applyArthropodEnchantments(player, targetEntity);
+						ItemStack itemstack1 = heldItem;//player.getHeldItemMainhand();
+						Entity entity = targetEntity;
+						if (targetEntity instanceof EnderDragonPartEntity) {
+							entity = ((EnderDragonPartEntity) targetEntity).dragon;
+						}
+
+						if (!player.world.isRemote && !itemstack1.isEmpty() && entity instanceof LivingEntity) {
+							ItemStack copy = itemstack1.copy();
+							itemstack1.hitEntity((LivingEntity) entity, player);
+							if (itemstack1.isEmpty()) {
+								net.minecraftforge.event.ForgeEventFactory.onPlayerDestroyItem(player, copy,Hand.MAIN_HAND);
+								player.setHeldItem(Hand.MAIN_HAND, ItemStack.EMPTY);
+							}
+						}
+
+						if (targetEntity instanceof LivingEntity) {
+							float f5 = f4 - ((LivingEntity) targetEntity).getHealth();
+							player.addStat(Stats.DAMAGE_DEALT, Math.round(f5 * 10.0F));
+							if (j > 0) {
+								targetEntity.setFire(j * 4);
+							}
+
+							if (player.world instanceof ServerWorld && f5 > 2.0F) {
+								int k = (int) ((double) f5 * 0.5D);
+								((ServerWorld) player.world).spawnParticle(ParticleTypes.DAMAGE_INDICATOR,
+										targetEntity.getPosX(), targetEntity.getPosYHeight(0.5D),
+										targetEntity.getPosZ(), k, 0.1D, 0.0D, 0.1D, 0.2D);
+							}
+						}
+
+						player.addExhaustion(0.1F);
+					} else {
+						player.world.playSound((PlayerEntity) null, player.getPosX(), player.getPosY(),
+								player.getPosZ(), SoundEvents.ENTITY_PLAYER_ATTACK_NODAMAGE, player.getSoundCategory(),
+								1.0F, 1.0F);
+						if (flag4) {
+							targetEntity.extinguish();
+						}
+					}
+				}
+
+			}
+		}
+	}
+
 }

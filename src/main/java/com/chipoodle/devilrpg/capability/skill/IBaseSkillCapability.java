@@ -26,6 +26,8 @@ public interface IBaseSkillCapability extends IGenericCapability{
 	public void setSkillsPoints(HashMap<SkillEnum,Integer> points);
 	public HashMap<SkillEnum,Integer> getMaxSkillsPoints();
 	public void setMaxSkillsPoints(HashMap<SkillEnum,Integer> points);
+	public HashMap<SkillEnum,Integer> getManaCostPoints();
+	public void setManaCostPoints(HashMap<SkillEnum,Integer> points);
 	
 	public void triggerAction(ServerPlayerEntity playerIn, PowerEnum triggeredPower) ;
 	

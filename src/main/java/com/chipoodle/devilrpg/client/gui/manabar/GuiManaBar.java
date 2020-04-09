@@ -13,11 +13,11 @@ import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent.ElementType;
 import net.minecraftforge.common.util.LazyOptional;
 
-//@OnlyIn(Dist.CLIENT)
 public class GuiManaBar extends AbstractGui {
 	private Minecraft mc;
 	private float manaRun;
 	private float maxMana;
+	LazyOptional<IBaseManaCapability> playerCapability;
 
 	private static final ResourceLocation texturepath = new ResourceLocation(
 			DevilRpg.MODID + ":textures/gui/mana_bar2.png");
@@ -33,7 +33,9 @@ public class GuiManaBar extends AbstractGui {
 			return;
 		}
 		
-		LazyOptional<IBaseManaCapability> playerCapability =  mc.player.getCapability(PlayerManaCapabilityProvider.MANA_CAP);
+		if(playerCapability == null)
+			playerCapability =  mc.player.getCapability(PlayerManaCapabilityProvider.MANA_CAP);
+		
 		if(!playerCapability.isPresent())
 			return;
 		

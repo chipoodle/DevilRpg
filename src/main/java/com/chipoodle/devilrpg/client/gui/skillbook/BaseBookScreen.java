@@ -1,4 +1,4 @@
-package com.chipoodle.devilrpg.client.gui.skill;
+package com.chipoodle.devilrpg.client.gui.skillbook;
 
 import java.util.Collections;
 import java.util.List;

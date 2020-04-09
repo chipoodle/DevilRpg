@@ -29,5 +29,11 @@ public final class DevilRpgConfig {
 
     public static int electricFurnaceEnergySmeltCostPerTick = 100;
     public static int heatCollectorTransferAmountPerTick = 100;
+    
+    public static final int WOLF_SPAWN_DISTANCE = 3;
+	public static final double WISP_SPAWN_DISTANCE = 3;
+	public static final double BEAR_SPAWN_DISTANCE = 3;	
+	
+	public static final int COMMAND_PERMISSION_LEVEL = 2;
 
 }

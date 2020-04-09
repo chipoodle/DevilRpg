@@ -1,6 +1,6 @@
 package com.chipoodle.devilrpg.client.render.entity.layer;
 
-import com.chipoodle.devilrpg.client.render.entity.model.SoulWolfModel;
+import com.chipoodle.devilrpg.client.render.entity.model.SoulWolfModelHeart;
 import com.chipoodle.devilrpg.entity.soulwolf.SoulWolfEntity;
 import com.mojang.blaze3d.matrix.MatrixStack;
 
@@ -12,10 +12,10 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 @OnlyIn(Dist.CLIENT)
-public class SoulWolfCollarLayer extends LayerRenderer<SoulWolfEntity, SoulWolfModel<SoulWolfEntity>> {
+public class SoulWolfCollarLayer extends LayerRenderer<SoulWolfEntity, SoulWolfModelHeart<SoulWolfEntity>> {
 	private static final ResourceLocation WOLF_COLLAR = new ResourceLocation("textures/entity/wolf/wolf_collar.png");
 
-	   public SoulWolfCollarLayer(IEntityRenderer<SoulWolfEntity, SoulWolfModel<SoulWolfEntity>> rendererIn) {
+	   public SoulWolfCollarLayer(IEntityRenderer<SoulWolfEntity, SoulWolfModelHeart<SoulWolfEntity>> rendererIn) {
 	      super(rendererIn);
 	   }
 

@@ -1,4 +1,4 @@
-package com.chipoodle.devilrpg.client.gui.skill;
+package com.chipoodle.devilrpg.client.gui.skillbook;
 
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;

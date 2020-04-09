@@ -1,21 +1,36 @@
 package com.chipoodle.devilrpg.eventsubscriber.common;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.config.ConfigHelper;
 import com.chipoodle.devilrpg.config.ConfigHolder;
 import com.chipoodle.devilrpg.init.ModBlocks;
+import com.chipoodle.devilrpg.init.ModCapability;
 import com.chipoodle.devilrpg.init.ModItemGroups;
 import com.chipoodle.devilrpg.item.ModdedSpawnEggItem;
+import com.chipoodle.devilrpg.util.TargetUtils;
 
 import net.minecraft.entity.EntityType;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.passive.TameableEntity;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.Item;
+import net.minecraft.util.DamageSource;
+import net.minecraft.util.SoundEvents;
 import net.minecraftforge.event.RegistryEvent;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.living.LivingEvent.LivingJumpEvent;
+import net.minecraftforge.event.entity.player.AttackEntityEvent;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.RegistryObject;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 import net.minecraftforge.fml.config.ModConfig;
+import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.registries.IForgeRegistry;
 
 /**
@@ -27,7 +42,12 @@ import net.minecraftforge.registries.IForgeRegistry;
 @EventBusSubscriber(modid = DevilRpg.MODID, bus = EventBusSubscriber.Bus.MOD)
 public final class ModEventSubscriber {
 
-
+	@SubscribeEvent
+	public static void onCommonSetup(FMLCommonSetupEvent event) {
+		DevilRpg.LOGGER.info("----------------------->ModEventSubscriber.onCommonSetup()");
+		ModCapability.register();
+	}
+	
     /**
      * This method will be called by Forge when it is time for the mod to
      * register its Items. This method will always be called after the Block
@@ -87,5 +107,22 @@ public final class ModEventSubscriber {
     public static void onPostRegisterEntities(final RegistryEvent.Register<EntityType<?>> event) {
         ModdedSpawnEggItem.initUnaddedEggs();
     }
-
+    
+    /*
+	 * @SubscribeEvent public void onPlayerFalls(LivingFallEvent event) { Entity
+	 * entity = event.getEntity();
+	 * 
+	 * if (entity.world.isRemote || !(entity instanceof ServerPlayerEntity) ||
+	 * event.getDistance() < 3) { return; }
+	 * 
+	 * PlayerEntity player = (PlayerEntity) entity; IMana mana = (IMana)
+	 * player.getCapability(ManaProvider.MANA_CAP, null);
+	 * 
+	 * float points = mana.getMana(); float cost = event.getDistance() * 2;
+	 * 
+	 * if (points > cost) { mana.consume(cost); String message = String.
+	 * format("You absorbed fall damage. It cost §7%d§r mana, you have §7%d§r mana left."
+	 * , (int) cost, (int) mana.getMana()); player.sendMessage(new
+	 * StringTextComponent(message)); event.setCanceled(true); } }
+	 */
 }

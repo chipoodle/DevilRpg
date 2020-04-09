@@ -1,4 +1,4 @@
-package com.chipoodle.devilrpg.client.gui.skill;
+package com.chipoodle.devilrpg.client.gui.skillbook;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -23,9 +23,12 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.StringTextComponent;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.fml.client.gui.GuiUtils;
 
+@OnlyIn(Dist.CLIENT)
 public class SkillScreen extends BaseBookScreen {
 	private PlayerEntity player;
 	private LazyOptional<IBaseSkillCapability> skillCap;

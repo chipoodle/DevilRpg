@@ -3,6 +3,7 @@ package com.chipoodle.devilrpg.init;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.entity.soulwolf.SoulWolfEntity;
 import com.chipoodle.devilrpg.entity.wildboar.WildBoarEntity;
+import com.chipoodle.devilrpg.entity.wisp.WispEntity;
 
 import net.minecraft.entity.EntityClassification;
 import net.minecraft.entity.EntityType;
@@ -30,6 +31,7 @@ public final class ModEntityTypes {
 
 	public static final String WILD_BOAR_NAME = "wild_boar";
 	public static final String SOUL_WOLF_NAME = "soul_wolf";
+	public static final String WISP_NAME = "wisp";
 
 	public static final RegistryObject<EntityType<WildBoarEntity>> WILD_BOAR = ENTITY_TYPES.register(WILD_BOAR_NAME,
 			() -> EntityType.Builder.<WildBoarEntity>create(WildBoarEntity::new, EntityClassification.CREATURE)
@@ -39,5 +41,9 @@ public final class ModEntityTypes {
 			() -> EntityType.Builder.<SoulWolfEntity>create(SoulWolfEntity::new, EntityClassification.CREATURE)
 					.size(EntityType.WOLF.getWidth(), EntityType.WOLF.getHeight())
 					.build(new ResourceLocation(DevilRpg.MODID, SOUL_WOLF_NAME).toString()));
+	public static final RegistryObject<EntityType<WispEntity>> WISP = ENTITY_TYPES.register(WISP_NAME,
+			() -> EntityType.Builder.<WispEntity>create(WispEntity::new, EntityClassification.CREATURE)
+					.size(EntityType.PARROT.getWidth(), EntityType.PARROT.getHeight())
+					.build(new ResourceLocation(DevilRpg.MODID, WISP_NAME).toString()));
 
 }

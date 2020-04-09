@@ -9,9 +9,9 @@ import net.minecraft.item.DyeColor;
 import net.minecraftforge.common.ForgeConfigSpec;
 
 /**
- * For configuration settings that change the behaviour of code on the LOGICAL
+ * For configuration settings that change the behavior of code on the LOGICAL
  * SERVER. This can be moved to an inner class of ExampleModConfig, but is
- * separate because of personal preference and to keep the code organised
+ * separate because of personal preference and to keep the code organized
  *
  * @author Cadiboo
  */
@@ -38,7 +38,6 @@ final class ServerConfig {
                 .comment("An example enum DyeColor in the server config")
                 .translation(DevilRpg.MODID + ".config.serverEnumDyeColor")
                 .defineEnum("serverEnumDyeColor", DyeColor.WHITE);
-
         electricFurnaceEnergySmeltCostPerTick = builder
                 .comment("How much energy for the Electric Furnace to consume to smelt an item per tick")
                 .translation(DevilRpg.MODID + ".config.electricFurnaceEnergySmeltCostPerTick")

@@ -7,6 +7,9 @@ package com.chipoodle.devilrpg.eventsubscriber.common;
 
 import static com.chipoodle.devilrpg.DevilRpg.LOGGER;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.experience.IBaseExperienceCapability;
 import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapabilityProvider;
@@ -18,18 +21,28 @@ import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.network.handler.PlayerExperienceClientServerHandler;
 import com.chipoodle.devilrpg.network.handler.PlayerManaClientServerHandler;
 import com.chipoodle.devilrpg.network.handler.PlayerSkillClientServerHandler;
+import com.chipoodle.devilrpg.network.handler.WerewolfAttackServerHandler;
 import com.chipoodle.devilrpg.util.SkillEnum;
+import com.chipoodle.devilrpg.util.TargetUtils;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.passive.TameableEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
+import net.minecraft.util.DamageSource;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.SoundEvents;
 import net.minecraft.util.text.StringTextComponent;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.EntityJoinWorldEvent;
+import net.minecraftforge.event.entity.living.LivingEvent.LivingJumpEvent;
+import net.minecraftforge.event.entity.player.AttackEntityEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.entity.player.PlayerSleepInBedEvent;
 import net.minecraftforge.event.entity.player.PlayerXpEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
@@ -44,7 +57,7 @@ import net.minecraftforge.fml.network.PacketDistributor;
  */
 
 @EventBusSubscriber(modid = DevilRpg.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
-public class PlayerForgeEventSubscriber {
+public class ForgeEventSubscriber {
 
 	public static final ResourceLocation MANA_CAP = new ResourceLocation(DevilRpg.MODID, "mana");
 	public static final ResourceLocation SKILL_CAP = new ResourceLocation(DevilRpg.MODID, "skill");
@@ -60,9 +73,7 @@ public class PlayerForgeEventSubscriber {
 		event.addCapability(SKILL_CAP, new PlayerSkillCapabilityProvider());
 		event.addCapability(EXP_CAP, new PlayerExperienceCapabilityProvider());
 		LOGGER.info("------------------------>Capabilities attached");
-		
-		
-		
+
 	}
 
 	@SubscribeEvent
@@ -112,6 +123,7 @@ public class PlayerForgeEventSubscriber {
 				});
 			});
 		}
+
 	}
 
 	@SubscribeEvent
@@ -125,7 +137,8 @@ public class PlayerForgeEventSubscriber {
 		}
 		LazyOptional<IBaseManaCapability> mana = player.getCapability(PlayerManaCapabilityProvider.MANA_CAP);
 		LazyOptional<IBaseSkillCapability> skill = player.getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
-		LazyOptional<IBaseExperienceCapability> exp = player.getCapability(PlayerExperienceCapabilityProvider.EXPERIENCE_CAP);
+		LazyOptional<IBaseExperienceCapability> exp = player
+				.getCapability(PlayerExperienceCapabilityProvider.EXPERIENCE_CAP);
 	}
 
 	@SubscribeEvent
@@ -155,66 +168,46 @@ public class PlayerForgeEventSubscriber {
 		final PlayerEntity player = (PlayerEntity) event.getEntity();
 		LazyOptional<IBaseManaCapability> mana = player.getCapability(PlayerManaCapabilityProvider.MANA_CAP);
 		LazyOptional<IBaseSkillCapability> skill = player.getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
-		LazyOptional<IBaseExperienceCapability> exp = player.getCapability(PlayerExperienceCapabilityProvider.EXPERIENCE_CAP);
-
-		int capSoulWolf = skill.map(x -> x.getSkillsPoints().get(SkillEnum.SUMMON_SOUL_WOLF)).orElse(0);
-		int maxSoulWolf = skill.map(x -> x.getMaxSkillsPoints().get(SkillEnum.SUMMON_SOUL_WOLF)).orElse(0);
-		int unspent = exp.map(x -> x.getUnspentPoints()).orElse(0);
-		int actualXp = exp.map(x -> x.getCurrentLevel()).orElse(0);
+		LazyOptional<IBaseExperienceCapability> exp = player
+				.getCapability(PlayerExperienceCapabilityProvider.EXPERIENCE_CAP);
 
 		Minecraft mainThread = Minecraft.getInstance();
-		if (!mana.isPresent())
-			DevilRpg.LOGGER.info("|||------>onEntityJoinWorld " + player.getEntityId() + " Mana cap = null"
-					+ " PLayer remote? " + player.world.isRemote);
-		else {
-			DevilRpg.LOGGER.info("|||------>onEntityJoinWorld " + player.getEntityId() + " Mana cap = " + mana
-					+ " Cliente? " + player.world.isRemote + " Mana: " + mana.map(x -> x.getMana()).orElse(0.0f)
-					+ " MaxMana: " + mana.map(x -> x.getMaxMana()).orElse(0.0f));
+		if (!mana.isPresent()) {
+
+		} else {
 			if (!player.world.isRemote) {
 				mainThread.enqueue(new Runnable() {
 					public void run() {
-						DevilRpg.LOGGER.info("||----------- ENVIANDO CAP DE SERVIDOR A CLIENTE: "
-								+ ((ServerPlayerEntity) player).getName());
 						ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> (ServerPlayerEntity) player),
 								new PlayerManaClientServerHandler(mana.map(x -> x.getNBTData()).orElse(null)));
 					}
 				});
 			}
 		}
-		if (!skill.isPresent())
-			DevilRpg.LOGGER.info("|||------>onEntityJoinWorld " + player.getEntityId() + " Skill cap = null"
-					+ "PLayer remote? " + player.world.isRemote);
-		else {
-			DevilRpg.LOGGER.info("|||------>onEntityJoinWorld " + player.getEntityId() + " Skill cap = " + skill
-					+ " Cliente? " + player.world.isRemote + " getPaSoulWolf: " + capSoulWolf + " getMaxSoulWolf: "
-					+ maxSoulWolf);
+		if (!skill.isPresent()) {
+
+		} else {
 			if (!player.world.isRemote) {
 				mainThread.enqueue(new Runnable() {
 					public void run() {
-						DevilRpg.LOGGER.info("||----------- ENVIANDO CAP DE SERVIDOR A CLIENTE: "
-								+ ((ServerPlayerEntity) player).getName());
 						ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> (ServerPlayerEntity) player),
 								new PlayerSkillClientServerHandler(skill.map(x -> x.getNBTData()).orElse(null)));
 					}
 				});
 			}
 		}
-		if (!exp.isPresent())
-			DevilRpg.LOGGER.info("|||------>onEntityJoinWorld " + player.getEntityId() + " Exp cap = null"
-					+ "PLayer remote? " + player.world.isRemote);
-		else {
-			DevilRpg.LOGGER.info("|||------>onEntityJoinWorld " + player.getEntityId() + " Exp cap = " + skill
-					+ " Cliente? " + player.world.isRemote + " unspent points: " + unspent + " actual xp: " + actualXp);
+		if (!exp.isPresent()) {
+
+		} else {
 			if (!player.world.isRemote) {
 				mainThread.enqueue(new Runnable() {
 					public void run() {
-						DevilRpg.LOGGER.info("||----------- ENVIANDO CAP DE SERVIDOR A CLIENTE: "
-								+ ((ServerPlayerEntity) player).getName());
 						ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> (ServerPlayerEntity) player),
 								new PlayerExperienceClientServerHandler(exp.map(x -> x.getNBTData()).orElse(null)));
 					}
 				});
 			}
+
 		}
 
 	}
@@ -227,11 +220,70 @@ public class PlayerForgeEventSubscriber {
 
 		LazyOptional<IBaseExperienceCapability> exp = player
 				.getCapability(PlayerExperienceCapabilityProvider.EXPERIENCE_CAP);
-		exp.ifPresent(x -> x.setCurrentLevel(player.experienceLevel + e.getLevels(),player));
+		exp.ifPresent(x -> x.setCurrentLevel(player.experienceLevel + e.getLevels(), player));
 	}
 
 	@SubscribeEvent(priority = EventPriority.NORMAL)
 	public void onPlayerPickupXP(PlayerXpEvent.PickupXp e) {
 		e.getOrb().xpValue *= 2;
+	}
+
+	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
+	public static void onEvent(LivingJumpEvent event) {
+		if (event.getEntity() instanceof PlayerEntity) {
+			// DevilRpg.LOGGER.info("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Boing");
+		}
+	}
+
+	/*
+	 * @SubscribeEvent public static void onPlayerTick(TickEvent.PlayerTickEvent
+	 * event) { // DevilRpg.LOGGER.info(
+	 * "----------------------->PlayerForgeEventSubscriber.PlayerTickEvent()" // +
+	 * " Client? "+ event.player.world.isRemote); if (event.phase ==
+	 * TickEvent.Phase.START) { if (event.player != null) { if
+	 * (event.player.ticksExisted % 10L == 0L) { //
+	 * TickEventHandler.setMultiHit(calculoHit.attack(event.player)); //
+	 * DevilRpg.LOGGER.info("------> hitting."); } } } }
+	 */
+
+	@SubscribeEvent
+	public static void interactLeftClick(PlayerInteractEvent.LeftClickBlock event) {
+		// DevilRpg.LOGGER.info("------> PlayerInteractEvent.LeftClickBlock.");
+		event.getPlayer().isSwingInProgress = false;
+		// event.setCanceled(true);
+	}
+
+	@SubscribeEvent
+	public static void entityInteractSpecific(PlayerInteractEvent.EntityInteractSpecific event) {
+		// DevilRpg.LOGGER.info("------> PlayerInteractEvent.EntityInteractSpecific.");
+		event.getPlayer().isSwingInProgress = false;
+		// event.setCanceled(true);
+	}
+
+	@SubscribeEvent
+	public static void onAttack(AttackEntityEvent event) {
+		// DevilRpg.LOGGER.info("------> PlayerInteractEvent.AttackEntityEvent.");
+		event.getPlayer().isSwingInProgress = false;
+		event.setCanceled(true);
+
+		/*
+		 * DevilRpg.LOGGER.info(
+		 * "----------------------->PlayerForgeEventSubscriber.AttackEntityEvent()" +
+		 * " Client? " + event.getPlayer().world.isRemote); if
+		 * (!event.getEntityLiving().getHeldItemMainhand().isEmpty()) {
+		 * event.setCanceled(true); if (event.getTarget().canBeAttackedWithItem()) { if
+		 * (!event.getTarget().hitByEntity(event.getEntity())) {
+		 * event.getPlayer().setLastAttackedEntity(event.getTarget());
+		 * event.getPlayer().world.playSound((PlayerEntity) null,
+		 * event.getPlayer().getPosX(), event.getPlayer().getPosY(),
+		 * event.getPlayer().getPosZ(), SoundEvents.ENTITY_PLAYER_ATTACK_WEAK,
+		 * event.getPlayer().getSoundCategory(), 1.0F, 1.0F);
+		 * event.getTarget().attackEntityFrom(DamageSource.causePlayerDamage(event.
+		 * getPlayer()), event.getPlayer().getCooledAttackStrength(1F));
+		 * event.getPlayer().addExhaustion(0.1F);
+		 * 
+		 * } } }
+		 */
+
 	}
 }
