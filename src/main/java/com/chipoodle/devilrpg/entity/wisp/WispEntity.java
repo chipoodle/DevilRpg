@@ -139,10 +139,9 @@ public class WispEntity extends TameableEntity implements IFlyingAnimal, ISoulEn
 			saludMaxima = 0.6 * this.puntosAsignados + SALUD_INICIAL;
 		}
 
-		this.getAttributes().registerAttribute(SharedMonsterAttributes.ARMOR).setBaseValue(0.15D);
-	    this.getAttributes().registerAttribute(SharedMonsterAttributes.ARMOR_TOUGHNESS);
 		this.getAttribute(SharedMonsterAttributes.FLYING_SPEED).setBaseValue((double) 0.9F);
 		this.getAttribute(SharedMonsterAttributes.MAX_HEALTH).setBaseValue(saludMaxima);
+		this.getAttribute(SharedMonsterAttributes.ARMOR).setBaseValue(0.15D);
 	}
 
 	/**

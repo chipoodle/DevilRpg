@@ -1,7 +1,5 @@
 package com.chipoodle.devilrpg.capability.skill;
 
-import static com.chipoodle.devilrpg.DevilRpg.LOGGER;
-
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -18,7 +16,6 @@ import com.chipoodle.devilrpg.util.BytesUtil;
 import com.chipoodle.devilrpg.util.PowerEnum;
 import com.chipoodle.devilrpg.util.SkillEnum;
 
-import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.util.text.StringTextComponent;
@@ -156,9 +153,8 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
 	
 	@Override
 	public void triggerAction(ServerPlayerEntity playerIn, PowerEnum triggeredPower) {
-        LOGGER.info("----------------->Trigger Action. Is Client? "+playerIn.world.isRemote);
         if (!playerIn.world.isRemote) {
-            if (getSkillLevelFromAssociatedPower(playerIn, triggeredPower) != 0) {
+            if (getSkillLevelFromAssociatedPower(triggeredPower) != 0) {
             	ISkillContainer poder = getSkill(triggeredPower);
                 if (consumeMana(playerIn, poder)) {
                     poder.execute(playerIn.world, playerIn);
@@ -176,10 +172,8 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
 		return singletonSkillFactory.create(skillEnum);
     }
 
-    private int getSkillLevelFromAssociatedPower(PlayerEntity playerIn, PowerEnum triggeredPower) {
-    	HashMap<PowerEnum, SkillEnum> powers = getSkillsNameOfPowers();
-        HashMap<SkillEnum, Integer> skills = getSkillsPoints();
-        return skills.get(powers.get(triggeredPower));
+    private int getSkillLevelFromAssociatedPower(PowerEnum triggeredPower) {
+        return getSkillsPoints().get(getSkillsNameOfPowers().get(triggeredPower));
     }
     
     private boolean consumeMana(ServerPlayerEntity playerIn, ISkillContainer poder) {
@@ -187,15 +181,20 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
         LazyOptional<IBaseManaCapability> mana = playerIn.getCapability(PlayerManaCapabilityProvider.MANA_CAP, null);
         if (mana.map(x -> x.getMana()).orElse(null) - consumedMana >= 0) {
             mana.ifPresent(m -> m.setMana(mana.map(x -> x.getMana()).orElse(null) - consumedMana));
-            LOGGER.info("=====Sending to player mana consumed " + mana.map(x -> x.getMana()).orElse(null) + " Cost: " + consumedMana + " player: " + playerIn.getName());
             ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> playerIn), new PlayerManaClientServerHandler(mana.map(x -> x.getNBTData()).orElse(null)));
             return true;
         }
         return false;
     }
-
-	public SingletonSkillFactory getSingletonSkillFactory() {
-		return singletonSkillFactory;
+    
+    @Override
+	public ISkillContainer getLoadedSkill(SkillEnum skillEnum) {
+    	return singletonSkillFactory.getExistingSkill(skillEnum);
+	}
+    
+    @Override
+	public ISkillContainer create(SkillEnum skillEnum) {
+		return singletonSkillFactory.create(skillEnum);
 	}
 
 	@Override
@@ -211,5 +210,4 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
 	private void sendSkillChangesToServer() {
 		ModNetwork.CHANNEL.sendToServer(new PlayerSkillClientServerHandler(getNBTData()));
 	}
-
 }

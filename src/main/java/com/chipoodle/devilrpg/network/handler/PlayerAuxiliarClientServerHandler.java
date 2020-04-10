@@ -2,7 +2,7 @@ package com.chipoodle.devilrpg.network.handler;
 
 import java.util.function.Supplier;
 
-import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapabilityProvider;
+import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliarCapabilityProvider;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.player.PlayerEntity;
@@ -12,33 +12,33 @@ import net.minecraft.network.PacketBuffer;
 import net.minecraftforge.fml.network.NetworkDirection;
 import net.minecraftforge.fml.network.NetworkEvent;
 
-public class PlayerExperienceClientServerHandler {
+public class PlayerAuxiliarClientServerHandler {
 
-	private final CompoundNBT experienceCompound;
+	private final CompoundNBT auxiliarCompound;
 
-	public PlayerExperienceClientServerHandler(CompoundNBT manaCompound) {
-		this.experienceCompound = manaCompound;
+	public PlayerAuxiliarClientServerHandler(CompoundNBT manaCompound) {
+		this.auxiliarCompound = manaCompound;
 	}
 
 	public CompoundNBT getExperienceCompound() {
-		return experienceCompound;
+		return auxiliarCompound;
 	}
 
-	public static void encode(final PlayerExperienceClientServerHandler msg, final PacketBuffer packetBuffer) {
+	public static void encode(final PlayerAuxiliarClientServerHandler msg, final PacketBuffer packetBuffer) {
 		packetBuffer.writeCompoundTag(msg.getExperienceCompound());
 	}
 
-	public static PlayerExperienceClientServerHandler decode(final PacketBuffer packetBuffer) {
-		return new PlayerExperienceClientServerHandler(packetBuffer.readCompoundTag());
+	public static PlayerAuxiliarClientServerHandler decode(final PacketBuffer packetBuffer) {
+		return new PlayerAuxiliarClientServerHandler(packetBuffer.readCompoundTag());
 	}
 
-	public static void onMessage(final PlayerExperienceClientServerHandler msg,
+	public static void onMessage(final PlayerAuxiliarClientServerHandler msg,
 			final Supplier<NetworkEvent.Context> contextSupplier) {
 		if (contextSupplier.get().getDirection().equals(NetworkDirection.PLAY_TO_SERVER)) {
-			contextSupplier.get().enqueueWork(() -> /* DistExecutor.runWhenOn(Dist.DEDICATED_SERVER, () -> () -> */ {
+			contextSupplier.get().enqueueWork(() ->  {
 				ServerPlayerEntity serverPlayer = contextSupplier.get().getSender();
 				if (serverPlayer != null) {
-					serverPlayer.getCapability(PlayerExperienceCapabilityProvider.EXPERIENCE_CAP)
+					serverPlayer.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP)
 							.ifPresent(x -> x.setNBTData(msg.getExperienceCompound()));
 				}
 			});
@@ -46,11 +46,11 @@ public class PlayerExperienceClientServerHandler {
 		}
 
 		if (contextSupplier.get().getDirection().equals(NetworkDirection.PLAY_TO_CLIENT)) {
-			contextSupplier.get().enqueueWork(() -> {
+			contextSupplier.get().enqueueWork(() ->  {
 				Minecraft m = Minecraft.getInstance();
 				PlayerEntity clientPlayer = m.player;
 				if (clientPlayer != null) {
-					clientPlayer.getCapability(PlayerExperienceCapabilityProvider.EXPERIENCE_CAP)
+					clientPlayer.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP)
 							.ifPresent(x -> x.setNBTData(msg.getExperienceCompound()));
 				}
 

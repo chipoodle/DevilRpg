@@ -35,7 +35,7 @@ public class PlayerSkillClientServerHandler {
 	public static void onMessage(final PlayerSkillClientServerHandler msg,
 			final Supplier<NetworkEvent.Context> contextSupplier) {
 		if (contextSupplier.get().getDirection().equals(NetworkDirection.PLAY_TO_SERVER)) {
-			contextSupplier.get().enqueueWork(() -> /* DistExecutor.runWhenOn(Dist.DEDICATED_SERVER, () -> () -> */ {
+			contextSupplier.get().enqueueWork(() -> {
 				ServerPlayerEntity serverPlayer = contextSupplier.get().getSender();
 				if (serverPlayer != null) {
 					serverPlayer.getCapability(PlayerSkillCapabilityProvider.SKILL_CAP)
@@ -46,7 +46,7 @@ public class PlayerSkillClientServerHandler {
 		}
 
 		if (contextSupplier.get().getDirection().equals(NetworkDirection.PLAY_TO_CLIENT)) {
-			contextSupplier.get().enqueueWork(() -> /* DistExecutor.runWhenOn(Dist.CLIENT, () -> () -> */ {
+			contextSupplier.get().enqueueWork(() -> {
 				Minecraft m = Minecraft.getInstance();
 				PlayerEntity clientPlayer = m.player;
 				if (clientPlayer != null) {

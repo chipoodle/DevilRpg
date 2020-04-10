@@ -45,7 +45,6 @@ public class SkillSummonSoulWolf implements ISkillContainer {
 	}
 
 	private SoulWolfEntity summonWolf(World worldIn, PlayerEntity playerIn) {
-		LOGGER.info("------------------>Summon soulWolf");
 		Random rand = new Random();
 		SoulWolfEntity sw = new SoulWolfEntity(ModEntityTypes.SOUL_WOLF.get(),worldIn);
 		sw.updateLevel(playerIn);
@@ -55,7 +54,6 @@ public class SkillSummonSoulWolf implements ISkillContainer {
 		double spawnY = playerIn.getPosY() + DevilRpgConfig.WOLF_SPAWN_DISTANCE * playerLookVector.y + 2;
 		sw.setLocationAndAngles(spawnX, spawnY, spawnZ, MathHelper.wrapDegrees(rand.nextFloat() * 360.0F), 0.0F);
 		worldIn.addEntity(sw);
-		System.out.println("Summoned soulWolf. is Client? " + worldIn.isRemote);
 		return sw;
 	}
 }

@@ -37,8 +37,7 @@ public class SkillSummonWispSpeed implements ISkillContainer {
 	@Override
 	public void execute(World worldIn, PlayerEntity playerIn) {
 		if (!worldIn.isRemote) {
-			SkillSummonWispHealth wispSkill = (SkillSummonWispHealth) parentCapability.getSingletonSkillFactory()
-					.getExistingSkill(SkillEnum.SUMMON_WISP_HEALTH);
+			SkillSummonWispHealth wispSkill = (SkillSummonWispHealth) parentCapability.getLoadedSkill(SkillEnum.SUMMON_WISP_HEALTH);
 			if (wispSkill != null) {
 				wispSkill.getPlayerWisp().forEach(x -> x.remove());
 			}
@@ -53,7 +52,6 @@ public class SkillSummonWispSpeed implements ISkillContainer {
 	}
 
 	private WispEntity summonWisp(World worldIn, PlayerEntity playerIn) {
-		LOGGER.info("------------------>Summon speed");
 		Random rand = new Random();
 		WispEntity sw = new WispEntity(ModEntityTypes.WISP.get(), worldIn);
 		sw.updateLevel(playerIn, Effects.SPEED, Effects.JUMP_BOOST, SkillEnum.SUMMON_WISP_SPEED);
@@ -63,7 +61,6 @@ public class SkillSummonWispSpeed implements ISkillContainer {
 		double spawnY = playerIn.getPosY() + DevilRpgConfig.WISP_SPAWN_DISTANCE * playerLookVector.y + 2;
 		sw.setLocationAndAngles(spawnX, spawnY, spawnZ, MathHelper.wrapDegrees(rand.nextFloat() * 360.0F), 0.0F);
 		worldIn.addEntity(sw);
-		System.out.println("Summoned wisp health. is Client? " + worldIn.isRemote);
 		return sw;
 	}
 

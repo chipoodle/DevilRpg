@@ -1,27 +1,30 @@
 package com.chipoodle.devilrpg.skillsystem.skillinstance;
 
-import static com.chipoodle.devilrpg.DevilRpg.LOGGER;
+import java.util.List;
+import java.util.stream.Collectors;
 
-import java.util.Random;
-import java.util.concurrent.ConcurrentLinkedQueue;
-
+import com.chipoodle.devilrpg.capability.auxiliar.IBaseAuxiliarCapability;
+import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliarCapabilityProvider;
+import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
-import com.chipoodle.devilrpg.config.DevilRpgConfig;
-import com.chipoodle.devilrpg.entity.soulwolf.SoulWolfEntity;
-import com.chipoodle.devilrpg.init.ModEntityTypes;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
+import com.chipoodle.devilrpg.init.ModNetwork;
+import com.chipoodle.devilrpg.network.handler.WerewolfAttackServerHandler;
 import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
 import com.chipoodle.devilrpg.util.SkillEnum;
+import com.chipoodle.devilrpg.util.TargetUtils;
 
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.passive.TameableEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.DamageSource;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.Hand;
+import net.minecraft.util.text.StringTextComponent;
 import net.minecraft.world.World;
+import net.minecraftforge.common.util.LazyOptional;
 
 public class SkillTransformWerewolf implements ISkillContainer {
 	private PlayerSkillCapability parentCapability;
-	private boolean isActive;
-	
+
 	public SkillTransformWerewolf(PlayerSkillCapability parentCapability) {
 		this.parentCapability = parentCapability;
 	}
@@ -34,11 +37,48 @@ public class SkillTransformWerewolf implements ISkillContainer {
 	@Override
 	public void execute(World worldIn, PlayerEntity playerIn) {
 		if (!worldIn.isRemote) {
-			
+			LazyOptional<IBaseAuxiliarCapability> aux = playerIn
+					.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
+			boolean transformation = aux.map(x -> x.isWerewolfTransformation()).orElse(false);
+			aux.ifPresent(x -> x.setWerewolfTransformation(!transformation, playerIn));
+
 		}
 	}
-	
-	public boolean isActive() {
-		return isActive;
+
+	public void playerTickEventAttack(PlayerEntity player) {
+		LazyOptional<IBaseAuxiliarCapability> aux = player.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
+
+		int points = parentCapability.getSkillsPoints().get(SkillEnum.TRANSFORM_WEREWOLF);
+		long g = (long) (15L - points * 0.5F);
+
+		boolean transformation = aux.map(x -> x.isWerewolfTransformation()).orElse(false);
+		boolean attack = aux.map(x -> x.isWerewolfAttack()).orElse(false);
+		//player.sendMessage(new StringTextComponent("transformation? " + transformation + " attack? " + attack + " interval? " + g));
+		if (transformation && attack) {
+			// event.player.isSwingInProgress = false;
+			if (player.world.isRemote && player.ticksExisted % points == 0L) {
+				int distance = 1;
+				double radius = 2;
+				if (player != null) {
+					List<LivingEntity> targetList = TargetUtils.acquireAllLookTargets(player, distance, radius).stream()
+							.filter(x -> !(x instanceof TameableEntity) || !x.isOnSameTeam(player))
+							.collect(Collectors.toList());
+
+					LivingEntity target = targetList.stream().filter(x -> !x.equals(player.getLastAttackedEntity()))
+							.findAny().orElseGet(() -> targetList.stream().findAny().orElse(null));
+
+					if (target != null) {
+						if (targetList != null && !targetList.isEmpty()) {
+							player.sendMessage(new StringTextComponent("Hitting " + target.getName()));
+							player.setLastAttackedEntity(target);
+							Hand h = player.ticksExisted % 20L == 0L ? Hand.MAIN_HAND : Hand.OFF_HAND;
+							player.swingArm(h);
+							ModNetwork.CHANNEL.sendToServer(new WerewolfAttackServerHandler(target.getEntityId(), h));
+						}
+					}
+
+				}
+			}
+		}
 	}
 }

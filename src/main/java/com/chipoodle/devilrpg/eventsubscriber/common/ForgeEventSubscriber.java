@@ -7,10 +7,9 @@ package com.chipoodle.devilrpg.eventsubscriber.common;
 
 import static com.chipoodle.devilrpg.DevilRpg.LOGGER;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.capability.auxiliar.IBaseAuxiliarCapability;
+import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliarCapabilityProvider;
 import com.chipoodle.devilrpg.capability.experience.IBaseExperienceCapability;
 import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapabilityProvider;
 import com.chipoodle.devilrpg.capability.mana.IBaseManaCapability;
@@ -18,26 +17,19 @@ import com.chipoodle.devilrpg.capability.mana.PlayerManaCapabilityProvider;
 import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
 import com.chipoodle.devilrpg.init.ModNetwork;
+import com.chipoodle.devilrpg.network.handler.PlayerAuxiliarClientServerHandler;
 import com.chipoodle.devilrpg.network.handler.PlayerExperienceClientServerHandler;
 import com.chipoodle.devilrpg.network.handler.PlayerManaClientServerHandler;
 import com.chipoodle.devilrpg.network.handler.PlayerSkillClientServerHandler;
-import com.chipoodle.devilrpg.network.handler.WerewolfAttackServerHandler;
-import com.chipoodle.devilrpg.util.SkillEnum;
-import com.chipoodle.devilrpg.util.TargetUtils;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.passive.TameableEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
-import net.minecraft.util.DamageSource;
 import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.SoundEvents;
 import net.minecraft.util.text.StringTextComponent;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
-import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.EntityJoinWorldEvent;
 import net.minecraftforge.event.entity.living.LivingEvent.LivingJumpEvent;
 import net.minecraftforge.event.entity.player.AttackEntityEvent;
@@ -62,6 +54,7 @@ public class ForgeEventSubscriber {
 	public static final ResourceLocation MANA_CAP = new ResourceLocation(DevilRpg.MODID, "mana");
 	public static final ResourceLocation SKILL_CAP = new ResourceLocation(DevilRpg.MODID, "skill");
 	public static final ResourceLocation EXP_CAP = new ResourceLocation(DevilRpg.MODID, "experience");
+	public static final ResourceLocation AUX_CAP = new ResourceLocation(DevilRpg.MODID, "auxiliar");
 
 	@SubscribeEvent
 	public static void attachCapability(AttachCapabilitiesEvent<Entity> event) {
@@ -72,6 +65,7 @@ public class ForgeEventSubscriber {
 		event.addCapability(MANA_CAP, new PlayerManaCapabilityProvider());
 		event.addCapability(SKILL_CAP, new PlayerSkillCapabilityProvider());
 		event.addCapability(EXP_CAP, new PlayerExperienceCapabilityProvider());
+		event.addCapability(AUX_CAP, new PlayerAuxiliarCapabilityProvider());
 		LOGGER.info("------------------------>Capabilities attached");
 
 	}
@@ -94,6 +88,10 @@ public class ForgeEventSubscriber {
 				.getCapability(PlayerExperienceCapabilityProvider.EXPERIENCE_CAP);
 		String message3 = String.format("You are lvl. %d ", exp.map(x -> x.getCurrentLevel()).orElse(-1));
 		player.sendMessage(new StringTextComponent(message3));
+
+		LazyOptional<IBaseAuxiliarCapability> aux = player.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
+		String message4 = String.format("Werewolf form:  " + aux.map(x -> x.isWerewolfTransformation()).orElse(false));
+		player.sendMessage(new StringTextComponent(message4));
 
 	}
 
@@ -122,6 +120,13 @@ public class ForgeEventSubscriber {
 					actualCap.setNBTData(originalCap.getNBTData());
 				});
 			});
+			e.getOriginal().getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP).ifPresent(originalCap -> {
+				e.getPlayer().getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP).ifPresent(actualCap -> {
+					PlayerEntity originalPlayer = e.getOriginal();
+					PlayerEntity actualPlayer = e.getPlayer();
+					actualCap.setNBTData(originalCap.getNBTData());
+				});
+			});
 		}
 
 	}
@@ -139,6 +144,7 @@ public class ForgeEventSubscriber {
 		LazyOptional<IBaseSkillCapability> skill = player.getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
 		LazyOptional<IBaseExperienceCapability> exp = player
 				.getCapability(PlayerExperienceCapabilityProvider.EXPERIENCE_CAP);
+		LazyOptional<IBaseAuxiliarCapability> aux = player.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
 	}
 
 	@SubscribeEvent
@@ -170,6 +176,7 @@ public class ForgeEventSubscriber {
 		LazyOptional<IBaseSkillCapability> skill = player.getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
 		LazyOptional<IBaseExperienceCapability> exp = player
 				.getCapability(PlayerExperienceCapabilityProvider.EXPERIENCE_CAP);
+		LazyOptional<IBaseAuxiliarCapability> aux = player.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
 
 		Minecraft mainThread = Minecraft.getInstance();
 		if (!mana.isPresent()) {
@@ -209,6 +216,24 @@ public class ForgeEventSubscriber {
 			}
 
 		}
+		if (!aux.isPresent()) {
+
+		} else {
+			if (!player.world.isRemote) {
+				mainThread.enqueue(new Runnable() {
+					public void run() {
+						aux.ifPresent(x -> x.setWerewolfAttack(false, player));
+						aux.ifPresent(x -> x.setWerewolfTransformation(false, player));
+						/*
+						 * ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() ->
+						 * (ServerPlayerEntity) player), new PlayerAuxiliarClientServerHandler(aux.map(x
+						 * -> x.getNBTData()).orElse(null)));
+						 */
+					}
+				});
+			}
+
+		}
 
 	}
 
@@ -235,36 +260,53 @@ public class ForgeEventSubscriber {
 		}
 	}
 
-	/*
-	 * @SubscribeEvent public static void onPlayerTick(TickEvent.PlayerTickEvent
-	 * event) { // DevilRpg.LOGGER.info(
-	 * "----------------------->PlayerForgeEventSubscriber.PlayerTickEvent()" // +
-	 * " Client? "+ event.player.world.isRemote); if (event.phase ==
-	 * TickEvent.Phase.START) { if (event.player != null) { if
-	 * (event.player.ticksExisted % 10L == 0L) { //
-	 * TickEventHandler.setMultiHit(calculoHit.attack(event.player)); //
-	 * DevilRpg.LOGGER.info("------> hitting."); } } } }
-	 */
-
 	@SubscribeEvent
-	public static void interactLeftClick(PlayerInteractEvent.LeftClickBlock event) {
-		// DevilRpg.LOGGER.info("------> PlayerInteractEvent.LeftClickBlock.");
-		event.getPlayer().isSwingInProgress = false;
-		// event.setCanceled(true);
+	public static void leftClickBlock(PlayerInteractEvent.LeftClickEmpty event) {
+		event.getPlayer().sendMessage(new StringTextComponent("------> PlayerInteractEvent.LeftClickEmpty"));
+	}
+	@SubscribeEvent
+	public static void leftClickBlock(PlayerInteractEvent.EntityInteract event) {
+		event.getPlayer().sendMessage(new StringTextComponent("------> PlayerInteractEvent.EntityInteract"));
+	}
+	
+	@SubscribeEvent
+	public static void leftClickBlock(PlayerInteractEvent.LeftClickBlock event) {
+		LazyOptional<IBaseAuxiliarCapability> aux = event.getPlayer()
+				.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
+
+		event.getPlayer().sendMessage(new StringTextComponent("------> PlayerInteractEvent.LeftClickBlock"));
+
+		boolean transformation = aux.map(x -> x.isWerewolfTransformation()).orElse(false);
+		if (transformation) {
+			event.getPlayer().isSwingInProgress = false;
+			// event.setCanceled(true);
+		}
 	}
 
 	@SubscribeEvent
 	public static void entityInteractSpecific(PlayerInteractEvent.EntityInteractSpecific event) {
-		// DevilRpg.LOGGER.info("------> PlayerInteractEvent.EntityInteractSpecific.");
-		event.getPlayer().isSwingInProgress = false;
+		LazyOptional<IBaseAuxiliarCapability> aux = event.getPlayer()
+				.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
+
+		event.getPlayer().sendMessage(new StringTextComponent("------> PlayerInteractEvent.EntityInteractSpecific"));
+
+		boolean transformation = aux.map(x -> x.isWerewolfTransformation()).orElse(false);
+		if (transformation)
+			event.getPlayer().isSwingInProgress = false;
 		// event.setCanceled(true);
 	}
 
 	@SubscribeEvent
 	public static void onAttack(AttackEntityEvent event) {
+		LazyOptional<IBaseAuxiliarCapability> aux = event.getPlayer()
+				.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
+
+		boolean transformation = aux.map(x -> x.isWerewolfTransformation()).orElse(false);
 		// DevilRpg.LOGGER.info("------> PlayerInteractEvent.AttackEntityEvent.");
-		event.getPlayer().isSwingInProgress = false;
-		event.setCanceled(true);
+		if (transformation) {
+			event.getPlayer().isSwingInProgress = false;
+			event.setCanceled(true);
+		}
 
 		/*
 		 * DevilRpg.LOGGER.info(
