@@ -5,9 +5,7 @@ import java.util.stream.Collectors;
 
 import com.chipoodle.devilrpg.capability.auxiliar.IBaseAuxiliarCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliarCapabilityProvider;
-import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
-import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
 import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.network.handler.WerewolfAttackServerHandler;
 import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
@@ -18,7 +16,6 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.passive.TameableEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.Hand;
-import net.minecraft.util.text.StringTextComponent;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.LazyOptional;
 

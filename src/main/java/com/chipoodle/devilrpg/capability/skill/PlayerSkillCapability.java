@@ -8,7 +8,6 @@ import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.mana.IBaseManaCapability;
 import com.chipoodle.devilrpg.capability.mana.PlayerManaCapabilityProvider;
 import com.chipoodle.devilrpg.init.ModNetwork;
-import com.chipoodle.devilrpg.network.handler.PlayerManaClientServerHandler;
 import com.chipoodle.devilrpg.network.handler.PlayerSkillClientServerHandler;
 import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
 import com.chipoodle.devilrpg.skillsystem.SingletonSkillFactory;
@@ -20,7 +19,6 @@ import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.util.text.StringTextComponent;
 import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.fml.network.PacketDistributor;
 
 public class PlayerSkillCapability implements IBaseSkillCapability {
 	public final static String POWERS_KEY = "Powers";

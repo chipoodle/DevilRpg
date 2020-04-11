@@ -1,7 +1,6 @@
 package com.chipoodle.devilrpg.capability.mana;
 
 import com.chipoodle.devilrpg.init.ModNetwork;
-import com.chipoodle.devilrpg.network.handler.PlayerAuxiliarClientServerHandler;
 import com.chipoodle.devilrpg.network.handler.PlayerManaClientServerHandler;
 
 import net.minecraft.entity.player.PlayerEntity;

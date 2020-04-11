@@ -6,7 +6,6 @@ import com.chipoodle.devilrpg.network.handler.PlayerAuxiliarClientServerHandler;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.util.text.StringTextComponent;
 import net.minecraftforge.fml.network.PacketDistributor;
 
 public class PlayerAuxiliarCapability implements IBaseAuxiliarCapability {

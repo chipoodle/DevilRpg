@@ -5,22 +5,14 @@
  */
 package com.chipoodle.devilrpg.eventsubscriber.client;
 
-import org.lwjgl.glfw.GLFW;
-
 import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.init.ModRenderer;
-import com.chipoodle.devilrpg.network.handler.PlayerManaClientServerHandler;
 
-import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.InputEvent;
-import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.DeferredWorkQueue;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
-import net.minecraftforge.fml.network.PacketDistributor;
 
 /**
  * Subscribe to events from the MOD EventBus that should be handled on the

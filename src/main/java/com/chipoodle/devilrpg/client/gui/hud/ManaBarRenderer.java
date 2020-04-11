@@ -1,77 +1,64 @@
-package com.chipoodle.devilrpg.client.gui.hudoverlay;
+package com.chipoodle.devilrpg.client.gui.hud;
 
 import java.text.DecimalFormat;
 
 import org.lwjgl.opengl.GL11;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.capability.mana.IBaseManaCapability;
+import com.chipoodle.devilrpg.capability.mana.PlayerManaCapabilityProvider;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.AbstractGui;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.potion.Effects;
 import net.minecraft.util.ResourceLocation;
-import net.minecraft.world.World;
+import net.minecraftforge.common.util.LazyOptional;
 
-/**
- * @author Nephroid
- *
- *         This class contains code that replaces the vanilla heart and armor
- *         bars with a custom unified status bar.
- */
+public class ManaBarRenderer extends AbstractGui {
 
-/*
- * I extend Gui because it has already implemented a bunch of drawing functions
- */
-public class StatusBarRenderer extends AbstractGui {
-
-	/*
-	 * This line tells Minecraft/Forge where your texture is. The first argument is
-	 * your MODID, and the second argument is the path to your texture starting at
-	 * "resources/assets/MODID"
-	 *
-	 * In this case, the location of the texture is
-	 *
-	 * "resources/assets/MODID/textures/gui/advanced_overlay.png"
-	 */
 	private final static ResourceLocation overlayBar = new ResourceLocation(
-			DevilRpg.MODID + ":textures/gui/health_texture.png");
+			DevilRpg.MODID + ":textures/gui/mana_texture.png");
 
 	/* These two variables describe the size of the bar */
 	private final static int BAR_WIDTH = 81;
 	private final static int BAR_HEIGHT = 9;
 	private final static int BAR_SPACING_ABOVE_EXP_BAR = 3;
-	// pixels between the BAR and the Experience Bar below it
+	//LazyOptional<IBaseManaCapability> playerCapability;
+	private float manaRun;
+	private float maxMana;
 
-	/*
-	 * Sometimes you want to include extra information from the game. This instance
-	 * of Minecraft will let you access the World and EntityPlayer objects which is
-	 * more than enough for most purposes. It also contains some helper objects for
-	 * OpenGL which can be used for drawing things.
-	 *
-	 * To actually get the instance of Minecraft, you should pass it in through the
-	 * constructor. It is possible to import Minecraft and use
-	 * Minecraft.getInstance() here, but this won't always be possible if you want
-	 * to include information that's part of another class.
-	 */
 	private Minecraft mc;
 
-	public StatusBarRenderer(Minecraft mc) {
+	public ManaBarRenderer(Minecraft mc) {
 		super();
 		this.mc = mc;
 	}
 
-	public StatusBarRenderer() {
+	public ManaBarRenderer() {
 		super();
 		mc = Minecraft.getInstance();
 	}
 
-	/* This helper method will render the bar */
 	public void renderStatusBar(int screenWidth, int screenHeight) {
 		/* These are the variables that contain world and player information */
-		World world = mc.world;
+		//World world = mc.world;
 		PlayerEntity player = mc.player;
+		LazyOptional<IBaseManaCapability> playerCapability = mc.player.getCapability(PlayerManaCapabilityProvider.MANA_CAP);
+		/*if (playerCapability == null)
+			playerCapability = mc.player.getCapability(PlayerManaCapabilityProvider.MANA_CAP);*/
+
+		if (!playerCapability.isPresent())
+			return;
+
+		maxMana = playerCapability.map(x -> x.getMaxMana()).orElse(0.0f);
+		manaRun = playerCapability.map(x -> x.getMana()).orElse(0.0f);
+		if (manaRun < maxMana) {
+			manaRun += 0.10;
+			playerCapability.ifPresent(x -> x.setMana(manaRun > maxMana ? maxMana : manaRun,player));
+		}else {
+			manaRun = maxMana;
+		} 
 
 		/* This object draws text using the Minecraft font */
 		FontRenderer fr = mc.fontRenderer;
@@ -97,7 +84,8 @@ public class StatusBarRenderer extends AbstractGui {
 		// we will draw the status bar just above the hotbar. obtained by inspecting the
 		// vanilla hotbar rendering code
 		final int vanillaExpLeftX = screenWidth / 2 - 91; // leftmost edge of the experience bar
-		final int vanillaExpTopY = screenHeight - 32 + 3; // top of the experience bar
+		final int vanillaExpTopY = screenHeight - 32 + BAR_SPACING_ABOVE_EXP_BAR - BAR_HEIGHT; // top of the experience
+																								// bar
 
 		/*
 		 * Shift our rendering origin to just above the experience bar The top left
@@ -124,27 +112,11 @@ public class StatusBarRenderer extends AbstractGui {
 		 */
 		blit(0, 0, 0, 0, BAR_WIDTH, BAR_HEIGHT);
 
-		/*
-		 * This line draws the outline effect that corresponds to how much armor the
-		 * player has. I slide the right-most side of the rectangle using the player's
-		 * armor value.
-		 */
-		blit(0, 0, 0, BAR_HEIGHT, (int) (BAR_WIDTH * (player.getTotalArmorValue() / 20f)), BAR_HEIGHT);
-
 		/* This part draws the inside of the bar, which starts 1 pixel right and down */
 		GL11.glPushMatrix();
 
 		/* Shift 1 pixel right and down */
 		GL11.glTranslatef(1, 1, 0);
-
-		/*
-		 * These few numbers will store the HP values of the player. This includes the
-		 * Health Boost and Absorption potion effects
-		 */
-		float maxHp = player.getMaxHealth();
-		float absorptionAmount = player.getAbsorptionAmount();
-		float effectiveHp = player.getHealth() + absorptionAmount;
-
 		/*
 		 * The part of the bar that fills up will be a rectangle that stretches based on
 		 * how much hp the player has. To do this, I need to use a scaling transform,
@@ -159,7 +131,7 @@ public class StatusBarRenderer extends AbstractGui {
 		 *
 		 * The width of the bar's interior is BAR_WIDTH - 2
 		 */
-		GL11.glScalef((BAR_WIDTH - 2) * Math.min(1, effectiveHp / maxHp), 1, 1);
+		GL11.glScalef((BAR_WIDTH - 2) * Math.min(1, manaRun / maxMana), 1, 1);
 
 		/*
 		 * This chain of if-else block checks if the player has any status effects. I
@@ -172,23 +144,9 @@ public class StatusBarRenderer extends AbstractGui {
 		 * For a more comprehensive list of status effects, see
 		 * http:minecraft.gamepedia.com/Status_effect
 		 */
-		final int WITHER_EFFECT_ID = 20; // is now MobEffects.WITHER
-		final int POISON_EFFECT_ID = 19; // is now MobEffects.POISON
-		final int REGEN_EFFECT_ID = 10; // is now MobEffects.REGENERATION
-		final int NORMAL_TEXTURE_U = BAR_WIDTH; // red texels - see mbe40_hud_overlay.png
-		final int REGEN_TEXTURE_U = BAR_WIDTH + 1; // green texels
-		final int POISON_TEXTURE_U = BAR_WIDTH + 2; // black texels
-		final int WITHER_TEXTURE_U = BAR_WIDTH + 3; // brown texels
 
-		if (player.isPotionActive(Effects.WITHER)) {
-			blit(0, 0, WITHER_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
-		} else if (player.isPotionActive(Effects.POISON)) {
-			blit(0, 0, POISON_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
-		} else if (player.isPotionActive(Effects.REGENERATION)) {
-			blit(0, 0, REGEN_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
-		} else {
-			blit(0, 0, NORMAL_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
-		}
+		final int NORMAL_TEXTURE_U = BAR_WIDTH; // red texels - see mbe40_hud_overlay.png
+		blit(0, 0, NORMAL_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
 
 		GL11.glPopMatrix();
 
@@ -200,24 +158,11 @@ public class StatusBarRenderer extends AbstractGui {
 		GL11.glScalef(0.5f, 0.5f, 1);
 
 		/* This generates the string that I want to draw. */
-		String s = d.format(effectiveHp) + "/" + d.format(maxHp);
+		String s = d.format(manaRun) + "/" + d.format(maxMana);
 
-		/*
-		 * If the player has the absorption effect, draw the string in gold color,
-		 * otherwise draw the string in white color. For each case, I call drawString
-		 * twice, once to draw the shadow, and once for the actual string.
-		 */
-		if (absorptionAmount > 0) {
+		fr.drawString(s, -fr.getStringWidth(s) + 1, 2, 0x4D0000);
+		fr.drawString(s, -fr.getStringWidth(s), 1, 0xFFFFFF);
 
-			/* Draw the shadow string */
-			fr.drawString(s, -fr.getStringWidth(s) + 1, 2, 0x5A2B00);
-
-			/* Draw the actual string */
-			fr.drawString(s, -fr.getStringWidth(s), 1, 0xFFD200);
-		} else {
-			fr.drawString(s, -fr.getStringWidth(s) + 1, 2, 0x4D0000);
-			fr.drawString(s, -fr.getStringWidth(s), 1, 0xFFFFFF);
-		}
 		GL11.glPopMatrix();
 
 		GL11.glPopMatrix();

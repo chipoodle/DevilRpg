@@ -1,7 +1,5 @@
 package com.chipoodle.devilrpg.network.handler;
 
-import static com.chipoodle.devilrpg.DevilRpg.LOGGER;
-
 import java.util.function.Supplier;
 
 import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
@@ -10,7 +8,6 @@ import com.chipoodle.devilrpg.util.PowerEnum;
 
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.text.StringTextComponent;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.fml.network.NetworkDirection;
 import net.minecraftforge.fml.network.NetworkEvent;

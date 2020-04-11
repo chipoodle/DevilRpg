@@ -17,7 +17,6 @@ import com.chipoodle.devilrpg.capability.mana.PlayerManaCapabilityProvider;
 import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
 import com.chipoodle.devilrpg.init.ModNetwork;
-import com.chipoodle.devilrpg.network.handler.PlayerAuxiliarClientServerHandler;
 import com.chipoodle.devilrpg.network.handler.PlayerExperienceClientServerHandler;
 import com.chipoodle.devilrpg.network.handler.PlayerManaClientServerHandler;
 import com.chipoodle.devilrpg.network.handler.PlayerSkillClientServerHandler;

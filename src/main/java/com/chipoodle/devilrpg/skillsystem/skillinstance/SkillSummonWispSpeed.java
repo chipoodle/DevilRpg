@@ -1,7 +1,5 @@
 package com.chipoodle.devilrpg.skillsystem.skillinstance;
 
-import static com.chipoodle.devilrpg.DevilRpg.LOGGER;
-
 import java.util.Random;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -14,7 +12,6 @@ import com.chipoodle.devilrpg.util.SkillEnum;
 
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.potion.Effects;
-import net.minecraft.util.DamageSource;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;

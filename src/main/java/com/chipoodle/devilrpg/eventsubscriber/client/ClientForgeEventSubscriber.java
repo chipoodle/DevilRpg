@@ -12,9 +12,8 @@ import com.chipoodle.devilrpg.capability.auxiliar.IBaseAuxiliarCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliarCapabilityProvider;
 import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
-import com.chipoodle.devilrpg.client.gui.hudoverlay.StatusBarRenderer;
-import com.chipoodle.devilrpg.client.gui.manabar.GuiManaBar;
-import com.chipoodle.devilrpg.client.gui.manabar.ManaBarRenderer;
+import com.chipoodle.devilrpg.client.gui.hud.ManaBarRenderer;
+import com.chipoodle.devilrpg.client.gui.hud.StatusBarRenderer;
 import com.chipoodle.devilrpg.skillsystem.skillinstance.SkillTransformWerewolf;
 import com.chipoodle.devilrpg.util.SkillEnum;
 

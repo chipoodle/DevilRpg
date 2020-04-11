@@ -1,4 +1,4 @@
-package com.chipoodle.devilrpg.client.gui.manabar;
+package com.chipoodle.devilrpg.client.gui.hud;
 
 import java.text.DecimalFormat;
 
@@ -12,12 +12,10 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.AbstractGui;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.potion.Effects;
 import net.minecraft.util.ResourceLocation;
-import net.minecraft.world.World;
 import net.minecraftforge.common.util.LazyOptional;
 
-public class ManaBarRenderer extends AbstractGui {
+public class MinionPortraitRenderer extends AbstractGui {
 
 	private final static ResourceLocation overlayBar = new ResourceLocation(
 			DevilRpg.MODID + ":textures/gui/mana_texture.png");
@@ -32,12 +30,12 @@ public class ManaBarRenderer extends AbstractGui {
 
 	private Minecraft mc;
 
-	public ManaBarRenderer(Minecraft mc) {
+	public MinionPortraitRenderer(Minecraft mc) {
 		super();
 		this.mc = mc;
 	}
 
-	public ManaBarRenderer() {
+	public MinionPortraitRenderer() {
 		super();
 		mc = Minecraft.getInstance();
 	}

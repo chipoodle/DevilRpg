@@ -2,7 +2,6 @@ package com.chipoodle.devilrpg.skillsystem;
 
 import java.util.Hashtable;
 
-import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.skillsystem.skillinstance.SkillSummonSoulWolf;
 import com.chipoodle.devilrpg.skillsystem.skillinstance.SkillSummonWispHealth;

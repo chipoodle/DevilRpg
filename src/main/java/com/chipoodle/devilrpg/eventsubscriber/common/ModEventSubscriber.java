@@ -1,8 +1,5 @@
 package com.chipoodle.devilrpg.eventsubscriber.common;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.config.ConfigHelper;
 import com.chipoodle.devilrpg.config.ConfigHolder;
@@ -10,21 +7,11 @@ import com.chipoodle.devilrpg.init.ModBlocks;
 import com.chipoodle.devilrpg.init.ModCapability;
 import com.chipoodle.devilrpg.init.ModItemGroups;
 import com.chipoodle.devilrpg.item.ModdedSpawnEggItem;
-import com.chipoodle.devilrpg.util.TargetUtils;
 
 import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.passive.TameableEntity;
-import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.Item;
-import net.minecraft.util.DamageSource;
-import net.minecraft.util.SoundEvents;
 import net.minecraftforge.event.RegistryEvent;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.entity.living.LivingEvent.LivingJumpEvent;
-import net.minecraftforge.event.entity.player.AttackEntityEvent;
-import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.RegistryObject;

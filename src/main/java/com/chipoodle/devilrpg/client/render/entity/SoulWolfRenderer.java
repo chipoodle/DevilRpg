@@ -3,7 +3,6 @@ package com.chipoodle.devilrpg.client.render.entity;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.client.render.entity.layer.SoulWolfCollarLayer;
 import com.chipoodle.devilrpg.client.render.entity.layer.SoulWolfGelLayer;
-import com.chipoodle.devilrpg.client.render.entity.model.SoulWolfModel;
 import com.chipoodle.devilrpg.client.render.entity.model.SoulWolfModelHeart;
 import com.chipoodle.devilrpg.entity.soulwolf.SoulWolfEntity;
 import com.mojang.blaze3d.matrix.MatrixStack;

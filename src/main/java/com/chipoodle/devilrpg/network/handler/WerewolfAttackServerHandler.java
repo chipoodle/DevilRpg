@@ -2,7 +2,6 @@ package com.chipoodle.devilrpg.network.handler;
 
 import java.util.function.Supplier;
 
-import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.util.TargetUtils;
 
 import net.minecraft.entity.Entity;
@@ -10,7 +9,6 @@ import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.DamageSource;
 import net.minecraft.util.Hand;
 import net.minecraftforge.fml.network.NetworkDirection;
 import net.minecraftforge.fml.network.NetworkEvent;
