@@ -10,6 +10,7 @@ import com.chipoodle.devilrpg.util.PowerEnum;
 
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.network.PacketBuffer;
+import net.minecraft.util.text.StringTextComponent;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.fml.network.NetworkDirection;
 import net.minecraftforge.fml.network.NetworkEvent;
@@ -39,6 +40,7 @@ public class KeyboardSkillServerHandler {
 			contextSupplier.get().enqueueWork(() -> {
 				ServerPlayerEntity sender = contextSupplier.get().getSender(); // the client that sent this packet
 				LazyOptional<IBaseSkillCapability> skill = sender.getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
+				//sender.sendMessage(new StringTextComponent("KeyboardSkillServerHandler on msg:"+ msg.getPoder().name()+" Player ID: "+sender.getEntityId()));
 				skill.ifPresent(x->x.triggerAction(sender, msg.getPoder()));
 			});
 			contextSupplier.get().setPacketHandled(true);

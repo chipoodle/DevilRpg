@@ -2,6 +2,7 @@ package com.chipoodle.devilrpg.skillsystem;
 
 import java.util.Hashtable;
 
+import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.skillsystem.skillinstance.SkillSummonSoulWolf;
 import com.chipoodle.devilrpg.skillsystem.skillinstance.SkillSummonWispHealth;
@@ -16,6 +17,7 @@ public class SingletonSkillFactory {
 
 	public SingletonSkillFactory(PlayerSkillCapability parentCapability) {
 		this.parentCapability = parentCapability;
+		//DevilRpg.LOGGER.info("--------> SingletonSkillFactory. capability hash: "+parentCapability.hashCode());
 	}
 
 	public ISkillContainer create(SkillEnum skillEnum) {

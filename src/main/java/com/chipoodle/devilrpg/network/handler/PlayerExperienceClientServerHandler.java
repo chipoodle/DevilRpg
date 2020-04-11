@@ -35,7 +35,7 @@ public class PlayerExperienceClientServerHandler {
 	public static void onMessage(final PlayerExperienceClientServerHandler msg,
 			final Supplier<NetworkEvent.Context> contextSupplier) {
 		if (contextSupplier.get().getDirection().equals(NetworkDirection.PLAY_TO_SERVER)) {
-			contextSupplier.get().enqueueWork(() -> /* DistExecutor.runWhenOn(Dist.DEDICATED_SERVER, () -> () -> */ {
+			contextSupplier.get().enqueueWork(() -> {
 				ServerPlayerEntity serverPlayer = contextSupplier.get().getSender();
 				if (serverPlayer != null) {
 					serverPlayer.getCapability(PlayerExperienceCapabilityProvider.EXPERIENCE_CAP)

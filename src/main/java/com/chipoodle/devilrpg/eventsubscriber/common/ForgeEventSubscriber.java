@@ -157,7 +157,7 @@ public class ForgeEventSubscriber {
 		}
 
 		LazyOptional<IBaseManaCapability> mana = player.getCapability(PlayerManaCapabilityProvider.MANA_CAP, null);
-		mana.ifPresent((cap) -> cap.setMana(mana.map(x -> x.getMaxMana()).orElse(Float.NaN)));
+		mana.ifPresent((cap) -> cap.setMana(mana.map(x -> x.getMaxMana()).orElse(Float.NaN),player));
 
 		String message = String.format(
 				"You refreshed yourself in the bed. You recovered mana and you have %f mana left.",
@@ -165,6 +165,10 @@ public class ForgeEventSubscriber {
 		player.sendMessage(new StringTextComponent(message));
 	}
 
+	/**
+	 * 
+	 * @param event
+	 */
 	@SubscribeEvent
 	public static void onEntityJoinWorld(EntityJoinWorldEvent event) {
 		if (!(event.getEntity() instanceof PlayerEntity))
@@ -179,21 +183,19 @@ public class ForgeEventSubscriber {
 		LazyOptional<IBaseAuxiliarCapability> aux = player.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
 
 		Minecraft mainThread = Minecraft.getInstance();
-		if (!mana.isPresent()) {
-
-		} else {
+		if (mana.isPresent()) {
 			if (!player.world.isRemote) {
 				mainThread.enqueue(new Runnable() {
 					public void run() {
+						DevilRpg.LOGGER.info("----------------------->onEntityJoinWorld(mana)");
 						ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> (ServerPlayerEntity) player),
 								new PlayerManaClientServerHandler(mana.map(x -> x.getNBTData()).orElse(null)));
 					}
 				});
 			}
-		}
-		if (!skill.isPresent()) {
 
-		} else {
+		}
+		if (skill.isPresent()) {
 			if (!player.world.isRemote) {
 				mainThread.enqueue(new Runnable() {
 					public void run() {
@@ -202,10 +204,9 @@ public class ForgeEventSubscriber {
 					}
 				});
 			}
-		}
-		if (!exp.isPresent()) {
 
-		} else {
+		}
+		if (exp.isPresent()) {
 			if (!player.world.isRemote) {
 				mainThread.enqueue(new Runnable() {
 					public void run() {
@@ -216,23 +217,21 @@ public class ForgeEventSubscriber {
 			}
 
 		}
-		if (!aux.isPresent()) {
 
-		} else {
+		if (aux.isPresent()) {
 			if (!player.world.isRemote) {
 				mainThread.enqueue(new Runnable() {
 					public void run() {
 						aux.ifPresent(x -> x.setWerewolfAttack(false, player));
 						aux.ifPresent(x -> x.setWerewolfTransformation(false, player));
-						/*
-						 * ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() ->
-						 * (ServerPlayerEntity) player), new PlayerAuxiliarClientServerHandler(aux.map(x
-						 * -> x.getNBTData()).orElse(null)));
-						 */
+						
+						  //ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() ->
+						  //(ServerPlayerEntity) player), new PlayerAuxiliarClientServerHandler(aux.map(x
+						  //-> x.getNBTData()).orElse(null)));
+						 
 					}
 				});
 			}
-
 		}
 
 	}
@@ -262,19 +261,23 @@ public class ForgeEventSubscriber {
 
 	@SubscribeEvent
 	public static void leftClickBlock(PlayerInteractEvent.LeftClickEmpty event) {
-		event.getPlayer().sendMessage(new StringTextComponent("------> PlayerInteractEvent.LeftClickEmpty"));
+		// event.getPlayer().sendMessage(new StringTextComponent("------>
+		// PlayerInteractEvent.LeftClickEmpty"));
 	}
+
 	@SubscribeEvent
 	public static void leftClickBlock(PlayerInteractEvent.EntityInteract event) {
-		event.getPlayer().sendMessage(new StringTextComponent("------> PlayerInteractEvent.EntityInteract"));
+		// event.getPlayer().sendMessage(new StringTextComponent("------>
+		// PlayerInteractEvent.EntityInteract"));
 	}
-	
+
 	@SubscribeEvent
 	public static void leftClickBlock(PlayerInteractEvent.LeftClickBlock event) {
 		LazyOptional<IBaseAuxiliarCapability> aux = event.getPlayer()
 				.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
 
-		event.getPlayer().sendMessage(new StringTextComponent("------> PlayerInteractEvent.LeftClickBlock"));
+		// event.getPlayer().sendMessage(new StringTextComponent("------>
+		// PlayerInteractEvent.LeftClickBlock"));
 
 		boolean transformation = aux.map(x -> x.isWerewolfTransformation()).orElse(false);
 		if (transformation) {
@@ -288,7 +291,8 @@ public class ForgeEventSubscriber {
 		LazyOptional<IBaseAuxiliarCapability> aux = event.getPlayer()
 				.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
 
-		event.getPlayer().sendMessage(new StringTextComponent("------> PlayerInteractEvent.EntityInteractSpecific"));
+		// event.getPlayer().sendMessage(new StringTextComponent("------>
+		// PlayerInteractEvent.EntityInteractSpecific"));
 
 		boolean transformation = aux.map(x -> x.isWerewolfTransformation()).orElse(false);
 		if (transformation)

@@ -24,6 +24,7 @@ import net.minecraftforge.common.util.LazyOptional;
 
 public class SkillTransformWerewolf implements ISkillContainer {
 	private PlayerSkillCapability parentCapability;
+	private LazyOptional<IBaseAuxiliarCapability> aux;
 
 	public SkillTransformWerewolf(PlayerSkillCapability parentCapability) {
 		this.parentCapability = parentCapability;
@@ -37,8 +38,7 @@ public class SkillTransformWerewolf implements ISkillContainer {
 	@Override
 	public void execute(World worldIn, PlayerEntity playerIn) {
 		if (!worldIn.isRemote) {
-			LazyOptional<IBaseAuxiliarCapability> aux = playerIn
-					.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
+			aux = playerIn.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
 			boolean transformation = aux.map(x -> x.isWerewolfTransformation()).orElse(false);
 			aux.ifPresent(x -> x.setWerewolfTransformation(!transformation, playerIn));
 
@@ -69,9 +69,8 @@ public class SkillTransformWerewolf implements ISkillContainer {
 
 					if (target != null) {
 						if (targetList != null && !targetList.isEmpty()) {
-							player.sendMessage(new StringTextComponent("Hitting " + target.getName()));
 							player.setLastAttackedEntity(target);
-							Hand h = player.ticksExisted % 20L == 0L ? Hand.MAIN_HAND : Hand.OFF_HAND;
+							Hand h = player.ticksExisted % points == 0L ? Hand.MAIN_HAND : Hand.OFF_HAND;
 							player.swingArm(h);
 							ModNetwork.CHANNEL.sendToServer(new WerewolfAttackServerHandler(target.getEntityId(), h));
 						}

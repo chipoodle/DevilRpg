@@ -1,9 +1,13 @@
 package com.chipoodle.devilrpg.capability.mana;
 
 import com.chipoodle.devilrpg.init.ModNetwork;
+import com.chipoodle.devilrpg.network.handler.PlayerAuxiliarClientServerHandler;
 import com.chipoodle.devilrpg.network.handler.PlayerManaClientServerHandler;
 
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.nbt.CompoundNBT;
+import net.minecraftforge.fml.network.PacketDistributor;
 
 public class PlayerManaCapability implements IBaseManaCapability {
 
@@ -16,9 +20,12 @@ public class PlayerManaCapability implements IBaseManaCapability {
 	}
 
 	@Override
-	public void setMana(float mana) {
+	public void setMana(float mana, PlayerEntity player) {
 		this.mana = mana;
-		sendManaChangesToServer();
+		if (!player.world.isRemote)
+			sendManaChangesToClient((ServerPlayerEntity) player);
+		else
+			sendManaChangesToServer();
 	}
 
 	@Override
@@ -27,9 +34,12 @@ public class PlayerManaCapability implements IBaseManaCapability {
 	}
 
 	@Override
-	public void setMaxMana(float maxMana) {
+	public void setMaxMana(float maxMana, PlayerEntity player) {
 		this.maxMana = maxMana;
-		sendManaChangesToServer();
+		if (!player.world.isRemote)
+			sendManaChangesToClient((ServerPlayerEntity) player);
+		else
+			sendManaChangesToServer();
 	}
 
 	@Override
@@ -53,5 +63,10 @@ public class PlayerManaCapability implements IBaseManaCapability {
 
 	private void sendManaChangesToServer() {
 		ModNetwork.CHANNEL.sendToServer(new PlayerManaClientServerHandler(getNBTData()));
+	}
+	
+	private void sendManaChangesToClient(ServerPlayerEntity pe) {
+		ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> pe),
+				new PlayerManaClientServerHandler(getNBTData()));
 	}
 }

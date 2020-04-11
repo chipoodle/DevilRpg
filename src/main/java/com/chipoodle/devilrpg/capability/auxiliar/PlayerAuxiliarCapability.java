@@ -20,27 +20,26 @@ public class PlayerAuxiliarCapability implements IBaseAuxiliarCapability {
 	}
 
 	@Override
-	public void setWerewolfAttack(boolean active,PlayerEntity player) {
+	public void setWerewolfAttack(boolean active, PlayerEntity player) {
 		werewolfAttack = active;
-		if(!player.world.isRemote) {
-			player.sendMessage(new StringTextComponent("Sending to client attaking werewolf: "+active));
+		if (!player.world.isRemote) {
+			//player.sendMessage(new StringTextComponent("Sending to client attaking werewolf: " + active));
 			sendAuxiliarChangesToClient((ServerPlayerEntity) player);
-		}
-		else {
-			player.sendMessage(new StringTextComponent("Sending to server attaking werewolf: "+active));
+		} else {
+			//player.sendMessage(new StringTextComponent("Sending to server attaking werewolf: " + active));
 			sendAuxiliarChangesToServer();
 		}
 	}
-	
+
 	@Override
 	public boolean isWerewolfTransformation() {
 		return werewolfTransformation;
 	}
-	
+
 	@Override
-	public void setWerewolfTransformation(boolean active,PlayerEntity player) {
+	public void setWerewolfTransformation(boolean active, PlayerEntity player) {
 		werewolfTransformation = active;
-		if(!player.world.isRemote)
+		if (!player.world.isRemote)
 			sendAuxiliarChangesToClient((ServerPlayerEntity) player);
 		else
 			sendAuxiliarChangesToServer();
@@ -59,13 +58,14 @@ public class PlayerAuxiliarCapability implements IBaseAuxiliarCapability {
 		werewolfAttack = compound.getBoolean("werewolfAttack");
 		werewolfTransformation = compound.getBoolean("werewolfTransformation");
 	}
-	
-	 private void sendAuxiliarChangesToServer() {
-			ModNetwork.CHANNEL.sendToServer(new PlayerAuxiliarClientServerHandler(getNBTData()));
-		}
-		
-		private void sendAuxiliarChangesToClient(ServerPlayerEntity pe) {
-			ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(()->pe),new PlayerAuxiliarClientServerHandler(getNBTData()));
-		}
+
+	private void sendAuxiliarChangesToServer() {
+		ModNetwork.CHANNEL.sendToServer(new PlayerAuxiliarClientServerHandler(getNBTData()));
+	}
+
+	private void sendAuxiliarChangesToClient(ServerPlayerEntity pe) {
+		ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> pe),
+				new PlayerAuxiliarClientServerHandler(getNBTData()));
+	}
 
 }

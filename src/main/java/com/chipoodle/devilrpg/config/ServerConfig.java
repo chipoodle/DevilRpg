@@ -24,6 +24,10 @@ final class ServerConfig {
     final ForgeConfigSpec.IntValue electricFurnaceEnergySmeltCostPerTick;
     final ForgeConfigSpec.IntValue heatCollectorTransferAmountPerTick;
 
+    final ForgeConfigSpec.IntValue wolfSpawnDistance;
+    final ForgeConfigSpec.IntValue bearSpawnDistance;
+    final ForgeConfigSpec.IntValue wispSpawnDistance;
+    
     ServerConfig(final ForgeConfigSpec.Builder builder) {
         builder.push("general");
         serverBoolean = builder
@@ -46,6 +50,19 @@ final class ServerConfig {
                 .comment("How much energy for the Heat Collector to try and transfer in each direction per tick")
                 .translation(DevilRpg.MODID + ".config.heatCollectorTransferAmountPerTick")
                 .defineInRange("heatCollectorTransferAmountPerTick", 100, 0, Integer.MAX_VALUE);
+        
+        wolfSpawnDistance = builder
+                .comment("Spawn distance when summoning")
+                .translation(DevilRpg.MODID + ".config.wolfSpawnDistance")
+                .defineInRange("wolfSpawnDistance", 3, 0, Integer.MAX_VALUE);
+        bearSpawnDistance = builder
+        		.comment("Spawn distance when summoning")
+        		.translation(DevilRpg.MODID + ".config.bearSpawnDistance")
+        		.defineInRange("bearSpawnDistance", 3, 0, Integer.MAX_VALUE);
+        wispSpawnDistance = builder
+        		.comment("Spawn distance when summoning")
+        		.translation(DevilRpg.MODID + ".config.wispSpawnDistance")
+        		.defineInRange("wispSpawnDistance", 3, 0, Integer.MAX_VALUE);
         builder.pop();
     }
 

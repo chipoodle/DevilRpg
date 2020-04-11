@@ -9,6 +9,7 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.network.PacketBuffer;
+import net.minecraft.util.text.StringTextComponent;
 import net.minecraftforge.fml.network.NetworkDirection;
 import net.minecraftforge.fml.network.NetworkEvent;
 
@@ -40,6 +41,7 @@ public class PlayerManaClientServerHandler {
 				if (serverPlayer != null) {
 					serverPlayer.getCapability(PlayerManaCapabilityProvider.MANA_CAP)
 							.ifPresent(x -> x.setNBTData(msg.getManaCompound()));
+					//serverPlayer.sendMessage(new StringTextComponent("PlayerManaClientServerHandler Server side compound:"+ msg.getManaCompound().getFloat("mana")+" Player ID: "+serverPlayer.getEntityId()));
 				}
 			});
 			contextSupplier.get().setPacketHandled(true);
@@ -52,6 +54,7 @@ public class PlayerManaClientServerHandler {
 				if (clientPlayer != null) {
 					clientPlayer.getCapability(PlayerManaCapabilityProvider.MANA_CAP)
 							.ifPresent(x -> x.setNBTData(msg.getManaCompound()));
+					//clientPlayer.sendMessage(new StringTextComponent("PlayerManaClientServerHandler Client side compound:"+ msg.getManaCompound().getFloat("mana")+" Player ID: "+clientPlayer.getEntityId()));
 				}
 
 			});

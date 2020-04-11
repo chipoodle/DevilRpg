@@ -45,7 +45,7 @@ public class GuiManaBar extends AbstractGui {
 			return;
 		} else {
 			manaRun += 0.10;
-			playerCapability.ifPresent(x -> x.setMana(manaRun > maxMana ? maxMana : manaRun));
+			playerCapability.ifPresent(x -> x.setMana(manaRun > maxMana ? maxMana : manaRun,mc.player));
 
 		}
 
