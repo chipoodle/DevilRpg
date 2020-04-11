@@ -25,9 +25,6 @@ public class DevilRpg {
    
 
     public DevilRpg() {
-    	
-    	
-    	
     	LOGGER.info("Initializing DevilRpg");
 
         final ModLoadingContext modLoadingContext = ModLoadingContext.get();

@@ -27,6 +27,10 @@ public final class ConfigHelper {
 
         DevilRpgConfig.electricFurnaceEnergySmeltCostPerTick = ConfigHolder.SERVER.electricFurnaceEnergySmeltCostPerTick.get();
         DevilRpgConfig.heatCollectorTransferAmountPerTick = ConfigHolder.SERVER.heatCollectorTransferAmountPerTick.get();
+        
+        DevilRpgConfig.WOLF_SPAWN_DISTANCE = ConfigHolder.SERVER.wolfSpawnDistance.get();
+        DevilRpgConfig.BEAR_SPAWN_DISTANCE = ConfigHolder.SERVER.bearSpawnDistance.get();
+        DevilRpgConfig.WISP_SPAWN_DISTANCE = ConfigHolder.SERVER.wispSpawnDistance.get();
     }
 
 }
