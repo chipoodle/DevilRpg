@@ -2,9 +2,12 @@ package com.chipoodle.devilrpg.util;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.world.ClientWorld;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.CreatureAttribute;
 import net.minecraft.entity.Entity;
@@ -416,8 +419,10 @@ public class TargetUtils {
 	 * The equipped item has hitEntity called on it. Args: targetEntity
 	 */
 	private static void attackTargetEntity(ServerPlayerEntity player, Entity targetEntity, ItemStack heldItem) {
-		/*if (!net.minecraftforge.common.ForgeHooks.onPlayerAttackTarget(player, targetEntity))
-			return;*/
+		/*
+		 * if (!net.minecraftforge.common.ForgeHooks.onPlayerAttackTarget(player,
+		 * targetEntity)) return;
+		 */
 		if (targetEntity.canBeAttackedWithItem()) {
 			if (!targetEntity.hitByEntity(player)) {
 				float f = (float) player.getAttribute(SharedMonsterAttributes.ATTACK_DAMAGE).getValue();
@@ -461,7 +466,7 @@ public class TargetUtils {
 					boolean flag3 = false;
 					double d0 = (double) (player.distanceWalkedModified - player.prevDistanceWalkedModified);
 					if (flag && !flag2 && !flag1 && player.onGround && d0 < (double) player.getAIMoveSpeed()) {
-						ItemStack itemstack = heldItem;//player.getHeldItem(Hand.MAIN_HAND);
+						ItemStack itemstack = heldItem;// player.getHeldItem(Hand.MAIN_HAND);
 						if (itemstack.getItem() instanceof SwordItem) {
 							flag3 = true;
 						}
@@ -557,7 +562,7 @@ public class TargetUtils {
 						}
 
 						EnchantmentHelper.applyArthropodEnchantments(player, targetEntity);
-						ItemStack itemstack1 = heldItem;//player.getHeldItemMainhand();
+						ItemStack itemstack1 = heldItem;// player.getHeldItemMainhand();
 						Entity entity = targetEntity;
 						if (targetEntity instanceof EnderDragonPartEntity) {
 							entity = ((EnderDragonPartEntity) targetEntity).dragon;
@@ -567,7 +572,8 @@ public class TargetUtils {
 							ItemStack copy = itemstack1.copy();
 							itemstack1.hitEntity((LivingEntity) entity, player);
 							if (itemstack1.isEmpty()) {
-								net.minecraftforge.event.ForgeEventFactory.onPlayerDestroyItem(player, copy,Hand.MAIN_HAND);
+								net.minecraftforge.event.ForgeEventFactory.onPlayerDestroyItem(player, copy,
+										Hand.MAIN_HAND);
 								player.setHeldItem(Hand.MAIN_HAND, ItemStack.EMPTY);
 							}
 						}
@@ -602,4 +608,14 @@ public class TargetUtils {
 		}
 	}
 
+	public static Entity getEntityByUUID(ServerWorld w, UUID uuid) {
+		ServerWorld sw = (ServerWorld) w;
+		return sw.getEntityByUuid(uuid);
+	}
+
+	public static Entity getEntityByUUID(ClientWorld w, UUID uuid) {
+		ClientWorld cw = (ClientWorld) w;
+		return StreamSupport.stream(cw.getAllEntities().spliterator(), true).filter(x -> x.getUniqueID().equals(uuid))
+				.findAny().get();
+	}
 }

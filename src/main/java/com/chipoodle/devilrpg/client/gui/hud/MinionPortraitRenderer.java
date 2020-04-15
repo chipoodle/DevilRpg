@@ -1,33 +1,39 @@
 package com.chipoodle.devilrpg.client.gui.hud;
 
 import java.text.DecimalFormat;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.lwjgl.opengl.GL11;
 
 import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.capability.mana.IBaseManaCapability;
-import com.chipoodle.devilrpg.capability.mana.PlayerManaCapabilityProvider;
+import com.chipoodle.devilrpg.capability.minion.IBaseMinionCapability;
+import com.chipoodle.devilrpg.capability.minion.PlayerMinionCapabilityProvider;
+import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
+import com.chipoodle.devilrpg.entity.SoulWolfEntity;
+import com.chipoodle.devilrpg.entity.WispEntity;
+import com.chipoodle.devilrpg.init.ModEntityTypes;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.AbstractGui;
 import net.minecraft.client.gui.FontRenderer;
+import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.potion.Effects;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.common.util.LazyOptional;
 
 public class MinionPortraitRenderer extends AbstractGui {
 
-	private final static ResourceLocation overlayBar = new ResourceLocation(
-			DevilRpg.MODID + ":textures/gui/mana_texture.png");
+	private final static ResourceLocation soulwolfPortrait = new ResourceLocation(
+			DevilRpg.MODID + ":textures/entity/soulwolf/soulwolf_portrait_256x256.png");
+	private final static ResourceLocation wispPortrait = new ResourceLocation(
+			DevilRpg.MODID + ":textures/entity/flyingwisp/wisp_portrait_256x256.png");
 
 	/* These two variables describe the size of the bar */
 	private final static int BAR_WIDTH = 81;
-	private final static int BAR_HEIGHT = 9;
-	private final static int BAR_SPACING_ABOVE_EXP_BAR = 3;
-	//LazyOptional<IBaseManaCapability> playerCapability;
-	private float manaRun;
-	private float maxMana;
-
+	private final static int BAR_HEIGHT = 81;
 	private Minecraft mc;
 
 	public MinionPortraitRenderer(Minecraft mc) {
@@ -40,26 +46,42 @@ public class MinionPortraitRenderer extends AbstractGui {
 		mc = Minecraft.getInstance();
 	}
 
-	public void renderStatusBar(int screenWidth, int screenHeight) {
-		/* These are the variables that contain world and player information */
-		//World world = mc.world;
+	public void renderPortraits(int screenWidth, int screenHeight) {
 		PlayerEntity player = mc.player;
-		LazyOptional<IBaseManaCapability> playerCapability = mc.player.getCapability(PlayerManaCapabilityProvider.MANA_CAP);
-		/*if (playerCapability == null)
-			playerCapability = mc.player.getCapability(PlayerManaCapabilityProvider.MANA_CAP);*/
+		LazyOptional<IBaseSkillCapability> skillCap = mc.player.getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
+		LazyOptional<IBaseMinionCapability> minionCap = player.getCapability(PlayerMinionCapabilityProvider.MINION_CAP);
 
-		if (!playerCapability.isPresent())
+		if (!skillCap.isPresent() || !minionCap.isPresent())
 			return;
 
-		maxMana = playerCapability.map(x -> x.getMaxMana()).orElse(0.0f);
-		manaRun = playerCapability.map(x -> x.getMana()).orElse(0.0f);
-		if (manaRun < maxMana) {
-			manaRun += 0.10;
-			playerCapability.ifPresent(x -> x.setMana(manaRun > maxMana ? maxMana : manaRun,player));
-		}else {
-			manaRun = maxMana;
-		} 
+		ConcurrentLinkedQueue<UUID> soulwolfMinionKeys = minionCap.map(x -> x.getSoulWolfMinions())
+				.orElse(new ConcurrentLinkedQueue<UUID>());
+		ConcurrentLinkedQueue<UUID> wispMinionKeys = minionCap.map(x -> x.getWispMinions())
+				.orElse(new ConcurrentLinkedQueue<UUID>());
+		
+		int i = 0;
+		for (UUID wolfKey : soulwolfMinionKeys) {
+			SoulWolfEntity h = (SoulWolfEntity)minionCap.map(m -> m.getTameableByUUID(wolfKey, player.world)).orElse(new SoulWolfEntity(ModEntityTypes.SOUL_WOLF.get(), mc.player.world));
+			if(h.getOwner()!= null) {
+				float health = h.getHealth();
+				float maxHealth = h.getMaxHealth();
+				renderEntityPortrait(i, health, maxHealth, soulwolfPortrait,h);
+				i++;
+			}
+		}
 
+		for (UUID wispKey : wispMinionKeys) {
+			WispEntity h = (WispEntity)minionCap.map(m -> m.getTameableByUUID(wispKey, player.world)).orElse(new WispEntity(ModEntityTypes.WISP.get(), mc.player.world));
+			if(h.getOwner()!= null) {
+				float health = h.getHealth();
+				float maxHealth = h.getMaxHealth();
+				renderEntityPortrait(i, health, maxHealth, wispPortrait,h);
+				i++;
+			}
+		}		
+	}
+
+	private void renderEntityPortrait(int i, float health, float maxHealth, ResourceLocation overlayBar, LivingEntity entity) {
 		/* This object draws text using the Minecraft font */
 		FontRenderer fr = mc.fontRenderer;
 
@@ -83,15 +105,14 @@ public class MinionPortraitRenderer extends AbstractGui {
 
 		// we will draw the status bar just above the hotbar. obtained by inspecting the
 		// vanilla hotbar rendering code
-		final int vanillaExpLeftX = screenWidth / 2 - 91; // leftmost edge of the experience bar
-		final int vanillaExpTopY = screenHeight - 32 + BAR_SPACING_ABOVE_EXP_BAR - BAR_HEIGHT; // top of the experience
-																								// bar
+		final int vanillaExpLeftX = 5; // leftmost edge of the experience bar
+		final int vanillaExpTopY = 5; // top of the experience bar
 
 		/*
 		 * Shift our rendering origin to just above the experience bar The top left
 		 * corner of the screen is x=0, y=0
 		 */
-		GL11.glTranslatef(vanillaExpLeftX, vanillaExpTopY - BAR_SPACING_ABOVE_EXP_BAR - BAR_HEIGHT, 0);
+		GL11.glTranslatef(vanillaExpLeftX + 30*i, vanillaExpTopY, 0);
 
 		/*
 		 * Draw a part of the image file at the current position
@@ -110,13 +131,14 @@ public class MinionPortraitRenderer extends AbstractGui {
 		 *
 		 * This line draws the background of the custom bar
 		 */
+		GL11.glScalef(0.3f, 0.3f, 0.3f);
 		blit(0, 0, 0, 0, BAR_WIDTH, BAR_HEIGHT);
 
 		/* This part draws the inside of the bar, which starts 1 pixel right and down */
 		GL11.glPushMatrix();
 
 		/* Shift 1 pixel right and down */
-		GL11.glTranslatef(1, 1, 0);
+		GL11.glTranslatef(0, -4, 0);
 		/*
 		 * The part of the bar that fills up will be a rectangle that stretches based on
 		 * how much hp the player has. To do this, I need to use a scaling transform,
@@ -131,7 +153,7 @@ public class MinionPortraitRenderer extends AbstractGui {
 		 *
 		 * The width of the bar's interior is BAR_WIDTH - 2
 		 */
-		GL11.glScalef((BAR_WIDTH - 2) * Math.min(1, manaRun / maxMana), 1, 1);
+		GL11.glScalef((BAR_WIDTH - 2) * Math.min(1, health / maxHealth), 1, 1);
 
 		/*
 		 * This chain of if-else block checks if the player has any status effects. I
@@ -145,8 +167,23 @@ public class MinionPortraitRenderer extends AbstractGui {
 		 * http:minecraft.gamepedia.com/Status_effect
 		 */
 
+		final int WITHER_EFFECT_ID = 20; // is now MobEffects.WITHER
+		final int POISON_EFFECT_ID = 19; // is now MobEffects.POISON
+		final int REGEN_EFFECT_ID = 10; // is now MobEffects.REGENERATION
 		final int NORMAL_TEXTURE_U = BAR_WIDTH; // red texels - see mbe40_hud_overlay.png
-		blit(0, 0, NORMAL_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
+		final int REGEN_TEXTURE_U = BAR_WIDTH + 1; // green texels
+		final int POISON_TEXTURE_U = BAR_WIDTH + 2; // black texels
+		final int WITHER_TEXTURE_U = BAR_WIDTH + 3; // brown texels
+
+		if (entity.isPotionActive(Effects.WITHER)) {
+			blit(0, 0, WITHER_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
+		} else if (entity.isPotionActive(Effects.POISON)) {
+			blit(0, 0, POISON_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
+		} else if (entity.isPotionActive(Effects.REGENERATION)) {
+			blit(0, 0, REGEN_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
+		} else {
+			blit(0, 0, NORMAL_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
+		}
 
 		GL11.glPopMatrix();
 
@@ -158,7 +195,7 @@ public class MinionPortraitRenderer extends AbstractGui {
 		GL11.glScalef(0.5f, 0.5f, 1);
 
 		/* This generates the string that I want to draw. */
-		String s = d.format(manaRun) + "/" + d.format(maxMana);
+		String s = d.format(health) + "/" + d.format(maxHealth);
 
 		fr.drawString(s, -fr.getStringWidth(s) + 1, 2, 0x4D0000);
 		fr.drawString(s, -fr.getStringWidth(s), 1, 0xFFFFFF);

@@ -5,6 +5,7 @@ import com.chipoodle.devilrpg.network.handler.KeyboardSkillServerHandler;
 import com.chipoodle.devilrpg.network.handler.PlayerAuxiliarClientServerHandler;
 import com.chipoodle.devilrpg.network.handler.PlayerExperienceClientServerHandler;
 import com.chipoodle.devilrpg.network.handler.PlayerManaClientServerHandler;
+import com.chipoodle.devilrpg.network.handler.PlayerMinionClientServerHandler;
 import com.chipoodle.devilrpg.network.handler.PlayerSkillClientServerHandler;
 import com.chipoodle.devilrpg.network.handler.WerewolfAttackServerHandler;
 
@@ -64,6 +65,12 @@ public class ModNetwork {
         		PlayerAuxiliarClientServerHandler::encode,
         		PlayerAuxiliarClientServerHandler::decode,
         		PlayerAuxiliarClientServerHandler::onMessage);
+
+        CHANNEL.registerMessage(networkId++,
+        		PlayerMinionClientServerHandler.class, 
+        		PlayerMinionClientServerHandler::encode,
+        		PlayerMinionClientServerHandler::decode,
+        		PlayerMinionClientServerHandler::onMessage);
     }
 
 }

@@ -3,6 +3,7 @@ package com.chipoodle.devilrpg.capability.skill;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.mana.IBaseManaCapability;
@@ -15,19 +16,22 @@ import com.chipoodle.devilrpg.util.BytesUtil;
 import com.chipoodle.devilrpg.util.PowerEnum;
 import com.chipoodle.devilrpg.util.SkillEnum;
 
+import net.minecraft.entity.passive.TameableEntity;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.util.text.StringTextComponent;
 import net.minecraftforge.common.util.LazyOptional;
+import net.minecraftforge.fml.network.PacketDistributor;
 
 public class PlayerSkillCapability implements IBaseSkillCapability {
 	public final static String POWERS_KEY = "Powers";
 	public final static String SKILLS_KEY = "Skills";
 	public final static String MAX_SKILLS_KEY = "MaxSkills";
 	public final static String MANA_COST_KEY = "ManaCost";
+	public final static String MINIONS_KEY = "Minions";
 	
 	private CompoundNBT nbt = new CompoundNBT();
-	//private HashMap<SkillEnum, Integer> fastManaCostContainer;
 	private SingletonSkillFactory singletonSkillFactory;
 
 	public PlayerSkillCapability() {
@@ -35,7 +39,8 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
 			HashMap<PowerEnum, SkillEnum> powers = new HashMap<>();
 			HashMap<SkillEnum, Integer> skills = new HashMap<>();
 			HashMap<SkillEnum, Integer> maxSkills = new HashMap<>();
-			HashMap<SkillEnum, Integer> fastManaCostContainer = new HashMap<>();
+			HashMap<SkillEnum, Integer> manaCostContainer = new HashMap<>();
+			ConcurrentLinkedQueue<TameableEntity> minions = new ConcurrentLinkedQueue<TameableEntity>();
 
 			for (PowerEnum p : Arrays.asList(PowerEnum.values())) {
 				powers.put(p, null);
@@ -45,14 +50,15 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
 				maxSkills.put(s, 20);
 			}
 			for (SkillEnum s : Arrays.asList(SkillEnum.values())) {
-				fastManaCostContainer.put(s, 20);
+				manaCostContainer.put(s, 20);
 			}
 
 			try {
 				nbt.putByteArray(POWERS_KEY, BytesUtil.toByteArray(powers));
 				nbt.putByteArray(SKILLS_KEY, BytesUtil.toByteArray(skills));
 				nbt.putByteArray(MAX_SKILLS_KEY, BytesUtil.toByteArray(maxSkills));
-				nbt.putByteArray(MANA_COST_KEY, BytesUtil.toByteArray(fastManaCostContainer));
+				nbt.putByteArray(MANA_COST_KEY, BytesUtil.toByteArray(manaCostContainer));
+				nbt.putByteArray(MINIONS_KEY, BytesUtil.toByteArray(minions));
 			} catch (IOException e) {
 				DevilRpg.LOGGER.error("Error en constructor PlayerSkillCapability", e);
 			}
@@ -72,10 +78,14 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
 	}
 
 	@Override
-	public void setSkillsNameOfPowers(HashMap<PowerEnum, SkillEnum> names) {
+	public void setSkillsNameOfPowers(HashMap<PowerEnum, SkillEnum> names, PlayerEntity player) {
 		try {
 			nbt.putByteArray(POWERS_KEY, BytesUtil.toByteArray(names));
-			sendSkillChangesToServer();
+			if (!player.world.isRemote) {
+				sendSkillChangesToClient((ServerPlayerEntity) player);
+			} else {
+				sendSkillChangesToServer();
+			}
 		} catch (IOException e) {
 			DevilRpg.LOGGER.error("Error en setSkillsNameOfPowers", e);
 		}
@@ -94,10 +104,14 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
 	}
 
 	@Override
-	public void setSkillsPoints(HashMap<SkillEnum, Integer> points) {
+	public void setSkillsPoints(HashMap<SkillEnum, Integer> points, PlayerEntity player) {
 		try {
 			nbt.putByteArray(SKILLS_KEY, BytesUtil.toByteArray(points));
-			sendSkillChangesToServer();
+			if (!player.world.isRemote) {
+				sendSkillChangesToClient((ServerPlayerEntity) player);
+			} else {
+				sendSkillChangesToServer();
+			}
 		} catch (IOException e) {
 			DevilRpg.LOGGER.error("Error en setSkillsPoints", e);
 		}
@@ -116,10 +130,14 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
 	}
 
 	@Override
-	public void setMaxSkillsPoints(HashMap<SkillEnum, Integer> points) {
+	public void setMaxSkillsPoints(HashMap<SkillEnum, Integer> points, PlayerEntity player) {
 		try {
 			nbt.putByteArray(MAX_SKILLS_KEY, BytesUtil.toByteArray(points));
-			sendSkillChangesToServer();
+			if (!player.world.isRemote) {
+				sendSkillChangesToClient((ServerPlayerEntity) player);
+			} else {
+				sendSkillChangesToServer();
+			}
 		} catch (IOException e) {
 			DevilRpg.LOGGER.error("Error en setMaxSkillsPoints", e);
 		}
@@ -130,7 +148,8 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
 	@Override
 	public HashMap<SkillEnum, Integer> getManaCostPoints() {
 		try {
-			return /*fastManaCostContainer =*/ (HashMap<SkillEnum, Integer>) BytesUtil.toObject(nbt.getByteArray(MANA_COST_KEY));
+			return (HashMap<SkillEnum, Integer>) BytesUtil
+					.toObject(nbt.getByteArray(MANA_COST_KEY));
 		} catch (ClassNotFoundException | IOException e) {
 			DevilRpg.LOGGER.error("Error en getManaCost", e);
 			return null;
@@ -138,60 +157,68 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
 	}
 
 	@Override
-	public void setManaCostPoints(HashMap<SkillEnum, Integer> points) {
+	public void setManaCostPoints(HashMap<SkillEnum, Integer> points, PlayerEntity player) {
 		try {
-			//fastManaCostContainer = points;
 			nbt.putByteArray(MANA_COST_KEY, BytesUtil.toByteArray(points));
-			sendSkillChangesToServer();
+			if (!player.world.isRemote) {
+				sendSkillChangesToClient((ServerPlayerEntity) player);
+			} else {
+				sendSkillChangesToServer();
+			}
 		} catch (IOException e) {
 			DevilRpg.LOGGER.error("Error en setManaCost", e);
 		}
 
 	}
-	
+
 	@Override
 	public void triggerAction(ServerPlayerEntity playerIn, PowerEnum triggeredPower) {
-		//playerIn.sendMessage(new StringTextComponent("Capability triggerAction:"+ triggeredPower.name()+" Player ID: "+playerIn.getEntityId()));
+		// playerIn.sendMessage(new StringTextComponent("Capability triggerAction:"+
+		// triggeredPower.name()+" Player ID: "+playerIn.getEntityId()));
 		if (!playerIn.world.isRemote) {
-            if (getSkillLevelFromAssociatedPower(triggeredPower) != 0) {
-            	ISkillContainer poder = getSkill(triggeredPower);
-                if (consumeMana(playerIn, poder)) {
-                    poder.execute(playerIn.world, playerIn);
-                }
-                else {
-                	String message = "Not enough mana.";
-                	playerIn.sendMessage(new StringTextComponent(message));
-                }
-            }
-        }
-    }
-	
-	private  ISkillContainer getSkill(PowerEnum triggeredPower) {
-		SkillEnum skillEnum =  getSkillsNameOfPowers().get(triggeredPower);
-		return singletonSkillFactory.create(skillEnum);
-    }
-
-    private int getSkillLevelFromAssociatedPower(PowerEnum triggeredPower) {
-        return getSkillsPoints().get(getSkillsNameOfPowers().get(triggeredPower));
-    }
-    
-    private boolean consumeMana(ServerPlayerEntity playerIn, ISkillContainer poder) {
-    	float consumedMana = getManaCostPoints().get(poder.getSkillEnum());
-        LazyOptional<IBaseManaCapability> mana = playerIn.getCapability(PlayerManaCapabilityProvider.MANA_CAP, null);
-        if (mana.map(x -> x.getMana() - consumedMana >= 0).orElse(false)) {
-        	//playerIn.sendMessage(new StringTextComponent("Capability Consumed mana:"+ consumedMana+" Player ID: "+playerIn.getEntityId()));
-            mana.ifPresent(m -> m.setMana(m.getMana() - consumedMana, playerIn));
-            return true;
-        }
-        return false;
-    }
-    
-    @Override
-	public ISkillContainer getLoadedSkill(SkillEnum skillEnum) {
-    	return singletonSkillFactory.getExistingSkill(skillEnum);
+			if (getSkillLevelFromAssociatedPower(triggeredPower) != 0) {
+				ISkillContainer poder = getSkill(triggeredPower);
+				if (consumeMana(playerIn, poder)) {
+					poder.execute(playerIn.world, playerIn);
+				} else {
+					String message = "Not enough mana.";
+					playerIn.sendMessage(new StringTextComponent(message));
+				}
+			}
+		}
 	}
-    
-    @Override
+
+	
+	
+	
+	
+	private ISkillContainer getSkill(PowerEnum triggeredPower) {
+		SkillEnum skillEnum = getSkillsNameOfPowers().get(triggeredPower);
+		return singletonSkillFactory.create(skillEnum);
+	}
+
+	private int getSkillLevelFromAssociatedPower(PowerEnum triggeredPower) {
+		return getSkillsPoints().get(getSkillsNameOfPowers().get(triggeredPower));
+	}
+
+	private boolean consumeMana(ServerPlayerEntity playerIn, ISkillContainer poder) {
+		float consumedMana = getManaCostPoints().get(poder.getSkillEnum());
+		LazyOptional<IBaseManaCapability> mana = playerIn.getCapability(PlayerManaCapabilityProvider.MANA_CAP, null);
+		if (mana.map(x -> x.getMana() - consumedMana >= 0).orElse(false)) {
+			// playerIn.sendMessage(new StringTextComponent("Capability Consumed mana:"+
+			// consumedMana+" Player ID: "+playerIn.getEntityId()));
+			mana.ifPresent(m -> m.setMana(m.getMana() - consumedMana, playerIn));
+			return true;
+		}
+		return false;
+	}
+
+	@Override
+	public ISkillContainer getLoadedSkill(SkillEnum skillEnum) {
+		return singletonSkillFactory.getExistingSkill(skillEnum);
+	}
+
+	@Override
 	public ISkillContainer create(SkillEnum skillEnum) {
 		return singletonSkillFactory.create(skillEnum);
 	}
@@ -208,5 +235,10 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
 
 	private void sendSkillChangesToServer() {
 		ModNetwork.CHANNEL.sendToServer(new PlayerSkillClientServerHandler(getNBTData()));
+	}
+
+	private void sendSkillChangesToClient(ServerPlayerEntity pe) {
+		ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> pe),
+				new PlayerSkillClientServerHandler(getNBTData()));
 	}
 }

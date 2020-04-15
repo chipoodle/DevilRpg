@@ -14,6 +14,8 @@ import com.chipoodle.devilrpg.capability.experience.IBaseExperienceCapability;
 import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapabilityProvider;
 import com.chipoodle.devilrpg.capability.mana.IBaseManaCapability;
 import com.chipoodle.devilrpg.capability.mana.PlayerManaCapabilityProvider;
+import com.chipoodle.devilrpg.capability.minion.IBaseMinionCapability;
+import com.chipoodle.devilrpg.capability.minion.PlayerMinionCapabilityProvider;
 import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
 import com.chipoodle.devilrpg.init.ModNetwork;
@@ -25,6 +27,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
+import net.minecraft.util.Hand;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.text.StringTextComponent;
 import net.minecraftforge.common.util.LazyOptional;
@@ -54,17 +57,20 @@ public class ForgeEventSubscriber {
 	public static final ResourceLocation SKILL_CAP = new ResourceLocation(DevilRpg.MODID, "skill");
 	public static final ResourceLocation EXP_CAP = new ResourceLocation(DevilRpg.MODID, "experience");
 	public static final ResourceLocation AUX_CAP = new ResourceLocation(DevilRpg.MODID, "auxiliar");
+	public static final ResourceLocation MINION_CAP = new ResourceLocation(DevilRpg.MODID, "minion");
 
 	@SubscribeEvent
 	public static void attachCapability(AttachCapabilitiesEvent<Entity> event) {
 		if (!(event.getObject() instanceof PlayerEntity)) {
 			return;
 		}
+		
 		DevilRpg.LOGGER.info("----------------------->PlayerForgeEventSubscriber.attachCapability()");
 		event.addCapability(MANA_CAP, new PlayerManaCapabilityProvider());
 		event.addCapability(SKILL_CAP, new PlayerSkillCapabilityProvider());
 		event.addCapability(EXP_CAP, new PlayerExperienceCapabilityProvider());
 		event.addCapability(AUX_CAP, new PlayerAuxiliarCapabilityProvider());
+		event.addCapability(MINION_CAP, new PlayerMinionCapabilityProvider());
 		LOGGER.info("------------------------>Capabilities attached");
 
 	}
@@ -80,8 +86,9 @@ public class ForgeEventSubscriber {
 		player.sendMessage(new StringTextComponent(message1));
 
 		LazyOptional<IBaseSkillCapability> skill = player.getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
-		String message2 = String.format("You have skills.", skill);
-		player.sendMessage(new StringTextComponent(message2));
+		String message2 = String.format("You have skills attached");
+		if (skill != null)
+			player.sendMessage(new StringTextComponent(message2));
 
 		LazyOptional<IBaseExperienceCapability> exp = player
 				.getCapability(PlayerExperienceCapabilityProvider.EXPERIENCE_CAP);
@@ -91,6 +98,10 @@ public class ForgeEventSubscriber {
 		LazyOptional<IBaseAuxiliarCapability> aux = player.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
 		String message4 = String.format("Werewolf form:  " + aux.map(x -> x.isWerewolfTransformation()).orElse(false));
 		player.sendMessage(new StringTextComponent(message4));
+
+		LazyOptional<IBaseMinionCapability> min = player.getCapability(PlayerMinionCapabilityProvider.MINION_CAP);
+		String message5 = String.format("Minions:  " + min.map(x -> !x.getSoulWolfMinions().isEmpty()).orElse(false));
+		player.sendMessage(new StringTextComponent(message5));
 
 	}
 
@@ -126,6 +137,13 @@ public class ForgeEventSubscriber {
 					actualCap.setNBTData(originalCap.getNBTData());
 				});
 			});
+			e.getOriginal().getCapability(PlayerMinionCapabilityProvider.MINION_CAP).ifPresent(originalCap -> {
+				e.getPlayer().getCapability(PlayerMinionCapabilityProvider.MINION_CAP).ifPresent(actualCap -> {
+					PlayerEntity originalPlayer = e.getOriginal();
+					PlayerEntity actualPlayer = e.getPlayer();
+					actualCap.setNBTData(originalCap.getNBTData());
+				});
+			});
 		}
 
 	}
@@ -144,27 +162,13 @@ public class ForgeEventSubscriber {
 		LazyOptional<IBaseExperienceCapability> exp = player
 				.getCapability(PlayerExperienceCapabilityProvider.EXPERIENCE_CAP);
 		LazyOptional<IBaseAuxiliarCapability> aux = player.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
+		LazyOptional<IBaseMinionCapability> min = player.getCapability(PlayerMinionCapabilityProvider.MINION_CAP);
 	}
 
-	@SubscribeEvent
-	public static void onPlayerSleep(PlayerSleepInBedEvent event) {
-		DevilRpg.LOGGER.info("----------------------->PlayerForgeEventSubscriber.onPlayerSleep()");
-		PlayerEntity player = event.getPlayer();
-
-		if (player.world.isRemote) {
-			return;
-		}
-
-		LazyOptional<IBaseManaCapability> mana = player.getCapability(PlayerManaCapabilityProvider.MANA_CAP, null);
-		mana.ifPresent((cap) -> cap.setMana(mana.map(x -> x.getMaxMana()).orElse(Float.NaN),player));
-
-		String message = String.format(
-				"You refreshed yourself in the bed. You recovered mana and you have %f mana left.",
-				mana.map(x -> x.getMaxMana()).orElse(Float.NaN));
-		player.sendMessage(new StringTextComponent(message));
-	}
+	
 
 	/**
+	 * Restore client player capabilities' values on join
 	 * 
 	 * @param event
 	 */
@@ -180,13 +184,13 @@ public class ForgeEventSubscriber {
 		LazyOptional<IBaseExperienceCapability> exp = player
 				.getCapability(PlayerExperienceCapabilityProvider.EXPERIENCE_CAP);
 		LazyOptional<IBaseAuxiliarCapability> aux = player.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
+		LazyOptional<IBaseMinionCapability> min = player.getCapability(PlayerMinionCapabilityProvider.MINION_CAP);
 
 		Minecraft mainThread = Minecraft.getInstance();
 		if (mana.isPresent()) {
 			if (!player.world.isRemote) {
 				mainThread.enqueue(new Runnable() {
 					public void run() {
-						DevilRpg.LOGGER.info("----------------------->onEntityJoinWorld(mana)");
 						ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> (ServerPlayerEntity) player),
 								new PlayerManaClientServerHandler(mana.map(x -> x.getNBTData()).orElse(null)));
 					}
@@ -223,18 +227,52 @@ public class ForgeEventSubscriber {
 					public void run() {
 						aux.ifPresent(x -> x.setWerewolfAttack(false, player));
 						aux.ifPresent(x -> x.setWerewolfTransformation(false, player));
-						
-						  //ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() ->
-						  //(ServerPlayerEntity) player), new PlayerAuxiliarClientServerHandler(aux.map(x
-						  //-> x.getNBTData()).orElse(null)));
-						 
+
+						// ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() ->
+						// (ServerPlayerEntity) player), new PlayerAuxiliarClientServerHandler(aux.map(x
+						// -> x.getNBTData()).orElse(null)));
+
 					}
 				});
 			}
 		}
 
+		if (min.isPresent()) {
+			if (!player.world.isRemote) {
+				mainThread.enqueue(new Runnable() {
+					public void run() {
+						min.ifPresent(x->{
+							x.removeAllSoulWolf(player);
+							x.removeAllWisp(player);
+						});
+						
+						/*ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> (ServerPlayerEntity) player),
+								new PlayerMinionClientServerHandler(min.map(x -> x.getNBTData()).orElse(null)));*/
+					}
+				});
+			}
+
+		}
 	}
 
+	@SubscribeEvent
+	public static void onPlayerSleep(PlayerSleepInBedEvent event) {
+		DevilRpg.LOGGER.info("----------------------->PlayerForgeEventSubscriber.onPlayerSleep()");
+		PlayerEntity player = event.getPlayer();
+
+		if (player.world.isRemote) {
+			return;
+		}
+
+		LazyOptional<IBaseManaCapability> mana = player.getCapability(PlayerManaCapabilityProvider.MANA_CAP, null);
+		mana.ifPresent((cap) -> cap.setMana(mana.map(x -> x.getMaxMana()).orElse(Float.NaN), player));
+
+		String message = String.format(
+				"You refreshed yourself in the bed. You recovered mana and you have %f mana left.",
+				mana.map(x -> x.getMaxMana()).orElse(Float.NaN));
+		player.sendMessage(new StringTextComponent(message));
+	}
+	
 	@SubscribeEvent
 	public static void playerLevelChange(PlayerXpEvent.LevelChange e) {
 		PlayerEntity player = e.getPlayer();
@@ -259,13 +297,7 @@ public class ForgeEventSubscriber {
 	}
 
 	@SubscribeEvent
-	public static void leftClickBlock(PlayerInteractEvent.LeftClickEmpty event) {
-		// event.getPlayer().sendMessage(new StringTextComponent("------>
-		// PlayerInteractEvent.LeftClickEmpty"));
-	}
-
-	@SubscribeEvent
-	public static void leftClickBlock(PlayerInteractEvent.EntityInteract event) {
+	public static void entityInteract(PlayerInteractEvent.EntityInteract event) {
 		// event.getPlayer().sendMessage(new StringTextComponent("------>
 		// PlayerInteractEvent.EntityInteract"));
 	}
@@ -275,13 +307,14 @@ public class ForgeEventSubscriber {
 		LazyOptional<IBaseAuxiliarCapability> aux = event.getPlayer()
 				.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
 
-		// event.getPlayer().sendMessage(new StringTextComponent("------>
-		// PlayerInteractEvent.LeftClickBlock"));
-
 		boolean transformation = aux.map(x -> x.isWerewolfTransformation()).orElse(false);
 		if (transformation) {
 			event.getPlayer().isSwingInProgress = false;
-			// event.setCanceled(true);
+			aux.ifPresent(x->{
+				Hand h = x.isSwingingMainHand() ? Hand.MAIN_HAND : Hand.OFF_HAND;
+				event.getPlayer().swingArm(h);
+				x.setSwingingMainHand(!x.isSwingingMainHand(), event.getPlayer());
+			});
 		}
 	}
 
@@ -290,12 +323,15 @@ public class ForgeEventSubscriber {
 		LazyOptional<IBaseAuxiliarCapability> aux = event.getPlayer()
 				.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
 
-		// event.getPlayer().sendMessage(new StringTextComponent("------>
-		// PlayerInteractEvent.EntityInteractSpecific"));
-
 		boolean transformation = aux.map(x -> x.isWerewolfTransformation()).orElse(false);
-		if (transformation)
+		if (transformation) {
 			event.getPlayer().isSwingInProgress = false;
+			aux.ifPresent(x->{
+				Hand h = x.isSwingingMainHand() ? Hand.MAIN_HAND : Hand.OFF_HAND;
+				event.getPlayer().swingArm(h);
+				x.setSwingingMainHand(!x.isSwingingMainHand(), event.getPlayer());
+			});
+		}
 		// event.setCanceled(true);
 	}
 
@@ -310,25 +346,5 @@ public class ForgeEventSubscriber {
 			event.getPlayer().isSwingInProgress = false;
 			event.setCanceled(true);
 		}
-
-		/*
-		 * DevilRpg.LOGGER.info(
-		 * "----------------------->PlayerForgeEventSubscriber.AttackEntityEvent()" +
-		 * " Client? " + event.getPlayer().world.isRemote); if
-		 * (!event.getEntityLiving().getHeldItemMainhand().isEmpty()) {
-		 * event.setCanceled(true); if (event.getTarget().canBeAttackedWithItem()) { if
-		 * (!event.getTarget().hitByEntity(event.getEntity())) {
-		 * event.getPlayer().setLastAttackedEntity(event.getTarget());
-		 * event.getPlayer().world.playSound((PlayerEntity) null,
-		 * event.getPlayer().getPosX(), event.getPlayer().getPosY(),
-		 * event.getPlayer().getPosZ(), SoundEvents.ENTITY_PLAYER_ATTACK_WEAK,
-		 * event.getPlayer().getSoundCategory(), 1.0F, 1.0F);
-		 * event.getTarget().attackEntityFrom(DamageSource.causePlayerDamage(event.
-		 * getPlayer()), event.getPlayer().getCooledAttackStrength(1F));
-		 * event.getPlayer().addExhaustion(0.1F);
-		 * 
-		 * } } }
-		 */
-
 	}
 }

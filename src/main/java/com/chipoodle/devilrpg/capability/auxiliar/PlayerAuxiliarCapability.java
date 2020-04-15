@@ -12,6 +12,7 @@ public class PlayerAuxiliarCapability implements IBaseAuxiliarCapability {
 
 	protected boolean werewolfAttack = false;
 	protected boolean werewolfTransformation = false;
+	protected boolean swingingMainHand = false;
 
 	@Override
 	public boolean isWerewolfAttack() {
@@ -43,12 +44,26 @@ public class PlayerAuxiliarCapability implements IBaseAuxiliarCapability {
 		else
 			sendAuxiliarChangesToServer();
 	}
+	@Override
+	public boolean isSwingingMainHand() {
+		return swingingMainHand;
+	}
+	
+	@Override
+	public void setSwingingMainHand(boolean active, PlayerEntity player) {
+		swingingMainHand = active;
+		if (!player.world.isRemote)
+			sendAuxiliarChangesToClient((ServerPlayerEntity) player);
+		else
+			sendAuxiliarChangesToServer();
+	}
 
 	@Override
 	public CompoundNBT getNBTData() {
 		CompoundNBT nbt = new CompoundNBT();
 		nbt.putBoolean("werewolfAttack", werewolfAttack);
 		nbt.putBoolean("werewolfTransformation", werewolfTransformation);
+		nbt.putBoolean("swingingMainHand", swingingMainHand);
 		return nbt;
 	}
 
@@ -56,6 +71,7 @@ public class PlayerAuxiliarCapability implements IBaseAuxiliarCapability {
 	public void setNBTData(CompoundNBT compound) {
 		werewolfAttack = compound.getBoolean("werewolfAttack");
 		werewolfTransformation = compound.getBoolean("werewolfTransformation");
+		swingingMainHand = compound.getBoolean("swingingMainHand");
 	}
 
 	private void sendAuxiliarChangesToServer() {

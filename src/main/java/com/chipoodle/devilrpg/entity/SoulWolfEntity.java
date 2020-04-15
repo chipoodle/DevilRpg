@@ -1,10 +1,12 @@
-package com.chipoodle.devilrpg.entity.soulwolf;
+package com.chipoodle.devilrpg.entity;
 
 import javax.annotation.Nullable;
 
+import com.chipoodle.devilrpg.capability.minion.IBaseMinionCapability;
+import com.chipoodle.devilrpg.capability.minion.PlayerMinionCapabilityProvider;
 import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
-import com.chipoodle.devilrpg.entity.ISoulEntity;
+import com.chipoodle.devilrpg.skillsystem.MinionDeathDamageSource;
 import com.chipoodle.devilrpg.util.SkillEnum;
 
 import net.minecraft.entity.Entity;
@@ -24,7 +26,10 @@ import net.minecraft.entity.ai.goal.OwnerHurtTargetGoal;
 import net.minecraft.entity.ai.goal.SitGoal;
 import net.minecraft.entity.ai.goal.SwimGoal;
 import net.minecraft.entity.ai.goal.WaterAvoidingRandomWalkingGoal;
+import net.minecraft.entity.merchant.villager.VillagerEntity;
+import net.minecraft.entity.passive.IronGolemEntity;
 import net.minecraft.entity.passive.TameableEntity;
+import net.minecraft.entity.passive.TurtleEntity;
 import net.minecraft.entity.passive.WolfEntity;
 import net.minecraft.entity.passive.horse.AbstractHorseEntity;
 import net.minecraft.entity.passive.horse.LlamaEntity;
@@ -44,19 +49,24 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity {
 	private int puntosAsignados = 0;
 	private double saludMaxima = SALUD_INICIAL;
 	private double stealingHealth;
-	private LazyOptional<IBaseSkillCapability> skill;
 
 	public SoulWolfEntity(EntityType<? extends WolfEntity> type, World worldIn) {
 		super(type, worldIn);
 	}
 
-	@SuppressWarnings("unchecked")
 	@Override
 	protected void registerGoals() {
 		this.sitGoal = new SitGoal(this);
 		this.goalSelector.addGoal(1, new SwimGoal(this));
-		//this.goalSelector.addGoal(2, this.sitGoal);
-		this.goalSelector.addGoal(3,new SoulWolfEntity.AvoidEntityGoal<LlamaEntity>(this, LlamaEntity.class, 24.0F, 1.5D, 1.5D));
+		// this.goalSelector.addGoal(2, this.sitGoal);
+		this.goalSelector.addGoal(3,
+				new SoulWolfEntity.AvoidEntityGoal<VillagerEntity>(this, VillagerEntity.class, 24.0F, 1.5D, 1.5D));
+		this.goalSelector.addGoal(3,
+				new SoulWolfEntity.AvoidEntityGoal<LlamaEntity>(this, LlamaEntity.class, 24.0F, 1.5D, 1.5D));
+		this.goalSelector.addGoal(3,
+				new SoulWolfEntity.AvoidEntityGoal<TurtleEntity>(this, TurtleEntity.class, 24.0F, 1.5D, 1.5D));
+		this.goalSelector.addGoal(3,
+				new SoulWolfEntity.AvoidEntityGoal<IronGolemEntity>(this, IronGolemEntity.class, 24.0F, 1.5D, 1.5D));
 		this.goalSelector.addGoal(4, new LeapAtTargetGoal(this, 0.4F));
 		this.goalSelector.addGoal(5, new MeleeAttackGoal(this, 1.0D, true));
 		this.goalSelector.addGoal(6, new FollowOwnerGoal(this, 1.0D, 10.0F, 2.0F, false));
@@ -74,9 +84,10 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity {
 		super.registerAttributes();
 	}
 
+	
 	public void updateLevel(PlayerEntity owner) {
 		setTamedBy(owner);
-		skill = getOwner().getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
+		LazyOptional<IBaseSkillCapability> skill = getOwner().getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
 		if (skill != null && skill.isPresent()) {
 			this.puntosAsignados = skill.map(x -> x.getSkillsPoints()).orElse(null).get(SkillEnum.SUMMON_SOUL_WOLF);
 			saludMaxima = 1.0 * this.puntosAsignados + SALUD_INICIAL;
@@ -88,6 +99,7 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity {
 		this.getAttribute(SharedMonsterAttributes.ARMOR).setBaseValue(0.35D);
 		this.getAttribute(SharedMonsterAttributes.FOLLOW_RANGE).setBaseValue(16.0D);
 		this.getAttribute(SharedMonsterAttributes.ATTACK_DAMAGE).setBaseValue((0.45 * puntosAsignados) + 2); // 2-11
+		setHealth((float) saludMaxima);
 	}
 
 	@Override
@@ -104,8 +116,9 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity {
 	@Override
 	public void livingTick() {
 		super.livingTick();
-		if (this.getOwnerId() == null || !this.getOwner().isAlive() || !this.isTamed())
-			remove();
+		if (this.getOwnerId() == null || this.getOwner() == null || !this.getOwner().isAlive() || !this.isTamed())
+			this.attackEntityFrom(new MinionDeathDamageSource(""), Integer.MAX_VALUE);
+		// onKillCommand();
 		addToLivingTick(this);
 	}
 
@@ -185,14 +198,34 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity {
 		 */
 		public boolean shouldExecute() {
 			if (super.shouldExecute() && this.avoidTarget instanceof LlamaEntity) {
-				return !this.wolf.isTamed() && this.avoidLlama((LlamaEntity) this.avoidTarget);
-			} else {
-				return false;
+				return this.wolf.isTamed() && this.avoidLlama((LlamaEntity) this.avoidTarget);
 			}
+			if (super.shouldExecute() && this.avoidTarget instanceof TurtleEntity) {
+				return this.wolf.isTamed() && this.avoidTurtle((TurtleEntity) this.avoidTarget);
+			}
+			if (super.shouldExecute() && this.avoidTarget instanceof VillagerEntity) {
+				return this.wolf.isTamed() && this.avoidVillager((VillagerEntity) this.avoidTarget);
+			}
+			if (super.shouldExecute() && this.avoidTarget instanceof IronGolemEntity) {
+				return this.wolf.isTamed() && this.avoidIronGolem((IronGolemEntity) this.avoidTarget);
+			}
+			return false;
 		}
 
 		private boolean avoidLlama(LlamaEntity p_190854_1_) {
 			return p_190854_1_.getStrength() >= SoulWolfEntity.this.rand.nextInt(5);
+		}
+
+		private boolean avoidTurtle(TurtleEntity p_190854_1_) {
+			return true;
+		}
+
+		private boolean avoidVillager(VillagerEntity p_190854_1_) {
+			return true;
+		}
+
+		private boolean avoidIronGolem(IronGolemEntity p_190854_1_) {
+			return true;
 		}
 
 		/**
@@ -211,14 +244,37 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity {
 			super.tick();
 		}
 	}
-	
+
+	@Override
+	public void remove() {
+		super.remove();
+	}
+
 	/**
-	 * Called on the logical server to get a packet to send to the client containing data necessary to spawn your entity.
-	 * Using Forge's method instead of the default vanilla one allows extra stuff to work such as sending extra data,
-	 * using a non-default entity factory and having {@link IEntityAdditionalSpawnData} work.
+	 * Called when the mob's health reaches 0.
+	 */
+	@Override
+	public void onDeath(DamageSource cause) {
+		if (getOwner() != null) {
+			LazyOptional<IBaseMinionCapability> minionCap = getOwner()
+					.getCapability(PlayerMinionCapabilityProvider.MINION_CAP);
+			if (!minionCap.isPresent())
+				return;
+			minionCap.ifPresent(x -> x.removeSoulWolf((PlayerEntity) getOwner(), this));
+		}
+		super.onDeath(cause);
+	}
+
+	/**
+	 * Called on the logical server to get a packet to send to the client containing
+	 * data necessary to spawn your entity. Using Forge's method instead of the
+	 * default vanilla one allows extra stuff to work such as sending extra data,
+	 * using a non-default entity factory and having
+	 * {@link IEntityAdditionalSpawnData} work.
 	 *
-	 * It is not actually necessary for our WildBoarEntity to use Forge's method as it doesn't need any of this extra
-	 * functionality, however, this is an example mod and many modders are unaware that Forge's method exists.
+	 * It is not actually necessary for our WildBoarEntity to use Forge's method as
+	 * it doesn't need any of this extra functionality, however, this is an example
+	 * mod and many modders are unaware that Forge's method exists.
 	 *
 	 * @return The packet with data about your entity
 	 * @see FMLPlayMessages.SpawnEntity

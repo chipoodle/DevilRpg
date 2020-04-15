@@ -1,10 +1,9 @@
 package com.chipoodle.devilrpg.client.render.entity;
 
 import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.client.render.entity.layer.SoulWolfCollarLayer;
 import com.chipoodle.devilrpg.client.render.entity.layer.SoulWolfGelLayer;
 import com.chipoodle.devilrpg.client.render.entity.model.SoulWolfModelHeart;
-import com.chipoodle.devilrpg.entity.soulwolf.SoulWolfEntity;
+import com.chipoodle.devilrpg.entity.SoulWolfEntity;
 import com.mojang.blaze3d.matrix.MatrixStack;
 
 import net.minecraft.client.renderer.IRenderTypeBuffer;
@@ -22,7 +21,6 @@ public class SoulWolfRenderer extends MobRenderer<SoulWolfEntity, SoulWolfModelH
 	public SoulWolfRenderer(EntityRendererManager renderManagerIn) {
 		super(renderManagerIn, new SoulWolfModelHeart<>(), 0.5F);
 		this.addLayer(new SoulWolfGelLayer<>(this));
-		this.addLayer(new SoulWolfCollarLayer(this));
 	}
 
 	protected float handleRotationFloat(SoulWolfEntity livingBase, float partialTicks) {

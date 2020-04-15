@@ -1,6 +1,6 @@
 package com.chipoodle.devilrpg.client.render.entity.model;
 
-import com.chipoodle.devilrpg.entity.wisp.WispEntity;
+import com.chipoodle.devilrpg.entity.WispEntity;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.vertex.IVertexBuilder;

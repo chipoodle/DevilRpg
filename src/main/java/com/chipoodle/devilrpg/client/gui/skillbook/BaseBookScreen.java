@@ -49,8 +49,10 @@ public class BaseBookScreen extends Screen {
 			return new StringTextComponent("");
 		}
 	};
-	//public static final ResourceLocation BOOK_TEXTURES = new ResourceLocation("textures/gui/book.png");
+	// public static final ResourceLocation BOOK_TEXTURES = new
+	// ResourceLocation("textures/gui/book.png");
 	public static ResourceLocation BOOK_TEXTURES = new ResourceLocation("textures/gui/book.png");
+	
 	private ReadBookScreen.IBookInfo bookInfo;
 	protected int currPage;
 	protected int cachedPage = -1;
@@ -125,12 +127,14 @@ public class BaseBookScreen extends Screen {
 	protected void addChangePageButtons() {
 		int i = (this.width - bookImageWidth) / 2;
 		int j = 2;
-		this.buttonNextPage = this.addButton(new ChangePageButton(i + changePagePageBttnXOffsetRight, changePagePageBttnY, true, (p_214159_1_) -> {
-			this.nextPage();
-		}, this.pageTurnSounds));
-		this.buttonPreviousPage = this.addButton(new ChangePageButton(i + changePagePageBttnXOffsetLeft, changePagePageBttnY, false, (p_214158_1_) -> {
-			this.previousPage();
-		}, this.pageTurnSounds));
+		this.buttonNextPage = this.addButton(
+				new ChangePageButton(i + changePagePageBttnXOffsetRight, changePagePageBttnY, true, (p_214159_1_) -> {
+					this.nextPage();
+				}, this.pageTurnSounds));
+		this.buttonPreviousPage = this.addButton(
+				new ChangePageButton(i + changePagePageBttnXOffsetLeft, changePagePageBttnY, false, (p_214158_1_) -> {
+					this.previousPage();
+				}, this.pageTurnSounds));
 		this.updateButtons();
 	}
 
@@ -183,43 +187,51 @@ public class BaseBookScreen extends Screen {
 	}
 
 	public void render(int p_render_1_, int p_render_2_, float p_render_3_) {
+		
+		
+		RenderSystem.pushMatrix();
 		this.renderBackground();
 		RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
 		this.minecraft.getTextureManager().bindTexture(BOOK_TEXTURES);
 		int offsetFromScreenLeft = (this.width - 192) / 2;
 		int j = 2;
-		this.blit(offsetFromScreenLeft, 2, 0, 0, bookImageWidth , bookImageHeight);
+		this.blit(offsetFromScreenLeft, 2, 0, 0, bookImageWidth, bookImageHeight);
 		if (this.cachedPage != this.currPage) {
 			ITextComponent itextcomponent = this.bookInfo.getPageText(this.currPage);
 			this.cachedPageLines = RenderComponentsUtil.splitText(itextcomponent, 114, this.font, true, true);
 		}
 		this.cachedPage = this.currPage;
 
-		/*Page number / total pages*/
-		/*String s = I18n.format("book.pageIndicator", this.currPage + 1, Math.max(this.getPageCount(), 1));
-		int widthOfString = this.getStringWidth(s);
-		float textPositionX = offsetFromScreenLeft - widthOfString + bookImageWidth - 44;
-		float textPositionY = 18.0F;
-		this.font.drawString(s,  textPositionX, textPositionY, 0);*/
+		/* Page number / total pages */
+		/*
+		 * String s = I18n.format("book.pageIndicator", this.currPage + 1,
+		 * Math.max(this.getPageCount(), 1)); int widthOfString =
+		 * this.getStringWidth(s); float textPositionX = offsetFromScreenLeft -
+		 * widthOfString + bookImageWidth - 44; float textPositionY = 18.0F;
+		 * this.font.drawString(s, textPositionX, textPositionY, 0);
+		 */
 
-		/*Titulo*/
+		/* Titulo */
 		int k = Math.min(128 / 9, this.cachedPageLines.size());
 		for (int l = 0; l < k; ++l) {
 			int offsetFromScreenUp = 16;
 			ITextComponent itextcomponent1 = this.cachedPageLines.get(l);
-			this.font.drawString(itextcomponent1.getFormattedText(), (float) (offsetFromScreenLeft + 36), (float) (offsetFromScreenUp + l * 9), 0);
+			this.font.drawString(itextcomponent1.getFormattedText(), (float) (offsetFromScreenLeft + 36),
+					(float) (offsetFromScreenUp + l * 9), 0);
 		}
 
 		ITextComponent itextcomponent2 = this.func_214154_c((double) p_render_1_, (double) p_render_2_);
 		if (itextcomponent2 != null) {
 			this.renderComponentHoverEffect(itextcomponent2, p_render_1_, p_render_2_);
 		}
-
+		RenderSystem.popMatrix();
 		super.render(p_render_1_, p_render_2_, p_render_3_);
+
 	}
 
 	protected int getStringWidth(String stringPageIndicator) {
-		return this.font.getStringWidth(this.font.getBidiFlag() ? this.font.bidiReorder(stringPageIndicator) : stringPageIndicator);
+		return this.font.getStringWidth(
+				this.font.getBidiFlag() ? this.font.bidiReorder(stringPageIndicator) : stringPageIndicator);
 	}
 
 	public boolean mouseClicked(double p_mouseClicked_1_, double p_mouseClicked_3_, int p_mouseClicked_5_) {

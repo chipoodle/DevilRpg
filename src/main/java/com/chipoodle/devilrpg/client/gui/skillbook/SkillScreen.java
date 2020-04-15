@@ -251,7 +251,7 @@ public class SkillScreen extends BaseBookScreen {
 					HashMap<PowerEnum, SkillEnum> powerNames = skillCap.map(x -> x.getSkillsNameOfPowers())
 							.orElse(null);
 					powerNames.put((PowerEnum) copy.getSkillName(), (SkillEnum) skillButtonApretado.getSkillName());
-					skillCap.ifPresent(x -> x.setSkillsNameOfPowers(powerNames));
+					skillCap.ifPresent(x -> x.setSkillsNameOfPowers(powerNames,player));
 				}
 				flushPressedButton();
 			}
@@ -282,7 +282,7 @@ public class SkillScreen extends BaseBookScreen {
 		Integer e = skillsPoints.get(((CustomGuiButton) pressedButton).getSkillName());
 		e += expCap.map(x -> x.consumePoint()).orElse(0);
 		skillsPoints.put(skilEnum, e);
-		skillCap.ifPresent(x -> x.setSkillsPoints(skillsPoints));
+		skillCap.ifPresent(x -> x.setSkillsPoints(skillsPoints,player));
 		updateButtons();
 	}
 

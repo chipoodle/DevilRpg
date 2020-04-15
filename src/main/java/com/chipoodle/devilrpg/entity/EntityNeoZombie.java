@@ -1,4 +1,4 @@
-package com.chipoodle.devilrpg.entity.neozombie;
+package com.chipoodle.devilrpg.entity;
 
 import net.minecraft.entity.monster.ZombieEntity;
 import net.minecraft.world.World;

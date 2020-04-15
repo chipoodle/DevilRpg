@@ -10,7 +10,11 @@ public interface IBaseManaCapability extends IGenericCapability{
 	public void setMana(float mana, PlayerEntity player);
 	public float getMaxMana();
 	public void setMaxMana(float maxMana, PlayerEntity player);
-	void SetManaNoUpdate(float mana);
+	public float getRegeneration();
+	public void setRegeneration(float regeneration, PlayerEntity player);
+
+	public void onPlayerTickEventRegeneration(PlayerEntity player);
+
 	CompoundNBT getNBTData();
 	public void setNBTData(CompoundNBT nbt);
 }

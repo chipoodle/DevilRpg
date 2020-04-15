@@ -53,12 +53,12 @@ public class ManaBarRenderer extends AbstractGui {
 
 		maxMana = playerCapability.map(x -> x.getMaxMana()).orElse(0.0f);
 		manaRun = playerCapability.map(x -> x.getMana()).orElse(0.0f);
-		if (manaRun < maxMana) {
+		/*if (manaRun < maxMana) {
 			manaRun += 0.10;
 			playerCapability.ifPresent(x -> x.setMana(manaRun > maxMana ? maxMana : manaRun,player));
 		}else {
 			manaRun = maxMana;
-		} 
+		} */
 
 		/* This object draws text using the Minecraft font */
 		FontRenderer fr = mc.fontRenderer;

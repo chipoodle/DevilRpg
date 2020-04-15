@@ -10,8 +10,9 @@ import net.minecraftforge.fml.network.PacketDistributor;
 
 public class PlayerManaCapability implements IBaseManaCapability {
 
-	protected float mana = 0;
-	protected float maxMana = 50;
+	protected float mana = 0f;
+	protected float maxMana = 50f;
+	protected float regeneration = 0.10f;
 
 	@Override
 	public float getMana() {
@@ -42,8 +43,27 @@ public class PlayerManaCapability implements IBaseManaCapability {
 	}
 
 	@Override
-	public void SetManaNoUpdate(float mana) {
-		this.mana = mana;
+	public float getRegeneration() {
+		return regeneration;
+	}
+
+	@Override
+	public void setRegeneration(float regeneration, PlayerEntity player) {
+		this.regeneration = maxMana;
+		if (!player.world.isRemote)
+			sendManaChangesToClient((ServerPlayerEntity) player);
+		else
+			sendManaChangesToServer();
+	}
+
+	@Override
+	public void onPlayerTickEventRegeneration(PlayerEntity player) {
+		if (mana < maxMana) {
+			mana += regeneration;
+			setMana(mana > maxMana ? maxMana : mana, player);
+		} else {
+			mana = maxMana;
+		}
 	}
 
 	@Override
@@ -51,6 +71,7 @@ public class PlayerManaCapability implements IBaseManaCapability {
 		CompoundNBT nbt = new CompoundNBT();
 		nbt.putFloat("mana", mana);
 		nbt.putFloat("maxMana", maxMana);
+		nbt.putFloat("regeneration", regeneration);
 		return nbt;
 	}
 
@@ -58,12 +79,13 @@ public class PlayerManaCapability implements IBaseManaCapability {
 	public void setNBTData(CompoundNBT compound) {
 		mana = compound.getFloat("mana");
 		maxMana = compound.getFloat("maxMana");
+		regeneration = compound.getFloat("regeneration");
 	}
 
 	private void sendManaChangesToServer() {
 		ModNetwork.CHANNEL.sendToServer(new PlayerManaClientServerHandler(getNBTData()));
 	}
-	
+
 	private void sendManaChangesToClient(ServerPlayerEntity pe) {
 		ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> pe),
 				new PlayerManaClientServerHandler(getNBTData()));

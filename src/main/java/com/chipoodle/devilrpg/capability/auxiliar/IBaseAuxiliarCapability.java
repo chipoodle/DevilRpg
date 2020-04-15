@@ -10,6 +10,8 @@ public interface IBaseAuxiliarCapability extends IGenericCapability{
 	public void setWerewolfAttack(boolean active,PlayerEntity player);
 	public boolean isWerewolfTransformation();
 	public void setWerewolfTransformation(boolean active,PlayerEntity player);
+	public boolean isSwingingMainHand();
+	public void setSwingingMainHand(boolean active,PlayerEntity player);
 	
 	CompoundNBT getNBTData();
 	public void setNBTData(CompoundNBT nbt);

@@ -1,6 +1,6 @@
 package com.chipoodle.devilrpg.client.render.entity.model;
 
-import com.chipoodle.devilrpg.entity.soulwolf.SoulWolfEntity;
+import com.chipoodle.devilrpg.entity.SoulWolfEntity;
 import com.google.common.collect.ImmutableList;
 
 import net.minecraft.client.renderer.entity.model.TintedAgeableModel;

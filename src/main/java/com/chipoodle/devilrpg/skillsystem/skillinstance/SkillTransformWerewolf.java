@@ -17,6 +17,8 @@ import net.minecraft.entity.passive.TameableEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.Hand;
 import net.minecraft.world.World;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.common.util.LazyOptional;
 
 public class SkillTransformWerewolf implements ISkillContainer {
@@ -38,22 +40,26 @@ public class SkillTransformWerewolf implements ISkillContainer {
 			aux = playerIn.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
 			boolean transformation = aux.map(x -> x.isWerewolfTransformation()).orElse(false);
 			aux.ifPresent(x -> x.setWerewolfTransformation(!transformation, playerIn));
-
+			if(!transformation) {
+				
+			}
+			
+			
 		}
 	}
 
-	public void playerTickEventAttack(PlayerEntity player) {
-		LazyOptional<IBaseAuxiliarCapability> aux = player.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
-
-		int points = parentCapability.getSkillsPoints().get(SkillEnum.TRANSFORM_WEREWOLF);
-		long g = (long) (15L - points * 0.5F);
-
-		boolean transformation = aux.map(x -> x.isWerewolfTransformation()).orElse(false);
-		boolean attack = aux.map(x -> x.isWerewolfAttack()).orElse(false);
-		//player.sendMessage(new StringTextComponent("transformation? " + transformation + " attack? " + attack + " interval? " + g));
-		if (transformation && attack) {
-			// event.player.isSwingInProgress = false;
-			if (player.world.isRemote && player.ticksExisted % points == 0L) {
+	/**
+	 * Must be called inside playerTickEvent. Client side
+	 * 
+	 * @param player
+	 */
+	@OnlyIn(Dist.CLIENT)
+	public void playerTickEventAttack(PlayerEntity player, LazyOptional<IBaseAuxiliarCapability> aux) {
+		if (player.world.isRemote) {
+			int points = parentCapability.getSkillsPoints().get(SkillEnum.TRANSFORM_WEREWOLF);
+			float s = (15L - points * 0.5F);
+			long attackTime = (long) s;
+			if (player.ticksExisted % attackTime == 0L) {
 				int distance = 1;
 				double radius = 2;
 				if (player != null) {
@@ -67,13 +73,18 @@ public class SkillTransformWerewolf implements ISkillContainer {
 					if (target != null) {
 						if (targetList != null && !targetList.isEmpty()) {
 							player.setLastAttackedEntity(target);
-							Hand h = player.ticksExisted % points == 0L ? Hand.MAIN_HAND : Hand.OFF_HAND;
-							player.swingArm(h);
-							ModNetwork.CHANNEL.sendToServer(new WerewolfAttackServerHandler(target.getEntityId(), h));
+							aux.ifPresent(x -> {
+								Hand h = x.isSwingingMainHand() ? Hand.MAIN_HAND : Hand.OFF_HAND;
+								player.swingArm(h);
+								x.setSwingingMainHand(!x.isSwingingMainHand(), player);
+								ModNetwork.CHANNEL
+										.sendToServer(new WerewolfAttackServerHandler(target.getEntityId(), h));
+							});
 						}
 					}
 
 				}
+
 			}
 		}
 	}

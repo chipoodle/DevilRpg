@@ -10,9 +10,12 @@ import org.lwjgl.glfw.GLFW;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.auxiliar.IBaseAuxiliarCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliarCapabilityProvider;
+import com.chipoodle.devilrpg.capability.mana.IBaseManaCapability;
+import com.chipoodle.devilrpg.capability.mana.PlayerManaCapabilityProvider;
 import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
 import com.chipoodle.devilrpg.client.gui.hud.ManaBarRenderer;
+import com.chipoodle.devilrpg.client.gui.hud.MinionPortraitRenderer;
 import com.chipoodle.devilrpg.client.gui.hud.StatusBarRenderer;
 import com.chipoodle.devilrpg.skillsystem.skillinstance.SkillTransformWerewolf;
 import com.chipoodle.devilrpg.util.SkillEnum;
@@ -25,8 +28,10 @@ import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 
 /**
@@ -38,23 +43,28 @@ import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 @EventBusSubscriber(modid = DevilRpg.MODID, bus = EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
 public final class ClientForgeEventSubscriber {
 
-	//private static GuiManaBar manaBar = new GuiManaBar();
+	// private static GuiManaBar manaBar = new GuiManaBar();
 	private static StatusBarRenderer statusBarRenderer = new StatusBarRenderer();
 	private static ManaBarRenderer manaBarRenderer = new ManaBarRenderer();
+	private static MinionPortraitRenderer minionPortraitRenderer = new MinionPortraitRenderer();
 
-	/*@OnlyIn(Dist.CLIENT)
-	@SubscribeEvent(priority = EventPriority.NORMAL)
-	public static void onRenderExperienceBar(RenderGameOverlayEvent.Post event) {
-		//manaBar.draw(event);
-	}*/
+	/*
+	 * @OnlyIn(Dist.CLIENT)
+	 * 
+	 * @SubscribeEvent(priority = EventPriority.NORMAL) public static void
+	 * onRenderExperienceBar(RenderGameOverlayEvent.Post event) {
+	 * //manaBar.draw(event); }
+	 */
 
 	@OnlyIn(Dist.CLIENT)
 	@SubscribeEvent(priority = EventPriority.NORMAL)
 	public static void onEvent(RenderGameOverlayEvent.Pre event) {
 		switch (event.getType()) {
 		case HEALTH:
-			statusBarRenderer.renderStatusBar(event.getWindow().getScaledWidth(),event.getWindow().getScaledHeight()); 
-			manaBarRenderer.renderStatusBar(event.getWindow().getScaledWidth(),event.getWindow().getScaledHeight()); 
+			statusBarRenderer.renderStatusBar(event.getWindow().getScaledWidth(), event.getWindow().getScaledHeight());
+			manaBarRenderer.renderStatusBar(event.getWindow().getScaledWidth(), event.getWindow().getScaledHeight());
+			minionPortraitRenderer.renderPortraits(event.getWindow().getScaledWidth(),
+					event.getWindow().getScaledHeight());
 			event.setCanceled(true);
 			break;
 
@@ -89,6 +99,15 @@ public final class ClientForgeEventSubscriber {
 		}
 	}
 
+	@SubscribeEvent
+	public static void leftClickEmpty(PlayerInteractEvent.LeftClickEmpty event) {
+		if (event.getPlayer().world.isRemote) {
+
+		}
+		// event.getPlayer().sendMessage(new StringTextComponent("------>
+		// PlayerInteractEvent.LeftClickEmpty"));
+	}
+
 	@OnlyIn(Dist.CLIENT)
 	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
 	public static void onMouseEvent(InputEvent.MouseInputEvent event) {
@@ -101,6 +120,8 @@ public final class ClientForgeEventSubscriber {
 		LazyOptional<IBaseAuxiliarCapability> aux = player.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
 		if (aux == null || !aux.isPresent() || !aux.map(x -> x.isWerewolfTransformation()).orElse(true))
 			return;
+		else
+			player.isSwingInProgress = false;
 
 		if (event.getButton() == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
 			if (event.getAction() == GLFW.GLFW_PRESS) {
@@ -118,12 +139,25 @@ public final class ClientForgeEventSubscriber {
 
 	@SubscribeEvent
 	public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
-		if (event.phase == TickEvent.Phase.START) {
-			LazyOptional<IBaseSkillCapability> skill = event.player
-					.getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
-			if (skill != null) {
-				skill.ifPresent(x -> ((SkillTransformWerewolf) x.create(SkillEnum.TRANSFORM_WEREWOLF))
-						.playerTickEventAttack(event.player));
+		if (event.side.equals(LogicalSide.CLIENT)) {
+			if (event.phase == TickEvent.Phase.START) {
+				LazyOptional<IBaseSkillCapability> skill = event.player
+						.getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
+				LazyOptional<IBaseAuxiliarCapability> aux = event.player
+						.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
+				LazyOptional<IBaseManaCapability> mana = event.player
+						.getCapability(PlayerManaCapabilityProvider.MANA_CAP);
+				if (skill != null && aux != null) {
+					boolean werewolfTransformation = aux.map(x -> x.isWerewolfTransformation()).orElse(false);
+					boolean werewolfAttack = aux.map(x -> x.isWerewolfAttack()).orElse(false);
+					if (werewolfTransformation && werewolfAttack) {
+						skill.ifPresent(x -> ((SkillTransformWerewolf) x.create(SkillEnum.TRANSFORM_WEREWOLF))
+								.playerTickEventAttack(event.player, aux));
+					}
+				}
+
+				// Mana
+				mana.ifPresent(m -> m.onPlayerTickEventRegeneration(event.player));
 
 			}
 		}

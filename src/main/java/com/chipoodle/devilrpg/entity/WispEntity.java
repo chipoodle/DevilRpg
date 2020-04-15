@@ -1,4 +1,4 @@
-package com.chipoodle.devilrpg.entity.wisp;
+package com.chipoodle.devilrpg.entity;
 
 import java.util.List;
 import java.util.Random;
@@ -6,9 +6,11 @@ import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
+import com.chipoodle.devilrpg.capability.minion.IBaseMinionCapability;
+import com.chipoodle.devilrpg.capability.minion.PlayerMinionCapabilityProvider;
 import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
-import com.chipoodle.devilrpg.entity.ISoulEntity;
+import com.chipoodle.devilrpg.skillsystem.MinionDeathDamageSource;
 import com.chipoodle.devilrpg.util.SkillEnum;
 
 import net.minecraft.block.Block;
@@ -85,7 +87,6 @@ public class WispEntity extends TameableEntity implements IFlyingAnimal, ISoulEn
 	protected double distanciaEfecto = 20;
 	protected int divisorNivelParaPotenciaEfecto = 5;
 	protected int durationTicks = 120;
-	private LazyOptional<IBaseSkillCapability> skill;
 
 	public WispEntity(EntityType<? extends WispEntity> type, World worldIn) {
 		super(type, worldIn);
@@ -115,7 +116,7 @@ public class WispEntity extends TameableEntity implements IFlyingAnimal, ISoulEn
 		this.goalSelector.addGoal(2, this.sitGoal);
 		this.goalSelector.addGoal(2, new FollowOwnerGoal(this, 1.0D, 10.0F, 2.0F, false));
 		this.goalSelector.addGoal(2, new WaterAvoidingRandomFlyingGoal(this, 1.0D));
-		//this.goalSelector.addGoal(3, new LandOnOwnersShoulderGoal(this));
+		// this.goalSelector.addGoal(3, new LandOnOwnersShoulderGoal(this));
 		this.goalSelector.addGoal(3, new FollowMobGoal(this, 1.0D, 3.0F, 7.0F));
 	}
 
@@ -127,10 +128,10 @@ public class WispEntity extends TameableEntity implements IFlyingAnimal, ISoulEn
 		this.getAttribute(SharedMonsterAttributes.MOVEMENT_SPEED).setBaseValue((double) 0.2F);
 		this.getAttribute(SharedMonsterAttributes.FOLLOW_RANGE).setBaseValue(16.0D);
 	}
-	
+
 	public void updateLevel(PlayerEntity owner, Effect efectoPrimario, Effect efectoSecundario, SkillEnum tipoWisp) {
 		setTamedBy(owner);
-		skill = getOwner().getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
+		LazyOptional<IBaseSkillCapability> skill = getOwner().getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
 		this.efectoPrimario = efectoPrimario;
 		this.efectoSecundario = efectoSecundario;
 		if (skill != null && skill.isPresent()) {
@@ -141,6 +142,7 @@ public class WispEntity extends TameableEntity implements IFlyingAnimal, ISoulEn
 		this.getAttribute(SharedMonsterAttributes.FLYING_SPEED).setBaseValue((double) 0.9F);
 		this.getAttribute(SharedMonsterAttributes.MAX_HEALTH).setBaseValue(saludMaxima);
 		this.getAttribute(SharedMonsterAttributes.ARMOR).setBaseValue(0.15D);
+		setHealth((float) saludMaxima);
 	}
 
 	/**
@@ -166,9 +168,10 @@ public class WispEntity extends TameableEntity implements IFlyingAnimal, ISoulEn
 	public void livingTick() {
 		super.livingTick();
 		this.calculateFlapping();
-		if (this.getOwnerId() == null || !this.getOwner().isAlive() || !this.isTamed())
-			remove();
-		
+		if (this.getOwnerId() == null || this.getOwner()== null ||!this.getOwner().isAlive() || !this.isTamed())
+			this.attackEntityFrom(new MinionDeathDamageSource(""), Integer.MAX_VALUE);
+			//onKillCommand();
+
 		if (this.world.getGameTime() % 80L == 0L && efectoPrimario != null && efectoSecundario != null) {
 			this.addEffectsToPlayers(puntosAsignados, efectoPrimario, efectoSecundario);
 		}
@@ -181,7 +184,7 @@ public class WispEntity extends TameableEntity implements IFlyingAnimal, ISoulEn
 	 */
 	@OnlyIn(Dist.CLIENT)
 	public void setPartying(BlockPos pos, boolean isPartying) {
-		
+
 	}
 
 	private void calculateFlapping() {
@@ -398,22 +401,21 @@ public class WispEntity extends TameableEntity implements IFlyingAnimal, ISoulEn
 					}
 				}
 
-				/*for (LivingEntity entity : list) {
-					EffectInstance aux = new EffectInstance(Effects.GLOWING, durationTicks, 0, false, true);
-					EffectInstance active = entity.getActivePotionEffect(Effects.GLOWING);
-					if (entity.getActivePotionEffect(Effects.GLOWING) == null
-							|| aux.getAmplifier() > active.getAmplifier()) {
-						entity.addPotionEffect(aux);
-					} else {
-						active.combine(aux);
-					}
-				}*/
+				/*
+				 * for (LivingEntity entity : list) { EffectInstance aux = new
+				 * EffectInstance(Effects.GLOWING, durationTicks, 0, false, true);
+				 * EffectInstance active = entity.getActivePotionEffect(Effects.GLOWING); if
+				 * (entity.getActivePotionEffect(Effects.GLOWING) == null || aux.getAmplifier()
+				 * > active.getAmplifier()) { entity.addPotionEffect(aux); } else {
+				 * active.combine(aux); } }
+				 */
 
 				if (niveles >= 10) {
 					for (LivingEntity entity : list) {
 						EffectInstance sec = new EffectInstance(secondaryEffect, durationTicks, 0, false, true);
 						EffectInstance active = entity.getActivePotionEffect(secondaryEffect);
-						if (entity.getActivePotionEffect(secondaryEffect) == null || sec.getAmplifier() > active.getAmplifier()) {
+						if (entity.getActivePotionEffect(secondaryEffect) == null
+								|| sec.getAmplifier() > active.getAmplifier()) {
 							entity.addPotionEffect(sec);
 						} else {
 							active.combine(sec);
@@ -423,25 +425,37 @@ public class WispEntity extends TameableEntity implements IFlyingAnimal, ISoulEn
 			}
 		}
 	}
-	
-	/*@Override
+
+	@Override
 	public void remove() {
-		if (auraAffectedEntities != null)
-			auraAffectedEntities.stream().forEach(x -> {
-				x.removeActivePotionEffect(efectoPrimario);
-				x.removeActivePotionEffect(efectoSecundario);
-				x.removeActivePotionEffect(efectoAuxiliar);
-			});
 		super.remove();
-	}*/
+	}
 
 	/**
-	 * Called on the logical server to get a packet to send to the client containing data necessary to spawn your entity.
-	 * Using Forge's method instead of the default vanilla one allows extra stuff to work such as sending extra data,
-	 * using a non-default entity factory and having {@link IEntityAdditionalSpawnData} work.
+	 * Called when the mob's health reaches 0.
+	 */
+	@Override
+	public void onDeath(DamageSource cause) {
+		if (getOwner() != null) {
+			LazyOptional<IBaseMinionCapability> minionCap = getOwner()
+					.getCapability(PlayerMinionCapabilityProvider.MINION_CAP);
+			if (!minionCap.isPresent())
+				return;
+			minionCap.ifPresent(x -> x.removeWisp((PlayerEntity) getOwner(), this));
+		}
+		super.onDeath(cause);
+	}
+
+	/**
+	 * Called on the logical server to get a packet to send to the client containing
+	 * data necessary to spawn your entity. Using Forge's method instead of the
+	 * default vanilla one allows extra stuff to work such as sending extra data,
+	 * using a non-default entity factory and having
+	 * {@link IEntityAdditionalSpawnData} work.
 	 *
-	 * It is not actually necessary for our WildBoarEntity to use Forge's method as it doesn't need any of this extra
-	 * functionality, however, this is an example mod and many modders are unaware that Forge's method exists.
+	 * It is not actually necessary for our WildBoarEntity to use Forge's method as
+	 * it doesn't need any of this extra functionality, however, this is an example
+	 * mod and many modders are unaware that Forge's method exists.
 	 *
 	 * @return The packet with data about your entity
 	 * @see FMLPlayMessages.SpawnEntity
