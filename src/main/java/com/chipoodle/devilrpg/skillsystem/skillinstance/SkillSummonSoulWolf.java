@@ -37,6 +37,7 @@ public class SkillSummonSoulWolf implements ISkillContainer {
 	public void execute(World worldIn, PlayerEntity playerIn) {
 		if (!worldIn.isRemote) {
 			LazyOptional<IBaseMinionCapability> min = playerIn.getCapability(PlayerMinionCapabilityProvider.MINION_CAP);
+			min.ifPresent(x->x.removeAllSoulBear(playerIn));
 			ConcurrentLinkedQueue<UUID> keys = min.map(x -> x.getSoulWolfMinions())
 					.orElse(new ConcurrentLinkedQueue<UUID>());
 

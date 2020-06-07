@@ -1,8 +1,11 @@
 package com.chipoodle.devilrpg.skillsystem.skillinstance;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
+import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.auxiliar.IBaseAuxiliarCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliarCapabilityProvider;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
@@ -13,6 +16,9 @@ import com.chipoodle.devilrpg.util.SkillEnum;
 import com.chipoodle.devilrpg.util.TargetUtils;
 
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.SharedMonsterAttributes;
+import net.minecraft.entity.ai.attributes.AttributeModifier;
+import net.minecraft.entity.ai.attributes.IAttribute;
 import net.minecraft.entity.passive.TameableEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.Hand;
@@ -24,6 +30,8 @@ import net.minecraftforge.common.util.LazyOptional;
 public class SkillTransformWerewolf implements ISkillContainer {
 	private PlayerSkillCapability parentCapability;
 	private LazyOptional<IBaseAuxiliarCapability> aux;
+	AttributeModifier healthAttributeModifier;
+	AttributeModifier speedAttributeModifier;
 
 	public SkillTransformWerewolf(PlayerSkillCapability parentCapability) {
 		this.parentCapability = parentCapability;
@@ -40,12 +48,52 @@ public class SkillTransformWerewolf implements ISkillContainer {
 			aux = playerIn.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
 			boolean transformation = aux.map(x -> x.isWerewolfTransformation()).orElse(false);
 			aux.ifPresent(x -> x.setWerewolfTransformation(!transformation, playerIn));
-			if(!transformation) {
-				
+			if (!transformation) {
+				removeCurrentModifiers(playerIn);
+				createNewAttributeModifiers();
+				addCurrentModifiers(playerIn);
+			} else {
+				removeCurrentModifiers(playerIn);
 			}
-			
-			
+
 		}
+	}
+
+	private void createNewAttributeModifiers() {
+		healthAttributeModifier = new AttributeModifier(SkillEnum.TRANSFORM_WEREWOLF.name() + "HEALTH",
+				parentCapability.getSkillsPoints().get(SkillEnum.TRANSFORM_WEREWOLF),
+				AttributeModifier.Operation.ADDITION);
+
+		speedAttributeModifier = new AttributeModifier(SkillEnum.TRANSFORM_WEREWOLF.name() + "SPEED",
+				parentCapability.getSkillsPoints().get(SkillEnum.TRANSFORM_WEREWOLF) * 0.0045,
+				AttributeModifier.Operation.ADDITION);
+	}
+
+	private void removeCurrentModifiers(PlayerEntity playerIn) {
+		HashMap<String, UUID> attributeModifiers = parentCapability.getAttributeModifiers();
+		if (healthAttributeModifier != null) {
+			//playerIn.getAttribute(SharedMonsterAttributes.MAX_HEALTH).removeModifier(healthAttributeModifier.getID());
+			playerIn.getAttribute(SharedMonsterAttributes.MAX_HEALTH).removeModifier(attributeModifiers.get(SharedMonsterAttributes.MAX_HEALTH.getName()));
+			attributeModifiers.remove(SharedMonsterAttributes.MAX_HEALTH.getName());
+			if(playerIn.getHealth() > playerIn.getMaxHealth())
+				playerIn.setHealth(playerIn.getMaxHealth());
+		}
+		if (speedAttributeModifier != null) {
+			//playerIn.getAttribute(SharedMonsterAttributes.MOVEMENT_SPEED).removeModifier(speedAttributeModifier.getID());
+			playerIn.getAttribute(SharedMonsterAttributes.MOVEMENT_SPEED).removeModifier(attributeModifiers.get(SharedMonsterAttributes.MOVEMENT_SPEED.getName()));
+			attributeModifiers.remove(SharedMonsterAttributes.MOVEMENT_SPEED.getName());
+		}
+		parentCapability.setAttributeModifiers(attributeModifiers, playerIn);
+	}
+
+	private void addCurrentModifiers(PlayerEntity playerIn) {
+		HashMap<String, UUID> attributeModifiers = parentCapability.getAttributeModifiers();
+		attributeModifiers.put(SharedMonsterAttributes.MAX_HEALTH.getName(), healthAttributeModifier.getID());
+		attributeModifiers.put(SharedMonsterAttributes.MOVEMENT_SPEED.getName(), speedAttributeModifier.getID());
+		parentCapability.setAttributeModifiers(attributeModifiers, playerIn);
+
+		playerIn.getAttribute(SharedMonsterAttributes.MAX_HEALTH).applyModifier(healthAttributeModifier);
+		playerIn.getAttribute(SharedMonsterAttributes.MOVEMENT_SPEED).applyModifier(speedAttributeModifier);
 	}
 
 	/**

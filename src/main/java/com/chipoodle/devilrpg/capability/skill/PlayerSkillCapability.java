@@ -3,6 +3,7 @@ package com.chipoodle.devilrpg.capability.skill;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import com.chipoodle.devilrpg.DevilRpg;
@@ -16,6 +17,8 @@ import com.chipoodle.devilrpg.util.BytesUtil;
 import com.chipoodle.devilrpg.util.PowerEnum;
 import com.chipoodle.devilrpg.util.SkillEnum;
 
+import net.minecraft.entity.ai.attributes.AttributeModifier;
+import net.minecraft.entity.ai.attributes.IAttribute;
 import net.minecraft.entity.passive.TameableEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
@@ -30,6 +33,7 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
 	public final static String MAX_SKILLS_KEY = "MaxSkills";
 	public final static String MANA_COST_KEY = "ManaCost";
 	public final static String MINIONS_KEY = "Minions";
+	public final static String ATTRIBUTE_MODIFIER_KEY = "AttributeModifier";
 	
 	private CompoundNBT nbt = new CompoundNBT();
 	private SingletonSkillFactory singletonSkillFactory;
@@ -41,7 +45,8 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
 			HashMap<SkillEnum, Integer> maxSkills = new HashMap<>();
 			HashMap<SkillEnum, Integer> manaCostContainer = new HashMap<>();
 			ConcurrentLinkedQueue<TameableEntity> minions = new ConcurrentLinkedQueue<TameableEntity>();
-
+			HashMap<IAttribute, UUID> attributeModifiers = new HashMap<>();
+			
 			for (PowerEnum p : Arrays.asList(PowerEnum.values())) {
 				powers.put(p, null);
 			}
@@ -59,6 +64,7 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
 				nbt.putByteArray(MAX_SKILLS_KEY, BytesUtil.toByteArray(maxSkills));
 				nbt.putByteArray(MANA_COST_KEY, BytesUtil.toByteArray(manaCostContainer));
 				nbt.putByteArray(MINIONS_KEY, BytesUtil.toByteArray(minions));
+				nbt.putByteArray(ATTRIBUTE_MODIFIER_KEY, BytesUtil.toByteArray(attributeModifiers));
 			} catch (IOException e) {
 				DevilRpg.LOGGER.error("Error en constructor PlayerSkillCapability", e);
 			}
@@ -89,7 +95,6 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
 		} catch (IOException e) {
 			DevilRpg.LOGGER.error("Error en setSkillsNameOfPowers", e);
 		}
-
 	}
 
 	@SuppressWarnings("unchecked")
@@ -115,7 +120,6 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
 		} catch (IOException e) {
 			DevilRpg.LOGGER.error("Error en setSkillsPoints", e);
 		}
-
 	}
 
 	@SuppressWarnings("unchecked")
@@ -141,7 +145,6 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
 		} catch (IOException e) {
 			DevilRpg.LOGGER.error("Error en setMaxSkillsPoints", e);
 		}
-
 	}
 
 	@SuppressWarnings("unchecked")
@@ -170,6 +173,32 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
 		}
 
 	}
+	@SuppressWarnings("unchecked")
+	@Override
+	public HashMap<String, UUID> getAttributeModifiers() {
+		try {
+			return (HashMap<String, UUID>) BytesUtil
+					.toObject(nbt.getByteArray(ATTRIBUTE_MODIFIER_KEY));
+		} catch (ClassNotFoundException | IOException e) {
+			DevilRpg.LOGGER.error("Error en getAttributeModifiers", e);
+			return null;
+		}
+	}
+	
+	@Override
+	public void setAttributeModifiers(HashMap<String, UUID> modifiers, PlayerEntity player) {
+		try {
+			nbt.putByteArray(ATTRIBUTE_MODIFIER_KEY, BytesUtil.toByteArray(modifiers));
+			if (!player.world.isRemote) {
+				sendSkillChangesToClient((ServerPlayerEntity) player);
+			} else {
+				sendSkillChangesToServer();
+			}
+		} catch (IOException e) {
+			DevilRpg.LOGGER.error("Error en setAttributeModifiers", e);
+		}
+		
+	}
 
 	@Override
 	public void triggerAction(ServerPlayerEntity playerIn, PowerEnum triggeredPower) {
@@ -188,10 +217,6 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
 		}
 	}
 
-	
-	
-	
-	
 	private ISkillContainer getSkill(PowerEnum triggeredPower) {
 		SkillEnum skillEnum = getSkillsNameOfPowers().get(triggeredPower);
 		return singletonSkillFactory.create(skillEnum);

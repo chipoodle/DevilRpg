@@ -1,12 +1,15 @@
 package com.chipoodle.devilrpg.capability.skill;
 
 import java.util.HashMap;
+import java.util.UUID;
 
 import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
 import com.chipoodle.devilrpg.util.PowerEnum;
 import com.chipoodle.devilrpg.util.SkillEnum;
 
+import net.minecraft.entity.ai.attributes.AttributeModifier;
+import net.minecraft.entity.ai.attributes.IAttribute;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.nbt.CompoundNBT;
@@ -21,6 +24,8 @@ public interface IBaseSkillCapability extends IGenericCapability{
 	public void setMaxSkillsPoints(HashMap<SkillEnum,Integer> points,PlayerEntity player);
 	public HashMap<SkillEnum,Integer> getManaCostPoints();
 	public void setManaCostPoints(HashMap<SkillEnum,Integer> points,PlayerEntity player);
+	public HashMap<String, UUID> getAttributeModifiers();
+	public void setAttributeModifiers(HashMap<String, UUID> modifiers,PlayerEntity player);
 	
 	public void triggerAction(ServerPlayerEntity playerIn, PowerEnum triggeredPower);
 	public ISkillContainer getLoadedSkill(SkillEnum skillEnum);

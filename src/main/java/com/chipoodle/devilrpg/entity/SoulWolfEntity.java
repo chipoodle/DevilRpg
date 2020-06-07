@@ -50,7 +50,7 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity {
 	private double saludMaxima = SALUD_INICIAL;
 	private double stealingHealth;
 
-	public SoulWolfEntity(EntityType<? extends WolfEntity> type, World worldIn) {
+	public SoulWolfEntity(EntityType<? extends SoulWolfEntity> type, World worldIn) {
 		super(type, worldIn);
 	}
 
@@ -116,9 +116,6 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity {
 	@Override
 	public void livingTick() {
 		super.livingTick();
-		if (this.getOwnerId() == null || this.getOwner() == null || !this.getOwner().isAlive() || !this.isTamed())
-			this.attackEntityFrom(new MinionDeathDamageSource(""), Integer.MAX_VALUE);
-		// onKillCommand();
 		addToLivingTick(this);
 	}
 
@@ -129,10 +126,7 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity {
 	@Override
 	public boolean isOnSameTeam(Entity entityIn) {
 		boolean isOnSameTeam = super.isOnSameTeam(entityIn);
-		boolean isSameOwner = false;
-		if (entityIn instanceof TameableEntity && ((TameableEntity) entityIn).getOwner() != null)
-			isSameOwner = ((TameableEntity) entityIn).getOwner().equals(this.getOwner());
-		return isOnSameTeam || isSameOwner;
+		return isOnSameTeam || isEntitySameOwnerAsThis(entityIn,this);
 	}
 
 	/**
@@ -145,18 +139,7 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity {
 
 	@Override
 	public boolean shouldAttackEntity(LivingEntity target, LivingEntity owner) {
-		if (target instanceof TameableEntity) {
-			TameableEntity entity = (WolfEntity) target;
-			return !entity.isTamed() || entity.getOwner() != owner;
-		} else if (target instanceof PlayerEntity && owner instanceof PlayerEntity
-				&& !((PlayerEntity) owner).canAttackPlayer((PlayerEntity) target)) {
-			return false;
-		} else if (target instanceof AbstractHorseEntity && ((AbstractHorseEntity) target).isTame()) {
-			return false;
-		} else {
-			return true;
-		}
-
+		return addToshouldAttackEntity(target,owner);
 	}
 
 	@Override
@@ -174,6 +157,7 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity {
 	/**
 	 * Sets the active target the Task system uses for tracking
 	 */
+	@Override
 	public void setAttackTarget(@Nullable LivingEntity entitylivingbaseIn) {
 		super.setAttackTarget(entitylivingbaseIn);
 		if (entitylivingbaseIn == null) {

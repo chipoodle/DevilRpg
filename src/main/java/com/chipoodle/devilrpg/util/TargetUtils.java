@@ -615,7 +615,7 @@ public class TargetUtils {
 
 	public static Entity getEntityByUUID(ClientWorld w, UUID uuid) {
 		ClientWorld cw = (ClientWorld) w;
-		return StreamSupport.stream(cw.getAllEntities().spliterator(), true).filter(x -> x.getUniqueID().equals(uuid))
-				.findAny().get();
+		return StreamSupport.stream(cw.   getAllEntities().spliterator(), true).filter(x -> x.getUniqueID().equals(uuid))
+				.findAny().orElse(null);
 	}
 }

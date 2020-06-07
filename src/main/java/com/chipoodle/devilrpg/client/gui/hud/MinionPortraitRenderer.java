@@ -11,11 +11,13 @@ import com.chipoodle.devilrpg.capability.minion.IBaseMinionCapability;
 import com.chipoodle.devilrpg.capability.minion.PlayerMinionCapabilityProvider;
 import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
+import com.chipoodle.devilrpg.entity.SoulBearEntity;
 import com.chipoodle.devilrpg.entity.SoulWolfEntity;
 import com.chipoodle.devilrpg.entity.WispEntity;
 import com.chipoodle.devilrpg.init.ModEntityTypes;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.entity.player.ClientPlayerEntity;
 import net.minecraft.client.gui.AbstractGui;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.entity.LivingEntity;
@@ -28,6 +30,8 @@ public class MinionPortraitRenderer extends AbstractGui {
 
 	private final static ResourceLocation soulwolfPortrait = new ResourceLocation(
 			DevilRpg.MODID + ":textures/entity/soulwolf/soulwolf_portrait_256x256.png");
+	private final static ResourceLocation soulbearPortrait = new ResourceLocation(
+			DevilRpg.MODID + ":textures/entity/soulbear/soulbear_portrait_256x256.png");
 	private final static ResourceLocation wispPortrait = new ResourceLocation(
 			DevilRpg.MODID + ":textures/entity/flyingwisp/wisp_portrait_256x256.png");
 
@@ -56,9 +60,11 @@ public class MinionPortraitRenderer extends AbstractGui {
 
 		ConcurrentLinkedQueue<UUID> soulwolfMinionKeys = minionCap.map(x -> x.getSoulWolfMinions())
 				.orElse(new ConcurrentLinkedQueue<UUID>());
+		ConcurrentLinkedQueue<UUID> soulbearMinionKeys = minionCap.map(x -> x.getSoulBearMinions())
+				.orElse(new ConcurrentLinkedQueue<UUID>());
 		ConcurrentLinkedQueue<UUID> wispMinionKeys = minionCap.map(x -> x.getWispMinions())
 				.orElse(new ConcurrentLinkedQueue<UUID>());
-		
+
 		int i = 0;
 		for (UUID wolfKey : soulwolfMinionKeys) {
 			SoulWolfEntity h = (SoulWolfEntity)minionCap.map(m -> m.getTameableByUUID(wolfKey, player.world)).orElse(new SoulWolfEntity(ModEntityTypes.SOUL_WOLF.get(), mc.player.world));
@@ -66,6 +72,16 @@ public class MinionPortraitRenderer extends AbstractGui {
 				float health = h.getHealth();
 				float maxHealth = h.getMaxHealth();
 				renderEntityPortrait(i, health, maxHealth, soulwolfPortrait,h);
+				i++;
+			}
+		}
+		
+		for (UUID bearKey : soulbearMinionKeys) {
+			SoulBearEntity h = (SoulBearEntity)minionCap.map(m -> m.getTameableByUUID(bearKey, player.world)).orElse(new SoulBearEntity(ModEntityTypes.SOUL_BEAR.get(), mc.player.world));
+			if(h.getOwner()!= null) {
+				float health = h.getHealth();
+				float maxHealth = h.getMaxHealth();
+				renderEntityPortrait(i, health, maxHealth, soulbearPortrait,h);
 				i++;
 			}
 		}
@@ -134,11 +150,29 @@ public class MinionPortraitRenderer extends AbstractGui {
 		GL11.glScalef(0.3f, 0.3f, 0.3f);
 		blit(0, 0, 0, 0, BAR_WIDTH, BAR_HEIGHT);
 
+		/*
+		 * This line draws the outline effect that corresponds to how much armor the
+		 * player has. I slide the right-most side of the rectangle using the player's
+		 * armor value.
+		 */
+		blit(0, 0, 0, BAR_HEIGHT, (int) (BAR_WIDTH * (entity.getTotalArmorValue() / 20f)), BAR_HEIGHT);
+		
 		/* This part draws the inside of the bar, which starts 1 pixel right and down */
 		GL11.glPushMatrix();
-
+		/* Shift the bar 10 pixel up*/
+		GL11.glTranslatef(0, -10, 0);
 		/* Shift 1 pixel right and down */
-		GL11.glTranslatef(0, -4, 0);
+		//GL11.glTranslatef(1, 1, 0);
+		
+		/*
+		 * These few numbers will store the HP values of the player. This includes the
+		 * Health Boost and Absorption potion effects
+		 */
+		float maxHp = entity.getMaxHealth();
+		float absorptionAmount = entity.getAbsorptionAmount();
+		float effectiveHp = entity.getHealth() + absorptionAmount;
+		
+		
 		/*
 		 * The part of the bar that fills up will be a rectangle that stretches based on
 		 * how much hp the player has. To do this, I need to use a scaling transform,
@@ -153,7 +187,7 @@ public class MinionPortraitRenderer extends AbstractGui {
 		 *
 		 * The width of the bar's interior is BAR_WIDTH - 2
 		 */
-		GL11.glScalef((BAR_WIDTH - 2) * Math.min(1, health / maxHealth), 1, 1);
+		GL11.glScalef((BAR_WIDTH - 2) * Math.min(1, effectiveHp / maxHp), 1, 1);
 
 		/*
 		 * This chain of if-else block checks if the player has any status effects. I
@@ -195,11 +229,24 @@ public class MinionPortraitRenderer extends AbstractGui {
 		GL11.glScalef(0.5f, 0.5f, 1);
 
 		/* This generates the string that I want to draw. */
-		String s = d.format(health) + "/" + d.format(maxHealth);
+		String s = d.format(effectiveHp) + "/" + d.format(maxHp);
 
-		fr.drawString(s, -fr.getStringWidth(s) + 1, 2, 0x4D0000);
-		fr.drawString(s, -fr.getStringWidth(s), 1, 0xFFFFFF);
+		/*
+		 * If the player has the absorption effect, draw the string in gold color,
+		 * otherwise draw the string in white color. For each case, I call drawString
+		 * twice, once to draw the shadow, and once for the actual string.
+		 */
+		if (absorptionAmount > 0) {
 
+			/* Draw the shadow string */
+			fr.drawString(s, -fr.getStringWidth(s) + 1, 2, 0x5A2B00);
+
+			/* Draw the actual string */
+			fr.drawString(s, -fr.getStringWidth(s), 1, 0xFFD200);
+		} else {
+			fr.drawString(s, -fr.getStringWidth(s) + 1, 2, 0x4D0000);
+			fr.drawString(s, -fr.getStringWidth(s), 1, 0xFFFFFF);
+		}
 		GL11.glPopMatrix();
 
 		GL11.glPopMatrix();

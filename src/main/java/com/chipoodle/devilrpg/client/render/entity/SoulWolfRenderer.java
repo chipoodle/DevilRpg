@@ -45,8 +45,8 @@ public class SoulWolfRenderer extends MobRenderer<SoulWolfEntity, SoulWolfModelH
 		//float heart = (float) Math.sin(partialTicks);
 		//matrixStackIn.translate(0.0f,-0.14f, 0.0f); 
 		// matrixStackIn.scale(heart, heart, heart);
-		super.renderName(entityIn, entityIn.getHealth() + "/" + entityIn.getMaxHealth(), matrixStackIn, bufferIn,
-				packedLightIn);		
+		/*super.renderName(entityIn, entityIn.getHealth() + "/" + entityIn.getMaxHealth(), matrixStackIn, bufferIn,
+				packedLightIn);	*/	
 	}
 
 	@Override

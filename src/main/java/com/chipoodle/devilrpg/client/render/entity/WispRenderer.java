@@ -32,8 +32,8 @@ public class WispRenderer extends MobRenderer<WispEntity, WispModel<WispEntity>>
    
    public void render(WispEntity entityIn, float entityYaw, float partialTicks, MatrixStack matrixStackIn, IRenderTypeBuffer bufferIn, int packedLightIn) {
 	      super.render(entityIn, entityYaw, partialTicks, matrixStackIn, bufferIn, packedLightIn);
-	      super.renderName(entityIn, entityIn.getHealth() + "/" + entityIn.getMaxHealth(), matrixStackIn, bufferIn,
-				   packedLightIn);
+	     /* super.renderName(entityIn, entityIn.getHealth() + "/" + entityIn.getMaxHealth(), matrixStackIn, bufferIn,
+				   packedLightIn);*/
    }
    
 }

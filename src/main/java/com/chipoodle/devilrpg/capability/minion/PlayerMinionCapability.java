@@ -5,6 +5,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.entity.SoulBearEntity;
 import com.chipoodle.devilrpg.entity.SoulWolfEntity;
 import com.chipoodle.devilrpg.entity.WispEntity;
 import com.chipoodle.devilrpg.init.ModNetwork;
@@ -25,18 +26,22 @@ import net.minecraftforge.fml.network.PacketDistributor;
 
 public class PlayerMinionCapability implements IBaseMinionCapability {
 	public final static String SOULWOLF_MINION_KEY = "Wolf_Minions";
+	public final static String SOULBEAR_MINION_KEY = "Bear_Minions";
 	public final static String WISP_MINIONS_KEY = "Wisp_Minions";
 	private CompoundNBT nbt = new CompoundNBT();
 
 	public PlayerMinionCapability() {
 		ConcurrentLinkedQueue<UUID> soulwolf;
+		ConcurrentLinkedQueue<UUID> soulbear;
 		ConcurrentLinkedQueue<UUID> wisp;
 		if (nbt.isEmpty()) {
 			soulwolf = new ConcurrentLinkedQueue<UUID>();
+			soulbear = new ConcurrentLinkedQueue<UUID>();
 			wisp = new ConcurrentLinkedQueue<UUID>();
 
 			try {
 				nbt.putByteArray(SOULWOLF_MINION_KEY, BytesUtil.toByteArray(soulwolf));
+				nbt.putByteArray(SOULBEAR_MINION_KEY, BytesUtil.toByteArray(soulbear));
 				nbt.putByteArray(WISP_MINIONS_KEY, BytesUtil.toByteArray(wisp));
 			} catch (IOException e) {
 				DevilRpg.LOGGER.error("Error en constructor PlayerSkillCapability", e);
@@ -66,6 +71,31 @@ public class PlayerMinionCapability implements IBaseMinionCapability {
 			}
 		} catch (IOException e) {
 			DevilRpg.LOGGER.error("Error en setSoulWolfMinions", e);
+		}
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public ConcurrentLinkedQueue<UUID> getSoulBearMinions() {
+		try {
+			return (ConcurrentLinkedQueue<UUID>) BytesUtil.toObject(nbt.getByteArray(SOULBEAR_MINION_KEY));
+		} catch (ClassNotFoundException | IOException e) {
+			DevilRpg.LOGGER.error("Error en getSoulBearfMinions", e);
+			return null;
+		}
+	}
+	
+	@Override
+	public void setSoulBearMinions(ConcurrentLinkedQueue<UUID> soulBearMinions, PlayerEntity player) {
+		try {
+			nbt.putByteArray(SOULBEAR_MINION_KEY, BytesUtil.toByteArray(soulBearMinions));
+			if (!player.world.isRemote) {
+				sendSkillChangesToClient((ServerPlayerEntity) player);
+			} else {
+				sendSkillChangesToServer();
+			}
+		} catch (IOException e) {
+			DevilRpg.LOGGER.error("Error en setSoulBearMinions", e);
 		}
 	}
 
@@ -115,7 +145,6 @@ public class PlayerMinionCapability implements IBaseMinionCapability {
 			wisp.remove(entity.getUniqueID());
 			setWispMinions(wisp, owner);
 			entity.attackEntityFrom(new MinionDeathDamageSource(""), Integer.MAX_VALUE);
-			//entity.onKillCommand();
 		}
 	}
 
@@ -126,7 +155,6 @@ public class PlayerMinionCapability implements IBaseMinionCapability {
 			soulwolf.remove(entity.getUniqueID());
 			setSoulWolfMinions(soulwolf, owner);
 			entity.attackEntityFrom(new MinionDeathDamageSource(""), Integer.MAX_VALUE);
-			//entity.onKillCommand();
 		}
 
 	}
@@ -151,6 +179,28 @@ public class PlayerMinionCapability implements IBaseMinionCapability {
 		});
 		soulwolf.clear();
 		setSoulWolfMinions(soulwolf, owner);
+	}
+	
+	@Override
+	public void removeSoulBear(PlayerEntity owner, SoulBearEntity entity) {
+		ConcurrentLinkedQueue<UUID> soulbear = getSoulBearMinions();
+		if (soulbear!= null && entity!= null && soulbear.contains(entity.getUniqueID())) {
+			soulbear.remove(entity.getUniqueID());
+			setSoulBearMinions(soulbear, owner);
+			entity.attackEntityFrom(new MinionDeathDamageSource(""), Integer.MAX_VALUE);
+		}
+
+	}
+	
+	@Override
+	public void removeAllSoulBear(PlayerEntity owner) {
+		ConcurrentLinkedQueue<UUID> soulbear = getSoulBearMinions();
+		soulbear.forEach(id -> {
+			TameableEntity entity = getTameableByUUID(id, owner.world);
+			removeSoulBear(owner, (SoulBearEntity) entity);
+		});
+		soulbear.clear();
+		setSoulBearMinions(soulbear, owner);
 	}
 
 	@Override

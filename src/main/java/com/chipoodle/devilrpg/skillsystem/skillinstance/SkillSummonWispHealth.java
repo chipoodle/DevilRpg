@@ -57,7 +57,7 @@ public class SkillSummonWispHealth implements ISkillContainer {
 	private WispEntity summonWisp(World worldIn, PlayerEntity playerIn) {
 		Random rand = new Random();
 		WispEntity sw = new WispEntity(ModEntityTypes.WISP.get(), worldIn);
-		sw.updateLevel(playerIn, Effects.HEALTH_BOOST, Effects.REGENERATION, SkillEnum.SUMMON_WISP_HEALTH);
+		sw.updateLevel(playerIn, Effects.HEALTH_BOOST, Effects.REGENERATION, SkillEnum.SUMMON_WISP_HEALTH,true);
 		Vec3d playerLookVector = playerIn.getLookVec();
 		double spawnX = playerIn.getPosX() + DevilRpgConfig.WISP_SPAWN_DISTANCE * playerLookVector.x;
 		double spawnZ = playerIn.getPosZ() + DevilRpgConfig.WISP_SPAWN_DISTANCE * playerLookVector.z;

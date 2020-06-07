@@ -7,6 +7,9 @@ package com.chipoodle.devilrpg.eventsubscriber.common;
 
 import static com.chipoodle.devilrpg.DevilRpg.LOGGER;
 
+import java.util.HashMap;
+import java.util.UUID;
+
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.auxiliar.IBaseAuxiliarCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliarCapabilityProvider;
@@ -25,6 +28,9 @@ import com.chipoodle.devilrpg.network.handler.PlayerSkillClientServerHandler;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.SharedMonsterAttributes;
+import net.minecraft.entity.ai.attributes.AttributeModifier;
+import net.minecraft.entity.ai.attributes.IAttribute;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.util.Hand;
@@ -64,7 +70,7 @@ public class ForgeEventSubscriber {
 		if (!(event.getObject() instanceof PlayerEntity)) {
 			return;
 		}
-		
+
 		DevilRpg.LOGGER.info("----------------------->PlayerForgeEventSubscriber.attachCapability()");
 		event.addCapability(MANA_CAP, new PlayerManaCapabilityProvider());
 		event.addCapability(SKILL_CAP, new PlayerSkillCapabilityProvider());
@@ -84,25 +90,6 @@ public class ForgeEventSubscriber {
 		String message1 = String.format("Hello there, you have mana %f left.",
 				mana.map(x -> x.getMana()).orElse(Float.NaN));
 		player.sendMessage(new StringTextComponent(message1));
-
-		LazyOptional<IBaseSkillCapability> skill = player.getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
-		String message2 = String.format("You have skills attached");
-		if (skill != null)
-			player.sendMessage(new StringTextComponent(message2));
-
-		LazyOptional<IBaseExperienceCapability> exp = player
-				.getCapability(PlayerExperienceCapabilityProvider.EXPERIENCE_CAP);
-		String message3 = String.format("You are lvl. %d ", exp.map(x -> x.getCurrentLevel()).orElse(-1));
-		player.sendMessage(new StringTextComponent(message3));
-
-		LazyOptional<IBaseAuxiliarCapability> aux = player.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
-		String message4 = String.format("Werewolf form:  " + aux.map(x -> x.isWerewolfTransformation()).orElse(false));
-		player.sendMessage(new StringTextComponent(message4));
-
-		LazyOptional<IBaseMinionCapability> min = player.getCapability(PlayerMinionCapabilityProvider.MINION_CAP);
-		String message5 = String.format("Minions:  " + min.map(x -> !x.getSoulWolfMinions().isEmpty()).orElse(false));
-		player.sendMessage(new StringTextComponent(message5));
-
 	}
 
 	@SubscribeEvent
@@ -165,8 +152,6 @@ public class ForgeEventSubscriber {
 		LazyOptional<IBaseMinionCapability> min = player.getCapability(PlayerMinionCapabilityProvider.MINION_CAP);
 	}
 
-	
-
 	/**
 	 * Restore client player capabilities' values on join
 	 * 
@@ -202,8 +187,21 @@ public class ForgeEventSubscriber {
 			if (!player.world.isRemote) {
 				mainThread.enqueue(new Runnable() {
 					public void run() {
-						ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> (ServerPlayerEntity) player),
-								new PlayerSkillClientServerHandler(skill.map(x -> x.getNBTData()).orElse(null)));
+						skill.ifPresent(x->{
+							HashMap<String, UUID> attributeModifiers = x.getAttributeModifiers();
+							UUID hlthAttMod = attributeModifiers.get(SharedMonsterAttributes.MAX_HEALTH.getName());
+							UUID spdAttMod = attributeModifiers.get(SharedMonsterAttributes.MOVEMENT_SPEED.getName());
+							
+							if(hlthAttMod != null) {
+								DevilRpg.LOGGER.info("||-------------> removing health id: "+hlthAttMod);
+								player.getAttribute(SharedMonsterAttributes.MAX_HEALTH).removeModifier(hlthAttMod);
+							}
+							if(spdAttMod!= null) {
+								player.getAttribute(SharedMonsterAttributes.MOVEMENT_SPEED).removeModifier(spdAttMod);
+							}
+							ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> (ServerPlayerEntity) player),
+									new PlayerSkillClientServerHandler(x.getNBTData()));
+						});		
 					}
 				});
 			}
@@ -227,7 +225,8 @@ public class ForgeEventSubscriber {
 					public void run() {
 						aux.ifPresent(x -> x.setWerewolfAttack(false, player));
 						aux.ifPresent(x -> x.setWerewolfTransformation(false, player));
-
+						//player.getAttribute(SharedMonsterAttributes.MAX_HEALTH).removeAllModifiers();
+						//player.getAttribute(SharedMonsterAttributes.MOVEMENT_SPEED).removeAllModifiers();
 						// ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() ->
 						// (ServerPlayerEntity) player), new PlayerAuxiliarClientServerHandler(aux.map(x
 						// -> x.getNBTData()).orElse(null)));
@@ -241,13 +240,17 @@ public class ForgeEventSubscriber {
 			if (!player.world.isRemote) {
 				mainThread.enqueue(new Runnable() {
 					public void run() {
-						min.ifPresent(x->{
+						min.ifPresent(x -> {
 							x.removeAllSoulWolf(player);
+							x.removeAllSoulBear(player);
 							x.removeAllWisp(player);
 						});
-						
-						/*ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> (ServerPlayerEntity) player),
-								new PlayerMinionClientServerHandler(min.map(x -> x.getNBTData()).orElse(null)));*/
+
+						/*
+						 * ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() ->
+						 * (ServerPlayerEntity) player), new PlayerMinionClientServerHandler(min.map(x
+						 * -> x.getNBTData()).orElse(null)));
+						 */
 					}
 				});
 			}
@@ -272,7 +275,7 @@ public class ForgeEventSubscriber {
 				mana.map(x -> x.getMaxMana()).orElse(Float.NaN));
 		player.sendMessage(new StringTextComponent(message));
 	}
-	
+
 	@SubscribeEvent
 	public static void playerLevelChange(PlayerXpEvent.LevelChange e) {
 		PlayerEntity player = e.getPlayer();
@@ -298,8 +301,9 @@ public class ForgeEventSubscriber {
 
 	@SubscribeEvent
 	public static void entityInteract(PlayerInteractEvent.EntityInteract event) {
-		// event.getPlayer().sendMessage(new StringTextComponent("------>
-		// PlayerInteractEvent.EntityInteract"));
+		// event.getPlayer().sendMessage(new
+		// StringTextComponent("------>PlayerInteractEvent.EntityInteract::
+		// "+event.getTarget()));	
 	}
 
 	@SubscribeEvent
@@ -310,7 +314,7 @@ public class ForgeEventSubscriber {
 		boolean transformation = aux.map(x -> x.isWerewolfTransformation()).orElse(false);
 		if (transformation) {
 			event.getPlayer().isSwingInProgress = false;
-			aux.ifPresent(x->{
+			aux.ifPresent(x -> {
 				Hand h = x.isSwingingMainHand() ? Hand.MAIN_HAND : Hand.OFF_HAND;
 				event.getPlayer().swingArm(h);
 				x.setSwingingMainHand(!x.isSwingingMainHand(), event.getPlayer());
@@ -326,13 +330,13 @@ public class ForgeEventSubscriber {
 		boolean transformation = aux.map(x -> x.isWerewolfTransformation()).orElse(false);
 		if (transformation) {
 			event.getPlayer().isSwingInProgress = false;
-			aux.ifPresent(x->{
+			aux.ifPresent(x -> {
 				Hand h = x.isSwingingMainHand() ? Hand.MAIN_HAND : Hand.OFF_HAND;
 				event.getPlayer().swingArm(h);
 				x.setSwingingMainHand(!x.isSwingingMainHand(), event.getPlayer());
 			});
 		}
-		// event.setCanceled(true);
+		//event.setCanceled(true);
 	}
 
 	@SubscribeEvent

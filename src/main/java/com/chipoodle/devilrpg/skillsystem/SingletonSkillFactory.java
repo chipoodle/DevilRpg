@@ -3,6 +3,7 @@ package com.chipoodle.devilrpg.skillsystem;
 import java.util.Hashtable;
 
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
+import com.chipoodle.devilrpg.skillsystem.skillinstance.SkillSummonSoulBear;
 import com.chipoodle.devilrpg.skillsystem.skillinstance.SkillSummonSoulWolf;
 import com.chipoodle.devilrpg.skillsystem.skillinstance.SkillSummonWispHealth;
 import com.chipoodle.devilrpg.skillsystem.skillinstance.SkillSummonWispSpeed;
@@ -24,6 +25,10 @@ public class SingletonSkillFactory {
 		if (skillEnum.equals(SkillEnum.SUMMON_SOUL_WOLF)) {
 			skillPool.putIfAbsent(SkillEnum.SUMMON_SOUL_WOLF, new SkillSummonSoulWolf(parentCapability));
 			return skillPool.get(SkillEnum.SUMMON_SOUL_WOLF);
+		}
+		if (skillEnum.equals(SkillEnum.SUMMON_SOUL_BEAR)) {
+			skillPool.putIfAbsent(SkillEnum.SUMMON_SOUL_BEAR, new SkillSummonSoulBear(parentCapability));
+			return skillPool.get(SkillEnum.SUMMON_SOUL_BEAR);
 		}
 		if (skillEnum.equals(SkillEnum.SUMMON_WISP_HEALTH)) {
 			skillPool.putIfAbsent(SkillEnum.SUMMON_WISP_HEALTH, new SkillSummonWispHealth(parentCapability));

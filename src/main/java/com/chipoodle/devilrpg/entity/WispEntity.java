@@ -34,6 +34,7 @@ import net.minecraft.entity.ai.goal.PanicGoal;
 import net.minecraft.entity.ai.goal.SitGoal;
 import net.minecraft.entity.ai.goal.SwimGoal;
 import net.minecraft.entity.ai.goal.WaterAvoidingRandomFlyingGoal;
+import net.minecraft.entity.monster.MonsterEntity;
 import net.minecraft.entity.passive.AnimalEntity;
 import net.minecraft.entity.passive.IFlyingAnimal;
 import net.minecraft.entity.passive.TameableEntity;
@@ -84,6 +85,8 @@ public class WispEntity extends TameableEntity implements IFlyingAnimal, ISoulEn
 	private double saludMaxima = SALUD_INICIAL;
 	protected Effect efectoPrimario;
 	protected Effect efectoSecundario;
+	protected boolean esBeneficioso;
+	
 	protected double distanciaEfecto = 20;
 	protected int divisorNivelParaPotenciaEfecto = 5;
 	protected int durationTicks = 120;
@@ -129,11 +132,12 @@ public class WispEntity extends TameableEntity implements IFlyingAnimal, ISoulEn
 		this.getAttribute(SharedMonsterAttributes.FOLLOW_RANGE).setBaseValue(16.0D);
 	}
 
-	public void updateLevel(PlayerEntity owner, Effect efectoPrimario, Effect efectoSecundario, SkillEnum tipoWisp) {
+	public void updateLevel(PlayerEntity owner, Effect efectoPrimario, Effect efectoSecundario, SkillEnum tipoWisp,boolean esBeneficioso) {
 		setTamedBy(owner);
 		LazyOptional<IBaseSkillCapability> skill = getOwner().getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
 		this.efectoPrimario = efectoPrimario;
 		this.efectoSecundario = efectoSecundario;
+		this.esBeneficioso = esBeneficioso;
 		if (skill != null && skill.isPresent()) {
 			this.puntosAsignados = skill.map(x -> x.getSkillsPoints()).orElse(null).get(tipoWisp);
 			saludMaxima = 0.6 * this.puntosAsignados + SALUD_INICIAL;
@@ -173,7 +177,7 @@ public class WispEntity extends TameableEntity implements IFlyingAnimal, ISoulEn
 			//onKillCommand();
 
 		if (this.world.getGameTime() % 80L == 0L && efectoPrimario != null && efectoSecundario != null) {
-			this.addEffectsToPlayers(puntosAsignados, efectoPrimario, efectoSecundario);
+			this.addEffectsToPlayers(puntosAsignados, efectoPrimario, efectoSecundario,esBeneficioso);
 		}
 		addToLivingTick(this);
 	}
@@ -373,10 +377,10 @@ public class WispEntity extends TameableEntity implements IFlyingAnimal, ISoulEn
 		return isOnSameTeam || isSameOwner;
 	}
 
-	private void addEffectsToPlayers(int niveles, Effect primaryEffect, Effect secondaryEffect) {
+	private void addEffectsToPlayers(int niveles, Effect primaryEffect, Effect secondaryEffect, boolean isBeneficial) {
 		if (niveles >= 0 && !this.world.isRemote && primaryEffect != null) {
 			// rango entre 0 - 4 el tipo de boost health
-			int i = getPotenciaPocion(niveles);
+			int potenciaPocion = getPotenciaPocion(niveles);
 			// System.out.println("Level of effect" + i);
 
 			int k = this.getPosition().getX();
@@ -385,21 +389,28 @@ public class WispEntity extends TameableEntity implements IFlyingAnimal, ISoulEn
 			AxisAlignedBB axisalignedbb = (new AxisAlignedBB((double) k, (double) l, (double) i1, (double) (k + 1),
 					(double) (l + 1), (double) (i1 + 1))).grow(distanciaEfecto).expand(0.0D,
 							(double) this.world.getHeight(), 0.0D);
-			List<LivingEntity> list = this.world.<LivingEntity>getEntitiesWithinAABB(LivingEntity.class, axisalignedbb)
-					.stream().filter(x -> x.isOnSameTeam(this.getOwner()) || x.equals(getOwner()))
-					.collect(Collectors.toList());
-
+			
+			
 			if (niveles > 0) {
-				for (LivingEntity entity : list) {
-					EffectInstance pri = new EffectInstance(primaryEffect, durationTicks, i, false, true);
-					EffectInstance active = entity.getActivePotionEffect(primaryEffect);
-					if (entity.getActivePotionEffect(primaryEffect) == null
-							|| pri.getAmplifier() > active.getAmplifier()) {
-						entity.addPotionEffect(pri);
-					} else {
-						active.combine(pri);
-					}
-				}
+				List<LivingEntity> alliesList = null;
+				List<LivingEntity> monsterlist = null;
+						if(isBeneficial) {
+							alliesList = getAlliesListWithinAABBRange(axisalignedbb);
+							applyPrimaryEffect(primaryEffect, potenciaPocion, alliesList);
+							if (niveles >= 10) {
+								applySecondaryEffect(secondaryEffect, alliesList);
+							}
+						
+						}
+						else {
+							monsterlist = getEnemiesListWithinAABBRange(axisalignedbb);
+							applyPrimaryEffect(primaryEffect, potenciaPocion, monsterlist);
+							if (niveles >= 10) {
+								applySecondaryEffect(secondaryEffect, monsterlist);
+							}
+						}
+				
+				
 
 				/*
 				 * for (LivingEntity entity : list) { EffectInstance aux = new
@@ -410,20 +421,51 @@ public class WispEntity extends TameableEntity implements IFlyingAnimal, ISoulEn
 				 * active.combine(aux); } }
 				 */
 
-				if (niveles >= 10) {
-					for (LivingEntity entity : list) {
-						EffectInstance sec = new EffectInstance(secondaryEffect, durationTicks, 0, false, true);
-						EffectInstance active = entity.getActivePotionEffect(secondaryEffect);
-						if (entity.getActivePotionEffect(secondaryEffect) == null
-								|| sec.getAmplifier() > active.getAmplifier()) {
-							entity.addPotionEffect(sec);
-						} else {
-							active.combine(sec);
-						}
-					}
-				}
+				
 			}
 		}
+	}
+
+	private void applySecondaryEffect(Effect secondaryEffect, List<LivingEntity> alliesList) {
+		for (LivingEntity entity : alliesList) {
+			EffectInstance sec = new EffectInstance(secondaryEffect, durationTicks, 0, false, true);
+			EffectInstance active = entity.getActivePotionEffect(secondaryEffect);
+			if (entity.getActivePotionEffect(secondaryEffect) == null
+					|| sec.getAmplifier() > active.getAmplifier()) {
+				entity.addPotionEffect(sec);
+			} else {
+				active.combine(sec);
+			}
+		}
+	}
+
+	private void applyPrimaryEffect(Effect primaryEffect, int i, List<LivingEntity> alliesList) {
+		for (LivingEntity entity : alliesList) {
+			EffectInstance pri = new EffectInstance(primaryEffect, durationTicks, i, false, true);
+			EffectInstance active = entity.getActivePotionEffect(primaryEffect);
+			if (entity.getActivePotionEffect(primaryEffect) == null
+					|| pri.getAmplifier() > active.getAmplifier()) {
+				entity.addPotionEffect(pri);
+			} else {
+				active.combine(pri);
+			}
+		}
+	}
+
+	private List<LivingEntity> getAlliesListWithinAABBRange(AxisAlignedBB axisalignedbb) {
+		List<LivingEntity> list = this.world.<LivingEntity>getEntitiesWithinAABB(LivingEntity.class, axisalignedbb)
+				.stream().filter(x -> x.isOnSameTeam(this.getOwner()) || x.equals(getOwner()))
+				.collect(Collectors.toList());
+		return list;
+	}
+	
+	private List<LivingEntity> getEnemiesListWithinAABBRange(AxisAlignedBB axisalignedbb) {
+		List<LivingEntity> list = this.world.<MonsterEntity>getEntitiesWithinAABB(MonsterEntity.class, axisalignedbb)
+				.stream()
+				.filter(x -> !x.isOnSameTeam(this.getOwner()))
+				.map(x->(LivingEntity)x)
+				.collect(Collectors.toList());
+		return list;
 	}
 
 	@Override
