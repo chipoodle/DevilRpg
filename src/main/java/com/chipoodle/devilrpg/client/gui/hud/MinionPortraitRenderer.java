@@ -86,8 +86,10 @@ public class MinionPortraitRenderer extends AbstractGui {
 			}
 		}
 
+		
+		
 		for (UUID wispKey : wispMinionKeys) {
-			WispEntity h = (WispEntity)minionCap.map(m -> m.getTameableByUUID(wispKey, player.world)).orElse(new WispEntity(ModEntityTypes.WISP.get(), mc.player.world));
+			WispEntity h = (WispEntity)minionCap.map(m -> m.getTameableByUUID(wispKey, player.world)).orElse(ModEntityTypes.WISP.get().create( mc.player.world));
 			if(h.getOwner()!= null) {
 				float health = h.getHealth();
 				float maxHealth = h.getMaxHealth();

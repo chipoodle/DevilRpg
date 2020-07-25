@@ -56,7 +56,7 @@ public class SkillSummonSoulBear implements ISkillContainer {
 
 	private SoulBearEntity summonSoulBear(World worldIn, PlayerEntity playerIn) {
 		Random rand = new Random();
-		SoulBearEntity sw = new SoulBearEntity(ModEntityTypes.SOUL_BEAR.get(), worldIn);
+		SoulBearEntity sw = ModEntityTypes.SOUL_BEAR.get().create(worldIn);
 		sw.updateLevel(playerIn);
 		Vec3d playerLookVector = playerIn.getLookVec();
 		double spawnX = playerIn.getPosX() + DevilRpgConfig.WOLF_SPAWN_DISTANCE * playerLookVector.x;

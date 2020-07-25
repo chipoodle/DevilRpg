@@ -56,7 +56,7 @@ public class SkillSummonSoulWolf implements ISkillContainer {
 
 	private SoulWolfEntity summoSoulWolf(World worldIn, PlayerEntity playerIn) {
 		Random rand = new Random();
-		SoulWolfEntity sw = new SoulWolfEntity(ModEntityTypes.SOUL_WOLF.get(), worldIn);
+		SoulWolfEntity sw = ModEntityTypes.SOUL_WOLF.get().create(worldIn);
 		sw.updateLevel(playerIn);
 		Vec3d playerLookVector = playerIn.getLookVec();
 		double spawnX = playerIn.getPosX() + DevilRpgConfig.WOLF_SPAWN_DISTANCE * playerLookVector.x;
