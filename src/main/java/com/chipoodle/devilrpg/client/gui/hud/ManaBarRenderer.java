@@ -23,7 +23,7 @@ public class ManaBarRenderer extends AbstractGui {
 	/* These two variables describe the size of the bar */
 	private final static int BAR_WIDTH = 81;
 	private final static int BAR_HEIGHT = 9;
-	private final static int BAR_SPACING_ABOVE_EXP_BAR = 3;
+	private final static int BAR_SPACING_ABOVE_EXP_BAR = 1;
 	//LazyOptional<IBaseManaCapability> playerCapability;
 	private float manaRun;
 	private float maxMana;
@@ -40,7 +40,7 @@ public class ManaBarRenderer extends AbstractGui {
 		mc = Minecraft.getInstance();
 	}
 
-	public void renderStatusBar(int screenWidth, int screenHeight) {
+	public void renderBar(int screenWidth, int screenHeight) {
 		/* These are the variables that contain world and player information */
 		//World world = mc.world;
 		PlayerEntity player = mc.player;
@@ -84,7 +84,7 @@ public class ManaBarRenderer extends AbstractGui {
 		// we will draw the status bar just above the hotbar. obtained by inspecting the
 		// vanilla hotbar rendering code
 		final int vanillaExpLeftX = screenWidth / 2 - 91; // leftmost edge of the experience bar
-		final int vanillaExpTopY = screenHeight - 32 + BAR_SPACING_ABOVE_EXP_BAR - BAR_HEIGHT; // top of the experience
+		final int vanillaExpTopY = screenHeight - 30 + BAR_SPACING_ABOVE_EXP_BAR - BAR_HEIGHT; // top of the experience
 																								// bar
 
 		/*

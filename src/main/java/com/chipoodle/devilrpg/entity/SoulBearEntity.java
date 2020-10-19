@@ -9,7 +9,6 @@ import com.chipoodle.devilrpg.capability.minion.IBaseMinionCapability;
 import com.chipoodle.devilrpg.capability.minion.PlayerMinionCapabilityProvider;
 import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
-import com.chipoodle.devilrpg.skillsystem.MinionDeathDamageSource;
 import com.chipoodle.devilrpg.util.SkillEnum;
 
 import net.minecraft.block.BlockState;
@@ -18,6 +17,7 @@ import net.minecraft.entity.AgeableEntity;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntitySize;
 import net.minecraft.entity.EntityType;
+import net.minecraft.entity.IChargeableMob;
 import net.minecraft.entity.ILivingEntityData;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.MobEntity;
@@ -25,6 +25,8 @@ import net.minecraft.entity.Pose;
 import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.ai.goal.FollowOwnerGoal;
+import net.minecraft.entity.ai.goal.FollowParentGoal;
+import net.minecraft.entity.ai.goal.HurtByTargetGoal;
 import net.minecraft.entity.ai.goal.LookAtGoal;
 import net.minecraft.entity.ai.goal.LookRandomlyGoal;
 import net.minecraft.entity.ai.goal.NearestAttackableTargetGoal;
@@ -36,7 +38,6 @@ import net.minecraft.entity.merchant.villager.VillagerEntity;
 import net.minecraft.entity.passive.IronGolemEntity;
 import net.minecraft.entity.passive.TameableEntity;
 import net.minecraft.entity.passive.TurtleEntity;
-import net.minecraft.entity.passive.horse.AbstractHorseEntity;
 import net.minecraft.entity.passive.horse.LlamaEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
@@ -47,7 +48,6 @@ import net.minecraft.network.datasync.DataSerializers;
 import net.minecraft.network.datasync.EntityDataManager;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.Hand;
-import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.SoundEvent;
 import net.minecraft.util.SoundEvents;
 import net.minecraft.util.math.BlockPos;
@@ -57,7 +57,6 @@ import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.Biomes;
-import net.minecraft.world.storage.loot.LootTable;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.common.util.LazyOptional;
@@ -65,7 +64,7 @@ import net.minecraftforge.fml.common.registry.IEntityAdditionalSpawnData;
 import net.minecraftforge.fml.network.FMLPlayMessages;
 import net.minecraftforge.fml.network.NetworkHooks;
 
-public class SoulBearEntity extends TameableEntity implements ISoulEntity {
+public class SoulBearEntity extends TameableEntity implements ISoulEntity,IChargeableMob {
 	private static final DataParameter<Boolean> IS_STANDING = EntityDataManager.createKey(SoulBearEntity.class,
 			DataSerializers.BOOLEAN);
 	private float clientSideStandAnimation0;
@@ -97,12 +96,12 @@ public class SoulBearEntity extends TameableEntity implements ISoulEntity {
 		super.registerGoals();
 		this.goalSelector.addGoal(0, new SwimGoal(this));
 		this.goalSelector.addGoal(1, new SoulBearEntity.MeleeAttackGoal());
-		this.goalSelector.addGoal(1, new SoulBearEntity.PanicGoal());
+		//this.goalSelector.addGoal(1, new SoulBearEntity.PanicGoal());
 		this.goalSelector.addGoal(3,new SoulBearEntity.AvoidEntityGoal<VillagerEntity>(this, VillagerEntity.class, 24.0F, 1.5D, 1.5D));
 		this.goalSelector.addGoal(3,new SoulBearEntity.AvoidEntityGoal<LlamaEntity>(this, LlamaEntity.class, 24.0F, 1.5D, 1.5D));
 		this.goalSelector.addGoal(3,new SoulBearEntity.AvoidEntityGoal<TurtleEntity>(this, TurtleEntity.class, 24.0F, 1.5D, 1.5D));
 		this.goalSelector.addGoal(3,new SoulBearEntity.AvoidEntityGoal<IronGolemEntity>(this, IronGolemEntity.class, 24.0F, 1.5D, 1.5D));
-		//this.goalSelector.addGoal(4, new FollowParentGoal(this, 1.25D));
+		this.goalSelector.addGoal(4, new FollowParentGoal(this, 1.25D));
 		this.goalSelector.addGoal(5, new RandomWalkingGoal(this, 1.0D));
 		this.goalSelector.addGoal(6, new FollowOwnerGoal(this, 1.0D, 10.0F, 2.0F, false));
 		this.goalSelector.addGoal(7, new LookAtGoal(this, PlayerEntity.class, 6.0F));
@@ -112,8 +111,8 @@ public class SoulBearEntity extends TameableEntity implements ISoulEntity {
 		
 		this.targetSelector.addGoal(1, new OwnerHurtByTargetGoal(this));
 		this.targetSelector.addGoal(2, new OwnerHurtTargetGoal(this));
-		this.targetSelector.addGoal(3, new SoulBearEntity.HurtByTargetGoal());
-		//this.targetSelector.addGoal(3, (new HurtByTargetGoal(this)).setCallsForHelp());
+		//this.targetSelector.addGoal(3, new SoulBearEntity.HurtByTargetGoal());
+		this.targetSelector.addGoal(3, (new HurtByTargetGoal(this)).setCallsForHelp());
 		this.targetSelector.addGoal(5, new NearestAttackableTargetGoal<>(this, MobEntity.class, false));
 		
 	}
@@ -384,31 +383,6 @@ public class SoulBearEntity extends TameableEntity implements ISoulEntity {
 		}
 	}
 
-	class HurtByTargetGoal extends net.minecraft.entity.ai.goal.HurtByTargetGoal {
-		public HurtByTargetGoal() {
-			super(SoulBearEntity.this);
-		}
-
-		/**
-		 * Execute a one shot task or start executing a continuous task
-		 */
-		public void startExecuting() {
-			super.startExecuting();
-			if (SoulBearEntity.this.isChild()) {
-				this.alertOthers();
-				this.resetTask();
-			}
-
-		}
-
-		protected void setAttackTarget(MobEntity mobIn, LivingEntity targetIn) {
-			if (mobIn instanceof SoulBearEntity && !mobIn.isChild()) {
-				super.setAttackTarget(mobIn, targetIn);
-			}
-
-		}
-	}
-
 	class MeleeAttackGoal extends net.minecraft.entity.ai.goal.MeleeAttackGoal {
 		public MeleeAttackGoal() {
 			super(SoulBearEntity.this, 1.25D, true);
@@ -525,5 +499,19 @@ public class SoulBearEntity extends TameableEntity implements ISoulEntity {
 			SoulBearEntity.this.setAttackTarget((LivingEntity) null);
 			super.tick();
 		}
+	}
+
+	@Override
+	public boolean func_225509_J__() {
+		return true;
+	}
+	
+	/**
+	 * Get the experience points the entity currently has.
+	 */
+	protected int getExperiencePoints(PlayerEntity player) {
+		if (player.equals(getOwner()))
+			return 0;
+		return 1 + this.world.rand.nextInt(3);
 	}
 }

@@ -9,6 +9,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.mana.IBaseManaCapability;
 import com.chipoodle.devilrpg.capability.mana.PlayerManaCapabilityProvider;
+import com.chipoodle.devilrpg.config.DevilRpgConfig;
 import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.network.handler.PlayerSkillClientServerHandler;
 import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
@@ -56,6 +57,9 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
 			}
 			for (SkillEnum s : Arrays.asList(SkillEnum.values())) {
 				manaCostContainer.put(s, 20);
+				if(s.equals(SkillEnum.FIREBALL)) {
+					manaCostContainer.put(s, 3);
+				}	
 			}
 
 			try {

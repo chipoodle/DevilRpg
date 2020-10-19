@@ -8,7 +8,7 @@ import com.chipoodle.devilrpg.capability.minion.IBaseMinionCapability;
 import com.chipoodle.devilrpg.capability.minion.PlayerMinionCapabilityProvider;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.config.DevilRpgConfig;
-import com.chipoodle.devilrpg.entity.WispEntity;
+import com.chipoodle.devilrpg.entity.SoulWispEntity;
 import com.chipoodle.devilrpg.init.ModEntityTypes;
 import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
 import com.chipoodle.devilrpg.util.SkillEnum;
@@ -45,7 +45,7 @@ public class SkillSummonWispHealth implements ISkillContainer {
 			if (keys.size() > NUMBER_OF_SUMMONS) {
 				UUID key = keys.remove();
 				min.ifPresent(x -> {
-					WispEntity e = (WispEntity) x.getTameableByUUID(key, playerIn.world);
+					SoulWispEntity e = (SoulWispEntity) x.getTameableByUUID(key, playerIn.world);
 					if (e != null)
 						x.removeWisp(playerIn, e);
 				});
@@ -54,9 +54,9 @@ public class SkillSummonWispHealth implements ISkillContainer {
 		}
 	}
 
-	private WispEntity summonWisp(World worldIn, PlayerEntity playerIn) {
+	private SoulWispEntity summonWisp(World worldIn, PlayerEntity playerIn) {
 		Random rand = new Random();
-		WispEntity sw = ModEntityTypes.WISP.get().create(worldIn);
+		SoulWispEntity sw = ModEntityTypes.WISP.get().create(worldIn);
 		sw.updateLevel(playerIn, Effects.HEALTH_BOOST, Effects.REGENERATION, SkillEnum.SUMMON_WISP_HEALTH,true);
 		Vec3d playerLookVector = playerIn.getLookVec();
 		double spawnX = playerIn.getPosX() + DevilRpgConfig.WISP_SPAWN_DISTANCE * playerLookVector.x;

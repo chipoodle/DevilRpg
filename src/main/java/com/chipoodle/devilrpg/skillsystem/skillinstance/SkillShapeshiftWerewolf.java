@@ -22,18 +22,19 @@ import net.minecraft.entity.ai.attributes.IAttribute;
 import net.minecraft.entity.passive.TameableEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.Hand;
+import net.minecraft.util.SoundEvents;
 import net.minecraft.world.World;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.common.util.LazyOptional;
 
-public class SkillTransformWerewolf implements ISkillContainer {
+public class SkillShapeshiftWerewolf implements ISkillContainer {
 	private PlayerSkillCapability parentCapability;
 	private LazyOptional<IBaseAuxiliarCapability> aux;
 	AttributeModifier healthAttributeModifier;
 	AttributeModifier speedAttributeModifier;
 
-	public SkillTransformWerewolf(PlayerSkillCapability parentCapability) {
+	public SkillShapeshiftWerewolf(PlayerSkillCapability parentCapability) {
 		this.parentCapability = parentCapability;
 	}
 

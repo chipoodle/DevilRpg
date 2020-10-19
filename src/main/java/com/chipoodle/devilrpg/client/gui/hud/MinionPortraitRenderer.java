@@ -13,7 +13,7 @@ import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
 import com.chipoodle.devilrpg.entity.SoulBearEntity;
 import com.chipoodle.devilrpg.entity.SoulWolfEntity;
-import com.chipoodle.devilrpg.entity.WispEntity;
+import com.chipoodle.devilrpg.entity.SoulWispEntity;
 import com.chipoodle.devilrpg.init.ModEntityTypes;
 
 import net.minecraft.client.Minecraft;
@@ -33,11 +33,15 @@ public class MinionPortraitRenderer extends AbstractGui {
 	private final static ResourceLocation soulbearPortrait = new ResourceLocation(
 			DevilRpg.MODID + ":textures/entity/soulbear/soulbear_portrait_256x256.png");
 	private final static ResourceLocation wispPortrait = new ResourceLocation(
-			DevilRpg.MODID + ":textures/entity/flyingwisp/wisp_portrait_256x256.png");
+			DevilRpg.MODID + ":textures/entity/flyingwisp/wisp_portrait_a_256x256.png");
 
 	/* These two variables describe the size of the bar */
 	private final static int BAR_WIDTH = 81;
 	private final static int BAR_HEIGHT = 81;
+	// we will draw the status bar just above the hotbar. obtained by inspecting the
+	// vanilla hotbar rendering code
+	final int vanillaExpLeftX = 1; // leftmost edge of the experience bar
+	final int vanillaExpTopY = 1; // top of the experience bar
 	private Minecraft mc;
 
 	public MinionPortraitRenderer(Minecraft mc) {
@@ -67,39 +71,32 @@ public class MinionPortraitRenderer extends AbstractGui {
 
 		int i = 0;
 		for (UUID wolfKey : soulwolfMinionKeys) {
-			SoulWolfEntity h = (SoulWolfEntity)minionCap.map(m -> m.getTameableByUUID(wolfKey, player.world)).orElse(new SoulWolfEntity(ModEntityTypes.SOUL_WOLF.get(), mc.player.world));
-			if(h.getOwner()!= null) {
-				float health = h.getHealth();
-				float maxHealth = h.getMaxHealth();
-				renderEntityPortrait(i, health, maxHealth, soulwolfPortrait,h);
-				i++;
-			}
-		}
-		
-		for (UUID bearKey : soulbearMinionKeys) {
-			SoulBearEntity h = (SoulBearEntity)minionCap.map(m -> m.getTameableByUUID(bearKey, player.world)).orElse(new SoulBearEntity(ModEntityTypes.SOUL_BEAR.get(), mc.player.world));
-			if(h.getOwner()!= null) {
-				float health = h.getHealth();
-				float maxHealth = h.getMaxHealth();
-				renderEntityPortrait(i, health, maxHealth, soulbearPortrait,h);
-				i++;
+			SoulWolfEntity h = (SoulWolfEntity) minionCap.map(m -> m.getTameableByUUID(wolfKey, player.world))
+					.orElse(new SoulWolfEntity(ModEntityTypes.SOUL_WOLF.get(), mc.player.world));
+			if (h.getOwner() != null) {
+				renderEntityPortrait(i++, h.getHealth(), h.getMaxHealth(), soulwolfPortrait, h);
 			}
 		}
 
-		
-		
-		for (UUID wispKey : wispMinionKeys) {
-			WispEntity h = (WispEntity)minionCap.map(m -> m.getTameableByUUID(wispKey, player.world)).orElse(ModEntityTypes.WISP.get().create( mc.player.world));
-			if(h.getOwner()!= null) {
-				float health = h.getHealth();
-				float maxHealth = h.getMaxHealth();
-				renderEntityPortrait(i, health, maxHealth, wispPortrait,h);
-				i++;
+		for (UUID bearKey : soulbearMinionKeys) {
+			SoulBearEntity h = (SoulBearEntity) minionCap.map(m -> m.getTameableByUUID(bearKey, player.world))
+					.orElse(new SoulBearEntity(ModEntityTypes.SOUL_BEAR.get(), mc.player.world));
+			if (h.getOwner() != null) {
+				renderEntityPortrait(i++, h.getHealth(), h.getMaxHealth(), soulbearPortrait, h);
 			}
-		}		
+		}
+
+		for (UUID wispKey : wispMinionKeys) {
+			SoulWispEntity h = (SoulWispEntity) minionCap.map(m -> m.getTameableByUUID(wispKey, player.world))
+					.orElse(ModEntityTypes.WISP.get().create(mc.player.world));
+			if (h.getOwner() != null) {
+				renderEntityPortrait(i++, h.getHealth(), h.getMaxHealth(), wispPortrait, h);
+			}
+		}
 	}
 
-	private void renderEntityPortrait(int i, float health, float maxHealth, ResourceLocation overlayBar, LivingEntity entity) {
+	private void renderEntityPortrait(int i, float health, float maxHealth, ResourceLocation overlayBar,
+			LivingEntity entity) {
 		/* This object draws text using the Minecraft font */
 		FontRenderer fr = mc.fontRenderer;
 
@@ -121,17 +118,15 @@ public class MinionPortraitRenderer extends AbstractGui {
 		/* This method tells OpenGL to draw with the custom texture */
 		mc.getTextureManager().bindTexture(overlayBar);
 
-		// we will draw the status bar just above the hotbar. obtained by inspecting the
-		// vanilla hotbar rendering code
-		final int vanillaExpLeftX = 5; // leftmost edge of the experience bar
-		final int vanillaExpTopY = 5; // top of the experience bar
-
 		/*
 		 * Shift our rendering origin to just above the experience bar The top left
 		 * corner of the screen is x=0, y=0
 		 */
-		GL11.glTranslatef(vanillaExpLeftX + 30*i, vanillaExpTopY, 0);
+		/* establece la posición inicial del componente (imagen con barra incluida) */
+		GL11.glTranslatef(vanillaExpLeftX + 20 * i, vanillaExpTopY, 0);
 
+		/* Escala toda la imagen con todo y barra */
+		GL11.glScalef(0.2f, 0.2f, 0.2f);
 		/*
 		 * Draw a part of the image file at the current position
 		 *
@@ -149,7 +144,6 @@ public class MinionPortraitRenderer extends AbstractGui {
 		 *
 		 * This line draws the background of the custom bar
 		 */
-		GL11.glScalef(0.3f, 0.3f, 0.3f);
 		blit(0, 0, 0, 0, BAR_WIDTH, BAR_HEIGHT);
 
 		/*
@@ -158,14 +152,17 @@ public class MinionPortraitRenderer extends AbstractGui {
 		 * armor value.
 		 */
 		blit(0, 0, 0, BAR_HEIGHT, (int) (BAR_WIDTH * (entity.getTotalArmorValue() / 20f)), BAR_HEIGHT);
-		
+
 		/* This part draws the inside of the bar, which starts 1 pixel right and down */
 		GL11.glPushMatrix();
-		/* Shift the bar 10 pixel up*/
-		GL11.glTranslatef(0, -10, 0);
+		/* Shift the bar 10 pixel up */
+		GL11.glTranslatef(0, BAR_HEIGHT, 0);
+
+		GL11.glScalef(1.0f, 2.0f, 1.0f);
+
 		/* Shift 1 pixel right and down */
-		//GL11.glTranslatef(1, 1, 0);
-		
+		// GL11.glTranslatef(1, 1, 0);
+
 		/*
 		 * These few numbers will store the HP values of the player. This includes the
 		 * Health Boost and Absorption potion effects
@@ -173,8 +170,7 @@ public class MinionPortraitRenderer extends AbstractGui {
 		float maxHp = entity.getMaxHealth();
 		float absorptionAmount = entity.getAbsorptionAmount();
 		float effectiveHp = entity.getHealth() + absorptionAmount;
-		
-		
+
 		/*
 		 * The part of the bar that fills up will be a rectangle that stretches based on
 		 * how much hp the player has. To do this, I need to use a scaling transform,
@@ -220,7 +216,6 @@ public class MinionPortraitRenderer extends AbstractGui {
 		} else {
 			blit(0, 0, NORMAL_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
 		}
-
 		GL11.glPopMatrix();
 
 		/* Move to the right end of the bar, minus a few pixels. */

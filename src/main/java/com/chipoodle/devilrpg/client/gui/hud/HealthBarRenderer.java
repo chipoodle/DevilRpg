@@ -24,7 +24,7 @@ import net.minecraft.world.World;
 /*
  * I extend Gui because it has already implemented a bunch of drawing functions
  */
-public class StatusBarRenderer extends AbstractGui {
+public class HealthBarRenderer extends AbstractGui {
 
 	/*
 	 * This line tells Minecraft/Forge where your texture is. The first argument is
@@ -41,7 +41,7 @@ public class StatusBarRenderer extends AbstractGui {
 	/* These two variables describe the size of the bar */
 	private final static int BAR_WIDTH = 81;
 	private final static int BAR_HEIGHT = 9;
-	private final static int BAR_SPACING_ABOVE_EXP_BAR = 3;
+	private final static int BAR_SPACING_ABOVE_EXP_BAR = 1;
 	// pixels between the BAR and the Experience Bar below it
 
 	/*
@@ -57,18 +57,18 @@ public class StatusBarRenderer extends AbstractGui {
 	 */
 	private Minecraft mc;
 
-	public StatusBarRenderer(Minecraft mc) {
+	public HealthBarRenderer(Minecraft mc) {
 		super();
 		this.mc = mc;
 	}
 
-	public StatusBarRenderer() {
+	public HealthBarRenderer() {
 		super();
 		mc = Minecraft.getInstance();
 	}
 
 	/* This helper method will render the bar */
-	public void renderStatusBar(int screenWidth, int screenHeight) {
+	public void renderBar(int screenWidth, int screenHeight) {
 		/* These are the variables that contain world and player information */
 		World world = mc.world;
 		PlayerEntity player = mc.player;
@@ -97,7 +97,7 @@ public class StatusBarRenderer extends AbstractGui {
 		// we will draw the status bar just above the hotbar. obtained by inspecting the
 		// vanilla hotbar rendering code
 		final int vanillaExpLeftX = screenWidth / 2 - 91; // leftmost edge of the experience bar
-		final int vanillaExpTopY = screenHeight - 32 + 3; // top of the experience bar
+		final int vanillaExpTopY = screenHeight - 30 + BAR_SPACING_ABOVE_EXP_BAR; // top of the experience bar
 
 		/*
 		 * Shift our rendering origin to just above the experience bar The top left

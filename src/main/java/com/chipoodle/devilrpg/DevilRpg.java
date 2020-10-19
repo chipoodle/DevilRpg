@@ -9,6 +9,7 @@ import com.chipoodle.devilrpg.init.ModContainerTypes;
 import com.chipoodle.devilrpg.init.ModEntityTypes;
 import com.chipoodle.devilrpg.init.ModItems;
 import com.chipoodle.devilrpg.init.ModNetwork;
+import com.chipoodle.devilrpg.init.ModRenderer;
 import com.chipoodle.devilrpg.init.ModTileEntityTypes;
 
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -39,7 +40,6 @@ public class DevilRpg {
         // Register Configs (Does not need to be after Deferred Registers)
         modLoadingContext.registerConfig(ModConfig.Type.CLIENT, ConfigHolder.CLIENT_SPEC);
         modLoadingContext.registerConfig(ModConfig.Type.SERVER, ConfigHolder.SERVER_SPEC);
-        
         ModNetwork.register();
     }
 }

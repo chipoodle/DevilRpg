@@ -4,6 +4,7 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.minion.IBaseMinionCapability;
 import com.chipoodle.devilrpg.capability.minion.PlayerMinionCapabilityProvider;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
@@ -14,6 +15,9 @@ import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
 import com.chipoodle.devilrpg.util.SkillEnum;
 
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.SoundEvent;
+import net.minecraft.util.SoundEvents;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
@@ -23,6 +27,7 @@ public class SkillSummonSoulWolf implements ISkillContainer {
 
 	private final static int NUMBER_OF_SUMMONS = 3;
 	private PlayerSkillCapability parentCapability;
+	private static final ResourceLocation SUMMON_SOUND = new ResourceLocation(DevilRpg.MODID,"summon");
 
 	public SkillSummonSoulWolf(PlayerSkillCapability parentCapability) {
 		this.parentCapability = parentCapability;
@@ -64,6 +69,8 @@ public class SkillSummonSoulWolf implements ISkillContainer {
 		double spawnY = playerIn.getPosY() + DevilRpgConfig.WOLF_SPAWN_DISTANCE * playerLookVector.y + 2;
 		sw.setLocationAndAngles(spawnX, spawnY, spawnZ, MathHelper.wrapDegrees(rand.nextFloat() * 360.0F), 0.0F);
 		worldIn.addEntity(sw);
+		SoundEvent event = new SoundEvent(SUMMON_SOUND);
+		sw.playSound(event, 0.7F, 0.6F);
 		return sw;
 	}
 }

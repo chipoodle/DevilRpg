@@ -11,6 +11,7 @@ import com.chipoodle.devilrpg.util.SkillEnum;
 
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
+import net.minecraft.entity.IChargeableMob;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.MobEntity;
 import net.minecraft.entity.SharedMonsterAttributes;
@@ -44,7 +45,7 @@ import net.minecraftforge.fml.common.registry.IEntityAdditionalSpawnData;
 import net.minecraftforge.fml.network.FMLPlayMessages;
 import net.minecraftforge.fml.network.NetworkHooks;
 
-public class SoulWolfEntity extends WolfEntity implements ISoulEntity {
+public class SoulWolfEntity extends WolfEntity implements ISoulEntity, IChargeableMob {
 	private final int SALUD_INICIAL = 10;
 	private int puntosAsignados = 0;
 	private double saludMaxima = SALUD_INICIAL;
@@ -73,6 +74,7 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity {
 		this.goalSelector.addGoal(8, new WaterAvoidingRandomWalkingGoal(this, 1.0D));
 		this.goalSelector.addGoal(10, new LookAtGoal(this, PlayerEntity.class, 8.0F));
 		this.goalSelector.addGoal(10, new LookRandomlyGoal(this));
+
 		this.targetSelector.addGoal(1, new OwnerHurtByTargetGoal(this));
 		this.targetSelector.addGoal(2, new OwnerHurtTargetGoal(this));
 		this.targetSelector.addGoal(3, (new HurtByTargetGoal(this)).setCallsForHelp());
@@ -84,7 +86,6 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity {
 		super.registerAttributes();
 	}
 
-	
 	public void updateLevel(PlayerEntity owner) {
 		setTamedBy(owner);
 		LazyOptional<IBaseSkillCapability> skill = getOwner().getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
@@ -126,7 +127,7 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity {
 	@Override
 	public boolean isOnSameTeam(Entity entityIn) {
 		boolean isOnSameTeam = super.isOnSameTeam(entityIn);
-		return isOnSameTeam || isEntitySameOwnerAsThis(entityIn,this);
+		return isOnSameTeam || isEntitySameOwnerAsThis(entityIn, this);
 	}
 
 	/**
@@ -139,7 +140,7 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity {
 
 	@Override
 	public boolean shouldAttackEntity(LivingEntity target, LivingEntity owner) {
-		return addToshouldAttackEntity(target,owner);
+		return addToshouldAttackEntity(target, owner);
 	}
 
 	@Override
@@ -266,5 +267,19 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity {
 	@Override
 	public IPacket<?> createSpawnPacket() {
 		return NetworkHooks.getEntitySpawningPacket(this);
+	}
+
+	@Override
+	public boolean func_225509_J__() {
+		return true;
+	}
+
+	/**
+	 * Get the experience points the entity currently has.
+	 */
+	protected int getExperiencePoints(PlayerEntity player) {
+		if (player.equals(getOwner()))
+			return 0;
+		return 1 + this.world.rand.nextInt(3);
 	}
 }

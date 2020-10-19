@@ -4,11 +4,18 @@ import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.client.render.entity.layer.SoulWolfGelLayer;
 import com.chipoodle.devilrpg.client.render.entity.model.SoulWolfModelHeart;
 import com.chipoodle.devilrpg.entity.SoulWolfEntity;
+import com.chipoodle.devilrpg.entity.SoulWispEntity;
 import com.mojang.blaze3d.matrix.MatrixStack;
+import com.mojang.blaze3d.vertex.IVertexBuilder;
 
 import net.minecraft.client.renderer.IRenderTypeBuffer;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRendererManager;
+import net.minecraft.client.renderer.entity.LivingRenderer;
 import net.minecraft.client.renderer.entity.MobRenderer;
+import net.minecraft.client.renderer.entity.layers.EnergyLayer;
+import net.minecraft.entity.passive.SheepEntity;
+import net.minecraft.item.DyeColor;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
@@ -26,6 +33,15 @@ public class SoulWolfRenderer extends MobRenderer<SoulWolfEntity, SoulWolfModelH
 	protected float handleRotationFloat(SoulWolfEntity livingBase, float partialTicks) {
 		return livingBase.getTailRotation();
 	}
+	
+	protected int getBlockLight(SoulWolfEntity entityIn, float partialTicks) {
+		return 1;
+	}
+	
+	@Override
+	public ResourceLocation getEntityTexture(SoulWolfEntity entity) {
+		return HEART_TEXTURES;
+	}
 
 	@Override
 	public void render(SoulWolfEntity entityIn, float entityYaw, float partialTicks, MatrixStack matrixStackIn,
@@ -41,20 +57,12 @@ public class SoulWolfRenderer extends MobRenderer<SoulWolfEntity, SoulWolfModelH
 		if (entityIn.isWolfWet()) {
 			this.entityModel.func_228253_a_(1.0F, 1.0F, 1.0F);
 		}
-		
-		//float heart = (float) Math.sin(partialTicks);
-		//matrixStackIn.translate(0.0f,-0.14f, 0.0f); 
-		// matrixStackIn.scale(heart, heart, heart);
-		/*super.renderName(entityIn, entityIn.getHealth() + "/" + entityIn.getMaxHealth(), matrixStackIn, bufferIn,
-				packedLightIn);	*/	
 	}
 
 	@Override
 	protected void preRenderCallback(SoulWolfEntity entityIn, MatrixStack matrixStackIn, float partialTickTime) {
 		super.preRenderCallback(entityIn, matrixStackIn, partialTickTime);
+		
 	}
 
-	public ResourceLocation getEntityTexture(SoulWolfEntity entity) {
-		return HEART_TEXTURES;
-	}
 }

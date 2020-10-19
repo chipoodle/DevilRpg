@@ -16,8 +16,8 @@ import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
 import com.chipoodle.devilrpg.client.gui.hud.ManaBarRenderer;
 import com.chipoodle.devilrpg.client.gui.hud.MinionPortraitRenderer;
-import com.chipoodle.devilrpg.client.gui.hud.StatusBarRenderer;
-import com.chipoodle.devilrpg.skillsystem.skillinstance.SkillTransformWerewolf;
+import com.chipoodle.devilrpg.client.gui.hud.HealthBarRenderer;
+import com.chipoodle.devilrpg.skillsystem.skillinstance.SkillShapeshiftWerewolf;
 import com.chipoodle.devilrpg.util.SkillEnum;
 
 import net.minecraft.client.Minecraft;
@@ -44,7 +44,7 @@ import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 public final class ClientForgeEventSubscriber {
 
 	// private static GuiManaBar manaBar = new GuiManaBar();
-	private static StatusBarRenderer statusBarRenderer = new StatusBarRenderer();
+	private static HealthBarRenderer healthBarRenderer = new HealthBarRenderer();
 	private static ManaBarRenderer manaBarRenderer = new ManaBarRenderer();
 	private static MinionPortraitRenderer minionPortraitRenderer = new MinionPortraitRenderer();
 
@@ -61,8 +61,8 @@ public final class ClientForgeEventSubscriber {
 	public static void onEvent(RenderGameOverlayEvent.Pre event) {
 		switch (event.getType()) {
 		case HEALTH:
-			statusBarRenderer.renderStatusBar(event.getWindow().getScaledWidth(), event.getWindow().getScaledHeight());
-			manaBarRenderer.renderStatusBar(event.getWindow().getScaledWidth(), event.getWindow().getScaledHeight());
+			healthBarRenderer.renderBar(event.getWindow().getScaledWidth(), event.getWindow().getScaledHeight());
+			manaBarRenderer.renderBar(event.getWindow().getScaledWidth(), event.getWindow().getScaledHeight());
 			minionPortraitRenderer.renderPortraits(event.getWindow().getScaledWidth(),
 					event.getWindow().getScaledHeight());
 			event.setCanceled(true);
@@ -151,7 +151,7 @@ public final class ClientForgeEventSubscriber {
 					boolean werewolfTransformation = aux.map(x -> x.isWerewolfTransformation()).orElse(false);
 					boolean werewolfAttack = aux.map(x -> x.isWerewolfAttack()).orElse(false);
 					if (werewolfTransformation && werewolfAttack) {
-						skill.ifPresent(x -> ((SkillTransformWerewolf) x.create(SkillEnum.TRANSFORM_WEREWOLF))
+						skill.ifPresent(x -> ((SkillShapeshiftWerewolf) x.create(SkillEnum.TRANSFORM_WEREWOLF))
 								.playerTickEventAttack(event.player, aux));
 					}
 				}

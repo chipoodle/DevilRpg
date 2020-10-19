@@ -8,65 +8,62 @@ import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.vertex.IVertexBuilder;
 
 import net.minecraft.client.renderer.IRenderTypeBuffer;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.IEntityRenderer;
 import net.minecraft.client.renderer.entity.LivingRenderer;
-import net.minecraft.client.renderer.entity.layers.LayerRenderer;
+import net.minecraft.client.renderer.entity.layers.EnergyLayer;
 import net.minecraft.client.renderer.entity.model.EntityModel;
-import net.minecraft.entity.passive.SheepEntity;
-import net.minecraft.item.DyeColor;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 @OnlyIn(Dist.CLIENT)
-public class SoulBearGelLayer<T extends SoulBearEntity> extends LayerRenderer<T, SoulBearModelHeart<T>> {
+public class SoulBearGelLayer<T extends SoulBearEntity> extends EnergyLayer<T, SoulBearModelHeart<T>> {
 	private final EntityModel<T> soulBearModel = new SoulBearModel<T>();
-	private final ResourceLocation BEAR_TEXTURES = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soulbear/soulbear_a.png");
-	
+	private final ResourceLocation BEAR_GEL = new ResourceLocation(
+			DevilRpg.MODID + ":textures/entity/soul/soulgel.png");
+	private IEntityRenderer<T, SoulBearModelHeart<T>> entityRenderer;
+
 	public SoulBearGelLayer(IEntityRenderer<T, SoulBearModelHeart<T>> p_i50923_1_) {
 		super(p_i50923_1_);
+		entityRenderer = p_i50923_1_;
 	}
 
 	public void render(MatrixStack matrixStackIn, IRenderTypeBuffer bufferIn, int packedLightIn, T entitylivingbaseIn,
 			float limbSwing, float limbSwingAmount, float partialTicks, float ageInTicks, float netHeadYaw,
 			float headPitch) {
-		if (!entitylivingbaseIn.isInvisible()) {
+		
+		groovyMethod(matrixStackIn, bufferIn, packedLightIn, entitylivingbaseIn, partialTicks);
 
-			this.getEntityModel().setModelAttributes(this.soulBearModel);
-			this.soulBearModel.setLivingAnimations(entitylivingbaseIn, limbSwing, limbSwingAmount, partialTicks);
-			this.soulBearModel.render(entitylivingbaseIn, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw,
-					headPitch);
-
-			IVertexBuilder ivertexbuilder = bufferIn
-					.getBuffer(RenderType.entityTranslucent(getEntityTexture(entitylivingbaseIn)));
-
-			//float[] aFloat = groovy(entitylivingbaseIn,partialTicks);
-			
-			this.soulBearModel.render(matrixStackIn, ivertexbuilder, packedLightIn,LivingRenderer.getPackedOverlay(entitylivingbaseIn, 0.1F), 1.0F, 1.0F, 1.0F, 1.0F);
-		}
-	}
-
-	private float[] groovy(T entitylivingbaseIn, float partialTicks) {
-		float f;
-		float f1;
-		float f2;
-		int i1 = 25;
-		int i = entitylivingbaseIn.ticksExisted / 25 + entitylivingbaseIn.getEntityId();
-		int j = DyeColor.values().length;
-		int k = i % j;
-		int l = (i + 1) % j;
-		float f3 = ((float) (entitylivingbaseIn.ticksExisted % 25) + partialTicks) / 25.0F;
-		float[] afloat1 = SheepEntity.getDyeRgb(DyeColor.byId(k));
-		float[] afloat2 = SheepEntity.getDyeRgb(DyeColor.byId(l));
-		f = afloat1[0] * (1.0F - f3) + afloat2[0] * f3;
-		f1 = afloat1[1] * (1.0F - f3) + afloat2[1] * f3;
-		f2 = afloat1[2] * (1.0F - f3) + afloat2[2] * f3;
-		float[] returnFloat = {f,f1,f2};
-		return returnFloat;
+		super.render(matrixStackIn, bufferIn, packedLightIn, entitylivingbaseIn, limbSwing, limbSwingAmount,
+				partialTicks, ageInTicks, netHeadYaw, headPitch);
 	}
 
 	public ResourceLocation getEntityTexture(SoulBearEntity entity) {
-			return BEAR_TEXTURES;
+		return BEAR_GEL;
+	}
+
+	protected float func_225634_a_(float p_225634_1_) {
+		return p_225634_1_ * 0.01F;
+	}
+
+	protected ResourceLocation func_225633_a_() {
+		return BEAR_GEL;
+	}
+
+	@Override
+	protected EntityModel<T> func_225635_b_() {
+		return soulBearModel;
+	}
+
+	private void groovyMethod(MatrixStack matrixStackIn, IRenderTypeBuffer bufferIn, int packedLightIn,
+			T entitylivingbaseIn, float partialTicks) {
+		if (!entitylivingbaseIn.isInvisible()) {
+			IVertexBuilder ivertexbuilder = entitylivingbaseIn.getBuffer(bufferIn,
+					entityRenderer.getEntityTexture(entitylivingbaseIn));
+			float[] rgbArray = entitylivingbaseIn.groovy(entitylivingbaseIn, partialTicks);
+			entityRenderer.getEntityModel().render(matrixStackIn, ivertexbuilder, packedLightIn,
+					LivingRenderer.getPackedOverlay(entitylivingbaseIn, 0.1F), rgbArray[0], rgbArray[1], rgbArray[2],
+					1.0F);
+		}
 	}
 }

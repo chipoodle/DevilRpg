@@ -7,7 +7,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.entity.SoulBearEntity;
 import com.chipoodle.devilrpg.entity.SoulWolfEntity;
-import com.chipoodle.devilrpg.entity.WispEntity;
+import com.chipoodle.devilrpg.entity.SoulWispEntity;
 import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.network.handler.PlayerMinionClientServerHandler;
 import com.chipoodle.devilrpg.skillsystem.MinionDeathDamageSource;
@@ -139,7 +139,7 @@ public class PlayerMinionCapability implements IBaseMinionCapability {
 	}
 
 	@Override
-	public void removeWisp(PlayerEntity owner, WispEntity entity) {
+	public void removeWisp(PlayerEntity owner, SoulWispEntity entity) {
 		ConcurrentLinkedQueue<UUID> wisp = getWispMinions();
 		if (wisp!= null && entity!= null && wisp.contains(entity.getUniqueID())) {
 			wisp.remove(entity.getUniqueID());
@@ -164,7 +164,7 @@ public class PlayerMinionCapability implements IBaseMinionCapability {
 		ConcurrentLinkedQueue<UUID> wisp = getWispMinions();
 		wisp.forEach(id -> {
 			TameableEntity entity = getTameableByUUID(id, owner.world);
-			removeWisp(owner, (WispEntity) entity);
+			removeWisp(owner, (SoulWispEntity) entity);
 		});
 		wisp.clear();
 		setWispMinions(wisp, owner);

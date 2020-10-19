@@ -4,6 +4,7 @@ import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.client.render.entity.layer.SoulBearGelLayer;
 import com.chipoodle.devilrpg.client.render.entity.model.SoulBearModelHeart;
 import com.chipoodle.devilrpg.entity.SoulBearEntity;
+import com.chipoodle.devilrpg.entity.SoulWispEntity;
 import com.mojang.blaze3d.matrix.MatrixStack;
 
 import net.minecraft.client.renderer.entity.EntityRendererManager;
@@ -22,6 +23,10 @@ public class SoulBearRenderer extends MobRenderer<SoulBearEntity, SoulBearModelH
       super(renderManagerIn, new SoulBearModelHeart<>(), 0.9F);
       this.addLayer(new SoulBearGelLayer<>(this));
    }
+   
+   protected int getBlockLight(SoulBearEntity entityIn, float partialTicks) {
+		return 1;
+	}
 
    public ResourceLocation getEntityTexture(SoulBearEntity entity) {
       return POLAR_BEAR_TEXTURE;

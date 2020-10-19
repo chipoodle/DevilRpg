@@ -3,11 +3,12 @@ package com.chipoodle.devilrpg.skillsystem;
 import java.util.Hashtable;
 
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
+import com.chipoodle.devilrpg.skillsystem.skillinstance.SkillFireBall;
+import com.chipoodle.devilrpg.skillsystem.skillinstance.SkillShapeshiftWerewolf;
 import com.chipoodle.devilrpg.skillsystem.skillinstance.SkillSummonSoulBear;
 import com.chipoodle.devilrpg.skillsystem.skillinstance.SkillSummonSoulWolf;
 import com.chipoodle.devilrpg.skillsystem.skillinstance.SkillSummonWispHealth;
 import com.chipoodle.devilrpg.skillsystem.skillinstance.SkillSummonWispSpeed;
-import com.chipoodle.devilrpg.skillsystem.skillinstance.SkillTransformWerewolf;
 import com.chipoodle.devilrpg.util.SkillEnum;
 
 public class SingletonSkillFactory {
@@ -39,8 +40,12 @@ public class SingletonSkillFactory {
 			return skillPool.get(SkillEnum.SUMMON_WISP_SPEED);
 		}
 		if (skillEnum.equals(SkillEnum.TRANSFORM_WEREWOLF)) {
-			skillPool.putIfAbsent(SkillEnum.TRANSFORM_WEREWOLF, new SkillTransformWerewolf(parentCapability));
+			skillPool.putIfAbsent(SkillEnum.TRANSFORM_WEREWOLF, new SkillShapeshiftWerewolf(parentCapability));
 			return skillPool.get(SkillEnum.TRANSFORM_WEREWOLF);
+		}
+		if (skillEnum.equals(SkillEnum.FIREBALL)) {
+			skillPool.putIfAbsent(SkillEnum.FIREBALL, new SkillFireBall(parentCapability));
+			return skillPool.get(SkillEnum.FIREBALL);
 		}
 		return null;
 	}
