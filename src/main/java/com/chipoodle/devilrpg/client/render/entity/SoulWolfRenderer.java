@@ -35,7 +35,7 @@ public class SoulWolfRenderer extends MobRenderer<SoulWolfEntity, SoulWolfModelH
 	}
 	
 	protected int getBlockLight(SoulWolfEntity entityIn, float partialTicks) {
-		return 1;
+		return 2;
 	}
 	
 	@Override

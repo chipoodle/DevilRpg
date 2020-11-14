@@ -9,26 +9,28 @@ import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.vertex.IVertexBuilder;
 
 import net.minecraft.client.renderer.IRenderTypeBuffer;
+import net.minecraft.client.renderer.Quaternion;
 import net.minecraft.client.renderer.entity.IEntityRenderer;
 import net.minecraft.client.renderer.entity.LivingRenderer;
 import net.minecraft.client.renderer.entity.layers.EnergyLayer;
 import net.minecraft.client.renderer.entity.model.EntityModel;
-import net.minecraft.client.renderer.entity.model.PlayerModel;
-import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.text.StringTextComponent;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 @OnlyIn(Dist.CLIENT)
-public class SoulWispGelLayer<T extends SoulWispEntity> extends EnergyLayer<T, PlayerModel<T>> {
+//public class SoulWispGelLayer<T extends SoulWispEntity> extends EnergyLayer<T, PlayerModel<T>> {
+//public class SoulWispGelLayer<T extends SoulWispEntity> extends EnergyLayer<T, SoulWispModel<T>> {
+public class SoulWispGelLayer<T extends SoulWispEntity> extends EnergyLayer<T, SoulWispModelHeart<T>> {
 	private final SoulWispModel<T> wispModel = new SoulWispModel<T>();
 	private static final ResourceLocation WISP_GEL = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soul/soulgel.png");
 	private static final ResourceLocation WISP_WINGS = new ResourceLocation(DevilRpg.MODID + ":textures/entity/flyingwisp/wings.png");
-	private IEntityRenderer<T, PlayerModel<T>> entityRenderer;
+	private IEntityRenderer<T, SoulWispModelHeart<T>> entityRenderer;
 
-	private WingsModel<SoulWispEntity> wingsModel = new WingsModel<SoulWispEntity>();
+	//private WingsModel<SoulWispEntity> wingsModel = new WingsModel<SoulWispEntity>();
 	
-	public SoulWispGelLayer(IEntityRenderer<T, PlayerModel<T>> p_i50947_1_) {
+	public SoulWispGelLayer(IEntityRenderer<T, SoulWispModelHeart<T>> p_i50947_1_) {
 		super(p_i50947_1_);
 		entityRenderer = p_i50947_1_;
 	}
@@ -37,16 +39,33 @@ public class SoulWispGelLayer<T extends SoulWispEntity> extends EnergyLayer<T, P
 			float limbSwing, float limbSwingAmount, float partialTicks, float ageInTicks, float netHeadYaw,
 			float headPitch) {
 			
-		renderWings(matrixStackIn, bufferIn, packedLightIn, entitylivingbaseIn, limbSwing, limbSwingAmount, ageInTicks,
-				netHeadYaw, headPitch);
-			
+		//renderWings(matrixStackIn, bufferIn, packedLightIn, entitylivingbaseIn, limbSwing, limbSwingAmount, ageInTicks,
+		//		netHeadYaw, headPitch);
+		
 		groovyMethod(matrixStackIn, bufferIn, packedLightIn, entitylivingbaseIn, partialTicks);
-		matrixStackIn.scale(6.0f, 6.0f, 6.0f);
-		matrixStackIn.translate(0.0f, -1.1f, 0.0f);
+		
+		float x = (float) (entitylivingbaseIn.getPosX() -  entitylivingbaseIn.getOwner().getPosX());
+		float z = (float) (entitylivingbaseIn.getPosZ() -  entitylivingbaseIn.getOwner().getPosZ());
+		
+		/*String message1 = String.format("Z: %f ", -0.62 - (z*0.01));
+		entitylivingbaseIn.getOwner().sendMessage(new StringTextComponent(message1));*/
+		
+		
+		
+		//matrixStackIn.translate(0.84,0.3423*2,-0.62 - (z*0.01));
+		//Quaternion q = new Quaternion(45,0,45,true);
+		//matrixStackIn.rotate(q);
+		//matrixStackIn.translate(0.5f,0.0f,0.0f);
+		
+		
+		//matrixStackIn.scale(1.4f, 1.4f, 1.4f);
+		//matrixStackIn.translate(0.0f, -0.32f, 0.0f);
+		
+		
 		super.render(matrixStackIn, bufferIn, packedLightIn, entitylivingbaseIn, limbSwing, limbSwingAmount,partialTicks, ageInTicks, netHeadYaw, headPitch);
 	}
 
-	private void renderWings(MatrixStack matrixStackIn, IRenderTypeBuffer bufferIn, int packedLightIn,
+	/*private void renderWings(MatrixStack matrixStackIn, IRenderTypeBuffer bufferIn, int packedLightIn,
 			T entitylivingbaseIn, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw,
 			float headPitch) {
 		matrixStackIn.push();	
@@ -56,7 +75,7 @@ public class SoulWispGelLayer<T extends SoulWispEntity> extends EnergyLayer<T, P
 		this.wingsModel.render(matrixStackIn, ivertexbuilder, packedLightIn, OverlayTexture.DEFAULT_LIGHT, 1.0F,1.0F, 1.0F, 1.0F);
 		this.wingsModel.render(entitylivingbaseIn, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
 		matrixStackIn.pop();
-	}
+	}*/
 	
 	public ResourceLocation getEntityTexture(SoulWispEntity entity) {
 		return WISP_GEL;
@@ -79,7 +98,7 @@ public class SoulWispGelLayer<T extends SoulWispEntity> extends EnergyLayer<T, P
 		if (!entitylivingbaseIn.isInvisible()) {
 			IVertexBuilder ivertexbuilder = entitylivingbaseIn.getBuffer(bufferIn,
 					entityRenderer.getEntityTexture(entitylivingbaseIn));
-			float[] rgbArray = entitylivingbaseIn.groovy(entitylivingbaseIn, partialTicks);
+			float[] rgbArray = entitylivingbaseIn.groovyRed(entitylivingbaseIn, partialTicks);
 			entityRenderer.getEntityModel().render(matrixStackIn, ivertexbuilder, packedLightIn,
 					LivingRenderer.getPackedOverlay(entitylivingbaseIn, 0.1F), rgbArray[0], rgbArray[1], rgbArray[2], 1.0F);
 		}

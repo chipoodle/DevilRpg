@@ -28,9 +28,7 @@ import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.ai.RandomPositionGenerator;
 import net.minecraft.entity.ai.controller.FlyingMovementController;
 import net.minecraft.entity.ai.controller.LookController;
-import net.minecraft.entity.ai.goal.FollowMobGoal;
 import net.minecraft.entity.ai.goal.FollowOwnerGoal;
-import net.minecraft.entity.ai.goal.FollowParentGoal;
 import net.minecraft.entity.ai.goal.Goal;
 import net.minecraft.entity.ai.goal.PanicGoal;
 import net.minecraft.entity.ai.goal.SwimGoal;
@@ -68,7 +66,7 @@ import net.minecraftforge.fml.common.registry.IEntityAdditionalSpawnData;
 import net.minecraftforge.fml.network.FMLPlayMessages;
 import net.minecraftforge.fml.network.NetworkHooks;
 
-public class SoulWispEntity extends TameableEntity implements IFlyingAnimal, ISoulEntity,IChargeableMob {
+public class SoulWispEntity extends TameableEntity implements IFlyingAnimal, ISoulEntity,IChargeableMob,IRenderUtilities {
 
 	@Nullable
 	private BlockPos field_226368_bH_ = null;
@@ -83,7 +81,6 @@ public class SoulWispEntity extends TameableEntity implements IFlyingAnimal, ISo
 	protected boolean esBeneficioso;
 
 	protected static final double DISTANCIA_EFECTO = 20;
-	protected static final int DIVISOR_NIVEL_PARA_POTENCIA_EFECTO = 5;
 	protected static final int DURATION_TICKS = 120;
 
 	private ResourceLocation wispPortrait;
@@ -107,14 +104,14 @@ public class SoulWispEntity extends TameableEntity implements IFlyingAnimal, ISo
 	}
 
 	protected void registerGoals() {
-		//this.goalSelector.addGoal(0, new PanicGoal(this, 1.25D));
-		//this.goalSelector.addGoal(0, new SwimGoal(this));
-		//this.goalSelector.addGoal(2, new FollowOwnerGoal(this, 1.0D, 10.0F, 2.0F, false));
-		//this.goalSelector.addGoal(2, new WaterAvoidingRandomFlyingGoal(this, 1.0D));
-			//this.goalSelector.addGoal(3, new FollowMobGoal(this, 1.0D, 3.0F, 7.0F));
-		//this.goalSelector.addGoal(5, new FollowParentGoal(this, 1.25D));
-		//this.goalSelector.addGoal(8, new SoulWispEntity.WanderGoal());
-		//this.goalSelector.addGoal(9, new SwimGoal(this));
+		/*this.goalSelector.addGoal(0, new PanicGoal(this, 1.25D));
+		this.goalSelector.addGoal(0, new SwimGoal(this));
+		this.goalSelector.addGoal(2, new FollowOwnerGoal(this, 1.0D, 10.0F, 2.0F, false));
+		this.goalSelector.addGoal(2, new WaterAvoidingRandomFlyingGoal(this, 1.0D));
+			////this.goalSelector.addGoal(3, new FollowMobGoal(this, 1.0D, 3.0F, 7.0F));
+			////this.goalSelector.addGoal(5, new FollowParentGoal(this, 1.25D));
+		this.goalSelector.addGoal(8, new SoulWispEntity.WanderGoal());
+		this.goalSelector.addGoal(9, new SwimGoal(this));*/
 	}
 
 	public void writeAdditional(CompoundNBT compound) {
@@ -405,10 +402,6 @@ public class SoulWispEntity extends TameableEntity implements IFlyingAnimal, ISo
 		setHealth((float) saludMaxima);
 	}
 
-	protected int getPotenciaPocion(int niveles) {
-		return (int) Math.ceil(niveles / (DIVISOR_NIVEL_PARA_POTENCIA_EFECTO));
-	}
-
 	/**
 	 * Returns whether this Entity is on the same team as the given Entity or they
 	 * share the same owner.
@@ -510,9 +503,18 @@ public class SoulWispEntity extends TameableEntity implements IFlyingAnimal, ISo
 				return;
 			minionCap.ifPresent(x -> x.removeWisp((PlayerEntity) getOwner(), this));
 		}
-		super.onDeath(cause);
+		//super.onDeath(cause);
+		customOnDeath();
 	}
-
+	
+	private void customOnDeath() {
+		world.setEntityState(this, (byte) 3);
+		this.dead = true;
+		this.remove();
+		customDeadParticles(this.world,this.rand,this);
+	}
+	
+	
 	public boolean isEsBeneficioso() {
 		return esBeneficioso;
 	}
@@ -545,8 +547,9 @@ public class SoulWispEntity extends TameableEntity implements IFlyingAnimal, ISo
 	 * Get the experience points the entity currently has.
 	 */
 	protected int getExperiencePoints(PlayerEntity player) {
-		if (player.equals(getOwner()))
+		/*if (player.equals(getOwner()))
 			return 0;
-		return 1 + this.world.rand.nextInt(3);
+		return 1 + this.world.rand.nextInt(3);*/
+		return 0;
 	}
 }

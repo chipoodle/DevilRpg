@@ -2,6 +2,7 @@ package com.chipoodle.devilrpg.skillsystem.skillinstance;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Random;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -22,6 +23,9 @@ import net.minecraft.entity.ai.attributes.IAttribute;
 import net.minecraft.entity.passive.TameableEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.Hand;
+import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.SoundCategory;
+import net.minecraft.util.SoundEvent;
 import net.minecraft.util.SoundEvents;
 import net.minecraft.world.World;
 import net.minecraftforge.api.distmarker.Dist;
@@ -30,6 +34,7 @@ import net.minecraftforge.common.util.LazyOptional;
 
 public class SkillShapeshiftWerewolf implements ISkillContainer {
 	private PlayerSkillCapability parentCapability;
+	private static final ResourceLocation SUMMON_SOUND = new ResourceLocation(DevilRpg.MODID,"summon");
 	private LazyOptional<IBaseAuxiliarCapability> aux;
 	AttributeModifier healthAttributeModifier;
 	AttributeModifier speedAttributeModifier;
@@ -46,6 +51,12 @@ public class SkillShapeshiftWerewolf implements ISkillContainer {
 	@Override
 	public void execute(World worldIn, PlayerEntity playerIn) {
 		if (!worldIn.isRemote) {
+			Random rand = new Random();
+			SoundEvent event = new SoundEvent(SUMMON_SOUND);
+			worldIn.playSound((PlayerEntity) null, playerIn.getPosX(), playerIn.getPosY(), playerIn.getPosZ(),
+					event, SoundCategory.NEUTRAL, 0.5F,
+					0.4F / (rand.nextFloat() * 0.4F + 0.8F));
+			
 			aux = playerIn.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
 			boolean transformation = aux.map(x -> x.isWerewolfTransformation()).orElse(false);
 			aux.ifPresent(x -> x.setWerewolfTransformation(!transformation, playerIn));

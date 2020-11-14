@@ -9,9 +9,16 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.projectile.DamagingProjectileEntity;
-import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.entity.projectile.ProjectileItemEntity;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
 import net.minecraft.network.IPacket;
+import net.minecraft.particles.IParticleData;
+import net.minecraft.particles.ItemParticleData;
+import net.minecraft.particles.ParticleTypes;
+import net.minecraft.potion.EffectInstance;
+import net.minecraft.potion.Effects;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.math.EntityRayTraceResult;
 import net.minecraft.util.math.RayTraceResult;
@@ -23,54 +30,69 @@ import net.minecraftforge.fml.common.registry.IEntityAdditionalSpawnData;
 import net.minecraftforge.fml.network.FMLPlayMessages;
 import net.minecraftforge.fml.network.NetworkHooks;
 
-public class SoulFireBallEntity extends DamagingProjectileEntity {
-	public int explosionPower = 1;
+public class SoulFireBallEntity extends ProjectileItemEntity implements ISoulEntity{
+
 	private int puntosAsignados = 0;
 	private float damage = 0;
 
-	public SoulFireBallEntity(EntityType<? extends SoulFireBallEntity> p_i50163_1_, World p_i50163_2_) {
-		super(p_i50163_1_, p_i50163_2_);
+	public SoulFireBallEntity(EntityType<? extends SoulFireBallEntity> p_i50159_1_, World p_i50159_2_) {
+		super(p_i50159_1_, p_i50159_2_);
+	}
+
+	public SoulFireBallEntity(World worldIn, LivingEntity throwerIn) {
+		super(ModEntityTypes.SOUL_FIREBALL.get(), throwerIn, worldIn);
+	}
+
+	public SoulFireBallEntity(World worldIn, double x, double y, double z) {
+		super(ModEntityTypes.SOUL_FIREBALL.get(), x, y, z, worldIn);
+	}
+
+	protected Item getDefaultItem() {
+		return Items.SNOWBALL;
 	}
 
 	@OnlyIn(Dist.CLIENT)
-	public SoulFireBallEntity(World worldIn, double x, double y, double z, double accelX, double accelY,
-			double accelZ) {
-
-		super(ModEntityTypes.SOUL_FIREBALL.get(), x, y, z, accelX, accelY, accelZ, worldIn);
-	}
-
-	public SoulFireBallEntity(World worldIn, LivingEntity shooter, double accelX, double accelY, double accelZ) {
-		super(ModEntityTypes.SOUL_FIREBALL.get(), shooter, accelX, accelY, accelZ, worldIn);
+	private IParticleData makeParticle() {
+		ItemStack itemstack = this.func_213882_k();
+		//return (IParticleData) (itemstack.isEmpty() ? ParticleTypes.ITEM_SNOWBALL
+		return (IParticleData) (itemstack.isEmpty() ? ParticleTypes.CLOUD
+				: new ItemParticleData(ParticleTypes.ITEM, itemstack));
 	}
 
 	/**
-	 * Called when this EntityFireball hits a block or entity.
+	 * Handler for {@link World#setEntityState}
 	 */
-	protected void onImpact(RayTraceResult result) {
-		super.onImpact(result);
-		if (!this.world.isRemote) {
-			if (result.getType() == RayTraceResult.Type.ENTITY) {
-				Entity targetEntity = ((EntityRayTraceResult) result).getEntity();	
-				targetEntity.attackEntityFrom(DamageSource.causeThrownDamage(this, this.shootingEntity), damage);
-				this.applyEnchantments(this.shootingEntity, targetEntity);
+	@OnlyIn(Dist.CLIENT)
+	public void handleStatusUpdate(byte id) {
+		if (id == 3) {
+			IParticleData iparticledata = this.makeParticle();
+
+			for (int i = 0; i < 8; ++i) {
+				this.world.addParticle(iparticledata, this.getPosX(), this.getPosY(), this.getPosZ(), 0.0D, 0.0D, 0.0D);
 			}
-			this.remove();
 		}
 
 	}
 
-	public void writeAdditional(CompoundNBT compound) {
-		super.writeAdditional(compound);
-		compound.putInt("ExplosionPower", this.explosionPower);
-	}
-
 	/**
-	 * (abstract) Protected helper method to read subclass entity data from NBT.
+	 * Called when this EntityThrowable hits a block or entity.
 	 */
-	public void readAdditional(CompoundNBT compound) {
-		super.readAdditional(compound);
-		if (compound.contains("ExplosionPower", 99)) {
-			this.explosionPower = compound.getInt("ExplosionPower");
+	protected void onImpact(RayTraceResult result) {
+		if (result.getType() == RayTraceResult.Type.ENTITY) {
+			Entity targetEntity = ((EntityRayTraceResult) result).getEntity();
+			targetEntity.attackEntityFrom(DamageSource.causeThrownDamage(this, this.getThrower()), (float) damage/6);
+			if(targetEntity instanceof LivingEntity) {
+				LivingEntity livingEntity = (LivingEntity) targetEntity;
+				EffectInstance pri = new EffectInstance(Effects.SLOWNESS, puntosAsignados*6, getPotenciaPocion(puntosAsignados), false, true);
+				if(livingEntity.isPotionApplicable(pri)) {
+					livingEntity.addPotionEffect(pri);
+				}				
+			}		
+		}
+
+		if (!this.world.isRemote) {
+			this.world.setEntityState(this, (byte) 3);
+			this.remove();
 		}
 
 	}
@@ -90,9 +112,9 @@ public class SoulFireBallEntity extends DamagingProjectileEntity {
 	 * using a non-default entity factory and having
 	 * {@link IEntityAdditionalSpawnData} work.
 	 *
-	 * It is not actually necessary for our Entity to use Forge's method as
-	 * it doesn't need any of this extra functionality, however, this is an example
-	 * mod and many modders are unaware that Forge's method exists.
+	 * It is not actually necessary for our Entity to use Forge's method as it
+	 * doesn't need any of this extra functionality, however, this is an example mod
+	 * and many modders are unaware that Forge's method exists.
 	 *
 	 * @return The packet with data about your entity
 	 * @see FMLPlayMessages.SpawnEntity

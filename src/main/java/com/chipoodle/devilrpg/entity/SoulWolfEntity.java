@@ -6,7 +6,6 @@ import com.chipoodle.devilrpg.capability.minion.IBaseMinionCapability;
 import com.chipoodle.devilrpg.capability.minion.PlayerMinionCapabilityProvider;
 import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
-import com.chipoodle.devilrpg.skillsystem.MinionDeathDamageSource;
 import com.chipoodle.devilrpg.util.SkillEnum;
 
 import net.minecraft.entity.Entity;
@@ -29,10 +28,8 @@ import net.minecraft.entity.ai.goal.SwimGoal;
 import net.minecraft.entity.ai.goal.WaterAvoidingRandomWalkingGoal;
 import net.minecraft.entity.merchant.villager.VillagerEntity;
 import net.minecraft.entity.passive.IronGolemEntity;
-import net.minecraft.entity.passive.TameableEntity;
 import net.minecraft.entity.passive.TurtleEntity;
 import net.minecraft.entity.passive.WolfEntity;
-import net.minecraft.entity.passive.horse.AbstractHorseEntity;
 import net.minecraft.entity.passive.horse.LlamaEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.CompoundNBT;
@@ -40,12 +37,14 @@ import net.minecraft.network.IPacket;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.Hand;
 import net.minecraft.world.World;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.fml.common.registry.IEntityAdditionalSpawnData;
 import net.minecraftforge.fml.network.FMLPlayMessages;
 import net.minecraftforge.fml.network.NetworkHooks;
 
-public class SoulWolfEntity extends WolfEntity implements ISoulEntity, IChargeableMob {
+public class SoulWolfEntity extends WolfEntity implements ISoulEntity, IChargeableMob,IRenderUtilities {
 	private final int SALUD_INICIAL = 10;
 	private int puntosAsignados = 0;
 	private double saludMaxima = SALUD_INICIAL;
@@ -59,7 +58,6 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity, IChargeab
 	protected void registerGoals() {
 		this.sitGoal = new SitGoal(this);
 		this.goalSelector.addGoal(1, new SwimGoal(this));
-		// this.goalSelector.addGoal(2, this.sitGoal);
 		this.goalSelector.addGoal(3,
 				new SoulWolfEntity.AvoidEntityGoal<VillagerEntity>(this, VillagerEntity.class, 24.0F, 1.5D, 1.5D));
 		this.goalSelector.addGoal(3,
@@ -247,7 +245,15 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity, IChargeab
 				return;
 			minionCap.ifPresent(x -> x.removeSoulWolf((PlayerEntity) getOwner(), this));
 		}
-		super.onDeath(cause);
+		// super.onDeath(cause);
+		customOnDeath();
+	}
+
+	private void customOnDeath() {
+		world.setEntityState(this, (byte) 3);
+		this.dead = true;
+		this.remove();
+		customDeadParticles(this.world, this.rand, this);
 	}
 
 	/**
@@ -278,8 +284,20 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity, IChargeab
 	 * Get the experience points the entity currently has.
 	 */
 	protected int getExperiencePoints(PlayerEntity player) {
-		if (player.equals(getOwner()))
-			return 0;
-		return 1 + this.world.rand.nextInt(3);
+		/*
+		 * if (player.equals(getOwner())) return 0; return 1 +
+		 * this.world.rand.nextInt(3);
+		 */
+		return 0;
+	}
+	
+	@Override
+	@OnlyIn(Dist.CLIENT)
+	public float getTailRotation() {
+		if (this.isAngry()) {
+			return 1.5393804F;
+		} else {
+			return ((float) Math.PI / 5F);
+		}
 	}
 }

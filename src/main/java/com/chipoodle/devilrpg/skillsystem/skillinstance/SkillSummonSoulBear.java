@@ -14,6 +14,7 @@ import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
 import com.chipoodle.devilrpg.util.SkillEnum;
 
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.util.SoundCategory;
 import net.minecraft.util.SoundEvents;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
@@ -37,12 +38,16 @@ public class SkillSummonSoulBear implements ISkillContainer {
 	@Override
 	public void execute(World worldIn, PlayerEntity playerIn) {
 		if (!worldIn.isRemote) {
+			Random rand = new Random();
+			worldIn.playSound((PlayerEntity) null, playerIn.getPosX(), playerIn.getPosY(), playerIn.getPosZ(),
+					SoundEvents.ENTITY_CHICKEN_EGG, SoundCategory.NEUTRAL, 0.5F,
+					0.4F / (rand.nextFloat() * 0.4F + 0.8F));
 			LazyOptional<IBaseMinionCapability> min = playerIn.getCapability(PlayerMinionCapabilityProvider.MINION_CAP);
-			min.ifPresent(x->x.removeAllSoulWolf(playerIn));
+			min.ifPresent(x -> x.removeAllSoulWolf(playerIn));
 			ConcurrentLinkedQueue<UUID> keys = min.map(x -> x.getSoulBearMinions())
 					.orElse(new ConcurrentLinkedQueue<UUID>());
 
-			keys.add(summonSoulBear(worldIn, playerIn).getUniqueID());
+			keys.add(summonSoulBear(worldIn, playerIn, rand).getUniqueID());
 			if (keys.size() > NUMBER_OF_SUMMONS) {
 				UUID key = keys.remove();
 				min.ifPresent(x -> {
@@ -55,8 +60,7 @@ public class SkillSummonSoulBear implements ISkillContainer {
 		}
 	}
 
-	private SoulBearEntity summonSoulBear(World worldIn, PlayerEntity playerIn) {
-		Random rand = new Random();
+	private SoulBearEntity summonSoulBear(World worldIn, PlayerEntity playerIn, Random rand) {
 		SoulBearEntity sw = ModEntityTypes.SOUL_BEAR.get().create(worldIn);
 		sw.updateLevel(playerIn);
 		Vec3d playerLookVector = playerIn.getLookVec();

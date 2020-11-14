@@ -15,6 +15,8 @@ import com.chipoodle.devilrpg.util.SkillEnum;
 
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.potion.Effects;
+import net.minecraft.util.SoundCategory;
+import net.minecraft.util.SoundEvents;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
@@ -37,11 +39,15 @@ public class SkillSummonWispSpeed implements ISkillContainer {
 	@Override
 	public void execute(World worldIn, PlayerEntity playerIn) {
 		if (!worldIn.isRemote) {
+			Random rand = new Random();
+			worldIn.playSound((PlayerEntity) null, playerIn.getPosX(), playerIn.getPosY(), playerIn.getPosZ(),
+					SoundEvents.BLOCK_BEACON_ACTIVATE, SoundCategory.NEUTRAL, 0.5F,
+					0.4F / (rand.nextFloat() * 0.4F + 0.8F));
 			LazyOptional<IBaseMinionCapability> min = playerIn.getCapability(PlayerMinionCapabilityProvider.MINION_CAP);
 			ConcurrentLinkedQueue<UUID> keys = min.map(x -> x.getWispMinions())
 					.orElse(new ConcurrentLinkedQueue<UUID>());
 
-			keys.add(summonWisp(worldIn, playerIn).getUniqueID());
+			keys.add(summonWisp(worldIn, playerIn, rand).getUniqueID());
 			if (keys.size() > NUMBER_OF_SUMMONS) {
 				UUID key = keys.remove();
 				min.ifPresent(x -> {
@@ -54,10 +60,12 @@ public class SkillSummonWispSpeed implements ISkillContainer {
 		}
 	}
 
-	private SoulWispEntity summonWisp(World worldIn, PlayerEntity playerIn) {
-		Random rand = new Random();
+	private SoulWispEntity summonWisp(World worldIn, PlayerEntity playerIn, Random rand ) {
+		worldIn.playSound((PlayerEntity) null, playerIn.getPosX(), playerIn.getPosY(), playerIn.getPosZ(),
+				SoundEvents.BLOCK_BEACON_ACTIVATE, SoundCategory.NEUTRAL, 0.5F,
+				0.4F / (rand.nextFloat() * 0.4F + 0.8F));
 		SoulWispEntity sw = ModEntityTypes.WISP.get().create(worldIn);
-		sw.updateLevel(playerIn, Effects.POISON, Effects.GLOWING, SkillEnum.SUMMON_WISP_SPEED,false);
+		sw.updateLevel(playerIn, Effects.POISON, Effects.GLOWING, SkillEnum.SUMMON_WISP_SPEED, false);
 		Vec3d playerLookVector = playerIn.getLookVec();
 		double spawnX = playerIn.getPosX() + DevilRpgConfig.WISP_SPAWN_DISTANCE * playerLookVector.x;
 		double spawnZ = playerIn.getPosZ() + DevilRpgConfig.WISP_SPAWN_DISTANCE * playerLookVector.z;

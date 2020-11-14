@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.client.render.entity;
 
+import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.entity.SoulFireBallEntity;
 import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.vertex.IVertexBuilder;
@@ -18,7 +19,7 @@ import net.minecraftforge.fml.client.registry.IRenderFactory;
 
 @OnlyIn(Dist.CLIENT)
 public class SoulFireBallRenderer extends EntityRenderer<SoulFireBallEntity> {
-	private static final ResourceLocation WITHER_TEXTURES = new ResourceLocation("textures/entity/wither/wither.png");
+	private static final ResourceLocation WITHER_TEXTURES = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soulsnowball/freeze_texture.jpg");
 	private final GenericHeadModel skeletonHeadModel = new GenericHeadModel();
 
 	public SoulFireBallRenderer(EntityRendererManager renderManagerIn) {

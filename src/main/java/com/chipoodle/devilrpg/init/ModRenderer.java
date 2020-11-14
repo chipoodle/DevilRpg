@@ -12,10 +12,10 @@ public class ModRenderer {
 	
 	public static void init() {
 		RenderingRegistry.registerEntityRenderingHandler(ModEntityTypes.SOUL_WOLF.get(), SoulWolfRenderer::new);
-        RenderingRegistry.registerEntityRenderingHandler(ModEntityTypes.WISP.get(), SoulWispRenderer::new);
         RenderingRegistry.registerEntityRenderingHandler(ModEntityTypes.SOUL_BEAR.get(), SoulBearRenderer::new);
-        RenderingRegistry.registerEntityRenderingHandler(ModEntityTypes.WISP.get(), SoulWispHumanoidRenderer::new);
         RenderingRegistry.registerEntityRenderingHandler(ModEntityTypes.SOUL_FIREBALL.get(), SoulFireBallRenderer::new);
+        RenderingRegistry.registerEntityRenderingHandler(ModEntityTypes.WISP.get(), SoulWispRenderer::new);
+        //RenderingRegistry.registerEntityRenderingHandler(ModEntityTypes.WISP.get(), SoulWispHumanoidRenderer::new);
         
 	}
 

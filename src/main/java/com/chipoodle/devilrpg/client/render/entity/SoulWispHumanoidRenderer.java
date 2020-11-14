@@ -23,7 +23,7 @@ public class SoulWispHumanoidRenderer extends LivingRenderer<SoulWispEntity, Pla
 
 	public SoulWispHumanoidRenderer(EntityRendererManager renderManagerIn) {
 		super(renderManagerIn, new PlayerModel<SoulWispEntity>(0.0F, false), 0.5F);
-		this.addLayer(new SoulWispGelLayer<>(this));
+		//this.addLayer(new SoulWispGelLayer<>(this));
 	}
 
 	protected int getBlockLight(SoulWispEntity entityIn, float partialTicks) {

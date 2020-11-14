@@ -1,12 +1,14 @@
 package com.chipoodle.devilrpg.entity;
 
+import java.util.Collection;
+import java.util.Random;
+
 import com.chipoodle.devilrpg.skillsystem.MinionDeathDamageSource;
-import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.vertex.IVertexBuilder;
 
 import net.minecraft.client.renderer.IRenderTypeBuffer;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.entity.LivingRenderer;
+import net.minecraft.entity.AreaEffectCloudEntity;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.passive.SheepEntity;
@@ -14,9 +16,14 @@ import net.minecraft.entity.passive.TameableEntity;
 import net.minecraft.entity.passive.horse.AbstractHorseEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.DyeColor;
+import net.minecraft.particles.ParticleTypes;
+import net.minecraft.potion.EffectInstance;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.world.World;
 
 public interface ISoulEntity {
+
+	static final int DIVISOR_NIVEL_PARA_POTENCIA_EFECTO = 5;
 
 	public default void addToLivingTick(TameableEntity thisEntity) {
 		if (thisEntity.getOwnerId() == null || thisEntity.getOwner() == null || !thisEntity.getOwner().isAlive()
@@ -57,26 +64,11 @@ public interface ISoulEntity {
 		return isSameOwner;
 	}
 
-	public default <T extends LivingEntity> float[] groovy(T entitylivingbaseIn, float partialTicks) {
-		float f;
-		float f1;
-		float f2;
-		int i1 = 25;
-		int i = entitylivingbaseIn.ticksExisted / 25 + entitylivingbaseIn.getEntityId();
-		int j = DyeColor.values().length;
-		int k = i % j;
-		int l = (i + 1) % j;
-		float f3 = ((float) (entitylivingbaseIn.ticksExisted % 25) + partialTicks) / 25.0F;
-		float[] afloat1 = SheepEntity.getDyeRgb(DyeColor.byId(k));
-		float[] afloat2 = SheepEntity.getDyeRgb(DyeColor.byId(l));
-		f = afloat1[0] * (1.0F - f3) + afloat2[0] * f3;
-		f1 = afloat1[1] * (1.0F - f3) + afloat2[1] * f3;
-		f2 = afloat1[2] * (1.0F - f3) + afloat2[2] * f3;
-		float[] returnFloat = { f, f1, f2 };
-		return returnFloat;
-	}
-
 	public default IVertexBuilder getBuffer(IRenderTypeBuffer bufferIn, ResourceLocation texture) {
 		return bufferIn.getBuffer(RenderType.entityTranslucent(texture));
+	}
+
+	public default int getPotenciaPocion(int niveles) {
+		return (int) Math.ceil(niveles / (DIVISOR_NIVEL_PARA_POTENCIA_EFECTO));
 	}
 }

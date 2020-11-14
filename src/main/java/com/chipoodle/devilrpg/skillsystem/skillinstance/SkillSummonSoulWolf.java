@@ -16,6 +16,7 @@ import com.chipoodle.devilrpg.util.SkillEnum;
 
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.SoundCategory;
 import net.minecraft.util.SoundEvent;
 import net.minecraft.util.SoundEvents;
 import net.minecraft.util.math.MathHelper;
@@ -27,7 +28,6 @@ public class SkillSummonSoulWolf implements ISkillContainer {
 
 	private final static int NUMBER_OF_SUMMONS = 3;
 	private PlayerSkillCapability parentCapability;
-	private static final ResourceLocation SUMMON_SOUND = new ResourceLocation(DevilRpg.MODID,"summon");
 
 	public SkillSummonSoulWolf(PlayerSkillCapability parentCapability) {
 		this.parentCapability = parentCapability;
@@ -41,12 +41,16 @@ public class SkillSummonSoulWolf implements ISkillContainer {
 	@Override
 	public void execute(World worldIn, PlayerEntity playerIn) {
 		if (!worldIn.isRemote) {
+			Random rand = new Random();
+			worldIn.playSound((PlayerEntity) null, playerIn.getPosX(), playerIn.getPosY(), playerIn.getPosZ(),
+					SoundEvents.ENTITY_CHICKEN_EGG, SoundCategory.NEUTRAL, 0.5F,
+					0.4F / (rand.nextFloat() * 0.4F + 0.8F));
 			LazyOptional<IBaseMinionCapability> min = playerIn.getCapability(PlayerMinionCapabilityProvider.MINION_CAP);
-			min.ifPresent(x->x.removeAllSoulBear(playerIn));
+			min.ifPresent(x -> x.removeAllSoulBear(playerIn));
 			ConcurrentLinkedQueue<UUID> keys = min.map(x -> x.getSoulWolfMinions())
 					.orElse(new ConcurrentLinkedQueue<UUID>());
 
-			keys.add(summoSoulWolf(worldIn, playerIn).getUniqueID());
+			keys.add(summoSoulWolf(worldIn, playerIn, rand).getUniqueID());
 			if (keys.size() > NUMBER_OF_SUMMONS) {
 				UUID key = keys.remove();
 				min.ifPresent(x -> {
@@ -59,8 +63,7 @@ public class SkillSummonSoulWolf implements ISkillContainer {
 		}
 	}
 
-	private SoulWolfEntity summoSoulWolf(World worldIn, PlayerEntity playerIn) {
-		Random rand = new Random();
+	private SoulWolfEntity summoSoulWolf(World worldIn, PlayerEntity playerIn, Random rand) {
 		SoulWolfEntity sw = ModEntityTypes.SOUL_WOLF.get().create(worldIn);
 		sw.updateLevel(playerIn);
 		Vec3d playerLookVector = playerIn.getLookVec();
@@ -69,8 +72,6 @@ public class SkillSummonSoulWolf implements ISkillContainer {
 		double spawnY = playerIn.getPosY() + DevilRpgConfig.WOLF_SPAWN_DISTANCE * playerLookVector.y + 2;
 		sw.setLocationAndAngles(spawnX, spawnY, spawnZ, MathHelper.wrapDegrees(rand.nextFloat() * 360.0F), 0.0F);
 		worldIn.addEntity(sw);
-		SoundEvent event = new SoundEvent(SUMMON_SOUND);
-		sw.playSound(event, 0.7F, 0.6F);
 		return sw;
 	}
 }

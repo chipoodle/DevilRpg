@@ -64,7 +64,7 @@ import net.minecraftforge.fml.common.registry.IEntityAdditionalSpawnData;
 import net.minecraftforge.fml.network.FMLPlayMessages;
 import net.minecraftforge.fml.network.NetworkHooks;
 
-public class SoulBearEntity extends TameableEntity implements ISoulEntity,IChargeableMob {
+public class SoulBearEntity extends TameableEntity implements ISoulEntity,IChargeableMob,IRenderUtilities {
 	private static final DataParameter<Boolean> IS_STANDING = EntityDataManager.createKey(SoulBearEntity.class,
 			DataSerializers.BOOLEAN);
 	private float clientSideStandAnimation0;
@@ -221,7 +221,15 @@ public class SoulBearEntity extends TameableEntity implements ISoulEntity,ICharg
 				return;
 			minionCap.ifPresent(x -> x.removeSoulBear((PlayerEntity) getOwner(), this));
 		}
-		super.onDeath(cause);
+		//super.onDeath(cause);
+		customOnDeath();
+	}
+	
+	private void customOnDeath() {
+		world.setEntityState(this, (byte) 3);
+		this.dead = true;
+		this.remove();
+		customDeadParticles(this.world,this.rand,this);
 	}
 	
 	/**
@@ -510,8 +518,9 @@ public class SoulBearEntity extends TameableEntity implements ISoulEntity,ICharg
 	 * Get the experience points the entity currently has.
 	 */
 	protected int getExperiencePoints(PlayerEntity player) {
-		if (player.equals(getOwner()))
+		/*if (player.equals(getOwner()))
 			return 0;
-		return 1 + this.world.rand.nextInt(3);
+		return 1 + this.world.rand.nextInt(3);*/
+		return 0;
 	}
 }
