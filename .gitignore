@@ -27,3 +27,6 @@ saves
 /options.txt
 /servers.dat
 /.gitattributes
+/usercache.json
+/usernamecache.json
+/realms_persistence.json
