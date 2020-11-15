@@ -27,7 +27,7 @@ import net.minecraftforge.registries.ForgeRegistries;
  */
 public final class ModEntityTypes {
 
-	public static final DeferredRegister<EntityType<?>> ENTITY_TYPES = new DeferredRegister<>(ForgeRegistries.ENTITIES,
+	public static final DeferredRegister<EntityType<?>> ENTITY_TYPES = DeferredRegister.create(ForgeRegistries.ENTITIES,
 			DevilRpg.MODID);
 
 	public static final String SOUL_WOLF_NAME = "soul_wolf";

@@ -46,23 +46,23 @@ public class KeyInputEventSubscriber {
         
 
         if (KEYS[0].isPressed()) {
-        	DevilRpg.LOGGER.debug(KEYS[0].getLocalizedName() + "pressed. " + KEYS[0].getKey().getKeyCode());        
+        	DevilRpg.LOGGER.debug(KEYS[0].getTranslationKey()+ "pressed. " + KEYS[0].getKey().getKeyCode());        
             ModNetwork.CHANNEL.sendToServer(new KeyboardSkillServerHandler(PowerEnum.POWER1));
         }
         if (KEYS[1].isPressed()) {
-        	DevilRpg.LOGGER.debug(KEYS[1].getLocalizedName() + "pressed. " + KEYS[1].getKey().getKeyCode());
+        	DevilRpg.LOGGER.debug(KEYS[1].getTranslationKey() + "pressed. " + KEYS[1].getKey().getKeyCode());
             ModNetwork.CHANNEL.sendToServer(new KeyboardSkillServerHandler(PowerEnum.POWER2));
         }
         if (KEYS[2].isPressed()) {
-        	DevilRpg.LOGGER.debug(KEYS[2].getLocalizedName() + "pressed. " + KEYS[2].getKey().getKeyCode());
+        	DevilRpg.LOGGER.debug(KEYS[2].getTranslationKey() + "pressed. " + KEYS[2].getKey().getKeyCode());
             ModNetwork.CHANNEL.sendToServer(new KeyboardSkillServerHandler(PowerEnum.POWER3));
         }
         if (KEYS[3].isPressed()) {
-        	DevilRpg.LOGGER.debug(KEYS[3].getLocalizedName() + "pressed. " + KEYS[3].getKey().getKeyCode());
+        	DevilRpg.LOGGER.debug(KEYS[3].getTranslationKey() + "pressed. " + KEYS[3].getKey().getKeyCode());
             ModNetwork.CHANNEL.sendToServer(new KeyboardSkillServerHandler(PowerEnum.POWER4));
         }
         if (KEYS[4].isPressed()) {
-        	DevilRpg.LOGGER.debug(KEYS[4].getLocalizedName() + "pressed. " + KEYS[4].getKey().getKeyCode());
+        	DevilRpg.LOGGER.debug(KEYS[4].getTranslationKey() + "pressed. " + KEYS[4].getKey().getKeyCode());
         	SkillScreen.open(player);
         }
 

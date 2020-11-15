@@ -80,7 +80,7 @@ public class SoulFireBallEntity extends ProjectileItemEntity implements ISoulEnt
 	protected void onImpact(RayTraceResult result) {
 		if (result.getType() == RayTraceResult.Type.ENTITY) {
 			Entity targetEntity = ((EntityRayTraceResult) result).getEntity();
-			targetEntity.attackEntityFrom(DamageSource.causeThrownDamage(this, this.getThrower()), (float) damage/6);
+			targetEntity.attackEntityFrom(DamageSource.causeThrownDamage(this, this.func_234616_v_()), (float) damage/6);
 			if(targetEntity instanceof LivingEntity) {
 				LivingEntity livingEntity = (LivingEntity) targetEntity;
 				EffectInstance pri = new EffectInstance(Effects.SLOWNESS, puntosAsignados*6, getPotenciaPocion(puntosAsignados), false, true);

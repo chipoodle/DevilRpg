@@ -19,7 +19,8 @@ import net.minecraftforge.fml.client.registry.IRenderFactory;
 
 @OnlyIn(Dist.CLIENT)
 public class SoulFireBallRenderer extends EntityRenderer<SoulFireBallEntity> {
-	private static final ResourceLocation WITHER_TEXTURES = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soulsnowball/freeze_texture.jpg");
+	private static final ResourceLocation WITHER_TEXTURES = new ResourceLocation(
+			DevilRpg.MODID + ":textures/entity/soulsnowball/freeze_texture.jpg");
 	private final GenericHeadModel skeletonHeadModel = new GenericHeadModel();
 
 	public SoulFireBallRenderer(EntityRendererManager renderManagerIn) {
@@ -34,13 +35,15 @@ public class SoulFireBallRenderer extends EntityRenderer<SoulFireBallEntity> {
 			IRenderTypeBuffer bufferIn, int packedLightIn) {
 		matrixStackIn.push();
 		matrixStackIn.scale(-0.50F, -0.50F, 0.50F);
-		//matrixStackIn.scale(-1.0F, -1.0F, 1.0F);
+		// matrixStackIn.scale(-1.0F, -1.0F, 1.0F);
 		float f = MathHelper.rotLerp(entityIn.prevRotationYaw, entityIn.rotationYaw, partialTicks);
 		float f1 = MathHelper.lerp(partialTicks, entityIn.prevRotationPitch, entityIn.rotationPitch);
-		
-		IVertexBuilder ivertexbuilder = bufferIn.getBuffer(this.skeletonHeadModel.getRenderType(this.getEntityTexture(entityIn)));
+
+		IVertexBuilder ivertexbuilder = bufferIn
+				.getBuffer(this.skeletonHeadModel.getRenderType(this.getEntityTexture(entityIn)));
 		this.skeletonHeadModel.func_225603_a_(0.0F, f, f1);
-		this.skeletonHeadModel.render(matrixStackIn, ivertexbuilder, packedLightIn, OverlayTexture.DEFAULT_LIGHT, 1.0F,1.0F, 1.0F, 1.0F);
+		this.skeletonHeadModel.render(matrixStackIn, ivertexbuilder, packedLightIn, OverlayTexture.NO_OVERLAY, 1.0F,
+				1.0F, 1.0F, 1.0F);
 		matrixStackIn.pop();
 		super.render(entityIn, entityYaw, partialTicks, matrixStackIn, bufferIn, packedLightIn);
 	}

@@ -8,11 +8,12 @@ import java.util.stream.StreamSupport;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.world.ClientWorld;
+import net.minecraft.dispenser.IPosition;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.CreatureAttribute;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.SharedMonsterAttributes;
+import net.minecraft.entity.ai.attributes.Attributes;
 import net.minecraft.entity.boss.dragon.EnderDragonPartEntity;
 import net.minecraft.entity.item.ArmorStandEntity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -31,7 +32,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.EntityRayTraceResult;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.RayTraceResult;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.world.GameType;
 import net.minecraft.world.World;
 import net.minecraft.world.server.ServerWorld;
@@ -93,20 +94,20 @@ public class TargetUtils {
 	/*
 	 * public static RayTraceResult checkForImpact(World world, Entity entity,
 	 * Entity shooter, double hitBox, boolean flag) { double posY = entity.getPosY()
-	 * + (entity.getHeight() / 2); // fix for Dash Vec3d vec3 = new
-	 * Vec3d(entity.getPosX(), posY, entity.getPosZ()); Vec3d motion =
-	 * entity.getMotion(); Vec3d vec31 = new Vec3d(entity.getPosX() + motion.getX(),
+	 * + (entity.getHeight() / 2); // fix for Dash Vector3d vec3 = new
+	 * Vector3d(entity.getPosX(), posY, entity.getPosZ()); Vector3d motion =
+	 * entity.getMotion(); Vector3d vec31 = new Vector3d(entity.getPosX() + motion.getX(),
 	 * posY + motion.getY(),entity.getPosZ() + motion.getZ()); BlockMode b;
 	 * RayTraceContext r = new RayTraceContext(vec3, vec31, BlockMode.COLLIDER,
 	 * FluidMode.ANY, entity); // RayTraceResult mop = world.rayTraceBlocks(vec3,
 	 * vec31, false, true, false); RayTraceResult mop = world.rayTraceBlocks(r);
-	 * vec3 = new Vec3d(entity.getPosX(), posY, entity.getPosZ());
+	 * vec3 = new Vector3d(entity.getPosX(), posY, entity.getPosZ());
 	 * 
-	 * motion = entity.getMotion(); vec31 = new Vec3d(entity.getPosX() +
+	 * motion = entity.getMotion(); vec31 = new Vector3d(entity.getPosX() +
 	 * motion.getX(), posY + motion.getY(), entity.getPosZ() + motion.getZ()); if
 	 * (mop != null) {
 	 * 
-	 * vec31 = new Vec3d(mop.getHitVec().x, mop.getHitVec().y, mop.getHitVec().z); }
+	 * vec31 = new Vector3d(mop.getHitVec().x, mop.getHitVec().y, mop.getHitVec().z); }
 	 * Entity target = null; motion = entity.getMotion(); List<Entity> list =
 	 * world.getEntitiesWithinAABBExcludingEntity(entity, entity.getBoundingBox()
 	 * .expand(motion.getX(), motion.getY(), motion.getZ()).grow(1.0D, 1.0D, 1.0D));
@@ -172,7 +173,7 @@ public class TargetUtils {
 		}
 		LivingEntity currentTarget = null;
 		double currentDistance = MAX_DISTANCE_SQ;
-		Vec3d vec3 = seeker.getLookVec();
+		Vector3d vec3 = seeker.getLookVec();
 		double targetX = seeker.getPosX();
 		double targetY = seeker.getPosY() + seeker.getEyeHeight() - 0.10000000149011612D;
 		double targetZ = seeker.getPosZ();
@@ -211,7 +212,7 @@ public class TargetUtils {
 			distance = MAX_DISTANCE;
 		}
 		List<LivingEntity> targets = new ArrayList<LivingEntity>();
-		Vec3d vec3 = seeker.getLookVec();
+		Vector3d vec3 = seeker.getLookVec();
 		double targetX = seeker.getPosX();
 		double targetY = seeker.getPosY() + seeker.getEyeHeight() - 0.10000000149011612D;
 		double targetZ = seeker.getPosZ();
@@ -246,7 +247,7 @@ public class TargetUtils {
 			distance = MAX_DISTANCE;
 		}
 		List<LivingEntity> targets = new ArrayList<LivingEntity>();
-		Vec3d vec3 = seeker.getLookVec();
+		Vector3d vec3 = seeker.getLookVec();
 		double targetX = seeker.getPosX();
 		double targetY = seeker.getPosY() + seeker.getEyeHeight() - 0.10000000149011612D;
 		double targetZ = seeker.getPosZ();
@@ -315,7 +316,7 @@ public class TargetUtils {
 	 * Returns true if the target's position is within the area that the seeker is
 	 * facing and the target can be seen
 	 */
-	private static final boolean isTargetInSight(Vec3d vec3, LivingEntity seeker, Entity target) {
+	private static final boolean isTargetInSight(Vector3d vec3, LivingEntity seeker, Entity target) {
 		return seeker.canEntityBeSeen(target) && isTargetInFrontOf(seeker, target, 60);
 	}
 
@@ -381,8 +382,8 @@ public class TargetUtils {
 	 * Returns true if the entity has an unimpeded view of the sky
 	 */
 	public static boolean canEntitySeeSky(World world, Entity entity) {
-		BlockPos pos = new BlockPos(entity);
-		while (pos.getY() < world.getActualHeight()) {
+		BlockPos pos = new BlockPos((IPosition)entity);
+		while (pos.getY() < world.getHeight()) {
 			if (!world.isAirBlock(pos)) {
 				return false;
 			}
@@ -425,7 +426,7 @@ public class TargetUtils {
 		 */
 		if (targetEntity.canBeAttackedWithItem()) {
 			if (!targetEntity.hitByEntity(player)) {
-				float f = (float) player.getAttribute(SharedMonsterAttributes.ATTACK_DAMAGE).getValue();
+				float f = (float) player.getAttribute(Attributes.ATTACK_DAMAGE).getValue();
 				float f1;
 				if (targetEntity instanceof LivingEntity) {
 					f1 = EnchantmentHelper.getModifierForCreature(heldItem,
@@ -451,7 +452,7 @@ public class TargetUtils {
 						flag1 = true;
 					}
 
-					boolean flag2 = flag && player.fallDistance > 0.0F && !player.onGround && !player.isOnLadder()
+					boolean flag2 = flag && player.fallDistance > 0.0F && !player.isOnGround() && !player.isOnLadder()
 							&& !player.isInWater() && !player.isPotionActive(Effects.BLINDNESS) && !player.isPassenger()
 							&& targetEntity instanceof LivingEntity;
 					flag2 = flag2 && !player.isSprinting();
@@ -465,7 +466,7 @@ public class TargetUtils {
 					f = f + f1;
 					boolean flag3 = false;
 					double d0 = (double) (player.distanceWalkedModified - player.prevDistanceWalkedModified);
-					if (flag && !flag2 && !flag1 && player.onGround && d0 < (double) player.getAIMoveSpeed()) {
+					if (flag && !flag2 && !flag1 && player.isOnGround() && d0 < (double) player.getAIMoveSpeed()) {
 						ItemStack itemstack = heldItem;// player.getHeldItem(Hand.MAIN_HAND);
 						if (itemstack.getItem() instanceof SwordItem) {
 							flag3 = true;
@@ -483,12 +484,12 @@ public class TargetUtils {
 						}
 					}
 
-					Vec3d vec3d = targetEntity.getMotion();
+					Vector3d vec3d = targetEntity.getMotion();
 					boolean flag5 = targetEntity.attackEntityFrom(DamageSource.causePlayerDamage(player), f);
 					if (flag5) {
 						if (i > 0) {
 							if (targetEntity instanceof LivingEntity) {
-								((LivingEntity) targetEntity).knockBack(player, (float) i * 0.5F,
+								((LivingEntity) targetEntity).applyKnockback((float) i * 0.5F,
 										(double) MathHelper.sin(player.rotationYaw * ((float) Math.PI / 180F)),
 										(double) (-MathHelper.cos(player.rotationYaw * ((float) Math.PI / 180F))));
 							} else {
@@ -513,7 +514,7 @@ public class TargetUtils {
 										&& (!(livingentity instanceof ArmorStandEntity)
 												|| !((ArmorStandEntity) livingentity).hasMarker())
 										&& player.getDistanceSq(livingentity) < 9.0D) {
-									livingentity.knockBack(player, 0.4F,
+									livingentity.applyKnockback(0.4F,
 											(double) MathHelper.sin(player.rotationYaw * ((float) Math.PI / 180F)),
 											(double) (-MathHelper.cos(player.rotationYaw * ((float) Math.PI / 180F))));
 									livingentity.attackEntityFrom(DamageSource.causePlayerDamage(player), f3);

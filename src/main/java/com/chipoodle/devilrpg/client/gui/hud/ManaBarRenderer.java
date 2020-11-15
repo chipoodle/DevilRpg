@@ -7,6 +7,7 @@ import org.lwjgl.opengl.GL11;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.mana.IBaseManaCapability;
 import com.chipoodle.devilrpg.capability.mana.PlayerManaCapabilityProvider;
+import com.mojang.blaze3d.matrix.MatrixStack;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.AbstractGui;
@@ -40,7 +41,7 @@ public class ManaBarRenderer extends AbstractGui {
 		mc = Minecraft.getInstance();
 	}
 
-	public void renderBar(int screenWidth, int screenHeight) {
+	public void renderBar(MatrixStack matrixStack, int screenWidth, int screenHeight) {
 		/* These are the variables that contain world and player information */
 		//World world = mc.world;
 		PlayerEntity player = mc.player;
@@ -110,7 +111,7 @@ public class ManaBarRenderer extends AbstractGui {
 		 *
 		 * This line draws the background of the custom bar
 		 */
-		blit(0, 0, 0, 0, BAR_WIDTH, BAR_HEIGHT);
+		blit(matrixStack, 0, 0, 0, 0, BAR_WIDTH, BAR_HEIGHT);
 
 		/* This part draws the inside of the bar, which starts 1 pixel right and down */
 		GL11.glPushMatrix();
@@ -146,7 +147,7 @@ public class ManaBarRenderer extends AbstractGui {
 		 */
 
 		final int NORMAL_TEXTURE_U = BAR_WIDTH; // red texels - see mbe40_hud_overlay.png
-		blit(0, 0, NORMAL_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
+		blit(matrixStack, 0, 0, NORMAL_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
 
 		GL11.glPopMatrix();
 
@@ -160,8 +161,8 @@ public class ManaBarRenderer extends AbstractGui {
 		/* This generates the string that I want to draw. */
 		String s = d.format(manaRun) + "/" + d.format(maxMana);
 
-		fr.drawString(s, -fr.getStringWidth(s) + 1, 2, 0x4D0000);
-		fr.drawString(s, -fr.getStringWidth(s), 1, 0xFFFFFF);
+		fr.drawString(matrixStack, s, -fr.getStringWidth(s) + 1, 2, 0x4D0000);
+		fr.drawString(matrixStack, s, -fr.getStringWidth(s), 1, 0xFFFFFF);
 
 		GL11.glPopMatrix();
 

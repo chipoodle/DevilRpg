@@ -1,18 +1,18 @@
 package com.chipoodle.devilrpg.client.render.entity;
 
-import com.chipoodle.devilrpg.client.render.entity.layer.SoulWispGelLayer;
 import com.chipoodle.devilrpg.entity.SoulWispEntity;
 import com.mojang.blaze3d.matrix.MatrixStack;
 
 import net.minecraft.client.renderer.IRenderTypeBuffer;
-import net.minecraft.client.renderer.Vector3f;
 import net.minecraft.client.renderer.entity.EntityRendererManager;
 import net.minecraft.client.renderer.entity.LivingRenderer;
 import net.minecraft.client.renderer.entity.model.PlayerModel;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.util.math.vector.Vector3f;
+import net.minecraft.util.text.StringTextComponent;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
@@ -48,8 +48,8 @@ public class SoulWispHumanoidRenderer extends LivingRenderer<SoulWispEntity, Pla
 		super.render(entityIn, entityYaw, partialTicks, matrixStackIn, bufferIn, packedLightIn);
 	}
 
-	public Vec3d getRenderOffset(SoulWispEntity entityIn, float partialTicks) {
-		return entityIn.isCrouching() ? new Vec3d(0.0D, -0.125D, 0.0D) : super.getRenderOffset(entityIn, partialTicks);
+	public Vector3d getRenderOffset(SoulWispEntity entityIn, float partialTicks) {
+		return entityIn.isCrouching() ? new Vector3d(0.0D, -0.125D, 0.0D) : super.getRenderOffset(entityIn, partialTicks);
 	}
 
 	protected void applyRotations(SoulWispEntity entityLiving, MatrixStack matrixStackIn, float ageInTicks,
@@ -63,8 +63,8 @@ public class SoulWispHumanoidRenderer extends LivingRenderer<SoulWispEntity, Pla
 				matrixStackIn.rotate(Vector3f.XP.rotationDegrees(f2 * (-90.0F - entityLiving.rotationPitch)));
 			}
 
-			Vec3d vec3d = entityLiving.getLook(partialTicks);
-			Vec3d vec3d1 = entityLiving.getMotion();
+			Vector3d vec3d = entityLiving.getLook(partialTicks);
+			Vector3d vec3d1 = entityLiving.getMotion();
 			double d0 = Entity.horizontalMag(vec3d1);
 			double d1 = Entity.horizontalMag(vec3d);
 			if (d0 > 0.0D && d1 > 0.0D) {
@@ -88,8 +88,8 @@ public class SoulWispHumanoidRenderer extends LivingRenderer<SoulWispEntity, Pla
 	
 	protected void renderName(SoulWispEntity entityIn, String displayNameIn, MatrixStack matrixStackIn, IRenderTypeBuffer bufferIn, int packedLightIn) {
 	      matrixStackIn.push();
-	      displayNameIn = "";
-	      super.renderName(entityIn, displayNameIn, matrixStackIn, bufferIn, packedLightIn);
+	      //displayNameIn = "";
+	      super.renderName(entityIn, new StringTextComponent(displayNameIn), matrixStackIn, bufferIn, packedLightIn);
 	      matrixStackIn.pop();
 	   }
 }

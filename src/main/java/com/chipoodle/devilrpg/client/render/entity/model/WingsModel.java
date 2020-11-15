@@ -54,7 +54,7 @@ public class WingsModel<T extends SoulWispEntity> extends AgeableModel<T> {
 		super.setLivingAnimations(entityIn, limbSwing, limbSwingAmount, partialTick);
 	}
 
-	public void render(T entityIn, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw,
+	public void setRotationAngles(T entityIn, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw,
 			float headPitch) {
 		float wingsRotationX = 4.4F;
 		float wingsRotationY = -0.5618F;
@@ -62,7 +62,7 @@ public class WingsModel<T extends SoulWispEntity> extends AgeableModel<T> {
 		this.field_228231_a_.rotateAngleX = -0.0F;
 		this.field_228231_a_.rotationPointY = 24.0F;
 		this.field_228231_a_.rotationPointZ = 8F;
-		boolean flag = entityIn.onGround && entityIn.getMotion().lengthSquared() < 1.0E-7D;
+		boolean flag = entityIn.isOnGround() && entityIn.getMotion().lengthSquared() < 1.0E-7D;
 		if (flag) {
 			this.ala1.rotateAngleX = wingsRotationX;
 			this.ala1.rotateAngleY = -wingsRotationY;

@@ -65,7 +65,7 @@ public interface ISoulEntity {
 	}
 
 	public default IVertexBuilder getBuffer(IRenderTypeBuffer bufferIn, ResourceLocation texture) {
-		return bufferIn.getBuffer(RenderType.entityTranslucent(texture));
+		return bufferIn.getBuffer(RenderType.getEntityTranslucent(texture));
 	}
 
 	public default int getPotenciaPocion(int niveles) {

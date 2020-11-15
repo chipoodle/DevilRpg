@@ -2,6 +2,7 @@ package com.chipoodle.devilrpg.entity;
 
 import java.util.EnumSet;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
@@ -20,12 +21,13 @@ import net.minecraft.entity.CreatureAttribute;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntitySize;
 import net.minecraft.entity.EntityType;
+import net.minecraft.entity.IAngerable;
 import net.minecraft.entity.IChargeableMob;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.MobEntity;
 import net.minecraft.entity.Pose;
-import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.ai.RandomPositionGenerator;
+import net.minecraft.entity.ai.attributes.Attributes;
 import net.minecraft.entity.ai.controller.FlyingMovementController;
 import net.minecraft.entity.ai.controller.LookController;
 import net.minecraft.entity.ai.goal.FollowOwnerGoal;
@@ -33,13 +35,18 @@ import net.minecraft.entity.ai.goal.Goal;
 import net.minecraft.entity.ai.goal.PanicGoal;
 import net.minecraft.entity.ai.goal.SwimGoal;
 import net.minecraft.entity.ai.goal.WaterAvoidingRandomFlyingGoal;
+import net.minecraft.entity.passive.BeeEntity;
 import net.minecraft.entity.passive.IFlyingAnimal;
 import net.minecraft.entity.passive.TameableEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.fluid.Fluid;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.network.DebugPacketSender;
 import net.minecraft.network.IPacket;
+import net.minecraft.network.datasync.DataParameter;
+import net.minecraft.network.datasync.DataSerializers;
+import net.minecraft.network.datasync.EntityDataManager;
 import net.minecraft.particles.IParticleData;
 import net.minecraft.particles.ParticleTypes;
 import net.minecraft.pathfinding.FlyingPathNavigator;
@@ -49,30 +56,30 @@ import net.minecraft.potion.Effect;
 import net.minecraft.potion.EffectInstance;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.tags.Tag;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.tileentity.TileEntityType;
 import net.minecraft.util.DamageSource;
+import net.minecraft.util.RangedInteger;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.SoundEvent;
 import net.minecraft.util.SoundEvents;
+import net.minecraft.util.TickRangeConverter;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.world.IWorldReader;
 import net.minecraft.world.World;
+import net.minecraft.world.server.ServerWorld;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.fml.common.registry.IEntityAdditionalSpawnData;
 import net.minecraftforge.fml.network.FMLPlayMessages;
 import net.minecraftforge.fml.network.NetworkHooks;
 
-public class SoulWispEntity extends TameableEntity implements IFlyingAnimal, ISoulEntity,IChargeableMob,IRenderUtilities {
-
-	@Nullable
-	private BlockPos field_226368_bH_ = null;
-	@Nullable
-	private BlockPos field_226369_bI_ = null;
-
+public class SoulWispEntity extends TameableEntity
+		implements IFlyingAnimal, ISoulEntity, IChargeableMob, IRenderUtilities, IAngerable {
+	private static final DataParameter<Integer> ANGER_TIME = EntityDataManager.createKey(BeeEntity.class,
+			DataSerializers.VARINT);
+	private static final RangedInteger field_234180_bw_ = TickRangeConverter.convertRange(20, 39);
+	private UUID lastHurtBy;
 	private final int SALUD_INICIAL = 8;
 	private int puntosAsignados = 0;
 	private double saludMaxima = SALUD_INICIAL;
@@ -100,18 +107,41 @@ public class SoulWispEntity extends TameableEntity implements IFlyingAnimal, ISo
 
 	public float getBlockPathWeight(BlockPos pos, IWorldReader worldIn) {
 		return worldIn.getBlockState(pos).isAir(worldIn, pos) ? 10.0F : 0.0F;
-		//return worldIn.getBlockState(pos).isAir() ? 10.0F : 0.0F;
+		// return worldIn.getBlockState(pos).isAir() ? 10.0F : 0.0F;
 	}
 
 	protected void registerGoals() {
-		/*this.goalSelector.addGoal(0, new PanicGoal(this, 1.25D));
-		this.goalSelector.addGoal(0, new SwimGoal(this));
-		this.goalSelector.addGoal(2, new FollowOwnerGoal(this, 1.0D, 10.0F, 2.0F, false));
-		this.goalSelector.addGoal(2, new WaterAvoidingRandomFlyingGoal(this, 1.0D));
-			////this.goalSelector.addGoal(3, new FollowMobGoal(this, 1.0D, 3.0F, 7.0F));
-			////this.goalSelector.addGoal(5, new FollowParentGoal(this, 1.25D));
-		this.goalSelector.addGoal(8, new SoulWispEntity.WanderGoal());
-		this.goalSelector.addGoal(9, new SwimGoal(this));*/
+		
+		 this.goalSelector.addGoal(0, new PanicGoal(this, 1.25D));
+		  this.goalSelector.addGoal(0, new SwimGoal(this));
+		  this.goalSelector.addGoal(2, new FollowOwnerGoal(this, 1.0D, 10.0F, 2.0F,
+		  false)); this.goalSelector.addGoal(2, new WaterAvoidingRandomFlyingGoal(this,1.0D)); 
+		  ////this.goalSelector.addGoal(3, new FollowMobGoal(this, 1.0D, 3.0F,7.0F)); 
+		  ////this.goalSelector.addGoal(5, new FollowParentGoal(this, 1.25D));
+		  this.goalSelector.addGoal(8, new SoulWispEntity.WanderGoal());
+		  this.goalSelector.addGoal(9, new SwimGoal(this));
+		 
+	}
+
+	public void updateLevel(PlayerEntity owner, Effect efectoPrimario, Effect efectoSecundario, SkillEnum tipoWisp,
+			boolean esBeneficioso) {
+		setTamedBy(owner);
+		LazyOptional<IBaseSkillCapability> skill = getOwner().getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
+		this.efectoPrimario = efectoPrimario;
+		this.efectoSecundario = efectoSecundario;
+		this.esBeneficioso = esBeneficioso;
+		if (skill != null && skill.isPresent()) {
+			this.puntosAsignados = skill.map(x -> x.getSkillsPoints()).orElse(null).get(tipoWisp);
+			saludMaxima = 0.6 * this.puntosAsignados + SALUD_INICIAL;
+		}
+
+		this.getAttribute(Attributes.FLYING_SPEED).setBaseValue((double) 0.9F);
+		this.getAttribute(Attributes.MAX_HEALTH).setBaseValue(saludMaxima);
+		this.getAttribute(Attributes.ARMOR).setBaseValue(0.15D);
+		this.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue((double) 0.3F);
+		this.getAttribute(Attributes.ATTACK_DAMAGE).setBaseValue(2.0D);
+		this.getAttribute(Attributes.FOLLOW_RANGE).setBaseValue(48.0D);
+		setHealth((float) saludMaxima);
 	}
 
 	public void writeAdditional(CompoundNBT compound) {
@@ -123,7 +153,6 @@ public class SoulWispEntity extends TameableEntity implements IFlyingAnimal, ISo
 	 * (abstract) Protected helper method to read subclass entity data from NBT.
 	 */
 	public void readAdditional(CompoundNBT compound) {
-		this.field_226369_bI_ = null;
 		super.readAdditional(compound);
 	}
 
@@ -151,19 +180,10 @@ public class SoulWispEntity extends TameableEntity implements IFlyingAnimal, ISo
 				p_226397_10_, MathHelper.lerp(p_226397_1_.rand.nextDouble(), p_226397_6_, p_226397_8_), 0.0D, 0.0D,
 				0.0D);
 	}
-
-	public boolean func_226409_eA_() {
-		return this.field_226369_bI_ != null;
-	}
-
-	@Nullable
-	public BlockPos func_226410_eB_() {
-		return this.field_226369_bI_;
-	}
-
+	
 	protected void sendDebugPackets() {
 		super.sendDebugPackets();
-		// DebugPacketSender.func_229749_a_(this);
+		//DebugPacketSender.func_229749_a_(this);
 	}
 
 	/**
@@ -174,10 +194,6 @@ public class SoulWispEntity extends TameableEntity implements IFlyingAnimal, ISo
 	public void livingTick() {
 		super.livingTick();
 		if (!this.world.isRemote) {
-			if (this.ticksExisted % 20 == 0 && !this.func_226422_eP_()) {
-				this.field_226369_bI_ = null;
-			}
-
 			if (this.getOwnerId() == null || this.getOwner() == null || !this.getOwner().isAlive() || !this.isTamed())
 				this.attackEntityFrom(new MinionDeathDamageSource(""), Integer.MAX_VALUE);
 
@@ -186,26 +202,6 @@ public class SoulWispEntity extends TameableEntity implements IFlyingAnimal, ISo
 			}
 			addToLivingTick(this);
 		}
-
-	}
-
-	private boolean func_226422_eP_() {
-		if (!this.func_226409_eA_()) {
-			return false;
-		} else {
-			TileEntity tileentity = this.world.getTileEntity(this.field_226369_bI_);
-			return tileentity != null && tileentity.getType() == TileEntityType.field_226985_G_;
-		}
-	}
-
-	protected void registerAttributes() {
-		super.registerAttributes();
-		this.getAttributes().registerAttribute(SharedMonsterAttributes.FLYING_SPEED);
-		this.getAttribute(SharedMonsterAttributes.MAX_HEALTH).setBaseValue(10.0D);
-		this.getAttribute(SharedMonsterAttributes.FLYING_SPEED).setBaseValue((double) 0.6F);
-		this.getAttribute(SharedMonsterAttributes.MOVEMENT_SPEED).setBaseValue((double) 0.3F);
-		this.getAttributes().registerAttribute(SharedMonsterAttributes.ATTACK_DAMAGE).setBaseValue(2.0D);
-		this.getAttribute(SharedMonsterAttributes.FOLLOW_RANGE).setBaseValue(48.0D);
 	}
 
 	/**
@@ -233,22 +229,22 @@ public class SoulWispEntity extends TameableEntity implements IFlyingAnimal, ISo
 	 * (wheat, carrots or seeds depending on the animal type)
 	 */
 	public boolean isBreedingItem(ItemStack stack) {
-		return stack.getItem().isIn(ItemTags.field_226159_I_);
+		return stack.getItem().isIn(ItemTags.FLOWERS);
 	}
 
 	protected void playStepSound(BlockPos pos, BlockState blockIn) {
 	}
 
 	protected SoundEvent getAmbientSound() {
-		return null;
+		return SoundEvents.BLOCK_BEACON_AMBIENT;
 	}
 
 	protected SoundEvent getHurtSound(DamageSource damageSourceIn) {
-		return SoundEvents.field_226125_Z_;
+		return SoundEvents.BLOCK_BEACON_POWER_SELECT;
 	}
 
 	protected SoundEvent getDeathSound() {
-		return SoundEvents.field_226124_Y_;
+		return SoundEvents.BLOCK_BEACON_DEACTIVATE;
 	}
 
 	/**
@@ -290,10 +286,6 @@ public class SoulWispEntity extends TameableEntity implements IFlyingAnimal, ISo
 
 	protected void handleFluidJump(Tag<Fluid> fluidTag) {
 		this.setMotion(this.getMotion().add(0.0D, 0.01D, 0.0D));
-	}
-
-	private boolean func_226401_b_(BlockPos p_226401_1_, int p_226401_2_) {
-		return p_226401_1_.withinDistance(new BlockPos(this), (double) p_226401_2_);
 	}
 
 	class BeeLookController extends LookController {
@@ -350,56 +342,32 @@ public class SoulWispEntity extends TameableEntity implements IFlyingAnimal, ISo
 		 * Returns whether an in-progress EntityAIBase should continue executing
 		 */
 		public boolean shouldContinueExecuting() {
-			return SoulWispEntity.this.navigator.func_226337_n_();
+			return SoulWispEntity.this.navigator.hasPath();
 		}
 
 		/**
 		 * Execute a one shot task or start executing a continuous task
 		 */
 		public void startExecuting() {
-			Vec3d vec3d = this.func_226509_g_();
+			Vector3d vec3d = this.getRandomLocation();
 			if (vec3d != null) {
-				SoulWispEntity.this.navigator.setPath(SoulWispEntity.this.navigator.getPathToPos(new BlockPos(vec3d), 1), 1.0D);
+				SoulWispEntity.this.navigator
+						.setPath(SoulWispEntity.this.navigator.getPathToPos(new BlockPos(vec3d), 1), 1.0D);
 			}
 
 		}
 
 		@Nullable
-		private Vec3d func_226509_g_() {
-			Vec3d vec3d;
-			if (SoulWispEntity.this.func_226422_eP_()
-					&& !SoulWispEntity.this.func_226401_b_(SoulWispEntity.this.field_226369_bI_, 40)) {
-				Vec3d vec3d1 = new Vec3d(SoulWispEntity.this.field_226369_bI_);
-				vec3d = vec3d1.subtract(SoulWispEntity.this.getPositionVec()).normalize();
-			} else {
-				vec3d = SoulWispEntity.this.getLook(0.0F);
-			}
-
+		private Vector3d getRandomLocation() {
+			Vector3d vector3d;
+			vector3d = SoulWispEntity.this.getLook(0.0F);
 			int i = 8;
-			Vec3d vec3d2 = RandomPositionGenerator.func_226340_a_(SoulWispEntity.this, 8, 7, vec3d, ((float) Math.PI / 2F),
-					2, 1);
-			return vec3d2 != null ? vec3d2
-					: RandomPositionGenerator.func_226338_a_(SoulWispEntity.this, 8, 4, -2, vec3d,
+			Vector3d vector3d2 = RandomPositionGenerator.findAirTarget(SoulWispEntity.this, 8, 7, vector3d,
+					((float) Math.PI / 2F), 2, 1);
+			return vector3d2 != null ? vector3d2
+					: RandomPositionGenerator.findGroundTarget(SoulWispEntity.this, 8, 4, -2, vector3d,
 							(double) ((float) Math.PI / 2F));
 		}
-	}
-
-	public void updateLevel(PlayerEntity owner, Effect efectoPrimario, Effect efectoSecundario, SkillEnum tipoWisp,
-			boolean esBeneficioso) {
-		setTamedBy(owner);
-		LazyOptional<IBaseSkillCapability> skill = getOwner().getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
-		this.efectoPrimario = efectoPrimario;
-		this.efectoSecundario = efectoSecundario;
-		this.esBeneficioso = esBeneficioso;
-		if (skill != null && skill.isPresent()) {
-			this.puntosAsignados = skill.map(x -> x.getSkillsPoints()).orElse(null).get(tipoWisp);
-			saludMaxima = 0.6 * this.puntosAsignados + SALUD_INICIAL;
-		}
-
-		this.getAttribute(SharedMonsterAttributes.FLYING_SPEED).setBaseValue((double) 0.9F);
-		this.getAttribute(SharedMonsterAttributes.MAX_HEALTH).setBaseValue(saludMaxima);
-		this.getAttribute(SharedMonsterAttributes.ARMOR).setBaseValue(0.15D);
-		setHealth((float) saludMaxima);
 	}
 
 	/**
@@ -460,7 +428,7 @@ public class SoulWispEntity extends TameableEntity implements IFlyingAnimal, ISo
 			}
 		}
 	}
-	
+
 	private void applySecondaryEffect(Effect secondaryEffect, List<LivingEntity> alliesList) {
 		for (LivingEntity entity : alliesList) {
 			EffectInstance sec = new EffectInstance(secondaryEffect, DURATION_TICKS, 0, false, true);
@@ -503,27 +471,21 @@ public class SoulWispEntity extends TameableEntity implements IFlyingAnimal, ISo
 				return;
 			minionCap.ifPresent(x -> x.removeWisp((PlayerEntity) getOwner(), this));
 		}
-		//super.onDeath(cause);
+		// super.onDeath(cause);
 		customOnDeath();
 	}
-	
+
 	private void customOnDeath() {
 		world.setEntityState(this, (byte) 3);
 		this.dead = true;
 		this.remove();
-		customDeadParticles(this.world,this.rand,this);
+		customDeadParticles(this.world, this.rand, this);
 	}
-	
-	
+
 	public boolean isEsBeneficioso() {
 		return esBeneficioso;
 	}
 
-	@Override
-	public boolean func_225509_J__() {
-		return true;
-	}
-	
 	/**
 	 * Called on the logical server to get a packet to send to the client containing
 	 * data necessary to spawn your entity. Using Forge's method instead of the
@@ -542,14 +504,45 @@ public class SoulWispEntity extends TameableEntity implements IFlyingAnimal, ISo
 	public IPacket<?> createSpawnPacket() {
 		return NetworkHooks.getEntitySpawningPacket(this);
 	}
-	
+
 	/**
 	 * Get the experience points the entity currently has.
 	 */
 	protected int getExperiencePoints(PlayerEntity player) {
-		/*if (player.equals(getOwner()))
-			return 0;
-		return 1 + this.world.rand.nextInt(3);*/
+		/*
+		 * if (player.equals(getOwner())) return 0; return 1 +
+		 * this.world.rand.nextInt(3);
+		 */
 		return 0;
+	}
+
+	public int getAngerTime() {
+		return this.dataManager.get(ANGER_TIME);
+	}
+
+	public void setAngerTime(int time) {
+		this.dataManager.set(ANGER_TIME, time);
+	}
+
+	public UUID getAngerTarget() {
+		return this.lastHurtBy;
+	}
+
+	public void setAngerTarget(@Nullable UUID target) {
+		this.lastHurtBy = target;
+	}
+
+	public void func_230258_H__() {
+		this.setAngerTime(field_234180_bw_.getRandomWithinRange(this.rand));
+	}
+
+	@Override
+	public boolean isCharged() {
+		return false;
+	}
+
+	@Override
+	public SoulWispEntity func_241840_a(ServerWorld p_241840_1_, AgeableEntity p_241840_2_) {
+		return ModEntityTypes.WISP.get().create(p_241840_1_);
 	}
 }

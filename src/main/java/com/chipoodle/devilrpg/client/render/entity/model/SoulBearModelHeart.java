@@ -31,9 +31,9 @@ public class SoulBearModelHeart<T extends SoulBearEntity> extends QuadrupedModel
 		return ImmutableList.of(this.heart);
 	}
 
-	public void render(T entityIn, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw,
+	public void setRotationAngles(T entityIn, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw,
 			float headPitch) {
-		super.render(entityIn, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
+		super.setRotationAngles(entityIn, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
 		float f = ageInTicks - (float) entityIn.ticksExisted;
 		float f1 = entityIn.getStandingAnimationScale(f);
 		f1 = f1 * f1;

@@ -49,13 +49,13 @@ public class SoulWolfRenderer extends MobRenderer<SoulWolfEntity, SoulWolfModelH
 
 		if (entityIn.isWolfWet()) {
 			float f = entityIn.getBrightness() * entityIn.getShadingWhileWet(partialTicks);
-			this.entityModel.func_228253_a_(f, f, f);
+			this.entityModel.setTint(f, f, f);
 		}
 		
 		super.render(entityIn, entityYaw, partialTicks, matrixStackIn, bufferIn, packedLightIn);
 
 		if (entityIn.isWolfWet()) {
-			this.entityModel.func_228253_a_(1.0F, 1.0F, 1.0F);
+			this.entityModel.setTint(1.0F, 1.0F, 1.0F);
 		}
 	}
 

@@ -35,7 +35,7 @@ public class SoulWolfModelHeart<T extends SoulWolfEntity> extends TintedAgeableM
 	}
 
 	@Override
-	public void render(T entityIn, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw,
+	public void setRotationAngles(T entityIn, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw,
 			float headPitch) {
 		
 	}

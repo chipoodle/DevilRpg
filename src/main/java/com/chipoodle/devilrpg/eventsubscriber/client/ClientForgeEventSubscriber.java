@@ -61,9 +61,11 @@ public final class ClientForgeEventSubscriber {
 	public static void onEvent(RenderGameOverlayEvent.Pre event) {
 		switch (event.getType()) {
 		case HEALTH:
-			healthBarRenderer.renderBar(event.getWindow().getScaledWidth(), event.getWindow().getScaledHeight());
-			manaBarRenderer.renderBar(event.getWindow().getScaledWidth(), event.getWindow().getScaledHeight());
-			minionPortraitRenderer.renderPortraits(event.getWindow().getScaledWidth(),
+			healthBarRenderer.renderBar(event.getMatrixStack(), event.getWindow().getScaledWidth(),
+					event.getWindow().getScaledHeight());
+			manaBarRenderer.renderBar(event.getMatrixStack(), event.getWindow().getScaledWidth(),
+					event.getWindow().getScaledHeight());
+			minionPortraitRenderer.renderPortraits(event.getMatrixStack(), event.getWindow().getScaledWidth(),
 					event.getWindow().getScaledHeight());
 			event.setCanceled(true);
 			break;
@@ -75,7 +77,6 @@ public final class ClientForgeEventSubscriber {
 			 */
 			event.setCanceled(true);
 			break;
-
 		default: // If it's not one of the above cases, do nothing
 			break;
 		}

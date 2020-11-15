@@ -32,11 +32,11 @@ public class SoulWispModel<T extends SoulWispEntity> extends AgeableModel<T> {
 		super.setLivingAnimations(entityIn, limbSwing, limbSwingAmount, partialTick);
 	}
 
-	public void render(T entityIn, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw,
+	public void setRotationAngles(T entityIn, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw,
 			float headPitch) {
 		this.cuerpo2.rotateAngleX = 0.0F;
 		this.cuerpo2.rotationPointY = 19.0F;
-		boolean flag = entityIn.onGround && entityIn.getMotion().lengthSquared() < 1.0E-7D;
+		boolean flag = entityIn.isOnGround() && entityIn.getMotion().lengthSquared() < 1.0E-7D;
 		if (flag) {
 		} else {
 			float f = ageInTicks * 2.1F;

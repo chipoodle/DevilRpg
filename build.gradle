@@ -13,6 +13,7 @@ apply plugin: 'net.minecraftforge.gradle'
 
 apply plugin: 'eclipse'
 apply plugin: 'maven-publish'
+apply plugin: 'java'
 
 //mainClassName : 'net.minecraft.launchwrapper.Launch'
 

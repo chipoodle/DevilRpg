@@ -19,7 +19,7 @@ import net.minecraftforge.registries.ForgeRegistries;
  */
 public final class ModTileEntityTypes {
 
-	public static final DeferredRegister<TileEntityType<?>> TILE_ENTITY_TYPES = new DeferredRegister<>(ForgeRegistries.TILE_ENTITIES, DevilRpg.MODID);
+	public static final DeferredRegister<TileEntityType<?>> TILE_ENTITY_TYPES = DeferredRegister.create(ForgeRegistries.TILE_ENTITIES, DevilRpg.MODID);
 /*
 	// We don't have a datafixer for our TileEntities, so we pass null into build.
 	public static final RegistryObject<TileEntityType<MiniModelTileEntity>> MINI_MODEL = TILE_ENTITY_TYPES.register("mini_model", () ->

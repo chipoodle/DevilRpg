@@ -1,19 +1,19 @@
 package com.chipoodle.devilrpg.entity;
 
-import javax.annotation.Nullable;
-
 import com.chipoodle.devilrpg.capability.minion.IBaseMinionCapability;
 import com.chipoodle.devilrpg.capability.minion.PlayerMinionCapabilityProvider;
 import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
+import com.chipoodle.devilrpg.init.ModEntityTypes;
 import com.chipoodle.devilrpg.util.SkillEnum;
 
+import net.minecraft.entity.AgeableEntity;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.IChargeableMob;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.MobEntity;
-import net.minecraft.entity.SharedMonsterAttributes;
+import net.minecraft.entity.ai.attributes.Attributes;
 import net.minecraft.entity.ai.goal.FollowOwnerGoal;
 import net.minecraft.entity.ai.goal.HurtByTargetGoal;
 import net.minecraft.entity.ai.goal.LeapAtTargetGoal;
@@ -23,6 +23,7 @@ import net.minecraft.entity.ai.goal.MeleeAttackGoal;
 import net.minecraft.entity.ai.goal.NearestAttackableTargetGoal;
 import net.minecraft.entity.ai.goal.OwnerHurtByTargetGoal;
 import net.minecraft.entity.ai.goal.OwnerHurtTargetGoal;
+import net.minecraft.entity.ai.goal.ResetAngerGoal;
 import net.minecraft.entity.ai.goal.SitGoal;
 import net.minecraft.entity.ai.goal.SwimGoal;
 import net.minecraft.entity.ai.goal.WaterAvoidingRandomWalkingGoal;
@@ -35,8 +36,8 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.network.IPacket;
 import net.minecraft.util.DamageSource;
-import net.minecraft.util.Hand;
 import net.minecraft.world.World;
+import net.minecraft.world.server.ServerWorld;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.common.util.LazyOptional;
@@ -44,7 +45,7 @@ import net.minecraftforge.fml.common.registry.IEntityAdditionalSpawnData;
 import net.minecraftforge.fml.network.FMLPlayMessages;
 import net.minecraftforge.fml.network.NetworkHooks;
 
-public class SoulWolfEntity extends WolfEntity implements ISoulEntity, IChargeableMob,IRenderUtilities {
+public class SoulWolfEntity extends WolfEntity implements ISoulEntity, IChargeableMob, IRenderUtilities {
 	private final int SALUD_INICIAL = 10;
 	private int puntosAsignados = 0;
 	private double saludMaxima = SALUD_INICIAL;
@@ -56,16 +57,12 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity, IChargeab
 
 	@Override
 	protected void registerGoals() {
-		this.sitGoal = new SitGoal(this);
 		this.goalSelector.addGoal(1, new SwimGoal(this));
-		this.goalSelector.addGoal(3,
-				new SoulWolfEntity.AvoidEntityGoal<VillagerEntity>(this, VillagerEntity.class, 24.0F, 1.5D, 1.5D));
-		this.goalSelector.addGoal(3,
-				new SoulWolfEntity.AvoidEntityGoal<LlamaEntity>(this, LlamaEntity.class, 24.0F, 1.5D, 1.5D));
-		this.goalSelector.addGoal(3,
-				new SoulWolfEntity.AvoidEntityGoal<TurtleEntity>(this, TurtleEntity.class, 24.0F, 1.5D, 1.5D));
-		this.goalSelector.addGoal(3,
-				new SoulWolfEntity.AvoidEntityGoal<IronGolemEntity>(this, IronGolemEntity.class, 24.0F, 1.5D, 1.5D));
+		this.goalSelector.addGoal(2, new SitGoal(this));
+		this.goalSelector.addGoal(3, new SoulWolfEntity.AvoidEntityGoal<VillagerEntity>(this, VillagerEntity.class, 24.0F, 1.5D, 1.5D));
+		this.goalSelector.addGoal(3, new SoulWolfEntity.AvoidEntityGoal<LlamaEntity>(this, LlamaEntity.class, 24.0F, 1.5D, 1.5D));
+		this.goalSelector.addGoal(3, new SoulWolfEntity.AvoidEntityGoal<TurtleEntity>(this, TurtleEntity.class, 24.0F, 1.5D, 1.5D));
+		this.goalSelector.addGoal(3, new SoulWolfEntity.AvoidEntityGoal<IronGolemEntity>(this, IronGolemEntity.class, 24.0F, 1.5D, 1.5D));
 		this.goalSelector.addGoal(4, new LeapAtTargetGoal(this, 0.4F));
 		this.goalSelector.addGoal(5, new MeleeAttackGoal(this, 1.0D, true));
 		this.goalSelector.addGoal(6, new FollowOwnerGoal(this, 1.0D, 10.0F, 2.0F, false));
@@ -77,11 +74,7 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity, IChargeab
 		this.targetSelector.addGoal(2, new OwnerHurtTargetGoal(this));
 		this.targetSelector.addGoal(3, (new HurtByTargetGoal(this)).setCallsForHelp());
 		this.targetSelector.addGoal(5, new NearestAttackableTargetGoal<>(this, MobEntity.class, false));
-	}
-
-	@Override
-	protected void registerAttributes() {
-		super.registerAttributes();
+		this.targetSelector.addGoal(8, new ResetAngerGoal<>(this, true));
 	}
 
 	public void updateLevel(PlayerEntity owner) {
@@ -93,11 +86,11 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity, IChargeab
 			stealingHealth = (0.135f * puntosAsignados) + 0.5;
 		}
 
-		this.getAttribute(SharedMonsterAttributes.MOVEMENT_SPEED).setBaseValue((double) 0.4F);
-		this.getAttribute(SharedMonsterAttributes.MAX_HEALTH).setBaseValue(saludMaxima);
-		this.getAttribute(SharedMonsterAttributes.ARMOR).setBaseValue(0.35D);
-		this.getAttribute(SharedMonsterAttributes.FOLLOW_RANGE).setBaseValue(16.0D);
-		this.getAttribute(SharedMonsterAttributes.ATTACK_DAMAGE).setBaseValue((0.45 * puntosAsignados) + 2); // 2-11
+		this.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue((double) 0.4F);
+		this.getAttribute(Attributes.MAX_HEALTH).setBaseValue(saludMaxima);
+		this.getAttribute(Attributes.ARMOR).setBaseValue(0.35D);
+		this.getAttribute(Attributes.FOLLOW_RANGE).setBaseValue(16.0D);
+		this.getAttribute(Attributes.ATTACK_DAMAGE).setBaseValue((0.45 * puntosAsignados) + 2); // 2-11
 		setHealth((float) saludMaxima);
 	}
 
@@ -128,14 +121,6 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity, IChargeab
 		return isOnSameTeam || isEntitySameOwnerAsThis(entityIn, this);
 	}
 
-	/**
-	 * doesn't interact. It's magical!
-	 */
-	@Override
-	public boolean processInteract(PlayerEntity player, Hand hand) {
-		return true;
-	}
-
 	@Override
 	public boolean shouldAttackEntity(LivingEntity target, LivingEntity owner) {
 		return addToshouldAttackEntity(target, owner);
@@ -144,26 +129,12 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity, IChargeab
 	@Override
 	public boolean attackEntityAsMob(Entity entityIn) {
 		boolean flag = entityIn.attackEntityFrom(DamageSource.causeMobDamage(this),
-				(float) ((int) this.getAttribute(SharedMonsterAttributes.ATTACK_DAMAGE).getValue()));
+				(float) ((int) this.getAttributeValue(Attributes.ATTACK_DAMAGE)));
 		if (flag) {
 			this.applyEnchantments(this, entityIn);
 			this.heal((float) stealingHealth);
 		}
-
 		return flag;
-	}
-
-	/**
-	 * Sets the active target the Task system uses for tracking
-	 */
-	@Override
-	public void setAttackTarget(@Nullable LivingEntity entitylivingbaseIn) {
-		super.setAttackTarget(entitylivingbaseIn);
-		if (entitylivingbaseIn == null) {
-			this.setAngry(false);
-		} else {
-			this.setAngry(true);
-		}
 	}
 
 	class AvoidEntityGoal<T extends LivingEntity> extends net.minecraft.entity.ai.goal.AvoidEntityGoal<T> {
@@ -275,11 +246,6 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity, IChargeab
 		return NetworkHooks.getEntitySpawningPacket(this);
 	}
 
-	@Override
-	public boolean func_225509_J__() {
-		return true;
-	}
-
 	/**
 	 * Get the experience points the entity currently has.
 	 */
@@ -290,14 +256,24 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity, IChargeab
 		 */
 		return 0;
 	}
-	
+
 	@Override
 	@OnlyIn(Dist.CLIENT)
 	public float getTailRotation() {
-		if (this.isAngry()) {
+		if (this.func_233678_J__()) {
 			return 1.5393804F;
 		} else {
 			return ((float) Math.PI / 5F);
 		}
+	}
+
+	@Override
+	public boolean isCharged() {
+		return false;
+	}
+
+	@Override
+	public SoulWolfEntity func_241840_a(ServerWorld p_241840_1_, AgeableEntity p_241840_2_) {
+		return ModEntityTypes.SOUL_WOLF.get().create(p_241840_1_);
 	}
 }

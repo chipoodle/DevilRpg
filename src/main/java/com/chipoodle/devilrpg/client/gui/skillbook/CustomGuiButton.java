@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.client.gui.skillbook;
 
+import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 
@@ -8,6 +9,7 @@ import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.widget.button.Button;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.text.StringTextComponent;
 import net.minecraftforge.fml.client.gui.GuiUtils;
 
 public class CustomGuiButton extends Button {
@@ -25,7 +27,7 @@ public class CustomGuiButton extends Button {
 	public CustomGuiButton(int x, int y, int widthIn, int heightIn, String buttonText, ResourceLocation textureResource,
 			int textureWidth, int textureHeight, Enum<?> skillName, int drawnSkillLevel, IPressable function,
 			int pageBelonging, boolean showSkillNumber) {
-		super(x, y, widthIn, heightIn, buttonText, function);
+		super(x, y, widthIn, heightIn, new StringTextComponent(buttonText), function);
 		resourceLocation = textureResource;
 		this.textureWidth = textureWidth;
 		this.textureHeight = textureHeight;
@@ -39,7 +41,7 @@ public class CustomGuiButton extends Button {
 	 * Draws this button to the screen.
 	 */
 	@Override
-	public void renderButton(int mouseX, int mouseY, float partialTicks) {
+	public void renderButton(MatrixStack matrixStack, int mouseX, int mouseY, float partialTicks) {
 		if (this.visible) {
 			Minecraft instance = Minecraft.getInstance();
 			instance.getTextureManager().bindTexture(resourceLocation);
@@ -62,12 +64,12 @@ public class CustomGuiButton extends Button {
 			GuiUtils.drawContinuousTexturedBox(resourceLocation, this.x, this.y, i, i, Math.round(this.width / scale),
 					Math.round(this.height / scale), Math.round(this.textureWidth / scale),
 					Math.round(this.textureHeight / scale), 0, 0, 0, 0, zLevel);
-			renderCenteredText();
+			renderCenteredText(matrixStack);
 			RenderSystem.popMatrix();
 		}
 	}
 
-	private void renderCenteredText() {
+	private void renderCenteredText(MatrixStack matrixStack) {
 		int xTitle = (this.x + this.width / 2) + 5;
 		int yTitle = (this.y + this.height) + 20;
 		int textPositionX = this.x;
@@ -87,9 +89,9 @@ public class CustomGuiButton extends Button {
 		RenderSystem.translatef((textPositionX - textPositionX * scaledText) - 1,
 				(textPositionY - textPositionY * scaledText) - 1, 0);
 		RenderSystem.scalef(scaledText, scaledText, scaledText);
-		this.drawCenteredString(fontrenderer, getMessage(), xTitle, yTitle, color);
+		this.drawCenteredString(matrixStack,fontrenderer, getMessage(), xTitle, yTitle, color);
 		if (showSkillNumber)
-			this.drawCenteredString(fontrenderer, drawnSkillLevel + "", this.x + this.width,
+			this.drawCenteredString(matrixStack,fontrenderer, drawnSkillLevel + "", this.x + this.width,
 					(this.y + this.height) - 20, color);
 	}
 
@@ -139,6 +141,10 @@ public class CustomGuiButton extends Button {
 
 	public void setzLevel(int i) {
 		zLevel = i;
+	}
+
+	public float getHeight() {
+		return this.height;
 	}
 
 }

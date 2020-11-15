@@ -28,9 +28,7 @@ import com.chipoodle.devilrpg.network.handler.PlayerSkillClientServerHandler;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.SharedMonsterAttributes;
-import net.minecraft.entity.ai.attributes.AttributeModifier;
-import net.minecraft.entity.ai.attributes.IAttribute;
+import net.minecraft.entity.ai.attributes.Attributes;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.util.Hand;
@@ -89,7 +87,7 @@ public class ForgeEventSubscriber {
 
 		String message1 = String.format("Hello there, you have mana %f left.",
 				mana.map(x -> x.getMana()).orElse(Float.NaN));
-		player.sendMessage(new StringTextComponent(message1));
+		player.sendMessage(new StringTextComponent(message1),player.getUniqueID());
 	}
 
 	@SubscribeEvent
@@ -189,15 +187,15 @@ public class ForgeEventSubscriber {
 					public void run() {
 						skill.ifPresent(x->{
 							HashMap<String, UUID> attributeModifiers = x.getAttributeModifiers();
-							UUID hlthAttMod = attributeModifiers.get(SharedMonsterAttributes.MAX_HEALTH.getName());
-							UUID spdAttMod = attributeModifiers.get(SharedMonsterAttributes.MOVEMENT_SPEED.getName());
+							UUID hlthAttMod = attributeModifiers.get(Attributes.MAX_HEALTH.getAttributeName());
+							UUID spdAttMod = attributeModifiers.get(Attributes.MOVEMENT_SPEED.getAttributeName());
 							
 							if(hlthAttMod != null) {
 								DevilRpg.LOGGER.info("||-------------> removing health id: "+hlthAttMod);
-								player.getAttribute(SharedMonsterAttributes.MAX_HEALTH).removeModifier(hlthAttMod);
+								player.getAttribute(Attributes.MAX_HEALTH).removeModifier(hlthAttMod);
 							}
 							if(spdAttMod!= null) {
-								player.getAttribute(SharedMonsterAttributes.MOVEMENT_SPEED).removeModifier(spdAttMod);
+								player.getAttribute(Attributes.MOVEMENT_SPEED).removeModifier(spdAttMod);
 							}
 							ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> (ServerPlayerEntity) player),
 									new PlayerSkillClientServerHandler(x.getNBTData()));
@@ -273,7 +271,7 @@ public class ForgeEventSubscriber {
 		String message = String.format(
 				"You refreshed yourself in the bed. You recovered mana and you have %f mana left.",
 				mana.map(x -> x.getMaxMana()).orElse(Float.NaN));
-		player.sendMessage(new StringTextComponent(message));
+		player.sendMessage(new StringTextComponent(message),player.getUniqueID());
 	}
 
 	@SubscribeEvent

@@ -48,8 +48,8 @@ public class SoulBearModel<T extends SoulBearEntity> extends QuadrupedModel<T> {
       --this.legFrontLeft.rotationPointZ;
    }
 
-   public void render(T entityIn, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
-      super.render(entityIn, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
+   public void setRotationAngles(T entityIn, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
+      super.setRotationAngles(entityIn, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
       float f = ageInTicks - (float)entityIn.ticksExisted;
       float f1 = entityIn.getStandingAnimationScale(f);
       f1 = f1 * f1;

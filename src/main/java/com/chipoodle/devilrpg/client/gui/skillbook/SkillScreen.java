@@ -12,6 +12,7 @@ import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
 import com.chipoodle.devilrpg.util.PowerEnum;
 import com.chipoodle.devilrpg.util.SkillEnum;
+import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 
@@ -21,6 +22,7 @@ import net.minecraft.client.gui.widget.button.Button;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.text.ITextComponent;
+import net.minecraft.util.text.ITextProperties;
 import net.minecraft.util.text.StringTextComponent;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
@@ -78,10 +80,8 @@ public class SkillScreen extends BaseBookScreen {
 			return TOTAL_PAGES;
 		}
 
-		/**
-		 * Gets the text from the supplied page number
-		 */
-		public ITextComponent iGetPageText(int pageNum) {
+		@Override
+		public ITextProperties func_230456_a_(int p_230456_1_) {
 			return new StringTextComponent("Skill book");
 		}
 
@@ -174,7 +174,7 @@ public class SkillScreen extends BaseBookScreen {
 	}
 
 	@Override
-	public void render(int parWidth, int parHeight, float p_73863_3_) {
+	public void render(MatrixStack matrixStack, int parWidth, int parHeight, float p_73863_3_) {
 		super.render(parWidth, parHeight, p_73863_3_);
 
 		int offsetFromScreenLeft = (this.width - 192) / 2;
@@ -185,7 +185,7 @@ public class SkillScreen extends BaseBookScreen {
 			int widthOfString = this.getStringWidth(s);
 			float textPositionX = offsetFromScreenLeft - widthOfString + bookImageWidth - 44;
 			float textPositionY = 16.0F;
-			this.font.drawString(s, textPositionX, textPositionY, 0);
+			this.font.drawString(matrixStack, s, textPositionX, textPositionY, 0);
 		}
 
 		if (skillButtonApretado != null) {

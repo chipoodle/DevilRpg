@@ -9,7 +9,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.mana.IBaseManaCapability;
 import com.chipoodle.devilrpg.capability.mana.PlayerManaCapabilityProvider;
-import com.chipoodle.devilrpg.config.DevilRpgConfig;
 import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.network.handler.PlayerSkillClientServerHandler;
 import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
@@ -18,8 +17,7 @@ import com.chipoodle.devilrpg.util.BytesUtil;
 import com.chipoodle.devilrpg.util.PowerEnum;
 import com.chipoodle.devilrpg.util.SkillEnum;
 
-import net.minecraft.entity.ai.attributes.AttributeModifier;
-import net.minecraft.entity.ai.attributes.IAttribute;
+import net.minecraft.entity.ai.attributes.Attribute;
 import net.minecraft.entity.passive.TameableEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
@@ -46,7 +44,7 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
 			HashMap<SkillEnum, Integer> maxSkills = new HashMap<>();
 			HashMap<SkillEnum, Integer> manaCostContainer = new HashMap<>();
 			ConcurrentLinkedQueue<TameableEntity> minions = new ConcurrentLinkedQueue<TameableEntity>();
-			HashMap<IAttribute, UUID> attributeModifiers = new HashMap<>();
+			HashMap<Attribute, UUID> attributeModifiers = new HashMap<>();
 			
 			for (PowerEnum p : Arrays.asList(PowerEnum.values())) {
 				powers.put(p, null);
@@ -215,7 +213,7 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
 					poder.execute(playerIn.world, playerIn);
 				} else {
 					String message = "Not enough mana.";
-					playerIn.sendMessage(new StringTextComponent(message));
+					playerIn.sendMessage(new StringTextComponent(message),playerIn.getUniqueID());
 				}
 			}
 		}

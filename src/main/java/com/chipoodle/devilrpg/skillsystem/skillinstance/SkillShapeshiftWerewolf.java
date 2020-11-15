@@ -17,16 +17,14 @@ import com.chipoodle.devilrpg.util.SkillEnum;
 import com.chipoodle.devilrpg.util.TargetUtils;
 
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.ai.attributes.AttributeModifier;
-import net.minecraft.entity.ai.attributes.IAttribute;
+import net.minecraft.entity.ai.attributes.Attributes;
 import net.minecraft.entity.passive.TameableEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.Hand;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.SoundCategory;
 import net.minecraft.util.SoundEvent;
-import net.minecraft.util.SoundEvents;
 import net.minecraft.world.World;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
@@ -85,27 +83,28 @@ public class SkillShapeshiftWerewolf implements ISkillContainer {
 		HashMap<String, UUID> attributeModifiers = parentCapability.getAttributeModifiers();
 		if (healthAttributeModifier != null) {
 			//playerIn.getAttribute(SharedMonsterAttributes.MAX_HEALTH).removeModifier(healthAttributeModifier.getID());
-			playerIn.getAttribute(SharedMonsterAttributes.MAX_HEALTH).removeModifier(attributeModifiers.get(SharedMonsterAttributes.MAX_HEALTH.getName()));
-			attributeModifiers.remove(SharedMonsterAttributes.MAX_HEALTH.getName());
+			playerIn.getAttribute(Attributes.MAX_HEALTH).removeModifier(attributeModifiers.get(Attributes.MAX_HEALTH.getAttributeName()));
+			attributeModifiers.remove(Attributes.MAX_HEALTH.getAttributeName());
 			if(playerIn.getHealth() > playerIn.getMaxHealth())
 				playerIn.setHealth(playerIn.getMaxHealth());
 		}
 		if (speedAttributeModifier != null) {
 			//playerIn.getAttribute(SharedMonsterAttributes.MOVEMENT_SPEED).removeModifier(speedAttributeModifier.getID());
-			playerIn.getAttribute(SharedMonsterAttributes.MOVEMENT_SPEED).removeModifier(attributeModifiers.get(SharedMonsterAttributes.MOVEMENT_SPEED.getName()));
-			attributeModifiers.remove(SharedMonsterAttributes.MOVEMENT_SPEED.getName());
+			playerIn.getAttribute(Attributes.MOVEMENT_SPEED).removeModifier(attributeModifiers.get(Attributes.MOVEMENT_SPEED.getAttributeName()));
+			attributeModifiers.remove(Attributes.MOVEMENT_SPEED.getAttributeName());
 		}
 		parentCapability.setAttributeModifiers(attributeModifiers, playerIn);
 	}
 
 	private void addCurrentModifiers(PlayerEntity playerIn) {
 		HashMap<String, UUID> attributeModifiers = parentCapability.getAttributeModifiers();
-		attributeModifiers.put(SharedMonsterAttributes.MAX_HEALTH.getName(), healthAttributeModifier.getID());
-		attributeModifiers.put(SharedMonsterAttributes.MOVEMENT_SPEED.getName(), speedAttributeModifier.getID());
+		attributeModifiers.put(Attributes.MAX_HEALTH.getAttributeName(), healthAttributeModifier.getID());
+		attributeModifiers.put(Attributes.MOVEMENT_SPEED.getAttributeName(), speedAttributeModifier.getID());
 		parentCapability.setAttributeModifiers(attributeModifiers, playerIn);
-
-		playerIn.getAttribute(SharedMonsterAttributes.MAX_HEALTH).applyModifier(healthAttributeModifier);
-		playerIn.getAttribute(SharedMonsterAttributes.MOVEMENT_SPEED).applyModifier(speedAttributeModifier);
+		
+		//TODO: Verificar si funciona y usar applyPersisentModifier para probar también
+		playerIn.getAttribute(Attributes.MAX_HEALTH).applyNonPersistentModifier(healthAttributeModifier);
+		playerIn.getAttribute(Attributes.MOVEMENT_SPEED).applyNonPersistentModifier(speedAttributeModifier);
 	}
 
 	/**

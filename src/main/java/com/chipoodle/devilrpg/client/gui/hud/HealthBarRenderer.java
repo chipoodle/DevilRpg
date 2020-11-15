@@ -5,6 +5,7 @@ import java.text.DecimalFormat;
 import org.lwjgl.opengl.GL11;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.mojang.blaze3d.matrix.MatrixStack;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.AbstractGui;
@@ -68,7 +69,7 @@ public class HealthBarRenderer extends AbstractGui {
 	}
 
 	/* This helper method will render the bar */
-	public void renderBar(int screenWidth, int screenHeight) {
+	public void renderBar(MatrixStack matrixStack, int screenWidth, int screenHeight) {
 		/* These are the variables that contain world and player information */
 		World world = mc.world;
 		PlayerEntity player = mc.player;
@@ -122,14 +123,14 @@ public class HealthBarRenderer extends AbstractGui {
 		 *
 		 * This line draws the background of the custom bar
 		 */
-		blit(0, 0, 0, 0, BAR_WIDTH, BAR_HEIGHT);
+		blit(matrixStack, 0, 0, 0, 0, BAR_WIDTH, BAR_HEIGHT);
 
 		/*
 		 * This line draws the outline effect that corresponds to how much armor the
 		 * player has. I slide the right-most side of the rectangle using the player's
 		 * armor value.
 		 */
-		blit(0, 0, 0, BAR_HEIGHT, (int) (BAR_WIDTH * (player.getTotalArmorValue() / 20f)), BAR_HEIGHT);
+		blit(matrixStack, 0, 0, 0, BAR_HEIGHT, (int) (BAR_WIDTH * (player.getTotalArmorValue() / 20f)), BAR_HEIGHT);
 
 		/* This part draws the inside of the bar, which starts 1 pixel right and down */
 		GL11.glPushMatrix();
@@ -181,13 +182,13 @@ public class HealthBarRenderer extends AbstractGui {
 		final int WITHER_TEXTURE_U = BAR_WIDTH + 3; // brown texels
 
 		if (player.isPotionActive(Effects.WITHER)) {
-			blit(0, 0, WITHER_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
+			blit(matrixStack, 0, 0, WITHER_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
 		} else if (player.isPotionActive(Effects.POISON)) {
-			blit(0, 0, POISON_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
+			blit(matrixStack, 0, 0, POISON_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
 		} else if (player.isPotionActive(Effects.REGENERATION)) {
-			blit(0, 0, REGEN_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
+			blit(matrixStack, 0, 0, REGEN_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
 		} else {
-			blit(0, 0, NORMAL_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
+			blit(matrixStack, 0, 0, NORMAL_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
 		}
 
 		GL11.glPopMatrix();
@@ -210,13 +211,13 @@ public class HealthBarRenderer extends AbstractGui {
 		if (absorptionAmount > 0) {
 
 			/* Draw the shadow string */
-			fr.drawString(s, -fr.getStringWidth(s) + 1, 2, 0x5A2B00);
+			fr.drawString(matrixStack, s, -fr.getStringWidth(s) + 1, 2, 0x5A2B00);
 
 			/* Draw the actual string */
-			fr.drawString(s, -fr.getStringWidth(s), 1, 0xFFD200);
+			fr.drawString(matrixStack, s, -fr.getStringWidth(s), 1, 0xFFD200);
 		} else {
-			fr.drawString(s, -fr.getStringWidth(s) + 1, 2, 0x4D0000);
-			fr.drawString(s, -fr.getStringWidth(s), 1, 0xFFFFFF);
+			fr.drawString(matrixStack, s, -fr.getStringWidth(s) + 1, 2, 0x4D0000);
+			fr.drawString(matrixStack, s, -fr.getStringWidth(s), 1, 0xFFFFFF);
 		}
 		GL11.glPopMatrix();
 

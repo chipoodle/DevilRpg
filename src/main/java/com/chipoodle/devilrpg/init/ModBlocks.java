@@ -23,7 +23,7 @@ import net.minecraftforge.registries.ForgeRegistries;
  */
 public final class ModBlocks {
 
-    public static final DeferredRegister<Block> BLOCKS = new DeferredRegister<>(ForgeRegistries.BLOCKS, DevilRpg.MODID);
+    public static final DeferredRegister<Block> BLOCKS =  DeferredRegister.create(ForgeRegistries.BLOCKS, DevilRpg.MODID);
     // This block has the ROCK material, meaning it needs at least a wooden pickaxe to break it. It is very similar to Iron Ore
     public static final RegistryObject<Block> EXAMPLE_ORE = BLOCKS.register("example_ore", () -> new Block(Block.Properties.create(Material.ROCK).hardnessAndResistance(3.0F, 3.0F)));
     // This block has the IRON material, meaning it needs at least a stone pickaxe to break it. It is very similar to the Iron Block

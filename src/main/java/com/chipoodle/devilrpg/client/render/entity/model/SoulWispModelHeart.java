@@ -36,7 +36,7 @@ public class SoulWispModelHeart<T extends SoulWispEntity> extends AgeableModel<T
 		}
 	}
 
-	public void render(T entityIn, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw,
+	public void setRotationAngles(T entityIn, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw,
 			float headPitch) {
 
 		/*if (this.field_228241_n_ > 0.0F) {

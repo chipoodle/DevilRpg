@@ -67,7 +67,7 @@ public class SoulWolfModel<T extends SoulWolfEntity> extends TintedAgeableModel<
    }
 
    public void setLivingAnimations(T entityIn, float limbSwing, float limbSwingAmount, float partialTick) {
-      if (entityIn.isAngry()) {
+      if (entityIn.func_233678_J__()) {
          this.tail.rotateAngleY = 0.0F;
       } else {
          this.tail.rotateAngleY = MathHelper.cos(limbSwing * 0.6662F) * 1.4F * limbSwingAmount;
@@ -110,7 +110,7 @@ public class SoulWolfModel<T extends SoulWolfEntity> extends TintedAgeableModel<
       this.field_228299_l_.rotateAngleZ = entityIn.getShakeAngle(partialTick, -0.2F);
    }
 
-   public void render(T entityIn, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
+   public void setRotationAngles(T entityIn, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
       this.head.rotateAngleX = headPitch * ((float)Math.PI / 180F);
       this.head.rotateAngleY = netHeadYaw * ((float)Math.PI / 180F);
       this.tail.rotateAngleX = ageInTicks;

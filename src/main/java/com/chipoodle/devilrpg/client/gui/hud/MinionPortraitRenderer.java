@@ -15,6 +15,7 @@ import com.chipoodle.devilrpg.entity.SoulBearEntity;
 import com.chipoodle.devilrpg.entity.SoulWolfEntity;
 import com.chipoodle.devilrpg.entity.SoulWispEntity;
 import com.chipoodle.devilrpg.init.ModEntityTypes;
+import com.mojang.blaze3d.matrix.MatrixStack;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.player.ClientPlayerEntity;
@@ -54,7 +55,7 @@ public class MinionPortraitRenderer extends AbstractGui {
 		mc = Minecraft.getInstance();
 	}
 
-	public void renderPortraits(int screenWidth, int screenHeight) {
+	public void renderPortraits(MatrixStack matrixStack, int screenWidth, int screenHeight) {
 		PlayerEntity player = mc.player;
 		LazyOptional<IBaseSkillCapability> skillCap = mc.player.getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
 		LazyOptional<IBaseMinionCapability> minionCap = player.getCapability(PlayerMinionCapabilityProvider.MINION_CAP);
@@ -74,7 +75,7 @@ public class MinionPortraitRenderer extends AbstractGui {
 			SoulWolfEntity h = (SoulWolfEntity) minionCap.map(m -> m.getTameableByUUID(wolfKey, player.world))
 					.orElse(new SoulWolfEntity(ModEntityTypes.SOUL_WOLF.get(), mc.player.world));
 			if (h.getOwner() != null) {
-				renderEntityPortrait(i++, h.getHealth(), h.getMaxHealth(), soulwolfPortrait, h);
+				renderEntityPortrait(matrixStack, i++, h.getHealth(), h.getMaxHealth(), soulwolfPortrait, h);
 			}
 		}
 
@@ -82,7 +83,7 @@ public class MinionPortraitRenderer extends AbstractGui {
 			SoulBearEntity h = (SoulBearEntity) minionCap.map(m -> m.getTameableByUUID(bearKey, player.world))
 					.orElse(new SoulBearEntity(ModEntityTypes.SOUL_BEAR.get(), mc.player.world));
 			if (h.getOwner() != null) {
-				renderEntityPortrait(i++, h.getHealth(), h.getMaxHealth(), soulbearPortrait, h);
+				renderEntityPortrait(matrixStack, i++, h.getHealth(), h.getMaxHealth(), soulbearPortrait, h);
 			}
 		}
 
@@ -90,12 +91,12 @@ public class MinionPortraitRenderer extends AbstractGui {
 			SoulWispEntity h = (SoulWispEntity) minionCap.map(m -> m.getTameableByUUID(wispKey, player.world))
 					.orElse(ModEntityTypes.WISP.get().create(mc.player.world));
 			if (h.getOwner() != null) {
-				renderEntityPortrait(i++, h.getHealth(), h.getMaxHealth(), wispPortrait, h);
+				renderEntityPortrait(matrixStack, i++, h.getHealth(), h.getMaxHealth(), wispPortrait, h);
 			}
 		}
 	}
 
-	private void renderEntityPortrait(int i, float health, float maxHealth, ResourceLocation overlayBar,
+	private void renderEntityPortrait(MatrixStack matrixStack, int i, float health, float maxHealth, ResourceLocation overlayBar,
 			LivingEntity entity) {
 		/* This object draws text using the Minecraft font */
 		FontRenderer fr = mc.fontRenderer;
@@ -144,14 +145,14 @@ public class MinionPortraitRenderer extends AbstractGui {
 		 *
 		 * This line draws the background of the custom bar
 		 */
-		blit(0, 0, 0, 0, BAR_WIDTH, BAR_HEIGHT);
+		blit(matrixStack, 0, 0, 0, 0, BAR_WIDTH, BAR_HEIGHT);
 
 		/*
 		 * This line draws the outline effect that corresponds to how much armor the
 		 * player has. I slide the right-most side of the rectangle using the player's
 		 * armor value.
 		 */
-		blit(0, 0, 0, BAR_HEIGHT, (int) (BAR_WIDTH * (entity.getTotalArmorValue() / 20f)), BAR_HEIGHT);
+		blit(matrixStack, 0, 0, 0, BAR_HEIGHT, (int) (BAR_WIDTH * (entity.getTotalArmorValue() / 20f)), BAR_HEIGHT);
 
 		/* This part draws the inside of the bar, which starts 1 pixel right and down */
 		GL11.glPushMatrix();
@@ -208,13 +209,13 @@ public class MinionPortraitRenderer extends AbstractGui {
 		final int WITHER_TEXTURE_U = BAR_WIDTH + 3; // brown texels
 
 		if (entity.isPotionActive(Effects.WITHER)) {
-			blit(0, 0, WITHER_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
+			blit(matrixStack, 0, 0, WITHER_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
 		} else if (entity.isPotionActive(Effects.POISON)) {
-			blit(0, 0, POISON_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
+			blit(matrixStack, 0, 0, POISON_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
 		} else if (entity.isPotionActive(Effects.REGENERATION)) {
-			blit(0, 0, REGEN_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
+			blit(matrixStack, 0, 0, REGEN_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
 		} else {
-			blit(0, 0, NORMAL_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
+			blit(matrixStack, 0, 0, NORMAL_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
 		}
 		GL11.glPopMatrix();
 
@@ -236,13 +237,13 @@ public class MinionPortraitRenderer extends AbstractGui {
 		if (absorptionAmount > 0) {
 
 			/* Draw the shadow string */
-			fr.drawString(s, -fr.getStringWidth(s) + 1, 2, 0x5A2B00);
+			fr.drawString(matrixStack, s, -fr.getStringWidth(s) + 1, 2, 0x5A2B00);
 
 			/* Draw the actual string */
-			fr.drawString(s, -fr.getStringWidth(s), 1, 0xFFD200);
+			fr.drawString(matrixStack, s, -fr.getStringWidth(s), 1, 0xFFD200);
 		} else {
-			fr.drawString(s, -fr.getStringWidth(s) + 1, 2, 0x4D0000);
-			fr.drawString(s, -fr.getStringWidth(s), 1, 0xFFFFFF);
+			fr.drawString(matrixStack, s, -fr.getStringWidth(s) + 1, 2, 0x4D0000);
+			fr.drawString(matrixStack, s, -fr.getStringWidth(s), 1, 0xFFFFFF);
 		}
 		GL11.glPopMatrix();
 

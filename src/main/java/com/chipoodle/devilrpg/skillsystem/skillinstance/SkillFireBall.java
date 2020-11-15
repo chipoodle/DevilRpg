@@ -6,13 +6,10 @@ import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.entity.SoulFireBallEntity;
 import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
 import com.chipoodle.devilrpg.util.SkillEnum;
-import com.chipoodle.devilrpg.util.TargetUtils;
 
-import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.SoundCategory;
 import net.minecraft.util.SoundEvents;
-import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
 public class SkillFireBall implements ISkillContainer {
@@ -37,7 +34,7 @@ public class SkillFireBall implements ISkillContainer {
 			worldIn.playSound((PlayerEntity)null, playerIn.getPosX(), playerIn.getPosY(), playerIn.getPosZ(), SoundEvents.ENTITY_SNOWBALL_THROW, SoundCategory.NEUTRAL, 0.5F, 0.4F / (random.nextFloat() * 0.4F + 0.8F));
 			SoulFireBallEntity snowballentity = new SoulFireBallEntity(worldIn, playerIn);
 			snowballentity.updateLevel(playerIn);
-			snowballentity.shoot(playerIn, playerIn.rotationPitch, playerIn.rotationYaw, 0.0F, 1.5F, 1.0F);
+			snowballentity.shoot(playerIn.rotationPitch, playerIn.rotationYaw, 0.0F, 1.5F, 1.0F);
 	        worldIn.addEntity(snowballentity);
 		}
 	}

@@ -23,10 +23,7 @@ run
 
 # Files from Forge MDK
 forge*changelog.txt
-/saves/
-/logs/
-/crash-reports/
+saves
 /options.txt
 /servers.dat
-/realms_persistence.json
-/usercache.json
+/.gitattributes
