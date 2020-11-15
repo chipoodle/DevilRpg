@@ -28,6 +28,7 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.MobEntity;
 import net.minecraft.entity.Pose;
 import net.minecraft.entity.SpawnReason;
+import net.minecraft.entity.ai.attributes.AttributeModifierMap;
 import net.minecraft.entity.ai.attributes.Attributes;
 import net.minecraft.entity.ai.goal.FollowOwnerGoal;
 import net.minecraft.entity.ai.goal.FollowParentGoal;
@@ -137,6 +138,15 @@ public class SoulBearEntity extends TameableEntity
 		this.targetSelector.addGoal(5, new NearestAttackableTargetGoal<>(this, MobEntity.class, false));
 		this.targetSelector.addGoal(8, new ResetAngerGoal<>(this, true));
 
+	}
+	
+	public static AttributeModifierMap.MutableAttribute setAttributes() {
+		return MobEntity.func_233666_p_().
+				createMutableAttribute(Attributes.MOVEMENT_SPEED, (double) 0.3F)
+				.createMutableAttribute(Attributes.MAX_HEALTH, 8.0D)
+				.createMutableAttribute(Attributes.FOLLOW_RANGE, 16.0D)
+				.createMutableAttribute(Attributes.ATTACK_DAMAGE, 2.0D)
+				.createMutableAttribute(Attributes.ARMOR, 0.35D);
 	}
 
 	public void updateLevel(PlayerEntity owner) {
@@ -520,11 +530,6 @@ public class SoulBearEntity extends TameableEntity
 		return 0;
 	}
 
-	@Override
-	public boolean isCharged() {
-		return false;
-	}
-
 	public void func_230258_H__() {
 		this.setAngerTime(field_234217_by_.getRandomWithinRange(this.rand));
 	}
@@ -548,5 +553,10 @@ public class SoulBearEntity extends TameableEntity
 	@Override
 	public SoulBearEntity func_241840_a(ServerWorld p_241840_1_, AgeableEntity p_241840_2_) {
 		return ModEntityTypes.SOUL_BEAR.get().create(p_241840_1_);
+	}
+	
+	@Override
+	public boolean isCharged() {
+		return true;
 	}
 }

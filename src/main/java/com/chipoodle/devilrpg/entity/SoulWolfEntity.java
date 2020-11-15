@@ -13,6 +13,7 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.IChargeableMob;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.MobEntity;
+import net.minecraft.entity.ai.attributes.AttributeModifierMap;
 import net.minecraft.entity.ai.attributes.Attributes;
 import net.minecraft.entity.ai.goal.FollowOwnerGoal;
 import net.minecraft.entity.ai.goal.HurtByTargetGoal;
@@ -59,10 +60,14 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity, IChargeab
 	protected void registerGoals() {
 		this.goalSelector.addGoal(1, new SwimGoal(this));
 		this.goalSelector.addGoal(2, new SitGoal(this));
-		this.goalSelector.addGoal(3, new SoulWolfEntity.AvoidEntityGoal<VillagerEntity>(this, VillagerEntity.class, 24.0F, 1.5D, 1.5D));
-		this.goalSelector.addGoal(3, new SoulWolfEntity.AvoidEntityGoal<LlamaEntity>(this, LlamaEntity.class, 24.0F, 1.5D, 1.5D));
-		this.goalSelector.addGoal(3, new SoulWolfEntity.AvoidEntityGoal<TurtleEntity>(this, TurtleEntity.class, 24.0F, 1.5D, 1.5D));
-		this.goalSelector.addGoal(3, new SoulWolfEntity.AvoidEntityGoal<IronGolemEntity>(this, IronGolemEntity.class, 24.0F, 1.5D, 1.5D));
+		this.goalSelector.addGoal(3,
+				new SoulWolfEntity.AvoidEntityGoal<VillagerEntity>(this, VillagerEntity.class, 24.0F, 1.5D, 1.5D));
+		this.goalSelector.addGoal(3,
+				new SoulWolfEntity.AvoidEntityGoal<LlamaEntity>(this, LlamaEntity.class, 24.0F, 1.5D, 1.5D));
+		this.goalSelector.addGoal(3,
+				new SoulWolfEntity.AvoidEntityGoal<TurtleEntity>(this, TurtleEntity.class, 24.0F, 1.5D, 1.5D));
+		this.goalSelector.addGoal(3,
+				new SoulWolfEntity.AvoidEntityGoal<IronGolemEntity>(this, IronGolemEntity.class, 24.0F, 1.5D, 1.5D));
 		this.goalSelector.addGoal(4, new LeapAtTargetGoal(this, 0.4F));
 		this.goalSelector.addGoal(5, new MeleeAttackGoal(this, 1.0D, true));
 		this.goalSelector.addGoal(6, new FollowOwnerGoal(this, 1.0D, 10.0F, 2.0F, false));
@@ -75,6 +80,15 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity, IChargeab
 		this.targetSelector.addGoal(3, (new HurtByTargetGoal(this)).setCallsForHelp());
 		this.targetSelector.addGoal(5, new NearestAttackableTargetGoal<>(this, MobEntity.class, false));
 		this.targetSelector.addGoal(8, new ResetAngerGoal<>(this, true));
+	}
+
+	public static AttributeModifierMap.MutableAttribute setAttributes() {
+		return MobEntity.func_233666_p_().
+				createMutableAttribute(Attributes.MOVEMENT_SPEED, (double) 0.3F)
+				.createMutableAttribute(Attributes.MAX_HEALTH, 8.0D)
+				.createMutableAttribute(Attributes.FOLLOW_RANGE, 16.0D)
+				.createMutableAttribute(Attributes.ATTACK_DAMAGE, 2.0D)
+				.createMutableAttribute(Attributes.ARMOR, 0.35D);
 	}
 
 	public void updateLevel(PlayerEntity owner) {
@@ -269,7 +283,7 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity, IChargeab
 
 	@Override
 	public boolean isCharged() {
-		return false;
+		return true;
 	}
 
 	@Override

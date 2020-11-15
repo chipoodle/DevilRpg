@@ -2,7 +2,6 @@ package com.chipoodle.devilrpg.init;
 
 import com.chipoodle.devilrpg.client.render.entity.SoulBearRenderer;
 import com.chipoodle.devilrpg.client.render.entity.SoulFireBallRenderer;
-import com.chipoodle.devilrpg.client.render.entity.SoulWispHumanoidRenderer;
 import com.chipoodle.devilrpg.client.render.entity.SoulWispRenderer;
 import com.chipoodle.devilrpg.client.render.entity.SoulWolfRenderer;
 

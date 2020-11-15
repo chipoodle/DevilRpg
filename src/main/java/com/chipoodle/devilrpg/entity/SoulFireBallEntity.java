@@ -30,7 +30,7 @@ import net.minecraftforge.fml.common.registry.IEntityAdditionalSpawnData;
 import net.minecraftforge.fml.network.FMLPlayMessages;
 import net.minecraftforge.fml.network.NetworkHooks;
 
-public class SoulFireBallEntity extends ProjectileItemEntity implements ISoulEntity{
+public class SoulFireBallEntity extends ProjectileItemEntity implements ISoulEntity {
 
 	private int puntosAsignados = 0;
 	private float damage = 0;
@@ -54,7 +54,7 @@ public class SoulFireBallEntity extends ProjectileItemEntity implements ISoulEnt
 	@OnlyIn(Dist.CLIENT)
 	private IParticleData makeParticle() {
 		ItemStack itemstack = this.func_213882_k();
-		//return (IParticleData) (itemstack.isEmpty() ? ParticleTypes.ITEM_SNOWBALL
+		// return (IParticleData) (itemstack.isEmpty() ? ParticleTypes.ITEM_SNOWBALL
 		return (IParticleData) (itemstack.isEmpty() ? ParticleTypes.CLOUD
 				: new ItemParticleData(ParticleTypes.ITEM, itemstack));
 	}
@@ -75,26 +75,31 @@ public class SoulFireBallEntity extends ProjectileItemEntity implements ISoulEnt
 	}
 
 	/**
-	 * Called when this EntityThrowable hits a block or entity.
+	 * Called when the arrow hits an entity
+	 */
+	protected void onEntityHit(EntityRayTraceResult p_213868_1_) {
+		super.onEntityHit(p_213868_1_);
+		Entity targetEntity = p_213868_1_.getEntity();
+		targetEntity.attackEntityFrom(DamageSource.causeThrownDamage(this, this.func_234616_v_()), (float) damage / 6);
+		if (targetEntity instanceof LivingEntity) {
+			LivingEntity livingEntity = (LivingEntity) targetEntity;
+			EffectInstance pri = new EffectInstance(Effects.SLOWNESS, puntosAsignados * 6,
+					getPotenciaPocion(puntosAsignados), false, true);
+			if (livingEntity.isPotionApplicable(pri)) {
+				livingEntity.addPotionEffect(pri);
+			}
+		}
+	}
+
+	/**
+	 * Called when this EntityFireball hits a block or entity.
 	 */
 	protected void onImpact(RayTraceResult result) {
-		if (result.getType() == RayTraceResult.Type.ENTITY) {
-			Entity targetEntity = ((EntityRayTraceResult) result).getEntity();
-			targetEntity.attackEntityFrom(DamageSource.causeThrownDamage(this, this.func_234616_v_()), (float) damage/6);
-			if(targetEntity instanceof LivingEntity) {
-				LivingEntity livingEntity = (LivingEntity) targetEntity;
-				EffectInstance pri = new EffectInstance(Effects.SLOWNESS, puntosAsignados*6, getPotenciaPocion(puntosAsignados), false, true);
-				if(livingEntity.isPotionApplicable(pri)) {
-					livingEntity.addPotionEffect(pri);
-				}				
-			}		
-		}
-
+		super.onImpact(result);
 		if (!this.world.isRemote) {
 			this.world.setEntityState(this, (byte) 3);
 			this.remove();
 		}
-
 	}
 
 	public void updateLevel(PlayerEntity owner) {
