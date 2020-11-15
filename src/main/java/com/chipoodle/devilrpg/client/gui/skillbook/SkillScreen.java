@@ -17,11 +17,11 @@ import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.screen.ReadBookScreen;
 import net.minecraft.client.gui.widget.button.Button;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.ITextProperties;
 import net.minecraft.util.text.StringTextComponent;
 import net.minecraftforge.api.distmarker.Dist;
@@ -43,8 +43,7 @@ public class SkillScreen extends BaseBookScreen {
 		SKILL_RESOURCES.put(SkillEnum.SUMMON_SOUL_BEAR, new ResourceLocation(IMG_LOCATION + "grizzly-bt.gif"));
 		SKILL_RESOURCES.put(SkillEnum.FIREBALL, new ResourceLocation(IMG_LOCATION + "moltenboulder-bt.gif"));
 		SKILL_RESOURCES.put(SkillEnum.SUMMON_WISP_HEALTH, new ResourceLocation(IMG_LOCATION + "oaksage-bt.gif"));
-		SKILL_RESOURCES.put(SkillEnum.SUMMON_WISP_SPEED,
-				new ResourceLocation(IMG_LOCATION + "wolverineheart-bt.gif"));
+		SKILL_RESOURCES.put(SkillEnum.SUMMON_WISP_SPEED, new ResourceLocation(IMG_LOCATION + "wolverineheart-bt.gif"));
 		SKILL_RESOURCES.put(SkillEnum.TRANSFORM_WEREWOLF, new ResourceLocation(IMG_LOCATION + "werewolf-bt.gif"));
 		BOOK_TEXTURES = new ResourceLocation(IMG_LOCATION + "book_cover.png");
 	}
@@ -159,7 +158,7 @@ public class SkillScreen extends BaseBookScreen {
 		HashMap<SkillEnum, Integer> maxSkillsPoints = skillCap.map(x -> x.getMaxSkillsPoints()).orElse(null);
 		if (!skillButtonList.isEmpty()) {
 			skillButtonList.stream().forEach(x -> {
-				x.visible = this.currPage == x.getPageBelonging();
+				x.visible = this.getCurrPage() == x.getPageBelonging();
 				if (x.visible) {
 					x.setDrawnSkillLevel(skillsPoints.get(x.getSkillName()));
 					x.active = skillsPoints.get(x.getSkillName()) < maxSkillsPoints.get(x.getSkillName())
@@ -170,19 +169,20 @@ public class SkillScreen extends BaseBookScreen {
 
 		if (!powerButtonList.isEmpty())
 			powerButtonList.stream()
-					.forEach(x -> x.visible = this.currPage == x.getPageBelonging() || x.getPageBelonging() == 0);
+					.forEach(x -> x.visible = this.getCurrPage() == x.getPageBelonging() || x.getPageBelonging() == 0);
 	}
 
 	@Override
 	public void render(MatrixStack matrixStack, int parWidth, int parHeight, float p_73863_3_) {
-		super.render(parWidth, parHeight, p_73863_3_);
+		super.render(matrixStack, parWidth, parHeight, p_73863_3_);
 
 		int offsetFromScreenLeft = (this.width - 192) / 2;
 
 		int unspentPoints = expCap.map(y -> y.getUnspentPoints()).orElse(-1);
 		if (unspentPoints != 0) {
 			String s = "Unspent: " + unspentPoints;
-			int widthOfString = this.getStringWidth(s);
+			FontRenderer fontRenderer = minecraft.fontRenderer;
+			int widthOfString = fontRenderer.getStringWidth(s);
 			float textPositionX = offsetFromScreenLeft - widthOfString + bookImageWidth - 44;
 			float textPositionY = 16.0F;
 			this.font.drawString(matrixStack, s, textPositionX, textPositionY, 0);
@@ -251,7 +251,7 @@ public class SkillScreen extends BaseBookScreen {
 					HashMap<PowerEnum, SkillEnum> powerNames = skillCap.map(x -> x.getSkillsNameOfPowers())
 							.orElse(null);
 					powerNames.put((PowerEnum) copy.getSkillName(), (SkillEnum) skillButtonApretado.getSkillName());
-					skillCap.ifPresent(x -> x.setSkillsNameOfPowers(powerNames,player));
+					skillCap.ifPresent(x -> x.setSkillsNameOfPowers(powerNames, player));
 				}
 				flushPressedButton();
 			}
@@ -282,7 +282,7 @@ public class SkillScreen extends BaseBookScreen {
 		Integer e = skillsPoints.get(((CustomGuiButton) pressedButton).getSkillName());
 		e += expCap.map(x -> x.consumePoint()).orElse(0);
 		skillsPoints.put(skilEnum, e);
-		skillCap.ifPresent(x -> x.setSkillsPoints(skillsPoints,player));
+		skillCap.ifPresent(x -> x.setSkillsPoints(skillsPoints, player));
 		updateButtons();
 	}
 

@@ -7,8 +7,10 @@ import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
+import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.systems.RenderSystem;
 
+import net.minecraft.client.gui.DialogTexts;
 import net.minecraft.client.gui.RenderComponentsUtil;
 import net.minecraft.client.gui.chat.NarratorChatListener;
 import net.minecraft.client.gui.screen.ReadBookScreen;
@@ -22,10 +24,13 @@ import net.minecraft.item.Items;
 import net.minecraft.item.WrittenBookItem;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.nbt.ListNBT;
+import net.minecraft.util.IReorderingProcessor;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.text.ITextComponent;
+import net.minecraft.util.text.ITextProperties;
 import net.minecraft.util.text.StringTextComponent;
+import net.minecraft.util.text.Style;
 import net.minecraft.util.text.TextFormatting;
 import net.minecraft.util.text.TranslationTextComponent;
 import net.minecraft.util.text.event.ClickEvent;
@@ -42,45 +47,39 @@ public class BaseBookScreen extends Screen {
 			return 0;
 		}
 
-		/**
-		 * Gets the text from the supplied page number
-		 */
-		public ITextComponent iGetPageText(int pageNum) {
-			return new StringTextComponent("");
+		public ITextProperties func_230456_a_(int p_230456_1_) {
+			return ITextProperties.field_240651_c_;
 		}
 	};
-	// public static final ResourceLocation BOOK_TEXTURES = new
-	// ResourceLocation("textures/gui/book.png");
 	public static ResourceLocation BOOK_TEXTURES = new ResourceLocation("textures/gui/book.png");
-	
 	private ReadBookScreen.IBookInfo bookInfo;
-	protected int currPage;
-	protected int cachedPage = -1;
+	private int currPage;
+	public int getCurrPage() {
+		return currPage;
+	}
+
 	/** Holds a copy of the page text, split into page width lines */
-	private List<ITextComponent> cachedPageLines = Collections.emptyList();
+	private List<IReorderingProcessor> cachedPageLines = Collections.emptyList();
+	private int cachedPage = -1;
+	private ITextComponent field_243344_s = StringTextComponent.EMPTY;
 	private ChangePageButton buttonNextPage;
 	private ChangePageButton buttonPreviousPage;
 	/** Determines if a sound is played when the page is turned */
 	private final boolean pageTurnSounds;
-	private final int bookImageHeight = 192;
-	private final int bookImageWidth = 192;
-	private int changePagePageBttnY = 163;
-	private int changePagePageBttnXOffsetLeft = 30;
-	private int changePagePageBttnXOffsetRight = 129;
 
 	public BaseBookScreen(ReadBookScreen.IBookInfo bookInfoIn) {
-		this(bookInfoIn, true);
-	}
+		      this(bookInfoIn, true);
+		   }
 
 	public BaseBookScreen() {
-		this(EMPTY_BOOK, false);
-	}
+		      this(EMPTY_BOOK, false);
+		   }
 
 	private BaseBookScreen(ReadBookScreen.IBookInfo bookInfoIn, boolean pageTurnSoundsIn) {
-		super(NarratorChatListener.EMPTY);
-		this.bookInfo = bookInfoIn;
-		this.pageTurnSounds = pageTurnSoundsIn;
-	}
+		      super(NarratorChatListener.EMPTY);
+		      this.bookInfo = bookInfoIn;
+		      this.pageTurnSounds = pageTurnSoundsIn;
+		   }
 
 	public void func_214155_a(ReadBookScreen.IBookInfo p_214155_1_) {
 		this.bookInfo = p_214155_1_;
@@ -119,26 +118,24 @@ public class BaseBookScreen extends Screen {
 	}
 
 	protected void addDoneButton() {
-		this.addButton(new Button(this.width / 2 - 100, 196, 200, 20, I18n.format("gui.done"), (p_214161_1_) -> {
+		this.addButton(new Button(this.width / 2 - 100, 196, 200, 20, DialogTexts.GUI_DONE, (p_214161_1_) -> {
 			this.minecraft.displayGuiScreen((Screen) null);
 		}));
 	}
 
 	protected void addChangePageButtons() {
-		int i = (this.width - bookImageWidth) / 2;
+		int i = (this.width - 192) / 2;
 		int j = 2;
-		this.buttonNextPage = this.addButton(
-				new ChangePageButton(i + changePagePageBttnXOffsetRight, changePagePageBttnY, true, (p_214159_1_) -> {
-					this.nextPage();
-				}, this.pageTurnSounds));
-		this.buttonPreviousPage = this.addButton(
-				new ChangePageButton(i + changePagePageBttnXOffsetLeft, changePagePageBttnY, false, (p_214158_1_) -> {
-					this.previousPage();
-				}, this.pageTurnSounds));
+		this.buttonNextPage = this.addButton(new ChangePageButton(i + 116, 159, true, (p_214159_1_) -> {
+			this.nextPage();
+		}, this.pageTurnSounds));
+		this.buttonPreviousPage = this.addButton(new ChangePageButton(i + 43, 159, false, (p_214158_1_) -> {
+			this.previousPage();
+		}, this.pageTurnSounds));
 		this.updateButtons();
 	}
 
-	protected int getPageCount() {
+	private int getPageCount() {
 		return this.bookInfo.getPageCount();
 	}
 
@@ -169,11 +166,11 @@ public class BaseBookScreen extends Screen {
 		this.buttonPreviousPage.visible = this.currPage > 0;
 	}
 
-	public boolean keyPressed(int p_keyPressed_1_, int p_keyPressed_2_, int p_keyPressed_3_) {
-		if (super.keyPressed(p_keyPressed_1_, p_keyPressed_2_, p_keyPressed_3_)) {
+	public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+		if (super.keyPressed(keyCode, scanCode, modifiers)) {
 			return true;
 		} else {
-			switch (p_keyPressed_1_) {
+			switch (keyCode) {
 			case 266:
 				this.buttonPreviousPage.onPress();
 				return true;
@@ -186,67 +183,51 @@ public class BaseBookScreen extends Screen {
 		}
 	}
 
-	public void render(int p_render_1_, int p_render_2_, float p_render_3_) {
-		
-		
-		RenderSystem.pushMatrix();
-		this.renderBackground();
+	public void render(MatrixStack matrixStack, int mouseX, int mouseY, float partialTicks) {
+		this.renderBackground(matrixStack);
 		RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
 		this.minecraft.getTextureManager().bindTexture(BOOK_TEXTURES);
-		int offsetFromScreenLeft = (this.width - 192) / 2;
+		int i = (this.width - 192) / 2;
 		int j = 2;
-		this.blit(offsetFromScreenLeft, 2, 0, 0, bookImageWidth, bookImageHeight);
+		this.blit(matrixStack, i, 2, 0, 0, 192, 192);
 		if (this.cachedPage != this.currPage) {
-			ITextComponent itextcomponent = this.bookInfo.getPageText(this.currPage);
-			this.cachedPageLines = RenderComponentsUtil.splitText(itextcomponent, 114, this.font, true, true);
+			ITextProperties itextproperties = this.bookInfo.func_238806_b_(this.currPage);
+			this.cachedPageLines = this.font.trimStringToWidth(itextproperties, 114);
+			this.field_243344_s = new TranslationTextComponent("book.pageIndicator", this.currPage + 1,
+					Math.max(this.getPageCount(), 1));
 		}
+
 		this.cachedPage = this.currPage;
-
-		/* Page number / total pages */
-		/*
-		 * String s = I18n.format("book.pageIndicator", this.currPage + 1,
-		 * Math.max(this.getPageCount(), 1)); int widthOfString =
-		 * this.getStringWidth(s); float textPositionX = offsetFromScreenLeft -
-		 * widthOfString + bookImageWidth - 44; float textPositionY = 18.0F;
-		 * this.font.drawString(s, textPositionX, textPositionY, 0);
-		 */
-
-		/* Titulo */
+		int i1 = this.font.getStringPropertyWidth(this.field_243344_s);
+		this.font.func_243248_b(matrixStack, this.field_243344_s, (float) (i - i1 + 192 - 44), 18.0F, 0);
 		int k = Math.min(128 / 9, this.cachedPageLines.size());
+
 		for (int l = 0; l < k; ++l) {
-			int offsetFromScreenUp = 16;
-			ITextComponent itextcomponent1 = this.cachedPageLines.get(l);
-			this.font.drawString(itextcomponent1.getFormattedText(), (float) (offsetFromScreenLeft + 36),
-					(float) (offsetFromScreenUp + l * 9), 0);
+			IReorderingProcessor ireorderingprocessor = this.cachedPageLines.get(l);
+			this.font.func_238422_b_(matrixStack, ireorderingprocessor, (float) (i + 36), (float) (32 + l * 9), 0);
 		}
 
-		ITextComponent itextcomponent2 = this.func_214154_c((double) p_render_1_, (double) p_render_2_);
-		if (itextcomponent2 != null) {
-			this.renderComponentHoverEffect(itextcomponent2, p_render_1_, p_render_2_);
+		Style style = this.func_238805_a_((double) mouseX, (double) mouseY);
+		if (style != null) {
+			this.renderComponentHoverEffect(matrixStack, style, mouseX, mouseY);
 		}
-		RenderSystem.popMatrix();
-		super.render(p_render_1_, p_render_2_, p_render_3_);
 
+		super.render(matrixStack, mouseX, mouseY, partialTicks);
 	}
 
-	protected int getStringWidth(String stringPageIndicator) {
-		return this.font.getStringWidth(
-				this.font.getBidiFlag() ? this.font.bidiReorder(stringPageIndicator) : stringPageIndicator);
-	}
-
-	public boolean mouseClicked(double p_mouseClicked_1_, double p_mouseClicked_3_, int p_mouseClicked_5_) {
-		if (p_mouseClicked_5_ == 0) {
-			ITextComponent itextcomponent = this.func_214154_c(p_mouseClicked_1_, p_mouseClicked_3_);
-			if (itextcomponent != null && this.handleComponentClicked(itextcomponent)) {
+	public boolean mouseClicked(double mouseX, double mouseY, int button) {
+		if (button == 0) {
+			Style style = this.func_238805_a_(mouseX, mouseY);
+			if (style != null && this.handleComponentClicked(style)) {
 				return true;
 			}
 		}
 
-		return super.mouseClicked(p_mouseClicked_1_, p_mouseClicked_3_, p_mouseClicked_5_);
+		return super.mouseClicked(mouseX, mouseY, button);
 	}
 
-	public boolean handleComponentClicked(ITextComponent p_handleComponentClicked_1_) {
-		ClickEvent clickevent = p_handleComponentClicked_1_.getStyle().getClickEvent();
+	public boolean handleComponentClicked(Style style) {
+		ClickEvent clickevent = style.getClickEvent();
 		if (clickevent == null) {
 			return false;
 		} else if (clickevent.getAction() == ClickEvent.Action.CHANGE_PAGE) {
@@ -255,11 +236,11 @@ public class BaseBookScreen extends Screen {
 			try {
 				int i = Integer.parseInt(s) - 1;
 				return this.showPage2(i);
-			} catch (Exception var5) {
+			} catch (Exception exception) {
 				return false;
 			}
 		} else {
-			boolean flag = super.handleComponentClicked(p_handleComponentClicked_1_);
+			boolean flag = super.handleComponentClicked(style);
 			if (flag && clickevent.getAction() == ClickEvent.Action.RUN_COMMAND) {
 				this.minecraft.displayGuiScreen((Screen) null);
 			}
@@ -269,31 +250,22 @@ public class BaseBookScreen extends Screen {
 	}
 
 	@Nullable
-	public ITextComponent func_214154_c(double p_214154_1_, double p_214154_3_) {
-		if (this.cachedPageLines == null) {
+	public Style func_238805_a_(double p_238805_1_, double p_238805_3_) {
+		if (this.cachedPageLines.isEmpty()) {
 			return null;
 		} else {
-			int i = MathHelper.floor(p_214154_1_ - (double) ((this.width - 192) / 2) - 36.0D);
-			int j = MathHelper.floor(p_214154_3_ - 2.0D - 30.0D);
+			int i = MathHelper.floor(p_238805_1_ - (double) ((this.width - 192) / 2) - 36.0D);
+			int j = MathHelper.floor(p_238805_3_ - 2.0D - 30.0D);
 			if (i >= 0 && j >= 0) {
 				int k = Math.min(128 / 9, this.cachedPageLines.size());
 				if (i <= 114 && j < 9 * k + k) {
 					int l = j / 9;
 					if (l >= 0 && l < this.cachedPageLines.size()) {
-						ITextComponent itextcomponent = this.cachedPageLines.get(l);
-						int i1 = 0;
-
-						for (ITextComponent itextcomponent1 : itextcomponent) {
-							if (itextcomponent1 instanceof StringTextComponent) {
-								i1 += this.minecraft.fontRenderer.getStringWidth(itextcomponent1.getFormattedText());
-								if (i1 > i) {
-									return itextcomponent1;
-								}
-							}
-						}
+						IReorderingProcessor ireorderingprocessor = this.cachedPageLines.get(l);
+						return this.minecraft.fontRenderer.getCharacterManager().func_243239_a(ireorderingprocessor, i);
+					} else {
+						return null;
 					}
-
-					return null;
 				} else {
 					return null;
 				}
@@ -321,17 +293,11 @@ public class BaseBookScreen extends Screen {
 		 */
 		int getPageCount();
 
-		/**
-		 * Gets the text from the supplied page number
-		 */
-		ITextComponent iGetPageText(int pageNum);
+		ITextProperties func_230456_a_(int p_230456_1_);
 
-		/**
-		 * Gets the text from the supplied page number
-		 */
-		default ITextComponent getPageText(int pageNum) {
-			return (ITextComponent) (pageNum >= 0 && pageNum < this.getPageCount() ? this.iGetPageText(pageNum)
-					: new StringTextComponent(""));
+		default ITextProperties func_238806_b_(int p_238806_1_) {
+			return p_238806_1_ >= 0 && p_238806_1_ < this.getPageCount() ? this.func_230456_a_(p_238806_1_)
+					: ITextProperties.field_240651_c_;
 		}
 
 		static ReadBookScreen.IBookInfo func_216917_a(ItemStack p_216917_0_) {
@@ -356,10 +322,8 @@ public class BaseBookScreen extends Screen {
 
 		private static List<String> func_216919_b(ItemStack p_216919_0_) {
 			CompoundNBT compoundnbt = p_216919_0_.getTag();
-			@SuppressWarnings("unchecked")
-			List<String> list = (List<String>) (compoundnbt != null ? ReadBookScreen.nbtPagesToStrings(compoundnbt)
+			return (List<String>) (compoundnbt != null ? ReadBookScreen.nbtPagesToStrings(compoundnbt)
 					: ImmutableList.of());
-			return list;
 		}
 
 		/**
@@ -369,11 +333,8 @@ public class BaseBookScreen extends Screen {
 			return this.pages.size();
 		}
 
-		/**
-		 * Gets the text from the supplied page number
-		 */
-		public ITextComponent iGetPageText(int pageNum) {
-			return new StringTextComponent(this.pages.get(pageNum));
+		public ITextProperties func_230456_a_(int p_230456_1_) {
+			return ITextProperties.func_240652_a_(this.pages.get(p_230456_1_));
 		}
 	}
 
@@ -389,8 +350,8 @@ public class BaseBookScreen extends Screen {
 			CompoundNBT compoundnbt = stack.getTag();
 			return (List<String>) (compoundnbt != null && WrittenBookItem.validBookTagContents(compoundnbt)
 					? ReadBookScreen.nbtPagesToStrings(compoundnbt)
-					: ImmutableList.of((new TranslationTextComponent("book.invalid.tag"))
-							.applyTextStyle(TextFormatting.DARK_RED).getFormattedText()));
+					: ImmutableList.of(ITextComponent.Serializer.toJson(
+							(new TranslationTextComponent("book.invalid.tag")).mergeStyle(TextFormatting.DARK_RED))));
 		}
 
 		/**
@@ -400,22 +361,18 @@ public class BaseBookScreen extends Screen {
 			return this.pages.size();
 		}
 
-		/**
-		 * Gets the text from the supplied page number
-		 */
-		public ITextComponent iGetPageText(int pageNum) {
-			String s = this.pages.get(pageNum);
+		public ITextProperties func_230456_a_(int p_230456_1_) {
+			String s = this.pages.get(p_230456_1_);
 
 			try {
-				ITextComponent itextcomponent = ITextComponent.Serializer.fromJson(s);
-				if (itextcomponent != null) {
-					return itextcomponent;
+				ITextProperties itextproperties = ITextComponent.Serializer.getComponentFromJson(s);
+				if (itextproperties != null) {
+					return itextproperties;
 				}
-			} catch (Exception var4) {
-				;
+			} catch (Exception exception) {
 			}
 
-			return new StringTextComponent(s);
+			return ITextProperties.func_240652_a_(s);
 		}
 	}
 }
