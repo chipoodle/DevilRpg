@@ -87,7 +87,7 @@ public class ForgeEventSubscriber {
 
 		String message1 = String.format("Hello there, you have mana %f left.",
 				mana.map(x -> x.getMana()).orElse(Float.NaN));
-		player.sendMessage(new StringTextComponent(message1),player.getUniqueID());
+		player.sendMessage(new StringTextComponent(message1), player.getUniqueID());
 	}
 
 	@SubscribeEvent
@@ -172,11 +172,10 @@ public class ForgeEventSubscriber {
 		Minecraft mainThread = Minecraft.getInstance();
 		if (mana.isPresent()) {
 			if (!player.world.isRemote) {
-				mainThread.enqueue(new Runnable() {
-					public void run() {
-						ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> (ServerPlayerEntity) player),
-								new PlayerManaClientServerHandler(mana.map(x -> x.getNBTData()).orElse(null)));
-					}
+				Minecraft.getInstance().enqueue(() -> {
+					ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> (ServerPlayerEntity) player),
+							new PlayerManaClientServerHandler(mana.map(x -> x.getNBTData()).orElse(null)));
+
 				});
 			}
 
@@ -185,21 +184,21 @@ public class ForgeEventSubscriber {
 			if (!player.world.isRemote) {
 				mainThread.enqueue(new Runnable() {
 					public void run() {
-						skill.ifPresent(x->{
+						skill.ifPresent(x -> {
 							HashMap<String, UUID> attributeModifiers = x.getAttributeModifiers();
 							UUID hlthAttMod = attributeModifiers.get(Attributes.MAX_HEALTH.getAttributeName());
 							UUID spdAttMod = attributeModifiers.get(Attributes.MOVEMENT_SPEED.getAttributeName());
-							
-							if(hlthAttMod != null) {
-								DevilRpg.LOGGER.info("||-------------> removing health id: "+hlthAttMod);
+
+							if (hlthAttMod != null) {
+								DevilRpg.LOGGER.info("||-------------> removing health id: " + hlthAttMod);
 								player.getAttribute(Attributes.MAX_HEALTH).removeModifier(hlthAttMod);
 							}
-							if(spdAttMod!= null) {
+							if (spdAttMod != null) {
 								player.getAttribute(Attributes.MOVEMENT_SPEED).removeModifier(spdAttMod);
 							}
 							ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> (ServerPlayerEntity) player),
 									new PlayerSkillClientServerHandler(x.getNBTData()));
-						});		
+						});
 					}
 				});
 			}
@@ -219,37 +218,33 @@ public class ForgeEventSubscriber {
 
 		if (aux.isPresent()) {
 			if (!player.world.isRemote) {
-				mainThread.enqueue(new Runnable() {
-					public void run() {
-						aux.ifPresent(x -> x.setWerewolfAttack(false, player));
-						aux.ifPresent(x -> x.setWerewolfTransformation(false, player));
-						//player.getAttribute(SharedMonsterAttributes.MAX_HEALTH).removeAllModifiers();
-						//player.getAttribute(SharedMonsterAttributes.MOVEMENT_SPEED).removeAllModifiers();
-						// ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() ->
-						// (ServerPlayerEntity) player), new PlayerAuxiliarClientServerHandler(aux.map(x
-						// -> x.getNBTData()).orElse(null)));
-
-					}
+				Minecraft.getInstance().enqueue(() -> {
+					aux.ifPresent(x -> x.setWerewolfAttack(false, player));
+					aux.ifPresent(x -> x.setWerewolfTransformation(false, player));
+					// player.getAttribute(SharedMonsterAttributes.MAX_HEALTH).removeAllModifiers();
+					// player.getAttribute(SharedMonsterAttributes.MOVEMENT_SPEED).removeAllModifiers();
+					// ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() ->
+					// (ServerPlayerEntity) player), new PlayerAuxiliarClientServerHandler(aux.map(x
+					// -> x.getNBTData()).orElse(null)));
 				});
 			}
 		}
 
 		if (min.isPresent()) {
 			if (!player.world.isRemote) {
-				mainThread.enqueue(new Runnable() {
-					public void run() {
-						min.ifPresent(x -> {
-							x.removeAllSoulWolf(player);
-							x.removeAllSoulBear(player);
-							x.removeAllWisp(player);
-						});
+				Minecraft.getInstance().enqueue(() -> {
+					min.ifPresent(x -> {
+						x.removeAllSoulWolf(player);
+						x.removeAllSoulBear(player);
+						x.removeAllWisp(player);
+					});
 
-						/*
-						 * ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() ->
-						 * (ServerPlayerEntity) player), new PlayerMinionClientServerHandler(min.map(x
-						 * -> x.getNBTData()).orElse(null)));
-						 */
-					}
+					/*
+					 * ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() ->
+					 * (ServerPlayerEntity) player), new PlayerMinionClientServerHandler(min.map(x
+					 * -> x.getNBTData()).orElse(null)));
+					 */
+
 				});
 			}
 
@@ -271,7 +266,7 @@ public class ForgeEventSubscriber {
 		String message = String.format(
 				"You refreshed yourself in the bed. You recovered mana and you have %f mana left.",
 				mana.map(x -> x.getMaxMana()).orElse(Float.NaN));
-		player.sendMessage(new StringTextComponent(message),player.getUniqueID());
+		player.sendMessage(new StringTextComponent(message), player.getUniqueID());
 	}
 
 	@SubscribeEvent
@@ -301,7 +296,7 @@ public class ForgeEventSubscriber {
 	public static void entityInteract(PlayerInteractEvent.EntityInteract event) {
 		// event.getPlayer().sendMessage(new
 		// StringTextComponent("------>PlayerInteractEvent.EntityInteract::
-		// "+event.getTarget()));	
+		// "+event.getTarget()));
 	}
 
 	@SubscribeEvent
@@ -334,7 +329,7 @@ public class ForgeEventSubscriber {
 				x.setSwingingMainHand(!x.isSwingingMainHand(), event.getPlayer());
 			});
 		}
-		//event.setCanceled(true);
+		// event.setCanceled(true);
 	}
 
 	@SubscribeEvent
