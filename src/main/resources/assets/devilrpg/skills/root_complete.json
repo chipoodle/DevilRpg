@@ -1,0 +1,165 @@
+[
+    {
+        "id":"summoning:root2",
+        "display": {
+            "description": {
+                "text": "Form changing",
+                "color": "blue"
+            },
+            "icon": {
+                "item": "minecraft:stone"
+            },
+            "title": {
+                "text": "Form changing tree",
+                "color": "white"
+            },
+            "frame": "goal",
+            "background": "minecraft:textures/gui/advancements/backgrounds/stone.png"
+        },
+        "rewards": {
+            "function": "",
+            "experience": 1000
+        }
+    },
+    {
+        "id":"summoning:root",
+        "display": {
+            "description": {
+                "text": "Summoning spiritual animals",
+                "color": "blue"
+            },
+            "icon": {
+                "item": "minecraft:stone"
+            },
+            "title": {
+                "text": "Summon tree",
+                "color": "white"
+            },
+            "frame": "goal",
+            "background": "minecraft:textures/gui/advancements/backgrounds/stone.png"
+        },
+        "rewards": {
+            "function": "",
+            "experience": 1000
+        }
+    },
+    {
+        "id":"summoning:ach2",
+        "display": {
+            "description": "Summon up to three spiritual wolves to aid you in battle",
+            "title": "Summong wolf",
+            "icon": {
+                "item": "minecraft:glass_pane",
+                "minecraft:glass_panenbt": 0
+            }
+        },
+        "rewards": {},
+        "parent": "summoning:root"
+    },
+    {
+        "id":"summoning:ach3",
+        "display": {
+            "description": "Summon bear",
+            "title": "Summon a spiritual bear to aid you in battle",
+            "icon": {
+                "item": "minecraft:glass_pane",
+                "minecraft:glass_panenbt": 1
+            }
+        },
+        "rewards": {},
+        "parent": "summoning:root"
+    },
+    {
+        "id":"summoning:ach4",
+        "display": {
+            "description": "Summon Wisp",
+            "title": "Summon a forest wisp that bess you with the vitality of mother nature",
+            "icon": {
+                "item": "minecraft:glass_pane",
+                "minecraft:glass_panenbt": 2
+            }
+        },
+        "rewards": {},
+        "parent": "summoning:root"
+    },
+    {
+        "id":"summoning:ach5",
+        "display": {
+            "description": "a",
+            "title": "a",
+            "icon": {
+                "item": "minecraft:glass_pane",
+                "minecraft:glass_panenbt": 3
+            }
+        },
+        "rewards": {},
+        "parent": "summoning:ach2"
+    },
+    {
+        "id":"summoning:ach6",
+        "display": {
+            "description": "b",
+            "title": "b",
+            "icon": {
+                "item": "minecraft:glass_pane",
+                "minecraft:glass_panenbt": 4
+            }
+        },
+        "rewards": {},
+        "parent": "summoning:ach2"
+    },
+    {
+        "id":"summoning:ach7",
+        "display": {
+            "description": "c",
+            "title": "c",
+            "icon": {
+                "item": "minecraft:glass_pane",
+                "minecraft:glass_panenbt": 5
+            }
+        },
+        "rewards": {},
+        "parent": "summoning:ach3"
+    },
+    {
+        "id":"summoning:ach8",
+        "display": {
+            "description": "d",
+            "title": "d",
+            "icon": {
+                "item": "minecraft:glass_pane",
+                "minecraft:glass_panenbt": 7
+            }
+        },
+        "rewards": {
+            "experience": 1000
+        },
+        "parent": "summoning:ach3"
+    },
+    {
+        "id":"summoning:ach9",
+        "display": {
+            "description": "e",
+            "title": "e",
+            "icon": {
+                "item": "minecraft:glass_pane",
+                "minecraft:glass_panenbt": 8
+            }
+        },
+        "rewards": {},
+        "parent": "summoning:ach4"
+    },
+    {
+        "id":"summoning:ach10",
+        "display": {
+            "description": "f",
+            "title": "f",
+            "icon": {
+                "item": "minecraft:glass_pane",
+                "minecraft:glass_panenbt": 14
+            }
+        },
+        "rewards": {},
+        "parent": "summoning:ach4"
+    }
+]

@@ -22,7 +22,7 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 
 @OnlyIn(Dist.CLIENT)
 public class SoulWolfRenderer extends MobRenderer<SoulWolfEntity, SoulWolfModelHeart<SoulWolfEntity>> {
-	public static final ResourceLocation HEART_TEXTURES = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soul/soul_heart_red.png");
+	public static final ResourceLocation HEART_TEXTURES = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soul/soul_heart_white.png");
 	
 	public SoulWolfRenderer(EntityRendererManager renderManagerIn) {
 		super(renderManagerIn, new SoulWolfModelHeart<>(), 0.5F);
