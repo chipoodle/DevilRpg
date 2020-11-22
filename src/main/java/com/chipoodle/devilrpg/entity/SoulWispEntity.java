@@ -89,7 +89,7 @@ public class SoulWispEntity extends TameableEntity
 	protected static final double DISTANCIA_EFECTO = 20;
 	protected static final int DURATION_TICKS = 120;
 
-	//private ResourceLocation wispPortrait;
+	// private ResourceLocation wispPortrait;
 
 	public SoulWispEntity(EntityType<? extends SoulWispEntity> p_i225714_1_, World p_i225714_2_) {
 		super(p_i225714_1_, p_i225714_2_);
@@ -110,26 +110,24 @@ public class SoulWispEntity extends TameableEntity
 	}
 
 	protected void registerGoals() {
-		
-		 this.goalSelector.addGoal(0, new PanicGoal(this, 1.25D));
-		  this.goalSelector.addGoal(0, new SwimGoal(this));
-		  this.goalSelector.addGoal(2, new FollowOwnerGoal(this, 1.0D, 10.0F, 2.0F,
-		  false)); this.goalSelector.addGoal(2, new WaterAvoidingRandomFlyingGoal(this,1.0D)); 
-		  ////this.goalSelector.addGoal(3, new FollowMobGoal(this, 1.0D, 3.0F,7.0F)); 
-		  ////this.goalSelector.addGoal(5, new FollowParentGoal(this, 1.25D));
-		  this.goalSelector.addGoal(8, new SoulWispEntity.WanderGoal());
-		  this.goalSelector.addGoal(9, new SwimGoal(this));
-		 
+
+		this.goalSelector.addGoal(0, new PanicGoal(this, 1.25D));
+		this.goalSelector.addGoal(0, new SwimGoal(this));
+		this.goalSelector.addGoal(2, new FollowOwnerGoal(this, 1.0D, 10.0F, 2.0F, false));
+		this.goalSelector.addGoal(2, new WaterAvoidingRandomFlyingGoal(this, 1.0D));
+		//// this.goalSelector.addGoal(3, new FollowMobGoal(this, 1.0D, 3.0F,7.0F));
+		//// this.goalSelector.addGoal(5, new FollowParentGoal(this, 1.25D));
+		this.goalSelector.addGoal(8, new SoulWispEntity.WanderGoal());
+		this.goalSelector.addGoal(9, new SwimGoal(this));
+
 	}
-	
+
 	public static AttributeModifierMap.MutableAttribute setAttributes() {
-		return MobEntity.func_233666_p_().
-				createMutableAttribute(Attributes.MOVEMENT_SPEED, (double) 0.3F)
+		return MobEntity.func_233666_p_().createMutableAttribute(Attributes.MOVEMENT_SPEED, (double) 0.3F)
 				.createMutableAttribute(Attributes.FLYING_SPEED, 0.9F)
 				.createMutableAttribute(Attributes.MAX_HEALTH, 8.0D)
 				.createMutableAttribute(Attributes.FOLLOW_RANGE, 48.0D)
-				.createMutableAttribute(Attributes.ATTACK_DAMAGE, 2.0D)
-				.createMutableAttribute(Attributes.ARMOR, 0.15D);
+				.createMutableAttribute(Attributes.ATTACK_DAMAGE, 2.0D).createMutableAttribute(Attributes.ARMOR, 0.15D);
 	}
 
 	public void updateLevel(PlayerEntity owner, Effect efectoPrimario, Effect efectoSecundario, SkillEnum tipoWisp,
@@ -189,10 +187,10 @@ public class SoulWispEntity extends TameableEntity
 				p_226397_10_, MathHelper.lerp(p_226397_1_.rand.nextDouble(), p_226397_6_, p_226397_8_), 0.0D, 0.0D,
 				0.0D);
 	}
-	
+
 	protected void sendDebugPackets() {
 		super.sendDebugPackets();
-		//DebugPacketSender.func_229749_a_(this);
+		// DebugPacketSender.func_229749_a_(this);
 	}
 
 	/**
@@ -203,14 +201,11 @@ public class SoulWispEntity extends TameableEntity
 	public void livingTick() {
 		super.livingTick();
 		if (!this.world.isRemote) {
-			if (this.getOwnerId() == null || this.getOwner() == null || !this.getOwner().isAlive() || !this.isTamed())
-				this.attackEntityFrom(new MinionDeathDamageSource(""), Integer.MAX_VALUE);
-
 			if (this.world.getGameTime() % 80L == 0L && efectoPrimario != null && efectoSecundario != null) {
 				this.addEffectsToPlayers(puntosAsignados, efectoPrimario, efectoSecundario, esBeneficioso);
 			}
-			addToLivingTick(this);
 		}
+		addToLivingTick(this);
 	}
 
 	/**
@@ -370,7 +365,7 @@ public class SoulWispEntity extends TameableEntity
 		private Vector3d getRandomLocation() {
 			Vector3d vector3d;
 			vector3d = SoulWispEntity.this.getLook(0.0F);
-			//int i = 8;
+			// int i = 8;
 			Vector3d vector3d2 = RandomPositionGenerator.findAirTarget(SoulWispEntity.this, 8, 7, vector3d,
 					((float) Math.PI / 2F), 2, 1);
 			return vector3d2 != null ? vector3d2
@@ -428,7 +423,7 @@ public class SoulWispEntity extends TameableEntity
 
 	private void applyPrimaryEffect(Effect primaryEffect, int amplifierIn, List<LivingEntity> alliesList) {
 		for (LivingEntity entity : alliesList) {
-			EffectInstance pri = new EffectInstance(primaryEffect, DURATION_TICKS, amplifierIn, false, true);
+			EffectInstance pri = new EffectInstance(primaryEffect, DURATION_TICKS, amplifierIn, true, true);
 			EffectInstance active = entity.getActivePotionEffect(primaryEffect);
 			if (active == null || pri.getAmplifier() > active.getAmplifier()) {
 				entity.addPotionEffect(pri);
@@ -440,7 +435,7 @@ public class SoulWispEntity extends TameableEntity
 
 	private void applySecondaryEffect(Effect secondaryEffect, List<LivingEntity> alliesList) {
 		for (LivingEntity entity : alliesList) {
-			EffectInstance sec = new EffectInstance(secondaryEffect, DURATION_TICKS, 0, false, true);
+			EffectInstance sec = new EffectInstance(secondaryEffect, DURATION_TICKS, 0, true, true);
 			EffectInstance active = entity.getActivePotionEffect(secondaryEffect);
 			if (active == null || sec.getAmplifier() > active.getAmplifier()) {
 				entity.addPotionEffect(sec);

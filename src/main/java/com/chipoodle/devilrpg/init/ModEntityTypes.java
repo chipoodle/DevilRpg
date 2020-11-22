@@ -34,6 +34,7 @@ public final class ModEntityTypes {
 	public static final String SOUL_BEAR_NAME = "soul_bear";
 	public static final String WISP_NAME = "wisp";
 	public static final String SOUL_FIREBALL_NAME = "soul_fireball";
+	public static final String WEREWOLF_NAME = "werewolf";
 
 	public static final RegistryObject<EntityType<SoulWolfEntity>> SOUL_WOLF = ENTITY_TYPES.register(SOUL_WOLF_NAME,
 			() -> EntityType.Builder.<SoulWolfEntity>create(SoulWolfEntity::new, EntityClassification.CREATURE)
@@ -54,5 +55,4 @@ public final class ModEntityTypes {
 			() -> EntityType.Builder.<SoulFireBallEntity>create(SoulFireBallEntity::new, EntityClassification.MISC)
 			.size(EntityType.WITHER_SKULL.getWidth(), EntityType.WITHER_SKULL.getHeight())
 			.build(new ResourceLocation(DevilRpg.MODID, SOUL_FIREBALL_NAME).toString()));
-
 }

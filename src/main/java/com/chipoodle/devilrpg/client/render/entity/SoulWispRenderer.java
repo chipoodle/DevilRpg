@@ -17,7 +17,7 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 @OnlyIn(Dist.CLIENT)
 public class SoulWispRenderer extends MobRenderer<SoulWispEntity, SoulWispModelHeart<SoulWispEntity>> {
 	private static final ResourceLocation WISP_TEXTURES = new ResourceLocation(
-			DevilRpg.MODID + ":textures/entity/soul/soul_heart.png");
+			DevilRpg.MODID + ":textures/entity/soul/soul_heart_white.png");
 
 	public SoulWispRenderer(EntityRendererManager renderManagerIn) {
 		//super(renderManagerIn, new PlayerModel<SoulWispEntity>(0.0F, false), 0.5F);
@@ -43,6 +43,7 @@ public class SoulWispRenderer extends MobRenderer<SoulWispEntity, SoulWispModelH
 
 	@Override
 	protected void preRenderCallback(SoulWispEntity entityIn, MatrixStack matrixStackIn, float partialTickTime) {
+		//matrixStackIn.scale(x, y, z);
 		super.preRenderCallback(entityIn, matrixStackIn, partialTickTime);
 	}
 }

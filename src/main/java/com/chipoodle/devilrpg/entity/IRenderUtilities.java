@@ -26,7 +26,7 @@ public interface IRenderUtilities {
 					Collectors.toMap(Functions.identity(),dye->createColor(dye)));
 	
 	Map<DyeColor, float[]> DYE_TO_RGB_RED = 
-			Arrays.stream(DyeColor.values() ).collect(
+			Arrays.stream(reds).collect(
 					Collectors.toMap(Functions.identity(),dye->createColor(dye)));
 
 	
@@ -79,8 +79,8 @@ public interface IRenderUtilities {
 		int k = i % j;
 		int l = (i + 1) % j;
 		float f3 = ((float) (entitylivingbaseIn.ticksExisted % 25) + partialTicks) / 25.0F;
-		float[] afloat1 = DYE_TO_RGB_RED.get(DyeColor.byId(k));
-		float[] afloat2 = DYE_TO_RGB_RED.get(DyeColor.byId(l));
+		float[] afloat1 = DYE_TO_RGB_RED.get(reds[k]);
+		float[] afloat2 = DYE_TO_RGB_RED.get(reds[l]);
 		f = afloat1[0] * (1.0F - f3) + afloat2[0] * f3;
 		f1 = afloat1[1] * (1.0F - f3) + afloat2[1] * f3;
 		f2 = afloat1[2] * (1.0F - f3) + afloat2[2] * f3;

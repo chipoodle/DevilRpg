@@ -14,20 +14,30 @@ import com.chipoodle.devilrpg.capability.mana.IBaseManaCapability;
 import com.chipoodle.devilrpg.capability.mana.PlayerManaCapabilityProvider;
 import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
+import com.chipoodle.devilrpg.client.gui.hud.HealthBarRenderer;
 import com.chipoodle.devilrpg.client.gui.hud.ManaBarRenderer;
 import com.chipoodle.devilrpg.client.gui.hud.MinionPortraitRenderer;
-import com.chipoodle.devilrpg.client.gui.hud.HealthBarRenderer;
+import com.chipoodle.devilrpg.client.render.entity.layer.SoulWispGelLayer;
+import com.chipoodle.devilrpg.client.render.entity.layer.WerewolfLayer;
 import com.chipoodle.devilrpg.skillsystem.skillinstance.SkillShapeshiftWerewolf;
 import com.chipoodle.devilrpg.util.SkillEnum;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.entity.player.AbstractClientPlayerEntity;
 import net.minecraft.client.entity.player.ClientPlayerEntity;
+import net.minecraft.client.renderer.entity.PlayerRenderer;
+import net.minecraft.client.renderer.entity.layers.LayerRenderer;
+import net.minecraft.client.renderer.entity.model.PlayerModel;
+import net.minecraft.entity.EntityType;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
+import net.minecraftforge.client.event.RenderPlayerEvent;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.EntityEvent.EntityConstructing;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -42,19 +52,9 @@ import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
  */
 @EventBusSubscriber(modid = DevilRpg.MODID, bus = EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
 public final class ClientForgeEventSubscriber {
-
-	// private static GuiManaBar manaBar = new GuiManaBar();
 	private static HealthBarRenderer healthBarRenderer = new HealthBarRenderer();
 	private static ManaBarRenderer manaBarRenderer = new ManaBarRenderer();
 	private static MinionPortraitRenderer minionPortraitRenderer = new MinionPortraitRenderer();
-
-	/*
-	 * @OnlyIn(Dist.CLIENT)
-	 * 
-	 * @SubscribeEvent(priority = EventPriority.NORMAL) public static void
-	 * onRenderExperienceBar(RenderGameOverlayEvent.Post event) {
-	 * //manaBar.draw(event); }
-	 */
 
 	@OnlyIn(Dist.CLIENT)
 	@SubscribeEvent(priority = EventPriority.NORMAL)
@@ -109,33 +109,79 @@ public final class ClientForgeEventSubscriber {
 		// PlayerInteractEvent.LeftClickEmpty"));
 	}
 
+	/*
+	 * @OnlyIn(Dist.CLIENT)
+	 * 
+	 * @SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
+	 * public static void onMouseEvent(InputEvent.MouseInputEvent event) {
+	 * 
+	 * Minecraft mc = Minecraft.getInstance(); ClientPlayerEntity player =
+	 * mc.player; if (player == null) return;
+	 * 
+	 * LazyOptional<IBaseAuxiliarCapability> aux =
+	 * player.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP); if (aux ==
+	 * null || !aux.isPresent() || !aux.map(x ->
+	 * x.isWerewolfTransformation()).orElse(true)) return; else
+	 * player.isSwingInProgress = false;
+	 * 
+	 * if (event.getButton() == GLFW.GLFW_MOUSE_BUTTON_LEFT) { if (event.getAction()
+	 * == GLFW.GLFW_PRESS) { DevilRpg.LOGGER.info("pressed"); aux.ifPresent(werwolf
+	 * -> werwolf.setWerewolfAttack(true, player)); } }
+	 * 
+	 * if (event.getAction() == GLFW.GLFW_RELEASE) {
+	 * DevilRpg.LOGGER.info("released"); aux.ifPresent(werwolf ->
+	 * werwolf.setWerewolfAttack(false, player)); }
+	 * 
+	 * }
+	 */
+
 	@OnlyIn(Dist.CLIENT)
 	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
-	public static void onMouseEvent(InputEvent.MouseInputEvent event) {
+	public static void onMouseRawEvent(InputEvent.RawMouseEvent event) {
 
 		Minecraft mc = Minecraft.getInstance();
 		ClientPlayerEntity player = mc.player;
-		if (player == null)
-			return;
+		if (player != null) {
+			LazyOptional<IBaseAuxiliarCapability> aux = player.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
+			if (aux == null || !aux.isPresent() || !aux.map(x -> x.isWerewolfTransformation()).orElse(true))
+				return;
+			else
+				player.isSwingInProgress = false;
 
-		LazyOptional<IBaseAuxiliarCapability> aux = player.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
-		if (aux == null || !aux.isPresent() || !aux.map(x -> x.isWerewolfTransformation()).orElse(true))
-			return;
-		else
-			player.isSwingInProgress = false;
+			if (event.getButton() == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+				if (event.getAction() == GLFW.GLFW_PRESS) {
+					DevilRpg.LOGGER.info("pressed");
+					aux.ifPresent(werwolf -> werwolf.setWerewolfAttack(true, player));
+				}
+			}
 
-		if (event.getButton() == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
-			if (event.getAction() == GLFW.GLFW_PRESS) {
-				DevilRpg.LOGGER.info("pressed");
-				aux.ifPresent(werwolf -> werwolf.setWerewolfAttack(true, player));
+			if (event.getAction() == GLFW.GLFW_RELEASE) {
+				DevilRpg.LOGGER.info("released");
+				aux.ifPresent(werwolf -> werwolf.setWerewolfAttack(false, player));
 			}
 		}
+	}
 
-		if (event.getAction() == GLFW.GLFW_RELEASE) {
-			DevilRpg.LOGGER.info("released");
-			aux.ifPresent(werwolf -> werwolf.setWerewolfAttack(false, player));
+	/**
+	 * Prevents player from interacting with any block. Also hits to allies don't
+	 * reach.
+	 * 
+	 * @param event
+	 */
+	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
+	public static void onPlayerInteractEvent(PlayerInteractEvent.LeftClickBlock event) {
+		if (event.getPlayer() != null) {
+			if (event.getPlayer() != null) {
+				LazyOptional<IBaseAuxiliarCapability> aux = event.getPlayer()
+						.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
+				if (aux == null || !aux.isPresent() || !aux.map(x -> x.isWerewolfTransformation()).orElse(true))
+					return;
+				else {
+					event.getPlayer().isSwingInProgress = false;
+					event.setCanceled(true);
+				}
+			}
 		}
-
 	}
 
 	@SubscribeEvent
@@ -156,10 +202,61 @@ public final class ClientForgeEventSubscriber {
 								.playerTickEventAttack(event.player, aux));
 					}
 				}
-
 				// Mana
 				mana.ifPresent(m -> m.onPlayerTickEventRegeneration(event.player));
 
+			}
+		}
+	}
+
+	/**
+	 * Cancels the default player's model rendering
+	 * 
+	 * @param event
+	 */
+	@SubscribeEvent
+	public static void onPlayerRender(RenderPlayerEvent.Pre event) {
+		if (event.getPlayer() != null) {
+			if (event.getPlayer() != null) {
+				LazyOptional<IBaseAuxiliarCapability> aux = event.getPlayer()
+						.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
+				if (aux == null || !aux.isPresent() || !aux.map(x -> x.isWerewolfTransformation()).orElse(true))
+					return;
+				else {
+					// event.setCanceled(true);
+
+					/*
+					 * LayerRenderer<AbstractClientPlayerEntity,
+					 * PlayerModel<AbstractClientPlayerEntity>> werwolfLayer = new
+					 * WerewolfLayer<AbstractClientPlayerEntity>( new
+					 * PlayerRenderer(event.getRenderer().getRenderManager()));
+					 * event.getRenderer().addLayer(werwolfLayer);
+					 */
+
+				}
+			}
+		}
+	}
+
+	/**
+	 * Render new player's model rendering
+	 * 
+	 * @param event
+	 */
+	@SubscribeEvent
+	public static void onPlayerRender(RenderPlayerEvent.Post event) {
+		if (event.getPlayer() != null) {
+			if (event.getPlayer() != null) {
+				LazyOptional<IBaseAuxiliarCapability> aux = event.getPlayer()
+						.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
+				if (aux == null || !aux.isPresent() || !aux.map(x -> x.isWerewolfTransformation()).orElse(true)) {
+					
+					//event.getRenderer().getPackedOverlay(event.getPlayer(), uIn)
+
+				} else {
+					//event.getRenderer().addLayer(new WerewolfLayer<>(event.getRenderer()));
+
+				}
 			}
 		}
 	}

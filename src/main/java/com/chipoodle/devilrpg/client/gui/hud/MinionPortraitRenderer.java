@@ -1,6 +1,7 @@
 package com.chipoodle.devilrpg.client.gui.hud;
 
 import java.text.DecimalFormat;
+import java.util.Collection;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -12,17 +13,17 @@ import com.chipoodle.devilrpg.capability.minion.PlayerMinionCapabilityProvider;
 import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
 import com.chipoodle.devilrpg.entity.SoulBearEntity;
-import com.chipoodle.devilrpg.entity.SoulWolfEntity;
 import com.chipoodle.devilrpg.entity.SoulWispEntity;
+import com.chipoodle.devilrpg.entity.SoulWolfEntity;
 import com.chipoodle.devilrpg.init.ModEntityTypes;
 import com.mojang.blaze3d.matrix.MatrixStack;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.entity.player.ClientPlayerEntity;
 import net.minecraft.client.gui.AbstractGui;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.potion.EffectInstance;
 import net.minecraft.potion.Effects;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.common.util.LazyOptional;
@@ -98,6 +99,7 @@ public class MinionPortraitRenderer extends AbstractGui {
 
 	private void renderEntityPortrait(MatrixStack matrixStack, int i, float health, float maxHealth, ResourceLocation overlayBar,
 			LivingEntity entity) {
+		
 		/* This object draws text using the Minecraft font */
 		FontRenderer fr = mc.fontRenderer;
 

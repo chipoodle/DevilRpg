@@ -19,8 +19,7 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 @OnlyIn(Dist.CLIENT)
 public class SoulWolfGelLayer<T extends SoulWolfEntity> extends EnergyLayer<T, SoulWolfModelHeart<T>> {
 	private final EntityModel<T> soulWolfModel = new SoulWolfModel<T>();
-	private final ResourceLocation WOLF_GEL = new ResourceLocation(
-			DevilRpg.MODID + ":textures/entity/soul/soulgel.png");
+	private final ResourceLocation WOLF_GEL = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soul/soulgel.png");
 	private IEntityRenderer<T, SoulWolfModelHeart<T>> entityRenderer;
 
 	public SoulWolfGelLayer(IEntityRenderer<T, SoulWolfModelHeart<T>> p_i50923_1_) {
@@ -59,7 +58,7 @@ public class SoulWolfGelLayer<T extends SoulWolfEntity> extends EnergyLayer<T, S
 		if (!entitylivingbaseIn.isInvisible()) {
 			IVertexBuilder ivertexbuilder = entitylivingbaseIn.getBuffer(bufferIn,
 					entityRenderer.getEntityTexture(entitylivingbaseIn));
-			float[] rgbArray = entitylivingbaseIn.groovy(entitylivingbaseIn, partialTicks);
+			float[] rgbArray = entitylivingbaseIn.groovyRed(entitylivingbaseIn, partialTicks);
 			entityRenderer.getEntityModel().render(matrixStackIn, ivertexbuilder, packedLightIn,
 					LivingRenderer.getPackedOverlay(entitylivingbaseIn, 0.1F), rgbArray[0], rgbArray[1], rgbArray[2],
 					1.0F);

@@ -1,5 +1,7 @@
 package com.chipoodle.devilrpg.entity;
 
+import java.util.Collection;
+
 import com.chipoodle.devilrpg.capability.minion.IBaseMinionCapability;
 import com.chipoodle.devilrpg.capability.minion.PlayerMinionCapabilityProvider;
 import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
@@ -36,7 +38,10 @@ import net.minecraft.entity.passive.horse.LlamaEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.network.IPacket;
+import net.minecraft.potion.EffectInstance;
+import net.minecraft.util.ActionResultType;
 import net.minecraft.util.DamageSource;
+import net.minecraft.util.Hand;
 import net.minecraft.world.World;
 import net.minecraft.world.server.ServerWorld;
 import net.minecraftforge.api.distmarker.Dist;
@@ -212,6 +217,11 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity, IChargeab
 			super.tick();
 		}
 	}
+	
+	@Override
+	 public ActionResultType func_230254_b_(PlayerEntity p_230254_1_, Hand p_230254_2_) {
+		return ActionResultType.PASS;
+	 }
 
 	@Override
 	public void remove() {

@@ -16,7 +16,7 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 @OnlyIn(Dist.CLIENT)
 public class SoulBearRenderer extends MobRenderer<SoulBearEntity, SoulBearModelHeart<SoulBearEntity>> {
    //private static final ResourceLocation POLAR_BEAR_TEXTURE = new ResourceLocation("textures/entity/bear/polarbear.png");
-   public static final ResourceLocation POLAR_BEAR_TEXTURE = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soulbear/soulbear_heart.png");
+   public static final ResourceLocation POLAR_BEAR_TEXTURE = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soul/soul_heart_red.png");
    
    
    public SoulBearRenderer(EntityRendererManager renderManagerIn) {

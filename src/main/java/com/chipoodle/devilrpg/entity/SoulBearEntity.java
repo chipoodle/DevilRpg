@@ -54,7 +54,9 @@ import net.minecraft.network.IPacket;
 import net.minecraft.network.datasync.DataParameter;
 import net.minecraft.network.datasync.DataSerializers;
 import net.minecraft.network.datasync.EntityDataManager;
+import net.minecraft.util.ActionResultType;
 import net.minecraft.util.DamageSource;
+import net.minecraft.util.Hand;
 import net.minecraft.util.RangedInteger;
 import net.minecraft.util.RegistryKey;
 import net.minecraft.util.SoundEvent;
@@ -180,11 +182,6 @@ public class SoulBearEntity extends TameableEntity
 	@Override
 	public void livingTick() {
 		super.livingTick();
-		/*
-		 * if (this.getOwnerId() == null || this.getOwner() == null ||
-		 * !this.getOwner().isAlive() || !this.isTamed()) this.attackEntityFrom(new
-		 * MinionDeathDamageSource(""), Integer.MAX_VALUE);
-		 */
 		addToLivingTick(this);
 	}
 
@@ -333,6 +330,11 @@ public class SoulBearEntity extends TameableEntity
 		}
 
 	}
+	
+	@Override
+	 public ActionResultType func_230254_b_(PlayerEntity p_230254_1_, Hand p_230254_2_) {
+		return ActionResultType.PASS;
+	 }
 
 	public EntitySize getSize(Pose poseIn) {
 		if (this.clientSideStandAnimation > 0.0F) {

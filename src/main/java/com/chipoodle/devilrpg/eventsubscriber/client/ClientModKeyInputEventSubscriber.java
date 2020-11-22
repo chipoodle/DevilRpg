@@ -1,7 +1,17 @@
 package com.chipoodle.devilrpg.eventsubscriber.client;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+
 import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.client.gui.skillbook.SkillScreen;
+import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.ClientScrollableSkillManager;
+import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.ScrollableSkillDisplayInfo;
+import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.ScrollableSkillFrameType;
+import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.ScrollableSkillInfoPacket;
+import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.ScrollableSkillScreen;
+import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillElement;
+import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillElement.Builder;
 import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.network.handler.KeyboardSkillServerHandler;
 import com.chipoodle.devilrpg.util.PowerEnum;
@@ -9,6 +19,10 @@ import com.chipoodle.devilrpg.util.PowerEnum;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.settings.KeyBinding;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
+import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.text.StringTextComponent;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.InputEvent.KeyInputEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -22,7 +36,7 @@ import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
  * @author Christian
  */
 @EventBusSubscriber(modid = DevilRpg.MODID, value = Dist.CLIENT)
-public class KeyInputEventSubscriber {
+public class ClientModKeyInputEventSubscriber {
 
 	private static final KeyBinding[] KEYS = new KeyBinding[5];
 
@@ -38,9 +52,9 @@ public class KeyInputEventSubscriber {
 		}
 	}
 
-	// Evento que s�lo se ejecuta en el cliente
+	// Evento que es lo se ejecuta en el cliente
 	@SubscribeEvent
-	public static void onKeyInput(KeyInputEvent event) {
+	public static void onKeyInput(KeyInputEvent event) throws Exception {
 		Minecraft instance = Minecraft.getInstance();
 		PlayerEntity player = instance.player;
 
@@ -62,14 +76,10 @@ public class KeyInputEventSubscriber {
 		}
 		if (KEYS[4].isPressed()) {
 			DevilRpg.LOGGER.debug(KEYS[4].getTranslationKey() + "pressed. " + KEYS[4].getKey().getKeyCode());
-			SkillScreen.open(player);
+			// SkillScreen.open(player);
 
-			/*ClientScrollableSkillManager skillManager = new ClientScrollableSkillManager(instance);
-			ScrollableSkillInfoPacket packetIn = new ScrollableSkillInfoPacket();
-			PacketBuffer buf = new PacketBuffer(buf);
-			packetIn.readPacketData(buf);
-			skillManager.read(packetIn);
-			Minecraft.getInstance().enqueue(() -> Minecraft.getInstance().displayGuiScreen(new ScrollableSkillScreen(skillManager)));*/
+			Minecraft.getInstance()
+					.enqueue(() -> Minecraft.getInstance().displayGuiScreen(new ScrollableSkillScreen(KEYS[4].getKey().getKeyCode())));
 
 		}
 

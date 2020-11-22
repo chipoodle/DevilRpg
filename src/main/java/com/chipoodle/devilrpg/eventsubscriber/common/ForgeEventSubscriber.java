@@ -33,11 +33,14 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.util.Hand;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.util.text.StringTextComponent;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
 import net.minecraftforge.event.entity.EntityJoinWorldEvent;
 import net.minecraftforge.event.entity.living.LivingEvent.LivingJumpEvent;
+import net.minecraftforge.event.entity.living.LivingEvent.LivingUpdateEvent;
+import net.minecraftforge.event.entity.living.LivingFallEvent;
 import net.minecraftforge.event.entity.player.AttackEntityEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
@@ -285,10 +288,41 @@ public class ForgeEventSubscriber {
 		e.getOrb().xpValue *= 2;
 	}
 
+	/**
+	 * Increase jump height by 1 when Werewolf form
+	 * @param event
+	 */
 	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
-	public static void onEvent(LivingJumpEvent event) {
+	public static void onLivingJumpEventt(LivingJumpEvent event) {
 		if (event.getEntity() instanceof PlayerEntity) {
-			// DevilRpg.LOGGER.info("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Boing");
+			LazyOptional<IBaseAuxiliarCapability> aux = event.getEntity()
+					.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
+
+			boolean transformation = aux.map(x -> x.isWerewolfTransformation()).orElse(false);
+			if (transformation) {
+				Vector3d motion = event.getEntity().getMotion();
+				event.getEntity().setMotion(motion.getX(), motion.getY() + 0.13D, motion.getZ());
+			}
+		}
+	}
+	
+	/**
+	 * Increase fall damage threshold by 1 block when in werewolf form 
+	 * @param event
+	 */
+	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
+	public static void onLivingFallEvent(LivingFallEvent  event) {
+		if (event.getEntity() instanceof PlayerEntity) {
+			LazyOptional<IBaseAuxiliarCapability> aux = event.getEntity()
+					.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
+
+			boolean transformation = aux.map(x -> x.isWerewolfTransformation()).orElse(false);
+			if (transformation) {
+				if(event.getDistance() > 1) {
+				    
+				    event.setDistance(event.getDistance()-1);
+				}
+			}
 		}
 	}
 
@@ -343,5 +377,20 @@ public class ForgeEventSubscriber {
 			event.getPlayer().isSwingInProgress = false;
 			event.setCanceled(true);
 		}
+	}
+
+	/**
+	 * Updates potion effects on client
+	 * 
+	 * @param event
+	 */
+	@SubscribeEvent
+	public static void onLivingUpdateEvent(LivingUpdateEvent event) {
+		/*
+		 * Collection<EffectInstance> activePotionEffects =
+		 * event.getEntityLiving().getActivePotionEffects();
+		 * DevilRpg.LOGGER.info("---->Entity: "+event.getEntityLiving().getType() +
+		 * "active potion effects: "+activePotionEffects);
+		 */
 	}
 }
