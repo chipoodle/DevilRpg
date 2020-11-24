@@ -106,7 +106,7 @@ public class WerewolfRenderer extends LivingRenderer<PlayerEntity, WerewolfTrans
 			playermodel.isSneak = clientPlayer.isCrouching();
 			
 			
-			BipedModel.ArmPose bipedmodel$armpose = func_241741_a_(clientPlayer, Hand.MAIN_HAND);
+			/*BipedModel.ArmPose bipedmodel$armpose = func_241741_a_(clientPlayer, Hand.MAIN_HAND);
 			BipedModel.ArmPose bipedmodel$armpose1 = func_241741_a_(clientPlayer, Hand.OFF_HAND);
 			if (bipedmodel$armpose.func_241657_a_()) {
 				bipedmodel$armpose1 = clientPlayer.getHeldItemOffhand().isEmpty() ? BipedModel.ArmPose.EMPTY
@@ -119,7 +119,7 @@ public class WerewolfRenderer extends LivingRenderer<PlayerEntity, WerewolfTrans
 			} else {
 				playermodel.rightArmPose = bipedmodel$armpose1;
 				playermodel.leftArmPose = bipedmodel$armpose;
-			}
+			}*/
 		}
 
 	}

@@ -62,5 +62,8 @@ public class SoulBearModelHeart<T extends SoulBearEntity> extends QuadrupedModel
 		}
 
 		this.headModel.rotateAngleX += f1 * (float) Math.PI * 0.15F;
+		
+		this.headModel.rotateAngleX = headPitch * ((float) Math.PI / 180F);
+		this.headModel.rotateAngleY = netHeadYaw * ((float) Math.PI / 180F);
 	}
 }
