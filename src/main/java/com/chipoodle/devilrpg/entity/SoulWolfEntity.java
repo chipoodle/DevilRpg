@@ -1,11 +1,10 @@
 package com.chipoodle.devilrpg.entity;
 
-import java.util.Collection;
-
 import com.chipoodle.devilrpg.capability.minion.IBaseMinionCapability;
 import com.chipoodle.devilrpg.capability.minion.PlayerMinionCapabilityProvider;
 import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
+import com.chipoodle.devilrpg.client.render.IRenderUtilities;
 import com.chipoodle.devilrpg.init.ModEntityTypes;
 import com.chipoodle.devilrpg.util.SkillEnum;
 
@@ -38,7 +37,6 @@ import net.minecraft.entity.passive.horse.LlamaEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.network.IPacket;
-import net.minecraft.potion.EffectInstance;
 import net.minecraft.util.ActionResultType;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.Hand;
@@ -65,14 +63,10 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity, IChargeab
 	protected void registerGoals() {
 		this.goalSelector.addGoal(1, new SwimGoal(this));
 		this.goalSelector.addGoal(2, new SitGoal(this));
-		this.goalSelector.addGoal(3,
-				new SoulWolfEntity.AvoidEntityGoal<VillagerEntity>(this, VillagerEntity.class, 24.0F, 1.5D, 1.5D));
-		this.goalSelector.addGoal(3,
-				new SoulWolfEntity.AvoidEntityGoal<LlamaEntity>(this, LlamaEntity.class, 24.0F, 1.5D, 1.5D));
-		this.goalSelector.addGoal(3,
-				new SoulWolfEntity.AvoidEntityGoal<TurtleEntity>(this, TurtleEntity.class, 24.0F, 1.5D, 1.5D));
-		this.goalSelector.addGoal(3,
-				new SoulWolfEntity.AvoidEntityGoal<IronGolemEntity>(this, IronGolemEntity.class, 24.0F, 1.5D, 1.5D));
+		this.goalSelector.addGoal(3, new SoulWolfEntity.AvoidEntityGoal<VillagerEntity>(this, VillagerEntity.class, 24.0F, 1.5D, 1.5D));
+		this.goalSelector.addGoal(3, new SoulWolfEntity.AvoidEntityGoal<LlamaEntity>(this, LlamaEntity.class, 24.0F, 1.5D, 1.5D));
+		this.goalSelector.addGoal(3, new SoulWolfEntity.AvoidEntityGoal<TurtleEntity>(this, TurtleEntity.class, 24.0F, 1.5D, 1.5D));
+		this.goalSelector.addGoal(3, new SoulWolfEntity.AvoidEntityGoal<IronGolemEntity>(this, IronGolemEntity.class, 24.0F, 1.5D, 1.5D));
 		this.goalSelector.addGoal(4, new LeapAtTargetGoal(this, 0.4F));
 		this.goalSelector.addGoal(5, new MeleeAttackGoal(this, 1.0D, true));
 		this.goalSelector.addGoal(6, new FollowOwnerGoal(this, 1.0D, 10.0F, 2.0F, false));
@@ -122,6 +116,7 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity, IChargeab
 	public void writeAdditional(CompoundNBT compound) {
 		super.writeAdditional(compound);
 		compound.putString("OwnerUUID", "");
+		compound.putUniqueId("Owner", null);
 	}
 
 	@Override

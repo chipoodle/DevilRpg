@@ -60,7 +60,7 @@ public class SoulBearGelLayer<T extends SoulBearEntity> extends EnergyLayer<T, S
 		if (!entitylivingbaseIn.isInvisible()) {
 			IVertexBuilder ivertexbuilder = entitylivingbaseIn.getBuffer(bufferIn,
 					entityRenderer.getEntityTexture(entitylivingbaseIn));
-			float[] rgbArray = entitylivingbaseIn.groovy(entitylivingbaseIn, partialTicks);
+			float[] rgbArray = entitylivingbaseIn.groovyRed(entitylivingbaseIn, partialTicks);
 			entityRenderer.getEntityModel().render(matrixStackIn, ivertexbuilder, packedLightIn,
 					LivingRenderer.getPackedOverlay(entitylivingbaseIn, 0.1F), rgbArray[0], rgbArray[1], rgbArray[2],
 					1.0F);

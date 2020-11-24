@@ -290,6 +290,7 @@ public class ForgeEventSubscriber {
 
 	/**
 	 * Increase jump height by 1 when Werewolf form
+	 * 
 	 * @param event
 	 */
 	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
@@ -305,22 +306,23 @@ public class ForgeEventSubscriber {
 			}
 		}
 	}
-	
+
 	/**
-	 * Increase fall damage threshold by 1 block when in werewolf form 
+	 * Increase fall damage threshold by 1 block when in werewolf form
+	 * 
 	 * @param event
 	 */
 	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
-	public static void onLivingFallEvent(LivingFallEvent  event) {
+	public static void onLivingFallEvent(LivingFallEvent event) {
 		if (event.getEntity() instanceof PlayerEntity) {
 			LazyOptional<IBaseAuxiliarCapability> aux = event.getEntity()
 					.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
 
 			boolean transformation = aux.map(x -> x.isWerewolfTransformation()).orElse(false);
 			if (transformation) {
-				if(event.getDistance() > 1) {
-				    
-				    event.setDistance(event.getDistance()-1);
+				if (event.getDistance() > 1) {
+
+					event.setDistance(event.getDistance() - 1);
 				}
 			}
 		}
@@ -335,35 +337,16 @@ public class ForgeEventSubscriber {
 
 	@SubscribeEvent
 	public static void leftClickBlock(PlayerInteractEvent.LeftClickBlock event) {
-		LazyOptional<IBaseAuxiliarCapability> aux = event.getPlayer()
-				.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
+		PlayerEntity player = event.getPlayer();
 
-		boolean transformation = aux.map(x -> x.isWerewolfTransformation()).orElse(false);
-		if (transformation) {
-			event.getPlayer().isSwingInProgress = false;
-			aux.ifPresent(x -> {
-				Hand h = x.isSwingingMainHand() ? Hand.MAIN_HAND : Hand.OFF_HAND;
-				event.getPlayer().swingArm(h);
-				x.setSwingingMainHand(!x.isSwingingMainHand(), event.getPlayer());
-			});
-		}
+		swingHands(player);
 	}
 
 	@SubscribeEvent
 	public static void entityInteractSpecific(PlayerInteractEvent.EntityInteractSpecific event) {
-		LazyOptional<IBaseAuxiliarCapability> aux = event.getPlayer()
-				.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
+		PlayerEntity player = event.getPlayer();
 
-		boolean transformation = aux.map(x -> x.isWerewolfTransformation()).orElse(false);
-		if (transformation) {
-			event.getPlayer().isSwingInProgress = false;
-			aux.ifPresent(x -> {
-				Hand h = x.isSwingingMainHand() ? Hand.MAIN_HAND : Hand.OFF_HAND;
-				event.getPlayer().swingArm(h);
-				x.setSwingingMainHand(!x.isSwingingMainHand(), event.getPlayer());
-			});
-		}
-		// event.setCanceled(true);
+		swingHands(player);
 	}
 
 	@SubscribeEvent
@@ -376,6 +359,23 @@ public class ForgeEventSubscriber {
 		if (transformation) {
 			event.getPlayer().isSwingInProgress = false;
 			event.setCanceled(true);
+		}
+	}
+
+	/**
+	 * @param player
+	 */
+	private static void swingHands(PlayerEntity player) {
+		LazyOptional<IBaseAuxiliarCapability> aux = player.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
+
+		boolean transformation = aux.map(x -> x.isWerewolfTransformation()).orElse(false);
+		if (transformation) {
+			player.isSwingInProgress = false;
+			aux.ifPresent(x -> {
+				Hand h = x.isSwingingMainHand() ? Hand.MAIN_HAND : Hand.OFF_HAND;
+				player.swingArm(h);
+				x.setSwingingMainHand(!x.isSwingingMainHand(), player);
+			});
 		}
 	}
 

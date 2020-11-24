@@ -3,7 +3,6 @@ package com.chipoodle.devilrpg.client.render.entity.layer;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.client.render.entity.model.SoulWispModel;
 import com.chipoodle.devilrpg.client.render.entity.model.SoulWispModelHeart;
-import com.chipoodle.devilrpg.client.render.entity.model.WingsModel;
 import com.chipoodle.devilrpg.entity.SoulWispEntity;
 import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.vertex.IVertexBuilder;
@@ -14,7 +13,6 @@ import net.minecraft.client.renderer.entity.LivingRenderer;
 import net.minecraft.client.renderer.entity.layers.EnergyLayer;
 import net.minecraft.client.renderer.entity.model.EntityModel;
 import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.text.StringTextComponent;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
@@ -24,14 +22,16 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 public class SoulWispGelLayer<T extends SoulWispEntity> extends EnergyLayer<T, SoulWispModelHeart<T>> {
 	private final SoulWispModel<T> wispModel = new SoulWispModel<T>();
 	private static final ResourceLocation WISP_GEL = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soul/soulgel.png");
-	private static final ResourceLocation WISP_WINGS = new ResourceLocation(DevilRpg.MODID + ":textures/entity/flyingwisp/wings.png");
+	//private static final ResourceLocation WISP_WINGS = new ResourceLocation(DevilRpg.MODID + ":textures/entity/flyingwisp/wings.png");
 	private IEntityRenderer<T, SoulWispModelHeart<T>> entityRenderer;
+	private float gelMovementFactor;
 
 	//private WingsModel<SoulWispEntity> wingsModel = new WingsModel<SoulWispEntity>();
 	
-	public SoulWispGelLayer(IEntityRenderer<T, SoulWispModelHeart<T>> p_i50947_1_) {
+	public SoulWispGelLayer(IEntityRenderer<T, SoulWispModelHeart<T>> p_i50947_1_, float gelMovementFactor) {
 		super(p_i50947_1_);
 		entityRenderer = p_i50947_1_;
+		this.gelMovementFactor = gelMovementFactor;
 	}
 	
 	public void render(MatrixStack matrixStackIn, IRenderTypeBuffer bufferIn, int packedLightIn, T entitylivingbaseIn,
@@ -81,7 +81,7 @@ public class SoulWispGelLayer<T extends SoulWispEntity> extends EnergyLayer<T, S
 	}
 
 	protected float func_225634_a_(float p_225634_1_) {
-		return p_225634_1_ * 0.01F;
+		return p_225634_1_ * gelMovementFactor;
 	}
 
 	protected ResourceLocation func_225633_a_() {
@@ -97,7 +97,7 @@ public class SoulWispGelLayer<T extends SoulWispEntity> extends EnergyLayer<T, S
 		if (!entitylivingbaseIn.isInvisible()) {
 			IVertexBuilder ivertexbuilder = entitylivingbaseIn.getBuffer(bufferIn,
 					entityRenderer.getEntityTexture(entitylivingbaseIn));
-			float[] rgbArray = entitylivingbaseIn.groovyRed(entitylivingbaseIn, partialTicks);
+			float[] rgbArray = entitylivingbaseIn.groovyBlue(entitylivingbaseIn, partialTicks);
 			entityRenderer.getEntityModel().render(matrixStackIn, ivertexbuilder, packedLightIn,
 					LivingRenderer.getPackedOverlay(entitylivingbaseIn, 0.1F), rgbArray[0], rgbArray[1], rgbArray[2], 1.0F);
 		}

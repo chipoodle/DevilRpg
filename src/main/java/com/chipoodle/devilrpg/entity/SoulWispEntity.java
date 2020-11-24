@@ -11,8 +11,8 @@ import com.chipoodle.devilrpg.capability.minion.IBaseMinionCapability;
 import com.chipoodle.devilrpg.capability.minion.PlayerMinionCapabilityProvider;
 import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
+import com.chipoodle.devilrpg.client.render.IRenderUtilities;
 import com.chipoodle.devilrpg.init.ModEntityTypes;
-import com.chipoodle.devilrpg.skillsystem.MinionDeathDamageSource;
 import com.chipoodle.devilrpg.util.SkillEnum;
 
 import net.minecraft.block.BlockState;
@@ -154,6 +154,7 @@ public class SoulWispEntity extends TameableEntity
 	public void writeAdditional(CompoundNBT compound) {
 		super.writeAdditional(compound);
 		compound.putString("OwnerUUID", "");
+		compound.putUniqueId("Owner", null);
 	}
 
 	/**

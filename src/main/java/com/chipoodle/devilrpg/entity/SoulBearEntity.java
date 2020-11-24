@@ -12,6 +12,7 @@ import com.chipoodle.devilrpg.capability.minion.IBaseMinionCapability;
 import com.chipoodle.devilrpg.capability.minion.PlayerMinionCapabilityProvider;
 import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
+import com.chipoodle.devilrpg.client.render.IRenderUtilities;
 import com.chipoodle.devilrpg.init.ModEntityTypes;
 import com.chipoodle.devilrpg.util.SkillEnum;
 
@@ -116,19 +117,16 @@ public class SoulBearEntity extends TameableEntity
 		this.goalSelector.addGoal(0, new SwimGoal(this));
 		this.goalSelector.addGoal(1, new SoulBearEntity.MeleeAttackGoal());
 		// this.goalSelector.addGoal(1, new SoulBearEntity.PanicGoal());
-		this.goalSelector.addGoal(3,
-				new SoulBearEntity.AvoidEntityGoal<VillagerEntity>(this, VillagerEntity.class, 24.0F, 1.5D, 1.5D));
-		this.goalSelector.addGoal(3,
-				new SoulBearEntity.AvoidEntityGoal<LlamaEntity>(this, LlamaEntity.class, 24.0F, 1.5D, 1.5D));
-		this.goalSelector.addGoal(3,
-				new SoulBearEntity.AvoidEntityGoal<TurtleEntity>(this, TurtleEntity.class, 24.0F, 1.5D, 1.5D));
-		this.goalSelector.addGoal(3,
-				new SoulBearEntity.AvoidEntityGoal<IronGolemEntity>(this, IronGolemEntity.class, 24.0F, 1.5D, 1.5D));
+		this.goalSelector.addGoal(3, new SoulBearEntity.AvoidEntityGoal<VillagerEntity>(this, VillagerEntity.class, 24.0F, 1.5D, 1.5D));
+		this.goalSelector.addGoal(3, new SoulBearEntity.AvoidEntityGoal<LlamaEntity>(this, LlamaEntity.class, 24.0F, 1.5D, 1.5D));
+		this.goalSelector.addGoal(3, new SoulBearEntity.AvoidEntityGoal<TurtleEntity>(this, TurtleEntity.class, 24.0F, 1.5D, 1.5D));
+		this.goalSelector.addGoal(3, new SoulBearEntity.AvoidEntityGoal<IronGolemEntity>(this, IronGolemEntity.class, 24.0F, 1.5D, 1.5D));
 		this.goalSelector.addGoal(4, new FollowParentGoal(this, 1.25D));
 		this.goalSelector.addGoal(5, new RandomWalkingGoal(this, 1.0D));
 		this.goalSelector.addGoal(6, new FollowOwnerGoal(this, 1.0D, 10.0F, 2.0F, false));
 		this.goalSelector.addGoal(7, new LookAtGoal(this, PlayerEntity.class, 6.0F));
 		this.goalSelector.addGoal(8, new LookRandomlyGoal(this));
+		
 		// this.targetSelector.addGoal(2, new SoulBearEntity.AttackPlayerGoal());
 		// this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this,
 		// MobEntity.class, 10, true, true,(Predicate<LivingEntity>) null));
@@ -177,6 +175,7 @@ public class SoulBearEntity extends TameableEntity
 	public void writeAdditional(CompoundNBT compound) {
 		super.writeAdditional(compound);
 		compound.putString("OwnerUUID", "");
+		compound.putUniqueId("Owner", null);
 	}
 
 	@Override

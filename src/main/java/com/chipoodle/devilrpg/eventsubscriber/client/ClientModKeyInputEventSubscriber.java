@@ -1,17 +1,7 @@
 package com.chipoodle.devilrpg.eventsubscriber.client;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-
 import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.ClientScrollableSkillManager;
-import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.ScrollableSkillDisplayInfo;
-import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.ScrollableSkillFrameType;
-import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.ScrollableSkillInfoPacket;
-import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.ScrollableSkillScreen;
-import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillElement;
-import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillElement.Builder;
+import com.chipoodle.devilrpg.client.gui.skillbook.SkillScreen;
 import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.network.handler.KeyboardSkillServerHandler;
 import com.chipoodle.devilrpg.util.PowerEnum;
@@ -19,10 +9,6 @@ import com.chipoodle.devilrpg.util.PowerEnum;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.settings.KeyBinding;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.text.StringTextComponent;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.InputEvent.KeyInputEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -76,10 +62,10 @@ public class ClientModKeyInputEventSubscriber {
 		}
 		if (KEYS[4].isPressed()) {
 			DevilRpg.LOGGER.debug(KEYS[4].getTranslationKey() + "pressed. " + KEYS[4].getKey().getKeyCode());
-			// SkillScreen.open(player);
+			 SkillScreen.open(player);
 
-			Minecraft.getInstance()
-					.enqueue(() -> Minecraft.getInstance().displayGuiScreen(new ScrollableSkillScreen(KEYS[4].getKey().getKeyCode())));
+			/*Minecraft.getInstance()
+					.enqueue(() -> Minecraft.getInstance().displayGuiScreen(new ScrollableSkillScreen(KEYS[4].getKey().getKeyCode())));*/
 
 		}
 

@@ -1,4 +1,4 @@
-package com.chipoodle.devilrpg.entity;
+package com.chipoodle.devilrpg.client.render;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -20,7 +20,8 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 public interface IRenderUtilities {
-	DyeColor[] reds = {DyeColor.RED,DyeColor.ORANGE,DyeColor.YELLOW};
+	DyeColor[] reds = {DyeColor.RED,DyeColor.BROWN};
+	DyeColor[] blues = {DyeColor.BLUE,DyeColor.LIGHT_BLUE};
 	Map<DyeColor, float[]> DYE_TO_RGB = 
 			Arrays.stream(DyeColor.values()).collect(
 					Collectors.toMap(Functions.identity(),dye->createColor(dye)));
@@ -28,12 +29,16 @@ public interface IRenderUtilities {
 	Map<DyeColor, float[]> DYE_TO_RGB_RED = 
 			Arrays.stream(reds).collect(
 					Collectors.toMap(Functions.identity(),dye->createColor(dye)));
+	
+	Map<DyeColor, float[]> DYE_TO_RGB_BLUE = 
+			Arrays.stream(blues).collect(
+					Collectors.toMap(Functions.identity(),dye->createColor(dye)));
 
 	
-	public default Map<DyeColor, float[]> getRedishColors() {
+	/*public default Map<DyeColor, float[]> getRedishColors() {
 		return Arrays.stream(reds).collect(
 						Collectors.toMap(Functions.identity(),dye->createColor(dye)));
-	}
+	}*/
 	
 	public static float[] createColor(DyeColor dyeColorIn) {
 		if (dyeColorIn == DyeColor.WHITE) {
@@ -81,6 +86,25 @@ public interface IRenderUtilities {
 		float f3 = ((float) (entitylivingbaseIn.ticksExisted % 25) + partialTicks) / 25.0F;
 		float[] afloat1 = DYE_TO_RGB_RED.get(reds[k]);
 		float[] afloat2 = DYE_TO_RGB_RED.get(reds[l]);
+		f = afloat1[0] * (1.0F - f3) + afloat2[0] * f3;
+		f1 = afloat1[1] * (1.0F - f3) + afloat2[1] * f3;
+		f2 = afloat1[2] * (1.0F - f3) + afloat2[2] * f3;
+		float[] returnFloat = { f, f1, f2 };
+		return returnFloat;
+	}
+	
+	public default <T extends LivingEntity> float[] groovyBlue(T entitylivingbaseIn, float partialTicks) {
+		float f;
+		float f1;
+		float f2;
+		// int i1 = 25;
+		int i = entitylivingbaseIn.ticksExisted / 25 + entitylivingbaseIn.getEntityId();
+		int j = blues.length;
+		int k = i % j;
+		int l = (i + 1) % j;
+		float f3 = ((float) (entitylivingbaseIn.ticksExisted % 25) + partialTicks) / 25.0F;
+		float[] afloat1 = DYE_TO_RGB_BLUE.get(blues[k]);
+		float[] afloat2 = DYE_TO_RGB_BLUE.get(blues[l]);
 		f = afloat1[0] * (1.0F - f3) + afloat2[0] * f3;
 		f1 = afloat1[1] * (1.0F - f3) + afloat2[1] * f3;
 		f2 = afloat1[2] * (1.0F - f3) + afloat2[2] * f3;
