@@ -16,8 +16,6 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 
 import net.minecraft.client.resources.JsonReloadListener;
-import net.minecraft.loot.ConditionArrayParser;
-import net.minecraft.loot.LootPredicateManager;
 import net.minecraft.profiler.IProfiler;
 import net.minecraft.resources.IResourceManager;
 import net.minecraft.util.JSONUtils;

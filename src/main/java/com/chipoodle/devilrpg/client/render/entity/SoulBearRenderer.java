@@ -4,7 +4,6 @@ import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.client.render.entity.layer.SoulBearGelLayer;
 import com.chipoodle.devilrpg.client.render.entity.model.SoulBearModelHeart;
 import com.chipoodle.devilrpg.entity.SoulBearEntity;
-import com.chipoodle.devilrpg.entity.SoulWispEntity;
 import com.mojang.blaze3d.matrix.MatrixStack;
 
 import net.minecraft.client.renderer.entity.EntityRendererManager;

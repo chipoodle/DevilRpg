@@ -5,8 +5,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.entity.SoulBearEntity;
-import com.chipoodle.devilrpg.entity.SoulWolfEntity;
 import com.chipoodle.devilrpg.entity.SoulWispEntity;
+import com.chipoodle.devilrpg.entity.SoulWolfEntity;
 
 import net.minecraft.entity.passive.TameableEntity;
 import net.minecraft.entity.player.PlayerEntity;

@@ -4,18 +4,11 @@ import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.client.render.entity.layer.SoulWolfGelLayer;
 import com.chipoodle.devilrpg.client.render.entity.model.SoulWolfModelHeart;
 import com.chipoodle.devilrpg.entity.SoulWolfEntity;
-import com.chipoodle.devilrpg.entity.SoulWispEntity;
 import com.mojang.blaze3d.matrix.MatrixStack;
-import com.mojang.blaze3d.vertex.IVertexBuilder;
 
 import net.minecraft.client.renderer.IRenderTypeBuffer;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRendererManager;
-import net.minecraft.client.renderer.entity.LivingRenderer;
 import net.minecraft.client.renderer.entity.MobRenderer;
-import net.minecraft.client.renderer.entity.layers.EnergyLayer;
-import net.minecraft.entity.passive.SheepEntity;
-import net.minecraft.item.DyeColor;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;

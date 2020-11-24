@@ -3,8 +3,8 @@ package com.chipoodle.devilrpg.client.gui.scrollableskillscreen;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
-import java.util.Set;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;

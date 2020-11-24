@@ -7,11 +7,9 @@ import java.util.Random;
 import java.util.stream.Collectors;
 
 import com.google.common.base.Functions;
-import com.google.common.collect.Maps;
 
 import net.minecraft.entity.AreaEffectCloudEntity;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.passive.SheepEntity;
 import net.minecraft.item.DyeColor;
 import net.minecraft.particles.ParticleTypes;
 import net.minecraft.potion.EffectInstance;

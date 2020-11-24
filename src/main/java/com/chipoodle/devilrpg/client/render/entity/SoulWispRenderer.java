@@ -2,7 +2,6 @@ package com.chipoodle.devilrpg.client.render.entity;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.client.render.entity.layer.SoulWispGelLayer;
-import com.chipoodle.devilrpg.client.render.entity.model.SoulWispModel;
 import com.chipoodle.devilrpg.client.render.entity.model.SoulWispModelHeart;
 import com.chipoodle.devilrpg.entity.SoulWispEntity;
 import com.mojang.blaze3d.matrix.MatrixStack;
@@ -11,7 +10,6 @@ import net.minecraft.client.renderer.IRenderTypeBuffer;
 import net.minecraft.client.renderer.entity.EntityRendererManager;
 import net.minecraft.client.renderer.entity.MobRenderer;
 import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.math.MathHelper;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 

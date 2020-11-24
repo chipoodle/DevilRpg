@@ -1,6 +1,5 @@
 package com.chipoodle.devilrpg.client.gui.scrollableskillscreen;
 
-import java.util.Arrays;
 import java.util.List;
 
 import javax.annotation.Nullable;
@@ -11,6 +10,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
+
 import net.minecraft.command.FunctionObject;
 import net.minecraft.entity.item.ItemEntity;
 import net.minecraft.entity.player.PlayerEntity;

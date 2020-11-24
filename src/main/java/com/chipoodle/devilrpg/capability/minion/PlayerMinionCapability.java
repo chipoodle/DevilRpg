@@ -6,8 +6,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.entity.SoulBearEntity;
-import com.chipoodle.devilrpg.entity.SoulWolfEntity;
 import com.chipoodle.devilrpg.entity.SoulWispEntity;
+import com.chipoodle.devilrpg.entity.SoulWolfEntity;
 import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.network.handler.PlayerMinionClientServerHandler;
 import com.chipoodle.devilrpg.skillsystem.MinionDeathDamageSource;

@@ -39,7 +39,6 @@ import com.mojang.serialization.Dynamic;
 import com.mojang.serialization.JsonOps;
 
 import net.minecraft.entity.player.ServerPlayerEntity;
-import net.minecraft.network.play.server.SSelectAdvancementsTabPacket;
 import net.minecraft.server.management.PlayerList;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.SharedConstants;

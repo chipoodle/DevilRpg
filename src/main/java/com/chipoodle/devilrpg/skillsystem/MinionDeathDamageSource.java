@@ -3,7 +3,6 @@ package com.chipoodle.devilrpg.skillsystem;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.TranslationTextComponent;
 
 public class MinionDeathDamageSource extends DamageSource {
 
