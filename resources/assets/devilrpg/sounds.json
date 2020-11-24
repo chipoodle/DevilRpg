@@ -1,7 +1,0 @@
-{
-  "summon": {
-    "category": "summon",
-    "subtitle": "devilrpg.subtitle.summon",
-    "sounds": [ "devilrpg:summon" ]
-  }
-}
