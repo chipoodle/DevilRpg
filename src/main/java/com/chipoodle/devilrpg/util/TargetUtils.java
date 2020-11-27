@@ -1,7 +1,9 @@
 package com.chipoodle.devilrpg.util;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Random;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -36,6 +38,8 @@ import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.world.GameType;
 import net.minecraft.world.World;
 import net.minecraft.world.server.ServerWorld;
+import net.minecraftforge.common.ForgeHooks;
+import net.minecraftforge.event.entity.player.CriticalHitEvent;
 
 /**
  * 
@@ -45,6 +49,7 @@ import net.minecraft.world.server.ServerWorld;
 public class TargetUtils {
 	/** Maximum range within which to search for targets */
 	private static final int MAX_DISTANCE = 256;
+	public static final Random RANDOM = new Random();
 	/**
 	 * Max distance squared, used for comparing target distances (avoids having to
 	 * call sqrt)
@@ -96,28 +101,29 @@ public class TargetUtils {
 	 * Entity shooter, double hitBox, boolean flag) { double posY = entity.getPosY()
 	 * + (entity.getHeight() / 2); // fix for Dash Vector3d vec3 = new
 	 * Vector3d(entity.getPosX(), posY, entity.getPosZ()); Vector3d motion =
-	 * entity.getMotion(); Vector3d vec31 = new Vector3d(entity.getPosX() + motion.getX(),
-	 * posY + motion.getY(),entity.getPosZ() + motion.getZ()); BlockMode b;
-	 * RayTraceContext r = new RayTraceContext(vec3, vec31, BlockMode.COLLIDER,
-	 * FluidMode.ANY, entity); // RayTraceResult mop = world.rayTraceBlocks(vec3,
-	 * vec31, false, true, false); RayTraceResult mop = world.rayTraceBlocks(r);
-	 * vec3 = new Vector3d(entity.getPosX(), posY, entity.getPosZ());
+	 * entity.getMotion(); Vector3d vec31 = new Vector3d(entity.getPosX() +
+	 * motion.getX(), posY + motion.getY(),entity.getPosZ() + motion.getZ());
+	 * BlockMode b; RayTraceContext r = new RayTraceContext(vec3, vec31,
+	 * BlockMode.COLLIDER, FluidMode.ANY, entity); // RayTraceResult mop =
+	 * world.rayTraceBlocks(vec3, vec31, false, true, false); RayTraceResult mop =
+	 * world.rayTraceBlocks(r); vec3 = new Vector3d(entity.getPosX(), posY,
+	 * entity.getPosZ());
 	 * 
 	 * motion = entity.getMotion(); vec31 = new Vector3d(entity.getPosX() +
 	 * motion.getX(), posY + motion.getY(), entity.getPosZ() + motion.getZ()); if
 	 * (mop != null) {
 	 * 
-	 * vec31 = new Vector3d(mop.getHitVec().x, mop.getHitVec().y, mop.getHitVec().z); }
-	 * Entity target = null; motion = entity.getMotion(); List<Entity> list =
-	 * world.getEntitiesWithinAABBExcludingEntity(entity, entity.getBoundingBox()
-	 * .expand(motion.getX(), motion.getY(), motion.getZ()).grow(1.0D, 1.0D, 1.0D));
-	 * double d0 = 0.0D; for (int i = 0; i < list.size(); ++i) { Entity entity1 =
-	 * (Entity) list.get(i); if (entity1.canBeCollidedWith() && (entity1 != shooter
-	 * || flag)) { AxisAlignedBB axisalignedbb =
-	 * entity1.getBoundingBox().expand(hitBox, hitBox, hitBox); RayTraceResult mop1
-	 * = axisalignedbb.calculateIntercept(vec3, vec31); if (mop1 != null) { double
-	 * d1 = vec3.distanceTo(mop1.getHitVec()); if (d1 < d0 || d0 == 0.0D) { target =
-	 * entity1; d0 = d1; } } } } if (target != null) { mop = new
+	 * vec31 = new Vector3d(mop.getHitVec().x, mop.getHitVec().y,
+	 * mop.getHitVec().z); } Entity target = null; motion = entity.getMotion();
+	 * List<Entity> list = world.getEntitiesWithinAABBExcludingEntity(entity,
+	 * entity.getBoundingBox() .expand(motion.getX(), motion.getY(),
+	 * motion.getZ()).grow(1.0D, 1.0D, 1.0D)); double d0 = 0.0D; for (int i = 0; i <
+	 * list.size(); ++i) { Entity entity1 = (Entity) list.get(i); if
+	 * (entity1.canBeCollidedWith() && (entity1 != shooter || flag)) { AxisAlignedBB
+	 * axisalignedbb = entity1.getBoundingBox().expand(hitBox, hitBox, hitBox);
+	 * RayTraceResult mop1 = axisalignedbb.calculateIntercept(vec3, vec31); if (mop1
+	 * != null) { double d1 = vec3.distanceTo(mop1.getHitVec()); if (d1 < d0 || d0
+	 * == 0.0D) { target = entity1; d0 = d1; } } } } if (target != null) { mop = new
 	 * RayTraceResult(target); } if (mop != null && mop.entityHit instanceof
 	 * PlayerEntity) { PlayerEntity player = (PlayerEntity) mop.entityHit; if
 	 * (player.capabilities.disableDamage || (shooter instanceof PlayerEntity &&
@@ -382,7 +388,7 @@ public class TargetUtils {
 	 * Returns true if the entity has an unimpeded view of the sky
 	 */
 	public static boolean canEntitySeeSky(World world, Entity entity) {
-		BlockPos pos = new BlockPos((IPosition)entity);
+		BlockPos pos = new BlockPos((IPosition) entity);
 		while (pos.getY() < world.getHeight()) {
 			if (!world.isAirBlock(pos)) {
 				return false;
@@ -395,10 +401,11 @@ public class TargetUtils {
 	/**
 	 * Whether the entity is currently standing in any liquid
 	 */
+
 	/*
-	 * public static boolean isInLiquid(Entity entity) { IBlockState state =
-	 * entity.world.getBlockState(new BlockPos(entity)); return
-	 * state.getBlock().getMaterial().isLiquid(); }
+	 * public static boolean isInLiquid(Entity entity) { BlockState state =
+	 * entity.world.getBlockState(new BlockPos(entity.getPositionVec())); return
+	 * state.getBlock(). getMaterial().isLiquid(); }
 	 */
 
 	/**
@@ -435,7 +442,9 @@ public class TargetUtils {
 					f1 = EnchantmentHelper.getModifierForCreature(heldItem, CreatureAttribute.UNDEFINED);
 				}
 
-				float f2 = player.getCooledAttackStrength(0.5F);
+				float f2 = ((RANDOM.nextInt() + new Date().getTime()) % 10 + 1) * 0.1f;// Porcentaje desde 10 a 100, de
+																						// 10 en 10
+				// player.getCooledAttackStrength(0.5F);
 				f = f * (0.2F + f2 * f2 * 0.8F);
 				f1 = f1 * f2;
 				player.resetCooldown();
@@ -456,8 +465,10 @@ public class TargetUtils {
 							&& !player.isInWater() && !player.isPotionActive(Effects.BLINDNESS) && !player.isPassenger()
 							&& targetEntity instanceof LivingEntity;
 					flag2 = flag2 && !player.isSprinting();
-					net.minecraftforge.event.entity.player.CriticalHitEvent hitResult = net.minecraftforge.common.ForgeHooks
-							.getCriticalHit(player, targetEntity, flag2, flag2 ? 1.5F : 1.0F);
+
+					CriticalHitEvent hitResult = ForgeHooks.getCriticalHit(player, targetEntity, flag2,
+							flag2 ? 1.5F : 1.0F);
+
 					flag2 = hitResult != null;
 					if (flag2) {
 						f *= hitResult.getDamageModifier();
@@ -616,7 +627,7 @@ public class TargetUtils {
 
 	public static Entity getEntityByUUID(ClientWorld w, UUID uuid) {
 		ClientWorld cw = (ClientWorld) w;
-		return StreamSupport.stream(cw.   getAllEntities().spliterator(), true).filter(x -> x.getUniqueID().equals(uuid))
+		return StreamSupport.stream(cw.getAllEntities().spliterator(), true).filter(x -> x.getUniqueID().equals(uuid))
 				.findAny().orElse(null);
 	}
 }

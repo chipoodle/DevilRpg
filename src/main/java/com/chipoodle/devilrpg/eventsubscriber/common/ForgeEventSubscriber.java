@@ -9,6 +9,7 @@ import static com.chipoodle.devilrpg.DevilRpg.LOGGER;
 
 import java.util.HashMap;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.auxiliar.IBaseAuxiliarCapability;
@@ -25,13 +26,14 @@ import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.network.handler.PlayerExperienceClientServerHandler;
 import com.chipoodle.devilrpg.network.handler.PlayerManaClientServerHandler;
 import com.chipoodle.devilrpg.network.handler.PlayerSkillClientServerHandler;
+import com.chipoodle.devilrpg.util.EventUtils;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.ai.attributes.Attributes;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
-import net.minecraft.util.Hand;
+import net.minecraft.util.RegistryKey;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.util.text.StringTextComponent;
@@ -42,8 +44,10 @@ import net.minecraftforge.event.entity.living.LivingEvent.LivingJumpEvent;
 import net.minecraftforge.event.entity.living.LivingEvent.LivingUpdateEvent;
 import net.minecraftforge.event.entity.living.LivingFallEvent;
 import net.minecraftforge.event.entity.player.AttackEntityEvent;
+import net.minecraftforge.event.entity.player.CriticalHitEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.event.entity.player.PlayerSetSpawnEvent;
 import net.minecraftforge.event.entity.player.PlayerSleepInBedEvent;
 import net.minecraftforge.event.entity.player.PlayerXpEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
@@ -210,10 +214,12 @@ public class ForgeEventSubscriber {
 		if (exp.isPresent()) {
 			if (!player.world.isRemote) {
 				mainThread.enqueue(new Runnable() {
+
 					public void run() {
 						ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> (ServerPlayerEntity) player),
 								new PlayerExperienceClientServerHandler(exp.map(x -> x.getNBTData()).orElse(null)));
 					}
+
 				});
 			}
 
@@ -224,11 +230,6 @@ public class ForgeEventSubscriber {
 				Minecraft.getInstance().enqueue(() -> {
 					aux.ifPresent(x -> x.setWerewolfAttack(false, player));
 					aux.ifPresent(x -> x.setWerewolfTransformation(false, player));
-					// player.getAttribute(SharedMonsterAttributes.MAX_HEALTH).removeAllModifiers();
-					// player.getAttribute(SharedMonsterAttributes.MOVEMENT_SPEED).removeAllModifiers();
-					// ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() ->
-					// (ServerPlayerEntity) player), new PlayerAuxiliarClientServerHandler(aux.map(x
-					// -> x.getNBTData()).orElse(null)));
 				});
 			}
 		}
@@ -241,12 +242,6 @@ public class ForgeEventSubscriber {
 						x.removeAllSoulBear(player);
 						x.removeAllWisp(player);
 					});
-
-					/*
-					 * ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() ->
-					 * (ServerPlayerEntity) player), new PlayerMinionClientServerHandler(min.map(x
-					 * -> x.getNBTData()).orElse(null)));
-					 */
 
 				});
 			}
@@ -285,7 +280,7 @@ public class ForgeEventSubscriber {
 
 	@SubscribeEvent(priority = EventPriority.NORMAL)
 	public void onPlayerPickupXP(PlayerXpEvent.PickupXp e) {
-		e.getOrb().xpValue *= 2;
+		e.getOrb().xpValue *= 0.5;
 	}
 
 	/**
@@ -296,14 +291,11 @@ public class ForgeEventSubscriber {
 	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
 	public static void onLivingJumpEventt(LivingJumpEvent event) {
 		if (event.getEntity() instanceof PlayerEntity) {
-			LazyOptional<IBaseAuxiliarCapability> aux = event.getEntity()
-					.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
-
-			boolean transformation = aux.map(x -> x.isWerewolfTransformation()).orElse(false);
-			if (transformation) {
-				Vector3d motion = event.getEntity().getMotion();
-				event.getEntity().setMotion(motion.getX(), motion.getY() + 0.13D, motion.getZ());
-			}
+			Consumer<LivingJumpEvent> c = eve -> {
+				Vector3d motion = eve.getEntity().getMotion();
+				eve.getEntity().setMotion(motion.getX(), motion.getY() + 0.13D, motion.getZ());
+			};
+			EventUtils.onTransformation((PlayerEntity) event.getEntity(), c, event);
 		}
 	}
 
@@ -315,68 +307,49 @@ public class ForgeEventSubscriber {
 	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
 	public static void onLivingFallEvent(LivingFallEvent event) {
 		if (event.getEntity() instanceof PlayerEntity) {
-			LazyOptional<IBaseAuxiliarCapability> aux = event.getEntity()
-					.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
-
-			boolean transformation = aux.map(x -> x.isWerewolfTransformation()).orElse(false);
-			if (transformation) {
-				if (event.getDistance() > 1) {
-
-					event.setDistance(event.getDistance() - 1);
+			Consumer<LivingFallEvent> c = eve -> {
+				if (eve.getDistance() > 1) {
+					eve.setDistance(eve.getDistance() - 1);
 				}
-			}
+			};
+			EventUtils.onTransformation((PlayerEntity) event.getEntity(), c, event);
 		}
 	}
 
 	@SubscribeEvent
 	public static void entityInteract(PlayerInteractEvent.EntityInteract event) {
-		// event.getPlayer().sendMessage(new
-		// StringTextComponent("------>PlayerInteractEvent.EntityInteract::
-		// "+event.getTarget()));
+		Consumer<PlayerInteractEvent.EntityInteract> c = eve -> {
+			eve.getPlayer().isSwingInProgress = false;
+			eve.setCanceled(true);
+		};
+		EventUtils.onTransformation(event.getPlayer(), c, event);
 	}
 
-	@SubscribeEvent
+	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
 	public static void leftClickBlock(PlayerInteractEvent.LeftClickBlock event) {
-		PlayerEntity player = event.getPlayer();
-
-		swingHands(player);
+		Consumer<PlayerInteractEvent.LeftClickBlock> c = eve -> {
+			eve.getPlayer().isSwingInProgress = false;
+			eve.setCanceled(true);
+		};
+		EventUtils.onTransformation(event.getPlayer(), c, event);
 	}
 
 	@SubscribeEvent
 	public static void entityInteractSpecific(PlayerInteractEvent.EntityInteractSpecific event) {
-		PlayerEntity player = event.getPlayer();
-
-		swingHands(player);
+		Consumer<PlayerInteractEvent.EntityInteractSpecific> c = eve -> {
+			eve.getPlayer().isSwingInProgress = false;
+			eve.setCanceled(true);
+		};
+		EventUtils.onTransformation(event.getPlayer(), c, event);
 	}
 
 	@SubscribeEvent
 	public static void onAttack(AttackEntityEvent event) {
-		LazyOptional<IBaseAuxiliarCapability> aux = event.getPlayer()
-				.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
-
-		boolean transformation = aux.map(x -> x.isWerewolfTransformation()).orElse(false);
-		// DevilRpg.LOGGER.info("------> PlayerInteractEvent.AttackEntityEvent.");
-		if (transformation) {
-			event.getPlayer().isSwingInProgress = false;
-			event.setCanceled(true);
-		}
-	}
-
-	/**
-	 * @param player
-	 */
-	private static void swingHands(PlayerEntity player) {
-		LazyOptional<IBaseAuxiliarCapability> aux = player.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
-
-		boolean transformation = aux.map(x -> x.isWerewolfTransformation()).orElse(false);
-		if (transformation) {
-			player.isSwingInProgress = false;
-			aux.ifPresent(x -> {
-				Hand h = x.isSwingingMainHand() ? Hand.MAIN_HAND : Hand.OFF_HAND;
-				player.swingArm(h);
-				x.setSwingingMainHand(!x.isSwingingMainHand(), player);
-			});
-		}
+		Consumer<AttackEntityEvent> c = eve -> {
+			eve.getPlayer().isSwingInProgress = false;
+			eve.setCanceled(true);
+		};
+		EventUtils.onTransformation(event.getPlayer(), c, event);
 	}
 
 	/**
@@ -392,5 +365,21 @@ public class ForgeEventSubscriber {
 		 * DevilRpg.LOGGER.info("---->Entity: "+event.getEntityLiving().getType() +
 		 * "active potion effects: "+activePotionEffects);
 		 */
+	}
+
+	/*
+	 * @SubscribeEvent public static void onBreakSpeed(BreakSpeed event) {
+	 * Consumer<BreakSpeed> c = eve -> { eve.setCanceled(true);
+	 * eve.getPlayer().sendMessage(new StringTextComponent("------> onBreakSpeed"),
+	 * eve.getPlayer().getUniqueID()); };
+	 * EventUtils.onTransformation(event.getPlayer(), c, event); }
+	 */
+
+	@SubscribeEvent
+	public static void onCriticalHitEvent(CriticalHitEvent event) {
+		event.getPlayer()
+				.sendMessage(new StringTextComponent(
+						"Critical hit on " + event.getTarget().getName().getStringTruncated(10) + " by " + event.getPlayer().getName().getStringTruncated(10)),
+						event.getPlayer().getUniqueID());
 	}
 }

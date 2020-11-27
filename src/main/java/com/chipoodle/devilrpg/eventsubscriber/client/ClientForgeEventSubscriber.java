@@ -5,6 +5,8 @@
  */
 package com.chipoodle.devilrpg.eventsubscriber.client;
 
+import java.util.function.Consumer;
+
 import org.lwjgl.glfw.GLFW;
 
 import com.chipoodle.devilrpg.DevilRpg;
@@ -19,18 +21,21 @@ import com.chipoodle.devilrpg.client.gui.hud.ManaBarRenderer;
 import com.chipoodle.devilrpg.client.gui.hud.MinionPortraitRenderer;
 import com.chipoodle.devilrpg.client.render.entity.WerewolfRenderer;
 import com.chipoodle.devilrpg.skillsystem.skillinstance.SkillShapeshiftWerewolf;
+import com.chipoodle.devilrpg.util.EventUtils;
 import com.chipoodle.devilrpg.util.SkillEnum;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.player.ClientPlayerEntity;
-import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.util.text.StringTextComponent;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
+import net.minecraftforge.client.event.RenderHandEvent;
 import net.minecraftforge.client.event.RenderPlayerEvent;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent.BreakSpeed;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -93,11 +98,13 @@ public final class ClientForgeEventSubscriber {
 		}
 	}
 
+	/**
+	 * Non cancellable event
+	 * 
+	 * @param event
+	 */
 	@SubscribeEvent
 	public static void leftClickEmpty(PlayerInteractEvent.LeftClickEmpty event) {
-		if (event.getPlayer().world.isRemote) {
-
-		}
 		// event.getPlayer().sendMessage(new StringTextComponent("------>
 		// PlayerInteractEvent.LeftClickEmpty"));
 	}
@@ -138,9 +145,8 @@ public final class ClientForgeEventSubscriber {
 			LazyOptional<IBaseAuxiliarCapability> aux = player.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
 			if (aux == null || !aux.isPresent() || !aux.map(x -> x.isWerewolfTransformation()).orElse(true))
 				return;
-			else
-				player.isSwingInProgress = false;
 
+			player.isSwingInProgress = false;
 			if (event.getButton() == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
 				if (event.getAction() == GLFW.GLFW_PRESS) {
 					DevilRpg.LOGGER.info("pressed");
@@ -151,28 +157,6 @@ public final class ClientForgeEventSubscriber {
 			if (event.getAction() == GLFW.GLFW_RELEASE) {
 				DevilRpg.LOGGER.info("released");
 				aux.ifPresent(werwolf -> werwolf.setWerewolfAttack(false, player));
-			}
-		}
-	}
-
-	/**
-	 * Prevents player from interacting with any block. Also hits to allies don't
-	 * reach.
-	 * 
-	 * @param event
-	 */
-	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
-	public static void onPlayerInteractEvent(PlayerInteractEvent.LeftClickBlock event) {
-		if (event.getPlayer() != null) {
-			if (event.getPlayer() != null) {
-				LazyOptional<IBaseAuxiliarCapability> aux = event.getPlayer()
-						.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
-				if (aux == null || !aux.isPresent() || !aux.map(x -> x.isWerewolfTransformation()).orElse(true))
-					return;
-				else {
-					event.getPlayer().isSwingInProgress = false;
-					event.setCanceled(true);
-				}
 			}
 		}
 	}
@@ -203,7 +187,7 @@ public final class ClientForgeEventSubscriber {
 	}
 
 	@OnlyIn(Dist.CLIENT)
-	public static WerewolfRenderer newWolf = null;// = new WerewolfRenderer(Minecraft.getInstance().getRenderManager());
+	public static WerewolfRenderer newWolf = null;
 
 	/**
 	 * Cancels the default player's model rendering
@@ -212,61 +196,19 @@ public final class ClientForgeEventSubscriber {
 	 */
 	@SubscribeEvent
 	public static void onPlayerRender(RenderPlayerEvent.Pre event) {
-		if (event.getPlayer() != null) {
-
-			LazyOptional<IBaseAuxiliarCapability> aux = event.getPlayer()
-					.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
-			if (aux == null || !aux.isPresent() || !aux.map(x -> x.isWerewolfTransformation()).orElse(true)) {
-				newWolf = null;
-				return;
-			} else {
-				event.setCanceled(true);
-				if (newWolf == null) {
-					newWolf = new WerewolfRenderer(event.getRenderer().getRenderManager());
-				}
-					newWolf.render(event.getPlayer(), 0, event.getPartialRenderTick(), event.getMatrixStack(),
-							event.getBuffers(), event.getLight());
-
-				// event.getRenderer().getRenderManager().renderers.put(EntityType.PLAYER, new
-				// WerewolfRenderer(event.getRenderer().getRenderManager()));
-
-				// event.getRenderer().getRenderManager().register(EntityType.PLAYER, new
-				// WerewolfRenderer(event.getRenderer().getRenderManager()));
-
-				/*
-				 * LayerRenderer<AbstractClientPlayerEntity,
-				 * PlayerModel<AbstractClientPlayerEntity>> werwolfLayer = new
-				 * WerewolfLayer<AbstractClientPlayerEntity>( new
-				 * PlayerRenderer(event.getRenderer().getRenderManager()));
-				 * event.getRenderer().addLayer(werwolfLayer);
-				 */
-
+		Consumer<RenderPlayerEvent.Pre> c = eve -> {
+			eve.setCanceled(true);
+			if (newWolf == null) {
+				newWolf = new WerewolfRenderer(eve.getRenderer().getRenderManager());
 			}
-
-		}
+			newWolf.render(eve.getPlayer(), 0, eve.getPartialRenderTick(), eve.getMatrixStack(), eve.getBuffers(),
+					eve.getLight());
+		};
+		EventUtils.onTransformation(event.getPlayer(), c, event);
 	}
 
-	/**
-	 * Render new player's model rendering
-	 * 
-	 * @param event
-	 */
 	@SubscribeEvent
-	public static void onPlayerRender(RenderPlayerEvent.Post event) {
-		if (event.getPlayer() != null && event.getEntity() instanceof PlayerEntity) {
-
-			LazyOptional<IBaseAuxiliarCapability> aux = event.getPlayer()
-					.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
-			if (aux == null || !aux.isPresent() || !aux.map(x -> x.isWerewolfTransformation()).orElse(true)) {
-				return;
-
-				// event.getRenderer().getPackedOverlay(event.getPlayer(), uIn)
-
-			} else {
-				// event.getRenderer().addLayer(new WerewolfLayer<>(event.getRenderer()));
-
-			}
-		}
+	public static void onRenderHandEvent(RenderHandEvent event) {
 
 	}
 }

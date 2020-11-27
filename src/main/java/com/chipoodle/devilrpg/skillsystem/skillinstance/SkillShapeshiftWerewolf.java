@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.skillsystem.skillinstance;
 
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
@@ -32,7 +33,7 @@ import net.minecraftforge.common.util.LazyOptional;
 
 public class SkillShapeshiftWerewolf implements ISkillContainer {
 	private PlayerSkillCapability parentCapability;
-	private static final ResourceLocation SUMMON_SOUND = new ResourceLocation(DevilRpg.MODID,"summon");
+	private static final ResourceLocation SUMMON_SOUND = new ResourceLocation(DevilRpg.MODID, "summon");
 	private LazyOptional<IBaseAuxiliarCapability> aux;
 	AttributeModifier healthAttributeModifier;
 	AttributeModifier speedAttributeModifier;
@@ -51,10 +52,9 @@ public class SkillShapeshiftWerewolf implements ISkillContainer {
 		if (!worldIn.isRemote) {
 			Random rand = new Random();
 			SoundEvent event = new SoundEvent(SUMMON_SOUND);
-			worldIn.playSound((PlayerEntity) null, playerIn.getPosX(), playerIn.getPosY(), playerIn.getPosZ(),
-					event, SoundCategory.NEUTRAL, 0.5F,
-					0.4F / (rand.nextFloat() * 0.4F + 0.8F));
-			
+			worldIn.playSound((PlayerEntity) null, playerIn.getPosX(), playerIn.getPosY(), playerIn.getPosZ(), event,
+					SoundCategory.NEUTRAL, 0.5F, 0.4F / (rand.nextFloat() * 0.4F + 0.8F));
+
 			aux = playerIn.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
 			boolean transformation = aux.map(x -> x.isWerewolfTransformation()).orElse(false);
 			aux.ifPresent(x -> x.setWerewolfTransformation(!transformation, playerIn));
@@ -82,15 +82,17 @@ public class SkillShapeshiftWerewolf implements ISkillContainer {
 	private void removeCurrentModifiers(PlayerEntity playerIn) {
 		HashMap<String, UUID> attributeModifiers = parentCapability.getAttributeModifiers();
 		if (healthAttributeModifier != null) {
-			//playerIn.getAttribute(SharedMonsterAttributes.MAX_HEALTH).removeModifier(healthAttributeModifier.getID());
-			playerIn.getAttribute(Attributes.MAX_HEALTH).removeModifier(attributeModifiers.get(Attributes.MAX_HEALTH.getAttributeName()));
+			// playerIn.getAttribute(SharedMonsterAttributes.MAX_HEALTH).removeModifier(healthAttributeModifier.getID());
+			playerIn.getAttribute(Attributes.MAX_HEALTH)
+					.removeModifier(attributeModifiers.get(Attributes.MAX_HEALTH.getAttributeName()));
 			attributeModifiers.remove(Attributes.MAX_HEALTH.getAttributeName());
-			if(playerIn.getHealth() > playerIn.getMaxHealth())
+			if (playerIn.getHealth() > playerIn.getMaxHealth())
 				playerIn.setHealth(playerIn.getMaxHealth());
 		}
 		if (speedAttributeModifier != null) {
-			//playerIn.getAttribute(SharedMonsterAttributes.MOVEMENT_SPEED).removeModifier(speedAttributeModifier.getID());
-			playerIn.getAttribute(Attributes.MOVEMENT_SPEED).removeModifier(attributeModifiers.get(Attributes.MOVEMENT_SPEED.getAttributeName()));
+			// playerIn.getAttribute(SharedMonsterAttributes.MOVEMENT_SPEED).removeModifier(speedAttributeModifier.getID());
+			playerIn.getAttribute(Attributes.MOVEMENT_SPEED)
+					.removeModifier(attributeModifiers.get(Attributes.MOVEMENT_SPEED.getAttributeName()));
 			attributeModifiers.remove(Attributes.MOVEMENT_SPEED.getAttributeName());
 		}
 		parentCapability.setAttributeModifiers(attributeModifiers, playerIn);
@@ -101,8 +103,9 @@ public class SkillShapeshiftWerewolf implements ISkillContainer {
 		attributeModifiers.put(Attributes.MAX_HEALTH.getAttributeName(), healthAttributeModifier.getID());
 		attributeModifiers.put(Attributes.MOVEMENT_SPEED.getAttributeName(), speedAttributeModifier.getID());
 		parentCapability.setAttributeModifiers(attributeModifiers, playerIn);
-		
-		//TODO: Verificar si funciona y usar applyPersisentModifier para probar también
+
+		// TODO: Verificar si funciona y usar applyPersisentModifier para probar
+		// también
 		playerIn.getAttribute(Attributes.MAX_HEALTH).applyNonPersistentModifier(healthAttributeModifier);
 		playerIn.getAttribute(Attributes.MOVEMENT_SPEED).applyNonPersistentModifier(speedAttributeModifier);
 	}
@@ -113,38 +116,40 @@ public class SkillShapeshiftWerewolf implements ISkillContainer {
 	 * @param player
 	 */
 	@OnlyIn(Dist.CLIENT)
-	public void playerTickEventAttack(PlayerEntity player, LazyOptional<IBaseAuxiliarCapability> aux) {
+	public void playerTickEventAttack(final PlayerEntity player, LazyOptional<IBaseAuxiliarCapability> aux) {
 		if (player.world.isRemote) {
-			int points = parentCapability.getSkillsPoints().get(SkillEnum.TRANSFORM_WEREWOLF);
-			float s = (15L - points * 0.5F);
-			long attackTime = (long) s;
-			if (player.ticksExisted % attackTime == 0L) {
-				int distance = 1;
-				double radius = 2;
-				if (player != null) {
-					List<LivingEntity> targetList = TargetUtils.acquireAllLookTargets(player, distance, radius).stream()
-							.filter(x -> !(x instanceof TameableEntity) || !x.isOnSameTeam(player))
-							.collect(Collectors.toList());
+			aux.ifPresent(auxiliarCapability -> {
+				int points = parentCapability.getSkillsPoints().get(SkillEnum.TRANSFORM_WEREWOLF);
+				float s = (15L - points * 0.5F);
+				long attackTime = (long) s;
+				LivingEntity target = null;
+				if (player.ticksExisted % attackTime == 0L) {
+					int distance = 1;
+					double radius = 2;
+					if (player != null) {
+						List<LivingEntity> targetList = TargetUtils.acquireAllLookTargets(player, distance, radius)
+								.stream().filter(x -> !(x instanceof TameableEntity) || !x.isOnSameTeam(player))
+								.collect(Collectors.toList());
 
-					LivingEntity target = targetList.stream().filter(x -> !x.equals(player.getLastAttackedEntity()))
-							.findAny().orElseGet(() -> targetList.stream().findAny().orElse(null));
+						target = targetList.stream().filter(x -> !x.equals(player.getLastAttackedEntity()))
+								.min(Comparator.comparing(x->x.getPosition().distanceSq(player.getPosition())))
+								.orElseGet(() -> targetList.stream().findAny().orElse(null));
 
-					if (target != null) {
-						if (targetList != null && !targetList.isEmpty()) {
-							player.setLastAttackedEntity(target);
-							aux.ifPresent(x -> {
-								Hand h = x.isSwingingMainHand() ? Hand.MAIN_HAND : Hand.OFF_HAND;
+						if (target != null) {
+							if (targetList != null && !targetList.isEmpty()) {
+								player.setLastAttackedEntity(target);
+								Hand h = auxiliarCapability.isSwingingMainHand() ? Hand.MAIN_HAND : Hand.OFF_HAND;
 								player.swingArm(h);
-								x.setSwingingMainHand(!x.isSwingingMainHand(), player);
+								auxiliarCapability.setSwingingMainHand(!auxiliarCapability.isSwingingMainHand(),
+										player);
 								ModNetwork.CHANNEL
 										.sendToServer(new WerewolfAttackServerHandler(target.getEntityId(), h));
-							});
+							}
 						}
 					}
-
 				}
 
-			}
+			});
 		}
 	}
 }
