@@ -125,7 +125,7 @@ public class SkillShapeshiftWerewolf implements ISkillContainer {
 				LivingEntity target = null;
 				if (player.ticksExisted % attackTime == 0L) {
 					int distance = 1;
-					double radius = 2;
+					double radius = 1.4;
 					if (player != null) {
 						List<LivingEntity> targetList = TargetUtils.acquireAllLookTargets(player, distance, radius)
 								.stream().filter(x -> !(x instanceof TameableEntity) || !x.isOnSameTeam(player))

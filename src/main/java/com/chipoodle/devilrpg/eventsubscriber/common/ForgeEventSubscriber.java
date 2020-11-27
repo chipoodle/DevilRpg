@@ -377,9 +377,12 @@ public class ForgeEventSubscriber {
 
 	@SubscribeEvent
 	public static void onCriticalHitEvent(CriticalHitEvent event) {
-		event.getPlayer()
-				.sendMessage(new StringTextComponent(
-						"Critical hit on " + event.getTarget().getName().getStringTruncated(10) + " by " + event.getPlayer().getName().getStringTruncated(10)),
-						event.getPlayer().getUniqueID());
+		/*
+		 * event.getPlayer() .sendMessage(new StringTextComponent( "Critical hit on " +
+		 * event.getTarget().getName().getStringTruncated(10) + " by " +
+		 * event.getPlayer().getName().getStringTruncated(10)),
+		 * event.getPlayer().getUniqueID());
+		 */
+
 	}
 }

@@ -80,7 +80,7 @@ public final class ClientForgeEventSubscriber {
 		}
 	}
 
-	/*
+	/**
 	 * The RenderGameOverlayEvent.Post event is called after each game overlay
 	 * element is rendered. Similar to the RenderGameOverlayEvent.Pre event, it is
 	 * called multiple times.
@@ -108,32 +108,6 @@ public final class ClientForgeEventSubscriber {
 		// event.getPlayer().sendMessage(new StringTextComponent("------>
 		// PlayerInteractEvent.LeftClickEmpty"));
 	}
-
-	/*
-	 * @OnlyIn(Dist.CLIENT)
-	 * 
-	 * @SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
-	 * public static void onMouseEvent(InputEvent.MouseInputEvent event) {
-	 * 
-	 * Minecraft mc = Minecraft.getInstance(); ClientPlayerEntity player =
-	 * mc.player; if (player == null) return;
-	 * 
-	 * LazyOptional<IBaseAuxiliarCapability> aux =
-	 * player.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP); if (aux ==
-	 * null || !aux.isPresent() || !aux.map(x ->
-	 * x.isWerewolfTransformation()).orElse(true)) return; else
-	 * player.isSwingInProgress = false;
-	 * 
-	 * if (event.getButton() == GLFW.GLFW_MOUSE_BUTTON_LEFT) { if (event.getAction()
-	 * == GLFW.GLFW_PRESS) { DevilRpg.LOGGER.info("pressed"); aux.ifPresent(werwolf
-	 * -> werwolf.setWerewolfAttack(true, player)); } }
-	 * 
-	 * if (event.getAction() == GLFW.GLFW_RELEASE) {
-	 * DevilRpg.LOGGER.info("released"); aux.ifPresent(werwolf ->
-	 * werwolf.setWerewolfAttack(false, player)); }
-	 * 
-	 * }
-	 */
 
 	@OnlyIn(Dist.CLIENT)
 	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
@@ -204,7 +178,9 @@ public final class ClientForgeEventSubscriber {
 			newWolf.render(eve.getPlayer(), 0, eve.getPartialRenderTick(), eve.getMatrixStack(), eve.getBuffers(),
 					eve.getLight());
 		};
-		EventUtils.onTransformation(event.getPlayer(), c, event);
+		if(!EventUtils.onTransformation(event.getPlayer(), c, event)) {
+			newWolf = null;
+		}
 	}
 
 	@SubscribeEvent

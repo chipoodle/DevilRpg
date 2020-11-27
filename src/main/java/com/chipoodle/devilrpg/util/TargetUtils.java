@@ -416,7 +416,7 @@ public class TargetUtils {
 		if (player.interactionManager.getGameType() == GameType.SPECTATOR) {
 			player.setSpectatingEntity(targetEntity);
 		} else {
-			// player.attackTargetEntityWithCurrentItem(targetEntity);
+			player.attackTargetEntityWithCurrentItem(targetEntity);
 			attackTargetEntity(player, targetEntity, heldItem);
 		}
 
@@ -433,18 +433,19 @@ public class TargetUtils {
 		 */
 		if (targetEntity.canBeAttackedWithItem()) {
 			if (!targetEntity.hitByEntity(player)) {
-				float f = (float) player.getAttribute(Attributes.ATTACK_DAMAGE).getValue();
+				float f = (float) player.getAttributeValue(Attributes.ATTACK_DAMAGE);
 				float f1;
 				if (targetEntity instanceof LivingEntity) {
-					f1 = EnchantmentHelper.getModifierForCreature(heldItem,
+					f1 = EnchantmentHelper.getModifierForCreature(player.getHeldItemMainhand(),
 							((LivingEntity) targetEntity).getCreatureAttribute());
 				} else {
-					f1 = EnchantmentHelper.getModifierForCreature(heldItem, CreatureAttribute.UNDEFINED);
+					f1 = EnchantmentHelper.getModifierForCreature(player.getHeldItemMainhand(),
+							CreatureAttribute.UNDEFINED);
 				}
 
-				float f2 = ((RANDOM.nextInt() + new Date().getTime()) % 10 + 1) * 0.1f;// Porcentaje desde 10 a 100, de
-																						// 10 en 10
-				// player.getCooledAttackStrength(0.5F);
+				float f2 = ((RANDOM.nextInt() + new Date().getTime()) % 10 + 1) * 0.1f;// player.getCooledAttackStrength(0.5F);
+																						// Porcentaje desde 10 a 100,
+																						// de 10 en 10
 				f = f * (0.2F + f2 * f2 * 0.8F);
 				f1 = f1 * f2;
 				player.resetCooldown();
@@ -465,10 +466,8 @@ public class TargetUtils {
 							&& !player.isInWater() && !player.isPotionActive(Effects.BLINDNESS) && !player.isPassenger()
 							&& targetEntity instanceof LivingEntity;
 					flag2 = flag2 && !player.isSprinting();
-
-					CriticalHitEvent hitResult = ForgeHooks.getCriticalHit(player, targetEntity, flag2,
-							flag2 ? 1.5F : 1.0F);
-
+					net.minecraftforge.event.entity.player.CriticalHitEvent hitResult = net.minecraftforge.common.ForgeHooks
+							.getCriticalHit(player, targetEntity, flag2, flag2 ? 1.5F : 1.0F);
 					flag2 = hitResult != null;
 					if (flag2) {
 						f *= hitResult.getDamageModifier();
@@ -478,7 +477,7 @@ public class TargetUtils {
 					boolean flag3 = false;
 					double d0 = (double) (player.distanceWalkedModified - player.prevDistanceWalkedModified);
 					if (flag && !flag2 && !flag1 && player.isOnGround() && d0 < (double) player.getAIMoveSpeed()) {
-						ItemStack itemstack = heldItem;// player.getHeldItem(Hand.MAIN_HAND);
+						ItemStack itemstack = player.getHeldItem(Hand.MAIN_HAND);
 						if (itemstack.getItem() instanceof SwordItem) {
 							flag3 = true;
 						}
@@ -495,7 +494,7 @@ public class TargetUtils {
 						}
 					}
 
-					Vector3d vec3d = targetEntity.getMotion();
+					Vector3d vector3d = targetEntity.getMotion();
 					boolean flag5 = targetEntity.attackEntityFrom(DamageSource.causePlayerDamage(player), f);
 					if (flag5) {
 						if (i > 0) {
@@ -542,7 +541,7 @@ public class TargetUtils {
 							((ServerPlayerEntity) targetEntity).connection
 									.sendPacket(new SEntityVelocityPacket(targetEntity));
 							targetEntity.velocityChanged = false;
-							targetEntity.setMotion(vec3d);
+							targetEntity.setMotion(vector3d);
 						}
 
 						if (flag2) {
@@ -574,7 +573,7 @@ public class TargetUtils {
 						}
 
 						EnchantmentHelper.applyArthropodEnchantments(player, targetEntity);
-						ItemStack itemstack1 = heldItem;// player.getHeldItemMainhand();
+						ItemStack itemstack1 = player.getHeldItemMainhand();
 						Entity entity = targetEntity;
 						if (targetEntity instanceof EnderDragonPartEntity) {
 							entity = ((EnderDragonPartEntity) targetEntity).dragon;

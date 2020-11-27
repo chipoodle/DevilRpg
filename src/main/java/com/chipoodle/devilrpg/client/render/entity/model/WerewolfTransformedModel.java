@@ -372,7 +372,9 @@ public class WerewolfTransformedModel<T extends LivingEntity> extends BipedModel
 
 			TailA.rotationPointY = 9.5F;
 			TailA.rotationPointZ = 6F;
-
+			
+			bipedLeftArm.rotationPointY = -4F;
+			bipedLeftArm.rotationPointZ = -2F;
 		} else {
 			bipedHead.rotationPointY = 0F;
 			bipedHead.rotationPointZ = -11F;
@@ -392,6 +394,9 @@ public class WerewolfTransformedModel<T extends LivingEntity> extends BipedModel
 			lArmA.rotationPointZ = -6F;
 			TailA.rotationPointY = 7.5F;
 			TailA.rotationPointZ = 10F;
+			
+			bipedLeftArm.rotationPointY = 4.5F; 
+			bipedLeftArm.rotationPointZ = -6F;
 		}
 
 		Nose.rotationPointY = bipedHead.rotationPointY;
@@ -502,6 +507,13 @@ public class WerewolfTransformedModel<T extends LivingEntity> extends BipedModel
 		lArmA.rotateAngleZ = (MathHelper.cos(ageInTicks * 0.09F) * 0.05F) - 0.05F;
 		rArmA.rotateAngleX = LLegXRot;// MathHelper.sin(f2 * 0.067F) * 0.05F;
 		lArmA.rotateAngleX = RLegXRot;// MathHelper.sin(f2 * 0.067F) * 0.05F;
+		
+		bipedRightArm.rotationPointY = bipedLeftArm.rotationPointY;
+		bipedRightArm.rotationPointZ = bipedLeftArm.rotationPointZ;
+		bipedRightArm.rotateAngleZ = -(MathHelper.cos(ageInTicks * 0.09F) * 0.05F) + 0.05F;
+		bipedLeftArm.rotateAngleZ = (MathHelper.cos(ageInTicks * 0.09F) * 0.05F) - 0.05F;
+		bipedRightArm.rotateAngleX = LLegXRot;// MathHelper.sin(f2 * 0.067F) * 0.05F;
+		bipedLeftArm.rotateAngleX = RLegXRot;// MathHelper.sin(f2 * 0.067F) * 0.05F;
 
 		rArmB.rotateAngleZ = 0.3490659F + rArmA.rotateAngleZ;
 		lArmB.rotateAngleZ = -0.3490659F + lArmA.rotateAngleZ;
@@ -567,13 +579,12 @@ public class WerewolfTransformedModel<T extends LivingEntity> extends BipedModel
 		} else {
 			this.bipedHead.rotateAngleX = headPitch * ((float) Math.PI / 180F);
 		}
-
 		this.bipedBody.rotateAngleY = 0.0F;
 		
-		this.bipedRightArm.rotationPointZ = 0.0F;
-		this.bipedRightArm.rotationPointX = -5.0F;
-		this.bipedLeftArm.rotationPointZ = 0.0F;
-		this.bipedLeftArm.rotationPointX = 5.0F;
+		this.bipedLeftArm.rotationPointZ = -2.0F;
+		this.bipedLeftArm.rotationPointX = 4.0F;
+		this.bipedRightArm.rotationPointZ = bipedLeftArm.rotationPointZ;
+		this.bipedRightArm.rotationPointX = -4.0F;
 
 		float f = 1.0F;
 		if (flagelytra) {
@@ -595,13 +606,15 @@ public class WerewolfTransformedModel<T extends LivingEntity> extends BipedModel
 		
 		
 		
-		this.bipedRightLeg.rotateAngleX = MathHelper.cos(limbSwing * 0.6662F) * 1.4F * limbSwingAmount / f;
+		/*this.bipedRightLeg.rotateAngleX = MathHelper.cos(limbSwing * 0.6662F) * 1.4F * limbSwingAmount / f;
 		this.bipedLeftLeg.rotateAngleX = MathHelper.cos(limbSwing * 0.6662F + (float) Math.PI) * 1.4F * limbSwingAmount / f;
 		this.bipedRightLeg.rotateAngleY = 0.0F;
 		this.bipedLeftLeg.rotateAngleY = 0.0F;
 		this.bipedRightLeg.rotateAngleZ = 0.0F;
-		this.bipedLeftLeg.rotateAngleZ = 0.0F;
-		if (this.isSitting) {
+		this.bipedLeftLeg.rotateAngleZ = 0.0F;*/
+		
+		
+		/*if (this.isSitting) {
 			this.bipedRightArm.rotateAngleX += (-(float) Math.PI / 5F);
 			this.bipedLeftArm.rotateAngleX += (-(float) Math.PI / 5F);
 			this.bipedRightLeg.rotateAngleX = -1.4137167F;
@@ -611,11 +624,13 @@ public class WerewolfTransformedModel<T extends LivingEntity> extends BipedModel
 			this.bipedLeftLeg.rotateAngleY = (-(float) Math.PI / 10F);
 			this.bipedLeftLeg.rotateAngleZ = -0.07853982F;
 		}
-
+		 */
 		this.bipedRightArm.rotateAngleY = 0.0F;
 		this.bipedLeftArm.rotateAngleY = 0.0F;
 		
 		
+		
+		/*
 		boolean flag2 = entityIn.getPrimaryHand() == HandSide.RIGHT;
 		boolean flag3 = flag2 ? this.leftArmPose.func_241657_a_() : this.rightArmPose.func_241657_a_();
 		if (flag2 != flag3) {
@@ -625,7 +640,7 @@ public class WerewolfTransformedModel<T extends LivingEntity> extends BipedModel
 			this.func_241654_b_(entityIn);
 			this.func_241655_c_(entityIn);
 		}
-
+		*/
 		
 		//OnSwingAttack
 		this.func_230486_a_(entityIn, ageInTicks);
@@ -794,9 +809,6 @@ public class WerewolfTransformedModel<T extends LivingEntity> extends BipedModel
 				this.LEar.rotateAngleY *= -1.0F;
 			}
 
-
-			
-			
 			/*this.lArmA.setRotationPoint(5F, -4F, 0F);
 			setRotation(lArmA, 0.6320364F, 0F, 0F);
 			
@@ -813,6 +825,13 @@ public class WerewolfTransformedModel<T extends LivingEntity> extends BipedModel
 			this.lArmA.rotateAngleY += this.bipedBody.rotateAngleY;
 			this.lArmA.rotateAngleX += this.bipedBody.rotateAngleY;*/
 			
+			float radianF = 57.29578F;
+			float RLegXRot = MathHelper.cos((ageInTicks * 0.6662F) + 3.141593F) * 0.8F ;//* limbSwingAmount;
+			float LLegXRot = MathHelper.cos(ageInTicks * 0.6662F) * 0.8F ;//* limbSwingAmount;
+			//rArmA.rotateAngleX = LLegXRot;// MathHelper.sin(f2 * 0.067F) * 0.05F;
+			//lArmA.rotateAngleX = RLegXRot;// MathHelper.sin(f2 * 0.067F) * 0.05F;
+			
+			
 			this.bipedRightArm.rotationPointZ = MathHelper.sin(this.bipedBody.rotateAngleY) * 5.0F;
 			this.bipedRightArm.rotationPointX = -MathHelper.cos(this.bipedBody.rotateAngleY) * 5.0F;
 			this.bipedLeftArm.rotationPointZ = -MathHelper.sin(this.bipedBody.rotateAngleY) * 5.0F;
@@ -823,9 +842,6 @@ public class WerewolfTransformedModel<T extends LivingEntity> extends BipedModel
 			this.bipedLeftArm.rotateAngleX += this.bipedBody.rotateAngleY;
 			
 			
-			
-			DevilRpg.LOGGER.info("----1ero");
-			DevilRpg.LOGGER.info("----2do");
 			
 			//Animate item hand
 			f = 1.0F - this.swingProgress;
