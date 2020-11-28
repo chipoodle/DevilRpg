@@ -46,11 +46,11 @@ public class WerewolfRenderer extends LivingRenderer<PlayerEntity, WerewolfTrans
 
 		// this.addLayer(new BipedArmorLayer<>(this, new BipedModel(0.5F), new
 		// BipedModel(1.0F)));
-		this.addLayer(new HeldItemLayer<>(this));
+		//this.addLayer(new HeldItemLayer<>(this));
 		// this.addLayer(new ArrowLayer<>(this)); //this.addLayer(new
 		// Deadmau5HeadLayer(this)); //this.addLayer(new CapeLayer(this));
-		this.addLayer(new HeadLayer<>(this));
-		this.addLayer(new ElytraLayer<>(this));
+		//this.addLayer(new HeadLayer<>(this));
+		//this.addLayer(new ElytraLayer<>(this));
 		// this.addLayer(new ParrotVariantLayer<>(this)); //this.addLayer(new
 		// SpinAttackEffectLayer<>(this)); //this.addLayer(new BeeStingerLayer<>(this));
 
