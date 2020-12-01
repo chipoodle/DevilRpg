@@ -125,25 +125,25 @@ public class SkillShapeshiftWerewolf implements ISkillContainer {
 				LivingEntity target = null;
 				if (player.ticksExisted % attackTime == 0L) {
 					int distance = 1;
-					double radius = 1.4;
+					double radius = 2;
 					if (player != null) {
 						List<LivingEntity> targetList = TargetUtils.acquireAllLookTargets(player, distance, radius)
 								.stream().filter(x -> !(x instanceof TameableEntity) || !x.isOnSameTeam(player))
 								.collect(Collectors.toList());
 
-						target = targetList.stream().filter(x -> !x.equals(player.getLastAttackedEntity()))
-								.min(Comparator.comparing(x->x.getPosition().distanceSq(player.getPosition())))
-								.orElseGet(() -> targetList.stream().findAny().orElse(null));
+						target = targetList.stream()
+								.filter(x -> targetList.size() == 1 || !x.equals(player.getLastAttackedEntity()))
+								.min(Comparator.comparing(x -> x.getPosition().distanceSq(player.getPosition())))
+								.orElse(null);
 
-						if (target != null) {
+						if (target != null && TargetUtils.canReachTarget(player, target)) {
 							if (targetList != null && !targetList.isEmpty()) {
 								player.setLastAttackedEntity(target);
-								Hand h = auxiliarCapability.isSwingingMainHand() ? Hand.MAIN_HAND : Hand.OFF_HAND;
-								player.swingArm(h);
-								auxiliarCapability.setSwingingMainHand(!auxiliarCapability.isSwingingMainHand(),
-										player);
+								Hand hand = auxiliarCapability.isSwingingMainHand() ? Hand.MAIN_HAND : Hand.OFF_HAND;
+								player.swingArm(hand);
+								auxiliarCapability.setSwingingMainHand(!auxiliarCapability.isSwingingMainHand(),player);
 								ModNetwork.CHANNEL
-										.sendToServer(new WerewolfAttackServerHandler(target.getEntityId(), h));
+										.sendToServer(new WerewolfAttackServerHandler(target.getEntityId(), hand));
 							}
 						}
 					}

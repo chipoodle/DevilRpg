@@ -141,25 +141,34 @@ public final class ClientForgeEventSubscriber {
 	}
 
 	@SubscribeEvent
-	public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
+	public static void onPlayerTickAttack(TickEvent.PlayerTickEvent event) {
 		if (event.side.equals(LogicalSide.CLIENT)) {
 			if (event.phase == TickEvent.Phase.START) {
-				LazyOptional<IBaseSkillCapability> skill = event.player
+				LazyOptional<IBaseSkillCapability> skillCapability = event.player
 						.getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
-				LazyOptional<IBaseAuxiliarCapability> aux = event.player
+				LazyOptional<IBaseAuxiliarCapability> auxCapability = event.player
 						.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
-				LazyOptional<IBaseManaCapability> mana = event.player
-						.getCapability(PlayerManaCapabilityProvider.MANA_CAP);
-				if (skill != null && aux != null) {
-					boolean werewolfTransformation = aux.map(x -> x.isWerewolfTransformation()).orElse(false);
-					boolean werewolfAttack = aux.map(x -> x.isWerewolfAttack()).orElse(false);
+				if (skillCapability != null && auxCapability != null) {
+					boolean werewolfTransformation = auxCapability.map(x -> x.isWerewolfTransformation()).orElse(false);
+					boolean werewolfAttack = auxCapability.map(x -> x.isWerewolfAttack()).orElse(false);
 					if (werewolfTransformation && werewolfAttack) {
-						skill.ifPresent(x -> ((SkillShapeshiftWerewolf) x.create(SkillEnum.TRANSFORM_WEREWOLF))
-								.playerTickEventAttack(event.player, aux));
+						skillCapability
+								.ifPresent(x -> ((SkillShapeshiftWerewolf) x.create(SkillEnum.TRANSFORM_WEREWOLF))
+										.playerTickEventAttack(event.player, auxCapability));
 					}
 				}
+			}
+		}
+	}
+
+	@SubscribeEvent
+	public static void onPlayerTickMana(TickEvent.PlayerTickEvent event) {
+		if (event.side.equals(LogicalSide.CLIENT)) {
+			if (event.phase == TickEvent.Phase.START) {
+				LazyOptional<IBaseManaCapability> manaCapability = event.player
+						.getCapability(PlayerManaCapabilityProvider.MANA_CAP);
 				// Mana
-				mana.ifPresent(m -> m.onPlayerTickEventRegeneration(event.player));
+				manaCapability.ifPresent(m -> m.onPlayerTickEventRegeneration(event.player));
 
 			}
 		}

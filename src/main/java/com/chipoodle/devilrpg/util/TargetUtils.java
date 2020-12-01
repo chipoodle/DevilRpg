@@ -412,12 +412,13 @@ public class TargetUtils {
 	 * Attacks for the player the targeted entity with the currently equipped item.
 	 * The equipped item has hitEntity called on it. Args: targetEntity
 	 */
-	public static void attackTargetEntityWithItem(ServerPlayerEntity player, Entity targetEntity, ItemStack heldItem) {
+	public static void attackTargetEntityWithItem(ServerPlayerEntity player, Entity targetEntity, ItemStack heldItem,
+			Hand currentHand) {
 		if (player.interactionManager.getGameType() == GameType.SPECTATOR) {
 			player.setSpectatingEntity(targetEntity);
 		} else {
-			player.attackTargetEntityWithCurrentItem(targetEntity);
-			attackTargetEntity(player, targetEntity, heldItem);
+			// player.attackTargetEntityWithCurrentItem(targetEntity);
+			attackTargetEntity(player, targetEntity, heldItem, currentHand);
 		}
 
 	}
@@ -426,7 +427,8 @@ public class TargetUtils {
 	 * Attacks for the player the targeted entity with the currently equipped item.
 	 * The equipped item has hitEntity called on it. Args: targetEntity
 	 */
-	private static void attackTargetEntity(ServerPlayerEntity player, Entity targetEntity, ItemStack heldItem) {
+	private static void attackTargetEntity(ServerPlayerEntity player, Entity targetEntity, ItemStack heldItem,
+			Hand currentHand) {
 		/*
 		 * if (!net.minecraftforge.common.ForgeHooks.onPlayerAttackTarget(player,
 		 * targetEntity)) return;
@@ -477,7 +479,7 @@ public class TargetUtils {
 					boolean flag3 = false;
 					double d0 = (double) (player.distanceWalkedModified - player.prevDistanceWalkedModified);
 					if (flag && !flag2 && !flag1 && player.isOnGround() && d0 < (double) player.getAIMoveSpeed()) {
-						ItemStack itemstack = player.getHeldItem(Hand.MAIN_HAND);
+						ItemStack itemstack = heldItem;// player.getHeldItem(Hand.MAIN_HAND);
 						if (itemstack.getItem() instanceof SwordItem) {
 							flag3 = true;
 						}
@@ -584,8 +586,8 @@ public class TargetUtils {
 							itemstack1.hitEntity((LivingEntity) entity, player);
 							if (itemstack1.isEmpty()) {
 								net.minecraftforge.event.ForgeEventFactory.onPlayerDestroyItem(player, copy,
-										Hand.MAIN_HAND);
-								player.setHeldItem(Hand.MAIN_HAND, ItemStack.EMPTY);
+										currentHand);
+								player.setHeldItem(currentHand, ItemStack.EMPTY);
 							}
 						}
 

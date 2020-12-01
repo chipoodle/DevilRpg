@@ -367,13 +367,6 @@ public class ForgeEventSubscriber {
 		 */
 	}
 
-	/*
-	 * @SubscribeEvent public static void onBreakSpeed(BreakSpeed event) {
-	 * Consumer<BreakSpeed> c = eve -> { eve.setCanceled(true);
-	 * eve.getPlayer().sendMessage(new StringTextComponent("------> onBreakSpeed"),
-	 * eve.getPlayer().getUniqueID()); };
-	 * EventUtils.onTransformation(event.getPlayer(), c, event); }
-	 */
 
 	@SubscribeEvent
 	public static void onCriticalHitEvent(CriticalHitEvent event) {

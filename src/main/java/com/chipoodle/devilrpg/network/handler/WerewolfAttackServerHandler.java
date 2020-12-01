@@ -2,6 +2,7 @@ package com.chipoodle.devilrpg.network.handler;
 
 import java.util.function.Supplier;
 
+import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.util.TargetUtils;
 
 import net.minecraft.entity.Entity;
@@ -51,9 +52,9 @@ public class WerewolfAttackServerHandler {
 			contextSupplier.get().enqueueWork(() -> {
 				ServerPlayerEntity sender = contextSupplier.get().getSender();
 				Entity target = sender.world.getEntityByID(msg.getEntityId());
-				ItemStack item = sender.getHeldItem(msg.getHand());	
-				TargetUtils.attackTargetEntityWithItem(sender, target, item);
-				//DevilRpg.LOGGER.info("----->HAND: " + msg.getHand().name());
+				ItemStack item = sender.getHeldItem(msg.getHand());
+				TargetUtils.attackTargetEntityWithItem(sender, target, item, msg.getHand());
+				DevilRpg.LOGGER.info("----->HAND: " + msg.getHand().name());
 			});
 			contextSupplier.get().setPacketHandled(true);
 		}
