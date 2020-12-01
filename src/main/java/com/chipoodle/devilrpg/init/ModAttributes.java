@@ -27,7 +27,6 @@ public final class ModAttributes {
 			GlobalEntityTypeAttributes.put(ModEntityTypes.SOUL_WOLF.get(), SoulWolfEntity.setAttributes().create());
 			GlobalEntityTypeAttributes.put(ModEntityTypes.SOUL_BEAR.get(), SoulBearEntity.setAttributes().create());
 			GlobalEntityTypeAttributes.put(ModEntityTypes.WISP.get(), SoulWispEntity.setAttributes().create());
-
 		});
 
 	}

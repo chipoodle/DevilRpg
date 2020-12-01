@@ -96,7 +96,7 @@ public class SoulWispEntity extends TameableEntity
 		this.moveController = new FlyingMovementController(this, 20, true);
 		this.lookController = new SoulWispEntity.BeeLookController(this);
 		this.setPathPriority(PathNodeType.WATER, -1.0F);
-		this.setPathPriority(PathNodeType.COCOA, -1.0F);
+		//this.setPathPriority(PathNodeType.COCOA, -1.0F);
 		this.setPathPriority(PathNodeType.FENCE, -1.0F);
 	}
 

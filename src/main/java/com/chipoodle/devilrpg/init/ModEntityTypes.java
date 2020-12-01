@@ -40,19 +40,20 @@ public final class ModEntityTypes {
 			() -> EntityType.Builder.<SoulWolfEntity>create(SoulWolfEntity::new, EntityClassification.CREATURE)
 					.size(EntityType.WOLF.getWidth(), EntityType.WOLF.getHeight())
 					.build(new ResourceLocation(DevilRpg.MODID, SOUL_WOLF_NAME).toString()));
-	
+
 	public static final RegistryObject<EntityType<SoulBearEntity>> SOUL_BEAR = ENTITY_TYPES.register(SOUL_BEAR_NAME,
 			() -> EntityType.Builder.<SoulBearEntity>create(SoulBearEntity::new, EntityClassification.CREATURE)
-			.size(EntityType.POLAR_BEAR.getWidth(), EntityType.POLAR_BEAR.getHeight())
-			.build(new ResourceLocation(DevilRpg.MODID, SOUL_BEAR_NAME).toString()));
-	
+					.size(EntityType.POLAR_BEAR.getWidth(), EntityType.POLAR_BEAR.getHeight())
+					.build(new ResourceLocation(DevilRpg.MODID, SOUL_BEAR_NAME).toString()));
+
 	public static final RegistryObject<EntityType<SoulWispEntity>> WISP = ENTITY_TYPES.register(WISP_NAME,
 			() -> EntityType.Builder.<SoulWispEntity>create(SoulWispEntity::new, EntityClassification.CREATURE)
-			.size(EntityType.BEE.getWidth(), EntityType.BEE.getHeight())
-			.build(new ResourceLocation(DevilRpg.MODID, WISP_NAME).toString()));
-	
-	public static final RegistryObject<EntityType<SoulFireBallEntity>> SOUL_FIREBALL = ENTITY_TYPES.register(SOUL_FIREBALL_NAME,
+					.size(EntityType.BEE.getWidth(), EntityType.BEE.getHeight())
+					.build(new ResourceLocation(DevilRpg.MODID, WISP_NAME).toString()));
+
+	public static final RegistryObject<EntityType<SoulFireBallEntity>> SOUL_FIREBALL = ENTITY_TYPES.register(
+			SOUL_FIREBALL_NAME,
 			() -> EntityType.Builder.<SoulFireBallEntity>create(SoulFireBallEntity::new, EntityClassification.MISC)
-			.size(EntityType.WITHER_SKULL.getWidth(), EntityType.WITHER_SKULL.getHeight())
-			.build(new ResourceLocation(DevilRpg.MODID, SOUL_FIREBALL_NAME).toString()));
+					.size(EntityType.WITHER_SKULL.getWidth(), EntityType.WITHER_SKULL.getHeight())
+					.build(new ResourceLocation(DevilRpg.MODID, SOUL_FIREBALL_NAME).toString()));
 }

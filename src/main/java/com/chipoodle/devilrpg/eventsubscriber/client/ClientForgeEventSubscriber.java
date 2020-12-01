@@ -5,6 +5,8 @@
  */
 package com.chipoodle.devilrpg.eventsubscriber.client;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.function.Consumer;
 
 import org.lwjgl.glfw.GLFW;
@@ -26,16 +28,19 @@ import com.chipoodle.devilrpg.util.SkillEnum;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.player.ClientPlayerEntity;
-import net.minecraft.util.text.StringTextComponent;
+import net.minecraft.client.renderer.ActiveRenderInfo;
+import net.minecraft.client.settings.PointOfView;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraftforge.client.event.EntityViewRenderEvent.CameraSetup;
 import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.client.event.RenderHandEvent;
+import net.minecraftforge.client.event.RenderLivingEvent;
 import net.minecraftforge.client.event.RenderPlayerEvent;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent.BreakSpeed;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -163,6 +168,8 @@ public final class ClientForgeEventSubscriber {
 	@OnlyIn(Dist.CLIENT)
 	public static WerewolfRenderer newWolf = null;
 
+	/* public static Entity camera = null; */
+
 	/**
 	 * Cancels the default player's model rendering
 	 * 
@@ -178,7 +185,7 @@ public final class ClientForgeEventSubscriber {
 			newWolf.render(eve.getPlayer(), 0, eve.getPartialRenderTick(), eve.getMatrixStack(), eve.getBuffers(),
 					eve.getLight());
 		};
-		if(!EventUtils.onTransformation(event.getPlayer(), c, event)) {
+		if (!EventUtils.onTransformation(event.getPlayer(), c, event)) {
 			newWolf = null;
 		}
 	}
@@ -187,4 +194,47 @@ public final class ClientForgeEventSubscriber {
 	public static void onRenderHandEvent(RenderHandEvent event) {
 
 	}
+
+	private static Class<?>[] tipos = { double.class, double.class, double.class };
+	private static Method method = null;
+
+	/**
+	 * 
+	 * @param event
+	 * @throws NoSuchMethodException
+	 * @throws SecurityException
+	 * @throws IllegalAccessException
+	 * @throws IllegalArgumentException
+	 * @throws InvocationTargetException
+	 */
+	@SubscribeEvent
+	public static void onCameraSetup(CameraSetup event) throws NoSuchMethodException, SecurityException,
+			IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+
+		PlayerEntity player = Minecraft.getInstance().player;
+		if (!Minecraft.getInstance().gameSettings.getPointOfView().equals(PointOfView.FIRST_PERSON)) {
+			Consumer<CameraSetup> c = eve -> {
+			};
+			if (EventUtils.onTransformation(player, c, event)) {
+				if (method == null) {
+					method = ActiveRenderInfo.class.getMethod("movePosition", tipos);
+					method.setAccessible(true);
+				}
+				method.invoke(event.getInfo(), 0.5D, 1.5D, 0.0D);
+			}
+		}
+	}
+
+	/**
+	 * renders custom 3d person view camera
+	 * 
+	 * @param <T>
+	 * 
+	 * @param event
+	 */
+	@SubscribeEvent
+	public static void onRenderLiving(RenderLivingEvent.Pre<?, ?> event) {
+
+	}
+
 }
