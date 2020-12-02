@@ -124,6 +124,10 @@ public class SkillShapeshiftWerewolf implements ISkillContainer {
 				long attackTime = (long) s;
 				LivingEntity target = null;
 				if (player.ticksExisted % attackTime == 0L) {
+					Hand hand = auxiliarCapability.isSwingingMainHand() ? Hand.MAIN_HAND : Hand.OFF_HAND;
+					player.swingArm(hand);
+					auxiliarCapability.setSwingingMainHand(!auxiliarCapability.isSwingingMainHand(), player);
+
 					int distance = 1;
 					double radius = 2;
 					if (player != null) {
@@ -137,16 +141,15 @@ public class SkillShapeshiftWerewolf implements ISkillContainer {
 								.orElse(null);
 
 						if (target != null && TargetUtils.canReachTarget(player, target)) {
-							if (targetList != null && !targetList.isEmpty()) {
-								player.setLastAttackedEntity(target);
-								Hand hand = auxiliarCapability.isSwingingMainHand() ? Hand.MAIN_HAND : Hand.OFF_HAND;
-								player.swingArm(hand);
-								auxiliarCapability.setSwingingMainHand(!auxiliarCapability.isSwingingMainHand(),player);
-								ModNetwork.CHANNEL.sendToServer(new WerewolfAttackServerHandler(target.getEntityId(), hand));
-							}
-						}
-						else {
-							player.isSwingInProgress = false;
+							player.setLastAttackedEntity(target);
+							/*
+							 * Hand hand = auxiliarCapability.isSwingingMainHand() ? Hand.MAIN_HAND :
+							 * Hand.OFF_HAND; player.swingArm(hand);
+							 * auxiliarCapability.setSwingingMainHand(!auxiliarCapability.isSwingingMainHand
+							 * (), player);
+							 */
+							ModNetwork.CHANNEL
+									.sendToServer(new WerewolfAttackServerHandler(target.getEntityId(), hand));
 						}
 					}
 				}

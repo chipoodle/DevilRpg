@@ -3,11 +3,9 @@ package com.chipoodle.devilrpg.client.render.entity.model;
 import java.util.List;
 import java.util.Random;
 
-import com.chipoodle.devilrpg.DevilRpg;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.model.BipedModel;
 import net.minecraft.client.renderer.model.ModelHelper;
 import net.minecraft.client.renderer.model.ModelRenderer;
@@ -820,14 +818,6 @@ public class WerewolfTransformedModel<T extends LivingEntity> extends BipedModel
 				this.LFinger5.rotateAngleX = this.bipedLeftArm.rotateAngleY * 2 - 1;
 				this.LFinger5.rotateAngleY = this.bipedLeftArm.rotateAngleY;
 			}
-
-			/*
-			 * LFinger1.rotationPointY = bipedLeftArm.rotationPointY;
-			 * LFinger2.rotationPointY = bipedLeftArm.rotationPointY;
-			 * LFinger3.rotationPointY = bipedLeftArm.rotationPointY;
-			 * LFinger4.rotationPointY = bipedLeftArm.rotationPointY;
-			 * LFinger5.rotationPointY = bipedLeftArm.rotationPointY;
-			 */
 
 			// Animate item hand
 			f = 1.0F - this.swingProgress;

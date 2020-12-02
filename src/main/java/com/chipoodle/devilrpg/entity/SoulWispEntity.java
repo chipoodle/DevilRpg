@@ -61,6 +61,7 @@ import net.minecraft.util.RangedInteger;
 import net.minecraft.util.SoundEvent;
 import net.minecraft.util.SoundEvents;
 import net.minecraft.util.TickRangeConverter;
+import net.minecraft.util.UUIDCodec;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
@@ -154,7 +155,7 @@ public class SoulWispEntity extends TameableEntity
 	public void writeAdditional(CompoundNBT compound) {
 		super.writeAdditional(compound);
 		compound.putString("OwnerUUID", "");
-		compound.putUniqueId("Owner", null);
+		compound.putString("Owner", "");
 	}
 
 	/**

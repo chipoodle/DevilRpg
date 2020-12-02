@@ -175,7 +175,8 @@ public class SoulBearEntity extends TameableEntity
 	public void writeAdditional(CompoundNBT compound) {
 		super.writeAdditional(compound);
 		compound.putString("OwnerUUID", "");
-		compound.putUniqueId("Owner", null);
+		compound.putString("Owner", "");
+		//compound.putUniqueId("Owner", UUID.fromString(""));
 	}
 
 	@Override

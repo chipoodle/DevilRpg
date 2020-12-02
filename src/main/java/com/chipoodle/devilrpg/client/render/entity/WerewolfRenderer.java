@@ -1,26 +1,18 @@
 package com.chipoodle.devilrpg.client.render.entity;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.client.render.entity.layer.ArrowWerewolfLayer;
 import com.chipoodle.devilrpg.client.render.entity.model.WerewolfTransformedModel;
 import com.mojang.blaze3d.matrix.MatrixStack;
 
 import net.minecraft.client.renderer.IRenderTypeBuffer;
 import net.minecraft.client.renderer.entity.EntityRendererManager;
 import net.minecraft.client.renderer.entity.LivingRenderer;
-import net.minecraft.client.renderer.entity.layers.ElytraLayer;
-import net.minecraft.client.renderer.entity.layers.HeadLayer;
-import net.minecraft.client.renderer.entity.layers.HeldItemLayer;
-import net.minecraft.client.renderer.entity.model.BipedModel;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.CrossbowItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.item.UseAction;
 import net.minecraft.scoreboard.Score;
 import net.minecraft.scoreboard.ScoreObjective;
 import net.minecraft.scoreboard.Scoreboard;
-import net.minecraft.util.Hand;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.vector.Vector3d;
@@ -46,13 +38,15 @@ public class WerewolfRenderer extends LivingRenderer<PlayerEntity, WerewolfTrans
 
 		// this.addLayer(new BipedArmorLayer<>(this, new BipedModel(0.5F), new
 		// BipedModel(1.0F)));
-		//this.addLayer(new HeldItemLayer<>(this));
-		// this.addLayer(new ArrowLayer<>(this)); //this.addLayer(new
-		// Deadmau5HeadLayer(this)); //this.addLayer(new CapeLayer(this));
-		//this.addLayer(new HeadLayer<>(this));
-		//this.addLayer(new ElytraLayer<>(this));
-		// this.addLayer(new ParrotVariantLayer<>(this)); //this.addLayer(new
-		// SpinAttackEffectLayer<>(this)); //this.addLayer(new BeeStingerLayer<>(this));
+		// this.addLayer(new HeldItemLayer<>(this));
+		this.addLayer(new ArrowWerewolfLayer<>(this));
+		// this.addLayer(new Deadmau5HeadLayer(this));
+		// this.addLayer(new CapeLayer(this));
+		// this.addLayer(new HeadLayer<>(this));
+		// this.addLayer(new ElytraLayer<>(this));
+		// this.addLayer(new ParrotVariantLayer<>(this));
+		// this.addLayer(new SpinAttackEffectLayer<>(this));
+		// this.addLayer(new BeeStingerLayer<>(this));
 
 		// this.addLayer(new WerewolfMoModel<PlayerEntity>(this));
 	}
@@ -84,7 +78,7 @@ public class WerewolfRenderer extends LivingRenderer<PlayerEntity, WerewolfTrans
 
 	private void setModelVisibilities(PlayerEntity clientPlayer) {
 		WerewolfTransformedModel<PlayerEntity> playermodel = this.getEntityModel();
-		// playermodel.bipedHead = playermodel.Head;
+		//playermodel.bipedHead = playermodel.Head;
 		if (clientPlayer.isSpectator()) {
 			playermodel.setVisible(false);
 			playermodel.bipedHead.showModel = true;

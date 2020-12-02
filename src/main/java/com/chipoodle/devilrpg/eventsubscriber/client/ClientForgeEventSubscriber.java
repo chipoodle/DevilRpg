@@ -7,6 +7,7 @@ package com.chipoodle.devilrpg.eventsubscriber.client;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import org.lwjgl.glfw.GLFW;
@@ -25,13 +26,13 @@ import com.chipoodle.devilrpg.client.render.entity.WerewolfRenderer;
 import com.chipoodle.devilrpg.skillsystem.skillinstance.SkillShapeshiftWerewolf;
 import com.chipoodle.devilrpg.util.EventUtils;
 import com.chipoodle.devilrpg.util.SkillEnum;
-import com.chipoodle.devilrpg.util.TargetUtils;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.player.ClientPlayerEntity;
 import net.minecraft.client.renderer.ActiveRenderInfo;
 import net.minecraft.client.settings.PointOfView;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.util.Hand;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.EntityViewRenderEvent.CameraSetup;
@@ -113,6 +114,12 @@ public final class ClientForgeEventSubscriber {
 	public static void leftClickEmpty(PlayerInteractEvent.LeftClickEmpty event) {
 		// event.getPlayer().sendMessage(new StringTextComponent("------>
 		// PlayerInteractEvent.LeftClickEmpty"));
+		
+		BiConsumer<PlayerInteractEvent.LeftClickEmpty, LazyOptional<IBaseAuxiliarCapability>> c = (eve, auxiliar) -> {
+			eve.getPlayer().isSwingInProgress = false;
+		};
+		EventUtils.onTransformation(event.getPlayer(), c, event);
+		
 	}
 
 	@OnlyIn(Dist.CLIENT)
@@ -141,7 +148,7 @@ public final class ClientForgeEventSubscriber {
 		}
 	}
 
-	@SubscribeEvent
+	@SubscribeEvent(priority = EventPriority.LOWEST)
 	public static void onPlayerTickAttack(TickEvent.PlayerTickEvent event) {
 		if (event.side.equals(LogicalSide.CLIENT)) {
 			if (event.phase == TickEvent.Phase.START) {
@@ -154,13 +161,6 @@ public final class ClientForgeEventSubscriber {
 					boolean werewolfTransformation = auxCapability.map(x -> x.isWerewolfTransformation()).orElse(false);
 					boolean werewolfAttack = auxCapability.map(x -> x.isWerewolfAttack()).orElse(false);
 					if (werewolfTransformation && werewolfAttack) {
-						if (event.player.getLastAttackedEntity() != null
-								&& event.player.getLastAttackedEntity().isAlive()
-								&& TargetUtils.canReachTarget(event.player, event.player.getLastAttackedEntity())) {
-							event.player.isSwingInProgress = true;
-						} else {
-							event.player.isSwingInProgress = false;
-						}
 						skillCapability
 								.ifPresent(x -> ((SkillShapeshiftWerewolf) x.create(SkillEnum.TRANSFORM_WEREWOLF))
 										.playerTickEventAttack(event.player, auxCapability));
@@ -184,6 +184,12 @@ public final class ClientForgeEventSubscriber {
 		}
 	}
 
+	/*
+	 * @SubscribeEvent public static void onDrawHighlightEvent(DrawHighlightEvent
+	 * event) { ClientPlayerEntity player = Minecraft.getInstance().player;
+	 * //player.isSwingInProgress = false; }
+	 */
+
 	@OnlyIn(Dist.CLIENT)
 	public static WerewolfRenderer newWolf = null;
 
@@ -196,7 +202,7 @@ public final class ClientForgeEventSubscriber {
 	 */
 	@SubscribeEvent
 	public static void onPlayerRender(RenderPlayerEvent.Pre event) {
-		Consumer<RenderPlayerEvent.Pre> c = eve -> {
+		BiConsumer<RenderPlayerEvent.Pre, LazyOptional<IBaseAuxiliarCapability>> c = (eve, auxiliar) -> {
 			eve.setCanceled(true);
 			if (newWolf == null) {
 				newWolf = new WerewolfRenderer(eve.getRenderer().getRenderManager());
@@ -232,7 +238,7 @@ public final class ClientForgeEventSubscriber {
 
 		PlayerEntity player = Minecraft.getInstance().player;
 		if (!Minecraft.getInstance().gameSettings.getPointOfView().equals(PointOfView.FIRST_PERSON)) {
-			Consumer<CameraSetup> c = eve -> {
+			BiConsumer<CameraSetup, LazyOptional<IBaseAuxiliarCapability>> c = (eve, auxiliar) -> {
 			};
 			if (EventUtils.onTransformation(player, c, event)) {
 				if (method == null) {

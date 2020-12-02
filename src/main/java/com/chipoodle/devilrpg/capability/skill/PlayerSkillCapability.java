@@ -3,6 +3,7 @@ package com.chipoodle.devilrpg.capability.skill;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -22,6 +23,8 @@ import net.minecraft.entity.passive.TameableEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.util.SoundCategory;
+import net.minecraft.util.SoundEvents;
 import net.minecraft.util.text.StringTextComponent;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.fml.network.PacketDistributor;
@@ -204,16 +207,20 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
 
 	@Override
 	public void triggerAction(ServerPlayerEntity playerIn, PowerEnum triggeredPower) {
-		// playerIn.sendMessage(new StringTextComponent("Capability triggerAction:"+
-		// triggeredPower.name()+" Player ID: "+playerIn.getEntityId()));
 		if (!playerIn.world.isRemote) {
 			if (getSkillLevelFromAssociatedPower(triggeredPower) != 0) {
 				ISkillContainer poder = getSkill(triggeredPower);
 				if (consumeMana(playerIn, poder)) {
 					poder.execute(playerIn.world, playerIn);
 				} else {
-					String message = "Not enough mana.";
-					playerIn.sendMessage(new StringTextComponent(message),playerIn.getUniqueID());
+					
+					Random rand = new Random();
+					playerIn.world.playSound((PlayerEntity) null, playerIn.getPosX(), playerIn.getPosY(), playerIn.getPosZ(),
+							SoundEvents.BLOCK_DISPENSER_FAIL, SoundCategory.NEUTRAL, 0.5F,
+							0.4F / (rand.nextFloat() * 0.4F + 0.8F));
+					
+					/*String message = "Not enough mana.";
+					playerIn.sendMessage(new StringTextComponent(message),playerIn.getUniqueID());*/
 				}
 			}
 		}
@@ -232,8 +239,6 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
 		float consumedMana = getManaCostPoints().get(poder.getSkillEnum());
 		LazyOptional<IBaseManaCapability> mana = playerIn.getCapability(PlayerManaCapabilityProvider.MANA_CAP, null);
 		if (mana.map(x -> x.getMana() - consumedMana >= 0).orElse(false)) {
-			// playerIn.sendMessage(new StringTextComponent("Capability Consumed mana:"+
-			// consumedMana+" Player ID: "+playerIn.getEntityId()));
 			mana.ifPresent(m -> m.setMana(m.getMana() - consumedMana, playerIn));
 			return true;
 		}

@@ -8,6 +8,8 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import com.chipoodle.devilrpg.DevilRpg;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.dispenser.IPosition;
@@ -15,6 +17,7 @@ import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.CreatureAttribute;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.ai.attributes.Attribute;
 import net.minecraft.entity.ai.attributes.Attributes;
 import net.minecraft.entity.boss.dragon.EnderDragonPartEntity;
 import net.minecraft.entity.item.ArmorStandEntity;
@@ -22,6 +25,7 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.SwordItem;
+import net.minecraft.item.TieredItem;
 import net.minecraft.network.play.server.SEntityVelocityPacket;
 import net.minecraft.particles.ParticleTypes;
 import net.minecraft.potion.Effects;
@@ -38,8 +42,6 @@ import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.world.GameType;
 import net.minecraft.world.World;
 import net.minecraft.world.server.ServerWorld;
-import net.minecraftforge.common.ForgeHooks;
-import net.minecraftforge.event.entity.player.CriticalHitEvent;
 
 /**
  * 
@@ -74,7 +76,7 @@ public class TargetUtils {
 	// Unlike Creative Mode, the mouseover is always null when an attack should miss
 	// when in Survival
 	public static double getReachDistanceSq(PlayerEntity player) {
-		//return 38.5D; // seems to be just about right for Creative Mode hit detection
+		// return 38.5D; // seems to be just about right for Creative Mode hit detection
 		return 9D; // seems to be just about right for Creative Mode hit detection
 	}
 
@@ -413,7 +415,8 @@ public class TargetUtils {
 	 * Attacks for the player the targeted entity with the currently equipped item.
 	 * The equipped item has hitEntity called on it. Args: targetEntity
 	 */
-	public static void attackTargetEntityWithItemHand(ServerPlayerEntity player, Entity targetEntity, Hand currentHand) {
+	public static void attackTargetEntityWithItemHand(ServerPlayerEntity player, Entity targetEntity,
+			Hand currentHand) {
 		if (player.interactionManager.getGameType() == GameType.SPECTATOR) {
 			player.setSpectatingEntity(targetEntity);
 		} else {
@@ -429,18 +432,20 @@ public class TargetUtils {
 	 */
 	private static void attackTargetEntity(ServerPlayerEntity player, Entity targetEntity, Hand currentHand) {
 
-		if (!net.minecraftforge.common.ForgeHooks.onPlayerAttackTarget(player, targetEntity))
-			return;
+		/*
+		 * if (!net.minecraftforge.common.ForgeHooks.onPlayerAttackTarget(player,
+		 * targetEntity)) return;
+		 */
 
-		if (targetEntity.canBeAttackedWithItem()) {
+		if (targetEntity != null && targetEntity.canBeAttackedWithItem()) {
 			if (!targetEntity.hitByEntity(player)) {
 				float f = (float) player.getAttributeValue(Attributes.ATTACK_DAMAGE);
 				float f1;
 				if (targetEntity instanceof LivingEntity) {
-					f1 = EnchantmentHelper.getModifierForCreature(player.getHeldItemMainhand(),
+					f1 = EnchantmentHelper.getModifierForCreature(player.getHeldItem(currentHand),
 							((LivingEntity) targetEntity).getCreatureAttribute());
 				} else {
-					f1 = EnchantmentHelper.getModifierForCreature(player.getHeldItemMainhand(),
+					f1 = EnchantmentHelper.getModifierForCreature(player.getHeldItem(currentHand),
 							CreatureAttribute.UNDEFINED);
 				}
 
@@ -479,6 +484,8 @@ public class TargetUtils {
 					double d0 = (double) (player.distanceWalkedModified - player.prevDistanceWalkedModified);
 					if (flag && !flag2 && !flag1 && player.isOnGround() && d0 < (double) player.getAIMoveSpeed()) {
 						ItemStack itemstack = player.getHeldItem(currentHand);
+						DevilRpg.LOGGER.info("----->HAND: " + currentHand.name() + " ITEM: "
+								+ itemstack.getItem().getName().getString());
 						if (itemstack.getItem() instanceof SwordItem) {
 							flag3 = true;
 						}
@@ -574,7 +581,7 @@ public class TargetUtils {
 						}
 
 						EnchantmentHelper.applyArthropodEnchantments(player, targetEntity);
-						ItemStack itemstack1 = player.getHeldItemMainhand();
+						ItemStack itemstack1 = player.getHeldItem(currentHand);
 						Entity entity = targetEntity;
 						if (targetEntity instanceof EnderDragonPartEntity) {
 							entity = ((EnderDragonPartEntity) targetEntity).dragon;

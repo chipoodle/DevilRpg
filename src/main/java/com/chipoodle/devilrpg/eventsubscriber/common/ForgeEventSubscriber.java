@@ -9,7 +9,7 @@ import static com.chipoodle.devilrpg.DevilRpg.LOGGER;
 
 import java.util.HashMap;
 import java.util.UUID;
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.auxiliar.IBaseAuxiliarCapability;
@@ -27,13 +27,14 @@ import com.chipoodle.devilrpg.network.handler.PlayerExperienceClientServerHandle
 import com.chipoodle.devilrpg.network.handler.PlayerManaClientServerHandler;
 import com.chipoodle.devilrpg.network.handler.PlayerSkillClientServerHandler;
 import com.chipoodle.devilrpg.util.EventUtils;
+import com.chipoodle.devilrpg.util.SkillEnum;
+import com.sun.jna.platform.unix.X11;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.ai.attributes.Attributes;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
-import net.minecraft.util.RegistryKey;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.util.text.StringTextComponent;
@@ -47,7 +48,6 @@ import net.minecraftforge.event.entity.player.AttackEntityEvent;
 import net.minecraftforge.event.entity.player.CriticalHitEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
-import net.minecraftforge.event.entity.player.PlayerSetSpawnEvent;
 import net.minecraftforge.event.entity.player.PlayerSleepInBedEvent;
 import net.minecraftforge.event.entity.player.PlayerXpEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
@@ -291,9 +291,14 @@ public class ForgeEventSubscriber {
 	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
 	public static void onLivingJumpEventt(LivingJumpEvent event) {
 		if (event.getEntity() instanceof PlayerEntity) {
-			Consumer<LivingJumpEvent> c = eve -> {
+			BiConsumer<LivingJumpEvent, LazyOptional<IBaseAuxiliarCapability>> c = (eve, auxiliar) -> {
 				Vector3d motion = eve.getEntity().getMotion();
-				eve.getEntity().setMotion(motion.getX(), motion.getY() + 0.13D, motion.getZ());
+
+				LazyOptional<IBaseSkillCapability> skillCap = event.getEntity()
+						.getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
+				int points = skillCap.map(x -> x.getSkillsPoints().get(SkillEnum.TRANSFORM_WEREWOLF)).get();
+				double jumpFactor = (points * 0.005) + 0.03f; //max 0.13
+				eve.getEntity().setMotion(motion.getX(), motion.getY() + jumpFactor, motion.getZ());
 			};
 			EventUtils.onTransformation((PlayerEntity) event.getEntity(), c, event);
 		}
@@ -307,7 +312,7 @@ public class ForgeEventSubscriber {
 	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
 	public static void onLivingFallEvent(LivingFallEvent event) {
 		if (event.getEntity() instanceof PlayerEntity) {
-			Consumer<LivingFallEvent> c = eve -> {
+			BiConsumer<LivingFallEvent, LazyOptional<IBaseAuxiliarCapability>> c = (eve, auxiliar) -> {
 				if (eve.getDistance() > 1) {
 					eve.setDistance(eve.getDistance() - 1);
 				}
@@ -318,36 +323,35 @@ public class ForgeEventSubscriber {
 
 	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
 	public static void leftClickBlock(PlayerInteractEvent.LeftClickBlock event) {
-		Consumer<PlayerInteractEvent.LeftClickBlock> c = eve -> {
-			eve.getPlayer().isSwingInProgress = false;
-			eve.setCanceled(true);
-		};
-		EventUtils.onTransformation(event.getPlayer(), c, event);
-	}
-	
-	@SubscribeEvent
-	public static void entityInteract(PlayerInteractEvent.EntityInteract event) {
-		Consumer<PlayerInteractEvent.EntityInteract> c = eve -> {
+		BiConsumer<PlayerInteractEvent.LeftClickBlock, LazyOptional<IBaseAuxiliarCapability>> c = (eve, auxiliar) -> {
 			eve.getPlayer().isSwingInProgress = false;
 			eve.setCanceled(true);
 		};
 		EventUtils.onTransformation(event.getPlayer(), c, event);
 	}
 
-	@SubscribeEvent
-	public static void entityInteractSpecific(PlayerInteractEvent.EntityInteractSpecific event) {
-		Consumer<PlayerInteractEvent.EntityInteractSpecific> c = eve -> {
-			eve.getPlayer().isSwingInProgress = false;
-			eve.setCanceled(true);
-		};
-		EventUtils.onTransformation(event.getPlayer(), c, event);
-	}
+	/*
+	 * @SubscribeEvent(priority = EventPriority.HIGHEST, receiveCanceled = true)
+	 * public static void entityInteract(PlayerInteractEvent.EntityInteract event) {
+	 * Consumer<PlayerInteractEvent.EntityInteract> c = eve -> {
+	 * eve.getPlayer().isSwingInProgress = false; eve.setCanceled(true); };
+	 * EventUtils.onTransformation(event.getPlayer(), c, event); }
+	 */
+
+	/*
+	 * @SubscribeEvent(priority = EventPriority.HIGHEST, receiveCanceled = true)
+	 * public static void
+	 * entityInteractSpecific(PlayerInteractEvent.EntityInteractSpecific event) {
+	 * Consumer<PlayerInteractEvent.EntityInteractSpecific> c = eve -> {
+	 * eve.getPlayer().isSwingInProgress = false; eve.setCanceled(true); };
+	 * EventUtils.onTransformation(event.getPlayer(), c, event); }
+	 */
 
 	@SubscribeEvent
 	public static void onAttack(AttackEntityEvent event) {
-		Consumer<AttackEntityEvent> c = eve -> {
-			eve.getPlayer().isSwingInProgress = true;
-			eve.setCanceled(false);
+		BiConsumer<AttackEntityEvent, LazyOptional<IBaseAuxiliarCapability>> c = (eve, auxiliar) -> {
+			eve.getPlayer().isSwingInProgress = false;
+			eve.setCanceled(true);
 		};
 		EventUtils.onTransformation(event.getPlayer(), c, event);
 	}
@@ -366,7 +370,6 @@ public class ForgeEventSubscriber {
 		 * "active potion effects: "+activePotionEffects);
 		 */
 	}
-
 
 	@SubscribeEvent
 	public static void onCriticalHitEvent(CriticalHitEvent event) {

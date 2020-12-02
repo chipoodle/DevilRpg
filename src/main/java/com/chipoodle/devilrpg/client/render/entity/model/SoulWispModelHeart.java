@@ -15,14 +15,13 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 public class SoulWispModelHeart<T extends SoulWispEntity> extends AgeableModel<T> {
 	private final ModelRenderer cuerpo;
 	private final ModelRenderer[] blazeSticks;
-	private final ModelRenderer[] tentacles;
+	//private final ModelRenderer[] tentacles;
 	private final ModelRenderer wispRightEye;
 	private final ModelRenderer wispLeftEye;
 
 	private final float distanciaDesdeElCentro = 4.0F;
 	private final int numberOfSticks = 5;
-	private final int numberOfTentacles = 9;
-	// private float field_228241_n_;
+	//private final int numberOfTentacles = 9;
 
 	public SoulWispModelHeart() {
 		super(false, 8.0F, 0.0F);
@@ -46,7 +45,7 @@ public class SoulWispModelHeart<T extends SoulWispEntity> extends AgeableModel<T
 			this.blazeSticks[i].addBox(-0.5F, 0.0F, 0.0F, 1.0F, 1.0F, -1.0F);
 			cuerpo.addChild(this.blazeSticks[i]);
 		}
-		Random random = new Random(1660L);
+		/*Random random = new Random(1660L);
 		this.tentacles = new ModelRenderer[numberOfTentacles];
 		for (int i = 0; i < this.tentacles.length; ++i) {
 			this.tentacles[i] = new ModelRenderer(this, 0, 0);
@@ -58,7 +57,7 @@ public class SoulWispModelHeart<T extends SoulWispEntity> extends AgeableModel<T
 			this.tentacles[i].rotationPointZ = (float) (f1 * 0.5);
 			this.tentacles[i].rotationPointY = 3.6F;
 			cuerpo.addChild(this.tentacles[i]);
-		}
+		}*/
 	}
 
 	public void setRotationAngles(T entityIn, float limbSwing, float limbSwingAmount, float ageInTicks,
@@ -70,14 +69,14 @@ public class SoulWispModelHeart<T extends SoulWispEntity> extends AgeableModel<T
 		 * this.field_228241_n_); }
 		 */
 		renderSticks(ageInTicks);
-		renderTentacles(ageInTicks);
+		//renderTentacles(ageInTicks);
 	}
 
-	private void renderTentacles(float ageInTicks) {
+	/*private void renderTentacles(float ageInTicks) {
 		for (int i = 0; i < this.tentacles.length; ++i) {
 			this.tentacles[i].rotateAngleX = 0.2F * MathHelper.sin(ageInTicks * 0.3F + (float) i) + 0.4F;
 		}
-	}
+	}*/
 
 	private void renderSticks(float ageInTicks) {
 		// float f = ageInTicks * (float) Math.PI * -0.1F;

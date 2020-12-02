@@ -1,5 +1,7 @@
 package com.chipoodle.devilrpg.entity;
 
+import java.util.UUID;
+
 import com.chipoodle.devilrpg.capability.minion.IBaseMinionCapability;
 import com.chipoodle.devilrpg.capability.minion.PlayerMinionCapabilityProvider;
 import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
@@ -116,7 +118,8 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity, IChargeab
 	public void writeAdditional(CompoundNBT compound) {
 		super.writeAdditional(compound);
 		compound.putString("OwnerUUID", "");
-		compound.putUniqueId("Owner", null);
+		compound.putString("Owner", "");
+		//compound.putUniqueId("Owner", UUID.fromString(""));
 	}
 
 	@Override
