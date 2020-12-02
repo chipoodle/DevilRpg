@@ -142,9 +142,11 @@ public class SkillShapeshiftWerewolf implements ISkillContainer {
 								Hand hand = auxiliarCapability.isSwingingMainHand() ? Hand.MAIN_HAND : Hand.OFF_HAND;
 								player.swingArm(hand);
 								auxiliarCapability.setSwingingMainHand(!auxiliarCapability.isSwingingMainHand(),player);
-								ModNetwork.CHANNEL
-										.sendToServer(new WerewolfAttackServerHandler(target.getEntityId(), hand));
+								ModNetwork.CHANNEL.sendToServer(new WerewolfAttackServerHandler(target.getEntityId(), hand));
 							}
+						}
+						else {
+							player.isSwingInProgress = false;
 						}
 					}
 				}

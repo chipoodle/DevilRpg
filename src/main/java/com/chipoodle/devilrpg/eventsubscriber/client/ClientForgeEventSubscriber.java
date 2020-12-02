@@ -25,6 +25,7 @@ import com.chipoodle.devilrpg.client.render.entity.WerewolfRenderer;
 import com.chipoodle.devilrpg.skillsystem.skillinstance.SkillShapeshiftWerewolf;
 import com.chipoodle.devilrpg.util.EventUtils;
 import com.chipoodle.devilrpg.util.SkillEnum;
+import com.chipoodle.devilrpg.util.TargetUtils;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.player.ClientPlayerEntity;
@@ -144,6 +145,7 @@ public final class ClientForgeEventSubscriber {
 	public static void onPlayerTickAttack(TickEvent.PlayerTickEvent event) {
 		if (event.side.equals(LogicalSide.CLIENT)) {
 			if (event.phase == TickEvent.Phase.START) {
+
 				LazyOptional<IBaseSkillCapability> skillCapability = event.player
 						.getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
 				LazyOptional<IBaseAuxiliarCapability> auxCapability = event.player
@@ -152,10 +154,18 @@ public final class ClientForgeEventSubscriber {
 					boolean werewolfTransformation = auxCapability.map(x -> x.isWerewolfTransformation()).orElse(false);
 					boolean werewolfAttack = auxCapability.map(x -> x.isWerewolfAttack()).orElse(false);
 					if (werewolfTransformation && werewolfAttack) {
+						if (event.player.getLastAttackedEntity() != null
+								&& event.player.getLastAttackedEntity().isAlive()
+								&& TargetUtils.canReachTarget(event.player, event.player.getLastAttackedEntity())) {
+							event.player.isSwingInProgress = true;
+						} else {
+							event.player.isSwingInProgress = false;
+						}
 						skillCapability
 								.ifPresent(x -> ((SkillShapeshiftWerewolf) x.create(SkillEnum.TRANSFORM_WEREWOLF))
 										.playerTickEventAttack(event.player, auxCapability));
 					}
+
 				}
 			}
 		}

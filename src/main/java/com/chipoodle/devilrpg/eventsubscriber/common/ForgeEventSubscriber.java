@@ -316,18 +316,18 @@ public class ForgeEventSubscriber {
 		}
 	}
 
-	@SubscribeEvent
-	public static void entityInteract(PlayerInteractEvent.EntityInteract event) {
-		Consumer<PlayerInteractEvent.EntityInteract> c = eve -> {
+	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
+	public static void leftClickBlock(PlayerInteractEvent.LeftClickBlock event) {
+		Consumer<PlayerInteractEvent.LeftClickBlock> c = eve -> {
 			eve.getPlayer().isSwingInProgress = false;
 			eve.setCanceled(true);
 		};
 		EventUtils.onTransformation(event.getPlayer(), c, event);
 	}
-
-	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
-	public static void leftClickBlock(PlayerInteractEvent.LeftClickBlock event) {
-		Consumer<PlayerInteractEvent.LeftClickBlock> c = eve -> {
+	
+	@SubscribeEvent
+	public static void entityInteract(PlayerInteractEvent.EntityInteract event) {
+		Consumer<PlayerInteractEvent.EntityInteract> c = eve -> {
 			eve.getPlayer().isSwingInProgress = false;
 			eve.setCanceled(true);
 		};
@@ -346,8 +346,8 @@ public class ForgeEventSubscriber {
 	@SubscribeEvent
 	public static void onAttack(AttackEntityEvent event) {
 		Consumer<AttackEntityEvent> c = eve -> {
-			eve.getPlayer().isSwingInProgress = false;
-			eve.setCanceled(true);
+			eve.getPlayer().isSwingInProgress = true;
+			eve.setCanceled(false);
 		};
 		EventUtils.onTransformation(event.getPlayer(), c, event);
 	}

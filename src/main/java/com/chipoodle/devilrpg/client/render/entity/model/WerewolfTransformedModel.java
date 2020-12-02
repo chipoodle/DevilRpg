@@ -808,6 +808,17 @@ public class WerewolfTransformedModel<T extends LivingEntity> extends BipedModel
 				this.lArmC.rotateAngleY = this.lArmB.rotateAngleY;
 				this.lArmD.rotateAngleX = this.bipedLeftArm.rotateAngleY * 2 - 1;
 				this.lArmD.rotateAngleY = this.bipedLeftArm.rotateAngleY;
+				
+				this.LFinger1.rotateAngleX = this.bipedLeftArm.rotateAngleY * 2 - 1;
+				this.LFinger1.rotateAngleY = this.bipedLeftArm.rotateAngleY;
+				this.LFinger2.rotateAngleX = this.bipedLeftArm.rotateAngleY * 2 - 1;
+				this.LFinger2.rotateAngleY = this.bipedLeftArm.rotateAngleY;
+				this.LFinger3.rotateAngleX = this.bipedLeftArm.rotateAngleY * 2 - 1;
+				this.LFinger3.rotateAngleY = this.bipedLeftArm.rotateAngleY;
+				this.LFinger4.rotateAngleX = this.bipedLeftArm.rotateAngleY * 2 - 1;
+				this.LFinger4.rotateAngleY = this.bipedLeftArm.rotateAngleY;
+				this.LFinger5.rotateAngleX = this.bipedLeftArm.rotateAngleY * 2 - 1;
+				this.LFinger5.rotateAngleY = this.bipedLeftArm.rotateAngleY;
 			}
 
 			/*

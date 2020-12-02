@@ -74,7 +74,8 @@ public class TargetUtils {
 	// Unlike Creative Mode, the mouseover is always null when an attack should miss
 	// when in Survival
 	public static double getReachDistanceSq(PlayerEntity player) {
-		return 38.5D; // seems to be just about right for Creative Mode hit detection
+		//return 38.5D; // seems to be just about right for Creative Mode hit detection
+		return 9D; // seems to be just about right for Creative Mode hit detection
 	}
 
 	/**
@@ -412,13 +413,12 @@ public class TargetUtils {
 	 * Attacks for the player the targeted entity with the currently equipped item.
 	 * The equipped item has hitEntity called on it. Args: targetEntity
 	 */
-	public static void attackTargetEntityWithItem(ServerPlayerEntity player, Entity targetEntity, ItemStack heldItem,
-			Hand currentHand) {
+	public static void attackTargetEntityWithItemHand(ServerPlayerEntity player, Entity targetEntity, Hand currentHand) {
 		if (player.interactionManager.getGameType() == GameType.SPECTATOR) {
 			player.setSpectatingEntity(targetEntity);
 		} else {
 			// player.attackTargetEntityWithCurrentItem(targetEntity);
-			attackTargetEntity(player, targetEntity, heldItem, currentHand);
+			attackTargetEntity(player, targetEntity, currentHand);
 		}
 
 	}
@@ -427,12 +427,11 @@ public class TargetUtils {
 	 * Attacks for the player the targeted entity with the currently equipped item.
 	 * The equipped item has hitEntity called on it. Args: targetEntity
 	 */
-	private static void attackTargetEntity(ServerPlayerEntity player, Entity targetEntity, ItemStack heldItem,
-			Hand currentHand) {
-		/*
-		 * if (!net.minecraftforge.common.ForgeHooks.onPlayerAttackTarget(player,
-		 * targetEntity)) return;
-		 */
+	private static void attackTargetEntity(ServerPlayerEntity player, Entity targetEntity, Hand currentHand) {
+
+		if (!net.minecraftforge.common.ForgeHooks.onPlayerAttackTarget(player, targetEntity))
+			return;
+
 		if (targetEntity.canBeAttackedWithItem()) {
 			if (!targetEntity.hitByEntity(player)) {
 				float f = (float) player.getAttributeValue(Attributes.ATTACK_DAMAGE);
@@ -479,7 +478,7 @@ public class TargetUtils {
 					boolean flag3 = false;
 					double d0 = (double) (player.distanceWalkedModified - player.prevDistanceWalkedModified);
 					if (flag && !flag2 && !flag1 && player.isOnGround() && d0 < (double) player.getAIMoveSpeed()) {
-						ItemStack itemstack = heldItem;// player.getHeldItem(Hand.MAIN_HAND);
+						ItemStack itemstack = player.getHeldItem(currentHand);
 						if (itemstack.getItem() instanceof SwordItem) {
 							flag3 = true;
 						}
