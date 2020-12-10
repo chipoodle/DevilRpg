@@ -33,6 +33,7 @@ public class EventUtils {
 
 	}*/
 
+	@SuppressWarnings("unchecked")
 	public static <T,U extends LazyOptional<IBaseAuxiliarCapability>> boolean onTransformation(PlayerEntity player, BiConsumer<T,U> event, T t) {
 		if (player != null) {
 			U aux = (U) player.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);

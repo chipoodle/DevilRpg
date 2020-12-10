@@ -6,6 +6,7 @@ import com.chipoodle.devilrpg.network.handler.PlayerAuxiliarClientServerHandler;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.util.Hand;
 import net.minecraftforge.fml.network.PacketDistributor;
 
 public class PlayerAuxiliarCapability implements IBaseAuxiliarCapability {
@@ -81,6 +82,14 @@ public class PlayerAuxiliarCapability implements IBaseAuxiliarCapability {
 	private void sendAuxiliarChangesToClient(ServerPlayerEntity pe) {
 		ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> pe),
 				new PlayerAuxiliarClientServerHandler(getNBTData()));
+	}
+
+	@Override
+	public Hand swingHands(PlayerEntity player) {
+		Hand hand = isSwingingMainHand() ? Hand.MAIN_HAND : Hand.OFF_HAND;
+		player.swingArm(hand);
+		setSwingingMainHand(!isSwingingMainHand(), player);
+		return hand;
 	}
 
 }

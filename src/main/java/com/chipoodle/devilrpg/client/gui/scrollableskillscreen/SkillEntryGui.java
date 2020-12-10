@@ -24,32 +24,33 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 @OnlyIn(Dist.CLIENT)
-public class ScrollableSkillEntryGui extends AbstractGui {
+public class SkillEntryGui extends AbstractGui {
 	private static final ResourceLocation WIDGETS = new ResourceLocation("textures/gui/advancements/widgets.png");
 	private static final int[] LINE_BREAK_VALUES = new int[] { 0, 10, -10, 25, -25 };
-	private final ScrollableSkillTabGui guiAdvancementTab;
+	private static int SIZE = 26;
+
+	private final SkillTabGui skillTabGui;
 	private final SkillElement skillElement;
-	private final ScrollableSkillDisplayInfo displayInfo;
+	private final SkillDisplayInfo displayInfo;
 	private final IReorderingProcessor title;
 	private final int width;
 	private final List<IReorderingProcessor> description;
 	private final Minecraft minecraft;
-	private ScrollableSkillEntryGui parent;
-	private final List<ScrollableSkillEntryGui> children = Lists.newArrayList();
-	private ScrollableSkillProgress advancementProgress;
+	private SkillEntryGui parent;
+	private final List<SkillEntryGui> children = Lists.newArrayList();
+	private SkillProgress skillProgress;
 	private final int x;
 	private final int y;
 
-	public ScrollableSkillEntryGui(ScrollableSkillTabGui guiAdvancementTab, Minecraft minecraft,
-			SkillElement advancement, ScrollableSkillDisplayInfo displayInfo) {
-		this.guiAdvancementTab = guiAdvancementTab;
-		this.skillElement = advancement;
-		this.displayInfo = displayInfo;
+	public SkillEntryGui(SkillTabGui skillTabGui, Minecraft minecraft, SkillElement skillElement) {
+		this.skillTabGui = skillTabGui;
+		this.skillElement = skillElement;
+		this.displayInfo = skillElement.getDisplay();
 		this.minecraft = minecraft;
 		this.title = LanguageMap.getInstance()
 				.func_241870_a(minecraft.fontRenderer.func_238417_a_(displayInfo.getTitle(), 163));
-		this.x = MathHelper.floor(displayInfo.getX() * 28.0F*2);
-		this.y = MathHelper.floor(displayInfo.getY() * 27.0F*2);
+		this.x = MathHelper.floor(displayInfo.getX() * 28.0F * 2);
+		this.y = MathHelper.floor(displayInfo.getY() * 27.0F * 2);
 		// int i = advancement.getRequirementCount();
 		int i = 0;
 		int j = String.valueOf(i).length();
@@ -95,22 +96,19 @@ public class ScrollableSkillEntryGui extends AbstractGui {
 	}
 
 	@Nullable
-	private ScrollableSkillEntryGui getFirstVisibleParent(SkillElement skillIn) {
+	private SkillEntryGui getFirstVisibleParent(SkillElement skillIn) {
 		do {
 			skillIn = skillIn.getParent();
 		} while (skillIn != null && skillIn.getDisplay() == null);
 
-		return skillIn != null && skillIn.getDisplay() != null
-				? this.guiAdvancementTab.getAdvancementGui(skillIn)
-				: null;
+		return skillIn != null && skillIn.getDisplay() != null ? this.skillTabGui.getSkillElementGui(skillIn) : null;
 	}
 
 	public void drawConnectionLineToParent(MatrixStack matrixStack, int x, int y, boolean dropShadow) {
 		if (this.parent != null) {
-			//DevilRpg.LOGGER.info("|---drawConnectionLineToParent " + skillElement.getId()+" ---> "+this.parent.skillElement.getId());
-			int i = x + this.parent.x + 13;
-			int j = x + this.parent.x + 26 + 4;
-			int k = y + this.parent.y + 13;
+			int i = x + this.parent.x + SIZE / 2;
+			int j = x + this.parent.x + SIZE + 4;
+			int k = y + this.parent.y + SIZE / 2;
 			int l = x + this.x + 13;
 			int i1 = y + this.y + 13;
 			int j1 = dropShadow ? -16777216 : -1;
@@ -130,16 +128,25 @@ public class ScrollableSkillEntryGui extends AbstractGui {
 			}
 		}
 
-		for (ScrollableSkillEntryGui advancemententrygui : this.children) {
+		for (SkillEntryGui advancemententrygui : this.children) {
 			advancemententrygui.drawConnectionLineToParent(matrixStack, x, y, dropShadow);
 		}
 
 	}
 
+	/**
+	 * Pinta los marcos con sus elementos internos cuando el mouse no está sobre
+	 * ellos
+	 * 
+	 * @param matrixStack
+	 * @param x
+	 * @param y
+	 */
 	public void drawSkill(MatrixStack matrixStack, int x, int y) {
-		//DevilRpg.LOGGER.info("|---drawSkill x" +x+" y "+y);
-		if (!this.displayInfo.isHidden() || this.advancementProgress != null && this.advancementProgress.isDone()) {
-			float f = this.advancementProgress == null ? 0.0F : this.advancementProgress.getPercent();
+		// DevilRpg.LOGGER.info("|---drawSkill x" +x+" y "+y+" title: "+
+		// this.displayInfo.getTitle());
+		if (!this.displayInfo.isHidden() || this.skillProgress != null && this.skillProgress.isDone()) {
+			float f = this.skillProgress == null ? 0.0F : this.skillProgress.getPercent();
 			ScrollableSkillState advancementstate;
 			if (f >= 1.0F) {
 				advancementstate = ScrollableSkillState.OBTAINED;
@@ -147,33 +154,40 @@ public class ScrollableSkillEntryGui extends AbstractGui {
 				advancementstate = ScrollableSkillState.UNOBTAINED;
 			}
 
+			// Texturas de los marcos, y barras de título de los tooltips
 			this.minecraft.getTextureManager().bindTexture(WIDGETS);
+
+			// Pinta el marco
 			this.blit(matrixStack, x + this.x + 3, y + this.y, this.displayInfo.getFrame().getIcon(),
-					128 + advancementstate.getId() * 26, 26, 26);
-			this.minecraft.getItemRenderer().renderItemAndEffectIntoGuiWithoutEntity(this.displayInfo.getIcon(),x + this.x + 8, y + this.y + 5);			
+					128 + advancementstate.getId() * SIZE, SIZE, SIZE);
+
+			// Pinta el icono del marco
+			this.minecraft.getItemRenderer().renderItemAndEffectIntoGuiWithoutEntity(this.displayInfo.getIcon(),
+					x + this.x + 8, y + this.y + 5);
 		}
 
-		for (ScrollableSkillEntryGui childrenEntry : this.children) {
+		// Pinta a los hijos
+		for (SkillEntryGui childrenEntry : this.children) {
 			childrenEntry.drawSkill(matrixStack, x, y);
 		}
 
 	}
 
-	public void setAdvancementProgress(ScrollableSkillProgress advancementProgressIn) {
-		this.advancementProgress = advancementProgressIn;
+	public void setAdvancementProgress(SkillProgress advancementProgressIn) {
+		this.skillProgress = advancementProgressIn;
 	}
 
-	public void addGuiSkill(ScrollableSkillEntryGui guiSkillsIn) {
-		DevilRpg.LOGGER.info("|----------- addGuiSkill "+(guiSkillsIn.title.toString()));
+	public void addGuiSkill(SkillEntryGui guiSkillsIn) {
+		DevilRpg.LOGGER.info("|----------- addGuiSkill " + (guiSkillsIn.title.toString()));
 		this.children.add(guiSkillsIn);
 	}
 
-	public void drawAdvancementHover(MatrixStack matrixStack, int x, int y, float fade, int width, int height) {
-		boolean flag = width + x + this.x + this.width + 26 >= this.guiAdvancementTab.getScreen().width;
-		String s = this.advancementProgress == null ? null : this.advancementProgress.getProgressText();
+	public void drawSkillHover(MatrixStack matrixStack, int x, int y, float fade, int width, int height) {
+		boolean flag = width + x + this.x + this.width + SIZE >= this.skillTabGui.getScreen().width;
+		String s = this.skillProgress == null ? null : this.skillProgress.getProgressText();
 		int i = s == null ? 0 : this.minecraft.fontRenderer.getStringWidth(s);
-		boolean flag1 = 113 - y - this.y - 26 <= 6 + this.description.size() * 9;
-		float f = this.advancementProgress == null ? 0.0F : this.advancementProgress.getPercent();
+		boolean flag1 = 113 - y - this.y - SIZE <= 6 + this.description.size() * 9;
+		float f = this.skillProgress == null ? 0.0F : this.skillProgress.getPercent();
 		int j = MathHelper.floor(f * (float) this.width);
 		ScrollableSkillState advancementstate;
 		ScrollableSkillState advancementstate1;
@@ -206,7 +220,7 @@ public class ScrollableSkillEntryGui extends AbstractGui {
 		int l = y + this.y;
 		int i1;
 		if (flag) {
-			i1 = x + this.x - this.width + 26 + 6;
+			i1 = x + this.x - this.width + SIZE + 6;
 		} else {
 			i1 = x + this.x;
 		}
@@ -214,16 +228,16 @@ public class ScrollableSkillEntryGui extends AbstractGui {
 		int j1 = 32 + this.description.size() * 9;
 		if (!this.description.isEmpty()) {
 			if (flag1) {
-				this.drawDescriptionBox(matrixStack, i1, l + 26 - j1, this.width, j1, 10, 200, 26, 0, 52);
+				this.drawDescriptionBox(matrixStack, i1, l + SIZE - j1, this.width, j1, 10, 200, SIZE, 0, 52);
 			} else {
-				this.drawDescriptionBox(matrixStack, i1, l, this.width, j1, 10, 200, 26, 0, 52);
+				this.drawDescriptionBox(matrixStack, i1, l, this.width, j1, 10, 200, SIZE, 0, 52);
 			}
 		}
 
-		this.blit(matrixStack, i1, l, 0, advancementstate.getId() * 26, j, 26);
-		this.blit(matrixStack, i1 + j, l, 200 - k, advancementstate1.getId() * 26, k, 26);
+		this.blit(matrixStack, i1, l, 0, advancementstate.getId() * SIZE, j, SIZE);
+		this.blit(matrixStack, i1 + j, l, 200 - k, advancementstate1.getId() * SIZE, k, SIZE);
 		this.blit(matrixStack, x + this.x + 3, y + this.y, this.displayInfo.getFrame().getIcon(),
-				128 + advancementstate2.getId() * 26, 26, 26);
+				128 + advancementstate2.getId() * SIZE, SIZE, SIZE);
 		if (flag) {
 			this.minecraft.fontRenderer.func_238407_a_(matrixStack, this.title, (float) (i1 + 5),
 					(float) (y + this.y + 9), -1);
@@ -243,7 +257,7 @@ public class ScrollableSkillEntryGui extends AbstractGui {
 		if (flag1) {
 			for (int k1 = 0; k1 < this.description.size(); ++k1) {
 				this.minecraft.fontRenderer.func_238422_b_(matrixStack, this.description.get(k1), (float) (i1 + 5),
-						(float) (l + 26 - j1 + 7 + k1 * 9), -5592406);
+						(float) (l + SIZE - j1 + 7 + k1 * 9), -5592406);
 			}
 		} else {
 			for (int l1 = 0; l1 < this.description.size(); ++l1) {
@@ -293,11 +307,11 @@ public class ScrollableSkillEntryGui extends AbstractGui {
 	}
 
 	public boolean isMouseOver(int x, int y, int mouseX, int mouseY) {
-		if (!this.displayInfo.isHidden() || this.advancementProgress != null && this.advancementProgress.isDone()) {
+		if (!this.displayInfo.isHidden() || this.skillProgress != null && this.skillProgress.isDone()) {
 			int i = x + this.x;
-			int j = i + 26;
+			int j = i + SIZE;
 			int k = y + this.y;
-			int l = k + 26;
+			int l = k + SIZE;
 			return mouseX >= i && mouseX <= j && mouseY >= k && mouseY <= l;
 		} else {
 			return false;
@@ -305,12 +319,15 @@ public class ScrollableSkillEntryGui extends AbstractGui {
 	}
 
 	public void attachToParent() {
-		DevilRpg.LOGGER.info("|-------- attachToParent (this.parent == null? && this.advancement.getParent() != null)? " + (this.parent == null && this.skillElement.getParent() != null));
+		// DevilRpg.LOGGER.info("|-------- attachToParent (this.parent == null? &&
+		// this.advancement.getParent() != null)? " + (this.parent == null &&
+		// this.skillElement.getParent() != null));
 		if (this.parent == null && this.skillElement.getParent() != null) {
 			this.parent = this.getFirstVisibleParent(this.skillElement);
-			DevilRpg.LOGGER.info("|----------- this.parent != null? " +(this.parent != null));
+			// DevilRpg.LOGGER.info("|----------- this.parent != null? " +(this.parent !=
+			// null));
 			if (this.parent != null) {
-				DevilRpg.LOGGER.info("|----------- parent.addGuiSkill");
+				// DevilRpg.LOGGER.info("|----------- parent.addGuiSkill");
 				this.parent.addGuiSkill(this);
 			}
 		}
@@ -327,12 +344,14 @@ public class ScrollableSkillEntryGui extends AbstractGui {
 
 	@Override
 	public String toString() {
-		return "ScrollableSkillEntryGui [" 
-				+ ", parent?=" + (parent != null)
-				+ ", children?=" + children.size()
-				+ ", width=" + width
-				+ ", description=" + description 
-				+ ", x=" + x + ", y=" + y + "]";
+		return "SkillEntryGui [" + ", children=" + children.size() + ", width=" + width + ", x=" + x + ", y=" + y + "]";
 	}
 
+	public final List<SkillEntryGui> getChildren() {
+		return children;
+	}
+
+	public SkillElement getSkillElement() {
+		return skillElement;
+	}
 }

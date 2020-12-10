@@ -1,4 +1,4 @@
-package com.chipoodle.devilrpg.client.gui.scrollableskillscreen;
+package com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -16,6 +16,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillProgress;
+import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillElement;
+import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillToast;
+import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillElement.Builder;
 import com.google.common.collect.Maps;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -33,7 +37,7 @@ public class ClientScrollableSkillManager {
 	private static final Logger LOGGER = LogManager.getLogger();
 	private final Minecraft mc;
 	private final ScrollableSkillList scrollableSkillList = new ScrollableSkillList();
-	private final Map<SkillElement, ScrollableSkillProgress> advancementToProgress = Maps.newHashMap();
+	private final Map<SkillElement, SkillProgress> advancementToProgress = Maps.newHashMap();
 	@Nullable
 	private ClientScrollableSkillManager.IListener listener;
 	@Nullable
@@ -44,11 +48,10 @@ public class ClientScrollableSkillManager {
 	}
 
 	public void buildSkillTrees() {
-		ResourceLocation resourcefile = new ResourceLocation(DevilRpg.MODID , "skills/root_complete.json");
 		InputStream inputStream = null;
 		Map<ResourceLocation, SkillElement.Builder> skillelementMap = new HashMap<ResourceLocation, SkillElement.Builder>();
-
 		try {
+			ResourceLocation resourcefile = new ResourceLocation(DevilRpg.MODID , "skills/root_complete.json");
 			inputStream = Minecraft.getInstance().getResourceManager().getResource(resourcefile).getInputStream();
 		} catch (IOException e1) {
 			DevilRpg.LOGGER.error("Ocurrió un error con buildSkillTrees()", e1);
@@ -80,10 +83,10 @@ public class ClientScrollableSkillManager {
 		this.scrollableSkillList.removeAll(packetIn.getAdvancementsToRemove());
 		this.scrollableSkillList.loadSkills(packetIn.getAdvancementsToAdd());
 
-		for (Entry<ResourceLocation, ScrollableSkillProgress> entry : packetIn.getProgressUpdates().entrySet()) {
+		for (Entry<ResourceLocation, SkillProgress> entry : packetIn.getProgressUpdates().entrySet()) {
 			SkillElement skillElement = this.scrollableSkillList.getAdvancement(entry.getKey());
 			if (skillElement != null) {
-				ScrollableSkillProgress advancementprogress = entry.getValue();
+				SkillProgress advancementprogress = entry.getValue();
 				this.advancementToProgress.put(skillElement, advancementprogress);
 				if (this.listener != null) {
 					this.listener.onUpdateAdvancementProgress(skillElement, advancementprogress);
@@ -100,20 +103,20 @@ public class ClientScrollableSkillManager {
 
 	}
 
-	public ScrollableSkillList getAdvancementList() {
+	public ScrollableSkillList getSkillList() {
 		return this.scrollableSkillList;
 	}
 
-	public void setSelectedTab(@Nullable SkillElement advancementIn, boolean tellServer) {
+	public void setSelectedTab(@Nullable SkillElement skillIn, boolean tellServer) {
 		ClientPlayNetHandler clientplaynethandler = this.mc.getConnection();
-		if (clientplaynethandler != null && advancementIn != null && tellServer) {
+		if (clientplaynethandler != null && skillIn != null && tellServer) {
 			// clientplaynethandler.sendPacket(CSeenAdvancementsPacket.openedTab(advancementIn));
 		}
 
-		if (this.selectedTab != advancementIn) {
-			this.selectedTab = advancementIn;
+		if (this.selectedTab != skillIn) {
+			this.selectedTab = skillIn;
 			if (this.listener != null) {
-				this.listener.setSelectedTab(advancementIn);
+				this.listener.setSelectedTab(skillIn);
 			}
 		}
 
@@ -124,7 +127,7 @@ public class ClientScrollableSkillManager {
 		this.scrollableSkillList.setListener(listenerIn);
 		if (listenerIn != null) {
 
-			for (Entry<SkillElement, ScrollableSkillProgress> entry : this.advancementToProgress.entrySet()) {
+			for (Entry<SkillElement, SkillProgress> entry : this.advancementToProgress.entrySet()) {
 				listenerIn.onUpdateAdvancementProgress(entry.getKey(), entry.getValue());
 			}
 			listenerIn.setSelectedTab(this.selectedTab);
@@ -134,7 +137,7 @@ public class ClientScrollableSkillManager {
 
 	@OnlyIn(Dist.CLIENT)
 	public interface IListener extends ScrollableSkillList.IListener {
-		void onUpdateAdvancementProgress(SkillElement advancementIn, ScrollableSkillProgress progress);
+		void onUpdateAdvancementProgress(SkillElement advancementIn, SkillProgress progress);
 
 		void setSelectedTab(@Nullable SkillElement advancementIn);
 	}

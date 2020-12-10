@@ -22,10 +22,12 @@ import net.minecraft.entity.ai.attributes.AttributeModifier;
 import net.minecraft.entity.ai.attributes.Attributes;
 import net.minecraft.entity.passive.TameableEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.particles.ParticleTypes;
 import net.minecraft.util.Hand;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.SoundCategory;
 import net.minecraft.util.SoundEvent;
+import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.world.World;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
@@ -37,6 +39,7 @@ public class SkillShapeshiftWerewolf implements ISkillContainer {
 	private LazyOptional<IBaseAuxiliarCapability> aux;
 	AttributeModifier healthAttributeModifier;
 	AttributeModifier speedAttributeModifier;
+	private Random rand = new Random();
 
 	public SkillShapeshiftWerewolf(PlayerSkillCapability parentCapability) {
 		this.parentCapability = parentCapability;
@@ -124,37 +127,65 @@ public class SkillShapeshiftWerewolf implements ISkillContainer {
 				long attackTime = (long) s;
 				LivingEntity target = null;
 				if (player.ticksExisted % attackTime == 0L) {
-					Hand hand = auxiliarCapability.isSwingingMainHand() ? Hand.MAIN_HAND : Hand.OFF_HAND;
-					player.swingArm(hand);
-					auxiliarCapability.setSwingingMainHand(!auxiliarCapability.isSwingingMainHand(), player);
-
-					int distance = 1;
-					double radius = 2;
-					if (player != null) {
-						List<LivingEntity> targetList = TargetUtils.acquireAllLookTargets(player, distance, radius)
-								.stream().filter(x -> !(x instanceof TameableEntity) || !x.isOnSameTeam(player))
-								.collect(Collectors.toList());
-
-						target = targetList.stream()
-								.filter(x -> targetList.size() == 1 || !x.equals(player.getLastAttackedEntity()))
-								.min(Comparator.comparing(x -> x.getPosition().distanceSq(player.getPosition())))
-								.orElse(null);
-
-						if (target != null && TargetUtils.canReachTarget(player, target)) {
-							player.setLastAttackedEntity(target);
-							/*
-							 * Hand hand = auxiliarCapability.isSwingingMainHand() ? Hand.MAIN_HAND :
-							 * Hand.OFF_HAND; player.swingArm(hand);
-							 * auxiliarCapability.setSwingingMainHand(!auxiliarCapability.isSwingingMainHand
-							 * (), player);
-							 */
-							ModNetwork.CHANNEL
-									.sendToServer(new WerewolfAttackServerHandler(target.getEntityId(), hand));
-						}
-					}
+					Hand hand = auxiliarCapability.swingHands(player);
+					getEnemies(player, hand);
 				}
 
 			});
+		}
+	}
+
+
+	/**
+	 * @param player
+	 * @param hand
+	 */
+	private void getEnemies(final PlayerEntity player, Hand hand) {
+		LivingEntity target;
+		int distance = 1;
+		double radius = 2;
+		if (player != null) {
+			List<LivingEntity> targetList = TargetUtils.acquireAllLookTargets(player, distance, radius).stream()
+					.filter(x -> !(x instanceof TameableEntity) || !x.isOnSameTeam(player))
+					.collect(Collectors.toList());
+
+			target = targetList.stream()
+					.filter(x -> targetList.size() == 1 || !x.equals(player.getLastAttackedEntity()))
+					.min(Comparator.comparing(x -> x.getPosition().distanceSq(player.getPosition()))).orElse(null);
+
+			if (target != null /* && TargetUtils.canReachTarget(player, target) */) {
+				renderParticles(player, hand);
+				player.setLastAttackedEntity(target);
+				ModNetwork.CHANNEL.sendToServer(new WerewolfAttackServerHandler(target.getEntityId(), hand));
+			}
+		}
+	}
+
+	/**
+	 * @param player
+	 * @param hand
+	 */
+	private void renderParticles(final PlayerEntity player, Hand hand) {
+		Vector3d vec = player.getLookVec();
+		double clawSideX = vec.getZ() * (hand.equals(Hand.MAIN_HAND) ? 0.6 : -0.6);
+		double clawSideZ = vec.getX() * (hand.equals(Hand.OFF_HAND) ? 0.6 : -0.6);
+		double dx = player.getPosX() + clawSideX;
+		double dz = player.getPosZ() + clawSideZ;
+		double dy = player.getPosY() + player.getEyeHeight();// + 2.0f;// player.getEyeHeight(); // you
+		// probably don't actually want to
+		// subtract the vec.yCoord, unless the position depends on the
+		// player's pitch
+		float movement = 1.78572f;
+		double acceleration = 0f;
+		for (int i = 0; i < 2; ++i) {
+			movement += 0.35714f;
+			acceleration += 0.005D;
+			double speedX = rand.nextGaussian() * 0.02D;
+			double speedY = rand.nextGaussian() * 0.02D;
+			double speedZ = rand.nextGaussian() * 0.02D;
+
+			player.world.addParticle(ParticleTypes.CLOUD, dx + (vec.getX() * movement), dy,
+					dz + (vec.getZ() * movement), speedX, speedY, speedZ);
 		}
 	}
 }

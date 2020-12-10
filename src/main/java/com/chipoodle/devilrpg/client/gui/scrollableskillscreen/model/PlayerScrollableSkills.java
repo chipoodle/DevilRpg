@@ -1,4 +1,4 @@
-package com.chipoodle.devilrpg.client.gui.scrollableskillscreen;
+package com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -22,6 +22,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.ScrollableSkillLoadFix;
+import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillProgress;
+import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillElement;
+import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillProgress.Serializer;
 import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -51,15 +55,15 @@ import net.minecraft.world.GameRules;
 public class PlayerScrollableSkills {
 	private static final Logger LOGGER = LogManager.getLogger();
 	private static final Gson GSON = (new GsonBuilder())
-			.registerTypeAdapter(ScrollableSkillProgress.class, new ScrollableSkillProgress.Serializer())
+			.registerTypeAdapter(SkillProgress.class, new SkillProgress.Serializer())
 			.registerTypeAdapter(ResourceLocation.class, new ResourceLocation.Serializer()).setPrettyPrinting()
 			.create();
-	private static final TypeToken<Map<ResourceLocation, ScrollableSkillProgress>> MAP_TOKEN = new TypeToken<Map<ResourceLocation, ScrollableSkillProgress>>() {
+	private static final TypeToken<Map<ResourceLocation, SkillProgress>> MAP_TOKEN = new TypeToken<Map<ResourceLocation, SkillProgress>>() {
 	};
 	private final DataFixer dataFixer;
 	private final PlayerList playerList;
 	private final File progressFile;
-	private final Map<SkillElement, ScrollableSkillProgress> progress = Maps.newLinkedHashMap();
+	private final Map<SkillElement, SkillProgress> progress = Maps.newLinkedHashMap();
 	private final Set<SkillElement> visible = Sets.newLinkedHashSet();
 	private final Set<SkillElement> visibilityChanged = Sets.newLinkedHashSet();
 	private final Set<SkillElement> progressChanged = Sets.newLinkedHashSet();
@@ -110,7 +114,7 @@ public class PlayerScrollableSkills {
 	private void ensureAllVisible() {
 		List<SkillElement> list = Lists.newArrayList();
 
-		for (Entry<SkillElement, ScrollableSkillProgress> entry : this.progress.entrySet()) {
+		for (Entry<SkillElement, SkillProgress> entry : this.progress.entrySet()) {
 			if (entry.getValue().isDone()) {
 				list.add(entry.getKey());
 				this.progressChanged.add(entry.getKey());
@@ -144,16 +148,16 @@ public class PlayerScrollableSkills {
 				dynamic = this.dataFixer.update(DefaultTypeReferences.ADVANCEMENTS.getTypeReference(), dynamic,
 						dynamic.get("DataVersion").asInt(0), SharedConstants.getVersion().getWorldVersion());
 				dynamic = dynamic.remove("DataVersion");
-				Map<ResourceLocation, ScrollableSkillProgress> map = GSON.getAdapter(MAP_TOKEN)
+				Map<ResourceLocation, SkillProgress> map = GSON.getAdapter(MAP_TOKEN)
 						.fromJsonTree(dynamic.getValue());
 				if (map == null) {
 					throw new JsonParseException("Found null for advancements");
 				}
 
-				Stream<Entry<ResourceLocation, ScrollableSkillProgress>> stream = map.entrySet().stream()
+				Stream<Entry<ResourceLocation, SkillProgress>> stream = map.entrySet().stream()
 						.sorted(Comparator.comparing(Entry::getValue));
 
-				for (Entry<ResourceLocation, ScrollableSkillProgress> entry : stream.collect(Collectors.toList())) {
+				for (Entry<ResourceLocation, SkillProgress> entry : stream.collect(Collectors.toList())) {
 					SkillElement advancement = manager.getAdvancement(entry.getKey());
 					if (advancement == null) {
 						LOGGER.warn("Ignored advancement '{}' in progress file {} - it doesn't exist anymore?",
@@ -180,10 +184,10 @@ public class PlayerScrollableSkills {
 	}
 
 	public void save() {
-		Map<ResourceLocation, ScrollableSkillProgress> map = Maps.newHashMap();
+		Map<ResourceLocation, SkillProgress> map = Maps.newHashMap();
 
-		for (Entry<SkillElement, ScrollableSkillProgress> entry : this.progress.entrySet()) {
-			ScrollableSkillProgress advancementprogress = entry.getValue();
+		for (Entry<SkillElement, SkillProgress> entry : this.progress.entrySet()) {
+			SkillProgress advancementprogress = entry.getValue();
 			if (advancementprogress.hasProgress()) {
 				map.put(entry.getKey().getId(), advancementprogress);
 			}
@@ -210,7 +214,7 @@ public class PlayerScrollableSkills {
 		if (this.player instanceof net.minecraftforge.common.util.FakePlayer)
 			return false;
 		boolean flag = false;
-		ScrollableSkillProgress advancementprogress = this.getProgress(advancementIn);
+		SkillProgress advancementprogress = this.getProgress(advancementIn);
 		boolean flag1 = advancementprogress.isDone();
 		if (advancementprogress.grantCriterion(criterionKey)) {
 			this.unregisterListeners(advancementIn);
@@ -240,7 +244,7 @@ public class PlayerScrollableSkills {
 
 	public boolean revokeCriterion(SkillElement advancementIn, String criterionKey) {
 		boolean flag = false;
-		ScrollableSkillProgress advancementprogress = this.getProgress(advancementIn);
+		SkillProgress advancementprogress = this.getProgress(advancementIn);
 		if (advancementprogress.revokeCriterion(criterionKey)) {
 			this.registerListeners(advancementIn);
 			this.progressChanged.add(advancementIn);
@@ -255,7 +259,7 @@ public class PlayerScrollableSkills {
 	}
 
 	private void registerListeners(SkillElement advancementIn) {
-		ScrollableSkillProgress advancementprogress = this.getProgress(advancementIn);
+		SkillProgress advancementprogress = this.getProgress(advancementIn);
 		/*
 		 * if (!advancementprogress.isDone()) { for (Entry<String, Criterion> entry :
 		 * advancementIn.getCriteria().entrySet()) { CriterionProgress criterionprogress
@@ -274,7 +278,7 @@ public class PlayerScrollableSkills {
 	}
 
 	private void unregisterListeners(SkillElement advancementIn) {
-		ScrollableSkillProgress advancementprogress = this.getProgress(advancementIn);
+		SkillProgress advancementprogress = this.getProgress(advancementIn);
 
 		/*
 		 * for (Entry<String, Criterion> entry : advancementIn.getCriteria().entrySet())
@@ -294,7 +298,7 @@ public class PlayerScrollableSkills {
 
 	public void flushDirty(ServerPlayerEntity serverPlayer) {
 		if (this.isFirstPacket || !this.visibilityChanged.isEmpty() || !this.progressChanged.isEmpty()) {
-			Map<ResourceLocation, ScrollableSkillProgress> map = Maps.newHashMap();
+			Map<ResourceLocation, SkillProgress> map = Maps.newHashMap();
 			Set<SkillElement> set = Sets.newLinkedHashSet();
 			Set<ResourceLocation> set1 = Sets.newLinkedHashSet();
 
@@ -339,17 +343,17 @@ public class PlayerScrollableSkills {
 
 	}
 
-	public ScrollableSkillProgress getProgress(SkillElement advancementIn) {
-		ScrollableSkillProgress advancementprogress = this.progress.get(advancementIn);
+	public SkillProgress getProgress(SkillElement advancementIn) {
+		SkillProgress advancementprogress = this.progress.get(advancementIn);
 		if (advancementprogress == null) {
-			advancementprogress = new ScrollableSkillProgress();
+			advancementprogress = new SkillProgress();
 			this.startProgress(advancementIn, advancementprogress);
 		}
 
 		return advancementprogress;
 	}
 
-	private void startProgress(SkillElement advancementIn, ScrollableSkillProgress progress) {
+	private void startProgress(SkillElement advancementIn, SkillProgress progress) {
 		//progress.update(advancementIn.getCriteria(), advancementIn.getRequirements());
 		this.progress.put(advancementIn, progress);
 	}
@@ -388,7 +392,7 @@ public class PlayerScrollableSkills {
 				return false;
 			}
 
-			ScrollableSkillProgress advancementprogress = this.getProgress(advancement);
+			SkillProgress advancementprogress = this.getProgress(advancement);
 			if (advancementprogress.isDone()) {
 				return true;
 			}
@@ -404,7 +408,7 @@ public class PlayerScrollableSkills {
 	}
 
 	private boolean hasCompletedChildrenOrSelf(SkillElement advancementIn) {
-		ScrollableSkillProgress advancementprogress = this.getProgress(advancementIn);
+		SkillProgress advancementprogress = this.getProgress(advancementIn);
 		if (advancementprogress.isDone()) {
 			return true;
 		} else {

@@ -27,7 +27,7 @@ import net.minecraft.util.JSONUtils;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
-public class ScrollableSkillProgress implements Comparable<ScrollableSkillProgress> {
+public class SkillProgress implements Comparable<SkillProgress> {
 	   private final Map<String, CriterionProgress> criteria = Maps.newHashMap();
 	   private String[][] requirements = new String[0][];
 
@@ -117,8 +117,8 @@ public class ScrollableSkillProgress implements Comparable<ScrollableSkillProgre
 
 	   }
 
-	   public static ScrollableSkillProgress fromNetwork(PacketBuffer buffer) {
-	      ScrollableSkillProgress advancementprogress = new ScrollableSkillProgress();
+	   public static SkillProgress fromNetwork(PacketBuffer buffer) {
+	      SkillProgress advancementprogress = new SkillProgress();
 	      int i = buffer.readVarInt();
 
 	      for(int j = 0; j < i; ++j) {
@@ -220,7 +220,7 @@ public class ScrollableSkillProgress implements Comparable<ScrollableSkillProgre
 	      return date;
 	   }
 
-	   public int compareTo(ScrollableSkillProgress p_compareTo_1_) {
+	   public int compareTo(SkillProgress p_compareTo_1_) {
 	      Date date = this.getFirstProgressDate();
 	      Date date1 = p_compareTo_1_.getFirstProgressDate();
 	      if (date == null && date1 != null) {
@@ -232,8 +232,8 @@ public class ScrollableSkillProgress implements Comparable<ScrollableSkillProgre
 	      }
 	   }
 
-	   public static class Serializer implements JsonDeserializer<ScrollableSkillProgress>, JsonSerializer<ScrollableSkillProgress> {
-	      public JsonElement serialize(ScrollableSkillProgress p_serialize_1_, Type p_serialize_2_, JsonSerializationContext p_serialize_3_) {
+	   public static class Serializer implements JsonDeserializer<SkillProgress>, JsonSerializer<SkillProgress> {
+	      public JsonElement serialize(SkillProgress p_serialize_1_, Type p_serialize_2_, JsonSerializationContext p_serialize_3_) {
 	         JsonObject jsonobject = new JsonObject();
 	         JsonObject jsonobject1 = new JsonObject();
 
@@ -252,10 +252,10 @@ public class ScrollableSkillProgress implements Comparable<ScrollableSkillProgre
 	         return jsonobject;
 	      }
 
-	      public ScrollableSkillProgress deserialize(JsonElement p_deserialize_1_, Type p_deserialize_2_, JsonDeserializationContext p_deserialize_3_) throws JsonParseException {
+	      public SkillProgress deserialize(JsonElement p_deserialize_1_, Type p_deserialize_2_, JsonDeserializationContext p_deserialize_3_) throws JsonParseException {
 	         JsonObject jsonobject = JSONUtils.getJsonObject(p_deserialize_1_, "advancement");
 	         JsonObject jsonobject1 = JSONUtils.getJsonObject(jsonobject, "criteria", new JsonObject());
-	         ScrollableSkillProgress advancementprogress = new ScrollableSkillProgress();
+	         SkillProgress advancementprogress = new SkillProgress();
 
 	         for(Entry<String, JsonElement> entry : jsonobject1.entrySet()) {
 	            String s = entry.getKey();

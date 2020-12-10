@@ -26,14 +26,14 @@ import net.minecraft.util.text.event.HoverEvent;
 
 public class SkillElement {
 	private final SkillElement parent;
-	private final ScrollableSkillDisplayInfo display;
+	private final SkillDisplayInfo display;
 	private final SkillElementRewards rewards;
 	private final ResourceLocation id;
 	private final Set<SkillElement> children = Sets.newLinkedHashSet();
 	private final ITextComponent displayText;
 
 	public SkillElement(ResourceLocation id, @Nullable SkillElement parentIn,
-			@Nullable ScrollableSkillDisplayInfo displayIn, SkillElementRewards rewardsIn) {
+			@Nullable SkillDisplayInfo displayIn, SkillElementRewards rewardsIn) {
 		this.id = id;
 		this.display = displayIn;
 		this.parent = parentIn;
@@ -87,7 +87,7 @@ public class SkillElement {
 	 *         GUIs. If {@code null}, signifies an invisible {@code SkillElement}.
 	 */
 	@Nullable
-	public ScrollableSkillDisplayInfo getDisplay() {
+	public SkillDisplayInfo getDisplay() {
 		return this.display;
 	}
 
@@ -166,11 +166,11 @@ public class SkillElement {
 		private ResourceLocation id;
 		private ResourceLocation parentId;
 		private SkillElement parent;
-		private ScrollableSkillDisplayInfo display;
+		private SkillDisplayInfo display;
 		private SkillElementRewards rewards = SkillElementRewards.EMPTY;
 
 		private Builder(ResourceLocation id, @Nullable ResourceLocation parentIdIn,
-				@Nullable ScrollableSkillDisplayInfo displayIn, SkillElementRewards rewardsIn) {
+				@Nullable SkillDisplayInfo displayIn, SkillElementRewards rewardsIn) {
 			this.parentId = parentIdIn;
 			this.id = id;
 			this.display = displayIn;
@@ -197,18 +197,18 @@ public class SkillElement {
 		public SkillElement.Builder withDisplay(ItemStack stack, ITextComponent title, ITextComponent description,
 				@Nullable ResourceLocation background, ScrollableSkillFrameType frame, boolean showToast,
 				boolean announceToChat, boolean hidden) {
-			return this.withDisplay(new ScrollableSkillDisplayInfo(stack, title, description, background, frame,
+			return this.withDisplay(new SkillDisplayInfo(stack, title, description, background, frame,
 					showToast, announceToChat, hidden));
 		}
 
 		public SkillElement.Builder withDisplay(IItemProvider itemIn, ITextComponent title, ITextComponent description,
 				@Nullable ResourceLocation background, ScrollableSkillFrameType frame, boolean showToast,
 				boolean announceToChat, boolean hidden) {
-			return this.withDisplay(new ScrollableSkillDisplayInfo(new ItemStack(itemIn.asItem()), title, description,
+			return this.withDisplay(new SkillDisplayInfo(new ItemStack(itemIn.asItem()), title, description,
 					background, frame, showToast, announceToChat, hidden));
 		}
 
-		public SkillElement.Builder withDisplay(ScrollableSkillDisplayInfo displayIn) {
+		public SkillElement.Builder withDisplay(SkillDisplayInfo displayIn) {
 			this.display = displayIn;
 			return this;
 		}
@@ -306,8 +306,8 @@ public class SkillElement {
 						? new ResourceLocation(JSONUtils.getString(json, "parent"))
 						: null;
 
-				ScrollableSkillDisplayInfo displayinfo = json.has("display")
-						? ScrollableSkillDisplayInfo.deserialize(JSONUtils.getJsonObject(json, "display"))
+				SkillDisplayInfo displayinfo = json.has("display")
+						? SkillDisplayInfo.deserialize(JSONUtils.getJsonObject(json, "display"))
 						: null;
 
 				SkillElementRewards advancementrewards = json.has("rewards")
@@ -332,8 +332,8 @@ public class SkillElement {
 						? new ResourceLocation(JSONUtils.getString(json, "parent"))
 						: null;
 
-				ScrollableSkillDisplayInfo displayinfo = json.has("display")
-						? ScrollableSkillDisplayInfo.deserialize(JSONUtils.getJsonObject(json, "display"))
+				SkillDisplayInfo displayinfo = json.has("display")
+						? SkillDisplayInfo.deserialize(JSONUtils.getJsonObject(json, "display"))
 						: null;
 
 				SkillElementRewards advancementrewards = json.has("rewards")
@@ -351,7 +351,7 @@ public class SkillElement {
 		public static SkillElement.Builder readFrom(PacketBuffer buf) {
 			ResourceLocation id = buf.readBoolean() ? buf.readResourceLocation() : null;
 			ResourceLocation resourcelocation = buf.readBoolean() ? buf.readResourceLocation() : null;
-			ScrollableSkillDisplayInfo displayinfo = buf.readBoolean() ? ScrollableSkillDisplayInfo.read(buf) : null;
+			SkillDisplayInfo displayinfo = buf.readBoolean() ? SkillDisplayInfo.read(buf) : null;
 			return new SkillElement.Builder(id, resourcelocation, displayinfo, SkillElementRewards.EMPTY);
 		}
 		

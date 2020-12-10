@@ -77,7 +77,7 @@ public class TargetUtils {
 	// when in Survival
 	public static double getReachDistanceSq(PlayerEntity player) {
 		// return 38.5D; // seems to be just about right for Creative Mode hit detection
-		return 9D; // seems to be just about right for Creative Mode hit detection
+		return 10D; // seems to be just about right for Creative Mode hit detection
 	}
 
 	/**
@@ -484,8 +484,7 @@ public class TargetUtils {
 					double d0 = (double) (player.distanceWalkedModified - player.prevDistanceWalkedModified);
 					if (flag && !flag2 && !flag1 && player.isOnGround() && d0 < (double) player.getAIMoveSpeed()) {
 						ItemStack itemstack = player.getHeldItem(currentHand);
-						DevilRpg.LOGGER.info("----->HAND: " + currentHand.name() + " ITEM: "
-								+ itemstack.getItem().getName().getString());
+						//DevilRpg.LOGGER.info("----->HAND: " + currentHand.name() + " ITEM: " + itemstack.getItem().getName().getString());
 						if (itemstack.getItem() instanceof SwordItem) {
 							flag3 = true;
 						}

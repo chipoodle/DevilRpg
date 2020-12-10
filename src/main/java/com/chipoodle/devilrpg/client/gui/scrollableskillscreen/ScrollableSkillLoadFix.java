@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model.PlayerScrollableSkills;
 import com.google.common.graph.Graph;
 import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.MutableGraph;
@@ -23,11 +24,11 @@ public class ScrollableSkillLoadFix {
 	private static final Logger LOGGER = LogManager.getLogger();
     private static Map<SkillElement, List<SkillElement>> roots;
 
-    public static void loadVisibility(final PlayerScrollableSkills playerAdvancements, final Set<SkillElement> visible, final Set<SkillElement> visibilityChanged, final Map<SkillElement, ScrollableSkillProgress> progress, final Set<SkillElement> progressChanged, final Predicate<SkillElement> shouldBeVisible) {
+    public static void loadVisibility(final PlayerScrollableSkills playerAdvancements, final Set<SkillElement> visible, final Set<SkillElement> visibilityChanged, final Map<SkillElement, SkillProgress> progress, final Set<SkillElement> progressChanged, final Predicate<SkillElement> shouldBeVisible) {
         LOGGER.info("Using new advancement loading for {}", playerAdvancements);
         if (roots == null) throw new RuntimeException("Why did the advancements not load yet?!");
         final Set<SkillElement> set = new HashSet<>();
-        for(Map.Entry<SkillElement, ScrollableSkillProgress> entry : progress.entrySet()) {
+        for(Map.Entry<SkillElement, SkillProgress> entry : progress.entrySet()) {
             if (entry.getValue().isDone()) {
                 set.add(entry.getKey());
                 progressChanged.add(entry.getKey());
@@ -41,7 +42,7 @@ public class ScrollableSkillLoadFix {
         return set.contains(adv) || (adv.getParent() != null && containsAncestor(adv.getParent(), set));
     }
 
-    private static void updateVisibility(final SkillElement adv, final Set<SkillElement> visible, final Set<SkillElement> visibilityChanged, final Map<SkillElement, ScrollableSkillProgress> progress, final Set<SkillElement> progressChanged, Predicate<SkillElement> shouldBeVisible) {
+    private static void updateVisibility(final SkillElement adv, final Set<SkillElement> visible, final Set<SkillElement> visibilityChanged, final Map<SkillElement, SkillProgress> progress, final Set<SkillElement> progressChanged, Predicate<SkillElement> shouldBeVisible) {
         boolean flag = shouldBeVisible.test(adv);
         boolean flag1 = visible.contains(adv);
         if (flag && !flag1) {

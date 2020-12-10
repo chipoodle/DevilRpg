@@ -1,7 +1,7 @@
 package com.chipoodle.devilrpg.eventsubscriber.client;
 
 import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.client.gui.skillbook.SkillScreen;
+import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.ScrollableSkillScreen;
 import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.network.handler.KeyboardSkillServerHandler;
 import com.chipoodle.devilrpg.util.PowerEnum;
@@ -38,12 +38,11 @@ public class ClientModKeyInputEventSubscriber {
 		}
 	}
 
-	// Evento que es lo se ejecuta en el cliente
+	// Evento que se ejecuta en el cliente
 	@SubscribeEvent
 	public static void onKeyInput(KeyInputEvent event) throws Exception {
 		Minecraft instance = Minecraft.getInstance();
-		PlayerEntity player = instance.player;
-
+		
 		if (KEYS[0].isPressed()) {
 			DevilRpg.LOGGER.debug(KEYS[0].getTranslationKey() + "pressed. " + KEYS[0].getKey().getKeyCode());
 			ModNetwork.CHANNEL.sendToServer(new KeyboardSkillServerHandler(PowerEnum.POWER1));
@@ -62,10 +61,10 @@ public class ClientModKeyInputEventSubscriber {
 		}
 		if (KEYS[4].isPressed()) {
 			DevilRpg.LOGGER.debug(KEYS[4].getTranslationKey() + "pressed. " + KEYS[4].getKey().getKeyCode());
-			 SkillScreen.open(player);
+			 //SkillScreen.open(player);
 
-			/*Minecraft.getInstance()
-					.enqueue(() -> Minecraft.getInstance().displayGuiScreen(new ScrollableSkillScreen(KEYS[4].getKey().getKeyCode())));*/
+			Minecraft.getInstance()
+					.enqueue(() -> Minecraft.getInstance().displayGuiScreen(new ScrollableSkillScreen(KEYS[4].getKey().getKeyCode())));
 
 		}
 

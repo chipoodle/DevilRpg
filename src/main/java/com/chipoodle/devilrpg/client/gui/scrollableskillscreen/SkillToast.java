@@ -26,7 +26,7 @@ public class SkillToast implements IToast {
    public IToast.Visibility func_230444_a_(MatrixStack p_230444_1_, ToastGui p_230444_2_, long p_230444_3_) {
       p_230444_2_.getMinecraft().getTextureManager().bindTexture(TEXTURE_TOASTS);
       RenderSystem.color3f(1.0F, 1.0F, 1.0F);
-      ScrollableSkillDisplayInfo displayinfo = this.advancement.getDisplay();
+      SkillDisplayInfo displayinfo = this.advancement.getDisplay();
       p_230444_2_.blit(p_230444_1_, 0, 0, 0, 0, this.func_230445_a_(), this.func_238540_d_());
       if (displayinfo != null) {
          List<IReorderingProcessor> list = p_230444_2_.getMinecraft().fontRenderer.trimStringToWidth(displayinfo.getTitle(), 125);

@@ -115,10 +115,10 @@ public final class ClientForgeEventSubscriber {
 		// event.getPlayer().sendMessage(new StringTextComponent("------>
 		// PlayerInteractEvent.LeftClickEmpty"));
 		
-		BiConsumer<PlayerInteractEvent.LeftClickEmpty, LazyOptional<IBaseAuxiliarCapability>> c = (eve, auxiliar) -> {
+		/*BiConsumer<PlayerInteractEvent.LeftClickEmpty, LazyOptional<IBaseAuxiliarCapability>> c = (eve, auxiliar) -> {
 			eve.getPlayer().isSwingInProgress = false;
 		};
-		EventUtils.onTransformation(event.getPlayer(), c, event);
+		EventUtils.onTransformation(event.getPlayer(), c, event);*/
 		
 	}
 
@@ -134,7 +134,7 @@ public final class ClientForgeEventSubscriber {
 				return;
 
 			player.isSwingInProgress = false;
-			if (event.getButton() == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+			if (event.getButton() == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
 				if (event.getAction() == GLFW.GLFW_PRESS) {
 					DevilRpg.LOGGER.info("pressed");
 					aux.ifPresent(werwolf -> werwolf.setWerewolfAttack(true, player));

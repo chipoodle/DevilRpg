@@ -19,9 +19,10 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 @OnlyIn(Dist.CLIENT)
 //public class SoulWispGelLayer<T extends SoulWispEntity> extends EnergyLayer<T, PlayerModel<T>> {
 //public class SoulWispGelLayer<T extends SoulWispEntity> extends EnergyLayer<T, SoulWispModel<T>> {
-public class SoulWispGelLayer<T extends SoulWispEntity> extends EnergyLayer<T, SoulWispModelHeart<T>> {
+public class SoulWispGelLayer<T extends SoulWispEntity> extends GhostEnergyLayer<T, SoulWispModelHeart<T>> {
 	private final SoulWispModel<T> wispModel = new SoulWispModel<T>();
-	private static final ResourceLocation WISP_GEL = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soul/soulgel.png");
+	private static final ResourceLocation WISP_GEL = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soul/soulgelghost.png");
+	//private static final ResourceLocation WISP_GEL = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soul/soulgel.png");
 	//private static final ResourceLocation WISP_WINGS = new ResourceLocation(DevilRpg.MODID + ":textures/entity/flyingwisp/wings.png");
 	private IEntityRenderer<T, SoulWispModelHeart<T>> entityRenderer;
 	private float gelMovementFactor;

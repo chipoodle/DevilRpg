@@ -20,7 +20,7 @@ import net.minecraft.util.text.ITextComponent;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
-public class ScrollableSkillDisplayInfo {
+public class SkillDisplayInfo {
 	   private final ITextComponent title;
 	   private final ITextComponent description;
 	   private final ItemStack icon;
@@ -32,7 +32,7 @@ public class ScrollableSkillDisplayInfo {
 	   private float x;
 	   private float y;
 
-	   public ScrollableSkillDisplayInfo(ItemStack icon, ITextComponent title, ITextComponent description, @Nullable ResourceLocation background, ScrollableSkillFrameType frame, boolean showToast, boolean announceToChat, boolean hidden) {
+	   public SkillDisplayInfo(ItemStack icon, ITextComponent title, ITextComponent description, @Nullable ResourceLocation background, ScrollableSkillFrameType frame, boolean showToast, boolean announceToChat, boolean hidden) {
 	      this.title = title;
 	      this.description = description;
 	      this.icon = icon;
@@ -94,7 +94,7 @@ public class ScrollableSkillDisplayInfo {
 	      return this.hidden;
 	   }
 
-	   public static ScrollableSkillDisplayInfo deserialize(JsonObject object) {
+	   public static SkillDisplayInfo deserialize(JsonObject object) {
 	      ITextComponent itextcomponent = ITextComponent.Serializer.getComponentFromJson(object.get("title"));
 	      ITextComponent itextcomponent1 = ITextComponent.Serializer.getComponentFromJson(object.get("description"));
 	      if (itextcomponent != null && itextcomponent1 != null) {
@@ -104,7 +104,7 @@ public class ScrollableSkillDisplayInfo {
 	         boolean flag = JSONUtils.getBoolean(object, "show_toast", true);
 	         boolean flag1 = JSONUtils.getBoolean(object, "announce_to_chat", true);
 	         boolean flag2 = JSONUtils.getBoolean(object, "hidden", false);
-	         return new ScrollableSkillDisplayInfo(itemstack, itextcomponent, itextcomponent1, resourcelocation, frametype, flag, flag1, flag2);
+	         return new SkillDisplayInfo(itemstack, itextcomponent, itextcomponent1, resourcelocation, frametype, flag, flag1, flag2);
 	      } else {
 	         throw new JsonSyntaxException("Both title and description must be set");
 	      }
@@ -160,7 +160,7 @@ public class ScrollableSkillDisplayInfo {
 	      buf.writeFloat(this.y);
 	   }
 
-	   public static ScrollableSkillDisplayInfo read(PacketBuffer buf) {
+	   public static SkillDisplayInfo read(PacketBuffer buf) {
 	      ITextComponent itextcomponent = buf.readTextComponent();
 	      ITextComponent itextcomponent1 = buf.readTextComponent();
 	      ItemStack itemstack = buf.readItemStack();
@@ -169,7 +169,7 @@ public class ScrollableSkillDisplayInfo {
 	      ResourceLocation resourcelocation = (i & 1) != 0 ? buf.readResourceLocation() : null;
 	      boolean flag = (i & 2) != 0;
 	      boolean flag1 = (i & 4) != 0;
-	      ScrollableSkillDisplayInfo displayinfo = new ScrollableSkillDisplayInfo(itemstack, itextcomponent, itextcomponent1, resourcelocation, frametype, flag, false, flag1);
+	      SkillDisplayInfo displayinfo = new SkillDisplayInfo(itemstack, itextcomponent, itextcomponent1, resourcelocation, frametype, flag, false, flag1);
 	      displayinfo.setPosition(buf.readFloat(), buf.readFloat());
 	      return displayinfo;
 	   }

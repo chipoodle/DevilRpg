@@ -114,7 +114,7 @@ public class SoulWispEntity extends TameableEntity
 
 		this.goalSelector.addGoal(0, new PanicGoal(this, 1.25D));
 		this.goalSelector.addGoal(0, new SwimGoal(this));
-		this.goalSelector.addGoal(2, new FollowOwnerGoal(this, 1.0D, 10.0F, 2.0F, false));
+		this.goalSelector.addGoal(2, new FollowOwnerGoal(this, 1.0D, 3.0F, 7.0F, false));
 		this.goalSelector.addGoal(2, new WaterAvoidingRandomFlyingGoal(this, 1.0D));
 		//// this.goalSelector.addGoal(3, new FollowMobGoal(this, 1.0D, 3.0F,7.0F));
 		//// this.goalSelector.addGoal(5, new FollowParentGoal(this, 1.25D));

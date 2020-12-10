@@ -216,7 +216,7 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
 					
 					Random rand = new Random();
 					playerIn.world.playSound((PlayerEntity) null, playerIn.getPosX(), playerIn.getPosY(), playerIn.getPosZ(),
-							SoundEvents.BLOCK_DISPENSER_FAIL, SoundCategory.NEUTRAL, 0.5F,
+							SoundEvents.BLOCK_NOTE_BLOCK_BASS, SoundCategory.NEUTRAL, 0.5F,
 							0.4F / (rand.nextFloat() * 0.4F + 0.8F));
 					
 					/*String message = "Not enough mana.";

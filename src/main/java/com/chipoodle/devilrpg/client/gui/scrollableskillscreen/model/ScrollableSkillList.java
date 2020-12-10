@@ -1,4 +1,4 @@
-package com.chipoodle.devilrpg.client.gui.scrollableskillscreen;
+package com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model;
 
 import java.util.Collection;
 import java.util.Iterator;
@@ -12,6 +12,9 @@ import javax.annotation.Nullable;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.ScrollableSkillLoadFix;
+import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillElement;
+import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillElement.Builder;
 import com.google.common.base.Functions;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;

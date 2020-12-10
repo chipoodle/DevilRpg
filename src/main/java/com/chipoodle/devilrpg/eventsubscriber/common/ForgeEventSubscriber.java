@@ -297,7 +297,7 @@ public class ForgeEventSubscriber {
 				LazyOptional<IBaseSkillCapability> skillCap = event.getEntity()
 						.getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
 				int points = skillCap.map(x -> x.getSkillsPoints().get(SkillEnum.TRANSFORM_WEREWOLF)).get();
-				double jumpFactor = (points * 0.005) + 0.03f; //max 0.13
+				double jumpFactor = (points * 0.005) + 0.03f; // max 0.13
 				eve.getEntity().setMotion(motion.getX(), motion.getY() + jumpFactor, motion.getZ());
 			};
 			EventUtils.onTransformation((PlayerEntity) event.getEntity(), c, event);
@@ -330,22 +330,24 @@ public class ForgeEventSubscriber {
 		EventUtils.onTransformation(event.getPlayer(), c, event);
 	}
 
-	/*
-	 * @SubscribeEvent(priority = EventPriority.HIGHEST, receiveCanceled = true)
-	 * public static void entityInteract(PlayerInteractEvent.EntityInteract event) {
-	 * Consumer<PlayerInteractEvent.EntityInteract> c = eve -> {
-	 * eve.getPlayer().isSwingInProgress = false; eve.setCanceled(true); };
-	 * EventUtils.onTransformation(event.getPlayer(), c, event); }
-	 */
+	@SubscribeEvent(priority = EventPriority.HIGHEST, receiveCanceled = true)
+	public static void entityInteract(PlayerInteractEvent.EntityInteract event) {
+		BiConsumer<PlayerInteractEvent.EntityInteract, LazyOptional<IBaseAuxiliarCapability>> c = (eve, auxiliar) -> {
+			eve.getPlayer().isSwingInProgress = false;
+			eve.setCanceled(true);
+		};
+		EventUtils.onTransformation(event.getPlayer(), c, event);
+	}
 
-	/*
-	 * @SubscribeEvent(priority = EventPriority.HIGHEST, receiveCanceled = true)
-	 * public static void
-	 * entityInteractSpecific(PlayerInteractEvent.EntityInteractSpecific event) {
-	 * Consumer<PlayerInteractEvent.EntityInteractSpecific> c = eve -> {
-	 * eve.getPlayer().isSwingInProgress = false; eve.setCanceled(true); };
-	 * EventUtils.onTransformation(event.getPlayer(), c, event); }
-	 */
+	@SubscribeEvent(priority = EventPriority.HIGHEST, receiveCanceled = true)
+	public static void entityInteractSpecific(PlayerInteractEvent.EntityInteractSpecific event) {
+		BiConsumer<PlayerInteractEvent.EntityInteractSpecific, LazyOptional<IBaseAuxiliarCapability>> c = (eve,
+				auxiliar) -> {
+			eve.getPlayer().isSwingInProgress = false;
+			eve.setCanceled(true);
+		};
+		EventUtils.onTransformation(event.getPlayer(), c, event);
+	}
 
 	@SubscribeEvent
 	public static void onAttack(AttackEntityEvent event) {

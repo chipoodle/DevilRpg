@@ -1,4 +1,4 @@
-package com.chipoodle.devilrpg.client.gui.scrollableskillscreen;
+package com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -6,6 +6,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillProgress;
+import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillElement;
+import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillElement.Builder;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
@@ -20,14 +23,14 @@ public class ScrollableSkillInfoPacket implements IPacket<IClientPlayNetHandler>
 	private boolean firstSync;
 	private Map<ResourceLocation, SkillElement.Builder> advancementsToAdd;
 	private Set<ResourceLocation> advancementsToRemove;
-	private Map<ResourceLocation, ScrollableSkillProgress> progressUpdates;
+	private Map<ResourceLocation, SkillProgress> progressUpdates;
 
 	public ScrollableSkillInfoPacket() {
 	}
 
 	public ScrollableSkillInfoPacket(boolean firstSync, Collection<SkillElement> advancementsToAddCollection,
 			Set<ResourceLocation> advancementsToRemoveSet,
-			Map<ResourceLocation, ScrollableSkillProgress> progressUpdatesMap) {
+			Map<ResourceLocation, SkillProgress> progressUpdatesMap) {
 		this.firstSync = firstSync;
 		this.advancementsToAdd = Maps.newHashMap();
 
@@ -73,7 +76,7 @@ public class ScrollableSkillInfoPacket implements IPacket<IClientPlayNetHandler>
 
 		for (int l = 0; l < i; ++l) {
 			ResourceLocation resourcelocation2 = buf.readResourceLocation();
-			this.progressUpdates.put(resourcelocation2, ScrollableSkillProgress.fromNetwork(buf));
+			this.progressUpdates.put(resourcelocation2, SkillProgress.fromNetwork(buf));
 		}
 
 	}
@@ -100,7 +103,7 @@ public class ScrollableSkillInfoPacket implements IPacket<IClientPlayNetHandler>
 
 		buf.writeVarInt(this.progressUpdates.size());
 
-		for (Entry<ResourceLocation, ScrollableSkillProgress> entry1 : this.progressUpdates.entrySet()) {
+		for (Entry<ResourceLocation, SkillProgress> entry1 : this.progressUpdates.entrySet()) {
 			buf.writeResourceLocation(entry1.getKey());
 			entry1.getValue().serializeToNetwork(buf);
 		}
@@ -118,7 +121,7 @@ public class ScrollableSkillInfoPacket implements IPacket<IClientPlayNetHandler>
 	}
 
 	@OnlyIn(Dist.CLIENT)
-	public Map<ResourceLocation, ScrollableSkillProgress> getProgressUpdates() {
+	public Map<ResourceLocation, SkillProgress> getProgressUpdates() {
 		return this.progressUpdates;
 	}
 
