@@ -185,14 +185,6 @@ public class SkillTabGui extends AbstractGui {
 				if (skillEntryGui.isMouseOver(i, j, mouseX, mouseY)) {
 					flag = true;
 					skillEntryGui.drawSkillHover(matrixStack, i, j, this.fade, width, height);
-
-					/*
-					 * DevilRpg.LOGGER.
-					 * info("|--------SkillTabGui.drawTabTooltips skillEntryGui.isMouseOver(i: " + i
-					 * + " j: " + j + " mouseX: " + mouseX + " mouseY: " + mouseY + " ID: " +
-					 * skillEntryGui.getSkillElement().getId());
-					 */
-
 					break;
 				}
 			}
@@ -299,9 +291,9 @@ public class SkillTabGui extends AbstractGui {
 		int j = MathHelper.floor(this.scrollY);// posición del fondo en y. Cambia cuando se posiciona con el drag del
 												// mouse
 
-		DevilRpg.LOGGER.info("|--------SkillTabGui.getIfInsideAnyChild(mouseX: " + mouseX + " mouseY: " + mouseY);
+		/*DevilRpg.LOGGER.info("|--------SkillTabGui.getIfInsideAnyChild(mouseX: " + mouseX + " mouseY: " + mouseY);
 		DevilRpg.LOGGER.info("|--------SkillTabGui.getIfInsideAnyChild" + " xMin:" + minX + " yMin: " + minY + " xMax: "
-				+ maxX + " yMax: " + maxY);
+				+ maxX + " yMax: " + maxY);*/
 
 		List<SkillEntryGui> collect = this.guis.entrySet().stream().map(x -> x.getValue()).collect(Collectors.toList());
 		return findIfInsideAnyChild(collect, (int) mouseX, (int) mouseY, i, j);

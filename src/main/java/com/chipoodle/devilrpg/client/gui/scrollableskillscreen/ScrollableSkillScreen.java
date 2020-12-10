@@ -131,7 +131,6 @@ public class ScrollableSkillScreen extends Screen implements ClientScrollableSki
 
 			for (SkillTabGui rootSkillTabGui : this.tabs.values()) {
 				if (rootSkillTabGui.getPage() == tabPage) {
-					DevilRpg.LOGGER.info("|----------- tabPage: "+tabPage);
 					if (rootSkillTabGui.isInsideTabSelector(i, j, mouseX, mouseY)) {
 						this.clientSkillManager.setSelectedTab(rootSkillTabGui.getSkillElement(), true);
 						break;
