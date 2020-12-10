@@ -139,7 +139,7 @@ public class ScrollableSkillScreen extends Screen implements ClientScrollableSki
 								mouseY - j - WINDOW_AREA_OFFSET_Y);
 						if (ifInsideAnyChild != null) {
 							DevilRpg.LOGGER.info("|----------- mouseClicked: " + ifInsideAnyChild.getSkillElement().getId());
-							break;
+							break; 
 						}
 					}
 				}
