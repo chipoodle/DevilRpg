@@ -42,12 +42,12 @@ public class ScrollableSkillList {
 		if (advancementIn.getParent() == null) {
 			this.roots.remove(advancementIn);
 			if (this.listener != null) {
-				this.listener.rootAdvancementRemoved(advancementIn);
+				this.listener.rootSkillRemoved(advancementIn);
 			}
 		} else {
 			this.nonRoots.remove(advancementIn);
 			if (this.listener != null) {
-				this.listener.nonRootAdvancementRemoved(advancementIn);
+				this.listener.nonRootSkillRemoved(advancementIn);
 			}
 		}
 
@@ -86,12 +86,12 @@ public class ScrollableSkillList {
 					if (skillElement.getParent() == null) {
 						this.roots.add(skillElement);
 						if (this.listener != null) {
-							this.listener.rootAdvancementAdded(skillElement);
+							this.listener.rootSkillAdded(skillElement);
 						}
 					} else {
 						this.nonRoots.add(skillElement);
 						if (this.listener != null) {
-							this.listener.nonRootAdvancementAdded(skillElement);
+							this.listener.nonRootSkillAdded(skillElement);
 						}
 					}
 				}
@@ -138,26 +138,26 @@ public class ScrollableSkillList {
 		this.listener = listenerIn;
 		if (listenerIn != null) {
 			for (SkillElement advancement : this.roots) {
-				listenerIn.rootAdvancementAdded(advancement);
+				listenerIn.rootSkillAdded(advancement);
 			}
 
 			for (SkillElement advancement1 : this.nonRoots) {
-				listenerIn.nonRootAdvancementAdded(advancement1);
+				listenerIn.nonRootSkillAdded(advancement1);
 			}
 		}
 
 	}
 
 	public interface IListener {
-		void rootAdvancementAdded(SkillElement advancementIn);
+		void rootSkillAdded(SkillElement advancementIn);
 
 		@OnlyIn(Dist.CLIENT)
-		void rootAdvancementRemoved(SkillElement advancementIn);
+		void rootSkillRemoved(SkillElement advancementIn);
 
-		void nonRootAdvancementAdded(SkillElement advancementIn);
+		void nonRootSkillAdded(SkillElement advancementIn);
 
 		@OnlyIn(Dist.CLIENT)
-		void nonRootAdvancementRemoved(SkillElement advancementIn);
+		void nonRootSkillRemoved(SkillElement advancementIn);
 
 		@OnlyIn(Dist.CLIENT)
 		void advancementsCleared();

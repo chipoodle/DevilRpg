@@ -97,7 +97,7 @@ public class SoulWispEntity extends TameableEntity
 		this.moveController = new FlyingMovementController(this, 20, true);
 		this.lookController = new SoulWispEntity.BeeLookController(this);
 		this.setPathPriority(PathNodeType.WATER, -1.0F);
-		//this.setPathPriority(PathNodeType.COCOA, -1.0F);
+		// this.setPathPriority(PathNodeType.COCOA, -1.0F);
 		this.setPathPriority(PathNodeType.FENCE, -1.0F);
 	}
 
@@ -427,11 +427,10 @@ public class SoulWispEntity extends TameableEntity
 		for (LivingEntity entity : alliesList) {
 			EffectInstance pri = new EffectInstance(primaryEffect, DURATION_TICKS, amplifierIn, true, true);
 			EffectInstance active = entity.getActivePotionEffect(primaryEffect);
-			if (active == null || pri.getAmplifier() > active.getAmplifier()) {
-				entity.addPotionEffect(pri);
-			} else {
+			if (!(active == null || pri.getAmplifier() > active.getAmplifier())) {
 				active.combine(pri);
 			}
+			entity.addPotionEffect(pri);
 		}
 	}
 
@@ -439,11 +438,10 @@ public class SoulWispEntity extends TameableEntity
 		for (LivingEntity entity : alliesList) {
 			EffectInstance sec = new EffectInstance(secondaryEffect, DURATION_TICKS, 0, true, true);
 			EffectInstance active = entity.getActivePotionEffect(secondaryEffect);
-			if (active == null || sec.getAmplifier() > active.getAmplifier()) {
-				entity.addPotionEffect(sec);
-			} else {
+			if (!(active == null || sec.getAmplifier() > active.getAmplifier())) {
 				active.combine(sec);
 			}
+			entity.addPotionEffect(sec);
 		}
 	}
 

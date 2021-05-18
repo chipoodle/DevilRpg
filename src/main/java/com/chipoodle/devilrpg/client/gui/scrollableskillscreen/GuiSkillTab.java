@@ -1,15 +1,20 @@
 package com.chipoodle.devilrpg.client.gui.scrollableskillscreen;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
 import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model.ScrollableSkillTreeNode;
+import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
+import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model.SkillTreeNode;
+import com.chipoodle.devilrpg.client.gui.skillbook.CustomGuiButton;
+import com.chipoodle.devilrpg.util.SkillEnum;
 import com.google.common.collect.Maps;
 import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -22,11 +27,13 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.text.ITextComponent;
+import net.minecraft.util.text.StringTextComponent;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraftforge.common.util.LazyOptional;
 
 @OnlyIn(Dist.CLIENT)
-public class SkillTabGui extends AbstractGui {
+public class GuiSkillTab extends AbstractGui {
 	private static final int HEIGHT = 27;
 	private static final int WIDTH = 28;
 	// private static final int TAB_BACKGROUND_X = 234;
@@ -35,14 +42,14 @@ public class SkillTabGui extends AbstractGui {
 	private static final int TAB_BACKGROUND_Y = 163;
 	private final Minecraft minecraft;
 	private final ScrollableSkillScreen screen;
-	private final ScrollableSkillTabType type;
+	private final SkillTabType type;
 	private final int index;
 	private final SkillElement skillElement;
-	private final SkillDisplayInfo display;
+	private final SkillDisplayInfo displayInfo;
 	private final ItemStack icon;
 	private final ITextComponent title;
-	private final SkillEntryGui root;
-	private final Map<SkillElement, SkillEntryGui> guis = Maps.newLinkedHashMap();
+	private final GuiSkillEntry root;
+	private final Map<SkillElement, GuiSkillEntry> guis = Maps.newLinkedHashMap();
 	private double scrollX;
 	private double scrollY;
 	private int minX = Integer.MAX_VALUE;
@@ -53,25 +60,28 @@ public class SkillTabGui extends AbstractGui {
 	private boolean centered;
 	private int page;
 
-	public SkillTabGui(Minecraft minecraft, ScrollableSkillScreen screen, ScrollableSkillTabType type, int index,
+	private LazyOptional<IBaseSkillCapability> skillCap;
+
+	private GuiSkillTab(Minecraft minecraft, ScrollableSkillScreen screen, SkillTabType type, int index,
 			SkillElement skillElement) {
 		this.minecraft = minecraft;
 		this.screen = screen;
 		this.type = type;
 		this.index = index;
 		this.skillElement = skillElement;
-		this.display = skillElement.getDisplay();
+		this.displayInfo = skillElement.getDisplay();
 		this.icon = skillElement.getDisplay().getIcon();
 		this.title = skillElement.getDisplay().getTitle();
-		this.root = new SkillEntryGui(this, minecraft, skillElement);
+		this.root = new GuiSkillEntry(this, minecraft, skillElement, 0, 0);
 		this.addGuiSkillElement(this.root, skillElement);
 		DevilRpg.LOGGER.info("|-----" + toString());
 	}
 
-	public SkillTabGui(Minecraft mc, ScrollableSkillScreen screen, ScrollableSkillTabType type, int index, int page,
-			SkillElement adv) {
+	public GuiSkillTab(Minecraft mc, ScrollableSkillScreen screen, SkillTabType type, int index, int page,
+			SkillElement adv, LazyOptional<IBaseSkillCapability> skillCap) {
 		this(mc, screen, type, index, adv);
 		this.page = page;
+		this.skillCap = skillCap;
 	}
 
 	public int getPage() {
@@ -86,6 +96,14 @@ public class SkillTabGui extends AbstractGui {
 		return this.title;
 	}
 
+	/**
+	 * Renderiza el frame de fondo del tab
+	 * 
+	 * @param matrixStack
+	 * @param offsetX
+	 * @param offsetY
+	 * @param isSelected
+	 */
 	public void renderTabSelectorBackground(MatrixStack matrixStack, int offsetX, int offsetY, boolean isSelected) {
 		this.type.renderTabSelectorBackground(matrixStack, this, offsetX, offsetY, isSelected, this.index);
 	}
@@ -95,7 +113,7 @@ public class SkillTabGui extends AbstractGui {
 	}
 
 	/**
-	 * Pinta la imagen de fondo dinámicamente aun al hacer scroll
+	 * Pinta la imagen de fondo dinámicamente inclusive al hacer scroll
 	 * 
 	 * @param matrixStack
 	 */
@@ -118,7 +136,7 @@ public class SkillTabGui extends AbstractGui {
 		// Pinta el fondo
 		fill(matrixStack, TAB_BACKGROUND_X, TAB_BACKGROUND_Y, 0, 0, -16777216);
 		RenderSystem.depthFunc(515);
-		ResourceLocation resourcelocation = this.display.getBackground();
+		ResourceLocation resourcelocation = this.displayInfo.getBackground();
 		if (resourcelocation != null) {
 			this.minecraft.getTextureManager().bindTexture(resourcelocation);
 		} else {
@@ -148,7 +166,7 @@ public class SkillTabGui extends AbstractGui {
 
 		this.root.drawConnectionLineToParent(matrixStack, i, j, true);
 		this.root.drawConnectionLineToParent(matrixStack, i, j, false);
-		this.root.drawSkill(matrixStack, i, j);
+		this.root.drawSkills(matrixStack, i, j);
 		RenderSystem.depthFunc(518);
 		RenderSystem.translatef(0.0F, 0.0F, -950.0F);
 		RenderSystem.colorMask(false, false, false, false);
@@ -160,7 +178,7 @@ public class SkillTabGui extends AbstractGui {
 	}
 
 	/**
-	 * Pinta el tooltip cuando el puntero está sobre el botón botón de habilidad.
+	 * Pinta el tooltip cuando el puntero está sobre el botón de habilidad.
 	 * Pinta la sombra que cubre el fondo cuando se hace hoover al botón de
 	 * habilidad
 	 * 
@@ -181,7 +199,7 @@ public class SkillTabGui extends AbstractGui {
 		int j = MathHelper.floor(this.scrollY);// posición del fondo en y. Cambia cuando se posiciona con el drag del
 												// mouse
 		if (mouseX > 0 && mouseX < TAB_BACKGROUND_X && mouseY > 0 && mouseY < TAB_BACKGROUND_Y) {
-			for (SkillEntryGui skillEntryGui : this.guis.values()) {
+			for (GuiSkillEntry skillEntryGui : this.guis.values()) {
 				if (skillEntryGui.isMouseOver(i, j, mouseX, mouseY)) {
 					flag = true;
 					skillEntryGui.drawSkillHover(matrixStack, i, j, this.fade, width, height);
@@ -196,29 +214,56 @@ public class SkillTabGui extends AbstractGui {
 		} else {
 			this.fade = MathHelper.clamp(this.fade - 0.04F, 0.0F, 1.0F);
 		}
+	}
 
+	public void drawSkillLevel(MatrixStack matrixStack) {
+		for (GuiSkillEntry skillEntryGui : this.guis.values()) {
+			drawSkillLevel(matrixStack, skillEntryGui);
+		}
+	}
+
+	/**
+	 * Pinta el nivel del skill como string
+	 * @param matrixStack
+	 * @param skillEntryGui
+	 * @return
+	 */
+	private String drawSkillLevel(MatrixStack matrixStack, GuiSkillEntry skillEntryGui) {
+		int i = MathHelper.floor(this.scrollX);
+		int j = MathHelper.floor(this.scrollY);
+		String levelString = skillEntryGui.getLevelString();
+		if (!skillEntryGui.getSkillElement().getSkillCapability().equals(SkillEnum.EMPTY) && Objects.nonNull(this.getScreen()) && this.getScreen().isInsideInnerFrame(i + skillEntryGui.getX(), j + skillEntryGui.getY())) {
+			this.minecraft.fontRenderer.drawStringWithShadow(matrixStack, levelString,(float) (i + skillEntryGui.getX()), (float) (j + skillEntryGui.getY()), -1);
+		}
+		return levelString;
 	}
 
 	public boolean isInsideTabSelector(int offsetX, int offsetY, double mouseX, double mouseY) {
 		return this.type.inInsideTabSelector(offsetX, offsetY, this.index, mouseX, mouseY);
 	}
-
+	/**
+	 * Crea y ordena los botones
+	 * @param minecraft
+	 * @param screen
+	 * @param tabIndex
+	 * @param skillElement
+	 * @param skillCap
+	 * @return
+	 */
 	@Nullable
-	public static SkillTabGui create(Minecraft minecraft, ScrollableSkillScreen screen, int tabIndex,
-			SkillElement advancement) {
-		if (advancement.getDisplay() == null) {
+	public static GuiSkillTab create(Minecraft minecraft, ScrollableSkillScreen screen, int tabIndex,SkillElement skillElement, LazyOptional<IBaseSkillCapability> skillCap) {
+		if (skillElement.getDisplay() == null) {
 			return null;
 		} else {
 			// Se ordenan los botones
-			ScrollableSkillTreeNode.layout(advancement);
-			for (ScrollableSkillTabType advancementtabtype : ScrollableSkillTabType.values()) {
-				if ((tabIndex % ScrollableSkillTabType.MAX_TABS) < advancementtabtype.getMax()) {
-					return new SkillTabGui(minecraft, screen, advancementtabtype,
-							tabIndex % ScrollableSkillTabType.MAX_TABS, tabIndex / ScrollableSkillTabType.MAX_TABS,
-							advancement);
+			SkillTreeNode.layout(skillElement);
+			for (SkillTabType skillTabType : SkillTabType.values()) {
+				if ((tabIndex % SkillTabType.MAX_TABS) < skillTabType.getMax()) {
+					return new GuiSkillTab(minecraft, screen, skillTabType, tabIndex % SkillTabType.MAX_TABS,
+							tabIndex / SkillTabType.MAX_TABS, skillElement, skillCap);
 				}
 
-				tabIndex -= advancementtabtype.getMax();
+				tabIndex -= skillTabType.getMax();
 			}
 
 			return null;
@@ -245,8 +290,16 @@ public class SkillTabGui extends AbstractGui {
 	public void addSkillElement(SkillElement skillElement) {
 		DevilRpg.LOGGER.info("|-------- addSkillElement");
 		if (skillElement.getDisplay() != null) {
-			SkillEntryGui skillentryGui = new SkillEntryGui(this, this.minecraft, skillElement);
-			this.addGuiSkillElement(skillentryGui, skillElement);
+
+			skillCap.ifPresent(skillCap -> {
+				HashMap<SkillEnum, Integer> skillsPoints = skillCap.getSkillsPoints();
+				HashMap<SkillEnum, Integer> skillsMaxPoints = skillCap.getMaxSkillsPoints();
+				Integer points = skillsPoints.get(skillElement.getSkillCapability());
+				Integer maxPonits = skillsMaxPoints.get(skillElement.getSkillCapability());
+				GuiSkillEntry skillentryGui = new GuiSkillEntry(this, this.minecraft, skillElement, (points == null ? 0 : points), (maxPonits == null ? 0 : maxPonits));
+				this.addGuiSkillElement(skillentryGui, skillElement);
+			});
+
 		}
 	}
 
@@ -257,7 +310,7 @@ public class SkillTabGui extends AbstractGui {
 	 * @param skillEntryGuiIn
 	 * @param skillElement
 	 */
-	private void addGuiSkillElement(SkillEntryGui skillEntryGuiIn, SkillElement skillElement) {
+	private void addGuiSkillElement(GuiSkillEntry skillEntryGuiIn, SkillElement skillElement) {
 		this.guis.put(skillElement, skillEntryGuiIn);
 		int i = skillEntryGuiIn.getX();
 		int j = i + WIDTH;
@@ -267,45 +320,52 @@ public class SkillTabGui extends AbstractGui {
 		this.maxX = Math.max(this.maxX, j);
 		this.minY = Math.min(this.minY, k);
 		this.maxY = Math.max(this.maxY, l);
-		DevilRpg.LOGGER.info("|-------- SkillTabGui.addGuiSkillElement" + "ID: " + skillElement.getId().toString()
-				+ " xMin:" + minX + " yMin: " + minY + " xMax: " + maxX + " yMax: " + maxY);
+		/*
+		 * DevilRpg.LOGGER.info("|-------- SkillTabGui.addGuiSkillElement" + "ID: " +
+		 * skillElement.getId().toString() + " xMin:" + minX + " yMin: " + minY +
+		 * " xMax: " + maxX + " yMax: " + maxY);
+		 */
 
-		for (SkillEntryGui skillEntryGui : this.guis.values()) {
+		for (GuiSkillEntry skillEntryGui : this.guis.values()) {
 			skillEntryGui.attachToParent();
 		}
 
 	}
 
 	@Nullable
-	public SkillEntryGui getSkillElementGui(SkillElement advancement) {
-		return this.guis.get(advancement);
+	public GuiSkillEntry getSkillElementGui(SkillElement skillElement) {
+		return this.guis.get(skillElement);
 	}
 
 	public ScrollableSkillScreen getScreen() {
 		return this.screen;
 	}
 
-	public SkillEntryGui getIfInsideAnyChild(double mouseX, double mouseY) {
+	public GuiSkillEntry getIfInsideIncludingChildren(double mouseX, double mouseY) {
 		int i = MathHelper.floor(this.scrollX);// posición del fondo en x. Cambia cuando se posiciona con el drag del
 												// mouse
 		int j = MathHelper.floor(this.scrollY);// posición del fondo en y. Cambia cuando se posiciona con el drag del
 												// mouse
 
-		/*DevilRpg.LOGGER.info("|--------SkillTabGui.getIfInsideAnyChild(mouseX: " + mouseX + " mouseY: " + mouseY);
-		DevilRpg.LOGGER.info("|--------SkillTabGui.getIfInsideAnyChild" + " xMin:" + minX + " yMin: " + minY + " xMax: "
-				+ maxX + " yMax: " + maxY);*/
+		/*
+		 * DevilRpg.LOGGER.info("|--------SkillTabGui.getIfInsideAnyChild(mouseX: " +
+		 * mouseX + " mouseY: " + mouseY);
+		 * DevilRpg.LOGGER.info("|--------SkillTabGui.getIfInsideAnyChild" + " xMin:" +
+		 * minX + " yMin: " + minY + " xMax: " + maxX + " yMax: " + maxY);
+		 */
 
-		List<SkillEntryGui> collect = this.guis.entrySet().stream().map(x -> x.getValue()).collect(Collectors.toList());
-		return findIfInsideAnyChild(collect, (int) mouseX, (int) mouseY, i, j);
+		List<GuiSkillEntry> collect = this.guis.entrySet().stream().map(x -> x.getValue()).collect(Collectors.toList());
+		return findIfInsideIncludingChildren(collect, (int) mouseX, (int) mouseY, i, j);
 	}
 
-	private SkillEntryGui findIfInsideAnyChild(List<SkillEntryGui> collect, int mouseX, int mouseY, int scrollX,
-			int scrollY) {
-		for (SkillEntryGui skillEntryGui : collect) {
+	private GuiSkillEntry findIfInsideIncludingChildren(List<GuiSkillEntry> collect, int mouseX, int mouseY,
+			int scrollX, int scrollY) {
+		for (GuiSkillEntry skillEntryGui : collect) {
 			if (skillEntryGui.isMouseOver(scrollX, scrollY, mouseX, mouseY)) {
 				return skillEntryGui;
 			}
-			SkillEntryGui result = findIfInsideAnyChild(skillEntryGui.getChildren(), mouseX, mouseY, scrollX, scrollY);
+			GuiSkillEntry result = findIfInsideIncludingChildren(skillEntryGui.getChildren(), mouseX, mouseY, scrollX,
+					scrollY);
 			if (result != null)
 				return result;
 		}

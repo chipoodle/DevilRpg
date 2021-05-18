@@ -10,7 +10,9 @@ import com.google.common.collect.ImmutableList.Builder;
 import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.systems.RenderSystem;
 
+import net.minecraft.client.gui.AbstractGui;
 import net.minecraft.client.gui.DialogTexts;
+import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.chat.NarratorChatListener;
 import net.minecraft.client.gui.screen.ReadBookScreen;
 import net.minecraft.client.gui.screen.Screen;
@@ -29,6 +31,7 @@ import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.ITextProperties;
 import net.minecraft.util.text.StringTextComponent;
 import net.minecraft.util.text.Style;
+import net.minecraft.util.text.TextComponent;
 import net.minecraft.util.text.TextFormatting;
 import net.minecraft.util.text.TranslationTextComponent;
 import net.minecraft.util.text.event.ClickEvent;
@@ -37,6 +40,12 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 
 @OnlyIn(Dist.CLIENT)
 public class BaseBookScreen extends Screen {
+	protected int bookImageWidth = 192;
+	protected int bookImageHeight = 192;
+	protected int bookImageScaleWidth = 192;
+	protected int bookImageScaleHeight = 192;
+	protected int uOffset = 0;
+	protected int vOffset = 0;
 	public static final ReadBookScreen.IBookInfo EMPTY_BOOK = new ReadBookScreen.IBookInfo() {
 		/**
 		 * Returns the size of the book
@@ -113,16 +122,23 @@ public class BaseBookScreen extends Screen {
 	protected void init() {
 		this.addDoneButton();
 		this.addChangePageButtons();
+		//this.testButtons();
 	}
 
+	/**
+	 * Button done.
+	 */
 	protected void addDoneButton() {
 		this.addButton(new Button(this.width / 2 - 100, 196, 200, 20, DialogTexts.GUI_DONE, (p_214161_1_) -> {
 			this.minecraft.displayGuiScreen((Screen) null);
 		}));
 	}
 
+	/**
+	 * Buttons next and previous.
+	 */
 	protected void addChangePageButtons() {
-		int i = (this.width - 192) / 2;
+		int i = (this.width - bookImageWidth) / 2;
 		int j = 2;
 		this.buttonNextPage = this.addButton(new ChangePageButton(i + 116, 159, true, (p_214159_1_) -> {
 			this.nextPage();
@@ -131,6 +147,58 @@ public class BaseBookScreen extends Screen {
 			this.previousPage();
 		}, this.pageTurnSounds));
 		this.updateButtons();
+	}
+	
+	protected void testButtons() {
+		this.addButton(new Button(10, 10, 50, 20, new StringTextComponent("bIWidth-10" ), (boton) -> {
+			bookImageWidth=bookImageWidth-10;
+		}));
+		this.addButton(new Button(70, 10, 50, 20, new StringTextComponent("bIWidth+10"), (boton) -> {
+			bookImageWidth=bookImageWidth+10;
+		}));
+		this.addButton(new Button(10, 30, 50, 20, new StringTextComponent("bIHeight-10"), (boton) -> {
+			bookImageHeight=bookImageHeight-10;
+		}));
+		this.addButton(new Button(70, 30, 50, 20, new StringTextComponent("bIHeight+10"), (boton) -> {
+			bookImageHeight=bookImageHeight+10;
+		}));
+
+		
+		this.addButton(new Button(10, 50, 50, 20, new StringTextComponent("bISWidth-10"), (boton) -> {
+			bookImageScaleWidth=bookImageScaleWidth-10;
+		}));
+		this.addButton(new Button(70, 50, 50, 20, new StringTextComponent("bISWidth+10"), (boton) -> {
+			bookImageScaleWidth=bookImageScaleWidth+10;
+		}));
+		this.addButton(new Button(10, 70, 50, 20, new StringTextComponent("bISHeight-10"), (boton) -> {
+			bookImageScaleHeight=bookImageScaleHeight-10;
+		}));
+		this.addButton(new Button(70, 70, 50, 20, new StringTextComponent("bISHeight+10"), (boton) -> {
+			bookImageScaleHeight=bookImageScaleHeight+10;
+		}));
+		
+		this.addButton(new Button(10, 90, 50, 20, new StringTextComponent("uOffset-10"), (boton) -> {
+			uOffset=uOffset-10;
+		}));
+		this.addButton(new Button(70, 90, 50, 20, new StringTextComponent("uOffset+10"), (boton) -> {
+			uOffset=uOffset+10;
+		}));
+		this.addButton(new Button(10, 110, 50, 20, new StringTextComponent("vOffset-10"), (boton) -> {
+			vOffset=vOffset-10;
+		}));
+		this.addButton(new Button(70, 110, 50, 20, new StringTextComponent("vOffset+10"), (boton) -> {
+			vOffset=vOffset+10;
+		}));
+	}
+	
+	private void drawtestButtonsTexts(MatrixStack matrixStack) {
+		drawText(matrixStack, bookImageWidth+"", 120, 12);
+		drawText(matrixStack, bookImageHeight+"", 120, 32);
+		drawText(matrixStack, bookImageScaleWidth+"", 120, 52);
+		drawText(matrixStack, bookImageScaleHeight+"", 120, 72);
+		drawText(matrixStack, uOffset+"", 120, 92);
+		drawText(matrixStack, vOffset+"", 120, 112);
+	
 	}
 
 	private int getPageCount() {
@@ -181,28 +249,34 @@ public class BaseBookScreen extends Screen {
 		}
 	}
 
+	public void drawText(MatrixStack matrixStack, String s,float textPositionX,float textPositionY) {
+		this.font.drawString(matrixStack, s, textPositionX, textPositionY, 0);
+	}
+	
 	public void render(MatrixStack matrixStack, int mouseX, int mouseY, float partialTicks) {
 		this.renderBackground(matrixStack);
 		RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
 		this.minecraft.getTextureManager().bindTexture(BOOK_TEXTURES);
-		int i = (this.width - 192) / 2;
-		int j = 2;
-		this.blit(matrixStack, i, 2, 0, 0, 192, 192);
+		int x = (this.width - bookImageWidth) / 2;
+		int y = 2;
+		
+		AbstractGui.blit(matrixStack, x, y,uOffset, vOffset, bookImageWidth, bookImageHeight,bookImageScaleWidth, bookImageScaleHeight);
+		//drawtestButtonsTexts(matrixStack);
+
 		if (this.cachedPage != this.currPage) {
 			ITextProperties itextproperties = this.bookInfo.func_238806_b_(this.currPage);
 			this.cachedPageLines = this.font.trimStringToWidth(itextproperties, 114);
-			this.field_243344_s = new TranslationTextComponent("book.pageIndicator", this.currPage + 1,
-					Math.max(this.getPageCount(), 1));
+			this.field_243344_s = new TranslationTextComponent("book.pageIndicator", this.currPage + 1,Math.max(this.getPageCount(), 1));
 		}
 
 		this.cachedPage = this.currPage;
 		int i1 = this.font.getStringPropertyWidth(this.field_243344_s);
-		this.font.func_243248_b(matrixStack, this.field_243344_s, (float) (i - i1 + 192 - 44), 18.0F, 0);
+		this.font.func_243248_b(matrixStack, this.field_243344_s, (float) (x - i1 + bookImageWidth - 44), 18.0F, 0);
 		int k = Math.min(128 / 9, this.cachedPageLines.size());
 
 		for (int l = 0; l < k; ++l) {
 			IReorderingProcessor ireorderingprocessor = this.cachedPageLines.get(l);
-			this.font.func_238422_b_(matrixStack, ireorderingprocessor, (float) (i + 36), (float) (32 + l * 9), 0);
+			this.font.func_238422_b_(matrixStack, ireorderingprocessor, (float) (x + 36), (float) (12 + l * 9), 0);
 		}
 
 		Style style = this.func_238805_a_((double) mouseX, (double) mouseY);
@@ -252,7 +326,7 @@ public class BaseBookScreen extends Screen {
 		if (this.cachedPageLines.isEmpty()) {
 			return null;
 		} else {
-			int i = MathHelper.floor(p_238805_1_ - (double) ((this.width - 192) / 2) - 36.0D);
+			int i = MathHelper.floor(p_238805_1_ - (double) ((this.width - bookImageWidth) / 2) - 36.0D);
 			int j = MathHelper.floor(p_238805_3_ - 2.0D - 30.0D);
 			if (i >= 0 && j >= 0) {
 				int k = Math.min(128 / 9, this.cachedPageLines.size());

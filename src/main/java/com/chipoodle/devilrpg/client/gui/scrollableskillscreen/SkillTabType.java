@@ -9,7 +9,7 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 @OnlyIn(Dist.CLIENT)
-public enum ScrollableSkillTabType {
+public enum SkillTabType {
 	   ABOVE(0, 0, 28, 32, 8),
 	   BELOW(84, 0, 28, 32, 8),
 	   LEFT(0, 64, 32, 28, 5),
@@ -22,7 +22,7 @@ public enum ScrollableSkillTabType {
 	   private final int height;
 	   private final int max;
 
-	   private ScrollableSkillTabType(int textureX, int textureY, int widthIn, int heightIn, int max) {
+	   private SkillTabType(int textureX, int textureY, int widthIn, int heightIn, int max) {
 	      this.textureX = textureX;
 	      this.textureY = textureY;
 	      this.width = widthIn;

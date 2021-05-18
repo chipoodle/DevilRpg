@@ -2,13 +2,13 @@ package com.chipoodle.devilrpg.eventsubscriber.client;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.ScrollableSkillScreen;
+import com.chipoodle.devilrpg.client.gui.skillbook.SkillScreen;
 import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.network.handler.KeyboardSkillServerHandler;
 import com.chipoodle.devilrpg.util.PowerEnum;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.settings.KeyBinding;
-import net.minecraft.entity.player.PlayerEntity;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.InputEvent.KeyInputEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -61,10 +61,9 @@ public class ClientModKeyInputEventSubscriber {
 		}
 		if (KEYS[4].isPressed()) {
 			DevilRpg.LOGGER.debug(KEYS[4].getTranslationKey() + "pressed. " + KEYS[4].getKey().getKeyCode());
-			 //SkillScreen.open(player);
+			//SkillScreen.open(Minecraft.getInstance().player,KEYS[4].getKey().getKeyCode());
 
-			Minecraft.getInstance()
-					.enqueue(() -> Minecraft.getInstance().displayGuiScreen(new ScrollableSkillScreen(KEYS[4].getKey().getKeyCode())));
+			Minecraft.getInstance().enqueue(() -> Minecraft.getInstance().displayGuiScreen(new ScrollableSkillScreen(KEYS[4].getKey().getKeyCode())));
 
 		}
 

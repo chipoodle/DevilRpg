@@ -33,17 +33,17 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 @OnlyIn(Dist.CLIENT)
-public class ClientScrollableSkillManager {
+public class ClientSkillBuilder {
 	private static final Logger LOGGER = LogManager.getLogger();
 	private final Minecraft mc;
 	private final ScrollableSkillList scrollableSkillList = new ScrollableSkillList();
 	private final Map<SkillElement, SkillProgress> advancementToProgress = Maps.newHashMap();
 	@Nullable
-	private ClientScrollableSkillManager.IListener listener;
+	private ClientSkillBuilder.IListener listener;
 	@Nullable
 	private SkillElement selectedTab;
 
-	public ClientScrollableSkillManager(Minecraft p_i47380_1_) {
+	public ClientSkillBuilder(Minecraft p_i47380_1_) {
 		this.mc = p_i47380_1_;
 	}
 
@@ -74,7 +74,7 @@ public class ClientScrollableSkillManager {
 		scrollableSkillList.loadSkills(skillelementMap);
 	}
 
-	public void read(ScrollableSkillInfoPacket packetIn) {
+	/*public void read(ScrollableSkillInfoPacket packetIn) {
 		if (packetIn.isFirstSync()) {
 			this.scrollableSkillList.clear();
 			this.advancementToProgress.clear();
@@ -101,11 +101,11 @@ public class ClientScrollableSkillManager {
 			}
 		}
 
-	}
+	}*/
 
-	public ScrollableSkillList getSkillList() {
+	/*public ScrollableSkillList getSkillList() {
 		return this.scrollableSkillList;
-	}
+	}*/
 
 	public void setSelectedTab(@Nullable SkillElement skillIn, boolean tellServer) {
 		ClientPlayNetHandler clientplaynethandler = this.mc.getConnection();
@@ -122,7 +122,7 @@ public class ClientScrollableSkillManager {
 
 	}
 
-	public void setListener(@Nullable ClientScrollableSkillManager.IListener listenerIn) {
+	public void setListener(@Nullable ClientSkillBuilder.IListener listenerIn) {
 		this.listener = listenerIn;
 		this.scrollableSkillList.setListener(listenerIn);
 		if (listenerIn != null) {

@@ -17,6 +17,7 @@ import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.entity.player.ClientPlayerEntity;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.screen.ReadBookScreen;
 import net.minecraft.client.gui.widget.button.Button;
@@ -31,12 +32,12 @@ import net.minecraftforge.fml.client.gui.GuiUtils;
 
 @OnlyIn(Dist.CLIENT)
 public class SkillScreen extends BaseBookScreen {
-	private PlayerEntity player;
-	private LazyOptional<IBaseSkillCapability> skillCap;
-	private LazyOptional<IBaseExperienceCapability> expCap;
 
 	private static final String IMG_LOCATION = DevilRpg.MODID + ":textures/gui/";
-
+	private static final int btnTextureWidth = 45;
+	private static final int btnTextureHeight = 45;
+	private static final int btnSize = 20;
+	private static final ResourceLocation POWER_RESOURCE = new ResourceLocation(IMG_LOCATION + "empty-box.png");
 	private static final HashMap<SkillEnum, ResourceLocation> SKILL_RESOURCES = new HashMap<SkillEnum, ResourceLocation>();
 	static {
 		SKILL_RESOURCES.put(SkillEnum.SUMMON_SOUL_WOLF, new ResourceLocation(IMG_LOCATION + "direwolf-bt.gif"));
@@ -45,15 +46,13 @@ public class SkillScreen extends BaseBookScreen {
 		SKILL_RESOURCES.put(SkillEnum.SUMMON_WISP_HEALTH, new ResourceLocation(IMG_LOCATION + "oaksage-bt.gif"));
 		SKILL_RESOURCES.put(SkillEnum.SUMMON_WISP_SPEED, new ResourceLocation(IMG_LOCATION + "wolverineheart-bt.gif"));
 		SKILL_RESOURCES.put(SkillEnum.TRANSFORM_WEREWOLF, new ResourceLocation(IMG_LOCATION + "werewolf-bt.gif"));
-		BOOK_TEXTURES = new ResourceLocation(IMG_LOCATION + "book_cover.png");
+		//BOOK_TEXTURES = new ResourceLocation(IMG_LOCATION + "book_cover.png");
+		BOOK_TEXTURES = new ResourceLocation(IMG_LOCATION + "book2.png");
 	}
-	private static final ResourceLocation POWER_RESOURCE = new ResourceLocation(IMG_LOCATION + "empty-box.png");
 
-	private final int bookImageHeight = 192;
-	private final int bookImageWidth = 192;
-	private final int btnTextureWidth = 45;
-	private final int btnTextureHeight = 45;
-	private final int btnSize = 20;
+	private PlayerEntity player;
+	private LazyOptional<IBaseSkillCapability> skillCap;
+	private LazyOptional<IBaseExperienceCapability> expCap;
 	private List<CustomGuiButton> skillButtonList = new ArrayList<>();
 	private List<CustomGuiButton> powerButtonList = new ArrayList<>();
 
@@ -63,6 +62,9 @@ public class SkillScreen extends BaseBookScreen {
 	int difPosicionY = 0;
 	Double posicionMouseX = 0.0;
 	Double posicionMouseY = 0.0;
+	private boolean isScrolling;
+
+	private static int openScreenKeyPressed;
 
 	class ButtonMouse {
 		public static final int LEFT_BUTTON = 0;
@@ -81,13 +83,37 @@ public class SkillScreen extends BaseBookScreen {
 
 		@Override
 		public ITextProperties func_230456_a_(int p_230456_1_) {
-			return new StringTextComponent("Skill book");
+			// return new StringTextComponent("Skill book");
+			return new StringTextComponent("");
 		}
 
 	};
+	
+	@Override
+	protected void init() {
+		super.init();
+		
+		bookImageWidth = 372;
+		bookImageHeight = 192;
+		bookImageScaleWidth = 512;
+		bookImageScaleHeight = 512;
+		
+		DevilRpg.LOGGER.info("--->width:"+this.width);
+		DevilRpg.LOGGER.info("--->height:"+this.height);
+		
+		addSkillButtons();
+		addPowerButtons();
+		loadAssignedPowerButtons();
+	}
 
-	public static void open(PlayerEntity player) {
+
+	private static void open(PlayerEntity player) {
 		Minecraft.getInstance().enqueue(() -> Minecraft.getInstance().displayGuiScreen(new SkillScreen(player)));
+	}
+
+	public static void open(ClientPlayerEntity player, int keyCode) {
+		openScreenKeyPressed = keyCode;
+		open(player);
 	}
 
 	public SkillScreen(PlayerEntity player) {
@@ -97,14 +123,6 @@ public class SkillScreen extends BaseBookScreen {
 		skillCap = player.getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
 	}
 
-	@Override
-	protected void init() {
-		super.init();
-		addSkillButtons();
-		addPowerButtons();
-		loadAssignedPowerButtons();
-	}
-
 	protected void addSkillButtons() {
 		int offsetFromScreenLeft = (width - bookImageWidth) / 2;
 		// int btnPosX = offsetFromScreenLeft + bookImageWidth / 2 - this.width / 2;
@@ -112,7 +130,10 @@ public class SkillScreen extends BaseBookScreen {
 		final int pageBelonging = 0;
 		HashMap<SkillEnum, Integer> skillsPoints = skillCap.map(x -> x.getSkillsPoints()).orElse(null);
 		int k = 0;
-		for (SkillEnum s : Arrays.asList(SkillEnum.values())) {
+		List<SkillEnum> skillList = new ArrayList<>(Arrays.asList(SkillEnum.values()));
+		skillList.remove(SkillEnum.EMPTY);
+
+		for (SkillEnum s : skillList) {
 			Double level = (double) (k / 2) + 1;
 			CustomGuiButton custom = new CustomGuiButton(offsetFromScreenLeft + 55 * ((k % 2) + 1),
 					10 + 30 * level.intValue(), btnSize, btnSize, s.getName(), SKILL_RESOURCES.get(s), btnTextureWidth,
@@ -176,7 +197,7 @@ public class SkillScreen extends BaseBookScreen {
 	public void render(MatrixStack matrixStack, int parWidth, int parHeight, float p_73863_3_) {
 		super.render(matrixStack, parWidth, parHeight, p_73863_3_);
 
-		int offsetFromScreenLeft = (this.width - 192) / 2;
+		int offsetFromScreenLeft = (this.width - bookImageWidth) / 2;
 
 		int unspentPoints = expCap.map(y -> y.getUnspentPoints()).orElse(-1);
 		if (unspentPoints != 0) {
@@ -189,27 +210,34 @@ public class SkillScreen extends BaseBookScreen {
 		}
 
 		if (skillButtonApretado != null) {
-			RenderSystem.pushMatrix();
-			RenderSystem.enableBlend();
-			RenderSystem.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA,
-					GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ONE,
-					GlStateManager.DestFactor.ZERO);
-			RenderSystem.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA,
-					GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
-			RenderSystem.scalef(skillButtonApretado.getScale(), skillButtonApretado.getScale(),
-					(float) (skillButtonApretado.getScale() + 0.5));
-			GuiUtils.drawContinuousTexturedBox(skillButtonApretado.getButtonTexture(),
-					Math.round(this.posicionMouseX.intValue() / skillButtonApretado.getScale()
-							- difPosicionX / skillButtonApretado.getScale()),
-					Math.round(this.posicionMouseY.intValue() / skillButtonApretado.getScale()
-							- difPosicionY / skillButtonApretado.getScale()),
-					0, 0, Math.round(skillButtonApretado.getWidth() / skillButtonApretado.getScale()),
-					Math.round(skillButtonApretado.getHeight() / skillButtonApretado.getScale()),
-					Math.round(skillButtonApretado.getTextureWidth() / skillButtonApretado.getScale()),
-					Math.round(skillButtonApretado.getTextureHeight() / skillButtonApretado.getScale()), 0, 0, 0, 0,
-					skillButtonApretado.getzLevel());
-			RenderSystem.popMatrix();
+			renderSkillButtonApretado();
 		}
+	}
+
+	/**
+	 * 
+	 */
+	private void renderSkillButtonApretado() {
+		RenderSystem.pushMatrix();
+		RenderSystem.enableBlend();
+		RenderSystem.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA,
+				GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ONE,
+				GlStateManager.DestFactor.ZERO);
+		RenderSystem.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA,
+				GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
+		RenderSystem.scalef(skillButtonApretado.getScale(), skillButtonApretado.getScale(),
+				(float) (skillButtonApretado.getScale() + 0.5));
+		GuiUtils.drawContinuousTexturedBox(skillButtonApretado.getButtonTexture(),
+				Math.round(this.posicionMouseX.intValue() / skillButtonApretado.getScale()
+						- difPosicionX / skillButtonApretado.getScale()),
+				Math.round(this.posicionMouseY.intValue() / skillButtonApretado.getScale()
+						- difPosicionY / skillButtonApretado.getScale()),
+				0, 0, Math.round(skillButtonApretado.getWidth() / skillButtonApretado.getScale()),
+				Math.round(skillButtonApretado.getHeight() / skillButtonApretado.getScale()),
+				Math.round(skillButtonApretado.getTextureWidth() / skillButtonApretado.getScale()),
+				Math.round(skillButtonApretado.getTextureHeight() / skillButtonApretado.getScale()), 0, 0, 0, 0,
+				skillButtonApretado.getzLevel());
+		RenderSystem.popMatrix();
 	}
 
 	/**
@@ -221,8 +249,7 @@ public class SkillScreen extends BaseBookScreen {
 	@Override
 	public boolean mouseDragged(double parMouseX, double parMouseY, int parLastButtonClicked,
 			double parTimeSinceMouseClick1, double parTimeSinceMouseClick2) {
-		boolean returned = super.mouseDragged(parMouseX, parMouseY, parLastButtonClicked, parTimeSinceMouseClick1,
-				parTimeSinceMouseClick2);
+		boolean returned = super.mouseDragged(parMouseX, parMouseY, parLastButtonClicked, parTimeSinceMouseClick1, parTimeSinceMouseClick2);
 		if (parLastButtonClicked == ButtonMouse.RIGHT_BUTTON) {
 			this.posicionMouseX = parMouseX;
 			this.posicionMouseY = parMouseY;
@@ -235,7 +262,16 @@ public class SkillScreen extends BaseBookScreen {
 				difPosicionX = posicionMouseX.intValue() - skillButtonApretado.x;
 				difPosicionY = posicionMouseY.intValue() - skillButtonApretado.y;
 			}
+			
+			isScrolling = false;
 		}
+		
+		if (parLastButtonClicked == ButtonMouse.RIGHT_BUTTON) {
+			isScrolling = true;
+			//dragSelectedGui(dragX, dragY);
+			return true;
+		}
+		
 		return returned;
 	}
 
@@ -260,9 +296,12 @@ public class SkillScreen extends BaseBookScreen {
 	}
 
 	@Override
-	public boolean keyPressed(int p_keyPressed_1_, int p_keyPressed_2_, int p_keyPressed_3_) {
-		return super.keyPressed(p_keyPressed_1_, p_keyPressed_2_, p_keyPressed_3_);
-
+	public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+		if (openScreenKeyPressed == keyCode) {
+			this.closeScreen();
+			return true;
+		} else
+			return super.keyPressed(keyCode, scanCode, modifiers);
 	}
 
 	private void flushPressedButton() {
@@ -277,16 +316,29 @@ public class SkillScreen extends BaseBookScreen {
 	public void skillButtonPressed(Button pressedButton) {
 		CustomGuiButton pressed = ((CustomGuiButton) pressedButton);
 		SkillEnum skilEnum = (SkillEnum) pressed.getSkillName();
-		HashMap<SkillEnum, Integer> skillsPoints = skillCap.map(x -> x.getSkillsPoints()).orElse(null);
+		/*HashMap<SkillEnum, Integer> skillsPoints = skillCap.map(x -> x.getSkillsPoints()).orElse(null);
 
 		Integer e = skillsPoints.get(((CustomGuiButton) pressedButton).getSkillName());
 		e += expCap.map(x -> x.consumePoint()).orElse(0);
 		skillsPoints.put(skilEnum, e);
 		skillCap.ifPresent(x -> x.setSkillsPoints(skillsPoints, player));
-		updateButtons();
+		updateButtons();*/
+		
+		
+		skillCap.ifPresent(x->{
+			HashMap<SkillEnum, Integer> skillsPoints = x.getSkillsPoints();
+			Integer e = skillsPoints.get(((CustomGuiButton) pressedButton).getSkillName());
+			e += expCap.map(exp -> exp.consumePoint()).orElse(0);
+			skillsPoints.put(skilEnum, e);
+			x.setSkillsPoints(skillsPoints, player);
+			updateButtons();
+			
+		});
+		
+		
 	}
 
-	public void powerButtonPressed(Button x) {
+	public void powerButtonPressed(Button pressedButton) {
 		updateButtons();
 
 	}

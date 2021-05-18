@@ -1,16 +1,20 @@
 package com.chipoodle.devilrpg.client.gui.scrollableskillscreen;
 
+import java.util.HashMap;
 import java.util.List;
 
 import javax.annotation.Nullable;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.client.gui.skillbook.CustomGuiButton;
+import com.chipoodle.devilrpg.util.SkillEnum;
 import com.google.common.collect.Lists;
 import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.systems.RenderSystem;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.AbstractGui;
+import net.minecraft.client.gui.widget.button.Button;
 import net.minecraft.util.IReorderingProcessor;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.MathHelper;
@@ -18,49 +22,48 @@ import net.minecraft.util.text.CharacterManager;
 import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.ITextProperties;
 import net.minecraft.util.text.LanguageMap;
+import net.minecraft.util.text.StringTextComponent;
 import net.minecraft.util.text.Style;
 import net.minecraft.util.text.TextComponentUtils;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 @OnlyIn(Dist.CLIENT)
-public class SkillEntryGui extends AbstractGui {
+public class GuiSkillEntry extends AbstractGui {
 	private static final ResourceLocation WIDGETS = new ResourceLocation("textures/gui/advancements/widgets.png");
 	private static final int[] LINE_BREAK_VALUES = new int[] { 0, 10, -10, 25, -25 };
-	private static int SIZE = 26;
+	private static int FRAME_SIZE = 26;
 
-	private final SkillTabGui skillTabGui;
+	private final GuiSkillTab skillTabGui;
 	private final SkillElement skillElement;
 	private final SkillDisplayInfo displayInfo;
 	private final IReorderingProcessor title;
 	private final int width;
 	private final List<IReorderingProcessor> description;
 	private final Minecraft minecraft;
-	private SkillEntryGui parent;
-	private final List<SkillEntryGui> children = Lists.newArrayList();
+	private GuiSkillEntry parent;
+	private final List<GuiSkillEntry> children = Lists.newArrayList();
 	private SkillProgress skillProgress;
 	private final int x;
 	private final int y;
+	
+	private String levelString;
 
-	public SkillEntryGui(SkillTabGui skillTabGui, Minecraft minecraft, SkillElement skillElement) {
+	public GuiSkillEntry(GuiSkillTab skillTabGui, Minecraft minecraft, SkillElement skillElement, int skillPoint,int maxSkillPoint) {
 		this.skillTabGui = skillTabGui;
 		this.skillElement = skillElement;
 		this.displayInfo = skillElement.getDisplay();
 		this.minecraft = minecraft;
-		this.title = LanguageMap.getInstance()
-				.func_241870_a(minecraft.fontRenderer.func_238417_a_(displayInfo.getTitle(), 163));
+		this.title = LanguageMap.getInstance().func_241870_a(minecraft.fontRenderer.func_238417_a_(displayInfo.getTitle(), 163));
 		this.x = MathHelper.floor(displayInfo.getX() * 28.0F * 2);
 		this.y = MathHelper.floor(displayInfo.getY() * 27.0F * 2);
 		// int i = advancement.getRequirementCount();
 		int i = 0;
 		int j = String.valueOf(i).length();
 		int k = i > 1
-				? minecraft.fontRenderer.getStringWidth("  ") + minecraft.fontRenderer.getStringWidth("0") * j * 2
-						+ minecraft.fontRenderer.getStringWidth("/")
-				: 0;
+				? minecraft.fontRenderer.getStringWidth("  ") + minecraft.fontRenderer.getStringWidth("0") * j * 2+ minecraft.fontRenderer.getStringWidth("/"): 0;
 		int l = 29 + minecraft.fontRenderer.func_243245_a(this.title) + k;
-		this.description = LanguageMap.getInstance().func_244260_a(
-				this.getDescriptionLines(TextComponentUtils.func_240648_a_(displayInfo.getDescription().deepCopy(),
+		this.description = LanguageMap.getInstance().func_244260_a(this.getDescriptionLines(TextComponentUtils.func_240648_a_(displayInfo.getDescription().deepCopy(),
 						Style.EMPTY.setFormatting(displayInfo.getFrame().getFormat())), l));
 
 		for (IReorderingProcessor ireorderingprocessor : this.description) {
@@ -68,6 +71,12 @@ public class SkillEntryGui extends AbstractGui {
 		}
 
 		this.width = l + 3 + 5;
+		
+		updateFormattedLevelString(skillPoint,maxSkillPoint);
+	}
+	
+	public void updateFormattedLevelString(int skillPoint,int maxSkillPoint) {
+		levelString = ""+skillPoint+"/"+maxSkillPoint;
 	}
 
 	private static float getTextWidth(CharacterManager manager, List<ITextProperties> text) {
@@ -96,7 +105,7 @@ public class SkillEntryGui extends AbstractGui {
 	}
 
 	@Nullable
-	private SkillEntryGui getFirstVisibleParent(SkillElement skillIn) {
+	private GuiSkillEntry getFirstVisibleParent(SkillElement skillIn) {
 		do {
 			skillIn = skillIn.getParent();
 		} while (skillIn != null && skillIn.getDisplay() == null);
@@ -106,9 +115,9 @@ public class SkillEntryGui extends AbstractGui {
 
 	public void drawConnectionLineToParent(MatrixStack matrixStack, int x, int y, boolean dropShadow) {
 		if (this.parent != null) {
-			int i = x + this.parent.x + SIZE / 2;
-			int j = x + this.parent.x + SIZE + 4;
-			int k = y + this.parent.y + SIZE / 2;
+			int i = x + this.parent.x + FRAME_SIZE / 2;
+			int j = x + this.parent.x + FRAME_SIZE + 4;
+			int k = y + this.parent.y + FRAME_SIZE / 2;
 			int l = x + this.x + 13;
 			int i1 = y + this.y + 13;
 			int j1 = dropShadow ? -16777216 : -1;
@@ -128,7 +137,7 @@ public class SkillEntryGui extends AbstractGui {
 			}
 		}
 
-		for (SkillEntryGui advancemententrygui : this.children) {
+		for (GuiSkillEntry advancemententrygui : this.children) {
 			advancemententrygui.drawConnectionLineToParent(matrixStack, x, y, dropShadow);
 		}
 
@@ -142,75 +151,88 @@ public class SkillEntryGui extends AbstractGui {
 	 * @param x
 	 * @param y
 	 */
-	public void drawSkill(MatrixStack matrixStack, int x, int y) {
+	public void drawSkills(MatrixStack matrixStack, int x, int y) {
 		// DevilRpg.LOGGER.info("|---drawSkill x" +x+" y "+y+" title: "+
 		// this.displayInfo.getTitle());
+
 		if (!this.displayInfo.isHidden() || this.skillProgress != null && this.skillProgress.isDone()) {
 			float f = this.skillProgress == null ? 0.0F : this.skillProgress.getPercent();
-			ScrollableSkillState advancementstate;
+			SkillState skillState;
 			if (f >= 1.0F) {
-				advancementstate = ScrollableSkillState.OBTAINED;
+				skillState = SkillState.OBTAINED;
 			} else {
-				advancementstate = ScrollableSkillState.UNOBTAINED;
+				skillState = SkillState.UNOBTAINED;
 			}
 
 			// Texturas de los marcos, y barras de título de los tooltips
 			this.minecraft.getTextureManager().bindTexture(WIDGETS);
 
 			// Pinta el marco
-			this.blit(matrixStack, x + this.x + 3, y + this.y, this.displayInfo.getFrame().getIcon(),
-					128 + advancementstate.getId() * SIZE, SIZE, SIZE);
+			this.blit(matrixStack, x + this.x + 3, y + this.y, this.displayInfo.getFrame().getIcon(),128 + skillState.getId() * FRAME_SIZE, FRAME_SIZE, FRAME_SIZE);
+			
 
+			
+			this.minecraft.getTextureManager().bindTexture(this.displayInfo.getImage());
+			this.blit(
+					matrixStack, 
+					x + this.x + 3, 
+					y + this.y, 
+					this.displayInfo.getFrame().getIcon(),
+					128 + skillState.getId() * FRAME_SIZE, 
+					FRAME_SIZE, 
+					FRAME_SIZE);
+			
+			
 			// Pinta el icono del marco
 			this.minecraft.getItemRenderer().renderItemAndEffectIntoGuiWithoutEntity(this.displayInfo.getIcon(),
 					x + this.x + 8, y + this.y + 5);
+
 		}
 
 		// Pinta a los hijos
-		for (SkillEntryGui childrenEntry : this.children) {
-			childrenEntry.drawSkill(matrixStack, x, y);
+		for (GuiSkillEntry childrenEntry : this.children) {
+			childrenEntry.drawSkills(matrixStack, x, y);
 		}
-
 	}
 
 	public void setAdvancementProgress(SkillProgress advancementProgressIn) {
 		this.skillProgress = advancementProgressIn;
 	}
 
-	public void addGuiSkill(SkillEntryGui guiSkillsIn) {
+	public void addGuiSkill(GuiSkillEntry guiSkillsIn) {
 		DevilRpg.LOGGER.info("|----------- addGuiSkill " + (guiSkillsIn.title.toString()));
 		this.children.add(guiSkillsIn);
 	}
 
 	public void drawSkillHover(MatrixStack matrixStack, int x, int y, float fade, int width, int height) {
-		boolean flag = width + x + this.x + this.width + SIZE >= this.skillTabGui.getScreen().width;
+		boolean flag = width + x + this.x + this.width + FRAME_SIZE >= this.skillTabGui.getScreen().width;
 		String s = this.skillProgress == null ? null : this.skillProgress.getProgressText();
 		int i = s == null ? 0 : this.minecraft.fontRenderer.getStringWidth(s);
-		boolean flag1 = 113 - y - this.y - SIZE <= 6 + this.description.size() * 9;
+		boolean flag1 = 113 - y - this.y - FRAME_SIZE <= 6 + this.description.size() * 9;
 		float f = this.skillProgress == null ? 0.0F : this.skillProgress.getPercent();
 		int j = MathHelper.floor(f * (float) this.width);
-		ScrollableSkillState advancementstate;
-		ScrollableSkillState advancementstate1;
-		ScrollableSkillState advancementstate2;
+		SkillState advancementstate;
+		SkillState advancementstate1;
+		SkillState advancementstate2;
 		if (f >= 1.0F) {
 			j = this.width / 2;
-			advancementstate = ScrollableSkillState.OBTAINED;
-			advancementstate1 = ScrollableSkillState.OBTAINED;
-			advancementstate2 = ScrollableSkillState.OBTAINED;
+			advancementstate = SkillState.OBTAINED;
+			advancementstate1 = SkillState.OBTAINED;
+			advancementstate2 = SkillState.OBTAINED;
 		} else if (j < 2) {
 			j = this.width / 2;
-			advancementstate = ScrollableSkillState.UNOBTAINED;
-			advancementstate1 = ScrollableSkillState.UNOBTAINED;
-			advancementstate2 = ScrollableSkillState.UNOBTAINED;
+			advancementstate = SkillState.UNOBTAINED;
+			advancementstate1 = SkillState.UNOBTAINED;
+			advancementstate2 = SkillState.UNOBTAINED;
 		} else if (j > this.width - 2) {
 			j = this.width / 2;
-			advancementstate = ScrollableSkillState.OBTAINED;
-			advancementstate1 = ScrollableSkillState.OBTAINED;
-			advancementstate2 = ScrollableSkillState.UNOBTAINED;
+			advancementstate = SkillState.OBTAINED;
+			advancementstate1 = SkillState.OBTAINED;
+			advancementstate2 = SkillState.UNOBTAINED;
 		} else {
-			advancementstate = ScrollableSkillState.OBTAINED;
-			advancementstate1 = ScrollableSkillState.UNOBTAINED;
-			advancementstate2 = ScrollableSkillState.UNOBTAINED;
+			advancementstate = SkillState.OBTAINED;
+			advancementstate1 = SkillState.UNOBTAINED;
+			advancementstate2 = SkillState.UNOBTAINED;
 		}
 
 		int k = this.width - j;
@@ -220,7 +242,7 @@ public class SkillEntryGui extends AbstractGui {
 		int l = y + this.y;
 		int i1;
 		if (flag) {
-			i1 = x + this.x - this.width + SIZE + 6;
+			i1 = x + this.x - this.width + FRAME_SIZE + 6;
 		} else {
 			i1 = x + this.x;
 		}
@@ -228,16 +250,17 @@ public class SkillEntryGui extends AbstractGui {
 		int j1 = 32 + this.description.size() * 9;
 		if (!this.description.isEmpty()) {
 			if (flag1) {
-				this.drawDescriptionBox(matrixStack, i1, l + SIZE - j1, this.width, j1, 10, 200, SIZE, 0, 52);
+				this.drawDescriptionBox(matrixStack, i1, l + FRAME_SIZE - j1, this.width, j1, 10, 200, FRAME_SIZE, 0,
+						52);
 			} else {
-				this.drawDescriptionBox(matrixStack, i1, l, this.width, j1, 10, 200, SIZE, 0, 52);
+				this.drawDescriptionBox(matrixStack, i1, l, this.width, j1, 10, 200, FRAME_SIZE, 0, 52);
 			}
 		}
 
-		this.blit(matrixStack, i1, l, 0, advancementstate.getId() * SIZE, j, SIZE);
-		this.blit(matrixStack, i1 + j, l, 200 - k, advancementstate1.getId() * SIZE, k, SIZE);
+		this.blit(matrixStack, i1, l, 0, advancementstate.getId() * FRAME_SIZE, j, FRAME_SIZE);
+		this.blit(matrixStack, i1 + j, l, 200 - k, advancementstate1.getId() * FRAME_SIZE, k, FRAME_SIZE);
 		this.blit(matrixStack, x + this.x + 3, y + this.y, this.displayInfo.getFrame().getIcon(),
-				128 + advancementstate2.getId() * SIZE, SIZE, SIZE);
+				128 + advancementstate2.getId() * FRAME_SIZE, FRAME_SIZE, FRAME_SIZE);
 		if (flag) {
 			this.minecraft.fontRenderer.func_238407_a_(matrixStack, this.title, (float) (i1 + 5),
 					(float) (y + this.y + 9), -1);
@@ -257,7 +280,7 @@ public class SkillEntryGui extends AbstractGui {
 		if (flag1) {
 			for (int k1 = 0; k1 < this.description.size(); ++k1) {
 				this.minecraft.fontRenderer.func_238422_b_(matrixStack, this.description.get(k1), (float) (i1 + 5),
-						(float) (l + SIZE - j1 + 7 + k1 * 9), -5592406);
+						(float) (l + FRAME_SIZE - j1 + 7 + k1 * 9), -5592406);
 			}
 		} else {
 			for (int l1 = 0; l1 < this.description.size(); ++l1) {
@@ -309,9 +332,9 @@ public class SkillEntryGui extends AbstractGui {
 	public boolean isMouseOver(int x, int y, int mouseX, int mouseY) {
 		if (!this.displayInfo.isHidden() || this.skillProgress != null && this.skillProgress.isDone()) {
 			int i = x + this.x;
-			int j = i + SIZE;
+			int j = i + FRAME_SIZE;
 			int k = y + this.y;
-			int l = k + SIZE;
+			int l = k + FRAME_SIZE;
 			return mouseX >= i && mouseX <= j && mouseY >= k && mouseY <= l;
 		} else {
 			return false;
@@ -319,15 +342,9 @@ public class SkillEntryGui extends AbstractGui {
 	}
 
 	public void attachToParent() {
-		// DevilRpg.LOGGER.info("|-------- attachToParent (this.parent == null? &&
-		// this.advancement.getParent() != null)? " + (this.parent == null &&
-		// this.skillElement.getParent() != null));
 		if (this.parent == null && this.skillElement.getParent() != null) {
 			this.parent = this.getFirstVisibleParent(this.skillElement);
-			// DevilRpg.LOGGER.info("|----------- this.parent != null? " +(this.parent !=
-			// null));
 			if (this.parent != null) {
-				// DevilRpg.LOGGER.info("|----------- parent.addGuiSkill");
 				this.parent.addGuiSkill(this);
 			}
 		}
@@ -347,11 +364,54 @@ public class SkillEntryGui extends AbstractGui {
 		return "SkillEntryGui [" + ", children=" + children.size() + ", width=" + width + ", x=" + x + ", y=" + y + "]";
 	}
 
-	public final List<SkillEntryGui> getChildren() {
+	public final List<GuiSkillEntry> getChildren() {
 		return children;
 	}
 
 	public SkillElement getSkillElement() {
 		return skillElement;
 	}
+
+	public String getLevelString() {
+		return levelString;
+	}
+	
+	
+	
+	/*-----------------------------*/
+	public void skillButtonPressed(Button pressedButton) {
+		CustomGuiButton pressed = ((CustomGuiButton) pressedButton);
+		SkillEnum skilEnum = (SkillEnum) pressed.getSkillName();
+		
+		skillTabGui.getScreen().getSkillCap().ifPresent(x->{
+			HashMap<SkillEnum, Integer> skillsPoints = x.getSkillsPoints();
+			Integer e = skillsPoints.get(((CustomGuiButton) pressedButton).getSkillName());
+			if(e != null && skillTabGui.getScreen().getExpCap().isPresent()) {
+				e += skillTabGui.getScreen().getExpCap().map(exp -> exp.consumePoint()).orElse(0);
+				skillsPoints.put(skilEnum, e);
+				x.setSkillsPoints(skillsPoints, minecraft.player);
+				//updateButtons();
+			}
+			
+		});
+	}
+	
+	/*protected void updateButtons() {
+		HashMap<SkillEnum, Integer> skillsPoints = skillCap.map(x -> x.getSkillsPoints()).orElse(null);
+		HashMap<SkillEnum, Integer> maxSkillsPoints = skillCap.map(x -> x.getMaxSkillsPoints()).orElse(null);
+		if (!skillButtonList.isEmpty()) {
+			skillButtonList.stream().forEach(x -> {
+				x.visible = this.getCurrPage() == x.getPageBelonging();
+				if (x.visible) {
+					x.setDrawnSkillLevel(skillsPoints.get(x.getSkillName()));
+					x.active = skillsPoints.get(x.getSkillName()) < maxSkillsPoints.get(x.getSkillName())
+							&& expCap.map(y -> y.getUnspentPoints() > 0).orElse(false);
+				}
+			});
+		}
+
+		if (!powerButtonList.isEmpty())
+			powerButtonList.stream()
+					.forEach(x -> x.visible = this.getCurrPage() == x.getPageBelonging() || x.getPageBelonging() == 0);
+	}*/
 }

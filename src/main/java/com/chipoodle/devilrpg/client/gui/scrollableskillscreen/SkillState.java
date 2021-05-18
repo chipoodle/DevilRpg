@@ -4,13 +4,13 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 @OnlyIn(Dist.CLIENT)
-public enum ScrollableSkillState {
+public enum SkillState {
    OBTAINED(0),
    UNOBTAINED(1);
 
    private final int id;
 
-   private ScrollableSkillState(int id) {
+   private SkillState(int id) {
       this.id = id;
    }
 

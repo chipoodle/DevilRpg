@@ -8,44 +8,44 @@ import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillElement;
 import com.google.common.collect.Lists;
 
 
-public class ScrollableSkillTreeNode {
-	private final SkillElement advancement;
-	private final ScrollableSkillTreeNode parent;
-	private final ScrollableSkillTreeNode sibling;
+public class SkillTreeNode {
+	private final SkillElement rootSkillElement;
+	private final SkillTreeNode parent;
+	private final SkillTreeNode sibling;
 	private final int index;
-	private final List<ScrollableSkillTreeNode> children = Lists.newArrayList();
-	private ScrollableSkillTreeNode ancestor;
-	private ScrollableSkillTreeNode thread;
+	private final List<SkillTreeNode> children = Lists.newArrayList();
+	private SkillTreeNode ancestor;
+	private SkillTreeNode thread;
 	private int x;
 	private float y;
 	private float mod;
 	private float change;
 	private float shift;
 
-	public ScrollableSkillTreeNode(SkillElement advancementIn, @Nullable ScrollableSkillTreeNode parentIn, @Nullable ScrollableSkillTreeNode siblingIn, int indexIn, int xIn) {
-	      if (advancementIn.getDisplay() == null) {
+	public SkillTreeNode(SkillElement rootSkillelement, @Nullable SkillTreeNode parentIn, @Nullable SkillTreeNode siblingIn, int indexIn, int xIn) {
+	      if (rootSkillelement.getDisplay() == null) {
 	         throw new IllegalArgumentException("Can't position an invisible advancement!");
 	      } else {
-	         this.advancement = advancementIn;
+	         this.rootSkillElement = rootSkillelement;
 	         this.parent = parentIn;
 	         this.sibling = siblingIn;
 	         this.index = indexIn;
 	         this.ancestor = this;
 	         this.x = xIn;
 	         this.y = -1.0F;
-	         ScrollableSkillTreeNode advancementtreenode = null;
+	         SkillTreeNode advancementtreenode = null;
 
-	         for(SkillElement advancement : advancementIn.getChildren()) {
-	            advancementtreenode = this.buildSubTree(advancement, advancementtreenode);
+	         for(SkillElement skillNode : rootSkillelement.getChildren()) {
+	            advancementtreenode = this.buildSubTree(skillNode, advancementtreenode);
 	         }
 
 	      }
 	   }
 
 	@Nullable
-	private ScrollableSkillTreeNode buildSubTree(SkillElement advancementIn, @Nullable ScrollableSkillTreeNode previous) {
+	private SkillTreeNode buildSubTree(SkillElement advancementIn, @Nullable SkillTreeNode previous) {
 		if (advancementIn.getDisplay() != null) {
-			previous = new ScrollableSkillTreeNode(advancementIn, this, previous, this.children.size() + 1, this.x + 1);
+			previous = new SkillTreeNode(advancementIn, this, previous, this.children.size() + 1, this.x + 1);
 			this.children.add(previous);
 		} else {
 			for (SkillElement advancement : advancementIn.getChildren()) {
@@ -65,12 +65,12 @@ public class ScrollableSkillTreeNode {
 			}
 
 		} else {
-			ScrollableSkillTreeNode advancementtreenode = null;
+			SkillTreeNode skillTreenode = null;
 
-			for (ScrollableSkillTreeNode advancementtreenode1 : this.children) {
-				advancementtreenode1.firstWalk();
-				advancementtreenode = advancementtreenode1
-						.apportion(advancementtreenode == null ? advancementtreenode1 : advancementtreenode);
+			for (SkillTreeNode skillTreenode1 : this.children) {
+				skillTreenode1.firstWalk();
+				skillTreenode = skillTreenode1
+						.apportion(skillTreenode == null ? skillTreenode1 : skillTreenode);
 			}
 
 			this.executeShifts();
@@ -92,7 +92,7 @@ public class ScrollableSkillTreeNode {
 			subtreeTopY = this.y;
 		}
 
-		for (ScrollableSkillTreeNode advancementtreenode : this.children) {
+		for (SkillTreeNode advancementtreenode : this.children) {
 			subtreeTopY = advancementtreenode.secondWalk(offsetY + this.mod, columnX + 1, subtreeTopY);
 		}
 
@@ -102,7 +102,7 @@ public class ScrollableSkillTreeNode {
 	private void thirdWalk(float yIn) {
 		this.y += yIn;
 
-		for (ScrollableSkillTreeNode advancementtreenode : this.children) {
+		for (SkillTreeNode advancementtreenode : this.children) {
 			advancementtreenode.thirdWalk(yIn);
 		}
 
@@ -113,7 +113,7 @@ public class ScrollableSkillTreeNode {
 		float f1 = 0.0F;
 
 		for (int i = this.children.size() - 1; i >= 0; --i) {
-			ScrollableSkillTreeNode advancementtreenode = this.children.get(i);
+			SkillTreeNode advancementtreenode = this.children.get(i);
 			advancementtreenode.y += f;
 			advancementtreenode.mod += f;
 			f1 += advancementtreenode.change;
@@ -123,7 +123,7 @@ public class ScrollableSkillTreeNode {
 	}
 
 	@Nullable
-	private ScrollableSkillTreeNode getFirstChild() {
+	private SkillTreeNode getFirstChild() {
 		if (this.thread != null) {
 			return this.thread;
 		} else {
@@ -132,7 +132,7 @@ public class ScrollableSkillTreeNode {
 	}
 
 	@Nullable
-	private ScrollableSkillTreeNode getLastChild() {
+	private SkillTreeNode getLastChild() {
 		if (this.thread != null) {
 			return this.thread;
 		} else {
@@ -140,14 +140,14 @@ public class ScrollableSkillTreeNode {
 		}
 	}
 
-	private ScrollableSkillTreeNode apportion(ScrollableSkillTreeNode nodeIn) {
+	private SkillTreeNode apportion(SkillTreeNode nodeIn) {
 		if (this.sibling == null) {
 			return nodeIn;
 		} else {
-			ScrollableSkillTreeNode advancementtreenode = this;
-			ScrollableSkillTreeNode advancementtreenode1 = this;
-			ScrollableSkillTreeNode advancementtreenode2 = this.sibling;
-			ScrollableSkillTreeNode advancementtreenode3 = this.parent.children.get(0);
+			SkillTreeNode advancementtreenode = this;
+			SkillTreeNode advancementtreenode1 = this;
+			SkillTreeNode advancementtreenode2 = this.sibling;
+			SkillTreeNode advancementtreenode3 = this.parent.children.get(0);
 			float f = this.mod;
 			float f1 = this.mod;
 			float f2 = advancementtreenode2.mod;
@@ -188,7 +188,7 @@ public class ScrollableSkillTreeNode {
 		}
 	}
 
-	private void moveSubtree(ScrollableSkillTreeNode nodeIn, float shift) {
+	private void moveSubtree(SkillTreeNode nodeIn, float shift) {
 		float f = (float) (nodeIn.index - this.index);
 		if (f != 0.0F) {
 			nodeIn.change -= shift / f;
@@ -200,17 +200,17 @@ public class ScrollableSkillTreeNode {
 		nodeIn.mod += shift;
 	}
 
-	private ScrollableSkillTreeNode getAncestor(ScrollableSkillTreeNode self, ScrollableSkillTreeNode other) {
+	private SkillTreeNode getAncestor(SkillTreeNode self, SkillTreeNode other) {
 		return this.ancestor != null && self.parent.children.contains(this.ancestor) ? this.ancestor : other;
 	}
 
 	private void updatePosition() {
-		if (this.advancement.getDisplay() != null) {
-			this.advancement.getDisplay().setPosition((float) this.x, this.y);
+		if (this.rootSkillElement.getDisplay() != null) {
+			this.rootSkillElement.getDisplay().setPosition((float) this.x, this.y);
 		}
 
 		if (!this.children.isEmpty()) {
-			for (ScrollableSkillTreeNode advancementtreenode : this.children) {
+			for (SkillTreeNode advancementtreenode : this.children) {
 				advancementtreenode.updatePosition();
 			}
 		}
@@ -221,8 +221,8 @@ public class ScrollableSkillTreeNode {
 		if (root.getDisplay() == null) {
 			throw new IllegalArgumentException("Can't position children of an invisible root!");
 		} else {
-			ScrollableSkillTreeNode advancementtreenode = new ScrollableSkillTreeNode(root, (ScrollableSkillTreeNode) null,
-					(ScrollableSkillTreeNode) null, 1, 0);
+			SkillTreeNode advancementtreenode = new SkillTreeNode(root, (SkillTreeNode) null,
+					(SkillTreeNode) null, 1, 0);
 			advancementtreenode.firstWalk();
 			float f = advancementtreenode.secondWalk(0.0F, 0, advancementtreenode.y);
 			if (f < 0.0F) {

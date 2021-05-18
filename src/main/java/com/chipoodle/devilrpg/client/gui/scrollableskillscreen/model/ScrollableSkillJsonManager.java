@@ -55,7 +55,7 @@ public class ScrollableSkillJsonManager extends JsonReloadListener {
 
 		      for(SkillElement advancement : advancementlist.getRoots()) {
 		         if (advancement.getDisplay() != null) {
-		            ScrollableSkillTreeNode.layout(advancement);
+		            SkillTreeNode.layout(advancement);
 		         }
 		      }
 

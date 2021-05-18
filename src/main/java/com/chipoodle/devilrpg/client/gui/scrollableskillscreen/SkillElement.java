@@ -7,6 +7,7 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.util.SkillEnum;
 import com.google.common.collect.Sets;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
@@ -31,9 +32,10 @@ public class SkillElement {
 	private final ResourceLocation id;
 	private final Set<SkillElement> children = Sets.newLinkedHashSet();
 	private final ITextComponent displayText;
+	private final SkillEnum skillCapability;
 
-	public SkillElement(ResourceLocation id, @Nullable SkillElement parentIn,
-			@Nullable SkillDisplayInfo displayIn, SkillElementRewards rewardsIn) {
+	public SkillElement(ResourceLocation id, @Nullable SkillElement parentIn, @Nullable SkillDisplayInfo displayIn,
+			SkillElementRewards rewardsIn, SkillEnum skillCapability) {
 		this.id = id;
 		this.display = displayIn;
 		this.parent = parentIn;
@@ -55,7 +57,7 @@ public class SkillElement {
 			});
 			this.displayText = TextComponentUtils.wrapWithSquareBrackets(itextcomponent2).mergeStyle(textformatting);
 		}
-
+		this.skillCapability = skillCapability;
 	}
 
 	/**
@@ -63,7 +65,7 @@ public class SkillElement {
 	 */
 	public SkillElement.Builder copy() {
 		return new SkillElement.Builder(this.id, this.parent == null ? null : this.parent.getId(), this.display,
-				this.rewards);
+				this.rewards, this.skillCapability);
 	}
 
 	/**
@@ -161,6 +163,10 @@ public class SkillElement {
 	public ITextComponent getDisplayText() {
 		return this.displayText;
 	}
+	
+	public SkillEnum getSkillCapability() {
+		return skillCapability;
+	}
 
 	public static class Builder {
 		private ResourceLocation id;
@@ -168,13 +174,15 @@ public class SkillElement {
 		private SkillElement parent;
 		private SkillDisplayInfo display;
 		private SkillElementRewards rewards = SkillElementRewards.EMPTY;
+		private SkillEnum skillCapability;
 
 		private Builder(ResourceLocation id, @Nullable ResourceLocation parentIdIn,
-				@Nullable SkillDisplayInfo displayIn, SkillElementRewards rewardsIn) {
+				@Nullable SkillDisplayInfo displayIn, SkillElementRewards rewardsIn, SkillEnum skillCapability) {
 			this.parentId = parentIdIn;
 			this.id = id;
 			this.display = displayIn;
 			this.rewards = rewardsIn;
+			this.skillCapability = skillCapability;
 		}
 
 		private Builder() {
@@ -195,17 +203,17 @@ public class SkillElement {
 		}
 
 		public SkillElement.Builder withDisplay(ItemStack stack, ITextComponent title, ITextComponent description,
-				@Nullable ResourceLocation background, ScrollableSkillFrameType frame, boolean showToast,
+				@Nullable ResourceLocation background,@Nullable ResourceLocation image, ScrollableSkillFrameType frame, boolean showToast,
 				boolean announceToChat, boolean hidden) {
-			return this.withDisplay(new SkillDisplayInfo(stack, title, description, background, frame,
-					showToast, announceToChat, hidden));
+			return this.withDisplay(new SkillDisplayInfo(stack, title, description, background, image,frame, showToast,
+					announceToChat, hidden));
 		}
 
 		public SkillElement.Builder withDisplay(IItemProvider itemIn, ITextComponent title, ITextComponent description,
-				@Nullable ResourceLocation background, ScrollableSkillFrameType frame, boolean showToast,
+				@Nullable ResourceLocation background,@Nullable ResourceLocation image, ScrollableSkillFrameType frame, boolean showToast,
 				boolean announceToChat, boolean hidden) {
-			return this.withDisplay(new SkillDisplayInfo(new ItemStack(itemIn.asItem()), title, description,
-					background, frame, showToast, announceToChat, hidden));
+			return this.withDisplay(new SkillDisplayInfo(new ItemStack(itemIn.asItem()), title, description, background,image,
+					frame, showToast, announceToChat, hidden));
 		}
 
 		public SkillElement.Builder withDisplay(SkillDisplayInfo displayIn) {
@@ -222,6 +230,11 @@ public class SkillElement {
 			return this;
 		}
 
+		public SkillElement.Builder withCapability(SkillEnum skillCapability) {
+			this.skillCapability = skillCapability;
+			return this;
+		}
+
 		/**
 		 * Tries to resolve the parent of this advancement, if possible. Returns true on
 		 * success.
@@ -232,7 +245,7 @@ public class SkillElement {
 			} else {
 				if (this.parent == null) {
 					this.parent = lookup.apply(this.parentId);
-					DevilRpg.LOGGER.info("|----Id: "+this.id+"  "+"ParentId: "+this.parentId);
+					DevilRpg.LOGGER.info("|----Id: " + this.id + "  " + "ParentId: " + this.parentId);
 
 				}
 
@@ -247,7 +260,7 @@ public class SkillElement {
 				throw new IllegalStateException("Tried to build incomplete advancement!");
 			} else {
 
-				return new SkillElement(id, this.parent, this.display, this.rewards);
+				return new SkillElement(id, this.parent, this.display, this.rewards, this.skillCapability);
 			}
 		}
 
@@ -314,7 +327,11 @@ public class SkillElement {
 						? SkillElementRewards.deserializeRewards(JSONUtils.getJsonObject(json, "rewards"))
 						: SkillElementRewards.EMPTY;
 
-				return new SkillElement.Builder(id, resourcelocation, displayinfo, advancementrewards);
+				SkillEnum skillCapability = json.has("capability")
+						? SkillEnum.getByJsonName(JSONUtils.getString(json, "capability"))
+						: SkillEnum.EMPTY;
+
+				return new SkillElement.Builder(id, resourcelocation, displayinfo, advancementrewards, skillCapability);
 			} catch (Exception ex) {
 				DevilRpg.LOGGER.error("Ocurrió un error al deserializar", ex);
 				return null;
@@ -340,8 +357,11 @@ public class SkillElement {
 						? SkillElementRewards.deserializeRewards(JSONUtils.getJsonObject(json, "rewards"))
 						: SkillElementRewards.EMPTY;
 
-						
-				return new SkillElement.Builder(id, resourcelocation, displayinfo, advancementrewards);
+				SkillEnum skillCapability = json.has("capability")
+						? SkillEnum.valueOf(JSONUtils.getJsonObject(json, "capability").getAsString())
+						: SkillEnum.EMPTY;
+
+				return new SkillElement.Builder(id, resourcelocation, displayinfo, advancementrewards, skillCapability);
 			} catch (Exception ex) {
 				DevilRpg.LOGGER.error("Ocurrió un error al deserializar", ex);
 				return null;
@@ -352,9 +372,10 @@ public class SkillElement {
 			ResourceLocation id = buf.readBoolean() ? buf.readResourceLocation() : null;
 			ResourceLocation resourcelocation = buf.readBoolean() ? buf.readResourceLocation() : null;
 			SkillDisplayInfo displayinfo = buf.readBoolean() ? SkillDisplayInfo.read(buf) : null;
-			return new SkillElement.Builder(id, resourcelocation, displayinfo, SkillElementRewards.EMPTY);
+			return new SkillElement.Builder(id, resourcelocation, displayinfo, SkillElementRewards.EMPTY,
+					SkillEnum.EMPTY);
 		}
-		
+
 		public ResourceLocation getId() {
 			return this.id;
 		}

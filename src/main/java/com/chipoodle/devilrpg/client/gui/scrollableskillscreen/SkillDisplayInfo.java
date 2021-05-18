@@ -25,6 +25,7 @@ public class SkillDisplayInfo {
 	   private final ITextComponent description;
 	   private final ItemStack icon;
 	   private final ResourceLocation background;
+	   private final ResourceLocation image;
 	   private final ScrollableSkillFrameType frame;
 	   private final boolean showToast;
 	   private final boolean announceToChat;
@@ -32,11 +33,12 @@ public class SkillDisplayInfo {
 	   private float x;
 	   private float y;
 
-	   public SkillDisplayInfo(ItemStack icon, ITextComponent title, ITextComponent description, @Nullable ResourceLocation background, ScrollableSkillFrameType frame, boolean showToast, boolean announceToChat, boolean hidden) {
+	   public SkillDisplayInfo(ItemStack icon, ITextComponent title, ITextComponent description, @Nullable ResourceLocation background,@Nullable ResourceLocation image, ScrollableSkillFrameType frame, boolean showToast, boolean announceToChat, boolean hidden) {
 	      this.title = title;
 	      this.description = description;
 	      this.icon = icon;
 	      this.background = background;
+	      this.image = image;
 	      this.frame = frame;
 	      this.showToast = showToast;
 	      this.announceToChat = announceToChat;
@@ -65,6 +67,11 @@ public class SkillDisplayInfo {
 	   @OnlyIn(Dist.CLIENT)
 	   public ResourceLocation getBackground() {
 	      return this.background;
+	   }
+	   @Nullable
+	   @OnlyIn(Dist.CLIENT)
+	   public ResourceLocation getImage() {
+		   return this.image;
 	   }
 
 	   public ScrollableSkillFrameType getFrame() {
@@ -99,12 +106,13 @@ public class SkillDisplayInfo {
 	      ITextComponent itextcomponent1 = ITextComponent.Serializer.getComponentFromJson(object.get("description"));
 	      if (itextcomponent != null && itextcomponent1 != null) {
 	         ItemStack itemstack = deserializeIcon(JSONUtils.getJsonObject(object, "icon"));
-	         ResourceLocation resourcelocation = object.has("background") ? new ResourceLocation(JSONUtils.getString(object, "background")) : null;
+	         ResourceLocation background = object.has("background") ? new ResourceLocation(JSONUtils.getString(object, "background")) : null;
+	         ResourceLocation image = object.has("image") ? new ResourceLocation(JSONUtils.getString(object, "image")) : null;
 	         ScrollableSkillFrameType frametype = object.has("frame") ? ScrollableSkillFrameType.byName(JSONUtils.getString(object, "frame")) : ScrollableSkillFrameType.TASK;
 	         boolean flag = JSONUtils.getBoolean(object, "show_toast", true);
 	         boolean flag1 = JSONUtils.getBoolean(object, "announce_to_chat", true);
 	         boolean flag2 = JSONUtils.getBoolean(object, "hidden", false);
-	         return new SkillDisplayInfo(itemstack, itextcomponent, itextcomponent1, resourcelocation, frametype, flag, flag1, flag2);
+	         return new SkillDisplayInfo(itemstack, itextcomponent, itextcomponent1, background,image, frametype, flag, flag1, flag2);
 	      } else {
 	         throw new JsonSyntaxException("Both title and description must be set");
 	      }
@@ -142,18 +150,24 @@ public class SkillDisplayInfo {
 	      if (this.background != null) {
 	         i |= 1;
 	      }
+	      if (this.image != null) {
+	    	  i |= 2;
+	      }
 
 	      if (this.showToast) {
-	         i |= 2;
+	         i |= 4;
 	      }
 
 	      if (this.hidden) {
-	         i |= 4;
+	         i |= 8;
 	      }
 
 	      buf.writeInt(i);
 	      if (this.background != null) {
 	         buf.writeResourceLocation(this.background);
+	      }
+	      if (this.image != null) {
+	    	  buf.writeResourceLocation(this.image);
 	      }
 
 	      buf.writeFloat(this.x);
@@ -166,10 +180,12 @@ public class SkillDisplayInfo {
 	      ItemStack itemstack = buf.readItemStack();
 	      ScrollableSkillFrameType frametype = buf.readEnumValue(ScrollableSkillFrameType.class);
 	      int i = buf.readInt();
-	      ResourceLocation resourcelocation = (i & 1) != 0 ? buf.readResourceLocation() : null;
-	      boolean flag = (i & 2) != 0;
-	      boolean flag1 = (i & 4) != 0;
-	      SkillDisplayInfo displayinfo = new SkillDisplayInfo(itemstack, itextcomponent, itextcomponent1, resourcelocation, frametype, flag, false, flag1);
+	      ResourceLocation background = (i & 1) != 0 ? buf.readResourceLocation() : null;
+	      //TODO: Revisar si esta conversión con el bit es correcta o se tiene que recorrer, después del background
+	      ResourceLocation image = (i & 2) != 0 ? buf.readResourceLocation() : null;
+	      boolean flag = (i & 4) != 0;
+	      boolean flag1 = (i & 8) != 0;
+	      SkillDisplayInfo displayinfo = new SkillDisplayInfo(itemstack, itextcomponent, itextcomponent1, background,image, frametype, flag, false, flag1);
 	      displayinfo.setPosition(buf.readFloat(), buf.readFloat());
 	      return displayinfo;
 	   }
@@ -185,6 +201,9 @@ public class SkillDisplayInfo {
 	      jsonobject.addProperty("hidden", this.hidden);
 	      if (this.background != null) {
 	         jsonobject.addProperty("background", this.background.toString());
+	      }
+	      if (this.image != null) {
+	    	  jsonobject.addProperty("image", this.image.toString());
 	      }
 
 	      return jsonobject;
