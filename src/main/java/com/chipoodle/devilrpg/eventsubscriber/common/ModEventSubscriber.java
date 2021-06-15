@@ -5,8 +5,12 @@ import com.chipoodle.devilrpg.capability.auxiliar.IBaseAuxiliarCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliarCapabilityProvider;
 import com.chipoodle.devilrpg.config.ConfigHelper;
 import com.chipoodle.devilrpg.config.ConfigHolder;
+import com.chipoodle.devilrpg.entity.SoulBearEntity;
+import com.chipoodle.devilrpg.entity.SoulWispEntity;
+import com.chipoodle.devilrpg.entity.SoulWolfEntity;
 import com.chipoodle.devilrpg.init.ModBlocks;
 import com.chipoodle.devilrpg.init.ModCapability;
+import com.chipoodle.devilrpg.init.ModEntityTypes;
 import com.chipoodle.devilrpg.init.ModItemGroups;
 import com.chipoodle.devilrpg.item.ModdedSpawnEggItem;
 
@@ -16,6 +20,7 @@ import net.minecraft.item.BlockItem;
 import net.minecraft.item.Item;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.RegistryEvent;
+import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent.HarvestCheck;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -100,22 +105,12 @@ public final class ModEventSubscriber {
 	public static void onPostRegisterEntities(final RegistryEvent.Register<EntityType<?>> event) {
 		ModdedSpawnEggItem.initUnaddedEggs();
 	}
-
-	/*
-	 * @SubscribeEvent public void onPlayerFalls(LivingFallEvent event) { Entity
-	 * entity = event.getEntity();
-	 * 
-	 * if (entity.world.isRemote || !(entity instanceof ServerPlayerEntity) ||
-	 * event.getDistance() < 3) { return; }
-	 * 
-	 * PlayerEntity player = (PlayerEntity) entity; IMana mana = (IMana)
-	 * player.getCapability(ManaProvider.MANA_CAP, null);
-	 * 
-	 * float points = mana.getMana(); float cost = event.getDistance() * 2;
-	 * 
-	 * if (points > cost) { mana.consume(cost); String message = String.
-	 * format("You absorbed fall damage. It cost §7%d§r mana, you have §7%d§r mana left."
-	 * , (int) cost, (int) mana.getMana()); player.sendMessage(new
-	 * StringTextComponent(message)); event.setCanceled(true); } }
-	 */
+	
+	@SubscribeEvent
+	public static void initEntityAttributes(EntityAttributeCreationEvent event) {
+		DevilRpg.LOGGER.info("----------------------->ForgeEventSubscriber.initEntityAttributes()");
+		event.put(ModEntityTypes.SOUL_WOLF.get(), SoulWolfEntity.setAttributes().build());
+		event.put(ModEntityTypes.SOUL_BEAR.get(), SoulBearEntity.setAttributes().build());
+		event.put(ModEntityTypes.WISP.get(), SoulWispEntity.setAttributes().build());
+	}
 }

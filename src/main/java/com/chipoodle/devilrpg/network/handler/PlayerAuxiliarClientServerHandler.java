@@ -2,6 +2,7 @@ package com.chipoodle.devilrpg.network.handler;
 
 import java.util.function.Supplier;
 
+import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliarCapabilityProvider;
 
 import net.minecraft.client.Minecraft;
@@ -20,12 +21,12 @@ public class PlayerAuxiliarClientServerHandler {
 		this.auxiliarCompound = manaCompound;
 	}
 
-	public CompoundNBT getExperienceCompound() {
+	public CompoundNBT getAuxiliarCompound() {
 		return auxiliarCompound;
 	}
 
 	public static void encode(final PlayerAuxiliarClientServerHandler msg, final PacketBuffer packetBuffer) {
-		packetBuffer.writeNbt(msg.getExperienceCompound());
+		packetBuffer.writeNbt(msg.getAuxiliarCompound());
 	}
 
 	public static PlayerAuxiliarClientServerHandler decode(final PacketBuffer packetBuffer) {
@@ -39,7 +40,7 @@ public class PlayerAuxiliarClientServerHandler {
 				ServerPlayerEntity serverPlayer = contextSupplier.get().getSender();
 				if (serverPlayer != null) {
 					serverPlayer.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP)
-							.ifPresent(x -> x.setNBTData(msg.getExperienceCompound()));
+							.ifPresent(x -> x.setNBTData(msg.getAuxiliarCompound()));
 				}
 			});
 			contextSupplier.get().setPacketHandled(true);
@@ -51,7 +52,7 @@ public class PlayerAuxiliarClientServerHandler {
 				PlayerEntity clientPlayer = m.player;
 				if (clientPlayer != null) {
 					clientPlayer.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP)
-							.ifPresent(x -> x.setNBTData(msg.getExperienceCompound()));
+							.ifPresent(x -> x.setNBTData(msg.getAuxiliarCompound()));
 				}
 
 			});

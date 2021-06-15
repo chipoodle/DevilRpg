@@ -235,9 +235,10 @@ public class TargetUtils {
 			AxisAlignedBB bb = new AxisAlignedBB(targetX - radius, targetY - radius, targetZ - radius, targetX + radius,
 					targetY + radius, targetZ + radius);
 			List<LivingEntity> list = seeker.level.getEntitiesOfClass(LivingEntity.class, bb);
-
-			return list.stream().filter(
-					target -> target != seeker && target.canBeCollidedWith() && isTargetInSight(vec3, seeker, target))
+			
+			return list.stream()
+					.filter(
+					target -> target != seeker /*&& target.canBeCollidedWith()*/ && isTargetInSight(vec3, seeker, target))
 					.distinct().collect(Collectors.toList());
 
 		}
@@ -326,6 +327,8 @@ public class TargetUtils {
 	 * facing and the target can be seen
 	 */
 	private static final boolean isTargetInSight(Vector3d vec3, LivingEntity seeker, Entity target) {
+		DevilRpg.LOGGER.info("isTargetInSight-> targetName {}, canSee: {}, isTargetInFrontOfSeeker: {} ",target.getName(),seeker.canSee(target),isTargetInFrontOf(seeker, target, 60));
+
 		return seeker.canSee(target) && isTargetInFrontOf(seeker, target, 60);
 	}
 

@@ -97,7 +97,7 @@ public class ForgeEventSubscriber {
 		PlayerEntity player = event.getPlayer();
 		LazyOptional<IBaseManaCapability> mana = player.getCapability(PlayerManaCapabilityProvider.MANA_CAP);
 
-		String message1 = String.format("Hello there, you have mana %f left.",
+		String message1 = String.format("Mana desiponible: %f ",
 				mana.map(x -> x.getMana()).orElse(Float.NaN));
 		player.sendMessage(new StringTextComponent(message1), player.getUUID());
 	}
@@ -184,7 +184,7 @@ public class ForgeEventSubscriber {
 		Minecraft mainThread = Minecraft.getInstance();
 		if (mana.isPresent()) {
 			if (!player.level.isClientSide) {
-				Minecraft.getInstance().tell(() -> {
+				mainThread.tell(() -> {
 					ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> (ServerPlayerEntity) player),
 							new PlayerManaClientServerHandler(mana.map(x -> x.getNBTData()).orElse(null)));
 
@@ -196,11 +196,11 @@ public class ForgeEventSubscriber {
 			if (!player.level.isClientSide) {
 				mainThread.tell(new Runnable() {
 					public void run() {
-						skill.ifPresent(x -> {
-							HashMap<String, UUID> attributeModifiers = x.getAttributeModifiers();
+						skill.ifPresent(presentSkill -> {
+							HashMap<String, UUID> attributeModifiers = presentSkill.getAttributeModifiers();
 							UUID hlthAttMod = attributeModifiers.get(Attributes.MAX_HEALTH.getDescriptionId());
 							UUID spdAttMod = attributeModifiers.get(Attributes.MOVEMENT_SPEED.getDescriptionId());
-
+							
 							if (hlthAttMod != null) {
 								DevilRpg.LOGGER.info("||-------------> removing health id: " + hlthAttMod);
 								player.getAttribute(Attributes.MAX_HEALTH).removeModifier(hlthAttMod);
@@ -209,13 +209,13 @@ public class ForgeEventSubscriber {
 								player.getAttribute(Attributes.MOVEMENT_SPEED).removeModifier(spdAttMod);
 							}
 							ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> (ServerPlayerEntity) player),
-									new PlayerSkillClientServerHandler(x.getNBTData()));
+									new PlayerSkillClientServerHandler(presentSkill.getNBTData()));
 						});
 					}
 				});
 			}
-
 		}
+
 		if (exp.isPresent()) {
 			if (!player.level.isClientSide) {
 				mainThread.tell(new Runnable() {
@@ -224,10 +224,8 @@ public class ForgeEventSubscriber {
 						ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> (ServerPlayerEntity) player),
 								new PlayerExperienceClientServerHandler(exp.map(x -> x.getNBTData()).orElse(null)));
 					}
-
 				});
 			}
-
 		}
 
 		if (aux.isPresent()) {
@@ -294,7 +292,7 @@ public class ForgeEventSubscriber {
 	 * @param event
 	 */
 	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
-	public static void onLivingJumpEventt(LivingJumpEvent event) {
+	public static void onLivingJumpEvent(LivingJumpEvent event) {
 		if (event.getEntity() instanceof PlayerEntity) {
 			BiConsumer<LivingJumpEvent, LazyOptional<IBaseAuxiliarCapability>> c = (eve, auxiliar) -> {
 				Vector3d motion = eve.getEntity().getDeltaMovement();
@@ -327,7 +325,7 @@ public class ForgeEventSubscriber {
 	}
 
 	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
-	public static void leftClickBlock(PlayerInteractEvent.LeftClickBlock event) {
+	public static void onLeftClickBlock(PlayerInteractEvent.LeftClickBlock event) {
 		BiConsumer<PlayerInteractEvent.LeftClickBlock, LazyOptional<IBaseAuxiliarCapability>> c = (eve, auxiliar) -> {
 			eve.getPlayer().swinging = false;
 			eve.setCanceled(true);
@@ -387,13 +385,5 @@ public class ForgeEventSubscriber {
 		 * event.getPlayer().getUUID());
 		 */
 
-	}
-	
-	@SubscribeEvent
-	public static void initEntityAttributes(EntityAttributeCreationEvent event) {
-		DevilRpg.LOGGER.info("----------------------->ForgeEventSubscriber.initEntityAttributes()");
-		event.put(ModEntityTypes.SOUL_WOLF.get(), SoulWolfEntity.setAttributes().build());
-		event.put(ModEntityTypes.SOUL_BEAR.get(), SoulBearEntity.setAttributes().build());
-		event.put(ModEntityTypes.WISP.get(), SoulWispEntity.setAttributes().build());
 	}
 }

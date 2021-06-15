@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
+import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.minion.IBaseMinionCapability;
 import com.chipoodle.devilrpg.capability.minion.PlayerMinionCapabilityProvider;
 import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
@@ -75,7 +76,7 @@ import net.minecraftforge.fml.network.NetworkHooks;
 
 public class SoulWispEntity extends TameableEntity
 		implements IFlyingAnimal, ISoulEntity, IChargeableMob, IRenderUtilities, IAngerable {
-	private static final DataParameter<Integer> ANGER_TIME = EntityDataManager.defineId(BeeEntity.class,DataSerializers.INT);
+	private static final DataParameter<Integer> ANGER_TIME = EntityDataManager.defineId(SoulWispEntity.class,DataSerializers.INT);
 	private static final RangedInteger PERSISTENT_ANGER_TIME = TickRangeConverter.rangeOfSeconds(20, 39);
 	private UUID lastHurtBy;
 	private final int SALUD_INICIAL = 8;
@@ -140,6 +141,7 @@ public class SoulWispEntity extends TameableEntity
 		if (skill != null && skill.isPresent()) {
 			this.puntosAsignados = skill.map(x -> x.getSkillsPoints()).orElse(null).get(tipoWisp);
 			saludMaxima = 0.6 * this.puntosAsignados + SALUD_INICIAL;
+			DevilRpg.LOGGER.debug("SoulWispEntity.updateLevel.saludMaxima{}",saludMaxima);
 		}
 
 		this.getAttribute(Attributes.FLYING_SPEED).setBaseValue((double) 0.9F);

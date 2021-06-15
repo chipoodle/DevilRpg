@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.capability.auxiliar;
 
+import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.network.handler.PlayerAuxiliarClientServerHandler;
 
@@ -7,6 +8,7 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.util.Hand;
+import net.minecraft.util.text.StringTextComponent;
 import net.minecraftforge.fml.network.PacketDistributor;
 
 public class PlayerAuxiliarCapability implements IBaseAuxiliarCapability {
@@ -23,12 +25,14 @@ public class PlayerAuxiliarCapability implements IBaseAuxiliarCapability {
 	@Override
 	public void setWerewolfAttack(boolean active, PlayerEntity player) {
 		werewolfAttack = active;
+		DevilRpg.LOGGER.info("------client sending to server attaking werewolf: " + active);
 		if (!player.level.isClientSide) {
-			//player.sendMessage(new StringTextComponent("Sending to client attaking werewolf: " + active));
+			//player.sendMessage(new StringTextComponent("Sending to client attaking werewolf: " + active),player.getUUID());
 			sendAuxiliarChangesToClient((ServerPlayerEntity) player);
 		} else {
-			//player.sendMessage(new StringTextComponent("Sending to server attaking werewolf: " + active));
+			//player.sendMessage(new StringTextComponent("Sending to server attaking werewolf: " + active),player.getUUID());
 			sendAuxiliarChangesToServer();
+			
 		}
 	}
 

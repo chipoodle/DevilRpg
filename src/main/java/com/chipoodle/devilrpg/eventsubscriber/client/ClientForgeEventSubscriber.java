@@ -111,7 +111,7 @@ public final class ClientForgeEventSubscriber {
 	 * @param event
 	 */
 	@SubscribeEvent
-	public static void leftClickEmpty(PlayerInteractEvent.LeftClickEmpty event) {
+	public static void onLeftClickEmpty(PlayerInteractEvent.LeftClickEmpty event) {
 		// event.getPlayer().sendMessage(new StringTextComponent("------>
 		// PlayerInteractEvent.LeftClickEmpty"));
 		
@@ -161,6 +161,7 @@ public final class ClientForgeEventSubscriber {
 					boolean werewolfTransformation = auxCapability.map(x -> x.isWerewolfTransformation()).orElse(false);
 					boolean werewolfAttack = auxCapability.map(x -> x.isWerewolfAttack()).orElse(false);
 					if (werewolfTransformation && werewolfAttack) {
+						//DevilRpg.LOGGER.info("clientForgeEvent.onPlayerTickAttack");
 						skillCapability
 								.ifPresent(x -> ((SkillShapeshiftWerewolf) x.create(SkillEnum.TRANSFORM_WEREWOLF))
 										.playerTickEventAttack(event.player, auxCapability));

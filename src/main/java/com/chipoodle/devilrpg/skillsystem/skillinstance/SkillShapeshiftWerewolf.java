@@ -122,12 +122,17 @@ public class SkillShapeshiftWerewolf implements ISkillContainer {
 	@OnlyIn(Dist.CLIENT)
 	public void playerTickEventAttack(final PlayerEntity player, LazyOptional<IBaseAuxiliarCapability> aux) {
 		if (player.level.isClientSide) {
+			//DevilRpg.LOGGER.info("Skill.playerTickEventAttack");
 			aux.ifPresent(auxiliarCapability -> {
 				int points = parentCapability.getSkillsPoints().get(SkillEnum.TRANSFORM_WEREWOLF);
 				float s = (15L - points * 0.5F);
 				long attackTime = (long) s;
-				LivingEntity target = null;
-				if (player.tickCount % attackTime == 0L) {
+				//LivingEntity target = null;
+				//DevilRpg.LOGGER.info("Skill.playerTickEventAttack.attackTime {} player.tickCount {}",attackTime,player.tickCount);
+				
+				
+				if (Math.floor(player.tickCount % attackTime) == 0) {
+					//DevilRpg.LOGGER.info("player.tickCount % attackTime {}",player.tickCount % attackTime);
 					Hand hand = auxiliarCapability.swingHands(player);
 					getEnemies(player, hand);
 				}
@@ -142,6 +147,7 @@ public class SkillShapeshiftWerewolf implements ISkillContainer {
 	 * @param hand
 	 */
 	private void getEnemies(final PlayerEntity player, Hand hand) {
+		DevilRpg.LOGGER.info("getEnemies");
 		LivingEntity target;
 		int distance = 1;
 		double radius = 2;
@@ -150,10 +156,10 @@ public class SkillShapeshiftWerewolf implements ISkillContainer {
 					.filter(x -> !(x instanceof TameableEntity) || !x.isAlliedTo(player))
 					.collect(Collectors.toList());
 
+			//DevilRpg.LOGGER.info("targetList.size:{}",targetList.size());
 			target = targetList.stream()
 					.filter(x -> targetList.size() == 1 || !x.equals(player.getLastHurtMob()))
 					.min(Comparator.comparing(entity -> ((LivingEntity) entity).position().distanceToSqr(player.position()))).orElse(null);
-
 			if (target != null /* && TargetUtils.canReachTarget(player, target) */) {
 				renderParticles(player, hand);
 				player.setLastHurtMob(target);
