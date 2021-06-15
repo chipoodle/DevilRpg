@@ -235,14 +235,14 @@ public final class ClientForgeEventSubscriber {
 	@SubscribeEvent
 	public static void onCameraSetup(CameraSetup event) throws NoSuchMethodException, SecurityException,
 			IllegalAccessException, IllegalArgumentException, InvocationTargetException {
-
+		
 		PlayerEntity player = Minecraft.getInstance().player;
 		if (!Minecraft.getInstance().options.getCameraType().equals(PointOfView.FIRST_PERSON)) {
 			BiConsumer<CameraSetup, LazyOptional<IBaseAuxiliarCapability>> c = (eve, auxiliar) -> {
 			};
 			if (EventUtils.onTransformation(player, c, event)) {
 				if (method == null) {
-					method = ActiveRenderInfo.class.getMethod("movePosition", tipos);
+					method = ActiveRenderInfo.class.getDeclaredMethod("move", tipos);
 					method.setAccessible(true);
 				}
 				method.invoke(event.getInfo(), 0.5D, 1.5D, 0.0D);
