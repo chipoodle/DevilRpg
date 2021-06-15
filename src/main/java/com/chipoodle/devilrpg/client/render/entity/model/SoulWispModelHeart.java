@@ -26,10 +26,10 @@ public class SoulWispModelHeart<T extends SoulWispEntity> extends AgeableModel<T
 	public SoulWispModelHeart() {
 		super(false, 8.0F, 0.0F);
 
-		this.textureWidth = 64;
-		this.textureHeight = 64;
+		this.texWidth = 64;
+		this.texHeight = 64;
 		this.cuerpo = new ModelRenderer(this);
-		this.cuerpo.setRotationPoint(0.0F, 19.0F, 0.0F);
+		this.cuerpo.setPos(0.0F, 19.0F, 0.0F);
 		this.cuerpo.addBox(-2.5F, -2.5F, -2.5F, 5.0F, 5.0F, 5.0F, 0.0f);
 
 		wispRightEye = new ModelRenderer(this, 32, 0);
@@ -60,13 +60,13 @@ public class SoulWispModelHeart<T extends SoulWispEntity> extends AgeableModel<T
 		}*/
 	}
 
-	public void setRotationAngles(T entityIn, float limbSwing, float limbSwingAmount, float ageInTicks,
+	public void setupAnim(T entityIn, float limbSwing, float limbSwingAmount, float ageInTicks,
 			float netHeadYaw, float headPitch) {
 
 		/*
-		 * if (this.field_228241_n_ > 0.0F) { this.cuerpo.rotateAngleX =
-		 * ModelUtils.func_228283_a_(this.cuerpo.rotateAngleX, 3.0915928F,
-		 * this.field_228241_n_); }
+		 * if (this.bodyPitch > 0.0F) { this.cuerpo.rotateAngleX =
+		 * ModelUtils.rotlerpRad(this.cuerpo.rotateAngleX, 3.0915928F,
+		 * this.bodyPitch); }
 		 */
 		renderSticks(ageInTicks);
 		//renderTentacles(ageInTicks);
@@ -85,20 +85,22 @@ public class SoulWispModelHeart<T extends SoulWispEntity> extends AgeableModel<T
 		float f = (float) (ageInTicks * 0.43);
 
 		for (int j = 0; j < numberOfSticks; ++j) {
-			this.blazeSticks[j].rotationPointY = 3.25F + MathHelper.cos(((float) (j * 2.5) + ageInTicks) * 0.25F);
-			this.blazeSticks[j].rotateAngleY = f;
+			this.blazeSticks[j].y = 3.25F + MathHelper.cos(((float) (j * 2.5) + ageInTicks) * 0.25F);
+			this.blazeSticks[j].yRot = f;
 			// this.blazeSticks[j].rotateAngleX = MathHelper.sin(f)*0.3f;
-			this.blazeSticks[j].rotationPointX = -MathHelper.sin(f) * distanciaDesdeElCentro;
-			this.blazeSticks[j].rotationPointZ = -MathHelper.cos(f) * distanciaDesdeElCentro;
+			this.blazeSticks[j].x = -MathHelper.sin(f) * distanciaDesdeElCentro;
+			this.blazeSticks[j].z = -MathHelper.cos(f) * distanciaDesdeElCentro;
 			f += Math.PI * 2 / numberOfSticks;
 		}
 	}
 
-	protected Iterable<ModelRenderer> getHeadParts() {
+	@Override
+	protected Iterable<ModelRenderer> headParts() {
 		return ImmutableList.of();
 	}
 
-	protected Iterable<ModelRenderer> getBodyParts() {
+	@Override
+	protected Iterable<ModelRenderer> bodyParts() {
 		return ImmutableList.of(this.cuerpo);
 	}
 }

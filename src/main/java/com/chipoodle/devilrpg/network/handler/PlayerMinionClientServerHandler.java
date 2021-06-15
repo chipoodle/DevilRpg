@@ -25,11 +25,11 @@ public class PlayerMinionClientServerHandler {
 	}
 
 	public static void encode(final PlayerMinionClientServerHandler msg, final PacketBuffer packetBuffer) {
-		packetBuffer.writeCompoundTag(msg.getSkillCompound());
+		packetBuffer.writeNbt(msg.getSkillCompound());
 	}
 
 	public static PlayerMinionClientServerHandler decode(final PacketBuffer packetBuffer) {
-		return new PlayerMinionClientServerHandler(packetBuffer.readCompoundTag());
+		return new PlayerMinionClientServerHandler(packetBuffer.readNbt());
 	}
 
 	public static void onMessage(final PlayerMinionClientServerHandler msg,

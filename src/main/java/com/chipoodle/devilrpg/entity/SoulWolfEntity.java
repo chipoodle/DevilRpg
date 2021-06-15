@@ -78,22 +78,22 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity, IChargeab
 
 		this.targetSelector.addGoal(1, new OwnerHurtByTargetGoal(this));
 		this.targetSelector.addGoal(2, new OwnerHurtTargetGoal(this));
-		this.targetSelector.addGoal(3, (new HurtByTargetGoal(this)).setCallsForHelp());
+		this.targetSelector.addGoal(3, (new HurtByTargetGoal(this)).setAlertOthers());
 		this.targetSelector.addGoal(5, new NearestAttackableTargetGoal<>(this, MobEntity.class, false));
 		this.targetSelector.addGoal(8, new ResetAngerGoal<>(this, true));
 	}
 
 	public static AttributeModifierMap.MutableAttribute setAttributes() {
-		return MobEntity.func_233666_p_().
-				createMutableAttribute(Attributes.MOVEMENT_SPEED, (double) 0.3F)
-				.createMutableAttribute(Attributes.MAX_HEALTH, 8.0D)
-				.createMutableAttribute(Attributes.FOLLOW_RANGE, 16.0D)
-				.createMutableAttribute(Attributes.ATTACK_DAMAGE, 2.0D)
-				.createMutableAttribute(Attributes.ARMOR, 0.35D);
+		return MobEntity.createMobAttributes()
+				.add(Attributes.MOVEMENT_SPEED, (double) 0.3F)
+				.add(Attributes.MAX_HEALTH, 8.0D)
+				.add(Attributes.FOLLOW_RANGE, 16.0D)
+				.add(Attributes.ATTACK_DAMAGE, 2.0D)
+				.add(Attributes.ARMOR, 0.35D);
 	}
 
 	public void updateLevel(PlayerEntity owner) {
-		setTamedBy(owner);
+		tame(owner);
 		LazyOptional<IBaseSkillCapability> skill = getOwner().getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
 		if (skill != null && skill.isPresent()) {
 			this.puntosAsignados = skill.map(x -> x.getSkillsPoints()).orElse(null).get(SkillEnum.SUMMON_SOUL_WOLF);
@@ -110,21 +110,21 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity, IChargeab
 	}
 
 	@Override
-	public void readAdditional(CompoundNBT compound) {
-		super.readAdditional(compound);
+	public void readAdditionalSaveData(CompoundNBT compound) {
+		super.readAdditionalSaveData(compound);
 	}
 
 	@Override
-	public void writeAdditional(CompoundNBT compound) {
-		super.writeAdditional(compound);
+	public void addAdditionalSaveData(CompoundNBT compound) {
+		super.addAdditionalSaveData(compound);
 		compound.putString("OwnerUUID", "");
 		compound.putString("Owner", "");
 		//compound.putUniqueId("Owner", UUID.fromString(""));
 	}
 
 	@Override
-	public void livingTick() {
-		super.livingTick();
+	public void aiStep() {
+		super.aiStep();
 		addToLivingTick(this);
 	}
 
@@ -133,22 +133,22 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity, IChargeab
 	 * share the same owner.
 	 */
 	@Override
-	public boolean isOnSameTeam(Entity entityIn) {
-		boolean isOnSameTeam = super.isOnSameTeam(entityIn);
+	public boolean isAlliedTo(Entity entityIn) {
+		boolean isOnSameTeam = super.isAlliedTo(entityIn);
 		return isOnSameTeam || isEntitySameOwnerAsThis(entityIn, this);
 	}
 
 	@Override
-	public boolean shouldAttackEntity(LivingEntity target, LivingEntity owner) {
-		return addToshouldAttackEntity(target, owner);
+	public boolean wantsToAttack(LivingEntity target, LivingEntity owner) {
+		return addToWantsToAttack(target, owner);
 	}
 
 	@Override
-	public boolean attackEntityAsMob(Entity entityIn) {
-		boolean flag = entityIn.attackEntityFrom(DamageSource.causeMobDamage(this),
+	public boolean doHurtTarget(Entity entityIn) {
+		boolean flag = entityIn.hurt(DamageSource.mobAttack(this),
 				(float) ((int) this.getAttributeValue(Attributes.ATTACK_DAMAGE)));
 		if (flag) {
-			this.applyEnchantments(this, entityIn);
+			this.doEnchantDamageEffects(this, entityIn);
 			this.heal((float) stealingHealth);
 		}
 		return flag;
@@ -157,9 +157,9 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity, IChargeab
 	class AvoidEntityGoal<T extends LivingEntity> extends net.minecraft.entity.ai.goal.AvoidEntityGoal<T> {
 		private final SoulWolfEntity wolf;
 
-		public AvoidEntityGoal(SoulWolfEntity wolfIn, Class<T> p_i47251_3_, float p_i47251_4_, double p_i47251_5_,
-				double p_i47251_7_) {
-			super(wolfIn, p_i47251_3_, p_i47251_4_, p_i47251_5_, p_i47251_7_);
+		public AvoidEntityGoal(SoulWolfEntity wolfIn, Class<T> entityClassToAvoidIn, float avoidDistanceIn, double farSpeedIn,
+				double nearSpeedIn) {
+			super(wolfIn, entityClassToAvoidIn, avoidDistanceIn, farSpeedIn, nearSpeedIn);
 			this.wolf = wolfIn;
 		}
 
@@ -167,59 +167,59 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity, IChargeab
 		 * Returns whether execution should begin. You can also read and cache any state
 		 * necessary for execution in this method as well.
 		 */
-		public boolean shouldExecute() {
-			if (super.shouldExecute() && this.avoidTarget instanceof LlamaEntity) {
-				return this.wolf.isTamed() && this.avoidLlama((LlamaEntity) this.avoidTarget);
+		public boolean canUse() {
+			if (super.canUse() && this.toAvoid instanceof LlamaEntity) {
+				return this.wolf.isTame() && this.avoidLlama((LlamaEntity) this.toAvoid);
 			}
-			if (super.shouldExecute() && this.avoidTarget instanceof TurtleEntity) {
-				return this.wolf.isTamed() && this.avoidTurtle((TurtleEntity) this.avoidTarget);
+			if (super.canUse() && this.toAvoid instanceof TurtleEntity) {
+				return this.wolf.isTame() && this.avoidTurtle((TurtleEntity) this.toAvoid);
 			}
-			if (super.shouldExecute() && this.avoidTarget instanceof VillagerEntity) {
-				return this.wolf.isTamed() && this.avoidVillager((VillagerEntity) this.avoidTarget);
+			if (super.canUse() && this.toAvoid instanceof VillagerEntity) {
+				return this.wolf.isTame() && this.avoidVillager((VillagerEntity) this.toAvoid);
 			}
-			if (super.shouldExecute() && this.avoidTarget instanceof IronGolemEntity) {
-				return this.wolf.isTamed() && this.avoidIronGolem((IronGolemEntity) this.avoidTarget);
+			if (super.canUse() && this.toAvoid instanceof IronGolemEntity) {
+				return this.wolf.isTame() && this.avoidIronGolem((IronGolemEntity) this.toAvoid);
 			}
 			return false;
 		}
 
-		private boolean avoidLlama(LlamaEntity p_190854_1_) {
-			return p_190854_1_.getStrength() >= SoulWolfEntity.this.rand.nextInt(5);
+		private boolean avoidLlama(LlamaEntity llamaIn) {
+			return llamaIn.getStrength() >= SoulWolfEntity.this.random.nextInt(5);
 		}
 
-		private boolean avoidTurtle(TurtleEntity p_190854_1_) {
+		private boolean avoidTurtle(TurtleEntity llamaIn) {
 			return true;
 		}
 
-		private boolean avoidVillager(VillagerEntity p_190854_1_) {
+		private boolean avoidVillager(VillagerEntity llamaIn) {
 			return true;
 		}
 
-		private boolean avoidIronGolem(IronGolemEntity p_190854_1_) {
+		private boolean avoidIronGolem(IronGolemEntity llamaIn) {
 			return true;
 		}
 
 		/**
 		 * Execute a one shot task or start executing a continuous task
 		 */
-		public void startExecuting() {
-			SoulWolfEntity.this.setAttackTarget((LivingEntity) null);
-			super.startExecuting();
+		public void start() {
+			SoulWolfEntity.this.setTarget((LivingEntity) null);
+			super.start();
 		}
 
 		/**
 		 * Keep ticking a continuous task that has already been started
 		 */
 		public void tick() {
-			SoulWolfEntity.this.setAttackTarget((LivingEntity) null);
+			SoulWolfEntity.this.setTarget((LivingEntity) null);
 			super.tick();
 		}
 	}
 	
 	@Override
-	 public ActionResultType func_230254_b_(PlayerEntity p_230254_1_, Hand p_230254_2_) {
+	public ActionResultType mobInteract(PlayerEntity playerIn, Hand hand) {
 		return ActionResultType.PASS;
-	 }
+	}
 
 	@Override
 	public void remove() {
@@ -230,7 +230,7 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity, IChargeab
 	 * Called when the mob's health reaches 0.
 	 */
 	@Override
-	public void onDeath(DamageSource cause) {
+	public void die(DamageSource cause) {
 		if (getOwner() != null) {
 			LazyOptional<IBaseMinionCapability> minionCap = getOwner()
 					.getCapability(PlayerMinionCapabilityProvider.MINION_CAP);
@@ -243,10 +243,10 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity, IChargeab
 	}
 
 	private void customOnDeath() {
-		world.setEntityState(this, (byte) 3);
+		level.broadcastEntityEvent(this, (byte) 3);
 		this.dead = true;
 		this.remove();
-		customDeadParticles(this.world, this.rand, this);
+		customDeadParticles(this.level, this.random, this);
 	}
 
 	/**
@@ -264,14 +264,14 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity, IChargeab
 	 * @see FMLPlayMessages.SpawnEntity
 	 */
 	@Override
-	public IPacket<?> createSpawnPacket() {
+	public IPacket<?> getAddEntityPacket() {
 		return NetworkHooks.getEntitySpawningPacket(this);
 	}
 
 	/**
 	 * Get the experience points the entity currently has.
 	 */
-	protected int getExperiencePoints(PlayerEntity player) {
+	protected int getExperienceReward(PlayerEntity player) {
 		/*
 		 * if (player.equals(getOwner())) return 0; return 1 +
 		 * this.world.rand.nextInt(3);
@@ -281,21 +281,21 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity, IChargeab
 
 	@Override
 	@OnlyIn(Dist.CLIENT)
-	public float getTailRotation() {
-		if (this.func_233678_J__()) {
+	public float getTailAngle() {
+		if (this.isAngry()) {
 			return 1.5393804F;
 		} else {
 			return ((float) Math.PI / 5F);
 		}
 	}
-
+	
 	@Override
-	public boolean isCharged() {
+	public boolean isPowered() {
 		return true;
 	}
 
 	@Override
-	public SoulWolfEntity func_241840_a(ServerWorld p_241840_1_, AgeableEntity p_241840_2_) {
-		return ModEntityTypes.SOUL_WOLF.get().create(p_241840_1_);
+	public SoulWolfEntity getBreedOffspring(ServerWorld world, AgeableEntity mate) {
+		return ModEntityTypes.SOUL_WOLF.get().create(world);
 	}
 }

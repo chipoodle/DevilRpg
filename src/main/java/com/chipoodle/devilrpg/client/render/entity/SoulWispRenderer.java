@@ -10,6 +10,7 @@ import net.minecraft.client.renderer.IRenderTypeBuffer;
 import net.minecraft.client.renderer.entity.EntityRendererManager;
 import net.minecraft.client.renderer.entity.MobRenderer;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.math.BlockPos;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
@@ -26,12 +27,12 @@ public class SoulWispRenderer extends MobRenderer<SoulWispEntity, SoulWispModelH
 		this.addLayer(new SoulWispGelLayer<>(this, 0.01F));
 	}
 
-	protected int getBlockLight(SoulWispEntity entityIn, float partialTicks) {
+	protected int getBlockLightLevel(SoulWispEntity entityIn,  BlockPos pos) {
 		return 8;
 	}
 
 	@Override
-	public ResourceLocation getEntityTexture(SoulWispEntity entity) {
+	public ResourceLocation getTextureLocation(SoulWispEntity entity) {
 		return WISP_TEXTURES;
 	}
 
@@ -42,8 +43,8 @@ public class SoulWispRenderer extends MobRenderer<SoulWispEntity, SoulWispModelH
 	}
 
 	@Override
-	protected void preRenderCallback(SoulWispEntity entityIn, MatrixStack matrixStackIn, float partialTickTime) {
+	protected void scale(SoulWispEntity entityIn, MatrixStack matrixStackIn, float partialTickTime) {
 		// matrixStackIn.scale(x, y, z);
-		super.preRenderCallback(entityIn, matrixStackIn, partialTickTime);
+		super.scale(entityIn, matrixStackIn, partialTickTime);
 	}
 }

@@ -16,25 +16,25 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 
 @OnlyIn(Dist.CLIENT)
 public class ArrowWerewolfLayer<T extends LivingEntity, M extends WerewolfTransformedModel<T>> extends StuckInBodyWerewolfLayer<T, M> {
-   private final EntityRendererManager field_215336_a;
-   private ArrowEntity field_229130_b_;
+   private final EntityRendererManager dispatcher;
+   private ArrowEntity arrow;
 
    public ArrowWerewolfLayer(LivingRenderer<T, M> rendererIn) {
       super(rendererIn);
-      this.field_215336_a = rendererIn.getRenderManager();
+      this.dispatcher = rendererIn.getDispatcher();
    }
 
-   protected int func_225631_a_(T p_225631_1_) {
-      return p_225631_1_.getArrowCountInEntity();
+   protected int numStuck(T p_225631_1_) {
+      return p_225631_1_.getArrowCount();
    }
 
-   protected void func_225632_a_(MatrixStack p_225632_1_, IRenderTypeBuffer p_225632_2_, int p_225632_3_, Entity p_225632_4_, float p_225632_5_, float p_225632_6_, float p_225632_7_, float p_225632_8_) {
+   protected void renderStuckItem(MatrixStack p_225632_1_, IRenderTypeBuffer p_225632_2_, int p_225632_3_, Entity p_225632_4_, float p_225632_5_, float p_225632_6_, float p_225632_7_, float p_225632_8_) {
       float f = MathHelper.sqrt(p_225632_5_ * p_225632_5_ + p_225632_7_ * p_225632_7_);
-      this.field_229130_b_ = new ArrowEntity(p_225632_4_.world, p_225632_4_.getPosX(), p_225632_4_.getPosY(), p_225632_4_.getPosZ());
-      this.field_229130_b_.rotationYaw = (float)(Math.atan2((double)p_225632_5_, (double)p_225632_7_) * (double)(180F / (float)Math.PI));
-      this.field_229130_b_.rotationPitch = (float)(Math.atan2((double)p_225632_6_, (double)f) * (double)(180F / (float)Math.PI));
-      this.field_229130_b_.prevRotationYaw = this.field_229130_b_.rotationYaw;
-      this.field_229130_b_.prevRotationPitch = this.field_229130_b_.rotationPitch;
-      this.field_215336_a.renderEntityStatic(this.field_229130_b_, 0.0D, 0.0D, 0.0D, 0.0F, p_225632_8_, p_225632_1_, p_225632_2_, p_225632_3_);
+      this.arrow = new ArrowEntity(p_225632_4_.level, p_225632_4_.getX(), p_225632_4_.getY(), p_225632_4_.getZ());
+      this.arrow.yRot = (float)(Math.atan2((double)p_225632_5_, (double)p_225632_7_) * (double)(180F / (float)Math.PI));
+      this.arrow.xRot = (float)(Math.atan2((double)p_225632_6_, (double)f) * (double)(180F / (float)Math.PI));
+      this.arrow.yRotO = this.arrow.yRot;
+      this.arrow.xRotO = this.arrow.xRot;
+      this.dispatcher.render(this.arrow, 0.0D, 0.0D, 0.0D, 0.0F, p_225632_8_, p_225632_1_, p_225632_2_, p_225632_3_);
    }
 }

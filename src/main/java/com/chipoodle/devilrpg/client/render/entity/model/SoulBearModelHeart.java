@@ -18,7 +18,7 @@ public class SoulBearModelHeart<T extends SoulBearEntity> extends QuadrupedModel
 	public SoulBearModelHeart() {
 		super(12, 0.0F, true, 16.0F, 4.0F, 2.25F, 2.0F, 24);
 		this.headModel = new ModelRenderer(this, 0, 0);
-		this.headModel.setRotationPoint(0.0F, 10.0F, -16.0F);
+		this.headModel.setPos(0.0F, 10.0F, -16.0F);
 		wispRightEye = new ModelRenderer(this, 32, 0);
 		wispLeftEye = new ModelRenderer(this, 32, 4);
 		wispRightEye.addBox(-2.0F, -0.25F, -3.5F, 1.0F, 0.75F, 0.5F);
@@ -27,43 +27,42 @@ public class SoulBearModelHeart<T extends SoulBearEntity> extends QuadrupedModel
 		headModel.addChild(wispLeftEye);
 
 		this.heart = new ModelRenderer(this, 14, 14);
-		this.textureWidth = 128;
-		this.textureHeight = 64;
+		this.texWidth = 128;
+		this.texHeight = 64;
 		this.heart = new ModelRenderer(this);
-		// this.heart.setTextureOffset(0, 19).addBox(-5.0F, -13.0F, -7.0F, 14.0F, 14.0F,
+		// this.heart.texOffs(0, 19).addBox(-5.0F, -13.0F, -7.0F, 14.0F, 14.0F,
 		// 11.0F, 0.0F);
-		this.heart.setTextureOffset(39, 0).addBox(-1.0F, -23.0F, -4.0F, 6.0F, 6.0F, 6.0F, 0.0F);
-		this.heart.setRotationPoint(-2.0F, 9.0F, 12.0F);
+		this.heart.texOffs(39, 0).addBox(-1.0F, -23.0F, -4.0F, 6.0F, 6.0F, 6.0F, 0.0F);
+		this.heart.setPos(-2.0F, 9.0F, 12.0F);
 	}
 
-	protected Iterable<ModelRenderer> getHeadParts() {
+	protected Iterable<ModelRenderer> headParts() {
 		return ImmutableList.of(this.headModel);
 	}
 
-	protected Iterable<ModelRenderer> getBodyParts() {
+	protected Iterable<ModelRenderer> bodyParts() {
 		return ImmutableList.of(this.heart);
 	}
 
-	public void setRotationAngles(T entityIn, float limbSwing, float limbSwingAmount, float ageInTicks,
-			float netHeadYaw, float headPitch) {
-		super.setRotationAngles(entityIn, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
-		float f = ageInTicks - (float) entityIn.ticksExisted;
+	public void setupAnim(T entityIn, float limbSwing, float limbSwingAmount, float ageInTicks,float netHeadYaw, float headPitch) {
+		super.setupAnim(entityIn, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
+		float f = ageInTicks - (float) entityIn.tickCount;
 		float f1 = entityIn.getStandingAnimationScale(f);
 		f1 = f1 * f1;
 		float f2 = 1.0F - f1;
-		this.heart.rotateAngleX = ((float) Math.PI / 2F) - f1 * (float) Math.PI * 0.35F;
-		this.heart.rotationPointY = 9.0F * f2 + 11.0F * f1;
-		if (this.isChild) {
-			this.headModel.rotationPointY = 10.0F * f2 - 9.0F * f1;
-			this.headModel.rotationPointZ = -16.0F * f2 - 7.0F * f1;
+		this.heart.xRot = ((float) Math.PI / 2F) - f1 * (float) Math.PI * 0.35F;
+		this.heart.y = 9.0F * f2 + 11.0F * f1;
+		if (entityIn.isBaby()) {
+			this.headModel.y = 10.0F * f2 - 9.0F * f1;
+			this.headModel.z = -16.0F * f2 - 7.0F * f1;
 		} else {
-			this.headModel.rotationPointY = 10.0F * f2 - 14.0F * f1;
-			this.headModel.rotationPointZ = -16.0F * f2 - 3.0F * f1;
+			this.headModel.y = 10.0F * f2 - 14.0F * f1;
+			this.headModel.z = -16.0F * f2 - 3.0F * f1;
 		}
 
-		this.headModel.rotateAngleX += f1 * (float) Math.PI * 0.15F;
+		this.headModel.xRot += f1 * (float) Math.PI * 0.15F;
 		
-		this.headModel.rotateAngleX = headPitch * ((float) Math.PI / 180F);
-		this.headModel.rotateAngleY = netHeadYaw * ((float) Math.PI / 180F);
+		this.headModel.xRot = headPitch * ((float) Math.PI / 180F);
+		this.headModel.yRot = netHeadYaw * ((float) Math.PI / 180F);
 	}
 }

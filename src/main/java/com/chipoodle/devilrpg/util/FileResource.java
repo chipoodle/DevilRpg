@@ -33,17 +33,16 @@ public class FileResource {
 	public IResource getResource(ResourceLocation resourceLocationIn) throws IOException {
 		this.checkResourcePath(resourceLocationIn);
 		IResourcePack iresourcepack = null;
-		//ResourceLocation resourcelocation = getLocationMcmeta(resourceLocationIn);
 		ResourceLocation resourcelocation = resourceLocationIn;
 		DevilRpg.LOGGER.info("getResource: "+ resourcelocation);
 
 		for (int i = this.resourcePacks.size() - 1; i >= 0; --i) {
 			IResourcePack iresourcepack1 = this.resourcePacks.get(i);
-			if (iresourcepack == null && iresourcepack1.resourceExists(this.type, resourcelocation)) {
+			if (iresourcepack == null && iresourcepack1.hasResource(this.type, resourcelocation)) {
 				iresourcepack = iresourcepack1;
 			}
 
-			if (iresourcepack1.resourceExists(this.type, resourceLocationIn)) {
+			if (iresourcepack1.hasResource(this.type, resourceLocationIn)) {
 				InputStream inputstream = null;
 				if (iresourcepack != null) {
 					inputstream = this.getInputStream(resourcelocation, iresourcepack);
@@ -58,12 +57,12 @@ public class FileResource {
 	}
 
 	public boolean hasResource(ResourceLocation path) {
-		if (!this.func_219541_f(path)) {
+		if (!this.isValidLocation(path)) {
 			return false;
 		} else {
 			for (int i = this.resourcePacks.size() - 1; i >= 0; --i) {
 				IResourcePack iresourcepack = this.resourcePacks.get(i);
-				if (iresourcepack.resourceExists(this.type, path)) {
+				if (iresourcepack.hasResource(this.type, path)) {
 					return true;
 				}
 			}
@@ -73,7 +72,7 @@ public class FileResource {
 	}
 
 	protected InputStream getInputStream(ResourceLocation location, IResourcePack resourcePack) throws IOException {
-		InputStream inputstream = resourcePack.getResourceStream(this.type, location);
+		InputStream inputstream = resourcePack.getResource(this.type, location);
 		return  inputstream;
 	}
 
@@ -83,12 +82,12 @@ public class FileResource {
 
 	private void checkResourcePath(ResourceLocation location) throws IOException {
 		DevilRpg.LOGGER.info("checkResourcePath: "+ location);
-		if (!this.func_219541_f(location)) {
+		if (!this.isValidLocation(location)) {
 			throw new IOException("Invalid relative path to resource: " + location);
 		}
 	}
 
-	private boolean func_219541_f(ResourceLocation p_219541_1_) {
+	private boolean isValidLocation(ResourceLocation p_219541_1_) {
 		return !p_219541_1_.getPath().contains("..");
 	}
 }

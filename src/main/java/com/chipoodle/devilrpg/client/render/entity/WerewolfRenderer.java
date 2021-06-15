@@ -55,7 +55,7 @@ public class WerewolfRenderer extends LivingRenderer<PlayerEntity, WerewolfTrans
 			IRenderTypeBuffer bufferIn, int packedLightIn) {
 		super.render(entityIn, entityYaw, partialTicks, matrixStackIn, bufferIn, packedLightIn);
 
-		this.setModelVisibilities(entityIn);
+		this.setModelProperties(entityIn);
 
 		/*
 		 * if (net.minecraftforge.common.MinecraftForge.EVENT_BUS .post(new
@@ -76,15 +76,15 @@ public class WerewolfRenderer extends LivingRenderer<PlayerEntity, WerewolfTrans
 
 	}
 
-	private void setModelVisibilities(PlayerEntity clientPlayer) {
-		WerewolfTransformedModel<PlayerEntity> playermodel = this.getEntityModel();
+	private void setModelProperties(PlayerEntity clientPlayer) {
+		WerewolfTransformedModel<PlayerEntity> playermodel = this.getModel();
 		//playermodel.bipedHead = playermodel.Head;
 		if (clientPlayer.isSpectator()) {
-			playermodel.setVisible(false);
-			playermodel.bipedHead.showModel = true;
-			playermodel.bipedHeadwear.showModel = true;
+			playermodel.setAllVisible(false);
+			playermodel.head.visible = true;
+			playermodel.hat.visible = true;
 		} else {
-			playermodel.setVisible(true);
+			playermodel.setAllVisible(true);
 			// playermodel.bipedHeadwear.showModel =
 			// clientPlayer.isWearing(PlayerModelPart.HAT);
 			/*
@@ -99,13 +99,13 @@ public class WerewolfRenderer extends LivingRenderer<PlayerEntity, WerewolfTrans
 			 * playermodel.bipedRightArmwear.showModel =
 			 * clientPlayer.isWearing(PlayerModelPart.RIGHT_SLEEVE);
 			 */
-			playermodel.isSneak = clientPlayer.isCrouching();
+			playermodel.crouching = clientPlayer.isCrouching();
 
 			/*
-			 * BipedModel.ArmPose bipedmodel$armpose = func_241741_a_(clientPlayer,
+			 * BipedModel.ArmPose bipedmodel$armpose = getArmPose(clientPlayer,
 			 * Hand.MAIN_HAND); BipedModel.ArmPose bipedmodel$armpose1 =
-			 * func_241741_a_(clientPlayer, Hand.OFF_HAND); if
-			 * (bipedmodel$armpose.func_241657_a_()) { bipedmodel$armpose1 =
+			 * getArmPose(clientPlayer, Hand.OFF_HAND); if
+			 * (bipedmodel$armpose.isTwoHanded()) { bipedmodel$armpose1 =
 			 * clientPlayer.getHeldItemOffhand().isEmpty() ? BipedModel.ArmPose.EMPTY :
 			 * BipedModel.ArmPose.ITEM; }
 			 * 
@@ -119,7 +119,7 @@ public class WerewolfRenderer extends LivingRenderer<PlayerEntity, WerewolfTrans
 	}
 
 	/*
-	 * private static BipedModel.ArmPose func_241741_a_(PlayerEntity p_241741_0_,
+	 * private static BipedModel.ArmPose getArmPose(PlayerEntity p_241741_0_,
 	 * Hand p_241741_1_) { ItemStack itemstack =
 	 * p_241741_0_.getHeldItem(p_241741_1_); if (itemstack.isEmpty()) { return
 	 * BipedModel.ArmPose.EMPTY; } else { if (p_241741_0_.getActiveHand() ==
@@ -140,39 +140,39 @@ public class WerewolfRenderer extends LivingRenderer<PlayerEntity, WerewolfTrans
 	 * return BipedModel.ArmPose.ITEM; } }
 	 */
 
-	protected void preRenderCallback(PlayerEntity entitylivingbaseIn, MatrixStack matrixStackIn,
+	protected void scale(PlayerEntity entitylivingbaseIn, MatrixStack matrixStackIn,
 			float partialTickTime) {
 
-		super.preRenderCallback(entitylivingbaseIn, matrixStackIn, partialTickTime);
+		super.scale(entitylivingbaseIn, matrixStackIn, partialTickTime);
 		/*
 		 * float f = 0.9375F; matrixStackIn.scale(0.9375F, 0.9375F, 0.9375F);
 		 */
 	}
 
-	protected void renderName(PlayerEntity entityIn, ITextComponent displayNameIn, MatrixStack matrixStackIn,
+	protected void renderNameTag(PlayerEntity entityIn, ITextComponent displayNameIn, MatrixStack matrixStackIn,
 			IRenderTypeBuffer bufferIn, int packedLightIn) {
-		super.renderName(entityIn, displayNameIn, matrixStackIn, bufferIn, packedLightIn);
+		super.renderNameTag(entityIn, displayNameIn, matrixStackIn, bufferIn, packedLightIn);
 
-		double d0 = this.renderManager.squareDistanceTo(entityIn);
-		matrixStackIn.push();
+		double d0 = this.entityRenderDispatcher.distanceToSqr(entityIn);
+		matrixStackIn.pushPose();
 		if (d0 < 100.0D) {
-			Scoreboard scoreboard = entityIn.getWorldScoreboard();
-			ScoreObjective scoreobjective = scoreboard.getObjectiveInDisplaySlot(2);
+			Scoreboard scoreboard = entityIn.getScoreboard();
+			ScoreObjective scoreobjective = scoreboard.getDisplayObjective(2);
 			if (scoreobjective != null) {
-				Score score = scoreboard.getOrCreateScore(entityIn.getScoreboardName(), scoreobjective);
-				super.renderName(entityIn, (new StringTextComponent(Integer.toString(score.getScorePoints())))
+				Score score = scoreboard.getOrCreatePlayerScore(entityIn.getScoreboardName(), scoreobjective);
+				/*super.renderName(entityIn, (new StringTextComponent(Integer.toString(score.getScorePoints())))
 						.appendString(" ").append(scoreobjective.getDisplayName()), matrixStackIn, bufferIn,
-						packedLightIn);
+						packedLightIn);*/
 				matrixStackIn.translate(0.0D, (double) (9.0F * 1.15F * 0.025F), 0.0D);
 			}
 		}
 
-		super.renderName(entityIn, displayNameIn, matrixStackIn, bufferIn, packedLightIn);
-		matrixStackIn.pop();
+		super.renderNameTag(entityIn, displayNameIn, matrixStackIn, bufferIn, packedLightIn);
+		matrixStackIn.popPose();
 
 	}
 
-	public void renderRightArm(MatrixStack matrixStackIn, IRenderTypeBuffer bufferIn, int combinedLightIn,
+	public void renderRightHand(MatrixStack matrixStackIn, IRenderTypeBuffer bufferIn, int combinedLightIn,
 			PlayerEntity playerIn) {
 		/*
 		 * this.renderItem(matrixStackIn, bufferIn, combinedLightIn, playerIn,
@@ -180,7 +180,7 @@ public class WerewolfRenderer extends LivingRenderer<PlayerEntity, WerewolfTrans
 		 */
 	}
 
-	public void renderLeftArm(MatrixStack matrixStackIn, IRenderTypeBuffer bufferIn, int combinedLightIn,
+	public void renderLeftHand(MatrixStack matrixStackIn, IRenderTypeBuffer bufferIn, int combinedLightIn,
 			PlayerEntity playerIn) {
 		/*
 		 * this.renderItem(matrixStackIn, bufferIn, combinedLightIn, playerIn,
@@ -206,47 +206,47 @@ public class WerewolfRenderer extends LivingRenderer<PlayerEntity, WerewolfTrans
 	 * OverlayTexture.NO_OVERLAY); }
 	 */
 
-	protected void applyRotations(PlayerEntity entityLiving, MatrixStack matrixStackIn, float ageInTicks,
+	protected void setupRotations(PlayerEntity entityLiving, MatrixStack matrixStackIn, float ageInTicks,
 			float rotationYaw, float partialTicks) {
 
 		boolean cameraFollows = true;
 
 		if (cameraFollows) {
-			float f = entityLiving.getSwimAnimation(partialTicks);
-			if (entityLiving.isElytraFlying()) {
-				super.applyRotations(entityLiving, matrixStackIn, ageInTicks, rotationYaw, partialTicks);
-				float f1 = (float) entityLiving.getTicksElytraFlying() + partialTicks;
+			float f = entityLiving.getSwimAmount(partialTicks);
+			if (entityLiving.isFallFlying()) {
+				super.setupRotations(entityLiving, matrixStackIn, ageInTicks, rotationYaw, partialTicks);
+				float f1 = (float) entityLiving.getFallFlyingTicks() + partialTicks;
 				float f2 = MathHelper.clamp(f1 * f1 / 100.0F, 0.0F, 1.0F);
-				if (!entityLiving.isSpinAttacking()) {
-					matrixStackIn.rotate(Vector3f.XP.rotationDegrees(f2 * (-90.0F - entityLiving.rotationPitch)));
+				if (!entityLiving.isAutoSpinAttack()) {
+					matrixStackIn.mulPose(Vector3f.XP.rotationDegrees(f2 * (-90.0F - entityLiving.xRot)));
 				}
 
-				Vector3d vector3d = entityLiving.getLook(partialTicks);
-				Vector3d vector3d1 = entityLiving.getMotion();
-				double d0 = Entity.horizontalMag(vector3d1);
-				double d1 = Entity.horizontalMag(vector3d);
+				Vector3d vector3d = entityLiving.getViewVector(partialTicks);
+				Vector3d vector3d1 = entityLiving.getDeltaMovement();
+				double d0 = Entity.getHorizontalDistanceSqr(vector3d1);
+				double d1 = Entity.getHorizontalDistanceSqr(vector3d);
 				if (d0 > 0.0D && d1 > 0.0D) {
 					double d2 = (vector3d1.x * vector3d.x + vector3d1.z * vector3d.z) / Math.sqrt(d0 * d1);
 					double d3 = vector3d1.x * vector3d.z - vector3d1.z * vector3d.x;
-					matrixStackIn.rotate(Vector3f.YP.rotation((float) (Math.signum(d3) * Math.acos(d2))));
+					matrixStackIn.mulPose(Vector3f.YP.rotation((float) (Math.signum(d3) * Math.acos(d2))));
 				}
 			} else if (f > 0.0F) {
-				super.applyRotations(entityLiving, matrixStackIn, ageInTicks, rotationYaw, partialTicks);
-				float f3 = entityLiving.isInWater() ? -90.0F - entityLiving.rotationPitch : -90.0F;
+				super.setupRotations(entityLiving, matrixStackIn, ageInTicks, rotationYaw, partialTicks);
+				float f3 = entityLiving.isInWater() ? -90.0F - entityLiving.xRot : -90.0F;
 				float f4 = MathHelper.lerp(f, 0.0F, f3);
-				matrixStackIn.rotate(Vector3f.XP.rotationDegrees(f4));
-				if (entityLiving.isActualySwimming()) {
+				matrixStackIn.mulPose(Vector3f.XP.rotationDegrees(f4));
+				if (entityLiving.isVisuallySwimming()) {
 					matrixStackIn.translate(0.0D, -1.0D, (double) 0.3F);
 				}
 			} else {
-				super.applyRotations(entityLiving, matrixStackIn, ageInTicks, rotationYaw, partialTicks);
+				super.setupRotations(entityLiving, matrixStackIn, ageInTicks, rotationYaw, partialTicks);
 			}
 		}
 
 	}
 
 	@Override
-	public ResourceLocation getEntityTexture(PlayerEntity entity) {
+	public ResourceLocation getTextureLocation(PlayerEntity entity) {
 		return werewolfTexture;
 	}
 }

@@ -43,28 +43,26 @@ public class ClientModKeyInputEventSubscriber {
 	public static void onKeyInput(KeyInputEvent event) throws Exception {
 		Minecraft instance = Minecraft.getInstance();
 		
-		if (KEYS[0].isPressed()) {
-			DevilRpg.LOGGER.debug(KEYS[0].getTranslationKey() + "pressed. " + KEYS[0].getKey().getKeyCode());
+		if (KEYS[0].consumeClick()) {
+			DevilRpg.LOGGER.debug(KEYS[0].saveString() + "pressed. " + KEYS[0].getKey().getValue());
 			ModNetwork.CHANNEL.sendToServer(new KeyboardSkillServerHandler(PowerEnum.POWER1));
 		}
-		if (KEYS[1].isPressed()) {
-			DevilRpg.LOGGER.debug(KEYS[1].getTranslationKey() + "pressed. " + KEYS[1].getKey().getKeyCode());
+		if (KEYS[1].consumeClick()) {
+			DevilRpg.LOGGER.debug(KEYS[1].saveString() + "pressed. " + KEYS[1].getKey().getValue());
 			ModNetwork.CHANNEL.sendToServer(new KeyboardSkillServerHandler(PowerEnum.POWER2));
 		}
-		if (KEYS[2].isPressed()) {
-			DevilRpg.LOGGER.debug(KEYS[2].getTranslationKey() + "pressed. " + KEYS[2].getKey().getKeyCode());
+		if (KEYS[2].consumeClick()) {
+			DevilRpg.LOGGER.debug(KEYS[2].saveString() + "pressed. " + KEYS[2].getKey().getValue());
 			ModNetwork.CHANNEL.sendToServer(new KeyboardSkillServerHandler(PowerEnum.POWER3));
 		}
-		if (KEYS[3].isPressed()) {
-			DevilRpg.LOGGER.debug(KEYS[3].getTranslationKey() + "pressed. " + KEYS[3].getKey().getKeyCode());
+		if (KEYS[3].consumeClick()) {
+			DevilRpg.LOGGER.debug(KEYS[3].saveString() + "pressed. " + KEYS[3].getKey().getValue());
 			ModNetwork.CHANNEL.sendToServer(new KeyboardSkillServerHandler(PowerEnum.POWER4));
 		}
-		if (KEYS[4].isPressed()) {
-			DevilRpg.LOGGER.debug(KEYS[4].getTranslationKey() + "pressed. " + KEYS[4].getKey().getKeyCode());
-			//SkillScreen.open(Minecraft.getInstance().player,KEYS[4].getKey().getKeyCode());
-
-			Minecraft.getInstance().enqueue(() -> Minecraft.getInstance().displayGuiScreen(new ScrollableSkillScreen(KEYS[4].getKey().getKeyCode())));
-
+		if (KEYS[4].consumeClick()) {
+			DevilRpg.LOGGER.debug(KEYS[4].saveString() + "pressed. " + KEYS[4].getKey().getValue());
+			//SkillScreen.open(Minecraft.getInstance().player,KEYS[4].getKey().getKeyCode())
+			Minecraft.getInstance().tell(() -> Minecraft.getInstance().setScreen(new ScrollableSkillScreen(KEYS[4].getKey().getValue())));
 		}
 
 	}

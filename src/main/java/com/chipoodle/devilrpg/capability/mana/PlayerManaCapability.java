@@ -22,7 +22,7 @@ public class PlayerManaCapability implements IBaseManaCapability {
 	@Override
 	public void setMana(float mana, PlayerEntity player) {
 		this.mana = mana;
-		if (!player.world.isRemote)
+		if (!player.level.isClientSide)
 			sendManaChangesToClient((ServerPlayerEntity) player);
 		else
 			sendManaChangesToServer();
@@ -36,7 +36,7 @@ public class PlayerManaCapability implements IBaseManaCapability {
 	@Override
 	public void setMaxMana(float maxMana, PlayerEntity player) {
 		this.maxMana = maxMana;
-		if (!player.world.isRemote)
+		if (!player.level.isClientSide)
 			sendManaChangesToClient((ServerPlayerEntity) player);
 		else
 			sendManaChangesToServer();
@@ -50,7 +50,7 @@ public class PlayerManaCapability implements IBaseManaCapability {
 	@Override
 	public void setRegeneration(float regeneration, PlayerEntity player) {
 		this.regeneration = maxMana;
-		if (!player.world.isRemote)
+		if (!player.level.isClientSide)
 			sendManaChangesToClient((ServerPlayerEntity) player);
 		else
 			sendManaChangesToServer();

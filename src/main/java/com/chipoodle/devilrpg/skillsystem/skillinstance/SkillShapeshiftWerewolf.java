@@ -17,6 +17,7 @@ import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import com.chipoodle.devilrpg.util.TargetUtils;
 
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.attributes.AttributeModifier;
 import net.minecraft.entity.ai.attributes.Attributes;
@@ -52,10 +53,10 @@ public class SkillShapeshiftWerewolf implements ISkillContainer {
 
 	@Override
 	public void execute(World worldIn, PlayerEntity playerIn) {
-		if (!worldIn.isRemote) {
+		if (!worldIn.isClientSide) {
 			Random rand = new Random();
 			SoundEvent event = new SoundEvent(SUMMON_SOUND);
-			worldIn.playSound((PlayerEntity) null, playerIn.getPosX(), playerIn.getPosY(), playerIn.getPosZ(), event,
+			worldIn.playSound((PlayerEntity) null, playerIn.getX(), playerIn.getY(), playerIn.getZ(), event,
 					SoundCategory.NEUTRAL, 0.5F, 0.4F / (rand.nextFloat() * 0.4F + 0.8F));
 
 			aux = playerIn.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
@@ -87,30 +88,30 @@ public class SkillShapeshiftWerewolf implements ISkillContainer {
 		if (healthAttributeModifier != null) {
 			// playerIn.getAttribute(SharedMonsterAttributes.MAX_HEALTH).removeModifier(healthAttributeModifier.getID());
 			playerIn.getAttribute(Attributes.MAX_HEALTH)
-					.removeModifier(attributeModifiers.get(Attributes.MAX_HEALTH.getAttributeName()));
-			attributeModifiers.remove(Attributes.MAX_HEALTH.getAttributeName());
+					.removeModifier(attributeModifiers.get(Attributes.MAX_HEALTH.getDescriptionId()));
+			attributeModifiers.remove(Attributes.MAX_HEALTH.getDescriptionId());
 			if (playerIn.getHealth() > playerIn.getMaxHealth())
 				playerIn.setHealth(playerIn.getMaxHealth());
 		}
 		if (speedAttributeModifier != null) {
 			// playerIn.getAttribute(SharedMonsterAttributes.MOVEMENT_SPEED).removeModifier(speedAttributeModifier.getID());
 			playerIn.getAttribute(Attributes.MOVEMENT_SPEED)
-					.removeModifier(attributeModifiers.get(Attributes.MOVEMENT_SPEED.getAttributeName()));
-			attributeModifiers.remove(Attributes.MOVEMENT_SPEED.getAttributeName());
+					.removeModifier(attributeModifiers.get(Attributes.MOVEMENT_SPEED.getDescriptionId()));
+			attributeModifiers.remove(Attributes.MOVEMENT_SPEED.getDescriptionId());
 		}
 		parentCapability.setAttributeModifiers(attributeModifiers, playerIn);
 	}
 
 	private void addCurrentModifiers(PlayerEntity playerIn) {
 		HashMap<String, UUID> attributeModifiers = parentCapability.getAttributeModifiers();
-		attributeModifiers.put(Attributes.MAX_HEALTH.getAttributeName(), healthAttributeModifier.getID());
-		attributeModifiers.put(Attributes.MOVEMENT_SPEED.getAttributeName(), speedAttributeModifier.getID());
+		attributeModifiers.put(Attributes.MAX_HEALTH.getDescriptionId(), healthAttributeModifier.getId());
+		attributeModifiers.put(Attributes.MOVEMENT_SPEED.getDescriptionId(), speedAttributeModifier.getId());
 		parentCapability.setAttributeModifiers(attributeModifiers, playerIn);
 
 		// TODO: Verificar si funciona y usar applyPersisentModifier para probar
 		// también
-		playerIn.getAttribute(Attributes.MAX_HEALTH).applyNonPersistentModifier(healthAttributeModifier);
-		playerIn.getAttribute(Attributes.MOVEMENT_SPEED).applyNonPersistentModifier(speedAttributeModifier);
+		playerIn.getAttribute(Attributes.MAX_HEALTH).addTransientModifier(healthAttributeModifier);
+		playerIn.getAttribute(Attributes.MOVEMENT_SPEED).addTransientModifier(speedAttributeModifier);
 	}
 
 	/**
@@ -120,13 +121,13 @@ public class SkillShapeshiftWerewolf implements ISkillContainer {
 	 */
 	@OnlyIn(Dist.CLIENT)
 	public void playerTickEventAttack(final PlayerEntity player, LazyOptional<IBaseAuxiliarCapability> aux) {
-		if (player.world.isRemote) {
+		if (player.level.isClientSide) {
 			aux.ifPresent(auxiliarCapability -> {
 				int points = parentCapability.getSkillsPoints().get(SkillEnum.TRANSFORM_WEREWOLF);
 				float s = (15L - points * 0.5F);
 				long attackTime = (long) s;
 				LivingEntity target = null;
-				if (player.ticksExisted % attackTime == 0L) {
+				if (player.tickCount % attackTime == 0L) {
 					Hand hand = auxiliarCapability.swingHands(player);
 					getEnemies(player, hand);
 				}
@@ -146,17 +147,17 @@ public class SkillShapeshiftWerewolf implements ISkillContainer {
 		double radius = 2;
 		if (player != null) {
 			List<LivingEntity> targetList = TargetUtils.acquireAllLookTargets(player, distance, radius).stream()
-					.filter(x -> !(x instanceof TameableEntity) || !x.isOnSameTeam(player))
+					.filter(x -> !(x instanceof TameableEntity) || !x.isAlliedTo(player))
 					.collect(Collectors.toList());
 
 			target = targetList.stream()
-					.filter(x -> targetList.size() == 1 || !x.equals(player.getLastAttackedEntity()))
-					.min(Comparator.comparing(x -> x.getPosition().distanceSq(player.getPosition()))).orElse(null);
+					.filter(x -> targetList.size() == 1 || !x.equals(player.getLastHurtMob()))
+					.min(Comparator.comparing(entity -> ((LivingEntity) entity).position().distanceToSqr(player.position()))).orElse(null);
 
 			if (target != null /* && TargetUtils.canReachTarget(player, target) */) {
 				renderParticles(player, hand);
-				player.setLastAttackedEntity(target);
-				ModNetwork.CHANNEL.sendToServer(new WerewolfAttackServerHandler(target.getEntityId(), hand));
+				player.setLastHurtMob(target);
+				ModNetwork.CHANNEL.sendToServer(new WerewolfAttackServerHandler(target.getId(), hand));
 			}
 		}
 	}
@@ -166,12 +167,12 @@ public class SkillShapeshiftWerewolf implements ISkillContainer {
 	 * @param hand
 	 */
 	private void renderParticles(final PlayerEntity player, Hand hand) {
-		Vector3d vec = player.getLookVec();
-		double clawSideX = vec.getZ() * (hand.equals(Hand.MAIN_HAND) ? 0.6 : -0.6);
-		double clawSideZ = vec.getX() * (hand.equals(Hand.OFF_HAND) ? 0.6 : -0.6);
-		double dx = player.getPosX() + clawSideX;
-		double dz = player.getPosZ() + clawSideZ;
-		double dy = player.getPosY() + player.getEyeHeight();// + 2.0f;// player.getEyeHeight(); // you
+		Vector3d vec = player.getLookAngle();
+		double clawSideX = vec.z() * (hand.equals(Hand.MAIN_HAND) ? 0.6 : -0.6);
+		double clawSideZ = vec.x() * (hand.equals(Hand.OFF_HAND) ? 0.6 : -0.6);
+		double dx = player.getX() + clawSideX;
+		double dz = player.getZ() + clawSideZ;
+		double dy = player.getY() + player.getEyeHeight();// + 2.0f;// player.getEyeHeight(); // you
 		// probably don't actually want to
 		// subtract the vec.yCoord, unless the position depends on the
 		// player's pitch
@@ -184,8 +185,8 @@ public class SkillShapeshiftWerewolf implements ISkillContainer {
 			double speedY = rand.nextGaussian() * 0.02D;
 			double speedZ = rand.nextGaussian() * 0.02D;
 
-			player.world.addParticle(ParticleTypes.CLOUD, dx + (vec.getX() * movement), dy,
-					dz + (vec.getZ() * movement), speedX, speedY, speedZ);
+			player.level.addParticle(ParticleTypes.CLOUD, dx + (vec.x() * movement), dy,
+					dz + (vec.z() * movement), speedX, speedY, speedZ);
 		}
 	}
 }

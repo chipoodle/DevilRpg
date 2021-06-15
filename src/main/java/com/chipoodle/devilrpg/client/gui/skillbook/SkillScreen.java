@@ -82,11 +82,10 @@ public class SkillScreen extends BaseBookScreen {
 		}
 
 		@Override
-		public ITextProperties func_230456_a_(int p_230456_1_) {
+		public ITextProperties getPageRaw(int p_230456_1_) {
 			// return new StringTextComponent("Skill book");
 			return new StringTextComponent("");
 		}
-
 	};
 	
 	@Override
@@ -108,7 +107,7 @@ public class SkillScreen extends BaseBookScreen {
 
 
 	private static void open(PlayerEntity player) {
-		Minecraft.getInstance().enqueue(() -> Minecraft.getInstance().displayGuiScreen(new SkillScreen(player)));
+		Minecraft.getInstance().tell(() -> Minecraft.getInstance().setScreen(new SkillScreen(player)));
 	}
 
 	public static void open(ClientPlayerEntity player, int keyCode) {
@@ -202,11 +201,11 @@ public class SkillScreen extends BaseBookScreen {
 		int unspentPoints = expCap.map(y -> y.getUnspentPoints()).orElse(-1);
 		if (unspentPoints != 0) {
 			String s = "Unspent: " + unspentPoints;
-			FontRenderer fontRenderer = minecraft.fontRenderer;
-			int widthOfString = fontRenderer.getStringWidth(s);
+			FontRenderer fontRenderer = minecraft.font;
+			int widthOfString = fontRenderer.width(s);
 			float textPositionX = offsetFromScreenLeft - widthOfString + bookImageWidth - 44;
 			float textPositionY = 16.0F;
-			this.font.drawString(matrixStack, s, textPositionX, textPositionY, 0);
+			this.font.draw(matrixStack, s, textPositionX, textPositionY, 0);
 		}
 
 		if (skillButtonApretado != null) {
@@ -298,7 +297,7 @@ public class SkillScreen extends BaseBookScreen {
 	@Override
 	public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
 		if (openScreenKeyPressed == keyCode) {
-			this.closeScreen();
+			this.onClose();
 			return true;
 		} else
 			return super.keyPressed(keyCode, scanCode, modifiers);

@@ -92,7 +92,7 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
 	public void setSkillsNameOfPowers(HashMap<PowerEnum, SkillEnum> names, PlayerEntity player) {
 		try {
 			nbt.putByteArray(POWERS_KEY, BytesUtil.toByteArray(names));
-			if (!player.world.isRemote) {
+			if (!player.level.isClientSide) {
 				sendSkillChangesToClient((ServerPlayerEntity) player);
 			} else {
 				sendSkillChangesToServer();
@@ -117,7 +117,7 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
 	public void setSkillsPoints(HashMap<SkillEnum, Integer> points, PlayerEntity player) {
 		try {
 			nbt.putByteArray(SKILLS_KEY, BytesUtil.toByteArray(points));
-			if (!player.world.isRemote) {
+			if (!player.level.isClientSide) {
 				sendSkillChangesToClient((ServerPlayerEntity) player);
 			} else {
 				sendSkillChangesToServer();
@@ -142,7 +142,7 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
 	public void setMaxSkillsPoints(HashMap<SkillEnum, Integer> points, PlayerEntity player) {
 		try {
 			nbt.putByteArray(MAX_SKILLS_KEY, BytesUtil.toByteArray(points));
-			if (!player.world.isRemote) {
+			if (!player.level.isClientSide) {
 				sendSkillChangesToClient((ServerPlayerEntity) player);
 			} else {
 				sendSkillChangesToServer();
@@ -168,7 +168,7 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
 	public void setManaCostPoints(HashMap<SkillEnum, Integer> points, PlayerEntity player) {
 		try {
 			nbt.putByteArray(MANA_COST_KEY, BytesUtil.toByteArray(points));
-			if (!player.world.isRemote) {
+			if (!player.level.isClientSide) {
 				sendSkillChangesToClient((ServerPlayerEntity) player);
 			} else {
 				sendSkillChangesToServer();
@@ -194,7 +194,7 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
 	public void setAttributeModifiers(HashMap<String, UUID> modifiers, PlayerEntity player) {
 		try {
 			nbt.putByteArray(ATTRIBUTE_MODIFIER_KEY, BytesUtil.toByteArray(modifiers));
-			if (!player.world.isRemote) {
+			if (!player.level.isClientSide) {
 				sendSkillChangesToClient((ServerPlayerEntity) player);
 			} else {
 				sendSkillChangesToServer();
@@ -207,16 +207,16 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
 
 	@Override
 	public void triggerAction(ServerPlayerEntity playerIn, PowerEnum triggeredPower) {
-		if (!playerIn.world.isRemote) {
+		if (!playerIn.level.isClientSide) {
 			if (getSkillLevelFromAssociatedPower(triggeredPower) != 0) {
 				ISkillContainer poder = getSkill(triggeredPower);
 				if (consumeMana(playerIn, poder)) {
-					poder.execute(playerIn.world, playerIn);
+					poder.execute(playerIn.level, playerIn);
 				} else {
 					
 					Random rand = new Random();
-					playerIn.world.playSound((PlayerEntity) null, playerIn.getPosX(), playerIn.getPosY(), playerIn.getPosZ(),
-							SoundEvents.BLOCK_NOTE_BLOCK_BASS, SoundCategory.NEUTRAL, 0.5F,
+					playerIn.level.playSound((PlayerEntity) null, playerIn.getX(), playerIn.getY(), playerIn.getZ(),
+							SoundEvents.NOTE_BLOCK_BASS, SoundCategory.NEUTRAL, 0.5F,
 							0.4F / (rand.nextFloat() * 0.4F + 0.8F));
 					
 					/*String message = "Not enough mana.";

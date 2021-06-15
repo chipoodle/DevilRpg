@@ -12,6 +12,8 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.text.StringTextComponent;
 import net.minecraftforge.fml.client.gui.GuiUtils;
 
+import net.minecraft.client.gui.widget.button.Button.IPressable;
+
 public class CustomGuiButton extends Button {
 	private ResourceLocation resourceLocation;
 	private int textureWidth;
@@ -44,7 +46,7 @@ public class CustomGuiButton extends Button {
 	public void renderButton(MatrixStack matrixStack, int mouseX, int mouseY, float partialTicks) {
 		if (this.visible) {
 			Minecraft instance = Minecraft.getInstance();
-			instance.getTextureManager().bindTexture(resourceLocation);
+			instance.getTextureManager().bind(resourceLocation);
 			// this.isHovered = mouseX >= this.x && mouseY >= this.y && mouseX < this.x +
 			// this.width && mouseY < this.y + this.height;
 			this.isHovered = this.isMouseOver(mouseX, mouseY); // isInside(mouseX, mouseY);
@@ -75,7 +77,7 @@ public class CustomGuiButton extends Button {
 		int textPositionX = this.x;
 		int textPositionY = this.y;
 		Minecraft instance = Minecraft.getInstance();
-		FontRenderer fontrenderer = instance.fontRenderer;
+		FontRenderer fontrenderer = instance.font;
 		int color = getFGColor() | MathHelper.ceil(this.alpha * 255.0F) << 24;
 		if (packedFGColor != 0) {
 			color = getFGColor() | MathHelper.ceil(this.alpha * 255.0F) << 4; // packedFGColor;
@@ -143,8 +145,8 @@ public class CustomGuiButton extends Button {
 		zLevel = i;
 	}
 
-	public float getHeight() {
+	/*public float getHeight() {
 		return this.height;
-	}
+	}*/
 
 }

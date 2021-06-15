@@ -37,21 +37,21 @@ public class SkillSummonSoulWolf implements ISkillContainer {
 
 	@Override
 	public void execute(World worldIn, PlayerEntity playerIn) {
-		if (!worldIn.isRemote) {
+		if (!worldIn.isClientSide) {
 			Random rand = new Random();
-			worldIn.playSound((PlayerEntity) null, playerIn.getPosX(), playerIn.getPosY(), playerIn.getPosZ(),
-					SoundEvents.ENTITY_CHICKEN_EGG, SoundCategory.NEUTRAL, 0.5F,
+			worldIn.playSound((PlayerEntity) null, playerIn.getX(), playerIn.getY(), playerIn.getZ(),
+					SoundEvents.CHICKEN_EGG, SoundCategory.NEUTRAL, 0.5F,
 					0.4F / (rand.nextFloat() * 0.4F + 0.8F));
 			LazyOptional<IBaseMinionCapability> min = playerIn.getCapability(PlayerMinionCapabilityProvider.MINION_CAP);
 			min.ifPresent(x -> x.removeAllSoulBear(playerIn));
 			ConcurrentLinkedQueue<UUID> keys = min.map(x -> x.getSoulWolfMinions())
 					.orElse(new ConcurrentLinkedQueue<UUID>());
 
-			keys.add(summoSoulWolf(worldIn, playerIn, rand).getUniqueID());
+			keys.add(summoSoulWolf(worldIn, playerIn, rand).getUUID());
 			if (keys.size() > NUMBER_OF_SUMMONS) {
 				UUID key = keys.remove();
 				min.ifPresent(x -> {
-					SoulWolfEntity e = (SoulWolfEntity) x.getTameableByUUID(key, playerIn.world);
+					SoulWolfEntity e = (SoulWolfEntity) x.getTameableByUUID(key, playerIn.level);
 					if (e != null)
 						x.removeSoulWolf(playerIn, e);
 				});
@@ -63,12 +63,12 @@ public class SkillSummonSoulWolf implements ISkillContainer {
 	private SoulWolfEntity summoSoulWolf(World worldIn, PlayerEntity playerIn, Random rand) {
 		SoulWolfEntity sw = ModEntityTypes.SOUL_WOLF.get().create(worldIn);
 		sw.updateLevel(playerIn);
-		Vector3d playerLookVector = playerIn.getLookVec();
-		double spawnX = playerIn.getPosX() + DevilRpgConfig.WOLF_SPAWN_DISTANCE * playerLookVector.x;
-		double spawnZ = playerIn.getPosZ() + DevilRpgConfig.WOLF_SPAWN_DISTANCE * playerLookVector.z;
-		double spawnY = playerIn.getPosY() + DevilRpgConfig.WOLF_SPAWN_DISTANCE * playerLookVector.y + 2;
-		sw.setLocationAndAngles(spawnX, spawnY, spawnZ, MathHelper.wrapDegrees(rand.nextFloat() * 360.0F), 0.0F);
-		worldIn.addEntity(sw);
+		Vector3d playerLookVector = playerIn.getLookAngle();
+		double spawnX = playerIn.getX() + DevilRpgConfig.WOLF_SPAWN_DISTANCE * playerLookVector.x;
+		double spawnZ = playerIn.getZ() + DevilRpgConfig.WOLF_SPAWN_DISTANCE * playerLookVector.z;
+		double spawnY = playerIn.getY() + DevilRpgConfig.WOLF_SPAWN_DISTANCE * playerLookVector.y + 2;
+		sw.moveTo(spawnX, spawnY, spawnZ, MathHelper.wrapDegrees(rand.nextFloat() * 360.0F), 0.0F);
+		worldIn.addFreshEntity(sw);
 		return sw;
 	}
 }

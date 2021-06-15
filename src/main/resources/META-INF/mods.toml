@@ -10,7 +10,7 @@ modLoader="javafml" #mandatory
 # A version range to match for said mod loader - for regular FML @Mod it will be the forge version
 # See "https://maven.apache.org/enforcer/enforcer-rules/versionRanges.html"
 # 24 is 1.13-pre, 25 is 1.13.2, 26 is 1.14.2, 27 is 1.14.3, 28 is 1.14.4, 29 is 1.15, 30 is 1.15.1, 31 is 1.15.2
-loaderVersion="[35,)" #mandatory
+loaderVersion="[36,)" #mandatory
 
 # The license for you mod. This is mandatory metadata and allows for easier comprehension of your redistributive properties.
 # Review your options at https://choosealicense.com/. All rights reserved is the default copyright stance, and is thus the default here.
@@ -53,7 +53,7 @@ modId="forge" #mandatory
 # Does this dependency have to exist - if not, ordering below must be specified
 mandatory=true #mandatory
 # The version range of the dependency (see "https://maven.apache.org/enforcer/enforcer-rules/versionRanges.html")
-versionRange="[35,)" #mandatory
+versionRange="[36,)" #mandatory
 # An ordering relationship for the dependency - BEFORE or AFTER required if the relationship is not mandatory
 ordering="NONE"
 # Side this dependency is applied on - BOTH, CLIENT or SERVER
@@ -63,6 +63,6 @@ side="BOTH"
 [[dependencies.devilrpg]]
 modId="minecraft"
 mandatory=true
-versionRange="[1.16.4,1.17]"
+versionRange="[1.16.5,1.17]"
 ordering="NONE"
 side="BOTH"

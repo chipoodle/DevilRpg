@@ -10,6 +10,7 @@ import net.minecraft.client.renderer.IRenderTypeBuffer;
 import net.minecraft.client.renderer.entity.EntityRendererManager;
 import net.minecraft.client.renderer.entity.MobRenderer;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.math.BlockPos;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
@@ -22,16 +23,16 @@ public class SoulWolfRenderer extends MobRenderer<SoulWolfEntity, SoulWolfModelH
 		this.addLayer(new SoulWolfGelLayer<>(this));
 	}
 
-	protected float handleRotationFloat(SoulWolfEntity livingBase, float partialTicks) {
-		return livingBase.getTailRotation();
+	protected float getBob(SoulWolfEntity livingBase, float partialTicks) {
+		return livingBase.getTailAngle();
 	}
 	
-	protected int getBlockLight(SoulWolfEntity entityIn, float partialTicks) {
+	protected int getBlockLightLevel(SoulWolfEntity entityIn,  BlockPos pos) {
 		return 2;
 	}
 	
 	@Override
-	public ResourceLocation getEntityTexture(SoulWolfEntity entity) {
+	public ResourceLocation getTextureLocation(SoulWolfEntity entity) {
 		return HEART_TEXTURES;
 	}
 
@@ -39,21 +40,21 @@ public class SoulWolfRenderer extends MobRenderer<SoulWolfEntity, SoulWolfModelH
 	public void render(SoulWolfEntity entityIn, float entityYaw, float partialTicks, MatrixStack matrixStackIn,
 			IRenderTypeBuffer bufferIn, int packedLightIn) {
 
-		if (entityIn.isWolfWet()) {
-			float f = entityIn.getBrightness() * entityIn.getShadingWhileWet(partialTicks);
-			this.entityModel.setTint(f, f, f);
+		if (entityIn.isWet()) {
+			float f = entityIn.getBrightness() * entityIn.getWetShade(partialTicks);
+			this.model.setColor(f, f, f);
 		}
 		
 		super.render(entityIn, entityYaw, partialTicks, matrixStackIn, bufferIn, packedLightIn);
 
-		if (entityIn.isWolfWet()) {
-			this.entityModel.setTint(1.0F, 1.0F, 1.0F);
+		if (entityIn.isWet()) {
+			this.model.setColor(1.0F, 1.0F, 1.0F);
 		}
 	}
 
 	@Override
-	protected void preRenderCallback(SoulWolfEntity entityIn, MatrixStack matrixStackIn, float partialTickTime) {
-		super.preRenderCallback(entityIn, matrixStackIn, partialTickTime);
+	protected void scale(SoulWolfEntity entityIn, MatrixStack matrixStackIn, float partialTickTime) {
+		super.scale(entityIn, matrixStackIn, partialTickTime);
 		
 	}
 

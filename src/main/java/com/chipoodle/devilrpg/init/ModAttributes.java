@@ -23,11 +23,11 @@ import net.minecraft.entity.ai.attributes.GlobalEntityTypeAttributes;
 public final class ModAttributes {
 
 	public static void register() {
-		Minecraft.getInstance().enqueue(() -> {
-			GlobalEntityTypeAttributes.put(ModEntityTypes.SOUL_WOLF.get(), SoulWolfEntity.setAttributes().create());
-			GlobalEntityTypeAttributes.put(ModEntityTypes.SOUL_BEAR.get(), SoulBearEntity.setAttributes().create());
-			GlobalEntityTypeAttributes.put(ModEntityTypes.WISP.get(), SoulWispEntity.setAttributes().create());
-		});
+		/*Minecraft.getInstance().tell(() -> {
+			GlobalEntityTypeAttributes.put(ModEntityTypes.SOUL_WOLF.get(), SoulWolfEntity.setAttributes().build());
+			GlobalEntityTypeAttributes.put(ModEntityTypes.SOUL_BEAR.get(), SoulBearEntity.setAttributes().build());
+			GlobalEntityTypeAttributes.put(ModEntityTypes.WISP.get(), SoulWispEntity.setAttributes().build());
+		});*/
 
 	}
 

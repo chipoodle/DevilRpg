@@ -69,7 +69,7 @@ public enum SkillTabType {
 	         j += 5;
 	      }
 
-	      renderItemIn.renderItemAndEffectIntoGuiWithoutEntity(stack, i, j);
+	      renderItemIn.renderAndDecorateFakeItem(stack, i, j);
 	   }
 
 	   public int getX(int index) {

@@ -145,8 +145,8 @@ public class PlayerScrollableSkills {
 					dynamic = dynamic.set("DataVersion", dynamic.createInt(1343));
 				}
 
-				dynamic = this.dataFixer.update(DefaultTypeReferences.ADVANCEMENTS.getTypeReference(), dynamic,
-						dynamic.get("DataVersion").asInt(0), SharedConstants.getVersion().getWorldVersion());
+				dynamic = this.dataFixer.update(DefaultTypeReferences.ADVANCEMENTS.getType(), dynamic,
+						dynamic.get("DataVersion").asInt(0), SharedConstants.getCurrentVersion().getWorldVersion());
 				dynamic = dynamic.remove("DataVersion");
 				Map<ResourceLocation, SkillProgress> map = GSON.getAdapter(MAP_TOKEN)
 						.fromJsonTree(dynamic.getValue());
@@ -198,7 +198,7 @@ public class PlayerScrollableSkills {
 		}
 
 		JsonElement jsonelement = GSON.toJsonTree(map);
-		jsonelement.getAsJsonObject().addProperty("DataVersion", SharedConstants.getVersion().getWorldVersion());
+		jsonelement.getAsJsonObject().addProperty("DataVersion", SharedConstants.getCurrentVersion().getWorldVersion());
 
 		try (OutputStream outputstream = new FileOutputStream(this.progressFile);
 				Writer writer = new OutputStreamWriter(outputstream, Charsets.UTF_8.newEncoder());) {
@@ -223,12 +223,12 @@ public class PlayerScrollableSkills {
 			if (!flag1 && advancementprogress.isDone()) {
 				advancementIn.getRewards().apply(this.player);
 				if (advancementIn.getDisplay() != null && advancementIn.getDisplay().shouldAnnounceToChat()
-						&& this.player.world.getGameRules().getBoolean(GameRules.ANNOUNCE_ADVANCEMENTS)) {
-					this.playerList.func_232641_a_(
+						&& this.player.level.getGameRules().getBoolean(GameRules.RULE_ANNOUNCE_ADVANCEMENTS)) {
+					this.playerList.broadcastMessage(
 							new TranslationTextComponent(
 									"chat.type.advancement." + advancementIn.getDisplay().getFrame().getName(),
 									this.player.getDisplayName(), advancementIn.getDisplayText()),
-							ChatType.SYSTEM, Util.DUMMY_UUID);
+							ChatType.SYSTEM, Util.NIL_UUID);
 				}
 				// net.minecraftforge.common.ForgeHooks.onAdvancement(this.player,
 				// advancementIn);
@@ -317,7 +317,7 @@ public class PlayerScrollableSkills {
 			}
 
 			if (this.isFirstPacket || !map.isEmpty() || !set.isEmpty() || !set1.isEmpty()) {
-				serverPlayer.connection.sendPacket(new ScrollableSkillInfoPacket(this.isFirstPacket, set, set1, map));
+				serverPlayer.connection.send(new ScrollableSkillInfoPacket(this.isFirstPacket, set, set1, map));
 				this.visibilityChanged.clear();
 				this.progressChanged.clear();
 			}

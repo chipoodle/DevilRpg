@@ -42,7 +42,7 @@ public interface IRenderUtilities {
 		if (dyeColorIn == DyeColor.WHITE) {
 			return new float[] { 0.9019608F, 0.9019608F, 0.9019608F };
 		} else {
-			float[] afloat = dyeColorIn.getColorComponentValues();
+			float[] afloat = dyeColorIn.getTextureDiffuseColors();
 			float f = 0.75F;
 			return new float[] { afloat[0] * 0.75F, afloat[1] * 0.75F, afloat[2] * 0.75F };
 		}
@@ -58,11 +58,11 @@ public interface IRenderUtilities {
 		float f1;
 		float f2;
 		// int i1 = 25;
-		int i = entitylivingbaseIn.ticksExisted / 25 + entitylivingbaseIn.getEntityId();
+		int i = entitylivingbaseIn.tickCount / 25 + entitylivingbaseIn.getId();
 		int j = DyeColor.values().length;
 		int k = i % j;
 		int l = (i + 1) % j;
-		float f3 = ((float) (entitylivingbaseIn.ticksExisted % 25) + partialTicks) / 25.0F;
+		float f3 = ((float) (entitylivingbaseIn.tickCount % 25) + partialTicks) / 25.0F;
 		float[] afloat1 = getDyeRgb(DyeColor.byId(k));
 		float[] afloat2 = getDyeRgb(DyeColor.byId(l));
 		f = afloat1[0] * (1.0F - f3) + afloat2[0] * f3;
@@ -77,11 +77,11 @@ public interface IRenderUtilities {
 		float f1;
 		float f2;
 		// int i1 = 25;
-		int i = entitylivingbaseIn.ticksExisted / 25 + entitylivingbaseIn.getEntityId();
+		int i = entitylivingbaseIn.tickCount / 25 + entitylivingbaseIn.getId();
 		int j = reds.length;
 		int k = i % j;
 		int l = (i + 1) % j;
-		float f3 = ((float) (entitylivingbaseIn.ticksExisted % 25) + partialTicks) / 25.0F;
+		float f3 = ((float) (entitylivingbaseIn.tickCount % 25) + partialTicks) / 25.0F;
 		float[] afloat1 = DYE_TO_RGB_RED.get(reds[k]);
 		float[] afloat2 = DYE_TO_RGB_RED.get(reds[l]);
 		f = afloat1[0] * (1.0F - f3) + afloat2[0] * f3;
@@ -96,11 +96,11 @@ public interface IRenderUtilities {
 		float f1;
 		float f2;
 		// int i1 = 25;
-		int i = entitylivingbaseIn.ticksExisted / 25 + entitylivingbaseIn.getEntityId();
+		int i = entitylivingbaseIn.tickCount / 25 + entitylivingbaseIn.getId();
 		int j = blues.length;
 		int k = i % j;
 		int l = (i + 1) % j;
-		float f3 = ((float) (entitylivingbaseIn.ticksExisted % 25) + partialTicks) / 25.0F;
+		float f3 = ((float) (entitylivingbaseIn.tickCount % 25) + partialTicks) / 25.0F;
 		float[] afloat1 = DYE_TO_RGB_BLUE.get(blues[k]);
 		float[] afloat2 = DYE_TO_RGB_BLUE.get(blues[l]);
 		f = afloat1[0] * (1.0F - f3) + afloat2[0] * f3;
@@ -111,10 +111,10 @@ public interface IRenderUtilities {
 	}
 
 	public default void spawnLingeringCloud(World world, LivingEntity living) {
-		Collection<EffectInstance> collection = living.getActivePotionEffects();
+		Collection<EffectInstance> collection = living.getActiveEffects();
 		if (!collection.isEmpty()) {
-			AreaEffectCloudEntity areaeffectcloudentity = new AreaEffectCloudEntity(world, living.getPosX(),
-					living.getPosY(), living.getPosZ());
+			AreaEffectCloudEntity areaeffectcloudentity = new AreaEffectCloudEntity(world, living.getX(),
+					living.getY(), living.getZ());
 			areaeffectcloudentity.setRadius(2.5F);
 			areaeffectcloudentity.setRadiusOnUse(-0.5F);
 			areaeffectcloudentity.setWaitTime(10);
@@ -126,7 +126,7 @@ public interface IRenderUtilities {
 				areaeffectcloudentity.addEffect(new EffectInstance(effectinstance));
 			}
 
-			world.addEntity(areaeffectcloudentity);
+			world.addFreshEntity(areaeffectcloudentity);
 		}
 
 	}
@@ -137,8 +137,8 @@ public interface IRenderUtilities {
 			double d0 = rand.nextGaussian() * 0.02D;
 			double d1 = rand.nextGaussian() * 0.02D;
 			double d2 = rand.nextGaussian() * 0.02D;
-			world.addParticle(ParticleTypes.END_ROD, living.getPosXRandom(1.0D), living.getPosYRandom() + 0.5D,
-					living.getPosZRandom(1.0D), d0, d1, d2);
+			world.addParticle(ParticleTypes.END_ROD, living.getRandomX(1.0D), living.getRandomY() + 0.5D,
+					living.getRandomZ(1.0D), d0, d1, d2);
 		}
 	}
 }

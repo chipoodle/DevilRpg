@@ -25,11 +25,11 @@ public class PlayerExperienceClientServerHandler {
 	}
 
 	public static void encode(final PlayerExperienceClientServerHandler msg, final PacketBuffer packetBuffer) {
-		packetBuffer.writeCompoundTag(msg.getExperienceCompound());
+		packetBuffer.writeNbt(msg.getExperienceCompound());
 	}
 
 	public static PlayerExperienceClientServerHandler decode(final PacketBuffer packetBuffer) {
-		return new PlayerExperienceClientServerHandler(packetBuffer.readCompoundTag());
+		return new PlayerExperienceClientServerHandler(packetBuffer.readNbt());
 	}
 
 	public static void onMessage(final PlayerExperienceClientServerHandler msg,

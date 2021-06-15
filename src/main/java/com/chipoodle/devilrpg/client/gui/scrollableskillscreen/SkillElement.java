@@ -47,15 +47,16 @@ public class SkillElement {
 		if (displayIn == null) {
 			this.displayText = new StringTextComponent(id.toString());
 		} else {
-			ITextComponent itextcomponent = displayIn.getTitle();
+			
 			TextFormatting textformatting = displayIn.getFrame().getFormat();
+			ITextComponent itextcomponent = displayIn.getTitle();
 			ITextComponent itextcomponent1 = TextComponentUtils
-					.func_240648_a_(itextcomponent.deepCopy(), Style.EMPTY.setFormatting(textformatting))
-					.appendString("\n").append(displayIn.getDescription());
-			ITextComponent itextcomponent2 = itextcomponent.deepCopy().modifyStyle((style) -> {
-				return style.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, itextcomponent1));
+					.mergeStyles(itextcomponent.copy(), Style.EMPTY.applyFormat(textformatting))
+					.append("\n").append(displayIn.getDescription());
+			ITextComponent itextcomponent2 = itextcomponent.copy().withStyle((style) -> {
+				return style.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, itextcomponent1));
 			});
-			this.displayText = TextComponentUtils.wrapWithSquareBrackets(itextcomponent2).mergeStyle(textformatting);
+			this.displayText = TextComponentUtils.wrapInSquareBrackets(itextcomponent2).withStyle(textformatting);
 		}
 		this.skillCapability = skillCapability;
 	}
@@ -313,22 +314,22 @@ public class SkillElement {
 				if (!json.has("id"))
 					throw new JsonSyntaxException("SkillElement id cannot be empty");
 
-				ResourceLocation id = new ResourceLocation(JSONUtils.getString(json, "id"));
+				ResourceLocation id = new ResourceLocation(JSONUtils.getAsString(json, "id"));
 
 				ResourceLocation resourcelocation = json.has("parent")
-						? new ResourceLocation(JSONUtils.getString(json, "parent"))
+						? new ResourceLocation(JSONUtils.getAsString(json, "parent"))
 						: null;
 
 				SkillDisplayInfo displayinfo = json.has("display")
-						? SkillDisplayInfo.deserialize(JSONUtils.getJsonObject(json, "display"))
+						? SkillDisplayInfo.deserialize(JSONUtils.getAsJsonObject(json, "display"))
 						: null;
 
 				SkillElementRewards advancementrewards = json.has("rewards")
-						? SkillElementRewards.deserializeRewards(JSONUtils.getJsonObject(json, "rewards"))
+						? SkillElementRewards.deserializeRewards(JSONUtils.getAsJsonObject(json, "rewards"))
 						: SkillElementRewards.EMPTY;
 
 				SkillEnum skillCapability = json.has("capability")
-						? SkillEnum.getByJsonName(JSONUtils.getString(json, "capability"))
+						? SkillEnum.getByJsonName(JSONUtils.getAsString(json, "capability"))
 						: SkillEnum.EMPTY;
 
 				return new SkillElement.Builder(id, resourcelocation, displayinfo, advancementrewards, skillCapability);
@@ -346,19 +347,19 @@ public class SkillElement {
 				ResourceLocation id = new ResourceLocation(json.get("id").getAsString());
 
 				ResourceLocation resourcelocation = json.has("parent")
-						? new ResourceLocation(JSONUtils.getString(json, "parent"))
+						? new ResourceLocation(JSONUtils.getAsString(json, "parent"))
 						: null;
 
 				SkillDisplayInfo displayinfo = json.has("display")
-						? SkillDisplayInfo.deserialize(JSONUtils.getJsonObject(json, "display"))
+						? SkillDisplayInfo.deserialize(JSONUtils.getAsJsonObject(json, "display"))
 						: null;
 
 				SkillElementRewards advancementrewards = json.has("rewards")
-						? SkillElementRewards.deserializeRewards(JSONUtils.getJsonObject(json, "rewards"))
+						? SkillElementRewards.deserializeRewards(JSONUtils.getAsJsonObject(json, "rewards"))
 						: SkillElementRewards.EMPTY;
 
 				SkillEnum skillCapability = json.has("capability")
-						? SkillEnum.valueOf(JSONUtils.getJsonObject(json, "capability").getAsString())
+						? SkillEnum.valueOf(JSONUtils.getAsJsonObject(json, "capability").getAsString())
 						: SkillEnum.EMPTY;
 
 				return new SkillElement.Builder(id, resourcelocation, displayinfo, advancementrewards, skillCapability);

@@ -71,24 +71,24 @@ public class MinionPortraitRenderer extends AbstractGui {
 
 		int i = 0;
 		for (UUID wolfKey : soulwolfMinionKeys) {
-			SoulWolfEntity h = (SoulWolfEntity) minionCap.map(m -> m.getTameableByUUID(wolfKey, player.world))
-					.orElse(new SoulWolfEntity(ModEntityTypes.SOUL_WOLF.get(), mc.player.world));
+			SoulWolfEntity h = (SoulWolfEntity) minionCap.map(m -> m.getTameableByUUID(wolfKey, player.level))
+					.orElse(new SoulWolfEntity(ModEntityTypes.SOUL_WOLF.get(), mc.player.level));
 			if (h.getOwner() != null) {
 				renderEntityPortrait(matrixStack, i++, h.getHealth(), h.getMaxHealth(), soulwolfPortrait, h);
 			}
 		}
 
 		for (UUID bearKey : soulbearMinionKeys) {
-			SoulBearEntity h = (SoulBearEntity) minionCap.map(m -> m.getTameableByUUID(bearKey, player.world))
-					.orElse(new SoulBearEntity(ModEntityTypes.SOUL_BEAR.get(), mc.player.world));
+			SoulBearEntity h = (SoulBearEntity) minionCap.map(m -> m.getTameableByUUID(bearKey, player.level))
+					.orElse(new SoulBearEntity(ModEntityTypes.SOUL_BEAR.get(), mc.player.level));
 			if (h.getOwner() != null) {
 				renderEntityPortrait(matrixStack, i++, h.getHealth(), h.getMaxHealth(), soulbearPortrait, h);
 			}
 		}
 
 		for (UUID wispKey : wispMinionKeys) {
-			SoulWispEntity h = (SoulWispEntity) minionCap.map(m -> m.getTameableByUUID(wispKey, player.world))
-					.orElse(ModEntityTypes.WISP.get().create(mc.player.world));
+			SoulWispEntity h = (SoulWispEntity) minionCap.map(m -> m.getTameableByUUID(wispKey, player.level))
+					.orElse(ModEntityTypes.WISP.get().create(mc.player.level));
 			if (h.getOwner() != null) {
 				renderEntityPortrait(matrixStack, i++, h.getHealth(), h.getMaxHealth(), wispPortrait, h);
 			}
@@ -99,7 +99,7 @@ public class MinionPortraitRenderer extends AbstractGui {
 			LivingEntity entity) {
 		
 		/* This object draws text using the Minecraft font */
-		FontRenderer fr = mc.fontRenderer;
+		FontRenderer fr = mc.font;
 
 		/* This object inserts commas into number strings */
 		DecimalFormat d = new DecimalFormat("#,###");
@@ -117,7 +117,7 @@ public class MinionPortraitRenderer extends AbstractGui {
 		GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
 
 		/* This method tells OpenGL to draw with the custom texture */
-		mc.getTextureManager().bindTexture(overlayBar);
+		mc.getTextureManager().bind(overlayBar);
 
 		/*
 		 * Shift our rendering origin to just above the experience bar The top left
@@ -152,7 +152,7 @@ public class MinionPortraitRenderer extends AbstractGui {
 		 * player has. I slide the right-most side of the rectangle using the player's
 		 * armor value.
 		 */
-		blit(matrixStack, 0, 0, 0, BAR_HEIGHT, (int) (BAR_WIDTH * (entity.getTotalArmorValue() / 20f)), BAR_HEIGHT);
+		blit(matrixStack, 0, 0, 0, BAR_HEIGHT, (int) (BAR_WIDTH * (entity.getArmorValue() / 20f)), BAR_HEIGHT);
 
 		/* This part draws the inside of the bar, which starts 1 pixel right and down */
 		GL11.glPushMatrix();
@@ -208,11 +208,11 @@ public class MinionPortraitRenderer extends AbstractGui {
 		final int POISON_TEXTURE_U = BAR_WIDTH + 2; // black texels
 		final int WITHER_TEXTURE_U = BAR_WIDTH + 3; // brown texels
 
-		if (entity.isPotionActive(Effects.WITHER)) {
+		if (entity.hasEffect(Effects.WITHER)) {
 			blit(matrixStack, 0, 0, WITHER_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
-		} else if (entity.isPotionActive(Effects.POISON)) {
+		} else if (entity.hasEffect(Effects.POISON)) {
 			blit(matrixStack, 0, 0, POISON_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
-		} else if (entity.isPotionActive(Effects.REGENERATION)) {
+		} else if (entity.hasEffect(Effects.REGENERATION)) {
 			blit(matrixStack, 0, 0, REGEN_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
 		} else {
 			blit(matrixStack, 0, 0, NORMAL_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
@@ -237,13 +237,13 @@ public class MinionPortraitRenderer extends AbstractGui {
 		if (absorptionAmount > 0) {
 
 			/* Draw the shadow string */
-			fr.drawString(matrixStack, s, -fr.getStringWidth(s) + 1, 2, 0x5A2B00);
+			fr.draw(matrixStack, s, -fr.width(s) + 1, 2, 0x5A2B00);
 
 			/* Draw the actual string */
-			fr.drawString(matrixStack, s, -fr.getStringWidth(s), 1, 0xFFD200);
+			fr.draw(matrixStack, s, -fr.width(s), 1, 0xFFD200);
 		} else {
-			fr.drawString(matrixStack, s, -fr.getStringWidth(s) + 1, 2, 0x4D0000);
-			fr.drawString(matrixStack, s, -fr.getStringWidth(s), 1, 0xFFFFFF);
+			fr.draw(matrixStack, s, -fr.width(s) + 1, 2, 0x4D0000);
+			fr.draw(matrixStack, s, -fr.width(s), 1, 0xFFFFFF);
 		}
 		GL11.glPopMatrix();
 

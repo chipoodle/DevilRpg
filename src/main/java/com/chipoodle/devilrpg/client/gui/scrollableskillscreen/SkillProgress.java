@@ -58,7 +58,7 @@ public class SkillProgress implements Comparable<SkillProgress> {
 
 	            for(String s : astring) {
 	               CriterionProgress criterionprogress = this.getCriterionProgress(s);
-	               if (criterionprogress != null && criterionprogress.isObtained()) {
+	               if (criterionprogress != null && criterionprogress.isDone()) {
 	                  flag = true;
 	                  break;
 	               }
@@ -75,7 +75,7 @@ public class SkillProgress implements Comparable<SkillProgress> {
 
 	   public boolean hasProgress() {
 	      for(CriterionProgress criterionprogress : this.criteria.values()) {
-	         if (criterionprogress.isObtained()) {
+	         if (criterionprogress.isDone()) {
 	            return true;
 	         }
 	      }
@@ -85,8 +85,8 @@ public class SkillProgress implements Comparable<SkillProgress> {
 
 	   public boolean grantCriterion(String criterionIn) {
 	      CriterionProgress criterionprogress = this.criteria.get(criterionIn);
-	      if (criterionprogress != null && !criterionprogress.isObtained()) {
-	         criterionprogress.obtain();
+	      if (criterionprogress != null && !criterionprogress.isDone()) {
+	         criterionprogress.grant();
 	         return true;
 	      } else {
 	         return false;
@@ -95,8 +95,8 @@ public class SkillProgress implements Comparable<SkillProgress> {
 
 	   public boolean revokeCriterion(String criterionIn) {
 	      CriterionProgress criterionprogress = this.criteria.get(criterionIn);
-	      if (criterionprogress != null && criterionprogress.isObtained()) {
-	         criterionprogress.reset();
+	      if (criterionprogress != null && criterionprogress.isDone()) {
+	         criterionprogress.revoke();
 	         return true;
 	      } else {
 	         return false;
@@ -111,8 +111,8 @@ public class SkillProgress implements Comparable<SkillProgress> {
 	      buffer.writeVarInt(this.criteria.size());
 
 	      for(Entry<String, CriterionProgress> entry : this.criteria.entrySet()) {
-	         buffer.writeString(entry.getKey());
-	         entry.getValue().write(buffer);
+	         buffer.writeUtf(entry.getKey());
+	         entry.getValue().serializeToNetwork(buffer);
 	      }
 
 	   }
@@ -122,7 +122,7 @@ public class SkillProgress implements Comparable<SkillProgress> {
 	      int i = buffer.readVarInt();
 
 	      for(int j = 0; j < i; ++j) {
-	         advancementprogress.criteria.put(buffer.readString(32767), CriterionProgress.read(buffer));
+	         advancementprogress.criteria.put(buffer.readUtf(32767), CriterionProgress.fromNetwork(buffer));
 	      }
 
 	      return advancementprogress;
@@ -169,7 +169,7 @@ public class SkillProgress implements Comparable<SkillProgress> {
 
 	         for(String s : astring) {
 	            CriterionProgress criterionprogress = this.getCriterionProgress(s);
-	            if (criterionprogress != null && criterionprogress.isObtained()) {
+	            if (criterionprogress != null && criterionprogress.isDone()) {
 	               flag = true;
 	               break;
 	            }
@@ -187,7 +187,7 @@ public class SkillProgress implements Comparable<SkillProgress> {
 	      List<String> list = Lists.newArrayList();
 
 	      for(Entry<String, CriterionProgress> entry : this.criteria.entrySet()) {
-	         if (!entry.getValue().isObtained()) {
+	         if (!entry.getValue().isDone()) {
 	            list.add(entry.getKey());
 	         }
 	      }
@@ -199,7 +199,7 @@ public class SkillProgress implements Comparable<SkillProgress> {
 	      List<String> list = Lists.newArrayList();
 
 	      for(Entry<String, CriterionProgress> entry : this.criteria.entrySet()) {
-	         if (entry.getValue().isObtained()) {
+	         if (entry.getValue().isDone()) {
 	            list.add(entry.getKey());
 	         }
 	      }
@@ -212,7 +212,7 @@ public class SkillProgress implements Comparable<SkillProgress> {
 	      Date date = null;
 
 	      for(CriterionProgress criterionprogress : this.criteria.values()) {
-	         if (criterionprogress.isObtained() && (date == null || criterionprogress.getObtained().before(date))) {
+	         if (criterionprogress.isDone() && (date == null || criterionprogress.getObtained().before(date))) {
 	            date = criterionprogress.getObtained();
 	         }
 	      }
@@ -239,8 +239,8 @@ public class SkillProgress implements Comparable<SkillProgress> {
 
 	         for(Entry<String, CriterionProgress> entry : p_serialize_1_.criteria.entrySet()) {
 	            CriterionProgress criterionprogress = entry.getValue();
-	            if (criterionprogress.isObtained()) {
-	               jsonobject1.add(entry.getKey(), criterionprogress.serialize());
+	            if (criterionprogress.isDone()) {
+	               jsonobject1.add(entry.getKey(), criterionprogress.serializeToJson());
 	            }
 	         }
 
@@ -253,13 +253,13 @@ public class SkillProgress implements Comparable<SkillProgress> {
 	      }
 
 	      public SkillProgress deserialize(JsonElement p_deserialize_1_, Type p_deserialize_2_, JsonDeserializationContext p_deserialize_3_) throws JsonParseException {
-	         JsonObject jsonobject = JSONUtils.getJsonObject(p_deserialize_1_, "advancement");
-	         JsonObject jsonobject1 = JSONUtils.getJsonObject(jsonobject, "criteria", new JsonObject());
+	         JsonObject jsonobject = JSONUtils.convertToJsonObject(p_deserialize_1_, "advancement");
+	         JsonObject jsonobject1 = JSONUtils.getAsJsonObject(jsonobject, "criteria", new JsonObject());
 	         SkillProgress advancementprogress = new SkillProgress();
 
 	         for(Entry<String, JsonElement> entry : jsonobject1.entrySet()) {
 	            String s = entry.getKey();
-	            advancementprogress.criteria.put(s, CriterionProgress.fromJson(JSONUtils.getString(entry.getValue(), s)));
+	            advancementprogress.criteria.put(s, CriterionProgress.fromJson(JSONUtils.convertToString(entry.getValue(), s)));
 	         }
 
 	         return advancementprogress;

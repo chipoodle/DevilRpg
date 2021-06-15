@@ -38,11 +38,11 @@ public class WerewolfAttackServerHandler {
 		CompoundNBT c = new CompoundNBT();
 		c.putInt(ENTITY_ID_KEY, msg.getEntityId());
 		c.putString(HAND_KEY, msg.getHand().name());
-		packetBuffer.writeCompoundTag(c);
+		packetBuffer.writeNbt(c);
 	}
 
 	public static WerewolfAttackServerHandler decode(final PacketBuffer packetBuffer) {
-		CompoundNBT c = packetBuffer.readCompoundTag();
+		CompoundNBT c = packetBuffer.readNbt();
 		return new WerewolfAttackServerHandler(c.getInt(ENTITY_ID_KEY), Hand.valueOf(c.getString(HAND_KEY)));
 	}
 
@@ -51,7 +51,7 @@ public class WerewolfAttackServerHandler {
 		if (contextSupplier.get().getDirection().equals(NetworkDirection.PLAY_TO_SERVER)) {
 			contextSupplier.get().enqueueWork(() -> {
 				ServerPlayerEntity sender = contextSupplier.get().getSender();
-				Entity target = sender.world.getEntityByID(msg.getEntityId());
+				Entity target = sender.level.getEntity(msg.getEntityId());
 				//ItemStack item = sender.getHeldItem(msg.getHand());
 				TargetUtils.attackTargetEntityWithItemHand(sender, target, msg.getHand());
 				//DevilRpg.LOGGER.info("----->HAND: " + msg.getHand().name());

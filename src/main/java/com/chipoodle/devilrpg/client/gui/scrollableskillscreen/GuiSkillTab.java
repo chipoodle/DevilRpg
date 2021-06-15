@@ -138,9 +138,9 @@ public class GuiSkillTab extends AbstractGui {
 		RenderSystem.depthFunc(515);
 		ResourceLocation resourcelocation = this.displayInfo.getBackground();
 		if (resourcelocation != null) {
-			this.minecraft.getTextureManager().bindTexture(resourcelocation);
+			this.minecraft.getTextureManager().bind(resourcelocation);
 		} else {
-			this.minecraft.getTextureManager().bindTexture(TextureManager.RESOURCE_LOCATION_EMPTY);
+			this.minecraft.getTextureManager().bind(TextureManager.INTENTIONAL_MISSING_TEXTURE);
 		}
 
 		generateBackgroundImageChunks(matrixStack);
@@ -216,11 +216,11 @@ public class GuiSkillTab extends AbstractGui {
 		}
 	}
 
-	public void drawSkillLevel(MatrixStack matrixStack) {
+	/*public void drawSkillLevel(MatrixStack matrixStack) {
 		for (GuiSkillEntry skillEntryGui : this.guis.values()) {
 			drawSkillLevel(matrixStack, skillEntryGui);
 		}
-	}
+	}*/
 
 	/**
 	 * Pinta el nivel del skill como string
@@ -228,7 +228,7 @@ public class GuiSkillTab extends AbstractGui {
 	 * @param skillEntryGui
 	 * @return
 	 */
-	private String drawSkillLevel(MatrixStack matrixStack, GuiSkillEntry skillEntryGui) {
+	/*private String drawSkillLevel(MatrixStack matrixStack, GuiSkillEntry skillEntryGui) {
 		int i = MathHelper.floor(this.scrollX);
 		int j = MathHelper.floor(this.scrollY);
 		String levelString = skillEntryGui.getLevelString();
@@ -236,7 +236,7 @@ public class GuiSkillTab extends AbstractGui {
 			this.minecraft.fontRenderer.drawStringWithShadow(matrixStack, levelString,(float) (i + skillEntryGui.getX()), (float) (j + skillEntryGui.getY()), -1);
 		}
 		return levelString;
-	}
+	}*/
 
 	public boolean isInsideTabSelector(int offsetX, int offsetY, double mouseX, double mouseY) {
 		return this.type.inInsideTabSelector(offsetX, offsetY, this.index, mouseX, mouseY);

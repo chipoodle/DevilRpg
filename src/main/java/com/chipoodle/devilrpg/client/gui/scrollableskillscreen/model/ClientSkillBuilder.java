@@ -43,8 +43,8 @@ public class ClientSkillBuilder {
 	@Nullable
 	private SkillElement selectedTab;
 
-	public ClientSkillBuilder(Minecraft p_i47380_1_) {
-		this.mc = p_i47380_1_;
+	public ClientSkillBuilder(Minecraft mc) {
+		this.mc = mc;
 	}
 
 	public void buildSkillTrees() {

@@ -3,15 +3,18 @@ package com.chipoodle.devilrpg.client.render.entity;
 import com.chipoodle.devilrpg.entity.SoulWispEntity;
 import com.mojang.blaze3d.matrix.MatrixStack;
 
+import net.minecraft.client.entity.player.AbstractClientPlayerEntity;
 import net.minecraft.client.renderer.IRenderTypeBuffer;
 import net.minecraft.client.renderer.entity.EntityRendererManager;
 import net.minecraft.client.renderer.entity.LivingRenderer;
 import net.minecraft.client.renderer.entity.model.PlayerModel;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.util.math.vector.Vector3f;
+import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.StringTextComponent;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
@@ -26,21 +29,21 @@ public class SoulWispHumanoidRenderer extends LivingRenderer<SoulWispEntity, Pla
 		//this.addLayer(new SoulWispGelLayer<>(this));
 	}
 
-	protected int getBlockLight(SoulWispEntity entityIn, float partialTicks) {
+	protected int getBlockLightLevel(SoulWispEntity entityIn, BlockPos b) {
 		return 8;
 	}
 
 	@Override
-	public ResourceLocation getEntityTexture(SoulWispEntity entity) {
+	public ResourceLocation getTextureLocation(SoulWispEntity entity) {
 		return WISP_TEXTURES;
 	}
 
 	@Override
-	protected void preRenderCallback(SoulWispEntity entityIn, MatrixStack matrixStackIn, float partialTickTime) {
+	protected void scale(SoulWispEntity entityIn, MatrixStack matrixStackIn, float partialTickTime) {
 		// float f = 0.9375F;
 		float f = 0.2375F;
 		matrixStackIn.scale(f, f, f);
-		 super.preRenderCallback(entityIn, matrixStackIn, partialTickTime);
+		 super.scale(entityIn, matrixStackIn, partialTickTime);
 	}
 
 	public void render(SoulWispEntity entityIn, float entityYaw, float partialTicks, MatrixStack matrixStackIn,
@@ -52,44 +55,44 @@ public class SoulWispHumanoidRenderer extends LivingRenderer<SoulWispEntity, Pla
 		return entityIn.isCrouching() ? new Vector3d(0.0D, -0.125D, 0.0D) : super.getRenderOffset(entityIn, partialTicks);
 	}
 
-	protected void applyRotations(SoulWispEntity entityLiving, MatrixStack matrixStackIn, float ageInTicks,
+	protected void setupRotations(SoulWispEntity entityLiving, MatrixStack matrixStackIn, float ageInTicks,
 			float rotationYaw, float partialTicks) {
-		float f = entityLiving.getSwimAnimation(partialTicks);
-		if (entityLiving.isElytraFlying()) {
-			super.applyRotations(entityLiving, matrixStackIn, ageInTicks, rotationYaw, partialTicks);
-			float f1 = (float) entityLiving.getTicksElytraFlying() + partialTicks;
+		float f = entityLiving.getSwimAmount(partialTicks);
+		if (entityLiving.isFallFlying()) {
+			super.setupRotations(entityLiving, matrixStackIn, ageInTicks, rotationYaw, partialTicks);
+			float f1 = (float) entityLiving.getFallFlyingTicks() + partialTicks;
 			float f2 = MathHelper.clamp(f1 * f1 / 100.0F, 0.0F, 1.0F);
-			if (!entityLiving.isSpinAttacking()) {
-				matrixStackIn.rotate(Vector3f.XP.rotationDegrees(f2 * (-90.0F - entityLiving.rotationPitch)));
+			if (!entityLiving.isAutoSpinAttack()) {
+				matrixStackIn.mulPose(Vector3f.XP.rotationDegrees(f2 * (-90.0F - entityLiving.xRot)));
 			}
 
-			Vector3d vec3d = entityLiving.getLook(partialTicks);
-			Vector3d vec3d1 = entityLiving.getMotion();
-			double d0 = Entity.horizontalMag(vec3d1);
-			double d1 = Entity.horizontalMag(vec3d);
+			Vector3d vec3d = entityLiving.getViewVector(partialTicks);
+			Vector3d vec3d1 = entityLiving.getDeltaMovement();
+			double d0 = Entity.getHorizontalDistanceSqr(vec3d1);
+			double d1 = Entity.getHorizontalDistanceSqr(vec3d);
 			if (d0 > 0.0D && d1 > 0.0D) {
 				double d2 = (vec3d1.x * vec3d.x + vec3d1.z * vec3d.z) / (Math.sqrt(d0) * Math.sqrt(d1));
 				double d3 = vec3d1.x * vec3d.z - vec3d1.z * vec3d.x;
-				matrixStackIn.rotate(Vector3f.YP.rotation((float) (Math.signum(d3) * Math.acos(d2))));
+				matrixStackIn.mulPose(Vector3f.YP.rotation((float) (Math.signum(d3) * Math.acos(d2))));
 			}
 		} else if (f > 0.0F) {
-			super.applyRotations(entityLiving, matrixStackIn, ageInTicks, rotationYaw, partialTicks);
-			float f3 = entityLiving.isInWater() ? -90.0F - entityLiving.rotationPitch : -90.0F;
+			super.setupRotations(entityLiving, matrixStackIn, ageInTicks, rotationYaw, partialTicks);
+			float f3 = entityLiving.isInWater() ? -90.0F - entityLiving.xRot : -90.0F;
 			float f4 = MathHelper.lerp(f, 0.0F, f3);
-			matrixStackIn.rotate(Vector3f.XP.rotationDegrees(f4));
-			if (entityLiving.isActualySwimming()) {
+			matrixStackIn.mulPose(Vector3f.XP.rotationDegrees(f4));
+			if (entityLiving.isVisuallySwimming()) {
 				matrixStackIn.translate(0.0D, -1.0D, (double) 0.3F);
 			}
 		} else {
-			super.applyRotations(entityLiving, matrixStackIn, ageInTicks, rotationYaw, partialTicks);
+			super.setupRotations(entityLiving, matrixStackIn, ageInTicks, rotationYaw, partialTicks);
 		}
 
 	}
 	
-	protected void renderName(SoulWispEntity entityIn, String displayNameIn, MatrixStack matrixStackIn, IRenderTypeBuffer bufferIn, int packedLightIn) {
-	      matrixStackIn.push();
+	protected void renderNameTag(SoulWispEntity entityIn, ITextComponent displayNameIn, MatrixStack matrixStackIn, IRenderTypeBuffer bufferIn, int packedLightIn) {
+	      matrixStackIn.pushPose();
 	      //displayNameIn = "";
-	      super.renderName(entityIn, new StringTextComponent(displayNameIn), matrixStackIn, bufferIn, packedLightIn);
-	      matrixStackIn.pop();
+	      super.renderNameTag(entityIn, displayNameIn, matrixStackIn, bufferIn, packedLightIn);
+	      matrixStackIn.popPose();
 	   }
 }

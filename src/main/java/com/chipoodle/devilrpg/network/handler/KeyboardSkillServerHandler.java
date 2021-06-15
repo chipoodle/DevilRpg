@@ -24,11 +24,11 @@ public class KeyboardSkillServerHandler {
 	}
 
 	public static void encode(final KeyboardSkillServerHandler msg, final PacketBuffer packetBuffer) {
-		packetBuffer.writeString(msg.getPoder().name());
+		packetBuffer.writeUtf(msg.getPoder().name());
 	}
 
 	public static KeyboardSkillServerHandler decode(final PacketBuffer packetBuffer) {
-		return new KeyboardSkillServerHandler(PowerEnum.valueOf(packetBuffer.readString()));
+		return new KeyboardSkillServerHandler(PowerEnum.valueOf(packetBuffer.readUtf()));
 	}
 
 	public static void onMessage(final KeyboardSkillServerHandler msg,

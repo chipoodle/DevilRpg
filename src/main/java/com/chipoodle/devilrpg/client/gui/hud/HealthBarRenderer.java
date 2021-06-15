@@ -71,11 +71,11 @@ public class HealthBarRenderer extends AbstractGui {
 	/* This helper method will render the bar */
 	public void renderBar(MatrixStack matrixStack, int screenWidth, int screenHeight) {
 		/* These are the variables that contain world and player information */
-		World world = mc.world;
+		World world = mc.level;
 		PlayerEntity player = mc.player;
 
 		/* This object draws text using the Minecraft font */
-		FontRenderer fr = mc.fontRenderer;
+		FontRenderer fr = mc.font;
 
 		/* This object inserts commas into number strings */
 		DecimalFormat d = new DecimalFormat("#,###");
@@ -93,7 +93,7 @@ public class HealthBarRenderer extends AbstractGui {
 		GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
 
 		/* This method tells OpenGL to draw with the custom texture */
-		mc.getTextureManager().bindTexture(overlayBar);
+		mc.getTextureManager().bind(overlayBar);
 
 		// we will draw the status bar just above the hotbar. obtained by inspecting the
 		// vanilla hotbar rendering code
@@ -130,7 +130,7 @@ public class HealthBarRenderer extends AbstractGui {
 		 * player has. I slide the right-most side of the rectangle using the player's
 		 * armor value.
 		 */
-		blit(matrixStack, 0, 0, 0, BAR_HEIGHT, (int) (BAR_WIDTH * (player.getTotalArmorValue() / 20f)), BAR_HEIGHT);
+		blit(matrixStack, 0, 0, 0, BAR_HEIGHT, (int) (BAR_WIDTH * (player.getArmorValue() / 20f)), BAR_HEIGHT);
 
 		/* This part draws the inside of the bar, which starts 1 pixel right and down */
 		GL11.glPushMatrix();
@@ -181,11 +181,11 @@ public class HealthBarRenderer extends AbstractGui {
 		final int POISON_TEXTURE_U = BAR_WIDTH + 2; // black texels
 		final int WITHER_TEXTURE_U = BAR_WIDTH + 3; // brown texels
 
-		if (player.isPotionActive(Effects.WITHER)) {
+		if (player.hasEffect(Effects.WITHER)) {
 			blit(matrixStack, 0, 0, WITHER_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
-		} else if (player.isPotionActive(Effects.POISON)) {
+		} else if (player.hasEffect(Effects.POISON)) {
 			blit(matrixStack, 0, 0, POISON_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
-		} else if (player.isPotionActive(Effects.REGENERATION)) {
+		} else if (player.hasEffect(Effects.REGENERATION)) {
 			blit(matrixStack, 0, 0, REGEN_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
 		} else {
 			blit(matrixStack, 0, 0, NORMAL_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
@@ -211,13 +211,13 @@ public class HealthBarRenderer extends AbstractGui {
 		if (absorptionAmount > 0) {
 
 			/* Draw the shadow string */
-			fr.drawString(matrixStack, s, -fr.getStringWidth(s) + 1, 2, 0x5A2B00);
+			fr.draw(matrixStack, s, -fr.width(s) + 1, 2, 0x5A2B00);
 
 			/* Draw the actual string */
-			fr.drawString(matrixStack, s, -fr.getStringWidth(s), 1, 0xFFD200);
+			fr.draw(matrixStack, s, -fr.width(s), 1, 0xFFD200);
 		} else {
-			fr.drawString(matrixStack, s, -fr.getStringWidth(s) + 1, 2, 0x4D0000);
-			fr.drawString(matrixStack, s, -fr.getStringWidth(s), 1, 0xFFFFFF);
+			fr.draw(matrixStack, s, -fr.width(s) + 1, 2, 0x4D0000);
+			fr.draw(matrixStack, s, -fr.width(s), 1, 0xFFFFFF);
 		}
 		GL11.glPopMatrix();
 

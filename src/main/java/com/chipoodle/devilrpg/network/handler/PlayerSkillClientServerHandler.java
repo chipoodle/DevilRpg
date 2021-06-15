@@ -25,11 +25,11 @@ public class PlayerSkillClientServerHandler {
 	}
 
 	public static void encode(final PlayerSkillClientServerHandler msg, final PacketBuffer packetBuffer) {
-		packetBuffer.writeCompoundTag(msg.getSkillCompound());
+		packetBuffer.writeNbt(msg.getSkillCompound());
 	}
 
 	public static PlayerSkillClientServerHandler decode(final PacketBuffer packetBuffer) {
-		return new PlayerSkillClientServerHandler(packetBuffer.readCompoundTag());
+		return new PlayerSkillClientServerHandler(packetBuffer.readNbt());
 	}
 
 	public static void onMessage(final PlayerSkillClientServerHandler msg,

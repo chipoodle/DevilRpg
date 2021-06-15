@@ -17,9 +17,8 @@ public interface ISoulEntity {
 	static final int DIVISOR_NIVEL_PARA_POTENCIA_EFECTO = 5;
 
 	public default void addToLivingTick(TameableEntity thisEntity) {
-		if (thisEntity.getOwnerId() == null || thisEntity.getOwner() == null || !thisEntity.getOwner().isAlive()
-				|| !thisEntity.isTamed())
-			thisEntity.attackEntityFrom(new MinionDeathDamageSource(""), Integer.MAX_VALUE);
+		if (thisEntity.getOwnerUUID() == null || thisEntity.getOwner() == null || !thisEntity.getOwner().isAlive() || !thisEntity.isTame())
+			thisEntity.hurt(new MinionDeathDamageSource(""), Integer.MAX_VALUE);
 
 		/*
 		 * if (thisEntity.world.getGameTime() % 80L == 0L) { EffectInstance aux = new
@@ -32,16 +31,16 @@ public interface ISoulEntity {
 
 	}
 
-	public default boolean addToshouldAttackEntity(LivingEntity target, LivingEntity owner) {
+	public default boolean addToWantsToAttack(LivingEntity target, LivingEntity owner) {
 		if (target instanceof TameableEntity) {
 			TameableEntity entity = (TameableEntity) target;
-			return !entity.isTamed() || entity.getOwner() != owner;
+			return !entity.isTame() || entity.getOwner() != owner;
 		} else
 
 		if (target instanceof PlayerEntity && owner instanceof PlayerEntity
-				&& !((PlayerEntity) owner).canAttackPlayer((PlayerEntity) target)) {
+				&& !((PlayerEntity) owner).canHarmPlayer((PlayerEntity) target)) {
 			return false;
-		} else if (target instanceof AbstractHorseEntity && ((AbstractHorseEntity) target).isTame()) {
+		} else if (target instanceof AbstractHorseEntity && ((AbstractHorseEntity) target).isTamed()) {
 			return false;
 		} else {
 			return true;
@@ -56,7 +55,7 @@ public interface ISoulEntity {
 	}
 
 	public default IVertexBuilder getBuffer(IRenderTypeBuffer bufferIn, ResourceLocation texture) {
-		return bufferIn.getBuffer(RenderType.getEntityTranslucent(texture));
+		return bufferIn.getBuffer(RenderType.entityTranslucent(texture));
 	}
 
 	public default int getPotenciaPocion(int niveles) {

@@ -23,21 +23,21 @@ public abstract class GhostEnergyLayer<T extends Entity & IChargeableMob, M exte
    }
 
    public void render(MatrixStack matrixStackIn, IRenderTypeBuffer bufferIn, int packedLightIn, T entitylivingbaseIn, float limbSwing, float limbSwingAmount, float partialTicks, float ageInTicks, float netHeadYaw, float headPitch) {
-      if (entitylivingbaseIn.isCharged()) {
-         float f = (float)entitylivingbaseIn.ticksExisted + partialTicks;
-         EntityModel<T> entitymodel = this.func_225635_b_();
-         entitymodel.setLivingAnimations(entitylivingbaseIn, limbSwing, limbSwingAmount, partialTicks);
-         this.getEntityModel().copyModelAttributesTo(entitymodel);
-         IVertexBuilder ivertexbuilder = bufferIn.getBuffer(RenderType.getEnergySwirl(this.func_225633_a_(), this.func_225634_a_(f), f * 0.01F));
-         entitymodel.setRotationAngles(entitylivingbaseIn, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
-         entitymodel.render(matrixStackIn, ivertexbuilder, packedLightIn, OverlayTexture.NO_OVERLAY, 0.5F, 0.5F, 0.5F, 2.0F);
+      if (entitylivingbaseIn.isPowered()) {
+         float f = (float)entitylivingbaseIn.tickCount + partialTicks;
+         EntityModel<T> entitymodel = this.model();
+         entitymodel.prepareMobModel(entitylivingbaseIn, limbSwing, limbSwingAmount, partialTicks);
+         this.getParentModel().copyPropertiesTo(entitymodel);
+         IVertexBuilder ivertexbuilder = bufferIn.getBuffer(RenderType.energySwirl(this.getTextureLocation(), this.xOffset(f), f * 0.01F));
+         entitymodel.setupAnim(entitylivingbaseIn, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
+         entitymodel.renderToBuffer(matrixStackIn, ivertexbuilder, packedLightIn, OverlayTexture.NO_OVERLAY, 0.5F, 0.5F, 0.5F, 2.0F);
       }
    }
 
-   protected abstract float func_225634_a_(float p_225634_1_);
+   protected abstract float xOffset(float p_225634_1_);
 
-   protected abstract ResourceLocation func_225633_a_();
+   protected abstract ResourceLocation getTextureLocation();
 
-   protected abstract EntityModel<T> func_225635_b_();
+   protected abstract EntityModel<T> model();
 }
 

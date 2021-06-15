@@ -9,6 +9,7 @@ import com.mojang.blaze3d.matrix.MatrixStack;
 import net.minecraft.client.renderer.entity.EntityRendererManager;
 import net.minecraft.client.renderer.entity.MobRenderer;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.math.BlockPos;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
@@ -23,16 +24,16 @@ public class SoulBearRenderer extends MobRenderer<SoulBearEntity, SoulBearModelH
       this.addLayer(new SoulBearGelLayer<>(this));
    }
    
-   protected int getBlockLight(SoulBearEntity entityIn, float partialTicks) {
+   protected int getBlockLightLevel(SoulBearEntity entityIn, BlockPos pos) {
 		return 1;
 	}
 
-   public ResourceLocation getEntityTexture(SoulBearEntity entity) {
+   public ResourceLocation getTextureLocation(SoulBearEntity entity) {
       return POLAR_BEAR_TEXTURE;
    }
 
-   protected void preRenderCallback(SoulBearEntity entitylivingbaseIn, MatrixStack matrixStackIn, float partialTickTime) {
+   protected void scale(SoulBearEntity entitylivingbaseIn, MatrixStack matrixStackIn, float partialTickTime) {
       matrixStackIn.scale(1.2F, 1.2F, 1.2F);
-      super.preRenderCallback(entitylivingbaseIn, matrixStackIn, partialTickTime);
+      super.scale(entitylivingbaseIn, matrixStackIn, partialTickTime);
    }
 }

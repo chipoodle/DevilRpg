@@ -11,115 +11,110 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 
 @OnlyIn(Dist.CLIENT)
 public class SoulWolfModel<T extends SoulWolfEntity> extends TintedAgeableModel<T> {
-	private ModelRenderer head;
-	private ModelRenderer field_228298_b_;
-	private ModelRenderer body;
-	private ModelRenderer legBackRight;
-	private ModelRenderer legBackLeft;
-	private ModelRenderer legFrontRight;
-	private ModelRenderer legFrontLeft;
-	private ModelRenderer tail;
-	private ModelRenderer field_228299_l_;
-	private ModelRenderer mane;
-
+	private final ModelRenderer head;
+	private final ModelRenderer realHead;
+	private final ModelRenderer body;
+	private final ModelRenderer leg0;
+	private final ModelRenderer leg1;
+	private final ModelRenderer leg2;
+	private final ModelRenderer leg3;
+	private final ModelRenderer tail;
+	private final ModelRenderer realTail;
+	private final ModelRenderer upperBody;
 
 	public SoulWolfModel() {
-		// float f = 0.0F;
-		// float f1 = 13.5F;
-		this.head = new ModelRenderer(this, 0, 0);
-		this.head.setRotationPoint(-1.0F, 13.5F, -7.0F);
-		this.field_228298_b_ = new ModelRenderer(this, 0, 0);
-		this.field_228298_b_.addBox(-2.0F, -3.0F, -2.0F, 6.0F, 6.0F, 4.0F, 0.0F);
-		this.head.addChild(this.field_228298_b_);
+	      float f = 0.0F;
+	      float f1 = 13.5F;
+	      this.head = new ModelRenderer(this, 0, 0);
+	      this.head.setPos(-1.0F, 13.5F, -7.0F);
+	      this.realHead = new ModelRenderer(this, 0, 0);
+	      this.realHead.addBox(-2.0F, -3.0F, -2.0F, 6.0F, 6.0F, 4.0F, 0.0F);
+	      this.head.addChild(this.realHead);
+	      this.body = new ModelRenderer(this, 18, 14);
+	      this.body.addBox(-3.0F, -2.0F, -3.0F, 6.0F, 9.0F, 6.0F, 0.0F);
+	      this.body.setPos(0.0F, 14.0F, 2.0F);
+	      this.upperBody = new ModelRenderer(this, 21, 0);
+	      this.upperBody.addBox(-3.0F, -3.0F, -3.0F, 8.0F, 6.0F, 7.0F, 0.0F);
+	      this.upperBody.setPos(-1.0F, 14.0F, 2.0F);
+	      this.leg0 = new ModelRenderer(this, 0, 18);
+	      this.leg0.addBox(0.0F, 0.0F, -1.0F, 2.0F, 8.0F, 2.0F, 0.0F);
+	      this.leg0.setPos(-2.5F, 16.0F, 7.0F);
+	      this.leg1 = new ModelRenderer(this, 0, 18);
+	      this.leg1.addBox(0.0F, 0.0F, -1.0F, 2.0F, 8.0F, 2.0F, 0.0F);
+	      this.leg1.setPos(0.5F, 16.0F, 7.0F);
+	      this.leg2 = new ModelRenderer(this, 0, 18);
+	      this.leg2.addBox(0.0F, 0.0F, -1.0F, 2.0F, 8.0F, 2.0F, 0.0F);
+	      this.leg2.setPos(-2.5F, 16.0F, -4.0F);
+	      this.leg3 = new ModelRenderer(this, 0, 18);
+	      this.leg3.addBox(0.0F, 0.0F, -1.0F, 2.0F, 8.0F, 2.0F, 0.0F);
+	      this.leg3.setPos(0.5F, 16.0F, -4.0F);
+	      this.tail = new ModelRenderer(this, 9, 18);
+	      this.tail.setPos(-1.0F, 12.0F, 8.0F);
+	      this.realTail = new ModelRenderer(this, 9, 18);
+	      this.realTail.addBox(0.0F, 0.0F, -1.0F, 2.0F, 8.0F, 2.0F, 0.0F);
+	      this.tail.addChild(this.realTail);
+	      this.realHead.texOffs(16, 14).addBox(-2.0F, -5.0F, 0.0F, 2.0F, 2.0F, 1.0F, 0.0F);
+	      this.realHead.texOffs(16, 14).addBox(2.0F, -5.0F, 0.0F, 2.0F, 2.0F, 1.0F, 0.0F);
+	      this.realHead.texOffs(0, 10).addBox(-0.5F, 0.0F, -5.0F, 3.0F, 3.0F, 4.0F, 0.0F);
+	   }
 
-		this.body = new ModelRenderer(this, 18, 14);
-		this.body.addBox(-3.0F, -2.0F, -3.0F, 6.0F, 9.0F, 6.0F, 0.0F);
-		this.body.setRotationPoint(0.0F, 14.0F, 2.0F);
-		this.mane = new ModelRenderer(this, 21, 0);
-		this.mane.addBox(-3.0F, -3.0F, -3.0F, 8.0F, 6.0F, 7.0F, 0.0F);
-		this.mane.setRotationPoint(-1.0F, 14.0F, 2.0F);
-		this.legBackRight = new ModelRenderer(this, 0, 18);
-		this.legBackRight.addBox(0.0F, 0.0F, -1.0F, 2.0F, 8.0F, 2.0F, 0.0F);
-		this.legBackRight.setRotationPoint(-2.5F, 16.0F, 7.0F);
-		this.legBackLeft = new ModelRenderer(this, 0, 18);
-		this.legBackLeft.addBox(0.0F, 0.0F, -1.0F, 2.0F, 8.0F, 2.0F, 0.0F);
-		this.legBackLeft.setRotationPoint(0.5F, 16.0F, 7.0F);
-		this.legFrontRight = new ModelRenderer(this, 0, 18);
-		this.legFrontRight.addBox(0.0F, 0.0F, -1.0F, 2.0F, 8.0F, 2.0F, 0.0F);
-		this.legFrontRight.setRotationPoint(-2.5F, 16.0F, -4.0F);
-		this.legFrontLeft = new ModelRenderer(this, 0, 18);
-		this.legFrontLeft.addBox(0.0F, 0.0F, -1.0F, 2.0F, 8.0F, 2.0F, 0.0F);
-		this.legFrontLeft.setRotationPoint(0.5F, 16.0F, -4.0F);
-		this.tail = new ModelRenderer(this, 9, 18);
-		this.tail.setRotationPoint(-1.0F, 12.0F, 8.0F);
-		this.field_228299_l_ = new ModelRenderer(this, 9, 18);
-		this.field_228299_l_.addBox(0.0F, 0.0F, -1.0F, 2.0F, 8.0F, 2.0F, 0.0F);
-		this.tail.addChild(this.field_228299_l_);
-		this.field_228298_b_.setTextureOffset(16, 14).addBox(-2.0F, -5.0F, 0.0F, 2.0F, 2.0F, 1.0F, 0.0F);
-		this.field_228298_b_.setTextureOffset(16, 14).addBox(2.0F, -5.0F, 0.0F, 2.0F, 2.0F, 1.0F, 0.0F);
-		this.field_228298_b_.setTextureOffset(0, 10).addBox(-0.5F, 0.0F, -5.0F, 3.0F, 3.0F, 4.0F, 0.0F);
-	}
-
-	protected Iterable<ModelRenderer> getHeadParts() {
+	protected Iterable<ModelRenderer> headParts() {
 		return ImmutableList.of(this.head);
 	}
 
-	protected Iterable<ModelRenderer> getBodyParts() {
-		return ImmutableList.of(this.body, this.legBackRight, this.legBackLeft, this.legFrontRight, this.legFrontLeft,
-				this.tail, this.mane);
+	protected Iterable<ModelRenderer> bodyParts() {
+		return ImmutableList.of(this.body, this.leg0, this.leg1, this.leg2, this.leg3, this.tail, this.upperBody);
 	}
 
-	public void setLivingAnimations(T entityIn, float limbSwing, float limbSwingAmount, float partialTick) {
-		if (entityIn.func_233678_J__()) {
-			this.tail.rotateAngleY = 0.0F;
+	public void prepareMobModel(T p_212843_1_, float p_212843_2_, float p_212843_3_, float p_212843_4_) {
+		if (p_212843_1_.isAngry()) {
+			this.tail.yRot = 0.0F;
 		} else {
-			this.tail.rotateAngleY = MathHelper.cos(limbSwing * 0.6662F) * 1.4F * limbSwingAmount;
+			this.tail.yRot = MathHelper.cos(p_212843_2_ * 0.6662F) * 1.4F * p_212843_3_;
 		}
 
-		if (entityIn.isSitting()) {
-			this.mane.setRotationPoint(-1.0F, 16.0F, -3.0F);
-			this.mane.rotateAngleX = 1.2566371F;
-			this.mane.rotateAngleY = 0.0F;
-			this.body.setRotationPoint(0.0F, 18.0F, 0.0F);
-			this.body.rotateAngleX = ((float) Math.PI / 4F);
-			this.tail.setRotationPoint(-1.0F, 21.0F, 6.0F);
-			this.legBackRight.setRotationPoint(-2.5F, 22.7F, 2.0F);
-			this.legBackRight.rotateAngleX = ((float) Math.PI * 1.5F);
-			this.legBackLeft.setRotationPoint(0.5F, 22.7F, 2.0F);
-			this.legBackLeft.rotateAngleX = ((float) Math.PI * 1.5F);
-			this.legFrontRight.rotateAngleX = 5.811947F;
-			this.legFrontRight.setRotationPoint(-2.49F, 17.0F, -4.0F);
-			this.legFrontLeft.rotateAngleX = 5.811947F;
-			this.legFrontLeft.setRotationPoint(0.51F, 17.0F, -4.0F);
+		if (p_212843_1_.isInSittingPose()) {
+			this.upperBody.setPos(-1.0F, 16.0F, -3.0F);
+			this.upperBody.xRot = 1.2566371F;
+			this.upperBody.yRot = 0.0F;
+			this.body.setPos(0.0F, 18.0F, 0.0F);
+			this.body.xRot = ((float) Math.PI / 4F);
+			this.tail.setPos(-1.0F, 21.0F, 6.0F);
+			this.leg0.setPos(-2.5F, 22.7F, 2.0F);
+			this.leg0.xRot = ((float) Math.PI * 1.5F);
+			this.leg1.setPos(0.5F, 22.7F, 2.0F);
+			this.leg1.xRot = ((float) Math.PI * 1.5F);
+			this.leg2.xRot = 5.811947F;
+			this.leg2.setPos(-2.49F, 17.0F, -4.0F);
+			this.leg3.xRot = 5.811947F;
+			this.leg3.setPos(0.51F, 17.0F, -4.0F);
 		} else {
-			this.body.setRotationPoint(0.0F, 14.0F, 2.0F);
-			this.body.rotateAngleX = ((float) Math.PI / 2F);
-			this.mane.setRotationPoint(-1.0F, 14.0F, -3.0F);
-			this.mane.rotateAngleX = this.body.rotateAngleX;
-			this.tail.setRotationPoint(-1.0F, 12.0F, 8.0F);
-			this.legBackRight.setRotationPoint(-2.5F, 16.0F, 7.0F);
-			this.legBackLeft.setRotationPoint(0.5F, 16.0F, 7.0F);
-			this.legFrontRight.setRotationPoint(-2.5F, 16.0F, -4.0F);
-			this.legFrontLeft.setRotationPoint(0.5F, 16.0F, -4.0F);
-			this.legBackRight.rotateAngleX = MathHelper.cos(limbSwing * 0.6662F) * 1.4F * limbSwingAmount;
-			this.legBackLeft.rotateAngleX = MathHelper.cos(limbSwing * 0.6662F + (float) Math.PI) * 1.4F
-					* limbSwingAmount;
-			this.legFrontRight.rotateAngleX = MathHelper.cos(limbSwing * 0.6662F + (float) Math.PI) * 1.4F
-					* limbSwingAmount;
-			this.legFrontLeft.rotateAngleX = MathHelper.cos(limbSwing * 0.6662F) * 1.4F * limbSwingAmount;
+			this.body.setPos(0.0F, 14.0F, 2.0F);
+			this.body.xRot = ((float) Math.PI / 2F);
+			this.upperBody.setPos(-1.0F, 14.0F, -3.0F);
+			this.upperBody.xRot = this.body.xRot;
+			this.tail.setPos(-1.0F, 12.0F, 8.0F);
+			this.leg0.setPos(-2.5F, 16.0F, 7.0F);
+			this.leg1.setPos(0.5F, 16.0F, 7.0F);
+			this.leg2.setPos(-2.5F, 16.0F, -4.0F);
+			this.leg3.setPos(0.5F, 16.0F, -4.0F);
+			this.leg0.xRot = MathHelper.cos(p_212843_2_ * 0.6662F) * 1.4F * p_212843_3_;
+			this.leg1.xRot = MathHelper.cos(p_212843_2_ * 0.6662F + (float) Math.PI) * 1.4F * p_212843_3_;
+			this.leg2.xRot = MathHelper.cos(p_212843_2_ * 0.6662F + (float) Math.PI) * 1.4F * p_212843_3_;
+			this.leg3.xRot = MathHelper.cos(p_212843_2_ * 0.6662F) * 1.4F * p_212843_3_;
 		}
 
-		this.field_228298_b_.rotateAngleZ = entityIn.getInterestedAngle(partialTick)
-				+ entityIn.getShakeAngle(partialTick, 0.0F);
-		this.mane.rotateAngleZ = entityIn.getShakeAngle(partialTick, -0.08F);
-		this.body.rotateAngleZ = entityIn.getShakeAngle(partialTick, -0.16F);
-		this.field_228299_l_.rotateAngleZ = entityIn.getShakeAngle(partialTick, -0.2F);
+		this.realHead.zRot = p_212843_1_.getHeadRollAngle(p_212843_4_)
+				+ p_212843_1_.getBodyRollAngle(p_212843_4_, 0.0F);
+		this.upperBody.zRot = p_212843_1_.getBodyRollAngle(p_212843_4_, -0.08F);
+		this.body.zRot = p_212843_1_.getBodyRollAngle(p_212843_4_, -0.16F);
+		this.realTail.zRot = p_212843_1_.getBodyRollAngle(p_212843_4_, -0.2F);
 	}
 
-	public void setRotationAngles(T entityIn, float limbSwing, float limbSwingAmount, float ageInTicks,
-			float netHeadYaw, float headPitch) {
-		this.head.rotateAngleX = headPitch * ((float) Math.PI / 180F);
-		this.head.rotateAngleY = netHeadYaw * ((float) Math.PI / 180F);
-		this.tail.rotateAngleX = ageInTicks;
+	public void setupAnim(T p_225597_1_, float p_225597_2_, float p_225597_3_, float p_225597_4_, float p_225597_5_,
+			float p_225597_6_) {
+		this.head.xRot = p_225597_6_ * ((float) Math.PI / 180F);
+		this.head.yRot = p_225597_5_ * ((float) Math.PI / 180F);
+		this.tail.xRot = p_225597_4_;
 	}
 }

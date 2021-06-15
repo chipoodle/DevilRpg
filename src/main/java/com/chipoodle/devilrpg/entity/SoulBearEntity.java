@@ -81,15 +81,14 @@ import net.minecraftforge.fml.network.NetworkHooks;
 
 public class SoulBearEntity extends TameableEntity
 		implements ISoulEntity, IChargeableMob, IRenderUtilities, IAngerable {
-	private static final DataParameter<Boolean> IS_STANDING = EntityDataManager.createKey(SoulBearEntity.class,
-			DataSerializers.BOOLEAN);
+	private static final DataParameter<Boolean> DATA_STANDING_ID = EntityDataManager.defineId(SoulBearEntity.class,DataSerializers.BOOLEAN);
 
-	private float clientSideStandAnimation0;
+	private float clientSideStandAnimationO;
 	private float clientSideStandAnimation;
 	private int warningSoundTicks;
-	private static final RangedInteger field_234217_by_ = TickRangeConverter.convertRange(20, 39);
-	private int field_234218_bz_;
-	private UUID field_234216_bA_;
+	private static final RangedInteger PERSISTENT_ANGER_TIME = TickRangeConverter.rangeOfSeconds(20, 39);
+	private int remainingPersistentAngerTime;
+   	private UUID persistentAngerTarget;
 
 	private final int SALUD_INICIAL = 30;
 	private int puntosAsignados = 0;
@@ -100,15 +99,19 @@ public class SoulBearEntity extends TameableEntity
 		super(type, worldIn);
 	}
 
-	public AgeableEntity createChild(AgeableEntity ageable) {
-		return EntityType.POLAR_BEAR.create(this.world);
+	public AgeableEntity getBreedOffspring(AgeableEntity ageable) {
+		return ModEntityTypes.SOUL_BEAR.get().create(this.level);
+	}
+
+	public AgeableEntity getBreedOffspring(ServerWorld level, AgeableEntity ageable) {
+	      return ModEntityTypes.SOUL_BEAR.get().create(level);
 	}
 
 	/**
 	 * Checks if the parameter is an item which this animal can be fed to breed it
 	 * (wheat, carrots or seeds depending on the animal type)
 	 */
-	public boolean isBreedingItem(ItemStack stack) {
+	public boolean isFood(ItemStack stack) {
 		return false;
 	}
 
@@ -134,23 +137,23 @@ public class SoulBearEntity extends TameableEntity
 		this.targetSelector.addGoal(1, new OwnerHurtByTargetGoal(this));
 		this.targetSelector.addGoal(2, new OwnerHurtTargetGoal(this));
 		// this.targetSelector.addGoal(3, new SoulBearEntity.HurtByTargetGoal());
-		this.targetSelector.addGoal(3, (new HurtByTargetGoal(this)).setCallsForHelp());
+		this.targetSelector.addGoal(3, (new HurtByTargetGoal(this)).setAlertOthers());
 		this.targetSelector.addGoal(5, new NearestAttackableTargetGoal<>(this, MobEntity.class, false));
 		this.targetSelector.addGoal(8, new ResetAngerGoal<>(this, true));
 
 	}
 	
 	public static AttributeModifierMap.MutableAttribute setAttributes() {
-		return MobEntity.func_233666_p_().
-				createMutableAttribute(Attributes.MOVEMENT_SPEED, (double) 0.3F)
-				.createMutableAttribute(Attributes.MAX_HEALTH, 8.0D)
-				.createMutableAttribute(Attributes.FOLLOW_RANGE, 16.0D)
-				.createMutableAttribute(Attributes.ATTACK_DAMAGE, 2.0D)
-				.createMutableAttribute(Attributes.ARMOR, 0.35D);
+		return MobEntity.createMobAttributes()
+				.add(Attributes.MOVEMENT_SPEED, (double) 0.3F)
+				.add(Attributes.MAX_HEALTH, 8.0D)
+				.add(Attributes.FOLLOW_RANGE, 16.0D)
+				.add(Attributes.ATTACK_DAMAGE, 2.0D)
+				.add(Attributes.ARMOR, 0.35D);
 	}
 
 	public void updateLevel(PlayerEntity owner) {
-		setTamedBy(owner);
+		tame(owner);
 		LazyOptional<IBaseSkillCapability> skill = getOwner().getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
 		if (skill != null && skill.isPresent()) {
 			this.puntosAsignados = skill.map(x -> x.getSkillsPoints()).orElse(null).get(SkillEnum.SUMMON_SOUL_BEAR);
@@ -167,21 +170,21 @@ public class SoulBearEntity extends TameableEntity
 	}
 
 	@Override
-	public void readAdditional(CompoundNBT compound) {
-		super.readAdditional(compound);
+	public void readAdditionalSaveData(CompoundNBT compound) {
+		super.readAdditionalSaveData(compound);
 	}
 
 	@Override
-	public void writeAdditional(CompoundNBT compound) {
-		super.writeAdditional(compound);
+	public void addAdditionalSaveData(CompoundNBT compound) {
+		super.addAdditionalSaveData(compound);
 		compound.putString("OwnerUUID", "");
 		compound.putString("Owner", "");
 		//compound.putUniqueId("Owner", UUID.fromString(""));
 	}
 
 	@Override
-	public void livingTick() {
-		super.livingTick();
+	public void aiStep() {
+		super.aiStep();
 		addToLivingTick(this);
 	}
 
@@ -190,33 +193,52 @@ public class SoulBearEntity extends TameableEntity
 	 * share the same owner.
 	 */
 	@Override
-	public boolean isOnSameTeam(Entity entityIn) {
-		boolean isOnSameTeam = super.isOnSameTeam(entityIn);
+	public boolean isAlliedTo(Entity entityIn) {
+		boolean isOnSameTeam = super.isAlliedTo(entityIn);
 		return isOnSameTeam || isEntitySameOwnerAsThis(entityIn, this);
 	}
 
 	@Override
-	public boolean shouldAttackEntity(LivingEntity target, LivingEntity owner) {
-		return addToshouldAttackEntity(target, owner);
+	public boolean wantsToAttack(LivingEntity target, LivingEntity owner) {
+		return addToWantsToAttack(target, owner);
 	}
 
 	@Override
-	public boolean attackEntityAsMob(Entity entityIn) {
-		boolean flag = entityIn.attackEntityFrom(DamageSource.causeMobDamage(this),
-				(float) ((int) this.getAttribute(Attributes.ATTACK_DAMAGE).getValue()));
+	public boolean doHurtTarget(Entity entityIn) {
+		boolean flag = entityIn.hurt(DamageSource.mobAttack(this),
+				(float) ((int) this.getAttributeValue(Attributes.ATTACK_DAMAGE)));
 		if (flag) {
-			this.applyEnchantments(this, entityIn);
+			this.doEnchantDamageEffects(this, entityIn);
 		}
-
 		return flag;
+	}
+	
+	public void startPersistentAngerTimer() {
+		this.setRemainingPersistentAngerTime(PERSISTENT_ANGER_TIME.randomValue(this.random));
+	}
+
+	public void setRemainingPersistentAngerTime(int p_230260_1_) {
+		this.remainingPersistentAngerTime = p_230260_1_;
+	}
+
+	public int getRemainingPersistentAngerTime() {
+		return this.remainingPersistentAngerTime;
+	}
+
+	public void setPersistentAngerTarget(@Nullable UUID p_230259_1_) {
+		this.persistentAngerTarget = p_230259_1_;
+	}
+
+	public UUID getPersistentAngerTarget() {
+		return this.persistentAngerTarget;
 	}
 
 	/**
 	 * Sets the active target the Task system uses for tracking
 	 */
 	@Override
-	public void setAttackTarget(@Nullable LivingEntity entitylivingbaseIn) {
-		super.setAttackTarget(entitylivingbaseIn);
+	public void setTarget(@Nullable LivingEntity entitylivingbaseIn) {
+		super.setTarget(entitylivingbaseIn);
 	}
 
 	@Override
@@ -228,7 +250,7 @@ public class SoulBearEntity extends TameableEntity
 	 * Called when the mob's health reaches 0.
 	 */
 	@Override
-	public void onDeath(DamageSource cause) {
+	public void die(DamageSource cause) {
 		if (getOwner() != null) {
 			LazyOptional<IBaseMinionCapability> minionCap = getOwner()
 					.getCapability(PlayerMinionCapabilityProvider.MINION_CAP);
@@ -241,10 +263,10 @@ public class SoulBearEntity extends TameableEntity
 	}
 
 	private void customOnDeath() {
-		world.setEntityState(this, (byte) 3);
+		level.broadcastEntityEvent(this, (byte) 3);
 		this.dead = true;
 		this.remove();
-		customDeadParticles(this.world, this.rand, this);
+		customDeadParticles(this.level, this.random, this);
 	}
 
 	/**
@@ -262,49 +284,37 @@ public class SoulBearEntity extends TameableEntity
 	 * @see FMLPlayMessages.SpawnEntity
 	 */
 	@Override
-	public IPacket<?> createSpawnPacket() {
+	public IPacket<?> getAddEntityPacket() {
 		return NetworkHooks.getEntitySpawningPacket(this);
 	}
 
-	public static boolean func_223320_c(EntityType<PolarBearEntity> p_223320_0_, IWorld p_223320_1_, SpawnReason reason,
-			BlockPos p_223320_3_, Random p_223320_4_) {
-		Optional<RegistryKey<Biome>> optional = p_223320_1_.func_242406_i(p_223320_3_);
-		if (!Objects.equals(optional, Optional.of(Biomes.FROZEN_OCEAN))
-				&& !Objects.equals(optional, Optional.of(Biomes.DEEP_FROZEN_OCEAN))) {
-			return canAnimalSpawn(p_223320_0_, p_223320_1_, reason, p_223320_3_, p_223320_4_);
-		} else {
-			return p_223320_1_.getLightSubtracted(p_223320_3_, 0) > 8
-					&& p_223320_1_.getBlockState(p_223320_3_.down()).isIn(Blocks.ICE);
-		}
-	}
-
 	protected SoundEvent getAmbientSound() {
-		return this.isChild() ? SoundEvents.ENTITY_POLAR_BEAR_AMBIENT_BABY : SoundEvents.ENTITY_POLAR_BEAR_AMBIENT;
+		return this.isBaby() ? SoundEvents.POLAR_BEAR_AMBIENT_BABY : SoundEvents.POLAR_BEAR_AMBIENT;
 	}
 
 	protected SoundEvent getHurtSound(DamageSource damageSourceIn) {
-		return SoundEvents.ENTITY_POLAR_BEAR_HURT;
+		return SoundEvents.POLAR_BEAR_HURT;
 	}
 
 	protected SoundEvent getDeathSound() {
-		return SoundEvents.ENTITY_POLAR_BEAR_DEATH;
+		return SoundEvents.POLAR_BEAR_DEATH;
 	}
 
 	protected void playStepSound(BlockPos pos, BlockState blockIn) {
-		this.playSound(SoundEvents.ENTITY_POLAR_BEAR_STEP, 0.15F, 1.0F);
+		this.playSound(SoundEvents.POLAR_BEAR_STEP, 0.15F, 1.0F);
 	}
 
 	protected void playWarningSound() {
 		if (this.warningSoundTicks <= 0) {
-			this.playSound(SoundEvents.ENTITY_POLAR_BEAR_WARNING, 1.0F, this.getSoundPitch());
+			this.playSound(SoundEvents.POLAR_BEAR_WARNING, 1.0F, this.getVoicePitch());
 			this.warningSoundTicks = 40;
 		}
 
 	}
 
-	protected void registerData() {
-		super.registerData();
-		this.dataManager.register(IS_STANDING, false);
+	protected void defineSynchedData() {
+		super.defineSynchedData();
+		this.entityData.define(DATA_STANDING_ID, false);
 	}
 
 	/**
@@ -312,12 +322,12 @@ public class SoulBearEntity extends TameableEntity
 	 */
 	public void tick() {
 		super.tick();
-		if (this.world.isRemote) {
-			if (this.clientSideStandAnimation != this.clientSideStandAnimation0) {
-				this.recalculateSize();
+		if (this.level.isClientSide) {
+			if (this.clientSideStandAnimation != this.clientSideStandAnimationO) {
+				this.refreshDimensions();
 			}
 
-			this.clientSideStandAnimation0 = this.clientSideStandAnimation;
+			this.clientSideStandAnimationO = this.clientSideStandAnimation;
 			if (this.isStanding()) {
 				this.clientSideStandAnimation = MathHelper.clamp(this.clientSideStandAnimation + 1.0F, 0.0F, 6.0F);
 			} else {
@@ -328,48 +338,51 @@ public class SoulBearEntity extends TameableEntity
 		if (this.warningSoundTicks > 0) {
 			--this.warningSoundTicks;
 		}
+		
+		if (!this.level.isClientSide) {
+			this.updatePersistentAnger((ServerWorld)this.level, true);
+	    }
 
 	}
 	
 	@Override
-	 public ActionResultType func_230254_b_(PlayerEntity p_230254_1_, Hand p_230254_2_) {
+	public ActionResultType mobInteract(PlayerEntity playerIn, Hand hand) {
 		return ActionResultType.PASS;
-	 }
+	}
 
-	public EntitySize getSize(Pose poseIn) {
+	public EntitySize getDimensions(Pose poseIn) {
 		if (this.clientSideStandAnimation > 0.0F) {
 			float f = this.clientSideStandAnimation / 6.0F;
 			float f1 = 1.0F + f;
-			return super.getSize(poseIn).scale(1.0F, f1);
+			return super.getDimensions(poseIn).scale(1.0F, f1);
 		} else {
-			return super.getSize(poseIn);
+			return super.getDimensions(poseIn);
 		}
 	}
 
 	public boolean isStanding() {
-		return this.dataManager.get(IS_STANDING);
+	      return this.entityData.get(DATA_STANDING_ID);
 	}
 
-	public void setStanding(boolean standing) {
-		this.dataManager.set(IS_STANDING, standing);
+	public void setStanding(boolean p_189794_1_) {
+	      this.entityData.set(DATA_STANDING_ID, p_189794_1_);
 	}
 
 	@OnlyIn(Dist.CLIENT)
 	public float getStandingAnimationScale(float p_189795_1_) {
-		return MathHelper.lerp(p_189795_1_, this.clientSideStandAnimation0, this.clientSideStandAnimation) / 6.0F;
+		return MathHelper.lerp(p_189795_1_, this.clientSideStandAnimationO, this.clientSideStandAnimation) / 6.0F;
 	}
 
 	protected float getWaterSlowDown() {
 		return 0.98F;
 	}
 
-	public ILivingEntityData onInitialSpawn(IServerWorld worldIn, DifficultyInstance difficultyIn, SpawnReason reason,
+	public ILivingEntityData finalizeSpawn(IServerWorld worldIn, DifficultyInstance difficultyIn, SpawnReason reason,
 			@Nullable ILivingEntityData spawnDataIn, @Nullable CompoundNBT dataTag) {
 		if (spawnDataIn == null) {
 			spawnDataIn = new AgeableEntity.AgeableData(1.0F);
 		}
-
-		return super.onInitialSpawn(worldIn, difficultyIn, reason, spawnDataIn, dataTag);
+		return super.finalizeSpawn(worldIn, difficultyIn, reason, spawnDataIn, dataTag);
 	}
 
 	class AttackPlayerGoal extends NearestAttackableTargetGoal<PlayerEntity> {
@@ -381,14 +394,14 @@ public class SoulBearEntity extends TameableEntity
 		 * Returns whether execution should begin. You can also read and cache any state
 		 * necessary for execution in this method as well.
 		 */
-		public boolean shouldExecute() {
-			if (SoulBearEntity.this.isChild()) {
+		public boolean canUse() {
+			if (SoulBearEntity.this.isBaby()) {
 				return false;
 			} else {
-				if (super.shouldExecute()) {
-					for (SoulBearEntity polarbearentity : SoulBearEntity.this.world.getEntitiesWithinAABB(
-							SoulBearEntity.class, SoulBearEntity.this.getBoundingBox().grow(8.0D, 4.0D, 8.0D))) {
-						if (polarbearentity.isChild()) {
+				if (super.canUse()) {
+					for (SoulBearEntity polarbearentity : SoulBearEntity.this.level.getEntitiesOfClass(
+							SoulBearEntity.class, SoulBearEntity.this.getBoundingBox().inflate(8.0D, 4.0D, 8.0D))) {
+						if (polarbearentity.isBaby()) {
 							return true;
 						}
 					}
@@ -398,8 +411,8 @@ public class SoulBearEntity extends TameableEntity
 			}
 		}
 
-		protected double getTargetDistance() {
-			return super.getTargetDistance() * 0.5D;
+		protected double getFollowDistance() {
+			return super.getFollowDistance() * 0.5D;
 		}
 	}
 
@@ -410,22 +423,22 @@ public class SoulBearEntity extends TameableEntity
 
 		protected void checkAndPerformAttack(LivingEntity enemy, double distToEnemySqr) {
 			double d0 = this.getAttackReachSqr(enemy);
-			if (distToEnemySqr <= d0 && this.func_234040_h_()) {
-				this.func_234039_g_();
-				this.attacker.attackEntityAsMob(enemy);
+			if (distToEnemySqr <= d0 && this.isTimeToAttack()) {
+				this.resetAttackCooldown();
+				this.mob.doHurtTarget(enemy);
 				SoulBearEntity.this.setStanding(false);
 			} else if (distToEnemySqr <= d0 * 2.0D) {
-				if (this.func_234040_h_()) {
+				if (this.isTimeToAttack()) {
 					SoulBearEntity.this.setStanding(false);
-					this.func_234039_g_();
+					this.resetAttackCooldown();
 				}
 
-				if (this.func_234041_j_() <= 10) {
+				if (this.getTicksUntilNextAttack() <= 10) {
 					SoulBearEntity.this.setStanding(true);
 					SoulBearEntity.this.playWarningSound();
 				}
 			} else {
-				this.func_234039_g_();
+				this.resetAttackCooldown();
 				SoulBearEntity.this.setStanding(false);
 			}
 
@@ -435,13 +448,13 @@ public class SoulBearEntity extends TameableEntity
 		 * Reset the task's internal state. Called when this task is interrupted by
 		 * another one
 		 */
-		public void resetTask() {
+		public void stop() {
 			SoulBearEntity.this.setStanding(false);
-			super.resetTask();
+			super.stop();
 		}
 
 		protected double getAttackReachSqr(LivingEntity attackTarget) {
-			return (double) (4.0F + attackTarget.getWidth());
+			return (double) (4.0F + attackTarget.getBbWidth());
 		}
 	}
 
@@ -455,16 +468,16 @@ public class SoulBearEntity extends TameableEntity
 		 * necessary for execution in this method as well.
 		 */
 		public boolean shouldExecute() {
-			return !SoulBearEntity.this.isChild() && !SoulBearEntity.this.isBurning() ? false : super.shouldExecute();
+			return !SoulBearEntity.this.isBaby() && !SoulBearEntity.this.isOnFire() ? false : super.canUse();
 		}
 	}
 
 	class AvoidEntityGoal<T extends LivingEntity> extends net.minecraft.entity.ai.goal.AvoidEntityGoal<T> {
 		private final SoulBearEntity bear;
 
-		public AvoidEntityGoal(SoulBearEntity wolfIn, Class<T> p_i47251_3_, float p_i47251_4_, double p_i47251_5_,
-				double p_i47251_7_) {
-			super(wolfIn, p_i47251_3_, p_i47251_4_, p_i47251_5_, p_i47251_7_);
+		public AvoidEntityGoal(SoulBearEntity wolfIn, Class<T> entityClassToAvoidIn, float avoidDistanceIn, double farSpeedIn,
+				double nearSpeedIn) {
+			super(wolfIn, entityClassToAvoidIn, avoidDistanceIn, farSpeedIn, nearSpeedIn);
 			this.bear = wolfIn;
 		}
 
@@ -472,51 +485,51 @@ public class SoulBearEntity extends TameableEntity
 		 * Returns whether execution should begin. You can also read and cache any state
 		 * necessary for execution in this method as well.
 		 */
-		public boolean shouldExecute() {
-			if (super.shouldExecute() && this.avoidTarget instanceof LlamaEntity) {
-				return this.bear.isTamed() && this.avoidLlama((LlamaEntity) this.avoidTarget);
+		public boolean canUse() {
+			if (super.canUse() && this.toAvoid instanceof LlamaEntity) {
+				return this.bear.isTame() && this.avoidLlama((LlamaEntity) this.toAvoid);
 			}
-			if (super.shouldExecute() && this.avoidTarget instanceof TurtleEntity) {
-				return this.bear.isTamed() && this.avoidTurtle((TurtleEntity) this.avoidTarget);
+			if (super.canUse() && this.toAvoid instanceof TurtleEntity) {
+				return this.bear.isTame() && this.avoidTurtle((TurtleEntity) this.toAvoid);
 			}
-			if (super.shouldExecute() && this.avoidTarget instanceof VillagerEntity) {
-				return this.bear.isTamed() && this.avoidVillager((VillagerEntity) this.avoidTarget);
+			if (super.canUse() && this.toAvoid instanceof VillagerEntity) {
+				return this.bear.isTame() && this.avoidVillager((VillagerEntity) this.toAvoid);
 			}
-			if (super.shouldExecute() && this.avoidTarget instanceof IronGolemEntity) {
-				return this.bear.isTamed() && this.avoidIronGolem((IronGolemEntity) this.avoidTarget);
+			if (super.canUse() && this.toAvoid instanceof IronGolemEntity) {
+				return this.bear.isTame() && this.avoidIronGolem((IronGolemEntity) this.toAvoid);
 			}
 			return false;
 		}
 
-		private boolean avoidLlama(LlamaEntity p_190854_1_) {
-			return p_190854_1_.getStrength() >= SoulBearEntity.this.rand.nextInt(5);
+		private boolean avoidLlama(LlamaEntity llamaIn) {
+			return llamaIn.getStrength() >= SoulBearEntity.this.random.nextInt(5);
 		}
 
-		private boolean avoidTurtle(TurtleEntity p_190854_1_) {
+		private boolean avoidTurtle(TurtleEntity llamaIn) {
 			return true;
 		}
 
-		private boolean avoidVillager(VillagerEntity p_190854_1_) {
+		private boolean avoidVillager(VillagerEntity llamaIn) {
 			return true;
 		}
 
-		private boolean avoidIronGolem(IronGolemEntity p_190854_1_) {
+		private boolean avoidIronGolem(IronGolemEntity llamaIn) {
 			return true;
 		}
 
 		/**
 		 * Execute a one shot task or start executing a continuous task
 		 */
-		public void startExecuting() {
-			SoulBearEntity.this.setAttackTarget((LivingEntity) null);
-			super.startExecuting();
+		public void start() {
+			SoulBearEntity.this.setTarget((LivingEntity) null);
+			super.start();
 		}
 
 		/**
 		 * Keep ticking a continuous task that has already been started
 		 */
 		public void tick() {
-			SoulBearEntity.this.setAttackTarget((LivingEntity) null);
+			SoulBearEntity.this.setTarget((LivingEntity) null);
 			super.tick();
 		}
 	}
@@ -524,41 +537,16 @@ public class SoulBearEntity extends TameableEntity
 	/**
 	 * Get the experience points the entity currently has.
 	 */
-	protected int getExperiencePoints(PlayerEntity player) {
+	protected int getExperienceReward(PlayerEntity player) {
 		/*
 		 * if (player.equals(getOwner())) return 0; return 1 +
 		 * this.world.rand.nextInt(3);
 		 */
 		return 0;
 	}
-
-	public void func_230258_H__() {
-		this.setAngerTime(field_234217_by_.getRandomWithinRange(this.rand));
-	}
-
-	public void setAngerTime(int time) {
-		this.field_234218_bz_ = time;
-	}
-
-	public int getAngerTime() {
-		return this.field_234218_bz_;
-	}
-
-	public void setAngerTarget(@Nullable UUID target) {
-		this.field_234216_bA_ = target;
-	}
-
-	public UUID getAngerTarget() {
-		return this.field_234216_bA_;
-	}
-
-	@Override
-	public SoulBearEntity func_241840_a(ServerWorld p_241840_1_, AgeableEntity p_241840_2_) {
-		return ModEntityTypes.SOUL_BEAR.get().create(p_241840_1_);
-	}
 	
 	@Override
-	public boolean isCharged() {
+	public boolean isPowered() {
 		return true;
 	}
 }

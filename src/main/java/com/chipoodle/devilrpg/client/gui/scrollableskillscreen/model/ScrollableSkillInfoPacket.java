@@ -45,14 +45,14 @@ public class ScrollableSkillInfoPacket implements IPacket<IClientPlayNetHandler>
 	/**
 	 * Passes this Packet on to the NetHandler for processing.
 	 */
-	public void processPacket(IClientPlayNetHandler handler) {
+	public void handle(IClientPlayNetHandler handler) {
 		// handler.handleAdvancementInfo(this);
 	}
 
 	/**
 	 * Reads the raw packet data from the data stream.
 	 */
-	public void readPacketData(PacketBuffer buf) throws IOException {
+	public void read(PacketBuffer buf) throws IOException {
 		this.firstSync = buf.readBoolean();
 		this.advancementsToAdd = Maps.newHashMap();
 		this.advancementsToRemove = Sets.newLinkedHashSet();
@@ -84,7 +84,7 @@ public class ScrollableSkillInfoPacket implements IPacket<IClientPlayNetHandler>
 	/**
 	 * Writes the raw packet data to the data stream.
 	 */
-	public void writePacketData(PacketBuffer buf) throws IOException {
+	public void write(PacketBuffer buf) throws IOException {
 		buf.writeBoolean(this.firstSync);
 		buf.writeVarInt(this.advancementsToAdd.size());
 

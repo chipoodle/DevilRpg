@@ -22,17 +22,21 @@ import com.chipoodle.devilrpg.capability.minion.IBaseMinionCapability;
 import com.chipoodle.devilrpg.capability.minion.PlayerMinionCapabilityProvider;
 import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
+import com.chipoodle.devilrpg.entity.SoulBearEntity;
+import com.chipoodle.devilrpg.entity.SoulWispEntity;
+import com.chipoodle.devilrpg.entity.SoulWolfEntity;
+import com.chipoodle.devilrpg.init.ModEntityTypes;
 import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.network.handler.PlayerExperienceClientServerHandler;
 import com.chipoodle.devilrpg.network.handler.PlayerManaClientServerHandler;
 import com.chipoodle.devilrpg.network.handler.PlayerSkillClientServerHandler;
 import com.chipoodle.devilrpg.util.EventUtils;
 import com.chipoodle.devilrpg.util.SkillEnum;
-import com.sun.jna.platform.unix.X11;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.ai.attributes.Attributes;
+import net.minecraft.entity.ai.attributes.GlobalEntityTypeAttributes;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.util.ResourceLocation;
@@ -40,6 +44,7 @@ import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.util.text.StringTextComponent;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
+import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
 import net.minecraftforge.event.entity.EntityJoinWorldEvent;
 import net.minecraftforge.event.entity.living.LivingEvent.LivingJumpEvent;
 import net.minecraftforge.event.entity.living.LivingEvent.LivingUpdateEvent;
@@ -76,7 +81,7 @@ public class ForgeEventSubscriber {
 			return;
 		}
 
-		DevilRpg.LOGGER.info("----------------------->PlayerForgeEventSubscriber.attachCapability()");
+		DevilRpg.LOGGER.info("----------------------->ForgeEventSubscriber.attachCapability()");
 		event.addCapability(MANA_CAP, new PlayerManaCapabilityProvider());
 		event.addCapability(SKILL_CAP, new PlayerSkillCapabilityProvider());
 		event.addCapability(EXP_CAP, new PlayerExperienceCapabilityProvider());
@@ -88,19 +93,19 @@ public class ForgeEventSubscriber {
 
 	@SubscribeEvent
 	public static void onPlayerLogsIn(PlayerEvent.PlayerLoggedInEvent event) {
-		DevilRpg.LOGGER.info("----------------------->PlayerForgeEventSubscriber.onPlayerLogsIn()");
+		DevilRpg.LOGGER.info("----------------------->ForgeEventSubscriber.onPlayerLogsIn()");
 		PlayerEntity player = event.getPlayer();
 		LazyOptional<IBaseManaCapability> mana = player.getCapability(PlayerManaCapabilityProvider.MANA_CAP);
 
 		String message1 = String.format("Hello there, you have mana %f left.",
 				mana.map(x -> x.getMana()).orElse(Float.NaN));
-		player.sendMessage(new StringTextComponent(message1), player.getUniqueID());
+		player.sendMessage(new StringTextComponent(message1), player.getUUID());
 	}
 
 	@SubscribeEvent
 	public static void onPlayerClone(PlayerEvent.Clone e) {
 		if (e.isWasDeath()) {
-			DevilRpg.LOGGER.info("----------------------->PlayerForgeEventSubscriber.onPlayerClone()");
+			DevilRpg.LOGGER.info("----------------------->ForgeEventSubscriber.onPlayerClone()");
 			e.getOriginal().getCapability(PlayerManaCapabilityProvider.MANA_CAP).ifPresent(originalCap -> {
 				e.getPlayer().getCapability(PlayerManaCapabilityProvider.MANA_CAP).ifPresent(actualCap -> {
 					PlayerEntity originalPlayer = e.getOriginal();
@@ -143,10 +148,10 @@ public class ForgeEventSubscriber {
 	@SubscribeEvent
 	public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
 
-		DevilRpg.LOGGER.info("----------------------->PlayerForgeEventSubscriber.onPlayerRespawn()");
+		DevilRpg.LOGGER.info("----------------------->ForgeEventSubscriber.onPlayerRespawn()");
 		PlayerEntity player = event.getPlayer();
 
-		if (player.world.isRemote) {
+		if (player.level.isClientSide) {
 			return;
 		}
 		LazyOptional<IBaseManaCapability> mana = player.getCapability(PlayerManaCapabilityProvider.MANA_CAP);
@@ -167,7 +172,7 @@ public class ForgeEventSubscriber {
 		if (!(event.getEntity() instanceof PlayerEntity))
 			return;
 
-		DevilRpg.LOGGER.info("----------------------->PlayerForgeEventSubscriber.onEntityJoinWorld()");
+		DevilRpg.LOGGER.info("----------------------->ForgeEventSubscriber.onEntityJoinWorld()");
 		final PlayerEntity player = (PlayerEntity) event.getEntity();
 		LazyOptional<IBaseManaCapability> mana = player.getCapability(PlayerManaCapabilityProvider.MANA_CAP);
 		LazyOptional<IBaseSkillCapability> skill = player.getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
@@ -178,8 +183,8 @@ public class ForgeEventSubscriber {
 
 		Minecraft mainThread = Minecraft.getInstance();
 		if (mana.isPresent()) {
-			if (!player.world.isRemote) {
-				Minecraft.getInstance().enqueue(() -> {
+			if (!player.level.isClientSide) {
+				Minecraft.getInstance().tell(() -> {
 					ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> (ServerPlayerEntity) player),
 							new PlayerManaClientServerHandler(mana.map(x -> x.getNBTData()).orElse(null)));
 
@@ -188,13 +193,13 @@ public class ForgeEventSubscriber {
 
 		}
 		if (skill.isPresent()) {
-			if (!player.world.isRemote) {
-				mainThread.enqueue(new Runnable() {
+			if (!player.level.isClientSide) {
+				mainThread.tell(new Runnable() {
 					public void run() {
 						skill.ifPresent(x -> {
 							HashMap<String, UUID> attributeModifiers = x.getAttributeModifiers();
-							UUID hlthAttMod = attributeModifiers.get(Attributes.MAX_HEALTH.getAttributeName());
-							UUID spdAttMod = attributeModifiers.get(Attributes.MOVEMENT_SPEED.getAttributeName());
+							UUID hlthAttMod = attributeModifiers.get(Attributes.MAX_HEALTH.getDescriptionId());
+							UUID spdAttMod = attributeModifiers.get(Attributes.MOVEMENT_SPEED.getDescriptionId());
 
 							if (hlthAttMod != null) {
 								DevilRpg.LOGGER.info("||-------------> removing health id: " + hlthAttMod);
@@ -212,8 +217,8 @@ public class ForgeEventSubscriber {
 
 		}
 		if (exp.isPresent()) {
-			if (!player.world.isRemote) {
-				mainThread.enqueue(new Runnable() {
+			if (!player.level.isClientSide) {
+				mainThread.tell(new Runnable() {
 
 					public void run() {
 						ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> (ServerPlayerEntity) player),
@@ -226,8 +231,8 @@ public class ForgeEventSubscriber {
 		}
 
 		if (aux.isPresent()) {
-			if (!player.world.isRemote) {
-				Minecraft.getInstance().enqueue(() -> {
+			if (!player.level.isClientSide) {
+				Minecraft.getInstance().tell(() -> {
 					aux.ifPresent(x -> x.setWerewolfAttack(false, player));
 					aux.ifPresent(x -> x.setWerewolfTransformation(false, player));
 				});
@@ -235,8 +240,8 @@ public class ForgeEventSubscriber {
 		}
 
 		if (min.isPresent()) {
-			if (!player.world.isRemote) {
-				Minecraft.getInstance().enqueue(() -> {
+			if (!player.level.isClientSide) {
+				Minecraft.getInstance().tell(() -> {
 					min.ifPresent(x -> {
 						x.removeAllSoulWolf(player);
 						x.removeAllSoulBear(player);
@@ -251,10 +256,10 @@ public class ForgeEventSubscriber {
 
 	@SubscribeEvent
 	public static void onPlayerSleep(PlayerSleepInBedEvent event) {
-		DevilRpg.LOGGER.info("----------------------->PlayerForgeEventSubscriber.onPlayerSleep()");
+		DevilRpg.LOGGER.info("----------------------->ForgeEventSubscriber.onPlayerSleep()");
 		PlayerEntity player = event.getPlayer();
 
-		if (player.world.isRemote) {
+		if (player.level.isClientSide) {
 			return;
 		}
 
@@ -264,14 +269,14 @@ public class ForgeEventSubscriber {
 		String message = String.format(
 				"You refreshed yourself in the bed. You recovered mana and you have %f mana left.",
 				mana.map(x -> x.getMaxMana()).orElse(Float.NaN));
-		player.sendMessage(new StringTextComponent(message), player.getUniqueID());
+		player.sendMessage(new StringTextComponent(message), player.getUUID());
 	}
 
 	@SubscribeEvent
 	public static void playerLevelChange(PlayerXpEvent.LevelChange e) {
 		PlayerEntity player = e.getPlayer();
-		DevilRpg.LOGGER.info("----------------------->PlayerForgeEventSubscriber.playerLevelChange()" + " Client? "
-				+ player.world.isRemote + " level? " + player.experienceLevel + " " + player.experienceTotal);
+		DevilRpg.LOGGER.info("----------------------->ForgeEventSubscriber.playerLevelChange()" + " Client? "
+				+ player.level.isClientSide + " level? " + player.experienceLevel + " " + player.totalExperience);
 
 		LazyOptional<IBaseExperienceCapability> exp = player
 				.getCapability(PlayerExperienceCapabilityProvider.EXPERIENCE_CAP);
@@ -280,7 +285,7 @@ public class ForgeEventSubscriber {
 
 	@SubscribeEvent(priority = EventPriority.NORMAL)
 	public void onPlayerPickupXP(PlayerXpEvent.PickupXp e) {
-		e.getOrb().xpValue *= 0.5;
+		e.getOrb().value *= 0.5;
 	}
 
 	/**
@@ -292,13 +297,13 @@ public class ForgeEventSubscriber {
 	public static void onLivingJumpEventt(LivingJumpEvent event) {
 		if (event.getEntity() instanceof PlayerEntity) {
 			BiConsumer<LivingJumpEvent, LazyOptional<IBaseAuxiliarCapability>> c = (eve, auxiliar) -> {
-				Vector3d motion = eve.getEntity().getMotion();
+				Vector3d motion = eve.getEntity().getDeltaMovement();
 
 				LazyOptional<IBaseSkillCapability> skillCap = event.getEntity()
 						.getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
 				int points = skillCap.map(x -> x.getSkillsPoints().get(SkillEnum.TRANSFORM_WEREWOLF)).get();
 				double jumpFactor = (points * 0.005) + 0.03f; // max 0.13
-				eve.getEntity().setMotion(motion.getX(), motion.getY() + jumpFactor, motion.getZ());
+				eve.getEntity().setDeltaMovement(motion.x(), motion.y() + jumpFactor, motion.z());
 			};
 			EventUtils.onTransformation((PlayerEntity) event.getEntity(), c, event);
 		}
@@ -324,7 +329,7 @@ public class ForgeEventSubscriber {
 	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
 	public static void leftClickBlock(PlayerInteractEvent.LeftClickBlock event) {
 		BiConsumer<PlayerInteractEvent.LeftClickBlock, LazyOptional<IBaseAuxiliarCapability>> c = (eve, auxiliar) -> {
-			eve.getPlayer().isSwingInProgress = false;
+			eve.getPlayer().swinging = false;
 			eve.setCanceled(true);
 		};
 		EventUtils.onTransformation(event.getPlayer(), c, event);
@@ -333,7 +338,7 @@ public class ForgeEventSubscriber {
 	@SubscribeEvent(priority = EventPriority.HIGHEST, receiveCanceled = true)
 	public static void entityInteract(PlayerInteractEvent.EntityInteract event) {
 		BiConsumer<PlayerInteractEvent.EntityInteract, LazyOptional<IBaseAuxiliarCapability>> c = (eve, auxiliar) -> {
-			eve.getPlayer().isSwingInProgress = false;
+			eve.getPlayer().swinging = false;
 			eve.setCanceled(true);
 		};
 		EventUtils.onTransformation(event.getPlayer(), c, event);
@@ -343,7 +348,7 @@ public class ForgeEventSubscriber {
 	public static void entityInteractSpecific(PlayerInteractEvent.EntityInteractSpecific event) {
 		BiConsumer<PlayerInteractEvent.EntityInteractSpecific, LazyOptional<IBaseAuxiliarCapability>> c = (eve,
 				auxiliar) -> {
-			eve.getPlayer().isSwingInProgress = false;
+			eve.getPlayer().swinging = false;
 			eve.setCanceled(true);
 		};
 		EventUtils.onTransformation(event.getPlayer(), c, event);
@@ -352,7 +357,7 @@ public class ForgeEventSubscriber {
 	@SubscribeEvent
 	public static void onAttack(AttackEntityEvent event) {
 		BiConsumer<AttackEntityEvent, LazyOptional<IBaseAuxiliarCapability>> c = (eve, auxiliar) -> {
-			eve.getPlayer().isSwingInProgress = false;
+			eve.getPlayer().swinging = false;
 			eve.setCanceled(true);
 		};
 		EventUtils.onTransformation(event.getPlayer(), c, event);
@@ -379,8 +384,16 @@ public class ForgeEventSubscriber {
 		 * event.getPlayer() .sendMessage(new StringTextComponent( "Critical hit on " +
 		 * event.getTarget().getName().getStringTruncated(10) + " by " +
 		 * event.getPlayer().getName().getStringTruncated(10)),
-		 * event.getPlayer().getUniqueID());
+		 * event.getPlayer().getUUID());
 		 */
 
+	}
+	
+	@SubscribeEvent
+	public static void initEntityAttributes(EntityAttributeCreationEvent event) {
+		DevilRpg.LOGGER.info("----------------------->ForgeEventSubscriber.initEntityAttributes()");
+		event.put(ModEntityTypes.SOUL_WOLF.get(), SoulWolfEntity.setAttributes().build());
+		event.put(ModEntityTypes.SOUL_BEAR.get(), SoulBearEntity.setAttributes().build());
+		event.put(ModEntityTypes.WISP.get(), SoulWispEntity.setAttributes().build());
 	}
 }

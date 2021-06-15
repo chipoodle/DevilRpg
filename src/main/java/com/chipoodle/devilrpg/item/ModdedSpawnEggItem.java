@@ -20,6 +20,8 @@ import net.minecraftforge.common.util.NonNullSupplier;
 import net.minecraftforge.fml.RegistryObject;
 import net.minecraftforge.fml.common.ObfuscationReflectionHelper;
 
+import net.minecraft.item.Item.Properties;
+
 /**
  * Exists to work around a limitation with Spawn Eggs:
  * Spawn Eggs require an EntityType, but EntityTypes are created AFTER Items.
@@ -36,14 +38,14 @@ public class ModdedSpawnEggItem extends SpawnEggItem {
 	protected static final List<ModdedSpawnEggItem> UNADDED_EGGS = new ArrayList<>();
 	private final Lazy<? extends EntityType<?>> entityTypeSupplier;
 
-	public ModdedSpawnEggItem(final NonNullSupplier<? extends EntityType<?>> entityTypeSupplier, final int p_i48465_2_, final int p_i48465_3_, final Properties p_i48465_4_) {
-		super(null, p_i48465_2_, p_i48465_3_, p_i48465_4_);
+	public ModdedSpawnEggItem(final NonNullSupplier<? extends EntityType<?>> entityTypeSupplier, final int primaryColorIn, final int secondaryColorIn, final Properties builder) {
+		super(null, primaryColorIn, secondaryColorIn, builder);
 		this.entityTypeSupplier = Lazy.of(entityTypeSupplier::get);
 		UNADDED_EGGS.add(this);
 	}
 
-	public ModdedSpawnEggItem(final RegistryObject<? extends EntityType<?>> entityTypeSupplier, final int p_i48465_2_, final int p_i48465_3_, final Properties p_i48465_4_) {
-		super(null, p_i48465_2_, p_i48465_3_, p_i48465_4_);
+	public ModdedSpawnEggItem(final RegistryObject<? extends EntityType<?>> entityTypeSupplier, final int primaryColorIn, final int secondaryColorIn, final Properties builder) {
+		super(null, primaryColorIn, secondaryColorIn, builder);
 		this.entityTypeSupplier = Lazy.of(entityTypeSupplier);
 		UNADDED_EGGS.add(this);
 	}
@@ -55,13 +57,14 @@ public class ModdedSpawnEggItem extends SpawnEggItem {
 	 * but supplier based ones won't have had their EntityTypes created yet.
 	 */
 	public static void initUnaddedEggs() {
-		final Map<EntityType<?>, SpawnEggItem> EGGS = ObfuscationReflectionHelper.getPrivateValue(SpawnEggItem.class, null, "field_195987_b");
+		final Map<EntityType<?>, SpawnEggItem> EGGS = ObfuscationReflectionHelper.getPrivateValue(SpawnEggItem.class, null, "BY_ID");
 		DefaultDispenseItemBehavior defaultDispenseItemBehavior = new DefaultDispenseItemBehavior() {
-                        @Override
-			public ItemStack dispenseStack(IBlockSource source, ItemStack stack) {
-				Direction direction = source.getBlockState().get(DispenserBlock.FACING);
+            @Override
+			public ItemStack execute(IBlockSource source, ItemStack stack) {
+            	
 				EntityType<?> entitytype = ((SpawnEggItem) stack.getItem()).getType(stack.getTag());
-				entitytype.spawn(source.getWorld(), stack, null, source.getBlockPos().offset(direction), SpawnReason.DISPENSER, direction != Direction.UP, false);
+				//////////////Direction direction = source.getBlockState().get(DispenserBlock.FACING);
+				//////////////entitytype.spawn(source.getLevel(), stack, null, source.getPos().offset(direction), SpawnReason.DISPENSER, direction != Direction.UP, false);
 				stack.shrink(1);
 				return stack;
 			}
@@ -70,14 +73,14 @@ public class ModdedSpawnEggItem extends SpawnEggItem {
                     EGGS.put(egg.getType(null), egg);
                 return egg;
             }).forEachOrdered((egg) -> {
-                DispenserBlock.registerDispenseBehavior(egg, defaultDispenseItemBehavior);
+                DispenserBlock.registerBehavior(egg, defaultDispenseItemBehavior);
                 // ItemColors for each spawn egg don't need to be registered because this method is called before ItemColors is created
             });
 		UNADDED_EGGS.clear();
 	}
 
 	@Override
-	public EntityType<?> getType(@Nullable final CompoundNBT p_208076_1_) {
+	public EntityType<?> getType(@Nullable final CompoundNBT nbt) {
 		return entityTypeSupplier.get();
 	}
 

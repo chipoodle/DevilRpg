@@ -64,7 +64,7 @@ public class PlayerMinionCapability implements IBaseMinionCapability {
 	public void setSoulWolfMinions(ConcurrentLinkedQueue<UUID> soulWolMinions, PlayerEntity player) {
 		try {
 			nbt.putByteArray(SOULWOLF_MINION_KEY, BytesUtil.toByteArray(soulWolMinions));
-			if (!player.world.isRemote) {
+			if (!player.level.isClientSide) {
 				sendSkillChangesToClient((ServerPlayerEntity) player);
 			} else {
 				sendSkillChangesToServer();
@@ -89,7 +89,7 @@ public class PlayerMinionCapability implements IBaseMinionCapability {
 	public void setSoulBearMinions(ConcurrentLinkedQueue<UUID> soulBearMinions, PlayerEntity player) {
 		try {
 			nbt.putByteArray(SOULBEAR_MINION_KEY, BytesUtil.toByteArray(soulBearMinions));
-			if (!player.world.isRemote) {
+			if (!player.level.isClientSide) {
 				sendSkillChangesToClient((ServerPlayerEntity) player);
 			} else {
 				sendSkillChangesToServer();
@@ -114,7 +114,7 @@ public class PlayerMinionCapability implements IBaseMinionCapability {
 	public void setWispMinions(ConcurrentLinkedQueue<UUID> wispMinions, PlayerEntity player) {
 		try {
 			nbt.putByteArray(WISP_MINIONS_KEY, BytesUtil.toByteArray(wispMinions));
-			if (!player.world.isRemote) {
+			if (!player.level.isClientSide) {
 				sendSkillChangesToClient((ServerPlayerEntity) player);
 			} else {
 				sendSkillChangesToServer();
@@ -127,7 +127,7 @@ public class PlayerMinionCapability implements IBaseMinionCapability {
 	@Override
 	public TameableEntity getTameableByUUID(UUID id, World world) {
 		Entity e;
-		if (!world.isRemote) {
+		if (!world.isClientSide) {
 			e = TargetUtils.getEntityByUUID((ServerWorld) world, id);
 		} else {
 			e = TargetUtils.getEntityByUUID((ClientWorld) world, id);
@@ -141,20 +141,20 @@ public class PlayerMinionCapability implements IBaseMinionCapability {
 	@Override
 	public void removeWisp(PlayerEntity owner, SoulWispEntity entity) {
 		ConcurrentLinkedQueue<UUID> wisp = getWispMinions();
-		if (wisp!= null && entity!= null && wisp.contains(entity.getUniqueID())) {
-			wisp.remove(entity.getUniqueID());
+		if (wisp!= null && entity!= null && wisp.contains(entity.getUUID())) {
+			wisp.remove(entity.getUUID());
 			setWispMinions(wisp, owner);
-			entity.attackEntityFrom(new MinionDeathDamageSource(""), Integer.MAX_VALUE);
+			entity.hurt(new MinionDeathDamageSource(""), Integer.MAX_VALUE);
 		}
 	}
 
 	@Override
 	public void removeSoulWolf(PlayerEntity owner, SoulWolfEntity entity) {
 		ConcurrentLinkedQueue<UUID> soulwolf = getSoulWolfMinions();
-		if (soulwolf!= null && entity!= null && soulwolf.contains(entity.getUniqueID())) {
-			soulwolf.remove(entity.getUniqueID());
+		if (soulwolf!= null && entity!= null && soulwolf.contains(entity.getUUID())) {
+			soulwolf.remove(entity.getUUID());
 			setSoulWolfMinions(soulwolf, owner);
-			entity.attackEntityFrom(new MinionDeathDamageSource(""), Integer.MAX_VALUE);
+			entity.hurt(new MinionDeathDamageSource(""), Integer.MAX_VALUE);
 		}
 
 	}
@@ -163,7 +163,7 @@ public class PlayerMinionCapability implements IBaseMinionCapability {
 	public void removeAllWisp(PlayerEntity owner) {
 		ConcurrentLinkedQueue<UUID> wisp = getWispMinions();
 		wisp.forEach(id -> {
-			TameableEntity entity = getTameableByUUID(id, owner.world);
+			TameableEntity entity = getTameableByUUID(id, owner.level);
 			removeWisp(owner, (SoulWispEntity) entity);
 		});
 		wisp.clear();
@@ -174,7 +174,7 @@ public class PlayerMinionCapability implements IBaseMinionCapability {
 	public void removeAllSoulWolf(PlayerEntity owner) {
 		ConcurrentLinkedQueue<UUID> soulwolf = getSoulWolfMinions();
 		soulwolf.forEach(id -> {
-			TameableEntity entity = getTameableByUUID(id, owner.world);
+			TameableEntity entity = getTameableByUUID(id, owner.level);
 			removeSoulWolf(owner, (SoulWolfEntity) entity);
 		});
 		soulwolf.clear();
@@ -184,10 +184,10 @@ public class PlayerMinionCapability implements IBaseMinionCapability {
 	@Override
 	public void removeSoulBear(PlayerEntity owner, SoulBearEntity entity) {
 		ConcurrentLinkedQueue<UUID> soulbear = getSoulBearMinions();
-		if (soulbear!= null && entity!= null && soulbear.contains(entity.getUniqueID())) {
-			soulbear.remove(entity.getUniqueID());
+		if (soulbear!= null && entity!= null && soulbear.contains(entity.getUUID())) {
+			soulbear.remove(entity.getUUID());
 			setSoulBearMinions(soulbear, owner);
-			entity.attackEntityFrom(new MinionDeathDamageSource(""), Integer.MAX_VALUE);
+			entity.hurt(new MinionDeathDamageSource(""), Integer.MAX_VALUE);
 		}
 
 	}
@@ -196,7 +196,7 @@ public class PlayerMinionCapability implements IBaseMinionCapability {
 	public void removeAllSoulBear(PlayerEntity owner) {
 		ConcurrentLinkedQueue<UUID> soulbear = getSoulBearMinions();
 		soulbear.forEach(id -> {
-			TameableEntity entity = getTameableByUUID(id, owner.world);
+			TameableEntity entity = getTameableByUUID(id, owner.level);
 			removeSoulBear(owner, (SoulBearEntity) entity);
 		});
 		soulbear.clear();

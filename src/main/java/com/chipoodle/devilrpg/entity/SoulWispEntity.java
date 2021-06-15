@@ -61,7 +61,6 @@ import net.minecraft.util.RangedInteger;
 import net.minecraft.util.SoundEvent;
 import net.minecraft.util.SoundEvents;
 import net.minecraft.util.TickRangeConverter;
-import net.minecraft.util.UUIDCodec;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
@@ -76,9 +75,8 @@ import net.minecraftforge.fml.network.NetworkHooks;
 
 public class SoulWispEntity extends TameableEntity
 		implements IFlyingAnimal, ISoulEntity, IChargeableMob, IRenderUtilities, IAngerable {
-	private static final DataParameter<Integer> ANGER_TIME = EntityDataManager.createKey(BeeEntity.class,
-			DataSerializers.VARINT);
-	private static final RangedInteger field_234180_bw_ = TickRangeConverter.convertRange(20, 39);
+	private static final DataParameter<Integer> ANGER_TIME = EntityDataManager.defineId(BeeEntity.class,DataSerializers.INT);
+	private static final RangedInteger PERSISTENT_ANGER_TIME = TickRangeConverter.rangeOfSeconds(20, 39);
 	private UUID lastHurtBy;
 	private final int SALUD_INICIAL = 8;
 	private int puntosAsignados = 0;
@@ -90,26 +88,26 @@ public class SoulWispEntity extends TameableEntity
 	protected static final double DISTANCIA_EFECTO = 20;
 	protected static final int DURATION_TICKS = 120;
 
-	// private ResourceLocation wispPortrait;
-
-	public SoulWispEntity(EntityType<? extends SoulWispEntity> p_i225714_1_, World p_i225714_2_) {
-		super(p_i225714_1_, p_i225714_2_);
-		this.moveController = new FlyingMovementController(this, 20, true);
-		this.lookController = new SoulWispEntity.BeeLookController(this);
-		this.setPathPriority(PathNodeType.WATER, -1.0F);
+	public SoulWispEntity(EntityType<? extends SoulWispEntity> type, World worldIn) {
+		super(type, worldIn);
+		this.moveControl = new FlyingMovementController(this, 20, true);
+		this.lookControl = new SoulWispEntity.BeeLookController(this);
+		this.setPathfindingMalus(PathNodeType.WATER, -1.0F);
 		// this.setPathPriority(PathNodeType.COCOA, -1.0F);
-		this.setPathPriority(PathNodeType.FENCE, -1.0F);
+		this.setPathfindingMalus(PathNodeType.FENCE, -1.0F);
 	}
 
-	protected void registerData() {
-		super.registerData();
+	@Override
+	protected void defineSynchedData() {
+		super.defineSynchedData();
 	}
 
-	public float getBlockPathWeight(BlockPos pos, IWorldReader worldIn) {
-		return worldIn.getBlockState(pos).isAir(worldIn, pos) ? 10.0F : 0.0F;
-		// return worldIn.getBlockState(pos).isAir() ? 10.0F : 0.0F;
+	@Override
+	public float getWalkTargetValue(BlockPos pos, IWorldReader worldIn) {
+		return worldIn.getBlockState(pos).isAir() ? 10.0F : 0.0F;
 	}
 
+	@Override
 	protected void registerGoals() {
 
 		this.goalSelector.addGoal(0, new PanicGoal(this, 1.25D));
@@ -124,16 +122,17 @@ public class SoulWispEntity extends TameableEntity
 	}
 
 	public static AttributeModifierMap.MutableAttribute setAttributes() {
-		return MobEntity.func_233666_p_().createMutableAttribute(Attributes.MOVEMENT_SPEED, (double) 0.3F)
-				.createMutableAttribute(Attributes.FLYING_SPEED, 0.9F)
-				.createMutableAttribute(Attributes.MAX_HEALTH, 8.0D)
-				.createMutableAttribute(Attributes.FOLLOW_RANGE, 48.0D)
-				.createMutableAttribute(Attributes.ATTACK_DAMAGE, 2.0D).createMutableAttribute(Attributes.ARMOR, 0.15D);
+		return MobEntity.createMobAttributes()
+				.add(Attributes.MOVEMENT_SPEED, (double) 0.3F)
+				.add(Attributes.FLYING_SPEED, 0.9F)
+				.add(Attributes.MAX_HEALTH, 8.0D)
+				.add(Attributes.FOLLOW_RANGE, 48.0D)
+				.add(Attributes.ATTACK_DAMAGE, 2.0D)
+				.add(Attributes.ARMOR, 0.15D);
 	}
 
-	public void updateLevel(PlayerEntity owner, Effect efectoPrimario, Effect efectoSecundario, SkillEnum tipoWisp,
-			boolean esBeneficioso) {
-		setTamedBy(owner);
+	public void updateLevel(PlayerEntity owner, Effect efectoPrimario, Effect efectoSecundario, SkillEnum tipoWisp, boolean esBeneficioso) {
+		tame(owner);
 		LazyOptional<IBaseSkillCapability> skill = getOwner().getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
 		this.efectoPrimario = efectoPrimario;
 		this.efectoSecundario = efectoSecundario;
@@ -152,8 +151,9 @@ public class SoulWispEntity extends TameableEntity
 		setHealth((float) saludMaxima);
 	}
 
-	public void writeAdditional(CompoundNBT compound) {
-		super.writeAdditional(compound);
+	@Override
+	public void addAdditionalSaveData(CompoundNBT compound) {
+		super.addAdditionalSaveData(compound);
 		compound.putString("OwnerUUID", "");
 		compound.putString("Owner", "");
 	}
@@ -161,38 +161,42 @@ public class SoulWispEntity extends TameableEntity
 	/**
 	 * (abstract) Protected helper method to read subclass entity data from NBT.
 	 */
-	public void readAdditional(CompoundNBT compound) {
-		super.readAdditional(compound);
+	@Override
+	public void readAdditionalSaveData(CompoundNBT compound) {
+		super.readAdditionalSaveData(compound);
 	}
 
-	public boolean attackEntityAsMob(Entity entityIn) {
+	@Override
+	public boolean doHurtTarget(Entity entityIn) {
 		return false;
 	}
 
 	/**
 	 * Called to update the entity's position/logic.
 	 */
+	@Override
 	public void tick() {
 		super.tick();
-		if (this.rand.nextFloat() < 0.05F) {
-			for (int i = 0; i < this.rand.nextInt(2) + 1; ++i) {
-				this.func_226397_a_(this.world, this.getPosX() - (double) 0.3F, this.getPosX() + (double) 0.3F,
-						this.getPosZ() - (double) 0.3F, this.getPosZ() + (double) 0.3F, this.getPosYHeight(0.5D),
-						ParticleTypes.CRIT);
+		if (this.random.nextFloat() < 0.05F) {
+			for (int i = 0; i < this.random.nextInt(2) + 1; ++i) {
+				this.addParticle(this.level, this.getX() - (double) 0.3F, this.getX() + (double) 0.3F,
+						this.getZ() - (double) 0.3F, this.getZ() + (double) 0.3F, this.getY(0.5D),
+						ParticleTypes.CRIMSON_SPORE);
 			}
 		}
 	}
 
-	private void func_226397_a_(World p_226397_1_, double p_226397_2_, double p_226397_4_, double p_226397_6_,
-			double p_226397_8_, double p_226397_10_, IParticleData p_226397_12_) {
-		p_226397_1_.addParticle(p_226397_12_, MathHelper.lerp(p_226397_1_.rand.nextDouble(), p_226397_2_, p_226397_4_),
-				p_226397_10_, MathHelper.lerp(p_226397_1_.rand.nextDouble(), p_226397_6_, p_226397_8_), 0.0D, 0.0D,
+	private void addParticle(World worldIn, double p_226397_2_, double p_226397_4_, double p_226397_6_,
+			double p_226397_8_, double posY, IParticleData particleData) {
+		worldIn.addParticle(particleData, MathHelper.lerp(worldIn.random.nextDouble(), p_226397_2_, p_226397_4_),
+				posY, MathHelper.lerp(worldIn.random.nextDouble(), p_226397_6_, p_226397_8_), 0.0D, 0.0D,
 				0.0D);
 	}
 
+	@Override
 	protected void sendDebugPackets() {
 		super.sendDebugPackets();
-		// DebugPacketSender.func_229749_a_(this);
+		// DebugPacketSender.sendBeeInfo(this);
 	}
 
 	/**
@@ -200,10 +204,11 @@ public class SoulWispEntity extends TameableEntity
 	 * For example, zombies and skeletons use this to react to sunlight and start to
 	 * burn.
 	 */
-	public void livingTick() {
-		super.livingTick();
-		if (!this.world.isRemote) {
-			if (this.world.getGameTime() % 80L == 0L && efectoPrimario != null && efectoSecundario != null) {
+	@Override
+	public void aiStep() {
+		super.aiStep();
+		if (!this.level.isClientSide) {
+			if (this.level.getGameTime() % 80L == 0L && efectoPrimario != null && efectoSecundario != null) {
 				this.addEffectsToPlayers(puntosAsignados, efectoPrimario, efectoSecundario, esBeneficioso);
 			}
 		}
@@ -213,11 +218,11 @@ public class SoulWispEntity extends TameableEntity
 	/**
 	 * Returns new PathNavigateGround instance
 	 */
-	protected PathNavigator createNavigator(World worldIn) {
+	@Override
+	protected PathNavigator createNavigation(World worldIn) {
 		FlyingPathNavigator flyingpathnavigator = new FlyingPathNavigator(this, worldIn) {
-			public boolean canEntityStandOnPos(BlockPos pos) {
-				return !this.world.getBlockState(pos).isAir(worldIn, pos);
-				// return !this.world.getBlockState(pos.down()).isAir();
+			public boolean isStableDestination(BlockPos pos) {
+				return !this.level.getBlockState(pos.below()).isAir();
 			}
 
 			public void tick() {
@@ -225,8 +230,8 @@ public class SoulWispEntity extends TameableEntity
 			}
 		};
 		flyingpathnavigator.setCanOpenDoors(true);
-		flyingpathnavigator.setCanSwim(true);
-		flyingpathnavigator.setCanEnterDoors(true);
+		flyingpathnavigator.setCanFloat(true);
+		flyingpathnavigator.setCanPassDoors(true);
 		return flyingpathnavigator;
 	}
 
@@ -234,45 +239,53 @@ public class SoulWispEntity extends TameableEntity
 	 * Checks if the parameter is an item which this animal can be fed to breed it
 	 * (wheat, carrots or seeds depending on the animal type)
 	 */
-	public boolean isBreedingItem(ItemStack stack) {
-		return stack.getItem().isIn(ItemTags.FLOWERS);
+	@Override
+	public boolean isFood(ItemStack stack) {
+		return stack.getItem().is(ItemTags.FLOWERS);
 	}
 
+	@Override
 	protected void playStepSound(BlockPos pos, BlockState blockIn) {
 	}
 
 	protected SoundEvent getAmbientSound() {
-		return SoundEvents.BLOCK_BEACON_AMBIENT;
+		return SoundEvents.BEACON_AMBIENT;
 	}
 
+	@Override
 	protected SoundEvent getHurtSound(DamageSource damageSourceIn) {
-		return SoundEvents.BLOCK_BEACON_POWER_SELECT;
+		return SoundEvents.BEACON_POWER_SELECT;
 	}
 
+	@Override
 	protected SoundEvent getDeathSound() {
-		return SoundEvents.BLOCK_BEACON_DEACTIVATE;
+		return SoundEvents.BEACON_DEACTIVATE;
 	}
 
 	/**
 	 * Returns the volume for the sounds this mob makes.
 	 */
+	@Override
 	protected float getSoundVolume() {
 		return 0.4F;
 	}
 
-	public SoulWispEntity createChild(AgeableEntity ageable) {
-		return ModEntityTypes.WISP.get().create(this.world);
+	public SoulWispEntity getBreedOffspring(AgeableEntity ageable) {
+		return ModEntityTypes.WISP.get().create(this.level);
 	}
 
+	@Override
 	protected float getStandingEyeHeight(Pose poseIn, EntitySize sizeIn) {
-		return this.isChild() ? sizeIn.height * 0.5F : sizeIn.height * 0.5F;
+		return this.isBaby() ? sizeIn.height * 0.5F : sizeIn.height * 0.5F;
 	}
 
-	public boolean onLivingFall(float distance, float damageMultiplier) {
+	@Override
+	public boolean causeFallDamage(float distance, float damageMultiplier) {
 		return false;
 	}
 
-	protected void updateFallState(double y, boolean onGroundIn, BlockState state, BlockPos pos) {
+	@Override
+	protected void checkFallDamage(double y, boolean onGroundIn, BlockState state, BlockPos pos) {
 	}
 
 	protected boolean makeFlySound() {
@@ -282,26 +295,24 @@ public class SoulWispEntity extends TameableEntity
 	/**
 	 * Called when the entity is attacked.
 	 */
-	public boolean attackEntityFrom(DamageSource source, float amount) {
-		return super.attackEntityFrom(source, amount);
+	public boolean hurt(DamageSource source, float amount) {
+		return super.hurt(source, amount);
 	}
 
-	public CreatureAttribute getCreatureAttribute() {
+	@Override
+	public CreatureAttribute getMobType() {
 		return CreatureAttribute.ARTHROPOD;
 	}
 
-	protected void handleFluidJump(Tag<Fluid> fluidTag) {
-		this.setMotion(this.getMotion().add(0.0D, 0.01D, 0.0D));
+	protected void jumpInLiquid(Tag<Fluid> fluidTag) {
+		this.setDeltaMovement(this.getDeltaMovement().add(0.0D, 0.01D, 0.0D));
 	}
 
 	class BeeLookController extends LookController {
-		BeeLookController(MobEntity p_i225729_2_) {
-			super(p_i225729_2_);
+		BeeLookController(MobEntity beeIn) {
+			super(beeIn);
 		}
-
-		/**
-		 * Updates look
-		 */
+		
 		public void tick() {
 			super.tick();
 		}
@@ -311,67 +322,67 @@ public class SoulWispEntity extends TameableEntity
 		private PassiveGoal() {
 		}
 
-		public abstract boolean func_225506_g_();
+		public abstract boolean canBeeStart();
 
-		public abstract boolean func_225507_h_();
+		public abstract boolean canBeeContinue();
 
 		/**
 		 * Returns whether execution should begin. You can also read and cache any state
 		 * necessary for execution in this method as well.
 		 */
 		public boolean shouldExecute() {
-			return true;// this.func_225506_g_() && !WispEntity.this.func_226427_ez_();
+			return true;// this.canBeeStart() && !WispEntity.this.func_226427_ez_();
 		}
 
 		/**
 		 * Returns whether an in-progress EntityAIBase should continue executing
 		 */
 		public boolean shouldContinueExecuting() {
-			return true;// this.func_225507_h_() && !WispEntity.this.func_226427_ez_();
+			return true;// this.canBeeContinue() && !WispEntity.this.func_226427_ez_();
 		}
 	}
 
 	class WanderGoal extends Goal {
 		WanderGoal() {
-			this.setMutexFlags(EnumSet.of(Goal.Flag.MOVE));
+			this.setFlags(EnumSet.of(Goal.Flag.MOVE));
 		}
 
 		/**
 		 * Returns whether execution should begin. You can also read and cache any state
 		 * necessary for execution in this method as well.
 		 */
-		public boolean shouldExecute() {
-			return SoulWispEntity.this.navigator.noPath() && SoulWispEntity.this.rand.nextInt(10) == 0;
+		public boolean canUse() {
+			return SoulWispEntity.this.navigation.isDone() && SoulWispEntity.this.random.nextInt(10) == 0;
 		}
 
 		/**
 		 * Returns whether an in-progress EntityAIBase should continue executing
 		 */
-		public boolean shouldContinueExecuting() {
-			return SoulWispEntity.this.navigator.hasPath();
+		public boolean canContinueToUse() {
+			return SoulWispEntity.this.navigation.isInProgress();
 		}
 
 		/**
 		 * Execute a one shot task or start executing a continuous task
 		 */
-		public void startExecuting() {
-			Vector3d vec3d = this.getRandomLocation();
+		public void start() {
+			Vector3d vec3d = this.findPos();
 			if (vec3d != null) {
-				SoulWispEntity.this.navigator
-						.setPath(SoulWispEntity.this.navigator.getPathToPos(new BlockPos(vec3d), 1), 1.0D);
+				SoulWispEntity.this.navigation
+						.moveTo(SoulWispEntity.this.navigation.createPath(new BlockPos(vec3d), 1), 1.0D);
 			}
 
 		}
 
 		@Nullable
-		private Vector3d getRandomLocation() {
+		private Vector3d findPos() {
 			Vector3d vector3d;
-			vector3d = SoulWispEntity.this.getLook(0.0F);
+			vector3d = SoulWispEntity.this.getViewVector(0.0F);
 			// int i = 8;
-			Vector3d vector3d2 = RandomPositionGenerator.findAirTarget(SoulWispEntity.this, 8, 7, vector3d,
+			Vector3d vector3d2 = RandomPositionGenerator.getAboveLandPos(SoulWispEntity.this, 8, 7, vector3d,
 					((float) Math.PI / 2F), 2, 1);
 			return vector3d2 != null ? vector3d2
-					: RandomPositionGenerator.findGroundTarget(SoulWispEntity.this, 8, 4, -2, vector3d,
+					: RandomPositionGenerator.getAirPos(SoulWispEntity.this, 8, 4, -2, vector3d,
 							(double) ((float) Math.PI / 2F));
 		}
 	}
@@ -381,8 +392,8 @@ public class SoulWispEntity extends TameableEntity
 	 * share the same owner.
 	 */
 	@Override
-	public boolean isOnSameTeam(Entity entityIn) {
-		boolean isOnSameTeam = super.isOnSameTeam(entityIn);
+	public boolean isAlliedTo(Entity entityIn) {
+		boolean isOnSameTeam = super.isAlliedTo(entityIn);
 		boolean isSameOwner = false;
 		if (entityIn instanceof TameableEntity && ((TameableEntity) entityIn).getOwner() != null)
 			isSameOwner = ((TameableEntity) entityIn).getOwner().equals(this.getOwner());
@@ -390,17 +401,17 @@ public class SoulWispEntity extends TameableEntity
 	}
 
 	private void addEffectsToPlayers(int niveles, Effect primaryEffect, Effect secondaryEffect, boolean isBeneficial) {
-		if (niveles >= 0 && !this.world.isRemote && primaryEffect != null) {
+		if (niveles >= 0 && !this.level.isClientSide && primaryEffect != null) {
 			// rango entre 0 - 4 el tipo de boost health
 			int potenciaPocion = getPotenciaPocion(niveles);
 			// System.out.println("Level of effect" + i);
 
-			int k = this.getPosition().getX();
-			int l = this.getPosition().getY();
-			int i1 = this.getPosition().getZ();
-			AxisAlignedBB axisalignedbb = (new AxisAlignedBB((double) k, (double) l, (double) i1, (double) (k + 1),
-					(double) (l + 1), (double) (i1 + 1))).grow(DISTANCIA_EFECTO).expand(0.0D,
-							(double) this.world.getHeight(), 0.0D);
+			double k = this.position().x();
+			double l = this.position().y();
+			double i1 = this.position().z();
+			AxisAlignedBB axisalignedbb = (new AxisAlignedBB(k, l, i1, (k + 1),
+					(l + 1), (i1 + 1))).inflate(DISTANCIA_EFECTO).expandTowards(0.0D,
+							(double) this.level.getHeight(), 0.0D);
 
 			if (niveles > 0) {
 				List<LivingEntity> alliesList = null;
@@ -426,35 +437,35 @@ public class SoulWispEntity extends TameableEntity
 	private void applyPrimaryEffect(Effect primaryEffect, int amplifierIn, List<LivingEntity> alliesList) {
 		for (LivingEntity entity : alliesList) {
 			EffectInstance pri = new EffectInstance(primaryEffect, DURATION_TICKS, amplifierIn, true, true);
-			EffectInstance active = entity.getActivePotionEffect(primaryEffect);
+			EffectInstance active = entity.getEffect(primaryEffect);
 			if (!(active == null || pri.getAmplifier() > active.getAmplifier())) {
-				active.combine(pri);
+				active.update(pri);
 			}
-			entity.addPotionEffect(pri);
+			entity.addEffect(pri);
 		}
 	}
 
 	private void applySecondaryEffect(Effect secondaryEffect, List<LivingEntity> alliesList) {
 		for (LivingEntity entity : alliesList) {
 			EffectInstance sec = new EffectInstance(secondaryEffect, DURATION_TICKS, 0, true, true);
-			EffectInstance active = entity.getActivePotionEffect(secondaryEffect);
+			EffectInstance active = entity.getEffect(secondaryEffect);
 			if (!(active == null || sec.getAmplifier() > active.getAmplifier())) {
-				active.combine(sec);
+				active.update(sec);
 			}
-			entity.addPotionEffect(sec);
+			entity.addEffect(sec);
 		}
 	}
 
 	private List<LivingEntity> getAlliesListWithinAABBRange(AxisAlignedBB axisalignedbb) {
-		List<LivingEntity> list = this.world.<LivingEntity>getEntitiesWithinAABB(LivingEntity.class, axisalignedbb)
-				.stream().filter(x -> x.isOnSameTeam(this.getOwner()) || x.equals(getOwner()))
+		List<LivingEntity> list = this.level.<LivingEntity>getEntitiesOfClass(LivingEntity.class, axisalignedbb)
+				.stream().filter(x -> x.isAlliedTo(this.getOwner()) || x.equals(getOwner()))
 				.collect(Collectors.toList());
 		return list;
 	}
 
 	private List<LivingEntity> getEnemiesListWithinAABBRange(AxisAlignedBB axisalignedbb) {
-		List<LivingEntity> list = this.world.<MobEntity>getEntitiesWithinAABB(MobEntity.class, axisalignedbb).stream()
-				.filter(x -> !x.isOnSameTeam(this.getOwner())).map(x -> (LivingEntity) x).collect(Collectors.toList());
+		List<LivingEntity> list = this.level.<MobEntity>getEntitiesOfClass(MobEntity.class, axisalignedbb).stream()
+				.filter(x -> !x.isAlliedTo(this.getOwner())).map(x -> (LivingEntity) x).collect(Collectors.toList());
 		return list;
 	}
 
@@ -467,7 +478,7 @@ public class SoulWispEntity extends TameableEntity
 	 * Called when the mob's health reaches 0.
 	 */
 	@Override
-	public void onDeath(DamageSource cause) {
+	public void die(DamageSource cause) {
 		if (getOwner() != null) {
 			LazyOptional<IBaseMinionCapability> minionCap = getOwner()
 					.getCapability(PlayerMinionCapabilityProvider.MINION_CAP);
@@ -480,10 +491,10 @@ public class SoulWispEntity extends TameableEntity
 	}
 
 	private void customOnDeath() {
-		world.setEntityState(this, (byte) 3);
+		level.broadcastEntityEvent(this, (byte) 3);
 		this.dead = true;
 		this.remove();
-		customDeadParticles(this.world, this.rand, this);
+		customDeadParticles(this.level, this.random, this);
 	}
 
 	public boolean isEsBeneficioso() {
@@ -505,14 +516,15 @@ public class SoulWispEntity extends TameableEntity
 	 * @see FMLPlayMessages.SpawnEntity
 	 */
 	@Override
-	public IPacket<?> createSpawnPacket() {
+	public IPacket<?> getAddEntityPacket() {
 		return NetworkHooks.getEntitySpawningPacket(this);
 	}
 
 	/**
 	 * Get the experience points the entity currently has.
 	 */
-	protected int getExperiencePoints(PlayerEntity player) {
+	@Override
+	protected int getExperienceReward(PlayerEntity player) {
 		/*
 		 * if (player.equals(getOwner())) return 0; return 1 +
 		 * this.world.rand.nextInt(3);
@@ -520,33 +532,39 @@ public class SoulWispEntity extends TameableEntity
 		return 0;
 	}
 
-	public int getAngerTime() {
-		return this.dataManager.get(ANGER_TIME);
-	}
-
-	public void setAngerTime(int time) {
-		this.dataManager.set(ANGER_TIME, time);
-	}
-
-	public UUID getAngerTarget() {
-		return this.lastHurtBy;
-	}
-
-	public void setAngerTarget(@Nullable UUID target) {
-		this.lastHurtBy = target;
-	}
-
-	public void func_230258_H__() {
-		this.setAngerTime(field_234180_bw_.getRandomWithinRange(this.rand));
+	@Override
+	public int getRemainingPersistentAngerTime() {
+		return this.entityData.get(ANGER_TIME);
 	}
 
 	@Override
-	public boolean isCharged() {
+	public void setRemainingPersistentAngerTime(int time) {
+		this.entityData.set(ANGER_TIME, time);
+	}
+
+	@Override
+	public UUID getPersistentAngerTarget() {
+		return this.lastHurtBy;
+	}
+
+	@Override
+	public void setPersistentAngerTarget(@Nullable UUID target) {
+		this.lastHurtBy = target;
+	}
+
+	@Override
+	public void startPersistentAngerTimer() {
+		this.setRemainingPersistentAngerTime(PERSISTENT_ANGER_TIME.randomValue(this.random));
+	}
+
+	@Override
+	public boolean isPowered() {
 		return true;
 	}
 
 	@Override
-	public SoulWispEntity func_241840_a(ServerWorld p_241840_1_, AgeableEntity p_241840_2_) {
-		return ModEntityTypes.WISP.get().create(p_241840_1_);
+	public SoulWispEntity getBreedOffspring(ServerWorld world, AgeableEntity mate) {
+		return ModEntityTypes.WISP.get().create(world);
 	}
+
 }

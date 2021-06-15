@@ -25,11 +25,11 @@ public class PlayerManaClientServerHandler {
 	}
 
 	public static void encode(final PlayerManaClientServerHandler msg, final PacketBuffer packetBuffer) {
-		packetBuffer.writeCompoundTag(msg.getManaCompound());
+		packetBuffer.writeNbt(msg.getManaCompound());
 	}
 
 	public static PlayerManaClientServerHandler decode(final PacketBuffer packetBuffer) {
-		return new PlayerManaClientServerHandler(packetBuffer.readCompoundTag());
+		return new PlayerManaClientServerHandler(packetBuffer.readNbt());
 	}
 
 	public static void onMessage(final PlayerManaClientServerHandler msg,

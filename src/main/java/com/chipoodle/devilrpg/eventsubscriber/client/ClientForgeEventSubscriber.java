@@ -66,12 +66,12 @@ public final class ClientForgeEventSubscriber {
 	public static void onEvent(RenderGameOverlayEvent.Pre event) {
 		switch (event.getType()) {
 		case HEALTH:
-			healthBarRenderer.renderBar(event.getMatrixStack(), event.getWindow().getScaledWidth(),
-					event.getWindow().getScaledHeight());
-			manaBarRenderer.renderBar(event.getMatrixStack(), event.getWindow().getScaledWidth(),
-					event.getWindow().getScaledHeight());
-			minionPortraitRenderer.renderPortraits(event.getMatrixStack(), event.getWindow().getScaledWidth(),
-					event.getWindow().getScaledHeight());
+			healthBarRenderer.renderBar(event.getMatrixStack(), event.getWindow().getGuiScaledWidth(),
+					event.getWindow().getGuiScaledHeight());
+			manaBarRenderer.renderBar(event.getMatrixStack(), event.getWindow().getGuiScaledWidth(),
+					event.getWindow().getGuiScaledHeight());
+			minionPortraitRenderer.renderPortraits(event.getMatrixStack(), event.getWindow().getGuiScaledWidth(),
+					event.getWindow().getGuiScaledHeight());
 			event.setCanceled(true);
 			break;
 
@@ -133,7 +133,7 @@ public final class ClientForgeEventSubscriber {
 			if (aux == null || !aux.isPresent() || !aux.map(x -> x.isWerewolfTransformation()).orElse(true))
 				return;
 
-			player.isSwingInProgress = false;
+			player.swinging = false;
 			if (event.getButton() == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
 				if (event.getAction() == GLFW.GLFW_PRESS) {
 					DevilRpg.LOGGER.info("pressed");
@@ -205,7 +205,7 @@ public final class ClientForgeEventSubscriber {
 		BiConsumer<RenderPlayerEvent.Pre, LazyOptional<IBaseAuxiliarCapability>> c = (eve, auxiliar) -> {
 			eve.setCanceled(true);
 			if (newWolf == null) {
-				newWolf = new WerewolfRenderer(eve.getRenderer().getRenderManager());
+				newWolf = new WerewolfRenderer(eve.getRenderer().getDispatcher());
 			}
 			newWolf.render(eve.getPlayer(), 0, eve.getPartialRenderTick(), eve.getMatrixStack(), eve.getBuffers(),
 					eve.getLight());
@@ -237,7 +237,7 @@ public final class ClientForgeEventSubscriber {
 			IllegalAccessException, IllegalArgumentException, InvocationTargetException {
 
 		PlayerEntity player = Minecraft.getInstance().player;
-		if (!Minecraft.getInstance().gameSettings.getPointOfView().equals(PointOfView.FIRST_PERSON)) {
+		if (!Minecraft.getInstance().options.getCameraType().equals(PointOfView.FIRST_PERSON)) {
 			BiConsumer<CameraSetup, LazyOptional<IBaseAuxiliarCapability>> c = (eve, auxiliar) -> {
 			};
 			if (EventUtils.onTransformation(player, c, event)) {

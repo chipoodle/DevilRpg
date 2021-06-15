@@ -44,8 +44,8 @@ public class SoulWispGelLayer<T extends SoulWispEntity> extends GhostEnergyLayer
 		
 		groovyMethod(matrixStackIn, bufferIn, packedLightIn, entitylivingbaseIn, partialTicks);
 		
-		float x = (float) (entitylivingbaseIn.getPosX() -  entitylivingbaseIn.getOwner().getPosX());
-		float z = (float) (entitylivingbaseIn.getPosZ() -  entitylivingbaseIn.getOwner().getPosZ());
+		float x = (float) (entitylivingbaseIn.getX() -  entitylivingbaseIn.getOwner().getX());
+		float z = (float) (entitylivingbaseIn.getZ() -  entitylivingbaseIn.getOwner().getZ());
 		
 		/*String message1 = String.format("Z: %f ", -0.62 - (z*0.01));
 		entitylivingbaseIn.getOwner().sendMessage(new StringTextComponent(message1));*/
@@ -81,15 +81,15 @@ public class SoulWispGelLayer<T extends SoulWispEntity> extends GhostEnergyLayer
 		return WISP_GEL;
 	}
 
-	protected float func_225634_a_(float p_225634_1_) {
+	protected float xOffset(float p_225634_1_) {
 		return p_225634_1_ * gelMovementFactor;
 	}
 
-	protected ResourceLocation func_225633_a_() {
+	protected ResourceLocation getTextureLocation() {
 		return WISP_GEL;
 	}
 
-	protected EntityModel<T> func_225635_b_() {
+	protected EntityModel<T> model() {
 		return wispModel;
 	}
 	
@@ -97,10 +97,10 @@ public class SoulWispGelLayer<T extends SoulWispEntity> extends GhostEnergyLayer
 			T entitylivingbaseIn, float partialTicks) {
 		if (!entitylivingbaseIn.isInvisible()) {
 			IVertexBuilder ivertexbuilder = entitylivingbaseIn.getBuffer(bufferIn,
-					entityRenderer.getEntityTexture(entitylivingbaseIn));
+					entityRenderer.getTextureLocation(entitylivingbaseIn));
 			float[] rgbArray = entitylivingbaseIn.groovyBlue(entitylivingbaseIn, partialTicks);
-			entityRenderer.getEntityModel().render(matrixStackIn, ivertexbuilder, packedLightIn,
-					LivingRenderer.getPackedOverlay(entitylivingbaseIn, 0.1F), rgbArray[0], rgbArray[1], rgbArray[2], 1.0F);
+			entityRenderer.getModel().renderToBuffer(matrixStackIn, ivertexbuilder, packedLightIn,
+					LivingRenderer.getOverlayCoords(entitylivingbaseIn, 0.1F), rgbArray[0], rgbArray[1], rgbArray[2], 1.0F);
 		}
 	}
 }

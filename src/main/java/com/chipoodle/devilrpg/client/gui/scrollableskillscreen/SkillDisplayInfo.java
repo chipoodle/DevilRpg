@@ -102,16 +102,16 @@ public class SkillDisplayInfo {
 	   }
 
 	   public static SkillDisplayInfo deserialize(JsonObject object) {
-	      ITextComponent itextcomponent = ITextComponent.Serializer.getComponentFromJson(object.get("title"));
-	      ITextComponent itextcomponent1 = ITextComponent.Serializer.getComponentFromJson(object.get("description"));
+	      ITextComponent itextcomponent = ITextComponent.Serializer.fromJson(object.get("title"));
+	      ITextComponent itextcomponent1 = ITextComponent.Serializer.fromJson(object.get("description"));
 	      if (itextcomponent != null && itextcomponent1 != null) {
-	         ItemStack itemstack = deserializeIcon(JSONUtils.getJsonObject(object, "icon"));
-	         ResourceLocation background = object.has("background") ? new ResourceLocation(JSONUtils.getString(object, "background")) : null;
-	         ResourceLocation image = object.has("image") ? new ResourceLocation(JSONUtils.getString(object, "image")) : null;
-	         ScrollableSkillFrameType frametype = object.has("frame") ? ScrollableSkillFrameType.byName(JSONUtils.getString(object, "frame")) : ScrollableSkillFrameType.TASK;
-	         boolean flag = JSONUtils.getBoolean(object, "show_toast", true);
-	         boolean flag1 = JSONUtils.getBoolean(object, "announce_to_chat", true);
-	         boolean flag2 = JSONUtils.getBoolean(object, "hidden", false);
+	         ItemStack itemstack = deserializeIcon(JSONUtils.getAsJsonObject(object, "icon"));
+	         ResourceLocation background = object.has("background") ? new ResourceLocation(JSONUtils.getAsString(object, "background")) : null;
+	         ResourceLocation image = object.has("image") ? new ResourceLocation(JSONUtils.getAsString(object, "image")) : null;
+	         ScrollableSkillFrameType frametype = object.has("frame") ? ScrollableSkillFrameType.byName(JSONUtils.getAsString(object, "frame")) : ScrollableSkillFrameType.TASK;
+	         boolean flag = JSONUtils.getAsBoolean(object, "show_toast", true);
+	         boolean flag1 = JSONUtils.getAsBoolean(object, "announce_to_chat", true);
+	         boolean flag2 = JSONUtils.getAsBoolean(object, "hidden", false);
 	         return new SkillDisplayInfo(itemstack, itextcomponent, itextcomponent1, background,image, frametype, flag, flag1, flag2);
 	      } else {
 	         throw new JsonSyntaxException("Both title and description must be set");
@@ -122,14 +122,14 @@ public class SkillDisplayInfo {
 	      if (!object.has("item")) {
 	         throw new JsonSyntaxException("Unsupported icon type, currently only items are supported (add 'item' key)");
 	      } else {
-	         Item item = JSONUtils.getItem(object, "item");
+	         Item item = JSONUtils.getAsItem(object, "item");
 	         if (object.has("data")) {
 	            throw new JsonParseException("Disallowed data tag found");
 	         } else {
 	            ItemStack itemstack = new ItemStack(item);
 	            if (object.has("nbt")) {
 	               try {
-	                  CompoundNBT compoundnbt = JsonToNBT.getTagFromJson(JSONUtils.getString(object.get("nbt"), "nbt"));
+	                  CompoundNBT compoundnbt = JsonToNBT.parseTag(JSONUtils.convertToString(object.get("nbt"), "nbt"));
 	                  itemstack.setTag(compoundnbt);
 	               } catch (CommandSyntaxException commandsyntaxexception) {
 	                  throw new JsonSyntaxException("Invalid nbt tag: " + commandsyntaxexception.getMessage());
@@ -142,10 +142,10 @@ public class SkillDisplayInfo {
 	   }
 
 	   public void write(PacketBuffer buf) {
-	      buf.writeTextComponent(this.title);
-	      buf.writeTextComponent(this.description);
-	      buf.writeItemStack(this.icon);
-	      buf.writeEnumValue(this.frame);
+	      buf.writeComponent(this.title);
+	      buf.writeComponent(this.description);
+	      buf.writeItem(this.icon);
+	      buf.writeEnum(this.frame);
 	      int i = 0;
 	      if (this.background != null) {
 	         i |= 1;
@@ -175,10 +175,10 @@ public class SkillDisplayInfo {
 	   }
 
 	   public static SkillDisplayInfo read(PacketBuffer buf) {
-	      ITextComponent itextcomponent = buf.readTextComponent();
-	      ITextComponent itextcomponent1 = buf.readTextComponent();
-	      ItemStack itemstack = buf.readItemStack();
-	      ScrollableSkillFrameType frametype = buf.readEnumValue(ScrollableSkillFrameType.class);
+	      ITextComponent itextcomponent = buf.readComponent();
+	      ITextComponent itextcomponent1 = buf.readComponent();
+	      ItemStack itemstack = buf.readItem();
+	      ScrollableSkillFrameType frametype = buf.readEnum(ScrollableSkillFrameType.class);
 	      int i = buf.readInt();
 	      ResourceLocation background = (i & 1) != 0 ? buf.readResourceLocation() : null;
 	      //TODO: Revisar si esta conversión con el bit es correcta o se tiene que recorrer, después del background

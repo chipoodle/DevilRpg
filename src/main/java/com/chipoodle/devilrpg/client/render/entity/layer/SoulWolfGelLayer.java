@@ -41,16 +41,16 @@ public class SoulWolfGelLayer<T extends SoulWolfEntity> extends GhostEnergyLayer
 		return WOLF_GEL;
 	}
 
-	protected float func_225634_a_(float p_225634_1_) {
+	protected float xOffset(float p_225634_1_) {
 		return p_225634_1_ * 0.01F;
 	}
 
-	protected ResourceLocation func_225633_a_() {
+	protected ResourceLocation getTextureLocation() {
 		return WOLF_GEL;
 	}
 
 	@Override
-	protected EntityModel<T> func_225635_b_() {
+	protected EntityModel<T> model() {
 		return soulWolfModel;
 	}
 
@@ -58,10 +58,10 @@ public class SoulWolfGelLayer<T extends SoulWolfEntity> extends GhostEnergyLayer
 			T entitylivingbaseIn, float partialTicks) {
 		if (!entitylivingbaseIn.isInvisible()) {
 			IVertexBuilder ivertexbuilder = entitylivingbaseIn.getBuffer(bufferIn,
-					entityRenderer.getEntityTexture(entitylivingbaseIn));
+					entityRenderer.getTextureLocation(entitylivingbaseIn));
 			float[] rgbArray = entitylivingbaseIn.groovyRed(entitylivingbaseIn, partialTicks);
-			entityRenderer.getEntityModel().render(matrixStackIn, ivertexbuilder, packedLightIn,
-					LivingRenderer.getPackedOverlay(entitylivingbaseIn, 0.1F), rgbArray[0], rgbArray[1], rgbArray[2],
+			entityRenderer.getModel().renderToBuffer(matrixStackIn, ivertexbuilder, packedLightIn,
+					LivingRenderer.getOverlayCoords(entitylivingbaseIn, 0.1F), rgbArray[0], rgbArray[1], rgbArray[2],
 					1.0F);
 		}
 	}

@@ -11,6 +11,7 @@ import net.minecraft.client.renderer.entity.EntityRendererManager;
 import net.minecraft.client.renderer.entity.model.GenericHeadModel;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
@@ -25,28 +26,28 @@ public class SoulFireBallRenderer extends EntityRenderer<SoulFireBallEntity> {
 		super(renderManagerIn);
 	}
 
-	protected int getBlockLight(SoulFireBallEntity entityIn, float partialTicks) {
+	protected int getBlockLightLevel(SoulFireBallEntity entityIn,  BlockPos pos) {
 		return 15;
 	}
 
 	public void render(SoulFireBallEntity entityIn, float entityYaw, float partialTicks, MatrixStack matrixStackIn,
 			IRenderTypeBuffer bufferIn, int packedLightIn) {
-		matrixStackIn.push();
+		matrixStackIn.pushPose();
 		matrixStackIn.scale(-0.50F, -0.50F, 0.50F);
 		// matrixStackIn.scale(-1.0F, -1.0F, 1.0F);
-		float f = MathHelper.rotLerp(entityIn.prevRotationYaw, entityIn.rotationYaw, partialTicks);
-		float f1 = MathHelper.lerp(partialTicks, entityIn.prevRotationPitch, entityIn.rotationPitch);
+		float f = MathHelper.rotLerp(entityIn.yRotO, entityIn.yRot, partialTicks);
+		float f1 = MathHelper.lerp(partialTicks, entityIn.xRotO, entityIn.xRot);
 
 		IVertexBuilder ivertexbuilder = bufferIn
-				.getBuffer(this.skeletonHeadModel.getRenderType(this.getEntityTexture(entityIn)));
-		this.skeletonHeadModel.func_225603_a_(0.0F, f, f1);
-		this.skeletonHeadModel.render(matrixStackIn, ivertexbuilder, packedLightIn, OverlayTexture.NO_OVERLAY, 1.0F,
+				.getBuffer(this.skeletonHeadModel.renderType(this.getTextureLocation(entityIn)));
+		this.skeletonHeadModel.setupAnim(0.0F, f, f1);
+		this.skeletonHeadModel.renderToBuffer(matrixStackIn, ivertexbuilder, packedLightIn, OverlayTexture.NO_OVERLAY, 1.0F,
 				1.0F, 1.0F, 1.0F);
-		matrixStackIn.pop();
+		matrixStackIn.popPose();
 		super.render(entityIn, entityYaw, partialTicks, matrixStackIn, bufferIn, packedLightIn);
 	}
 
-	public ResourceLocation getEntityTexture(SoulFireBallEntity entity) {
+	public ResourceLocation getTextureLocation(SoulFireBallEntity entity) {
 		return WITHER_TEXTURES;
 	}
 

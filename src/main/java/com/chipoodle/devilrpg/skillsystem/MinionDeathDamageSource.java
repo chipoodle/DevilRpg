@@ -15,7 +15,7 @@ public class MinionDeathDamageSource extends DamageSource {
 	 * Gets the death message that is displayed when the player dies
 	 */
 	public ITextComponent getDeathMessage(LivingEntity entityLivingBaseIn) {
-		LivingEntity livingentity = entityLivingBaseIn.getAttackingEntity();
+		LivingEntity livingentity = entityLivingBaseIn.getKillCredit();
 		return null;//new TranslationTextComponent("");
 
 	}

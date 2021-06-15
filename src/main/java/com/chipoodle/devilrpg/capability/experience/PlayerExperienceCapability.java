@@ -37,7 +37,7 @@ public class PlayerExperienceCapability implements IBaseExperienceCapability {
 			unspentPoints+= this.currentLevel-maximumLevel;
 			maximumLevel = this.currentLevel;
 		}	
-		if(!pe.world.isRemote)
+		if(!pe.level.isClientSide)
 			sendExperienceChangesToClient((ServerPlayerEntity) pe);
 		else
 			sendExperienceChangesToServer();

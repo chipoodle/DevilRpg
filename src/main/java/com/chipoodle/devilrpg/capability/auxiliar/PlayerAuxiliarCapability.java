@@ -23,7 +23,7 @@ public class PlayerAuxiliarCapability implements IBaseAuxiliarCapability {
 	@Override
 	public void setWerewolfAttack(boolean active, PlayerEntity player) {
 		werewolfAttack = active;
-		if (!player.world.isRemote) {
+		if (!player.level.isClientSide) {
 			//player.sendMessage(new StringTextComponent("Sending to client attaking werewolf: " + active));
 			sendAuxiliarChangesToClient((ServerPlayerEntity) player);
 		} else {
@@ -40,7 +40,7 @@ public class PlayerAuxiliarCapability implements IBaseAuxiliarCapability {
 	@Override
 	public void setWerewolfTransformation(boolean active, PlayerEntity player) {
 		werewolfTransformation = active;
-		if (!player.world.isRemote)
+		if (!player.level.isClientSide)
 			sendAuxiliarChangesToClient((ServerPlayerEntity) player);
 		else
 			sendAuxiliarChangesToServer();
@@ -53,7 +53,7 @@ public class PlayerAuxiliarCapability implements IBaseAuxiliarCapability {
 	@Override
 	public void setSwingingMainHand(boolean active, PlayerEntity player) {
 		swingingMainHand = active;
-		if (!player.world.isRemote)
+		if (!player.level.isClientSide)
 			sendAuxiliarChangesToClient((ServerPlayerEntity) player);
 		else
 			sendAuxiliarChangesToServer();
@@ -87,7 +87,7 @@ public class PlayerAuxiliarCapability implements IBaseAuxiliarCapability {
 	@Override
 	public Hand swingHands(PlayerEntity player) {
 		Hand hand = isSwingingMainHand() ? Hand.MAIN_HAND : Hand.OFF_HAND;
-		player.swingArm(hand);
+		player.swing(hand);
 		setSwingingMainHand(!isSwingingMainHand(), player);
 		return hand;
 	}

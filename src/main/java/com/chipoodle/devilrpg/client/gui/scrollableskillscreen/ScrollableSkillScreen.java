@@ -38,8 +38,8 @@ import net.minecraftforge.common.util.LazyOptional;
 public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.IListener {
 	private static final int INITIAL_TEXTURE_HEIGHT = 256;
 	private static final int INITIAL_TEXTURE_WIDTH = 308;
-	private static final int INNER_WIDTH = 282;
-	private static final int INNER_HEIGHT = 162;
+	private static final int INNER_SCREEN_WIDTH = 282;
+	private static final int INNER_SCREEN_HEIGHT = 162;
 	private static final int WINDOW_AREA_OFFSET_X = 10;
 	private static final int WINDOW_AREA_OFFSET_Y = 18;
 	private static final int INITIAL_WIDTH = 302;
@@ -84,7 +84,7 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 	private double posicionMouseY;
 
 	private ScrollableSkillScreen() {
-		super(NarratorChatListener.EMPTY);
+		super(NarratorChatListener.NO_TITLE);
 		ClientSkillBuilder skillManager = new ClientSkillBuilder(Minecraft.getInstance());
 		skillManager.buildSkillTrees();
 		this.clientSkillManager = skillManager;
@@ -128,7 +128,7 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 
 	public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
 		if (openScreenKeyPressed == keyCode) {
-			this.closeScreen();
+			this.onClose();
 			return true;
 		} else
 			return super.keyPressed(keyCode, scanCode, modifiers);
@@ -141,13 +141,12 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 		this.renderBackground(matrixStack);
 		if (maxPages != 0) {
 			ITextComponent page = new StringTextComponent(String.format("%d / %d", tabPage + 1, maxPages + 1));
-			int width = this.font.getStringPropertyWidth(page);
+			int width = this.font.width(page);
 			RenderSystem.disableLighting();
-			this.font.func_238407_a_(matrixStack, page.func_241878_f(), offsetX + (INITIAL_WIDTH / 2) - (width / 2),
-					offsetY - 44, -1);
+			this.font.drawShadow(matrixStack, page.getVisualOrderText(), offsetX + (INITIAL_WIDTH / 2) - (width / 2),offsetY - 44, -1);
 		}
 		this.drawWindowBackground(matrixStack, mouseX, mouseY);
-		this.drawSkillLevel(matrixStack);
+		//this.drawSkillLevel(matrixStack);
 		this.renderWindow(matrixStack);
 		this.drawWindowTooltips(matrixStack, mouseX, mouseY);
 	}
@@ -255,7 +254,7 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 	public void renderWindow(MatrixStack matrixStack) {
 		RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
 		RenderSystem.enableBlend();
-		this.minecraft.getTextureManager().bindTexture(WINDOW);
+		this.minecraft.getTextureManager().bind(WINDOW);
 
 		// Pinta la pantalla exterior
 		// AbstractGui.blit(matrixStack, offsetX, offsetY, 0, 0, INITIAL_WIDTH,
@@ -263,7 +262,7 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 		AbstractGui.blit(matrixStack, offsetX, offsetY, 0, 0, INITIAL_WIDTH, INITIAL_HEIGHT + INFO_SPACE,INITIAL_TEXTURE_WIDTH, INITIAL_TEXTURE_HEIGHT);
 
 		if (this.tabs.size() > 1) {
-			this.minecraft.getTextureManager().bindTexture(TABS);
+			this.minecraft.getTextureManager().bind(TABS);
 
 			for (GuiSkillTab skillTabGui : this.tabs.values()) {
 				if (skillTabGui.getPage() == tabPage)
@@ -283,38 +282,33 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 			RenderSystem.disableBlend();
 		}
 
-		this.font.func_243248_b(matrixStack, GUI_LABEL, (float) (offsetX + 8), (float) (offsetY + 6), 4210752);
+		 this.font.draw(matrixStack, GUI_LABEL, (float) (offsetX + 8), (float) (offsetY + 6), 4210752);
 
 		int unspentPoints = expCap.map(y -> y.getUnspentPoints()).orElse(-1);
 		if (unspentPoints != 0) {
-			unspentSkillHolder.append(UNSPENT_LABEL);
+			/*unspentSkillHolder.append(UNSPENT_LABEL);
 			unspentSkillHolder.appendString("" + unspentPoints);
-			this.font.func_243248_b(matrixStack, unspentSkillHolder, (float) (offsetX + 8),
-					(float) (offsetY + INITIAL_HEIGHT), 4210752);
+			this.font.drawText(matrixStack, unspentSkillHolder, (float) (offsetX + 8),
+					(float) (offsetY + INITIAL_HEIGHT), 4210752);*/
 		}
 
 		// Pinta coordenadas de mouse (DEBUG)
-		this.font.func_243248_b(matrixStack,
+		this.font.draw(matrixStack,
 				new StringTextComponent(
 						"x: " + (offsetX + WINDOW_AREA_OFFSET_X) + " y: " + (offsetY + WINDOW_AREA_OFFSET_Y)),
 				(float) (offsetX + 14), (float) (offsetY + 18), 4210752);
 
-		this.font.func_243248_b(matrixStack, new StringTextComponent("offsetX: " + offsetX + " offsetY: " + offsetY),
+		this.font.draw(matrixStack, new StringTextComponent("offsetX: " + offsetX + " offsetY: " + offsetY),
 				(float) (offsetX + 14), (float) (offsetY + 28), 4210752);
 
-		this.font.func_243248_b(matrixStack,
-				new StringTextComponent("I width: " + (offsetX + WINDOW_AREA_OFFSET_X + INNER_WIDTH) + " I height: "
-						+ (offsetY + WINDOW_AREA_OFFSET_Y + INNER_HEIGHT)),
+		this.font.draw(matrixStack,
+				new StringTextComponent("I width: " + (offsetX + WINDOW_AREA_OFFSET_X + INNER_SCREEN_WIDTH) + " I height: "
+						+ (offsetY + WINDOW_AREA_OFFSET_Y + INNER_SCREEN_HEIGHT)),
 				(float) (offsetX + 14), (float) (offsetY + 38), 4210752);
-
-		if (isInsideInnerFrame(mouseX, mouseY))
-			this.font.func_243248_b(matrixStack, new StringTextComponent("mouseX: " + mouseX + " mouseY: " + mouseY),
-					(float) (offsetX + 14), (float) (offsetY + 48), 4210752);
-		/*
-		 * this.font.func_243248_b(matrixStack, new StringTextComponent("width: " +
-		 * this.width + " offsetY: " + this.height), (float) (offsetX + 14), (float)
-		 * (offsetY + 38), 4210752);
-		 */
+		 
+		/*if (isInsideInnerFrame(mouseX, mouseY,14,48))
+			this.font.drawText(matrixStack, new StringTextComponent("mouseX: " + mouseX + " mouseY: " + mouseY),(float) (offsetX + 14), (float) (offsetY + 48), 4210752);
+		*/
 	}
 
 	/**
@@ -332,10 +326,10 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 		// Pinta el fondo vacío cuando no hay elementos
 		if (selectedSkillTabGui == null) {
 			fill(matrixStack, offsetX + WINDOW_AREA_OFFSET_X, offsetY + WINDOW_AREA_OFFSET_Y,
-					offsetX + WINDOW_AREA_OFFSET_X + INNER_WIDTH, offsetY + WINDOW_AREA_OFFSET_Y + INNER_HEIGHT,-16777216);
+					offsetX + WINDOW_AREA_OFFSET_X + INNER_SCREEN_WIDTH, offsetY + WINDOW_AREA_OFFSET_Y + INNER_SCREEN_HEIGHT,-16777216);
 			int i = offsetX + WINDOW_AREA_OFFSET_X + 117;
 			drawCenteredString(matrixStack, this.font, EMPTY, i,offsetY + WINDOW_AREA_OFFSET_Y + 56 - WINDOW_AREA_OFFSET_X / 2, -1);
-			drawCenteredString(matrixStack, this.font, SAD_LABEL, i,offsetY + WINDOW_AREA_OFFSET_Y + INNER_HEIGHT - WINDOW_AREA_OFFSET_X, -1);
+			drawCenteredString(matrixStack, this.font, SAD_LABEL, i,offsetY + WINDOW_AREA_OFFSET_Y + INNER_SCREEN_HEIGHT - WINDOW_AREA_OFFSET_X, -1);
 		} else {
 			// Pinta el fondo con elementos
 			RenderSystem.pushMatrix();
@@ -375,9 +369,8 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 
 	}
 
-	@SuppressWarnings("deprecation")
+	/*@SuppressWarnings("deprecation")
 	private void drawSkillLevel(MatrixStack matrixStack) {
-		// RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
 		if (this.selectedTab != null) {
 			RenderSystem.pushMatrix();
 			RenderSystem.enableDepthTest();
@@ -388,10 +381,10 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 			RenderSystem.disableDepthTest();
 			RenderSystem.popMatrix();
 		}
-	}
+	}*/
 
-	public boolean isInsideInnerFrame(double coordX, double coordY) {
-		return coordX >= 0 && coordY >= 0 && coordX <= (INNER_WIDTH) && coordY <= (INNER_HEIGHT);
+	public boolean isInsideInnerFrame(double coordX, double coordY,int frameWidth, int frameHeight) {
+		return coordX+frameWidth >= 0 && coordY+frameHeight >= 0 && coordX <= (INNER_SCREEN_WIDTH) && coordY <= (INNER_SCREEN_HEIGHT);
 	}
 
 	public void rootSkillAdded(SkillElement advancementIn) {
@@ -451,7 +444,7 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 
 	public <T extends Widget> T addButton(T button) {
 		this.buttons.add(button);
-		return this.addListener(button);
+		return this.addWidget(button);
 	}
 
 	public LazyOptional<IBaseSkillCapability> getSkillCap() {

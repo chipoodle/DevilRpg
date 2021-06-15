@@ -62,7 +62,7 @@ public class ManaBarRenderer extends AbstractGui {
 		} */
 
 		/* This object draws text using the Minecraft font */
-		FontRenderer fr = mc.fontRenderer;
+		FontRenderer fr = mc.font;
 
 		/* This object inserts commas into number strings */
 		DecimalFormat d = new DecimalFormat("#,###");
@@ -80,7 +80,7 @@ public class ManaBarRenderer extends AbstractGui {
 		GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
 
 		/* This method tells OpenGL to draw with the custom texture */
-		mc.getTextureManager().bindTexture(overlayBar);
+		mc.getTextureManager().bind(overlayBar);
 
 		// we will draw the status bar just above the hotbar. obtained by inspecting the
 		// vanilla hotbar rendering code
@@ -161,8 +161,8 @@ public class ManaBarRenderer extends AbstractGui {
 		/* This generates the string that I want to draw. */
 		String s = d.format(manaRun) + "/" + d.format(maxMana);
 
-		fr.drawString(matrixStack, s, -fr.getStringWidth(s) + 1, 2, 0x4D0000);
-		fr.drawString(matrixStack, s, -fr.getStringWidth(s), 1, 0xFFFFFF);
+		fr.draw(matrixStack, s, -fr.width(s) + 1, 2, 0x4D0000);
+		fr.draw(matrixStack, s, -fr.width(s), 1, 0xFFFFFF);
 
 		GL11.glPopMatrix();
 

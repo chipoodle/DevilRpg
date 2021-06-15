@@ -52,10 +52,10 @@ public class SoulFireBallEntity extends ProjectileItemEntity implements ISoulEnt
 	}
 
 	@OnlyIn(Dist.CLIENT)
-	private IParticleData makeParticle() {
-		ItemStack itemstack = this.func_213882_k();
-		// return (IParticleData) (itemstack.isEmpty() ? ParticleTypes.ITEM_SNOWBALL
-		return (IParticleData) (itemstack.isEmpty() ? ParticleTypes.CLOUD
+	private IParticleData getParticle() {
+		ItemStack itemstack = this.getItemRaw();
+		// return (IParticleData) (itemstack.isEmpty() ? ParticleTypes.CLOUD
+		return (IParticleData) (itemstack.isEmpty() ? ParticleTypes.ITEM_SNOWBALL
 				: new ItemParticleData(ParticleTypes.ITEM, itemstack));
 	}
 
@@ -63,12 +63,12 @@ public class SoulFireBallEntity extends ProjectileItemEntity implements ISoulEnt
 	 * Handler for {@link World#setEntityState}
 	 */
 	@OnlyIn(Dist.CLIENT)
-	public void handleStatusUpdate(byte id) {
+	public void handleEntityEvent(byte id) {
 		if (id == 3) {
-			IParticleData iparticledata = this.makeParticle();
+			IParticleData iparticledata = this.getParticle();
 
 			for (int i = 0; i < 8; ++i) {
-				this.world.addParticle(iparticledata, this.getPosX(), this.getPosY(), this.getPosZ(), 0.0D, 0.0D, 0.0D);
+				this.level.addParticle(iparticledata, this.getX(), this.getY(), this.getZ(), 0.0D, 0.0D, 0.0D);
 			}
 		}
 
@@ -77,16 +77,15 @@ public class SoulFireBallEntity extends ProjectileItemEntity implements ISoulEnt
 	/**
 	 * Called when the arrow hits an entity
 	 */
-	protected void onEntityHit(EntityRayTraceResult p_213868_1_) {
-		super.onEntityHit(p_213868_1_);
-		Entity targetEntity = p_213868_1_.getEntity();
-		targetEntity.attackEntityFrom(DamageSource.causeThrownDamage(this, this.func_234616_v_()), (float) damage / 6);
+	protected void onHitEntity(EntityRayTraceResult result) {
+		super.onHitEntity(result);
+		Entity targetEntity = result.getEntity();
+		targetEntity.hurt(DamageSource.thrown(this, this.getOwner()), (float) damage / 6);
 		if (targetEntity instanceof LivingEntity) {
 			LivingEntity livingEntity = (LivingEntity) targetEntity;
-			EffectInstance pri = new EffectInstance(Effects.SLOWNESS, puntosAsignados * 6,
-					getPotenciaPocion(puntosAsignados), false, true);
-			if (livingEntity.isPotionApplicable(pri)) {
-				livingEntity.addPotionEffect(pri);
+			EffectInstance pri = new EffectInstance(Effects.MOVEMENT_SLOWDOWN, puntosAsignados * 6, getPotenciaPocion(puntosAsignados), false, true);
+			if (livingEntity.canBeAffected(pri)) {
+				livingEntity.addEffect(pri);
 			}
 		}
 	}
@@ -94,10 +93,10 @@ public class SoulFireBallEntity extends ProjectileItemEntity implements ISoulEnt
 	/**
 	 * Called when this EntityFireball hits a block or entity.
 	 */
-	protected void onImpact(RayTraceResult result) {
-		super.onImpact(result);
-		if (!this.world.isRemote) {
-			this.world.setEntityState(this, (byte) 3);
+	protected void onHit(RayTraceResult result) {
+		super.onHit(result);
+		if (!this.level.isClientSide) {
+			this.level.broadcastEntityEvent(this, (byte) 3);
 			this.remove();
 		}
 	}
@@ -125,7 +124,7 @@ public class SoulFireBallEntity extends ProjectileItemEntity implements ISoulEnt
 	 * @see FMLPlayMessages.SpawnEntity
 	 */
 	@Override
-	public IPacket<?> createSpawnPacket() {
+	public IPacket<?> getAddEntityPacket() {
 		return NetworkHooks.getEntitySpawningPacket(this);
 	}
 }

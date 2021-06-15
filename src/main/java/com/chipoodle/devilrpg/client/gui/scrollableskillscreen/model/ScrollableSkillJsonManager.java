@@ -38,7 +38,7 @@ public class ScrollableSkillJsonManager extends JsonReloadListener {
 		      Map<ResourceLocation, SkillElement.Builder> map = Maps.newHashMap();
 		      objectIn.forEach((conditions, advancement) -> {
 		         try {
-		            JsonObject jsonobject = JSONUtils.getJsonObject(advancement, "advancement");
+		            JsonObject jsonobject = JSONUtils.convertToJsonObject(advancement, "advancement");
 		            SkillElement.Builder advancement$builder = SkillElement.Builder.deserialize(jsonobject);
 		            if (advancement$builder == null) {
 		                LOGGER.debug("Skipping loading advancement {} as it's conditions were not met", conditions);
