@@ -25,6 +25,8 @@ import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.chat.NarratorChatListener;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.Widget;
+import net.minecraft.client.util.InputMappings;
+import net.minecraft.client.util.InputMappings.Input;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.text.ITextComponent;
@@ -67,7 +69,8 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 	private int offsetX;
 	private int offsetY;
 
-	private int openScreenKeyPressed;
+	private Input openScreenKeyPressed;
+	private static int ESC_KEY = 256;
 
 	private PlayerEntity player;
 	private LazyOptional<IBaseSkillCapability> skillCap;
@@ -93,12 +96,13 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 		skillEntryGuiApretado = null;
 	}
 
-	public ScrollableSkillScreen(int keyCode) {
+	public ScrollableSkillScreen(Input input) {
 		this();
-		openScreenKeyPressed = keyCode;
+		openScreenKeyPressed = input;
 		this.player = Minecraft.getInstance().player;
 		expCap = player.getCapability(PlayerExperienceCapabilityProvider.EXPERIENCE_CAP);
 		skillCap = player.getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
+		DevilRpg.LOGGER.info("ScrollableSkillScreen consturctor. openScreenKeyPressed: {}", openScreenKeyPressed);
 	}
 
 	protected void init() {
@@ -108,8 +112,7 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 		if (this.selectedTab == null && !this.tabs.isEmpty()) {
 			this.clientSkillManager.setSelectedTab(this.tabs.values().iterator().next().getSkillElement(), true);
 		} else {
-			this.clientSkillManager.setSelectedTab(this.selectedTab == null ? null : this.selectedTab.getSkillElement(),
-					true);
+			this.clientSkillManager.setSelectedTab(this.selectedTab == null ? null : this.selectedTab.getSkillElement(),true);
 		}
 		if (this.tabs.size() > SkillTabType.MAX_TABS) {
 			int guiLeft = (this.width - INITIAL_WIDTH) / 2;
@@ -124,14 +127,16 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 
 	public void onClose() {
 		this.clientSkillManager.setListener((ClientSkillBuilder.IListener) null);
+		super.onClose();
 	}
 
 	public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-		if (openScreenKeyPressed == keyCode) {
+		Input pressedKeyCode = InputMappings.Type.KEYSYM.getOrCreate(keyCode);
+		if (openScreenKeyPressed.getName().equals(pressedKeyCode.getName())) {
 			this.onClose();
 			return true;
 		} else
-			return super.keyPressed(keyCode, scanCode, modifiers);
+			return super.keyPressed(pressedKeyCode.getValue(), scanCode, modifiers);
 	}
 
 	@SuppressWarnings("deprecation")
@@ -146,7 +151,6 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 			this.font.drawShadow(matrixStack, page.getVisualOrderText(), offsetX + (INITIAL_WIDTH / 2) - (width / 2),offsetY - 44, -1);
 		}
 		this.drawWindowBackground(matrixStack, mouseX, mouseY);
-		//this.drawSkillLevel(matrixStack);
 		this.renderWindow(matrixStack);
 		this.drawWindowTooltips(matrixStack, mouseX, mouseY);
 	}

@@ -9,6 +9,7 @@ import com.chipoodle.devilrpg.util.PowerEnum;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.settings.KeyBinding;
+import net.minecraft.client.util.InputMappings;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.InputEvent.KeyInputEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -44,25 +45,25 @@ public class ClientModKeyInputEventSubscriber {
 		Minecraft instance = Minecraft.getInstance();
 		
 		if (KEYS[0].consumeClick()) {
-			DevilRpg.LOGGER.debug(KEYS[0].saveString() + "pressed. " + KEYS[0].getKey().getValue());
+			DevilRpg.LOGGER.debug(KEYS[0].saveString() + " pressed. " + KEYS[0].getKey().getValue());
 			ModNetwork.CHANNEL.sendToServer(new KeyboardSkillServerHandler(PowerEnum.POWER1));
 		}
 		if (KEYS[1].consumeClick()) {
-			DevilRpg.LOGGER.debug(KEYS[1].saveString() + "pressed. " + KEYS[1].getKey().getValue());
+			DevilRpg.LOGGER.debug(KEYS[1].saveString() + " pressed. " + KEYS[1].getKey().getValue());
 			ModNetwork.CHANNEL.sendToServer(new KeyboardSkillServerHandler(PowerEnum.POWER2));
 		}
 		if (KEYS[2].consumeClick()) {
-			DevilRpg.LOGGER.debug(KEYS[2].saveString() + "pressed. " + KEYS[2].getKey().getValue());
+			DevilRpg.LOGGER.debug(KEYS[2].saveString() + " pressed. " + KEYS[2].getKey().getValue());
 			ModNetwork.CHANNEL.sendToServer(new KeyboardSkillServerHandler(PowerEnum.POWER3));
 		}
 		if (KEYS[3].consumeClick()) {
-			DevilRpg.LOGGER.debug(KEYS[3].saveString() + "pressed. " + KEYS[3].getKey().getValue());
+			DevilRpg.LOGGER.debug(KEYS[3].saveString() + " pressed. " + KEYS[3].getKey().getValue());
 			ModNetwork.CHANNEL.sendToServer(new KeyboardSkillServerHandler(PowerEnum.POWER4));
 		}
 		if (KEYS[4].consumeClick()) {
-			DevilRpg.LOGGER.debug(KEYS[4].saveString() + "pressed. " + KEYS[4].getKey().getValue());
+			DevilRpg.LOGGER.debug(KEYS[4].saveString() + " pressed. " + KEYS[4].getKey().getValue());
 			//SkillScreen.open(Minecraft.getInstance().player,KEYS[4].getKey().getKeyCode())
-			Minecraft.getInstance().tell(() -> Minecraft.getInstance().setScreen(new ScrollableSkillScreen(KEYS[4].getKey().getValue())));
+			Minecraft.getInstance().tell(() -> Minecraft.getInstance().setScreen(new ScrollableSkillScreen(KEYS[4].getKey())));
 		}
 
 	}
