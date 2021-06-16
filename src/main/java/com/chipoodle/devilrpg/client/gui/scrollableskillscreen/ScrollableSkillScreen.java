@@ -206,7 +206,7 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 			}
 			if (skillEntryGuiApretado != null) {
 				isDraggingPowerButton = true;
-				DevilRpg.LOGGER.info("|----------- mouseDragged: " + skillEntryGuiApretado.getSkillElement().getSkillCapability());
+				DevilRpg.LOGGER.info("|----------- rightMouseDragged: " + skillEntryGuiApretado.getSkillElement().getSkillCapability());
 				
 				return true;
 			}
@@ -229,6 +229,7 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 		boolean returned = super.mouseReleased(mouseX, mouseY, state);
 		if (state == ButtonMouse.RIGHT_BUTTON) { // botón derecho
 			if (skillEntryGuiApretado != null) {
+				DevilRpg.LOGGER.info("|----------- rightMouseReleases: " + skillEntryGuiApretado.getSkillElement().getSkillCapability());
 				/*CustomGuiButton copy = powerButtonList.stream().filter(x -> x.isInside(mouseX, mouseY)).findAny().orElse(null);
 				if (copy != null) {
 					copy.setButtonTexture(skillButtonApretado.getButtonTexture());
