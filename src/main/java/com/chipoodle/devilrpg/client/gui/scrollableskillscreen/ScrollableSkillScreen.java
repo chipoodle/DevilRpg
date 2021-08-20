@@ -56,7 +56,7 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 	private static final ResourceLocation WINDOW_LOCATION = new ResourceLocation(IMG_LOCATION + "window-256b.png");
 	private static final ResourceLocation TABS_LOCATION = new ResourceLocation("textures/gui/advancements/tabs.png");
 	private static final ResourceLocation EMPTY_POWER_IMAGE_RESOURCE = new ResourceLocation(IMG_LOCATION + "celtic/empty.png");
-
+ 
 	private static final ITextComponent SAD_LABEL = new TranslationTextComponent("advancements.sad_label");
 	private static final ITextComponent EMPTY = new TranslationTextComponent("advancements.empty");
 	private static final ITextComponent GUI_LABEL = new TranslationTextComponent("gui.skills.title");
