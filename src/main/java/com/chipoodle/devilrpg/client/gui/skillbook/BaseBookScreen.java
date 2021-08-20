@@ -76,18 +76,18 @@ public class BaseBookScreen extends Screen {
 	private final boolean pageTurnSounds;
 
 	public BaseBookScreen(ReadBookScreen.IBookInfo bookInfoIn) {
-		      this(bookInfoIn, true);
-		   }
+		this(bookInfoIn, true);
+	}
 
 	public BaseBookScreen() {
-		      this(EMPTY_BOOK, false);
-		   }
+		this(EMPTY_BOOK, false);
+	}
 
 	private BaseBookScreen(ReadBookScreen.IBookInfo bookInfoIn, boolean pageTurnSoundsIn) {
-		      super(NarratorChatListener.NO_TITLE);
-		      this.bookInfo = bookInfoIn;
-		      this.pageTurnSounds = pageTurnSoundsIn;
-		   }
+		super(NarratorChatListener.NO_TITLE);
+		this.bookInfo = bookInfoIn;
+		this.pageTurnSounds = pageTurnSoundsIn;
+	}
 
 	public void setBookAccess(ReadBookScreen.IBookInfo p_214155_1_) {
 		this.bookInfo = p_214155_1_;

@@ -1,81 +1,83 @@
-package com.chipoodle.devilrpg.client.gui.skillbook;
+package com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model;
 
 import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.AbstractGui;
 import net.minecraft.client.gui.FontRenderer;
-import net.minecraft.client.gui.widget.button.Button.IPressable;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.text.StringTextComponent;
-import net.minecraftforge.fml.client.gui.GuiUtils;
 import net.minecraftforge.fml.client.gui.widget.ExtendedButton;
 
-public class CustomGuiButton extends ExtendedButton {
+public class CustomSkillButton extends ExtendedButton {
 	private ResourceLocation resourceLocation;
 	private int textureWidth;
 	private int textureHeight;
-	private float scale = 0.075F;
-	private float scaledText = 7.0f;
-	private float zLevel = 2;
+	private float xScale;
+	private float yScale;
+	private float scaledText;
 	private Enum<?> skillName;
-	private int pageBelonging;
 	private int drawnSkillLevel;
 	boolean showSkillNumber;
 
-	public CustomGuiButton(int x, int y, int buttonWidth, int buttonHeight, String buttonText, ResourceLocation textureResource,
+	public CustomSkillButton(int x, int y, int buttonWidth, int buttonHeight, String buttonText, ResourceLocation textureResource,
 			int textureWidth, int textureHeight, Enum<?> skillName, int drawnSkillLevel, IPressable function,
-			int pageBelonging, boolean showSkillNumber, float scale, float scaledText) {
-		
+			boolean showSkillNumber, float scaledText) {
 		super(x, y, buttonWidth, buttonHeight, new StringTextComponent(buttonText), function);
 		resourceLocation = textureResource;
 		this.textureWidth = textureWidth;
 		this.textureHeight = textureHeight;
 		this.skillName = skillName;
-		this.pageBelonging = pageBelonging;
 		this.drawnSkillLevel = drawnSkillLevel;
 		this.showSkillNumber = showSkillNumber;
-		this.scale = scale;
 		this.scaledText = scaledText;
+		
+		xScale = (float) buttonWidth / textureWidth;
+		yScale = (float) buttonHeight / textureHeight;
+	}
+	
+	public static float roundAvoid(float value, int places) {
+	    float scale = (float) Math.pow(10, places);
+	    return Math.round(value * scale) / scale;
 	}
 
 	/**
 	 * Draws this button to the screen.
 	 */
-	@SuppressWarnings("deprecation")
 	@Override
 	public void renderButton(MatrixStack matrixStack, int mouseX, int mouseY, float partialTicks) {
+		super.renderButton(matrixStack, mouseX, mouseY, partialTicks);
+		
 		if (this.visible) {
 			Minecraft instance = Minecraft.getInstance();
-			instance.getTextureManager().bind(resourceLocation);
-			// this.isHovered = mouseX >= this.x && mouseY >= this.y && mouseX < this.x +
-			// this.width && mouseY < this.y + this.height;
-			this.isHovered = this.isMouseOver(mouseX, mouseY); // isInside(mouseX, mouseY);
+			this.isHovered = this.isMouseOver(mouseX, mouseY); 
 			int i = 3 * this.getYImage(this.isHovered());
 
+			instance.getTextureManager().bind(resourceLocation);
 			RenderSystem.pushMatrix();
 			RenderSystem.enableBlend();
 			RenderSystem.defaultBlendFunc();
-			RenderSystem.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA,
-					GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ONE,
-					GlStateManager.DestFactor.ZERO);
-			RenderSystem.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA,
-					GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
-			RenderSystem.translatef((this.x - this.x * scale) - 1, (this.y - this.y * scale) - 1, 0);
-			RenderSystem.scalef(scale, scale, scale);
-			//RenderSystem.translatef( Math.round(this.width / scale), Math.round(this.height / scale), 0);
+			RenderSystem.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA,GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ONE,GlStateManager.DestFactor.ZERO);
+			RenderSystem.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA,GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
+
+			RenderSystem.translatef((this.x - this.x * xScale), (this.y - this.y * yScale), 0);
+			RenderSystem.scalef(xScale, yScale, 0);
+			RenderSystem.translatef(this.x * -xScale/width, this.y * -yScale/height, 0);
 			
-			GuiUtils.drawContinuousTexturedBox(resourceLocation, this.x, this.y, i, i, Math.round(this.width / scale),
-					Math.round(this.height / scale), Math.round(this.textureWidth / scale),
-					Math.round(this.textureHeight / scale), 0, 0, 0, 0, zLevel);
-			renderCenteredText(matrixStack);
+			AbstractGui.blit(matrixStack, x, y, 0, 0,textureWidth, textureHeight, textureWidth, textureHeight);
+
 			RenderSystem.popMatrix();
+			renderCenteredText(matrixStack);
 		}
 	}
 
+	@SuppressWarnings("deprecation")
 	private void renderCenteredText(MatrixStack matrixStack) {
+		
+		RenderSystem.pushMatrix();
 		int xTitle = (this.x + this.width / 2) + 5;
 		int yTitle = (this.y + this.height) + 20;
 		int textPositionX = this.x;
@@ -95,10 +97,11 @@ public class CustomGuiButton extends ExtendedButton {
 		RenderSystem.translatef((textPositionX - textPositionX * scaledText) - 1,
 				(textPositionY - textPositionY * scaledText) - 1, 0);
 		RenderSystem.scalef(scaledText, scaledText, scaledText);
-		this.drawCenteredString(matrixStack,fontrenderer, getMessage(), xTitle, yTitle, color);
+		AbstractGui.drawCenteredString(matrixStack,fontrenderer, getMessage(), xTitle, yTitle, color);
 		if (showSkillNumber)
-			this.drawCenteredString(matrixStack,fontrenderer, drawnSkillLevel + "", this.x + this.width,
+			AbstractGui.drawCenteredString(matrixStack,fontrenderer, drawnSkillLevel + "", this.x + this.width,
 					(this.y + this.height) - 20, color);
+		RenderSystem.popMatrix();
 	}
 
 	public boolean isInside(double mouseX, double mouseY) {
@@ -121,20 +124,8 @@ public class CustomGuiButton extends ExtendedButton {
 		return textureHeight;
 	}
 
-	public float getScale() {
-		return this.scale;
-	}
-
-	public Enum<?> getSkillName() {
+	public Enum<?> getEnum() {
 		return skillName;
-	}
-
-	public int getPageBelonging() {
-		return pageBelonging;
-	}
-
-	public float getzLevel() {
-		return zLevel;
 	}
 
 	public int getDrawnSkillLevel() {
@@ -145,12 +136,8 @@ public class CustomGuiButton extends ExtendedButton {
 		this.drawnSkillLevel = drawnSkillLevel;
 	}
 
-	public void setzLevel(int i) {
-		zLevel = i;
-	}
-
-	/*public float getHeight() {
-		return this.height;
-	}*/
-
+    public void setCoords(int x, int y) {
+    	this.x = x;
+    	this.y = y;
+    }
 }

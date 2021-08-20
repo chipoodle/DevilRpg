@@ -33,22 +33,24 @@ public class PlayerExperienceCapability implements IBaseExperienceCapability {
 	@Override
 	public void setCurrentLevel(int currentLevel, PlayerEntity pe) {
 		this.currentLevel = currentLevel;
-		if(this.currentLevel > maximumLevel) {
-			unspentPoints+= this.currentLevel-maximumLevel;
+		if (this.currentLevel > maximumLevel) {
+			unspentPoints += this.currentLevel - maximumLevel;
 			maximumLevel = this.currentLevel;
-		}	
-		if(!pe.level.isClientSide)
+		}
+		if (!pe.level.isClientSide)
 			sendExperienceChangesToClient((ServerPlayerEntity) pe);
 		else
 			sendExperienceChangesToServer();
 	}
 
-
 	@Override
 	public int consumePoint() {
-		unspentPoints--;
-		sendExperienceChangesToServer();
-		return 1;
+		if (unspentPoints > 0) {
+			unspentPoints--;
+			sendExperienceChangesToServer();
+			return 1;
+		}
+		return 0;
 	}
 
 	@Override
@@ -70,10 +72,11 @@ public class PlayerExperienceCapability implements IBaseExperienceCapability {
 	private void sendExperienceChangesToServer() {
 		ModNetwork.CHANNEL.sendToServer(new PlayerExperienceClientServerHandler(getNBTData()));
 	}
-	
+
 	private void sendExperienceChangesToClient(ServerPlayerEntity pe) {
-		DevilRpg.LOGGER.info("----------> sendExperienceChangesToClient. unspentPoints: "+unspentPoints);
-		ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(()->pe),new PlayerExperienceClientServerHandler(getNBTData()));
-		
+		DevilRpg.LOGGER.info("----------> sendExperienceChangesToClient. unspentPoints: " + unspentPoints);
+		ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> pe),
+				new PlayerExperienceClientServerHandler(getNBTData()));
+
 	}
 }

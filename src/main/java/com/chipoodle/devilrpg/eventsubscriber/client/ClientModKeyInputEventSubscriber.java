@@ -62,7 +62,7 @@ public class ClientModKeyInputEventSubscriber {
 		}
 		if (KEYS[4].consumeClick()) {
 			DevilRpg.LOGGER.debug(KEYS[4].saveString() + " pressed. " + KEYS[4].getKey().getValue());
-			//SkillScreen.open(Minecraft.getInstance().player,KEYS[4].getKey().getKeyCode())
+			//SkillScreen.open(Minecraft.getInstance().player,KEYS[4].getKey());
 			Minecraft.getInstance().tell(() -> Minecraft.getInstance().setScreen(new ScrollableSkillScreen(KEYS[4].getKey())));
 		}
 

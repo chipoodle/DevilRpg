@@ -1,8 +1,12 @@
 package com.chipoodle.devilrpg.client.gui.scrollableskillscreen;
 
-import java.awt.TextComponent;
+import java.util.Arrays;
+import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.annotation.Nullable;
 
@@ -12,7 +16,7 @@ import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapabilityPr
 import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
 import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model.ClientSkillBuilder;
-import com.chipoodle.devilrpg.client.gui.skillbook.CustomGuiButton;
+import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model.CustomSkillButton;
 import com.chipoodle.devilrpg.util.PowerEnum;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import com.google.common.collect.Maps;
@@ -21,10 +25,10 @@ import com.mojang.blaze3d.systems.RenderSystem;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.AbstractGui;
-import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.chat.NarratorChatListener;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.Widget;
+import net.minecraft.client.gui.widget.button.Button;
 import net.minecraft.client.util.InputMappings;
 import net.minecraft.client.util.InputMappings.Input;
 import net.minecraft.entity.player.PlayerEntity;
@@ -35,11 +39,12 @@ import net.minecraft.util.text.TranslationTextComponent;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.common.util.LazyOptional;
+import net.minecraftforge.fml.client.gui.widget.ExtendedButton;
 
 @OnlyIn(Dist.CLIENT)
 public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.IListener {
-	private static final int INITIAL_TEXTURE_HEIGHT = 256;
 	private static final int INITIAL_TEXTURE_WIDTH = 308;
+	private static final int INITIAL_TEXTURE_HEIGHT = 256;
 	private static final int INNER_SCREEN_WIDTH = 282;
 	private static final int INNER_SCREEN_HEIGHT = 162;
 	private static final int WINDOW_AREA_OFFSET_X = 10;
@@ -47,12 +52,11 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 	private static final int INITIAL_WIDTH = 302;
 	private static final int INITIAL_HEIGHT = 190;
 	private static final int INFO_SPACE = 20;
-	// private static final int INITIAL_HEIGHT = 220;
-	// private static final ResourceLocation WINDOW = new
-	// ResourceLocation("textures/gui/advancements/window.png");
-	private static final ResourceLocation WINDOW = new ResourceLocation(
-			DevilRpg.MODID + ":textures/gui/window-256b.png");
-	private static final ResourceLocation TABS = new ResourceLocation("textures/gui/advancements/tabs.png");
+	private static final String IMG_LOCATION = DevilRpg.MODID + ":textures/gui/";
+	private static final ResourceLocation WINDOW_LOCATION = new ResourceLocation(IMG_LOCATION + "window-256b.png");
+	private static final ResourceLocation TABS_LOCATION = new ResourceLocation("textures/gui/advancements/tabs.png");
+	private static final ResourceLocation EMPTY_POWER_IMAGE_RESOURCE = new ResourceLocation(IMG_LOCATION + "celtic/empty.png");
+
 	private static final ITextComponent SAD_LABEL = new TranslationTextComponent("advancements.sad_label");
 	private static final ITextComponent EMPTY = new TranslationTextComponent("advancements.empty");
 	private static final ITextComponent GUI_LABEL = new TranslationTextComponent("gui.skills.title");
@@ -61,30 +65,40 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 	private final Map<SkillElement, GuiSkillTab> tabs = Maps.newLinkedHashMap();
 	private GuiSkillTab selectedTab;
 	private boolean isScrolling;
-	private boolean isDraggingPowerButton;
+	private boolean isDraggingToPowerButton;
 	private static int tabPage, maxPages;
 
 	private double mouseX;
 	private double mouseY;
-	private int offsetX;
-	private int offsetY;
+	private int offsetLeft;
+	private int offsetTop;
 
 	private Input openScreenKeyPressed;
-	private static int ESC_KEY = 256;
-
-	private PlayerEntity player;
-	private LazyOptional<IBaseSkillCapability> skillCap;
-	private LazyOptional<IBaseExperienceCapability> expCap;
-
-	class ButtonMouse {
-		public static final int LEFT_BUTTON = 0;
-		public static final int RIGHT_BUTTON = 1;
-	}
 
 	StringTextComponent unspentSkillHolder;
 	private GuiSkillEntry skillEntryGuiApretado;
 	private double posicionMouseX;
 	private double posicionMouseY;
+
+	private double dragPositionMouseX;
+	private double dragPositionMouseY;
+
+	private PlayerEntity player;
+	private LazyOptional<IBaseSkillCapability> skillCap;
+	private LazyOptional<IBaseExperienceCapability> expCap;
+
+	private Set<CustomSkillButton> powerButtonList;
+
+	private EnumMap<SkillEnum, ResourceLocation> skillsImages;
+
+	class ButtonMouse {
+		private ButtonMouse() {
+
+		}
+
+		public static final int LEFT_BUTTON = 0;
+		public static final int RIGHT_BUTTON = 1;
+	}
 
 	private ScrollableSkillScreen() {
 		super(NarratorChatListener.NO_TITLE);
@@ -92,8 +106,9 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 		skillManager.buildSkillTrees();
 		this.clientSkillManager = skillManager;
 		unspentSkillHolder = new StringTextComponent("");
-		isDraggingPowerButton = false;
+		isDraggingToPowerButton = false;
 		skillEntryGuiApretado = null;
+		skillsImages = new EnumMap<>(SkillEnum.class);
 	}
 
 	public ScrollableSkillScreen(Input input) {
@@ -103,33 +118,44 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 		expCap = player.getCapability(PlayerExperienceCapabilityProvider.EXPERIENCE_CAP);
 		skillCap = player.getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
 		DevilRpg.LOGGER.info("ScrollableSkillScreen consturctor. openScreenKeyPressed: {}", openScreenKeyPressed);
+		powerButtonList = new LinkedHashSet<>();
 	}
 
+	@Override
 	protected void init() {
 		this.tabs.clear();
 		this.selectedTab = null;
 		this.clientSkillManager.setListener(this);
+
 		if (this.selectedTab == null && !this.tabs.isEmpty()) {
 			this.clientSkillManager.setSelectedTab(this.tabs.values().iterator().next().getSkillElement(), true);
 		} else {
-			this.clientSkillManager.setSelectedTab(this.selectedTab == null ? null : this.selectedTab.getSkillElement(),true);
+			this.clientSkillManager.setSelectedTab(this.selectedTab == null ? null : this.selectedTab.getSkillElement(),
+					true);
 		}
 		if (this.tabs.size() > SkillTabType.MAX_TABS) {
 			int guiLeft = (this.width - INITIAL_WIDTH) / 2;
 			int guiTop = (this.height - INITIAL_HEIGHT) / 2;
-			//pinta boton <
-			addButton(new net.minecraft.client.gui.widget.button.Button(guiLeft, guiTop - 50, 20, 20,new net.minecraft.util.text.StringTextComponent("<"), b -> tabPage = Math.max(tabPage - 1, 0)));
-			//pinta boton >
-			addButton(new net.minecraft.client.gui.widget.button.Button(guiLeft + INITIAL_WIDTH - 20, guiTop - 50, 20,20, new net.minecraft.util.text.StringTextComponent(">"),b -> tabPage = Math.min(tabPage + 1, maxPages)));
+			// pinta boton <
+			addButton(new ExtendedButton(guiLeft, guiTop - 50, 20, 20, new StringTextComponent("<"),
+					b -> tabPage = Math.max(tabPage - 1, 0)));
+			// pinta boton >
+			addButton(new ExtendedButton(guiLeft + INITIAL_WIDTH - 20, guiTop - 50, 20, 20,
+					new StringTextComponent(">"), b -> tabPage = Math.min(tabPage + 1, maxPages)));
 			maxPages = this.tabs.size() / SkillTabType.MAX_TABS;
 		}
+		///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		addPowerButtons();
+		loadAssignedPowerButtons();
 	}
 
+	@Override
 	public void onClose() {
 		this.clientSkillManager.setListener((ClientSkillBuilder.IListener) null);
 		super.onClose();
 	}
 
+	@Override
 	public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
 		Input pressedKeyCode = InputMappings.Type.KEYSYM.getOrCreate(keyCode);
 		if (openScreenKeyPressed.getName().equals(pressedKeyCode.getName())) {
@@ -139,33 +165,46 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 			return super.keyPressed(pressedKeyCode.getValue(), scanCode, modifiers);
 	}
 
-	@SuppressWarnings("deprecation")
+	@Override
 	public void render(MatrixStack matrixStack, int mouseX, int mouseY, float partialTicks) {
-		offsetX = (this.width - INITIAL_WIDTH) / 2;
-		offsetY = (this.height - INITIAL_HEIGHT) / 2;
+
+		offsetLeft = (this.width - INITIAL_WIDTH) / 2;
+		offsetTop = (this.height - INITIAL_HEIGHT) / 2;
 		this.renderBackground(matrixStack);
 		if (maxPages != 0) {
 			ITextComponent page = new StringTextComponent(String.format("%d / %d", tabPage + 1, maxPages + 1));
 			int width = this.font.width(page);
 			RenderSystem.disableLighting();
-			this.font.drawShadow(matrixStack, page.getVisualOrderText(), offsetX + (INITIAL_WIDTH / 2) - (width / 2),offsetY - 44, -1);
+			this.font.drawShadow(matrixStack, page.getVisualOrderText(), offsetLeft + (INITIAL_WIDTH / 2) - (width / 2),
+					offsetTop - 44, -1);
 		}
-		this.drawWindowBackground(matrixStack, mouseX, mouseY);
+		this.renderInside(matrixStack, mouseX, mouseY);
 		this.renderWindow(matrixStack);
-		this.drawWindowTooltips(matrixStack, mouseX, mouseY);
+		this.renderTooltips(matrixStack, mouseX, mouseY);
+		super.render(matrixStack, mouseX, mouseY, partialTicks);
+		renderSkillButtonApretado(matrixStack);
 	}
 
+	private void renderSkillButtonApretado(MatrixStack matrixStack) {
+		if (skillEntryGuiApretado != null) {
+			skillEntryGuiApretado.drawButton(matrixStack, (int) posicionMouseX, (int) posicionMouseY, false,
+					skillEntryGuiApretado.getDisplayInfo().getImage(), true);
+		}
+	}
+
+	@Override
 	public boolean mouseClicked(double mouseX, double mouseY, int button) {
 		if (button == ButtonMouse.LEFT_BUTTON) {
 			for (GuiSkillTab rootSkillTabGui : this.tabs.values()) {
 				if (rootSkillTabGui.getPage() == tabPage) {
-					if (rootSkillTabGui.isInsideTabSelector(offsetX, offsetY, mouseX, mouseY)) {
+					if (rootSkillTabGui.isInsideTabSelector(offsetLeft, offsetTop, mouseX, mouseY)) {
 						this.clientSkillManager.setSelectedTab(rootSkillTabGui.getSkillElement(), true);
 						break;
 					} else {
-						GuiSkillEntry skillEntryGui = selectedTab.getIfInsideIncludingChildren(mouseX - offsetX - WINDOW_AREA_OFFSET_X, mouseY - offsetY - WINDOW_AREA_OFFSET_Y);
+						GuiSkillEntry skillEntryGui = selectedTab.getIfInsideIncludingChildren(
+								mouseX - offsetLeft - WINDOW_AREA_OFFSET_X, mouseY - offsetTop - WINDOW_AREA_OFFSET_Y);
 						if (skillEntryGui != null) {
-							DevilRpg.LOGGER.info("|----------- mouseClicked: "+ skillEntryGui.getSkillElement().getSkillCapability());
+							DevilRpg.LOGGER.info("|----------- mouseClicked: {}",skillEntryGui.getSkillElement().getSkillCapability());
 							skillButtonPressed(skillEntryGui);
 							break;
 						}
@@ -180,15 +219,15 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 	public void skillButtonPressed(GuiSkillEntry skillEntryGui) {
 		SkillEnum skilEnum = skillEntryGui.getSkillElement().getSkillCapability();
 		if (!skilEnum.equals(SkillEnum.EMPTY)) {
-			skillCap.ifPresent(skillCap -> {
-				HashMap<SkillEnum, Integer> skillsPoints = skillCap.getSkillsPoints();
-				HashMap<SkillEnum, Integer> skillsMaxPoints = skillCap.getMaxSkillsPoints();
+			skillCap.ifPresent(aSkillCap -> {
+				HashMap<SkillEnum, Integer> skillsPoints = aSkillCap.getSkillsPoints();
+				HashMap<SkillEnum, Integer> skillsMaxPoints = aSkillCap.getMaxSkillsPoints();
 				Integer points = skillsPoints.get(skilEnum);
 				Integer maxPoints = skillsMaxPoints.get(skilEnum);
 				if (points < maxPoints) {
-					points += expCap.map(x -> x.consumePoint()).orElse(0);
+					points += expCap.map(IBaseExperienceCapability::consumePoint).orElse(0);
 					skillsPoints.put(skilEnum, points);
-					skillCap.setSkillsPoints(skillsPoints, player);
+					aSkillCap.setSkillsPoints(skillsPoints, player);
 					skillEntryGui.updateFormattedLevelString(points, maxPoints);
 				}
 
@@ -199,22 +238,27 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 	/**
 	 * Se dispara cuando se está hiciendro drag con el mouse
 	 */
+	@Override
 	public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
 		if (button == ButtonMouse.RIGHT_BUTTON) {
 			this.isScrolling = false;
-			this.posicionMouseX = mouseX;
-			this.posicionMouseY = mouseY;
-			
-			if (!isDraggingPowerButton) {
-				skillEntryGuiApretado = selectedTab.getIfInsideIncludingChildren(mouseX - offsetX - WINDOW_AREA_OFFSET_X, mouseY - offsetY - WINDOW_AREA_OFFSET_Y);
-			}
-			if (skillEntryGuiApretado != null) {
-				isDraggingPowerButton = true;
-				DevilRpg.LOGGER.info("|----------- rightMouseDragged: " + skillEntryGuiApretado.getSkillElement().getSkillCapability());
-				
-				return true;
+
+			//int i = MathHelper.floor(selectedTab.getScrollX());
+			//int j = MathHelper.floor(selectedTab.getScrollY());
+
+			if (!isDraggingToPowerButton) {
+				skillEntryGuiApretado = selectedTab.getIfInsideIncludingChildren(
+						mouseX - offsetLeft - WINDOW_AREA_OFFSET_X, mouseY - offsetTop - WINDOW_AREA_OFFSET_Y);
 			}
 
+			if (skillEntryGuiApretado != null) {
+				if (!isDraggingToPowerButton) {
+				}
+				isDraggingToPowerButton = true;
+				posicionMouseX = mouseX - skillEntryGuiApretado.getX() - GuiSkillEntry.FRAME_SIZE / ((double) 2);
+				posicionMouseY = mouseY - skillEntryGuiApretado.getY() - GuiSkillEntry.FRAME_SIZE / ((double) 2);
+				return true;
+			}
 			return false;
 
 		} else {
@@ -231,27 +275,28 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 	@Override
 	public boolean mouseReleased(double mouseX, double mouseY, int state) {
 		boolean returned = super.mouseReleased(mouseX, mouseY, state);
-		if (state == ButtonMouse.RIGHT_BUTTON) { // botón derecho
-			if (skillEntryGuiApretado != null) {
-				DevilRpg.LOGGER.info("|----------- rightMouseReleases: " + skillEntryGuiApretado.getSkillElement().getSkillCapability());
-				/*CustomGuiButton copy = powerButtonList.stream().filter(x -> x.isInside(mouseX, mouseY)).findAny().orElse(null);
-				if (copy != null) {
-					copy.setButtonTexture(skillButtonApretado.getButtonTexture());
-					HashMap<PowerEnum, SkillEnum> powerNames = skillCap.map(x -> x.getSkillsNameOfPowers()).orElse(null);
-					powerNames.put((PowerEnum) copy.getSkillName(), (SkillEnum) skillButtonApretado.getSkillName());
+		if (state == ButtonMouse.RIGHT_BUTTON && skillEntryGuiApretado != null) { // botón derecho
+			DevilRpg.LOGGER.info("|----------- rightMouseReleases: {}", skillEntryGuiApretado.getSkillElement().getSkillCapability());
+
+			CustomSkillButton copy = powerButtonList.stream().filter(x -> x.isInside(mouseX, mouseY)).findAny().orElse(null);
+			if (copy != null) {
+				copy.setButtonTexture(skillEntryGuiApretado.getDisplayInfo().getImage());
+				HashMap<PowerEnum, SkillEnum> powerNames = skillCap.map(IBaseSkillCapability::getSkillsNameOfPowers).orElse(null);
+				if (powerNames != null) {
+					powerNames.put((PowerEnum) copy.getEnum(), skillEntryGuiApretado.getSkillElement().getSkillCapability());
 					skillCap.ifPresent(x -> x.setSkillsNameOfPowers(powerNames, player));
-				}*/
-				isDraggingPowerButton = false;
-				skillEntryGuiApretado = null;
+				}
 			}
+			isDraggingToPowerButton = false;
+			skillEntryGuiApretado = null;
 		}
 		return returned;
 	}
 
 	@Override
-	public void mouseMoved(double xPos, double mouseY) {
-		super.mouseMoved(xPos, mouseY);
-		this.mouseX = xPos;
+	public void mouseMoved(double mouseX, double mouseY) {
+		// super.mouseMoved(mouseX, mouseY);
+		this.mouseX = mouseX;
 		this.mouseY = mouseY;
 	}
 
@@ -259,61 +304,66 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 	public void renderWindow(MatrixStack matrixStack) {
 		RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
 		RenderSystem.enableBlend();
-		this.minecraft.getTextureManager().bind(WINDOW);
-
 		// Pinta la pantalla exterior
-		// AbstractGui.blit(matrixStack, offsetX, offsetY, 0, 0, INITIAL_WIDTH,
-		// INITIAL_HEIGHT, INITIAL_TEXTURE_WIDTH, INITIAL_TEXTURE_HEIGHT);
-		AbstractGui.blit(matrixStack, offsetX, offsetY, 0, 0, INITIAL_WIDTH, INITIAL_HEIGHT + INFO_SPACE,INITIAL_TEXTURE_WIDTH, INITIAL_TEXTURE_HEIGHT);
+		this.minecraft.getTextureManager().bind(WINDOW_LOCATION);
+		AbstractGui.blit(matrixStack, offsetLeft, offsetTop, 0, 0, INITIAL_WIDTH, INITIAL_HEIGHT + INFO_SPACE,
+				INITIAL_TEXTURE_WIDTH, INITIAL_TEXTURE_HEIGHT);
 
 		if (this.tabs.size() > 1) {
-			this.minecraft.getTextureManager().bind(TABS);
+			this.minecraft.getTextureManager().bind(TABS_LOCATION);
 
+			// Pinta todas las pestañas, tanto la seleccionada como las no seleccionadas
 			for (GuiSkillTab skillTabGui : this.tabs.values()) {
 				if (skillTabGui.getPage() == tabPage)
-					skillTabGui.renderTabSelectorBackground(matrixStack, offsetX, offsetY,
-							skillTabGui == this.selectedTab);
+					skillTabGui.drawTab(matrixStack, offsetLeft, offsetTop, skillTabGui == this.selectedTab);
 			}
 
 			RenderSystem.enableRescaleNormal();
 			RenderSystem.defaultBlendFunc();
+			// Pinta el ícono o la imagen de la pestaña (tab)
+			for (GuiSkillTab guiSkillTab : this.tabs.values()) {
+				if (guiSkillTab.getPage() == tabPage) {
+					guiSkillTab.drawIcon(offsetLeft, offsetTop, this.itemRenderer);
+				}
+			}
+			RenderSystem.disableBlend();
 
-			// Pinta la imagen de la pestaña
-			for (GuiSkillTab advancementtabgui1 : this.tabs.values()) {
-				if (advancementtabgui1.getPage() == tabPage)
-					advancementtabgui1.drawIcon(offsetX, offsetY, this.itemRenderer);
+			// Pinta el título
+			this.font.draw(matrixStack, GUI_LABEL, (float) (offsetLeft + 8), (float) (offsetTop + 6), 4210752);
+
+			int unspentPoints = expCap.map(y -> y.getUnspentPoints()).orElse(-1);
+			if (unspentPoints != 0) {
+				unspentSkillHolder.append(UNSPENT_LABEL);
+				unspentSkillHolder.append("" + unspentPoints);
+				this.font.draw(matrixStack, unspentSkillHolder, (float) (offsetLeft + 8),
+						(float) (offsetTop + INITIAL_HEIGHT), 4210752);
 			}
 
-			RenderSystem.disableBlend();
-		}
-
-		 this.font.draw(matrixStack, GUI_LABEL, (float) (offsetX + 8), (float) (offsetY + 6), 4210752);
-
-		int unspentPoints = expCap.map(y -> y.getUnspentPoints()).orElse(-1);
-		if (unspentPoints != 0) {
-			/*unspentSkillHolder.append(UNSPENT_LABEL);
-			unspentSkillHolder.appendString("" + unspentPoints);
-			this.font.drawText(matrixStack, unspentSkillHolder, (float) (offsetX + 8),
-					(float) (offsetY + INITIAL_HEIGHT), 4210752);*/
 		}
 
 		// Pinta coordenadas de mouse (DEBUG)
+		/*this.font.draw(matrixStack,
+				new StringTextComponent(
+						"x: " + (offsetLeft + WINDOW_AREA_OFFSET_X) + " y: " + (offsetTop + WINDOW_AREA_OFFSET_Y)),
+				(float) (offsetLeft + 14), (float) (offsetTop + 18), 4210752);
+
+		this.font.draw(matrixStack, new StringTextComponent("offsetX: " + offsetLeft + " offsetY: " + offsetTop),
+				(float) (offsetLeft + 14), (float) (offsetTop + 28), 4210752);
+
+		this.font.draw(matrixStack,
+				new StringTextComponent("I width: " + (offsetLeft + WINDOW_AREA_OFFSET_X + INNER_SCREEN_WIDTH)
+						+ " I height: " + (offsetTop + WINDOW_AREA_OFFSET_Y + INNER_SCREEN_HEIGHT)),
+				(float) (offsetLeft + 14), (float) (offsetTop + 38), 4210752);
+
+		
+		this.font.draw(matrixStack, new StringTextComponent("mouseX: " + mouseX + " mouseY: " + mouseY),
+				(float) (offsetLeft + 14), (float) (offsetTop + 48), 4210752);
+
 		this.font.draw(matrixStack,
 				new StringTextComponent(
-						"x: " + (offsetX + WINDOW_AREA_OFFSET_X) + " y: " + (offsetY + WINDOW_AREA_OFFSET_Y)),
-				(float) (offsetX + 14), (float) (offsetY + 18), 4210752);
+						"ScrollX: " + selectedTab.getScrollX() + " ScrollY: " + selectedTab.getScrollY()),
+				(float) (offsetLeft + 14), (float) (offsetTop + 58), 4210752);*/
 
-		this.font.draw(matrixStack, new StringTextComponent("offsetX: " + offsetX + " offsetY: " + offsetY),
-				(float) (offsetX + 14), (float) (offsetY + 28), 4210752);
-
-		this.font.draw(matrixStack,
-				new StringTextComponent("I width: " + (offsetX + WINDOW_AREA_OFFSET_X + INNER_SCREEN_WIDTH) + " I height: "
-						+ (offsetY + WINDOW_AREA_OFFSET_Y + INNER_SCREEN_HEIGHT)),
-				(float) (offsetX + 14), (float) (offsetY + 38), 4210752);
-		 
-		/*if (isInsideInnerFrame(mouseX, mouseY,14,48))
-			this.font.drawText(matrixStack, new StringTextComponent("mouseX: " + mouseX + " mouseY: " + mouseY),(float) (offsetX + 14), (float) (offsetY + 48), 4210752);
-		*/
 	}
 
 	/**
@@ -322,27 +372,30 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 	 * @param matrixStack
 	 * @param mouseX
 	 * @param mouseY
-	 * @param offsetX
-	 * @param offsetY
+	 * @param offsetLeft
+	 * @param offsetTop
 	 */
 	@SuppressWarnings("deprecation")
-	private void drawWindowBackground(MatrixStack matrixStack, int mouseX, int mouseY) {
+	private void renderInside(MatrixStack matrixStack, int mouseX, int mouseY) {
 		GuiSkillTab selectedSkillTabGui = this.selectedTab;
 		// Pinta el fondo vacío cuando no hay elementos
 		if (selectedSkillTabGui == null) {
-			fill(matrixStack, offsetX + WINDOW_AREA_OFFSET_X, offsetY + WINDOW_AREA_OFFSET_Y,
-					offsetX + WINDOW_AREA_OFFSET_X + INNER_SCREEN_WIDTH, offsetY + WINDOW_AREA_OFFSET_Y + INNER_SCREEN_HEIGHT,-16777216);
-			int i = offsetX + WINDOW_AREA_OFFSET_X + 117;
-			drawCenteredString(matrixStack, this.font, EMPTY, i,offsetY + WINDOW_AREA_OFFSET_Y + 56 - WINDOW_AREA_OFFSET_X / 2, -1);
-			drawCenteredString(matrixStack, this.font, SAD_LABEL, i,offsetY + WINDOW_AREA_OFFSET_Y + INNER_SCREEN_HEIGHT - WINDOW_AREA_OFFSET_X, -1);
+			fill(matrixStack, offsetLeft + WINDOW_AREA_OFFSET_X, offsetTop + WINDOW_AREA_OFFSET_Y,
+					offsetLeft + WINDOW_AREA_OFFSET_X + INNER_SCREEN_WIDTH,
+					offsetTop + WINDOW_AREA_OFFSET_Y + INNER_SCREEN_HEIGHT, -16777216);
+			int i = offsetLeft + WINDOW_AREA_OFFSET_X + 117;
+			drawCenteredString(matrixStack, this.font, EMPTY, i,
+					offsetTop + WINDOW_AREA_OFFSET_Y + 56 - WINDOW_AREA_OFFSET_X / 2, -1);
+			drawCenteredString(matrixStack, this.font, SAD_LABEL, i,
+					offsetTop + WINDOW_AREA_OFFSET_Y + INNER_SCREEN_HEIGHT - WINDOW_AREA_OFFSET_X, -1);
 		} else {
 			// Pinta el fondo con elementos
 			RenderSystem.pushMatrix();
 			// Se posiciona al inicio de la ventana + offsets
-			RenderSystem.translatef((float) (offsetX + WINDOW_AREA_OFFSET_X), (float) (offsetY + WINDOW_AREA_OFFSET_Y),
-					0.0F);
-			//Pinta el fondo del tab
-			selectedSkillTabGui.drawTabBackground(matrixStack);
+			RenderSystem.translatef((float) (offsetLeft + WINDOW_AREA_OFFSET_X),
+					(float) (offsetTop + WINDOW_AREA_OFFSET_Y), 0.0F);
+			// Pinta el fondo del tab
+			selectedSkillTabGui.drawContents(matrixStack);
 			RenderSystem.popMatrix();
 			RenderSystem.depthFunc(515);
 			RenderSystem.disableDepthTest();
@@ -350,23 +403,25 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 	}
 
 	@SuppressWarnings("deprecation")
-	private void drawWindowTooltips(MatrixStack matrixStack, int mouseX, int mouseY) {
+	private void renderTooltips(MatrixStack matrixStack, int mouseX, int mouseY) {
 		RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
+		// pinta los tooltips de los botones
 		if (this.selectedTab != null) {
 			RenderSystem.pushMatrix();
 			RenderSystem.enableDepthTest();
-			RenderSystem.translatef((float) (offsetX + WINDOW_AREA_OFFSET_X), (float) (offsetY + WINDOW_AREA_OFFSET_Y),
-					400.0F);
-			this.selectedTab.drawTabTooltips(matrixStack, mouseX - offsetX - WINDOW_AREA_OFFSET_X,
-					mouseY - offsetY - WINDOW_AREA_OFFSET_Y, offsetX, offsetY);
+			RenderSystem.translatef((float) (offsetLeft + WINDOW_AREA_OFFSET_X),
+					(float) (offsetTop + WINDOW_AREA_OFFSET_Y), 400.0F);
+			this.selectedTab.drawTabTooltips(matrixStack, mouseX - offsetLeft - WINDOW_AREA_OFFSET_X,
+					mouseY - offsetTop - WINDOW_AREA_OFFSET_Y, offsetLeft, offsetTop);
 			RenderSystem.disableDepthTest();
 			RenderSystem.popMatrix();
 		}
 
+		// Pinta los tooltips de las pestañas
 		if (this.tabs.size() > 1) {
 			for (GuiSkillTab skillTabGui : this.tabs.values()) {
 				if (skillTabGui.getPage() == tabPage
-						&& skillTabGui.isInsideTabSelector(offsetX, offsetY, (double) mouseX, (double) mouseY)) {
+						&& skillTabGui.isInsideTabSelector(offsetLeft, offsetTop, (double) mouseX, (double) mouseY)) {
 					this.renderTooltip(matrixStack, skillTabGui.getTitle(), mouseX, mouseY);
 				}
 			}
@@ -374,25 +429,13 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 
 	}
 
-	/*@SuppressWarnings("deprecation")
-	private void drawSkillLevel(MatrixStack matrixStack) {
-		if (this.selectedTab != null) {
-			RenderSystem.pushMatrix();
-			RenderSystem.enableDepthTest();
-			RenderSystem.translatef((float) (offsetX + WINDOW_AREA_OFFSET_X), (float) (offsetY + WINDOW_AREA_OFFSET_Y),400.0F);
-
-			this.selectedTab.drawSkillLevel(matrixStack);
-
-			RenderSystem.disableDepthTest();
-			RenderSystem.popMatrix();
-		}
-	}*/
-
-	public boolean isInsideInnerFrame(double coordX, double coordY,int frameWidth, int frameHeight) {
-		return coordX+frameWidth >= 0 && coordY+frameHeight >= 0 && coordX <= (INNER_SCREEN_WIDTH) && coordY <= (INNER_SCREEN_HEIGHT);
+	public boolean isInsideInnerFrame(double coordX, double coordY, int frameWidth, int frameHeight) {
+		return coordX + frameWidth >= 0 && coordY + frameHeight >= 0 && coordX <= (INNER_SCREEN_WIDTH)
+				&& coordY <= (INNER_SCREEN_HEIGHT);
 	}
 
 	public void rootSkillAdded(SkillElement advancementIn) {
+		DevilRpg.LOGGER.info("|-------- rootSkillAdded");
 		GuiSkillTab advancementtabgui = GuiSkillTab.create(this.minecraft, this, this.tabs.size(), advancementIn,
 				skillCap);
 		if (advancementtabgui != null) {
@@ -401,10 +444,19 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 	}
 
 	public void rootSkillRemoved(SkillElement advancementIn) {
+		DevilRpg.LOGGER.info("|-------- rootSkillRemoved");
+		GuiSkillTab advancementtabgui = GuiSkillTab.create(this.minecraft, this, this.tabs.size(), advancementIn,
+				skillCap);
+		if (advancementtabgui != null) {
+			this.tabs.remove(advancementIn, advancementtabgui);
+		}
 	}
 
+	/**
+	 * Agrega las hojas del nodo raiz
+	 */
 	public void nonRootSkillAdded(SkillElement advancementIn) {
-		DevilRpg.LOGGER.info("|-------- nonRootAdvancementAdded");
+		DevilRpg.LOGGER.info("|-------- nonRootSkillAdded");
 		GuiSkillTab advancementtabgui = this.getTab(advancementIn);
 		if (advancementtabgui != null) {
 			advancementtabgui.addSkillElement(advancementIn);
@@ -413,6 +465,11 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 	}
 
 	public void nonRootSkillRemoved(SkillElement skillElementIn) {
+		DevilRpg.LOGGER.info("|-------- nonRootSkillRemoved");
+		GuiSkillTab advancementtabgui = this.getTab(skillElementIn);
+		if (advancementtabgui != null) {
+			advancementtabgui.removeSkillElement(skillElementIn);
+		}
 	}
 
 	public void onUpdateAdvancementProgress(SkillElement skillElementIn, SkillProgress progress) {
@@ -447,11 +504,6 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 		return this.tabs.get(skillElement);
 	}
 
-	public <T extends Widget> T addButton(T button) {
-		this.buttons.add(button);
-		return this.addWidget(button);
-	}
-
 	public LazyOptional<IBaseSkillCapability> getSkillCap() {
 		return skillCap;
 	}
@@ -467,6 +519,83 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 	public void setExpCap(LazyOptional<IBaseExperienceCapability> expCap) {
 		this.expCap = expCap;
 	}
-	
-	
+
+	protected void addPowerButtons() {
+		int k = 0;
+
+		//int offLeft = (this.width - INITIAL_WIDTH) / 2;
+		int offTop = (this.height - INITIAL_HEIGHT) / 2;
+		List<PowerEnum> powerList = Arrays.asList(PowerEnum.values());
+		k = powerList.size();
+		for (PowerEnum powerEnum : powerList) {
+			int drawnSkillLevel = 0;
+			CustomSkillButton powrButtons = new CustomSkillButton(
+					(width + WINDOW_AREA_OFFSET_X) - (k * (GuiSkillEntry.FRAME_SIZE + 10)),
+					WINDOW_AREA_OFFSET_Y + offTop + INNER_SCREEN_HEIGHT + 2, 
+					GuiSkillEntry.FRAME_SIZE, // 3
+					GuiSkillEntry.FRAME_SIZE, // 4
+					powerEnum.getDescription(), 
+					EMPTY_POWER_IMAGE_RESOURCE, 
+					GuiSkillEntry.BUTTON_IMAGE_SIZE, // 7
+					GuiSkillEntry.BUTTON_IMAGE_SIZE, // 8
+					powerEnum, 
+					drawnSkillLevel, 
+					this::powerButtonPressed, 
+					false, 
+					7.0F);
+
+			powrButtons.visible = true;
+
+			powerButtonList.add(powrButtons);
+			addButton(powrButtons);
+			k++;
+		}
+	}
+
+	public void powerButtonPressed(Button pressedButton) {
+		DevilRpg.LOGGER.info("--------powerButtonPressed: {} ", pressedButton.getMessage().getContents());
+		
+		if(pressedButton instanceof CustomSkillButton) {
+			CustomSkillButton pb = (CustomSkillButton) pressedButton;
+			HashMap<PowerEnum, SkillEnum> powerNames = skillCap.map(IBaseSkillCapability::getSkillsNameOfPowers).orElse(null);
+			if (powerNames != null) {
+				pb.setButtonTexture(EMPTY_POWER_IMAGE_RESOURCE);
+				DevilRpg.LOGGER.info("pb.getEnum(): {} ",pb.getEnum());
+				
+				powerNames.put((PowerEnum) pb.getEnum(), SkillEnum.EMPTY);
+				skillCap.ifPresent(x -> x.setSkillsNameOfPowers(powerNames, player));
+			
+			}
+		}
+		
+	}
+
+	protected void loadAssignedPowerButtons() {
+		DevilRpg.LOGGER.info("---------loadAssignedPowerButtons ");
+		HashMap<PowerEnum, SkillEnum> powerToSkillDictionary = skillCap.map(x -> x.getSkillsNameOfPowers()).orElse(null);
+
+		if (powerToSkillDictionary != null) {
+			for (CustomSkillButton c : powerButtonList) {
+				PowerEnum powerEnumFromButton = (PowerEnum) c.getEnum();
+				SkillEnum aSkillEnum = powerToSkillDictionary.getOrDefault(powerEnumFromButton,SkillEnum.EMPTY);
+				if(!aSkillEnum.equals(SkillEnum.EMPTY)) {
+					c.setButtonTexture(skillsImages.get(aSkillEnum));
+				}
+				else {
+					c.setButtonTexture(EMPTY_POWER_IMAGE_RESOURCE);
+				}
+			}
+		}
+	}
+
+	@Override
+	public <T extends Widget> T addButton(T widget) {
+		super.buttons.add(widget);
+		return super.addWidget(widget);
+	}
+
+	public Map<SkillEnum, ResourceLocation> getSkillsResourceLocations() {
+		return skillsImages;
+	}
+
 }

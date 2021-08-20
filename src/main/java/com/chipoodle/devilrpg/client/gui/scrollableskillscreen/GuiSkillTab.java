@@ -34,8 +34,8 @@ import net.minecraftforge.common.util.LazyOptional;
 
 @OnlyIn(Dist.CLIENT)
 public class GuiSkillTab extends AbstractGui {
-	private static final int HEIGHT = 27;
-	private static final int WIDTH = 28;
+	private static final int WIDGET_HEIGHT = 27;
+	private static final int WIDGET_WIDTH = 28;
 	// private static final int TAB_BACKGROUND_X = 234;
 	// private static final int TAB_BACKGROUND_Y = 113;
 	private static final int TAB_BACKGROUND_X = 284;
@@ -74,7 +74,7 @@ public class GuiSkillTab extends AbstractGui {
 		this.title = skillElement.getDisplay().getTitle();
 		this.root = new GuiSkillEntry(this, minecraft, skillElement, 0, 0);
 		this.addGuiSkillElement(this.root, skillElement);
-		DevilRpg.LOGGER.info("|-----" + toString());
+		DevilRpg.LOGGER.info("|-----{}", toString());
 	}
 
 	public GuiSkillTab(Minecraft mc, ScrollableSkillScreen screen, SkillTabType type, int index, int page,
@@ -104,7 +104,7 @@ public class GuiSkillTab extends AbstractGui {
 	 * @param offsetY
 	 * @param isSelected
 	 */
-	public void renderTabSelectorBackground(MatrixStack matrixStack, int offsetX, int offsetY, boolean isSelected) {
+	public void drawTab(MatrixStack matrixStack, int offsetX, int offsetY, boolean isSelected) {
 		this.type.renderTabSelectorBackground(matrixStack, this, offsetX, offsetY, isSelected, this.index);
 	}
 
@@ -117,13 +117,12 @@ public class GuiSkillTab extends AbstractGui {
 	 * 
 	 * @param matrixStack
 	 */
-	public void drawTabBackground(MatrixStack matrixStack) {
+	public void drawContents(MatrixStack matrixStack) {
 		if (!this.centered) {
-			this.scrollX = (double) (117 - (this.maxX + this.minX) / 2);
-			this.scrollY = (double) (56 - (this.maxY + this.minY) / 2);
+			this.scrollX =  (117 - (this.maxX + this.minX) / 2D);
+			this.scrollY =  (56 - (this.maxY + this.minY) / 2D);
 			this.centered = true;
 		}
-
 		RenderSystem.pushMatrix();
 		RenderSystem.enableDepthTest();
 		RenderSystem.translatef(0.0F, 0.0F, 950.0F);
@@ -143,12 +142,22 @@ public class GuiSkillTab extends AbstractGui {
 			this.minecraft.getTextureManager().bind(TextureManager.INTENTIONAL_MISSING_TEXTURE);
 		}
 
+		//Pinta el mosaico dinámico del fondo asícomo los iconos y las conexiones dle arbol de habilidades
 		generateBackgroundImageChunks(matrixStack);
+		
+		RenderSystem.depthFunc(518);
+		RenderSystem.translatef(0.0F, 0.0F, -950.0F);
+		RenderSystem.colorMask(false, false, false, false);
+		fill(matrixStack, 4680, 2260, -4680, -2260, -16777216);
+		RenderSystem.colorMask(true, true, true, true);
+		RenderSystem.translatef(0.0F, 0.0F, 950.0F);
+		RenderSystem.depthFunc(515);
+		RenderSystem.popMatrix();
 	}
 
 	/**
 	 * Pinta los chunks del fondo dinámicamente para hacer uno completo aun cuando
-	 * se mueva con scroll
+	 * se mueva con scroll. También pinta las líneas del árbol y los botones que no tienen encima el mouse
 	 * 
 	 * @param matrixStack
 	 */
@@ -163,24 +172,15 @@ public class GuiSkillTab extends AbstractGui {
 				blit(matrixStack, k + 16 * i1, l + 16 * j1, 0.0F, 0.0F, 16, 16, 16, 16);
 			}
 		}
-
+		//pinta las lineas
 		this.root.drawConnectionLineToParent(matrixStack, i, j, true);
 		this.root.drawConnectionLineToParent(matrixStack, i, j, false);
 		this.root.drawSkills(matrixStack, i, j);
-		RenderSystem.depthFunc(518);
-		RenderSystem.translatef(0.0F, 0.0F, -950.0F);
-		RenderSystem.colorMask(false, false, false, false);
-		fill(matrixStack, 4680, 2260, -4680, -2260, -16777216);
-		RenderSystem.colorMask(true, true, true, true);
-		RenderSystem.translatef(0.0F, 0.0F, 950.0F);
-		RenderSystem.depthFunc(515);
-		RenderSystem.popMatrix();
 	}
 
 	/**
-	 * Pinta el tooltip cuando el puntero está sobre el botón de habilidad.
-	 * Pinta la sombra que cubre el fondo cuando se hace hoover al botón de
-	 * habilidad
+	 * Pinta el tooltip cuando el puntero está sobre el botón de habilidad. Pinta la
+	 * sombra que cubre el fondo cuando se hace hoover al botón de habilidad
 	 * 
 	 * @param matrixStack
 	 * @param mouseX
@@ -216,33 +216,13 @@ public class GuiSkillTab extends AbstractGui {
 		}
 	}
 
-	/*public void drawSkillLevel(MatrixStack matrixStack) {
-		for (GuiSkillEntry skillEntryGui : this.guis.values()) {
-			drawSkillLevel(matrixStack, skillEntryGui);
-		}
-	}*/
-
-	/**
-	 * Pinta el nivel del skill como string
-	 * @param matrixStack
-	 * @param skillEntryGui
-	 * @return
-	 */
-	/*private String drawSkillLevel(MatrixStack matrixStack, GuiSkillEntry skillEntryGui) {
-		int i = MathHelper.floor(this.scrollX);
-		int j = MathHelper.floor(this.scrollY);
-		String levelString = skillEntryGui.getLevelString();
-		if (!skillEntryGui.getSkillElement().getSkillCapability().equals(SkillEnum.EMPTY) && Objects.nonNull(this.getScreen()) && this.getScreen().isInsideInnerFrame(i + skillEntryGui.getX(), j + skillEntryGui.getY())) {
-			this.minecraft.fontRenderer.drawStringWithShadow(matrixStack, levelString,(float) (i + skillEntryGui.getX()), (float) (j + skillEntryGui.getY()), -1);
-		}
-		return levelString;
-	}*/
-
 	public boolean isInsideTabSelector(int offsetX, int offsetY, double mouseX, double mouseY) {
 		return this.type.inInsideTabSelector(offsetX, offsetY, this.index, mouseX, mouseY);
 	}
+
 	/**
 	 * Crea y ordena los botones
+	 * 
 	 * @param minecraft
 	 * @param screen
 	 * @param tabIndex
@@ -251,7 +231,8 @@ public class GuiSkillTab extends AbstractGui {
 	 * @return
 	 */
 	@Nullable
-	public static GuiSkillTab create(Minecraft minecraft, ScrollableSkillScreen screen, int tabIndex,SkillElement skillElement, LazyOptional<IBaseSkillCapability> skillCap) {
+	public static GuiSkillTab create(Minecraft minecraft, ScrollableSkillScreen screen, int tabIndex,
+			SkillElement skillElement, LazyOptional<IBaseSkillCapability> skillCap) {
 		if (skillElement.getDisplay() == null) {
 			return null;
 		} else {
@@ -296,8 +277,26 @@ public class GuiSkillTab extends AbstractGui {
 				HashMap<SkillEnum, Integer> skillsMaxPoints = skillCap.getMaxSkillsPoints();
 				Integer points = skillsPoints.get(skillElement.getSkillCapability());
 				Integer maxPonits = skillsMaxPoints.get(skillElement.getSkillCapability());
-				GuiSkillEntry skillentryGui = new GuiSkillEntry(this, this.minecraft, skillElement, (points == null ? 0 : points), (maxPonits == null ? 0 : maxPonits));
+				GuiSkillEntry skillentryGui = new GuiSkillEntry(this, this.minecraft, skillElement,
+						(points == null ? 0 : points), (maxPonits == null ? 0 : maxPonits));
 				this.addGuiSkillElement(skillentryGui, skillElement);
+			});
+
+		}
+	}
+	
+	/**
+	 * Agrega el Skill a la lista de guis envolviendolo en un
+	 * ScrollableSkillEntryGui
+	 * 
+	 * @param skillElement
+	 */
+	public void removeSkillElement(SkillElement skillElement) {
+		DevilRpg.LOGGER.info("|-------- addSkillElement");
+		if (skillElement.getDisplay() != null) {
+
+			skillCap.ifPresent(skillCap -> {
+				this.guis.remove(skillElement);
 			});
 
 		}
@@ -313,9 +312,9 @@ public class GuiSkillTab extends AbstractGui {
 	private void addGuiSkillElement(GuiSkillEntry skillEntryGuiIn, SkillElement skillElement) {
 		this.guis.put(skillElement, skillEntryGuiIn);
 		int i = skillEntryGuiIn.getX();
-		int j = i + WIDTH;
+		int j = i + WIDGET_WIDTH;
 		int k = skillEntryGuiIn.getY();
-		int l = k + HEIGHT;
+		int l = k + WIDGET_HEIGHT;
 		this.minX = Math.min(this.minX, i);
 		this.maxX = Math.max(this.maxX, j);
 		this.minY = Math.min(this.minY, k);
@@ -358,8 +357,7 @@ public class GuiSkillTab extends AbstractGui {
 		return findIfInsideIncludingChildren(collect, (int) mouseX, (int) mouseY, i, j);
 	}
 
-	private GuiSkillEntry findIfInsideIncludingChildren(List<GuiSkillEntry> collect, int mouseX, int mouseY,
-			int scrollX, int scrollY) {
+	private GuiSkillEntry findIfInsideIncludingChildren(List<GuiSkillEntry> collect, int mouseX, int mouseY, int scrollX, int scrollY) {
 		for (GuiSkillEntry skillEntryGui : collect) {
 			if (skillEntryGui.isMouseOver(scrollX, scrollY, mouseX, mouseY)) {
 				return skillEntryGui;
@@ -372,4 +370,15 @@ public class GuiSkillTab extends AbstractGui {
 		return null;
 	}
 
+	public Map<SkillElement, GuiSkillEntry> getGuis() {
+		return guis;
+	}
+
+	public double getScrollX() {
+		return scrollX;
+	}
+
+	public double getScrollY() {
+		return scrollY;
+	}
 }

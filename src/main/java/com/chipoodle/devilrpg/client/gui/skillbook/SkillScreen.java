@@ -21,6 +21,8 @@ import net.minecraft.client.entity.player.ClientPlayerEntity;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.screen.ReadBookScreen;
 import net.minecraft.client.gui.widget.button.Button;
+import net.minecraft.client.util.InputMappings;
+import net.minecraft.client.util.InputMappings.Input;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.text.ITextProperties;
@@ -33,10 +35,10 @@ import net.minecraftforge.fml.client.gui.GuiUtils;
 @OnlyIn(Dist.CLIENT)
 public class SkillScreen extends BaseBookScreen {
 
-	private static final String IMG_LOCATION = DevilRpg.MODID + ":textures/gui/";
 	private static final int btnTextureWidth = 45;
 	private static final int btnTextureHeight = 45;
 	private static final int btnSize = 20;
+	private static final String IMG_LOCATION = DevilRpg.MODID + ":textures/gui/";
 	private static final ResourceLocation POWER_RESOURCE = new ResourceLocation(IMG_LOCATION + "empty-box.png");
 	private static final HashMap<SkillEnum, ResourceLocation> SKILL_RESOURCES = new HashMap<SkillEnum, ResourceLocation>();
 	static {
@@ -53,7 +55,9 @@ public class SkillScreen extends BaseBookScreen {
 	private PlayerEntity player;
 	private LazyOptional<IBaseSkillCapability> skillCap;
 	private LazyOptional<IBaseExperienceCapability> expCap;
-	private List<CustomGuiButton> skillButtonList = new ArrayList<>();
+	//private List<CustomGuiButton> skillButtonList = new ArrayList<>();
+	private HashMap<SkillEnum,CustomGuiButton> skillButtonList = new HashMap<>();
+	
 	private List<CustomGuiButton> powerButtonList = new ArrayList<>();
 
 	CustomGuiButton skillButtonApretado = null;
@@ -64,7 +68,7 @@ public class SkillScreen extends BaseBookScreen {
 	Double posicionMouseY = 0.0;
 	private boolean isScrolling;
 
-	private static int openScreenKeyPressed;
+	private static Input openScreenKeyPressed;
 
 	class ButtonMouse {
 		public static final int LEFT_BUTTON = 0;
@@ -106,13 +110,14 @@ public class SkillScreen extends BaseBookScreen {
 	}
 
 
-	private static void open(PlayerEntity player) {
-		Minecraft.getInstance().tell(() -> Minecraft.getInstance().setScreen(new SkillScreen(player)));
+
+	public static void open(ClientPlayerEntity player, Input input) {
+		openScreenKeyPressed = input;
+		open(player);
 	}
 
-	public static void open(ClientPlayerEntity player, int keyCode) {
-		openScreenKeyPressed = keyCode;
-		open(player);
+	private static void open(PlayerEntity player) {
+		Minecraft.getInstance().tell(() -> Minecraft.getInstance().setScreen(new SkillScreen(player)));
 	}
 
 	public SkillScreen(PlayerEntity player) {
@@ -136,8 +141,9 @@ public class SkillScreen extends BaseBookScreen {
 			Double level = (double) (k / 2) + 1;
 			CustomGuiButton custom = new CustomGuiButton(offsetFromScreenLeft + 55 * ((k % 2) + 1),
 					10 + 30 * level.intValue(), btnSize, btnSize, s.getName(), SKILL_RESOURCES.get(s), btnTextureWidth,
-					btnTextureHeight, s, skillsPoints.get(s), x -> skillButtonPressed(x), pageBelonging, true);
-			skillButtonList.add(custom);
+					btnTextureHeight, s, skillsPoints.get(s), x -> skillButtonPressed(x), pageBelonging, true, 0.075F, 7.0F);
+			//skillButtonList.add(custom);
+			skillButtonList.put(s, custom);
 			addButton(custom);
 			k++;
 		}
@@ -151,7 +157,7 @@ public class SkillScreen extends BaseBookScreen {
 			int drawnSkillLevel = 0;
 			CustomGuiButton custom = new CustomGuiButton(offsetFromScreenLeft + 33 * (k + 1), 135, btnSize, btnSize,
 					p.getDescription(), POWER_RESOURCE, btnTextureWidth, btnTextureHeight, p, drawnSkillLevel,
-					x -> powerButtonPressed(x), 0, false);
+					x -> powerButtonPressed(x), 0, false, 0.075F, 7.0F);
 			powerButtonList.add(custom);
 			addButton(custom);
 			k++;
@@ -165,8 +171,10 @@ public class SkillScreen extends BaseBookScreen {
 		for (CustomGuiButton c : powerButtonList) {
 			PowerEnum pe = (PowerEnum) c.getSkillName();
 			SkillEnum se = powerNames.get(pe);
-			c.setButtonTexture(skillButtonList.stream().filter(x -> x.getSkillName().equals(se)).findAny()
-					.map(x -> x.getButtonTexture()).orElse(POWER_RESOURCE));
+			/*c.setButtonTexture(skillButtonList.stream().filter(x -> x.getSkillName().equals(se)).findAny()
+					.map(x -> x.getButtonTexture()).orElse(POWER_RESOURCE));*/
+			CustomGuiButton cgb = skillButtonList.get(se);
+			c.setButtonTexture(cgb != null?  cgb.getButtonTexture() : POWER_RESOURCE );
 		}
 		updateButtons();
 	}
@@ -177,14 +185,25 @@ public class SkillScreen extends BaseBookScreen {
 		HashMap<SkillEnum, Integer> skillsPoints = skillCap.map(x -> x.getSkillsPoints()).orElse(null);
 		HashMap<SkillEnum, Integer> maxSkillsPoints = skillCap.map(x -> x.getMaxSkillsPoints()).orElse(null);
 		if (!skillButtonList.isEmpty()) {
-			skillButtonList.stream().forEach(x -> {
+			
+			/*skillButtonList.stream().forEach(x -> {
 				x.visible = this.getCurrPage() == x.getPageBelonging();
 				if (x.visible) {
 					x.setDrawnSkillLevel(skillsPoints.get(x.getSkillName()));
 					x.active = skillsPoints.get(x.getSkillName()) < maxSkillsPoints.get(x.getSkillName())
 							&& expCap.map(y -> y.getUnspentPoints() > 0).orElse(false);
 				}
+			});*/
+			skillButtonList.forEach((x,y) -> {
+				y.visible = this.getCurrPage() == y.getPageBelonging();
+				if (y.visible) {
+					y.setDrawnSkillLevel(skillsPoints.get(y.getSkillName()));
+					y.active = skillsPoints.get(y.getSkillName()) < maxSkillsPoints.get(y.getSkillName())
+							&& expCap.map(ec -> ec.getUnspentPoints() > 0).orElse(false);
+				}
 			});
+			
+			
 		}
 
 		if (!powerButtonList.isEmpty())
@@ -253,8 +272,8 @@ public class SkillScreen extends BaseBookScreen {
 			this.posicionMouseX = parMouseX;
 			this.posicionMouseY = parMouseY;
 
-			CustomGuiButton skillButton = skillButtonList.stream()
-					.filter(x -> !apretado && x.isInside(posicionMouseX, posicionMouseY)).findAny().orElse(null);
+			//CustomGuiButton skillButton = skillButtonList.stream().filter(x -> !apretado && x.isInside(posicionMouseX, posicionMouseY)).findAny().orElse(null);
+			CustomGuiButton skillButton = skillButtonList.values().stream().filter(x -> !apretado && x.isInside(posicionMouseX, posicionMouseY)).findAny().orElse(null);
 			if (skillButton != null) {
 				apretado = true;
 				skillButtonApretado = skillButton;
@@ -283,8 +302,7 @@ public class SkillScreen extends BaseBookScreen {
 						.orElse(null);
 				if (copy != null) {
 					copy.setButtonTexture(skillButtonApretado.getButtonTexture());
-					HashMap<PowerEnum, SkillEnum> powerNames = skillCap.map(x -> x.getSkillsNameOfPowers())
-							.orElse(null);
+					HashMap<PowerEnum, SkillEnum> powerNames = skillCap.map(x -> x.getSkillsNameOfPowers()).orElse(null);
 					powerNames.put((PowerEnum) copy.getSkillName(), (SkillEnum) skillButtonApretado.getSkillName());
 					skillCap.ifPresent(x -> x.setSkillsNameOfPowers(powerNames, player));
 				}
@@ -296,11 +314,12 @@ public class SkillScreen extends BaseBookScreen {
 
 	@Override
 	public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-		if (openScreenKeyPressed == keyCode) {
+		Input pressedKeyCode = InputMappings.Type.KEYSYM.getOrCreate(keyCode);
+		if (openScreenKeyPressed.getName().equals(pressedKeyCode.getName())) {
 			this.onClose();
 			return true;
 		} else
-			return super.keyPressed(keyCode, scanCode, modifiers);
+			return super.keyPressed(pressedKeyCode.getValue(), scanCode, modifiers);
 	}
 
 	private void flushPressedButton() {

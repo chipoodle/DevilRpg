@@ -59,7 +59,7 @@ public class SkillTreeNode {
 	private void firstWalk() {
 		if (this.children.isEmpty()) {
 			if (this.sibling != null) {
-				this.y = this.sibling.y + 0.5F;
+				this.y = this.sibling.y + 1.0F;
 			} else {
 				this.y = 0.0F;
 			}
