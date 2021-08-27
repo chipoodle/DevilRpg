@@ -25,7 +25,7 @@ import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.ScrollableSkillLoadFix;
 import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillProgress;
 import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillElement;
-import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillProgress.Serializer;
+//import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillProgress.Serializer;
 import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -54,10 +54,10 @@ import net.minecraft.world.GameRules;
 
 public class PlayerScrollableSkills {
 	private static final Logger LOGGER = LogManager.getLogger();
-	private static final Gson GSON = (new GsonBuilder())
+	/*private static final Gson GSON = (new GsonBuilder())
 			.registerTypeAdapter(SkillProgress.class, new SkillProgress.Serializer())
 			.registerTypeAdapter(ResourceLocation.class, new ResourceLocation.Serializer()).setPrettyPrinting()
-			.create();
+			.create();*/
 	private static final TypeToken<Map<ResourceLocation, SkillProgress>> MAP_TOKEN = new TypeToken<Map<ResourceLocation, SkillProgress>>() {
 	};
 	private final DataFixer dataFixer;
@@ -77,7 +77,7 @@ public class PlayerScrollableSkills {
 		this.playerList = playerList;
 		this.progressFile = progressFile;
 		this.player = player;
-		this.deserialize(advancementManager);
+		//this.deserialize(advancementManager);
 		DevilRpg.LOGGER.info("|-----"+toString());
 	}
 
@@ -101,7 +101,7 @@ public class PlayerScrollableSkills {
 		this.progressChanged.clear();
 		this.isFirstPacket = true;
 		this.lastSelectedTab = null;
-		this.deserialize(manager);
+		//this.deserialize(manager);
 	}
 
 	private void registerAchievementListeners(ScrollableSkillJsonManager manager) {
@@ -129,13 +129,13 @@ public class PlayerScrollableSkills {
 
 	private void unlockDefaultAdvancements(ScrollableSkillJsonManager manager) {
 		for (SkillElement advancement : manager.getAllAdvancements()) {
-			this.grantCriterion(advancement, "");
+			//this.grantCriterion(advancement, "");
 			advancement.getRewards().apply(this.player);
 		}
 
 	}
 
-	private void deserialize(ScrollableSkillJsonManager manager) {
+	/*private void deserialize(ScrollableSkillJsonManager manager) {
 		if (this.progressFile.isFile()) {
 			try (JsonReader jsonreader = new JsonReader(
 					new StringReader(Files.toString(this.progressFile, StandardCharsets.UTF_8)))) {
@@ -181,9 +181,9 @@ public class PlayerScrollableSkills {
 		else
 			this.ensureAllVisible();
 		this.registerAchievementListeners(manager);
-	}
+	}*/
 
-	public void save() {
+	/*public void save() {
 		Map<ResourceLocation, SkillProgress> map = Maps.newHashMap();
 
 		for (Entry<SkillElement, SkillProgress> entry : this.progress.entrySet()) {
@@ -207,9 +207,9 @@ public class PlayerScrollableSkills {
 			LOGGER.error("Couldn't save player advancements to {}", this.progressFile, ioexception);
 		}
 
-	}
+	}*/
 
-	public boolean grantCriterion(SkillElement advancementIn, String criterionKey) {
+	/*public boolean grantCriterion(SkillElement advancementIn, String criterionKey) {
 		// Forge: don't grant advancements for fake players
 		if (this.player instanceof net.minecraftforge.common.util.FakePlayer)
 			return false;
@@ -240,7 +240,7 @@ public class PlayerScrollableSkills {
 		}
 
 		return flag;
-	}
+	}*/
 
 	public boolean revokeCriterion(SkillElement advancementIn, String criterionKey) {
 		boolean flag = false;
@@ -346,7 +346,7 @@ public class PlayerScrollableSkills {
 	public SkillProgress getProgress(SkillElement advancementIn) {
 		SkillProgress advancementprogress = this.progress.get(advancementIn);
 		if (advancementprogress == null) {
-			advancementprogress = new SkillProgress();
+			//advancementprogress = new SkillProgress();
 			this.startProgress(advancementIn, advancementprogress);
 		}
 

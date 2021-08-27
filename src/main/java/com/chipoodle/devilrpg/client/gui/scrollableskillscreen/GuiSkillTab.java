@@ -34,6 +34,8 @@ import net.minecraftforge.common.util.LazyOptional;
 
 @OnlyIn(Dist.CLIENT)
 public class GuiSkillTab extends AbstractGui {
+	private static final int BACKGROUND_CHUNKS = 64;//16
+	
 	private static final int WIDGET_HEIGHT = 27;
 	private static final int WIDGET_WIDTH = 28;
 	// private static final int TAB_BACKGROUND_X = 234;
@@ -119,8 +121,8 @@ public class GuiSkillTab extends AbstractGui {
 	 */
 	public void drawContents(MatrixStack matrixStack) {
 		if (!this.centered) {
-			this.scrollX =  (117 - (this.maxX + this.minX) / 2D);
-			this.scrollY =  (56 - (this.maxY + this.minY) / 2D);
+			this.scrollX = (117 - (this.maxX + this.minX) / 2D);
+			this.scrollY = (56 - (this.maxY + this.minY) / 2D);
 			this.centered = true;
 		}
 		RenderSystem.pushMatrix();
@@ -142,9 +144,10 @@ public class GuiSkillTab extends AbstractGui {
 			this.minecraft.getTextureManager().bind(TextureManager.INTENTIONAL_MISSING_TEXTURE);
 		}
 
-		//Pinta el mosaico dinámico del fondo asícomo los iconos y las conexiones dle arbol de habilidades
+		// Pinta el mosaico dinámico del fondo asícomo los iconos y las conexiones dle
+		// arbol de habilidades
 		generateBackgroundImageChunks(matrixStack);
-		
+
 		RenderSystem.depthFunc(518);
 		RenderSystem.translatef(0.0F, 0.0F, -950.0F);
 		RenderSystem.colorMask(false, false, false, false);
@@ -157,24 +160,28 @@ public class GuiSkillTab extends AbstractGui {
 
 	/**
 	 * Pinta los chunks del fondo dinámicamente para hacer uno completo aun cuando
-	 * se mueva con scroll. También pinta las líneas del árbol y los botones que no tienen encima el mouse
+	 * se mueva con scroll. También pinta las líneas del árbol y los botones que no
+	 * tienen encima el mouse
 	 * 
 	 * @param matrixStack
 	 */
+
 	private void generateBackgroundImageChunks(MatrixStack matrixStack) {
 		int i = MathHelper.floor(this.scrollX);
 		int j = MathHelper.floor(this.scrollY);
-		int k = i % 16;
-		int l = j % 16;
+		int k = i % BACKGROUND_CHUNKS;
+		int l = j % BACKGROUND_CHUNKS;
 
-		for (int i1 = -1; i1 <= 18; ++i1) {
-			for (int j1 = -1; j1 <= 11; ++j1) {
-				blit(matrixStack, k + 16 * i1, l + 16 * j1, 0.0F, 0.0F, 16, 16, 16, 16);
+		for (int i1 = -1; i1 <= 5; ++i1) {//18
+			for (int j1 = -1; j1 <= 3; ++j1) { //11
+				blit(matrixStack, k + BACKGROUND_CHUNKS * i1, l + BACKGROUND_CHUNKS * j1, 0.0F, 0.0F, BACKGROUND_CHUNKS,
+						BACKGROUND_CHUNKS, BACKGROUND_CHUNKS, BACKGROUND_CHUNKS);
 			}
 		}
-		//pinta las lineas
+		// pinta las lineas
 		this.root.drawConnectionLineToParent(matrixStack, i, j, true);
 		this.root.drawConnectionLineToParent(matrixStack, i, j, false);
+		// Pinta los skills
 		this.root.drawSkills(matrixStack, i, j);
 	}
 
@@ -284,7 +291,7 @@ public class GuiSkillTab extends AbstractGui {
 
 		}
 	}
-	
+
 	/**
 	 * Agrega el Skill a la lista de guis envolviendolo en un
 	 * ScrollableSkillEntryGui
@@ -357,7 +364,8 @@ public class GuiSkillTab extends AbstractGui {
 		return findIfInsideIncludingChildren(collect, (int) mouseX, (int) mouseY, i, j);
 	}
 
-	private GuiSkillEntry findIfInsideIncludingChildren(List<GuiSkillEntry> collect, int mouseX, int mouseY, int scrollX, int scrollY) {
+	private GuiSkillEntry findIfInsideIncludingChildren(List<GuiSkillEntry> collect, int mouseX, int mouseY,
+			int scrollX, int scrollY) {
 		for (GuiSkillEntry skillEntryGui : collect) {
 			if (skillEntryGui.isMouseOver(scrollX, scrollY, mouseX, mouseY)) {
 				return skillEntryGui;
@@ -381,4 +389,5 @@ public class GuiSkillTab extends AbstractGui {
 	public double getScrollY() {
 		return scrollY;
 	}
+
 }

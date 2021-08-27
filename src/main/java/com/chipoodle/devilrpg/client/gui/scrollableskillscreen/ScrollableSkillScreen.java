@@ -25,6 +25,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.AbstractGui;
+import net.minecraft.client.gui.IGuiEventListener;
 import net.minecraft.client.gui.chat.NarratorChatListener;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.Widget;
@@ -75,7 +76,7 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 
 	private Input openScreenKeyPressed;
 
-	StringTextComponent unspentSkillHolder;
+	
 	private GuiSkillEntry skillEntryGuiApretado;
 	private double posicionMouseX;
 	private double posicionMouseY;
@@ -105,7 +106,6 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 		ClientSkillBuilder skillManager = new ClientSkillBuilder(Minecraft.getInstance());
 		skillManager.buildSkillTrees();
 		this.clientSkillManager = skillManager;
-		unspentSkillHolder = new StringTextComponent("");
 		isDraggingToPowerButton = false;
 		skillEntryGuiApretado = null;
 		skillsImages = new EnumMap<>(SkillEnum.class);
@@ -117,7 +117,6 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 		this.player = Minecraft.getInstance().player;
 		expCap = player.getCapability(PlayerExperienceCapabilityProvider.EXPERIENCE_CAP);
 		skillCap = player.getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
-		DevilRpg.LOGGER.info("ScrollableSkillScreen consturctor. openScreenKeyPressed: {}", openScreenKeyPressed);
 		powerButtonList = new LinkedHashSet<>();
 	}
 
@@ -188,36 +187,13 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 	private void renderSkillButtonApretado(MatrixStack matrixStack) {
 		if (skillEntryGuiApretado != null) {
 			skillEntryGuiApretado.drawButton(matrixStack, (int) posicionMouseX, (int) posicionMouseY, false,
-					skillEntryGuiApretado.getDisplayInfo().getImage(), true);
+					skillEntryGuiApretado.getDisplayInfo().getImage(), true,skillEntryGuiApretado.isDisabled());
 		}
-	}
-
-	@Override
-	public boolean mouseClicked(double mouseX, double mouseY, int button) {
-		if (button == ButtonMouse.LEFT_BUTTON) {
-			for (GuiSkillTab rootSkillTabGui : this.tabs.values()) {
-				if (rootSkillTabGui.getPage() == tabPage) {
-					if (rootSkillTabGui.isInsideTabSelector(offsetLeft, offsetTop, mouseX, mouseY)) {
-						this.clientSkillManager.setSelectedTab(rootSkillTabGui.getSkillElement(), true);
-						break;
-					} else {
-						GuiSkillEntry skillEntryGui = selectedTab.getIfInsideIncludingChildren(
-								mouseX - offsetLeft - WINDOW_AREA_OFFSET_X, mouseY - offsetTop - WINDOW_AREA_OFFSET_Y);
-						if (skillEntryGui != null) {
-							DevilRpg.LOGGER.info("|----------- mouseClicked: {}",skillEntryGui.getSkillElement().getSkillCapability());
-							skillButtonPressed(skillEntryGui);
-							break;
-						}
-					}
-				}
-			}
-		}
-
-		return super.mouseClicked(mouseX, mouseY, button);
 	}
 
 	public void skillButtonPressed(GuiSkillEntry skillEntryGui) {
 		SkillEnum skilEnum = skillEntryGui.getSkillElement().getSkillCapability();
+		DevilRpg.LOGGER.info("|----------- skillButtonPressed: {}",skilEnum);
 		if (!skilEnum.equals(SkillEnum.EMPTY)) {
 			skillCap.ifPresent(aSkillCap -> {
 				HashMap<SkillEnum, Integer> skillsPoints = aSkillCap.getSkillsPoints();
@@ -234,6 +210,30 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 			});
 		}
 	}
+	
+	@Override
+	public boolean mouseClicked(double mouseX, double mouseY, int button) {
+		if (button == ButtonMouse.LEFT_BUTTON) {
+			for (GuiSkillTab rootSkillTabGui : this.tabs.values()) {
+				if (rootSkillTabGui.getPage() == tabPage) {
+					if (rootSkillTabGui.isInsideTabSelector(offsetLeft, offsetTop, mouseX, mouseY)) {
+						this.clientSkillManager.setSelectedTab(rootSkillTabGui.getSkillElement(), true);
+						break;
+					} else {
+						GuiSkillEntry skillEntryGui = selectedTab.getIfInsideIncludingChildren(
+								mouseX - offsetLeft - WINDOW_AREA_OFFSET_X, mouseY - offsetTop - WINDOW_AREA_OFFSET_Y);
+						if (skillEntryGui != null && skillEntryGui.getSkillElement().getParent() != null  && !skillEntryGui.isDisabled() ) {
+							DevilRpg.LOGGER.info("|----------- mouseClicked: {}",skillEntryGui.getSkillElement().getSkillCapability());
+							skillButtonPressed(skillEntryGui);
+							break;
+						}
+					}
+				}
+			}
+		}
+
+		return super.mouseClicked(mouseX, mouseY, button);
+	}
 
 	/**
 	 * Se dispara cuando se está hiciendro drag con el mouse
@@ -243,15 +243,15 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 		if (button == ButtonMouse.RIGHT_BUTTON) {
 			this.isScrolling = false;
 
-			//int i = MathHelper.floor(selectedTab.getScrollX());
-			//int j = MathHelper.floor(selectedTab.getScrollY());
-
 			if (!isDraggingToPowerButton) {
 				skillEntryGuiApretado = selectedTab.getIfInsideIncludingChildren(
 						mouseX - offsetLeft - WINDOW_AREA_OFFSET_X, mouseY - offsetTop - WINDOW_AREA_OFFSET_Y);
+				if(skillEntryGuiApretado!= null && (skillEntryGuiApretado.isDisabled() || !skillEntryGuiApretado.getSkillProgress().hasProgress())) {
+					skillEntryGuiApretado = null;
+				}
 			}
 
-			if (skillEntryGuiApretado != null) {
+			if (skillEntryGuiApretado != null && skillEntryGuiApretado.getSkillElement().getParent() != null && !skillEntryGuiApretado.isDisabled()) {
 				if (!isDraggingToPowerButton) {
 				}
 				isDraggingToPowerButton = true;
@@ -259,6 +259,8 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 				posicionMouseY = mouseY - skillEntryGuiApretado.getY() - GuiSkillEntry.FRAME_SIZE / ((double) 2);
 				return true;
 			}
+			else
+				skillEntryGuiApretado = null;
 			return false;
 
 		} else {
@@ -275,7 +277,7 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 	@Override
 	public boolean mouseReleased(double mouseX, double mouseY, int state) {
 		boolean returned = super.mouseReleased(mouseX, mouseY, state);
-		if (state == ButtonMouse.RIGHT_BUTTON && skillEntryGuiApretado != null) { // botón derecho
+		if (state == ButtonMouse.RIGHT_BUTTON && skillEntryGuiApretado != null && skillEntryGuiApretado.getSkillElement().getParent() != null) { // botón derecho
 			DevilRpg.LOGGER.info("|----------- rightMouseReleases: {}", skillEntryGuiApretado.getSkillElement().getSkillCapability());
 
 			CustomSkillButton copy = powerButtonList.stream().filter(x -> x.isInside(mouseX, mouseY)).findAny().orElse(null);
@@ -285,6 +287,7 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 				if (powerNames != null) {
 					powerNames.put((PowerEnum) copy.getEnum(), skillEntryGuiApretado.getSkillElement().getSkillCapability());
 					skillCap.ifPresent(x -> x.setSkillsNameOfPowers(powerNames, player));
+					init();
 				}
 			}
 			isDraggingToPowerButton = false;
@@ -329,14 +332,15 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 			RenderSystem.disableBlend();
 
 			// Pinta el título
-			this.font.draw(matrixStack, GUI_LABEL, (float) (offsetLeft + 8), (float) (offsetTop + 6), 4210752);
+			this.font.draw(matrixStack, GUI_LABEL, (offsetLeft + 8), (offsetTop + 6), 4210752);
 
 			int unspentPoints = expCap.map(y -> y.getUnspentPoints()).orElse(-1);
 			if (unspentPoints != 0) {
+				StringTextComponent unspentSkillHolder = new StringTextComponent("");
 				unspentSkillHolder.append(UNSPENT_LABEL);
 				unspentSkillHolder.append("" + unspentPoints);
-				this.font.draw(matrixStack, unspentSkillHolder, (float) (offsetLeft + 8),
-						(float) (offsetTop + INITIAL_HEIGHT), 4210752);
+				//Pinta puntos sin usar
+				this.font.draw(matrixStack, unspentSkillHolder, (offsetLeft + 8), (offsetTop + INITIAL_HEIGHT), 4210752);
 			}
 
 		}
@@ -578,11 +582,13 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 			for (CustomSkillButton c : powerButtonList) {
 				PowerEnum powerEnumFromButton = (PowerEnum) c.getEnum();
 				SkillEnum aSkillEnum = powerToSkillDictionary.getOrDefault(powerEnumFromButton,SkillEnum.EMPTY);
-				if(!aSkillEnum.equals(SkillEnum.EMPTY)) {
-					c.setButtonTexture(skillsImages.get(aSkillEnum));
-				}
-				else {
-					c.setButtonTexture(EMPTY_POWER_IMAGE_RESOURCE);
+				if(aSkillEnum!= null) {
+					if(!aSkillEnum.equals(SkillEnum.EMPTY)) {
+						c.setButtonTexture(skillsImages.get(aSkillEnum));
+					}
+					else {
+						c.setButtonTexture(EMPTY_POWER_IMAGE_RESOURCE);
+					}
 				}
 			}
 		}

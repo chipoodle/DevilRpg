@@ -53,7 +53,7 @@ public class ScrollableSkillInfoPacket implements IPacket<IClientPlayNetHandler>
 	 * Reads the raw packet data from the data stream.
 	 */
 	public void read(PacketBuffer buf) throws IOException {
-		this.firstSync = buf.readBoolean();
+		/*this.firstSync = buf.readBoolean();
 		this.advancementsToAdd = Maps.newHashMap();
 		this.advancementsToRemove = Sets.newLinkedHashSet();
 		this.progressUpdates = Maps.newHashMap();
@@ -76,15 +76,16 @@ public class ScrollableSkillInfoPacket implements IPacket<IClientPlayNetHandler>
 
 		for (int l = 0; l < i; ++l) {
 			ResourceLocation resourcelocation2 = buf.readResourceLocation();
-			this.progressUpdates.put(resourcelocation2, SkillProgress.fromNetwork(buf));
+			//this.progressUpdates.put(resourcelocation2, SkillProgress.fromNetwork(buf));
 		}
-
+*/
 	}
 
 	/**
 	 * Writes the raw packet data to the data stream.
 	 */
 	public void write(PacketBuffer buf) throws IOException {
+		/*
 		buf.writeBoolean(this.firstSync);
 		buf.writeVarInt(this.advancementsToAdd.size());
 
@@ -107,7 +108,7 @@ public class ScrollableSkillInfoPacket implements IPacket<IClientPlayNetHandler>
 			buf.writeResourceLocation(entry1.getKey());
 			entry1.getValue().serializeToNetwork(buf);
 		}
-
+		 */
 	}
 
 	@OnlyIn(Dist.CLIENT)

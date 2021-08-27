@@ -2,7 +2,6 @@ package com.chipoodle.devilrpg.client.gui.scrollableskillscreen;
 
 import java.util.HashMap;
 import java.util.List;
-import java.util.Objects;
 
 import javax.annotation.Nullable;
 
@@ -24,7 +23,6 @@ import net.minecraft.util.text.CharacterManager;
 import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.ITextProperties;
 import net.minecraft.util.text.LanguageMap;
-import net.minecraft.util.text.StringTextComponent;
 import net.minecraft.util.text.Style;
 import net.minecraft.util.text.TextComponentUtils;
 import net.minecraftforge.api.distmarker.Dist;
@@ -44,30 +42,33 @@ public class GuiSkillEntry extends AbstractGui {
 	private final GuiSkillTab skillTabGui;
 	private final SkillElement skillElement;
 	private final SkillDisplayInfo displayInfo;
-	private final IReorderingProcessor title;
+	private IReorderingProcessor title;
 	private final int width;
 	private final List<IReorderingProcessor> description;
 	private final Minecraft minecraft;
 	private GuiSkillEntry parent;
 	private final List<GuiSkillEntry> children = Lists.newArrayList();
 	private SkillProgress skillProgress;
+
 	private final int x;
 	private final int y;
 
 	private String levelString;
-
+		
 	public GuiSkillEntry(GuiSkillTab skillTabGui, Minecraft minecraft, SkillElement skillElement, int skillPoint,
 			int maxSkillPoint) {
 		this.skillTabGui = skillTabGui;
 		this.skillElement = skillElement;
 		this.displayInfo = skillElement.getDisplay();
 		this.minecraft = minecraft;
-		this.title = LanguageMap.getInstance()
-				.getVisualOrder(minecraft.font.substrByWidth(getDisplayInfo().getTitle(), 163));
+
+		skillProgress = new SkillProgress(skillPoint, maxSkillPoint);
+		updateFormattedLevelString(skillPoint, maxSkillPoint);
+		
 		this.x = MathHelper.floor(getDisplayInfo().getX() * 28.0F * 2);
 		this.y = MathHelper.floor(getDisplayInfo().getY() * 27.0F * 2);
-		// int i = advancement.getRequirementCount();
-		int i = 0;
+		//int i = skillElement.getRequirementCount();
+		int i = maxSkillPoint;
 		int j = String.valueOf(i).length();
 		int k = i > 1 ? minecraft.font.width("  ") + minecraft.font.width("0") * j * 2 + minecraft.font.width("/") : 0;
 		int l = 29 + minecraft.font.width(this.title) + k;
@@ -82,20 +83,33 @@ public class GuiSkillEntry extends AbstractGui {
 		this.width = l + 3 + 5;
 
 		skillTabGui.getScreen().getSkillsResourceLocations().put(skillElement.getSkillCapability(),this.getDisplayInfo().getImage());
-		updateFormattedLevelString(skillPoint, maxSkillPoint);
-
 	}
 
 	/**
-	 * Actualiza lso puntos utilizads / puntos máximos del skill
+	 * Actualiza los puntos utilizads / puntos máximos del skill
 	 * 
 	 * @param skillPoint
 	 * @param maxSkillPoint
 	 */
 	public void updateFormattedLevelString(int skillPoint, int maxSkillPoint) {
-		levelString = "" + skillPoint + "/" + maxSkillPoint;
+		updateLevelString(skillPoint, maxSkillPoint);
+		updateTitle();
+		skillProgress.update(skillPoint, maxSkillPoint);
 	}
 
+	private void updateLevelString(int skillPoint, int maxSkillPoint) {
+		levelString = "" + skillPoint + "/" + maxSkillPoint;
+	}
+	
+	private void updateTitle() {
+		//StringTextComponent level = new StringTextComponent(" "+levelString);
+		this.title = LanguageMap.getInstance().getVisualOrder(this.minecraft.font.substrByWidth(getDisplayInfo().getTitle(), 163));
+		if(skillElement.getParent() != null) {
+			IReorderingProcessor levelPr = IReorderingProcessor.forward(" "+levelString, Style.EMPTY);
+			this.title = IReorderingProcessor.composite(this.title, levelPr);
+		}
+	}
+	
 	private static float getTextWidth(CharacterManager manager, List<ITextProperties> text) {
 		return (float) text.stream().mapToDouble(manager::stringWidth).max().orElse(0.0D);
 	}
@@ -164,8 +178,8 @@ public class GuiSkillEntry extends AbstractGui {
 	 * @return
 	 */
 	private SkillState getSkillState() {
-		float f = this.skillProgress == null ? 0.0F : this.skillProgress.getPercent();
 		SkillState skillState;
+		float f = this.skillProgress == null ? 0.0F : this.skillProgress.getPercent();
 		if (f >= 1.0F) {
 			skillState = SkillState.OBTAINED;
 		} else {
@@ -183,6 +197,13 @@ public class GuiSkillEntry extends AbstractGui {
 		this.children.add(guiSkillsIn);
 	}
 
+	public boolean isDisabled() {
+		if(this.parent == null)
+			return false;
+				
+		return !(parent.getSkillProgress().hasProgress() || parent.getSkillProgress().isDone() ) ;
+	}
+	
 	/**
 	 * Pinta los marcos con sus elementos internos cuando el mouse no está sobre
 	 * ellos
@@ -195,14 +216,19 @@ public class GuiSkillEntry extends AbstractGui {
 		// DevilRpg.LOGGER.info("|---drawSkill x" +x+" y "+y+" title: "+
 		// this.displayInfo.getTitle());
 
+		// Pinta a los hijos
+		for (GuiSkillEntry childrenEntry : this.children) {
+			childrenEntry.drawSkills(matrixStack, x, y);
+		}
+
 		if (!this.getDisplayInfo().isHidden() || (this.skillProgress != null && this.skillProgress.isDone())) {
 
 			SkillState skillState = getSkillState();
-
+			
 			// Texturas de los marcos, y barras de título de los tooltips
 			this.minecraft.getTextureManager().bind(WIDGETS);
 
-			// Pinta el marco
+			// Pinta el marco del botón
 			this.blit(matrixStack, x + this.x + 3, y + this.y, this.getDisplayInfo().getFrame().getIcon(),
 					128 + skillState.getId() * FRAME_SIZE, FRAME_SIZE, FRAME_SIZE);
 
@@ -210,14 +236,13 @@ public class GuiSkillEntry extends AbstractGui {
 			// this.minecraft.getItemRenderer().renderAndDecorateFakeItem(this.displayInfo.getIcon(),x
 			// + this.x + 8, y + this.y + 5);
 
+			//RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
+			//RenderSystem.enableBlend();
+			
 			// Pinta el botón
-			drawButton(matrixStack, x, y, true, this.getDisplayInfo().getImage(), false);
+			drawButton(matrixStack, x, y, false, this.getDisplayInfo().getImage(), false,isDisabled());
 		}
 
-		// Pinta a los hijos
-		for (GuiSkillEntry childrenEntry : this.children) {
-			childrenEntry.drawSkills(matrixStack, x, y);
-		}
 
 	}
 
@@ -231,6 +256,7 @@ public class GuiSkillEntry extends AbstractGui {
 		SkillState advancementstate;
 		SkillState advancementstate1;
 		SkillState advancementstate2;
+		
 		if (f >= 1.0F) {
 			j = this.width / 2;
 			advancementstate = SkillState.OBTAINED;
@@ -254,8 +280,8 @@ public class GuiSkillEntry extends AbstractGui {
 
 		int k = this.width - j;
 		this.minecraft.getTextureManager().bind(WIDGETS);
-		RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
-		RenderSystem.enableBlend();
+		//RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
+		//RenderSystem.enableBlend();
 		int l = y + this.y;
 		int i1;
 		if (widthFlag) {
@@ -275,40 +301,46 @@ public class GuiSkillEntry extends AbstractGui {
 			}
 		}
 
+		//pinta la mitad izquierda de la barra del título
 		this.blit(matrixStack, i1, l, 0, advancementstate.getId() * FRAME_SIZE, j, FRAME_SIZE);
+		//pinta la mitad derecha de la barra del título
 		this.blit(matrixStack, i1 + j, l, 200 - k, advancementstate1.getId() * FRAME_SIZE, k, FRAME_SIZE);
-		// Pinta el marco
+		// Pinta el marco del ícono
 		this.blit(matrixStack, x + this.x + 3, y + this.y, this.getDisplayInfo().getFrame().getIcon(),
 				128 + advancementstate2.getId() * FRAME_SIZE, FRAME_SIZE, FRAME_SIZE);
+	
 		if (widthFlag) {
 			//pinta título
-			this.minecraft.font.drawShadow(matrixStack, this.title+" "+getLevelString(), (float) (i1 + 5), (float) (y + this.y + 9), -1);
+			this.minecraft.font.drawShadow(matrixStack, this.title,  (i1 + 5), (y + this.y + 9), -1);
 			if (skillProgressString != null) {
-				this.minecraft.font.drawShadow(matrixStack, skillProgressString, (float) (x + this.x - i), (float) (y + this.y + 9), -1);
+				this.minecraft.font.drawShadow(matrixStack, skillProgressString, (x + this.x - i), (y + this.y + 9), -1);
 			}
 		} else {
 			//pinta título
-			this.minecraft.font.drawShadow(matrixStack, this.title+" "+getLevelString(), (float) (x + this.x + 32), (float) (y + this.y + 9),
-					-1);
+			this.minecraft.font.drawShadow(matrixStack, this.title, (x + this.x + 32),  (y + this.y + 9), -1);
 			if (skillProgressString != null) {
-				this.minecraft.font.drawShadow(matrixStack, skillProgressString, (float) (x + this.x + this.width - i - 5),
-						(y + this.y + 9), -1);
+				this.minecraft.font.drawShadow(matrixStack, skillProgressString, (x + this.x + this.width - i - 5), (y + this.y + 9), -1);
 			}
 		}
 
+		
 		if (flag1) {
 			for (int k1 = 0; k1 < this.description.size(); ++k1) {
+				//Pinta contenido
 				this.minecraft.font.draw(matrixStack, this.description.get(k1), (i1 + 5),
 						(float) (l + FRAME_SIZE - j1 + 7 + k1 * 9), -5592406);
 			}
+			
+			
 		} else {
 			for (int l1 = 0; l1 < this.description.size(); ++l1) {
+				//Pinta contenido
 				this.minecraft.font.draw(matrixStack, this.description.get(l1), (i1 + 5),
 						(float) (y + this.y + 9 + 17 + l1 * 9), -5592406);
 			}
 		}
 
-		drawButton(matrixStack, x, y, false, this.getDisplayInfo().getImage(), false);
+		drawButton(matrixStack, x, y, false, this.getDisplayInfo().getImage(), false,isDisabled());
 
 		// Pinta el icono del marco
 		// this.minecraft.getItemRenderer().renderItemAndEffectIntoGuiWithoutEntity(this.displayInfo.getIcon(),x
@@ -325,11 +357,12 @@ public class GuiSkillEntry extends AbstractGui {
 	 */
 	@SuppressWarnings("deprecation")
 	public void drawButton(MatrixStack matrixStack, int x, int y, boolean mostrarPuntos, ResourceLocation image,
-			boolean superpuesto) {
+			boolean superpuesto,boolean disabled) {
+				
 		if (mostrarPuntos) {
 			// Pinta puntos asignados/puntos máximos
 			RenderSystem.pushMatrix();
-			drawSkillLevel(matrixStack, (int) (x), (int) (y + FRAME_SIZE));
+			drawOuterSkillLevel(matrixStack, (int) (x), (int) (y + FRAME_SIZE));
 			RenderSystem.popMatrix();
 		}
 		int posX = this.x + x;
@@ -347,14 +380,22 @@ public class GuiSkillEntry extends AbstractGui {
 					GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
 		} else {
 			RenderSystem.enableDepthTest();
+			if(disabled){
+				RenderSystem.color4f(100.0F, 100.0F, 100.0F, 0.4F);
+				RenderSystem.enableBlend();
+			}
 		}
-
+		
 		this.minecraft.getTextureManager().bind(image);
 		RenderSystem.translatef(posX - posX * BOTON_SCALE_FACTOR - 1, posY - posY * BOTON_SCALE_FACTOR - 1, 1);
 		RenderSystem.scalef(BOTON_SCALE_FACTOR, BOTON_SCALE_FACTOR, 0);
 		RenderSystem.translatef(168, 90, 0);
 		AbstractGui.blit(matrixStack, posX, posY, 0, 0, FRAME_SIZE * 20 - 2, FRAME_SIZE * 20 - 2, BUTTON_IMAGE_SIZE,
 				BUTTON_IMAGE_SIZE);
+
+		if(disabled)
+			RenderSystem.disableBlend();
+		
 		RenderSystem.popMatrix();
 
 	}
@@ -364,10 +405,9 @@ public class GuiSkillEntry extends AbstractGui {
 	 * @param x           de scroll
 	 * @param y           de scroll
 	 */
-	private void drawSkillLevel(MatrixStack matrixStack, int x, int y) {
+	private void drawOuterSkillLevel(MatrixStack matrixStack, int x, int y) {
 		if (!getSkillElement().getSkillCapability().equals(SkillEnum.EMPTY)) {
-			String levelStr = getLevelString();
-			this.minecraft.font.draw(matrixStack, levelStr, (x + getX()), (y + getY()), -1);
+			this.minecraft.font.draw(matrixStack, levelString, (x + getX()), (y + getY()), -1);
 		}
 	}
 
@@ -486,10 +526,6 @@ public class GuiSkillEntry extends AbstractGui {
 		return skillElement;
 	}
 
-	public String getLevelString() {
-		return levelString;
-	}
-
 	/*-----------------------------*/
 	public void skillButtonPressed(Button pressedButton) {
 		CustomGuiButton pressed = ((CustomGuiButton) pressedButton);
@@ -509,5 +545,9 @@ public class GuiSkillEntry extends AbstractGui {
 
 	public SkillDisplayInfo getDisplayInfo() {
 		return displayInfo;
+	}
+	
+	public SkillProgress getSkillProgress() {
+		return skillProgress;
 	}
 }

@@ -9,6 +9,7 @@ import com.google.common.collect.Lists;
 
 
 public class SkillTreeNode {
+	private static final float LINE_WIDTH_FACTOR = 1.0f;//0.50F;
 	private final SkillElement rootSkillElement;
 	private final SkillTreeNode parent;
 	private final SkillTreeNode sibling;
@@ -59,7 +60,7 @@ public class SkillTreeNode {
 	private void firstWalk() {
 		if (this.children.isEmpty()) {
 			if (this.sibling != null) {
-				this.y = this.sibling.y + 1.0F;
+				this.y = this.sibling.y + LINE_WIDTH_FACTOR;
 			} else {
 				this.y = 0.0F;
 			}
@@ -206,7 +207,7 @@ public class SkillTreeNode {
 
 	private void updatePosition() {
 		if (this.rootSkillElement.getDisplay() != null) {
-			this.rootSkillElement.getDisplay().setPosition((float) this.x, this.y);
+			this.rootSkillElement.getDisplay().setPosition(this.x, this.y);
 		}
 
 		if (!this.children.isEmpty()) {

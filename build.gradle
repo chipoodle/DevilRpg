@@ -5,7 +5,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '4.1.+', changing: true
+        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '5.1.+', changing: true
     }
 }
 apply plugin: 'net.minecraftforge.gradle'
@@ -164,9 +164,9 @@ publishing {
 }
 
 // Jar signing
-import net.minecraftforge.gradle.common.task.SignJar
+//import net.minecraftforge.gradle.common.task.SignJar
 
-task signJar(type: SignJar, dependsOn: jar) {
+/*task signJar(type: SignJar, dependsOn: jar) {
     // Skips if the keyStore property is missing.
     onlyIf {
         project.hasProperty('keyStore')
@@ -183,7 +183,7 @@ task signJar(type: SignJar, dependsOn: jar) {
 }
 
 // Runs the signJar task automatically when build is run.
-build.dependsOn signJar
+build.dependsOn signJar*/
 
 // Process resources on build
 processResources {

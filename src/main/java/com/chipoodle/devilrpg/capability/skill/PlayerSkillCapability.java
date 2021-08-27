@@ -232,7 +232,15 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
 	}
 
 	private int getSkillLevelFromAssociatedPower(PowerEnum triggeredPower) {
-		return getSkillsPoints().get(getSkillsNameOfPowers().get(triggeredPower));
+		HashMap<SkillEnum,Integer> skillsPoints = getSkillsPoints();
+		if(skillsPoints!= null && getSkillsNameOfPowers()!= null) {
+			return skillsPoints
+			.get(getSkillsNameOfPowers()
+			.get(triggeredPower));
+		}
+		
+		return 0;
+		
 	}
 
 	private boolean consumeMana(ServerPlayerEntity playerIn, ISkillContainer poder) {
