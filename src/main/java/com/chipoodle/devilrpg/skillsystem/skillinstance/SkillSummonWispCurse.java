@@ -22,18 +22,18 @@ import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.LazyOptional;
 
-public class SkillSummonWispSpeed implements ISkillContainer {
+public class SkillSummonWispCurse implements ISkillContainer {
 
 	private final static int NUMBER_OF_SUMMONS = 1;
 	private PlayerSkillCapability parentCapability;
 
-	public SkillSummonWispSpeed(PlayerSkillCapability parentCapability) {
+	public SkillSummonWispCurse(PlayerSkillCapability parentCapability) {
 		this.parentCapability = parentCapability;
 	}
 
 	@Override
 	public SkillEnum getSkillEnum() {
-		return SkillEnum.SUMMON_WISP_SPEED;
+		return SkillEnum.SUMMON_WISP_CURSE;
 	}
 
 	@Override
@@ -65,7 +65,7 @@ public class SkillSummonWispSpeed implements ISkillContainer {
 				SoundEvents.BEACON_ACTIVATE, SoundCategory.NEUTRAL, 0.5F,
 				0.4F / (rand.nextFloat() * 0.4F + 0.8F));
 		SoulWispEntity sw = ModEntityTypes.WISP.get().create(worldIn);
-		sw.updateLevel(playerIn, Effects.POISON, Effects.GLOWING, SkillEnum.SUMMON_WISP_SPEED, false);
+		sw.updateLevel(playerIn, Effects.POISON, Effects.GLOWING, SkillEnum.SUMMON_WISP_CURSE, false);
 		Vector3d playerLookVector = playerIn.getLookAngle();
 		double spawnX = playerIn.getX() + DevilRpgConfig.WISP_SPAWN_DISTANCE * playerLookVector.x;
 		double spawnZ = playerIn.getZ() + DevilRpgConfig.WISP_SPAWN_DISTANCE * playerLookVector.z;

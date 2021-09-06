@@ -3,14 +3,11 @@ package com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
-import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillProgress;
 import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillElement;
-import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillElement.Builder;
+import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillProgress;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 
 import net.minecraft.client.network.play.IClientPlayNetHandler;
 import net.minecraft.network.IPacket;

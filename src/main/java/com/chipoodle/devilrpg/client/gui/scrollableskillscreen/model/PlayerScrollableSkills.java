@@ -1,20 +1,10 @@
 package com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.StringReader;
-import java.io.Writer;
-import java.nio.charset.StandardCharsets;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 
@@ -22,35 +12,17 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.ScrollableSkillLoadFix;
-import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillProgress;
 import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillElement;
-//import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillProgress.Serializer;
-import com.google.common.base.Charsets;
+import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillProgress;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.common.io.Files;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParseException;
-import com.google.gson.internal.Streams;
 import com.google.gson.reflect.TypeToken;
-import com.google.gson.stream.JsonReader;
 import com.mojang.datafixers.DataFixer;
-import com.mojang.serialization.Dynamic;
-import com.mojang.serialization.JsonOps;
 
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.server.management.PlayerList;
 import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.SharedConstants;
-import net.minecraft.util.Util;
-import net.minecraft.util.datafix.DefaultTypeReferences;
-import net.minecraft.util.text.ChatType;
-import net.minecraft.util.text.TranslationTextComponent;
-import net.minecraft.world.GameRules;
 
 public class PlayerScrollableSkills {
 	private static final Logger LOGGER = LogManager.getLogger();

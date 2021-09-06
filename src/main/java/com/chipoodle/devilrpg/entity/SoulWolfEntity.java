@@ -1,7 +1,5 @@
 package com.chipoodle.devilrpg.entity;
 
-import java.util.UUID;
-
 import com.chipoodle.devilrpg.capability.minion.IBaseMinionCapability;
 import com.chipoodle.devilrpg.capability.minion.PlayerMinionCapabilityProvider;
 import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;

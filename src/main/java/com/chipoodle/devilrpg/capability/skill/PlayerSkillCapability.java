@@ -25,7 +25,6 @@ import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.util.SoundCategory;
 import net.minecraft.util.SoundEvents;
-import net.minecraft.util.text.StringTextComponent;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.fml.network.PacketDistributor;
 
@@ -46,7 +45,7 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
 			HashMap<SkillEnum, Integer> skills = new HashMap<>();
 			HashMap<SkillEnum, Integer> maxSkills = new HashMap<>();
 			HashMap<SkillEnum, Integer> manaCostContainer = new HashMap<>();
-			ConcurrentLinkedQueue<TameableEntity> minions = new ConcurrentLinkedQueue<TameableEntity>();
+			ConcurrentLinkedQueue<TameableEntity> minions = new ConcurrentLinkedQueue<>();
 			HashMap<Attribute, UUID> attributeModifiers = new HashMap<>();
 			
 			for (PowerEnum p : Arrays.asList(PowerEnum.values())) {
@@ -58,7 +57,7 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
 			}
 			for (SkillEnum s : Arrays.asList(SkillEnum.values())) {
 				manaCostContainer.put(s, 20);
-				if(s.equals(SkillEnum.FIREBALL)) {
+				if(s.equals(SkillEnum.FROSTBALL)) {
 					manaCostContainer.put(s, 3);
 				}	
 			}

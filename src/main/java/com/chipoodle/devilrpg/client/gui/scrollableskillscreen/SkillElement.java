@@ -33,9 +33,10 @@ public class SkillElement {
 	private final Set<SkillElement> children = Sets.newLinkedHashSet();
 	private final ITextComponent displayText;
 	private final SkillEnum skillCapability;
+	private final SkillManaCost skillManaCost;
 
 	public SkillElement(ResourceLocation id, @Nullable SkillElement parentIn, @Nullable SkillDisplayInfo displayIn,
-			SkillElementRewards rewardsIn, SkillEnum skillCapability) {
+			SkillElementRewards rewardsIn, SkillEnum skillCapability, SkillManaCost skillManaCost) {
 		this.id = id;
 		this.display = displayIn;
 		this.parent = parentIn;
@@ -59,6 +60,7 @@ public class SkillElement {
 			this.displayText = TextComponentUtils.wrapInSquareBrackets(itextcomponent2).withStyle(textformatting);
 		}
 		this.skillCapability = skillCapability;
+		this.skillManaCost = skillManaCost;
 	}
 
 	/**
@@ -66,7 +68,7 @@ public class SkillElement {
 	 */
 	public SkillElement.Builder copy() {
 		return new SkillElement.Builder(this.id, this.parent == null ? null : this.parent.getId(), this.display,
-				this.rewards, this.skillCapability);
+				this.rewards, this.skillCapability,this.skillManaCost);
 	}
 
 	/**
@@ -98,10 +100,28 @@ public class SkillElement {
 		return this.rewards;
 	}
 
+	@Override
 	public String toString() {
-		return "SimpleSkillElement{id=" + this.getId() + ", parent="
-				+ (this.parent == null ? "null" : this.parent.getId()) + ", display=" + this.display + ", rewards="
-				+ this.rewards + '}';
+		StringBuilder builder2 = new StringBuilder();
+		builder2.append("SkillElement [");
+		if (parent != null)
+			builder2.append("parent=").append(parent).append(", ");
+		if (display != null)
+			builder2.append("display=").append(display).append(", ");
+		if (rewards != null)
+			builder2.append("rewards=").append(rewards).append(", ");
+		if (id != null)
+			builder2.append("id=").append(id).append(", ");
+		if (children != null)
+			builder2.append("children=").append(children).append(", ");
+		if (displayText != null)
+			builder2.append("displayText=").append(displayText).append(", ");
+		if (skillCapability != null)
+			builder2.append("skillCapability=").append(skillCapability).append(", ");
+		if (skillManaCost != null)
+			builder2.append("skillManaCost=").append(skillManaCost);
+		builder2.append("]");
+		return builder2.toString();
 	}
 
 	/**
@@ -168,6 +188,10 @@ public class SkillElement {
 	public SkillEnum getSkillCapability() {
 		return skillCapability;
 	}
+		
+	public SkillManaCost getSkillManaCost() {
+		return skillManaCost;
+	}
 
 	public static class Builder {
 		private ResourceLocation id;
@@ -176,14 +200,16 @@ public class SkillElement {
 		private SkillDisplayInfo display;
 		private SkillElementRewards rewards = SkillElementRewards.EMPTY;
 		private SkillEnum skillCapability;
+		private SkillManaCost skillManaCost;
 
 		private Builder(ResourceLocation id, @Nullable ResourceLocation parentIdIn,
-				@Nullable SkillDisplayInfo displayIn, SkillElementRewards rewardsIn, SkillEnum skillCapability) {
+				@Nullable SkillDisplayInfo displayIn, SkillElementRewards rewardsIn, SkillEnum skillCapability, SkillManaCost skillManaCost) {
 			this.parentId = parentIdIn;
 			this.id = id;
 			this.display = displayIn;
 			this.rewards = rewardsIn;
 			this.skillCapability = skillCapability;
+			this.skillManaCost = skillManaCost;
 		}
 
 		private Builder() {
@@ -235,7 +261,12 @@ public class SkillElement {
 			this.skillCapability = skillCapability;
 			return this;
 		}
-
+		
+		public SkillElement.Builder withSkillManaCost(SkillManaCost skillManaCost) {
+			this.skillManaCost = skillManaCost;
+			return this;
+		}
+		
 		/**
 		 * Tries to resolve the parent of this advancement, if possible. Returns true on
 		 * success.
@@ -260,8 +291,7 @@ public class SkillElement {
 			})) {
 				throw new IllegalStateException("Tried to build incomplete advancement!");
 			} else {
-
-				return new SkillElement(id, this.parent, this.display, this.rewards, this.skillCapability);
+				return new SkillElement(id, this.parent, this.display, this.rewards, this.skillCapability,this.skillManaCost);
 			}
 		}
 
@@ -331,8 +361,14 @@ public class SkillElement {
 				SkillEnum skillCapability = json.has("capability")
 						? SkillEnum.getByJsonName(JSONUtils.getAsString(json, "capability"))
 						: SkillEnum.EMPTY;
+				
+				SkillManaCost skillManaCost = json.has("skillmanacost")
+						?  SkillManaCost.deserialize(JSONUtils.getAsJsonObject(json, "skillmanacost"))
+						: null;
+				
+				
 
-				return new SkillElement.Builder(id, resourcelocation, displayinfo, advancementrewards, skillCapability);
+				return new SkillElement.Builder(id, resourcelocation, displayinfo, advancementrewards, skillCapability,skillManaCost);
 			} catch (Exception ex) {
 				DevilRpg.LOGGER.error("Ocurrió un error al deserializar", ex);
 				return null;
@@ -361,21 +397,25 @@ public class SkillElement {
 				SkillEnum skillCapability = json.has("capability")
 						? SkillEnum.valueOf(JSONUtils.getAsJsonObject(json, "capability").getAsString())
 						: SkillEnum.EMPTY;
+				
+				SkillManaCost skillManaCost = json.has("skillmanacost")
+						?  SkillManaCost.deserialize(JSONUtils.getAsJsonObject(json, "skillmanacost"))
+						: null;
 
-				return new SkillElement.Builder(id, resourcelocation, displayinfo, advancementrewards, skillCapability);
+				return new SkillElement.Builder(id, resourcelocation, displayinfo, advancementrewards, skillCapability, skillManaCost);
 			} catch (Exception ex) {
 				DevilRpg.LOGGER.error("Ocurrió un error al deserializar", ex);
 				return null;
 			}
 		}
 
-		public static SkillElement.Builder readFrom(PacketBuffer buf) {
+		/*public static SkillElement.Builder readFrom(PacketBuffer buf) {
 			ResourceLocation id = buf.readBoolean() ? buf.readResourceLocation() : null;
 			ResourceLocation resourcelocation = buf.readBoolean() ? buf.readResourceLocation() : null;
 			SkillDisplayInfo displayinfo = buf.readBoolean() ? SkillDisplayInfo.read(buf) : null;
 			return new SkillElement.Builder(id, resourcelocation, displayinfo, SkillElementRewards.EMPTY,
 					SkillEnum.EMPTY);
-		}
+		}*/
 
 		public ResourceLocation getId() {
 			return this.id;

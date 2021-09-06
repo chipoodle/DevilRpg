@@ -6,7 +6,7 @@ import java.util.List;
 import javax.annotation.Nullable;
 
 import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.client.gui.skillbook.CustomGuiButton;
+import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model.CustomSkillButton;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import com.google.common.collect.Lists;
 import com.mojang.blaze3d.matrix.MatrixStack;
@@ -30,13 +30,17 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 
 @OnlyIn(Dist.CLIENT)
 public class GuiSkillEntry extends AbstractGui {
-	static final int BUTTON_IMAGE_SIZE = 512;
+	//static final int BUTTON_IMAGE_SIZE = 512;
+	static final int BUTTON_IMAGE_SIZE = 256;
+	static final int TARGET_BUTTON_IMAGE_SIZE = 20;
 	static int FRAME_SIZE = 26;
-	static Float BOTON_SCALE_FACTOR = 0.0400F;
-	static Float BOTON_TRANSLATION_FACTOR = 152.0F;
-	static int BOTON_FACTOR_POSICION = 25; // 25
 
-	private static final ResourceLocation WIDGETS = new ResourceLocation("textures/gui/advancements/widgets.png");
+
+
+
+	private static final String SKILL_GUI_IMG_LOCATION = DevilRpg.MODID + ":textures/gui/skill";
+	//private static final ResourceLocation WIDGETS = new ResourceLocation("textures/gui/advancements/widgets.png");
+	private static final ResourceLocation WIDGETS = new ResourceLocation(SKILL_GUI_IMG_LOCATION+"/widgets.png");
 	private static final int[] LINE_BREAK_VALUES = new int[] { 0, 10, -10, 25, -25 };
 
 	private final GuiSkillTab skillTabGui;
@@ -55,6 +59,9 @@ public class GuiSkillEntry extends AbstractGui {
 
 	private String levelString;
 		
+	private final float xScale;
+	private final float yScale;
+	
 	public GuiSkillEntry(GuiSkillTab skillTabGui, Minecraft minecraft, SkillElement skillElement, int skillPoint,
 			int maxSkillPoint) {
 		this.skillTabGui = skillTabGui;
@@ -72,8 +79,7 @@ public class GuiSkillEntry extends AbstractGui {
 		int j = String.valueOf(i).length();
 		int k = i > 1 ? minecraft.font.width("  ") + minecraft.font.width("0") * j * 2 + minecraft.font.width("/") : 0;
 		int l = 29 + minecraft.font.width(this.title) + k;
-		this.description = LanguageMap.getInstance().getVisualOrder(
-				this.getDescriptionLines(TextComponentUtils.mergeStyles(getDisplayInfo().getDescription().copy(),
+		this.description = LanguageMap.getInstance().getVisualOrder(this.getDescriptionLines(TextComponentUtils.mergeStyles(getDisplayInfo().getDescription().copy(),
 						Style.EMPTY.applyFormat(getDisplayInfo().getFrame().getFormat())), l));
 
 		for (IReorderingProcessor ireorderingprocessor : this.description) {
@@ -83,6 +89,9 @@ public class GuiSkillEntry extends AbstractGui {
 		this.width = l + 3 + 5;
 
 		skillTabGui.getScreen().getSkillsResourceLocations().put(skillElement.getSkillCapability(),this.getDisplayInfo().getImage());
+		
+		xScale = (float) (TARGET_BUTTON_IMAGE_SIZE) / BUTTON_IMAGE_SIZE;
+		yScale = (float) TARGET_BUTTON_IMAGE_SIZE / BUTTON_IMAGE_SIZE;
 	}
 
 	/**
@@ -102,7 +111,6 @@ public class GuiSkillEntry extends AbstractGui {
 	}
 	
 	private void updateTitle() {
-		//StringTextComponent level = new StringTextComponent(" "+levelString);
 		this.title = LanguageMap.getInstance().getVisualOrder(this.minecraft.font.substrByWidth(getDisplayInfo().getTitle(), 163));
 		if(skillElement.getParent() != null) {
 			IReorderingProcessor levelPr = IReorderingProcessor.forward(" "+levelString, Style.EMPTY);
@@ -121,7 +129,7 @@ public class GuiSkillEntry extends AbstractGui {
 
 		for (int i : LINE_BREAK_VALUES) {
 			List<ITextProperties> list1 = charactermanager.splitLines(component, maxWidth - i, Style.EMPTY);
-			float f1 = Math.abs(getTextWidth(charactermanager, list1) - (float) maxWidth);
+			float f1 = Math.abs(getTextWidth(charactermanager, list1) - maxWidth);
 			if (f1 <= 10.0F) {
 				return list1;
 			}
@@ -305,7 +313,7 @@ public class GuiSkillEntry extends AbstractGui {
 		this.blit(matrixStack, i1, l, 0, advancementstate.getId() * FRAME_SIZE, j, FRAME_SIZE);
 		//pinta la mitad derecha de la barra del título
 		this.blit(matrixStack, i1 + j, l, 200 - k, advancementstate1.getId() * FRAME_SIZE, k, FRAME_SIZE);
-		// Pinta el marco del ícono
+		// Pinta el marco del boton
 		this.blit(matrixStack, x + this.x + 3, y + this.y, this.getDisplayInfo().getFrame().getIcon(),
 				128 + advancementstate2.getId() * FRAME_SIZE, FRAME_SIZE, FRAME_SIZE);
 	
@@ -386,12 +394,17 @@ public class GuiSkillEntry extends AbstractGui {
 			}
 		}
 		
-		this.minecraft.getTextureManager().bind(image);
-		RenderSystem.translatef(posX - posX * BOTON_SCALE_FACTOR - 1, posY - posY * BOTON_SCALE_FACTOR - 1, 1);
-		RenderSystem.scalef(BOTON_SCALE_FACTOR, BOTON_SCALE_FACTOR, 0);
-		RenderSystem.translatef(168, 90, 0);
-		AbstractGui.blit(matrixStack, posX, posY, 0, 0, FRAME_SIZE * 20 - 2, FRAME_SIZE * 20 - 2, BUTTON_IMAGE_SIZE,
-				BUTTON_IMAGE_SIZE);
+		this.minecraft.getTextureManager().bind(image);			
+		RenderSystem.translatef((posX), (posY), 0);
+		RenderSystem.scalef(xScale, yScale, 0);
+		RenderSystem.translatef(posX * -1.0f, posY * -1.0f, 0);
+		AbstractGui.blit(matrixStack, 
+				(int) (posX + BUTTON_IMAGE_SIZE * 0.302734375),
+				(int) (posY + BUTTON_IMAGE_SIZE * 0.1171875), 
+				0, 0, 
+				BUTTON_IMAGE_SIZE, BUTTON_IMAGE_SIZE,
+				BUTTON_IMAGE_SIZE, BUTTON_IMAGE_SIZE);
+		
 
 		if(disabled)
 			RenderSystem.disableBlend();
@@ -485,10 +498,10 @@ public class GuiSkillEntry extends AbstractGui {
 
 	public boolean isMouseOver(int scrollX, int scrollY, int mouseX, int mouseY) {
 		if (!this.getDisplayInfo().isHidden() || this.skillProgress != null && this.skillProgress.isDone()) {
-			int i = scrollX + this.x;
-			int j = i + FRAME_SIZE;
+			int i = scrollX + this.x+3;
+			int j = i + FRAME_SIZE-1;
 			int k = scrollY + this.y;
-			int l = k + FRAME_SIZE;
+			int l = k + FRAME_SIZE-1;
 			return mouseX >= i && mouseX <= j && mouseY >= k && mouseY <= l;
 		} else {
 			return false;
@@ -528,12 +541,12 @@ public class GuiSkillEntry extends AbstractGui {
 
 	/*-----------------------------*/
 	public void skillButtonPressed(Button pressedButton) {
-		CustomGuiButton pressed = ((CustomGuiButton) pressedButton);
-		SkillEnum skilEnum = (SkillEnum) pressed.getSkillName();
+		CustomSkillButton pressed = ((CustomSkillButton) pressedButton);
+		SkillEnum skilEnum = (SkillEnum) pressed.getEnum();
 
 		skillTabGui.getScreen().getSkillCap().ifPresent(x -> {
 			HashMap<SkillEnum, Integer> skillsPoints = x.getSkillsPoints();
-			Integer e = skillsPoints.get(((CustomGuiButton) pressedButton).getSkillName());
+			Integer e = skillsPoints.get(((CustomSkillButton) pressedButton).getEnum());
 			if (e != null && skillTabGui.getScreen().getExpCap().isPresent()) {
 				e += skillTabGui.getScreen().getExpCap().map(exp -> exp.consumePoint()).orElse(0);
 				skillsPoints.put(skilEnum, e);

@@ -20,8 +20,6 @@ import net.minecraftforge.common.util.NonNullSupplier;
 import net.minecraftforge.fml.RegistryObject;
 import net.minecraftforge.fml.common.ObfuscationReflectionHelper;
 
-import net.minecraft.item.Item.Properties;
-
 /**
  * Exists to work around a limitation with Spawn Eggs: Spawn Eggs require an
  * EntityType, but EntityTypes are created AFTER Items. Therefore it is

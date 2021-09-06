@@ -3,9 +3,6 @@ package com.chipoodle.devilrpg.client.gui.scrollableskillscreen;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Objects;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
@@ -13,7 +10,6 @@ import javax.annotation.Nullable;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
 import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model.SkillTreeNode;
-import com.chipoodle.devilrpg.client.gui.skillbook.CustomGuiButton;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import com.google.common.collect.Maps;
 import com.mojang.blaze3d.matrix.MatrixStack;
@@ -27,13 +23,15 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.StringTextComponent;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.common.util.LazyOptional;
 
 @OnlyIn(Dist.CLIENT)
 public class GuiSkillTab extends AbstractGui {
+	private static final int BACKGROUND_CHUNKS_X_LOOP = 5;//18
+	private static final int BACKGROUND_CHUNKS_Y_LOOP = 3;//11
+
 	private static final int BACKGROUND_CHUNKS = 64;//16
 	
 	private static final int WIDGET_HEIGHT = 27;
@@ -112,6 +110,11 @@ public class GuiSkillTab extends AbstractGui {
 
 	public void drawIcon(int offsetX, int offsetY, ItemRenderer renderer) {
 		this.type.drawIcon(offsetX, offsetY, this.index, renderer, this.icon);
+		
+	}
+	
+	public void drawIconImage(MatrixStack matrixStack, int offsetLeft, int offsetTop) {
+		this.type.drawIconImage(matrixStack, offsetLeft,offsetTop, this.index, root);
 	}
 
 	/**
@@ -172,8 +175,8 @@ public class GuiSkillTab extends AbstractGui {
 		int k = i % BACKGROUND_CHUNKS;
 		int l = j % BACKGROUND_CHUNKS;
 
-		for (int i1 = -1; i1 <= 5; ++i1) {//18
-			for (int j1 = -1; j1 <= 3; ++j1) { //11
+		for (int i1 = -1; i1 <= BACKGROUND_CHUNKS_X_LOOP; ++i1) {//18
+			for (int j1 = -1; j1 <= BACKGROUND_CHUNKS_Y_LOOP; ++j1) { //11
 				blit(matrixStack, k + BACKGROUND_CHUNKS * i1, l + BACKGROUND_CHUNKS * j1, 0.0F, 0.0F, BACKGROUND_CHUNKS,
 						BACKGROUND_CHUNKS, BACKGROUND_CHUNKS, BACKGROUND_CHUNKS);
 			}
@@ -299,7 +302,7 @@ public class GuiSkillTab extends AbstractGui {
 	 * @param skillElement
 	 */
 	public void removeSkillElement(SkillElement skillElement) {
-		DevilRpg.LOGGER.info("|-------- addSkillElement");
+		DevilRpg.LOGGER.info("|-------- removeSkillElement");
 		if (skillElement.getDisplay() != null) {
 
 			skillCap.ifPresent(skillCap -> {
@@ -326,11 +329,6 @@ public class GuiSkillTab extends AbstractGui {
 		this.maxX = Math.max(this.maxX, j);
 		this.minY = Math.min(this.minY, k);
 		this.maxY = Math.max(this.maxY, l);
-		/*
-		 * DevilRpg.LOGGER.info("|-------- SkillTabGui.addGuiSkillElement" + "ID: " +
-		 * skillElement.getId().toString() + " xMin:" + minX + " yMin: " + minY +
-		 * " xMax: " + maxX + " yMax: " + maxY);
-		 */
 
 		for (GuiSkillEntry skillEntryGui : this.guis.values()) {
 			skillEntryGui.attachToParent();
@@ -352,13 +350,6 @@ public class GuiSkillTab extends AbstractGui {
 												// mouse
 		int j = MathHelper.floor(this.scrollY);// posición del fondo en y. Cambia cuando se posiciona con el drag del
 												// mouse
-
-		/*
-		 * DevilRpg.LOGGER.info("|--------SkillTabGui.getIfInsideAnyChild(mouseX: " +
-		 * mouseX + " mouseY: " + mouseY);
-		 * DevilRpg.LOGGER.info("|--------SkillTabGui.getIfInsideAnyChild" + " xMin:" +
-		 * minX + " yMin: " + minY + " xMax: " + maxX + " yMax: " + maxY);
-		 */
 
 		List<GuiSkillEntry> collect = this.guis.entrySet().stream().map(x -> x.getValue()).collect(Collectors.toList());
 		return findIfInsideIncludingChildren(collect, (int) mouseX, (int) mouseY, i, j);

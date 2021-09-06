@@ -22,7 +22,7 @@ public class SkillFireBall implements ISkillContainer {
 
 	@Override
 	public SkillEnum getSkillEnum() {
-		return SkillEnum.FIREBALL;
+		return SkillEnum.FROSTBALL;
 	}
 
 	@Override

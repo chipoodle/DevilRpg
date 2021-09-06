@@ -1,8 +1,6 @@
 package com.chipoodle.devilrpg.eventsubscriber.common;
 
 import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.capability.auxiliar.IBaseAuxiliarCapability;
-import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliarCapabilityProvider;
 import com.chipoodle.devilrpg.config.ConfigHelper;
 import com.chipoodle.devilrpg.config.ConfigHolder;
 import com.chipoodle.devilrpg.entity.SoulBearEntity;
@@ -15,13 +13,10 @@ import com.chipoodle.devilrpg.init.ModItemGroups;
 import com.chipoodle.devilrpg.item.ModdedSpawnEggItem;
 
 import net.minecraft.entity.EntityType;
-import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.Item;
-import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.RegistryEvent;
 import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent.HarvestCheck;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.RegistryObject;

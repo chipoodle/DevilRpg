@@ -17,6 +17,7 @@ import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
 import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model.ClientSkillBuilder;
 import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model.CustomSkillButton;
+import com.chipoodle.devilrpg.eventsubscriber.client.ClientModKeyInputEventSubscriber;
 import com.chipoodle.devilrpg.util.PowerEnum;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import com.google.common.collect.Maps;
@@ -24,8 +25,9 @@ import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.systems.RenderSystem;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.audio.SimpleSound;
+import net.minecraft.client.audio.SoundHandler;
 import net.minecraft.client.gui.AbstractGui;
-import net.minecraft.client.gui.IGuiEventListener;
 import net.minecraft.client.gui.chat.NarratorChatListener;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.Widget;
@@ -34,6 +36,7 @@ import net.minecraft.client.util.InputMappings;
 import net.minecraft.client.util.InputMappings.Input;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.SoundEvents;
 import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.StringTextComponent;
 import net.minecraft.util.text.TranslationTextComponent;
@@ -224,6 +227,7 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 								mouseX - offsetLeft - WINDOW_AREA_OFFSET_X, mouseY - offsetTop - WINDOW_AREA_OFFSET_Y);
 						if (skillEntryGui != null && skillEntryGui.getSkillElement().getParent() != null  && !skillEntryGui.isDisabled() ) {
 							DevilRpg.LOGGER.info("|----------- mouseClicked: {}",skillEntryGui.getSkillElement().getSkillCapability());
+							this.playDownSound(Minecraft.getInstance().getSoundManager());
 							skillButtonPressed(skillEntryGui);
 							break;
 						}
@@ -251,9 +255,9 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 				}
 			}
 
-			if (skillEntryGuiApretado != null && skillEntryGuiApretado.getSkillElement().getParent() != null && !skillEntryGuiApretado.isDisabled()) {
-				if (!isDraggingToPowerButton) {
-				}
+			if (skillEntryGuiApretado != null && skillEntryGuiApretado.getSkillElement().getDisplay().getFrame().equals(
+					ScrollableSkillFrameType.TASK) /* skillEntryGuiApretado.getSkillElement().getParent() != null */
+					&& !skillEntryGuiApretado.isDisabled()) {
 				isDraggingToPowerButton = true;
 				posicionMouseX = mouseX - skillEntryGuiApretado.getX() - GuiSkillEntry.FRAME_SIZE / ((double) 2);
 				posicionMouseY = mouseY - skillEntryGuiApretado.getY() - GuiSkillEntry.FRAME_SIZE / ((double) 2);
@@ -287,7 +291,8 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 				if (powerNames != null) {
 					powerNames.put((PowerEnum) copy.getEnum(), skillEntryGuiApretado.getSkillElement().getSkillCapability());
 					skillCap.ifPresent(x -> x.setSkillsNameOfPowers(powerNames, player));
-					init();
+					addPowerButtons();
+					loadAssignedPowerButtons();
 				}
 			}
 			isDraggingToPowerButton = false;
@@ -321,12 +326,15 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 					skillTabGui.drawTab(matrixStack, offsetLeft, offsetTop, skillTabGui == this.selectedTab);
 			}
 
+		
 			RenderSystem.enableRescaleNormal();
 			RenderSystem.defaultBlendFunc();
 			// Pinta el ícono o la imagen de la pestaña (tab)
+			int k = 0;
 			for (GuiSkillTab guiSkillTab : this.tabs.values()) {
 				if (guiSkillTab.getPage() == tabPage) {
-					guiSkillTab.drawIcon(offsetLeft, offsetTop, this.itemRenderer);
+					//guiSkillTab.drawIcon(offsetLeft, offsetTop, this.itemRenderer);
+					guiSkillTab.drawIconImage(matrixStack,offsetLeft, offsetTop);
 				}
 			}
 			RenderSystem.disableBlend();
@@ -351,7 +359,7 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 						"x: " + (offsetLeft + WINDOW_AREA_OFFSET_X) + " y: " + (offsetTop + WINDOW_AREA_OFFSET_Y)),
 				(float) (offsetLeft + 14), (float) (offsetTop + 18), 4210752);
 
-		this.font.draw(matrixStack, new StringTextComponent("offsetX: " + offsetLeft + " offsetY: " + offsetTop),
+		this.font.draw(matrixStack, new StringTextComponent("offsetLeft: " + offsetLeft + " offsetTop: " + offsetTop),
 				(float) (offsetLeft + 14), (float) (offsetTop + 28), 4210752);
 
 		this.font.draw(matrixStack,
@@ -527,18 +535,19 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 	protected void addPowerButtons() {
 		int k = 0;
 
-		//int offLeft = (this.width - INITIAL_WIDTH) / 2;
+		int offLeft = (this.width - INITIAL_WIDTH) / 2;
 		int offTop = (this.height - INITIAL_HEIGHT) / 2;
 		List<PowerEnum> powerList = Arrays.asList(PowerEnum.values());
 		k = powerList.size();
 		for (PowerEnum powerEnum : powerList) {
 			int drawnSkillLevel = 0;
 			CustomSkillButton powrButtons = new CustomSkillButton(
-					(width + WINDOW_AREA_OFFSET_X) - (k * (GuiSkillEntry.FRAME_SIZE + 10)),
+					//(WINDOW_AREA_OFFSET_X+ offLeft + INNER_SCREEN_WIDTH/8) + (k * (GuiSkillEntry.FRAME_SIZE + 10)),
+					(WINDOW_AREA_OFFSET_X+ offLeft +10) + (k * (GuiSkillEntry.FRAME_SIZE + 10)),
 					WINDOW_AREA_OFFSET_Y + offTop + INNER_SCREEN_HEIGHT + 2, 
-					GuiSkillEntry.FRAME_SIZE, // 3
-					GuiSkillEntry.FRAME_SIZE, // 4
-					powerEnum.getDescription(), 
+					GuiSkillEntry.FRAME_SIZE-5, // 3
+					GuiSkillEntry.FRAME_SIZE-5, // 4
+					ClientModKeyInputEventSubscriber.getKeyName(powerEnum), 
 					EMPTY_POWER_IMAGE_RESOURCE, 
 					GuiSkillEntry.BUTTON_IMAGE_SIZE, // 7
 					GuiSkillEntry.BUTTON_IMAGE_SIZE, // 8
@@ -553,7 +562,12 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 			powerButtonList.add(powrButtons);
 			addButton(powrButtons);
 			k++;
+			
+			/*AbstractGui.blit(matrixStack, offsetLeft, offsetTop, 0, 0, INITIAL_WIDTH, INITIAL_HEIGHT + INFO_SPACE,
+					INITIAL_TEXTURE_WIDTH, INITIAL_TEXTURE_HEIGHT);*/
+			
 		}
+		
 	}
 
 	public void powerButtonPressed(Button pressedButton) {
@@ -571,7 +585,9 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 			
 			}
 		}
-		
+		//init();
+		addPowerButtons();
+		loadAssignedPowerButtons();
 	}
 
 	protected void loadAssignedPowerButtons() {
@@ -604,4 +620,7 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 		return skillsImages;
 	}
 
+	public void playDownSound(SoundHandler p_230988_1_) {
+		p_230988_1_.play(SimpleSound.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
+	}
 }

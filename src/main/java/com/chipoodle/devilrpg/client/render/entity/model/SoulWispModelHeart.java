@@ -1,7 +1,5 @@
 package com.chipoodle.devilrpg.client.render.entity.model;
 
-import java.util.Random;
-
 import com.chipoodle.devilrpg.entity.SoulWispEntity;
 import com.google.common.collect.ImmutableList;
 

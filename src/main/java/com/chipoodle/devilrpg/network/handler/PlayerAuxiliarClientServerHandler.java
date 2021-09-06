@@ -2,7 +2,6 @@ package com.chipoodle.devilrpg.network.handler;
 
 import java.util.function.Supplier;
 
-import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliarCapabilityProvider;
 
 import net.minecraft.client.Minecraft;

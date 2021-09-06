@@ -7,8 +7,8 @@ import com.chipoodle.devilrpg.skillsystem.skillinstance.SkillFireBall;
 import com.chipoodle.devilrpg.skillsystem.skillinstance.SkillShapeshiftWerewolf;
 import com.chipoodle.devilrpg.skillsystem.skillinstance.SkillSummonSoulBear;
 import com.chipoodle.devilrpg.skillsystem.skillinstance.SkillSummonSoulWolf;
+import com.chipoodle.devilrpg.skillsystem.skillinstance.SkillSummonWispCurse;
 import com.chipoodle.devilrpg.skillsystem.skillinstance.SkillSummonWispHealth;
-import com.chipoodle.devilrpg.skillsystem.skillinstance.SkillSummonWispSpeed;
 import com.chipoodle.devilrpg.util.SkillEnum;
 
 public class SingletonSkillFactory {
@@ -35,17 +35,17 @@ public class SingletonSkillFactory {
 			skillPool.putIfAbsent(SkillEnum.SUMMON_WISP_HEALTH, new SkillSummonWispHealth(parentCapability));
 			return skillPool.get(SkillEnum.SUMMON_WISP_HEALTH);
 		}
-		if (skillEnum.equals(SkillEnum.SUMMON_WISP_SPEED)) {
-			skillPool.putIfAbsent(SkillEnum.SUMMON_WISP_SPEED, new SkillSummonWispSpeed(parentCapability));
-			return skillPool.get(SkillEnum.SUMMON_WISP_SPEED);
+		if (skillEnum.equals(SkillEnum.SUMMON_WISP_CURSE)) {
+			skillPool.putIfAbsent(SkillEnum.SUMMON_WISP_CURSE, new SkillSummonWispCurse(parentCapability));
+			return skillPool.get(SkillEnum.SUMMON_WISP_CURSE);
 		}
 		if (skillEnum.equals(SkillEnum.TRANSFORM_WEREWOLF)) {
 			skillPool.putIfAbsent(SkillEnum.TRANSFORM_WEREWOLF, new SkillShapeshiftWerewolf(parentCapability));
 			return skillPool.get(SkillEnum.TRANSFORM_WEREWOLF);
 		}
-		if (skillEnum.equals(SkillEnum.FIREBALL)) {
-			skillPool.putIfAbsent(SkillEnum.FIREBALL, new SkillFireBall(parentCapability));
-			return skillPool.get(SkillEnum.FIREBALL);
+		if (skillEnum.equals(SkillEnum.FROSTBALL)) {
+			skillPool.putIfAbsent(SkillEnum.FROSTBALL, new SkillFireBall(parentCapability));
+			return skillPool.get(SkillEnum.FROSTBALL);
 		}
 		return null;
 	}

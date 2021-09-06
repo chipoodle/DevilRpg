@@ -1,12 +1,6 @@
 package com.chipoodle.devilrpg.init;
 
-import com.chipoodle.devilrpg.entity.SoulBearEntity;
-import com.chipoodle.devilrpg.entity.SoulWispEntity;
-import com.chipoodle.devilrpg.entity.SoulWolfEntity;
-
-import net.minecraft.client.Minecraft;
 import net.minecraft.entity.EntityType;
-import net.minecraft.entity.ai.attributes.GlobalEntityTypeAttributes;
 
 /**
  * Holds a list of all our {@link EntityType}s. Suppliers that create

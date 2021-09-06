@@ -104,7 +104,7 @@ public class SoulFireBallEntity extends ProjectileItemEntity implements ISoulEnt
 	public void updateLevel(PlayerEntity owner) {
 		LazyOptional<IBaseSkillCapability> skill = owner.getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
 		if (skill != null && skill.isPresent()) {
-			this.puntosAsignados = skill.map(x -> x.getSkillsPoints()).orElse(null).get(SkillEnum.FIREBALL);
+			this.puntosAsignados = skill.map(x -> x.getSkillsPoints()).orElse(null).get(SkillEnum.FROSTBALL);
 			this.damage = puntosAsignados * 2;
 		}
 	}

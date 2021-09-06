@@ -25,7 +25,7 @@ public class SkillTreeNode {
 
 	public SkillTreeNode(SkillElement rootSkillelement, @Nullable SkillTreeNode parentIn, @Nullable SkillTreeNode siblingIn, int indexIn, int xIn) {
 	      if (rootSkillelement.getDisplay() == null) {
-	         throw new IllegalArgumentException("Can't position an invisible advancement!");
+	         throw new IllegalArgumentException("Can't position an invisible skill!");
 	      } else {
 	         this.rootSkillElement = rootSkillelement;
 	         this.parent = parentIn;
@@ -49,8 +49,8 @@ public class SkillTreeNode {
 			previous = new SkillTreeNode(advancementIn, this, previous, this.children.size() + 1, this.x + 1);
 			this.children.add(previous);
 		} else {
-			for (SkillElement advancement : advancementIn.getChildren()) {
-				previous = this.buildSubTree(advancement, previous);
+			for (SkillElement skillelement : advancementIn.getChildren()) {
+				previous = this.buildSubTree(skillelement, previous);
 			}
 		}
 

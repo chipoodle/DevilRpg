@@ -1,13 +1,13 @@
 package com.chipoodle.devilrpg.client.gui.scrollableskillscreen;
 
 import com.mojang.blaze3d.matrix.MatrixStack;
-import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.AbstractGui;
 import net.minecraft.client.renderer.ItemRenderer;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.text.StringTextComponent;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
@@ -46,8 +46,11 @@ public enum SkillTabType {
 		}
 
 		int j = isSelected ? this.textureY + this.height : this.textureY;
+		RenderSystem.pushMatrix();
+		RenderSystem.translatef(0.35f, 0f, 0f);
 		abstractGui.blit(matrixStack, offsetX + this.getX(index), offsetY + this.getY(index), i, j, this.width,
 				this.height);
+		RenderSystem.popMatrix();
 	}
 
 	public void drawIcon(int offsetX, int offsetY, int index, ItemRenderer renderItemIn, ItemStack stack) {
@@ -72,6 +75,49 @@ public enum SkillTabType {
 		}
 
 		renderItemIn.renderAndDecorateFakeItem(stack, i, j);
+
+	}
+
+	public void drawIconImage(MatrixStack matrixStack, int offsetX, int offsetY, int index,
+			GuiSkillEntry guiSkillEntry) {
+		int i = offsetX + this.getX(index);
+		int j = offsetY + this.getY(index);
+		switch (this) {
+		case ABOVE:
+			i += 6;
+			j += 9;
+			break;
+		case BELOW:
+			i += 6;
+			j += 6;
+			break;
+		case LEFT:
+			i += 10;
+			j += 5;
+			break;
+		case RIGHT:
+			i += 6;
+			j += 5;
+		}
+
+		float width = 20f;
+		float height = 20f;
+		float xScale = (float) width / guiSkillEntry.BUTTON_IMAGE_SIZE;
+		float yScale = (float) height / guiSkillEntry.BUTTON_IMAGE_SIZE;
+		
+		
+		
+		RenderSystem.pushMatrix();
+		RenderSystem.enableDepthTest();	
+		Minecraft.getInstance().getTextureManager().bind(guiSkillEntry.getDisplayInfo().getImage());
+		
+		RenderSystem.translatef((i-2), (j), 0);
+		RenderSystem.scalef(xScale, yScale, 0);
+		RenderSystem.translatef(i * -1.0f, j * -1.0f, 0);
+		
+		AbstractGui.blit(matrixStack, i, j, 0, 0,guiSkillEntry.BUTTON_IMAGE_SIZE, guiSkillEntry.BUTTON_IMAGE_SIZE, guiSkillEntry.BUTTON_IMAGE_SIZE, guiSkillEntry.BUTTON_IMAGE_SIZE);
+		RenderSystem.popMatrix();
+
 	}
 
 	public int getX(int index) {

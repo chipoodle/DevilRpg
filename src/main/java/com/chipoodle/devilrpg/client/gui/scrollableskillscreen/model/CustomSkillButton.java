@@ -10,6 +10,7 @@ import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.text.StringTextComponent;
+import net.minecraftforge.fml.client.gui.GuiUtils;
 import net.minecraftforge.fml.client.gui.widget.ExtendedButton;
 
 public class CustomSkillButton extends ExtendedButton {
@@ -49,12 +50,14 @@ public class CustomSkillButton extends ExtendedButton {
 	 */
 	@Override
 	public void renderButton(MatrixStack matrixStack, int mouseX, int mouseY, float partialTicks) {
-		super.renderButton(matrixStack, mouseX, mouseY, partialTicks);
+		//super.renderButton(matrixStack, mouseX, mouseY, partialTicks);
 		
 		if (this.visible) {
 			Minecraft instance = Minecraft.getInstance();
-			this.isHovered = this.isMouseOver(mouseX, mouseY); 
-			int i = 3 * this.getYImage(this.isHovered());
+            this.isHovered = this.isMouseOver(mouseX, mouseY); 
+            int k = this.getYImage(this.isHovered());
+            GuiUtils.drawContinuousTexturedBox(matrixStack, WIDGETS_LOCATION, this.x, this.y, 0, 46 + k * 20, this.width, this.height, 200, 20, 2, 3, 2, 2, this.getBlitOffset());
+            this.renderBg(matrixStack, instance, mouseX, mouseY);
 
 			instance.getTextureManager().bind(resourceLocation);
 			RenderSystem.pushMatrix();
@@ -70,8 +73,17 @@ public class CustomSkillButton extends ExtendedButton {
 			AbstractGui.blit(matrixStack, x, y, 0, 0,textureWidth, textureHeight, textureWidth, textureHeight);
 
 			RenderSystem.popMatrix();
-			renderCenteredText(matrixStack);
+			//renderCenteredText(matrixStack);
+			RenderSystem.pushMatrix();
+			//RenderSystem.translatef((this.x), (this.y), 0);
+			//RenderSystem.scalef(0.5f, 0.5f, 0);
+			//RenderSystem.translatef(this.x * -1.0f, this.y * -1.0f, 0);
+			RenderSystem.translatef((this.x - this.x * 0.5f) - 1,(this.y - this.y * 0.5f) - 1, 0);
+			RenderSystem.scalef(0.5f, 0.5f,0);
+			drawCenteredString(matrixStack, instance.font, this.getMessage(), this.x + this.width+3, this.y + (this.height) + 23, getFGColor());
+			RenderSystem.popMatrix();
 		}
+		
 	}
 
 	@SuppressWarnings("deprecation")
@@ -94,13 +106,11 @@ public class CustomSkillButton extends ExtendedButton {
 
 		}
 
-		RenderSystem.translatef((textPositionX - textPositionX * scaledText) - 1,
-				(textPositionY - textPositionY * scaledText) - 1, 0);
+		RenderSystem.translatef((textPositionX - textPositionX * scaledText) - 1,(textPositionY - textPositionY * scaledText) - 1, 0);
 		RenderSystem.scalef(scaledText, scaledText, scaledText);
 		AbstractGui.drawCenteredString(matrixStack,fontrenderer, getMessage(), xTitle, yTitle, color);
 		if (showSkillNumber)
-			AbstractGui.drawCenteredString(matrixStack,fontrenderer, drawnSkillLevel + "", this.x + this.width,
-					(this.y + this.height) - 20, color);
+			AbstractGui.drawCenteredString(matrixStack,fontrenderer, drawnSkillLevel + "", this.x + this.width,(this.y + this.height) - 20, color);
 		RenderSystem.popMatrix();
 	}
 

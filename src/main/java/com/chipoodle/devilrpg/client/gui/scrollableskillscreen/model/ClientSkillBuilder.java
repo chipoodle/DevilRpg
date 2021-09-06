@@ -16,10 +16,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillProgress;
 import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillElement;
-import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillToast;
-import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillElement.Builder;
+import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillProgress;
 import com.google.common.collect.Maps;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
