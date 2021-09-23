@@ -58,6 +58,10 @@ public final class ClientForgeEventSubscriber {
 	private static HealthBarRenderer healthBarRenderer = new HealthBarRenderer();
 	private static ManaBarRenderer manaBarRenderer = new ManaBarRenderer();
 	private static MinionPortraitRenderer minionPortraitRenderer = new MinionPortraitRenderer();
+	@OnlyIn(Dist.CLIENT)
+	public static WerewolfRenderer newWolf = null;
+	private static Class<?>[] tipos = { double.class, double.class, double.class };
+	private static Method method = null;
 
 	@OnlyIn(Dist.CLIENT)
 	@SubscribeEvent(priority = EventPriority.NORMAL)
@@ -189,9 +193,6 @@ public final class ClientForgeEventSubscriber {
 	 * //player.isSwingInProgress = false; }
 	 */
 
-	@OnlyIn(Dist.CLIENT)
-	public static WerewolfRenderer newWolf = null;
-
 	/* public static Entity camera = null; */
 
 	/**
@@ -209,7 +210,7 @@ public final class ClientForgeEventSubscriber {
 			newWolf.render(eve.getPlayer(), 0, eve.getPartialRenderTick(), eve.getMatrixStack(), eve.getBuffers(),
 					eve.getLight());
 		};
-		if (!EventUtils.onTransformation(event.getPlayer(), c, event)) {
+		if (!EventUtils.onWerewolfTransformation(event.getPlayer(), c, event)) {
 			newWolf = null;
 		}
 	}
@@ -218,9 +219,6 @@ public final class ClientForgeEventSubscriber {
 	public static void onRenderHandEvent(RenderHandEvent event) {
 
 	}
-
-	private static Class<?>[] tipos = { double.class, double.class, double.class };
-	private static Method method = null;
 
 	/**
 	 * 
@@ -239,7 +237,7 @@ public final class ClientForgeEventSubscriber {
 		if (!Minecraft.getInstance().options.getCameraType().equals(PointOfView.FIRST_PERSON)) {
 			BiConsumer<CameraSetup, LazyOptional<IBaseAuxiliarCapability>> c = (eve, auxiliar) -> {
 			};
-			if (EventUtils.onTransformation(player, c, event)) {
+			if (EventUtils.onWerewolfTransformation(player, c, event)) {
 				if (method == null) {
 					method = ActiveRenderInfo.class.getDeclaredMethod("move", tipos);
 					method.setAccessible(true);

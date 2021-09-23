@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.entity.SoulBearEntity;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.world.ClientWorld;
@@ -16,6 +17,7 @@ import net.minecraft.dispenser.IPosition;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.CreatureAttribute;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.attributes.Attributes;
 import net.minecraft.entity.boss.dragon.EnderDragonPartEntity;
@@ -40,6 +42,7 @@ import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.world.GameType;
 import net.minecraft.world.World;
 import net.minecraft.world.server.ServerWorld;
+import net.minecraftforge.fml.RegistryObject;
 
 /**
  * 
@@ -279,6 +282,12 @@ public class TargetUtils {
 		}
 
 		return targets;
+	}
+	
+	public static List<LivingEntity> acquireAllTargetsInRadiusByClass(LivingEntity seeker, Class<? extends LivingEntity> classEntity, double radius) {
+		AxisAlignedBB bb = new AxisAlignedBB(seeker.getX() - radius, seeker.getY() - radius, seeker.getZ() - radius, seeker.getX() + radius,
+				seeker.getY() + radius, seeker.getZ() + radius);
+		return seeker.level.getEntitiesOfClass(classEntity, bb);
 	}
 
 	/**

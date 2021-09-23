@@ -2,7 +2,9 @@ package com.chipoodle.devilrpg.init;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.entity.SoulBearEntity;
-import com.chipoodle.devilrpg.entity.SoulFireBallEntity;
+import com.chipoodle.devilrpg.entity.SoulIceBallEntity;
+import com.chipoodle.devilrpg.entity.SoulWispArcherEntity;
+import com.chipoodle.devilrpg.entity.SoulWispBomberEntity;
 import com.chipoodle.devilrpg.entity.SoulWispEntity;
 import com.chipoodle.devilrpg.entity.SoulWolfEntity;
 
@@ -32,7 +34,9 @@ public final class ModEntityTypes {
 	public static final String SOUL_WOLF_NAME = "soul_wolf";
 	public static final String SOUL_BEAR_NAME = "soul_bear";
 	public static final String WISP_NAME = "wisp";
-	public static final String SOUL_FIREBALL_NAME = "soul_fireball";
+	public static final String WISP_BOMB_NAME = "wisp_bomb";
+	public static final String WISP_ARCHER_NAME = "wisp_archer";
+	public static final String SOUL_ICEBALL_NAME = "soul_iceball";
 	public static final String WEREWOLF_NAME = "werewolf";
 
 	public static final RegistryObject<EntityType<SoulWolfEntity>> SOUL_WOLF = ENTITY_TYPES.register(SOUL_WOLF_NAME,
@@ -50,8 +54,18 @@ public final class ModEntityTypes {
 					.sized(EntityType.BEE.getWidth(), EntityType.BEE.getHeight())
 					.build(new ResourceLocation(DevilRpg.MODID, WISP_NAME).toString()));
 
-	public static final RegistryObject<EntityType<SoulFireBallEntity>> SOUL_FIREBALL = ENTITY_TYPES.register(SOUL_FIREBALL_NAME,
-			() -> EntityType.Builder.<SoulFireBallEntity>of(SoulFireBallEntity::new, EntityClassification.MISC)
+	public static final RegistryObject<EntityType<SoulWispBomberEntity>> WISP_BOMB = ENTITY_TYPES.register(WISP_BOMB_NAME,
+			() -> EntityType.Builder.<SoulWispBomberEntity>of(SoulWispBomberEntity::new, EntityClassification.CREATURE)
+			.sized(EntityType.BEE.getWidth(), EntityType.BEE.getHeight())
+			.build(new ResourceLocation(DevilRpg.MODID, WISP_BOMB_NAME).toString()));
+	
+	public static final RegistryObject<EntityType<SoulWispArcherEntity>> WISP_ARCHER = ENTITY_TYPES.register(WISP_ARCHER_NAME,
+			() -> EntityType.Builder.<SoulWispArcherEntity>of(SoulWispArcherEntity::new, EntityClassification.CREATURE)
+			.sized(EntityType.BEE.getWidth(), EntityType.BEE.getHeight())
+			.build(new ResourceLocation(DevilRpg.MODID, WISP_ARCHER_NAME).toString()));
+
+	public static final RegistryObject<EntityType<SoulIceBallEntity>> SOUL_ICEBALL = ENTITY_TYPES.register(SOUL_ICEBALL_NAME,
+			() -> EntityType.Builder.<SoulIceBallEntity>of(SoulIceBallEntity::new, EntityClassification.MISC)
 					.sized(EntityType.WITHER_SKULL.getWidth(), EntityType.WITHER_SKULL.getHeight())
-					.build(new ResourceLocation(DevilRpg.MODID, SOUL_FIREBALL_NAME).toString()));
+					.build(new ResourceLocation(DevilRpg.MODID, SOUL_ICEBALL_NAME).toString()));
 }

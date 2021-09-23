@@ -19,7 +19,7 @@ public class SoulWispModel<T extends SoulWispEntity> extends AgeableModel<T> {
 	private float rollAmount;
 
 	private final ModelRenderer[] tentacles;
-	private final int numberOfTentacles = 9;
+	private static final int numberOfTentacles = 9;
 
 	public SoulWispModel() {
 		super(false, 8.0F, 0.0F);

@@ -3,10 +3,12 @@ package com.chipoodle.devilrpg.skillsystem;
 import java.util.Hashtable;
 
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
-import com.chipoodle.devilrpg.skillsystem.skillinstance.SkillFireBall;
+import com.chipoodle.devilrpg.skillsystem.skillinstance.SkillFrostBall;
 import com.chipoodle.devilrpg.skillsystem.skillinstance.SkillShapeshiftWerewolf;
 import com.chipoodle.devilrpg.skillsystem.skillinstance.SkillSummonSoulBear;
 import com.chipoodle.devilrpg.skillsystem.skillinstance.SkillSummonSoulWolf;
+import com.chipoodle.devilrpg.skillsystem.skillinstance.SkillSummonWispArcher;
+import com.chipoodle.devilrpg.skillsystem.skillinstance.SkillSummonWispBomber;
 import com.chipoodle.devilrpg.skillsystem.skillinstance.SkillSummonWispCurse;
 import com.chipoodle.devilrpg.skillsystem.skillinstance.SkillSummonWispHealth;
 import com.chipoodle.devilrpg.util.SkillEnum;
@@ -39,12 +41,20 @@ public class SingletonSkillFactory {
 			skillPool.putIfAbsent(SkillEnum.SUMMON_WISP_CURSE, new SkillSummonWispCurse(parentCapability));
 			return skillPool.get(SkillEnum.SUMMON_WISP_CURSE);
 		}
+		if (skillEnum.equals(SkillEnum.SUMMON_WISP_BOMB)) {
+			skillPool.putIfAbsent(SkillEnum.SUMMON_WISP_BOMB, new SkillSummonWispBomber(parentCapability));
+			return skillPool.get(SkillEnum.SUMMON_WISP_BOMB);
+		}
+		if (skillEnum.equals(SkillEnum.SUMMON_WISP_ARCHER)) {
+			skillPool.putIfAbsent(SkillEnum.SUMMON_WISP_ARCHER, new SkillSummonWispArcher(parentCapability));
+			return skillPool.get(SkillEnum.SUMMON_WISP_ARCHER);
+		}
 		if (skillEnum.equals(SkillEnum.TRANSFORM_WEREWOLF)) {
 			skillPool.putIfAbsent(SkillEnum.TRANSFORM_WEREWOLF, new SkillShapeshiftWerewolf(parentCapability));
 			return skillPool.get(SkillEnum.TRANSFORM_WEREWOLF);
 		}
 		if (skillEnum.equals(SkillEnum.FROSTBALL)) {
-			skillPool.putIfAbsent(SkillEnum.FROSTBALL, new SkillFireBall(parentCapability));
+			skillPool.putIfAbsent(SkillEnum.FROSTBALL, new SkillFrostBall(parentCapability));
 			return skillPool.get(SkillEnum.FROSTBALL);
 		}
 		return null;

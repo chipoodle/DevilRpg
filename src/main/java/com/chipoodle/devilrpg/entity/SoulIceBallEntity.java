@@ -30,21 +30,21 @@ import net.minecraftforge.fml.common.registry.IEntityAdditionalSpawnData;
 import net.minecraftforge.fml.network.FMLPlayMessages;
 import net.minecraftforge.fml.network.NetworkHooks;
 
-public class SoulFireBallEntity extends ProjectileItemEntity implements ISoulEntity {
+public class SoulIceBallEntity extends ProjectileItemEntity implements ISoulEntity {
 
 	private int puntosAsignados = 0;
 	private float damage = 0;
 
-	public SoulFireBallEntity(EntityType<? extends SoulFireBallEntity> p_i50159_1_, World p_i50159_2_) {
+	public SoulIceBallEntity(EntityType<? extends SoulIceBallEntity> p_i50159_1_, World p_i50159_2_) {
 		super(p_i50159_1_, p_i50159_2_);
 	}
 
-	public SoulFireBallEntity(World worldIn, LivingEntity throwerIn) {
-		super(ModEntityTypes.SOUL_FIREBALL.get(), throwerIn, worldIn);
+	public SoulIceBallEntity(World worldIn, LivingEntity throwerIn) {
+		super(ModEntityTypes.SOUL_ICEBALL.get(), throwerIn, worldIn);
 	}
 
-	public SoulFireBallEntity(World worldIn, double x, double y, double z) {
-		super(ModEntityTypes.SOUL_FIREBALL.get(), x, y, z, worldIn);
+	public SoulIceBallEntity(World worldIn, double x, double y, double z) {
+		super(ModEntityTypes.SOUL_ICEBALL.get(), x, y, z, worldIn);
 	}
 
 	protected Item getDefaultItem() {
@@ -101,11 +101,11 @@ public class SoulFireBallEntity extends ProjectileItemEntity implements ISoulEnt
 		}
 	}
 
-	public void updateLevel(PlayerEntity owner) {
+	public void updateLevel(PlayerEntity owner, SkillEnum callerSkillEnum) {
 		LazyOptional<IBaseSkillCapability> skill = owner.getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
 		if (skill != null && skill.isPresent()) {
-			this.puntosAsignados = skill.map(x -> x.getSkillsPoints()).orElse(null).get(SkillEnum.FROSTBALL);
-			this.damage = puntosAsignados * 2;
+			this.puntosAsignados = skill.map(x -> x.getSkillsPoints()).orElse(null).get(callerSkillEnum);
+			this.damage = puntosAsignados * 2.0f;
 		}
 	}
 

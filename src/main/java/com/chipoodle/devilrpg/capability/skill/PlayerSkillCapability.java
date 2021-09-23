@@ -2,7 +2,9 @@ package com.chipoodle.devilrpg.capability.skill;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -10,6 +12,9 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.mana.IBaseManaCapability;
 import com.chipoodle.devilrpg.capability.mana.PlayerManaCapabilityProvider;
+import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillElement;
+import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillManaCost;
+import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model.ClientSkillBuilder;
 import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.network.handler.PlayerSkillClientServerHandler;
 import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
@@ -41,25 +46,31 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
 
 	public PlayerSkillCapability() {
 		if (nbt.isEmpty()) {
+			ClientSkillBuilder client = new ClientSkillBuilder();
+			client.buildSkillTrees();
 			HashMap<PowerEnum, SkillEnum> powers = new HashMap<>();
 			HashMap<SkillEnum, Integer> skills = new HashMap<>();
 			HashMap<SkillEnum, Integer> maxSkills = new HashMap<>();
 			HashMap<SkillEnum, Integer> manaCostContainer = new HashMap<>();
 			ConcurrentLinkedQueue<TameableEntity> minions = new ConcurrentLinkedQueue<>();
 			HashMap<Attribute, UUID> attributeModifiers = new HashMap<>();
+			List<SkillEnum> filteredSkillList = SkillEnum.getSkillsWithoutEmpty();
 			
 			for (PowerEnum p : Arrays.asList(PowerEnum.values())) {
 				powers.put(p, null);
 			}
-			for (SkillEnum s : Arrays.asList(SkillEnum.values())) {
+
+			for (SkillEnum s : filteredSkillList) {
+				SkillManaCost skillManaCost = extractSkillManaCost(client, s);
 				skills.put(s, 0);
-				maxSkills.put(s, 20);
+				if(skillManaCost != null)
+					maxSkills.put(s, skillManaCost.getMaxSkillLevel());
 			}
-			for (SkillEnum s : Arrays.asList(SkillEnum.values())) {
-				manaCostContainer.put(s, 20);
-				if(s.equals(SkillEnum.FROSTBALL)) {
-					manaCostContainer.put(s, 3);
-				}	
+			
+			for (SkillEnum s : filteredSkillList) {
+				SkillManaCost skillManaCost = extractSkillManaCost(client, s);
+				if(skillManaCost != null)
+					manaCostContainer.put(s, skillManaCost.getManaCost());
 			}
 
 			try {
@@ -74,6 +85,13 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
 			}
 		}
 		singletonSkillFactory = new SingletonSkillFactory(this);
+	}
+
+	private SkillManaCost extractSkillManaCost(ClientSkillBuilder client, SkillEnum s) {
+		SkillElement skillElementByEnum = client.getSkillElementByEnum(s);
+		DevilRpg.LOGGER.debug("extractSkillManaCost: {}-> {} ",s,skillElementByEnum.getSkillManaCost());
+		
+		return skillElementByEnum == null? null : skillElementByEnum.getSkillManaCost();
 	}
 
 	@SuppressWarnings("unchecked")
@@ -207,6 +225,7 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
 	@Override
 	public void triggerAction(ServerPlayerEntity playerIn, PowerEnum triggeredPower) {
 		if (!playerIn.level.isClientSide) {
+			DevilRpg.LOGGER.info("PlayerSkillCapability triggerAction(ServerPlayerEntity, triggeredPower) {} {}",playerIn,triggeredPower);
 			if (getSkillLevelFromAssociatedPower(triggeredPower) != 0) {
 				ISkillContainer poder = getSkill(triggeredPower);
 				if (consumeMana(playerIn, poder)) {

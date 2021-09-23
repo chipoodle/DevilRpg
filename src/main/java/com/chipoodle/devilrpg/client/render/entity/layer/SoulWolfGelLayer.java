@@ -1,6 +1,7 @@
 package com.chipoodle.devilrpg.client.render.entity.layer;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.client.render.IRenderUtilities;
 import com.chipoodle.devilrpg.client.render.entity.model.SoulWolfModel;
 import com.chipoodle.devilrpg.client.render.entity.model.SoulWolfModelHeart;
 import com.chipoodle.devilrpg.entity.SoulWolfEntity;
@@ -17,9 +18,8 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 
 @OnlyIn(Dist.CLIENT)
 public class SoulWolfGelLayer<T extends SoulWolfEntity> extends GhostEnergyLayer<T, SoulWolfModelHeart<T>> {
+	private static final ResourceLocation WOLF_GEL = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soul/soulgelghost.png");
 	private final EntityModel<T> soulWolfModel = new SoulWolfModel<T>();
-	private final ResourceLocation WOLF_GEL = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soul/soulgelghost.png");
-	//private final ResourceLocation WOLF_GEL = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soul/soulgel.png");
 	private IEntityRenderer<T, SoulWolfModelHeart<T>> entityRenderer;
 
 	public SoulWolfGelLayer(IEntityRenderer<T, SoulWolfModelHeart<T>> p_i50923_1_) {
@@ -27,6 +27,7 @@ public class SoulWolfGelLayer<T extends SoulWolfEntity> extends GhostEnergyLayer
 		entityRenderer = p_i50923_1_;
 	}
 
+	@Override
 	public void render(MatrixStack matrixStackIn, IRenderTypeBuffer bufferIn, int packedLightIn, T entitylivingbaseIn,
 			float limbSwing, float limbSwingAmount, float partialTicks, float ageInTicks, float netHeadYaw,
 			float headPitch) {
@@ -58,7 +59,7 @@ public class SoulWolfGelLayer<T extends SoulWolfEntity> extends GhostEnergyLayer
 		if (!entitylivingbaseIn.isInvisible()) {
 			IVertexBuilder ivertexbuilder = entitylivingbaseIn.getBuffer(bufferIn,
 					entityRenderer.getTextureLocation(entitylivingbaseIn));
-			float[] rgbArray = entitylivingbaseIn.groovyRed(entitylivingbaseIn, partialTicks);
+			float[] rgbArray = IRenderUtilities.groovyRed(entitylivingbaseIn, partialTicks);
 			entityRenderer.getModel().renderToBuffer(matrixStackIn, ivertexbuilder, packedLightIn,
 					LivingRenderer.getOverlayCoords(entitylivingbaseIn, 0.1F), rgbArray[0], rgbArray[1], rgbArray[2],
 					1.0F);

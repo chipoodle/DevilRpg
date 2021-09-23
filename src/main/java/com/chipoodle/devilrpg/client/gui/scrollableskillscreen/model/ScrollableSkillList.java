@@ -1,6 +1,7 @@
 package com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -14,6 +15,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.ScrollableSkillLoadFix;
 import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillElement;
+import com.chipoodle.devilrpg.util.SkillEnum;
 import com.google.common.base.Functions;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -28,27 +30,30 @@ public class ScrollableSkillList {
 	private final Map<ResourceLocation, SkillElement> skillElementMap = Maps.newHashMap();
 	private final Set<SkillElement> roots = Sets.newLinkedHashSet();
 	private final Set<SkillElement> nonRoots = Sets.newLinkedHashSet();
+	private final HashMap<SkillEnum,SkillElement> skillEnumHashMap =  Maps.newHashMap();
+	
 	private ScrollableSkillList.IListener listener;
 
 	@OnlyIn(Dist.CLIENT)
-	private void remove(SkillElement advancementIn) {
-		for (SkillElement advancement : advancementIn.getChildren()) {
-			this.remove(advancement);
+	private void remove(SkillElement skillelmentIn) {
+		for (SkillElement skillElement : skillelmentIn.getChildren()) {
+			this.remove(skillElement);
 		}
 
-		LOGGER.info("Forgot about skillElement {}", (Object) advancementIn.getId());
-		this.skillElementMap.remove(advancementIn.getId());
-		if (advancementIn.getParent() == null) {
-			this.roots.remove(advancementIn);
+		LOGGER.info("Forgot about skillElement {}", (Object) skillelmentIn.getId());
+		this.skillElementMap.remove(skillelmentIn.getId());
+		if (skillelmentIn.getParent() == null) {
+			this.roots.remove(skillelmentIn);
 			if (this.listener != null) {
-				this.listener.rootSkillRemoved(advancementIn);
+				this.listener.rootSkillRemoved(skillelmentIn);
 			}
 		} else {
-			this.nonRoots.remove(advancementIn);
+			this.nonRoots.remove(skillelmentIn);
 			if (this.listener != null) {
-				this.listener.nonRootSkillRemoved(advancementIn);
+				this.listener.nonRootSkillRemoved(skillelmentIn);
 			}
 		}
+		skillEnumHashMap.remove(skillelmentIn.getSkillCapability());
 
 	}
 
@@ -93,19 +98,20 @@ public class ScrollableSkillList {
 							this.listener.nonRootSkillAdded(skillElement);
 						}
 					}
+					this.skillEnumHashMap.put(skillElement.getSkillCapability(), skillElement);
 				}
 			}
 
 			if (!flag) {
 				for (Entry<ResourceLocation, SkillElement.Builder> entry1 : advancementsIn.entrySet()) {
-					LOGGER.error("Couldn't load advancement {}: {}", entry1.getKey(), entry1.getValue());
+					LOGGER.error("Couldn't load skill element {}: {}", entry1.getKey(), entry1.getValue());
 				}
 				break;
 			}
 		}
 
 		ScrollableSkillLoadFix.buildSortedTrees(this.roots);
-		LOGGER.info("Loaded {} advancements", (int) this.skillElementMap.size());
+		LOGGER.info("Loaded {} skill elements", (int) this.skillElementMap.size());
 	}
 
 	@OnlyIn(Dist.CLIENT)
@@ -125,6 +131,10 @@ public class ScrollableSkillList {
 
 	public Collection<SkillElement> getAll() {
 		return this.skillElementMap.values();
+	}
+	
+	public SkillElement getSkillElementByEnum(SkillEnum skillEnum) {
+		return skillEnumHashMap.get(skillEnum);
 	}
 
 	@Nullable

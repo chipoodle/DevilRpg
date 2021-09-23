@@ -106,7 +106,7 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 
 	private ScrollableSkillScreen() {
 		super(NarratorChatListener.NO_TITLE);
-		ClientSkillBuilder skillManager = new ClientSkillBuilder(Minecraft.getInstance());
+		ClientSkillBuilder skillManager = new ClientSkillBuilder(/*Minecraft.getInstance()*/);
 		skillManager.buildSkillTrees();
 		this.clientSkillManager = skillManager;
 		isDraggingToPowerButton = false;
@@ -562,10 +562,6 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 			powerButtonList.add(powrButtons);
 			addButton(powrButtons);
 			k++;
-			
-			/*AbstractGui.blit(matrixStack, offsetLeft, offsetTop, 0, 0, INITIAL_WIDTH, INITIAL_HEIGHT + INFO_SPACE,
-					INITIAL_TEXTURE_WIDTH, INITIAL_TEXTURE_HEIGHT);*/
-			
 		}
 		
 	}
@@ -585,7 +581,6 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 			
 			}
 		}
-		//init();
 		addPowerButtons();
 		loadAssignedPowerButtons();
 	}

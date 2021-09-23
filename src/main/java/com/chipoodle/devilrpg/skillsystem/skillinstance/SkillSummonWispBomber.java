@@ -8,13 +8,13 @@ import com.chipoodle.devilrpg.capability.minion.IBaseMinionCapability;
 import com.chipoodle.devilrpg.capability.minion.PlayerMinionCapabilityProvider;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.config.DevilRpgConfig;
+import com.chipoodle.devilrpg.entity.SoulWispBomberEntity;
 import com.chipoodle.devilrpg.entity.SoulWispEntity;
 import com.chipoodle.devilrpg.init.ModEntityTypes;
 import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
 import com.chipoodle.devilrpg.util.SkillEnum;
 
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.potion.Effects;
 import net.minecraft.util.SoundCategory;
 import net.minecraft.util.SoundEvents;
 import net.minecraft.util.math.MathHelper;
@@ -22,17 +22,17 @@ import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.LazyOptional;
 
-public class SkillSummonWispHealth implements ISkillContainer, WispSkillInterface {
+public class SkillSummonWispBomber implements ISkillContainer, WispSkillInterface {
 
 	private PlayerSkillCapability parentCapability;
 
-	public SkillSummonWispHealth(PlayerSkillCapability parentCapability) {
+	public SkillSummonWispBomber(PlayerSkillCapability parentCapability) {
 		this.parentCapability = parentCapability;
 	}
 
 	@Override
 	public SkillEnum getSkillEnum() {
-		return SkillEnum.SUMMON_WISP_HEALTH;
+		return SkillEnum.SUMMON_WISP_BOMB;
 	}
 
 	@Override
@@ -60,8 +60,8 @@ public class SkillSummonWispHealth implements ISkillContainer, WispSkillInterfac
 	}
 
 	private SoulWispEntity summonWisp(World worldIn, PlayerEntity playerIn, Random rand) {
-		SoulWispEntity sw = ModEntityTypes.WISP.get().create(worldIn);
-		sw.updateLevel(playerIn, Effects.HEALTH_BOOST, Effects.REGENERATION, SkillEnum.SUMMON_WISP_HEALTH, true);
+		SoulWispEntity sw = ModEntityTypes.WISP_BOMB.get().create(worldIn);
+		sw.updateLevel(playerIn, null, null, SkillEnum.SUMMON_WISP_BOMB, true);
 		Vector3d playerLookVector = playerIn.getLookAngle();
 		double spawnX = playerIn.getX() + DevilRpgConfig.WISP_SPAWN_DISTANCE * playerLookVector.x;
 		double spawnZ = playerIn.getZ() + DevilRpgConfig.WISP_SPAWN_DISTANCE * playerLookVector.z;

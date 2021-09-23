@@ -21,6 +21,8 @@ public interface IBaseMinionCapability extends IGenericCapability{
 	public ConcurrentLinkedQueue<UUID> getWispMinions();
 	public void setWispMinions(ConcurrentLinkedQueue<UUID> minions, PlayerEntity player);
 	
+	public ConcurrentLinkedQueue<UUID> getAllMinions();
+	
 	public TameableEntity getTameableByUUID(UUID id, World world);
 	
 	public void removeWisp(PlayerEntity owner, SoulWispEntity entity);

@@ -6,20 +6,26 @@ import java.util.Map;
 import java.util.Random;
 import java.util.stream.Collectors;
 
+import com.chipoodle.devilrpg.entity.SoulWolfEntity;
 import com.google.common.base.Functions;
 
+import net.minecraft.client.renderer.model.ModelRenderer;
 import net.minecraft.entity.AreaEffectCloudEntity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.item.DyeColor;
+import net.minecraft.particles.BasicParticleType;
+import net.minecraft.particles.BlockParticleData;
+import net.minecraft.particles.ParticleType;
 import net.minecraft.particles.ParticleTypes;
 import net.minecraft.potion.EffectInstance;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.World;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 public interface IRenderUtilities {
-	DyeColor[] reds = {DyeColor.RED,DyeColor.BROWN};
-	DyeColor[] blues = {DyeColor.BLUE,DyeColor.LIGHT_BLUE};
+	DyeColor[] reds = {DyeColor.BLACK,DyeColor.RED,DyeColor.ORANGE};
+	DyeColor[] blues = {DyeColor.BLACK, DyeColor.BLUE,DyeColor.LIGHT_BLUE};
 	Map<DyeColor, float[]> DYE_TO_RGB = 
 			Arrays.stream(DyeColor.values()).collect(
 					Collectors.toMap(Functions.identity(),dye->createColor(dye)));
@@ -72,7 +78,7 @@ public interface IRenderUtilities {
 		return returnFloat;
 	}
 
-	public default <T extends LivingEntity> float[] groovyRed(T entitylivingbaseIn, float partialTicks) {
+	public static <T extends LivingEntity> float[] groovyRed(T entitylivingbaseIn, float partialTicks) {
 		float f;
 		float f1;
 		float f2;
@@ -91,7 +97,7 @@ public interface IRenderUtilities {
 		return returnFloat;
 	}
 	
-	public default <T extends LivingEntity> float[] groovyBlue(T entitylivingbaseIn, float partialTicks) {
+	public static <T extends LivingEntity> float[] groovyBlue(T entitylivingbaseIn, float partialTicks) {
 		float f;
 		float f1;
 		float f2;
@@ -109,13 +115,13 @@ public interface IRenderUtilities {
 		float[] returnFloat = { f, f1, f2 };
 		return returnFloat;
 	}
-
-	public default void spawnLingeringCloud(World world, LivingEntity living) {
+	
+	public static void spawnLingeringCloud(World world, LivingEntity living,float radius, int puntosAsignados) {
 		Collection<EffectInstance> collection = living.getActiveEffects();
 		if (!collection.isEmpty()) {
 			AreaEffectCloudEntity areaeffectcloudentity = new AreaEffectCloudEntity(world, living.getX(),
 					living.getY(), living.getZ());
-			areaeffectcloudentity.setRadius(2.5F);
+			areaeffectcloudentity.setRadius(1 + radius * puntosAsignados);
 			areaeffectcloudentity.setRadiusOnUse(-0.5F);
 			areaeffectcloudentity.setWaitTime(10);
 			areaeffectcloudentity.setDuration(areaeffectcloudentity.getDuration() / 2);
@@ -131,14 +137,42 @@ public interface IRenderUtilities {
 
 	}
 
-	public default void customDeadParticles(World world, Random rand, LivingEntity living) {
+	public static void customDeadParticles(World world, Random rand, LivingEntity living) {
 
 		for (int i = 0; i < 7; ++i) {
 			double d0 = rand.nextGaussian() * 0.02D;
 			double d1 = rand.nextGaussian() * 0.02D;
 			double d2 = rand.nextGaussian() * 0.02D;
-			world.addParticle(ParticleTypes.END_ROD, living.getRandomX(1.0D), living.getRandomY() + 0.5D,
-					living.getRandomZ(1.0D), d0, d1, d2);
+			world.addParticle(ParticleTypes.END_ROD, living.getRandomX(1.0D), living.getRandomY() + 0.5D,living.getRandomZ(1.0D), d0, d1, d2);
+		}
+	}
+	
+	public static void customParticles(World world, Random rand, LivingEntity living, BasicParticleType particle) {
+
+		for (int i = 0; i < 7; ++i) {
+			double d0 = rand.nextGaussian() * 0.02D;
+			double d1 = rand.nextGaussian() * 0.02D;
+			double d2 = rand.nextGaussian() * 0.02D;
+			world.addParticle(particle, living.getRandomX(1.0D), living.getRandomY() + 1.5D,living.getRandomZ(1.0D), d0, d1, d2);
+		}
+	}
+	public static void rotationParticles(World world, Random rand, LivingEntity living, BasicParticleType particle, int numberOfParticles, double distanciaDesdeElCentro) {
+		double x;
+		double y;
+		double z;
+		int ageInTicks = 20;
+		float f = (float) (ageInTicks * 0.43);
+		for (int j = 0; j < numberOfParticles; ++j) {
+			double d0 = rand.nextGaussian() * 0.02D;
+			double d1 = rand.nextGaussian() * 0.02D;
+			double d2 = rand.nextGaussian() * 0.02D;
+			y = living.getRandomY()+0.6D;
+			//this.blazeSticks[j].yRot = f;
+			// this.blazeSticks[j].rotateAngleX = MathHelper.sin(f)*0.3f;
+			x = -MathHelper.sin(f) * distanciaDesdeElCentro+living.getRandomX(0.9D);
+			z = -MathHelper.cos(f) * distanciaDesdeElCentro+living.getRandomZ(0.9D);
+			f += Math.PI * 2 / numberOfParticles;
+			world.addParticle(particle, x, y,z, d0, d1, d2);
 		}
 	}
 }

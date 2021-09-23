@@ -23,7 +23,7 @@ import net.minecraftforge.common.util.LazyOptional;
 
 public class SkillSummonSoulBear implements ISkillContainer {
 
-	private final static int NUMBER_OF_SUMMONS = 1;
+	private static final int NUMBER_OF_SUMMONS = 1;
 	private PlayerSkillCapability parentCapability;
 
 	public SkillSummonSoulBear(PlayerSkillCapability parentCapability) {
@@ -47,7 +47,7 @@ public class SkillSummonSoulBear implements ISkillContainer {
 			ConcurrentLinkedQueue<UUID> keys = min.map(x -> x.getSoulBearMinions())
 					.orElse(new ConcurrentLinkedQueue<UUID>());
 
-			keys.add(summonSoulBear(worldIn, playerIn, rand).getUUID());
+			keys.offer(summonSoulBear(worldIn, playerIn, rand).getUUID());
 			if (keys.size() > NUMBER_OF_SUMMONS) {
 				UUID key = keys.remove();
 				min.ifPresent(x -> {

@@ -4,6 +4,8 @@ import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.config.ConfigHelper;
 import com.chipoodle.devilrpg.config.ConfigHolder;
 import com.chipoodle.devilrpg.entity.SoulBearEntity;
+import com.chipoodle.devilrpg.entity.SoulWispArcherEntity;
+import com.chipoodle.devilrpg.entity.SoulWispBomberEntity;
 import com.chipoodle.devilrpg.entity.SoulWispEntity;
 import com.chipoodle.devilrpg.entity.SoulWolfEntity;
 import com.chipoodle.devilrpg.init.ModBlocks;
@@ -17,6 +19,7 @@ import net.minecraft.item.BlockItem;
 import net.minecraft.item.Item;
 import net.minecraftforge.event.RegistryEvent;
 import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
+import net.minecraftforge.event.entity.EntityAttributeModificationEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.RegistryObject;
@@ -107,5 +110,12 @@ public final class ModEventSubscriber {
 		event.put(ModEntityTypes.SOUL_WOLF.get(), SoulWolfEntity.setAttributes().build());
 		event.put(ModEntityTypes.SOUL_BEAR.get(), SoulBearEntity.setAttributes().build());
 		event.put(ModEntityTypes.WISP.get(), SoulWispEntity.setAttributes().build());
+		event.put(ModEntityTypes.WISP_BOMB.get(), SoulWispBomberEntity.setAttributes().build());
+		event.put(ModEntityTypes.WISP_ARCHER.get(), SoulWispArcherEntity.setAttributes().build());
+	}
+	
+	@SubscribeEvent
+	public static void updateEntityAttributes(EntityAttributeModificationEvent event) {
+		DevilRpg.LOGGER.info("----------------------->ForgeEventSubscriber.updateEntityAttributes()");
 	}
 }

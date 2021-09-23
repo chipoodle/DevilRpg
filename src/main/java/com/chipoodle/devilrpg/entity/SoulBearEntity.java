@@ -1,10 +1,13 @@
 package com.chipoodle.devilrpg.entity;
 
+import java.util.List;
 import java.util.UUID;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
+import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.minion.IBaseMinionCapability;
 import com.chipoodle.devilrpg.capability.minion.PlayerMinionCapabilityProvider;
 import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
@@ -12,8 +15,10 @@ import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
 import com.chipoodle.devilrpg.client.render.IRenderUtilities;
 import com.chipoodle.devilrpg.init.ModEntityTypes;
 import com.chipoodle.devilrpg.util.SkillEnum;
+import com.chipoodle.devilrpg.util.TargetUtils;
 
 import net.minecraft.block.BlockState;
+import net.minecraft.client.Minecraft;
 import net.minecraft.entity.AgeableEntity;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntitySize;
@@ -39,6 +44,7 @@ import net.minecraft.entity.ai.goal.RandomWalkingGoal;
 import net.minecraft.entity.ai.goal.ResetAngerGoal;
 import net.minecraft.entity.ai.goal.SwimGoal;
 import net.minecraft.entity.merchant.villager.VillagerEntity;
+import net.minecraft.entity.monster.IMob;
 import net.minecraft.entity.passive.IronGolemEntity;
 import net.minecraft.entity.passive.TameableEntity;
 import net.minecraft.entity.passive.TurtleEntity;
@@ -50,6 +56,9 @@ import net.minecraft.network.IPacket;
 import net.minecraft.network.datasync.DataParameter;
 import net.minecraft.network.datasync.DataSerializers;
 import net.minecraft.network.datasync.EntityDataManager;
+import net.minecraft.particles.ParticleTypes;
+import net.minecraft.potion.EffectInstance;
+import net.minecraft.potion.Effects;
 import net.minecraft.util.ActionResultType;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.Hand;
@@ -57,6 +66,7 @@ import net.minecraft.util.RangedInteger;
 import net.minecraft.util.SoundEvent;
 import net.minecraft.util.SoundEvents;
 import net.minecraft.util.TickRangeConverter;
+import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.DifficultyInstance;
@@ -71,20 +81,29 @@ import net.minecraftforge.fml.network.FMLPlayMessages;
 import net.minecraftforge.fml.network.NetworkHooks;
 
 public class SoulBearEntity extends TameableEntity
-		implements ISoulEntity, IChargeableMob, IRenderUtilities, IAngerable {
-	private static final DataParameter<Boolean> DATA_STANDING_ID = EntityDataManager.defineId(SoulBearEntity.class,DataSerializers.BOOLEAN);
+		implements ISoulEntity, IChargeableMob, IAngerable, IPassiveMinionUpdater<SoulBearEntity> {
+	private static final double RADIUS_PARTICLES = 1.0;
+	private static final int NUMBER_OF_PARTICLES_WARBEAR = 15;
+	private static final double SPLASH_DAMAGE_FACTOR = 0.5F;
+	private static final DataParameter<Boolean> DATA_STANDING_ID = EntityDataManager.defineId(SoulBearEntity.class,
+			DataSerializers.BOOLEAN);
+	private static final int PROBABILITY_MULTIPLIER = 3;
+	private static final int DURATION_TICKS = 100;
 
 	private float clientSideStandAnimationO;
 	private float clientSideStandAnimation;
 	private int warningSoundTicks;
 	private static final RangedInteger PERSISTENT_ANGER_TIME = TickRangeConverter.rangeOfSeconds(20, 39);
 	private int remainingPersistentAngerTime;
-   	private UUID persistentAngerTarget;
+	private UUID persistentAngerTarget;
 
-	private final int SALUD_INICIAL = 30;
+	private final int SALUD_INICIAL = 20;
 	private int puntosAsignados = 0;
 	private double saludMaxima = SALUD_INICIAL;
 	private static double initialArmor;
+
+	private Integer warBear = 0;
+	private Integer mountBear = 0;
 
 	public SoulBearEntity(EntityType<? extends SoulBearEntity> type, World worldIn) {
 		super(type, worldIn);
@@ -95,32 +114,42 @@ public class SoulBearEntity extends TameableEntity
 	}
 
 	public AgeableEntity getBreedOffspring(ServerWorld level, AgeableEntity ageable) {
-	      return ModEntityTypes.SOUL_BEAR.get().create(level);
+		return ModEntityTypes.SOUL_BEAR.get().create(level);
 	}
 
 	/**
 	 * Checks if the parameter is an item which this animal can be fed to breed it
 	 * (wheat, carrots or seeds depending on the animal type)
 	 */
+	@Override
 	public boolean isFood(ItemStack stack) {
 		return false;
 	}
 
+	@Override
 	protected void registerGoals() {
 		super.registerGoals();
 		this.goalSelector.addGoal(0, new SwimGoal(this));
 		this.goalSelector.addGoal(1, new SoulBearEntity.MeleeAttackGoal());
 		// this.goalSelector.addGoal(1, new SoulBearEntity.PanicGoal());
-		this.goalSelector.addGoal(3, new SoulBearEntity.AvoidEntityGoal<VillagerEntity>(this, VillagerEntity.class, 24.0F, 1.5D, 1.5D));
-		this.goalSelector.addGoal(3, new SoulBearEntity.AvoidEntityGoal<LlamaEntity>(this, LlamaEntity.class, 24.0F, 1.5D, 1.5D));
-		this.goalSelector.addGoal(3, new SoulBearEntity.AvoidEntityGoal<TurtleEntity>(this, TurtleEntity.class, 24.0F, 1.5D, 1.5D));
-		this.goalSelector.addGoal(3, new SoulBearEntity.AvoidEntityGoal<IronGolemEntity>(this, IronGolemEntity.class, 24.0F, 1.5D, 1.5D));
+		// this.goalSelector.addGoal(3, new
+		// SoulBearEntity.AvoidEntityGoal<VillagerEntity>(this, VillagerEntity.class,
+		// 24.0F, 1.5D, 1.5D));
+		// this.goalSelector.addGoal(3, new
+		// SoulBearEntity.AvoidEntityGoal<LlamaEntity>(this, LlamaEntity.class, 24.0F,
+		// 1.5D, 1.5D));
+		// this.goalSelector.addGoal(3, new
+		// SoulBearEntity.AvoidEntityGoal<TurtleEntity>(this, TurtleEntity.class, 24.0F,
+		// 1.5D, 1.5D));
+		// this.goalSelector.addGoal(3, new
+		// SoulBearEntity.AvoidEntityGoal<IronGolemEntity>(this, IronGolemEntity.class,
+		// 24.0F, 1.5D, 1.5D));
 		this.goalSelector.addGoal(4, new FollowParentGoal(this, 1.25D));
 		this.goalSelector.addGoal(5, new RandomWalkingGoal(this, 1.0D));
 		this.goalSelector.addGoal(6, new FollowOwnerGoal(this, 1.0D, 10.0F, 2.0F, false));
 		this.goalSelector.addGoal(7, new LookAtGoal(this, PlayerEntity.class, 6.0F));
 		this.goalSelector.addGoal(8, new LookRandomlyGoal(this));
-		
+
 		// this.targetSelector.addGoal(2, new SoulBearEntity.AttackPlayerGoal());
 		// this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this,
 		// MobEntity.class, 10, true, true,(Predicate<LivingEntity>) null));
@@ -129,18 +158,21 @@ public class SoulBearEntity extends TameableEntity
 		this.targetSelector.addGoal(2, new OwnerHurtTargetGoal(this));
 		// this.targetSelector.addGoal(3, new SoulBearEntity.HurtByTargetGoal());
 		this.targetSelector.addGoal(3, (new HurtByTargetGoal(this)).setAlertOthers());
-		this.targetSelector.addGoal(5, new NearestAttackableTargetGoal<>(this, MobEntity.class, false));
+		// this.targetSelector.addGoal(5, new NearestAttackableTargetGoal<>(this,
+		// MobEntity.class, false));
+		this.targetSelector.addGoal(5,
+				new NearestAttackableTargetGoal<>(this, MobEntity.class, 10, false, false, (entity) -> {
+					return !(entity instanceof VillagerEntity)
+							&& !(entity instanceof LlamaEntity) && !(entity instanceof TurtleEntity)
+							&& !(entity instanceof IronGolemEntity);
+				}));
 		this.targetSelector.addGoal(8, new ResetAngerGoal<>(this, true));
 
 	}
-	
+
 	public static AttributeModifierMap.MutableAttribute setAttributes() {
-		return MobEntity.createMobAttributes()
-				.add(Attributes.MOVEMENT_SPEED, (double) 0.3F)
-				.add(Attributes.MAX_HEALTH, 8.0D)
-				.add(Attributes.FOLLOW_RANGE, 16.0D)
-				.add(Attributes.ATTACK_DAMAGE, 2.0D)
-				.add(Attributes.ARMOR, 0.35D);
+		return MobEntity.createMobAttributes().add(Attributes.MOVEMENT_SPEED, 0.3D).add(Attributes.MAX_HEALTH, 8.0D)
+				.add(Attributes.FOLLOW_RANGE, 16.0D).add(Attributes.ATTACK_DAMAGE, 2.0D).add(Attributes.ARMOR, 0.35D);
 	}
 
 	public void updateLevel(PlayerEntity owner) {
@@ -170,7 +202,7 @@ public class SoulBearEntity extends TameableEntity
 		super.addAdditionalSaveData(compound);
 		compound.putString("OwnerUUID", "");
 		compound.putString("Owner", "");
-		//compound.putUniqueId("Owner", UUID.fromString(""));
+		// compound.putUniqueId("Owner", UUID.fromString(""));
 	}
 
 	@Override
@@ -196,14 +228,40 @@ public class SoulBearEntity extends TameableEntity
 
 	@Override
 	public boolean doHurtTarget(Entity entityIn) {
-		boolean flag = entityIn.hurt(DamageSource.mobAttack(this),
-				(float) ((int) this.getAttributeValue(Attributes.ATTACK_DAMAGE)));
+		double attackDamage = this.getAttributeValue(Attributes.ATTACK_DAMAGE);
+		boolean flag = entityIn.hurt(DamageSource.mobAttack(this), (float) (attackDamage));
 		if (flag) {
+			int probability = random.nextInt(100);
+			if (warBear > 0 && probability <= (warBear * PROBABILITY_MULTIPLIER)) {
+				IRenderUtilities.rotationParticles(Minecraft.getInstance().level, random, this, ParticleTypes.CRIMSON_SPORE,NUMBER_OF_PARTICLES_WARBEAR,RADIUS_PARTICLES);
+				double radius = 3;
+				List<LivingEntity> acquireAllLookTargetsByClass = TargetUtils
+						.acquireAllTargetsInRadiusByClass(this, LivingEntity.class, radius).stream()
+						.filter(entity -> !isAlliedTo(entity)).collect(Collectors.toList());
+
+				acquireAllLookTargetsByClass.forEach(mob -> mob.hurt(DamageSource.mobAttack(this), (float) (attackDamage*SPLASH_DAMAGE_FACTOR)));
+				DevilRpg.LOGGER.info("---------->doHurtTarget warBear: {} prob: {} limit: {} enemies: {}", warBear,
+						probability, warBear * PROBABILITY_MULTIPLIER, acquireAllLookTargetsByClass.size());
+			}
 			this.doEnchantDamageEffects(this, entityIn);
 		}
 		return flag;
 	}
-	
+
+	@Override
+	public boolean hurt(DamageSource damageSource, float amount) {
+		boolean hurt = super.hurt(damageSource, amount);
+		if (hurt) {
+				
+			
+			
+			
+			
+			
+		}
+		return hurt;
+	}
+
 	public void startPersistentAngerTimer() {
 		this.setRemainingPersistentAngerTime(PERSISTENT_ANGER_TIME.randomValue(this.random));
 	}
@@ -257,7 +315,7 @@ public class SoulBearEntity extends TameableEntity
 		level.broadcastEntityEvent(this, (byte) 3);
 		this.dead = true;
 		this.remove();
-		customDeadParticles(this.level, this.random, this);
+		IRenderUtilities.customDeadParticles(this.level, this.random, this);
 	}
 
 	/**
@@ -329,13 +387,13 @@ public class SoulBearEntity extends TameableEntity
 		if (this.warningSoundTicks > 0) {
 			--this.warningSoundTicks;
 		}
-		
+
 		if (!this.level.isClientSide) {
-			this.updatePersistentAnger((ServerWorld)this.level, true);
-	    }
+			this.updatePersistentAnger((ServerWorld) this.level, true);
+		}
 
 	}
-	
+
 	@Override
 	public ActionResultType mobInteract(PlayerEntity playerIn, Hand hand) {
 		return ActionResultType.PASS;
@@ -352,11 +410,11 @@ public class SoulBearEntity extends TameableEntity
 	}
 
 	public boolean isStanding() {
-	      return this.entityData.get(DATA_STANDING_ID);
+		return this.entityData.get(DATA_STANDING_ID);
 	}
 
 	public void setStanding(boolean p_189794_1_) {
-	      this.entityData.set(DATA_STANDING_ID, p_189794_1_);
+		this.entityData.set(DATA_STANDING_ID, p_189794_1_);
 	}
 
 	@OnlyIn(Dist.CLIENT)
@@ -466,8 +524,8 @@ public class SoulBearEntity extends TameableEntity
 	class AvoidEntityGoal<T extends LivingEntity> extends net.minecraft.entity.ai.goal.AvoidEntityGoal<T> {
 		private final SoulBearEntity bear;
 
-		public AvoidEntityGoal(SoulBearEntity wolfIn, Class<T> entityClassToAvoidIn, float avoidDistanceIn, double farSpeedIn,
-				double nearSpeedIn) {
+		public AvoidEntityGoal(SoulBearEntity wolfIn, Class<T> entityClassToAvoidIn, float avoidDistanceIn,
+				double farSpeedIn, double nearSpeedIn) {
 			super(wolfIn, entityClassToAvoidIn, avoidDistanceIn, farSpeedIn, nearSpeedIn);
 			this.bear = wolfIn;
 		}
@@ -535,9 +593,17 @@ public class SoulBearEntity extends TameableEntity
 		 */
 		return 0;
 	}
-	
+
 	@Override
 	public boolean isPowered() {
 		return true;
+	}
+
+	public void setWarBear(Integer warBear) {
+		this.warBear = warBear;
+	}
+
+	public void setMountBear(Integer mountBear) {
+		this.mountBear = mountBear;
 	}
 }

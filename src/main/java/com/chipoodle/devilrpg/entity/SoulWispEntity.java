@@ -7,7 +7,6 @@ import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
-import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.minion.IBaseMinionCapability;
 import com.chipoodle.devilrpg.capability.minion.PlayerMinionCapabilityProvider;
 import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
@@ -73,14 +72,15 @@ import net.minecraftforge.fml.common.registry.IEntityAdditionalSpawnData;
 import net.minecraftforge.fml.network.FMLPlayMessages;
 import net.minecraftforge.fml.network.NetworkHooks;
 
-public class SoulWispEntity extends TameableEntity
-		implements IFlyingAnimal, ISoulEntity, IChargeableMob, IRenderUtilities, IAngerable {
-	private static final DataParameter<Integer> ANGER_TIME = EntityDataManager.defineId(SoulWispEntity.class,DataSerializers.INT);
+public class SoulWispEntity extends TameableEntity implements IFlyingAnimal, ISoulEntity, IChargeableMob,
+		IAngerable, IPassiveMinionUpdater<SoulWispEntity> {
+	private static final DataParameter<Integer> ANGER_TIME = EntityDataManager.defineId(SoulWispEntity.class,
+			DataSerializers.INT);
 	private static final RangedInteger PERSISTENT_ANGER_TIME = TickRangeConverter.rangeOfSeconds(20, 39);
 	private UUID lastHurtBy;
-	private final int SALUD_INICIAL = 8;
-	private int puntosAsignados = 0;
-	private double saludMaxima = SALUD_INICIAL;
+	private final int SALUD_INICIAL = 4;
+	protected int puntosAsignados = 0;
+	protected double saludMaxima = SALUD_INICIAL;
 	protected Effect efectoPrimario;
 	protected Effect efectoSecundario;
 	protected boolean esBeneficioso;
@@ -117,21 +117,23 @@ public class SoulWispEntity extends TameableEntity
 		//// this.goalSelector.addGoal(3, new FollowMobGoal(this, 1.0D, 3.0F,7.0F));
 		//// this.goalSelector.addGoal(5, new FollowParentGoal(this, 1.25D));
 		this.goalSelector.addGoal(8, new SoulWispEntity.WanderGoal());
-		this.goalSelector.addGoal(9, new SwimGoal(this));
+		// this.goalSelector.addGoal(9, new SwimGoal(this));
 
 	}
 
+	/**
+	 * Called in EntityAttributeCreationEvent event
+	 * 
+	 * @return
+	 */
 	public static AttributeModifierMap.MutableAttribute setAttributes() {
-		return MobEntity.createMobAttributes()
-				.add(Attributes.MOVEMENT_SPEED, (double) 0.3F)
-				.add(Attributes.FLYING_SPEED, 0.9F)
-				.add(Attributes.MAX_HEALTH, 8.0D)
-				.add(Attributes.FOLLOW_RANGE, 48.0D)
-				.add(Attributes.ATTACK_DAMAGE, 2.0D)
-				.add(Attributes.ARMOR, 0.15D);
+		return MobEntity.createMobAttributes().add(Attributes.MOVEMENT_SPEED, (double) 0.3F)
+				.add(Attributes.FLYING_SPEED, 0.9F).add(Attributes.MAX_HEALTH, 8.0D).add(Attributes.FOLLOW_RANGE, 48.0D)
+				.add(Attributes.ATTACK_DAMAGE, 2.0D).add(Attributes.ARMOR, 0.15D);
 	}
 
-	public void updateLevel(PlayerEntity owner, Effect efectoPrimario, Effect efectoSecundario, SkillEnum tipoWisp, boolean esBeneficioso) {
+	public void updateLevel(PlayerEntity owner, Effect efectoPrimario, Effect efectoSecundario, SkillEnum tipoWisp,
+			boolean esBeneficioso) {
 		tame(owner);
 		LazyOptional<IBaseSkillCapability> skill = getOwner().getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
 		this.efectoPrimario = efectoPrimario;
@@ -140,7 +142,7 @@ public class SoulWispEntity extends TameableEntity
 		if (skill != null && skill.isPresent()) {
 			this.puntosAsignados = skill.map(x -> x.getSkillsPoints()).orElse(null).get(tipoWisp);
 			saludMaxima = 0.6 * this.puntosAsignados + SALUD_INICIAL;
-			DevilRpg.LOGGER.debug("SoulWispEntity.updateLevel.saludMaxima{}",saludMaxima);
+			// DevilRpg.LOGGER.debug("SoulWispEntity.updateLevel.saludMaxima{}",saludMaxima);
 		}
 
 		this.getAttribute(Attributes.FLYING_SPEED).setBaseValue((double) 0.9F);
@@ -167,11 +169,6 @@ public class SoulWispEntity extends TameableEntity
 		super.readAdditionalSaveData(compound);
 	}
 
-	@Override
-	public boolean doHurtTarget(Entity entityIn) {
-		return false;
-	}
-
 	/**
 	 * Called to update the entity's position/logic.
 	 */
@@ -189,9 +186,8 @@ public class SoulWispEntity extends TameableEntity
 
 	private void addParticle(World worldIn, double p_226397_2_, double p_226397_4_, double p_226397_6_,
 			double p_226397_8_, double posY, IParticleData particleData) {
-		worldIn.addParticle(particleData, MathHelper.lerp(worldIn.random.nextDouble(), p_226397_2_, p_226397_4_),
-				posY, MathHelper.lerp(worldIn.random.nextDouble(), p_226397_6_, p_226397_8_), 0.0D, 0.0D,
-				0.0D);
+		worldIn.addParticle(particleData, MathHelper.lerp(worldIn.random.nextDouble(), p_226397_2_, p_226397_4_), posY,
+				MathHelper.lerp(worldIn.random.nextDouble(), p_226397_6_, p_226397_8_), 0.0D, 0.0D, 0.0D);
 	}
 
 	@Override
@@ -293,11 +289,21 @@ public class SoulWispEntity extends TameableEntity
 		return true;
 	}
 
+	@Override
+	public boolean doHurtTarget(Entity entityIn) {
+		return false;
+	}
+	
 	/**
 	 * Called when the entity is attacked.
 	 */
 	public boolean hurt(DamageSource source, float amount) {
 		return super.hurt(source, amount);
+	}
+	
+	@Override
+	public boolean wantsToAttack(LivingEntity target, LivingEntity owner) {
+		return addToWantsToAttack(target, owner);
 	}
 
 	@Override
@@ -313,7 +319,7 @@ public class SoulWispEntity extends TameableEntity
 		BeeLookController(MobEntity beeIn) {
 			super(beeIn);
 		}
-		
+
 		public void tick() {
 			super.tick();
 		}
@@ -369,8 +375,8 @@ public class SoulWispEntity extends TameableEntity
 		public void start() {
 			Vector3d vec3d = this.findPos();
 			if (vec3d != null) {
-				SoulWispEntity.this.navigation
-						.moveTo(SoulWispEntity.this.navigation.createPath(new BlockPos(vec3d), 1), 1.0D);
+				SoulWispEntity.this.navigation.moveTo(SoulWispEntity.this.navigation.createPath(new BlockPos(vec3d), 1),
+						1.0D);
 			}
 
 		}
@@ -410,9 +416,8 @@ public class SoulWispEntity extends TameableEntity
 			double k = this.position().x();
 			double l = this.position().y();
 			double i1 = this.position().z();
-			AxisAlignedBB axisalignedbb = (new AxisAlignedBB(k, l, i1, (k + 1),
-					(l + 1), (i1 + 1))).inflate(DISTANCIA_EFECTO).expandTowards(0.0D,
-							(double) this.level.getHeight(), 0.0D);
+			AxisAlignedBB axisalignedbb = (new AxisAlignedBB(k, l, i1, (k + 1), (l + 1), (i1 + 1)))
+					.inflate(DISTANCIA_EFECTO).expandTowards(0.0D, (double) this.level.getHeight(), 0.0D);
 
 			if (niveles > 0) {
 				List<LivingEntity> alliesList = null;
@@ -495,7 +500,7 @@ public class SoulWispEntity extends TameableEntity
 		level.broadcastEntityEvent(this, (byte) 3);
 		this.dead = true;
 		this.remove();
-		customDeadParticles(this.level, this.random, this);
+		IRenderUtilities.customDeadParticles(this.level, this.random, this);
 	}
 
 	public boolean isEsBeneficioso() {
@@ -567,5 +572,4 @@ public class SoulWispEntity extends TameableEntity
 	public SoulWispEntity getBreedOffspring(ServerWorld world, AgeableEntity mate) {
 		return ModEntityTypes.WISP.get().create(world);
 	}
-
 }

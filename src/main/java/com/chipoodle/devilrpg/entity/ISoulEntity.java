@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.entity;
 
+import com.chipoodle.devilrpg.client.render.IRenderUtilities;
 import com.chipoodle.devilrpg.skillsystem.MinionDeathDamageSource;
 import com.mojang.blaze3d.vertex.IVertexBuilder;
 

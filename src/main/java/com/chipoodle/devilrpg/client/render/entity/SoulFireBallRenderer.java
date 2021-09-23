@@ -1,7 +1,7 @@
 package com.chipoodle.devilrpg.client.render.entity;
 
 import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.entity.SoulFireBallEntity;
+import com.chipoodle.devilrpg.entity.SoulIceBallEntity;
 import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.vertex.IVertexBuilder;
 
@@ -17,7 +17,7 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 @OnlyIn(Dist.CLIENT)
-public class SoulFireBallRenderer extends EntityRenderer<SoulFireBallEntity> {
+public class SoulFireBallRenderer extends EntityRenderer<SoulIceBallEntity> {
 	private static final ResourceLocation WITHER_TEXTURES = new ResourceLocation(
 			DevilRpg.MODID + ":textures/entity/soulsnowball/freeze_texture.jpg");
 	private final GenericHeadModel skeletonHeadModel = new GenericHeadModel();
@@ -26,11 +26,11 @@ public class SoulFireBallRenderer extends EntityRenderer<SoulFireBallEntity> {
 		super(renderManagerIn);
 	}
 
-	protected int getBlockLightLevel(SoulFireBallEntity entityIn,  BlockPos pos) {
+	protected int getBlockLightLevel(SoulIceBallEntity entityIn,  BlockPos pos) {
 		return 15;
 	}
 
-	public void render(SoulFireBallEntity entityIn, float entityYaw, float partialTicks, MatrixStack matrixStackIn,
+	public void render(SoulIceBallEntity entityIn, float entityYaw, float partialTicks, MatrixStack matrixStackIn,
 			IRenderTypeBuffer bufferIn, int packedLightIn) {
 		matrixStackIn.pushPose();
 		matrixStackIn.scale(-0.50F, -0.50F, 0.50F);
@@ -47,7 +47,7 @@ public class SoulFireBallRenderer extends EntityRenderer<SoulFireBallEntity> {
 		super.render(entityIn, entityYaw, partialTicks, matrixStackIn, bufferIn, packedLightIn);
 	}
 
-	public ResourceLocation getTextureLocation(SoulFireBallEntity entity) {
+	public ResourceLocation getTextureLocation(SoulIceBallEntity entity) {
 		return WITHER_TEXTURES;
 	}
 

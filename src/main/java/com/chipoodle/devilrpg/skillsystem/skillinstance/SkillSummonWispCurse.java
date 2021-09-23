@@ -22,9 +22,8 @@ import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.LazyOptional;
 
-public class SkillSummonWispCurse implements ISkillContainer {
+public class SkillSummonWispCurse implements ISkillContainer, WispSkillInterface {
 
-	private final static int NUMBER_OF_SUMMONS = 1;
 	private PlayerSkillCapability parentCapability;
 
 	public SkillSummonWispCurse(PlayerSkillCapability parentCapability) {
@@ -47,7 +46,7 @@ public class SkillSummonWispCurse implements ISkillContainer {
 			ConcurrentLinkedQueue<UUID> keys = min.map(x -> x.getWispMinions())
 					.orElse(new ConcurrentLinkedQueue<UUID>());
 
-			keys.add(summonWisp(worldIn, playerIn, rand).getUUID());
+			keys.offer(summonWisp(worldIn, playerIn, rand).getUUID());
 			if (keys.size() > NUMBER_OF_SUMMONS) {
 				UUID key = keys.remove();
 				min.ifPresent(x -> {
@@ -61,9 +60,6 @@ public class SkillSummonWispCurse implements ISkillContainer {
 	}
 
 	private SoulWispEntity summonWisp(World worldIn, PlayerEntity playerIn, Random rand ) {
-		worldIn.playSound((PlayerEntity) null, playerIn.getX(), playerIn.getY(), playerIn.getZ(),
-				SoundEvents.BEACON_ACTIVATE, SoundCategory.NEUTRAL, 0.5F,
-				0.4F / (rand.nextFloat() * 0.4F + 0.8F));
 		SoulWispEntity sw = ModEntityTypes.WISP.get().create(worldIn);
 		sw.updateLevel(playerIn, Effects.POISON, Effects.GLOWING, SkillEnum.SUMMON_WISP_CURSE, false);
 		Vector3d playerLookVector = playerIn.getLookAngle();

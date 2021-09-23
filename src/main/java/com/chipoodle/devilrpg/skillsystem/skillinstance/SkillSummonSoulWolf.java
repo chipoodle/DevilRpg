@@ -23,7 +23,7 @@ import net.minecraftforge.common.util.LazyOptional;
 
 public class SkillSummonSoulWolf implements ISkillContainer {
 
-	private final static int NUMBER_OF_SUMMONS = 3;
+	private static final int NUMBER_OF_SUMMONS = 3;
 	private PlayerSkillCapability parentCapability;
 
 	public SkillSummonSoulWolf(PlayerSkillCapability parentCapability) {
@@ -45,9 +45,9 @@ public class SkillSummonSoulWolf implements ISkillContainer {
 			LazyOptional<IBaseMinionCapability> min = playerIn.getCapability(PlayerMinionCapabilityProvider.MINION_CAP);
 			min.ifPresent(x -> x.removeAllSoulBear(playerIn));
 			ConcurrentLinkedQueue<UUID> keys = min.map(x -> x.getSoulWolfMinions())
-					.orElse(new ConcurrentLinkedQueue<UUID>());
+					.orElse(new ConcurrentLinkedQueue<>());
 
-			keys.add(summoSoulWolf(worldIn, playerIn, rand).getUUID());
+			keys.offer(summonSoulWolf(worldIn, playerIn, rand).getUUID());
 			if (keys.size() > NUMBER_OF_SUMMONS) {
 				UUID key = keys.remove();
 				min.ifPresent(x -> {
@@ -60,7 +60,7 @@ public class SkillSummonSoulWolf implements ISkillContainer {
 		}
 	}
 
-	private SoulWolfEntity summoSoulWolf(World worldIn, PlayerEntity playerIn, Random rand) {
+	private SoulWolfEntity summonSoulWolf(World worldIn, PlayerEntity playerIn, Random rand) {
 		SoulWolfEntity sw = ModEntityTypes.SOUL_WOLF.get().create(worldIn);
 		sw.updateLevel(playerIn);
 		Vector3d playerLookVector = playerIn.getLookAngle();

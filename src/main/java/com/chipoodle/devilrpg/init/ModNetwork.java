@@ -7,6 +7,7 @@ import com.chipoodle.devilrpg.network.handler.PlayerExperienceClientServerHandle
 import com.chipoodle.devilrpg.network.handler.PlayerManaClientServerHandler;
 import com.chipoodle.devilrpg.network.handler.PlayerMinionClientServerHandler;
 import com.chipoodle.devilrpg.network.handler.PlayerSkillClientServerHandler;
+import com.chipoodle.devilrpg.network.handler.PotionClientServerHandler;
 import com.chipoodle.devilrpg.network.handler.WerewolfAttackServerHandler;
 
 import net.minecraft.util.ResourceLocation;
@@ -71,6 +72,12 @@ public class ModNetwork {
         		PlayerMinionClientServerHandler::encode,
         		PlayerMinionClientServerHandler::decode,
         		PlayerMinionClientServerHandler::onMessage);
+        
+        CHANNEL.registerMessage(networkId++,
+        		PotionClientServerHandler.class, 
+        		PotionClientServerHandler::encode,
+        		PotionClientServerHandler::decode,
+        		PotionClientServerHandler::onMessage);
     }
 
 }

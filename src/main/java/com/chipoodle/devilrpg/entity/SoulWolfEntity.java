@@ -1,5 +1,9 @@
 package com.chipoodle.devilrpg.entity;
 
+import java.util.Random;
+
+import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.minion.IBaseMinionCapability;
 import com.chipoodle.devilrpg.capability.minion.PlayerMinionCapabilityProvider;
 import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
@@ -8,6 +12,7 @@ import com.chipoodle.devilrpg.client.render.IRenderUtilities;
 import com.chipoodle.devilrpg.init.ModEntityTypes;
 import com.chipoodle.devilrpg.util.SkillEnum;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.entity.AgeableEntity;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
@@ -30,6 +35,7 @@ import net.minecraft.entity.ai.goal.SitGoal;
 import net.minecraft.entity.ai.goal.SwimGoal;
 import net.minecraft.entity.ai.goal.WaterAvoidingRandomWalkingGoal;
 import net.minecraft.entity.merchant.villager.VillagerEntity;
+import net.minecraft.entity.monster.IMob;
 import net.minecraft.entity.passive.IronGolemEntity;
 import net.minecraft.entity.passive.TurtleEntity;
 import net.minecraft.entity.passive.WolfEntity;
@@ -37,6 +43,9 @@ import net.minecraft.entity.passive.horse.LlamaEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.network.IPacket;
+import net.minecraft.particles.ParticleTypes;
+import net.minecraft.potion.EffectInstance;
+import net.minecraft.potion.Effects;
 import net.minecraft.util.ActionResultType;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.Hand;
@@ -49,11 +58,19 @@ import net.minecraftforge.fml.common.registry.IEntityAdditionalSpawnData;
 import net.minecraftforge.fml.network.FMLPlayMessages;
 import net.minecraftforge.fml.network.NetworkHooks;
 
-public class SoulWolfEntity extends WolfEntity implements ISoulEntity, IChargeableMob, IRenderUtilities {
-	private final int SALUD_INICIAL = 10;
+public class SoulWolfEntity extends WolfEntity
+		implements ISoulEntity, IChargeableMob, IPassiveMinionUpdater<SoulWolfEntity> {
+	private static final int ICE_ARMOR_EFFECT_FACTOR = 2;
+	private static final double RADIUS_PARTICLES = 0.7;
+	private static final int NUMBER_OF_PARTICLES_ICEARMOR = 10;
+	private static final int PROBABILITY_MULTIPLIER = 3;
+	private static final int DURATION_TICKS = 100;
+	private static final int SALUD_INICIAL = 7;
 	private int puntosAsignados = 0;
 	private double saludMaxima = SALUD_INICIAL;
-	private double stealingHealth;
+	// private double stealingHealth;
+	private Integer iceArmor = 0;
+	private Integer frostbite = 0;
 
 	public SoulWolfEntity(EntityType<? extends SoulWolfEntity> type, World worldIn) {
 		super(type, worldIn);
@@ -61,12 +78,8 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity, IChargeab
 
 	@Override
 	protected void registerGoals() {
-		this.goalSelector.addGoal(1, new SwimGoal(this));
+		this.goalSelector.addGoal(0, new SwimGoal(this));
 		this.goalSelector.addGoal(2, new SitGoal(this));
-		this.goalSelector.addGoal(3, new SoulWolfEntity.AvoidEntityGoal<VillagerEntity>(this, VillagerEntity.class, 24.0F, 1.5D, 1.5D));
-		this.goalSelector.addGoal(3, new SoulWolfEntity.AvoidEntityGoal<LlamaEntity>(this, LlamaEntity.class, 24.0F, 1.5D, 1.5D));
-		this.goalSelector.addGoal(3, new SoulWolfEntity.AvoidEntityGoal<TurtleEntity>(this, TurtleEntity.class, 24.0F, 1.5D, 1.5D));
-		this.goalSelector.addGoal(3, new SoulWolfEntity.AvoidEntityGoal<IronGolemEntity>(this, IronGolemEntity.class, 24.0F, 1.5D, 1.5D));
 		this.goalSelector.addGoal(4, new LeapAtTargetGoal(this, 0.4F));
 		this.goalSelector.addGoal(5, new MeleeAttackGoal(this, 1.0D, true));
 		this.goalSelector.addGoal(6, new FollowOwnerGoal(this, 1.0D, 10.0F, 2.0F, false));
@@ -77,26 +90,29 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity, IChargeab
 		this.targetSelector.addGoal(1, new OwnerHurtByTargetGoal(this));
 		this.targetSelector.addGoal(2, new OwnerHurtTargetGoal(this));
 		this.targetSelector.addGoal(3, (new HurtByTargetGoal(this)).setAlertOthers());
-		this.targetSelector.addGoal(5, new NearestAttackableTargetGoal<>(this, MobEntity.class, false));
+		//this.targetSelector.addGoal(5, new NearestAttackableTargetGoal<>(this, MobEntity.class, false));
+		this.targetSelector.addGoal(5, new NearestAttackableTargetGoal<>(this, MobEntity.class, 10, false, true, (entity) -> {
+	         return  !(entity instanceof VillagerEntity) &&
+	        		 !(entity instanceof LlamaEntity) && 
+	        		 !(entity instanceof TurtleEntity) && 
+	        		 !(entity instanceof IronGolemEntity) ;
+	     }));
 		this.targetSelector.addGoal(8, new ResetAngerGoal<>(this, true));
 	}
 
 	public static AttributeModifierMap.MutableAttribute setAttributes() {
-		return MobEntity.createMobAttributes()
-				.add(Attributes.MOVEMENT_SPEED, (double) 0.3F)
-				.add(Attributes.MAX_HEALTH, 8.0D)
-				.add(Attributes.FOLLOW_RANGE, 16.0D)
-				.add(Attributes.ATTACK_DAMAGE, 2.0D)
-				.add(Attributes.ARMOR, 0.35D);
+		return MobEntity.createMobAttributes().add(Attributes.MOVEMENT_SPEED, (double) 0.3F)
+				.add(Attributes.MAX_HEALTH, 8.0D).add(Attributes.FOLLOW_RANGE, 16.0D)
+				.add(Attributes.ATTACK_DAMAGE, 2.0D).add(Attributes.ARMOR, 0.35D);
 	}
 
 	public void updateLevel(PlayerEntity owner) {
 		tame(owner);
-		LazyOptional<IBaseSkillCapability> skill = getOwner().getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
-		if (skill != null && skill.isPresent()) {
-			this.puntosAsignados = skill.map(x -> x.getSkillsPoints()).orElse(null).get(SkillEnum.SUMMON_SOUL_WOLF);
+		IBaseSkillCapability skill = IGenericCapability.getUnwrappedCapability((PlayerEntity)getOwner(), PlayerSkillCapabilityProvider.SKILL_CAP);
+		if (skill != null) {
+			this.puntosAsignados = skill.getSkillsPoints().get(SkillEnum.SUMMON_SOUL_WOLF);
 			saludMaxima = 1.0 * this.puntosAsignados + SALUD_INICIAL;
-			stealingHealth = (0.135f * puntosAsignados) + 0.5;
+			// stealingHealth = (0.135f * puntosAsignados) + 0.5;
 		}
 
 		this.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue((double) 0.4F);
@@ -117,7 +133,6 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity, IChargeab
 		super.addAdditionalSaveData(compound);
 		compound.putString("OwnerUUID", "");
 		compound.putString("Owner", "");
-		//compound.putUniqueId("Owner", UUID.fromString(""));
 	}
 
 	@Override
@@ -143,20 +158,55 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity, IChargeab
 
 	@Override
 	public boolean doHurtTarget(Entity entityIn) {
-		boolean flag = entityIn.hurt(DamageSource.mobAttack(this),
-				(float) ((int) this.getAttributeValue(Attributes.ATTACK_DAMAGE)));
+		double attackDamage = this.getAttributeValue(Attributes.ATTACK_DAMAGE);
+		boolean flag = entityIn.hurt(DamageSource.mobAttack(this), (float) (attackDamage));
+		
+		int probability = random.nextInt(100);
+		if (frostbite > 0 && probability <= (frostbite * PROBABILITY_MULTIPLIER)) {
+			IRenderUtilities.customParticles(Minecraft.getInstance().level, random, this, ParticleTypes.CRIMSON_SPORE);
+			EffectInstance frostbiteEffect = new EffectInstance(Effects.DAMAGE_BOOST,DURATION_TICKS,frostbite, true, false);
+			EffectInstance active = this.getEffect(Effects.DAMAGE_BOOST);
+			if (active != null && frostbiteEffect.getAmplifier() <= active.getAmplifier()) {
+				active.update(frostbiteEffect);
+			}
+			else
+				this.addEffect(frostbiteEffect);
+			
+			this.addEffect(frostbiteEffect);
+			DevilRpg.LOGGER.info("---------->doHurtTarget frostbite: {} prob: {} limit: {}", frostbite, probability,frostbite*PROBABILITY_MULTIPLIER);
+		}
 		if (flag) {
 			this.doEnchantDamageEffects(this, entityIn);
-			this.heal((float) stealingHealth);
 		}
 		return flag;
 	}
+	
+	@Override
+	public boolean hurt(DamageSource damageSource, float amount) {
+		boolean hurt = super.hurt(damageSource, amount);
+		if(hurt) {
+			int probability = random.nextInt(100);
+			if (iceArmor > 0 && probability <= (iceArmor*PROBABILITY_MULTIPLIER)) {
+				IRenderUtilities.rotationParticles(Minecraft.getInstance().level, random, this, ParticleTypes.SOUL_FIRE_FLAME,NUMBER_OF_PARTICLES_ICEARMOR,RADIUS_PARTICLES);
+				EffectInstance iceArmorEffect = new EffectInstance(Effects.ABSORPTION, DURATION_TICKS , iceArmor * ICE_ARMOR_EFFECT_FACTOR , true, false);
+				EffectInstance active = this.getEffect(Effects.ABSORPTION);
+				if (active != null && iceArmorEffect.getAmplifier() <= active.getAmplifier()) {
+					active.update(iceArmorEffect);
+				}
+				else
+					this.addEffect(iceArmorEffect);
+				DevilRpg.LOGGER.info("---------->hurt iceArmor: {} prob: {} limit: {}", iceArmor,probability,iceArmor*PROBABILITY_MULTIPLIER);
+			}
+		}
+		return hurt;
+	}
+	
 
 	class AvoidEntityGoal<T extends LivingEntity> extends net.minecraft.entity.ai.goal.AvoidEntityGoal<T> {
 		private final SoulWolfEntity wolf;
 
-		public AvoidEntityGoal(SoulWolfEntity wolfIn, Class<T> entityClassToAvoidIn, float avoidDistanceIn, double farSpeedIn,
-				double nearSpeedIn) {
+		public AvoidEntityGoal(SoulWolfEntity wolfIn, Class<T> entityClassToAvoidIn, float avoidDistanceIn,
+				double farSpeedIn, double nearSpeedIn) {
 			super(wolfIn, entityClassToAvoidIn, avoidDistanceIn, farSpeedIn, nearSpeedIn);
 			this.wolf = wolfIn;
 		}
@@ -213,7 +263,7 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity, IChargeab
 			super.tick();
 		}
 	}
-	
+
 	@Override
 	public ActionResultType mobInteract(PlayerEntity playerIn, Hand hand) {
 		return ActionResultType.PASS;
@@ -244,7 +294,7 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity, IChargeab
 		level.broadcastEntityEvent(this, (byte) 3);
 		this.dead = true;
 		this.remove();
-		customDeadParticles(this.level, this.random, this);
+		IRenderUtilities.customDeadParticles(this.level, this.random, this);
 	}
 
 	/**
@@ -286,7 +336,7 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity, IChargeab
 			return ((float) Math.PI / 5F);
 		}
 	}
-	
+
 	@Override
 	public boolean isPowered() {
 		return true;
@@ -295,5 +345,15 @@ public class SoulWolfEntity extends WolfEntity implements ISoulEntity, IChargeab
 	@Override
 	public SoulWolfEntity getBreedOffspring(ServerWorld world, AgeableEntity mate) {
 		return ModEntityTypes.SOUL_WOLF.get().create(world);
+	}
+
+	public void setFrostbite(Integer frostbite) {
+		this.frostbite = frostbite;
+
+	}
+
+	public void setIceArmor(Integer iceArmor) {
+		this.iceArmor = iceArmor;
+
 	}
 }

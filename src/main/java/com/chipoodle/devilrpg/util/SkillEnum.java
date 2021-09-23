@@ -11,20 +11,24 @@ import java.util.stream.Collectors;
 
 /**
  *
- * @author Dra. Magdalena
+ * @author Christian
  */
 public enum SkillEnum {
     SUMMON_SOUL_WOLF("SummonSoulWolf","Soul Wolf","summon_soul_wolf",true),
+    WOLF_FROSTBITE("WolfFrostBite","Wolf Frost Bite","wolffrostbite",true),
+    WOLF_ICE_ARMOR("WolfIceArmor","Wolf Ice Armor","wolficearmor",true),
     SUMMON_SOUL_BEAR("SummonSoulBear","Soul Bear","summon_soul_bear",true),
+    WAR_BEAR("WarBear","War Bear","war_bear",true),
+    MOUNT_BEAR("MountBear","Mount Bear","mount_bear",true),
     FROSTBALL("Frostball","Frostball","frostball",true),
     SUMMON_WISP_HEALTH("SummonWispHealth","Wisp Health","summon_wisp_health",true),
     SUMMON_WISP_CURSE("SummonWispCurse","Wisp Curse","summon_wisp_curse",true),
     SUMMON_WISP_BOMB("SummonWispBomb","Bomber Wisp","summon_wisp_bomb",true),
+    SUMMON_WISP_ARCHER("SummonWispArcher","Archer Wisp","summon_wisp_archer",true),
     TRANSFORM_WEREWOLF("TransformWereWolf","Werewolf","shapeshift_werewolf",true),
-    SUMMON_CROWS("SummonCrows","Summon Crows","summon_crows",true),
-    SUMMON_SUNFLOWER("SummonSunflower","Summon Sunflower","summon_sunflower",true),
     SKIN_ARMOR("SkinArmor","Skin Armor","skin_armor",false),
     WEREWOLF_HIT("WereWolfHit","Werewolf Hit","werewolf_hit",false),
+    MINION_VITALITY("MinionVitality","Minion Vitality","summon_minion_vitality",false),
 	EMPTY("","","",false);
 	
     private final String name;
@@ -60,5 +64,8 @@ public enum SkillEnum {
     public static List<SkillEnum> getPassiveSkills() {
     	return Arrays.asList(SkillEnum.values()).stream().filter(x->!x.activeSkill).collect(Collectors.toList());
     }
-
+    
+    public static List<SkillEnum> getSkillsWithoutEmpty() {
+    	return Arrays.asList(SkillEnum.values()).stream().filter(x->!x.equals(EMPTY)).collect(Collectors.toList());
+    }
 }

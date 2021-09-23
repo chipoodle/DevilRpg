@@ -1,6 +1,7 @@
 package com.chipoodle.devilrpg.client.render.entity.layer;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.client.render.IRenderUtilities;
 import com.chipoodle.devilrpg.client.render.entity.model.SoulBearModel;
 import com.chipoodle.devilrpg.client.render.entity.model.SoulBearModelHeart;
 import com.chipoodle.devilrpg.entity.SoulBearEntity;
@@ -17,8 +18,8 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 
 @OnlyIn(Dist.CLIENT)
 public class SoulBearGelLayer<T extends SoulBearEntity> extends GhostEnergyLayer<T, SoulBearModelHeart<T>> {
+	private static final ResourceLocation BEAR_GEL = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soul/soulgelghost.png");
 	private final EntityModel<T> soulBearModel = new SoulBearModel<T>();
-	private final ResourceLocation BEAR_GEL = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soul/soulgelghost.png");
 	//private final ResourceLocation BEAR_GEL = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soul/soulgel.png");
 	private IEntityRenderer<T, SoulBearModelHeart<T>> entityRenderer;
 
@@ -54,12 +55,21 @@ public class SoulBearGelLayer<T extends SoulBearEntity> extends GhostEnergyLayer
 		return soulBearModel;
 	}
 
-	private void groovyMethod(MatrixStack matrixStackIn, IRenderTypeBuffer bufferIn, int packedLightIn,
-			T entitylivingbaseIn, float partialTicks) {
+	private void groovyMethod(MatrixStack matrixStackIn, IRenderTypeBuffer bufferIn, int packedLightIn, T entitylivingbaseIn, float partialTicks) {
 		if (!entitylivingbaseIn.isInvisible()) {
 			IVertexBuilder ivertexbuilder = entitylivingbaseIn.getBuffer(bufferIn,
 					entityRenderer.getTextureLocation(entitylivingbaseIn));
-			float[] rgbArray = entitylivingbaseIn.groovyRed(entitylivingbaseIn, partialTicks);
+			float[] rgbArray = IRenderUtilities.groovyRed(entitylivingbaseIn, partialTicks);
+			entityRenderer.getModel().renderToBuffer(matrixStackIn, ivertexbuilder, packedLightIn,
+					LivingRenderer.getOverlayCoords(entitylivingbaseIn, 0.1F), rgbArray[0], rgbArray[1], rgbArray[2],
+					1.0F);
+		}
+	}
+	
+	private void healthMethod(MatrixStack matrixStackIn, IRenderTypeBuffer bufferIn, int packedLightIn, T entitylivingbaseIn, float partialTicks) {
+		if (!entitylivingbaseIn.isInvisible()) {
+			IVertexBuilder ivertexbuilder = entitylivingbaseIn.getBuffer(bufferIn,entityRenderer.getTextureLocation(entitylivingbaseIn));
+			float[] rgbArray = IRenderUtilities.groovyRed(entitylivingbaseIn, partialTicks);
 			entityRenderer.getModel().renderToBuffer(matrixStackIn, ivertexbuilder, packedLightIn,
 					LivingRenderer.getOverlayCoords(entitylivingbaseIn, 0.1F), rgbArray[0], rgbArray[1], rgbArray[2],
 					1.0F);

@@ -140,7 +140,11 @@ public class SkillProgress implements Comparable<SkillProgress> {
 	@Nullable
 	@OnlyIn(Dist.CLIENT)
 	public String getProgressText() {
-		if (this.criteria.isEmpty()) {
+		if (maxSkillPoint == 0)
+			return null;
+		return skillPoint + "/" +maxSkillPoint;
+		
+		/*if (this.criteria.isEmpty()) {
 			return null;
 		} else {
 			int i = this.requirements.length;
@@ -150,7 +154,7 @@ public class SkillProgress implements Comparable<SkillProgress> {
 				int j = this.countCompletedRequirements();
 				return j + "/" + i;
 			}
-		}
+		}*/
 	}
 
 	@OnlyIn(Dist.CLIENT)

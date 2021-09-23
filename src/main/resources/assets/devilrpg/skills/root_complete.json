@@ -169,18 +169,18 @@
         "parent": "summoning:root"
     },
     {
-        "id": "summoning:wolffire",
+        "id": "summoning:wolffrostbite",
         "display": {
-            "description": "Fire to wolf!",
+            "description": "Frostbite for wolf!",
             "icon": {
                 "item": "minecraft:glass_pane",
                 "minecraft:glass_panenbt": 1
             },
-            "title": "FireWolf",
+            "title": "Frost bite",
             "image": "devilrpg:textures/gui/skill/spark-spirit.png",
             "frame": "goal"
         },
-        "capability": "",
+        "capability": "wolffrostbite",
         "skillmanacost":{
         	"maxskilllevel":"5",
 			"manacost":"0"
@@ -189,18 +189,18 @@
         "parent": "summoning:wolf"
     },
     {
-        "id": "summoning:wolfice",
+        "id": "summoning:wolficearmor",
         "display": {
             "description": "Strikes against a spirit wolf retaliate against the attacker. Gives the wolf some armor defense",
             "icon": {
                 "item": "minecraft:glass_pane",
                 "minecraft:glass_panenbt": 1
             },
-            "title": "Ice retailiation",
+            "title": "Ice armor",
             "image": "devilrpg:textures/gui/skill/ice-shield.png",
             "frame": "goal"
         },
-        "capability": "",
+        "capability": "wolficearmor",
         "skillmanacost":{
         	"maxskilllevel":"5",
 			"manacost":"0"
@@ -240,9 +240,9 @@
             "image": "devilrpg:textures/gui/skill/spiked-shield.png",
             "frame": "goal"
         },
-        "capability": "",
+        "capability": "war_bear",
         "skillmanacost":{
-        	"maxskilllevel":"20",
+        	"maxskilllevel":"5",
 			"manacost":"0"
 		},
         "rewards": {},
@@ -260,13 +260,33 @@
             "image": "devilrpg:textures/gui/skill/saddle.png",
             "frame": "goal"
         },
-        "capability": "",
+        "capability": "mount_bear",
         "skillmanacost":{
-        	"maxskilllevel":"20",
+        	"maxskilllevel":"5",
 			"manacost":"0"
 		},
         "rewards": {},
         "parent": "summoning:bear"
+    },
+    {
+        "id": "summoning:minionvitality",
+        "display": {
+            "description": "Gives vitality to all minions",
+            "icon": {
+                "item": "minecraft:glass_pane",
+                "minecraft:glass_panenbt": 2
+            },
+            "title": "Minion Vitality",
+            "image": "devilrpg:textures/gui/skill/heart-plus.png",
+            "frame": "goal"
+        },
+        "rewards": {},
+        "capability": "summon_minion_vitality",
+        "skillmanacost":{
+        	"maxskilllevel":"20",
+			"manacost":"0"
+		},
+        "parent": "summoning:root"
     },
     {
         "id": "summoning:wisphealth",
@@ -276,7 +296,7 @@
                 "item": "minecraft:glass_pane",
                 "minecraft:glass_panenbt": 2
             },
-            "title": "Summon Wisp",
+            "title": "Health Wisp",
             "image": "devilrpg:textures/gui/skill/jellyfish.png",
             "frame": "task"
         },
@@ -286,7 +306,7 @@
         	"maxskilllevel":"20",
 			"manacost":"15"
 		},
-        "parent": "summoning:root"
+        "parent": "summoning:minionvitality"
     },
     {
         "id": "summoning:wispcurse",
@@ -296,7 +316,7 @@
                 "item": "minecraft:glass_pane",
                 "minecraft:glass_panenbt": 3
             },
-            "title": "Cursed wisp",
+            "title": "Curse Wisp",
             "image": "devilrpg:textures/gui/skill/medusa-head.png",
             "frame": "task"
         },
@@ -306,12 +326,12 @@
         	"maxskilllevel":"20",
 			"manacost":"15"
 		},
-        "parent": "summoning:wisphealth"
+        "parent": "summoning:minionvitality"
     },
     {
         "id": "summoning:wispbomber",
         "display": {
-            "description": "Bomber wisp",
+            "description": "Bomber Wisp",
             "icon": {
                 "item": "minecraft:glass_pane",
                 "minecraft:glass_panenbt": 4
@@ -326,6 +346,26 @@
         	"maxskilllevel":"20",
 			"manacost":"15"
 		},
-        "parent": "summoning:wisphealth"
+        "parent": "summoning:minionvitality"
+    },
+    {
+        "id": "summoning:wisparcher",
+        "display": {
+            "description": "Ranged Wisp",
+            "icon": {
+                "item": "minecraft:glass_pane",
+                "minecraft:glass_panenbt": 4
+            },
+            "title": "Ranged wisp",
+            "image": "devilrpg:textures/gui/skill/ice-spear.png",
+            "frame": "task"
+        },
+        "rewards": {},
+        "capability": "summon_wisp_archer",
+        "skillmanacost":{
+        	"maxskilllevel":"20",
+			"manacost":"15"
+		},
+        "parent": "summoning:minionvitality"
     }
 ]

@@ -73,7 +73,7 @@ public class PlayerMinionCapability implements IBaseMinionCapability {
 			DevilRpg.LOGGER.error("Error en setSoulWolfMinions", e);
 		}
 	}
-	
+
 	@SuppressWarnings("unchecked")
 	@Override
 	public ConcurrentLinkedQueue<UUID> getSoulBearMinions() {
@@ -85,6 +85,24 @@ public class PlayerMinionCapability implements IBaseMinionCapability {
 		}
 	}
 	
+	@SuppressWarnings("unchecked")
+	@Override
+	public ConcurrentLinkedQueue<UUID> getAllMinions() {
+		try {
+			ConcurrentLinkedQueue<UUID> soulbears = (ConcurrentLinkedQueue<UUID>) BytesUtil.toObject(nbt.getByteArray(SOULBEAR_MINION_KEY));
+			ConcurrentLinkedQueue<UUID> soulwolves = (ConcurrentLinkedQueue<UUID>) BytesUtil.toObject(nbt.getByteArray(SOULWOLF_MINION_KEY));
+			ConcurrentLinkedQueue<UUID> wisps = (ConcurrentLinkedQueue<UUID>) BytesUtil.toObject(nbt.getByteArray(WISP_MINIONS_KEY));
+			soulbears.addAll(soulwolves);
+			soulbears.addAll(wisps);
+			return soulbears;
+			
+		} catch (ClassNotFoundException | IOException e) {
+			DevilRpg.LOGGER.error("Error en getSoulBearfMinions", e);
+			return new ConcurrentLinkedQueue<>();
+		}
+	}
+	
+
 	@Override
 	public void setSoulBearMinions(ConcurrentLinkedQueue<UUID> soulBearMinions, PlayerEntity player) {
 		try {
@@ -127,13 +145,15 @@ public class PlayerMinionCapability implements IBaseMinionCapability {
 	@Override
 	public TameableEntity getTameableByUUID(UUID id, World world) {
 		Entity e;
-		if (!world.isClientSide) {
-			e = TargetUtils.getEntityByUUID((ServerWorld) world, id);
-		} else {
-			e = TargetUtils.getEntityByUUID((ClientWorld) world, id);
-		}
-		if (e!= null && e instanceof TameableEntity) {
-			return (TameableEntity) e;
+		if (id != null) {
+			if (!world.isClientSide) {
+				e = TargetUtils.getEntityByUUID((ServerWorld) world, id);
+			} else {
+				e = TargetUtils.getEntityByUUID((ClientWorld) world, id);
+			}
+			if (e != null && e instanceof TameableEntity) {
+				return (TameableEntity) e;
+			}
 		}
 		return null;
 	}
@@ -141,7 +161,7 @@ public class PlayerMinionCapability implements IBaseMinionCapability {
 	@Override
 	public void removeWisp(PlayerEntity owner, SoulWispEntity entity) {
 		ConcurrentLinkedQueue<UUID> wisp = getWispMinions();
-		if (wisp!= null && entity!= null && wisp.contains(entity.getUUID())) {
+		if (wisp != null && entity != null && wisp.contains(entity.getUUID())) {
 			wisp.remove(entity.getUUID());
 			setWispMinions(wisp, owner);
 			entity.hurt(new MinionDeathDamageSource(""), Integer.MAX_VALUE);
@@ -151,7 +171,7 @@ public class PlayerMinionCapability implements IBaseMinionCapability {
 	@Override
 	public void removeSoulWolf(PlayerEntity owner, SoulWolfEntity entity) {
 		ConcurrentLinkedQueue<UUID> soulwolf = getSoulWolfMinions();
-		if (soulwolf!= null && entity!= null && soulwolf.contains(entity.getUUID())) {
+		if (soulwolf != null && entity != null && soulwolf.contains(entity.getUUID())) {
 			soulwolf.remove(entity.getUUID());
 			setSoulWolfMinions(soulwolf, owner);
 			entity.hurt(new MinionDeathDamageSource(""), Integer.MAX_VALUE);
@@ -180,18 +200,18 @@ public class PlayerMinionCapability implements IBaseMinionCapability {
 		soulwolf.clear();
 		setSoulWolfMinions(soulwolf, owner);
 	}
-	
+
 	@Override
 	public void removeSoulBear(PlayerEntity owner, SoulBearEntity entity) {
 		ConcurrentLinkedQueue<UUID> soulbear = getSoulBearMinions();
-		if (soulbear!= null && entity!= null && soulbear.contains(entity.getUUID())) {
+		if (soulbear != null && entity != null && soulbear.contains(entity.getUUID())) {
 			soulbear.remove(entity.getUUID());
 			setSoulBearMinions(soulbear, owner);
 			entity.hurt(new MinionDeathDamageSource(""), Integer.MAX_VALUE);
 		}
 
 	}
-	
+
 	@Override
 	public void removeAllSoulBear(PlayerEntity owner) {
 		ConcurrentLinkedQueue<UUID> soulbear = getSoulBearMinions();

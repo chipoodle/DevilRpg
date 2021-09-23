@@ -17,7 +17,9 @@ import org.apache.logging.log4j.Logger;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillElement;
+import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillManaCost;
 import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillProgress;
+import com.chipoodle.devilrpg.util.SkillEnum;
 import com.google.common.collect.Maps;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -33,7 +35,7 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 @OnlyIn(Dist.CLIENT)
 public class ClientSkillBuilder {
 	private static final Logger LOGGER = LogManager.getLogger();
-	private final Minecraft mc;
+	//private final Minecraft mc;
 	private final ScrollableSkillList scrollableSkillList = new ScrollableSkillList();
 	private final Map<SkillElement, SkillProgress> advancementToProgress = Maps.newHashMap();
 	@Nullable
@@ -41,8 +43,8 @@ public class ClientSkillBuilder {
 	@Nullable
 	private SkillElement selectedTab;
 
-	public ClientSkillBuilder(Minecraft mc) {
-		this.mc = mc;
+	public ClientSkillBuilder(/*Minecraft mc*/) {
+		//this.mc = mc;
 	}
 
 	public void buildSkillTrees() {
@@ -57,7 +59,7 @@ public class ClientSkillBuilder {
 		String text = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8)).lines()
 				.collect(Collectors.joining("\n"));
 
-		DevilRpg.LOGGER.info("text: "+text);
+		DevilRpg.LOGGER.info("text: {}",text);
 		JsonParser parser = new JsonParser();
 		JsonElement jsonRootElement = parser.parse(text);
 
@@ -106,10 +108,10 @@ public class ClientSkillBuilder {
 	}*/
 
 	public void setSelectedTab(@Nullable SkillElement skillIn, boolean tellServer) {
-		ClientPlayNetHandler clientplaynethandler = this.mc.getConnection();
+		/*ClientPlayNetHandler clientplaynethandler = this.mc.getConnection();
 		if (clientplaynethandler != null && skillIn != null && tellServer) {
 			// clientplaynethandler.sendPacket(CSeenAdvancementsPacket.openedTab(advancementIn));
-		}
+		}*/
 
 		if (this.selectedTab != skillIn) {
 			this.selectedTab = skillIn;
@@ -139,4 +141,9 @@ public class ClientSkillBuilder {
 
 		void setSelectedTab(@Nullable SkillElement advancementIn);
 	}
+	
+	public SkillElement getSkillElementByEnum(SkillEnum skillEnum) {
+		return scrollableSkillList.getSkillElementByEnum(skillEnum);
+	}
+	
 }

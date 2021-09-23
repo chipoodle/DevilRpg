@@ -14,5 +14,6 @@
     "key.power4": "Power 4",
     "key.skill_gui": "Skill GUI", 
     "gui.skills.title": "Skills", 
+    "gui.skills.mana_cost": "Mana cost:", 
     "gui.skills.unspent": "Unspent points:" 
 }
