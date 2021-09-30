@@ -5,6 +5,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.entity.ITamableEntity;
 import com.chipoodle.devilrpg.entity.SoulBearEntity;
 import com.chipoodle.devilrpg.entity.SoulWispEntity;
 import com.chipoodle.devilrpg.entity.SoulWolfEntity;
@@ -16,7 +17,6 @@ import com.chipoodle.devilrpg.util.TargetUtils;
 
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.passive.TameableEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.nbt.CompoundNBT;
@@ -143,7 +143,7 @@ public class PlayerMinionCapability implements IBaseMinionCapability {
 	}
 
 	@Override
-	public TameableEntity getTameableByUUID(UUID id, World world) {
+	public ITamableEntity getTameableByUUID(UUID id, World world) {
 		Entity e;
 		if (id != null) {
 			if (!world.isClientSide) {
@@ -151,8 +151,8 @@ public class PlayerMinionCapability implements IBaseMinionCapability {
 			} else {
 				e = TargetUtils.getEntityByUUID((ClientWorld) world, id);
 			}
-			if (e != null && e instanceof TameableEntity) {
-				return (TameableEntity) e;
+			if (e != null && e instanceof ITamableEntity) {
+				return (ITamableEntity) e;
 			}
 		}
 		return null;
@@ -183,7 +183,7 @@ public class PlayerMinionCapability implements IBaseMinionCapability {
 	public void removeAllWisp(PlayerEntity owner) {
 		ConcurrentLinkedQueue<UUID> wisp = getWispMinions();
 		wisp.forEach(id -> {
-			TameableEntity entity = getTameableByUUID(id, owner.level);
+			ITamableEntity entity = getTameableByUUID(id, owner.level);
 			removeWisp(owner, (SoulWispEntity) entity);
 		});
 		wisp.clear();
@@ -194,7 +194,7 @@ public class PlayerMinionCapability implements IBaseMinionCapability {
 	public void removeAllSoulWolf(PlayerEntity owner) {
 		ConcurrentLinkedQueue<UUID> soulwolf = getSoulWolfMinions();
 		soulwolf.forEach(id -> {
-			TameableEntity entity = getTameableByUUID(id, owner.level);
+			ITamableEntity entity = getTameableByUUID(id, owner.level);
 			removeSoulWolf(owner, (SoulWolfEntity) entity);
 		});
 		soulwolf.clear();
@@ -216,7 +216,7 @@ public class PlayerMinionCapability implements IBaseMinionCapability {
 	public void removeAllSoulBear(PlayerEntity owner) {
 		ConcurrentLinkedQueue<UUID> soulbear = getSoulBearMinions();
 		soulbear.forEach(id -> {
-			TameableEntity entity = getTameableByUUID(id, owner.level);
+			ITamableEntity entity = getTameableByUUID(id, owner.level);
 			removeSoulBear(owner, (SoulBearEntity) entity);
 		});
 		soulbear.clear();

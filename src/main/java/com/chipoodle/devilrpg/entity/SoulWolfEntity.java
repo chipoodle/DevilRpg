@@ -1,7 +1,5 @@
 package com.chipoodle.devilrpg.entity;
 
-import java.util.Random;
-
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.minion.IBaseMinionCapability;
@@ -35,7 +33,6 @@ import net.minecraft.entity.ai.goal.SitGoal;
 import net.minecraft.entity.ai.goal.SwimGoal;
 import net.minecraft.entity.ai.goal.WaterAvoidingRandomWalkingGoal;
 import net.minecraft.entity.merchant.villager.VillagerEntity;
-import net.minecraft.entity.monster.IMob;
 import net.minecraft.entity.passive.IronGolemEntity;
 import net.minecraft.entity.passive.TurtleEntity;
 import net.minecraft.entity.passive.WolfEntity;
@@ -58,8 +55,7 @@ import net.minecraftforge.fml.common.registry.IEntityAdditionalSpawnData;
 import net.minecraftforge.fml.network.FMLPlayMessages;
 import net.minecraftforge.fml.network.NetworkHooks;
 
-public class SoulWolfEntity extends WolfEntity
-		implements ISoulEntity, IChargeableMob, IPassiveMinionUpdater<SoulWolfEntity> {
+public class SoulWolfEntity extends WolfEntity implements ITamableEntity, ISoulEntity, IChargeableMob, IPassiveMinionUpdater<SoulWolfEntity> {
 	private static final int ICE_ARMOR_EFFECT_FACTOR = 2;
 	private static final double RADIUS_PARTICLES = 0.7;
 	private static final int NUMBER_OF_PARTICLES_ICEARMOR = 10;
@@ -356,4 +352,35 @@ public class SoulWolfEntity extends WolfEntity
 		this.iceArmor = iceArmor;
 
 	}
+
+	@Override
+	public World getLevel() {
+		return this.level;
+	}
+
+	@Override
+	public double distanceToSqr(LivingEntity livingentity) {
+		return super.distanceToSqr(livingentity);
+	}
+
+	@Override
+	public float getxRot() {
+		return this.xRot;
+	}
+
+	@Override
+	public float getyRot() {
+		return this.yRot;
+	}
+
+	@Override
+	public void moveTo(double d, double p_226328_2_, double e, float getyRot, float getxRot) {
+		super.moveTo(d, p_226328_2_, e, getyRot, getxRot);
+	}
+
+	@Override
+	public Entity getEntity() {
+		return this;
+	}
+
 }

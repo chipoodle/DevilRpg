@@ -1,9 +1,9 @@
-
 package com.chipoodle.devilrpg.init;
 
 import com.chipoodle.devilrpg.DevilRpg;
-
+import com.chipoodle.devilrpg.entity.container.TameableMountableHorseInventoryContainer;
 import net.minecraft.inventory.container.ContainerType;
+import net.minecraftforge.fml.RegistryObject;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 
@@ -20,10 +20,15 @@ import net.minecraftforge.registries.ForgeRegistries;
  */
 public final class ModContainerTypes {
 
-	public static final DeferredRegister<ContainerType<?>> CONTAINER_TYPES = DeferredRegister.create(ForgeRegistries.CONTAINERS, DevilRpg.MODID);
+    public static final DeferredRegister<ContainerType<?>> CONTAINER_TYPES = DeferredRegister.create(ForgeRegistries.CONTAINERS, DevilRpg.MODID);
 
-	//public static final RegistryObject<ContainerType<HeatCollectorContainer>> HEAT_COLLECTOR = CONTAINER_TYPES.register("heat_collector", () -> IForgeContainerType.create(HeatCollectorContainer::new));
-	//public static final RegistryObject<ContainerType<ElectricFurnaceContainer>> ELECTRIC_FURNACE = CONTAINER_TYPES.register("electric_furnace", () -> IForgeContainerType.create(ElectricFurnaceContainer::new));
-	//public static final RegistryObject<ContainerType<ModFurnaceContainer>> MOD_FURNACE = CONTAINER_TYPES.register("mod_furnace", () -> IForgeContainerType.create(ModFurnaceContainer::new));
+    public static final RegistryObject<ContainerType<TameableMountableHorseInventoryContainer>>
+            TAMEABLE_MOUNTABLE_CONTAINER =
+            CONTAINER_TYPES.register("tameable_mountable_inventory_container",
+            () -> new ContainerType<TameableMountableHorseInventoryContainer>(TameableMountableHorseInventoryContainer::new));
+
+    //public static final RegistryObject<ContainerType<HeatCollectorContainer>> HEAT_COLLECTOR = CONTAINER_TYPES.register("heat_collector", () -> IForgeContainerType.create(HeatCollectorContainer::new));
+    //public static final RegistryObject<ContainerType<ElectricFurnaceContainer>> ELECTRIC_FURNACE = CONTAINER_TYPES.register("electric_furnace", () -> IForgeContainerType.create(ElectricFurnaceContainer::new));
+    //public static final RegistryObject<ContainerType<ModFurnaceContainer>> MOD_FURNACE = CONTAINER_TYPES.register("mod_furnace", () -> IForgeContainerType.create(ModFurnaceContainer::new));
 
 }

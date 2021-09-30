@@ -3,7 +3,6 @@ package com.chipoodle.devilrpg.client.gui.hud;
 import java.text.DecimalFormat;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.lwjgl.opengl.GL11;
 
@@ -17,7 +16,6 @@ import com.chipoodle.devilrpg.entity.SoulBearEntity;
 import com.chipoodle.devilrpg.entity.SoulWispEntity;
 import com.chipoodle.devilrpg.entity.SoulWolfEntity;
 import com.mojang.blaze3d.matrix.MatrixStack;
-import com.mojang.blaze3d.systems.RenderSystem;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.AbstractGui;
@@ -26,7 +24,6 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.potion.Effects;
 import net.minecraft.util.ResourceLocation;
-import net.minecraftforge.common.util.LazyOptional;
 
 public class MinionPortraitRenderer extends AbstractGui {
 

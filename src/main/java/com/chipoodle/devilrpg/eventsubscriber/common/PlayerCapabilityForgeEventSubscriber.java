@@ -23,6 +23,7 @@ import com.chipoodle.devilrpg.capability.minion.IBaseMinionCapability;
 import com.chipoodle.devilrpg.capability.minion.PlayerMinionCapabilityProvider;
 import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
+import com.chipoodle.devilrpg.entity.ITamableEntity;
 import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.network.handler.PlayerExperienceClientServerHandler;
 import com.chipoodle.devilrpg.network.handler.PlayerManaClientServerHandler;
@@ -32,7 +33,6 @@ import com.chipoodle.devilrpg.util.EventUtils;
 
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.ai.attributes.Attributes;
-import net.minecraft.entity.passive.TameableEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.util.ResourceLocation;
@@ -169,9 +169,9 @@ public class PlayerCapabilityForgeEventSubscriber {
 			onPlayerJoinWorld(event);
 		}
 
-		if (event.getEntity() instanceof TameableEntity) {
-			DevilRpg.LOGGER.info("----------------------->ForgeEventSubscriber.onEntityJoinWorld() == TameableEntity:{} ", event.getEntity().getScoreboardName());
-			new MinionPassiveAttributes((TameableEntity) event.getEntity());
+		if (event.getEntity() instanceof ITamableEntity) {
+			DevilRpg.LOGGER.info("----------------------->ForgeEventSubscriber.onEntityJoinWorld() == ITameable:{} ", event.getEntity().getScoreboardName());
+			new MinionPassiveAttributes((ITamableEntity) event.getEntity());
 		}
 
 	}

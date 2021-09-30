@@ -7,6 +7,7 @@ import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
 import com.chipoodle.devilrpg.entity.IPassiveMinionUpdater;
+import com.chipoodle.devilrpg.entity.ITamableEntity;
 import com.chipoodle.devilrpg.entity.SoulBearEntity;
 import com.chipoodle.devilrpg.entity.SoulWispEntity;
 import com.chipoodle.devilrpg.entity.SoulWolfEntity;
@@ -17,7 +18,6 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.attributes.Attribute;
 import net.minecraft.entity.ai.attributes.AttributeModifier;
 import net.minecraft.entity.ai.attributes.Attributes;
-import net.minecraft.entity.passive.TameableEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.world.World;
 
@@ -26,9 +26,9 @@ public class MinionPassiveAttributes implements ISkillContainer {
 	private World worldIn;
 	private PlayerEntity playerIn;
 
-	public MinionPassiveAttributes(TameableEntity entity) {
+	public MinionPassiveAttributes(ITamableEntity entity) {
 		DevilRpg.LOGGER.info("||---->MinionPassiveAttributes");
-		worldIn = entity.level;
+		worldIn = entity.getLevel();
 		LivingEntity owner = entity.getOwner();
 
 		if (!(entity instanceof IPassiveMinionUpdater && owner instanceof PlayerEntity))
@@ -62,7 +62,7 @@ public class MinionPassiveAttributes implements ISkillContainer {
 	}
 
 	@SuppressWarnings("unchecked")
-	private void apply(TameableEntity entity) {
+	private void apply(ITamableEntity entity) {
 		DevilRpg.LOGGER.info("||---->MinionPassiveAttributes apply");
 
 		if (!worldIn.isClientSide && playerIn != null) {
@@ -73,7 +73,7 @@ public class MinionPassiveAttributes implements ISkillContainer {
 					new AttributeModifier("PASSIVE_MINION_HEALTH",
 							factor * parentCapability.getSkillsPoints().get(SkillEnum.MINION_VITALITY),
 							AttributeModifier.Operation.ADDITION));
-			IPassiveMinionUpdater<TameableEntity> minion = (IPassiveMinionUpdater<TameableEntity>) entity;
+			IPassiveMinionUpdater<ITamableEntity> minion = (IPassiveMinionUpdater<ITamableEntity>) entity;
 			minion.applyPassives(attributes, entity);
 		}
 	}

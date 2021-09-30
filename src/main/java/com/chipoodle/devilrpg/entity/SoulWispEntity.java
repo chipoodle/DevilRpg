@@ -72,7 +72,7 @@ import net.minecraftforge.fml.common.registry.IEntityAdditionalSpawnData;
 import net.minecraftforge.fml.network.FMLPlayMessages;
 import net.minecraftforge.fml.network.NetworkHooks;
 
-public class SoulWispEntity extends TameableEntity implements IFlyingAnimal, ISoulEntity, IChargeableMob,
+public class SoulWispEntity extends TameableEntity implements ITamableEntity, IFlyingAnimal, ISoulEntity, IChargeableMob,
 		IAngerable, IPassiveMinionUpdater<SoulWispEntity> {
 	private static final DataParameter<Integer> ANGER_TIME = EntityDataManager.defineId(SoulWispEntity.class,
 			DataSerializers.INT);
@@ -571,5 +571,35 @@ public class SoulWispEntity extends TameableEntity implements IFlyingAnimal, ISo
 	@Override
 	public SoulWispEntity getBreedOffspring(ServerWorld world, AgeableEntity mate) {
 		return ModEntityTypes.WISP.get().create(world);
+	}
+
+	@Override
+	public World getLevel() {
+		return this.level;
+	}
+
+	@Override
+	public double distanceToSqr(LivingEntity livingentity) {
+		return super.distanceToSqr(livingentity);
+	}
+
+	@Override
+	public float getxRot() {
+		return this.xRot;
+	}
+
+	@Override
+	public float getyRot() {
+		return this.yRot;
+	}
+
+	@Override
+	public void moveTo(double d, double p_226328_2_, double e, float getyRot, float getxRot) {
+		super.moveTo(d, p_226328_2_, e, getyRot, getxRot);
+	}
+
+	@Override
+	public Entity getEntity() {
+		return this;
 	}
 }

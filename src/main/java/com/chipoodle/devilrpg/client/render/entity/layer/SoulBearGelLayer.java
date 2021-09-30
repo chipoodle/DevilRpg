@@ -65,14 +65,4 @@ public class SoulBearGelLayer<T extends SoulBearEntity> extends GhostEnergyLayer
 					1.0F);
 		}
 	}
-	
-	private void healthMethod(MatrixStack matrixStackIn, IRenderTypeBuffer bufferIn, int packedLightIn, T entitylivingbaseIn, float partialTicks) {
-		if (!entitylivingbaseIn.isInvisible()) {
-			IVertexBuilder ivertexbuilder = entitylivingbaseIn.getBuffer(bufferIn,entityRenderer.getTextureLocation(entitylivingbaseIn));
-			float[] rgbArray = IRenderUtilities.groovyRed(entitylivingbaseIn, partialTicks);
-			entityRenderer.getModel().renderToBuffer(matrixStackIn, ivertexbuilder, packedLightIn,
-					LivingRenderer.getOverlayCoords(entitylivingbaseIn, 0.1F), rgbArray[0], rgbArray[1], rgbArray[2],
-					1.0F);
-		}
-	}
 }

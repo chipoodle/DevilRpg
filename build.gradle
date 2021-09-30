@@ -15,6 +15,10 @@ apply plugin: 'eclipse'
 apply plugin: 'maven-publish'
 apply plugin: 'java'
 
+tasks.withType(Copy).all {
+    duplicatesStrategy 'exclude'
+}
+
 //mainClassName : 'net.minecraft.launchwrapper.Launch'
 
 version = modMinecraftVersion + "-" + modVersion

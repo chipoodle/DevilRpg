@@ -8,15 +8,20 @@ import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.minion.IBaseMinionCapability;
 import com.chipoodle.devilrpg.capability.minion.PlayerMinionCapabilityProvider;
 import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
 import com.chipoodle.devilrpg.client.render.IRenderUtilities;
+import com.chipoodle.devilrpg.entity.goal.TameableMountableFollowOwnerGoal;
+import com.chipoodle.devilrpg.entity.goal.TameableMountableOwnerHurtByTargetGoal;
+import com.chipoodle.devilrpg.entity.goal.TameableMountableOwnerHurtTargetGoal;
 import com.chipoodle.devilrpg.init.ModEntityTypes;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import com.chipoodle.devilrpg.util.TargetUtils;
 
+import net.minecraft.advancements.CriteriaTriggers;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.AgeableEntity;
@@ -32,33 +37,24 @@ import net.minecraft.entity.Pose;
 import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.ai.attributes.AttributeModifierMap;
 import net.minecraft.entity.ai.attributes.Attributes;
-import net.minecraft.entity.ai.goal.FollowOwnerGoal;
 import net.minecraft.entity.ai.goal.FollowParentGoal;
 import net.minecraft.entity.ai.goal.HurtByTargetGoal;
 import net.minecraft.entity.ai.goal.LookAtGoal;
 import net.minecraft.entity.ai.goal.LookRandomlyGoal;
 import net.minecraft.entity.ai.goal.NearestAttackableTargetGoal;
-import net.minecraft.entity.ai.goal.OwnerHurtByTargetGoal;
-import net.minecraft.entity.ai.goal.OwnerHurtTargetGoal;
 import net.minecraft.entity.ai.goal.RandomWalkingGoal;
 import net.minecraft.entity.ai.goal.ResetAngerGoal;
 import net.minecraft.entity.ai.goal.SwimGoal;
 import net.minecraft.entity.merchant.villager.VillagerEntity;
-import net.minecraft.entity.monster.IMob;
 import net.minecraft.entity.passive.IronGolemEntity;
-import net.minecraft.entity.passive.TameableEntity;
 import net.minecraft.entity.passive.TurtleEntity;
 import net.minecraft.entity.passive.horse.LlamaEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.network.IPacket;
-import net.minecraft.network.datasync.DataParameter;
-import net.minecraft.network.datasync.DataSerializers;
-import net.minecraft.network.datasync.EntityDataManager;
 import net.minecraft.particles.ParticleTypes;
-import net.minecraft.potion.EffectInstance;
-import net.minecraft.potion.Effects;
 import net.minecraft.util.ActionResultType;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.Hand;
@@ -66,7 +62,6 @@ import net.minecraft.util.RangedInteger;
 import net.minecraft.util.SoundEvent;
 import net.minecraft.util.SoundEvents;
 import net.minecraft.util.TickRangeConverter;
-import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.DifficultyInstance;
@@ -80,13 +75,12 @@ import net.minecraftforge.fml.common.registry.IEntityAdditionalSpawnData;
 import net.minecraftforge.fml.network.FMLPlayMessages;
 import net.minecraftforge.fml.network.NetworkHooks;
 
-public class SoulBearEntity extends TameableEntity
-		implements ISoulEntity, IChargeableMob, IAngerable, IPassiveMinionUpdater<SoulBearEntity> {
+public class SoulBearEntity extends AbstractMountableTameableEntity
+		implements ITamableEntity, ISoulEntity, IChargeableMob, IAngerable, IPassiveMinionUpdater<SoulBearEntity> {
 	private static final double RADIUS_PARTICLES = 1.0;
 	private static final int NUMBER_OF_PARTICLES_WARBEAR = 15;
 	private static final double SPLASH_DAMAGE_FACTOR = 0.5F;
-	private static final DataParameter<Boolean> DATA_STANDING_ID = EntityDataManager.defineId(SoulBearEntity.class,
-			DataSerializers.BOOLEAN);
+	//private static final DataParameter<Boolean> DATA_STANDING_ID = EntityDataManager.defineId(SoulBearEntity.class,DataSerializers.BOOLEAN);
 	private static final int PROBABILITY_MULTIPLIER = 3;
 	private static final int DURATION_TICKS = 100;
 
@@ -100,11 +94,13 @@ public class SoulBearEntity extends TameableEntity
 	private final int SALUD_INICIAL = 20;
 	private int puntosAsignados = 0;
 	private double saludMaxima = SALUD_INICIAL;
-	private static double initialArmor;
+	private double initialArmor;
 
 	private Integer warBear = 0;
 	private Integer mountBear = 0;
-
+	
+	private boolean orderedToSit;
+	
 	public SoulBearEntity(EntityType<? extends SoulBearEntity> type, World worldIn) {
 		super(type, worldIn);
 	}
@@ -128,43 +124,21 @@ public class SoulBearEntity extends TameableEntity
 
 	@Override
 	protected void registerGoals() {
-		super.registerGoals();
+		// super.registerGoals();
 		this.goalSelector.addGoal(0, new SwimGoal(this));
 		this.goalSelector.addGoal(1, new SoulBearEntity.MeleeAttackGoal());
-		// this.goalSelector.addGoal(1, new SoulBearEntity.PanicGoal());
-		// this.goalSelector.addGoal(3, new
-		// SoulBearEntity.AvoidEntityGoal<VillagerEntity>(this, VillagerEntity.class,
-		// 24.0F, 1.5D, 1.5D));
-		// this.goalSelector.addGoal(3, new
-		// SoulBearEntity.AvoidEntityGoal<LlamaEntity>(this, LlamaEntity.class, 24.0F,
-		// 1.5D, 1.5D));
-		// this.goalSelector.addGoal(3, new
-		// SoulBearEntity.AvoidEntityGoal<TurtleEntity>(this, TurtleEntity.class, 24.0F,
-		// 1.5D, 1.5D));
-		// this.goalSelector.addGoal(3, new
-		// SoulBearEntity.AvoidEntityGoal<IronGolemEntity>(this, IronGolemEntity.class,
-		// 24.0F, 1.5D, 1.5D));
 		this.goalSelector.addGoal(4, new FollowParentGoal(this, 1.25D));
 		this.goalSelector.addGoal(5, new RandomWalkingGoal(this, 1.0D));
-		this.goalSelector.addGoal(6, new FollowOwnerGoal(this, 1.0D, 10.0F, 2.0F, false));
+		this.goalSelector.addGoal(6, new TameableMountableFollowOwnerGoal(this, 1.0D, 10.0F, 2.0F, false));
 		this.goalSelector.addGoal(7, new LookAtGoal(this, PlayerEntity.class, 6.0F));
 		this.goalSelector.addGoal(8, new LookRandomlyGoal(this));
-
-		// this.targetSelector.addGoal(2, new SoulBearEntity.AttackPlayerGoal());
-		// this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this,
-		// MobEntity.class, 10, true, true,(Predicate<LivingEntity>) null));
-
-		this.targetSelector.addGoal(1, new OwnerHurtByTargetGoal(this));
-		this.targetSelector.addGoal(2, new OwnerHurtTargetGoal(this));
-		// this.targetSelector.addGoal(3, new SoulBearEntity.HurtByTargetGoal());
+		this.targetSelector.addGoal(1, new TameableMountableOwnerHurtByTargetGoal(this));
+		this.targetSelector.addGoal(2, new TameableMountableOwnerHurtTargetGoal(this));
 		this.targetSelector.addGoal(3, (new HurtByTargetGoal(this)).setAlertOthers());
-		// this.targetSelector.addGoal(5, new NearestAttackableTargetGoal<>(this,
-		// MobEntity.class, false));
 		this.targetSelector.addGoal(5,
 				new NearestAttackableTargetGoal<>(this, MobEntity.class, 10, false, false, (entity) -> {
-					return !(entity instanceof VillagerEntity)
-							&& !(entity instanceof LlamaEntity) && !(entity instanceof TurtleEntity)
-							&& !(entity instanceof IronGolemEntity);
+					return !(entity instanceof VillagerEntity) && !(entity instanceof LlamaEntity)
+							&& !(entity instanceof TurtleEntity) && !(entity instanceof IronGolemEntity);
 				}));
 		this.targetSelector.addGoal(8, new ResetAngerGoal<>(this, true));
 
@@ -177,9 +151,11 @@ public class SoulBearEntity extends TameableEntity
 
 	public void updateLevel(PlayerEntity owner) {
 		tame(owner);
-		LazyOptional<IBaseSkillCapability> skill = getOwner().getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
-		if (skill != null && skill.isPresent()) {
-			this.puntosAsignados = skill.map(x -> x.getSkillsPoints()).orElse(null).get(SkillEnum.SUMMON_SOUL_BEAR);
+
+		IBaseSkillCapability skill = IGenericCapability.getUnwrappedCapability((PlayerEntity) getOwner(),
+				PlayerSkillCapabilityProvider.SKILL_CAP);
+		if (skill != null) {
+			this.puntosAsignados = skill.getSkillsPoints().get(SkillEnum.SUMMON_SOUL_BEAR);
 			saludMaxima = 5 * this.puntosAsignados + SALUD_INICIAL;
 			initialArmor = (1.0D * 0.309 * puntosAsignados) + 2;
 		}
@@ -195,6 +171,9 @@ public class SoulBearEntity extends TameableEntity
 	@Override
 	public void readAdditionalSaveData(CompoundNBT compound) {
 		super.readAdditionalSaveData(compound);
+		
+		this.orderedToSit = compound.getBoolean("Sitting");
+	    this.setInSittingPose(this.orderedToSit);
 	}
 
 	@Override
@@ -202,7 +181,8 @@ public class SoulBearEntity extends TameableEntity
 		super.addAdditionalSaveData(compound);
 		compound.putString("OwnerUUID", "");
 		compound.putString("Owner", "");
-		// compound.putUniqueId("Owner", UUID.fromString(""));
+		
+		compound.putBoolean("Sitting", this.orderedToSit);
 	}
 
 	@Override
@@ -233,13 +213,15 @@ public class SoulBearEntity extends TameableEntity
 		if (flag) {
 			int probability = random.nextInt(100);
 			if (warBear > 0 && probability <= (warBear * PROBABILITY_MULTIPLIER)) {
-				IRenderUtilities.rotationParticles(Minecraft.getInstance().level, random, this, ParticleTypes.CRIMSON_SPORE,NUMBER_OF_PARTICLES_WARBEAR,RADIUS_PARTICLES);
+				IRenderUtilities.rotationParticles(Minecraft.getInstance().level, random, this,
+						ParticleTypes.CRIMSON_SPORE, NUMBER_OF_PARTICLES_WARBEAR, RADIUS_PARTICLES);
 				double radius = 3;
 				List<LivingEntity> acquireAllLookTargetsByClass = TargetUtils
 						.acquireAllTargetsInRadiusByClass(this, LivingEntity.class, radius).stream()
 						.filter(entity -> !isAlliedTo(entity)).collect(Collectors.toList());
 
-				acquireAllLookTargetsByClass.forEach(mob -> mob.hurt(DamageSource.mobAttack(this), (float) (attackDamage*SPLASH_DAMAGE_FACTOR)));
+				acquireAllLookTargetsByClass.forEach(
+						mob -> mob.hurt(DamageSource.mobAttack(this), (float) (attackDamage * SPLASH_DAMAGE_FACTOR)));
 				DevilRpg.LOGGER.info("---------->doHurtTarget warBear: {} prob: {} limit: {} enemies: {}", warBear,
 						probability, warBear * PROBABILITY_MULTIPLIER, acquireAllLookTargetsByClass.size());
 			}
@@ -252,12 +234,7 @@ public class SoulBearEntity extends TameableEntity
 	public boolean hurt(DamageSource damageSource, float amount) {
 		boolean hurt = super.hurt(damageSource, amount);
 		if (hurt) {
-				
-			
-			
-			
-			
-			
+
 		}
 		return hurt;
 	}
@@ -363,7 +340,7 @@ public class SoulBearEntity extends TameableEntity
 
 	protected void defineSynchedData() {
 		super.defineSynchedData();
-		this.entityData.define(DATA_STANDING_ID, false);
+		//this.entityData.define(DATA_STANDING_ID, false);
 	}
 
 	/**
@@ -399,6 +376,7 @@ public class SoulBearEntity extends TameableEntity
 		return ActionResultType.PASS;
 	}
 
+	@Override
 	public EntitySize getDimensions(Pose poseIn) {
 		if (this.clientSideStandAnimation > 0.0F) {
 			float f = this.clientSideStandAnimation / 6.0F;
@@ -409,19 +387,30 @@ public class SoulBearEntity extends TameableEntity
 		}
 	}
 
+
+	// Method from PolarBear
+	@Override
 	public boolean isStanding() {
-		return this.entityData.get(DATA_STANDING_ID);
+		return super.isStanding();
+		//return this.getFlag(32);
+		//return this.entityData.get(DATA_STANDING_ID);
 	}
 
-	public void setStanding(boolean p_189794_1_) {
-		this.entityData.set(DATA_STANDING_ID, p_189794_1_);
+
+	 // Method from PolarBear
+	@Override
+	public void setStanding(boolean isStanding) {
+		super.setStanding(isStanding);
+		//this.setFlag(32, isStanding);
+		//this.entityData.set(DATA_STANDING_ID, isStanding);
 	}
 
 	@OnlyIn(Dist.CLIENT)
-	public float getStandingAnimationScale(float p_189795_1_) {
-		return MathHelper.lerp(p_189795_1_, this.clientSideStandAnimationO, this.clientSideStandAnimation) / 6.0F;
+	public float getStandingAnimationScale(float scale) {
+		return MathHelper.lerp(scale, this.clientSideStandAnimationO, this.clientSideStandAnimation) / 6.0F;
 	}
 
+	@Override
 	protected float getWaterSlowDown() {
 		return 0.98F;
 	}
@@ -460,6 +449,7 @@ public class SoulBearEntity extends TameableEntity
 			}
 		}
 
+		@Override
 		protected double getFollowDistance() {
 			return super.getFollowDistance() * 0.5D;
 		}
@@ -470,6 +460,7 @@ public class SoulBearEntity extends TameableEntity
 			super(SoulBearEntity.this, 1.25D, true);
 		}
 
+		@Override
 		protected void checkAndPerformAttack(LivingEntity enemy, double distToEnemySqr) {
 			double d0 = this.getAttackReachSqr(enemy);
 			if (distToEnemySqr <= d0 && this.isTimeToAttack()) {
@@ -497,11 +488,13 @@ public class SoulBearEntity extends TameableEntity
 		 * Reset the task's internal state. Called when this task is interrupted by
 		 * another one
 		 */
+		@Override
 		public void stop() {
 			SoulBearEntity.this.setStanding(false);
 			super.stop();
 		}
 
+		@Override
 		protected double getAttackReachSqr(LivingEntity attackTarget) {
 			return (double) (4.0F + attackTarget.getBbWidth());
 		}
@@ -594,6 +587,65 @@ public class SoulBearEntity extends TameableEntity
 		return 0;
 	}
 
+	
+	
+	///////////////////////////////
+	public void tame(PlayerEntity p_193101_1_) {
+		this.setTame(true);
+		this.setOwnerUUID(p_193101_1_.getUUID());
+		if (p_193101_1_ instanceof ServerPlayerEntity) {
+			CriteriaTriggers.TAME_ANIMAL.trigger((ServerPlayerEntity) p_193101_1_, this);
+		}
+
+	}
+
+	public void setTame(boolean p_70903_1_) {
+		this.setFlag(4 , p_70903_1_);
+		this.reassessTameGoals();
+	}
+	
+	protected void reassessTameGoals() {
+	}
+
+	public void setInSittingPose(boolean p_233686_1_) {
+		this.setFlag(1 , p_233686_1_);
+	}
+	
+	@Override
+	public boolean isTame() {
+		return this.getFlag(4);
+	}
+	
+	@Override
+	public LivingEntity getOwner() {
+		try {
+			UUID uuid = this.getOwnerUUID();
+			return uuid == null ? null : this.level.getPlayerByUUID(uuid);
+		} catch (IllegalArgumentException illegalargumentexception) {
+			return null;
+		}
+	}
+
+	@Override
+	public boolean isOrderedToSit() {
+		return this.orderedToSit;
+	}
+	
+	@Override
+	public void setOrderedToSit(boolean sit) {
+	    this.orderedToSit = sit;
+	}
+	
+	@Override
+	public boolean canAttack(LivingEntity entity) {
+	      return !this.isOwnedBy(entity) && super.canAttack(entity);
+	}
+	
+	//////////////////////////////////////////
+	
+	
+	
+	
 	@Override
 	public boolean isPowered() {
 		return true;
@@ -605,5 +657,35 @@ public class SoulBearEntity extends TameableEntity
 
 	public void setMountBear(Integer mountBear) {
 		this.mountBear = mountBear;
+	}
+
+	@Override
+	public World getLevel() {
+		return this.level;
+	}
+
+	@Override
+	public double distanceToSqr(LivingEntity livingentity) {
+		return super.distanceToSqr(livingentity);
+	}
+
+	@Override
+	public float getxRot() {
+		return this.xRot;
+	}
+
+	@Override
+	public float getyRot() {
+		return this.yRot;
+	}
+
+	@Override
+	public void moveTo(double d, double p_226328_2_, double e, float getyRot, float getxRot) {
+		super.moveTo(d, p_226328_2_, e, getyRot, getxRot);
+	}
+
+	@Override
+	public Entity getEntity() {
+		return this;
 	}
 }
