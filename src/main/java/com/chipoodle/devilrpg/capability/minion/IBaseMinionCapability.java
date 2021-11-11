@@ -4,7 +4,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import com.chipoodle.devilrpg.capability.IGenericCapability;
-import com.chipoodle.devilrpg.entity.ITamableEntity;
+import com.chipoodle.devilrpg.entity.ITameableEntity;
 import com.chipoodle.devilrpg.entity.SoulBearEntity;
 import com.chipoodle.devilrpg.entity.SoulWispEntity;
 import com.chipoodle.devilrpg.entity.SoulWolfEntity;
@@ -23,7 +23,7 @@ public interface IBaseMinionCapability extends IGenericCapability{
 	
 	public ConcurrentLinkedQueue<UUID> getAllMinions();
 	
-	public ITamableEntity getTameableByUUID(UUID id, World world);
+	public ITameableEntity getTameableByUUID(UUID id, World world);
 	
 	public void removeWisp(PlayerEntity owner, SoulWispEntity entity);
 	public void removeSoulWolf(PlayerEntity owner, SoulWolfEntity entity);

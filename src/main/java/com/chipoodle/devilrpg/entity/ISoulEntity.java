@@ -15,25 +15,13 @@ public interface ISoulEntity {
 
 	static final int DIVISOR_NIVEL_PARA_POTENCIA_EFECTO = 5;
 
-	public default void addToLivingTick(ITamableEntity thisEntity) {
+	/**
+	 * Kills the entity if it has no owner.
+	 * @param thisEntity
+	 */
+	public default void addToAiStep(ITameableEntity thisEntity) {
 		if (thisEntity.getOwnerUUID() == null || thisEntity.getOwner() == null || !thisEntity.getOwner().isAlive() || !thisEntity.isTame())
 			thisEntity.hurt(new MinionDeathDamageSource(""), Integer.MAX_VALUE);
-	}
-	
-	public default boolean addToWantsToAttack(LivingEntity target, LivingEntity owner) {
-		if (target instanceof TameableEntity) {
-			TameableEntity entity = (TameableEntity) target;
-			return !entity.isTame() || entity.getOwner() != owner;
-		} else
-
-		if (target instanceof PlayerEntity && owner instanceof PlayerEntity
-				&& !((PlayerEntity) owner).canHarmPlayer((PlayerEntity) target)) {
-			return false;
-		} else if (target instanceof AbstractHorseEntity && ((AbstractHorseEntity) target).isTamed()) {
-			return false;
-		} else {
-			return true;
-		}
 	}
 
 	public default IVertexBuilder getBuffer(IRenderTypeBuffer bufferIn, ResourceLocation texture) {

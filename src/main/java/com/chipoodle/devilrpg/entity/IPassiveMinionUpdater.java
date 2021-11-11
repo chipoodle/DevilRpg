@@ -8,7 +8,7 @@ import net.minecraft.entity.ai.attributes.Attribute;
 import net.minecraft.entity.ai.attributes.AttributeModifier;
 import net.minecraft.entity.ai.attributes.ModifiableAttributeInstance;
 
-public interface IPassiveMinionUpdater<T extends ITamableEntity> {
+public interface IPassiveMinionUpdater<T extends ITameableEntity> {
 	
 	public default void applyPassives(Map<Attribute, AttributeModifier> attributes, T t) {
 		attributes.forEach((key, value)->{

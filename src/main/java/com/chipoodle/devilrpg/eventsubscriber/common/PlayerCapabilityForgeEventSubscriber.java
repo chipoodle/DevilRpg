@@ -23,7 +23,7 @@ import com.chipoodle.devilrpg.capability.minion.IBaseMinionCapability;
 import com.chipoodle.devilrpg.capability.minion.PlayerMinionCapabilityProvider;
 import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
-import com.chipoodle.devilrpg.entity.ITamableEntity;
+import com.chipoodle.devilrpg.entity.ITameableEntity;
 import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.network.handler.PlayerExperienceClientServerHandler;
 import com.chipoodle.devilrpg.network.handler.PlayerManaClientServerHandler;
@@ -169,9 +169,9 @@ public class PlayerCapabilityForgeEventSubscriber {
 			onPlayerJoinWorld(event);
 		}
 
-		if (event.getEntity() instanceof ITamableEntity) {
+		if (event.getEntity() instanceof ITameableEntity) {
 			DevilRpg.LOGGER.info("----------------------->ForgeEventSubscriber.onEntityJoinWorld() == ITameable:{} ", event.getEntity().getScoreboardName());
-			new MinionPassiveAttributes((ITamableEntity) event.getEntity());
+			new MinionPassiveAttributes((ITameableEntity) event.getEntity());
 		}
 
 	}

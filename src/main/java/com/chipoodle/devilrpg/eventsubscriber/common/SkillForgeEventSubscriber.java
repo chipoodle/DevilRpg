@@ -12,7 +12,7 @@ import com.chipoodle.devilrpg.capability.auxiliar.IBaseAuxiliarCapability;
 import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
 import com.chipoodle.devilrpg.entity.ISoulEntity;
-import com.chipoodle.devilrpg.entity.ITamableEntity;
+import com.chipoodle.devilrpg.entity.ITameableEntity;
 import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.network.handler.PotionClientServerHandler;
 import com.chipoodle.devilrpg.util.EventUtils;
@@ -162,8 +162,8 @@ public class SkillForgeEventSubscriber {
 		if(!(event instanceof PotionEvent.PotionAddedEvent) && !(event instanceof PotionEvent.PotionExpiryEvent))
 			return;
 		
-		if (event.getEntity() instanceof ISoulEntity && event.getEntity() instanceof ITamableEntity) {
-			ITamableEntity minion = (ITamableEntity) event.getEntity();
+		if (event.getEntity() instanceof ISoulEntity && event.getEntity() instanceof ITameableEntity) {
+			ITameableEntity minion = (ITameableEntity) event.getEntity();
 			LivingEntity owner = minion.getOwner();
 			if (owner != null && owner instanceof ServerPlayerEntity && !event.getEntity().level.isClientSide()) {
 				EffectInstance potionEffect = event.getPotionEffect();

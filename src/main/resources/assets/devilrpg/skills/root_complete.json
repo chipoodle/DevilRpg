@@ -242,7 +242,7 @@
         },
         "capability": "war_bear",
         "skillmanacost":{
-        	"maxskilllevel":"5",
+        	"maxskilllevel":"6",
 			"manacost":"0"
 		},
         "rewards": {},
@@ -262,7 +262,7 @@
         },
         "capability": "mount_bear",
         "skillmanacost":{
-        	"maxskilllevel":"5",
+        	"maxskilllevel":"1",
 			"manacost":"0"
 		},
         "rewards": {},

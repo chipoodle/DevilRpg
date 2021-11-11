@@ -41,6 +41,7 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.network.IPacket;
 import net.minecraft.particles.ParticleTypes;
+import net.minecraft.pathfinding.PathNavigator;
 import net.minecraft.potion.EffectInstance;
 import net.minecraft.potion.Effects;
 import net.minecraft.util.ActionResultType;
@@ -55,7 +56,7 @@ import net.minecraftforge.fml.common.registry.IEntityAdditionalSpawnData;
 import net.minecraftforge.fml.network.FMLPlayMessages;
 import net.minecraftforge.fml.network.NetworkHooks;
 
-public class SoulWolfEntity extends WolfEntity implements ITamableEntity, ISoulEntity, IChargeableMob, IPassiveMinionUpdater<SoulWolfEntity> {
+public class SoulWolfEntity extends WolfEntity implements ITameableEntity, ISoulEntity, IChargeableMob, IPassiveMinionUpdater<SoulWolfEntity> {
 	private static final int ICE_ARMOR_EFFECT_FACTOR = 2;
 	private static final double RADIUS_PARTICLES = 0.7;
 	private static final int NUMBER_OF_PARTICLES_ICEARMOR = 10;
@@ -134,7 +135,7 @@ public class SoulWolfEntity extends WolfEntity implements ITamableEntity, ISoulE
 	@Override
 	public void aiStep() {
 		super.aiStep();
-		addToLivingTick(this);
+		addToAiStep(this);
 	}
 
 	/**
@@ -149,7 +150,8 @@ public class SoulWolfEntity extends WolfEntity implements ITamableEntity, ISoulE
 
 	@Override
 	public boolean wantsToAttack(LivingEntity target, LivingEntity owner) {
-		return addToWantsToAttack(target, owner);
+		//return ((ITameableEntity)this).wantsToAttack(target, owner);
+		return ITameableEntity.super.wantsToAttack(target, owner);
 	}
 
 	@Override

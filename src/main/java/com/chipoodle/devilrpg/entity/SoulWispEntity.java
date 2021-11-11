@@ -72,7 +72,7 @@ import net.minecraftforge.fml.common.registry.IEntityAdditionalSpawnData;
 import net.minecraftforge.fml.network.FMLPlayMessages;
 import net.minecraftforge.fml.network.NetworkHooks;
 
-public class SoulWispEntity extends TameableEntity implements ITamableEntity, IFlyingAnimal, ISoulEntity, IChargeableMob,
+public class SoulWispEntity extends TameableEntity implements ITameableEntity, IFlyingAnimal, ISoulEntity, IChargeableMob,
 		IAngerable, IPassiveMinionUpdater<SoulWispEntity> {
 	private static final DataParameter<Integer> ANGER_TIME = EntityDataManager.defineId(SoulWispEntity.class,
 			DataSerializers.INT);
@@ -209,7 +209,7 @@ public class SoulWispEntity extends TameableEntity implements ITamableEntity, IF
 				this.addEffectsToPlayers(puntosAsignados, efectoPrimario, efectoSecundario, esBeneficioso);
 			}
 		}
-		addToLivingTick(this);
+		addToAiStep(this);
 	}
 
 	/**
@@ -300,10 +300,11 @@ public class SoulWispEntity extends TameableEntity implements ITamableEntity, IF
 	public boolean hurt(DamageSource source, float amount) {
 		return super.hurt(source, amount);
 	}
-	
+
 	@Override
 	public boolean wantsToAttack(LivingEntity target, LivingEntity owner) {
-		return addToWantsToAttack(target, owner);
+		//return ((ITameableEntity)this).wantsToAttack(target, owner);
+		return ITameableEntity.super.wantsToAttack(target, owner);
 	}
 
 	@Override
@@ -401,10 +402,7 @@ public class SoulWispEntity extends TameableEntity implements ITamableEntity, IF
 	@Override
 	public boolean isAlliedTo(Entity entityIn) {
 		boolean isOnSameTeam = super.isAlliedTo(entityIn);
-		boolean isSameOwner = false;
-		if (entityIn instanceof TameableEntity && ((TameableEntity) entityIn).getOwner() != null)
-			isSameOwner = ((TameableEntity) entityIn).getOwner().equals(this.getOwner());
-		return isOnSameTeam || isSameOwner;
+		return isOnSameTeam || isEntitySameOwnerAsThis(entityIn, this);
 	}
 
 	private void addEffectsToPlayers(int niveles, Effect primaryEffect, Effect secondaryEffect, boolean isBeneficial) {

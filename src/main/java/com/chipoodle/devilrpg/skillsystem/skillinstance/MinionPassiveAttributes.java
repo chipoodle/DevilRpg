@@ -7,7 +7,7 @@ import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
 import com.chipoodle.devilrpg.entity.IPassiveMinionUpdater;
-import com.chipoodle.devilrpg.entity.ITamableEntity;
+import com.chipoodle.devilrpg.entity.ITameableEntity;
 import com.chipoodle.devilrpg.entity.SoulBearEntity;
 import com.chipoodle.devilrpg.entity.SoulWispEntity;
 import com.chipoodle.devilrpg.entity.SoulWolfEntity;
@@ -26,7 +26,7 @@ public class MinionPassiveAttributes implements ISkillContainer {
 	private World worldIn;
 	private PlayerEntity playerIn;
 
-	public MinionPassiveAttributes(ITamableEntity entity) {
+	public MinionPassiveAttributes(ITameableEntity entity) {
 		DevilRpg.LOGGER.info("||---->MinionPassiveAttributes");
 		worldIn = entity.getLevel();
 		LivingEntity owner = entity.getOwner();
@@ -62,7 +62,7 @@ public class MinionPassiveAttributes implements ISkillContainer {
 	}
 
 	@SuppressWarnings("unchecked")
-	private void apply(ITamableEntity entity) {
+	private void apply(ITameableEntity entity) {
 		DevilRpg.LOGGER.info("||---->MinionPassiveAttributes apply");
 
 		if (!worldIn.isClientSide && playerIn != null) {
@@ -73,7 +73,7 @@ public class MinionPassiveAttributes implements ISkillContainer {
 					new AttributeModifier("PASSIVE_MINION_HEALTH",
 							factor * parentCapability.getSkillsPoints().get(SkillEnum.MINION_VITALITY),
 							AttributeModifier.Operation.ADDITION));
-			IPassiveMinionUpdater<ITamableEntity> minion = (IPassiveMinionUpdater<ITamableEntity>) entity;
+			IPassiveMinionUpdater<ITameableEntity> minion = (IPassiveMinionUpdater<ITameableEntity>) entity;
 			minion.applyPassives(attributes, entity);
 		}
 	}
@@ -108,7 +108,7 @@ public class MinionPassiveAttributes implements ISkillContainer {
 	}
 
 	private void applyPassives(SoulWispEntity entity) {
-		DevilRpg.LOGGER.info("||---->MinionPassiveAttributes SoulBearEntity");
+		DevilRpg.LOGGER.info("||---->MinionPassiveAttributes SoulWispEntity");
 
 	}
 
