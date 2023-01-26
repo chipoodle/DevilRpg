@@ -2,9 +2,9 @@ package com.chipoodle.devilrpg.entity;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
-import com.chipoodle.devilrpg.capability.minion.IBaseMinionCapability;
-import com.chipoodle.devilrpg.capability.minion.PlayerMinionCapabilityProvider;
-import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
+import com.chipoodle.devilrpg.capability.player_minion.IBaseMinionCapability;
+import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityProvider;
+import com.chipoodle.devilrpg.capability.skill.IBasePlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
 import com.chipoodle.devilrpg.client.render.IRenderUtilities;
 import com.chipoodle.devilrpg.init.ModEntityTypes;
@@ -41,7 +41,6 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.network.IPacket;
 import net.minecraft.particles.ParticleTypes;
-import net.minecraft.pathfinding.PathNavigator;
 import net.minecraft.potion.EffectInstance;
 import net.minecraft.potion.Effects;
 import net.minecraft.util.ActionResultType;
@@ -105,7 +104,7 @@ public class SoulWolfEntity extends WolfEntity implements ITameableEntity, ISoul
 
 	public void updateLevel(PlayerEntity owner) {
 		tame(owner);
-		IBaseSkillCapability skill = IGenericCapability.getUnwrappedCapability((PlayerEntity)getOwner(), PlayerSkillCapabilityProvider.SKILL_CAP);
+		IBasePlayerSkillCapability skill = IGenericCapability.getUnwrappedPlayerCapability((PlayerEntity)getOwner(), PlayerSkillCapabilityProvider.SKILL_CAP);
 		if (skill != null) {
 			this.puntosAsignados = skill.getSkillsPoints().get(SkillEnum.SUMMON_SOUL_WOLF);
 			saludMaxima = 1.0 * this.puntosAsignados + SALUD_INICIAL;

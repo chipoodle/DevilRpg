@@ -16,8 +16,8 @@ public class PlayerSkillClientServerHandler {
 
 	private final CompoundNBT skillCompound;
 
-	public PlayerSkillClientServerHandler(CompoundNBT manaCompound) {
-		this.skillCompound = manaCompound;
+	public PlayerSkillClientServerHandler(CompoundNBT skillCompound) {
+		this.skillCompound = skillCompound;
 	}
 
 	public CompoundNBT getSkillCompound() {

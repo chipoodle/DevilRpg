@@ -13,7 +13,7 @@ import javax.annotation.Nullable;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.experience.IBaseExperienceCapability;
 import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapabilityProvider;
-import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
+import com.chipoodle.devilrpg.capability.skill.IBasePlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
 import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model.ClientSkillBuilder;
 import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model.CustomSkillButton;
@@ -88,7 +88,7 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 	private double dragPositionMouseY;
 
 	private PlayerEntity player;
-	private LazyOptional<IBaseSkillCapability> skillCap;
+	private LazyOptional<IBasePlayerSkillCapability> skillCap;
 	private LazyOptional<IBaseExperienceCapability> expCap;
 
 	private Set<CustomSkillButton> powerButtonList;
@@ -208,6 +208,12 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 					skillsPoints.put(skilEnum, points);
 					aSkillCap.setSkillsPoints(skillsPoints, player);
 					skillEntryGui.updateFormattedLevelString(points, maxPoints);
+
+
+
+
+
+					//Para pasivos
 				}
 
 			});
@@ -240,7 +246,7 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 	}
 
 	/**
-	 * Se dispara cuando se está hiciendro drag con el mouse
+	 * Se dispara cuando se está haciendro drag con el mouse
 	 */
 	@Override
 	public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
@@ -287,7 +293,7 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 			CustomSkillButton copy = powerButtonList.stream().filter(x -> x.isInside(mouseX, mouseY)).findAny().orElse(null);
 			if (copy != null) {
 				copy.setButtonTexture(skillEntryGuiApretado.getDisplayInfo().getImage());
-				HashMap<PowerEnum, SkillEnum> powerNames = skillCap.map(IBaseSkillCapability::getSkillsNameOfPowers).orElse(null);
+				HashMap<PowerEnum, SkillEnum> powerNames = skillCap.map(IBasePlayerSkillCapability::getSkillsNameOfPowers).orElse(null);
 				if (powerNames != null) {
 					powerNames.put((PowerEnum) copy.getEnum(), skillEntryGuiApretado.getSkillElement().getSkillCapability());
 					skillCap.ifPresent(x -> x.setSkillsNameOfPowers(powerNames, player));
@@ -384,8 +390,7 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 	 * @param matrixStack
 	 * @param mouseX
 	 * @param mouseY
-	 * @param offsetLeft
-	 * @param offsetTop
+
 	 */
 	@SuppressWarnings("deprecation")
 	private void renderInside(MatrixStack matrixStack, int mouseX, int mouseY) {
@@ -516,11 +521,11 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 		return this.tabs.get(skillElement);
 	}
 
-	public LazyOptional<IBaseSkillCapability> getSkillCap() {
+	public LazyOptional<IBasePlayerSkillCapability> getSkillCap() {
 		return skillCap;
 	}
 
-	public void setSkillCap(LazyOptional<IBaseSkillCapability> skillCap) {
+	public void setSkillCap(LazyOptional<IBasePlayerSkillCapability> skillCap) {
 		this.skillCap = skillCap;
 	}
 
@@ -571,7 +576,7 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 		
 		if(pressedButton instanceof CustomSkillButton) {
 			CustomSkillButton pb = (CustomSkillButton) pressedButton;
-			HashMap<PowerEnum, SkillEnum> powerNames = skillCap.map(IBaseSkillCapability::getSkillsNameOfPowers).orElse(null);
+			HashMap<PowerEnum, SkillEnum> powerNames = skillCap.map(IBasePlayerSkillCapability::getSkillsNameOfPowers).orElse(null);
 			if (powerNames != null) {
 				pb.setButtonTexture(EMPTY_POWER_IMAGE_RESOURCE);
 				DevilRpg.LOGGER.info("pb.getEnum(): {} ",pb.getEnum());

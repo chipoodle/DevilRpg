@@ -2,9 +2,9 @@ package com.chipoodle.devilrpg.entity;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
-import com.chipoodle.devilrpg.capability.minion.IBaseMinionCapability;
-import com.chipoodle.devilrpg.capability.minion.PlayerMinionCapabilityProvider;
-import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
+import com.chipoodle.devilrpg.capability.player_minion.IBaseMinionCapability;
+import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityProvider;
+import com.chipoodle.devilrpg.capability.skill.IBasePlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
 import com.chipoodle.devilrpg.client.render.IRenderUtilities;
 import com.chipoodle.devilrpg.entity.goal.TameableMountableFollowOwnerGoal;
@@ -15,9 +15,7 @@ import com.chipoodle.devilrpg.util.SkillEnum;
 import com.chipoodle.devilrpg.util.TargetUtils;
 import net.minecraft.advancements.CriteriaTriggers;
 import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
 import net.minecraft.client.Minecraft;
-import net.minecraft.data.BlockStateVariantBuilder;
 import net.minecraft.entity.*;
 import net.minecraft.entity.ai.attributes.AttributeModifier;
 import net.minecraft.entity.ai.attributes.AttributeModifierMap;
@@ -34,9 +32,7 @@ import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.inventory.EquipmentSlotType;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.HorseArmorItem;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.network.IPacket;
 import net.minecraft.network.datasync.DataParameter;
@@ -53,7 +49,6 @@ import net.minecraft.world.server.ServerWorld;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.common.util.TriPredicate;
 import net.minecraftforge.fml.common.registry.IEntityAdditionalSpawnData;
 import net.minecraftforge.fml.network.FMLPlayMessages;
 import net.minecraftforge.fml.network.NetworkHooks;
@@ -61,7 +56,6 @@ import net.minecraftforge.fml.network.NetworkHooks;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.UUID;
-import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -148,7 +142,7 @@ public class SoulBearEntity extends AbstractMountableTameableEntity
     public void updateLevel(PlayerEntity owner) {
         tame(owner);
 
-        IBaseSkillCapability skill = IGenericCapability.getUnwrappedCapability((PlayerEntity) getOwner(),
+        IBasePlayerSkillCapability skill = IGenericCapability.getUnwrappedPlayerCapability((PlayerEntity) getOwner(),
                 PlayerSkillCapabilityProvider.SKILL_CAP);
         if (skill != null) {
             this.puntosAsignados = skill.getSkillsPoints().get(SkillEnum.SUMMON_SOUL_BEAR);

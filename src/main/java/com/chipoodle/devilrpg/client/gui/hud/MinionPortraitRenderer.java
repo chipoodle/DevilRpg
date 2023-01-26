@@ -8,9 +8,9 @@ import org.lwjgl.opengl.GL11;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
-import com.chipoodle.devilrpg.capability.minion.IBaseMinionCapability;
-import com.chipoodle.devilrpg.capability.minion.PlayerMinionCapabilityProvider;
-import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
+import com.chipoodle.devilrpg.capability.player_minion.IBaseMinionCapability;
+import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityProvider;
+import com.chipoodle.devilrpg.capability.skill.IBasePlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
 import com.chipoodle.devilrpg.entity.SoulBearEntity;
 import com.chipoodle.devilrpg.entity.SoulWispEntity;
@@ -62,9 +62,9 @@ public class MinionPortraitRenderer extends AbstractGui {
 		if (player == null)
 			return;
 
-		IBaseSkillCapability skillCap = IGenericCapability.getUnwrappedCapability(player,
+		IBasePlayerSkillCapability skillCap = IGenericCapability.getUnwrappedPlayerCapability(player,
 				PlayerSkillCapabilityProvider.SKILL_CAP);
-		IBaseMinionCapability minionCap = IGenericCapability.getUnwrappedCapability(player,
+		IBaseMinionCapability minionCap = IGenericCapability.getUnwrappedPlayerCapability(player,
 				PlayerMinionCapabilityProvider.MINION_CAP);
 		// LazyOptional<IBaseSkillCapability> skillCap =
 		// player.getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);

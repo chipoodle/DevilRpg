@@ -7,9 +7,9 @@ import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
-import com.chipoodle.devilrpg.capability.minion.IBaseMinionCapability;
-import com.chipoodle.devilrpg.capability.minion.PlayerMinionCapabilityProvider;
-import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
+import com.chipoodle.devilrpg.capability.player_minion.IBaseMinionCapability;
+import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityProvider;
+import com.chipoodle.devilrpg.capability.skill.IBasePlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
 import com.chipoodle.devilrpg.client.render.IRenderUtilities;
 import com.chipoodle.devilrpg.init.ModEntityTypes;
@@ -135,7 +135,7 @@ public class SoulWispEntity extends TameableEntity implements ITameableEntity, I
 	public void updateLevel(PlayerEntity owner, Effect efectoPrimario, Effect efectoSecundario, SkillEnum tipoWisp,
 			boolean esBeneficioso) {
 		tame(owner);
-		LazyOptional<IBaseSkillCapability> skill = getOwner().getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
+		LazyOptional<IBasePlayerSkillCapability> skill = getOwner().getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
 		this.efectoPrimario = efectoPrimario;
 		this.efectoSecundario = efectoSecundario;
 		this.esBeneficioso = esBeneficioso;

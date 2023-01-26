@@ -1,11 +1,12 @@
 package com.chipoodle.devilrpg.skillsystem.skillinstance;
 
+import java.util.HashMap;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import com.chipoodle.devilrpg.capability.minion.IBaseMinionCapability;
-import com.chipoodle.devilrpg.capability.minion.PlayerMinionCapabilityProvider;
+import com.chipoodle.devilrpg.capability.player_minion.IBaseMinionCapability;
+import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityProvider;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.config.DevilRpgConfig;
 import com.chipoodle.devilrpg.entity.SoulWispEntity;
@@ -35,7 +36,7 @@ public class SkillSummonWispArcher implements ISkillContainer, WispSkillInterfac
 	}
 
 	@Override
-	public void execute(World worldIn, PlayerEntity playerIn) {
+	public void execute(World worldIn, PlayerEntity playerIn, HashMap<String, String> parameters) {
 		if (!worldIn.isClientSide) {
 			Random rand = new Random();
 			worldIn.playSound((PlayerEntity) null, playerIn.getX(), playerIn.getY(), playerIn.getZ(),

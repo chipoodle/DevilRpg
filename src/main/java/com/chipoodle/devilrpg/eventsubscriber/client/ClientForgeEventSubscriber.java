@@ -16,7 +16,7 @@ import com.chipoodle.devilrpg.capability.auxiliar.IBaseAuxiliarCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliarCapabilityProvider;
 import com.chipoodle.devilrpg.capability.mana.IBaseManaCapability;
 import com.chipoodle.devilrpg.capability.mana.PlayerManaCapabilityProvider;
-import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
+import com.chipoodle.devilrpg.capability.skill.IBasePlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
 import com.chipoodle.devilrpg.client.gui.hud.HealthBarRenderer;
 import com.chipoodle.devilrpg.client.gui.hud.ManaBarRenderer;
@@ -155,7 +155,7 @@ public final class ClientForgeEventSubscriber {
 		if (event.side.equals(LogicalSide.CLIENT)) {
 			if (event.phase == TickEvent.Phase.START) {
 
-				LazyOptional<IBaseSkillCapability> skillCapability = event.player
+				LazyOptional<IBasePlayerSkillCapability> skillCapability = event.player
 						.getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
 				LazyOptional<IBaseAuxiliarCapability> auxCapability = event.player
 						.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
@@ -249,10 +249,7 @@ public final class ClientForgeEventSubscriber {
 
 	/**
 	 * renders custom 3d person view camera
-	 * 
-	 * @param <T>
-	 * 
-	 * @param event
+	 *
 	 */
 	@SubscribeEvent
 	public static void onRenderLiving(RenderLivingEvent.Pre<?, ?> event) {

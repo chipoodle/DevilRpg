@@ -31,3 +31,5 @@ saves
 /usernamecache.json
 /realms_persistence.json
 /gradleForge.properties.backup
+logs
+crash-reports

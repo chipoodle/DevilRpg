@@ -9,11 +9,13 @@ import com.chipoodle.devilrpg.capability.experience.IBaseExperienceCapability;
 import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapabilityFactory;
 import com.chipoodle.devilrpg.capability.mana.IBaseManaCapability;
 import com.chipoodle.devilrpg.capability.mana.PlayerManaCapabilityFactory;
-import com.chipoodle.devilrpg.capability.minion.IBaseMinionCapability;
-import com.chipoodle.devilrpg.capability.minion.PlayerMinionCapabilityFactory;
-import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
+import com.chipoodle.devilrpg.capability.player_minion.IBaseMinionCapability;
+import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityFactory;
+import com.chipoodle.devilrpg.capability.skill.IBasePlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityFactory;
 
+import com.chipoodle.devilrpg.capability.tamable_minion.IBaseTamableMinionCapability;
+import com.chipoodle.devilrpg.capability.tamable_minion.TamableMinionCapabilityFactory;
 import net.minecraftforge.common.capabilities.CapabilityManager;
 
 public class ModCapability {
@@ -22,13 +24,14 @@ public class ModCapability {
 	public static final PlayerExperienceCapabilityFactory EXP_FACTORY = new PlayerExperienceCapabilityFactory();
 	public static final PlayerAuxiliarCapabilityFactory AUX_FACTORY = new PlayerAuxiliarCapabilityFactory();
 	public static final PlayerMinionCapabilityFactory MINION_FACTORY = new PlayerMinionCapabilityFactory();
+	public static final TamableMinionCapabilityFactory TAMABLE_MINION_FACTORY = new TamableMinionCapabilityFactory();
 
-	public static void register() {		
+	public static void register() {
 		CapabilityManager.INSTANCE.register(IBaseManaCapability.class,
 				new GenericCapabilityStorage<IBaseManaCapability>(),
 				MANA_FACTORY);
-		CapabilityManager.INSTANCE.register(IBaseSkillCapability.class,
-				new GenericCapabilityStorage<IBaseSkillCapability>(),
+		CapabilityManager.INSTANCE.register(IBasePlayerSkillCapability.class,
+				new GenericCapabilityStorage<IBasePlayerSkillCapability>(),
 				SKILL_FACTORY);
 		CapabilityManager.INSTANCE.register(IBaseExperienceCapability.class,
 				new GenericCapabilityStorage<IBaseExperienceCapability>(),
@@ -39,6 +42,9 @@ public class ModCapability {
 		CapabilityManager.INSTANCE.register(IBaseMinionCapability.class,
 				new GenericCapabilityStorage<IBaseMinionCapability>(),
 				MINION_FACTORY);
+		CapabilityManager.INSTANCE.register(IBaseTamableMinionCapability.class,
+				new GenericCapabilityStorage<IBaseTamableMinionCapability>(),
+				TAMABLE_MINION_FACTORY);
 		LOGGER.info("-----> Capabilities registrados");
 
 	}

@@ -122,7 +122,7 @@
         },
         "capability": "skin_armor",
         "skillmanacost":{
-        	"maxskilllevel":"5",
+        	"maxskilllevel":"20",
 			"manacost":"0"
 		},
         "rewards": {},
@@ -229,6 +229,26 @@
         "parent": "summoning:root"
     },
     {
+        "id": "summoning:mountbear",
+        "display": {
+            "description": "Allows the druid to ride its bear companion",
+            "icon": {
+                "item": "minecraft:glass_pane",
+                "minecraft:glass_panenbt": 1
+            },
+            "title": "Riding Bear",
+            "image": "devilrpg:textures/gui/skill/saddle.png",
+            "frame": "goal"
+        },
+        "capability": "mount_bear",
+        "skillmanacost":{
+            "maxskilllevel":"2",
+            "manacost":"0"
+        },
+        "rewards": {},
+        "parent": "summoning:bear"
+    },
+    {
         "id": "summoning:warbear",
         "display": {
             "description": "War bear",
@@ -243,26 +263,6 @@
         "capability": "war_bear",
         "skillmanacost":{
         	"maxskilllevel":"6",
-			"manacost":"0"
-		},
-        "rewards": {},
-        "parent": "summoning:bear"
-    },
-    {
-        "id": "summoning:mountbear",
-        "display": {
-            "description": "Mount bear",
-            "icon": {
-                "item": "minecraft:glass_pane",
-                "minecraft:glass_panenbt": 1
-            },
-            "title": "Mount Bear",
-            "image": "devilrpg:textures/gui/skill/saddle.png",
-            "frame": "goal"
-        },
-        "capability": "mount_bear",
-        "skillmanacost":{
-        	"maxskilllevel":"1",
 			"manacost":"0"
 		},
         "rewards": {},

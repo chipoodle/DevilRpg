@@ -40,7 +40,7 @@ public class EventUtils {
 	public static <T,U extends LazyOptional<IBaseAuxiliarCapability>> boolean onWerewolfTransformation(PlayerEntity player, BiConsumer<T,U> typedFunctionToExcecute, T event) {
 		if (player != null) {
 			U aux = (U) player.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
-			if (aux == null || !aux.isPresent() || !aux.map(x -> x.isWerewolfTransformation()).orElse(true))
+			if (!aux.isPresent() || !aux.map(IBaseAuxiliarCapability::isWerewolfTransformation).orElse(true))
 				return false;
 			typedFunctionToExcecute.accept(event,aux);
 			return true;
@@ -49,11 +49,11 @@ public class EventUtils {
 	}
 	
 	@SuppressWarnings("unchecked")
-	public static <T extends PlayerEntity,U extends LazyOptional<V>, V extends IGenericCapability> void onJoin(T player, BiConsumer<T,U> typedFunctionToExcecute, Capability<V> cap) {
+	public static <T extends PlayerEntity,U extends LazyOptional<? extends IGenericCapability>> void onJoin(T player, BiConsumer<T,U> typedFunctionToExecute, Capability<?> cap) {
 		Minecraft mainThread = Minecraft.getInstance();
 		if (player != null && !player.level.isClientSide) {
 			U capabilityInstance = (U) player.getCapability(cap);
-			mainThread.tell(()-> typedFunctionToExcecute.accept(player, capabilityInstance));
+			mainThread.tell(()-> typedFunctionToExecute.accept(player, capabilityInstance));
 		}
 	}
 }

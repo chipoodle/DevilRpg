@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.entity;
 
+import com.chipoodle.devilrpg.capability.IGenericCapability;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.attributes.Attribute;
@@ -15,12 +16,14 @@ import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.vector.Vector3i;
 import net.minecraft.util.text.ITextComponent;
 import net.minecraft.world.World;
+import net.minecraftforge.common.capabilities.Capability;
+import net.minecraftforge.common.capabilities.ICapabilityProvider;
 
 import javax.annotation.Nullable;
 import java.util.Random;
 import java.util.UUID;
 
-public interface ITameableEntity {
+public interface ITameableEntity extends ICapabilityProvider {
 
     World getLevel();
 

@@ -8,7 +8,7 @@ import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
+import com.chipoodle.devilrpg.capability.skill.IBasePlayerSkillCapability;
 import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model.SkillTreeNode;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import com.google.common.collect.Maps;
@@ -60,7 +60,7 @@ public class GuiSkillTab extends AbstractGui {
 	private boolean centered;
 	private int page;
 
-	private LazyOptional<IBaseSkillCapability> skillCap;
+	private LazyOptional<IBasePlayerSkillCapability> skillCap;
 
 	private GuiSkillTab(Minecraft minecraft, ScrollableSkillScreen screen, SkillTabType type, int index,
 			SkillElement skillElement) {
@@ -78,7 +78,7 @@ public class GuiSkillTab extends AbstractGui {
 	}
 
 	public GuiSkillTab(Minecraft mc, ScrollableSkillScreen screen, SkillTabType type, int index, int page,
-			SkillElement adv, LazyOptional<IBaseSkillCapability> skillCap) {
+			SkillElement adv, LazyOptional<IBasePlayerSkillCapability> skillCap) {
 		this(mc, screen, type, index, adv);
 		this.page = page;
 		this.skillCap = skillCap;
@@ -242,7 +242,7 @@ public class GuiSkillTab extends AbstractGui {
 	 */
 	@Nullable
 	public static GuiSkillTab create(Minecraft minecraft, ScrollableSkillScreen screen, int tabIndex,
-			SkillElement skillElement, LazyOptional<IBaseSkillCapability> skillCap) {
+			SkillElement skillElement, LazyOptional<IBasePlayerSkillCapability> skillCap) {
 		if (skillElement.getDisplay() == null) {
 			return null;
 		} else {
@@ -296,7 +296,7 @@ public class GuiSkillTab extends AbstractGui {
 	}
 
 	/**
-	 * Agrega el Skill a la lista de guis envolviendolo en un
+	 * Remueve el Skill a la lista de guis envolviendolo en un
 	 * ScrollableSkillEntryGui
 	 * 
 	 * @param skillElement

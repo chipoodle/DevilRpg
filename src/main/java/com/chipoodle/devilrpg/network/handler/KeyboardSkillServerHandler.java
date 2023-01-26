@@ -2,7 +2,7 @@ package com.chipoodle.devilrpg.network.handler;
 
 import java.util.function.Supplier;
 
-import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
+import com.chipoodle.devilrpg.capability.skill.IBasePlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
 import com.chipoodle.devilrpg.util.PowerEnum;
 
@@ -36,7 +36,7 @@ public class KeyboardSkillServerHandler {
 		if (contextSupplier.get().getDirection().equals(NetworkDirection.PLAY_TO_SERVER)) {
 			contextSupplier.get().enqueueWork(() -> {
 				ServerPlayerEntity sender = contextSupplier.get().getSender(); // the client that sent this packet
-				LazyOptional<IBaseSkillCapability> skill = sender.getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
+				LazyOptional<IBasePlayerSkillCapability> skill = sender.getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
 				//sender.sendMessage(new StringTextComponent("KeyboardSkillServerHandler on msg:"+ msg.getPoder().name()+" Player ID: "+sender.getEntityId()));
 				skill.ifPresent(x->x.triggerAction(sender, msg.getPoder()));
 			});

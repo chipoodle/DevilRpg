@@ -2,7 +2,6 @@ package com.chipoodle.devilrpg.capability.skill;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
@@ -33,14 +32,15 @@ import net.minecraft.util.SoundEvents;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.fml.network.PacketDistributor;
 
-public class PlayerSkillCapability implements IBaseSkillCapability {
+public class PlayerSkillCapability implements IBasePlayerSkillCapability {
 	public final static String POWERS_KEY = "Powers";
 	public final static String SKILLS_KEY = "Skills";
 	public final static String MAX_SKILLS_KEY = "MaxSkills";
 	public final static String MANA_COST_KEY = "ManaCost";
 	public final static String MINIONS_KEY = "Minions";
 	public final static String ATTRIBUTE_MODIFIER_KEY = "AttributeModifier";
-	
+	public final static String SKILL_BYTE_ARRAY_KEY = "PassiveKey";
+
 	private CompoundNBT nbt = new CompoundNBT();
 	private SingletonSkillFactory singletonSkillFactory;
 
@@ -61,16 +61,16 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
 			}
 
 			for (SkillEnum s : filteredSkillList) {
-				SkillManaCost skillManaCost = extractSkillManaCost(client, s);
+				SkillManaCost skillManaCostRelation = extractSkillManaCost(client, s);
 				skills.put(s, 0);
-				if(skillManaCost != null)
-					maxSkills.put(s, skillManaCost.getMaxSkillLevel());
+				if(skillManaCostRelation != null)
+					maxSkills.put(s, skillManaCostRelation.getMaxSkillLevel());
 			}
 			
 			for (SkillEnum s : filteredSkillList) {
-				SkillManaCost skillManaCost = extractSkillManaCost(client, s);
-				if(skillManaCost != null)
-					manaCostContainer.put(s, skillManaCost.getManaCost());
+				SkillManaCost skillManaCostRelation = extractSkillManaCost(client, s);
+				if(skillManaCostRelation != null)
+					manaCostContainer.put(s, skillManaCostRelation.getManaCost());
 			}
 
 			try {
@@ -223,13 +223,23 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
 	}
 
 	@Override
+	public SkillEnum getSkillFromByteArray(CompoundNBT triggeredSkill) {
+		try {
+			return (SkillEnum) BytesUtil.toObject(triggeredSkill.getByteArray(SKILL_BYTE_ARRAY_KEY));
+		} catch (ClassNotFoundException | IOException e) {
+			DevilRpg.LOGGER.error("Error en getSkill", e);
+			return null;
+		}
+	}
+
+	@Override
 	public void triggerAction(ServerPlayerEntity playerIn, PowerEnum triggeredPower) {
 		if (!playerIn.level.isClientSide) {
 			DevilRpg.LOGGER.info("PlayerSkillCapability triggerAction(ServerPlayerEntity, triggeredPower) {} {}",playerIn,triggeredPower);
 			if (getSkillLevelFromAssociatedPower(triggeredPower) != 0) {
-				ISkillContainer poder = getSkill(triggeredPower);
-				if (consumeMana(playerIn, poder)) {
-					poder.execute(playerIn.level, playerIn);
+				ISkillContainer skill = getSkill(triggeredPower);
+				if (consumeMana(playerIn, skill)) {
+					skill.execute(playerIn.level, playerIn,null);
 				} else {
 					
 					Random rand = new Random();
@@ -244,6 +254,20 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
 		}
 	}
 
+	@Override
+	public void triggerPassive(ServerPlayerEntity sender, CompoundNBT triggeredSkill) {
+		if (!sender.level.isClientSide) {
+			DevilRpg.LOGGER.info("PlayerSkillCapability triggerPassive(ServerPlayerEntity, triggeredSkill) {} {}",sender,triggeredSkill);
+
+			SkillEnum skillFromByteArray = getSkillFromByteArray(triggeredSkill);
+			ISkillContainer skill = singletonSkillFactory.create(skillFromByteArray);
+			skill.execute(sender.level, sender,new HashMap<>());
+		}
+	}
+
+	//trigger passive
+
+
 	private ISkillContainer getSkill(PowerEnum triggeredPower) {
 		SkillEnum skillEnum = getSkillsNameOfPowers().get(triggeredPower);
 		return singletonSkillFactory.create(skillEnum);
@@ -251,14 +275,13 @@ public class PlayerSkillCapability implements IBaseSkillCapability {
 
 	private int getSkillLevelFromAssociatedPower(PowerEnum triggeredPower) {
 		HashMap<SkillEnum,Integer> skillsPoints = getSkillsPoints();
-		if(skillsPoints!= null && getSkillsNameOfPowers()!= null) {
+		HashMap<PowerEnum, SkillEnum> skillsNameOfPowers = getSkillsNameOfPowers();
+		if(skillsPoints!= null && skillsNameOfPowers != null && skillsNameOfPowers.get(triggeredPower)!= null) {
 			return skillsPoints
-			.get(getSkillsNameOfPowers()
+			.get(skillsNameOfPowers
 			.get(triggeredPower));
 		}
-		
 		return 0;
-		
 	}
 
 	private boolean consumeMana(ServerPlayerEntity playerIn, ISkillContainer poder) {

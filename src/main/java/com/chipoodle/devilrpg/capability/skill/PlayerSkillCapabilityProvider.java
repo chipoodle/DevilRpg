@@ -12,10 +12,10 @@ import net.minecraftforge.common.util.LazyOptional;
 
 public class PlayerSkillCapabilityProvider implements ICapabilityProvider, INBTSerializable<INBT> {
 
-    @CapabilityInject(IBaseSkillCapability.class)
-    public static Capability<IBaseSkillCapability> SKILL_CAP = null;
+    @CapabilityInject(IBasePlayerSkillCapability.class)
+    public static Capability<IBasePlayerSkillCapability> SKILL_CAP = null;
 
-    private final LazyOptional<IBaseSkillCapability> instance = LazyOptional.of(()->SKILL_CAP.getDefaultInstance());
+    private final LazyOptional<IBasePlayerSkillCapability> instance = LazyOptional.of(()->SKILL_CAP.getDefaultInstance());
 
     public boolean hasCapability(Capability<?> capability, Direction side) {
         return capability == SKILL_CAP;

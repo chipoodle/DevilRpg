@@ -1,14 +1,7 @@
 package com.chipoodle.devilrpg.init;
 
 import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.network.handler.KeyboardSkillServerHandler;
-import com.chipoodle.devilrpg.network.handler.PlayerAuxiliarClientServerHandler;
-import com.chipoodle.devilrpg.network.handler.PlayerExperienceClientServerHandler;
-import com.chipoodle.devilrpg.network.handler.PlayerManaClientServerHandler;
-import com.chipoodle.devilrpg.network.handler.PlayerMinionClientServerHandler;
-import com.chipoodle.devilrpg.network.handler.PlayerSkillClientServerHandler;
-import com.chipoodle.devilrpg.network.handler.PotionClientServerHandler;
-import com.chipoodle.devilrpg.network.handler.WerewolfAttackServerHandler;
+import com.chipoodle.devilrpg.network.handler.*;
 
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.fml.network.NetworkRegistry;
@@ -78,6 +71,12 @@ public class ModNetwork {
         		PotionClientServerHandler::encode,
         		PotionClientServerHandler::decode,
         		PotionClientServerHandler::onMessage);
+
+        CHANNEL.registerMessage(networkId++,
+                PassiveSkillServerHandler.class,
+                PassiveSkillServerHandler::encode,
+                PassiveSkillServerHandler::decode,
+                PassiveSkillServerHandler::onMessage);
     }
 
 }

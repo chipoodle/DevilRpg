@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.skillsystem.skillinstance;
 
+import java.util.HashMap;
 import java.util.Random;
 
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
@@ -26,7 +27,7 @@ public class SkillFrostBall implements ISkillContainer {
 	}
 
 	@Override
-	public void execute(World worldIn, PlayerEntity playerIn) {
+	public void execute(World worldIn, PlayerEntity playerIn, HashMap<String, String> parameters) {
 		if (!worldIn.isClientSide) {
 			//Vec3d look = playerIn.getLook(1.0F);
 			//LivingEntity target = TargetUtils.acquireLookTarget(playerIn, 20, 5, true);

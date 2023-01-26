@@ -1,4 +1,4 @@
-package com.chipoodle.devilrpg.capability.minion;
+package com.chipoodle.devilrpg.capability.player_minion;
 
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;

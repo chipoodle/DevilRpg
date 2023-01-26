@@ -2,7 +2,7 @@ package com.chipoodle.devilrpg.network.handler;
 
 import java.util.function.Supplier;
 
-import com.chipoodle.devilrpg.capability.minion.PlayerMinionCapabilityProvider;
+import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityProvider;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.player.PlayerEntity;
@@ -16,8 +16,8 @@ public class PlayerMinionClientServerHandler {
 
 	private final CompoundNBT skillCompound;
 
-	public PlayerMinionClientServerHandler(CompoundNBT manaCompound) {
-		this.skillCompound = manaCompound;
+	public PlayerMinionClientServerHandler(CompoundNBT skillCompound) {
+		this.skillCompound = skillCompound;
 	}
 
 	public CompoundNBT getSkillCompound() {

@@ -9,7 +9,7 @@ import java.util.function.BiConsumer;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.auxiliar.IBaseAuxiliarCapability;
-import com.chipoodle.devilrpg.capability.skill.IBaseSkillCapability;
+import com.chipoodle.devilrpg.capability.skill.IBasePlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
 import com.chipoodle.devilrpg.entity.ISoulEntity;
 import com.chipoodle.devilrpg.entity.ITameableEntity;
@@ -48,8 +48,7 @@ public class SkillForgeEventSubscriber {
 
 	/**
 	 * Increase jump height by 1 when Werewolf form
-	 * 
-	 * @param event
+	 *
 	 */
 	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
 	public static void onLivingJumpEvent(LivingJumpEvent event) {
@@ -57,7 +56,7 @@ public class SkillForgeEventSubscriber {
 			BiConsumer<LivingJumpEvent, LazyOptional<IBaseAuxiliarCapability>> c = (eve, auxiliar) -> {
 				Vector3d motion = eve.getEntity().getDeltaMovement();
 
-				LazyOptional<IBaseSkillCapability> skillCap = event.getEntity()
+				LazyOptional<IBasePlayerSkillCapability> skillCap = event.getEntity()
 						.getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
 				int points = skillCap.map(x -> x.getSkillsPoints().get(SkillEnum.TRANSFORM_WEREWOLF)).get();
 				double jumpFactor = (points * 0.005) + 0.03f; // max 0.13
@@ -69,8 +68,7 @@ public class SkillForgeEventSubscriber {
 
 	/**
 	 * Increase fall damage threshold by 1 block when in werewolf form
-	 * 
-	 * @param event
+	 *
 	 */
 	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
 	public static void onLivingFallEvent(LivingFallEvent event) {
@@ -103,7 +101,7 @@ public class SkillForgeEventSubscriber {
 	}
 
 	@SubscribeEvent(priority = EventPriority.HIGHEST, receiveCanceled = true)
-	public static void entityInteract(PlayerInteractEvent.EntityInteract event) {
+	public static void onEntityInteract(PlayerInteractEvent.EntityInteract event) {
 		BiConsumer<PlayerInteractEvent.EntityInteract, LazyOptional<IBaseAuxiliarCapability>> c = (eve, auxiliar) -> {
 			eve.getPlayer().swinging = false;
 			eve.setCanceled(true);
@@ -112,7 +110,7 @@ public class SkillForgeEventSubscriber {
 	}
 
 	@SubscribeEvent(priority = EventPriority.HIGHEST, receiveCanceled = true)
-	public static void entityInteractSpecific(PlayerInteractEvent.EntityInteractSpecific event) {
+	public static void onEntityInteractSpecific(PlayerInteractEvent.EntityInteractSpecific event) {
 		BiConsumer<PlayerInteractEvent.EntityInteractSpecific, LazyOptional<IBaseAuxiliarCapability>> c = (eve,
 				auxiliar) -> {
 			eve.getPlayer().swinging = false;
@@ -130,11 +128,7 @@ public class SkillForgeEventSubscriber {
 		EventUtils.onWerewolfTransformation(event.getPlayer(), c, event);
 	}
 
-	/**
-	 * Updates potion effects on client
-	 * 
-	 * @param event
-	 */
+
 	@SubscribeEvent
 	public static void onLivingUpdateEvent(LivingUpdateEvent event) {
 		/*
@@ -156,16 +150,20 @@ public class SkillForgeEventSubscriber {
 
 	}
 
+	/**
+	 * Updates potion effects on client
+	 *
+	 */
 	@SubscribeEvent
 	public static void onPotionEvent(PotionEvent event) {
 
 		if(!(event instanceof PotionEvent.PotionAddedEvent) && !(event instanceof PotionEvent.PotionExpiryEvent))
 			return;
 		
-		if (event.getEntity() instanceof ISoulEntity && event.getEntity() instanceof ITameableEntity) {
+		if (event.getEntity() instanceof ISoulEntity && event.getEntity() instanceof ITameableEntity && event.getPotionEffect() != null) {
 			ITameableEntity minion = (ITameableEntity) event.getEntity();
 			LivingEntity owner = minion.getOwner();
-			if (owner != null && owner instanceof ServerPlayerEntity && !event.getEntity().level.isClientSide()) {
+			if (owner instanceof ServerPlayerEntity && !event.getEntity().level.isClientSide()) {
 				EffectInstance potionEffect = event.getPotionEffect();
 				CompoundNBT effectInstanceNbt = potionEffect.save(new CompoundNBT());
 				effectInstanceNbt.putUUID(PotionClientServerHandler.MINION_ID_KEY, event.getEntity().getUUID());
