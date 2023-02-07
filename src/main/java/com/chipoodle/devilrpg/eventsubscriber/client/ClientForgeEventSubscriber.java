@@ -7,8 +7,10 @@ package com.chipoodle.devilrpg.eventsubscriber.client;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Objects;
 import java.util.function.BiConsumer;
 
+import net.minecraft.client.renderer.RenderTypeLookup;
 import org.lwjgl.glfw.GLFW;
 
 import com.chipoodle.devilrpg.DevilRpg;
@@ -55,12 +57,12 @@ import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
  */
 @EventBusSubscriber(modid = DevilRpg.MODID, bus = EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
 public final class ClientForgeEventSubscriber {
-	private static HealthBarRenderer healthBarRenderer = new HealthBarRenderer();
-	private static ManaBarRenderer manaBarRenderer = new ManaBarRenderer();
-	private static MinionPortraitRenderer minionPortraitRenderer = new MinionPortraitRenderer();
+	private static final HealthBarRenderer healthBarRenderer = new HealthBarRenderer();
+	private static final ManaBarRenderer manaBarRenderer = new ManaBarRenderer();
+	private static final MinionPortraitRenderer minionPortraitRenderer = new MinionPortraitRenderer();
 	@OnlyIn(Dist.CLIENT)
 	public static WerewolfRenderer newWolf = null;
-	private static Class<?>[] tipos = { double.class, double.class, double.class };
+	private static final Class<?>[] tipos = { double.class, double.class, double.class };
 	private static Method method = null;
 
 	@OnlyIn(Dist.CLIENT)
@@ -99,11 +101,8 @@ public final class ClientForgeEventSubscriber {
 	 */
 	@SubscribeEvent(receiveCanceled = true)
 	public static void onEvent(RenderGameOverlayEvent.Post event) {
-		switch (event.getType()) {
-		case HEALTH:
-			break;
-		default: // If it's not one of the above cases, do nothing
-			break;
+		// If it's not one of the above cases, do nothing
+		if (Objects.requireNonNull(event.getType()) == RenderGameOverlayEvent.ElementType.HEALTH) {
 		}
 	}
 

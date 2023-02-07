@@ -90,9 +90,9 @@ minecraft {
             property 'forge.logging.markers', 'SCAN,REGISTRIES,REGISTRYDUMP'
 
             // Recommended logging level for the console
-            property 'forge.logging.console.level', 'debug'
+            property 'forge.logging.console.level', 'info'
 
-            args '--mod', 'devilrpg', '--all', '--output', file('src/generated/resources/')
+            args '--mod', 'devilrpg', '--all', '--output', file('src/generated/resources/') , '--existing', file('src/main/resources/')
 
             mods {
                 devilrpg {

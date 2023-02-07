@@ -11,10 +11,10 @@ import net.minecraftforge.fml.network.NetworkEvent;
 
 import java.util.function.Supplier;
 
-public class PassiveSkillServerHandler {
+public class PlayerPassiveSkillServerHandler {
 	private final CompoundNBT skillCompound;
 
-	public PassiveSkillServerHandler(CompoundNBT skillCompound) {
+	public PlayerPassiveSkillServerHandler(CompoundNBT skillCompound) {
 		this.skillCompound = skillCompound;
 	}
 
@@ -22,15 +22,15 @@ public class PassiveSkillServerHandler {
 		return skillCompound;
 	}
 
-	public static void encode(final PassiveSkillServerHandler msg, final PacketBuffer packetBuffer) {
+	public static void encode(final PlayerPassiveSkillServerHandler msg, final PacketBuffer packetBuffer) {
 		packetBuffer.writeNbt(msg.getSkillCompound());
 	}
 
-	public static PassiveSkillServerHandler decode(final PacketBuffer packetBuffer) {
-		return new PassiveSkillServerHandler(packetBuffer.readNbt());
+	public static PlayerPassiveSkillServerHandler decode(final PacketBuffer packetBuffer) {
+		return new PlayerPassiveSkillServerHandler(packetBuffer.readNbt());
 	}
 
-	public static void onMessage(final PassiveSkillServerHandler msg,
+	public static void onMessage(final PlayerPassiveSkillServerHandler msg,
 			final Supplier<NetworkEvent.Context> contextSupplier) {
 		if (contextSupplier.get().getDirection().equals(NetworkDirection.PLAY_TO_SERVER)) {
 			contextSupplier.get().enqueueWork(() -> {

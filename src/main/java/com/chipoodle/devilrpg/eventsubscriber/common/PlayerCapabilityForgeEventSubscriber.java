@@ -92,7 +92,7 @@ public class PlayerCapabilityForgeEventSubscriber {
 
     @SubscribeEvent
     public static void onPlayerLogsIn(PlayerEvent.PlayerLoggedInEvent event) {
-        DevilRpg.LOGGER.info("----------------------->ForgeEventSubscriber.onPlayerLogsIn()");
+        DevilRpg.LOGGER.info("----------------------->PlayerCapabilityForgeEventSubscriber.onPlayerLogsIn()");
         PlayerEntity player = event.getPlayer();
         /*
          * LazyOptional<IBaseManaCapability> mana =
@@ -112,7 +112,8 @@ public class PlayerCapabilityForgeEventSubscriber {
     @SubscribeEvent
     public static void onPlayerClone(PlayerEvent.Clone e) {
         if (e.isWasDeath()) {
-            DevilRpg.LOGGER.info("----------------------->ForgeEventSubscriber.onPlayerClone()");
+
+            DevilRpg.LOGGER.info("----------------------->PlayerCapabilityForgeEventSubscriber.onPlayerClone()");
             clonePlayerCapability(e, PlayerManaCapabilityProvider.MANA_CAP);
             clonePlayerCapability(e, PlayerSkillCapabilityProvider.SKILL_CAP);
             clonePlayerCapability(e, PlayerExperienceCapabilityProvider.EXPERIENCE_CAP);
@@ -135,7 +136,7 @@ public class PlayerCapabilityForgeEventSubscriber {
     @SubscribeEvent
     public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
 
-        DevilRpg.LOGGER.info("----------------------->ForgeEventSubscriber.onPlayerRespawn()");
+        DevilRpg.LOGGER.info("----------------------->PlayerCapabilityForgeEventSubscriber.onPlayerRespawn()");
         PlayerEntity player = event.getPlayer();
 
         if (player.level.isClientSide) {
@@ -157,7 +158,7 @@ public class PlayerCapabilityForgeEventSubscriber {
     @SubscribeEvent
     public static void onEntityJoinWorld(EntityJoinWorldEvent event) {
         if (event.getEntity() instanceof ITameableEntity) {
-            DevilRpg.LOGGER.info("----------------------->ForgeEventSubscriber.onEntityJoinWorld() == ITameable:{} ", event.getEntity().getScoreboardName());
+            DevilRpg.LOGGER.info("----------------------->PlayerCapabilityForgeEventSubscriber.onEntityJoinWorld() == ITameable:{} ", event.getEntity().getScoreboardName());
             //new MinionPassiveAttributes((ITameableEntity) event.getEntity());
             IBaseTamableMinionCapability minionPassiveCap
                     = IGenericCapability.getUnwrappedMinionCapability((ITameableEntity) event.getEntity(),
@@ -182,8 +183,7 @@ public class PlayerCapabilityForgeEventSubscriber {
 
         if (player.level.isClientSide)
             return;
-
-        DevilRpg.LOGGER.info("----------------------->ForgeEventSubscriber.onEntityJoinWorld()");
+        DevilRpg.LOGGER.info("----------------------->PlayerCapabilityForgeEventSubscriber.onEntityJoinWorld()");
         BiConsumer<PlayerEntity, LazyOptional<IBaseManaCapability>> manaBiConsumer = sendManaNBTData();
         EventUtils.onJoin(player, manaBiConsumer, PlayerManaCapabilityProvider.MANA_CAP);
 
@@ -207,7 +207,7 @@ public class PlayerCapabilityForgeEventSubscriber {
                 x.removeAllSoulBear(player);
                 x.removeAllWisp(player);
             });
-            DevilRpg.LOGGER.info("----------------------->ForgeEventSubscriber.onEntityJoinWorld().minBiConsumer");
+            DevilRpg.LOGGER.info("----------------------->PlayerCapabilityForgeEventSubscriber.removeMinions");
         };
         return minBiConsumer;
     }
@@ -218,7 +218,7 @@ public class PlayerCapabilityForgeEventSubscriber {
                 x.setWerewolfAttack(false, aPlayer);
                 x.setWerewolfTransformation(false, aPlayer);
             });
-            DevilRpg.LOGGER.info("----------------------->ForgeEventSubscriber.onEntityJoinWorld().auxBiConsumer");
+            DevilRpg.LOGGER.info("----------------------->PlayerCapabilityForgeEventSubscriber.shapeshiftToNormal");
         };
         return auxBiConsumer;
     }
@@ -227,7 +227,7 @@ public class PlayerCapabilityForgeEventSubscriber {
         BiConsumer<PlayerEntity, LazyOptional<IBaseExperienceCapability>> expBiConsumer = (aPlayer, theExp) -> {
             ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> (ServerPlayerEntity) aPlayer),
                     new PlayerExperienceClientServerHandler(theExp.map(x -> x.getNBTData()).orElse(null)));
-            DevilRpg.LOGGER.info("----------------------->ForgeEventSubscriber.onEntityJoinWorld().expBiConsumer");
+            DevilRpg.LOGGER.info("----------------------->PlayerCapabilityForgeEventSubscriber.sendExperienceNBTData");
         };
         return expBiConsumer;
     }
@@ -236,7 +236,7 @@ public class PlayerCapabilityForgeEventSubscriber {
         BiConsumer<PlayerEntity, LazyOptional<IBaseManaCapability>> manaBiConsumer = (aPlayer, theMana) -> {
             ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> (ServerPlayerEntity) aPlayer),
                     new PlayerManaClientServerHandler(theMana.map(IBaseManaCapability::getNBTData).orElse(null)));
-            DevilRpg.LOGGER.info("----------------------->ForgeEventSubscriber.onEntityJoinWorld().manaBiConsumer");
+            DevilRpg.LOGGER.info("----------------------->PlayerCapabilityForgeEventSubscriber.sendManaNBTData");
         };
         return manaBiConsumer;
     }
@@ -248,9 +248,9 @@ public class PlayerCapabilityForgeEventSubscriber {
                 UUID hlthAttMod = attributeModifiers.get(Attributes.MAX_HEALTH.getDescriptionId());
                 UUID spdAttMod = attributeModifiers.get(Attributes.MOVEMENT_SPEED.getDescriptionId());
                 UUID armrAttMod = attributeModifiers.get(Attributes.ARMOR.getDescriptionId());
+                UUID attDmgMod = attributeModifiers.get(Attributes.ATTACK_DAMAGE.getDescriptionId());
 
                 if (hlthAttMod != null) {
-                    // DevilRpg.LOGGER.info("||-------------> removing health id: " + hlthAttMod);
                     aPlayer.getAttribute(Attributes.MAX_HEALTH).removeModifier(hlthAttMod);
                 }
                 if (spdAttMod != null) {
@@ -259,19 +259,22 @@ public class PlayerCapabilityForgeEventSubscriber {
                 if (armrAttMod != null) {
                     aPlayer.getAttribute(Attributes.ARMOR).removeModifier(armrAttMod);
                 }
+                if (attDmgMod != null) {
+                    aPlayer.getAttribute(Attributes.ATTACK_DAMAGE).removeModifier(attDmgMod);
+                }
 
 
                 ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> (ServerPlayerEntity) aPlayer),
                         new PlayerSkillClientServerHandler(presentSkill.getNBTData()));
             });
-            DevilRpg.LOGGER.info("----------------------->ForgeEventSubscriber.onEntityJoinWorld().skillBiConsumer");
+            DevilRpg.LOGGER.info("----------------------->PlayerCapabilityForgeEventSubscriber.removeStoredSkillAttributes");
         };
         return skillBiConsumer;
     }
 
     @SubscribeEvent
     public static void onPlayerSleep(PlayerSleepInBedEvent event) {
-        DevilRpg.LOGGER.info("----------------------->ForgeEventSubscriber.onPlayerSleep()");
+        DevilRpg.LOGGER.info("----------------------->PlayerCapabilityForgeEventSubscriber.onPlayerSleep()");
         PlayerEntity player = event.getPlayer();
 
         if (player.level.isClientSide) {
@@ -288,9 +291,9 @@ public class PlayerCapabilityForgeEventSubscriber {
     }
 
     @SubscribeEvent
-    public static void playerLevelChange(PlayerXpEvent.LevelChange e) {
+    public static void onplayerLevelChange(PlayerXpEvent.LevelChange e) {
         PlayerEntity player = e.getPlayer();
-        DevilRpg.LOGGER.info("----------------------->ForgeEventSubscriber.playerLevelChange() Client? "
+        DevilRpg.LOGGER.info("----------------------->PlayerCapabilityForgeEventSubscriber.onPlayerLevelChange() Client? "
                 + player.level.isClientSide + " level? " + player.experienceLevel + " " + player.totalExperience);
 
         IBaseExperienceCapability expCap = IGenericCapability.getUnwrappedPlayerCapability(player,
@@ -300,9 +303,9 @@ public class PlayerCapabilityForgeEventSubscriber {
 
     @SubscribeEvent(priority = EventPriority.NORMAL)
     public static void onPlayerSetSpawnEvent(PlayerSetSpawnEvent event) {
-        DevilRpg.LOGGER.info("----------------------->ForgeEventSubscriber.playerSetSpawnEvent()");
+        DevilRpg.LOGGER.info("----------------------->PlayerCapabilityForgeEventSubscriber.onPlayerSetSpawnEvent()");
         if (event.getNewSpawn() != null) {
-            DevilRpg.LOGGER.info(" SPAWN POINT FIRST {}", event.getNewSpawn());
+            DevilRpg.LOGGER.info("||||||||||||||||||||||||||| SPAWN POINT FIRST {}", event.getNewSpawn());
 
         }
     }
@@ -312,7 +315,7 @@ public class PlayerCapabilityForgeEventSubscriber {
 
         if ((event.getEntity() instanceof PlayerEntity) && event.getSlot().getType().compareTo(EquipmentSlotType.Group.ARMOR) == 0) {
             PlayerEntity player = (PlayerEntity) event.getEntity();
-            DevilRpg.LOGGER.info("----------------------->onLivingEquipmentChangeEvent. Server Side?: {}",!player.level.isClientSide);
+            DevilRpg.LOGGER.info("----------------------->PlayerCapabilityForgeEventSubscriber.onLivingEquipmentChangeEvent. Server Side?: {}",!player.level.isClientSide);
             /*DevilRpg.LOGGER.info("----------------------->getSlot {}", event.getSlot().getName());
             DevilRpg.LOGGER.info("----------------------->getFrom {}", event.getFrom().toString());
             DevilRpg.LOGGER.info("----------------------->getTo {}", event.getTo().toString());

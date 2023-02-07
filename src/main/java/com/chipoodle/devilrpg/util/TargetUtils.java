@@ -33,11 +33,7 @@ import net.minecraft.stats.Stats;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.Hand;
 import net.minecraft.util.SoundEvents;
-import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.EntityRayTraceResult;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.RayTraceResult;
+import net.minecraft.util.math.*;
 import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.world.GameType;
 import net.minecraft.world.World;
@@ -50,9 +46,9 @@ import net.minecraftforge.fml.RegistryObject;
  * https://github.com/coolAlias/ZeldaSwordSkills/blob/1.8/src/main/java/zeldaswordskills/util/TargetUtils.java#L189
  */
 public class TargetUtils {
+	public static final Random RANDOM = new Random();
 	/** Maximum range within which to search for targets */
 	private static final int MAX_DISTANCE = 256;
-	public static final Random RANDOM = new Random();
 	/**
 	 * Max distance squared, used for comparing target distances (avoids having to
 	 * call sqrt)
@@ -166,12 +162,13 @@ public class TargetUtils {
 	/**
 	 * Returns the LivingEntity closest to the point at which the entity is looking
 	 * and within the distance and radius specified
-	 * 
+	 * @param seeker 		  the LivingEntity
+	 *
 	 * @param distance        max distance to check for target, in blocks; negative
 	 *                        value will check to MAX_DISTANCE
 	 * @param radius          max distance, in blocks, to search on either side of
 	 *                        the vector's path
-	 * @param closestToEntity if true, the target closest to the seeker and still
+	 * @param closestToSeeker if true, the target closest to the seeker and still
 	 *                        within the line of sight search radius is returned
 	 * @return the entity the seeker is looking at or null if no entity within sight
 	 *         search range
@@ -471,7 +468,7 @@ public class TargetUtils {
 					int i = 0;
 					i = i + EnchantmentHelper.getKnockbackBonus(player);
 					if (player.isSprinting() && flag) {
-						player.level.playSound((PlayerEntity) null, player.getX(), player.getY(),
+						player.level.playSound(null, player.getX(), player.getY(),
 								player.getZ(), SoundEvents.PLAYER_ATTACK_KNOCKBACK, player.getSoundSource(),
 								1.0F, 1.0F);
 						++i;
@@ -491,7 +488,7 @@ public class TargetUtils {
 
 					f = f + f1;
 					boolean flag3 = false;
-					double d0 = (double) (player.walkDist - player.walkDistO);
+					double d0 = player.walkDist - player.walkDistO;
 					if (flag && !flag2 && !flag1 && player.isOnGround() && d0 < (double) player.getSpeed()) {
 						ItemStack itemstack = player.getItemInHand(currentHand);
 						//DevilRpg.LOGGER.info("----->HAND: " + currentHand.name() + " ITEM: " + itemstack.getItem().getName().getString());
@@ -517,14 +514,14 @@ public class TargetUtils {
 						if (i > 0) {
 							if (targetEntity instanceof LivingEntity) {
 								((LivingEntity) targetEntity).knockback((float) i * 0.5F,
-										(double) MathHelper.sin(player.yRot * ((float) Math.PI / 180F)),
-										(double) (-MathHelper.cos(player.yRot * ((float) Math.PI / 180F))));
+										MathHelper.sin(player.yRot * ((float) Math.PI / 180F)),
+										-MathHelper.cos(player.yRot * ((float) Math.PI / 180F)));
 							} else {
 								targetEntity.push(
-										(double) (-MathHelper.sin(player.yRot * ((float) Math.PI / 180F))
-												* (float) i * 0.5F),
-										0.1D, (double) (MathHelper.cos(player.yRot * ((float) Math.PI / 180F))
-												* (float) i * 0.5F));
+										-MathHelper.sin(player.yRot * ((float) Math.PI / 180F))
+												* (float) i * 0.5F,
+										0.1D, MathHelper.cos(player.yRot * ((float) Math.PI / 180F))
+												* (float) i * 0.5F);
 							}
 
 							player.setDeltaMovement(player.getDeltaMovement().multiply(0.6D, 1.0D, 0.6D));
@@ -542,13 +539,13 @@ public class TargetUtils {
 												|| !((ArmorStandEntity) livingentity).isMarker())
 										&& player.distanceToSqr(livingentity) < 9.0D) {
 									livingentity.knockback(0.4F,
-											(double) MathHelper.sin(player.yRot * ((float) Math.PI / 180F)),
-											(double) (-MathHelper.cos(player.yRot * ((float) Math.PI / 180F))));
+											MathHelper.sin(player.yRot * ((float) Math.PI / 180F)),
+											-MathHelper.cos(player.yRot * ((float) Math.PI / 180F)));
 									livingentity.hurt(DamageSource.playerAttack(player), f3);
 								}
 							}
 
-							player.level.playSound((PlayerEntity) null, player.getX(), player.getY(),
+							player.level.playSound(null, player.getX(), player.getY(),
 									player.getZ(), SoundEvents.PLAYER_ATTACK_SWEEP, player.getSoundSource(),
 									1.0F, 1.0F);
 							player.sweepAttack();
@@ -562,7 +559,7 @@ public class TargetUtils {
 						}
 
 						if (flag2) {
-							player.level.playSound((PlayerEntity) null, player.getX(), player.getY(),
+							player.level.playSound(null, player.getX(), player.getY(),
 									player.getZ(), SoundEvents.PLAYER_ATTACK_CRIT, player.getSoundSource(),
 									1.0F, 1.0F);
 							player.crit(targetEntity);
@@ -570,11 +567,11 @@ public class TargetUtils {
 
 						if (!flag2 && !flag3) {
 							if (flag) {
-								player.level.playSound((PlayerEntity) null, player.getX(), player.getY(),
+								player.level.playSound(null, player.getX(), player.getY(),
 										player.getZ(), SoundEvents.PLAYER_ATTACK_STRONG,
 										player.getSoundSource(), 1.0F, 1.0F);
 							} else {
-								player.level.playSound((PlayerEntity) null, player.getX(), player.getY(),
+								player.level.playSound(null, player.getX(), player.getY(),
 										player.getZ(), SoundEvents.PLAYER_ATTACK_WEAK,
 										player.getSoundSource(), 1.0F, 1.0F);
 							}
@@ -623,7 +620,7 @@ public class TargetUtils {
 
 						player.causeFoodExhaustion(0.1F);
 					} else {
-						player.level.playSound((PlayerEntity) null, player.getX(), player.getY(),
+						player.level.playSound(null, player.getX(), player.getY(),
 								player.getZ(), SoundEvents.PLAYER_ATTACK_NODAMAGE, player.getSoundSource(),
 								1.0F, 1.0F);
 						if (flag4) {
@@ -637,13 +634,27 @@ public class TargetUtils {
 	}
 
 	public static Entity getEntityByUUID(ServerWorld w, UUID uuid) {
-		ServerWorld sw = (ServerWorld) w;
+		ServerWorld sw = w;
 		return sw.getEntity(uuid);
 	}
 
 	public static Entity getEntityByUUID(ClientWorld w, UUID uuid) {
-		ClientWorld cw = (ClientWorld) w;
+		ClientWorld cw = w;
 		return StreamSupport.stream(cw.entitiesForRendering().spliterator(), true).filter(x -> x.getUUID().equals(uuid))
 				.findAny().orElse(null);
+	}
+
+	public static BlockRayTraceResult getPlayerBlockRayResult(){
+		Minecraft instance = Minecraft.getInstance();
+		RayTraceResult hitResult = instance.hitResult;
+
+		return (BlockRayTraceResult)hitResult;
+	}
+
+	public static RayTraceResult getPlayerRayResult(){
+		Minecraft instance = Minecraft.getInstance();
+		RayTraceResult hitResult = instance.hitResult;
+
+		return hitResult;
 	}
 }

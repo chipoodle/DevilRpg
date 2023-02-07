@@ -8,15 +8,14 @@ import com.chipoodle.devilrpg.entity.SoulWispArcherEntity;
 import com.chipoodle.devilrpg.entity.SoulWispBomberEntity;
 import com.chipoodle.devilrpg.entity.SoulWispEntity;
 import com.chipoodle.devilrpg.entity.SoulWolfEntity;
-import com.chipoodle.devilrpg.init.ModBlocks;
-import com.chipoodle.devilrpg.init.ModCapability;
-import com.chipoodle.devilrpg.init.ModEntityTypes;
-import com.chipoodle.devilrpg.init.ModItemGroups;
+import com.chipoodle.devilrpg.init.*;
 import com.chipoodle.devilrpg.item.ModdedSpawnEggItem;
 
+import net.minecraft.data.DataGenerator;
 import net.minecraft.entity.EntityType;
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.Item;
+import net.minecraftforge.common.data.ExistingFileHelper;
 import net.minecraftforge.event.RegistryEvent;
 import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
 import net.minecraftforge.event.entity.EntityAttributeModificationEvent;
@@ -27,6 +26,7 @@ import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.registries.IForgeRegistry;
+import net.minecraftforge.fml.event.lifecycle.GatherDataEvent;
 
 /**
  * Subscribe to events from the MOD EventBus that should be handled on both
@@ -37,85 +37,86 @@ import net.minecraftforge.registries.IForgeRegistry;
 @EventBusSubscriber(modid = DevilRpg.MODID, bus = EventBusSubscriber.Bus.MOD)
 public final class ModEventSubscriber {
 
-	@SubscribeEvent
-	public static void onCommonSetup(FMLCommonSetupEvent event) {
-		DevilRpg.LOGGER.info("----------------------->ModEventSubscriber.onCommonSetup()");
-		ModCapability.register();
-	}
+    @SubscribeEvent
+    public static void onCommonSetup(FMLCommonSetupEvent event) {
+        DevilRpg.LOGGER.info("----------------------->ModEventSubscriber.onCommonSetup()");
+        ModCapability.register();
+    }
 
-	/**
-	 * This method will be called by Forge when it is time for the mod to register
-	 * its Items. This method will always be called after the Block registry method.
-	 *
-	 * @param event
-	 */
-	@SubscribeEvent
-	public static void onRegisterItems(final RegistryEvent.Register<Item> event) {
-		final IForgeRegistry<Item> registry = event.getRegistry();
-		// Automatically register BlockItems for all our Blocks
-		ModBlocks.BLOCKS.getEntries().stream().map(RegistryObject::get)
-				// You can do extra filtering here if you don't want some blocks to have an
-				// BlockItem automatically registered for them
-				// .filter(block -> needsItemBlock(block))
-				// Register the BlockItem for the block
-				.forEach(block -> {
-					// Make the properties, and make it so that the item will be on our ItemGroup
-					// (CreativeTab)
-					final Item.Properties properties = new Item.Properties().tab(ModItemGroups.MOD_ITEM_GROUP);
-					// Create the new BlockItem with the block and it's properties
-					final BlockItem blockItem = new BlockItem(block, properties);
-					// Set the new BlockItem's registry name to the block's registry name
-					blockItem.setRegistryName(block.getRegistryName());
-					// Register the BlockItem
-					registry.register(blockItem);
-				});
-		DevilRpg.LOGGER.debug("Registered BlockItems");
-	}
+    /**
+     * This method will be called by Forge when it is time for the mod to register
+     * its Items. This method will always be called after the Block registry method.
+     *
+     * @param event
+     */
+    @SubscribeEvent
+    public static void onRegisterItems(final RegistryEvent.Register<Item> event) {
+        final IForgeRegistry<Item> registry = event.getRegistry();
+        // Automatically register BlockItems for all our Blocks
+        ModBlocks.BLOCKS.getEntries().stream().map(RegistryObject::get)
+                // You can do extra filtering here if you don't want some blocks to have an
+                // BlockItem automatically registered for them
+                // .filter(block -> needsItemBlock(block))
+                // Register the BlockItem for the block
+                .forEach(block -> {
+                    // Make the properties, and make it so that the item will be on our ItemGroup
+                    // (CreativeTab)
+                    final Item.Properties properties = new Item.Properties().tab(ModItemGroups.MOD_ITEM_GROUP);
+                    // Create the new BlockItem with the block and it's properties
+                    final BlockItem blockItem = new BlockItem(block, properties);
+                    // Set the new BlockItem's registry name to the block's registry name
+                    blockItem.setRegistryName(block.getRegistryName());
+                    // Register the BlockItem
+                    registry.register(blockItem);
+                });
+        DevilRpg.LOGGER.debug("Registered BlockItems");
+    }
 
-	/**
-	 * This method will be called by Forge when a config changes.
-	 *
-	 * @param event
-	 */
-	@SubscribeEvent
-	public static void onModConfigEvent(final ModConfig.ModConfigEvent event) {
-		final ModConfig config = event.getConfig();
-		// Rebake the configs when they change
-		if (config.getSpec() == ConfigHolder.CLIENT_SPEC) {
-			ConfigHelper.bakeClient(config);
-			DevilRpg.LOGGER.debug("Baked client config");
-		} else if (config.getSpec() == ConfigHolder.SERVER_SPEC) {
-			ConfigHelper.bakeServer(config);
-			DevilRpg.LOGGER.debug("Baked server config");
-		}
-	}
+    /**
+     * This method will be called by Forge when a config changes.
+     *
+     * @param event
+     */
+    @SubscribeEvent
+    public static void onModConfigEvent(final ModConfig.ModConfigEvent event) {
+        final ModConfig config = event.getConfig();
+        // Rebake the configs when they change
+        if (config.getSpec() == ConfigHolder.CLIENT_SPEC) {
+            ConfigHelper.bakeClient(config);
+            DevilRpg.LOGGER.debug("Baked client config");
+        } else if (config.getSpec() == ConfigHolder.SERVER_SPEC) {
+            ConfigHelper.bakeServer(config);
+            DevilRpg.LOGGER.debug("Baked server config");
+        }
+    }
 
-	/**
-	 * Exists to work around a limitation with Spawn Eggs: Spawn Eggs require an
-	 * EntityType, but EntityTypes are created AFTER Items. Therefore it is
-	 * "impossible" for modded spawn eggs to exist. To get around this we have our
-	 * own custom SpawnEggItem, but it needs some extra setup after Item and
-	 * EntityType registration completes.
-	 * 
-	 * @param event
-	 */
-	@SubscribeEvent(priority = EventPriority.LOWEST)
-	public static void onPostRegisterEntities(final RegistryEvent.Register<EntityType<?>> event) {
-		ModdedSpawnEggItem.initUnaddedEggs();
-	}
-	
-	@SubscribeEvent
-	public static void initEntityAttributes(EntityAttributeCreationEvent event) {
-		DevilRpg.LOGGER.info("----------------------->ForgeEventSubscriber.initEntityAttributes()");
-		event.put(ModEntityTypes.SOUL_WOLF.get(), SoulWolfEntity.setAttributes().build());
-		event.put(ModEntityTypes.SOUL_BEAR.get(), SoulBearEntity.setAttributes().build());
-		event.put(ModEntityTypes.WISP.get(), SoulWispEntity.setAttributes().build());
-		event.put(ModEntityTypes.WISP_BOMB.get(), SoulWispBomberEntity.setAttributes().build());
-		event.put(ModEntityTypes.WISP_ARCHER.get(), SoulWispArcherEntity.setAttributes().build());
-	}
-	
-	@SubscribeEvent
-	public static void updateEntityAttributes(EntityAttributeModificationEvent event) {
-		DevilRpg.LOGGER.info("----------------------->ForgeEventSubscriber.updateEntityAttributes()");
-	}
+    /**
+     * Exists to work around a limitation with Spawn Eggs: Spawn Eggs require an
+     * EntityType, but EntityTypes are created AFTER Items. Therefore it is
+     * "impossible" for modded spawn eggs to exist. To get around this we have our
+     * own custom SpawnEggItem, but it needs some extra setup after Item and
+     * EntityType registration completes.
+     *
+     * @param event
+     */
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void onPostRegisterEntities(final RegistryEvent.Register<EntityType<?>> event) {
+        ModdedSpawnEggItem.initUnaddedEggs();
+    }
+
+    @SubscribeEvent
+    public static void initEntityAttributes(EntityAttributeCreationEvent event) {
+        DevilRpg.LOGGER.info("----------------------->ModEventSubscriber.initEntityAttributes()");
+        event.put(ModEntityTypes.SOUL_WOLF.get(), SoulWolfEntity.setAttributes().build());
+        event.put(ModEntityTypes.SOUL_BEAR.get(), SoulBearEntity.setAttributes().build());
+        event.put(ModEntityTypes.WISP.get(), SoulWispEntity.setAttributes().build());
+        event.put(ModEntityTypes.WISP_BOMB.get(), SoulWispBomberEntity.setAttributes().build());
+        event.put(ModEntityTypes.WISP_ARCHER.get(), SoulWispArcherEntity.setAttributes().build());
+    }
+
+    @SubscribeEvent
+    public static void updateEntityAttributes(EntityAttributeModificationEvent event) {
+        DevilRpg.LOGGER.info("----------------------->ModEventSubscriber.updateEntityAttributes()");
+    }
+
 }

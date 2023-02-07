@@ -1,7 +1,5 @@
 {
-    "item.devilrpg.portal_item": "Portal Item",
     "itemGroup.devilrpg": "Devil RPG",
-    "item.item_soul_wolf.name": "Summon Soul Wolf",
     "key.categories.devilrpg": "Devil RPG power buttons",
     "entity.devilrpg.soul_wolf.name": "Soul Wolf",
     "entity.devilrpg.wisp.name": "Wisp",
@@ -15,5 +13,8 @@
     "key.skill_gui": "Skill GUI", 
     "gui.skills.title": "Skills", 
     "gui.skills.mana_cost": "Mana cost:", 
-    "gui.skills.unspent": "Unspent points:" 
+    "gui.skills.unspent": "Unspent points:",
+    "item.devilrpg.portal_item": "Portal Item",
+    "block.devilrpg.soulvine": "Soulvine",
+    "item.devilrpg.item_soul_wolf.name": "Summon Soul Wolf"
 }

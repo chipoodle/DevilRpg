@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.UUID;
 
 import com.chipoodle.devilrpg.capability.IGenericCapability;
+import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model.ClientSkillBuilder;
 import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
 import com.chipoodle.devilrpg.util.PowerEnum;
 import com.chipoodle.devilrpg.util.SkillEnum;
@@ -14,25 +15,27 @@ import net.minecraft.nbt.CompoundNBT;
 
 public interface IBasePlayerSkillCapability extends IGenericCapability{
 		
-	public HashMap<PowerEnum,SkillEnum> getSkillsNameOfPowers();
-	public void setSkillsNameOfPowers(HashMap<PowerEnum,SkillEnum> names,PlayerEntity player);
-	public HashMap<SkillEnum,Integer> getSkillsPoints();
-	public void setSkillsPoints(HashMap<SkillEnum,Integer> points,PlayerEntity player);
-	public HashMap<SkillEnum,Integer> getMaxSkillsPoints();
-	public void setMaxSkillsPoints(HashMap<SkillEnum,Integer> points,PlayerEntity player);
-	public HashMap<SkillEnum,Integer> getManaCostPoints();
-	public void setManaCostPoints(HashMap<SkillEnum,Integer> points,PlayerEntity player);
-	public HashMap<String, UUID> getAttributeModifiers();
-	public void setAttributeModifiers(HashMap<String, UUID> modifiers,PlayerEntity player);
+	HashMap<PowerEnum,SkillEnum> getSkillsNameOfPowers();
+	void setSkillsNameOfPowers(HashMap<PowerEnum,SkillEnum> names,PlayerEntity player);
+	HashMap<SkillEnum,Integer> getSkillsPoints();
+	void setSkillsPoints(HashMap<SkillEnum,Integer> points,PlayerEntity player);
+	HashMap<SkillEnum,Integer> getMaxSkillsPoints();
+	void setMaxSkillsPoints(HashMap<SkillEnum,Integer> points,PlayerEntity player);
+	HashMap<SkillEnum,Integer> getManaCostPoints();
+	void setManaCostPoints(HashMap<SkillEnum,Integer> points,PlayerEntity player);
+	HashMap<String, UUID> getAttributeModifiers();
+	void setAttributeModifiers(HashMap<String, UUID> modifiers,PlayerEntity player);
 
 	SkillEnum getSkillFromByteArray(CompoundNBT triggeredskill);
+	CompoundNBT setSkillToByteArray(SkillEnum skillEnum);
 
-	public void triggerAction(ServerPlayerEntity sender, PowerEnum triggeredPower);
-	public void triggerPassive(ServerPlayerEntity sender, CompoundNBT triggeredPassive);
-	public ISkillContainer getLoadedSkill(SkillEnum skillEnum);
-	public ISkillContainer create(SkillEnum skillEnum);
+	void triggerAction(ServerPlayerEntity sender, PowerEnum triggeredPower);
+	void triggerPassive(ServerPlayerEntity sender, CompoundNBT triggeredPassive);
+	ISkillContainer getLoadedSkill(SkillEnum skillEnum);
+	ISkillContainer create(SkillEnum skillEnum);
 	
-	public CompoundNBT getNBTData();
-	public void setNBTData(CompoundNBT nbt);
+	CompoundNBT getNBTData();
+	void setNBTData(CompoundNBT nbt);
 
+	ClientSkillBuilder getClientSkillBuilder();
 }

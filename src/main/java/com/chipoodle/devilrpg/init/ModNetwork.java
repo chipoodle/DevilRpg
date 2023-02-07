@@ -73,10 +73,10 @@ public class ModNetwork {
         		PotionClientServerHandler::onMessage);
 
         CHANNEL.registerMessage(networkId++,
-                PassiveSkillServerHandler.class,
-                PassiveSkillServerHandler::encode,
-                PassiveSkillServerHandler::decode,
-                PassiveSkillServerHandler::onMessage);
+                PlayerPassiveSkillServerHandler.class,
+                PlayerPassiveSkillServerHandler::encode,
+                PlayerPassiveSkillServerHandler::decode,
+                PlayerPassiveSkillServerHandler::onMessage);
     }
 
 }

@@ -1,10 +1,16 @@
 package com.chipoodle.devilrpg.skillsystem.skillinstance;
 
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
+import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
+import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.entity.ai.attributes.Attribute;
 import net.minecraft.entity.ai.attributes.AttributeModifier;
 import net.minecraft.entity.ai.attributes.ModifiableAttributeInstance;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.world.World;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -54,4 +60,11 @@ public abstract class AbstractPlayerPassive {
         return modifiedAttributeInstance.getModifier(attributeUuid);
     }
 
+    protected void executePassiveChildren(PlayerSkillCapability parentCapability, SkillEnum skillEnum, World worldIn, PlayerEntity playerIn){
+        List<SkillEnum> passivesFromActiveSkill = parentCapability.getPassivesFromActiveSkill(skillEnum);
+        for (SkillEnum passiveEnum : passivesFromActiveSkill) {
+            ISkillContainer loadedSkill = parentCapability.getLoadedSkill(passiveEnum);
+            loadedSkill.execute(worldIn, playerIn, new HashMap<>());
+        }
+    }
 }

@@ -125,7 +125,8 @@ public class GuiSkillTab extends AbstractGui {
 	public void drawContents(MatrixStack matrixStack) {
 		if (!this.centered) {
 			this.scrollX = (117 - (this.maxX + this.minX) / 2D);
-			this.scrollY = (56 - (this.maxY + this.minY) / 2D);
+			//Con este controlamos la altura de los botones del árbol
+			this.scrollY = (84 - (this.maxY + this.minY) / 2D);
 			this.centered = true;
 		}
 		RenderSystem.pushMatrix();
@@ -263,11 +264,11 @@ public class GuiSkillTab extends AbstractGui {
 
 	public void dragSelectedGui(double dragX, double dragY) {
 		if (this.maxX - this.minX > TAB_BACKGROUND_X) {
-			this.scrollX = MathHelper.clamp(this.scrollX + dragX, (double) (-(this.maxX - TAB_BACKGROUND_X)), 0.0D);
+			this.scrollX = MathHelper.clamp(this.scrollX + dragX, -(this.maxX - TAB_BACKGROUND_X), 0.0D);
 		}
 
 		if (this.maxY - this.minY > TAB_BACKGROUND_Y) {
-			this.scrollY = MathHelper.clamp(this.scrollY + dragY, (double) (-(this.maxY - TAB_BACKGROUND_Y)), 0.0D);
+			this.scrollY = MathHelper.clamp(this.scrollY + dragY, -(this.maxY - TAB_BACKGROUND_Y), 0.0D);
 		}
 
 	}

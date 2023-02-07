@@ -25,7 +25,7 @@ public final class ModContainerTypes {
     public static final RegistryObject<ContainerType<TameableMountableHorseInventoryContainer>>
             TAMEABLE_MOUNTABLE_CONTAINER =
             CONTAINER_TYPES.register("tameable_mountable_inventory_container",
-            () -> new ContainerType<TameableMountableHorseInventoryContainer>(TameableMountableHorseInventoryContainer::new));
+            () -> new ContainerType<>(TameableMountableHorseInventoryContainer::new));
 
     //public static final RegistryObject<ContainerType<HeatCollectorContainer>> HEAT_COLLECTOR = CONTAINER_TYPES.register("heat_collector", () -> IForgeContainerType.create(HeatCollectorContainer::new));
     //public static final RegistryObject<ContainerType<ElectricFurnaceContainer>> ELECTRIC_FURNACE = CONTAINER_TYPES.register("electric_furnace", () -> IForgeContainerType.create(ElectricFurnaceContainer::new));

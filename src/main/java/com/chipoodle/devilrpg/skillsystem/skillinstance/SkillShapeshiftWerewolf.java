@@ -29,14 +29,14 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class SkillShapeshiftWerewolf extends AbstractPlayerPassive implements ISkillContainer, ICapabilityAttributeModifier {
-    public static final String HEALTH = "HEALTH";
+    // public static final String HEALTH = "HEALTH";
     public static final String SPEED = "SPEED";
     private static final ResourceLocation SUMMON_SOUND = new ResourceLocation(DevilRpg.MODID, "summon");
-    AttributeModifier healthAttributeModifier;
+    //AttributeModifier healthAttributeModifier;
     AttributeModifier speedAttributeModifier;
-    private PlayerSkillCapability parentCapability;
+    private final PlayerSkillCapability parentCapability;
     private LazyOptional<IBaseAuxiliarCapability> aux;
-    private Random rand = new Random();
+    private final Random rand = new Random();
 
     public SkillShapeshiftWerewolf(PlayerSkillCapability parentCapability) {
         this.parentCapability = parentCapability;
@@ -66,17 +66,28 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassive implements IS
                 removeCurrentModifiers(playerIn);
             }
 
-            ISkillContainer loadedSkill = parentCapability.getLoadedSkill(SkillEnum.SKIN_ARMOR);
-            loadedSkill.execute(worldIn, playerIn, new HashMap<>());
+            super.executePassiveChildren(parentCapability,getSkillEnum(),worldIn,playerIn);
+
+
+
+           /* CompoundNBT compoundNBT;
+            compoundNBT = parentCapability.setSkillToByteArray(SkillEnum.SKIN_ARMOR);
+            ModNetwork.CHANNEL.sendToServer(new PlayerPassiveSkillServerHandler(compoundNBT));
+
+            compoundNBT = parentCapability.setSkillToByteArray(SkillEnum.WEREWOLF_HIT);
+            ModNetwork.CHANNEL.sendToServer(new PlayerPassiveSkillServerHandler(compoundNBT));*/
+
+            /*ISkillContainer loadedSkill = parentCapability.getLoadedSkill(SkillEnum.SKIN_ARMOR);
+            loadedSkill.execute(worldIn, playerIn, new HashMap<>());*/
         }
 
 
     }
 
     private void createNewAttributeModifiers() {
-        healthAttributeModifier = createNewAttributeModifier(
+        /*healthAttributeModifier = createNewAttributeModifier(
                 SkillEnum.TRANSFORM_WEREWOLF.name() + HEALTH,
-                Double.valueOf(parentCapability.getSkillsPoints().get(SkillEnum.TRANSFORM_WEREWOLF)), AttributeModifier.Operation.ADDITION);
+                Double.valueOf(parentCapability.getSkillsPoints().get(SkillEnum.TRANSFORM_WEREWOLF)), AttributeModifier.Operation.ADDITION);*/
 
         speedAttributeModifier = createNewAttributeModifier(
                 SkillEnum.TRANSFORM_WEREWOLF.name() + SPEED,
@@ -85,10 +96,10 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassive implements IS
 
     private void removeCurrentModifiers(PlayerEntity playerIn) {
         HashMap<String, UUID> attributeModifiers = parentCapability.getAttributeModifiers();
-        removeCurrentModifierFromPlayer(playerIn, healthAttributeModifier, Attributes.MAX_HEALTH);
-        removeAttributeFromCapability(attributeModifiers, Attributes.MAX_HEALTH);
-        if (playerIn.getHealth() > playerIn.getMaxHealth())
-            playerIn.setHealth(playerIn.getMaxHealth());
+        //removeCurrentModifierFromPlayer(playerIn, healthAttributeModifier, Attributes.MAX_HEALTH);
+        //removeAttributeFromCapability(attributeModifiers, Attributes.MAX_HEALTH);
+        /*if (playerIn.getHealth() > playerIn.getMaxHealth())
+            playerIn.setHealth(playerIn.getMaxHealth());*/
         removeCurrentModifierFromPlayer(playerIn, speedAttributeModifier, Attributes.MOVEMENT_SPEED);
         removeAttributeFromCapability(attributeModifiers, Attributes.MOVEMENT_SPEED);
         parentCapability.setAttributeModifiers(attributeModifiers, playerIn);
@@ -96,10 +107,10 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassive implements IS
 
     private void addCurrentModifiers(PlayerEntity playerIn) {
         HashMap<String, UUID> attributeModifiers = parentCapability.getAttributeModifiers();
-        addAttributeToCapability(attributeModifiers, Attributes.MAX_HEALTH, healthAttributeModifier.getId());
+        //addAttributeToCapability(attributeModifiers, Attributes.MAX_HEALTH, healthAttributeModifier.getId());
         addAttributeToCapability(attributeModifiers, Attributes.MOVEMENT_SPEED, speedAttributeModifier.getId());
         parentCapability.setAttributeModifiers(attributeModifiers, playerIn);
-        addCurrentModifierTransiently(playerIn, Attributes.MAX_HEALTH, healthAttributeModifier);
+        //addCurrentModifierTransiently(playerIn, Attributes.MAX_HEALTH, healthAttributeModifier);
         addCurrentModifierTransiently(playerIn, Attributes.MOVEMENT_SPEED, speedAttributeModifier);
     }
 
@@ -130,7 +141,6 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassive implements IS
         }
     }
 
-
     /**
      * @param player
      * @param hand
@@ -148,7 +158,7 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassive implements IS
             //DevilRpg.LOGGER.info("targetList.size:{}",targetList.size());
             target = targetList.stream()
                     .filter(x -> targetList.size() == 1 || !x.equals(player.getLastHurtMob()))
-                    .min(Comparator.comparing(entity -> ((LivingEntity) entity).position().distanceToSqr(player.position()))).orElse(null);
+                    .min(Comparator.comparing(entity -> entity.position().distanceToSqr(player.position()))).orElse(null);
             if (target != null /* && TargetUtils.canReachTarget(player, target) */) {
                 renderParticles(player, hand);
                 player.setLastHurtMob(target);

@@ -1,16 +1,10 @@
 package com.chipoodle.devilrpg;
 
+import com.chipoodle.devilrpg.init.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.chipoodle.devilrpg.config.ConfigHolder;
-import com.chipoodle.devilrpg.init.ModAttributes;
-import com.chipoodle.devilrpg.init.ModBlocks;
-import com.chipoodle.devilrpg.init.ModContainerTypes;
-import com.chipoodle.devilrpg.init.ModEntityTypes;
-import com.chipoodle.devilrpg.init.ModItems;
-import com.chipoodle.devilrpg.init.ModNetwork;
-import com.chipoodle.devilrpg.init.ModTileEntityTypes;
 
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.ModLoadingContext;
@@ -37,6 +31,7 @@ public class DevilRpg {
         ModContainerTypes.CONTAINER_TYPES.register(modEventBus);
         ModEntityTypes.ENTITY_TYPES.register(modEventBus);
         ModTileEntityTypes.TILE_ENTITY_TYPES.register(modEventBus);
+        ModBlockStates.BLOCK_STATES.register(modEventBus);
         // Register Configs (Does not need to be after Deferred Registers)
         modLoadingContext.registerConfig(ModConfig.Type.CLIENT, ConfigHolder.CLIENT_SPEC);
         modLoadingContext.registerConfig(ModConfig.Type.SERVER, ConfigHolder.SERVER_SPEC);

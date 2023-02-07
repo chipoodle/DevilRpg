@@ -89,6 +89,26 @@
         "parent": "nature:root"
     },
     {
+        "id": "nature:soulvine",
+        "display": {
+            "description": "A vine that help to climb mountains",
+            "icon": {
+                "item": "minecraft:glass_pane",
+                "minecraft:glass_panenbt": 1
+            },
+            "title": "Soulvine",
+            "image": "devilrpg:textures/gui/skill/curling-vines.png",
+            "frame": "task"
+        },
+        "capability": "soulvine",
+        "skillmanacost":{
+            "maxskilllevel":"20",
+            "manacost":"3"
+        },
+        "rewards": {},
+        "parent": "nature:root"
+    },
+    {
         "id": "shapeshifting:werewolf",
         "display": {
             "description": "Shapeshifts into a Werewolf",
@@ -109,7 +129,7 @@
         "parent": "shapeshifting:root"
     },
     {
-        "id": "shapeshifting:thickhide",
+        "id": "shapeshifting:skin_armor",
         "display": {
             "description": "Using leather armor hardens shapeshifter defense",
             "icon": {
@@ -117,7 +137,7 @@
                 "minecraft:glass_panenbt": 1
             },
             "title": "Thick hide",
-            "image": "devilrpg:textures/gui/skill/large-wound.png",
+            "image": "devilrpg:textures/gui/skill/layered-armor.png",
             "frame": "goal"
         },
         "capability": "skin_armor",
@@ -126,7 +146,27 @@
 			"manacost":"0"
 		},
         "rewards": {},
-        "parent": "shapeshifting:root"
+        "parent": "shapeshifting:werewolf"
+    },
+    {
+        "id": "shapeshifting:werewolf_vitality",
+        "display": {
+            "description": "Increases vitality",
+            "icon": {
+                "item": "minecraft:glass_pane",
+                "minecraft:glass_panenbt": 1
+            },
+            "title": "Werewolf vitality",
+            "image": "devilrpg:textures/gui/skill/heart-organ.png",
+            "frame": "goal"
+        },
+        "capability": "werewolf_vitality",
+        "skillmanacost":{
+            "maxskilllevel":"20",
+            "manacost":"0"
+        },
+        "rewards": {},
+        "parent": "shapeshifting:werewolf"
     },
     {
         "id": "shapeshifting:werewolfhit",
@@ -217,7 +257,7 @@
                 "minecraft:glass_panenbt": 1
             },
             "title": "Summon Bear",
-            "image": "devilrpg:textures/gui/skill/bear-face.png",
+            "image": "devilrpg:textures/gui/skill/bear-head.png",
             "frame": "task"
         },
         "capability": "summon_soul_bear",

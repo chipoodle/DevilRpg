@@ -16,7 +16,7 @@ import net.minecraft.entity.EntityType;
  */
 public final class ModAttributes {
 
-	public static void register3() {
+	public static void register() {
 		/*Minecraft.getInstance().tell(() -> {
 			GlobalEntityTypeAttributes.put(ModEntityTypes.SOUL_WOLF.get(), SoulWolfEntity.setAttributes().build());
 			GlobalEntityTypeAttributes.put(ModEntityTypes.SOUL_BEAR.get(), SoulBearEntity.setAttributes().build());

@@ -49,7 +49,7 @@ public class ClientSkillBuilder {
 
 	public void buildSkillTrees() {
 		InputStream inputStream = null;
-		Map<ResourceLocation, SkillElement.Builder> skillelementMap = new HashMap<ResourceLocation, SkillElement.Builder>();
+		Map<ResourceLocation, SkillElement.Builder> skillelementMap = new HashMap<>();
 		try {
 			ResourceLocation resourcefile = new ResourceLocation(DevilRpg.MODID , "skills/root_complete.json");
 			inputStream = Minecraft.getInstance().getResourceManager().getResource(resourcefile).getInputStream();
