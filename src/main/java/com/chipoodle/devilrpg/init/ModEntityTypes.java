@@ -40,27 +40,27 @@ public final class ModEntityTypes {
 	public static final String WEREWOLF_NAME = "werewolf";
 
 	public static final RegistryObject<EntityType<SoulWolfEntity>> SOUL_WOLF = ENTITY_TYPES.register(SOUL_WOLF_NAME,
-			() -> EntityType.Builder.<SoulWolfEntity>of(SoulWolfEntity::new, EntityClassification.CREATURE)
+			() -> EntityType.Builder.of(SoulWolfEntity::new, EntityClassification.CREATURE)
 					.sized(EntityType.WOLF.getWidth(), EntityType.WOLF.getHeight())
 					.build(new ResourceLocation(DevilRpg.MODID, SOUL_WOLF_NAME).toString()));
 
 	public static final RegistryObject<EntityType<SoulBearEntity>> SOUL_BEAR = ENTITY_TYPES.register(SOUL_BEAR_NAME,
-			() -> EntityType.Builder.<SoulBearEntity>of(SoulBearEntity::new, EntityClassification.CREATURE)
+			() -> EntityType.Builder.of(SoulBearEntity::new, EntityClassification.CREATURE)
 					.sized(EntityType.POLAR_BEAR.getWidth(), EntityType.POLAR_BEAR.getHeight())
 					.build(new ResourceLocation(DevilRpg.MODID, SOUL_BEAR_NAME).toString()));
 
 	public static final RegistryObject<EntityType<SoulWispEntity>> WISP = ENTITY_TYPES.register(WISP_NAME,
-			() -> EntityType.Builder.<SoulWispEntity>of(SoulWispEntity::new, EntityClassification.CREATURE)
+			() -> EntityType.Builder.of(SoulWispEntity::new, EntityClassification.CREATURE)
 					.sized(EntityType.BEE.getWidth(), EntityType.BEE.getHeight())
 					.build(new ResourceLocation(DevilRpg.MODID, WISP_NAME).toString()));
 
 	public static final RegistryObject<EntityType<SoulWispBomberEntity>> WISP_BOMB = ENTITY_TYPES.register(WISP_BOMB_NAME,
-			() -> EntityType.Builder.<SoulWispBomberEntity>of(SoulWispBomberEntity::new, EntityClassification.CREATURE)
+			() -> EntityType.Builder.of(SoulWispBomberEntity::new, EntityClassification.CREATURE)
 			.sized(EntityType.BEE.getWidth(), EntityType.BEE.getHeight())
 			.build(new ResourceLocation(DevilRpg.MODID, WISP_BOMB_NAME).toString()));
 	
 	public static final RegistryObject<EntityType<SoulWispArcherEntity>> WISP_ARCHER = ENTITY_TYPES.register(WISP_ARCHER_NAME,
-			() -> EntityType.Builder.<SoulWispArcherEntity>of(SoulWispArcherEntity::new, EntityClassification.CREATURE)
+			() -> EntityType.Builder.of(SoulWispArcherEntity::new, EntityClassification.CREATURE)
 			.sized(EntityType.BEE.getWidth(), EntityType.BEE.getHeight())
 			.build(new ResourceLocation(DevilRpg.MODID, WISP_ARCHER_NAME).toString()));
 

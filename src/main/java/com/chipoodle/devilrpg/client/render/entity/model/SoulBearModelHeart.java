@@ -11,7 +11,7 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 @OnlyIn(Dist.CLIENT)
 public class SoulBearModelHeart<T extends SoulBearEntity> extends QuadrupedModel<T> {
 	private ModelRenderer heart;
-	private ModelRenderer headModel;
+	private final ModelRenderer headModel;
 	private final ModelRenderer wispRightEye;
 	private final ModelRenderer wispLeftEye;
 

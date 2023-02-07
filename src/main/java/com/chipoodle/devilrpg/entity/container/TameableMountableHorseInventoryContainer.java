@@ -39,7 +39,7 @@ public class TameableMountableHorseInventoryContainer extends Container {
 
     public TameableMountableHorseInventoryContainer(int ID, PlayerInventory playerInventory,
                                                     IInventory container, final AbstractMountableTameableEntity tameableMountable) {
-        super((ContainerType<?>) null, ID);
+        super(null, ID);
         this.horseContainer = container;
         this.horse = tameableMountable;
         int i = 3;

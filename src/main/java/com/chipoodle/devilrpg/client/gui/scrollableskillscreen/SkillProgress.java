@@ -17,7 +17,7 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 
 public class SkillProgress implements Comparable<SkillProgress> {
 	private final Map<String, CriterionProgress> criteria = Maps.newHashMap();
-	private String[][] requirements = new String[0][];
+	private final String[][] requirements = new String[0][];
 	private int skillPoint;
 	private int maxSkillPoint;
 

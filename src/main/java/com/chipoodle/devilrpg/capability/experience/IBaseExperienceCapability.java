@@ -6,13 +6,13 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.CompoundNBT;
 
 public interface IBaseExperienceCapability extends IGenericCapability{
-	public int getCurrentLevel();
-	public int getMaximumLevel();
-	public int getUnspentPoints();
-	public void setCurrentLevel(int currentLevel, PlayerEntity pe);
-	public int consumePoint();
+	int getCurrentLevel();
+	int getMaximumLevel();
+	int getUnspentPoints();
+	void setCurrentLevel(int currentLevel, PlayerEntity pe);
+	int consumePoint();
 
 	
 	CompoundNBT getNBTData();
-	public void setNBTData(CompoundNBT nbt);
+	void setNBTData(CompoundNBT nbt);
 }

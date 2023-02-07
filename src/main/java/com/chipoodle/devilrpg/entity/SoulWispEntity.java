@@ -127,7 +127,7 @@ public class SoulWispEntity extends TameableEntity implements ITameableEntity, I
 	 * @return
 	 */
 	public static AttributeModifierMap.MutableAttribute setAttributes() {
-		return MobEntity.createMobAttributes().add(Attributes.MOVEMENT_SPEED, (double) 0.3F)
+		return MobEntity.createMobAttributes().add(Attributes.MOVEMENT_SPEED, 0.3F)
 				.add(Attributes.FLYING_SPEED, 0.9F).add(Attributes.MAX_HEALTH, 8.0D).add(Attributes.FOLLOW_RANGE, 48.0D)
 				.add(Attributes.ATTACK_DAMAGE, 2.0D).add(Attributes.ARMOR, 0.15D);
 	}
@@ -145,10 +145,10 @@ public class SoulWispEntity extends TameableEntity implements ITameableEntity, I
 			// DevilRpg.LOGGER.debug("SoulWispEntity.updateLevel.saludMaxima{}",saludMaxima);
 		}
 
-		this.getAttribute(Attributes.FLYING_SPEED).setBaseValue((double) 0.9F);
+		this.getAttribute(Attributes.FLYING_SPEED).setBaseValue(0.9F);
 		this.getAttribute(Attributes.MAX_HEALTH).setBaseValue(saludMaxima);
 		this.getAttribute(Attributes.ARMOR).setBaseValue(0.15D);
-		this.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue((double) 0.3F);
+		this.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(0.3F);
 		this.getAttribute(Attributes.ATTACK_DAMAGE).setBaseValue(2.0D);
 		this.getAttribute(Attributes.FOLLOW_RANGE).setBaseValue(48.0D);
 		setHealth((float) saludMaxima);
@@ -273,7 +273,7 @@ public class SoulWispEntity extends TameableEntity implements ITameableEntity, I
 
 	@Override
 	protected float getStandingEyeHeight(Pose poseIn, EntitySize sizeIn) {
-		return this.isBaby() ? sizeIn.height * 0.5F : sizeIn.height * 0.5F;
+		return sizeIn.height * 0.5F;
 	}
 
 	@Override
@@ -391,7 +391,7 @@ public class SoulWispEntity extends TameableEntity implements ITameableEntity, I
 					((float) Math.PI / 2F), 2, 1);
 			return vector3d2 != null ? vector3d2
 					: RandomPositionGenerator.getAirPos(SoulWispEntity.this, 8, 4, -2, vector3d,
-							(double) ((float) Math.PI / 2F));
+					(float) Math.PI / 2F);
 		}
 	}
 
@@ -415,7 +415,7 @@ public class SoulWispEntity extends TameableEntity implements ITameableEntity, I
 			double l = this.position().y();
 			double i1 = this.position().z();
 			AxisAlignedBB axisalignedbb = (new AxisAlignedBB(k, l, i1, (k + 1), (l + 1), (i1 + 1)))
-					.inflate(DISTANCIA_EFECTO).expandTowards(0.0D, (double) this.level.getHeight(), 0.0D);
+					.inflate(DISTANCIA_EFECTO).expandTowards(0.0D, this.level.getHeight(), 0.0D);
 
 			if (niveles > 0) {
 				List<LivingEntity> alliesList = null;
@@ -461,14 +461,14 @@ public class SoulWispEntity extends TameableEntity implements ITameableEntity, I
 	}
 
 	private List<LivingEntity> getAlliesListWithinAABBRange(AxisAlignedBB axisalignedbb) {
-		List<LivingEntity> list = this.level.<LivingEntity>getEntitiesOfClass(LivingEntity.class, axisalignedbb)
+		List<LivingEntity> list = this.level.getEntitiesOfClass(LivingEntity.class, axisalignedbb)
 				.stream().filter(x -> x.isAlliedTo(this.getOwner()) || x.equals(getOwner()))
 				.collect(Collectors.toList());
 		return list;
 	}
 
 	private List<LivingEntity> getEnemiesListWithinAABBRange(AxisAlignedBB axisalignedbb) {
-		List<LivingEntity> list = this.level.<MobEntity>getEntitiesOfClass(MobEntity.class, axisalignedbb).stream()
+		List<LivingEntity> list = this.level.getEntitiesOfClass(MobEntity.class, axisalignedbb).stream()
 				.filter(x -> !x.isAlliedTo(this.getOwner())).map(x -> (LivingEntity) x).collect(Collectors.toList());
 		return list;
 	}

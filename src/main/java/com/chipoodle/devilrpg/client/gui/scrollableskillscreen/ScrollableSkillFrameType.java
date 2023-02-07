@@ -16,7 +16,7 @@ public enum ScrollableSkillFrameType {
 	private final TextFormatting format;
 	private final ITextComponent translatedToast;
 
-	private ScrollableSkillFrameType(String nameIn, int iconIn, TextFormatting formatIn) {
+	ScrollableSkillFrameType(String nameIn, int iconIn, TextFormatting formatIn) {
 		      this.name = nameIn;
 		      this.icon = iconIn;
 		      this.format = formatIn;

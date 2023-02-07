@@ -50,7 +50,7 @@ public class PlayerScrollableSkills {
 		this.progressFile = progressFile;
 		this.player = player;
 		//this.deserialize(advancementManager);
-		DevilRpg.LOGGER.info("|-----"+toString());
+		DevilRpg.LOGGER.info("|-----"+ this);
 	}
 
 	public void setPlayer(ServerPlayerEntity player) {

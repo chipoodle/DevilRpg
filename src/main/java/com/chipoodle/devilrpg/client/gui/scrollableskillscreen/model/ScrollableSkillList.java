@@ -40,7 +40,7 @@ public class ScrollableSkillList {
 			this.remove(skillElement);
 		}
 
-		LOGGER.info("Forgot about skillElement {}", (Object) skillelmentIn.getId());
+		LOGGER.info("Forgot about skillElement {}", skillelmentIn.getId());
 		this.skillElementMap.remove(skillelmentIn.getId());
 		if (skillelmentIn.getParent() == null) {
 			this.roots.remove(skillelmentIn);
@@ -62,7 +62,7 @@ public class ScrollableSkillList {
 		for (ResourceLocation resourcelocation : ids) {
 			SkillElement advancement = this.skillElementMap.get(resourcelocation);
 			if (advancement == null) {
-				LOGGER.warn("Told to remove advancement {} but I don't know what that is", (Object) resourcelocation);
+				LOGGER.warn("Told to remove advancement {} but I don't know what that is", resourcelocation);
 			} else {
 				this.remove(advancement);
 			}
@@ -71,7 +71,7 @@ public class ScrollableSkillList {
 	}
 
 	public void loadSkills(Map<ResourceLocation, SkillElement.Builder> advancementsIn) {
-		Function<ResourceLocation, SkillElement> function = Functions.forMap(this.skillElementMap, (SkillElement) null);
+		Function<ResourceLocation, SkillElement> function = Functions.forMap(this.skillElementMap, null);
 
 		while (!advancementsIn.isEmpty()) {
 			boolean flag = false;
@@ -111,7 +111,7 @@ public class ScrollableSkillList {
 		}
 
 		ScrollableSkillLoadFix.buildSortedTrees(this.roots);
-		LOGGER.info("Loaded {} skill elements", (int) this.skillElementMap.size());
+		LOGGER.info("Loaded {} skill elements", this.skillElementMap.size());
 	}
 
 	@OnlyIn(Dist.CLIENT)

@@ -24,7 +24,7 @@ public class MinionPassiveAttributes  {
 	public static final String PASSIVE_MINION_HEALTH = "PASSIVE_MINION_HEALTH";
 	public static final String PASSIVE_WAR_BEAR_HEALTH = "PASSIVE_WAR_BEAR_HEALTH";
 	private float factor;
-	private World worldIn;
+	private final World worldIn;
 	private PlayerEntity playerIn;
 
 	public MinionPassiveAttributes(ITameableEntity entity) {

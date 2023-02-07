@@ -72,11 +72,7 @@ public interface ITameableEntity extends ICapabilityProvider {
         } else if (target instanceof PlayerEntity && owner instanceof PlayerEntity
                 && !((PlayerEntity) owner).canHarmPlayer((PlayerEntity) target)) {
             return false;
-        } else if (target instanceof AbstractHorseEntity && ((AbstractHorseEntity) target).isTamed()) {
-            return false;
-        } else {
-            return true;
-        }
+        } else return !(target instanceof AbstractHorseEntity) || !((AbstractHorseEntity) target).isTamed();
     }
 
     ModifiableAttributeInstance getAttribute(Attribute key);
@@ -112,6 +108,6 @@ public interface ITameableEntity extends ICapabilityProvider {
         return p_152114_1_ == this.getOwner();
     }
 
-    public void tame(PlayerEntity p_193101_1_);
+    void tame(PlayerEntity p_193101_1_);
 
 }

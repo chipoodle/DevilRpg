@@ -10,8 +10,8 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 
 @OnlyIn(Dist.CLIENT)
 public class SoulWolfModelHeart<T extends SoulWolfEntity> extends TintedAgeableModel<T> {
-	private ModelRenderer heart;
-	private ModelRenderer head;
+	private final ModelRenderer heart;
+	private final ModelRenderer head;
 	private final ModelRenderer wispRightEye;
 	private final ModelRenderer wispLeftEye;
 	

@@ -14,26 +14,26 @@ import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.world.World;
 
 public interface IBaseMinionCapability extends IGenericCapability{
-	public ConcurrentLinkedQueue<UUID> getSoulWolfMinions();
-	public void setSoulWolfMinions(ConcurrentLinkedQueue<UUID> minions, PlayerEntity player);
-	public ConcurrentLinkedQueue<UUID> getSoulBearMinions();
-	public void setSoulBearMinions(ConcurrentLinkedQueue<UUID> minions, PlayerEntity player);
-	public ConcurrentLinkedQueue<UUID> getWispMinions();
-	public void setWispMinions(ConcurrentLinkedQueue<UUID> minions, PlayerEntity player);
+	ConcurrentLinkedQueue<UUID> getSoulWolfMinions();
+	void setSoulWolfMinions(ConcurrentLinkedQueue<UUID> minions, PlayerEntity player);
+	ConcurrentLinkedQueue<UUID> getSoulBearMinions();
+	void setSoulBearMinions(ConcurrentLinkedQueue<UUID> minions, PlayerEntity player);
+	ConcurrentLinkedQueue<UUID> getWispMinions();
+	void setWispMinions(ConcurrentLinkedQueue<UUID> minions, PlayerEntity player);
 	
-	public ConcurrentLinkedQueue<UUID> getAllMinions();
+	ConcurrentLinkedQueue<UUID> getAllMinions();
 	
-	public ITameableEntity getTameableByUUID(UUID id, World world);
+	ITameableEntity getTameableByUUID(UUID id, World world);
 	
-	public void removeWisp(PlayerEntity owner, SoulWispEntity entity);
-	public void removeSoulWolf(PlayerEntity owner, SoulWolfEntity entity);
-	public void removeSoulBear(PlayerEntity owner, SoulBearEntity entity);
+	void removeWisp(PlayerEntity owner, SoulWispEntity entity);
+	void removeSoulWolf(PlayerEntity owner, SoulWolfEntity entity);
+	void removeSoulBear(PlayerEntity owner, SoulBearEntity entity);
 	
-	public void removeAllWisp(PlayerEntity owner);
-	public void removeAllSoulWolf(PlayerEntity owner);
-	public void removeAllSoulBear(PlayerEntity owner);
+	void removeAllWisp(PlayerEntity owner);
+	void removeAllSoulWolf(PlayerEntity owner);
+	void removeAllSoulBear(PlayerEntity owner);
 	
-	public CompoundNBT getNBTData();
-	public void setNBTData(CompoundNBT nbt);
+	CompoundNBT getNBTData();
+	void setNBTData(CompoundNBT nbt);
 	
 }

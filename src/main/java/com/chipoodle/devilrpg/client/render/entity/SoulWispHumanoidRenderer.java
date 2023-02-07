@@ -79,7 +79,7 @@ public class SoulWispHumanoidRenderer extends LivingRenderer<SoulWispEntity, Pla
 			float f4 = MathHelper.lerp(f, 0.0F, f3);
 			matrixStackIn.mulPose(Vector3f.XP.rotationDegrees(f4));
 			if (entityLiving.isVisuallySwimming()) {
-				matrixStackIn.translate(0.0D, -1.0D, (double) 0.3F);
+				matrixStackIn.translate(0.0D, -1.0D, 0.3F);
 			}
 		} else {
 			super.setupRotations(entityLiving, matrixStackIn, ageInTicks, rotationYaw, partialTicks);

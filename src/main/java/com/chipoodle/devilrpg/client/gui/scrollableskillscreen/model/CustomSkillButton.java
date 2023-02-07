@@ -15,12 +15,12 @@ import net.minecraftforge.fml.client.gui.widget.ExtendedButton;
 
 public class CustomSkillButton extends ExtendedButton {
 	private ResourceLocation resourceLocation;
-	private int textureWidth;
-	private int textureHeight;
-	private float xScale;
-	private float yScale;
-	private float scaledText;
-	private Enum<?> skillName;
+	private final int textureWidth;
+	private final int textureHeight;
+	private final float xScale;
+	private final float yScale;
+	private final float scaledText;
+	private final Enum<?> skillName;
 	private int drawnSkillLevel;
 	boolean showSkillNumber;
 

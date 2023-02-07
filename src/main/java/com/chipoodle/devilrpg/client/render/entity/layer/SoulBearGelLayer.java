@@ -21,7 +21,7 @@ public class SoulBearGelLayer<T extends SoulBearEntity> extends GhostEnergyLayer
 	private static final ResourceLocation BEAR_GEL = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soul/soulgelghost.png");
 	private final EntityModel<T> soulBearModel = new SoulBearModel<T>();
 	//private final ResourceLocation BEAR_GEL = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soul/soulgel.png");
-	private IEntityRenderer<T, SoulBearModelHeart<T>> entityRenderer;
+	private final IEntityRenderer<T, SoulBearModelHeart<T>> entityRenderer;
 
 	public SoulBearGelLayer(IEntityRenderer<T, SoulBearModelHeart<T>> p_i50923_1_) {
 		super(p_i50923_1_);

@@ -20,7 +20,7 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 public class SoulWolfGelLayer<T extends SoulWolfEntity> extends GhostEnergyLayer<T, SoulWolfModelHeart<T>> {
 	private static final ResourceLocation WOLF_GEL = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soul/soulgelghost.png");
 	private final EntityModel<T> soulWolfModel = new SoulWolfModel<T>();
-	private IEntityRenderer<T, SoulWolfModelHeart<T>> entityRenderer;
+	private final IEntityRenderer<T, SoulWolfModelHeart<T>> entityRenderer;
 
 	public SoulWolfGelLayer(IEntityRenderer<T, SoulWolfModelHeart<T>> p_i50923_1_) {
 		super(p_i50923_1_);

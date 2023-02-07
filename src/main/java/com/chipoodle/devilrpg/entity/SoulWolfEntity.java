@@ -97,7 +97,7 @@ public class SoulWolfEntity extends WolfEntity implements ITameableEntity, ISoul
 	}
 
 	public static AttributeModifierMap.MutableAttribute setAttributes() {
-		return MobEntity.createMobAttributes().add(Attributes.MOVEMENT_SPEED, (double) 0.3F)
+		return MobEntity.createMobAttributes().add(Attributes.MOVEMENT_SPEED, 0.3F)
 				.add(Attributes.MAX_HEALTH, 8.0D).add(Attributes.FOLLOW_RANGE, 16.0D)
 				.add(Attributes.ATTACK_DAMAGE, 2.0D).add(Attributes.ARMOR, 0.35D);
 	}
@@ -111,7 +111,7 @@ public class SoulWolfEntity extends WolfEntity implements ITameableEntity, ISoul
 			// stealingHealth = (0.135f * puntosAsignados) + 0.5;
 		}
 
-		this.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue((double) 0.4F);
+		this.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(0.4F);
 		this.getAttribute(Attributes.MAX_HEALTH).setBaseValue(saludMaxima);
 		this.getAttribute(Attributes.ARMOR).setBaseValue(0.35D);
 		this.getAttribute(Attributes.FOLLOW_RANGE).setBaseValue(16.0D);
@@ -248,7 +248,7 @@ public class SoulWolfEntity extends WolfEntity implements ITameableEntity, ISoul
 		 * Execute a one shot task or start executing a continuous task
 		 */
 		public void start() {
-			SoulWolfEntity.this.setTarget((LivingEntity) null);
+			SoulWolfEntity.this.setTarget(null);
 			super.start();
 		}
 
@@ -256,7 +256,7 @@ public class SoulWolfEntity extends WolfEntity implements ITameableEntity, ISoul
 		 * Keep ticking a continuous task that has already been started
 		 */
 		public void tick() {
-			SoulWolfEntity.this.setTarget((LivingEntity) null);
+			SoulWolfEntity.this.setTarget(null);
 			super.tick();
 		}
 	}

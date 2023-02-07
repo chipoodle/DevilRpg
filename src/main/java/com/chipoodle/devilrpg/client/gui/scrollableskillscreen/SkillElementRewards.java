@@ -54,7 +54,7 @@ public class SkillElementRewards {
 			for (ItemStack itemstack : player.server.getLootTables().get(resourcelocation)
 					.getRandomItems(lootcontext)) {
 				if (player.addItem(itemstack)) {
-					player.level.playSound((PlayerEntity) null, player.getX(), player.getY(), player.getZ(),
+					player.level.playSound(null, player.getX(), player.getY(), player.getZ(),
 							SoundEvents.ITEM_PICKUP, SoundCategory.PLAYERS, 0.2F,
 							((player.getRandom().nextFloat() - player.getRandom().nextFloat()) * 0.7F + 1.0F) * 2.0F);
 					flag = true;

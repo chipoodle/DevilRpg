@@ -26,7 +26,7 @@ public abstract class AbstractTameableMountableChestedHorseEntity extends Abstra
    }
 
    protected void randomizeAttributes() {
-      this.getAttribute(Attributes.MAX_HEALTH).setBaseValue((double)this.generateRandomMaxHealth());
+      this.getAttribute(Attributes.MAX_HEALTH).setBaseValue(this.generateRandomMaxHealth());
    }
 
    protected void defineSynchedData() {
@@ -35,7 +35,7 @@ public abstract class AbstractTameableMountableChestedHorseEntity extends Abstra
    }
 
    public static AttributeModifierMap.MutableAttribute createBaseChestedHorseAttributes() {
-      return createBaseHorseAttributes().add(Attributes.MOVEMENT_SPEED, (double)0.175F).add(Attributes.JUMP_STRENGTH, 0.5D);
+      return createBaseHorseAttributes().add(Attributes.MOVEMENT_SPEED, 0.175F).add(Attributes.JUMP_STRENGTH, 0.5D);
    }
 
    public boolean hasChest() {

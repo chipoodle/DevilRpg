@@ -15,7 +15,7 @@ import net.minecraft.world.World;
 
 public class SkillFrostBall implements ISkillContainer {
 
-	private PlayerSkillCapability parentCapability;
+	private final PlayerSkillCapability parentCapability;
 
 	public SkillFrostBall(PlayerSkillCapability parentCapability) {
 		this.parentCapability = parentCapability;
@@ -32,7 +32,7 @@ public class SkillFrostBall implements ISkillContainer {
 			//Vec3d look = playerIn.getLook(1.0F);
 			//LivingEntity target = TargetUtils.acquireLookTarget(playerIn, 20, 5, true);
 			Random random = new Random();
-			worldIn.playSound((PlayerEntity)null, playerIn.getX(), playerIn.getY(), playerIn.getZ(), SoundEvents.SNOWBALL_THROW, SoundCategory.NEUTRAL, 0.5F, 0.4F / (random.nextFloat() * 0.4F + 0.8F));
+			worldIn.playSound(null, playerIn.getX(), playerIn.getY(), playerIn.getZ(), SoundEvents.SNOWBALL_THROW, SoundCategory.NEUTRAL, 0.5F, 0.4F / (random.nextFloat() * 0.4F + 0.8F));
 			SoulIceBallEntity snowballentity = new SoulIceBallEntity(worldIn, playerIn);
 			snowballentity.updateLevel(playerIn,SkillEnum.FROSTBALL);
 			snowballentity.shootFromRotation(playerIn, playerIn.xRot, playerIn.yRot, 0.0F, 1.5F, 1.0F);

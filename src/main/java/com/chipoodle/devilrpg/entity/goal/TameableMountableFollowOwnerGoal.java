@@ -116,7 +116,7 @@ public class TameableMountableFollowOwnerGoal extends Goal {
       } else if (!this.canTeleportTo(new BlockPos(p_226328_1_, p_226328_2_, p_226328_3_))) {
          return false;
       } else {
-         this.tamable.moveTo((double)p_226328_1_ + 0.5D, (double)p_226328_2_, (double)p_226328_3_ + 0.5D, this.tamable.getyRot(), this.tamable.getxRot());
+         this.tamable.moveTo((double)p_226328_1_ + 0.5D, p_226328_2_, (double)p_226328_3_ + 0.5D, this.tamable.getyRot(), this.tamable.getxRot());
          this.navigation.stop();
          return true;
       }

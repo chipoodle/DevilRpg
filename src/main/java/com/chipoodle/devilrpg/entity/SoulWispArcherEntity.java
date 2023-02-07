@@ -60,7 +60,7 @@ public class SoulWispArcherEntity extends SoulWispEntity implements IRangedAttac
 		double d0 = p_82196_1_.getX() - this.getX();
 		double d1 = p_82196_1_.getY(0.3233333333333333D) - this.getY();
 		double d2 = p_82196_1_.getZ() - this.getZ();
-		double d3 = (double) MathHelper.sqrt(d0 * d0 + d2 * d2);
+		double d3 = MathHelper.sqrt(d0 * d0 + d2 * d2);
 
 		SoulIceBallEntity snowballentity = new SoulIceBallEntity(this.level, this);
 		snowballentity.updateLevel((PlayerEntity) this.getOwner(),SkillEnum.SUMMON_WISP_ARCHER);

@@ -162,7 +162,7 @@ public class WerewolfRenderer extends LivingRenderer<PlayerEntity, WerewolfTrans
 				/*super.renderName(entityIn, (new StringTextComponent(Integer.toString(score.getScorePoints())))
 						.appendString(" ").append(scoreobjective.getDisplayName()), matrixStackIn, bufferIn,
 						packedLightIn);*/
-				matrixStackIn.translate(0.0D, (double) (9.0F * 1.15F * 0.025F), 0.0D);
+				matrixStackIn.translate(0.0D, 9.0F * 1.15F * 0.025F, 0.0D);
 			}
 		}
 
@@ -235,7 +235,7 @@ public class WerewolfRenderer extends LivingRenderer<PlayerEntity, WerewolfTrans
 				float f4 = MathHelper.lerp(f, 0.0F, f3);
 				matrixStackIn.mulPose(Vector3f.XP.rotationDegrees(f4));
 				if (entityLiving.isVisuallySwimming()) {
-					matrixStackIn.translate(0.0D, -1.0D, (double) 0.3F);
+					matrixStackIn.translate(0.0D, -1.0D, 0.3F);
 				}
 			} else {
 				super.setupRotations(entityLiving, matrixStackIn, ageInTicks, rotationYaw, partialTicks);

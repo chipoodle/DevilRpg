@@ -8,6 +8,6 @@ import net.minecraft.world.World;
 import java.util.HashMap;
 
 public interface ISkillContainer{
-	public void execute(World worldIn, PlayerEntity playerIn, HashMap<String,String> parameters);
-	public SkillEnum getSkillEnum();
+	void execute(World worldIn, PlayerEntity playerIn, HashMap<String,String> parameters);
+	SkillEnum getSkillEnum();
 }

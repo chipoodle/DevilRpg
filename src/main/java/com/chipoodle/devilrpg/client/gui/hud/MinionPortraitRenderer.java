@@ -44,7 +44,7 @@ public class MinionPortraitRenderer extends AbstractGui {
 	// vanilla hotbar rendering code
 	final int vanillaExpLeftX = 1; // leftmost edge of the experience bar
 	final int vanillaExpTopY = 1; // top of the experience bar
-	private Minecraft mc;
+	private final Minecraft mc;
 
 	public MinionPortraitRenderer(Minecraft mc) {
 		super();

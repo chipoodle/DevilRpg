@@ -7,15 +7,15 @@ import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.util.Hand;
 
 public interface IBaseAuxiliarCapability extends IGenericCapability{
-	public boolean isWerewolfAttack();
-	public void setWerewolfAttack(boolean active,PlayerEntity player);
-	public boolean isWerewolfTransformation();
-	public void setWerewolfTransformation(boolean active,PlayerEntity player);
-	public boolean isSwingingMainHand();
-	public void setSwingingMainHand(boolean active,PlayerEntity player);
-	public Hand swingHands(PlayerEntity player);
+	boolean isWerewolfAttack();
+	void setWerewolfAttack(boolean active,PlayerEntity player);
+	boolean isWerewolfTransformation();
+	void setWerewolfTransformation(boolean active,PlayerEntity player);
+	boolean isSwingingMainHand();
+	void setSwingingMainHand(boolean active,PlayerEntity player);
+	Hand swingHands(PlayerEntity player);
 	
 	CompoundNBT getNBTData();
-	public void setNBTData(CompoundNBT nbt);
+	void setNBTData(CompoundNBT nbt);
 	
 }

@@ -22,7 +22,7 @@ public enum SkillTabType {
 	private final int height;
 	private final int max;
 
-	private SkillTabType(int textureX, int textureY, int widthIn, int heightIn, int max) {
+	SkillTabType(int textureX, int textureY, int widthIn, int heightIn, int max) {
 		this.textureX = textureX;
 		this.textureY = textureY;
 		this.width = widthIn;
@@ -102,8 +102,8 @@ public enum SkillTabType {
 
 		float width = 20f;
 		float height = 20f;
-		float xScale = (float) width / guiSkillEntry.BUTTON_IMAGE_SIZE;
-		float yScale = (float) height / guiSkillEntry.BUTTON_IMAGE_SIZE;
+		float xScale = width / GuiSkillEntry.BUTTON_IMAGE_SIZE;
+		float yScale = height / GuiSkillEntry.BUTTON_IMAGE_SIZE;
 		
 		
 		
@@ -115,7 +115,7 @@ public enum SkillTabType {
 		RenderSystem.scalef(xScale, yScale, 0);
 		RenderSystem.translatef(i * -1.0f, j * -1.0f, 0);
 		
-		AbstractGui.blit(matrixStack, i, j, 0, 0,guiSkillEntry.BUTTON_IMAGE_SIZE, guiSkillEntry.BUTTON_IMAGE_SIZE, guiSkillEntry.BUTTON_IMAGE_SIZE, guiSkillEntry.BUTTON_IMAGE_SIZE);
+		AbstractGui.blit(matrixStack, i, j, 0, 0, GuiSkillEntry.BUTTON_IMAGE_SIZE, GuiSkillEntry.BUTTON_IMAGE_SIZE, GuiSkillEntry.BUTTON_IMAGE_SIZE, GuiSkillEntry.BUTTON_IMAGE_SIZE);
 		RenderSystem.popMatrix();
 
 	}

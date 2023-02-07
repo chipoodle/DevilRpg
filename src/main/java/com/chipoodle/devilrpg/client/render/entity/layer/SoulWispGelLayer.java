@@ -26,8 +26,8 @@ public class SoulWispGelLayer<T extends SoulWispEntity> extends GhostEnergyLayer
 	// ResourceLocation(DevilRpg.MODID + ":textures/entity/soul/soulgel.png");
 	// private static final ResourceLocation WISP_WINGS = new
 	// ResourceLocation(DevilRpg.MODID + ":textures/entity/flyingwisp/wings.png");
-	private IEntityRenderer<T, SoulWispModelHeart<T>> entityRenderer;
-	private float gelMovementFactor;
+	private final IEntityRenderer<T, SoulWispModelHeart<T>> entityRenderer;
+	private final float gelMovementFactor;
 
 	// private WingsModel<SoulWispEntity> wingsModel = new
 	// WingsModel<SoulWispEntity>();

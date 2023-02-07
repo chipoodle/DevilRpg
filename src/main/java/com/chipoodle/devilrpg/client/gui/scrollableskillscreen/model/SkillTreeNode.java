@@ -222,8 +222,8 @@ public class SkillTreeNode {
 		if (root.getDisplay() == null) {
 			throw new IllegalArgumentException("Can't position children of an invisible root!");
 		} else {
-			SkillTreeNode advancementtreenode = new SkillTreeNode(root, (SkillTreeNode) null,
-					(SkillTreeNode) null, 1, 0);
+			SkillTreeNode advancementtreenode = new SkillTreeNode(root, null,
+					null, 1, 0);
 			advancementtreenode.firstWalk();
 			float f = advancementtreenode.secondWalk(0.0F, 0, advancementtreenode.y);
 			if (f < 0.0F) {

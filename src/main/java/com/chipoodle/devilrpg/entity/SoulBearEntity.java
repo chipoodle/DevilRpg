@@ -154,7 +154,7 @@ public class SoulBearEntity extends AbstractMountableTameableEntity
 
 
 
-        this.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue((double) 0.4F);
+        this.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(0.4F);
         this.getAttribute(Attributes.MAX_HEALTH).setBaseValue(saludMaxima);
         this.getAttribute(Attributes.ARMOR).setBaseValue(initialArmor);
         this.getAttribute(Attributes.FOLLOW_RANGE).setBaseValue(16.0D);
@@ -551,7 +551,7 @@ public class SoulBearEntity extends AbstractMountableTameableEntity
             if (this.isArmor(p_213804_1_)) {
                 int i = ((HorseArmorItem) p_213804_1_.getItem()).getProtection();
                 if (i != 0) {
-                    this.getAttribute(Attributes.ARMOR).addTransientModifier(new AttributeModifier(ARMOR_MODIFIER_UUID, "Horse armor bonus", (double) i, AttributeModifier.Operation.ADDITION));
+                    this.getAttribute(Attributes.ARMOR).addTransientModifier(new AttributeModifier(ARMOR_MODIFIER_UUID, "Horse armor bonus", i, AttributeModifier.Operation.ADDITION));
                 }
             }
         }
@@ -653,7 +653,7 @@ public class SoulBearEntity extends AbstractMountableTameableEntity
 
     class AttackPlayerGoal extends NearestAttackableTargetGoal<PlayerEntity> {
         public AttackPlayerGoal() {
-            super(SoulBearEntity.this, PlayerEntity.class, 20, true, true, (Predicate<LivingEntity>) null);
+            super(SoulBearEntity.this, PlayerEntity.class, 20, true, true, null);
         }
 
         /**
@@ -729,7 +729,7 @@ public class SoulBearEntity extends AbstractMountableTameableEntity
 
         @Override
         protected double getAttackReachSqr(LivingEntity attackTarget) {
-            return (double) (4.0F + attackTarget.getBbWidth());
+            return 4.0F + attackTarget.getBbWidth();
         }
     }
 
@@ -743,7 +743,7 @@ public class SoulBearEntity extends AbstractMountableTameableEntity
          * necessary for execution in this method as well.
          */
         public boolean shouldExecute() {
-            return !SoulBearEntity.this.isBaby() && !SoulBearEntity.this.isOnFire() ? false : super.canUse();
+            return (SoulBearEntity.this.isBaby() || SoulBearEntity.this.isOnFire()) && super.canUse();
         }
     }
 
@@ -796,7 +796,7 @@ public class SoulBearEntity extends AbstractMountableTameableEntity
          * Execute a one shot task or start executing a continuous task
          */
         public void start() {
-            SoulBearEntity.this.setTarget((LivingEntity) null);
+            SoulBearEntity.this.setTarget(null);
             super.start();
         }
 
@@ -804,7 +804,7 @@ public class SoulBearEntity extends AbstractMountableTameableEntity
          * Keep ticking a continuous task that has already been started
          */
         public void tick() {
-            SoulBearEntity.this.setTarget((LivingEntity) null);
+            SoulBearEntity.this.setTarget(null);
             super.tick();
         }
     }

@@ -13,22 +13,22 @@ import net.minecraft.util.ResourceLocation;
 
 public interface ISoulEntity {
 
-	static final int DIVISOR_NIVEL_PARA_POTENCIA_EFECTO = 5;
+	int DIVISOR_NIVEL_PARA_POTENCIA_EFECTO = 5;
 
 	/**
 	 * Kills the entity if it has no owner.
 	 * @param thisEntity
 	 */
-	public default void addToAiStep(ITameableEntity thisEntity) {
+	default void addToAiStep(ITameableEntity thisEntity) {
 		if (thisEntity.getOwnerUUID() == null || thisEntity.getOwner() == null || !thisEntity.getOwner().isAlive() || !thisEntity.isTame())
 			thisEntity.hurt(new MinionDeathDamageSource(""), Integer.MAX_VALUE);
 	}
 
-	public default IVertexBuilder getBuffer(IRenderTypeBuffer bufferIn, ResourceLocation texture) {
+	default IVertexBuilder getBuffer(IRenderTypeBuffer bufferIn, ResourceLocation texture) {
 		return bufferIn.getBuffer(RenderType.entityTranslucent(texture));
 	}
 
-	public default int getPotenciaPocion(int niveles) {
+	default int getPotenciaPocion(int niveles) {
 		return (int) Math.ceil(niveles / (DIVISOR_NIVEL_PARA_POTENCIA_EFECTO));
 	}
 }

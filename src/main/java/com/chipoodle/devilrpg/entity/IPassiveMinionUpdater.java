@@ -10,7 +10,7 @@ import net.minecraft.entity.ai.attributes.ModifiableAttributeInstance;
 
 public interface IPassiveMinionUpdater<T extends ITameableEntity> {
 	
-	public default void applyPassives(Map<Attribute, AttributeModifier> attributes, T t) {
+	default void applyPassives(Map<Attribute, AttributeModifier> attributes, T t) {
 		attributes.forEach((key, value)->{
 			ModifiableAttributeInstance attribute = t.getAttribute(key);
 			DevilRpg.LOGGER.info("||---->IPassiveMinionUpdater applyPassives Minion: {} apply: {}, amount: {}",

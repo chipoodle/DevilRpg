@@ -10,7 +10,7 @@ public enum SkillState {
 
    private final int id;
 
-   private SkillState(int id) {
+   SkillState(int id) {
       this.id = id;
    }
 

@@ -44,7 +44,7 @@ public interface IRenderUtilities {
 						Collectors.toMap(Functions.identity(),dye->createColor(dye)));
 	}*/
 	
-	public static float[] createColor(DyeColor dyeColorIn) {
+	static float[] createColor(DyeColor dyeColorIn) {
 		if (dyeColorIn == DyeColor.WHITE) {
 			return new float[] { 0.9019608F, 0.9019608F, 0.9019608F };
 		} else {
@@ -55,11 +55,11 @@ public interface IRenderUtilities {
 	}
 
 	@OnlyIn(Dist.CLIENT)
-	public static float[] getDyeRgb(DyeColor dyeColor) {
+	static float[] getDyeRgb(DyeColor dyeColor) {
 		return DYE_TO_RGB.get(dyeColor);
 	}
 	
-	public default <T extends LivingEntity> float[] groovy(T entitylivingbaseIn, float partialTicks) {
+	default <T extends LivingEntity> float[] groovy(T entitylivingbaseIn, float partialTicks) {
 		float f;
 		float f1;
 		float f2;
@@ -78,7 +78,7 @@ public interface IRenderUtilities {
 		return returnFloat;
 	}
 
-	public static <T extends LivingEntity> float[] groovyRed(T entitylivingbaseIn, float partialTicks) {
+	static <T extends LivingEntity> float[] groovyRed(T entitylivingbaseIn, float partialTicks) {
 		float f;
 		float f1;
 		float f2;
@@ -97,7 +97,7 @@ public interface IRenderUtilities {
 		return returnFloat;
 	}
 	
-	public static <T extends LivingEntity> float[] groovyBlue(T entitylivingbaseIn, float partialTicks) {
+	static <T extends LivingEntity> float[] groovyBlue(T entitylivingbaseIn, float partialTicks) {
 		float f;
 		float f1;
 		float f2;
@@ -116,7 +116,7 @@ public interface IRenderUtilities {
 		return returnFloat;
 	}
 	
-	public static void spawnLingeringCloud(World world, LivingEntity living,float radius, int puntosAsignados) {
+	static void spawnLingeringCloud(World world, LivingEntity living,float radius, int puntosAsignados) {
 		Collection<EffectInstance> collection = living.getActiveEffects();
 		if (!collection.isEmpty()) {
 			AreaEffectCloudEntity areaeffectcloudentity = new AreaEffectCloudEntity(world, living.getX(),
@@ -137,7 +137,7 @@ public interface IRenderUtilities {
 
 	}
 
-	public static void customDeadParticles(World world, Random rand, LivingEntity living) {
+	static void customDeadParticles(World world, Random rand, LivingEntity living) {
 
 		for (int i = 0; i < 7; ++i) {
 			double d0 = rand.nextGaussian() * 0.02D;
@@ -147,7 +147,7 @@ public interface IRenderUtilities {
 		}
 	}
 	
-	public static void customParticles(World world, Random rand, LivingEntity living, BasicParticleType particle) {
+	static void customParticles(World world, Random rand, LivingEntity living, BasicParticleType particle) {
 
 		for (int i = 0; i < 7; ++i) {
 			double d0 = rand.nextGaussian() * 0.02D;
@@ -156,7 +156,7 @@ public interface IRenderUtilities {
 			world.addParticle(particle, living.getRandomX(1.0D), living.getRandomY() + 1.5D,living.getRandomZ(1.0D), d0, d1, d2);
 		}
 	}
-	public static void rotationParticles(World world, Random rand, LivingEntity living, BasicParticleType particle, int numberOfParticles, double distanciaDesdeElCentro) {
+	static void rotationParticles(World world, Random rand, LivingEntity living, BasicParticleType particle, int numberOfParticles, double distanciaDesdeElCentro) {
 		double x;
 		double y;
 		double z;

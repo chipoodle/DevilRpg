@@ -25,7 +25,7 @@ public class PlayerPassiveSkillSkinArmor extends AbstractPlayerPassive implement
     public static final String IS_COMPLETE_ARMOR = "IS_COMPLETE_ARMOR";
     public static final double ARMOR_FACTOR = 0.70D;
     AttributeModifier skinArmorAttributeModifier;
-    private IBasePlayerSkillCapability parentCapability;
+    private final IBasePlayerSkillCapability parentCapability;
     private PlayerEntity playerIn;
 
     /*public PlayerPassiveSkillSkinArmor(PlayerEntity playerIn) {

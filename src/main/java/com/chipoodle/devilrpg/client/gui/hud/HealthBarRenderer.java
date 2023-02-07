@@ -56,7 +56,7 @@ public class HealthBarRenderer extends AbstractGui {
 	 * Minecraft.getInstance() here, but this won't always be possible if you want
 	 * to include information that's part of another class.
 	 */
-	private Minecraft mc;
+	private final Minecraft mc;
 
 	public HealthBarRenderer(Minecraft mc) {
 		super();

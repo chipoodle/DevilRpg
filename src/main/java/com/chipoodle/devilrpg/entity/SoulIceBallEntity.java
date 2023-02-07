@@ -55,8 +55,8 @@ public class SoulIceBallEntity extends ProjectileItemEntity implements ISoulEnti
 	private IParticleData getParticle() {
 		ItemStack itemstack = this.getItemRaw();
 		// return (IParticleData) (itemstack.isEmpty() ? ParticleTypes.CLOUD
-		return (IParticleData) (itemstack.isEmpty() ? ParticleTypes.ITEM_SNOWBALL
-				: new ItemParticleData(ParticleTypes.ITEM, itemstack));
+		return itemstack.isEmpty() ? ParticleTypes.ITEM_SNOWBALL
+				: new ItemParticleData(ParticleTypes.ITEM, itemstack);
 	}
 
 
@@ -78,7 +78,7 @@ public class SoulIceBallEntity extends ProjectileItemEntity implements ISoulEnti
 	protected void onHitEntity(EntityRayTraceResult result) {
 		super.onHitEntity(result);
 		Entity targetEntity = result.getEntity();
-		targetEntity.hurt(DamageSource.thrown(this, this.getOwner()), (float) damage / 6);
+		targetEntity.hurt(DamageSource.thrown(this, this.getOwner()), damage / 6);
 		if (targetEntity instanceof LivingEntity) {
 			LivingEntity livingEntity = (LivingEntity) targetEntity;
 			EffectInstance pri = new EffectInstance(Effects.MOVEMENT_SLOWDOWN, puntosAsignados * 6, getPotenciaPocion(puntosAsignados), false, true);

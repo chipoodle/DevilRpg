@@ -14,7 +14,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 public interface IBaseTamableMinionCapability extends IGenericCapability{
 
-	public void applyPassives(ITameableEntity entity);
+	void applyPassives(ITameableEntity entity);
 	
 
 	

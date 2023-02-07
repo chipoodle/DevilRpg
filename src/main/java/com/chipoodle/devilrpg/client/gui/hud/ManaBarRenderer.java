@@ -29,7 +29,7 @@ public class ManaBarRenderer extends AbstractGui {
 	private float manaRun;
 	private float maxMana;
 
-	private Minecraft mc;
+	private final Minecraft mc;
 
 	public ManaBarRenderer(Minecraft mc) {
 		super();

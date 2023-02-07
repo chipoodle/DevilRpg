@@ -31,7 +31,7 @@ public abstract class StuckInBodyWerewolfLayer<T extends LivingEntity, M extends
 			float limbSwing, float limbSwingAmount, float partialTicks, float ageInTicks, float netHeadYaw,
 			float headPitch) {
 		int i = this.numStuck(entitylivingbaseIn);
-		Random random = new Random((long) entitylivingbaseIn.getId());
+		Random random = new Random(entitylivingbaseIn.getId());
 		if (i > 0) {
 			for (int j = 0; j < i; ++j) {
 				matrixStackIn.pushPose();
@@ -44,7 +44,7 @@ public abstract class StuckInBodyWerewolfLayer<T extends LivingEntity, M extends
 				float f3 = MathHelper.lerp(f, modelrenderer$modelbox.minX, modelrenderer$modelbox.maxX) / 16.0F;
 				float f4 = MathHelper.lerp(f1, modelrenderer$modelbox.minY, modelrenderer$modelbox.maxY) / 16.0F;
 				float f5 = MathHelper.lerp(f2, modelrenderer$modelbox.minZ, modelrenderer$modelbox.maxZ) / 16.0F;
-				matrixStackIn.translate((double) f3, (double) f4, (double) f5);
+				matrixStackIn.translate(f3, f4, f5);
 				f = -1.0F * (f * 2.0F - 1.0F);
 				f1 = -1.0F * (f1 * 2.0F - 1.0F);
 				f2 = -1.0F * (f2 * 2.0F - 1.0F);
