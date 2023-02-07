@@ -18,12 +18,10 @@ public class FileResource {
 
 	public final List<IResourcePack> resourcePacks = Lists.newArrayList();
 	private final ResourcePackType type;
-	private final String namespace;
 
 	public FileResource(ResourcePackType type, String namespace) {
 		super();
 		this.type = type;
-		this.namespace = namespace;
 	}
 
 	public void addResourcePack(IResourcePack resourcePack) {

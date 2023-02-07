@@ -25,9 +25,6 @@ public class ManaBarRenderer extends AbstractGui {
 	private final static int BAR_WIDTH = 81;
 	private final static int BAR_HEIGHT = 9;
 	private final static int BAR_SPACING_ABOVE_EXP_BAR = 1;
-	//LazyOptional<IBaseManaCapability> playerCapability;
-	private float manaRun;
-	private float maxMana;
 
 	private final Minecraft mc;
 
@@ -52,8 +49,9 @@ public class ManaBarRenderer extends AbstractGui {
 		if (!playerCapability.isPresent())
 			return;
 
-		maxMana = playerCapability.map(x -> x.getMaxMana()).orElse(0.0f);
-		manaRun = playerCapability.map(x -> x.getMana()).orElse(0.0f);
+		float maxMana = playerCapability.map(x -> x.getMaxMana()).orElse(0.0f);
+		//LazyOptional<IBaseManaCapability> playerCapability;
+		float manaRun = playerCapability.map(x -> x.getMana()).orElse(0.0f);
 		/*if (manaRun < maxMana) {
 			manaRun += 0.10;
 			playerCapability.ifPresent(x -> x.setMana(manaRun > maxMana ? maxMana : manaRun,player));

@@ -15,11 +15,8 @@ import net.minecraft.world.World;
 
 public class SkillFrostBall implements ISkillContainer {
 
-	private final PlayerSkillCapability parentCapability;
-
-	public SkillFrostBall(PlayerSkillCapability parentCapability) {
-		this.parentCapability = parentCapability;
-	}
+    public SkillFrostBall(PlayerSkillCapability parentCapability) {
+    }
 
 	@Override
 	public SkillEnum getSkillEnum() {

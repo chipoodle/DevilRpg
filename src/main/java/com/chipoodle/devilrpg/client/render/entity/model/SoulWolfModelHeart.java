@@ -12,14 +12,12 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 public class SoulWolfModelHeart<T extends SoulWolfEntity> extends TintedAgeableModel<T> {
 	private final ModelRenderer heart;
 	private final ModelRenderer head;
-	private final ModelRenderer wispRightEye;
-	private final ModelRenderer wispLeftEye;
-	
-	public SoulWolfModelHeart() {
+
+    public SoulWolfModelHeart() {
 		head = new ModelRenderer(this, 0, 0);
 		head.setPos(-1.0F, 13.5F, -7.0F);
-		wispRightEye = new ModelRenderer(this, 32, 0);
-		wispLeftEye = new ModelRenderer(this, 32, 4);
+        ModelRenderer wispRightEye = new ModelRenderer(this, 32, 0);
+        ModelRenderer wispLeftEye = new ModelRenderer(this, 32, 4);
 		wispRightEye.addBox(-0.75F, -1.0F, -2.5F, 1.0F, 0.75F, 0.5F);
 		wispLeftEye.addBox(1.75F, -1.0F, -2.5F, 1.0F, 0.75F, 0.5F);
 		head.addChild(wispRightEye);

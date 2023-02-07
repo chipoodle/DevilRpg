@@ -35,7 +35,6 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassive implements IS
     //AttributeModifier healthAttributeModifier;
     AttributeModifier speedAttributeModifier;
     private final PlayerSkillCapability parentCapability;
-    private LazyOptional<IBaseAuxiliarCapability> aux;
     private final Random rand = new Random();
 
     public SkillShapeshiftWerewolf(PlayerSkillCapability parentCapability) {
@@ -55,7 +54,7 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassive implements IS
             worldIn.playSound(null, playerIn.getX(), playerIn.getY(), playerIn.getZ(), event,
                     SoundCategory.NEUTRAL, 0.5F, 0.4F / (rand.nextFloat() * 0.4F + 0.8F));
 
-            aux = playerIn.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
+            LazyOptional<IBaseAuxiliarCapability> aux = playerIn.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
             boolean transformation = aux.map(x -> x.isWerewolfTransformation()).orElse(false);
             aux.ifPresent(x -> x.setWerewolfTransformation(!transformation, playerIn));
             if (!transformation) {

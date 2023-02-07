@@ -13,11 +13,7 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 public class SoulWispModelHeart<T extends SoulWispEntity> extends AgeableModel<T> {
 	private final ModelRenderer cuerpo;
 	private final ModelRenderer[] blazeSticks;
-	//private final ModelRenderer[] tentacles;
-	private final ModelRenderer wispRightEye;
-	private final ModelRenderer wispLeftEye;
 
-	private final float distanciaDesdeElCentro = 4.0F;
 	private final int numberOfSticks = 5;
 	//private final int numberOfTentacles = 9;
 
@@ -30,8 +26,9 @@ public class SoulWispModelHeart<T extends SoulWispEntity> extends AgeableModel<T
 		this.cuerpo.setPos(0.0F, 19.0F, 0.0F);
 		this.cuerpo.addBox(-2.5F, -2.5F, -2.5F, 5.0F, 5.0F, 5.0F, 0.0f);
 
-		wispRightEye = new ModelRenderer(this, 32, 0);
-		wispLeftEye = new ModelRenderer(this, 32, 4);
+		//private final ModelRenderer[] tentacles;
+		ModelRenderer wispRightEye = new ModelRenderer(this, 32, 0);
+		ModelRenderer wispLeftEye = new ModelRenderer(this, 32, 4);
 		wispRightEye.addBox(-3.25F, -2.0F, -3.4F, 2.0F, 2.0F, 2.0F);
 		wispLeftEye.addBox(1.25F, -2.0F, -3.4F, 2.0F, 2.0F, 2.0F);
 		cuerpo.addChild(wispRightEye);
@@ -86,6 +83,7 @@ public class SoulWispModelHeart<T extends SoulWispEntity> extends AgeableModel<T
 			this.blazeSticks[j].y = 3.25F + MathHelper.cos(((float) (j * 2.5) + ageInTicks) * 0.25F);
 			this.blazeSticks[j].yRot = f;
 			// this.blazeSticks[j].rotateAngleX = MathHelper.sin(f)*0.3f;
+			float distanciaDesdeElCentro = 4.0F;
 			this.blazeSticks[j].x = -MathHelper.sin(f) * distanciaDesdeElCentro;
 			this.blazeSticks[j].z = -MathHelper.cos(f) * distanciaDesdeElCentro;
 			f += Math.PI * 2 / numberOfSticks;

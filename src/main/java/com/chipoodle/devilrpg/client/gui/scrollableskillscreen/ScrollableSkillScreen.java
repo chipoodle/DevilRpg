@@ -67,8 +67,6 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
     private GuiSkillTab selectedTab;
     private boolean isScrolling;
     private boolean isDraggingToPowerButton;
-    private double mouseX;
-    private double mouseY;
     private int offsetLeft;
     private int offsetTop;
 
@@ -296,8 +294,6 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
     @Override
     public void mouseMoved(double mouseX, double mouseY) {
         // super.mouseMoved(mouseX, mouseY);
-        this.mouseX = mouseX;
-        this.mouseY = mouseY;
     }
 
     @SuppressWarnings("deprecation")

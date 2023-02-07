@@ -29,10 +29,8 @@ import net.minecraftforge.common.util.LazyOptional;
 public class SkillSummonSoulWolf implements ISkillContainer {
 
     private static final int NUMBER_OF_SUMMONS = 3;
-    private final PlayerSkillCapability parentCapability;
 
     public SkillSummonSoulWolf(PlayerSkillCapability parentCapability) {
-        this.parentCapability = parentCapability;
     }
 
     @Override

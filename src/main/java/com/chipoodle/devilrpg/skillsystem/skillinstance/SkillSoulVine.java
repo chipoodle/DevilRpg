@@ -33,10 +33,8 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class SkillSoulVine implements ISkillContainer {
-    private final PlayerSkillCapability parentCapability;
 
     public SkillSoulVine(PlayerSkillCapability parentCapability) {
-        this.parentCapability = parentCapability;
     }
 
     @Override

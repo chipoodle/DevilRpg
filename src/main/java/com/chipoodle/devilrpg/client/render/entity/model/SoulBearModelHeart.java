@@ -12,15 +12,13 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 public class SoulBearModelHeart<T extends SoulBearEntity> extends QuadrupedModel<T> {
 	private ModelRenderer heart;
 	private final ModelRenderer headModel;
-	private final ModelRenderer wispRightEye;
-	private final ModelRenderer wispLeftEye;
 
-	public SoulBearModelHeart() {
+    public SoulBearModelHeart() {
 		super(12, 0.0F, true, 16.0F, 4.0F, 2.25F, 2.0F, 24);
 		this.headModel = new ModelRenderer(this, 0, 0);
 		this.headModel.setPos(0.0F, 10.0F, -16.0F);
-		wispRightEye = new ModelRenderer(this, 32, 0);
-		wispLeftEye = new ModelRenderer(this, 32, 4);
+        ModelRenderer wispRightEye = new ModelRenderer(this, 32, 0);
+        ModelRenderer wispLeftEye = new ModelRenderer(this, 32, 4);
 		wispRightEye.addBox(-2.0F, -0.25F, -3.5F, 1.0F, 0.75F, 0.5F);
 		wispLeftEye.addBox(1.0F, -0.25F, -3.5F, 1.0F, 0.75F, 0.5F);
 		headModel.addChild(wispRightEye);

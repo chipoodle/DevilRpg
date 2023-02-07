@@ -17,7 +17,6 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 @OnlyIn(Dist.CLIENT)
 public class ArrowWerewolfLayer<T extends LivingEntity, M extends WerewolfTransformedModel<T>> extends StuckInBodyWerewolfLayer<T, M> {
    private final EntityRendererManager dispatcher;
-   private ArrowEntity arrow;
 
    public ArrowWerewolfLayer(LivingRenderer<T, M> rendererIn) {
       super(rendererIn);
@@ -30,11 +29,11 @@ public class ArrowWerewolfLayer<T extends LivingEntity, M extends WerewolfTransf
 
    protected void renderStuckItem(MatrixStack p_225632_1_, IRenderTypeBuffer p_225632_2_, int p_225632_3_, Entity p_225632_4_, float p_225632_5_, float p_225632_6_, float p_225632_7_, float p_225632_8_) {
       float f = MathHelper.sqrt(p_225632_5_ * p_225632_5_ + p_225632_7_ * p_225632_7_);
-      this.arrow = new ArrowEntity(p_225632_4_.level, p_225632_4_.getX(), p_225632_4_.getY(), p_225632_4_.getZ());
-      this.arrow.yRot = (float)(Math.atan2(p_225632_5_, p_225632_7_) * (double)(180F / (float)Math.PI));
-      this.arrow.xRot = (float)(Math.atan2(p_225632_6_, f) * (double)(180F / (float)Math.PI));
-      this.arrow.yRotO = this.arrow.yRot;
-      this.arrow.xRotO = this.arrow.xRot;
-      this.dispatcher.render(this.arrow, 0.0D, 0.0D, 0.0D, 0.0F, p_225632_8_, p_225632_1_, p_225632_2_, p_225632_3_);
+      ArrowEntity arrow = new ArrowEntity(p_225632_4_.level, p_225632_4_.getX(), p_225632_4_.getY(), p_225632_4_.getZ());
+      arrow.yRot = (float)(Math.atan2(p_225632_5_, p_225632_7_) * (double)(180F / (float)Math.PI));
+      arrow.xRot = (float)(Math.atan2(p_225632_6_, f) * (double)(180F / (float)Math.PI));
+      arrow.yRotO = arrow.yRot;
+      arrow.xRotO = arrow.xRot;
+      this.dispatcher.render(arrow, 0.0D, 0.0D, 0.0D, 0.0F, p_225632_8_, p_225632_1_, p_225632_2_, p_225632_3_);
    }
 }

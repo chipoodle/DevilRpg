@@ -27,10 +27,7 @@ import net.minecraftforge.common.util.LazyOptional;
 
 public class SkillSummonWispArcher implements ISkillContainer, WispSkillInterface {
 
-	private final PlayerSkillCapability parentCapability;
-
 	public SkillSummonWispArcher(PlayerSkillCapability parentCapability) {
-		this.parentCapability = parentCapability;
 	}
 
 	@Override

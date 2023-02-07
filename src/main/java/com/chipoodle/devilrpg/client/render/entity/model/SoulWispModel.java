@@ -15,7 +15,6 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 @OnlyIn(Dist.CLIENT)
 public class SoulWispModel<T extends SoulWispEntity> extends AgeableModel<T> {
 	private final ModelRenderer bone;
-	private final ModelRenderer body;
 	private float rollAmount;
 
 	private final ModelRenderer[] tentacles;
@@ -27,10 +26,10 @@ public class SoulWispModel<T extends SoulWispEntity> extends AgeableModel<T> {
 		this.texHeight = 64;
 		this.bone = new ModelRenderer(this);
 		this.bone.setPos(0.0F, 19.0F, 0.0F);
-		this.body = new ModelRenderer(this, 0, 0);
-		this.body.setPos(0.0F, 0.0F, 0.0F);
-		this.bone.addChild(this.body);
-		this.body.addBox(-3.5F, -3.5F, -3.5F, 7.0F, 7.0F, 7.0F, 0.0f);
+		ModelRenderer body = new ModelRenderer(this, 0, 0);
+		body.setPos(0.0F, 0.0F, 0.0F);
+		this.bone.addChild(body);
+		body.addBox(-3.5F, -3.5F, -3.5F, 7.0F, 7.0F, 7.0F, 0.0f);
 
 		Random random = new Random(1660L);
 		this.tentacles = new ModelRenderer[numberOfTentacles];

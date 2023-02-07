@@ -7,11 +7,10 @@ import net.minecraft.nbt.CompoundNBT;
 public class TamableMinionCapability implements IBaseTamableMinionCapability {
 
 	private CompoundNBT nbt = new CompoundNBT();
-    private MinionPassiveAttributes minionPassiveAttributes;
 
     @Override
     public void applyPassives(ITameableEntity entity) {
-        minionPassiveAttributes = new MinionPassiveAttributes(entity);
+        MinionPassiveAttributes minionPassiveAttributes = new MinionPassiveAttributes(entity);
     }
 
     @Override
