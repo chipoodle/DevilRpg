@@ -1,38 +1,39 @@
 package com.chipoodle.devilrpg.block;
 
 import com.google.common.collect.ImmutableMap;
-import net.minecraft.block.*;
-import net.minecraft.item.BlockItemUseContext;
-import net.minecraft.state.BooleanProperty;
-import net.minecraft.state.StateContainer;
-import net.minecraft.util.Direction;
-import net.minecraft.util.Mirror;
-import net.minecraft.util.Rotation;
-import net.minecraft.util.Util;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.shapes.ISelectionContext;
-import net.minecraft.util.math.shapes.VoxelShape;
-import net.minecraft.util.math.shapes.VoxelShapes;
-import net.minecraft.world.IBlockReader;
-import net.minecraft.world.IWorld;
-import net.minecraft.world.IWorldReader;
-import net.minecraft.world.server.ServerWorld;
+import net.minecraft.Util;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.block.*;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
 
 import javax.annotation.Nullable;
 import java.util.Map;
-import java.util.Random;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class SoulVineBlock extends Block implements net.minecraftforge.common.IForgeShearable {
-    public static final BooleanProperty UP = SixWayBlock.UP;
-    public static final BooleanProperty NORTH = SixWayBlock.NORTH;
-    public static final BooleanProperty EAST = SixWayBlock.EAST;
-    public static final BooleanProperty SOUTH = SixWayBlock.SOUTH;
-    public static final BooleanProperty WEST = SixWayBlock.WEST;
-    public static final Map<Direction, BooleanProperty> PROPERTY_BY_DIRECTION = SixWayBlock.PROPERTY_BY_DIRECTION.entrySet().stream().filter((p_199782_0_) -> {
-        return p_199782_0_.getKey() != Direction.DOWN;
+    public static final BooleanProperty UP = PipeBlock.UP;
+    public static final BooleanProperty NORTH = PipeBlock.NORTH;
+    public static final BooleanProperty EAST = PipeBlock.EAST;
+    public static final BooleanProperty SOUTH = PipeBlock.SOUTH;
+    public static final BooleanProperty WEST = PipeBlock.WEST;
+    public static final Map<Direction, BooleanProperty> PROPERTY_BY_DIRECTION = PipeBlock.PROPERTY_BY_DIRECTION.entrySet().stream().filter((p_57886_) -> {
+        return p_57886_.getKey() != Direction.DOWN;
     }).collect(Util.toMap());
+    protected static final float AABB_OFFSET = 1.0F;
     private static final VoxelShape UP_AABB = Block.box(0.0D, 15.0D, 0.0D, 16.0D, 16.0D, 16.0D);
     private static final VoxelShape WEST_AABB = Block.box(0.0D, 0.0D, 0.0D, 1.0D, 16.0D, 16.0D);
     private static final VoxelShape EAST_AABB = Block.box(15.0D, 0.0D, 0.0D, 16.0D, 16.0D, 16.0D);
@@ -40,54 +41,58 @@ public class SoulVineBlock extends Block implements net.minecraftforge.common.IF
     private static final VoxelShape SOUTH_AABB = Block.box(0.0D, 0.0D, 15.0D, 16.0D, 16.0D, 16.0D);
     private final Map<BlockState, VoxelShape> shapesCache;
 
-    public SoulVineBlock(Properties p_i48303_1_) {
-        super(p_i48303_1_);
+    public SoulVineBlock(BlockBehaviour.Properties p_57847_) {
+        super(p_57847_);
         this.registerDefaultState(this.stateDefinition.any().setValue(UP, Boolean.valueOf(false)).setValue(NORTH, Boolean.valueOf(false)).setValue(EAST, Boolean.valueOf(false)).setValue(SOUTH, Boolean.valueOf(false)).setValue(WEST, Boolean.valueOf(false)));
         this.shapesCache = ImmutableMap.copyOf(this.stateDefinition.getPossibleStates().stream().collect(Collectors.toMap(Function.identity(), SoulVineBlock::calculateShape)));
     }
 
-    private static VoxelShape calculateShape(BlockState p_242685_0_) {
-        VoxelShape voxelshape = VoxelShapes.empty();
-        if (p_242685_0_.getValue(UP)) {
+    private static VoxelShape calculateShape(BlockState p_57906_) {
+        VoxelShape voxelshape = Shapes.empty();
+        if (p_57906_.getValue(UP)) {
             voxelshape = UP_AABB;
         }
 
-        if (p_242685_0_.getValue(NORTH)) {
-            voxelshape = VoxelShapes.or(voxelshape, NORTH_AABB);
+        if (p_57906_.getValue(NORTH)) {
+            voxelshape = Shapes.or(voxelshape, NORTH_AABB);
         }
 
-        if (p_242685_0_.getValue(SOUTH)) {
-            voxelshape = VoxelShapes.or(voxelshape, SOUTH_AABB);
+        if (p_57906_.getValue(SOUTH)) {
+            voxelshape = Shapes.or(voxelshape, SOUTH_AABB);
         }
 
-        if (p_242685_0_.getValue(EAST)) {
-            voxelshape = VoxelShapes.or(voxelshape, EAST_AABB);
+        if (p_57906_.getValue(EAST)) {
+            voxelshape = Shapes.or(voxelshape, EAST_AABB);
         }
 
-        if (p_242685_0_.getValue(WEST)) {
-            voxelshape = VoxelShapes.or(voxelshape, WEST_AABB);
+        if (p_57906_.getValue(WEST)) {
+            voxelshape = Shapes.or(voxelshape, WEST_AABB);
         }
 
-        return voxelshape;
+        return voxelshape.isEmpty() ? Shapes.block() : voxelshape;
     }
 
-    public VoxelShape getShape(BlockState p_220053_1_, IBlockReader p_220053_2_, BlockPos p_220053_3_, ISelectionContext p_220053_4_) {
-        return this.shapesCache.get(p_220053_1_);
+    public VoxelShape getShape(BlockState p_57897_, BlockGetter p_57898_, BlockPos p_57899_, CollisionContext p_57900_) {
+        return this.shapesCache.get(p_57897_);
     }
 
-    public boolean canSurvive(BlockState p_196260_1_, IWorldReader p_196260_2_, BlockPos p_196260_3_) {
-        return this.hasFaces(this.getUpdatedState(p_196260_1_, p_196260_2_, p_196260_3_));
+    public boolean propagatesSkylightDown(BlockState p_181239_, BlockGetter p_181240_, BlockPos p_181241_) {
+        return true;
     }
 
-    private boolean hasFaces(BlockState p_196543_1_) {
-        return this.countFaces(p_196543_1_) > 0;
+    public boolean canSurvive(BlockState p_57861_, LevelReader p_57862_, BlockPos p_57863_) {
+        return this.hasFaces(this.getUpdatedState(p_57861_, p_57862_, p_57863_));
     }
 
-    private int countFaces(BlockState p_208496_1_) {
+    private boolean hasFaces(BlockState p_57908_) {
+        return this.countFaces(p_57908_) > 0;
+    }
+
+    private int countFaces(BlockState p_57910_) {
         int i = 0;
 
         for (BooleanProperty booleanproperty : PROPERTY_BY_DIRECTION.values()) {
-            if (p_208496_1_.getValue(booleanproperty)) {
+            if (p_57910_.getValue(booleanproperty)) {
                 ++i;
             }
         }
@@ -95,135 +100,133 @@ public class SoulVineBlock extends Block implements net.minecraftforge.common.IF
         return i;
     }
 
-    private boolean canSupportAtFace(IBlockReader p_196541_1_, BlockPos p_196541_2_, Direction p_196541_3_) {
-        if (p_196541_3_ == Direction.DOWN) {
+    private boolean canSupportAtFace(BlockGetter p_57888_, BlockPos p_57889_, Direction p_57890_) {
+        if (p_57890_ == Direction.DOWN) {
             return false;
         } else {
-            BlockPos blockpos = p_196541_2_.relative(p_196541_3_);
-            if (isAcceptableNeighbour(p_196541_1_, blockpos, p_196541_3_)) {
+            BlockPos blockpos = p_57889_.relative(p_57890_);
+            if (isAcceptableNeighbour(p_57888_, blockpos, p_57890_)) {
                 return true;
-            } else if (p_196541_3_.getAxis() == Direction.Axis.Y) {
+            } else if (p_57890_.getAxis() == Direction.Axis.Y) {
                 return false;
             } else {
-                BooleanProperty booleanproperty = PROPERTY_BY_DIRECTION.get(p_196541_3_);
-                BlockState blockstate = p_196541_1_.getBlockState(p_196541_2_.above());
+                BooleanProperty booleanproperty = PROPERTY_BY_DIRECTION.get(p_57890_);
+                BlockState blockstate = p_57888_.getBlockState(p_57889_.above());
                 return blockstate.is(this) && blockstate.getValue(booleanproperty);
             }
         }
     }
 
-    public static boolean isAcceptableNeighbour(IBlockReader p_196542_0_, BlockPos p_196542_1_, Direction p_196542_2_) {
-        BlockState blockstate = p_196542_0_.getBlockState(p_196542_1_);
-        return Block.isFaceFull(blockstate.getCollisionShape(p_196542_0_, p_196542_1_), p_196542_2_.getOpposite());
+    public static boolean isAcceptableNeighbour(BlockGetter p_57854_, BlockPos p_57855_, Direction p_57856_) {
+        return MultifaceBlock.canAttachTo(p_57854_, p_57856_, p_57855_, p_57854_.getBlockState(p_57855_));
     }
 
-    private BlockState getUpdatedState(BlockState p_196545_1_, IBlockReader p_196545_2_, BlockPos p_196545_3_) {
-        BlockPos blockpos = p_196545_3_.above();
-        if (p_196545_1_.getValue(UP)) {
-            p_196545_1_ = p_196545_1_.setValue(UP, Boolean.valueOf(isAcceptableNeighbour(p_196545_2_, blockpos, Direction.DOWN)));
+    private BlockState getUpdatedState(BlockState p_57902_, BlockGetter p_57903_, BlockPos p_57904_) {
+        BlockPos blockpos = p_57904_.above();
+        if (p_57902_.getValue(UP)) {
+            p_57902_ = p_57902_.setValue(UP, Boolean.valueOf(isAcceptableNeighbour(p_57903_, blockpos, Direction.DOWN)));
         }
 
         BlockState blockstate = null;
 
         for (Direction direction : Direction.Plane.HORIZONTAL) {
             BooleanProperty booleanproperty = getPropertyForFace(direction);
-            if (p_196545_1_.getValue(booleanproperty)) {
-                boolean flag = this.canSupportAtFace(p_196545_2_, p_196545_3_, direction);
+            if (p_57902_.getValue(booleanproperty)) {
+                boolean flag = this.canSupportAtFace(p_57903_, p_57904_, direction);
                 if (!flag) {
                     if (blockstate == null) {
-                        blockstate = p_196545_2_.getBlockState(blockpos);
+                        blockstate = p_57903_.getBlockState(blockpos);
                     }
 
                     flag = blockstate.is(this) && blockstate.getValue(booleanproperty);
                 }
 
-                p_196545_1_ = p_196545_1_.setValue(booleanproperty, Boolean.valueOf(flag));
+                p_57902_ = p_57902_.setValue(booleanproperty, Boolean.valueOf(flag));
             }
         }
 
-        return p_196545_1_;
+        return p_57902_;
     }
 
-    public BlockState updateShape(BlockState p_196271_1_, Direction p_196271_2_, BlockState p_196271_3_, IWorld p_196271_4_, BlockPos p_196271_5_, BlockPos p_196271_6_) {
-        if (p_196271_2_ == Direction.DOWN) {
-            return super.updateShape(p_196271_1_, p_196271_2_, p_196271_3_, p_196271_4_, p_196271_5_, p_196271_6_);
+    public BlockState updateShape(BlockState p_57875_, Direction p_57876_, BlockState p_57877_, LevelAccessor p_57878_, BlockPos p_57879_, BlockPos p_57880_) {
+        if (p_57876_ == Direction.DOWN) {
+            return super.updateShape(p_57875_, p_57876_, p_57877_, p_57878_, p_57879_, p_57880_);
         } else {
-            BlockState blockstate = this.getUpdatedState(p_196271_1_, p_196271_4_, p_196271_5_);
+            BlockState blockstate = this.getUpdatedState(p_57875_, p_57878_, p_57879_);
             return !this.hasFaces(blockstate) ? Blocks.AIR.defaultBlockState() : blockstate;
         }
     }
 
-    public void randomTick(BlockState p_225542_1_, ServerWorld p_225542_2_, BlockPos p_225542_3_, Random p_225542_4_) {
-        if (p_225542_2_.random.nextInt(4) == 0 && p_225542_2_.isAreaLoaded(p_225542_3_, 4)) { // Forge: check area to prevent loading unloaded chunks
-            Direction direction = Direction.getRandom(p_225542_4_);
-            BlockPos blockpos = p_225542_3_.above();
-            if (direction.getAxis().isHorizontal() && !p_225542_1_.getValue(getPropertyForFace(direction))) {
-                if (this.canSpread(p_225542_2_, p_225542_3_)) {
-                    BlockPos blockpos4 = p_225542_3_.relative(direction);
-                    BlockState blockstate4 = p_225542_2_.getBlockState(blockpos4);
-                    if (blockstate4.isAir(p_225542_2_, blockpos4)) {
+    public void randomTick(BlockState p_222655_, ServerLevel p_222656_, BlockPos p_222657_, RandomSource p_222658_) {
+        if (p_222656_.random.nextInt(4) == 0 && p_222656_.isAreaLoaded(p_222657_, 4)) { // Forge: check area to prevent loading unloaded chunks
+            Direction direction = Direction.getRandom(p_222658_);
+            BlockPos blockpos = p_222657_.above();
+            if (direction.getAxis().isHorizontal() && !p_222655_.getValue(getPropertyForFace(direction))) {
+                if (this.canSpread(p_222656_, p_222657_)) {
+                    BlockPos blockpos4 = p_222657_.relative(direction);
+                    BlockState blockstate4 = p_222656_.getBlockState(blockpos4);
+                    if (blockstate4.isAir()) {
                         Direction direction3 = direction.getClockWise();
                         Direction direction4 = direction.getCounterClockWise();
-                        boolean flag = p_225542_1_.getValue(getPropertyForFace(direction3));
-                        boolean flag1 = p_225542_1_.getValue(getPropertyForFace(direction4));
+                        boolean flag = p_222655_.getValue(getPropertyForFace(direction3));
+                        boolean flag1 = p_222655_.getValue(getPropertyForFace(direction4));
                         BlockPos blockpos2 = blockpos4.relative(direction3);
                         BlockPos blockpos3 = blockpos4.relative(direction4);
-                        if (flag && isAcceptableNeighbour(p_225542_2_, blockpos2, direction3)) {
-                            p_225542_2_.setBlock(blockpos4, this.defaultBlockState().setValue(getPropertyForFace(direction3), Boolean.valueOf(true)), 2);
-                        } else if (flag1 && isAcceptableNeighbour(p_225542_2_, blockpos3, direction4)) {
-                            p_225542_2_.setBlock(blockpos4, this.defaultBlockState().setValue(getPropertyForFace(direction4), Boolean.valueOf(true)), 2);
+                        if (flag && isAcceptableNeighbour(p_222656_, blockpos2, direction3)) {
+                            p_222656_.setBlock(blockpos4, this.defaultBlockState().setValue(getPropertyForFace(direction3), Boolean.valueOf(true)), 2);
+                        } else if (flag1 && isAcceptableNeighbour(p_222656_, blockpos3, direction4)) {
+                            p_222656_.setBlock(blockpos4, this.defaultBlockState().setValue(getPropertyForFace(direction4), Boolean.valueOf(true)), 2);
                         } else {
                             Direction direction1 = direction.getOpposite();
-                            if (flag && p_225542_2_.isEmptyBlock(blockpos2) && isAcceptableNeighbour(p_225542_2_, p_225542_3_.relative(direction3), direction1)) {
-                                p_225542_2_.setBlock(blockpos2, this.defaultBlockState().setValue(getPropertyForFace(direction1), Boolean.valueOf(true)), 2);
-                            } else if (flag1 && p_225542_2_.isEmptyBlock(blockpos3) && isAcceptableNeighbour(p_225542_2_, p_225542_3_.relative(direction4), direction1)) {
-                                p_225542_2_.setBlock(blockpos3, this.defaultBlockState().setValue(getPropertyForFace(direction1), Boolean.valueOf(true)), 2);
-                            } else if ((double) p_225542_2_.random.nextFloat() < 0.05D && isAcceptableNeighbour(p_225542_2_, blockpos4.above(), Direction.UP)) {
-                                p_225542_2_.setBlock(blockpos4, this.defaultBlockState().setValue(UP, Boolean.valueOf(true)), 2);
+                            if (flag && p_222656_.isEmptyBlock(blockpos2) && isAcceptableNeighbour(p_222656_, p_222657_.relative(direction3), direction1)) {
+                                p_222656_.setBlock(blockpos2, this.defaultBlockState().setValue(getPropertyForFace(direction1), Boolean.valueOf(true)), 2);
+                            } else if (flag1 && p_222656_.isEmptyBlock(blockpos3) && isAcceptableNeighbour(p_222656_, p_222657_.relative(direction4), direction1)) {
+                                p_222656_.setBlock(blockpos3, this.defaultBlockState().setValue(getPropertyForFace(direction1), Boolean.valueOf(true)), 2);
+                            } else if ((double) p_222658_.nextFloat() < 0.05D && isAcceptableNeighbour(p_222656_, blockpos4.above(), Direction.UP)) {
+                                p_222656_.setBlock(blockpos4, this.defaultBlockState().setValue(UP, Boolean.valueOf(true)), 2);
                             }
                         }
-                    } else if (isAcceptableNeighbour(p_225542_2_, blockpos4, direction)) {
-                        p_225542_2_.setBlock(p_225542_3_, p_225542_1_.setValue(getPropertyForFace(direction), Boolean.valueOf(true)), 2);
+                    } else if (isAcceptableNeighbour(p_222656_, blockpos4, direction)) {
+                        p_222656_.setBlock(p_222657_, p_222655_.setValue(getPropertyForFace(direction), Boolean.valueOf(true)), 2);
                     }
 
                 }
             } else {
-                if (direction == Direction.UP && p_225542_3_.getY() < 255) {
-                    if (this.canSupportAtFace(p_225542_2_, p_225542_3_, direction)) {
-                        p_225542_2_.setBlock(p_225542_3_, p_225542_1_.setValue(UP, Boolean.valueOf(true)), 2);
+                if (direction == Direction.UP && p_222657_.getY() < p_222656_.getMaxBuildHeight() - 1) {
+                    if (this.canSupportAtFace(p_222656_, p_222657_, direction)) {
+                        p_222656_.setBlock(p_222657_, p_222655_.setValue(UP, Boolean.valueOf(true)), 2);
                         return;
                     }
 
-                    if (p_225542_2_.isEmptyBlock(blockpos)) {
-                        if (!this.canSpread(p_225542_2_, p_225542_3_)) {
+                    if (p_222656_.isEmptyBlock(blockpos)) {
+                        if (!this.canSpread(p_222656_, p_222657_)) {
                             return;
                         }
 
-                        BlockState blockstate3 = p_225542_1_;
+                        BlockState blockstate3 = p_222655_;
 
                         for (Direction direction2 : Direction.Plane.HORIZONTAL) {
-                            if (p_225542_4_.nextBoolean() || !isAcceptableNeighbour(p_225542_2_, blockpos.relative(direction2), Direction.UP)) {
+                            if (p_222658_.nextBoolean() || !isAcceptableNeighbour(p_222656_, blockpos.relative(direction2), direction2)) {
                                 blockstate3 = blockstate3.setValue(getPropertyForFace(direction2), Boolean.valueOf(false));
                             }
                         }
 
                         if (this.hasHorizontalConnection(blockstate3)) {
-                            p_225542_2_.setBlock(blockpos, blockstate3, 2);
+                            p_222656_.setBlock(blockpos, blockstate3, 2);
                         }
 
                         return;
                     }
                 }
 
-                if (p_225542_3_.getY() > 0) {
-                    BlockPos blockpos1 = p_225542_3_.below();
-                    BlockState blockstate = p_225542_2_.getBlockState(blockpos1);
-                    boolean isAir = blockstate.isAir(p_225542_2_, blockpos1);
-                    if (isAir || blockstate.is(this)) {
-                        BlockState blockstate1 = isAir ? this.defaultBlockState() : blockstate;
-                        BlockState blockstate2 = this.copyRandomFaces(p_225542_1_, blockstate1, p_225542_4_);
+                if (p_222657_.getY() > p_222656_.getMinBuildHeight()) {
+                    BlockPos blockpos1 = p_222657_.below();
+                    BlockState blockstate = p_222656_.getBlockState(blockpos1);
+                    if (blockstate.isAir() || blockstate.is(this)) {
+                        BlockState blockstate1 = blockstate.isAir() ? this.defaultBlockState() : blockstate;
+                        BlockState blockstate2 = this.copyRandomFaces(p_222655_, blockstate1, p_222658_);
                         if (blockstate1 != blockstate2 && this.hasHorizontalConnection(blockstate2)) {
-                            p_225542_2_.setBlock(blockpos1, blockstate2, 2);
+                            p_222656_.setBlock(blockpos1, blockstate2, 2);
                         }
                     }
                 }
@@ -232,30 +235,30 @@ public class SoulVineBlock extends Block implements net.minecraftforge.common.IF
         }
     }
 
-    private BlockState copyRandomFaces(BlockState p_196544_1_, BlockState p_196544_2_, Random p_196544_3_) {
+    private BlockState copyRandomFaces(BlockState p_222651_, BlockState p_222652_, RandomSource p_222653_) {
         for (Direction direction : Direction.Plane.HORIZONTAL) {
-            if (p_196544_3_.nextBoolean()) {
+            if (p_222653_.nextBoolean()) {
                 BooleanProperty booleanproperty = getPropertyForFace(direction);
-                if (p_196544_1_.getValue(booleanproperty)) {
-                    p_196544_2_ = p_196544_2_.setValue(booleanproperty, Boolean.valueOf(true));
+                if (p_222651_.getValue(booleanproperty)) {
+                    p_222652_ = p_222652_.setValue(booleanproperty, Boolean.valueOf(true));
                 }
             }
         }
 
-        return p_196544_2_;
+        return p_222652_;
     }
 
-    private boolean hasHorizontalConnection(BlockState p_196540_1_) {
-        return p_196540_1_.getValue(NORTH) || p_196540_1_.getValue(EAST) || p_196540_1_.getValue(SOUTH) || p_196540_1_.getValue(WEST);
+    private boolean hasHorizontalConnection(BlockState p_57912_) {
+        return p_57912_.getValue(NORTH) || p_57912_.getValue(EAST) || p_57912_.getValue(SOUTH) || p_57912_.getValue(WEST);
     }
 
-    private boolean canSpread(IBlockReader p_196539_1_, BlockPos p_196539_2_) {
+    private boolean canSpread(BlockGetter p_57851_, BlockPos p_57852_) {
         int i = 4;
-        Iterable<BlockPos> iterable = BlockPos.betweenClosed(p_196539_2_.getX() - 4, p_196539_2_.getY() - 1, p_196539_2_.getZ() - 4, p_196539_2_.getX() + 4, p_196539_2_.getY() + 1, p_196539_2_.getZ() + 4);
+        Iterable<BlockPos> iterable = BlockPos.betweenClosed(p_57852_.getX() - 4, p_57852_.getY() - 1, p_57852_.getZ() - 4, p_57852_.getX() + 4, p_57852_.getY() + 1, p_57852_.getZ() + 4);
         int j = 5;
 
         for (BlockPos blockpos : iterable) {
-            if (p_196539_1_.getBlockState(blockpos).is(this)) {
+            if (p_57851_.getBlockState(blockpos).is(this)) {
                 --j;
                 if (j <= 0) {
                     return false;
@@ -266,26 +269,26 @@ public class SoulVineBlock extends Block implements net.minecraftforge.common.IF
         return true;
     }
 
-    public boolean canBeReplaced(BlockState p_196253_1_, BlockItemUseContext p_196253_2_) {
-        BlockState blockstate = p_196253_2_.getLevel().getBlockState(p_196253_2_.getClickedPos());
+    public boolean canBeReplaced(BlockState p_57858_, BlockPlaceContext p_57859_) {
+        BlockState blockstate = p_57859_.getLevel().getBlockState(p_57859_.getClickedPos());
         if (blockstate.is(this)) {
             return this.countFaces(blockstate) < PROPERTY_BY_DIRECTION.size();
         } else {
-            return super.canBeReplaced(p_196253_1_, p_196253_2_);
+            return super.canBeReplaced(p_57858_, p_57859_);
         }
     }
 
     @Nullable
-    public BlockState getStateForPlacement(BlockItemUseContext p_196258_1_) {
-        BlockState blockstate = p_196258_1_.getLevel().getBlockState(p_196258_1_.getClickedPos());
+    public BlockState getStateForPlacement(BlockPlaceContext p_57849_) {
+        BlockState blockstate = p_57849_.getLevel().getBlockState(p_57849_.getClickedPos());
         boolean flag = blockstate.is(this);
         BlockState blockstate1 = flag ? blockstate : this.defaultBlockState();
 
-        for (Direction direction : p_196258_1_.getNearestLookingDirections()) {
+        for (Direction direction : p_57849_.getNearestLookingDirections()) {
             if (direction != Direction.DOWN) {
                 BooleanProperty booleanproperty = getPropertyForFace(direction);
                 boolean flag1 = flag && blockstate.getValue(booleanproperty);
-                if (!flag1 && this.canSupportAtFace(p_196258_1_.getLevel(), p_196258_1_.getClickedPos(), direction)) {
+                if (!flag1 && this.canSupportAtFace(p_57849_.getLevel(), p_57849_.getClickedPos(), direction)) {
                     return blockstate1.setValue(booleanproperty, Boolean.valueOf(true));
                 }
             }
@@ -294,41 +297,35 @@ public class SoulVineBlock extends Block implements net.minecraftforge.common.IF
         return flag ? blockstate1 : null;
     }
 
-    protected void createBlockStateDefinition(StateContainer.Builder<Block, BlockState> p_206840_1_) {
-        p_206840_1_.add(UP, NORTH, EAST, SOUTH, WEST);
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_57882_) {
+        p_57882_.add(UP, NORTH, EAST, SOUTH, WEST);
     }
 
-    public BlockState rotate(BlockState p_185499_1_, Rotation p_185499_2_) {
-        switch (p_185499_2_) {
+    public BlockState rotate(BlockState p_57868_, Rotation p_57869_) {
+        switch (p_57869_) {
             case CLOCKWISE_180:
-                return p_185499_1_.setValue(NORTH, p_185499_1_.getValue(SOUTH)).setValue(EAST, p_185499_1_.getValue(WEST)).setValue(SOUTH, p_185499_1_.getValue(NORTH)).setValue(WEST, p_185499_1_.getValue(EAST));
+                return p_57868_.setValue(NORTH, p_57868_.getValue(SOUTH)).setValue(EAST, p_57868_.getValue(WEST)).setValue(SOUTH, p_57868_.getValue(NORTH)).setValue(WEST, p_57868_.getValue(EAST));
             case COUNTERCLOCKWISE_90:
-                return p_185499_1_.setValue(NORTH, p_185499_1_.getValue(EAST)).setValue(EAST, p_185499_1_.getValue(SOUTH)).setValue(SOUTH, p_185499_1_.getValue(WEST)).setValue(WEST, p_185499_1_.getValue(NORTH));
+                return p_57868_.setValue(NORTH, p_57868_.getValue(EAST)).setValue(EAST, p_57868_.getValue(SOUTH)).setValue(SOUTH, p_57868_.getValue(WEST)).setValue(WEST, p_57868_.getValue(NORTH));
             case CLOCKWISE_90:
-                return p_185499_1_.setValue(NORTH, p_185499_1_.getValue(WEST)).setValue(EAST, p_185499_1_.getValue(NORTH)).setValue(SOUTH, p_185499_1_.getValue(EAST)).setValue(WEST, p_185499_1_.getValue(SOUTH));
+                return p_57868_.setValue(NORTH, p_57868_.getValue(WEST)).setValue(EAST, p_57868_.getValue(NORTH)).setValue(SOUTH, p_57868_.getValue(EAST)).setValue(WEST, p_57868_.getValue(SOUTH));
             default:
-                return p_185499_1_;
+                return p_57868_;
         }
     }
 
-    public BlockState mirror(BlockState p_185471_1_, Mirror p_185471_2_) {
-        switch (p_185471_2_) {
+    public BlockState mirror(BlockState p_57865_, Mirror p_57866_) {
+        switch (p_57866_) {
             case LEFT_RIGHT:
-                return p_185471_1_.setValue(NORTH, p_185471_1_.getValue(SOUTH)).setValue(SOUTH, p_185471_1_.getValue(NORTH));
+                return p_57865_.setValue(NORTH, p_57865_.getValue(SOUTH)).setValue(SOUTH, p_57865_.getValue(NORTH));
             case FRONT_BACK:
-                return p_185471_1_.setValue(EAST, p_185471_1_.getValue(WEST)).setValue(WEST, p_185471_1_.getValue(EAST));
+                return p_57865_.setValue(EAST, p_57865_.getValue(WEST)).setValue(WEST, p_57865_.getValue(EAST));
             default:
-                return super.mirror(p_185471_1_, p_185471_2_);
+                return super.mirror(p_57865_, p_57866_);
         }
     }
 
-    public static BooleanProperty getPropertyForFace(Direction p_176267_0_) {
-        return PROPERTY_BY_DIRECTION.get(p_176267_0_);
+    public static BooleanProperty getPropertyForFace(Direction p_57884_) {
+        return PROPERTY_BY_DIRECTION.get(p_57884_);
     }
-
-    /*@Nullable
-    @Override
-    public <T extends Block> BlockTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
-        return type == MyBlockEntityTypes.MYBE.get() ? MyBlockEntity::tick : null;
-    }*/
 }

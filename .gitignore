@@ -23,13 +23,3 @@ run
 
 # Files from Forge MDK
 forge*changelog.txt
-saves
-/options.txt
-/servers.dat
-/.gitattributes
-/usercache.json
-/usernamecache.json
-/realms_persistence.json
-/gradleForge.properties.backup
-logs
-crash-reports
