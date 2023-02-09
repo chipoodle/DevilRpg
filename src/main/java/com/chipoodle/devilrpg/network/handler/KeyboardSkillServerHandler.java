@@ -1,16 +1,16 @@
 package com.chipoodle.devilrpg.network.handler;
 
-import java.util.function.Supplier;
-
-import com.chipoodle.devilrpg.capability.skill.IBasePlayerSkillCapability;
-import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityAttacher;
 import com.chipoodle.devilrpg.util.PowerEnum;
-
-import net.minecraft.entity.player.ServerPlayerEntity;
-import net.minecraft.network.PacketBuffer;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.fml.network.NetworkDirection;
-import net.minecraftforge.fml.network.NetworkEvent;
+import net.minecraftforge.network.NetworkDirection;
+import net.minecraftforge.network.NetworkEvent;
+
+
+import java.util.function.Supplier;
 
 public class KeyboardSkillServerHandler {
 	private final PowerEnum poder;
@@ -23,11 +23,11 @@ public class KeyboardSkillServerHandler {
 		return poder;
 	}
 
-	public static void encode(final KeyboardSkillServerHandler msg, final PacketBuffer packetBuffer) {
+	public static void encode(final KeyboardSkillServerHandler msg, final FriendlyByteBuf packetBuffer) {
 		packetBuffer.writeUtf(msg.getPoder().name());
 	}
 
-	public static KeyboardSkillServerHandler decode(final PacketBuffer packetBuffer) {
+	public static KeyboardSkillServerHandler decode(final FriendlyByteBuf packetBuffer) {
 		return new KeyboardSkillServerHandler(PowerEnum.valueOf(packetBuffer.readUtf()));
 	}
 
@@ -35,12 +35,13 @@ public class KeyboardSkillServerHandler {
 			final Supplier<NetworkEvent.Context> contextSupplier) {
 		if (contextSupplier.get().getDirection().equals(NetworkDirection.PLAY_TO_SERVER)) {
 			contextSupplier.get().enqueueWork(() -> {
-				ServerPlayerEntity sender = contextSupplier.get().getSender(); // the client that sent this packet
-				LazyOptional<IBasePlayerSkillCapability> skill = sender.getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
+				ServerPlayer sender = contextSupplier.get().getSender(); // the client that sent this packet
+				LazyOptional<PlayerSkillCapabilityInterface> skill = sender.getCapability(PlayerSkillCapabilityAttacher.SKILL_CAP);
 				//sender.sendMessage(new StringTextComponent("KeyboardSkillServerHandler on msg:"+ msg.getPoder().name()+" Player ID: "+sender.getEntityId()));
 				skill.ifPresent(x->x.triggerAction(sender, msg.getPoder()));
 			});
 			contextSupplier.get().setPacketHandled(true);
 		}
 	}
+
 }

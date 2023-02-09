@@ -1,7 +1,7 @@
 package com.chipoodle.devilrpg.entity;
 
-import com.chipoodle.devilrpg.capability.skill.IBasePlayerSkillCapability;
-import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityAttacher;
 import com.chipoodle.devilrpg.init.ModEntityTypes;
 import com.chipoodle.devilrpg.util.SkillEnum;
 
@@ -100,7 +100,7 @@ public class SoulIceBallEntity extends ProjectileItemEntity implements ISoulEnti
 	}
 
 	public void updateLevel(PlayerEntity owner, SkillEnum callerSkillEnum) {
-		LazyOptional<IBasePlayerSkillCapability> skill = owner.getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
+		LazyOptional<PlayerSkillCapabilityInterface> skill = owner.getCapability(PlayerSkillCapabilityAttacher.SKILL_CAP);
 		if (skill != null && skill.isPresent()) {
 			this.puntosAsignados = skill.map(x -> x.getSkillsPoints()).orElse(null).get(callerSkillEnum);
 			this.damage = puntosAsignados * 2.0f;

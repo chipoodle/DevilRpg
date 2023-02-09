@@ -2,10 +2,10 @@ package com.chipoodle.devilrpg.skillsystem.skillinstance;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
-import com.chipoodle.devilrpg.capability.auxiliar.IBaseAuxiliarCapability;
-import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliarCapabilityProvider;
-import com.chipoodle.devilrpg.capability.skill.IBasePlayerSkillCapability;
-import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
+import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
+import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
 import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.entity.ai.attributes.AttributeModifier;
@@ -20,10 +20,10 @@ public class PlayerPassiveWerewolfVitality extends AbstractPlayerPassive impleme
     public static final String ATTRIBUTE_MODIFIER_UNIQUE_NAME = SkillEnum.WEREWOLF_VITALITY.name() + "_" + "ADDITION";
     public static final double HEALTH_FACTOR = 1.00D;
     AttributeModifier hitAttributeModifier;
-    private final IBasePlayerSkillCapability parentCapability;
+    private final PlayerSkillCapabilityInterface parentCapability;
     private PlayerEntity playerIn;
 
-    public PlayerPassiveWerewolfVitality(PlayerSkillCapability parentCapability) {
+    public PlayerPassiveWerewolfVitality(PlayerSkillCapabilityImplementation parentCapability) {
         this.parentCapability = parentCapability;
         DevilRpg.LOGGER.info("----------------------->CONSTRUCTOR PlayerPassiveWerewolfVitality. Parent capability: {}", parentCapability);
     }
@@ -44,7 +44,7 @@ public class PlayerPassiveWerewolfVitality extends AbstractPlayerPassive impleme
             }
             initializeAttributes(playerIn);
 
-            IBaseAuxiliarCapability auxiliary = IGenericCapability.getUnwrappedPlayerCapability(playerIn, PlayerAuxiliarCapabilityProvider.AUX_CAP);
+            PlayerAuxiliaryCapabilityInterface auxiliary = IGenericCapability.getUnwrappedPlayerCapability(playerIn, PlayerAuxiliaryCapability.AUX_CAP);
             if (auxiliary.isWerewolfTransformation()) {
                 add();
             } else {

@@ -2,10 +2,10 @@ package com.chipoodle.devilrpg.skillsystem.skillinstance;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
-import com.chipoodle.devilrpg.capability.auxiliar.IBaseAuxiliarCapability;
-import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliarCapabilityProvider;
-import com.chipoodle.devilrpg.capability.skill.IBasePlayerSkillCapability;
-import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
+import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
+import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
 import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.entity.ai.attributes.AttributeModifier;
@@ -25,7 +25,7 @@ public class PlayerPassiveSkillSkinArmor extends AbstractPlayerPassive implement
     public static final String IS_COMPLETE_ARMOR = "IS_COMPLETE_ARMOR";
     public static final double ARMOR_FACTOR = 0.70D;
     AttributeModifier skinArmorAttributeModifier;
-    private final IBasePlayerSkillCapability parentCapability;
+    private final PlayerSkillCapabilityInterface parentCapability;
     private PlayerEntity playerIn;
 
     /*public PlayerPassiveSkillSkinArmor(PlayerEntity playerIn) {
@@ -33,7 +33,7 @@ public class PlayerPassiveSkillSkinArmor extends AbstractPlayerPassive implement
         parentCapability = IGenericCapability.getUnwrappedPlayerCapability(playerIn, PlayerSkillCapabilityProvider.SKILL_CAP);
     }*/
 
-    public PlayerPassiveSkillSkinArmor(PlayerSkillCapability parentCapability) {
+    public PlayerPassiveSkillSkinArmor(PlayerSkillCapabilityImplementation parentCapability) {
         this.parentCapability = parentCapability;
         DevilRpg.LOGGER.info("----------------------->CONSTRUCTOR PlayerPassiveSkillSkinArmor. Parnt capability: {}", parentCapability);
     }
@@ -54,7 +54,7 @@ public class PlayerPassiveSkillSkinArmor extends AbstractPlayerPassive implement
             }
             initializeAttributes(playerIn);
 
-            IBaseAuxiliarCapability auxiliary = IGenericCapability.getUnwrappedPlayerCapability(playerIn, PlayerAuxiliarCapabilityProvider.AUX_CAP);
+            PlayerAuxiliaryCapabilityInterface auxiliary = IGenericCapability.getUnwrappedPlayerCapability(playerIn, PlayerAuxiliaryCapability.AUX_CAP);
             if (auxiliary.isWerewolfTransformation()) {
                 testSkinArmorToGetParameters(playerIn, parameters);
                 DevilRpg.LOGGER.info("----------------------->IS_COMPLETE_ARMOR: {}", parameters.get(IS_COMPLETE_ARMOR).toLowerCase());

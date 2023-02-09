@@ -1,7 +1,7 @@
 package com.chipoodle.devilrpg.network.handler;
 
-import com.chipoodle.devilrpg.capability.skill.IBasePlayerSkillCapability;
-import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityAttacher;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.network.PacketBuffer;
@@ -35,7 +35,7 @@ public class PlayerPassiveSkillServerHandler {
 		if (contextSupplier.get().getDirection().equals(NetworkDirection.PLAY_TO_SERVER)) {
 			contextSupplier.get().enqueueWork(() -> {
 				ServerPlayerEntity sender = contextSupplier.get().getSender(); // the client that sent this packet
-				LazyOptional<IBasePlayerSkillCapability> skill = sender.getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
+				LazyOptional<PlayerSkillCapabilityInterface> skill = sender.getCapability(PlayerSkillCapabilityAttacher.SKILL_CAP);
 				//sender.sendMessage(new StringTextComponent("KeyboardSkillServerHandler on msg:"+ msg.getPoder().name()+" Player ID: "+sender.getEntityId()));
 				skill.ifPresent(x->x.triggerPassive(sender, msg.getSkillCompound()));
 			});

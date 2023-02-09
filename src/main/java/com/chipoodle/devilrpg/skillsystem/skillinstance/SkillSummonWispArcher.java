@@ -5,10 +5,9 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import com.chipoodle.devilrpg.capability.player_minion.IBaseMinionCapability;
-import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityProvider;
-import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
-import com.chipoodle.devilrpg.config.DevilRpgConfig;
+import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityInterface;
+import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityAttacher;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
 import com.chipoodle.devilrpg.entity.SoulWispEntity;
 import com.chipoodle.devilrpg.init.ModEntityTypes;
 import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
@@ -27,7 +26,7 @@ import net.minecraftforge.common.util.LazyOptional;
 
 public class SkillSummonWispArcher implements ISkillContainer, WispSkillInterface {
 
-	public SkillSummonWispArcher(PlayerSkillCapability parentCapability) {
+	public SkillSummonWispArcher(PlayerSkillCapabilityImplementation parentCapability) {
 	}
 
 	@Override
@@ -42,7 +41,7 @@ public class SkillSummonWispArcher implements ISkillContainer, WispSkillInterfac
 			worldIn.playSound(null, playerIn.getX(), playerIn.getY(), playerIn.getZ(),
 					SoundEvents.BEACON_ACTIVATE, SoundCategory.NEUTRAL, 0.5F,
 					0.4F / (rand.nextFloat() * 0.4F + 0.8F));
-			LazyOptional<IBaseMinionCapability> min = playerIn.getCapability(PlayerMinionCapabilityProvider.MINION_CAP);
+			LazyOptional<PlayerMinionCapabilityInterface> min = playerIn.getCapability(PlayerMinionCapabilityAttacher.MINION_CAP);
 			ConcurrentLinkedQueue<UUID> keys = min.map(x -> x.getWispMinions())
 					.orElse(new ConcurrentLinkedQueue<>());
 

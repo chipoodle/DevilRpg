@@ -1,19 +1,19 @@
-package com.chipoodle.devilrpg.capability.tamable_minion;
+package com.chipoodle.devilrpg.capability.auxiliar;
 
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.CapabilityManager;
 import net.minecraftforge.common.capabilities.CapabilityToken;
 import net.minecraftforge.common.capabilities.RegisterCapabilitiesEvent;
 
-
-public class TamableMinionCapability {
-    public static final Capability<TamableMinionCapabilityInterface> INSTANCE = CapabilityManager.get(new CapabilityToken<>() {
+public class PlayerAuxiliaryCapability {
+    public static final Capability<PlayerAuxiliaryCapabilityInterface> INSTANCE = CapabilityManager.get(new CapabilityToken<>() {
     });
 
-    private TamableMinionCapability() {
+    private PlayerAuxiliaryCapability() {
     }
 
     public static void register(RegisterCapabilitiesEvent event) {
-        event.register(TamableMinionCapabilityInterface.class);
+        event.register(PlayerAuxiliaryCapabilityInterface.class);
     }
+
 }

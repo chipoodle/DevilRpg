@@ -1,60 +1,60 @@
 package com.chipoodle.devilrpg.network.handler;
 
-import java.util.function.Supplier;
-
-import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
-
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityAttacher;
 import net.minecraft.client.Minecraft;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.ServerPlayerEntity;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.network.PacketBuffer;
-import net.minecraftforge.fml.network.NetworkDirection;
-import net.minecraftforge.fml.network.NetworkEvent;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraftforge.network.NetworkDirection;
+import net.minecraftforge.network.NetworkEvent;
+
+
+import java.util.function.Supplier;
 
 public class PlayerSkillClientServerHandler {
 
-	private final CompoundNBT skillCompound;
+    private final CompoundTag skillCompound;
 
-	public PlayerSkillClientServerHandler(CompoundNBT skillCompound) {
-		this.skillCompound = skillCompound;
-	}
+    public PlayerSkillClientServerHandler(CompoundTag skillCompound) {
+        this.skillCompound = skillCompound;
+    }
 
-	public CompoundNBT getSkillCompound() {
-		return skillCompound;
-	}
+    public CompoundTag getSkillCompound() {
+        return skillCompound;
+    }
 
-	public static void encode(final PlayerSkillClientServerHandler msg, final PacketBuffer packetBuffer) {
-		packetBuffer.writeNbt(msg.getSkillCompound());
-	}
+    public static void encode(final PlayerSkillClientServerHandler msg, final FriendlyByteBuf packetBuffer) {
+        packetBuffer.writeNbt(msg.getSkillCompound());
+    }
 
-	public static PlayerSkillClientServerHandler decode(final PacketBuffer packetBuffer) {
-		return new PlayerSkillClientServerHandler(packetBuffer.readNbt());
-	}
+    public static PlayerSkillClientServerHandler decode(final FriendlyByteBuf packetBuffer) {
+        return new PlayerSkillClientServerHandler(packetBuffer.readNbt());
+    }
 
-	public static void onMessage(final PlayerSkillClientServerHandler msg,
-			final Supplier<NetworkEvent.Context> contextSupplier) {
-		if (contextSupplier.get().getDirection().equals(NetworkDirection.PLAY_TO_SERVER)) {
-			contextSupplier.get().enqueueWork(() -> {
-				ServerPlayerEntity serverPlayer = contextSupplier.get().getSender();
-				if (serverPlayer != null) {
-					serverPlayer.getCapability(PlayerSkillCapabilityProvider.SKILL_CAP)
-							.ifPresent(x -> x.setNBTData(msg.getSkillCompound()));
-				}
-			});
-			contextSupplier.get().setPacketHandled(true);
-		}
+    public static void onMessage(final PlayerSkillClientServerHandler msg,
+                                 final Supplier<NetworkEvent.Context> contextSupplier) {
+        if (contextSupplier.get().getDirection().equals(NetworkDirection.PLAY_TO_SERVER)) {
+            contextSupplier.get().enqueueWork(() -> {
+                ServerPlayer serverPlayer = contextSupplier.get().getSender();
+                if (serverPlayer != null) {
+                    serverPlayer.getCapability(PlayerSkillCapabilityAttacher.SKILL_CAP)
+                            .ifPresent(x -> x.setNBTData(msg.getSkillCompound()));
+                }
+            });
+            contextSupplier.get().setPacketHandled(true);
+        }
 
-		if (contextSupplier.get().getDirection().equals(NetworkDirection.PLAY_TO_CLIENT)) {
-			contextSupplier.get().enqueueWork(() -> {
-				Minecraft m = Minecraft.getInstance();
-				PlayerEntity clientPlayer = m.player;
-				if (clientPlayer != null) {
-					clientPlayer.getCapability(PlayerSkillCapabilityProvider.SKILL_CAP)
-							.ifPresent(x -> x.setNBTData(msg.getSkillCompound()));
-				}
-			});
-			contextSupplier.get().setPacketHandled(true);
-		}
-	}
+        if (contextSupplier.get().getDirection().equals(NetworkDirection.PLAY_TO_CLIENT)) {
+            contextSupplier.get().enqueueWork(() -> {
+                Minecraft m = Minecraft.getInstance();
+                LocalPlayer clientPlayer = m.player;
+                if (clientPlayer != null) {
+                    clientPlayer.getCapability(PlayerSkillCapabilityAttacher.SKILL_CAP)
+                            .ifPresent(x -> x.setNBTData(msg.getSkillCompound()));
+                }
+            });
+            contextSupplier.get().setPacketHandled(true);
+        }
+    }
 }

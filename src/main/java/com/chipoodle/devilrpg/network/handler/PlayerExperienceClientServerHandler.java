@@ -2,25 +2,25 @@ package com.chipoodle.devilrpg.network.handler;
 
 import java.util.function.Supplier;
 
-import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapabilityProvider;
+import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapabilityAttacher;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
-import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.PacketBuffer;
 import net.minecraftforge.fml.network.NetworkDirection;
 import net.minecraftforge.fml.network.NetworkEvent;
 
 public class PlayerExperienceClientServerHandler {
 
-	private final CompoundNBT experienceCompound;
+	private final CompoundTag experienceCompound;
 
-	public PlayerExperienceClientServerHandler(CompoundNBT manaCompound) {
+	public PlayerExperienceClientServerHandler(CompoundTag manaCompound) {
 		this.experienceCompound = manaCompound;
 	}
 
-	public CompoundNBT getExperienceCompound() {
+	public CompoundTag getExperienceCompound() {
 		return experienceCompound;
 	}
 
@@ -38,7 +38,7 @@ public class PlayerExperienceClientServerHandler {
 			contextSupplier.get().enqueueWork(() -> {
 				ServerPlayerEntity serverPlayer = contextSupplier.get().getSender();
 				if (serverPlayer != null) {
-					serverPlayer.getCapability(PlayerExperienceCapabilityProvider.EXPERIENCE_CAP)
+					serverPlayer.getCapability(PlayerExperienceCapabilityAttacher.EXPERIENCE_CAP)
 							.ifPresent(x -> x.setNBTData(msg.getExperienceCompound()));
 				}
 			});
@@ -50,7 +50,7 @@ public class PlayerExperienceClientServerHandler {
 				Minecraft m = Minecraft.getInstance();
 				PlayerEntity clientPlayer = m.player;
 				if (clientPlayer != null) {
-					clientPlayer.getCapability(PlayerExperienceCapabilityProvider.EXPERIENCE_CAP)
+					clientPlayer.getCapability(PlayerExperienceCapabilityAttacher.EXPERIENCE_CAP)
 							.ifPresent(x -> x.setNBTData(msg.getExperienceCompound()));
 				}
 

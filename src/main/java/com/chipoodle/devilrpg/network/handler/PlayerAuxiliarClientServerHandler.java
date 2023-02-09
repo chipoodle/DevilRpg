@@ -1,61 +1,60 @@
 package com.chipoodle.devilrpg.network.handler;
 
-import java.util.function.Supplier;
-
-import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliarCapabilityProvider;
-
+import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
 import net.minecraft.client.Minecraft;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.ServerPlayerEntity;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.network.PacketBuffer;
-import net.minecraftforge.fml.network.NetworkDirection;
-import net.minecraftforge.fml.network.NetworkEvent;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraftforge.network.NetworkDirection;
+import net.minecraftforge.network.NetworkEvent;
+
+import java.util.function.Supplier;
 
 public class PlayerAuxiliarClientServerHandler {
 
-	private final CompoundNBT auxiliarCompound;
+    private final CompoundTag auxiliaryCompound;
 
-	public PlayerAuxiliarClientServerHandler(CompoundNBT manaCompound) {
-		this.auxiliarCompound = manaCompound;
-	}
+    public PlayerAuxiliarClientServerHandler(CompoundTag manaCompound) {
+        this.auxiliaryCompound = manaCompound;
+    }
 
-	public CompoundNBT getAuxiliarCompound() {
-		return auxiliarCompound;
-	}
+    public CompoundTag getAuxiliaryCompound() {
+        return auxiliaryCompound;
+    }
 
-	public static void encode(final PlayerAuxiliarClientServerHandler msg, final PacketBuffer packetBuffer) {
-		packetBuffer.writeNbt(msg.getAuxiliarCompound());
-	}
+    public static void encode(final PlayerAuxiliarClientServerHandler msg, final FriendlyByteBuf packetBuffer) {
+        packetBuffer.writeNbt(msg.getAuxiliaryCompound());
+    }
 
-	public static PlayerAuxiliarClientServerHandler decode(final PacketBuffer packetBuffer) {
-		return new PlayerAuxiliarClientServerHandler(packetBuffer.readNbt());
-	}
+    public static PlayerAuxiliarClientServerHandler decode(final FriendlyByteBuf packetBuffer) {
+        return new PlayerAuxiliarClientServerHandler(packetBuffer.readNbt());
+    }
 
-	public static void onMessage(final PlayerAuxiliarClientServerHandler msg,
-			final Supplier<NetworkEvent.Context> contextSupplier) {
-		if (contextSupplier.get().getDirection().equals(NetworkDirection.PLAY_TO_SERVER)) {
-			contextSupplier.get().enqueueWork(() ->  {
-				ServerPlayerEntity serverPlayer = contextSupplier.get().getSender();
-				if (serverPlayer != null) {
-					serverPlayer.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP)
-							.ifPresent(x -> x.setNBTData(msg.getAuxiliarCompound()));
-				}
-			});
-			contextSupplier.get().setPacketHandled(true);
-		}
+    public static void onMessage(final PlayerAuxiliarClientServerHandler msg,
+                                 final Supplier<NetworkEvent.Context> contextSupplier) {
+        if (contextSupplier.get().getDirection().equals(NetworkDirection.PLAY_TO_SERVER)) {
+            contextSupplier.get().enqueueWork(() -> {
+                ServerPlayer serverPlayer = contextSupplier.get().getSender();
+                if (serverPlayer != null) {
+                    serverPlayer.getCapability(PlayerAuxiliaryCapability.INSTANCE)
+                            .ifPresent(x -> x.deserializeNBT(msg.getAuxiliaryCompound()));
+                }
+            });
+            contextSupplier.get().setPacketHandled(true);
+        }
 
-		if (contextSupplier.get().getDirection().equals(NetworkDirection.PLAY_TO_CLIENT)) {
-			contextSupplier.get().enqueueWork(() ->  {
-				Minecraft m = Minecraft.getInstance();
-				PlayerEntity clientPlayer = m.player;
-				if (clientPlayer != null) {
-					clientPlayer.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP)
-							.ifPresent(x -> x.setNBTData(msg.getAuxiliarCompound()));
-				}
+        if (contextSupplier.get().getDirection().equals(NetworkDirection.PLAY_TO_CLIENT)) {
+            contextSupplier.get().enqueueWork(() -> {
+                Minecraft m = Minecraft.getInstance();
+                LocalPlayer clientPlayer = m.player;
+                if (clientPlayer != null) {
+                    clientPlayer.getCapability(PlayerAuxiliaryCapability.INSTANCE)
+                            .ifPresent(x -> x.deserializeNBT(msg.getAuxiliaryCompound()));
+                }
 
-			});
-			contextSupplier.get().setPacketHandled(true);
-		}
-	}
+            });
+            contextSupplier.get().setPacketHandled(true);
+        }
+    }
 }

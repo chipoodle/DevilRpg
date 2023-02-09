@@ -5,8 +5,8 @@ import java.text.DecimalFormat;
 import org.lwjgl.opengl.GL11;
 
 import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.capability.mana.IBaseManaCapability;
-import com.chipoodle.devilrpg.capability.mana.PlayerManaCapabilityProvider;
+import com.chipoodle.devilrpg.capability.mana.PlayerManaCapabilityInterface;
+import com.chipoodle.devilrpg.capability.mana.PlayerManaCapabilityAttacher;
 import com.mojang.blaze3d.matrix.MatrixStack;
 
 import net.minecraft.client.Minecraft;
@@ -42,7 +42,7 @@ public class ManaBarRenderer extends AbstractGui {
 		/* These are the variables that contain world and player information */
 		//World world = mc.world;
 		PlayerEntity player = mc.player;
-		LazyOptional<IBaseManaCapability> playerCapability = mc.player.getCapability(PlayerManaCapabilityProvider.MANA_CAP);
+		LazyOptional<PlayerManaCapabilityInterface> playerCapability = mc.player.getCapability(PlayerManaCapabilityAttacher.MANA_CAP);
 		/*if (playerCapability == null)
 			playerCapability = mc.player.getCapability(PlayerManaCapabilityProvider.MANA_CAP);*/
 

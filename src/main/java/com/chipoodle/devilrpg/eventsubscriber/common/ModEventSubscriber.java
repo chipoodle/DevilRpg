@@ -3,30 +3,25 @@ package com.chipoodle.devilrpg.eventsubscriber.common;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.config.ConfigHelper;
 import com.chipoodle.devilrpg.config.ConfigHolder;
-import com.chipoodle.devilrpg.entity.SoulBearEntity;
-import com.chipoodle.devilrpg.entity.SoulWispArcherEntity;
-import com.chipoodle.devilrpg.entity.SoulWispBomberEntity;
-import com.chipoodle.devilrpg.entity.SoulWispEntity;
-import com.chipoodle.devilrpg.entity.SoulWolfEntity;
-import com.chipoodle.devilrpg.init.*;
+import com.chipoodle.devilrpg.entity.*;
+import com.chipoodle.devilrpg.init.ModBlocks;
+import com.chipoodle.devilrpg.init.ModCapability;
+import com.chipoodle.devilrpg.init.ModEntityTypes;
+import com.chipoodle.devilrpg.init.ModItemGroups;
 import com.chipoodle.devilrpg.item.ModdedSpawnEggItem;
-
-import net.minecraft.data.DataGenerator;
-import net.minecraft.entity.EntityType;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.Item;
-import net.minecraftforge.common.data.ExistingFileHelper;
-import net.minecraftforge.event.RegistryEvent;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Item;
+import net.minecraftforge.event.AttachCapabilitiesEvent;
 import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
 import net.minecraftforge.event.entity.EntityAttributeModificationEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.RegistryObject;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.registries.IForgeRegistry;
-import net.minecraftforge.fml.event.lifecycle.GatherDataEvent;
+
 
 /**
  * Subscribe to events from the MOD EventBus that should be handled on both
@@ -38,9 +33,19 @@ import net.minecraftforge.fml.event.lifecycle.GatherDataEvent;
 public final class ModEventSubscriber {
 
     @SubscribeEvent
+    public static void onAttachCapabilitiesEvent(AttachCapabilitiesEvent event) {
+        DevilRpg.LOGGER.info("----------------------->ModEventSubscriber.onAttachCapabilitiesEvent()");
+        if (event.getObject() instanceof Player) {
+            ModCapability.register(event);
+        }
+    }
+
+
+
+
+    @SubscribeEvent
     public static void onCommonSetup(FMLCommonSetupEvent event) {
-        DevilRpg.LOGGER.info("----------------------->ModEventSubscriber.onCommonSetup()");
-        ModCapability.register();
+
     }
 
     /**

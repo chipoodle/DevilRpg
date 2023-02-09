@@ -2,13 +2,12 @@ package com.chipoodle.devilrpg.init;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.network.handler.*;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.network.NetworkRegistry;
+import net.minecraftforge.network.simple.SimpleChannel;
 
-import net.minecraft.util.ResourceLocation;
-import net.minecraftforge.fml.network.NetworkRegistry;
-import net.minecraftforge.fml.network.simple.SimpleChannel;
 
 /**
- *
  * @author Christian
  */
 public class ModNetwork {
@@ -25,52 +24,52 @@ public class ModNetwork {
 
         int networkId = 0;
         CHANNEL.registerMessage(networkId++,
-                KeyboardSkillServerHandler.class, 
+                KeyboardSkillServerHandler.class,
                 KeyboardSkillServerHandler::encode,
                 KeyboardSkillServerHandler::decode,
                 KeyboardSkillServerHandler::onMessage);
-        
+
         CHANNEL.registerMessage(networkId++,
-                PlayerManaClientServerHandler.class, 
+                PlayerManaClientServerHandler.class,
                 PlayerManaClientServerHandler::encode,
                 PlayerManaClientServerHandler::decode,
                 PlayerManaClientServerHandler::onMessage);
-        
+
         CHANNEL.registerMessage(networkId++,
-                PlayerSkillClientServerHandler.class, 
+                PlayerSkillClientServerHandler.class,
                 PlayerSkillClientServerHandler::encode,
                 PlayerSkillClientServerHandler::decode,
                 PlayerSkillClientServerHandler::onMessage);
-        
+
         CHANNEL.registerMessage(networkId++,
-                WerewolfAttackServerHandler.class, 
+                WerewolfAttackServerHandler.class,
                 WerewolfAttackServerHandler::encode,
                 WerewolfAttackServerHandler::decode,
                 WerewolfAttackServerHandler::onMessage);
-        
+
         CHANNEL.registerMessage(networkId++,
-                PlayerExperienceClientServerHandler.class, 
+                PlayerExperienceClientServerHandler.class,
                 PlayerExperienceClientServerHandler::encode,
                 PlayerExperienceClientServerHandler::decode,
                 PlayerExperienceClientServerHandler::onMessage);
-        
-        CHANNEL.registerMessage(networkId++,
-        		PlayerAuxiliarClientServerHandler.class, 
-        		PlayerAuxiliarClientServerHandler::encode,
-        		PlayerAuxiliarClientServerHandler::decode,
-        		PlayerAuxiliarClientServerHandler::onMessage);
 
         CHANNEL.registerMessage(networkId++,
-        		PlayerMinionClientServerHandler.class, 
-        		PlayerMinionClientServerHandler::encode,
-        		PlayerMinionClientServerHandler::decode,
-        		PlayerMinionClientServerHandler::onMessage);
-        
+                PlayerAuxiliarClientServerHandler.class,
+                PlayerAuxiliarClientServerHandler::encode,
+                PlayerAuxiliarClientServerHandler::decode,
+                PlayerAuxiliarClientServerHandler::onMessage);
+
         CHANNEL.registerMessage(networkId++,
-        		PotionClientServerHandler.class, 
-        		PotionClientServerHandler::encode,
-        		PotionClientServerHandler::decode,
-        		PotionClientServerHandler::onMessage);
+                PlayerMinionClientServerHandler.class,
+                PlayerMinionClientServerHandler::encode,
+                PlayerMinionClientServerHandler::decode,
+                PlayerMinionClientServerHandler::onMessage);
+
+        CHANNEL.registerMessage(networkId++,
+                PotionClientServerHandler.class,
+                PotionClientServerHandler::encode,
+                PotionClientServerHandler::decode,
+                PotionClientServerHandler::onMessage);
 
         CHANNEL.registerMessage(networkId++,
                 PlayerPassiveSkillServerHandler.class,

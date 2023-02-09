@@ -4,8 +4,8 @@ import java.util.HashMap;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
-import com.chipoodle.devilrpg.capability.skill.IBasePlayerSkillCapability;
-import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityAttacher;
 import com.chipoodle.devilrpg.entity.IPassiveMinionUpdater;
 import com.chipoodle.devilrpg.entity.ITameableEntity;
 import com.chipoodle.devilrpg.entity.SoulBearEntity;
@@ -57,8 +57,8 @@ public class MinionPassiveAttributes  {
 		DevilRpg.LOGGER.info("||---->MinionPassiveAttributes apply");
 
 		if (!worldIn.isClientSide && playerIn != null) {
-			IBasePlayerSkillCapability parentCapability = IGenericCapability.getUnwrappedPlayerCapability(playerIn,
-					PlayerSkillCapabilityProvider.SKILL_CAP);
+			PlayerSkillCapabilityInterface parentCapability = IGenericCapability.getUnwrappedPlayerCapability(playerIn,
+					PlayerSkillCapabilityAttacher.SKILL_CAP);
 			HashMap<Attribute, AttributeModifier> attributes = new HashMap<>();
 			attributes.put(Attributes.MAX_HEALTH,
 					new AttributeModifier(PASSIVE_MINION_HEALTH,
@@ -70,8 +70,8 @@ public class MinionPassiveAttributes  {
 	}
 
 	private void applyPassives(SoulBearEntity entity) {
-		IBasePlayerSkillCapability parentCapability = IGenericCapability.getUnwrappedPlayerCapability(playerIn,
-				PlayerSkillCapabilityProvider.SKILL_CAP);
+		PlayerSkillCapabilityInterface parentCapability = IGenericCapability.getUnwrappedPlayerCapability(playerIn,
+				PlayerSkillCapabilityAttacher.SKILL_CAP);
 		Integer warBear = parentCapability.getSkillsPoints().get(SkillEnum.WAR_BEAR);
 		Integer mountBear = parentCapability.getSkillsPoints().get(SkillEnum.MOUNT_BEAR);
 		DevilRpg.LOGGER.info("||---->MinionPassiveAttributes SoulBearEntity warbear:{} factor: {}", warBear, factor);
@@ -89,8 +89,8 @@ public class MinionPassiveAttributes  {
 
 	private void applyPassives(SoulWolfEntity entity) {
 		DevilRpg.LOGGER.info("||---->MinionPassiveAttributes SoulWolfEntity");
-		IBasePlayerSkillCapability parentCapability = IGenericCapability.getUnwrappedPlayerCapability(playerIn,
-				PlayerSkillCapabilityProvider.SKILL_CAP);
+		PlayerSkillCapabilityInterface parentCapability = IGenericCapability.getUnwrappedPlayerCapability(playerIn,
+				PlayerSkillCapabilityAttacher.SKILL_CAP);
 		Integer frostbite = parentCapability.getSkillsPoints().get(SkillEnum.WOLF_FROSTBITE);
 		Integer iceArmor = parentCapability.getSkillsPoints().get(SkillEnum.WOLF_ICE_ARMOR);
 

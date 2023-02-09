@@ -2,10 +2,10 @@ package com.chipoodle.devilrpg.entity;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
-import com.chipoodle.devilrpg.capability.player_minion.IBaseMinionCapability;
-import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityProvider;
-import com.chipoodle.devilrpg.capability.skill.IBasePlayerSkillCapability;
-import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
+import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityInterface;
+import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityAttacher;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityAttacher;
 import com.chipoodle.devilrpg.client.render.IRenderUtilities;
 import com.chipoodle.devilrpg.entity.goal.TameableMountableFollowOwnerGoal;
 import com.chipoodle.devilrpg.entity.goal.TameableMountableOwnerHurtByTargetGoal;
@@ -39,7 +39,6 @@ import net.minecraft.network.datasync.DataParameter;
 import net.minecraft.network.datasync.DataSerializers;
 import net.minecraft.network.datasync.EntityDataManager;
 import net.minecraft.particles.ParticleTypes;
-import net.minecraft.util.*;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.DifficultyInstance;
@@ -56,7 +55,6 @@ import net.minecraftforge.fml.network.NetworkHooks;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.UUID;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public class SoulBearEntity extends AbstractMountableTameableEntity
@@ -142,8 +140,8 @@ public class SoulBearEntity extends AbstractMountableTameableEntity
     public void updateLevel(PlayerEntity owner) {
         tame(owner);
 
-        IBasePlayerSkillCapability skill = IGenericCapability.getUnwrappedPlayerCapability((PlayerEntity) getOwner(),
-                PlayerSkillCapabilityProvider.SKILL_CAP);
+        PlayerSkillCapabilityInterface skill = IGenericCapability.getUnwrappedPlayerCapability((PlayerEntity) getOwner(),
+                PlayerSkillCapabilityAttacher.SKILL_CAP);
         if (skill != null) {
             this.puntosAsignados = skill.getSkillsPoints().get(SkillEnum.SUMMON_SOUL_BEAR);
             saludMaxima = 5 * this.puntosAsignados + SALUD_INICIAL;
@@ -298,8 +296,8 @@ public class SoulBearEntity extends AbstractMountableTameableEntity
     @Override
     public void die(DamageSource cause) {
         if (getOwner() != null) {
-            LazyOptional<IBaseMinionCapability> minionCap = getOwner()
-                    .getCapability(PlayerMinionCapabilityProvider.MINION_CAP);
+            LazyOptional<PlayerMinionCapabilityInterface> minionCap = getOwner()
+                    .getCapability(PlayerMinionCapabilityAttacher.MINION_CAP);
             if (!minionCap.isPresent())
                 return;
             minionCap.ifPresent(x -> x.removeSoulBear((PlayerEntity) getOwner(), this));

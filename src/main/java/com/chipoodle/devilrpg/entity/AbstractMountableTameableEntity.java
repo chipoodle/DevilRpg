@@ -38,9 +38,13 @@ import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.world.ContainerListener;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.IServerWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.entity.PlayerRideableJumping;
+import net.minecraft.world.entity.Saddleable;
+import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.server.ServerWorld;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
@@ -50,7 +54,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Predicate;
 
-public abstract class AbstractMountableTameableEntity extends AnimalEntity implements IInventoryChangedListener, IJumpingMount, IEquipable {
+public abstract class AbstractMountableTameableEntity extends Animal implements ContainerListener, PlayerRideableJumping, Saddleable {
     private static final Ingredient FOOD_ITEMS = Ingredient.of(Items.WHEAT, Items.SUGAR, Blocks.HAY_BLOCK.asItem(), Items.APPLE, Items.GOLDEN_CARROT, Items.GOLDEN_APPLE, Items.ENCHANTED_GOLDEN_APPLE);
     private static final DataParameter<Byte> DATA_ID_FLAGS = EntityDataManager.defineId(AbstractMountableTameableEntity.class, DataSerializers.BYTE);
     private static final Predicate<LivingEntity> PARENT_HORSE_SELECTOR = (p_213617_0_) -> {

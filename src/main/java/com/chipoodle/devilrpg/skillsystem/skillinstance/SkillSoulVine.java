@@ -2,18 +2,11 @@ package com.chipoodle.devilrpg.skillsystem.skillinstance;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.block.SoulVineBlock;
-import com.chipoodle.devilrpg.capability.player_minion.IBaseMinionCapability;
-import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityProvider;
-import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
-import com.chipoodle.devilrpg.config.DevilRpgConfig;
-import com.chipoodle.devilrpg.entity.SoulWolfEntity;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
 import com.chipoodle.devilrpg.init.ModBlocks;
-import com.chipoodle.devilrpg.init.ModEntityTypes;
 import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
 import com.chipoodle.devilrpg.util.SkillEnum;
-import com.chipoodle.devilrpg.util.TargetUtils;
 import net.minecraft.block.*;
-import net.minecraft.client.Minecraft;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.Direction;
 import net.minecraft.util.Mirror;
@@ -25,16 +18,13 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.world.World;
-import net.minecraftforge.common.util.LazyOptional;
 
 import java.util.HashMap;
 import java.util.Random;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class SkillSoulVine implements ISkillContainer {
 
-    public SkillSoulVine(PlayerSkillCapability parentCapability) {
+    public SkillSoulVine(PlayerSkillCapabilityImplementation parentCapability) {
     }
 
     @Override

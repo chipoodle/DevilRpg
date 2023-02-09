@@ -2,60 +2,39 @@ package com.chipoodle.devilrpg.entity;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
-import com.chipoodle.devilrpg.capability.player_minion.IBaseMinionCapability;
-import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityProvider;
-import com.chipoodle.devilrpg.capability.skill.IBasePlayerSkillCapability;
-import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
+import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityInterface;
+import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityAttacher;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityAttacher;
 import com.chipoodle.devilrpg.client.render.IRenderUtilities;
 import com.chipoodle.devilrpg.init.ModEntityTypes;
 import com.chipoodle.devilrpg.util.SkillEnum;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.entity.AgeableEntity;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.IChargeableMob;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.MobEntity;
-import net.minecraft.entity.ai.attributes.AttributeModifierMap;
-import net.minecraft.entity.ai.attributes.Attributes;
-import net.minecraft.entity.ai.goal.FollowOwnerGoal;
-import net.minecraft.entity.ai.goal.HurtByTargetGoal;
-import net.minecraft.entity.ai.goal.LeapAtTargetGoal;
-import net.minecraft.entity.ai.goal.LookAtGoal;
-import net.minecraft.entity.ai.goal.LookRandomlyGoal;
-import net.minecraft.entity.ai.goal.MeleeAttackGoal;
-import net.minecraft.entity.ai.goal.NearestAttackableTargetGoal;
-import net.minecraft.entity.ai.goal.OwnerHurtByTargetGoal;
-import net.minecraft.entity.ai.goal.OwnerHurtTargetGoal;
-import net.minecraft.entity.ai.goal.ResetAngerGoal;
-import net.minecraft.entity.ai.goal.SitGoal;
-import net.minecraft.entity.ai.goal.SwimGoal;
-import net.minecraft.entity.ai.goal.WaterAvoidingRandomWalkingGoal;
-import net.minecraft.entity.merchant.villager.VillagerEntity;
-import net.minecraft.entity.passive.IronGolemEntity;
-import net.minecraft.entity.passive.TurtleEntity;
-import net.minecraft.entity.passive.WolfEntity;
-import net.minecraft.entity.passive.horse.LlamaEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.network.IPacket;
-import net.minecraft.particles.ParticleTypes;
-import net.minecraft.potion.EffectInstance;
-import net.minecraft.potion.Effects;
-import net.minecraft.util.ActionResultType;
-import net.minecraft.util.DamageSource;
-import net.minecraft.util.Hand;
-import net.minecraft.world.World;
-import net.minecraft.world.server.ServerWorld;
+
+
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.PowerableMob;
+import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.goal.*;
+import net.minecraft.world.entity.ai.goal.target.*;
+import net.minecraft.world.entity.animal.IronGolem;
+import net.minecraft.world.entity.animal.Turtle;
+import net.minecraft.world.entity.animal.Wolf;
+import net.minecraft.world.entity.animal.horse.Llama;
+import net.minecraft.world.entity.npc.Villager;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.fml.common.registry.IEntityAdditionalSpawnData;
-import net.minecraftforge.fml.network.FMLPlayMessages;
-import net.minecraftforge.fml.network.NetworkHooks;
 
-public class SoulWolfEntity extends WolfEntity implements ITameableEntity, ISoulEntity, IChargeableMob, IPassiveMinionUpdater<SoulWolfEntity> {
+
+public class SoulWolfEntity extends Wolf implements ITameableEntity, ISoulEntity, PowerableMob, IPassiveMinionUpdater<SoulWolfEntity> {
 	private static final int ICE_ARMOR_EFFECT_FACTOR = 2;
 	private static final double RADIUS_PARTICLES = 0.7;
 	private static final int NUMBER_OF_PARTICLES_ICEARMOR = 10;
@@ -68,43 +47,43 @@ public class SoulWolfEntity extends WolfEntity implements ITameableEntity, ISoul
 	private Integer iceArmor = 0;
 	private Integer frostbite = 0;
 
-	public SoulWolfEntity(EntityType<? extends SoulWolfEntity> type, World worldIn) {
-		super(type, worldIn);
+	public SoulWolfEntity(EntityType<? extends SoulWolfEntity> type, Level LevelIn) {
+		super(type, LevelIn);
 	}
 
 	@Override
 	protected void registerGoals() {
-		this.goalSelector.addGoal(0, new SwimGoal(this));
-		this.goalSelector.addGoal(2, new SitGoal(this));
+		this.goalSelector.addGoal(0, new FloatGoal(this));
+		this.goalSelector.addGoal(2, new SitWhenOrderedToGoal(this));
 		this.goalSelector.addGoal(4, new LeapAtTargetGoal(this, 0.4F));
 		this.goalSelector.addGoal(5, new MeleeAttackGoal(this, 1.0D, true));
 		this.goalSelector.addGoal(6, new FollowOwnerGoal(this, 1.0D, 10.0F, 2.0F, false));
-		this.goalSelector.addGoal(8, new WaterAvoidingRandomWalkingGoal(this, 1.0D));
-		this.goalSelector.addGoal(10, new LookAtGoal(this, PlayerEntity.class, 8.0F));
-		this.goalSelector.addGoal(10, new LookRandomlyGoal(this));
+		this.goalSelector.addGoal(8, new WaterAvoidingRandomStrollGoal(this, 1.0D));
+		this.goalSelector.addGoal(10, new LookAtPlayerGoal(this, Player.class, 8.0F));
+		this.goalSelector.addGoal(10, new RandomLookAroundGoal(this));
 
 		this.targetSelector.addGoal(1, new OwnerHurtByTargetGoal(this));
 		this.targetSelector.addGoal(2, new OwnerHurtTargetGoal(this));
 		this.targetSelector.addGoal(3, (new HurtByTargetGoal(this)).setAlertOthers());
 		//this.targetSelector.addGoal(5, new NearestAttackableTargetGoal<>(this, MobEntity.class, false));
-		this.targetSelector.addGoal(5, new NearestAttackableTargetGoal<>(this, MobEntity.class, 10, false, true, (entity) -> {
-	         return  !(entity instanceof VillagerEntity) &&
-	        		 !(entity instanceof LlamaEntity) && 
-	        		 !(entity instanceof TurtleEntity) && 
-	        		 !(entity instanceof IronGolemEntity) ;
+		this.targetSelector.addGoal(5, new NearestAttackableTargetGoal<>(this, Mob.class, 10, false, true, (entity) -> {
+	         return  !(entity instanceof Villager) &&
+	        		 !(entity instanceof Llama) &&
+	        		 !(entity instanceof Turtle) &&
+	        		 !(entity instanceof IronGolem) ;
 	     }));
-		this.targetSelector.addGoal(8, new ResetAngerGoal<>(this, true));
+		this.targetSelector.addGoal(8, new ResetUniversalAngerTargetGoal<>(this, true));
 	}
 
-	public static AttributeModifierMap.MutableAttribute setAttributes() {
-		return MobEntity.createMobAttributes().add(Attributes.MOVEMENT_SPEED, 0.3F)
+	public static AttributeSupplier.Builder createAttributes() {
+		return Mob.createMobAttributes().add(Attributes.MOVEMENT_SPEED, 0.3F)
 				.add(Attributes.MAX_HEALTH, 8.0D).add(Attributes.FOLLOW_RANGE, 16.0D)
 				.add(Attributes.ATTACK_DAMAGE, 2.0D).add(Attributes.ARMOR, 0.35D);
 	}
 
-	public void updateLevel(PlayerEntity owner) {
+	public void updateLevel(Player owner) {
 		tame(owner);
-		IBasePlayerSkillCapability skill = IGenericCapability.getUnwrappedPlayerCapability((PlayerEntity)getOwner(), PlayerSkillCapabilityProvider.SKILL_CAP);
+		PlayerSkillCapabilityInterface skill = IGenericCapability.getUnwrappedPlayerCapability((Player)getOwner(), PlayerSkillCapability.INSTANCE);
 		if (skill != null) {
 			this.puntosAsignados = skill.getSkillsPoints().get(SkillEnum.SUMMON_SOUL_WOLF);
 			saludMaxima = 1.0 * this.puntosAsignados + SALUD_INICIAL;
@@ -262,7 +241,7 @@ public class SoulWolfEntity extends WolfEntity implements ITameableEntity, ISoul
 	}
 
 	@Override
-	public ActionResultType mobInteract(PlayerEntity playerIn, Hand hand) {
+	public ActionResultType mobInteract(Player playerIn, Hand hand) {
 		return ActionResultType.PASS;
 	}
 
@@ -277,11 +256,11 @@ public class SoulWolfEntity extends WolfEntity implements ITameableEntity, ISoul
 	@Override
 	public void die(DamageSource cause) {
 		if (getOwner() != null) {
-			LazyOptional<IBaseMinionCapability> minionCap = getOwner()
-					.getCapability(PlayerMinionCapabilityProvider.MINION_CAP);
+			LazyOptional<PlayerMinionCapabilityInterface> minionCap = getOwner()
+					.getCapability(PlayerMinionCapabilityAttacher.MINION_CAP);
 			if (!minionCap.isPresent())
 				return;
-			minionCap.ifPresent(x -> x.removeSoulWolf((PlayerEntity) getOwner(), this));
+			minionCap.ifPresent(x -> x.removeSoulWolf((Player) getOwner(), this));
 		}
 		// super.onDeath(cause);
 		customOnDeath();
@@ -316,10 +295,10 @@ public class SoulWolfEntity extends WolfEntity implements ITameableEntity, ISoul
 	/**
 	 * Get the experience points the entity currently has.
 	 */
-	protected int getExperienceReward(PlayerEntity player) {
+	protected int getExperienceReward(Player player) {
 		/*
 		 * if (player.equals(getOwner())) return 0; return 1 +
-		 * this.world.rand.nextInt(3);
+		 * this.Level.rand.nextInt(3);
 		 */
 		return 0;
 	}
@@ -340,8 +319,8 @@ public class SoulWolfEntity extends WolfEntity implements ITameableEntity, ISoul
 	}
 
 	@Override
-	public SoulWolfEntity getBreedOffspring(ServerWorld world, AgeableEntity mate) {
-		return ModEntityTypes.SOUL_WOLF.get().create(world);
+	public SoulWolfEntity getBreedOffspring(ServerLevel Level, AgeableEntity mate) {
+		return ModEntityTypes.SOUL_WOLF.get().create(Level);
 	}
 
 	public void setFrostbite(Integer frostbite) {
@@ -355,7 +334,7 @@ public class SoulWolfEntity extends WolfEntity implements ITameableEntity, ISoul
 	}
 
 	@Override
-	public World getLevel() {
+	public Level getLevel() {
 		return this.level;
 	}
 

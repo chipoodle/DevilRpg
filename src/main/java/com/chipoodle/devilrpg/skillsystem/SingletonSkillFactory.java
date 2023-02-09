@@ -1,6 +1,6 @@
 package com.chipoodle.devilrpg.skillsystem;
 
-import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
 import com.chipoodle.devilrpg.skillsystem.skillinstance.*;
 import com.chipoodle.devilrpg.util.SkillEnum;
 
@@ -9,9 +9,9 @@ import java.util.Hashtable;
 public class SingletonSkillFactory {
 
     private final Hashtable<SkillEnum, ISkillContainer> skillPool = new Hashtable<>();
-    private final PlayerSkillCapability parentCapability;
+    private final PlayerSkillCapabilityImplementation parentCapability;
 
-    public SingletonSkillFactory(PlayerSkillCapability parentCapability) {
+    public SingletonSkillFactory(PlayerSkillCapabilityImplementation parentCapability) {
         this.parentCapability = parentCapability;
         //DevilRpg.LOGGER.info("--------> SingletonSkillFactory. capability hash: "+parentCapability.hashCode());
     }

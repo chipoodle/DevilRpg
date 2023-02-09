@@ -8,9 +8,9 @@ package com.chipoodle.devilrpg.eventsubscriber.common;
 import java.util.function.BiConsumer;
 
 import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.capability.auxiliar.IBaseAuxiliarCapability;
-import com.chipoodle.devilrpg.capability.skill.IBasePlayerSkillCapability;
-import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
+import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityAttacher;
 import com.chipoodle.devilrpg.entity.ISoulEntity;
 import com.chipoodle.devilrpg.entity.ITameableEntity;
 import com.chipoodle.devilrpg.init.ModNetwork;
@@ -53,11 +53,11 @@ public class SkillForgeEventSubscriber {
 	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
 	public static void onLivingJumpEvent(LivingJumpEvent event) {
 		if (event.getEntity() instanceof PlayerEntity) {
-			BiConsumer<LivingJumpEvent, LazyOptional<IBaseAuxiliarCapability>> c = (eve, auxiliar) -> {
+			BiConsumer<LivingJumpEvent, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, auxiliar) -> {
 				Vector3d motion = eve.getEntity().getDeltaMovement();
 
-				LazyOptional<IBasePlayerSkillCapability> skillCap = event.getEntity()
-						.getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
+				LazyOptional<PlayerSkillCapabilityInterface> skillCap = event.getEntity()
+						.getCapability(PlayerSkillCapabilityAttacher.SKILL_CAP);
 				int points = skillCap.map(x -> x.getSkillsPoints().get(SkillEnum.TRANSFORM_WEREWOLF)).get();
 				double jumpFactor = (points * 0.005) + 0.03f; // max 0.13
 				eve.getEntity().setDeltaMovement(motion.x(), motion.y() + jumpFactor, motion.z());
@@ -73,7 +73,7 @@ public class SkillForgeEventSubscriber {
 	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
 	public static void onLivingFallEvent(LivingFallEvent event) {
 		if (event.getEntity() instanceof PlayerEntity) {
-			BiConsumer<LivingFallEvent, LazyOptional<IBaseAuxiliarCapability>> c = (eve, auxiliar) -> {
+			BiConsumer<LivingFallEvent, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, auxiliar) -> {
 				if (eve.getDistance() > 1) {
 					eve.setDistance(eve.getDistance() - 1);
 				}
@@ -84,7 +84,7 @@ public class SkillForgeEventSubscriber {
 
 	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
 	public static void onLeftClickBlock(PlayerInteractEvent.LeftClickBlock event) {
-		BiConsumer<PlayerInteractEvent.LeftClickBlock, LazyOptional<IBaseAuxiliarCapability>> c = (eve, auxiliar) -> {
+		BiConsumer<PlayerInteractEvent.LeftClickBlock, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, auxiliar) -> {
 			eve.getPlayer().swinging = false;
 			eve.setCanceled(true);
 		};
@@ -93,7 +93,7 @@ public class SkillForgeEventSubscriber {
 
 	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
 	public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
-		BiConsumer<PlayerInteractEvent.RightClickBlock, LazyOptional<IBaseAuxiliarCapability>> c = (eve, auxiliar) -> {
+		BiConsumer<PlayerInteractEvent.RightClickBlock, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, auxiliar) -> {
 			eve.getPlayer().swinging = false;
 			eve.setCanceled(true);
 		};
@@ -102,7 +102,7 @@ public class SkillForgeEventSubscriber {
 
 	@SubscribeEvent(priority = EventPriority.HIGHEST, receiveCanceled = true)
 	public static void onEntityInteract(PlayerInteractEvent.EntityInteract event) {
-		BiConsumer<PlayerInteractEvent.EntityInteract, LazyOptional<IBaseAuxiliarCapability>> c = (eve, auxiliar) -> {
+		BiConsumer<PlayerInteractEvent.EntityInteract, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, auxiliar) -> {
 			eve.getPlayer().swinging = false;
 			eve.setCanceled(true);
 		};
@@ -111,8 +111,8 @@ public class SkillForgeEventSubscriber {
 
 	@SubscribeEvent(priority = EventPriority.HIGHEST, receiveCanceled = true)
 	public static void onEntityInteractSpecific(PlayerInteractEvent.EntityInteractSpecific event) {
-		BiConsumer<PlayerInteractEvent.EntityInteractSpecific, LazyOptional<IBaseAuxiliarCapability>> c = (eve,
-				auxiliar) -> {
+		BiConsumer<PlayerInteractEvent.EntityInteractSpecific, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve,
+																													  auxiliar) -> {
 			eve.getPlayer().swinging = false;
 			eve.setCanceled(true);
 		};
@@ -121,7 +121,7 @@ public class SkillForgeEventSubscriber {
 
 	@SubscribeEvent
 	public static void onAttack(AttackEntityEvent event) {
-		BiConsumer<AttackEntityEvent, LazyOptional<IBaseAuxiliarCapability>> c = (eve, auxiliar) -> {
+		BiConsumer<AttackEntityEvent, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, auxiliar) -> {
 			eve.getPlayer().swinging = false;
 			eve.setCanceled(true);
 		};

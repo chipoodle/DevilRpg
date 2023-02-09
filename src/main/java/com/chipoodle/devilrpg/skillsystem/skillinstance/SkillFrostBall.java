@@ -3,7 +3,7 @@ package com.chipoodle.devilrpg.skillsystem.skillinstance;
 import java.util.HashMap;
 import java.util.Random;
 
-import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
 import com.chipoodle.devilrpg.entity.SoulIceBallEntity;
 import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
 import com.chipoodle.devilrpg.util.SkillEnum;
@@ -15,7 +15,7 @@ import net.minecraft.world.World;
 
 public class SkillFrostBall implements ISkillContainer {
 
-    public SkillFrostBall(PlayerSkillCapability parentCapability) {
+    public SkillFrostBall(PlayerSkillCapabilityImplementation parentCapability) {
     }
 
 	@Override

@@ -1,10 +1,10 @@
 package com.chipoodle.devilrpg.client.gui.scrollableskillscreen;
 
 import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.capability.experience.IBaseExperienceCapability;
-import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapabilityProvider;
-import com.chipoodle.devilrpg.capability.skill.IBasePlayerSkillCapability;
-import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
+import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapabilityInterface;
+import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapabilityAttacher;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityAttacher;
 import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model.ClientSkillBuilder;
 import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model.CustomSkillButton;
 import com.chipoodle.devilrpg.eventsubscriber.client.ClientModKeyInputEventSubscriber;
@@ -12,7 +12,6 @@ import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.network.handler.PlayerPassiveSkillServerHandler;
 import com.chipoodle.devilrpg.util.PowerEnum;
 import com.chipoodle.devilrpg.util.SkillEnum;
-import com.chipoodle.devilrpg.util.TargetUtils;
 import com.google.common.collect.Maps;
 import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -81,8 +80,8 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
     private double dragPositionMouseY;
 
     private final PlayerEntity player;
-    private LazyOptional<IBasePlayerSkillCapability> skillCap;
-    private LazyOptional<IBaseExperienceCapability> expCap;
+    private LazyOptional<PlayerSkillCapabilityInterface> skillCap;
+    private LazyOptional<PlayerExperienceCapabilityInterface> expCap;
 
     private Set<CustomSkillButton> powerButtonList;
 
@@ -95,8 +94,8 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
         skillsImages = new EnumMap<>(SkillEnum.class);
 
         this.player = Minecraft.getInstance().player;
-        expCap = player.getCapability(PlayerExperienceCapabilityProvider.EXPERIENCE_CAP);
-        skillCap = player.getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
+        expCap = player.getCapability(PlayerExperienceCapabilityAttacher.EXPERIENCE_CAP);
+        skillCap = player.getCapability(PlayerSkillCapabilityAttacher.SKILL_CAP);
         ClientSkillBuilder skillManager = skillCap.map(s->s.getClientSkillBuilder()).orElse(null); //new ClientSkillBuilder(/*Minecraft.getInstance()*/);
         //skillManager.buildSkillTrees();
         this.clientSkillManager = skillManager;
@@ -189,7 +188,7 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
                 Integer points = skillsPoints.get(skillEnum);
                 Integer maxPoints = skillsMaxPoints.get(skillEnum);
                 if (points < maxPoints) {
-                    points += expCap.map(IBaseExperienceCapability::consumePoint).orElse(0);
+                    points += expCap.map(PlayerExperienceCapabilityInterface::consumePoint).orElse(0);
                     skillsPoints.put(skillEnum, points);
                     aSkillCap.setSkillsPoints(skillsPoints, player);
                     skillEntryGui.updateFormattedLevelString(points, maxPoints);
@@ -277,7 +276,7 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
             CustomSkillButton copy = powerButtonList.stream().filter(x -> x.isInside(mouseX, mouseY)).findAny().orElse(null);
             if (copy != null) {
                 copy.setButtonTexture(skillEntryGuiApretado.getDisplayInfo().getImage());
-                HashMap<PowerEnum, SkillEnum> powerNames = skillCap.map(IBasePlayerSkillCapability::getSkillsNameOfPowers).orElse(null);
+                HashMap<PowerEnum, SkillEnum> powerNames = skillCap.map(PlayerSkillCapabilityInterface::getSkillsNameOfPowers).orElse(null);
                 if (powerNames != null) {
                     powerNames.put((PowerEnum) copy.getEnum(), skillEntryGuiApretado.getSkillElement().getSkillCapability());
                     skillCap.ifPresent(x -> x.setSkillsNameOfPowers(powerNames, player));
@@ -502,19 +501,19 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
         return this.tabs.get(skillElement);
     }
 
-    public LazyOptional<IBasePlayerSkillCapability> getSkillCap() {
+    public LazyOptional<PlayerSkillCapabilityInterface> getSkillCap() {
         return skillCap;
     }
 
-    public void setSkillCap(LazyOptional<IBasePlayerSkillCapability> skillCap) {
+    public void setSkillCap(LazyOptional<PlayerSkillCapabilityInterface> skillCap) {
         this.skillCap = skillCap;
     }
 
-    public LazyOptional<IBaseExperienceCapability> getExpCap() {
+    public LazyOptional<PlayerExperienceCapabilityInterface> getExpCap() {
         return expCap;
     }
 
-    public void setExpCap(LazyOptional<IBaseExperienceCapability> expCap) {
+    public void setExpCap(LazyOptional<PlayerExperienceCapabilityInterface> expCap) {
         this.expCap = expCap;
     }
 
@@ -557,7 +556,7 @@ public class ScrollableSkillScreen extends Screen implements ClientSkillBuilder.
 
         if (pressedButton instanceof CustomSkillButton) {
             CustomSkillButton pb = (CustomSkillButton) pressedButton;
-            HashMap<PowerEnum, SkillEnum> powerNames = skillCap.map(IBasePlayerSkillCapability::getSkillsNameOfPowers).orElse(null);
+            HashMap<PowerEnum, SkillEnum> powerNames = skillCap.map(PlayerSkillCapabilityInterface::getSkillsNameOfPowers).orElse(null);
             if (powerNames != null) {
                 pb.setButtonTexture(EMPTY_POWER_IMAGE_RESOURCE);
                 DevilRpg.LOGGER.info("pb.getEnum(): {} ", pb.getEnum());

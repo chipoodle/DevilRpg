@@ -2,33 +2,35 @@ package com.chipoodle.devilrpg.network.handler;
 
 import java.util.function.Supplier;
 
-import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityProvider;
+import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapability;
+import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityAttacher;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.ServerPlayerEntity;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.network.PacketBuffer;
-import net.minecraftforge.fml.network.NetworkDirection;
-import net.minecraftforge.fml.network.NetworkEvent;
+
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraftforge.network.NetworkDirection;
+import net.minecraftforge.network.NetworkEvent;
+
 
 public class PlayerMinionClientServerHandler {
 
-	private final CompoundNBT skillCompound;
+	private final CompoundTag skillCompound;
 
-	public PlayerMinionClientServerHandler(CompoundNBT skillCompound) {
+	public PlayerMinionClientServerHandler(CompoundTag skillCompound) {
 		this.skillCompound = skillCompound;
 	}
 
-	public CompoundNBT getSkillCompound() {
+	public CompoundTag getSkillCompound() {
 		return skillCompound;
 	}
 
-	public static void encode(final PlayerMinionClientServerHandler msg, final PacketBuffer packetBuffer) {
+	public static void encode(final PlayerMinionClientServerHandler msg, final FriendlyByteBuf packetBuffer) {
 		packetBuffer.writeNbt(msg.getSkillCompound());
 	}
 
-	public static PlayerMinionClientServerHandler decode(final PacketBuffer packetBuffer) {
+	public static PlayerMinionClientServerHandler decode(final FriendlyByteBuf packetBuffer) {
 		return new PlayerMinionClientServerHandler(packetBuffer.readNbt());
 	}
 
@@ -36,9 +38,9 @@ public class PlayerMinionClientServerHandler {
 			final Supplier<NetworkEvent.Context> contextSupplier) {
 		if (contextSupplier.get().getDirection().equals(NetworkDirection.PLAY_TO_SERVER)) {
 			contextSupplier.get().enqueueWork(() -> {
-				ServerPlayerEntity serverPlayer = contextSupplier.get().getSender();
+				ServerPlayer serverPlayer = contextSupplier.get().getSender();
 				if (serverPlayer != null) {
-					serverPlayer.getCapability(PlayerMinionCapabilityProvider.MINION_CAP)
+					serverPlayer.getCapability(PlayerMinionCapability.INSTANCE)
 							.ifPresent(x -> x.setNBTData(msg.getSkillCompound()));
 				}
 			});
@@ -50,7 +52,7 @@ public class PlayerMinionClientServerHandler {
 				Minecraft m = Minecraft.getInstance();
 				PlayerEntity clientPlayer = m.player;
 				if (clientPlayer != null) {
-					clientPlayer.getCapability(PlayerMinionCapabilityProvider.MINION_CAP)
+					clientPlayer.getCapability(PlayerMinionCapabilityAttacher.MINION_CAP)
 							.ifPresent(x -> x.setNBTData(msg.getSkillCompound()));
 				}
 			});

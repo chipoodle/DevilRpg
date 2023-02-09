@@ -1,9 +1,9 @@
 package com.chipoodle.devilrpg.skillsystem.skillinstance;
 
 import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.capability.auxiliar.IBaseAuxiliarCapability;
-import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliarCapabilityProvider;
-import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
+import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
+import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
 import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.network.handler.WerewolfAttackServerHandler;
 import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
@@ -20,7 +20,10 @@ import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.SoundCategory;
 import net.minecraft.util.SoundEvent;
 import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.World;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.common.util.LazyOptional;
@@ -34,10 +37,10 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassive implements IS
     private static final ResourceLocation SUMMON_SOUND = new ResourceLocation(DevilRpg.MODID, "summon");
     //AttributeModifier healthAttributeModifier;
     AttributeModifier speedAttributeModifier;
-    private final PlayerSkillCapability parentCapability;
+    private final PlayerSkillCapabilityImplementation parentCapability;
     private final Random rand = new Random();
 
-    public SkillShapeshiftWerewolf(PlayerSkillCapability parentCapability) {
+    public SkillShapeshiftWerewolf(PlayerSkillCapabilityImplementation parentCapability) {
         this.parentCapability = parentCapability;
     }
 
@@ -47,14 +50,14 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassive implements IS
     }
 
     @Override
-    public void execute(World worldIn, PlayerEntity playerIn, HashMap<String, String> parameters) {
+    public void execute(Level worldIn, Player playerIn, HashMap<String, String> parameters) {
         if (!worldIn.isClientSide) {
             Random rand = new Random();
             SoundEvent event = new SoundEvent(SUMMON_SOUND);
             worldIn.playSound(null, playerIn.getX(), playerIn.getY(), playerIn.getZ(), event,
                     SoundCategory.NEUTRAL, 0.5F, 0.4F / (rand.nextFloat() * 0.4F + 0.8F));
 
-            LazyOptional<IBaseAuxiliarCapability> aux = playerIn.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
+            LazyOptional<PlayerAuxiliaryCapabilityInterface> aux = playerIn.getCapability(PlayerAuxiliaryCapability.AUX_CAP);
             boolean transformation = aux.map(x -> x.isWerewolfTransformation()).orElse(false);
             aux.ifPresent(x -> x.setWerewolfTransformation(!transformation, playerIn));
             if (!transformation) {
@@ -119,10 +122,10 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassive implements IS
      * @param player
      */
     @OnlyIn(Dist.CLIENT)
-    public void playerTickEventAttack(final PlayerEntity player, LazyOptional<IBaseAuxiliarCapability> aux) {
+    public void playerTickEventAttack(final Player player, LazyOptional<PlayerAuxiliaryCapabilityInterface> aux) {
         if (player.level.isClientSide) {
             //DevilRpg.LOGGER.info("Skill.playerTickEventAttack");
-            aux.ifPresent(auxiliarCapability -> {
+            aux.ifPresent(auxiliaryCapability -> {
                 int points = parentCapability.getSkillsPoints().get(SkillEnum.TRANSFORM_WEREWOLF);
                 float s = (15L - points * 0.5F);
                 long attackTime = (long) s;
@@ -132,7 +135,7 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassive implements IS
 
                 if (Math.floor(player.tickCount % attackTime) == 0) {
                     //DevilRpg.LOGGER.info("player.tickCount % attackTime {}",player.tickCount % attackTime);
-                    Hand hand = auxiliarCapability.swingHands(player);
+                    InteractionHand hand = auxiliaryCapability.swingHands(player);
                     getEnemies(player, hand);
                 }
 
@@ -144,7 +147,7 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassive implements IS
      * @param player
      * @param hand
      */
-    private void getEnemies(final PlayerEntity player, Hand hand) {
+    private void getEnemies(final Player player, InteractionHand hand) {
         DevilRpg.LOGGER.info("getEnemies");
         LivingEntity target;
         int distance = 1;

@@ -7,72 +7,19 @@ import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
-import com.chipoodle.devilrpg.capability.player_minion.IBaseMinionCapability;
-import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityProvider;
-import com.chipoodle.devilrpg.capability.skill.IBasePlayerSkillCapability;
-import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityProvider;
+import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityInterface;
+import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityAttacher;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityAttacher;
 import com.chipoodle.devilrpg.client.render.IRenderUtilities;
 import com.chipoodle.devilrpg.init.ModEntityTypes;
 import com.chipoodle.devilrpg.util.SkillEnum;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.AgeableEntity;
-import net.minecraft.entity.CreatureAttribute;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntitySize;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.IAngerable;
-import net.minecraft.entity.IChargeableMob;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.MobEntity;
-import net.minecraft.entity.Pose;
-import net.minecraft.entity.ai.RandomPositionGenerator;
-import net.minecraft.entity.ai.attributes.AttributeModifierMap;
-import net.minecraft.entity.ai.attributes.Attributes;
-import net.minecraft.entity.ai.controller.FlyingMovementController;
-import net.minecraft.entity.ai.controller.LookController;
-import net.minecraft.entity.ai.goal.FollowOwnerGoal;
-import net.minecraft.entity.ai.goal.Goal;
-import net.minecraft.entity.ai.goal.PanicGoal;
-import net.minecraft.entity.ai.goal.SwimGoal;
-import net.minecraft.entity.ai.goal.WaterAvoidingRandomFlyingGoal;
-import net.minecraft.entity.passive.IFlyingAnimal;
-import net.minecraft.entity.passive.TameableEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.fluid.Fluid;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.network.IPacket;
-import net.minecraft.network.datasync.DataParameter;
-import net.minecraft.network.datasync.DataSerializers;
-import net.minecraft.network.datasync.EntityDataManager;
-import net.minecraft.particles.IParticleData;
-import net.minecraft.particles.ParticleTypes;
-import net.minecraft.pathfinding.FlyingPathNavigator;
-import net.minecraft.pathfinding.PathNavigator;
-import net.minecraft.pathfinding.PathNodeType;
-import net.minecraft.potion.Effect;
-import net.minecraft.potion.EffectInstance;
-import net.minecraft.tags.ItemTags;
-import net.minecraft.tags.Tag;
-import net.minecraft.util.DamageSource;
-import net.minecraft.util.RangedInteger;
-import net.minecraft.util.SoundEvent;
-import net.minecraft.util.SoundEvents;
-import net.minecraft.util.TickRangeConverter;
-import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.vector.Vector3d;
-import net.minecraft.world.IWorldReader;
-import net.minecraft.world.World;
-import net.minecraft.world.server.ServerWorld;
+import net.minecraft.world.entity.TamableAnimal;
 import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.fml.common.registry.IEntityAdditionalSpawnData;
-import net.minecraftforge.fml.network.FMLPlayMessages;
-import net.minecraftforge.fml.network.NetworkHooks;
 
-public class SoulWispEntity extends TameableEntity implements ITameableEntity, IFlyingAnimal, ISoulEntity, IChargeableMob,
+
+public class SoulWispEntity extends TamableAnimal implements ITameableEntity, IFlyingAnimal, ISoulEntity, IChargeableMob,
 		IAngerable, IPassiveMinionUpdater<SoulWispEntity> {
 	private static final DataParameter<Integer> ANGER_TIME = EntityDataManager.defineId(SoulWispEntity.class,
 			DataSerializers.INT);
@@ -88,7 +35,7 @@ public class SoulWispEntity extends TameableEntity implements ITameableEntity, I
 	protected static final double DISTANCIA_EFECTO = 20;
 	protected static final int DURATION_TICKS = 120;
 
-	public SoulWispEntity(EntityType<? extends SoulWispEntity> type, World worldIn) {
+	public SoulWispEntity(EntityType<? extends SoulWispEntity> type, Level worldIn) {
 		super(type, worldIn);
 		this.moveControl = new FlyingMovementController(this, 20, true);
 		this.lookControl = new SoulWispEntity.BeeLookController(this);
@@ -135,7 +82,7 @@ public class SoulWispEntity extends TameableEntity implements ITameableEntity, I
 	public void updateLevel(PlayerEntity owner, Effect efectoPrimario, Effect efectoSecundario, SkillEnum tipoWisp,
 			boolean esBeneficioso) {
 		tame(owner);
-		LazyOptional<IBasePlayerSkillCapability> skill = getOwner().getCapability(PlayerSkillCapabilityProvider.SKILL_CAP);
+		LazyOptional<PlayerSkillCapabilityInterface> skill = getOwner().getCapability(PlayerSkillCapabilityAttacher.SKILL_CAP);
 		this.efectoPrimario = efectoPrimario;
 		this.efectoSecundario = efectoSecundario;
 		this.esBeneficioso = esBeneficioso;
@@ -184,7 +131,7 @@ public class SoulWispEntity extends TameableEntity implements ITameableEntity, I
 		}
 	}
 
-	private void addParticle(World worldIn, double p_226397_2_, double p_226397_4_, double p_226397_6_,
+	private void addParticle(Level worldIn, double p_226397_2_, double p_226397_4_, double p_226397_6_,
 			double p_226397_8_, double posY, IParticleData particleData) {
 		worldIn.addParticle(particleData, MathHelper.lerp(worldIn.random.nextDouble(), p_226397_2_, p_226397_4_), posY,
 				MathHelper.lerp(worldIn.random.nextDouble(), p_226397_6_, p_226397_8_), 0.0D, 0.0D, 0.0D);
@@ -216,7 +163,7 @@ public class SoulWispEntity extends TameableEntity implements ITameableEntity, I
 	 * Returns new PathNavigateGround instance
 	 */
 	@Override
-	protected PathNavigator createNavigation(World worldIn) {
+	protected PathNavigator createNavigation(Level worldIn) {
 		FlyingPathNavigator flyingpathnavigator = new FlyingPathNavigator(this, worldIn) {
 			public boolean isStableDestination(BlockPos pos) {
 				return !this.level.getBlockState(pos.below()).isAir();
@@ -484,8 +431,8 @@ public class SoulWispEntity extends TameableEntity implements ITameableEntity, I
 	@Override
 	public void die(DamageSource cause) {
 		if (getOwner() != null) {
-			LazyOptional<IBaseMinionCapability> minionCap = getOwner()
-					.getCapability(PlayerMinionCapabilityProvider.MINION_CAP);
+			LazyOptional<PlayerMinionCapabilityInterface> minionCap = getOwner()
+					.getCapability(PlayerMinionCapabilityAttacher.MINION_CAP);
 			if (!minionCap.isPresent())
 				return;
 			minionCap.ifPresent(x -> x.removeWisp((PlayerEntity) getOwner(), this));
@@ -531,7 +478,7 @@ public class SoulWispEntity extends TameableEntity implements ITameableEntity, I
 	protected int getExperienceReward(PlayerEntity player) {
 		/*
 		 * if (player.equals(getOwner())) return 0; return 1 +
-		 * this.world.rand.nextInt(3);
+		 * this.level.rand.nextInt(3);
 		 */
 		return 0;
 	}
@@ -567,12 +514,12 @@ public class SoulWispEntity extends TameableEntity implements ITameableEntity, I
 	}
 
 	@Override
-	public SoulWispEntity getBreedOffspring(ServerWorld world, AgeableEntity mate) {
-		return ModEntityTypes.WISP.get().create(world);
+	public SoulWispEntity getBreedOffspring(ServerWorld level, AgeableEntity mate) {
+		return ModEntityTypes.WISP.get().create(level);
 	}
 
 	@Override
-	public World getLevel() {
+	public Level getLevel() {
 		return this.level;
 	}
 
