@@ -1,23 +1,22 @@
 package com.chipoodle.devilrpg.entity.goal;
 
+import com.chipoodle.devilrpg.entity.ITamableEntity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.entity.ai.goal.target.TargetGoal;
+import net.minecraft.world.entity.ai.targeting.TargetingConditions;
+
 import java.util.EnumSet;
-
-import com.chipoodle.devilrpg.entity.ITameableEntity;
-
-import net.minecraft.entity.EntityPredicate;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.MobEntity;
-import net.minecraft.entity.ai.goal.Goal;
-import net.minecraft.entity.ai.goal.TargetGoal;
 
 
 public class TameableMountableOwnerHurtByTargetGoal extends TargetGoal {
-   private final ITameableEntity tameAnimal;
+   private final ITamableEntity tameAnimal;
    private LivingEntity ownerLastHurtBy;
    private int timestamp;
 
-   public TameableMountableOwnerHurtByTargetGoal(ITameableEntity p_i1667_1_) {
-      super((MobEntity) p_i1667_1_, false);
+   public TameableMountableOwnerHurtByTargetGoal(ITamableEntity p_i1667_1_) {
+      super((Mob) p_i1667_1_, false);
       this.tameAnimal = p_i1667_1_;
       this.setFlags(EnumSet.of(Goal.Flag.TARGET));
    }
@@ -30,7 +29,7 @@ public class TameableMountableOwnerHurtByTargetGoal extends TargetGoal {
          } else {
             this.ownerLastHurtBy = livingentity.getLastHurtByMob();
             int i = livingentity.getLastHurtByMobTimestamp();
-            return i != this.timestamp && this.canAttack(this.ownerLastHurtBy, EntityPredicate.DEFAULT) && this.tameAnimal.wantsToAttack(this.ownerLastHurtBy, livingentity);
+            return i != this.timestamp && this.canAttack(this.ownerLastHurtBy, TargetingConditions.DEFAULT) && this.tameAnimal.wantsToAttack(this.ownerLastHurtBy, livingentity);
          }
       } else {
          return false;

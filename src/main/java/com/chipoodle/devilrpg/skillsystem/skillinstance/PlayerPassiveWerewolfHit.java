@@ -2,16 +2,16 @@ package com.chipoodle.devilrpg.skillsystem.skillinstance;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
-import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
-import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
+import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
 import com.chipoodle.devilrpg.util.SkillEnum;
-import net.minecraft.entity.ai.attributes.AttributeModifier;
-import net.minecraft.entity.ai.attributes.Attributes;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.world.World;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
 
 import java.util.HashMap;
 import java.util.UUID;
@@ -19,9 +19,9 @@ import java.util.UUID;
 public class PlayerPassiveWerewolfHit extends AbstractPlayerPassive implements ISkillContainer, ICapabilityAttributeModifier {
     public static final String ATTRIBUTE_MODIFIER_UNIQUE_NAME = SkillEnum.WEREWOLF_HIT.name() + "_" + "ADDITION";
     public static final double HIT_FACTOR = 0.30D;
-    AttributeModifier hitAttributeModifier;
     private final PlayerSkillCapabilityInterface parentCapability;
-    private PlayerEntity playerIn;
+    AttributeModifier hitAttributeModifier;
+    private Player playerIn;
 
     public PlayerPassiveWerewolfHit(PlayerSkillCapabilityImplementation parentCapability) {
         this.parentCapability = parentCapability;
@@ -31,20 +31,20 @@ public class PlayerPassiveWerewolfHit extends AbstractPlayerPassive implements I
     /**
      * *
      *
-     * @param worldIn
+     * @param levelIn
      * @param playerIn
      * @param parameters Server side called
      */
     @Override
-    public void execute(World worldIn, PlayerEntity playerIn, HashMap<String, String> parameters) {
-        if (!worldIn.isClientSide) {
+    public void execute(Level levelIn, Player playerIn, HashMap<String, String> parameters) {
+        if (!levelIn.isClientSide) {
 
             if (this.playerIn == null) {
                 this.playerIn = playerIn;
             }
             initializeAttributes(playerIn);
 
-            PlayerAuxiliaryCapabilityInterface auxiliary = IGenericCapability.getUnwrappedPlayerCapability(playerIn, PlayerAuxiliaryCapability.AUX_CAP);
+            PlayerAuxiliaryCapabilityInterface auxiliary = IGenericCapability.getUnwrappedPlayerCapability(playerIn, PlayerAuxiliaryCapability.INSTANCE);
             if (auxiliary.isWerewolfTransformation()) {
                 add();
             } else {
@@ -55,7 +55,7 @@ public class PlayerPassiveWerewolfHit extends AbstractPlayerPassive implements I
         }
     }
 
-    private void initializeAttributes(PlayerEntity playerIn) {
+    private void initializeAttributes(Player playerIn) {
         if (hitAttributeModifier == null ||
                 hitAttributeModifier.getAmount() != Double.valueOf(parentCapability.getSkillsPoints().get(SkillEnum.WEREWOLF_HIT)) * HIT_FACTOR) {
             removeCurrentWerewolfHitModifiers();

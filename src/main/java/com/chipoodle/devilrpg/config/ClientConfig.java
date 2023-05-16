@@ -5,7 +5,8 @@ import java.util.List;
 
 import com.chipoodle.devilrpg.DevilRpg;
 
-import net.minecraft.item.DyeColor;
+
+import net.minecraft.world.item.DyeColor;
 import net.minecraftforge.common.ForgeConfigSpec;
 
 /**

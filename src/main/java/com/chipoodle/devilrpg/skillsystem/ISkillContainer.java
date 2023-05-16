@@ -7,6 +7,6 @@ import net.minecraft.world.level.Level;
 import java.util.HashMap;
 
 public interface ISkillContainer{
-	void execute(Level worldIn, Player playerIn, HashMap<String,String> parameters);
+	void execute(Level level, Player playerIn, HashMap<String,String> parameters);
 	SkillEnum getSkillEnum();
 }

@@ -1,6 +1,7 @@
 package com.chipoodle.devilrpg.capability.mana;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapability;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
@@ -13,12 +14,16 @@ import net.minecraftforge.event.AttachCapabilitiesEvent;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static com.chipoodle.devilrpg.DevilRpg.LOGGER;
+
 public class PlayerManaCapabilityAttacher {
 
     private PlayerManaCapabilityAttacher() {
     }
 
     public static void attach(final AttachCapabilitiesEvent<Entity> event) {
+        if(event.getObject().getCapability(PlayerManaCapability.INSTANCE).isPresent()) return;
+        LOGGER.info("-----> attach PlayerManaCapabilityProvider");
         final PlayerManaCapabilityProvider provider = new PlayerManaCapabilityProvider();
         event.addCapability(PlayerManaCapabilityProvider.IDENTIFIER, provider);
     }

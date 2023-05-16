@@ -1,62 +1,61 @@
 package com.chipoodle.devilrpg.network.handler;
 
-import java.util.function.Supplier;
-
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.util.TargetUtils;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.Entity;
+import net.minecraftforge.network.NetworkDirection;
+import net.minecraftforge.network.NetworkEvent;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.ServerPlayerEntity;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.Hand;
-import net.minecraftforge.fml.network.NetworkDirection;
-import net.minecraftforge.fml.network.NetworkEvent;
+import java.util.function.Supplier;
 
 public class WerewolfAttackServerHandler {
 
-	public static final String ENTITY_ID_KEY = "entityId";
-	public static final String HAND_KEY = "hand";
-	private final int entityId;
-	private final Hand hand;
+    public static final String ENTITY_ID_KEY = "entityId";
+    public static final String HAND_KEY = "hand";
+    private final int entityId;
+    private final InteractionHand hand;
 
-	public WerewolfAttackServerHandler(int entityId, Hand hand) {
-		this.entityId = entityId;
-		this.hand = hand;
-	}
+    public WerewolfAttackServerHandler(int entityId, InteractionHand hand) {
+        this.entityId = entityId;
+        this.hand = hand;
+    }
 
-	public int getEntityId() {
-		return entityId;
-	}
+    public static void encode(final WerewolfAttackServerHandler msg, final FriendlyByteBuf packetBuffer) {
+        CompoundTag c = new CompoundTag();
+        c.putInt(ENTITY_ID_KEY, msg.getEntityId());
+        c.putString(HAND_KEY, msg.getInteractionHand().name());
+        packetBuffer.writeNbt(c);
+    }
 
-	public Hand getHand() {
-		return hand;
-	}
+    public static WerewolfAttackServerHandler decode(final FriendlyByteBuf packetBuffer) {
+        CompoundTag c = packetBuffer.readNbt();
+        return new WerewolfAttackServerHandler(c.getInt(ENTITY_ID_KEY), InteractionHand.valueOf(c.getString(HAND_KEY)));
+    }
 
-	public static void encode(final WerewolfAttackServerHandler msg, final PacketBuffer packetBuffer) {
-		CompoundNBT c = new CompoundNBT();
-		c.putInt(ENTITY_ID_KEY, msg.getEntityId());
-		c.putString(HAND_KEY, msg.getHand().name());
-		packetBuffer.writeNbt(c);
-	}
+    public static void onMessage(final WerewolfAttackServerHandler msg,
+                                 final Supplier<NetworkEvent.Context> contextSupplier) {
+        if (contextSupplier.get().getDirection().equals(NetworkDirection.PLAY_TO_SERVER)) {
+            contextSupplier.get().enqueueWork(() -> {
+                ServerPlayer sender = contextSupplier.get().getSender();
+                Entity target = sender.level.getEntity(msg.getEntityId());
+                DevilRpg.LOGGER.info("Server recieved attack to entity: {}", target.getName());
+                //ItemStack item = sender.getHeldItem(msg.getInteractionHand());
+                TargetUtils.attackTargetEntityWithItemHand(sender, target, msg.getInteractionHand());
+                //DevilRpg.LOGGER.info("----->HAND: " + msg.getInteractionHand().name());
+            });
+            contextSupplier.get().setPacketHandled(true);
+        }
+    }
 
-	public static WerewolfAttackServerHandler decode(final PacketBuffer packetBuffer) {
-		CompoundNBT c = packetBuffer.readNbt();
-		return new WerewolfAttackServerHandler(c.getInt(ENTITY_ID_KEY), Hand.valueOf(c.getString(HAND_KEY)));
-	}
+    public int getEntityId() {
+        return entityId;
+    }
 
-	public static void onMessage(final WerewolfAttackServerHandler msg,
-			final Supplier<NetworkEvent.Context> contextSupplier) {
-		if (contextSupplier.get().getDirection().equals(NetworkDirection.PLAY_TO_SERVER)) {
-			contextSupplier.get().enqueueWork(() -> {
-				ServerPlayerEntity sender = contextSupplier.get().getSender();
-				Entity target = sender.level.getEntity(msg.getEntityId());
-				DevilRpg.LOGGER.info("Server recieved attack to entity: {}",target.getName());
-				//ItemStack item = sender.getHeldItem(msg.getHand());
-				TargetUtils.attackTargetEntityWithItemHand(sender, target, msg.getHand());
-				//DevilRpg.LOGGER.info("----->HAND: " + msg.getHand().name());
-			});
-			contextSupplier.get().setPacketHandled(true);
-		}
-	}
+    public InteractionHand getInteractionHand() {
+        return hand;
+    }
 }

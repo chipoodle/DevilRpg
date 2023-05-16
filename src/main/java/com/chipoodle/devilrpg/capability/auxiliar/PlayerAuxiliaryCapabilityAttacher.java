@@ -5,6 +5,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.ICapabilityProvider;
 import net.minecraftforge.common.util.INBTSerializable;
@@ -13,6 +14,8 @@ import net.minecraftforge.event.AttachCapabilitiesEvent;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static com.chipoodle.devilrpg.DevilRpg.LOGGER;
+
 
 public class PlayerAuxiliaryCapabilityAttacher {
 
@@ -20,6 +23,8 @@ public class PlayerAuxiliaryCapabilityAttacher {
     }
 
     public static void attach(final AttachCapabilitiesEvent<Entity> event) {
+        if(event.getObject().getCapability(PlayerAuxiliaryCapability.INSTANCE).isPresent()) return;
+        LOGGER.info("-----> attach PlayerAuxiliaryCapabilityProvider");
         final PlayerAuxiliaryCapabilityProvider provider = new PlayerAuxiliaryCapabilityProvider();
         event.addCapability(PlayerAuxiliaryCapabilityProvider.IDENTIFIER, provider);
     }

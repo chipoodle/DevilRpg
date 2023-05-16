@@ -6,17 +6,24 @@
 package com.chipoodle.devilrpg.eventsubscriber.client;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.client.gui.hud.ManaBarHudOverlay;
+import com.chipoodle.devilrpg.client.gui.hud.MinionPortraitHudOverlay;
+import com.chipoodle.devilrpg.client.render.entity.model.*;
+import com.chipoodle.devilrpg.client.render.entity.renderer.*;
 import com.chipoodle.devilrpg.init.ModBlocks;
-import com.chipoodle.devilrpg.init.ModRenderer;
-
-import net.minecraft.client.renderer.color.IBlockColor;
-import net.minecraft.client.renderer.color.IItemColor;
+import com.chipoodle.devilrpg.init.ModEntities;
+import net.minecraft.client.color.block.BlockColor;
+import net.minecraft.client.color.item.ItemColor;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
 import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.ColorHandlerEvent;
+import net.minecraftforge.client.event.EntityRenderersEvent;
+import net.minecraftforge.client.event.RegisterColorHandlersEvent;
+import net.minecraftforge.client.event.RegisterGuiOverlaysEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.DeferredWorkQueue;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
-import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
+
+import net.minecraft.world.entity.player.Player;
 
 /**
  * Subscribe to events from the MOD EventBus that should be handled on the
@@ -29,59 +36,56 @@ public final class ClientModEventSubscriber {
 
     public static final int SOULVINE_COLOR = 0xAF3F1F;
 
-    /**
-     * We need to register our renderers on the client because rendering code does
-     * not exist on the server and trying to use it on a dedicated server will crash
-     * the game.
-     * <p>
-     * This method will be called by Forge when it is time for the mod to do its
-     * client-side setup This method will always be called after the Registry
-     * events. This means that all Blocks, Items, TileEntityTypes, etc. will all
-     * have been registered already
-     *
-     * @param event
-     */
-    @SuppressWarnings("deprecation")
+
     @SubscribeEvent
-    public static void onFMLClientSetupEvent(final FMLClientSetupEvent event) {
-        // Register TileEntity Renderers
-        // ClientRegistry.bindTileEntityRenderer(ModTileEntityTypes.MINI_MODEL.get(),
-        // MiniModelTileEntityRenderer::new);
-        // ClientRegistry.bindTileEntityRenderer(ModTileEntityTypes.ELECTRIC_FURNACE.get(),
-        // ElectricFurnaceTileEntityRenderer::new);
-        DevilRpg.LOGGER.debug("Registered TileEntity Renderers");
-
-        // Register Entity Renderers
-        ModRenderer.init();
-        DevilRpg.LOGGER.debug("Registered Entity Renderers");
-
-        // Register ContainerType Screens
-        // ScreenManager.registerFactory is not safe to call during parallel mod loading
-        // so we queue it to run later
-        /*
-         * DeferredWorkQueue.runLater(() -> {
-         * ScreenManager.registerFactory(ModContainerTypes.HEAT_COLLECTOR.get(),
-         * HeatCollectorScreen::new);
-         * ScreenManager.registerFactory(ModContainerTypes.ELECTRIC_FURNACE.get(),
-         * ElectricFurnaceScreen::new);
-         * ScreenManager.registerFactory(ModContainerTypes.MOD_FURNACE.get(),
-         * ModFurnaceScreen::new); LOGGER.debug("Registered ContainerType Screens"); });
-         */
-        DeferredWorkQueue.runLater(() -> {
-
-        });
+    public static void onRegisterBlockColors(final RegisterColorHandlersEvent.Block event) {
+        DevilRpg.LOGGER.info("----------------------->ClientModEventSubscriber.onRegisterBlockColors");
+        BlockColor iBlockColor = (state, reader, pos, tint) -> SOULVINE_COLOR;
+        event.getBlockColors().register(iBlockColor, ModBlocks.SOUL_VINE_BLOCK.get());
     }
 
     @SubscribeEvent
-    public static void registerBlockColors(final ColorHandlerEvent.Block event) {
-		IBlockColor iBlockColor = (state, reader, pos, tint) -> SOULVINE_COLOR;
-		event.getBlockColors().register(iBlockColor, ModBlocks.SOUL_VINE_BLOCK.get());
-    }
-
-    @SubscribeEvent
-    public static void registerBlockColors(final ColorHandlerEvent.Item event) {
-        IItemColor iItemColor = (itemStack, anInteger) -> SOULVINE_COLOR;
+    public static void onRegisterItemColors(final RegisterColorHandlersEvent.Item event) {
+        DevilRpg.LOGGER.info("----------------------->ClientModEventSubscriber.onRegisterItemColors");
+        ItemColor iItemColor = (itemStack, anInteger) -> SOULVINE_COLOR;
         event.getItemColors().register(iItemColor, ModBlocks.SOUL_VINE_BLOCK.get());
+    }
+
+    @SubscribeEvent
+    public static void onRegisterLayers(final EntityRenderersEvent.RegisterLayerDefinitions event) {
+        DevilRpg.LOGGER.info("----------------------->ClientModEventSubscriber.onRegisterLayers");
+        event.registerLayerDefinition(SoulBearModel.LAYER_LOCATION, SoulBearModel::createBodyLayer);
+        event.registerLayerDefinition(SoulWolfModel.LAYER_LOCATION, SoulWolfModel::createBodyLayer);
+        event.registerLayerDefinition(SoulBearModelHeart.LAYER_LOCATION, SoulBearModelHeart::createBodyLayer);
+        event.registerLayerDefinition(SoulWolfModelHeart.LAYER_LOCATION, SoulWolfModelHeart::createBodyLayer);
+        event.registerLayerDefinition(SoulWispModel.DEFAULT_LAYER_LOCATION, SoulWispModel::createBodyLayer);
+        event.registerLayerDefinition(SoulWispModel.BOMBER_LAYER_LOCATION, SoulWispModel::createBodyLayer);
+        event.registerLayerDefinition(SoulWispModel.ARCHER_LAYER_LOCATION, SoulWispModel::createBodyLayer);
+        event.registerLayerDefinition(WerewolfHumanModel.WEREWOLF_LAYER_LOCATION,WerewolfHumanModel::createBodyLayer);
+        event.registerLayerDefinition(WerewolfTransformedModel.WEREWOLF_LAYER_LOCATION,WerewolfTransformedModel::createBodyLayer);
+    }
+
+    @SubscribeEvent
+    public static void onRegisterRenderers(final EntityRenderersEvent.RegisterRenderers event) {
+        DevilRpg.LOGGER.info("----------------------->ClientModEventSubscriber.onRegisterRenderers");
+
+        event.registerEntityRenderer(ModEntities.SOUL_WOLF.get(), SoulWolfRenderer::new);
+        event.registerEntityRenderer(ModEntities.SOUL_BEAR.get(), SoulBearRenderer::new);
+        event.registerEntityRenderer(ModEntities.SOUL_ICEBALL.get(), SoulFireBallRenderer::new);
+        event.registerEntityRenderer(ModEntities.WISP.get(), SoulWispRenderer::new);
+        event.registerEntityRenderer(ModEntities.WISP_BOMB.get(), SoulWispBomberRenderer::new);
+        event.registerEntityRenderer(ModEntities.WISP_ARCHER.get(), SoulWispArcherRenderer::new);
+        //ItemBlockRenderTypes.setRenderLayer(ModBlocks.SOUL_VINE_BLOCK.get(), RenderType.translucent());
+        //event.registerEntityRenderer(ModEntityTypes.WISP.get(), SoulWispHumanoidRenderer::new);
+    }
+
+    @SubscribeEvent
+    public static void onRegisterGuiOverlaysEvent(final RegisterGuiOverlaysEvent event) {
+        DevilRpg.LOGGER.info("----------------------->ClientModEventSubscriber.onRegisterGuiOverlaysEvent");
+
+        event.registerAboveAll("mana", ManaBarHudOverlay.HUD_MANA_BAR);
+        event.registerAboveAll("minion_portrait", MinionPortraitHudOverlay.HUD_MINION_PORTRAITS);
+
     }
 
 }

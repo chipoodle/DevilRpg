@@ -2,18 +2,19 @@ package com.chipoodle.devilrpg.client.gui.hud;
 
 import java.text.DecimalFormat;
 
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiComponent;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
 import org.lwjgl.opengl.GL11;
 
 import com.chipoodle.devilrpg.DevilRpg;
-import com.mojang.blaze3d.matrix.MatrixStack;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.AbstractGui;
-import net.minecraft.client.gui.FontRenderer;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.potion.Effects;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.world.World;
+
 
 /**
  * @author Nephroid
@@ -25,7 +26,7 @@ import net.minecraft.world.World;
 /*
  * I extend Gui because it has already implemented a bunch of drawing functions
  */
-public class HealthBarRenderer extends AbstractGui {
+public class HealthBarRenderer extends GuiComponent {
 
 	/*
 	 * This line tells Minecraft/Forge where your texture is. The first argument is
@@ -47,7 +48,7 @@ public class HealthBarRenderer extends AbstractGui {
 
 	/*
 	 * Sometimes you want to include extra information from the game. This instance
-	 * of Minecraft will let you access the World and EntityPlayer objects which is
+	 * of Minecraft will let you access the Level and EntityPlayer objects which is
 	 * more than enough for most purposes. It also contains some helper objects for
 	 * OpenGL which can be used for drawing things.
 	 *
@@ -69,13 +70,13 @@ public class HealthBarRenderer extends AbstractGui {
 	}
 
 	/* This helper method will render the bar */
-	public void renderBar(MatrixStack matrixStack, int screenWidth, int screenHeight) {
-		/* These are the variables that contain world and player information */
-		World world = mc.level;
-		PlayerEntity player = mc.player;
+	public void renderBar(PoseStack poseStack, int screenWidth, int screenHeight) {
+		/* These are the variables that contain level and player information */
+		Level level = mc.level;
+		Player player = mc.player;
 
 		/* This object draws text using the Minecraft font */
-		FontRenderer fr = mc.font;
+		Font fr = mc.font;
 
 		/* This object inserts commas into number strings */
 		DecimalFormat d = new DecimalFormat("#,###");
@@ -93,7 +94,8 @@ public class HealthBarRenderer extends AbstractGui {
 		GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
 
 		/* This method tells OpenGL to draw with the custom texture */
-		mc.getTextureManager().bind(overlayBar);
+		mc.getTextureManager().bindForSetup(overlayBar);
+		//mc.getTextureManager().bind(overlayBar);
 
 		// we will draw the status bar just above the hotbar. obtained by inspecting the
 		// vanilla hotbar rendering code
@@ -123,14 +125,14 @@ public class HealthBarRenderer extends AbstractGui {
 		 *
 		 * This line draws the background of the custom bar
 		 */
-		blit(matrixStack, 0, 0, 0, 0, BAR_WIDTH, BAR_HEIGHT);
+		blit(poseStack, 0, 0, 0, 0, BAR_WIDTH, BAR_HEIGHT);
 
 		/*
 		 * This line draws the outline effect that corresponds to how much armor the
 		 * player has. I slide the right-most side of the rectangle using the player's
 		 * armor value.
 		 */
-		blit(matrixStack, 0, 0, 0, BAR_HEIGHT, (int) (BAR_WIDTH * (player.getArmorValue() / 20f)), BAR_HEIGHT);
+		blit(poseStack, 0, 0, 0, BAR_HEIGHT, (int) (BAR_WIDTH * (player.getArmorValue() / 20f)), BAR_HEIGHT);
 
 		/* This part draws the inside of the bar, which starts 1 pixel right and down */
 		GL11.glPushMatrix();
@@ -181,14 +183,14 @@ public class HealthBarRenderer extends AbstractGui {
 		final int POISON_TEXTURE_U = BAR_WIDTH + 2; // black texels
 		final int WITHER_TEXTURE_U = BAR_WIDTH + 3; // brown texels
 
-		if (player.hasEffect(Effects.WITHER)) {
-			blit(matrixStack, 0, 0, WITHER_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
-		} else if (player.hasEffect(Effects.POISON)) {
-			blit(matrixStack, 0, 0, POISON_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
-		} else if (player.hasEffect(Effects.REGENERATION)) {
-			blit(matrixStack, 0, 0, REGEN_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
+		if (player.hasEffect(MobEffects.WITHER)) {
+			blit(poseStack, 0, 0, WITHER_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
+		} else if (player.hasEffect(MobEffects.POISON)) {
+			blit(poseStack, 0, 0, POISON_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
+		} else if (player.hasEffect(MobEffects.REGENERATION)) {
+			blit(poseStack, 0, 0, REGEN_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
 		} else {
-			blit(matrixStack, 0, 0, NORMAL_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
+			blit(poseStack, 0, 0, NORMAL_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
 		}
 
 		GL11.glPopMatrix();
@@ -211,13 +213,13 @@ public class HealthBarRenderer extends AbstractGui {
 		if (absorptionAmount > 0) {
 
 			/* Draw the shadow string */
-			fr.draw(matrixStack, s, -fr.width(s) + 1, 2, 0x5A2B00);
+			fr.draw(poseStack, s, -fr.width(s) + 1, 2, 0x5A2B00);
 
 			/* Draw the actual string */
-			fr.draw(matrixStack, s, -fr.width(s), 1, 0xFFD200);
+			fr.draw(poseStack, s, -fr.width(s), 1, 0xFFD200);
 		} else {
-			fr.draw(matrixStack, s, -fr.width(s) + 1, 2, 0x4D0000);
-			fr.draw(matrixStack, s, -fr.width(s), 1, 0xFFFFFF);
+			fr.draw(poseStack, s, -fr.width(s) + 1, 2, 0x4D0000);
+			fr.draw(poseStack, s, -fr.width(s), 1, 0xFFFFFF);
 		}
 		GL11.glPopMatrix();
 

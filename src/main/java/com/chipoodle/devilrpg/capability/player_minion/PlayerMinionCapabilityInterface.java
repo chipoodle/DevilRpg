@@ -1,19 +1,18 @@
 package com.chipoodle.devilrpg.capability.player_minion;
 
-import com.chipoodle.devilrpg.entity.ITameableEntity;
-import com.chipoodle.devilrpg.entity.SoulBearEntity;
-import com.chipoodle.devilrpg.entity.SoulWispEntity;
-import com.chipoodle.devilrpg.entity.SoulWolfEntity;
-import net.minecraft.nbt.CompoundTag;
+import com.chipoodle.devilrpg.capability.IGenericCapability;
+import com.chipoodle.devilrpg.entity.ITamableEntity;
+import com.chipoodle.devilrpg.entity.SoulBear;
+import com.chipoodle.devilrpg.entity.SoulWisp;
+import com.chipoodle.devilrpg.entity.SoulWolf;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.common.util.INBTSerializable;
 
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 
-public interface PlayerMinionCapabilityInterface extends INBTSerializable<CompoundTag> {
+public interface PlayerMinionCapabilityInterface extends IGenericCapability {
     ConcurrentLinkedQueue<UUID> getSoulWolfMinions();
 
     void setSoulWolfMinions(ConcurrentLinkedQueue<UUID> minions, Player player);
@@ -28,13 +27,13 @@ public interface PlayerMinionCapabilityInterface extends INBTSerializable<Compou
 
     ConcurrentLinkedQueue<UUID> getAllMinions();
 
-    ITameableEntity getTameableByUUID(UUID id, Level world);
+    ITamableEntity getTameableByUUID(UUID id, Level world);
 
-    void removeWisp(Player owner, SoulWispEntity entity);
+    void removeWisp(Player owner, SoulWisp entity);
 
-    void removeSoulWolf(Player owner, SoulWolfEntity entity);
+    void removeSoulWolf(Player owner, SoulWolf entity);
 
-    void removeSoulBear(Player owner, SoulBearEntity entity);
+    void removeSoulBear(Player owner, SoulBear entity);
 
     void removeAllWisp(Player owner);
 

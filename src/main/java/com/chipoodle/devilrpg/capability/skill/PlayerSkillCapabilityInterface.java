@@ -1,18 +1,18 @@
 package com.chipoodle.devilrpg.capability.skill;
 
-import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model.ClientSkillBuilder;
+import com.chipoodle.devilrpg.capability.IGenericCapability;
+import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model.ClientSkillBuilderFromJson;
 import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
 import com.chipoodle.devilrpg.util.PowerEnum;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.common.util.INBTSerializable;
 
 import java.util.HashMap;
 import java.util.UUID;
 
-public interface PlayerSkillCapabilityInterface extends INBTSerializable<CompoundTag> {
+public interface PlayerSkillCapabilityInterface extends IGenericCapability {
 
     HashMap<PowerEnum, SkillEnum> getSkillsNameOfPowers();
 
@@ -46,5 +46,5 @@ public interface PlayerSkillCapabilityInterface extends INBTSerializable<Compoun
 
     ISkillContainer create(SkillEnum skillEnum);
 
-    ClientSkillBuilder getClientSkillBuilder();
+    ClientSkillBuilderFromJson getClientSkillBuilder();
 }

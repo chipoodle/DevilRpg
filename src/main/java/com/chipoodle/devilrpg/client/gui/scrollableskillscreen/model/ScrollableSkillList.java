@@ -1,28 +1,20 @@
 package com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.function.Function;
-
-import javax.annotation.Nullable;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
-import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.ScrollableSkillLoadFix;
 import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillElement;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import com.google.common.base.Functions;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import javax.annotation.Nullable;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.function.Function;
 
 public class ScrollableSkillList {
 
@@ -71,6 +63,7 @@ public class ScrollableSkillList {
 	}
 
 	public void loadSkills(Map<ResourceLocation, SkillElement.Builder> advancementsIn) {
+		LOGGER.debug("ScrollableSkillList -> Loading skills");
 		Function<ResourceLocation, SkillElement> function = Functions.forMap(this.skillElementMap, null);
 
 		while (!advancementsIn.isEmpty()) {
@@ -110,7 +103,7 @@ public class ScrollableSkillList {
 			}
 		}
 
-		ScrollableSkillLoadFix.buildSortedTrees(this.roots);
+		//SkillLoadFix.buildSortedTrees(this.roots);
 		LOGGER.info("Loaded {} skill elements", this.skillElementMap.size());
 	}
 

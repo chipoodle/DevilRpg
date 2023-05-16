@@ -11,43 +11,43 @@ import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 
-import net.minecraft.command.FunctionObject;
-import net.minecraft.entity.item.ItemEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.ServerPlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.loot.LootContext;
-import net.minecraft.loot.LootParameterSets;
-import net.minecraft.loot.LootParameters;
+
+import net.minecraft.commands.CommandFunction;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.util.JSONUtils;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.SoundCategory;
-import net.minecraft.util.SoundEvents;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.GsonHelper;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 
 public class SkillElementRewards {
 	public static final SkillElementRewards EMPTY = new SkillElementRewards(0, new ResourceLocation[0],
-			new ResourceLocation[0], FunctionObject.CacheableFunction.NONE);
+			new ResourceLocation[0], CommandFunction.CacheableFunction.NONE);
 	private final int experience;
 	private final ResourceLocation[] loot;
 	private final ResourceLocation[] recipes;
-	private final FunctionObject.CacheableFunction function;
+	private final CommandFunction.CacheableFunction function;
 
-	public SkillElementRewards(int experience, ResourceLocation[] loot, ResourceLocation[] recipes, FunctionObject.CacheableFunction function) {
+	public SkillElementRewards(int experience, ResourceLocation[] loot, ResourceLocation[] recipes, CommandFunction.CacheableFunction function) {
 	      this.experience = experience;
 	      this.loot = loot;
 	      this.recipes = recipes;
 	      this.function = function;
 	   }
 
-	public void apply(ServerPlayerEntity player) {
+	public void apply(ServerPlayer player) {
 		player.giveExperiencePoints(this.experience);
 		LootContext lootcontext = (new LootContext.Builder(player.getLevel()))
-				.withParameter(LootParameters.THIS_ENTITY, player)
-				.withParameter(LootParameters.ORIGIN, player.position())
+				.withParameter(LootContextParams.THIS_ENTITY, player)
+				.withParameter(LootContextParams.ORIGIN, player.position())
 				.withRandom(player.getRandom())
 				.withLuck(player.getLuck())
-				.create(LootParameterSets.ADVANCEMENT_REWARD); // FORGE: luck to LootContext
+				.create(LootContextParamSets.ADVANCEMENT_REWARD); // FORGE: luck to LootContext
 		boolean flag = false;
 
 		for (ResourceLocation resourcelocation : this.loot) {
@@ -55,7 +55,7 @@ public class SkillElementRewards {
 					.getRandomItems(lootcontext)) {
 				if (player.addItem(itemstack)) {
 					player.level.playSound(null, player.getX(), player.getY(), player.getZ(),
-							SoundEvents.ITEM_PICKUP, SoundCategory.PLAYERS, 0.2F,
+							SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 0.2F,
 							((player.getRandom().nextFloat() - player.getRandom().nextFloat()) * 0.7F + 1.0F) * 2.0F);
 					flag = true;
 				} else {
@@ -126,27 +126,27 @@ public class SkillElementRewards {
 	}
 
 	public static SkillElementRewards deserializeRewards(JsonObject json) throws JsonParseException {
-		int i = JSONUtils.getAsInt(json, "experience", 0);
-		JsonArray jsonarray = JSONUtils.getAsJsonArray(json, "loot", new JsonArray());
+		int i = GsonHelper.getAsInt(json, "experience", 0);
+		JsonArray jsonarray = GsonHelper.getAsJsonArray(json, "loot", new JsonArray());
 		ResourceLocation[] aresourcelocation = new ResourceLocation[jsonarray.size()];
 
 		for (int j = 0; j < aresourcelocation.length; ++j) {
-			aresourcelocation[j] = new ResourceLocation(JSONUtils.convertToString(jsonarray.get(j), "loot[" + j + "]"));
+			aresourcelocation[j] = new ResourceLocation(GsonHelper.convertToString(jsonarray.get(j), "loot[" + j + "]"));
 		}
 
-		JsonArray jsonarray1 = JSONUtils.getAsJsonArray(json, "recipes", new JsonArray());
+		JsonArray jsonarray1 = GsonHelper.getAsJsonArray(json, "recipes", new JsonArray());
 		ResourceLocation[] aresourcelocation1 = new ResourceLocation[jsonarray1.size()];
 
 		for (int k = 0; k < aresourcelocation1.length; ++k) {
-			aresourcelocation1[k] = new ResourceLocation(JSONUtils.convertToString(jsonarray1.get(k), "recipes[" + k + "]"));
+			aresourcelocation1[k] = new ResourceLocation(GsonHelper.convertToString(jsonarray1.get(k), "recipes[" + k + "]"));
 		}
 
-		FunctionObject.CacheableFunction functionobject$cacheablefunction;
+		CommandFunction.CacheableFunction functionobject$cacheablefunction;
 		if (json.has("function")) {
-			functionobject$cacheablefunction = new FunctionObject.CacheableFunction(
-					new ResourceLocation(JSONUtils.getAsString(json, "function")));
+			functionobject$cacheablefunction = new CommandFunction.CacheableFunction(
+					new ResourceLocation(GsonHelper.getAsString(json, "function")));
 		} else {
-			functionobject$cacheablefunction = FunctionObject.CacheableFunction.NONE;
+			functionobject$cacheablefunction = CommandFunction.CacheableFunction.NONE;
 		}
 
 		return new SkillElementRewards(i, aresourcelocation, aresourcelocation1, functionobject$cacheablefunction);
@@ -192,8 +192,8 @@ public class SkillElementRewards {
 		public SkillElementRewards build() {
 			return new SkillElementRewards(this.experience, this.loot.toArray(new ResourceLocation[0]),
 					this.recipes.toArray(new ResourceLocation[0]),
-					this.function == null ? FunctionObject.CacheableFunction.NONE
-							: new FunctionObject.CacheableFunction(this.function));
+					this.function == null ? CommandFunction.CacheableFunction.NONE
+							: new CommandFunction.CacheableFunction(this.function));
 		}
 	}
 }

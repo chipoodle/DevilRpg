@@ -1,61 +1,61 @@
 package com.chipoodle.devilrpg.network.handler;
 
+import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapability;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraftforge.network.NetworkDirection;
+import net.minecraftforge.network.NetworkEvent;
+
 import java.util.function.Supplier;
 
-import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapabilityAttacher;
-
-import net.minecraft.client.Minecraft;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.ServerPlayerEntity;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.PacketBuffer;
-import net.minecraftforge.fml.network.NetworkDirection;
-import net.minecraftforge.fml.network.NetworkEvent;
 
 public class PlayerExperienceClientServerHandler {
 
-	private final CompoundTag experienceCompound;
+    private final CompoundTag experienceCompound;
 
-	public PlayerExperienceClientServerHandler(CompoundTag manaCompound) {
-		this.experienceCompound = manaCompound;
-	}
+    public PlayerExperienceClientServerHandler(CompoundTag manaCompound) {
+        this.experienceCompound = manaCompound;
+    }
 
-	public CompoundTag getExperienceCompound() {
-		return experienceCompound;
-	}
+    public static void encode(final PlayerExperienceClientServerHandler msg, final FriendlyByteBuf packetBuffer) {
+        packetBuffer.writeNbt(msg.getExperienceCompound());
+    }
 
-	public static void encode(final PlayerExperienceClientServerHandler msg, final PacketBuffer packetBuffer) {
-		packetBuffer.writeNbt(msg.getExperienceCompound());
-	}
+    public static PlayerExperienceClientServerHandler decode(final FriendlyByteBuf packetBuffer) {
+        return new PlayerExperienceClientServerHandler(packetBuffer.readNbt());
+    }
 
-	public static PlayerExperienceClientServerHandler decode(final PacketBuffer packetBuffer) {
-		return new PlayerExperienceClientServerHandler(packetBuffer.readNbt());
-	}
+    public static void onMessage(final PlayerExperienceClientServerHandler msg,
+                                 final Supplier<NetworkEvent.Context> contextSupplier) {
+        if (contextSupplier.get().getDirection().equals(NetworkDirection.PLAY_TO_SERVER)) {
+            contextSupplier.get().enqueueWork(() -> {
+                ServerPlayer serverPlayer = contextSupplier.get().getSender();
+                if (serverPlayer != null) {
+                    serverPlayer.getCapability(PlayerExperienceCapability.INSTANCE)
+                            .ifPresent(x -> x.deserializeNBT(msg.getExperienceCompound()));
+                }
+            });
+            contextSupplier.get().setPacketHandled(true);
+        }
 
-	public static void onMessage(final PlayerExperienceClientServerHandler msg,
-			final Supplier<NetworkEvent.Context> contextSupplier) {
-		if (contextSupplier.get().getDirection().equals(NetworkDirection.PLAY_TO_SERVER)) {
-			contextSupplier.get().enqueueWork(() -> {
-				ServerPlayerEntity serverPlayer = contextSupplier.get().getSender();
-				if (serverPlayer != null) {
-					serverPlayer.getCapability(PlayerExperienceCapabilityAttacher.EXPERIENCE_CAP)
-							.ifPresent(x -> x.setNBTData(msg.getExperienceCompound()));
-				}
-			});
-			contextSupplier.get().setPacketHandled(true);
-		}
+        if (contextSupplier.get().getDirection().equals(NetworkDirection.PLAY_TO_CLIENT)) {
+            contextSupplier.get().enqueueWork(() -> {
+                Minecraft m = Minecraft.getInstance();
+                LocalPlayer clientPlayer = m.player;
+                if (clientPlayer != null) {
+                    clientPlayer.getCapability(PlayerExperienceCapability.INSTANCE)
+                            .ifPresent(x -> x.deserializeNBT(msg.getExperienceCompound()));
+                }
 
-		if (contextSupplier.get().getDirection().equals(NetworkDirection.PLAY_TO_CLIENT)) {
-			contextSupplier.get().enqueueWork(() -> {
-				Minecraft m = Minecraft.getInstance();
-				PlayerEntity clientPlayer = m.player;
-				if (clientPlayer != null) {
-					clientPlayer.getCapability(PlayerExperienceCapabilityAttacher.EXPERIENCE_CAP)
-							.ifPresent(x -> x.setNBTData(msg.getExperienceCompound()));
-				}
+            });
+            contextSupplier.get().setPacketHandled(true);
+        }
+    }
 
-			});
-			contextSupplier.get().setPacketHandled(true);
-		}
-	}
+    public CompoundTag getExperienceCompound() {
+        return experienceCompound;
+    }
 }

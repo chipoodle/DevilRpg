@@ -116,14 +116,8 @@ public class PlayerCapabilityForgeEventSubscriber {
         LazyOptional<? extends IGenericCapability> actual = e.getEntity().getCapability(cap);
         //DevilRpg.LOGGER.info("----------------------->clonePlayerCapability. Original: {}", original);
         //DevilRpg.LOGGER.info("----------------------->clonePlayerCapability. New: {}", actual);
-
-
         originalPlayer.reviveCaps();
-        actual.ifPresent(originalCap -> {
-            original.ifPresent(actualCap -> {
-                originalCap.deserializeNBT(actualCap.serializeNBT());
-            });
-        });
+        actual.ifPresent(originalCap -> original.ifPresent(actualCap -> originalCap.deserializeNBT(actualCap.serializeNBT())));
     }
 
     @SubscribeEvent
@@ -347,13 +341,6 @@ public class PlayerCapabilityForgeEventSubscriber {
     @SubscribeEvent(priority = EventPriority.NORMAL)
     public void onPlayerPickupXP(PlayerXpEvent.PickupXp e) {
         e.getOrb().value *= 0.5;
-    }
-
-    @SubscribeEvent(priority = EventPriority.NORMAL)
-    public void onLivingUpdateEvent(LivingEvent.LivingTickEvent event) {
-        if ((event.getEntity() instanceof Player))
-            DevilRpg.LOGGER.info("----------------------->onLivingUpdateEvent {}", event.getEntity());
-        DevilRpg.LOGGER.info("----------------------->onLivingUpdateEvent {}", event);
     }
 
 }

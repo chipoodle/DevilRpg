@@ -1,10 +1,11 @@
 package com.chipoodle.devilrpg.capability.mana;
 
+import com.chipoodle.devilrpg.capability.IGenericCapability;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.common.util.INBTSerializable;
 
-public interface PlayerManaCapabilityInterface extends INBTSerializable<CompoundTag> {
+public interface PlayerManaCapabilityInterface extends IGenericCapability {
     float getMana();
 
     void setMana(float mana, Player player);

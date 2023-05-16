@@ -1,6 +1,6 @@
 package com.chipoodle.devilrpg.network.handler;
 
-import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityAttacher;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.nbt.CompoundTag;
@@ -8,7 +8,6 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkDirection;
 import net.minecraftforge.network.NetworkEvent;
-
 
 import java.util.function.Supplier;
 
@@ -18,10 +17,6 @@ public class PlayerSkillClientServerHandler {
 
     public PlayerSkillClientServerHandler(CompoundTag skillCompound) {
         this.skillCompound = skillCompound;
-    }
-
-    public CompoundTag getSkillCompound() {
-        return skillCompound;
     }
 
     public static void encode(final PlayerSkillClientServerHandler msg, final FriendlyByteBuf packetBuffer) {
@@ -38,8 +33,8 @@ public class PlayerSkillClientServerHandler {
             contextSupplier.get().enqueueWork(() -> {
                 ServerPlayer serverPlayer = contextSupplier.get().getSender();
                 if (serverPlayer != null) {
-                    serverPlayer.getCapability(PlayerSkillCapabilityAttacher.SKILL_CAP)
-                            .ifPresent(x -> x.setNBTData(msg.getSkillCompound()));
+                    serverPlayer.getCapability(PlayerSkillCapability.INSTANCE)
+                            .ifPresent(x -> x.deserializeNBT(msg.getSkillCompound()));
                 }
             });
             contextSupplier.get().setPacketHandled(true);
@@ -50,11 +45,15 @@ public class PlayerSkillClientServerHandler {
                 Minecraft m = Minecraft.getInstance();
                 LocalPlayer clientPlayer = m.player;
                 if (clientPlayer != null) {
-                    clientPlayer.getCapability(PlayerSkillCapabilityAttacher.SKILL_CAP)
-                            .ifPresent(x -> x.setNBTData(msg.getSkillCompound()));
+                    clientPlayer.getCapability(PlayerSkillCapability.INSTANCE)
+                            .ifPresent(x -> x.deserializeNBT(msg.getSkillCompound()));
                 }
             });
             contextSupplier.get().setPacketHandled(true);
         }
+    }
+
+    public CompoundTag getSkillCompound() {
+        return skillCompound;
     }
 }

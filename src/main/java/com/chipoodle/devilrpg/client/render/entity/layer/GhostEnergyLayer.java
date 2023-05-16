@@ -1,43 +1,42 @@
 package com.chipoodle.devilrpg.client.render.entity.layer;
 
-import com.mojang.blaze3d.matrix.MatrixStack;
-import com.mojang.blaze3d.vertex.IVertexBuilder;
-
-import net.minecraft.client.renderer.IRenderTypeBuffer;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.model.EntityModel;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.entity.IEntityRenderer;
-import net.minecraft.client.renderer.entity.layers.LayerRenderer;
-import net.minecraft.client.renderer.entity.model.EntityModel;
+import net.minecraft.client.renderer.entity.RenderLayerParent;
+import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.IChargeableMob;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.PowerableMob;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 
 @OnlyIn(Dist.CLIENT)
-public abstract class GhostEnergyLayer<T extends Entity & IChargeableMob, M extends EntityModel<T>> extends LayerRenderer<T, M> {
-   public GhostEnergyLayer(IEntityRenderer<T, M> p_i226038_1_) {
-      super(p_i226038_1_);
-   }
+public abstract class GhostEnergyLayer<T extends Entity & PowerableMob, M extends EntityModel<T>> extends RenderLayer<T, M> {
+    public GhostEnergyLayer(RenderLayerParent<T, M> p_i226038_1_) {
+        super(p_i226038_1_);
+    }
 
-   public void render(MatrixStack matrixStackIn, IRenderTypeBuffer bufferIn, int packedLightIn, T entitylivingbaseIn, float limbSwing, float limbSwingAmount, float partialTicks, float ageInTicks, float netHeadYaw, float headPitch) {
-      if (entitylivingbaseIn.isPowered()) {
-         float f = (float)entitylivingbaseIn.tickCount + partialTicks;
-         EntityModel<T> entitymodel = this.model();
-         entitymodel.prepareMobModel(entitylivingbaseIn, limbSwing, limbSwingAmount, partialTicks);
-         this.getParentModel().copyPropertiesTo(entitymodel);
-         IVertexBuilder ivertexbuilder = bufferIn.getBuffer(RenderType.energySwirl(this.getTextureLocation(), this.xOffset(f), f * 0.01F));
-         entitymodel.setupAnim(entitylivingbaseIn, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
-         entitymodel.renderToBuffer(matrixStackIn, ivertexbuilder, packedLightIn, OverlayTexture.NO_OVERLAY, 0.5F, 0.5F, 0.5F, 2.0F);
-      }
-   }
+    public void render(PoseStack p_116970_, MultiBufferSource p_116971_, int p_116972_, T p_116973_, float p_116974_, float p_116975_, float p_116976_, float p_116977_, float p_116978_, float p_116979_) {
+        if (p_116973_.isPowered()) {
+            float f = (float) p_116973_.tickCount + p_116976_;
+            EntityModel<T> entitymodel = this.model();
+            entitymodel.prepareMobModel(p_116973_, p_116974_, p_116975_, p_116976_);
+            this.getParentModel().copyPropertiesTo(entitymodel);
+            VertexConsumer vertexconsumer = p_116971_.getBuffer(RenderType.energySwirl(this.getTextureLocation(), this.xOffset(f) % 1.0F, f * 0.01F % 1.0F));
+            entitymodel.setupAnim(p_116973_, p_116974_, p_116975_, p_116977_, p_116978_, p_116979_);
+            entitymodel.renderToBuffer(p_116970_, vertexconsumer, p_116972_, OverlayTexture.NO_OVERLAY, 0.5F, 0.5F, 0.5F, 1.0F);
+        }
+    }
 
-   protected abstract float xOffset(float p_225634_1_);
+    protected abstract float xOffset(float p_116968_);
 
-   protected abstract ResourceLocation getTextureLocation();
+    protected abstract ResourceLocation getTextureLocation();
 
-   protected abstract EntityModel<T> model();
+    protected abstract EntityModel<T> model();
 }
 

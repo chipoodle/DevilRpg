@@ -1,11 +1,12 @@
 package com.chipoodle.devilrpg.capability.skill;
 
 import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.capability.mana.PlayerManaCapabilityAttacher;
+import com.chipoodle.devilrpg.capability.mana.PlayerManaCapability;
 import com.chipoodle.devilrpg.capability.mana.PlayerManaCapabilityInterface;
 import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillElement;
 import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillManaCost;
-import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model.ClientSkillBuilder;
+import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model.ClientSkillBuilderFromJson;
+import com.chipoodle.devilrpg.entity.ITamableEntity;
 import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.network.handler.PlayerSkillClientServerHandler;
 import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
@@ -34,19 +35,18 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
     public final static String MINIONS_KEY = "Minions";
     public final static String ATTRIBUTE_MODIFIER_KEY = "AttributeModifier";
     public final static String SKILL_BYTE_ARRAY_KEY = "PassiveKey";
-    private final ClientSkillBuilder clientBuilder;
+    private final ClientSkillBuilderFromJson clientBuilder= new ClientSkillBuilderFromJson();
     private final SingletonSkillFactory singletonSkillFactory;
     private CompoundTag nbt = new CompoundTag();
 
     public PlayerSkillCapabilityImplementation() {
-        clientBuilder = new ClientSkillBuilder();
-        clientBuilder.buildSkillTrees();
         if (nbt.isEmpty()) {
+            clientBuilder.buildSkillTrees();
             HashMap<PowerEnum, SkillEnum> powers = new HashMap<>();
             HashMap<SkillEnum, Integer> skills = new HashMap<>();
             HashMap<SkillEnum, Integer> maxSkills = new HashMap<>();
             HashMap<SkillEnum, Integer> manaCostContainer = new HashMap<>();
-            ConcurrentLinkedQueue<TameableEntity> minions = new ConcurrentLinkedQueue<TameableEntity>();
+            ConcurrentLinkedQueue<ITamableEntity> minions = new ConcurrentLinkedQueue<ITamableEntity>();
             HashMap<Attribute, UUID> attributeModifiers = new HashMap<>();
             List<SkillEnum> filteredSkillList = SkillEnum.getSkillsWithoutEmpty();
 
@@ -81,9 +81,9 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
         singletonSkillFactory = new SingletonSkillFactory(this);
     }
 
-    private SkillManaCost extractSkillManaCost(ClientSkillBuilder client, SkillEnum s) {
+    private SkillManaCost extractSkillManaCost(ClientSkillBuilderFromJson client, SkillEnum s) {
         SkillElement skillElementByEnum = client.getSkillElementByEnum(s);
-        DevilRpg.LOGGER.debug("extractSkillManaCost: {}-> {} ", s, skillElementByEnum.getSkillManaCost());
+        //DevilRpg.LOGGER.debug("extractSkillManaCost: {}-> {} ", s, skillElementByEnum.getSkillManaCost());
 
         return skillElementByEnum == null ? null : skillElementByEnum.getSkillManaCost();
     }
@@ -291,7 +291,11 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
 
     private boolean consumeMana(ServerPlayer playerIn, ISkillContainer poder) {
         float consumedMana = getManaCostPoints().get(poder.getSkillEnum());
-        LazyOptional<PlayerManaCapabilityInterface> mana = playerIn.getCapability(PlayerManaCapabilityAttacher.MANA_CAP, null);
+
+        if(playerIn.isCreative())
+            return true;
+
+        LazyOptional<PlayerManaCapabilityInterface> mana = playerIn.getCapability(PlayerManaCapability.INSTANCE, null);
         if (mana.map(x -> x.getMana() - consumedMana >= 0).orElse(false)) {
             mana.ifPresent(m -> m.setMana(m.getMana() - consumedMana, playerIn));
             return true;
@@ -321,17 +325,17 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
 
 
     @Override
-    public ClientSkillBuilder getClientSkillBuilder() {
+    public ClientSkillBuilderFromJson getClientSkillBuilder() {
         return clientBuilder;
     }
 
     private void sendSkillChangesToServer() {
-        ModNetwork.CHANNEL.sendToServer(new PlayerSkillClientServerHandler(getNBTData()));
+        ModNetwork.CHANNEL.sendToServer(new PlayerSkillClientServerHandler(serializeNBT()));
     }
 
     private void sendSkillChangesToClient(ServerPlayer pe) {
         ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> pe),
-                new PlayerSkillClientServerHandler(getNBTData()));
+                new PlayerSkillClientServerHandler(serializeNBT()));
     }
 
     public List<SkillEnum> getPassivesFromActiveSkill(SkillEnum skillEnum) {

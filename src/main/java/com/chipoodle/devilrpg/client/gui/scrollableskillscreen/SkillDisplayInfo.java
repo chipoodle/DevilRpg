@@ -1,222 +1,222 @@
 package com.chipoodle.devilrpg.client.gui.scrollableskillscreen;
 
-import javax.annotation.Nullable;
-
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonSyntaxException;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.nbt.JsonToNBT;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.JSONUtils;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.text.ITextComponent;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.TagParser;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.GsonHelper;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
+import javax.annotation.Nullable;
+
 public class SkillDisplayInfo {
-	   private final ITextComponent title;
-	   private final ITextComponent description;
-	   private final ItemStack icon;
-	   private final ResourceLocation background;
-	   private final ResourceLocation image;
-	   private final ScrollableSkillFrameType frame;
-	   private final boolean showToast;
-	   private final boolean announceToChat;
-	   private final boolean hidden;
-	   private float x;
-	   private float y;
+    private final Component title;
+    private final Component description;
+    private final ItemStack icon;
+    private final ResourceLocation background;
+    private final ResourceLocation image;
+    private final SkillFrameType frame;
+    private final boolean showToast;
+    private final boolean announceToChat;
+    private final boolean hidden;
+    private float x;
+    private float y;
 
-	   public SkillDisplayInfo(ItemStack icon, ITextComponent title, ITextComponent description, @Nullable ResourceLocation background,@Nullable ResourceLocation image, ScrollableSkillFrameType frame, boolean showToast, boolean announceToChat, boolean hidden) {
-	      this.title = title;
-	      this.description = description;
-	      this.icon = icon;
-	      this.background = background;
-	      this.image = image;
-	      this.frame = frame;
-	      this.showToast = showToast;
-	      this.announceToChat = announceToChat;
-	      this.hidden = hidden;
-	   }
+    public SkillDisplayInfo(ItemStack icon, Component title, Component description, @Nullable ResourceLocation background, @Nullable ResourceLocation image, SkillFrameType frame, boolean showToast, boolean announceToChat, boolean hidden) {
+        this.title = title;
+        this.description = description;
+        this.icon = icon;
+        this.background = background;
+        this.image = image;
+        this.frame = frame;
+        this.showToast = showToast;
+        this.announceToChat = announceToChat;
+        this.hidden = hidden;
+    }
 
-	   public void setPosition(float x, float y) {
-	      this.x = x;
-	      this.y = y;
-	   }
+    public static SkillDisplayInfo deserialize(JsonObject object) {
+        Component itextcomponent = Component.Serializer.fromJson(object.get("title"));
+        Component itextcomponent1 = Component.Serializer.fromJson(object.get("description"));
+        if (itextcomponent != null && itextcomponent1 != null) {
+            ItemStack itemstack = deserializeIcon(GsonHelper.getAsJsonObject(object, "icon"));
+            ResourceLocation background = object.has("background") ? new ResourceLocation(GsonHelper.getAsString(object, "background")) : null;
+            ResourceLocation image = object.has("image") ? new ResourceLocation(GsonHelper.getAsString(object, "image")) : null;
+            SkillFrameType frametype = object.has("frame") ? SkillFrameType.byName(GsonHelper.getAsString(object, "frame")) : SkillFrameType.TASK;
+            boolean flag = GsonHelper.getAsBoolean(object, "show_toast", true);
+            boolean flag1 = GsonHelper.getAsBoolean(object, "announce_to_chat", true);
+            boolean flag2 = GsonHelper.getAsBoolean(object, "hidden", false);
+            return new SkillDisplayInfo(itemstack, itextcomponent, itextcomponent1, background, image, frametype, flag, flag1, flag2);
+        } else {
+            throw new JsonSyntaxException("Both title and description must be set");
+        }
+    }
 
-	   public ITextComponent getTitle() {
-	      return this.title;
-	   }
+    private static ItemStack deserializeIcon(JsonObject object) {
+        if (!object.has("item")) {
+            throw new JsonSyntaxException("Unsupported icon type, currently only items are supported (add 'item' key)");
+        } else {
+            Item item = GsonHelper.getAsItem(object, "item");
+            if (object.has("data")) {
+                throw new JsonParseException("Disallowed data tag found");
+            } else {
+                ItemStack itemstack = new ItemStack(item);
+                if (object.has("nbt")) {
+                    try {
+                        CompoundTag compoundnbt = TagParser.parseTag(GsonHelper.convertToString(object.get("nbt"), "nbt"));
+                        itemstack.setTag(compoundnbt);
+                    } catch (CommandSyntaxException commandsyntaxexception) {
+                        throw new JsonSyntaxException("Invalid nbt tag: " + commandsyntaxexception.getMessage());
+                    }
+                }
 
-	   public ITextComponent getDescription() {
-	      return this.description;
-	   }
+                return itemstack;
+            }
+        }
+    }
 
-	   @OnlyIn(Dist.CLIENT)
-	   public ItemStack getIcon() {
-	      return this.icon;
-	   }
+    public static SkillDisplayInfo read(FriendlyByteBuf buf) {
+        Component itextcomponent = buf.readComponent();
+        Component itextcomponent1 = buf.readComponent();
+        ItemStack itemstack = buf.readItem();
+        SkillFrameType frametype = buf.readEnum(SkillFrameType.class);
+        int i = buf.readInt();
+        ResourceLocation background = (i & 1) != 0 ? buf.readResourceLocation() : null;
+        //TODO: Revisar si esta conversión con el bit es correcta o se tiene que recorrer, después del background
+        ResourceLocation image = (i & 2) != 0 ? buf.readResourceLocation() : null;
+        boolean flag = (i & 4) != 0;
+        boolean flag1 = (i & 8) != 0;
+        SkillDisplayInfo displayinfo = new SkillDisplayInfo(itemstack, itextcomponent, itextcomponent1, background, image, frametype, flag, false, flag1);
+        displayinfo.setPosition(buf.readFloat(), buf.readFloat());
+        return displayinfo;
+    }
 
-	   @Nullable
-	   @OnlyIn(Dist.CLIENT)
-	   public ResourceLocation getBackground() {
-	      return this.background;
-	   }
-	   @Nullable
-	   @OnlyIn(Dist.CLIENT)
-	   public ResourceLocation getImage() {
-		   return this.image;
-	   }
+    public void setPosition(float x, float y) {
+        this.x = x;
+        this.y = y;
+    }
 
-	   public ScrollableSkillFrameType getFrame() {
-	      return this.frame;
-	   }
+    public Component getTitle() {
+        return this.title;
+    }
 
-	   @OnlyIn(Dist.CLIENT)
-	   public float getX() {
-	      return this.x;
-	   }
+    public Component getDescription() {
+        return this.description;
+    }
 
-	   @OnlyIn(Dist.CLIENT)
-	   public float getY() {
-	      return this.y;
-	   }
+    @OnlyIn(Dist.CLIENT)
+    public ItemStack getIcon() {
+        return this.icon;
+    }
 
-	   @OnlyIn(Dist.CLIENT)
-	   public boolean shouldShowToast() {
-	      return this.showToast;
-	   }
+    @Nullable
+    @OnlyIn(Dist.CLIENT)
+    public ResourceLocation getBackground() {
+        return this.background;
+    }
 
-	   public boolean shouldAnnounceToChat() {
-	      return this.announceToChat;
-	   }
+    @Nullable
+    @OnlyIn(Dist.CLIENT)
+    public ResourceLocation getImage() {
+        return this.image;
+    }
 
-	   public boolean isHidden() {
-	      return this.hidden;
-	   }
+    public SkillFrameType getFrame() {
+        return this.frame;
+    }
 
-	   public static SkillDisplayInfo deserialize(JsonObject object) {
-	      ITextComponent itextcomponent = ITextComponent.Serializer.fromJson(object.get("title"));
-	      ITextComponent itextcomponent1 = ITextComponent.Serializer.fromJson(object.get("description"));
-	      if (itextcomponent != null && itextcomponent1 != null) {
-	         ItemStack itemstack = deserializeIcon(JSONUtils.getAsJsonObject(object, "icon"));
-	         ResourceLocation background = object.has("background") ? new ResourceLocation(JSONUtils.getAsString(object, "background")) : null;
-	         ResourceLocation image = object.has("image") ? new ResourceLocation(JSONUtils.getAsString(object, "image")) : null;
-	         ScrollableSkillFrameType frametype = object.has("frame") ? ScrollableSkillFrameType.byName(JSONUtils.getAsString(object, "frame")) : ScrollableSkillFrameType.TASK;
-	         boolean flag = JSONUtils.getAsBoolean(object, "show_toast", true);
-	         boolean flag1 = JSONUtils.getAsBoolean(object, "announce_to_chat", true);
-	         boolean flag2 = JSONUtils.getAsBoolean(object, "hidden", false);
-	         return new SkillDisplayInfo(itemstack, itextcomponent, itextcomponent1, background,image, frametype, flag, flag1, flag2);
-	      } else {
-	         throw new JsonSyntaxException("Both title and description must be set");
-	      }
-	   }
+    @OnlyIn(Dist.CLIENT)
+    public float getX() {
+        return this.x;
+    }
 
-	   private static ItemStack deserializeIcon(JsonObject object) {
-	      if (!object.has("item")) {
-	         throw new JsonSyntaxException("Unsupported icon type, currently only items are supported (add 'item' key)");
-	      } else {
-	         Item item = JSONUtils.getAsItem(object, "item");
-	         if (object.has("data")) {
-	            throw new JsonParseException("Disallowed data tag found");
-	         } else {
-	            ItemStack itemstack = new ItemStack(item);
-	            if (object.has("nbt")) {
-	               try {
-	                  CompoundNBT compoundnbt = JsonToNBT.parseTag(JSONUtils.convertToString(object.get("nbt"), "nbt"));
-	                  itemstack.setTag(compoundnbt);
-	               } catch (CommandSyntaxException commandsyntaxexception) {
-	                  throw new JsonSyntaxException("Invalid nbt tag: " + commandsyntaxexception.getMessage());
-	               }
-	            }
+    @OnlyIn(Dist.CLIENT)
+    public float getY() {
+        return this.y;
+    }
 
-	            return itemstack;
-	         }
-	      }
-	   }
+    @OnlyIn(Dist.CLIENT)
+    public boolean shouldShowToast() {
+        return this.showToast;
+    }
 
-	   public void write(PacketBuffer buf) {
-	      buf.writeComponent(this.title);
-	      buf.writeComponent(this.description);
-	      buf.writeItem(this.icon);
-	      buf.writeEnum(this.frame);
-	      int i = 0;
-	      if (this.background != null) {
-	         i |= 1;
-	      }
-	      if (this.image != null) {
-	    	  i |= 2;
-	      }
+    public boolean shouldAnnounceToChat() {
+        return this.announceToChat;
+    }
 
-	      if (this.showToast) {
-	         i |= 4;
-	      }
+    public boolean isHidden() {
+        return this.hidden;
+    }
 
-	      if (this.hidden) {
-	         i |= 8;
-	      }
+    public void write(FriendlyByteBuf buf) {
+        buf.writeComponent(this.title);
+        buf.writeComponent(this.description);
+        buf.writeItem(this.icon);
+        buf.writeEnum(this.frame);
+        int i = 0;
+        if (this.background != null) {
+            i |= 1;
+        }
+        if (this.image != null) {
+            i |= 2;
+        }
 
-	      buf.writeInt(i);
-	      if (this.background != null) {
-	         buf.writeResourceLocation(this.background);
-	      }
-	      if (this.image != null) {
-	    	  buf.writeResourceLocation(this.image);
-	      }
+        if (this.showToast) {
+            i |= 4;
+        }
 
-	      buf.writeFloat(this.x);
-	      buf.writeFloat(this.y);
-	   }
+        if (this.hidden) {
+            i |= 8;
+        }
 
-	   public static SkillDisplayInfo read(PacketBuffer buf) {
-	      ITextComponent itextcomponent = buf.readComponent();
-	      ITextComponent itextcomponent1 = buf.readComponent();
-	      ItemStack itemstack = buf.readItem();
-	      ScrollableSkillFrameType frametype = buf.readEnum(ScrollableSkillFrameType.class);
-	      int i = buf.readInt();
-	      ResourceLocation background = (i & 1) != 0 ? buf.readResourceLocation() : null;
-	      //TODO: Revisar si esta conversión con el bit es correcta o se tiene que recorrer, después del background
-	      ResourceLocation image = (i & 2) != 0 ? buf.readResourceLocation() : null;
-	      boolean flag = (i & 4) != 0;
-	      boolean flag1 = (i & 8) != 0;
-	      SkillDisplayInfo displayinfo = new SkillDisplayInfo(itemstack, itextcomponent, itextcomponent1, background,image, frametype, flag, false, flag1);
-	      displayinfo.setPosition(buf.readFloat(), buf.readFloat());
-	      return displayinfo;
-	   }
+        buf.writeInt(i);
+        if (this.background != null) {
+            buf.writeResourceLocation(this.background);
+        }
+        if (this.image != null) {
+            buf.writeResourceLocation(this.image);
+        }
 
-	   public JsonElement serialize() {
-	      JsonObject jsonobject = new JsonObject();
-	      jsonobject.add("icon", this.serializeIcon());
-	      jsonobject.add("title", ITextComponent.Serializer.toJsonTree(this.title));
-	      jsonobject.add("description", ITextComponent.Serializer.toJsonTree(this.description));
-	      jsonobject.addProperty("frame", this.frame.getName());
-	      jsonobject.addProperty("show_toast", this.showToast);
-	      jsonobject.addProperty("announce_to_chat", this.announceToChat);
-	      jsonobject.addProperty("hidden", this.hidden);
-	      if (this.background != null) {
-	         jsonobject.addProperty("background", this.background.toString());
-	      }
-	      if (this.image != null) {
-	    	  jsonobject.addProperty("image", this.image.toString());
-	      }
+        buf.writeFloat(this.x);
+        buf.writeFloat(this.y);
+    }
 
-	      return jsonobject;
-	   }
+    public JsonElement serialize() {
+        JsonObject jsonobject = new JsonObject();
+        jsonobject.add("icon", this.serializeIcon());
+        jsonobject.add("title", Component.Serializer.toJsonTree(this.title));
+        jsonobject.add("description", Component.Serializer.toJsonTree(this.description));
+        jsonobject.addProperty("frame", this.frame.getName());
+        jsonobject.addProperty("show_toast", this.showToast);
+        jsonobject.addProperty("announce_to_chat", this.announceToChat);
+        jsonobject.addProperty("hidden", this.hidden);
+        if (this.background != null) {
+            jsonobject.addProperty("background", this.background.toString());
+        }
+        if (this.image != null) {
+            jsonobject.addProperty("image", this.image.toString());
+        }
 
-	   private JsonObject serializeIcon() {
-	      JsonObject jsonobject = new JsonObject();
-	      jsonobject.addProperty("item", Registry.ITEM.getKey(this.icon.getItem()).toString());
-	      if (this.icon.hasTag()) {
-	         jsonobject.addProperty("nbt", this.icon.getTag().toString());
-	      }
+        return jsonobject;
+    }
 
-	      return jsonobject;
-	   }
-	}
+    private JsonObject serializeIcon() {
+        JsonObject jsonobject = new JsonObject();
+        jsonobject.addProperty("item", BuiltInRegistries.ITEM.getKey(this.icon.getItem()).toString());
+        if (this.icon.hasTag()) {
+            jsonobject.addProperty("nbt", this.icon.getTag().toString());
+        }
+
+        return jsonobject;
+    }
+}
 

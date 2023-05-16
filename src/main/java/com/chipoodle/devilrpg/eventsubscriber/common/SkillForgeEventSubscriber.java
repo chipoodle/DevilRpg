@@ -9,26 +9,29 @@ import java.util.function.BiConsumer;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityAttacher;
 import com.chipoodle.devilrpg.entity.ISoulEntity;
-import com.chipoodle.devilrpg.entity.ITameableEntity;
+import com.chipoodle.devilrpg.entity.ITamableEntity;
 import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.network.handler.PotionClientServerHandler;
 import com.chipoodle.devilrpg.util.EventUtils;
 import com.chipoodle.devilrpg.util.SkillEnum;
 
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.ServerPlayerEntity;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.potion.EffectInstance;
-import net.minecraft.util.math.vector.Vector3d;
+
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.entity.living.LivingEvent.LivingJumpEvent;
-import net.minecraftforge.event.entity.living.LivingEvent.LivingUpdateEvent;
+
 import net.minecraftforge.event.entity.living.LivingFallEvent;
-import net.minecraftforge.event.entity.living.PotionEvent;
+
+import net.minecraftforge.event.entity.living.MobEffectEvent;
 import net.minecraftforge.event.entity.player.AttackEntityEvent;
 import net.minecraftforge.event.entity.player.CriticalHitEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
@@ -36,14 +39,15 @@ import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
-import net.minecraftforge.fml.network.PacketDistributor;
+import net.minecraftforge.network.PacketDistributor;
+
 
 /**
  *
  * @author Christian
  */
 
-@EventBusSubscriber(modid = DevilRpg.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
+@EventBusSubscriber(modid = DevilRpg.MODID, bus = EventBusSubscriber.Bus.FORGE)
 public class SkillForgeEventSubscriber {
 
 	/**
@@ -52,17 +56,17 @@ public class SkillForgeEventSubscriber {
 	 */
 	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
 	public static void onLivingJumpEvent(LivingJumpEvent event) {
-		if (event.getEntity() instanceof PlayerEntity) {
+		if (event.getEntity() instanceof Player) {
 			BiConsumer<LivingJumpEvent, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, auxiliar) -> {
-				Vector3d motion = eve.getEntity().getDeltaMovement();
+				Vec3 motion = eve.getEntity().getDeltaMovement();
 
 				LazyOptional<PlayerSkillCapabilityInterface> skillCap = event.getEntity()
-						.getCapability(PlayerSkillCapabilityAttacher.SKILL_CAP);
+						.getCapability(PlayerSkillCapability.INSTANCE);
 				int points = skillCap.map(x -> x.getSkillsPoints().get(SkillEnum.TRANSFORM_WEREWOLF)).get();
 				double jumpFactor = (points * 0.005) + 0.03f; // max 0.13
 				eve.getEntity().setDeltaMovement(motion.x(), motion.y() + jumpFactor, motion.z());
 			};
-			EventUtils.onWerewolfTransformation((PlayerEntity) event.getEntity(), c, event);
+			EventUtils.onWerewolfTransformation((Player) event.getEntity(), c, event);
 		}
 	}
 
@@ -72,72 +76,71 @@ public class SkillForgeEventSubscriber {
 	 */
 	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
 	public static void onLivingFallEvent(LivingFallEvent event) {
-		if (event.getEntity() instanceof PlayerEntity) {
+		if (event.getEntity() instanceof Player) {
 			BiConsumer<LivingFallEvent, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, auxiliar) -> {
 				if (eve.getDistance() > 1) {
 					eve.setDistance(eve.getDistance() - 1);
 				}
 			};
-			EventUtils.onWerewolfTransformation((PlayerEntity) event.getEntity(), c, event);
+			EventUtils.onWerewolfTransformation((Player) event.getEntity(), c, event);
 		}
 	}
 
 	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
 	public static void onLeftClickBlock(PlayerInteractEvent.LeftClickBlock event) {
 		BiConsumer<PlayerInteractEvent.LeftClickBlock, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, auxiliar) -> {
-			eve.getPlayer().swinging = false;
+			eve.getEntity().swinging = false;
 			eve.setCanceled(true);
 		};
-		EventUtils.onWerewolfTransformation(event.getPlayer(), c, event);
+		EventUtils.onWerewolfTransformation(event.getEntity(), c, event);
 	}
 
 	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
 	public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
 		BiConsumer<PlayerInteractEvent.RightClickBlock, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, auxiliar) -> {
-			eve.getPlayer().swinging = false;
+			eve.getEntity().swinging = false;
 			eve.setCanceled(true);
 		};
-		EventUtils.onWerewolfTransformation(event.getPlayer(), c, event);
+		EventUtils.onWerewolfTransformation(event.getEntity(), c, event);
 	}
 
 	@SubscribeEvent(priority = EventPriority.HIGHEST, receiveCanceled = true)
 	public static void onEntityInteract(PlayerInteractEvent.EntityInteract event) {
 		BiConsumer<PlayerInteractEvent.EntityInteract, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, auxiliar) -> {
-			eve.getPlayer().swinging = false;
+			eve.getEntity().swinging = false;
 			eve.setCanceled(true);
 		};
-		EventUtils.onWerewolfTransformation(event.getPlayer(), c, event);
+		EventUtils.onWerewolfTransformation(event.getEntity(), c, event);
 	}
 
 	@SubscribeEvent(priority = EventPriority.HIGHEST, receiveCanceled = true)
 	public static void onEntityInteractSpecific(PlayerInteractEvent.EntityInteractSpecific event) {
-		BiConsumer<PlayerInteractEvent.EntityInteractSpecific, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve,
-																													  auxiliar) -> {
-			eve.getPlayer().swinging = false;
+		BiConsumer<PlayerInteractEvent.EntityInteractSpecific, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, auxiliar) -> {
+			eve.getEntity().swinging = false;
 			eve.setCanceled(true);
 		};
-		EventUtils.onWerewolfTransformation(event.getPlayer(), c, event);
+		EventUtils.onWerewolfTransformation(event.getEntity(), c, event);
 	}
 
 	@SubscribeEvent
 	public static void onAttack(AttackEntityEvent event) {
 		BiConsumer<AttackEntityEvent, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, auxiliar) -> {
-			eve.getPlayer().swinging = false;
-			eve.setCanceled(true);
+			eve.getEntity().swinging = false;
+			//eve.setCanceled(true);
 		};
-		EventUtils.onWerewolfTransformation(event.getPlayer(), c, event);
+		EventUtils.onWerewolfTransformation(event.getEntity(), c, event);
 	}
 
 
-	@SubscribeEvent
+	/*@SubscribeEvent
 	public static void onLivingUpdateEvent(LivingUpdateEvent event) {
-		/*
+
 		 * Collection<EffectInstance> activePotionEffects =
 		 * event.getEntityLiving().getActivePotionEffects();
 		 * DevilRpg.LOGGER.info("---->Entity: "+event.getEntityLiving().getType() +
 		 * "active potion effects: "+activePotionEffects);
-		 */
-	}
+
+	}*/
 
 	@SubscribeEvent
 	public static void onCriticalHitEvent(CriticalHitEvent event) {
@@ -155,20 +158,20 @@ public class SkillForgeEventSubscriber {
 	 *
 	 */
 	@SubscribeEvent
-	public static void onPotionEvent(PotionEvent event) {
+	public static void onPotionEvent(MobEffectEvent event) {
 
-		if(!(event instanceof PotionEvent.PotionAddedEvent) && !(event instanceof PotionEvent.PotionExpiryEvent))
+		if(!(event instanceof MobEffectEvent.Added) && !(event instanceof MobEffectEvent.Expired))
 			return;
 		
-		if (event.getEntity() instanceof ISoulEntity && event.getEntity() instanceof ITameableEntity && event.getPotionEffect() != null) {
-			ITameableEntity minion = (ITameableEntity) event.getEntity();
+		if (event.getEntity() instanceof ISoulEntity && event.getEntity() instanceof ITamableEntity && event.getEffectInstance() != null) {
+			ITamableEntity minion = (ITamableEntity) event.getEntity();
 			LivingEntity owner = minion.getOwner();
-			if (owner instanceof ServerPlayerEntity && !event.getEntity().level.isClientSide()) {
-				EffectInstance potionEffect = event.getPotionEffect();
-				CompoundNBT effectInstanceNbt = potionEffect.save(new CompoundNBT());
+			if (owner instanceof ServerPlayer && !event.getEntity().level.isClientSide()) {
+				MobEffectInstance potionEffect = event.getEffectInstance();
+				CompoundTag effectInstanceNbt = potionEffect.save(new CompoundTag());
 				effectInstanceNbt.putUUID(PotionClientServerHandler.MINION_ID_KEY, event.getEntity().getUUID());
 				effectInstanceNbt.putString(PotionClientServerHandler.EFFECT_EVENT_TYPE, event.getClass().getSimpleName());
-				ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> ((ServerPlayerEntity) owner)),
+				ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> ((ServerPlayer) owner)),
 						new PotionClientServerHandler(effectInstanceNbt));
 			}
 		}

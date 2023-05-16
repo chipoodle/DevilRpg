@@ -1,26 +1,28 @@
 package com.chipoodle.devilrpg.entity;
 
-import net.minecraft.block.Blocks;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.ai.attributes.AttributeModifierMap;
-import net.minecraft.entity.ai.attributes.Attributes;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.nbt.ListNBT;
-import net.minecraft.network.datasync.DataParameter;
-import net.minecraft.network.datasync.DataSerializers;
-import net.minecraft.network.datasync.EntityDataManager;
-import net.minecraft.util.ActionResultType;
-import net.minecraft.util.Hand;
-import net.minecraft.util.SoundEvents;
-import net.minecraft.world.World;
 
-public abstract class AbstractTameableMountableChestedHorseEntity extends AbstractMountableTameableEntity {
-   private static final DataParameter<Boolean> DATA_ID_CHEST = EntityDataManager.defineId(AbstractTameableMountableChestedHorseEntity.class, DataSerializers.BOOLEAN);
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
 
-   protected AbstractTameableMountableChestedHorseEntity(EntityType<? extends AbstractTameableMountableChestedHorseEntity> p_i48564_1_, World p_i48564_2_) {
+
+public abstract class AbstractTameableMountableChestedHorseEntity extends AbstractMountableTamableEntity {
+   private static final EntityDataAccessor<Boolean> DATA_ID_CHEST = SynchedEntityData.defineId(AbstractTameableMountableChestedHorseEntity.class, EntityDataSerializers.BOOLEAN);
+
+   protected AbstractTameableMountableChestedHorseEntity(EntityType<? extends AbstractTameableMountableChestedHorseEntity> p_i48564_1_, Level p_i48564_2_) {
       super(p_i48564_1_, p_i48564_2_);
       this.canGallop = false;
    }
@@ -34,7 +36,7 @@ public abstract class AbstractTameableMountableChestedHorseEntity extends Abstra
       this.entityData.define(DATA_ID_CHEST, false);
    }
 
-   public static AttributeModifierMap.MutableAttribute createBaseChestedHorseAttributes() {
+   public static AttributeSupplier.Builder createBaseChestedHorseAttributes() {
       return createBaseHorseAttributes().add(Attributes.MOVEMENT_SPEED, 0.175F).add(Attributes.JUMP_STRENGTH, 0.5D);
    }
 
@@ -66,39 +68,39 @@ public abstract class AbstractTameableMountableChestedHorseEntity extends Abstra
 
    }
 
-   public void addAdditionalSaveData(CompoundNBT p_213281_1_) {
+   public void addAdditionalSaveData(CompoundTag p_213281_1_) {
       super.addAdditionalSaveData(p_213281_1_);
       p_213281_1_.putBoolean("ChestedHorse", this.hasChest());
       if (this.hasChest()) {
-         ListNBT listnbt = new ListNBT();
+         ListTag listTag = new ListTag();
 
          for(int i = 2; i < this.inventory.getContainerSize(); ++i) {
             ItemStack itemstack = this.inventory.getItem(i);
             if (!itemstack.isEmpty()) {
-               CompoundNBT compoundnbt = new CompoundNBT();
-               compoundnbt.putByte("Slot", (byte)i);
-               itemstack.save(compoundnbt);
-               listnbt.add(compoundnbt);
+               CompoundTag compoundTag = new CompoundTag();
+               compoundTag.putByte("Slot", (byte)i);
+               itemstack.save(compoundTag);
+               listTag.add(compoundTag);
             }
          }
 
-         p_213281_1_.put("Items", listnbt);
+         p_213281_1_.put("Items", listTag);
       }
 
    }
 
-   public void readAdditionalSaveData(CompoundNBT p_70037_1_) {
+   public void readAdditionalSaveData(CompoundTag p_70037_1_) {
       super.readAdditionalSaveData(p_70037_1_);
       this.setChest(p_70037_1_.getBoolean("ChestedHorse"));
       if (this.hasChest()) {
-         ListNBT listnbt = p_70037_1_.getList("Items", 10);
+         ListTag listTag = p_70037_1_.getList("Items", 10);
          this.createInventory();
 
-         for(int i = 0; i < listnbt.size(); ++i) {
-            CompoundNBT compoundnbt = listnbt.getCompound(i);
-            int j = compoundnbt.getByte("Slot") & 255;
+         for(int i = 0; i < listTag.size(); ++i) {
+            CompoundTag compoundTag = listTag.getCompound(i);
+            int j = compoundTag.getByte("Slot") & 255;
             if (j >= 2 && j < this.inventory.getContainerSize()) {
-               this.inventory.setItem(j, ItemStack.of(compoundnbt));
+               this.inventory.setItem(j, ItemStack.of(compoundTag));
             }
          }
       }
@@ -124,12 +126,12 @@ public abstract class AbstractTameableMountableChestedHorseEntity extends Abstra
       return super.setSlot(p_174820_1_, p_174820_2_);
    }
 
-   public ActionResultType mobInteract(PlayerEntity p_230254_1_, Hand p_230254_2_) {
+   public InteractionResult mobInteract(Player p_230254_1_, InteractionHand p_230254_2_) {
       ItemStack itemstack = p_230254_1_.getItemInHand(p_230254_2_);
       if (!this.isBaby()) {
          if (this.isTame() && p_230254_1_.isSecondaryUseActive()) {
-            this.openInventory(p_230254_1_);
-            return ActionResultType.sidedSuccess(this.level.isClientSide);
+            this.openCustomInventoryScreen(p_230254_1_);
+            return InteractionResult.sidedSuccess(this.level.isClientSide);
          }
 
          if (this.isVehicle()) {
@@ -144,23 +146,23 @@ public abstract class AbstractTameableMountableChestedHorseEntity extends Abstra
 
          if (!this.isTame()) {
             this.makeMad();
-            return ActionResultType.sidedSuccess(this.level.isClientSide);
+            return InteractionResult.sidedSuccess(this.level.isClientSide);
          }
 
          if (!this.hasChest() && itemstack.getItem() == Blocks.CHEST.asItem()) {
             this.setChest(true);
             this.playChestEquipsSound();
-            if (!p_230254_1_.abilities.instabuild) {
+            if (!p_230254_1_.getAbilities().instabuild) {
                itemstack.shrink(1);
             }
 
             this.createInventory();
-            return ActionResultType.sidedSuccess(this.level.isClientSide);
+            return InteractionResult.sidedSuccess(this.level.isClientSide);
          }
 
          if (!this.isBaby() && !this.isSaddled() && itemstack.getItem() == Items.SADDLE) {
-            this.openInventory(p_230254_1_);
-            return ActionResultType.sidedSuccess(this.level.isClientSide);
+            this.openCustomInventoryScreen(p_230254_1_);
+            return InteractionResult.sidedSuccess(this.level.isClientSide);
          }
       }
 
@@ -168,7 +170,7 @@ public abstract class AbstractTameableMountableChestedHorseEntity extends Abstra
          return super.mobInteract(p_230254_1_, p_230254_2_);
       } else {
          this.doPlayerRide(p_230254_1_);
-         return ActionResultType.sidedSuccess(this.level.isClientSide);
+         return InteractionResult.sidedSuccess(this.level.isClientSide);
       }
    }
 

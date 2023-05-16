@@ -1,6 +1,7 @@
 package com.chipoodle.devilrpg.skillsystem.skillinstance;
 
-import net.minecraft.entity.ai.attributes.Attribute;
+
+import net.minecraft.world.entity.ai.attributes.Attribute;
 
 import java.util.HashMap;
 import java.util.UUID;

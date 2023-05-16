@@ -16,5 +16,7 @@
     "gui.skills.unspent": "Unspent points:",
     "item.devilrpg.portal_item": "Portal Item",
     "block.devilrpg.soulvine": "Soulvine",
-    "item.devilrpg.item_soul_wolf.name": "Summon Soul Wolf"
+    "item.devilrpg.item_soul_wolf.name": "Summon Soul Wolf",
+    "item.devilrpg.soulwolf_spawn_egg": "Soul Wolf",
+    "item_group.devilrpg.devilrpg_tab": "Devil RPG"
 }

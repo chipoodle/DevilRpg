@@ -16,7 +16,8 @@ public class MinionDeathDamageSource extends DamageSource {
      */
     public Component getDeathMessage(LivingEntity entityLivingBaseIn) {
         LivingEntity livingentity = entityLivingBaseIn.getKillCredit();
-        return null;//new TranslationTextComponent("");
+        return Component.literal(msgId);
+        //return null
     }
 
     public Component getLocalizedDeathMessage(LivingEntity p_19343_) {

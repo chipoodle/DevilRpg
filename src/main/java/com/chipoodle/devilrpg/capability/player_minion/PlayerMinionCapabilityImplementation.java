@@ -5,10 +5,10 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.entity.ITameableEntity;
-import com.chipoodle.devilrpg.entity.SoulBearEntity;
-import com.chipoodle.devilrpg.entity.SoulWispEntity;
-import com.chipoodle.devilrpg.entity.SoulWolfEntity;
+import com.chipoodle.devilrpg.entity.ITamableEntity;
+import com.chipoodle.devilrpg.entity.SoulBear;
+import com.chipoodle.devilrpg.entity.SoulWisp;
+import com.chipoodle.devilrpg.entity.SoulWolf;
 import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.network.handler.PlayerMinionClientServerHandler;
 import com.chipoodle.devilrpg.skillsystem.MinionDeathDamageSource;
@@ -148,7 +148,7 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
 	}
 
 	@Override
-	public ITameableEntity getTameableByUUID(UUID id, Level world) {
+	public ITamableEntity getTameableByUUID(UUID id, Level world) {
 		Entity e;
 		if (id != null) {
 			if (!world.isClientSide) {
@@ -156,15 +156,15 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
 			} else {
 				e = TargetUtils.getEntityByUUID((ClientLevel) world, id);
 			}
-			if (e != null && e instanceof ITameableEntity) {
-				return (ITameableEntity) e;
+			if (e != null && e instanceof ITamableEntity) {
+				return (ITamableEntity) e;
 			}
 		}
 		return null;
 	}
 
 	@Override
-	public void removeWisp(Player owner, SoulWispEntity entity) {
+	public void removeWisp(Player owner, SoulWisp entity) {
 		ConcurrentLinkedQueue<UUID> wisp = getWispMinions();
 		if (wisp != null && entity != null && wisp.contains(entity.getUUID())) {
 			wisp.remove(entity.getUUID());
@@ -174,7 +174,7 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
 	}
 
 	@Override
-	public void removeSoulWolf(Player owner, SoulWolfEntity entity) {
+	public void removeSoulWolf(Player owner, SoulWolf entity) {
 		ConcurrentLinkedQueue<UUID> soulwolf = getSoulWolfMinions();
 		if (soulwolf != null && entity != null && soulwolf.contains(entity.getUUID())) {
 			soulwolf.remove(entity.getUUID());
@@ -188,8 +188,8 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
 	public void removeAllWisp(Player owner) {
 		ConcurrentLinkedQueue<UUID> wisp = getWispMinions();
 		wisp.forEach(id -> {
-			ITameableEntity entity = getTameableByUUID(id, owner.level);
-			removeWisp(owner, (SoulWispEntity) entity);
+			ITamableEntity entity = getTameableByUUID(id, owner.level);
+			removeWisp(owner, (SoulWisp) entity);
 		});
 		wisp.clear();
 		setWispMinions(wisp, owner);
@@ -199,15 +199,15 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
 	public void removeAllSoulWolf(Player owner) {
 		ConcurrentLinkedQueue<UUID> soulwolf = getSoulWolfMinions();
 		soulwolf.forEach(id -> {
-			ITameableEntity entity = getTameableByUUID(id, owner.level);
-			removeSoulWolf(owner, (SoulWolfEntity) entity);
+			ITamableEntity entity = getTameableByUUID(id, owner.level);
+			removeSoulWolf(owner, (SoulWolf) entity);
 		});
 		soulwolf.clear();
 		setSoulWolfMinions(soulwolf, owner);
 	}
 
 	@Override
-	public void removeSoulBear(Player owner, SoulBearEntity entity) {
+	public void removeSoulBear(Player owner, SoulBear entity) {
 		ConcurrentLinkedQueue<UUID> soulbear = getSoulBearMinions();
 		if (soulbear != null && entity != null && soulbear.contains(entity.getUUID())) {
 			soulbear.remove(entity.getUUID());
@@ -221,8 +221,8 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
 	public void removeAllSoulBear(Player owner) {
 		ConcurrentLinkedQueue<UUID> soulbear = getSoulBearMinions();
 		soulbear.forEach(id -> {
-			ITameableEntity entity = getTameableByUUID(id, owner.level);
-			removeSoulBear(owner, (SoulBearEntity) entity);
+			ITamableEntity entity = getTameableByUUID(id, owner.level);
+			removeSoulBear(owner, (SoulBear) entity);
 		});
 		soulbear.clear();
 		setSoulBearMinions(soulbear, owner);

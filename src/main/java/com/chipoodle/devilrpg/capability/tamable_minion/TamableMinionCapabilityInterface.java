@@ -1,13 +1,12 @@
 package com.chipoodle.devilrpg.capability.tamable_minion;
 
-import com.chipoodle.devilrpg.entity.ITameableEntity;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraftforge.common.util.INBTSerializable;
+import com.chipoodle.devilrpg.capability.IGenericCapability;
+import com.chipoodle.devilrpg.entity.ITamableEntity;
 
 
-public interface TamableMinionCapabilityInterface extends INBTSerializable<CompoundTag> {
+public interface TamableMinionCapabilityInterface extends IGenericCapability {
 
-    void applyPassives(ITameableEntity entity);
+    void applyPassives(ITamableEntity entity);
 
 
 }

@@ -1,9 +1,7 @@
 package com.chipoodle.devilrpg.capability.tamable_minion;
 
-import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
-import com.chipoodle.devilrpg.entity.ITameableEntity;
+import com.chipoodle.devilrpg.entity.ITamableEntity;
 import com.chipoodle.devilrpg.skillsystem.skillinstance.MinionPassiveAttributes;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.CompoundTag;
 
 public class TamableMinionCapabilityImplementation implements TamableMinionCapabilityInterface {
@@ -11,7 +9,7 @@ public class TamableMinionCapabilityImplementation implements TamableMinionCapab
 	private CompoundTag nbt = new CompoundTag();
 
     @Override
-    public void applyPassives(ITameableEntity entity) {
+    public void applyPassives(ITamableEntity entity) {
         MinionPassiveAttributes minionPassiveAttributes = new MinionPassiveAttributes(entity);
     }
 

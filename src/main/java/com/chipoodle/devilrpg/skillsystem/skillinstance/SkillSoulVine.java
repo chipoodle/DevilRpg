@@ -6,18 +6,16 @@ import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementati
 import com.chipoodle.devilrpg.init.ModBlocks;
 import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
 import com.chipoodle.devilrpg.util.SkillEnum;
-import net.minecraft.block.*;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.Direction;
-import net.minecraft.util.Mirror;
-import net.minecraft.util.SoundCategory;
-import net.minecraft.util.SoundEvents;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.BlockRayTraceResult;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.RayTraceResult;
-import net.minecraft.util.math.vector.Vector3d;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.HashMap;
 import java.util.Random;
@@ -33,28 +31,28 @@ public class SkillSoulVine implements ISkillContainer {
     }
 
     @Override
-    public void execute(World worldIn, PlayerEntity playerIn, HashMap<String, String> parameters) {
-        if (!worldIn.isClientSide) {
+    public void execute(Level levelIn, Player playerIn, HashMap<String, String> parameters) {
+        if (!levelIn.isClientSide) {
             Random rand = new Random();
-            worldIn.playSound(null, playerIn.getX(), playerIn.getY(), playerIn.getZ(),
-                    SoundEvents.CHICKEN_EGG, SoundCategory.NEUTRAL, 0.5F,
+            levelIn.playSound(null, playerIn.getX(), playerIn.getY(), playerIn.getZ(),
+                    SoundEvents.CHICKEN_EGG, SoundSource.NEUTRAL, 0.5F,
                     0.4F / (rand.nextFloat() * 0.4F + 0.8F));
-            setVine(worldIn, playerIn);
+            setVine(levelIn, playerIn);
         }
     }
 
-    private void setVine(World worldIn, PlayerEntity playerIn) {
+    private void setVine(Level levelIn, Player playerIn) {
         BlockPos blockPos = playerIn.blockPosition();
         Block block = ModBlocks.SOUL_VINE_BLOCK.get();
-        BlockState blockState = worldIn.getBlockState(blockPos);
+        BlockState blockState = levelIn.getBlockState(blockPos);
 
-        Vector3d playerLookVector = playerIn.getLookAngle();
+        Vec3 playerLookVector = playerIn.getLookAngle();
         Direction nearest = Direction.getNearest(playerLookVector.x, 0, playerLookVector.z);
 
         DevilRpg.LOGGER.info("-------->Direction: " + nearest);
 
         if (blockState.getBlock().equals(Blocks.AIR))
-            worldIn
+            levelIn
                     .setBlock(
                             blockPos,
                             //block.defaultBlockState().setValue(SoulVineBlock.getPropertyForFace(playerViewDirection.), Boolean.valueOf(true)),

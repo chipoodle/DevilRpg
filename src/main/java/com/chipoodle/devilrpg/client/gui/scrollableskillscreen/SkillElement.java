@@ -12,18 +12,19 @@ import com.google.common.collect.Sets;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
 
+import net.minecraft.ChatFormatting;
 import net.minecraft.advancements.DisplayInfo;
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.IItemProvider;
-import net.minecraft.util.JSONUtils;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.StringTextComponent;
-import net.minecraft.util.text.Style;
-import net.minecraft.util.text.TextComponentUtils;
-import net.minecraft.util.text.TextFormatting;
-import net.minecraft.util.text.event.HoverEvent;
+import net.minecraft.advancements.FrameType;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentUtils;
+import net.minecraft.network.chat.HoverEvent;
+import net.minecraft.network.chat.Style;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.GsonHelper;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.ItemLike;
+
 
 public class SkillElement {
 	private final SkillElement parent;
@@ -31,7 +32,7 @@ public class SkillElement {
 	private final SkillElementRewards rewards;
 	private final ResourceLocation id;
 	private final Set<SkillElement> children = Sets.newLinkedHashSet();
-	private final ITextComponent displayText;
+	private final Component displayText;
 	private final SkillEnum skillCapability;
 	private final SkillManaCost skillManaCost;
 
@@ -46,18 +47,17 @@ public class SkillElement {
 		}
 
 		if (displayIn == null) {
-			this.displayText = new StringTextComponent(id.toString());
+			this.displayText = Component.literal(id.toString());
 		} else {
-			
-			TextFormatting textformatting = displayIn.getFrame().getFormat();
-			ITextComponent itextcomponent = displayIn.getTitle();
-			ITextComponent itextcomponent1 = TextComponentUtils
+			ChatFormatting textformatting = displayIn.getFrame().getFormat();
+			Component itextcomponent = displayIn.getTitle();
+			Component itextcomponent1 = ComponentUtils
 					.mergeStyles(itextcomponent.copy(), Style.EMPTY.applyFormat(textformatting))
 					.append("\n").append(displayIn.getDescription());
-			ITextComponent itextcomponent2 = itextcomponent.copy().withStyle((style) -> {
+			Component itextcomponent2 = itextcomponent.copy().withStyle((style) -> {
 				return style.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, itextcomponent1));
 			});
-			this.displayText = TextComponentUtils.wrapInSquareBrackets(itextcomponent2).withStyle(textformatting);
+			this.displayText = ComponentUtils.wrapInSquareBrackets(itextcomponent2).withStyle(textformatting);
 		}
 		this.skillCapability = skillCapability;
 		this.skillManaCost = skillManaCost;
@@ -72,9 +72,8 @@ public class SkillElement {
 	}
 
 	/**
-	 * Get the {@code SkillElement} that is this {@code SkillElement}'s parent. This
-	 * determines the tree structure that appears in the
-	 * {@linkplain GuiScreenSkillElements GUI}.
+	 * Get the {@linkplain SkillElement} that is this {@code SkillElement}'s parent. This
+	 * determines the tree structure
 	 * 
 	 * @return the parent {@code SkillElement} of this {@code SkillElement}, or
 	 *         {@code null} to signify that this {@code
@@ -177,11 +176,11 @@ public class SkillElement {
 	 *         consists simply of {@link #getId()}. Otherwise, it is the
 	 *         {@linkplain DisplayInfo#getTitle() title} inside square brackets,
 	 *         colored by the
-	 *         {@linkplain net.minecraft.advancements.FrameType#getFormat frame
+	 *         {@linkplain FrameType#getChatColor()}  frame
 	 *         type}, and hovering over it shows the
 	 *         {@linkplain DisplayInfo#getDescription() description}.
 	 */
-	public ITextComponent getDisplayText() {
+	public Component getDisplayText() {
 		return this.displayText;
 	}
 	
@@ -229,16 +228,16 @@ public class SkillElement {
 			return this;
 		}
 
-		public SkillElement.Builder withDisplay(ItemStack stack, ITextComponent title, ITextComponent description,
-				@Nullable ResourceLocation background,@Nullable ResourceLocation image, ScrollableSkillFrameType frame, boolean showToast,
-				boolean announceToChat, boolean hidden) {
+		public SkillElement.Builder withDisplay(ItemStack stack, Component title, Component description,
+												@Nullable ResourceLocation background, @Nullable ResourceLocation image, SkillFrameType frame, boolean showToast,
+												boolean announceToChat, boolean hidden) {
 			return this.withDisplay(new SkillDisplayInfo(stack, title, description, background, image,frame, showToast,
 					announceToChat, hidden));
 		}
 
-		public SkillElement.Builder withDisplay(IItemProvider itemIn, ITextComponent title, ITextComponent description,
-				@Nullable ResourceLocation background,@Nullable ResourceLocation image, ScrollableSkillFrameType frame, boolean showToast,
-				boolean announceToChat, boolean hidden) {
+		public SkillElement.Builder withDisplay(ItemLike itemIn, Component title, Component description,
+												@Nullable ResourceLocation background, @Nullable ResourceLocation image, SkillFrameType frame, boolean showToast,
+												boolean announceToChat, boolean hidden) {
 			return this.withDisplay(new SkillDisplayInfo(new ItemStack(itemIn.asItem()), title, description, background,image,
 					frame, showToast, announceToChat, hidden));
 		}
@@ -277,7 +276,7 @@ public class SkillElement {
 			} else {
 				if (this.parent == null) {
 					this.parent = lookup.apply(this.parentId);
-					DevilRpg.LOGGER.info("|----Id: " + this.id + "  " + "ParentId: " + this.parentId);
+					//DevilRpg.LOGGER.info("|----Id: " + this.id + "  " + "ParentId: " + this.parentId);
 
 				}
 
@@ -286,10 +285,8 @@ public class SkillElement {
 		}
 
 		public SkillElement build(ResourceLocation id) {
-			if (!this.resolveParent((parentID) -> {
-				return null;
-			})) {
-				throw new IllegalStateException("Tried to build incomplete advancement!");
+			if (!this.resolveParent((parentID) -> null)) {
+				throw new IllegalStateException("Tried to build incomplete skill!");
 			} else {
 				return new SkillElement(id, this.parent, this.display, this.rewards, this.skillCapability,this.skillManaCost);
 			}
@@ -318,7 +315,7 @@ public class SkillElement {
 			return jsonobject;
 		}
 
-		public void writeTo(PacketBuffer buf) {
+		public void writeTo(FriendlyByteBuf buf) {
 			if (this.parentId == null) {
 				buf.writeBoolean(false);
 			} else {
@@ -344,26 +341,26 @@ public class SkillElement {
 				if (!json.has("id"))
 					throw new JsonSyntaxException("SkillElement id cannot be empty");
 
-				ResourceLocation id = new ResourceLocation(JSONUtils.getAsString(json, "id"));
+				ResourceLocation id = new ResourceLocation(GsonHelper.getAsString(json, "id"));
 
 				ResourceLocation resourcelocation = json.has("parent")
-						? new ResourceLocation(JSONUtils.getAsString(json, "parent"))
+						? new ResourceLocation(GsonHelper.getAsString(json, "parent"))
 						: null;
 
 				SkillDisplayInfo displayinfo = json.has("display")
-						? SkillDisplayInfo.deserialize(JSONUtils.getAsJsonObject(json, "display"))
+						? SkillDisplayInfo.deserialize(GsonHelper.getAsJsonObject(json, "display"))
 						: null;
 
 				SkillElementRewards advancementrewards = json.has("rewards")
-						? SkillElementRewards.deserializeRewards(JSONUtils.getAsJsonObject(json, "rewards"))
+						? SkillElementRewards.deserializeRewards(GsonHelper.getAsJsonObject(json, "rewards"))
 						: SkillElementRewards.EMPTY;
 
 				SkillEnum skillCapability = json.has("capability")
-						? SkillEnum.getByJsonName(JSONUtils.getAsString(json, "capability"))
+						? SkillEnum.getByJsonName(GsonHelper.getAsString(json, "capability"))
 						: SkillEnum.EMPTY;
 				
 				SkillManaCost skillManaCost = json.has("skillmanacost")
-						?  SkillManaCost.deserialize(JSONUtils.getAsJsonObject(json, "skillmanacost"))
+						?  SkillManaCost.deserialize(GsonHelper.getAsJsonObject(json, "skillmanacost"))
 						: null;
 				
 				
@@ -383,23 +380,23 @@ public class SkillElement {
 				ResourceLocation id = new ResourceLocation(json.get("id").getAsString());
 
 				ResourceLocation resourcelocation = json.has("parent")
-						? new ResourceLocation(JSONUtils.getAsString(json, "parent"))
+						? new ResourceLocation(GsonHelper.getAsString(json, "parent"))
 						: null;
 
 				SkillDisplayInfo displayinfo = json.has("display")
-						? SkillDisplayInfo.deserialize(JSONUtils.getAsJsonObject(json, "display"))
+						? SkillDisplayInfo.deserialize(GsonHelper.getAsJsonObject(json, "display"))
 						: null;
 
 				SkillElementRewards advancementrewards = json.has("rewards")
-						? SkillElementRewards.deserializeRewards(JSONUtils.getAsJsonObject(json, "rewards"))
+						? SkillElementRewards.deserializeRewards(GsonHelper.getAsJsonObject(json, "rewards"))
 						: SkillElementRewards.EMPTY;
 
 				SkillEnum skillCapability = json.has("capability")
-						? SkillEnum.valueOf(JSONUtils.getAsJsonObject(json, "capability").getAsString())
+						? SkillEnum.valueOf(GsonHelper.getAsJsonObject(json, "capability").getAsString())
 						: SkillEnum.EMPTY;
 				
 				SkillManaCost skillManaCost = json.has("skillmanacost")
-						?  SkillManaCost.deserialize(JSONUtils.getAsJsonObject(json, "skillmanacost"))
+						?  SkillManaCost.deserialize(GsonHelper.getAsJsonObject(json, "skillmanacost"))
 						: null;
 
 				return new SkillElement.Builder(id, resourcelocation, displayinfo, advancementrewards, skillCapability, skillManaCost);
@@ -408,14 +405,6 @@ public class SkillElement {
 				return null;
 			}
 		}
-
-		/*public static SkillElement.Builder readFrom(PacketBuffer buf) {
-			ResourceLocation id = buf.readBoolean() ? buf.readResourceLocation() : null;
-			ResourceLocation resourcelocation = buf.readBoolean() ? buf.readResourceLocation() : null;
-			SkillDisplayInfo displayinfo = buf.readBoolean() ? SkillDisplayInfo.read(buf) : null;
-			return new SkillElement.Builder(id, resourcelocation, displayinfo, SkillElementRewards.EMPTY,
-					SkillEnum.EMPTY);
-		}*/
 
 		public ResourceLocation getId() {
 			return this.id;

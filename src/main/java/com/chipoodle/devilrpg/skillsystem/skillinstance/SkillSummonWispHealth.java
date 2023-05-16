@@ -1,29 +1,31 @@
 package com.chipoodle.devilrpg.skillsystem.skillinstance;
 
+import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapability;
+import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityInterface;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
+import com.chipoodle.devilrpg.entity.SoulBear;
+import com.chipoodle.devilrpg.entity.SoulWisp;
+import com.chipoodle.devilrpg.init.ModEntities;
+import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
+import com.chipoodle.devilrpg.util.SkillEnum;
+import com.chipoodle.devilrpg.util.TargetUtils;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraftforge.common.util.LazyOptional;
+
 import java.util.HashMap;
+import java.util.Objects;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
-
-import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityInterface;
-import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityAttacher;
-import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
-import com.chipoodle.devilrpg.entity.SoulWispEntity;
-import com.chipoodle.devilrpg.init.ModEntityTypes;
-import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
-import com.chipoodle.devilrpg.util.SkillEnum;
-
-import com.chipoodle.devilrpg.util.TargetUtils;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.potion.Effects;
-import net.minecraft.util.SoundCategory;
-import net.minecraft.util.SoundEvents;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.BlockRayTraceResult;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.vector.Vector3d;
-import net.minecraft.world.World;
-import net.minecraftforge.common.util.LazyOptional;
 
 public class SkillSummonWispHealth implements ISkillContainer, WispSkillInterface {
 
@@ -36,21 +38,21 @@ public class SkillSummonWispHealth implements ISkillContainer, WispSkillInterfac
     }
 
     @Override
-    public void execute(World worldIn, PlayerEntity playerIn, HashMap<String, String> parameters) {
-        if (!worldIn.isClientSide) {
+    public void execute(Level levelIn, Player playerIn, HashMap<String, String> parameters) {
+        if (!levelIn.isClientSide) {
             Random rand = new Random();
-            worldIn.playSound(null, playerIn.getX(), playerIn.getY(), playerIn.getZ(),
-                    SoundEvents.BEACON_ACTIVATE, SoundCategory.NEUTRAL, 0.5F,
+            levelIn.playSound(null, playerIn.getX(), playerIn.getY(), playerIn.getZ(),
+                    SoundEvents.BEACON_ACTIVATE, SoundSource.NEUTRAL, 0.5F,
                     0.4F / (rand.nextFloat() * 0.4F + 0.8F));
-            LazyOptional<PlayerMinionCapabilityInterface> min = playerIn.getCapability(PlayerMinionCapabilityAttacher.MINION_CAP);
-            ConcurrentLinkedQueue<UUID> keys = min.map(x -> x.getWispMinions())
+            LazyOptional<PlayerMinionCapabilityInterface> min = playerIn.getCapability(PlayerMinionCapability.INSTANCE);
+            ConcurrentLinkedQueue<UUID> keys = min.map(PlayerMinionCapabilityInterface::getWispMinions)
                     .orElse(new ConcurrentLinkedQueue<UUID>());
 
-            keys.offer(summonWisp(worldIn, playerIn, rand).getUUID());
+            keys.offer(summonWisp(levelIn, playerIn, rand).getUUID());
             if (keys.size() > NUMBER_OF_SUMMONS) {
                 UUID key = keys.remove();
                 min.ifPresent(x -> {
-                    SoulWispEntity e = (SoulWispEntity) x.getTameableByUUID(key, playerIn.level);
+                    SoulWisp e = (SoulWisp) x.getTameableByUUID(key, playerIn.level);
                     if (e != null)
                         x.removeWisp(playerIn, e);
                 });
@@ -59,15 +61,16 @@ public class SkillSummonWispHealth implements ISkillContainer, WispSkillInterfac
         }
     }
 
-    private SoulWispEntity summonWisp(World worldIn, PlayerEntity playerIn, Random rand) {
-        SoulWispEntity sw = ModEntityTypes.WISP.get().create(worldIn);
-        sw.updateLevel(playerIn, Effects.HEALTH_BOOST, Effects.REGENERATION, SkillEnum.SUMMON_WISP_HEALTH, true);
-        BlockRayTraceResult blockraytraceresult = TargetUtils.getPlayerBlockRayResult();
-        BlockPos blockPos = blockraytraceresult.getBlockPos();
-        if (!worldIn.isEmptyBlock(blockPos))
+    private SoulWisp summonWisp(Level levelIn, Player playerIn, Random rand) {
+        BlockHitResult playerBlockRayResult = TargetUtils.getPlayerBlockRayResult();
+        BlockPos blockPos = playerBlockRayResult.getBlockPos();
+        if (!levelIn.isEmptyBlock(blockPos))
             blockPos = blockPos.above();
-        sw.moveTo(blockPos, MathHelper.wrapDegrees(rand.nextFloat() * 360.0F), 0.0F);
-        worldIn.addFreshEntity(sw);
+
+        SoulWisp sw = ModEntities.WISP.get().create((ServerLevel) levelIn, null, null, blockPos, MobSpawnType.MOB_SUMMONED, true, true);
+        Objects.requireNonNull(sw).updateLevel(playerIn, MobEffects.HEALTH_BOOST, MobEffects.REGENERATION, SkillEnum.SUMMON_WISP_HEALTH, true);
+        sw.moveTo(blockPos, Mth.wrapDegrees(rand.nextFloat() * 360.0F), 0.0F);
+        levelIn.addFreshEntity(sw);
         return sw;
     }
 }

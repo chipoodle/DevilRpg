@@ -4,26 +4,24 @@ import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
+import com.chipoodle.devilrpg.entity.ITamableEntity;
 import com.chipoodle.devilrpg.init.ModNetwork;
+import com.chipoodle.devilrpg.init.ModSounds;
 import com.chipoodle.devilrpg.network.handler.WerewolfAttackServerHandler;
 import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import com.chipoodle.devilrpg.util.TargetUtils;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.ai.attributes.AttributeModifier;
-import net.minecraft.entity.ai.attributes.Attributes;
-import net.minecraft.entity.passive.TameableEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.particles.ParticleTypes;
-import net.minecraft.util.Hand;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.SoundCategory;
-import net.minecraft.util.SoundEvent;
-import net.minecraft.util.math.vector.Vector3d;
+
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.World;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.common.util.LazyOptional;
@@ -53,11 +51,11 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassive implements IS
     public void execute(Level worldIn, Player playerIn, HashMap<String, String> parameters) {
         if (!worldIn.isClientSide) {
             Random rand = new Random();
-            SoundEvent event = new SoundEvent(SUMMON_SOUND);
-            worldIn.playSound(null, playerIn.getX(), playerIn.getY(), playerIn.getZ(), event,
-                    SoundCategory.NEUTRAL, 0.5F, 0.4F / (rand.nextFloat() * 0.4F + 0.8F));
 
-            LazyOptional<PlayerAuxiliaryCapabilityInterface> aux = playerIn.getCapability(PlayerAuxiliaryCapability.AUX_CAP);
+            worldIn.playSound(null, playerIn.getX(), playerIn.getY(), playerIn.getZ(), ModSounds.METAL_SWORD_SOUND.get(),
+                    SoundSource.NEUTRAL, 0.5F, 0.4F / (rand.nextFloat() * 0.4F + 0.8F));
+
+            LazyOptional<PlayerAuxiliaryCapabilityInterface> aux = playerIn.getCapability(PlayerAuxiliaryCapability.INSTANCE);
             boolean transformation = aux.map(x -> x.isWerewolfTransformation()).orElse(false);
             aux.ifPresent(x -> x.setWerewolfTransformation(!transformation, playerIn));
             if (!transformation) {
@@ -96,7 +94,7 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassive implements IS
                 parentCapability.getSkillsPoints().get(SkillEnum.TRANSFORM_WEREWOLF) * 0.0045, AttributeModifier.Operation.ADDITION);
     }
 
-    private void removeCurrentModifiers(PlayerEntity playerIn) {
+    private void removeCurrentModifiers(Player playerIn) {
         HashMap<String, UUID> attributeModifiers = parentCapability.getAttributeModifiers();
         //removeCurrentModifierFromPlayer(playerIn, healthAttributeModifier, Attributes.MAX_HEALTH);
         //removeAttributeFromCapability(attributeModifiers, Attributes.MAX_HEALTH);
@@ -107,7 +105,7 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassive implements IS
         parentCapability.setAttributeModifiers(attributeModifiers, playerIn);
     }
 
-    private void addCurrentModifiers(PlayerEntity playerIn) {
+    private void addCurrentModifiers(Player playerIn) {
         HashMap<String, UUID> attributeModifiers = parentCapability.getAttributeModifiers();
         //addAttributeToCapability(attributeModifiers, Attributes.MAX_HEALTH, healthAttributeModifier.getId());
         addAttributeToCapability(attributeModifiers, Attributes.MOVEMENT_SPEED, speedAttributeModifier.getId());
@@ -154,7 +152,7 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassive implements IS
         double radius = 2;
         if (player != null) {
             List<LivingEntity> targetList = TargetUtils.acquireAllLookTargets(player, distance, radius).stream()
-                    .filter(x -> !(x instanceof TameableEntity) || !x.isAlliedTo(player))
+                    .filter(x -> !(x instanceof ITamableEntity) || !x.isAlliedTo(player))
                     .collect(Collectors.toList());
 
             //DevilRpg.LOGGER.info("targetList.size:{}",targetList.size());
@@ -173,10 +171,10 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassive implements IS
      * @param player
      * @param hand
      */
-    private void renderParticles(final PlayerEntity player, Hand hand) {
-        Vector3d vec = player.getLookAngle();
-        double clawSideX = vec.z() * (hand.equals(Hand.MAIN_HAND) ? 0.6 : -0.6);
-        double clawSideZ = vec.x() * (hand.equals(Hand.OFF_HAND) ? 0.6 : -0.6);
+    private void renderParticles(final Player player, InteractionHand hand) {
+        Vec3 vec = player.getLookAngle();
+        double clawSideX = vec.z() * (hand.equals(InteractionHand.MAIN_HAND) ? 0.6 : -0.6);
+        double clawSideZ = vec.x() * (hand.equals(InteractionHand.OFF_HAND) ? 0.6 : -0.6);
         double dx = player.getX() + clawSideX;
         double dz = player.getZ() + clawSideZ;
         double dy = player.getY() + player.getEyeHeight();// + 2.0f;// player.getEyeHeight(); // you

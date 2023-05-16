@@ -8,26 +8,32 @@ package com.chipoodle.devilrpg.eventsubscriber.client;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
+import com.chipoodle.devilrpg.capability.mana.PlayerManaCapability;
 import com.chipoodle.devilrpg.capability.mana.PlayerManaCapabilityInterface;
-import com.chipoodle.devilrpg.capability.mana.PlayerManaCapabilityAttacher;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
-import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityAttacher;
-import com.chipoodle.devilrpg.client.gui.hud.HealthBarRenderer;
-import com.chipoodle.devilrpg.client.gui.hud.ManaBarRenderer;
-import com.chipoodle.devilrpg.client.gui.hud.MinionPortraitRenderer;
-import com.chipoodle.devilrpg.client.render.entity.WerewolfRenderer;
+import com.chipoodle.devilrpg.client.render.entity.renderer.WerewolfRenderer;
 import com.chipoodle.devilrpg.skillsystem.skillinstance.SkillShapeshiftWerewolf;
 import com.chipoodle.devilrpg.util.EventUtils;
 import com.chipoodle.devilrpg.util.SkillEnum;
+import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.model.PlayerModel;
+import net.minecraft.client.model.geom.EntityModelSet;
+import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.client.renderer.ActiveRenderInfo;
-import net.minecraft.client.settings.PointOfView;
-import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.client.renderer.ItemInHandRenderer;
+import net.minecraft.client.renderer.block.BlockRenderDispatcher;
+import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
+import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.client.renderer.entity.ItemRenderer;
+import net.minecraft.client.renderer.entity.LivingEntityRenderer;
+import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.client.event.EntityViewRenderEvent.CameraSetup;
 import net.minecraftforge.client.event.*;
+import net.minecraftforge.client.gui.overlay.NamedGuiOverlay;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
@@ -37,10 +43,13 @@ import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 import org.lwjgl.glfw.GLFW;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.Objects;
 import java.util.function.BiConsumer;
+
+import static net.minecraftforge.client.gui.overlay.VanillaGuiOverlay.ARMOR_LEVEL;
+import static net.minecraftforge.client.gui.overlay.VanillaGuiOverlay.PLAYER_HEALTH;
 
 /**
  * Subscribe to events from the FORGE EventBus that should be handled on the
@@ -50,39 +59,41 @@ import java.util.function.BiConsumer;
  */
 @EventBusSubscriber(modid = DevilRpg.MODID, bus = EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
 public final class ClientForgeEventSubscriber {
-    private static final HealthBarRenderer healthBarRenderer = new HealthBarRenderer();
-    private static final ManaBarRenderer manaBarRenderer = new ManaBarRenderer();
-    private static final MinionPortraitRenderer minionPortraitRenderer = new MinionPortraitRenderer();
+    //private static final HealthBarRenderer healthBarRenderer = new HealthBarRenderer();
+    //private static final ManaBarRenderer manaBarRenderer = new ManaBarRenderer();
+    //private static final MinionPortraitRenderer minionPortraitRenderer = new MinionPortraitRenderer();
+    private static final Class<?>[] tipos = {double.class, double.class, double.class};
     @OnlyIn(Dist.CLIENT)
     public static WerewolfRenderer newWolf = null;
-    private static final Class<?>[] tipos = {double.class, double.class, double.class};
     private static Method method = null;
+    private static EntityRenderDispatcher entityRenderDispatcher;
+    private static Font font;
+    private static EntityModelSet entityModelSet;
+    private static ItemInHandRenderer itemInHandRenderer;
+    private static ItemRenderer itemRenderer;
+    private static BlockRenderDispatcher blockRenderDispatcher;
 
     @OnlyIn(Dist.CLIENT)
     @SubscribeEvent(priority = EventPriority.NORMAL)
-    public static void onEvent(RenderGameOverlayEvent.Pre event) {
-        switch (event.getType()) {
-            case HEALTH:
-                healthBarRenderer.renderBar(event.getMatrixStack(), event.getWindow().getGuiScaledWidth(),
-                        event.getWindow().getGuiScaledHeight());
-                manaBarRenderer.renderBar(event.getMatrixStack(), event.getWindow().getGuiScaledWidth(),
-                        event.getWindow().getGuiScaledHeight());
-                minionPortraitRenderer.renderPortraits(event.getMatrixStack(), event.getWindow().getGuiScaledWidth(),
-                        event.getWindow().getGuiScaledHeight());
-                event.setCanceled(true);
-                break;
+    public static void onEvent(RenderGuiOverlayEvent.Pre event) {
+        NamedGuiOverlay health = PLAYER_HEALTH.type();
+        NamedGuiOverlay armor = ARMOR_LEVEL.type();
 
-            case ARMOR:
-                /*
-                 * Don't render the vanilla armor bar, it's part of the status bar in the HEALTH
-                 * event
-                 */
-                event.setCanceled(true);
-                break;
-            default: // If it's not one of the above cases, do nothing
-                break;
+        /*if (event.getOverlay().equals(health)) {
+            healthBarRenderer.renderBar(event.getPoseStack(), event.getWindow().getGuiScaledWidth(),
+                    event.getWindow().getGuiScaledHeight());
+            manaBarRenderer.renderBar(event.getPoseStack(), event.getWindow().getGuiScaledWidth(),
+                    event.getWindow().getGuiScaledHeight());
+            minionPortraitRenderer.renderPortraits(event.getPoseStack(), event.getWindow().getGuiScaledWidth(),
+                    event.getWindow().getGuiScaledHeight());
+            event.setCanceled(true);
         }
+
+        if (event.getOverlay().equals(armor)) {
+            event.setCanceled(true);
+        }*/
     }
+
 
     /**
      * The RenderGameOverlayEvent.Post event is called after each game overlay
@@ -92,12 +103,12 @@ public final class ClientForgeEventSubscriber {
      * If you want something to be rendered over an existing vanilla element, you
      * would render it here.
      */
-    @SubscribeEvent(receiveCanceled = true)
+    /*@SubscribeEvent(receiveCanceled = true)
     public static void onEvent(RenderGameOverlayEvent.Post event) {
         // If it's not one of the above cases, do nothing
         if (Objects.requireNonNull(event.getType()) == RenderGameOverlayEvent.ElementType.HEALTH) {
         }
-    }
+    }*/
 
     /**
      * Non cancellable event
@@ -123,7 +134,7 @@ public final class ClientForgeEventSubscriber {
         Minecraft mc = Minecraft.getInstance();
         LocalPlayer player = mc.player;
         if (player != null) {
-            LazyOptional<PlayerAuxiliaryCapabilityInterface> aux = player.getCapability(PlayerAuxiliaryCapability.AUX_CAP);
+            LazyOptional<PlayerAuxiliaryCapabilityInterface> aux = player.getCapability(PlayerAuxiliaryCapability.INSTANCE);
             if (aux == null || !aux.isPresent() || !aux.map(x -> x.isWerewolfTransformation()).orElse(true))
                 return;
 
@@ -148,9 +159,9 @@ public final class ClientForgeEventSubscriber {
             if (event.phase == TickEvent.Phase.START) {
 
                 LazyOptional<PlayerSkillCapabilityInterface> skillCapability = event.player
-                        .getCapability(PlayerSkillCapabilityAttacher.SKILL_CAP);
+                        .getCapability(PlayerSkillCapability.INSTANCE);
                 LazyOptional<PlayerAuxiliaryCapabilityInterface> auxCapability = event.player
-                        .getCapability(PlayerAuxiliaryCapability.AUX_CAP);
+                        .getCapability(PlayerAuxiliaryCapability.INSTANCE);
                 if (skillCapability != null && auxCapability != null) {
                     boolean werewolfTransformation = auxCapability.map(x -> x.isWerewolfTransformation()).orElse(false);
                     boolean werewolfAttack = auxCapability.map(x -> x.isWerewolfAttack()).orElse(false);
@@ -171,7 +182,7 @@ public final class ClientForgeEventSubscriber {
         if (event.side.equals(LogicalSide.CLIENT)) {
             if (event.phase == TickEvent.Phase.START) {
                 LazyOptional<PlayerManaCapabilityInterface> manaCapability = event.player
-                        .getCapability(PlayerManaCapabilityAttacher.MANA_CAP);
+                        .getCapability(PlayerManaCapability.INSTANCE);
                 // Mana
                 manaCapability.ifPresent(m -> m.onPlayerTickEventRegeneration(event.player));
 
@@ -185,32 +196,11 @@ public final class ClientForgeEventSubscriber {
      * //player.isSwingInProgress = false; }
      */
 
-    /* public static Entity camera = null; */
-
-    /**
-     * Cancels the default player's model rendering
-     *
-     * @param event
-     */
-    @SubscribeEvent
-    public static void onPlayerRender(RenderPlayerEvent.Pre event) {
-        BiConsumer<RenderPlayerEvent.Pre, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, auxiliar) -> {
-            eve.setCanceled(true);
-            if (newWolf == null) {
-                newWolf = new WerewolfRenderer(eve.getRenderer().getDispatcher());
-            }
-            newWolf.render(eve.getPlayer(), 0, eve.getPartialRenderTick(), eve.getMatrixStack(), eve.getBuffers(),
-                    eve.getLight());
-        };
-        if (!EventUtils.onWerewolfTransformation(event.getPlayer(), c, event)) {
-            newWolf = null;
-        }
-    }
-
     @SubscribeEvent
     public static void onRenderHandEvent(RenderHandEvent event) {
 
     }
+
 
     /**
      * @param event
@@ -221,19 +211,19 @@ public final class ClientForgeEventSubscriber {
      * @throws InvocationTargetException
      */
     @SubscribeEvent
-    public static void onCameraSetup(CameraSetup event) throws NoSuchMethodException, SecurityException,
+    public static void onCameraSetup(ViewportEvent.ComputeCameraAngles event) throws NoSuchMethodException, SecurityException,
             IllegalAccessException, IllegalArgumentException, InvocationTargetException {
 
-        PlayerEntity player = Minecraft.getInstance().player;
-        if (!Minecraft.getInstance().options.getCameraType().equals(PointOfView.FIRST_PERSON)) {
-            BiConsumer<CameraSetup, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, auxiliar) -> {
+        Player player = Minecraft.getInstance().player;
+        if (!Minecraft.getInstance().options.getCameraType().equals(CameraType.FIRST_PERSON)) {
+            BiConsumer<ViewportEvent.ComputeCameraAngles, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, auxiliar) -> {
             };
             if (EventUtils.onWerewolfTransformation(player, c, event)) {
                 if (method == null) {
-                    method = ActiveRenderInfo.class.getDeclaredMethod("move", tipos);
+                    method = event.getCamera().getClass().getDeclaredMethod("move", tipos);
                     method.setAccessible(true);
                 }
-                method.invoke(event.getInfo(), 0.5D, 1.5D, 0.0D);
+                method.invoke(event.getCamera(), 0.5D, 1.1D, 0.0D);
             }
         }
     }
@@ -243,7 +233,77 @@ public final class ClientForgeEventSubscriber {
      */
     @SubscribeEvent
     public static void onRenderLiving(RenderLivingEvent.Pre<?, ?> event) {
-
+        if (!(event.getEntity() instanceof Player))
+            return;
     }
+
+    @SubscribeEvent
+    public static void onPlayerRender(RenderPlayerEvent.Pre event) {
+        BiConsumer<RenderPlayerEvent.Pre, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, auxiliar) -> {
+            eve.setCanceled(true);
+            LivingEntityRenderer<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> renderer = eve.getRenderer();
+            if (entityRenderDispatcher == null) {
+                try {
+                    Field fontField = renderer.getClass().getSuperclass().getSuperclass().getDeclaredField("font");
+                    fontField.setAccessible(true);
+                    font = (Font) fontField.get(renderer);
+
+                    Field entityRenderDispatcherField = renderer.getClass().getSuperclass().getSuperclass().getDeclaredField("entityRenderDispatcher");
+                    entityRenderDispatcherField.setAccessible(true);
+                    entityRenderDispatcher = (EntityRenderDispatcher) entityRenderDispatcherField.get(renderer);
+
+                    Field entityModelsField = entityRenderDispatcher.getClass().getDeclaredField("entityModels");
+                    entityModelsField.setAccessible(true);
+                    entityModelSet = (EntityModelSet) entityModelsField.get(entityRenderDispatcher);
+
+                    Field itemInHandRendererField = entityRenderDispatcher.getClass().getDeclaredField("itemInHandRenderer");
+                    itemInHandRendererField.setAccessible(true);
+                    itemInHandRenderer = (ItemInHandRenderer) itemInHandRendererField.get(entityRenderDispatcher);
+
+                    Field itemRendererField = entityRenderDispatcher.getClass().getDeclaredField("itemRenderer");
+                    itemRendererField.setAccessible(true);
+                    itemRenderer = (ItemRenderer) itemRendererField.get(entityRenderDispatcher);
+
+                    Field blockRenderDispatcherField = entityRenderDispatcher.getClass().getDeclaredField("blockRenderDispatcher");
+                    blockRenderDispatcherField.setAccessible(true);
+                    blockRenderDispatcher = (BlockRenderDispatcher) blockRenderDispatcherField.get(entityRenderDispatcher);
+
+                } catch (NoSuchFieldException | IllegalAccessException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
+            if (newWolf == null) {
+                EntityRendererProvider.Context cc = new EntityRendererProvider.Context(
+                        entityRenderDispatcher,
+                        itemRenderer,
+                        blockRenderDispatcher,
+                        itemInHandRenderer,
+                        null,
+                        entityModelSet,
+                        font);
+                newWolf = new WerewolfRenderer(cc, false);
+                event.getEntity().refreshDimensions();
+                DevilRpg.LOGGER.debug("Created layer: {}, client side: {}", newWolf, event.getEntity().level.isClientSide());
+            }
+            newWolf.render((AbstractClientPlayer) eve.getEntity(), 0, eve.getPartialTick(), eve.getPoseStack(), eve.getMultiBufferSource(), eve.getPackedLight());
+        };
+
+        if (!EventUtils.onWerewolfTransformation(event.getEntity(), c, event) && newWolf != null) {
+            newWolf = null;
+            event.getEntity().refreshDimensions();
+        }
+    }
+
+    @SubscribeEvent
+    public static void onPlayerRender(RenderPlayerEvent.Post event) {
+        BiConsumer<RenderPlayerEvent.Pre, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, auxiliar) -> {
+            eve.setCanceled(true);
+            LivingEntityRenderer<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> renderer = eve.getRenderer();
+
+
+        };
+    }
+
 
 }

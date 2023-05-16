@@ -2,6 +2,7 @@ package com.chipoodle.devilrpg.capability.player_minion;
 
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.capability.mana.PlayerManaCapability;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
@@ -14,12 +15,16 @@ import net.minecraftforge.event.AttachCapabilitiesEvent;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static com.chipoodle.devilrpg.DevilRpg.LOGGER;
+
 public class PlayerMinionCapabilityAttacher {
 
     private PlayerMinionCapabilityAttacher() {
     }
 
     public static void attach(final AttachCapabilitiesEvent<Entity> event) {
+        if(event.getObject().getCapability(PlayerMinionCapability.INSTANCE).isPresent()) return;
+        LOGGER.info("-----> attach PlayerMinionCapabilityProvider");
         final PlayerMinionCapabilityProvider provider = new PlayerMinionCapabilityProvider();
         event.addCapability(PlayerMinionCapabilityProvider.IDENTIFIER, provider);
     }

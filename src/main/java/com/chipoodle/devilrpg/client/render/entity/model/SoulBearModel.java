@@ -1,75 +1,64 @@
 package com.chipoodle.devilrpg.client.render.entity.model;
 
-import com.chipoodle.devilrpg.entity.SoulBearEntity;
-
-import net.minecraft.client.renderer.entity.model.QuadrupedModel;
-import net.minecraft.client.renderer.model.ModelRenderer;
+import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.entity.SoulBear;
+import net.minecraft.client.model.QuadrupedModel;
+import net.minecraft.client.model.geom.ModelLayerLocation;
+import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.model.geom.PartPose;
+import net.minecraft.client.model.geom.builders.CubeListBuilder;
+import net.minecraft.client.model.geom.builders.LayerDefinition;
+import net.minecraft.client.model.geom.builders.MeshDefinition;
+import net.minecraft.client.model.geom.builders.PartDefinition;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 @OnlyIn(Dist.CLIENT)
-public class SoulBearModel<T extends SoulBearEntity> extends QuadrupedModel<T> {
-	public SoulBearModel() {
-		super(12, 0.0F, true, 16.0F, 4.0F, 2.25F, 2.0F, 24);
-		this.texWidth = 128;
-		this.texHeight = 64;
-		this.head = new ModelRenderer(this, 0, 0);
-		this.head.addBox(-3.5F, -3.0F, -3.0F, 7.0F, 7.0F, 7.0F, 0.0F);
-		this.head.setPos(0.0F, 10.0F, -16.0F);
-		this.head.texOffs(0, 44).addBox(-2.5F, 1.0F, -6.0F, 5.0F, 3.0F, 3.0F, 0.0F);
-		this.head.texOffs(26, 0).addBox(-4.5F, -4.0F, -1.0F, 2.0F, 2.0F, 1.0F, 0.0F);
-		ModelRenderer modelrenderer = this.head.texOffs(26, 0);
-		modelrenderer.mirror = true;
-		modelrenderer.addBox(2.5F, -4.0F, -1.0F, 2.0F, 2.0F, 1.0F, 0.0F);
-		this.body = new ModelRenderer(this);
-		this.body.texOffs(0, 19).addBox(-5.0F, -13.0F, -7.0F, 14.0F, 14.0F, 11.0F, 0.0F);
-		this.body.texOffs(39, 0).addBox(-4.0F, -25.0F, -7.0F, 12.0F, 12.0F, 10.0F, 0.0F);
-		this.body.setPos(-2.0F, 9.0F, 12.0F);
-		int i = 10;
-		this.leg0 = new ModelRenderer(this, 50, 22);
-		this.leg0.addBox(-2.0F, 0.0F, -2.0F, 4.0F, 10.0F, 8.0F, 0.0F);
-		this.leg0.setPos(-3.5F, 14.0F, 6.0F);
-		this.leg1 = new ModelRenderer(this, 50, 22);
-		this.leg1.addBox(-2.0F, 0.0F, -2.0F, 4.0F, 10.0F, 8.0F, 0.0F);
-		this.leg1.setPos(3.5F, 14.0F, 6.0F);
-		this.leg2 = new ModelRenderer(this, 50, 40);
-		this.leg2.addBox(-2.0F, 0.0F, -2.0F, 4.0F, 10.0F, 6.0F, 0.0F);
-		this.leg2.setPos(-2.5F, 14.0F, -7.0F);
-		this.leg3 = new ModelRenderer(this, 50, 40);
-		this.leg3.addBox(-2.0F, 0.0F, -2.0F, 4.0F, 10.0F, 6.0F, 0.0F);
-		this.leg3.setPos(2.5F, 14.0F, -7.0F);
-		--this.leg0.x;
-		++this.leg1.x;
-		this.leg0.z += 0.0F;
-		this.leg1.z += 0.0F;
-		--this.leg2.x;
-		++this.leg3.x;
-		--this.leg2.z;
-		--this.leg3.z;
-	}
+public class SoulBearModel<T extends SoulBear> extends QuadrupedModel<T> {
 
-	public void setupAnim(T p_225597_1_, float p_225597_2_, float p_225597_3_, float p_225597_4_, float p_225597_5_,float p_225597_6_) {
-		super.setupAnim(p_225597_1_, p_225597_2_, p_225597_3_, p_225597_4_, p_225597_5_, p_225597_6_);
-		float f = p_225597_4_ - (float) p_225597_1_.tickCount;
-		float f1 = p_225597_1_.getStandingAnimationScale(f);
-		f1 = f1 * f1;
-		float f2 = 1.0F - f1;
-		this.body.xRot = ((float) Math.PI / 2F) - f1 * (float) Math.PI * 0.35F;
-		this.body.y = 9.0F * f2 + 11.0F * f1;
-		this.leg2.y = 14.0F * f2 - 6.0F * f1;
-		this.leg2.z = -8.0F * f2 - 4.0F * f1;
-		this.leg2.xRot -= f1 * (float) Math.PI * 0.45F;
-		this.leg3.y = this.leg2.y;
-		this.leg3.z = this.leg2.z;
-		this.leg3.xRot -= f1 * (float) Math.PI * 0.45F;
-		if (this.young) {
-			this.head.y = 10.0F * f2 - 9.0F * f1;
-			this.head.z = -16.0F * f2 - 7.0F * f1;
-		} else {
-			this.head.y = 10.0F * f2 - 14.0F * f1;
-			this.head.z = -16.0F * f2 - 3.0F * f1;
-		}
+    public static final ModelLayerLocation LAYER_LOCATION = new ModelLayerLocation(new ResourceLocation(DevilRpg.MODID, "soulbear"), "armor");
+    public SoulBearModel(ModelPart p_170829_) {
+        super(p_170829_, true, 16.0F, 4.0F, 2.25F, 2.0F, 24);
+    }
 
-		this.head.xRot += f1 * (float) Math.PI * 0.15F;
-	}
+    public static LayerDefinition createBodyLayer() {
+        MeshDefinition meshdefinition = new MeshDefinition();
+        PartDefinition partdefinition = meshdefinition.getRoot();
+        partdefinition.addOrReplaceChild("head", CubeListBuilder.create().texOffs(0, 0).addBox(-3.5F, -3.0F, -3.0F, 7.0F, 7.0F, 7.0F).texOffs(0, 44).addBox("mouth", -2.5F, 1.0F, -6.0F, 5.0F, 3.0F, 3.0F).texOffs(26, 0).addBox("right_ear", -4.5F, -4.0F, -1.0F, 2.0F, 2.0F, 1.0F).texOffs(26, 0).mirror().addBox("left_ear", 2.5F, -4.0F, -1.0F, 2.0F, 2.0F, 1.0F), PartPose.offset(0.0F, 10.0F, -16.0F));
+        partdefinition.addOrReplaceChild("body", CubeListBuilder.create().texOffs(0, 19).addBox(-5.0F, -13.0F, -7.0F, 14.0F, 14.0F, 11.0F).texOffs(39, 0).addBox(-4.0F, -25.0F, -7.0F, 12.0F, 12.0F, 10.0F), PartPose.offsetAndRotation(-2.0F, 9.0F, 12.0F, ((float) Math.PI / 2F), 0.0F, 0.0F));
+        int i = 10;
+        CubeListBuilder cubelistbuilder = CubeListBuilder.create().texOffs(50, 22).addBox(-2.0F, 0.0F, -2.0F, 4.0F, 10.0F, 8.0F);
+        partdefinition.addOrReplaceChild("right_hind_leg", cubelistbuilder, PartPose.offset(-4.5F, 14.0F, 6.0F));
+        partdefinition.addOrReplaceChild("left_hind_leg", cubelistbuilder, PartPose.offset(4.5F, 14.0F, 6.0F));
+        CubeListBuilder cubelistbuilder1 = CubeListBuilder.create().texOffs(50, 40).addBox(-2.0F, 0.0F, -2.0F, 4.0F, 10.0F, 6.0F);
+        partdefinition.addOrReplaceChild("right_front_leg", cubelistbuilder1, PartPose.offset(-3.5F, 14.0F, -8.0F));
+        partdefinition.addOrReplaceChild("left_front_leg", cubelistbuilder1, PartPose.offset(3.5F, 14.0F, -8.0F));
+        return LayerDefinition.create(meshdefinition, 128, 64);
+    }
+
+    public void setupAnim(T p_103429_, float p_103430_, float p_103431_, float p_103432_, float p_103433_, float p_103434_) {
+        super.setupAnim(p_103429_, p_103430_, p_103431_, p_103432_, p_103433_, p_103434_);
+        float f = p_103432_ - (float) p_103429_.tickCount;
+        float f1 = p_103429_.getStandingAnimationScale(f);
+        f1 *= f1;
+        float f2 = 1.0F - f1;
+        this.body.xRot = ((float) Math.PI / 2F) - f1 * (float) Math.PI * 0.35F;
+        this.body.y = 9.0F * f2 + 11.0F * f1;
+        this.rightFrontLeg.y = 14.0F * f2 - 6.0F * f1;
+        this.rightFrontLeg.z = -8.0F * f2 - 4.0F * f1;
+        this.rightFrontLeg.xRot -= f1 * (float) Math.PI * 0.45F;
+        this.leftFrontLeg.y = this.rightFrontLeg.y;
+        this.leftFrontLeg.z = this.rightFrontLeg.z;
+        this.leftFrontLeg.xRot -= f1 * (float) Math.PI * 0.45F;
+        if (this.young) {
+            this.head.y = 10.0F * f2 - 9.0F * f1;
+            this.head.z = -16.0F * f2 - 7.0F * f1;
+        } else {
+            this.head.y = 10.0F * f2 - 14.0F * f1;
+            this.head.z = -16.0F * f2 - 3.0F * f1;
+        }
+
+        this.head.xRot += f1 * (float) Math.PI * 0.15F;
+    }
 }

@@ -8,10 +8,12 @@ import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
 import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
 import com.chipoodle.devilrpg.util.SkillEnum;
-import net.minecraft.entity.ai.attributes.AttributeModifier;
-import net.minecraft.entity.ai.attributes.Attributes;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.world.World;
+
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+
 
 import java.util.HashMap;
 import java.util.UUID;
@@ -21,7 +23,7 @@ public class PlayerPassiveWerewolfVitality extends AbstractPlayerPassive impleme
     public static final double HEALTH_FACTOR = 1.00D;
     AttributeModifier hitAttributeModifier;
     private final PlayerSkillCapabilityInterface parentCapability;
-    private PlayerEntity playerIn;
+    private Player playerIn;
 
     public PlayerPassiveWerewolfVitality(PlayerSkillCapabilityImplementation parentCapability) {
         this.parentCapability = parentCapability;
@@ -31,20 +33,20 @@ public class PlayerPassiveWerewolfVitality extends AbstractPlayerPassive impleme
     /**
      * *
      *
-     * @param worldIn
+     * @param levelIn
      * @param playerIn
      * @param parameters Server side called
      */
     @Override
-    public void execute(World worldIn, PlayerEntity playerIn, HashMap<String, String> parameters) {
-        if (!worldIn.isClientSide) {
+    public void execute(Level levelIn, Player playerIn, HashMap<String, String> parameters) {
+        if (!levelIn.isClientSide) {
 
             if (this.playerIn == null) {
                 this.playerIn = playerIn;
             }
             initializeAttributes(playerIn);
 
-            PlayerAuxiliaryCapabilityInterface auxiliary = IGenericCapability.getUnwrappedPlayerCapability(playerIn, PlayerAuxiliaryCapability.AUX_CAP);
+            PlayerAuxiliaryCapabilityInterface auxiliary = IGenericCapability.getUnwrappedPlayerCapability(playerIn, PlayerAuxiliaryCapability.INSTANCE);
             if (auxiliary.isWerewolfTransformation()) {
                 add();
             } else {
@@ -55,7 +57,7 @@ public class PlayerPassiveWerewolfVitality extends AbstractPlayerPassive impleme
         }
     }
 
-    private void initializeAttributes(PlayerEntity playerIn) {
+    private void initializeAttributes(Player playerIn) {
         if (hitAttributeModifier == null ||
                 hitAttributeModifier.getAmount() != Double.valueOf(parentCapability.getSkillsPoints().get(SkillEnum.WEREWOLF_VITALITY)) * HEALTH_FACTOR) {
             removeCurrentWerwolfVitalityModifiers();

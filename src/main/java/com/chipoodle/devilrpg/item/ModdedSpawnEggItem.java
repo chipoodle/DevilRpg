@@ -1,24 +1,24 @@
 package com.chipoodle.devilrpg.item;
 
+import net.minecraft.core.BlockSource;
+import net.minecraft.core.Direction;
+import net.minecraft.core.dispenser.DefaultDispenseItemBehavior;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.SpawnEggItem;
+import net.minecraft.world.level.block.DispenserBlock;
+import net.minecraftforge.common.util.Lazy;
+import net.minecraftforge.common.util.NonNullSupplier;
+import net.minecraftforge.fml.util.ObfuscationReflectionHelper;
+import net.minecraftforge.registries.RegistryObject;
+
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import javax.annotation.Nullable;
-
-import net.minecraft.block.DispenserBlock;
-import net.minecraft.dispenser.DefaultDispenseItemBehavior;
-import net.minecraft.dispenser.IBlockSource;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.SpawnReason;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.SpawnEggItem;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.util.Direction;
-import net.minecraftforge.common.util.Lazy;
-import net.minecraftforge.common.util.NonNullSupplier;
-import net.minecraftforge.fml.RegistryObject;
-import net.minecraftforge.fml.common.ObfuscationReflectionHelper;
 
 /**
  * Exists to work around a limitation with Spawn Eggs: Spawn Eggs require an
@@ -33,59 +33,59 @@ import net.minecraftforge.fml.common.ObfuscationReflectionHelper;
  */
 public class ModdedSpawnEggItem extends SpawnEggItem {
 
-	protected static final List<ModdedSpawnEggItem> UNADDED_EGGS = new ArrayList<>();
-	private final Lazy<? extends EntityType<?>> entityTypeSupplier;
+    protected static final List<ModdedSpawnEggItem> UNADDED_EGGS = new ArrayList<>();
+    private final Lazy<? extends EntityType<?>> entityTypeSupplier;
 
-	public ModdedSpawnEggItem(final NonNullSupplier<? extends EntityType<?>> entityTypeSupplier,
-			final int primaryColorIn, final int secondaryColorIn, final Properties builder) {
-		super(null, primaryColorIn, secondaryColorIn, builder);
-		this.entityTypeSupplier = Lazy.of(entityTypeSupplier::get);
-		UNADDED_EGGS.add(this);
-	}
+    public ModdedSpawnEggItem(final NonNullSupplier<? extends EntityType<?>> entityTypeSupplier,
+                              final int primaryColorIn, final int secondaryColorIn, final Properties builder) {
+        super(null, primaryColorIn, secondaryColorIn, builder);
+        this.entityTypeSupplier = Lazy.of(entityTypeSupplier::get);
+        UNADDED_EGGS.add(this);
+    }
 
-	public ModdedSpawnEggItem(final RegistryObject<? extends EntityType<?>> entityTypeSupplier,
-			final int primaryColorIn, final int secondaryColorIn, final Properties builder) {
-		super(null, primaryColorIn, secondaryColorIn, builder);
-		this.entityTypeSupplier = Lazy.of(entityTypeSupplier);
-		UNADDED_EGGS.add(this);
-	}
+    public ModdedSpawnEggItem(final RegistryObject<? extends EntityType<?>> entityTypeSupplier,
+                              final int primaryColorIn, final int secondaryColorIn, final Properties builder) {
+        super(null, primaryColorIn, secondaryColorIn, builder);
+        this.entityTypeSupplier = Lazy.of(entityTypeSupplier);
+        UNADDED_EGGS.add(this);
+    }
 
-	/**
-	 * Adds all the supplier based spawn eggs to vanilla's map and registers an
-	 * IDispenseItemBehavior for each of them as normal spawn eggs have one
-	 * registered for each of them during
-	 * {@link net.minecraft.dispenser.IDispenseItemBehavior#init()} but supplier
-	 * based ones won't have had their EntityTypes created yet.
-	 */
-	public static void initUnaddedEggs() {
-		final Map<EntityType<?>, SpawnEggItem> EGGS = ObfuscationReflectionHelper.getPrivateValue(SpawnEggItem.class,
-				null, "BY_ID");
-		DefaultDispenseItemBehavior defaultDispenseItemBehavior = new DefaultDispenseItemBehavior() {
-			@Override
-			protected ItemStack execute(IBlockSource source, ItemStack stack) {
-				Direction direction = source.getBlockState().getValue(DispenserBlock.FACING);
-				EntityType<?> type = ((SpawnEggItem) stack.getItem()).getType(stack.getTag());
-				type.spawn(source.getLevel(), stack, null, source.getPos().relative(direction), SpawnReason.DISPENSER,
-						direction != Direction.UP, false);
-				stack.shrink(1);
-				return stack;
-			}
+    /**
+     * Adds all the supplier based spawn eggs to vanilla's map and registers an
+     * IDispenseItemBehavior for each of them as normal spawn eggs have one
+     * registered for each of them during
+     */
+    public static void initUnaddedEggs() {
+        final Map<EntityType<?>, SpawnEggItem> EGGS = ObfuscationReflectionHelper.getPrivateValue(SpawnEggItem.class,
+                null, "BY_ID");
+        DefaultDispenseItemBehavior defaultDispenseItemBehavior = new DefaultDispenseItemBehavior() {
+            @Override
+            protected ItemStack execute(BlockSource source, ItemStack stack) {
+                Direction direction = source.getBlockState().getValue(DispenserBlock.FACING);
+                EntityType<?> type = ((SpawnEggItem) stack.getItem()).getType(stack.getTag());
+				/*type.spawn(source.getLevel(), stack, null, source.getPos().relative(direction), SpawnReason.DISPENSER,
+						direction != Direction.UP, false);*/
 
-		};
-		UNADDED_EGGS.stream().map((egg) -> {
-			EGGS.put(egg.getType(null), egg);
-			return egg;
-		}).forEachOrdered((egg) -> {
-			DispenserBlock.registerBehavior(egg, defaultDispenseItemBehavior);
-			// ItemColors for each spawn egg don't need to be registered because this method
-			// is called before ItemColors is created
-		});
-		UNADDED_EGGS.clear();
-	}
+                type.spawn(source.getLevel(), stack, null, source.getPos().relative(direction), MobSpawnType.DISPENSER, false, false);
+                stack.shrink(1);
+                return stack;
+            }
 
-	@Override
-	public EntityType<?> getType(@Nullable final CompoundNBT nbt) {
-		return entityTypeSupplier.get();
-	}
+        };
+        UNADDED_EGGS.stream().map((egg) -> {
+            EGGS.put(egg.getType(null), egg);
+            return egg;
+        }).forEachOrdered((egg) -> {
+            DispenserBlock.registerBehavior(egg, defaultDispenseItemBehavior);
+            // ItemColors for each spawn egg don't need to be registered because this method
+            // is called before ItemColors is created
+        });
+        UNADDED_EGGS.clear();
+    }
+
+    @Override
+    public EntityType<?> getType(@Nullable final CompoundTag nbt) {
+        return entityTypeSupplier.get();
+    }
 
 }

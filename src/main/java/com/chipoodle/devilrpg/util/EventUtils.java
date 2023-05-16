@@ -5,8 +5,12 @@ import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.player.Player;
+import net.minecraftforge.client.event.RenderLivingEvent;
+import net.minecraftforge.client.event.RenderPlayerEvent;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.util.LazyOptional;
+import net.minecraftforge.event.entity.EntityEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
 
 import java.util.function.BiConsumer;
 
@@ -36,12 +40,12 @@ public class EventUtils {
 	}*/
 
     @SuppressWarnings("unchecked")
-    public static <T, U extends LazyOptional<PlayerAuxiliaryCapabilityInterface>> boolean onWerewolfTransformation(Player player, BiConsumer<T, U> typedFunctionToExcecute, T event) {
+    public static <T, U extends LazyOptional<PlayerAuxiliaryCapabilityInterface>> boolean onWerewolfTransformation(Player player, BiConsumer<T, U> typedFunctionToExecute, T event) {
         if (player != null) {
-            U aux = (U) player.getCapability(PlayerAuxiliaryCapability.AUX_CAP);
+            U aux = (U) player.getCapability(PlayerAuxiliaryCapability.INSTANCE);
             if (!aux.isPresent() || !aux.map(PlayerAuxiliaryCapabilityInterface::isWerewolfTransformation).orElse(true))
                 return false;
-            typedFunctionToExcecute.accept(event, aux);
+            typedFunctionToExecute.accept(event, aux);
             return true;
         }
         return false;
@@ -55,4 +59,5 @@ public class EventUtils {
             mainThread.tell(() -> typedFunctionToExecute.accept(player, capabilityInstance));
         }
     }
+
 }

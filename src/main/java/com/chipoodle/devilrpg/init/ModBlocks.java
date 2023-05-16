@@ -2,6 +2,9 @@ package com.chipoodle.devilrpg.init;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.block.SoulVineBlock;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraftforge.registries.DeferredRegister;
@@ -32,4 +35,6 @@ public final class ModBlocks {
             Block.Properties.copy(Blocks.VINE)
             //.randomTicks().noCollission().strength(0.2F).sound(SoundType.VINE)
     ));
+
+    /*public static final TagKey<Block> SOULVINE_TAG = BlockTags.create(new ResourceLocation(DevilRpg.MODID,"climbable"));*/
 }
