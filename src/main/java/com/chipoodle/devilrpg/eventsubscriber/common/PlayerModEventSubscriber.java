@@ -71,7 +71,7 @@ public final class PlayerModEventSubscriber {
      * @param event
      */
     @SubscribeEvent
-    public static void onModConfigEvent(final ModConfigEvent event) {
+    public static void onModConfigEvent(final ModConfigEvent.Loading  event) {
         DevilRpg.LOGGER.info("----------------------->ModEventSubscriber.onModConfigEvent()");
         final ModConfig config = event.getConfig();
         // Rebake the configs when they change

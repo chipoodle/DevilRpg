@@ -104,6 +104,15 @@ public class SkillForgeEventSubscriber {
 		EventUtils.onWerewolfTransformation(event.getEntity(), c, event);
 	}
 
+	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
+	public static void onRightClickItem(PlayerInteractEvent.RightClickItem event) {
+		BiConsumer<PlayerInteractEvent.RightClickItem, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, auxiliar) -> {
+			eve.getEntity().swinging = false;
+			eve.setCanceled(true);
+		};
+		EventUtils.onWerewolfTransformation(event.getEntity(), c, event);
+	}
+
 	@SubscribeEvent(priority = EventPriority.HIGHEST, receiveCanceled = true)
 	public static void onEntityInteract(PlayerInteractEvent.EntityInteract event) {
 		BiConsumer<PlayerInteractEvent.EntityInteract, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, auxiliar) -> {
