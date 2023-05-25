@@ -156,9 +156,9 @@ public class TargetUtils {
      * and within the distance and radius specified
      *
      * @param seeker          the LivingEntity
-     * @param distance        max distance to check for target, in blocks; negative
+     * @param distance        max distance to check for target, in block; negative
      *                        value will check to MAX_DISTANCE
-     * @param radius          max distance, in blocks, to search on either side of
+     * @param radius          max distance, in block, to search on either side of
      *                        the vector's path
      * @param closestToSeeker if true, the target closest to the seeker and still
      *                        within the line of sight search radius is returned

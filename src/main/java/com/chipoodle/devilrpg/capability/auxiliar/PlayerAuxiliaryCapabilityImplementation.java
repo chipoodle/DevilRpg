@@ -23,7 +23,7 @@ public class PlayerAuxiliaryCapabilityImplementation implements PlayerAuxiliaryC
     @Override
     public void setWerewolfAttack(boolean active, Player player) {
         werewolfAttack = active;
-        DevilRpg.LOGGER.info("------client sending to server attaking werewolf: " + active);
+        //DevilRpg.LOGGER.info("------Client sending to server attaking werewolf: {} isClientSide {}, main hand? {}",active, player.level.isClientSide,swingingMainHand);
         if (!player.level.isClientSide) {
             //player.sendMessage(new StringTextComponent("Sending to client attaking werewolf: " + active),player.getUUID());
             sendAuxiliaryChangesToClient((ServerPlayer) player);

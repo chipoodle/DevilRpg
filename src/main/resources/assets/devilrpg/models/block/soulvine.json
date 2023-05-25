@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:block/cross",
+  "ambientocclusion": false,
+  "render_type": "minecraft:translucent",
+  "textures": {
+    "particle": "block/vine",
+    "cross": "devilrpg:block/soulvine"
+  }
+}

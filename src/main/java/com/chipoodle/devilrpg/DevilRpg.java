@@ -27,6 +27,7 @@ public class DevilRpg {
 
         // Register Deferred Registers (Does not need to be before Configs)
         ModBlocks.BLOCKS.register(modEventBus);
+        ModEntityBlocks.BLOCK_ENTITIES.register(modEventBus);
         ModItems.ITEMS.register(modEventBus);
         ModEntities.ENTITY_TYPES.register(modEventBus);
         ModSounds.SOUND_EVENTS.register(modEventBus);

@@ -95,22 +95,22 @@ public class WerewolfHumanModel<T extends LivingEntity> extends HumanoidModel<T>
 		this.cloak.render(p_103412_, p_103413_, p_103414_, p_103415_);
 	}
 
-	public void setupAnim(T p_103395_, float p_103396_, float p_103397_, float p_103398_, float p_103399_, float p_103400_) {
-		super.setupAnim(p_103395_, p_103396_, p_103397_, p_103398_, p_103399_, p_103400_);
+	public void setupAnim(T entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
+		super.setupAnim(entity, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
 		this.leftPants.copyFrom(this.leftLeg);
 		this.rightPants.copyFrom(this.rightLeg);
 		this.leftSleeve.copyFrom(this.leftArm);
 		this.rightSleeve.copyFrom(this.rightArm);
 		this.jacket.copyFrom(this.body);
-		if (p_103395_.getItemBySlot(EquipmentSlot.CHEST).isEmpty()) {
-			if (p_103395_.isCrouching()) {
+		if (entity.getItemBySlot(EquipmentSlot.CHEST).isEmpty()) {
+			if (entity.isCrouching()) {
 				this.cloak.z = 1.4F;
 				this.cloak.y = 1.85F;
 			} else {
 				this.cloak.z = 0.0F;
 				this.cloak.y = 0.0F;
 			}
-		} else if (p_103395_.isCrouching()) {
+		} else if (entity.isCrouching()) {
 			this.cloak.z = 0.3F;
 			this.cloak.y = 0.8F;
 		} else {
@@ -143,8 +143,7 @@ public class WerewolfHumanModel<T extends LivingEntity> extends HumanoidModel<T>
 		}
 
 	}
-
-	public ModelPart getRandomModelPart(RandomSource p_233439_) {
-		return this.parts.get(p_233439_.nextInt(this.parts.size()));
+	public ModelPart getRandomModelPart(RandomSource randomSource) {
+		return this.parts.get(randomSource.nextInt(this.parts.size()));
 	}
 }

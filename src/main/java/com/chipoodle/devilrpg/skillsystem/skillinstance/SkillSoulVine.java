@@ -2,7 +2,10 @@ package com.chipoodle.devilrpg.skillsystem.skillinstance;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.block.SoulVineBlock;
+import com.chipoodle.devilrpg.capability.IGenericCapability;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.init.ModBlocks;
 import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
 import com.chipoodle.devilrpg.util.SkillEnum;
@@ -12,7 +15,6 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
@@ -37,29 +39,41 @@ public class SkillSoulVine implements ISkillContainer {
             levelIn.playSound(null, playerIn.getX(), playerIn.getY(), playerIn.getZ(),
                     SoundEvents.CHICKEN_EGG, SoundSource.NEUTRAL, 0.5F,
                     0.4F / (rand.nextFloat() * 0.4F + 0.8F));
-            setVine(levelIn, playerIn);
+
+            PlayerSkillCapabilityInterface skillCap = IGenericCapability.getUnwrappedPlayerCapability(playerIn,
+                    PlayerSkillCapability.INSTANCE);
+
+            setVine(levelIn, playerIn, skillCap);
         }
     }
 
-    private void setVine(Level levelIn, Player playerIn) {
-        BlockPos blockPos = playerIn.blockPosition();
-        Block block = ModBlocks.SOUL_VINE_BLOCK.get();
-        BlockState blockState = levelIn.getBlockState(blockPos);
-
+    private void setVine(Level levelIn, Player playerIn, PlayerSkillCapabilityInterface skillCap) {
+        BlockPos playerBlockPos = playerIn.blockPosition();
+        SoulVineBlock createdBlock = ModBlocks.SOUL_VINE_BLOCK.get();
+        BlockState playerBlockState = levelIn.getBlockState(playerBlockPos);
         Vec3 playerLookVector = playerIn.getLookAngle();
-        Direction nearest = Direction.getNearest(playerLookVector.x, 0, playerLookVector.z);
+        Direction nearestDirection = Direction.getNearest(playerLookVector.x, 0, playerLookVector.z);
+        //DevilRpg.LOGGER.info("-------->Direction: {}" , nearestDirection);
+        BlockPos newBlockpos = playerBlockPos.relative(nearestDirection);
 
-        DevilRpg.LOGGER.info("-------->Direction: " + nearest);
+        //createdBlock.setGrowthDirection(nearestDirection);
+        //createdBlock.setEdad(5);
+        if (playerBlockState.getBlock().equals(Blocks.AIR)) {
+            int skillPoints = skillCap.getSkillsPoints().get(SkillEnum.SOULVINE);
 
-        if (blockState.getBlock().equals(Blocks.AIR))
+            DevilRpg.LOGGER.info("-------->placed block: {} calculatedProgression: {}", createdBlock,skillPoints);
             levelIn
-                    .setBlock(
-                            blockPos,
-                            //block.defaultBlockState().setValue(SoulVineBlock.getPropertyForFace(playerViewDirection.), Boolean.valueOf(true)),
-                            block.defaultBlockState()
-                                    //.setValue(SoulVineBlock.getPropertyForFace(Direction.UP), Boolean.valueOf(true))
-                                    .setValue(SoulVineBlock.getPropertyForFace(Direction.UP), Boolean.valueOf(true))
-                            ,
-                            2);
+                    .setBlockAndUpdate(
+                            newBlockpos,
+                            createdBlock.defaultBlockState()
+                                    .setValue(SoulVineBlock.AGE,1)
+                                    .setValue(SoulVineBlock.DIRECTIONS,nearestDirection)
+                                    .setValue(SoulVineBlock.LEVEL,skillPoints)
+                    );
+            //levelIn.scheduleTick(newBlockpos,createdBlock,1);
+
+
+        }
     }
+
 }

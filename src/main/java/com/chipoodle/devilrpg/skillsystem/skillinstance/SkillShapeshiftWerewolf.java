@@ -1,8 +1,8 @@
 package com.chipoodle.devilrpg.skillsystem.skillinstance;
 
 import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
+import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
 import com.chipoodle.devilrpg.entity.ITamableEntity;
 import com.chipoodle.devilrpg.init.ModNetwork;
@@ -11,7 +11,6 @@ import com.chipoodle.devilrpg.network.handler.WerewolfAttackServerHandler;
 import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import com.chipoodle.devilrpg.util.TargetUtils;
-
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundSource;
@@ -27,16 +26,15 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.common.util.LazyOptional;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class SkillShapeshiftWerewolf extends AbstractPlayerPassive implements ISkillContainer, ICapabilityAttributeModifier {
     // public static final String HEALTH = "HEALTH";
     public static final String SPEED = "SPEED";
     private static final ResourceLocation SUMMON_SOUND = new ResourceLocation(DevilRpg.MODID, "summon");
-    //AttributeModifier healthAttributeModifier;
-    AttributeModifier speedAttributeModifier;
     private final PlayerSkillCapabilityImplementation parentCapability;
     private final Random rand = new Random();
+    //AttributeModifier healthAttributeModifier;
+    AttributeModifier speedAttributeModifier;
 
     public SkillShapeshiftWerewolf(PlayerSkillCapabilityImplementation parentCapability) {
         this.parentCapability = parentCapability;
@@ -66,7 +64,7 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassive implements IS
                 removeCurrentModifiers(playerIn);
             }
 
-            super.executePassiveChildren(parentCapability,getSkillEnum(),worldIn,playerIn);
+            super.executePassiveChildren(parentCapability, getSkillEnum(), worldIn, playerIn);
 
 
 
@@ -120,52 +118,47 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassive implements IS
      * @param player
      */
     @OnlyIn(Dist.CLIENT)
-    public void playerTickEventAttack(final Player player, LazyOptional<PlayerAuxiliaryCapabilityInterface> aux) {
-        if (player.level.isClientSide) {
-            //DevilRpg.LOGGER.info("Skill.playerTickEventAttack");
-            aux.ifPresent(auxiliaryCapability -> {
-                int points = parentCapability.getSkillsPoints().get(SkillEnum.TRANSFORM_WEREWOLF);
-                float s = (15L - points * 0.5F);
-                long attackTime = (long) s;
-                //LivingEntity target = null;
-                //DevilRpg.LOGGER.info("Skill.playerTickEventAttack.attackTime {} player.tickCount {}",attackTime,player.tickCount);
-
-
-                if (Math.floor(player.tickCount % attackTime) == 0) {
-                    //DevilRpg.LOGGER.info("player.tickCount % attackTime {}",player.tickCount % attackTime);
-                    InteractionHand hand = auxiliaryCapability.swingHands(player);
-                    getEnemies(player, hand);
-                }
-
-            });
+    public void playerTickEventAttack(final Player player, PlayerAuxiliaryCapabilityInterface auxiliaryCapability) {
+        //if (player.level.isClientSide) {
+        //DevilRpg.LOGGER.info("Skill.playerTickEventAttack");
+        //DevilRpg.LOGGER.info("att time : {}.  Player.tickCount / attackTime {}", attackTime, player.tickCount / attackTime);
+        InteractionHand hand = auxiliaryCapability.swingHands(player);
+        LivingEntity closestEnemy = findClosestEnemy(player);
+        if (closestEnemy != null) {
+            DevilRpg.LOGGER.info("-------> Closest enemy : {}", closestEnemy);
+            player.setLastHurtMob(closestEnemy);
+            renderParticles(player, hand);
+            attackEnemies(closestEnemy, hand);
         }
+        //}
     }
 
-    /**
-     * @param player
-     * @param hand
-     */
-    private void getEnemies(final Player player, InteractionHand hand) {
-        DevilRpg.LOGGER.info("getEnemies");
+    private LivingEntity findClosestEnemy(final Player player) {
         LivingEntity target;
         int distance = 1;
         double radius = 2;
-        if (player != null) {
-            List<LivingEntity> targetList = TargetUtils.acquireAllLookTargets(player, distance, radius).stream()
-                    .filter(x -> !(x instanceof ITamableEntity) || !x.isAlliedTo(player))
-                    .collect(Collectors.toList());
+        //if (player != null) {
+        List<LivingEntity> targetList = TargetUtils.acquireAllLookTargets(player, distance, radius).stream()
+                .filter(x -> !(x instanceof ITamableEntity) || !x.isAlliedTo(player))
+                .toList();
 
-            //DevilRpg.LOGGER.info("targetList.size:{}",targetList.size());
-            target = targetList.stream()
-                    .filter(x -> targetList.size() == 1 || !x.equals(player.getLastHurtMob()))
-                    .min(Comparator.comparing(entity -> entity.position().distanceToSqr(player.position()))).orElse(null);
-            if (target != null /* && TargetUtils.canReachTarget(player, target) */) {
-                renderParticles(player, hand);
-                player.setLastHurtMob(target);
-                ModNetwork.CHANNEL.sendToServer(new WerewolfAttackServerHandler(target.getId(), hand));
-            }
-        }
+        //DevilRpg.LOGGER.info("targetList.size:{}",targetList.size());
+        target = targetList.stream()
+                .filter(x -> targetList.size() == 1 || !x.equals(player.getLastHurtMob()))
+                .min(Comparator.comparing(entity -> entity.position().distanceToSqr(player.position()))).orElse(null);
+        //}
+        return target;
     }
+
+    /**
+     * @param hand
+     */
+    private void attackEnemies(LivingEntity target, InteractionHand hand) {
+        //if (target != null /* && TargetUtils.canReachTarget(player, target) */) {
+        ModNetwork.CHANNEL.sendToServer(new WerewolfAttackServerHandler(target.getId(), hand));
+        //}
+    }
+
 
     /**
      * @param player

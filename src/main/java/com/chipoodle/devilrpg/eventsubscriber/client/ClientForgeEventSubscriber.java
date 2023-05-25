@@ -6,13 +6,18 @@
 package com.chipoodle.devilrpg.eventsubscriber.client;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.block.SoulVineBlock;
+import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
+import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapability;
+import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapabilityInterface;
 import com.chipoodle.devilrpg.capability.mana.PlayerManaCapability;
 import com.chipoodle.devilrpg.capability.mana.PlayerManaCapabilityInterface;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.client.render.entity.renderer.WerewolfRenderer;
+import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
 import com.chipoodle.devilrpg.skillsystem.skillinstance.SkillShapeshiftWerewolf;
 import com.chipoodle.devilrpg.util.EventUtils;
 import com.chipoodle.devilrpg.util.SkillEnum;
@@ -37,6 +42,7 @@ import net.minecraftforge.client.gui.overlay.NamedGuiOverlay;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.event.level.BlockEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.LogicalSide;
@@ -46,6 +52,7 @@ import org.lwjgl.glfw.GLFW;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Objects;
 import java.util.function.BiConsumer;
 
 import static net.minecraftforge.client.gui.overlay.VanillaGuiOverlay.ARMOR_LEVEL;
@@ -127,9 +134,11 @@ public final class ClientForgeEventSubscriber {
 
     }
 
+
+
     @OnlyIn(Dist.CLIENT)
     @SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
-    public static void onMouseRawEvent(InputEvent.MouseButton event) {
+    public static void onMouseRawEvent(InputEvent.MouseButton.Pre event) {
 
         Minecraft mc = Minecraft.getInstance();
         LocalPlayer player = mc.player;
@@ -141,13 +150,13 @@ public final class ClientForgeEventSubscriber {
             player.swinging = false;
             if (event.getButton() == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
                 if (event.getAction() == GLFW.GLFW_PRESS) {
-                    DevilRpg.LOGGER.info("pressed");
+                    //DevilRpg.LOGGER.info("onMouseRawEvent GLFW_MOUSE_BUTTON_RIGHT pressed. setWerewolfAttack true");
                     aux.ifPresent(werwolf -> werwolf.setWerewolfAttack(true, player));
                 }
             }
 
             if (event.getAction() == GLFW.GLFW_RELEASE) {
-                DevilRpg.LOGGER.info("released");
+                //DevilRpg.LOGGER.info("onMouseRawEvent released. setWerewolfAttack false");
                 aux.ifPresent(werwolf -> werwolf.setWerewolfAttack(false, player));
             }
         }
@@ -155,23 +164,22 @@ public final class ClientForgeEventSubscriber {
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onPlayerTickAttack(TickEvent.PlayerTickEvent event) {
-        if (event.side.equals(LogicalSide.CLIENT)) {
-            if (event.phase == TickEvent.Phase.START) {
-
-                LazyOptional<PlayerSkillCapabilityInterface> skillCapability = event.player
-                        .getCapability(PlayerSkillCapability.INSTANCE);
-                LazyOptional<PlayerAuxiliaryCapabilityInterface> auxCapability = event.player
-                        .getCapability(PlayerAuxiliaryCapability.INSTANCE);
-                if (skillCapability != null && auxCapability != null) {
-                    boolean werewolfTransformation = auxCapability.map(x -> x.isWerewolfTransformation()).orElse(false);
-                    boolean werewolfAttack = auxCapability.map(x -> x.isWerewolfAttack()).orElse(false);
-                    if (werewolfTransformation && werewolfAttack) {
-                        //DevilRpg.LOGGER.info("clientForgeEvent.onPlayerTickAttack");
-                        skillCapability
-                                .ifPresent(x -> ((SkillShapeshiftWerewolf) x.create(SkillEnum.TRANSFORM_WEREWOLF))
-                                        .playerTickEventAttack(event.player, auxCapability));
-                    }
-
+        if (event.side.equals(LogicalSide.CLIENT) && event.phase == TickEvent.Phase.START) {
+            PlayerSkillCapabilityInterface skillCapability = IGenericCapability.getUnwrappedPlayerCapability(event.player, PlayerSkillCapability.INSTANCE);
+            PlayerAuxiliaryCapabilityInterface auxCapability = IGenericCapability.getUnwrappedPlayerCapability(event.player, PlayerAuxiliaryCapability.INSTANCE);
+            boolean werewolfTransformation = auxCapability.isWerewolfTransformation();
+            boolean werewolfAttack = auxCapability.isWerewolfAttack();
+            if (werewolfTransformation && werewolfAttack) {
+                //DevilRpg.LOGGER.info("clientForgeEvent.onPlayerTickAttack");
+                //float s = 5L;
+                //LivingEntity target = null;
+                //DevilRpg.LOGGER.info("Skill.playerTickEventAttack.attackTime {} player.tickCount {}",attackTime,player.tickCount);
+                int points = skillCapability.getSkillsPoints().get(SkillEnum.TRANSFORM_WEREWOLF);
+                float s = (15L - points * 0.5F);
+                long attackTime = (long) s;
+                if (Math.floor(event.player.tickCount % attackTime) == 0) {
+                    SkillShapeshiftWerewolf skill = (SkillShapeshiftWerewolf) skillCapability.create(SkillEnum.TRANSFORM_WEREWOLF);
+                    skill.playerTickEventAttack(event.player, auxCapability);
                 }
             }
         }
@@ -181,8 +189,7 @@ public final class ClientForgeEventSubscriber {
     public static void onPlayerTickMana(TickEvent.PlayerTickEvent event) {
         if (event.side.equals(LogicalSide.CLIENT)) {
             if (event.phase == TickEvent.Phase.START) {
-                LazyOptional<PlayerManaCapabilityInterface> manaCapability = event.player
-                        .getCapability(PlayerManaCapability.INSTANCE);
+                LazyOptional<PlayerManaCapabilityInterface> manaCapability = event.player.getCapability(PlayerManaCapability.INSTANCE);
                 // Mana
                 manaCapability.ifPresent(m -> m.onPlayerTickEventRegeneration(event.player));
 
@@ -304,6 +311,5 @@ public final class ClientForgeEventSubscriber {
 
         };
     }
-
 
 }

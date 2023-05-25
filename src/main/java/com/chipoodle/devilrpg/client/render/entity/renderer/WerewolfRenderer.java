@@ -1,12 +1,11 @@
 package com.chipoodle.devilrpg.client.render.entity.renderer;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.client.render.entity.layer.WerewolfArrowLayer;
 import com.chipoodle.devilrpg.client.render.entity.model.WerewolfTransformedModel;
-import com.chipoodle.devilrpg.entity.SoulWisp;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import net.minecraft.client.model.HumanoidModel;
-import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -23,30 +22,31 @@ import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.item.CrossbowItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.UseAnim;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.scores.Objective;
 import net.minecraft.world.scores.Score;
 import net.minecraft.world.scores.Scoreboard;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
+import org.jetbrains.annotations.NotNull;
 
 @OnlyIn(Dist.CLIENT)
 public class WerewolfRenderer extends LivingEntityRenderer<AbstractClientPlayer, WerewolfTransformedModel<AbstractClientPlayer>> {
 
     private static final ResourceLocation WEREWOLF_TEXTURE = new ResourceLocation(DevilRpg.MODID + ":/textures/entity/werewolf/wolftimber.png");
 
-    public WerewolfRenderer(EntityRendererProvider.Context p_174557_, boolean p_174558_) {
-        super(p_174557_, new WerewolfTransformedModel<>(p_174557_.bakeLayer(WerewolfTransformedModel.WEREWOLF_LAYER_LOCATION)), 0.5F);
-        //this.addLayer(new HumanoidArmorLayer<>(this, new HumanoidModel(p_174557_.bakeLayer(p_174558_ ? ModelLayers.PLAYER_SLIM_INNER_ARMOR : ModelLayers.PLAYER_INNER_ARMOR)), new HumanoidModel(p_174557_.bakeLayer(p_174558_ ? ModelLayers.PLAYER_SLIM_OUTER_ARMOR : ModelLayers.PLAYER_OUTER_ARMOR))));
-        //this.addLayer(new PlayerItemInHandLayer<>(this, p_174557_.getItemInHandRenderer()));
-        //this.addLayer(new WerewolfArrowLayer<>(p_174557_, this));
+    public WerewolfRenderer(EntityRendererProvider.Context context, boolean p_174558_) {
+        super(context, new WerewolfTransformedModel<>(context.bakeLayer(WerewolfTransformedModel.WEREWOLF_LAYER_LOCATION)), 0.5F);
+        //this.addLayer(new WerewolfArmorLayer<>(this, new WerewolfTransformedModel(context.bakeLayer( ModelLayers.PLAYER_INNER_ARMOR)), new WerewolfTransformedModel(context.bakeLayer( ModelLayers.PLAYER_OUTER_ARMOR))));
+        //this.addLayer(new WerewolfArmorLayer<>(this, new WerewolfTransformedModel(context.bakeLayer(WerewolfTransformedModel.WEREWOLF_INNER_ARMOR_LAYER_LOCATION)), new WerewolfTransformedModel(context.bakeLayer(WerewolfTransformedModel.WEREWOLF_OUTER_ARMOR_LAYER_LOCATION))));
+        //this.addLayer(new PlayerItemInHandLayer<>(this, context.getItemInHandRenderer()));
+        this.addLayer(new WerewolfArrowLayer<>(context, this));
         //boolean b = this.addLayer(new Deadmau5EarsLayer(this));
         //this.addLayer(new CapeLayer(this));
-        //this.addLayer(new CustomHeadLayer<>(this, p_174557_.getModelSet(), p_174557_.getItemInHandRenderer()));
-        this.addLayer(new ElytraLayer<>(this, p_174557_.getModelSet()));
-        //this.addLayer(new ParrotOnShoulderLayer<>(this, p_174557_.getModelSet()));
-        //this.addLayer(new SpinAttackEffectLayer<>(this, p_174557_.getModelSet()));
+        //this.addLayer(new CustomHeadLayer<>(this, context.getModelSet(), context.getItemInHandRenderer()));
+        this.addLayer(new ElytraLayer<>(this, context.getModelSet()));
+        //this.addLayer(new ParrotOnShoulderLayer<>(this, context.getModelSet()));
+        //this.addLayer(new SpinAttackEffectLayer<>(this, context.getModelSet()));
         //this.addLayer(new BeeStingerLayer<>(this));
     }
 
@@ -105,11 +105,11 @@ public class WerewolfRenderer extends LivingEntityRenderer<AbstractClientPlayer,
     }
 
     private void setModelProperties(AbstractClientPlayer p_117819_) {
-        WerewolfTransformedModel<AbstractClientPlayer> WerewolfHumanModel = this.getModel();
+        WerewolfTransformedModel<AbstractClientPlayer> werewolfHumanModel = this.getModel();
         if (p_117819_.isSpectator()) {
-           // WerewolfHumanModel.setAllVisible(false);
-           // WerewolfHumanModel.head.visible = true;
-            //WerewolfHumanModel.hat.visible = true;
+             //WerewolfHumanModel.setAllVisible(false);
+             werewolfHumanModel.head.visible = true;
+             //WerewolfHumanModel.hat.visible = true;
         } else {
             //WerewolfHumanModel.setAllVisible(true);
 			/*WerewolfHumanModel.hat.visible = p_117819_.isModelPartShown(WerewolfHumanModelPart.HAT);
@@ -136,11 +136,11 @@ public class WerewolfRenderer extends LivingEntityRenderer<AbstractClientPlayer,
 
     }
 
-    public ResourceLocation getTextureLocation(AbstractClientPlayer p_117783_) {
+    public @NotNull ResourceLocation getTextureLocation(AbstractClientPlayer p_117783_) {
         return WEREWOLF_TEXTURE;
     }
 
-    protected void scale(AbstractClientPlayer p_117798_, PoseStack p_117799_, float p_117800_) {
+    protected void scale(@NotNull AbstractClientPlayer p_117798_, @NotNull PoseStack p_117799_, float p_117800_) {
         /*float f = 0.9375F;
         p_117799_.scale(f, f, f);*/
     }
@@ -163,20 +163,22 @@ public class WerewolfRenderer extends LivingEntityRenderer<AbstractClientPlayer,
     }
 
     public void renderRightHand(PoseStack p_117771_, MultiBufferSource p_117772_, int p_117773_, AbstractClientPlayer p_117774_) {
-        if (!net.minecraftforge.client.ForgeHooksClient.renderSpecificFirstPersonArm(p_117771_, p_117772_, p_117773_, p_117774_, HumanoidArm.RIGHT));
-            //this.renderHand(p_117771_, p_117772_, p_117773_, p_117774_, (this.model).rightArm, (this.model).rightSleeve);
+        if (!net.minecraftforge.client.ForgeHooksClient.renderSpecificFirstPersonArm(p_117771_, p_117772_, p_117773_, p_117774_, HumanoidArm.RIGHT))
+            ;
+        //this.renderHand(p_117771_, p_117772_, p_117773_, p_117774_, (this.model).rightArm, (this.model).rightSleeve);
     }
 
     public void renderLeftHand(PoseStack p_117814_, MultiBufferSource p_117815_, int p_117816_, AbstractClientPlayer p_117817_) {
-        if (!net.minecraftforge.client.ForgeHooksClient.renderSpecificFirstPersonArm(p_117814_, p_117815_, p_117816_, p_117817_, HumanoidArm.LEFT));
-            //this.renderHand(p_117814_, p_117815_, p_117816_, p_117817_, (this.model).leftArm, (this.model).leftSleeve);
+        if (!net.minecraftforge.client.ForgeHooksClient.renderSpecificFirstPersonArm(p_117814_, p_117815_, p_117816_, p_117817_, HumanoidArm.LEFT))
+            ;
+        //this.renderHand(p_117814_, p_117815_, p_117816_, p_117817_, (this.model).leftArm, (this.model).leftSleeve);
     }
 
     private void renderHand(PoseStack p_117776_, MultiBufferSource p_117777_, int p_117778_, AbstractClientPlayer p_117779_, ModelPart p_117780_, ModelPart p_117781_) {
         WerewolfTransformedModel<AbstractClientPlayer> WerewolfHumanModel = this.getModel();
         this.setModelProperties(p_117779_);
         WerewolfHumanModel.attackTime = 0.0F;
-       //WerewolfHumanModel.crouching = false;
+        //WerewolfHumanModel.crouching = false;
         //WerewolfHumanModel.swimAmount = 0.0F;
         WerewolfHumanModel.setupAnim(p_117779_, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F);
         p_117780_.xRot = 0.0F;
@@ -185,35 +187,35 @@ public class WerewolfRenderer extends LivingEntityRenderer<AbstractClientPlayer,
         p_117781_.render(p_117776_, p_117777_.getBuffer(RenderType.entityTranslucent(p_117779_.getSkinTextureLocation())), p_117778_, OverlayTexture.NO_OVERLAY);
     }
 
-    protected void setupRotations(AbstractClientPlayer p_117802_, PoseStack p_117803_, float p_117804_, float p_117805_, float p_117806_) {
-        float f = p_117802_.getSwimAmount(p_117806_);
-        if (p_117802_.isFallFlying()) {
-            super.setupRotations(p_117802_, p_117803_, p_117804_, p_117805_, p_117806_);
-            float f1 = (float) p_117802_.getFallFlyingTicks() + p_117806_;
+    protected void setupRotations(AbstractClientPlayer entity, @NotNull PoseStack cameraPosition, float cameraRotation, float entityRotation, float entityPitch) {
+        float f = entity.getSwimAmount(entityPitch);
+        if (entity.isFallFlying()) {
+            super.setupRotations(entity, cameraPosition, cameraRotation, entityRotation, entityPitch);
+            float f1 = (float) entity.getFallFlyingTicks() + entityPitch;
             float f2 = Mth.clamp(f1 * f1 / 100.0F, 0.0F, 1.0F);
-            if (!p_117802_.isAutoSpinAttack()) {
-                p_117803_.mulPose(Axis.XP.rotationDegrees(f2 * (-90.0F - p_117802_.getXRot())));
+            if (!entity.isAutoSpinAttack()) {
+                cameraPosition.mulPose(Axis.XP.rotationDegrees(f2 * (-90.0F - entity.getXRot())));
             }
 
-            Vec3 vec3 = p_117802_.getViewVector(p_117806_);
-            Vec3 vec31 = p_117802_.getDeltaMovement();
+            Vec3 vec3 = entity.getViewVector(entityPitch);
+            Vec3 vec31 = entity.getDeltaMovement();
             double d0 = vec31.horizontalDistanceSqr();
             double d1 = vec3.horizontalDistanceSqr();
             if (d0 > 0.0D && d1 > 0.0D) {
                 double d2 = (vec31.x * vec3.x + vec31.z * vec3.z) / Math.sqrt(d0 * d1);
                 double d3 = vec31.x * vec3.z - vec31.z * vec3.x;
-                p_117803_.mulPose(Axis.YP.rotation((float) (Math.signum(d3) * Math.acos(d2))));
+                cameraPosition.mulPose(Axis.YP.rotation((float) (Math.signum(d3) * Math.acos(d2))));
             }
         } else if (f > 0.0F) {
-            super.setupRotations(p_117802_, p_117803_, p_117804_, p_117805_, p_117806_);
-            float f3 = p_117802_.isInWater() || p_117802_.isInFluidType((fluidType, height) -> p_117802_.canSwimInFluidType(fluidType)) ? -90.0F - p_117802_.getXRot() : -90.0F;
+            super.setupRotations(entity, cameraPosition, cameraRotation, entityRotation, entityPitch);
+            float f3 = entity.isInWater() || entity.isInFluidType((fluidType, height) -> entity.canSwimInFluidType(fluidType)) ? -90.0F - entity.getXRot() : -90.0F;
             float f4 = Mth.lerp(f, 0.0F, f3);
-            p_117803_.mulPose(Axis.XP.rotationDegrees(f4));
-            if (p_117802_.isVisuallySwimming()) {
-                p_117803_.translate(0.0F, -1.0F, 0.3F);
+            cameraPosition.mulPose(Axis.XP.rotationDegrees(f4));
+            if (entity.isVisuallySwimming()) {
+                cameraPosition.translate(0.0F, -1.0F, 0.3F);
             }
         } else {
-            super.setupRotations(p_117802_, p_117803_, p_117804_, p_117805_, p_117806_);
+            super.setupRotations(entity, cameraPosition, cameraRotation, entityRotation, entityPitch);
         }
 
     }

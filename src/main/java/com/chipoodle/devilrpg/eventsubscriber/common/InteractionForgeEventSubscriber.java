@@ -11,7 +11,6 @@ import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
-import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityAttacher;
 import com.chipoodle.devilrpg.entity.ISoulEntity;
 import com.chipoodle.devilrpg.entity.ITamableEntity;
 import com.chipoodle.devilrpg.init.ModNetwork;
@@ -37,7 +36,6 @@ import net.minecraftforge.event.entity.player.CriticalHitEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 import net.minecraftforge.network.PacketDistributor;
 
@@ -48,7 +46,7 @@ import net.minecraftforge.network.PacketDistributor;
  */
 
 @EventBusSubscriber(modid = DevilRpg.MODID, bus = EventBusSubscriber.Bus.FORGE)
-public class SkillForgeEventSubscriber {
+public class InteractionForgeEventSubscriber {
 
 	/**
 	 * Increase jump height by 1 when Werewolf form
@@ -86,6 +84,16 @@ public class SkillForgeEventSubscriber {
 		}
 	}
 
+	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = false)
+	public static void onRightClickItem(PlayerInteractEvent.RightClickItem event) {
+		BiConsumer<PlayerInteractEvent.RightClickItem, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, auxiliar) -> {
+			eve.getEntity().swinging = true;
+			eve.setCanceled(false);
+		};
+		EventUtils.onWerewolfTransformation(event.getEntity(), c, event);
+	}
+
+
 	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
 	public static void onLeftClickBlock(PlayerInteractEvent.LeftClickBlock event) {
 		BiConsumer<PlayerInteractEvent.LeftClickBlock, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, auxiliar) -> {
@@ -95,18 +103,18 @@ public class SkillForgeEventSubscriber {
 		EventUtils.onWerewolfTransformation(event.getEntity(), c, event);
 	}
 
-	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
+	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = false)
 	public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
 		BiConsumer<PlayerInteractEvent.RightClickBlock, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, auxiliar) -> {
-			eve.getEntity().swinging = false;
-			eve.setCanceled(true);
+			eve.getEntity().swinging = true;
+			eve.setCanceled(false);
 		};
 		EventUtils.onWerewolfTransformation(event.getEntity(), c, event);
 	}
 
-	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
-	public static void onRightClickItem(PlayerInteractEvent.RightClickItem event) {
-		BiConsumer<PlayerInteractEvent.RightClickItem, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, auxiliar) -> {
+	@SubscribeEvent(priority = EventPriority.HIGHEST, receiveCanceled = true)
+	public static void onEntityInteractSpecific(PlayerInteractEvent.EntityInteractSpecific event) {
+		BiConsumer<PlayerInteractEvent.EntityInteractSpecific, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, auxiliar) -> {
 			eve.getEntity().swinging = false;
 			eve.setCanceled(true);
 		};
@@ -116,15 +124,6 @@ public class SkillForgeEventSubscriber {
 	@SubscribeEvent(priority = EventPriority.HIGHEST, receiveCanceled = true)
 	public static void onEntityInteract(PlayerInteractEvent.EntityInteract event) {
 		BiConsumer<PlayerInteractEvent.EntityInteract, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, auxiliar) -> {
-			eve.getEntity().swinging = false;
-			eve.setCanceled(true);
-		};
-		EventUtils.onWerewolfTransformation(event.getEntity(), c, event);
-	}
-
-	@SubscribeEvent(priority = EventPriority.HIGHEST, receiveCanceled = true)
-	public static void onEntityInteractSpecific(PlayerInteractEvent.EntityInteractSpecific event) {
-		BiConsumer<PlayerInteractEvent.EntityInteractSpecific, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, auxiliar) -> {
 			eve.getEntity().swinging = false;
 			eve.setCanceled(true);
 		};

@@ -1,11 +1,14 @@
 package com.chipoodle.devilrpg.client.render.entity.layer;
 
 import com.chipoodle.devilrpg.client.render.entity.model.WerewolfHumanModel;
+import com.chipoodle.devilrpg.client.render.entity.model.WerewolfTransformedModel;
+import com.chipoodle.devilrpg.client.render.entity.renderer.WerewolfRenderer;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
+import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
@@ -15,9 +18,13 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 @OnlyIn(Dist.CLIENT)
-public abstract class WerewolfStuckInBodyLayer<T extends LivingEntity, M extends WerewolfHumanModel<T>> extends RenderLayer<T, M> {
+public abstract class WerewolfStuckInBodyLayer<T extends LivingEntity, M extends WerewolfTransformedModel<T>> extends RenderLayer<T, M> {
    public WerewolfStuckInBodyLayer(LivingEntityRenderer<T, M> p_117564_) {
       super(p_117564_);
+   }
+
+   public WerewolfStuckInBodyLayer(WerewolfRenderer livingEntityRenderer) {
+      super((RenderLayerParent<T, M>) livingEntityRenderer);
    }
 
    protected abstract int numStuck(T p_117565_);

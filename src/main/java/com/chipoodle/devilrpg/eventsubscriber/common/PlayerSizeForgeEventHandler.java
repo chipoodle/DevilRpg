@@ -6,17 +6,15 @@ import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInter
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.phys.AABB;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.entity.EntityEvent;
 import net.minecraftforge.event.entity.living.LivingEvent;
+import net.minecraftforge.event.level.BlockEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
-import java.lang.reflect.Field;
-
 @Mod.EventBusSubscriber(modid = DevilRpg.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
-public class PlayerSizeEventHandler {
+public class PlayerSizeForgeEventHandler {
 
     public static final float WEREWOLF_EXTRA_HEIGHT = 0.500f;
     public static final float WEREWOLF_EXTRA_WIDTH = 0.150f;
@@ -41,11 +39,26 @@ public class PlayerSizeEventHandler {
             event.setNewSize(EntityType.PLAYER.getDimensions());
             event.setNewEyeHeight(player.getEyeHeight(player.getPose()));
         } else {
-            EntityDimensions newSize = new EntityDimensions(EntityType.PLAYER.getDimensions().width + WEREWOLF_EXTRA_WIDTH,
-                    EntityType.PLAYER.getDimensions().height + WEREWOLF_EXTRA_HEIGHT, EntityType.PLAYER.getDimensions().fixed);
-            event.setNewSize(newSize);
-            event.setNewEyeHeight(player.getEyeHeight(player.getPose())+ WEREWOLF_EXTRA_HEIGHT);
+            EntityDimensions newSize;
+            if(event.getEntity().isCrouching()){
+
+                newSize = new EntityDimensions(EntityType.PLAYER.getDimensions().width + WEREWOLF_EXTRA_WIDTH + 0.430f,
+                        EntityType.PLAYER.getDimensions().height - 0.200f, EntityType.PLAYER.getDimensions().fixed);
+                event.setNewSize(newSize);
+            }
+            else{
+                newSize = new EntityDimensions(EntityType.PLAYER.getDimensions().width + WEREWOLF_EXTRA_WIDTH,
+                        EntityType.PLAYER.getDimensions().height + WEREWOLF_EXTRA_HEIGHT, EntityType.PLAYER.getDimensions().fixed);
+                event.setNewSize(newSize);
+                event.setNewEyeHeight(player.getEyeHeight(player.getPose())+ WEREWOLF_EXTRA_HEIGHT );
+            }
+
+
+
+
         }
+
+
     }
 
     @SubscribeEvent

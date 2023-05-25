@@ -14,8 +14,6 @@ import com.chipoodle.devilrpg.init.ModBlocks;
 import com.chipoodle.devilrpg.init.ModEntities;
 import net.minecraft.client.color.block.BlockColor;
 import net.minecraft.client.color.item.ItemColor;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.EntityRenderersEvent;
 import net.minecraftforge.client.event.RegisterColorHandlersEvent;
@@ -23,13 +21,9 @@ import net.minecraftforge.client.event.RegisterGuiOverlaysEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 
-import net.minecraft.world.entity.player.Player;
-
 /**
  * Subscribe to events from the MOD EventBus that should be handled on the
  * PHYSICAL CLIENT side in this class
- *
- * @author Cadiboo
  */
 @EventBusSubscriber(modid = DevilRpg.MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public final class ClientModEventSubscriber {
@@ -61,8 +55,8 @@ public final class ClientModEventSubscriber {
         event.registerLayerDefinition(SoulWispModel.DEFAULT_LAYER_LOCATION, SoulWispModel::createBodyLayer);
         event.registerLayerDefinition(SoulWispModel.BOMBER_LAYER_LOCATION, SoulWispModel::createBodyLayer);
         event.registerLayerDefinition(SoulWispModel.ARCHER_LAYER_LOCATION, SoulWispModel::createBodyLayer);
-        event.registerLayerDefinition(WerewolfHumanModel.WEREWOLF_LAYER_LOCATION,WerewolfHumanModel::createBodyLayer);
-        event.registerLayerDefinition(WerewolfTransformedModel.WEREWOLF_LAYER_LOCATION,WerewolfTransformedModel::createBodyLayer);
+        event.registerLayerDefinition(WerewolfHumanModel.WEREWOLF_LAYER_LOCATION, WerewolfHumanModel::createBodyLayer);
+        event.registerLayerDefinition(WerewolfTransformedModel.WEREWOLF_LAYER_LOCATION, WerewolfTransformedModel::createBodyLayer);
     }
 
     @SubscribeEvent

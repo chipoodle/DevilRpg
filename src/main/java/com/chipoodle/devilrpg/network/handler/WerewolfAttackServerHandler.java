@@ -42,8 +42,9 @@ public class WerewolfAttackServerHandler {
             contextSupplier.get().enqueueWork(() -> {
                 ServerPlayer sender = contextSupplier.get().getSender();
                 Entity target = sender.level.getEntity(msg.getEntityId());
-                DevilRpg.LOGGER.info("Server recieved attack to entity: {}", target.getName());
+                //DevilRpg.LOGGER.info("Server recieved attack to entity: {}", target.getName());
                 //ItemStack item = sender.getHeldItem(msg.getInteractionHand());
+
                 TargetUtils.attackTargetEntityWithItemHand(sender, target, msg.getInteractionHand());
                 //DevilRpg.LOGGER.info("----->HAND: " + msg.getInteractionHand().name());
             });
