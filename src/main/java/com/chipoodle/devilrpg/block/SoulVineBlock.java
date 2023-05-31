@@ -6,7 +6,6 @@ import com.chipoodle.devilrpg.init.ModEntityBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -14,7 +13,6 @@ import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
-import net.minecraft.world.level.block.NetherVines;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -28,6 +26,9 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 
 public class SoulVineBlock extends Block implements EntityBlock {
@@ -51,16 +52,8 @@ public class SoulVineBlock extends Block implements EntityBlock {
         return ModBlocks.SOUL_VINE_BLOCK.get();
     }
 
-    public static boolean canGrowInto(BlockState p_154869_) {
-        return NetherVines.isValidGrowthState(p_154869_);
-    }
-
-    public static BlockState getGrowIntoState(BlockState p_221347_, RandomSource p_221348_) {
+    public static BlockState getGrowIntoState(BlockState p_221347_) {
         return p_221347_.cycle(AGE);
-    }
-
-    protected static boolean canAttachTo(BlockState p_153321_) {
-        return !p_153321_.isAir();
     }
 
 
@@ -69,76 +62,41 @@ public class SoulVineBlock extends Block implements EntityBlock {
         if (currentBlockState.getValue(AGE) == 1)
             newBlockpos = currentBlockPos;
         else {
-            if (!areSurroundingBlocksPlausible(levelReader, currentBlockPos))
+            if (!canSurvive(levelReader, currentBlockPos))
                 return false;
             newBlockpos = currentBlockPos.relative(growthDirection);
         }
         BlockState newBlockState = levelReader.getBlockState(newBlockpos);
         return true;
-
-        /*if (!canAttachTo(newBlockState)) {
-
-            // buscar una nueva dirección donde si
-
-            return false;
-        } else {
-            boolean faceSturdy = newBlockState.isFaceSturdy(levelReader, newBlockpos, growthDirection);
-            return faceSturdy;
-        }*/
     }
 
-    public static Object getNextDirection(@NotNull BlockState currentBlockState, @NotNull LevelReader levelReader, @NotNull BlockPos currentBlockPos, Direction growthDirection) {
-        BlockPos newBlockpos = currentBlockPos.relative(growthDirection);
-        return null;
-
-    }
-
-    /**
-     * Verifies if at least one cube around is soulvine
-     *
-     * @param levelReader     a level reader
-     * @param currentBlockPos current block position
-     * @return wheter or not an adyascent block is soulvine
-     */
-    private static boolean areSurroundingBlocksPlausible(@NotNull LevelReader levelReader, @NotNull BlockPos currentBlockPos) {
+    public static @NotNull Boolean canSurvive(@NotNull LevelReader levelReader, @NotNull BlockPos currentBlockPos) {
         Block soulVineBlock = getSoulVineBlock();
-
-
-        boolean isSoulVine = false;
-        boolean isFaceSturdy = false;
-        Direction directionFromsourceVine = null;
-        for (Direction possibleDirection : DIRECTIONS.getPossibleValues()) {
+        Collection<Direction> possibleValues = DIRECTIONS.getPossibleValues();
+        for (Direction possibleDirection : possibleValues) {
             BlockState nextState = getNextState(levelReader, currentBlockPos, possibleDirection);
-
-            //DevilRpg.LOGGER.info("-----------------{} {}---------------",growDirection,currentBlockPos);
-            //DevilRpg.LOGGER.info("direction: {} next block: {} next position: {}",possibleDirection, nextState.getBlock(), nextPos);
-
             if (nextState.is(soulVineBlock)) {
-                directionFromsourceVine = possibleDirection;
-                isSoulVine = true;
-            }
-
-            if (!nextState.is(soulVineBlock) && (canAttachTo(nextState))) {
-                isFaceSturdy = true;
-            }
-
-            if (isSoulVine && isFaceSturdy)
-                return true;
-        }
-        if(isSoulVine){
-            Direction oppositeDirectionSourceVine = directionFromsourceVine.getOpposite();
-            Direction finalDirectionFromsourceVine = directionFromsourceVine;
-            List<Direction> directions = DIRECTIONS.getPossibleValues().stream()
-                    .filter(dir -> !dir.equals(oppositeDirectionSourceVine))
-                    .filter(dir -> !dir.equals(finalDirectionFromsourceVine))
-                    .toList();
-            for (Direction possibleDirection : directions){
-
+               return true;
             }
         }
-
         return false;
     }
+
+    public static Boolean hasAtLeasOneSolidNeighbourPerpendicularToGrowDirection(@NotNull LevelReader levelReader, @NotNull BlockPos currentBlockPos, Direction growDirection) {
+        List<Direction> possibleValues = new ArrayList<>(DIRECTIONS.getPossibleValues()
+                .stream()
+                .filter(x -> x != growDirection)
+                .filter(x -> x != growDirection.getOpposite())
+                .sorted(Comparator.comparingInt(Direction::get3DDataValue)).toList());
+        for (Direction possibleDirection : possibleValues) {
+            BlockState nextState = getNextState(levelReader, currentBlockPos, possibleDirection);
+            if (!nextState.isAir()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
 
     @NotNull
     private static BlockState getNextState(@NotNull LevelReader levelReader, @NotNull BlockPos currentBlockPos, Direction possibleDirection) {

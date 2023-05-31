@@ -53,7 +53,7 @@ public class SkillSoulVine implements ISkillContainer {
         BlockState playerBlockState = levelIn.getBlockState(playerBlockPos);
         Vec3 playerLookVector = playerIn.getLookAngle();
         Direction nearestDirection = Direction.getNearest(playerLookVector.x, 0, playerLookVector.z);
-        //DevilRpg.LOGGER.info("-------->Direction: {}" , nearestDirection);
+        DevilRpg.LOGGER.info("-------->Direction: {}" , nearestDirection);
         BlockPos newBlockpos = playerBlockPos.relative(nearestDirection);
 
         //createdBlock.setGrowthDirection(nearestDirection);

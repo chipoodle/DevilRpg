@@ -1,6 +1,5 @@
 package com.chipoodle.devilrpg.blockentity;
 
-import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.block.SoulVineBlock;
 import com.chipoodle.devilrpg.init.ModEntityBlocks;
 import net.minecraft.core.BlockPos;
@@ -33,13 +32,13 @@ public class SoulVineBlockEntity extends BlockEntity {
         }
 
         Integer currentAge = blockState.getValue(AGE);
-        Integer skillLevel = blockState.getValue(LEVEL);
+        int skillLevel = blockState.getValue(LEVEL);
         Direction currentDirection = blockState.getValue(DIRECTIONS);
         Integer duration = skillLevel * TICK_FACTOR;
 
         //DevilRpg.LOGGER.info("-------->tick. Age {} ", currentAge);
 
-        if (!SoulVineBlock.canStay(blockState, serverLevel, oldBlockPos, currentDirection) || timeOfCreation + duration < serverLevel.getGameTime()) {
+        if (!canStay(blockState, serverLevel, oldBlockPos, currentDirection) || timeOfCreation + duration < serverLevel.getGameTime()) {
             serverLevel.destroyBlock(oldBlockPos, true);
             return;
         }
@@ -51,27 +50,45 @@ public class SoulVineBlockEntity extends BlockEntity {
                 BlockPos nextBlockPos;
                 BlockState nextBlockState;
                 //DevilRpg.LOGGER.info("-------->oldBlocPos: {}, blockpos {} , direction {}", oldBlockPos, blockpos, this.customGrowthDirection);
-                List<Direction> possibleValues = new ArrayList<>(DIRECTIONS.getPossibleValues().stream().filter(x -> x != currentDirection).sorted(Comparator.comparingInt(Direction::get3DDataValue)).toList());
-                possibleValues.add(0, currentDirection);
+                List<Direction> possibleValues = new ArrayList<>(DIRECTIONS.getPossibleValues()
+                        .stream()
+                        .filter(x -> x != currentDirection)
+                        .sorted(Comparator.comparingInt(Direction::get3DDataValue)).toList());
                 //DevilRpg.LOGGER.info("Ordered list--> {}", possibleValues);
-                for (Direction nextBlockPosGeneral : possibleValues) {
-                    DevilRpg.LOGGER.info("nextBlockPosGeneral--> {}", nextBlockPosGeneral);
-                    nextBlockPos = oldBlockPos.relative(nextBlockPosGeneral);
+                possibleValues.add(0, currentDirection);
+                for (Direction nextDirection : possibleValues) {
+                    // DevilRpg.LOGGER.info("nextDirection--> {}", nextDirection);
+                    nextBlockPos = oldBlockPos.relative(nextDirection);
                     nextBlockState = serverLevel.getBlockState(nextBlockPos);
-                    if (SoulVineBlock.canGrowInto(nextBlockState)) {
-                        createChildBlock(blockState, serverLevel, currentDirection, nextBlockPos);
-                        return;
+                    if (nextBlockState.isAir()) {
+                        if (hasAtLeasOneSolidNeighbourPerpendicularToGrowDirection(serverLevel, nextBlockPos, nextDirection)) {
+                            createChildBlock(blockState, serverLevel, currentDirection, nextBlockPos);
+                            return;
+                        } else {
+                            List<Direction> adjacentDirections = DIRECTIONS.getPossibleValues().stream()
+                                    .filter(dir -> !dir.equals(nextDirection))
+                                    .filter(dir -> !dir.equals(nextDirection.getOpposite()))
+                                    .sorted(Comparator.comparingInt(Direction::get3DDataValue))
+                                    .toList();
+                            for (Direction adjacentDirection : adjacentDirections) {
+                                BlockPos adjacentBlockPos = nextBlockPos.relative(adjacentDirection);
+                                BlockState adjacentBlockState = serverLevel.getBlockState(adjacentBlockPos);
+                                if (adjacentBlockState.isAir() && hasAtLeasOneSolidNeighbourPerpendicularToGrowDirection(serverLevel, adjacentBlockPos, adjacentDirection)) {
+                                    createChildBlock(blockState, serverLevel, currentDirection, nextBlockPos);
+                                    return;
+                                }
+                            }
+                        }
                     }
                 }
-
             }
         }
-
     }
+
     private void createChildBlock(@NotNull BlockState blockState, @NotNull ServerLevel serverLevel, Direction currentDirection, BlockPos nextBlockPos) {
         //DevilRpg.LOGGER.info("-------->AGE {} creating children at: {}",currentAge,nextBlockPos);
         hasChildren = true;
-        BlockState blockStateNew = SoulVineBlock.getGrowIntoState(blockState, serverLevel.random).setValue(AGE, blockState.getValue(AGE) + 1).setValue(DIRECTIONS, currentDirection);
+        BlockState blockStateNew = SoulVineBlock.getGrowIntoState(blockState).setValue(AGE, blockState.getValue(AGE) + 1).setValue(DIRECTIONS, currentDirection);
         serverLevel.setBlockAndUpdate(nextBlockPos, blockStateNew);
     }
 
