@@ -3,8 +3,8 @@ package com.chipoodle.devilrpg.init;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.network.handler.*;
 import net.minecraft.resources.ResourceLocation;
-
-import net.minecraftforge.network.SimpleChannel;
+import net.minecraftforge.network.NetworkRegistry;
+import net.minecraftforge.network.simple.SimpleChannel;
 
 
 /**

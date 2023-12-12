@@ -9,6 +9,7 @@ import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
 import net.minecraft.client.model.geom.builders.*;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
@@ -71,11 +72,11 @@ public class WerewolfTransformedModel<T extends Entity> extends HierarchicalMode
     private float swimAmount;
 
     public WerewolfTransformedModel(ModelPart root) {
-
+        super(RenderType::entityTranslucent);
         this.root = root;
-        this.head = root.getChild("head");
-        this.body = root.getChild("body");
-        this.legs = root.getChild("legs");
+        this.head = this.root.getChild("head");
+        this.body = this.root.getChild("body");
+        this.legs = this.root.getChild("legs");
 
         this.arms = body.getChild("arms");
         this.torax = body.getChild("torax");
@@ -399,7 +400,7 @@ public class WerewolfTransformedModel<T extends Entity> extends HierarchicalMode
         return p_102837_ + p_102836_ * f;
     }
 
-    public ModelPart getHead() {
+    public @NotNull ModelPart getHead() {
         return this.head;
     }
 

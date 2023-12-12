@@ -1,10 +1,9 @@
 package com.chipoodle.devilrpg.client.render.entity.layer;
 
-import com.chipoodle.devilrpg.client.render.entity.model.WerewolfHumanModel;
+import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.client.render.entity.model.WerewolfTransformedModel;
 import com.chipoodle.devilrpg.client.render.entity.renderer.WerewolfRenderer;
 import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
@@ -17,6 +16,8 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.List;
 
 @OnlyIn(Dist.CLIENT)
 public abstract class WerewolfStuckInBodyLayer<T extends LivingEntity, M extends WerewolfTransformedModel<T>> extends RenderLayer<T, M> {
@@ -38,13 +39,27 @@ public abstract class WerewolfStuckInBodyLayer<T extends LivingEntity, M extends
       if (i > 0) {
          for(int j = 0; j < i; ++j) {
             p_117586_.pushPose();
+
             ModelPart modelpart = this.getParentModel().getRandomModelPart(randomsource);
-            ModelPart.Cube modelpart$cube = modelpart.getRandomCube(randomsource);
+
+            ModelPart.Cube modelpart$cube = null;
+            while(modelpart$cube==null) {
+               ModelPart randomModelPart = null;
+               try {
+                  List<ModelPart> modelPartList = modelpart.getAllParts().toList();
+                  randomModelPart = modelPartList.get(randomsource.nextInt(modelPartList.size()));
+                  modelpart$cube = randomModelPart.getRandomCube(randomsource);
+               } catch (IllegalArgumentException ignored) {
+                  DevilRpg.LOGGER.debug("---------------Illegal cube in ModelPart:  {}",randomModelPart);
+               }
+            }
+
             modelpart.translateAndRotate(p_117586_);
             float f = randomsource.nextFloat();
             float f1 = randomsource.nextFloat();
             float f2 = randomsource.nextFloat();
-            float f3 = Mth.lerp(f, modelpart$cube.minX, modelpart$cube.maxX) / 16.0F;
+            //float f3 = Mth.lerp(f, modelpart$cube.minX, modelpart$cube.maxX) / 16.0F;
+            float f3 = Mth.lerp(f, Math.min(modelpart$cube.minX, modelpart$cube.maxX), Math.max(modelpart$cube.minX, modelpart$cube.maxX)) / 16.0F;
             float f4 = Mth.lerp(f1, modelpart$cube.minY, modelpart$cube.maxY) / 16.0F;
             float f5 = Mth.lerp(f2, modelpart$cube.minZ, modelpart$cube.maxZ) / 16.0F;
             p_117586_.translate(f3, f4, f5);
