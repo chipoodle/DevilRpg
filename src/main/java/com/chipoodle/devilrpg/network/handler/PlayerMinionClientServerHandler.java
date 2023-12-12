@@ -12,16 +12,10 @@ import net.minecraftforge.network.NetworkEvent;
 import java.util.function.Supplier;
 
 
-public class PlayerMinionClientServerHandler {
-
-    private final CompoundTag skillCompound;
-
-    public PlayerMinionClientServerHandler(CompoundTag skillCompound) {
-        this.skillCompound = skillCompound;
-    }
+public record PlayerMinionClientServerHandler(CompoundTag skillCompound) {
 
     public static void encode(final PlayerMinionClientServerHandler msg, final FriendlyByteBuf packetBuffer) {
-        packetBuffer.writeNbt(msg.getSkillCompound());
+        packetBuffer.writeNbt(msg.skillCompound());
     }
 
     public static PlayerMinionClientServerHandler decode(final FriendlyByteBuf packetBuffer) {
@@ -35,7 +29,7 @@ public class PlayerMinionClientServerHandler {
                 ServerPlayer serverPlayer = contextSupplier.get().getSender();
                 if (serverPlayer != null) {
                     serverPlayer.getCapability(PlayerMinionCapability.INSTANCE)
-                            .ifPresent(x -> x.deserializeNBT(msg.getSkillCompound()));
+                            .ifPresent(x -> x.deserializeNBT(msg.skillCompound()));
                 }
             });
             contextSupplier.get().setPacketHandled(true);
@@ -47,14 +41,10 @@ public class PlayerMinionClientServerHandler {
                 LocalPlayer clientPlayer = m.player;
                 if (clientPlayer != null) {
                     clientPlayer.getCapability(PlayerMinionCapability.INSTANCE)
-                            .ifPresent(x -> x.deserializeNBT(msg.getSkillCompound()));
+                            .ifPresent(x -> x.deserializeNBT(msg.skillCompound()));
                 }
             });
             contextSupplier.get().setPacketHandled(true);
         }
-    }
-
-    public CompoundTag getSkillCompound() {
-        return skillCompound;
     }
 }

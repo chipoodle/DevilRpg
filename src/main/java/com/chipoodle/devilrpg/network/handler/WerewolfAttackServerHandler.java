@@ -1,6 +1,5 @@
 package com.chipoodle.devilrpg.network.handler;
 
-import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.util.TargetUtils;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
@@ -12,17 +11,10 @@ import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
 
-public class WerewolfAttackServerHandler {
+public record WerewolfAttackServerHandler(int entityId, InteractionHand hand) {
 
     public static final String ENTITY_ID_KEY = "entityId";
     public static final String HAND_KEY = "hand";
-    private final int entityId;
-    private final InteractionHand hand;
-
-    public WerewolfAttackServerHandler(int entityId, InteractionHand hand) {
-        this.entityId = entityId;
-        this.hand = hand;
-    }
 
     public static void encode(final WerewolfAttackServerHandler msg, final FriendlyByteBuf packetBuffer) {
         CompoundTag c = new CompoundTag();

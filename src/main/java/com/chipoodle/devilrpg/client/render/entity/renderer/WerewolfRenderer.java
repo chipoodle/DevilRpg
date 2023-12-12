@@ -2,6 +2,7 @@ package com.chipoodle.devilrpg.client.render.entity.renderer;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.client.render.entity.layer.WerewolfArrowLayer;
+import com.chipoodle.devilrpg.client.render.entity.layer.WerewolfSpinAttackEffectLayer;
 import com.chipoodle.devilrpg.client.render.entity.model.WerewolfTransformedModel;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
@@ -13,6 +14,7 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.layers.ElytraLayer;
+import net.minecraft.client.renderer.entity.layers.SpinAttackEffectLayer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -46,7 +48,7 @@ public class WerewolfRenderer extends LivingEntityRenderer<AbstractClientPlayer,
         //this.addLayer(new CustomHeadLayer<>(this, context.getModelSet(), context.getItemInHandRenderer()));
         this.addLayer(new ElytraLayer<>(this, context.getModelSet()));
         //this.addLayer(new ParrotOnShoulderLayer<>(this, context.getModelSet()));
-        //this.addLayer(new SpinAttackEffectLayer<>(this, context.getModelSet()));
+        this.addLayer(new WerewolfSpinAttackEffectLayer<>(this, context.getModelSet()));
         //this.addLayer(new BeeStingerLayer<>(this));
     }
 

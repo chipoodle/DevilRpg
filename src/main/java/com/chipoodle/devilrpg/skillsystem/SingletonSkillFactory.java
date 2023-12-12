@@ -66,6 +66,18 @@ public class SingletonSkillFactory {
             skillPool.putIfAbsent(SkillEnum.SOULVINE, new SkillSoulVine(parentCapability));
             return skillPool.get(SkillEnum.SOULVINE);
         }
+        if (skillEnum.equals(SkillEnum.MANA_POOL)) {
+            skillPool.putIfAbsent(SkillEnum.MANA_POOL, new PlayerPassiveManaPool(parentCapability));
+            return skillPool.get(SkillEnum.MANA_POOL);
+        }
+        if (skillEnum.equals(SkillEnum.MANA_REGENERATION)) {
+            skillPool.putIfAbsent(SkillEnum.MANA_REGENERATION, new PlayerPassiveManaRegeneration(parentCapability));
+            return skillPool.get(SkillEnum.MANA_REGENERATION);
+        }
+        if (skillEnum.equals(SkillEnum.CHARGE)) {
+            skillPool.putIfAbsent(SkillEnum.CHARGE, new SkillCharge(parentCapability));
+            return skillPool.get(SkillEnum.CHARGE);
+        }
 
         return null;
     }

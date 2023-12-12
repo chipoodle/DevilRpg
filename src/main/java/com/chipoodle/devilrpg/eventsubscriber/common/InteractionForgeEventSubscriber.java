@@ -14,7 +14,7 @@ import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.entity.ISoulEntity;
 import com.chipoodle.devilrpg.entity.ITamableEntity;
 import com.chipoodle.devilrpg.init.ModNetwork;
-import com.chipoodle.devilrpg.network.handler.PotionClientServerHandler;
+import com.chipoodle.devilrpg.network.handler.PotionClientHandler;
 import com.chipoodle.devilrpg.util.EventUtils;
 import com.chipoodle.devilrpg.util.SkillEnum;
 
@@ -140,6 +140,10 @@ public class InteractionForgeEventSubscriber {
 	}
 
 
+
+
+
+
 	/*@SubscribeEvent
 	public static void onLivingUpdateEvent(LivingUpdateEvent event) {
 
@@ -171,16 +175,14 @@ public class InteractionForgeEventSubscriber {
 		if(!(event instanceof MobEffectEvent.Added) && !(event instanceof MobEffectEvent.Expired))
 			return;
 		
-		if (event.getEntity() instanceof ISoulEntity && event.getEntity() instanceof ITamableEntity && event.getEffectInstance() != null) {
-			ITamableEntity minion = (ITamableEntity) event.getEntity();
+		if (event.getEntity() instanceof ISoulEntity && event.getEntity() instanceof ITamableEntity minion && event.getEffectInstance() != null) {
 			LivingEntity owner = minion.getOwner();
 			if (owner instanceof ServerPlayer && !event.getEntity().level.isClientSide()) {
 				MobEffectInstance potionEffect = event.getEffectInstance();
 				CompoundTag effectInstanceNbt = potionEffect.save(new CompoundTag());
-				effectInstanceNbt.putUUID(PotionClientServerHandler.MINION_ID_KEY, event.getEntity().getUUID());
-				effectInstanceNbt.putString(PotionClientServerHandler.EFFECT_EVENT_TYPE, event.getClass().getSimpleName());
-				ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> ((ServerPlayer) owner)),
-						new PotionClientServerHandler(effectInstanceNbt));
+				effectInstanceNbt.putUUID(PotionClientHandler.ENTITY_ID_KEY, event.getEntity().getUUID());
+				effectInstanceNbt.putString(PotionClientHandler.EFFECT_EVENT_TYPE, event.getClass().getSimpleName());
+				ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> ((ServerPlayer) owner)), new PotionClientHandler(effectInstanceNbt));
 			}
 		}
 

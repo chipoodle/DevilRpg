@@ -8,5 +8,7 @@ import java.util.HashMap;
 
 public interface ISkillContainer{
 	void execute(Level level, Player playerIn, HashMap<String,String> parameters);
+
+	default boolean arePreconditionsMetBeforeConsumingMana(Player playerIn){return true;}
 	SkillEnum getSkillEnum();
 }

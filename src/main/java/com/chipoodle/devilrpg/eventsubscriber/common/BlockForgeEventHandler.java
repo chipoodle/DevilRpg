@@ -16,7 +16,7 @@ public class BlockForgeEventHandler {
     public static void onBlockEventEntityPlaceEvent(BlockEvent event) {
 
         if (event instanceof BlockEvent.FluidPlaceBlockEvent placeBlockEvent) {
-            DevilRpg.LOGGER.info("------------------>BlockForgeEventHandler.FluidPlaceBlockEvent.");
+            //DevilRpg.LOGGER.info("------------------>BlockForgeEventHandler.FluidPlaceBlockEvent.");
 
         }
 

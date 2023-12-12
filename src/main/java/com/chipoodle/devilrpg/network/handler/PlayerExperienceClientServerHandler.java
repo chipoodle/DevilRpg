@@ -12,16 +12,10 @@ import net.minecraftforge.network.NetworkEvent;
 import java.util.function.Supplier;
 
 
-public class PlayerExperienceClientServerHandler {
-
-    private final CompoundTag experienceCompound;
-
-    public PlayerExperienceClientServerHandler(CompoundTag manaCompound) {
-        this.experienceCompound = manaCompound;
-    }
+public record PlayerExperienceClientServerHandler(CompoundTag experienceCompound) {
 
     public static void encode(final PlayerExperienceClientServerHandler msg, final FriendlyByteBuf packetBuffer) {
-        packetBuffer.writeNbt(msg.getExperienceCompound());
+        packetBuffer.writeNbt(msg.experienceCompound());
     }
 
     public static PlayerExperienceClientServerHandler decode(final FriendlyByteBuf packetBuffer) {
@@ -35,7 +29,7 @@ public class PlayerExperienceClientServerHandler {
                 ServerPlayer serverPlayer = contextSupplier.get().getSender();
                 if (serverPlayer != null) {
                     serverPlayer.getCapability(PlayerExperienceCapability.INSTANCE)
-                            .ifPresent(x -> x.deserializeNBT(msg.getExperienceCompound()));
+                            .ifPresent(x -> x.deserializeNBT(msg.experienceCompound()));
                 }
             });
             contextSupplier.get().setPacketHandled(true);
@@ -47,15 +41,11 @@ public class PlayerExperienceClientServerHandler {
                 LocalPlayer clientPlayer = m.player;
                 if (clientPlayer != null) {
                     clientPlayer.getCapability(PlayerExperienceCapability.INSTANCE)
-                            .ifPresent(x -> x.deserializeNBT(msg.getExperienceCompound()));
+                            .ifPresent(x -> x.deserializeNBT(msg.experienceCompound()));
                 }
 
             });
             contextSupplier.get().setPacketHandled(true);
         }
-    }
-
-    public CompoundTag getExperienceCompound() {
-        return experienceCompound;
     }
 }

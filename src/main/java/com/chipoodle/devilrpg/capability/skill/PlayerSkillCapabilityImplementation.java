@@ -245,7 +245,7 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
             DevilRpg.LOGGER.info("PlayerSkillCapability triggerAction(ServerPlayer, triggeredPower) {} {}", playerIn.getName().getString(), triggeredPower);
             if (getSkillLevelFromAssociatedPower(triggeredPower) != 0) {
                 ISkillContainer skill = getSkill(triggeredPower);
-                if (consumeMana(playerIn, skill)) {
+                if (skill.arePreconditionsMetBeforeConsumingMana(playerIn) && consumeMana(playerIn, skill)) {
                     skill.execute(playerIn.level, playerIn, null);
                 } else {
 

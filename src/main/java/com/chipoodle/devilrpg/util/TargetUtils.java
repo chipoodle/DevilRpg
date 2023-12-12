@@ -449,7 +449,7 @@ public class TargetUtils {
                     f1 = EnchantmentHelper.getDamageBonus(player.getItemInHand(currentHand), MobType.UNDEFINED);
                 }
 
-                float f2 = ((RANDOM.nextInt() + new Date().getTime()) % 10 + 1) * 0.1f;// player.getCooledAttackStrength(0.5F);
+                float f2 = ((RANDOM.nextInt() + new Date().getTime()) % 10 + 1) * 0.1f;// player.getCooledAttackStrength(0.5F); // getAttackStrengthScale
                 // Porcentaje desde 10 a 100,
                 // de 10 en 10
                 f = f * (0.2F + f2 * f2 * 0.8F);

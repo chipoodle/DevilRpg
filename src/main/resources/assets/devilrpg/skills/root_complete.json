@@ -109,6 +109,46 @@
         "parent": "nature:root"
     },
     {
+        "id": "nature:mana_pool",
+        "display": {
+            "description": "Extends the pool of mana",
+            "icon": {
+                "item": "minecraft:glass_pane",
+                "minecraft:glass_panenbt": 1
+            },
+            "title": "Mana Pool",
+            "image": "devilrpg:textures/gui/skill/hospital-cross.png",
+            "frame": "goal"
+        },
+        "capability": "mana_pool",
+        "skillmanacost":{
+            "maxskilllevel":"20",
+            "manacost":"0"
+        },
+        "rewards": {},
+        "parent": "nature:root"
+    },
+    {
+        "id": "nature:mana_regeneration",
+        "display": {
+            "description": "Increments regeneration of mana",
+            "icon": {
+                "item": "minecraft:glass_pane",
+                "minecraft:glass_panenbt": 1
+            },
+            "title": "Mana Regeneration",
+            "image": "devilrpg:textures/gui/skill/fire-silhouette.png",
+            "frame": "goal"
+        },
+        "capability": "mana_regeneration",
+        "skillmanacost":{
+            "maxskilllevel":"20",
+            "manacost":"0"
+        },
+        "rewards": {},
+        "parent": "nature:mana_pool"
+    },
+    {
         "id": "shapeshifting:werewolf",
         "display": {
             "description": "Shapeshifts into a Werewolf",
@@ -187,6 +227,26 @@
 		},
         "rewards": {},
         "parent": "shapeshifting:werewolf"
+    },
+    {
+        "id": "shapeshifting:charge",
+        "display": {
+            "description": "Charges at the enemy",
+            "icon": {
+                "item": "minecraft:glass_pane",
+                "minecraft:glass_panenbt": 1
+            },
+            "title": "Werewolf",
+            "image": "devilrpg:textures/gui/skill/perpendicular-rings.png",
+            "frame": "task"
+        },
+        "capability": "charge",
+        "skillmanacost":{
+            "maxskilllevel":"3",
+            "manacost":"26"
+        },
+        "rewards": {},
+        "parent": "shapeshifting:werewolfhit"
     },
     {
         "id": "summoning:wolf",
@@ -317,7 +377,7 @@
                 "minecraft:glass_panenbt": 2
             },
             "title": "Minion Vitality",
-            "image": "devilrpg:textures/gui/skill/heart-plus.png",
+            "image": "devilrpg:textures/gui/skill/paw-heart.png",
             "frame": "goal"
         },
         "rewards": {},

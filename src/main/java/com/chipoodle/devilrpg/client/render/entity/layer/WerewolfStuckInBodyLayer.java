@@ -16,6 +16,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
+import org.jetbrains.annotations.NotNull;
 
 @OnlyIn(Dist.CLIENT)
 public abstract class WerewolfStuckInBodyLayer<T extends LivingEntity, M extends WerewolfTransformedModel<T>> extends RenderLayer<T, M> {
@@ -31,9 +32,9 @@ public abstract class WerewolfStuckInBodyLayer<T extends LivingEntity, M extends
 
    protected abstract void renderStuckItem(PoseStack p_117566_, MultiBufferSource p_117567_, int p_117568_, Entity p_117569_, float p_117570_, float p_117571_, float p_117572_, float p_117573_);
 
-   public void render(PoseStack p_117586_, MultiBufferSource p_117587_, int p_117588_, T p_117589_, float p_117590_, float p_117591_, float p_117592_, float p_117593_, float p_117594_, float p_117595_) {
+   public void render(@NotNull PoseStack p_117586_, @NotNull MultiBufferSource p_117587_, int p_117588_, @NotNull T p_117589_, float p_117590_, float p_117591_, float p_117592_, float p_117593_, float p_117594_, float p_117595_) {
       int i = this.numStuck(p_117589_);
-      RandomSource randomsource = RandomSource.create((long)p_117589_.getId());
+      RandomSource randomsource = RandomSource.create(p_117589_.getId());
       if (i > 0) {
          for(int j = 0; j < i; ++j) {
             p_117586_.pushPose();

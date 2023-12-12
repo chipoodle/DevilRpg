@@ -31,10 +31,9 @@ public class PlayerPassiveWerewolfVitality extends AbstractPlayerPassive impleme
     }
 
     /**
-     * *
      *
-     * @param levelIn
-     * @param playerIn
+     * @param levelIn The world level
+     * @param playerIn the player
      * @param parameters Server side called
      */
     @Override

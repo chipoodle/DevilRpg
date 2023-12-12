@@ -14,26 +14,21 @@ import net.minecraftforge.network.NetworkEvent;
 import java.util.UUID;
 import java.util.function.Supplier;
 
-public class PotionClientServerHandler {
-    public static final String MINION_ID_KEY = "entityId";
+public record PotionClientHandler(CompoundTag compound) {
+    public static final String ENTITY_ID_KEY = "entityId";
     public static final String EFFECT_EVENT_TYPE = "effectEventType";
-    private static final String POTION_EXPIRY_EVENT = "PotionExpiryEvent";
-    private static final String POTION_ADDED_EVENT = "PotionAddedEvent";
-    private final CompoundTag compound;
+    public static final String POTION_EXPIRY_EVENT = "PotionExpiryEvent";
+    public static final String POTION_ADDED_EVENT = "PotionAddedEvent";
 
-    public PotionClientServerHandler(CompoundTag compound) {
-        this.compound = compound;
+    public static void encode(final PotionClientHandler msg, final FriendlyByteBuf packetBuffer) {
+        packetBuffer.writeNbt(msg.compound());
     }
 
-    public static void encode(final PotionClientServerHandler msg, final FriendlyByteBuf packetBuffer) {
-        packetBuffer.writeNbt(msg.getCompound());
+    public static PotionClientHandler decode(final FriendlyByteBuf packetBuffer) {
+        return new PotionClientHandler(packetBuffer.readNbt());
     }
 
-    public static PotionClientServerHandler decode(final FriendlyByteBuf packetBuffer) {
-        return new PotionClientServerHandler(packetBuffer.readNbt());
-    }
-
-    public static void onMessage(final PotionClientServerHandler msg,
+    public static void onMessage(final PotionClientHandler msg,
                                  final Supplier<NetworkEvent.Context> contextSupplier) {
 
 
@@ -42,29 +37,27 @@ public class PotionClientServerHandler {
                 Minecraft m = Minecraft.getInstance();
                 LocalPlayer clientPlayer = m.player;
                 if (clientPlayer != null) {
-                    UUID uuid = msg.getCompound().getUUID(MINION_ID_KEY);
+                    UUID uuid = msg.compound().getUUID(ENTITY_ID_KEY);
                     LivingEntity entityByUUID = (LivingEntity) TargetUtils.getEntityByUUID(m.level, uuid);
-                    if (uuid != null && entityByUUID != null) {
-                        MobEffectInstance effectInstance = MobEffectInstance.load(msg.getCompound());
-                        String effectEventType = msg.getCompound().getString(EFFECT_EVENT_TYPE);
+                    if (entityByUUID != null) {
+                        MobEffectInstance effectInstance = MobEffectInstance.load(msg.compound());
+                        String effectEventType = msg.compound().getString(EFFECT_EVENT_TYPE);
 
                         //DevilRpg.LOGGER.info("----->effectEventType {}",effectEventType);
                         if (effectEventType.equals(POTION_ADDED_EVENT)) {
+                            assert effectInstance != null;
                             entityByUUID.addEffect(effectInstance);
-                            DevilRpg.LOGGER.info("----->effect added to client");
+                            DevilRpg.LOGGER.info("----->effect added to client {}",effectInstance);
                         }
                         if (effectEventType.equals(POTION_EXPIRY_EVENT)) {
+                            assert effectInstance != null;
                             entityByUUID.removeEffect(effectInstance.getEffect());
-                            DevilRpg.LOGGER.info("----->effect removed to client");
+                            DevilRpg.LOGGER.info("----->effect removed to client{}",effectInstance);
                         }
                     }
                 }
             });
             contextSupplier.get().setPacketHandled(true);
         }
-    }
-
-    public CompoundTag getCompound() {
-        return compound;
     }
 }

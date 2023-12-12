@@ -10,13 +10,9 @@ import com.chipoodle.devilrpg.client.gui.hud.ManaBarHudOverlay;
 import com.chipoodle.devilrpg.client.gui.hud.MinionPortraitHudOverlay;
 import com.chipoodle.devilrpg.client.render.entity.model.*;
 import com.chipoodle.devilrpg.client.render.entity.renderer.*;
-import com.chipoodle.devilrpg.init.ModBlocks;
 import com.chipoodle.devilrpg.init.ModEntities;
-import net.minecraft.client.color.block.BlockColor;
-import net.minecraft.client.color.item.ItemColor;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.EntityRenderersEvent;
-import net.minecraftforge.client.event.RegisterColorHandlersEvent;
 import net.minecraftforge.client.event.RegisterGuiOverlaysEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
@@ -31,7 +27,7 @@ public final class ClientModEventSubscriber {
     public static final int SOULVINE_COLOR = 0xAF3F1F;
 
 
-    @SubscribeEvent
+    /*@SubscribeEvent
     public static void onRegisterBlockColors(final RegisterColorHandlersEvent.Block event) {
         DevilRpg.LOGGER.info("----------------------->ClientModEventSubscriber.onRegisterBlockColors");
         BlockColor iBlockColor = (state, reader, pos, tint) -> SOULVINE_COLOR;
@@ -43,7 +39,7 @@ public final class ClientModEventSubscriber {
         DevilRpg.LOGGER.info("----------------------->ClientModEventSubscriber.onRegisterItemColors");
         ItemColor iItemColor = (itemStack, anInteger) -> SOULVINE_COLOR;
         event.getItemColors().register(iItemColor, ModBlocks.SOUL_VINE_BLOCK.get());
-    }
+    }*/
 
     @SubscribeEvent
     public static void onRegisterLayers(final EntityRenderersEvent.RegisterLayerDefinitions event) {

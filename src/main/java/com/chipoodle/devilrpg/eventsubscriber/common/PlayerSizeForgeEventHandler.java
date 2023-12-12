@@ -62,7 +62,7 @@ public class PlayerSizeForgeEventHandler {
     }
 
     @SubscribeEvent
-    public static void onLivingUpdate(LivingEvent.LivingTickEvent event) {
+    public static void onLivingTickEvent(LivingEvent.LivingTickEvent event) {
 
     }
 

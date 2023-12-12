@@ -61,7 +61,7 @@ public class PlayerPassiveWerewolfHit extends AbstractPlayerPassive implements I
             removeCurrentWerewolfHitModifiers();
             hitAttributeModifier = createNewAttributeModifiers();
             HashMap<String, UUID> capAttModifiersHashMap = parentCapability.getAttributeModifiers();
-            addAttributeToCapability(capAttModifiersHashMap, Attributes.ARMOR, hitAttributeModifier.getId());
+            addAttributeToCapability(capAttModifiersHashMap, Attributes.ATTACK_DAMAGE, hitAttributeModifier.getId());
             parentCapability.setAttributeModifiers(capAttModifiersHashMap, playerIn);
             DevilRpg.LOGGER.info("----------------------->Add {}", hitAttributeModifier.getId());
         }

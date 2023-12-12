@@ -298,7 +298,7 @@ public class PlayerCapabilityForgeEventSubscriber {
     }
 
     @SubscribeEvent
-    public static void onplayerLevelChange(PlayerXpEvent.LevelChange e) {
+    public static void onPlayerLevelChange(PlayerXpEvent.LevelChange e) {
         Player player = e.getEntity();
         DevilRpg.LOGGER.info("----------------------->PlayerCapabilityForgeEventSubscriber.onPlayerLevelChange() Client? "
                 + player.level.isClientSide + " level? " + player.experienceLevel + " " + player.totalExperience);

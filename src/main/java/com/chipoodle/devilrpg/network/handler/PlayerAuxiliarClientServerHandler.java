@@ -11,20 +11,10 @@ import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
 
-public class PlayerAuxiliarClientServerHandler {
-
-    private final CompoundTag auxiliaryCompound;
-
-    public PlayerAuxiliarClientServerHandler(CompoundTag manaCompound) {
-        this.auxiliaryCompound = manaCompound;
-    }
-
-    public CompoundTag getAuxiliaryCompound() {
-        return auxiliaryCompound;
-    }
+public record PlayerAuxiliarClientServerHandler(CompoundTag auxiliaryCompound) {
 
     public static void encode(final PlayerAuxiliarClientServerHandler msg, final FriendlyByteBuf packetBuffer) {
-        packetBuffer.writeNbt(msg.getAuxiliaryCompound());
+        packetBuffer.writeNbt(msg.auxiliaryCompound());
     }
 
     public static PlayerAuxiliarClientServerHandler decode(final FriendlyByteBuf packetBuffer) {
@@ -38,7 +28,7 @@ public class PlayerAuxiliarClientServerHandler {
                 ServerPlayer serverPlayer = contextSupplier.get().getSender();
                 if (serverPlayer != null) {
                     serverPlayer.getCapability(PlayerAuxiliaryCapability.INSTANCE)
-                            .ifPresent(x -> x.deserializeNBT(msg.getAuxiliaryCompound()));
+                            .ifPresent(x -> x.deserializeNBT(msg.auxiliaryCompound()));
                 }
             });
             contextSupplier.get().setPacketHandled(true);
@@ -50,7 +40,7 @@ public class PlayerAuxiliarClientServerHandler {
                 LocalPlayer clientPlayer = m.player;
                 if (clientPlayer != null) {
                     clientPlayer.getCapability(PlayerAuxiliaryCapability.INSTANCE)
-                            .ifPresent(x -> x.deserializeNBT(msg.getAuxiliaryCompound()));
+                            .ifPresent(x -> x.deserializeNBT(msg.auxiliaryCompound()));
                 }
 
             });

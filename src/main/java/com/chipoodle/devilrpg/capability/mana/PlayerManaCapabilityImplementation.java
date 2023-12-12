@@ -10,9 +10,9 @@ import net.minecraftforge.network.PacketDistributor;
 
 public class PlayerManaCapabilityImplementation implements PlayerManaCapabilityInterface {
 
-    protected float mana = 0f;
-    protected float maxMana = 50f;
-    protected float regeneration = 0.10f;
+    private float mana = 0f;
+    private float maxMana = 30f;
+    private float regeneration = 0.2f;
 
     @Override
     public float getMana() {
@@ -49,7 +49,7 @@ public class PlayerManaCapabilityImplementation implements PlayerManaCapabilityI
 
     @Override
     public void setRegeneration(float regeneration, Player player) {
-        this.regeneration = maxMana;
+        this.regeneration = regeneration;
         if (!player.level.isClientSide)
             sendManaChangesToClient((ServerPlayer) player);
         else
@@ -60,7 +60,7 @@ public class PlayerManaCapabilityImplementation implements PlayerManaCapabilityI
     public void onPlayerTickEventRegeneration(Player player) {
         if (mana < maxMana) {
             mana += regeneration;
-            setMana(mana > maxMana ? maxMana : mana, player);
+            setMana(Math.min(mana, maxMana), player);
         } else {
             mana = maxMana;
         }
