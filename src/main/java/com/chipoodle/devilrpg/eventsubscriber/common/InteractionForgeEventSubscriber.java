@@ -8,9 +8,12 @@ package com.chipoodle.devilrpg.eventsubscriber.common;
 import java.util.function.BiConsumer;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
+import com.chipoodle.devilrpg.capability.stamina.PlayerStaminaCapability;
+import com.chipoodle.devilrpg.capability.stamina.PlayerStaminaCapabilityInterface;
 import com.chipoodle.devilrpg.entity.ISoulEntity;
 import com.chipoodle.devilrpg.entity.ITamableEntity;
 import com.chipoodle.devilrpg.init.ModNetwork;
@@ -135,6 +138,8 @@ public class InteractionForgeEventSubscriber {
 		BiConsumer<AttackEntityEvent, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, auxiliar) -> {
 			eve.getEntity().swinging = false;
 			//eve.setCanceled(true);
+			PlayerStaminaCapabilityInterface unwrappedPlayerCapabilityStamina = IGenericCapability.getUnwrappedPlayerCapability(event.getEntity(), PlayerStaminaCapability.INSTANCE);
+			unwrappedPlayerCapabilityStamina.onPlayerTickEventRegeneration(event.getEntity(),0.0f);
 		};
 		EventUtils.onWerewolfTransformation(event.getEntity(), c, event);
 	}

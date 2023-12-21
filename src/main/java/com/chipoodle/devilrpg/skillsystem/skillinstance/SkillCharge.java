@@ -42,7 +42,7 @@ public class SkillCharge implements ISkillContainer {
     }
 
     @Override
-    public boolean arePreconditionsMetBeforeConsumingMana(Player player) {
+    public boolean arePreconditionsMetBeforeConsumingResource(Player player) {
         PlayerAuxiliaryCapabilityInterface auxiliary = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerAuxiliaryCapability.INSTANCE);
         return auxiliary.isWerewolfTransformation() && player.isOnGround();
     }

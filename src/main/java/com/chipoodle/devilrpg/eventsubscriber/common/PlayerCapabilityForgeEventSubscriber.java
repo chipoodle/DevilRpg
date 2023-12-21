@@ -22,6 +22,9 @@ import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityInt
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
+import com.chipoodle.devilrpg.capability.stamina.PlayerStaminaCapability;
+import com.chipoodle.devilrpg.capability.stamina.PlayerStaminaCapabilityImplementation;
+import com.chipoodle.devilrpg.capability.stamina.PlayerStaminaCapabilityInterface;
 import com.chipoodle.devilrpg.capability.tamable_minion.TamableMinionCapability;
 import com.chipoodle.devilrpg.capability.tamable_minion.TamableMinionCapabilityImplementation;
 import com.chipoodle.devilrpg.capability.tamable_minion.TamableMinionCapabilityInterface;
@@ -30,7 +33,8 @@ import com.chipoodle.devilrpg.init.ModCapability;
 import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.network.handler.PlayerExperienceClientServerHandler;
 import com.chipoodle.devilrpg.network.handler.PlayerManaClientServerHandler;
-import com.chipoodle.devilrpg.network.handler.PlayerSkillClientServerHandler;
+import com.chipoodle.devilrpg.network.handler.PlayerSkillTreeClientServerHandler;
+import com.chipoodle.devilrpg.network.handler.PlayerStaminaClientServerHandler;
 import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
 import com.chipoodle.devilrpg.util.EventUtils;
 import com.chipoodle.devilrpg.util.SkillEnum;
@@ -47,7 +51,6 @@ import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
 import net.minecraftforge.event.entity.EntityJoinLevelEvent;
 import net.minecraftforge.event.entity.living.LivingEquipmentChangeEvent;
-import net.minecraftforge.event.entity.living.LivingEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerSetSpawnEvent;
 import net.minecraftforge.event.entity.player.PlayerSleepInBedEvent;
@@ -74,6 +77,7 @@ public class PlayerCapabilityForgeEventSubscriber {
         event.register(PlayerAuxiliaryCapabilityImplementation.class);
         event.register(PlayerExperienceCapabilityImplementation.class);
         event.register(PlayerManaCapabilityImplementation.class);
+        event.register(PlayerStaminaCapabilityImplementation.class);
         event.register(PlayerMinionCapabilityImplementation.class);
         event.register(PlayerSkillCapabilityImplementation.class);
         event.register(TamableMinionCapabilityImplementation.class);
@@ -102,6 +106,7 @@ public class PlayerCapabilityForgeEventSubscriber {
             clonePlayerCapability(e, PlayerAuxiliaryCapability.INSTANCE);
             clonePlayerCapability(e, PlayerExperienceCapability.INSTANCE);
             clonePlayerCapability(e, PlayerManaCapability.INSTANCE);
+            clonePlayerCapability(e, PlayerStaminaCapability.INSTANCE);
             clonePlayerCapability(e, PlayerMinionCapability.INSTANCE);
             clonePlayerCapability(e, PlayerSkillCapability.INSTANCE);
         }
@@ -140,9 +145,9 @@ public class PlayerCapabilityForgeEventSubscriber {
             return;
         }
         LazyOptional<PlayerManaCapabilityInterface> mana = player.getCapability(PlayerManaCapability.INSTANCE);
+        LazyOptional<PlayerStaminaCapabilityInterface> stamina = player.getCapability(PlayerStaminaCapability.INSTANCE);
         LazyOptional<PlayerSkillCapabilityInterface> skill = player.getCapability(PlayerSkillCapability.INSTANCE);
-        LazyOptional<PlayerExperienceCapabilityInterface> exp = player
-                .getCapability(PlayerExperienceCapability.INSTANCE);
+        LazyOptional<PlayerExperienceCapabilityInterface> exp = player.getCapability(PlayerExperienceCapability.INSTANCE);
         LazyOptional<PlayerAuxiliaryCapabilityInterface> aux = player.getCapability(PlayerAuxiliaryCapability.INSTANCE);
         LazyOptional<PlayerMinionCapabilityInterface> min = player.getCapability(PlayerMinionCapability.INSTANCE);
     }
@@ -192,6 +197,9 @@ public class PlayerCapabilityForgeEventSubscriber {
         DevilRpg.LOGGER.info("----------------------->PlayerCapabilityForgeEventSubscriber.onEntityJoinWorld()");
         BiConsumer<Player, LazyOptional<PlayerManaCapabilityInterface>> manaBiConsumer = sendManaNBTData();
         EventUtils.onJoin(player, manaBiConsumer, PlayerManaCapability.INSTANCE);
+
+        BiConsumer<Player, LazyOptional<PlayerStaminaCapabilityInterface>> staminaBiConsumer = sendStaminaNBTData();
+        EventUtils.onJoin(player, staminaBiConsumer, PlayerStaminaCapability.INSTANCE);
 
         BiConsumer<Player, LazyOptional<PlayerSkillCapabilityInterface>> skillBiConsumer = removeStoredSkillAttributes();
         EventUtils.onJoin(player, skillBiConsumer, PlayerSkillCapability.INSTANCE);
@@ -247,6 +255,15 @@ public class PlayerCapabilityForgeEventSubscriber {
         return manaBiConsumer;
     }
 
+    private static BiConsumer<Player, LazyOptional<PlayerStaminaCapabilityInterface>> sendStaminaNBTData() {
+        BiConsumer<Player, LazyOptional<PlayerStaminaCapabilityInterface>> staminaBiConsumer = (aPlayer, theMana) -> {
+            ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> (ServerPlayer) aPlayer),
+                    new PlayerStaminaClientServerHandler(theMana.map(PlayerStaminaCapabilityInterface::serializeNBT).orElse(null)));
+            DevilRpg.LOGGER.info("----------------------->PlayerCapabilityForgeEventSubscriber.sendStaminaNBTData");
+        };
+        return staminaBiConsumer;
+    }
+
     private static BiConsumer<Player, LazyOptional<PlayerSkillCapabilityInterface>> removeStoredSkillAttributes() {
         BiConsumer<Player, LazyOptional<PlayerSkillCapabilityInterface>> skillBiConsumer = (aPlayer, theSkill) -> {
             theSkill.ifPresent(presentSkill -> {
@@ -271,7 +288,7 @@ public class PlayerCapabilityForgeEventSubscriber {
 
 
                 ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> (ServerPlayer) aPlayer),
-                        new PlayerSkillClientServerHandler(presentSkill.serializeNBT()));
+                        new PlayerSkillTreeClientServerHandler(presentSkill.serializeNBT()));
             });
             DevilRpg.LOGGER.info("----------------------->PlayerCapabilityForgeEventSubscriber.removeStoredSkillAttributes");
         };
@@ -324,7 +341,7 @@ public class PlayerCapabilityForgeEventSubscriber {
 
     private static ISkillContainer getLoadedSkillForPlayer(Player player, SkillEnum skill) {
         PlayerSkillCapabilityInterface aSkillCap = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerSkillCapability.INSTANCE);
-        ISkillContainer loadedSkill = aSkillCap.getLoadedSkill(skill);
+        ISkillContainer loadedSkill = aSkillCap.getLoadedSkillExecutor(skill);
         DevilRpg.LOGGER.info("----------------------->loadedSkill {}", loadedSkill);
         return loadedSkill;
     }

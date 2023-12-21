@@ -1,6 +1,7 @@
 package com.chipoodle.devilrpg.skillsystem.skillinstance;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
@@ -46,6 +47,17 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassive implements IS
     }
 
     @Override
+    public boolean arePreconditionsMetBeforeConsumingResource(Player playerIn){
+        return true;
+    }
+
+    @Override
+    public boolean isResourceConsumptionIgnored(Player player){
+        PlayerAuxiliaryCapabilityInterface unwrappedPlayerCapabilityAux = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerAuxiliaryCapability.INSTANCE);
+        return unwrappedPlayerCapabilityAux.isWerewolfTransformation();
+    }
+
+    @Override
     public void execute(Level worldIn, Player playerIn, HashMap<String, String> parameters) {
         if (!worldIn.isClientSide) {
             Random rand = new Random();
@@ -65,28 +77,12 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassive implements IS
             }
 
             super.executePassiveChildren(parentCapability, getSkillEnum(), worldIn, playerIn);
-
-
-
-           /* CompoundNBT compoundNBT;
-            compoundNBT = parentCapability.setSkillToByteArray(SkillEnum.SKIN_ARMOR);
-            ModNetwork.CHANNEL.sendToServer(new PlayerPassiveSkillServerHandler(compoundNBT));
-
-            compoundNBT = parentCapability.setSkillToByteArray(SkillEnum.WEREWOLF_HIT);
-            ModNetwork.CHANNEL.sendToServer(new PlayerPassiveSkillServerHandler(compoundNBT));*/
-
-            /*ISkillContainer loadedSkill = parentCapability.getLoadedSkill(SkillEnum.SKIN_ARMOR);
-            loadedSkill.execute(worldIn, playerIn, new HashMap<>());*/
         }
 
 
     }
 
     private void createNewAttributeModifiers() {
-        /*healthAttributeModifier = createNewAttributeModifier(
-                SkillEnum.TRANSFORM_WEREWOLF.name() + HEALTH,
-                Double.valueOf(parentCapability.getSkillsPoints().get(SkillEnum.TRANSFORM_WEREWOLF)), AttributeModifier.Operation.ADDITION);*/
-
         speedAttributeModifier = createNewAttributeModifier(
                 SkillEnum.TRANSFORM_WEREWOLF.name() + SPEED,
                 parentCapability.getSkillsPoints().get(SkillEnum.TRANSFORM_WEREWOLF) * 0.0045, AttributeModifier.Operation.ADDITION);
@@ -94,10 +90,6 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassive implements IS
 
     private void removeCurrentModifiers(Player playerIn) {
         HashMap<String, UUID> attributeModifiers = parentCapability.getAttributeModifiers();
-        //removeCurrentModifierFromPlayer(playerIn, healthAttributeModifier, Attributes.MAX_HEALTH);
-        //removeAttributeFromCapability(attributeModifiers, Attributes.MAX_HEALTH);
-        /*if (playerIn.getHealth() > playerIn.getMaxHealth())
-            playerIn.setHealth(playerIn.getMaxHealth());*/
         removeCurrentModifierFromPlayer(playerIn, speedAttributeModifier, Attributes.MOVEMENT_SPEED);
         removeAttributeFromCapability(attributeModifiers, Attributes.MOVEMENT_SPEED);
         parentCapability.setAttributeModifiers(attributeModifiers, playerIn);
@@ -114,14 +106,11 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassive implements IS
 
     /**
      * Must be called inside playerTickEvent. Client side
-     *
-     * @param player
+     * @param player the player
+     * @param auxiliaryCapability Auxiliar capability
      */
     @OnlyIn(Dist.CLIENT)
     public void playerTickEventAttack(final Player player, PlayerAuxiliaryCapabilityInterface auxiliaryCapability) {
-        //if (player.level.isClientSide) {
-        //DevilRpg.LOGGER.info("Skill.playerTickEventAttack");
-        //DevilRpg.LOGGER.info("att time : {}.  Player.tickCount / attackTime {}", attackTime, player.tickCount / attackTime);
         InteractionHand hand = auxiliaryCapability.swingHands(player);
         LivingEntity closestEnemy = findClosestEnemy(player);
         if (closestEnemy != null) {
@@ -130,7 +119,6 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassive implements IS
             renderParticles(player, hand);
             attackEnemies(closestEnemy, hand);
         }
-        //}
     }
 
     private LivingEntity findClosestEnemy(final Player player) {
@@ -151,6 +139,8 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassive implements IS
     }
 
     /**
+     *
+     * @param target
      * @param hand
      */
     private void attackEnemies(LivingEntity target, InteractionHand hand) {
@@ -159,8 +149,8 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassive implements IS
         //}
     }
 
-
     /**
+     *
      * @param player
      * @param hand
      */

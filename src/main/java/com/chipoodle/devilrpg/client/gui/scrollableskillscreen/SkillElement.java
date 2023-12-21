@@ -34,10 +34,10 @@ public class SkillElement {
 	private final Set<SkillElement> children = Sets.newLinkedHashSet();
 	private final Component displayText;
 	private final SkillEnum skillCapability;
-	private final SkillManaCost skillManaCost;
+	private final SkillResourceCost skillResourceCost;
 
 	public SkillElement(ResourceLocation id, @Nullable SkillElement parentIn, @Nullable SkillDisplayInfo displayIn,
-			SkillElementRewards rewardsIn, SkillEnum skillCapability, SkillManaCost skillManaCost) {
+			SkillElementRewards rewardsIn, SkillEnum skillCapability, SkillResourceCost skillResourceCost) {
 		this.id = id;
 		this.display = displayIn;
 		this.parent = parentIn;
@@ -60,7 +60,7 @@ public class SkillElement {
 			this.displayText = ComponentUtils.wrapInSquareBrackets(itextcomponent2).withStyle(textformatting);
 		}
 		this.skillCapability = skillCapability;
-		this.skillManaCost = skillManaCost;
+		this.skillResourceCost = skillResourceCost;
 	}
 
 	/**
@@ -68,7 +68,7 @@ public class SkillElement {
 	 */
 	public SkillElement.Builder copy() {
 		return new SkillElement.Builder(this.id, this.parent == null ? null : this.parent.getId(), this.display,
-				this.rewards, this.skillCapability,this.skillManaCost);
+				this.rewards, this.skillCapability,this.skillResourceCost);
 	}
 
 	/**
@@ -117,8 +117,8 @@ public class SkillElement {
 			builder2.append("displayText=").append(displayText).append(", ");
 		if (skillCapability != null)
 			builder2.append("skillCapability=").append(skillCapability).append(", ");
-		if (skillManaCost != null)
-			builder2.append("skillManaCost=").append(skillManaCost);
+		if (skillResourceCost != null)
+			builder2.append("skillManaCost=").append(skillResourceCost);
 		builder2.append("]");
 		return builder2.toString();
 	}
@@ -188,8 +188,8 @@ public class SkillElement {
 		return skillCapability;
 	}
 		
-	public SkillManaCost getSkillManaCost() {
-		return skillManaCost;
+	public SkillResourceCost getSkillManaCost() {
+		return skillResourceCost;
 	}
 
 	public static class Builder {
@@ -199,16 +199,16 @@ public class SkillElement {
 		private SkillDisplayInfo display;
 		private SkillElementRewards rewards = SkillElementRewards.EMPTY;
 		private SkillEnum skillCapability;
-		private SkillManaCost skillManaCost;
+		private SkillResourceCost skillResourceCost;
 
 		private Builder(ResourceLocation id, @Nullable ResourceLocation parentIdIn,
-				@Nullable SkillDisplayInfo displayIn, SkillElementRewards rewardsIn, SkillEnum skillCapability, SkillManaCost skillManaCost) {
+				@Nullable SkillDisplayInfo displayIn, SkillElementRewards rewardsIn, SkillEnum skillCapability, SkillResourceCost skillResourceCost) {
 			this.parentId = parentIdIn;
 			this.id = id;
 			this.display = displayIn;
 			this.rewards = rewardsIn;
 			this.skillCapability = skillCapability;
-			this.skillManaCost = skillManaCost;
+			this.skillResourceCost = skillResourceCost;
 		}
 
 		private Builder() {
@@ -261,8 +261,8 @@ public class SkillElement {
 			return this;
 		}
 		
-		public SkillElement.Builder withSkillManaCost(SkillManaCost skillManaCost) {
-			this.skillManaCost = skillManaCost;
+		public SkillElement.Builder withSkillManaCost(SkillResourceCost skillResourceCost) {
+			this.skillResourceCost = skillResourceCost;
 			return this;
 		}
 		
@@ -288,7 +288,7 @@ public class SkillElement {
 			if (!this.resolveParent((parentID) -> null)) {
 				throw new IllegalStateException("Tried to build incomplete skill!");
 			} else {
-				return new SkillElement(id, this.parent, this.display, this.rewards, this.skillCapability,this.skillManaCost);
+				return new SkillElement(id, this.parent, this.display, this.rewards, this.skillCapability,this.skillResourceCost);
 			}
 		}
 
@@ -359,13 +359,13 @@ public class SkillElement {
 						? SkillEnum.getByJsonName(GsonHelper.getAsString(json, "capability"))
 						: SkillEnum.EMPTY;
 				
-				SkillManaCost skillManaCost = json.has("skillmanacost")
-						?  SkillManaCost.deserialize(GsonHelper.getAsJsonObject(json, "skillmanacost"))
+				SkillResourceCost skillResourceCost = json.has("skillmanacost")
+						?  SkillResourceCost.deserialize(GsonHelper.getAsJsonObject(json, "skillmanacost"))
 						: null;
 				
 				
 
-				return new SkillElement.Builder(id, resourcelocation, displayinfo, advancementrewards, skillCapability,skillManaCost);
+				return new SkillElement.Builder(id, resourcelocation, displayinfo, advancementrewards, skillCapability, skillResourceCost);
 			} catch (Exception ex) {
 				DevilRpg.LOGGER.error("Ocurrió un error al deserializar", ex);
 				return null;
@@ -395,11 +395,11 @@ public class SkillElement {
 						? SkillEnum.valueOf(GsonHelper.getAsJsonObject(json, "capability").getAsString())
 						: SkillEnum.EMPTY;
 				
-				SkillManaCost skillManaCost = json.has("skillmanacost")
-						?  SkillManaCost.deserialize(GsonHelper.getAsJsonObject(json, "skillmanacost"))
+				SkillResourceCost skillResourceCost = json.has("skillmanacost")
+						?  SkillResourceCost.deserialize(GsonHelper.getAsJsonObject(json, "skillmanacost"))
 						: null;
 
-				return new SkillElement.Builder(id, resourcelocation, displayinfo, advancementrewards, skillCapability, skillManaCost);
+				return new SkillElement.Builder(id, resourcelocation, displayinfo, advancementrewards, skillCapability, skillResourceCost);
 			} catch (Exception ex) {
 				DevilRpg.LOGGER.error("Ocurrió un error al deserializar", ex);
 				return null;

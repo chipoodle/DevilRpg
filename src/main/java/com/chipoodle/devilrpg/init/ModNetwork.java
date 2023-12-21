@@ -38,10 +38,10 @@ public class ModNetwork {
                 PlayerManaClientServerHandler::onMessage);
 
         CHANNEL.registerMessage(++networkId,
-                PlayerSkillClientServerHandler.class,
-                PlayerSkillClientServerHandler::encode,
-                PlayerSkillClientServerHandler::decode,
-                PlayerSkillClientServerHandler::onMessage);
+                PlayerSkillTreeClientServerHandler.class,
+                PlayerSkillTreeClientServerHandler::encode,
+                PlayerSkillTreeClientServerHandler::decode,
+                PlayerSkillTreeClientServerHandler::onMessage);
 
         CHANNEL.registerMessage(++networkId,
                 WerewolfAttackServerHandler.class,
@@ -84,6 +84,12 @@ public class ModNetwork {
                 PlayerDeltaMovementClientHandler::encode,
                 PlayerDeltaMovementClientHandler::decode,
                 PlayerDeltaMovementClientHandler::onMessage);
+
+        CHANNEL.registerMessage(++networkId,
+                PlayerStaminaClientServerHandler.class,
+                PlayerStaminaClientServerHandler::encode,
+                PlayerStaminaClientServerHandler::decode,
+                PlayerStaminaClientServerHandler::onMessage);
     }
 
 }

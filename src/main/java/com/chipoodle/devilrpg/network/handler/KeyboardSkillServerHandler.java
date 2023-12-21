@@ -23,8 +23,7 @@ public record KeyboardSkillServerHandler(PowerEnum poder) {
 		return new KeyboardSkillServerHandler(PowerEnum.valueOf(packetBuffer.readUtf()));
 	}
 
-	public static void onMessage(final KeyboardSkillServerHandler msg,
-								 final Supplier<NetworkEvent.Context> contextSupplier) {
+	public static void onMessage(final KeyboardSkillServerHandler msg, final Supplier<NetworkEvent.Context> contextSupplier) {
 		if (contextSupplier.get().getDirection().equals(NetworkDirection.PLAY_TO_SERVER)) {
 			contextSupplier.get().enqueueWork(() -> {
 				ServerPlayer sender = contextSupplier.get().getSender(); // the client that sent this packet

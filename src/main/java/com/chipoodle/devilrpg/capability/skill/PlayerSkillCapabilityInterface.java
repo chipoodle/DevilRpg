@@ -1,6 +1,7 @@
 package com.chipoodle.devilrpg.capability.skill;
 
 import com.chipoodle.devilrpg.capability.IGenericCapability;
+import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.ResourceType;
 import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model.ClientSkillBuilderFromJson;
 import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
 import com.chipoodle.devilrpg.util.PowerEnum;
@@ -26,9 +27,14 @@ public interface PlayerSkillCapabilityInterface extends IGenericCapability {
 
     void setMaxSkillsPoints(HashMap<SkillEnum, Integer> points, Player player);
 
-    HashMap<SkillEnum, Integer> getManaCostPoints();
+    HashMap<SkillEnum, Integer> getResourceCostPoints();
 
-    void setManaCostPoints(HashMap<SkillEnum, Integer> points, Player player);
+    void setResourceCostPoints(HashMap<SkillEnum, Integer> points, Player player);
+
+    HashMap<SkillEnum, ResourceType> getResourceType();
+
+
+    void setResourceType(HashMap<SkillEnum, ResourceType> points, Player player);
 
     HashMap<String, UUID> getAttributeModifiers();
 
@@ -38,13 +44,13 @@ public interface PlayerSkillCapabilityInterface extends IGenericCapability {
 
     CompoundTag setSkillToByteArray(SkillEnum skillEnum);
 
-    void triggerAction(ServerPlayer sender, PowerEnum triggeredPower);
+    void triggerAction(ServerPlayer playerIn, PowerEnum triggeredPower);
 
     void triggerPassive(ServerPlayer sender, CompoundTag triggeredPassive);
 
-    ISkillContainer getLoadedSkill(SkillEnum skillEnum);
+    ISkillContainer getLoadedSkillExecutor(SkillEnum skillEnum);
 
-    ISkillContainer create(SkillEnum skillEnum);
+    ISkillContainer createSkillExecutor(SkillEnum skillEnum);
 
     ClientSkillBuilderFromJson getClientSkillBuilder();
 }

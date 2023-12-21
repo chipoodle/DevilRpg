@@ -83,7 +83,8 @@
         "capability": "frostball",
         "skillmanacost":{
         	"maxskilllevel":"20",
-			"manacost":"3"
+			"manacost":"3",
+            "resourcetype":"mana"
 		},
         "rewards": {},
         "parent": "nature:root"
@@ -103,7 +104,8 @@
         "capability": "soulvine",
         "skillmanacost":{
             "maxskilllevel":"20",
-            "manacost":"3"
+            "manacost":"3",
+            "resourcetype":"mana"
         },
         "rewards": {},
         "parent": "nature:root"
@@ -123,7 +125,8 @@
         "capability": "mana_pool",
         "skillmanacost":{
             "maxskilllevel":"20",
-            "manacost":"0"
+            "manacost":"0",
+            "resourcetype":"mana"
         },
         "rewards": {},
         "parent": "nature:root"
@@ -143,7 +146,8 @@
         "capability": "mana_regeneration",
         "skillmanacost":{
             "maxskilllevel":"20",
-            "manacost":"0"
+            "manacost":"0",
+            "resourcetype":"mana"
         },
         "rewards": {},
         "parent": "nature:mana_pool"
@@ -163,7 +167,8 @@
         "capability": "shapeshift_werewolf",
         "skillmanacost":{
         	"maxskilllevel":"20",
-			"manacost":"10"
+			"manacost":"5",
+            "resourcetype":"mana"
 		},
         "rewards": {},
         "parent": "shapeshifting:root"
@@ -183,7 +188,8 @@
         "capability": "skin_armor",
         "skillmanacost":{
         	"maxskilllevel":"20",
-			"manacost":"0"
+			"manacost":"0",
+            "resourcetype":"mana"
 		},
         "rewards": {},
         "parent": "shapeshifting:werewolf"
@@ -203,7 +209,8 @@
         "capability": "werewolf_vitality",
         "skillmanacost":{
             "maxskilllevel":"20",
-            "manacost":"0"
+            "manacost":"0",
+            "resourcetype":"mana"
         },
         "rewards": {},
         "parent": "shapeshifting:werewolf"
@@ -223,7 +230,8 @@
         "capability": "werewolf_hit",
         "skillmanacost":{
         	"maxskilllevel":"10",
-			"manacost":"1"
+			"manacost":"1",
+            "resourcetype":"mana"
 		},
         "rewards": {},
         "parent": "shapeshifting:werewolf"
@@ -243,7 +251,8 @@
         "capability": "charge",
         "skillmanacost":{
             "maxskilllevel":"3",
-            "manacost":"26"
+            "manacost":"26",
+            "resourcetype":"stamina"
         },
         "rewards": {},
         "parent": "shapeshifting:werewolfhit"
@@ -263,7 +272,8 @@
         "capability": "summon_soul_wolf",
         "skillmanacost":{
         	"maxskilllevel":"20",
-			"manacost":"15"
+			"manacost":"15",
+            "resourcetype":"mana"
 		},
         "rewards": {},
         "parent": "summoning:root"
@@ -283,7 +293,8 @@
         "capability": "wolffrostbite",
         "skillmanacost":{
         	"maxskilllevel":"5",
-			"manacost":"0"
+			"manacost":"0",
+            "resourcetype":"mana"
 		},
         "rewards": {},
         "parent": "summoning:wolf"
@@ -303,7 +314,8 @@
         "capability": "wolficearmor",
         "skillmanacost":{
         	"maxskilllevel":"5",
-			"manacost":"0"
+			"manacost":"0",
+            "resourcetype":"mana"
 		},
         "rewards": {},
         "parent": "summoning:wolf"
@@ -323,7 +335,8 @@
         "capability": "summon_soul_bear",
         "skillmanacost":{
         	"maxskilllevel":"20",
-			"manacost":"30"
+			"manacost":"30",
+            "resourcetype":"mana"
 		},
         "rewards": {},
         "parent": "summoning:root"
@@ -343,7 +356,8 @@
         "capability": "mount_bear",
         "skillmanacost":{
             "maxskilllevel":"2",
-            "manacost":"0"
+            "manacost":"0",
+            "resourcetype":"mana"
         },
         "rewards": {},
         "parent": "summoning:bear"
@@ -363,7 +377,8 @@
         "capability": "war_bear",
         "skillmanacost":{
         	"maxskilllevel":"6",
-			"manacost":"0"
+			"manacost":"0",
+            "resourcetype":"mana"
 		},
         "rewards": {},
         "parent": "summoning:bear"
@@ -384,7 +399,8 @@
         "capability": "summon_minion_vitality",
         "skillmanacost":{
         	"maxskilllevel":"20",
-			"manacost":"0"
+			"manacost":"0",
+            "resourcetype":"mana"
 		},
         "parent": "summoning:root"
     },
@@ -404,7 +420,8 @@
         "capability": "summon_wisp_health",
         "skillmanacost":{
         	"maxskilllevel":"20",
-			"manacost":"15"
+			"manacost":"15",
+            "resourcetype":"mana"
 		},
         "parent": "summoning:minionvitality"
     },
@@ -424,7 +441,8 @@
         "capability": "summon_wisp_curse",
         "skillmanacost":{
         	"maxskilllevel":"20",
-			"manacost":"15"
+			"manacost":"15",
+            "resourcetype":"mana"
 		},
         "parent": "summoning:minionvitality"
     },
@@ -444,7 +462,8 @@
         "capability": "summon_wisp_bomb",
         "skillmanacost":{
         	"maxskilllevel":"20",
-			"manacost":"15"
+			"manacost":"15",
+            "resourcetype":"mana"
 		},
         "parent": "summoning:minionvitality"
     },
@@ -464,7 +483,8 @@
         "capability": "summon_wisp_archer",
         "skillmanacost":{
         	"maxskilllevel":"20",
-			"manacost":"15"
+			"manacost":"15",
+            "resourcetype":"mana"
 		},
         "parent": "summoning:minionvitality"
     }

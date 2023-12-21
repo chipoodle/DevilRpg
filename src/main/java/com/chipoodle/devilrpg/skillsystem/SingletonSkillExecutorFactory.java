@@ -6,17 +6,17 @@ import com.chipoodle.devilrpg.util.SkillEnum;
 
 import java.util.Hashtable;
 
-public class SingletonSkillFactory {
+public class SingletonSkillExecutorFactory {
 
     private final Hashtable<SkillEnum, ISkillContainer> skillPool = new Hashtable<>();
     private final PlayerSkillCapabilityImplementation parentCapability;
 
-    public SingletonSkillFactory(PlayerSkillCapabilityImplementation parentCapability) {
+    public SingletonSkillExecutorFactory(PlayerSkillCapabilityImplementation parentCapability) {
         this.parentCapability = parentCapability;
         //DevilRpg.LOGGER.info("--------> SingletonSkillFactory. capability hash: "+parentCapability.hashCode());
     }
 
-    public ISkillContainer create(SkillEnum skillEnum) {
+    public ISkillContainer getOrCreate(SkillEnum skillEnum) {
 
         if (skillEnum.equals(SkillEnum.SUMMON_SOUL_WOLF)) {
             skillPool.putIfAbsent(SkillEnum.SUMMON_SOUL_WOLF, new SkillSummonSoulWolf(parentCapability));
@@ -83,6 +83,6 @@ public class SingletonSkillFactory {
     }
 
     public ISkillContainer getExistingSkill(SkillEnum skillEnum) {
-        return (skillPool.containsKey(skillEnum) ? skillPool.get(skillEnum) : create(skillEnum));
+        return (skillPool.containsKey(skillEnum) ? skillPool.get(skillEnum) : getOrCreate(skillEnum));
     }
 }

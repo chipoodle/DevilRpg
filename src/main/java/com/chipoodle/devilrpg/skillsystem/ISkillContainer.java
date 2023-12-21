@@ -9,6 +9,8 @@ import java.util.HashMap;
 public interface ISkillContainer{
 	void execute(Level level, Player playerIn, HashMap<String,String> parameters);
 
-	default boolean arePreconditionsMetBeforeConsumingMana(Player playerIn){return true;}
+	default boolean arePreconditionsMetBeforeConsumingResource(Player playerIn){return true;}
 	SkillEnum getSkillEnum();
+
+	default boolean isResourceConsumptionIgnored(Player player){return false;}
 }

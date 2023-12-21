@@ -64,7 +64,7 @@ public abstract class AbstractPlayerPassive {
     protected void executePassiveChildren(PlayerSkillCapabilityImplementation parentCapability, SkillEnum skillEnum, Level level, Player playerIn) {
         List<SkillEnum> passivesFromActiveSkill = parentCapability.getPassivesFromActiveSkill(skillEnum);
         for (SkillEnum passiveEnum : passivesFromActiveSkill) {
-            ISkillContainer loadedSkill = parentCapability.getLoadedSkill(passiveEnum);
+            ISkillContainer loadedSkill = parentCapability.getLoadedSkillExecutor(passiveEnum);
             loadedSkill.execute(level, playerIn, new HashMap<>());
         }
     }

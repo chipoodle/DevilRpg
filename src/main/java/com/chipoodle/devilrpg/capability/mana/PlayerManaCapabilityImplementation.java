@@ -57,13 +57,11 @@ public class PlayerManaCapabilityImplementation implements PlayerManaCapabilityI
     }
 
     @Override
-    public void onPlayerTickEventRegeneration(Player player) {
-        if (mana < maxMana) {
-            mana += regeneration;
-            setMana(Math.min(mana, maxMana), player);
-        } else {
-            mana = maxMana;
-        }
+    public void onPlayerTickEventRegeneration(Player player, final float degeneration) {
+            mana += regeneration-degeneration;
+            mana = Math.max(Math.min(mana, maxMana),0.0f);
+            setMana(mana, player);
+
     }
 
     @Override

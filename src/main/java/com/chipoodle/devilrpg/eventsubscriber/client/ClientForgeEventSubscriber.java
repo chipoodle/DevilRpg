@@ -153,7 +153,7 @@ public final class ClientForgeEventSubscriber {
                 float t = (15L - points * 0.5F);
                 long attackTime = (long) t;
                 if (Math.floor(event.player.tickCount % attackTime) == 0) {
-                    SkillShapeshiftWerewolf skill = (SkillShapeshiftWerewolf) skillCapability.create(SkillEnum.TRANSFORM_WEREWOLF);
+                    SkillShapeshiftWerewolf skill = (SkillShapeshiftWerewolf) skillCapability.createSkillExecutor(SkillEnum.TRANSFORM_WEREWOLF);
                     skill.playerTickEventAttack(event.player, auxCapability);
                 }
             }

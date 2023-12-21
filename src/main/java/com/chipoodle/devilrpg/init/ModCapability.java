@@ -8,6 +8,7 @@ import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapabilityAt
 import com.chipoodle.devilrpg.capability.mana.PlayerManaCapabilityAttacher;
 import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityAttacher;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityAttacher;
+import com.chipoodle.devilrpg.capability.stamina.PlayerStaminaCapabilityAttacher;
 import com.chipoodle.devilrpg.capability.tamable_minion.TamableMinionCapabilityAttacher;
 import com.chipoodle.devilrpg.entity.ITamableEntity;
 import net.minecraft.world.entity.player.Player;
@@ -20,6 +21,7 @@ public class ModCapability {
 		PlayerManaCapabilityAttacher.attach(event);
 		PlayerMinionCapabilityAttacher.attach(event);
 		PlayerSkillCapabilityAttacher.attach(event);
+		PlayerStaminaCapabilityAttacher.attach(event);
 		LOGGER.info("-----> Player({}) capabilities registered",((Player)event.getObject()).getUUID());
 	}
 

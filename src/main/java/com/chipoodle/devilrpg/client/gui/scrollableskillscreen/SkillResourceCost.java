@@ -4,14 +4,16 @@ import com.google.gson.JsonObject;
 
 import net.minecraft.util.GsonHelper;
 
-public class SkillManaCost {
+public class SkillResourceCost {
 	private final Integer maxSkillLevel;
 	private final Integer manaCost;
+	private final ResourceType resourceType;
 
-	public SkillManaCost(Integer maxSkillLevel, Integer manaCost) {
+	public SkillResourceCost(Integer maxSkillLevel, Integer manaCost, ResourceType resourceType) {
 		super();
 		this.maxSkillLevel = maxSkillLevel;
 		this.manaCost = manaCost;
+		this.resourceType = resourceType;
 	}
 
 	public Integer getMaxSkillLevel() {
@@ -22,9 +24,12 @@ public class SkillManaCost {
 		return manaCost;
 	}
 
-	public static SkillManaCost deserialize(JsonObject object) {
+	public ResourceType getResourceType() {return  resourceType;}
+
+	public static SkillResourceCost deserialize(JsonObject object) {
 		Integer maxSkillLevel = Integer.parseInt(GsonHelper.getAsString(object, "maxskilllevel"));
 		Integer manaCost = Integer.parseInt(GsonHelper.getAsString(object, "manacost"));
-		return new SkillManaCost(maxSkillLevel,manaCost);
+		ResourceType resourceType = ResourceType.valueOf(GsonHelper.getAsString(object, "resourcetype").toUpperCase());
+		return new SkillResourceCost(maxSkillLevel,manaCost,resourceType);
 	}
 }

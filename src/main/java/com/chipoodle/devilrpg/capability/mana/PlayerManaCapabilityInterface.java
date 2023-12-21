@@ -18,6 +18,5 @@ public interface PlayerManaCapabilityInterface extends IGenericCapability {
 
     void setRegeneration(float regeneration, Player player);
 
-    void onPlayerTickEventRegeneration(Player player);
-
+    void onPlayerTickEventRegeneration(Player player, final float degeneration);
 }
