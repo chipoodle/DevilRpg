@@ -25,6 +25,6 @@ public interface ISoulEntity {
    }
 
     default int getPotenciaPocion(int niveles) {
-        return (int) Math.ceil(niveles / (DIVISOR_NIVEL_PARA_POTENCIA_EFECTO));
+        return (int) Math.ceil((double) niveles / (DIVISOR_NIVEL_PARA_POTENCIA_EFECTO));
     }
 }

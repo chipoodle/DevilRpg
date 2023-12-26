@@ -13,12 +13,10 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
-import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.util.LazyOptional;
 
 import java.util.HashMap;
@@ -27,14 +25,14 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-public class SkillSummonWispBomber implements ISkillContainer, WispSkillInterface {
+public class SkillSummonIWispArcher implements ISkillContainer, IWispSkill {
 
-    public SkillSummonWispBomber(PlayerSkillCapabilityImplementation parentCapability) {
+    public SkillSummonIWispArcher(PlayerSkillCapabilityImplementation parentCapability) {
     }
 
     @Override
     public SkillEnum getSkillEnum() {
-        return SkillEnum.SUMMON_WISP_BOMB;
+        return SkillEnum.SUMMON_WISP_ARCHER;
     }
 
     @Override
@@ -46,7 +44,7 @@ public class SkillSummonWispBomber implements ISkillContainer, WispSkillInterfac
                     0.4F / (rand.nextFloat() * 0.4F + 0.8F));
             LazyOptional<PlayerMinionCapabilityInterface> min = playerIn.getCapability(PlayerMinionCapability.INSTANCE);
             ConcurrentLinkedQueue<UUID> keys = min.map(PlayerMinionCapabilityInterface::getWispMinions)
-                    .orElse(new ConcurrentLinkedQueue<UUID>());
+                    .orElse(new ConcurrentLinkedQueue<>());
 
             keys.offer(summonWisp(levelIn, playerIn, rand).getUUID());
             if (keys.size() > NUMBER_OF_SUMMONS) {
@@ -67,8 +65,8 @@ public class SkillSummonWispBomber implements ISkillContainer, WispSkillInterfac
         if (!levelIn.isEmptyBlock(blockPos))
             blockPos = blockPos.above();
 
-        SoulWisp sw = ModEntities.WISP_BOMB.get().create((ServerLevel) levelIn, null, null, blockPos, MobSpawnType.MOB_SUMMONED, true, true);
-        Objects.requireNonNull(sw).updateLevel(playerIn, null, null, SkillEnum.SUMMON_WISP_BOMB, true);
+        SoulWisp sw = ModEntities.WISP_ARCHER.get().create((ServerLevel) levelIn, null, null, blockPos, MobSpawnType.MOB_SUMMONED, true, true);
+        Objects.requireNonNull(sw).updateLevel(playerIn, null, null, SkillEnum.SUMMON_WISP_ARCHER, true);
         sw.moveTo(blockPos, Mth.wrapDegrees(rand.nextFloat() * 360.0F), 0.0F);
         levelIn.addFreshEntity(sw);
         return sw;

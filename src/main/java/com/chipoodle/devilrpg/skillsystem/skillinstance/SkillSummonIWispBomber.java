@@ -25,14 +25,14 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-public class SkillSummonWispArcher implements ISkillContainer, WispSkillInterface {
+public class SkillSummonIWispBomber implements ISkillContainer, IWispSkill {
 
-    public SkillSummonWispArcher(PlayerSkillCapabilityImplementation parentCapability) {
+    public SkillSummonIWispBomber(PlayerSkillCapabilityImplementation parentCapability) {
     }
 
     @Override
     public SkillEnum getSkillEnum() {
-        return SkillEnum.SUMMON_WISP_ARCHER;
+        return SkillEnum.SUMMON_WISP_BOMB;
     }
 
     @Override
@@ -44,7 +44,7 @@ public class SkillSummonWispArcher implements ISkillContainer, WispSkillInterfac
                     0.4F / (rand.nextFloat() * 0.4F + 0.8F));
             LazyOptional<PlayerMinionCapabilityInterface> min = playerIn.getCapability(PlayerMinionCapability.INSTANCE);
             ConcurrentLinkedQueue<UUID> keys = min.map(PlayerMinionCapabilityInterface::getWispMinions)
-                    .orElse(new ConcurrentLinkedQueue<>());
+                    .orElse(new ConcurrentLinkedQueue<UUID>());
 
             keys.offer(summonWisp(levelIn, playerIn, rand).getUUID());
             if (keys.size() > NUMBER_OF_SUMMONS) {
@@ -65,8 +65,8 @@ public class SkillSummonWispArcher implements ISkillContainer, WispSkillInterfac
         if (!levelIn.isEmptyBlock(blockPos))
             blockPos = blockPos.above();
 
-        SoulWisp sw = ModEntities.WISP_ARCHER.get().create((ServerLevel) levelIn, null, null, blockPos, MobSpawnType.MOB_SUMMONED, true, true);
-        Objects.requireNonNull(sw).updateLevel(playerIn, null, null, SkillEnum.SUMMON_WISP_ARCHER, true);
+        SoulWisp sw = ModEntities.WISP_BOMB.get().create((ServerLevel) levelIn, null, null, blockPos, MobSpawnType.MOB_SUMMONED, true, true);
+        Objects.requireNonNull(sw).updateLevel(playerIn, null, null, SkillEnum.SUMMON_WISP_BOMB, true);
         sw.moveTo(blockPos, Mth.wrapDegrees(rand.nextFloat() * 360.0F), 0.0F);
         levelIn.addFreshEntity(sw);
         return sw;

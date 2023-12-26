@@ -13,8 +13,11 @@ import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import com.chipoodle.devilrpg.util.TargetUtils;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
@@ -38,6 +41,7 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassive implements IS
     AttributeModifier speedAttributeModifier;
 
     public SkillShapeshiftWerewolf(PlayerSkillCapabilityImplementation parentCapability) {
+        DevilRpg.LOGGER.info("----------------------->CONSTRUCTOR SkillShapeshiftWerewolf. {}", this);
         this.parentCapability = parentCapability;
     }
 
@@ -62,30 +66,34 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassive implements IS
         if (!worldIn.isClientSide) {
             Random rand = new Random();
 
-            worldIn.playSound(null, playerIn.getX(), playerIn.getY(), playerIn.getZ(), ModSounds.METAL_SWORD_SOUND.get(),
-                    SoundSource.NEUTRAL, 0.5F, 0.4F / (rand.nextFloat() * 0.4F + 0.8F));
-
             LazyOptional<PlayerAuxiliaryCapabilityInterface> aux = playerIn.getCapability(PlayerAuxiliaryCapability.INSTANCE);
-            boolean transformation = aux.map(x -> x.isWerewolfTransformation()).orElse(false);
+            boolean transformation = aux.map(PlayerAuxiliaryCapabilityInterface::isWerewolfTransformation).orElse(false);
             aux.ifPresent(x -> x.setWerewolfTransformation(!transformation, playerIn));
+            removeCurrentModifiers(playerIn);
             if (!transformation) {
-                removeCurrentModifiers(playerIn);
                 createNewAttributeModifiers();
                 addCurrentModifiers(playerIn);
+                worldIn.playSound(null, playerIn.getX(), playerIn.getY(), playerIn.getZ(),
+                        ModSounds.METAL_SWORD_SOUND.get(), SoundSource.NEUTRAL, 0.5F,
+                        0.4F / (rand.nextFloat() * 0.4F + 0.8F));
+
             } else {
-                removeCurrentModifiers(playerIn);
+                worldIn.playSound(null, playerIn.getX(), playerIn.getY(), playerIn.getZ(),
+                        SoundEvents.NOTE_BLOCK_BASS.get(), SoundSource.NEUTRAL, 0.5F,
+                        0.4F / (new Random().nextFloat() * 0.4F + 0.8F));
             }
 
             super.executePassiveChildren(parentCapability, getSkillEnum(), worldIn, playerIn);
+            double maxMovementSpeed = playerIn.getAttributeValue(Attributes.MOVEMENT_SPEED);
+            DevilRpg.LOGGER.info("max movement speed {}", maxMovementSpeed);
         }
-
-
     }
 
     private void createNewAttributeModifiers() {
         speedAttributeModifier = createNewAttributeModifier(
                 SkillEnum.TRANSFORM_WEREWOLF.name() + SPEED,
                 parentCapability.getSkillsPoints().get(SkillEnum.TRANSFORM_WEREWOLF) * 0.0045, AttributeModifier.Operation.ADDITION);
+        DevilRpg.LOGGER.info("----------------------->createNewAttributeModifiers(): {}", speedAttributeModifier);
     }
 
     private void removeCurrentModifiers(Player playerIn) {
@@ -93,6 +101,7 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassive implements IS
         removeCurrentModifierFromPlayer(playerIn, speedAttributeModifier, Attributes.MOVEMENT_SPEED);
         removeAttributeFromCapability(attributeModifiers, Attributes.MOVEMENT_SPEED);
         parentCapability.setAttributeModifiers(attributeModifiers, playerIn);
+        DevilRpg.LOGGER.info("----------------------->removeCurrentModifiers(): {}", speedAttributeModifier);
     }
 
     private void addCurrentModifiers(Player playerIn) {
@@ -102,6 +111,7 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassive implements IS
         parentCapability.setAttributeModifiers(attributeModifiers, playerIn);
         //addCurrentModifierTransiently(playerIn, Attributes.MAX_HEALTH, healthAttributeModifier);
         addCurrentModifierTransiently(playerIn, Attributes.MOVEMENT_SPEED, speedAttributeModifier);
+        DevilRpg.LOGGER.info("----------------------->addCurrentModifierTransiently(): {}", speedAttributeModifier);
     }
 
     /**
@@ -111,12 +121,12 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassive implements IS
      */
     @OnlyIn(Dist.CLIENT)
     public void playerTickEventAttack(final Player player, PlayerAuxiliaryCapabilityInterface auxiliaryCapability) {
-        InteractionHand hand = auxiliaryCapability.swingHands(player);
         LivingEntity closestEnemy = findClosestEnemy(player);
         if (closestEnemy != null) {
-            DevilRpg.LOGGER.info("-------> Closest enemy : {}", closestEnemy);
             player.setLastHurtMob(closestEnemy);
-            renderParticles(player, hand);
+            InteractionHand hand = auxiliaryCapability.swingHands(player);
+            DevilRpg.LOGGER.info("-------> Closest enemy: {} hand: {}", closestEnemy, hand);
+            renderHitParticles(player, hand);
             attackEnemies(closestEnemy, hand);
         }
     }
@@ -154,7 +164,7 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassive implements IS
      * @param player
      * @param hand
      */
-    private void renderParticles(final Player player, InteractionHand hand) {
+    private void renderHitParticles(final Player player, InteractionHand hand) {
         Vec3 vec = player.getLookAngle();
         double clawSideX = vec.z() * (hand.equals(InteractionHand.MAIN_HAND) ? 0.6 : -0.6);
         double clawSideZ = vec.x() * (hand.equals(InteractionHand.OFF_HAND) ? 0.6 : -0.6);

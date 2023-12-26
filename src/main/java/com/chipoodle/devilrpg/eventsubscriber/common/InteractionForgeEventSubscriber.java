@@ -22,6 +22,7 @@ import com.chipoodle.devilrpg.util.EventUtils;
 import com.chipoodle.devilrpg.util.SkillEnum;
 
 
+import it.unimi.dsi.fastutil.objects.AbstractReferenceList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -37,6 +38,7 @@ import net.minecraftforge.event.entity.living.MobEffectEvent;
 import net.minecraftforge.event.entity.player.AttackEntityEvent;
 import net.minecraftforge.event.entity.player.CriticalHitEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.eventbus.api.Event;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
@@ -87,11 +89,12 @@ public class InteractionForgeEventSubscriber {
 		}
 	}
 
-	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = false)
+	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
 	public static void onRightClickItem(PlayerInteractEvent.RightClickItem event) {
-		BiConsumer<PlayerInteractEvent.RightClickItem, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, auxiliar) -> {
-			eve.getEntity().swinging = true;
-			eve.setCanceled(false);
+		BiConsumer<PlayerInteractEvent.RightClickItem, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, aux) -> {
+			eve.getEntity().swinging = false;
+			eve.setCanceled(true);
+			//DevilRpg.LOGGER.debug("--------RightClickItem");
 		};
 		EventUtils.onWerewolfTransformation(event.getEntity(), c, event);
 	}
@@ -99,46 +102,49 @@ public class InteractionForgeEventSubscriber {
 
 	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
 	public static void onLeftClickBlock(PlayerInteractEvent.LeftClickBlock event) {
-		BiConsumer<PlayerInteractEvent.LeftClickBlock, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, auxiliar) -> {
+		BiConsumer<PlayerInteractEvent.LeftClickBlock, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, aux) -> {
 			eve.getEntity().swinging = false;
 			eve.setCanceled(true);
 		};
 		EventUtils.onWerewolfTransformation(event.getEntity(), c, event);
 	}
 
-	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = false)
+	@SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
 	public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
-		BiConsumer<PlayerInteractEvent.RightClickBlock, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, auxiliar) -> {
-			eve.getEntity().swinging = true;
-			eve.setCanceled(false);
+		BiConsumer<PlayerInteractEvent.RightClickBlock, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, aux) -> {
+			eve.getEntity().swinging = false;
+			eve.setCanceled(true);
 		};
 		EventUtils.onWerewolfTransformation(event.getEntity(), c, event);
 	}
 
 	@SubscribeEvent(priority = EventPriority.HIGHEST, receiveCanceled = true)
 	public static void onEntityInteractSpecific(PlayerInteractEvent.EntityInteractSpecific event) {
-		BiConsumer<PlayerInteractEvent.EntityInteractSpecific, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, auxiliar) -> {
+		BiConsumer<PlayerInteractEvent.EntityInteractSpecific, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, aux) -> {
 			eve.getEntity().swinging = false;
 			eve.setCanceled(true);
+			DevilRpg.LOGGER.debug("--------EntityInteractSpecific");
 		};
 		EventUtils.onWerewolfTransformation(event.getEntity(), c, event);
 	}
 
 	@SubscribeEvent(priority = EventPriority.HIGHEST, receiveCanceled = true)
 	public static void onEntityInteract(PlayerInteractEvent.EntityInteract event) {
-		BiConsumer<PlayerInteractEvent.EntityInteract, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, auxiliar) -> {
+		BiConsumer<PlayerInteractEvent.EntityInteract, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, aux) -> {
 			eve.getEntity().swinging = false;
 			eve.setCanceled(true);
+			DevilRpg.LOGGER.debug("--------EntityInteract");
 		};
 		EventUtils.onWerewolfTransformation(event.getEntity(), c, event);
 	}
 
 	@SubscribeEvent
 	public static void onAttack(AttackEntityEvent event) {
-		BiConsumer<AttackEntityEvent, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, auxiliar) -> {
+		BiConsumer<AttackEntityEvent, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, aux) -> {
 			eve.getEntity().swinging = false;
 			//eve.setCanceled(true);
 			PlayerStaminaCapabilityInterface unwrappedPlayerCapabilityStamina = IGenericCapability.getUnwrappedPlayerCapability(event.getEntity(), PlayerStaminaCapability.INSTANCE);
+			//Stamina generation
 			unwrappedPlayerCapabilityStamina.onPlayerTickEventRegeneration(event.getEntity(),0.0f);
 		};
 		EventUtils.onWerewolfTransformation(event.getEntity(), c, event);

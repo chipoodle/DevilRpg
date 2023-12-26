@@ -8,7 +8,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapability;
 import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityInterface;
-import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityAttacher;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
 import com.chipoodle.devilrpg.entity.SoulWisp;
 import com.chipoodle.devilrpg.init.ModEntities;
@@ -26,12 +25,11 @@ import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.util.LazyOptional;
 
-public class SkillSummonWispCurse implements ISkillContainer, WispSkillInterface {
+public class SkillSummonIWispCurse implements ISkillContainer, IWispSkill {
 
-	public SkillSummonWispCurse(PlayerSkillCapabilityImplementation parentCapability) {
+	public SkillSummonIWispCurse(PlayerSkillCapabilityImplementation parentCapability) {
 	}
 
 	@Override

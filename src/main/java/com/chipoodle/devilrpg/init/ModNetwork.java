@@ -90,6 +90,12 @@ public class ModNetwork {
                 PlayerStaminaClientServerHandler::encode,
                 PlayerStaminaClientServerHandler::decode,
                 PlayerStaminaClientServerHandler::onMessage);
+
+        CHANNEL.registerMessage(++networkId,
+                DirectSkillExecutionServerHandler.class,
+                DirectSkillExecutionServerHandler::encode,
+                DirectSkillExecutionServerHandler::decode,
+                DirectSkillExecutionServerHandler::onMessage);
     }
 
 }

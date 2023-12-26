@@ -18,6 +18,7 @@ import net.minecraftforge.client.gui.overlay.IGuiOverlay;
 import net.minecraftforge.common.util.LazyOptional;
 
 import java.text.DecimalFormat;
+import java.util.Objects;
 
 public class StaminaBarHudOverlay {
 
@@ -35,7 +36,9 @@ public class StaminaBarHudOverlay {
 
 
         PlayerAuxiliaryCapabilityInterface unwrappedPlayerCapability = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerAuxiliaryCapability.INSTANCE);
-        if(!unwrappedPlayerCapability.isWerewolfTransformation()) return;
+        if(Objects.nonNull(unwrappedPlayerCapability) && !unwrappedPlayerCapability.isWerewolfTransformation()) {
+            return;
+        }
 
         LazyOptional<PlayerStaminaCapabilityInterface> playerCapability = mc.player.getCapability(PlayerStaminaCapability.INSTANCE);
         if (!playerCapability.isPresent()) return;

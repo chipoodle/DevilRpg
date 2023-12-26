@@ -1,7 +1,7 @@
 {
-  "summon": {
+  "metal_sword_sound": {
     "category": "summon",
     "subtitle": "devilrpg.subtitle.summon",
-    "sounds": [ "devilrpg:summon" ]
+    "sounds": [ "devilrpg:metal_sword_sound" ]
   }
 }

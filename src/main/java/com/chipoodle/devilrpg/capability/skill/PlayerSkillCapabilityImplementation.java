@@ -275,8 +275,8 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
 
     @Override
     public void triggerAction(ServerPlayer playerIn, PowerEnum triggeredPower) {
-        if (!playerIn.level.isClientSide) {
-            DevilRpg.LOGGER.info("PlayerSkillCapability triggerAction(ServerPlayer, triggeredPower) {} {}", playerIn.getName().getString(), triggeredPower);
+            DevilRpg.LOGGER.info("------ side: {} PlayerSkillCapability triggerAction(ServerPlayer, triggeredPower) {} {}"
+                    ,(playerIn.level.isClientSide?"CLIENT":"SERVER"), playerIn.getName().getString(), triggeredPower);
             if (getSkillLevelFromAssociatedPower(triggeredPower) != 0) {
                 ISkillContainer skill = getSkill(triggeredPower);
                 if (skill.arePreconditionsMetBeforeConsumingResource(playerIn) && consumeResource(playerIn, skill)) {
@@ -290,7 +290,6 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
 					playerIn.sendMessage(new StringTextComponent(message),playerIn.getUniqueID());*/
                 }
             }
-        }
     }
 
     @Override

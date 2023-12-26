@@ -42,11 +42,11 @@ import org.jetbrains.annotations.NotNull;
 public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, PowerableMob, IPassiveMinionUpdater<SoulWolf> {
     private static final int ICE_ARMOR_EFFECT_FACTOR = 2;
     private static final double RADIUS_PARTICLES = 0.7;
-    private static final int NUMBER_OF_PARTICLES_ICE_ARMOR = 10;
-    private static final int PROBABILITY_MULTIPLIER = 3;
+    private static final int NUMBER_OF_PARTICLES_ICE_ARMOR = 11;
+    private static final int PROBABILITY_MULTIPLIER = 7;
     private static final int DURATION_TICKS = 100;
     private static final int INITIAL_HEALTH = 7;
-    private static final int NUMBER_OF_PARTICLES_FROST_BITE = 10;
+    private static final int NUMBER_OF_PARTICLES_FROST_BITE = 11;
     private int puntosAsignados = 0;
     private double saludMaxima = INITIAL_HEALTH;
     // private double stealingHealth;
@@ -103,7 +103,7 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
         this.getAttribute(Attributes.MAX_HEALTH).setBaseValue(saludMaxima);
         this.getAttribute(Attributes.ARMOR).setBaseValue(0.35D);
         this.getAttribute(Attributes.FOLLOW_RANGE).setBaseValue(16.0D);
-        this.getAttribute(Attributes.ATTACK_DAMAGE).setBaseValue((0.45 * puntosAsignados) + 2); // 2-11
+        this.getAttribute(Attributes.ATTACK_DAMAGE).setBaseValue((0.45 * puntosAsignados) + 2); // 2.45-11
         setHealth((float) saludMaxima);
     }
 
@@ -184,7 +184,7 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
                     active.update(iceArmorEffect);
                 } else
                     this.addEffect(iceArmorEffect);
-                DevilRpg.LOGGER.debug("---------->hurt iceArmor: {} prob: {} limit: {}", iceArmor, probability, iceArmor * PROBABILITY_MULTIPLIER);
+                DevilRpg.LOGGER.debug("---------->hurt iceArmor: {} probability: {} Range of success: {}", iceArmor, probability, iceArmor * PROBABILITY_MULTIPLIER);
             }
         }
         return hurt;

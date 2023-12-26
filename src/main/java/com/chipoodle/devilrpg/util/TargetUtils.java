@@ -627,13 +627,11 @@ public class TargetUtils {
     }
 
     public static Entity getEntityByUUID(ServerLevel w, UUID uuid) {
-        ServerLevel sw = w;
-        return sw.getEntity(uuid);
+        return w.getEntity(uuid);
     }
 
     public static Entity getEntityByUUID(ClientLevel w, UUID uuid) {
-        ClientLevel cw = w;
-        return StreamSupport.stream(cw.entitiesForRendering().spliterator(), true).filter(x -> x.getUUID().equals(uuid))
+        return StreamSupport.stream(w.entitiesForRendering().spliterator(), true).filter(x -> x.getUUID().equals(uuid))
                 .findAny().orElse(null);
     }
 

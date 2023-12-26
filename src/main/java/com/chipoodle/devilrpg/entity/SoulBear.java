@@ -73,12 +73,12 @@ public class SoulBear extends AbstractMountableTamableEntity
     private static final UUID ARMOR_MODIFIER_UUID = UUID.fromString("556E1665-8B10-40C8-8F9D-CF9B1667F295");
     private static final EntityDataAccessor<Integer> DATA_ID_TYPE_VARIANT = SynchedEntityData.defineId(SoulBear.class, EntityDataSerializers.INT);
     private static final UniformInt PERSISTENT_ANGER_TIME = TimeUtil.rangeOfSeconds(20, 39);
-    private static final int PROBABILITY_MULTIPLIER = 3;
+    private static final int PROBABILITY_MULTIPLIER = 10;
     private static final int DURATION_TICKS = 100;
 
     private static final double RADIUS_PARTICLES = 1.0;
-    private static final int NUMBER_OF_PARTICLES_WAR_BEAR = 15;
-    private static final double SPLASH_DAMAGE_FACTOR = 0.5F;
+    private static final int NUMBER_OF_PARTICLES_WAR_BEAR = 16;
+    private static final double SPLASH_DAMAGE_FACTOR = 0.6F;
     //private static final DataParameter<Boolean> DATA_STANDING_ID = EntityDataManager.defineId(SoulBearEntity.class,DataSerializers.BOOLEAN);
     private final int SALUD_INICIAL = 20;
     private float clientSideStandAnimationO;
@@ -139,10 +139,8 @@ public class SoulBear extends AbstractMountableTamableEntity
         this.targetSelector.addGoal(2, new TameableMountableOwnerHurtTargetGoal(this));
         this.targetSelector.addGoal(3, (new HurtByTargetGoal(this)).setAlertOthers());
         this.targetSelector.addGoal(5,
-                new NearestAttackableTargetGoal<>(this, Mob.class, 10, false, false, (entity) -> {
-                    return !(entity instanceof Villager) && !(entity instanceof Llama)
-                            && !(entity instanceof Turtle) && !(entity instanceof IronGolem);
-                }));
+                new NearestAttackableTargetGoal<>(this, Mob.class, 10, false, false, (entity) -> !(entity instanceof Villager) && !(entity instanceof Llama)
+                        && !(entity instanceof Turtle) && !(entity instanceof IronGolem)));
         this.targetSelector.addGoal(8, new ResetUniversalAngerTargetGoal<>(this, true));
 
     }
@@ -164,9 +162,7 @@ public class SoulBear extends AbstractMountableTamableEntity
         this.getAttribute(Attributes.MAX_HEALTH).setBaseValue(saludMaxima);
         this.getAttribute(Attributes.ARMOR).setBaseValue(initialArmor);
         this.getAttribute(Attributes.FOLLOW_RANGE).setBaseValue(16.0D);
-        this.getAttribute(Attributes.ATTACK_DAMAGE).setBaseValue((1.5 * puntosAsignados) + 4); // 4-34
-        //TODO: generar valores del salto de acerdo al nivel
-        // this.getAttribute(Attributes.JUMP_STRENGTH).setBaseValue(this.generateRandomJumpStrength());
+        this.getAttribute(Attributes.ATTACK_DAMAGE).setBaseValue((1.8 * puntosAsignados) + 4); // 5.8-40
         this.getAttribute(Attributes.JUMP_STRENGTH).setBaseValue(0.7D + (mountBear / 5));
         setHealth((float) saludMaxima);
         DevilRpg.LOGGER.debug("----------------------->SoulBear.updateLevel(). Owner {}. isTame {}.  ",owner.getUUID(),isTame());
@@ -242,8 +238,8 @@ public class SoulBear extends AbstractMountableTamableEntity
 
                 acquireAllLookTargetsByClass.forEach(
                         mob -> mob.hurt(DamageSource.mobAttack(this), (float) (attackDamage * SPLASH_DAMAGE_FACTOR)));
-                DevilRpg.LOGGER.info("---------->doHurtTarget warBear: {} prob: {} limit: {} enemies: {}", warBear,
-                        probability, warBear * PROBABILITY_MULTIPLIER, acquireAllLookTargetsByClass.size());
+                DevilRpg.LOGGER.info("---------->doHurtTarget warBear: {} probability: {} Range of success: {} enemies: {}, main damage: {} splash damage: {}", warBear,
+                        probability, warBear * PROBABILITY_MULTIPLIER, acquireAllLookTargetsByClass.size(),attackDamage, attackDamage * SPLASH_DAMAGE_FACTOR);
             }
             this.doEnchantDamageEffects(this, entityIn);
         }

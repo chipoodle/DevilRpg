@@ -4,6 +4,7 @@ package com.chipoodle.devilrpg.skillsystem;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
+import org.jetbrains.annotations.NotNull;
 
 public class MinionDeathDamageSource extends DamageSource {
 
@@ -20,7 +21,7 @@ public class MinionDeathDamageSource extends DamageSource {
         //return null
     }
 
-    public Component getLocalizedDeathMessage(LivingEntity p_19343_) {
+    public @NotNull Component getLocalizedDeathMessage(LivingEntity p_19343_) {
         LivingEntity livingentity = p_19343_.getKillCredit();
         String s = "death.attack." + this.msgId;
         String s1 = s + ".player";

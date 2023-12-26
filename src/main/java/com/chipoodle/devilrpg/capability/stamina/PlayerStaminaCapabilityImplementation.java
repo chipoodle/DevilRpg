@@ -12,7 +12,7 @@ public class PlayerStaminaCapabilityImplementation implements PlayerStaminaCapab
 
     private float stamina = 0f;
     private float maxStamina = 30f;
-    private float regeneration = 0.8f;
+    private float regeneration = 0.0f;
 
     @Override
     public float getStamina() {
@@ -85,7 +85,6 @@ public class PlayerStaminaCapabilityImplementation implements PlayerStaminaCapab
     }
 
     private void sendStaminaChangesToClient(ServerPlayer pe) {
-        ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> pe),
-                new PlayerStaminaClientServerHandler(serializeNBT()));
+        ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> pe), new PlayerStaminaClientServerHandler(serializeNBT()));
     }
 }

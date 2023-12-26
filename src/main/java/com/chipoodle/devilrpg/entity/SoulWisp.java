@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.entity;
 
+import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapability;
 import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityInterface;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
@@ -315,7 +316,7 @@ public class SoulWisp extends TamableAnimal implements ITamableEntity, FlyingAni
 
     @Override
     public MobType getMobType() {
-        return MobType.ARTHROPOD;
+        return MobType.UNDEFINED;
     }
 
 	/*protected void jumpInLiquid(TagKey<Fluid> p_204061_) {
@@ -350,7 +351,7 @@ public class SoulWisp extends TamableAnimal implements ITamableEntity, FlyingAni
         if (niveles >= 0 && !this.level.isClientSide && primaryEffect != null) {
             // rango entre 0 - 4 el tipo de boost health
             int potenciaPocion = getPotenciaPocion(niveles);
-            // System.out.println("Level of mobEffect" + i);
+            DevilRpg.LOGGER.debug("niveles {} potenciaPocion {}",niveles, potenciaPocion);
 
             double k = this.position().x();
             double l = this.position().y();
@@ -541,7 +542,7 @@ public class SoulWisp extends TamableAnimal implements ITamableEntity, FlyingAni
         return this;
     }
 
-    class BeeLookControl extends LookControl {
+    static class BeeLookControl extends LookControl {
         BeeLookControl(Mob beeIn) {
             super(beeIn);
         }
@@ -551,7 +552,7 @@ public class SoulWisp extends TamableAnimal implements ITamableEntity, FlyingAni
         }
     }
 
-    abstract class PassiveGoal extends Goal {
+    abstract static class PassiveGoal extends Goal {
         private PassiveGoal() {
         }
 
@@ -601,8 +602,7 @@ public class SoulWisp extends TamableAnimal implements ITamableEntity, FlyingAni
         public void start() {
             Vec3 vec3d = this.findPos();
             if (vec3d != null) {
-                SoulWisp.this.navigation.moveTo(SoulWisp.this.navigation.createPath(new BlockPos(vec3d), 1),
-                        1.0D);
+                SoulWisp.this.navigation.moveTo(SoulWisp.this.navigation.createPath(new BlockPos(vec3d), 1), 1.0D);
             }
 
         }

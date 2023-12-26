@@ -61,6 +61,13 @@ public abstract class AbstractPlayerPassive {
         return modifiedAttributeInstance.getModifier(attributeUuid);
     }
 
+    /**
+     * Mus be executed after the skill executor method.
+     * @param parentCapability
+     * @param skillEnum
+     * @param level
+     * @param playerIn
+     */
     protected void executePassiveChildren(PlayerSkillCapabilityImplementation parentCapability, SkillEnum skillEnum, Level level, Player playerIn) {
         List<SkillEnum> passivesFromActiveSkill = parentCapability.getPassivesFromActiveSkill(skillEnum);
         for (SkillEnum passiveEnum : passivesFromActiveSkill) {

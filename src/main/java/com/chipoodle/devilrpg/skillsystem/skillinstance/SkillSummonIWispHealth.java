@@ -3,7 +3,6 @@ package com.chipoodle.devilrpg.skillsystem.skillinstance;
 import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapability;
 import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityInterface;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
-import com.chipoodle.devilrpg.entity.SoulBear;
 import com.chipoodle.devilrpg.entity.SoulWisp;
 import com.chipoodle.devilrpg.init.ModEntities;
 import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
@@ -27,9 +26,9 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-public class SkillSummonWispHealth implements ISkillContainer, WispSkillInterface {
+public class SkillSummonIWispHealth implements ISkillContainer, IWispSkill {
 
-    public SkillSummonWispHealth(PlayerSkillCapabilityImplementation parentCapability) {
+    public SkillSummonIWispHealth(PlayerSkillCapabilityImplementation parentCapability) {
     }
 
     @Override

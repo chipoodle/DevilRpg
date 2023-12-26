@@ -16,15 +16,17 @@ import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.capability.stamina.PlayerStaminaCapability;
 import com.chipoodle.devilrpg.capability.stamina.PlayerStaminaCapabilityInterface;
 import com.chipoodle.devilrpg.init.ModNetwork;
-import com.chipoodle.devilrpg.network.handler.KeyboardSkillServerHandler;
-import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
-import com.chipoodle.devilrpg.util.PowerEnum;
+import com.chipoodle.devilrpg.network.handler.DirectSkillExecutionServerHandler;
 import com.chipoodle.devilrpg.util.SkillEnum;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
+
+import java.util.Random;
 
 /**
  * Subscribe to events from the FORGE EventBus that should be handled on the
@@ -33,9 +35,11 @@ import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
  * @author Chipoodle
  */
 @EventBusSubscriber(modid = DevilRpg.MODID, bus = EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
-public final class ClientForgeManaEventSubscriber {
+public final class ClientForgeResourceEventSubscriber {
 
     public static final int TICK_COUNT_REGENERATION = 10;
+    public static final float BASE_MANA_DEGENERATION = 0.7f;
+    public static final float BASE_STAMINA_DEGENERATION = 0.1f;
 
     @SubscribeEvent
     public static void onPlayerTickMana(TickEvent.PlayerTickEvent event) {
@@ -50,17 +54,19 @@ public final class ClientForgeManaEventSubscriber {
 
                     float manaDegeneration = 0.0f;
                     if (unwrappedPlayerCapabilityAux.isWerewolfTransformation()) {
-                        manaDegeneration = 1.0f - (0.01f * unwrappedPlayerCapabilitySkill.getSkillsPoints().get(SkillEnum.TRANSFORM_WEREWOLF));
-                        unwrappedPlayerCapabilityStamina.onPlayerTickEventRegeneration(event.player,0.9f);
+                        manaDegeneration = BASE_MANA_DEGENERATION - (0.01f * unwrappedPlayerCapabilitySkill.getSkillsPoints().get(SkillEnum.TRANSFORM_WEREWOLF));
+                        unwrappedPlayerCapabilityStamina.onPlayerTickEventRegeneration(event.player, BASE_STAMINA_DEGENERATION);
                     }
 
                     unwrappedPlayerCapabilityMana.onPlayerTickEventRegeneration(event.player, manaDegeneration);
                     if(unwrappedPlayerCapabilityMana.getMana() <= 0.0f){
                         //ISkillContainer loadedSkillExecutor = unwrappedPlayerCapabilitySkill.getLoadedSkillExecutor(SkillEnum.TRANSFORM_WEREWOLF);
-
-                        ModNetwork.CHANNEL.sendToServer(new KeyboardSkillServerHandler(PowerEnum.));
-
                         //loadedSkillExecutor.execute(event.player.level,event.player,null);
+                        ModNetwork.CHANNEL.sendToServer(new DirectSkillExecutionServerHandler(SkillEnum.TRANSFORM_WEREWOLF));
+                        event.player.level.playSound(event.player, event.player.getX(), event.player.getY(), event.player.getZ(),
+                                SoundEvents.NOTE_BLOCK_BASS.get(), SoundSource.NEUTRAL, 0.5F,
+                                0.4F / (new Random().nextFloat() * 0.4F + 0.8F));
+
                     }
                 }
 
