@@ -4,8 +4,10 @@ package com.chipoodle.devilrpg.entity;
 import net.minecraft.core.Vec3i;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageSources;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.OwnableEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.control.LookControl;
@@ -19,15 +21,16 @@ import net.minecraft.world.scores.Team;
 import net.minecraftforge.common.capabilities.ICapabilityProvider;
 
 import javax.annotation.Nullable;
+import java.nio.channels.Pipe;
 import java.util.UUID;
 
-public interface ITamableEntity extends ICapabilityProvider {
+public interface ITamableEntity extends ICapabilityProvider, OwnableEntity {
 
     Level getLevel();
 
     PathNavigation getNavigation();
-
-    LivingEntity getOwner();
+    /*@Nullable
+    LivingEntity getOwner();*/
 
     boolean isOrderedToSit();
 
@@ -113,4 +116,5 @@ public interface ITamableEntity extends ICapabilityProvider {
 
     void tame(Player p_193101_1_);
 
+    DamageSources damageSources();
 }

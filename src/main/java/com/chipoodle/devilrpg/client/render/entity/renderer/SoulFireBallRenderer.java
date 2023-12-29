@@ -46,7 +46,7 @@ public class SoulFireBallRenderer extends EntityRenderer<SoulIceBall> {
     public void render(SoulIceBall p_116484_, float p_116485_, float p_116486_, PoseStack p_116487_, MultiBufferSource p_116488_, int p_116489_) {
         p_116487_.pushPose();
         p_116487_.scale(-1.0F, -1.0F, 1.0F);
-        float f = Mth.rotlerp(p_116484_.yRotO, p_116484_.getYRot(), p_116486_);
+        float f = Mth.rotLerp(p_116484_.yRotO, p_116484_.getYRot(), p_116486_);
         float f1 = Mth.lerp(p_116486_, p_116484_.xRotO, p_116484_.getXRot());
         VertexConsumer vertexconsumer = p_116488_.getBuffer(this.model.renderType(this.getTextureLocation(p_116484_)));
         this.model.setupAnim(0.0F, f, f1);

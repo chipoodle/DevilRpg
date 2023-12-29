@@ -9,14 +9,15 @@ import com.chipoodle.devilrpg.entity.ITamableEntity;
 import com.chipoodle.devilrpg.entity.SoulBear;
 import com.chipoodle.devilrpg.entity.SoulWisp;
 import com.chipoodle.devilrpg.entity.SoulWolf;
+import com.chipoodle.devilrpg.init.ModDamageTypes;
 import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.network.handler.PlayerMinionClientServerHandler;
-import com.chipoodle.devilrpg.skillsystem.MinionDeathDamageSource;
 import com.chipoodle.devilrpg.util.BytesUtil;
 import com.chipoodle.devilrpg.util.TargetUtils;
 
 
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 
 import net.minecraft.server.level.ServerLevel;
@@ -169,7 +170,12 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
 		if (wisp != null && entity != null && wisp.contains(entity.getUUID())) {
 			wisp.remove(entity.getUUID());
 			setWispMinions(wisp, owner);
-			entity.hurt(new MinionDeathDamageSource(""), Integer.MAX_VALUE);
+			DamageSource damagesource = new DamageSource(
+					entity.level
+							.registryAccess()
+							.registryOrThrow(Registries.DAMAGE_TYPE)
+							.getHolderOrThrow(ModDamageTypes.MINION_DEATH));
+			entity.hurt(damagesource, Integer.MAX_VALUE);
 		}
 	}
 
@@ -179,8 +185,12 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
 		if (soulwolf != null && entity != null && soulwolf.contains(entity.getUUID())) {
 			soulwolf.remove(entity.getUUID());
 			setSoulWolfMinions(soulwolf, owner);
-			DamageSource minionDeathDamageSource = new MinionDeathDamageSource("");
-			entity.hurt(minionDeathDamageSource, Integer.MAX_VALUE);
+			DamageSource damagesource = new DamageSource(
+					entity.level
+							.registryAccess()
+							.registryOrThrow(Registries.DAMAGE_TYPE)
+							.getHolderOrThrow(ModDamageTypes.MINION_DEATH));
+			entity.hurt(damagesource, Integer.MAX_VALUE);
 		}
 	}
 
@@ -212,7 +222,12 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
 		if (soulbear != null && entity != null && soulbear.contains(entity.getUUID())) {
 			soulbear.remove(entity.getUUID());
 			setSoulBearMinions(soulbear, owner);
-			entity.hurt(new MinionDeathDamageSource(""), Integer.MAX_VALUE);
+			DamageSource damagesource = new DamageSource(
+					entity.level
+							.registryAccess()
+							.registryOrThrow(Registries.DAMAGE_TYPE)
+							.getHolderOrThrow(ModDamageTypes.MINION_DEATH));
+			entity.hurt(damagesource, Integer.MAX_VALUE);
 		}
 
 	}

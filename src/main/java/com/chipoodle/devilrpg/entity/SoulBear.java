@@ -7,13 +7,12 @@ import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityInt
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.client.render.IRenderUtilities;
-import com.chipoodle.devilrpg.entity.goal.TameableMountableFollowOwnerGoal;
-import com.chipoodle.devilrpg.entity.goal.TameableMountableOwnerHurtByTargetGoal;
-import com.chipoodle.devilrpg.entity.goal.TameableMountableOwnerHurtTargetGoal;
+import com.chipoodle.devilrpg.entity.goal.TameablePetFollowOwnerGoal;
+import com.chipoodle.devilrpg.entity.goal.TameablePetOwnerHurtByTargetGoal;
+import com.chipoodle.devilrpg.entity.goal.TameablePetOwnerHurtTargetGoal;
 import com.chipoodle.devilrpg.init.ModEntities;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import com.chipoodle.devilrpg.util.TargetUtils;
-import net.minecraft.advancements.CriteriaTriggers;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
@@ -24,7 +23,6 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
@@ -64,10 +62,11 @@ import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-public class SoulBear extends AbstractMountableTamableEntity
+public class SoulBear extends AbstractMountablePet
         implements ITamableEntity, ISoulEntity, PowerableMob, NeutralMob, IPassiveMinionUpdater<SoulBear>, VariantHolder<Variant> {
 
     private static final UUID ARMOR_MODIFIER_UUID = UUID.fromString("556E1665-8B10-40C8-8F9D-CF9B1667F295");
@@ -77,7 +76,7 @@ public class SoulBear extends AbstractMountableTamableEntity
     private static final int DURATION_TICKS = 100;
 
     private static final double RADIUS_PARTICLES = 1.0;
-    private static final int NUMBER_OF_PARTICLES_WAR_BEAR = 16;
+    private static final int NUMBER_OF_PARTICLES_WAR_BEAR = 3;
     private static final double SPLASH_DAMAGE_FACTOR = 0.6F;
     //private static final DataParameter<Boolean> DATA_STANDING_ID = EntityDataManager.defineId(SoulBearEntity.class,DataSerializers.BOOLEAN);
     private final int SALUD_INICIAL = 20;
@@ -132,11 +131,11 @@ public class SoulBear extends AbstractMountableTamableEntity
         this.goalSelector.addGoal(1, new SoulBear.MeleeAttackGoal());
         this.goalSelector.addGoal(4, new FollowParentGoal(this, 1.25D));
         this.goalSelector.addGoal(5, new RandomStrollGoal(this, 1.0D));
-        this.goalSelector.addGoal(6, new TameableMountableFollowOwnerGoal(this, 1.0D, 10.0F, 2.0F, false));
+        this.goalSelector.addGoal(6, new TameablePetFollowOwnerGoal(this, 1.0D, 10.0F, 2.0F, false));
         this.goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 6.0F));
         this.goalSelector.addGoal(8, new RandomLookAroundGoal(this));
-        this.targetSelector.addGoal(1, new TameableMountableOwnerHurtByTargetGoal(this));
-        this.targetSelector.addGoal(2, new TameableMountableOwnerHurtTargetGoal(this));
+        this.targetSelector.addGoal(1, new TameablePetOwnerHurtByTargetGoal(this));
+        this.targetSelector.addGoal(2, new TameablePetOwnerHurtTargetGoal(this));
         this.targetSelector.addGoal(3, (new HurtByTargetGoal(this)).setAlertOthers());
         this.targetSelector.addGoal(5,
                 new NearestAttackableTargetGoal<>(this, Mob.class, 10, false, false, (entity) -> !(entity instanceof Villager) && !(entity instanceof Llama)
@@ -158,22 +157,22 @@ public class SoulBear extends AbstractMountableTamableEntity
 
         }
 
-        this.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(0.4F);
-        this.getAttribute(Attributes.MAX_HEALTH).setBaseValue(saludMaxima);
-        this.getAttribute(Attributes.ARMOR).setBaseValue(initialArmor);
-        this.getAttribute(Attributes.FOLLOW_RANGE).setBaseValue(16.0D);
-        this.getAttribute(Attributes.ATTACK_DAMAGE).setBaseValue((1.8 * puntosAsignados) + 4); // 5.8-40
-        this.getAttribute(Attributes.JUMP_STRENGTH).setBaseValue(0.7D + (mountBear / 5));
+        Objects.requireNonNull(this.getAttribute(Attributes.MOVEMENT_SPEED)).setBaseValue(0.4F);
+        Objects.requireNonNull(this.getAttribute(Attributes.MAX_HEALTH)).setBaseValue(saludMaxima);
+        Objects.requireNonNull(this.getAttribute(Attributes.ARMOR)).setBaseValue(initialArmor);
+        Objects.requireNonNull(this.getAttribute(Attributes.FOLLOW_RANGE)).setBaseValue(16.0D);
+        Objects.requireNonNull(this.getAttribute(Attributes.ATTACK_DAMAGE)).setBaseValue((1.8 * puntosAsignados) + 4); // 5.8-40
+        Objects.requireNonNull(this.getAttribute(Attributes.JUMP_STRENGTH)).setBaseValue(0.7D + ((double) mountBear / 5));
         setHealth((float) saludMaxima);
         DevilRpg.LOGGER.debug("----------------------->SoulBear.updateLevel(). Owner {}. isTame {}.  ",owner.getUUID(),isTame());
     }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag compound) {
+    public void readAdditionalSaveData(@NotNull CompoundTag compound) {
         super.readAdditionalSaveData(compound);
 
         this.orderedToSit = compound.getBoolean("Sitting");
-        this.setInSittingPose(this.orderedToSit);
+        //this.setInSittingPose(this.orderedToSit);
 
         //this.setTypeVariant(compound.getInt("Variant"));
         if (compound.contains("ArmorItem", 10)) {
@@ -225,19 +224,19 @@ public class SoulBear extends AbstractMountableTamableEntity
     @Override
     public boolean doHurtTarget(Entity entityIn) {
         double attackDamage = this.getAttributeValue(Attributes.ATTACK_DAMAGE);
-        boolean flag = entityIn.hurt(DamageSource.mobAttack(this), (float) (attackDamage));
+        boolean flag = entityIn.hurt(this.damageSources().mobAttack(this), (float) (attackDamage));
         if (flag) {
             int probability = random.nextInt(100);
             if (warBear > 0 && probability <= (warBear * PROBABILITY_MULTIPLIER)) {
                 IRenderUtilities.rotationParticles(Minecraft.getInstance().level, random, this,
-                        ParticleTypes.CRIMSON_SPORE, NUMBER_OF_PARTICLES_WAR_BEAR, RADIUS_PARTICLES);
+                        ParticleTypes.EXPLOSION, NUMBER_OF_PARTICLES_WAR_BEAR, RADIUS_PARTICLES);
                 double radius = 3;
                 List<LivingEntity> acquireAllLookTargetsByClass = TargetUtils
                         .acquireAllTargetsInRadiusByClass(this, LivingEntity.class, radius).stream()
                         .filter(entity -> !isAlliedTo(entity)).collect(Collectors.toList());
 
                 acquireAllLookTargetsByClass.forEach(
-                        mob -> mob.hurt(DamageSource.mobAttack(this), (float) (attackDamage * SPLASH_DAMAGE_FACTOR)));
+                        mob -> mob.hurt(this.damageSources().mobAttack(this), (float) (attackDamage * SPLASH_DAMAGE_FACTOR)));
                 DevilRpg.LOGGER.info("---------->doHurtTarget warBear: {} probability: {} Range of success: {} enemies: {}, main damage: {} splash damage: {}", warBear,
                         probability, warBear * PROBABILITY_MULTIPLIER, acquireAllLookTargetsByClass.size(),attackDamage, attackDamage * SPLASH_DAMAGE_FACTOR);
             }
@@ -256,7 +255,7 @@ public class SoulBear extends AbstractMountableTamableEntity
     }
 
     @Override
-    protected boolean isImmobile() {
+    public boolean isImmobile() {
         if (!isAttacking)
             return super.isImmobile();
         return this.isDeadOrDying();
@@ -426,31 +425,35 @@ public class SoulBear extends AbstractMountableTamableEntity
 
     }
     @Override
-    public @NotNull InteractionResult mobInteract(@NotNull Player p_230254_1_, @NotNull InteractionHand p_230254_2_) {
+    public @NotNull InteractionResult mobInteract(@NotNull Player player, @NotNull InteractionHand interactionHand) {
         DevilRpg.LOGGER.info("----------------------->mobInteract mountBear:{}. this.isVehicle(): {}",mountBear,this.isVehicle());
         if (mountBear <= 0) {
             return InteractionResult.PASS;
         }
 
-        ItemStack itemstack = p_230254_1_.getItemInHand(p_230254_2_);
-        if (!this.isBaby()) {
-            if (this.isTame() && p_230254_1_.isSecondaryUseActive()) {
-                this.openCustomInventoryScreen(p_230254_1_);
-                return InteractionResult.sidedSuccess(this.level.isClientSide);
+        boolean flag = !this.isBaby() && this.isTame() && player.isSecondaryUseActive();
+        if (!this.isVehicle() && !flag) {
+            ItemStack itemstack = player.getItemInHand(interactionHand);
+            if (!itemstack.isEmpty()) {
+                if (this.isFood(itemstack)) {
+                    return this.fedFood(player, itemstack);
+                }
+
+                if (!this.isTame()) {
+                    this.makeMad();
+                    return InteractionResult.sidedSuccess(this.level.isClientSide);
+                }
             }
 
-            if (this.isVehicle()) {
-                return super.mobInteract(p_230254_1_, p_230254_2_);
-            }
+            return super.mobInteract(player, interactionHand);
+        } else {
+            return super.mobInteract(player, interactionHand);
         }
-
-        this.doPlayerRide(p_230254_1_);
-        return InteractionResult.sidedSuccess(this.level.isClientSide);
     }
 
 
     @Override
-    public EntityDimensions getDimensions(Pose poseIn) {
+    public @NotNull EntityDimensions getDimensions(@NotNull Pose poseIn) {
         if (this.clientSideStandAnimation > 0.0F) {
             float f = this.clientSideStandAnimation / 6.0F;
             float f1 = 1.0F + f;
@@ -585,7 +588,7 @@ public class SoulBear extends AbstractMountableTamableEntity
 
     }*/
 
-    @Override
+   /* @Override
     public boolean isTame() {
         return this.getFlag(4);
     }
@@ -594,7 +597,7 @@ public class SoulBear extends AbstractMountableTamableEntity
     public void setTame(boolean p_70903_1_) {
         this.setFlag(4, p_70903_1_);
         this.reassessTameGoals();
-    }
+    }*/
 
     protected void reassessTameGoals() {
     }
@@ -602,8 +605,7 @@ public class SoulBear extends AbstractMountableTamableEntity
     @Override
     public LivingEntity getOwner() {
         try {
-            UUID uuid = this.getOwnerUUID();
-            return uuid == null ? null : this.level.getPlayerByUUID(uuid);
+           return super.getOwner();
         } catch (IllegalArgumentException illegalargumentexception) {
             return null;
         }

@@ -47,7 +47,7 @@ public enum SkillTabType {
                 this.height);
     }
 
-    public void drawIcon(int offsetX, int offsetY, int index, ItemRenderer renderItemIn, ItemStack stack) {
+    public void drawIcon(PoseStack p_275292_,int offsetX, int offsetY, int index, ItemRenderer renderItemIn, ItemStack stack) {
         int i = offsetX + this.getX(index);
         int j = offsetY + this.getY(index);
         switch (this) {
@@ -68,7 +68,7 @@ public enum SkillTabType {
                 j += 5;
         }
 
-        renderItemIn.renderAndDecorateFakeItem(stack, i, j);
+        renderItemIn.renderAndDecorateFakeItem(p_275292_,stack, i, j);
 
     }
 

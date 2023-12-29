@@ -144,7 +144,7 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
     @Override
     public boolean doHurtTarget(Entity entityIn) {
         double attackDamage = this.getAttributeValue(Attributes.ATTACK_DAMAGE);
-        boolean flag = entityIn.hurt(DamageSource.mobAttack(this), (float) (attackDamage));
+        boolean flag = entityIn.hurt(this.damageSources().mobAttack(this), (float) (attackDamage));
         random.setSeed(System.currentTimeMillis());
         int probability = random.nextInt(100);
         if (frostbite > 0 && probability <= (frostbite * PROBABILITY_MULTIPLIER)) {
@@ -159,7 +159,7 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
             this.addEffect(frostbiteEffect);
             DevilRpg.LOGGER.info("---------->doHurtTarget frostbite: {} prob: {} limit: {}", frostbite, probability, frostbite * PROBABILITY_MULTIPLIER);
             */
-            entityIn.hurt(DamageSource.FREEZE, frostbite);
+            entityIn.hurt(this.damageSources().freeze(), frostbite);
             IRenderUtilities.rotationParticles(Minecraft.getInstance().level, random, this, ParticleTypes.ELECTRIC_SPARK, NUMBER_OF_PARTICLES_FROST_BITE, RADIUS_PARTICLES);
 
             DevilRpg.LOGGER.debug("---------->doHurtTarget attdmg {} + frostbite: {} prob: {} limit: {}", attackDamage, frostbite, probability, frostbite * PROBABILITY_MULTIPLIER);

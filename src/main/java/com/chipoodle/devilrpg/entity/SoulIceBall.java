@@ -76,7 +76,7 @@ public class SoulIceBall extends ThrowableItemProjectile implements ISoulEntity 
     protected void onHitEntity(EntityHitResult result) {
         super.onHitEntity(result);
         Entity targetEntity = result.getEntity();
-        targetEntity.hurt(DamageSource.FREEZE, damage);
+        targetEntity.hurt(this.damageSources().freeze(), damage);
 
        /* if (targetEntity instanceof LivingEntity) {
             LivingEntity livingEntity = (LivingEntity) targetEntity;

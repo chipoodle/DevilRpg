@@ -11,11 +11,12 @@ import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityAttacher;
 import com.chipoodle.devilrpg.capability.stamina.PlayerStaminaCapabilityAttacher;
 import com.chipoodle.devilrpg.capability.tamable_minion.TamableMinionCapabilityAttacher;
 import com.chipoodle.devilrpg.entity.ITamableEntity;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
 
 public class ModCapability {
-	public static void registerForPlayer(AttachCapabilitiesEvent event) {
+	public static void registerForPlayer(AttachCapabilitiesEvent<Entity> event) {
 		PlayerAuxiliaryCapabilityAttacher.attach(event);
 		PlayerExperienceCapabilityAttacher.attach(event);
 		PlayerManaCapabilityAttacher.attach(event);
@@ -25,7 +26,7 @@ public class ModCapability {
 		LOGGER.info("-----> Player({}) capabilities registered",((Player)event.getObject()).getUUID());
 	}
 
-	public static void registerForTamableEntity(AttachCapabilitiesEvent event) {
+	public static void registerForTamableEntity(AttachCapabilitiesEvent<Entity> event) {
 		TamableMinionCapabilityAttacher.attach(event);
 		LOGGER.info("-----> Minion({}) capabilities registered",((ITamableEntity)event.getObject()).getEntity().getUUID());
 	}

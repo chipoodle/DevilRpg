@@ -15,7 +15,7 @@ import net.minecraft.world.level.pathfinder.WalkNodeEvaluator;
 
 import java.util.EnumSet;
 
-public class TameableMountableFollowOwnerGoal extends Goal {
+public class TameablePetFollowOwnerGoal extends Goal {
     private final ITamableEntity tamable;
     private final LevelReader level;
     private final double speedModifier;
@@ -27,7 +27,7 @@ public class TameableMountableFollowOwnerGoal extends Goal {
     private int timeToRecalcPath;
     private float oldWaterCost;
 
-    public TameableMountableFollowOwnerGoal(ITamableEntity p_i225711_1_, double p_i225711_2_, float p_i225711_4_, float p_i225711_5_, boolean p_i225711_6_) {
+    public TameablePetFollowOwnerGoal(ITamableEntity p_i225711_1_, double p_i225711_2_, float p_i225711_4_, float p_i225711_5_, boolean p_i225711_6_) {
         this.tamable = p_i225711_1_;
         this.level = p_i225711_1_.getLevel();
         this.speedModifier = p_i225711_2_;

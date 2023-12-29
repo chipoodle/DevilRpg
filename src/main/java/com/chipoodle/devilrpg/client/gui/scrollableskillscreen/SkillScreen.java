@@ -49,7 +49,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     private static final String IMG_LOCATION = DevilRpg.MODID + ":textures/gui/";
     private static final ResourceLocation WINDOW_LOCATION = new ResourceLocation(IMG_LOCATION + "window-256b.png");
     private static final ResourceLocation TABS_LOCATION = new ResourceLocation("textures/gui/advancements/tabs.png");
-    private static final ResourceLocation EMPTY_POWER_IMAGE_RESOURCE = new ResourceLocation(IMG_LOCATION + "celtic/empty.png");
+    private static final ResourceLocation EMPTY_POWER_IMAGE_RESOURCE = new ResourceLocation(IMG_LOCATION + "empty-box.png");
 
     private static final Component SAD_LABEL = Component.translatable("advancements.sad_label");
     private static final Component EMPTY = Component.translatable("advancements.empty");

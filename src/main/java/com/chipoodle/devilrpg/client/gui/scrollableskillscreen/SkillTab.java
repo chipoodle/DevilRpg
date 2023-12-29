@@ -137,8 +137,8 @@ public class SkillTab extends GuiComponent {
         this.type.renderTabSelectorBackground(poseStack, this, offsetX, offsetY, isSelected, this.index);
     }
 
-    public void drawIcon(int offsetX, int offsetY, ItemRenderer renderer) {
-        this.type.drawIcon(offsetX, offsetY, this.index, renderer, this.icon);
+    public void drawIcon(PoseStack p_275411_,int offsetX, int offsetY, ItemRenderer renderer) {
+        this.type.drawIcon(p_275411_,offsetX, offsetY, this.index, renderer, this.icon);
 
     }
 

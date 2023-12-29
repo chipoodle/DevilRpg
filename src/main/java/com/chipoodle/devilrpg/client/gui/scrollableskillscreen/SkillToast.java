@@ -60,9 +60,8 @@ public class SkillToast implements Toast {
                     minecraft.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, 1.0F, 1.0F));
                 }
             }
-
-            minecraft.getItemRenderer().renderAndDecorateFakeItem(displayinfo.getIcon(), 8, 8);
-            return p_230444_3_ >= 5000L ? Toast.Visibility.HIDE : Toast.Visibility.SHOW;
+            p_230444_2_.getMinecraft().getItemRenderer().renderAndDecorateFakeItem(p_230444_1_, displayinfo.getIcon(), 8, 8);
+            return (double)p_230444_3_ >= 5000.0D * p_230444_2_.getNotificationDisplayTimeMultiplier() ? Toast.Visibility.HIDE : Toast.Visibility.SHOW;
         } else {
             return Toast.Visibility.HIDE;
         }

@@ -46,7 +46,7 @@ public class WerewolfArmorLayer<T extends LivingEntity, M extends WerewolfTransf
    private void renderArmorPiece(PoseStack p_117119_, MultiBufferSource multiBufferSource, T livingEntity, EquipmentSlot p_117122_, int p_117123_, A p_117124_) {
       ItemStack itemstack = livingEntity.getItemBySlot(p_117122_);
       if (itemstack.getItem() instanceof ArmorItem armoritem) {
-         if (armoritem.getSlot() == p_117122_) {
+         if (armoritem.getEquipmentSlot() == p_117122_) {
             this.getParentModel().copyPropertiesTo(p_117124_);
             this.setPartVisibility(p_117124_, p_117122_);
             net.minecraft.client.model.Model model = getArmorModelHook(livingEntity, itemstack, p_117122_, p_117124_);

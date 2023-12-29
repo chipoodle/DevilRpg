@@ -127,7 +127,7 @@ public final class PlayerModEventSubscriber {
                         // Set icon of creative tab
                         .icon(() -> new ItemStack(PORTAL_ITEM.get()))
                         // Add default items to tab
-                        .displayItems((enabledFlags, populator, hasPermissions) -> {
+                        .displayItems((enabledFlags, populator) -> {
                             BLOCKS.getEntries().forEach((blockRegistryObject) -> {
                                 Block block = blockRegistryObject.get();
                                 populator.accept(block);

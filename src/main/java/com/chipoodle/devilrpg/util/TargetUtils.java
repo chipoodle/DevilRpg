@@ -393,7 +393,7 @@ public class TargetUtils {
      */
     public static boolean canEntitySeeSky(Level world, Entity entity) {
 
-        BlockPos pos = new BlockPos(entity.position());
+        BlockPos pos = BlockPos.containing(entity.position());
         while (pos.getY() < world.getHeight()) {
             if (!world.isEmptyBlock(pos)) {
                 return false;
@@ -502,7 +502,7 @@ public class TargetUtils {
                     }
 
                     Vec3 vector3d = targetEntity.getDeltaMovement();
-                    boolean flag5 = targetEntity.hurt(DamageSource.playerAttack(player), f);
+                    boolean flag5 = targetEntity.hurt(player.damageSources().playerAttack(player), f);
                     if (flag5) {
                         if (i > 0) {
                             if (targetEntity instanceof LivingEntity) {
@@ -534,7 +534,7 @@ public class TargetUtils {
                                     livingentity.knockback(0.4F,
                                             Mth.sin(player.getYRot() * ((float) Math.PI / 180F)),
                                             -Mth.cos(player.getYRot() * ((float) Math.PI / 180F)));
-                                    livingentity.hurt(DamageSource.playerAttack(player), f3);
+                                    livingentity.hurt(player.damageSources().playerAttack(player), f3);
                                 }
                             }
 

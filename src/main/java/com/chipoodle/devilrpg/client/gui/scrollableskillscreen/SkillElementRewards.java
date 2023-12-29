@@ -62,7 +62,7 @@ public class SkillElementRewards {
 					ItemEntity itementity = player.drop(itemstack, false);
 					if (itementity != null) {
 						itementity.setNoPickUpDelay();
-						itementity.setOwner(player.getUUID());
+						itementity.setTarget(player.getUUID());
 					}
 				}
 			}

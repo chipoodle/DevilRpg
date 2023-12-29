@@ -602,7 +602,7 @@ public class SoulWisp extends TamableAnimal implements ITamableEntity, FlyingAni
         public void start() {
             Vec3 vec3d = this.findPos();
             if (vec3d != null) {
-                SoulWisp.this.navigation.moveTo(SoulWisp.this.navigation.createPath(new BlockPos(vec3d), 1), 1.0D);
+                SoulWisp.this.navigation.moveTo(SoulWisp.this.navigation.createPath(BlockPos.containing(vec3d), 1), 1.0D);
             }
 
         }

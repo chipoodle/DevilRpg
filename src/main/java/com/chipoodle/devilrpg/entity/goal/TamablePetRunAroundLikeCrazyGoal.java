@@ -1,6 +1,6 @@
 package com.chipoodle.devilrpg.entity.goal;
 
-import com.chipoodle.devilrpg.entity.AbstractMountableTamableEntity;
+import com.chipoodle.devilrpg.entity.AbstractMountablePet;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.util.DefaultRandomPos;
@@ -9,17 +9,16 @@ import net.minecraft.world.phys.Vec3;
 
 import java.util.EnumSet;
 
-
-public class TameableMountableRunAroundLikeCrazyGoal extends Goal {
-    private final AbstractMountableTamableEntity horse;
+public class TamablePetRunAroundLikeCrazyGoal  extends Goal{
+    private final AbstractMountablePet horse;
     private final double speedModifier;
     private double posX;
     private double posY;
     private double posZ;
 
-    public TameableMountableRunAroundLikeCrazyGoal(AbstractMountableTamableEntity p_i1653_1_, double p_i1653_2_) {
-        this.horse = p_i1653_1_;
-        this.speedModifier = p_i1653_2_;
+    public TamablePetRunAroundLikeCrazyGoal(AbstractMountablePet p_25890_, double p_25891_) {
+        this.horse = p_25890_;
+        this.speedModifier = p_25891_;
         this.setFlags(EnumSet.of(Goal.Flag.MOVE));
     }
 
@@ -48,17 +47,18 @@ public class TameableMountableRunAroundLikeCrazyGoal extends Goal {
     }
 
     public void tick() {
-        if (!this.horse.isTame() && this.horse.getRandom().nextInt(50) == 0) {
-            Entity entity = this.horse.getPassengers().get(0);
+        if (!this.horse.isTame() && this.horse.getRandom().nextInt(this.adjustedTickDelay(50)) == 0) {
+            Entity entity = this.horse.getFirstPassenger();
             if (entity == null) {
                 return;
             }
 
             if (entity instanceof Player) {
+                Player player = (Player)entity;
                 int i = this.horse.getTemper();
                 int j = this.horse.getMaxTemper();
-                if (j > 0 && this.horse.getRandom().nextInt(j) < i && !net.minecraftforge.event.ForgeEventFactory.onAnimalTame(horse, (Player) entity)) {
-                    this.horse.tame((Player) entity);
+                if (j > 0 && this.horse.getRandom().nextInt(j) < i && !net.minecraftforge.event.ForgeEventFactory.onAnimalTame(horse, (Player)entity)) {
+                    this.horse.tame(player);
                     return;
                 }
 
@@ -67,9 +67,8 @@ public class TameableMountableRunAroundLikeCrazyGoal extends Goal {
 
             this.horse.ejectPassengers();
             this.horse.makeMad();
-            this.horse.level.broadcastEntityEvent(this.horse, (byte) 6);
+            this.horse.level.broadcastEntityEvent(this.horse, (byte)6);
         }
 
     }
 }
-

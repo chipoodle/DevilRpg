@@ -72,6 +72,7 @@ public class MinionPassiveAttributes {
         Integer warBear = parentCapability.getSkillsPoints().get(SkillEnum.WAR_BEAR);
         Integer mountBear = parentCapability.getSkillsPoints().get(SkillEnum.MOUNT_BEAR);
         DevilRpg.LOGGER.info("||---->MinionPassiveAttributes SoulBearEntity warbear:{} factor: {}", warBear, factor);
+        DevilRpg.LOGGER.info("||---->MinionPassiveAttributes SoulBearEntity mountBear:{} factor: {}", mountBear, factor);
 
         entity.setWarBear(warBear);
         entity.setMountBear(mountBear);
