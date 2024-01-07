@@ -417,8 +417,7 @@ public class TargetUtils {
      * Attacks for the player the targeted entity with the currently equipped item.
      * The equipped item has hurtEnemy called on it. Args: targetEntity
      */
-    public static void attackTargetEntityWithItemHand(ServerPlayer player, Entity targetEntity,
-                                                      InteractionHand currentHand) {
+    public static void attackTargetEntityWithItemHand(ServerPlayer player, Entity targetEntity, InteractionHand currentHand) {
         if (player.gameMode.getGameModeForPlayer() == GameType.SPECTATOR) {
             player.setCamera(targetEntity);
         } else {
@@ -443,8 +442,7 @@ public class TargetUtils {
                 float f = (float) player.getAttributeValue(Attributes.ATTACK_DAMAGE);
                 float f1;
                 if (targetEntity instanceof LivingEntity) {
-                    f1 = EnchantmentHelper.getDamageBonus(player.getItemInHand(currentHand),
-                            ((LivingEntity) targetEntity).getMobType());
+                    f1 = EnchantmentHelper.getDamageBonus(player.getItemInHand(currentHand), ((LivingEntity) targetEntity).getMobType());
                 } else {
                     f1 = EnchantmentHelper.getDamageBonus(player.getItemInHand(currentHand), MobType.UNDEFINED);
                 }
@@ -580,7 +578,8 @@ public class TargetUtils {
                         }
 
                         EnchantmentHelper.doPostDamageEffects(player, targetEntity);
-                        ItemStack itemstack1 = player.getMainHandItem();
+                        //ItemStack itemstack1 = player.getMainHandItem();
+                        ItemStack itemstack1 = player.getItemInHand(currentHand);
                         Entity entity = targetEntity;
                         if (targetEntity instanceof net.minecraftforge.entity.PartEntity) {
                             entity = ((net.minecraftforge.entity.PartEntity<?>) targetEntity).getParent();
@@ -590,8 +589,7 @@ public class TargetUtils {
                             ItemStack copy = itemstack1.copy();
                             itemstack1.hurtEnemy((LivingEntity) entity, player);
                             if (itemstack1.isEmpty()) {
-                                net.minecraftforge.event.ForgeEventFactory.onPlayerDestroyItem(player, copy,
-                                        currentHand);
+                                net.minecraftforge.event.ForgeEventFactory.onPlayerDestroyItem(player, copy, currentHand);
                                 player.setItemInHand(currentHand, ItemStack.EMPTY);
                             }
                         }
