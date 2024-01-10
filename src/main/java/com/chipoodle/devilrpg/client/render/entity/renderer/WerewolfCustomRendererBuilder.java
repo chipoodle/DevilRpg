@@ -85,8 +85,7 @@ public class WerewolfCustomRendererBuilder {
             eve.getEntity().refreshDimensions();
             /*
             DevilRpg.LOGGER.debug("Created layer: {}, client side: {}", newWolf, event.getEntity().level.isClientSide());*/
-            IRenderUtilities.rotationParticles(Minecraft.getInstance().level, random, eve.getEntity(),
-                    ParticleTypes.EFFECT, 17, 1);
+            //IRenderUtilities.rotationParticles(Minecraft.getInstance().level, random, eve.getEntity(), ParticleTypes.EFFECT, 17, 1);
         }
     }
 
@@ -98,8 +97,7 @@ public class WerewolfCustomRendererBuilder {
         if (!EventUtils.onWerewolfTransformation(event.getEntity(), c, event) && newWolf != null) {
             newWolf = null;
             event.getEntity().refreshDimensions();
-            IRenderUtilities.rotationParticles(Minecraft.getInstance().level, random, event.getEntity(),
-                    ParticleTypes.EFFECT, 17, 1);
+            //IRenderUtilities.rotationParticles(Minecraft.getInstance().level, random, event.getEntity(), ParticleTypes.EFFECT, 17, 1);
         }
 
     }
