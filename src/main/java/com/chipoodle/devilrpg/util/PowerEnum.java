@@ -18,6 +18,6 @@ public enum PowerEnum {
 	}
 	
 	public static PowerEnum getByDescription(String description) {
-    	return Arrays.asList(PowerEnum.values()).stream().filter(x->x.description.equals(description)).findAny().orElse(null);
+    	return Arrays.stream(PowerEnum.values()).filter(x->x.description.equals(description)).findAny().orElse(null);
     }
 }

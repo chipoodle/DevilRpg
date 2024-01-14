@@ -85,7 +85,6 @@ public class CustomSkillButton extends Button {
             //blit(poseStack, getX(), getY(), this.getBlitOffset(), 0.0F, 0.0F, this.width, this.height, this.width, this.height);
             blit(poseStack, getX(), getY(), 0, 0.0F, 0.0F, this.width, this.height, this.width, this.height);
             //this.renderTexture(poseStack, this.resourceLocation, this.getX(), this.getY(), 0.0F, 0.0F, this.yDiffTex, this.width, this.height, this.width, this.height);
-            this.renderBg(poseStack, partialTicks, mouseX, mouseY);
 
 
             //Pinta el texto debajo del botón
@@ -98,11 +97,6 @@ public class CustomSkillButton extends Button {
         }
 
 
-    }
-
-    protected void renderBg(@NotNull PoseStack matrixStack, float partialTick, int mouseX, int mouseY) {
-        //RenderSystem.setShaderTexture(0, resourceLocation);
-        //this.blit(matrixStack, this.getRectangle().left(), this.getRectangle().top(), 0, 0, this.textureWidth, this.textureHeight);
     }
 
     public boolean isInside(double mouseX, double mouseY) {

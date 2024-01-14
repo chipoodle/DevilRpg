@@ -14,9 +14,12 @@
     "gui.skills.title": "Skills", 
     "gui.skills.mana_cost": "Mana cost:", 
     "gui.skills.unspent": "Unspent points:",
-    "item.devilrpg.portal_item": "Portal Item",
+    "item.devilrpg.item_vacio": "Empty Item",
     "block.devilrpg.soulvine": "Soulvine",
     "item.devilrpg.item_soul_wolf.name": "Summon Soul Wolf",
     "item.devilrpg.soulwolf_spawn_egg": "Soul Wolf",
-    "item_group.devilrpg.devilrpg_tab": "Devil RPG"
+    "item.devilrpg.soulbear_spawn_egg": "Soul Bear",
+    "item_group.devilrpg.devilrpg_tab": "Devil RPG",
+    "effects.devilrpg.knockback_immunity": "Knock-back Immunity"
+
 }

@@ -34,6 +34,8 @@ public enum SkillEnum {
     MANA_POOL("ManaPool","Mana Pool","mana_pool",false,false),
     MANA_REGENERATION("ManaRegeneration","Mana Regeneration","mana_regeneration",false,false),
     CHARGE("Charge","Charge","charge",true,false),
+    BLOCK("Block","Block","block",true,false),
+    KNOCKBACK_RESISTANCE("KnockbackResistance","Knockback Resistance","knockback_resistance",false,false),
     EMPTY("","","",false,false);
 	
     private final String name;

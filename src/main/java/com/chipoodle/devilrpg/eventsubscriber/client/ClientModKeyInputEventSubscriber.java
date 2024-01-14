@@ -1,6 +1,8 @@
 package com.chipoodle.devilrpg.eventsubscriber.client;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillScreen;
 import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.network.handler.KeyboardSkillServerHandler;
@@ -8,9 +10,11 @@ import com.chipoodle.devilrpg.util.PowerEnum;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
+import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
@@ -63,25 +67,39 @@ public class ClientModKeyInputEventSubscriber {
 
         @SubscribeEvent
         public static void onKeyInput(InputEvent.Key event) {
+            LocalPlayer p = Minecraft.getInstance().player;
+
+            if(p == null)
+                return;
+
+            LazyOptional<PlayerSkillCapabilityInterface> skill = p.getCapability(PlayerSkillCapability.INSTANCE);
             if (KEYS[0].consumeClick()) {
                 DevilRpg.LOGGER.debug(KEYS[0].saveString() + " pressed. " + KEYS[0].getKey().getValue());
                 DevilRpg.LOGGER.debug("---->" + getKeyName(PowerEnum.POWER1));
                 ModNetwork.CHANNEL.sendToServer(new KeyboardSkillServerHandler(PowerEnum.POWER1));
+                //Para que se ejecute en el cliente
+                skill.ifPresent(x -> x.triggerAction(p, PowerEnum.POWER1));
             }
             if (KEYS[1].consumeClick()) {
                 DevilRpg.LOGGER.debug(KEYS[1].saveString() + " pressed. " + KEYS[1].getKey().getValue());
                 DevilRpg.LOGGER.debug("---->" + getKeyName(PowerEnum.POWER2));
                 ModNetwork.CHANNEL.sendToServer(new KeyboardSkillServerHandler(PowerEnum.POWER2));
+                //Para que se ejecute en el cliente
+                skill.ifPresent(x -> x.triggerAction(p, PowerEnum.POWER2));
             }
             if (KEYS[2].consumeClick()) {
                 DevilRpg.LOGGER.debug(KEYS[2].saveString() + " pressed. " + KEYS[2].getKey().getValue());
                 DevilRpg.LOGGER.debug("---->" + getKeyName(PowerEnum.POWER3));
                 ModNetwork.CHANNEL.sendToServer(new KeyboardSkillServerHandler(PowerEnum.POWER3));
+                //Para que se ejecute en el cliente
+                skill.ifPresent(x -> x.triggerAction(p, PowerEnum.POWER3));
             }
             if (KEYS[3].consumeClick()) {
                 DevilRpg.LOGGER.debug(KEYS[3].saveString() + " pressed. " + KEYS[3].getKey().getValue());
                 DevilRpg.LOGGER.debug("---->" + getKeyName(PowerEnum.POWER4));
                 ModNetwork.CHANNEL.sendToServer(new KeyboardSkillServerHandler(PowerEnum.POWER4));
+                //Para que se ejecute en el cliente
+                skill.ifPresent(x -> x.triggerAction(p, PowerEnum.POWER4));
             }
             if (KEYS[4].consumeClick()) {
                 DevilRpg.LOGGER.debug(KEYS[4].saveString() + " pressed. " + KEYS[4].getKey().getValue());
@@ -93,9 +111,8 @@ public class ClientModKeyInputEventSubscriber {
         }
 
         public static String getKeyName(PowerEnum power) {
-            DevilRpg.LOGGER.debug("---->getKeyName power{} ", power);
+            //DevilRpg.LOGGER.debug("---->getKeyName power{} ", power);
             InputConstants.Key key = keyBindingsHash.getOrDefault(power, new KeyMapping("", -1, "")).getKey();
-
             InputConstants.Key orCreate = InputConstants.Type.KEYSYM.getOrCreate(key.getValue());
             return orCreate.getDisplayName().getString();
         }

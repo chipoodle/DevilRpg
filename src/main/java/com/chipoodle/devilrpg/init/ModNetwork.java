@@ -80,12 +80,6 @@ public class ModNetwork {
                 PlayerPassiveSkillServerHandler::onMessage);
 
         CHANNEL.registerMessage(++networkId,
-                PlayerDeltaMovementClientHandler.class,
-                PlayerDeltaMovementClientHandler::encode,
-                PlayerDeltaMovementClientHandler::decode,
-                PlayerDeltaMovementClientHandler::onMessage);
-
-        CHANNEL.registerMessage(++networkId,
                 PlayerStaminaClientServerHandler.class,
                 PlayerStaminaClientServerHandler::encode,
                 PlayerStaminaClientServerHandler::decode,

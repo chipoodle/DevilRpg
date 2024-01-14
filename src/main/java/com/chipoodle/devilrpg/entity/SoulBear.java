@@ -6,7 +6,7 @@ import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapability;
 import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityInterface;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
-import com.chipoodle.devilrpg.client.render.IRenderUtilities;
+import com.chipoodle.devilrpg.util.IRenderUtilities;
 import com.chipoodle.devilrpg.entity.goal.TameablePetFollowOwnerGoal;
 import com.chipoodle.devilrpg.entity.goal.TameablePetOwnerHurtByTargetGoal;
 import com.chipoodle.devilrpg.entity.goal.TameablePetOwnerHurtTargetGoal;
@@ -43,7 +43,6 @@ import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.ResetUniversalAngerTargetGoal;
 import net.minecraft.world.entity.animal.IronGolem;
 import net.minecraft.world.entity.animal.Turtle;
-
 import net.minecraft.world.entity.animal.horse.Llama;
 import net.minecraft.world.entity.animal.horse.Markings;
 import net.minecraft.world.entity.animal.horse.Variant;
@@ -72,7 +71,7 @@ public class SoulBear extends AbstractMountablePet
     private static final UUID ARMOR_MODIFIER_UUID = UUID.fromString("556E1665-8B10-40C8-8F9D-CF9B1667F295");
     private static final EntityDataAccessor<Integer> DATA_ID_TYPE_VARIANT = SynchedEntityData.defineId(SoulBear.class, EntityDataSerializers.INT);
     private static final UniformInt PERSISTENT_ANGER_TIME = TimeUtil.rangeOfSeconds(20, 39);
-    private static final int PROBABILITY_MULTIPLIER = 10;
+    private static final int PROBABILITY_MULTIPLIER = 13;
     private static final int DURATION_TICKS = 100;
 
     private static final double RADIUS_PARTICLES = 1.0;
@@ -153,18 +152,20 @@ public class SoulBear extends AbstractMountablePet
         if (skill != null) {
             this.puntosAsignados = skill.getSkillsPoints().get(SkillEnum.SUMMON_SOUL_BEAR);
             saludMaxima = 5 * this.puntosAsignados + SALUD_INICIAL;
-            initialArmor = (1.0D * 0.309 * puntosAsignados) + 2;
+            initialArmor = (1.0D * 0.410 * puntosAsignados) + 3;
 
         }
+        if (warBear != 0)
+            Objects.requireNonNull(this.getAttribute(Attributes.KNOCKBACK_RESISTANCE)).setBaseValue(warBear * 0.1);
 
         Objects.requireNonNull(this.getAttribute(Attributes.MOVEMENT_SPEED)).setBaseValue(0.4F);
         Objects.requireNonNull(this.getAttribute(Attributes.MAX_HEALTH)).setBaseValue(saludMaxima);
-        Objects.requireNonNull(this.getAttribute(Attributes.ARMOR)).setBaseValue(initialArmor);
+        Objects.requireNonNull(this.getAttribute(Attributes.ARMOR)).setBaseValue(initialArmor + warBear);
         Objects.requireNonNull(this.getAttribute(Attributes.FOLLOW_RANGE)).setBaseValue(16.0D);
         Objects.requireNonNull(this.getAttribute(Attributes.ATTACK_DAMAGE)).setBaseValue((1.8 * puntosAsignados) + 4); // 5.8-40
         Objects.requireNonNull(this.getAttribute(Attributes.JUMP_STRENGTH)).setBaseValue(0.7D + ((double) mountBear / 5));
         setHealth((float) saludMaxima);
-        DevilRpg.LOGGER.debug("----------------------->SoulBear.updateLevel(). Owner {}. isTame {}.  ",owner.getUUID(),isTame());
+        DevilRpg.LOGGER.debug("----------------------->SoulBear.updateLevel(). Owner {}. isTame {}.  ", owner.getUUID(), isTame());
     }
 
     @Override
@@ -237,8 +238,8 @@ public class SoulBear extends AbstractMountablePet
 
                 acquireAllLookTargetsByClass.forEach(
                         mob -> mob.hurt(this.damageSources().mobAttack(this), (float) (attackDamage * SPLASH_DAMAGE_FACTOR)));
-                DevilRpg.LOGGER.info("---------->doHurtTarget warBear: {} probability: {} Range of success: {} enemies: {}, main damage: {} splash damage: {}", warBear,
-                        probability, warBear * PROBABILITY_MULTIPLIER, acquireAllLookTargetsByClass.size(),attackDamage, attackDamage * SPLASH_DAMAGE_FACTOR);
+                DevilRpg.LOGGER.info("---------->doHurtTarget warBear: {} probability: {} Range of success: {}, enemies: {}, main damage: {} splash damage: {}, armor: {}", warBear,
+                        probability, warBear * PROBABILITY_MULTIPLIER, acquireAllLookTargetsByClass.size(), attackDamage, attackDamage * SPLASH_DAMAGE_FACTOR, Objects.requireNonNull(this.getAttribute(Attributes.ARMOR)).getValue());
             }
             this.doEnchantDamageEffects(this, entityIn);
         }
@@ -424,9 +425,10 @@ public class SoulBear extends AbstractMountablePet
         }
 
     }
+
     @Override
     public @NotNull InteractionResult mobInteract(@NotNull Player player, @NotNull InteractionHand interactionHand) {
-        DevilRpg.LOGGER.info("----------------------->mobInteract mountBear:{}. this.isVehicle(): {}",mountBear,this.isVehicle());
+        DevilRpg.LOGGER.info("----------------------->mobInteract mountBear:{}. this.isVehicle(): {}", mountBear, this.isVehicle());
         if (mountBear <= 0) {
             return InteractionResult.PASS;
         }
@@ -605,7 +607,7 @@ public class SoulBear extends AbstractMountablePet
     @Override
     public LivingEntity getOwner() {
         try {
-           return super.getOwner();
+            return super.getOwner();
         } catch (IllegalArgumentException illegalargumentexception) {
             return null;
         }
@@ -685,6 +687,10 @@ public class SoulBear extends AbstractMountablePet
     }
 
     protected boolean handleEating(Player p_190678_1_, ItemStack p_190678_2_) {
+        return false;
+    }
+
+    public boolean canBeLeashed(Player p_30396_) {
         return false;
     }
 
@@ -844,9 +850,5 @@ public class SoulBear extends AbstractMountablePet
             SoulBear.this.setTarget(null);
             super.tick();
         }
-    }
-
-    public boolean canBeLeashed(Player p_30396_) {
-        return false;
     }
 }

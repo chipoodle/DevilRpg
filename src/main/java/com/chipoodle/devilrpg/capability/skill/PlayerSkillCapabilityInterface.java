@@ -2,15 +2,17 @@ package com.chipoodle.devilrpg.capability.skill;
 
 import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.ResourceType;
+import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillElement;
 import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model.ClientSkillBuilderFromJson;
 import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
 import com.chipoodle.devilrpg.util.PowerEnum;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.UUID;
 
 public interface PlayerSkillCapabilityInterface extends IGenericCapability {
@@ -44,13 +46,22 @@ public interface PlayerSkillCapabilityInterface extends IGenericCapability {
 
     CompoundTag setSkillToByteArray(SkillEnum skillEnum);
 
-    void triggerAction(ServerPlayer playerIn, PowerEnum triggeredPower);
+    @SuppressWarnings("unchecked")
+    HashMap<SkillEnum, ResourceLocation> getImagesOfSkills();
 
-    void triggerPassive(ServerPlayer sender, CompoundTag triggeredPassive);
+    void setImagesOfSkills(HashMap<SkillEnum, ResourceLocation> names, Player player);
+
+    void triggerAction(Player playerIn, PowerEnum triggeredPower);
+
+    void triggerPassive(Player sender, CompoundTag triggeredPassive);
 
     ISkillContainer getLoadedSkillExecutor(SkillEnum skillEnum);
 
     ISkillContainer createSkillExecutor(SkillEnum skillEnum);
 
     ClientSkillBuilderFromJson getClientSkillBuilder();
+
+    List<SkillEnum> getPassivesFromActiveSkill(SkillEnum skillEnum);
+
+    SkillElement getSkillElementByEnum(SkillEnum skillEnum);
 }

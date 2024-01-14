@@ -1,9 +1,7 @@
 package com.chipoodle.devilrpg.client.render.entity.renderer;
 
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
-import com.chipoodle.devilrpg.client.render.IRenderUtilities;
 import com.chipoodle.devilrpg.util.EventUtils;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.EntityModelSet;
@@ -14,22 +12,18 @@ import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
-import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.core.particles.SimpleParticleType;
-import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.level.Level;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.RenderPlayerEvent;
 import net.minecraftforge.common.util.LazyOptional;
 
 import java.lang.reflect.Field;
-import java.util.Random;
 import java.util.function.BiConsumer;
 
 public class WerewolfCustomRendererBuilder {
 
+    protected static final RandomSource random = RandomSource.create();
     @OnlyIn(Dist.CLIENT)
     public static WerewolfRenderer newWolf = null;
     private static EntityRenderDispatcher entityRenderDispatcher;
@@ -38,8 +32,6 @@ public class WerewolfCustomRendererBuilder {
     private static ItemInHandRenderer itemInHandRenderer;
     private static ItemRenderer itemRenderer;
     private static BlockRenderDispatcher blockRenderDispatcher;
-
-    protected static final RandomSource random = RandomSource.create();
 
     public WerewolfCustomRendererBuilder() {
 
@@ -71,6 +63,8 @@ public class WerewolfCustomRendererBuilder {
                 Field blockRenderDispatcherField = entityRenderDispatcher.getClass().getDeclaredField("blockRenderDispatcher");
                 blockRenderDispatcherField.setAccessible(true);
                 blockRenderDispatcher = (BlockRenderDispatcher) blockRenderDispatcherField.get(entityRenderDispatcher);
+
+                //itemInHandRenderer = new WerewolfItemInHandRenderer(Minecraft.getInstance(), entityRenderDispatcher,itemRenderer);
 
             } catch (NoSuchFieldException | IllegalAccessException e) {
                 throw new RuntimeException(e);

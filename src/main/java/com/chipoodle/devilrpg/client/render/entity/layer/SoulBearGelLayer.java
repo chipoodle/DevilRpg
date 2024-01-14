@@ -1,7 +1,7 @@
 package com.chipoodle.devilrpg.client.render.entity.layer;
 
 import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.client.render.IRenderUtilities;
+import com.chipoodle.devilrpg.util.IRenderUtilities;
 import com.chipoodle.devilrpg.client.render.entity.model.SoulBearModel;
 import com.chipoodle.devilrpg.client.render.entity.model.SoulBearModelHeart;
 import com.chipoodle.devilrpg.entity.SoulBear;

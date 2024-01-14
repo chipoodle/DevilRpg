@@ -4,7 +4,8 @@ import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
-import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
+import com.chipoodle.devilrpg.util.IRenderUtilities;
 import com.chipoodle.devilrpg.entity.ITamableEntity;
 import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.init.ModSounds;
@@ -12,12 +13,12 @@ import com.chipoodle.devilrpg.network.handler.WerewolfAttackServerHandler;
 import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import com.chipoodle.devilrpg.util.TargetUtils;
+import net.minecraft.client.Minecraft;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.util.Mth;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
@@ -31,16 +32,16 @@ import net.minecraftforge.common.util.LazyOptional;
 
 import java.util.*;
 
-public class SkillShapeshiftWerewolf extends AbstractPlayerPassive implements ISkillContainer, ICapabilityAttributeModifier {
+public class SkillShapeshiftWerewolf extends AbstractPlayerPassiveAttribute implements ISkillContainer, ICapabilityAttributeModifier {
     // public static final String HEALTH = "HEALTH";
     public static final String SPEED = "SPEED";
     private static final ResourceLocation SUMMON_SOUND = new ResourceLocation(DevilRpg.MODID, "summon");
-    private final PlayerSkillCapabilityImplementation parentCapability;
+    private final PlayerSkillCapabilityInterface parentCapability;
     private final Random rand = new Random();
     //AttributeModifier healthAttributeModifier;
     AttributeModifier speedAttributeModifier;
 
-    public SkillShapeshiftWerewolf(PlayerSkillCapabilityImplementation parentCapability) {
+    public SkillShapeshiftWerewolf(PlayerSkillCapabilityInterface parentCapability) {
         DevilRpg.LOGGER.info("----------------------->CONSTRUCTOR SkillShapeshiftWerewolf. {}", this);
         this.parentCapability = parentCapability;
     }
@@ -56,7 +57,7 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassive implements IS
     }
 
     @Override
-    public boolean isResourceConsumptionIgnored(Player player){
+    public boolean isResourceConsumptionBypassed(Player player) {
         PlayerAuxiliaryCapabilityInterface unwrappedPlayerCapabilityAux = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerAuxiliaryCapability.INSTANCE);
         return unwrappedPlayerCapabilityAux.isWerewolfTransformation();
     }
@@ -87,6 +88,9 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassive implements IS
             double maxMovementSpeed = playerIn.getAttributeValue(Attributes.MOVEMENT_SPEED);
             DevilRpg.LOGGER.info("max movement speed {}", maxMovementSpeed);
         }
+        else{
+            IRenderUtilities.rotationParticles(Minecraft.getInstance().level, RandomSource.create(), playerIn, ParticleTypes.EFFECT, 17, 1);
+        }
     }
 
     private void createNewAttributeModifiers() {
@@ -116,7 +120,8 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassive implements IS
 
     /**
      * Must be called inside playerTickEvent. Client side
-     * @param player the player
+     *
+     * @param player              the player
      * @param auxiliaryCapability Auxiliar capability
      */
     @OnlyIn(Dist.CLIENT)
@@ -149,7 +154,6 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassive implements IS
     }
 
     /**
-     *
      * @param target
      * @param hand
      */
@@ -160,7 +164,6 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassive implements IS
     }
 
     /**
-     *
      * @param player
      * @param hand
      */

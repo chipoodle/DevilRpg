@@ -128,7 +128,7 @@ public class MinionPortraitHudOverlay extends GuiComponent {
         final int POISON_EFFECT_ID = 19; // is now MobEffects.POISON
         final int REGEN_EFFECT_ID = 10; // is now MobEffects.REGENERATION
         final int NORMAL_TEXTURE_U = BAR_WIDTH; // red texels - see mbe40_hud_overlay.png
-        final int REGEN_TEXTURE_U = BAR_WIDTH + 1; // green texels
+        final int HEALTH_BOOST_TEXTURE_U = BAR_WIDTH + 1; // green texels
         final int POISON_TEXTURE_U = BAR_WIDTH + 2; // black texels
         final int WITHER_TEXTURE_U = BAR_WIDTH + 3; // brown texels
         final int ABSORPION_TEXTURE_U = BAR_WIDTH + 3; // brown texels
@@ -140,8 +140,8 @@ public class MinionPortraitHudOverlay extends GuiComponent {
             gui.blit(poseStack, 0, 0, WITHER_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
         } else if (entity.hasEffect(MobEffects.POISON)) {
             gui.blit(poseStack, 0, 0, POISON_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
-        } else if (entity.hasEffect(MobEffects.REGENERATION)) {
-            gui.blit(poseStack, 0, 0, REGEN_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
+        } else if (entity.hasEffect(MobEffects.HEALTH_BOOST)) {
+            gui.blit(poseStack, 0, 0, HEALTH_BOOST_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
         } else {
             gui.blit(poseStack, 0, 0, NORMAL_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
         }

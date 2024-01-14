@@ -125,7 +125,7 @@ public final class PlayerModEventSubscriber {
                 // Set name of tab to display
                 builder.title(Component.translatable("item_group." + DevilRpg.MODID + "." + ModItems.CREATIVE_TAB_NAME))
                         // Set icon of creative tab
-                        .icon(() -> new ItemStack(PORTAL_ITEM.get()))
+                        .icon(() -> new ItemStack(ITEM_VACIO.get()))
                         // Add default items to tab
                         .displayItems((enabledFlags, populator) -> {
                             BLOCKS.getEntries().forEach((blockRegistryObject) -> {

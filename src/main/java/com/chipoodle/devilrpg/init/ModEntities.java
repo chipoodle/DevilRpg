@@ -26,7 +26,7 @@ import net.minecraftforge.registries.RegistryObject;
  * the Block and Item registries are filled. Note: This supports registry
  * overrides.
  *
- * @author Cadiboo
+ * @author Christian
  */
 public final class ModEntities {
 

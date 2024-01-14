@@ -7,6 +7,7 @@ package com.chipoodle.devilrpg.eventsubscriber.client;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.client.gui.hud.ManaBarHudOverlay;
+import com.chipoodle.devilrpg.client.gui.hud.SkillsIconHudOverlay;
 import com.chipoodle.devilrpg.client.gui.hud.MinionPortraitHudOverlay;
 import com.chipoodle.devilrpg.client.gui.hud.StaminaBarHudOverlay;
 import com.chipoodle.devilrpg.client.render.entity.model.*;
@@ -68,6 +69,7 @@ public final class ClientModRegistryEventSubscriber {
         event.registerEntityRenderer(ModEntities.WISP_ARCHER.get(), SoulWispArcherRenderer::new);
         //ItemBlockRenderTypes.setRenderLayer(ModBlocks.SOUL_VINE_BLOCK.get(), RenderType.translucent());
         //event.registerEntityRenderer(ModEntityTypes.WISP.get(), SoulWispHumanoidRenderer::new);
+
     }
 
     @SubscribeEvent
@@ -77,6 +79,7 @@ public final class ClientModRegistryEventSubscriber {
         event.registerAboveAll("mana", ManaBarHudOverlay.HUD_MANA_BAR);
         event.registerAboveAll("stamina", StaminaBarHudOverlay.HUD_STAMINA_BAR);
         event.registerAboveAll("minion_portrait", MinionPortraitHudOverlay.HUD_MINION_PORTRAITS);
+        event.registerAboveAll("skill_icons", SkillsIconHudOverlay.HUD_SKILL_ICONS);
 
     }
 

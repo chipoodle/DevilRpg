@@ -18,6 +18,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.GameNarrator;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiComponent;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.GameRenderer;
@@ -84,9 +85,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
         this.player = Minecraft.getInstance().player;
         expCap = player.getCapability(PlayerExperienceCapability.INSTANCE);
         skillCap = player.getCapability(PlayerSkillCapability.INSTANCE);
-        ClientSkillBuilderFromJson skillManager = skillCap.map(s -> s.getClientSkillBuilder()).orElse(null); //new ClientSkillBuilder(/*Minecraft.getInstance()*/);
-        //skillManager.buildSkillTrees();
-        this.clientSkillManager = skillManager;
+        this.clientSkillManager = skillCap.map(PlayerSkillCapabilityInterface::getClientSkillBuilder).orElse(null);
     }
 
     public SkillScreen(InputConstants.Key input) {
@@ -118,9 +117,47 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
                     .pos(guiLeft + WINDOW_WIDTH - 20, guiTop - 50).size(20, 20).build());
             maxPages = this.tabs.size() / SkillTabType.MAX_TABS;
         }
+
+        //////////////////////////////////////////
+        addThemeButtons();
+
+        maxPages = this.tabs.size() / SkillTabType.MAX_TABS;
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         addPowerButtons();
         loadAssignedPowerButtons();
+    }
+
+    private void addThemeButtons() {
+        int offLeft = (this.width - WINDOW_WIDTH) / 2;
+        int offTop = (this.height - WINDOW_HEIGHT) / 2;
+
+
+        Button themeForward = Button.builder(
+                        Component.literal(">"),
+                        b -> {
+                            //tabPage = Math.min(tabPage + 1, maxPages);
+                            SkillWidget.changeWidgetTheme(true);
+                        }
+                )
+                .pos((WINDOW_AREA_OFFSET_X + offLeft + 10) + ((SkillWidget.FRAME_SIZE + 10) + 30),
+                        WINDOW_AREA_OFFSET_Y + offTop + INNER_SCREEN_HEIGHT + 2)
+                .size(20, 20)
+                .build();
+
+        Button themeBackwards = Button.builder(
+                        Component.literal("<"),
+                        b -> {
+                            //tabPage = Math.min(tabPage + 1, maxPages);
+                            SkillWidget.changeWidgetTheme(true);
+                        }
+                )
+                .pos((WINDOW_AREA_OFFSET_X + offLeft + 10) + ((SkillWidget.FRAME_SIZE + 10) ),
+                        WINDOW_AREA_OFFSET_Y + offTop + INNER_SCREEN_HEIGHT + 2)
+                .size(20, 20)
+                .build();
+
+        addRenderableWidget(themeForward);
+        addRenderableWidget(themeBackwards);
     }
 
     @Override
@@ -169,8 +206,8 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
             // Texturas de los marcos, y barras de título de los tooltips
             //RenderSystem.setShaderTexture(0, WIDGETS);
             // Pinta el icono del botón
-            this.blit(poseStack, draggedSkillWidget.getX() + 3, draggedSkillWidget.getY(), draggedSkillWidget.getDisplayInfo().getFrame().getIcon(),
-                   0,SkillWidget.FRAME_SIZE, SkillWidget.FRAME_SIZE);
+            blit(poseStack, draggedSkillWidget.getX() + 3, draggedSkillWidget.getY(), draggedSkillWidget.getDisplayInfo().getFrame().getIcon(),
+                    0, SkillWidget.FRAME_SIZE, SkillWidget.FRAME_SIZE);
 
             draggedSkillWidget.drawButton(poseStack, (int) posicionMouseX, (int) posicionMouseY, false,
                     draggedSkillWidget.getDisplayInfo().getImage(), true, draggedSkillWidget.isDisabled());
@@ -246,7 +283,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
                 }
             }
 
-            if (draggedSkillWidget != null && draggedSkillWidget.getSkillElement().getDisplay().getFrame().equals(
+            if (draggedSkillWidget != null && Objects.requireNonNull(draggedSkillWidget.getSkillElement().getDisplay()).getFrame().equals(
                     SkillFrameType.TASK) /* skillEntryGuiApretado.getSkillElement().getParent() != null */
                     && !draggedSkillWidget.isDisabled()) {
                 isDraggingToPowerButton = true;
@@ -303,7 +340,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
         RenderSystem.setShader(GameRenderer::getPositionTexShader);
         // Pinta la pantalla exterior
         RenderSystem.setShaderTexture(0, WINDOW_LOCATION);
-        this.blit(poseStack, offsetLeft, offsetTop, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT + INFO_SPACE, INITIAL_TEXTURE_WIDTH, INITIAL_TEXTURE_HEIGHT);
+        blit(poseStack, offsetLeft, offsetTop, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT + INFO_SPACE, INITIAL_TEXTURE_WIDTH, INITIAL_TEXTURE_HEIGHT);
 
         if (this.tabs.size() > 1) {
             RenderSystem.setShaderTexture(0, TABS_LOCATION);
@@ -328,7 +365,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
             // Pinta el título
             this.font.draw(poseStack, GUI_LABEL, (offsetLeft + 8), (offsetTop + 6), 4210752);
 
-            int unspentPoints = expCap.map(y -> y.getUnspentPoints()).orElse(-1);
+            int unspentPoints = expCap.map(PlayerExperienceCapabilityInterface::getUnspentPoints).orElse(-1);
             if (unspentPoints != 0) {
                 Component unspentSkillHolder = Component.literal("" + UNSPENT_LABEL.getString() + " " + unspentPoints);
                 //Pinta puntos sin usar
@@ -337,37 +374,14 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
 
         }
 
-        // Pinta coordenadas de mouse (DEBUG)
-		/*this.font.draw(poseStack,
-				new StringTextComponent(
-						"x: " + (offsetLeft + WINDOW_AREA_OFFSET_X) + " y: " + (offsetTop + WINDOW_AREA_OFFSET_Y)),
-				(float) (offsetLeft + 14), (float) (offsetTop + 18), 4210752);
-
-		this.font.draw(poseStack, new StringTextComponent("offsetLeft: " + offsetLeft + " offsetTop: " + offsetTop),
-				(float) (offsetLeft + 14), (float) (offsetTop + 28), 4210752);
-
-		this.font.draw(poseStack,
-				new StringTextComponent("I width: " + (offsetLeft + WINDOW_AREA_OFFSET_X + INNER_SCREEN_WIDTH)
-						+ " I height: " + (offsetTop + WINDOW_AREA_OFFSET_Y + INNER_SCREEN_HEIGHT)),
-				(float) (offsetLeft + 14), (float) (offsetTop + 38), 4210752);
-
-
-		this.font.draw(poseStack, new StringTextComponent("mouseX: " + mouseX + " mouseY: " + mouseY),
-				(float) (offsetLeft + 14), (float) (offsetTop + 48), 4210752);
-
-		this.font.draw(poseStack,
-				new StringTextComponent(
-						"ScrollX: " + selectedTab.getScrollX() + " ScrollY: " + selectedTab.getScrollY()),
-				(float) (offsetLeft + 14), (float) (offsetTop + 58), 4210752);*/
-
     }
 
     /**
      * Pinta el fondo incluyendo los botones de las skills
      *
-     * @param poseStack
-     * @param mouseX
-     * @param mouseY
+     * @param poseStack poseStack
+     * @param mouseX X mouse
+     * @param mouseY Y mouse
      */
     @SuppressWarnings("deprecation")
     private void renderInside(PoseStack poseStack, int mouseX, int mouseY) {
@@ -424,11 +438,6 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
             }
         }
 
-    }
-
-    public boolean isInsideInnerFrame(double coordX, double coordY, int frameWidth, int frameHeight) {
-        return coordX + frameWidth >= 0 && coordY + frameHeight >= 0 && coordX <= (INNER_SCREEN_WIDTH)
-                && coordY <= (INNER_SCREEN_HEIGHT);
     }
 
     public void rootSkillAdded(SkillElement advancementIn) {
@@ -553,8 +562,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     public void powerButtonPressed(Button pressedButton) {
         DevilRpg.LOGGER.info("--------powerButtonPressed: {} ", pressedButton.getMessage().getContents());
 
-        if (pressedButton instanceof CustomSkillButton) {
-            CustomSkillButton pb = (CustomSkillButton) pressedButton;
+        if (pressedButton instanceof CustomSkillButton pb) {
             HashMap<PowerEnum, SkillEnum> powerNames = skillCap.map(PlayerSkillCapabilityInterface::getSkillsNameOfPowers).orElse(null);
             if (powerNames != null) {
                 pb.setButtonTexture(EMPTY_POWER_IMAGE_RESOURCE);
@@ -570,7 +578,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
 
     protected void loadAssignedPowerButtons() {
         DevilRpg.LOGGER.info("---------loadAssignedPowerButtons ");
-        HashMap<PowerEnum, SkillEnum> powerToSkillDictionary = skillCap.map(x -> x.getSkillsNameOfPowers()).orElse(null);
+        HashMap<PowerEnum, SkillEnum> powerToSkillDictionary = skillCap.map(PlayerSkillCapabilityInterface::getSkillsNameOfPowers).orElse(null);
 
         if (powerToSkillDictionary != null) {
             for (CustomSkillButton c : powerButtonList) {
@@ -582,7 +590,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
                     } else {
                         c.setButtonTexture(EMPTY_POWER_IMAGE_RESOURCE);
                     }
-                    DevilRpg.LOGGER.debug("--------- {}",aSkillEnum.getName());
+                    DevilRpg.LOGGER.debug("--------- {}", aSkillEnum.getName());
                 }
             }
         }

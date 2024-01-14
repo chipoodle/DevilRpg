@@ -13,8 +13,9 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
+import net.minecraft.client.renderer.entity.layers.BeeStingerLayer;
 import net.minecraft.client.renderer.entity.layers.ElytraLayer;
-import net.minecraft.client.renderer.entity.layers.SpinAttackEffectLayer;
+import net.minecraft.client.renderer.entity.layers.PlayerItemInHandLayer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -41,7 +42,7 @@ public class WerewolfRenderer extends LivingEntityRenderer<AbstractClientPlayer,
         super(context, new WerewolfTransformedModel<>(context.bakeLayer(WerewolfTransformedModel.WEREWOLF_LAYER_LOCATION)), 0.5F);
         //this.addLayer(new WerewolfArmorLayer<>(this, new WerewolfTransformedModel(context.bakeLayer( ModelLayers.PLAYER_INNER_ARMOR)), new WerewolfTransformedModel(context.bakeLayer( ModelLayers.PLAYER_OUTER_ARMOR))));
         //this.addLayer(new WerewolfArmorLayer<>(this, new WerewolfTransformedModel(context.bakeLayer(WerewolfTransformedModel.WEREWOLF_INNER_ARMOR_LAYER_LOCATION)), new WerewolfTransformedModel(context.bakeLayer(WerewolfTransformedModel.WEREWOLF_OUTER_ARMOR_LAYER_LOCATION))));
-        //this.addLayer(new PlayerItemInHandLayer<>(this, context.getItemInHandRenderer()));
+        this.addLayer(new PlayerItemInHandLayer<>(this, context.getItemInHandRenderer()));
         this.addLayer(new WerewolfArrowLayer<>(context, this));
         //boolean b = this.addLayer(new Deadmau5EarsLayer(this));
         //this.addLayer(new CapeLayer(this));
@@ -109,9 +110,9 @@ public class WerewolfRenderer extends LivingEntityRenderer<AbstractClientPlayer,
     private void setModelProperties(AbstractClientPlayer p_117819_) {
         WerewolfTransformedModel<AbstractClientPlayer> werewolfHumanModel = this.getModel();
         if (p_117819_.isSpectator()) {
-             //WerewolfHumanModel.setAllVisible(false);
-             werewolfHumanModel.head.visible = true;
-             //WerewolfHumanModel.hat.visible = true;
+            //WerewolfHumanModel.setAllVisible(false);
+            werewolfHumanModel.head.visible = true;
+            //WerewolfHumanModel.hat.visible = true;
         } else {
             //WerewolfHumanModel.setAllVisible(true);
 			/*WerewolfHumanModel.hat.visible = p_117819_.isModelPartShown(WerewolfHumanModelPart.HAT);
@@ -128,11 +129,11 @@ public class WerewolfRenderer extends LivingEntityRenderer<AbstractClientPlayer,
             }
 
             if (p_117819_.getMainArm() == HumanoidArm.RIGHT) {
-                //WerewolfHumanModel.rightArmPose = humanoidmodel$armpose;
-                //WerewolfHumanModel.leftArmPose = humanoidmodel$armpose1;
+                werewolfHumanModel.rightArmPose = humanoidmodel$armpose;
+                werewolfHumanModel.leftArmPose = humanoidmodel$armpose1;
             } else {
-                //WerewolfHumanModel.rightArmPose = humanoidmodel$armpose1;
-                //WerewolfHumanModel.leftArmPose = humanoidmodel$armpose;
+                werewolfHumanModel.rightArmPose = humanoidmodel$armpose1;
+                werewolfHumanModel.leftArmPose = humanoidmodel$armpose;
             }
         }
 
@@ -167,26 +168,28 @@ public class WerewolfRenderer extends LivingEntityRenderer<AbstractClientPlayer,
     public void renderRightHand(PoseStack p_117771_, MultiBufferSource p_117772_, int p_117773_, AbstractClientPlayer p_117774_) {
         if (!net.minecraftforge.client.ForgeHooksClient.renderSpecificFirstPersonArm(p_117771_, p_117772_, p_117773_, p_117774_, HumanoidArm.RIGHT))
             ;
-        //this.renderHand(p_117771_, p_117772_, p_117773_, p_117774_, (this.model).rightArm, (this.model).rightSleeve);
+        this.renderHand(p_117771_, p_117772_, p_117773_, p_117774_, (this.model).rightArm, null/*(this.model).rightSleeve*/);
     }
 
     public void renderLeftHand(PoseStack p_117814_, MultiBufferSource p_117815_, int p_117816_, AbstractClientPlayer p_117817_) {
         if (!net.minecraftforge.client.ForgeHooksClient.renderSpecificFirstPersonArm(p_117814_, p_117815_, p_117816_, p_117817_, HumanoidArm.LEFT))
             ;
-        //this.renderHand(p_117814_, p_117815_, p_117816_, p_117817_, (this.model).leftArm, (this.model).leftSleeve);
+        this.renderHand(p_117814_, p_117815_, p_117816_, p_117817_, (this.model).leftArm, null/*(this.model).leftSleeve*/);
     }
 
-    private void renderHand(PoseStack p_117776_, MultiBufferSource p_117777_, int p_117778_, AbstractClientPlayer p_117779_, ModelPart p_117780_, ModelPart p_117781_) {
+    private void renderHand(PoseStack poseStack, MultiBufferSource bufferSource, int p_117778_, AbstractClientPlayer player, ModelPart arm, ModelPart sleeve) {
         WerewolfTransformedModel<AbstractClientPlayer> WerewolfHumanModel = this.getModel();
-        this.setModelProperties(p_117779_);
+        this.setModelProperties(player);
         WerewolfHumanModel.attackTime = 0.0F;
         //WerewolfHumanModel.crouching = false;
         //WerewolfHumanModel.swimAmount = 0.0F;
-        WerewolfHumanModel.setupAnim(p_117779_, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F);
-        p_117780_.xRot = 0.0F;
-        p_117780_.render(p_117776_, p_117777_.getBuffer(RenderType.entitySolid(p_117779_.getSkinTextureLocation())), p_117778_, OverlayTexture.NO_OVERLAY);
-        p_117781_.xRot = 0.0F;
-        p_117781_.render(p_117776_, p_117777_.getBuffer(RenderType.entityTranslucent(p_117779_.getSkinTextureLocation())), p_117778_, OverlayTexture.NO_OVERLAY);
+        WerewolfHumanModel.setupAnim(player, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F);
+        arm.xRot = 0.0F;
+        arm.render(poseStack, bufferSource.getBuffer(RenderType.entitySolid(player.getSkinTextureLocation())), p_117778_, OverlayTexture.NO_OVERLAY);
+        if (sleeve != null) {
+            sleeve.xRot = 0.0F;
+            sleeve.render(poseStack, bufferSource.getBuffer(RenderType.entityTranslucent(player.getSkinTextureLocation())), p_117778_, OverlayTexture.NO_OVERLAY);
+        }
     }
 
     protected void setupRotations(AbstractClientPlayer entity, @NotNull PoseStack cameraPosition, float cameraRotation, float entityRotation, float entityPitch) {

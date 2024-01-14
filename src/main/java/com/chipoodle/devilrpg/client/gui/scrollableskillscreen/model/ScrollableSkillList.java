@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model;
 
+import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillDisplayInfo;
 import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillElement;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import com.google.common.base.Functions;
@@ -128,6 +129,15 @@ public class ScrollableSkillList {
 	
 	public SkillElement getSkillElementByEnum(SkillEnum skillEnum) {
 		return skillEnumHashMap.get(skillEnum);
+	}
+
+	public ResourceLocation getImageOfSkill(SkillEnum skillEnum) {
+		SkillElement skillElement = skillEnumHashMap.get(skillEnum);
+		SkillDisplayInfo display = skillElement.getDisplay();
+		if(Objects.nonNull(display)){
+			return display.getImage();
+		}
+		return null;
 	}
 
 	@Nullable

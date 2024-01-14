@@ -8,6 +8,8 @@ public interface PlayerStaminaCapabilityInterface extends IGenericCapability {
 
     void setStamina(float stamina, Player player);
 
+    void addStamina(float staminaAdded, Player player);
+
     float getMaxStamina();
 
     void setMaxStamina(float maxStamina, Player player);

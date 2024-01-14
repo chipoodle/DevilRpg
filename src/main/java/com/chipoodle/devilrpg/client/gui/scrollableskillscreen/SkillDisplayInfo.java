@@ -1,11 +1,11 @@
 package com.chipoodle.devilrpg.client.gui.scrollableskillscreen;
 
+import com.chipoodle.devilrpg.init.ModItems;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonSyntaxException;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.TagParser;
 import net.minecraft.network.FriendlyByteBuf;
@@ -18,6 +18,8 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 import javax.annotation.Nullable;
+
+import static com.chipoodle.devilrpg.util.JsonUtil.convertToItem;
 
 public class SkillDisplayInfo {
     private final Component title;
@@ -65,7 +67,7 @@ public class SkillDisplayInfo {
         if (!object.has("item")) {
             throw new JsonSyntaxException("Unsupported icon type, currently only items are supported (add 'item' key)");
         } else {
-            Item item = GsonHelper.getAsItem(object, "item");
+            Item item = convertToItem(object, "item");
             if (object.has("data")) {
                 throw new JsonParseException("Disallowed data tag found");
             } else {
@@ -84,7 +86,7 @@ public class SkillDisplayInfo {
         }
     }
 
-    public static SkillDisplayInfo read(FriendlyByteBuf buf) {
+    /*public static SkillDisplayInfo read(FriendlyByteBuf buf) {
         Component itextcomponent = buf.readComponent();
         Component itextcomponent1 = buf.readComponent();
         ItemStack itemstack = buf.readItem();
@@ -98,7 +100,7 @@ public class SkillDisplayInfo {
         SkillDisplayInfo displayinfo = new SkillDisplayInfo(itemstack, itextcomponent, itextcomponent1, background, image, frametype, flag, false, flag1);
         displayinfo.setPosition(buf.readFloat(), buf.readFloat());
         return displayinfo;
-    }
+    }*/
 
     public void setPosition(float x, float y) {
         this.x = x;
@@ -209,9 +211,19 @@ public class SkillDisplayInfo {
         return jsonobject;
     }
 
-    private JsonObject serializeIcon() {
+    /*private JsonObject serializeIcon() {
         JsonObject jsonobject = new JsonObject();
         jsonobject.addProperty("item", BuiltInRegistries.ITEM.getKey(this.icon.getItem()).toString());
+        if (this.icon.hasTag()) {
+            jsonobject.addProperty("nbt", this.icon.getTag().toString());
+        }
+
+        return jsonobject;
+    }*/
+
+    private JsonObject serializeIcon() {
+        JsonObject jsonobject = new JsonObject();
+        jsonobject.addProperty("item", ModItems.getLocationFromItem(this.icon.getItem()).toString());
         if (this.icon.hasTag()) {
             jsonobject.addProperty("nbt", this.icon.getTag().toString());
         }

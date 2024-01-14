@@ -72,7 +72,7 @@ public class SkillTab extends GuiComponent {
         this.title = skillElement.getDisplay().getTitle();
         this.root = new SkillWidget(this, minecraft, skillElement, 0, 0);
         this.addGuiSkillElement(this.root, skillElement);
-        DevilRpg.LOGGER.info("|-----{}", toString());
+        //DevilRpg.LOGGER.info("|-----{}", toString());
     }
 
     public SkillTab(Minecraft mc, SkillScreen screen, SkillTabType type, int index, int page,

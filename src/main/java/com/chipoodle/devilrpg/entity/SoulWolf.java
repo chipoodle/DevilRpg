@@ -6,7 +6,7 @@ import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapability;
 import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityInterface;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
-import com.chipoodle.devilrpg.client.render.IRenderUtilities;
+import com.chipoodle.devilrpg.util.IRenderUtilities;
 import com.chipoodle.devilrpg.init.ModEntities;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.client.Minecraft;
@@ -37,6 +37,8 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.Objects;
 
 
 public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, PowerableMob, IPassiveMinionUpdater<SoulWolf> {
@@ -99,11 +101,11 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
             // stealingHealth = (0.135f * puntosAsignados) + 0.5;
         }
 
-        this.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(0.4F);
-        this.getAttribute(Attributes.MAX_HEALTH).setBaseValue(saludMaxima);
-        this.getAttribute(Attributes.ARMOR).setBaseValue(0.35D);
-        this.getAttribute(Attributes.FOLLOW_RANGE).setBaseValue(16.0D);
-        this.getAttribute(Attributes.ATTACK_DAMAGE).setBaseValue((0.45 * puntosAsignados) + 2); // 2.45-11
+        Objects.requireNonNull(this.getAttribute(Attributes.MOVEMENT_SPEED)).setBaseValue(0.4F);
+        Objects.requireNonNull(this.getAttribute(Attributes.MAX_HEALTH)).setBaseValue(saludMaxima);
+        Objects.requireNonNull(this.getAttribute(Attributes.ARMOR)).setBaseValue(0.35D);
+        Objects.requireNonNull(this.getAttribute(Attributes.FOLLOW_RANGE)).setBaseValue(16.0D);
+        Objects.requireNonNull(this.getAttribute(Attributes.ATTACK_DAMAGE)).setBaseValue((0.45 * puntosAsignados) + 2); // 2.45-11
         setHealth((float) saludMaxima);
     }
 

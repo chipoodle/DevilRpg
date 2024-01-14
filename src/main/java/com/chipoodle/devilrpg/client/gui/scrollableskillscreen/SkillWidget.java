@@ -1,8 +1,6 @@
 package com.chipoodle.devilrpg.client.gui.scrollableskillscreen;
 
 import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model.CustomSkillButton;
-import com.chipoodle.devilrpg.util.SkillEnum;
 import com.google.common.collect.Lists;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -10,7 +8,6 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.StringSplitter;
 import net.minecraft.client.gui.GuiComponent;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.*;
@@ -22,8 +19,17 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.gui.ScreenUtils;
 
 import javax.annotation.Nullable;
-import java.util.HashMap;
+import java.io.File;
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.nio.file.FileVisitOption;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 
 @OnlyIn(Dist.CLIENT)
 public class SkillWidget extends GuiComponent {
@@ -31,16 +37,16 @@ public class SkillWidget extends GuiComponent {
     public static final int BUTTON_IMAGE_SIZE = 256;
     public static final int TARGET_BUTTON_IMAGE_SIZE = 20;
     public static final int FRAME_SIZE = 26;
-    private static final String SKILL_GUI_IMG_LOCATION = DevilRpg.MODID + ":textures/gui/skill";
-    public static final ResourceLocation WIDGETS = new ResourceLocation(SKILL_GUI_IMG_LOCATION + "/widgets.png");
-
-    private static final int[] LINE_BREAK_VALUES = new int[]{0, 10, -10, 25, -25};
-    private static final net.minecraft.network.chat.Component MANA_COST = net.minecraft.network.chat.Component.translatable("gui.skills.mana_cost");
     public static final float Y_DISTANCE = 27.0F;
     public static final float X_DISTANCE = 27.0F;
     public static final double X_DISTANCE_FACTOR = 1.7;
     public static final double Y_DISTANCE_FACTOR = 1.3;
-
+    private static final String SKILL_GUI_IMG_LOCATION = DevilRpg.MODID + ":textures/gui/skill";
+    private static final int[] LINE_BREAK_VALUES = new int[]{0, 10, -10, 25, -25};
+    private static final net.minecraft.network.chat.Component MANA_COST = net.minecraft.network.chat.Component.translatable("gui.skills.mana_cost");
+    public static ResourceLocation WIDGETS = new ResourceLocation(SKILL_GUI_IMG_LOCATION + "/widgets.png");
+    private static List<ResourceLocation> resourceLocations = new ArrayList<>();
+    private static int resourceIndex = 0;
     private final SkillTab skillTabGui;
     private final SkillElement skillElement;
     private final SkillDisplayInfo displayInfo;
@@ -53,10 +59,13 @@ public class SkillWidget extends GuiComponent {
     private final float xScale;
     private final float yScale;
     private FormattedCharSequence title;
-
     //private String levelString;
     private SkillWidget parent;
     private SkillProgress skillProgress;
+
+	/*private void updateLevelString(int skillPoint, int maxSkillPoint) {
+		levelString = "" + skillPoint + "/" + maxSkillPoint;
+	}*/
 
     public SkillWidget(SkillTab skillTabGui, Minecraft minecraft, SkillElement skillElement, int skillPoint,
                        int maxSkillPoint) {
@@ -103,9 +112,56 @@ public class SkillWidget extends GuiComponent {
         return (float) text.stream().mapToDouble(manager::stringWidth).max().orElse(0.0D);
     }
 
-	/*private void updateLevelString(int skillPoint, int maxSkillPoint) {
-		levelString = "" + skillPoint + "/" + maxSkillPoint;
-	}*/
+    public static void changeWidgetTheme(boolean forward) {
+        resourceLocations = loadWidgetThemeImages();
+        int size = resourceLocations.size();
+
+        if (size > 0) {
+            if (forward) {
+                // Move forward in the list
+                resourceIndex = (resourceIndex + 1) % size;
+            } else {
+                // Move backward in the list
+                resourceIndex = (resourceIndex - 1 + size) % size;
+            }
+
+            WIDGETS = resourceLocations.get(resourceIndex);
+        }
+    }
+
+    public static List<ResourceLocation> loadWidgetThemeImages() {
+        if (!resourceLocations.isEmpty()) {
+            return resourceLocations;
+        }
+
+        try {
+            // Obtén la URL de los recursos desde el classloader del mod
+            URL resourceURL = DevilRpg.class.getClassLoader().getResource("assets/devilrpg/textures/gui/skill");
+
+            if (resourceURL != null) {
+                Path directory = Paths.get(resourceURL.toURI());
+
+                // Utiliza Files.walk para recorrer el directorio y encontrar archivos que cumplan con ciertos criterios
+                try (Stream<Path> walk = Files.walk(directory, FileVisitOption.FOLLOW_LINKS)) {
+                    resourceLocations = walk.filter(Files::isRegularFile)
+                            .filter(path -> path.getFileName().toString().startsWith("widget") && path.toString().endsWith(".png"))
+                            .map(path -> {
+                                // Convierte la ruta del archivo a una ruta relativa al directorio del mod
+                                String relativePath = directory.relativize(path).toString();
+                                String resourcePath = SKILL_GUI_IMG_LOCATION + "/" + relativePath.replace(File.separator, "/");
+                                // Crea un ResourceLocation y agrégalo a la lista
+                                return new ResourceLocation(resourcePath);
+                            })
+                            .sorted()
+                            .toList();
+                }
+            }
+        } catch (IOException | URISyntaxException e) {
+            throw new RuntimeException(e);
+        }
+
+        return resourceLocations;
+    }
 
     /**
      * Actualiza los puntos utilizads / puntos máximos del skill
@@ -390,7 +446,6 @@ public class SkillWidget extends GuiComponent {
 
     }
 
-
     /**
      * @param matrixStack
      * @param x
@@ -477,21 +532,8 @@ public class SkillWidget extends GuiComponent {
         return this.x;
     }
 
-    @Override
-    public String toString() {
-        return "SkillEntryGui [" + ", children=" + children.size() + ", width=" + width + ", x=" + x + ", y=" + y + "]";
-    }
-
-    public final List<SkillWidget> getChildren() {
-        return children;
-    }
-
-    public SkillElement getSkillElement() {
-        return skillElement;
-    }
-
     /*-----------------------------*/
-    public void skillButtonPressed(Button pressedButton) {
+    /*public void skillButtonPressed(Button pressedButton) {
         CustomSkillButton pressed = ((CustomSkillButton) pressedButton);
         SkillEnum skilEnum = (SkillEnum) pressed.getEnum();
 
@@ -505,6 +547,19 @@ public class SkillWidget extends GuiComponent {
             }
 
         });
+    }*/
+
+    @Override
+    public String toString() {
+        return "SkillEntryGui [" + ", children=" + children.size() + ", width=" + width + ", x=" + x + ", y=" + y + "]";
+    }
+
+    public final List<SkillWidget> getChildren() {
+        return children;
+    }
+
+    public SkillElement getSkillElement() {
+        return skillElement;
     }
 
     public SkillDisplayInfo getDisplayInfo() {

@@ -29,6 +29,16 @@ public class PlayerStaminaCapabilityImplementation implements PlayerStaminaCapab
     }
 
     @Override
+    public void addStamina(float staminaAdded, Player player) {
+        this.stamina += staminaAdded;
+        stamina = Math.max(Math.min(stamina, maxStamina),0.0f);
+        if (!player.level.isClientSide)
+            sendStaminaChangesToClient((ServerPlayer) player);
+        else
+            sendStaminaChangesToServer();
+    }
+
+    @Override
     public float getMaxStamina() {
         return maxStamina;
     }

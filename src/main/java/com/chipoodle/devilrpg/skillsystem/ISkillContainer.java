@@ -12,5 +12,5 @@ public interface ISkillContainer{
 	default boolean arePreconditionsMetBeforeConsumingResource(Player playerIn){return true;}
 	SkillEnum getSkillEnum();
 
-	default boolean isResourceConsumptionIgnored(Player player){return false;}
+	default boolean isResourceConsumptionBypassed(Player player){return false;}
 }

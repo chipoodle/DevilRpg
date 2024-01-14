@@ -23,7 +23,7 @@ public class ModCapability {
 		PlayerMinionCapabilityAttacher.attach(event);
 		PlayerSkillCapabilityAttacher.attach(event);
 		PlayerStaminaCapabilityAttacher.attach(event);
-		LOGGER.info("-----> Player({}) capabilities registered",((Player)event.getObject()).getUUID());
+		LOGGER.info("-----> Player({}) capabilities registered", event.getObject().getUUID());
 	}
 
 	public static void registerForTamableEntity(AttachCapabilitiesEvent<Entity> event) {

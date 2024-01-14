@@ -11,6 +11,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.GsonHelper;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import org.apache.logging.log4j.LogManager;
@@ -43,23 +44,10 @@ public class ClientSkillBuilderFromJson {
 
     public void buildSkillTrees() {
         LOGGER.debug("ClientSkillBuilderFromJson -> Building SkillTrees");
-
-        InputStream inputStream = null;
         Map<ResourceLocation, SkillElement.Builder> skillelementMap = new HashMap<>();
-        try {
-            ResourceLocation resourcefile = new ResourceLocation(DevilRpg.MODID, "skills/root_complete.json");
-            inputStream = Minecraft.getInstance().getResourceManager().getResource(resourcefile).get().open();
-        } catch (Exception e1) {
-            DevilRpg.LOGGER.error("Ocurrió un error con buildSkillTrees()", e1);
-        }
-        String text = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8)).lines()
-                .collect(Collectors.joining("\n"));
 
-        DevilRpg.LOGGER.debug("Skill Json tree loaded successfully ");
-        JsonParser parser = new JsonParser();
-        JsonElement jsonRootElement = parser.parse(text);
+        JsonArray asJsonArray = getJsonElements();
 
-        JsonArray asJsonArray = jsonRootElement.getAsJsonArray();
         asJsonArray.forEach(jsonElement -> {
             JsonObject jsonObject = jsonElement.getAsJsonObject();
             SkillElement.Builder skill$builder = SkillElement.Builder.deserialize(jsonObject);
@@ -68,6 +56,24 @@ public class ClientSkillBuilderFromJson {
             }
         });
         scrollableSkillList.loadSkills(skillelementMap);
+    }
+
+    private static JsonArray getJsonElements() {
+        InputStream inputStream = null;
+        try {
+            ResourceLocation resourceFile = new ResourceLocation(DevilRpg.MODID, "skills/root_complete.json");
+            inputStream = Minecraft.getInstance().getResourceManager().getResource(resourceFile).orElseThrow().open();
+        } catch (Exception e1) {
+            DevilRpg.LOGGER.error("Ocurrió un error con buildSkillTrees()", e1);
+        }
+        String text = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8)).lines().collect(Collectors.joining("\n"));
+
+        DevilRpg.LOGGER.debug("Skill Json tree loaded successfully ");
+        JsonParser parser = new JsonParser();
+        JsonElement jsonRootElement = parser.parse(text);
+
+        JsonArray asJsonArray = jsonRootElement.getAsJsonArray();
+        return asJsonArray;
     }
 
     public void setSelectedTab(@Nullable SkillElement skillIn, boolean tellServer) {
@@ -96,6 +102,10 @@ public class ClientSkillBuilderFromJson {
 
     public SkillElement getSkillElementByEnum(SkillEnum skillEnum) {
         return scrollableSkillList.getSkillElementByEnum(skillEnum);
+    }
+
+    public ResourceLocation getImageOfSkill(SkillEnum skillEnum) {
+        return scrollableSkillList.getImageOfSkill(skillEnum);
     }
 
     @OnlyIn(Dist.CLIENT)

@@ -241,21 +241,61 @@
         "display": {
             "description": "Charges at the enemy",
             "icon": {
-                "item": "minecraft:glass_pane",
-                "minecraft:glass_panenbt": 1
+                "item": "devilrpg:item_charge"
             },
-            "title": "Werewolf",
+            "title": "Charge",
             "image": "devilrpg:textures/gui/skill/perpendicular-rings.png",
             "frame": "task"
         },
         "capability": "charge",
         "skillmanacost":{
             "maxskilllevel":"3",
-            "manacost":"26",
+            "manacost":"8",
             "resourcetype":"stamina"
         },
         "rewards": {},
         "parent": "shapeshifting:werewolfhit"
+    },
+    {
+        "id": "shapeshifting:block",
+        "display": {
+            "description": "Absorbs a portion of incoming damage for a duration",
+            "icon": {
+                "item": "devilrpg:item_block"
+            },
+            "title": "Damage absorption",
+            "image": "devilrpg:textures/gui/skill/nested-hearts.png",
+            "frame": "task"
+        },
+        "capability": "block",
+        "skillmanacost":{
+            "maxskilllevel":"20",
+            "manacost":"8",
+            "resourcetype":"stamina"
+        },
+        "rewards": {},
+        "parent": "shapeshifting:skin_armor"
+    },
+    {
+        "id": "shapeshifting:knockback_resistance",
+        "display": {
+            "description": "Makes you resistant to knock-back for the duration of the skill",
+            "icon": {
+                "item": "minecraft:glass_pane",
+                "minecraft:glass_panenbt": 1
+            },
+            "title": "Knockback Resistance",
+            "image": "devilrpg:textures/gui/skill/armor-upgrade.png",
+            "frame": "goal"
+        },
+        "capability": "knockback_resistance",
+        "skillmanacost":{
+            "maxskilllevel":"5",
+            "manacost":"0",
+            "resourcetype":"stamina"
+        },
+        "rewards": {},
+        "parent": "shapeshifting:block"
     },
     {
         "id": "summoning:wolf",
