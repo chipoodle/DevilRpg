@@ -19,6 +19,8 @@ public record PotionClientHandler(CompoundTag compound) {
     public static final String EFFECT_EVENT_TYPE = "effectEventType";
     public static final String POTION_EXPIRY_EVENT = "PotionExpiryEvent";
     public static final String POTION_ADDED_EVENT = "PotionAddedEvent";
+    public static final String CUSTOM_ADDED_EVENT = "Added";
+    private static final String CUSTOM_EXPIRED_EVENT = "Expired";
 
     public static void encode(final PotionClientHandler msg, final FriendlyByteBuf packetBuffer) {
         packetBuffer.writeNbt(msg.compound());
@@ -44,12 +46,12 @@ public record PotionClientHandler(CompoundTag compound) {
                         String effectEventType = msg.compound().getString(EFFECT_EVENT_TYPE);
 
                         //DevilRpg.LOGGER.info("----->effectEventType {}",effectEventType);
-                        if (effectEventType.equals(POTION_ADDED_EVENT)) {
+                        if (effectEventType.equals(POTION_ADDED_EVENT) || effectEventType.equals(CUSTOM_ADDED_EVENT)) {
                             assert effectInstance != null;
                             entityByUUID.addEffect(effectInstance);
                             DevilRpg.LOGGER.info("----->effect added to client {}",effectInstance);
                         }
-                        if (effectEventType.equals(POTION_EXPIRY_EVENT)) {
+                        if (effectEventType.equals(POTION_EXPIRY_EVENT) || effectEventType.equals(CUSTOM_EXPIRED_EVENT)) {
                             assert effectInstance != null;
                             entityByUUID.removeEffect(effectInstance.getEffect());
                             DevilRpg.LOGGER.info("----->effect removed to client{}",effectInstance);
