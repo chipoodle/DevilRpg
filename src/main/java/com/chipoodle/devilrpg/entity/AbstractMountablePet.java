@@ -434,7 +434,7 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
     }
 
     protected void playGallopSound(SoundType p_30560_) {
-        this.playSound(SoundEvents.HORSE_GALLOP, p_30560_.getVolume() * 0.15F, p_30560_.getPitch());
+        this.playSound(SoundEvents.ALLAY_THROW, p_30560_.getVolume() * 0.15F, p_30560_.getPitch());
     }
 
     @Override
@@ -457,7 +457,7 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
     }
 
     @Override
-    public void openCustomInventoryScreen(Player player) {
+    public void openCustomInventoryScreen(@NotNull Player player) {
         if (!this.level.isClientSide && (!this.isVehicle() || this.hasPassenger(player)) && this.isTame()) {
             openHorseInventory(this, this.inventory, (ServerPlayer) player);
         }
@@ -1079,12 +1079,12 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
 
     @Nullable
     public LivingEntity getControllingPassenger() {
-        if (this.isSaddled()) {
+        //if (this.isSaddled()) {
             Entity entity = this.getFirstPassenger();
             if (entity instanceof Player) {
                 return (Player) entity;
             }
-        }
+        //}
 
         return super.getControllingPassenger();
     }
