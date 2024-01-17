@@ -3,7 +3,6 @@ package com.chipoodle.devilrpg.skillsystem.skillinstance;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
-import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityAttacher;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.entity.*;
 import com.chipoodle.devilrpg.util.SkillEnum;
@@ -20,6 +19,7 @@ import java.util.HashMap;
 public class MinionPassiveAttributes {
     public static final String PASSIVE_MINION_HEALTH = "PASSIVE_MINION_HEALTH";
     public static final String PASSIVE_WAR_BEAR_HEALTH = "PASSIVE_WAR_BEAR_HEALTH";
+    public static final String PASSIVE_WAR_BEAR_KNOCKBACK = "PASSIVE_WAR_BEAR_KNOCKBACK";
     private final Level levelIn;
     private float factor;
     private Player playerIn;
@@ -80,6 +80,11 @@ public class MinionPassiveAttributes {
         HashMap<Attribute, AttributeModifier> attributes = new HashMap<>();
         attributes.put(Attributes.MAX_HEALTH, new AttributeModifier(PASSIVE_WAR_BEAR_HEALTH, 3.5D * warBear,
                 AttributeModifier.Operation.ADDITION));
+
+        attributes.put(Attributes.KNOCKBACK_RESISTANCE, new AttributeModifier(PASSIVE_WAR_BEAR_KNOCKBACK, 0.1666666666 * warBear,
+                AttributeModifier.Operation.ADDITION));
+
+
         IPassiveMinionUpdater<SoulBear> minion = entity;
         minion.applyPassives(attributes, entity);
 
