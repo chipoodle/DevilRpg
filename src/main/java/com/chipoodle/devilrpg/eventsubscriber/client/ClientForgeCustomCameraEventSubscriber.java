@@ -32,9 +32,7 @@ import java.util.function.BiConsumer;
 public final class ClientForgeCustomCameraEventSubscriber {
     private static final Class<?>[] types = {double.class, double.class, double.class};
     private static boolean firstPersonView = false;
-
-    private static boolean firstTimeShapeshifted = false;
-
+    private static boolean firstTimeShapeshifted = true;
     private static CameraType originalCameraType;
     private static Method cameraMoveMethod = null;
 
@@ -104,6 +102,7 @@ public final class ClientForgeCustomCameraEventSubscriber {
                 Minecraft.getInstance().options.setCameraType(originalCameraType);
                 firstTimeShapeshifted = false;
                 firstPersonView = false;
+                marked = false;
             }
         }
     }
