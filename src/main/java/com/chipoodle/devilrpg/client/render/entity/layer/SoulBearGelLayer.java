@@ -20,6 +20,7 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 @OnlyIn(Dist.CLIENT)
 public class SoulBearGelLayer<T extends SoulBear> extends GhostEnergyLayer<T, SoulBearModelHeart<T>> {
     private static final ResourceLocation BEAR_GEL = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soul/soulgelghost.png");
+    //private static final ResourceLocation BEAR_GEL = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soul/trident_riptide.png");
     private final EntityModel<T> soulBearModel;
 
     public SoulBearGelLayer(RenderLayerParent<T, SoulBearModelHeart<T>> renderLayerParent, EntityModelSet entityModelSet) {

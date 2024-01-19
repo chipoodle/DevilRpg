@@ -18,13 +18,16 @@ import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.network.handler.PotionClientHandler;
 import com.chipoodle.devilrpg.util.EventUtils;
 import com.chipoodle.devilrpg.util.SkillEnum;
+import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.util.LazyOptional;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingEvent.LivingJumpEvent;
 import net.minecraftforge.event.entity.living.LivingFallEvent;
 import net.minecraftforge.event.entity.living.MobEffectEvent;
@@ -181,8 +184,8 @@ public class CommonForgeInteractionEventSubscriber {
 
         if (
                 event.getEntity() instanceof ISoulEntity &&
-                event.getEntity() instanceof ITamableEntity minion &&
-                event.getEffectInstance() != null
+                        event.getEntity() instanceof ITamableEntity minion &&
+                        event.getEffectInstance() != null
         ) {
             LivingEntity owner = minion.getOwner();
             if (owner instanceof ServerPlayer && !event.getEntity().level.isClientSide()) {
@@ -195,5 +198,32 @@ public class CommonForgeInteractionEventSubscriber {
         }
 
     }
+
+   /* @SubscribeEvent
+    public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
+        Player player = event.player;
+
+        if (player.isAlive() && !player.isSpectator()) {
+            // Verifica si el jugador está caminando
+            if (player.getDeltaMovement().y > 0.0F) {
+                BlockPos playerPos = player.blockPosition();
+                BlockState blockState = player.level.getBlockState(playerPos.below());
+
+                // Verifica si el bloque debajo del jugador es un bloque sólido
+                if (blockState.isSolidRender(player.level, playerPos.below())) {
+                    // Ajusta la posición del jugador para simular el paso alto
+                    double playerY = player.getY();
+                    double blockMaxY = player.level.getMaxBuildHeight();
+
+                    if (playerY + 1.0 > blockMaxY) {
+                        // Evita que el jugador suba por encima del límite de construcción
+                        playerY = blockMaxY - 1.0;
+                    }
+
+                    player.setPos(player.getX(), playerY + 1.0, player.getZ());
+                }
+            }
+        }
+    }*/
 
 }

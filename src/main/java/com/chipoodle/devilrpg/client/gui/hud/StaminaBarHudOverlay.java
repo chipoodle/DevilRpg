@@ -26,6 +26,7 @@ public class StaminaBarHudOverlay {
     private final static int BAR_WIDTH = 81;
     private final static int BAR_HEIGHT = 9;
     private final static int BAR_SPACING_ABOVE_EXP_BAR = 1;
+    private static final int RIGHT_OFFSET = 15;
     public static final IGuiOverlay HUD_STAMINA_BAR = (gui, poseStack, partialTick, screenWidth, screenHeight) -> {
         Minecraft mc = Minecraft.getInstance();
         Player player = mc.player;
@@ -43,7 +44,7 @@ public class StaminaBarHudOverlay {
         float maxStamina = playerCapability.map(PlayerStaminaCapabilityInterface::getMaxStamina).orElse(0.0f);
         float staminaRun = playerCapability.map(PlayerStaminaCapabilityInterface::getStamina).orElse(0.0f);
         Font fr = mc.font;
-        DecimalFormat d = new DecimalFormat("#,###.##");
+        DecimalFormat d = new DecimalFormat("#,###.#");
         poseStack.pushPose();
         {
             RenderSystem.setShader(GameRenderer::getPositionTexShader);
@@ -51,7 +52,8 @@ public class StaminaBarHudOverlay {
             RenderSystem.setShaderTexture(0, overlayBar);
             final int vanillaExpLeftX = screenWidth / 2 + 91; // leftmost edge of the experience bar
             final int vanillaExpTopY = screenHeight + BAR_SPACING_ABOVE_EXP_BAR - BAR_HEIGHT; // top of the experience bar
-            poseStack.translate(screenWidth - BAR_WIDTH, vanillaExpTopY - BAR_SPACING_ABOVE_EXP_BAR - BAR_HEIGHT - 5, 0);
+            poseStack.translate(screenWidth - BAR_WIDTH - RIGHT_OFFSET, vanillaExpTopY - BAR_SPACING_ABOVE_EXP_BAR - BAR_HEIGHT - 5, 0);
+
             //Draw only the black bar
             GuiComponent.blit(poseStack, 0, 0, 0, 0, BAR_WIDTH, BAR_HEIGHT);
             poseStack.pushPose();

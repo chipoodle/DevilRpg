@@ -2,6 +2,7 @@ package com.chipoodle.devilrpg.client.render.entity.renderer;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.client.render.entity.layer.WerewolfArrowLayer;
+import com.chipoodle.devilrpg.client.render.entity.layer.WerewolfItemInHandLayer;
 import com.chipoodle.devilrpg.client.render.entity.layer.WerewolfSpinAttackEffectLayer;
 import com.chipoodle.devilrpg.client.render.entity.model.WerewolfTransformedModel;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -13,9 +14,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
-import net.minecraft.client.renderer.entity.layers.BeeStingerLayer;
 import net.minecraft.client.renderer.entity.layers.ElytraLayer;
-import net.minecraft.client.renderer.entity.layers.PlayerItemInHandLayer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -36,13 +35,13 @@ import org.jetbrains.annotations.NotNull;
 @OnlyIn(Dist.CLIENT)
 public class WerewolfRenderer extends LivingEntityRenderer<AbstractClientPlayer, WerewolfTransformedModel<AbstractClientPlayer>> {
 
-    private static final ResourceLocation WEREWOLF_TEXTURE = new ResourceLocation(DevilRpg.MODID + ":/textures/entity/werewolf/wolftimber.png");
+    public static final ResourceLocation WEREWOLF_TEXTURE = new ResourceLocation(DevilRpg.MODID + ":/textures/entity/werewolf/wolftimber.png");
 
     public WerewolfRenderer(EntityRendererProvider.Context context, boolean p_174558_) {
         super(context, new WerewolfTransformedModel<>(context.bakeLayer(WerewolfTransformedModel.WEREWOLF_LAYER_LOCATION)), 0.5F);
         //this.addLayer(new WerewolfArmorLayer<>(this, new WerewolfTransformedModel(context.bakeLayer( ModelLayers.PLAYER_INNER_ARMOR)), new WerewolfTransformedModel(context.bakeLayer( ModelLayers.PLAYER_OUTER_ARMOR))));
         //this.addLayer(new WerewolfArmorLayer<>(this, new WerewolfTransformedModel(context.bakeLayer(WerewolfTransformedModel.WEREWOLF_INNER_ARMOR_LAYER_LOCATION)), new WerewolfTransformedModel(context.bakeLayer(WerewolfTransformedModel.WEREWOLF_OUTER_ARMOR_LAYER_LOCATION))));
-        this.addLayer(new PlayerItemInHandLayer<>(this, context.getItemInHandRenderer()));
+        this.addLayer(new WerewolfItemInHandLayer<>(this, context.getItemInHandRenderer(), context.getEntityRenderDispatcher()));
         this.addLayer(new WerewolfArrowLayer<>(context, this));
         //boolean b = this.addLayer(new Deadmau5EarsLayer(this));
         //this.addLayer(new CapeLayer(this));
@@ -94,13 +93,9 @@ public class WerewolfRenderer extends LivingEntityRenderer<AbstractClientPlayer,
         }
     }
 
-    public void render(AbstractClientPlayer p_117788_, float p_117789_, float p_117790_, PoseStack p_117791_, MultiBufferSource p_117792_, int p_117793_) {
-        this.setModelProperties(p_117788_);
-        /*if (net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(new net.minecraftforge.client.event.RenderPlayerEvent.Pre(p_117788_, this, p_117790_, p_117791_, p_117792_, p_117793_)))
-            return;*/
-
-        super.render(p_117788_, p_117789_, p_117790_, p_117791_, p_117792_, p_117793_);
-        // net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(new net.minecraftforge.client.event.RenderPlayerEvent.Post(p_117788_, this, p_117790_, p_117791_, p_117792_, p_117793_));
+    public void render(@NotNull AbstractClientPlayer player, float i, float partialTicks, @NotNull PoseStack poseStack, @NotNull MultiBufferSource multiBufferSource, int packedLight) {
+        this.setModelProperties(player);
+        super.render(player, i, partialTicks, poseStack, multiBufferSource, packedLight);
     }
 
     public Vec3 getRenderOffset(AbstractClientPlayer p_117785_, float p_117786_) {
@@ -124,9 +119,9 @@ public class WerewolfRenderer extends LivingEntityRenderer<AbstractClientPlayer,
             //WerewolfHumanModel.crouching = p_117819_.isCrouching();
             HumanoidModel.ArmPose humanoidmodel$armpose = getArmPose(p_117819_, InteractionHand.MAIN_HAND);
             HumanoidModel.ArmPose humanoidmodel$armpose1 = getArmPose(p_117819_, InteractionHand.OFF_HAND);
-            if (humanoidmodel$armpose.isTwoHanded()) {
+            /*if (humanoidmodel$armpose.isTwoHanded()) {
                 humanoidmodel$armpose1 = p_117819_.getOffhandItem().isEmpty() ? HumanoidModel.ArmPose.EMPTY : HumanoidModel.ArmPose.ITEM;
-            }
+            }*/
 
             if (p_117819_.getMainArm() == HumanoidArm.RIGHT) {
                 werewolfHumanModel.rightArmPose = humanoidmodel$armpose;
@@ -165,31 +160,25 @@ public class WerewolfRenderer extends LivingEntityRenderer<AbstractClientPlayer,
         p_117810_.popPose();
     }
 
-    public void renderRightHand(PoseStack p_117771_, MultiBufferSource p_117772_, int p_117773_, AbstractClientPlayer p_117774_) {
-        if (!net.minecraftforge.client.ForgeHooksClient.renderSpecificFirstPersonArm(p_117771_, p_117772_, p_117773_, p_117774_, HumanoidArm.RIGHT))
-            ;
-        this.renderHand(p_117771_, p_117772_, p_117773_, p_117774_, (this.model).rightArm, null/*(this.model).rightSleeve*/);
+    public void renderRightHand(PoseStack poseStack, MultiBufferSource multiBufferSource, int packedLight, AbstractClientPlayer player) {
+        this.renderHand(poseStack, multiBufferSource, packedLight, player, (this.model).rightArm, null/*(this.model).rightSleeve*/);
     }
 
-    public void renderLeftHand(PoseStack p_117814_, MultiBufferSource p_117815_, int p_117816_, AbstractClientPlayer p_117817_) {
-        if (!net.minecraftforge.client.ForgeHooksClient.renderSpecificFirstPersonArm(p_117814_, p_117815_, p_117816_, p_117817_, HumanoidArm.LEFT))
-            ;
-        this.renderHand(p_117814_, p_117815_, p_117816_, p_117817_, (this.model).leftArm, null/*(this.model).leftSleeve*/);
+    public void renderLeftHand(PoseStack poseStack, MultiBufferSource multiBufferSource, int packedLight, AbstractClientPlayer player) {
+        this.renderHand(poseStack, multiBufferSource, packedLight, player, (this.model).leftArm, null/*(this.model).leftSleeve*/);
     }
 
-    private void renderHand(PoseStack poseStack, MultiBufferSource bufferSource, int p_117778_, AbstractClientPlayer player, ModelPart arm, ModelPart sleeve) {
-        WerewolfTransformedModel<AbstractClientPlayer> WerewolfHumanModel = this.getModel();
+    private void renderHand(PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, AbstractClientPlayer player, ModelPart arm, ModelPart sleeve) {
+        WerewolfTransformedModel<AbstractClientPlayer> werewolfHumanModel = this.getModel();
         this.setModelProperties(player);
-        WerewolfHumanModel.attackTime = 0.0F;
-        //WerewolfHumanModel.crouching = false;
-        //WerewolfHumanModel.swimAmount = 0.0F;
-        WerewolfHumanModel.setupAnim(player, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F);
+        werewolfHumanModel.attackTime = 0.0F;
+        //werewolfHumanModel.crouching = false;
+        //werewolfHumanModel.swimAmount = 0.0F;
+        werewolfHumanModel.setupAnim(player, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F);
         arm.xRot = 0.0F;
-        arm.render(poseStack, bufferSource.getBuffer(RenderType.entitySolid(player.getSkinTextureLocation())), p_117778_, OverlayTexture.NO_OVERLAY);
-        if (sleeve != null) {
-            sleeve.xRot = 0.0F;
-            sleeve.render(poseStack, bufferSource.getBuffer(RenderType.entityTranslucent(player.getSkinTextureLocation())), p_117778_, OverlayTexture.NO_OVERLAY);
-        }
+        arm.render(poseStack, bufferSource.getBuffer(RenderType.entitySolid(player.getSkinTextureLocation())), packedLight, OverlayTexture.NO_OVERLAY);
+        arm.xRot = 0.0F;
+        arm.render(poseStack, bufferSource.getBuffer(RenderType.entityTranslucent(player.getSkinTextureLocation())), packedLight, OverlayTexture.NO_OVERLAY);
     }
 
     protected void setupRotations(AbstractClientPlayer entity, @NotNull PoseStack cameraPosition, float cameraRotation, float entityRotation, float entityPitch) {

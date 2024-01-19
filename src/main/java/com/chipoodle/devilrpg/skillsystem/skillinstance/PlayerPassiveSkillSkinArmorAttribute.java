@@ -4,9 +4,7 @@ import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
-import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
-import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
@@ -21,13 +19,12 @@ import net.minecraft.world.level.Level;
 import java.util.HashMap;
 import java.util.UUID;
 
-public class PlayerPassiveSkillSkinArmorAttribute extends AbstractPlayerPassiveAttribute implements ISkillContainer, ICapabilityAttributeModifier {
+public class PlayerPassiveSkillSkinArmorAttribute extends AbstractPlayerPassiveAttribute implements ICapabilityAttributeModifier {
     public static final String ATTRIBUTE_MODIFIER_ARMOR_UNIQUE_NAME = SkillEnum.SKIN_ARMOR.name() + "_ARMOR_" + "ADDITION";
     public static final String ATTRIBUTE_MODIFIER_TOUGHNESS_UNIQUE_NAME = SkillEnum.SKIN_ARMOR.name() + "_TOUGHNESS_" + "ADDITION";
     public static final String IS_COMPLETE_ARMOR = "IS_COMPLETE_ARMOR";
     public static final double ARMOR_FACTOR = 0.65D;
     private static final Double TOUGHNESS_FACTOR = 0.60D;
-    private final PlayerSkillCapabilityInterface parentCapability;
     AttributeModifier skinArmorAttributeModifier;
     AttributeModifier skinToughnessAttributeModifier;
     private Player playerIn;
@@ -37,8 +34,8 @@ public class PlayerPassiveSkillSkinArmorAttribute extends AbstractPlayerPassiveA
         parentCapability = IGenericCapability.getUnwrappedPlayerCapability(playerIn, PlayerSkillCapabilityProvider.SKILL_CAP);
     }*/
 
-    public PlayerPassiveSkillSkinArmorAttribute(PlayerSkillCapabilityImplementation parentCapability) {
-        this.parentCapability = parentCapability;
+    public PlayerPassiveSkillSkinArmorAttribute(PlayerSkillCapabilityInterface parentCapability) {
+        super(parentCapability);
         DevilRpg.LOGGER.info("----------------------->CONSTRUCTOR PlayerPassiveSkillSkinArmor. Parent capability: {}", parentCapability);
     }
 

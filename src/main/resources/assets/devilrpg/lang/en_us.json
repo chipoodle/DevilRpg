@@ -10,7 +10,8 @@
     "key.power2": "Power 2",
     "key.power3": "Power 3",
     "key.power4": "Power 4",
-    "key.skill_gui": "Skill GUI", 
+    "key.power5": "Power 5",
+    "key.skill_gui": "Skill GUI",
     "gui.skills.title": "Skills", 
     "gui.skills.mana_cost": "Mana cost:", 
     "gui.skills.unspent": "Unspent points:",
@@ -20,6 +21,6 @@
     "item.devilrpg.soulwolf_spawn_egg": "Soul Wolf",
     "item.devilrpg.soulbear_spawn_egg": "Soul Bear",
     "item_group.devilrpg.devilrpg_tab": "Devil RPG",
-    "effects.devilrpg.knockback_immunity": "Knock-back Immunity"
+    "effect.devilrpg.knockback_immunity": "Knock-back Immunity"
 
 }

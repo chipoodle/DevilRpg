@@ -25,6 +25,6 @@ public class SoulWispBomberRenderer extends MobRenderer<SoulWispBomber, SoulWisp
 	}
 
 	protected int getBlockLightLevel(SoulWispBomber p_234560_, BlockPos p_234561_) {
-		return 15;
+		return 1;
 	}
 }

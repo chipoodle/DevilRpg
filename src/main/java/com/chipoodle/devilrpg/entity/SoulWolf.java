@@ -162,7 +162,7 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
             DevilRpg.LOGGER.info("---------->doHurtTarget frostbite: {} prob: {} limit: {}", frostbite, probability, frostbite * PROBABILITY_MULTIPLIER);
             */
             entityIn.hurt(this.damageSources().freeze(), frostbite);
-            IRenderUtilities.rotationParticles(Minecraft.getInstance().level, random, this, ParticleTypes.ELECTRIC_SPARK, NUMBER_OF_PARTICLES_FROST_BITE, RADIUS_PARTICLES);
+            IRenderUtilities.rotationParticles(Minecraft.getInstance().level, random, this, ParticleTypes.ITEM_SNOWBALL, NUMBER_OF_PARTICLES_FROST_BITE, RADIUS_PARTICLES);
 
             DevilRpg.LOGGER.debug("---------->doHurtTarget attdmg {} + frostbite: {} prob: {} limit: {}", attackDamage, frostbite, probability, frostbite * PROBABILITY_MULTIPLIER);
 

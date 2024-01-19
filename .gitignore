@@ -24,3 +24,4 @@ run
 # Files from Forge MDK
 forge*changelog.txt
 /src/main/java/com/chipoodle/devilrpg/eventsubscriber/common/LoginEventSuscriber.java
+/src/main/resources/assets/devilrpg/textures/gui/skill/widget/

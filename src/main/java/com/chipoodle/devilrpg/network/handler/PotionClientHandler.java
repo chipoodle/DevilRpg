@@ -11,6 +11,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraftforge.network.NetworkDirection;
 import net.minecraftforge.network.NetworkEvent;
 
+import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Supplier;
 
@@ -30,8 +31,7 @@ public record PotionClientHandler(CompoundTag compound) {
         return new PotionClientHandler(packetBuffer.readNbt());
     }
 
-    public static void onMessage(final PotionClientHandler msg,
-                                 final Supplier<NetworkEvent.Context> contextSupplier) {
+    public static void onMessage(final PotionClientHandler msg, final Supplier<NetworkEvent.Context> contextSupplier) {
 
 
         if (contextSupplier.get().getDirection().equals(NetworkDirection.PLAY_TO_CLIENT)) {
@@ -40,7 +40,7 @@ public record PotionClientHandler(CompoundTag compound) {
                 LocalPlayer clientPlayer = m.player;
                 if (clientPlayer != null) {
                     UUID uuid = msg.compound().getUUID(ENTITY_ID_KEY);
-                    LivingEntity entityByUUID = (LivingEntity) TargetUtils.getEntityByUUID(m.level, uuid);
+                    LivingEntity entityByUUID = (LivingEntity) TargetUtils.getEntityByUUID(Objects.requireNonNull(m.level), uuid);
                     if (entityByUUID != null) {
                         MobEffectInstance effectInstance = MobEffectInstance.load(msg.compound());
                         String effectEventType = msg.compound().getString(EFFECT_EVENT_TYPE);

@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.client.render.entity.layer;
 
+import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.client.render.entity.model.WerewolfTransformedModel;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -25,7 +26,7 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 
 @OnlyIn(Dist.CLIENT)
 public class WerewolfSpinAttackEffectLayer<T extends LivingEntity> extends RenderLayer<T, WerewolfTransformedModel<T>> {
-   public static final ResourceLocation TEXTURE = new ResourceLocation("textures/entity/trident_riptide.png");
+   public static final ResourceLocation TEXTURE = new ResourceLocation(DevilRpg.MODID + ":textures/gui/skill/trident_riptide.png");
    public static final String BOX = "box";
    private final ModelPart box;
 

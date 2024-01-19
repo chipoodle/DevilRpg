@@ -2,38 +2,33 @@ package com.chipoodle.devilrpg.skillsystem.skillinstance;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
-import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
-import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
+import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
-import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.util.SkillEnum;
-
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 
-
 import java.util.HashMap;
 import java.util.UUID;
 
-public class PlayerPassiveWerewolfVitalityAttribute extends AbstractPlayerPassiveAttribute implements ISkillContainer, ICapabilityAttributeModifier {
+public class PlayerPassiveWerewolfVitalityAttribute extends AbstractPlayerPassiveAttribute implements ICapabilityAttributeModifier {
     public static final String ATTRIBUTE_MODIFIER_UNIQUE_NAME = SkillEnum.WEREWOLF_VITALITY.name() + "_" + "ADDITION";
     public static final double HEALTH_FACTOR = 1.00D;
     AttributeModifier hitAttributeModifier;
-    private final PlayerSkillCapabilityInterface parentCapability;
     private Player playerIn;
 
-    public PlayerPassiveWerewolfVitalityAttribute(PlayerSkillCapabilityImplementation parentCapability) {
-        this.parentCapability = parentCapability;
+    public PlayerPassiveWerewolfVitalityAttribute(PlayerSkillCapabilityInterface parentCapability) {
+        super(parentCapability);
         DevilRpg.LOGGER.info("----------------------->CONSTRUCTOR PlayerPassiveWerewolfVitality. Parent capability: {}", parentCapability);
     }
 
     /**
-     *
-     * @param levelIn The world level
-     * @param playerIn the player
+     * @param levelIn    The world level
+     * @param playerIn   the player
      * @param parameters Server side called
      */
     @Override
@@ -88,7 +83,7 @@ public class PlayerPassiveWerewolfVitalityAttribute extends AbstractPlayerPassiv
         //UUID uuid = removeAttributeFromCapability(attributeModifiers, Attributes.MAX_HEALTH);
         //parentCapability.setAttributeModifiers(attributeModifiers, playerIn);
         //DevilRpg.LOGGER.info("----------------------->Remove {}",uuid);
-         if (playerIn.getHealth() > playerIn.getMaxHealth())
+        if (playerIn.getHealth() > playerIn.getMaxHealth())
             playerIn.setHealth(playerIn.getMaxHealth());
         DevilRpg.LOGGER.info("----------------------->removeCurrentModifiers(): {}", hitAttributeModifier);
     }

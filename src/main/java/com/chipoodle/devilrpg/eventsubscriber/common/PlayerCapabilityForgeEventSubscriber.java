@@ -35,7 +35,7 @@ import com.chipoodle.devilrpg.network.handler.PlayerExperienceClientServerHandle
 import com.chipoodle.devilrpg.network.handler.PlayerManaClientServerHandler;
 import com.chipoodle.devilrpg.network.handler.PlayerSkillTreeClientServerHandler;
 import com.chipoodle.devilrpg.network.handler.PlayerStaminaClientServerHandler;
-import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
+import com.chipoodle.devilrpg.skillsystem.AbstractSkillContainer;
 import com.chipoodle.devilrpg.util.EventUtils;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.network.chat.Component;
@@ -328,14 +328,14 @@ public class PlayerCapabilityForgeEventSubscriber {
             DevilRpg.LOGGER.info("----------------------->getFrom {}", event.getFrom().toString());
             DevilRpg.LOGGER.info("----------------------->getTo {}", event.getTo().toString());
             DevilRpg.LOGGER.info("----------------------->getType {}", event.getSlot().getType().toString());*/
-            ISkillContainer loadedSkill = getLoadedSkillForPlayer(player, SkillEnum.SKIN_ARMOR);
+            AbstractSkillContainer loadedSkill = getLoadedSkillForPlayer(player, SkillEnum.SKIN_ARMOR);
             loadedSkill.execute(player.level, player, new HashMap<>());
         }
     }
 
-    private static ISkillContainer getLoadedSkillForPlayer(Player player, SkillEnum skill) {
+    private static AbstractSkillContainer getLoadedSkillForPlayer(Player player, SkillEnum skill) {
         PlayerSkillCapabilityInterface aSkillCap = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerSkillCapability.INSTANCE);
-        ISkillContainer loadedSkill = aSkillCap.getLoadedSkillExecutor(skill);
+        AbstractSkillContainer loadedSkill = aSkillCap.getLoadedSkillExecutor(skill);
         DevilRpg.LOGGER.info("----------------------->loadedSkill {}", loadedSkill);
         return loadedSkill;
     }

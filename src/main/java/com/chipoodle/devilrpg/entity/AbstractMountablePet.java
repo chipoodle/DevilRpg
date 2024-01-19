@@ -405,7 +405,7 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
     }
 
     @Override
-    protected void playStepSound(BlockPos p_30584_, BlockState p_30585_) {
+    protected void playStepSound(@NotNull BlockPos p_30584_, BlockState p_30585_) {
         if (!p_30585_.getMaterial().isLiquid()) {
             BlockState blockstate = this.level.getBlockState(p_30584_.above());
             SoundType soundtype = p_30585_.getSoundType(level, p_30584_, this);

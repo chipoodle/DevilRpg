@@ -34,6 +34,7 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.common.util.LazyOptional;
 
 import javax.annotation.Nullable;
+import java.text.DecimalFormat;
 import java.util.*;
 
 @OnlyIn(Dist.CLIENT)
@@ -81,9 +82,9 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
         isDraggingToPowerButton = false;
         draggedSkillWidget = null;
         skillsImages = new EnumMap<>(SkillEnum.class);
-
-        this.player = Minecraft.getInstance().player;
-        expCap = player.getCapability(PlayerExperienceCapability.INSTANCE);
+        Minecraft instance = Minecraft.getInstance();
+        this.player = instance.player;
+        expCap = Objects.requireNonNull(player).getCapability(PlayerExperienceCapability.INSTANCE);
         skillCap = player.getCapability(PlayerSkillCapability.INSTANCE);
         this.clientSkillManager = skillCap.map(PlayerSkillCapabilityInterface::getClientSkillBuilder).orElse(null);
     }
@@ -135,7 +136,6 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
         Button themeForward = Button.builder(
                         Component.literal(">"),
                         b -> {
-                            //tabPage = Math.min(tabPage + 1, maxPages);
                             SkillWidget.changeWidgetTheme(true);
                         }
                 )
@@ -147,8 +147,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
         Button themeBackwards = Button.builder(
                         Component.literal("<"),
                         b -> {
-                            //tabPage = Math.min(tabPage + 1, maxPages);
-                            SkillWidget.changeWidgetTheme(true);
+                            SkillWidget.changeWidgetTheme(false);
                         }
                 )
                 .pos((WINDOW_AREA_OFFSET_X + offLeft + 10) + ((SkillWidget.FRAME_SIZE + 10) ),
@@ -156,6 +155,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
                 .size(20, 20)
                 .build();
 
+        //this.font.draw(poseStack, "theme: ", (offsetLeft + 8), (offsetTop + 6), 4210752);
         addRenderableWidget(themeForward);
         addRenderableWidget(themeBackwards);
     }
@@ -203,12 +203,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
             RenderSystem.applyModelViewMatrix();
             RenderSystem.setShader(GameRenderer::getPositionTexShader);
 
-            // Texturas de los marcos, y barras de título de los tooltips
-            //RenderSystem.setShaderTexture(0, WIDGETS);
-            // Pinta el icono del botón
-            blit(poseStack, draggedSkillWidget.getX() + 3, draggedSkillWidget.getY(), draggedSkillWidget.getDisplayInfo().getFrame().getIcon(),
-                    0, SkillWidget.FRAME_SIZE, SkillWidget.FRAME_SIZE);
-
+            // Pinta la imagen del botón
             draggedSkillWidget.drawButton(poseStack, (int) posicionMouseX, (int) posicionMouseY, false,
                     draggedSkillWidget.getDisplayInfo().getImage(), true, draggedSkillWidget.isDisabled());
 
@@ -283,8 +278,11 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
                 }
             }
 
-            if (draggedSkillWidget != null && Objects.requireNonNull(draggedSkillWidget.getSkillElement().getDisplay()).getFrame().equals(
-                    SkillFrameType.TASK) /* skillEntryGuiApretado.getSkillElement().getParent() != null */
+            if (draggedSkillWidget != null
+                    && draggedSkillWidget.getSkillElement()  != null
+                    && draggedSkillWidget.getSkillElement().getDisplay() != null
+                    && draggedSkillWidget.getSkillElement().getDisplay().getFrame() != null
+                    && draggedSkillWidget.getSkillElement().getDisplay().getFrame().equals(SkillFrameType.TASK)
                     && !draggedSkillWidget.isDisabled()) {
                 isDraggingToPowerButton = true;
                 posicionMouseX = mouseX - draggedSkillWidget.getX() - SkillWidget.FRAME_SIZE / ((double) 2);
@@ -309,7 +307,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     public boolean mouseReleased(double mouseX, double mouseY, int state) {
         boolean returned = super.mouseReleased(mouseX, mouseY, state);
         if (state == ButtonMouse.RIGHT_BUTTON && draggedSkillWidget != null && draggedSkillWidget.getSkillElement().getParent() != null) { // botón derecho
-            DevilRpg.LOGGER.info("|----------- rightMouseReleases: {}", draggedSkillWidget.getSkillElement().getSkillCapability());
+            DevilRpg.LOGGER.info("|----------- rightMouseReleases: {}, mousex: {}, mousey:{}", draggedSkillWidget.getSkillElement().getSkillCapability().getName(), mouseX, mouseY);
 
             CustomSkillButton copy = powerButtonList.stream().filter(x -> x.isInside(mouseX, mouseY)).findAny().orElse(null);
             if (copy != null) {
@@ -372,9 +370,13 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
                 this.font.draw(poseStack, unspentSkillHolder, (offsetLeft + 8), (offsetTop + WINDOW_HEIGHT), 4210752);
             }
 
+          ;
+
+            //this.font.draw(poseStack, Component.literal("x:"+d.format(posicionMouseX)+" y:"+d.format(posicionMouseY)), (float) posicionMouseX,(float)posicionMouseY, 10526880);
         }
 
     }
+    static DecimalFormat d = new DecimalFormat("#,###.#");
 
     /**
      * Pinta el fondo incluyendo los botones de las skills
@@ -531,13 +533,13 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
 
         int offLeft = (this.width - WINDOW_WIDTH) / 2;
         int offTop = (this.height - WINDOW_HEIGHT) / 2;
-        List<PowerEnum> powerList = Arrays.asList(PowerEnum.values());
-        k = powerList.size();
+        PowerEnum[] powerList = PowerEnum.values();
+        //k = powerList.size();
         for (PowerEnum powerEnum : powerList) {
             int drawnSkillLevel = 0;
-            CustomSkillButton powrButtons = new CustomSkillButton(
-                    (WINDOW_AREA_OFFSET_X + offLeft + 10) + (k * (SkillWidget.FRAME_SIZE + 10)),
-                    WINDOW_AREA_OFFSET_Y + offTop + INNER_SCREEN_HEIGHT + 2,
+            CustomSkillButton powerButtons = new CustomSkillButton(
+                    ( offLeft) + 130 + (k * (SkillWidget.FRAME_SIZE + 8)),
+                    WINDOW_AREA_OFFSET_Y + offTop + INNER_SCREEN_HEIGHT + 4,
                     SkillWidget.FRAME_SIZE - 5, // 3
                     SkillWidget.FRAME_SIZE - 5, // 4
                     ClientModKeyInputEventSubscriber.KeyEvent.getKeyName(powerEnum),
@@ -550,10 +552,10 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
                     false,
                     7.0F);
 
-            powrButtons.visible = true;
+            powerButtons.visible = true;
 
-            powerButtonList.add(powrButtons);
-            this.addRenderableWidget(powrButtons);
+            powerButtonList.add(powerButtons);
+            this.addRenderableWidget(powerButtons);
             k++;
         }
 

@@ -13,6 +13,7 @@ import com.chipoodle.devilrpg.client.gui.hud.StaminaBarHudOverlay;
 import com.chipoodle.devilrpg.client.render.entity.model.*;
 import com.chipoodle.devilrpg.client.render.entity.renderer.*;
 import com.chipoodle.devilrpg.init.ModEntities;
+import net.minecraft.world.entity.EntityType;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.EntityRenderersEvent;
 import net.minecraftforge.client.event.RegisterGuiOverlaysEvent;
@@ -53,7 +54,7 @@ public final class ClientModRegistryEventSubscriber {
         event.registerLayerDefinition(SoulWispModel.DEFAULT_LAYER_LOCATION, SoulWispModel::createBodyLayer);
         event.registerLayerDefinition(SoulWispModel.BOMBER_LAYER_LOCATION, SoulWispModel::createBodyLayer);
         event.registerLayerDefinition(SoulWispModel.ARCHER_LAYER_LOCATION, SoulWispModel::createBodyLayer);
-        event.registerLayerDefinition(WerewolfHumanModel.WEREWOLF_LAYER_LOCATION, WerewolfHumanModel::createBodyLayer);
+        //event.registerLayerDefinition(WerewolfHumanModel.WEREWOLF_LAYER_LOCATION, WerewolfHumanModel::createBodyLayer);
         event.registerLayerDefinition(WerewolfTransformedModel.WEREWOLF_LAYER_LOCATION, WerewolfTransformedModel::createBodyLayer);
     }
 

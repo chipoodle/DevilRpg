@@ -4,10 +4,8 @@ import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
-import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.init.ModEffects;
-import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.player.Player;
@@ -15,14 +13,13 @@ import net.minecraft.world.level.Level;
 
 import java.util.HashMap;
 
-public class PlayerPassiveKnockBackResistance extends AbstractPlayerPassiveAttribute implements ISkillContainer {
+public class PlayerPassiveKnockBackResistance extends AbstractPlayerPassiveAttribute  {
     public static final String ABSORPTION_TICKS = "ABSORPTION_TICKS";
     public static final String BLOCK_POINTS = "BLOCK_POINTS";
-    private final PlayerSkillCapabilityInterface parentCapability;
       private Player playerIn;
 
-    public PlayerPassiveKnockBackResistance(PlayerSkillCapabilityImplementation parentCapability) {
-        this.parentCapability = parentCapability;
+    public PlayerPassiveKnockBackResistance(PlayerSkillCapabilityInterface parentCapability) {
+        super(parentCapability);
         DevilRpg.LOGGER.info("----------------------->CONSTRUCTOR PlayerPassiveWerewolfHit. Parent capability: {}", parentCapability);
     }
 

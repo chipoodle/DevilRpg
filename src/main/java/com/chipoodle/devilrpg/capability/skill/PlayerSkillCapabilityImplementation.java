@@ -13,7 +13,7 @@ import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model.ClientSkill
 import com.chipoodle.devilrpg.entity.ITamableEntity;
 import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.network.handler.PlayerSkillTreeClientServerHandler;
-import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
+import com.chipoodle.devilrpg.skillsystem.AbstractSkillContainer;
 import com.chipoodle.devilrpg.skillsystem.SingletonSkillExecutorFactory;
 import com.chipoodle.devilrpg.util.BytesUtil;
 import com.chipoodle.devilrpg.util.PowerEnum;
@@ -327,7 +327,7 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
         DevilRpg.LOGGER.info("------ side: {} PlayerSkillCapability triggerAction(SPlayer, triggeredPower) {} {}"
                 , (playerIn.level.isClientSide ? "CLIENT" : "SERVER"), playerIn.getName().getString(), triggeredPower);
         if (getSkillLevelFromAssociatedPower(triggeredPower) != 0) {
-            ISkillContainer skill = getSkill(triggeredPower);
+            AbstractSkillContainer skill = getSkill(triggeredPower);
             if (skill.arePreconditionsMetBeforeConsumingResource(playerIn) && consumeResource(playerIn, skill)) {
                 skill.execute(playerIn.level, playerIn, new HashMap<>());
             } else {
@@ -346,12 +346,12 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
         if (!sender.level.isClientSide) {
             SkillEnum skillFromByteArray = getSkillFromByteArray(triggeredSkill);
             DevilRpg.LOGGER.info("PlayerSkillCapability triggerPassive(ServerPlayer, triggeredSkill) {} {}", sender, skillFromByteArray);
-            ISkillContainer skill = getLoadedSkillExecutor(skillFromByteArray);
+            AbstractSkillContainer skill = getLoadedSkillExecutor(skillFromByteArray);
             skill.execute(sender.level, sender, new HashMap<>());
         }
     }
 
-    private ISkillContainer getSkill(PowerEnum triggeredPower) {
+    private AbstractSkillContainer getSkill(PowerEnum triggeredPower) {
         SkillEnum skillEnum = getSkillsNameOfPowers().get(triggeredPower);
         return singletonSkillExecutorFactory.getOrCreate(skillEnum);
     }
@@ -369,7 +369,7 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
         return 0;
     }
 
-    private boolean consumeResource(Player playerIn, ISkillContainer power) {
+    private boolean consumeResource(Player playerIn, AbstractSkillContainer power) {
         float resourceCost = getResourceCostPoints().get(power.getSkillEnum());
         ResourceType type = getResourceType().get(power.getSkillEnum());
 
@@ -399,12 +399,12 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
     }
 
     @Override
-    public ISkillContainer getLoadedSkillExecutor(SkillEnum skillEnum) {
+    public AbstractSkillContainer getLoadedSkillExecutor(SkillEnum skillEnum) {
         return singletonSkillExecutorFactory.getExistingSkill(skillEnum);
     }
 
     @Override
-    public ISkillContainer createSkillExecutor(SkillEnum skillEnum) {
+    public AbstractSkillContainer createSkillExecutor(SkillEnum skillEnum) {
         return singletonSkillExecutorFactory.getOrCreate(skillEnum);
     }
 

@@ -89,7 +89,7 @@ public final class ClientForgePlayerEventSubscriber {
                         if(!werewolf.isWerewolfAttack()) {
                             werewolf.setWerewolfAttack(true, player);
                             event.setCanceled(true);
-                            DevilRpg.LOGGER.info("onMouseRawEvent GLFW_MOUSE_BUTTON_RIGHT pressed. setWerewolfAttack true");
+                           // DevilRpg.LOGGER.info("onMouseRawEvent GLFW_MOUSE_BUTTON_RIGHT pressed. setWerewolfAttack true");
                         }
 
                     });
@@ -100,7 +100,7 @@ public final class ClientForgePlayerEventSubscriber {
                 aux.ifPresent(werewolf -> {
                     if(werewolf.isWerewolfAttack()) {
                         werewolf.setWerewolfAttack(false, player);
-                        DevilRpg.LOGGER.info("onMouseRawEvent GLFW_RELEASE released. setWerewolfAttack false");
+                        //DevilRpg.LOGGER.info("onMouseRawEvent GLFW_RELEASE released. setWerewolfAttack false");
                     }
                 });
                 event.setCanceled(false);

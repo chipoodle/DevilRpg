@@ -7,7 +7,7 @@ import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.init.ModBlocks;
-import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
+import com.chipoodle.devilrpg.skillsystem.AbstractSkillContainer;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -22,9 +22,10 @@ import net.minecraft.world.phys.Vec3;
 import java.util.HashMap;
 import java.util.Random;
 
-public class SkillSoulVine implements ISkillContainer {
+public class SkillSoulVine extends AbstractSkillContainer {
 
     public SkillSoulVine(PlayerSkillCapabilityImplementation parentCapability) {
+        super(parentCapability);
     }
 
     @Override

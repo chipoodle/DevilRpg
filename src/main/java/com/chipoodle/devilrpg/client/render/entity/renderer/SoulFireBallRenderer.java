@@ -40,7 +40,7 @@ public class SoulFireBallRenderer extends EntityRenderer<SoulIceBall> {
     }
 
     protected int getBlockLightLevel(SoulIceBall p_116491_, BlockPos p_116492_) {
-        return 15;
+        return 1;
     }
 
     public void render(SoulIceBall p_116484_, float p_116485_, float p_116486_, PoseStack p_116487_, MultiBufferSource p_116488_, int p_116489_) {

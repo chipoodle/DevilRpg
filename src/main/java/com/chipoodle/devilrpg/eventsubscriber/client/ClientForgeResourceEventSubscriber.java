@@ -39,7 +39,7 @@ public final class ClientForgeResourceEventSubscriber {
 
     public static final int TICK_COUNT_REGENERATION = 10;
     public static final float BASE_MANA_DEGENERATION = 0.7f;
-    public static final float BASE_STAMINA_DEGENERATION = 0.1f;
+    public static final float BASE_STAMINA_DEGENERATION = 0.03f;
 
     @SubscribeEvent
     public static void onPlayerTickMana(TickEvent.PlayerTickEvent event) {

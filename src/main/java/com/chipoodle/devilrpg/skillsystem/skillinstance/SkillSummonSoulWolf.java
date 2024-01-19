@@ -1,12 +1,11 @@
 package com.chipoodle.devilrpg.skillsystem.skillinstance;
 
-import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapability;
 import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityInterface;
-import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.entity.SoulWolf;
 import com.chipoodle.devilrpg.init.ModEntities;
-import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
+import com.chipoodle.devilrpg.skillsystem.AbstractSkillContainer;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import com.chipoodle.devilrpg.util.TargetUtils;
 import net.minecraft.core.BlockPos;
@@ -26,11 +25,12 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-public class SkillSummonSoulWolf implements ISkillContainer {
+public class SkillSummonSoulWolf extends AbstractSkillContainer {
 
     private static final int NUMBER_OF_SUMMONS = 3;
 
-    public SkillSummonSoulWolf(PlayerSkillCapabilityImplementation parentCapability) {
+    public SkillSummonSoulWolf(PlayerSkillCapabilityInterface parentCapability) {
+        super(parentCapability);
     }
 
     @Override
@@ -39,25 +39,28 @@ public class SkillSummonSoulWolf implements ISkillContainer {
     }
 
     @Override
-    public void execute(Level levelIn, Player playerIn, HashMap<String, String> parameters) {
-        if (!levelIn.isClientSide) {
-            Random rand = new Random();
-            levelIn.playSound(null, playerIn.getX(), playerIn.getY(), playerIn.getZ(), SoundEvents.CHICKEN_EGG, SoundSource.NEUTRAL, 0.5F, 0.4F / (rand.nextFloat() * 0.4F + 0.8F));
-            LazyOptional<PlayerMinionCapabilityInterface> min = playerIn.getCapability(PlayerMinionCapability.INSTANCE);
-            min.ifPresent(x -> x.removeAllSoulBear(playerIn));
-            ConcurrentLinkedQueue<UUID> keys = min.map(PlayerMinionCapabilityInterface::getSoulWolfMinions).orElse(new ConcurrentLinkedQueue<>());
+    public void execute(Level level, Player player, HashMap<String, String> parameters) {
+        if (!player.getCooldowns().isOnCooldown(icon.getItem())) {
+            if (!level.isClientSide) {
+                Random rand = new Random();
+                level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.CHICKEN_EGG, SoundSource.NEUTRAL, 0.5F, 0.4F / (rand.nextFloat() * 0.4F + 0.8F));
+                LazyOptional<PlayerMinionCapabilityInterface> min = player.getCapability(PlayerMinionCapability.INSTANCE);
+                min.ifPresent(x -> x.removeAllSoulBear(player));
+                ConcurrentLinkedQueue<UUID> keys = min.map(PlayerMinionCapabilityInterface::getSoulWolfMinions).orElse(new ConcurrentLinkedQueue<>());
 
-            keys.offer(summonSoulWolf(levelIn, playerIn, rand).getUUID());
-            if (keys.size() > NUMBER_OF_SUMMONS) {
-                UUID key = keys.remove();
-                min.ifPresent(x -> {
-                    SoulWolf e = (SoulWolf) x.getTameableByUUID(key, playerIn.level);
-                    if (e != null)
-                        x.removeSoulWolf(playerIn, e);
-                });
+                keys.offer(summonSoulWolf(level, player, rand).getUUID());
+                if (keys.size() > NUMBER_OF_SUMMONS) {
+                    UUID key = keys.remove();
+                    min.ifPresent(x -> {
+                        SoulWolf e = (SoulWolf) x.getTameableByUUID(key, player.level);
+                        if (e != null)
+                            x.removeSoulWolf(player, e);
+                    });
+                }
+                min.ifPresent(x -> x.setSoulWolfMinions(keys, player));
             }
-            min.ifPresent(x -> x.setSoulWolfMinions(keys, playerIn));
         }
+        player.getCooldowns().addCooldown(icon.getItem(), 20);
     }
 
     private SoulWolf summonSoulWolf(Level levelIn, Player playerIn, Random rand) {

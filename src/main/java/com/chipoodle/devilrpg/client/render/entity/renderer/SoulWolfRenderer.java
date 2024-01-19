@@ -27,7 +27,7 @@ public class SoulWolfRenderer extends MobRenderer<SoulWolf, SoulWolfModelHeart<S
     }
 
     protected int getBlockLightLevel(SoulWolf entityIn, BlockPos pos) {
-        return 2;
+        return 1;
     }
 
     @Override

@@ -155,8 +155,6 @@ public class SoulBear extends AbstractMountablePet
             initialArmor = (1.0D * 0.410 * puntosAsignados) + 3;
 
         }
-        if (warBear != 0)
-            Objects.requireNonNull(this.getAttribute(Attributes.KNOCKBACK_RESISTANCE)).setBaseValue(warBear * 0.1);
 
         Objects.requireNonNull(this.getAttribute(Attributes.MOVEMENT_SPEED)).setBaseValue(0.4F);
         Objects.requireNonNull(this.getAttribute(Attributes.MAX_HEALTH)).setBaseValue(saludMaxima);
@@ -357,7 +355,7 @@ public class SoulBear extends AbstractMountablePet
     }
 
     @Override
-    protected void playStepSound(BlockPos pos, BlockState blockIn) {
+    protected void playStepSound(@NotNull BlockPos pos, BlockState blockIn) {
         this.playSound(SoundEvents.POLAR_BEAR_STEP, 0.15F, 1.0F);
     }
 
@@ -580,30 +578,6 @@ public class SoulBear extends AbstractMountablePet
 
     }
 
-    ///////////////////////////////
-    /*public void tame(Player p_193101_1_) {
-        this.setTamed(true);
-        this.setOwnerUUID(p_193101_1_.getUUID());
-        if (p_193101_1_ instanceof ServerPlayer) {
-            CriteriaTriggers.TAME_ANIMAL.trigger((ServerPlayer) p_193101_1_, this);
-        }
-
-    }*/
-
-   /* @Override
-    public boolean isTame() {
-        return this.getFlag(4);
-    }
-
-    @Override
-    public void setTame(boolean p_70903_1_) {
-        this.setFlag(4, p_70903_1_);
-        this.reassessTameGoals();
-    }*/
-
-    protected void reassessTameGoals() {
-    }
-
     @Override
     public LivingEntity getOwner() {
         try {
@@ -642,7 +616,7 @@ public class SoulBear extends AbstractMountablePet
     }
 
     @Override
-    public Level getLevel() {
+    public @NotNull Level getLevel() {
         return this.level;
     }
 
@@ -732,7 +706,7 @@ public class SoulBear extends AbstractMountablePet
         }
 
         @Override
-        protected void checkAndPerformAttack(LivingEntity enemy, double distToEnemySqr) {
+        protected void checkAndPerformAttack(@NotNull LivingEntity enemy, double distToEnemySqr) {
             double d0 = this.getAttackReachSqr(enemy);
             if (distToEnemySqr <= d0 && this.isTimeToAttack()) {
                 SoulBear.this.setAttacking(true);
@@ -838,6 +812,7 @@ public class SoulBear extends AbstractMountablePet
         /**
          * Execute a one shot task or start executing a continuous task
          */
+       @Override
         public void start() {
             SoulBear.this.setTarget(null);
             super.start();
@@ -846,6 +821,7 @@ public class SoulBear extends AbstractMountablePet
         /**
          * Keep ticking a continuous task that has already been started
          */
+        @Override
         public void tick() {
             SoulBear.this.setTarget(null);
             super.tick();

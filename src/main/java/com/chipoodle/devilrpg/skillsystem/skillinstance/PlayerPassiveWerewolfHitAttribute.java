@@ -4,9 +4,7 @@ import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
-import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
-import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -16,15 +14,14 @@ import net.minecraft.world.level.Level;
 import java.util.HashMap;
 import java.util.UUID;
 
-public class PlayerPassiveWerewolfHitAttribute extends AbstractPlayerPassiveAttribute implements ISkillContainer, ICapabilityAttributeModifier {
+public class PlayerPassiveWerewolfHitAttribute extends AbstractPlayerPassiveAttribute implements ICapabilityAttributeModifier {
     public static final String ATTRIBUTE_MODIFIER_UNIQUE_NAME = SkillEnum.WEREWOLF_HIT.name() + "_" + "ADDITION";
-    public static final double HIT_FACTOR = 0.30D;
-    private final PlayerSkillCapabilityInterface parentCapability;
+    public static final double HIT_FACTOR = 0.40D;
     AttributeModifier hitAttributeModifier;
     private Player playerIn;
 
-    public PlayerPassiveWerewolfHitAttribute(PlayerSkillCapabilityImplementation parentCapability) {
-        this.parentCapability = parentCapability;
+    public PlayerPassiveWerewolfHitAttribute(PlayerSkillCapabilityInterface parentCapability) {
+        super(parentCapability);
         DevilRpg.LOGGER.info("----------------------->CONSTRUCTOR PlayerPassiveWerewolfHit. Parent capability: {}", parentCapability);
     }
 

@@ -51,10 +51,12 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.network.NetworkHooks;
+import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -137,23 +139,23 @@ public class SoulWisp extends TamableAnimal implements ITamableEntity, FlyingAni
         this.efectoPrimario = efectoPrimario;
         this.efectoSecundario = efectoSecundario;
         this.esBeneficioso = esBeneficioso;
-        if (skill != null && skill.isPresent()) {
-            this.puntosAsignados = skill.map(x -> x.getSkillsPoints()).orElse(null).get(tipoWisp);
+        if (skill.isPresent()) {
+            this.puntosAsignados = skill.map(PlayerSkillCapabilityInterface::getSkillsPoints).orElse(null).get(tipoWisp);
             saludMaxima = 0.6 * this.puntosAsignados + SALUD_INICIAL;
             // DevilRpg.LOGGER.debug("SoulWispEntity.updateLevel.saludMaxima{}",saludMaxima);
         }
 
-        this.getAttribute(Attributes.FLYING_SPEED).setBaseValue(0.9F);
-        this.getAttribute(Attributes.MAX_HEALTH).setBaseValue(saludMaxima);
-        this.getAttribute(Attributes.ARMOR).setBaseValue(0.15D);
-        this.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(0.3F);
-        this.getAttribute(Attributes.ATTACK_DAMAGE).setBaseValue(2.0D);
-        this.getAttribute(Attributes.FOLLOW_RANGE).setBaseValue(48.0D);
+        Objects.requireNonNull(this.getAttribute(Attributes.FLYING_SPEED)).setBaseValue(0.9F);
+        Objects.requireNonNull(this.getAttribute(Attributes.MAX_HEALTH)).setBaseValue(saludMaxima);
+        Objects.requireNonNull(this.getAttribute(Attributes.ARMOR)).setBaseValue(0.15D);
+        Objects.requireNonNull(this.getAttribute(Attributes.MOVEMENT_SPEED)).setBaseValue(0.3F);
+        Objects.requireNonNull(this.getAttribute(Attributes.ATTACK_DAMAGE)).setBaseValue(2.0D);
+        Objects.requireNonNull(this.getAttribute(Attributes.FOLLOW_RANGE)).setBaseValue(48.0D);
         setHealth((float) saludMaxima);
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag compound) {
+    public void addAdditionalSaveData(@NotNull CompoundTag compound) {
         super.addAdditionalSaveData(compound);
         compound.putString("OwnerUUID", "");
         compound.putString("Owner", "");
@@ -163,7 +165,7 @@ public class SoulWisp extends TamableAnimal implements ITamableEntity, FlyingAni
      * (abstract) Protected helper method to read subclass entity data from NBT.
      */
     @Override
-    public void readAdditionalSaveData(CompoundTag compound) {
+    public void readAdditionalSaveData(@NotNull CompoundTag compound) {
         super.readAdditionalSaveData(compound);
     }
 
@@ -350,7 +352,7 @@ public class SoulWisp extends TamableAnimal implements ITamableEntity, FlyingAni
         if (niveles >= 0 && !this.level.isClientSide && primaryEffect != null) {
             // rango entre 0 - 4 el tipo de boost health
             int potenciaPocion = getPotenciaPocion(niveles);
-            DevilRpg.LOGGER.debug("niveles {} potenciaPocion {}",niveles, potenciaPocion);
+            //DevilRpg.LOGGER.debug("niveles {} potenciaPocion {}",niveles, potenciaPocion);
 
             double k = this.position().x();
             double l = this.position().y();

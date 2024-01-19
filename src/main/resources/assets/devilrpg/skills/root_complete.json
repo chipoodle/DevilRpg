@@ -229,7 +229,7 @@
         },
         "capability": "werewolf_hit",
         "skillmanacost":{
-        	"maxskilllevel":"10",
+        	"maxskilllevel":"20",
 			"manacost":"1",
             "resourcetype":"mana"
 		},
@@ -250,7 +250,7 @@
         "capability": "charge",
         "skillmanacost":{
             "maxskilllevel":"3",
-            "manacost":"8",
+            "manacost":"10",
             "resourcetype":"stamina"
         },
         "rewards": {},
@@ -270,7 +270,7 @@
         "capability": "block",
         "skillmanacost":{
             "maxskilllevel":"20",
-            "manacost":"8",
+            "manacost":"10",
             "resourcetype":"stamina"
         },
         "rewards": {},
@@ -302,8 +302,7 @@
         "display": {
             "description": "Summon up to three spiritual wolves to aid you in battle",
             "icon": {
-                "item": "minecraft:glass_pane",
-                "minecraft:glass_panenbt": 1
+                "item": "devilrpg:item_summon"
             },
             "title": "Summon Wolf",
             "image": "devilrpg:textures/gui/skill/wolf-head.png",
@@ -365,8 +364,7 @@
         "display": {
             "description": "Summon a spiritual bear to aid you in battle",
             "icon": {
-                "item": "minecraft:glass_pane",
-                "minecraft:glass_panenbt": 1
+                "item": "devilrpg:item_summon"
             },
             "title": "Summon Bear",
             "image": "devilrpg:textures/gui/skill/bear-head.png",
@@ -449,8 +447,7 @@
         "display": {
             "description": "Summon a forest wisp that bless you with mother nature's aura",
             "icon": {
-                "item": "minecraft:glass_pane",
-                "minecraft:glass_panenbt": 2
+                "item": "devilrpg:item_summon"
             },
             "title": "Health Wisp",
             "image": "devilrpg:textures/gui/skill/jellyfish.png",
@@ -470,8 +467,7 @@
         "display": {
             "description": "Wisp emanates an aura that curses enemies",
             "icon": {
-                "item": "minecraft:glass_pane",
-                "minecraft:glass_panenbt": 3
+                "item": "devilrpg:item_summon"
             },
             "title": "Curse Wisp",
             "image": "devilrpg:textures/gui/skill/medusa-head.png",
@@ -491,8 +487,7 @@
         "display": {
             "description": "Bomber Wisp",
             "icon": {
-                "item": "minecraft:glass_pane",
-                "minecraft:glass_panenbt": 4
+                "item": "devilrpg:item_summon"
             },
             "title": "Bomber wisp",
             "image": "devilrpg:textures/gui/skill/burning-eye.png",
@@ -512,8 +507,7 @@
         "display": {
             "description": "Ranged Wisp",
             "icon": {
-                "item": "minecraft:glass_pane",
-                "minecraft:glass_panenbt": 4
+                "item": "devilrpg:item_summon"
             },
             "title": "Ranged wisp",
             "image": "devilrpg:textures/gui/skill/ice-spear.png",

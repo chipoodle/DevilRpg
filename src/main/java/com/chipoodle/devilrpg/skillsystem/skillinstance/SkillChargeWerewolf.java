@@ -4,10 +4,8 @@ import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
-import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
-import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillElement;
-import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
+import com.chipoodle.devilrpg.skillsystem.AbstractSkillContainer;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
@@ -18,25 +16,17 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.HashMap;
 import java.util.Random;
 
-public class SkillChargeWerewolf implements ISkillContainer {
-
+public class SkillChargeWerewolf extends AbstractSkillContainer {
     public static final int DAMAGE_BOOST_DURATION_IN_TICKS = 25;
-    private final PlayerSkillCapabilityInterface parentCapability;
 
-    private ItemStack icon;
-
-    public SkillChargeWerewolf(PlayerSkillCapabilityImplementation parentCapability) {
-
-        this.parentCapability = parentCapability;
-        SkillElement skillElementByEnum = parentCapability.getSkillElementByEnum(getSkillEnum());
-        icon = skillElementByEnum.getDisplay().getIcon();
+    public SkillChargeWerewolf(PlayerSkillCapabilityInterface parentCapability) {
+        super(parentCapability);
     }
 
     @Override
@@ -57,10 +47,7 @@ public class SkillChargeWerewolf implements ISkillContainer {
 
     @Override
     public void execute(Level levelIn, Player player, HashMap<String, String> parameters) {
-        // Verifica que el código se esté ejecutando en el lado del servidor
-
         if (!player.getCooldowns().isOnCooldown(icon.getItem())) {
-
             float f7 = player.getYRot();
             float f = player.getXRot();
             float f1 = -Mth.sin(f7 * ((float) Math.PI / 180F)) * Mth.cos(f * ((float) Math.PI / 180F));

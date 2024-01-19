@@ -23,7 +23,7 @@ public class SoulBearRenderer extends MobRenderer<SoulBear, SoulBearModelHeart<S
     }
 
     protected int getBlockLightLevel(SoulBear entityIn, BlockPos pos) {
-        return 2;
+        return 1;
     }
 
     public ResourceLocation getTextureLocation(SoulBear entity) {

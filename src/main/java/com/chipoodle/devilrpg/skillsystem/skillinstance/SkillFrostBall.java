@@ -3,18 +3,19 @@ package com.chipoodle.devilrpg.skillsystem.skillinstance;
 import java.util.HashMap;
 import java.util.Random;
 
-import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.entity.SoulIceBall;
-import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
+import com.chipoodle.devilrpg.skillsystem.AbstractSkillContainer;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 
-public class SkillFrostBall implements ISkillContainer {
+public class SkillFrostBall extends AbstractSkillContainer {
 
-    public SkillFrostBall(PlayerSkillCapabilityImplementation parentCapability) {
+    public SkillFrostBall(PlayerSkillCapabilityInterface parentCapability) {
+		super(parentCapability);
     }
 
 	@Override

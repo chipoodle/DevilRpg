@@ -56,6 +56,12 @@ public class WerewolfTransformedModel<T extends Entity> extends HierarchicalMode
     private final ModelPart neckBase;
     private final ModelPart rightHand;
     private final ModelPart leftHand;
+
+    private final ModelPart rFingers;
+    private final ModelPart lFingers;
+
+    private final ModelPart rightWrist;
+    private final ModelPart leftWrist;
     private final ModelPart upperJaw;
     private final ModelPart lowerJaw;
     private final ModelPart chest;
@@ -95,6 +101,12 @@ public class WerewolfTransformedModel<T extends Entity> extends HierarchicalMode
         this.rightHand = rightArm.getChild("r_hand");
         this.leftHand = leftArm.getChild("l_hand");
 
+        this.rFingers = rightHand.getChild("r_fingers");
+        this.lFingers = leftHand.getChild("l_fingers");
+
+        this.rightWrist = rightHand.getChild("r_wrist_r1");
+        this.leftWrist = leftHand.getChild("l_wrist_r1");
+
         this.chest = torax.getChild("chest");
         this.tail = torax.getChild("tail");
 
@@ -107,7 +119,7 @@ public class WerewolfTransformedModel<T extends Entity> extends HierarchicalMode
         this.rFootBone = rightLegBBone.getChild("r_foot_bone");
         this.lFootBone = leftLegBBone.getChild("l_foot_bone");
 
-        this.parts = List.of(head, body, arms, legs, rightArm, leftArm, rightLeg, leftLeg, ears, upperJaw, lowerJaw, torax, chest, tail, neckBase, rightHand, leftHand, rightLegCBone, leftLegCBone, rightLegBBone, leftLegBBone, rFootBone, lFootBone);
+        this.parts = List.of(head, body, arms, legs, rightArm, leftArm, rightLeg, leftLeg, ears, upperJaw, lowerJaw, torax, chest, tail, neckBase, rightHand, leftHand,leftWrist,rightWrist, rFingers,lFingers, rightLegCBone, leftLegCBone, rightLegBBone, leftLegBBone, rFootBone, lFootBone);
     }
 
     public static LayerDefinition createBodyLayer() {
@@ -417,7 +429,9 @@ public class WerewolfTransformedModel<T extends Entity> extends HierarchicalMode
     }
 
     public ModelPart getRandomModelPart(RandomSource p_233439_) {
-        return this.parts.get(p_233439_.nextInt(this.parts.size()));
+        //return this.parts.get(p_233439_.nextInt(this.parts.size()));
+        List<ModelPart> list = List.of(head, body, legs);
+        return list.get(p_233439_.nextInt(list.size()));
     }
 
     public void translateToHand(@NotNull HumanoidArm p_102854_, @NotNull PoseStack p_102855_) {
@@ -426,5 +440,6 @@ public class WerewolfTransformedModel<T extends Entity> extends HierarchicalMode
 
     protected ModelPart getArm(HumanoidArm p_102852_) {
         return p_102852_ == HumanoidArm.LEFT ? this.leftArm : this.rightArm;
+        //return p_102852_ == HumanoidArm.RIGHT ? this.leftWrist : this.rightWrist;
     }
 }

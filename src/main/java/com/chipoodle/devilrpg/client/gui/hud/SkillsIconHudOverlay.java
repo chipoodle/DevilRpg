@@ -18,6 +18,7 @@ import net.minecraft.world.item.Item;
 import net.minecraftforge.client.gui.overlay.IGuiOverlay;
 
 import java.util.HashMap;
+import java.util.Objects;
 
 public class SkillsIconHudOverlay {
     private static final String IMG_LOCATION = DevilRpg.MODID + ":textures/gui/";
@@ -30,7 +31,7 @@ public class SkillsIconHudOverlay {
 
         PlayerSkillCapabilityInterface skillCap = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerSkillCapability.INSTANCE);
 
-        if(skillCap == null)
+        if (skillCap == null)
             return;
 
         final HashMap<PowerEnum, SkillEnum> powerToSkillDictionary = skillCap.getSkillsNameOfPowers();
@@ -40,26 +41,31 @@ public class SkillsIconHudOverlay {
         int i = 0;
         for (PowerEnum power : powerList) {
             SkillEnum aSkillEnum = powerToSkillDictionary.get(power);
-            if(aSkillEnum == null)
+            if (aSkillEnum == null)
                 aSkillEnum = SkillEnum.EMPTY;
 
             SkillElement skillElementByEnum = skillCap.getSkillElementByEnum(aSkillEnum);
-            if(skillElementByEnum == null)
-                throw new RuntimeException("---->Falló la busqueda de del Skillelement para el skill: "+aSkillEnum);
+            if (skillElementByEnum == null)
+                throw new RuntimeException("---->Falló la busqueda de del Skillelement para el skill: " + aSkillEnum);
 
-            Item item = skillElementByEnum.getDisplay().getIcon().getItem();
+            Item item = Objects.requireNonNull(skillElementByEnum.getDisplay()).getIcon().getItem();
 
             ResourceLocation resourceLocation = skillCap.getImagesOfSkills().get(aSkillEnum);
-            if(resourceLocation == null)
+            if (resourceLocation == null)
                 resourceLocation = EMPTY_POWER_IMAGE_RESOURCE;
-            int x = (screenWidth - 77) + (i * 21);
+            int x = (screenWidth - 102) + (i * 21);
             int y = screenHeight - 40;
             int width = 12;
             int height = 12;
+            boolean onCooldown = player.getCooldowns().isOnCooldown(item);
+
+            //////////player.getCooldowns().getCooldownPercent(item,)
+            float cooldownPercent = player.getCooldowns().getCooldownPercent(item, 0);
+            float color = 1f - (cooldownPercent)/1.5f;
 
             RenderSystem.setShader(GameRenderer::getPositionTexShader);
             RenderSystem.setShaderTexture(0, resourceLocation);
-            RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+            RenderSystem.setShaderColor(1.0F, color, color, 1.0F);
 
             RenderSystem.enableBlend();
             RenderSystem.defaultBlendFunc();
@@ -67,14 +73,14 @@ public class SkillsIconHudOverlay {
             // Pinta el icono del botón
             GuiComponent.blit(poseStack, x, y, 0, 0.0F, 0.0F, width, height, width, height);
 
+            String keyName = ClientModKeyInputEventSubscriber.KeyEvent.getKeyName(power);
+
             //Pinta el texto debajo del botón
             poseStack.pushPose();
             poseStack.translate((x - x * 0.3f) - 1, (y - y * 0.3f) - 1, 0);
             poseStack.scale(0.3f, 0.3f, 0);
-            GuiComponent.drawCenteredString(poseStack, mc.font, ClientModKeyInputEventSubscriber.KeyEvent.getKeyName(power),
-                    x + width +1, y + (height) + 32,
-                    //getFGColor(power == PowerEnum.POWER3 && !player.getCooldowns().isOnCooldown(ModItems.ITEM_VACIO.get())));
-                    getFGColor(!player.getCooldowns().isOnCooldown(item)));
+            //GuiComponent.drawCenteredString(poseStack, mc.font, ""+cooldownPercent, x + width + (keyName.length() / 2) + (width / 2) + (1 / keyName.length()) * 7, y + (height) - 32, getFGColor(!onCooldown));
+            GuiComponent.drawCenteredString(poseStack, mc.font, keyName, x + width + (keyName.length() / 2) + (width / 2) + (1 / keyName.length()) * 7, y + (height) + 32, getFGColor(!onCooldown));
             poseStack.popPose();
             i++;
         }

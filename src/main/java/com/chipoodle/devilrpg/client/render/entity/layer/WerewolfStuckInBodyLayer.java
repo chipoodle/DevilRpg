@@ -59,7 +59,6 @@ public abstract class WerewolfStuckInBodyLayer<T extends LivingEntity, M extends
                         }
                     } catch (IllegalArgumentException e) {
                         DevilRpg.LOGGER.error("---------------Illegal cube in ModelPart:  {}", randomModelPart, e);
-
                     }
                 }
 

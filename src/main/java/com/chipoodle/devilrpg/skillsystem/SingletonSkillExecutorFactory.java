@@ -9,7 +9,7 @@ import java.util.Hashtable;
 
 public class SingletonSkillExecutorFactory {
 
-    private final Hashtable<SkillEnum, ISkillContainer> skillPool = new Hashtable<>();
+    private final Hashtable<SkillEnum, AbstractSkillContainer> skillPool = new Hashtable<>();
     private final PlayerSkillCapabilityImplementation parentCapability;
 
     public SingletonSkillExecutorFactory(PlayerSkillCapabilityImplementation parentCapability) {
@@ -17,7 +17,7 @@ public class SingletonSkillExecutorFactory {
         DevilRpg.LOGGER.debug("--------> SingletonSkillExecutorFactory {}", this);
     }
 
-    public ISkillContainer getOrCreate(SkillEnum skillEnum) {
+    public AbstractSkillContainer getOrCreate(SkillEnum skillEnum) {
 
         switch (skillEnum) {
 
@@ -38,23 +38,23 @@ public class SingletonSkillExecutorFactory {
             }
             case SUMMON_WISP_HEALTH -> {
                 if (!skillPool.containsKey(SkillEnum.SUMMON_WISP_HEALTH))
-                    skillPool.put(SkillEnum.SUMMON_WISP_HEALTH, new SkillSummonIWispHealth(parentCapability));
+                    skillPool.put(SkillEnum.SUMMON_WISP_HEALTH, new SkillSummonWispHealth(parentCapability));
                 return skillPool.get(SkillEnum.SUMMON_WISP_HEALTH);
             }
             case SUMMON_WISP_CURSE -> {
                 if (!skillPool.containsKey(SkillEnum.SUMMON_WISP_CURSE))
-                    skillPool.put(SkillEnum.SUMMON_WISP_CURSE, new SkillSummonIWispCurse(parentCapability));
+                    skillPool.put(SkillEnum.SUMMON_WISP_CURSE, new SkillSummontWispCurse(parentCapability));
                 return skillPool.get(SkillEnum.SUMMON_WISP_CURSE);
 
             }
             case SUMMON_WISP_BOMB -> {
                 if (!skillPool.containsKey(SkillEnum.SUMMON_WISP_BOMB))
-                    skillPool.put(SkillEnum.SUMMON_WISP_BOMB, new SkillSummonIWispBomber(parentCapability));
+                    skillPool.put(SkillEnum.SUMMON_WISP_BOMB, new SkillSummonWispBomber(parentCapability));
                 return skillPool.get(SkillEnum.SUMMON_WISP_BOMB);
             }
             case SUMMON_WISP_ARCHER -> {
                 if (!skillPool.containsKey(SkillEnum.SUMMON_WISP_ARCHER))
-                    skillPool.put(SkillEnum.SUMMON_WISP_ARCHER, new SkillSummonIWispArcher(parentCapability));
+                    skillPool.put(SkillEnum.SUMMON_WISP_ARCHER, new SkillSummonWispArcher(parentCapability));
                 return skillPool.get(SkillEnum.SUMMON_WISP_ARCHER);
             }
             case TRANSFORM_WEREWOLF -> {
@@ -111,7 +111,7 @@ public class SingletonSkillExecutorFactory {
         return null;
     }
 
-    public ISkillContainer getExistingSkill(SkillEnum skillEnum) {
+    public AbstractSkillContainer getExistingSkill(SkillEnum skillEnum) {
         return (skillPool.containsKey(skillEnum) ? skillPool.get(skillEnum) : getOrCreate(skillEnum));
     }
 }

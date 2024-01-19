@@ -2,23 +2,26 @@ package com.chipoodle.devilrpg.client.render.entity.renderer;
 
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
 import com.chipoodle.devilrpg.util.EventUtils;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.EntityModelSet;
 import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.ItemInHandRenderer;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.block.BlockRenderDispatcher;
-import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
-import net.minecraft.client.renderer.entity.EntityRendererProvider;
-import net.minecraft.client.renderer.entity.ItemRenderer;
-import net.minecraft.client.renderer.entity.LivingEntityRenderer;
+import net.minecraft.client.renderer.entity.*;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.RenderPlayerEvent;
 import net.minecraftforge.common.util.LazyOptional;
 
 import java.lang.reflect.Field;
+import java.util.Objects;
 import java.util.function.BiConsumer;
 
 public class WerewolfCustomRendererBuilder {
@@ -37,7 +40,7 @@ public class WerewolfCustomRendererBuilder {
 
     }
 
-    public static void init(LivingEntityRenderer<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> renderer) {
+    public static EntityRenderDispatcher init(LivingEntityRenderer<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> renderer) {
         if (entityRenderDispatcher == null) {
             try {
                 Field fontField = renderer.getClass().getSuperclass().getSuperclass().getDeclaredField("font");
@@ -70,21 +73,24 @@ public class WerewolfCustomRendererBuilder {
                 throw new RuntimeException(e);
             }
         }
+        return entityRenderDispatcher;
     }
 
-    public static void createRenderer(RenderPlayerEvent.Pre eve) {
+    public static WerewolfRenderer createRenderer(Player player) {
         if (newWolf == null) {
+
+            if(entityRenderDispatcher == null){
+                hardInit(player);
+            }
+
             EntityRendererProvider.Context cc = new EntityRendererProvider.Context(entityRenderDispatcher, itemRenderer, blockRenderDispatcher, itemInHandRenderer, null, entityModelSet, font);
             newWolf = new WerewolfRenderer(cc, false);
-            eve.getEntity().refreshDimensions();
+            player.refreshDimensions();
             /*
             DevilRpg.LOGGER.debug("Created layer: {}, client side: {}", newWolf, event.getEntity().level.isClientSide());*/
             //IRenderUtilities.rotationParticles(Minecraft.getInstance().level, random, eve.getEntity(), ParticleTypes.EFFECT, 17, 1);
         }
-    }
-
-    public static void render(RenderPlayerEvent.Pre eve) {
-        newWolf.render((AbstractClientPlayer) eve.getEntity(), 0, eve.getPartialTick(), eve.getPoseStack(), eve.getMultiBufferSource(), eve.getPackedLight());
+        return newWolf;
     }
 
     public static void releaseRender(RenderPlayerEvent.Pre event, BiConsumer<RenderPlayerEvent.Pre, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c) {
@@ -96,4 +102,13 @@ public class WerewolfCustomRendererBuilder {
 
     }
 
+    public static void render(AbstractClientPlayer entity, float i,float partialTicks, PoseStack poseStack, MultiBufferSource multiBufferSource, int packedLight) {
+        newWolf.render(entity, i,partialTicks, poseStack, multiBufferSource,packedLight);
+    }
+
+    private static void hardInit(Player player){
+        Minecraft instance = Minecraft.getInstance();
+        EntityRenderer<? super LocalPlayer> renderer = instance.getEntityRenderDispatcher().getRenderer(Objects.requireNonNull(player));
+        init((LivingEntityRenderer<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>>) renderer);
+    }
 }

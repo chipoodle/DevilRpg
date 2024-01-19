@@ -3,24 +3,20 @@ package com.chipoodle.devilrpg.skillsystem.skillinstance;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.mana.PlayerManaCapability;
 import com.chipoodle.devilrpg.capability.mana.PlayerManaCapabilityInterface;
-import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
-import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 
 import java.util.HashMap;
 
-public class PlayerPassiveManaPoolAttribute extends AbstractPlayerPassiveAttribute implements ISkillContainer {
-
-    private final PlayerSkillCapabilityInterface parentCapability;
+public class PlayerPassiveManaPoolAttribute extends AbstractPlayerPassiveAttribute {
     private Player playerIn;
 
     private static Integer BASE_MANA_POOL = 30; // must be the same as PlayerManaCapabilityImplementation.maxMana initially
 
-    public PlayerPassiveManaPoolAttribute(PlayerSkillCapabilityImplementation parentCapability) {
-        this.parentCapability = parentCapability;
+    public PlayerPassiveManaPoolAttribute(PlayerSkillCapabilityInterface parentCapability) {
+        super(parentCapability);
     }
 
     /**

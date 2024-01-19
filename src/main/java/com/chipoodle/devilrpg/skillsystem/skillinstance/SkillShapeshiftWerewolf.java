@@ -10,7 +10,6 @@ import com.chipoodle.devilrpg.entity.ITamableEntity;
 import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.init.ModSounds;
 import com.chipoodle.devilrpg.network.handler.WerewolfAttackServerHandler;
-import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import com.chipoodle.devilrpg.util.TargetUtils;
 import net.minecraft.client.Minecraft;
@@ -32,18 +31,17 @@ import net.minecraftforge.common.util.LazyOptional;
 
 import java.util.*;
 
-public class SkillShapeshiftWerewolf extends AbstractPlayerPassiveAttribute implements ISkillContainer, ICapabilityAttributeModifier {
+public class SkillShapeshiftWerewolf extends AbstractPlayerPassiveAttribute implements ICapabilityAttributeModifier {
     // public static final String HEALTH = "HEALTH";
     public static final String SPEED = "SPEED";
     private static final ResourceLocation SUMMON_SOUND = new ResourceLocation(DevilRpg.MODID, "summon");
-    private final PlayerSkillCapabilityInterface parentCapability;
     private final Random rand = new Random();
     //AttributeModifier healthAttributeModifier;
     AttributeModifier speedAttributeModifier;
 
     public SkillShapeshiftWerewolf(PlayerSkillCapabilityInterface parentCapability) {
+        super(parentCapability);
         DevilRpg.LOGGER.info("----------------------->CONSTRUCTOR SkillShapeshiftWerewolf. {}", this);
-        this.parentCapability = parentCapability;
     }
 
     @Override
@@ -84,7 +82,7 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassiveAttribute impl
                         0.4F / (new Random().nextFloat() * 0.4F + 0.8F));
             }
 
-            super.executePassiveChildren(parentCapability, getSkillEnum(), worldIn, playerIn);
+            super.executePassiveChildren(getSkillEnum(), worldIn, playerIn);
             double maxMovementSpeed = playerIn.getAttributeValue(Attributes.MOVEMENT_SPEED);
             DevilRpg.LOGGER.info("max movement speed {}", maxMovementSpeed);
         }

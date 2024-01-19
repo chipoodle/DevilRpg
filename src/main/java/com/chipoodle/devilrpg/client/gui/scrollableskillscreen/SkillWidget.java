@@ -23,10 +23,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.nio.file.FileVisitOption;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
@@ -136,7 +133,7 @@ public class SkillWidget extends GuiComponent {
 
         try {
             // Obtén la URL de los recursos desde el classloader del mod
-            URL resourceURL = DevilRpg.class.getClassLoader().getResource("assets/devilrpg/textures/gui/skill");
+            URL resourceURL = DevilRpg.class.getClassLoader().getResource("assets/devilrpg/textures/gui/skill/widget");
 
             if (resourceURL != null) {
                 Path directory = Paths.get(resourceURL.toURI());
@@ -144,11 +141,11 @@ public class SkillWidget extends GuiComponent {
                 // Utiliza Files.walk para recorrer el directorio y encontrar archivos que cumplan con ciertos criterios
                 try (Stream<Path> walk = Files.walk(directory, FileVisitOption.FOLLOW_LINKS)) {
                     resourceLocations = walk.filter(Files::isRegularFile)
-                            .filter(path -> path.getFileName().toString().startsWith("widget") && path.toString().endsWith(".png"))
+                            .filter(path -> path.getFileName().toString().startsWith("a-gui-texture-widget-for-rpg-game-celtic-style") && path.toString().endsWith(".png"))
                             .map(path -> {
                                 // Convierte la ruta del archivo a una ruta relativa al directorio del mod
                                 String relativePath = directory.relativize(path).toString();
-                                String resourcePath = SKILL_GUI_IMG_LOCATION + "/" + relativePath.replace(File.separator, "/");
+                                String resourcePath = SKILL_GUI_IMG_LOCATION + "/widget/" + relativePath.replace(File.separator, "/");
                                 // Crea un ResourceLocation y agrégalo a la lista
                                 return new ResourceLocation(resourcePath);
                             })

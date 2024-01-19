@@ -5,8 +5,6 @@ import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
-import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillElement;
-import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -14,22 +12,17 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
 import java.util.HashMap;
 import java.util.Random;
 
-public class SkillBlockWerewolf extends AbstractPlayerPassiveAttribute implements ISkillContainer {
+public class SkillBlockWerewolf extends AbstractPlayerPassiveAttribute {
 
-    public static final int ABSORPTION_TICKS = 200;
-    private final PlayerSkillCapabilityInterface parentCapability;
-    private ItemStack icon;
+    public static final int ABSORPTION_TICKS = 800;
 
-    public SkillBlockWerewolf(PlayerSkillCapabilityImplementation parentCapability) {
-        this.parentCapability = parentCapability;
-        SkillElement skillElementByEnum = parentCapability.getSkillElementByEnum(getSkillEnum());
-        icon = skillElementByEnum.getDisplay().getIcon();
+    public SkillBlockWerewolf(PlayerSkillCapabilityInterface parentCapability) {
+        super(parentCapability);
     }
 
     @Override
@@ -61,19 +54,19 @@ public class SkillBlockWerewolf extends AbstractPlayerPassiveAttribute implement
             if (!levelIn.isClientSide) {
                 //if (!levelIn.isClientSide) {
 
-                int abs = Mth.abs(blockPoints / 5); //4to nivel de absorption
-                //DevilRpg.LOGGER.debug("Absorption level: {}",abs);
+                int absorptionLevel = Mth.abs(blockPoints / 5); //4to nivel de absorption
+                //DevilRpg.LOGGER.debug("Absorption level: {}",absorptionLevel);
 
                 // Aplica el efecto de resistencia al daño por 2 segundos
-                MobEffectInstance resistanceEffect = new MobEffectInstance(MobEffects.ABSORPTION, ABSORPTION_TICKS + blockPoints, abs); // 40 ticks = 2 segundos
+                MobEffectInstance resistanceEffect = new MobEffectInstance(MobEffects.ABSORPTION, ABSORPTION_TICKS + blockPoints, absorptionLevel); // 40 ticks = 2 segundos
                 player.addEffect(resistanceEffect);
                 parameters.put("ABSORPTION_TICKS", Integer.toString(ABSORPTION_TICKS));
                 parameters.put("BLOCK_POINTS", Integer.toString(blockPoints));
 
-                super.executePassiveChildren(parentCapability, getSkillEnum(), levelIn, player, parameters);
+                super.executePassiveChildren(getSkillEnum(), levelIn, player, parameters);
             }
-            // Cancela el uso de este poder durante el tiempo que dura el efecto mas una tercera parte más
-            player.getCooldowns().addCooldown(icon.getItem(), (int) ((ABSORPTION_TICKS + blockPoints) * 1.33)); // 40 ticks = 2 segundos
+            // Cancela el uso de este poder durante el tiempo que dura el efecto mas un 20% mass
+            player.getCooldowns().addCooldown(icon.getItem(), (int) ((ABSORPTION_TICKS + blockPoints) * 1.20)); // 40 ticks = 2 segundos
             // }
 
         }

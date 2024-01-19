@@ -1,8 +1,7 @@
 package com.chipoodle.devilrpg.skillsystem.skillinstance;
 
-import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
-import com.chipoodle.devilrpg.skillsystem.ISkillContainer;
+import com.chipoodle.devilrpg.skillsystem.AbstractSkillContainer;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
@@ -16,7 +15,11 @@ import java.util.Set;
 import java.util.UUID;
 
 
-public abstract class AbstractPlayerPassiveAttribute {
+public abstract class AbstractPlayerPassiveAttribute extends AbstractSkillContainer {
+
+    public AbstractPlayerPassiveAttribute(PlayerSkillCapabilityInterface parentCapability) {
+        super(parentCapability);
+    }
 
     protected AttributeModifier createNewAttributeModifier(String attributeModifierUniqueName, Double value, AttributeModifier.Operation operation) {
         return new AttributeModifier(attributeModifierUniqueName, value, operation);
@@ -64,23 +67,22 @@ public abstract class AbstractPlayerPassiveAttribute {
 
     /**
      * Mus be executed after the skill executor method.
-     * @param parentCapability
      * @param skillEnum
      * @param level
      * @param playerIn
      */
-    protected void executePassiveChildren(PlayerSkillCapabilityInterface parentCapability, SkillEnum skillEnum, Level level, Player playerIn) {
+    protected void executePassiveChildren(SkillEnum skillEnum, Level level, Player playerIn) {
         List<SkillEnum> passivesFromActiveSkill = parentCapability.getPassivesFromActiveSkill(skillEnum);
         for (SkillEnum passiveEnum : passivesFromActiveSkill) {
-            ISkillContainer loadedSkill = parentCapability.getLoadedSkillExecutor(passiveEnum);
+            AbstractSkillContainer loadedSkill = parentCapability.getLoadedSkillExecutor(passiveEnum);
             loadedSkill.execute(level, playerIn, new HashMap<>());
         }
     }
 
-    protected void executePassiveChildren(PlayerSkillCapabilityInterface parentCapability, SkillEnum skillEnum, Level level, Player playerIn, HashMap<String,String> parameters) {
+    protected void executePassiveChildren(SkillEnum skillEnum, Level level, Player playerIn, HashMap<String,String> parameters) {
         List<SkillEnum> passivesFromActiveSkill = parentCapability.getPassivesFromActiveSkill(skillEnum);
         for (SkillEnum passiveEnum : passivesFromActiveSkill) {
-            ISkillContainer loadedSkill = parentCapability.getLoadedSkillExecutor(passiveEnum);
+            AbstractSkillContainer loadedSkill = parentCapability.getLoadedSkillExecutor(passiveEnum);
             loadedSkill.execute(level, playerIn, parameters);
         }
     }
