@@ -8,7 +8,6 @@ package com.chipoodle.devilrpg.eventsubscriber.client;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
 import com.chipoodle.devilrpg.util.EventUtils;
-import net.minecraft.client.Camera;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.player.Player;
@@ -35,7 +34,6 @@ public final class ClientForgeCustomCameraEventSubscriber {
     private static boolean firstTimeShapeshifted = true;
     private static CameraType originalCameraType;
     private static Method cameraMoveMethod = null;
-
     private static boolean marked = false;
 
     /**
@@ -53,57 +51,80 @@ public final class ClientForgeCustomCameraEventSubscriber {
         };
 
         if (EventUtils.onWerewolfTransformation(player, c, event)) {
-            if (cameraMoveMethod == null) {
-                cameraMoveMethod = event.getCamera().getClass().getDeclaredMethod("move", types);
-                cameraMoveMethod.setAccessible(true);
-            }
-
+            initializeCameraMoveMethod(event);
             firstTimeShapeshifted = true;
 
-            if (Minecraft.getInstance().options.getCameraType().isFirstPerson()) {
-                //firstPersonShapeshifted = !firstPersonShapeshifted;
-                firstPersonView = true;
-                marked = true;
-                Minecraft.getInstance().options.setCameraType(CameraType.THIRD_PERSON_BACK);
-            }
-            if (Minecraft.getInstance().options.getCameraType().equals(CameraType.THIRD_PERSON_BACK)) {
-                if (firstPersonView){
-                    // Establecemos la posición de la cámara para simular la vista de primera persona
-                    cameraMoveMethod.invoke(event.getCamera(),4.45D, 0.43D, 0.0D);
-                    // Ajustamos la rotación de la cámara para coincidir con la vista de primera persona
-                    event.getCamera().setAnglesInternal(player.getYRot(), player.getXRot());
-                }
-                else {
-                    //Tercera persona
-                    cameraMoveMethod.invoke(event.getCamera(), 0.0D, 1.1D, 0.0D);
-                    marked = false;
-                }
-            }
-            if (Minecraft.getInstance().options.getCameraType().equals(CameraType.THIRD_PERSON_FRONT)) {
-                if(firstPersonView){
-                    firstPersonView = false;
-                    Minecraft.getInstance().options.setCameraType(CameraType.THIRD_PERSON_BACK);
-                }else {
-                    if(marked) {
-                        Minecraft.getInstance().options.setCameraType(CameraType.FIRST_PERSON);
+            CameraType cameraType = Minecraft.getInstance().options.getCameraType();
+
+            switch (cameraType) {
+                case FIRST_PERSON -> handleFirstPerson(cameraType);
+                case THIRD_PERSON_BACK -> {
+                    if (firstPersonView) {
+                        simulateFirstPersonView(event, player);
+                    } else {
+                        handleThirdPersonBack(event);
                     }
                 }
-
-
+                case THIRD_PERSON_FRONT -> handleThirdPersonFront();
             }
+        } else {
+            restoreCamera();
 
         }
-        else{
-            if(originalCameraType == null || !firstTimeShapeshifted){
-                originalCameraType = Minecraft.getInstance().options.getCameraType();
-            }
+    }
 
-            if(firstTimeShapeshifted){
-                Minecraft.getInstance().options.setCameraType(originalCameraType);
-                firstTimeShapeshifted = false;
-                firstPersonView = false;
-                marked = false;
+    private static void handleFirstPerson(CameraType cameraType) {
+        firstPersonView = true;
+        marked = true;
+        Minecraft.getInstance().options.setCameraType(CameraType.THIRD_PERSON_BACK);
+        originalCameraType = cameraType;
+    }
+
+    private static void handleThirdPersonFront() {
+        if (firstPersonView) {
+            firstPersonView = false;
+            Minecraft.getInstance().options.setCameraType(CameraType.THIRD_PERSON_BACK);
+            originalCameraType = CameraType.THIRD_PERSON_BACK;
+        } else {
+            originalCameraType = CameraType.THIRD_PERSON_FRONT;
+            if (marked) {
+                Minecraft.getInstance().options.setCameraType(CameraType.FIRST_PERSON);
+                originalCameraType = CameraType.FIRST_PERSON;
             }
+        }
+    }
+
+    private static void handleThirdPersonBack(ViewportEvent.ComputeCameraAngles event) throws IllegalAccessException, InvocationTargetException {
+        cameraMoveMethod.invoke(event.getCamera(), 0.0D, 1.1D, 0.0D);
+        marked = false;
+        originalCameraType = CameraType.THIRD_PERSON_BACK;
+    }
+
+    private static void simulateFirstPersonView(ViewportEvent.ComputeCameraAngles event, Player player) throws IllegalAccessException, InvocationTargetException {
+        // Establecemos la posición de la cámara para simular la vista de primera persona
+        cameraMoveMethod.invoke(event.getCamera(), 4.80D, 0.20D, 0.0D);
+        // Ajustamos la rotación de la cámara para coincidir con la vista de primera persona
+        event.getCamera().setAnglesInternal(player.getYRot(), player.getXRot());
+        originalCameraType = CameraType.FIRST_PERSON;
+    }
+
+    private static void restoreCamera() {
+        if (originalCameraType == null || !firstTimeShapeshifted) {
+            originalCameraType = Minecraft.getInstance().options.getCameraType();
+        }
+        if (firstTimeShapeshifted) {
+            Minecraft.getInstance().options.setCameraType(originalCameraType);
+            firstTimeShapeshifted = false;
+            firstPersonView = false;
+            marked = false;
+            originalCameraType = null;
+        }
+    }
+
+    private static void initializeCameraMoveMethod(ViewportEvent.ComputeCameraAngles event) throws NoSuchMethodException {
+        if (cameraMoveMethod == null) {
+            cameraMoveMethod = event.getCamera().getClass().getDeclaredMethod("move", types);
+            cameraMoveMethod.setAccessible(true);
         }
     }
 }
