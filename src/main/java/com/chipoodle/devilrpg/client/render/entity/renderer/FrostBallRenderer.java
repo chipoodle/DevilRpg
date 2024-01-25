@@ -1,7 +1,7 @@
 package com.chipoodle.devilrpg.client.render.entity.renderer;
 
 import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.entity.SoulIceBall;
+import com.chipoodle.devilrpg.entity.FrostBall;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.model.SkullModel;
@@ -20,14 +20,15 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
+import org.jetbrains.annotations.NotNull;
 
 @OnlyIn(Dist.CLIENT)
-public class SoulFireBallRenderer extends EntityRenderer<SoulIceBall> {
+public class FrostBallRenderer extends EntityRenderer<FrostBall> {
     private static final ResourceLocation ICE_TEXTURES = new ResourceLocation(
-            DevilRpg.MODID + ":textures/entity/soulsnowball/freeze_texture.jpg");
+            DevilRpg.MODID + ":textures/entity/frostball/freeze_texture.jpg");
     private final SkullModel model;
 
-    public SoulFireBallRenderer(EntityRendererProvider.Context p_174449_) {
+    public FrostBallRenderer(EntityRendererProvider.Context p_174449_) {
         super(p_174449_);
         this.model = new SkullModel(p_174449_.bakeLayer(ModelLayers.WITHER_SKULL));
     }
@@ -39,11 +40,11 @@ public class SoulFireBallRenderer extends EntityRenderer<SoulIceBall> {
         return LayerDefinition.create(meshdefinition, 64, 64);
     }
 
-    protected int getBlockLightLevel(SoulIceBall p_116491_, BlockPos p_116492_) {
+    protected int getBlockLightLevel(@NotNull FrostBall p_116491_, @NotNull BlockPos p_116492_) {
         return 1;
     }
 
-    public void render(SoulIceBall p_116484_, float p_116485_, float p_116486_, PoseStack p_116487_, MultiBufferSource p_116488_, int p_116489_) {
+    public void render(FrostBall p_116484_, float p_116485_, float p_116486_, PoseStack p_116487_, MultiBufferSource p_116488_, int p_116489_) {
         p_116487_.pushPose();
         p_116487_.scale(-1.0F, -1.0F, 1.0F);
         float f = Mth.rotLerp(p_116484_.yRotO, p_116484_.getYRot(), p_116486_);
@@ -55,7 +56,7 @@ public class SoulFireBallRenderer extends EntityRenderer<SoulIceBall> {
         super.render(p_116484_, p_116485_, p_116486_, p_116487_, p_116488_, p_116489_);
     }
 
-    public ResourceLocation getTextureLocation(SoulIceBall p_116482_) {
+    public @NotNull ResourceLocation getTextureLocation(@NotNull FrostBall p_116482_) {
         return ICE_TEXTURES;
     }
 

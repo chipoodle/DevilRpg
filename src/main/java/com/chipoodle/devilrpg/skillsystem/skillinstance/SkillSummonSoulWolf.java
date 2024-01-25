@@ -5,7 +5,7 @@ import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityInt
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.entity.SoulWolf;
 import com.chipoodle.devilrpg.init.ModEntities;
-import com.chipoodle.devilrpg.skillsystem.AbstractSkillContainer;
+import com.chipoodle.devilrpg.skillsystem.AbstractSkillExecutor;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import com.chipoodle.devilrpg.util.TargetUtils;
 import net.minecraft.core.BlockPos;
@@ -25,7 +25,7 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-public class SkillSummonSoulWolf extends AbstractSkillContainer {
+public class SkillSummonSoulWolf extends AbstractSkillExecutor {
 
     private static final int NUMBER_OF_SUMMONS = 3;
 
@@ -36,6 +36,11 @@ public class SkillSummonSoulWolf extends AbstractSkillContainer {
     @Override
     public SkillEnum getSkillEnum() {
         return SkillEnum.SUMMON_SOUL_WOLF;
+    }
+
+    @Override
+    public boolean arePreconditionsMetBeforeConsumingResource(Player player) {
+        return !player.getCooldowns().isOnCooldown(icon.getItem());
     }
 
     @Override

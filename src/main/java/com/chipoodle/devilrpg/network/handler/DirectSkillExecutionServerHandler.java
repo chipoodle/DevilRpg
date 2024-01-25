@@ -3,7 +3,7 @@ package com.chipoodle.devilrpg.network.handler;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
-import com.chipoodle.devilrpg.skillsystem.AbstractSkillContainer;
+import com.chipoodle.devilrpg.skillsystem.AbstractSkillExecutor;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
@@ -35,7 +35,7 @@ public record DirectSkillExecutionServerHandler(SkillEnum skill) {
 				ServerPlayer sender = contextSupplier.get().getSender(); // the client that sent this packet
 				//sender.sendMessage(new StringTextComponent("KeyboardSkillServerHandler on msg:"+ msg.getPoder().name()+" Player ID: "+sender.getEntityId()));
 				PlayerSkillCapabilityInterface unwrappedPlayerCapability = IGenericCapability.getUnwrappedPlayerCapability(Objects.requireNonNull(sender), PlayerSkillCapability.INSTANCE);
-				AbstractSkillContainer loadedSkillExecutor = unwrappedPlayerCapability.getLoadedSkillExecutor(msg.skill());
+				AbstractSkillExecutor loadedSkillExecutor = unwrappedPlayerCapability.getLoadedSkillExecutor(msg.skill());
 				loadedSkillExecutor.execute(sender.level,sender,null);
 
 			});

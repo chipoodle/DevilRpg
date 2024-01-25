@@ -73,11 +73,10 @@
         "display": {
             "description": "A Frostball that damages and freezes your enemies",
             "icon": {
-                "item": "minecraft:glass_pane",
-                "minecraft:glass_panenbt": 1
+                "item": "devilrpg:item_frost"
             },
             "title": "Frostball",
-            "image": "devilrpg:textures/gui/skill/frostfire.png",
+            "image": "devilrpg:textures/gui/skill/frostball.png",
             "frame": "task"
         },
         "capability": "frostball",
@@ -94,8 +93,7 @@
         "display": {
             "description": "A vine that help to climb mountains",
             "icon": {
-                "item": "minecraft:glass_pane",
-                "minecraft:glass_panenbt": 1
+                "item": "devilrpg:item_vine"
             },
             "title": "Soulvine",
             "image": "devilrpg:textures/gui/skill/curling-vines.png",

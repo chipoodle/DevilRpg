@@ -141,7 +141,7 @@ public interface IRenderUtilities {
             // this.blazeSticks[j].rotateAngleX = MathHelper.sin(f)*0.3f;
             x = -Mth.sin(f) * distanciaDesdeElCentro + living.getRandomX(0.9D);
             z = -Mth.cos(f) * distanciaDesdeElCentro + living.getRandomZ(0.9D);
-            f += Math.PI * 2 / numberOfParticles;
+            f += (float) (Math.PI * 2 / numberOfParticles);
             Level.addParticle(particle, x, y, z, d0, d1, d2);
         }
     }

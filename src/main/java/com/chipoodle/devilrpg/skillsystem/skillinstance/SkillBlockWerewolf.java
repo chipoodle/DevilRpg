@@ -3,7 +3,6 @@ package com.chipoodle.devilrpg.skillsystem.skillinstance;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
-import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.sounds.SoundEvents;
@@ -17,7 +16,7 @@ import net.minecraft.world.level.Level;
 import java.util.HashMap;
 import java.util.Random;
 
-public class SkillBlockWerewolf extends AbstractPlayerPassiveAttribute {
+public class SkillBlockWerewolf extends AbstractPlayerPassiveAttributeExecutor {
 
     public static final int ABSORPTION_TICKS = 800;
 
@@ -65,8 +64,8 @@ public class SkillBlockWerewolf extends AbstractPlayerPassiveAttribute {
 
                 super.executePassiveChildren(getSkillEnum(), levelIn, player, parameters);
             }
-            // Cancela el uso de este poder durante el tiempo que dura el efecto mas un 20% mass
-            player.getCooldowns().addCooldown(icon.getItem(), (int) ((ABSORPTION_TICKS + blockPoints) * 1.20)); // 40 ticks = 2 segundos
+            // Cancela el uso de este poder durante el tiempo que dura el efecto
+            player.getCooldowns().addCooldown(icon.getItem(), (ABSORPTION_TICKS + blockPoints)); // 40 ticks = 2 segundos
             // }
 
         }

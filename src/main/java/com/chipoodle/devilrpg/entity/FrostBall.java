@@ -9,9 +9,6 @@ import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
-import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -27,18 +24,20 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.network.NetworkHooks;
+import org.jetbrains.annotations.NotNull;
+
+import java.util.Objects;
 
 
-public class SoulIceBall extends ThrowableItemProjectile implements ISoulEntity {
+public class FrostBall extends ThrowableItemProjectile implements ISoulEntity {
 
-    private int puntosAsignados = 0;
     private float damage = 0;
 
-    public SoulIceBall(EntityType<? extends SoulIceBall> p_i50159_1_, Level p_i50159_2_) {
+    public FrostBall(EntityType<? extends FrostBall> p_i50159_1_, Level p_i50159_2_) {
         super(p_i50159_1_, p_i50159_2_);
     }
 
-    public SoulIceBall(Level levelIn, LivingEntity throwerIn) {
+    public FrostBall(Level levelIn, LivingEntity throwerIn) {
         super(ModEntities.SOUL_ICEBALL.get(), throwerIn, levelIn);
     }
 
@@ -46,7 +45,8 @@ public class SoulIceBall extends ThrowableItemProjectile implements ISoulEntity 
 		super(ModEntities.SOUL_ICEBALL.get(), x, y, z, levelIn);
 	}*/
 
-    protected Item getDefaultItem() {
+    @Override
+    protected @NotNull Item getDefaultItem() {
         return Items.SNOWBALL;
     }
 
@@ -59,6 +59,7 @@ public class SoulIceBall extends ThrowableItemProjectile implements ISoulEntity 
 
 
     @OnlyIn(Dist.CLIENT)
+    @Override
     public void handleEntityEvent(byte id) {
         if (id == 3) {
             ParticleOptions iparticledata = this.getParticle();
@@ -73,24 +74,19 @@ public class SoulIceBall extends ThrowableItemProjectile implements ISoulEntity 
     /**
      * Called when the arrow hits an entity
      */
-    protected void onHitEntity(EntityHitResult result) {
+    @Override
+    protected void onHitEntity(@NotNull EntityHitResult result) {
         super.onHitEntity(result);
         Entity targetEntity = result.getEntity();
         targetEntity.hurt(this.damageSources().freeze(), damage);
-
-       /* if (targetEntity instanceof LivingEntity) {
-            LivingEntity livingEntity = (LivingEntity) targetEntity;
-            MobEffectInstance pri = new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, puntosAsignados * 6, getPotenciaPocion(puntosAsignados), false, true);
-            if (livingEntity.canBeAffected(pri)) {
-                livingEntity.addEffect(pri);
-            }
-        }*/
     }
 
     /**
      * Called when this EntityFireball hits a block or entity.
      */
-    protected void onHit(HitResult result) {
+
+    @Override
+    protected void onHit(@NotNull HitResult result) {
         super.onHit(result);
         if (!this.level.isClientSide) {
             this.level.broadcastEntityEvent(this, (byte) 3);
@@ -102,26 +98,13 @@ public class SoulIceBall extends ThrowableItemProjectile implements ISoulEntity 
         this.setOwner(owner);
         LazyOptional<PlayerSkillCapabilityInterface> skill = owner.getCapability(PlayerSkillCapability.INSTANCE);
         if (skill != null && skill.isPresent()) {
-            this.puntosAsignados = skill.map(x -> x.getSkillsPoints()).orElse(null).get(callerSkillEnum);
+            int puntosAsignados = Objects.requireNonNull(skill.map(PlayerSkillCapabilityInterface::getSkillsPoints).orElse(null)).get(callerSkillEnum);
             damage = puntosAsignados * 0.15F;
         }
     }
 
-    /**
-     * Called on the logical server to get a packet to send to the client containing
-     * data necessary to spawn your entity. Using Forge's method instead of the
-     * default vanilla one allows extra stuff to work such as sending extra data,
-     * using a non-default entity factory and having
-     * {@link Packet} work.
-     * <p>
-     * It is not actually necessary for our WildBoarEntity to use Forge's method as
-     * it doesn't need any of this extra functionality, however, this is an example
-     * mod and many modders are unaware that Forge's method exists.
-     *
-     * @return The packet with data about your entity
-     */
     @Override
-    public Packet<ClientGamePacketListener> getAddEntityPacket() {
+    public @NotNull Packet<ClientGamePacketListener> getAddEntityPacket() {
         return NetworkHooks.getEntitySpawningPacket(this);
     }
 }

@@ -6,11 +6,11 @@ import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapability;
 import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityInterface;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
-import com.chipoodle.devilrpg.util.IRenderUtilities;
 import com.chipoodle.devilrpg.entity.goal.TameablePetFollowOwnerGoal;
 import com.chipoodle.devilrpg.entity.goal.TameablePetOwnerHurtByTargetGoal;
 import com.chipoodle.devilrpg.entity.goal.TameablePetOwnerHurtTargetGoal;
 import com.chipoodle.devilrpg.init.ModEntities;
+import com.chipoodle.devilrpg.util.IRenderUtilities;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import com.chipoodle.devilrpg.util.TargetUtils;
 import net.minecraft.client.Minecraft;
@@ -137,23 +137,24 @@ public class SoulBear extends AbstractMountablePet
         this.targetSelector.addGoal(2, new TameablePetOwnerHurtTargetGoal(this));
         this.targetSelector.addGoal(3, (new HurtByTargetGoal(this)).setAlertOthers());
         this.targetSelector.addGoal(5,
-                new NearestAttackableTargetGoal<>(this, Mob.class, 10, false, false, (entity) -> !(entity instanceof Villager) && !(entity instanceof Llama)
-                        && !(entity instanceof Turtle) && !(entity instanceof IronGolem)));
+                new NearestAttackableTargetGoal<>(this, Mob.class, 10, false, false, (entity) ->
+                        !(entity instanceof Villager)
+                                && !(entity instanceof Llama)
+                                && !(entity instanceof Turtle)
+                                && !(entity instanceof IronGolem)));
         this.targetSelector.addGoal(8, new ResetUniversalAngerTargetGoal<>(this, true));
 
     }
 
     public void updateLevel(Player owner) {
         tame(owner);
-
-
         PlayerSkillCapabilityInterface skill = IGenericCapability.getUnwrappedPlayerCapability((Player) getOwner(),
                 PlayerSkillCapability.INSTANCE);
         if (skill != null) {
             this.puntosAsignados = skill.getSkillsPoints().get(SkillEnum.SUMMON_SOUL_BEAR);
             saludMaxima = 5 * this.puntosAsignados + SALUD_INICIAL;
             initialArmor = (1.0D * 0.410 * puntosAsignados) + 3;
-
+            this.equipSaddle(null);
         }
 
         Objects.requireNonNull(this.getAttribute(Attributes.MOVEMENT_SPEED)).setBaseValue(0.4F);
@@ -209,15 +210,14 @@ public class SoulBear extends AbstractMountablePet
      * share the same owner.
      */
     @Override
-    public boolean isAlliedTo(Entity entity) {
+    public boolean isAlliedTo(@NotNull Entity entity) {
         boolean isOnSameTeam = super.isAlliedTo(entity);
         return isOnSameTeam || isEntitySameOwnerAsThis(entity, this);
     }
 
     @Override
-    public boolean wantsToAttack(LivingEntity target, LivingEntity owner) {
+    public boolean wantsToAttack(@NotNull LivingEntity target, @NotNull LivingEntity owner) {
         return ITamableEntity.super.wantsToAttack(target, owner);
-        //return ((ITameableEntity) this).wantsToAttack(target, owner);
     }
 
     @Override
@@ -445,10 +445,8 @@ public class SoulBear extends AbstractMountablePet
                 }
             }
 
-            return super.mobInteract(player, interactionHand);
-        } else {
-            return super.mobInteract(player, interactionHand);
         }
+        return super.mobInteract(player, interactionHand);
     }
 
 
@@ -812,7 +810,7 @@ public class SoulBear extends AbstractMountablePet
         /**
          * Execute a one shot task or start executing a continuous task
          */
-       @Override
+        @Override
         public void start() {
             SoulBear.this.setTarget(null);
             super.start();

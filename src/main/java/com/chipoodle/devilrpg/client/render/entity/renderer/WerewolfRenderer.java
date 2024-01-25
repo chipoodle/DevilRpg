@@ -14,6 +14,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
+import net.minecraft.client.renderer.entity.layers.CustomHeadLayer;
 import net.minecraft.client.renderer.entity.layers.ElytraLayer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.network.chat.Component;
@@ -176,9 +177,9 @@ public class WerewolfRenderer extends LivingEntityRenderer<AbstractClientPlayer,
         //werewolfHumanModel.swimAmount = 0.0F;
         werewolfHumanModel.setupAnim(player, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F);
         arm.xRot = 0.0F;
-        arm.render(poseStack, bufferSource.getBuffer(RenderType.entitySolid(player.getSkinTextureLocation())), packedLight, OverlayTexture.NO_OVERLAY);
+        arm.render(poseStack, bufferSource.getBuffer(RenderType.entitySolid(WerewolfRenderer.WEREWOLF_TEXTURE)), packedLight, OverlayTexture.NO_OVERLAY);
         arm.xRot = 0.0F;
-        arm.render(poseStack, bufferSource.getBuffer(RenderType.entityTranslucent(player.getSkinTextureLocation())), packedLight, OverlayTexture.NO_OVERLAY);
+        arm.render(poseStack, bufferSource.getBuffer(RenderType.entityTranslucent(WerewolfRenderer.WEREWOLF_TEXTURE)), packedLight, OverlayTexture.NO_OVERLAY);
     }
 
     protected void setupRotations(AbstractClientPlayer entity, @NotNull PoseStack cameraPosition, float cameraRotation, float entityRotation, float entityPitch) {

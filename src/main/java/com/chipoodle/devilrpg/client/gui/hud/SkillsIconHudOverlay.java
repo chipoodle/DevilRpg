@@ -26,7 +26,7 @@ public class SkillsIconHudOverlay {
     public static final IGuiOverlay HUD_SKILL_ICONS = (gui, poseStack, partialTick, screenWidth, screenHeight) -> {
         Minecraft mc = Minecraft.getInstance();
         Player player = mc.player;
-        if (player.isCreative())
+        if (Objects.requireNonNull(player).isCreative())
             return;
 
         PlayerSkillCapabilityInterface skillCap = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerSkillCapability.INSTANCE);

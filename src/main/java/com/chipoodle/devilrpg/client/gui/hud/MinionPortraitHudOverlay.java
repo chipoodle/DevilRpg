@@ -149,7 +149,7 @@ public class MinionPortraitHudOverlay extends GuiComponent {
         String s = d.format(effectiveHp) + "/" + d.format(maxHp);
         int textWidth = fr.width(s);
 
-        poseStack.translate(3 + textWidth + textWidth / 2, -0.5f, 0);
+        poseStack.translate(3 + textWidth + (float) textWidth / 2, -0.5f, 0);
         poseStack.pushPose();
         poseStack.scale(1.6f, 0.8f, 1);
 

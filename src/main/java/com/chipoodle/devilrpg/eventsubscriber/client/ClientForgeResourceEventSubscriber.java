@@ -39,10 +39,10 @@ public final class ClientForgeResourceEventSubscriber {
 
     public static final int TICK_COUNT_REGENERATION = 10;
     public static final float BASE_MANA_DEGENERATION = 0.7f;
-    public static final float BASE_STAMINA_DEGENERATION = 0.03f;
+    public static final float BASE_STAMINA_DEGENERATION = 0.05f;
 
     @SubscribeEvent
-    public static void onPlayerTickMana(TickEvent.PlayerTickEvent event) {
+    public static void onPlayerTickResource(TickEvent.PlayerTickEvent event) {
         if (event.side.equals(LogicalSide.CLIENT)) {
             if (event.phase == TickEvent.Phase.START) {
                 if (event.player.tickCount % TICK_COUNT_REGENERATION == 0) {
@@ -60,8 +60,6 @@ public final class ClientForgeResourceEventSubscriber {
 
                     unwrappedPlayerCapabilityMana.onPlayerTickEventRegeneration(event.player, manaDegeneration);
                     if(unwrappedPlayerCapabilityMana.getMana() <= 0.0f){
-                        //ISkillContainer loadedSkillExecutor = unwrappedPlayerCapabilitySkill.getLoadedSkillExecutor(SkillEnum.TRANSFORM_WEREWOLF);
-                        //loadedSkillExecutor.execute(event.player.level,event.player,null);
                         ModNetwork.CHANNEL.sendToServer(new DirectSkillExecutionServerHandler(SkillEnum.TRANSFORM_WEREWOLF));
                         event.player.level.playSound(event.player, event.player.getX(), event.player.getY(), event.player.getZ(),
                                 SoundEvents.NOTE_BLOCK_BASS.get(), SoundSource.NEUTRAL, 0.5F,

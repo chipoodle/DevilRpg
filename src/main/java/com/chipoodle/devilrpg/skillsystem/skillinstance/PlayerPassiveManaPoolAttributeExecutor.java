@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.skillsystem.skillinstance;
 
+import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.mana.PlayerManaCapability;
 import com.chipoodle.devilrpg.capability.mana.PlayerManaCapabilityInterface;
@@ -10,13 +11,15 @@ import net.minecraft.world.level.Level;
 
 import java.util.HashMap;
 
-public class PlayerPassiveManaPoolAttribute extends AbstractPlayerPassiveAttribute {
+public class PlayerPassiveManaPoolAttributeExecutor extends AbstractPlayerPassiveAttributeExecutor {
     private Player playerIn;
 
-    private static Integer BASE_MANA_POOL = 30; // must be the same as PlayerManaCapabilityImplementation.maxMana initially
+    private static final Integer BASE_MANA_POOL = 30; // must be the same as PlayerManaCapabilityImplementation.maxMana initially
 
-    public PlayerPassiveManaPoolAttribute(PlayerSkillCapabilityInterface parentCapability) {
+    public PlayerPassiveManaPoolAttributeExecutor(PlayerSkillCapabilityInterface parentCapability) {
         super(parentCapability);
+        DevilRpg.LOGGER.info("----------------------->CONSTRUCTOR PlayerPassiveManaPoolAttributeExecutor. Parent capability: {}", parentCapability);
+
     }
 
     /**
@@ -36,6 +39,8 @@ public class PlayerPassiveManaPoolAttribute extends AbstractPlayerPassiveAttribu
             Integer manaPoolPoints = parentCapability.getSkillsPoints().get(SkillEnum.MANA_POOL);
             PlayerManaCapabilityInterface mana = IGenericCapability.getUnwrappedPlayerCapability(playerIn, PlayerManaCapability.INSTANCE);
             mana.setMaxMana(BASE_MANA_POOL+manaPoolPoints,playerIn);
+
+            DevilRpg.LOGGER.info("-----------------------> Executing passive PlayerPassiveManaPoolAttributeExecutor skillPoints:{}",manaPoolPoints);
         }
     }
 

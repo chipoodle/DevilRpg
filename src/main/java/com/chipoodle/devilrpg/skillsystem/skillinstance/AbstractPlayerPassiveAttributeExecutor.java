@@ -1,7 +1,7 @@
 package com.chipoodle.devilrpg.skillsystem.skillinstance;
 
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
-import com.chipoodle.devilrpg.skillsystem.AbstractSkillContainer;
+import com.chipoodle.devilrpg.skillsystem.AbstractSkillExecutor;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
@@ -9,50 +9,48 @@ import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 
-public abstract class AbstractPlayerPassiveAttribute extends AbstractSkillContainer {
+public abstract class AbstractPlayerPassiveAttributeExecutor extends AbstractSkillExecutor {
 
-    public AbstractPlayerPassiveAttribute(PlayerSkillCapabilityInterface parentCapability) {
+    public AbstractPlayerPassiveAttributeExecutor(PlayerSkillCapabilityInterface parentCapability) {
         super(parentCapability);
     }
 
-    protected AttributeModifier createNewAttributeModifier(String attributeModifierUniqueName, Double value, AttributeModifier.Operation operation) {
-        return new AttributeModifier(attributeModifierUniqueName, value, operation);
+    protected AttributeModifier createNewAttributeModifier(String attributeModifierUniqueName, Double value) {
+        return new AttributeModifier(attributeModifierUniqueName, value, AttributeModifier.Operation.ADDITION);
     }
 
     protected void removeCurrentModifierFromPlayer(Player playerIn,
                                                    AttributeModifier attributeModifier,
                                                    Attribute attribute) {
         if (attributeModifier != null) {
-            playerIn.getAttribute(attribute).removeModifier(attributeModifier.getId());
+            Objects.requireNonNull(playerIn.getAttribute(attribute)).removeModifier(attributeModifier.getId());
         }
     }
 
     protected void addCurrentModifierTransiently(Player playerIn,
                                                  Attribute attribute,
                                                  AttributeModifier attributeModifier) {
-        if (playerIn.getAttribute(attribute).getModifier(attributeModifier.getId()) != null)
-            playerIn.getAttribute(attribute).removeModifier(attributeModifier.getId());
-        playerIn.getAttribute(attribute).addTransientModifier(attributeModifier);
+        if (Objects.requireNonNull(playerIn.getAttribute(attribute)).getModifier(attributeModifier.getId()) != null)
+            Objects.requireNonNull(playerIn.getAttribute(attribute)).removeModifier(attributeModifier.getId());
+        Objects.requireNonNull(playerIn.getAttribute(attribute)).addTransientModifier(attributeModifier);
     }
 
     protected void addCurrentModifierPermanently(Player playerIn,
                                                  Attribute attribute,
                                                  AttributeModifier attributeModifier) {
-        if (playerIn.getAttribute(attribute).getModifier(attributeModifier.getId()) != null)
-            playerIn.getAttribute(attribute).removeModifier(attributeModifier.getId());
-        playerIn.getAttribute(attribute).addPermanentModifier(attributeModifier);
+        if (Objects.requireNonNull(playerIn.getAttribute(attribute)).getModifier(attributeModifier.getId()) != null)
+            Objects.requireNonNull(playerIn.getAttribute(attribute)).removeModifier(attributeModifier.getId());
+        Objects.requireNonNull(playerIn.getAttribute(attribute)).addPermanentModifier(attributeModifier);
     }
 
     protected AttributeModifier findAttributeModifierForPlayerByName(Player playerIn,
                                                                      Attribute attribute,
                                                                      String attributeModifierUniqueName) {
         AttributeInstance modifiedAttributeInstance = playerIn.getAttribute(attribute);
+        assert modifiedAttributeInstance != null;
         Set<AttributeModifier> modifiers = modifiedAttributeInstance.getModifiers();
         return modifiers.stream().filter(mod -> mod.getName().equals(attributeModifierUniqueName)).findAny()
                 .orElse(null);
@@ -62,6 +60,7 @@ public abstract class AbstractPlayerPassiveAttribute extends AbstractSkillContai
                                                               Attribute attribute,
                                                               UUID attributeUuid) {
         AttributeInstance modifiedAttributeInstance = playerIn.getAttribute(attribute);
+        assert modifiedAttributeInstance != null;
         return modifiedAttributeInstance.getModifier(attributeUuid);
     }
 
@@ -74,7 +73,7 @@ public abstract class AbstractPlayerPassiveAttribute extends AbstractSkillContai
     protected void executePassiveChildren(SkillEnum skillEnum, Level level, Player playerIn) {
         List<SkillEnum> passivesFromActiveSkill = parentCapability.getPassivesFromActiveSkill(skillEnum);
         for (SkillEnum passiveEnum : passivesFromActiveSkill) {
-            AbstractSkillContainer loadedSkill = parentCapability.getLoadedSkillExecutor(passiveEnum);
+            AbstractSkillExecutor loadedSkill = parentCapability.getLoadedSkillExecutor(passiveEnum);
             loadedSkill.execute(level, playerIn, new HashMap<>());
         }
     }
@@ -82,7 +81,7 @@ public abstract class AbstractPlayerPassiveAttribute extends AbstractSkillContai
     protected void executePassiveChildren(SkillEnum skillEnum, Level level, Player playerIn, HashMap<String,String> parameters) {
         List<SkillEnum> passivesFromActiveSkill = parentCapability.getPassivesFromActiveSkill(skillEnum);
         for (SkillEnum passiveEnum : passivesFromActiveSkill) {
-            AbstractSkillContainer loadedSkill = parentCapability.getLoadedSkillExecutor(passiveEnum);
+            AbstractSkillExecutor loadedSkill = parentCapability.getLoadedSkillExecutor(passiveEnum);
             loadedSkill.execute(level, playerIn, parameters);
         }
     }

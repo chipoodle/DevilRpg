@@ -30,6 +30,7 @@ import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingEvent.LivingJumpEvent;
 import net.minecraftforge.event.entity.living.LivingFallEvent;
+import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.event.entity.living.MobEffectEvent;
 import net.minecraftforge.event.entity.player.AttackEntityEvent;
 import net.minecraftforge.event.entity.player.CriticalHitEvent;
@@ -49,6 +50,8 @@ import java.util.function.BiConsumer;
 @EventBusSubscriber(modid = DevilRpg.MODID, bus = EventBusSubscriber.Bus.FORGE)
 public class CommonForgeInteractionEventSubscriber {
 
+    public static final double XY_JUMP_FACTOR = 2;
+
     /**
      * Increase jump height by 1 when Werewolf form
      */
@@ -62,8 +65,9 @@ public class CommonForgeInteractionEventSubscriber {
                 LazyOptional<PlayerSkillCapabilityInterface> skillCap = event.getEntity()
                         .getCapability(PlayerSkillCapability.INSTANCE);
                 int points = skillCap.map(x -> x.getSkillsPoints().get(SkillEnum.TRANSFORM_WEREWOLF)).orElseThrow();
-                double jumpFactor = (points * 0.005) + 0.03f; // max 0.13
-                eve.getEntity().setDeltaMovement(motion.x(), motion.y() + jumpFactor, motion.z());
+                double yJumpFactor = (points * 0.005) + 0.03f; // max 0.13
+                double xyJumpFactor = (points * 0.05) + 1; // Salta el doble de distancia hacia todas direcciones cuando points = 20 (x controla rectas, z diagonales)
+                eve.getEntity().setDeltaMovement(motion.x() * xyJumpFactor, motion.y() + yJumpFactor, motion.z() * xyJumpFactor);
             };
             EventUtils.onWerewolfTransformation((Player) event.getEntity(), c, event);
         }
@@ -196,34 +200,12 @@ public class CommonForgeInteractionEventSubscriber {
                 ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> ((ServerPlayer) owner)), new PotionClientHandler(effectInstanceNbt));
             }
         }
-
     }
 
-   /* @SubscribeEvent
-    public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
-        Player player = event.player;
+    @SubscribeEvent
+    public static void onLivingHurtEvent(LivingHurtEvent event) {
 
-        if (player.isAlive() && !player.isSpectator()) {
-            // Verifica si el jugador está caminando
-            if (player.getDeltaMovement().y > 0.0F) {
-                BlockPos playerPos = player.blockPosition();
-                BlockState blockState = player.level.getBlockState(playerPos.below());
+       // DevilRpg.LOGGER.debug("Entity {} source {} ammount {}",event.getEntity().getClass().getName(),event.getSource(),event.getAmount());
 
-                // Verifica si el bloque debajo del jugador es un bloque sólido
-                if (blockState.isSolidRender(player.level, playerPos.below())) {
-                    // Ajusta la posición del jugador para simular el paso alto
-                    double playerY = player.getY();
-                    double blockMaxY = player.level.getMaxBuildHeight();
-
-                    if (playerY + 1.0 > blockMaxY) {
-                        // Evita que el jugador suba por encima del límite de construcción
-                        playerY = blockMaxY - 1.0;
-                    }
-
-                    player.setPos(player.getX(), playerY + 1.0, player.getZ());
-                }
-            }
-        }
-    }*/
-
+    }
 }

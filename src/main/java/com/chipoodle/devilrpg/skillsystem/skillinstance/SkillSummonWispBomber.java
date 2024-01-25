@@ -5,7 +5,7 @@ import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityInt
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
 import com.chipoodle.devilrpg.entity.SoulWisp;
 import com.chipoodle.devilrpg.init.ModEntities;
-import com.chipoodle.devilrpg.skillsystem.AbstractSkillContainer;
+import com.chipoodle.devilrpg.skillsystem.AbstractSkillExecutor;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import com.chipoodle.devilrpg.util.TargetUtils;
 import net.minecraft.core.BlockPos;
@@ -25,7 +25,7 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-public class SkillSummonWispBomber extends AbstractSkillContainer implements IWispSkill {
+public class SkillSummonWispBomber extends AbstractSkillExecutor implements IWispSkill {
 
     public SkillSummonWispBomber(PlayerSkillCapabilityImplementation parentCapability) {
         super(parentCapability);
@@ -34,6 +34,11 @@ public class SkillSummonWispBomber extends AbstractSkillContainer implements IWi
     @Override
     public SkillEnum getSkillEnum() {
         return SkillEnum.SUMMON_WISP_BOMB;
+    }
+
+    @Override
+    public boolean arePreconditionsMetBeforeConsumingResource(Player player) {
+        return !player.getCooldowns().isOnCooldown(icon.getItem());
     }
 
     @Override

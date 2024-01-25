@@ -9,7 +9,7 @@ import java.util.Hashtable;
 
 public class SingletonSkillExecutorFactory {
 
-    private final Hashtable<SkillEnum, AbstractSkillContainer> skillPool = new Hashtable<>();
+    private final Hashtable<SkillEnum, AbstractSkillExecutor> skillPool = new Hashtable<>();
     private final PlayerSkillCapabilityImplementation parentCapability;
 
     public SingletonSkillExecutorFactory(PlayerSkillCapabilityImplementation parentCapability) {
@@ -17,7 +17,7 @@ public class SingletonSkillExecutorFactory {
         DevilRpg.LOGGER.debug("--------> SingletonSkillExecutorFactory {}", this);
     }
 
-    public AbstractSkillContainer getOrCreate(SkillEnum skillEnum) {
+    public AbstractSkillExecutor getOrCreate(SkillEnum skillEnum) {
 
         switch (skillEnum) {
 
@@ -64,17 +64,17 @@ public class SingletonSkillExecutorFactory {
             }
             case SKIN_ARMOR -> {
                 if (!skillPool.containsKey(SkillEnum.SKIN_ARMOR))
-                    skillPool.put(SkillEnum.SKIN_ARMOR, new PlayerPassiveSkillSkinArmorAttribute(parentCapability));
+                    skillPool.put(SkillEnum.SKIN_ARMOR, new PlayerPassiveSkillSkinArmorAttributeExecutor(parentCapability));
                 return skillPool.get(SkillEnum.SKIN_ARMOR);
             }
             case WEREWOLF_HIT -> {
                 if (!skillPool.containsKey(SkillEnum.WEREWOLF_HIT))
-                    skillPool.put(SkillEnum.WEREWOLF_HIT, new PlayerPassiveWerewolfHitAttribute(parentCapability));
+                    skillPool.put(SkillEnum.WEREWOLF_HIT, new PlayerPassiveWerewolfHitAttributeExecutor(parentCapability));
                 return skillPool.get(SkillEnum.WEREWOLF_HIT);
             }
             case WEREWOLF_VITALITY -> {
                 if (!skillPool.containsKey(SkillEnum.WEREWOLF_VITALITY))
-                    skillPool.put(SkillEnum.WEREWOLF_VITALITY, new PlayerPassiveWerewolfVitalityAttribute(parentCapability));
+                    skillPool.put(SkillEnum.WEREWOLF_VITALITY, new PlayerPassiveWerewolfVitalityAttributeExecutor(parentCapability));
                 return skillPool.get(SkillEnum.WEREWOLF_VITALITY);
             }
             case SOULVINE -> {
@@ -84,12 +84,12 @@ public class SingletonSkillExecutorFactory {
             }
             case MANA_POOL -> {
                 if (!skillPool.containsKey(SkillEnum.MANA_POOL))
-                    skillPool.put(SkillEnum.MANA_POOL, new PlayerPassiveManaPoolAttribute(parentCapability));
+                    skillPool.put(SkillEnum.MANA_POOL, new PlayerPassiveManaPoolAttributeExecutor(parentCapability));
                 return skillPool.get(SkillEnum.MANA_POOL);
             }
             case MANA_REGENERATION -> {
                 if (!skillPool.containsKey(SkillEnum.MANA_REGENERATION))
-                    skillPool.put(SkillEnum.MANA_REGENERATION, new PlayerPassiveManaRegenerationAttribute(parentCapability));
+                    skillPool.put(SkillEnum.MANA_REGENERATION, new PlayerPassiveManaRegenerationAttributeExecutor(parentCapability));
                 return skillPool.get(SkillEnum.MANA_REGENERATION);
             }
             case CHARGE -> {
@@ -104,14 +104,14 @@ public class SingletonSkillExecutorFactory {
             }
             case KNOCKBACK_RESISTANCE -> {
                 if (!skillPool.containsKey(SkillEnum.KNOCKBACK_RESISTANCE))
-                    skillPool.put(SkillEnum.KNOCKBACK_RESISTANCE, new PlayerPassiveKnockBackResistance(parentCapability));
+                    skillPool.put(SkillEnum.KNOCKBACK_RESISTANCE, new PlayerPassiveKnockBackResistanceExecutor(parentCapability));
                 return skillPool.get(SkillEnum.KNOCKBACK_RESISTANCE);
             }
         }
         return null;
     }
 
-    public AbstractSkillContainer getExistingSkill(SkillEnum skillEnum) {
+    public AbstractSkillExecutor getExistingSkill(SkillEnum skillEnum) {
         return (skillPool.containsKey(skillEnum) ? skillPool.get(skillEnum) : getOrCreate(skillEnum));
     }
 }

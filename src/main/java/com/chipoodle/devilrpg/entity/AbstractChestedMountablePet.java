@@ -113,7 +113,7 @@ public class AbstractChestedMountablePet extends AbstractMountablePet {
         this.updateContainerEquipment();
     }
 
-    public SlotAccess getSlot(int p_149479_) {
+    public @NotNull SlotAccess getSlot(int p_149479_) {
         return p_149479_ == 499 ? new SlotAccess() {
             public ItemStack get() {
                 return AbstractChestedMountablePet.this.hasChest() ? new ItemStack(Items.CHEST) : ItemStack.EMPTY;
@@ -141,13 +141,13 @@ public class AbstractChestedMountablePet extends AbstractMountablePet {
         } : super.getSlot(p_149479_);
     }
 
-    public InteractionResult mobInteract(Player p_30493_, InteractionHand p_30494_) {
-        boolean flag = !this.isBaby() && this.isTame() && p_30493_.isSecondaryUseActive();
+    public @NotNull InteractionResult mobInteract(@NotNull Player player, @NotNull InteractionHand interactionHand) {
+        boolean flag = !this.isBaby() && this.isTame() && player.isSecondaryUseActive();
         if (!this.isVehicle() && !flag) {
-            ItemStack itemstack = p_30493_.getItemInHand(p_30494_);
+            ItemStack itemstack = player.getItemInHand(interactionHand);
             if (!itemstack.isEmpty()) {
                 if (this.isFood(itemstack)) {
-                    return this.fedFood(p_30493_, itemstack);
+                    return this.fedFood(player, itemstack);
                 }
 
                 if (!this.isTame()) {
@@ -156,14 +156,14 @@ public class AbstractChestedMountablePet extends AbstractMountablePet {
                 }
 
                 if (!this.hasChest() && itemstack.is(Items.CHEST)) {
-                    this.equipChest(p_30493_, itemstack);
+                    this.equipChest(player, itemstack);
                     return InteractionResult.sidedSuccess(this.level.isClientSide);
                 }
             }
 
-            return super.mobInteract(p_30493_, p_30494_);
+            return super.mobInteract(player, interactionHand);
         } else {
-            return super.mobInteract(p_30493_, p_30494_);
+            return super.mobInteract(player, interactionHand);
         }
     }
 

@@ -19,7 +19,7 @@ import net.minecraft.world.level.Level;
 import java.util.HashMap;
 import java.util.UUID;
 
-public class PlayerPassiveSkillSkinArmorAttribute extends AbstractPlayerPassiveAttribute implements ICapabilityAttributeModifier {
+public class PlayerPassiveSkillSkinArmorAttributeExecutor extends AbstractPlayerPassiveAttributeExecutor implements ICapabilityAttributeModifier {
     public static final String ATTRIBUTE_MODIFIER_ARMOR_UNIQUE_NAME = SkillEnum.SKIN_ARMOR.name() + "_ARMOR_" + "ADDITION";
     public static final String ATTRIBUTE_MODIFIER_TOUGHNESS_UNIQUE_NAME = SkillEnum.SKIN_ARMOR.name() + "_TOUGHNESS_" + "ADDITION";
     public static final String IS_COMPLETE_ARMOR = "IS_COMPLETE_ARMOR";
@@ -34,9 +34,9 @@ public class PlayerPassiveSkillSkinArmorAttribute extends AbstractPlayerPassiveA
         parentCapability = IGenericCapability.getUnwrappedPlayerCapability(playerIn, PlayerSkillCapabilityProvider.SKILL_CAP);
     }*/
 
-    public PlayerPassiveSkillSkinArmorAttribute(PlayerSkillCapabilityInterface parentCapability) {
+    public PlayerPassiveSkillSkinArmorAttributeExecutor(PlayerSkillCapabilityInterface parentCapability) {
         super(parentCapability);
-        DevilRpg.LOGGER.info("----------------------->CONSTRUCTOR PlayerPassiveSkillSkinArmor. Parent capability: {}", parentCapability);
+        DevilRpg.LOGGER.info("----------------------->CONSTRUCTOR PlayerPassiveSkillSkinArmorAttributeExecutor. Parent capability: {}", parentCapability);
     }
 
     /**
@@ -71,6 +71,7 @@ public class PlayerPassiveSkillSkinArmorAttribute extends AbstractPlayerPassiveA
             //DevilRpg.LOGGER.info("Player armorValue {}", playerIn.getArmorValue());
             DevilRpg.LOGGER.info("Player Att armor {}",playerIn.getAttributeValue(Attributes.ARMOR));
             DevilRpg.LOGGER.info("Player Att toughness {}", playerIn.getAttributeValue(Attributes.ARMOR_TOUGHNESS));
+
 
         }
     }
@@ -107,7 +108,7 @@ public class PlayerPassiveSkillSkinArmorAttribute extends AbstractPlayerPassiveA
         AttributeModifier newAttributeModifier = createNewAttributeModifier(
                 uniqueName,
                 Double.valueOf(parentCapability.getSkillsPoints().get(SkillEnum.SKIN_ARMOR)) * factor
-                , AttributeModifier.Operation.ADDITION);
+        );
         //DevilRpg.LOGGER.info("||----------------------->createNewAttributeModifiers SKIN_ARMOR: {}", parentCapability.getSkillsPoints().get(SkillEnum.SKIN_ARMOR));
         DevilRpg.LOGGER.info("----------------------->createNewAttributeModifiers(): {}", newAttributeModifier);
         return newAttributeModifier;
@@ -179,12 +180,12 @@ public class PlayerPassiveSkillSkinArmorAttribute extends AbstractPlayerPassiveA
                     chestMaterial.equals(ArmorMaterials.LEATHER) &&
                     legsMaterial.equals(ArmorMaterials.LEATHER) &&
                     feetMaterial.equals(ArmorMaterials.LEATHER)) {
-                parameters.put(PlayerPassiveSkillSkinArmorAttribute.IS_COMPLETE_ARMOR, "true");
+                parameters.put(PlayerPassiveSkillSkinArmorAttributeExecutor.IS_COMPLETE_ARMOR, "true");
             } else {
-                parameters.put(PlayerPassiveSkillSkinArmorAttribute.IS_COMPLETE_ARMOR, "false");
+                parameters.put(PlayerPassiveSkillSkinArmorAttributeExecutor.IS_COMPLETE_ARMOR, "false");
             }
         } else {
-            parameters.put(PlayerPassiveSkillSkinArmorAttribute.IS_COMPLETE_ARMOR, "false");
+            parameters.put(PlayerPassiveSkillSkinArmorAttributeExecutor.IS_COMPLETE_ARMOR, "false");
         }
 
 

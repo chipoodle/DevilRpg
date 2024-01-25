@@ -7,7 +7,7 @@ import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.init.ModBlocks;
-import com.chipoodle.devilrpg.skillsystem.AbstractSkillContainer;
+import com.chipoodle.devilrpg.skillsystem.AbstractSkillExecutor;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -22,7 +22,7 @@ import net.minecraft.world.phys.Vec3;
 import java.util.HashMap;
 import java.util.Random;
 
-public class SkillSoulVine extends AbstractSkillContainer {
+public class SkillSoulVine extends AbstractSkillExecutor {
 
     public SkillSoulVine(PlayerSkillCapabilityImplementation parentCapability) {
         super(parentCapability);
@@ -34,17 +34,24 @@ public class SkillSoulVine extends AbstractSkillContainer {
     }
 
     @Override
-    public void execute(Level levelIn, Player playerIn, HashMap<String, String> parameters) {
-        if (!levelIn.isClientSide) {
-            Random rand = new Random();
-            levelIn.playSound(null, playerIn.getX(), playerIn.getY(), playerIn.getZ(),
-                    SoundEvents.CHICKEN_EGG, SoundSource.NEUTRAL, 0.5F,
-                    0.4F / (rand.nextFloat() * 0.4F + 0.8F));
+    public boolean arePreconditionsMetBeforeConsumingResource(Player player) {
+        return !player.getCooldowns().isOnCooldown(icon.getItem());
+    }
 
-            PlayerSkillCapabilityInterface skillCap = IGenericCapability.getUnwrappedPlayerCapability(playerIn,
-                    PlayerSkillCapability.INSTANCE);
+    @Override
+    public void execute(Level levelIn, Player player, HashMap<String, String> parameters) {
+        if (!player.getCooldowns().isOnCooldown(icon.getItem())) {
+            if (!levelIn.isClientSide) {
+                Random rand = new Random();
+                levelIn.playSound(null, player.getX(), player.getY(), player.getZ(),
+                        SoundEvents.CHICKEN_EGG, SoundSource.NEUTRAL, 0.5F,
+                        0.4F / (rand.nextFloat() * 0.4F + 0.8F));
 
-            setVine(levelIn, playerIn, skillCap);
+                PlayerSkillCapabilityInterface skillCap = IGenericCapability.getUnwrappedPlayerCapability(player,
+                        PlayerSkillCapability.INSTANCE);
+                setVine(levelIn, player, skillCap);
+                player.getCooldowns().addCooldown(icon.getItem(), 20);
+            }
         }
     }
 

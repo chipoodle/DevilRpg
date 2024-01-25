@@ -2,7 +2,7 @@ package com.chipoodle.devilrpg.init;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.entity.SoulBear;
-import com.chipoodle.devilrpg.entity.SoulIceBall;
+import com.chipoodle.devilrpg.entity.FrostBall;
 import com.chipoodle.devilrpg.entity.SoulWispArcher;
 import com.chipoodle.devilrpg.entity.SoulWispBomber;
 import com.chipoodle.devilrpg.entity.SoulWisp;
@@ -65,8 +65,8 @@ public final class ModEntities {
 			.sized(EntityType.ALLAY.getWidth(), EntityType.ALLAY.getHeight())
 			.build(new ResourceLocation(DevilRpg.MODID, WISP_ARCHER_NAME).toString()));
 
-	public static final RegistryObject<EntityType<SoulIceBall>> SOUL_ICEBALL = ENTITY_TYPES.register(SOUL_ICEBALL_NAME,
-			() -> EntityType.Builder.<SoulIceBall>of(SoulIceBall::new, MobCategory.MISC)
+	public static final RegistryObject<EntityType<FrostBall>> SOUL_ICEBALL = ENTITY_TYPES.register(SOUL_ICEBALL_NAME,
+			() -> EntityType.Builder.<FrostBall>of(FrostBall::new, MobCategory.MISC)
 					.sized(EntityType.WITHER_SKULL.getWidth(), EntityType.WITHER_SKULL.getHeight())
 					.build(new ResourceLocation(DevilRpg.MODID, SOUL_ICEBALL_NAME).toString()));
 }

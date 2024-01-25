@@ -6,8 +6,8 @@ import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapability;
 import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityInterface;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
-import com.chipoodle.devilrpg.util.IRenderUtilities;
 import com.chipoodle.devilrpg.init.ModEntities;
+import com.chipoodle.devilrpg.util.IRenderUtilities;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.particles.ParticleTypes;
@@ -45,10 +45,11 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
     private static final int ICE_ARMOR_EFFECT_FACTOR = 2;
     private static final double RADIUS_PARTICLES = 0.7;
     private static final int NUMBER_OF_PARTICLES_ICE_ARMOR = 11;
-    private static final int PROBABILITY_MULTIPLIER = 7;
-    private static final int DURATION_TICKS = 100;
+    private static final int PROBABILITY_MULTIPLIER = 6;
+    private static final int ICE_ARMOR_DURATION_TICKS = 100;
+    public static final int FROSTBITE_DURATION_TICKS = 20;
     private static final int INITIAL_HEALTH = 7;
-    private static final int NUMBER_OF_PARTICLES_FROST_BITE = 11;
+    private static final int NUMBER_OF_PARTICLES_FROST_BITE = 1;
     private int puntosAsignados = 0;
     private double saludMaxima = INITIAL_HEALTH;
     // private double stealingHealth;
@@ -83,12 +84,12 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
         this.targetSelector.addGoal(2, new OwnerHurtTargetGoal(this));
         this.targetSelector.addGoal(3, (new HurtByTargetGoal(this)).setAlertOthers());
         //this.targetSelector.addGoal(5, new NearestAttackableTargetGoal<>(this, MobEntity.class, false));
-        this.targetSelector.addGoal(5, new NearestAttackableTargetGoal<>(this, Mob.class, 10, false, true, (entity) -> {
-            return !(entity instanceof Villager) &&
-                    !(entity instanceof Llama) &&
-                    !(entity instanceof Turtle) &&
-                    !(entity instanceof IronGolem);
-        }));
+        this.targetSelector.addGoal(5, new NearestAttackableTargetGoal<>(this, Mob.class, 10, false, true, (entity) ->
+                !(entity instanceof Villager) &&
+                        !(entity instanceof Llama) &&
+                        !(entity instanceof Turtle) &&
+                        !(entity instanceof IronGolem)
+        ));
         this.targetSelector.addGoal(8, new ResetUniversalAngerTargetGoal<>(this, true));
     }
 
@@ -105,7 +106,7 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
         Objects.requireNonNull(this.getAttribute(Attributes.MAX_HEALTH)).setBaseValue(saludMaxima);
         Objects.requireNonNull(this.getAttribute(Attributes.ARMOR)).setBaseValue(0.35D);
         Objects.requireNonNull(this.getAttribute(Attributes.FOLLOW_RANGE)).setBaseValue(16.0D);
-        Objects.requireNonNull(this.getAttribute(Attributes.ATTACK_DAMAGE)).setBaseValue((0.45 * puntosAsignados) + 2); // 2.45-11
+        Objects.requireNonNull(this.getAttribute(Attributes.ATTACK_DAMAGE)).setBaseValue((0.30 * puntosAsignados) + 2); // 2.35-6
         setHealth((float) saludMaxima);
     }
 
@@ -143,44 +144,49 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
         return ITamableEntity.super.wantsToAttack(target, owner);
     }
 
+    /**
+     * El efecto MobEffects.DAMAGE_BOOST tiene 5 niveles. Cada nivel aumenta el daño que inflige el jugador en 2,5%.
+     * Por lo tanto, un jugador con el efecto MobEffects.DAMAGE_BOOST al máximo nivel infligirá 12,5% más daño que un jugador normal.
+     *
+     * @param target
+     * @return
+     */
     @Override
-    public boolean doHurtTarget(Entity entityIn) {
-        double attackDamage = this.getAttributeValue(Attributes.ATTACK_DAMAGE);
-        boolean flag = entityIn.hurt(this.damageSources().mobAttack(this), (float) (attackDamage));
-        random.setSeed(System.currentTimeMillis());
-        int probability = random.nextInt(100);
-        if (frostbite > 0 && probability <= (frostbite * PROBABILITY_MULTIPLIER)) {
-            /*
-            MobEffectInstance frostbiteEffect = new MobEffectInstance(MobEffects.DAMAGE_BOOST, DURATION_TICKS, frostbite, true, false);
+    public boolean doHurtTarget(@NotNull Entity target) {
+        random.setSeed(System.currentTimeMillis()+random.nextInt());
+        int randomNumber = random.nextInt(100);
+        if (frostbite > 0 && randomNumber <= (frostbite * PROBABILITY_MULTIPLIER)) { //30% randomNumber on lvl5 frostbite
+
+            MobEffectInstance frostbiteEffect = new MobEffectInstance(MobEffects.DAMAGE_BOOST, FROSTBITE_DURATION_TICKS, (int) Math.round((double) frostbite /2), true, false);
             MobEffectInstance active = this.getEffect(MobEffects.DAMAGE_BOOST);
             if (active != null && frostbiteEffect.getAmplifier() <= active.getAmplifier()) {
                 active.update(frostbiteEffect);
             } else
                 this.addEffect(frostbiteEffect);
-
-            this.addEffect(frostbiteEffect);
-            DevilRpg.LOGGER.info("---------->doHurtTarget frostbite: {} prob: {} limit: {}", frostbite, probability, frostbite * PROBABILITY_MULTIPLIER);
-            */
-            entityIn.hurt(this.damageSources().freeze(), frostbite);
-            IRenderUtilities.rotationParticles(Minecraft.getInstance().level, random, this, ParticleTypes.ITEM_SNOWBALL, NUMBER_OF_PARTICLES_FROST_BITE, RADIUS_PARTICLES);
-
-            DevilRpg.LOGGER.debug("---------->doHurtTarget attdmg {} + frostbite: {} prob: {} limit: {}", attackDamage, frostbite, probability, frostbite * PROBABILITY_MULTIPLIER);
-
+            IRenderUtilities.rotationParticles(Minecraft.getInstance().level, random, this, ParticleTypes.FLASH, NUMBER_OF_PARTICLES_FROST_BITE, RADIUS_PARTICLES);
         }
+        double attackDamage = this.getAttributeValue(Attributes.ATTACK_DAMAGE);
+        boolean flag = target.hurt(this.damageSources().mobAttack(this), (float) (attackDamage));
+        MobEffectInstance mobEffectInstance = this.getEffect(MobEffects.DAMAGE_BOOST);
+        DevilRpg.LOGGER.debug("---------->doHurtTarget attdmg {} + frostbite: {} random: {} <= limit: {} effect lvl {}"
+                , attackDamage, Math.round((double) frostbite /2), randomNumber,
+                frostbite * PROBABILITY_MULTIPLIER, mobEffectInstance!= null? mobEffectInstance.getAmplifier(): 0 );
+
+
         if (flag) {
-            this.doEnchantDamageEffects(this, entityIn);
+            this.doEnchantDamageEffects(this, target);
         }
         return flag;
     }
 
     @Override
-    public boolean hurt(DamageSource damageSource, float amount) {
+    public boolean hurt(@NotNull DamageSource damageSource, float amount) {
         boolean hurt = super.hurt(damageSource, amount);
         if (hurt) {
             int probability = random.nextInt(100);
             if (iceArmor > 0 && probability <= (iceArmor * PROBABILITY_MULTIPLIER) && Minecraft.getInstance().level != null) {
                 IRenderUtilities.rotationParticles(Minecraft.getInstance().level, random, this, ParticleTypes.SNOWFLAKE, NUMBER_OF_PARTICLES_ICE_ARMOR, RADIUS_PARTICLES);
-                MobEffectInstance iceArmorEffect = new MobEffectInstance(MobEffects.ABSORPTION, DURATION_TICKS, iceArmor * ICE_ARMOR_EFFECT_FACTOR, true, false);
+                MobEffectInstance iceArmorEffect = new MobEffectInstance(MobEffects.ABSORPTION, ICE_ARMOR_DURATION_TICKS, iceArmor * ICE_ARMOR_EFFECT_FACTOR, true, false);
                 MobEffectInstance active = this.getEffect(MobEffects.ABSORPTION);
                 if (active != null && iceArmorEffect.getAmplifier() <= active.getAmplifier()) {
                     active.update(iceArmorEffect);
@@ -193,12 +199,12 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
     }
 
     @Override
-    public InteractionResult mobInteract(Player playerIn, InteractionHand hand) {
+    public @NotNull InteractionResult mobInteract(@NotNull Player playerIn, @NotNull InteractionHand hand) {
         return InteractionResult.PASS;
     }
 
     @Override
-    public void remove(RemovalReason removalReason) {
+    public void remove(@NotNull RemovalReason removalReason) {
         super.remove(removalReason);
     }
 
@@ -206,7 +212,7 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
      * Called when the mob's health reaches 0.
      */
     @Override
-    public void die(DamageSource cause) {
+    public void die(@NotNull DamageSource cause) {
         if (getOwner() != null) {
             LazyOptional<PlayerMinionCapabilityInterface> minionCap = getOwner()
                     .getCapability(PlayerMinionCapability.INSTANCE);

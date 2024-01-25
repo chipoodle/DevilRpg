@@ -5,11 +5,12 @@ import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
-import com.chipoodle.devilrpg.util.IRenderUtilities;
-import com.chipoodle.devilrpg.entity.ITamableEntity;
+import com.chipoodle.devilrpg.capability.stamina.PlayerStaminaCapability;
+import com.chipoodle.devilrpg.capability.stamina.PlayerStaminaCapabilityInterface;
 import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.init.ModSounds;
 import com.chipoodle.devilrpg.network.handler.WerewolfAttackServerHandler;
+import com.chipoodle.devilrpg.util.IRenderUtilities;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import com.chipoodle.devilrpg.util.TargetUtils;
 import net.minecraft.client.Minecraft;
@@ -19,7 +20,9 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
@@ -27,17 +30,20 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraftforge.common.ForgeMod;
 import net.minecraftforge.common.util.LazyOptional;
 
 import java.util.*;
 
-public class SkillShapeshiftWerewolf extends AbstractPlayerPassiveAttribute implements ICapabilityAttributeModifier {
+public class SkillShapeshiftWerewolf extends AbstractPlayerPassiveAttributeExecutor implements ICapabilityAttributeModifier {
     // public static final String HEALTH = "HEALTH";
     public static final String SPEED = "SPEED";
+    public static final String STEP = "STEP";
     private static final ResourceLocation SUMMON_SOUND = new ResourceLocation(DevilRpg.MODID, "summon");
-    private final Random rand = new Random();
+    private static final Random rand = new Random();
     //AttributeModifier healthAttributeModifier;
     AttributeModifier speedAttributeModifier;
+    AttributeModifier stepAttributeModifier;
 
     public SkillShapeshiftWerewolf(PlayerSkillCapabilityInterface parentCapability) {
         super(parentCapability);
@@ -50,8 +56,9 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassiveAttribute impl
     }
 
     @Override
-    public boolean arePreconditionsMetBeforeConsumingResource(Player playerIn){
-        return true;
+    public boolean arePreconditionsMetBeforeConsumingResource(Player player) {
+        Entity vehicle = player.getVehicle();
+        return vehicle == null;
     }
 
     @Override
@@ -61,59 +68,96 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassiveAttribute impl
     }
 
     @Override
-    public void execute(Level worldIn, Player playerIn, HashMap<String, String> parameters) {
+    public void execute(Level worldIn, Player player, HashMap<String, String> parameters) {
         if (!worldIn.isClientSide) {
-            Random rand = new Random();
 
-            LazyOptional<PlayerAuxiliaryCapabilityInterface> aux = playerIn.getCapability(PlayerAuxiliaryCapability.INSTANCE);
+            DevilRpg.LOGGER.debug("==========> Step just before transformation: {}", Objects.requireNonNull(player.getAttribute(ForgeMod.STEP_HEIGHT_ADDITION.get())).getValue());
+
+
+            Random rand = new Random();
+            PlayerStaminaCapabilityInterface stamina = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerStaminaCapability.INSTANCE);
+            stamina.setStamina(0,player);
+
+            //Attribute attribute = ForgeMod.STEP_HEIGHT_ADDITION.get();
+
+            LazyOptional<PlayerAuxiliaryCapabilityInterface> aux = player.getCapability(PlayerAuxiliaryCapability.INSTANCE);
             boolean transformation = aux.map(PlayerAuxiliaryCapabilityInterface::isWerewolfTransformation).orElse(false);
-            aux.ifPresent(x -> x.setWerewolfTransformation(!transformation, playerIn));
-            removeCurrentModifiers(playerIn);
+            aux.ifPresent(x -> x.setWerewolfTransformation(!transformation, player));
+
+            removeCurrentModifiersSpeed(player);
+            removeCurrentModifiersStep(player);
             if (!transformation) {
-                createNewAttributeModifiers();
-                addCurrentModifiers(playerIn);
-                worldIn.playSound(null, playerIn.getX(), playerIn.getY(), playerIn.getZ(),
+                createNewAttributeModifiersSpeed();
+                createNewAttributeModifiersStep();
+                addCurrentModifiersSpeed(player);
+                addCurrentModifiersStep(player);
+                worldIn.playSound(null, player.getX(), player.getY(), player.getZ(),
                         ModSounds.METAL_SWORD_SOUND.get(), SoundSource.NEUTRAL, 0.5F,
                         0.4F / (rand.nextFloat() * 0.4F + 0.8F));
 
             } else {
-                worldIn.playSound(null, playerIn.getX(), playerIn.getY(), playerIn.getZ(),
+                worldIn.playSound(null, player.getX(), player.getY(), player.getZ(),
                         SoundEvents.NOTE_BLOCK_BASS.get(), SoundSource.NEUTRAL, 0.5F,
                         0.4F / (new Random().nextFloat() * 0.4F + 0.8F));
             }
 
-            super.executePassiveChildren(getSkillEnum(), worldIn, playerIn);
-            double maxMovementSpeed = playerIn.getAttributeValue(Attributes.MOVEMENT_SPEED);
+            super.executePassiveChildren(getSkillEnum(), worldIn, player);
+            double maxMovementSpeed = player.getAttributeValue(Attributes.MOVEMENT_SPEED);
             DevilRpg.LOGGER.info("max movement speed {}", maxMovementSpeed);
-        }
-        else{
-            IRenderUtilities.rotationParticles(Minecraft.getInstance().level, RandomSource.create(), playerIn, ParticleTypes.EFFECT, 17, 1);
+            DevilRpg.LOGGER.debug("==========> Step after transformation: {}", Objects.requireNonNull(player.getAttribute(ForgeMod.STEP_HEIGHT_ADDITION.get())).getValue());
+        } else {
+            IRenderUtilities.rotationParticles(Minecraft.getInstance().level, RandomSource.create(), player, ParticleTypes.EFFECT, 17, 1);
         }
     }
 
-    private void createNewAttributeModifiers() {
+    private void createNewAttributeModifiersSpeed() {
         speedAttributeModifier = createNewAttributeModifier(
                 SkillEnum.TRANSFORM_WEREWOLF.name() + SPEED,
-                parentCapability.getSkillsPoints().get(SkillEnum.TRANSFORM_WEREWOLF) * 0.0045, AttributeModifier.Operation.ADDITION);
-        DevilRpg.LOGGER.info("----------------------->createNewAttributeModifiers(): {}", speedAttributeModifier);
+                parentCapability.getSkillsPoints().get(SkillEnum.TRANSFORM_WEREWOLF) * 0.0045);
+        DevilRpg.LOGGER.info("----------------------->createNewAttributeModifiersSpeed(): {}", speedAttributeModifier);
     }
 
-    private void removeCurrentModifiers(Player playerIn) {
+    private void createNewAttributeModifiersStep() {
+        stepAttributeModifier = createNewAttributeModifier(
+                SkillEnum.TRANSFORM_WEREWOLF.name() + STEP,
+                0.4);
+        DevilRpg.LOGGER.info("----------------------->createNewAttributeModifiersStep(): {}", speedAttributeModifier);
+    }
+
+    private void removeCurrentModifiersSpeed(Player playerIn) {
         HashMap<String, UUID> attributeModifiers = parentCapability.getAttributeModifiers();
         removeCurrentModifierFromPlayer(playerIn, speedAttributeModifier, Attributes.MOVEMENT_SPEED);
         removeAttributeFromCapability(attributeModifiers, Attributes.MOVEMENT_SPEED);
         parentCapability.setAttributeModifiers(attributeModifiers, playerIn);
-        DevilRpg.LOGGER.info("----------------------->removeCurrentModifiers(): {}", speedAttributeModifier);
+        DevilRpg.LOGGER.info("----------------------->removeCurrentModifiersSpeed(): {}", speedAttributeModifier);
     }
 
-    private void addCurrentModifiers(Player playerIn) {
+    private void removeCurrentModifiersStep(Player playerIn) {
+        HashMap<String, UUID> attributeModifiers = parentCapability.getAttributeModifiers();
+        removeCurrentModifierFromPlayer(playerIn, stepAttributeModifier,ForgeMod.STEP_HEIGHT_ADDITION.get());
+        removeAttributeFromCapability(attributeModifiers, ForgeMod.STEP_HEIGHT_ADDITION.get());
+        parentCapability.setAttributeModifiers(attributeModifiers, playerIn);
+        DevilRpg.LOGGER.info("----------------------->removeCurrentModifiersStep(): {}", stepAttributeModifier);
+    }
+
+    private void addCurrentModifiersSpeed(Player playerIn) {
         HashMap<String, UUID> attributeModifiers = parentCapability.getAttributeModifiers();
         //addAttributeToCapability(attributeModifiers, Attributes.MAX_HEALTH, healthAttributeModifier.getId());
         addAttributeToCapability(attributeModifiers, Attributes.MOVEMENT_SPEED, speedAttributeModifier.getId());
         parentCapability.setAttributeModifiers(attributeModifiers, playerIn);
         //addCurrentModifierTransiently(playerIn, Attributes.MAX_HEALTH, healthAttributeModifier);
         addCurrentModifierTransiently(playerIn, Attributes.MOVEMENT_SPEED, speedAttributeModifier);
-        DevilRpg.LOGGER.info("----------------------->addCurrentModifierTransiently(): {}", speedAttributeModifier);
+        DevilRpg.LOGGER.info("----------------------->addCurrentModifiersSpeed(): {}", speedAttributeModifier);
+    }
+
+    private void addCurrentModifiersStep(Player playerIn) {
+        HashMap<String, UUID> attributeModifiers = parentCapability.getAttributeModifiers();
+        //addAttributeToCapability(attributeModifiers, Attributes.MAX_HEALTH, healthAttributeModifier.getId());
+        addAttributeToCapability(attributeModifiers, ForgeMod.STEP_HEIGHT_ADDITION.get(), stepAttributeModifier.getId());
+        parentCapability.setAttributeModifiers(attributeModifiers, playerIn);
+        //addCurrentModifierTransiently(playerIn, Attributes.MAX_HEALTH, healthAttributeModifier);
+        addCurrentModifierTransiently(playerIn, ForgeMod.STEP_HEIGHT_ADDITION.get(), stepAttributeModifier);
+        DevilRpg.LOGGER.info("----------------------->addCurrentModifiersStep(): {}", stepAttributeModifier);
     }
 
     /**
@@ -124,7 +168,7 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassiveAttribute impl
      */
     @OnlyIn(Dist.CLIENT)
     public void playerTickEventAttack(final Player player, PlayerAuxiliaryCapabilityInterface auxiliaryCapability) {
-        LivingEntity closestEnemy = findClosestEnemy(player);
+        LivingEntity closestEnemy = TargetUtils.findClosestEnemy(player);
         if (closestEnemy != null) {
             player.setLastHurtMob(closestEnemy);
             InteractionHand hand = auxiliaryCapability.swingHands(player);
@@ -132,23 +176,6 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassiveAttribute impl
             renderHitParticles(player, hand);
             attackEnemies(closestEnemy, hand);
         }
-    }
-
-    private LivingEntity findClosestEnemy(final Player player) {
-        LivingEntity target;
-        int distance = 1;
-        double radius = 2;
-        //if (player != null) {
-        List<LivingEntity> targetList = TargetUtils.acquireAllLookTargets(player, distance, radius).stream()
-                .filter(x -> !(x instanceof ITamableEntity) || !x.isAlliedTo(player))
-                .toList();
-
-        //DevilRpg.LOGGER.info("targetList.size:{}",targetList.size());
-        target = targetList.stream()
-                .filter(x -> targetList.size() == 1 || !x.equals(player.getLastHurtMob()))
-                .min(Comparator.comparing(entity -> entity.position().distanceToSqr(player.position()))).orElse(null);
-        //}
-        return target;
     }
 
     /**

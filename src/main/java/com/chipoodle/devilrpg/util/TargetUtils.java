@@ -1,6 +1,7 @@
 package com.chipoodle.devilrpg.util;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.entity.ITamableEntity;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
@@ -643,5 +644,22 @@ public class TargetUtils {
         Minecraft instance = Minecraft.getInstance();
         HitResult hitResult = instance.hitResult;
         return hitResult;
+    }
+
+    public static LivingEntity findClosestEnemy(final Player player) {
+        LivingEntity target;
+        int distance = 1;
+        double radius = 2;
+        //if (player != null) {
+        List<LivingEntity> targetList = TargetUtils.acquireAllLookTargets(player, distance, radius).stream()
+                .filter(x -> !(x instanceof ITamableEntity) || !x.isAlliedTo(player))
+                .toList();
+
+        //DevilRpg.LOGGER.info("targetList.size:{}",targetList.size());
+        target = targetList.stream()
+                .filter(x -> targetList.size() == 1 || !x.equals(player.getLastHurtMob()))
+                .min(Comparator.comparing(entity -> entity.position().distanceToSqr(player.position()))).orElse(null);
+        //}
+        return target;
     }
 }

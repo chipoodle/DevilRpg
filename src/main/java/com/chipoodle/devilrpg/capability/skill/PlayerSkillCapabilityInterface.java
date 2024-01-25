@@ -4,7 +4,7 @@ import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.ResourceType;
 import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillElement;
 import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model.ClientSkillBuilderFromJson;
-import com.chipoodle.devilrpg.skillsystem.AbstractSkillContainer;
+import com.chipoodle.devilrpg.skillsystem.AbstractSkillExecutor;
 import com.chipoodle.devilrpg.util.PowerEnum;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.nbt.CompoundTag;
@@ -55,9 +55,9 @@ public interface PlayerSkillCapabilityInterface extends IGenericCapability {
 
     void triggerPassive(Player sender, CompoundTag triggeredPassive);
 
-    AbstractSkillContainer getLoadedSkillExecutor(SkillEnum skillEnum);
+    AbstractSkillExecutor getLoadedSkillExecutor(SkillEnum skillEnum);
 
-    AbstractSkillContainer createSkillExecutor(SkillEnum skillEnum);
+    AbstractSkillExecutor createSkillExecutor(SkillEnum skillEnum);
 
     ClientSkillBuilderFromJson getClientSkillBuilder();
 

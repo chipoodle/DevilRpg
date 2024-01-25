@@ -24,7 +24,7 @@ public class MobEffectKnockbackResistance extends MobEffect {
     }
 
     @Override
-    public void applyEffectTick(LivingEntity entity, int amplifier) {
+    public void applyEffectTick(@NotNull LivingEntity entity, int amplifier) {
         // Calculate the knockback resistance based on the amplifier
         double knockbackResistance = 0.2 * amplifier;
 
@@ -40,7 +40,7 @@ public class MobEffectKnockbackResistance extends MobEffect {
     }
 
     @Override
-    public void removeAttributeModifiers(LivingEntity entityLivingBaseIn, AttributeMap attributeMapIn, int amplifier) {
+    public void removeAttributeModifiers(LivingEntity entityLivingBaseIn, @NotNull AttributeMap attributeMapIn, int amplifier) {
         // Remove the knockback resistance attribute modifier when the effect is removed
         Objects.requireNonNull(entityLivingBaseIn.getAttribute(Attributes.KNOCKBACK_RESISTANCE)).removeModifier(KNOCKBACK_RESISTANCE_UUID);
         attMod = null;

@@ -5,7 +5,7 @@ import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
-import com.chipoodle.devilrpg.skillsystem.AbstractSkillContainer;
+import com.chipoodle.devilrpg.skillsystem.AbstractSkillExecutor;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
@@ -22,8 +22,9 @@ import net.minecraft.world.phys.Vec3;
 import java.util.HashMap;
 import java.util.Random;
 
-public class SkillChargeWerewolf extends AbstractSkillContainer {
+public class SkillChargeWerewolf extends AbstractSkillExecutor {
     public static final int DAMAGE_BOOST_DURATION_IN_TICKS = 25;
+    public static final double ELEVATION_FACTOR = 0.58;
 
     public SkillChargeWerewolf(PlayerSkillCapabilityInterface parentCapability) {
         super(parentCapability);
@@ -37,7 +38,7 @@ public class SkillChargeWerewolf extends AbstractSkillContainer {
     @Override
     public boolean arePreconditionsMetBeforeConsumingResource(Player player) {
         PlayerAuxiliaryCapabilityInterface auxiliary = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerAuxiliaryCapability.INSTANCE);
-        return auxiliary.isWerewolfTransformation() && player.isOnGround();
+        return auxiliary.isWerewolfTransformation() && player.isOnGround() && !player.getCooldowns().isOnCooldown(icon.getItem());
     }
 
     @Override
@@ -66,8 +67,8 @@ public class SkillChargeWerewolf extends AbstractSkillContainer {
                 f2 *= f5 / f4;
                 f3 *= f5 / f4;
 
-                player.push(f1, f2, f3);
-                player.move(MoverType.SELF, new Vec3(0.0D, 2.1999999F, 0.0D));
+                player.push(f1, f2+ ELEVATION_FACTOR, f3);
+                //player.move(MoverType.SELF, new Vec3(0.0D, 2.1999999F, 0.0D));
                 //DevilRpg.LOGGER.info("isOnGround move server");
                 MobEffectInstance m = new MobEffectInstance(MobEffects.DAMAGE_BOOST, DAMAGE_BOOST_DURATION_IN_TICKS, chargePoints);
                 player.addEffect(m);
@@ -81,8 +82,8 @@ public class SkillChargeWerewolf extends AbstractSkillContainer {
                 if (clientPlayer != null && clientPlayer.isOnGround()) {
 
 
-                    clientPlayer.push(f1, f2, f3);
-                    clientPlayer.move(MoverType.SELF, new Vec3(0.0D, 2.1999999F, 0.0D));
+                    clientPlayer.push(f1, f2+ ELEVATION_FACTOR, f3);
+                    //clientPlayer.move(MoverType.SELF, new Vec3(0.0D, 2.1999999F, 0.0D));
                     DevilRpg.LOGGER.info("isOnGround move client");
                     clientPlayer.startAutoSpinAttack(autoSpinAttackTicks);
                 }

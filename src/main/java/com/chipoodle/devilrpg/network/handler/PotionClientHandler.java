@@ -49,12 +49,12 @@ public record PotionClientHandler(CompoundTag compound) {
                         if (effectEventType.equals(POTION_ADDED_EVENT) || effectEventType.equals(CUSTOM_ADDED_EVENT)) {
                             assert effectInstance != null;
                             entityByUUID.addEffect(effectInstance);
-                            DevilRpg.LOGGER.info("----->effect added to client {}",effectInstance);
+                            //DevilRpg.LOGGER.info("----->effect added to client {}",effectInstance);
                         }
                         if (effectEventType.equals(POTION_EXPIRY_EVENT) || effectEventType.equals(CUSTOM_EXPIRED_EVENT)) {
                             assert effectInstance != null;
                             entityByUUID.removeEffect(effectInstance.getEffect());
-                            DevilRpg.LOGGER.info("----->effect removed to client{}",effectInstance);
+                            //DevilRpg.LOGGER.info("----->effect removed to client{}",effectInstance);
                         }
                     }
                 }

@@ -8,6 +8,7 @@ import net.minecraft.client.animation.KeyframeAnimations;
 public class WerewolfRendererAnimation {
 
 
+
     public static final AnimationDefinition MODEL_WALK = AnimationDefinition.Builder.withLength(1f).looping()
             .addAnimation("right_leg",
                     new AnimationChannel(AnimationChannel.Targets.ROTATION,
@@ -194,7 +195,7 @@ public class WerewolfRendererAnimation {
                                     AnimationChannel.Interpolations.LINEAR)))
             .addAnimation("head",
                     new AnimationChannel(AnimationChannel.Targets.ROTATION,
-                            new Keyframe(0f, KeyframeAnimations.degreeVec(10f, 0f, 0f),
+                            new Keyframe(0f, KeyframeAnimations.degreeVec(0f, 0f, 0f),
                                     AnimationChannel.Interpolations.LINEAR)))
             .addAnimation("body",
                     new AnimationChannel(AnimationChannel.Targets.POSITION,
@@ -205,8 +206,12 @@ public class WerewolfRendererAnimation {
                             new Keyframe(0f, KeyframeAnimations.degreeVec(82.5f, 0f, 0f),
                                     AnimationChannel.Interpolations.LINEAR)))
             .addAnimation("arms",
+                    new AnimationChannel(AnimationChannel.Targets.POSITION,
+                            new Keyframe(0f, KeyframeAnimations.posVec(0f, -10f, -10f),
+                                    AnimationChannel.Interpolations.LINEAR)))
+            .addAnimation("arms",
                     new AnimationChannel(AnimationChannel.Targets.ROTATION,
-                            new Keyframe(0f, KeyframeAnimations.degreeVec(-90f, 0f, 0f),
+                            new Keyframe(0f, KeyframeAnimations.degreeVec(-10f, 0f, 0f),
                                     AnimationChannel.Interpolations.LINEAR)))
             .addAnimation("tail",
                     new AnimationChannel(AnimationChannel.Targets.POSITION,

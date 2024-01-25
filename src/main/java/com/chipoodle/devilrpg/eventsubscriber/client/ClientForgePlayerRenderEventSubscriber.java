@@ -7,8 +7,8 @@ package com.chipoodle.devilrpg.eventsubscriber.client;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
-import com.chipoodle.devilrpg.client.render.entity.renderer.WerewolfItemInHandRenderer;
 import com.chipoodle.devilrpg.client.render.entity.renderer.WerewolfCustomRendererBuilder;
+import com.chipoodle.devilrpg.client.render.entity.renderer.WerewolfItemInHandRenderer;
 import com.chipoodle.devilrpg.client.render.entity.renderer.WerewolfRenderer;
 import com.chipoodle.devilrpg.util.EventUtils;
 import net.minecraft.client.Minecraft;
@@ -17,9 +17,9 @@ import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.RenderArmEvent;
 import net.minecraftforge.client.event.RenderHandEvent;
 import net.minecraftforge.client.event.RenderLivingEvent;
 import net.minecraftforge.client.event.RenderPlayerEvent;
@@ -37,6 +37,41 @@ import java.util.function.BiConsumer;
  */
 @EventBusSubscriber(modid = DevilRpg.MODID, bus = EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
 public final class ClientForgePlayerRenderEventSubscriber {
+    /**
+     * @SubscribeEvent public static void renderInjectedArm(RenderArmEvent event) {
+     * BiConsumer<RenderArmEvent, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, auxiliar) -> {
+     * eve.setCanceled(true);
+     * };
+     * Minecraft instance = Minecraft.getInstance();
+     * LocalPlayer player = instance.player;
+     * if (EventUtils.onWerewolfTransformation(player, c, event)) {
+     * <p>
+     * if(handRenderer == null)
+     * handRenderer = new CustomHandRenderer();
+     * <p>
+     * var poseStack = new PoseStack();
+     * poseStack.translate(0.5, -0.5, -0.6);
+     * <p>
+     * handRenderer.render(
+     * null,
+     * poseStack,
+     * event.getMultiBufferSource(),
+     * event.getPackedLight());
+     * event.setCanceled(true);
+     * <p>
+     * }
+     * <p>
+     * }
+     */
+
+
+    /*@SubscribeEvent
+    public static void onPlayerRenderHand(RenderPlayerEvent.Pre event) {
+        event.getRenderer().renderRightHand(event.getPoseStack(), event.getMultiBufferSource(), event.getPackedLight(), (AbstractClientPlayer) event.getEntity());
+    }*/
+
+    private static WerewolfItemInHandRenderer handRenderer;
+
     /**
      * renders custom 3d person view camera
      */
@@ -66,35 +101,22 @@ public final class ClientForgePlayerRenderEventSubscriber {
         };
 
     }
-
     @SubscribeEvent
     public static void onRenderHandEvent(RenderHandEvent event) {
         BiConsumer<RenderHandEvent, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, auxiliar) -> {
             eve.setCanceled(true);
-
         };
 
         Minecraft instance = Minecraft.getInstance();
         LocalPlayer player = instance.player;
         if (EventUtils.onWerewolfTransformation(player, c, event)) {
             WerewolfRenderer renderer = WerewolfCustomRendererBuilder.createRenderer(Minecraft.getInstance().player);
-            WerewolfItemInHandRenderer handRenderer =
-                    new WerewolfItemInHandRenderer(instance, instance.getEntityRenderDispatcher(), instance.getItemRenderer(), renderer);
+            if (handRenderer == null)
+                handRenderer = new WerewolfItemInHandRenderer(instance, instance.getEntityRenderDispatcher(), instance.getItemRenderer(), renderer);
+            if (event.getHand() == InteractionHand.MAIN_HAND)
                 handRenderer.renderHandsWithItems(event.getPartialTick(), event.getPoseStack(), (MultiBufferSource.BufferSource) event.getMultiBufferSource(), player, event.getPackedLight());
         }
 
     }
 
-    @SubscribeEvent
-    public static void renderInjectedArm(RenderArmEvent event) {
-        BiConsumer<RenderArmEvent, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, auxiliar) -> {
-            eve.setCanceled(true);
-        };
-        Minecraft instance = Minecraft.getInstance();
-        LocalPlayer player = instance.player;
-        if (EventUtils.onWerewolfTransformation(player, c, event)) {
-
-        }
-
-    }
 }

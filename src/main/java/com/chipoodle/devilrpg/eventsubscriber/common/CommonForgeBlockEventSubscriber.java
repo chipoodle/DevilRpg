@@ -21,11 +21,11 @@ public class CommonForgeBlockEventSubscriber {
         }
 
         if (event instanceof BlockEvent.EntityMultiPlaceEvent placeBlockEvent) {
-            DevilRpg.LOGGER.info("------------------>BlockForgeEventHandler.EntityMultiPlaceEvent. Is Client? {}.", Objects.requireNonNull(placeBlockEvent.getEntity()).level.isClientSide);
+            //DevilRpg.LOGGER.info("------------------>BlockForgeEventHandler.EntityMultiPlaceEvent. Is Client? {}.", Objects.requireNonNull(placeBlockEvent.getEntity()).level.isClientSide);
         }
 
         if (event instanceof BlockEvent.EntityPlaceEvent placeBlockEvent) {
-            DevilRpg.LOGGER.info("------------------>BlockForgeEventHandler.onBlockEventEntityPlaceEvent. Is Client? {}.", Objects.requireNonNull(placeBlockEvent.getEntity()).level.isClientSide);
+           // DevilRpg.LOGGER.info("------------------>BlockForgeEventHandler.onBlockEventEntityPlaceEvent. Is Client? {}.", Objects.requireNonNull(placeBlockEvent.getEntity()).level.isClientSide);
 
             if (placeBlockEvent.getPlacedBlock().getBlock() instanceof SoulVineBlock block) {
                 //block.setCustomGrowthDirection(Objects.requireNonNull(placeBlockEvent.getEntity()).getDirection());

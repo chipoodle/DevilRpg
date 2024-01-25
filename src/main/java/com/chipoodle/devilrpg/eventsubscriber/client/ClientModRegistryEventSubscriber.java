@@ -13,7 +13,6 @@ import com.chipoodle.devilrpg.client.gui.hud.StaminaBarHudOverlay;
 import com.chipoodle.devilrpg.client.render.entity.model.*;
 import com.chipoodle.devilrpg.client.render.entity.renderer.*;
 import com.chipoodle.devilrpg.init.ModEntities;
-import net.minecraft.world.entity.EntityType;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.EntityRenderersEvent;
 import net.minecraftforge.client.event.RegisterGuiOverlaysEvent;
@@ -64,7 +63,7 @@ public final class ClientModRegistryEventSubscriber {
 
         event.registerEntityRenderer(ModEntities.SOUL_WOLF.get(), SoulWolfRenderer::new);
         event.registerEntityRenderer(ModEntities.SOUL_BEAR.get(), SoulBearRenderer::new);
-        event.registerEntityRenderer(ModEntities.SOUL_ICEBALL.get(), SoulFireBallRenderer::new);
+        event.registerEntityRenderer(ModEntities.SOUL_ICEBALL.get(), FrostBallRenderer::new);
         event.registerEntityRenderer(ModEntities.WISP.get(), SoulWispRenderer::new);
         event.registerEntityRenderer(ModEntities.WISP_BOMB.get(), SoulWispBomberRenderer::new);
         event.registerEntityRenderer(ModEntities.WISP_ARCHER.get(), SoulWispArcherRenderer::new);

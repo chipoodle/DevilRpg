@@ -18,7 +18,6 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.GameNarrator;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiComponent;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.GameRenderer;
@@ -186,7 +185,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
             Component page = Component.literal(String.format("%d / %d", tabPage + 1, maxPages + 1));
             int width = this.font.width(page);
             //RenderSystem.disableLighting();
-            this.font.drawShadow(poseStack, page.getVisualOrderText(), offsetLeft + (WINDOW_WIDTH / 2) - (width / 2),
+            this.font.drawShadow(poseStack, page.getVisualOrderText(), offsetLeft + ((float) WINDOW_WIDTH / 2) - ((float) width / 2),
                     offsetTop - 44, -1);
         }
         this.renderInside(poseStack, mouseX, mouseY);
@@ -227,7 +226,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
                     skillEntryGui.updateFormattedLevelString(points, maxPoints);
 
 
-                    if (skillEnum.isPassive() && !skillEnum.iforMinion()) {
+                    if (skillEnum.isPassive() && !skillEnum.isForMinion()) {
                         //Para pasivos
                         CompoundTag compoundTag = aSkillCap.setSkillToByteArray(skillEnum);
                         ModNetwork.CHANNEL.sendToServer(new PlayerPassiveSkillServerHandler(compoundTag));
@@ -607,7 +606,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     }
 
 
-    class ButtonMouse {
+    static class ButtonMouse {
         public static final int LEFT_BUTTON = 0;
         public static final int RIGHT_BUTTON = 1;
 

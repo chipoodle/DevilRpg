@@ -11,7 +11,7 @@ import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityInt
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
 import com.chipoodle.devilrpg.entity.SoulBear;
 import com.chipoodle.devilrpg.init.ModEntities;
-import com.chipoodle.devilrpg.skillsystem.AbstractSkillContainer;
+import com.chipoodle.devilrpg.skillsystem.AbstractSkillExecutor;
 import com.chipoodle.devilrpg.util.SkillEnum;
 
 import com.chipoodle.devilrpg.util.TargetUtils;
@@ -27,7 +27,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraftforge.common.util.LazyOptional;
 
-public class SkillSummonSoulBear extends AbstractSkillContainer {
+public class SkillSummonSoulBear extends AbstractSkillExecutor {
 
     private static final int NUMBER_OF_SUMMONS = 1;
 
@@ -41,6 +41,11 @@ public class SkillSummonSoulBear extends AbstractSkillContainer {
     }
 
     @Override
+    public boolean arePreconditionsMetBeforeConsumingResource(Player player) {
+        return !player.getCooldowns().isOnCooldown(icon.getItem());
+    }
+
+    @Override
     public void execute(Level level, Player player, HashMap<String, String> parameters) {
         if (!player.getCooldowns().isOnCooldown(icon.getItem())) {
             if (!level.isClientSide) {
@@ -48,7 +53,7 @@ public class SkillSummonSoulBear extends AbstractSkillContainer {
                 level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.CHICKEN_EGG, SoundSource.NEUTRAL, 0.5F, 0.4F / (rand.nextFloat() * 0.4F + 0.8F));
                 LazyOptional<PlayerMinionCapabilityInterface> min = player.getCapability(PlayerMinionCapability.INSTANCE);
                 min.ifPresent(x -> x.removeAllSoulWolf(player));
-                ConcurrentLinkedQueue<UUID> keys = min.map(PlayerMinionCapabilityInterface::getSoulBearMinions).orElse(new ConcurrentLinkedQueue<UUID>());
+                ConcurrentLinkedQueue<UUID> keys = min.map(PlayerMinionCapabilityInterface::getSoulBearMinions).orElse(new ConcurrentLinkedQueue<>());
 
                 keys.offer(summonSoulBear(level, player, rand).getUUID());
                 if (keys.size() > NUMBER_OF_SUMMONS) {

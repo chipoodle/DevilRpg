@@ -9,10 +9,10 @@ import net.minecraft.world.level.Level;
 
 import java.util.HashMap;
 
-public abstract class AbstractSkillContainer {
+public abstract class AbstractSkillExecutor {
 	protected final PlayerSkillCapabilityInterface parentCapability;
 	protected final ItemStack icon;
-	public AbstractSkillContainer(PlayerSkillCapabilityInterface parentCapability) {
+	public AbstractSkillExecutor(PlayerSkillCapabilityInterface parentCapability) {
 		this.parentCapability = parentCapability;
 		SkillElement skillElementByEnum = parentCapability.getSkillElementByEnum(getSkillEnum());
 		icon = skillElementByEnum.getDisplay().getIcon();

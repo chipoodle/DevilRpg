@@ -312,7 +312,7 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
     @Override
     public boolean causeFallDamage(float p_149499_, float p_149500_, @NotNull DamageSource damageSource) {
         if (p_149499_ > 1.0F) {
-            this.playSound(SoundEvents.HORSE_LAND, 0.4F, 1.0F);
+            this.playSound(SoundEvents.POLAR_BEAR_HURT, 0.4F, 1.0F);
         }
 
         int i = this.calculateFallDamage(p_149499_, p_149500_);
@@ -418,12 +418,12 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
                 if (this.gallopSoundCounter > 5 && this.gallopSoundCounter % 3 == 0) {
                     this.playGallopSound(soundtype);
                 } else if (this.gallopSoundCounter <= 5) {
-                    this.playSound(SoundEvents.HORSE_STEP_WOOD, soundtype.getVolume() * 0.15F, soundtype.getPitch());
+                    this.playSound(SoundEvents.POLAR_BEAR_STEP, soundtype.getVolume() * 0.15F, soundtype.getPitch());
                 }
             } else if (this.isWoodSoundType(soundtype)) {
-                this.playSound(SoundEvents.HORSE_STEP_WOOD, soundtype.getVolume() * 0.15F, soundtype.getPitch());
+                this.playSound(SoundEvents.POLAR_BEAR_STEP, soundtype.getVolume() * 0.15F, soundtype.getPitch());
             } else {
-                this.playSound(SoundEvents.HORSE_STEP, soundtype.getVolume() * 0.15F, soundtype.getPitch());
+                this.playSound(SoundEvents.POLAR_BEAR_STEP, soundtype.getVolume() * 0.15F, soundtype.getPitch());
             }
 
         }
@@ -705,30 +705,30 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
     }
 
     @Override
-    public InteractionResult mobInteract(Player p_252289_, InteractionHand p_248927_) {
+    public @NotNull InteractionResult mobInteract(@NotNull Player player, @NotNull InteractionHand interactionHand) {
         if (!this.isVehicle() && !this.isBaby()) {
-            if (this.isTame() && p_252289_.isSecondaryUseActive()) {
-                this.openCustomInventoryScreen(p_252289_);
+            if (this.isTame() && player.isSecondaryUseActive()) {
+                this.openCustomInventoryScreen(player);
                 return InteractionResult.sidedSuccess(this.level.isClientSide);
             } else {
-                ItemStack itemstack = p_252289_.getItemInHand(p_248927_);
+                ItemStack itemstack = player.getItemInHand(interactionHand);
                 if (!itemstack.isEmpty()) {
-                    InteractionResult interactionresult = itemstack.interactLivingEntity(p_252289_, this, p_248927_);
+                    InteractionResult interactionresult = itemstack.interactLivingEntity(player, this, interactionHand);
                     if (interactionresult.consumesAction()) {
                         return interactionresult;
                     }
 
                     if (this.canWearArmor() && this.isArmor(itemstack) && !this.isWearingArmor()) {
-                        this.equipArmor(p_252289_, itemstack);
+                        this.equipArmor(player, itemstack);
                         return InteractionResult.sidedSuccess(this.level.isClientSide);
                     }
                 }
 
-                this.doPlayerRide(p_252289_);
+                this.doPlayerRide(player);
                 return InteractionResult.sidedSuccess(this.level.isClientSide);
             }
         } else {
-            return super.mobInteract(p_252289_, p_248927_);
+            return super.mobInteract(player, interactionHand);
         }
     }
 
@@ -916,9 +916,9 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
         this.setOffspringAttribute(p_149509_, p_149510_, Attributes.MOVEMENT_SPEED, (double) MIN_MOVEMENT_SPEED, (double) MAX_MOVEMENT_SPEED);
     }
 
-    private void setOffspringAttribute(AgeableMob p_273163_, AbstractMountablePet p_273784_, Attribute p_273681_, double p_272663_, double p_273405_) {
-        double d0 = createOffspringAttribute(this.getAttributeBaseValue(p_273681_), p_273163_.getAttributeBaseValue(p_273681_), p_272663_, p_273405_, this.random);
-        p_273784_.getAttribute(p_273681_).setBaseValue(d0);
+    private void setOffspringAttribute(AgeableMob ageableMob, AbstractMountablePet abstractMountablePet, Attribute attribute, double p_272663_, double p_273405_) {
+        double d0 = createOffspringAttribute(this.getAttributeBaseValue(attribute), ageableMob.getAttributeBaseValue(attribute), p_272663_, p_273405_, this.random);
+        Objects.requireNonNull(abstractMountablePet.getAttribute(attribute)).setBaseValue(d0);
     }
 
     public float getEatAnim(float p_30664_) {
@@ -1053,13 +1053,11 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
         };
     }
 
-    public SlotAccess getSlot(int p_149514_) {
+    public @NotNull SlotAccess getSlot(int p_149514_) {
         int i = p_149514_ - 400;
         if (i >= 0 && i < 2 && i < this.inventory.getContainerSize()) {
             if (i == 0) {
-                return this.createEquipmentSlotAccess(i, (p_149518_) -> {
-                    return p_149518_.isEmpty() || p_149518_.is(Items.SADDLE);
-                });
+                return this.createEquipmentSlotAccess(i, (p_149518_) -> p_149518_.isEmpty() || p_149518_.is(Items.SADDLE));
             }
 
             if (i == 1) {
@@ -1067,9 +1065,7 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
                     return SlotAccess.NULL;
                 }
 
-                return this.createEquipmentSlotAccess(i, (p_149516_) -> {
-                    return p_149516_.isEmpty() || this.isArmor(p_149516_);
-                });
+                return this.createEquipmentSlotAccess(i, (p_149516_) -> p_149516_.isEmpty() || this.isArmor(p_149516_));
             }
         }
 
@@ -1079,12 +1075,12 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
 
     @Nullable
     public LivingEntity getControllingPassenger() {
-        //if (this.isSaddled()) {
+        if (this.isSaddled()) {
             Entity entity = this.getFirstPassenger();
             if (entity instanceof Player) {
                 return (Player) entity;
             }
-        //}
+        }
 
         return super.getControllingPassenger();
     }

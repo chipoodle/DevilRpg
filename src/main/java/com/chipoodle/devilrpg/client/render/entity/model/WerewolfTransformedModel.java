@@ -83,8 +83,8 @@ public class WerewolfTransformedModel<T extends Entity> extends HierarchicalMode
         this.head = this.root.getChild("head");
         this.body = this.root.getChild("body");
         this.legs = this.root.getChild("legs");
+        this.arms = this.root.getChild("arms");
 
-        this.arms = body.getChild("arms");
         this.torax = body.getChild("torax");
 
         this.rightArm = arms.getChild("right_arm");
@@ -156,52 +156,6 @@ public class WerewolfTransformedModel<T extends Entity> extends HierarchicalMode
 
         PartDefinition body = partdefinition.addOrReplaceChild("body", CubeListBuilder.create(), PartPose.offset(0.0F, -1.0F, 2.5F));
 
-        PartDefinition arms = body.addOrReplaceChild("arms", CubeListBuilder.create(), PartPose.offset(0.0F, -6.0F, 1.0F));
-
-        PartDefinition right_arm = arms.addOrReplaceChild("right_arm", CubeListBuilder.create(), PartPose.offset(4.0F, 0.1811F, -0.3015F));
-
-        PartDefinition r_arm_b_r1 = right_arm.addOrReplaceChild("r_arm_b_r1", CubeListBuilder.create().texOffs(48, 77).addBox(1.0F, 3.0F, 2.5F, 4.0F, 7.0F, 4.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(0.0F, -1.0F, -4.5F, -0.0045F, 0.0008F, -0.1684F));
-
-        PartDefinition r_arm_a_r1 = right_arm.addOrReplaceChild("r_arm_a_r1", CubeListBuilder.create().texOffs(0, 108).addBox(0.0F, -1.0F, 2.0F, 5.0F, 5.0F, 5.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(0.0F, -1.0F, -4.5F, -0.011F, 0.0F, 0.0F));
-
-        PartDefinition r_hand = right_arm.addOrReplaceChild("r_hand", CubeListBuilder.create(), PartPose.offsetAndRotation(4.6375F, 8.048F, -0.0552F, 1.5708F, 1.3526F, -1.5708F));
-
-        PartDefinition r_wrist_r1 = r_hand.addOrReplaceChild("r_wrist_r1", CubeListBuilder.create().texOffs(32, 118).addBox(-2.0F, -1.5F, -2.0F, 4.0F, 3.0F, 4.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(0.0021F, -7.5057F, -0.0121F, 3.1416F, 0.0F, 0.0F));
-
-        PartDefinition r_arm_c_r1 = r_hand.addOrReplaceChild("r_arm_c_r1", CubeListBuilder.create().texOffs(48, 112).addBox(-2.0F, -3.5F, -2.0F, 4.0F, 7.0F, 4.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(-0.0021F, -2.4943F, 0.0121F, -0.0057F, -0.0021F, -3.1416F));
-
-        PartDefinition r_fingers = r_hand.addOrReplaceChild("r_fingers", CubeListBuilder.create().texOffs(12, 119).addBox(-0.4932F, -2.2317F, -1.8442F, 1.0F, 4.0F, 1.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(-0.4711F, -11.1374F, -0.1679F, 0.0F, 0.0F, -3.1416F));
-
-        PartDefinition r_finger_5_r1 = r_fingers.addOrReplaceChild("r_finger_5_r1", CubeListBuilder.create().texOffs(16, 124).addBox(-0.5F, -1.5F, -0.5F, 1.0F, 3.0F, 1.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(1.2068F, -0.7317F, 1.1558F, 0.0F, 1.5708F, 0.0F));
-
-        PartDefinition r_finger_4_r1 = r_fingers.addOrReplaceChild("r_finger_4_r1", CubeListBuilder.create().texOffs(16, 119).addBox(-0.5F, -2.0F, -0.5F, 1.0F, 4.0F, 1.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(1.2068F, -0.2317F, -0.3442F, 0.0F, -1.5708F, 0.0F));
-
-        PartDefinition r_finger_2_r1 = r_fingers.addOrReplaceChild("r_finger_2_r1", CubeListBuilder.create().texOffs(12, 124).addBox(-0.5F, -1.5F, -0.5F, 1.0F, 3.0F, 1.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(-1.2932F, -0.7317F, -1.3442F, 0.0F, 1.5708F, 0.0F));
-
-        PartDefinition r_finger_1_r1 = r_fingers.addOrReplaceChild("r_finger_1_r1", CubeListBuilder.create().texOffs(8, 120).addBox(-0.5F, -1.5F, -0.5F, 1.0F, 3.0F, 1.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(-1.7932F, -0.7317F, 1.1558F, 0.0F, -1.5708F, 0.0F));
-
-        PartDefinition left_arm = arms.addOrReplaceChild("left_arm", CubeListBuilder.create(), PartPose.offset(-4.0F, 0.1811F, -0.3015F));
-
-        PartDefinition l_arm_b_r1 = left_arm.addOrReplaceChild("l_arm_b_r1", CubeListBuilder.create().texOffs(48, 89).addBox(-5.0F, 3.0F, 2.5F, 4.0F, 7.0F, 4.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(0.0F, -1.0F, -4.5F, -0.0045F, 0.0008F, 0.1684F));
-
-        PartDefinition l_arm_a_r1 = left_arm.addOrReplaceChild("l_arm_a_r1", CubeListBuilder.create().texOffs(0, 98).addBox(-5.0F, -1.0F, 2.0F, 5.0F, 5.0F, 5.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(0.0F, -1.0F, -4.5F, -0.011F, 0.0F, 0.0F));
-
-        PartDefinition l_hand = left_arm.addOrReplaceChild("l_hand", CubeListBuilder.create(), PartPose.offsetAndRotation(-4.6375F, 8.048F, -0.0552F, 1.5708F, -1.3526F, 1.5708F));
-
-        PartDefinition l_wrist_r1 = l_hand.addOrReplaceChild("l_wrist_r1", CubeListBuilder.create().texOffs(32, 111).addBox(-1.5F, -1.5F, -2.0F, 4.0F, 3.0F, 4.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(-0.4576F, -7.5077F, -0.0283F, 3.1416F, 0.0F, 0.0F));
-
-        PartDefinition l_arm_c_r1 = l_hand.addOrReplaceChild("l_arm_c_r1", CubeListBuilder.create().texOffs(48, 101).addBox(-2.0F, -3.5F, -2.0F, 4.0F, 7.0F, 4.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(0.0383F, -2.4963F, -0.0124F, -0.0057F, -0.0021F, -3.1416F));
-
-        PartDefinition l_fingers = l_hand.addOrReplaceChild("l_fingers", CubeListBuilder.create().texOffs(0, 119).addBox(-0.5216F, -2.2305F, -1.8648F, 1.0F, 4.0F, 1.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(0.5008F, -11.1382F, -0.1634F, 0.0F, 0.0F, -3.1416F));
-
-        PartDefinition l_finger_5_r1 = l_fingers.addOrReplaceChild("l_finger_5_r1", CubeListBuilder.create().texOffs(4, 124).addBox(-0.5F, -1.5F, -0.5F, 1.0F, 3.0F, 1.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(-1.2216F, -0.7305F, 1.1352F, 0.0F, -1.5708F, 0.0F));
-
-        PartDefinition l_finger_4_r1 = l_fingers.addOrReplaceChild("l_finger_4_r1", CubeListBuilder.create().texOffs(4, 119).addBox(-0.5F, -2.0F, -0.5F, 1.0F, 4.0F, 1.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(-1.2216F, -0.2305F, -0.3648F, 0.0F, 1.5708F, 0.0F));
-
-        PartDefinition l_finger_2_r1 = l_fingers.addOrReplaceChild("l_finger_2_r1", CubeListBuilder.create().texOffs(0, 124).addBox(-0.5F, -1.5F, -0.5F, 1.0F, 3.0F, 1.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(1.2784F, -0.7305F, -1.3648F, 0.0F, -1.5708F, 0.0F));
-
-        PartDefinition l_finger_1_r1 = l_fingers.addOrReplaceChild("l_finger_1_r1", CubeListBuilder.create().texOffs(8, 124).addBox(-0.5F, -1.5F, -0.5F, 1.0F, 3.0F, 1.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(1.7784F, -0.7305F, 1.1352F, 0.0F, 1.5708F, 0.0F));
-
         PartDefinition torax = body.addOrReplaceChild("torax", CubeListBuilder.create(), PartPose.offsetAndRotation(0.0F, 3.0F, 2.5F, 0.0436F, 0.0F, 0.0F));
 
         PartDefinition entrepierna_r1 = torax.addOrReplaceChild("entrepierna_r1", CubeListBuilder.create().texOffs(52, 42).addBox(-1.5F, -0.5F, -13.0F, 3.0F, 4.0F, 3.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(-0.0881F, -6.9869F, 0.6511F, 1.1595F, 0.0F, 0.0F));
@@ -253,6 +207,52 @@ public class WerewolfTransformedModel<T extends Entity> extends HierarchicalMode
         PartDefinition l_foot_bone = l_leg_b_bone.addOrReplaceChild("l_foot_bone", CubeListBuilder.create(), PartPose.offset(-5.65F, 16.0395F, -5.6898F));
 
         PartDefinition l_foot_r1 = l_foot_bone.addOrReplaceChild("l_foot_r1", CubeListBuilder.create().texOffs(0, 93).addBox(-1.25F, -1.25F, -2.5F, 3.0F, 2.0F, 3.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(-0.25F, 0.3784F, 0.9588F, -0.1309F, 0.0F, 0.0F));
+
+        PartDefinition arms = partdefinition.addOrReplaceChild("arms", CubeListBuilder.create(), PartPose.offset(0.0F, -7.0F, 3.5F));
+
+        PartDefinition right_arm = arms.addOrReplaceChild("right_arm", CubeListBuilder.create(), PartPose.offset(4.0F, 0.1811F, -0.3015F));
+
+        PartDefinition r_arm_b_r1 = right_arm.addOrReplaceChild("r_arm_b_r1", CubeListBuilder.create().texOffs(48, 77).addBox(1.0F, 3.0F, 2.5F, 4.0F, 7.0F, 4.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(0.0F, -1.0F, -4.5F, -0.0045F, 0.0008F, -0.1684F));
+
+        PartDefinition r_arm_a_r1 = right_arm.addOrReplaceChild("r_arm_a_r1", CubeListBuilder.create().texOffs(0, 108).addBox(0.0F, -1.0F, 2.0F, 5.0F, 5.0F, 5.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(0.0F, -1.0F, -4.5F, -0.011F, 0.0F, 0.0F));
+
+        PartDefinition r_hand = right_arm.addOrReplaceChild("r_hand", CubeListBuilder.create(), PartPose.offsetAndRotation(4.6375F, 8.048F, -0.0552F, 1.5708F, 1.3526F, -1.5708F));
+
+        PartDefinition r_wrist_r1 = r_hand.addOrReplaceChild("r_wrist_r1", CubeListBuilder.create().texOffs(32, 118).addBox(-2.0F, -1.5F, -2.0F, 4.0F, 3.0F, 4.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(0.0021F, -7.5057F, -0.0121F, 3.1416F, 0.0F, 0.0F));
+
+        PartDefinition r_arm_c_r1 = r_hand.addOrReplaceChild("r_arm_c_r1", CubeListBuilder.create().texOffs(48, 112).addBox(-2.0F, -3.5F, -2.0F, 4.0F, 7.0F, 4.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(-0.0021F, -2.4943F, 0.0121F, -0.0057F, -0.0021F, -3.1416F));
+
+        PartDefinition r_fingers = r_hand.addOrReplaceChild("r_fingers", CubeListBuilder.create().texOffs(12, 119).addBox(-0.4932F, -2.2317F, -1.8442F, 1.0F, 4.0F, 1.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(-0.4711F, -11.1374F, -0.1679F, 0.0F, 0.0F, -3.1416F));
+
+        PartDefinition r_finger_5_r1 = r_fingers.addOrReplaceChild("r_finger_5_r1", CubeListBuilder.create().texOffs(16, 124).addBox(-0.5F, -1.5F, -0.5F, 1.0F, 3.0F, 1.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(1.2068F, -0.7317F, 1.1558F, 0.0F, 1.5708F, 0.0F));
+
+        PartDefinition r_finger_4_r1 = r_fingers.addOrReplaceChild("r_finger_4_r1", CubeListBuilder.create().texOffs(16, 119).addBox(-0.5F, -2.0F, -0.5F, 1.0F, 4.0F, 1.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(1.2068F, -0.2317F, -0.3442F, 0.0F, -1.5708F, 0.0F));
+
+        PartDefinition r_finger_2_r1 = r_fingers.addOrReplaceChild("r_finger_2_r1", CubeListBuilder.create().texOffs(12, 124).addBox(-0.5F, -1.5F, -0.5F, 1.0F, 3.0F, 1.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(-1.2932F, -0.7317F, -1.3442F, 0.0F, 1.5708F, 0.0F));
+
+        PartDefinition r_finger_1_r1 = r_fingers.addOrReplaceChild("r_finger_1_r1", CubeListBuilder.create().texOffs(8, 120).addBox(-0.5F, -1.5F, -0.5F, 1.0F, 3.0F, 1.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(-1.7932F, -0.7317F, 1.1558F, 0.0F, -1.5708F, 0.0F));
+
+        PartDefinition left_arm = arms.addOrReplaceChild("left_arm", CubeListBuilder.create(), PartPose.offset(-4.0F, 0.1811F, -0.3015F));
+
+        PartDefinition l_arm_b_r1 = left_arm.addOrReplaceChild("l_arm_b_r1", CubeListBuilder.create().texOffs(48, 89).addBox(-5.0F, 3.0F, 2.5F, 4.0F, 7.0F, 4.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(0.0F, -1.0F, -4.5F, -0.0045F, 0.0008F, 0.1684F));
+
+        PartDefinition l_arm_a_r1 = left_arm.addOrReplaceChild("l_arm_a_r1", CubeListBuilder.create().texOffs(0, 98).addBox(-5.0F, -1.0F, 2.0F, 5.0F, 5.0F, 5.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(0.0F, -1.0F, -4.5F, -0.011F, 0.0F, 0.0F));
+
+        PartDefinition l_hand = left_arm.addOrReplaceChild("l_hand", CubeListBuilder.create(), PartPose.offsetAndRotation(-4.6375F, 8.048F, -0.0552F, 1.5708F, -1.3526F, 1.5708F));
+
+        PartDefinition l_wrist_r1 = l_hand.addOrReplaceChild("l_wrist_r1", CubeListBuilder.create().texOffs(32, 111).addBox(-1.5F, -1.5F, -2.0F, 4.0F, 3.0F, 4.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(-0.4576F, -7.5077F, -0.0283F, 3.1416F, 0.0F, 0.0F));
+
+        PartDefinition l_arm_c_r1 = l_hand.addOrReplaceChild("l_arm_c_r1", CubeListBuilder.create().texOffs(48, 101).addBox(-2.0F, -3.5F, -2.0F, 4.0F, 7.0F, 4.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(0.0383F, -2.4963F, -0.0124F, -0.0057F, -0.0021F, -3.1416F));
+
+        PartDefinition l_fingers = l_hand.addOrReplaceChild("l_fingers", CubeListBuilder.create().texOffs(0, 119).addBox(-0.5216F, -2.2305F, -1.8648F, 1.0F, 4.0F, 1.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(0.5008F, -11.1382F, -0.1634F, 0.0F, 0.0F, -3.1416F));
+
+        PartDefinition l_finger_5_r1 = l_fingers.addOrReplaceChild("l_finger_5_r1", CubeListBuilder.create().texOffs(4, 124).addBox(-0.5F, -1.5F, -0.5F, 1.0F, 3.0F, 1.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(-1.2216F, -0.7305F, 1.1352F, 0.0F, -1.5708F, 0.0F));
+
+        PartDefinition l_finger_4_r1 = l_fingers.addOrReplaceChild("l_finger_4_r1", CubeListBuilder.create().texOffs(4, 119).addBox(-0.5F, -2.0F, -0.5F, 1.0F, 4.0F, 1.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(-1.2216F, -0.2305F, -0.3648F, 0.0F, 1.5708F, 0.0F));
+
+        PartDefinition l_finger_2_r1 = l_fingers.addOrReplaceChild("l_finger_2_r1", CubeListBuilder.create().texOffs(0, 124).addBox(-0.5F, -1.5F, -0.5F, 1.0F, 3.0F, 1.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(1.2784F, -0.7305F, -1.3648F, 0.0F, -1.5708F, 0.0F));
+
+        PartDefinition l_finger_1_r1 = l_fingers.addOrReplaceChild("l_finger_1_r1", CubeListBuilder.create().texOffs(8, 124).addBox(-0.5F, -1.5F, -0.5F, 1.0F, 3.0F, 1.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(1.7784F, -0.7305F, 1.1352F, 0.0F, 1.5708F, 0.0F));
 
         return LayerDefinition.create(meshdefinition, 128, 128);
     }
@@ -419,6 +419,7 @@ public class WerewolfTransformedModel<T extends Entity> extends HierarchicalMode
     @Override
     public void renderToBuffer(@NotNull PoseStack poseStack, @NotNull VertexConsumer vertexConsumer, int packedLight, int packedOverlay, float red, float green, float blue, float alpha) {
         head.render(poseStack, vertexConsumer, packedLight, packedOverlay, red, green, blue, alpha);
+        arms.render(poseStack, vertexConsumer, packedLight, packedOverlay, red, green, blue, alpha);
         body.render(poseStack, vertexConsumer, packedLight, packedOverlay, red, green, blue, alpha);
         legs.render(poseStack, vertexConsumer, packedLight, packedOverlay, red, green, blue, alpha);
     }

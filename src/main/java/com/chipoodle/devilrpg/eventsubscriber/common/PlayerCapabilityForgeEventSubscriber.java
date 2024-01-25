@@ -30,27 +30,30 @@ import com.chipoodle.devilrpg.capability.tamable_minion.TamableMinionCapabilityI
 import com.chipoodle.devilrpg.capability.tamable_minion.TamableMinionCapabilityInterface;
 import com.chipoodle.devilrpg.entity.ITamableEntity;
 import com.chipoodle.devilrpg.init.ModCapability;
+import com.chipoodle.devilrpg.init.ModEffects;
 import com.chipoodle.devilrpg.init.ModNetwork;
-import com.chipoodle.devilrpg.network.handler.PlayerExperienceClientServerHandler;
-import com.chipoodle.devilrpg.network.handler.PlayerManaClientServerHandler;
-import com.chipoodle.devilrpg.network.handler.PlayerSkillTreeClientServerHandler;
-import com.chipoodle.devilrpg.network.handler.PlayerStaminaClientServerHandler;
-import com.chipoodle.devilrpg.skillsystem.AbstractSkillContainer;
+import com.chipoodle.devilrpg.network.handler.*;
+import com.chipoodle.devilrpg.skillsystem.AbstractSkillExecutor;
 import com.chipoodle.devilrpg.util.EventUtils;
 import com.chipoodle.devilrpg.util.SkillEnum;
+import com.mojang.blaze3d.shaders.Effect;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraftforge.common.ForgeMod;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.RegisterCapabilitiesEvent;
 import net.minecraftforge.common.util.INBTSerializable;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
 import net.minecraftforge.event.entity.EntityJoinLevelEvent;
+import net.minecraftforge.event.entity.EntityLeaveLevelEvent;
 import net.minecraftforge.event.entity.living.LivingEquipmentChangeEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerSetSpawnEvent;
@@ -89,7 +92,7 @@ public class PlayerCapabilityForgeEventSubscriber {
     @SubscribeEvent
     public static void onAttachCapabilitiesEvent(AttachCapabilitiesEvent<Entity> event) {
         if (event.getObject() instanceof Player) {
-            DevilRpg.LOGGER.info("----------------------->PlayerCapabilityForgeEventSubscriber.onAttachCapabilitiesEvent()");
+            DevilRpg.LOGGER.info("----------------------->PlayerCapabilityForgeEventSubscriber.onAttachCapabilitiesEvent() server? {}",event.getObject().level.isClientSide);
             ModCapability.registerForPlayer(event);
         }
         if (event.getObject() instanceof ITamableEntity) {
@@ -116,15 +119,25 @@ public class PlayerCapabilityForgeEventSubscriber {
     }
 
     private static void clonePlayerCapability(PlayerEvent.Clone e, Capability<? extends IGenericCapability> cap) {
+
+
         Player originalPlayer = e.getOriginal();
         Player actualPlayer = e.getEntity();
+
+        originalPlayer.reviveCaps();
 
         LazyOptional<? extends IGenericCapability> original = e.getOriginal().getCapability(cap);
         LazyOptional<? extends IGenericCapability> actual = e.getEntity().getCapability(cap);
         //DevilRpg.LOGGER.info("----------------------->clonePlayerCapability. Original: {}", original);
         //DevilRpg.LOGGER.info("----------------------->clonePlayerCapability. New: {}", actual);
-        originalPlayer.reviveCaps();
-        actual.ifPresent(originalCap -> original.ifPresent(actualCap -> originalCap.deserializeNBT(actualCap.serializeNBT())));
+
+        IGenericCapability originalCap = original.orElseThrow(NullPointerException::new);
+        CompoundTag originalCompound = originalCap.serializeNBT();
+        IGenericCapability actualCap = actual.orElseThrow(NegativeArraySizeException::new);
+        actualCap.deserializeNBT(originalCompound);
+        //DevilRpg.LOGGER.info("----------------------->clonePlayerCapability. Original: {}", originalCompound);
+        //actual.ifPresent(actualCap -> original.ifPresent(originalCap -> actualCap.deserializeNBT(originalCap.serializeNBT())));
+        originalPlayer.invalidateCaps();
     }
 
     @SubscribeEvent
@@ -154,13 +167,54 @@ public class PlayerCapabilityForgeEventSubscriber {
         LazyOptional<PlayerMinionCapabilityInterface> min = player.getCapability(PlayerMinionCapability.INSTANCE);
     }
 
+    @SubscribeEvent
+    public static void onPlayerChangedDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
+        Player player = event.getEntity();
+
+        DevilRpg.LOGGER.info("----------------------->PlayerCapabilityForgeEventSubscriber.onPlayerChangedDimension()");
+        PlayerSkillCapabilityInterface aSkillCap = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerSkillCapability.INSTANCE);
+        //Es necesrio enviar nuevamente la activación de todos los pasivos del Player que no se guardan en un Attribute
+        SkillEnum.getPassiveSkills().stream().filter(x->!x.isForMinion()).forEach(skillEnum->{
+            CompoundTag compoundTag = aSkillCap.setSkillToByteArray(skillEnum);
+            ModNetwork.CHANNEL.sendToServer(new PlayerPassiveSkillServerHandler(compoundTag));
+        });
+    }
+
+    @SubscribeEvent
+    public static void onEntityLeaveLevelEvent(EntityLeaveLevelEvent event) {
+        if(event.getEntity() instanceof Player player){
+
+            DevilRpg.LOGGER.info("----------------------->PlayerCapabilityForgeEventSubscriber.onEntityLeaveLevelEvent({}) ", player.getScoreboardName());
+
+
+            BiConsumer<Player, LazyOptional<PlayerManaCapabilityInterface>> manaBiConsumer = sendManaNBTData();
+            manaBiConsumer.accept(player,player.getCapability(PlayerManaCapability.INSTANCE));
+
+            BiConsumer<Player, LazyOptional<PlayerStaminaCapabilityInterface>> staminaBiConsumer = sendStaminaNBTData();
+            staminaBiConsumer.accept(player,player.getCapability(PlayerStaminaCapability.INSTANCE));
+
+            BiConsumer<Player, LazyOptional<PlayerSkillCapabilityInterface>> skillBiConsumer = removeStoredSkillAttributes();
+            skillBiConsumer.accept(player,player.getCapability(PlayerSkillCapability.INSTANCE));
+
+            BiConsumer<Player, LazyOptional<PlayerExperienceCapabilityInterface>> expBiConsumer = sendExperienceNBTData();
+            expBiConsumer.accept(player,player.getCapability(PlayerExperienceCapability.INSTANCE));
+
+            BiConsumer<Player, LazyOptional<PlayerAuxiliaryCapabilityInterface>> auxBiConsumer = shapeshiftToNormal();
+            auxBiConsumer.accept(player,player.getCapability(PlayerAuxiliaryCapability.INSTANCE));
+
+            BiConsumer<Player, LazyOptional<PlayerMinionCapabilityInterface>> minBiConsumer = removeMinions(player);
+            minBiConsumer.accept(player,player.getCapability(PlayerMinionCapability.INSTANCE));
+        }
+    }
+
+
     /**
      * Restore client player capabilities' values on join. Applies passive skills to entities
      *
      * @param event EntityJoinLevelEvent
      */
     @SubscribeEvent
-    public static void onTamableJoinLevelEvent(EntityJoinLevelEvent event) {
+    public static void onApplyPetPassives(EntityJoinLevelEvent event) {
         Entity entity = event.getEntity();
 
         if ((entity instanceof Player || entity instanceof ItemEntity)) {
@@ -189,13 +243,10 @@ public class PlayerCapabilityForgeEventSubscriber {
         if (!(event.getEntity() instanceof Player player)) {
             return;
         }
-
-        DevilRpg.LOGGER.info("----------------------->PlayerCapabilityForgeEventSubscriber.onPlayerJoinLevelEvent({}) ", player.getScoreboardName());
-
-
         if (player.level.isClientSide)
             return;
-        DevilRpg.LOGGER.info("----------------------->PlayerCapabilityForgeEventSubscriber.onEntityJoinWorld()");
+        DevilRpg.LOGGER.info("----------------------->PlayerCapabilityForgeEventSubscriber.onPlayerJoinLevelEvent({}) ", player.getScoreboardName());
+
         BiConsumer<Player, LazyOptional<PlayerManaCapabilityInterface>> manaBiConsumer = sendManaNBTData();
         EventUtils.onJoin(player, manaBiConsumer, PlayerManaCapability.INSTANCE);
 
@@ -268,6 +319,7 @@ public class PlayerCapabilityForgeEventSubscriber {
                 UUID spdAttMod = attributeModifiers.get(Attributes.MOVEMENT_SPEED.getDescriptionId());
                 UUID armrAttMod = attributeModifiers.get(Attributes.ARMOR.getDescriptionId());
                 UUID attDmgMod = attributeModifiers.get(Attributes.ATTACK_DAMAGE.getDescriptionId());
+                UUID stepDmgMod = attributeModifiers.get(ForgeMod.STEP_HEIGHT_ADDITION.get().getDescriptionId());
 
                 if (hlthAttMod != null) {
                     Objects.requireNonNull(aPlayer.getAttribute(Attributes.MAX_HEALTH)).removeModifier(hlthAttMod);
@@ -281,10 +333,15 @@ public class PlayerCapabilityForgeEventSubscriber {
                 if (attDmgMod != null) {
                     Objects.requireNonNull(aPlayer.getAttribute(Attributes.ATTACK_DAMAGE)).removeModifier(attDmgMod);
                 }
-
+                if (stepDmgMod != null) {
+                    Objects.requireNonNull(aPlayer.getAttribute(ForgeMod.STEP_HEIGHT_ADDITION.get())).removeModifier(stepDmgMod);
+                }
 
                 ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> (ServerPlayer) aPlayer),
                         new PlayerSkillTreeClientServerHandler(presentSkill.serializeNBT()));
+
+                aPlayer.removeEffect(ModEffects.KNOCKBACK_RESISTANCE.get());
+                aPlayer.removeEffect(MobEffects.ABSORPTION);
             });
             DevilRpg.LOGGER.info("----------------------->PlayerCapabilityForgeEventSubscriber.removeStoredSkillAttributes");
         };
@@ -301,11 +358,11 @@ public class PlayerCapabilityForgeEventSubscriber {
         }
 
         LazyOptional<PlayerManaCapabilityInterface> mana = player.getCapability(PlayerManaCapability.INSTANCE, null);
-        mana.ifPresent((cap) -> cap.setMana(mana.map(x -> x.getMaxMana()).orElse(Float.NaN), player));
+        mana.ifPresent((cap) -> cap.setMana(mana.map(PlayerManaCapabilityInterface::getMaxMana).orElse(Float.NaN), player));
 
         String message = String.format(
                 "You refreshed yourself in the bed. You recovered mana and you have %f mana left.",
-                mana.map(x -> x.getMaxMana()).orElse(Float.NaN));
+                mana.map(PlayerManaCapabilityInterface::getMaxMana).orElse(Float.NaN));
         player.sendSystemMessage(Component.literal(message));
     }
 
@@ -328,14 +385,14 @@ public class PlayerCapabilityForgeEventSubscriber {
             DevilRpg.LOGGER.info("----------------------->getFrom {}", event.getFrom().toString());
             DevilRpg.LOGGER.info("----------------------->getTo {}", event.getTo().toString());
             DevilRpg.LOGGER.info("----------------------->getType {}", event.getSlot().getType().toString());*/
-            AbstractSkillContainer loadedSkill = getLoadedSkillForPlayer(player, SkillEnum.SKIN_ARMOR);
+            AbstractSkillExecutor loadedSkill = getLoadedSkillForPlayer(player, SkillEnum.SKIN_ARMOR);
             loadedSkill.execute(player.level, player, new HashMap<>());
         }
     }
 
-    private static AbstractSkillContainer getLoadedSkillForPlayer(Player player, SkillEnum skill) {
+    private static AbstractSkillExecutor getLoadedSkillForPlayer(Player player, SkillEnum skill) {
         PlayerSkillCapabilityInterface aSkillCap = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerSkillCapability.INSTANCE);
-        AbstractSkillContainer loadedSkill = aSkillCap.getLoadedSkillExecutor(skill);
+        AbstractSkillExecutor loadedSkill = aSkillCap.getLoadedSkillExecutor(skill);
         DevilRpg.LOGGER.info("----------------------->loadedSkill {}", loadedSkill);
         return loadedSkill;
     }
@@ -347,11 +404,14 @@ public class PlayerCapabilityForgeEventSubscriber {
             DevilRpg.LOGGER.info("||||||||||||||||||||||||||| SPAWN POINT FIRST {}", event.getNewSpawn());
 
         }
+        else{
+            DevilRpg.LOGGER.info("||||||||||||||||||||||||||| SPAWN POINT");
+        }
     }
 
     @SubscribeEvent(priority = EventPriority.NORMAL)
     public void onPlayerPickupXP(PlayerXpEvent.PickupXp e) {
-        e.getOrb().value *= 0.5;
+        //e.getOrb().value *= 0.5;
     }
 
 }

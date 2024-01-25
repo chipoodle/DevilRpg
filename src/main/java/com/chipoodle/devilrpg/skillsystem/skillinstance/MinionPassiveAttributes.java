@@ -85,8 +85,7 @@ public class MinionPassiveAttributes {
                 AttributeModifier.Operation.ADDITION));
 
 
-        IPassiveMinionUpdater<SoulBear> minion = entity;
-        minion.applyPassives(attributes, entity);
+        entity.applyPassives(attributes, entity);
 
     }
 

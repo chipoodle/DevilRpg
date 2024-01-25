@@ -13,14 +13,14 @@ import net.minecraft.world.level.Level;
 
 import java.util.HashMap;
 
-public class PlayerPassiveKnockBackResistance extends AbstractPlayerPassiveAttribute  {
+public class PlayerPassiveKnockBackResistanceExecutor extends AbstractPlayerPassiveAttributeExecutor {
     public static final String ABSORPTION_TICKS = "ABSORPTION_TICKS";
     public static final String BLOCK_POINTS = "BLOCK_POINTS";
       private Player playerIn;
 
-    public PlayerPassiveKnockBackResistance(PlayerSkillCapabilityInterface parentCapability) {
+    public PlayerPassiveKnockBackResistanceExecutor(PlayerSkillCapabilityInterface parentCapability) {
         super(parentCapability);
-        DevilRpg.LOGGER.info("----------------------->CONSTRUCTOR PlayerPassiveWerewolfHit. Parent capability: {}", parentCapability);
+        DevilRpg.LOGGER.info("----------------------->CONSTRUCTOR PlayerPassiveKnockBackResistanceExecutor. Parent capability: {}", parentCapability);
     }
 
     /**
@@ -34,6 +34,8 @@ public class PlayerPassiveKnockBackResistance extends AbstractPlayerPassiveAttri
     public void execute(Level levelIn, Player player, HashMap<String, String> parameters) {
         if (!levelIn.isClientSide) {
 
+
+
             if (this.playerIn == null) {
                 this.playerIn = player;
             }
@@ -44,6 +46,9 @@ public class PlayerPassiveKnockBackResistance extends AbstractPlayerPassiveAttri
 
             PlayerAuxiliaryCapabilityInterface auxiliary = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerAuxiliaryCapability.INSTANCE);
             Integer skillPoints = parentCapability.getSkillsPoints().get(SkillEnum.KNOCKBACK_RESISTANCE);
+
+            DevilRpg.LOGGER.info("-----------------------> Executing passive PlayerPassiveKnockBackResistanceExecutor skillPoints:{}",skillPoints);
+
             if (auxiliary.isWerewolfTransformation() && skillPoints > 0) {
                 MobEffectInstance knockbackEffect = new MobEffectInstance(ModEffects.KNOCKBACK_RESISTANCE.get(), absorptionTicks + blockPoints, skillPoints); //5 máximo amplificador para dar el 100% de resistencia a knockback
                 player.addEffect(knockbackEffect);

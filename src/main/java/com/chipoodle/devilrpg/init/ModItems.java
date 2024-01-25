@@ -19,6 +19,8 @@ public class ModItems {
     public static final RegistryObject<Item> ITEM_BLOCK = ITEMS.register("item_block", () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> ITEM_CHARGE = ITEMS.register("item_charge", () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> ITEM_SUMMON = ITEMS.register("item_summon", () -> new Item(new Item.Properties()));
+    public static final RegistryObject<Item> ITEM_FROST = ITEMS.register("item_frost", () -> new Item(new Item.Properties()));
+    public static final RegistryObject<Item> ITEM_VINE = ITEMS.register("item_vine", () -> new Item(new Item.Properties()));
     public static final RegistryObject<ForgeSpawnEggItem> SOULWOLF_SPAWN_EGG = ITEMS.register("soulwolf_spawn_egg",
             () -> new ForgeSpawnEggItem(ModEntities.SOUL_WOLF, 0x944a7f, 0x3b3636,
                     new Item.Properties().stacksTo(16)));

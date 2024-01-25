@@ -18,23 +18,23 @@ public class MountablePetContainerMenu extends AbstractContainerMenu {
     private final Container horseContainer;
     private final AbstractMountablePet horse;
 
-    public MountablePetContainerMenu(int p_39656_, Inventory p_39657_, Container p_39658_, final AbstractMountablePet p_39659_) {
+    public MountablePetContainerMenu(int p_39656_, Inventory inventory, Container container, final AbstractMountablePet p_39659_) {
         super((MenuType<?>)null, p_39656_);
-        this.horseContainer = p_39658_;
+        this.horseContainer = container;
         this.horse = p_39659_;
         int i = 3;
-        p_39658_.startOpen(p_39657_.player);
+        container.startOpen(inventory.player);
         int j = -18;
-        this.addSlot(new Slot(p_39658_, 0, 8, 18) {
-            public boolean mayPlace(ItemStack p_39677_) {
-                return p_39677_.is(Items.SADDLE) && !this.hasItem() && p_39659_.isSaddleable();
+        this.addSlot(new Slot(container, 0, 8, 18) {
+            public boolean mayPlace(@NotNull ItemStack itemStack) {
+                return itemStack.is(Items.SADDLE) && !this.hasItem() && p_39659_.isSaddleable();
             }
 
             public boolean isActive() {
                 return p_39659_.isSaddleable();
             }
         });
-        this.addSlot(new Slot(p_39658_, 1, 8, 36) {
+        this.addSlot(new Slot(container, 1, 8, 36) {
             public boolean mayPlace(ItemStack p_39690_) {
                 return p_39659_.isArmor(p_39690_);
             }
@@ -50,19 +50,19 @@ public class MountablePetContainerMenu extends AbstractContainerMenu {
         if (this.hasChest(p_39659_)) {
             for(int k = 0; k < 3; ++k) {
                 for(int l = 0; l < ((AbstractChestedMountablePet)p_39659_).getInventoryColumns(); ++l) {
-                    this.addSlot(new Slot(p_39658_, 2 + l + k * ((AbstractChestedMountablePet)p_39659_).getInventoryColumns(), 80 + l * 18, 18 + k * 18));
+                    this.addSlot(new Slot(container, 2 + l + k * ((AbstractChestedMountablePet)p_39659_).getInventoryColumns(), 80 + l * 18, 18 + k * 18));
                 }
             }
         }
 
         for(int i1 = 0; i1 < 3; ++i1) {
             for(int k1 = 0; k1 < 9; ++k1) {
-                this.addSlot(new Slot(p_39657_, k1 + i1 * 9 + 9, 8 + k1 * 18, 102 + i1 * 18 + -18));
+                this.addSlot(new Slot(inventory, k1 + i1 * 9 + 9, 8 + k1 * 18, 102 + i1 * 18 - 18));
             }
         }
 
         for(int j1 = 0; j1 < 9; ++j1) {
-            this.addSlot(new Slot(p_39657_, j1, 8 + j1 * 18, 142));
+            this.addSlot(new Slot(inventory, j1, 8 + j1 * 18, 142));
         }
 
     }

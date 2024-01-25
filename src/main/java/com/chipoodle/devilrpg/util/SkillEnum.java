@@ -63,7 +63,7 @@ public enum SkillEnum {
 
     }
 
-    public boolean iforMinion() {
+    public boolean isForMinion() {
         return ofMinion;
     }
 

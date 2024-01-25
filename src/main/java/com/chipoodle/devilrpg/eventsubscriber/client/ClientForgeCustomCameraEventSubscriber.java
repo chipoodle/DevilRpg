@@ -46,6 +46,7 @@ public final class ClientForgeCustomCameraEventSubscriber {
      */
     @SubscribeEvent
     public static void onComputeCameraAngles(ViewportEvent.ComputeCameraAngles event) throws NoSuchMethodException, SecurityException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+        /*
         Player player = Minecraft.getInstance().player;
         BiConsumer<ViewportEvent.ComputeCameraAngles, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, auxiliar) -> {
         };
@@ -71,6 +72,7 @@ public final class ClientForgeCustomCameraEventSubscriber {
             restoreCamera();
 
         }
+        */
     }
 
     private static void handleFirstPerson(CameraType cameraType) {

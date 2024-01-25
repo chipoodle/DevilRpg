@@ -220,18 +220,18 @@ public class SkillWidget extends GuiComponent {
             int i1 = y + this.y + 13;
             int j1 = dropShadow ? -16777216 : -1;
             if (dropShadow) {
-                this.hLine(matrixStack, j, i, k - 1, j1);
-                this.hLine(matrixStack, j + 1, i, k, j1);
-                this.hLine(matrixStack, j, i, k + 1, j1);
-                this.hLine(matrixStack, l, j - 1, i1 - 1, j1);
-                this.hLine(matrixStack, l, j - 1, i1, j1);
-                this.hLine(matrixStack, l, j - 1, i1 + 1, j1);
-                this.vLine(matrixStack, j - 1, i1, k, j1);
-                this.vLine(matrixStack, j + 1, i1, k, j1);
+                hLine(matrixStack, j, i, k - 1, j1);
+                hLine(matrixStack, j + 1, i, k, j1);
+                hLine(matrixStack, j, i, k + 1, j1);
+                hLine(matrixStack, l, j - 1, i1 - 1, j1);
+                hLine(matrixStack, l, j - 1, i1, j1);
+                hLine(matrixStack, l, j - 1, i1 + 1, j1);
+                vLine(matrixStack, j - 1, i1, k, j1);
+                vLine(matrixStack, j + 1, i1, k, j1);
             } else {
-                this.hLine(matrixStack, j, i, k, j1);
-                this.hLine(matrixStack, l, j, i1, j1);
-                this.vLine(matrixStack, j, i1, k, j1);
+                hLine(matrixStack, j, i, k, j1);
+                hLine(matrixStack, l, j, i1, j1);
+                vLine(matrixStack, j, i1, k, j1);
             }
         }
 
