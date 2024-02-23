@@ -6,6 +6,7 @@ import com.chipoodle.devilrpg.capability.mana.PlayerManaCapabilityInterface;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiComponent;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
@@ -45,7 +46,7 @@ public class ManaBarHudOverlay {
             final int vanillaExpTopY = screenHeight + 9 + BAR_SPACING_ABOVE_EXP_BAR - BAR_HEIGHT; // top of the experience bar
             poseStack.translate(screenWidth - BAR_WIDTH - RIGHT_OFFSET, vanillaExpTopY - BAR_SPACING_ABOVE_EXP_BAR - BAR_HEIGHT - 5, 0);
             //Draw only the black bar
-            gui.blit(poseStack, 0, 0, 0, 0, BAR_WIDTH, BAR_HEIGHT);
+            GuiComponent.blit(poseStack, 0, 0, 0, 0, BAR_WIDTH, BAR_HEIGHT);
             poseStack.pushPose();
             {
                 //move inside the black bar to draw
@@ -53,7 +54,7 @@ public class ManaBarHudOverlay {
                 poseStack.pushPose();
                 {
                     poseStack.scale((BAR_WIDTH - 2) * Math.min(1, manaRun / maxMana), 1, 1);
-                    gui.blit(poseStack, 0, 0, BAR_WIDTH, 0, 1, BAR_HEIGHT - 2);
+                    GuiComponent.blit(poseStack, 0, 0, BAR_WIDTH, 0, 1, BAR_HEIGHT - 2);
                 }
                 poseStack.popPose();
                 /* Move to the right end of the bar, minus a few pixels to draw the text */

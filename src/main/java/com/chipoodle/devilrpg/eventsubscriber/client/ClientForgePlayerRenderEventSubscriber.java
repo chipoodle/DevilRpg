@@ -37,38 +37,7 @@ import java.util.function.BiConsumer;
  */
 @EventBusSubscriber(modid = DevilRpg.MODID, bus = EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
 public final class ClientForgePlayerRenderEventSubscriber {
-    /**
-     * @SubscribeEvent public static void renderInjectedArm(RenderArmEvent event) {
-     * BiConsumer<RenderArmEvent, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, auxiliar) -> {
-     * eve.setCanceled(true);
-     * };
-     * Minecraft instance = Minecraft.getInstance();
-     * LocalPlayer player = instance.player;
-     * if (EventUtils.onWerewolfTransformation(player, c, event)) {
-     * <p>
-     * if(handRenderer == null)
-     * handRenderer = new CustomHandRenderer();
-     * <p>
-     * var poseStack = new PoseStack();
-     * poseStack.translate(0.5, -0.5, -0.6);
-     * <p>
-     * handRenderer.render(
-     * null,
-     * poseStack,
-     * event.getMultiBufferSource(),
-     * event.getPackedLight());
-     * event.setCanceled(true);
-     * <p>
-     * }
-     * <p>
-     * }
-     */
 
-
-    /*@SubscribeEvent
-    public static void onPlayerRenderHand(RenderPlayerEvent.Pre event) {
-        event.getRenderer().renderRightHand(event.getPoseStack(), event.getMultiBufferSource(), event.getPackedLight(), (AbstractClientPlayer) event.getEntity());
-    }*/
 
     private static WerewolfItemInHandRenderer handRenderer;
 
@@ -77,7 +46,8 @@ public final class ClientForgePlayerRenderEventSubscriber {
      */
     @SubscribeEvent
     public static void onRenderLiving(RenderLivingEvent.Pre<?, ?> event) {
-        if (!(event.getEntity() instanceof Player)) return;
+        if (!(event.getEntity() instanceof Player)) {
+        }
     }
 
     @SubscribeEvent

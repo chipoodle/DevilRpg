@@ -59,13 +59,12 @@ public class SkillsIconHudOverlay {
             int height = 12;
             boolean onCooldown = player.getCooldowns().isOnCooldown(item);
 
-            //////////player.getCooldowns().getCooldownPercent(item,)
             float cooldownPercent = player.getCooldowns().getCooldownPercent(item, 0);
             float color = 1f - (cooldownPercent)/1.5f;
 
             RenderSystem.setShader(GameRenderer::getPositionTexShader);
             RenderSystem.setShaderTexture(0, resourceLocation);
-            RenderSystem.setShaderColor(1.0F, color, color, 1.0F);
+            RenderSystem.setShaderColor(1.0F, color, color, player.getCooldowns().isOnCooldown(item)? 0.5F: 1.0F);
 
             RenderSystem.enableBlend();
             RenderSystem.defaultBlendFunc();
@@ -79,7 +78,6 @@ public class SkillsIconHudOverlay {
             poseStack.pushPose();
             poseStack.translate((x - x * 0.3f) - 1, (y - y * 0.3f) - 1, 0);
             poseStack.scale(0.3f, 0.3f, 0);
-            //GuiComponent.drawCenteredString(poseStack, mc.font, ""+cooldownPercent, x + width + (keyName.length() / 2) + (width / 2) + (1 / keyName.length()) * 7, y + (height) - 32, getFGColor(!onCooldown));
             GuiComponent.drawCenteredString(poseStack, mc.font, keyName, x + width + (keyName.length() / 2) + (width / 2) + (1 / keyName.length()) * 7, y + (height) + 32, getFGColor(!onCooldown));
             poseStack.popPose();
             i++;

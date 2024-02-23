@@ -1,10 +1,15 @@
 package com.chipoodle.devilrpg.entity;
 
+import com.chipoodle.devilrpg.init.ModEntities;
+import com.chipoodle.devilrpg.util.SkillEnum;
+import net.minecraft.advancements.CriteriaTriggers;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.entity.AreaEffectCloud;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.goal.*;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
@@ -12,7 +17,11 @@ import net.minecraft.world.entity.animal.IronGolem;
 import net.minecraft.world.entity.animal.Turtle;
 import net.minecraft.world.entity.animal.horse.Llama;
 import net.minecraft.world.entity.npc.Villager;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 
@@ -84,5 +93,19 @@ public class SoulWispBomber extends SoulWisp {
 
     }
 
+    @Override
+    public void tick() {
+        super.tick();
+    }
+
+    public void updateLevel(Player owner) {
+        super.updateLevel(owner,null,null, SkillEnum.SUMMON_WISP_BOMB,true);
+    }
+
+    @Nullable
+    @Override
+    public SoulWispBomber getBreedOffspring(@NotNull ServerLevel level, @NotNull AgeableMob ageableMob) {
+        return ModEntities.WISP_BOMB.get().create(level);
+    }
 
 }

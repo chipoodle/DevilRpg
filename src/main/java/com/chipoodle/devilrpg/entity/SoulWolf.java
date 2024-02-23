@@ -45,7 +45,7 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
     private static final int ICE_ARMOR_EFFECT_FACTOR = 2;
     private static final double RADIUS_PARTICLES = 0.7;
     private static final int NUMBER_OF_PARTICLES_ICE_ARMOR = 11;
-    private static final int PROBABILITY_MULTIPLIER = 6;
+    private static final int PROBABILITY_MULTIPLIER = 5;
     private static final int ICE_ARMOR_DURATION_TICKS = 100;
     public static final int FROSTBITE_DURATION_TICKS = 20;
     private static final int INITIAL_HEALTH = 7;
@@ -106,8 +106,9 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
         Objects.requireNonNull(this.getAttribute(Attributes.MAX_HEALTH)).setBaseValue(saludMaxima);
         Objects.requireNonNull(this.getAttribute(Attributes.ARMOR)).setBaseValue(0.35D);
         Objects.requireNonNull(this.getAttribute(Attributes.FOLLOW_RANGE)).setBaseValue(16.0D);
-        Objects.requireNonNull(this.getAttribute(Attributes.ATTACK_DAMAGE)).setBaseValue((0.30 * puntosAsignados) + 2); // 2.35-6
+        Objects.requireNonNull(this.getAttribute(Attributes.ATTACK_DAMAGE)).setBaseValue((0.25 * puntosAsignados) + 2); // 2.25-5
         setHealth((float) saludMaxima);
+        random.setSeed(System.currentTimeMillis());
     }
 
     @Override
@@ -153,7 +154,6 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
      */
     @Override
     public boolean doHurtTarget(@NotNull Entity target) {
-        random.setSeed(System.currentTimeMillis()+random.nextInt());
         int randomNumber = random.nextInt(100);
         if (frostbite > 0 && randomNumber <= (frostbite * PROBABILITY_MULTIPLIER)) { //30% randomNumber on lvl5 frostbite
 

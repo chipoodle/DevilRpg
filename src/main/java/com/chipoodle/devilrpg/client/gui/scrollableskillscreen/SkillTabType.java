@@ -43,7 +43,7 @@ public enum SkillTabType {
         }
 
         int j = isSelected ? this.textureY + this.height : this.textureY;
-        abstractGui.blit(poseStack, offsetX + this.getX(index), offsetY + this.getY(index), i, j, this.width,
+        GuiComponent.blit(poseStack, offsetX + this.getX(index), offsetY + this.getY(index), i, j, this.width,
                 this.height);
     }
 

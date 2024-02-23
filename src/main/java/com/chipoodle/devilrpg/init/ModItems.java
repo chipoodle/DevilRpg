@@ -21,20 +21,27 @@ public class ModItems {
     public static final RegistryObject<Item> ITEM_SUMMON = ITEMS.register("item_summon", () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> ITEM_FROST = ITEMS.register("item_frost", () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> ITEM_VINE = ITEMS.register("item_vine", () -> new Item(new Item.Properties()));
+
     public static final RegistryObject<ForgeSpawnEggItem> SOULWOLF_SPAWN_EGG = ITEMS.register("soulwolf_spawn_egg",
             () -> new ForgeSpawnEggItem(ModEntities.SOUL_WOLF, 0x944a7f, 0x3b3636,
                     new Item.Properties().stacksTo(16)));
     public static final RegistryObject<ForgeSpawnEggItem> SOULBEAR_SPAWN_EGG = ITEMS.register("soulbear_spawn_egg",
             () -> new ForgeSpawnEggItem(ModEntities.SOUL_BEAR, 0x944b7f, 0x4b3636,
                     new Item.Properties().stacksTo(16)));
-    public static final RegistryObject<ForgeSpawnEggItem> SOULWISP_SPAWN_EGG = ITEMS.register("soulwisp_spawn_egg",
+    /*public static final RegistryObject<ForgeSpawnEggItem> SOULWISP_SPAWN_EGG = ITEMS.register("soulwisp_spawn_egg",
             () -> new ForgeSpawnEggItem(ModEntities.WISP, 0x944c7f, 0x5b3636,
+                    new Item.Properties().stacksTo(16)));*/
+    public static final RegistryObject<ForgeSpawnEggItem> SOULWISP_HEALTH_SPAWN_EGG = ITEMS.register("soulwisp_health_spawn_egg",
+            () -> new ForgeSpawnEggItem(ModEntities.WISP_HEALTH, 0x944a7f, 0x6b3636,
+                    new Item.Properties().stacksTo(16)));
+    public static final RegistryObject<ForgeSpawnEggItem> SOULWISP_CURSE_SPAWN_EGG = ITEMS.register("soulwisp_curse_spawn_egg",
+            () -> new ForgeSpawnEggItem(ModEntities.WISP_CURSE, 0x944b7f, 0x7b3636,
                     new Item.Properties().stacksTo(16)));
     public static final RegistryObject<ForgeSpawnEggItem> SOULWISP_ARCHER_SPAWN_EGG = ITEMS.register("soulwisp_archer_spawn_egg",
-            () -> new ForgeSpawnEggItem(ModEntities.WISP_ARCHER, 0x944d7f, 0x6b3636,
+            () -> new ForgeSpawnEggItem(ModEntities.WISP_ARCHER, 0x944c7f, 0x6b3636,
                     new Item.Properties().stacksTo(16)));
     public static final RegistryObject<ForgeSpawnEggItem> SOULWISP_BOMBER_SPAWN_EGG = ITEMS.register("soulwisp_bomber_spawn_egg",
-            () -> new ForgeSpawnEggItem(ModEntities.WISP_BOMB, 0x944e7f, 0x7b3636,
+            () -> new ForgeSpawnEggItem(ModEntities.WISP_BOMB, 0x944d7f, 0x7b3636,
                     new Item.Properties().stacksTo(16)));
     private static Map<ResourceLocation, Item> itemDictionary;
     private static Map<Item, ResourceLocation> locationDictionary;

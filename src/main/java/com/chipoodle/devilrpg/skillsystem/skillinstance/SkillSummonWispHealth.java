@@ -4,6 +4,7 @@ import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapability;
 import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityInterface;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
 import com.chipoodle.devilrpg.entity.SoulWisp;
+import com.chipoodle.devilrpg.entity.SoulWispHealth;
 import com.chipoodle.devilrpg.init.ModEntities;
 import com.chipoodle.devilrpg.skillsystem.AbstractSkillExecutor;
 import com.chipoodle.devilrpg.util.SkillEnum;
@@ -75,8 +76,8 @@ public class SkillSummonWispHealth extends AbstractSkillExecutor implements IWis
         if (!levelIn.isEmptyBlock(blockPos))
             blockPos = blockPos.above();
 
-        SoulWisp sw = ModEntities.WISP.get().create((ServerLevel) levelIn, null, null, blockPos, MobSpawnType.MOB_SUMMONED, true, true);
-        Objects.requireNonNull(sw).updateLevel(playerIn, MobEffects.HEALTH_BOOST, MobEffects.REGENERATION, SkillEnum.SUMMON_WISP_HEALTH, true);
+        SoulWispHealth sw = ModEntities.WISP_HEALTH.get().create((ServerLevel) levelIn, null, null, blockPos, MobSpawnType.MOB_SUMMONED, true, true);
+        Objects.requireNonNull(sw).updateLevel(playerIn);
         sw.moveTo(blockPos, Mth.wrapDegrees(rand.nextFloat() * 360.0F), 0.0F);
         levelIn.addFreshEntity(sw);
         return sw;

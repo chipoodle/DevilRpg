@@ -6,9 +6,8 @@ import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapability;
 import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityInterface;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
-import com.chipoodle.devilrpg.entity.SoulBear;
-import com.chipoodle.devilrpg.entity.SoulWisp;
-import com.chipoodle.devilrpg.entity.SoulWolf;
+import com.chipoodle.devilrpg.entity.*;
+import com.chipoodle.devilrpg.util.SkillEnum;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
@@ -55,6 +54,7 @@ public class MinionPortraitHudOverlay extends GuiComponent {
         PlayerSkillCapabilityInterface skillCap = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerSkillCapability.INSTANCE);
         PlayerMinionCapabilityInterface minionCap = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerMinionCapability.INSTANCE);
 
+
         if (skillCap == null || minionCap == null)
             return;
 
@@ -64,9 +64,9 @@ public class MinionPortraitHudOverlay extends GuiComponent {
 
         int i = 0;
         for (UUID wolfKey : soulwolfMinionKeys) {
-            SoulWolf h = (SoulWolf) minionCap.getTameableByUUID(wolfKey, player.level);
+            SoulWolf h = (SoulWolf) minionCap.getTameableByUUID(wolfKey, player.level); // se puede optimizar con singleton
             if (h != null && h.getOwner() != null) {
-                renderEntityPortrait(gui, poseStack, i++, h.getHealth(), h.getMaxHealth(), soulwolfPortrait, h);
+                renderEntityPortrait(gui, poseStack, i++, h.getHealth(), h.getMaxHealth(), skillCap.getImagesOfSkills().get(SkillEnum.SUMMON_SOUL_WOLF), h);
             }
 
         }
@@ -74,7 +74,7 @@ public class MinionPortraitHudOverlay extends GuiComponent {
         for (UUID bearKey : soulbearMinionKeys) {
             SoulBear h = (SoulBear) minionCap.getTameableByUUID(bearKey, player.level);
             if (h != null && h.getOwner() != null) {
-                renderEntityPortrait(gui, poseStack, i++, h.getHealth(), h.getMaxHealth(), soulbearPortrait, h);
+                renderEntityPortrait(gui, poseStack, i++, h.getHealth(), h.getMaxHealth(), skillCap.getImagesOfSkills().get(SkillEnum.SUMMON_SOUL_BEAR), h);
             }
 
         }
@@ -82,7 +82,15 @@ public class MinionPortraitHudOverlay extends GuiComponent {
         for (UUID wispKey : wispMinionKeys) {
             SoulWisp h = (SoulWisp) minionCap.getTameableByUUID(wispKey, player.level);
             if (h != null && h.getOwner() != null) {
-                renderEntityPortrait(gui, poseStack, i++, h.getHealth(), h.getMaxHealth(), wispPortrait, h);
+                if (h instanceof SoulWispHealth)
+                    renderEntityPortrait(gui, poseStack, i++, h.getHealth(), h.getMaxHealth(), skillCap.getImagesOfSkills().get(SkillEnum.SUMMON_WISP_HEALTH), h);
+                if (h instanceof SoulWispCurse)
+                    renderEntityPortrait(gui, poseStack, i++, h.getHealth(), h.getMaxHealth(), skillCap.getImagesOfSkills().get(SkillEnum.SUMMON_WISP_CURSE), h);
+                if (h instanceof SoulWispArcher)
+                    renderEntityPortrait(gui, poseStack, i++, h.getHealth(), h.getMaxHealth(), skillCap.getImagesOfSkills().get(SkillEnum.SUMMON_WISP_ARCHER), h);
+                if (h instanceof SoulWispBomber)
+                    renderEntityPortrait(gui, poseStack, i++, h.getHealth(), h.getMaxHealth(), skillCap.getImagesOfSkills().get(SkillEnum.SUMMON_WISP_BOMB), h);
+
             }
 
         }
@@ -100,7 +108,7 @@ public class MinionPortraitHudOverlay extends GuiComponent {
         poseStack.translate(vanillaExpLeftX + 20 * i, vanillaExpTopY, 0);
 
         poseStack.scale(0.2f, 0.2f, 0.2f);
-        gui.blit(poseStack, 0, 0, 0, 0, BAR_WIDTH, BAR_HEIGHT);
+        blit(poseStack, 0, 0, 0, 0, BAR_WIDTH, BAR_HEIGHT, BAR_WIDTH, BAR_HEIGHT);
         poseStack.pushPose();
         RenderSystem.setShaderTexture(0, bars);
 
@@ -109,10 +117,10 @@ public class MinionPortraitHudOverlay extends GuiComponent {
         poseStack.scale(1.0f, 2.0f, 1.0f);
         poseStack.translate(0, -40, 0);
         //Barra negra de fondo
-        gui.blit(poseStack, 0, BAR_HEIGHT, 0, BAR_HEIGHT, (BAR_WIDTH + 20), 9);
+        blit(poseStack, 0, BAR_HEIGHT, 0, BAR_HEIGHT, (BAR_WIDTH + 20), 9);
         poseStack.scale(1.04f, 1.2f, 1.0f);
         poseStack.translate(-1.2f, -12.0f, 0);
-        gui.blit(poseStack, 0, BAR_HEIGHT - 2, 0, BAR_HEIGHT + 9, (int) (BAR_WIDTH * (entity.getArmorValue() / 20f)), 9);
+        blit(poseStack, 0, BAR_HEIGHT - 2, 0, BAR_HEIGHT + 9, (int) (BAR_WIDTH * (entity.getArmorValue() / 20f)), 9);
         poseStack.popPose();
         poseStack.pushPose();
         poseStack.translate(0, BAR_HEIGHT + 2, 0);
@@ -134,16 +142,16 @@ public class MinionPortraitHudOverlay extends GuiComponent {
         final int ABSORPION_TEXTURE_U = BAR_WIDTH + 3; // brown texels
 
         if (entity.hasEffect(MobEffects.ABSORPTION)) {
-            gui.blit(poseStack, 0, 0, ABSORPION_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
+            blit(poseStack, 0, 0, ABSORPION_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
             //entity.setAbsorptionAmount(entity.getEffect(MobEffects.ABSORPTION).getAmplifier());
         } else if (entity.hasEffect(MobEffects.WITHER)) {
-            gui.blit(poseStack, 0, 0, WITHER_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
+            blit(poseStack, 0, 0, WITHER_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
         } else if (entity.hasEffect(MobEffects.POISON)) {
-            gui.blit(poseStack, 0, 0, POISON_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
+            blit(poseStack, 0, 0, POISON_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
         } else if (entity.hasEffect(MobEffects.HEALTH_BOOST)) {
-            gui.blit(poseStack, 0, 0, HEALTH_BOOST_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
+            blit(poseStack, 0, 0, HEALTH_BOOST_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
         } else {
-            gui.blit(poseStack, 0, 0, NORMAL_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
+            blit(poseStack, 0, 0, NORMAL_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
         }
         poseStack.popPose();
         String s = d.format(effectiveHp) + "/" + d.format(maxHp);

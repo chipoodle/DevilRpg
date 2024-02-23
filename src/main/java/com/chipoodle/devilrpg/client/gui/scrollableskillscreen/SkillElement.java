@@ -154,10 +154,9 @@ public class SkillElement {
 	public boolean equals(Object p_equals_1_) {
 		if (this == p_equals_1_) {
 			return true;
-		} else if (!(p_equals_1_ instanceof SkillElement)) {
+		} else if (!(p_equals_1_ instanceof SkillElement advancement)) {
 			return false;
 		} else {
-			SkillElement advancement = (SkillElement) p_equals_1_;
 			return this.id.equals(advancement.id);
 		}
 	}

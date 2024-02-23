@@ -1,12 +1,7 @@
 package com.chipoodle.devilrpg.init;
 
 import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.entity.SoulBear;
-import com.chipoodle.devilrpg.entity.FrostBall;
-import com.chipoodle.devilrpg.entity.SoulWispArcher;
-import com.chipoodle.devilrpg.entity.SoulWispBomber;
-import com.chipoodle.devilrpg.entity.SoulWisp;
-import com.chipoodle.devilrpg.entity.SoulWolf;
+import com.chipoodle.devilrpg.entity.*;
 
 
 import net.minecraft.resources.ResourceLocation;
@@ -34,10 +29,13 @@ public final class ModEntities {
 
 	public static final String SOUL_WOLF_NAME = "soul_wolf";
 	public static final String SOUL_BEAR_NAME = "soul_bear";
-	public static final String WISP_NAME = "wisp";
+	private static final String WISP_HEALTH_NAME = "wisp_health";
+	private static final String WISP_CURSE_NAME = "wisp_curse";
 	public static final String WISP_BOMB_NAME = "wisp_bomb";
 	public static final String WISP_ARCHER_NAME = "wisp_archer";
 	public static final String SOUL_ICEBALL_NAME = "soul_iceball";
+
+	private static final String LICHEN_SEEDBALL_NAME = "lichen_seedball";
 
 
 	public static final RegistryObject<EntityType<SoulWolf>> SOUL_WOLF = ENTITY_TYPES.register(SOUL_WOLF_NAME,
@@ -49,11 +47,15 @@ public final class ModEntities {
 			() -> EntityType.Builder.of(SoulBear::new, MobCategory.CREATURE)
 					.sized(EntityType.POLAR_BEAR.getWidth(), EntityType.POLAR_BEAR.getHeight())
 					.build(new ResourceLocation(DevilRpg.MODID, SOUL_BEAR_NAME).toString()));
-
-	public static final RegistryObject<EntityType<SoulWisp>> WISP = ENTITY_TYPES.register(WISP_NAME,
-			() -> EntityType.Builder.of(SoulWisp::new, MobCategory.CREATURE)
+	public static final RegistryObject<EntityType<SoulWispHealth>> WISP_HEALTH = ENTITY_TYPES.register(WISP_HEALTH_NAME,
+			() -> EntityType.Builder.of(SoulWispHealth::new, MobCategory.CREATURE)
 					.sized(EntityType.ALLAY.getWidth(), EntityType.ALLAY.getHeight())
-					.build(new ResourceLocation(DevilRpg.MODID, WISP_NAME).toString()));
+					.build(new ResourceLocation(DevilRpg.MODID, WISP_HEALTH_NAME).toString()));
+
+	public static final RegistryObject<EntityType<SoulWispCurse>> WISP_CURSE = ENTITY_TYPES.register(WISP_CURSE_NAME,
+			() -> EntityType.Builder.of(SoulWispCurse::new, MobCategory.CREATURE)
+					.sized(EntityType.ALLAY.getWidth(), EntityType.ALLAY.getHeight())
+					.build(new ResourceLocation(DevilRpg.MODID, WISP_CURSE_NAME).toString()));
 
 	public static final RegistryObject<EntityType<SoulWispBomber>> WISP_BOMB = ENTITY_TYPES.register(WISP_BOMB_NAME,
 			() -> EntityType.Builder.of(SoulWispBomber::new, MobCategory.CREATURE)
@@ -69,4 +71,9 @@ public final class ModEntities {
 			() -> EntityType.Builder.<FrostBall>of(FrostBall::new, MobCategory.MISC)
 					.sized(EntityType.WITHER_SKULL.getWidth(), EntityType.WITHER_SKULL.getHeight())
 					.build(new ResourceLocation(DevilRpg.MODID, SOUL_ICEBALL_NAME).toString()));
+
+	public static final RegistryObject<EntityType<LichenSeedBall>>LICHEN_SEEDBALL = ENTITY_TYPES.register(LICHEN_SEEDBALL_NAME,
+			() -> EntityType.Builder.<LichenSeedBall>of(LichenSeedBall::new, MobCategory.MISC)
+					.sized(EntityType.WITHER_SKULL.getWidth(), EntityType.WITHER_SKULL.getHeight())
+					.build(new ResourceLocation(DevilRpg.MODID, LICHEN_SEEDBALL_NAME).toString()));
 }

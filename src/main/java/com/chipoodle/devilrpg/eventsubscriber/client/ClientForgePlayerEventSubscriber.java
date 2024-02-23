@@ -117,8 +117,8 @@ public final class ClientForgePlayerEventSubscriber {
         LocalPlayer player = mc.player;
         if (player != null) {
             LazyOptional<PlayerAuxiliaryCapabilityInterface> aux = player.getCapability(PlayerAuxiliaryCapability.INSTANCE);
-            if (!aux.isPresent() || !aux.map(PlayerAuxiliaryCapabilityInterface::isWerewolfTransformation).orElse(true))
-                return;
+            if (!aux.isPresent() || !aux.map(PlayerAuxiliaryCapabilityInterface::isWerewolfTransformation).orElse(true)) {
+            }
 
         }
     }

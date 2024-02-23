@@ -19,6 +19,7 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.phys.shapes.CollisionContext;
@@ -26,10 +27,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 
 public class SoulVineBlock extends Block implements EntityBlock {
 
@@ -37,15 +35,23 @@ public class SoulVineBlock extends Block implements EntityBlock {
     public static final IntegerProperty AGE = BlockStateProperties.AGE_25;
     public static final DirectionProperty DIRECTIONS = BlockStateProperties.FACING;
     public static final IntegerProperty LEVEL = IntegerProperty.create("soulvine_level", 0, 30);
+    public static final BooleanProperty HAS_CHILDREN = BooleanProperty.create("soulvine_has_children");
+    public static final DirectionProperty SOULVINE_FACING = DirectionProperty.create("soulvine_facing", BlockStateProperties.FACING.getPossibleValues());
+
     private static final Integer MAX_AGE = 25;
     protected final Direction growthDirection;
 
     public SoulVineBlock(Properties properties) {
         super(properties);
         growthDirection = Direction.UP;
-        this.registerDefaultState(this.getStateDefinition().any().setValue(AGE, 0));
-        this.registerDefaultState(this.getStateDefinition().any().setValue(DIRECTIONS, growthDirection));
-        this.registerDefaultState(this.getStateDefinition().any().setValue(LEVEL, 0));
+        this.registerDefaultState(this.defaultBlockState()
+                .setValue(AGE, 0)
+                .setValue(DIRECTIONS, growthDirection)
+                .setValue(LEVEL, 0)
+                .setValue(HAS_CHILDREN, false)
+                .setValue(SOULVINE_FACING,Direction.UP)
+        );
+
     }
 
     protected static @NotNull Block getSoulVineBlock() {
@@ -56,7 +62,6 @@ public class SoulVineBlock extends Block implements EntityBlock {
         return p_221347_.cycle(AGE);
     }
 
-
     public static boolean canStay(@NotNull BlockState currentBlockState, @NotNull LevelReader levelReader, @NotNull BlockPos currentBlockPos, Direction growthDirection) {
         BlockPos newBlockpos;
         if (currentBlockState.getValue(AGE) == 1)
@@ -66,7 +71,7 @@ public class SoulVineBlock extends Block implements EntityBlock {
                 return false;
             newBlockpos = currentBlockPos.relative(growthDirection);
         }
-        BlockState newBlockState = levelReader.getBlockState(newBlockpos);
+        //BlockState newBlockState = levelReader.getBlockState(newBlockpos);
         return true;
     }
 
@@ -76,7 +81,7 @@ public class SoulVineBlock extends Block implements EntityBlock {
         for (Direction possibleDirection : possibleValues) {
             BlockState nextState = getNextState(levelReader, currentBlockPos, possibleDirection);
             if (nextState.is(soulVineBlock)) {
-               return true;
+                return true;
             }
         }
         return false;
@@ -88,9 +93,11 @@ public class SoulVineBlock extends Block implements EntityBlock {
                 .filter(x -> x != growDirection)
                 .filter(x -> x != growDirection.getOpposite())
                 .sorted(Comparator.comparingInt(Direction::get3DDataValue)).toList());
+        possibleValues.remove(Direction.UP);
+        possibleValues.add(0, Direction.UP);
         for (Direction possibleDirection : possibleValues) {
             BlockState nextState = getNextState(levelReader, currentBlockPos, possibleDirection);
-            if (!nextState.isAir()) {
+            if (!nextState.isAir() && !(nextState.getBlock() instanceof SoulVineBlock)) {
                 return true;
             }
         }
@@ -105,7 +112,13 @@ public class SoulVineBlock extends Block implements EntityBlock {
     }
 
     public @NotNull BlockState getStateForPlacement(LevelAccessor levelAccessor) {
-        return this.defaultBlockState().setValue(AGE, levelAccessor.getRandom().nextInt(MAX_AGE)).setValue(DIRECTIONS, Direction.getRandom(levelAccessor.getRandom()));
+        return this.defaultBlockState()
+                .setValue(AGE, levelAccessor.getRandom().nextInt(MAX_AGE))
+                .setValue(DIRECTIONS, Direction.getRandom(levelAccessor.getRandom()))
+                .setValue(LEVEL, levelAccessor.getRandom().nextInt())
+                .setValue(HAS_CHILDREN, false)
+                .setValue(SOULVINE_FACING,Direction.UP)
+                ;
     }
 
     @Nullable
@@ -119,7 +132,13 @@ public class SoulVineBlock extends Block implements EntityBlock {
     }
 
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> stateDefinition) {
-        stateDefinition.add(AGE).add(DIRECTIONS).add(LEVEL);
+        stateDefinition
+                .add(AGE)
+                .add(DIRECTIONS)
+                .add(LEVEL)
+                .add(HAS_CHILDREN)
+                .add(SOULVINE_FACING)
+        ;
     }
 
     public @NotNull VoxelShape getShape(@NotNull BlockState p_53880_, @NotNull BlockGetter p_53881_, @NotNull BlockPos p_53882_, @NotNull CollisionContext p_53883_) {
@@ -136,7 +155,7 @@ public class SoulVineBlock extends Block implements EntityBlock {
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, @NotNull BlockState blockState, @NotNull BlockEntityType<T> type) {
         return level.isClientSide ? null : (alevel, pos, aBlockstate, blockEntity) -> {
-            if (blockEntity instanceof SoulVineBlockEntity soulVineBlockEntity && alevel.getGameTime() % 10 == 0) {
+            if (blockEntity instanceof SoulVineBlockEntity soulVineBlockEntity && alevel.getGameTime() % 3 == 0) {
                 soulVineBlockEntity.tick(blockState, (ServerLevel) alevel, pos, alevel.getRandom());
             }
         };

@@ -100,7 +100,7 @@ public class WerewolfArmorLayer<T extends LivingEntity, M extends WerewolfTransf
    }
 
    private A getArmorModel(EquipmentSlot p_117079_) {
-      return (A)(this.usesInnerModel(p_117079_) ? this.innerModel : this.outerModel);
+      return this.usesInnerModel(p_117079_) ? this.innerModel : this.outerModel;
    }
 
    private boolean usesInnerModel(EquipmentSlot p_117129_) {

@@ -1,11 +1,13 @@
 package com.chipoodle.devilrpg.init;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.block.SoulLichenBlock;
 import com.chipoodle.devilrpg.block.SoulVineBlock;
-import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.material.Material;
+import net.minecraft.world.level.material.MaterialColor;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
@@ -25,10 +27,10 @@ public final class ModBlocks {
 
     public static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(ForgeRegistries.BLOCKS, DevilRpg.MODID);
     public static final RegistryObject<SoulVineBlock> SOUL_VINE_BLOCK = BLOCKS.register("soulvine", () -> new SoulVineBlock(
-            //Block.Properties.copy(Blocks.VINE).lightLevel((state) -> 15)
-            //BlockBehaviour.Properties.of(Material.DECORATION, MaterialColor.SAND).noCollission().sound(SoundType.SCAFFOLDING).dynamicShape()
-            Block.Properties.copy(Blocks.WEEPING_VINES)
-            //BlockBehaviour.Properties.of(Material.PLANT).noCollission().instabreak().sound(SoundType.WEEPING_VINES)
-            //.randomTicks().noCollission().strength(0.2F).sound(SoundType.VINE)
+            Block. Properties.of(Material.PLANT, MaterialColor.COLOR_GREEN).randomTicks().noCollission().instabreak().sound(SoundType.WEEPING_VINES)
+    ));
+
+    public static final RegistryObject<SoulLichenBlock> SOUL_LICHEN_BLOCK = BLOCKS.register("soullichen", () -> new SoulLichenBlock(
+            Block.Properties.copy(Blocks.GLOW_LICHEN).lightLevel(SoulLichenBlock.emission(7)).randomTicks()
     ));
 }

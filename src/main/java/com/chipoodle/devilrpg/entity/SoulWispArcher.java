@@ -1,9 +1,13 @@
 package com.chipoodle.devilrpg.entity;
 
+import com.chipoodle.devilrpg.init.ModEntities;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
@@ -18,6 +22,8 @@ import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.network.NetworkHooks;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
@@ -42,14 +48,11 @@ public class SoulWispArcher extends SoulWisp implements RangedAttackMob {
         this.goalSelector.addGoal(9, new SoulWisp.WanderGoal());
         this.goalSelector.addGoal(10, new LookAtPlayerGoal(this, Mob.class, 8.0F));
         this.goalSelector.addGoal(2, new RandomLookAroundGoal(this));
-        this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, Mob.class, 10, true, false, (entity) -> {
-            return Math.abs(entity.getY() - this.getY()) <= 4.0D &&
-                    !(entity instanceof Villager) &&
-                    !(entity instanceof Llama) &&
-                    !(entity instanceof Turtle) &&
-                    !(entity instanceof IronGolem);
-        }));
-
+        this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, Mob.class, 10, true, false, (entity) -> Math.abs(entity.getY() - this.getY()) <= 4.0D &&
+                !(entity instanceof Villager) &&
+                !(entity instanceof Llama) &&
+                !(entity instanceof Turtle) &&
+                !(entity instanceof IronGolem)));
         this.targetSelector.addGoal(2, new HurtByTargetGoal(this));
     }
 
@@ -60,30 +63,21 @@ public class SoulWispArcher extends SoulWisp implements RangedAttackMob {
         double d2 = p_82196_1_.getZ() - this.getZ();
         double d3 = Math.sqrt(d0 * d0 + d2 * d2);
 
-        FrostBall snowballentity = new FrostBall(this.level, this);
-        snowballentity.updateLevel((Player) Objects.requireNonNull(this.getOwner()), SkillEnum.SUMMON_WISP_ARCHER);
-        snowballentity.shoot(d0, d1 + d3 * (double) 0.2F, d2, 1.6F, (float) (14 - this.level.getDifficulty().getId() * 4));
+        FrostBall snowballEntity = new FrostBall(this.level, this);
+        snowballEntity.updateLevel((Player) Objects.requireNonNull(this.getOwner()), SkillEnum.SUMMON_WISP_ARCHER);
+        snowballEntity.shoot(d0, d1 + d3 * (double) 0.2F, d2, 1.6F, (float) (14 - this.level.getDifficulty().getId() * 4));
         this.playSound(SoundEvents.SKELETON_SHOOT, 1.0F, 1.0F / (this.getRandom().nextFloat() * 0.4F + 0.8F));
-        this.level.addFreshEntity(snowballentity);
-        this.setHealth(this.getHealth() -1.5F);
+        this.level.addFreshEntity(snowballEntity);
+        //this.setHealth(this.getHealth() -1.5F);
     }
 
-    /**
-     * Called on the logical server to get a packet to send to the client containing
-     * data necessary to spawn your entity. Using Forge's method instead of the
-     * default vanilla one allows extra stuff to work such as sending extra data,
-     * using a non-default entity factory and having
-     * {@link Packet} work.
-     * <p>
-     * It is not actually necessary for our WildBoarEntity to use Forge's method as
-     * it doesn't need any of this extra functionality, however, this is an example
-     * mod and many modders are unaware that Forge's method exists.
-     *
-     * @return The packet with data about your entity
-     */
+    public void updateLevel(Player owner) {
+        super.updateLevel(owner,null,null,SkillEnum.SUMMON_WISP_ARCHER,true);
+    }
+
+    @Nullable
     @Override
-    public Packet<ClientGamePacketListener> getAddEntityPacket() {
-        return NetworkHooks.getEntitySpawningPacket(this);
+    public SoulWispArcher getBreedOffspring(@NotNull ServerLevel level, @NotNull AgeableMob ageableMob) {
+        return ModEntities.WISP_ARCHER.get().create(level);
     }
-
 }

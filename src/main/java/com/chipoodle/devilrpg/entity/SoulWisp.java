@@ -1,12 +1,11 @@
 package com.chipoodle.devilrpg.entity;
 
-import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapability;
 import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityInterface;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
-import com.chipoodle.devilrpg.util.IRenderUtilities;
 import com.chipoodle.devilrpg.init.ModEntities;
+import com.chipoodle.devilrpg.util.IRenderUtilities;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
@@ -61,7 +60,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 
-public class SoulWisp extends TamableAnimal implements ITamableEntity, FlyingAnimal, ISoulEntity, PowerableMob,
+public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, FlyingAnimal, ISoulEntity, PowerableMob,
         NeutralMob, IPassiveMinionUpdater<SoulWisp> {
 
     private static final EntityDataAccessor<Boolean> DATA_DANCING = SynchedEntityData.defineId(SoulWisp.class, EntityDataSerializers.BOOLEAN);
@@ -82,6 +81,7 @@ public class SoulWisp extends TamableAnimal implements ITamableEntity, FlyingAni
     private float dancingAnimationTicks;
     private float spinningAnimationTicks;
     private float spinningAnimationTicks0;
+    private SkillEnum wispType;
 
     public SoulWisp(EntityType<? extends SoulWisp> type, Level worldIn) {
         super(type, worldIn);
@@ -95,7 +95,7 @@ public class SoulWisp extends TamableAnimal implements ITamableEntity, FlyingAni
     /**
      * Called in EntityAttributeCreationEvent event
      *
-     * @return
+     * @return  AttributeSupplier.Builder
      */
     public static AttributeSupplier.Builder setAttributes() {
         return TamableAnimal.createMobAttributes()
@@ -132,17 +132,17 @@ public class SoulWisp extends TamableAnimal implements ITamableEntity, FlyingAni
 
     }
 
-    public void updateLevel(Player owner, MobEffect efectoPrimario, MobEffect efectoSecundario, SkillEnum tipoWisp,
-                            boolean esBeneficioso) {
+    public void updateLevel(Player owner, MobEffect efectoPrimario, MobEffect efectoSecundario, SkillEnum wispType, boolean esBeneficioso) {
         tame(owner);
-        LazyOptional<PlayerSkillCapabilityInterface> skill = getOwner().getCapability(PlayerSkillCapability.INSTANCE);
+        LazyOptional<PlayerSkillCapabilityInterface> skill = Objects.requireNonNull(getOwner()).getCapability(PlayerSkillCapability.INSTANCE);
         this.efectoPrimario = efectoPrimario;
         this.efectoSecundario = efectoSecundario;
         this.esBeneficioso = esBeneficioso;
         if (skill.isPresent()) {
-            this.puntosAsignados = skill.map(PlayerSkillCapabilityInterface::getSkillsPoints).orElse(null).get(tipoWisp);
+            this.puntosAsignados = Objects.requireNonNull(skill.map(PlayerSkillCapabilityInterface::getSkillsPoints).orElse(null)).get(wispType);
             saludMaxima = 0.6 * this.puntosAsignados + SALUD_INICIAL;
             // DevilRpg.LOGGER.debug("SoulWispEntity.updateLevel.saludMaxima{}",saludMaxima);
+            this.wispType = wispType;
         }
 
         Objects.requireNonNull(this.getAttribute(Attributes.FLYING_SPEED)).setBaseValue(0.9F);
@@ -273,10 +273,6 @@ public class SoulWisp extends TamableAnimal implements ITamableEntity, FlyingAni
     @Override
     protected float getSoundVolume() {
         return 0.4F;
-    }
-
-    public SoulWisp getBreedOffspring(AgeableMob ageable) {
-        return ModEntities.WISP.get().create(this.level);
     }
 
     @Override
@@ -508,13 +504,13 @@ public class SoulWisp extends TamableAnimal implements ITamableEntity, FlyingAni
         return true;
     }
 
-    @Override
-    public SoulWisp getBreedOffspring(ServerLevel Level, AgeableMob mate) {
-        return ModEntities.WISP.get().create(Level);
-    }
+    /*@Override
+    public SoulWisp getBreedOffspring(ServerLevel level, AgeableMob mate) {
+        return ModEntities.WISP.get().create(level);
+    }*/
 
     @Override
-    public Level getLevel() {
+    public @NotNull Level getLevel() {
         return this.level;
     }
 
@@ -541,6 +537,10 @@ public class SoulWisp extends TamableAnimal implements ITamableEntity, FlyingAni
     @Override
     public Entity getEntity() {
         return this;
+    }
+
+    public SkillEnum getWispType() {
+        return wispType;
     }
 
     static class BeeLookControl extends LookControl {
@@ -614,7 +614,7 @@ public class SoulWisp extends TamableAnimal implements ITamableEntity, FlyingAni
             vec3 = SoulWisp.this.getViewVector(0.0F);
             // int i = 8;
             Vec3 vector3d2 = HoverRandomPos.getPos(SoulWisp.this, 8, 7, vec3.x, vec3.z, ((float) Math.PI / 2F), 3, 1);
-            return vector3d2 != null ? vector3d2 : AirAndWaterRandomPos.getPos(SoulWisp.this, 8, 4, -2, vec3.x, vec3.z, (double) ((float) Math.PI / 2F));
+            return vector3d2 != null ? vector3d2 : AirAndWaterRandomPos.getPos(SoulWisp.this, 8, 4, -2, vec3.x, vec3.z, (float) Math.PI / 2F);
         }
     }
 

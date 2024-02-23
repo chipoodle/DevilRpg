@@ -25,3 +25,10 @@ run
 forge*changelog.txt
 /src/main/java/com/chipoodle/devilrpg/eventsubscriber/common/LoginEventSuscriber.java
 /src/main/resources/assets/devilrpg/textures/gui/skill/widget/
+/run-data/
+/logs/
+/options.txt
+/build.gradle
+/config/fml.toml
+/config/forge-client.toml
+/config/forge-common.toml

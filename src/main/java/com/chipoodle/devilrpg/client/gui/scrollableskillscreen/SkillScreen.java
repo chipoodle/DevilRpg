@@ -364,12 +364,10 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
 
             int unspentPoints = expCap.map(PlayerExperienceCapabilityInterface::getUnspentPoints).orElse(-1);
             if (unspentPoints != 0) {
-                Component unspentSkillHolder = Component.literal("" + UNSPENT_LABEL.getString() + " " + unspentPoints);
+                Component unspentSkillHolder = Component.literal(UNSPENT_LABEL.getString() + " " + unspentPoints);
                 //Pinta puntos sin usar
                 this.font.draw(poseStack, unspentSkillHolder, (offsetLeft + 8), (offsetTop + WINDOW_HEIGHT), 4210752);
             }
-
-          ;
 
             //this.font.draw(poseStack, Component.literal("x:"+d.format(posicionMouseX)+" y:"+d.format(posicionMouseY)), (float) posicionMouseX,(float)posicionMouseY, 10526880);
         }

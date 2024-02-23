@@ -107,6 +107,11 @@ public class SingletonSkillExecutorFactory {
                     skillPool.put(SkillEnum.KNOCKBACK_RESISTANCE, new PlayerPassiveKnockBackResistanceExecutor(parentCapability));
                 return skillPool.get(SkillEnum.KNOCKBACK_RESISTANCE);
             }
+            case SOULLICHEN -> {
+                if (!skillPool.containsKey(SkillEnum.SOULLICHEN))
+                    skillPool.put(SkillEnum.SOULLICHEN, new SkillSoulLichen(parentCapability));
+                return skillPool.get(SkillEnum.SOULLICHEN);
+            }
         }
         return null;
     }

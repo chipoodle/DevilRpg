@@ -44,7 +44,9 @@ public final class PlayerModEventSubscriber {
         DevilRpg.LOGGER.info("----------------------->ModEventSubscriber.initEntityAttributes()");
         event.put(ModEntities.SOUL_WOLF.get(), SoulWolf.setAttributes().build());
         event.put(ModEntities.SOUL_BEAR.get(), SoulBear.setAttributes().build());
-        event.put(ModEntities.WISP.get(), SoulWisp.setAttributes().build());
+        //event.put(ModEntities.WISP.get(), SoulWisp.setAttributes().build());
+        event.put(ModEntities.WISP_HEALTH.get(), SoulWispHealth.setAttributes().build());
+        event.put(ModEntities.WISP_CURSE.get(), SoulWispCurse.setAttributes().build());
         event.put(ModEntities.WISP_BOMB.get(), SoulWispBomber.setAttributes().build());
         event.put(ModEntities.WISP_ARCHER.get(), SoulWispArcher.setAttributes().build());
     }
@@ -71,7 +73,7 @@ public final class PlayerModEventSubscriber {
      * @param event
      */
     @SubscribeEvent
-    public static void onModConfigEvent(final ModConfigEvent.Loading  event) {
+    public static void onModConfigEvent(final ModConfigEvent.Loading event) {
         DevilRpg.LOGGER.info("----------------------->ModEventSubscriber.onModConfigEvent()");
         final ModConfig config = event.getConfig();
         // Rebake the configs when they change
@@ -134,7 +136,9 @@ public final class PlayerModEventSubscriber {
                             });
                             populator.accept(SOULWOLF_SPAWN_EGG.get());
                             populator.accept(SOULBEAR_SPAWN_EGG.get());
-                            populator.accept(SOULWISP_SPAWN_EGG.get());
+                            //populator.accept(SOULWISP_SPAWN_EGG.get());
+                            populator.accept(SOULWISP_HEALTH_SPAWN_EGG.get());
+                            populator.accept(SOULWISP_CURSE_SPAWN_EGG.get());
                             populator.accept(SOULWISP_ARCHER_SPAWN_EGG.get());
                             populator.accept(SOULWISP_BOMBER_SPAWN_EGG.get());
                         })

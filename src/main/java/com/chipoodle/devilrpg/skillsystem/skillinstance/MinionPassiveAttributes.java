@@ -19,7 +19,7 @@ import java.util.HashMap;
 public class MinionPassiveAttributes {
     public static final String PASSIVE_MINION_HEALTH = "PASSIVE_MINION_HEALTH";
     public static final String PASSIVE_WAR_BEAR_HEALTH = "PASSIVE_WAR_BEAR_HEALTH";
-    public static final String PASSIVE_WAR_BEAR_KNOCKBACK = "PASSIVE_WAR_BEAR_KNOCKBACK";
+    public static final String PASSIVE_WAR_BEAR_KNOCKBACK_RES = "PASSIVE_WAR_BEAR_KNOCKBACK";
     private final Level levelIn;
     private float factor;
     private Player playerIn;
@@ -81,7 +81,7 @@ public class MinionPassiveAttributes {
         attributes.put(Attributes.MAX_HEALTH, new AttributeModifier(PASSIVE_WAR_BEAR_HEALTH, 3.5D * warBear,
                 AttributeModifier.Operation.ADDITION));
 
-        attributes.put(Attributes.KNOCKBACK_RESISTANCE, new AttributeModifier(PASSIVE_WAR_BEAR_KNOCKBACK, 0.1666666666 * warBear,
+        attributes.put(Attributes.KNOCKBACK_RESISTANCE, new AttributeModifier(PASSIVE_WAR_BEAR_KNOCKBACK_RES, 0.1666666666 * warBear,
                 AttributeModifier.Operation.ADDITION));
 
 

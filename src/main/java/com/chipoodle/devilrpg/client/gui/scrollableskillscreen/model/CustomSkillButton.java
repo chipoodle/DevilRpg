@@ -20,8 +20,8 @@ public class CustomSkillButton extends Button {
     private ResourceLocation skillResourceLocation;
     private int drawnSkillLevel;
 
-    private  int textureWidth;
-    private int textureHeight;
+    private final int textureWidth;
+    private final int textureHeight;
 
     public CustomSkillButton(int x, int y, int buttonWidth, int buttonHeight, String buttonText, ResourceLocation textureResource,
                              int textureWidth, int textureHeight, Enum<?> skillName, int drawnSkillLevel, Button.OnPress function,

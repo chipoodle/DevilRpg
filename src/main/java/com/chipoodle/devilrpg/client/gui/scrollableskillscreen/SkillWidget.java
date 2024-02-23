@@ -292,7 +292,7 @@ public class SkillWidget extends GuiComponent {
             RenderSystem.setShaderTexture(0, WIDGETS);
 
             // Pinta el icono del botón
-            this.blit(matrixStack, x + this.x + 3, y + this.y, this.getDisplayInfo().getFrame().getIcon(),
+            blit(matrixStack, x + this.x + 3, y + this.y, this.getDisplayInfo().getFrame().getIcon(),
                     128 + skillState.getId() * FRAME_SIZE, FRAME_SIZE, FRAME_SIZE);
 
             // Pinta el marco botón
@@ -365,11 +365,11 @@ public class SkillWidget extends GuiComponent {
         }
 
         // pinta la mitad izquierda de la barra del título
-        this.blit(matrixStack, i1, l, 0, advancementstate.getId() * FRAME_SIZE, j, FRAME_SIZE);
+        blit(matrixStack, i1, l, 0, advancementstate.getId() * FRAME_SIZE, j, FRAME_SIZE);
         // pinta la mitad derecha de la barra del título
-        this.blit(matrixStack, i1 + j, l, 200 - k, advancementstate1.getId() * FRAME_SIZE, k, FRAME_SIZE);
+        blit(matrixStack, i1 + j, l, 200 - k, advancementstate1.getId() * FRAME_SIZE, k, FRAME_SIZE);
         // Pinta el marco del boton
-        this.blit(matrixStack, x + this.x + 3, y + this.y, this.getDisplayInfo().getFrame().getIcon(),
+        blit(matrixStack, x + this.x + 3, y + this.y, this.getDisplayInfo().getFrame().getIcon(),
                 128 + advancementstate2.getId() * FRAME_SIZE, FRAME_SIZE, FRAME_SIZE);
 
         if (widthFlag) {
@@ -407,7 +407,7 @@ public class SkillWidget extends GuiComponent {
         RenderSystem.setShader(GameRenderer::getPositionTexShader);
         RenderSystem.setShaderTexture(0, WIDGETS);
         // Pinta el ícono del botón
-        this.blit(matrixStack, x + this.x + 3, y + this.y, this.getDisplayInfo().getFrame().getIcon(),
+        blit(matrixStack, x + this.x + 3, y + this.y, this.getDisplayInfo().getFrame().getIcon(),
                 128 + skillState.getId() * FRAME_SIZE, FRAME_SIZE, FRAME_SIZE);
 
         drawButton(matrixStack, x, y, false, this.getDisplayInfo().getImage(), false, isDisabled());
@@ -418,12 +418,12 @@ public class SkillWidget extends GuiComponent {
     }
 
     protected void render9Sprite(PoseStack p_97288_, int p_97289_, int p_97290_, int p_97291_, int p_97292_, int p_97293_, int p_97294_, int p_97295_, int p_97296_, int p_97297_) {
-        this.blit(p_97288_, p_97289_, p_97290_, p_97296_, p_97297_, p_97293_, p_97293_);
+        blit(p_97288_, p_97289_, p_97290_, p_97296_, p_97297_, p_97293_, p_97293_);
         this.renderRepeating(p_97288_, p_97289_ + p_97293_, p_97290_, p_97291_ - p_97293_ - p_97293_, p_97293_, p_97296_ + p_97293_, p_97297_, p_97294_ - p_97293_ - p_97293_, p_97295_);
-        this.blit(p_97288_, p_97289_ + p_97291_ - p_97293_, p_97290_, p_97296_ + p_97294_ - p_97293_, p_97297_, p_97293_, p_97293_);
-        this.blit(p_97288_, p_97289_, p_97290_ + p_97292_ - p_97293_, p_97296_, p_97297_ + p_97295_ - p_97293_, p_97293_, p_97293_);
+        blit(p_97288_, p_97289_ + p_97291_ - p_97293_, p_97290_, p_97296_ + p_97294_ - p_97293_, p_97297_, p_97293_, p_97293_);
+        blit(p_97288_, p_97289_, p_97290_ + p_97292_ - p_97293_, p_97296_, p_97297_ + p_97295_ - p_97293_, p_97293_, p_97293_);
         this.renderRepeating(p_97288_, p_97289_ + p_97293_, p_97290_ + p_97292_ - p_97293_, p_97291_ - p_97293_ - p_97293_, p_97293_, p_97296_ + p_97293_, p_97297_ + p_97295_ - p_97293_, p_97294_ - p_97293_ - p_97293_, p_97295_);
-        this.blit(p_97288_, p_97289_ + p_97291_ - p_97293_, p_97290_ + p_97292_ - p_97293_, p_97296_ + p_97294_ - p_97293_, p_97297_ + p_97295_ - p_97293_, p_97293_, p_97293_);
+        blit(p_97288_, p_97289_ + p_97291_ - p_97293_, p_97290_ + p_97292_ - p_97293_, p_97296_ + p_97294_ - p_97293_, p_97297_ + p_97295_ - p_97293_, p_97293_, p_97293_);
         this.renderRepeating(p_97288_, p_97289_, p_97290_ + p_97293_, p_97293_, p_97292_ - p_97293_ - p_97293_, p_97296_, p_97297_ + p_97293_, p_97294_, p_97295_ - p_97293_ - p_97293_);
         this.renderRepeating(p_97288_, p_97289_ + p_97293_, p_97290_ + p_97293_, p_97291_ - p_97293_ - p_97293_, p_97292_ - p_97293_ - p_97293_, p_97296_ + p_97293_, p_97297_ + p_97293_, p_97294_ - p_97293_ - p_97293_, p_97295_ - p_97293_ - p_97293_);
         this.renderRepeating(p_97288_, p_97289_ + p_97291_ - p_97293_, p_97290_ + p_97293_, p_97293_, p_97292_ - p_97293_ - p_97293_, p_97296_ + p_97294_ - p_97293_, p_97297_ + p_97293_, p_97294_, p_97295_ - p_97293_ - p_97293_);
@@ -437,7 +437,7 @@ public class SkillWidget extends GuiComponent {
             for (int l = 0; l < p_97282_; l += p_97286_) {
                 int i1 = p_97280_ + l;
                 int j1 = Math.min(p_97286_, p_97282_ - l);
-                this.blit(p_97278_, j, i1, p_97283_, p_97284_, k, j1);
+                blit(p_97278_, j, i1, p_97283_, p_97284_, k, j1);
             }
         }
 

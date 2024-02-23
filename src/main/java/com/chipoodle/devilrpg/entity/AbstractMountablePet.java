@@ -123,7 +123,7 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
     }
 
     public static AttributeSupplier.Builder createBaseHorseAttributes() {
-        return Mob.createMobAttributes().add(Attributes.JUMP_STRENGTH).add(Attributes.MAX_HEALTH, 53.0D).add(Attributes.MOVEMENT_SPEED, (double) 0.225F);
+        return Mob.createMobAttributes().add(Attributes.JUMP_STRENGTH).add(Attributes.MAX_HEALTH, 53.0D).add(Attributes.MOVEMENT_SPEED, 0.225F);
     }
 
     static double createOffspringAttribute(double p_272685_, double p_273709_, double p_273376_, double p_273030_, RandomSource p_272743_) {
@@ -303,7 +303,7 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
         if (!this.isSilent()) {
             SoundEvent soundevent = this.getEatingSound();
             if (soundevent != null) {
-                this.level.playSound((Player) null, this.getX(), this.getY(), this.getZ(), soundevent, this.getSoundSource(), 1.0F, 1.0F + (this.random.nextFloat() - this.random.nextFloat()) * 0.2F);
+                this.level.playSound(null, this.getX(), this.getY(), this.getZ(), soundevent, this.getSoundSource(), 1.0F, 1.0F + (this.random.nextFloat() - this.random.nextFloat()) * 0.2F);
             }
         }
 
@@ -911,9 +911,9 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
     }
 
     protected void setOffspringAttributes(AgeableMob p_149509_, AbstractMountablePet p_149510_) {
-        this.setOffspringAttribute(p_149509_, p_149510_, Attributes.MAX_HEALTH, (double) MIN_HEALTH, (double) MAX_HEALTH);
-        this.setOffspringAttribute(p_149509_, p_149510_, Attributes.JUMP_STRENGTH, (double) MIN_JUMP_STRENGTH, (double) MAX_JUMP_STRENGTH);
-        this.setOffspringAttribute(p_149509_, p_149510_, Attributes.MOVEMENT_SPEED, (double) MIN_MOVEMENT_SPEED, (double) MAX_MOVEMENT_SPEED);
+        this.setOffspringAttribute(p_149509_, p_149510_, Attributes.MAX_HEALTH, MIN_HEALTH, MAX_HEALTH);
+        this.setOffspringAttribute(p_149509_, p_149510_, Attributes.JUMP_STRENGTH, MIN_JUMP_STRENGTH, MAX_JUMP_STRENGTH);
+        this.setOffspringAttribute(p_149509_, p_149510_, Attributes.MOVEMENT_SPEED, MIN_MOVEMENT_SPEED, MAX_MOVEMENT_SPEED);
     }
 
     private void setOffspringAttribute(AgeableMob ageableMob, AbstractMountablePet abstractMountablePet, Attribute attribute, double p_272663_, double p_273405_) {
@@ -1122,12 +1122,12 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
     }
 
     public @NotNull Vec3 getDismountLocationForPassenger(LivingEntity p_30576_) {
-        Vec3 vec3 = getCollisionHorizontalEscapeVector((double) this.getBbWidth(), (double) p_30576_.getBbWidth(), this.getYRot() + (p_30576_.getMainArm() == HumanoidArm.RIGHT ? 90.0F : -90.0F));
+        Vec3 vec3 = getCollisionHorizontalEscapeVector(this.getBbWidth(), p_30576_.getBbWidth(), this.getYRot() + (p_30576_.getMainArm() == HumanoidArm.RIGHT ? 90.0F : -90.0F));
         Vec3 vec31 = this.getDismountLocationInDirection(vec3, p_30576_);
         if (vec31 != null) {
             return vec31;
         } else {
-            Vec3 vec32 = getCollisionHorizontalEscapeVector((double) this.getBbWidth(), (double) p_30576_.getBbWidth(), this.getYRot() + (p_30576_.getMainArm() == HumanoidArm.LEFT ? 90.0F : -90.0F));
+            Vec3 vec32 = getCollisionHorizontalEscapeVector(this.getBbWidth(), p_30576_.getBbWidth(), this.getYRot() + (p_30576_.getMainArm() == HumanoidArm.LEFT ? 90.0F : -90.0F));
             Vec3 vec33 = this.getDismountLocationInDirection(vec32, p_30576_);
             return vec33 != null ? vec33 : this.position();
         }

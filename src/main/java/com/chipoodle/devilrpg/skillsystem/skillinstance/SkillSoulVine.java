@@ -1,6 +1,5 @@
 package com.chipoodle.devilrpg.skillsystem.skillinstance;
 
-import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.block.SoulVineBlock;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
@@ -35,7 +34,16 @@ public class SkillSoulVine extends AbstractSkillExecutor {
 
     @Override
     public boolean arePreconditionsMetBeforeConsumingResource(Player player) {
-        return !player.getCooldowns().isOnCooldown(icon.getItem());
+        BlockPos playerBlockPos = player.blockPosition();
+        BlockState playerBlockState = player.level.getBlockState(playerBlockPos);
+        Vec3 playerLookVector = player.getLookAngle();
+        Direction nearestDirection = Direction.getNearest(playerLookVector.x, 0, playerLookVector.z);
+        //DevilRpg.LOGGER.info("-------->Direction: {}", nearestDirection);
+        BlockPos newBlockpos = playerBlockPos.relative(nearestDirection);
+        boolean canPlace = playerBlockState.getBlock().equals(Blocks.AIR)
+                && player.level.getBlockState(newBlockpos).getBlock().equals(Blocks.AIR)
+                && SoulVineBlock.hasAtLeasOneSolidNeighbourPerpendicularToGrowDirection(player.level,newBlockpos,nearestDirection);
+        return !player.getCooldowns().isOnCooldown(icon.getItem()) && canPlace;
     }
 
     @Override
@@ -55,33 +63,29 @@ public class SkillSoulVine extends AbstractSkillExecutor {
         }
     }
 
-    private void setVine(Level levelIn, Player playerIn, PlayerSkillCapabilityInterface skillCap) {
+    private void setVine(Level level, Player playerIn, PlayerSkillCapabilityInterface skillCap) {
         BlockPos playerBlockPos = playerIn.blockPosition();
         SoulVineBlock createdBlock = ModBlocks.SOUL_VINE_BLOCK.get();
-        BlockState playerBlockState = levelIn.getBlockState(playerBlockPos);
+        BlockState playerBlockState = level.getBlockState(playerBlockPos);
         Vec3 playerLookVector = playerIn.getLookAngle();
         Direction nearestDirection = Direction.getNearest(playerLookVector.x, 0, playerLookVector.z);
-        DevilRpg.LOGGER.info("-------->Direction: {}" , nearestDirection);
+        //DevilRpg.LOGGER.info("-------->Direction: {}", nearestDirection);
         BlockPos newBlockpos = playerBlockPos.relative(nearestDirection);
-
-        //createdBlock.setGrowthDirection(nearestDirection);
-        //createdBlock.setEdad(5);
-        if (playerBlockState.getBlock().equals(Blocks.AIR)) {
+        if (playerBlockState.getBlock().equals(Blocks.AIR)
+                && level.getBlockState(newBlockpos).getBlock().equals(Blocks.AIR)
+                && SoulVineBlock.hasAtLeasOneSolidNeighbourPerpendicularToGrowDirection(level,newBlockpos,nearestDirection)) {
             int skillPoints = skillCap.getSkillsPoints().get(SkillEnum.SOULVINE);
-
-            DevilRpg.LOGGER.info("-------->placed block: {} calculatedProgression: {}", createdBlock,skillPoints);
-            levelIn
+            level
                     .setBlockAndUpdate(
                             newBlockpos,
                             createdBlock.defaultBlockState()
-                                    .setValue(SoulVineBlock.AGE,1)
-                                    .setValue(SoulVineBlock.DIRECTIONS,nearestDirection)
-                                    .setValue(SoulVineBlock.LEVEL,skillPoints)
+                                    .setValue(SoulVineBlock.AGE, 1)
+                                    .setValue(SoulVineBlock.DIRECTIONS, nearestDirection)
+                                    .setValue(SoulVineBlock.LEVEL, skillPoints)
+                                    .setValue(SoulVineBlock.HAS_CHILDREN,false)
                     );
-            //levelIn.scheduleTick(newBlockpos,createdBlock,1);
 
 
         }
     }
-
 }

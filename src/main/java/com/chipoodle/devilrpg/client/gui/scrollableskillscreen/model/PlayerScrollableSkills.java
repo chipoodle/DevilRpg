@@ -36,7 +36,7 @@ public class PlayerScrollableSkills {
     private ServerPlayer player;
     @Nullable
     private SkillElement lastSelectedTab;
-    private boolean isFirstPacket = true;
+    private final boolean isFirstPacket = true;
 
     public PlayerScrollableSkills(DataFixer dataFixer, PlayerList playerList, File progressFile, ServerPlayer player) {
         this.dataFixer = dataFixer;

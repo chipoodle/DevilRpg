@@ -19,6 +19,7 @@ import net.minecraft.world.level.pathfinder.BlockPathTypes;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.scores.Team;
 import net.minecraftforge.common.capabilities.ICapabilityProvider;
+import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.nio.channels.Pipe;
@@ -26,7 +27,7 @@ import java.util.UUID;
 
 public interface ITamableEntity extends ICapabilityProvider, OwnableEntity {
 
-    Level getLevel();
+    @NotNull Level getLevel();
 
     PathNavigation getNavigation();
     /*@Nullable
@@ -72,8 +73,7 @@ public interface ITamableEntity extends ICapabilityProvider, OwnableEntity {
     void setTame(boolean p_21836_);
 
     default boolean wantsToAttack(LivingEntity target, LivingEntity owner) {
-        if (target instanceof ITamableEntity) {
-            ITamableEntity entity = (ITamableEntity) target;
+        if (target instanceof ITamableEntity entity) {
             return !entity.isTame() || entity.getOwner() != owner;
         } else if (target instanceof Player && owner instanceof Player
                 && !((Player) owner).canHarmPlayer((Player) target)) {

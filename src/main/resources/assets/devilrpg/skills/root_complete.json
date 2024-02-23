@@ -96,17 +96,37 @@
                 "item": "devilrpg:item_vine"
             },
             "title": "Soulvine",
-            "image": "devilrpg:textures/gui/skill/curling-vines.png",
+            "image": "devilrpg:textures/gui/skill/thorn-helix.png",
             "frame": "task"
         },
         "capability": "soulvine",
         "skillmanacost":{
             "maxskilllevel":"20",
-            "manacost":"3",
+            "manacost":"15",
             "resourcetype":"mana"
         },
         "rewards": {},
         "parent": "nature:root"
+    },
+    {
+        "id": "nature:soullichen",
+        "display": {
+            "description": "A vine that slows down enemies",
+            "icon": {
+                "item": "devilrpg:item_vine"
+            },
+            "title": "Soullichen",
+            "image": "devilrpg:textures/gui/skill/curling-vines.png",
+            "frame": "task"
+        },
+        "capability": "soullichen",
+        "skillmanacost":{
+            "maxskilllevel":"20",
+            "manacost":"15",
+            "resourcetype":"mana"
+        },
+        "rewards": {},
+        "parent": "nature:soulvine"
     },
     {
         "id": "nature:mana_pool",

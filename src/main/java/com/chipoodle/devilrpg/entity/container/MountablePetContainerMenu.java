@@ -19,7 +19,7 @@ public class MountablePetContainerMenu extends AbstractContainerMenu {
     private final AbstractMountablePet horse;
 
     public MountablePetContainerMenu(int p_39656_, Inventory inventory, Container container, final AbstractMountablePet p_39659_) {
-        super((MenuType<?>)null, p_39656_);
+        super(null, p_39656_);
         this.horseContainer = container;
         this.horse = p_39659_;
         int i = 3;

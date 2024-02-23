@@ -162,12 +162,8 @@ public class PlayerPassiveSkillSkinArmorAttributeExecutor extends AbstractPlayer
 
 
         DevilRpg.LOGGER.info("----------------------->head: {} chest: {} legs: {} feet: {}", head.toString(), chest, legs, feet);
-        if (head.getItem() instanceof ArmorItem && chest.getItem() instanceof ArmorItem &&
-                legs.getItem() instanceof ArmorItem && feet.getItem() instanceof ArmorItem) {
-            ArmorItem headItem = (ArmorItem) head.getItem();
-            ArmorItem chestItem = (ArmorItem) chest.getItem();
-            ArmorItem legsItem = (ArmorItem) legs.getItem();
-            ArmorItem feetItem = (ArmorItem) feet.getItem();
+        if (head.getItem() instanceof ArmorItem headItem && chest.getItem() instanceof ArmorItem chestItem &&
+                legs.getItem() instanceof ArmorItem legsItem && feet.getItem() instanceof ArmorItem feetItem) {
 
             ArmorMaterial headMaterial = headItem.getMaterial();
             ArmorMaterial chestMaterial = chestItem.getMaterial();

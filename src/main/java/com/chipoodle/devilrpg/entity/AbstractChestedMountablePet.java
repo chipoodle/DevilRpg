@@ -33,7 +33,7 @@ public class AbstractChestedMountablePet extends AbstractMountablePet {
     }
 
     protected void randomizeAttributes(RandomSource p_218803_) {
-        Objects.requireNonNull(this.getAttribute(Attributes.MAX_HEALTH)).setBaseValue((double)generateMaxHealth(p_218803_::nextInt));
+        Objects.requireNonNull(this.getAttribute(Attributes.MAX_HEALTH)).setBaseValue(generateMaxHealth(p_218803_::nextInt));
     }
 
     protected void defineSynchedData() {
@@ -42,7 +42,7 @@ public class AbstractChestedMountablePet extends AbstractMountablePet {
     }
 
     public static AttributeSupplier.Builder createBaseChestedHorseAttributes() {
-        return createBaseHorseAttributes().add(Attributes.MOVEMENT_SPEED, (double)0.175F).add(Attributes.JUMP_STRENGTH, 0.5D);
+        return createBaseHorseAttributes().add(Attributes.MOVEMENT_SPEED, 0.175F).add(Attributes.JUMP_STRENGTH, 0.5D);
     }
 
     public boolean hasChest() {

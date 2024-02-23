@@ -102,7 +102,7 @@ public class WerewolfItemInHandRenderer {
     private float oMainHandHeight;
     private float offHandHeight;
     private float oOffHandHeight;
-    private WerewolfRenderer werewolfenderer;
+    private final WerewolfRenderer werewolfenderer;
 
     public WerewolfItemInHandRenderer(Minecraft p_234241_, EntityRenderDispatcher p_234242_, ItemRenderer p_234243_, WerewolfRenderer werewolfenderer) {
         this.minecraft = p_234241_;
@@ -158,7 +158,7 @@ public class WerewolfItemInHandRenderer {
             p_109331_.translate(0.0F, f2, 0.0F);
         }
 
-        float f3 = 1.0F - (float) Math.pow((double) f1, 27.0D);
+        float f3 = 1.0F - (float) Math.pow(f1, 27.0D);
         int i = p_109333_ == HumanoidArm.RIGHT ? 1 : -1;
         p_109331_.translate(f3 * 0.6F * (float) i, f3 * -0.5F, f3 * 0.0F);
         p_109331_.mulPose(Axis.YP.rotationDegrees((float) i * f3 * 90.0F));
@@ -382,13 +382,13 @@ public class WerewolfItemInHandRenderer {
 
     @OnlyIn(Dist.CLIENT)
     @VisibleForTesting
-    static enum HandRenderSelection {
+    enum HandRenderSelection {
         RENDER_BOTH_HANDS(true, true), RENDER_MAIN_HAND_ONLY(true, false), RENDER_OFF_HAND_ONLY(false, true);
 
         final boolean renderMainHand;
         final boolean renderOffHand;
 
-        private HandRenderSelection(boolean p_172928_, boolean p_172929_) {
+        HandRenderSelection(boolean p_172928_, boolean p_172929_) {
             this.renderMainHand = p_172928_;
             this.renderOffHand = p_172929_;
         }

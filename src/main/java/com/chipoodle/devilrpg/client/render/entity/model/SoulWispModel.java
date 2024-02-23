@@ -16,6 +16,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
+import org.jetbrains.annotations.NotNull;
 
 @OnlyIn(Dist.CLIENT)
 public class SoulWispModel<T extends SoulWisp> extends HierarchicalModel<T> implements ArmedModel {
@@ -23,6 +24,8 @@ public class SoulWispModel<T extends SoulWisp> extends HierarchicalModel<T> impl
     public static final ModelLayerLocation DEFAULT_LAYER_LOCATION = new ModelLayerLocation(new ResourceLocation(DevilRpg.MODID, "soulwisp"), "main");
     public static final ModelLayerLocation ARCHER_LAYER_LOCATION = new ModelLayerLocation(new ResourceLocation(DevilRpg.MODID, "soulwisparcher"), "main");
     public static final ModelLayerLocation BOMBER_LAYER_LOCATION = new ModelLayerLocation(new ResourceLocation(DevilRpg.MODID, "soulwispbomber"), "main");
+    public static final ModelLayerLocation CURSE_LAYER_LOCATION = new ModelLayerLocation(new ResourceLocation(DevilRpg.MODID, "soulwispcurse"), "main");
+    public static final ModelLayerLocation HEALTH_LAYER_LOCATION = new ModelLayerLocation(new ResourceLocation(DevilRpg.MODID, "soulwisphealth"), "main");
     private static final float FLYING_ANIMATION_X_ROT = ((float) Math.PI / 4F);
     private static final float MAX_HAND_HOLDING_ITEM_X_ROT_RAD = -1.134464F;
     private static final float MIN_HAND_HOLDING_ITEM_X_ROT_RAD = (-(float) Math.PI / 3F);
@@ -92,7 +95,7 @@ public class SoulWispModel<T extends SoulWisp> extends HierarchicalModel<T> impl
         this.left_wing.yRot = ((float) Math.PI / 4F) - f1;
         this.body.xRot = f4 * ((float) Math.PI / 4F);
         float f12 = f6 * Mth.lerp(f4, (-(float) Math.PI / 3F), -1.134464F);
-        this.root.y += (float) Math.cos((double) f3) * 0.25F * f5;
+        this.root.y += (float) Math.cos(f3) * 0.25F * f5;
         this.right_arm.xRot = f12;
         this.left_arm.xRot = f12;
         float f13 = f5 * (1.0F - f6);
@@ -103,7 +106,7 @@ public class SoulWispModel<T extends SoulWisp> extends HierarchicalModel<T> impl
         this.left_arm.yRot = -0.27925268F * f6;
     }
 
-    public void translateToHand(HumanoidArm p_233322_, PoseStack p_233323_) {
+    public void translateToHand(@NotNull HumanoidArm p_233322_, @NotNull PoseStack p_233323_) {
         float f = 1.0F;
         float f1 = 3.0F;
         this.root.translateAndRotate(p_233323_);

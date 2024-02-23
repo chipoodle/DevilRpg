@@ -31,13 +31,14 @@ public enum SkillEnum {
     WEREWOLF_VITALITY("WereWolfVitality","Werewolf Vitality","werewolf_vitality",false,false),
     MINION_VITALITY("MinionVitality","Minion Vitality","summon_minion_vitality",false,true),
     SOULVINE("Soulvine","Soulvine","soulvine",true,false),
+    SOULLICHEN("Soullichen","Soullichen","soullichen",true,false),
     MANA_POOL("ManaPool","Mana Pool","mana_pool",false,false),
     MANA_REGENERATION("ManaRegeneration","Mana Regeneration","mana_regeneration",false,false),
     CHARGE("Charge","Charge","charge",true,false),
     BLOCK("Block","Block","block",true,false),
     KNOCKBACK_RESISTANCE("KnockbackResistance","Knockback Resistance","knockback_resistance",false,false),
     EMPTY("","","",false,false);
-	
+
     private final String name;
     private final String description;
     private final String jsonName;

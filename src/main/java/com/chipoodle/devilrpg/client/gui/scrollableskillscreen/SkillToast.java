@@ -3,6 +3,7 @@ package com.chipoodle.devilrpg.client.gui.scrollableskillscreen;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiComponent;
 import net.minecraft.client.gui.components.toasts.Toast;
 import net.minecraft.client.gui.components.toasts.ToastComponent;
 import net.minecraft.client.renderer.GameRenderer;
@@ -30,7 +31,7 @@ public class SkillToast implements Toast {
         RenderSystem.setShaderTexture(0, TEXTURE);
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
         SkillDisplayInfo displayinfo = this.advancement.getDisplay();
-        p_230444_2_.blit(p_230444_1_, 0, 0, 0, 0, this.width(), this.height());
+        GuiComponent.blit(p_230444_1_, 0, 0, 0, 0, this.width(), this.height());
         if (displayinfo != null) {
             List<FormattedCharSequence> list = minecraft.font.split(displayinfo.getTitle(), 125);
             int i = displayinfo.getFrame() == SkillFrameType.CHALLENGE ? 16746751 : 16776960;

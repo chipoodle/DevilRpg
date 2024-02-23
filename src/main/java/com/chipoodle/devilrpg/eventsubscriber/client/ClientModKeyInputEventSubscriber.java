@@ -37,7 +37,7 @@ public class ClientModKeyInputEventSubscriber {
     public static class KeyRegister {
         @SubscribeEvent
         public static void onRegisterKeyMappingsEvent(RegisterKeyMappingsEvent registerKeyMappingsEvent) {
-            DevilRpg.LOGGER.info("----------------------->ClientModKeyInputEventSubscriber.onRegisterKeyMappingsEvent");
+            //DevilRpg.LOGGER.info("----------------------->ClientModKeyInputEventSubscriber.onRegisterKeyMappingsEvent");
             KEYS[0] = new KeyMapping("key.power1", -1, "key.categories.devilrpg");
             KEYS[1] = new KeyMapping("key.power2", -1, "key.categories.devilrpg");
             KEYS[2] = new KeyMapping("key.power3", -1, "key.categories.devilrpg");
@@ -56,7 +56,7 @@ public class ClientModKeyInputEventSubscriber {
                     registerKeyMappingsEvent.register(KEYS[i]);
                 }
             } catch (Exception e) {
-                DevilRpg.LOGGER.error("----> Failed to register key binding");
+                //DevilRpg.LOGGER.error("----> Failed to register key binding");
                 System.exit(-1);
             }
 
@@ -76,43 +76,43 @@ public class ClientModKeyInputEventSubscriber {
 
             LazyOptional<PlayerSkillCapabilityInterface> skill = p.getCapability(PlayerSkillCapability.INSTANCE);
             if (KEYS[0].consumeClick()) {
-                DevilRpg.LOGGER.debug(KEYS[0].saveString() + " pressed. " + KEYS[0].getKey().getValue());
-                DevilRpg.LOGGER.debug("---->" + getKeyName(PowerEnum.POWER1));
+                //DevilRpg.LOGGER.debug(KEYS[0].saveString() + " pressed. " + KEYS[0].getKey().getValue());
+                //DevilRpg.LOGGER.debug("---->" + getKeyName(PowerEnum.POWER1));
                 ModNetwork.CHANNEL.sendToServer(new KeyboardSkillServerHandler(PowerEnum.POWER1));
                 //Para que se ejecute en el cliente
                 skill.ifPresent(x -> x.triggerAction(p, PowerEnum.POWER1));
             }
             if (KEYS[1].consumeClick()) {
-                DevilRpg.LOGGER.debug(KEYS[1].saveString() + " pressed. " + KEYS[1].getKey().getValue());
-                DevilRpg.LOGGER.debug("---->" + getKeyName(PowerEnum.POWER2));
+                //DevilRpg.LOGGER.debug(KEYS[1].saveString() + " pressed. " + KEYS[1].getKey().getValue());
+                //DevilRpg.LOGGER.debug("---->" + getKeyName(PowerEnum.POWER2));
                 ModNetwork.CHANNEL.sendToServer(new KeyboardSkillServerHandler(PowerEnum.POWER2));
                 //Para que se ejecute en el cliente
                 skill.ifPresent(x -> x.triggerAction(p, PowerEnum.POWER2));
             }
             if (KEYS[2].consumeClick()) {
-                DevilRpg.LOGGER.debug(KEYS[2].saveString() + " pressed. " + KEYS[2].getKey().getValue());
-                DevilRpg.LOGGER.debug("---->" + getKeyName(PowerEnum.POWER3));
+                //DevilRpg.LOGGER.debug(KEYS[2].saveString() + " pressed. " + KEYS[2].getKey().getValue());
+                //DevilRpg.LOGGER.debug("---->" + getKeyName(PowerEnum.POWER3));
                 ModNetwork.CHANNEL.sendToServer(new KeyboardSkillServerHandler(PowerEnum.POWER3));
                 //Para que se ejecute en el cliente
                 skill.ifPresent(x -> x.triggerAction(p, PowerEnum.POWER3));
             }
             if (KEYS[3].consumeClick()) {
-                DevilRpg.LOGGER.debug(KEYS[3].saveString() + " pressed. " + KEYS[3].getKey().getValue());
-                DevilRpg.LOGGER.debug("---->" + getKeyName(PowerEnum.POWER4));
+                //DevilRpg.LOGGER.debug(KEYS[3].saveString() + " pressed. " + KEYS[3].getKey().getValue());
+                //DevilRpg.LOGGER.debug("---->" + getKeyName(PowerEnum.POWER4));
                 ModNetwork.CHANNEL.sendToServer(new KeyboardSkillServerHandler(PowerEnum.POWER4));
                 //Para que se ejecute en el cliente
                 skill.ifPresent(x -> x.triggerAction(p, PowerEnum.POWER4));
             }
             if (KEYS[4].consumeClick()) {
-                DevilRpg.LOGGER.debug(KEYS[4].saveString() + " pressed. " + KEYS[4].getKey().getValue());
-                DevilRpg.LOGGER.debug("---->" + getKeyName(PowerEnum.POWER5));
+                //DevilRpg.LOGGER.debug(KEYS[4].saveString() + " pressed. " + KEYS[4].getKey().getValue());
+                //DevilRpg.LOGGER.debug("---->" + getKeyName(PowerEnum.POWER5));
                 ModNetwork.CHANNEL.sendToServer(new KeyboardSkillServerHandler(PowerEnum.POWER5));
                 //Para que se ejecute en el cliente
                 skill.ifPresent(x -> x.triggerAction(p, PowerEnum.POWER5));
             }
             if (KEYS[5].consumeClick()) {
-                DevilRpg.LOGGER.debug(KEYS[5].saveString() + " pressed. " + KEYS[5].getKey().getValue());
-                DevilRpg.LOGGER.debug(KEYS[5].getKey().getDisplayName());
+                //DevilRpg.LOGGER.debug(KEYS[5].saveString() + " pressed. " + KEYS[5].getKey().getValue());
+                //DevilRpg.LOGGER.debug(KEYS[5].getKey().getDisplayName());
                 //SkillScreen.open(Minecraft.getInstance().player,KEYS[4].getKey());
                 Minecraft.getInstance().tell(() -> Minecraft.getInstance().setScreen(new SkillScreen(KEYS[5].getKey())));
             }

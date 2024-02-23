@@ -71,12 +71,12 @@ public class SoulBear extends AbstractMountablePet
     private static final UUID ARMOR_MODIFIER_UUID = UUID.fromString("556E1665-8B10-40C8-8F9D-CF9B1667F295");
     private static final EntityDataAccessor<Integer> DATA_ID_TYPE_VARIANT = SynchedEntityData.defineId(SoulBear.class, EntityDataSerializers.INT);
     private static final UniformInt PERSISTENT_ANGER_TIME = TimeUtil.rangeOfSeconds(20, 39);
-    private static final int PROBABILITY_MULTIPLIER = 13;
+    private static final int PROBABILITY_MULTIPLIER = 5;
     private static final int DURATION_TICKS = 100;
 
     private static final double RADIUS_PARTICLES = 1.0;
     private static final int NUMBER_OF_PARTICLES_WAR_BEAR = 3;
-    private static final double SPLASH_DAMAGE_FACTOR = 0.6F;
+    private static final double SPLASH_DAMAGE_FACTOR = 0.35F;
     //private static final DataParameter<Boolean> DATA_STANDING_ID = EntityDataManager.defineId(SoulBearEntity.class,DataSerializers.BOOLEAN);
     private final int SALUD_INICIAL = 20;
     private float clientSideStandAnimationO;
@@ -161,7 +161,7 @@ public class SoulBear extends AbstractMountablePet
         Objects.requireNonNull(this.getAttribute(Attributes.MAX_HEALTH)).setBaseValue(saludMaxima);
         Objects.requireNonNull(this.getAttribute(Attributes.ARMOR)).setBaseValue(initialArmor + warBear);
         Objects.requireNonNull(this.getAttribute(Attributes.FOLLOW_RANGE)).setBaseValue(16.0D);
-        Objects.requireNonNull(this.getAttribute(Attributes.ATTACK_DAMAGE)).setBaseValue((1.8 * puntosAsignados) + 4); // 5.8-40
+        Objects.requireNonNull(this.getAttribute(Attributes.ATTACK_DAMAGE)).setBaseValue((1.4 * puntosAsignados) + 4); // 5.4-32
         Objects.requireNonNull(this.getAttribute(Attributes.JUMP_STRENGTH)).setBaseValue(0.7D + ((double) mountBear / 5));
         setHealth((float) saludMaxima);
         DevilRpg.LOGGER.debug("----------------------->SoulBear.updateLevel(). Owner {}. isTame {}.  ", owner.getUUID(), isTame());

@@ -53,8 +53,7 @@ public class TamablePetRunAroundLikeCrazyGoal  extends Goal{
                 return;
             }
 
-            if (entity instanceof Player) {
-                Player player = (Player)entity;
+            if (entity instanceof Player player) {
                 int i = this.pet.getTemper();
                 int j = this.pet.getMaxTemper();
                 if (j > 0 && this.pet.getRandom().nextInt(j) < i && !net.minecraftforge.event.ForgeEventFactory.onAnimalTame(pet, (Player)entity)) {
