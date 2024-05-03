@@ -19,7 +19,7 @@ import net.minecraft.world.phys.Vec3;
 
 import java.util.function.Consumer;
 
-public class ChopWoodGoal extends Goal {
+public class SoulWispChopWoodGoal extends Goal {
     public static final double SPEED = 1.0;
     public static final int TICKS_UNTIL_NEXT_HIT_LOG = 10;
     public static final int TICKS_UNTIL_NEXT_HIT_LEAVES = 3;
@@ -31,7 +31,7 @@ public class ChopWoodGoal extends Goal {
     private int ticksUntilNextHit;
     private int tickswithoutChopping;
 
-    public ChopWoodGoal(SoulWisp soulWisp) {
+    public SoulWispChopWoodGoal(SoulWisp soulWisp) {
         this.soulWisp = soulWisp;
         this.ticksUntilNextHit = 0;
         this.tickswithoutChopping = 0;
@@ -60,7 +60,7 @@ public class ChopWoodGoal extends Goal {
             }
         }
 
-        if (closestBlockPos != null) {
+        if (closestBlockPos != null && soulWisp.hasItemInHand()) {
             this.targetBlockPos = closestBlockPos;
             return true;
         }

@@ -27,6 +27,7 @@ import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.*;
+import net.minecraft.world.phys.shapes.CollisionContext;
 
 import java.util.*;
 import java.util.stream.Collectors;

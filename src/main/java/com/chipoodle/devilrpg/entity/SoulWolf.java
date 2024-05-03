@@ -44,12 +44,12 @@ import java.util.Objects;
 public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, PowerableMob, IPassiveMinionUpdater<SoulWolf> {
     private static final int ICE_ARMOR_EFFECT_FACTOR = 2;
     private static final double RADIUS_PARTICLES = 0.7;
-    private static final int NUMBER_OF_PARTICLES_ICE_ARMOR = 11;
-    private static final int PROBABILITY_MULTIPLIER = 5;
-    private static final int ICE_ARMOR_DURATION_TICKS = 100;
+    //private static final int NUMBER_OF_PARTICLES_ICE_ARMOR = 11;
+    private static final int PROBABILITY_MULTIPLIER = 4;
+    private static final int ICE_ARMOR_DURATION_TICKS = 140;
     public static final int FROSTBITE_DURATION_TICKS = 20;
-    private static final int INITIAL_HEALTH = 7;
-    private static final int NUMBER_OF_PARTICLES_FROST_BITE = 1;
+    private static final int INITIAL_HEALTH = 8;
+    private static final int NUMBER_OF_PARTICLES_FROST_BITE = 11;
     private int puntosAsignados = 0;
     private double saludMaxima = INITIAL_HEALTH;
     // private double stealingHealth;
@@ -98,7 +98,7 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
         PlayerSkillCapabilityInterface skill = IGenericCapability.getUnwrappedPlayerCapability((Player) getOwner(), PlayerSkillCapability.INSTANCE);
         if (skill != null) {
             this.puntosAsignados = skill.getSkillsPoints().get(SkillEnum.SUMMON_SOUL_WOLF);
-            saludMaxima = 1.0 * this.puntosAsignados + INITIAL_HEALTH;
+            saludMaxima = this.puntosAsignados + INITIAL_HEALTH;
             // stealingHealth = (0.135f * puntosAsignados) + 0.5;
         }
 
@@ -155,7 +155,7 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
     @Override
     public boolean doHurtTarget(@NotNull Entity target) {
         int randomNumber = random.nextInt(100);
-        if (frostbite > 0 && randomNumber <= (frostbite * PROBABILITY_MULTIPLIER)) { //30% randomNumber on lvl5 frostbite
+        if (frostbite > 0 && randomNumber <= (frostbite * PROBABILITY_MULTIPLIER)) { //20% randomNumber on lvl5 frostbite
 
             MobEffectInstance frostbiteEffect = new MobEffectInstance(MobEffects.DAMAGE_BOOST, FROSTBITE_DURATION_TICKS, (int) Math.round((double) frostbite /2), true, false);
             MobEffectInstance active = this.getEffect(MobEffects.DAMAGE_BOOST);
@@ -163,7 +163,8 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
                 active.update(frostbiteEffect);
             } else
                 this.addEffect(frostbiteEffect);
-            IRenderUtilities.rotationParticles(Minecraft.getInstance().level, random, this, ParticleTypes.FLASH, NUMBER_OF_PARTICLES_FROST_BITE, RADIUS_PARTICLES);
+            //IRenderUtilities.rotationParticles(Minecraft.getInstance().level, random, this, ParticleTypes.FLASH, NUMBER_OF_PARTICLES_FROST_BITE, RADIUS_PARTICLES);
+            IRenderUtilities.rotationParticles(Minecraft.getInstance().level, random, this, ParticleTypes.SNOWFLAKE, NUMBER_OF_PARTICLES_FROST_BITE, RADIUS_PARTICLES);
         }
         double attackDamage = this.getAttributeValue(Attributes.ATTACK_DAMAGE);
         boolean flag = target.hurt(this.damageSources().mobAttack(this), (float) (attackDamage));
@@ -185,14 +186,22 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
         if (hurt) {
             int probability = random.nextInt(100);
             if (iceArmor > 0 && probability <= (iceArmor * PROBABILITY_MULTIPLIER) && Minecraft.getInstance().level != null) {
-                IRenderUtilities.rotationParticles(Minecraft.getInstance().level, random, this, ParticleTypes.SNOWFLAKE, NUMBER_OF_PARTICLES_ICE_ARMOR, RADIUS_PARTICLES);
+                //IRenderUtilities.rotationParticles(Minecraft.getInstance().level, random, this, ParticleTypes.SNOWFLAKE, NUMBER_OF_PARTICLES_ICE_ARMOR, RADIUS_PARTICLES);
                 MobEffectInstance iceArmorEffect = new MobEffectInstance(MobEffects.ABSORPTION, ICE_ARMOR_DURATION_TICKS, iceArmor * ICE_ARMOR_EFFECT_FACTOR, true, false);
                 MobEffectInstance active = this.getEffect(MobEffects.ABSORPTION);
                 if (active != null && iceArmorEffect.getAmplifier() <= active.getAmplifier()) {
                     active.update(iceArmorEffect);
                 } else
                     this.addEffect(iceArmorEffect);
+
                 DevilRpg.LOGGER.debug("---------->hurt iceArmor: {} probability: {} Range of success: {}", iceArmor, probability, iceArmor * PROBABILITY_MULTIPLIER);
+
+                MobEffectInstance fireResistance = new MobEffectInstance(MobEffects.FIRE_RESISTANCE,ICE_ARMOR_DURATION_TICKS, Math.max(Math.min(iceArmor-1,3),0));
+                this.addEffect(fireResistance);
+                boolean hasEffect = this.hasEffect(MobEffects.FIRE_RESISTANCE);
+
+                MobEffectInstance effect = this.getEffect(MobEffects.FIRE_RESISTANCE);
+                DevilRpg.LOGGER.debug("---------- fireResistance?:{} amplifier:{} duration: {}",hasEffect,  Objects.requireNonNull(effect).getAmplifier(),effect.getDuration()  );
             }
         }
         return hurt;
@@ -258,6 +267,15 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
          * this.Level.rand.nextInt(3);
          */
         return 0;
+    }
+
+    @Override
+    public LivingEntity getOwner() {
+        try {
+            return super.getOwner();
+        } catch (IllegalArgumentException illegalargumentexception) {
+            return null;
+        }
     }
 
     @Override

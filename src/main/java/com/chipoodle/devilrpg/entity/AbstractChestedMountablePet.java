@@ -161,10 +161,8 @@ public class AbstractChestedMountablePet extends AbstractMountablePet {
                 }
             }
 
-            return super.mobInteract(player, interactionHand);
-        } else {
-            return super.mobInteract(player, interactionHand);
         }
+        return super.mobInteract(player, interactionHand);
     }
 
     private void equipChest(Player p_250937_, ItemStack p_251558_) {

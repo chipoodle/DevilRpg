@@ -25,6 +25,7 @@ public enum SkillEnum {
     SUMMON_WISP_CURSE("SummonWispCurse","Wisp Curse","summon_wisp_curse",true,false),
     SUMMON_WISP_BOMB("SummonWispBomb","Bomber Wisp","summon_wisp_bomb",true,false),
     SUMMON_WISP_ARCHER("SummonWispArcher","Archer Wisp","summon_wisp_archer",true,false),
+    SUMMON_WISP_CHOPPER("SummonWispChopper","Chopper Wisp","summon_wisp_chopper",true,false),
     TRANSFORM_WEREWOLF("TransformWereWolf","Werewolf","shapeshift_werewolf",true,false),
     SKIN_ARMOR("SkinArmor","Skin Armor","skin_armor",false,false),
     WEREWOLF_HIT("WereWolfHit","Werewolf Hit","werewolf_hit",false,false),
@@ -32,11 +33,13 @@ public enum SkillEnum {
     MINION_VITALITY("MinionVitality","Minion Vitality","summon_minion_vitality",false,true),
     SOULVINE("Soulvine","Soulvine","soulvine",true,false),
     SOULLICHEN("Soullichen","Soullichen","soullichen",true,false),
+    VINEFLESHBALL("Vinefleshball","Vinefleshball","vinefleshball",true,false),
     MANA_POOL("ManaPool","Mana Pool","mana_pool",false,false),
     MANA_REGENERATION("ManaRegeneration","Mana Regeneration","mana_regeneration",false,false),
     CHARGE("Charge","Charge","charge",true,false),
     BLOCK("Block","Block","block",true,false),
     KNOCKBACK_RESISTANCE("KnockbackResistance","Knockback Resistance","knockback_resistance",false,false),
+
     EMPTY("","","",false,false);
 
     private final String name;

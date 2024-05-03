@@ -16,10 +16,12 @@ import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
+import org.jetbrains.annotations.NotNull;
 
 @OnlyIn(Dist.CLIENT)
 public class SoulBearGelLayer<T extends SoulBear> extends GhostEnergyLayer<T, SoulBearModelHeart<T>> {
     private static final ResourceLocation BEAR_GEL = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soul/soulgelghost.png");
+    //private static final ResourceLocation BEAR_GEL = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soulbear/Cyber-Grizzly-Bear-Vinyl-Film-Wrap-Close-Up-Pattern.jpg");
     //private static final ResourceLocation BEAR_GEL = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soul/trident_riptide.png");
     private final EntityModel<T> soulBearModel;
 
@@ -28,9 +30,9 @@ public class SoulBearGelLayer<T extends SoulBear> extends GhostEnergyLayer<T, So
         this.soulBearModel = new SoulBearModel<>(entityModelSet.bakeLayer(SoulBearModel.LAYER_LOCATION));
     }
 
-    public void render(PoseStack p_117470_, MultiBufferSource p_117471_, int p_117472_, T p_117473_, float p_117474_, float p_117475_, float p_117476_, float p_117477_, float p_117478_, float p_117479_) {
-        groovyMethod(p_117470_, p_117471_, p_117472_, p_117473_, p_117474_, p_117475_, p_117476_, p_117477_, p_117478_, p_117479_);
-        super.render(p_117470_, p_117471_, p_117472_, p_117473_, p_117474_, p_117475_, p_117476_, p_117477_, p_117478_, p_117479_);
+    public void render(@NotNull PoseStack poseStack, @NotNull MultiBufferSource multiBufferSource, int p_117472_, @NotNull T entity, float p_117474_, float p_117475_, float p_117476_, float p_117477_, float p_117478_, float p_117479_) {
+        groovyMethod(poseStack, multiBufferSource, p_117472_, entity, p_117474_, p_117475_, p_117476_, p_117477_, p_117478_, p_117479_);
+        super.render(poseStack, multiBufferSource, p_117472_, entity, p_117474_, p_117475_, p_117476_, p_117477_, p_117478_, p_117479_);
     }
 
     protected float xOffset(float p_225634_1_) {

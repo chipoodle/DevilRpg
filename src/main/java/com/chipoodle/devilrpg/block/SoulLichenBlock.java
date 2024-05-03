@@ -51,11 +51,11 @@ public class SoulLichenBlock extends MultifaceBlock implements SimpleWaterlogged
     public SoulLichenBlock(Properties properties) {
         super(properties);
         this.registerDefaultState(this
-                .defaultBlockState()
-                .setValue(WATERLOGGED, Boolean.FALSE)
-                .setValue(SKILL_LEVEL, 0)
-                .setValue(FACE, Direction.DOWN)
-                .setValue(DIRECTION, Direction.DOWN)
+                        .defaultBlockState()
+                        .setValue(WATERLOGGED, Boolean.FALSE)
+                        .setValue(SKILL_LEVEL, 0)
+                        .setValue(FACE, Direction.DOWN)
+                        .setValue(DIRECTION, Direction.DOWN)
                 //.trySetValue(CURRENT_AGE, 0)
         );
     }
@@ -69,9 +69,31 @@ public class SoulLichenBlock extends MultifaceBlock implements SimpleWaterlogged
         return p_153901_.hasProperty(booleanproperty) && p_153901_.getValue(booleanproperty);
     }
 
+    public static boolean stateCanBeReplaced(BlockState blockState, SoulLichenBlock soulLichenBlock) {
+        return blockState.isAir() || blockState.is(soulLichenBlock) ||
+                blockState.is(Blocks.WATER) && blockState.getFluidState().isSource() ||
+                blockState.is(Blocks.GRASS) || blockState.is(Blocks.SNOW);
+    }
+
+    public static void applySoulLichenEffects(@NotNull Level level, @NotNull Entity entity, Player owner) {
+        entity.hurt(level.damageSources().playerAttack(owner), 1.0F);
+        // Aplicar aceleración al movimiento
+        double speedBoost = -0.4; // Ajusta este valor según lo rápido que quieras que sea el impulso
+        double motionX = entity.getX() - entity.xOld;
+        double motionZ = entity.getZ() - entity.zOld;
+        double speed = Math.sqrt(motionX * motionX + motionZ * motionZ);
+        double speedx = (motionX / speed) * speedBoost;
+        double speedz = (motionZ / speed) * speedBoost;
+        entity.setDeltaMovement(entity.getDeltaMovement().multiply(
+                Double.isNaN(speedx) ? 0.0d : speedx,
+                0.0,
+                Double.isNaN(speedz) ? 0.0d : speedz
+        ));
+    }
+
     protected void createBlockStateDefinition(StateDefinition.@NotNull Builder<Block, BlockState> stateDefinition) {
         stateDefinition.add(WATERLOGGED).add(SKILL_LEVEL).add(FACE).add(DIRECTION)
-                //.add(CURRENT_AGE)
+        //.add(CURRENT_AGE)
         ;
         super.createBlockStateDefinition(stateDefinition);
     }
@@ -120,6 +142,10 @@ public class SoulLichenBlock extends MultifaceBlock implements SimpleWaterlogged
                 .orElse(Optional.empty());
     }
 
+    /*protected boolean stateCanBeReplaced(BlockGetter p_221688_, BlockPos p_221689_, BlockPos p_221690_, Direction p_221691_, BlockState p_221692_) {
+        return p_221692_.isAir() || p_221692_.is(this) || p_221692_.is(Blocks.WATER) && p_221692_.getFluidState().isSource();
+    }*/
+
     public Optional<MultifaceSpreader.SpreadPos> spreadFromFaceTowardDirection(
             BlockState blockState,
             LevelAccessor levelAccessor,
@@ -138,11 +164,7 @@ public class SoulLichenBlock extends MultifaceBlock implements SimpleWaterlogged
 
     public boolean canSpreadInto(BlockGetter p_221685_, BlockPos p_221686_, MultifaceSpreader.SpreadPos p_221687_) {
         BlockState blockstate = p_221685_.getBlockState(p_221687_.pos());
-        return this.stateCanBeReplaced(p_221685_, p_221686_, p_221687_.pos(), p_221687_.face(), blockstate) && isValidStateForPlacement(p_221685_, blockstate, p_221687_.pos(), p_221687_.face());
-    }
-
-    protected boolean stateCanBeReplaced(BlockGetter p_221688_, BlockPos p_221689_, BlockPos p_221690_, Direction p_221691_, BlockState p_221692_) {
-        return p_221692_.isAir() || p_221692_.is(this) || p_221692_.is(Blocks.WATER) && p_221692_.getFluidState().isSource();
+        return stateCanBeReplaced(blockstate, this) && isValidStateForPlacement(p_221685_, blockstate, p_221687_.pos(), p_221687_.face());
     }
 
     public Optional<MultifaceSpreader.SpreadPos> getSpreadFromFaceTowardDirection(BlockState blockState, BlockGetter blockGetter, BlockPos blockPos, Direction face, Direction direction, MultifaceSpreader.SpreadPredicate spreadPredicate) {
@@ -215,7 +237,7 @@ public class SoulLichenBlock extends MultifaceBlock implements SimpleWaterlogged
                     .setValue(FACE, face)
                     .setValue(DIRECTION, direction)
                     //.setValue(CURRENT_AGE,age)
-            ;
+                    ;
         }
     }
 
@@ -271,27 +293,12 @@ public class SoulLichenBlock extends MultifaceBlock implements SimpleWaterlogged
     @Deprecated
     @Override
     public void entityInside(@NotNull BlockState blockState, @NotNull Level level, @NotNull BlockPos blockPos, @NotNull Entity entity) {
-        if (entity instanceof LivingEntity && entity.getType() != ModEntities.LICHEN_SEEDBALL.get()) {
+        if (entity instanceof LivingEntity && entity.getType() != ModEntities.LICHEN_SEED_BALL.get()) {
             entity.makeStuckInBlock(blockState, new Vec3(0.8D, 0.75D, 0.8D));
             if (!level.isClientSide) {
                 applySoulLichenEffects(level, entity, (Player) owner);
             }
         }
-    }
-
-    public static void applySoulLichenEffects(@NotNull Level level, @NotNull Entity entity, Player owner) {
-        entity.hurt(level.damageSources().playerAttack(owner), 1.0F);
-        // Aplicar aceleración al movimiento
-        double speedBoost = -0.4; // Ajusta este valor según lo rápido que quieras que sea el impulso
-        double motionX = entity.getX() - entity.xOld;
-        double motionZ = entity.getZ() - entity.zOld;
-        double speed = Math.sqrt(motionX * motionX + motionZ * motionZ);
-
-        entity.setDeltaMovement(entity.getDeltaMovement().multiply(
-                (motionX / speed) * speedBoost,
-                0.0,
-                (motionZ / speed) * speedBoost
-        ));
     }
 
     @Nullable

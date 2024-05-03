@@ -32,6 +32,7 @@ public class DevilRpg {
         ModEntities.ENTITY_TYPES.register(modEventBus);
         ModSounds.SOUND_EVENTS.register(modEventBus);
         ModEffects.EFFECTS.register(modEventBus);
+        ModContainers.CONTAINERS.register(modEventBus);
         // Register Configs (Does not need to be after Deferred Registers)
         modLoadingContext.registerConfig(ModConfig.Type.CLIENT, ConfigHolder.CLIENT_SPEC);
         modLoadingContext.registerConfig(ModConfig.Type.SERVER, ConfigHolder.SERVER_SPEC);

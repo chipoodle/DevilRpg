@@ -24,7 +24,7 @@ import java.lang.reflect.Field;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 
-public class WerewolfCustomRendererBuilder {
+public class WerewolfCustomRendererHelper {
 
     protected static final RandomSource random = RandomSource.create();
     @OnlyIn(Dist.CLIENT)
@@ -36,7 +36,7 @@ public class WerewolfCustomRendererBuilder {
     private static ItemRenderer itemRenderer;
     private static BlockRenderDispatcher blockRenderDispatcher;
 
-    public WerewolfCustomRendererBuilder() {
+    public WerewolfCustomRendererHelper() {
 
     }
 

@@ -2,7 +2,10 @@
     "itemGroup.devilrpg": "Devil RPG",
     "key.categories.devilrpg": "Devil RPG power buttons",
     "entity.devilrpg.soul_wolf.name": "Soul Wolf",
+    "entity.devilrpg.soul_bear": "Soul Bear",
+    "entity.devilrpg.soul_bear.name": "Soul Bear",
     "entity.devilrpg.wisp.name": "Wisp",
+    "entity.devilrpg.wisp.openmenu": "Soul wisp inventory",
     "entity.devilrpg.health_wisp.name": "Health Wisp",
     "entity.devilrpg.speed_wisp.name": "Speed Wisp",
     "entity.devilrpg.neozombie.name": "NeoZombie",
@@ -22,7 +25,8 @@
     "item.devilrpg.soulwolf_spawn_egg": "Soul Wolf",
     "item.devilrpg.soulbear_spawn_egg": "Soul Bear",
     "item_group.devilrpg.devilrpg_tab": "Devil RPG",
-    "effect.devilrpg.knockback-immunity": "Knock-back Immunity",
+    "effect.devilrpg.knockback_resistance": "Knock-back Immunity",
+    "effect.devilrpg.entangling": "Entangling",
     "item.devilrpg.soullichenblock.tooltip": "Sou Lichen"
 
 }

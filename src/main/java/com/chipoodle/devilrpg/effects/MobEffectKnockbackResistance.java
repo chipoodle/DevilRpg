@@ -25,6 +25,7 @@ public class MobEffectKnockbackResistance extends MobEffect {
 
     @Override
     public void applyEffectTick(@NotNull LivingEntity entity, int amplifier) {
+        amplifier = Math.max(1, Math.min(amplifier + 1, 5));// se suma uno porque  el indice empieza en 0 pero el nivel es de 1 a 5
         // Calculate the knockback resistance based on the amplifier
         double knockbackResistance = 0.2 * amplifier;
 
@@ -35,7 +36,7 @@ public class MobEffectKnockbackResistance extends MobEffect {
         if(!Objects.requireNonNull(entity.getAttribute(Attributes.KNOCKBACK_RESISTANCE)).hasModifier(attMod)) {
             // Apply the knockback resistance attribute modifier
             Objects.requireNonNull(entity.getAttribute(Attributes.KNOCKBACK_RESISTANCE)).addTransientModifier(attMod);
-            DevilRpg.LOGGER.debug(entity.getName().getString() + " has knockback resistance: " + knockbackResistance);
+            DevilRpg.LOGGER.debug("{} has knockback resistance: {} amplifier {}",entity.getName().getString(), knockbackResistance, amplifier);
         }
     }
 

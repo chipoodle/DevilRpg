@@ -7,7 +7,7 @@ package com.chipoodle.devilrpg.eventsubscriber.client;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
-import com.chipoodle.devilrpg.client.render.entity.renderer.WerewolfCustomRendererBuilder;
+import com.chipoodle.devilrpg.client.render.entity.renderer.WerewolfCustomRendererHelper;
 import com.chipoodle.devilrpg.client.render.entity.renderer.WerewolfItemInHandRenderer;
 import com.chipoodle.devilrpg.client.render.entity.renderer.WerewolfRenderer;
 import com.chipoodle.devilrpg.util.EventUtils;
@@ -54,11 +54,11 @@ public final class ClientForgePlayerRenderEventSubscriber {
     public static void onPlayerRender(RenderPlayerEvent.Pre event) {
         BiConsumer<RenderPlayerEvent.Pre, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, auxiliar) -> {
             eve.setCanceled(true);
-            WerewolfCustomRendererBuilder.init(eve.getRenderer());
-            WerewolfCustomRendererBuilder.createRenderer(eve.getEntity());
-            WerewolfCustomRendererBuilder.render((AbstractClientPlayer) eve.getEntity(), 0, eve.getPartialTick(), eve.getPoseStack(), eve.getMultiBufferSource(), eve.getPackedLight());
+            WerewolfCustomRendererHelper.init(eve.getRenderer());
+            WerewolfCustomRendererHelper.createRenderer(eve.getEntity());
+            WerewolfCustomRendererHelper.render((AbstractClientPlayer) eve.getEntity(), 0, eve.getPartialTick(), eve.getPoseStack(), eve.getMultiBufferSource(), eve.getPackedLight());
         };
-        WerewolfCustomRendererBuilder.releaseRender(event, c);
+        WerewolfCustomRendererHelper.releaseRender(event, c);
     }
 
     @SubscribeEvent
@@ -80,7 +80,7 @@ public final class ClientForgePlayerRenderEventSubscriber {
         Minecraft instance = Minecraft.getInstance();
         LocalPlayer player = instance.player;
         if (EventUtils.onWerewolfTransformation(player, c, event)) {
-            WerewolfRenderer renderer = WerewolfCustomRendererBuilder.createRenderer(Minecraft.getInstance().player);
+            WerewolfRenderer renderer = WerewolfCustomRendererHelper.createRenderer(Minecraft.getInstance().player);
             if (handRenderer == null)
                 handRenderer = new WerewolfItemInHandRenderer(instance, instance.getEntityRenderDispatcher(), instance.getItemRenderer(), renderer);
             if (event.getHand() == InteractionHand.MAIN_HAND)

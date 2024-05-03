@@ -1,6 +1,7 @@
 package com.chipoodle.devilrpg.entity;
 
-import com.chipoodle.devilrpg.entity.goal.ChopWoodGoal;
+import com.chipoodle.devilrpg.entity.goal.SoulWispChopWoodGoal;
+import com.chipoodle.devilrpg.entity.goal.SoulWispFollowOwnerGoal;
 import com.chipoodle.devilrpg.init.ModEntities;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.server.level.ServerLevel;
@@ -20,12 +21,8 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.gameevent.GameEvent;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.Optional;
 
 public class SoulWispChopper extends SoulWisp {
     public SoulWispChopper(EntityType<? extends SoulWispChopper> type, Level worldIn) {
@@ -34,10 +31,10 @@ public class SoulWispChopper extends SoulWisp {
 
     protected void registerGoals() {
         // super.registerGoals();
-        this.goalSelector.addGoal(0, new ChopWoodGoal(this));
+        this.goalSelector.addGoal(0, new SoulWispChopWoodGoal(this));
         this.goalSelector.addGoal(1, new FloatGoal(this));
         // this.goalSelector.addGoal(3, new WaterAvoidingRandomFlyingGoal(this, 1.0D));
-        this.goalSelector.addGoal(5, new FollowOwnerGoal(this, 1.0D, 10.0F, 2.0F, false));
+        this.goalSelector.addGoal(5, new SoulWispFollowOwnerGoal(this, 1.0D, 3.0F, 7.0F, true));
         this.goalSelector.addGoal(9, new SoulWisp.WanderGoal());
         //this.goalSelector.addGoal(10, new LookAtPlayerGoal(this, Mob.class, 8.0F));
         //this.goalSelector.addGoal(2, new RandomLookAroundGoal(this));
@@ -62,9 +59,9 @@ public class SoulWispChopper extends SoulWisp {
 
                 if (playerItemStack.getItem() instanceof AxeItem axeItem) {
                     dropPreviousItem(hand);
-                    ItemStack itemstack3 = playerItemStack.copy();
-                    itemstack3.setCount(1);
-                    this.setItemInHand(InteractionHand.MAIN_HAND, itemstack3);
+                    ItemStack itemstack = playerItemStack.copy();
+                    itemstack.setCount(1);
+                    this.setItemInHand(InteractionHand.MAIN_HAND, itemstack);
                     this.removeInteractionItem(player, playerItemStack);
                     this.level.playSound(player, this, SoundEvents.ALLAY_ITEM_GIVEN, SoundSource.NEUTRAL, 2.0F, 1.0F);
                     return InteractionResult.SUCCESS;
@@ -84,9 +81,9 @@ public class SoulWispChopper extends SoulWisp {
         }
     }
 
-    private void removeInteractionItem(Player p_239359_, ItemStack p_239360_) {
-        if (!p_239359_.getAbilities().instabuild) {
-            p_239360_.shrink(1);
+    private void removeInteractionItem(Player player, ItemStack itemStack) {
+        if (!player.getAbilities().instabuild) {
+            itemStack.shrink(1);
         }
 
     }

@@ -6,6 +6,7 @@ import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapability;
 import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityInterface;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
+import com.chipoodle.devilrpg.entity.container.MountablePetContainerMenu;
 import com.chipoodle.devilrpg.entity.goal.TameablePetFollowOwnerGoal;
 import com.chipoodle.devilrpg.entity.goal.TameablePetOwnerHurtByTargetGoal;
 import com.chipoodle.devilrpg.entity.goal.TameablePetOwnerHurtTargetGoal;
@@ -13,16 +14,19 @@ import com.chipoodle.devilrpg.init.ModEntities;
 import com.chipoodle.devilrpg.util.IRenderUtilities;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import com.chipoodle.devilrpg.util.TargetUtils;
+import net.minecraft.advancements.CriteriaTriggers;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundHorseScreenOpenPacket;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
@@ -43,9 +47,7 @@ import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.ResetUniversalAngerTargetGoal;
 import net.minecraft.world.entity.animal.IronGolem;
 import net.minecraft.world.entity.animal.Turtle;
-import net.minecraft.world.entity.animal.horse.Llama;
-import net.minecraft.world.entity.animal.horse.Markings;
-import net.minecraft.world.entity.animal.horse.Variant;
+import net.minecraft.world.entity.animal.horse.*;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.HorseArmorItem;
@@ -65,7 +67,7 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-public class SoulBear extends AbstractMountablePet
+public class SoulBear extends AbstractChestedHorse
         implements ITamableEntity, ISoulEntity, PowerableMob, NeutralMob, IPassiveMinionUpdater<SoulBear>, VariantHolder<Variant> {
 
     private static final UUID ARMOR_MODIFIER_UUID = UUID.fromString("556E1665-8B10-40C8-8F9D-CF9B1667F295");
@@ -110,7 +112,7 @@ public class SoulBear extends AbstractMountablePet
     }
 
     @Override
-    public AgeableMob getBreedOffspring(ServerLevel level, AgeableMob ageable) {
+    public AgeableMob getBreedOffspring(@NotNull ServerLevel level, @NotNull AgeableMob ageable) {
         return ModEntities.SOUL_BEAR.get().create(level);
     }
 
@@ -119,7 +121,7 @@ public class SoulBear extends AbstractMountablePet
      * (wheat, carrots or seeds depending on the animal type)
      */
     @Override
-    public boolean isFood(ItemStack stack) {
+    public boolean isFood(@NotNull ItemStack stack) {
         return false;
     }
 
@@ -148,14 +150,28 @@ public class SoulBear extends AbstractMountablePet
 
     public void updateLevel(Player owner) {
         tame(owner);
-        PlayerSkillCapabilityInterface skill = IGenericCapability.getUnwrappedPlayerCapability((Player) getOwner(),
-                PlayerSkillCapability.INSTANCE);
+        DevilRpg.LOGGER.debug("-------> updateLevel getOwnerUUID() {} ", this.getOwnerUUID());
+        DevilRpg.LOGGER.debug("-------> updateLevel getUUID() {} ", this.getUUID());
+        PlayerSkillCapabilityInterface skill = IGenericCapability.getUnwrappedPlayerCapability(owner, PlayerSkillCapability.INSTANCE);
         if (skill != null) {
             this.puntosAsignados = skill.getSkillsPoints().get(SkillEnum.SUMMON_SOUL_BEAR);
             saludMaxima = 5 * this.puntosAsignados + SALUD_INICIAL;
             initialArmor = (1.0D * 0.410 * puntosAsignados) + 3;
-            this.equipSaddle(null);
+
+            PlayerMinionCapabilityInterface minion = IGenericCapability.getUnwrappedPlayerCapability((Player) getOwner(), PlayerMinionCapability.INSTANCE);
+            CompoundTag soulBearInventory = minion.getSoulBearInventory();
+
+            if (soulBearInventory != null && !soulBearInventory.isEmpty()) {
+                if (!soulBearInventory.isEmpty()) {
+                    readAdditionalSaveData(soulBearInventory);
+                } else {
+                    addAdditionalSaveData(soulBearInventory);
+                    minion.setSoulBearInventory(soulBearInventory, (Player) getOwner());
+                }
+                this.equipSaddle(null);
+            }
         }
+        //tame(owner);
 
         Objects.requireNonNull(this.getAttribute(Attributes.MOVEMENT_SPEED)).setBaseValue(0.4F);
         Objects.requireNonNull(this.getAttribute(Attributes.MAX_HEALTH)).setBaseValue(saludMaxima);
@@ -186,7 +202,7 @@ public class SoulBear extends AbstractMountablePet
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag compound) {
+    public void addAdditionalSaveData(@NotNull CompoundTag compound) {
         super.addAdditionalSaveData(compound);
         compound.putString("OwnerUUID", "");
         compound.putString("Owner", "");
@@ -245,7 +261,7 @@ public class SoulBear extends AbstractMountablePet
     }
 
     @Override
-    public boolean hurt(DamageSource damageSource, float amount) {
+    public boolean hurt(@NotNull DamageSource damageSource, float amount) {
         boolean hurt = super.hurt(damageSource, amount);
         if (hurt) {
 
@@ -293,7 +309,7 @@ public class SoulBear extends AbstractMountablePet
     }
 
     @Override
-    public void remove(RemovalReason removalReason) {
+    public void remove(@NotNull RemovalReason removalReason) {
         super.remove(removalReason);
     }
 
@@ -301,7 +317,7 @@ public class SoulBear extends AbstractMountablePet
      * Called when the mob's health reaches 0.
      */
     @Override
-    public void die(DamageSource cause) {
+    public void die(@NotNull DamageSource cause) {
         if (getOwner() != null) {
             LazyOptional<PlayerMinionCapabilityInterface> minionCap = getOwner()
                     .getCapability(PlayerMinionCapability.INSTANCE);
@@ -314,6 +330,13 @@ public class SoulBear extends AbstractMountablePet
     }
 
     private void customOnDeath() {
+        if (getOwner() != null) {
+            PlayerMinionCapabilityInterface minion = IGenericCapability.getUnwrappedPlayerCapability((Player) getOwner(), PlayerMinionCapability.INSTANCE);
+            CompoundTag c = new CompoundTag();
+            addAdditionalSaveData(c);
+            minion.setSoulBearInventory(c, (Player) getOwner());
+        }
+
         level.broadcastEntityEvent(this, (byte) 3);
         this.dead = true;
         this.remove(RemovalReason.DISCARDED);
@@ -334,7 +357,7 @@ public class SoulBear extends AbstractMountablePet
      * @return The packet with data about your entity
      */
     @Override
-    public Packet<ClientGamePacketListener> getAddEntityPacket() {
+    public @NotNull Packet<ClientGamePacketListener> getAddEntityPacket() {
         return NetworkHooks.getEntitySpawningPacket(this);
     }
 
@@ -345,7 +368,7 @@ public class SoulBear extends AbstractMountablePet
     }
 
     @Override
-    protected SoundEvent getHurtSound(DamageSource damageSourceIn) {
+    protected SoundEvent getHurtSound(@NotNull DamageSource damageSourceIn) {
         return SoundEvents.POLAR_BEAR_HURT;
     }
 
@@ -355,7 +378,7 @@ public class SoulBear extends AbstractMountablePet
     }
 
     @Override
-    protected void playStepSound(@NotNull BlockPos pos, BlockState blockIn) {
+    protected void playStepSound(@NotNull BlockPos pos, @NotNull BlockState blockIn) {
         this.playSound(SoundEvents.POLAR_BEAR_STEP, 0.15F, 1.0F);
     }
 
@@ -374,9 +397,9 @@ public class SoulBear extends AbstractMountablePet
     }
 
     @Override
-    public void containerChanged(Container p_76316_1_) {
+    public void containerChanged(@NotNull Container container) {
         ItemStack itemstack = this.getArmor();
-        super.containerChanged(p_76316_1_);
+        super.containerChanged(container);
         ItemStack itemstack1 = this.getArmor();
         if (this.tickCount > 20 && this.isArmor(itemstack1) && itemstack != itemstack1) {
             this.playSound(SoundEvents.HORSE_ARMOR, 0.5F, 1.0F);
@@ -490,7 +513,7 @@ public class SoulBear extends AbstractMountablePet
     }
 
     @Override
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor p_29533_, DifficultyInstance p_29534_, MobSpawnType p_29535_, @Nullable SpawnGroupData p_29536_, @Nullable CompoundTag p_29537_) {
+    public SpawnGroupData finalizeSpawn(@NotNull ServerLevelAccessor p_29533_, @NotNull DifficultyInstance p_29534_, @NotNull MobSpawnType p_29535_, @Nullable SpawnGroupData p_29536_, @Nullable CompoundTag p_29537_) {
         if (p_29536_ == null) {
             p_29536_ = new AgeableMob.AgeableMobGroupData(1.0F);
         }
@@ -540,7 +563,7 @@ public class SoulBear extends AbstractMountablePet
     }
 
     @Override
-    public Variant getVariant() {
+    public @NotNull Variant getVariant() {
         return Variant.byId(this.getTypeVariant() & 255);
     }
 
@@ -549,9 +572,9 @@ public class SoulBear extends AbstractMountablePet
         this.setTypeVariant(p_262684_.getId() & 255 | this.getTypeVariant() & -256);
     }
 
-    public Markings getMarkings() {
+    /*public Markings getMarkings() {
         return Markings.byId((this.getTypeVariant() & '\uff00') >> 8);
-    }
+    }*/
 
     @Override
     protected void updateContainerEquipment() {
@@ -565,11 +588,11 @@ public class SoulBear extends AbstractMountablePet
     private void setArmorEquipment(ItemStack p_213804_1_) {
         this.setArmor(p_213804_1_);
         if (!this.level.isClientSide) {
-            this.getAttribute(Attributes.ARMOR).removeModifier(ARMOR_MODIFIER_UUID);
+            Objects.requireNonNull(this.getAttribute(Attributes.ARMOR)).removeModifier(ARMOR_MODIFIER_UUID);
             if (this.isArmor(p_213804_1_)) {
                 int i = ((HorseArmorItem) p_213804_1_.getItem()).getProtection();
                 if (i != 0) {
-                    this.getAttribute(Attributes.ARMOR).addTransientModifier(new AttributeModifier(ARMOR_MODIFIER_UUID, "Soul bear armor bonus", i, AttributeModifier.Operation.ADDITION));
+                    Objects.requireNonNull(this.getAttribute(Attributes.ARMOR)).addTransientModifier(new AttributeModifier(ARMOR_MODIFIER_UUID, "Soul bear armor bonus", i, AttributeModifier.Operation.ADDITION));
                 }
             }
         }
@@ -645,10 +668,30 @@ public class SoulBear extends AbstractMountablePet
         return this;
     }
 
-    public InteractionResult fedFood(Player p_30581_, ItemStack p_30582_) {
-        boolean flag = this.handleEating(p_30581_, p_30582_);
-        if (!p_30581_.getAbilities().instabuild) {
-            p_30582_.shrink(1);
+    @Override
+    public boolean isTame() {
+        return this.getFlag(2);
+    }
+
+    @Override
+    public void setTame(boolean p_30652_) {
+        this.setFlag(2, p_30652_);
+    }
+
+    @Override
+    public void tame(Player player) {
+        this.setTame(true);
+        this.setOwnerUUID(player.getUUID());
+        if (player instanceof ServerPlayer) {
+            CriteriaTriggers.TAME_ANIMAL.trigger((ServerPlayer) player, this);
+        }
+        this.level.broadcastEntityEvent(this, (byte) 7);
+    }
+
+    public @NotNull InteractionResult fedFood(@NotNull Player player, @NotNull ItemStack itemStack) {
+        boolean flag = this.handleEating(player, itemStack);
+        if (!player.getAbilities().instabuild) {
+            itemStack.shrink(1);
         }
 
         if (this.level.isClientSide) {
@@ -658,12 +701,37 @@ public class SoulBear extends AbstractMountablePet
         }
     }
 
-    protected boolean handleEating(Player p_190678_1_, ItemStack p_190678_2_) {
+    protected boolean handleEating(@NotNull Player p_30593_, @NotNull ItemStack p_30594_) {
         return false;
     }
 
     public boolean canBeLeashed(Player p_30396_) {
         return false;
+    }
+
+    @Override
+    public void openCustomInventoryScreen(@NotNull Player player) {
+        if (!this.level.isClientSide && (!this.isVehicle() || this.hasPassenger(player)) && this.isTamed()) {
+            //player.openHorseInventory(this, this.inventory);
+            openBearInventory(this, this.inventory, (ServerPlayer) player);
+        }
+
+    }
+
+    public void openBearInventory(AbstractHorse abstractHorse, Container p_9060_, ServerPlayer player) {
+        if (player.containerMenu != player.inventoryMenu) {
+            player.closeContainer();
+        }
+
+        player.nextContainerCounter();
+        player.connection.send(new ClientboundHorseScreenOpenPacket(player.containerCounter, p_9060_.getContainerSize(), abstractHorse.getId()));
+
+        //player.containerMenu = new HorseInventoryMenu(player.containerCounter, player.getInventory(), p_9060_, abstractHorse);
+        player.containerMenu = new MountablePetContainerMenu(player.containerCounter, player.getInventory(), p_9060_, abstractHorse);
+
+
+        player.initMenu(player.containerMenu);
+        net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(new net.minecraftforge.event.entity.player.PlayerContainerEvent.Open(player, player.containerMenu));
     }
 
     class AttackPlayersGoal extends NearestAttackableTargetGoal<Player> {

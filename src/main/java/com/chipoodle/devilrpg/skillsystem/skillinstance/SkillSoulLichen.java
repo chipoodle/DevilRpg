@@ -35,10 +35,10 @@ public class SkillSoulLichen extends AbstractSkillExecutor {
     public void execute(Level levelIn, Player player, HashMap<String, String> parameters) {
         if (!player.getCooldowns().isOnCooldown(icon.getItem())) {
             if (!levelIn.isClientSide) {
-                Random rand = new Random();
+                /*Random rand = new Random();
                 levelIn.playSound(null, player.getX(), player.getY(), player.getZ(),
                         SoundEvents.CHICKEN_EGG, SoundSource.NEUTRAL, 0.5F,
-                        0.4F / (rand.nextFloat() * 0.4F + 0.8F));
+                        0.4F / (rand.nextFloat() * 0.4F + 0.8F));*/
 
                 /*PlayerSkillCapabilityInterface skillCap = IGenericCapability.getUnwrappedPlayerCapability(player,
                         PlayerSkillCapability.INSTANCE);*/
@@ -54,11 +54,6 @@ public class SkillSoulLichen extends AbstractSkillExecutor {
                 if (Double.isNaN(deltaMovement.x) || Double.isNaN(deltaMovement.z))
                     player.setDeltaMovement(0.0d, deltaMovement.y, 0.0d);
                 lichenSeedBallEntity.shootFromRotation(player, player.getXRot(), player.getYRot(), 0.0F, 1.5F, 1.0F);
-
-
-                MobEffectInstance knockbackEffect = new MobEffectInstance(ModEffects.SLOWNESS.get(), 120, 9); //5 máximo amplificador para dar el 100% de resistencia a knockback
-                player.addEffect(knockbackEffect);
-
 
                 levelIn.addFreshEntity(lichenSeedBallEntity);
                 player.getCooldowns().addCooldown(icon.getItem(), 20);

@@ -33,9 +33,12 @@ public final class ModEntities {
 	private static final String WISP_CURSE_NAME = "wisp_curse";
 	public static final String WISP_BOMB_NAME = "wisp_bomb";
 	public static final String WISP_ARCHER_NAME = "wisp_archer";
+
+	private static final String WISP_CHOPPER_NAME = "wisp_chopper";
 	public static final String SOUL_ICEBALL_NAME = "soul_iceball";
 
-	private static final String LICHEN_SEEDBALL_NAME = "lichen_seedball";
+	private static final String LICHEN_SEED_BALL_NAME = "lichen_seedball";
+	private static final String VINE_FLESH_BALL_NAME = "vine_flesh_ball";
 
 
 	public static final RegistryObject<EntityType<SoulWolf>> SOUL_WOLF = ENTITY_TYPES.register(SOUL_WOLF_NAME,
@@ -67,13 +70,23 @@ public final class ModEntities {
 			.sized(EntityType.ALLAY.getWidth(), EntityType.ALLAY.getHeight())
 			.build(new ResourceLocation(DevilRpg.MODID, WISP_ARCHER_NAME).toString()));
 
+	public static final RegistryObject<EntityType<SoulWispChopper>> WISP_CHOPPER = ENTITY_TYPES.register(WISP_CHOPPER_NAME,
+			() -> EntityType.Builder.of(SoulWispChopper::new, MobCategory.CREATURE)
+			.sized(EntityType.ALLAY.getWidth(), EntityType.ALLAY.getHeight())
+			.build(new ResourceLocation(DevilRpg.MODID, WISP_CHOPPER_NAME).toString()));
+
 	public static final RegistryObject<EntityType<FrostBall>> SOUL_ICEBALL = ENTITY_TYPES.register(SOUL_ICEBALL_NAME,
 			() -> EntityType.Builder.<FrostBall>of(FrostBall::new, MobCategory.MISC)
 					.sized(EntityType.WITHER_SKULL.getWidth(), EntityType.WITHER_SKULL.getHeight())
 					.build(new ResourceLocation(DevilRpg.MODID, SOUL_ICEBALL_NAME).toString()));
 
-	public static final RegistryObject<EntityType<LichenSeedBall>>LICHEN_SEEDBALL = ENTITY_TYPES.register(LICHEN_SEEDBALL_NAME,
+	public static final RegistryObject<EntityType<LichenSeedBall>> LICHEN_SEED_BALL = ENTITY_TYPES.register(LICHEN_SEED_BALL_NAME,
 			() -> EntityType.Builder.<LichenSeedBall>of(LichenSeedBall::new, MobCategory.MISC)
 					.sized(EntityType.WITHER_SKULL.getWidth(), EntityType.WITHER_SKULL.getHeight())
-					.build(new ResourceLocation(DevilRpg.MODID, LICHEN_SEEDBALL_NAME).toString()));
+					.build(new ResourceLocation(DevilRpg.MODID, LICHEN_SEED_BALL_NAME).toString()));
+
+	public static final RegistryObject<EntityType<VineFleshPuppetSeedBall>>VINE_FLESH_BALL = ENTITY_TYPES.register(VINE_FLESH_BALL_NAME,
+			() -> EntityType.Builder.<VineFleshPuppetSeedBall>of(VineFleshPuppetSeedBall::new, MobCategory.MISC)
+					.sized(EntityType.WITHER_SKULL.getWidth(), EntityType.WITHER_SKULL.getHeight())
+					.build(new ResourceLocation(DevilRpg.MODID, VINE_FLESH_BALL_NAME).toString()));
 }

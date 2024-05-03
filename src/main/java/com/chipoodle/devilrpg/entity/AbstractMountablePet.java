@@ -46,6 +46,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.scores.Team;
+import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Vector3f;
 
@@ -367,7 +368,7 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
     }
 
     @Override
-    public void containerChanged(Container p_30548_) {
+    public void containerChanged(@NotNull Container p_30548_) {
         boolean flag = this.isSaddled();
         this.updateContainerEquipment();
         if (this.tickCount > 20 && !flag && this.isSaddled()) {
@@ -381,7 +382,7 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
     }
 
     @Override
-    public boolean hurt(DamageSource p_252258_, float p_250984_) {
+    public boolean hurt(@NotNull DamageSource p_252258_, float p_250984_) {
         boolean flag = super.hurt(p_252258_, p_250984_);
         if (flag && this.random.nextInt(3) == 0) {
             this.standIfPossible();
@@ -464,14 +465,14 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
 
     }
 
-    public void openHorseInventory(AbstractMountablePet entity, SimpleContainer simpleContainer, ServerPlayer player) {
+    public void openHorseInventory(AbstractMountablePet entity, Container simpleContainer, ServerPlayer player) {
         if (player.containerMenu != player.inventoryMenu) {
             player.closeContainer();
         }
 
         player.nextContainerCounter();
         player.connection.send(new ClientboundHorseScreenOpenPacket(player.containerCounter, simpleContainer.getContainerSize(), entity.getId()));
-        player.containerMenu = new MountablePetContainerMenu(player.containerCounter, player.getInventory(), simpleContainer, entity);
+        //player.containerMenu = new MountablePetContainerMenu(player.containerCounter, player.getInventory(), simpleContainer, entity);
         player.initMenu(player.containerMenu);
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(new net.minecraftforge.event.entity.player.PlayerContainerEvent.Open(player, player.containerMenu));
     }
@@ -573,7 +574,7 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
     }
 
     @Override
-    public boolean isFood(ItemStack p_30644_) {
+    public boolean isFood(@NotNull ItemStack p_30644_) {
         return FOOD_ITEMS.test(p_30644_);
     }
 
@@ -897,7 +898,7 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
         this.updateContainerEquipment();
     }
 
-    public boolean canMate(Animal p_30553_) {
+    public boolean canMate(@NotNull Animal p_30553_) {
         return false;
     }
 
@@ -906,7 +907,7 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
     }
 
     @Nullable
-    public AgeableMob getBreedOffspring(ServerLevel p_149506_, AgeableMob p_149507_) {
+    public AgeableMob getBreedOffspring(@NotNull ServerLevel p_149506_, @NotNull AgeableMob p_149507_) {
         return null;
     }
 
@@ -993,7 +994,7 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
     }
 
     @Override
-    public void positionRider(Entity p_30642_) {
+    public void positionRider(@NotNull Entity p_30642_) {
         super.positionRider(p_30642_);
         if (p_30642_ instanceof Mob mob) {
             this.yBodyRot = mob.yBodyRot;
@@ -1019,7 +1020,7 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
     }
 
     @Override
-    protected float getStandingEyeHeight(Pose p_30578_, EntityDimensions p_30579_) {
+    protected float getStandingEyeHeight(@NotNull Pose p_30578_, EntityDimensions p_30579_) {
         return p_30579_.height * 0.95F;
     }
 
@@ -1037,11 +1038,11 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
 
     private SlotAccess createEquipmentSlotAccess(final int p_149503_, final Predicate<ItemStack> p_149504_) {
         return new SlotAccess() {
-            public ItemStack get() {
+            public @NotNull ItemStack get() {
                 return AbstractMountablePet.this.inventory.getItem(p_149503_);
             }
 
-            public boolean set(ItemStack p_149528_) {
+            public boolean set(@NotNull ItemStack p_149528_) {
                 if (!p_149504_.test(p_149528_)) {
                     return false;
                 } else {
@@ -1137,7 +1138,7 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
     }
 
     @Nullable
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor p_30555_, DifficultyInstance p_30556_, MobSpawnType p_30557_, @Nullable SpawnGroupData p_30558_, @Nullable CompoundTag p_30559_) {
+    public SpawnGroupData finalizeSpawn(@NotNull ServerLevelAccessor p_30555_, @NotNull DifficultyInstance p_30556_, @NotNull MobSpawnType p_30557_, @Nullable SpawnGroupData p_30558_, @Nullable CompoundTag p_30559_) {
         if (p_30558_ == null) {
             p_30558_ = new AgeableMob.AgeableMobGroupData(0.2F);
         }
@@ -1147,7 +1148,7 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
     }
 
     @Override
-    public <T> net.minecraftforge.common.util.LazyOptional<T> getCapability(net.minecraftforge.common.capabilities.Capability<T> capability, @Nullable net.minecraft.core.Direction facing) {
+    public <T> net.minecraftforge.common.util.@NotNull LazyOptional<T> getCapability(net.minecraftforge.common.capabilities.@NotNull Capability<T> capability, @Nullable net.minecraft.core.Direction facing) {
         if (this.isAlive() && capability == net.minecraftforge.common.capabilities.ForgeCapabilities.ITEM_HANDLER && itemHandler != null)
             return itemHandler.cast();
         return super.getCapability(capability, facing);
@@ -1171,9 +1172,9 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
         return this.getAmbientSoundInterval();
     }
 
-    /*protected Vector3f getPassengerAttachmentPoint(Entity p_301103_, EntityDimensions p_298879_, float p_299886_) {
+    protected Vector3f getPassengerAttachmentPoint(Entity p_301103_, EntityDimensions p_298879_, float p_299886_) {
         return new Vector3f(0.0F, this.getPassengersRidingOffsetY(p_298879_, p_299886_) + 0.15F * this.standAnimO * p_299886_, -0.7F * this.standAnimO * p_299886_);
-    }*/
+    }
 
     protected float getPassengersRidingOffsetY(EntityDimensions p_299002_, float p_297393_) {
         return p_299002_.height + (this.isBaby() ? 0.125F : -0.15625F) * p_297393_;

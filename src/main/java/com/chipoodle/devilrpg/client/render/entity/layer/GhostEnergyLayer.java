@@ -13,23 +13,24 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.PowerableMob;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
+import org.jetbrains.annotations.NotNull;
 
 
 @OnlyIn(Dist.CLIENT)
 public abstract class GhostEnergyLayer<T extends Entity & PowerableMob, M extends EntityModel<T>> extends RenderLayer<T, M> {
-    public GhostEnergyLayer(RenderLayerParent<T, M> p_i226038_1_) {
-        super(p_i226038_1_);
+    public GhostEnergyLayer(RenderLayerParent<T, M> renderLayerParent) {
+        super(renderLayerParent);
     }
 
-    public void render(PoseStack p_116970_, MultiBufferSource p_116971_, int p_116972_, T p_116973_, float p_116974_, float p_116975_, float p_116976_, float p_116977_, float p_116978_, float p_116979_) {
-        if (p_116973_.isPowered()) {
-            float f = (float) p_116973_.tickCount + p_116976_;
+    public void render(@NotNull PoseStack poseStack, @NotNull MultiBufferSource multiBufferSource, int p_116972_, T entity, float p_116974_, float p_116975_, float p_116976_, float p_116977_, float p_116978_, float p_116979_) {
+        if (entity.isPowered()) {
+            float f = (float) entity.tickCount + p_116976_;
             EntityModel<T> entitymodel = this.model();
-            entitymodel.prepareMobModel(p_116973_, p_116974_, p_116975_, p_116976_);
+            entitymodel.prepareMobModel(entity, p_116974_, p_116975_, p_116976_);
             this.getParentModel().copyPropertiesTo(entitymodel);
-            VertexConsumer vertexconsumer = p_116971_.getBuffer(RenderType.energySwirl(this.getTextureLocation(), this.xOffset(f) % 1.0F, f * 0.01F % 1.0F));
-            entitymodel.setupAnim(p_116973_, p_116974_, p_116975_, p_116977_, p_116978_, p_116979_);
-            entitymodel.renderToBuffer(p_116970_, vertexconsumer, p_116972_, OverlayTexture.NO_OVERLAY, 0.5F, 0.5F, 0.5F, 1.0F);
+            VertexConsumer vertexconsumer = multiBufferSource.getBuffer(RenderType.energySwirl(this.getTextureLocation(), this.xOffset(f) % 1.0F, f * 0.01F % 1.0F));
+            entitymodel.setupAnim(entity, p_116974_, p_116975_, p_116977_, p_116978_, p_116979_);
+            entitymodel.renderToBuffer(poseStack, vertexconsumer, p_116972_, OverlayTexture.NO_OVERLAY, 0.5F, 0.5F, 0.5F, 1.0F);
         }
     }
 

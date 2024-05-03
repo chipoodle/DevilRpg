@@ -13,11 +13,14 @@ import com.chipoodle.devilrpg.util.TargetUtils;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.network.PacketDistributor;
 
@@ -30,23 +33,26 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
     public final static String SOULWOLF_MINION_KEY = "Wolf_Minions";
     public final static String SOULBEAR_MINION_KEY = "Bear_Minions";
     public final static String WISP_MINIONS_KEY = "Wisp_Minions";
+    public final static String SOULBEAR_INVENTORY_KEY = "Soulbear_Inventory";
     private CompoundTag nbt = new CompoundTag();
 
     public PlayerMinionCapabilityImplementation() {
         ConcurrentLinkedQueue<UUID> soulwolf;
         ConcurrentLinkedQueue<UUID> soulbear;
         ConcurrentLinkedQueue<UUID> wisp;
+        CompoundTag soulbearInventory;
         if (nbt.isEmpty()) {
-            soulwolf = new ConcurrentLinkedQueue<UUID>();
-            soulbear = new ConcurrentLinkedQueue<UUID>();
-            wisp = new ConcurrentLinkedQueue<UUID>();
-
+            soulwolf = new ConcurrentLinkedQueue<>();
+            soulbear = new ConcurrentLinkedQueue<>();
+            wisp = new ConcurrentLinkedQueue<>();
+            soulbearInventory = new CompoundTag();
             try {
                 nbt.putByteArray(SOULWOLF_MINION_KEY, BytesUtil.toByteArray(soulwolf));
                 nbt.putByteArray(SOULBEAR_MINION_KEY, BytesUtil.toByteArray(soulbear));
                 nbt.putByteArray(WISP_MINIONS_KEY, BytesUtil.toByteArray(wisp));
+                nbt.put(SOULBEAR_INVENTORY_KEY, soulbearInventory);
             } catch (IOException e) {
-                DevilRpg.LOGGER.error("Error en constructor PlayerSkillCapability", e);
+                DevilRpg.LOGGER.error("Error en constructor PlayerMinionCapabilityImplementation", e);
             }
         }
     }
@@ -82,7 +88,7 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
         try {
             return (ConcurrentLinkedQueue<UUID>) BytesUtil.toObject(nbt.getByteArray(SOULBEAR_MINION_KEY));
         } catch (ClassNotFoundException | IOException e) {
-            DevilRpg.LOGGER.error("Error en getSoulBearfMinions", e);
+            DevilRpg.LOGGER.error("Error en getSoulBearMinions", e);
             return null;
         }
     }
@@ -99,7 +105,7 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
             return soulbears;
 
         } catch (ClassNotFoundException | IOException e) {
-            DevilRpg.LOGGER.error("Error en getSoulBearfMinions", e);
+            DevilRpg.LOGGER.error("Error en getAllMinions", e);
             return new ConcurrentLinkedQueue<>();
         }
     }
@@ -141,6 +147,43 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
             }
         } catch (IOException e) {
             DevilRpg.LOGGER.error("Error en setWispMinions", e);
+        }
+    }
+
+    @Override
+    public void setSoulBearInventory(CompoundTag soulbearInventory, Player player) {
+        nbt.put(SOULBEAR_INVENTORY_KEY, soulbearInventory);
+        DevilRpg.LOGGER.debug("setSoulBearInventory {}", soulbearInventory);
+        if (!player.level.isClientSide) {
+            sendSkillChangesToClient((ServerPlayer) player);
+        } else {
+            sendSkillChangesToServer();
+        }
+    }
+
+    @Override
+    public CompoundTag getSoulBearInventory() {
+        CompoundTag tag =  nbt.getCompound(SOULBEAR_INVENTORY_KEY);
+        if (tag.isEmpty())
+            return null;
+        return tag;
+    }
+
+    public SimpleContainer fromTag(ListTag listtag) {
+        try {
+            SimpleContainer s = new SimpleContainer();
+            //s.clearContent();
+            for (int i = 0; i < listtag.size(); ++i) {
+                CompoundTag compoundtag = listtag.getCompound(i);
+                int j = compoundtag.getByte("Slot") & 255;
+                if (j < s.getContainerSize()) {
+                    s.setItem(j, ItemStack.of(compoundtag));
+                }
+            }
+            return s;
+        } catch (Exception e) {
+            DevilRpg.LOGGER.error("Error ", e);
+            return null;
         }
     }
 

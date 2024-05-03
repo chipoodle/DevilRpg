@@ -4,7 +4,6 @@ import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapability;
 import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityInterface;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
-import com.chipoodle.devilrpg.init.ModEntities;
 import com.chipoodle.devilrpg.util.IRenderUtilities;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.core.BlockPos;
@@ -16,7 +15,6 @@ import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.ItemTags;
@@ -42,6 +40,8 @@ import net.minecraft.world.entity.ai.util.HoverRandomPos;
 import net.minecraft.world.entity.animal.FlyingAnimal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.state.BlockState;
@@ -63,9 +63,9 @@ import java.util.stream.Collectors;
 public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, FlyingAnimal, ISoulEntity, PowerableMob,
         NeutralMob, IPassiveMinionUpdater<SoulWisp> {
 
-    private static final EntityDataAccessor<Boolean> DATA_DANCING = SynchedEntityData.defineId(SoulWisp.class, EntityDataSerializers.BOOLEAN);
     protected static final double DISTANCIA_EFECTO = 20;
     protected static final int DURATION_TICKS = 120;
+    private static final EntityDataAccessor<Boolean> DATA_DANCING = SynchedEntityData.defineId(SoulWisp.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Integer> DATA_REMAINING_ANGER_TIME = SynchedEntityData.defineId(SoulWisp.class, EntityDataSerializers.INT);
     private static final UniformInt PERSISTENT_ANGER_TIME = TimeUtil.rangeOfSeconds(20, 39);
     private final int SALUD_INICIAL = 4;
@@ -82,11 +82,12 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
     private float spinningAnimationTicks;
     private float spinningAnimationTicks0;
     private SkillEnum wispType;
+    private boolean isWorking;
 
     public SoulWisp(EntityType<? extends SoulWisp> type, Level worldIn) {
         super(type, worldIn);
         this.moveControl = new FlyingMoveControl(this, 20, true);
-        this.lookControl = new BeeLookControl(this);
+        this.lookControl = new WispLookControl(this);
         this.setPathfindingMalus(BlockPathTypes.WATER, -1.0F);
         this.setPathfindingMalus(BlockPathTypes.WATER_BORDER, 16.0F);
         this.setPathfindingMalus(BlockPathTypes.FENCE, -1.0F);
@@ -95,7 +96,7 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
     /**
      * Called in EntityAttributeCreationEvent event
      *
-     * @return  AttributeSupplier.Builder
+     * @return AttributeSupplier.Builder
      */
     public static AttributeSupplier.Builder setAttributes() {
         return TamableAnimal.createMobAttributes()
@@ -114,7 +115,7 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
     }
 
     @Override
-    public float getWalkTargetValue(BlockPos pos, LevelReader worldIn) {
+    public float getWalkTargetValue(@NotNull BlockPos pos, LevelReader worldIn) {
         return worldIn.getBlockState(pos).isAir() ? 10.0F : 0.0F;
     }
 
@@ -224,7 +225,7 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
      * Returns new PathNavigateGround instance
      */
     @Override
-    protected PathNavigation createNavigation(Level worldIn) {
+    protected @NotNull PathNavigation createNavigation(@NotNull Level worldIn) {
         FlyingPathNavigation flyingpathnavigator = new FlyingPathNavigation(this, worldIn) {
             public boolean isStableDestination(BlockPos pos) {
                 return !this.level.getBlockState(pos.below()).isAir();
@@ -250,7 +251,7 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
     }
 
     @Override
-    protected void playStepSound(BlockPos pos, BlockState blockIn) {
+    protected void playStepSound(@NotNull BlockPos pos, @NotNull BlockState blockIn) {
     }
 
     protected SoundEvent getAmbientSound() {
@@ -258,7 +259,7 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
     }
 
     @Override
-    protected SoundEvent getHurtSound(DamageSource damageSourceIn) {
+    protected SoundEvent getHurtSound(@NotNull DamageSource damageSourceIn) {
         return SoundEvents.BEACON_POWER_SELECT;
     }
 
@@ -276,17 +277,17 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
     }
 
     @Override
-    protected float getStandingEyeHeight(Pose poseIn, EntityDimensions sizeIn) {
+    protected float getStandingEyeHeight(@NotNull Pose poseIn, EntityDimensions sizeIn) {
         return sizeIn.height * 0.5F;
     }
 
     @Override
-    public boolean causeFallDamage(float distance, float damageMultiplier, DamageSource damageSource) {
+    public boolean causeFallDamage(float distance, float damageMultiplier, @NotNull DamageSource damageSource) {
         return false;
     }
 
     @Override
-    protected void checkFallDamage(double y, boolean onGroundIn, BlockState state, BlockPos pos) {
+    protected void checkFallDamage(double y, boolean onGroundIn, @NotNull BlockState state, @NotNull BlockPos pos) {
     }
 
     protected boolean makeFlySound() {
@@ -294,25 +295,25 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
     }
 
     @Override
-    public boolean doHurtTarget(Entity entityIn) {
+    public boolean doHurtTarget(@NotNull Entity entityIn) {
         return false;
     }
 
     /**
      * Called when the entity is attacked.
      */
-    public boolean hurt(DamageSource source, float amount) {
+    public boolean hurt(@NotNull DamageSource source, float amount) {
         return super.hurt(source, amount);
     }
 
     @Override
-    public boolean wantsToAttack(LivingEntity target, LivingEntity owner) {
+    public boolean wantsToAttack(@NotNull LivingEntity target, @NotNull LivingEntity owner) {
         //return ((ITameableEntity)this).wantsToAttack(target, owner);
         return ITamableEntity.super.wantsToAttack(target, owner);
     }
 
     @Override
-    public MobType getMobType() {
+    public @NotNull MobType getMobType() {
         return MobType.UNDEFINED;
     }
 
@@ -325,7 +326,7 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
     }
 
     @Override
-    public void jumpInFluid(net.minecraftforge.fluids.FluidType type) {
+    public void jumpInFluid(net.minecraftforge.fluids.@NotNull FluidType type) {
         this.jumpInLiquidInternal();
     }
 
@@ -339,7 +340,7 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
      * share the same owner.
      */
     @Override
-    public boolean isAlliedTo(Entity entityIn) {
+    public boolean isAlliedTo(@NotNull Entity entityIn) {
         boolean isOnSameTeam = super.isAlliedTo(entityIn);
         return isOnSameTeam || isEntitySameOwnerAsThis(entityIn, this);
     }
@@ -400,20 +401,18 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
     }
 
     private List<LivingEntity> getAlliesListWithinAABBRange(AABB axisalignedbb) {
-        List<LivingEntity> list = this.level.getEntitiesOfClass(LivingEntity.class, axisalignedbb)
-                .stream().filter(x -> x.isAlliedTo(this.getOwner()) || x.equals(getOwner()))
+        return this.level.getEntitiesOfClass(LivingEntity.class, axisalignedbb)
+                .stream().filter(x -> x.isAlliedTo(Objects.requireNonNull(this.getOwner())) || x.equals(getOwner()))
                 .collect(Collectors.toList());
-        return list;
     }
 
     private List<LivingEntity> getEnemiesListWithinAABBRange(AABB axisalignedbb) {
-        List<LivingEntity> list = this.level.getEntitiesOfClass(Mob.class, axisalignedbb).stream()
-                .filter(x -> !x.isAlliedTo(this.getOwner())).map(x -> (LivingEntity) x).collect(Collectors.toList());
-        return list;
+        return this.level.getEntitiesOfClass(Mob.class, axisalignedbb).stream()
+                .filter(x -> !x.isAlliedTo(Objects.requireNonNull(this.getOwner()))).map(x -> (LivingEntity) x).collect(Collectors.toList());
     }
 
     @Override
-    public void remove(RemovalReason removalReason) {
+    public void remove(@NotNull RemovalReason removalReason) {
         super.remove(removalReason);
     }
 
@@ -421,7 +420,7 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
      * Called when the mob's health reaches 0.
      */
     @Override
-    public void die(DamageSource cause) {
+    public void die(@NotNull DamageSource cause) {
         if (getOwner() != null) {
             LazyOptional<PlayerMinionCapabilityInterface> minionCap = getOwner()
                     .getCapability(PlayerMinionCapability.INSTANCE);
@@ -429,6 +428,7 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
                 return;
             minionCap.ifPresent(x -> x.removeWisp((Player) getOwner(), this));
         }
+        dropAllDeathLoot(cause);
         // super.onDeath(cause);
         customOnDeath();
     }
@@ -439,6 +439,21 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
         this.remove(RemovalReason.DISCARDED);
         IRenderUtilities.customDeadParticles(this.level, this.random, this);
     }
+
+    protected void dropEquipment() {
+        super.dropEquipment();
+        if (!this.level.getGameRules().getBoolean(GameRules.RULE_KEEPINVENTORY)) {
+            if (this.hasItemInHand()) {
+                // Obtiene el ítem de la mano principal
+                ItemStack itemStack = this.getItemInHand(InteractionHand.MAIN_HAND);
+                if (!itemStack.isEmpty() || EnchantmentHelper.hasVanishingCurse(itemStack))
+                    // Suelta el ítem al mundo
+                    this.spawnAtLocation(itemStack);
+            }
+        }
+
+    }
+
 
     public boolean isEsBeneficioso() {
         return esBeneficioso;
@@ -458,7 +473,7 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
      * @return The packet with data about your entity
      */
     @Override
-    public Packet<ClientGamePacketListener> getAddEntityPacket() {
+    public @NotNull Packet<ClientGamePacketListener> getAddEntityPacket() {
         return NetworkHooks.getEntitySpawningPacket(this);
     }
 
@@ -543,81 +558,6 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
         return wispType;
     }
 
-    static class BeeLookControl extends LookControl {
-        BeeLookControl(Mob beeIn) {
-            super(beeIn);
-        }
-
-        public void tick() {
-            super.tick();
-        }
-    }
-
-    abstract static class PassiveGoal extends Goal {
-        private PassiveGoal() {
-        }
-
-        public abstract boolean canBeeStart();
-
-        public abstract boolean canBeeContinue();
-
-        /**
-         * Returns whether execution should begin. You can also read and cache any state
-         * necessary for execution in this method as well.
-         */
-        public boolean shouldExecute() {
-            return true;// this.canBeeStart() && !WispEntity.this.func_226427_ez_();
-        }
-
-        /**
-         * Returns whether an in-progress EntityAIBase should continue executing
-         */
-        public boolean shouldContinueExecuting() {
-            return true;// this.canBeeContinue() && !WispEntity.this.func_226427_ez_();
-        }
-    }
-
-    class WanderGoal extends Goal {
-        WanderGoal() {
-            this.setFlags(EnumSet.of(Goal.Flag.MOVE));
-        }
-
-        /**
-         * Returns whether execution should begin. You can also read and cache any state
-         * necessary for execution in this method as well.
-         */
-        public boolean canUse() {
-            return SoulWisp.this.navigation.isDone() && SoulWisp.this.random.nextInt(10) == 0;
-        }
-
-        /**
-         * Returns whether an in-progress EntityAIBase should continue executing
-         */
-        public boolean canContinueToUse() {
-            return SoulWisp.this.navigation.isInProgress();
-        }
-
-        /**
-         * Execute a one shot task or start executing a continuous task
-         */
-        public void start() {
-            Vec3 vec3d = this.findPos();
-            if (vec3d != null) {
-                SoulWisp.this.navigation.moveTo(SoulWisp.this.navigation.createPath(BlockPos.containing(vec3d), 1), 1.0D);
-            }
-
-        }
-
-        @Nullable
-        private Vec3 findPos() {
-            Vec3 vec3;
-            vec3 = SoulWisp.this.getViewVector(0.0F);
-            // int i = 8;
-            Vec3 vector3d2 = HoverRandomPos.getPos(SoulWisp.this, 8, 7, vec3.x, vec3.z, ((float) Math.PI / 2F), 3, 1);
-            return vector3d2 != null ? vector3d2 : AirAndWaterRandomPos.getPos(SoulWisp.this, 8, 4, -2, vec3.x, vec3.z, (float) Math.PI / 2F);
-        }
-    }
-
     public float getHoldingItemAnimationProgress(float p_218395_) {
         return Mth.lerp(p_218395_, this.holdingItemAnimationTicks0, this.holdingItemAnimationTicks) / 5.0F;
     }
@@ -625,6 +565,7 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
     private boolean isOnPickupCooldown() {
         return this.getBrain().checkMemory(MemoryModuleType.ITEM_PICKUP_COOLDOWN_TICKS, MemoryStatus.VALUE_PRESENT);
     }
+
     @Override
     public boolean canPickUpLoot() {
         return !this.isOnPickupCooldown() && this.hasItemInHand();
@@ -653,7 +594,66 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
         return Mth.lerp(p_240057_, this.spinningAnimationTicks0, this.spinningAnimationTicks) / 15.0F;
     }
 
-    public boolean canBeLeashed(Player p_30396_) {
+    public boolean canBeLeashed(@NotNull Player p_30396_) {
         return false;
+    }
+
+    public void setIsWorking(boolean isWorking) {
+        this.isWorking = isWorking;
+    }
+
+    public boolean isWorking() {
+        return isWorking;
+    }
+
+    static class WispLookControl extends LookControl {
+        WispLookControl(Mob beeIn) {
+            super(beeIn);
+        }
+
+        public void tick() {
+            super.tick();
+        }
+    }
+
+    class WanderGoal extends Goal {
+        WanderGoal() {
+            this.setFlags(EnumSet.of(Goal.Flag.MOVE));
+        }
+
+        /**
+         * Returns whether execution should begin. You can also read and cache any state
+         * necessary for execution in this method as well.
+         */
+        public boolean canUse() {
+            return SoulWisp.this.navigation.isDone() && SoulWisp.this.random.nextInt(20) == 0 && SoulWisp.this.hasItemInHand();
+        }
+
+        /**
+         * Returns whether an in-progress EntityAIBase should continue executing
+         */
+        public boolean canContinueToUse() {
+            return SoulWisp.this.navigation.isInProgress() && !SoulWisp.this.isWorking();
+        }
+
+        /**
+         * Execute a one shot task or start executing a continuous task
+         */
+        public void start() {
+            Vec3 vec3d = this.findPos();
+            if (vec3d != null) {
+                SoulWisp.this.navigation.moveTo(SoulWisp.this.navigation.createPath(BlockPos.containing(vec3d), 1), 1.0D);
+            }
+
+        }
+
+        @Nullable
+        private Vec3 findPos() {
+            Vec3 vec3;
+            vec3 = SoulWisp.this.getViewVector(0.0F);
+            // int i = 8;
+            Vec3 vector3d2 = HoverRandomPos.getPos(SoulWisp.this, 8, 7, vec3.x, vec3.z, ((float) Math.PI / 2F), 3, 1);
+            return vector3d2 != null ? vector3d2 : AirAndWaterRandomPos.getPos(SoulWisp.this, 8, 4, -2, vec3.x, vec3.z, (float) Math.PI / 2F);
+        }
     }
 }

@@ -129,6 +129,26 @@
         "parent": "nature:soulvine"
     },
     {
+        "id": "nature:vinefleshpuppet",
+        "display": {
+            "description": "A vine parasyte that grows a golem over the enemy's dead body",
+            "icon": {
+                "item": "devilrpg:item_vine"
+            },
+            "title": "vine flesh puppet",
+            "image": "devilrpg:textures/gui/skill/fruiting.png",
+            "frame": "task"
+        },
+        "capability": "vinefleshball",
+        "skillmanacost":{
+            "maxskilllevel":"20",
+            "manacost":"15",
+            "resourcetype":"mana"
+        },
+        "rewards": {},
+        "parent": "nature:soulvine"
+    },
+    {
         "id": "nature:mana_pool",
         "display": {
             "description": "Extends the pool of mana",
@@ -538,6 +558,26 @@
 			"manacost":"15",
             "resourcetype":"mana"
 		},
+        "parent": "summoning:minionvitality"
+    },
+    {
+        "id": "summoning:wispchopper",
+        "display": {
+            "description": "Woodcutter Wisp",
+            "icon": {
+                "item": "devilrpg:item_summon"
+            },
+            "title": "Woodcutter wisp",
+            "image": "devilrpg:textures/gui/skill/axe-in-stump.png",
+            "frame": "task"
+        },
+        "rewards": {},
+        "capability": "summon_wisp_chopper",
+        "skillmanacost":{
+            "maxskilllevel":"20",
+            "manacost":"15",
+            "resourcetype":"mana"
+        },
         "parent": "summoning:minionvitality"
     }
 ]

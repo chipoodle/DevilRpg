@@ -93,7 +93,6 @@ public class FrostBall extends ThrowableItemProjectile implements ISoulEntity {
     /**
      * Called when this EntityFireball hits a block or entity.
      */
-
     @Override
     protected void onHit(@NotNull HitResult result) {
         super.onHit(result);
@@ -109,7 +108,7 @@ public class FrostBall extends ThrowableItemProjectile implements ISoulEntity {
         LazyOptional<PlayerSkillCapabilityInterface> skill = owner.getCapability(PlayerSkillCapability.INSTANCE);
         if (skill != null && skill.isPresent()) {
             int puntosAsignados = Objects.requireNonNull(skill.map(PlayerSkillCapabilityInterface::getSkillsPoints).orElse(null)).get(callerSkillEnum);
-            damage = puntosAsignados * 0.15F;
+            damage = puntosAsignados * 0.20F;
         }
     }
 

@@ -57,6 +57,11 @@ public class SingletonSkillExecutorFactory {
                     skillPool.put(SkillEnum.SUMMON_WISP_ARCHER, new SkillSummonWispArcher(parentCapability));
                 return skillPool.get(SkillEnum.SUMMON_WISP_ARCHER);
             }
+            case SUMMON_WISP_CHOPPER -> {
+                if (!skillPool.containsKey(SkillEnum.SUMMON_WISP_CHOPPER))
+                    skillPool.put(SkillEnum.SUMMON_WISP_CHOPPER, new SkillSummonWispChopper(parentCapability));
+                return skillPool.get(SkillEnum.SUMMON_WISP_CHOPPER);
+            }
             case TRANSFORM_WEREWOLF -> {
                 if (!skillPool.containsKey(SkillEnum.TRANSFORM_WEREWOLF))
                     skillPool.put(SkillEnum.TRANSFORM_WEREWOLF, new SkillShapeshiftWerewolf(parentCapability));
@@ -112,8 +117,14 @@ public class SingletonSkillExecutorFactory {
                     skillPool.put(SkillEnum.SOULLICHEN, new SkillSoulLichen(parentCapability));
                 return skillPool.get(SkillEnum.SOULLICHEN);
             }
+            case VINEFLESHBALL -> {
+                if (!skillPool.containsKey(SkillEnum.VINEFLESHBALL))
+                    skillPool.put(SkillEnum.VINEFLESHBALL, new SkillVineFleshPuppet(parentCapability));
+                return skillPool.get(SkillEnum.VINEFLESHBALL);
+            }
         }
-        return null;
+        throw new RuntimeException("There is no SkillExecutor for the skill  "+skillEnum);
+        //return null;
     }
 
     public AbstractSkillExecutor getExistingSkill(SkillEnum skillEnum) {

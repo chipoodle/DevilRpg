@@ -2,37 +2,37 @@
   "variants": {
     "soulvine_facing=north": {
       "model": "devilrpg:block/soulvine",
-      "uvlock": true,
+      "uvlock": false,
       "y": 0,
       "x": 90
     },
     "soulvine_facing=south": {
       "model": "devilrpg:block/soulvine",
-      "uvlock": true,
+      "uvlock": false,
       "y": 180,
-      "x": 90
+      "x": 270
     },
     "soulvine_facing=east": {
       "model": "devilrpg:block/soulvine",
-      "uvlock": true,
+      "uvlock": false,
       "y": 90,
       "x": 90
     },
     "soulvine_facing=west": {
       "model": "devilrpg:block/soulvine",
-      "uvlock": true,
-      "y": 90,
-      "x": 90
+      "uvlock": false,
+      "y": 270,
+      "x": 270
     },
     "soulvine_facing=up": {
       "model": "devilrpg:block/soulvine",
-      "uvlock": true,
+      "uvlock": false,
       "y": 0,
       "x": 0
     },
     "soulvine_facing=down": {
       "model": "devilrpg:block/soulvine",
-      "uvlock": true,
+      "uvlock": false,
       "y": 180,
       "x": 180
     }

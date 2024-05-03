@@ -26,8 +26,8 @@ public class PlayerPassiveKnockBackResistanceExecutor extends AbstractPlayerPass
     /**
      * *
      *
-     * @param levelIn
-     * @param player
+     * @param levelIn Level
+     * @param player the player
      * @param parameters Server side called
      */
     @Override
@@ -50,7 +50,7 @@ public class PlayerPassiveKnockBackResistanceExecutor extends AbstractPlayerPass
             DevilRpg.LOGGER.info("-----------------------> Executing passive PlayerPassiveKnockBackResistanceExecutor skillPoints:{}",skillPoints);
 
             if (auxiliary.isWerewolfTransformation() && skillPoints > 0) {
-                MobEffectInstance knockbackEffect = new MobEffectInstance(ModEffects.KNOCKBACK_RESISTANCE.get(), absorptionTicks + blockPoints, skillPoints); //5 máximo amplificador para dar el 100% de resistencia a knockback
+                MobEffectInstance knockbackEffect = new MobEffectInstance(ModEffects.KNOCKBACK_RESISTANCE.get(), absorptionTicks + blockPoints, skillPoints - 1); // de 0 a 4. 5 máximo amplificador para dar el 100% de resistencia a knockback
                 player.addEffect(knockbackEffect);
             }
         }

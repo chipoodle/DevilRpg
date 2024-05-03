@@ -55,8 +55,7 @@ public class SkillSummonSoulBear extends AbstractSkillExecutor {
                 min.ifPresent(x -> x.removeAllSoulWolf(player));
                 ConcurrentLinkedQueue<UUID> keys = min.map(PlayerMinionCapabilityInterface::getSoulBearMinions).orElse(new ConcurrentLinkedQueue<>());
 
-                keys.offer(summonSoulBear(level, player, rand).getUUID());
-                if (keys.size() > NUMBER_OF_SUMMONS) {
+                if (!keys.isEmpty()) {
                     UUID key = keys.remove();
                     min.ifPresent(x -> {
                         SoulBear e = (SoulBear) x.getTameableByUUID(key, player.level);
@@ -64,6 +63,7 @@ public class SkillSummonSoulBear extends AbstractSkillExecutor {
                             x.removeSoulBear(player, e);
                     });
                 }
+                keys.offer(summonSoulBear(level, player, rand).getUUID());
                 min.ifPresent(x -> x.setSoulBearMinions(keys, player));
             }
             player.getCooldowns().addCooldown(icon.getItem(), 20);

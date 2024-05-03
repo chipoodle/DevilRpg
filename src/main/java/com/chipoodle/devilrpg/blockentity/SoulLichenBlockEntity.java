@@ -1,6 +1,5 @@
 package com.chipoodle.devilrpg.blockentity;
 
-import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.block.SoulLichenBlock;
 import com.chipoodle.devilrpg.init.ModEntityBlocks;
 import net.minecraft.core.BlockPos;
@@ -50,7 +49,7 @@ public class SoulLichenBlockEntity extends BlockEntity {
         step = (int) Math.ceil((float) skillLevel / (float) 4);
         if (step != nextStep) { // limits the spreading ths limiting the area when skill points are higher
             nextStep = step;
-            DevilRpg.LOGGER.debug("skillLevel: {} step: {}", skillLevel, step);
+            //DevilRpg.LOGGER.debug("skillLevel: {} step: {}", skillLevel, step);
             Direction face = currentBlockState.hasProperty(FACE) ? currentBlockState.getValue(FACE) : Direction.DOWN;
             Direction direction = currentBlockState.hasProperty(DIRECTION) ? currentBlockState.getValue(DIRECTION) : Direction.DOWN;
             long faceCount = currentBlockState.getProperties().stream()

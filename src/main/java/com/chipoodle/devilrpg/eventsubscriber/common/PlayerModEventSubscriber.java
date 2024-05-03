@@ -6,6 +6,7 @@ import com.chipoodle.devilrpg.config.ConfigHolder;
 import com.chipoodle.devilrpg.entity.*;
 import com.chipoodle.devilrpg.init.ModEntities;
 import com.chipoodle.devilrpg.init.ModItems;
+import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.BlockItem;
@@ -49,6 +50,7 @@ public final class PlayerModEventSubscriber {
         event.put(ModEntities.WISP_CURSE.get(), SoulWispCurse.setAttributes().build());
         event.put(ModEntities.WISP_BOMB.get(), SoulWispBomber.setAttributes().build());
         event.put(ModEntities.WISP_ARCHER.get(), SoulWispArcher.setAttributes().build());
+        event.put(ModEntities.WISP_CHOPPER.get(), SoulWispChopper.setAttributes().build());
     }
 
     @SubscribeEvent
@@ -141,10 +143,12 @@ public final class PlayerModEventSubscriber {
                             populator.accept(SOULWISP_CURSE_SPAWN_EGG.get());
                             populator.accept(SOULWISP_ARCHER_SPAWN_EGG.get());
                             populator.accept(SOULWISP_BOMBER_SPAWN_EGG.get());
+                            populator.accept(SOULWISP_CHOPPER_SPAWN_EGG.get());
                         })
         );
 
-
     }
+
+   
 
 }

@@ -5,6 +5,8 @@ import com.chipoodle.devilrpg.entity.ITamableEntity;
 import com.chipoodle.devilrpg.entity.SoulBear;
 import com.chipoodle.devilrpg.entity.SoulWisp;
 import com.chipoodle.devilrpg.entity.SoulWolf;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 
@@ -20,6 +22,9 @@ public interface PlayerMinionCapabilityInterface extends IGenericCapability {
     ConcurrentLinkedQueue<UUID> getSoulBearMinions();
 
     void setSoulBearMinions(ConcurrentLinkedQueue<UUID> minions, Player player);
+    CompoundTag getSoulBearInventory();
+
+    void setSoulBearInventory(CompoundTag soulbearInventory, Player player);
 
     ConcurrentLinkedQueue<UUID> getWispMinions();
 

@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.blockentity;
 
+import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.block.SoulVineBlock;
 import com.chipoodle.devilrpg.init.ModEntityBlocks;
 import net.minecraft.core.BlockPos;
@@ -50,7 +51,7 @@ public class SoulVineBlockEntity extends BlockEntity {
 
             if (!hasChildren) {
 
-                //DevilRpg.LOGGER.info("--------> currentDirection: {} age: {}", currentDirection, currentAge);
+                DevilRpg.LOGGER.info("--------> currentDirection: {} age: {}", currentDirection, currentAge);
 
                 BlockPos childBlockPos;
                 BlockState childBlockState;

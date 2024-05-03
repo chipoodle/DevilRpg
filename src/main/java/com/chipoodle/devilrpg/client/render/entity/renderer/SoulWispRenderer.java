@@ -12,7 +12,8 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 
 @OnlyIn(Dist.CLIENT)
 public class SoulWispRenderer extends MobRenderer<SoulWisp, SoulWispModel<SoulWisp>> {
-    private static final ResourceLocation ALLAY_TEXTURE = new ResourceLocation("textures/entity/allay/allay.png");
+    //private static final ResourceLocation ALLAY_TEXTURE = new ResourceLocation("textures/entity/allay/allay.png");
+    private static final ResourceLocation ALLAY_TEXTURE = new ResourceLocation("textures/entity/illager/vex.png");
 
     public SoulWispRenderer(EntityRendererProvider.Context p_234551_) {
         super(p_234551_, new SoulWispModel(p_234551_.bakeLayer(SoulWispModel.DEFAULT_LAYER_LOCATION)), 0.4F);
