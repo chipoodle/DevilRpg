@@ -32,6 +32,7 @@ import net.minecraft.world.entity.animal.horse.Llama;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.scores.Team;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.common.util.LazyOptional;
@@ -140,8 +141,7 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
     }
 
     @Override
-    public boolean wantsToAttack(LivingEntity target, LivingEntity owner) {
-        //return ((ITameableEntity)this).wantsToAttack(target, owner);
+    public boolean wantsToAttack(@NotNull LivingEntity target, @NotNull LivingEntity owner) {
         return ITamableEntity.super.wantsToAttack(target, owner);
     }
 

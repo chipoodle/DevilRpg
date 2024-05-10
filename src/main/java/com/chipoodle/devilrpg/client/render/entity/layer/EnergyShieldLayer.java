@@ -22,7 +22,7 @@ import org.jetbrains.annotations.NotNull;
 @OnlyIn(Dist.CLIENT)
 public class EnergyShieldLayer<T extends LivingEntity, M extends EntityModel<T>> extends RenderLayer<T, M> {
 
-    private static final ResourceLocation RESOURCE = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soul/iceshield.png");
+    private static final ResourceLocation RESOURCE = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soul/ice4.png");
     //private static final ResourceLocation BEAR_GEL = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soul/trident_riptide.png");
     private final EntityModel<T> model;
 
@@ -31,7 +31,7 @@ public class EnergyShieldLayer<T extends LivingEntity, M extends EntityModel<T>>
         this.model = new CubeModel<>(entityModelSet.bakeLayer(CubeModel.LAYER_LOCATION));
     }
 
-    public void render(@NotNull PoseStack poseStack, MultiBufferSource multiBufferSource, int p_116972_, T entity, float p_116974_, float p_116975_, float p_116976_, float p_116977_, float p_116978_, float p_116979_) {
+    public void render(@NotNull PoseStack poseStack, @NotNull MultiBufferSource multiBufferSource, int p_116972_, T entity, float p_116974_, float p_116975_, float p_116976_, float p_116977_, float p_116978_, float p_116979_) {
         if (entity.hasEffect(MobEffects.ABSORPTION)) {
             float f = (float) entity.tickCount + p_116976_;
             EntityModel<T> entitymodel = this.model();

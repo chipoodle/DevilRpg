@@ -203,13 +203,22 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
 
     }
 
-    public boolean isTame() {
+    public boolean isTamed() {
         return this.getFlag(2);
     }
 
-    public void setTame(boolean p_30652_) {
+    public void setTamed(boolean p_30652_) {
         this.setFlag(2, p_30652_);
     }
+
+    public boolean isTame() {
+        return this.isTamed();
+    }
+
+    public void setTame(boolean p_30652_) {
+        this.setTamed(p_30652_);
+    }
+
 
     public boolean isJumping() {
         return this.isJumping;
@@ -881,7 +890,7 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
             uuid = p_30565_.getUUID("Owner");
         } else {
             String s = p_30565_.getString("Owner");
-            uuid = OldUsersConverter.convertMobOwnerIfNecessary(Objects.requireNonNull(this.getServer()), s);
+            uuid = OldUsersConverter.convertMobOwnerIfNecessary(this.getServer(), s);
         }
 
         if (uuid != null) {

@@ -20,7 +20,8 @@ import org.jetbrains.annotations.NotNull;
 
 @OnlyIn(Dist.CLIENT)
 public class SoulWolfGelLayer<T extends SoulWolf> extends GhostEnergyLayer<T, SoulWolfModelHeart<T>> {
-    private static final ResourceLocation WOLF_GEL = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soul/soulgelghost.png");
+    //private static final ResourceLocation WOLF_GEL = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soul/soulgelghost.png");
+    private static final ResourceLocation WOLF_GEL = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soul/air_small.png");
     private final EntityModel<T> soulWolfModel;
     RenderLayerParent<T, SoulWolfModelHeart<T>> renderLayerParent;
 
@@ -30,9 +31,9 @@ public class SoulWolfGelLayer<T extends SoulWolf> extends GhostEnergyLayer<T, So
         this.renderLayerParent = renderLayerParent;
     }
 
-    public void render(@NotNull PoseStack poseStack, @NotNull MultiBufferSource multiBufferSource, int p_117472_, T p_117473_, float p_117474_, float p_117475_, float p_117476_, float p_117477_, float p_117478_, float p_117479_) {
-        groovyMethod(poseStack, multiBufferSource, p_117472_, p_117473_, p_117474_, p_117475_, p_117476_, p_117477_, p_117478_, p_117479_);
-        super.render(poseStack, multiBufferSource, p_117472_, p_117473_, p_117474_, p_117475_, p_117476_, p_117477_, p_117478_, p_117479_);
+    public void render(@NotNull PoseStack poseStack, @NotNull MultiBufferSource multiBufferSource, int p_117472_, @NotNull T entity, float p_117474_, float p_117475_, float p_117476_, float p_117477_, float p_117478_, float p_117479_) {
+        groovyMethod(poseStack, multiBufferSource, p_117472_, entity, p_117474_, p_117475_, p_117476_, p_117477_, p_117478_, p_117479_);
+        super.render(poseStack, multiBufferSource, p_117472_, entity, p_117474_, p_117475_, p_117476_, p_117477_, p_117478_, p_117479_);
     }
 
     protected float xOffset(float p_225634_1_) {

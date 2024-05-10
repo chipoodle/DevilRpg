@@ -55,6 +55,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.scores.Team;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.common.util.LazyOptional;
@@ -129,8 +130,8 @@ public class SoulBear extends AbstractChestedHorse
     protected void registerGoals() {
         // super.registerGoals();
         this.goalSelector.addGoal(0, new FloatGoal(this));
-        this.goalSelector.addGoal(1, new SoulBear.MeleeAttackGoal());
         this.goalSelector.addGoal(4, new FollowParentGoal(this, 1.25D));
+        this.goalSelector.addGoal(5, new SoulBear.MeleeAttackGoal());
         this.goalSelector.addGoal(5, new RandomStrollGoal(this, 1.0D));
         this.goalSelector.addGoal(6, new TameablePetFollowOwnerGoal(this, 1.0D, 10.0F, 2.0F, false));
         this.goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 6.0F));
@@ -143,7 +144,9 @@ public class SoulBear extends AbstractChestedHorse
                         !(entity instanceof Villager)
                                 && !(entity instanceof Llama)
                                 && !(entity instanceof Turtle)
-                                && !(entity instanceof IronGolem)));
+                                && !(entity instanceof IronGolem)
+                                && !(entity instanceof ITamableEntity && Objects.equals(((ITamableEntity) entity).getOwnerUUID(), this.getOwnerUUID()))
+                ));
         this.targetSelector.addGoal(8, new ResetUniversalAngerTargetGoal<>(this, true));
 
     }
@@ -180,7 +183,7 @@ public class SoulBear extends AbstractChestedHorse
         Objects.requireNonNull(this.getAttribute(Attributes.ATTACK_DAMAGE)).setBaseValue((1.4 * puntosAsignados) + 4); // 5.4-32
         Objects.requireNonNull(this.getAttribute(Attributes.JUMP_STRENGTH)).setBaseValue(0.7D + ((double) mountBear / 5));
         setHealth((float) saludMaxima);
-        DevilRpg.LOGGER.debug("----------------------->SoulBear.updateLevel(). Owner {}. isTame {}.  ", owner.getUUID(), isTame());
+        DevilRpg.LOGGER.debug("----------------------->SoulBear.updateLevel(). Owner {}. isTame {}.  ", owner.getUUID(), this.isTame());
     }
 
     @Override
@@ -219,16 +222,6 @@ public class SoulBear extends AbstractChestedHorse
     public void aiStep() {
         super.aiStep();
         addToAiStep(this);
-    }
-
-    /**
-     * Returns whether this Entity is on the same team as the given Entity or they
-     * share the same owner.
-     */
-    @Override
-    public boolean isAlliedTo(@NotNull Entity entity) {
-        boolean isOnSameTeam = super.isAlliedTo(entity);
-        return isOnSameTeam || isEntitySameOwnerAsThis(entity, this);
     }
 
     @Override
@@ -619,8 +612,8 @@ public class SoulBear extends AbstractChestedHorse
     }
 
     @Override
-    public boolean canAttack(LivingEntity entity) {
-        return !this.isOwnedBy(entity) && super.canAttack(entity);
+    public boolean canAttack(@NotNull LivingEntity livingEntity) {
+        return !this.isOwnedBy(livingEntity) && super.canAttack(livingEntity);
     }
 
     @Override
@@ -670,12 +663,14 @@ public class SoulBear extends AbstractChestedHorse
 
     @Override
     public boolean isTame() {
-        return this.getFlag(2);
+        return super.isTamed();
+        //return this.getFlag(2);
     }
 
     @Override
-    public void setTame(boolean p_30652_) {
-        this.setFlag(2, p_30652_);
+    public void setTame(boolean isTamed) {
+        super.setTamed(isTamed);
+        //this.setFlag(2, isTamed);
     }
 
     @Override
@@ -705,13 +700,13 @@ public class SoulBear extends AbstractChestedHorse
         return false;
     }
 
-    public boolean canBeLeashed(Player p_30396_) {
+    public boolean canBeLeashed(@NotNull Player player) {
         return false;
     }
 
     @Override
     public void openCustomInventoryScreen(@NotNull Player player) {
-        if (!this.level.isClientSide && (!this.isVehicle() || this.hasPassenger(player)) && this.isTamed()) {
+        if (!this.level.isClientSide && (!this.isVehicle() || this.hasPassenger(player)) && this.isTame()) {
             //player.openHorseInventory(this, this.inventory);
             openBearInventory(this, this.inventory, (ServerPlayer) player);
         }
@@ -732,6 +727,38 @@ public class SoulBear extends AbstractChestedHorse
 
         player.initMenu(player.containerMenu);
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(new net.minecraftforge.event.entity.player.PlayerContainerEvent.Open(player, player.containerMenu));
+    }
+
+    @Override
+    public Team getTeam() {
+        if (this.isTame()) {
+            LivingEntity livingentity = this.getOwner();
+            if (livingentity != null) {
+                return livingentity.getTeam();
+            }
+        }
+        return super.getTeam();
+    }
+
+    @Override
+    public boolean isAlliedTo(@NotNull Entity entity) {
+        if (this.isTame()) {
+            LivingEntity livingentity = this.getOwner();
+            if (entity == livingentity) {
+                return true;
+            }
+
+            if (livingentity != null) {
+                return livingentity.isAlliedTo(entity);
+            }
+        }
+
+        boolean isOnSameTeam = super.isAlliedTo(entity);
+        return isOnSameTeam || isEntitySameOwnerAsThis(entity, this);
+    }
+
+    public boolean isOwnedBy(LivingEntity p_21831_) {
+        return p_21831_ == this.getOwner();
     }
 
     class AttackPlayersGoal extends NearestAttackableTargetGoal<Player> {

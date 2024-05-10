@@ -428,6 +428,7 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
                 return;
             minionCap.ifPresent(x -> x.removeWisp((Player) getOwner(), this));
         }
+        if(!this.level.isClientSide)
         dropAllDeathLoot(cause);
         // super.onDeath(cause);
         customOnDeath();

@@ -2,7 +2,9 @@ package com.chipoodle.devilrpg.client.render.entity.renderer;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.client.render.entity.layer.EnergyShieldLayer;
+import com.chipoodle.devilrpg.client.render.entity.layer.SoulBearArmorLayer;
 import com.chipoodle.devilrpg.client.render.entity.layer.SoulWolfGelLayer;
+import com.chipoodle.devilrpg.client.render.entity.layer.SoulWolfSkinLayer;
 import com.chipoodle.devilrpg.client.render.entity.model.SoulWolfModelHeart;
 import com.chipoodle.devilrpg.entity.SoulWolf;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -22,6 +24,7 @@ public class SoulWolfRenderer extends MobRenderer<SoulWolf, SoulWolfModelHeart<S
         super(entityRendererProviderContext, new SoulWolfModelHeart<>(entityRendererProviderContext.bakeLayer(SoulWolfModelHeart.LAYER_LOCATION)), 0.5F);
         this.addLayer(new SoulWolfGelLayer<>(this, entityRendererProviderContext.getModelSet()));
         this.addLayer(new EnergyShieldLayer<>(this,entityRendererProviderContext.getModelSet()));
+        this.addLayer(new SoulWolfSkinLayer<>(this, entityRendererProviderContext.getModelSet()));
     }
 
     protected float getBob(SoulWolf livingBase, float partialTicks) {

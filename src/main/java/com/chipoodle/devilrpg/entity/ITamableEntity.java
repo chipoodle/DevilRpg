@@ -22,7 +22,6 @@ import net.minecraftforge.common.capabilities.ICapabilityProvider;
 import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
-import java.nio.channels.Pipe;
 import java.util.UUID;
 
 public interface ITamableEntity extends ICapabilityProvider, OwnableEntity {
@@ -75,8 +74,7 @@ public interface ITamableEntity extends ICapabilityProvider, OwnableEntity {
     default boolean wantsToAttack(LivingEntity target, LivingEntity owner) {
         if (target instanceof ITamableEntity entity) {
             return !entity.isTame() || entity.getOwner() != owner;
-        } else if (target instanceof Player && owner instanceof Player
-                && !((Player) owner).canHarmPlayer((Player) target)) {
+        } else if (target instanceof Player && owner instanceof Player && !((Player) owner).canHarmPlayer((Player) target)) {
             return false;
         } else return !(target instanceof AbstractHorse) || !((AbstractHorse) target).isTamed();
     }

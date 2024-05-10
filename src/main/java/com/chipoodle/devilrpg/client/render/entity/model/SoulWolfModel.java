@@ -18,6 +18,7 @@ import net.minecraft.util.Mth;
 
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
+import org.jetbrains.annotations.NotNull;
 
 @OnlyIn(Dist.CLIENT)
 public class SoulWolfModel<T extends SoulWolf> extends ColorableAgeableListModel<T> {
@@ -122,7 +123,7 @@ public class SoulWolfModel<T extends SoulWolf> extends ColorableAgeableListModel
 		this.realTail.zRot = p_104132_.getBodyRollAngle(p_104135_, -0.2F);
 	}
 
-	public void setupAnim(T p_104137_, float p_104138_, float p_104139_, float p_104140_, float p_104141_, float p_104142_) {
+	public void setupAnim(@NotNull T entity, float p_104138_, float p_104139_, float p_104140_, float p_104141_, float p_104142_) {
 		this.head.xRot = p_104142_ * ((float)Math.PI / 180F);
 		this.head.yRot = p_104141_ * ((float)Math.PI / 180F);
 		this.tail.xRot = p_104140_;
