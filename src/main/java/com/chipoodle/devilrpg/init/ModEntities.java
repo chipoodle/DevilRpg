@@ -39,6 +39,7 @@ public final class ModEntities {
 
 	private static final String LICHEN_SEED_BALL_NAME = "lichen_seedball";
 	private static final String VINE_FLESH_BALL_NAME = "vine_flesh_ball";
+	private static final String SUNFLOWER_SHULKER_NAME = "sunflower_shulker";
 
 
 	public static final RegistryObject<EntityType<SoulWolf>> SOUL_WOLF = ENTITY_TYPES.register(SOUL_WOLF_NAME,
@@ -89,4 +90,9 @@ public final class ModEntities {
 			() -> EntityType.Builder.<VineFleshPuppetSeedBall>of(VineFleshPuppetSeedBall::new, MobCategory.MISC)
 					.sized(EntityType.WITHER_SKULL.getWidth(), EntityType.WITHER_SKULL.getHeight())
 					.build(new ResourceLocation(DevilRpg.MODID, VINE_FLESH_BALL_NAME).toString()));
+
+	public static final RegistryObject<EntityType<SunflowerShulker>>SUNFLOWER_SHULKER = ENTITY_TYPES.register(SUNFLOWER_SHULKER_NAME,
+			() -> EntityType.Builder.of(SunflowerShulker::new, MobCategory.MISC)
+					.sized(EntityType.SHULKER.getWidth(), EntityType.SHULKER.getHeight())
+					.build(new ResourceLocation(DevilRpg.MODID, SUNFLOWER_SHULKER_NAME).toString()));
 }

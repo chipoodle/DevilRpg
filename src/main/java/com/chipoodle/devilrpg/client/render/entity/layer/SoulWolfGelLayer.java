@@ -22,6 +22,7 @@ import org.jetbrains.annotations.NotNull;
 public class SoulWolfGelLayer<T extends SoulWolf> extends GhostEnergyLayer<T, SoulWolfModelHeart<T>> {
     //private static final ResourceLocation WOLF_GEL = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soul/soulgelghost.png");
     private static final ResourceLocation WOLF_GEL = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soul/air_small.png");
+    private static final ResourceLocation WOLF_GEL_ANGRY = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soul/firestone3.png");
     private final EntityModel<T> soulWolfModel;
     RenderLayerParent<T, SoulWolfModelHeart<T>> renderLayerParent;
 
@@ -40,8 +41,8 @@ public class SoulWolfGelLayer<T extends SoulWolf> extends GhostEnergyLayer<T, So
         return p_225634_1_ * 0.01F;
     }
 
-    protected ResourceLocation getTextureLocation() {
-        return WOLF_GEL;
+    protected @NotNull ResourceLocation getTextureLocation(@NotNull SoulWolf soulWolf) {
+        return soulWolf.isAngry()? WOLF_GEL_ANGRY : WOLF_GEL;
     }
 
     @Override

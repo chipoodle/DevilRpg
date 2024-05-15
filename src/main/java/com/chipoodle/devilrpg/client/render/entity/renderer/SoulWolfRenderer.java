@@ -2,7 +2,6 @@ package com.chipoodle.devilrpg.client.render.entity.renderer;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.client.render.entity.layer.EnergyShieldLayer;
-import com.chipoodle.devilrpg.client.render.entity.layer.SoulBearArmorLayer;
 import com.chipoodle.devilrpg.client.render.entity.layer.SoulWolfGelLayer;
 import com.chipoodle.devilrpg.client.render.entity.layer.SoulWolfSkinLayer;
 import com.chipoodle.devilrpg.client.render.entity.model.SoulWolfModelHeart;
@@ -15,6 +14,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
+import org.jetbrains.annotations.NotNull;
 
 @OnlyIn(Dist.CLIENT)
 public class SoulWolfRenderer extends MobRenderer<SoulWolf, SoulWolfModelHeart<SoulWolf>> {
@@ -23,7 +23,7 @@ public class SoulWolfRenderer extends MobRenderer<SoulWolf, SoulWolfModelHeart<S
     public SoulWolfRenderer(EntityRendererProvider.Context entityRendererProviderContext) {
         super(entityRendererProviderContext, new SoulWolfModelHeart<>(entityRendererProviderContext.bakeLayer(SoulWolfModelHeart.LAYER_LOCATION)), 0.5F);
         this.addLayer(new SoulWolfGelLayer<>(this, entityRendererProviderContext.getModelSet()));
-        this.addLayer(new EnergyShieldLayer<>(this,entityRendererProviderContext.getModelSet()));
+        this.addLayer(new EnergyShieldLayer<>(this, entityRendererProviderContext.getModelSet()));
         this.addLayer(new SoulWolfSkinLayer<>(this, entityRendererProviderContext.getModelSet()));
     }
 
@@ -31,17 +31,17 @@ public class SoulWolfRenderer extends MobRenderer<SoulWolf, SoulWolfModelHeart<S
         return livingBase.getTailAngle();
     }
 
-    protected int getBlockLightLevel(SoulWolf entityIn, BlockPos pos) {
+    protected int getBlockLightLevel(@NotNull SoulWolf entityIn, @NotNull BlockPos pos) {
         return 1;
     }
 
     @Override
-    public ResourceLocation getTextureLocation(SoulWolf entity) {
+    public @NotNull ResourceLocation getTextureLocation(@NotNull SoulWolf entity) {
         return HEART_TEXTURES;
     }
 
     @Override
-    public void render(SoulWolf p_116531_, float p_116532_, float p_116533_, PoseStack p_116534_, MultiBufferSource p_116535_, int p_116536_) {
+    public void render(SoulWolf p_116531_, float p_116532_, float p_116533_, @NotNull PoseStack p_116534_, @NotNull MultiBufferSource p_116535_, int p_116536_) {
         if (p_116531_.isWet()) {
             float f = p_116531_.getWetShade(p_116533_);
             this.model.setColor(f, f, f);
@@ -52,8 +52,9 @@ public class SoulWolfRenderer extends MobRenderer<SoulWolf, SoulWolfModelHeart<S
             this.model.setColor(1.0F, 1.0F, 1.0F);
         }
     }
+
     @Override
-    protected void scale(SoulWolf entityIn, PoseStack matrixStackIn, float partialTickTime) {
+    protected void scale(@NotNull SoulWolf entityIn, @NotNull PoseStack matrixStackIn, float partialTickTime) {
         super.scale(entityIn, matrixStackIn, partialTickTime);
     }
 

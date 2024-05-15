@@ -186,7 +186,7 @@ public class SoulBear extends AbstractChestedHorse
         DevilRpg.LOGGER.debug("----------------------->SoulBear.updateLevel(). Owner {}. isTame {}.  ", owner.getUUID(), this.isTame());
     }
 
-    @Override
+    @Override // create
     public void readAdditionalSaveData(@NotNull CompoundTag compound) {
         super.readAdditionalSaveData(compound);
 
@@ -204,7 +204,7 @@ public class SoulBear extends AbstractChestedHorse
         this.updateContainerEquipment();
     }
 
-    @Override
+    @Override // pause menu, dead
     public void addAdditionalSaveData(@NotNull CompoundTag compound) {
         super.addAdditionalSaveData(compound);
         compound.putString("OwnerUUID", "");
@@ -216,6 +216,9 @@ public class SoulBear extends AbstractChestedHorse
         if (!this.inventory.getItem(1).isEmpty()) {
             compound.put("ArmorItem", this.inventory.getItem(1).save(new CompoundTag()));
         }
+
+        PlayerMinionCapabilityInterface minion = IGenericCapability.getUnwrappedPlayerCapability((Player) getOwner(), PlayerMinionCapability.INSTANCE);
+        minion.setSoulBearInventory(compound, (Player) getOwner());
     }
 
     @Override
@@ -324,10 +327,8 @@ public class SoulBear extends AbstractChestedHorse
 
     private void customOnDeath() {
         if (getOwner() != null) {
-            PlayerMinionCapabilityInterface minion = IGenericCapability.getUnwrappedPlayerCapability((Player) getOwner(), PlayerMinionCapability.INSTANCE);
             CompoundTag c = new CompoundTag();
             addAdditionalSaveData(c);
-            minion.setSoulBearInventory(c, (Player) getOwner());
         }
 
         level.broadcastEntityEvent(this, (byte) 3);

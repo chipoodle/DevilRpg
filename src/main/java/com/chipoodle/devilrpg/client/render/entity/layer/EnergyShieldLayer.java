@@ -22,7 +22,7 @@ import org.jetbrains.annotations.NotNull;
 @OnlyIn(Dist.CLIENT)
 public class EnergyShieldLayer<T extends LivingEntity, M extends EntityModel<T>> extends RenderLayer<T, M> {
 
-    private static final ResourceLocation RESOURCE = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soul/ice4.png");
+    private static final ResourceLocation RESOURCE = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soul/iceshield.png");
     //private static final ResourceLocation BEAR_GEL = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soul/trident_riptide.png");
     private final EntityModel<T> model;
 

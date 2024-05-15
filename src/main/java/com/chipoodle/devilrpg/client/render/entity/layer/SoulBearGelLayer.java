@@ -20,7 +20,7 @@ import org.jetbrains.annotations.NotNull;
 
 @OnlyIn(Dist.CLIENT)
 public class SoulBearGelLayer<T extends SoulBear> extends GhostEnergyLayer<T, SoulBearModelHeart<T>> {
-    private static final ResourceLocation BEAR_GEL = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soul/soulgelghost.png");
+    private static final ResourceLocation BEAR_GEL = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soul/air_small.png");
     //private static final ResourceLocation BEAR_GEL = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soulbear/Cyber-Grizzly-Bear-Vinyl-Film-Wrap-Close-Up-Pattern.jpg");
     //private static final ResourceLocation BEAR_GEL = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soul/trident_riptide.png");
     private final EntityModel<T> soulBearModel;
@@ -39,7 +39,7 @@ public class SoulBearGelLayer<T extends SoulBear> extends GhostEnergyLayer<T, So
         return p_225634_1_ * 0.01F;
     }
 
-    protected ResourceLocation getTextureLocation() {
+    protected @NotNull ResourceLocation getTextureLocation(@NotNull SoulBear soulbear) {
         return BEAR_GEL;
     }
 

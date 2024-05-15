@@ -28,7 +28,7 @@ public abstract class GhostEnergyLayer<T extends Entity & PowerableMob, M extend
             EntityModel<T> entitymodel = this.model();
             entitymodel.prepareMobModel(entity, p_116974_, p_116975_, p_116976_);
             this.getParentModel().copyPropertiesTo(entitymodel);
-            VertexConsumer vertexconsumer = multiBufferSource.getBuffer(RenderType.energySwirl(this.getTextureLocation(), this.xOffset(f) % 1.0F, f * 0.01F % 1.0F));
+            VertexConsumer vertexconsumer = multiBufferSource.getBuffer(RenderType.energySwirl(this.getTextureLocation(entity), this.xOffset(f) % 1.0F, f * 0.01F % 1.0F));
             entitymodel.setupAnim(entity, p_116974_, p_116975_, p_116977_, p_116978_, p_116979_);
             entitymodel.renderToBuffer(poseStack, vertexconsumer, p_116972_, OverlayTexture.NO_OVERLAY, 0.5F, 0.5F, 0.5F, 1.0F);
         }
@@ -36,7 +36,7 @@ public abstract class GhostEnergyLayer<T extends Entity & PowerableMob, M extend
 
     protected abstract float xOffset(float p_116968_);
 
-    protected abstract ResourceLocation getTextureLocation();
+    protected abstract @NotNull ResourceLocation getTextureLocation(@NotNull T entity);
 
     protected abstract EntityModel<T> model();
 }

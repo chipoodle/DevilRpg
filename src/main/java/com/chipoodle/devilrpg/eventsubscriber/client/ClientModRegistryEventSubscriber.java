@@ -57,8 +57,8 @@ public final class ClientModRegistryEventSubscriber {
         event.registerLayerDefinition(SoulWispModel.ARCHER_LAYER_LOCATION, SoulWispModel::createBodyLayer);
         event.registerLayerDefinition(SoulWispModel.CHOPPER_LAYER_LOCATION, SoulWispModel::createBodyLayer);
         event.registerLayerDefinition(CubeModel.LAYER_LOCATION, CubeModel::createBodyLayer);
-        //event.registerLayerDefinition(WerewolfHumanModel.WEREWOLF_LAYER_LOCATION, WerewolfHumanModel::createBodyLayer);
         event.registerLayerDefinition(WerewolfTransformedModel.WEREWOLF_LAYER_LOCATION, WerewolfTransformedModel::createBodyLayer);
+        event.registerLayerDefinition(SunflowerShulkerModel.DEFAULT_LAYER_LOCATION, SunflowerShulkerModel::createBodyLayer);
     }
 
     @SubscribeEvent
@@ -76,6 +76,7 @@ public final class ClientModRegistryEventSubscriber {
         event.registerEntityRenderer(ModEntities.WISP_BOMB.get(), SoulWispBomberRenderer::new);
         event.registerEntityRenderer(ModEntities.WISP_ARCHER.get(), SoulWispArcherRenderer::new);
         event.registerEntityRenderer(ModEntities.WISP_CHOPPER.get(), SoulWispChopperRenderer::new);
+        event.registerEntityRenderer(ModEntities.SUNFLOWER_SHULKER.get(), SunflowerShulkerRenderer::new);
         //ItemBlockRenderTypes.setRenderLayer(ModBlocks.SOUL_VINE_BLOCK.get(), RenderType.translucent());
         //event.registerEntityRenderer(ModEntityTypes.WISP.get(), SoulWispHumanoidRenderer::new);
 
