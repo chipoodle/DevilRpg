@@ -9,6 +9,7 @@ import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.init.ModBlocks;
 import com.chipoodle.devilrpg.init.ModEffects;
 import com.chipoodle.devilrpg.util.SkillEnum;
+import com.chipoodle.devilrpg.util.TargetUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.effect.MobEffect;
@@ -45,7 +46,7 @@ public class MobEffectEntangling extends MobEffect {
     @Override
     public void applyEffectTick(@NotNull LivingEntity entity, int amplifier) {
         // Calculate the entangling based on the amplifier
-        amplifier = Math.max(1, Math.min(amplifier + 1, 5));
+        amplifier = Math.max(1, Math.min(amplifier + 1, 5));// se suma uno porque  el indice empieza en 0 pero el nivel es de 1 a 5
         float percentage = amplifier * 0.2f;
 
         if (owner != null)
@@ -71,12 +72,6 @@ public class MobEffectEntangling extends MobEffect {
         this.owner = owner;
     }
 
-    private BlockPos findSolidGround(Level level, BlockPos pos) {
-        while (pos.getY() > 0 && !level.getBlockState(pos).getMaterial().isSolid()) {
-            pos = pos.below();
-        }
-        return pos;
-    }
 
     private void applySoulLichenEffects(@NotNull Level level, @NotNull Entity entity, Player owner, float percentage) {
         double slowDown = 1.0 - percentage;
@@ -90,7 +85,7 @@ public class MobEffectEntangling extends MobEffect {
                 setLichen(level, owner, blockPos, unwrappedPlayerCapability);
             } else {
                 // Encuentra la posición del primer bloque sólido debajo de la entidad
-                BlockPos groundPos = findSolidGround(level, blockPos);
+                BlockPos groundPos = TargetUtils.findSolidGround(level, blockPos);
 
                 if (groundPos != null) {
                     // Coloca el bloque de SoulLichen en la posición encontrada

@@ -7,6 +7,7 @@ import com.chipoodle.devilrpg.entity.*;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
+import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
@@ -35,11 +36,14 @@ public final class ModEntities {
 	public static final String WISP_ARCHER_NAME = "wisp_archer";
 
 	private static final String WISP_CHOPPER_NAME = "wisp_chopper";
-	public static final String SOUL_ICEBALL_NAME = "soul_iceball";
+	public static final String SOUL_FROSTBALL_NAME = "soul_frostball";
 
 	private static final String LICHEN_SEED_BALL_NAME = "lichen_seedball";
 	private static final String VINE_FLESH_BALL_NAME = "vine_flesh_ball";
 	private static final String SUNFLOWER_SHULKER_NAME = "sunflower_shulker";
+	private static final String EXPLODING_SPORE_BULLET_NAME = "exploding_spore_bullet";
+
+	private static final String GENERIC_ITEM_PROJECTILE_NAME = "generic_item_projectile";
 
 
 	public static final RegistryObject<EntityType<SoulWolf>> SOUL_WOLF = ENTITY_TYPES.register(SOUL_WOLF_NAME,
@@ -76,10 +80,15 @@ public final class ModEntities {
 			.sized(EntityType.ALLAY.getWidth(), EntityType.ALLAY.getHeight())
 			.build(new ResourceLocation(DevilRpg.MODID, WISP_CHOPPER_NAME).toString()));
 
-	public static final RegistryObject<EntityType<FrostBall>> SOUL_ICEBALL = ENTITY_TYPES.register(SOUL_ICEBALL_NAME,
+	public static final RegistryObject<EntityType<FrostBall>> SOUL_FROSTBALL = ENTITY_TYPES.register(SOUL_FROSTBALL_NAME,
 			() -> EntityType.Builder.<FrostBall>of(FrostBall::new, MobCategory.MISC)
 					.sized(EntityType.WITHER_SKULL.getWidth(), EntityType.WITHER_SKULL.getHeight())
-					.build(new ResourceLocation(DevilRpg.MODID, SOUL_ICEBALL_NAME).toString()));
+					.build(new ResourceLocation(DevilRpg.MODID, SOUL_FROSTBALL_NAME).toString()));
+
+	public static final RegistryObject<EntityType<GenericItemProjectile>> GENERIC_ITEM_PROJECTILE = ENTITY_TYPES.register(GENERIC_ITEM_PROJECTILE_NAME,
+			() -> EntityType.Builder.<GenericItemProjectile>of(GenericItemProjectile::new, MobCategory.MISC)
+					.sized(EntityType.WITHER_SKULL.getWidth(), EntityType.WITHER_SKULL.getHeight())
+					.build(new ResourceLocation(DevilRpg.MODID, GENERIC_ITEM_PROJECTILE_NAME).toString()));
 
 	public static final RegistryObject<EntityType<LichenSeedBall>> LICHEN_SEED_BALL = ENTITY_TYPES.register(LICHEN_SEED_BALL_NAME,
 			() -> EntityType.Builder.<LichenSeedBall>of(LichenSeedBall::new, MobCategory.MISC)
@@ -95,4 +104,9 @@ public final class ModEntities {
 			() -> EntityType.Builder.of(SunflowerShulker::new, MobCategory.MISC)
 					.sized(EntityType.SHULKER.getWidth(), EntityType.SHULKER.getHeight())
 					.build(new ResourceLocation(DevilRpg.MODID, SUNFLOWER_SHULKER_NAME).toString()));
+
+	public static final RegistryObject<EntityType<ExplodingSporeBullet>>EXPLODING_SPORE_BULLET = ENTITY_TYPES.register(EXPLODING_SPORE_BULLET_NAME,
+			() -> EntityType.Builder.of(ExplodingSporeBullet::new, MobCategory.MISC)
+					.sized(EntityType.BEE.getWidth(), EntityType.BEE.getHeight())
+					.build(new ResourceLocation(DevilRpg.MODID, EXPLODING_SPORE_BULLET_NAME).toString()));
 }

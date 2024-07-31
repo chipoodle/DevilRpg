@@ -59,6 +59,7 @@ public final class ClientModRegistryEventSubscriber {
         event.registerLayerDefinition(CubeModel.LAYER_LOCATION, CubeModel::createBodyLayer);
         event.registerLayerDefinition(WerewolfTransformedModel.WEREWOLF_LAYER_LOCATION, WerewolfTransformedModel::createBodyLayer);
         event.registerLayerDefinition(SunflowerShulkerModel.DEFAULT_LAYER_LOCATION, SunflowerShulkerModel::createBodyLayer);
+        event.registerLayerDefinition(ExplodingSporeBulletModel.DEFAULT_LAYER_LOCATION, ExplodingSporeBulletModel::createBodyLayer);
     }
 
     @SubscribeEvent
@@ -67,7 +68,8 @@ public final class ClientModRegistryEventSubscriber {
 
         event.registerEntityRenderer(ModEntities.SOUL_WOLF.get(), SoulWolfRenderer::new);
         event.registerEntityRenderer(ModEntities.SOUL_BEAR.get(), SoulBearRenderer::new);
-        event.registerEntityRenderer(ModEntities.SOUL_ICEBALL.get(), FrostBallRenderer::new);
+        event.registerEntityRenderer(ModEntities.SOUL_FROSTBALL.get(), FrostBallRenderer::new);
+        event.registerEntityRenderer(ModEntities.GENERIC_ITEM_PROJECTILE.get(), ExplodingSporeBulletRenderer::new);
         event.registerEntityRenderer(ModEntities.LICHEN_SEED_BALL.get(), LichenSeedBallRenderer::new);
         event.registerEntityRenderer(ModEntities.VINE_FLESH_BALL.get(), VineFleshBallRenderer::new);
         //event.registerEntityRenderer(ModEntities.WISP.get(), SoulWispRenderer::new);
@@ -77,6 +79,7 @@ public final class ClientModRegistryEventSubscriber {
         event.registerEntityRenderer(ModEntities.WISP_ARCHER.get(), SoulWispArcherRenderer::new);
         event.registerEntityRenderer(ModEntities.WISP_CHOPPER.get(), SoulWispChopperRenderer::new);
         event.registerEntityRenderer(ModEntities.SUNFLOWER_SHULKER.get(), SunflowerShulkerRenderer::new);
+        event.registerEntityRenderer(ModEntities.EXPLODING_SPORE_BULLET.get(), ExplodingSporeBulletRenderer::new);
         //ItemBlockRenderTypes.setRenderLayer(ModBlocks.SOUL_VINE_BLOCK.get(), RenderType.translucent());
         //event.registerEntityRenderer(ModEntityTypes.WISP.get(), SoulWispHumanoidRenderer::new);
 

@@ -15,7 +15,7 @@ public interface ISoulEntity {
     /**
      * Kills the entity if it has no owner.
      *
-     * @param thisEntity
+     * @param thisEntity instance of ITamableEntity
      */
     default void addToAiStep(ITamableEntity thisEntity) {
         if (thisEntity.getOwnerUUID() == null || thisEntity.getOwner() == null || !thisEntity.getOwner().isAlive() || !thisEntity.isTame()) {

@@ -68,12 +68,10 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-public class SoulBear extends AbstractChestedHorse
-        implements ITamableEntity, ISoulEntity, PowerableMob, NeutralMob, IPassiveMinionUpdater<SoulBear>, VariantHolder<Variant> {
+public class SoulBear extends AbstractChestedHorse implements ITamableEntity, ISoulEntity, PowerableMob, NeutralMob, IPassiveMinionUpdater<SoulBear> {
 
     private static final UUID ARMOR_MODIFIER_UUID = UUID.fromString("556E1665-8B10-40C8-8F9D-CF9B1667F295");
-    private static final EntityDataAccessor<Integer> DATA_ID_TYPE_VARIANT = SynchedEntityData.defineId(SoulBear.class, EntityDataSerializers.INT);
-    private static final UniformInt PERSISTENT_ANGER_TIME = TimeUtil.rangeOfSeconds(20, 39);
+   private static final UniformInt PERSISTENT_ANGER_TIME = TimeUtil.rangeOfSeconds(20, 39);
     private static final int PROBABILITY_MULTIPLIER = 5;
     private static final int DURATION_TICKS = 100;
 
@@ -171,6 +169,7 @@ public class SoulBear extends AbstractChestedHorse
                     addAdditionalSaveData(soulBearInventory);
                     minion.setSoulBearInventory(soulBearInventory, (Player) getOwner());
                 }
+                this.removeAllEffects();
                 this.equipSaddle(null);
             }
         }
@@ -224,6 +223,11 @@ public class SoulBear extends AbstractChestedHorse
     @Override
     public void aiStep() {
         super.aiStep();
+
+        if (!this.level.isClientSide) {
+            this.updatePersistentAnger((ServerLevel)this.level, true);
+        }
+
         addToAiStep(this);
     }
 
@@ -233,9 +237,15 @@ public class SoulBear extends AbstractChestedHorse
     }
 
     @Override
-    public boolean doHurtTarget(Entity entityIn) {
+    public boolean doHurtTarget(Entity target) {
         double attackDamage = this.getAttributeValue(Attributes.ATTACK_DAMAGE);
-        boolean flag = entityIn.hurt(this.damageSources().mobAttack(this), (float) (attackDamage));
+
+        //Needed to generate xp orbs after killing target since this entity doesn't inherit from TamableAnimal
+        if(target instanceof LivingEntity livingEntity){
+            livingEntity.setLastHurtByPlayer((Player) getOwner());
+        }
+
+        boolean flag = target.hurt(this.damageSources().mobAttack(this), (float) (attackDamage));
         if (flag) {
             int probability = random.nextInt(100);
             if (warBear > 0 && probability <= (warBear * PROBABILITY_MULTIPLIER)) {
@@ -248,10 +258,10 @@ public class SoulBear extends AbstractChestedHorse
 
                 acquireAllLookTargetsByClass.forEach(
                         mob -> mob.hurt(this.damageSources().mobAttack(this), (float) (attackDamage * SPLASH_DAMAGE_FACTOR)));
-                DevilRpg.LOGGER.info("---------->doHurtTarget warBear: {} probability: {} Range of success: {}, enemies: {}, main damage: {} splash damage: {}, armor: {}", warBear,
-                        probability, warBear * PROBABILITY_MULTIPLIER, acquireAllLookTargetsByClass.size(), attackDamage, attackDamage * SPLASH_DAMAGE_FACTOR, Objects.requireNonNull(this.getAttribute(Attributes.ARMOR)).getValue());
+                DevilRpg.LOGGER.info("---------->doHurtTarget warBear: {} probability: {} Range of success: {}, enemies: {}, main damage: {} splash damage: {}, armor: {} owner: {} owneruuid: {}", warBear,
+                        probability, warBear * PROBABILITY_MULTIPLIER, acquireAllLookTargetsByClass.size(), attackDamage, attackDamage * SPLASH_DAMAGE_FACTOR, Objects.requireNonNull(this.getAttribute(Attributes.ARMOR)).getValue(),getOwner(),getOwnerUUID());
             }
-            this.doEnchantDamageEffects(this, entityIn);
+            this.doEnchantDamageEffects(this, target);
         }
         return flag;
     }
@@ -527,7 +537,7 @@ public class SoulBear extends AbstractChestedHorse
     /**
      * Get the experience points the entity currently has.
      */
-    protected int getExperienceReward(Player player) {
+    public int getExperienceReward() {
         /*
          * if (player.equals(getOwner())) return 0; return 1 +
          * this.world.rand.nextInt(3);
@@ -543,32 +553,6 @@ public class SoulBear extends AbstractChestedHorse
         this.setItemSlot(EquipmentSlot.CHEST, p_213805_1_);
         this.setDropChance(EquipmentSlot.CHEST, 0.0F);
     }
-
-    private int getTypeVariant() {
-        return this.entityData.get(DATA_ID_TYPE_VARIANT);
-    }
-
-    private void setTypeVariant(int p_234242_1_) {
-        this.entityData.set(DATA_ID_TYPE_VARIANT, p_234242_1_);
-    }
-
-    private void setVariantAndMarkings(Variant p_30700_, Markings p_30701_) {
-        this.setTypeVariant(p_30700_.getId() & 255 | p_30701_.getId() << 8 & '\uff00');
-    }
-
-    @Override
-    public @NotNull Variant getVariant() {
-        return Variant.byId(this.getTypeVariant() & 255);
-    }
-
-    @Override
-    public void setVariant(Variant p_262684_) {
-        this.setTypeVariant(p_262684_.getId() & 255 | this.getTypeVariant() & -256);
-    }
-
-    /*public Markings getMarkings() {
-        return Markings.byId((this.getTypeVariant() & '\uff00') >> 8);
-    }*/
 
     @Override
     protected void updateContainerEquipment() {
@@ -757,43 +741,6 @@ public class SoulBear extends AbstractChestedHorse
         boolean isOnSameTeam = super.isAlliedTo(entity);
         return isOnSameTeam || isEntitySameOwnerAsThis(entity, this);
     }
-
-    public boolean isOwnedBy(LivingEntity p_21831_) {
-        return p_21831_ == this.getOwner();
-    }
-
-    class AttackPlayersGoal extends NearestAttackableTargetGoal<Player> {
-        public AttackPlayersGoal() {
-            super(SoulBear.this, Player.class, 20, true, true, null);
-        }
-
-        /**
-         * Returns whether execution should begin. You can also read and cache any state
-         * necessary for execution in this method as well.
-         */
-        public boolean canUse() {
-            if (SoulBear.this.isBaby()) {
-                return false;
-            } else {
-                if (super.canUse()) {
-                    for (SoulBear soulbearentity : SoulBear.this.level.getEntitiesOfClass(
-                            SoulBear.class, SoulBear.this.getBoundingBox().inflate(8.0D, 4.0D, 8.0D))) {
-                        if (soulbearentity.isBaby()) {
-                            return true;
-                        }
-                    }
-                }
-
-                return false;
-            }
-        }
-
-        @Override
-        protected double getFollowDistance() {
-            return super.getFollowDistance() * 0.5D;
-        }
-    }
-
     class MeleeAttackGoal extends net.minecraft.world.entity.ai.goal.MeleeAttackGoal {
         public MeleeAttackGoal() {
             super(SoulBear.this, 1.25D, true);
@@ -844,81 +791,4 @@ public class SoulBear extends AbstractChestedHorse
         }
     }
 
-    class PanicGoal extends net.minecraft.world.entity.ai.goal.PanicGoal {
-        public PanicGoal() {
-            super(SoulBear.this, 2.0D);
-        }
-
-        /**
-         * Returns whether execution should begin. You can also read and cache any state
-         * necessary for execution in this method as well.
-         */
-        public boolean shouldExecute() {
-            return (SoulBear.this.isBaby() || SoulBear.this.isOnFire()) && super.canUse();
-        }
-    }
-
-    class SoulBearAvoidEntityGoal<T extends LivingEntity> extends AvoidEntityGoal<T> {
-        private final SoulBear bear;
-
-        public SoulBearAvoidEntityGoal(SoulBear wolfIn, Class<T> entityClassToAvoidIn, float avoidDistanceIn,
-                                       double farSpeedIn, double nearSpeedIn) {
-            super(wolfIn, entityClassToAvoidIn, avoidDistanceIn, farSpeedIn, nearSpeedIn);
-            this.bear = wolfIn;
-        }
-
-        /**
-         * Returns whether execution should begin. You can also read and cache any state
-         * necessary for execution in this method as well.
-         */
-        public boolean canUse() {
-            if (super.canUse() && this.toAvoid instanceof Llama) {
-                return this.bear.isTame() && this.avoidLlama((Llama) this.toAvoid);
-            }
-            if (super.canUse() && this.toAvoid instanceof Turtle) {
-                return this.bear.isTame() && this.avoidTurtle((Turtle) this.toAvoid);
-            }
-            if (super.canUse() && this.toAvoid instanceof Villager) {
-                return this.bear.isTame() && this.avoidVillager((Villager) this.toAvoid);
-            }
-            if (super.canUse() && this.toAvoid instanceof IronGolem) {
-                return this.bear.isTame() && this.avoidIronGolem((IronGolem) this.toAvoid);
-            }
-            return false;
-        }
-
-        private boolean avoidLlama(Llama llamaIn) {
-            return llamaIn.getStrength() >= SoulBear.this.random.nextInt(5);
-        }
-
-        private boolean avoidTurtle(Turtle llamaIn) {
-            return true;
-        }
-
-        private boolean avoidVillager(Villager llamaIn) {
-            return true;
-        }
-
-        private boolean avoidIronGolem(IronGolem llamaIn) {
-            return true;
-        }
-
-        /**
-         * Execute a one shot task or start executing a continuous task
-         */
-        @Override
-        public void start() {
-            SoulBear.this.setTarget(null);
-            super.start();
-        }
-
-        /**
-         * Keep ticking a continuous task that has already been started
-         */
-        @Override
-        public void tick() {
-            SoulBear.this.setTarget(null);
-            super.tick();
-        }
-    }
 }

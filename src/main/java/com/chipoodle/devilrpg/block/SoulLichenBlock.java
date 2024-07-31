@@ -1,6 +1,8 @@
 package com.chipoodle.devilrpg.block;
 
 import com.chipoodle.devilrpg.blockentity.SoulLichenBlockEntity;
+import com.chipoodle.devilrpg.entity.ISoulEntity;
+import com.chipoodle.devilrpg.entity.ITamableEntity;
 import com.chipoodle.devilrpg.init.ModEntities;
 import com.chipoodle.devilrpg.init.ModEntityBlocks;
 import net.minecraft.core.BlockPos;
@@ -32,6 +34,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.ToIntFunction;
 import java.util.stream.Collectors;
@@ -76,19 +79,22 @@ public class SoulLichenBlock extends MultifaceBlock implements SimpleWaterlogged
     }
 
     public static void applySoulLichenEffects(@NotNull Level level, @NotNull Entity entity, Player owner) {
-        entity.hurt(level.damageSources().playerAttack(owner), 1.0F);
-        // Aplicar aceleración al movimiento
-        double speedBoost = -0.4; // Ajusta este valor según lo rápido que quieras que sea el impulso
-        double motionX = entity.getX() - entity.xOld;
-        double motionZ = entity.getZ() - entity.zOld;
-        double speed = Math.sqrt(motionX * motionX + motionZ * motionZ);
-        double speedx = (motionX / speed) * speedBoost;
-        double speedz = (motionZ / speed) * speedBoost;
-        entity.setDeltaMovement(entity.getDeltaMovement().multiply(
-                Double.isNaN(speedx) ? 0.0d : speedx,
-                0.0,
-                Double.isNaN(speedz) ? 0.0d : speedz
-        ));
+
+        if(!(entity instanceof ITamableEntity iSoulEntity && Objects.requireNonNull(iSoulEntity.getOwner()).getUUID().equals(owner.getUUID()))) {
+            entity.hurt(level.damageSources().playerAttack(owner), 1.0F);
+            // Aplicar aceleración al movimiento
+            double speedBoost = -0.4; // Ajusta este valor según lo rápido que quieras que sea el impulso
+            double motionX = entity.getX() - entity.xOld;
+            double motionZ = entity.getZ() - entity.zOld;
+            double speed = Math.sqrt(motionX * motionX + motionZ * motionZ);
+            double speedx = (motionX / speed) * speedBoost;
+            double speedz = (motionZ / speed) * speedBoost;
+            entity.setDeltaMovement(entity.getDeltaMovement().multiply(
+                    Double.isNaN(speedx) ? 0.0d : speedx,
+                    0.0,
+                    Double.isNaN(speedz) ? 0.0d : speedz
+            ));
+        }
     }
 
     protected void createBlockStateDefinition(StateDefinition.@NotNull Builder<Block, BlockState> stateDefinition) {

@@ -1,58 +1,70 @@
 package com.chipoodle.devilrpg.effects;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.entity.SunflowerShulker;
+import com.chipoodle.devilrpg.entity.goal.MiniFireAttackGoal;
 import com.chipoodle.devilrpg.init.ModEffects;
+import com.chipoodle.devilrpg.init.ModEntities;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectCategory;
 import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.AttributeMap;
-import net.minecraft.world.entity.monster.Shulker;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.HashMap;
+import java.util.UUID;
+
 public class MobEffectVineFleshPuppet extends MobEffect {
 
+    private final HashMap<UUID, Boolean> alive;
     private Player owner;
 
-    Shulker shulker;
-
     public MobEffectVineFleshPuppet() {
-        super(MobEffectCategory.HARMFUL, 0xBFFAFF);
+        super(MobEffectCategory.HARMFUL, 0xBFFABF);
+        alive = new HashMap<>();
     }
 
     public static MobEffectInstance createInstance(int duration, int amplifier, Player owner) {
         // Create an instance of your custom MobEffect with the specified duration and amplifier
         MobEffectVineFleshPuppet mobEffect = (MobEffectVineFleshPuppet) ModEffects.VINE_FLESH_PUPPET.get();
         mobEffect.setOwner(owner);
-        //DevilRpg.LOGGER.debug("--- crated. duration {} amplifier {}, seconds {}", duration, amplifier, duration / 20);
-        return new MobEffectInstance(mobEffect, duration, amplifier);
+        MobEffectInstance mobEffectInstance = new MobEffectInstance(mobEffect, duration, amplifier);
+        DevilRpg.LOGGER.debug("--- MobEffectInstance crated. duration {} amplifier {}, seconds {}", duration, amplifier, duration / 20);
+        return mobEffectInstance;
     }
 
     @Override
-    public void applyEffectTick(LivingEntity entity, int amplifier) {
+    public void applyEffectTick(@NotNull LivingEntity entity, int amplifier) {
         // Check if the entity is dead and if it was killed by the player
-        if (!entity.isAlive() && entity.getLastDamageSource() instanceof DamageSource && entity.getLastDamageSource().getEntity() instanceof Player) {
-            Level world = entity.level;
-            BlockPos spawnPos = entity.blockPosition();
-            Player player = (Player) entity.getLastDamageSource().getEntity();
+        if (!entity.isAlive()) {
+            if (alive.getOrDefault(entity.getUUID(),Boolean.FALSE)) {
+                Level world = entity.level;
+                BlockPos spawnPos = entity.blockPosition();
+                //Player player = (Player) Objects.requireNonNull(entity.getLastDamageSource()).getEntity();
 
-            // Revive the enemy as a minion for 1 minute
-            shulker = EntityType.SHULKER.create(world);
-            shulker.setPos(spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5);
-            //Shulker minion = new MinionEntity(world, spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5, player);
-            world.addFreshEntity(shulker);
+                // Revive the enemy as a minion for 1 minute
+                SunflowerShulker shulker = ModEntities.SUNFLOWER_SHULKER.get().create(world);
+                shulker.updateLevel(owner);
+                shulker.setPos(spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5);
+                //Shulker minion = new MinionEntity(world, spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5, player);
+                world.addFreshEntity(shulker);
+                DevilRpg.LOGGER.info("===>MobEffectInstance applyEffectTick created sunflower from dead entity {} ", entity.getUUID());
+                alive.put(entity.getUUID(), false);
+            }
+        } else {
+            alive.put(entity.getUUID(), true);
         }
+
     }
 
     @Override
-    public void removeAttributeModifiers(LivingEntity entityLivingBaseIn, @NotNull AttributeMap attributeMapIn, int amplifier) {
-        // Remove the entangling  resistance attribute modifier when the effect is removed
-        DevilRpg.LOGGER.debug(entityLivingBaseIn.getName().getString() + "'s vine flesh puppet has worn off.");
+    public void removeAttributeModifiers(LivingEntity entity, @NotNull AttributeMap attributeMapIn, int amplifier) {
+        DevilRpg.LOGGER.debug(entity.getName().getString() + "'s vine flesh puppet has worn off. Owner; {}", owner);
     }
 
     @Override

@@ -1,6 +1,7 @@
 package com.chipoodle.devilrpg.client.render.entity.layer;
 
 import com.chipoodle.devilrpg.client.render.entity.model.SunflowerShulkerModel;
+import com.chipoodle.devilrpg.client.render.entity.renderer.SunflowerShulkerRenderer;
 import com.chipoodle.devilrpg.entity.SunflowerShulker;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -22,7 +23,7 @@ public class SunflowerShulkerHeadLayer extends RenderLayer<SunflowerShulker, Sun
    }
 
    public void render(@NotNull PoseStack poseStack, MultiBufferSource multiBufferSource, int p_117447_, SunflowerShulker sunflowerShulker, float p_117449_, float p_117450_, float p_117451_, float p_117452_, float p_117453_, float p_117454_) {
-      ResourceLocation resourcelocation = ShulkerRenderer.getTextureLocation(sunflowerShulker.getColor());
+      ResourceLocation resourcelocation = SunflowerShulkerRenderer.getTextureLocation(sunflowerShulker.getColor());
       VertexConsumer vertexconsumer = multiBufferSource.getBuffer(RenderType.entitySolid(resourcelocation));
       this.getParentModel().getHead().render(poseStack, vertexconsumer, p_117447_, LivingEntityRenderer.getOverlayCoords(sunflowerShulker, 0.0F));
    }

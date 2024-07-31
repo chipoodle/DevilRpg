@@ -113,12 +113,12 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
     }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag compound) {
+    public void readAdditionalSaveData(@NotNull CompoundTag compound) {
         super.readAdditionalSaveData(compound);
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag compound) {
+    public void addAdditionalSaveData(@NotNull CompoundTag compound) {
         super.addAdditionalSaveData(compound);
         compound.putString("OwnerUUID", "");
         compound.putString("Owner", "");
@@ -135,9 +135,9 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
      * share the same owner.
      */
     @Override
-    public boolean isAlliedTo(Entity entityIn) {
-        boolean isOnSameTeam = super.isAlliedTo(entityIn);
-        return isOnSameTeam || isEntitySameOwnerAsThis(entityIn, this);
+    public boolean isAlliedTo(@NotNull Entity entity) {
+        boolean isOnSameTeam = super.isAlliedTo(entity);
+        return isOnSameTeam || isEntitySameOwnerAsThis(entity, this);
     }
 
     @Override
@@ -164,14 +164,14 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
             } else
                 this.addEffect(frostbiteEffect);
             //IRenderUtilities.rotationParticles(Minecraft.getInstance().level, random, this, ParticleTypes.FLASH, NUMBER_OF_PARTICLES_FROST_BITE, RADIUS_PARTICLES);
-            IRenderUtilities.rotationParticles(Minecraft.getInstance().level, random, this, ParticleTypes.SNOWFLAKE, NUMBER_OF_PARTICLES_FROST_BITE, RADIUS_PARTICLES);
+            IRenderUtilities.rotationParticles(Minecraft.getInstance().level, random, this, ParticleTypes.WARPED_SPORE, NUMBER_OF_PARTICLES_FROST_BITE, RADIUS_PARTICLES);
         }
         double attackDamage = this.getAttributeValue(Attributes.ATTACK_DAMAGE);
         boolean flag = target.hurt(this.damageSources().mobAttack(this), (float) (attackDamage));
         MobEffectInstance mobEffectInstance = this.getEffect(MobEffects.DAMAGE_BOOST);
-        DevilRpg.LOGGER.debug("---------->doHurtTarget attdmg {} + frostbite: {} random: {} <= limit: {} effect lvl {}"
+        DevilRpg.LOGGER.debug("---------->doHurtTarget attdmg {} + frostbite: {} random: {} <= limit: {} effect lvl {} owner: {}  owneruuid: {}"
                 , attackDamage, Math.round((double) frostbite /2), randomNumber,
-                frostbite * PROBABILITY_MULTIPLIER, mobEffectInstance!= null? mobEffectInstance.getAmplifier(): 0 );
+                frostbite * PROBABILITY_MULTIPLIER, mobEffectInstance!= null? mobEffectInstance.getAmplifier(): 0,getOwner(), getOwnerUUID() );
 
 
         if (flag) {
@@ -338,70 +338,8 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
         return this;
     }
 
-    public boolean canBeLeashed(Player p_30396_) {
+    public boolean canBeLeashed(@NotNull Player player) {
         return false;
-    }
-
-    class SoulWolfAvoidEntityGoal<T extends LivingEntity> extends AvoidEntityGoal<T> {
-        private final SoulWolf wolf;
-
-        public SoulWolfAvoidEntityGoal(SoulWolf wolfIn, Class<T> entityClassToAvoidIn, float avoidDistanceIn,
-                                       double farSpeedIn, double nearSpeedIn) {
-            super(wolfIn, entityClassToAvoidIn, avoidDistanceIn, farSpeedIn, nearSpeedIn);
-            this.wolf = wolfIn;
-        }
-
-        /**
-         * Returns whether execution should begin. You can also read and cache any state
-         * necessary for execution in this method as well.
-         */
-        public boolean canUse() {
-            if (super.canUse() && this.toAvoid instanceof Llama) {
-                return this.wolf.isTame() && this.avoidLlama((Llama) this.toAvoid);
-            }
-            if (super.canUse() && this.toAvoid instanceof Turtle) {
-                return this.wolf.isTame() && this.avoidTurtle((Turtle) this.toAvoid);
-            }
-            if (super.canUse() && this.toAvoid instanceof Villager) {
-                return this.wolf.isTame() && this.avoidVillager((Villager) this.toAvoid);
-            }
-            if (super.canUse() && this.toAvoid instanceof IronGolem) {
-                return this.wolf.isTame() && this.avoidIronGolem((IronGolem) this.toAvoid);
-            }
-            return false;
-        }
-
-        private boolean avoidLlama(Llama llamaIn) {
-            return llamaIn.getStrength() >= SoulWolf.this.random.nextInt(5);
-        }
-
-        private boolean avoidTurtle(Turtle llamaIn) {
-            return true;
-        }
-
-        private boolean avoidVillager(Villager llamaIn) {
-            return true;
-        }
-
-        private boolean avoidIronGolem(IronGolem llamaIn) {
-            return true;
-        }
-
-        /**
-         * Execute a one shot task or start executing a continuous task
-         */
-        public void start() {
-            SoulWolf.this.setTarget(null);
-            super.start();
-        }
-
-        /**
-         * Keep ticking a continuous task that has already been started
-         */
-        public void tick() {
-            SoulWolf.this.setTarget(null);
-            super.tick();
-        }
     }
 
 }

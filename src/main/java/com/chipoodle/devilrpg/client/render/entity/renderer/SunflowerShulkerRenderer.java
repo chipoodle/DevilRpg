@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.client.render.entity.renderer;
 
+import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.client.render.entity.layer.SunflowerShulkerHeadLayer;
 import com.chipoodle.devilrpg.client.render.entity.model.SunflowerShulkerModel;
 import com.chipoodle.devilrpg.entity.SunflowerShulker;
@@ -23,20 +24,14 @@ import javax.annotation.Nullable;
 
 @OnlyIn(Dist.CLIENT)
 public class SunflowerShulkerRenderer extends MobRenderer<SunflowerShulker, SunflowerShulkerModel<SunflowerShulker>> {
-    private static final ResourceLocation DEFAULT_TEXTURE_LOCATION = new ResourceLocation("textures/" + Sheets.DEFAULT_SHULKER_TEXTURE_LOCATION.texture().getPath() + ".png");
-    private static final ResourceLocation[] TEXTURE_LOCATION = Sheets.SHULKER_TEXTURE_LOCATION.stream().map((p_115919_) -> {
-        return new ResourceLocation("textures/" + p_115919_.texture().getPath() + ".png");
-    }).toArray((p_115877_) -> {
-        return new ResourceLocation[p_115877_];
-    });
-
+    public static final ResourceLocation DEFAULT_TEXTURE_LOCATION = new ResourceLocation(DevilRpg.MODID + ":textures/entity/sunflowershulker/texture.png");
     public SunflowerShulkerRenderer(EntityRendererProvider.Context p_174370_) {
         super(p_174370_, new SunflowerShulkerModel<>(p_174370_.bakeLayer(SunflowerShulkerModel.DEFAULT_LAYER_LOCATION)), 0.0F);
         this.addLayer(new SunflowerShulkerHeadLayer(this));
     }
 
     public static ResourceLocation getTextureLocation(@Nullable DyeColor p_174376_) {
-        return p_174376_ == null ? DEFAULT_TEXTURE_LOCATION : TEXTURE_LOCATION[p_174376_.getId()];
+        return DEFAULT_TEXTURE_LOCATION;
     }
 
     public @NotNull Vec3 getRenderOffset(SunflowerShulker p_115904_, float p_115905_) {
@@ -44,12 +39,12 @@ public class SunflowerShulkerRenderer extends MobRenderer<SunflowerShulker, Sunf
     }
 
     public boolean shouldRender(@NotNull SunflowerShulker sunflowerShulker, @NotNull Frustum frustum, double p_115915_, double p_115916_, double p_115917_) {
-        return super.shouldRender(sunflowerShulker, frustum, p_115915_, p_115916_, p_115917_) ? true : sunflowerShulker.getRenderPosition(0.0F).filter((p_174374_) -> {
+        return super.shouldRender(sunflowerShulker, frustum, p_115915_, p_115916_, p_115917_) || sunflowerShulker.getRenderPosition(0.0F).filter((p_174374_) -> {
             EntityType<?> entitytype = sunflowerShulker.getType();
             float f = entitytype.getHeight() / 2.0F;
             float f1 = entitytype.getWidth() / 2.0F;
             Vec3 vec3 = Vec3.atBottomCenterOf(sunflowerShulker.blockPosition());
-            return frustum.isVisible((new AABB(p_174374_.x, p_174374_.y + (double) f, p_174374_.z, vec3.x, vec3.y + (double) f, vec3.z)).inflate((double) f1, (double) f, (double) f1));
+            return frustum.isVisible((new AABB(p_174374_.x, p_174374_.y + (double) f, p_174374_.z, vec3.x, vec3.y + (double) f, vec3.z)).inflate(f1, f, f1));
         }).isPresent();
     }
 

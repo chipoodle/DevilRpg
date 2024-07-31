@@ -1,12 +1,12 @@
 package com.chipoodle.devilrpg.entity;
 
+import com.chipoodle.devilrpg.capability.IGenericCapability;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.init.ModEntities;
 import com.chipoodle.devilrpg.util.SkillEnum;
-import net.minecraft.network.protocol.Packet;
-import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
-import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -21,11 +21,8 @@ import net.minecraft.world.entity.monster.RangedAttackMob;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.Objects;
 
 
 public class SoulWispArcher extends SoulWisp implements RangedAttackMob {
@@ -57,22 +54,26 @@ public class SoulWispArcher extends SoulWisp implements RangedAttackMob {
     }
 
     @Override
-    public void performRangedAttack(LivingEntity p_82196_1_, float p_82196_2_) {
-        double d0 = p_82196_1_.getX() - this.getX();
-        double d1 = p_82196_1_.getY(0.3233333333333333D) - this.getY();
-        double d2 = p_82196_1_.getZ() - this.getZ();
+    public void performRangedAttack(LivingEntity target, float p_82196_2_) {
+        double d0 = target.getX() - this.getX();
+        double d1 = target.getY(0.3333333333333333D) - this.getY();
+        double d2 = target.getZ() - this.getZ();
         double d3 = Math.sqrt(d0 * d0 + d2 * d2);
 
         var snowballEntity = new FrostBall(this.level, this);
-        snowballEntity.updateLevel((Player) Objects.requireNonNull(this.getOwner()), SkillEnum.SUMMON_WISP_ARCHER);
-        snowballEntity.shoot(d0, d1 + d3 * (double) 0.2F, d2, 1.6F, (float) (14 - this.level.getDifficulty().getId() * 4));
+
+        PlayerSkillCapabilityInterface unwrappedPlayerCapability = IGenericCapability.getUnwrappedPlayerCapability((Player) getOwner(), PlayerSkillCapability.INSTANCE);
+        Integer i = unwrappedPlayerCapability.getSkillsPoints().get(SkillEnum.SUMMON_WISP_ARCHER);
+
+        snowballEntity.updateLevel(this, i);
+        snowballEntity.shoot(d0, d1 + d3 * (double) 0.1F, d2, 1.6F, (float) (14 - this.level.getDifficulty().getId() * 4));
         this.playSound(SoundEvents.SKELETON_SHOOT, 1.0F, 1.0F / (this.getRandom().nextFloat() * 0.4F + 0.8F));
         this.level.addFreshEntity(snowballEntity);
         //this.setHealth(this.getHealth() -1.5F);
     }
 
     public void updateLevel(Player owner) {
-        super.updateLevel(owner,null,null,SkillEnum.SUMMON_WISP_ARCHER,true);
+        super.updateLevel(owner, null, null, SkillEnum.SUMMON_WISP_ARCHER, true);
     }
 
     @Nullable

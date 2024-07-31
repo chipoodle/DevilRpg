@@ -153,7 +153,7 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
     @Override
     public void setSoulBearInventory(CompoundTag soulbearInventory, Player player) {
         nbt.put(SOULBEAR_INVENTORY_KEY, soulbearInventory);
-        DevilRpg.LOGGER.debug("setSoulBearInventory {}", soulbearInventory);
+        //DevilRpg.LOGGER.debug("setSoulBearInventory {}", soulbearInventory);
         if (!player.level.isClientSide) {
             sendSkillChangesToClient((ServerPlayer) player);
         } else {

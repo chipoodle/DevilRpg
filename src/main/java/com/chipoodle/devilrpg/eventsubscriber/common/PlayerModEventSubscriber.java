@@ -51,6 +51,8 @@ public final class PlayerModEventSubscriber {
         event.put(ModEntities.WISP_BOMB.get(), SoulWispBomber.setAttributes().build());
         event.put(ModEntities.WISP_ARCHER.get(), SoulWispArcher.setAttributes().build());
         event.put(ModEntities.WISP_CHOPPER.get(), SoulWispChopper.setAttributes().build());
+        event.put(ModEntities.SUNFLOWER_SHULKER.get(), SunflowerShulker.createAttributes().build());
+        event.put(ModEntities.EXPLODING_SPORE_BULLET.get(),ExplodingSporeBullet.createAttributes().build());
     }
 
     @SubscribeEvent

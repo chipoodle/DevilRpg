@@ -25,7 +25,7 @@ public class MinionPassiveAttributes {
     private Player playerIn;
 
     public MinionPassiveAttributes(ITamableEntity entity) {
-        DevilRpg.LOGGER.info("||---->MinionPassiveAttributes");
+        DevilRpg.LOGGER.info("||---->MinionPassiveAttributes entity {}",((LivingEntity)entity).getUUID());
         levelIn = entity.getLevel();
         LivingEntity owner = entity.getOwner();
 
@@ -43,11 +43,16 @@ public class MinionPassiveAttributes {
             applyPassives((SoulBear) entity);
         }
         if (entity instanceof SoulWisp) {
-            factor = 1.0f;
+            factor = 0.9f;
             applyPassives((SoulWisp) entity);
+        }
+        if (entity instanceof SunflowerShulker) {
+            factor = 0.2f;
+            applyPassives((SunflowerShulker) entity);
         }
         apply(entity);
     }
+
 
     @SuppressWarnings("unchecked")
     private void apply(ITamableEntity entity) {
@@ -102,6 +107,9 @@ public class MinionPassiveAttributes {
     private void applyPassives(SoulWisp entity) {
         DevilRpg.LOGGER.info("||---->MinionPassiveAttributes SoulWispEntity");
 
+    }
+    private void applyPassives(SunflowerShulker entity) {
+        DevilRpg.LOGGER.info("||---->MinionPassiveAttributes SunflowerShulker");
     }
 
 }

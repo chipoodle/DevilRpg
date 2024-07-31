@@ -13,7 +13,6 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.stats.Stats;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -27,7 +26,6 @@ import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.*;
-import net.minecraft.world.phys.shapes.CollisionContext;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -35,7 +33,7 @@ import java.util.stream.StreamSupport;
 
 /**
  * A collection of methods related to target acquisition Source:
- * https://github.com/coolAlias/ZeldaSwordSkills/blob/1.8/src/main/java/zeldaswordskills/util/TargetUtils.java#L189
+ * <a href="https://github.com/coolAlias/ZeldaSwordSkills/blob/1.8/src/main/java/zeldaswordskills/util/TargetUtils.java#L189">...</a>
  */
 public class TargetUtils {
     public static final Random RANDOM = new Random();
@@ -643,8 +641,7 @@ public class TargetUtils {
 
     public static HitResult getPlayerRayResult() {
         Minecraft instance = Minecraft.getInstance();
-        HitResult hitResult = instance.hitResult;
-        return hitResult;
+        return instance.hitResult;
     }
 
     public static LivingEntity findClosestEnemy(final Player player) {
@@ -662,5 +659,18 @@ public class TargetUtils {
                 .min(Comparator.comparing(entity -> entity.position().distanceToSqr(player.position()))).orElse(null);
         //}
         return target;
+    }
+
+    public static BlockPos findSolidGround(Level level, BlockPos pos) {
+        while (pos.getY() > 0 && !level.getBlockState(pos).getMaterial().isSolid()
+                && pos.getY() > level.getMinBuildHeight() && level.getWorldBorder().isWithinBounds(pos)) {
+            pos = pos.below();
+        }
+        return pos;
+    }
+
+    public static BlockPos findSolidGroundMinusOneempty(Level level, BlockPos pos) {
+        BlockPos solidGround = findSolidGround(level, pos);
+        return solidGround.above();
     }
 }

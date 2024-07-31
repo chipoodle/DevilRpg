@@ -3,6 +3,7 @@ package com.chipoodle.devilrpg.skillsystem.skillinstance;
 import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapability;
 import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityInterface;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
+import com.chipoodle.devilrpg.entity.ExplodingSporeBullet;
 import com.chipoodle.devilrpg.entity.SoulWisp;
 import com.chipoodle.devilrpg.entity.SoulWispBomber;
 import com.chipoodle.devilrpg.init.ModEntities;
@@ -77,8 +78,13 @@ public class SkillSummonWispBomber extends AbstractSkillExecutor implements IWis
 
         SoulWispBomber sw = ModEntities.WISP_BOMB.get().create((ServerLevel) levelIn, null, null, blockPos, MobSpawnType.MOB_SUMMONED, true, true);
         Objects.requireNonNull(sw).updateLevel(playerIn);
-        sw.moveTo(blockPos, Mth.wrapDegrees(rand.nextFloat() * 360.0F), 0.0F);
-        levelIn.addFreshEntity(sw);
+       // sw.moveTo(blockPos, Mth.wrapDegrees(rand.nextFloat() * 360.0F), 0.0F);
+        //levelIn.addFreshEntity(sw);
+
+        ExplodingSporeBullet explodingSporeBullet = ModEntities.EXPLODING_SPORE_BULLET.get().create((ServerLevel) levelIn, null, null, blockPos, MobSpawnType.MOB_SUMMONED, true, true);
+        Objects.requireNonNull(explodingSporeBullet).updateLevel(playerIn);
+        explodingSporeBullet.moveTo(blockPos, Mth.wrapDegrees(rand.nextFloat() * 360.0F), 0.0F);
+        levelIn.addFreshEntity(explodingSporeBullet);
         return sw;
     }
 }

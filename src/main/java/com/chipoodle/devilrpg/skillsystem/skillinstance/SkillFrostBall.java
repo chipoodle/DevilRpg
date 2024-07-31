@@ -1,5 +1,7 @@
 package com.chipoodle.devilrpg.skillsystem.skillinstance;
 
+import com.chipoodle.devilrpg.capability.IGenericCapability;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.entity.FrostBall;
 import com.chipoodle.devilrpg.skillsystem.AbstractSkillExecutor;
@@ -37,7 +39,11 @@ public class SkillFrostBall extends AbstractSkillExecutor {
                 Random random = new Random();
                 levelIn.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.SNOWBALL_THROW, SoundSource.NEUTRAL, 0.5F, 0.4F / (random.nextFloat() * 0.4F + 0.8F));
                 FrostBall snowballEntity = new FrostBall(levelIn, player);
-                snowballEntity.updateLevel(player, SkillEnum.FROSTBALL);
+
+                PlayerSkillCapabilityInterface unwrappedPlayerCapability = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerSkillCapability.INSTANCE);
+                Integer i = unwrappedPlayerCapability.getSkillsPoints().get(SkillEnum.FROSTBALL);
+
+                snowballEntity.updateLevel(player, i);
                 snowballEntity.shootFromRotation(player, player.getXRot(), player.getYRot(), 0.0F, 1.5F, 1.0F);
                 levelIn.addFreshEntity(snowballEntity);
                 player.getCooldowns().addCooldown(icon.getItem(), 20);

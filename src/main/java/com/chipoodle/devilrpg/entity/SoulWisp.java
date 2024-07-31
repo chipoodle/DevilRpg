@@ -60,8 +60,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 
-public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, FlyingAnimal, ISoulEntity, PowerableMob,
-        NeutralMob, IPassiveMinionUpdater<SoulWisp> {
+public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, FlyingAnimal, ISoulEntity, PowerableMob, NeutralMob, IPassiveMinionUpdater<SoulWisp> {
 
     protected static final double DISTANCIA_EFECTO = 20;
     protected static final int DURATION_TICKS = 120;
