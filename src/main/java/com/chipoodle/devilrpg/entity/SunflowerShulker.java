@@ -11,7 +11,6 @@ import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
@@ -123,7 +122,7 @@ public class SunflowerShulker extends TamableAnimal implements ITamableEntity, I
             tame(owner);
             PlayerSkillCapabilityInterface skill = IGenericCapability.getUnwrappedPlayerCapability((Player) getOwner(), PlayerSkillCapability.INSTANCE);
             this.puntosAsignados = skill.getSkillsPoints().get(SkillEnum.VINEFLESHBALL);
-            limitedLifeTicks = 400 + puntosAsignados * 10;
+            limitedLifeTicks = 600 + puntosAsignados * 10;
 
             Objects.requireNonNull(this.getAttribute(Attributes.MAX_HEALTH)).setBaseValue(10 + (double) puntosAsignados / 2);
             DevilRpg.LOGGER.info("--------> update limitedLifeTicks seconds: = {} life {}", limitedLifeTicks / 20, Objects.requireNonNull(this.getAttribute(Attributes.MAX_HEALTH)).getValue());
