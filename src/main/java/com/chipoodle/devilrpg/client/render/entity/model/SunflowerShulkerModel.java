@@ -3,8 +3,6 @@ package com.chipoodle.devilrpg.client.render.entity.model;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.entity.SunflowerShulker;
 import com.google.common.collect.ImmutableList;
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.model.ListModel;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
@@ -55,31 +53,33 @@ public class SunflowerShulkerModel<T extends SunflowerShulker> extends ListModel
     public void setupAnim(T p_103735_, float p_103736_, float p_103737_, float p_103738_, float p_103739_, float p_103740_) {
         float f = p_103738_ - (float) p_103735_.tickCount;
         float f1 = (0.5F + p_103735_.getClientPeekAmount(f)) * (float) Math.PI;
-        float f2 = -1.0F + Mth.sin(f1);
+        //float f2 = -1.0F + Mth.sin(f1);
         float f3 = 0.0F;
         if (f1 > (float) Math.PI) {
             f3 = Mth.sin(p_103738_ * 0.1F) * 0.7F;
         }
 
-        this.lid.setPos(0.0F, 16.0F + Mth.sin(f1) * 8.0F + f3, 0.0F);
-        if (p_103735_.getClientPeekAmount(f) > 0.3F) {
-            this.lid.yRot = f2 * f2 * f2 * f2 * (float) Math.PI * 0.125F;
-        } else {
-            this.lid.yRot = 0.0F;
-        }
+        //this.lid.setPos(0.0F, 16.0F + Mth.sin(f1) * 8.0F + f3, 0.0F);
+        this.lid.setPos(0.0F, 26.0F + Mth.sin(f1) * 1.1F + f3, 0.0F);
+        //if (p_103735_.getClientPeekAmount(f) > 0.3F) {
+        //this.lid.yRot = f2 * f2 * f2 * f2 * (float) Math.PI * 0.125F; //rotación de la cabeza del hongo
+        //} else {
+        this.lid.yRot = 0.0F;
+        // }
 
-        this.head.setPos(0.0F, 12.0F , 0.0F);
+        this.head.setPos(0.0F, 12.0F, 0.0F);
         this.head.xRot = p_103740_ * ((float) Math.PI / 180F);
         this.head.yRot = (p_103735_.yHeadRot - 180.0F - p_103735_.yBodyRot) * ((float) Math.PI / 180F);
+        this.lid.yRot = this.head.yRot;
     }
 
     public @NotNull Iterable<ModelPart> parts() {
         return ImmutableList.of(this.base, this.lid);
     }
 
-    public ModelPart getLid() {
-        return this.lid;
-    }
+    //public ModelPart getLid() {
+    //return this.lid;
+    //}
 
     public ModelPart getHead() {
         return this.head;

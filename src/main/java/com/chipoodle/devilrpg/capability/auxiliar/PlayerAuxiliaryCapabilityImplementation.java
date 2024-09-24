@@ -1,6 +1,5 @@
 package com.chipoodle.devilrpg.capability.auxiliar;
 
-import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.network.handler.PlayerAuxiliarClientServerHandler;
 import net.minecraft.nbt.CompoundTag;

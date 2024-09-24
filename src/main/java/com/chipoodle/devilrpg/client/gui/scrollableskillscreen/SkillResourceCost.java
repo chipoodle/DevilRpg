@@ -1,7 +1,6 @@
 package com.chipoodle.devilrpg.client.gui.scrollableskillscreen;
 
 import com.google.gson.JsonObject;
-
 import net.minecraft.util.GsonHelper;
 
 public class SkillResourceCost {

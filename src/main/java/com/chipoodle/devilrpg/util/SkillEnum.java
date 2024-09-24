@@ -32,6 +32,7 @@ public enum SkillEnum {
     WEREWOLF_VITALITY("WereWolfVitality","Werewolf Vitality","werewolf_vitality",false,false),
     MINION_VITALITY("MinionVitality","Minion Vitality","summon_minion_vitality",false,true),
     SOULVINE("Soulvine","Soulvine","soulvine",true,false),
+    SOULSHIELDVINE("Soulshieldvine","Soulshieldvine","soulshieldvine",true,false),
     SOULLICHEN("Soullichen","Soullichen","soullichen",true,false),
     VINEFLESHBALL("Vinefleshball","Vinefleshball","vinefleshball",true,false),
     MANA_POOL("ManaPool","Mana Pool","mana_pool",false,false),
@@ -72,22 +73,22 @@ public enum SkillEnum {
     }
 
     public static SkillEnum getByName(String name) {
-    	return Arrays.asList(SkillEnum.values()).stream().filter(x->x.name.equals(name)).findAny().orElse(EMPTY);
+    	return Arrays.stream(SkillEnum.values()).filter(x->x.name.equals(name)).findAny().orElse(EMPTY);
     }
     public static SkillEnum getByJsonName(String jsonName) {
-    	return Arrays.asList(SkillEnum.values()).stream().filter(x->x.jsonName.equals(jsonName)).findAny().orElse(EMPTY);
+    	return Arrays.stream(SkillEnum.values()).filter(x->x.jsonName.equals(jsonName)).findAny().orElse(EMPTY);
     }
     public static SkillEnum getByDescription(String description) {
-    	return Arrays.asList(SkillEnum.values()).stream().filter(x->x.description.equals(description)).findAny().orElse(EMPTY);
+    	return Arrays.stream(SkillEnum.values()).filter(x->x.description.equals(description)).findAny().orElse(EMPTY);
     }
     public static List<SkillEnum> getActiveSkills() {
-    	return Arrays.asList(SkillEnum.values()).stream().filter(x->x.activeSkill).collect(Collectors.toList());
+        return Arrays.stream(SkillEnum.values()).filter(x -> x.activeSkill).collect(Collectors.toList());
     }
     public static List<SkillEnum> getPassiveSkills() {
-    	return Arrays.asList(SkillEnum.values()).stream().filter(x->!x.activeSkill).collect(Collectors.toList());
+    	return Arrays.stream(SkillEnum.values()).filter(x->!x.activeSkill).collect(Collectors.toList());
     }
     
     public static List<SkillEnum> getSkillsWithoutEmpty() {
-    	return Arrays.asList(SkillEnum.values()).stream().filter(x->!x.equals(EMPTY)).collect(Collectors.toList());
+    	return Arrays.stream(SkillEnum.values()).filter(x->!x.equals(EMPTY)).collect(Collectors.toList());
     }
 }

@@ -1,6 +1,5 @@
 package com.chipoodle.devilrpg.util;
 
-import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.init.ModItems;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;

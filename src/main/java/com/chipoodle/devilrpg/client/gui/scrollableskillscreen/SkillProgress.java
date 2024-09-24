@@ -1,19 +1,17 @@
 package com.chipoodle.devilrpg.client.gui.scrollableskillscreen;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import net.minecraft.advancements.CriterionProgress;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
+
+import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-
-import javax.annotation.Nullable;
-
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-
-import net.minecraft.advancements.CriterionProgress;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 public class SkillProgress implements Comparable<SkillProgress> {
 	private final Map<String, CriterionProgress> criteria = Maps.newHashMap();

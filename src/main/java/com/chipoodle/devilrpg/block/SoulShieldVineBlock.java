@@ -1,6 +1,6 @@
 package com.chipoodle.devilrpg.block;
 
-import com.chipoodle.devilrpg.blockentity.SoulVineBlockEntity;
+import com.chipoodle.devilrpg.blockentity.SoulShieldVineBlockEntity;
 import com.chipoodle.devilrpg.init.ModBlocks;
 import com.chipoodle.devilrpg.init.ModEntityBlocks;
 import net.minecraft.core.BlockPos;
@@ -32,19 +32,19 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 
-public class SoulVineBlock extends Block implements EntityBlock {
+public class SoulShieldVineBlock extends Block implements EntityBlock {
 
     public static final VoxelShape SHAPE = Block.box(4.0D, 0.0D, 4.0D, 12.0D, 15.0D, 12.0D);
     public static final IntegerProperty AGE = BlockStateProperties.AGE_25;
     public static final DirectionProperty DIRECTIONS = BlockStateProperties.FACING;
-    public static final IntegerProperty LEVEL = IntegerProperty.create("soulvine_level", 0, 30);
-    public static final BooleanProperty HAS_CHILDREN = BooleanProperty.create("soulvine_has_children");
-    public static final DirectionProperty SOULVINE_FACING = DirectionProperty.create("soulvine_facing", BlockStateProperties.FACING.getPossibleValues());
+    public static final IntegerProperty LEVEL = IntegerProperty.create("soulshieldvine_level", 0, 30);
+    public static final BooleanProperty HAS_CHILDREN = BooleanProperty.create("soulshieldvine_has_children");
+    public static final DirectionProperty SOULVINE_FACING = DirectionProperty.create("soulshieldvine_facing", BlockStateProperties.FACING.getPossibleValues());
 
     private static final Integer MAX_AGE = 25;
     protected final Direction growthDirection;
 
-    public SoulVineBlock(Properties properties) {
+    public SoulShieldVineBlock(Properties properties) {
         super(properties);
         growthDirection = Direction.UP;
         this.registerDefaultState(this.defaultBlockState()
@@ -57,8 +57,8 @@ public class SoulVineBlock extends Block implements EntityBlock {
 
     }
 
-    protected static @NotNull Block getSoulVineBlock() {
-        return ModBlocks.SOUL_VINE_BLOCK.get();
+    protected static @NotNull Block getSoulShieldVineBlock() {
+        return ModBlocks.SOUL_SHIELD_VINE_BLOCK.get();
     }
 
     public static BlockState getGrowIntoState(BlockState p_221347_) {
@@ -79,7 +79,7 @@ public class SoulVineBlock extends Block implements EntityBlock {
     }
 
     public static @NotNull Boolean canSurvive(@NotNull LevelReader levelReader, @NotNull BlockPos currentBlockPos) {
-        Block soulVineBlock = getSoulVineBlock();
+        Block soulVineBlock = getSoulShieldVineBlock();
         Collection<Direction> possibleValues = DIRECTIONS.getPossibleValues();
         for (Direction possibleDirection : possibleValues) {
             BlockState nextState = getNextState(levelReader, currentBlockPos, possibleDirection);
@@ -100,7 +100,7 @@ public class SoulVineBlock extends Block implements EntityBlock {
         possibleValues.add(0, Direction.UP);
         for (Direction possibleDirection : possibleValues) {
             BlockState nextState = getNextState(levelReader, currentBlockPos, possibleDirection);
-            if (!nextState.isAir() && !(nextState.getBlock() instanceof SoulVineBlock)) {
+            if (!nextState.isAir() && !(nextState.getBlock() instanceof SoulShieldVineBlock)) {
                 return true;
             }
         }
@@ -127,7 +127,7 @@ public class SoulVineBlock extends Block implements EntityBlock {
     @Nullable
     public BlockState getStateForPlacement(BlockPlaceContext p_53868_) {
         BlockState blockstate = p_53868_.getLevel().getBlockState(p_53868_.getClickedPos().relative(this.growthDirection));
-        return !blockstate.is(getSoulVineBlock()) ? this.getStateForPlacement(p_53868_.getLevel()) : getSoulVineBlock().defaultBlockState();
+        return !blockstate.is(getSoulShieldVineBlock()) ? this.getStateForPlacement(p_53868_.getLevel()) : getSoulShieldVineBlock().defaultBlockState();
     }
 
     public boolean isRandomlyTicking(BlockState blockState) {
@@ -151,14 +151,14 @@ public class SoulVineBlock extends Block implements EntityBlock {
     @Nullable
     @Override
     public BlockEntity newBlockEntity(@NotNull BlockPos pos, @NotNull BlockState state) {
-        return ModEntityBlocks.SOUL_VINE_ENTITY_BLOCK.get().create(pos, state);
+        return ModEntityBlocks.SOUL_SHIELD_VINE_ENTITY_BLOCK.get().create(pos, state);
     }
 
     @Nullable
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, @NotNull BlockState blockState, @NotNull BlockEntityType<T> type) {
         return level.isClientSide ? null : (alevel, pos, aBlockstate, blockEntity) -> {
-            if (blockEntity instanceof SoulVineBlockEntity soulVineBlockEntity && alevel.getGameTime() % 3 == 0) {
+            if (blockEntity instanceof SoulShieldVineBlockEntity soulVineBlockEntity && alevel.getGameTime() % 3 == 0) {
                 soulVineBlockEntity.tick(blockState, (ServerLevel) alevel, pos, alevel.getRandom());
             }
         };

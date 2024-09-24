@@ -6,20 +6,16 @@
 package com.chipoodle.devilrpg.eventsubscriber.client;
 
 import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
-import com.chipoodle.devilrpg.util.EventUtils;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.ViewportEvent;
-import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.function.BiConsumer;
 
 /**
  * Subscribe to events from the FORGE EventBus that should be handled on the

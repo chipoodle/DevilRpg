@@ -1,7 +1,6 @@
 package com.chipoodle.devilrpg.capability.experience;
 
 import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;

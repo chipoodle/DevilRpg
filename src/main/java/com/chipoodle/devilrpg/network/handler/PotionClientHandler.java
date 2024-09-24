@@ -1,6 +1,5 @@
 package com.chipoodle.devilrpg.network.handler;
 
-import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.util.TargetUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;

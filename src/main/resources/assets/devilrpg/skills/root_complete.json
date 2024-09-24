@@ -109,6 +109,26 @@
         "parent": "nature:root"
     },
     {
+        "id": "nature:soulshieldvine",
+        "display": {
+            "description": "A vine that surrounds you to block enemies",
+            "icon": {
+                "item": "devilrpg:item_vine"
+            },
+            "title": "Soulshieldvine",
+            "image": "devilrpg:textures/gui/skill/laurels.png",
+            "frame": "task"
+        },
+        "capability": "soulshieldvine",
+        "skillmanacost":{
+            "maxskilllevel":"20",
+            "manacost":"15",
+            "resourcetype":"mana"
+        },
+        "rewards": {},
+        "parent": "nature:soulvine"
+    },
+    {
         "id": "nature:soullichen",
         "display": {
             "description": "A vine that slows down enemies",

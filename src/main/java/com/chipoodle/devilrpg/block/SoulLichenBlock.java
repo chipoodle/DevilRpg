@@ -1,7 +1,6 @@
 package com.chipoodle.devilrpg.block;
 
 import com.chipoodle.devilrpg.blockentity.SoulLichenBlockEntity;
-import com.chipoodle.devilrpg.entity.ISoulEntity;
 import com.chipoodle.devilrpg.entity.ITamableEntity;
 import com.chipoodle.devilrpg.init.ModEntities;
 import com.chipoodle.devilrpg.init.ModEntityBlocks;

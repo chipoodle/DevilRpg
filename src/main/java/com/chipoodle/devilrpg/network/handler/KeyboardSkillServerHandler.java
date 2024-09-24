@@ -9,7 +9,6 @@ import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.network.NetworkDirection;
 import net.minecraftforge.network.NetworkEvent;
 
-
 import java.util.function.Supplier;
 
 public record KeyboardSkillServerHandler(PowerEnum poder) {

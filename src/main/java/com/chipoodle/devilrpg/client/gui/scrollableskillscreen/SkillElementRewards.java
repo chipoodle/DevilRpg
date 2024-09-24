@@ -1,17 +1,7 @@
 package com.chipoodle.devilrpg.client.gui.scrollableskillscreen;
 
-import java.util.List;
-
-import javax.annotation.Nullable;
-
 import com.google.common.collect.Lists;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonNull;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParseException;
-
-
+import com.google.gson.*;
 import net.minecraft.commands.CommandFunction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -24,6 +14,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
+
+import javax.annotation.Nullable;
+import java.util.List;
 
 public class SkillElementRewards {
 	public static final SkillElementRewards EMPTY = new SkillElementRewards(0, new ResourceLocation[0],

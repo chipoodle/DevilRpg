@@ -1,18 +1,15 @@
 package com.chipoodle.devilrpg.client.render.entity.layer;
 
 import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.client.render.entity.model.SoulBearModel;
 import com.chipoodle.devilrpg.client.render.entity.model.SoulWolfModel;
 import com.chipoodle.devilrpg.client.render.entity.model.SoulWolfModelHeart;
 import com.chipoodle.devilrpg.entity.SoulWolf;
-import com.chipoodle.devilrpg.util.IRenderUtilities;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.model.geom.EntityModelSet;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.client.renderer.texture.OverlayTexture;

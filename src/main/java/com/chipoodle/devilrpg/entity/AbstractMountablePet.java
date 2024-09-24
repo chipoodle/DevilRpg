@@ -1,6 +1,5 @@
 package com.chipoodle.devilrpg.entity;
 
-import com.chipoodle.devilrpg.entity.container.MountablePetContainerMenu;
 import com.chipoodle.devilrpg.entity.goal.TamablePetRandomStandGoal;
 import com.chipoodle.devilrpg.entity.goal.TamablePetRunAroundLikeCrazyGoal;
 import net.minecraft.advancements.CriteriaTriggers;
@@ -46,7 +45,6 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.scores.Team;
-import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Vector3f;
 

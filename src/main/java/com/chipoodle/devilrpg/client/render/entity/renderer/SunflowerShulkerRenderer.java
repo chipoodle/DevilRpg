@@ -5,12 +5,9 @@ import com.chipoodle.devilrpg.client.render.entity.layer.SunflowerShulkerHeadLay
 import com.chipoodle.devilrpg.client.render.entity.model.SunflowerShulkerModel;
 import com.chipoodle.devilrpg.entity.SunflowerShulker;
 import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.client.model.geom.ModelLayers;
-import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.MobRenderer;
-import net.minecraft.client.renderer.entity.layers.ShulkerHeadLayer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.DyeColor;

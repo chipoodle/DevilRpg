@@ -1,11 +1,10 @@
 package com.chipoodle.devilrpg.entity;
 
-import java.util.Map;
-
-import com.chipoodle.devilrpg.DevilRpg;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+
+import java.util.Map;
 
 
 public interface IPassiveMinionUpdater<T extends ITamableEntity> {

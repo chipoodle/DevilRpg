@@ -1,7 +1,6 @@
 package com.chipoodle.devilrpg.client.render.entity.renderer;
 
 import com.chipoodle.devilrpg.client.render.entity.model.ExplodingSporeBulletModel;
-import com.chipoodle.devilrpg.entity.ExplodingSporeBullet;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;

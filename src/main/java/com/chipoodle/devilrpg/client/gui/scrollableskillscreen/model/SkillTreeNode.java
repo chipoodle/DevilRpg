@@ -1,11 +1,10 @@
 package com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model;
 
-import java.util.List;
-
-import javax.annotation.Nullable;
-
 import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillElement;
 import com.google.common.collect.Lists;
+
+import javax.annotation.Nullable;
+import java.util.List;
 
 
 public class SkillTreeNode {

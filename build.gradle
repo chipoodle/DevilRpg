@@ -2,12 +2,13 @@
 plugins {
     id 'eclipse'
     id 'idea'
+    id 'maven-publish'
     id 'net.minecraftforge.gradle' version '[6.0,6.2)'
 }
 
 
-group = mod_version
-version = mod_group_id
+group = mod_group_id
+version = mod_version
 
 base {
     archivesName = mod_id
@@ -17,6 +18,7 @@ java {
     toolchain.languageVersion = JavaLanguageVersion.of(17)
 }
 
+println "Java: ${System.getProperty 'java.version'}, JVM: ${System.getProperty 'java.vm.version'} (${System.getProperty 'java.vendor'}), Arch: ${System.getProperty 'os.arch'}"
 minecraft {
     // The mappings can be changed at any time and must be in the following format.
     // Channel:   Version:
@@ -74,6 +76,9 @@ minecraft {
             // You can set various levels here.
             // Please read: https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels
             property 'forge.logging.console.level', 'debug'
+
+            // Comma-separated list of namespaces to load gametests from. Empty = all namespaces.
+            property 'forge.enabledGameTestNamespaces', mod_id
 
             mods {
                 "${mod_id}" {
@@ -185,6 +190,19 @@ tasks.named('jar', Jar).configure {
 
     // This is the preferred method to reobfuscate your jar file
     finalizedBy 'reobfJar'
+}
+
+publishing {
+    publications {
+        register('mavenJava', MavenPublication) {
+            artifact jar
+        }
+    }
+    repositories {
+        maven {
+            url "file://${project.projectDir}/mcmodsrepo"
+        }
+    }
 }
 
 tasks.withType(JavaCompile).configureEach {

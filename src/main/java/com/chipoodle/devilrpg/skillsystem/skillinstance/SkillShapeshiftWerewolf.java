@@ -22,7 +22,6 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
@@ -33,7 +32,10 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.common.ForgeMod;
 import net.minecraftforge.common.util.LazyOptional;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Objects;
+import java.util.Random;
+import java.util.UUID;
 
 public class SkillShapeshiftWerewolf extends AbstractPlayerPassiveAttributeExecutor implements ICapabilityAttributeModifier {
     // public static final String HEALTH = "HEALTH";

@@ -2,12 +2,10 @@ package com.chipoodle.devilrpg.skillsystem.skillinstance;
 
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
 import com.chipoodle.devilrpg.entity.LichenSeedBall;
-import com.chipoodle.devilrpg.init.ModEffects;
 import com.chipoodle.devilrpg.skillsystem.AbstractSkillExecutor;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;

@@ -3,16 +3,12 @@ package com.chipoodle.devilrpg.init;
 import com.chipoodle.devilrpg.DevilRpg;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.data.PackOutput;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.BlockTags;
-import net.minecraft.tags.TagKey;
-import net.minecraft.world.level.block.Block;
 import net.minecraftforge.common.data.BlockTagsProvider;
 import net.minecraftforge.common.data.ExistingFileHelper;
 import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
-import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
 
 public class ModBlockTags extends BlockTagsProvider {

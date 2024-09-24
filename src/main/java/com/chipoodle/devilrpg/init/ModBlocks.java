@@ -2,6 +2,7 @@ package com.chipoodle.devilrpg.init;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.block.SoulLichenBlock;
+import com.chipoodle.devilrpg.block.SoulShieldVineBlock;
 import com.chipoodle.devilrpg.block.SoulVineBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -27,6 +28,10 @@ public final class ModBlocks {
 
     public static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(ForgeRegistries.BLOCKS, DevilRpg.MODID);
     public static final RegistryObject<SoulVineBlock> SOUL_VINE_BLOCK = BLOCKS.register("soulvine", () -> new SoulVineBlock(
+            Block. Properties.of(Material.PLANT, MaterialColor.COLOR_GREEN).randomTicks().noCollission().instabreak().sound(SoundType.WEEPING_VINES)
+    ));
+
+    public static final RegistryObject<SoulShieldVineBlock> SOUL_SHIELD_VINE_BLOCK = BLOCKS.register("soulshieldvine", () -> new SoulShieldVineBlock(
             Block. Properties.of(Material.PLANT, MaterialColor.COLOR_GREEN).randomTicks().noCollission().instabreak().sound(SoundType.WEEPING_VINES)
     ));
 

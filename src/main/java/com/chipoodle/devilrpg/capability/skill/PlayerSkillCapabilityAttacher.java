@@ -2,7 +2,6 @@ package com.chipoodle.devilrpg.capability.skill;
 
 
 import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapability;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;

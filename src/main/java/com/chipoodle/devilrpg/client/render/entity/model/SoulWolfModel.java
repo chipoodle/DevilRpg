@@ -3,7 +3,6 @@ package com.chipoodle.devilrpg.client.render.entity.model;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.entity.SoulWolf;
 import com.google.common.collect.ImmutableList;
-
 import net.minecraft.client.model.ColorableAgeableListModel;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
@@ -12,10 +11,8 @@ import net.minecraft.client.model.geom.builders.CubeListBuilder;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.model.geom.builders.PartDefinition;
-
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
-
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jetbrains.annotations.NotNull;

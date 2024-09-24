@@ -2,7 +2,6 @@ package com.chipoodle.devilrpg.effects;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.entity.SunflowerShulker;
-import com.chipoodle.devilrpg.entity.goal.MiniFireAttackGoal;
 import com.chipoodle.devilrpg.init.ModEffects;
 import com.chipoodle.devilrpg.init.ModEntities;
 import net.minecraft.core.BlockPos;
@@ -10,7 +9,6 @@ import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectCategory;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.AttributeMap;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;

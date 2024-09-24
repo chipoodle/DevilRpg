@@ -1,17 +1,10 @@
 package com.chipoodle.devilrpg.client.gui.scrollableskillscreen;
 
-import java.util.Set;
-import java.util.function.Consumer;
-import java.util.function.Function;
-
-import javax.annotation.Nullable;
-
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import com.google.common.collect.Sets;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
-
 import net.minecraft.ChatFormatting;
 import net.minecraft.advancements.DisplayInfo;
 import net.minecraft.advancements.FrameType;
@@ -24,6 +17,11 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.GsonHelper;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ItemLike;
+
+import javax.annotation.Nullable;
+import java.util.Set;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 
 public class SkillElement {

@@ -8,7 +8,6 @@ import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.client.gui.ScreenUtils;
-import org.jetbrains.annotations.NotNull;
 
 
 public class CustomSkillButton extends Button {

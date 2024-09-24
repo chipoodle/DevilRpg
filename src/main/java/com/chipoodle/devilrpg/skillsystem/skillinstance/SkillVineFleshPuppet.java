@@ -1,7 +1,6 @@
 package com.chipoodle.devilrpg.skillsystem.skillinstance;
 
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
-import com.chipoodle.devilrpg.entity.LichenSeedBall;
 import com.chipoodle.devilrpg.entity.VineFleshPuppetSeedBall;
 import com.chipoodle.devilrpg.skillsystem.AbstractSkillExecutor;
 import com.chipoodle.devilrpg.util.SkillEnum;

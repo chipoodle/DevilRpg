@@ -6,7 +6,6 @@ import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectCategory;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeMap;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -16,7 +15,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 public class MobEffectKnockbackResistance extends MobEffect {
-    private static final UUID KNOCKBACK_RESISTANCE_UUID = UUID.fromString("AF8B6E3F-3328-4C0A-BB47-5BA2BB9DBEF3");
+    private static final UUID KNOCKBACK_RESISTANCE_UUID = UUID.fromString("AF8B6E3F-3328-4C0A-BB47-5FF2BB9DBEF3");
     private AttributeModifier attMod = null;
 
     public MobEffectKnockbackResistance() {

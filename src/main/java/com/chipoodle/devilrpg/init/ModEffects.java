@@ -1,8 +1,8 @@
 package com.chipoodle.devilrpg.init;
 
 import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.effects.MobEffectKnockbackResistance;
 import com.chipoodle.devilrpg.effects.MobEffectEntangling;
+import com.chipoodle.devilrpg.effects.MobEffectKnockbackResistance;
 import com.chipoodle.devilrpg.effects.MobEffectVineFleshPuppet;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraftforge.registries.DeferredRegister;

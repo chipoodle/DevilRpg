@@ -6,7 +6,6 @@ import com.chipoodle.devilrpg.config.ConfigHolder;
 import com.chipoodle.devilrpg.entity.*;
 import com.chipoodle.devilrpg.init.ModEntities;
 import com.chipoodle.devilrpg.init.ModItems;
-import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.BlockItem;

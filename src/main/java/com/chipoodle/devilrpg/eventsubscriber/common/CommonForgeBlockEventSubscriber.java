@@ -7,8 +7,6 @@ import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
-import java.util.Objects;
-
 @Mod.EventBusSubscriber(modid = DevilRpg.MODID)
 public class CommonForgeBlockEventSubscriber {
 

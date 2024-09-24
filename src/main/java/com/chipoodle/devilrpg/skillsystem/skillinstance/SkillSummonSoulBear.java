@@ -1,11 +1,5 @@
 package com.chipoodle.devilrpg.skillsystem.skillinstance;
 
-import java.util.HashMap;
-import java.util.Objects;
-import java.util.Random;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentLinkedQueue;
-
 import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapability;
 import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityInterface;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
@@ -13,9 +7,7 @@ import com.chipoodle.devilrpg.entity.SoulBear;
 import com.chipoodle.devilrpg.init.ModEntities;
 import com.chipoodle.devilrpg.skillsystem.AbstractSkillExecutor;
 import com.chipoodle.devilrpg.util.SkillEnum;
-
 import com.chipoodle.devilrpg.util.TargetUtils;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
@@ -26,6 +18,12 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraftforge.common.util.LazyOptional;
+
+import java.util.HashMap;
+import java.util.Objects;
+import java.util.Random;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class SkillSummonSoulBear extends AbstractSkillExecutor {
 

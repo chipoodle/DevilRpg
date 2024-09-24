@@ -1,9 +1,6 @@
 package com.chipoodle.devilrpg.init;
 
-import static com.chipoodle.devilrpg.DevilRpg.LOGGER;
-
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityAttacher;
-
 import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapabilityAttacher;
 import com.chipoodle.devilrpg.capability.mana.PlayerManaCapabilityAttacher;
 import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityAttacher;
@@ -12,8 +9,9 @@ import com.chipoodle.devilrpg.capability.stamina.PlayerStaminaCapabilityAttacher
 import com.chipoodle.devilrpg.capability.tamable_minion.TamableMinionCapabilityAttacher;
 import com.chipoodle.devilrpg.entity.ITamableEntity;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
+
+import static com.chipoodle.devilrpg.DevilRpg.LOGGER;
 
 public class ModCapability {
 	public static void registerForPlayer(AttachCapabilitiesEvent<Entity> event) {

@@ -1,10 +1,10 @@
 package com.chipoodle.devilrpg.client.render.entity.layer;
 
 import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.util.IRenderUtilities;
 import com.chipoodle.devilrpg.client.render.entity.model.SoulBearModel;
 import com.chipoodle.devilrpg.client.render.entity.model.SoulBearModelHeart;
 import com.chipoodle.devilrpg.entity.SoulBear;
+import com.chipoodle.devilrpg.util.IRenderUtilities;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.model.EntityModel;
