@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.skillsystem.skillinstance;
 
+import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.block.SoulShieldVineBlock;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
@@ -16,6 +17,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.Material;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.HashMap;
@@ -42,7 +44,7 @@ public class SkillSoulShieldVine extends AbstractSkillExecutor {
         BlockPos newBlockpos = playerBlockPos.relative(nearestDirection);
         boolean canPlace = playerBlockState.getBlock().equals(Blocks.AIR)
                 && player.level.getBlockState(newBlockpos).getBlock().equals(Blocks.AIR)
-                && SoulShieldVineBlock.hasAtLeasOneSolidNeighbourPerpendicularToGrowDirection(player.level,newBlockpos,nearestDirection);
+                && SoulShieldVineBlock.hasAtLeasOneSolidNeighbourPerpendicularToGrowDirection(player.level, newBlockpos, nearestDirection);
         return !player.getCooldowns().isOnCooldown(icon.getItem()) && canPlace;
     }
 
@@ -57,35 +59,63 @@ public class SkillSoulShieldVine extends AbstractSkillExecutor {
 
                 PlayerSkillCapabilityInterface skillCap = IGenericCapability.getUnwrappedPlayerCapability(player,
                         PlayerSkillCapability.INSTANCE);
-                setVine(levelIn, player, skillCap);
+                //setVine(levelIn, player, skillCap);
+                createDome(levelIn, player, skillCap);
                 player.getCooldowns().addCooldown(icon.getItem(), 20);
             }
         }
     }
 
-    private void setVine(Level level, Player playerIn, PlayerSkillCapabilityInterface skillCap) {
+    private void createDome(Level level, Player playerIn, PlayerSkillCapabilityInterface skillCap) {
         BlockPos playerBlockPos = playerIn.blockPosition();
         SoulShieldVineBlock createdBlock = ModBlocks.SOUL_SHIELD_VINE_BLOCK.get();
-        BlockState playerBlockState = level.getBlockState(playerBlockPos);
-        Vec3 playerLookVector = playerIn.getLookAngle();
-        Direction nearestDirection = Direction.getNearest(playerLookVector.x, 0, playerLookVector.z);
-        //DevilRpg.LOGGER.info("-------->Direction: {}", nearestDirection);
-        BlockPos newBlockpos = playerBlockPos.relative(nearestDirection);
-        if (playerBlockState.getBlock().equals(Blocks.AIR)
-                && level.getBlockState(newBlockpos).getBlock().equals(Blocks.AIR)
-                && SoulShieldVineBlock.hasAtLeasOneSolidNeighbourPerpendicularToGrowDirection(level,newBlockpos,nearestDirection)) {
-            int skillPoints = skillCap.getSkillsPoints().get(SkillEnum.SOULSHIELDVINE);
-            level
-                    .setBlockAndUpdate(
-                            newBlockpos,
-                            createdBlock.defaultBlockState()
-                                    .setValue(SoulShieldVineBlock.AGE, 1)
-                                    .setValue(SoulShieldVineBlock.DIRECTIONS, nearestDirection)
-                                    .setValue(SoulShieldVineBlock.LEVEL, skillPoints)
-                                    .setValue(SoulShieldVineBlock.HAS_CHILDREN,false)
-                    );
+        int radius = 2;  // Ajusta el radio de la esfera
+        int skillPoints = skillCap.getSkillsPoints().get(SkillEnum.SOULSHIELDVINE);
 
 
+        // Iterar sobre un cubo de dimensiones 2 * radius + 1 centrado en el jugador
+        for (int x = -radius; x <= radius; x++) {
+            for (int y = -radius; y <= radius; y++) {
+                for (int z = -radius; z <= radius; z++) {
+
+                    BlockPos domeBlockPos = playerBlockPos.offset(x, y, z);
+
+                    // Calcular la distancia desde el centro (jugador) hasta el bloque actual
+                    double distanceSquared = x * x + y * y + z * z;
+
+                    // Comprobar si el bloque está dentro de la esfera (<= radio^2)
+                    if (distanceSquared <= radius * radius && distanceSquared * 2.1 >= radius * radius) {
+                        // Solo colocar el bloque si el espacio está vacío
+                        if (level.getBlockState(domeBlockPos).getBlock().equals(Blocks.AIR)
+                                || level.getBlockState(domeBlockPos).getMaterial().equals(Material.REPLACEABLE_PLANT)) {
+
+                            Direction directionFromPlayer = getDirectionFromOffset(x, y, z);
+                            DevilRpg.LOGGER.info(directionFromPlayer);
+
+                            level.setBlockAndUpdate(
+                                    domeBlockPos,
+                                    createdBlock.defaultBlockState()
+                                            .setValue(SoulShieldVineBlock.AGE, 1)
+                                            .setValue(SoulShieldVineBlock.DIRECTIONS, directionFromPlayer) // Dirección arbitraria
+                                            .setValue(SoulShieldVineBlock.LEVEL, skillPoints)
+                            );
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Método para obtener la dirección a partir del offset
+    private Direction getDirectionFromOffset(int x, int y, int z) {
+        if (Math.abs(x) > Math.abs(z)) {
+            return x > 0 ? Direction.EAST : Direction.WEST;
+        } else if (Math.abs(z) > Math.abs(x)) {
+            return z > 0 ? Direction.SOUTH : Direction.NORTH;
+        } else if (y > 0) {
+            return Direction.UP;
+        } else {
+            return Direction.DOWN;
         }
     }
 }

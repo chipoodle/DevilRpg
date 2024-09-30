@@ -111,11 +111,11 @@
     {
         "id": "nature:soulshieldvine",
         "display": {
-            "description": "A vine that surrounds you to block enemies",
+            "description": "Instantly grows a dome of vines to protect you from attacks for a limited time",
             "icon": {
                 "item": "devilrpg:item_vine"
             },
-            "title": "Soulshieldvine",
+            "title": "Dome of vines",
             "image": "devilrpg:textures/gui/skill/laurels.png",
             "frame": "task"
         },

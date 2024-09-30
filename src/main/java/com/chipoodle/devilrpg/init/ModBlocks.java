@@ -32,7 +32,10 @@ public final class ModBlocks {
     ));
 
     public static final RegistryObject<SoulShieldVineBlock> SOUL_SHIELD_VINE_BLOCK = BLOCKS.register("soulshieldvine", () -> new SoulShieldVineBlock(
-            Block. Properties.of(Material.PLANT, MaterialColor.COLOR_GREEN).randomTicks().noCollission().instabreak().sound(SoundType.WEEPING_VINES)
+            Block. Properties.of(Material.PLANT, MaterialColor.COLOR_GREEN).randomTicks()
+                    .dynamicShape().strength(1.5F)
+                    .noOcclusion()
+                    .sound(SoundType.WEEPING_VINES)
     ));
 
     public static final RegistryObject<SoulLichenBlock> SOUL_LICHEN_BLOCK = BLOCKS.register("soullichen", () -> new SoulLichenBlock(
