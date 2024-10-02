@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
+import static com.chipoodle.devilrpg.block.SoulShieldVineBlock.DECAY_STAGE;
 import static com.chipoodle.devilrpg.block.SoulVineBlock.*;
 
 public class SoulVineBlockEntity extends BlockEntity {
@@ -27,21 +28,31 @@ public class SoulVineBlockEntity extends BlockEntity {
         super(ModEntityBlocks.SOUL_VINE_ENTITY_BLOCK.get(), pos, state);
     }
 
-    public boolean tick(@NotNull BlockState blockState, @NotNull ServerLevel serverLevel, @NotNull BlockPos currentBlockPos, @NotNull RandomSource randomSource) {
+    public boolean tick(@NotNull BlockState state, @NotNull ServerLevel world, @NotNull BlockPos currentBlockPos, @NotNull RandomSource randomSource) {
         if (timeOfCreation == null) {
-            timeOfCreation = serverLevel.getGameTime();
+            timeOfCreation = world.getGameTime();
         }
 
-        Integer currentAge = blockState.getValue(AGE);
-        int skillLevel = blockState.getValue(LEVEL);
-        Direction currentDirection = blockState.getValue(DIRECTIONS);
+        Integer currentAge = state.getValue(AGE);
+        int skillLevel = state.getValue(LEVEL);
+        int currentDecay = state.getValue(DECAY_STAGE);
+        Direction currentDirection = state.getValue(DIRECTIONS);
         Integer duration = skillLevel * TICK_FACTOR + 60;
-        boolean hasChildren = blockState.getValue(HAS_CHILDREN);
+        boolean hasChildren = state.getValue(HAS_CHILDREN);
 
         //DevilRpg.LOGGER.info("-------->tick. Age {} ", currentAge);
 
-        if (!canStay(blockState, serverLevel, currentBlockPos, currentDirection) || timeOfCreation + duration < serverLevel.getGameTime()) {
-            serverLevel.destroyBlock(currentBlockPos, true);
+        long timeElapsed = world.getGameTime() - timeOfCreation;
+        int newDecayStage = (int) ((timeElapsed * 4) / duration); // 4 etapas de decadencia
+
+        // Actualiza el estado de decadencia
+        if (newDecayStage != currentDecay && newDecayStage <= 3) {
+            state = state.setValue(DECAY_STAGE, newDecayStage);
+            world.setBlockAndUpdate(currentBlockPos, state);
+        }
+
+        if (!canStay(state, world, currentBlockPos, currentDirection) || timeOfCreation + duration < world.getGameTime()) {
+            world.destroyBlock(currentBlockPos, true);
             return hasChildren;
         }
 
@@ -64,11 +75,11 @@ public class SoulVineBlockEntity extends BlockEntity {
                 for (Direction nextDirection : possibleValues) {
                     // DevilRpg.LOGGER.info("nextDirection--> {}", nextDirection);
                     childBlockPos = currentBlockPos.relative(nextDirection);
-                    childBlockState = serverLevel.getBlockState(childBlockPos);
+                    childBlockState = world.getBlockState(childBlockPos);
                     if (childBlockState.isAir()) {
-                        if (hasAtLeasOneSolidNeighbourPerpendicularToGrowDirection(serverLevel, childBlockPos, nextDirection)) {
-                            blockState = setBlockDirection(blockState, serverLevel, currentBlockPos, nextDirection);
-                            createChildBlock(blockState, serverLevel, currentDirection, childBlockPos, currentBlockPos, nextDirection);
+                        if (hasAtLeasOneSolidNeighbourPerpendicularToGrowDirection(world, childBlockPos, nextDirection)) {
+                            state = setBlockDirection(state, world, currentBlockPos, nextDirection);
+                            createChildBlock(state, world, currentDirection, childBlockPos, currentBlockPos, nextDirection);
                             return true;
                         } else {
                             //Verifica el siguiente del siguiente
@@ -90,10 +101,10 @@ public class SoulVineBlockEntity extends BlockEntity {
 
                             for (Direction adjacentDirection : adjacentDirections) {
                                 BlockPos adjacentBlockPos = childBlockPos.relative(adjacentDirection);
-                                BlockState adjacentBlockState = serverLevel.getBlockState(adjacentBlockPos);
-                                if (adjacentBlockState.isAir() && hasAtLeasOneSolidNeighbourPerpendicularToGrowDirection(serverLevel, adjacentBlockPos, adjacentDirection)) {
-                                    blockState = setBlockDirection(blockState, serverLevel, currentBlockPos, nextDirection);
-                                    createChildBlock(blockState, serverLevel, currentDirection, childBlockPos, currentBlockPos, adjacentDirection);
+                                BlockState adjacentBlockState = world.getBlockState(adjacentBlockPos);
+                                if (adjacentBlockState.isAir() && hasAtLeasOneSolidNeighbourPerpendicularToGrowDirection(world, adjacentBlockPos, adjacentDirection)) {
+                                    state = setBlockDirection(state, world, currentBlockPos, nextDirection);
+                                    createChildBlock(state, world, currentDirection, childBlockPos, currentBlockPos, adjacentDirection);
                                     return true;
                                 }
                             }

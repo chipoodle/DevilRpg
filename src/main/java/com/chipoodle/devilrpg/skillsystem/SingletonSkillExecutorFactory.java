@@ -104,7 +104,7 @@ public class SingletonSkillExecutorFactory {
             }
             case BLOCK -> {
                 if (!skillPool.containsKey(SkillEnum.BLOCK))
-                    skillPool.put(SkillEnum.BLOCK, new SkillBlockWerewolf(parentCapability));
+                    skillPool.put(SkillEnum.BLOCK, new SkillWerewolfBlocking(parentCapability));
                 return skillPool.get(SkillEnum.BLOCK);
             }
             case KNOCKBACK_RESISTANCE -> {
@@ -126,6 +126,11 @@ public class SingletonSkillExecutorFactory {
                 if (!skillPool.containsKey(SkillEnum.SOULSHIELDVINE))
                     skillPool.put(SkillEnum.SOULSHIELDVINE, new SkillSoulShieldVine(parentCapability));
                 return skillPool.get(SkillEnum.SOULSHIELDVINE);
+            }
+            case SOULSHIELDVINE_RADIUS -> {
+                if (!skillPool.containsKey(SkillEnum.SOULSHIELDVINE_RADIUS))
+                    skillPool.put(SkillEnum.SOULSHIELDVINE_RADIUS, new PassiveSoulShieldVineRadiusExecutor(parentCapability));
+                return skillPool.get(SkillEnum.SOULSHIELDVINE_RADIUS);
             }
         }
         throw new RuntimeException("There is no SkillExecutor for the skill  "+skillEnum);

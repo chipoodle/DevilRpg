@@ -16,11 +16,11 @@ import net.minecraft.world.level.Level;
 import java.util.HashMap;
 import java.util.Random;
 
-public class SkillBlockWerewolf extends AbstractPlayerPassiveAttributeExecutor {
+public class SkillWerewolfBlocking extends AbstractPlayerPassiveAttributeExecutor {
 
     public static final int ABSORPTION_TICKS = 800;
 
-    public SkillBlockWerewolf(PlayerSkillCapabilityInterface parentCapability) {
+    public SkillWerewolfBlocking(PlayerSkillCapabilityInterface parentCapability) {
         super(parentCapability);
     }
 

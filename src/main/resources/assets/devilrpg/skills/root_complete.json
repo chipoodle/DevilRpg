@@ -129,6 +129,27 @@
         "parent": "nature:soulvine"
     },
     {
+        "id": "nature:soulshieldvine_radius",
+        "display": {
+            "description": "Extends the radius of the vine dome",
+            "icon": {
+                "item": "minecraft:glass_pane",
+                "minecraft:glass_panenbt": 1
+            },
+            "title": "Vine Dome Radius",
+            "image": "devilrpg:textures/gui/skill/laurel-crown.png",
+            "frame": "goal"
+        },
+        "capability": "soulshieldvine_radius",
+        "skillmanacost":{
+            "maxskilllevel":"1",
+            "manacost":"0",
+            "resourcetype":"mana"
+        },
+        "rewards": {},
+        "parent": "nature:soulshieldvine"
+    },
+    {
         "id": "nature:soullichen",
         "display": {
             "description": "A vine that slows down enemies",

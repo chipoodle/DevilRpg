@@ -36,12 +36,12 @@ import static com.chipoodle.devilrpg.init.ModItems.*;
  * @author Cadiboo
  */
 @EventBusSubscriber(modid = DevilRpg.MODID, bus = EventBusSubscriber.Bus.MOD)
-public final class PlayerModEventSubscriber {
+public final class PlayerModInitEventSubscriber {
 
 
     @SubscribeEvent
     public static void initEntityAttributes(EntityAttributeCreationEvent event) {
-        DevilRpg.LOGGER.info("----------------------->ModEventSubscriber.initEntityAttributes()");
+        DevilRpg.LOGGER.info("----------------------->PlayerModInitEventSubscriber.initEntityAttributes()");
         event.put(ModEntities.SOUL_WOLF.get(), SoulWolf.setAttributes().build());
         event.put(ModEntities.SOUL_BEAR.get(), SoulBear.setAttributes().build());
         //event.put(ModEntities.WISP.get(), SoulWisp.setAttributes().build());
@@ -56,7 +56,7 @@ public final class PlayerModEventSubscriber {
 
     @SubscribeEvent
     public static void updateEntityAttributes(EntityAttributeModificationEvent event) {
-        DevilRpg.LOGGER.info("----------------------->ModEventSubscriber.updateEntityAttributes()");
+        DevilRpg.LOGGER.info("----------------------->PlayerModInitEventSubscriber.updateEntityAttributes()");
         /*if (!event.has(EntityType.CREEPER, EXAMPLE_ATTRIBUTE.get())) {
             event.add(EntityType.CREEPER,
                     EXAMPLE_ATTRIBUTE.get() // Applies new attribute to creeper
@@ -66,7 +66,7 @@ public final class PlayerModEventSubscriber {
 
     @SubscribeEvent
     public static void onCommonSetup(FMLCommonSetupEvent event) {
-        DevilRpg.LOGGER.info("----------------------->ModEventSubscriber.onCommonSetup()");
+        DevilRpg.LOGGER.info("----------------------->PlayerModInitEventSubscriber.onCommonSetup()");
 
     }
 
@@ -77,7 +77,7 @@ public final class PlayerModEventSubscriber {
      */
     @SubscribeEvent
     public static void onModConfigEvent(final ModConfigEvent.Loading event) {
-        DevilRpg.LOGGER.info("----------------------->ModEventSubscriber.onModConfigEvent()");
+        DevilRpg.LOGGER.info("----------------------->PlayerModInitEventSubscriber.onModConfigEvent()");
         final ModConfig config = event.getConfig();
         // Rebake the configs when they change
         if (config.getSpec() == ConfigHolder.CLIENT_SPEC) {
@@ -98,7 +98,7 @@ public final class PlayerModEventSubscriber {
     @SubscribeEvent
     public static void onRegisterItems(final RegisterEvent event) {
         if (event.getRegistryKey().equals(ForgeRegistries.Keys.ITEMS)) {
-            DevilRpg.LOGGER.info("----------------------->ModEventSubscriber.onRegisterItems()");
+            DevilRpg.LOGGER.info("----------------------->PlayerModInitEventSubscriber.onRegisterItems()");
             BLOCKS.getEntries().forEach((blockRegistryObject) -> {
                 Block block = blockRegistryObject.get();
                 Item.Properties properties = new Item.Properties();
@@ -125,7 +125,7 @@ public final class PlayerModEventSubscriber {
 // Assume we have RegistryObject<Item> and RegistryObject<Block> called ITEM and BLOCK
     @SubscribeEvent
     public static void onRegisterCreativeModeTabEvent(CreativeModeTabEvent.Register event) {
-        DevilRpg.LOGGER.info("----------------------->ModEventSubscriber.onRegisterCreativeModeTabEvent()");
+        DevilRpg.LOGGER.info("----------------------->PlayerModInitEventSubscriber.onRegisterCreativeModeTabEvent()");
         event.registerCreativeModeTab(new ResourceLocation(DevilRpg.MODID, ModItems.CREATIVE_TAB_NAME), builder ->
                 // Set name of tab to display
                 builder.title(Component.translatable("item_group." + DevilRpg.MODID + "." + ModItems.CREATIVE_TAB_NAME))

@@ -1,37 +1,148 @@
 {
   "variants": {
-    "soulshieldvine_facing=north": {
-      "model": "devilrpg:block/soulshieldvine",
+    "soulshieldvine_facing=north,decay_stage=0": {
+      "model": "devilrpg:block/soulshieldvine_green",
       "uvlock": false,
       "y": 90,
       "x": 270
     },
-    "soulshieldvine_facing=south": {
-      "model": "devilrpg:block/soulshieldvine",
+    "soulshieldvine_facing=south,decay_stage=0": {
+      "model": "devilrpg:block/soulshieldvine_green",
       "uvlock": false,
       "y": 270,
       "x": 90
     },
-    "soulshieldvine_facing=east": {
-      "model": "devilrpg:block/soulshieldvine",
+    "soulshieldvine_facing=east,decay_stage=0": {
+      "model": "devilrpg:block/soulshieldvine_green",
       "uvlock": false,
       "y": 90,
       "x": 0
     },
-    "soulshieldvine_facing=west": {
-      "model": "devilrpg:block/soulshieldvine",
+    "soulshieldvine_facing=west,decay_stage=0": {
+      "model": "devilrpg:block/soulshieldvine_green",
       "uvlock": false,
       "y": 270,
       "x": 0
     },
-    "soulshieldvine_facing=up": {
-      "model": "devilrpg:block/soulshieldvine",
+    "soulshieldvine_facing=up,decay_stage=0": {
+      "model": "devilrpg:block/soulshieldvine_green",
       "uvlock": false,
       "y": 0,
       "x": 270
     },
-    "soulshieldvine_facing=down": {
-      "model": "devilrpg:block/soulshieldvine",
+    "soulshieldvine_facing=down,decay_stage=0": {
+      "model": "devilrpg:block/soulshieldvine_green",
+      "uvlock": false,
+      "y": 0,
+      "x": 90
+    },
+
+    "soulshieldvine_facing=north,decay_stage=1": {
+      "model": "devilrpg:block/soulshieldvine_yellow",
+      "uvlock": false,
+      "y": 90,
+      "x": 270
+    },
+    "soulshieldvine_facing=south,decay_stage=1": {
+      "model": "devilrpg:block/soulshieldvine_yellow",
+      "uvlock": false,
+      "y": 270,
+      "x": 90
+    },
+    "soulshieldvine_facing=east,decay_stage=1": {
+      "model": "devilrpg:block/soulshieldvine_yellow",
+      "uvlock": false,
+      "y": 90,
+      "x": 0
+    },
+    "soulshieldvine_facing=west,decay_stage=1": {
+      "model": "devilrpg:block/soulshieldvine_yellow",
+      "uvlock": false,
+      "y": 270,
+      "x": 0
+    },
+    "soulshieldvine_facing=up,decay_stage=1": {
+      "model": "devilrpg:block/soulshieldvine_yellow",
+      "uvlock": false,
+      "y": 0,
+      "x": 270
+    },
+    "soulshieldvine_facing=down,decay_stage=1": {
+      "model": "devilrpg:block/soulshieldvine_yellow",
+      "uvlock": false,
+      "y": 0,
+      "x": 90
+    },
+
+    "soulshieldvine_facing=north,decay_stage=2": {
+      "model": "devilrpg:block/soulshieldvine_brown",
+      "uvlock": false,
+      "y": 90,
+      "x": 270
+    },
+    "soulshieldvine_facing=south,decay_stage=2": {
+      "model": "devilrpg:block/soulshieldvine_brown",
+      "uvlock": false,
+      "y": 270,
+      "x": 90
+    },
+    "soulshieldvine_facing=east,decay_stage=2": {
+      "model": "devilrpg:block/soulshieldvine_brown",
+      "uvlock": false,
+      "y": 90,
+      "x": 0
+    },
+    "soulshieldvine_facing=west,decay_stage=2": {
+      "model": "devilrpg:block/soulshieldvine_brown",
+      "uvlock": false,
+      "y": 270,
+      "x": 0
+    },
+    "soulshieldvine_facing=up,decay_stage=2": {
+      "model": "devilrpg:block/soulshieldvine_brown",
+      "uvlock": false,
+      "y": 0,
+      "x": 270
+    },
+    "soulshieldvine_facing=down,decay_stage=2": {
+      "model": "devilrpg:block/soulshieldvine_brown",
+      "uvlock": false,
+      "y": 0,
+      "x": 90
+    },
+
+    "soulshieldvine_facing=north,decay_stage=3": {
+      "model": "devilrpg:block/soulshieldvine_dead",
+      "uvlock": false,
+      "y": 90,
+      "x": 270
+    },
+    "soulshieldvine_facing=south,decay_stage=3": {
+      "model": "devilrpg:block/soulshieldvine_dead",
+      "uvlock": false,
+      "y": 270,
+      "x": 90
+    },
+    "soulshieldvine_facing=east,decay_stage=3": {
+      "model": "devilrpg:block/soulshieldvine_dead",
+      "uvlock": false,
+      "y": 90,
+      "x": 0
+    },
+    "soulshieldvine_facing=west,decay_stage=3": {
+      "model": "devilrpg:block/soulshieldvine_dead",
+      "uvlock": false,
+      "y": 270,
+      "x": 0
+    },
+    "soulshieldvine_facing=up,decay_stage=3": {
+      "model": "devilrpg:block/soulshieldvine_dead",
+      "uvlock": false,
+      "y": 0,
+      "x": 270
+    },
+    "soulshieldvine_facing=down,decay_stage=3": {
+      "model": "devilrpg:block/soulshieldvine_dead",
       "uvlock": false,
       "y": 0,
       "x": 90

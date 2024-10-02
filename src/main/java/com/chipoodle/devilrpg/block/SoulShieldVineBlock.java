@@ -34,11 +34,13 @@ import java.util.List;
 
 public class SoulShieldVineBlock extends Block implements EntityBlock {
 
-    public static final VoxelShape SHAPE = Block.box(4.0D, 0.0D, 4.0D, 12.0D, 15.0D, 12.0D);
+    public static final VoxelShape SHAPE = Block.box(0.0D, 0.0D, 0.0D, 15.0D, 15.0D, 15.0D);
     public static final IntegerProperty AGE = BlockStateProperties.AGE_25;
     public static final DirectionProperty DIRECTIONS = BlockStateProperties.FACING;
     public static final IntegerProperty LEVEL = IntegerProperty.create("soulshieldvine_level", 0, 30);
     public static final DirectionProperty SOULVINE_FACING = DirectionProperty.create("soulshieldvine_facing", BlockStateProperties.FACING.getPossibleValues());
+
+    public static final IntegerProperty DECAY_STAGE = IntegerProperty.create("decay_stage", 0, 3);
 
     private static final Integer MAX_AGE = 25;
     protected final Direction growthDirection;
@@ -51,6 +53,7 @@ public class SoulShieldVineBlock extends Block implements EntityBlock {
                 .setValue(DIRECTIONS, growthDirection)
                 .setValue(LEVEL, 0)
                 .setValue(SOULVINE_FACING,Direction.UP)
+                .setValue(DECAY_STAGE,0)
         );
 
     }
@@ -118,6 +121,7 @@ public class SoulShieldVineBlock extends Block implements EntityBlock {
                 .setValue(DIRECTIONS, Direction.getRandom(levelAccessor.getRandom()))
                 .setValue(LEVEL, levelAccessor.getRandom().nextInt())
                 .setValue(SOULVINE_FACING,Direction.UP)
+                .setValue(DECAY_STAGE,0)
                 ;
     }
 
@@ -137,6 +141,7 @@ public class SoulShieldVineBlock extends Block implements EntityBlock {
                 .add(DIRECTIONS)
                 .add(LEVEL)
                 .add(SOULVINE_FACING)
+                .add(DECAY_STAGE)
         ;
     }
 

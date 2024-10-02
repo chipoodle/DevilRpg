@@ -41,6 +41,8 @@ public class SoulVineBlock extends Block implements EntityBlock {
     public static final BooleanProperty HAS_CHILDREN = BooleanProperty.create("soulvine_has_children");
     public static final DirectionProperty SOULVINE_FACING = DirectionProperty.create("soulvine_facing", BlockStateProperties.FACING.getPossibleValues());
 
+    public static final IntegerProperty DECAY_STAGE = IntegerProperty.create("decay_stage", 0, 3);
+
     private static final Integer MAX_AGE = 25;
     protected final Direction growthDirection;
 
@@ -53,6 +55,7 @@ public class SoulVineBlock extends Block implements EntityBlock {
                 .setValue(LEVEL, 0)
                 .setValue(HAS_CHILDREN, false)
                 .setValue(SOULVINE_FACING,Direction.UP)
+                .setValue(DECAY_STAGE,0)
         );
 
     }
@@ -121,6 +124,7 @@ public class SoulVineBlock extends Block implements EntityBlock {
                 .setValue(LEVEL, levelAccessor.getRandom().nextInt())
                 .setValue(HAS_CHILDREN, false)
                 .setValue(SOULVINE_FACING,Direction.UP)
+                .setValue(DECAY_STAGE,0)
                 ;
     }
 
@@ -141,6 +145,7 @@ public class SoulVineBlock extends Block implements EntityBlock {
                 .add(LEVEL)
                 .add(HAS_CHILDREN)
                 .add(SOULVINE_FACING)
+                .add(DECAY_STAGE)
         ;
     }
 

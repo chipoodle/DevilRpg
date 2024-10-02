@@ -32,11 +32,22 @@ public class SoulShieldVineBlockEntity extends BlockEntity {
 
         Integer currentAge = state.getValue(AGE);
         int skillLevel = state.getValue(LEVEL);
+        int currentDecay = state.getValue(DECAY_STAGE);
         Direction currentDirection = state.getValue(DIRECTIONS);
+
         Integer duration = skillLevel * TICK_FACTOR + 80;
         //boolean hasChildren = state.getValue(HAS_CHILDREN);
 
+        long timeElapsed = world.getGameTime() - timeOfCreation;
+        int newDecayStage = (int) ((timeElapsed * 4) / duration); // 4 etapas de decadencia
+
         //DevilRpg.LOGGER.info("-------->tick. Age {} ", currentAge);
+
+        // Actualiza el estado de decadencia
+        if (newDecayStage != currentDecay && newDecayStage <= 3) {
+            state = state.setValue(DECAY_STAGE, newDecayStage);
+            world.setBlockAndUpdate(currentBlockPos, state);
+        }
 
         if (!canStay(state, world, currentBlockPos, currentDirection) || timeOfCreation + duration < world.getGameTime()) {
             world.destroyBlock(currentBlockPos, true);

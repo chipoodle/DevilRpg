@@ -57,8 +57,7 @@ public class SkillSoulShieldVine extends AbstractSkillExecutor {
                         SoundEvents.CHICKEN_EGG, SoundSource.NEUTRAL, 0.5F,
                         0.4F / (rand.nextFloat() * 0.4F + 0.8F));
 
-                PlayerSkillCapabilityInterface skillCap = IGenericCapability.getUnwrappedPlayerCapability(player,
-                        PlayerSkillCapability.INSTANCE);
+                PlayerSkillCapabilityInterface skillCap = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerSkillCapability.INSTANCE);
                 //setVine(levelIn, player, skillCap);
                 createDome(levelIn, player, skillCap);
                 player.getCooldowns().addCooldown(icon.getItem(), 20);
@@ -69,7 +68,7 @@ public class SkillSoulShieldVine extends AbstractSkillExecutor {
     private void createDome(Level level, Player playerIn, PlayerSkillCapabilityInterface skillCap) {
         BlockPos playerBlockPos = playerIn.blockPosition();
         SoulShieldVineBlock createdBlock = ModBlocks.SOUL_SHIELD_VINE_BLOCK.get();
-        int radius = 2;  // Ajusta el radio de la esfera
+        int radius = 2 + skillCap.getSkillsPoints().get(SkillEnum.SOULSHIELDVINE_RADIUS);  // Ajusta el radio de la esfera
         int skillPoints = skillCap.getSkillsPoints().get(SkillEnum.SOULSHIELDVINE);
 
 
