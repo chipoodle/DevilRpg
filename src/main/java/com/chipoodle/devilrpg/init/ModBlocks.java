@@ -2,8 +2,10 @@ package com.chipoodle.devilrpg.init;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.block.SoulLichenBlock;
+import com.chipoodle.devilrpg.block.SoulMinerVineBlock;
 import com.chipoodle.devilrpg.block.SoulShieldVineBlock;
 import com.chipoodle.devilrpg.block.SoulVineBlock;
+import net.minecraft.world.flag.FeatureFlag;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.SoundType;
@@ -28,14 +30,26 @@ public final class ModBlocks {
 
     public static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(ForgeRegistries.BLOCKS, DevilRpg.MODID);
     public static final RegistryObject<SoulVineBlock> SOUL_VINE_BLOCK = BLOCKS.register("soulvine", () -> new SoulVineBlock(
-            Block. Properties.of(Material.PLANT, MaterialColor.COLOR_GREEN).randomTicks().noCollission().instabreak().sound(SoundType.WEEPING_VINES)
+            Block.Properties.of(Material.LEAVES, MaterialColor.COLOR_GREEN)
+                    .randomTicks()
+                    .noCollission()
+                    .instabreak()
+                    .sound(SoundType.VINE)
+    ));
+    public static final RegistryObject<SoulMinerVineBlock> SOUL_MINER_VINE_BLOCK = BLOCKS.register("soulminervine", () -> new SoulMinerVineBlock(
+            Block. Properties.of(Material.LEAVES, MaterialColor.COLOR_GREEN)
+                    .randomTicks()
+                    .noCollission()
+                    .instabreak()
+                    .sound(SoundType.VINE)
     ));
 
     public static final RegistryObject<SoulShieldVineBlock> SOUL_SHIELD_VINE_BLOCK = BLOCKS.register("soulshieldvine", () -> new SoulShieldVineBlock(
-            Block. Properties.of(Material.PLANT, MaterialColor.COLOR_GREEN).randomTicks()
+            Block. Properties.of(Material.LEAVES, MaterialColor.COLOR_GREEN)
+                    .randomTicks()
                     .dynamicShape().strength(1.5F)
                     .noOcclusion()
-                    .sound(SoundType.WEEPING_VINES)
+                    .sound(SoundType.VINE)
     ));
 
     public static final RegistryObject<SoulLichenBlock> SOUL_LICHEN_BLOCK = BLOCKS.register("soullichen", () -> new SoulLichenBlock(

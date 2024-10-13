@@ -4,6 +4,7 @@ import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.config.ConfigHelper;
 import com.chipoodle.devilrpg.config.ConfigHolder;
 import com.chipoodle.devilrpg.entity.*;
+import com.chipoodle.devilrpg.init.ModBlocks;
 import com.chipoodle.devilrpg.init.ModEntities;
 import com.chipoodle.devilrpg.init.ModItems;
 import net.minecraft.network.chat.Component;
@@ -12,6 +13,8 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.FireBlock;
 import net.minecraftforge.event.CreativeModeTabEvent;
 import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
 import net.minecraftforge.event.entity.EntityAttributeModificationEvent;
@@ -23,6 +26,8 @@ import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegisterEvent;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.function.Supplier;
 
 import static com.chipoodle.devilrpg.init.ModBlocks.BLOCKS;
@@ -68,6 +73,27 @@ public final class PlayerModInitEventSubscriber {
     public static void onCommonSetup(FMLCommonSetupEvent event) {
         DevilRpg.LOGGER.info("----------------------->PlayerModInitEventSubscriber.onCommonSetup()");
 
+        event.enqueueWork(() -> {
+            try {
+                // Obtener el bloque de fuego
+                FireBlock fireBlock = (FireBlock) Blocks.FIRE;
+
+                // Obtener el método privado setFlammable mediante reflexión
+                Method setFlammableMethod = FireBlock.class.getDeclaredMethod("setFlammable", Block.class, int.class, int.class);
+
+                // Hacer el método accesible
+                setFlammableMethod.setAccessible(true);
+
+                // Invocar el método con los parámetros correctos
+                setFlammableMethod.invoke(fireBlock, ModBlocks.SOUL_VINE_BLOCK.get(), 60, 100);
+                setFlammableMethod.invoke(fireBlock, ModBlocks.SOUL_MINER_VINE_BLOCK.get(), 60, 100);
+                setFlammableMethod.invoke(fireBlock, ModBlocks.SOUL_SHIELD_VINE_BLOCK.get(), 60, 100);
+
+                DevilRpg.LOGGER.info("SOUL_VINE_BLOCK, SOUL_MINER_VINE_BLOCK, SOUL_SHIELD_VINE_BLOCK ahora son inflamables.");
+            } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+                DevilRpg.LOGGER.error("Error al hacer que SoulVineBlock sea inflamable", e);
+            }
+        });
     }
 
     /**

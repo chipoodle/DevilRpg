@@ -33,8 +33,8 @@ public enum SkillEnum {
     MINION_VITALITY("MinionVitality","Minion Vitality","summon_minion_vitality",false,true),
     SOULVINE("Soulvine","Soulvine","soulvine",true,false),
     SOULSHIELDVINE("Soulshieldvine","Soulshieldvine","soulshieldvine",true,false),
-
     SOULSHIELDVINE_RADIUS("SoulShieldVineRadius","Vine Dome Radius","soulshieldvine_radius",false,false),
+    SOULMINERVINE("SoulMinerVine","Miner Vine","soulminervine",false,false),
     SOULLICHEN("Soullichen","Soullichen","soullichen",true,false),
     VINEFLESHBALL("Vinefleshball","Vinefleshball","vinefleshball",true,false),
     MANA_POOL("ManaPool","Mana Pool","mana_pool",false,false),

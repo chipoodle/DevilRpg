@@ -28,7 +28,7 @@ public class ModBlockTags extends BlockTagsProvider {
     public void addTags(HolderLookup.@NotNull Provider provider) {
         DevilRpg.LOGGER.info("-----------------------> Adding tags");
         this.tag(BlockTags.CLIMBABLE).add(ModBlocks.SOUL_VINE_BLOCK.get());
-        this.tag(BlockTags.ICE).add(ModBlocks.SOUL_VINE_BLOCK.get());
+        this.tag(BlockTags.LEAVES).add(ModBlocks.SOUL_VINE_BLOCK.get());
         DevilRpg.LOGGER.info("done.");
     }
 

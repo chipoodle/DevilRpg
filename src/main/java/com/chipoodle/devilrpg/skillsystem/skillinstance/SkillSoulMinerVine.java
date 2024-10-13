@@ -1,11 +1,16 @@
 package com.chipoodle.devilrpg.skillsystem.skillinstance;
 
+import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.block.SoulMinerVineBlock;
+import com.chipoodle.devilrpg.block.SoulShieldVineBlock;
 import com.chipoodle.devilrpg.block.SoulVineBlock;
+import com.chipoodle.devilrpg.blockentity.SoulMinerVineBlockEntity;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.init.ModBlocks;
+import com.chipoodle.devilrpg.skillsystem.AbstractSkillExecutor;
 import com.chipoodle.devilrpg.skillsystem.AbstractSkillSeedsInInventoryExecutor;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.core.BlockPos;
@@ -15,21 +20,23 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.Material;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.HashMap;
 import java.util.Random;
 
-public class SkillSoulVine extends AbstractSkillSeedsInInventoryExecutor {
+public class SkillSoulMinerVine extends AbstractSkillSeedsInInventoryExecutor {
 
-    public SkillSoulVine(PlayerSkillCapabilityImplementation parentCapability) {
+    public SkillSoulMinerVine(PlayerSkillCapabilityImplementation parentCapability) {
         super(parentCapability);
     }
 
     @Override
     public SkillEnum getSkillEnum() {
-        return SkillEnum.SOULVINE;
+        return SkillEnum.SOULSHIELDVINE;
     }
 
     @Override
@@ -45,9 +52,7 @@ public class SkillSoulVine extends AbstractSkillSeedsInInventoryExecutor {
 
         boolean canPlace = playerBlockState.getBlock().equals(Blocks.AIR)
                 && player.level.getBlockState(newBlockpos).getBlock().equals(Blocks.AIR)
-                && SoulVineBlock.hasAtLeasOneSolidNeighbourPerpendicularToGrowDirection(player.level, newBlockpos, nearestDirection);
-
-
+                && SoulMinerVineBlock.hasAtLeasOneSolidNeighbourPerpendicularToGrowDirection(player.level, newBlockpos, nearestDirection);
         return !player.getCooldowns().isOnCooldown(icon.getItem()) && canPlace && hasSeeds;
     }
 
@@ -60,8 +65,8 @@ public class SkillSoulVine extends AbstractSkillSeedsInInventoryExecutor {
                         SoundEvents.CHICKEN_EGG, SoundSource.NEUTRAL, 0.5F,
                         0.4F / (rand.nextFloat() * 0.4F + 0.8F));
 
-                PlayerSkillCapabilityInterface skillCap = IGenericCapability.getUnwrappedPlayerCapability(player,
-                        PlayerSkillCapability.INSTANCE);
+                PlayerSkillCapabilityInterface skillCap = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerSkillCapability.INSTANCE);
+                //setVine(levelIn, player, skillCap);
                 setVine(levelIn, player, skillCap);
                 player.getCooldowns().addCooldown(icon.getItem(), 20);
             }
@@ -70,7 +75,7 @@ public class SkillSoulVine extends AbstractSkillSeedsInInventoryExecutor {
 
     private void setVine(Level level, Player playerIn, PlayerSkillCapabilityInterface skillCap) {
         BlockPos playerBlockPos = playerIn.blockPosition();
-        SoulVineBlock createdBlock = ModBlocks.SOUL_VINE_BLOCK.get();
+        SoulMinerVineBlock createdBlock = ModBlocks.SOUL_MINER_VINE_BLOCK.get();
         BlockState playerBlockState = level.getBlockState(playerBlockPos);
         Vec3 playerLookVector = playerIn.getLookAngle();
         Direction nearestDirection = Direction.getNearest(playerLookVector.x, 0, playerLookVector.z);
@@ -78,23 +83,25 @@ public class SkillSoulVine extends AbstractSkillSeedsInInventoryExecutor {
         BlockPos newBlockpos = playerBlockPos.relative(nearestDirection);
         if (playerBlockState.getBlock().equals(Blocks.AIR)
                 && level.getBlockState(newBlockpos).getBlock().equals(Blocks.AIR)
-                && SoulVineBlock.hasAtLeasOneSolidNeighbourPerpendicularToGrowDirection(level, newBlockpos, nearestDirection)) {
+                && SoulMinerVineBlock.hasAtLeasOneSolidNeighbourPerpendicularToGrowDirection(level,newBlockpos,nearestDirection)) {
 
             // Consumir una semilla del inventario
             consumeSeed(playerIn);
 
-            int skillPoints = skillCap.getSkillsPoints().get(SkillEnum.SOULVINE);
+            int skillPoints = skillCap.getSkillsPoints().get(SkillEnum.SOULMINERVINE);
             level
                     .setBlockAndUpdate(
                             newBlockpos,
                             createdBlock.defaultBlockState()
-                                    .setValue(SoulVineBlock.AGE, 1)
-                                    .setValue(SoulVineBlock.DIRECTIONS, nearestDirection)
-                                    .setValue(SoulVineBlock.LEVEL, skillPoints)
-                                    .setValue(SoulVineBlock.HAS_CHILDREN, false)
+                                    .setValue(SoulMinerVineBlock.AGE, 1)
+                                    .setValue(SoulMinerVineBlock.DIRECTIONS, nearestDirection)
+                                    .setValue(SoulMinerVineBlock.LEVEL, skillPoints)
+                                    .setValue(SoulMinerVineBlock.HAS_CHILDREN,false)
                     );
 
 
         }
+
     }
+
 }

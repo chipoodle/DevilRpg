@@ -10,7 +10,7 @@ import net.minecraftforge.fml.common.Mod;
 @Mod.EventBusSubscriber(modid = DevilRpg.MODID)
 public class CommonForgeBlockEventSubscriber {
 
-    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onBlockEventEntityPlaceEvent(BlockEvent event) {
 
         if (event instanceof BlockEvent.FluidPlaceBlockEvent placeBlockEvent) {
@@ -27,6 +27,7 @@ public class CommonForgeBlockEventSubscriber {
 
             if (placeBlockEvent.getPlacedBlock().getBlock() instanceof SoulVineBlock block) {
                 //block.setCustomGrowthDirection(Objects.requireNonNull(placeBlockEvent.getEntity()).getDirection());
+
             }
         }
     }

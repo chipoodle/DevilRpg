@@ -19,7 +19,6 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.phys.shapes.CollisionContext;
@@ -35,25 +34,22 @@ import java.util.List;
 public class SoulShieldVineBlock extends Block implements EntityBlock {
 
     public static final VoxelShape SHAPE = Block.box(0.0D, 0.0D, 0.0D, 15.0D, 15.0D, 15.0D);
-    public static final IntegerProperty AGE = BlockStateProperties.AGE_25;
     public static final DirectionProperty DIRECTIONS = BlockStateProperties.FACING;
     public static final IntegerProperty LEVEL = IntegerProperty.create("soulshieldvine_level", 0, 30);
     public static final DirectionProperty SOULVINE_FACING = DirectionProperty.create("soulshieldvine_facing", BlockStateProperties.FACING.getPossibleValues());
 
     public static final IntegerProperty DECAY_STAGE = IntegerProperty.create("decay_stage", 0, 3);
 
-    private static final Integer MAX_AGE = 25;
     protected final Direction growthDirection;
 
     public SoulShieldVineBlock(Properties properties) {
         super(properties);
         growthDirection = Direction.UP;
         this.registerDefaultState(this.defaultBlockState()
-                .setValue(AGE, 0)
                 .setValue(DIRECTIONS, growthDirection)
                 .setValue(LEVEL, 0)
-                .setValue(SOULVINE_FACING,Direction.UP)
-                .setValue(DECAY_STAGE,0)
+                .setValue(SOULVINE_FACING, Direction.UP)
+                .setValue(DECAY_STAGE, 0)
         );
 
     }
@@ -62,21 +58,12 @@ public class SoulShieldVineBlock extends Block implements EntityBlock {
         return ModBlocks.SOUL_SHIELD_VINE_BLOCK.get();
     }
 
-    public static BlockState getGrowIntoState(BlockState p_221347_) {
-        return p_221347_.cycle(AGE);
-    }
+    /*public static BlockState getGrowIntoState(BlockState p_221347_) {
+        return p_221347_;
+    }*/
 
     public static boolean canStay(@NotNull BlockState currentBlockState, @NotNull LevelReader levelReader, @NotNull BlockPos currentBlockPos, Direction growthDirection) {
-        BlockPos newBlockpos;
-        if (currentBlockState.getValue(AGE) == 1)
-            newBlockpos = currentBlockPos;
-        else {
-            if (!canSurvive(levelReader, currentBlockPos))
-                return false;
-            newBlockpos = currentBlockPos.relative(growthDirection);
-        }
-        //BlockState newBlockState = levelReader.getBlockState(newBlockpos);
-        return true;
+        return canSurvive(levelReader, currentBlockPos);
     }
 
     public static @NotNull Boolean canSurvive(@NotNull LevelReader levelReader, @NotNull BlockPos currentBlockPos) {
@@ -91,14 +78,14 @@ public class SoulShieldVineBlock extends Block implements EntityBlock {
         return false;
     }
 
-    public static Boolean hasAtLeasOneSolidNeighbourPerpendicularToGrowDirection(@NotNull LevelReader levelReader, @NotNull BlockPos currentBlockPos, Direction growDirection) {
+    /*public static Boolean hasAtLeasOneSolidNeighbourPerpendicularToGrowDirection(@NotNull LevelReader levelReader, @NotNull BlockPos currentBlockPos, Direction growDirection) {
         List<Direction> possibleValues = new ArrayList<>(DIRECTIONS.getPossibleValues()
                 .stream()
                 .filter(x -> x != growDirection)
                 .filter(x -> x != growDirection.getOpposite())
                 .sorted(Comparator.comparingInt(Direction::get3DDataValue)).toList());
-        possibleValues.remove(Direction.UP);
-        possibleValues.add(0, Direction.UP);
+        //possibleValues.remove(Direction.UP);
+        //possibleValues.add(0, Direction.UP);
         for (Direction possibleDirection : possibleValues) {
             BlockState nextState = getNextState(levelReader, currentBlockPos, possibleDirection);
             if (!nextState.isAir() && !(nextState.getBlock() instanceof SoulShieldVineBlock)) {
@@ -106,7 +93,7 @@ public class SoulShieldVineBlock extends Block implements EntityBlock {
             }
         }
         return false;
-    }
+    }*/
 
 
     @NotNull
@@ -117,11 +104,10 @@ public class SoulShieldVineBlock extends Block implements EntityBlock {
 
     public @NotNull BlockState getStateForPlacement(LevelAccessor levelAccessor) {
         return this.defaultBlockState()
-                .setValue(AGE, levelAccessor.getRandom().nextInt(MAX_AGE))
                 .setValue(DIRECTIONS, Direction.getRandom(levelAccessor.getRandom()))
-                .setValue(LEVEL, levelAccessor.getRandom().nextInt())
-                .setValue(SOULVINE_FACING,Direction.UP)
-                .setValue(DECAY_STAGE,0)
+                .setValue(LEVEL, 0)
+                .setValue(SOULVINE_FACING, Direction.UP)
+                .setValue(DECAY_STAGE, 0)
                 ;
     }
 
@@ -131,13 +117,12 @@ public class SoulShieldVineBlock extends Block implements EntityBlock {
         return !blockstate.is(getSoulShieldVineBlock()) ? this.getStateForPlacement(p_53868_.getLevel()) : getSoulShieldVineBlock().defaultBlockState();
     }
 
-    public boolean isRandomlyTicking(BlockState blockState) {
-        return blockState.getValue(AGE) < MAX_AGE;
-    }
+    /*public boolean isRandomlyTicking(BlockState blockState) {
+        return true;
+    }*/
 
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> stateDefinition) {
         stateDefinition
-                .add(AGE)
                 .add(DIRECTIONS)
                 .add(LEVEL)
                 .add(SOULVINE_FACING)

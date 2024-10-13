@@ -2,6 +2,7 @@ package com.chipoodle.devilrpg.init;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.blockentity.SoulLichenBlockEntity;
+import com.chipoodle.devilrpg.blockentity.SoulMinerVineBlockEntity;
 import com.chipoodle.devilrpg.blockentity.SoulShieldVineBlockEntity;
 import com.chipoodle.devilrpg.blockentity.SoulVineBlockEntity;
 import net.minecraft.world.level.block.Block;
@@ -31,4 +32,8 @@ public final class ModEntityBlocks {
             () -> BlockEntityType.Builder.of(SoulShieldVineBlockEntity::new, ModBlocks.SOUL_SHIELD_VINE_BLOCK.get()).build(null));
     public static final RegistryObject<BlockEntityType<SoulLichenBlockEntity>> SOUL_LICHEN_ENTITY_BLOCK = BLOCK_ENTITIES.register("soullichenentityblock",
             () -> BlockEntityType.Builder.of(SoulLichenBlockEntity::new, ModBlocks.SOUL_LICHEN_BLOCK.get()).build(null));
+
+    public static final RegistryObject<BlockEntityType<SoulMinerVineBlockEntity>> SOUL_MINER_VINE_ENTITY_BLOCK = BLOCK_ENTITIES.register("soulminervineentityblock",
+            () -> BlockEntityType.Builder.of(SoulMinerVineBlockEntity::new, ModBlocks.SOUL_MINER_VINE_BLOCK.get()).build(null));
+
 }

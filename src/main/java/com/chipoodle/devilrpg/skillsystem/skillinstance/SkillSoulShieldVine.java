@@ -1,6 +1,5 @@
 package com.chipoodle.devilrpg.skillsystem.skillinstance;
 
-import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.block.SoulShieldVineBlock;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
@@ -8,6 +7,7 @@ import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementati
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.init.ModBlocks;
 import com.chipoodle.devilrpg.skillsystem.AbstractSkillExecutor;
+import com.chipoodle.devilrpg.skillsystem.AbstractSkillSeedsInInventoryExecutor;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -23,7 +23,7 @@ import net.minecraft.world.phys.Vec3;
 import java.util.HashMap;
 import java.util.Random;
 
-public class SkillSoulShieldVine extends AbstractSkillExecutor {
+public class SkillSoulShieldVine extends AbstractSkillSeedsInInventoryExecutor {
 
     public SkillSoulShieldVine(PlayerSkillCapabilityImplementation parentCapability) {
         super(parentCapability);
@@ -43,9 +43,11 @@ public class SkillSoulShieldVine extends AbstractSkillExecutor {
         //DevilRpg.LOGGER.info("-------->Direction: {}", nearestDirection);
         BlockPos newBlockpos = playerBlockPos.relative(nearestDirection);
         boolean canPlace = playerBlockState.getBlock().equals(Blocks.AIR)
-                && player.level.getBlockState(newBlockpos).getBlock().equals(Blocks.AIR)
-                && SoulShieldVineBlock.hasAtLeasOneSolidNeighbourPerpendicularToGrowDirection(player.level, newBlockpos, nearestDirection);
-        return !player.getCooldowns().isOnCooldown(icon.getItem()) && canPlace;
+                && player.level.getBlockState(newBlockpos).getBlock().equals(Blocks.AIR);
+
+        boolean hasSeeds = super.arePreconditionsMetBeforeConsumingResource(player);
+
+        return !player.getCooldowns().isOnCooldown(icon.getItem()) && canPlace && hasSeeds;
     }
 
     @Override
@@ -72,6 +74,9 @@ public class SkillSoulShieldVine extends AbstractSkillExecutor {
         int skillPoints = skillCap.getSkillsPoints().get(SkillEnum.SOULSHIELDVINE);
 
 
+        // Consumir una semilla del inventario
+        consumeSeed(playerIn);
+
         // Iterar sobre un cubo de dimensiones 2 * radius + 1 centrado en el jugador
         for (int x = -radius; x <= radius; x++) {
             for (int y = -radius; y <= radius; y++) {
@@ -89,13 +94,13 @@ public class SkillSoulShieldVine extends AbstractSkillExecutor {
                                 || level.getBlockState(domeBlockPos).getMaterial().equals(Material.REPLACEABLE_PLANT)) {
 
                             Direction directionFromPlayer = getDirectionFromOffset(x, y, z);
-                            DevilRpg.LOGGER.info(directionFromPlayer);
+                            //DevilRpg.LOGGER.info(directionFromPlayer);
 
                             level.setBlockAndUpdate(
                                     domeBlockPos,
                                     createdBlock.defaultBlockState()
-                                            .setValue(SoulShieldVineBlock.AGE, 1)
-                                            .setValue(SoulShieldVineBlock.DIRECTIONS, directionFromPlayer) // Dirección arbitraria
+                                            //.setValue(SoulShieldVineBlock.AGE, 1)
+                                            .setValue(SoulShieldVineBlock.DIRECTIONS, directionFromPlayer)
                                             .setValue(SoulShieldVineBlock.LEVEL, skillPoints)
                             );
                         }

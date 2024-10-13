@@ -132,6 +132,11 @@ public class SingletonSkillExecutorFactory {
                     skillPool.put(SkillEnum.SOULSHIELDVINE_RADIUS, new PassiveSoulShieldVineRadiusExecutor(parentCapability));
                 return skillPool.get(SkillEnum.SOULSHIELDVINE_RADIUS);
             }
+            case SOULMINERVINE -> {
+                if (!skillPool.containsKey(SkillEnum.SOULMINERVINE))
+                    skillPool.put(SkillEnum.SOULMINERVINE, new SkillSoulMinerVine(parentCapability));
+                return skillPool.get(SkillEnum.SOULMINERVINE);
+            }
         }
         throw new RuntimeException("There is no SkillExecutor for the skill  "+skillEnum);
         //return null;

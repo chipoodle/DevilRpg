@@ -21,6 +21,8 @@
     "gui.skills.unspent": "Unspent points:",
     "item.devilrpg.item_vacio": "Empty Item",
     "block.devilrpg.soulvine": "Soulvine",
+    "block.devilrpg.soulshieldvine": "Dome of vines",
+    "block.devilrpg.soulminervine": "Miner vine",
     "block.devilrpg.soullichen": "Soullichen",
     "item.devilrpg.item_soul_wolf.name": "Summon Soul Wolf",
     "item.devilrpg.soulwolf_spawn_egg": "Soul Wolf",
@@ -28,6 +30,6 @@
     "item_group.devilrpg.devilrpg_tab": "Devil RPG",
     "effect.devilrpg.knockback_resistance": "Knock-back Immunity",
     "effect.devilrpg.entangling": "Entangling",
-    "item.devilrpg.soullichenblock.tooltip": "Sou Lichen"
+    "item.devilrpg.soullichenblock.tooltip": "Soul Lichen"
 
 }

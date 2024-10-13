@@ -50,13 +50,13 @@
         "display": {
             "description": {
                 "text": "Nature",
-                "color": "blue"
+                "color": "orange"
             },
             "icon": {
                 "item": "minecraft:stone"
             },
             "title": {
-                "text": "Nature's magic",
+                "text": "Nature's Wrath",
                 "color": "white"
             },
             "image": "devilrpg:textures/gui/skill/oak.png",
@@ -91,7 +91,7 @@
     {
         "id": "nature:soulvine",
         "display": {
-            "description": "A vine that help to climb mountains",
+            "description": "The Soul Vine dynamically grows in the direction the player is looking, spreading and creating new vines as it advances. The vine’s growth speed and lifespan depend on your skill level, with higher levels extending its reach and duration. Activation requires a seed from your inventory, which will be consumed upon use.",
             "icon": {
                 "item": "devilrpg:item_vine"
             },
@@ -109,9 +109,29 @@
         "parent": "nature:root"
     },
     {
+        "id": "nature:soulminervine",
+        "display": {
+            "description": "Summon a Soul Miner Vine that burrows and grows randomly, mining nearby stone or ores as it expands. The vine branches out in unpredictable directions, breaking blocks in its path. As your power level increases, the vine grows farther and mines faster. Requires at least one seed in your inventory, which will be consumed upon activation.",
+            "icon": {
+                "item": "devilrpg:item_vine"
+            },
+            "title": "Miner vine",
+            "image": "devilrpg:textures/gui/skill/beanstalk.png",
+            "frame": "task"
+        },
+        "capability": "soulminervine",
+        "skillmanacost":{
+            "maxskilllevel":"20",
+            "manacost":"15",
+            "resourcetype":"mana"
+        },
+        "rewards": {},
+        "parent": "nature:soulvine"
+    },
+    {
         "id": "nature:soulshieldvine",
         "display": {
-            "description": "Instantly grows a dome of vines to protect you from attacks for a limited time",
+            "description": "Instantly creates a protective dome of vines around you, shielding you from incoming attacks for a limited duration. Requires at least one seed in your inventory, which will be consumed upon activation.",
             "icon": {
                 "item": "devilrpg:item_vine"
             },
@@ -122,16 +142,16 @@
         "capability": "soulshieldvine",
         "skillmanacost":{
             "maxskilllevel":"20",
-            "manacost":"15",
+            "manacost":"25",
             "resourcetype":"mana"
         },
         "rewards": {},
-        "parent": "nature:soulvine"
+        "parent": "nature:soulminervine"
     },
     {
         "id": "nature:soulshieldvine_radius",
         "display": {
-            "description": "Extends the radius of the vine dome",
+            "description": "Extends the radius of the vine dome.",
             "icon": {
                 "item": "minecraft:glass_pane",
                 "minecraft:glass_panenbt": 1
@@ -152,7 +172,7 @@
     {
         "id": "nature:soullichen",
         "display": {
-            "description": "A vine that slows down enemies",
+            "description": "A parasite is thrown onto the enemy, slowing them down and causing damage over time. If the enemy dies while under the parasite’s effect, a lichen will grow at the location, slowing and damaging nearby enemies within a radius. Requires a seed from your inventory, which will be consumed upon activation.",
             "icon": {
                 "item": "devilrpg:item_vine"
             },
@@ -172,12 +192,12 @@
     {
         "id": "nature:vinefleshpuppet",
         "display": {
-            "description": "A vine parasyte that grows a golem over the enemy's dead body",
+            "description": "A spore is thrown onto the enemy. If the enemy dies while under the spore’s effect, a spore-spraying mushroom will grow on the corpse, releasing spores that damage nearby enemies. Requires a seed from your inventory, which will be consumed upon activation.",
             "icon": {
                 "item": "devilrpg:item_vine"
             },
-            "title": "vine flesh puppet",
-            "image": "devilrpg:textures/gui/skill/fruiting.png",
+            "title": "Parasyte mushroom",
+            "image": "devilrpg:textures/gui/skill/mushroom-gills.png",
             "frame": "task"
         },
         "capability": "vinefleshball",
@@ -187,7 +207,7 @@
             "resourcetype":"mana"
         },
         "rewards": {},
-        "parent": "nature:soulvine"
+        "parent": "nature:soullichen"
     },
     {
         "id": "nature:mana_pool",

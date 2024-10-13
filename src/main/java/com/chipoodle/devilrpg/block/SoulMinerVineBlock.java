@@ -1,6 +1,6 @@
 package com.chipoodle.devilrpg.block;
 
-import com.chipoodle.devilrpg.blockentity.SoulVineBlockEntity;
+import com.chipoodle.devilrpg.blockentity.SoulMinerVineBlockEntity;
 import com.chipoodle.devilrpg.init.ModBlocks;
 import com.chipoodle.devilrpg.init.ModEntityBlocks;
 import net.minecraft.core.BlockPos;
@@ -13,7 +13,6 @@ import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
-import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -25,7 +24,6 @@ import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.minecraftforge.common.extensions.IForgeBlock;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -34,21 +32,24 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 
-public class SoulVineBlock extends Block implements EntityBlock, IForgeBlock {
+public class SoulMinerVineBlock extends Block implements EntityBlock {
 
     public static final VoxelShape SHAPE = Block.box(4.0D, 0.0D, 4.0D, 12.0D, 15.0D, 12.0D);
-    public static final IntegerProperty AGE = BlockStateProperties.AGE_25;
+
+    // Cambiar AGE a un rango de 0 a 30
+    public static final IntegerProperty AGE = IntegerProperty.create("age", 0, 30);
+
     public static final DirectionProperty DIRECTIONS = BlockStateProperties.FACING;
-    public static final IntegerProperty LEVEL = IntegerProperty.create("soulvine_level", 0, 30);
+    public static final IntegerProperty LEVEL = IntegerProperty.create("soulvine_level", 0, 25);
     public static final BooleanProperty HAS_CHILDREN = BooleanProperty.create("soulvine_has_children");
     public static final DirectionProperty SOULVINE_FACING = DirectionProperty.create("soulvine_facing", BlockStateProperties.FACING.getPossibleValues());
-
     public static final IntegerProperty DECAY_STAGE = IntegerProperty.create("decay_stage", 0, 3);
 
-    private static final Integer MAX_AGE = 25;
+    // Cambiar MAX_AGE a 30
+    public static final Integer MAX_AGE = 25;
     protected final Direction growthDirection;
 
-    public SoulVineBlock(Properties properties) {
+    public SoulMinerVineBlock(Properties properties) {
         super(properties);
         growthDirection = Direction.UP;
         this.registerDefaultState(this.defaultBlockState()
@@ -56,17 +57,17 @@ public class SoulVineBlock extends Block implements EntityBlock, IForgeBlock {
                 .setValue(DIRECTIONS, growthDirection)
                 .setValue(LEVEL, 0)
                 .setValue(HAS_CHILDREN, false)
-                .setValue(SOULVINE_FACING,Direction.UP)
-                .setValue(DECAY_STAGE,0)
+                .setValue(SOULVINE_FACING, Direction.UP)
+                .setValue(DECAY_STAGE, 0)
         );
     }
 
-        protected static @NotNull Block getSoulVineBlock() {
-        return ModBlocks.SOUL_VINE_BLOCK.get();
+    protected static @NotNull Block getSoulVineBlock() {
+        return ModBlocks.SOUL_MINER_VINE_BLOCK.get();
     }
 
-    public static BlockState getGrowIntoState(BlockState p_221347_) {
-        return p_221347_.cycle(AGE);
+    public static BlockState getGrowIntoState(BlockState blockstate) {
+        return blockstate.cycle(AGE);
     }
 
     public static boolean canStay(@NotNull BlockState currentBlockState, @NotNull LevelReader levelReader, @NotNull BlockPos currentBlockPos, Direction growthDirection) {
@@ -78,7 +79,6 @@ public class SoulVineBlock extends Block implements EntityBlock, IForgeBlock {
                 return false;
             newBlockpos = currentBlockPos.relative(growthDirection);
         }
-        //BlockState newBlockState = levelReader.getBlockState(newBlockpos);
         return true;
     }
 
@@ -104,13 +104,12 @@ public class SoulVineBlock extends Block implements EntityBlock, IForgeBlock {
         possibleValues.add(0, Direction.UP);
         for (Direction possibleDirection : possibleValues) {
             BlockState nextState = getNextState(levelReader, currentBlockPos, possibleDirection);
-            if (!nextState.isAir() && !(nextState.getBlock() instanceof SoulVineBlock)) {
+            if (!nextState.isAir() && !(nextState.getBlock() instanceof SoulMinerVineBlock)) {
                 return true;
             }
         }
         return false;
     }
-
 
     @NotNull
     private static BlockState getNextState(@NotNull LevelReader levelReader, @NotNull BlockPos currentBlockPos, Direction possibleDirection) {
@@ -120,13 +119,12 @@ public class SoulVineBlock extends Block implements EntityBlock, IForgeBlock {
 
     public @NotNull BlockState getStateForPlacement(LevelAccessor levelAccessor) {
         return this.defaultBlockState()
-                .setValue(AGE, levelAccessor.getRandom().nextInt(MAX_AGE))
+                .setValue(AGE, levelAccessor.getRandom().nextInt(MAX_AGE)) // Ahora hasta 30
                 .setValue(DIRECTIONS, Direction.getRandom(levelAccessor.getRandom()))
                 .setValue(LEVEL, levelAccessor.getRandom().nextInt())
                 .setValue(HAS_CHILDREN, false)
-                .setValue(SOULVINE_FACING,Direction.UP)
-                .setValue(DECAY_STAGE,0)
-                ;
+                .setValue(SOULVINE_FACING, Direction.UP)
+                .setValue(DECAY_STAGE, 0);
     }
 
     @Nullable
@@ -146,8 +144,7 @@ public class SoulVineBlock extends Block implements EntityBlock, IForgeBlock {
                 .add(LEVEL)
                 .add(HAS_CHILDREN)
                 .add(SOULVINE_FACING)
-                .add(DECAY_STAGE)
-        ;
+                .add(DECAY_STAGE);
     }
 
     public @NotNull VoxelShape getShape(@NotNull BlockState p_53880_, @NotNull BlockGetter p_53881_, @NotNull BlockPos p_53882_, @NotNull CollisionContext p_53883_) {
@@ -157,14 +154,14 @@ public class SoulVineBlock extends Block implements EntityBlock, IForgeBlock {
     @Nullable
     @Override
     public BlockEntity newBlockEntity(@NotNull BlockPos pos, @NotNull BlockState state) {
-        return ModEntityBlocks.SOUL_VINE_ENTITY_BLOCK.get().create(pos, state);
+        return ModEntityBlocks.SOUL_MINER_VINE_ENTITY_BLOCK.get().create(pos, state);
     }
 
     @Nullable
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, @NotNull BlockState blockState, @NotNull BlockEntityType<T> type) {
         return level.isClientSide ? null : (alevel, pos, aBlockstate, blockEntity) -> {
-            if (blockEntity instanceof SoulVineBlockEntity soulVineBlockEntity && alevel.getGameTime() % 3 == 0) {
+            if (blockEntity instanceof SoulMinerVineBlockEntity soulVineBlockEntity && alevel.getGameTime() % 5 == 0) {
                 soulVineBlockEntity.tick(blockState, (ServerLevel) alevel, pos, alevel.getRandom());
             }
         };

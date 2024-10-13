@@ -62,7 +62,7 @@ public class SoulVineBlockEntity extends BlockEntity {
 
             if (!hasChildren) {
 
-                DevilRpg.LOGGER.info("--------> currentDirection: {} age: {}", currentDirection, currentAge);
+                //DevilRpg.LOGGER.info("--------> currentDirection: {} age: {}", currentDirection, currentAge);
 
                 BlockPos childBlockPos;
                 BlockState childBlockState;

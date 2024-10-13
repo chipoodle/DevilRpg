@@ -3,6 +3,7 @@ package com.chipoodle.devilrpg.skillsystem.skillinstance;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
 import com.chipoodle.devilrpg.entity.LichenSeedBall;
 import com.chipoodle.devilrpg.skillsystem.AbstractSkillExecutor;
+import com.chipoodle.devilrpg.skillsystem.AbstractSkillSeedsInInventoryExecutor;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -13,7 +14,7 @@ import net.minecraft.world.phys.Vec3;
 import java.util.HashMap;
 import java.util.Random;
 
-public class SkillSoulLichen extends AbstractSkillExecutor {
+public class SkillSoulLichen extends AbstractSkillSeedsInInventoryExecutor {
 
     public SkillSoulLichen(PlayerSkillCapabilityImplementation parentCapability) {
         super(parentCapability);
@@ -26,13 +27,18 @@ public class SkillSoulLichen extends AbstractSkillExecutor {
 
     @Override
     public boolean arePreconditionsMetBeforeConsumingResource(Player player) {
-        return !player.getCooldowns().isOnCooldown(icon.getItem());
+        boolean hasSeeds = super.arePreconditionsMetBeforeConsumingResource(player);
+        return !player.getCooldowns().isOnCooldown(icon.getItem()) && hasSeeds;
     }
 
     @Override
     public void execute(Level levelIn, Player player, HashMap<String, String> parameters) {
         if (!player.getCooldowns().isOnCooldown(icon.getItem())) {
             if (!levelIn.isClientSide) {
+
+                // Consumir una semilla del inventario
+                consumeSeed(player);
+
                 /*Random rand = new Random();
                 levelIn.playSound(null, player.getX(), player.getY(), player.getZ(),
                         SoundEvents.CHICKEN_EGG, SoundSource.NEUTRAL, 0.5F,

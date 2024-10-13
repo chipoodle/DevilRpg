@@ -11,7 +11,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
 
 import static com.chipoodle.devilrpg.block.SoulShieldVineBlock.*;
-import static com.chipoodle.devilrpg.block.SoulShieldVineBlock.AGE;
 
 public class SoulShieldVineBlockEntity extends BlockEntity {
 
@@ -30,7 +29,6 @@ public class SoulShieldVineBlockEntity extends BlockEntity {
             timeOfCreation = world.getGameTime();
         }
 
-        Integer currentAge = state.getValue(AGE);
         int skillLevel = state.getValue(LEVEL);
         int currentDecay = state.getValue(DECAY_STAGE);
         Direction currentDirection = state.getValue(DIRECTIONS);
@@ -41,17 +39,13 @@ public class SoulShieldVineBlockEntity extends BlockEntity {
         long timeElapsed = world.getGameTime() - timeOfCreation;
         int newDecayStage = (int) ((timeElapsed * 4) / duration); // 4 etapas de decadencia
 
-        //DevilRpg.LOGGER.info("-------->tick. Age {} ", currentAge);
-
         // Actualiza el estado de decadencia
         if (newDecayStage != currentDecay && newDecayStage <= 3) {
             state = state.setValue(DECAY_STAGE, newDecayStage);
             world.setBlockAndUpdate(currentBlockPos, state);
         }
 
-        if (!canStay(state, world, currentBlockPos, currentDirection) || timeOfCreation + duration < world.getGameTime()) {
-            world.destroyBlock(currentBlockPos, true);
-        }
+        //DevilRpg.LOGGER.info(" timeOfCreation {} + duration {} < world.getGameTime() {} ----> {} < {} = {}",  timeOfCreation , duration , world.getGameTime(),timeOfCreation + duration, world.getGameTime(), timeOfCreation + duration < world.getGameTime());
 
         //setBlockDirection(state,world,currentBlockPos,currentDirection);
         if (!directionChanged) {
@@ -69,6 +63,9 @@ public class SoulShieldVineBlockEntity extends BlockEntity {
             directionChanged = true;
         }
 
+        if (/*!canStay(state, world, currentBlockPos, currentDirection) ||*/ timeOfCreation + duration < world.getGameTime()) {
+            world.destroyBlock(currentBlockPos, true);
+        }
 
     }
 
