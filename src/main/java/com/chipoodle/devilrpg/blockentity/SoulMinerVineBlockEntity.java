@@ -18,7 +18,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.chipoodle.devilrpg.block.SoulMinerVineBlock.*;
-import static com.chipoodle.devilrpg.block.SoulShieldVineBlock.DECAY_STAGE;
 
 
 public class SoulMinerVineBlockEntity extends BlockEntity {

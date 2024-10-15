@@ -89,9 +89,9 @@ public final class PlayerModInitEventSubscriber {
                 setFlammableMethod.invoke(fireBlock, ModBlocks.SOUL_MINER_VINE_BLOCK.get(), 60, 100);
                 setFlammableMethod.invoke(fireBlock, ModBlocks.SOUL_SHIELD_VINE_BLOCK.get(), 60, 100);
 
-                DevilRpg.LOGGER.info("SOUL_VINE_BLOCK, SOUL_MINER_VINE_BLOCK, SOUL_SHIELD_VINE_BLOCK ahora son inflamables.");
+                DevilRpg.LOGGER.info("SOUL_VINE_BLOCK, SOUL_MINER_VINE_BLOCK, SOUL_SHIELD_VINE_BLOCK are now flammables.");
             } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
-                DevilRpg.LOGGER.error("Error al hacer que SoulVineBlock sea inflamable", e);
+                DevilRpg.LOGGER.error("Error making SOUL_VINE_BLOCK, SOUL_MINER_VINE_BLOCK, SOUL_SHIELD_VINE_BLOCK flammables", e);
             }
         });
     }

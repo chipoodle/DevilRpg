@@ -39,10 +39,10 @@ public class SoulVineBlock extends Block implements EntityBlock, IForgeBlock {
     public static final VoxelShape SHAPE = Block.box(4.0D, 0.0D, 4.0D, 12.0D, 15.0D, 12.0D);
     public static final IntegerProperty AGE = BlockStateProperties.AGE_25;
     public static final DirectionProperty DIRECTIONS = BlockStateProperties.FACING;
-    public static final IntegerProperty LEVEL = IntegerProperty.create("soulvine_level", 0, 30);
     public static final BooleanProperty HAS_CHILDREN = BooleanProperty.create("soulvine_has_children");
     public static final DirectionProperty SOULVINE_FACING = DirectionProperty.create("soulvine_facing", BlockStateProperties.FACING.getPossibleValues());
 
+    public static final IntegerProperty LEVEL = IntegerProperty.create("soulvine_level", 0, 30);
     public static final IntegerProperty DECAY_STAGE = IntegerProperty.create("decay_stage", 0, 3);
 
     private static final Integer MAX_AGE = 25;

@@ -1,145 +1,145 @@
 {
   "variants": {
     "soulvine_facing=north,decay_stage=0": {
-      "model": "devilrpg:block/soulshieldvine_green",
+      "model": "devilrpg:block/soulvine_green",
       "uvlock": false,
       "y": 0,
       "x": 90
     },
     "soulvine_facing=south,decay_stage=0": {
-      "model": "devilrpg:block/soulshieldvine_green",
+      "model": "devilrpg:block/soulvine_green",
       "uvlock": false,
       "y": 180,
       "x": 270
     },
     "soulvine_facing=east,decay_stage=0": {
-      "model": "devilrpg:block/soulshieldvine_green",
+      "model": "devilrpg:block/soulvine_green",
       "uvlock": false,
       "y": 90,
       "x": 90
     },
     "soulvine_facing=west,decay_stage=0": {
-      "model": "devilrpg:block/soulshieldvine_green",
+      "model": "devilrpg:block/soulvine_green",
       "uvlock": false,
       "y": 270,
       "x": 270
     },
     "soulvine_facing=up,decay_stage=0": {
-      "model": "devilrpg:block/soulshieldvine_green",
+      "model": "devilrpg:block/soulvine_green",
       "uvlock": false,
       "y": 0,
       "x": 0
     },
     "soulvine_facing=down,decay_stage=0": {
-      "model": "devilrpg:block/soulshieldvine_green",
+      "model": "devilrpg:block/soulvine_green",
       "uvlock": false,
       "y": 180,
       "x": 180
     },
     "soulvine_facing=north,decay_stage=1": {
-      "model": "devilrpg:block/soulshieldvine_yellow",
+      "model": "devilrpg:block/soulvine_yellow",
       "uvlock": false,
       "y": 0,
       "x": 90
     },
     "soulvine_facing=south,decay_stage=1": {
-      "model": "devilrpg:block/soulshieldvine_yellow",
+      "model": "devilrpg:block/soulvine_yellow",
       "uvlock": false,
       "y": 180,
       "x": 270
     },
     "soulvine_facing=east,decay_stage=1": {
-      "model": "devilrpg:block/soulshieldvine_yellow",
+      "model": "devilrpg:block/soulvine_yellow",
       "uvlock": false,
       "y": 90,
       "x": 90
     },
     "soulvine_facing=west,decay_stage=1": {
-      "model": "devilrpg:block/soulshieldvine_yellow",
+      "model": "devilrpg:block/soulvine_yellow",
       "uvlock": false,
       "y": 270,
       "x": 270
     },
     "soulvine_facing=up,decay_stage=1": {
-      "model": "devilrpg:block/soulshieldvine_yellow",
+      "model": "devilrpg:block/soulvine_yellow",
       "uvlock": false,
       "y": 0,
       "x": 0
     },
     "soulvine_facing=down,decay_stage=1": {
-      "model": "devilrpg:block/soulshieldvine_yellow",
+      "model": "devilrpg:block/soulvine_yellow",
       "uvlock": false,
       "y": 180,
       "x": 180
     },
     "soulvine_facing=north,decay_stage=2": {
-      "model": "devilrpg:block/soulshieldvine_brown",
+      "model": "devilrpg:block/soulvine_brown",
       "uvlock": false,
       "y": 0,
       "x": 90
     },
     "soulvine_facing=south,decay_stage=2": {
-      "model": "devilrpg:block/soulshieldvine_brown",
+      "model": "devilrpg:block/soulvine_brown",
       "uvlock": false,
       "y": 180,
       "x": 270
     },
     "soulvine_facing=east,decay_stage=2": {
-      "model": "devilrpg:block/soulshieldvine_brown",
+      "model": "devilrpg:block/soulvine_brown",
       "uvlock": false,
       "y": 90,
       "x": 90
     },
     "soulvine_facing=west,decay_stage=2": {
-      "model": "devilrpg:block/soulshieldvine_brown",
+      "model": "devilrpg:block/soulvine_brown",
       "uvlock": false,
       "y": 270,
       "x": 270
     },
     "soulvine_facing=up,decay_stage=2": {
-      "model": "devilrpg:block/soulshieldvine_brown",
+      "model": "devilrpg:block/soulvine_brown",
       "uvlock": false,
       "y": 0,
       "x": 0
     },
     "soulvine_facing=down,decay_stage=2": {
-      "model": "devilrpg:block/soulshieldvine_brown",
+      "model": "devilrpg:block/soulvine_brown",
       "uvlock": false,
       "y": 180,
       "x": 180
     },
     "soulvine_facing=north,decay_stage=3": {
-      "model": "devilrpg:block/soulshieldvine_dead",
+      "model": "devilrpg:block/soulvine_dead",
       "uvlock": false,
       "y": 0,
       "x": 90
     },
     "soulvine_facing=south,decay_stage=3": {
-      "model": "devilrpg:block/soulshieldvine_dead",
+      "model": "devilrpg:block/soulvine_dead",
       "uvlock": false,
       "y": 180,
       "x": 270
     },
     "soulvine_facing=east,decay_stage=3": {
-      "model": "devilrpg:block/soulshieldvine_dead",
+      "model": "devilrpg:block/soulvine_dead",
       "uvlock": false,
       "y": 90,
       "x": 90
     },
     "soulvine_facing=west,decay_stage=3": {
-      "model": "devilrpg:block/soulshieldvine_dead",
+      "model": "devilrpg:block/soulvine_dead",
       "uvlock": false,
       "y": 270,
       "x": 270
     },
     "soulvine_facing=up,decay_stage=3": {
-      "model": "devilrpg:block/soulshieldvine_dead",
+      "model": "devilrpg:block/soulvine_dead",
       "uvlock": false,
       "y": 0,
       "x": 0
     },
     "soulvine_facing=down,decay_stage=3": {
-      "model": "devilrpg:block/soulshieldvine_dead",
+      "model": "devilrpg:block/soulvine_dead",
       "uvlock": false,
       "y": 180,
       "x": 180

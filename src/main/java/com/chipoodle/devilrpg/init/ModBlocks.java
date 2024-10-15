@@ -1,11 +1,7 @@
 package com.chipoodle.devilrpg.init;
 
 import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.block.SoulLichenBlock;
-import com.chipoodle.devilrpg.block.SoulMinerVineBlock;
-import com.chipoodle.devilrpg.block.SoulShieldVineBlock;
-import com.chipoodle.devilrpg.block.SoulVineBlock;
-import net.minecraft.world.flag.FeatureFlag;
+import com.chipoodle.devilrpg.block.*;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.SoundType;
@@ -54,5 +50,13 @@ public final class ModBlocks {
 
     public static final RegistryObject<SoulLichenBlock> SOUL_LICHEN_BLOCK = BLOCKS.register("soullichen", () -> new SoulLichenBlock(
             Block.Properties.copy(Blocks.GLOW_LICHEN).lightLevel(SoulLichenBlock.emission(7)).randomTicks()
+    ));
+
+    public static final RegistryObject<ManaBerryBushBlock> MANA_BERRY_BUSH_BLOCK = BLOCKS.register("mana_berry_bush", () -> new ManaBerryBushBlock(
+            Block.Properties.of(Material.PLANT, MaterialColor.COLOR_GREEN)
+                    .randomTicks()
+                    .noCollission()
+                    .instabreak()
+                    .sound(SoundType.SWEET_BERRY_BUSH)
     ));
 }

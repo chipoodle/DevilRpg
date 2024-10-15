@@ -1,10 +1,7 @@
 package com.chipoodle.devilrpg.init;
 
 import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.blockentity.SoulLichenBlockEntity;
-import com.chipoodle.devilrpg.blockentity.SoulMinerVineBlockEntity;
-import com.chipoodle.devilrpg.blockentity.SoulShieldVineBlockEntity;
-import com.chipoodle.devilrpg.blockentity.SoulVineBlockEntity;
+import com.chipoodle.devilrpg.blockentity.*;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraftforge.registries.DeferredRegister;
@@ -35,5 +32,8 @@ public final class ModEntityBlocks {
 
     public static final RegistryObject<BlockEntityType<SoulMinerVineBlockEntity>> SOUL_MINER_VINE_ENTITY_BLOCK = BLOCK_ENTITIES.register("soulminervineentityblock",
             () -> BlockEntityType.Builder.of(SoulMinerVineBlockEntity::new, ModBlocks.SOUL_MINER_VINE_BLOCK.get()).build(null));
+
+    public static final RegistryObject<BlockEntityType<ManaBerryBlockEntity>> MANA_BERRY_ENTITY_BLOCK = BLOCK_ENTITIES.register("manaberrybushentityblock",
+            () -> BlockEntityType.Builder.of(ManaBerryBlockEntity::new, ModBlocks.MANA_BERRY_BUSH_BLOCK.get()).build(null));
 
 }

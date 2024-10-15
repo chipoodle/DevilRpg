@@ -49,7 +49,7 @@
         "id": "nature:root",
         "display": {
             "description": {
-                "text": "Nature",
+                "text": "Marks the druid's first step in mastering the arcane forces of nature, allowing them to harness natural energies and transmute seeds into powerful abilities.It sets the foundation for commanding vines, plants, and the elements in harmony with nature’s balance.",
                 "color": "orange"
             },
             "icon": {
@@ -107,6 +107,26 @@
         },
         "rewards": {},
         "parent": "nature:root"
+    },
+    {
+        "id": "nature:manaberry",
+        "display": {
+            "description": "Harnesses the druid’s arcane mastery to transmute a seed into a Mana berry bush, which draws energy from the earth to grow. As it matures, it produces blue berries that restore mana. Bound by nature’s cycles, the bush withers and vanishes after its lifespan. Requires a seed from your inventory, which is consumed during transmutation.",
+            "icon": {
+                "item": "devilrpg:item_vine"
+            },
+            "title": "Mana Berry",
+            "image": "devilrpg:textures/gui/skill/fruiting.png",
+            "frame": "task"
+        },
+        "capability": "manaberry",
+        "skillmanacost":{
+            "maxskilllevel":"20",
+            "manacost":"15",
+            "resourcetype":"mana"
+        },
+        "rewards": {},
+        "parent": "nature:soulvine"
     },
     {
         "id": "nature:soulminervine",
