@@ -20,7 +20,7 @@ public enum SkillEnum {
     SUMMON_SOUL_BEAR("SummonSoulBear","Soul Bear","summon_soul_bear",true,false),
     WAR_BEAR("WarBear","War Bear","war_bear",true,true),
     MOUNT_BEAR("MountBear","Mount Bear","mount_bear",true,true),
-    FROSTBALL("Frostball","Frostball","frostball",true,false),
+    //FROSTBALL("Frostball","Frostball","frostball",true,false),
     SUMMON_WISP_HEALTH("SummonWispHealth","Wisp Health","summon_wisp_health",true,false),
     SUMMON_WISP_CURSE("SummonWispCurse","Wisp Curse","summon_wisp_curse",true,false),
     SUMMON_WISP_BOMB("SummonWispBomb","Bomber Wisp","summon_wisp_bomb",true,false),

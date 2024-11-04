@@ -16,133 +16,133 @@ import net.minecraft.world.level.pathfinder.WalkNodeEvaluator;
 import java.util.EnumSet;
 
 public class SoulWispFollowOwnerGoal extends Goal {
-   public static final int TELEPORT_WHEN_DISTANCE_IS = 12;
-   private static final int MIN_HORIZONTAL_DISTANCE_FROM_PLAYER_WHEN_TELEPORTING = 2;
-   private static final int MAX_HORIZONTAL_DISTANCE_FROM_PLAYER_WHEN_TELEPORTING = 3;
-   private static final int MAX_VERTICAL_DISTANCE_FROM_PLAYER_WHEN_TELEPORTING = 1;
-   private final SoulWisp tamable;
-   private LivingEntity owner;
-   private final LevelReader level;
-   private final double speedModifier;
-   private final PathNavigation navigation;
-   private int timeToRecalcPath;
-   private final float stopDistance;
-   private final float startDistance;
-   private float oldWaterCost;
-   private final boolean canFly;
+    public static final int TELEPORT_WHEN_DISTANCE_IS = 12;
+    private static final int MIN_HORIZONTAL_DISTANCE_FROM_PLAYER_WHEN_TELEPORTING = 2;
+    private static final int MAX_HORIZONTAL_DISTANCE_FROM_PLAYER_WHEN_TELEPORTING = 3;
+    private static final int MAX_VERTICAL_DISTANCE_FROM_PLAYER_WHEN_TELEPORTING = 1;
+    private final SoulWisp tamable;
+    private final LevelReader level;
+    private final double speedModifier;
+    private final PathNavigation navigation;
+    private final float stopDistance;
+    private final float startDistance;
+    private final boolean canFly;
+    private LivingEntity owner;
+    private int timeToRecalcPath;
+    private float oldWaterCost;
 
-   public SoulWispFollowOwnerGoal(SoulWisp soulWisp, double speedModifier, float startDistance, float stopDistance, boolean canFly) {
-      this.tamable = soulWisp;
-      this.level = soulWisp.level;
-      this.speedModifier = speedModifier;
-      this.navigation = soulWisp.getNavigation();
-      this.startDistance = startDistance;
-      this.stopDistance = stopDistance;
-      this.canFly = canFly;
-      this.setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
-      if (!(soulWisp.getNavigation() instanceof GroundPathNavigation) && !(soulWisp.getNavigation() instanceof FlyingPathNavigation)) {
-         throw new IllegalArgumentException("Unsupported mob type for FollowOwnerGoal");
-      }
-   }
+    public SoulWispFollowOwnerGoal(SoulWisp soulWisp, double speedModifier, float startDistance, float stopDistance, boolean canFly) {
+        this.tamable = soulWisp;
+        this.level = soulWisp.level;
+        this.speedModifier = speedModifier;
+        this.navigation = soulWisp.getNavigation();
+        this.startDistance = startDistance;
+        this.stopDistance = stopDistance;
+        this.canFly = canFly;
+        this.setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
+        if (!(soulWisp.getNavigation() instanceof GroundPathNavigation) && !(soulWisp.getNavigation() instanceof FlyingPathNavigation)) {
+            throw new IllegalArgumentException("Unsupported mob type for FollowOwnerGoal");
+        }
+    }
 
-   public boolean canUse() {
-      LivingEntity owner = this.tamable.getOwner();
-      if (owner == null) {
-         return false;
-      } else if (owner.isSpectator()) {
-         return false;
-      } else if (this.unableToMove()) {
-         return false;
-      } else if (this.tamable.distanceToSqr(owner) < (double)(this.startDistance * this.startDistance)) {
-         return false;
-      } else {
-         this.owner = owner;
-         return !tamable.hasItemInHand();
-      }
-   }
-
-   public boolean canContinueToUse() {
-      if (this.navigation.isDone()) {
-         return false;
-      } else if (this.unableToMove()) {
-         return false;
-      } else {
-         return !(this.tamable.distanceToSqr(this.owner) <= (double)(this.stopDistance * this.stopDistance));
-      }
-   }
-
-   private boolean unableToMove() {
-      return this.tamable.isOrderedToSit() || this.tamable.isPassenger() || this.tamable.isLeashed();
-   }
-
-   public void start() {
-      this.timeToRecalcPath = 0;
-      this.oldWaterCost = this.tamable.getPathfindingMalus(BlockPathTypes.WATER);
-      this.tamable.setPathfindingMalus(BlockPathTypes.WATER, 0.0F);
-   }
-
-   public void stop() {
-      this.owner = null;
-      this.navigation.stop();
-      this.tamable.setPathfindingMalus(BlockPathTypes.WATER, this.oldWaterCost);
-   }
-
-   public void tick() {
-      this.tamable.getLookControl().setLookAt(this.owner, 10.0F, (float)this.tamable.getMaxHeadXRot());
-      if (--this.timeToRecalcPath <= 0) {
-         this.timeToRecalcPath = this.adjustedTickDelay(10);
-         if (this.tamable.distanceToSqr(this.owner) >= 144.0D) {
-            this.teleportToOwner();
-         } else {
-            this.navigation.moveTo(this.owner, this.speedModifier);
-         }
-
-      }
-   }
-
-   private void teleportToOwner() {
-      BlockPos blockpos = this.owner.blockPosition();
-
-      for(int i = 0; i < 10; ++i) {
-         int j = this.randomIntInclusive(-3, 3);
-         int k = this.randomIntInclusive(-1, 1);
-         int l = this.randomIntInclusive(-3, 3);
-         boolean flag = this.maybeTeleportTo(blockpos.getX() + j, blockpos.getY() + k, blockpos.getZ() + l);
-         if (flag) {
-            return;
-         }
-      }
-
-   }
-
-   private boolean maybeTeleportTo(int p_25304_, int p_25305_, int p_25306_) {
-      if (Math.abs((double)p_25304_ - this.owner.getX()) < 2.0D && Math.abs((double)p_25306_ - this.owner.getZ()) < 2.0D) {
-         return false;
-      } else if (!this.canTeleportTo(new BlockPos(p_25304_, p_25305_, p_25306_))) {
-         return false;
-      } else {
-         this.tamable.moveTo((double)p_25304_ + 0.5D, (double)p_25305_, (double)p_25306_ + 0.5D, this.tamable.getYRot(), this.tamable.getXRot());
-         this.navigation.stop();
-         return true;
-      }
-   }
-
-   private boolean canTeleportTo(BlockPos p_25308_) {
-      BlockPathTypes blockpathtypes = WalkNodeEvaluator.getBlockPathTypeStatic(this.level, p_25308_.mutable());
-      if (blockpathtypes != BlockPathTypes.WALKABLE) {
-         return false;
-      } else {
-         BlockState blockstate = this.level.getBlockState(p_25308_.below());
-         if (!this.canFly && blockstate.getBlock() instanceof LeavesBlock) {
+    public boolean canUse() {
+        LivingEntity owner = this.tamable.getOwner();
+        if (owner == null) {
             return false;
-         } else {
-            BlockPos blockpos = p_25308_.subtract(this.tamable.blockPosition());
-            return this.level.noCollision(this.tamable, this.tamable.getBoundingBox().move(blockpos));
-         }
-      }
-   }
+        } else if (owner.isSpectator()) {
+            return false;
+        } else if (this.unableToMove()) {
+            return false;
+        } else if (this.tamable.distanceToSqr(owner) < (double) (this.startDistance * this.startDistance)) {
+            return false;
+        } else {
+            this.owner = owner;
+            return !tamable.hasItemInMainHand();
+        }
+    }
 
-   private int randomIntInclusive(int p_25301_, int p_25302_) {
-      return this.tamable.getRandom().nextInt(p_25302_ - p_25301_ + 1) + p_25301_;
-   }
+    public boolean canContinueToUse() {
+        if (this.navigation.isDone()) {
+            return false;
+        } else if (this.unableToMove()) {
+            return false;
+        } else {
+            return !(this.tamable.distanceToSqr(this.owner) <= (double) (this.stopDistance * this.stopDistance));
+        }
+    }
+
+    private boolean unableToMove() {
+        return this.tamable.isOrderedToSit() || this.tamable.isPassenger() || this.tamable.isLeashed();
+    }
+
+    public void start() {
+        this.timeToRecalcPath = 0;
+        this.oldWaterCost = this.tamable.getPathfindingMalus(BlockPathTypes.WATER);
+        this.tamable.setPathfindingMalus(BlockPathTypes.WATER, 0.0F);
+    }
+
+    public void stop() {
+        this.owner = null;
+        this.navigation.stop();
+        this.tamable.setPathfindingMalus(BlockPathTypes.WATER, this.oldWaterCost);
+    }
+
+    public void tick() {
+        this.tamable.getLookControl().setLookAt(this.owner, 10.0F, (float) this.tamable.getMaxHeadXRot());
+        if (--this.timeToRecalcPath <= 0) {
+            this.timeToRecalcPath = this.adjustedTickDelay(10);
+            if (this.tamable.distanceToSqr(this.owner) >= 144.0D) {
+                this.teleportToOwner();
+            } else {
+                this.navigation.moveTo(this.owner, this.speedModifier);
+            }
+
+        }
+    }
+
+    private void teleportToOwner() {
+        BlockPos blockpos = this.owner.blockPosition();
+
+        for (int i = 0; i < 10; ++i) {
+            int j = this.randomIntInclusive(-3, 3);
+            int k = this.randomIntInclusive(-1, 1);
+            int l = this.randomIntInclusive(-3, 3);
+            boolean flag = this.maybeTeleportTo(blockpos.getX() + j, blockpos.getY() + k, blockpos.getZ() + l);
+            if (flag) {
+                return;
+            }
+        }
+
+    }
+
+    private boolean maybeTeleportTo(int p_25304_, int p_25305_, int p_25306_) {
+        if (Math.abs((double) p_25304_ - this.owner.getX()) < 2.0D && Math.abs((double) p_25306_ - this.owner.getZ()) < 2.0D) {
+            return false;
+        } else if (!this.canTeleportTo(new BlockPos(p_25304_, p_25305_, p_25306_))) {
+            return false;
+        } else {
+            this.tamable.moveTo((double) p_25304_ + 0.5D, (double) p_25305_, (double) p_25306_ + 0.5D, this.tamable.getYRot(), this.tamable.getXRot());
+            this.navigation.stop();
+            return true;
+        }
+    }
+
+    private boolean canTeleportTo(BlockPos p_25308_) {
+        BlockPathTypes blockpathtypes = WalkNodeEvaluator.getBlockPathTypeStatic(this.level, p_25308_.mutable());
+        if (blockpathtypes != BlockPathTypes.WALKABLE) {
+            return false;
+        } else {
+            BlockState blockstate = this.level.getBlockState(p_25308_.below());
+            if (!this.canFly && blockstate.getBlock() instanceof LeavesBlock) {
+                return false;
+            } else {
+                BlockPos blockpos = p_25308_.subtract(this.tamable.blockPosition());
+                return this.level.noCollision(this.tamable, this.tamable.getBoundingBox().move(blockpos));
+            }
+        }
+    }
+
+    private int randomIntInclusive(int p_25301_, int p_25302_) {
+        return this.tamable.getRandom().nextInt(p_25302_ - p_25301_ + 1) + p_25301_;
+    }
 }

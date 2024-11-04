@@ -2,11 +2,13 @@ package com.chipoodle.devilrpg.init;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.Item;
 import net.minecraftforge.common.ForgeSpawnEggItem;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
+import com.chipoodle.devilrpg.item.*;
 
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -21,6 +23,8 @@ public class ModItems {
     public static final RegistryObject<Item> ITEM_SUMMON = ITEMS.register("item_summon", () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> ITEM_FROST = ITEMS.register("item_frost", () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> ITEM_VINE = ITEMS.register("item_vine", () -> new Item(new Item.Properties()));
+    public static final RegistryObject<Item> MANA_BERRY = ITEMS.register("mana_berry",
+            () -> new ManaBerryItem(new Item.Properties().food(new FoodProperties.Builder().nutrition(4).saturationMod(0.3f).build())));
 
     public static final RegistryObject<ForgeSpawnEggItem> SOULWOLF_SPAWN_EGG = ITEMS.register("soulwolf_spawn_egg",
             () -> new ForgeSpawnEggItem(ModEntities.SOUL_WOLF, 0x944a7f, 0x3b3636,

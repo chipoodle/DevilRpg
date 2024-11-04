@@ -69,26 +69,6 @@
         }
     },
     {
-        "id": "nature:frostball",
-        "display": {
-            "description": "A Frostball that damages and freezes your enemies",
-            "icon": {
-                "item": "devilrpg:item_frost"
-            },
-            "title": "Frostball",
-            "image": "devilrpg:textures/gui/skill/frostball.png",
-            "frame": "task"
-        },
-        "capability": "frostball",
-        "skillmanacost":{
-        	"maxskilllevel":"20",
-			"manacost":"3",
-            "resourcetype":"mana"
-		},
-        "rewards": {},
-        "parent": "nature:root"
-    },
-    {
         "id": "nature:soulvine",
         "display": {
             "description": "The Soul Vine dynamically grows in the direction the player is looking, spreading and creating new vines as it advances. The vine’s growth speed and lifespan depend on your skill level, with higher levels extending its reach and duration. Activation requires a seed from your inventory, which will be consumed upon use.",
@@ -122,7 +102,7 @@
         "capability": "manaberry",
         "skillmanacost":{
             "maxskilllevel":"20",
-            "manacost":"15",
+            "manacost":"28",
             "resourcetype":"mana"
         },
         "rewards": {},

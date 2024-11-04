@@ -13,7 +13,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
@@ -32,18 +31,13 @@ public class SkillManaBerry extends AbstractSkillSeedsInInventoryExecutor {
 
     @Override
     public boolean arePreconditionsMetBeforeConsumingResource(Player player) {
-        BlockPos playerBlockPos = player.blockPosition();
-        BlockState playerBlockState = player.level.getBlockState(playerBlockPos);
+        boolean hasSeeds = super.arePreconditionsMetBeforeConsumingResource(player);
         Vec3 playerLookVector = player.getLookAngle();
         Direction nearestDirection = Direction.getNearest(playerLookVector.x, 0, playerLookVector.z);
-        //DevilRpg.LOGGER.info("-------->Direction: {}", nearestDirection);
+        BlockPos playerBlockPos = player.blockPosition();
         BlockPos newBlockpos = playerBlockPos.relative(nearestDirection);
-
-        boolean hasSeeds = super.arePreconditionsMetBeforeConsumingResource(player);
-
-        boolean canPlace = playerBlockState.getBlock().equals(Blocks.AIR)
-                && player.level.getBlockState(newBlockpos).getBlock().equals(Blocks.AIR);
-
+        BlockState belowBlockstate = player.level.getBlockState(newBlockpos.below());
+        boolean canPlace = player.level.isEmptyBlock(newBlockpos) && belowBlockstate.is(BlockTags.DIRT);
 
         return !player.getCooldowns().isOnCooldown(icon.getItem()) && canPlace && hasSeeds;
     }
@@ -52,11 +46,6 @@ public class SkillManaBerry extends AbstractSkillSeedsInInventoryExecutor {
     public void execute(Level levelIn, Player player, HashMap<String, String> parameters) {
         if (!player.getCooldowns().isOnCooldown(icon.getItem())) {
             if (!levelIn.isClientSide) {
-               /* Random rand = new Random();
-                levelIn.playSound(null, player.getX(), player.getY(), player.getZ(),
-                        SoundEvents.CHICKEN_EGG, SoundSource.NEUTRAL, 0.5F,
-                        0.4F / (rand.nextFloat() * 0.4F + 0.8F));*/
-
                 PlayerSkillCapabilityInterface skillCap = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerSkillCapability.INSTANCE);
                 setVine(levelIn, player, skillCap);
                 player.getCooldowns().addCooldown(icon.getItem(), 20);
@@ -65,12 +54,10 @@ public class SkillManaBerry extends AbstractSkillSeedsInInventoryExecutor {
     }
 
     private void setVine(Level level, Player playerIn, PlayerSkillCapabilityInterface skillCap) {
-        BlockPos playerBlockPos = playerIn.blockPosition();
         ManaBerryBushBlock createdBlock = ModBlocks.MANA_BERRY_BUSH_BLOCK.get();
-        BlockState playerBlockState = level.getBlockState(playerBlockPos);
         Vec3 playerLookVector = playerIn.getLookAngle();
         Direction nearestDirection = Direction.getNearest(playerLookVector.x, 0, playerLookVector.z);
-        //DevilRpg.LOGGER.info("-------->Direction: {}", nearestDirection);
+        BlockPos playerBlockPos = playerIn.blockPosition();
         BlockPos newBlockpos = playerBlockPos.relative(nearestDirection);
         BlockState belowBlockstate = level.getBlockState(newBlockpos.below());
         if (level.isEmptyBlock(newBlockpos) && belowBlockstate.is(BlockTags.DIRT)) {

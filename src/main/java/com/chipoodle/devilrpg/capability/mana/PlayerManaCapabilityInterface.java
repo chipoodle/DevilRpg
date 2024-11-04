@@ -12,6 +12,8 @@ public interface PlayerManaCapabilityInterface extends IGenericCapability {
 
     void setMaxMana(float maxMana, Player player);
 
+    void addMana(float manaToAdd, Player player);
+
     float getRegeneration();
 
     void setRegeneration(float regeneration, Player player);

@@ -37,17 +37,17 @@ public class SkillSoulShieldVine extends AbstractSkillSeedsInInventoryExecutor {
     @Override
     public boolean arePreconditionsMetBeforeConsumingResource(Player player) {
         BlockPos playerBlockPos = player.blockPosition();
-        BlockState playerBlockState = player.level.getBlockState(playerBlockPos);
+        //BlockState playerBlockState = player.level.getBlockState(playerBlockPos);
         Vec3 playerLookVector = player.getLookAngle();
         Direction nearestDirection = Direction.getNearest(playerLookVector.x, 0, playerLookVector.z);
         //DevilRpg.LOGGER.info("-------->Direction: {}", nearestDirection);
-        BlockPos newBlockpos = playerBlockPos.relative(nearestDirection);
-        boolean canPlace = playerBlockState.getBlock().equals(Blocks.AIR)
-                && player.level.getBlockState(newBlockpos).getBlock().equals(Blocks.AIR);
+        //BlockPos newBlockpos = playerBlockPos.relative(nearestDirection);
+        /*boolean canPlace = playerBlockState.getBlock().equals(Blocks.AIR)
+                && player.level.getBlockState(newBlockpos).getBlock().equals(Blocks.AIR);*/
 
         boolean hasSeeds = super.arePreconditionsMetBeforeConsumingResource(player);
 
-        return !player.getCooldowns().isOnCooldown(icon.getItem()) && canPlace && hasSeeds;
+        return !player.getCooldowns().isOnCooldown(icon.getItem()) && /*canPlace &&*/ hasSeeds;
     }
 
     @Override

@@ -2,6 +2,7 @@ package com.chipoodle.devilrpg.blockentity;
 
 
 import com.chipoodle.devilrpg.init.ModEntityBlocks;
+import com.chipoodle.devilrpg.init.ModItems;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
@@ -54,23 +55,19 @@ public class ManaBerryBlockEntity extends BlockEntity {
             return false;
         }
 
-        /*double length = skillLevel * 0.5 + 10;
-        if (currentAge < length) {
-            //DevilRpg.LOGGER.info("-------->Direction: {}, AGE {}, LEVEL {}, duration: {}", currentDirection, currentAge, skillLevel, duration);
-
-
-        }*/
-
         if (currentAge < 3 && newDecayStage < 4) {
             BlockState blockstate = state.setValue(AGE, currentAge + 1);
             world.setBlock(currentBlockPos, blockstate, 2);
             world.gameEvent(GameEvent.BLOCK_CHANGE, currentBlockPos, GameEvent.Context.of(blockstate));
         }
-        if (currentAge == 3 && world.getGameTime() % 8 == 0) {
-            popResource(world, currentBlockPos, new ItemStack(Items.SWEET_BERRIES, 1));
-            world.playSound((Player) null, currentBlockPos, SoundEvents.SWEET_BERRY_BUSH_PICK_BERRIES, SoundSource.BLOCKS, 1.0F, 0.8F + world.random.nextFloat() * 0.4F);
+        if (currentAge == 3 && world.getGameTime() % 2 == 0) {
+            popResource(world, currentBlockPos, new ItemStack(ModItems.MANA_BERRY.get(), 1));
+            BlockState blockstate = state.setValue(AGE, 1);
+            world.setBlock(currentBlockPos, blockstate, 2);
+            world.gameEvent(GameEvent.BLOCK_CHANGE, currentBlockPos, GameEvent.Context.of(blockstate));
+            world.playSound(null, currentBlockPos, SoundEvents.SWEET_BERRY_BUSH_PICK_BERRIES, SoundSource.BLOCKS, 1.0F, 0.8F + world.random.nextFloat() * 0.4F);
         }
-        if(newDecayStage >= 4){
+        if (newDecayStage >= 4) {
             BlockState blockstate = state.setValue(AGE, 0);
             world.setBlock(currentBlockPos, blockstate, 2);
             world.gameEvent(GameEvent.BLOCK_CHANGE, currentBlockPos, GameEvent.Context.of(blockstate));

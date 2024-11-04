@@ -15,7 +15,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.Material;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.HashMap;
@@ -35,7 +35,7 @@ public class SkillSoulVine extends AbstractSkillSeedsInInventoryExecutor {
     @Override
     public boolean arePreconditionsMetBeforeConsumingResource(Player player) {
         BlockPos playerBlockPos = player.blockPosition();
-        BlockState playerBlockState = player.level.getBlockState(playerBlockPos);
+        //BlockState playerBlockState = player.level.getBlockState(playerBlockPos);
         Vec3 playerLookVector = player.getLookAngle();
         Direction nearestDirection = Direction.getNearest(playerLookVector.x, 0, playerLookVector.z);
         //DevilRpg.LOGGER.info("-------->Direction: {}", nearestDirection);
@@ -43,8 +43,9 @@ public class SkillSoulVine extends AbstractSkillSeedsInInventoryExecutor {
 
         boolean hasSeeds = super.arePreconditionsMetBeforeConsumingResource(player);
 
-        boolean canPlace = playerBlockState.getBlock().equals(Blocks.AIR)
-                && player.level.getBlockState(newBlockpos).getBlock().equals(Blocks.AIR)
+        boolean canPlace = (player.level.getBlockState(newBlockpos).getMaterial().equals(Material.REPLACEABLE_PLANT) ||
+                player.level.getBlockState(newBlockpos).getMaterial().equals(Material.TOP_SNOW) ||
+                player.level.getBlockState(newBlockpos).getBlock().equals(Blocks.AIR))
                 && SoulVineBlock.hasAtLeasOneSolidNeighbourPerpendicularToGrowDirection(player.level, newBlockpos, nearestDirection);
 
 
@@ -71,14 +72,15 @@ public class SkillSoulVine extends AbstractSkillSeedsInInventoryExecutor {
     private void setVine(Level level, Player playerIn, PlayerSkillCapabilityInterface skillCap) {
         BlockPos playerBlockPos = playerIn.blockPosition();
         SoulVineBlock createdBlock = ModBlocks.SOUL_VINE_BLOCK.get();
-        BlockState playerBlockState = level.getBlockState(playerBlockPos);
+        //BlockState playerBlockState = level.getBlockState(playerBlockPos);
         Vec3 playerLookVector = playerIn.getLookAngle();
         Direction nearestDirection = Direction.getNearest(playerLookVector.x, 0, playerLookVector.z);
         //DevilRpg.LOGGER.info("-------->Direction: {}", nearestDirection);
         BlockPos newBlockpos = playerBlockPos.relative(nearestDirection);
-        if (playerBlockState.getBlock().equals(Blocks.AIR)
+        /*if (playerBlockState.getBlock().equals(Blocks.AIR)
                 && level.getBlockState(newBlockpos).getBlock().equals(Blocks.AIR)
-                && SoulVineBlock.hasAtLeasOneSolidNeighbourPerpendicularToGrowDirection(level, newBlockpos, nearestDirection)) {
+                && SoulVineBlock.hasAtLeasOneSolidNeighbourPerpendicularToGrowDirection(level, newBlockpos, nearestDirection)) */
+        {
 
             // Consumir una semilla del inventario
             consumeSeed(playerIn);

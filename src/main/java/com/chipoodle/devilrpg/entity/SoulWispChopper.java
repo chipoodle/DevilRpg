@@ -30,14 +30,16 @@ public class SoulWispChopper extends SoulWisp {
 
     protected void registerGoals() {
         // super.registerGoals();
-        this.goalSelector.addGoal(0, new SoulWispChopWoodGoal(this));
-        this.goalSelector.addGoal(1, new FloatGoal(this));
+        //this.goalSelector.addGoal(0, new SoulWispCollectLogsGoal(this,5));
+        this.goalSelector.addGoal(1, new SoulWispChopWoodGoal(this));
+
+        this.goalSelector.addGoal(2, new FloatGoal(this));
         // this.goalSelector.addGoal(3, new WaterAvoidingRandomFlyingGoal(this, 1.0D));
         this.goalSelector.addGoal(5, new SoulWispFollowOwnerGoal(this, 1.0D, 3.0F, 7.0F, true));
         this.goalSelector.addGoal(9, new SoulWisp.WanderGoal());
         //this.goalSelector.addGoal(10, new LookAtPlayerGoal(this, Mob.class, 8.0F));
         //this.goalSelector.addGoal(2, new RandomLookAroundGoal(this));
-        this.targetSelector.addGoal(2, new HurtByTargetGoal(this));
+        this.targetSelector.addGoal(3, new HurtByTargetGoal(this));
     }
 
     public void updateLevel(Player owner) {
@@ -80,10 +82,4 @@ public class SoulWispChopper extends SoulWisp {
         }
     }
 
-    private void removeInteractionItem(Player player, ItemStack itemStack) {
-        if (!player.getAbilities().instabuild) {
-            itemStack.shrink(1);
-        }
-
-    }
 }

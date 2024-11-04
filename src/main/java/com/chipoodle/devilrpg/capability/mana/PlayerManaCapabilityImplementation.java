@@ -43,6 +43,29 @@ public class PlayerManaCapabilityImplementation implements PlayerManaCapabilityI
     }
 
     @Override
+    public void addMana(float manaToAdd, Player player) {
+        // Sumar el mana actual con la cantidad a agregar
+        this.mana += manaToAdd;
+
+        // Asegurarse de que el mana no exceda el máximo permitido
+        if (this.mana > this.maxMana) {
+            this.mana = this.maxMana;
+        }
+
+        // Asegurarse de que el mana no sea menor a 0
+        if (this.mana < 0) {
+            this.mana = 0;
+        }
+
+        // Sincronizar los cambios con el cliente o el servidor según el lado
+        if (!player.level.isClientSide) {
+            sendManaChangesToClient((ServerPlayer) player);
+        } else {
+            sendManaChangesToServer();
+        }
+    }
+
+    @Override
     public float getRegeneration() {
         return regeneration;
     }

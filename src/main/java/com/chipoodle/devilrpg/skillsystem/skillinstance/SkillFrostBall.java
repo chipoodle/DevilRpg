@@ -14,23 +14,23 @@ import net.minecraft.world.level.Level;
 import java.util.HashMap;
 import java.util.Random;
 
-public class SkillFrostBall extends AbstractSkillExecutor {
+public class SkillFrostBall /*extends AbstractSkillExecutor */{
 
     public SkillFrostBall(PlayerSkillCapabilityInterface parentCapability) {
-        super(parentCapability);
+        //super(parentCapability);
     }
 
-    @Override
+    /*@Override
     public SkillEnum getSkillEnum() {
         return SkillEnum.FROSTBALL;
     }
-
-    @Override
+*/
+   /* @Override
     public boolean arePreconditionsMetBeforeConsumingResource(Player player) {
         return !player.getCooldowns().isOnCooldown(icon.getItem());
-    }
+    }*/
 
-    @Override
+    /*@Override
     public void execute(Level levelIn, Player player, HashMap<String, String> parameters) {
         if (!player.getCooldowns().isOnCooldown(icon.getItem())) {
             if (!levelIn.isClientSide) {
@@ -49,5 +49,5 @@ public class SkillFrostBall extends AbstractSkillExecutor {
                 player.getCooldowns().addCooldown(icon.getItem(), 20);
             }
         }
-    }
+    }*/
 }

@@ -9,6 +9,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.Material;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -76,7 +77,7 @@ public class SoulVineBlockEntity extends BlockEntity {
                     // DevilRpg.LOGGER.info("nextDirection--> {}", nextDirection);
                     childBlockPos = currentBlockPos.relative(nextDirection);
                     childBlockState = world.getBlockState(childBlockPos);
-                    if (childBlockState.isAir()) {
+                    if (childBlockState.isAir() || childBlockState.getMaterial().equals(Material.REPLACEABLE_PLANT)) {
                         if (hasAtLeasOneSolidNeighbourPerpendicularToGrowDirection(world, childBlockPos, nextDirection)) {
                             state = setBlockDirection(state, world, currentBlockPos, nextDirection);
                             createChildBlock(state, world, currentDirection, childBlockPos, currentBlockPos, nextDirection);

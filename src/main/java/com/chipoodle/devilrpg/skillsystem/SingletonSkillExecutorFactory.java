@@ -31,11 +31,11 @@ public class SingletonSkillExecutorFactory {
                     skillPool.put(SkillEnum.SUMMON_SOUL_BEAR, new SkillSummonSoulBear(parentCapability));
                 return skillPool.get(SkillEnum.SUMMON_SOUL_BEAR);
             }
-            case FROSTBALL -> {
+            /*case FROSTBALL -> {
                 if (!skillPool.containsKey(SkillEnum.FROSTBALL))
                     skillPool.put(SkillEnum.FROSTBALL, new SkillFrostBall(parentCapability));
                 return skillPool.get(SkillEnum.FROSTBALL);
-            }
+            }*/
             case SUMMON_WISP_HEALTH -> {
                 if (!skillPool.containsKey(SkillEnum.SUMMON_WISP_HEALTH))
                     skillPool.put(SkillEnum.SUMMON_WISP_HEALTH, new SkillSummonWispHealth(parentCapability));

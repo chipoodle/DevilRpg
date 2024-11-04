@@ -44,6 +44,7 @@ public class MinionPortraitHudOverlay extends GuiComponent {
     private final static int vanillaExpLeftX = 1; // leftmost edge of the experience bar
     private final static int vanillaExpTopY = 1; // top of the experience bar
 
+    private final static DecimalFormat dCurrent = new DecimalFormat("#,###.##");
     public static final IGuiOverlay HUD_MINION_PORTRAITS = (gui, poseStack, partialTick, screenWidth, screenHeight) -> {
         Minecraft mc = Minecraft.getInstance();
         Player player = mc.player;
@@ -102,7 +103,7 @@ public class MinionPortraitHudOverlay extends GuiComponent {
 
         Minecraft mc = Minecraft.getInstance();
         Font fr = mc.font;
-        DecimalFormat d = new DecimalFormat("#,###");
+
         poseStack.pushPose();
         RenderSystem.setShader(GameRenderer::getPositionTexShader);
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
@@ -156,7 +157,7 @@ public class MinionPortraitHudOverlay extends GuiComponent {
             blit(poseStack, 0, 0, NORMAL_TEXTURE_U, 0, 1, BAR_HEIGHT - 2);
         }
         poseStack.popPose();
-        String s = d.format(effectiveHp) + "/" + d.format(maxHp);
+        String s = dCurrent.format(effectiveHp) + "/" + dCurrent.format(maxHp);
         int textWidth = fr.width(s);
 
         poseStack.translate(3 + textWidth + (float) textWidth / 2, -0.5f, 0);

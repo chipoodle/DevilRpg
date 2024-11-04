@@ -42,12 +42,12 @@ import java.util.Objects;
 
 
 public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, PowerableMob, IPassiveMinionUpdater<SoulWolf> {
+    public static final int FROSTBITE_DURATION_TICKS = 20;
     private static final int ICE_ARMOR_EFFECT_FACTOR = 2;
     private static final double RADIUS_PARTICLES = 0.7;
     //private static final int NUMBER_OF_PARTICLES_ICE_ARMOR = 11;
     private static final int PROBABILITY_MULTIPLIER = 4;
     private static final int ICE_ARMOR_DURATION_TICKS = 140;
-    public static final int FROSTBITE_DURATION_TICKS = 20;
     private static final int INITIAL_HEALTH = 8;
     private static final int NUMBER_OF_PARTICLES_FROST_BITE = 11;
     private int puntosAsignados = 0;
@@ -156,7 +156,7 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
         int randomNumber = random.nextInt(100);
         if (frostbite > 0 && randomNumber <= (frostbite * PROBABILITY_MULTIPLIER)) { //20% randomNumber on lvl5 frostbite
 
-            MobEffectInstance frostbiteEffect = new MobEffectInstance(MobEffects.DAMAGE_BOOST, FROSTBITE_DURATION_TICKS, (int) Math.round((double) frostbite /2), true, false);
+            MobEffectInstance frostbiteEffect = new MobEffectInstance(MobEffects.DAMAGE_BOOST, FROSTBITE_DURATION_TICKS, (int) Math.round((double) frostbite / 2), true, false);
             MobEffectInstance active = this.getEffect(MobEffects.DAMAGE_BOOST);
             if (active != null && frostbiteEffect.getAmplifier() <= active.getAmplifier()) {
                 active.update(frostbiteEffect);
@@ -169,9 +169,8 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
         boolean flag = target.hurt(this.damageSources().mobAttack(this), (float) (attackDamage));
         MobEffectInstance mobEffectInstance = this.getEffect(MobEffects.DAMAGE_BOOST);
         DevilRpg.LOGGER.debug("---------->doHurtTarget attdmg {} + frostbite: {} random: {} <= limit: {} effect lvl {} owner: {}  owneruuid: {}"
-                , attackDamage, Math.round((double) frostbite /2), randomNumber,
-                frostbite * PROBABILITY_MULTIPLIER, mobEffectInstance!= null? mobEffectInstance.getAmplifier(): 0,getOwner(), getOwnerUUID() );
-
+                , attackDamage, Math.round((double) frostbite / 2), randomNumber,
+                frostbite * PROBABILITY_MULTIPLIER, mobEffectInstance != null ? mobEffectInstance.getAmplifier() : 0, getOwner().getName().getString(), getOwnerUUID());
 
         if (flag) {
             this.doEnchantDamageEffects(this, target);
@@ -181,29 +180,28 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
 
     @Override
     public boolean hurt(@NotNull DamageSource damageSource, float amount) {
-        boolean hurt = super.hurt(damageSource, amount);
-        if (hurt) {
-            int probability = random.nextInt(100);
-            if (iceArmor > 0 && probability <= (iceArmor * PROBABILITY_MULTIPLIER) && Minecraft.getInstance().level != null) {
-                //IRenderUtilities.rotationParticles(Minecraft.getInstance().level, random, this, ParticleTypes.SNOWFLAKE, NUMBER_OF_PARTICLES_ICE_ARMOR, RADIUS_PARTICLES);
-                MobEffectInstance iceArmorEffect = new MobEffectInstance(MobEffects.ABSORPTION, ICE_ARMOR_DURATION_TICKS, iceArmor * ICE_ARMOR_EFFECT_FACTOR, true, false);
-                MobEffectInstance active = this.getEffect(MobEffects.ABSORPTION);
-                if (active != null && iceArmorEffect.getAmplifier() <= active.getAmplifier()) {
-                    active.update(iceArmorEffect);
-                } else
-                    this.addEffect(iceArmorEffect);
 
-                DevilRpg.LOGGER.debug("---------->hurt iceArmor: {} probability: {} Range of success: {}", iceArmor, probability, iceArmor * PROBABILITY_MULTIPLIER);
+        int probability = random.nextInt(100);
+        if (iceArmor > 0 && probability <= (iceArmor * PROBABILITY_MULTIPLIER) && Minecraft.getInstance().level != null) {
+            //IRenderUtilities.rotationParticles(Minecraft.getInstance().level, random, this, ParticleTypes.SNOWFLAKE, NUMBER_OF_PARTICLES_ICE_ARMOR, RADIUS_PARTICLES);
+            MobEffectInstance iceArmorEffect = new MobEffectInstance(MobEffects.ABSORPTION, ICE_ARMOR_DURATION_TICKS, iceArmor * ICE_ARMOR_EFFECT_FACTOR, true, false);
+            MobEffectInstance active = this.getEffect(MobEffects.ABSORPTION);
+            if (active != null && iceArmorEffect.getAmplifier() <= active.getAmplifier()) {
+                active.update(iceArmorEffect);
+            } else
+                this.addEffect(iceArmorEffect);
 
-                MobEffectInstance fireResistance = new MobEffectInstance(MobEffects.FIRE_RESISTANCE,ICE_ARMOR_DURATION_TICKS, Math.max(Math.min(iceArmor-1,3),0));
-                this.addEffect(fireResistance);
-                boolean hasEffect = this.hasEffect(MobEffects.FIRE_RESISTANCE);
+            DevilRpg.LOGGER.debug("---------->hurt iceArmor: {} probability: {} Range of success: {}", iceArmor, probability, iceArmor * PROBABILITY_MULTIPLIER);
 
-                MobEffectInstance effect = this.getEffect(MobEffects.FIRE_RESISTANCE);
-                DevilRpg.LOGGER.debug("---------- fireResistance?:{} amplifier:{} duration: {}",hasEffect,  Objects.requireNonNull(effect).getAmplifier(),effect.getDuration()  );
-            }
+            MobEffectInstance fireResistance = new MobEffectInstance(MobEffects.FIRE_RESISTANCE, ICE_ARMOR_DURATION_TICKS, Math.max(Math.min(iceArmor - 1, 3), 0));
+            this.addEffect(fireResistance);
+            boolean hasEffect = this.hasEffect(MobEffects.FIRE_RESISTANCE);
+
+            MobEffectInstance effect = this.getEffect(MobEffects.FIRE_RESISTANCE);
+            DevilRpg.LOGGER.debug("---------- fireResistance?:{} amplifier:{} duration: {}", hasEffect, Objects.requireNonNull(effect).getAmplifier(), effect.getDuration());
         }
-        return hurt;
+
+        return super.hurt(damageSource, amount);
     }
 
     @Override

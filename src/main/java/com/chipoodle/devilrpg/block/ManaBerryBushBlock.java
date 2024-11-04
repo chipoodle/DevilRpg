@@ -66,31 +66,6 @@ public class ManaBerryBushBlock extends BushBlock implements EntityBlock {
         return p_57284_.getValue(AGE) < 3;
     }
 
-    /*public void randomTick(BlockState state, @NotNull ServerLevel world, @NotNull BlockPos blockPos, @NotNull RandomSource randomSource) {
-        int i = state.getValue(AGE);
-        if (i < 3 && world.getRawBrightness(blockPos.above(), 0) >= 9 && net.minecraftforge.common.ForgeHooks.onCropsGrowPre(world, blockPos, state, randomSource.nextInt(5) == 0)) {
-            BlockState blockstate = state.setValue(AGE, i + 1);
-            world.setBlock(blockPos, blockstate, 2);
-            world.gameEvent(GameEvent.BLOCK_CHANGE, blockPos, GameEvent.Context.of(blockstate));
-            net.minecraftforge.common.ForgeHooks.onCropsGrowPost(world, blockPos, state);
-        }
-
-    }*/
-
-   /*public void entityInside(@NotNull BlockState blockState, @NotNull Level level, @NotNull BlockPos blockPos, @NotNull Entity entity) {
-      if (entity instanceof LivingEntity && entity.getType() != EntityType.FOX && entity.getType() != EntityType.BEE) {
-         entity.makeStuckInBlock(blockState, new Vec3((double)0.8F, 0.75D, (double)0.8F));
-         if (!level.isClientSide && blockState.getValue(AGE) > 0 && (entity.xOld != entity.getX() || entity.zOld != entity.getZ())) {
-            double d0 = Math.abs(entity.getX() - entity.xOld);
-            double d1 = Math.abs(entity.getZ() - entity.zOld);
-            if (d0 >= (double)0.003F || d1 >= (double)0.003F) {
-               entity.hurt(level.damageSources().sweetBerryBush(), 1.0F);
-            }
-         }
-
-      }
-   }*/
-
     public @NotNull InteractionResult use(BlockState blockState, @NotNull Level level, @NotNull BlockPos blockPos, @NotNull Player player, @NotNull InteractionHand interactionHand, @NotNull BlockHitResult blockHitResult) {
         int i = blockState.getValue(AGE);
         boolean flag = i == 3;
@@ -116,12 +91,6 @@ public class ManaBerryBushBlock extends BushBlock implements EntityBlock {
                 .add(DECAY_STAGE)
         ;
     }
-
-    public void performBonemeal(ServerLevel p_222553_, @NotNull RandomSource p_222554_, @NotNull BlockPos p_222555_, BlockState p_222556_) {
-        int i = Math.min(3, p_222556_.getValue(AGE) + 1);
-        p_222553_.setBlock(p_222555_, p_222556_.setValue(AGE, i), 2);
-    }
-
 
     @Nullable
     @Override

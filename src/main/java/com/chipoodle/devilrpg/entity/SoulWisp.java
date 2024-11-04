@@ -177,19 +177,19 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
         super.tick();
 
         this.holdingItemAnimationTicks0 = this.holdingItemAnimationTicks;
-        if (this.hasItemInHand()) {
+        if (this.hasItemInMainHand()) {
             this.holdingItemAnimationTicks = Mth.clamp(this.holdingItemAnimationTicks + 1.0F, 0.0F, 5.0F);
         } else {
             this.holdingItemAnimationTicks = Mth.clamp(this.holdingItemAnimationTicks - 1.0F, 0.0F, 5.0F);
         }
 
-        if (this.random.nextFloat() < 0.05F) {
+        /*if (this.random.nextFloat() < 0.05F) {
             for (int i = 0; i < this.random.nextInt(2) + 1; ++i) {
                 this.addParticle(this.level, this.getX() - (double) 0.3F, this.getX() + (double) 0.3F,
                         this.getZ() - (double) 0.3F, this.getZ() + (double) 0.3F, this.getY(0.5D),
                         ParticleTypes.CRIMSON_SPORE);
             }
-        }
+        }*/
     }
 
     private void addParticle(Level worldIn, double p_226397_2_, double p_226397_4_, double p_226397_6_,
@@ -289,9 +289,9 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
     protected void checkFallDamage(double y, boolean onGroundIn, @NotNull BlockState state, @NotNull BlockPos pos) {
     }
 
-    protected boolean makeFlySound() {
+    /*protected boolean makeFlySound() {
         return true;
-    }
+    }*/
 
     @Override
     public boolean doHurtTarget(@NotNull Entity entityIn) {
@@ -443,7 +443,7 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
     protected void dropEquipment() {
         super.dropEquipment();
         if (!this.level.getGameRules().getBoolean(GameRules.RULE_KEEPINVENTORY)) {
-            if (this.hasItemInHand()) {
+            if (this.hasItemInMainHand()) {
                 // Obtiene el ítem de la mano principal
                 ItemStack itemStack = this.getItemInHand(InteractionHand.MAIN_HAND);
                 if (!itemStack.isEmpty() || EnchantmentHelper.hasVanishingCurse(itemStack))
@@ -568,11 +568,15 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
 
     @Override
     public boolean canPickUpLoot() {
-        return !this.isOnPickupCooldown() && this.hasItemInHand();
+        return !this.isOnPickupCooldown() && this.hasItemInMainHand();
     }
 
-    public boolean hasItemInHand() {
+    public boolean hasItemInMainHand() {
         return !this.getItemInHand(InteractionHand.MAIN_HAND).isEmpty();
+    }
+
+    public boolean hasItemInOffHand() {
+        return !this.getItemInHand(InteractionHand.OFF_HAND).isEmpty();
     }
 
     public boolean isDancing() {
@@ -626,7 +630,7 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
          * necessary for execution in this method as well.
          */
         public boolean canUse() {
-            return SoulWisp.this.navigation.isDone() && SoulWisp.this.random.nextInt(20) == 0 && SoulWisp.this.hasItemInHand();
+            return SoulWisp.this.navigation.isDone() && SoulWisp.this.random.nextInt(20) == 0 && SoulWisp.this.hasItemInMainHand();
         }
 
         /**
@@ -655,5 +659,12 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
             Vec3 vector3d2 = HoverRandomPos.getPos(SoulWisp.this, 8, 7, vec3.x, vec3.z, ((float) Math.PI / 2F), 3, 1);
             return vector3d2 != null ? vector3d2 : AirAndWaterRandomPos.getPos(SoulWisp.this, 8, 4, -2, vec3.x, vec3.z, (float) Math.PI / 2F);
         }
+    }
+
+    protected void removeInteractionItem(Player player, ItemStack itemStack) {
+        if (!player.getAbilities().instabuild) {
+            itemStack.shrink(1);
+        }
+
     }
 }
