@@ -26,33 +26,37 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 public class SoulWispChopWoodGoal extends Goal {
-    public static final double SPEED = 1.0;
-    public static final int TICKS_UNTIL_NEXT_HIT_LOG = 10;
-    public static final int TICKS_UNTIL_NEXT_HIT_LEAVES = 3;
-    public static final int TICKS_WITHOUTH_CHOPPING = 30;
-    public static final double MAXIMUM_DISTANCE_TO_SQR = 2.6;
-    private final SoulWispChopper soulWisp;
-    private final int radius;
-    private BlockPos targetBlockPos;
-    private int ticksUntilNextHit;
-    private int tickswithoutChopping;
-    private boolean hasLogItem = false;
-    private boolean isInventoryFull = false;
-    private int inventoryFullCooldown = 100; // Tiempo de espera en ticks para intentar nuevamente
-    private int inventoryFullTicks = 0;
+    // Parámetros de configuración para la IA del SoulWisp
+    public static final double SPEED = 1.0;                       // Velocidad de movimiento
+    public static final int TICKS_UNTIL_NEXT_HIT_LOG = 10;        // Ticks de espera entre golpes al talar troncos
+    public static final int TICKS_UNTIL_NEXT_HIT_LEAVES = 3;      // Ticks de espera entre golpes al talar hojas
+    public static final int TICKS_WITHOUT_CHOPPING = 30;          // Ticks sin cortar antes de intentar una nueva posición
+    public static final double MAXIMUM_DISTANCE_TO_SQR = 2.6;     // Distancia máxima para iniciar el corte
+    public static final double MAXIMUM_DISTANCE_FOR_DELIVERY = 2.5;
+
+    // Referencias y variables de estado para el comportamiento del SoulWisp
+    private final SoulWispChopper soulWisp;                       // Entidad SoulWisp que ejecuta este objetivo
+    private final int radius;                                     // Radio de búsqueda para bloques e items
+    private BlockPos targetBlockPos;                              // Posición del bloque objetivo
+    private int ticksUntilNextHit;                                // Contador de ticks para el siguiente golpe
+    private int tickswithoutChopping;                             // Contador de ticks sin cortar
+    private boolean hasLogItemsNear = false;                      // Bandera para saber si hay items de tronco cerca
+    private boolean isInventoryFull = false;                      // Bandera que indica si el inventario del jugador estaba lleno
+    private int inventoryFullCooldown = 100;                      // Tiempo de espera en ticks antes de intentar otra vez
+    private int inventoryFullTicks = 0;                           // Contador de tiempo de espera para inventario lleno
 
     public SoulWispChopWoodGoal(SoulWispChopper soulWisp) {
         this.soulWisp = soulWisp;
         this.ticksUntilNextHit = 0;
         this.tickswithoutChopping = 0;
-        this.radius = 5;
+        this.radius = 5; // Configura el radio de búsqueda en 5 bloques
     }
 
     @Override
     public boolean canUse() {
         BlockPos blockPos = this.soulWisp.blockPosition();
 
-        // Ignora logs en el suelo si el inventario del jugador estaba lleno recientemente
+        // Ignora items en el suelo si el inventario del jugador estaba lleno recientemente
         if (isInventoryFull) {
             inventoryFullTicks++;
             if (inventoryFullTicks > inventoryFullCooldown) {
@@ -62,26 +66,29 @@ public class SoulWispChopWoodGoal extends Goal {
             return false;
         }
 
-        // Revisa primero si hay logs caídos en el suelo
+        // Revisa si hay items de tronco caídos en el suelo cercanos
         List<ItemEntity> items = getNearbyLogItems();
         if (!items.isEmpty()) {
-            this.hasLogItem = true;
+            this.hasLogItemsNear = true;
             return true;
         }
 
-        // Si no hay logs caídos, procede a buscar un árbol para talar
+        // Si no hay items de tronco en el suelo, busca un árbol para talar
         BlockPos closestBlockPos = getBlockPos(blockPos, BlockTags.LOGS);
-        if (closestBlockPos == null || tickswithoutChopping > TICKS_WITHOUTH_CHOPPING)
+        if (closestBlockPos == null || tickswithoutChopping > TICKS_WITHOUT_CHOPPING) {
             closestBlockPos = getBlockPos(blockPos, BlockTags.LEAVES);
+        }
 
+        // Si encuentra un bloque objetivo y tiene un item en la mano principal pero no en la secundaria, puede usar el objetivo
         if (closestBlockPos != null && soulWisp.hasItemInMainHand() && !soulWisp.hasItemInOffHand()) {
             this.targetBlockPos = closestBlockPos;
             return true;
         }
 
-        return this.soulWisp.hasItemInOffHand();
+        return this.soulWisp.hasItemInOffHand(); // Si tiene un item en la mano secundaria, intenta entregar el item al jugador
     }
 
+    // Busca la posición del bloque más cercano de un tipo específico (ej. troncos, hojas) en un radio definido
     private BlockPos getBlockPos(BlockPos blockPos, TagKey<Block> blockTag) {
         double closestDistanceSq = Double.MAX_VALUE;
         BlockPos closestBlockPos = null;
@@ -105,28 +112,25 @@ public class SoulWispChopWoodGoal extends Goal {
 
     @Override
     public void start() {
-        //this.soulWisp.setChopping(true);
-        if (hasLogItem) {
-            // Moverse hacia el jugador para entregarle el log.
+        // Define el objetivo cuando encuentra items en el suelo o un bloque para talar
+        if (hasLogItemsNear) {
             this.soulWisp.getNavigation().moveTo(Objects.requireNonNull(this.soulWisp.getOwner()), SPEED);
         } else if (targetBlockPos != null) {
-            // Moverse hacia el bloque para talar
             this.soulWisp.getNavigation().moveTo(this.targetBlockPos.getX(), this.targetBlockPos.getY(), this.targetBlockPos.getZ(), SPEED);
         }
     }
 
     @Override
     public void stop() {
-        //this.soulWisp.setChopping(false);
         this.targetBlockPos = null;
         this.ticksUntilNextHit = 0;
         this.tickswithoutChopping = 0;
-        this.hasLogItem = false;
+        this.hasLogItemsNear = false;
     }
 
     @Override
     public void tick() {
-        if (hasLogItem) {
+        if (hasLogItemsNear) {
             this.soulWisp.setChopping(false);
             // Si no tiene un log en la mano secundaria (offhand)
             if (!this.soulWisp.hasItemInOffHand()) {
@@ -140,7 +144,7 @@ public class SoulWispChopWoodGoal extends Goal {
             } else {
                 // Intento de entrega al jugador
                 Player owner = (Player) this.soulWisp.getOwner();
-                if (owner != null && this.soulWisp.distanceTo(owner) <= 2.5) {
+                if (owner != null && this.soulWisp.distanceTo(owner) <= MAXIMUM_DISTANCE_FOR_DELIVERY) {
                     boolean addedSuccessfully = owner.addItem(this.soulWisp.getOffhandItem());
                     if (addedSuccessfully) {
                         this.soulWisp.setItemSlot(EquipmentSlot.OFFHAND, ItemStack.EMPTY);
@@ -151,7 +155,7 @@ public class SoulWispChopWoodGoal extends Goal {
                         this.isInventoryFull = true; // Activa la bandera para ignorar logs temporalmente
                         this.inventoryFullTicks = 0; // Reinicia el contador de tiempo de espera
                     }
-                    this.hasLogItem = false;
+                    this.hasLogItemsNear = false;
                 } else if (owner != null) {
                     this.soulWisp.getNavigation().moveTo(owner, SPEED);
                 }
@@ -166,7 +170,7 @@ public class SoulWispChopWoodGoal extends Goal {
                 } else {
                     this.soulWisp.setChopping(false);
                     tickswithoutChopping++;
-                    if (tickswithoutChopping > TICKS_WITHOUTH_CHOPPING) {
+                    if (tickswithoutChopping > TICKS_WITHOUT_CHOPPING) {
                         setRandomPosition();
                     } else {
                         this.soulWisp.getNavigation().moveTo(this.targetBlockPos.getX(), this.targetBlockPos.getY(), this.targetBlockPos.getZ(), SPEED);
