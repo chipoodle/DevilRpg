@@ -7,8 +7,6 @@ import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.util.IRenderUtilities;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
@@ -64,10 +62,11 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
 
     protected static final double DISTANCIA_EFECTO = 20;
     protected static final int DURATION_TICKS = 120;
-    private static final EntityDataAccessor<Boolean> DATA_DANCING = SynchedEntityData.defineId(SoulWisp.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Boolean> DATA_CHOPPING = SynchedEntityData.defineId(SoulWisp.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Integer> DATA_REMAINING_ANGER_TIME = SynchedEntityData.defineId(SoulWisp.class, EntityDataSerializers.INT);
     private static final UniformInt PERSISTENT_ANGER_TIME = TimeUtil.rangeOfSeconds(20, 39);
     private final int SALUD_INICIAL = 4;
+
     protected int puntosAsignados = 0;
     protected double saludMaxima = SALUD_INICIAL;
     protected MobEffect efectoPrimario;
@@ -77,11 +76,7 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
 
     private float holdingItemAnimationTicks;
     private float holdingItemAnimationTicks0;
-    private float dancingAnimationTicks;
-    private float spinningAnimationTicks;
-    private float spinningAnimationTicks0;
     private SkillEnum wispType;
-    private boolean isWorking;
 
     public SoulWisp(EntityType<? extends SoulWisp> type, Level worldIn) {
         super(type, worldIn);
@@ -110,7 +105,7 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
     @Override
     protected void defineSynchedData() {
         super.defineSynchedData();
-        this.entityData.define(DATA_DANCING, false);
+        this.entityData.define(DATA_CHOPPING, false);
     }
 
     @Override
@@ -192,11 +187,11 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
         }*/
     }
 
-    private void addParticle(Level worldIn, double p_226397_2_, double p_226397_4_, double p_226397_6_,
+    /*private void addParticle(Level worldIn, double p_226397_2_, double p_226397_4_, double p_226397_6_,
                              double p_226397_8_, double posY, SimpleParticleType particleData) {
         worldIn.addParticle(particleData, Mth.lerp(worldIn.random.nextDouble(), p_226397_2_, p_226397_4_), posY,
                 Mth.lerp(worldIn.random.nextDouble(), p_226397_6_, p_226397_8_), 0.0D, 0.0D, 0.0D);
-    }
+    }*/
 
     @Override
     protected void sendDebugPackets() {
@@ -554,14 +549,6 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
         return this;
     }
 
-    public SkillEnum getWispType() {
-        return wispType;
-    }
-
-    public float getHoldingItemAnimationProgress(float p_218395_) {
-        return Mth.lerp(p_218395_, this.holdingItemAnimationTicks0, this.holdingItemAnimationTicks) / 5.0F;
-    }
-
     private boolean isOnPickupCooldown() {
         return this.getBrain().checkMemory(MemoryModuleType.ITEM_PICKUP_COOLDOWN_TICKS, MemoryStatus.VALUE_PRESENT);
     }
@@ -579,35 +566,20 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
         return !this.getItemInHand(InteractionHand.OFF_HAND).isEmpty();
     }
 
-    public boolean isDancing() {
-        return this.entityData.get(DATA_DANCING);
+    public boolean isChopping() {
+        return this.entityData.get(DATA_CHOPPING);
     }
 
-    public void setDancing(boolean p_240178_) {
-        if (!this.level.isClientSide && this.isEffectiveAi() && (!p_240178_ /*|| !this.isPanicking()*/)) {
-            this.entityData.set(DATA_DANCING, p_240178_);
-        }
-    }
-
-    public boolean isSpinning() {
-        float f = this.dancingAnimationTicks % 55.0F;
-        return f < 15.0F;
-    }
-
-    public float getSpinningProgress(float p_240057_) {
-        return Mth.lerp(p_240057_, this.spinningAnimationTicks0, this.spinningAnimationTicks) / 15.0F;
+    public void setChopping(boolean p_240178_) {
+        this.entityData.set(DATA_CHOPPING, p_240178_);
     }
 
     public boolean canBeLeashed(@NotNull Player p_30396_) {
         return false;
     }
 
-    public void setIsWorking(boolean isWorking) {
-        this.isWorking = isWorking;
-    }
-
-    public boolean isWorking() {
-        return isWorking;
+    public SkillEnum getWispType() {
+        return wispType;
     }
 
     static class WispLookControl extends LookControl {
@@ -637,7 +609,7 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
          * Returns whether an in-progress EntityAIBase should continue executing
          */
         public boolean canContinueToUse() {
-            return SoulWisp.this.navigation.isInProgress() && !SoulWisp.this.isWorking();
+            return SoulWisp.this.navigation.isInProgress() && !SoulWisp.this.isChopping();
         }
 
         /**

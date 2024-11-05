@@ -1,6 +1,6 @@
 package com.chipoodle.devilrpg.entity.goal;
 
-import com.chipoodle.devilrpg.entity.SoulWisp;
+import com.chipoodle.devilrpg.entity.SoulWispChopper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.stats.Stats;
 import net.minecraft.tags.BlockTags;
@@ -30,8 +30,8 @@ public class SoulWispChopWoodGoal extends Goal {
     public static final int TICKS_UNTIL_NEXT_HIT_LOG = 10;
     public static final int TICKS_UNTIL_NEXT_HIT_LEAVES = 3;
     public static final int TICKS_WITHOUTH_CHOPPING = 30;
-    public static final double MAXIMUM_DISTANCE_TO_SQR = 2.5;
-    private final SoulWisp soulWisp;
+    public static final double MAXIMUM_DISTANCE_TO_SQR = 2.6;
+    private final SoulWispChopper soulWisp;
     private final int radius;
     private BlockPos targetBlockPos;
     private int ticksUntilNextHit;
@@ -41,7 +41,7 @@ public class SoulWispChopWoodGoal extends Goal {
     private int inventoryFullCooldown = 100; // Tiempo de espera en ticks para intentar nuevamente
     private int inventoryFullTicks = 0;
 
-    public SoulWispChopWoodGoal(SoulWisp soulWisp) {
+    public SoulWispChopWoodGoal(SoulWispChopper soulWisp) {
         this.soulWisp = soulWisp;
         this.ticksUntilNextHit = 0;
         this.tickswithoutChopping = 0;
@@ -105,7 +105,7 @@ public class SoulWispChopWoodGoal extends Goal {
 
     @Override
     public void start() {
-        this.soulWisp.setIsWorking(true);
+        //this.soulWisp.setChopping(true);
         if (hasLogItem) {
             // Moverse hacia el jugador para entregarle el log.
             this.soulWisp.getNavigation().moveTo(Objects.requireNonNull(this.soulWisp.getOwner()), SPEED);
@@ -117,7 +117,7 @@ public class SoulWispChopWoodGoal extends Goal {
 
     @Override
     public void stop() {
-        //this.soulWisp.setIsWorking(false);
+        //this.soulWisp.setChopping(false);
         this.targetBlockPos = null;
         this.ticksUntilNextHit = 0;
         this.tickswithoutChopping = 0;
@@ -127,6 +127,7 @@ public class SoulWispChopWoodGoal extends Goal {
     @Override
     public void tick() {
         if (hasLogItem) {
+            this.soulWisp.setChopping(false);
             // Si no tiene un log en la mano secundaria (offhand)
             if (!this.soulWisp.hasItemInOffHand()) {
                 List<ItemEntity> items = getNearbyLogItems();
@@ -160,8 +161,10 @@ public class SoulWispChopWoodGoal extends Goal {
             if (blockState.is(BlockTags.LOGS) || blockState.is(BlockTags.LEAVES)) {
                 double distanceToSqr = this.soulWisp.distanceToSqr(this.targetBlockPos.getX(), this.targetBlockPos.getY(), this.targetBlockPos.getZ());
                 if (distanceToSqr <= MAXIMUM_DISTANCE_TO_SQR) {
+                this.soulWisp.setChopping(true);
                     tryChopLogWithAxe(blockState);
                 } else {
+                    this.soulWisp.setChopping(false);
                     tickswithoutChopping++;
                     if (tickswithoutChopping > TICKS_WITHOUTH_CHOPPING) {
                         setRandomPosition();

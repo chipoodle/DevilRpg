@@ -60,16 +60,18 @@ public class SoulWispModel<T extends SoulWisp> extends HierarchicalModel<T> impl
     }
 
 
-    public void setupAnim(@NotNull T p_104028_, float p_104029_, float p_104030_, float p_104031_, float p_104032_, float p_104033_) {
+    public void setupAnim(@NotNull T entity, float p_104029_, float p_104030_, float p_104031_, float p_104032_, float p_104033_) {
         this.root().getAllParts().forEach(ModelPart::resetPose);
         this.head.yRot = p_104032_ * ((float) Math.PI / 180F);
         this.head.xRot = p_104033_ * ((float) Math.PI / 180F);
         float f = Mth.cos(p_104031_ * 5.5F * ((float) Math.PI / 180F)) * 0.1F;
         this.rightArm.zRot = ((float) Math.PI / 5F) + f;
         this.leftArm.zRot = -(((float) Math.PI / 5F) + f);
-        if (p_104028_.isWorking()) {
-            this.body.xRot = 0.0F;
-            this.setArmsCharging(p_104028_.getMainHandItem(), p_104028_.getOffhandItem(), f);
+        if (entity.isChopping()) {
+            //this.body.xRot = 0.0F;
+            this.body.xRot =1.0995574F + Mth.cos(p_104031_ * 45.836624F * ((float) Math.PI / 180F)) * ((float) Math.PI / 180F) * 16.2F;
+            this.setArmsCharging(entity.getMainHandItem(), entity.getOffhandItem(), f);
+
         } else {
             this.body.xRot = 0.15707964F;
         }
