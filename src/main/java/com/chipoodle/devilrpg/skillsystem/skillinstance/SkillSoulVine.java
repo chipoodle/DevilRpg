@@ -61,9 +61,9 @@ public class SkillSoulVine extends AbstractSkillSeedsInInventoryExecutor {
                         SoundEvents.CHICKEN_EGG, SoundSource.NEUTRAL, 0.5F,
                         0.4F / (rand.nextFloat() * 0.4F + 0.8F));
 
-                PlayerSkillCapabilityInterface skillCap = IGenericCapability.getUnwrappedPlayerCapability(player,
-                        PlayerSkillCapability.INSTANCE);
-                setVine(levelIn, player, skillCap);
+                /*PlayerSkillCapabilityInterface skillCap = IGenericCapability.getUnwrappedPlayerCapability(player,
+                        PlayerSkillCapability.INSTANCE);*/
+                setVine(levelIn, player, parentCapability);
                 player.getCooldowns().addCooldown(icon.getItem(), 20);
             }
         }

@@ -661,7 +661,7 @@ public class TargetUtils {
         return target;
     }
 
-    public static BlockPos findSolidGround(Level level, BlockPos pos) {
+    public static BlockPos findSolidGroundBelow(Level level, BlockPos pos) {
         while (pos.getY() > 0 && !level.getBlockState(pos).getMaterial().isSolid()
                 && pos.getY() > level.getMinBuildHeight() && level.getWorldBorder().isWithinBounds(pos)) {
             pos = pos.below();
@@ -669,8 +669,14 @@ public class TargetUtils {
         return pos;
     }
 
-    public static BlockPos findSolidGroundMinusOneempty(Level level, BlockPos pos) {
-        BlockPos solidGround = findSolidGround(level, pos);
+    public static BlockPos findSolidGroundBelowMinusOneEmpty(Level level, BlockPos pos) {
+        BlockPos solidGround = findSolidGroundBelow(level, pos);
         return solidGround.above();
+    }
+
+    public static List<LivingEntity> getAlliesListWithinAABBRangeIncludingOwner(AABB area, Player owner) {
+        return owner.level.getEntitiesOfClass(LivingEntity.class, area).stream()
+        .filter(entity -> entity.isAlliedTo(owner) || entity.equals(owner))
+        .collect(Collectors.toList());
     }
 }

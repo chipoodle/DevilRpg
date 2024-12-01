@@ -4,6 +4,7 @@ import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
+import com.chipoodle.devilrpg.init.ModEntities;
 import com.chipoodle.devilrpg.util.IRenderUtilities;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import com.chipoodle.devilrpg.util.TargetUtils;
@@ -60,10 +61,7 @@ import org.jetbrains.annotations.NotNull;
 import org.joml.Vector3f;
 
 import javax.annotation.Nullable;
-import java.util.EnumSet;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 public class SunflowerShulker extends TamableAnimal implements ITamableEntity, ISoulEntity, PowerableMob, NeutralMob, IPassiveMinionUpdater<SunflowerShulker> {
     protected static final EntityDataAccessor<Direction> DATA_ATTACH_FACE_ID = SynchedEntityData.defineId(SunflowerShulker.class, EntityDataSerializers.DIRECTION);
@@ -122,7 +120,7 @@ public class SunflowerShulker extends TamableAnimal implements ITamableEntity, I
             tame(owner);
             PlayerSkillCapabilityInterface skill = IGenericCapability.getUnwrappedPlayerCapability((Player) getOwner(), PlayerSkillCapability.INSTANCE);
             this.puntosAsignados = skill.getSkillsPoints().get(SkillEnum.VINEFLESHBALL);
-            limitedLifeTicks = 600 + puntosAsignados * 10;
+            limitedLifeTicks = 400 + puntosAsignados * 20;
 
             Objects.requireNonNull(this.getAttribute(Attributes.MAX_HEALTH)).setBaseValue(10 + (double) puntosAsignados / 2);
             DevilRpg.LOGGER.info("--------> update limitedLifeTicks seconds: = {} life {}", limitedLifeTicks / 20, Objects.requireNonNull(this.getAttribute(Attributes.MAX_HEALTH)).getValue());
@@ -434,7 +432,7 @@ public class SunflowerShulker extends TamableAnimal implements ITamableEntity, I
 
             for (int i = 0; i < 5; ++i) {
                 //BlockPos blockpos1 = blockpos.offset(Mth.randomBetweenInclusive(this.random, -8, 8), Mth.randomBetweenInclusive(this.random, -8, 8), Mth.randomBetweenInclusive(this.random, -8, 8));
-               BlockPos blockpos1 = TargetUtils.findSolidGroundMinusOneempty(level, blockpos);
+               BlockPos blockpos1 = TargetUtils.findSolidGroundBelowMinusOneEmpty(level, blockpos);
 
                 if (blockpos1.getY() > this.level.getMinBuildHeight() && this.level.isEmptyBlock(blockpos1) && this.level.getWorldBorder().isWithinBounds(blockpos1) && this.level.noCollision(this, (new AABB(blockpos1)).deflate(1.0E-6D))) {
                     Direction direction = this.findAttachableSurface(blockpos1);
@@ -783,14 +781,21 @@ public class SunflowerShulker extends TamableAnimal implements ITamableEntity, I
                             PlayerSkillCapabilityInterface unwrappedPlayerCapability = IGenericCapability.getUnwrappedPlayerCapability((Player) getOwner(), PlayerSkillCapability.INSTANCE);
                             Integer assignedPoint = unwrappedPlayerCapability.getSkillsPoints().get(SkillEnum.VINEFLESHBALL);
 
-                            var snowballEntity = new GenericItemProjectile(SunflowerShulker.this.level, SunflowerShulker.this);
+                           /* var snowballEntity = new GenericItemProjectile(SunflowerShulker.this.level, SunflowerShulker.this);
                             snowballEntity.updateLevel(SunflowerShulker.this, assignedPoint);
                             snowballEntity.shoot(
                                     d0,
                                     d1 + d3 * (double) 0.1F,
                                     d2,
                                     1.6F, (float) (14 - SunflowerShulker.this.level.getDifficulty().getId() * 4));
-                            SunflowerShulker.this.level.addFreshEntity(snowballEntity);
+                            SunflowerShulker.this.level.addFreshEntity(snowballEntity);*/
+
+
+                            ExplodingSporeBullet explodingSporeBullet = ModEntities.EXPLODING_SPORE_BULLET.get().create((ServerLevel) SunflowerShulker.this.level, null, null, SunflowerShulker.this.blockPosition(), MobSpawnType.MOB_SUMMONED, true, true);
+                            Objects.requireNonNull(explodingSporeBullet).updateLevel((Player) getOwner());
+                            explodingSporeBullet.moveTo(SunflowerShulker.this.blockPosition(), Mth.wrapDegrees(new Random().nextFloat() * 360.0F), 0.0F);
+                            SunflowerShulker.this.level.addFreshEntity(explodingSporeBullet);
+
                             SunflowerShulker.this.playSound(SoundEvents.SHULKER_SHOOT, 2.0F, (SunflowerShulker.this.random.nextFloat() - SunflowerShulker.this.random.nextFloat()) * 0.2F + 1.0F);
                         }
                     } else {

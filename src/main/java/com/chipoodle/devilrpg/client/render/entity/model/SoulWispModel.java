@@ -2,6 +2,7 @@ package com.chipoodle.devilrpg.client.render.entity.model;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.entity.SoulWisp;
+import com.chipoodle.devilrpg.entity.SoulWispChopper;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.model.ArmedModel;
 import net.minecraft.client.model.HierarchicalModel;
@@ -67,7 +68,7 @@ public class SoulWispModel<T extends SoulWisp> extends HierarchicalModel<T> impl
         float f = Mth.cos(p_104031_ * 5.5F * ((float) Math.PI / 180F)) * 0.1F;
         this.rightArm.zRot = ((float) Math.PI / 5F) + f;
         this.leftArm.zRot = -(((float) Math.PI / 5F) + f);
-        if (entity.isChopping()) {
+        if (entity instanceof SoulWispChopper chopper && chopper.isChopping()) {
             //this.body.xRot = 0.0F;
             this.body.xRot =1.0995574F + Mth.cos(p_104031_ * 45.836624F * ((float) Math.PI / 180F)) * ((float) Math.PI / 180F) * 16.2F;
             this.setArmsCharging(entity.getMainHandItem(), entity.getOffhandItem(), f);

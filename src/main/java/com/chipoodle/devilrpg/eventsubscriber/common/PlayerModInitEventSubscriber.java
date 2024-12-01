@@ -88,8 +88,10 @@ public final class PlayerModInitEventSubscriber {
                 setFlammableMethod.invoke(fireBlock, ModBlocks.SOUL_VINE_BLOCK.get(), 60, 100);
                 setFlammableMethod.invoke(fireBlock, ModBlocks.SOUL_MINER_VINE_BLOCK.get(), 60, 100);
                 setFlammableMethod.invoke(fireBlock, ModBlocks.SOUL_SHIELD_VINE_BLOCK.get(), 60, 100);
+                setFlammableMethod.invoke(fireBlock, ModBlocks.BLOOMING_SANCTUARY_BLOCK.get(), 60, 100);
+                setFlammableMethod.invoke(fireBlock, ModBlocks.UPWARD_SPORE_BLOSSOM_BLOCK.get(), 60, 100);
 
-                DevilRpg.LOGGER.info("SOUL_VINE_BLOCK, SOUL_MINER_VINE_BLOCK, SOUL_SHIELD_VINE_BLOCK are now flammables.");
+                DevilRpg.LOGGER.info("onCommonSetup FMLCommonSetupEvent SOUL_VINE_BLOCK, SOUL_MINER_VINE_BLOCK, SOUL_SHIELD_VINE_BLOCK, BLOOMING_SANCTUARY_BLOCK are now flammables.");
             } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
                 DevilRpg.LOGGER.error("Error making SOUL_VINE_BLOCK, SOUL_MINER_VINE_BLOCK, SOUL_SHIELD_VINE_BLOCK flammables", e);
             }

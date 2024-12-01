@@ -23,7 +23,7 @@ public class MobEffectVineFleshPuppet extends MobEffect {
     private Player owner;
 
     public MobEffectVineFleshPuppet() {
-        super(MobEffectCategory.HARMFUL, 0xBFFABF);
+        super(MobEffectCategory.HARMFUL, 0xFA4A4A);
         alive = new HashMap<>();
     }
 
@@ -38,6 +38,7 @@ public class MobEffectVineFleshPuppet extends MobEffect {
 
     @Override
     public void applyEffectTick(@NotNull LivingEntity entity, int amplifier) {
+        entity.hurt(entity.level.damageSources().playerAttack(owner), 1.0F);
         // Check if the entity is dead and if it was killed by the player
         if (!entity.isAlive()) {
             if (alive.getOrDefault(entity.getUUID(),Boolean.FALSE)) {

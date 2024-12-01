@@ -32,7 +32,7 @@ public class MobEffectEntangling extends MobEffect {
     private Player owner;
 
     public MobEffectEntangling() {
-        super(MobEffectCategory.HARMFUL, 0x00FF0E); // Adjust the color as needed
+        super(MobEffectCategory.HARMFUL, 0xBFFABF); // Adjust the color as needed
     }
 
     public static MobEffectInstance createInstance(int duration, int amplifier, Player owner) {
@@ -85,7 +85,7 @@ public class MobEffectEntangling extends MobEffect {
                 setLichen(level, owner, blockPos, unwrappedPlayerCapability);
             } else {
                 // Encuentra la posición del primer bloque sólido debajo de la entidad
-                BlockPos groundPos = TargetUtils.findSolidGround(level, blockPos);
+                BlockPos groundPos = TargetUtils.findSolidGroundBelow(level, blockPos);
 
                 if (groundPos != null) {
                     // Coloca el bloque de SoulLichen en la posición encontrada

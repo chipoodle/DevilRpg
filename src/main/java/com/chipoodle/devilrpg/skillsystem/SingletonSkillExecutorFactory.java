@@ -137,11 +137,15 @@ public class SingletonSkillExecutorFactory {
                     skillPool.put(SkillEnum.SOULMINERVINE, new SkillSoulMinerVine(parentCapability));
                 return skillPool.get(SkillEnum.SOULMINERVINE);
             }
-
             case MANA_BERRY -> {
                 if (!skillPool.containsKey(SkillEnum.MANA_BERRY))
                     skillPool.put(SkillEnum.MANA_BERRY, new SkillManaBerry(parentCapability));
                 return skillPool.get(SkillEnum.MANA_BERRY);
+            }
+            case BLOOMING_SANCTUARY -> {
+                if (!skillPool.containsKey(SkillEnum.BLOOMING_SANCTUARY))
+                    skillPool.put(SkillEnum.BLOOMING_SANCTUARY, new SkillBloomingSanctuary(parentCapability));
+                return skillPool.get(SkillEnum.BLOOMING_SANCTUARY);
             }
         }
         throw new RuntimeException("There is no SkillExecutor for the skill  "+skillEnum);

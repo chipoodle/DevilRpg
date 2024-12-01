@@ -36,4 +36,6 @@ public final class ModEntityBlocks {
     public static final RegistryObject<BlockEntityType<ManaBerryBlockEntity>> MANA_BERRY_ENTITY_BLOCK = BLOCK_ENTITIES.register("manaberrybushentityblock",
             () -> BlockEntityType.Builder.of(ManaBerryBlockEntity::new, ModBlocks.MANA_BERRY_BUSH_BLOCK.get()).build(null));
 
+    public static final RegistryObject<BlockEntityType<BloomingSanctuaryBlockEntity>> BLOOMING_SANCTUARY_ENTITY_BLOCK = BLOCK_ENTITIES.register("bloomingsanctuaryentityblock",
+            () -> BlockEntityType.Builder.of(BloomingSanctuaryBlockEntity::new, ModBlocks.BLOOMING_SANCTUARY_BLOCK.get()).build(null));
 }

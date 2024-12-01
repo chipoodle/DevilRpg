@@ -1,6 +1,7 @@
 package com.chipoodle.devilrpg.entity.goal;
 
 import com.chipoodle.devilrpg.entity.SoulWisp;
+import com.chipoodle.devilrpg.entity.SoulWispChopper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
@@ -20,7 +21,7 @@ public class SoulWispFollowOwnerGoal extends Goal {
     private static final int MIN_HORIZONTAL_DISTANCE_FROM_PLAYER_WHEN_TELEPORTING = 2;
     private static final int MAX_HORIZONTAL_DISTANCE_FROM_PLAYER_WHEN_TELEPORTING = 3;
     private static final int MAX_VERTICAL_DISTANCE_FROM_PLAYER_WHEN_TELEPORTING = 1;
-    private final SoulWisp tamable;
+    private final SoulWisp soulWisp;
     private final LevelReader level;
     private final double speedModifier;
     private final PathNavigation navigation;
@@ -32,7 +33,7 @@ public class SoulWispFollowOwnerGoal extends Goal {
     private float oldWaterCost;
 
     public SoulWispFollowOwnerGoal(SoulWisp soulWisp, double speedModifier, float startDistance, float stopDistance, boolean canFly) {
-        this.tamable = soulWisp;
+        this.soulWisp = soulWisp;
         this.level = soulWisp.level;
         this.speedModifier = speedModifier;
         this.navigation = soulWisp.getNavigation();
@@ -46,18 +47,24 @@ public class SoulWispFollowOwnerGoal extends Goal {
     }
 
     public boolean canUse() {
-        LivingEntity owner = this.tamable.getOwner();
+        LivingEntity owner = this.soulWisp.getOwner();
         if (owner == null) {
             return false;
         } else if (owner.isSpectator()) {
             return false;
         } else if (this.unableToMove()) {
             return false;
-        } else if (this.tamable.distanceToSqr(owner) < (double) (this.startDistance * this.startDistance)) {
+        } else if (this.soulWisp.distanceToSqr(owner) < (double) (this.startDistance * this.startDistance)) {
             return false;
         } else {
             this.owner = owner;
-            return !tamable.hasItemInMainHand();
+            if(soulWisp instanceof SoulWispChopper soulWispChopper) {
+                return soulWispChopper.goalSelector.getRunningGoals()
+                        .filter(goal->goal.getGoal() instanceof SoulWispChopLogsGoal
+                                || goal.getGoal() instanceof SoulWispGatherLogItemsGoal)
+                        .toList().isEmpty();
+            }
+            return true;
         }
     }
 
@@ -67,31 +74,31 @@ public class SoulWispFollowOwnerGoal extends Goal {
         } else if (this.unableToMove()) {
             return false;
         } else {
-            return !(this.tamable.distanceToSqr(this.owner) <= (double) (this.stopDistance * this.stopDistance));
+            return !(this.soulWisp.distanceToSqr(this.owner) <= (double) (this.stopDistance * this.stopDistance));
         }
     }
 
     private boolean unableToMove() {
-        return this.tamable.isOrderedToSit() || this.tamable.isPassenger() || this.tamable.isLeashed();
+        return this.soulWisp.isOrderedToSit() || this.soulWisp.isPassenger() || this.soulWisp.isLeashed();
     }
 
     public void start() {
         this.timeToRecalcPath = 0;
-        this.oldWaterCost = this.tamable.getPathfindingMalus(BlockPathTypes.WATER);
-        this.tamable.setPathfindingMalus(BlockPathTypes.WATER, 0.0F);
+        this.oldWaterCost = this.soulWisp.getPathfindingMalus(BlockPathTypes.WATER);
+        this.soulWisp.setPathfindingMalus(BlockPathTypes.WATER, 0.0F);
     }
 
     public void stop() {
         this.owner = null;
         this.navigation.stop();
-        this.tamable.setPathfindingMalus(BlockPathTypes.WATER, this.oldWaterCost);
+        this.soulWisp.setPathfindingMalus(BlockPathTypes.WATER, this.oldWaterCost);
     }
 
     public void tick() {
-        this.tamable.getLookControl().setLookAt(this.owner, 10.0F, (float) this.tamable.getMaxHeadXRot());
+        this.soulWisp.getLookControl().setLookAt(this.owner, 10.0F, (float) this.soulWisp.getMaxHeadXRot());
         if (--this.timeToRecalcPath <= 0) {
             this.timeToRecalcPath = this.adjustedTickDelay(10);
-            if (this.tamable.distanceToSqr(this.owner) >= 144.0D) {
+            if (this.soulWisp.distanceToSqr(this.owner) >= 144.0D) {
                 this.teleportToOwner();
             } else {
                 this.navigation.moveTo(this.owner, this.speedModifier);
@@ -121,7 +128,7 @@ public class SoulWispFollowOwnerGoal extends Goal {
         } else if (!this.canTeleportTo(new BlockPos(p_25304_, p_25305_, p_25306_))) {
             return false;
         } else {
-            this.tamable.moveTo((double) p_25304_ + 0.5D, (double) p_25305_, (double) p_25306_ + 0.5D, this.tamable.getYRot(), this.tamable.getXRot());
+            this.soulWisp.moveTo((double) p_25304_ + 0.5D, (double) p_25305_, (double) p_25306_ + 0.5D, this.soulWisp.getYRot(), this.soulWisp.getXRot());
             this.navigation.stop();
             return true;
         }
@@ -136,13 +143,13 @@ public class SoulWispFollowOwnerGoal extends Goal {
             if (!this.canFly && blockstate.getBlock() instanceof LeavesBlock) {
                 return false;
             } else {
-                BlockPos blockpos = p_25308_.subtract(this.tamable.blockPosition());
-                return this.level.noCollision(this.tamable, this.tamable.getBoundingBox().move(blockpos));
+                BlockPos blockpos = p_25308_.subtract(this.soulWisp.blockPosition());
+                return this.level.noCollision(this.soulWisp, this.soulWisp.getBoundingBox().move(blockpos));
             }
         }
     }
 
     private int randomIntInclusive(int p_25301_, int p_25302_) {
-        return this.tamable.getRandom().nextInt(p_25302_ - p_25301_ + 1) + p_25301_;
+        return this.soulWisp.getRandom().nextInt(p_25302_ - p_25301_ + 1) + p_25301_;
     }
 }

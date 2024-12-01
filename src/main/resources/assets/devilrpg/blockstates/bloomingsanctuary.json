@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "decay_stage=0": {
+      "model": "devilrpg:block/bloomingsanctuary_green"
+    },
+    "decay_stage=1": {
+      "model": "devilrpg:block/bloomingsanctuary_yellow"
+    },
+    "decay_stage=2": {
+      "model": "devilrpg:block/bloomingsanctuary_brown"
+    },
+    "decay_stage=3": {
+      "model": "devilrpg:block/bloomingsanctuary_dead"
+    }
+  }
+}

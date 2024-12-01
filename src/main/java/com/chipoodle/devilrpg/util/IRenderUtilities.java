@@ -1,8 +1,11 @@
 package com.chipoodle.devilrpg.util;
 
 import com.google.common.base.Functions;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.particles.SimpleParticleType;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -161,8 +164,7 @@ public interface IRenderUtilities {
         f = afloat1[0] * (1.0F - f3) + afloat2[0] * f3;
         f1 = afloat1[1] * (1.0F - f3) + afloat2[1] * f3;
         f2 = afloat1[2] * (1.0F - f3) + afloat2[2] * f3;
-        float[] returnFloat = {f, f1, f2};
-        return returnFloat;
+        return new float[]{f, f1, f2};
     }
 
     static void spawnBlockingParticles(Player player, ParticleOptions particleTypes) {
@@ -190,6 +192,23 @@ public interface IRenderUtilities {
                 // Genera la partícula en la posición calculada
                 player.level.addParticle(particleTypes, spawnX, spawnY, spawnZ, 0.0, 0.0, 0.0);
             }
+        }
+    }
+
+    static void renderEffectArea(ServerLevel world, BlockPos center, int radius, SimpleParticleType particleTypes) {
+        double x = center.getX() + 0.5;
+        double y = center.getY() + 0.5;
+        double z = center.getZ() + 0.5;
+
+        for (double angle = 0; angle < 360; angle += 10) {
+            double radian = Math.toRadians(angle);
+            double offsetX = Math.cos(radian) * radius;
+            double offsetZ = Math.sin(radian) * radius;
+
+            world.sendParticles(particleTypes,
+                    x + offsetX, y, z + offsetZ,
+                    1, // cantidad
+                    0, 0, 0, 0); // velocidad
         }
     }
 }

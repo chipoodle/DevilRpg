@@ -32,6 +32,7 @@ public enum SkillEnum {
     WEREWOLF_VITALITY("WereWolfVitality","Werewolf Vitality","werewolf_vitality",false,false),
     MINION_VITALITY("MinionVitality","Minion Vitality","summon_minion_vitality",false,true),
     SOULVINE("Soulvine","Soulvine","soulvine",true,false),
+    BLOOMING_SANCTUARY("BloomingSanctuary","Blooming Sanctuary" ,"blooming_sanctuary" ,true ,false ),
     SOULSHIELDVINE("Soulshieldvine","Soulshieldvine","soulshieldvine",true,false),
     SOULSHIELDVINE_RADIUS("SoulShieldVineRadius","Vine Dome Radius","soulshieldvine_radius",false,false),
     SOULMINERVINE("SoulMinerVine","Miner Vine","soulminervine",true,false),

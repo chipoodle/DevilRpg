@@ -169,6 +169,29 @@
         "rewards": {},
         "parent": "nature:soulshieldvine"
     },
+
+    {
+        "id": "nature:blooming_sanctuary",
+        "display": {
+            "description": "Creates a sanctuary that spawns plants in a small radius. Grants a small damage boost to the player and allies within while slowing down enemies in the area. Requires a seed from your inventory, which will be consumed upon activation.",
+            "icon": {
+                "item": "devilrpg:item_vine"
+            },
+            "title": "Dome of vines",
+            "image": "devilrpg:textures/gui/skill/sprout-disc.png",
+            "frame": "task"
+        },
+        "capability": "blooming_sanctuary",
+        "skillmanacost":{
+            "maxskilllevel":"20",
+            "manacost":"28",
+            "resourcetype":"mana"
+        },
+        "rewards": {},
+        "parent": "nature:soulshieldvine"
+    },
+
+
     {
         "id": "nature:soullichen",
         "display": {

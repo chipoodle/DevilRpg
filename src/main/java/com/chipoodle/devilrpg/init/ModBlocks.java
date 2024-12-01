@@ -5,6 +5,7 @@ import com.chipoodle.devilrpg.block.*;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.Material;
 import net.minecraft.world.level.material.MaterialColor;
 import net.minecraftforge.registries.DeferredRegister;
@@ -33,7 +34,7 @@ public final class ModBlocks {
                     .sound(SoundType.VINE)
     ));
     public static final RegistryObject<SoulMinerVineBlock> SOUL_MINER_VINE_BLOCK = BLOCKS.register("soulminervine", () -> new SoulMinerVineBlock(
-            Block. Properties.of(Material.LEAVES, MaterialColor.COLOR_GREEN)
+            Block.Properties.of(Material.LEAVES, MaterialColor.COLOR_GREEN)
                     .randomTicks()
                     .noCollission()
                     .instabreak()
@@ -41,7 +42,7 @@ public final class ModBlocks {
     ));
 
     public static final RegistryObject<SoulShieldVineBlock> SOUL_SHIELD_VINE_BLOCK = BLOCKS.register("soulshieldvine", () -> new SoulShieldVineBlock(
-            Block. Properties.of(Material.LEAVES, MaterialColor.COLOR_GREEN)
+            Block.Properties.of(Material.LEAVES, MaterialColor.COLOR_GREEN)
                     .randomTicks()
                     .dynamicShape().strength(1.5F)
                     .noOcclusion()
@@ -58,5 +59,17 @@ public final class ModBlocks {
                     .noCollission()
                     .instabreak()
                     .sound(SoundType.SWEET_BERRY_BUSH)
+    ));
+
+    public static final RegistryObject<BloomingSanctuaryBlock> BLOOMING_SANCTUARY_BLOCK = BLOCKS.register("bloomingsanctuary", () -> new BloomingSanctuaryBlock(
+            Block.Properties.of(Material.LEAVES, MaterialColor.COLOR_GREEN)
+                    .randomTicks()
+                    .dynamicShape().strength(1.5F)
+                    .noOcclusion()
+                    .sound(SoundType.VINE)
+    ));
+
+    public static final RegistryObject<UpwardSporeBlossomBlock> UPWARD_SPORE_BLOSSOM_BLOCK = BLOCKS.register("upward_spore_blossom", () -> new UpwardSporeBlossomBlock(
+            BlockBehaviour.Properties.copy(Blocks.SPORE_BLOSSOM).randomTicks()
     ));
 }

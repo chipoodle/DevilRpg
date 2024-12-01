@@ -62,7 +62,7 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
 
     protected static final double DISTANCIA_EFECTO = 20;
     protected static final int DURATION_TICKS = 120;
-    private static final EntityDataAccessor<Boolean> DATA_CHOPPING = SynchedEntityData.defineId(SoulWisp.class, EntityDataSerializers.BOOLEAN);
+
     private static final EntityDataAccessor<Integer> DATA_REMAINING_ANGER_TIME = SynchedEntityData.defineId(SoulWisp.class, EntityDataSerializers.INT);
     private static final UniformInt PERSISTENT_ANGER_TIME = TimeUtil.rangeOfSeconds(20, 39);
     private final int SALUD_INICIAL = 4;
@@ -105,7 +105,6 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
     @Override
     protected void defineSynchedData() {
         super.defineSynchedData();
-        this.entityData.define(DATA_CHOPPING, false);
     }
 
     @Override
@@ -566,14 +565,6 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
         return !this.getItemInHand(InteractionHand.OFF_HAND).isEmpty();
     }
 
-    public boolean isChopping() {
-        return this.entityData.get(DATA_CHOPPING);
-    }
-
-    public void setChopping(boolean p_240178_) {
-        this.entityData.set(DATA_CHOPPING, p_240178_);
-    }
-
     public boolean canBeLeashed(@NotNull Player p_30396_) {
         return false;
     }
@@ -602,14 +593,14 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
          * necessary for execution in this method as well.
          */
         public boolean canUse() {
-            return SoulWisp.this.navigation.isDone() && SoulWisp.this.random.nextInt(20) == 0 && SoulWisp.this.hasItemInMainHand();
+            return SoulWisp.this.navigation.isDone() && SoulWisp.this.random.nextInt(20) == 0 /*&& SoulWisp.this.hasItemInMainHand()*/;
         }
 
         /**
          * Returns whether an in-progress EntityAIBase should continue executing
          */
         public boolean canContinueToUse() {
-            return SoulWisp.this.navigation.isInProgress() && !SoulWisp.this.isChopping();
+            return SoulWisp.this.navigation.isInProgress() /*!SoulWisp.this.isChopping()*/;
         }
 
         /**
