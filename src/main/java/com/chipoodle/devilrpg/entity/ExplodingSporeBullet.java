@@ -79,7 +79,7 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
     private float rollAmount;
     private float rollAmountO;
     private int timeSinceSting;
-    private int stayOutOfHiveCountdown;
+    //private int stayOutOfHiveCountdown;
     private int underWaterTicks;
 
     public ExplodingSporeBullet(EntityType<? extends ExplodingSporeBullet> p_27717_, Level p_27718_) {
@@ -133,7 +133,7 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
         super.addAdditionalSaveData(compoundTag);
 
         compoundTag.putBoolean("HasStung", this.hasStung());
-        compoundTag.putInt("CannotEnterHiveTicks", this.stayOutOfHiveCountdown);
+        //compoundTag.putInt("CannotEnterHiveTicks", this.stayOutOfHiveCountdown);
         this.addPersistentAngerSaveData(compoundTag);
         compoundTag.putString("OwnerUUID", "");
         compoundTag.putString("Owner", "");
@@ -142,7 +142,7 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
     public void readAdditionalSaveData(CompoundTag p_27793_) {
         super.readAdditionalSaveData(p_27793_);
         this.setHasStung(p_27793_.getBoolean("HasStung"));
-        this.stayOutOfHiveCountdown = p_27793_.getInt("CannotEnterHiveTicks");
+        //this.stayOutOfHiveCountdown = p_27793_.getInt("CannotEnterHiveTicks");
         this.readPersistentAngerSaveData(this.level, p_27793_);
     }
 
@@ -294,9 +294,9 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
     public void aiStep() {
         super.aiStep();
         if (!this.level.isClientSide) {
-            if (this.stayOutOfHiveCountdown > 0) {
-                --this.stayOutOfHiveCountdown;
-            }
+            //if (this.stayOutOfHiveCountdown > 0) {
+            //    --this.stayOutOfHiveCountdown;
+           // }
 
             if (this.remainingCooldownBeforeLocatingNewHive > 0) {
                 --this.remainingCooldownBeforeLocatingNewHive;
@@ -801,9 +801,9 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
 
     private void explodeCreeper() {
         if (!this.level.isClientSide) {
-            float explosionRadius = 3;
+            float explosionRadius = 2;
             this.dead = true;
-            this.level.explode(this, this.getX(), this.getY(), this.getZ(), explosionRadius, Level.ExplosionInteraction.MOB);
+            this.level.explode(this, this.getX(), this.getY(), this.getZ(), explosionRadius,true, Level.ExplosionInteraction.MOB);
             this.discard();
             this.spawnLingeringCloud();
         }
@@ -814,7 +814,7 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
         Collection<MobEffectInstance> collection = this.getActiveEffects();
         if (!collection.isEmpty()) {
             AreaEffectCloud areaeffectcloud = new AreaEffectCloud(this.level, this.getX(), this.getY(), this.getZ());
-            areaeffectcloud.setRadius(2.5F);
+            areaeffectcloud.setRadius(2.0F);
             areaeffectcloud.setRadiusOnUse(-0.5F);
             areaeffectcloud.setWaitTime(10);
             areaeffectcloud.setDuration(areaeffectcloud.getDuration() / 2);

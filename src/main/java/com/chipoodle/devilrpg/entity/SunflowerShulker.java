@@ -54,6 +54,8 @@ import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.gameevent.GameEvent;
+import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.network.NetworkHooks;
@@ -418,7 +420,9 @@ public class SunflowerShulker extends TamableAnimal implements ITamableEntity, I
 
     private boolean isPositionBlocked(BlockPos p_149813_) {
         BlockState blockstate = this.level.getBlockState(p_149813_);
-        if (blockstate.isAir()) {
+        FluidState fluidState = blockstate.getFluidState();
+        boolean isWater = fluidState.getType() == Fluids.WATER;
+        if (blockstate.isAir() || isWater) {
             return false;
         } else {
             boolean flag = blockstate.is(Blocks.MOVING_PISTON) && p_149813_.equals(this.blockPosition());
@@ -432,9 +436,17 @@ public class SunflowerShulker extends TamableAnimal implements ITamableEntity, I
 
             for (int i = 0; i < 5; ++i) {
                 //BlockPos blockpos1 = blockpos.offset(Mth.randomBetweenInclusive(this.random, -8, 8), Mth.randomBetweenInclusive(this.random, -8, 8), Mth.randomBetweenInclusive(this.random, -8, 8));
-               BlockPos blockpos1 = TargetUtils.findSolidGroundBelowMinusOneEmpty(level, blockpos);
+                BlockPos blockpos1 = TargetUtils.findSolidGroundBelowMinusOneEmpty(level, blockpos);
+                BlockState blockState = level.getBlockState(blockpos1);
+                FluidState fluidState = blockState.getFluidState();
+                // Fluid type = fluidState.getType();
+                boolean isWater = fluidState.getType() == Fluids.WATER;
+                boolean yPosMin = blockpos1.getY() > this.level.getMinBuildHeight();
+                boolean emptyBlock = this.level.isEmptyBlock(blockpos1);
+                boolean withinBounds = this.level.getWorldBorder().isWithinBounds(blockpos1);
+                boolean noCollision = this.level.noCollision(this, (new AABB(blockpos1)).deflate(1.0E-6D));
 
-                if (blockpos1.getY() > this.level.getMinBuildHeight() && this.level.isEmptyBlock(blockpos1) && this.level.getWorldBorder().isWithinBounds(blockpos1) && this.level.noCollision(this, (new AABB(blockpos1)).deflate(1.0E-6D))) {
+                if (yPosMin && (emptyBlock || isWater) && withinBounds && noCollision) {
                     Direction direction = this.findAttachableSurface(blockpos1);
                     if (direction != null) {
                         net.minecraftforge.event.entity.EntityTeleportEvent.EnderEntity event = net.minecraftforge.event.ForgeEventFactory.onEnderTeleport(this, blockpos1.getX(), blockpos1.getY(), blockpos1.getZ());
