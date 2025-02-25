@@ -22,13 +22,10 @@ import net.minecraft.tags.ItemTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.util.Mth;
 import net.minecraft.util.TimeUtil;
-import net.minecraft.util.VisibleForDebug;
 import net.minecraft.util.valueproviders.UniformInt;
-import net.minecraft.world.Difficulty;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -36,25 +33,16 @@ import net.minecraft.world.entity.ai.control.FlyingMoveControl;
 import net.minecraft.world.entity.ai.control.LookControl;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.Goal;
-import net.minecraft.world.entity.ai.goal.GoalSelector;
-import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
 import net.minecraft.world.entity.ai.goal.target.*;
 import net.minecraft.world.entity.ai.navigation.FlyingPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.ai.util.AirAndWaterRandomPos;
-import net.minecraft.world.entity.ai.util.AirRandomPos;
 import net.minecraft.world.entity.ai.util.HoverRandomPos;
 import net.minecraft.world.entity.animal.FlyingAnimal;
-import net.minecraft.world.entity.animal.IronGolem;
-import net.minecraft.world.entity.animal.Turtle;
-import net.minecraft.world.entity.animal.horse.Llama;
-import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
-import net.minecraft.world.level.block.entity.BeehiveBlockEntity;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.pathfinder.BlockPathTypes;
@@ -65,15 +53,17 @@ import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
-import java.util.*;
+import java.util.Collection;
+import java.util.EnumSet;
+import java.util.Objects;
+import java.util.UUID;
 
 public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, FlyingAnimal, ITamableEntity, ISoulEntity {
     public static final int TICKS_PER_FLAP = Mth.ceil(1.4959966F);
+    public static final int REMAINING_TICKS_ALIVE = 600;
     private static final EntityDataAccessor<Byte> DATA_FLAGS_ID = SynchedEntityData.defineId(ExplodingSporeBullet.class, EntityDataSerializers.BYTE);
     private static final EntityDataAccessor<Integer> DATA_REMAINING_ANGER_TIME = SynchedEntityData.defineId(ExplodingSporeBullet.class, EntityDataSerializers.INT);
     private static final UniformInt PERSISTENT_ANGER_TIME = TimeUtil.rangeOfSeconds(20, 39);
-    int remainingCooldownBeforeLocatingNewHive;
-    int remainingCooldownBeforeLocatingNewFlower = Mth.nextInt(this.random, 20, 60);
     @Nullable
     private UUID persistentAngerTarget;
     private float rollAmount;
@@ -94,7 +84,7 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
     }
 
     public static AttributeSupplier.Builder createAttributes() {
-        return Mob.createMobAttributes().add(Attributes.MAX_HEALTH, 10.0D).add(Attributes.FLYING_SPEED, (double) 0.6F).add(Attributes.MOVEMENT_SPEED, (double) 0.3F).add(Attributes.ATTACK_DAMAGE, 2.0D).add(Attributes.FOLLOW_RANGE, 48.0D);
+        return Mob.createMobAttributes().add(Attributes.MAX_HEALTH, 10.0D).add(Attributes.FLYING_SPEED, 0.6D).add(Attributes.MOVEMENT_SPEED, 0.3D).add(Attributes.ATTACK_DAMAGE, 2.0D).add(Attributes.FOLLOW_RANGE, 48.0D);
     }
 
     protected void defineSynchedData() {
@@ -119,11 +109,14 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
         this.targetSelector.addGoal(3, (new HurtByTargetGoal(this)).setAlertOthers());
         this.targetSelector.addGoal(4,
                 new NearestAttackableTargetGoal<>(this, Mob.class, 10, false, false, (entity) ->
-                        !(entity instanceof Villager)
+                                   /* !(entity instanceof Villager)
                                 && !(entity instanceof Llama)
                                 && !(entity instanceof Turtle)
                                 && !(entity instanceof IronGolem)
-                                && !(entity instanceof ITamableEntity && Objects.equals(((ITamableEntity) entity).getOwnerUUID(), this.getOwnerUUID()))
+
+                                && */
+                        !(entity instanceof ITamableEntity
+                                && Objects.equals(((ITamableEntity) entity).getOwnerUUID(), this.getOwnerUUID()))
                 ));
         //this.targetSelector.addGoal(3, new ResetUniversalAngerTargetGoal<>(this, true));
         this.targetSelector.addGoal(8, new ResetUniversalAngerTargetGoal<>(this, true));
@@ -132,7 +125,7 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
     public void addAdditionalSaveData(@NotNull CompoundTag compoundTag) {
         super.addAdditionalSaveData(compoundTag);
 
-        compoundTag.putBoolean("HasStung", this.hasStung());
+        //compoundTag.putBoolean("HasStung", this.hasStung());
         //compoundTag.putInt("CannotEnterHiveTicks", this.stayOutOfHiveCountdown);
         this.addPersistentAngerSaveData(compoundTag);
         compoundTag.putString("OwnerUUID", "");
@@ -141,14 +134,14 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
 
     public void readAdditionalSaveData(CompoundTag p_27793_) {
         super.readAdditionalSaveData(p_27793_);
-        this.setHasStung(p_27793_.getBoolean("HasStung"));
+        //this.setHasStung(p_27793_.getBoolean("HasStung"));
         //this.stayOutOfHiveCountdown = p_27793_.getInt("CannotEnterHiveTicks");
         this.readPersistentAngerSaveData(this.level, p_27793_);
     }
 
     public boolean doHurtTarget(Entity target) {
-        boolean flag = target.hurt(this.damageSources().sting(this), (float) ((int) this.getAttributeValue(Attributes.ATTACK_DAMAGE)));
-        if (flag) {
+        //boolean flag = target.hurt(this.damageSources().sting(this), (float) ((int) this.getAttributeValue(Attributes.ATTACK_DAMAGE)));
+       /* if (flag) {
             this.doEnchantDamageEffects(this, target);
             if (target instanceof LivingEntity) {
                 ((LivingEntity) target).setStingerCount(((LivingEntity) target).getStingerCount() + 1);
@@ -164,12 +157,13 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
                 }
             }
 
-            this.setHasStung(true);
+            //this.setHasStung(true);
             this.stopBeingAngry();
             this.playSound(SoundEvents.BEE_STING, 1.0F, 1.0F);
-        }
+        }*/
 
-        return flag;
+        //return flag;
+        return true;
     }
 
     public void tick() {
@@ -187,35 +181,6 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
         p_27780_.addParticle(p_27786_, Mth.lerp(p_27780_.random.nextDouble(), p_27781_, p_27782_), p_27785_, Mth.lerp(p_27780_.random.nextDouble(), p_27783_, p_27784_), 0.0D, 0.0D, 0.0D);
     }
 
-    void pathfindRandomlyTowards(BlockPos p_27881_) {
-        Vec3 vec3 = Vec3.atBottomCenterOf(p_27881_);
-        int i = 0;
-        BlockPos blockpos = this.blockPosition();
-        int j = (int) vec3.y - blockpos.getY();
-        if (j > 2) {
-            i = 4;
-        } else if (j < -2) {
-            i = -4;
-        }
-
-        int k = 6;
-        int l = 8;
-        int i1 = blockpos.distManhattan(p_27881_);
-        if (i1 < 15) {
-            k = i1 / 2;
-            l = i1 / 2;
-        }
-
-        Vec3 vec31 = AirRandomPos.getPosTowards(this, k, l, i, vec3, (double) ((float) Math.PI / 10F));
-        if (vec31 != null) {
-            this.navigation.setMaxVisitedNodesMultiplier(0.5F);
-            this.navigation.moveTo(vec31.x, vec31.y, vec31.z, 1.0D);
-        }
-    }
-    public float getRollAmount(float p_27936_) {
-        return Mth.lerp(p_27936_, this.rollAmountO, this.rollAmount);
-    }
-
     private void updateRollAmount() {
         this.rollAmountO = this.rollAmount;
         if (this.isRolling()) {
@@ -227,7 +192,7 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
     }
 
     protected void customServerAiStep() {
-        boolean flag = this.hasStung();
+        //boolean flag = this.hasStung();
         if (this.isInWaterOrBubble()) {
             ++this.underWaterTicks;
         } else {
@@ -238,10 +203,11 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
             this.hurt(this.damageSources().drown(), 1.0F);
         }
 
-        if (flag) {
+        if (/*flag*/true) {
             ++this.timeSinceSting;
-            if (this.timeSinceSting % 5 == 0 && this.random.nextInt(Mth.clamp(1200 - this.timeSinceSting, 1, 1200)) == 0) {
+            if (this.timeSinceSting % 5 == 0 && this.random.nextInt(Mth.clamp(REMAINING_TICKS_ALIVE - this.timeSinceSting, 1, REMAINING_TICKS_ALIVE)) == 0) {
                 this.hurt(this.damageSources().generic(), this.getHealth());
+                explodeCreeper();
             }
         }
 
@@ -272,19 +238,10 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
         this.setRemainingPersistentAngerTime(PERSISTENT_ANGER_TIME.sample(this.random));
     }
 
-    private boolean doesHiveHaveSpace(BlockPos p_27885_) {
-        BlockEntity blockentity = this.level.getBlockEntity(p_27885_);
-        if (blockentity instanceof BeehiveBlockEntity) {
-            return !((BeehiveBlockEntity) blockentity).isFull();
-        } else {
-            return false;
-        }
-    }
-
-    @VisibleForDebug
+    /*@VisibleForDebug
     public GoalSelector getGoalSelector() {
         return this.goalSelector;
-    }
+    }*/
 
     protected void sendDebugPackets() {
         super.sendDebugPackets();
@@ -294,19 +251,8 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
     public void aiStep() {
         super.aiStep();
         if (!this.level.isClientSide) {
-            //if (this.stayOutOfHiveCountdown > 0) {
-            //    --this.stayOutOfHiveCountdown;
-           // }
 
-            if (this.remainingCooldownBeforeLocatingNewHive > 0) {
-                --this.remainingCooldownBeforeLocatingNewHive;
-            }
-
-            if (this.remainingCooldownBeforeLocatingNewFlower > 0) {
-                --this.remainingCooldownBeforeLocatingNewFlower;
-            }
-
-            boolean flag = this.isAngry() && !this.hasStung() && this.getTarget() != null && this.getTarget().distanceToSqr(this) < 4.0D;
+            boolean flag = this.isAngry() && /*!this.hasStung() && */this.getTarget() != null && this.getTarget().distanceToSqr(this) < 4.0D;
             this.setRolling(flag);
         }
 
@@ -314,31 +260,23 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
 
     }
 
-    public boolean hasStung() {
-        return this.getFlag(4);
-    }
-
-    private void setHasStung(boolean p_27926_) {
-        this.setFlag(4, p_27926_);
-    }
-
     private boolean isRolling() {
         return this.getFlag(2);
     }
 
     private void setRolling(boolean p_27930_) {
-        this.setFlag(2, p_27930_);
+        this.setFlag(p_27930_);
     }
 
-    boolean isTooFarAway(BlockPos p_27890_) {
+    /*boolean isTooFarAway(BlockPos p_27890_) {
         return !this.closerThan(p_27890_, 32);
-    }
+    }*/
 
-    private void setFlag(int p_27833_, boolean p_27834_) {
+    private void setFlag(boolean p_27834_) {
         if (p_27834_) {
-            this.entityData.set(DATA_FLAGS_ID, (byte) (this.entityData.get(DATA_FLAGS_ID) | p_27833_));
+            this.entityData.set(DATA_FLAGS_ID, (byte) (this.entityData.get(DATA_FLAGS_ID) | 2));
         } else {
-            this.entityData.set(DATA_FLAGS_ID, (byte) (this.entityData.get(DATA_FLAGS_ID) & ~p_27833_));
+            this.entityData.set(DATA_FLAGS_ID, (byte) (this.entityData.get(DATA_FLAGS_ID) & ~2));
         }
 
     }
@@ -375,11 +313,11 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
     }
 
     protected SoundEvent getHurtSound(@NotNull DamageSource p_27845_) {
-        return SoundEvents.BEE_HURT;
+        return SoundEvents.AZALEA_HIT;
     }
 
     protected SoundEvent getDeathSound() {
-        return SoundEvents.BEE_DEATH;
+        return SoundEvents.AZALEA_BREAK;
     }
 
     protected float getSoundVolume() {
@@ -532,6 +470,36 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
         random.setSeed(System.currentTimeMillis());
     }
 
+    private void explodeCreeper() {
+        if (!this.level.isClientSide) {
+            float explosionRadius = 1;
+            this.dead = true;
+            this.level.explode(this, this.getX(), this.getY(), this.getZ(), explosionRadius, false, Level.ExplosionInteraction.MOB);
+            this.discard();
+            this.spawnLingeringCloud();
+        }
+
+    }
+
+    private void spawnLingeringCloud() {
+        Collection<MobEffectInstance> collection = this.getActiveEffects();
+        if (!collection.isEmpty()) {
+            AreaEffectCloud areaeffectcloud = new AreaEffectCloud(this.level, this.getX(), this.getY(), this.getZ());
+            areaeffectcloud.setRadius(2.0F);
+            areaeffectcloud.setRadiusOnUse(-0.5F);
+            areaeffectcloud.setWaitTime(10);
+            areaeffectcloud.setDuration(areaeffectcloud.getDuration() / 2);
+            areaeffectcloud.setRadiusPerTick(-areaeffectcloud.getRadius() / (float) areaeffectcloud.getDuration());
+
+            for (MobEffectInstance mobeffectinstance : collection) {
+                areaeffectcloud.addEffect(new MobEffectInstance(mobeffectinstance));
+            }
+
+            this.level.addFreshEntity(areaeffectcloud);
+        }
+
+    }
+
     static class ExplodingShulkerBulletBecomeAngryTargetGoal extends NearestAttackableTargetGoal<Player> {
         ExplodingShulkerBulletBecomeAngryTargetGoal(ExplodingSporeBullet p_27966_) {
             super(p_27966_, Player.class, 10, true, false, p_27966_::isAngryAt);
@@ -553,100 +521,23 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
 
         private boolean ExplodingShulkerBulletCanTarget() {
             ExplodingSporeBullet ExplodingSporeBullet = (ExplodingSporeBullet) this.mob;
-            return ExplodingSporeBullet.isAngry() && !ExplodingSporeBullet.hasStung();
+            return ExplodingSporeBullet.isAngry() /*&& !ExplodingSporeBullet.hasStung()*/;
         }
     }
-
-    class ExplodingShulkerBulletAttackGoal extends ExplodingSporeBullet.MeleeAttackGoal {
-        ExplodingShulkerBulletAttackGoal(ExplodingSporeBullet p_27960_, double p_27961_, boolean p_27962_) {
-            super(p_27960_, p_27961_, p_27962_);
-        }
-
-        public boolean canUse() {
-            return super.canUse() && ExplodingSporeBullet.this.isAngry() && !ExplodingSporeBullet.this.hasStung();
-        }
-
-        public boolean canContinueToUse() {
-            return super.canContinueToUse() && ExplodingSporeBullet.this.isAngry() && !ExplodingSporeBullet.this.hasStung();
-        }
-    }
-
-    class ExplodingShulkerBulletHurtByOtherGoal extends HurtByTargetGoal {
-        ExplodingShulkerBulletHurtByOtherGoal(ExplodingSporeBullet p_28033_) {
-            super(p_28033_);
-        }
-
-        public boolean canContinueToUse() {
-            return ExplodingSporeBullet.this.isAngry() && super.canContinueToUse();
-        }
-
-        protected void alertOther(@NotNull Mob p_28035_, @NotNull LivingEntity p_28036_) {
-            if (p_28035_ instanceof ExplodingSporeBullet && this.mob.hasLineOfSight(p_28036_)) {
-                p_28035_.setTarget(p_28036_);
-            }
-
-        }
-    }
-
-    class ExplodingSporeBulletLookControl extends LookControl {
-        ExplodingSporeBulletLookControl(Mob p_28059_) {
-            super(p_28059_);
-        }
-
-        public void tick() {
-            if (!ExplodingSporeBullet.this.isAngry()) {
-                super.tick();
-            }
-        }
-
-    }
-
-    class ExplodingShulkerBulletWanderGoal extends Goal {
-        private static final int WANDER_THRESHOLD = 22;
-
-        ExplodingShulkerBulletWanderGoal() {
-            this.setFlags(EnumSet.of(Goal.Flag.MOVE));
-        }
-
-        public boolean canUse() {
-            return ExplodingSporeBullet.this.navigation.isDone() && ExplodingSporeBullet.this.random.nextInt(10) == 0;
-        }
-
-        public boolean canContinueToUse() {
-            return ExplodingSporeBullet.this.navigation.isInProgress();
-        }
-
-        public void start() {
-            Vec3 vec3 = this.findPos();
-            if (vec3 != null) {
-                ExplodingSporeBullet.this.navigation.moveTo(ExplodingSporeBullet.this.navigation.createPath(BlockPos.containing(vec3), 1), 1.0D);
-            }
-
-        }
-        @Nullable
-        private Vec3 findPos() {
-            Vec3 vec3;
-            vec3 = ExplodingSporeBullet.this.getViewVector(0.0F);
-            int i = 8;
-            Vec3 vec32 = HoverRandomPos.getPos(ExplodingSporeBullet.this, 8, 7, vec3.x, vec3.z, ((float) Math.PI / 2F), 3, 1);
-            return vec32 != null ? vec32 : AirAndWaterRandomPos.getPos(ExplodingSporeBullet.this, 8, 4, -2, vec3.x, vec3.z, (double) ((float) Math.PI / 2F));
-        }
-    }
-
 
     static class MeleeAttackGoal extends Goal {
+        private static final long COOLDOWN_BETWEEN_CAN_USE_CHECKS = 20L;
         protected final ExplodingSporeBullet mob;
         private final double speedModifier;
         private final boolean followingTargetEvenIfNotSeen;
+        private final int attackInterval = 20;
         private Path path;
         private double pathedTargetX;
         private double pathedTargetY;
         private double pathedTargetZ;
         private int ticksUntilNextPathRecalculation;
         private int ticksUntilNextAttack;
-        private final int attackInterval = 20;
         private long lastCanUseCheck;
-        private static final long COOLDOWN_BETWEEN_CAN_USE_CHECKS = 20L;
         private int failedPathFindingPenalty = 0;
         private boolean canPenalize = false;
 
@@ -699,7 +590,7 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
             } else if (!this.mob.isWithinRestriction(livingentity.blockPosition())) {
                 return false;
             } else {
-                return !(livingentity instanceof Player) || !livingentity.isSpectator() && !((Player)livingentity).isCreative();
+                return !(livingentity instanceof Player) || !livingentity.isSpectator() && !((Player) livingentity).isCreative();
             }
         }
 
@@ -713,7 +604,7 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
         public void stop() {
             LivingEntity livingentity = this.mob.getTarget();
             if (!EntitySelector.NO_CREATIVE_OR_SPECTATOR.test(livingentity)) {
-                this.mob.setTarget((LivingEntity)null);
+                this.mob.setTarget((LivingEntity) null);
             }
 
             this.mob.setAggressive(false);
@@ -793,40 +684,87 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
         }
 
         protected double getAttackReachSqr(LivingEntity p_25556_) {
-            return (double)(this.mob.getBbWidth() * 2.0F * this.mob.getBbWidth() * 2.0F + p_25556_.getBbWidth());
+            return (double) (this.mob.getBbWidth() * 2.0F * this.mob.getBbWidth() * 2.0F + p_25556_.getBbWidth());
         }
 
 
     }
 
-    private void explodeCreeper() {
-        if (!this.level.isClientSide) {
-            float explosionRadius = 2;
-            this.dead = true;
-            this.level.explode(this, this.getX(), this.getY(), this.getZ(), explosionRadius,true, Level.ExplosionInteraction.MOB);
-            this.discard();
-            this.spawnLingeringCloud();
+    class ExplodingShulkerBulletAttackGoal extends ExplodingSporeBullet.MeleeAttackGoal {
+        ExplodingShulkerBulletAttackGoal(ExplodingSporeBullet p_27960_, double p_27961_, boolean p_27962_) {
+            super(p_27960_, p_27961_, p_27962_);
         }
 
+        public boolean canUse() {
+            return super.canUse() && ExplodingSporeBullet.this.isAngry() /*&& !ExplodingSporeBullet.this.hasStung()*/;
+        }
+
+        public boolean canContinueToUse() {
+            return super.canContinueToUse() && ExplodingSporeBullet.this.isAngry() /*&& !ExplodingSporeBullet.this.hasStung()*/;
+        }
     }
 
-    private void spawnLingeringCloud() {
-        Collection<MobEffectInstance> collection = this.getActiveEffects();
-        if (!collection.isEmpty()) {
-            AreaEffectCloud areaeffectcloud = new AreaEffectCloud(this.level, this.getX(), this.getY(), this.getZ());
-            areaeffectcloud.setRadius(2.0F);
-            areaeffectcloud.setRadiusOnUse(-0.5F);
-            areaeffectcloud.setWaitTime(10);
-            areaeffectcloud.setDuration(areaeffectcloud.getDuration() / 2);
-            areaeffectcloud.setRadiusPerTick(-areaeffectcloud.getRadius() / (float)areaeffectcloud.getDuration());
+    class ExplodingShulkerBulletHurtByOtherGoal extends HurtByTargetGoal {
+        ExplodingShulkerBulletHurtByOtherGoal(ExplodingSporeBullet p_28033_) {
+            super(p_28033_);
+        }
 
-            for(MobEffectInstance mobeffectinstance : collection) {
-                areaeffectcloud.addEffect(new MobEffectInstance(mobeffectinstance));
+        public boolean canContinueToUse() {
+            return ExplodingSporeBullet.this.isAngry() && super.canContinueToUse();
+        }
+
+        protected void alertOther(@NotNull Mob p_28035_, @NotNull LivingEntity p_28036_) {
+            if (p_28035_ instanceof ExplodingSporeBullet && this.mob.hasLineOfSight(p_28036_)) {
+                p_28035_.setTarget(p_28036_);
             }
 
-            this.level.addFreshEntity(areaeffectcloud);
+        }
+    }
+
+    class ExplodingSporeBulletLookControl extends LookControl {
+        ExplodingSporeBulletLookControl(Mob p_28059_) {
+            super(p_28059_);
         }
 
+        public void tick() {
+            if (!ExplodingSporeBullet.this.isAngry()) {
+                super.tick();
+            }
+        }
+
+    }
+
+    class ExplodingShulkerBulletWanderGoal extends Goal {
+        private static final int WANDER_THRESHOLD = 22;
+
+        ExplodingShulkerBulletWanderGoal() {
+            this.setFlags(EnumSet.of(Goal.Flag.MOVE));
+        }
+
+        public boolean canUse() {
+            return ExplodingSporeBullet.this.navigation.isDone() && ExplodingSporeBullet.this.random.nextInt(10) == 0;
+        }
+
+        public boolean canContinueToUse() {
+            return ExplodingSporeBullet.this.navigation.isInProgress();
+        }
+
+        public void start() {
+            Vec3 vec3 = this.findPos();
+            if (vec3 != null) {
+                ExplodingSporeBullet.this.navigation.moveTo(ExplodingSporeBullet.this.navigation.createPath(BlockPos.containing(vec3), 1), 1.0D);
+            }
+
+        }
+
+        @Nullable
+        private Vec3 findPos() {
+            Vec3 vec3;
+            vec3 = ExplodingSporeBullet.this.getViewVector(0.0F);
+            int i = 8;
+            Vec3 vec32 = HoverRandomPos.getPos(ExplodingSporeBullet.this, 8, 7, vec3.x, vec3.z, ((float) Math.PI / 2F), 3, 1);
+            return vec32 != null ? vec32 : AirAndWaterRandomPos.getPos(ExplodingSporeBullet.this, 8, 4, -2, vec3.x, vec3.z, (double) ((float) Math.PI / 2F));
+        }
     }
 
 }

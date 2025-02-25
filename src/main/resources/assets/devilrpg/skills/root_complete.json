@@ -173,11 +173,11 @@
     {
         "id": "nature:blooming_sanctuary",
         "display": {
-            "description": "Creates a sanctuary that spawns plants in a small radius. Grants a small damage boost to the player and allies within while slowing down enemies in the area. Requires a seed from your inventory, which will be consumed upon activation.",
+            "description": "Creates a sanctuary that grants a regeneration to the player and allies. consumes 1 mana per tick. Requires a seed from your inventory, which will be consumed upon activation.",
             "icon": {
                 "item": "devilrpg:item_vine"
             },
-            "title": "Dome of vines",
+            "title": "Blooming Sanctuary",
             "image": "devilrpg:textures/gui/skill/sprout-disc.png",
             "frame": "task"
         },

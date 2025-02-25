@@ -4,6 +4,6 @@
   "render_type": "minecraft:translucent",
   "textures": {
     "particle": "block/vine",
-    "cross": "devilrpg:block/soulshieldvine_green"
+    "cross": "devilrpg:block/bloomingsanctuary_green"
   }
 }

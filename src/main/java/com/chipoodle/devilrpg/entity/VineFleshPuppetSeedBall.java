@@ -5,6 +5,7 @@ import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.effects.MobEffectVineFleshPuppet;
 import com.chipoodle.devilrpg.init.ModEntities;
+import com.chipoodle.devilrpg.init.ModItems;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ItemParticleOption;
@@ -43,7 +44,7 @@ public class VineFleshPuppetSeedBall extends ThrowableItemProjectile implements 
 
     @Override
     protected @NotNull Item getDefaultItem() {
-        return Items.ACACIA_WOOD;
+        return ModItems.ITEM_VINE.get();
     }
 
     @OnlyIn(Dist.CLIENT)
