@@ -1,6 +1,7 @@
 {
     "itemGroup.devilrpg": "Devil RPG",
     "key.categories.devilrpg": "Devil RPG power buttons",
+    "entity.devilrpg.soul_wolf": "Soul Wolf",
     "entity.devilrpg.soul_wolf.name": "Soul Wolf",
     "entity.devilrpg.soul_bear": "Soul Bear",
     "entity.devilrpg.soul_bear.name": "Soul Bear",
@@ -10,6 +11,8 @@
     "entity.devilrpg.speed_wisp.name": "Speed Wisp",
     "entity.devilrpg.neozombie.name": "NeoZombie",
     "entity.devilrpg.soul_frostball.name": "Frostball",
+    "entity.devilrpg.aggressive_zombie": "Aggressive Zombie",
+    "entity.devilrpg.aggressive_zombie.name": "Aggressive Zombie",
     "key.power1": "Power 1",
     "key.power2": "Power 2",
     "key.power3": "Power 3",

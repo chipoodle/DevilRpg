@@ -51,6 +51,10 @@ public class ModItems {
     public static final RegistryObject<ForgeSpawnEggItem> SOULWISP_CHOPPER_SPAWN_EGG = ITEMS.register("soulwisp_chopper_spawn_egg",
             () -> new ForgeSpawnEggItem(ModEntities.WISP_CHOPPER, 0x944e7f, 0x7b3636,
                     new Item.Properties().stacksTo(16)));
+
+    public static final RegistryObject<ForgeSpawnEggItem> AGGRESSIVE_ZOMBIE_SPAWN_EGG = ITEMS.register("aggressive_zombie_spawn_egg",
+            () -> new ForgeSpawnEggItem(ModEntities.AGGRESSIVE_ZOMBIE, 0x144e7f, 0xab3634,
+                    new Item.Properties().stacksTo(16)));
     private static Map<ResourceLocation, Item> itemDictionary;
     private static Map<Item, ResourceLocation> locationDictionary;
 

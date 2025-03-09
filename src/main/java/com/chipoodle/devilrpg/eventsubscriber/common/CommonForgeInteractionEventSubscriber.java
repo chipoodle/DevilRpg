@@ -12,8 +12,10 @@ import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.capability.stamina.PlayerStaminaCapability;
 import com.chipoodle.devilrpg.capability.stamina.PlayerStaminaCapabilityInterface;
+import com.chipoodle.devilrpg.entity.AggressiveZombieEntity;
 import com.chipoodle.devilrpg.entity.ISoulEntity;
 import com.chipoodle.devilrpg.entity.ITamableEntity;
+import com.chipoodle.devilrpg.init.ModEntities;
 import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.network.handler.PotionClientHandler;
 import com.chipoodle.devilrpg.util.EventUtils;
@@ -22,9 +24,11 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.monster.Zombie;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.util.LazyOptional;
+import net.minecraftforge.event.entity.EntityJoinLevelEvent;
 import net.minecraftforge.event.entity.living.LivingEvent.LivingJumpEvent;
 import net.minecraftforge.event.entity.living.LivingFallEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
@@ -202,7 +206,20 @@ public class CommonForgeInteractionEventSubscriber {
     @SubscribeEvent
     public static void onLivingHurtEvent(LivingHurtEvent event) {
 
-       // DevilRpg.LOGGER.debug("Entity {} source {} ammount {}",event.getEntity().getClass().getName(),event.getSource(),event.getAmount());
+        // DevilRpg.LOGGER.debug("Entity {} source {} ammount {}",event.getEntity().getClass().getName(),event.getSource(),event.getAmount());
 
     }
+
+    @SubscribeEvent
+    public static void onEntitySpawn(EntityJoinLevelEvent event) {
+        /*if (!event.getLevel().isClientSide() && event.getEntity() instanceof Zombie) {
+            if (event.getLevel().getRandom().nextInt(100) < 5) { // Probabilidad del 5%
+                AggressiveZombieEntity aggressiveZombie = new AggressiveZombieEntity(ModEntities.AGGRESSIVE_ZOMBIE.get(), event.getLevel());
+                aggressiveZombie.moveTo(event.getEntity().getX(), event.getEntity().getY(), event.getEntity().getZ(), event.getEntity().getYRot(), event.getEntity().getXRot());
+                event.getLevel().addFreshEntity(aggressiveZombie);
+                event.setCanceled(true); // Reemplazar el Zombie normal
+            }
+        }*/
+    }
+
 }

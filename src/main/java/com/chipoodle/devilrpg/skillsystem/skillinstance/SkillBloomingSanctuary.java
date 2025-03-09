@@ -1,6 +1,7 @@
 package com.chipoodle.devilrpg.skillsystem.skillinstance;
 
 import com.chipoodle.devilrpg.block.BloomingSanctuaryBlock;
+import com.chipoodle.devilrpg.block.SoulVineBlock;
 import com.chipoodle.devilrpg.blockentity.BloomingSanctuaryBlockEntity;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
 import com.chipoodle.devilrpg.init.ModBlocks;
@@ -17,6 +18,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.Material;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.HashMap;
@@ -34,7 +36,23 @@ public class SkillBloomingSanctuary extends AbstractSkillSeedsInInventoryExecuto
 
     @Override
     public boolean arePreconditionsMetBeforeConsumingResource(Player player) {
-        return !player.getCooldowns().isOnCooldown(icon.getItem()) && super.arePreconditionsMetBeforeConsumingResource(player);
+
+        BlockPos playerBlockPos = player.blockPosition();
+        //BlockState playerBlockState = player.level.getBlockState(playerBlockPos);
+        Vec3 playerLookVector = player.getLookAngle();
+        Direction nearestDirection = Direction.getNearest(playerLookVector.x, 0, playerLookVector.z);
+        //DevilRpg.LOGGER.info("-------->Direction: {}", nearestDirection);
+        BlockPos newBlockpos = playerBlockPos.relative(nearestDirection);
+
+        boolean hasSeeds = super.arePreconditionsMetBeforeConsumingResource(player);
+
+        boolean canPlace = (player.level.getBlockState(newBlockpos).getMaterial().equals(Material.REPLACEABLE_PLANT) ||
+                player.level.getBlockState(newBlockpos).getMaterial().equals(Material.TOP_SNOW) ||
+                player.level.getBlockState(newBlockpos).getBlock().equals(Blocks.AIR))
+                && SoulVineBlock.hasAtLeasOneSolidNeighbourPerpendicularToGrowDirection(player.level, newBlockpos, nearestDirection);
+
+
+        return !player.getCooldowns().isOnCooldown(icon.getItem()) && canPlace && hasSeeds;
     }
 
     @Override
@@ -50,18 +68,6 @@ public class SkillBloomingSanctuary extends AbstractSkillSeedsInInventoryExecuto
     }
 
     private void createSanctuary(Player playerIn, int skillPoints) {
-        /*BlockPos.betweenClosedStream(centerPos.offset(-radius, -1, -radius), centerPos.offset(radius, 1, radius))
-                .filter(pos -> level.getBlockState(pos).getBlock().equals(Blocks.AIR)
-                        || level.getBlockState(pos).getBlock().equals(Blocks.GRASS_BLOCK)
-                        || level.getBlockState(pos).getBlock().equals(Blocks.GRASS)
-                )
-                .forEach(pos -> {
-                    if (level.getRandom().nextDouble() < 0.3) { // 30% de probabilidad de poner una flor
-                        level.setBlockAndUpdate(pos, Blocks.MOSS_CARPET.defaultBlockState());
-                    }
-                });*/
-
-
         BlockPos playerBlockPos = playerIn.blockPosition();
         BloomingSanctuaryBlock createdBlock = ModBlocks.BLOOMING_SANCTUARY_BLOCK.get();
         Vec3 playerLookVector = playerIn.getLookAngle();

@@ -48,54 +48,58 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
 
     public PlayerSkillCapabilityImplementation() {
         if (nbt.isEmpty()) {
-            clientBuilder.buildSkillTrees();
-            HashMap<PowerEnum, SkillEnum> powers = new HashMap<>();
-            HashMap<SkillEnum, Integer> skills = new HashMap<>();
-            HashMap<SkillEnum, Integer> maxSkills = new HashMap<>();
-            HashMap<SkillEnum, Integer> manaCostContainer = new HashMap<>();
-            HashMap<SkillEnum, ResourceType> resourceTypeContainer = new HashMap<>();
-            ConcurrentLinkedQueue<ITamableEntity> minions = new ConcurrentLinkedQueue<>();
-            HashMap<Attribute, UUID> attributeModifiers = new HashMap<>();
-            List<SkillEnum> filteredSkillList = SkillEnum.getSkillsWithoutEmpty();
-            HashMap<SkillEnum, String> imagesOfSkills = new HashMap<>();
-
-            for (PowerEnum p : PowerEnum.values()) {
-                powers.put(p, null);
-            }
-
-            for (SkillEnum s : filteredSkillList) {
-                SkillResourceCost skillResourceCostRelation = extractSkillResourceCost(clientBuilder, s);
-                skills.put(s, 0);
-                if (skillResourceCostRelation != null)
-                    maxSkills.put(s, skillResourceCostRelation.getMaxSkillLevel());
-            }
-
-            for (SkillEnum s : filteredSkillList) {
-                SkillResourceCost skillResourceCostRelation = extractSkillResourceCost(clientBuilder, s);
-                if (skillResourceCostRelation != null) {
-                    manaCostContainer.put(s, skillResourceCostRelation.getManaCost());
-                    resourceTypeContainer.put(s, skillResourceCostRelation.getResourceType());
-                }
-            }
-            for (SkillEnum s : filteredSkillList) {
-                ResourceLocation imageOfSkill = clientBuilder.getImageOfSkill(s);
-                imagesOfSkills.put(s, imageOfSkill.toString());
-            }
-
-            try {
-                nbt.putByteArray(POWERS_KEY, BytesUtil.toByteArray(powers));
-                nbt.putByteArray(SKILLS_KEY, BytesUtil.toByteArray(skills));
-                nbt.putByteArray(MAX_SKILLS_KEY, BytesUtil.toByteArray(maxSkills));
-                nbt.putByteArray(MANA_COST_KEY, BytesUtil.toByteArray(manaCostContainer));
-                nbt.putByteArray(RESOURCE_TYPE_KEY, BytesUtil.toByteArray(resourceTypeContainer));
-                nbt.putByteArray(MINIONS_KEY, BytesUtil.toByteArray(minions));
-                nbt.putByteArray(ATTRIBUTE_MODIFIER_KEY, BytesUtil.toByteArray(attributeModifiers));
-                nbt.putByteArray(IMAGES_OF_SKILLS_KEY, BytesUtil.toByteArray(imagesOfSkills));
-            } catch (IOException e) {
-                DevilRpg.LOGGER.error("Error en constructor PlayerSkillCapability", e);
-            }
+            initNbt();
         }
         singletonSkillExecutorFactory = new SingletonSkillExecutorFactory(this);
+    }
+
+    private void initNbt() {
+        clientBuilder.buildSkillTrees();
+        HashMap<PowerEnum, SkillEnum> powers = new HashMap<>();
+        HashMap<SkillEnum, Integer> skills = new HashMap<>();
+        HashMap<SkillEnum, Integer> maxSkills = new HashMap<>();
+        HashMap<SkillEnum, Integer> manaCostContainer = new HashMap<>();
+        HashMap<SkillEnum, ResourceType> resourceTypeContainer = new HashMap<>();
+        ConcurrentLinkedQueue<ITamableEntity> minions = new ConcurrentLinkedQueue<>();
+        HashMap<Attribute, UUID> attributeModifiers = new HashMap<>();
+        List<SkillEnum> filteredSkillList = SkillEnum.getSkillsWithoutEmpty();
+        HashMap<SkillEnum, String> imagesOfSkills = new HashMap<>();
+
+        for (PowerEnum p : PowerEnum.values()) {
+            powers.put(p, null);
+        }
+
+        for (SkillEnum s : filteredSkillList) {
+            SkillResourceCost skillResourceCostRelation = extractSkillResourceCost(clientBuilder, s);
+            skills.put(s, 0);
+            if (skillResourceCostRelation != null)
+                maxSkills.put(s, skillResourceCostRelation.getMaxSkillLevel());
+        }
+
+        for (SkillEnum s : filteredSkillList) {
+            SkillResourceCost skillResourceCostRelation = extractSkillResourceCost(clientBuilder, s);
+            if (skillResourceCostRelation != null) {
+                manaCostContainer.put(s, skillResourceCostRelation.getManaCost());
+                resourceTypeContainer.put(s, skillResourceCostRelation.getResourceType());
+            }
+        }
+        for (SkillEnum s : filteredSkillList) {
+            ResourceLocation imageOfSkill = clientBuilder.getImageOfSkill(s);
+            imagesOfSkills.put(s, imageOfSkill.toString());
+        }
+
+        try {
+            nbt.putByteArray(POWERS_KEY, BytesUtil.toByteArray(powers));
+            nbt.putByteArray(SKILLS_KEY, BytesUtil.toByteArray(skills));
+            nbt.putByteArray(MAX_SKILLS_KEY, BytesUtil.toByteArray(maxSkills));
+            nbt.putByteArray(MANA_COST_KEY, BytesUtil.toByteArray(manaCostContainer));
+            nbt.putByteArray(RESOURCE_TYPE_KEY, BytesUtil.toByteArray(resourceTypeContainer));
+            nbt.putByteArray(MINIONS_KEY, BytesUtil.toByteArray(minions));
+            nbt.putByteArray(ATTRIBUTE_MODIFIER_KEY, BytesUtil.toByteArray(attributeModifiers));
+            nbt.putByteArray(IMAGES_OF_SKILLS_KEY, BytesUtil.toByteArray(imagesOfSkills));
+        } catch (IOException e) {
+            DevilRpg.LOGGER.error("Error en constructor PlayerSkillCapability", e);
+        }
     }
 
     private SkillResourceCost extractSkillResourceCost(ClientSkillBuilderFromJson client, SkillEnum s) {
@@ -292,7 +296,7 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
                     .collect(Collectors.toMap(
                             Map.Entry::getKey,
                             entry -> new ResourceLocation(entry.getValue()),
-                            (e1, e2) -> e1,HashMap::new
+                            (e1, e2) -> e1, HashMap::new
                     ));
 
         } catch (ClassNotFoundException | IOException e) {
@@ -343,10 +347,10 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
     @Override
     public void triggerPassive(Player sender, CompoundTag triggeredSkill) {
         //if (!sender.level.isClientSide) {
-            SkillEnum skillFromByteArray = getSkillFromByteArray(triggeredSkill);
-            //DevilRpg.LOGGER.debug("PlayerSkillCapability triggerPassive(ServerPlayer, triggeredSkill) {} {}", sender, skillFromByteArray);
-            AbstractSkillExecutor skill = getLoadedSkillExecutor(skillFromByteArray);
-            skill.execute(sender.level, sender, new HashMap<>());
+        SkillEnum skillFromByteArray = getSkillFromByteArray(triggeredSkill);
+        //DevilRpg.LOGGER.debug("PlayerSkillCapability triggerPassive(ServerPlayer, triggeredSkill) {} {}", sender, skillFromByteArray);
+        AbstractSkillExecutor skill = getLoadedSkillExecutor(skillFromByteArray);
+        skill.execute(sender.level, sender, new HashMap<>());
         //}
     }
 
@@ -449,7 +453,7 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
     }
 
     @Override
-    public SkillElement getSkillElementByEnum(SkillEnum skillEnum){
+    public SkillElement getSkillElementByEnum(SkillEnum skillEnum) {
         return clientBuilder.getSkillElementByEnum(skillEnum);
     }
 

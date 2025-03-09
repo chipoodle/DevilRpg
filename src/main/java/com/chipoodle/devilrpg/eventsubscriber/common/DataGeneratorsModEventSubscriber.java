@@ -10,8 +10,8 @@ import net.minecraftforge.fml.common.Mod;
 
 
 @Mod.EventBusSubscriber(modid = DevilRpg.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
-public class DataGeneratorsEventSubscriber {
-    private DataGeneratorsEventSubscriber() {
+public class DataGeneratorsModEventSubscriber {
+    private DataGeneratorsModEventSubscriber() {
     }
 
     @SubscribeEvent

@@ -147,6 +147,11 @@ public class SingletonSkillExecutorFactory {
                     skillPool.put(SkillEnum.BLOOMING_SANCTUARY, new SkillBloomingSanctuary(parentCapability));
                 return skillPool.get(SkillEnum.BLOOMING_SANCTUARY);
             }
+            case FLORAS_VIGOR -> {
+                if (!skillPool.containsKey(SkillEnum.FLORAS_VIGOR))
+                    skillPool.put(SkillEnum.FLORAS_VIGOR, new PassiveFlorasVigorExecutor(parentCapability));
+                return skillPool.get(SkillEnum.FLORAS_VIGOR);
+            }
         }
         throw new RuntimeException("There is no SkillExecutor for the skill  "+skillEnum);
         //return null;

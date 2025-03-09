@@ -4,9 +4,12 @@ import com.chipoodle.devilrpg.block.BloomingSanctuaryBlock;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.mana.PlayerManaCapability;
 import com.chipoodle.devilrpg.capability.mana.PlayerManaCapabilityInterface;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.init.ModBlocks;
 import com.chipoodle.devilrpg.init.ModEntityBlocks;
 import com.chipoodle.devilrpg.util.IRenderUtilities;
+import com.chipoodle.devilrpg.util.SkillEnum;
 import com.chipoodle.devilrpg.util.TargetUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -18,6 +21,10 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.BoneMealItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.BonemealableBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
@@ -32,9 +39,11 @@ import static com.chipoodle.devilrpg.block.BloomingSanctuaryBlock.*;
 public class BloomingSanctuaryBlockEntity extends BlockEntity {
 
     public static final int TICK_FACTOR = 20; // 20 ticks = 1 segundo
+    public static final int MANA_TO_ADD = -1;
     private static final int REGENERATION_DURATION = 25; // 1.25 segundos (25 ticks)
     private static final int EFFECT_RADIUS = 5; // Radio de efecto
-    public static final int MANA_TO_ADD = -1;
+    private static final double BONE_MEAL_CHANCE = 0.50; // 50% de probabilidad por tick
+
 
     private Player owner;
     private Long timeOfCreation = null;
@@ -42,6 +51,8 @@ public class BloomingSanctuaryBlockEntity extends BlockEntity {
     private UUID ownerUUID;
     private PlayerManaCapabilityInterface manaCapability;
     private AABB effectArea;
+    private PlayerSkillCapabilityInterface skillCap;
+    private int florasVigorPoints = 0;
 
     public BloomingSanctuaryBlockEntity(BlockPos pos, BlockState state) {
         super(ModEntityBlocks.BLOOMING_SANCTUARY_ENTITY_BLOCK.get(), pos, state);
@@ -65,7 +76,12 @@ public class BloomingSanctuaryBlockEntity extends BlockEntity {
             manaCapability = IGenericCapability.getUnwrappedPlayerCapability(owner, PlayerManaCapability.INSTANCE);
         }
 
-        manaCapability.addMana(MANA_TO_ADD, owner);// gasto de mana por tick
+        if (skillCap == null) {
+            skillCap = IGenericCapability.getUnwrappedPlayerCapability(owner, PlayerSkillCapability.INSTANCE);
+            florasVigorPoints = skillCap.getSkillsPoints().get(SkillEnum.FLORAS_VIGOR);
+        }
+
+        manaCapability.addMana(MANA_TO_ADD, owner); // Gasto de mana por tick
 
         if (manaCapability.getMana() == 0) {
             destroyBlock(world, currentBlockPos);
@@ -93,6 +109,8 @@ public class BloomingSanctuaryBlockEntity extends BlockEntity {
 
         if (!isTop) {
             applyRegenerationEffect(owner, radius, effectAmplifier);
+            if (florasVigorPoints != 0)
+                applyBoneMealEffect(world, currentBlockPos, radius, randomSource, florasVigorPoints);
             IRenderUtilities.renderEffectArea(world, currentBlockPos, radius, ParticleTypes.HAPPY_VILLAGER);
         }
 
@@ -103,6 +121,31 @@ public class BloomingSanctuaryBlockEntity extends BlockEntity {
 
         if (timeOfCreation + duration < currentTime || ownerUUID == null) {
             destroyBlock(world, currentBlockPos);
+        }
+    }
+
+    /**
+     * Aplica bonemeal aleatoriamente a bloques dentro del radio si pueden crecer o generar vegetación.
+     */
+    private void applyBoneMealEffect(@NotNull ServerLevel world, @NotNull BlockPos centerPos, int radius, @NotNull RandomSource random, int florasVigorPoints) {
+        if (random.nextDouble() < BONE_MEAL_CHANCE + (florasVigorPoints * 0.166666667D)) {
+            BlockPos targetPos;
+            do {
+                targetPos = centerPos.offset(random.nextInt(radius * 2) - radius, -1, random.nextInt(radius * 2) - radius);
+            }
+            while (centerPos.equals(targetPos));
+
+            BlockState targetState = world.getBlockState(targetPos);
+
+            // Verificar si el bloque es fertilizable con bonemeal (cultivos, plantas y pasto)
+            if (targetState.getBlock() instanceof BonemealableBlock bonemealableBlock) {
+                if (bonemealableBlock.isValidBonemealTarget(world, targetPos, targetState, false)) {
+                    ItemStack bonemealStack = new ItemStack(Items.BONE_MEAL); // Crear un stack de bonemeal
+                    BoneMealItem.applyBonemeal(bonemealStack, world, targetPos, owner);
+                    world.levelEvent(2005, targetPos, 0); // Efecto de partículas de bonemeal
+                    manaCapability.addMana(MANA_TO_ADD, owner); // Gasto de mana por aplicación de bonemeal
+                }
+            }
         }
     }
 

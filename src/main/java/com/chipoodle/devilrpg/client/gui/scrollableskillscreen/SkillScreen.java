@@ -139,7 +139,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
                         }
                 )
                 .pos((WINDOW_AREA_OFFSET_X + offLeft + 10) + ((SkillWidget.FRAME_SIZE + 10) + 30),
-                        WINDOW_AREA_OFFSET_Y + offTop + INNER_SCREEN_HEIGHT + 2)
+                        WINDOW_AREA_OFFSET_Y + offTop + INNER_SCREEN_HEIGHT + 20)
                 .size(20, 20)
                 .build();
 
@@ -150,7 +150,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
                         }
                 )
                 .pos((WINDOW_AREA_OFFSET_X + offLeft + 10) + ((SkillWidget.FRAME_SIZE + 10) ),
-                        WINDOW_AREA_OFFSET_Y + offTop + INNER_SCREEN_HEIGHT + 2)
+                        WINDOW_AREA_OFFSET_Y + offTop + INNER_SCREEN_HEIGHT + 20)
                 .size(20, 20)
                 .build();
 
@@ -421,7 +421,11 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
             //RenderSystem.enableDepthTest();
             poseStack.translate((float) (offsetLeft + WINDOW_AREA_OFFSET_X), (float) (offsetTop + WINDOW_AREA_OFFSET_Y), 400.0F);
             RenderSystem.applyModelViewMatrix();
-            this.selectedTab.drawTabTooltips(poseStack1, mouseX - offsetLeft - WINDOW_AREA_OFFSET_X, mouseY - offsetTop - WINDOW_AREA_OFFSET_Y, offsetLeft, offsetTop);
+            this.selectedTab.drawTabTooltips(poseStack1,
+                    mouseX - offsetLeft - WINDOW_AREA_OFFSET_X,
+                    mouseY - offsetTop - WINDOW_AREA_OFFSET_Y,
+                    offsetLeft,
+                    offsetTop);
             RenderSystem.disableDepthTest();
             poseStack.popPose();
             RenderSystem.applyModelViewMatrix();

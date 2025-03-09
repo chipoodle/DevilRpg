@@ -169,7 +169,6 @@
         "rewards": {},
         "parent": "nature:soulshieldvine"
     },
-
     {
         "id": "nature:blooming_sanctuary",
         "display": {
@@ -190,8 +189,27 @@
         "rewards": {},
         "parent": "nature:soulshieldvine"
     },
-
-
+    {
+        "id": "nature:floras_vigor",
+        "display": {
+            "description": "There is a chance that some parts of the area of flora's vigor get fertilized. Consumes more mana",
+            "icon": {
+                "item": "minecraft:glass_pane",
+                "minecraft:glass_panenbt": 1
+            },
+            "title": "Flora's Vigor",
+            "image": "devilrpg:textures/gui/skill/fertilizer-bag.png",
+            "frame": "goal"
+        },
+        "capability": "floras_vigor",
+        "skillmanacost":{
+            "maxskilllevel":"3",
+            "manacost":"0",
+            "resourcetype":"mana"
+        },
+        "rewards": {},
+        "parent": "nature:blooming_sanctuary"
+    },
     {
         "id": "nature:soullichen",
         "display": {
@@ -583,6 +601,27 @@
             "resourcetype":"mana"
 		},
         "parent": "summoning:minionvitality"
+    },
+    {
+        "id": "summoning:wispregeneration",
+        "display": {
+            "description": "Wisp emanates an aura that regenerates the health of allies",
+            "icon": {
+                "item": "minecraft:glass_pane",
+                "minecraft:glass_panenbt": 1
+            },
+            "title": "Regeneration",
+            "image": "devilrpg:textures/gui/skill/health-increase.png",
+            "frame": "goal"
+        },
+        "capability": "wisp_regeneration",
+        "skillmanacost":{
+            "maxskilllevel":"0",
+            "manacost":"0",
+            "resourcetype":"mana"
+        },
+        "rewards": {},
+        "parent": "summoning:wisphealth"
     },
     {
         "id": "summoning:wispcurse",

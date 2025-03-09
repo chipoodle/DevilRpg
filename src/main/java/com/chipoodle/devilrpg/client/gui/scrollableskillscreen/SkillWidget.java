@@ -540,6 +540,9 @@ public class SkillWidget extends GuiComponent {
     public SkillProgress getSkillProgress() {
         return skillProgress;
     }
+
+
+
     // Caché para almacenar la forma y variaciones fijas de cada conexión
     private static final Map<String, int[]> branchVariationCache = new HashMap<>();
 
@@ -581,20 +584,21 @@ public class SkillWidget extends GuiComponent {
     }
 
     private void drawSmoothCurvedLine(PoseStack matrixStack, int x1, int y1, int midX, int midY, int x2, int y2, int thickness) {
-        int colorDark = 0xFF8B4513;
-        int colorLight = 0xFFA0522D;
+        int colorDark = 0xFF5C3317; // Marrón oscuro
+        int colorLight = 0xFFD2B48C; // Marrón claro
 
-        // Reducción de iteraciones para mejorar rendimiento
+        // Generar la curvatura de la rama con gradiente vertical
         for (int i = -thickness / 2; i <= thickness / 2; i++) {
-            int color = (i % 2 == 0) ? colorDark : colorLight;
-            drawContinuousBezier(matrixStack, x1, y1 + i, midX, midY + i, x2, y2 + i, color);
+            double ratio = (i + thickness / 2) / (double) thickness; // Controla el gradiente vertical
+            int color = interpolateColor(colorDark, colorLight, ratio);
+
+            drawGradientBezier(matrixStack, x1, y1 + i, midX, midY + i, x2, y2 + i, color);
         }
     }
 
-    private void drawContinuousBezier(PoseStack matrixStack, int x1, int y1, int midX, int midY, int x2, int y2, int color) {
+    private void drawGradientBezier(PoseStack matrixStack, int x1, int y1, int midX, int midY, int x2, int y2, int color) {
         int prevX = x1, prevY = y1;
 
-        // Ajuste en la resolución de la curva para optimizar y hacer líneas continuas
         for (double t = 0; t <= 1; t += 0.02) {
             int x = (int) ((1 - t) * (1 - t) * x1 + 2 * (1 - t) * t * midX + t * t * x2);
             int y = (int) ((1 - t) * (1 - t) * y1 + 2 * (1 - t) * t * midY + t * t * y2);
@@ -605,8 +609,24 @@ public class SkillWidget extends GuiComponent {
         }
     }
 
+    // Método para interpolar colores con un gradiente vertical
+    private int interpolateColor(int startColor, int endColor, double ratio) {
+        int r1 = (startColor >> 16) & 0xFF;
+        int g1 = (startColor >> 8) & 0xFF;
+        int b1 = startColor & 0xFF;
+
+        int r2 = (endColor >> 16) & 0xFF;
+        int g2 = (endColor >> 8) & 0xFF;
+        int b2 = endColor & 0xFF;
+
+        int r = (int) (r1 + (r2 - r1) * ratio);
+        int g = (int) (g1 + (g2 - g1) * ratio);
+        int b = (int) (b1 + (b2 - b1) * ratio);
+
+        return (0xFF << 24) | (r << 16) | (g << 8) | b;
+    }
+
     private void drawThickSegment(PoseStack matrixStack, int x1, int y1, int x2, int y2, int color) {
-        // Dibuja un segmento sólido entre dos puntos, eliminando los espacios
         int dx = Math.abs(x2 - x1);
         int dy = Math.abs(y2 - y1);
         int sx = x1 < x2 ? 1 : -1;
@@ -627,6 +647,5 @@ public class SkillWidget extends GuiComponent {
             }
         }
     }
-
 
 }

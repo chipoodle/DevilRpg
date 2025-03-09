@@ -207,7 +207,7 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
     public void aiStep() {
         super.aiStep();
         if (!this.level.isClientSide) {
-            if (this.level.getGameTime() % 80L == 0L && efectoPrimario != null && efectoSecundario != null) {
+            if (this.level.getGameTime() % 80L == 0L && (efectoPrimario != null || efectoSecundario != null)) {
                 this.addEffectsToPlayers(puntosAsignados, efectoPrimario, efectoSecundario, esBeneficioso);
             }
         }
@@ -356,14 +356,14 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
                 if (isBeneficial) {
                     alliesList = getAlliesListWithinAABBRange(axisalignedbb);
                     applyPrimaryEffect(primaryEffect, potenciaPocion, alliesList);
-                    if (niveles >= 1) {
+                    if (secondaryEffect != null) {
                         applySecondaryEffect(secondaryEffect, alliesList);
                     }
 
                 } else {
                     monsterlist = getEnemiesListWithinAABBRange(axisalignedbb);
                     applyPrimaryEffect(primaryEffect, potenciaPocion, monsterlist);
-                    if (niveles >= 1) {
+                    if (secondaryEffect != null) {
                         applySecondaryEffect(secondaryEffect, monsterlist);
                     }
                 }

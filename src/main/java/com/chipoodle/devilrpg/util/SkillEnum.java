@@ -20,6 +20,7 @@ public enum SkillEnum {
     SUMMON_SOUL_BEAR("SummonSoulBear","Soul Bear","summon_soul_bear",true,false),
     WAR_BEAR("WarBear","War Bear","war_bear",true,true),
     MOUNT_BEAR("MountBear","Mount Bear","mount_bear",true,true),
+    WISP_REGENERATION("WispRegeneration","Wisp Regeneration" ,"wisp_regeneration" ,false , true ),
     //FROSTBALL("Frostball","Frostball","frostball",true,false),
     SUMMON_WISP_HEALTH("SummonWispHealth","Wisp Health","summon_wisp_health",true,false),
     SUMMON_WISP_CURSE("SummonWispCurse","Wisp Curse","summon_wisp_curse",true,false),
@@ -44,6 +45,7 @@ public enum SkillEnum {
     CHARGE("Charge","Charge","charge",true,false),
     BLOCK("Block","Block","block",true,false),
     KNOCKBACK_RESISTANCE("KnockbackResistance","Knockback Resistance","knockback_resistance",false,false),
+    FLORAS_VIGOR("FlorasVigor","Flora's Vigor","floras_vigor",false,false),
 
     EMPTY("","","",false,false);
 

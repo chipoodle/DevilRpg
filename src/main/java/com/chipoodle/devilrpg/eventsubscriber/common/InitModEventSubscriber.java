@@ -9,15 +9,18 @@ import com.chipoodle.devilrpg.init.ModEntities;
 import com.chipoodle.devilrpg.init.ModItems;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.SpawnPlacements;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.FireBlock;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraftforge.event.CreativeModeTabEvent;
 import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
 import net.minecraftforge.event.entity.EntityAttributeModificationEvent;
+import net.minecraftforge.event.entity.SpawnPlacementRegisterEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 import net.minecraftforge.fml.config.ModConfig;
@@ -41,12 +44,12 @@ import static com.chipoodle.devilrpg.init.ModItems.*;
  * @author Cadiboo
  */
 @EventBusSubscriber(modid = DevilRpg.MODID, bus = EventBusSubscriber.Bus.MOD)
-public final class PlayerModInitEventSubscriber {
+public final class InitModEventSubscriber {
 
 
     @SubscribeEvent
     public static void initEntityAttributes(EntityAttributeCreationEvent event) {
-        DevilRpg.LOGGER.info("----------------------->PlayerModInitEventSubscriber.initEntityAttributes()");
+        DevilRpg.LOGGER.info("----------------------->InitModEventSubscriber.initEntityAttributes()");
         event.put(ModEntities.SOUL_WOLF.get(), SoulWolf.setAttributes().build());
         event.put(ModEntities.SOUL_BEAR.get(), SoulBear.setAttributes().build());
         //event.put(ModEntities.WISP.get(), SoulWisp.setAttributes().build());
@@ -57,11 +60,13 @@ public final class PlayerModInitEventSubscriber {
         event.put(ModEntities.WISP_CHOPPER.get(), SoulWispChopper.setAttributes().build());
         event.put(ModEntities.SUNFLOWER_SHULKER.get(), SunflowerShulker.createAttributes().build());
         event.put(ModEntities.EXPLODING_SPORE_BULLET.get(),ExplodingSporeBullet.createAttributes().build());
+        event.put(ModEntities.AGGRESSIVE_ZOMBIE.get(), AggressiveZombieEntity.setAttributes().build());
+
     }
 
     @SubscribeEvent
     public static void updateEntityAttributes(EntityAttributeModificationEvent event) {
-        DevilRpg.LOGGER.info("----------------------->PlayerModInitEventSubscriber.updateEntityAttributes()");
+        DevilRpg.LOGGER.info("----------------------->InitModEventSubscriber.updateEntityAttributes()");
         /*if (!event.has(EntityType.CREEPER, EXAMPLE_ATTRIBUTE.get())) {
             event.add(EntityType.CREEPER,
                     EXAMPLE_ATTRIBUTE.get() // Applies new attribute to creeper
@@ -71,7 +76,7 @@ public final class PlayerModInitEventSubscriber {
 
     @SubscribeEvent
     public static void onCommonSetup(FMLCommonSetupEvent event) {
-        DevilRpg.LOGGER.info("----------------------->PlayerModInitEventSubscriber.onCommonSetup()");
+        DevilRpg.LOGGER.info("----------------------->InitModEventSubscriber.onCommonSetup()");
 
         event.enqueueWork(() -> {
             try {
@@ -96,6 +101,8 @@ public final class PlayerModInitEventSubscriber {
                 DevilRpg.LOGGER.error("Error making SOUL_VINE_BLOCK, SOUL_MINER_VINE_BLOCK, SOUL_SHIELD_VINE_BLOCK flammables", e);
             }
         });
+
+        //event.enqueueWork(ModEntities::registerSpawnPlacements);
     }
 
     /**
@@ -105,7 +112,7 @@ public final class PlayerModInitEventSubscriber {
      */
     @SubscribeEvent
     public static void onModConfigEvent(final ModConfigEvent.Loading event) {
-        DevilRpg.LOGGER.info("----------------------->PlayerModInitEventSubscriber.onModConfigEvent()");
+        DevilRpg.LOGGER.info("----------------------->InitModEventSubscriber.onModConfigEvent()");
         final ModConfig config = event.getConfig();
         // Rebake the configs when they change
         if (config.getSpec() == ConfigHolder.CLIENT_SPEC) {
@@ -126,7 +133,7 @@ public final class PlayerModInitEventSubscriber {
     @SubscribeEvent
     public static void onRegisterItems(final RegisterEvent event) {
         if (event.getRegistryKey().equals(ForgeRegistries.Keys.ITEMS)) {
-            DevilRpg.LOGGER.info("----------------------->PlayerModInitEventSubscriber.onRegisterItems()");
+            DevilRpg.LOGGER.info("----------------------->InitModEventSubscriber.onRegisterItems()");
             BLOCKS.getEntries().forEach((blockRegistryObject) -> {
                 Block block = blockRegistryObject.get();
                 Item.Properties properties = new Item.Properties();
@@ -153,7 +160,7 @@ public final class PlayerModInitEventSubscriber {
 // Assume we have RegistryObject<Item> and RegistryObject<Block> called ITEM and BLOCK
     @SubscribeEvent
     public static void onRegisterCreativeModeTabEvent(CreativeModeTabEvent.Register event) {
-        DevilRpg.LOGGER.info("----------------------->PlayerModInitEventSubscriber.onRegisterCreativeModeTabEvent()");
+        DevilRpg.LOGGER.info("----------------------->InitModEventSubscriber.onRegisterCreativeModeTabEvent()");
         event.registerCreativeModeTab(new ResourceLocation(DevilRpg.MODID, ModItems.CREATIVE_TAB_NAME), builder ->
                 // Set name of tab to display
                 builder.title(Component.translatable("item_group." + DevilRpg.MODID + "." + ModItems.CREATIVE_TAB_NAME))
@@ -173,11 +180,24 @@ public final class PlayerModInitEventSubscriber {
                             populator.accept(SOULWISP_ARCHER_SPAWN_EGG.get());
                             populator.accept(SOULWISP_BOMBER_SPAWN_EGG.get());
                             populator.accept(SOULWISP_CHOPPER_SPAWN_EGG.get());
+                            populator.accept(AGGRESSIVE_ZOMBIE_SPAWN_EGG.get());
+
                         })
         );
 
     }
 
-   
+    /*@SubscribeEvent
+    public static void onSpawnPlacementRegister(SpawnPlacementRegisterEvent event) {
+        DevilRpg.LOGGER.info("----------------------->InitModEventSubscriber.onSpawnPlacementRegister()");
+        // Registrar las reglas de spawn para AggressiveZombieEntity
+        event.register(
+                ModEntities.AGGRESSIVE_ZOMBIE.get(), // Tu entidad registrada
+                SpawnPlacements.Type.ON_GROUND, // Tipo de spawn (en el suelo)
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, // Altura del spawn
+                AggressiveZombieEntity::checkSpawnRules, // Reglas de spawn personalizadas
+                SpawnPlacementRegisterEvent.Operation.REPLACE // Reemplazar cualquier regla existente
+        );
+    }*/
 
 }

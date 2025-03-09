@@ -6,6 +6,7 @@ import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.entity.*;
 import com.chipoodle.devilrpg.util.SkillEnum;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
@@ -106,6 +107,11 @@ public class MinionPassiveAttributes {
 
     private void applyPassives(SoulWisp entity) {
         DevilRpg.LOGGER.info("||---->MinionPassiveAttributes SoulWispEntity");
+        if(entity instanceof SoulWispHealth soulWispHealth){
+            PlayerSkillCapabilityInterface parentCapability = IGenericCapability.getUnwrappedPlayerCapability(playerIn, PlayerSkillCapability.INSTANCE);
+            Integer wispRegenerationPoints = parentCapability.getSkillsPoints().get(SkillEnum.WISP_REGENERATION);
+            soulWispHealth.setSecondaryEffect(wispRegenerationPoints, MobEffects.REGENERATION);
+        }
 
     }
     private void applyPassives(SunflowerShulker entity) {

@@ -5,6 +5,8 @@ import com.chipoodle.devilrpg.entity.*;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
+import net.minecraft.world.entity.SpawnPlacements;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
@@ -31,16 +33,15 @@ public final class ModEntities {
 	private static final String WISP_CURSE_NAME = "wisp_curse";
 	public static final String WISP_BOMB_NAME = "wisp_bomb";
 	public static final String WISP_ARCHER_NAME = "wisp_archer";
-
 	private static final String WISP_CHOPPER_NAME = "wisp_chopper";
 	public static final String SOUL_FROSTBALL_NAME = "soul_frostball";
-
 	private static final String LICHEN_SEED_BALL_NAME = "lichen_seedball";
 	private static final String VINE_FLESH_BALL_NAME = "vine_flesh_ball";
 	private static final String SUNFLOWER_SHULKER_NAME = "sunflower_shulker";
 	private static final String EXPLODING_SPORE_BULLET_NAME = "exploding_spore_bullet";
-
 	private static final String GENERIC_ITEM_PROJECTILE_NAME = "generic_item_projectile";
+
+	public static final String AGGRESSIVE_ZOMBIE_NAME = "aggressive_zombie";
 
 
 	public static final RegistryObject<EntityType<SoulWolf>> SOUL_WOLF = ENTITY_TYPES.register(SOUL_WOLF_NAME,
@@ -106,4 +107,13 @@ public final class ModEntities {
 			() -> EntityType.Builder.of(ExplodingSporeBullet::new, MobCategory.MISC)
 					.sized(EntityType.BEE.getWidth(), EntityType.BEE.getHeight())
 					.build(new ResourceLocation(DevilRpg.MODID, EXPLODING_SPORE_BULLET_NAME).toString()));
+
+
+	public static final RegistryObject<EntityType<AggressiveZombieEntity>> AGGRESSIVE_ZOMBIE = ENTITY_TYPES.register(AGGRESSIVE_ZOMBIE_NAME,
+					() -> EntityType.Builder.of(AggressiveZombieEntity::new, MobCategory.MONSTER)
+							.sized(0.6F, 1.95F) // Tamaño del mob
+							.clientTrackingRange(8)
+							.build(new ResourceLocation(DevilRpg.MODID,AGGRESSIVE_ZOMBIE_NAME).toString()));
 }
+
+

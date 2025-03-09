@@ -153,7 +153,8 @@ public class SkillTab extends GuiComponent {
      */
     public void drawContents(PoseStack poseStack) {
         if (!this.centered) {
-            this.scrollX = (117 - (this.maxX + this.minX) / 2D);
+            //Con este controlamos la posciion en x de los botones del árbol
+            this.scrollX = (137 - (this.maxX + this.minX) / 2D);
             //Con este controlamos la altura de los botones del árbol
             this.scrollY = (84 - (this.maxY + this.minY) / 2D);
             this.centered = true;
@@ -235,9 +236,9 @@ public class SkillTab extends GuiComponent {
         // Pinta la sombra que cubre el fondo cuando se hace hoover en una habilidad
         fill(poseStack, 0, 0, TAB_BACKGROUND_X, TAB_BACKGROUND_Y, Mth.floor(this.fade * 255.0F) << 24);
         boolean flag = false;
-        int i = Mth.floor(this.scrollX);// posición del fondo en x. Cambia cuando se posiciona con el drag del mouse
-        int j = Mth.floor(this.scrollY);// posición del fondo en y. Cambia cuando se posiciona con el drag del mouse
         if (mouseX > 0 && mouseX < TAB_BACKGROUND_X && mouseY > 0 && mouseY < TAB_BACKGROUND_Y) {
+            int i = Mth.floor(this.scrollX);// posición del fondo en x. Cambia cuando se posiciona con el drag del mouse
+            int j = Mth.floor(this.scrollY);// posición del fondo en y. Cambia cuando se posiciona con el drag del mouse
 
             for (SkillWidget skillEntryGui : this.guis.values()) {
                 if (skillEntryGui.isMouseOver(i, j, mouseX, mouseY)) {
