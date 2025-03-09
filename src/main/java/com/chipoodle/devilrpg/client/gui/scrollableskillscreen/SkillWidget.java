@@ -28,7 +28,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 
 @OnlyIn(Dist.CLIENT)
@@ -61,11 +63,10 @@ public class SkillWidget extends GuiComponent {
     private FormattedCharSequence title;
     //private String levelString;
     private SkillWidget parent;
+    /*private void updateLevelString(int skillPoint, int maxSkillPoint) {
+        levelString = "" + skillPoint + "/" + maxSkillPoint;
+    }*/
     private SkillProgress skillProgress;
-
-	/*private void updateLevelString(int skillPoint, int maxSkillPoint) {
-		levelString = "" + skillPoint + "/" + maxSkillPoint;
-	}*/
 
     public SkillWidget(SkillTab skillTabGui, Minecraft minecraft, SkillElement skillElement, int skillPoint,
                        int maxSkillPoint) {
@@ -212,36 +213,6 @@ public class SkillWidget extends GuiComponent {
         } while (skillIn != null && skillIn.getDisplay() == null);
 
         return skillIn != null && skillIn.getDisplay() != null ? this.skillTabGui.getSkillElementGui(skillIn) : null;
-    }
-
-    public void drawConnectionLineToParent(PoseStack matrixStack, int x, int y, boolean dropShadow) {
-        if (this.parent != null) {
-            int i = x + this.parent.x + FRAME_SIZE / 2;
-            int j = x + this.parent.x + FRAME_SIZE + 4;
-            int k = y + this.parent.y + FRAME_SIZE / 2;
-            int l = x + this.x + 13;
-            int i1 = y + this.y + 13;
-            int j1 = dropShadow ? -16777216 : -1;
-            if (dropShadow) {
-                hLine(matrixStack, j, i, k - 1, j1);
-                hLine(matrixStack, j + 1, i, k, j1);
-                hLine(matrixStack, j, i, k + 1, j1);
-                hLine(matrixStack, l, j - 1, i1 - 1, j1);
-                hLine(matrixStack, l, j - 1, i1, j1);
-                hLine(matrixStack, l, j - 1, i1 + 1, j1);
-                vLine(matrixStack, j - 1, i1, k, j1);
-                vLine(matrixStack, j + 1, i1, k, j1);
-            } else {
-                hLine(matrixStack, j, i, k, j1);
-                hLine(matrixStack, l, j, i1, j1);
-                vLine(matrixStack, j, i1, k, j1);
-            }
-        }
-
-        for (SkillWidget skillWidget : this.children) {
-            skillWidget.drawConnectionLineToParent(matrixStack, x, y, dropShadow);
-        }
-
     }
 
     /**
@@ -569,4 +540,93 @@ public class SkillWidget extends GuiComponent {
     public SkillProgress getSkillProgress() {
         return skillProgress;
     }
+    // Caché para almacenar la forma y variaciones fijas de cada conexión
+    private static final Map<String, int[]> branchVariationCache = new HashMap<>();
+
+    public void drawConnectionLineToParent(PoseStack matrixStack, int x, int y, boolean dropShadow) {
+        drawConnectionLineToParent(matrixStack, x, y, dropShadow, 0);
+    }
+
+    public void drawConnectionLineToParent(PoseStack matrixStack, int x, int y, boolean dropShadow, int depth) {
+        if (this.parent != null) {
+            int startX = x + this.parent.x + FRAME_SIZE / 2;
+            int startY = y + this.parent.y + FRAME_SIZE / 2;
+            int endX = x + this.x + FRAME_SIZE / 2;
+            int endY = y + this.y + FRAME_SIZE / 2;
+
+            drawCurvedLine(matrixStack, startX, startY, endX, endY, dropShadow, depth);
+        }
+
+        for (SkillWidget skillWidget : this.children) {
+            skillWidget.drawConnectionLineToParent(matrixStack, x, y, dropShadow, depth + 1);
+        }
+    }
+
+    private void drawCurvedLine(PoseStack matrixStack, int startX, int startY, int endX, int endY, boolean dropShadow, int depth) {
+        String cacheKey = this.parent.hashCode() + "->" + this.hashCode();
+
+        // Variación almacenada para cada rama
+        int[] variation = branchVariationCache.computeIfAbsent(cacheKey, k -> {
+            int varX = (int) (Math.random() * 6 - 3);
+            int varY = (int) (Math.random() * 6 - 3);
+            return new int[]{varX, varY};
+        });
+
+        int midX = (startX + endX) / 2 + variation[0];
+        int midY = (startY + endY) / 2 + variation[1];
+
+        int thickness = Math.max(5 - depth, 2); // Ajustado para mejor rendimiento
+
+        drawSmoothCurvedLine(matrixStack, startX, startY, midX, midY, endX, endY, thickness);
+    }
+
+    private void drawSmoothCurvedLine(PoseStack matrixStack, int x1, int y1, int midX, int midY, int x2, int y2, int thickness) {
+        int colorDark = 0xFF8B4513;
+        int colorLight = 0xFFA0522D;
+
+        // Reducción de iteraciones para mejorar rendimiento
+        for (int i = -thickness / 2; i <= thickness / 2; i++) {
+            int color = (i % 2 == 0) ? colorDark : colorLight;
+            drawContinuousBezier(matrixStack, x1, y1 + i, midX, midY + i, x2, y2 + i, color);
+        }
+    }
+
+    private void drawContinuousBezier(PoseStack matrixStack, int x1, int y1, int midX, int midY, int x2, int y2, int color) {
+        int prevX = x1, prevY = y1;
+
+        // Ajuste en la resolución de la curva para optimizar y hacer líneas continuas
+        for (double t = 0; t <= 1; t += 0.02) {
+            int x = (int) ((1 - t) * (1 - t) * x1 + 2 * (1 - t) * t * midX + t * t * x2);
+            int y = (int) ((1 - t) * (1 - t) * y1 + 2 * (1 - t) * t * midY + t * t * y2);
+
+            drawThickSegment(matrixStack, prevX, prevY, x, y, color);
+            prevX = x;
+            prevY = y;
+        }
+    }
+
+    private void drawThickSegment(PoseStack matrixStack, int x1, int y1, int x2, int y2, int color) {
+        // Dibuja un segmento sólido entre dos puntos, eliminando los espacios
+        int dx = Math.abs(x2 - x1);
+        int dy = Math.abs(y2 - y1);
+        int sx = x1 < x2 ? 1 : -1;
+        int sy = y1 < y2 ? 1 : -1;
+        int err = dx - dy;
+
+        while (true) {
+            fill(matrixStack, x1, y1, x1 + 1, y1 + 1, color);
+            if (x1 == x2 && y1 == y2) break;
+            int e2 = 2 * err;
+            if (e2 > -dy) {
+                err -= dy;
+                x1 += sx;
+            }
+            if (e2 < dx) {
+                err += dx;
+                y1 += sy;
+            }
+        }
+    }
+
+
 }
