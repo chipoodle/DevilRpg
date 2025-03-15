@@ -18,6 +18,7 @@ import com.chipoodle.devilrpg.skillsystem.SingletonSkillExecutorFactory;
 import com.chipoodle.devilrpg.util.BytesUtil;
 import com.chipoodle.devilrpg.util.PowerEnum;
 import com.chipoodle.devilrpg.util.SkillEnum;
+import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -404,11 +405,6 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
     @Override
     public AbstractSkillExecutor getLoadedSkillExecutor(SkillEnum skillEnum) {
         return singletonSkillExecutorFactory.getExistingSkill(skillEnum);
-    }
-
-    @Override
-    public AbstractSkillExecutor createSkillExecutor(SkillEnum skillEnum) {
-        return singletonSkillExecutorFactory.getOrCreate(skillEnum);
     }
 
     @Override

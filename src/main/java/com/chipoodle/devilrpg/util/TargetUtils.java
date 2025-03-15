@@ -5,6 +5,7 @@ import com.chipoodle.devilrpg.entity.ITamableEntity;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Vec3i;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.server.level.ServerLevel;
@@ -678,5 +679,32 @@ public class TargetUtils {
         return owner.level.getEntitiesOfClass(LivingEntity.class, area).stream()
         .filter(entity -> entity.isAlliedTo(owner) || entity.equals(owner))
         .collect(Collectors.toList());
+    }
+
+    /**
+     * Convierte un String en formato "x,y,z" a un objeto Vec3.
+     *
+     * @param str Cadena en formato "x,y,z"
+     * @return Objeto Vec3 con las coordenadas extraídas
+     */
+    public static Vec3 stringToVec3(String str) {
+        str = str.replace("(", "").replace(")", "");
+        String[] parts = str.split(",");
+        if (parts.length != 3) {
+            throw new IllegalArgumentException("Formato inválido para Vec3: " + str);
+        }
+        double x = Double.parseDouble(parts[0]);
+        double y = Double.parseDouble(parts[1]);
+        double z = Double.parseDouble(parts[2]);
+        return new Vec3(x, y, z);
+    }
+
+    /**
+     * Convierte un Vec3 en Vec3i truncando los valores de x, y, z a enteros.
+     * @param vec3 Objeto Vec3 a convertir
+     * @return Vec3i con las coordenadas truncadas
+     */
+    public static Vec3i vec3ToVec3i(Vec3 vec3) {
+        return new Vec3i((int) vec3.x, (int) vec3.y, (int) vec3.z);
     }
 }

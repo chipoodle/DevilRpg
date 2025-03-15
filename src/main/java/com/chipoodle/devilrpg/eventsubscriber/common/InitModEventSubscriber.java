@@ -187,7 +187,7 @@ public final class InitModEventSubscriber {
 
     }
 
-    /*@SubscribeEvent
+    @SubscribeEvent
     public static void onSpawnPlacementRegister(SpawnPlacementRegisterEvent event) {
         DevilRpg.LOGGER.info("----------------------->InitModEventSubscriber.onSpawnPlacementRegister()");
         // Registrar las reglas de spawn para AggressiveZombieEntity
@@ -195,9 +195,9 @@ public final class InitModEventSubscriber {
                 ModEntities.AGGRESSIVE_ZOMBIE.get(), // Tu entidad registrada
                 SpawnPlacements.Type.ON_GROUND, // Tipo de spawn (en el suelo)
                 Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, // Altura del spawn
-                AggressiveZombieEntity::checkSpawnRules, // Reglas de spawn personalizadas
-                SpawnPlacementRegisterEvent.Operation.REPLACE // Reemplazar cualquier regla existente
+                AggressiveZombieEntity::checkSpawnRules,
+                SpawnPlacementRegisterEvent.Operation.AND // Reemplazar cualquier regla existente
         );
-    }*/
+    }
 
 }

@@ -4,7 +4,7 @@
   "spawners": [
     {
       "type": "devilrpg:aggressive_zombie",
-      "weight": 10,
+      "weight": 200,
       "minCount": 1,
       "maxCount": 3
     }

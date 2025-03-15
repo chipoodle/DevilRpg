@@ -7,24 +7,23 @@ package com.chipoodle.devilrpg.eventsubscriber.common;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
+import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.capability.stamina.PlayerStaminaCapability;
 import com.chipoodle.devilrpg.capability.stamina.PlayerStaminaCapabilityInterface;
-import com.chipoodle.devilrpg.entity.AggressiveZombieEntity;
 import com.chipoodle.devilrpg.entity.ISoulEntity;
 import com.chipoodle.devilrpg.entity.ITamableEntity;
-import com.chipoodle.devilrpg.init.ModEntities;
 import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.network.handler.PotionClientHandler;
 import com.chipoodle.devilrpg.util.EventUtils;
 import com.chipoodle.devilrpg.util.SkillEnum;
+import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.monster.Zombie;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.util.LazyOptional;
@@ -212,6 +211,13 @@ public class CommonForgeInteractionEventSubscriber {
 
     @SubscribeEvent
     public static void onEntitySpawn(EntityJoinLevelEvent event) {
+        if (!event.getLevel().isClientSide() && event.getEntity() instanceof Player player) {
+            PlayerAuxiliaryCapabilityInterface playerCapability = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerAuxiliaryCapability.INSTANCE);
+            Vec3 spawnPoint = playerCapability.getSpawnPoint();
+            if (spawnPoint == null) {
+                playerCapability.setSpawnPoint(player.position(), player);
+            }
+        }
         /*if (!event.getLevel().isClientSide() && event.getEntity() instanceof Zombie) {
             if (event.getLevel().getRandom().nextInt(100) < 5) { // Probabilidad del 5%
                 AggressiveZombieEntity aggressiveZombie = new AggressiveZombieEntity(ModEntities.AGGRESSIVE_ZOMBIE.get(), event.getLevel());

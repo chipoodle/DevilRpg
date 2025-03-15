@@ -25,6 +25,9 @@ import javax.annotation.Nullable;
 import java.util.Objects;
 import java.util.UUID;
 
+/**
+ * Entities that implment this interface are attached with TamableMinionCapability via onApplyPetPassives event at PlayerCapabilityForgeEventSubscriber
+ */
 public interface ITamableEntity extends ICapabilityProvider, OwnableEntity {
 
     @NotNull Level getLevel();
