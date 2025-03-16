@@ -7,9 +7,9 @@ import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityInt
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.entity.container.MountablePetContainerMenu;
-import com.chipoodle.devilrpg.entity.goal.TameablePetFollowOwnerGoal;
-import com.chipoodle.devilrpg.entity.goal.TameablePetOwnerHurtByTargetGoal;
-import com.chipoodle.devilrpg.entity.goal.TameablePetOwnerHurtTargetGoal;
+import com.chipoodle.devilrpg.entity.goal.TamablePetFollowOwnerGoal;
+import com.chipoodle.devilrpg.entity.goal.TamablePetOwnerHurtByTargetGoal;
+import com.chipoodle.devilrpg.entity.goal.TamablePetOwnerHurtTargetGoal;
 import com.chipoodle.devilrpg.init.ModEntities;
 import com.chipoodle.devilrpg.util.IRenderUtilities;
 import com.chipoodle.devilrpg.util.SkillEnum;
@@ -70,7 +70,7 @@ import java.util.stream.Collectors;
 public class SoulBear extends AbstractChestedHorse implements ITamableEntity, ISoulEntity, PowerableMob, NeutralMob, IPassiveMinionUpdater<SoulBear> {
 
     private static final UUID ARMOR_MODIFIER_UUID = UUID.fromString("556E1665-8B10-40C8-8F9D-CF9B1667F295");
-   private static final UniformInt PERSISTENT_ANGER_TIME = TimeUtil.rangeOfSeconds(20, 39);
+    private static final UniformInt PERSISTENT_ANGER_TIME = TimeUtil.rangeOfSeconds(20, 39);
     private static final int PROBABILITY_MULTIPLIER = 5;
     private static final int DURATION_TICKS = 100;
 
@@ -130,11 +130,11 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
         this.goalSelector.addGoal(4, new FollowParentGoal(this, 1.25D));
         this.goalSelector.addGoal(5, new SoulBear.MeleeAttackGoal());
         this.goalSelector.addGoal(5, new RandomStrollGoal(this, 1.0D));
-        this.goalSelector.addGoal(6, new TameablePetFollowOwnerGoal(this, 1.0D, 10.0F, 2.0F, false));
+        this.goalSelector.addGoal(6, new TamablePetFollowOwnerGoal(this, 1.0D, 10.0F, 2.0F, false));
         this.goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 6.0F));
         this.goalSelector.addGoal(8, new RandomLookAroundGoal(this));
-        this.targetSelector.addGoal(1, new TameablePetOwnerHurtByTargetGoal(this));
-        this.targetSelector.addGoal(2, new TameablePetOwnerHurtTargetGoal(this));
+        this.targetSelector.addGoal(1, new TamablePetOwnerHurtByTargetGoal(this));
+        this.targetSelector.addGoal(2, new TamablePetOwnerHurtTargetGoal(this));
         this.targetSelector.addGoal(3, (new HurtByTargetGoal(this)).setAlertOthers());
         this.targetSelector.addGoal(5,
                 new NearestAttackableTargetGoal<>(this, Mob.class, 10, false, false, (entity) ->
@@ -161,7 +161,13 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
             PlayerMinionCapabilityInterface minion = IGenericCapability.getUnwrappedPlayerCapability((Player) getOwner(), PlayerMinionCapability.INSTANCE);
             CompoundTag soulBearInventory = minion.getSoulBearInventory();
 
-            if (soulBearInventory != null && !soulBearInventory.isEmpty()) {
+            if (soulBearInventory == null) {
+                soulBearInventory = new CompoundTag();
+                addAdditionalSaveData(soulBearInventory);
+                minion.setSoulBearInventory(soulBearInventory, (Player) getOwner());
+            }
+
+            if (!soulBearInventory.isEmpty()) {
                 if (!soulBearInventory.isEmpty()) {
                     readAdditionalSaveData(soulBearInventory);
                 } else {
@@ -224,7 +230,7 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
         super.aiStep();
 
         if (!this.level.isClientSide) {
-            this.updatePersistentAnger((ServerLevel)this.level, true);
+            this.updatePersistentAnger((ServerLevel) this.level, true);
         }
 
         addToAiStep(this);
@@ -240,7 +246,7 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
         double attackDamage = this.getAttributeValue(Attributes.ATTACK_DAMAGE);
 
         //Needed to generate xp orbs after killing target since this entity doesn't inherit from TamableAnimal
-        if(target instanceof LivingEntity livingEntity){
+        if (target instanceof LivingEntity livingEntity) {
             livingEntity.setLastHurtByPlayer((Player) getOwner());
         }
 
@@ -258,7 +264,7 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
                 acquireAllLookTargetsByClass.forEach(
                         mob -> mob.hurt(this.damageSources().mobAttack(this), (float) (attackDamage * SPLASH_DAMAGE_FACTOR)));
                 DevilRpg.LOGGER.info("---------->doHurtTarget warBear: {} probability: {} Range of success: {}, enemies: {}, main damage: {} splash damage: {}, armor: {} owner: {} owneruuid: {}", warBear,
-                        probability, warBear * PROBABILITY_MULTIPLIER, acquireAllLookTargetsByClass.size(), attackDamage, attackDamage * SPLASH_DAMAGE_FACTOR, Objects.requireNonNull(this.getAttribute(Attributes.ARMOR)).getValue(),getOwner(),getOwnerUUID());
+                        probability, warBear * PROBABILITY_MULTIPLIER, acquireAllLookTargetsByClass.size(), attackDamage, attackDamage * SPLASH_DAMAGE_FACTOR, Objects.requireNonNull(this.getAttribute(Attributes.ARMOR)).getValue(), getOwner(), getOwnerUUID());
             }
             this.doEnchantDamageEffects(this, target);
         }
@@ -667,6 +673,7 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
         this.level.broadcastEntityEvent(this, (byte) 7);
     }
 
+    @Override
     public @NotNull InteractionResult fedFood(@NotNull Player player, @NotNull ItemStack itemStack) {
         boolean flag = this.handleEating(player, itemStack);
         if (!player.getAbilities().instabuild) {
@@ -680,10 +687,12 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
         }
     }
 
+    @Override
     protected boolean handleEating(@NotNull Player p_30593_, @NotNull ItemStack p_30594_) {
         return false;
     }
 
+    @Override
     public boolean canBeLeashed(@NotNull Player player) {
         return false;
     }
@@ -740,6 +749,7 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
         boolean isOnSameTeam = super.isAlliedTo(entity);
         return isOnSameTeam || isEntitySameOwnerAsThis(entity, this);
     }
+
     class MeleeAttackGoal extends net.minecraft.world.entity.ai.goal.MeleeAttackGoal {
         public MeleeAttackGoal() {
             super(SoulBear.this, 1.25D, true);

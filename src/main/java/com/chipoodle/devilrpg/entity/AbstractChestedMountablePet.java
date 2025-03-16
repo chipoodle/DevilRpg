@@ -24,12 +24,16 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Objects;
 
 public class AbstractChestedMountablePet extends AbstractMountablePet {
-    private static final EntityDataAccessor<Boolean> DATA_ID_CHEST = SynchedEntityData.defineId(AbstractChestedMountablePet.class, EntityDataSerializers.BOOLEAN);
     public static final int INV_CHEST_COUNT = 15;
+    private static final EntityDataAccessor<Boolean> DATA_ID_CHEST = SynchedEntityData.defineId(AbstractChestedMountablePet.class, EntityDataSerializers.BOOLEAN);
 
     protected AbstractChestedMountablePet(EntityType<? extends AbstractChestedMountablePet> p_30485_, Level p_30486_) {
         super(p_30485_, p_30486_);
         this.canGallop = false;
+    }
+
+    public static AttributeSupplier.Builder createBaseChestedHorseAttributes() {
+        return createBaseHorseAttributes().add(Attributes.MOVEMENT_SPEED, 0.175F).add(Attributes.JUMP_STRENGTH, 0.5D);
     }
 
     protected void randomizeAttributes(RandomSource p_218803_) {
@@ -39,10 +43,6 @@ public class AbstractChestedMountablePet extends AbstractMountablePet {
     protected void defineSynchedData() {
         super.defineSynchedData();
         this.entityData.define(DATA_ID_CHEST, false);
-    }
-
-    public static AttributeSupplier.Builder createBaseChestedHorseAttributes() {
-        return createBaseHorseAttributes().add(Attributes.MOVEMENT_SPEED, 0.175F).add(Attributes.JUMP_STRENGTH, 0.5D);
     }
 
     public boolean hasChest() {
@@ -79,11 +79,11 @@ public class AbstractChestedMountablePet extends AbstractMountablePet {
         if (this.hasChest()) {
             ListTag listtag = new ListTag();
 
-            for(int i = 2; i < this.inventory.getContainerSize(); ++i) {
+            for (int i = 2; i < this.inventory.getContainerSize(); ++i) {
                 ItemStack itemstack = this.inventory.getItem(i);
                 if (!itemstack.isEmpty()) {
                     CompoundTag compoundtag = new CompoundTag();
-                    compoundtag.putByte("Slot", (byte)i);
+                    compoundtag.putByte("Slot", (byte) i);
                     itemstack.save(compoundtag);
                     listtag.add(compoundtag);
                 }
@@ -101,7 +101,7 @@ public class AbstractChestedMountablePet extends AbstractMountablePet {
         if (this.hasChest()) {
             ListTag listtag = p_30488_.getList("Items", 10);
 
-            for(int i = 0; i < listtag.size(); ++i) {
+            for (int i = 0; i < listtag.size(); ++i) {
                 CompoundTag compoundtag = listtag.getCompound(i);
                 int j = compoundtag.getByte("Slot") & 255;
                 if (j >= 2 && j < this.inventory.getContainerSize()) {

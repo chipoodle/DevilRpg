@@ -10,12 +10,12 @@ import net.minecraft.world.entity.ai.targeting.TargetingConditions;
 import java.util.EnumSet;
 
 
-public class TameablePetOwnerHurtByTargetGoal extends TargetGoal {
+public class TamablePetOwnerHurtByTargetGoal extends TargetGoal {
    private final ITamableEntity tameAnimal;
    private LivingEntity ownerLastHurtBy;
    private int timestamp;
 
-   public TameablePetOwnerHurtByTargetGoal(ITamableEntity p_i1667_1_) {
+   public TamablePetOwnerHurtByTargetGoal(ITamableEntity p_i1667_1_) {
       super((Mob) p_i1667_1_, false);
       this.tameAnimal = p_i1667_1_;
       this.setFlags(EnumSet.of(Goal.Flag.TARGET));

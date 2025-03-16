@@ -6,15 +6,20 @@ import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillElement;
 import com.chipoodle.devilrpg.eventsubscriber.client.ClientModKeyInputEventSubscriber;
+import com.chipoodle.devilrpg.skillsystem.AbstractSkillExecutor;
+import com.chipoodle.devilrpg.skillsystem.AbstractSkillSeedsInInventoryExecutor;
 import com.chipoodle.devilrpg.util.PowerEnum;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiComponent;
 import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraftforge.client.gui.overlay.IGuiOverlay;
 
 import java.util.HashMap;
@@ -47,8 +52,8 @@ public class SkillsIconHudOverlay {
             SkillElement skillElementByEnum = skillCap.getSkillElementByEnum(aSkillEnum);
             if (skillElementByEnum == null)
                 throw new RuntimeException("---->Falló la busqueda de del Skillelement para el skill: " + aSkillEnum);
-
             Item item = Objects.requireNonNull(skillElementByEnum.getDisplay()).getIcon().getItem();
+            String keyName = ClientModKeyInputEventSubscriber.KeyEvent.getKeyName(power);
 
             ResourceLocation resourceLocation = skillCap.getImagesOfSkills().get(aSkillEnum);
             if (resourceLocation == null)
@@ -60,11 +65,11 @@ public class SkillsIconHudOverlay {
             boolean onCooldown = player.getCooldowns().isOnCooldown(item);
 
             float cooldownPercent = player.getCooldowns().getCooldownPercent(item, 0);
-            float color = 1f - (cooldownPercent)/1.5f;
+            float color = 1f - (cooldownPercent) / 1.5f;
 
             RenderSystem.setShader(GameRenderer::getPositionTexShader);
             RenderSystem.setShaderTexture(0, resourceLocation);
-            RenderSystem.setShaderColor(1.0F, color, color, player.getCooldowns().isOnCooldown(item)? 0.5F: 1.0F);
+            RenderSystem.setShaderColor(1.0F, color, color, player.getCooldowns().isOnCooldown(item) ? 0.5F : 1.0F);
 
             RenderSystem.enableBlend();
             RenderSystem.defaultBlendFunc();
@@ -72,7 +77,44 @@ public class SkillsIconHudOverlay {
             // Pinta el icono del botón
             GuiComponent.blit(poseStack, x, y, 0, 0.0F, 0.0F, width, height, width, height);
 
-            String keyName = ClientModKeyInputEventSubscriber.KeyEvent.getKeyName(power);
+            if (!aSkillEnum.equals(SkillEnum.EMPTY)) {
+                AbstractSkillExecutor loadedSkillExecutor = skillCap.getLoadedSkillExecutor(aSkillEnum);
+                if (loadedSkillExecutor instanceof AbstractSkillSeedsInInventoryExecutor) {
+                    ItemStack seedStack = ItemStack.EMPTY;
+
+                    // Busca la primera semilla en el inventario
+                    for (ItemStack stack : player.getInventory().items) {
+                        if (stack.is(Items.WHEAT_SEEDS) || stack.is(Items.BEETROOT_SEEDS) ||
+                                stack.is(Items.MELON_SEEDS) || stack.is(Items.PUMPKIN_SEEDS)) {
+                            seedStack = stack;
+                            break; // Usa la primera semilla que encuentre
+                        }
+                    }
+
+                    boolean hasSeeds = !seedStack.isEmpty();
+                    float seedOpacity = hasSeeds ? 1.0F : 0.3F; // Opacidad si no hay semillas
+
+                    int seedX = x + width - 6; // Posición en la esquina superior derecha
+                    int seedY = y - 2;         // Posición más arriba dentro del icono
+
+                    poseStack.pushPose();
+                    poseStack.translate(seedX, seedY, 0);
+                    poseStack.scale(0.5f, 0.5f, 1.0f); // Reducir tamaño al 50%
+
+                    ItemRenderer itemRenderer = mc.getItemRenderer();
+                    RenderSystem.enableBlend();
+                    RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, seedOpacity);
+
+                    // Renderiza el ícono de la semilla si hay alguna disponible
+                    if (hasSeeds) {
+                        itemRenderer.renderGuiItem(poseStack, seedStack, 0, 0);
+                    }
+
+                    RenderSystem.disableBlend();
+                    poseStack.popPose();
+                }
+            }
+
 
             //Pinta el texto debajo del botón
             poseStack.pushPose();
