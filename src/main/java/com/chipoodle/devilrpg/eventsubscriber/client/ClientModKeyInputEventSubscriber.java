@@ -30,7 +30,7 @@ import java.util.HashMap;
 
 public class ClientModKeyInputEventSubscriber {
 
-    private static final KeyMapping[] KEYS = new KeyMapping[6];
+    private static final KeyMapping[] KEYS = new KeyMapping[7];
     private static final HashMap<PowerEnum, KeyMapping> keyBindingsHash = new HashMap<>();
 
     @Mod.EventBusSubscriber(modid = DevilRpg.MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
@@ -43,13 +43,15 @@ public class ClientModKeyInputEventSubscriber {
             KEYS[2] = new KeyMapping("key.power3", -1, "key.categories.devilrpg");
             KEYS[3] = new KeyMapping("key.power4", -1, "key.categories.devilrpg");
             KEYS[4] = new KeyMapping("key.power5", -1, "key.categories.devilrpg");
-            KEYS[5] = new KeyMapping("key.skill_gui", -1, "key.categories.devilrpg");
+            KEYS[5] = new KeyMapping("key.power6", -1, "key.categories.devilrpg");
+            KEYS[6] = new KeyMapping("key.skill_gui", -1, "key.categories.devilrpg");
 
             keyBindingsHash.put(PowerEnum.POWER1, KEYS[0]);
             keyBindingsHash.put(PowerEnum.POWER2, KEYS[1]);
             keyBindingsHash.put(PowerEnum.POWER3, KEYS[2]);
             keyBindingsHash.put(PowerEnum.POWER4, KEYS[3]);
             keyBindingsHash.put(PowerEnum.POWER5, KEYS[4]);
+            keyBindingsHash.put(PowerEnum.POWER6, KEYS[5]);
 
             try {
                 for (int i = 0; i < KEYS.length; ++i) {
@@ -111,6 +113,13 @@ public class ClientModKeyInputEventSubscriber {
                 skill.ifPresent(x -> x.triggerAction(p, PowerEnum.POWER5));
             }
             if (KEYS[5].consumeClick()) {
+                //DevilRpg.LOGGER.debug(KEYS[4].saveString() + " pressed. " + KEYS[4].getKey().getValue());
+                //DevilRpg.LOGGER.debug("---->" + getKeyName(PowerEnum.POWER5));
+                ModNetwork.CHANNEL.sendToServer(new KeyboardSkillServerHandler(PowerEnum.POWER6));
+                //Para que se ejecute en el cliente
+                skill.ifPresent(x -> x.triggerAction(p, PowerEnum.POWER6));
+            }
+            if (KEYS[6].consumeClick()) {
                 //DevilRpg.LOGGER.debug(KEYS[5].saveString() + " pressed. " + KEYS[5].getKey().getValue());
                 //DevilRpg.LOGGER.debug(KEYS[5].getKey().getDisplayName());
                 //SkillScreen.open(Minecraft.getInstance().player,KEYS[4].getKey());

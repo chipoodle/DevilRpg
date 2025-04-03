@@ -25,8 +25,11 @@ import net.minecraft.world.level.Level;
 import net.minecraftforge.network.PacketDistributor;
 
 import java.io.IOException;
+import java.util.Objects;
+import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.function.Supplier;
 
 
 public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabilityInterface {
@@ -132,7 +135,7 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
             return (ConcurrentLinkedQueue<UUID>) BytesUtil.toObject(nbt.getByteArray(WISP_MINIONS_KEY));
         } catch (ClassNotFoundException | IOException e) {
             DevilRpg.LOGGER.error("Error en getWispMinions", e);
-            return null;
+            return new ConcurrentLinkedQueue<>();
         }
     }
 
@@ -163,7 +166,7 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
 
     @Override
     public CompoundTag getSoulBearInventory() {
-        CompoundTag tag =  nbt.getCompound(SOULBEAR_INVENTORY_KEY);
+        CompoundTag tag = nbt.getCompound(SOULBEAR_INVENTORY_KEY);
         if (tag.isEmpty())
             return null;
         return tag;
@@ -188,7 +191,7 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
     }
 
     @Override
-    public ITamableEntity getTameableByUUID(UUID id, Level world) {
+    public ITamableEntity getTamableByUUID(UUID id, Level world) {
         Entity e;
         if (id != null) {
             if (!world.isClientSide) {
@@ -237,7 +240,7 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
     public void removeAllWisp(Player owner) {
         ConcurrentLinkedQueue<UUID> wisp = getWispMinions();
         wisp.forEach(id -> {
-            ITamableEntity entity = getTameableByUUID(id, owner.level);
+            ITamableEntity entity = getTamableByUUID(id, owner.level);
             removeWisp(owner, (SoulWisp) entity);
         });
         wisp.clear();
@@ -248,7 +251,7 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
     public void removeAllSoulWolf(Player owner) {
         ConcurrentLinkedQueue<UUID> soulwolf = getSoulWolfMinions();
         soulwolf.forEach(id -> {
-            ITamableEntity entity = getTameableByUUID(id, owner.level);
+            ITamableEntity entity = getTamableByUUID(id, owner.level);
             removeSoulWolf(owner, (SoulWolf) entity);
         });
         soulwolf.clear();
@@ -275,7 +278,7 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
     public void removeAllSoulBear(Player owner) {
         ConcurrentLinkedQueue<UUID> soulbear = getSoulBearMinions();
         for (UUID uuid : soulbear) {
-            ITamableEntity entity = getTameableByUUID(uuid, owner.level);
+            ITamableEntity entity = getTamableByUUID(uuid, owner.level);
             removeSoulBear(owner, (SoulBear) entity);
         }
         soulbear.clear();
@@ -301,4 +304,48 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
                 new PlayerMinionClientServerHandler(serializeNBT()));
     }
 
+    @Override
+    public SoulWisp existsWisp(Class<? extends SoulWisp> instance, Player player) {
+        return getWispMinions().stream()
+                .map(wispKey -> (SoulWisp) getTamableByUUID(wispKey, player.level))
+                .filter(Objects::nonNull)
+                .filter(instance::isInstance)
+                .findFirst()
+                .orElse(null);
+    }
+
+    public void summonWispComplete(Level levelIn, Player player, Random rand, Supplier<SoulWisp> summonWispFunction, int maxSummons, Class<? extends SoulWisp> instance) {
+        ConcurrentLinkedQueue<UUID> keys = getWispMinions();
+        SoulWisp existingWisp = existsWisp(instance, player);
+
+        if (existingWisp == null) {
+            summonNewWisp(player, keys, maxSummons, summonWispFunction);
+        } else {
+            replaceExistingWisp(player, existingWisp, keys, summonWispFunction);
+        }
+
+        setWispMinions(keys, player);
+    }
+
+    private void summonNewWisp(Player player, ConcurrentLinkedQueue<UUID> keys, int maxSummons, Supplier<SoulWisp> summonWispFunction) {
+        keys.offer(summonWispFunction.get().getUUID());
+        removeOldestWispIfNecessary(keys, maxSummons, player);
+    }
+
+    private void replaceExistingWisp(Player player, SoulWisp existingWisp, ConcurrentLinkedQueue<UUID> keys, Supplier<SoulWisp> summonWispFunction) {
+        keys.remove(existingWisp.getUUID());
+        removeWisp(player, existingWisp);
+
+        keys.offer(summonWispFunction.get().getUUID());
+    }
+
+    private void removeOldestWispIfNecessary(ConcurrentLinkedQueue<UUID> keys, int maxSummons, Player player) {
+        if (keys.size() > maxSummons) {
+            UUID removedKey = keys.poll();
+            SoulWisp oldestWisp = (SoulWisp) getTamableByUUID(removedKey, player.level);
+            if (oldestWisp != null) {
+                removeWisp(player, oldestWisp);
+            }
+        }
+    }
 }

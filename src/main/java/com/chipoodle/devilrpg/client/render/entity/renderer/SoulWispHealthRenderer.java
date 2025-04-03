@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.client.render.entity.renderer;
 
+import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.client.render.entity.model.SoulWispModel;
 import com.chipoodle.devilrpg.entity.SoulWispHealth;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -15,7 +16,8 @@ import org.jetbrains.annotations.NotNull;
 
 @OnlyIn(Dist.CLIENT)
 public class SoulWispHealthRenderer extends MobRenderer<SoulWispHealth, SoulWispModel<SoulWispHealth>> {
-    private static final ResourceLocation ALLAY_TEXTURE = new ResourceLocation("textures/entity/allay/allay.png");
+    //private static final ResourceLocation ALLAY_TEXTURE = new ResourceLocation("textures/entity/allay/allay.png");
+    public static final ResourceLocation ALLAY_TEXTURE = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soulwisp/allay_orange.png");
 
     public SoulWispHealthRenderer(EntityRendererProvider.Context p_234551_) {
         super(p_234551_, new SoulWispModel<>(p_234551_.bakeLayer(SoulWispModel.HEALTH_LAYER_LOCATION)), 0.4F);

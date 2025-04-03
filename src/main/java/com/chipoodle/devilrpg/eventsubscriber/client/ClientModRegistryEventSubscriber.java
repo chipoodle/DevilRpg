@@ -53,10 +53,9 @@ public final class ClientModRegistryEventSubscriber {
         event.registerLayerDefinition(SoulWolfModelHeart.LAYER_LOCATION, SoulWolfModelHeart::createBodyLayer);
         event.registerLayerDefinition(SoulWispModel.DEFAULT_LAYER_LOCATION, SoulWispModel::createBodyLayer);
         event.registerLayerDefinition(SoulWispModel.HEALTH_LAYER_LOCATION, SoulWispModel::createBodyLayer);
-        event.registerLayerDefinition(SoulWispModel.CURSE_LAYER_LOCATION, SoulWispModel::createBodyLayer);
-        event.registerLayerDefinition(SoulWispModel.BOMBER_LAYER_LOCATION, SoulWispModel::createBodyLayer);
         event.registerLayerDefinition(SoulWispModel.ARCHER_LAYER_LOCATION, SoulWispModel::createBodyLayer);
         event.registerLayerDefinition(SoulWispModel.CHOPPER_LAYER_LOCATION, SoulWispModel::createBodyLayer);
+        event.registerLayerDefinition(SoulWispModel.FORESTER_LAYER_LOCATION, SoulWispModel::createBodyLayer);
         event.registerLayerDefinition(CubeModel.LAYER_LOCATION, CubeModel::createBodyLayer);
         event.registerLayerDefinition(WerewolfTransformedModel.WEREWOLF_LAYER_LOCATION, WerewolfTransformedModel::createBodyLayer);
         event.registerLayerDefinition(SunflowerShulkerModel.DEFAULT_LAYER_LOCATION, SunflowerShulkerModel::createBodyLayer);
@@ -75,10 +74,9 @@ public final class ClientModRegistryEventSubscriber {
         event.registerEntityRenderer(ModEntities.VINE_FLESH_BALL.get(), VineFleshBallRenderer::new);
         //event.registerEntityRenderer(ModEntities.WISP.get(), SoulWispRenderer::new);
         event.registerEntityRenderer(ModEntities.WISP_HEALTH.get(), SoulWispHealthRenderer::new);
-        event.registerEntityRenderer(ModEntities.WISP_CURSE.get(), SoulWispCurseRenderer::new);
-        event.registerEntityRenderer(ModEntities.WISP_BOMB.get(), SoulWispBomberRenderer::new);
         event.registerEntityRenderer(ModEntities.WISP_ARCHER.get(), SoulWispArcherRenderer::new);
         event.registerEntityRenderer(ModEntities.WISP_CHOPPER.get(), SoulWispChopperRenderer::new);
+        event.registerEntityRenderer(ModEntities.WISP_FORESTER.get(), SoulWispForesterRenderer::new);
         event.registerEntityRenderer(ModEntities.SUNFLOWER_SHULKER.get(), SunflowerShulkerRenderer::new);
         event.registerEntityRenderer(ModEntities.EXPLODING_SPORE_BULLET.get(), ExplodingSporeBulletRenderer::new);
         event.registerEntityRenderer(ModEntities.AGGRESSIVE_ZOMBIE.get(), AggressiveZombieRenderer::new);

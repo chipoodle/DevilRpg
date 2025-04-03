@@ -24,10 +24,9 @@ public class SoulWispModel<T extends SoulWisp> extends HierarchicalModel<T> impl
 
     public static final ModelLayerLocation DEFAULT_LAYER_LOCATION = new ModelLayerLocation(new ResourceLocation(DevilRpg.MODID, "soulwisp"), "main");
     public static final ModelLayerLocation ARCHER_LAYER_LOCATION = new ModelLayerLocation(new ResourceLocation(DevilRpg.MODID, "soulwisparcher"), "main");
-    public static final ModelLayerLocation BOMBER_LAYER_LOCATION = new ModelLayerLocation(new ResourceLocation(DevilRpg.MODID, "soulwispbomber"), "main");
-    public static final ModelLayerLocation CURSE_LAYER_LOCATION = new ModelLayerLocation(new ResourceLocation(DevilRpg.MODID, "soulwispcurse"), "main");
     public static final ModelLayerLocation HEALTH_LAYER_LOCATION = new ModelLayerLocation(new ResourceLocation(DevilRpg.MODID, "soulwisphealth"), "main");
     public static final ModelLayerLocation CHOPPER_LAYER_LOCATION = new ModelLayerLocation(new ResourceLocation(DevilRpg.MODID, "soulwispchopper"), "main");
+    public static final ModelLayerLocation FORESTER_LAYER_LOCATION = new ModelLayerLocation(new ResourceLocation(DevilRpg.MODID, "soulwispforester"), "main");
     private final ModelPart root;
     private final ModelPart body;
     private final ModelPart rightArm;

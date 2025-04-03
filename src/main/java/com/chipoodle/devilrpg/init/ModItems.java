@@ -36,20 +36,18 @@ public class ModItems {
             () -> new ForgeSpawnEggItem(ModEntities.WISP, 0x944c7f, 0x5b3636,
                     new Item.Properties().stacksTo(16)));*/
     public static final RegistryObject<ForgeSpawnEggItem> SOULWISP_HEALTH_SPAWN_EGG = ITEMS.register("soulwisp_health_spawn_egg",
-            () -> new ForgeSpawnEggItem(ModEntities.WISP_HEALTH, 0x944a7f, 0x6b3636,
-                    new Item.Properties().stacksTo(16)));
-    public static final RegistryObject<ForgeSpawnEggItem> SOULWISP_CURSE_SPAWN_EGG = ITEMS.register("soulwisp_curse_spawn_egg",
-            () -> new ForgeSpawnEggItem(ModEntities.WISP_CURSE, 0x944b7f, 0x7b3636,
+            () -> new ForgeSpawnEggItem(ModEntities.WISP_HEALTH, 0x944a7f, 0x5b3636,
                     new Item.Properties().stacksTo(16)));
     public static final RegistryObject<ForgeSpawnEggItem> SOULWISP_ARCHER_SPAWN_EGG = ITEMS.register("soulwisp_archer_spawn_egg",
             () -> new ForgeSpawnEggItem(ModEntities.WISP_ARCHER, 0x944c7f, 0x6b3636,
                     new Item.Properties().stacksTo(16)));
-    public static final RegistryObject<ForgeSpawnEggItem> SOULWISP_BOMBER_SPAWN_EGG = ITEMS.register("soulwisp_bomber_spawn_egg",
-            () -> new ForgeSpawnEggItem(ModEntities.WISP_BOMB, 0x944d7f, 0x7b3636,
-                    new Item.Properties().stacksTo(16)));
 
     public static final RegistryObject<ForgeSpawnEggItem> SOULWISP_CHOPPER_SPAWN_EGG = ITEMS.register("soulwisp_chopper_spawn_egg",
             () -> new ForgeSpawnEggItem(ModEntities.WISP_CHOPPER, 0x944e7f, 0x7b3636,
+                    new Item.Properties().stacksTo(16)));
+
+    public static final RegistryObject<ForgeSpawnEggItem> SOULWISP_FORESTER_SPAWN_EGG = ITEMS.register("soulwisp_forester_spawn_egg",
+            () -> new ForgeSpawnEggItem(ModEntities.WISP_FORESTER, 0x944e7f, 0x8b3636,
                     new Item.Properties().stacksTo(16)));
 
     public static final RegistryObject<ForgeSpawnEggItem> AGGRESSIVE_ZOMBIE_SPAWN_EGG = ITEMS.register("aggressive_zombie_spawn_egg",

@@ -23,12 +23,12 @@ public class SkillProgress implements Comparable<SkillProgress> {
 		update(skillPoint, maxSkillPoint);
 	}
 
-	
+
 	public void update(int skillPoint, int maxSkillPoint) {
 		this.skillPoint = skillPoint;
 		this.maxSkillPoint = maxSkillPoint;
 	}
-	
+
 	/**
 	 * Update this ScrollableSkillProgress' criteria and requirements
 	 */
@@ -53,13 +53,13 @@ public class SkillProgress implements Comparable<SkillProgress> {
 		/*
 		 * if (this.requirements.length == 0) { return false; } else { for (String[]
 		 * astring : this.requirements) { boolean flag = false;
-		 * 
+		 *
 		 * for (String s : astring) { CriterionProgress criterionprogress =
 		 * this.getCriterionProgress(s); if (criterionprogress != null &&
 		 * criterionprogress.isDone()) { flag = true; break; } }
-		 * 
+		 *
 		 * if (!flag) { return false; } }
-		 * 
+		 *
 		 * return true; }
 		 */
 	}
@@ -69,9 +69,9 @@ public class SkillProgress implements Comparable<SkillProgress> {
 		/*
 		 * for (CriterionProgress criterionprogress : this.criteria.values()) { if
 		 * (criterionprogress.isDone()) { return true; } }
-		 * 
+		 *
 		 * return false; }
-		 * 
+		 *
 		 * public boolean grantCriterion(String criterionIn) { CriterionProgress
 		 * criterionprogress = this.criteria.get(criterionIn); if (criterionprogress !=
 		 * null && !criterionprogress.isDone()) { criterionprogress.grant(); return
@@ -107,11 +107,11 @@ public class SkillProgress implements Comparable<SkillProgress> {
 	/*
 	 * public static SkillProgress fromNetwork(PacketBuffer buffer) { SkillProgress
 	 * advancementprogress = new SkillProgress(); int i = buffer.readVarInt();
-	 * 
+	 *
 	 * for (int j = 0; j < i; ++j) {
 	 * advancementprogress.criteria.put(buffer.readUtf(32767),
 	 * CriterionProgress.fromNetwork(buffer)); }
-	 * 
+	 *
 	 * return advancementprogress; }
 	 */
 
@@ -137,10 +137,10 @@ public class SkillProgress implements Comparable<SkillProgress> {
 
 	@Nullable
 	@OnlyIn(Dist.CLIENT)
-	public String getProgressText() {
+	public String getSkillPointText() {
 		if (maxSkillPoint == 0)
 			return null;
-		return skillPoint + "/" +maxSkillPoint;
+		return skillPoint + "/" + maxSkillPoint;
 		
 		/*if (this.criteria.isEmpty()) {
 			return null;
@@ -160,15 +160,15 @@ public class SkillProgress implements Comparable<SkillProgress> {
 		return skillPoint;
 		/*
 		 * int i = 0;
-		 * 
+		 *
 		 * for (String[] astring : this.requirements) { boolean flag = false;
-		 * 
+		 *
 		 * for (String s : astring) { CriterionProgress criterionprogress =
 		 * this.getCriterionProgress(s); if (criterionprogress != null &&
 		 * criterionprogress.isDone()) { flag = true; break; } }
-		 * 
+		 *
 		 * if (flag) { ++i; } }
-		 * 
+		 *
 		 * return i;
 		 */
 	}
@@ -228,30 +228,33 @@ public class SkillProgress implements Comparable<SkillProgress> {
 	 * p_serialize_1_, Type p_serialize_2_, JsonSerializationContext p_serialize_3_)
 	 * { JsonObject jsonobject = new JsonObject(); JsonObject jsonobject1 = new
 	 * JsonObject();
-	 * 
+	 *
 	 * for (Entry<String, CriterionProgress> entry :
 	 * p_serialize_1_.criteria.entrySet()) { CriterionProgress criterionprogress =
 	 * entry.getValue(); if (criterionprogress.isDone()) {
 	 * jsonobject1.add(entry.getKey(), criterionprogress.serializeToJson()); } }
-	 * 
+	 *
 	 * if (!jsonobject1.entrySet().isEmpty()) { jsonobject.add("criteria",
 	 * jsonobject1); }
-	 * 
+	 *
 	 * jsonobject.addProperty("done", p_serialize_1_.isDone()); return jsonobject; }
-	 * 
+	 *
 	 * public SkillProgress deserialize(JsonElement p_deserialize_1_, Type
 	 * p_deserialize_2_, JsonDeserializationContext p_deserialize_3_) throws
 	 * JsonParseException { JsonObject jsonobject =
 	 * JSONUtils.convertToJsonObject(p_deserialize_1_, "advancement"); JsonObject
 	 * jsonobject1 = JSONUtils.getAsJsonObject(jsonobject, "criteria", new
 	 * JsonObject()); SkillProgress advancementprogress = new SkillProgress();
-	 * 
+	 *
 	 * for (Entry<String, JsonElement> entry : jsonobject1.entrySet()) { String s =
 	 * entry.getKey(); advancementprogress.criteria.put(s,
 	 * CriterionProgress.fromJson(JSONUtils.convertToString(entry.getValue(), s)));
 	 * }
-	 * 
+	 *
 	 * return advancementprogress; } }
 	 */
 
+	public int getMaxSkillPoints() {
+		return this.maxSkillPoint;
+	}
 }

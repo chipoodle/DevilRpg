@@ -1,5 +1,4 @@
 package com.chipoodle.devilrpg.entity.goal;
-
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.entity.SoulWispChopper;
 import net.minecraft.tags.BlockTags;
@@ -9,6 +8,7 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
 
 import java.util.List;
@@ -17,8 +17,9 @@ public class SoulWispGatherLogItemsGoal extends Goal {
     private static final double SPEED = 1.0;
     private static final double MAXIMUM_DISTANCE_FOR_DELIVERY = 2.5;
     private static final int INVENTORY_FULL_COOLDOWN = 100;
+    private static final int RADIUS = 10; // Radio de búsqueda para bloques e ítems
+
     private final SoulWispChopper soulWisp;
-    private final int RADIUS = 5;                                     // Radio de búsqueda para bloques e items
     private boolean isInventoryFull = false;
     private int inventoryFullTicks = 0;
 
@@ -36,53 +37,55 @@ public class SoulWispGatherLogItemsGoal extends Goal {
             }
             return false;
         }
-        return !getNearbyLogItems().isEmpty() || soulWisp.hasItemInOffHand();
+        return !getNearbyWoodItems().isEmpty() || soulWisp.hasItemInOffHand();
     }
 
     @Override
     public void start() {
         DevilRpg.LOGGER.info("======= start SoulWispGatherLogItemsGoal");
-        if (this.soulWisp.getOwner() != null)
+        if (this.soulWisp.getOwner() != null) {
             this.soulWisp.getNavigation().moveTo(this.soulWisp.getOwner(), SPEED);
+        }
     }
 
-    public void stop(){
+    @Override
+    public void stop() {
         DevilRpg.LOGGER.info("======= stop SoulWispGatherLogItemsGoal");
     }
 
     @Override
     public void tick() {
         if (!this.soulWisp.hasItemInOffHand()) {
-            lookForNearestLogItemAndTakeItOffHand();
+            lookForNearestWoodItemAndTakeItOffHand();
         } else {
-            tryToGiveLogItemToPlayer();
+            tryToGiveWoodItemToPlayer();
         }
     }
 
-    private List<ItemEntity> getNearbyLogItems() {
+    private List<ItemEntity> getNearbyWoodItems() {
         return soulWisp.level.getEntitiesOfClass(ItemEntity.class, soulWisp.getBoundingBox().inflate(RADIUS),
                 item -> {
                     ItemStack stack = item.getItem();
                     if (stack.getItem() instanceof BlockItem blockItem) {
                         Block block = blockItem.getBlock();
-                        return block.defaultBlockState().is(BlockTags.LOGS);
+                        return block.defaultBlockState().is(BlockTags.LOGS); // Si es un tronco
                     }
-                    return false;
+                    return stack.is(Items.STICK); // Si es un palo
                 }
         );
     }
 
-    private void lookForNearestLogItemAndTakeItOffHand() {
-        List<ItemEntity> items = getNearbyLogItems();
+    private void lookForNearestWoodItemAndTakeItOffHand() {
+        List<ItemEntity> items = getNearbyWoodItems();
         if (!items.isEmpty()) {
             ItemEntity itemEntity = items.get(0);
-            ItemStack logStack = itemEntity.getItem();
-            this.soulWisp.setItemSlot(EquipmentSlot.OFFHAND, logStack);
+            ItemStack woodStack = itemEntity.getItem();
+            this.soulWisp.setItemSlot(EquipmentSlot.OFFHAND, woodStack);
             itemEntity.discard();
         }
     }
 
-    private void tryToGiveLogItemToPlayer() {
+    private void tryToGiveWoodItemToPlayer() {
         Player owner = (Player) this.soulWisp.getOwner();
         if (owner != null && this.soulWisp.distanceTo(owner) <= MAXIMUM_DISTANCE_FOR_DELIVERY) {
             boolean addedSuccessfully = owner.addItem(this.soulWisp.getOffhandItem());

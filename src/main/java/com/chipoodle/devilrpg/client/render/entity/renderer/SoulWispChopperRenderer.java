@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.client.render.entity.renderer;
 
+import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.client.render.entity.model.SoulWispModel;
 import com.chipoodle.devilrpg.entity.SoulWispChopper;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
@@ -13,7 +14,8 @@ import org.jetbrains.annotations.NotNull;
 
 @OnlyIn(Dist.CLIENT)
 public class SoulWispChopperRenderer extends MobRenderer<SoulWispChopper, SoulWispModel<SoulWispChopper>> {
-    private static final ResourceLocation ALLAY_TEXTURE = new ResourceLocation("textures/entity/allay/allay.png");
+    //private static final ResourceLocation ALLAY_TEXTURE = new ResourceLocation("textures/entity/allay/allay.png");
+    public static final ResourceLocation ALLAY_TEXTURE = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soulwisp/allay_yellow.png");
 
     public SoulWispChopperRenderer(EntityRendererProvider.Context p_234551_) {
         super(p_234551_, new SoulWispModel<>(p_234551_.bakeLayer(SoulWispModel.CHOPPER_LAYER_LOCATION)), 0.4F);

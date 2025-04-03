@@ -5,6 +5,8 @@ import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.entity.*;
+import com.chipoodle.devilrpg.entity.goal.SoulWispGatherLogItemsGoal;
+import com.chipoodle.devilrpg.entity.goal.SoulWispHarvestGrassGoal;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
@@ -26,7 +28,7 @@ public class MinionPassiveAttributes {
     private Player playerIn;
 
     public MinionPassiveAttributes(ITamableEntity entity) {
-        DevilRpg.LOGGER.info("||---->MinionPassiveAttributes entity {}",((LivingEntity)entity).getUUID());
+        DevilRpg.LOGGER.info("||---->MinionPassiveAttributes entity {}", ((LivingEntity) entity).getUUID());
         levelIn = entity.getLevel();
         LivingEntity owner = entity.getOwner();
 
@@ -107,13 +109,26 @@ public class MinionPassiveAttributes {
 
     private void applyPassives(SoulWisp entity) {
         DevilRpg.LOGGER.info("||---->MinionPassiveAttributes SoulWispEntity");
-        if(entity instanceof SoulWispHealth soulWispHealth){
-            PlayerSkillCapabilityInterface parentCapability = IGenericCapability.getUnwrappedPlayerCapability(playerIn, PlayerSkillCapability.INSTANCE);
-            Integer wispRegenerationPoints = parentCapability.getSkillsPoints().get(SkillEnum.WISP_REGENERATION);
-            soulWispHealth.setSecondaryEffect(wispRegenerationPoints, MobEffects.REGENERATION);
+        PlayerSkillCapabilityInterface parentCapability = IGenericCapability.getUnwrappedPlayerCapability(playerIn, PlayerSkillCapability.INSTANCE);
+        if (entity instanceof SoulWispHealth soulWispHealth) {
+            Integer points = parentCapability.getSkillsPoints().get(SkillEnum.WISP_REGENERATION);
+            soulWispHealth.setSecondaryEffect(points, MobEffects.REGENERATION);
+        }
+
+        if (entity instanceof SoulWispChopper soulWispChopper) {
+            Integer points = parentCapability.getSkillsPoints().get(SkillEnum.WISP_LOG_COLLECTOR);
+            if (points != null && points > 0)
+                soulWispChopper.goalSelector.addGoal(2, new SoulWispGatherLogItemsGoal(soulWispChopper));
+        }
+
+        if (entity instanceof SoulWispForester soulWispForester) {
+            Integer points = parentCapability.getSkillsPoints().get(SkillEnum.WISP_SEED_COLLECTOR);
+            if (points != null && points > 0)
+                soulWispForester.goalSelector.addGoal(3, new SoulWispHarvestGrassGoal(soulWispForester));
         }
 
     }
+
     private void applyPassives(SunflowerShulker entity) {
         DevilRpg.LOGGER.info("||---->MinionPassiveAttributes SunflowerShulker");
     }

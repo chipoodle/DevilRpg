@@ -4,9 +4,11 @@ import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapability;
 import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityInterface;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
+import com.chipoodle.devilrpg.init.ModDamageTypes;
 import com.chipoodle.devilrpg.util.IRenderUtilities;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
@@ -20,6 +22,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.util.TimeUtil;
 import net.minecraft.util.valueproviders.UniformInt;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -421,8 +424,8 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
                 return;
             minionCap.ifPresent(x -> x.removeWisp((Player) getOwner(), this));
         }
-        if(!this.level.isClientSide)
-        dropAllDeathLoot(cause);
+        if (!this.level.isClientSide)
+            dropAllDeathLoot(cause);
         // super.onDeath(cause);
         customOnDeath();
     }
@@ -573,6 +576,31 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
         return wispType;
     }
 
+    protected void removeInteractionItem(Player player, ItemStack itemStack) {
+        if (!player.getAbilities().instabuild) {
+            itemStack.shrink(1);
+        }
+
+    }
+
+    @Override
+    public @NotNull InteractionResult mobInteract(@NotNull Player player, @NotNull InteractionHand hand) {
+        if (this.getOwner() != null && player == this.getOwner() && hand == InteractionHand.OFF_HAND) {
+            if (this.isOwnedBy(player) || this.isTame()) {
+                DamageSource damagesource = new DamageSource(
+                        this.level
+                                .registryAccess()
+                                .registryOrThrow(Registries.DAMAGE_TYPE)
+                                .getHolderOrThrow(ModDamageTypes.MINION_DEATH));
+                this.die(damagesource);
+                return InteractionResult.SUCCESS;
+            }
+        }
+
+
+        return InteractionResult.PASS;
+    }
+
     static class WispLookControl extends LookControl {
         WispLookControl(Mob beeIn) {
             super(beeIn);
@@ -611,7 +639,6 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
             if (vec3d != null) {
                 SoulWisp.this.navigation.moveTo(SoulWisp.this.navigation.createPath(BlockPos.containing(vec3d), 1), 1.0D);
             }
-
         }
 
         @Nullable
@@ -622,12 +649,5 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
             Vec3 vector3d2 = HoverRandomPos.getPos(SoulWisp.this, 8, 7, vec3.x, vec3.z, ((float) Math.PI / 2F), 3, 1);
             return vector3d2 != null ? vector3d2 : AirAndWaterRandomPos.getPos(SoulWisp.this, 8, 4, -2, vec3.x, vec3.z, (float) Math.PI / 2F);
         }
-    }
-
-    protected void removeInteractionItem(Player player, ItemStack itemStack) {
-        if (!player.getAbilities().instabuild) {
-            itemStack.shrink(1);
-        }
-
     }
 }

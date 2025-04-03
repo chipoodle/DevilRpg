@@ -57,7 +57,7 @@ public class SkillSummonSoulWolf extends AbstractSkillExecutor {
                 if (keys.size() > NUMBER_OF_SUMMONS) {
                     UUID key = keys.remove();
                     min.ifPresent(x -> {
-                        SoulWolf e = (SoulWolf) x.getTameableByUUID(key, player.level);
+                        SoulWolf e = (SoulWolf) x.getTamableByUUID(key, player.level);
                         if (e != null)
                             x.removeSoulWolf(player, e);
                     });

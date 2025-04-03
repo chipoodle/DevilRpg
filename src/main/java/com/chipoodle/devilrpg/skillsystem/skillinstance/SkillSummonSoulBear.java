@@ -56,7 +56,7 @@ public class SkillSummonSoulBear extends AbstractSkillExecutor {
                 if (!keys.isEmpty()) {
                     UUID key = keys.remove();
                     min.ifPresent(x -> {
-                        SoulBear e = (SoulBear) x.getTameableByUUID(key, player.level);
+                        SoulBear e = (SoulBear) x.getTamableByUUID(key, player.level);
                         if (e != null)
                             x.removeSoulBear(player, e);
                     });

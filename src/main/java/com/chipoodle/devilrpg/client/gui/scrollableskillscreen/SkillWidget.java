@@ -80,27 +80,55 @@ public class SkillWidget extends GuiComponent {
 
         this.x = Mth.floor(getDisplayInfo().getX() * X_DISTANCE * X_DISTANCE_FACTOR);
         this.y = Mth.floor(getDisplayInfo().getY() * Y_DISTANCE * Y_DISTANCE_FACTOR);
-        // int i = skillElement.getRequirementCount();
-        int i = maxSkillPoint;
-        int j = String.valueOf(i).length();
-        int k = i > 1 ? minecraft.font.width("  ") + minecraft.font.width("0") * j * 2 + minecraft.font.width("/") : 0;
-        int l = 29 + minecraft.font.width(this.title) + k;
 
+        // Obtenemos el texto del título como String
+        StringBuilder titleBuilder = new StringBuilder();
+        this.title.accept((index, style, codePoint) -> {
+            titleBuilder.append(Character.toChars(codePoint));
+            return true;
+        });
+        String titleText = titleBuilder.toString();
+
+        // Calculamos el ancho del título
+        int titleWidth = minecraft.font.width(titleText);
+
+        // Calculamos el ancho del texto de progreso (excepto para 0/0 y 1/0)
+        int progressWidth = 0;
+        if (!(maxSkillPoint == 0 && (skillPoint == 0 || skillPoint == 1))) {
+            String progressText = skillProgress.getSkillPointText();
+            progressWidth = minecraft.font.width(progressText) + 5; // +5 de margen
+        }
+
+        // Ancho base (icono + márgenes)
+        int baseWidth = 29; // 26 (icono) + 3 (margen)
+
+        // Creamos la descripción
         Integer manaCost = 0;
         MutableComponent desc = getDisplayInfo().getDescription().copy();
         if (skillElement.getSkillManaCost() != null) {
             manaCost = skillElement.getSkillManaCost().getManaCost();
             desc = desc.copy().append("\n").append(MANA_COST).append(Component.nullToEmpty(" " + manaCost));
         }
+
+        // Calculamos el ancho mínimo basado en título y progreso
+        int minWidth = baseWidth + titleWidth + progressWidth;
+
+        // Generamos las líneas de descripción
         this.description = Language.getInstance().getVisualOrder(this.getDescriptionLines(
                 ComponentUtils.mergeStyles(desc, Style.EMPTY.applyFormat(getDisplayInfo().getFrame().getFormat())),
-                l));
+                minWidth));
 
-        for (FormattedCharSequence ireorderingprocessor : this.description) {
-            l = Math.max(l, minecraft.font.width(ireorderingprocessor));
+        // Calculamos el ancho máximo entre todas las líneas de descripción
+        int descriptionWidth = minWidth;
+        for (FormattedCharSequence line : this.description) {
+            descriptionWidth = Math.max(descriptionWidth, minecraft.font.width(line));
         }
 
-        this.width = l + 3 + 5;
+        // Añadimos márgenes adicionales
+        descriptionWidth += 8;
+
+        // El ancho final es el mayor entre el ancho mínimo y el de la descripción
+        this.width = Math.max(minWidth, descriptionWidth);
 
         skillTabGui.getScreen().getSkillsResourceLocations().put(skillElement.getSkillCapability(),
                 this.getDisplayInfo().getImage());
@@ -282,7 +310,7 @@ public class SkillWidget extends GuiComponent {
 
     public void drawHoveredSkill(PoseStack matrixStack, int x, int y, float fade, int width, int height) {
         boolean widthFlag = width + x + this.x + this.width + FRAME_SIZE >= this.skillTabGui.getScreen().width;
-        String skillProgressString = this.skillProgress == null ? null : this.skillProgress.getProgressText();
+        String skillProgressString = this.skillProgress == null ? null : this.skillProgress.getSkillPointText();
         int i = skillProgressString == null ? 0 : this.minecraft.font.width(skillProgressString);
         boolean flag1 = 113 - y - this.y - FRAME_SIZE <= 6 + this.description.size() * 9;
         float f = this.skillProgress == null ? 0.0F : this.skillProgress.getPercent();

@@ -74,7 +74,7 @@ public class SoulWispFollowOwnerGoal extends Goal {
         } else if (this.unableToMove()) {
             return false;
         } else {
-            return !(this.soulWisp.distanceToSqr(this.owner) <= (double) (this.stopDistance * this.stopDistance));
+            return (this.soulWisp.distanceToSqr(this.owner) > (double) (this.stopDistance * this.stopDistance));
         }
     }
 

@@ -1,7 +1,6 @@
 package com.chipoodle.devilrpg.entity;
 
 import com.chipoodle.devilrpg.entity.goal.SoulWispChopLogsGoal;
-import com.chipoodle.devilrpg.entity.goal.SoulWispChopWoodGoal;
 import com.chipoodle.devilrpg.entity.goal.SoulWispFollowOwnerGoal;
 import com.chipoodle.devilrpg.entity.goal.SoulWispGatherLogItemsGoal;
 import com.chipoodle.devilrpg.init.ModEntities;
@@ -17,6 +16,7 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
+import net.minecraft.world.entity.ai.goal.PanicGoal;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
@@ -37,19 +37,11 @@ public class SoulWispChopper extends SoulWisp {
     }
 
     protected void registerGoals() {
-        // super.registerGoals();
-        //this.goalSelector.addGoal(0, new SoulWispCollectLogsGoal(this,5));
-        this.goalSelector.addGoal(1, new SoulWispFollowOwnerGoal(this, 1.0D, 3.0F, 7.0F, true));
-        //this.goalSelector.addGoal(2, new SoulWispChopWoodGoal(this));
-        this.goalSelector.addGoal(2, new SoulWispGatherLogItemsGoal(this));
+        this.goalSelector.addGoal(0, new PanicGoal(this, 1.25D));
+        this.goalSelector.addGoal(1, new SoulWispFollowOwnerGoal(this, 1.0D, 8.0F, 12.0F, true));
+        //this.goalSelector.addGoal(2, new SoulWispGatherLogItemsGoal(this));
         this.goalSelector.addGoal(3, new SoulWispChopLogsGoal(this));
-
-
         this.goalSelector.addGoal(3, new FloatGoal(this));
-        // this.goalSelector.addGoal(3, new WaterAvoidingRandomFlyingGoal(this, 1.0D));
-        //this.goalSelector.addGoal(9, new SoulWisp.WanderGoal());
-        //this.goalSelector.addGoal(10, new LookAtPlayerGoal(this, Mob.class, 8.0F));
-        //this.goalSelector.addGoal(2, new RandomLookAroundGoal(this));
         this.targetSelector.addGoal(3, new HurtByTargetGoal(this));
     }
 
@@ -61,6 +53,7 @@ public class SoulWispChopper extends SoulWisp {
 
     public void updateLevel(Player owner) {
         super.updateLevel(owner, null, null, SkillEnum.SUMMON_WISP_CHOPPER, true);
+        //this.goalSelector.addGoal(2, new SoulWispGatherLogItemsGoal(this));
     }
 
 
@@ -101,7 +94,7 @@ public class SoulWispChopper extends SoulWisp {
                 }
             }
         }
-        return InteractionResult.PASS;
+        return super.mobInteract(player,hand);
     }
 
     private void dropPreviousItem(@NotNull InteractionHand hand) {

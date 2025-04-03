@@ -54,10 +54,9 @@ public final class InitModEventSubscriber {
         event.put(ModEntities.SOUL_BEAR.get(), SoulBear.setAttributes().build());
         //event.put(ModEntities.WISP.get(), SoulWisp.setAttributes().build());
         event.put(ModEntities.WISP_HEALTH.get(), SoulWispHealth.setAttributes().build());
-        event.put(ModEntities.WISP_CURSE.get(), SoulWispCurse.setAttributes().build());
-        event.put(ModEntities.WISP_BOMB.get(), SoulWispBomber.setAttributes().build());
         event.put(ModEntities.WISP_ARCHER.get(), SoulWispArcher.setAttributes().build());
         event.put(ModEntities.WISP_CHOPPER.get(), SoulWispChopper.setAttributes().build());
+        event.put(ModEntities.WISP_FORESTER.get(), SoulWispForester.setAttributes().build());
         event.put(ModEntities.SUNFLOWER_SHULKER.get(), SunflowerShulker.createAttributes().build());
         event.put(ModEntities.EXPLODING_SPORE_BULLET.get(),ExplodingSporeBullet.createAttributes().build());
         event.put(ModEntities.AGGRESSIVE_ZOMBIE.get(), AggressiveZombieEntity.setAttributes().build());
@@ -176,12 +175,12 @@ public final class InitModEventSubscriber {
                             populator.accept(SOULBEAR_SPAWN_EGG.get());
                             //populator.accept(SOULWISP_SPAWN_EGG.get());
                             populator.accept(SOULWISP_HEALTH_SPAWN_EGG.get());
-                            populator.accept(SOULWISP_CURSE_SPAWN_EGG.get());
                             populator.accept(SOULWISP_ARCHER_SPAWN_EGG.get());
-                            populator.accept(SOULWISP_BOMBER_SPAWN_EGG.get());
                             populator.accept(SOULWISP_CHOPPER_SPAWN_EGG.get());
+                            populator.accept(SOULWISP_FORESTER_SPAWN_EGG.get());
                             populator.accept(AGGRESSIVE_ZOMBIE_SPAWN_EGG.get());
 
+                            
                         })
         );
 

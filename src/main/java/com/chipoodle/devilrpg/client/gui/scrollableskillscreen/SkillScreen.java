@@ -56,6 +56,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     private static final Component EMPTY = Component.translatable("advancements.empty");
     private static final Component GUI_LABEL = Component.translatable("gui.skills.title");
     private static final Component UNSPENT_LABEL = Component.translatable("gui.skills.unspent");
+    public static final int POWER_INITIAL_X_POSITION = 100;
     private static int tabPage, maxPages;
     private final ClientSkillBuilderFromJson clientSkillManager;
     private final Map<SkillElement, SkillTab> tabs = Maps.newLinkedHashMap();
@@ -391,16 +392,13 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
                     offsetLeft + WINDOW_AREA_OFFSET_X + INNER_SCREEN_WIDTH,
                     offsetTop + WINDOW_AREA_OFFSET_Y + INNER_SCREEN_HEIGHT, -16777216);
             int i = offsetLeft + WINDOW_AREA_OFFSET_X + 117;
-            drawCenteredString(poseStack, this.font, EMPTY, i,
-                    offsetTop + WINDOW_AREA_OFFSET_Y + 56 - WINDOW_AREA_OFFSET_X / 2, -1);
-            drawCenteredString(poseStack, this.font, SAD_LABEL, i,
-                    offsetTop + WINDOW_AREA_OFFSET_Y + INNER_SCREEN_HEIGHT - WINDOW_AREA_OFFSET_X, -1);
+            drawCenteredString(poseStack, this.font, EMPTY, i, offsetTop + WINDOW_AREA_OFFSET_Y + 56 - WINDOW_AREA_OFFSET_X / 2, -1);
+            drawCenteredString(poseStack, this.font, SAD_LABEL, i, offsetTop + WINDOW_AREA_OFFSET_Y + INNER_SCREEN_HEIGHT - WINDOW_AREA_OFFSET_X, -1);
         } else {
             // Pinta el fondo con elementos
             poseStack.pushPose();
             // Se posiciona al inicio de la ventana + offsets
-            poseStack.translate((float) (offsetLeft + WINDOW_AREA_OFFSET_X),
-                    (float) (offsetTop + WINDOW_AREA_OFFSET_Y), 0.0F);
+            poseStack.translate((float) (offsetLeft + WINDOW_AREA_OFFSET_X),(float) (offsetTop + WINDOW_AREA_OFFSET_Y), 0.0F);
             // Pinta el fondo del tab
             RenderSystem.applyModelViewMatrix();
             selectedSkillTabGui.drawContents(poseStack);
@@ -445,8 +443,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
 
     public void rootSkillAdded(SkillElement advancementIn) {
         //DevilRpg.LOGGER.info("|-------- rootSkillAdded");
-        SkillTab advancementtabgui = SkillTab.create(this.minecraft, this, this.tabs.size(), advancementIn,
-                skillCap);
+        SkillTab advancementtabgui = SkillTab.create(this.minecraft, this, this.tabs.size(), advancementIn, skillCap);
         if (advancementtabgui != null) {
             this.tabs.put(advancementIn, advancementtabgui);
         }
@@ -539,7 +536,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
         for (PowerEnum powerEnum : powerList) {
             int drawnSkillLevel = 0;
             CustomSkillButton powerButtons = new CustomSkillButton(
-                    ( offLeft) + 130 + (k * (SkillWidget.FRAME_SIZE + 8)),
+                    ( offLeft) + POWER_INITIAL_X_POSITION + (k * (SkillWidget.FRAME_SIZE + 8)),
                     WINDOW_AREA_OFFSET_Y + offTop + INNER_SCREEN_HEIGHT + 4,
                     SkillWidget.FRAME_SIZE - 5, // 3
                     SkillWidget.FRAME_SIZE - 5, // 4

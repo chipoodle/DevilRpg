@@ -34,6 +34,7 @@ public final class ModEntities {
 	public static final String WISP_BOMB_NAME = "wisp_bomb";
 	public static final String WISP_ARCHER_NAME = "wisp_archer";
 	private static final String WISP_CHOPPER_NAME = "wisp_chopper";
+	private static final String WISP_FORESTER_NAME = "wisp_forester";
 	public static final String SOUL_FROSTBALL_NAME = "soul_frostball";
 	private static final String LICHEN_SEED_BALL_NAME = "lichen_seedball";
 	private static final String VINE_FLESH_BALL_NAME = "vine_flesh_ball";
@@ -58,16 +59,6 @@ public final class ModEntities {
 					.sized(EntityType.ALLAY.getWidth(), EntityType.ALLAY.getHeight())
 					.build(new ResourceLocation(DevilRpg.MODID, WISP_HEALTH_NAME).toString()));
 
-	public static final RegistryObject<EntityType<SoulWispCurse>> WISP_CURSE = ENTITY_TYPES.register(WISP_CURSE_NAME,
-			() -> EntityType.Builder.of(SoulWispCurse::new, MobCategory.CREATURE)
-					.sized(EntityType.ALLAY.getWidth(), EntityType.ALLAY.getHeight())
-					.build(new ResourceLocation(DevilRpg.MODID, WISP_CURSE_NAME).toString()));
-
-	public static final RegistryObject<EntityType<SoulWispBomber>> WISP_BOMB = ENTITY_TYPES.register(WISP_BOMB_NAME,
-			() -> EntityType.Builder.of(SoulWispBomber::new, MobCategory.CREATURE)
-			.sized(EntityType.ALLAY.getWidth(), EntityType.ALLAY.getHeight())
-			.build(new ResourceLocation(DevilRpg.MODID, WISP_BOMB_NAME).toString()));
-	
 	public static final RegistryObject<EntityType<SoulWispArcher>> WISP_ARCHER = ENTITY_TYPES.register(WISP_ARCHER_NAME,
 			() -> EntityType.Builder.of(SoulWispArcher::new, MobCategory.CREATURE)
 			.sized(EntityType.ALLAY.getWidth(), EntityType.ALLAY.getHeight())
@@ -77,6 +68,11 @@ public final class ModEntities {
 			() -> EntityType.Builder.of(SoulWispChopper::new, MobCategory.CREATURE)
 			.sized(EntityType.ALLAY.getWidth(), EntityType.ALLAY.getHeight())
 			.build(new ResourceLocation(DevilRpg.MODID, WISP_CHOPPER_NAME).toString()));
+
+	public static final RegistryObject<EntityType<SoulWispForester>> WISP_FORESTER = ENTITY_TYPES.register(WISP_FORESTER_NAME,
+			() -> EntityType.Builder.of(SoulWispForester::new, MobCategory.CREATURE)
+					.sized(EntityType.ALLAY.getWidth(), EntityType.ALLAY.getHeight())
+					.build(new ResourceLocation(DevilRpg.MODID, WISP_FORESTER_NAME).toString()));
 
 	public static final RegistryObject<EntityType<FrostBall>> SOUL_FROSTBALL = ENTITY_TYPES.register(SOUL_FROSTBALL_NAME,
 			() -> EntityType.Builder.<FrostBall>of(FrostBall::new, MobCategory.MISC)

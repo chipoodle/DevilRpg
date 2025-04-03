@@ -65,7 +65,7 @@ public class MinionPortraitHudOverlay extends GuiComponent {
 
         int i = 0;
         for (UUID wolfKey : soulwolfMinionKeys) {
-            SoulWolf h = (SoulWolf) minionCap.getTameableByUUID(wolfKey, player.level); // se puede optimizar con singleton
+            SoulWolf h = (SoulWolf) minionCap.getTamableByUUID(wolfKey, player.level); // se puede optimizar con singleton
             if (h != null && h.isAlive()) {
                 renderEntityPortrait(gui, poseStack, i++, h.getHealth(), h.getMaxHealth(), skillCap.getImagesOfSkills().get(SkillEnum.SUMMON_SOUL_WOLF), h);
             }
@@ -73,7 +73,7 @@ public class MinionPortraitHudOverlay extends GuiComponent {
         }
 
         for (UUID bearKey : soulbearMinionKeys) {
-            SoulBear h = (SoulBear) minionCap.getTameableByUUID(bearKey, player.level);
+            SoulBear h = (SoulBear) minionCap.getTamableByUUID(bearKey, player.level);
             if (h != null && h.isAlive()) {
                 renderEntityPortrait(gui, poseStack, i++, h.getHealth(), h.getMaxHealth(), skillCap.getImagesOfSkills().get(SkillEnum.SUMMON_SOUL_BEAR), h);
             }
@@ -81,18 +81,16 @@ public class MinionPortraitHudOverlay extends GuiComponent {
         }
 
         for (UUID wispKey : wispMinionKeys) {
-            SoulWisp h = (SoulWisp) minionCap.getTameableByUUID(wispKey, player.level);
+            SoulWisp h = (SoulWisp) minionCap.getTamableByUUID(wispKey, player.level);
             if (h != null && h.isAlive()) {
                 if (h instanceof SoulWispHealth)
                     renderEntityPortrait(gui, poseStack, i++, h.getHealth(), h.getMaxHealth(), skillCap.getImagesOfSkills().get(SkillEnum.SUMMON_WISP_HEALTH), h);
-                if (h instanceof SoulWispCurse)
-                    renderEntityPortrait(gui, poseStack, i++, h.getHealth(), h.getMaxHealth(), skillCap.getImagesOfSkills().get(SkillEnum.SUMMON_WISP_CURSE), h);
                 if (h instanceof SoulWispArcher)
                     renderEntityPortrait(gui, poseStack, i++, h.getHealth(), h.getMaxHealth(), skillCap.getImagesOfSkills().get(SkillEnum.SUMMON_WISP_ARCHER), h);
-                if (h instanceof SoulWispBomber)
-                    renderEntityPortrait(gui, poseStack, i++, h.getHealth(), h.getMaxHealth(), skillCap.getImagesOfSkills().get(SkillEnum.SUMMON_WISP_BOMB), h);
                 if (h instanceof SoulWispChopper)
                     renderEntityPortrait(gui, poseStack, i++, h.getHealth(), h.getMaxHealth(), skillCap.getImagesOfSkills().get(SkillEnum.SUMMON_WISP_CHOPPER), h);
+                if (h instanceof SoulWispForester)
+                    renderEntityPortrait(gui, poseStack, i++, h.getHealth(), h.getMaxHealth(), skillCap.getImagesOfSkills().get(SkillEnum.SUMMON_WISP_FORESTER), h);
 
             }
 

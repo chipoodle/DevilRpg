@@ -453,4 +453,10 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
         return clientBuilder.getSkillElementByEnum(skillEnum);
     }
 
+    @Override
+    public int getSkillsPoints(SkillEnum skillEnum) {
+        HashMap<SkillEnum, Integer> skillsPoints = this.getSkillsPoints();
+        return skillsPoints.getOrDefault(skillEnum,0);
+    }
+
 }

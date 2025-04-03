@@ -583,6 +583,27 @@
         "parent": "summoning:root"
     },
     {
+        "id": "summoning:wisparmy",
+        "display": {
+            "description": "Increases the number of wisps that can be invoked at the same time",
+            "icon": {
+                "item": "minecraft:glass_pane",
+                "minecraft:glass_panenbt": 2
+            },
+            "title": "Wisp Army",
+            "image": "devilrpg:textures/gui/skill/dark-squad.png",
+            "frame": "goal"
+        },
+        "rewards": {},
+        "capability": "wisp_army",
+        "skillmanacost":{
+            "maxskilllevel":"4",
+            "manacost":"0",
+            "resourcetype":"mana"
+        },
+        "parent": "summoning:root"
+    },
+    {
         "id": "summoning:wisphealth",
         "display": {
             "description": "Summon a forest wisp that bless you with mother nature's aura",
@@ -600,7 +621,7 @@
 			"manacost":"15",
             "resourcetype":"mana"
 		},
-        "parent": "summoning:minionvitality"
+        "parent": "summoning:wisparmy"
     },
     {
         "id": "summoning:wispregeneration",
@@ -610,58 +631,18 @@
                 "item": "minecraft:glass_pane",
                 "minecraft:glass_panenbt": 1
             },
-            "title": "Regeneration",
+            "title": "Regeneration Aura ",
             "image": "devilrpg:textures/gui/skill/health-increase.png",
             "frame": "goal"
         },
         "capability": "wisp_regeneration",
         "skillmanacost":{
-            "maxskilllevel":"0",
+            "maxskilllevel":"1",
             "manacost":"0",
             "resourcetype":"mana"
         },
         "rewards": {},
         "parent": "summoning:wisphealth"
-    },
-    {
-        "id": "summoning:wispcurse",
-        "display": {
-            "description": "Wisp emanates an aura that curses enemies",
-            "icon": {
-                "item": "devilrpg:item_summon"
-            },
-            "title": "Curse Wisp",
-            "image": "devilrpg:textures/gui/skill/medusa-head.png",
-            "frame": "task"
-        },
-        "rewards": {},
-        "capability": "summon_wisp_curse",
-        "skillmanacost":{
-        	"maxskilllevel":"20",
-			"manacost":"15",
-            "resourcetype":"mana"
-		},
-        "parent": "summoning:minionvitality"
-    },
-    {
-        "id": "summoning:wispbomber",
-        "display": {
-            "description": "Bomber Wisp",
-            "icon": {
-                "item": "devilrpg:item_summon"
-            },
-            "title": "Bomber wisp",
-            "image": "devilrpg:textures/gui/skill/burning-eye.png",
-            "frame": "task"
-        },
-        "rewards": {},
-        "capability": "summon_wisp_bomb",
-        "skillmanacost":{
-        	"maxskilllevel":"20",
-			"manacost":"15",
-            "resourcetype":"mana"
-		},
-        "parent": "summoning:minionvitality"
     },
     {
         "id": "summoning:wisparcher",
@@ -681,7 +662,7 @@
 			"manacost":"15",
             "resourcetype":"mana"
 		},
-        "parent": "summoning:minionvitality"
+        "parent": "summoning:wisparmy"
     },
     {
         "id": "summoning:wispchopper",
@@ -701,6 +682,68 @@
             "manacost":"15",
             "resourcetype":"mana"
         },
-        "parent": "summoning:minionvitality"
+        "parent": "summoning:wisparmy"
+    },
+    {
+        "id": "summoning:wisplogcollector",
+        "display": {
+            "description": "Wisp that collects logs and gives them to his master",
+            "icon": {
+                "item": "minecraft:glass_pane",
+                "minecraft:glass_panenbt": 1
+            },
+            "title": "Log Collector",
+            "image": "devilrpg:textures/gui/skill/log.png",
+            "frame": "goal"
+        },
+        "capability": "wisp_log_collector",
+        "skillmanacost":{
+            "maxskilllevel":"1",
+            "manacost":"0",
+            "resourcetype":"mana"
+        },
+        "rewards": {},
+        "parent": "summoning:wispchopper"
+    },
+    {
+        "id": "summoning:wispforester",
+        "display": {
+            "description": "Forester Wisp",
+            "icon": {
+                "item": "devilrpg:item_summon"
+            },
+            "title": "Forester wisp",
+            "image": "devilrpg:textures/gui/skill/circle-forest.png",
+            "frame": "task"
+        },
+        "rewards": {},
+        "capability": "summon_wisp_forester",
+        "skillmanacost":{
+            "maxskilllevel":"20",
+            "manacost":"15",
+            "resourcetype":"mana"
+        },
+        "parent": "summoning:wisparmy"
+    },
+    {
+        "id": "summoning:wispseedcollector",
+        "display": {
+            "description": "Wisp that harvests grass, collects seeds and gives them to his master",
+            "icon": {
+                "item": "minecraft:glass_pane",
+                "minecraft:glass_panenbt": 1
+            },
+            "title": "Seed Collector",
+            "image": "devilrpg:textures/gui/skill/sesame.png",
+            "frame": "goal"
+        },
+        "capability": "wisp_seed_collector",
+        "skillmanacost":{
+            "maxskilllevel":"1",
+            "manacost":"0",
+            "resourcetype":"mana"
+        },
+        "rewards": {},
+        "parent": "summoning:wispforester"
     }
 ]

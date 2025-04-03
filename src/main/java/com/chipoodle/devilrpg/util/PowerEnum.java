@@ -7,7 +7,8 @@ public enum PowerEnum {
 	POWER2("Power 2"),
 	POWER3("Power 3"),
 	POWER4("Power 4"),
-	POWER5("Power 5");
+	POWER5("Power 5"),
+	POWER6("Power 6");
 
 	private final String description;
 	PowerEnum(String description) {

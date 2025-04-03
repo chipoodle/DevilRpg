@@ -1,8 +1,11 @@
 package com.chipoodle.devilrpg.skillsystem.skillinstance;
 
+import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapability;
 import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityInterface;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.entity.SoulWisp;
 import com.chipoodle.devilrpg.entity.SoulWispArcher;
 import com.chipoodle.devilrpg.init.ModEntities;
@@ -18,15 +21,12 @@ import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.BlockHitResult;
-import net.minecraftforge.common.util.LazyOptional;
 
 import java.util.HashMap;
 import java.util.Objects;
 import java.util.Random;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
-public class SkillSummonWispArcher extends AbstractSkillExecutor implements IWispSkill {
+public class SkillSummonWispArcher extends AbstractSkillExecutor {
 
     public SkillSummonWispArcher(PlayerSkillCapabilityImplementation parentCapability) {
         super(parentCapability);
@@ -46,28 +46,21 @@ public class SkillSummonWispArcher extends AbstractSkillExecutor implements IWis
     public void execute(Level levelIn, Player player, HashMap<String, String> parameters) {
         if (!player.getCooldowns().isOnCooldown(icon.getItem())) {
             if (!levelIn.isClientSide) {
-                Random rand = new Random();
-                levelIn.playSound(null, player.getX(), player.getY(), player.getZ(),
-                        SoundEvents.BEACON_ACTIVATE, SoundSource.NEUTRAL, 0.5F,
-                        0.4F / (rand.nextFloat() * 0.4F + 0.8F));
-                LazyOptional<PlayerMinionCapabilityInterface> min = player.getCapability(PlayerMinionCapability.INSTANCE);
-                ConcurrentLinkedQueue<UUID> keys = min.map(PlayerMinionCapabilityInterface::getWispMinions)
-                        .orElse(new ConcurrentLinkedQueue<>());
 
-                keys.offer(summonWisp(levelIn, player, rand).getUUID());
-                if (keys.size() > NUMBER_OF_SUMMONS) {
-                    UUID key = keys.remove();
-                    min.ifPresent(x -> {
-                        SoulWisp e = (SoulWisp) x.getTameableByUUID(key, player.level);
-                        if (e != null)
-                            x.removeWisp(player, e);
-                    });
-                }
-                min.ifPresent(x -> x.setWispMinions(keys, player));
+                Random rand = new Random();
+                levelIn.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.BEACON_ACTIVATE, SoundSource.NEUTRAL, 0.5F, 0.4F / (rand.nextFloat() * 0.4F + 0.8F));
+
+                PlayerSkillCapabilityInterface playerCap = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerSkillCapability.INSTANCE);
+                int maxSummons = playerCap.getSkillsPoints(SkillEnum.WISP_ARMY);
+
+                PlayerMinionCapabilityInterface minionCap = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerMinionCapability.INSTANCE);
+                minionCap.summonWispComplete(levelIn, player, rand, () -> summonWisp(levelIn, player, rand), maxSummons, SoulWispArcher.class);
+
             }
             player.getCooldowns().addCooldown(icon.getItem(), 20);
         }
     }
+
 
     private SoulWisp summonWisp(Level levelIn, Player playerIn, Random rand) {
         BlockHitResult playerBlockRayResult = TargetUtils.getPlayerBlockRayResult();

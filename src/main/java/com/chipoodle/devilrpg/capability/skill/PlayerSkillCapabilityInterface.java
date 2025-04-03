@@ -40,4 +40,5 @@ public interface PlayerSkillCapabilityInterface extends IGenericCapability {
     ClientSkillBuilderFromJson getClientSkillBuilder();
     List<SkillEnum> getPassivesFromActiveSkill(SkillEnum skillEnum);
     SkillElement getSkillElementByEnum(SkillEnum skillEnum);
+    int getSkillsPoints(SkillEnum skillEnum) ;
 }

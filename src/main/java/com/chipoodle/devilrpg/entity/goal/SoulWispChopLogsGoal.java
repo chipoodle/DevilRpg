@@ -30,7 +30,7 @@ public class SoulWispChopLogsGoal extends Goal {
     private static final int TICKS_UNTIL_NEXT_HIT_LEAVES = 3;
     private static final int TICKS_WITHOUT_CHOPPING = 30;
     private final SoulWispChopper soulWisp;
-    private final int RADIUS = 5;
+    private final int RADIUS = 10;
     private BlockPos targetBlockPos;
     private int ticksUntilNextHit;
     private int currentTicksWithoutChopping;
@@ -109,7 +109,11 @@ public class SoulWispChopLogsGoal extends Goal {
     }
 
     private BlockPos getClosestLogOrLeafBlock() {
-        BlockPos soulWispBlockPos = this.soulWisp.blockPosition();
+        LivingEntity owner = soulWisp.getOwner();
+        if(owner == null)
+            return null;
+
+        BlockPos soulWispBlockPos = owner.blockPosition();
         ArrayList<TagKey<Block>> tagKeys = new ArrayList<>();
         tagKeys.add(BlockTags.LOGS);
         tagKeys.add(BlockTags.LEAVES);
