@@ -34,8 +34,8 @@ public class SkillTab {
     private static final int WIDGET_WIDTH = 28;
     // private static final int TAB_BACKGROUND_X = 234;
     // private static final int TAB_BACKGROUND_Y = 113;
-    private static final int TAB_BACKGROUND_X = 284;
-    private static final int TAB_BACKGROUND_Y = 163;
+    public static final int TAB_BACKGROUND_X = 284;
+    public static final int TAB_BACKGROUND_Y = 163;
     private final Minecraft minecraft;
     private final SkillScreen screen;
     private final SkillTabType type;
@@ -148,10 +148,15 @@ public class SkillTab {
      * Pinta la imagen de fondo dinámicamente inclusive al hacer scroll
      *
      * @param guiGraphics
-     * @param x coordenada absoluta X del area del arbol (origen)
-     * @param y coordenada absoluta Y del area del arbol (origen)
+     * @param localX     origen X local de la ventana (translate del pose)
+     * @param localY     origen Y local de la ventana (translate del pose)
+     * @param scissorX   coordenada X de pantalla (virtual) del area del arbol
+     * @param scissorY   coordenada Y de pantalla (virtual) del area del arbol
+     * @param scissorW   ancho del area del arbol en pantalla (virtual)
+     * @param scissorH   alto del area del arbol en pantalla (virtual)
      */
-    public void drawContents(GuiGraphics guiGraphics, int x, int y) {
+    public void drawContents(GuiGraphics guiGraphics, int localX, int localY,
+                             int scissorX, int scissorY, int scissorW, int scissorH) {
         if (!this.centered) {
             //Con este controlamos la posciion en x de los botones del árbol
             this.scrollX = (137 - (this.maxX + this.minX) / 2D);
@@ -163,10 +168,10 @@ public class SkillTab {
         // GUI ya no escriben en el depth buffer), por lo que el árbol se dibujaba sin recortar
         // y quedaba invisible/borroso. Vanilla ahora usa scissor en AdvancementTab.drawContents;
         // replicamos ese enfoque para recortar el contenido del árbol a la ventana.
-        guiGraphics.enableScissor(x, y, x + TAB_BACKGROUND_X, y + TAB_BACKGROUND_Y);
+        guiGraphics.enableScissor(scissorX, scissorY, scissorX + scissorW, scissorY + scissorH);
         PoseStack poseStack = guiGraphics.pose();
         poseStack.pushPose();
-        poseStack.translate(x, y, 0.0F);
+        poseStack.translate(localX, localY, 0.0F);
         // Pinta el fondo negro del area del arbol (como antes)
         guiGraphics.fill(TAB_BACKGROUND_X, TAB_BACKGROUND_Y, 0, 0, -16777216);
         // Pinta el mosaico dinámico del fondo así como los iconos y las conexiones del arbol de habilidades
@@ -186,20 +191,21 @@ public class SkillTab {
     private void generateBackgroundImageChunks(GuiGraphics guiGraphics) {
         int i = Mth.floor(this.scrollX);
         int j = Mth.floor(this.scrollY);
+        int k = i % BACKGROUND_CHUNKS;
+        int l = j % BACKGROUND_CHUNKS;
 
-        ResourceLocation resourcelocation = this.displayInfo.getBackground();
-        if (resourcelocation == null) {
-            resourcelocation = TextureManager.INTENTIONAL_MISSING_TEXTURE;
+        // Textura teselable generada a partir de mandala-a.png (64x64 seamless).
+        // Se repite en mosaico a 1:1 -> patron nitido (la imagen original de 1414x1414
+        // se aplastaba en cada baldosa y se veia borrosa).
+        ResourceLocation resourcelocation = ResourceLocation.parse(
+                DevilRpg.MODID + ":textures/gui/skill/mandala-tile.png");
+
+        for (int i1 = -1; i1 <= BACKGROUND_CHUNKS_X_LOOP; ++i1) {
+            for (int j1 = -1; j1 <= BACKGROUND_CHUNKS_Y_LOOP; ++j1) {
+                guiGraphics.blit(resourcelocation, k + BACKGROUND_CHUNKS * i1, l + BACKGROUND_CHUNKS * j1, 0.0F, 0.0F,
+                        BACKGROUND_CHUNKS, BACKGROUND_CHUNKS, BACKGROUND_CHUNKS, BACKGROUND_CHUNKS);
+            }
         }
-
-        // 1.21.1: el antiguo mosaico de baldosas de 64px muestreaba la textura completa
-        // (UV 0..1) en cada baldosa; con una imagen grande como mandala-a.png (1414x1414)
-        // eso la aplastaba 22x y se veia borrosa. Ahora se dibuja el fondo escalado para
-        // llenar el area del arbol manteniendo la proporcion (cuadrado); el scissor de
-        // drawContents recorta el exceso vertical.
-        guiGraphics.blit(resourcelocation, 0, 0, 0.0F, 0.0F, TAB_BACKGROUND_X, TAB_BACKGROUND_X,
-                TAB_BACKGROUND_X, TAB_BACKGROUND_X);
-
         // pinta las lineas
         this.root.drawConnectionLineToParent(guiGraphics, i, j, true);
         this.root.drawConnectionLineToParent(guiGraphics, i, j, false);

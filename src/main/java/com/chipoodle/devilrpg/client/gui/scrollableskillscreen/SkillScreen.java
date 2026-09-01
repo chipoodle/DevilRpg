@@ -68,6 +68,8 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     private boolean isDraggingToPowerButton;
     private int offsetLeft;
     private int offsetTop;
+    /** Escala para que la ventana (302x210) quepa en la pantalla virtual con cualquier guiScale */
+    private float fitScale = 1.0F;
     private InputConstants.Key openScreenKeyPressed;
     private SkillWidget draggedSkillWidget;
     private double posicionMouseX;
@@ -98,6 +100,11 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
 
     @Override
     protected void init() {
+        this.fitScale = Math.min(1.0F,
+                Math.min((float) this.width / WINDOW_WIDTH, (float) this.height / WINDOW_HEIGHT));
+        offsetLeft = (this.width - (int) (WINDOW_WIDTH * this.fitScale)) / 2;
+        offsetTop = (this.height - (int) (WINDOW_HEIGHT * this.fitScale)) / 2;
+
         this.tabs.clear();
         this.selectedTab = null;
         this.clientSkillManager.setListener(this);
@@ -130,8 +137,8 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     }
 
     private void addThemeButtons() {
-        int offLeft = (this.width - WINDOW_WIDTH) / 2;
-        int offTop = (this.height - WINDOW_HEIGHT) / 2;
+        int offLeft = offsetLeft;
+        int offTop = offsetTop;
 
 
         Button themeForward = Button.builder(
@@ -180,20 +187,33 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
 
-        offsetLeft = (this.width - WINDOW_WIDTH) / 2;
-        offsetTop = (this.height - WINDOW_HEIGHT) / 2;
+        // Escala la ventana para que quepa en la pantalla virtual con cualquier guiScale.
+        // Con guiScale 3 (virtual 284x160) la ventana de 302x210 se desbordaba y el
+        // contenido se veia ampliado/borroso. Con guiScale 1-2 fitScale=1 y el
+        // comportamiento es identico al original.
+        this.fitScale = Math.min(1.0F,
+                Math.min((float) this.width / WINDOW_WIDTH, (float) this.height / WINDOW_HEIGHT));
+        offsetLeft = (this.width - (int) (WINDOW_WIDTH * this.fitScale)) / 2;
+        offsetTop = (this.height - (int) (WINDOW_HEIGHT * this.fitScale)) / 2;
+
         this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
         if (maxPages != 0) {
             Component page = Component.literal(String.format("%d / %d", tabPage + 1, maxPages + 1));
             int width = this.font.width(page);
             //RenderSystem.disableLighting();
             guiGraphics.drawString(this.font, page.getVisualOrderText(),
-                    (int) (offsetLeft + ((float) WINDOW_WIDTH / 2) - ((float) width / 2)),
+                    (int) (offsetLeft + ((float) (WINDOW_WIDTH * this.fitScale) / 2) - ((float) width / 2)),
                     offsetTop - 44, -1, true);
         }
+        PoseStack pose = guiGraphics.pose();
+        pose.pushPose();
+        pose.translate(offsetLeft, offsetTop, 0.0F);
+        pose.scale(this.fitScale, this.fitScale, 1.0F);
+        // A partir de aqui se dibuja en coordenadas locales de la ventana (0..WINDOW_WIDTH)
         this.renderInside(guiGraphics, mouseX, mouseY);
         this.renderWindow(guiGraphics);
         this.renderTooltips(guiGraphics, mouseX, mouseY);
+        pose.popPose();
         super.render(guiGraphics, mouseX, mouseY, partialTick);
         this.renderSkillButtonPressed(guiGraphics);
     }
@@ -243,14 +263,16 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (button == ButtonMouse.LEFT_BUTTON) {
+            double lmX = (mouseX - offsetLeft) / this.fitScale;
+            double lmY = (mouseY - offsetTop) / this.fitScale;
             for (SkillTab rootSkillTabGui : this.tabs.values()) {
                 if (rootSkillTabGui.getPage() == tabPage) {
-                    if (rootSkillTabGui.isInsideTabSelector(offsetLeft, offsetTop, mouseX, mouseY)) {
+                    if (rootSkillTabGui.isInsideTabSelector(0, 0, lmX, lmY)) {
                         this.clientSkillManager.setSelectedTab(rootSkillTabGui.getSkillElement(), true);
                         break;
                     } else {
                         SkillWidget skillEntryGui = selectedTab.getIfInsideIncludingChildren(
-                                mouseX - offsetLeft - WINDOW_AREA_OFFSET_X, mouseY - offsetTop - WINDOW_AREA_OFFSET_Y);
+                                lmX - WINDOW_AREA_OFFSET_X, lmY - WINDOW_AREA_OFFSET_Y);
                         if (skillEntryGui != null && skillEntryGui.getSkillElement().getParent() != null && !skillEntryGui.isDisabled()) {
                             DevilRpg.LOGGER.info("|----------- mouseClicked: {}", skillEntryGui.getSkillElement().getSkillCapability());
                             this.playDownSound(Minecraft.getInstance().getSoundManager());
@@ -274,8 +296,10 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
             this.isScrolling = false;
 
             if (!isDraggingToPowerButton) {
+                double lmX = (mouseX - offsetLeft) / this.fitScale;
+                double lmY = (mouseY - offsetTop) / this.fitScale;
                 draggedSkillWidget = selectedTab.getIfInsideIncludingChildren(
-                        mouseX - offsetLeft - WINDOW_AREA_OFFSET_X, mouseY - offsetTop - WINDOW_AREA_OFFSET_Y);
+                        lmX - WINDOW_AREA_OFFSET_X, lmY - WINDOW_AREA_OFFSET_Y);
                 if (draggedSkillWidget != null && (draggedSkillWidget.isDisabled() || !draggedSkillWidget.getSkillProgress().hasProgress())) {
                     draggedSkillWidget = null;
                 }
@@ -339,9 +363,10 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
         RenderSystem.enableBlend();
         RenderSystem.setShader(GameRenderer::getPositionTexShader);
-        // Pinta la pantalla exterior
+        // Pinta la pantalla exterior (coordenadas locales de la ventana; el pose ya esta
+        // trasladado/escalado por render())
         RenderSystem.setShaderTexture(0, WINDOW_LOCATION);
-        guiGraphics.blit(WINDOW_LOCATION, offsetLeft, offsetTop, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT + INFO_SPACE, INITIAL_TEXTURE_WIDTH, INITIAL_TEXTURE_HEIGHT);
+        guiGraphics.blit(WINDOW_LOCATION, 0, 0, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT + INFO_SPACE, INITIAL_TEXTURE_WIDTH, INITIAL_TEXTURE_HEIGHT);
 
         if (this.tabs.size() > 1) {
             RenderSystem.setShaderTexture(0, TABS_LOCATION);
@@ -349,7 +374,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
             // Pinta todas las pestañas, tanto la seleccionada como las no seleccionadas
             for (SkillTab skillTabGui : this.tabs.values()) {
                 if (skillTabGui.getPage() == tabPage)
-                    skillTabGui.drawTab(guiGraphics, offsetLeft, offsetTop, skillTabGui == this.selectedTab);
+                    skillTabGui.drawTab(guiGraphics, 0, 0, skillTabGui == this.selectedTab);
             }
 
             RenderSystem.defaultBlendFunc();
@@ -358,19 +383,19 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
             for (SkillTab skillTab : this.tabs.values()) {
                 if (skillTab.getPage() == tabPage) {
                     //guiSkillTab.drawIcon(offsetLeft, offsetTop, this.itemRenderer);
-                    skillTab.drawIconImage(guiGraphics, offsetLeft, offsetTop);
+                    skillTab.drawIconImage(guiGraphics, 0, 0);
                 }
             }
             RenderSystem.disableBlend();
 
             // Pinta el título
-            guiGraphics.drawString(this.font, GUI_LABEL, (offsetLeft + 8), (offsetTop + 6), 4210752);
+            guiGraphics.drawString(this.font, GUI_LABEL, 8, 6, 4210752);
 
             int unspentPoints = expCap == null ? -1 : expCap.getUnspentPoints();
             if (unspentPoints != 0) {
                 Component unspentSkillHolder = Component.literal(UNSPENT_LABEL.getString() + " " + unspentPoints);
                 //Pinta puntos sin usar
-                guiGraphics.drawString(this.font, unspentSkillHolder, (offsetLeft + 8), (offsetTop + WINDOW_HEIGHT), 4210752);
+                guiGraphics.drawString(this.font, unspentSkillHolder, 8, WINDOW_HEIGHT, 4210752);
             }
 
             //this.font.draw(poseStack, Component.literal("x:"+d.format(posicionMouseX)+" y:"+d.format(posicionMouseY)), (float) posicionMouseX,(float)posicionMouseY, 10526880);
@@ -391,15 +416,21 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
         SkillTab selectedSkillTabGui = this.selectedTab;
         // Pinta el fondo vacío cuando no hay elementos
         if (selectedSkillTabGui == null) {
-            guiGraphics.fill(offsetLeft + WINDOW_AREA_OFFSET_X, offsetTop + WINDOW_AREA_OFFSET_Y,
-                    offsetLeft + WINDOW_AREA_OFFSET_X + INNER_SCREEN_WIDTH,
-                    offsetTop + WINDOW_AREA_OFFSET_Y + INNER_SCREEN_HEIGHT, -16777216);
-            int i = offsetLeft + WINDOW_AREA_OFFSET_X + 117;
-            guiGraphics.drawCenteredString(this.font, EMPTY, i, offsetTop + WINDOW_AREA_OFFSET_Y + 56 - WINDOW_AREA_OFFSET_X / 2, -1);
-            guiGraphics.drawCenteredString(this.font, SAD_LABEL, i, offsetTop + WINDOW_AREA_OFFSET_Y + INNER_SCREEN_HEIGHT - WINDOW_AREA_OFFSET_X, -1);
+            guiGraphics.fill(WINDOW_AREA_OFFSET_X, WINDOW_AREA_OFFSET_Y,
+                    WINDOW_AREA_OFFSET_X + INNER_SCREEN_WIDTH,
+                    WINDOW_AREA_OFFSET_Y + INNER_SCREEN_HEIGHT, -16777216);
+            int i = WINDOW_AREA_OFFSET_X + 117;
+            guiGraphics.drawCenteredString(this.font, EMPTY, i, WINDOW_AREA_OFFSET_Y + 56 - WINDOW_AREA_OFFSET_X / 2, -1);
+            guiGraphics.drawCenteredString(this.font, SAD_LABEL, i, WINDOW_AREA_OFFSET_Y + INNER_SCREEN_HEIGHT - WINDOW_AREA_OFFSET_X, -1);
         } else {
-            // Pinta el fondo con elementos (drawContents aplica su propio scissor y translate)
-            selectedSkillTabGui.drawContents(guiGraphics, offsetLeft + WINDOW_AREA_OFFSET_X, offsetTop + WINDOW_AREA_OFFSET_Y);
+            // Pinta el fondo con elementos: drawContents aplica su propio translate (origen
+            // local de la ventana) y el scissor en coordenadas de pantalla (virtual)
+            selectedSkillTabGui.drawContents(guiGraphics,
+                    WINDOW_AREA_OFFSET_X, WINDOW_AREA_OFFSET_Y,
+                    (int) (offsetLeft + WINDOW_AREA_OFFSET_X * this.fitScale),
+                    (int) (offsetTop + WINDOW_AREA_OFFSET_Y * this.fitScale),
+                    (int) (SkillTab.TAB_BACKGROUND_X * this.fitScale),
+                    (int) (SkillTab.TAB_BACKGROUND_Y * this.fitScale));
             RenderSystem.depthFunc(515);
             RenderSystem.disableDepthTest();
         }
@@ -408,17 +439,19 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     @SuppressWarnings("deprecation")
     private void renderTooltips(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+        // mouse en coordenadas locales de la ventana (diseno)
+        double lmX = (mouseX - offsetLeft) / this.fitScale;
+        double lmY = (mouseY - offsetTop) / this.fitScale;
         // pinta los tooltips de los botones
         if (this.selectedTab != null) {
             PoseStack poseStack = guiGraphics.pose();
             poseStack.pushPose();
             //RenderSystem.enableDepthTest();
-            poseStack.translate((float) (offsetLeft + WINDOW_AREA_OFFSET_X), (float) (offsetTop + WINDOW_AREA_OFFSET_Y), 400.0F);
+            poseStack.translate(WINDOW_AREA_OFFSET_X, WINDOW_AREA_OFFSET_Y, 400.0F);
             this.selectedTab.drawTabTooltips(guiGraphics,
-                    mouseX - offsetLeft - WINDOW_AREA_OFFSET_X,
-                    mouseY - offsetTop - WINDOW_AREA_OFFSET_Y,
-                    offsetLeft,
-                    offsetTop);
+                    (int) lmX - WINDOW_AREA_OFFSET_X,
+                    (int) lmY - WINDOW_AREA_OFFSET_Y,
+                    0, 0);
             RenderSystem.disableDepthTest();
             poseStack.popPose();
         }
@@ -427,8 +460,8 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
         if (this.tabs.size() > 1) {
             for (SkillTab skillTabGui : this.tabs.values()) {
                 if (skillTabGui.getPage() == tabPage
-                        && skillTabGui.isInsideTabSelector(offsetLeft, offsetTop, mouseX, mouseY)) {
-                    guiGraphics.renderTooltip(this.font, skillTabGui.getTitle(), mouseX, mouseY);
+                        && skillTabGui.isInsideTabSelector(0, 0, lmX, lmY)) {
+                    guiGraphics.renderTooltip(this.font, skillTabGui.getTitle(), (int) lmX, (int) lmY);
                 }
             }
         }
@@ -523,8 +556,8 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     protected void addPowerButtons() {
         int k = 0;
 
-        int offLeft = (this.width - WINDOW_WIDTH) / 2;
-        int offTop = (this.height - WINDOW_HEIGHT) / 2;
+        int offLeft = offsetLeft;
+        int offTop = offsetTop;
         PowerEnum[] powerList = PowerEnum.values();
         //k = powerList.size();
         for (PowerEnum powerEnum : powerList) {
