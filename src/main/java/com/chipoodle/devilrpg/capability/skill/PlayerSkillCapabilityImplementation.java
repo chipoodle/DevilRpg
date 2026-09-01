@@ -88,7 +88,9 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
         }
         for (SkillEnum s : filteredSkillList) {
             ResourceLocation imageOfSkill = clientBuilder.getImageOfSkill(s);
-            imagesOfSkills.put(s, imageOfSkill.toString());
+            if (imageOfSkill != null) {
+                imagesOfSkills.put(s, imageOfSkill.toString());
+            }
         }
 
         try {

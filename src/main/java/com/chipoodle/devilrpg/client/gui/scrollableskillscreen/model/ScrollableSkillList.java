@@ -133,6 +133,10 @@ public class ScrollableSkillList {
 
 	public ResourceLocation getImageOfSkill(SkillEnum skillEnum) {
 		SkillElement skillElement = skillEnumHashMap.get(skillEnum);
+		if (skillElement == null) {
+			LOGGER.warn("No skill element registered for skill {}", skillEnum);
+			return null;
+		}
 		SkillDisplayInfo display = skillElement.getDisplay();
 		if(Objects.nonNull(display)){
 			return display.getImage();

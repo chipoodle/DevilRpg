@@ -37,6 +37,7 @@
     "item.devilrpg.mana_berry": "Mana Berry",
     "effect.devilrpg.knockback_resistance": "Knock-back Immunity",
     "effect.devilrpg.entangling": "Entangling",
-    "item.devilrpg.soullichenblock.tooltip": "Soul Lichen"
+    "item.devilrpg.soullichenblock.tooltip": "Soul Lichen",
+    "devilrpg.subtitle.summon": "Metal sword sound"
 
 }

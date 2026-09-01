@@ -50,7 +50,7 @@
         "display": {
             "description": {
                 "text": "Marks the druid's first step in mastering the arcane forces of nature, allowing them to harness natural energies and transmute seeds into powerful abilities.It sets the foundation for commanding vines, plants, and the elements in harmony with nature’s balance.",
-                "color": "orange"
+                "color": "gold"
             },
             "icon": {
                 "item": "minecraft:stone"
