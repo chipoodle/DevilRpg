@@ -54,10 +54,21 @@ public class SkillsIconHudOverlay {
         int i = 0;
         for (PowerEnum power : powerList) {
             SkillEnum aSkillEnum = powerToSkillDictionary.getOrDefault(power, SkillEnum.EMPTY);
+            if (aSkillEnum == null) {
+                // Ranura de poder sin skill asignada (estado inicial: el mapa contiene null)
+                aSkillEnum = SkillEnum.EMPTY;
+            }
             SkillElement skillElementByEnum = skillCap.getSkillElementByEnum(aSkillEnum);
-            if (skillElementByEnum == null)
-                throw new RuntimeException("Failed to find SkillElement for skill: " + aSkillEnum);
-
+            if (skillElementByEnum == null) {
+                // Skill asignada pero sin elemento en el arbol (p. ej. save antiguo con skill eliminada):
+                // tratar la ranura como vacia en lugar de tumbar el juego
+                DevilRpg.LOGGER.warn("Skill element not found for power {}, showing empty slot", power);
+                aSkillEnum = SkillEnum.EMPTY;
+                skillElementByEnum = skillCap.getSkillElementByEnum(aSkillEnum);
+                if (skillElementByEnum == null) {
+                    continue; // arbol de skills no disponible: no dibujar esta ranura
+                }
+            }
             Item item = Objects.requireNonNull(skillElementByEnum.getDisplay()).getIcon().getItem();
             String keyName = ClientModKeyInputEventSubscriber.KeyEvent.getKeyName(power);
 
