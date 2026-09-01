@@ -179,10 +179,16 @@ public class CommonForgeInteractionEventSubscriber {
      * Updates potion effects on client
      */
     @SubscribeEvent
-    public static void onPotionEvent(MobEffectEvent event) {
+    public static void onPotionAddedEvent(MobEffectEvent.Added event) {
+        handlePotionEvent(event);
+    }
 
-        if (!(event instanceof MobEffectEvent.Added) && !(event instanceof MobEffectEvent.Expired))
-            return;
+    @SubscribeEvent
+    public static void onPotionExpiredEvent(MobEffectEvent.Expired event) {
+        handlePotionEvent(event);
+    }
+
+    private static void handlePotionEvent(MobEffectEvent event) {
 
         if (
                 event.getEntity() instanceof ISoulEntity &&

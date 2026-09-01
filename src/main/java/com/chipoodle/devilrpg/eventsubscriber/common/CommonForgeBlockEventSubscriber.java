@@ -6,30 +6,15 @@ import com.chipoodle.devilrpg.block.SoulVineBlock;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.Mod;
 
 @EventBusSubscriber(modid = DevilRpg.MODID)
 public class CommonForgeBlockEventSubscriber {
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
-    public static void onBlockEventEntityPlaceEvent(BlockEvent event) {
-
-        if (event instanceof BlockEvent.FluidPlaceBlockEvent placeBlockEvent) {
-            //DevilRpg.LOGGER.info("------------------>BlockForgeEventHandler.FluidPlaceBlockEvent.");
-
-        }
-
-        if (event instanceof BlockEvent.EntityMultiPlaceEvent placeBlockEvent) {
-            //DevilRpg.LOGGER.info("------------------>BlockForgeEventHandler.EntityMultiPlaceEvent. Is Client? {}.", Objects.requireNonNull(placeBlockEvent.getEntity()).level.isClientSide);
-        }
-
-        if (event instanceof BlockEvent.EntityPlaceEvent placeBlockEvent) {
-           // DevilRpg.LOGGER.info("------------------>BlockForgeEventHandler.onBlockEventEntityPlaceEvent. Is Client? {}.", Objects.requireNonNull(placeBlockEvent.getEntity()).level.isClientSide);
-
-            if (placeBlockEvent.getPlacedBlock().getBlock() instanceof SoulVineBlock block) {
-                //block.setCustomGrowthDirection(Objects.requireNonNull(placeBlockEvent.getEntity()).getDirection());
-
-            }
+    public static void onBlockEventEntityPlaceEvent(BlockEvent.EntityPlaceEvent event) {
+        //DevilRpg.LOGGER.info("------------------>BlockForgeEventHandler.EntityPlaceEvent.");
+        if (event.getPlacedBlock().getBlock() instanceof SoulVineBlock block) {
+            //block.setCustomGrowthDirection(Objects.requireNonNull(placeBlockEvent.getEntity()).getDirection());
         }
     }
 

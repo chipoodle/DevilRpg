@@ -305,7 +305,7 @@ public class PlayerCapabilityForgeEventSubscriber {
     }
 
     @SubscribeEvent(priority = EventPriority.NORMAL)
-    public void onPlayerPickupXP(PlayerXpEvent.PickupXp e) {
+    public static void onPlayerPickupXP(PlayerXpEvent.PickupXp e) {
         //e.getOrb().value *= 0.5;
     }
 }
