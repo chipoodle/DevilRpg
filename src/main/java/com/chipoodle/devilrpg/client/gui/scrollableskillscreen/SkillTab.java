@@ -186,27 +186,25 @@ public class SkillTab {
     private void generateBackgroundImageChunks(GuiGraphics guiGraphics) {
         int i = Mth.floor(this.scrollX);
         int j = Mth.floor(this.scrollY);
-        int k = i % BACKGROUND_CHUNKS;
-        int l = j % BACKGROUND_CHUNKS;
 
         ResourceLocation resourcelocation = this.displayInfo.getBackground();
         if (resourcelocation == null) {
             resourcelocation = TextureManager.INTENTIONAL_MISSING_TEXTURE;
         }
 
-        for (int i1 = -1; i1 <= BACKGROUND_CHUNKS_X_LOOP; ++i1) {//18
-            for (int j1 = -1; j1 <= BACKGROUND_CHUNKS_Y_LOOP; ++j1) { //11
-                guiGraphics.blit(resourcelocation, k + BACKGROUND_CHUNKS * i1, l + BACKGROUND_CHUNKS * j1, 0.0F, 0.0F, BACKGROUND_CHUNKS,
-                        BACKGROUND_CHUNKS, BACKGROUND_CHUNKS, BACKGROUND_CHUNKS);
-            }
-        }
+        // 1.21.1: el antiguo mosaico de baldosas de 64px muestreaba la textura completa
+        // (UV 0..1) en cada baldosa; con una imagen grande como mandala-a.png (1414x1414)
+        // eso la aplastaba 22x y se veia borrosa. Ahora se dibuja el fondo escalado para
+        // llenar el area del arbol manteniendo la proporcion (cuadrado); el scissor de
+        // drawContents recorta el exceso vertical.
+        guiGraphics.blit(resourcelocation, 0, 0, 0.0F, 0.0F, TAB_BACKGROUND_X, TAB_BACKGROUND_X,
+                TAB_BACKGROUND_X, TAB_BACKGROUND_X);
+
         // pinta las lineas
         this.root.drawConnectionLineToParent(guiGraphics, i, j, true);
         this.root.drawConnectionLineToParent(guiGraphics, i, j, false);
         // Pinta los skills
         this.root.drawSkills(guiGraphics, i, j);
-
-
     }
 
     /**
