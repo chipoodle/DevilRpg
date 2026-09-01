@@ -200,6 +200,9 @@ public class SkillTab {
         ResourceLocation resourcelocation = ResourceLocation.parse(
                 DevilRpg.MODID + ":textures/gui/skill/mandala-tile.png");
 
+        // Fuerza filtrado NEAREST para que la ampliacion de la textura se vea nitida
+        SkillWidget.forceNearestFilter(resourcelocation);
+
         for (int i1 = -1; i1 <= BACKGROUND_CHUNKS_X_LOOP; ++i1) {
             for (int j1 = -1; j1 <= BACKGROUND_CHUNKS_Y_LOOP; ++j1) {
                 guiGraphics.blit(resourcelocation, k + BACKGROUND_CHUNKS * i1, l + BACKGROUND_CHUNKS * j1, 0.0F, 0.0F,

@@ -365,11 +365,11 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
         RenderSystem.setShader(GameRenderer::getPositionTexShader);
         // Pinta la pantalla exterior (coordenadas locales de la ventana; el pose ya esta
         // trasladado/escalado por render())
-        RenderSystem.setShaderTexture(0, WINDOW_LOCATION);
+        SkillWidget.forceNearestFilter(WINDOW_LOCATION);
         guiGraphics.blit(WINDOW_LOCATION, 0, 0, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT + INFO_SPACE, INITIAL_TEXTURE_WIDTH, INITIAL_TEXTURE_HEIGHT);
 
         if (this.tabs.size() > 1) {
-            RenderSystem.setShaderTexture(0, TABS_LOCATION);
+            SkillWidget.forceNearestFilter(TABS_LOCATION);
 
             // Pinta todas las pestañas, tanto la seleccionada como las no seleccionadas
             for (SkillTab skillTabGui : this.tabs.values()) {

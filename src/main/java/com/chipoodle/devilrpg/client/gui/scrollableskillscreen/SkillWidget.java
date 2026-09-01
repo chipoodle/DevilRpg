@@ -281,6 +281,18 @@ public class SkillWidget {
      * @param x
      * @param y
      */
+    /**
+     * Fuerza el filtrado NEAREST en una textura de la GUI. En 1.21.1 las texturas se suben
+     * sin configurar el filtro y OpenGL usa el valor por defecto (MAG=GL_LINEAR), por lo que
+     * al ampliarlas (la ventana de skills amplía texturas de 256px) se ven borrosas/desenfocadas.
+     * Con NEAREST la ampliación queda nítida (pixelada) como en 1.19.4.
+     */
+    public static void forceNearestFilter(ResourceLocation rl) {
+        RenderSystem.setShaderTexture(0, rl);
+        GlStateManager._texParameter(3553, 10240, 9728); // GL_TEXTURE_MAG_FILTER = GL_NEAREST
+        GlStateManager._texParameter(3553, 10241, 9728); // GL_TEXTURE_MIN_FILTER = GL_NEAREST
+    }
+
     public void drawSkills(GuiGraphics guiGraphics, int x, int y) {
         // DevilRpg.LOGGER.info("|---drawSkill x" +x+" y "+y+" title: "+
         // this.displayInfo.getTitle());
@@ -291,7 +303,7 @@ public class SkillWidget {
 
             // Texturas de los marcos, y barras de título de los tooltips
             RenderSystem.setShader(GameRenderer::getPositionTexShader);
-            RenderSystem.setShaderTexture(0, WIDGETS);
+            forceNearestFilter(WIDGETS);
 
             // Pinta el icono del botón
             guiGraphics.blit(WIDGETS, x + this.x + 3, y + this.y, this.getDisplayInfo().getFrame().getIcon(),
@@ -342,7 +354,7 @@ public class SkillWidget {
 
         int k = this.width - j;
         RenderSystem.setShader(GameRenderer::getPositionTexShader);
-        RenderSystem.setShaderTexture(0, WIDGETS);
+        forceNearestFilter(WIDGETS);
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
         RenderSystem.enableBlend();
 
@@ -487,7 +499,7 @@ public class SkillWidget {
             }
         }
 
-        RenderSystem.setShaderTexture(0, image);
+        forceNearestFilter(image);
         //this.minecraft.getTextureManager().bind(image);
         matrixStack.translate((posX), (posY), 0);
         matrixStack.scale(xScale, yScale, 0);

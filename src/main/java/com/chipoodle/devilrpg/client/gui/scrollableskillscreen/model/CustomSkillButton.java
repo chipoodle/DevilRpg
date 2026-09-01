@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model;
 
+import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillWidget;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
@@ -73,11 +74,12 @@ public class CustomSkillButton extends Button {
             poseStack.pushPose();
             int i = this.isHoveredOrFocused()? 2 : 1;
             //ScreenUtils.blitWithBorder(poseStack, WIDGETS_LOCATION, this.getX(), this.getY(), 0, 46 + i * 20, this.width, this.height, 200, 20, 2, 3, 2, 2, this.getBlitOffset());
+            SkillWidget.forceNearestFilter(WIDGETS_LOCATION);
             ScreenUtils.blitWithBorder(guiGraphics, WIDGETS_LOCATION, this.getX(), this.getY(), 0, 46 + i * 20, this.width, this.height, 200, 20, 2, 3, 2, 2, 0);
             poseStack.popPose();
 
             RenderSystem.setShader(GameRenderer::getPositionTexShader);
-            RenderSystem.setShaderTexture(0, skillResourceLocation);
+            SkillWidget.forceNearestFilter(skillResourceLocation);
             RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, this.alpha);
 
             RenderSystem.enableBlend();

@@ -106,7 +106,7 @@ public enum SkillTabType {
         PoseStack poseStack = guiGraphics.pose();
         poseStack.pushPose();
         RenderSystem.enableDepthTest();
-        RenderSystem.setShaderTexture(0, skillWidget.getDisplayInfo().getImage());
+        SkillWidget.forceNearestFilter(skillWidget.getDisplayInfo().getImage());
 
         poseStack.translate((i - 2), (j), 0);
         poseStack.scale(xScale, yScale, 0);
