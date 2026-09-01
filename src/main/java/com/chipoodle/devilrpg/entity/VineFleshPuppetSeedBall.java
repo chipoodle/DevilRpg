@@ -26,9 +26,8 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.network.NetworkHooks;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import org.jetbrains.annotations.NotNull;
 
 
@@ -49,7 +48,7 @@ public class VineFleshPuppetSeedBall extends ThrowableItemProjectile implements 
 
     @OnlyIn(Dist.CLIENT)
     private ParticleOptions getParticle() {
-        ItemStack itemstack = this.getItemRaw();
+        ItemStack itemstack = this.getItem();
         return itemstack.isEmpty() ? ParticleTypes.SMALL_FLAME : new ItemParticleOption(ParticleTypes.ITEM, itemstack);
     }
 
@@ -61,7 +60,7 @@ public class VineFleshPuppetSeedBall extends ThrowableItemProjectile implements 
             ParticleOptions iparticledata = this.getParticle();
 
             for (int i = 0; i < 8; ++i) {
-                this.level.addParticle(iparticledata, this.getX(), this.getY(), this.getZ(), 0.0D, 0.0D, 0.0D);
+                this.level().addParticle(iparticledata, this.getX(), this.getY(), this.getZ(), 0.0D, 0.0D, 0.0D);
             }
         }
 
@@ -71,10 +70,10 @@ public class VineFleshPuppetSeedBall extends ThrowableItemProjectile implements 
     protected void onHitBlock(@NotNull BlockHitResult blockHitResult) {
         //DevilRpg.LOGGER.debug("---onHitBlock");
         super.onHitBlock(blockHitResult);
-        if (!this.level.isClientSide && this.getOwner() != null) {
+        if (!this.level().isClientSide && this.getOwner() != null) {
             BlockPos blockPos = blockHitResult.getBlockPos();
             PlayerSkillCapabilityInterface unwrappedPlayerCapability = IGenericCapability.getUnwrappedPlayerCapability((Player) this.getOwner(), PlayerSkillCapability.INSTANCE);
-            //setLichen(this.level, (Player) this.getOwner(), blockPos, unwrappedPlayerCapability);
+            //setLichen(this.level(), (Player) this.getOwner(), blockPos, unwrappedPlayerCapability);
         }
     }
 
@@ -86,7 +85,7 @@ public class VineFleshPuppetSeedBall extends ThrowableItemProjectile implements 
         super.onHitEntity(result);
         Entity targetEntity = result.getEntity();
 
-        if (!this.level.isClientSide) {
+        if (!this.level().isClientSide) {
             if (targetEntity instanceof LivingEntity livingEntity) {
                 PlayerSkillCapabilityInterface unwrappedPlayerCapability = IGenericCapability.getUnwrappedPlayerCapability((Player) this.getOwner(), PlayerSkillCapability.INSTANCE);
                 int skillPoints = unwrappedPlayerCapability.getSkillsPoints().get(SkillEnum.VINEFLESHBALL);
@@ -107,8 +106,8 @@ public class VineFleshPuppetSeedBall extends ThrowableItemProjectile implements 
     @Override
     protected void onHit(@NotNull HitResult result) {
         super.onHit(result);
-        if (!this.level.isClientSide) {
-            this.level.broadcastEntityEvent(this, (byte) 3);
+        if (!this.level().isClientSide) {
+            this.level().broadcastEntityEvent(this, (byte) 3);
             //this.remove(RemovalReason.DISCARDED);
             this.discard();
         }
@@ -123,9 +122,5 @@ public class VineFleshPuppetSeedBall extends ThrowableItemProjectile implements 
         }*/
     }
 
-    @Override
-    public @NotNull Packet<ClientGamePacketListener> getAddEntityPacket() {
-        return NetworkHooks.getEntitySpawningPacket(this);
-    }
 
 }

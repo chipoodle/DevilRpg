@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.client.gui.scrollableskillscreen;
 
+import net.neoforged.neoforge.network.PacketDistributor;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapability;
 import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapabilityInterface;
@@ -9,7 +10,7 @@ import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model.ClientSkill
 import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model.CustomSkillButton;
 import com.chipoodle.devilrpg.eventsubscriber.client.ClientModKeyInputEventSubscriber;
 import com.chipoodle.devilrpg.init.ModNetwork;
-import com.chipoodle.devilrpg.network.handler.PlayerPassiveSkillServerHandler;
+import com.chipoodle.devilrpg.network.payload.PlayerPassiveSkillPayload;
 import com.chipoodle.devilrpg.util.PowerEnum;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import com.google.common.collect.Maps;
@@ -18,6 +19,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.GameNarrator;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.GameRenderer;
@@ -28,9 +30,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.common.util.LazyOptional;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 import javax.annotation.Nullable;
 import java.text.DecimalFormat;
@@ -48,9 +49,9 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     private static final int WINDOW_HEIGHT = 190;
     private static final int INFO_SPACE = 20;
     private static final String IMG_LOCATION = DevilRpg.MODID + ":textures/gui/";
-    private static final ResourceLocation WINDOW_LOCATION = new ResourceLocation(IMG_LOCATION + "window-256b.png");
-    private static final ResourceLocation TABS_LOCATION = new ResourceLocation("textures/gui/advancements/tabs.png");
-    private static final ResourceLocation EMPTY_POWER_IMAGE_RESOURCE = new ResourceLocation(IMG_LOCATION + "empty-box.png");
+    private static final ResourceLocation WINDOW_LOCATION = ResourceLocation.parse(IMG_LOCATION + "window-256b.png");
+    private static final ResourceLocation TABS_LOCATION = ResourceLocation.parse("textures/gui/advancements/tabs.png");
+    private static final ResourceLocation EMPTY_POWER_IMAGE_RESOURCE = ResourceLocation.parse(IMG_LOCATION + "empty-box.png");
 
     private static final Component SAD_LABEL = Component.translatable("advancements.sad_label");
     private static final Component EMPTY = Component.translatable("advancements.empty");
@@ -73,8 +74,8 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     private double posicionMouseY;
     private double dragPositionMouseX;
     private double dragPositionMouseY;
-    private LazyOptional<PlayerSkillCapabilityInterface> skillCap;
-    private LazyOptional<PlayerExperienceCapabilityInterface> expCap;
+    private PlayerSkillCapabilityInterface skillCap;
+    private PlayerExperienceCapabilityInterface expCap;
     private Set<CustomSkillButton> powerButtonList;
 
     private SkillScreen() {
@@ -84,9 +85,9 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
         skillsImages = new EnumMap<>(SkillEnum.class);
         Minecraft instance = Minecraft.getInstance();
         this.player = instance.player;
-        expCap = Objects.requireNonNull(player).getCapability(PlayerExperienceCapability.INSTANCE);
-        skillCap = player.getCapability(PlayerSkillCapability.INSTANCE);
-        this.clientSkillManager = skillCap.map(PlayerSkillCapabilityInterface::getClientSkillBuilder).orElse(null);
+        expCap = Objects.requireNonNull(player).getData(PlayerExperienceCapability.INSTANCE);
+        skillCap = player.getData(PlayerSkillCapability.INSTANCE);
+        this.clientSkillManager = skillCap == null ? null : skillCap.getClientSkillBuilder();
     }
 
     public SkillScreen(InputConstants.Key input) {
@@ -177,34 +178,36 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     }
 
     @Override
-    public void render(PoseStack poseStack, int mouseX, int mouseY, float partialTicks) {
+    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
 
         offsetLeft = (this.width - WINDOW_WIDTH) / 2;
         offsetTop = (this.height - WINDOW_HEIGHT) / 2;
-        this.renderBackground(poseStack);
+        this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
         if (maxPages != 0) {
             Component page = Component.literal(String.format("%d / %d", tabPage + 1, maxPages + 1));
             int width = this.font.width(page);
             //RenderSystem.disableLighting();
-            this.font.drawShadow(poseStack, page.getVisualOrderText(), offsetLeft + ((float) WINDOW_WIDTH / 2) - ((float) width / 2),
-                    offsetTop - 44, -1);
+            guiGraphics.drawString(this.font, page.getVisualOrderText(),
+                    (int) (offsetLeft + ((float) WINDOW_WIDTH / 2) - ((float) width / 2)),
+                    offsetTop - 44, -1, true);
         }
-        this.renderInside(poseStack, mouseX, mouseY);
-        this.renderWindow(poseStack);
-        this.renderTooltips(poseStack, mouseX, mouseY);
-        super.render(poseStack, mouseX, mouseY, partialTicks);
-        this.renderSkillButtonPressed(poseStack);
+        this.renderInside(guiGraphics, mouseX, mouseY);
+        this.renderWindow(guiGraphics);
+        this.renderTooltips(guiGraphics, mouseX, mouseY);
+        super.render(guiGraphics, mouseX, mouseY, partialTick);
+        this.renderSkillButtonPressed(guiGraphics);
     }
 
-    private void renderSkillButtonPressed(PoseStack poseStack) {
+    private void renderSkillButtonPressed(GuiGraphics guiGraphics) {
         if (draggedSkillWidget != null) {
 
+            PoseStack poseStack = guiGraphics.pose();
             poseStack.pushPose();
             RenderSystem.applyModelViewMatrix();
             RenderSystem.setShader(GameRenderer::getPositionTexShader);
 
             // Pinta la imagen del botón
-            draggedSkillWidget.drawButton(poseStack, (int) posicionMouseX, (int) posicionMouseY, false,
+            draggedSkillWidget.drawButton(guiGraphics, (int) posicionMouseX, (int) posicionMouseY, false,
                     draggedSkillWidget.getDisplayInfo().getImage(), true, draggedSkillWidget.isDisabled());
 
             poseStack.popPose();
@@ -215,25 +218,25 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
         SkillEnum skillEnum = skillEntryGui.getSkillElement().getSkillCapability();
         DevilRpg.LOGGER.debug("|----------- skillButtonPressed: {}", skillEnum);
         if (!skillEnum.equals(SkillEnum.EMPTY)) {
-            skillCap.ifPresent(aSkillCap -> {
-                HashMap<SkillEnum, Integer> skillsPoints = aSkillCap.getSkillsPoints();
-                HashMap<SkillEnum, Integer> skillsMaxPoints = aSkillCap.getMaxSkillsPoints();
+            if (skillCap != null) {
+                HashMap<SkillEnum, Integer> skillsPoints = skillCap.getSkillsPoints();
+                HashMap<SkillEnum, Integer> skillsMaxPoints = skillCap.getMaxSkillsPoints();
                 Integer points = skillsPoints.get(skillEnum);
                 Integer maxPoints = skillsMaxPoints.get(skillEnum);
                 if (points < maxPoints) {
-                    points += expCap.map(PlayerExperienceCapabilityInterface::consumePoint).orElse(0);
+                    points += expCap == null ? 0 : expCap.consumePoint();
                     skillsPoints.put(skillEnum, points);
-                    aSkillCap.setSkillsPoints(skillsPoints, player);
+                    skillCap.setSkillsPoints(skillsPoints, player);
                     skillEntryGui.updateFormattedLevelString(points, maxPoints);
 
 
                     if (skillEnum.isPassive() && !skillEnum.isForMinion()) {
                         //Para pasivos
-                        CompoundTag compoundTag = aSkillCap.setSkillToByteArray(skillEnum);
-                        ModNetwork.CHANNEL.sendToServer(new PlayerPassiveSkillServerHandler(compoundTag));
+                        CompoundTag compoundTag = skillCap.setSkillToByteArray(skillEnum);
+                        PacketDistributor.sendToServer(new PlayerPassiveSkillPayload(compoundTag));
                     }
                 }
-            });
+            }
         }
     }
 
@@ -312,10 +315,10 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
             CustomSkillButton copy = powerButtonList.stream().filter(x -> x.isInside(mouseX, mouseY)).findAny().orElse(null);
             if (copy != null) {
                 copy.setButtonTexture(draggedSkillWidget.getDisplayInfo().getImage());
-                HashMap<PowerEnum, SkillEnum> powerNames = skillCap.map(PlayerSkillCapabilityInterface::getSkillsNameOfPowers).orElse(null);
+                HashMap<PowerEnum, SkillEnum> powerNames = skillCap == null ? null : skillCap.getSkillsNameOfPowers();
                 if (powerNames != null) {
                     powerNames.put((PowerEnum) copy.getEnum(), draggedSkillWidget.getSkillElement().getSkillCapability());
-                    skillCap.ifPresent(x -> x.setSkillsNameOfPowers(powerNames, player));
+                    if (skillCap != null) skillCap.setSkillsNameOfPowers(powerNames, player);
                     addPowerButtons();
                     loadAssignedPowerButtons();
                 }
@@ -332,13 +335,13 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     }
 
     @SuppressWarnings("deprecation")
-    public void renderWindow(PoseStack poseStack) {
+    public void renderWindow(GuiGraphics guiGraphics) {
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
         RenderSystem.enableBlend();
         RenderSystem.setShader(GameRenderer::getPositionTexShader);
         // Pinta la pantalla exterior
         RenderSystem.setShaderTexture(0, WINDOW_LOCATION);
-        blit(poseStack, offsetLeft, offsetTop, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT + INFO_SPACE, INITIAL_TEXTURE_WIDTH, INITIAL_TEXTURE_HEIGHT);
+        guiGraphics.blit(WINDOW_LOCATION, offsetLeft, offsetTop, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT + INFO_SPACE, INITIAL_TEXTURE_WIDTH, INITIAL_TEXTURE_HEIGHT);
 
         if (this.tabs.size() > 1) {
             RenderSystem.setShaderTexture(0, TABS_LOCATION);
@@ -346,7 +349,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
             // Pinta todas las pestañas, tanto la seleccionada como las no seleccionadas
             for (SkillTab skillTabGui : this.tabs.values()) {
                 if (skillTabGui.getPage() == tabPage)
-                    skillTabGui.drawTab(poseStack, offsetLeft, offsetTop, skillTabGui == this.selectedTab);
+                    skillTabGui.drawTab(guiGraphics, offsetLeft, offsetTop, skillTabGui == this.selectedTab);
             }
 
             RenderSystem.defaultBlendFunc();
@@ -355,19 +358,19 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
             for (SkillTab skillTab : this.tabs.values()) {
                 if (skillTab.getPage() == tabPage) {
                     //guiSkillTab.drawIcon(offsetLeft, offsetTop, this.itemRenderer);
-                    skillTab.drawIconImage(poseStack, offsetLeft, offsetTop);
+                    skillTab.drawIconImage(guiGraphics, offsetLeft, offsetTop);
                 }
             }
             RenderSystem.disableBlend();
 
             // Pinta el título
-            this.font.draw(poseStack, GUI_LABEL, (offsetLeft + 8), (offsetTop + 6), 4210752);
+            guiGraphics.drawString(this.font, GUI_LABEL, (offsetLeft + 8), (offsetTop + 6), 4210752);
 
-            int unspentPoints = expCap.map(PlayerExperienceCapabilityInterface::getUnspentPoints).orElse(-1);
+            int unspentPoints = expCap == null ? -1 : expCap.getUnspentPoints();
             if (unspentPoints != 0) {
                 Component unspentSkillHolder = Component.literal(UNSPENT_LABEL.getString() + " " + unspentPoints);
                 //Pinta puntos sin usar
-                this.font.draw(poseStack, unspentSkillHolder, (offsetLeft + 8), (offsetTop + WINDOW_HEIGHT), 4210752);
+                guiGraphics.drawString(this.font, unspentSkillHolder, (offsetLeft + 8), (offsetTop + WINDOW_HEIGHT), 4210752);
             }
 
             //this.font.draw(poseStack, Component.literal("x:"+d.format(posicionMouseX)+" y:"+d.format(posicionMouseY)), (float) posicionMouseX,(float)posicionMouseY, 10526880);
@@ -384,24 +387,25 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
      * @param mouseY Y mouse
      */
     @SuppressWarnings("deprecation")
-    private void renderInside(PoseStack poseStack, int mouseX, int mouseY) {
+    private void renderInside(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         SkillTab selectedSkillTabGui = this.selectedTab;
         // Pinta el fondo vacío cuando no hay elementos
         if (selectedSkillTabGui == null) {
-            fill(poseStack, offsetLeft + WINDOW_AREA_OFFSET_X, offsetTop + WINDOW_AREA_OFFSET_Y,
+            guiGraphics.fill(offsetLeft + WINDOW_AREA_OFFSET_X, offsetTop + WINDOW_AREA_OFFSET_Y,
                     offsetLeft + WINDOW_AREA_OFFSET_X + INNER_SCREEN_WIDTH,
                     offsetTop + WINDOW_AREA_OFFSET_Y + INNER_SCREEN_HEIGHT, -16777216);
             int i = offsetLeft + WINDOW_AREA_OFFSET_X + 117;
-            drawCenteredString(poseStack, this.font, EMPTY, i, offsetTop + WINDOW_AREA_OFFSET_Y + 56 - WINDOW_AREA_OFFSET_X / 2, -1);
-            drawCenteredString(poseStack, this.font, SAD_LABEL, i, offsetTop + WINDOW_AREA_OFFSET_Y + INNER_SCREEN_HEIGHT - WINDOW_AREA_OFFSET_X, -1);
+            guiGraphics.drawCenteredString(this.font, EMPTY, i, offsetTop + WINDOW_AREA_OFFSET_Y + 56 - WINDOW_AREA_OFFSET_X / 2, -1);
+            guiGraphics.drawCenteredString(this.font, SAD_LABEL, i, offsetTop + WINDOW_AREA_OFFSET_Y + INNER_SCREEN_HEIGHT - WINDOW_AREA_OFFSET_X, -1);
         } else {
             // Pinta el fondo con elementos
+            PoseStack poseStack = guiGraphics.pose();
             poseStack.pushPose();
             // Se posiciona al inicio de la ventana + offsets
             poseStack.translate((float) (offsetLeft + WINDOW_AREA_OFFSET_X),(float) (offsetTop + WINDOW_AREA_OFFSET_Y), 0.0F);
             // Pinta el fondo del tab
             RenderSystem.applyModelViewMatrix();
-            selectedSkillTabGui.drawContents(poseStack);
+            selectedSkillTabGui.drawContents(guiGraphics);
             poseStack.popPose();
             RenderSystem.applyModelViewMatrix();
             RenderSystem.depthFunc(515);
@@ -410,23 +414,21 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     }
 
     @SuppressWarnings("deprecation")
-    private void renderTooltips(PoseStack poseStack1, int mouseX, int mouseY) {
+    private void renderTooltips(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
         // pinta los tooltips de los botones
         if (this.selectedTab != null) {
-            PoseStack poseStack = RenderSystem.getModelViewStack();
+            PoseStack poseStack = guiGraphics.pose();
             poseStack.pushPose();
             //RenderSystem.enableDepthTest();
             poseStack.translate((float) (offsetLeft + WINDOW_AREA_OFFSET_X), (float) (offsetTop + WINDOW_AREA_OFFSET_Y), 400.0F);
-            RenderSystem.applyModelViewMatrix();
-            this.selectedTab.drawTabTooltips(poseStack1,
+            this.selectedTab.drawTabTooltips(guiGraphics,
                     mouseX - offsetLeft - WINDOW_AREA_OFFSET_X,
                     mouseY - offsetTop - WINDOW_AREA_OFFSET_Y,
                     offsetLeft,
                     offsetTop);
             RenderSystem.disableDepthTest();
             poseStack.popPose();
-            RenderSystem.applyModelViewMatrix();
         }
 
         // Pinta los tooltips de las pestañas
@@ -434,7 +436,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
             for (SkillTab skillTabGui : this.tabs.values()) {
                 if (skillTabGui.getPage() == tabPage
                         && skillTabGui.isInsideTabSelector(offsetLeft, offsetTop, mouseX, mouseY)) {
-                    this.renderTooltip(poseStack1, skillTabGui.getTitle(), mouseX, mouseY);
+                    guiGraphics.renderTooltip(this.font, skillTabGui.getTitle(), mouseX, mouseY);
                 }
             }
         }
@@ -510,19 +512,19 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
         return this.tabs.get(skillElement);
     }
 
-    public LazyOptional<PlayerSkillCapabilityInterface> getSkillCap() {
+    public PlayerSkillCapabilityInterface getSkillCap() {
         return skillCap;
     }
 
-    public void setSkillCap(LazyOptional<PlayerSkillCapabilityInterface> skillCap) {
+    public void setSkillCap(PlayerSkillCapabilityInterface skillCap) {
         this.skillCap = skillCap;
     }
 
-    public LazyOptional<PlayerExperienceCapabilityInterface> getExpCap() {
+    public PlayerExperienceCapabilityInterface getExpCap() {
         return expCap;
     }
 
-    public void setExpCap(LazyOptional<PlayerExperienceCapabilityInterface> expCap) {
+    public void setExpCap(PlayerExperienceCapabilityInterface expCap) {
         this.expCap = expCap;
     }
 
@@ -563,13 +565,13 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
         DevilRpg.LOGGER.info("--------powerButtonPressed: {} ", pressedButton.getMessage().getContents());
 
         if (pressedButton instanceof CustomSkillButton pb) {
-            HashMap<PowerEnum, SkillEnum> powerNames = skillCap.map(PlayerSkillCapabilityInterface::getSkillsNameOfPowers).orElse(null);
+            HashMap<PowerEnum, SkillEnum> powerNames = skillCap == null ? null : skillCap.getSkillsNameOfPowers();
             if (powerNames != null) {
                 pb.setButtonTexture(EMPTY_POWER_IMAGE_RESOURCE);
                 DevilRpg.LOGGER.info("pressed button: {} ", pb.getEnum());
 
                 powerNames.put((PowerEnum) pb.getEnum(), SkillEnum.EMPTY);
-                skillCap.ifPresent(x -> x.setSkillsNameOfPowers(powerNames, player));
+                if (skillCap != null) skillCap.setSkillsNameOfPowers(powerNames, player);
 
             }
         }
@@ -578,7 +580,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
 
     protected void loadAssignedPowerButtons() {
         DevilRpg.LOGGER.info("---------loadAssignedPowerButtons ");
-        HashMap<PowerEnum, SkillEnum> powerToSkillDictionary = skillCap.map(PlayerSkillCapabilityInterface::getSkillsNameOfPowers).orElse(null);
+        HashMap<PowerEnum, SkillEnum> powerToSkillDictionary = skillCap == null ? null : skillCap.getSkillsNameOfPowers();
 
         if (powerToSkillDictionary != null) {
             for (CustomSkillButton c : powerButtonList) {

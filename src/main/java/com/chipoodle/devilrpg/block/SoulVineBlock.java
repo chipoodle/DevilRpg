@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.block;
 
+import com.mojang.serialization.MapCodec;
 import com.chipoodle.devilrpg.blockentity.SoulVineBlockEntity;
 import com.chipoodle.devilrpg.init.ModBlocks;
 import com.chipoodle.devilrpg.init.ModEntityBlocks;
@@ -25,7 +26,6 @@ import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.minecraftforge.common.extensions.IForgeBlock;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -34,7 +34,14 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 
-public class SoulVineBlock extends Block implements EntityBlock, IForgeBlock {
+public class SoulVineBlock extends Block implements EntityBlock {
+    public static final MapCodec<SoulVineBlock> CODEC = simpleCodec(SoulVineBlock::new);
+
+    @Override
+    protected MapCodec<? extends Block> codec() {
+        return CODEC;
+    }
+
 
     public static final VoxelShape SHAPE = Block.box(4.0D, 0.0D, 4.0D, 12.0D, 15.0D, 12.0D);
     public static final IntegerProperty AGE = BlockStateProperties.AGE_25;

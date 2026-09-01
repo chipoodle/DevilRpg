@@ -11,14 +11,14 @@ import net.minecraft.client.model.geom.builders.*;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import org.jetbrains.annotations.NotNull;
 
 @OnlyIn(Dist.CLIENT)
 public class SunflowerShulkerModel<T extends SunflowerShulker> extends ListModel<T> {
 
-    public static final ModelLayerLocation DEFAULT_LAYER_LOCATION = new ModelLayerLocation(new ResourceLocation(DevilRpg.MODID, "sunflowershulker"), "main");
+    public static final ModelLayerLocation DEFAULT_LAYER_LOCATION = new ModelLayerLocation(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "sunflowershulker"), "main");
     private final ModelPart base;
     private final ModelPart lid;
     private final ModelPart head;

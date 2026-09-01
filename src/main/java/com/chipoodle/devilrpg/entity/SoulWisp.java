@@ -1,5 +1,7 @@
 package com.chipoodle.devilrpg.entity;
 
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.core.Holder;
 import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapability;
 import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityInterface;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
@@ -46,11 +48,9 @@ import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.pathfinder.BlockPathTypes;
+import net.minecraft.world.level.pathfinder.PathType;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
@@ -72,8 +72,8 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
 
     protected int puntosAsignados = 0;
     protected double saludMaxima = SALUD_INICIAL;
-    protected MobEffect efectoPrimario;
-    protected MobEffect efectoSecundario;
+    protected Holder<MobEffect> efectoPrimario;
+    protected Holder<MobEffect> efectoSecundario;
     protected boolean esBeneficioso;
     private UUID lastHurtBy;
 
@@ -85,9 +85,9 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
         super(type, worldIn);
         this.moveControl = new FlyingMoveControl(this, 20, true);
         this.lookControl = new WispLookControl(this);
-        this.setPathfindingMalus(BlockPathTypes.WATER, -1.0F);
-        this.setPathfindingMalus(BlockPathTypes.WATER_BORDER, 16.0F);
-        this.setPathfindingMalus(BlockPathTypes.FENCE, -1.0F);
+        this.setPathfindingMalus(PathType.WATER, -1.0F);
+        this.setPathfindingMalus(PathType.WATER_BORDER, 16.0F);
+        this.setPathfindingMalus(PathType.FENCE, -1.0F);
     }
 
     /**
@@ -106,8 +106,8 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
     }
 
     @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
     }
 
     @Override
@@ -120,7 +120,7 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
 
         this.goalSelector.addGoal(0, new PanicGoal(this, 1.25D));
         this.goalSelector.addGoal(0, new FloatGoal(this));
-        this.goalSelector.addGoal(2, new FollowOwnerGoal(this, 1.0D, 3.0F, 7.0F, false));
+        this.goalSelector.addGoal(2, new FollowOwnerGoal(this, 1.0D, 3.0F, 7.0F));
         this.goalSelector.addGoal(2, new WaterAvoidingRandomFlyingGoal(this, 1.0D));
         //// this.goalSelector.addGoal(3, new FollowMobGoal(this, 1.0D, 3.0F,7.0F));
         //// this.goalSelector.addGoal(5, new FollowParentGoal(this, 1.25D));
@@ -129,14 +129,14 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
 
     }
 
-    public void updateLevel(Player owner, MobEffect efectoPrimario, MobEffect efectoSecundario, SkillEnum wispType, boolean esBeneficioso) {
+    public void updateLevel(Player owner, Holder<MobEffect> efectoPrimario, Holder<MobEffect> efectoSecundario, SkillEnum wispType, boolean esBeneficioso) {
         tame(owner);
-        LazyOptional<PlayerSkillCapabilityInterface> skill = Objects.requireNonNull(getOwner()).getCapability(PlayerSkillCapability.INSTANCE);
+        PlayerSkillCapabilityInterface skill = Objects.requireNonNull(getOwner()).getData(PlayerSkillCapability.INSTANCE);
         this.efectoPrimario = efectoPrimario;
         this.efectoSecundario = efectoSecundario;
         this.esBeneficioso = esBeneficioso;
-        if (skill.isPresent()) {
-            this.puntosAsignados = Objects.requireNonNull(skill.map(PlayerSkillCapabilityInterface::getSkillsPoints).orElse(null)).get(wispType);
+        if (skill != null) {
+            this.puntosAsignados = Objects.requireNonNull(skill.getSkillsPoints()).get(wispType);
             saludMaxima = 0.6 * this.puntosAsignados + SALUD_INICIAL;
             // DevilRpg.LOGGER.debug("SoulWispEntity.updateLevel.saludMaxima{}",saludMaxima);
             this.wispType = wispType;
@@ -182,7 +182,7 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
 
         /*if (this.random.nextFloat() < 0.05F) {
             for (int i = 0; i < this.random.nextInt(2) + 1; ++i) {
-                this.addParticle(this.level, this.getX() - (double) 0.3F, this.getX() + (double) 0.3F,
+                this.addParticle(this.level(), this.getX() - (double) 0.3F, this.getX() + (double) 0.3F,
                         this.getZ() - (double) 0.3F, this.getZ() + (double) 0.3F, this.getY(0.5D),
                         ParticleTypes.CRIMSON_SPORE);
             }
@@ -209,8 +209,8 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
     @Override
     public void aiStep() {
         super.aiStep();
-        if (!this.level.isClientSide) {
-            if (this.level.getGameTime() % 80L == 0L && (efectoPrimario != null || efectoSecundario != null)) {
+        if (!this.level().isClientSide) {
+            if (this.level().getGameTime() % 80L == 0L && (efectoPrimario != null || efectoSecundario != null)) {
                 this.addEffectsToPlayers(puntosAsignados, efectoPrimario, efectoSecundario, esBeneficioso);
             }
         }
@@ -224,7 +224,7 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
     protected @NotNull PathNavigation createNavigation(@NotNull Level worldIn) {
         FlyingPathNavigation flyingpathnavigator = new FlyingPathNavigation(this, worldIn) {
             public boolean isStableDestination(BlockPos pos) {
-                return !this.level.getBlockState(pos.below()).isAir();
+                return !SoulWisp.this.level().getBlockState(pos.below()).isAir();
             }
 
             public void tick() {
@@ -272,10 +272,6 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
         return 0.4F;
     }
 
-    @Override
-    protected float getStandingEyeHeight(@NotNull Pose poseIn, EntityDimensions sizeIn) {
-        return sizeIn.height * 0.5F;
-    }
 
     @Override
     public boolean causeFallDamage(float distance, float damageMultiplier, @NotNull DamageSource damageSource) {
@@ -308,10 +304,6 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
         return ITamableEntity.super.wantsToAttack(target, owner);
     }
 
-    @Override
-    public @NotNull MobType getMobType() {
-        return MobType.UNDEFINED;
-    }
 
 	/*protected void jumpInLiquid(TagKey<Fluid> p_204061_) {
 		this.jumpInLiquidInternal();
@@ -322,13 +314,13 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
     }
 
     @Override
-    public void jumpInFluid(net.minecraftforge.fluids.@NotNull FluidType type) {
+    public void jumpInFluid(net.neoforged.neoforge.fluids.@NotNull FluidType type) {
         this.jumpInLiquidInternal();
     }
 
     @Override
     public boolean isFlying() {
-        return !this.onGround;
+        return !this.onGround();
     }
 
     /**
@@ -341,8 +333,8 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
         return isOnSameTeam || isEntitySameOwnerAsThis(entityIn, this);
     }
 
-    private void addEffectsToPlayers(int niveles, MobEffect primaryEffect, MobEffect secondaryEffect, boolean isBeneficial) {
-        if (niveles >= 0 && !this.level.isClientSide && primaryEffect != null) {
+    private void addEffectsToPlayers(int niveles, Holder<MobEffect> primaryEffect, Holder<MobEffect> secondaryEffect, boolean isBeneficial) {
+        if (niveles >= 0 && !this.level().isClientSide && primaryEffect != null) {
             // rango entre 0 - 4 el tipo de boost health
             int potenciaPocion = getPotenciaPocion(niveles);
             //DevilRpg.LOGGER.debug("niveles {} potenciaPocion {}",niveles, potenciaPocion);
@@ -351,7 +343,7 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
             double l = this.position().y();
             double i1 = this.position().z();
             AABB axisalignedbb = (new AABB(k, l, i1, (k + 1), (l + 1), (i1 + 1)))
-                    .inflate(DISTANCIA_EFECTO).expandTowards(0.0D, this.level.getHeight(), 0.0D);
+                    .inflate(DISTANCIA_EFECTO).expandTowards(0.0D, this.level().getHeight(), 0.0D);
 
             if (niveles > 0) {
                 List<LivingEntity> alliesList = null;
@@ -374,7 +366,7 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
         }
     }
 
-    private void applyPrimaryEffect(MobEffect primaryEffect, int amplifierIn, List<LivingEntity> alliesList) {
+    private void applyPrimaryEffect(Holder<MobEffect> primaryEffect, int amplifierIn, List<LivingEntity> alliesList) {
         for (LivingEntity entity : alliesList) {
             MobEffectInstance pri = new MobEffectInstance(primaryEffect, DURATION_TICKS, amplifierIn, true, true);
             MobEffectInstance active = entity.getEffect(primaryEffect);
@@ -385,7 +377,7 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
         }
     }
 
-    private void applySecondaryEffect(MobEffect secondaryEffect, List<LivingEntity> alliesList) {
+    private void applySecondaryEffect(Holder<MobEffect> secondaryEffect, List<LivingEntity> alliesList) {
         for (LivingEntity entity : alliesList) {
             MobEffectInstance sec = new MobEffectInstance(secondaryEffect, DURATION_TICKS, 0, true, true);
             MobEffectInstance active = entity.getEffect(secondaryEffect);
@@ -397,13 +389,13 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
     }
 
     private List<LivingEntity> getAlliesListWithinAABBRange(AABB axisalignedbb) {
-        return this.level.getEntitiesOfClass(LivingEntity.class, axisalignedbb)
+        return this.level().getEntitiesOfClass(LivingEntity.class, axisalignedbb)
                 .stream().filter(x -> x.isAlliedTo(Objects.requireNonNull(this.getOwner())) || x.equals(getOwner()))
                 .collect(Collectors.toList());
     }
 
     private List<LivingEntity> getEnemiesListWithinAABBRange(AABB axisalignedbb) {
-        return this.level.getEntitiesOfClass(Mob.class, axisalignedbb).stream()
+        return this.level().getEntitiesOfClass(Mob.class, axisalignedbb).stream()
                 .filter(x -> !x.isAlliedTo(Objects.requireNonNull(this.getOwner()))).map(x -> (LivingEntity) x).collect(Collectors.toList());
     }
 
@@ -418,32 +410,32 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
     @Override
     public void die(@NotNull DamageSource cause) {
         if (getOwner() != null) {
-            LazyOptional<PlayerMinionCapabilityInterface> minionCap = getOwner()
-                    .getCapability(PlayerMinionCapability.INSTANCE);
-            if (!minionCap.isPresent())
+            PlayerMinionCapabilityInterface minionCap = getOwner()
+                    .getData(PlayerMinionCapability.INSTANCE);
+            if (minionCap == null)
                 return;
-            minionCap.ifPresent(x -> x.removeWisp((Player) getOwner(), this));
+            minionCap.removeWisp((Player) getOwner(), this);
         }
-        if (!this.level.isClientSide)
-            dropAllDeathLoot(cause);
+        if (!this.level().isClientSide)
+            dropAllDeathLoot((ServerLevel) level(), cause);
         // super.onDeath(cause);
         customOnDeath();
     }
 
     private void customOnDeath() {
-        level.broadcastEntityEvent(this, (byte) 3);
+        level().broadcastEntityEvent(this, (byte) 3);
         this.dead = true;
         this.remove(RemovalReason.DISCARDED);
-        IRenderUtilities.customDeadParticles(this.level, this.random, this);
+        IRenderUtilities.customDeadParticles(this.level(), this.random, this);
     }
 
     protected void dropEquipment() {
         super.dropEquipment();
-        if (!this.level.getGameRules().getBoolean(GameRules.RULE_KEEPINVENTORY)) {
+        if (!this.level().getGameRules().getBoolean(GameRules.RULE_KEEPINVENTORY)) {
             if (this.hasItemInMainHand()) {
                 // Obtiene el ítem de la mano principal
                 ItemStack itemStack = this.getItemInHand(InteractionHand.MAIN_HAND);
-                if (!itemStack.isEmpty() || EnchantmentHelper.hasVanishingCurse(itemStack))
+                if (!itemStack.isEmpty() || false)
                     // Suelta el ítem al mundo
                     this.spawnAtLocation(itemStack);
             }
@@ -469,22 +461,10 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
      *
      * @return The packet with data about your entity
      */
-    @Override
-    public @NotNull Packet<ClientGamePacketListener> getAddEntityPacket() {
-        return NetworkHooks.getEntitySpawningPacket(this);
-    }
 
     /**
      * Get the experience points the entity currently has.
      */
-    @Override
-    public int getExperienceReward() {
-        /*
-         * if (player.equals(getOwner())) return 0; return 1 +
-         * this.level.rand.nextInt(3);
-         */
-        return 0;
-    }
 
     @Override
     public int getRemainingPersistentAngerTime() {
@@ -521,10 +501,6 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
         return ModEntities.WISP.get().create(level);
     }*/
 
-    @Override
-    public @NotNull Level getLevel() {
-        return this.level;
-    }
 
     @Override
     public double distanceToSqr(LivingEntity livingentity) {
@@ -588,7 +564,7 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
         if (this.getOwner() != null && player == this.getOwner() && hand == InteractionHand.OFF_HAND) {
             if (this.isOwnedBy(player) || this.isTame()) {
                 DamageSource damagesource = new DamageSource(
-                        this.level
+                        this.level()
                                 .registryAccess()
                                 .registryOrThrow(Registries.DAMAGE_TYPE)
                                 .getHolderOrThrow(ModDamageTypes.MINION_DEATH));

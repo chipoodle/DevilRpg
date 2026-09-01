@@ -7,27 +7,24 @@ import com.chipoodle.devilrpg.entity.*;
 import com.chipoodle.devilrpg.init.ModBlocks;
 import com.chipoodle.devilrpg.init.ModEntities;
 import com.chipoodle.devilrpg.init.ModItems;
-import net.minecraft.network.chat.Component;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.entity.SpawnPlacements;
+import net.minecraft.world.entity.SpawnPlacementTypes;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.FireBlock;
 import net.minecraft.world.level.levelgen.Heightmap;
-import net.minecraftforge.event.CreativeModeTabEvent;
-import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
-import net.minecraftforge.event.entity.EntityAttributeModificationEvent;
-import net.minecraftforge.event.entity.SpawnPlacementRegisterEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
-import net.minecraftforge.fml.config.ModConfig;
-import net.minecraftforge.fml.event.config.ModConfigEvent;
-import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.RegisterEvent;
+import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
+import net.neoforged.neoforge.event.entity.EntityAttributeModificationEvent;
+import net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.config.ModConfig;
+import net.neoforged.fml.event.config.ModConfigEvent;
+import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.neoforged.neoforge.registries.RegisterEvent;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -131,13 +128,13 @@ public final class InitModEventSubscriber {
      */
     @SubscribeEvent
     public static void onRegisterItems(final RegisterEvent event) {
-        if (event.getRegistryKey().equals(ForgeRegistries.Keys.ITEMS)) {
+        if (event.getRegistryKey().equals(Registries.ITEM)) {
             DevilRpg.LOGGER.info("----------------------->InitModEventSubscriber.onRegisterItems()");
             BLOCKS.getEntries().forEach((blockRegistryObject) -> {
                 Block block = blockRegistryObject.get();
                 Item.Properties properties = new Item.Properties();
                 Supplier<Item> blockItemFactory = () -> new BlockItem(block, properties);
-                event.register(ForgeRegistries.Keys.ITEMS, blockRegistryObject.getId(), blockItemFactory);
+                event.register(Registries.ITEM, blockRegistryObject.getId(), blockItemFactory);
             });
         }
     }
@@ -155,47 +152,18 @@ public final class InitModEventSubscriber {
 
     }*/
 
-    // Registered on the MOD event bus
-// Assume we have RegistryObject<Item> and RegistryObject<Block> called ITEM and BLOCK
-    @SubscribeEvent
-    public static void onRegisterCreativeModeTabEvent(CreativeModeTabEvent.Register event) {
-        DevilRpg.LOGGER.info("----------------------->InitModEventSubscriber.onRegisterCreativeModeTabEvent()");
-        event.registerCreativeModeTab(new ResourceLocation(DevilRpg.MODID, ModItems.CREATIVE_TAB_NAME), builder ->
-                // Set name of tab to display
-                builder.title(Component.translatable("item_group." + DevilRpg.MODID + "." + ModItems.CREATIVE_TAB_NAME))
-                        // Set icon of creative tab
-                        .icon(() -> new ItemStack(ITEM_VACIO.get()))
-                        // Add default items to tab
-                        .displayItems((enabledFlags, populator) -> {
-                            BLOCKS.getEntries().forEach((blockRegistryObject) -> {
-                                Block block = blockRegistryObject.get();
-                                populator.accept(block);
-                            });
-                            populator.accept(SOULWOLF_SPAWN_EGG.get());
-                            populator.accept(SOULBEAR_SPAWN_EGG.get());
-                            //populator.accept(SOULWISP_SPAWN_EGG.get());
-                            populator.accept(SOULWISP_HEALTH_SPAWN_EGG.get());
-                            populator.accept(SOULWISP_ARCHER_SPAWN_EGG.get());
-                            populator.accept(SOULWISP_CHOPPER_SPAWN_EGG.get());
-                            populator.accept(SOULWISP_FORESTER_SPAWN_EGG.get());
-                            populator.accept(AGGRESSIVE_ZOMBIE_SPAWN_EGG.get());
-
-                            
-                        })
-        );
-
-    }
+    // Creative tab is registered in ModCreativeTabs via the vanilla CREATIVE_MODE_TAB registry.
 
     @SubscribeEvent
-    public static void onSpawnPlacementRegister(SpawnPlacementRegisterEvent event) {
+    public static void onSpawnPlacementRegister(RegisterSpawnPlacementsEvent event) {
         DevilRpg.LOGGER.info("----------------------->InitModEventSubscriber.onSpawnPlacementRegister()");
         // Registrar las reglas de spawn para AggressiveZombieEntity
         event.register(
                 ModEntities.AGGRESSIVE_ZOMBIE.get(), // Tu entidad registrada
-                SpawnPlacements.Type.ON_GROUND, // Tipo de spawn (en el suelo)
+                SpawnPlacementTypes.ON_GROUND, // Tipo de spawn (en el suelo)
                 Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, // Altura del spawn
                 AggressiveZombieEntity::checkSpawnRules,
-                SpawnPlacementRegisterEvent.Operation.AND // Reemplazar cualquier regla existente
+                RegisterSpawnPlacementsEvent.Operation.AND // Reemplazar cualquier regla existente
         );
     }
 

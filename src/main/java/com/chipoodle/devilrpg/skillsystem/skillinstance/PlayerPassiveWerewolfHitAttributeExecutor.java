@@ -55,13 +55,13 @@ public class PlayerPassiveWerewolfHitAttributeExecutor extends AbstractPlayerPas
 
     private void initializeAttributes(Player playerIn) {
         if (hitAttributeModifier == null ||
-                hitAttributeModifier.getAmount() != Double.valueOf(parentCapability.getSkillsPoints().get(SkillEnum.WEREWOLF_HIT)) * HIT_FACTOR) {
+                hitAttributeModifier.amount() != Double.valueOf(parentCapability.getSkillsPoints().get(SkillEnum.WEREWOLF_HIT)) * HIT_FACTOR) {
             removeCurrentWerewolfHitModifiers();
             hitAttributeModifier = createNewAttributeModifiers();
-            HashMap<String, UUID> capAttModifiersHashMap = parentCapability.getAttributeModifiers();
-            addAttributeToCapability(capAttModifiersHashMap, Attributes.ATTACK_DAMAGE, hitAttributeModifier.getId());
+            HashMap<String, String> capAttModifiersHashMap = parentCapability.getAttributeModifiers();
+            addAttributeToCapability(capAttModifiersHashMap, Attributes.ATTACK_DAMAGE, hitAttributeModifier.id());
             parentCapability.setAttributeModifiers(capAttModifiersHashMap, playerIn);
-            DevilRpg.LOGGER.info("----------------------->Add {}", hitAttributeModifier.getId());
+            DevilRpg.LOGGER.info("----------------------->Add {}", hitAttributeModifier.id());
         }
     }
 
@@ -80,7 +80,7 @@ public class PlayerPassiveWerewolfHitAttributeExecutor extends AbstractPlayerPas
     }
 
     private void removeCurrentWerewolfHitModifiers() {
-        //HashMap<String, UUID> attributeModifiers = parentCapability.getAttributeModifiers();
+        //HashMap<String, String> attributeModifiers = parentCapability.getAttributeModifiers();
         removeCurrentModifierFromPlayer(playerIn, hitAttributeModifier, Attributes.ATTACK_DAMAGE);
         //UUID uuid = removeAttributeFromCapability(attributeModifiers, Attributes.ARMOR);
         //parentCapability.setAttributeModifiers(attributeModifiers, playerIn);
@@ -89,11 +89,11 @@ public class PlayerPassiveWerewolfHitAttributeExecutor extends AbstractPlayerPas
     }
 
     private void addCurrentModifiers() {
-        //HashMap<String, UUID> attributeModifiers = parentCapability.getAttributeModifiers();
-        //addAttributeToCapability(attributeModifiers, Attributes.ARMOR, skinArmorAttributeModifier.getId());
+        //HashMap<String, String> attributeModifiers = parentCapability.getAttributeModifiers();
+        //addAttributeToCapability(attributeModifiers, Attributes.ARMOR, skinArmorAttributeModifier.id());
         addCurrentModifierTransiently(playerIn, Attributes.ATTACK_DAMAGE, hitAttributeModifier);
         //parentCapability.setAttributeModifiers(attributeModifiers, playerIn);
-        //DevilRpg.LOGGER.info("----------------------->Add {}",skinArmorAttributeModifier.getId());
+        //DevilRpg.LOGGER.info("----------------------->Add {}",skinArmorAttributeModifier.id());
         DevilRpg.LOGGER.info("----------------------->addCurrentModifierTransiently(): {}", hitAttributeModifier);
     }
 

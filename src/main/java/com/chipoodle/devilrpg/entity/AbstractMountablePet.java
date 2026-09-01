@@ -1,5 +1,10 @@
 package com.chipoodle.devilrpg.entity;
 
+import net.minecraft.world.entity.animal.horse.AbstractHorse;
+import net.minecraft.core.Holder;
+import com.chipoodle.devilrpg.entity.container.MountablePetContainerMenu;
+import net.minecraft.world.SimpleMenuProvider;
+import net.neoforged.neoforge.items.IItemHandler;
 import com.chipoodle.devilrpg.entity.goal.TamablePetRandomStandGoal;
 import com.chipoodle.devilrpg.entity.goal.TamablePetRunAroundLikeCrazyGoal;
 import net.minecraft.advancements.CriteriaTriggers;
@@ -113,11 +118,10 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
     private float standAnimO;
     private float mouthAnim;
     private float mouthAnimO;
-    private net.minecraftforge.common.util.LazyOptional<?> itemHandler = null;
+    private IItemHandler itemHandler = null;
 
     protected AbstractMountablePet(EntityType<? extends AbstractMountablePet> p_30531_, Level p_30532_) {
         super(p_30531_, p_30532_);
-        this.setMaxUpStep(1.0F);
         this.createInventory();
     }
 
@@ -182,9 +186,9 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
     }
 
     @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(DATA_ID_FLAGS, (byte) 0);
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(DATA_ID_FLAGS, (byte) 0);
     }
 
     protected boolean getFlag(int p_30648_) {
@@ -226,7 +230,6 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
         this.isJumping = p_30656_;
     }
 
-    @Override
     protected void onLeashDistance(float p_30660_) {
         if (p_30660_ > 6.0F && this.isEating()) {
             this.setEating(false);
@@ -268,8 +271,8 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
     }
 
     @Override
-    public void equipSaddle(@Nullable SoundSource p_30546_) {
-        this.inventory.setItem(0, new ItemStack(Items.SADDLE));
+    public void equipSaddle(ItemStack stack, @Nullable SoundSource sound) {
+        this.inventory.setItem(0, stack);
     }
 
     public void equipArmor(Player p_251330_, ItemStack p_248855_) {
@@ -311,7 +314,7 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
         if (!this.isSilent()) {
             SoundEvent soundevent = this.getEatingSound();
             if (soundevent != null) {
-                this.level.playSound(null, this.getX(), this.getY(), this.getZ(), soundevent, this.getSoundSource(), 1.0F, 1.0F + (this.random.nextFloat() - this.random.nextFloat()) * 0.2F);
+                this.level().playSound(null, this.getX(), this.getY(), this.getZ(), soundevent, this.getSoundSource(), 1.0F, 1.0F + (this.random.nextFloat() - this.random.nextFloat()) * 0.2F);
             }
         }
 
@@ -365,11 +368,11 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
 
         this.inventory.addListener(this);
         this.updateContainerEquipment();
-        this.itemHandler = net.minecraftforge.common.util.LazyOptional.of(() -> new net.minecraftforge.items.wrapper.InvWrapper(this.inventory));
+        this.itemHandler = new net.neoforged.neoforge.items.wrapper.InvWrapper(this.inventory);
     }
 
     protected void updateContainerEquipment() {
-        if (!this.level.isClientSide) {
+        if (!this.level().isClientSide) {
             this.setFlag(4, !this.inventory.getItem(0).isEmpty());
         }
     }
@@ -414,11 +417,11 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
 
     @Override
     protected void playStepSound(@NotNull BlockPos p_30584_, BlockState p_30585_) {
-        if (!p_30585_.getMaterial().isLiquid()) {
-            BlockState blockstate = this.level.getBlockState(p_30584_.above());
-            SoundType soundtype = p_30585_.getSoundType(level, p_30584_, this);
+        if (p_30585_.getFluidState().isEmpty()) {
+            BlockState blockstate = this.level().getBlockState(p_30584_.above());
+            SoundType soundtype = p_30585_.getSoundType(level(), p_30584_, this);
             if (blockstate.is(Blocks.SNOW)) {
-                soundtype = blockstate.getSoundType(level, p_30584_, this);
+                soundtype = blockstate.getSoundType(level(), p_30584_, this);
             }
 
             if (this.isVehicle() && this.canGallop) {
@@ -466,7 +469,7 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
 
     @Override
     public void openCustomInventoryScreen(@NotNull Player player) {
-        if (!this.level.isClientSide && (!this.isVehicle() || this.hasPassenger(player)) && this.isTame()) {
+        if (!this.level().isClientSide && (!this.isVehicle() || this.hasPassenger(player)) && this.isTame()) {
             openHorseInventory(this, this.inventory, (ServerPlayer) player);
         }
 
@@ -477,11 +480,7 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
             player.closeContainer();
         }
 
-        player.nextContainerCounter();
-        player.connection.send(new ClientboundHorseScreenOpenPacket(player.containerCounter, simpleContainer.getContainerSize(), entity.getId()));
-        //player.containerMenu = new MountablePetContainerMenu(player.containerCounter, player.getInventory(), simpleContainer, entity);
-        player.initMenu(player.containerMenu);
-        net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(new net.minecraftforge.event.entity.player.PlayerContainerEvent.Open(player, player.containerMenu));
+        player.openMenu(new SimpleMenuProvider((id, inventory, p) -> new MountablePetContainerMenu(id, inventory, simpleContainer, (AbstractHorse) (Object) entity), entity.getDisplayName()));
     }
 
     public InteractionResult fedFood(Player p_30581_, ItemStack p_30582_) {
@@ -490,7 +489,7 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
             p_30582_.shrink(1);
         }
 
-        if (this.level.isClientSide) {
+        if (this.level().isClientSide) {
             return InteractionResult.CONSUME;
         } else {
             return flag ? InteractionResult.SUCCESS : InteractionResult.PASS;
@@ -521,7 +520,7 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
             f = 4.0F;
             i = 60;
             j = 5;
-            if (!this.level.isClientSide && this.isTame() && this.getAge() == 0 && !this.isInLove()) {
+            if (!this.level().isClientSide && this.isTame() && this.getAge() == 0 && !this.isInLove()) {
                 flag = true;
                 this.setInLove(p_30593_);
             }
@@ -529,7 +528,7 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
             f = 10.0F;
             i = 240;
             j = 10;
-            if (!this.level.isClientSide && this.isTame() && this.getAge() == 0 && !this.isInLove()) {
+            if (!this.level().isClientSide && this.isTame() && this.getAge() == 0 && !this.isInLove()) {
                 flag = true;
                 this.setInLove(p_30593_);
             }
@@ -541,8 +540,8 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
         }
 
         if (this.isBaby() && i > 0) {
-            this.level.addParticle(ParticleTypes.HAPPY_VILLAGER, this.getRandomX(1.0D), this.getRandomY() + 0.5D, this.getRandomZ(1.0D), 0.0D, 0.0D, 0.0D);
-            if (!this.level.isClientSide) {
+            this.level().addParticle(ParticleTypes.HAPPY_VILLAGER, this.getRandomX(1.0D), this.getRandomY() + 0.5D, this.getRandomZ(1.0D), 0.0D, 0.0D, 0.0D);
+            if (!this.level().isClientSide) {
                 this.ageUp(i);
             }
 
@@ -551,7 +550,7 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
 
         if (j > 0 && (flag || !this.isTame()) && this.getTemper() < this.getMaxTemper()) {
             flag = true;
-            if (!this.level.isClientSide) {
+            if (!this.level().isClientSide) {
                 this.modifyTemper(j);
             }
         }
@@ -567,7 +566,7 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
     protected void doPlayerRide(Player p_30634_) {
         this.setEating(false);
         this.setStanding(false);
-        if (!this.level.isClientSide) {
+        if (!this.level().isClientSide) {
             p_30634_.setYRot(this.getYRot());
             p_30634_.setXRot(this.getXRot());
             p_30634_.startRiding(this);
@@ -595,7 +594,7 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
         if (this.inventory != null) {
             for (int i = 0; i < this.inventory.getContainerSize(); ++i) {
                 ItemStack itemstack = this.inventory.getItem(i);
-                if (!itemstack.isEmpty() && !EnchantmentHelper.hasVanishingCurse(itemstack)) {
+                if (!itemstack.isEmpty() ) {
                     this.spawnAtLocation(itemstack);
                 }
             }
@@ -610,13 +609,13 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
         }
 
         super.aiStep();
-        if (!this.level.isClientSide && this.isAlive()) {
+        if (!this.level().isClientSide && this.isAlive()) {
             if (this.random.nextInt(900) == 0 && this.deathTime == 0) {
                 this.heal(1.0F);
             }
 
             if (this.canEatGrass()) {
-                if (!this.isEating() && !this.isVehicle() && this.random.nextInt(300) == 0 && this.level.getBlockState(this.blockPosition().below()).is(Blocks.GRASS_BLOCK)) {
+                if (!this.isEating() && !this.isVehicle() && this.random.nextInt(300) == 0 && this.level().getBlockState(this.blockPosition().below()).is(Blocks.GRASS_BLOCK)) {
                     this.setEating(true);
                 }
 
@@ -632,7 +631,7 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
 
     protected void followMommy() {
         if (this.isBred() && this.isBaby() && !this.isEating()) {
-            LivingEntity livingentity = this.level.getNearestEntity(AbstractMountablePet.class, MOMMY_TARGETING, this, this.getX(), this.getY(), this.getZ(), this.getBoundingBox().inflate(16.0D));
+            LivingEntity livingentity = this.level().getNearestEntity(AbstractMountablePet.class, MOMMY_TARGETING, this, this.getX(), this.getY(), this.getZ(), this.getBoundingBox().inflate(16.0D));
             if (livingentity != null && this.distanceToSqr(livingentity) > 4.0D) {
                 this.navigation.createPath(livingentity, 0);
             }
@@ -717,7 +716,7 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
         if (!this.isVehicle() && !this.isBaby()) {
             if (this.isTame() && player.isSecondaryUseActive()) {
                 this.openCustomInventoryScreen(player);
-                return InteractionResult.sidedSuccess(this.level.isClientSide);
+                return InteractionResult.sidedSuccess(this.level().isClientSide);
             } else {
                 ItemStack itemstack = player.getItemInHand(interactionHand);
                 if (!itemstack.isEmpty()) {
@@ -728,12 +727,12 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
 
                     if (this.canWearArmor() && this.isArmor(itemstack) && !this.isWearingArmor()) {
                         this.equipArmor(player, itemstack);
-                        return InteractionResult.sidedSuccess(this.level.isClientSide);
+                        return InteractionResult.sidedSuccess(this.level().isClientSide);
                     }
                 }
 
                 this.doPlayerRide(player);
-                return InteractionResult.sidedSuccess(this.level.isClientSide);
+                return InteractionResult.sidedSuccess(this.level().isClientSide);
             }
         } else {
             return super.mobInteract(player, interactionHand);
@@ -741,7 +740,7 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
     }
 
     private void openMouth() {
-        if (!this.level.isClientSide) {
+        if (!this.level().isClientSide) {
             this.mouthCounter = 1;
             this.setFlag(64, true);
         }
@@ -773,27 +772,27 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
     }
 
     public void tame(Player p_193101_1_) {
-        this.setTame(true);
+        this.setTame(true, false);
         this.setOwnerUUID(p_193101_1_.getUUID());
         if (p_193101_1_ instanceof ServerPlayer) {
             CriteriaTriggers.TAME_ANIMAL.trigger((ServerPlayer) p_193101_1_, this);
         }
-        this.level.broadcastEntityEvent(this, (byte) 7);
+        this.level().broadcastEntityEvent(this, (byte) 7);
     }
 
 
     /*public boolean tameWithName(Player p_30638_) {
         this.setOwnerUUID(p_30638_.getUUID());
-        this.setTame(true);
+        this.setTame(true, false);
         if (p_30638_ instanceof ServerPlayer) {
             CriteriaTriggers.TAME_ANIMAL.trigger((ServerPlayer) p_30638_, this);
         }
 
-        this.level.broadcastEntityEvent(this, (byte) 7);
+        this.level().broadcastEntityEvent(this, (byte) 7);
         return true;
     }*/
 
-    protected void tickRidden(@NotNull LivingEntity p_275282_, @NotNull Vec3 p_275693_) {
+    protected void tickRidden(@NotNull Player p_275282_, @NotNull Vec3 p_275693_) {
         super.tickRidden(p_275282_, p_275693_);
         Vec2 vec2 = this.getRiddenRotation(p_275282_);
         this.setRot(vec2.y, vec2.x);
@@ -803,7 +802,7 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
                 this.gallopSoundCounter = 0;
             }
 
-            if (this.onGround) {
+            if (this.onGround()) {
                 this.setIsJumping(false);
                 if (this.playerJumpPendingScale > 0.0F && !this.isJumping()) {
                     this.executeRidersJump(this.playerJumpPendingScale, p_275693_);
@@ -820,8 +819,8 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
     }
 
     @Override
-    protected @NotNull Vec3 getRiddenInput(@NotNull LivingEntity p_275673_, @NotNull Vec3 p_275506_) {
-        if (this.onGround && this.playerJumpPendingScale == 0.0F && this.isStanding() && !this.allowStandSliding) {
+    protected @NotNull Vec3 getRiddenInput(@NotNull Player p_275673_, @NotNull Vec3 p_275506_) {
+        if (this.onGround() && this.playerJumpPendingScale == 0.0F && this.isStanding() && !this.allowStandSliding) {
             return Vec3.ZERO;
         } else {
             float f = p_275673_.xxa * 0.5F;
@@ -835,7 +834,7 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
     }
 
     @Override
-    protected float getRiddenSpeed(@NotNull LivingEntity p_250911_) {
+    protected float getRiddenSpeed(@NotNull Player p_250911_) {
         return (float)this.getAttributeValue(Attributes.MOVEMENT_SPEED);
     }
 
@@ -846,7 +845,7 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
         this.setDeltaMovement(vec3.x, d1, vec3.z);
         this.setIsJumping(true);
         this.hasImpulse = true;
-        net.minecraftforge.common.ForgeHooks.onLivingJump(this);
+        net.neoforged.neoforge.common.CommonHooks.onLivingJump(this);
         if (p_275435_.z > 0.0D) {
             float f = Mth.sin(this.getYRot() * ((float)Math.PI / 180F));
             float f1 = Mth.cos(this.getYRot() * ((float)Math.PI / 180F));
@@ -871,7 +870,7 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
         }
 
         if (!this.inventory.getItem(0).isEmpty()) {
-            p_30589_.put("SaddleItem", this.inventory.getItem(0).save(new CompoundTag()));
+            p_30589_.put("SaddleItem", this.inventory.getItem(0).save(this.level().registryAccess(), new CompoundTag()));
         }
 
     }
@@ -882,7 +881,7 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
         this.setEating(p_30565_.getBoolean("EatingHaystack"));
         this.setBred(p_30565_.getBoolean("Bred"));
         this.setTemper(p_30565_.getInt("Temper"));
-        this.setTame(p_30565_.getBoolean("Tame"));
+        this.setTame(p_30565_.getBoolean("Tame"), false);
         UUID uuid;
         if (p_30565_.hasUUID("Owner")) {
             uuid = p_30565_.getUUID("Owner");
@@ -896,7 +895,7 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
         }
 
         if (p_30565_.contains("SaddleItem", 10)) {
-            ItemStack itemstack = ItemStack.of(p_30565_.getCompound("SaddleItem"));
+            ItemStack itemstack = ItemStack.parse(this.level().registryAccess(), p_30565_.getCompound("SaddleItem")).orElse(ItemStack.EMPTY);
             if (itemstack.is(Items.SADDLE)) {
                 this.inventory.setItem(0, itemstack);
             }
@@ -924,7 +923,7 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
         this.setOffspringAttribute(p_149509_, p_149510_, Attributes.MOVEMENT_SPEED, MIN_MOVEMENT_SPEED, MAX_MOVEMENT_SPEED);
     }
 
-    private void setOffspringAttribute(AgeableMob ageableMob, AbstractMountablePet abstractMountablePet, Attribute attribute, double p_272663_, double p_273405_) {
+    private void setOffspringAttribute(AgeableMob ageableMob, AbstractMountablePet abstractMountablePet, Holder<Attribute> attribute, double p_272663_, double p_273405_) {
         double d0 = createOffspringAttribute(this.getAttributeBaseValue(attribute), ageableMob.getAttributeBaseValue(attribute), p_272663_, p_273405_, this.random);
         Objects.requireNonNull(abstractMountablePet.getAttribute(attribute)).setBaseValue(d0);
     }
@@ -983,7 +982,7 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
             double d0 = this.random.nextGaussian() * 0.02D;
             double d1 = this.random.nextGaussian() * 0.02D;
             double d2 = this.random.nextGaussian() * 0.02D;
-            this.level.addParticle(particleoptions, this.getRandomX(1.0D), this.getRandomY() + 0.5D, this.getRandomZ(1.0D), d0, d1, d2);
+            this.level().addParticle(particleoptions, this.getRandomX(1.0D), this.getRandomY() + 0.5D, this.getRandomZ(1.0D), d0, d1, d2);
         }
 
     }
@@ -1000,25 +999,6 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
 
     }
 
-    @Override
-    public void positionRider(@NotNull Entity p_30642_) {
-        super.positionRider(p_30642_);
-        if (p_30642_ instanceof Mob mob) {
-            this.yBodyRot = mob.yBodyRot;
-        }
-
-        if (this.standAnimO > 0.0F) {
-            float f3 = Mth.sin(this.yBodyRot * ((float)Math.PI / 180F));
-            float f = Mth.cos(this.yBodyRot * ((float)Math.PI / 180F));
-            float f1 = 0.7F * this.standAnimO;
-            float f2 = 0.15F * this.standAnimO;
-            p_30642_.setPos(this.getX() + (double)(f1 * f3), this.getY() + this.getPassengersRidingOffset() + p_30642_.getMyRidingOffset() + (double)f2, this.getZ() - (double)(f1 * f));
-            if (p_30642_ instanceof LivingEntity) {
-                ((LivingEntity)p_30642_).yBodyRot = this.yBodyRot;
-            }
-        }
-
-    }
 
 
     @Override
@@ -1026,10 +1006,6 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
         return false;
     }
 
-    @Override
-    protected float getStandingEyeHeight(@NotNull Pose p_30578_, EntityDimensions p_30579_) {
-        return p_30579_.height * 0.95F;
-    }
 
     public boolean canWearArmor() {
         return false;
@@ -1105,7 +1081,7 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
             double d3 = this.getBoundingBox().maxY + 0.75D;
 
             while (true) {
-                double d4 = this.level.getBlockFloorHeight(blockpos$mutableblockpos);
+                double d4 = this.level().getBlockFloorHeight(blockpos$mutableblockpos);
                 if ((double) blockpos$mutableblockpos.getY() + d4 > d3) {
                     break;
                 }
@@ -1113,7 +1089,7 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
                 if (DismountHelper.isBlockFloorValid(d4)) {
                     AABB aabb = p_30563_.getLocalBoundsForPose(pose);
                     Vec3 vec3 = new Vec3(d0, (double) blockpos$mutableblockpos.getY() + d4, d2);
-                    if (DismountHelper.canDismountTo(this.level, p_30563_, aabb.move(vec3))) {
+                    if (DismountHelper.canDismountTo(this.level(), p_30563_, aabb.move(vec3))) {
                         p_30563_.setPose(pose);
                         return vec3;
                     }
@@ -1145,30 +1121,13 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
     }
 
     @Nullable
-    public SpawnGroupData finalizeSpawn(@NotNull ServerLevelAccessor p_30555_, @NotNull DifficultyInstance p_30556_, @NotNull MobSpawnType p_30557_, @Nullable SpawnGroupData p_30558_, @Nullable CompoundTag p_30559_) {
+    public SpawnGroupData finalizeSpawn(@NotNull ServerLevelAccessor p_30555_, @NotNull DifficultyInstance p_30556_, @NotNull MobSpawnType p_30557_, @Nullable SpawnGroupData p_30558_) {
         if (p_30558_ == null) {
             p_30558_ = new AgeableMob.AgeableMobGroupData(0.2F);
         }
 
         this.randomizeAttributes(p_30555_.getRandom());
-        return super.finalizeSpawn(p_30555_, p_30556_, p_30557_, p_30558_, p_30559_);
-    }
-
-    @Override
-    public <T> net.minecraftforge.common.util.@NotNull LazyOptional<T> getCapability(net.minecraftforge.common.capabilities.@NotNull Capability<T> capability, @Nullable net.minecraft.core.Direction facing) {
-        if (this.isAlive() && capability == net.minecraftforge.common.capabilities.ForgeCapabilities.ITEM_HANDLER && itemHandler != null)
-            return itemHandler.cast();
-        return super.getCapability(capability, facing);
-    }
-
-    @Override
-    public void invalidateCaps() {
-        super.invalidateCaps();
-        if (itemHandler != null) {
-            net.minecraftforge.common.util.LazyOptional<?> oldHandler = itemHandler;
-            itemHandler = null;
-            oldHandler.invalidate();
-        }
+        return super.finalizeSpawn(p_30555_, p_30556_, p_30557_, p_30558_);
     }
 
     public boolean hasInventoryChanged(Container p_149512_) {
@@ -1179,21 +1138,12 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
         return this.getAmbientSoundInterval();
     }
 
-    protected Vector3f getPassengerAttachmentPoint(Entity p_301103_, EntityDimensions p_298879_, float p_299886_) {
-        return new Vector3f(0.0F, this.getPassengersRidingOffsetY(p_298879_, p_299886_) + 0.15F * this.standAnimO * p_299886_, -0.7F * this.standAnimO * p_299886_);
+    protected Vec3 getPassengerAttachmentPoint(Entity p_301103_, EntityDimensions p_298879_, float p_299886_) {
+        return new Vec3(0.0D, this.getPassengersRidingOffsetY(p_298879_, p_299886_) + 0.15F * this.standAnimO * p_299886_, -0.7F * this.standAnimO * p_299886_);
     }
 
     protected float getPassengersRidingOffsetY(EntityDimensions p_299002_, float p_297393_) {
-        return p_299002_.height + (this.isBaby() ? 0.125F : -0.15625F) * p_297393_;
+        return p_299002_.height() + (this.isBaby() ? 0.125F : -0.15625F) * p_297393_;
     }
 
-    public Team getTeam() {
-        if (this.isTame()) {
-            LivingEntity livingentity = this.getOwner();
-            if (livingentity != null) {
-                return livingentity.getTeam();
-            }
-        }
-        return super.getTeam();
-    }
 }

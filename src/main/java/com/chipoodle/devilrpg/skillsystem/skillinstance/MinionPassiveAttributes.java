@@ -1,5 +1,7 @@
 package com.chipoodle.devilrpg.skillsystem.skillinstance;
 
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.core.Holder;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
@@ -29,7 +31,7 @@ public class MinionPassiveAttributes {
 
     public MinionPassiveAttributes(ITamableEntity entity) {
         DevilRpg.LOGGER.info("||---->MinionPassiveAttributes entity {}", ((LivingEntity) entity).getUUID());
-        levelIn = entity.getLevel();
+        levelIn = entity.level();
         LivingEntity owner = entity.getOwner();
 
         if (!(entity instanceof IPassiveMinionUpdater && owner instanceof Player))
@@ -64,11 +66,11 @@ public class MinionPassiveAttributes {
         if (!levelIn.isClientSide && playerIn != null) {
             PlayerSkillCapabilityInterface parentCapability = IGenericCapability.getUnwrappedPlayerCapability(playerIn,
                     PlayerSkillCapability.INSTANCE);
-            HashMap<Attribute, AttributeModifier> attributes = new HashMap<>();
+            HashMap<Holder<Attribute>, AttributeModifier> attributes = new HashMap<>();
             attributes.put(Attributes.MAX_HEALTH,
-                    new AttributeModifier(PASSIVE_MINION_HEALTH,
+                    new AttributeModifier(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, PASSIVE_MINION_HEALTH),
                             factor * parentCapability.getSkillsPoints().get(SkillEnum.MINION_VITALITY),
-                            AttributeModifier.Operation.ADDITION));
+                            AttributeModifier.Operation.ADD_VALUE));
             IPassiveMinionUpdater<ITamableEntity> minion = (IPassiveMinionUpdater<ITamableEntity>) entity;
             minion.applyPassives(attributes, entity);
         }
@@ -85,12 +87,12 @@ public class MinionPassiveAttributes {
         entity.setWarBear(warBear);
         entity.setMountBear(mountBear);
 
-        HashMap<Attribute, AttributeModifier> attributes = new HashMap<>();
-        attributes.put(Attributes.MAX_HEALTH, new AttributeModifier(PASSIVE_WAR_BEAR_HEALTH, 3.5D * warBear,
-                AttributeModifier.Operation.ADDITION));
+        HashMap<Holder<Attribute>, AttributeModifier> attributes = new HashMap<>();
+        attributes.put(Attributes.MAX_HEALTH, new AttributeModifier(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, PASSIVE_WAR_BEAR_HEALTH), 3.5D * warBear,
+                AttributeModifier.Operation.ADD_VALUE));
 
-        attributes.put(Attributes.KNOCKBACK_RESISTANCE, new AttributeModifier(PASSIVE_WAR_BEAR_KNOCKBACK_RES, 0.1666666666 * warBear,
-                AttributeModifier.Operation.ADDITION));
+        attributes.put(Attributes.KNOCKBACK_RESISTANCE, new AttributeModifier(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, PASSIVE_WAR_BEAR_KNOCKBACK_RES), 0.1666666666 * warBear,
+                AttributeModifier.Operation.ADD_VALUE));
 
 
         entity.applyPassives(attributes, entity);

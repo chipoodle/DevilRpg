@@ -2,11 +2,10 @@ package com.chipoodle.devilrpg;
 
 import com.chipoodle.devilrpg.config.ConfigHolder;
 import com.chipoodle.devilrpg.init.*;
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.fml.ModLoadingContext;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.config.ModConfig;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.config.ModConfig;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -15,13 +14,9 @@ public class DevilRpg {
 
     public static final String MODID = "devilrpg";
     public static final Logger LOGGER = LogManager.getLogger(MODID);
-   
 
-    public DevilRpg() {
-    	LOGGER.info("Initializing DevilRpg");
-
-        final ModLoadingContext modLoadingContext = ModLoadingContext.get();
-        final IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
+    public DevilRpg(IEventBus modEventBus, ModContainer modContainer) {
+        LOGGER.info("Initializing DevilRpg");
 
         // Register Deferred Registers (Does not need to be before Configs)
         ModBlocks.BLOCKS.register(modEventBus);
@@ -31,9 +26,12 @@ public class DevilRpg {
         ModSounds.SOUND_EVENTS.register(modEventBus);
         ModEffects.EFFECTS.register(modEventBus);
         ModContainers.CONTAINERS.register(modEventBus);
+        ModCapabilities.ATTACHMENT_TYPES.register(modEventBus);
+        ModCreativeTabs.CREATIVE_TABS.register(modEventBus);
         // Register Configs (Does not need to be after Deferred Registers)
-        modLoadingContext.registerConfig(ModConfig.Type.CLIENT, ConfigHolder.CLIENT_SPEC);
-        modLoadingContext.registerConfig(ModConfig.Type.SERVER, ConfigHolder.SERVER_SPEC);
-        ModNetwork.register();
+        modContainer.registerConfig(ModConfig.Type.CLIENT, ConfigHolder.CLIENT_SPEC);
+        modContainer.registerConfig(ModConfig.Type.SERVER, ConfigHolder.SERVER_SPEC);
+        // Register networking payloads
+        modEventBus.addListener(ModNetwork::registerPayloads);
     }
 }

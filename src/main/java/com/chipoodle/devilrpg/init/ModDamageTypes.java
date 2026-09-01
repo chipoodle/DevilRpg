@@ -10,7 +10,7 @@ public class ModDamageTypes {
     public static final ResourceKey<DamageType> MINION_DEATH = register("minion_death");
 
     private static ResourceKey<DamageType> register(String name) {
-        return ResourceKey.create(Registries.DAMAGE_TYPE, new ResourceLocation(DevilRpg.MODID, name));
+        return ResourceKey.create(Registries.DAMAGE_TYPE, ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, name));
     }
 
 }

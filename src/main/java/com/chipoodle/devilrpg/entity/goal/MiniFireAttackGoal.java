@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.entity.goal;
 
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -81,13 +82,13 @@ public class MiniFireAttackGoal extends Goal {
                     if (this.attackStep > 1) {
                         double d4 = Math.sqrt(Math.sqrt(d0)) * 0.5D;
                         if (!this.mobEntity.isSilent()) {
-                            this.mobEntity.level.levelEvent((Player) null, 1018, this.mobEntity.blockPosition(), 0);
+                            this.mobEntity.level().levelEvent((Player) null, 1018, this.mobEntity.blockPosition(), 0);
                         }
 
                         for (int i = 0; i < 1; ++i) {
-                            SmallFireball smallfireball = new SmallFireball(this.mobEntity.level, this.mobEntity, this.mobEntity.getRandom().triangle(d1, 2.297D * d4), d2, this.mobEntity.getRandom().triangle(d3, 2.297D * d4));
+                            SmallFireball smallfireball = new SmallFireball(this.mobEntity.level(), this.mobEntity, new Vec3(this.mobEntity.getRandom().triangle(d1, 2.297D * d4), d2, this.mobEntity.getRandom().triangle(d3, 2.297D * d4)));
                             smallfireball.setPos(smallfireball.getX(), this.mobEntity.getY(0.5D) + 0.5D, smallfireball.getZ());
-                            this.mobEntity.level.addFreshEntity(smallfireball);
+                            this.mobEntity.level().addFreshEntity(smallfireball);
                         }
                     }
                 }

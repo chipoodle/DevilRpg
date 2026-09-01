@@ -13,17 +13,18 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.DyeableHorseArmorItem;
-import net.minecraft.world.item.HorseArmorItem;
+import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraft.world.item.component.DyedItemColor;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import org.jetbrains.annotations.NotNull;
 
 @OnlyIn(Dist.CLIENT)
 public class SoulBearArmorLayer<T extends SoulBear> extends RenderLayer<T, SoulBearModelHeart<T>> {
-    private static final ResourceLocation RESOURCE = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soulbear/soulbear_armor6.png");
+    private static final ResourceLocation RESOURCE = ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "textures/entity/soulbear/soulbear_armor6.png");
     private final EntityModel<T> model;
 
     public SoulBearArmorLayer(RenderLayerParent<T, SoulBearModelHeart<T>> renderLayerParent, EntityModelSet entityModelSet) {
@@ -33,15 +34,16 @@ public class SoulBearArmorLayer<T extends SoulBear> extends RenderLayer<T, SoulB
 
     public void render(@NotNull PoseStack poseStack, @NotNull MultiBufferSource multiBufferSource, int p_117034_, T entity, float p_117036_, float p_117037_, float p_117038_, float p_117039_, float p_117040_, float p_117041_) {
         ItemStack itemstack = entity.getArmor();
-        if (itemstack.getItem() instanceof HorseArmorItem horsearmoritem) {
+        if (itemstack.getItem() instanceof ArmorItem) {
             this.getParentModel().copyPropertiesTo(this.model);
             this.model.prepareMobModel(entity, p_117036_, p_117037_, p_117038_);
             this.model.setupAnim(entity, p_117036_, p_117037_, p_117039_, p_117040_, p_117041_);
             float f;
             float f1;
             float f2;
-            if (horsearmoritem instanceof DyeableHorseArmorItem) {
-                int i = ((DyeableHorseArmorItem) horsearmoritem).getColor(itemstack);
+            DyedItemColor dyeditemcolor = itemstack.get(DataComponents.DYED_COLOR);
+            if (dyeditemcolor != null) {
+                int i = dyeditemcolor.rgb();
                 f = (float) (i >> 16 & 255) / 255.0F;
                 f1 = (float) (i >> 8 & 255) / 255.0F;
                 f2 = (float) (i & 255) / 255.0F;
@@ -53,7 +55,8 @@ public class SoulBearArmorLayer<T extends SoulBear> extends RenderLayer<T, SoulB
 
             //VertexConsumer vertexconsumer = multiBufferSource.getBuffer(RenderType.entityCutoutNoCull(horsearmoritem.getTexture()));
             VertexConsumer vertexconsumer = multiBufferSource.getBuffer(RenderType.entityCutoutNoCull(getTextureLocation()));
-            this.model.renderToBuffer(poseStack, vertexconsumer, p_117034_, OverlayTexture.NO_OVERLAY, f, f1, f2, 0.5F);
+            int color = 0x7F000000 | ((int) (f * 255.0F) << 16) | ((int) (f1 * 255.0F) << 8) | (int) (f2 * 255.0F);
+            this.model.renderToBuffer(poseStack, vertexconsumer, p_117034_, OverlayTexture.NO_OVERLAY, color);
         }
     }
 

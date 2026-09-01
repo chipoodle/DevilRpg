@@ -1,12 +1,14 @@
 package com.chipoodle.devilrpg.capability.experience;
 
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
+import net.neoforged.neoforge.network.PacketDistributor;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.init.ModNetwork;
-import com.chipoodle.devilrpg.network.handler.PlayerExperienceClientServerHandler;
+import com.chipoodle.devilrpg.network.payload.PlayerExperiencePayload;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.network.PacketDistributor;
 
 public class PlayerExperienceCapabilityImplementation implements PlayerExperienceCapabilityInterface {
 
@@ -36,7 +38,7 @@ public class PlayerExperienceCapabilityImplementation implements PlayerExperienc
             unspentPoints += this.currentLevel - maximumLevel;
             maximumLevel = this.currentLevel;
         }
-        if (!pe.level.isClientSide)
+        if (!pe.level().isClientSide)
             sendExperienceChangesToClient((ServerPlayer) pe);
         else
             sendExperienceChangesToServer();
@@ -53,7 +55,7 @@ public class PlayerExperienceCapabilityImplementation implements PlayerExperienc
     }
 
     @Override
-    public CompoundTag serializeNBT() {
+    public CompoundTag serializeNBT(HolderLookup.Provider provider) {
         CompoundTag nbt = new CompoundTag();
         nbt.putInt("currentLevel", currentLevel);
         nbt.putInt("maximumLevel", maximumLevel);
@@ -62,20 +64,20 @@ public class PlayerExperienceCapabilityImplementation implements PlayerExperienc
     }
 
     @Override
-    public void deserializeNBT(CompoundTag nbt) {
+    public void deserializeNBT(HolderLookup.Provider provider, CompoundTag nbt) {
         currentLevel = nbt.getInt("currentLevel");
         maximumLevel = nbt.getInt("maximumLevel");
         unspentPoints = nbt.getInt("unspentPoints");
     }
 
     private void sendExperienceChangesToServer() {
-        ModNetwork.CHANNEL.sendToServer(new PlayerExperienceClientServerHandler(serializeNBT()));
+        PacketDistributor.sendToServer(new PlayerExperiencePayload(serializeNBT(RegistryAccess.EMPTY)));
     }
 
     private void sendExperienceChangesToClient(ServerPlayer pe) {
         DevilRpg.LOGGER.info("----------> sendExperienceChangesToClient. unspentPoints: " + unspentPoints);
-        ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> pe),
-                new PlayerExperienceClientServerHandler(serializeNBT()));
+        PacketDistributor.sendToPlayer(pe,
+                new PlayerExperiencePayload(serializeNBT(RegistryAccess.EMPTY)));
 
     }
 }

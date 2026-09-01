@@ -40,29 +40,27 @@ public class MobEffectEntangling extends MobEffect {
         MobEffectEntangling mobEffect = (MobEffectEntangling) ModEffects.ENTANGLING.get();
         mobEffect.setOwner(owner);
         //DevilRpg.LOGGER.debug("--- crated. duration {} amplifier {}, seconds {}", duration, amplifier, duration / 20);
-        return new MobEffectInstance(mobEffect, duration, amplifier);
+        return new MobEffectInstance(ModEffects.ENTANGLING, duration, amplifier);
     }
 
     @Override
-    public void applyEffectTick(@NotNull LivingEntity entity, int amplifier) {
+    public boolean applyEffectTick(@NotNull LivingEntity entity, int amplifier) {
         // Calculate the entangling based on the amplifier
         amplifier = Math.max(1, Math.min(amplifier + 1, 5));// se suma uno porque  el indice empieza en 0 pero el nivel es de 1 a 5
         float percentage = amplifier * 0.2f;
 
         if (owner != null)
-            applySoulLichenEffects(entity.getLevel(), entity, owner, percentage);
-
-
+            applySoulLichenEffects(entity.level(), entity, owner, percentage);
+        return true;
     }
 
-    @Override
     public void removeAttributeModifiers(LivingEntity entityLivingBaseIn, @NotNull AttributeMap attributeMapIn, int amplifier) {
         // Remove the entangling  resistance attribute modifier when the effect is removed
         DevilRpg.LOGGER.debug(entityLivingBaseIn.getName().getString() + "'s entangling effect has worn off.");
     }
 
     @Override
-    public boolean isDurationEffectTick(int duration, int amplifier) {
+    public boolean shouldApplyEffectTickThisTick(int duration, int amplifier) {
         // This method controls how often the applyEffectTick method is called
         // You can adjust it based on your needs
         return true;
@@ -80,7 +78,7 @@ public class MobEffectEntangling extends MobEffect {
         if (!entity.isAlive()) {
             BlockPos blockPos = entity.blockPosition();
             PlayerSkillCapabilityInterface unwrappedPlayerCapability = IGenericCapability.getUnwrappedPlayerCapability(owner, PlayerSkillCapability.INSTANCE);
-            if (entity.isOnGround() || (entity.getY() % 1.0 == 0 && entity.getDeltaMovement().y > 0)) {
+            if (entity.onGround() || (entity.getY() % 1.0 == 0 && entity.getDeltaMovement().y > 0)) {
                 // Si la entidad objetivo está en el suelo o volando, coloca SoulLichen
                 setLichen(level, owner, blockPos, unwrappedPlayerCapability);
             } else {

@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.block;
 
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
@@ -19,6 +20,13 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.NotNull;
 
 public class UpwardSporeBlossomBlock extends FallingBlock {
+    public static final MapCodec<UpwardSporeBlossomBlock> CODEC = simpleCodec(UpwardSporeBlossomBlock::new);
+
+    @Override
+    protected MapCodec<? extends FallingBlock> codec() {
+        return CODEC;
+    }
+
     private static final VoxelShape SHAPE = Block.box(2.0D, 0.0D, 2.0D, 14.0D, 3.0D, 14.0D);
     private static final int ADD_PARTICLE_ATTEMPTS = 14;
     private static final int PARTICLE_XZ_RADIUS = 10;

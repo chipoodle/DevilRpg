@@ -1,11 +1,13 @@
 package com.chipoodle.devilrpg.entity;
 
 
+import net.minecraft.core.Holder;
 import net.minecraft.core.Vec3i;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageSources;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.Leashable;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.OwnableEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
@@ -15,10 +17,10 @@ import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.animal.horse.AbstractHorse;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.pathfinder.BlockPathTypes;
+import net.minecraft.world.level.pathfinder.PathType;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.scores.Team;
-import net.minecraftforge.common.capabilities.ICapabilityProvider;
+import net.neoforged.neoforge.attachment.IAttachmentHolder;
 import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
@@ -26,11 +28,11 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Entities that implment this interface are attached with TamableMinionCapability via onApplyPetPassives event at PlayerCapabilityForgeEventSubscriber
+ * Entities that implment this interface carry the TamableMinion data attachment (see {@link com.chipoodle.devilrpg.init.ModCapabilities}).
  */
-public interface ITamableEntity extends ICapabilityProvider, OwnableEntity {
+public interface ITamableEntity extends IAttachmentHolder, OwnableEntity, Leashable {
 
-    @NotNull Level getLevel();
+    @NotNull Level level();
 
     PathNavigation getNavigation();
     /*@Nullable
@@ -42,17 +44,15 @@ public interface ITamableEntity extends ICapabilityProvider, OwnableEntity {
 
     double distanceToSqr(LivingEntity livingentity);
 
-    float getPathfindingMalus(BlockPathTypes water);
+    float getPathfindingMalus(PathType water);
 
-    void setPathfindingMalus(BlockPathTypes water, float f);
+    void setPathfindingMalus(PathType water, float f);
 
     int getMaxHeadXRot();
 
     LookControl getLookControl();
 
     boolean isPassenger();
-
-    boolean isLeashed();
 
     float getXRot();
 
@@ -73,8 +73,6 @@ public interface ITamableEntity extends ICapabilityProvider, OwnableEntity {
 
     boolean isTame();
 
-    void setTame(boolean p_21836_);
-
     default boolean wantsToAttack(LivingEntity target, LivingEntity owner) {
         if (target instanceof ITamableEntity entity) {
             return !entity.isTame() || !Objects.equals(entity.getOwnerUUID(), owner.getUUID());
@@ -83,7 +81,7 @@ public interface ITamableEntity extends ICapabilityProvider, OwnableEntity {
         } else return !(target instanceof AbstractHorse) || !((AbstractHorse) target).isTamed();
     }
 
-    AttributeInstance getAttribute(Attribute key);
+    AttributeInstance getAttribute(Holder<Attribute> key);
 
     //ITextComponent getDisplayName();
 

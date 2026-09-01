@@ -8,14 +8,14 @@ import net.minecraft.client.renderer.entity.MobRenderer;
 import net.minecraft.client.renderer.entity.layers.ItemInHandLayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import org.jetbrains.annotations.NotNull;
 
 @OnlyIn(Dist.CLIENT)
 public class SoulWispChopperRenderer extends MobRenderer<SoulWispChopper, SoulWispModel<SoulWispChopper>> {
     //private static final ResourceLocation ALLAY_TEXTURE = new ResourceLocation("textures/entity/allay/allay.png");
-    public static final ResourceLocation ALLAY_TEXTURE = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soulwisp/allay_yellow.png");
+    public static final ResourceLocation ALLAY_TEXTURE = ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "textures/entity/soulwisp/allay_yellow.png");
 
     public SoulWispChopperRenderer(EntityRendererProvider.Context p_234551_) {
         super(p_234551_, new SoulWispModel<>(p_234551_.bakeLayer(SoulWispModel.CHOPPER_LAYER_LOCATION)), 0.4F);

@@ -1,19 +1,13 @@
 package com.chipoodle.devilrpg.capability.auxiliar;
 
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.capabilities.CapabilityManager;
-import net.minecraftforge.common.capabilities.CapabilityToken;
-import net.minecraftforge.common.capabilities.RegisterCapabilitiesEvent;
+import com.chipoodle.devilrpg.init.ModCapabilities;
+import net.neoforged.neoforge.attachment.AttachmentType;
+
+import java.util.function.Supplier;
 
 public class PlayerAuxiliaryCapability {
-    public static final Capability<PlayerAuxiliaryCapabilityInterface> INSTANCE = CapabilityManager.get(new CapabilityToken<>() {
-    });
+    public static final Supplier<AttachmentType<PlayerAuxiliaryCapabilityInterface>> INSTANCE = ModCapabilities.PLAYER_AUXILIARY;
 
     private PlayerAuxiliaryCapability() {
     }
-
-    public static void register(RegisterCapabilitiesEvent event) {
-        event.register(PlayerAuxiliaryCapabilityInterface.class);
-    }
-
 }

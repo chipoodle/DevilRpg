@@ -1,5 +1,8 @@
 package com.chipoodle.devilrpg.capability.player_minion;
 
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
+import net.neoforged.neoforge.network.PacketDistributor;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.entity.ITamableEntity;
 import com.chipoodle.devilrpg.entity.SoulBear;
@@ -7,7 +10,7 @@ import com.chipoodle.devilrpg.entity.SoulWisp;
 import com.chipoodle.devilrpg.entity.SoulWolf;
 import com.chipoodle.devilrpg.init.ModDamageTypes;
 import com.chipoodle.devilrpg.init.ModNetwork;
-import com.chipoodle.devilrpg.network.handler.PlayerMinionClientServerHandler;
+import com.chipoodle.devilrpg.network.payload.PlayerMinionPayload;
 import com.chipoodle.devilrpg.util.BytesUtil;
 import com.chipoodle.devilrpg.util.TargetUtils;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -22,7 +25,6 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.network.PacketDistributor;
 
 import java.io.IOException;
 import java.util.Objects;
@@ -75,7 +77,7 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
     public void setSoulWolfMinions(ConcurrentLinkedQueue<UUID> soulWolMinions, Player player) {
         try {
             nbt.putByteArray(SOULWOLF_MINION_KEY, BytesUtil.toByteArray(soulWolMinions));
-            if (!player.level.isClientSide) {
+            if (!player.level().isClientSide) {
                 sendSkillChangesToClient((ServerPlayer) player);
             } else {
                 sendSkillChangesToServer();
@@ -118,7 +120,7 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
     public void setSoulBearMinions(ConcurrentLinkedQueue<UUID> soulBearMinions, Player player) {
         try {
             nbt.putByteArray(SOULBEAR_MINION_KEY, BytesUtil.toByteArray(soulBearMinions));
-            if (!player.level.isClientSide) {
+            if (!player.level().isClientSide) {
                 sendSkillChangesToClient((ServerPlayer) player);
             } else {
                 sendSkillChangesToServer();
@@ -143,7 +145,7 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
     public void setWispMinions(ConcurrentLinkedQueue<UUID> wispMinions, Player player) {
         try {
             nbt.putByteArray(WISP_MINIONS_KEY, BytesUtil.toByteArray(wispMinions));
-            if (!player.level.isClientSide) {
+            if (!player.level().isClientSide) {
                 sendSkillChangesToClient((ServerPlayer) player);
             } else {
                 sendSkillChangesToServer();
@@ -157,7 +159,7 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
     public void setSoulBearInventory(CompoundTag soulbearInventory, Player player) {
         nbt.put(SOULBEAR_INVENTORY_KEY, soulbearInventory);
         //DevilRpg.LOGGER.debug("setSoulBearInventory {}", soulbearInventory);
-        if (!player.level.isClientSide) {
+        if (!player.level().isClientSide) {
             sendSkillChangesToClient((ServerPlayer) player);
         } else {
             sendSkillChangesToServer();
@@ -180,7 +182,7 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
                 CompoundTag compoundtag = listtag.getCompound(i);
                 int j = compoundtag.getByte("Slot") & 255;
                 if (j < s.getContainerSize()) {
-                    s.setItem(j, ItemStack.of(compoundtag));
+                    s.setItem(j, ItemStack.parse(RegistryAccess.EMPTY, compoundtag).orElse(ItemStack.EMPTY));
                 }
             }
             return s;
@@ -213,7 +215,7 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
             wisp.remove(entity.getUUID());
             setWispMinions(wisp, owner);
             DamageSource damagesource = new DamageSource(
-                    entity.level
+                    entity.level()
                             .registryAccess()
                             .registryOrThrow(Registries.DAMAGE_TYPE)
                             .getHolderOrThrow(ModDamageTypes.MINION_DEATH));
@@ -228,7 +230,7 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
             soulwolf.remove(entity.getUUID());
             setSoulWolfMinions(soulwolf, owner);
             DamageSource damagesource = new DamageSource(
-                    entity.level
+                    entity.level()
                             .registryAccess()
                             .registryOrThrow(Registries.DAMAGE_TYPE)
                             .getHolderOrThrow(ModDamageTypes.MINION_DEATH));
@@ -240,7 +242,7 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
     public void removeAllWisp(Player owner) {
         ConcurrentLinkedQueue<UUID> wisp = getWispMinions();
         wisp.forEach(id -> {
-            ITamableEntity entity = getTamableByUUID(id, owner.level);
+            ITamableEntity entity = getTamableByUUID(id, owner.level());
             removeWisp(owner, (SoulWisp) entity);
         });
         wisp.clear();
@@ -251,7 +253,7 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
     public void removeAllSoulWolf(Player owner) {
         ConcurrentLinkedQueue<UUID> soulwolf = getSoulWolfMinions();
         soulwolf.forEach(id -> {
-            ITamableEntity entity = getTamableByUUID(id, owner.level);
+            ITamableEntity entity = getTamableByUUID(id, owner.level());
             removeSoulWolf(owner, (SoulWolf) entity);
         });
         soulwolf.clear();
@@ -265,7 +267,7 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
             soulbear.remove(entity.getUUID());
             setSoulBearMinions(soulbear, owner);
             DamageSource damagesource = new DamageSource(
-                    entity.level
+                    entity.level()
                             .registryAccess()
                             .registryOrThrow(Registries.DAMAGE_TYPE)
                             .getHolderOrThrow(ModDamageTypes.MINION_DEATH));
@@ -278,7 +280,7 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
     public void removeAllSoulBear(Player owner) {
         ConcurrentLinkedQueue<UUID> soulbear = getSoulBearMinions();
         for (UUID uuid : soulbear) {
-            ITamableEntity entity = getTamableByUUID(uuid, owner.level);
+            ITamableEntity entity = getTamableByUUID(uuid, owner.level());
             removeSoulBear(owner, (SoulBear) entity);
         }
         soulbear.clear();
@@ -286,28 +288,28 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
     }
 
     @Override
-    public CompoundTag serializeNBT() {
+    public CompoundTag serializeNBT(HolderLookup.Provider provider) {
         return nbt;
     }
 
     @Override
-    public void deserializeNBT(CompoundTag nbt) {
+    public void deserializeNBT(HolderLookup.Provider provider, CompoundTag nbt) {
         this.nbt = nbt;
     }
 
     private void sendSkillChangesToServer() {
-        ModNetwork.CHANNEL.sendToServer(new PlayerMinionClientServerHandler(serializeNBT()));
+        PacketDistributor.sendToServer(new PlayerMinionPayload(serializeNBT(RegistryAccess.EMPTY)));
     }
 
     private void sendSkillChangesToClient(ServerPlayer pe) {
-        ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> pe),
-                new PlayerMinionClientServerHandler(serializeNBT()));
+        PacketDistributor.sendToPlayer(pe,
+                new PlayerMinionPayload(serializeNBT(RegistryAccess.EMPTY)));
     }
 
     @Override
     public SoulWisp existsWisp(Class<? extends SoulWisp> instance, Player player) {
         return getWispMinions().stream()
-                .map(wispKey -> (SoulWisp) getTamableByUUID(wispKey, player.level))
+                .map(wispKey -> (SoulWisp) getTamableByUUID(wispKey, player.level()))
                 .filter(Objects::nonNull)
                 .filter(instance::isInstance)
                 .findFirst()
@@ -342,7 +344,7 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
     private void removeOldestWispIfNecessary(ConcurrentLinkedQueue<UUID> keys, int maxSummons, Player player) {
         if (keys.size() > maxSummons) {
             UUID removedKey = keys.poll();
-            SoulWisp oldestWisp = (SoulWisp) getTamableByUUID(removedKey, player.level);
+            SoulWisp oldestWisp = (SoulWisp) getTamableByUUID(removedKey, player.level());
             if (oldestWisp != null) {
                 removeWisp(player, oldestWisp);
             }

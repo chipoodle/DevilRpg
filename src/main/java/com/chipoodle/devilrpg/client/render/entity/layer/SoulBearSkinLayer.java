@@ -14,13 +14,13 @@ import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import org.jetbrains.annotations.NotNull;
 
 @OnlyIn(Dist.CLIENT)
 public class SoulBearSkinLayer<T extends SoulBear> extends RenderLayer<T, SoulBearModelHeart<T>> {
-    private static final ResourceLocation RESOURCE = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soulbear/tattoo.png");
+    private static final ResourceLocation RESOURCE = ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "textures/entity/soulbear/tattoo.png");
     private final EntityModel<T> model;
 
     public SoulBearSkinLayer(RenderLayerParent<T, SoulBearModelHeart<T>> renderLayerParent, EntityModelSet entityModelSet) {
@@ -41,7 +41,7 @@ public class SoulBearSkinLayer<T extends SoulBear> extends RenderLayer<T, SoulBe
         f2 = 1.0F;
 
         VertexConsumer vertexconsumer = multiBufferSource.getBuffer(RenderType.entityCutoutNoCull(getTextureLocation()));
-        this.model.renderToBuffer(poseStack, vertexconsumer, p_117034_, OverlayTexture.NO_OVERLAY, f, f1, f2, 0.4F);
+        this.model.renderToBuffer(poseStack, vertexconsumer, p_117034_, OverlayTexture.NO_OVERLAY, 0x66FFFFFF);
 
 
     }

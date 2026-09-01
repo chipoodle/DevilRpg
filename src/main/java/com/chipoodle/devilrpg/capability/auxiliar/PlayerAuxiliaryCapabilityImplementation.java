@@ -1,14 +1,16 @@
 package com.chipoodle.devilrpg.capability.auxiliar;
 
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
+import net.neoforged.neoforge.network.PacketDistributor;
 import com.chipoodle.devilrpg.init.ModNetwork;
-import com.chipoodle.devilrpg.network.handler.PlayerAuxiliarClientServerHandler;
+import com.chipoodle.devilrpg.network.payload.PlayerAuxiliarPayload;
 import com.chipoodle.devilrpg.util.TargetUtils;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.network.PacketDistributor;
 
 public class PlayerAuxiliaryCapabilityImplementation implements PlayerAuxiliaryCapabilityInterface {
 
@@ -26,8 +28,8 @@ public class PlayerAuxiliaryCapabilityImplementation implements PlayerAuxiliaryC
     @Override
     public void setWerewolfAttack(boolean active, Player player) {
         werewolfAttack = active;
-        //DevilRpg.LOGGER.info("------Client sending to server attaking werewolf: {} isClientSide {}, main hand? {}",active, player.level.isClientSide,swingingMainHand);
-        if (!player.level.isClientSide) {
+        //DevilRpg.LOGGER.info("------Client sending to server attaking werewolf: {} isClientSide {}, main hand? {}",active, player.level().isClientSide,swingingMainHand);
+        if (!player.level().isClientSide) {
             //player.sendMessage(new StringTextComponent("Sending to client attaking werewolf: " + active),player.getUUID());
             sendAuxiliaryChangesToClient((ServerPlayer) player);
         } else {
@@ -45,7 +47,7 @@ public class PlayerAuxiliaryCapabilityImplementation implements PlayerAuxiliaryC
     @Override
     public void setWerewolfTransformation(boolean active, Player player) {
         werewolfTransformation = active;
-        if (!player.level.isClientSide) sendAuxiliaryChangesToClient((ServerPlayer) player);
+        if (!player.level().isClientSide) sendAuxiliaryChangesToClient((ServerPlayer) player);
         else sendAuxiliaryChangesToServer();
     }
 
@@ -57,7 +59,7 @@ public class PlayerAuxiliaryCapabilityImplementation implements PlayerAuxiliaryC
     @Override
     public void setSwingingMainHand(boolean active, Player player) {
         swingingMainHand = active;
-        if (!player.level.isClientSide) sendAuxiliaryChangesToClient((ServerPlayer) player);
+        if (!player.level().isClientSide) sendAuxiliaryChangesToClient((ServerPlayer) player);
         else sendAuxiliaryChangesToServer();
     }
 
@@ -77,12 +79,12 @@ public class PlayerAuxiliaryCapabilityImplementation implements PlayerAuxiliaryC
     @Override
     public void setSpawnPoint(Vec3 spawnPoint, Player player) {
         this.spawnPoint = spawnPoint;
-        if (!player.level.isClientSide) sendAuxiliaryChangesToClient((ServerPlayer) player);
+        if (!player.level().isClientSide) sendAuxiliaryChangesToClient((ServerPlayer) player);
         else sendAuxiliaryChangesToServer();
     }
 
     @Override
-    public CompoundTag serializeNBT() {
+    public CompoundTag serializeNBT(HolderLookup.Provider provider) {
         CompoundTag nbt = new CompoundTag();
         nbt.putBoolean("werewolfAttack", werewolfAttack);
         nbt.putBoolean("werewolfTransformation", werewolfTransformation);
@@ -93,7 +95,7 @@ public class PlayerAuxiliaryCapabilityImplementation implements PlayerAuxiliaryC
     }
 
     @Override
-    public void deserializeNBT(CompoundTag nbt) {
+    public void deserializeNBT(HolderLookup.Provider provider, CompoundTag nbt) {
         werewolfAttack = nbt.getBoolean("werewolfAttack");
         werewolfTransformation = nbt.getBoolean("werewolfTransformation");
         //no es necesario leer que mano está moviendose
@@ -105,10 +107,10 @@ public class PlayerAuxiliaryCapabilityImplementation implements PlayerAuxiliaryC
     }
 
     private void sendAuxiliaryChangesToServer() {
-        ModNetwork.CHANNEL.sendToServer(new PlayerAuxiliarClientServerHandler(serializeNBT()));
+        PacketDistributor.sendToServer(new PlayerAuxiliarPayload(serializeNBT(RegistryAccess.EMPTY)));
     }
 
     private void sendAuxiliaryChangesToClient(ServerPlayer pe) {
-        ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> pe), new PlayerAuxiliarClientServerHandler(serializeNBT()));
+        PacketDistributor.sendToPlayer(pe, new PlayerAuxiliarPayload(serializeNBT(RegistryAccess.EMPTY)));
     }
 }

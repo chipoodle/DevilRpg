@@ -1,5 +1,7 @@
 package com.chipoodle.devilrpg.entity;
 
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.resources.ResourceLocation;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
@@ -58,7 +60,6 @@ import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Vector3f;
 
@@ -66,6 +67,11 @@ import javax.annotation.Nullable;
 import java.util.*;
 
 public class SunflowerShulker extends TamableAnimal implements ITamableEntity, ISoulEntity, PowerableMob, NeutralMob, IPassiveMinionUpdater<SunflowerShulker> {
+    @Override
+    public boolean isFood(ItemStack stack) {
+        return false;
+    }
+
     protected static final EntityDataAccessor<Direction> DATA_ATTACH_FACE_ID = SynchedEntityData.defineId(SunflowerShulker.class, EntityDataSerializers.DIRECTION);
     protected static final EntityDataAccessor<Byte> DATA_PEEK_ID = SynchedEntityData.defineId(SunflowerShulker.class, EntityDataSerializers.BYTE);
     protected static final EntityDataAccessor<Byte> DATA_COLOR_ID = SynchedEntityData.defineId(SunflowerShulker.class, EntityDataSerializers.BYTE);
@@ -75,7 +81,7 @@ public class SunflowerShulker extends TamableAnimal implements ITamableEntity, I
     });
     private static final EntityDataAccessor<Integer> DATA_REMAINING_ANGER_TIME = SynchedEntityData.defineId(SunflowerShulker.class, EntityDataSerializers.INT);
     private static final UUID COVERED_ARMOR_MODIFIER_UUID = UUID.fromString("7E0292F2-9434-48D5-A29F-9583AF7DF27F");
-    private static final AttributeModifier COVERED_ARMOR_MODIFIER = new AttributeModifier(COVERED_ARMOR_MODIFIER_UUID, "Covered armor bonus", 20.0D, AttributeModifier.Operation.ADDITION);
+    private static final AttributeModifier COVERED_ARMOR_MODIFIER = new AttributeModifier(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "covered_armor"), 20.0D, AttributeModifier.Operation.ADD_VALUE);
     private static final UniformInt PERSISTENT_ANGER_TIME = TimeUtil.rangeOfSeconds(20, 39);
 
     private float currentPeekAmountO;
@@ -196,12 +202,12 @@ public class SunflowerShulker extends TamableAnimal implements ITamableEntity, I
         return this.isClosed() ? SoundEvents.SHULKER_HURT_CLOSED : SoundEvents.SHULKER_HURT;
     }
 
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(DATA_ATTACH_FACE_ID, Direction.DOWN);
-        this.entityData.define(DATA_PEEK_ID, (byte) 0);
-        this.entityData.define(DATA_COLOR_ID, (byte) 16);
-        this.entityData.define(DATA_REMAINING_ANGER_TIME, 0);
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(DATA_ATTACH_FACE_ID, Direction.DOWN);
+        builder.define(DATA_PEEK_ID, (byte) 0);
+        builder.define(DATA_COLOR_ID, (byte) 16);
+        builder.define(DATA_REMAINING_ANGER_TIME, 0);
     }
 
     protected @NotNull BodyRotationControl createBodyControl() {
@@ -230,7 +236,7 @@ public class SunflowerShulker extends TamableAnimal implements ITamableEntity, I
 
     public void tick() {
         super.tick();
-        if (!this.level.isClientSide && !this.isPassenger() && !this.canStayAt(this.blockPosition(), this.getAttachFace())) {
+        if (!this.level().isClientSide && !this.isPassenger() && !this.canStayAt(this.blockPosition(), this.getAttachFace())) {
             this.findNewAttachment();
         }
 
@@ -238,7 +244,7 @@ public class SunflowerShulker extends TamableAnimal implements ITamableEntity, I
             this.onPeekAmountChange();
         }
 
-        if (this.level.isClientSide) {
+        if (this.level().isClientSide) {
             if (this.clientSideTeleportInterpolation > 0) {
                 --this.clientSideTeleportInterpolation;
             } else {
@@ -256,10 +262,10 @@ public class SunflowerShulker extends TamableAnimal implements ITamableEntity, I
     }
 
     private void customOnDeath() {
-        level.broadcastEntityEvent(this, (byte) 3);
+        level().broadcastEntityEvent(this, (byte) 3);
         this.dead = true;
         this.remove(RemovalReason.DISCARDED);
-        IRenderUtilities.customDeadParticles(this.level, this.random, this);
+        IRenderUtilities.customDeadParticles(this.level(), this.random, this);
     }
 
 
@@ -303,7 +309,7 @@ public class SunflowerShulker extends TamableAnimal implements ITamableEntity, I
         Direction direction = this.getAttachFace().getOpposite();
         float f2 = f - f1;
         if (!(f2 <= 0.0F)) {
-            for (Entity entity : this.level.getEntities(this, getProgressDeltaAabb(direction, f1, f).move(this.getX() - 0.5D, this.getY(), this.getZ() - 0.5D), EntitySelector.NO_SPECTATORS.and((p_149771_) -> !p_149771_.isPassengerOfSameVehicle(this)))) {
+            for (Entity entity : this.level().getEntities(this, getProgressDeltaAabb(direction, f1, f).move(this.getX() - 0.5D, this.getY(), this.getZ() - 0.5D), EntitySelector.NO_SPECTATORS.and((p_149771_) -> !p_149771_.isPassengerOfSameVehicle(this)))) {
                 if (!(entity instanceof SunflowerShulker) && !entity.noPhysics) {
                     entity.move(MoverType.SHULKER, new Vec3(f2 * (float) direction.getStepX(), f2 * (float) direction.getStepY(), f2 * (float) direction.getStepZ()));
                 }
@@ -312,13 +318,9 @@ public class SunflowerShulker extends TamableAnimal implements ITamableEntity, I
         }
     }
 
-    public double getMyRidingOffset() {
-        EntityType<?> entitytype = Objects.requireNonNull(this.getVehicle()).getType();
-        return !(this.getVehicle() instanceof Boat) && entitytype != EntityType.MINECART ? super.getMyRidingOffset() : 0.1875D - this.getVehicle().getPassengersRidingOffset();
-    }
 
     public boolean startRiding(@NotNull Entity p_149773_, boolean p_149774_) {
-        if (this.level.isClientSide()) {
+        if (this.level().isClientSide()) {
             this.clientOldAttachPosition = null;
             this.clientSideTeleportInterpolation = 0;
         }
@@ -329,7 +331,7 @@ public class SunflowerShulker extends TamableAnimal implements ITamableEntity, I
 
     public void stopRiding() {
         super.stopRiding();
-        if (this.level.isClientSide) {
+        if (this.level().isClientSide) {
             this.clientOldAttachPosition = this.blockPosition();
         }
 
@@ -338,11 +340,11 @@ public class SunflowerShulker extends TamableAnimal implements ITamableEntity, I
     }
 
     @Nullable
-    public SpawnGroupData finalizeSpawn(@NotNull ServerLevelAccessor p_149780_, @NotNull DifficultyInstance p_149781_, @NotNull MobSpawnType p_149782_, @Nullable SpawnGroupData p_149783_, @Nullable CompoundTag p_149784_) {
+    public SpawnGroupData finalizeSpawn(@NotNull ServerLevelAccessor p_149780_, @NotNull DifficultyInstance p_149781_, @NotNull MobSpawnType p_149782_, @Nullable SpawnGroupData p_149783_) {
         this.setYRot(0.0F);
         this.yHeadRot = this.getYRot();
         this.setOldPosAndRot();
-        return super.finalizeSpawn(p_149780_, p_149781_, p_149782_, p_149783_, p_149784_);
+        return super.finalizeSpawn(p_149780_, p_149781_, p_149782_, p_149783_);
     }
 
     @Override
@@ -381,7 +383,7 @@ public class SunflowerShulker extends TamableAnimal implements ITamableEntity, I
             if (!blockpos1.equals(blockpos)) {
                 this.entityData.set(DATA_PEEK_ID, (byte) 0);
                 this.hasImpulse = true;
-                if (this.level.isClientSide && !this.isPassenger() && !blockpos1.equals(this.clientOldAttachPosition)) {
+                if (this.level().isClientSide && !this.isPassenger() && !blockpos1.equals(this.clientOldAttachPosition)) {
                     this.clientOldAttachPosition = blockpos;
                     this.clientSideTeleportInterpolation = 6;
                     this.xOld = this.getX();
@@ -409,17 +411,17 @@ public class SunflowerShulker extends TamableAnimal implements ITamableEntity, I
             return false;
         } else {
             Direction direction = p_149787_.getOpposite();
-            if (!this.level.loadedAndEntityCanStandOnFace(p_149786_.relative(p_149787_), this, direction)) {
+            if (!this.level().loadedAndEntityCanStandOnFace(p_149786_.relative(p_149787_), this, direction)) {
                 return false;
             } else {
                 AABB aabb = getProgressAabb(direction, 1.0F).move(p_149786_).deflate(1.0E-6D);
-                return this.level.noCollision(this, aabb);
+                return this.level().noCollision(this, aabb);
             }
         }
     }
 
     private boolean isPositionBlocked(BlockPos p_149813_) {
-        BlockState blockstate = this.level.getBlockState(p_149813_);
+        BlockState blockstate = this.level().getBlockState(p_149813_);
         FluidState fluidState = blockstate.getFluidState();
         boolean isWater = fluidState.getType() == Fluids.WATER;
         if (blockstate.isAir() || isWater) {
@@ -436,22 +438,22 @@ public class SunflowerShulker extends TamableAnimal implements ITamableEntity, I
 
             for (int i = 0; i < 5; ++i) {
                 //BlockPos blockpos1 = blockpos.offset(Mth.randomBetweenInclusive(this.random, -8, 8), Mth.randomBetweenInclusive(this.random, -8, 8), Mth.randomBetweenInclusive(this.random, -8, 8));
-                BlockPos blockpos1 = TargetUtils.findSolidGroundBelowMinusOneEmpty(level, blockpos);
-                BlockState blockState = level.getBlockState(blockpos1);
+                BlockPos blockpos1 = TargetUtils.findSolidGroundBelowMinusOneEmpty(level(), blockpos);
+                BlockState blockState = level().getBlockState(blockpos1);
                 FluidState fluidState = blockState.getFluidState();
                 // Fluid type = fluidState.getType();
                 boolean isWater = fluidState.getType() == Fluids.WATER;
-                boolean yPosMin = blockpos1.getY() > this.level.getMinBuildHeight();
-                boolean emptyBlock = this.level.isEmptyBlock(blockpos1);
-                boolean withinBounds = this.level.getWorldBorder().isWithinBounds(blockpos1);
-                boolean noCollision = this.level.noCollision(this, (new AABB(blockpos1)).deflate(1.0E-6D));
+                boolean yPosMin = blockpos1.getY() > this.level().getMinBuildHeight();
+                boolean emptyBlock = this.level().isEmptyBlock(blockpos1);
+                boolean withinBounds = this.level().getWorldBorder().isWithinBounds(blockpos1);
+                boolean noCollision = this.level().noCollision(this, (new AABB(blockpos1)).deflate(1.0E-6D));
 
                 if (yPosMin && (emptyBlock || isWater) && withinBounds && noCollision) {
                     Direction direction = this.findAttachableSurface(blockpos1);
                     if (direction != null) {
-                        net.minecraftforge.event.entity.EntityTeleportEvent.EnderEntity event = net.minecraftforge.event.ForgeEventFactory.onEnderTeleport(this, blockpos1.getX(), blockpos1.getY(), blockpos1.getZ());
-                        if (event.isCanceled()) direction = null;
-                        blockpos1 = BlockPos.containing(event.getTargetX(), event.getTargetY(), event.getTargetZ());
+                        // EnderTeleport event removed in 1.21
+                        
+                        
                     }
 
                     if (direction != null) {
@@ -459,7 +461,7 @@ public class SunflowerShulker extends TamableAnimal implements ITamableEntity, I
                         this.setAttachFace(direction);
                         this.playSound(SoundEvents.SHULKER_TELEPORT, 1.0F, 1.0F);
                         this.setPos((double) blockpos1.getX() + 0.5D, blockpos1.getY(), (double) blockpos1.getZ() + 0.5D);
-                        this.level.gameEvent(GameEvent.TELEPORT, blockpos, GameEvent.Context.of(this));
+                        this.level().gameEvent(GameEvent.TELEPORT, blockpos, GameEvent.Context.of(this));
                         this.entityData.set(DATA_PEEK_ID, (byte) 0);
                         this.setTarget(null);
                         return;
@@ -502,7 +504,7 @@ public class SunflowerShulker extends TamableAnimal implements ITamableEntity, I
     @Override
     public void tame(@NotNull Player player) {
         super.tame(player);
-        this.level.broadcastEntityEvent(this, (byte) 7);
+        this.level().broadcastEntityEvent(this, (byte) 7);
     }
 
     private boolean isClosed() {
@@ -513,14 +515,14 @@ public class SunflowerShulker extends TamableAnimal implements ITamableEntity, I
         Vec3 vec3 = this.position();
         AABB aabb = this.getBoundingBox();
         if (!this.isClosed() && this.teleportSomewhere()) {
-            int i = this.level.getEntities(ModEntities.SUNFLOWER_SHULKER.get(), aabb.inflate(8.0D), Entity::isAlive).size();
+            int i = this.level().getEntities(ModEntities.SUNFLOWER_SHULKER.get(), aabb.inflate(8.0D), Entity::isAlive).size();
             float f = (float) (i - 1) / 5.0F;
-            if (!(this.level.random.nextFloat() < f)) {
-                SunflowerShulker shulker = ModEntities.SUNFLOWER_SHULKER.get().create(this.level);
+            if (!(this.level().random.nextFloat() < f)) {
+                SunflowerShulker shulker = ModEntities.SUNFLOWER_SHULKER.get().create(this.level());
                 if (shulker != null) {
                     shulker.setVariant(this.getVariant());
                     shulker.moveTo(vec3);
-                    this.level.addFreshEntity(shulker);
+                    this.level().addFreshEntity(shulker);
                 }
 
             }
@@ -552,7 +554,7 @@ public class SunflowerShulker extends TamableAnimal implements ITamableEntity, I
     }
 
     void setRawPeekAmount(int p_33419_) {
-        if (!this.level.isClientSide) {
+        if (!this.level().isClientSide) {
             Objects.requireNonNull(this.getAttribute(Attributes.ARMOR)).removeModifier(COVERED_ARMOR_MODIFIER);
             if (p_33419_ == 0) {
                 Objects.requireNonNull(this.getAttribute(Attributes.ARMOR)).addPermanentModifier(COVERED_ARMOR_MODIFIER);
@@ -613,10 +615,6 @@ public class SunflowerShulker extends TamableAnimal implements ITamableEntity, I
      *
      * @return The packet with data about your entity
      */
-    @Override
-    public @NotNull Packet<ClientGamePacketListener> getAddEntityPacket() {
-        return NetworkHooks.getEntitySpawningPacket(this);
-    }
 
     @Override
     public Entity getEntity() {
@@ -628,11 +626,7 @@ public class SunflowerShulker extends TamableAnimal implements ITamableEntity, I
         return super.isTame();
     }
 
-    @Override
-    public void setTame(boolean tamed) {
-        super.setTame(tamed);
-    }
-
+    
     @Override
     public UUID getOwnerUUID() {
         return super.getOwnerUUID();
@@ -753,7 +747,7 @@ public class SunflowerShulker extends TamableAnimal implements ITamableEntity, I
         public boolean canUse() {
             LivingEntity target = SunflowerShulker.this.getTarget();
             if (target != null && target.isAlive()) {
-                return SunflowerShulker.this.level.getDifficulty() != Difficulty.PEACEFUL;
+                return SunflowerShulker.this.level().getDifficulty() != Difficulty.PEACEFUL;
             } else {
                 return false;
             }
@@ -773,7 +767,7 @@ public class SunflowerShulker extends TamableAnimal implements ITamableEntity, I
         }
 
         public void tick() {
-            if (SunflowerShulker.this.level.getDifficulty() != Difficulty.PEACEFUL) {
+            if (SunflowerShulker.this.level().getDifficulty() != Difficulty.PEACEFUL) {
                 --this.attackTime;
                 LivingEntity livingentity = SunflowerShulker.this.getTarget();
                 if (livingentity != null) {
@@ -793,20 +787,20 @@ public class SunflowerShulker extends TamableAnimal implements ITamableEntity, I
                             PlayerSkillCapabilityInterface unwrappedPlayerCapability = IGenericCapability.getUnwrappedPlayerCapability((Player) getOwner(), PlayerSkillCapability.INSTANCE);
                             Integer assignedPoint = unwrappedPlayerCapability.getSkillsPoints().get(SkillEnum.VINEFLESHBALL);
 
-                           /* var snowballEntity = new GenericItemProjectile(SunflowerShulker.this.level, SunflowerShulker.this);
+                           /* var snowballEntity = new GenericItemProjectile(SunflowerShulker.this.level(), SunflowerShulker.this);
                             snowballEntity.updateLevel(SunflowerShulker.this, assignedPoint);
                             snowballEntity.shoot(
                                     d0,
                                     d1 + d3 * (double) 0.1F,
                                     d2,
-                                    1.6F, (float) (14 - SunflowerShulker.this.level.getDifficulty().getId() * 4));
-                            SunflowerShulker.this.level.addFreshEntity(snowballEntity);*/
+                                    1.6F, (float) (14 - SunflowerShulker.this.level().getDifficulty().getId() * 4));
+                            SunflowerShulker.this.level().addFreshEntity(snowballEntity);*/
 
 
-                            ExplodingSporeBullet explodingSporeBullet = ModEntities.EXPLODING_SPORE_BULLET.get().create((ServerLevel) SunflowerShulker.this.level, null, null, SunflowerShulker.this.blockPosition(), MobSpawnType.MOB_SUMMONED, true, true);
+                            ExplodingSporeBullet explodingSporeBullet = ModEntities.EXPLODING_SPORE_BULLET.get().create((ServerLevel) SunflowerShulker.this.level(), null, SunflowerShulker.this.blockPosition(), MobSpawnType.MOB_SUMMONED, true, true);
                             Objects.requireNonNull(explodingSporeBullet).updateLevel((Player) getOwner());
                             explodingSporeBullet.moveTo(SunflowerShulker.this.blockPosition(), Mth.wrapDegrees(new Random().nextFloat() * 360.0F), 0.0F);
-                            SunflowerShulker.this.level.addFreshEntity(explodingSporeBullet);
+                            SunflowerShulker.this.level().addFreshEntity(explodingSporeBullet);
 
                             SunflowerShulker.this.playSound(SoundEvents.SHULKER_SHOOT, 2.0F, (SunflowerShulker.this.random.nextFloat() - SunflowerShulker.this.random.nextFloat()) * 0.2F + 1.0F);
                         }
@@ -854,7 +848,7 @@ public class SunflowerShulker extends TamableAnimal implements ITamableEntity, I
         }
 
         public boolean canUse() {
-            return SunflowerShulker.this.level.getDifficulty() != Difficulty.PEACEFUL && super.canUse();
+            return SunflowerShulker.this.level().getDifficulty() != Difficulty.PEACEFUL && super.canUse();
         }
 
         protected @NotNull AABB getTargetSearchArea(double p_33508_) {

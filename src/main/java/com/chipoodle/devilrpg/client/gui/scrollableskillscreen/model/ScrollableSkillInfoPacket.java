@@ -8,8 +8,8 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundUpdateAdvancementsPacket;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -19,7 +19,7 @@ import java.util.Set;
 /**
  * Based on {{@linkplain ClientboundUpdateAdvancementsPacket}
  */
-public class ScrollableSkillInfoPacket implements Packet<ClientGamePacketListener> {
+public class ScrollableSkillInfoPacket  {
     private boolean firstSync;
     private Map<ResourceLocation, SkillElement.Builder> advancementsToAdd;
     private Set<ResourceLocation> advancementsToRemove;

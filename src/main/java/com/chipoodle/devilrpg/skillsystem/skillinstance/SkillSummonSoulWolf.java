@@ -17,7 +17,6 @@ import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.BlockHitResult;
-import net.minecraftforge.common.util.LazyOptional;
 
 import java.util.HashMap;
 import java.util.Objects;
@@ -49,20 +48,18 @@ public class SkillSummonSoulWolf extends AbstractSkillExecutor {
             if (!level.isClientSide) {
                 Random rand = new Random();
                 level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.CHICKEN_EGG, SoundSource.NEUTRAL, 0.5F, 0.4F / (rand.nextFloat() * 0.4F + 0.8F));
-                LazyOptional<PlayerMinionCapabilityInterface> min = player.getCapability(PlayerMinionCapability.INSTANCE);
-                min.ifPresent(x -> x.removeAllSoulBear(player));
-                ConcurrentLinkedQueue<UUID> keys = min.map(PlayerMinionCapabilityInterface::getSoulWolfMinions).orElse(new ConcurrentLinkedQueue<>());
+                PlayerMinionCapabilityInterface min = player.getData(PlayerMinionCapability.INSTANCE);
+                min.removeAllSoulBear(player);
+                ConcurrentLinkedQueue<UUID> keys = min.getSoulWolfMinions();
 
                 keys.offer(summonSoulWolf(level, player, rand).getUUID());
                 if (keys.size() > NUMBER_OF_SUMMONS) {
                     UUID key = keys.remove();
-                    min.ifPresent(x -> {
-                        SoulWolf e = (SoulWolf) x.getTamableByUUID(key, player.level);
-                        if (e != null)
-                            x.removeSoulWolf(player, e);
-                    });
+                    SoulWolf e = (SoulWolf) min.getTamableByUUID(key, player.level());
+                    if (e != null)
+                        min.removeSoulWolf(player, e);
                 }
-                min.ifPresent(x -> x.setSoulWolfMinions(keys, player));
+                min.setSoulWolfMinions(keys, player);
             }
         }
         player.getCooldowns().addCooldown(icon.getItem(), 20);
@@ -74,7 +71,7 @@ public class SkillSummonSoulWolf extends AbstractSkillExecutor {
         if (!levelIn.isEmptyBlock(blockPos))
             blockPos = blockPos.above();
 
-        SoulWolf sw = ModEntities.SOUL_WOLF.get().create((ServerLevel) levelIn, null, null, blockPos, MobSpawnType.MOB_SUMMONED, true, true);
+        SoulWolf sw = ModEntities.SOUL_WOLF.get().create((ServerLevel) levelIn, null, blockPos, MobSpawnType.MOB_SUMMONED, true, true);
         Objects.requireNonNull(sw).updateLevel(playerIn);
         sw.moveTo(blockPos, Mth.wrapDegrees(rand.nextFloat() * 360.0F), 0.0F);
         levelIn.addFreshEntity(sw);

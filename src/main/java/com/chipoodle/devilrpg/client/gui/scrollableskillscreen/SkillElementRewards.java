@@ -1,8 +1,14 @@
 package com.chipoodle.devilrpg.client.gui.scrollableskillscreen;
 
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import java.util.Optional;
+import net.minecraft.world.level.storage.loot.LootParams;
+import java.util.Arrays;
+import net.minecraft.server.level.ServerLevel;
 import com.google.common.collect.Lists;
 import com.google.gson.*;
-import net.minecraft.commands.CommandFunction;
+import net.minecraft.commands.functions.CommandFunction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -20,13 +26,13 @@ import java.util.List;
 
 public class SkillElementRewards {
 	public static final SkillElementRewards EMPTY = new SkillElementRewards(0, new ResourceLocation[0],
-			new ResourceLocation[0], CommandFunction.CacheableFunction.NONE);
+			new ResourceLocation[0], null);
 	private final int experience;
 	private final ResourceLocation[] loot;
 	private final ResourceLocation[] recipes;
-	private final CommandFunction.CacheableFunction function;
+	private final @Nullable ResourceLocation function;
 
-	public SkillElementRewards(int experience, ResourceLocation[] loot, ResourceLocation[] recipes, CommandFunction.CacheableFunction function) {
+	public SkillElementRewards(int experience, ResourceLocation[] loot, ResourceLocation[] recipes, @Nullable ResourceLocation function) {
 	      this.experience = experience;
 	      this.loot = loot;
 	      this.recipes = recipes;
@@ -35,19 +41,18 @@ public class SkillElementRewards {
 
 	public void apply(ServerPlayer player) {
 		player.giveExperiencePoints(this.experience);
-		LootContext lootcontext = (new LootContext.Builder(player.getLevel()))
+		LootParams lootparams = new LootParams.Builder((ServerLevel) player.level())
 				.withParameter(LootContextParams.THIS_ENTITY, player)
 				.withParameter(LootContextParams.ORIGIN, player.position())
-				.withRandom(player.getRandom())
 				.withLuck(player.getLuck())
-				.create(LootContextParamSets.ADVANCEMENT_REWARD); // FORGE: luck to LootContext
+				.create(LootContextParamSets.ADVANCEMENT_REWARD);
 		boolean flag = false;
 
 		for (ResourceLocation resourcelocation : this.loot) {
-			for (ItemStack itemstack : player.server.getLootTables().get(resourcelocation)
-					.getRandomItems(lootcontext)) {
+			for (ItemStack itemstack : player.server.reloadableRegistries().getLootTable(ResourceKey.create(Registries.LOOT_TABLE, resourcelocation))
+					.getRandomItems(lootparams)) {
 				if (player.addItem(itemstack)) {
-					player.level.playSound(null, player.getX(), player.getY(), player.getZ(),
+					player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
 							SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 0.2F,
 							((player.getRandom().nextFloat() - player.getRandom().nextFloat()) * 0.7F + 1.0F) * 2.0F);
 					flag = true;
@@ -66,14 +71,16 @@ public class SkillElementRewards {
 		}
 
 		if (this.recipes.length > 0) {
-			player.awardRecipesByKey(this.recipes);
+			player.awardRecipesByKey(Arrays.asList(this.recipes));
 		}
 
 		MinecraftServer minecraftserver = player.server;
-		this.function.get(minecraftserver.getFunctions()).ifPresent((commandFunction) -> {
-			minecraftserver.getFunctions().execute(commandFunction,
-					player.createCommandSourceStack().withSuppressedOutput().withPermission(2));
-		});
+		if (this.function != null) {
+			minecraftserver.getFunctions().get(this.function).ifPresent((commandFunction) -> {
+				minecraftserver.getFunctions().execute(commandFunction,
+						player.createCommandSourceStack().withSuppressedOutput().withPermission(2));
+			});
+		}
 	}
 
 	public String toString() {
@@ -110,8 +117,8 @@ public class SkillElementRewards {
 				jsonobject.add("recipes", jsonarray1);
 			}
 
-			if (this.function.getId() != null) {
-				jsonobject.addProperty("function", this.function.getId().toString());
+			if (this.function != null) {
+				jsonobject.addProperty("function", this.function.toString());
 			}
 
 			return jsonobject;
@@ -124,22 +131,21 @@ public class SkillElementRewards {
 		ResourceLocation[] aresourcelocation = new ResourceLocation[jsonarray.size()];
 
 		for (int j = 0; j < aresourcelocation.length; ++j) {
-			aresourcelocation[j] = new ResourceLocation(GsonHelper.convertToString(jsonarray.get(j), "loot[" + j + "]"));
+			aresourcelocation[j] = ResourceLocation.parse(GsonHelper.convertToString(jsonarray.get(j), "loot[" + j + "]"));
 		}
 
 		JsonArray jsonarray1 = GsonHelper.getAsJsonArray(json, "recipes", new JsonArray());
 		ResourceLocation[] aresourcelocation1 = new ResourceLocation[jsonarray1.size()];
 
 		for (int k = 0; k < aresourcelocation1.length; ++k) {
-			aresourcelocation1[k] = new ResourceLocation(GsonHelper.convertToString(jsonarray1.get(k), "recipes[" + k + "]"));
+			aresourcelocation1[k] = ResourceLocation.parse(GsonHelper.convertToString(jsonarray1.get(k), "recipes[" + k + "]"));
 		}
 
-		CommandFunction.CacheableFunction functionobject$cacheablefunction;
+		ResourceLocation functionobject$cacheablefunction;
 		if (json.has("function")) {
-			functionobject$cacheablefunction = new CommandFunction.CacheableFunction(
-					new ResourceLocation(GsonHelper.getAsString(json, "function")));
+			functionobject$cacheablefunction = ResourceLocation.parse(GsonHelper.getAsString(json, "function"));
 		} else {
-			functionobject$cacheablefunction = CommandFunction.CacheableFunction.NONE;
+			functionobject$cacheablefunction = null;
 		}
 
 		return new SkillElementRewards(i, aresourcelocation, aresourcelocation1, functionobject$cacheablefunction);
@@ -185,8 +191,7 @@ public class SkillElementRewards {
 		public SkillElementRewards build() {
 			return new SkillElementRewards(this.experience, this.loot.toArray(new ResourceLocation[0]),
 					this.recipes.toArray(new ResourceLocation[0]),
-					this.function == null ? CommandFunction.CacheableFunction.NONE
-							: new CommandFunction.CacheableFunction(this.function));
+					this.function);
 		}
 	}
 }

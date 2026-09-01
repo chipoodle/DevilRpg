@@ -31,26 +31,24 @@ public class MobEffectVineFleshPuppet extends MobEffect {
         // Create an instance of your custom MobEffect with the specified duration and amplifier
         MobEffectVineFleshPuppet mobEffect = (MobEffectVineFleshPuppet) ModEffects.VINE_FLESH_PUPPET.get();
         mobEffect.setOwner(owner);
-        MobEffectInstance mobEffectInstance = new MobEffectInstance(mobEffect, duration, amplifier);
+        MobEffectInstance mobEffectInstance = new MobEffectInstance(ModEffects.VINE_FLESH_PUPPET, duration, amplifier);
         DevilRpg.LOGGER.debug("--- MobEffectInstance crated. duration {} amplifier {}, seconds {}", duration, amplifier, duration / 20);
         return mobEffectInstance;
     }
 
     @Override
-    public void applyEffectTick(@NotNull LivingEntity entity, int amplifier) {
-        entity.hurt(entity.level.damageSources().playerAttack(owner), 1.0F);
+    public boolean applyEffectTick(@NotNull LivingEntity entity, int amplifier) {
+        entity.hurt(entity.level().damageSources().playerAttack(owner), 1.0F);
         // Check if the entity is dead and if it was killed by the player
         if (!entity.isAlive()) {
-            if (alive.getOrDefault(entity.getUUID(),Boolean.FALSE)) {
-                Level world = entity.level;
+            if (alive.getOrDefault(entity.getUUID(), Boolean.FALSE)) {
+                Level world = entity.level();
                 BlockPos spawnPos = entity.blockPosition();
-                //Player player = (Player) Objects.requireNonNull(entity.getLastDamageSource()).getEntity();
 
                 // Revive the enemy as a minion for 1 minute
                 SunflowerShulker shulker = ModEntities.SUNFLOWER_SHULKER.get().create(world);
                 shulker.updateLevel(owner);
                 shulker.setPos(spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5);
-                //Shulker minion = new MinionEntity(world, spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5, player);
                 world.addFreshEntity(shulker);
                 DevilRpg.LOGGER.info("===>MobEffectInstance applyEffectTick created sunflower from dead entity {} ", entity.getUUID());
                 alive.put(entity.getUUID(), false);
@@ -58,16 +56,15 @@ public class MobEffectVineFleshPuppet extends MobEffect {
         } else {
             alive.put(entity.getUUID(), true);
         }
-
+        return true;
     }
 
-    @Override
     public void removeAttributeModifiers(LivingEntity entity, @NotNull AttributeMap attributeMapIn, int amplifier) {
         DevilRpg.LOGGER.debug(entity.getName().getString() + "'s vine flesh puppet has worn off. Owner; {}", owner);
     }
 
     @Override
-    public boolean isDurationEffectTick(int duration, int amplifier) {
+    public boolean shouldApplyEffectTickThisTick(int duration, int amplifier) {
         // This method controls how often the applyEffectTick method is called
         // You can adjust it based on your needs
         return true;

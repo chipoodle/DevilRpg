@@ -1,5 +1,7 @@
 package com.chipoodle.devilrpg.client.gui.scrollableskillscreen;
 
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.component.DataComponents;
 import com.chipoodle.devilrpg.init.ModItems;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -14,8 +16,9 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.GsonHelper;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraft.world.item.component.CustomData;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 import javax.annotation.Nullable;
 
@@ -47,12 +50,12 @@ public class SkillDisplayInfo {
     }
 
     public static SkillDisplayInfo deserialize(JsonObject object) {
-        Component itextcomponent = Component.Serializer.fromJson(object.get("title"));
-        Component itextcomponent1 = Component.Serializer.fromJson(object.get("description"));
+        Component itextcomponent = Component.Serializer.fromJson(object.get("title"), RegistryAccess.EMPTY);
+        Component itextcomponent1 = Component.Serializer.fromJson(object.get("description"), RegistryAccess.EMPTY);
         if (itextcomponent != null && itextcomponent1 != null) {
             ItemStack itemstack = deserializeIcon(GsonHelper.getAsJsonObject(object, "icon"));
-            ResourceLocation background = object.has("background") ? new ResourceLocation(GsonHelper.getAsString(object, "background")) : null;
-            ResourceLocation image = object.has("image") ? new ResourceLocation(GsonHelper.getAsString(object, "image")) : null;
+            ResourceLocation background = object.has("background") ? ResourceLocation.parse(GsonHelper.getAsString(object, "background")) : null;
+            ResourceLocation image = object.has("image") ? ResourceLocation.parse(GsonHelper.getAsString(object, "image")) : null;
             SkillFrameType frametype = object.has("frame") ? SkillFrameType.byName(GsonHelper.getAsString(object, "frame")) : SkillFrameType.TASK;
             boolean flag = GsonHelper.getAsBoolean(object, "show_toast", true);
             boolean flag1 = GsonHelper.getAsBoolean(object, "announce_to_chat", true);
@@ -75,7 +78,7 @@ public class SkillDisplayInfo {
                 if (object.has("nbt")) {
                     try {
                         CompoundTag compoundnbt = TagParser.parseTag(GsonHelper.convertToString(object.get("nbt"), "nbt"));
-                        itemstack.setTag(compoundnbt);
+                        itemstack.set(DataComponents.CUSTOM_DATA, CustomData.of(compoundnbt));
                     } catch (CommandSyntaxException commandsyntaxexception) {
                         throw new JsonSyntaxException("Invalid nbt tag: " + commandsyntaxexception.getMessage());
                     }
@@ -159,7 +162,7 @@ public class SkillDisplayInfo {
         return this.hidden;
     }
 
-    public void write(FriendlyByteBuf buf) {
+    /*public void write(FriendlyByteBuf buf) {
         buf.writeComponent(this.title);
         buf.writeComponent(this.description);
         buf.writeItem(this.icon);
@@ -190,13 +193,13 @@ public class SkillDisplayInfo {
 
         buf.writeFloat(this.x);
         buf.writeFloat(this.y);
-    }
+    }*/
 
     public JsonElement serialize() {
         JsonObject jsonobject = new JsonObject();
         jsonobject.add("icon", this.serializeIcon());
-        jsonobject.add("title", Component.Serializer.toJsonTree(this.title));
-        jsonobject.add("description", Component.Serializer.toJsonTree(this.description));
+        jsonobject.addProperty("title", Component.Serializer.toJson(this.title, RegistryAccess.EMPTY));
+        jsonobject.addProperty("description", Component.Serializer.toJson(this.description, RegistryAccess.EMPTY));
         jsonobject.addProperty("frame", this.frame.getName());
         jsonobject.addProperty("show_toast", this.showToast);
         jsonobject.addProperty("announce_to_chat", this.announceToChat);
@@ -224,8 +227,8 @@ public class SkillDisplayInfo {
     private JsonObject serializeIcon() {
         JsonObject jsonobject = new JsonObject();
         jsonobject.addProperty("item", ModItems.getLocationFromItem(this.icon.getItem()).toString());
-        if (this.icon.hasTag()) {
-            jsonobject.addProperty("nbt", this.icon.getTag().toString());
+        if (this.icon.has(DataComponents.CUSTOM_DATA)) {
+            jsonobject.addProperty("nbt", this.icon.get(DataComponents.CUSTOM_DATA).copyTag().toString());
         }
 
         return jsonobject;

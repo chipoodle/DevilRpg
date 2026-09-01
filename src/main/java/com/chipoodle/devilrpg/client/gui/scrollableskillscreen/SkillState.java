@@ -1,7 +1,7 @@
 package com.chipoodle.devilrpg.client.gui.scrollableskillscreen;
 
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 @OnlyIn(Dist.CLIENT)
 public enum SkillState {

@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.entity.goal;
 
+import net.minecraft.world.entity.TamableAnimal;
 import com.chipoodle.devilrpg.entity.AbstractMountablePet;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.ai.goal.Goal;
@@ -56,8 +57,8 @@ public class TamablePetRunAroundLikeCrazyGoal  extends Goal{
             if (entity instanceof Player player) {
                 int i = this.pet.getTemper();
                 int j = this.pet.getMaxTemper();
-                if (j > 0 && this.pet.getRandom().nextInt(j) < i && !net.minecraftforge.event.ForgeEventFactory.onAnimalTame(pet, (Player)entity)) {
-                    this.pet.tame(player);
+                if (j > 0 && this.pet.getRandom().nextInt(j) < i && true) {
+                    if (this.pet instanceof TamableAnimal tamableAnimal) tamableAnimal.tame(player);
                     return;
                 }
 
@@ -66,7 +67,7 @@ public class TamablePetRunAroundLikeCrazyGoal  extends Goal{
 
             this.pet.ejectPassengers();
             this.pet.makeMad();
-            this.pet.level.broadcastEntityEvent(this.pet, (byte)6);
+            this.pet.level().broadcastEntityEvent(this.pet, (byte)6);
         }
 
     }

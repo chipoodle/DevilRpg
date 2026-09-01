@@ -1,95 +1,36 @@
 package com.chipoodle.devilrpg.init;
 
-import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.network.handler.*;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.network.NetworkRegistry;
-import net.minecraftforge.network.simple.SimpleChannel;
-
+import com.chipoodle.devilrpg.network.payload.*;
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
 /**
+ * Registers the custom payloads (networking) of the mod with NeoForge.
+ *
  * @author Christian
  */
 public class ModNetwork {
 
     private static final String NETWORK_PROTOCOL_VERSION = "1";
 
+    public static void registerPayloads(final RegisterPayloadHandlersEvent event) {
+        final PayloadRegistrar registrar = event.registrar(NETWORK_PROTOCOL_VERSION);
 
-    public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
-            new ResourceLocation(DevilRpg.MODID, "main"),
-            () -> NETWORK_PROTOCOL_VERSION,
-            NETWORK_PROTOCOL_VERSION::equals,
-            NETWORK_PROTOCOL_VERSION::equals
-    );
+        // Serverbound only
+        registrar.playToServer(KeyboardSkillPayload.TYPE, KeyboardSkillPayload.STREAM_CODEC, KeyboardSkillPayload::handle);
+        registrar.playToServer(WerewolfAttackPayload.TYPE, WerewolfAttackPayload.STREAM_CODEC, WerewolfAttackPayload::handle);
+        registrar.playToServer(PlayerPassiveSkillPayload.TYPE, PlayerPassiveSkillPayload.STREAM_CODEC, PlayerPassiveSkillPayload::handle);
+        registrar.playToServer(DirectSkillExecutionPayload.TYPE, DirectSkillExecutionPayload.STREAM_CODEC, DirectSkillExecutionPayload::handle);
 
-    public static void register() {
+        // Bidirectional (client <-> server)
+        registrar.playBidirectional(PlayerManaPayload.TYPE, PlayerManaPayload.STREAM_CODEC, PlayerManaPayload::handle);
+        registrar.playBidirectional(PlayerSkillTreePayload.TYPE, PlayerSkillTreePayload.STREAM_CODEC, PlayerSkillTreePayload::handle);
+        registrar.playBidirectional(PlayerExperiencePayload.TYPE, PlayerExperiencePayload.STREAM_CODEC, PlayerExperiencePayload::handle);
+        registrar.playBidirectional(PlayerAuxiliarPayload.TYPE, PlayerAuxiliarPayload.STREAM_CODEC, PlayerAuxiliarPayload::handle);
+        registrar.playBidirectional(PlayerMinionPayload.TYPE, PlayerMinionPayload.STREAM_CODEC, PlayerMinionPayload::handle);
+        registrar.playBidirectional(PlayerStaminaPayload.TYPE, PlayerStaminaPayload.STREAM_CODEC, PlayerStaminaPayload::handle);
 
-        int networkId = 0;
-        CHANNEL.registerMessage(++networkId,
-                KeyboardSkillServerHandler.class,
-                KeyboardSkillServerHandler::encode,
-                KeyboardSkillServerHandler::decode,
-                KeyboardSkillServerHandler::onMessage);
-
-        CHANNEL.registerMessage(++networkId,
-                PlayerManaClientServerHandler.class,
-                PlayerManaClientServerHandler::encode,
-                PlayerManaClientServerHandler::decode,
-                PlayerManaClientServerHandler::onMessage);
-
-        CHANNEL.registerMessage(++networkId,
-                PlayerSkillTreeClientServerHandler.class,
-                PlayerSkillTreeClientServerHandler::encode,
-                PlayerSkillTreeClientServerHandler::decode,
-                PlayerSkillTreeClientServerHandler::onMessage);
-
-        CHANNEL.registerMessage(++networkId,
-                WerewolfAttackServerHandler.class,
-                WerewolfAttackServerHandler::encode,
-                WerewolfAttackServerHandler::decode,
-                WerewolfAttackServerHandler::onMessage);
-
-        CHANNEL.registerMessage(++networkId,
-                PlayerExperienceClientServerHandler.class,
-                PlayerExperienceClientServerHandler::encode,
-                PlayerExperienceClientServerHandler::decode,
-                PlayerExperienceClientServerHandler::onMessage);
-
-        CHANNEL.registerMessage(++networkId,
-                PlayerAuxiliarClientServerHandler.class,
-                PlayerAuxiliarClientServerHandler::encode,
-                PlayerAuxiliarClientServerHandler::decode,
-                PlayerAuxiliarClientServerHandler::onMessage);
-
-        CHANNEL.registerMessage(++networkId,
-                PlayerMinionClientServerHandler.class,
-                PlayerMinionClientServerHandler::encode,
-                PlayerMinionClientServerHandler::decode,
-                PlayerMinionClientServerHandler::onMessage);
-
-        CHANNEL.registerMessage(++networkId,
-                PotionClientHandler.class,
-                PotionClientHandler::encode,
-                PotionClientHandler::decode,
-                PotionClientHandler::onMessage);
-
-        CHANNEL.registerMessage(++networkId,
-                PlayerPassiveSkillServerHandler.class,
-                PlayerPassiveSkillServerHandler::encode,
-                PlayerPassiveSkillServerHandler::decode,
-                PlayerPassiveSkillServerHandler::onMessage);
-
-        CHANNEL.registerMessage(++networkId,
-                PlayerStaminaClientServerHandler.class,
-                PlayerStaminaClientServerHandler::encode,
-                PlayerStaminaClientServerHandler::decode,
-                PlayerStaminaClientServerHandler::onMessage);
-
-        CHANNEL.registerMessage(++networkId,
-                DirectSkillExecutionServerHandler.class,
-                DirectSkillExecutionServerHandler::encode,
-                DirectSkillExecutionServerHandler::decode,
-                DirectSkillExecutionServerHandler::onMessage);
+        // Clientbound only
+        registrar.playToClient(PotionPayload.TYPE, PotionPayload.STREAM_CODEC, PotionPayload::handle);
     }
-
 }

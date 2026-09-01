@@ -1,13 +1,14 @@
 package com.chipoodle.devilrpg.eventsubscriber.common;
 
+import net.neoforged.fml.common.EventBusSubscriber;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.block.SoulVineBlock;
-import net.minecraftforge.event.level.BlockEvent;
-import net.minecraftforge.eventbus.api.EventPriority;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.bus.api.EventPriority;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.Mod;
 
-@Mod.EventBusSubscriber(modid = DevilRpg.MODID)
+@EventBusSubscriber(modid = DevilRpg.MODID)
 public class CommonForgeBlockEventSubscriber {
 
     @SubscribeEvent(priority = EventPriority.LOWEST)

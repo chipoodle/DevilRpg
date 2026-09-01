@@ -14,7 +14,7 @@ public class JsonUtil {
             JsonElement jsonElement = jsonObject.get(itemString);
             if (jsonElement.isJsonPrimitive()) {
                 String s = jsonElement.getAsString();
-                ResourceLocation resourceLocation = new ResourceLocation(s);
+                ResourceLocation resourceLocation = ResourceLocation.parse(s);
                 //DevilRpg.LOGGER.debug("--------- Discovering resourceLocation: {} with string: {} to item", resourceLocation, s);
                 Item itemFromLocation = ModItems.getItemFromLocation(resourceLocation);
                 //DevilRpg.LOGGER.debug("--------- Item Discovered {}", itemFromLocation);

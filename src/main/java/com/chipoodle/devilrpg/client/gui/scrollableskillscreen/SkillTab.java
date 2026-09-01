@@ -8,16 +8,15 @@ import com.google.common.collect.Maps;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiComponent;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.common.util.LazyOptional;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 import javax.annotation.Nullable;
 import java.util.HashMap;
@@ -26,7 +25,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @OnlyIn(Dist.CLIENT)
-public class SkillTab extends GuiComponent {
+public class SkillTab {
     private static final int BACKGROUND_CHUNKS_X_LOOP = 5;//18
     private static final int BACKGROUND_CHUNKS_Y_LOOP = 3;//11
 
@@ -58,7 +57,7 @@ public class SkillTab extends GuiComponent {
     private boolean centered;
     private int page;
 
-    private LazyOptional<PlayerSkillCapabilityInterface> skillCap;
+    private PlayerSkillCapabilityInterface skillCap;
 
     private SkillTab(Minecraft minecraft, SkillScreen screen, SkillTabType type, int index,
                      SkillElement skillElement) {
@@ -76,7 +75,7 @@ public class SkillTab extends GuiComponent {
     }
 
     public SkillTab(Minecraft mc, SkillScreen screen, SkillTabType type, int index, int page,
-                    SkillElement adv, LazyOptional<PlayerSkillCapabilityInterface> skillCap) {
+                    SkillElement adv, PlayerSkillCapabilityInterface skillCap) {
         this(mc, screen, type, index, adv);
         this.page = page;
         this.skillCap = skillCap;
@@ -94,7 +93,7 @@ public class SkillTab extends GuiComponent {
      */
     @Nullable
     public static SkillTab create(Minecraft minecraft, SkillScreen screen, int tabIndex,
-                                  SkillElement skillElement, LazyOptional<PlayerSkillCapabilityInterface> skillCap) {
+                                  SkillElement skillElement, PlayerSkillCapabilityInterface skillCap) {
         if (skillElement.getDisplay() == null) {
             return null;
         } else {
@@ -133,17 +132,17 @@ public class SkillTab extends GuiComponent {
      * @param offsetY
      * @param isSelected
      */
-    public void drawTab(PoseStack poseStack, int offsetX, int offsetY, boolean isSelected) {
-        this.type.renderTabSelectorBackground(poseStack, this, offsetX, offsetY, isSelected, this.index);
+    public void drawTab(GuiGraphics guiGraphics, int offsetX, int offsetY, boolean isSelected) {
+        this.type.renderTabSelectorBackground(guiGraphics, offsetX, offsetY, isSelected, this.index);
     }
 
-    public void drawIcon(PoseStack p_275411_,int offsetX, int offsetY, ItemRenderer renderer) {
-        this.type.drawIcon(p_275411_,offsetX, offsetY, this.index, renderer, this.icon);
+    public void drawIcon(GuiGraphics guiGraphics, int offsetX, int offsetY, ItemRenderer renderer) {
+        this.type.drawIcon(guiGraphics, offsetX, offsetY, this.index, renderer, this.icon);
 
     }
 
-    public void drawIconImage(PoseStack poseStack, int offsetLeft, int offsetTop) {
-        this.type.drawIconImage(poseStack, offsetLeft, offsetTop, this.index, root);
+    public void drawIconImage(GuiGraphics guiGraphics, int offsetLeft, int offsetTop) {
+        this.type.drawIconImage(guiGraphics, offsetLeft, offsetTop, this.index, root);
     }
 
     /**
@@ -151,7 +150,7 @@ public class SkillTab extends GuiComponent {
      *
      * @param poseStack
      */
-    public void drawContents(PoseStack poseStack) {
+    public void drawContents(GuiGraphics guiGraphics) {
         if (!this.centered) {
             //Con este controlamos la posciion en x de los botones del árbol
             this.scrollX = (137 - (this.maxX + this.minX) / 2D);
@@ -159,17 +158,18 @@ public class SkillTab extends GuiComponent {
             this.scrollY = (84 - (this.maxY + this.minY) / 2D);
             this.centered = true;
         }
+        PoseStack poseStack = guiGraphics.pose();
         poseStack.pushPose();
         poseStack.translate(0.0F, 0.0F, 950.0F);
         RenderSystem.enableDepthTest();
         RenderSystem.colorMask(false, false, false, false);
         // Oculta el fondo fuera de la ventana
-        fill(poseStack, 4680, 2260, -4680, -2260, -16777216);
+        guiGraphics.fill(4680, 2260, -4680, -2260, -16777216);
         RenderSystem.colorMask(true, true, true, true);
         poseStack.translate(0.0F, 0.0F, -950.0F);
         RenderSystem.depthFunc(518);
         // Pinta el fondo
-        fill(poseStack, TAB_BACKGROUND_X, TAB_BACKGROUND_Y, 0, 0, -16777216);
+        guiGraphics.fill(TAB_BACKGROUND_X, TAB_BACKGROUND_Y, 0, 0, -16777216);
         RenderSystem.depthFunc(515);
         ResourceLocation resourcelocation = this.displayInfo.getBackground();
         if (resourcelocation != null) {
@@ -179,12 +179,12 @@ public class SkillTab extends GuiComponent {
         }
 
         // Pinta el mosaico dinámico del fondo así como los iconos y las conexiones del arbol de habilidades
-        generateBackgroundImageChunks(poseStack);
+        generateBackgroundImageChunks(guiGraphics);
 
         RenderSystem.depthFunc(518);
         poseStack.translate(0.0F, 0.0F, -950.0F);
         RenderSystem.colorMask(false, false, false, false);
-        fill(poseStack, 4680, 2260, -4680, -2260, -16777216);
+        guiGraphics.fill(4680, 2260, -4680, -2260, -16777216);
         RenderSystem.colorMask(true, true, true, true);
         poseStack.translate(0.0F, 0.0F, 950.0F);
         RenderSystem.depthFunc(515);
@@ -199,23 +199,28 @@ public class SkillTab extends GuiComponent {
      * @param poseStack
      */
 
-    private void generateBackgroundImageChunks(PoseStack poseStack) {
+    private void generateBackgroundImageChunks(GuiGraphics guiGraphics) {
         int i = Mth.floor(this.scrollX);
         int j = Mth.floor(this.scrollY);
         int k = i % BACKGROUND_CHUNKS;
         int l = j % BACKGROUND_CHUNKS;
 
+        ResourceLocation resourcelocation = this.displayInfo.getBackground();
+        if (resourcelocation == null) {
+            resourcelocation = TextureManager.INTENTIONAL_MISSING_TEXTURE;
+        }
+
         for (int i1 = -1; i1 <= BACKGROUND_CHUNKS_X_LOOP; ++i1) {//18
             for (int j1 = -1; j1 <= BACKGROUND_CHUNKS_Y_LOOP; ++j1) { //11
-                blit(poseStack, k + BACKGROUND_CHUNKS * i1, l + BACKGROUND_CHUNKS * j1, 0.0F, 0.0F, BACKGROUND_CHUNKS,
+                guiGraphics.blit(resourcelocation, k + BACKGROUND_CHUNKS * i1, l + BACKGROUND_CHUNKS * j1, 0.0F, 0.0F, BACKGROUND_CHUNKS,
                         BACKGROUND_CHUNKS, BACKGROUND_CHUNKS, BACKGROUND_CHUNKS);
             }
         }
         // pinta las lineas
-        this.root.drawConnectionLineToParent(poseStack, i, j, true);
-        this.root.drawConnectionLineToParent(poseStack, i, j, false);
+        this.root.drawConnectionLineToParent(guiGraphics, i, j, true);
+        this.root.drawConnectionLineToParent(guiGraphics, i, j, false);
         // Pinta los skills
-        this.root.drawSkills(poseStack, i, j);
+        this.root.drawSkills(guiGraphics, i, j);
 
 
     }
@@ -230,11 +235,12 @@ public class SkillTab extends GuiComponent {
      * @param width
      * @param height
      */
-    public void drawTabTooltips(PoseStack poseStack, int mouseX, int mouseY, int width, int height) {
+    public void drawTabTooltips(GuiGraphics guiGraphics, int mouseX, int mouseY, int width, int height) {
+        PoseStack poseStack = guiGraphics.pose();
         poseStack.pushPose();
         poseStack.translate(0.0F, 0.0F, -200.0F);
         // Pinta la sombra que cubre el fondo cuando se hace hoover en una habilidad
-        fill(poseStack, 0, 0, TAB_BACKGROUND_X, TAB_BACKGROUND_Y, Mth.floor(this.fade * 255.0F) << 24);
+        guiGraphics.fill(0, 0, TAB_BACKGROUND_X, TAB_BACKGROUND_Y, Mth.floor(this.fade * 255.0F) << 24);
         boolean flag = false;
         if (mouseX > 0 && mouseX < TAB_BACKGROUND_X && mouseY > 0 && mouseY < TAB_BACKGROUND_Y) {
             int i = Mth.floor(this.scrollX);// posición del fondo en x. Cambia cuando se posiciona con el drag del mouse
@@ -243,7 +249,7 @@ public class SkillTab extends GuiComponent {
             for (SkillWidget skillEntryGui : this.guis.values()) {
                 if (skillEntryGui.isMouseOver(i, j, mouseX, mouseY)) {
                     flag = true;
-                    skillEntryGui.drawHoveredSkill(poseStack, i, j, this.fade, width, height);
+                    skillEntryGui.drawHoveredSkill(guiGraphics, i, j, this.fade, width, height);
                     break;
                 }
             }
@@ -282,7 +288,7 @@ public class SkillTab extends GuiComponent {
         //DevilRpg.LOGGER.info("|-------- addSkillElement");
         if (skillElement.getDisplay() != null) {
 
-            skillCap.ifPresent(skillCap -> {
+            if (skillCap != null) {
                 HashMap<SkillEnum, Integer> skillsPoints = skillCap.getSkillsPoints();
                 HashMap<SkillEnum, Integer> skillsMaxPoints = skillCap.getMaxSkillsPoints();
                 Integer points = skillsPoints.get(skillElement.getSkillCapability());
@@ -290,7 +296,7 @@ public class SkillTab extends GuiComponent {
                 SkillWidget skillentryGui = new SkillWidget(this, this.minecraft, skillElement,
                         (points == null ? 0 : points), (maxPonits == null ? 0 : maxPonits));
                 this.addGuiSkillElement(skillentryGui, skillElement);
-            });
+            }
 
         }
     }
@@ -305,9 +311,9 @@ public class SkillTab extends GuiComponent {
         DevilRpg.LOGGER.info("|-------- removeSkillElement");
         if (skillElement.getDisplay() != null) {
 
-            skillCap.ifPresent(skillCap -> {
+            if (skillCap != null) {
                 this.guis.remove(skillElement);
-            });
+            }
 
         }
     }

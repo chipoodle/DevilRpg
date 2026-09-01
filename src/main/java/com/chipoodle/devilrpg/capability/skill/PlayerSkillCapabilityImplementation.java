@@ -1,5 +1,8 @@
 package com.chipoodle.devilrpg.capability.skill;
 
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
+import net.neoforged.neoforge.network.PacketDistributor;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.mana.PlayerManaCapability;
@@ -12,7 +15,7 @@ import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillResourceCost
 import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model.ClientSkillBuilderFromJson;
 import com.chipoodle.devilrpg.entity.ITamableEntity;
 import com.chipoodle.devilrpg.init.ModNetwork;
-import com.chipoodle.devilrpg.network.handler.PlayerSkillTreeClientServerHandler;
+import com.chipoodle.devilrpg.network.payload.PlayerSkillTreePayload;
 import com.chipoodle.devilrpg.skillsystem.AbstractSkillExecutor;
 import com.chipoodle.devilrpg.skillsystem.SingletonSkillExecutorFactory;
 import com.chipoodle.devilrpg.util.BytesUtil;
@@ -26,7 +29,6 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.network.PacketDistributor;
 
 import java.io.IOException;
 import java.util.*;
@@ -62,7 +64,7 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
         HashMap<SkillEnum, Integer> manaCostContainer = new HashMap<>();
         HashMap<SkillEnum, ResourceType> resourceTypeContainer = new HashMap<>();
         ConcurrentLinkedQueue<ITamableEntity> minions = new ConcurrentLinkedQueue<>();
-        HashMap<Attribute, UUID> attributeModifiers = new HashMap<>();
+        HashMap<String, String> attributeModifiers = new HashMap<>();
         List<SkillEnum> filteredSkillList = SkillEnum.getSkillsWithoutEmpty();
         HashMap<SkillEnum, String> imagesOfSkills = new HashMap<>();
 
@@ -125,7 +127,7 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
     public void setSkillsNameOfPowers(HashMap<PowerEnum, SkillEnum> names, Player player) {
         try {
             nbt.putByteArray(POWERS_KEY, BytesUtil.toByteArray(names));
-            if (!player.level.isClientSide) {
+            if (!player.level().isClientSide) {
                 sendSkillChangesToClient((ServerPlayer) player);
             } else {
                 sendSkillChangesToServer();
@@ -150,7 +152,7 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
     public void setSkillsPoints(HashMap<SkillEnum, Integer> points, Player player) {
         try {
             nbt.putByteArray(SKILLS_KEY, BytesUtil.toByteArray(points));
-            if (!player.level.isClientSide) {
+            if (!player.level().isClientSide) {
                 sendSkillChangesToClient((ServerPlayer) player);
             } else {
                 sendSkillChangesToServer();
@@ -175,7 +177,7 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
     public void setMaxSkillsPoints(HashMap<SkillEnum, Integer> points, Player player) {
         try {
             nbt.putByteArray(MAX_SKILLS_KEY, BytesUtil.toByteArray(points));
-            if (!player.level.isClientSide) {
+            if (!player.level().isClientSide) {
                 sendSkillChangesToClient((ServerPlayer) player);
             } else {
                 sendSkillChangesToServer();
@@ -201,7 +203,7 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
     public void setResourceCostPoints(HashMap<SkillEnum, Integer> points, Player player) {
         try {
             nbt.putByteArray(MANA_COST_KEY, BytesUtil.toByteArray(points));
-            if (!player.level.isClientSide) {
+            if (!player.level().isClientSide) {
                 sendSkillChangesToClient((ServerPlayer) player);
             } else {
                 sendSkillChangesToServer();
@@ -227,7 +229,7 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
     public void setResourceType(HashMap<SkillEnum, ResourceType> points, Player player) {
         try {
             nbt.putByteArray(RESOURCE_TYPE_KEY, BytesUtil.toByteArray(points));
-            if (!player.level.isClientSide) {
+            if (!player.level().isClientSide) {
                 sendSkillChangesToClient((ServerPlayer) player);
             } else {
                 sendSkillChangesToServer();
@@ -240,9 +242,9 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
 
     @SuppressWarnings("unchecked")
     @Override
-    public HashMap<String, UUID> getAttributeModifiers() {
+    public HashMap<String, String> getAttributeModifiers() {
         try {
-            return (HashMap<String, UUID>) BytesUtil
+            return (HashMap<String, String>) BytesUtil
                     .toObject(nbt.getByteArray(ATTRIBUTE_MODIFIER_KEY));
         } catch (ClassNotFoundException | IOException e) {
             DevilRpg.LOGGER.error("Error en getAttributeModifiers", e);
@@ -251,10 +253,10 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
     }
 
     @Override
-    public void setAttributeModifiers(HashMap<String, UUID> modifiers, Player player) {
+    public void setAttributeModifiers(HashMap<String, String> modifiers, Player player) {
         try {
             nbt.putByteArray(ATTRIBUTE_MODIFIER_KEY, BytesUtil.toByteArray(modifiers));
-            if (!player.level.isClientSide) {
+            if (!player.level().isClientSide) {
                 sendSkillChangesToClient((ServerPlayer) player);
             } else {
                 sendSkillChangesToServer();
@@ -296,7 +298,7 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
                     .stream()
                     .collect(Collectors.toMap(
                             Map.Entry::getKey,
-                            entry -> new ResourceLocation(entry.getValue()),
+                            entry -> ResourceLocation.parse(entry.getValue()),
                             (e1, e2) -> e1, HashMap::new
                     ));
 
@@ -317,7 +319,7 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
                             (e1, e2) -> e1, HashMap::new
                     ));
             nbt.putByteArray(IMAGES_OF_SKILLS_KEY, BytesUtil.toByteArray(adaptedMap));
-            if (!player.level.isClientSide) {
+            if (!player.level().isClientSide) {
                 sendSkillChangesToClient((ServerPlayer) player);
             } else {
                 sendSkillChangesToServer();
@@ -329,14 +331,14 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
 
     @Override
     public void triggerAction(Player playerIn, PowerEnum triggeredPower) {
-        //DevilRpg.LOGGER.info("------ side: {} PlayerSkillCapability triggerAction(SPlayer, triggeredPower) {} {}", (playerIn.level.isClientSide ? "CLIENT" : "SERVER"), playerIn.getName().getString(), triggeredPower);
+        //DevilRpg.LOGGER.info("------ side: {} PlayerSkillCapability triggerAction(SPlayer, triggeredPower) {} {}", (playerIn.level().isClientSide ? "CLIENT" : "SERVER"), playerIn.getName().getString(), triggeredPower);
         if (getSkillLevelFromAssociatedPower(triggeredPower) != 0) {
             AbstractSkillExecutor skill = getSkill(triggeredPower);
             if (skill.arePreconditionsMetBeforeConsumingResource(playerIn) && consumeResource(playerIn, skill)) {
-                skill.execute(playerIn.level, playerIn, new HashMap<>());
+                skill.execute(playerIn.level(), playerIn, new HashMap<>());
             } else {
-                playerIn.level.playSound(null, playerIn.getX(), playerIn.getY(), playerIn.getZ(),
-                        SoundEvents.NOTE_BLOCK_BASS.get(), SoundSource.NEUTRAL, 0.5F,
+                playerIn.level().playSound(null, playerIn.getX(), playerIn.getY(), playerIn.getZ(),
+                        SoundEvents.NOTE_BLOCK_BASS, SoundSource.NEUTRAL, 0.5F,
                         0.4F / (new Random().nextFloat() * 0.4F + 0.8F));
 					
 					/*String message = "Not enough mana.";
@@ -347,11 +349,11 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
 
     @Override
     public void triggerPassive(Player sender, CompoundTag triggeredSkill) {
-        //if (!sender.level.isClientSide) {
+        //if (!sender.level().isClientSide) {
         SkillEnum skillFromByteArray = getSkillFromByteArray(triggeredSkill);
         //DevilRpg.LOGGER.debug("PlayerSkillCapability triggerPassive(ServerPlayer, triggeredSkill) {} {}", sender, skillFromByteArray);
         AbstractSkillExecutor skill = getLoadedSkillExecutor(skillFromByteArray);
-        skill.execute(sender.level, sender, new HashMap<>());
+        skill.execute(sender.level(), sender, new HashMap<>());
         //}
     }
 
@@ -408,12 +410,12 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
     }
 
     @Override
-    public CompoundTag serializeNBT() {
+    public CompoundTag serializeNBT(HolderLookup.Provider provider) {
         return nbt;
     }
 
     @Override
-    public void deserializeNBT(CompoundTag nbt) {
+    public void deserializeNBT(HolderLookup.Provider provider, CompoundTag nbt) {
         this.nbt = nbt;
     }
 
@@ -424,12 +426,12 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
     }
 
     private void sendSkillChangesToServer() {
-        ModNetwork.CHANNEL.sendToServer(new PlayerSkillTreeClientServerHandler(serializeNBT()));
+        PacketDistributor.sendToServer(new PlayerSkillTreePayload(serializeNBT(RegistryAccess.EMPTY)));
     }
 
     private void sendSkillChangesToClient(ServerPlayer pe) {
-        ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> pe),
-                new PlayerSkillTreeClientServerHandler(serializeNBT()));
+        PacketDistributor.sendToPlayer(pe,
+                new PlayerSkillTreePayload(serializeNBT(RegistryAccess.EMPTY)));
     }
 
     @Override

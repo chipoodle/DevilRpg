@@ -3,12 +3,12 @@ package com.chipoodle.devilrpg.client.gui.scrollableskillscreen;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import net.minecraft.advancements.CriterionProgress;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 import javax.annotation.Nullable;
+import java.time.Instant;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -198,27 +198,27 @@ public class SkillProgress implements Comparable<SkillProgress> {
 	}
 
 	@Nullable
-	public Date getFirstProgressDate() {
-		Date date = null;
+	public Instant getFirstProgressDate() {
+		Instant instant = null;
 
 		for (CriterionProgress criterionprogress : this.criteria.values()) {
-			if (criterionprogress.isDone() && (date == null || criterionprogress.getObtained().before(date))) {
-				date = criterionprogress.getObtained();
+			if (criterionprogress.isDone() && (instant == null || criterionprogress.getObtained().isBefore(instant))) {
+				instant = criterionprogress.getObtained();
 			}
 		}
 
-		return date;
+		return instant;
 	}
 
 	public int compareTo(SkillProgress p_compareTo_1_) {
-		Date date = this.getFirstProgressDate();
-		Date date1 = p_compareTo_1_.getFirstProgressDate();
-		if (date == null && date1 != null) {
+		Instant instant = this.getFirstProgressDate();
+		Instant instant1 = p_compareTo_1_.getFirstProgressDate();
+		if (instant == null && instant1 != null) {
 			return 1;
-		} else if (date != null && date1 == null) {
+		} else if (instant != null && instant1 == null) {
 			return -1;
 		} else {
-			return date == null && date1 == null ? 0 : date.compareTo(date1);
+			return instant == null && instant1 == null ? 0 : instant.compareTo(instant1);
 		}
 	}
 

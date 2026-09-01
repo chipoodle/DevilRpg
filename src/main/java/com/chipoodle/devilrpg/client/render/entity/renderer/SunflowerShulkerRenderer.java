@@ -13,15 +13,15 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 
 @OnlyIn(Dist.CLIENT)
 public class SunflowerShulkerRenderer extends MobRenderer<SunflowerShulker, SunflowerShulkerModel<SunflowerShulker>> {
-    public static final ResourceLocation DEFAULT_TEXTURE_LOCATION = new ResourceLocation(DevilRpg.MODID + ":textures/entity/sunflowershulker/texture.png");
+    public static final ResourceLocation DEFAULT_TEXTURE_LOCATION = ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "textures/entity/sunflowershulker/texture.png");
     public SunflowerShulkerRenderer(EntityRendererProvider.Context p_174370_) {
         super(p_174370_, new SunflowerShulkerModel<>(p_174370_.bakeLayer(SunflowerShulkerModel.DEFAULT_LAYER_LOCATION)), 0.0F);
         this.addLayer(new SunflowerShulkerHeadLayer(this));
@@ -49,8 +49,8 @@ public class SunflowerShulkerRenderer extends MobRenderer<SunflowerShulker, Sunf
         return getTextureLocation(p_115902_.getColor());
     }
 
-    protected void setupRotations(@NotNull SunflowerShulker sunflowerShulker, @NotNull PoseStack poseStack, float p_115909_, float p_115910_, float p_115911_) {
-        super.setupRotations(sunflowerShulker, poseStack, p_115909_, p_115910_ + 180.0F, p_115911_);
+    protected void setupRotations(@NotNull SunflowerShulker sunflowerShulker, @NotNull PoseStack poseStack, float p_115909_, float p_115910_, float p_115911_, float p_115912_) {
+        super.setupRotations(sunflowerShulker, poseStack, p_115909_, p_115910_ + 180.0F, p_115911_, p_115912_);
         poseStack.translate(0.0D, 0.5D, 0.0D);
         poseStack.mulPose(sunflowerShulker.getAttachFace().getOpposite().getRotation());
         poseStack.translate(0.0D, -0.5D, 0.0D);

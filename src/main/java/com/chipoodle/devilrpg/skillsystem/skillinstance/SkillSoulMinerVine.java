@@ -16,7 +16,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.material.Material;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.HashMap;
@@ -36,7 +35,7 @@ public class SkillSoulMinerVine extends AbstractSkillSeedsInInventoryExecutor {
     @Override
     public boolean arePreconditionsMetBeforeConsumingResource(Player player) {
         BlockPos playerBlockPos = player.blockPosition();
-        //BlockState playerBlockState = player.level.getBlockState(playerBlockPos);
+        //BlockState playerBlockState = player.level().getBlockState(playerBlockPos);
         Vec3 playerLookVector = player.getLookAngle();
         Direction nearestDirection = Direction.getNearest(playerLookVector.x, 0, playerLookVector.z);
         //DevilRpg.LOGGER.info("-------->Direction: {}", nearestDirection);
@@ -44,10 +43,9 @@ public class SkillSoulMinerVine extends AbstractSkillSeedsInInventoryExecutor {
 
         boolean hasSeeds = super.arePreconditionsMetBeforeConsumingResource(player);
 
-        boolean canPlace = (player.level.getBlockState(newBlockpos).getMaterial().equals(Material.REPLACEABLE_PLANT) ||
-                player.level.getBlockState(newBlockpos).getMaterial().equals(Material.TOP_SNOW) ||
-                player.level.getBlockState(newBlockpos).getBlock().equals(Blocks.AIR))
-                && SoulMinerVineBlock.hasAtLeasOneSolidNeighbourPerpendicularToGrowDirection(player.level, newBlockpos, nearestDirection);
+        boolean canPlace = (player.level().getBlockState(newBlockpos).canBeReplaced() ||
+                player.level().getBlockState(newBlockpos).isAir())
+                && SoulMinerVineBlock.hasAtLeasOneSolidNeighbourPerpendicularToGrowDirection(player.level(), newBlockpos, nearestDirection);
         return !player.getCooldowns().isOnCooldown(icon.getItem()) && canPlace && hasSeeds;
     }
 

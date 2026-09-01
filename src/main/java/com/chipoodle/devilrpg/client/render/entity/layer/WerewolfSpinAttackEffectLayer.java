@@ -20,12 +20,12 @@ import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 @OnlyIn(Dist.CLIENT)
 public class WerewolfSpinAttackEffectLayer<T extends LivingEntity> extends RenderLayer<T, WerewolfTransformedModel<T>> {
-   public static final ResourceLocation TEXTURE = new ResourceLocation(DevilRpg.MODID + ":textures/gui/skill/trident_riptide.png");
+   public static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "textures/gui/skill/trident_riptide.png");
    public static final String BOX = "box";
    private final ModelPart box;
 

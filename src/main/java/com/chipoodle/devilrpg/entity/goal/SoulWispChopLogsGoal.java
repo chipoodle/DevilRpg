@@ -68,7 +68,7 @@ public class SoulWispChopLogsGoal extends Goal {
     public void tick() {
         //DevilRpg.LOGGER.info("======= tick targetBlockPos != null {} ", targetBlockPos != null);
         if (targetBlockPos != null) {
-            BlockState targetBlockState = this.soulWisp.level.getBlockState(targetBlockPos);
+            BlockState targetBlockState = this.soulWisp.level().getBlockState(targetBlockPos);
             //if (targetBlockState.is(BlockTags.LOGS) || targetBlockState.is(BlockTags.LEAVES)) {
             double distanceToSqr = this.soulWisp.distanceToSqr(targetBlockPos.getX(), targetBlockPos.getY(), targetBlockPos.getZ());
             if (distanceToSqr <= MAXIMUM_DISTANCE_TO_SQR) {
@@ -126,13 +126,13 @@ public class SoulWispChopLogsGoal extends Goal {
     }
 
     private void chopLog(BlockState blockState, BlockPos blockPos) {
-        this.soulWisp.level.destroyBlockProgress(soulWisp.getId(), blockPos, (-1 * (ticksUntilNextHit % -10) + 1));
+        this.soulWisp.level().destroyBlockProgress(soulWisp.getId(), blockPos, (-1 * (ticksUntilNextHit % -10) + 1));
         if (this.ticksUntilNextHit <= 0) {
             DevilRpg.LOGGER.info("======= tryChopLogWithAxe {} ", ticksUntilNextHit);
             ItemStack mainHandItem = soulWisp.getMainHandItem();
             this.ticksUntilNextHit = blockState.is(BlockTags.LOGS) ? TICKS_UNTIL_NEXT_HIT_LOG : TICKS_UNTIL_NEXT_HIT_LEAVES;
-            this.hurtAndBreak(1, this.soulWisp, (entity) -> entity.broadcastBreakEvent(EquipmentSlot.MAINHAND), mainHandItem, (Player) soulWisp.getOwner());
-            if (this.soulWisp.level.destroyBlock(targetBlockPos, true, soulWisp))
+            this.hurtAndBreak(1, this.soulWisp, (entity) -> {}, mainHandItem, (Player) soulWisp.getOwner());
+            if (this.soulWisp.level().destroyBlock(targetBlockPos, true, soulWisp))
                 resetTargetBlock();
             //this.currentTicksWithoutChopping = 0;
         } else {
@@ -157,7 +157,7 @@ public class SoulWispChopLogsGoal extends Goal {
             for (int y = -RADIUS; y <= RADIUS; y++) {
                 for (int z = -RADIUS; z <= RADIUS; z++) {
                     BlockPos pos = blockPos.offset(x, y, z);
-                    BlockState blockState = this.soulWisp.level.getBlockState(pos);
+                    BlockState blockState = this.soulWisp.level().getBlockState(pos);
 
                     // Verificar si el bloque pertenece a una de las etiquetas
                     for (TagKey<Block> tag : blockTags) {
@@ -236,10 +236,10 @@ public class SoulWispChopLogsGoal extends Goal {
 
 
     public <T extends LivingEntity> void hurtAndBreak(int damage, T livingEntity, Consumer<T> tConsumer, ItemStack itemStack, Player owner) {
-        if (!livingEntity.level.isClientSide && (!(livingEntity instanceof Player) || !((Player) livingEntity).getAbilities().instabuild)) {
+        if (!livingEntity.level().isClientSide && (!(livingEntity instanceof Player) || !((Player) livingEntity).getAbilities().instabuild)) {
             if (itemStack.isDamageableItem()) {
-                damage = itemStack.getItem().damageItem(itemStack, damage, livingEntity, tConsumer);
-                if (itemStack.hurt(damage, livingEntity.getRandom(), null)) {
+                itemStack.hurtAndBreak(damage, livingEntity, EquipmentSlot.MAINHAND);
+                if (itemStack.isEmpty()) {
                     tConsumer.accept(livingEntity);
                     Item item = itemStack.getItem();
                     itemStack.shrink(1);

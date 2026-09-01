@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.blockentity;
 
+import net.minecraft.core.Holder;
 import com.chipoodle.devilrpg.block.BloomingSanctuaryBlock;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.mana.PlayerManaCapability;
@@ -139,7 +140,7 @@ public class BloomingSanctuaryBlockEntity extends BlockEntity {
 
             // Verificar si el bloque es fertilizable con bonemeal (cultivos, plantas y pasto)
             if (targetState.getBlock() instanceof BonemealableBlock bonemealableBlock) {
-                if (bonemealableBlock.isValidBonemealTarget(world, targetPos, targetState, false)) {
+                if (bonemealableBlock.isValidBonemealTarget(world, targetPos, targetState)) {
                     ItemStack bonemealStack = new ItemStack(Items.BONE_MEAL); // Crear un stack de bonemeal
                     BoneMealItem.applyBonemeal(bonemealStack, world, targetPos, owner);
                     world.levelEvent(2005, targetPos, 0); // Efecto de partículas de bonemeal
@@ -177,7 +178,7 @@ public class BloomingSanctuaryBlockEntity extends BlockEntity {
         applyEffectToEntities(MobEffects.REGENERATION, effectAmplifier, entities);
     }
 
-    private void applyEffectToEntities(MobEffect effect, int amplifier, List<LivingEntity> entities) {
+    private void applyEffectToEntities(Holder<MobEffect> effect, int amplifier, List<LivingEntity> entities) {
         for (LivingEntity entity : entities) {
             MobEffectInstance effectInstance = new MobEffectInstance(effect, REGENERATION_DURATION, amplifier, true, true);
             MobEffectInstance activeEffect = entity.getEffect(effect);

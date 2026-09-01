@@ -5,41 +5,17 @@ import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.util.LazyOptional;
+import net.neoforged.neoforge.attachment.AttachmentType;
 
 import java.util.function.BiConsumer;
+import java.util.function.Supplier;
 
 public class EventUtils {
 
-	/*public static void cancelSwing(PlayerEntity player, PlayerInteractEvent event) {
-		LazyOptional<IBaseAuxiliarCapability> aux = player.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
-		if (aux == null || !aux.isPresent() || !aux.map(x -> x.isWerewolfTransformation()).orElse(true))
-			return;
-		boolean transformation = aux.map(x -> x.isWerewolfTransformation()).orElse(false);
-		if (transformation) {
-			player.isSwingInProgress = false;
-			event.setCanceled(true);
-		}
-	}
-
-	public static void cancelSwing(PlayerEntity player, AttackEntityEvent event) {
-		LazyOptional<IBaseAuxiliarCapability> aux = player.getCapability(PlayerAuxiliarCapabilityProvider.AUX_CAP);
-		if (aux == null || !aux.isPresent() || !aux.map(x -> x.isWerewolfTransformation()).orElse(true))
-			return;
-		boolean transformation = aux.map(x -> x.isWerewolfTransformation()).orElse(false);
-		if (transformation) {
-			player.isSwingInProgress = false;
-			event.setCanceled(true);
-		}
-
-	}*/
-
-    @SuppressWarnings("unchecked")
-    public static <T, U extends LazyOptional<PlayerAuxiliaryCapabilityInterface>> boolean onWerewolfTransformation(Player player, BiConsumer<T, U> typedFunctionToExecute, T event) {
+    public static <T> boolean onWerewolfTransformation(Player player, BiConsumer<T, PlayerAuxiliaryCapabilityInterface> typedFunctionToExecute, T event) {
         if (player != null) {
-            U aux = (U) player.getCapability(PlayerAuxiliaryCapability.INSTANCE);
-            if (!aux.isPresent() || !aux.map(PlayerAuxiliaryCapabilityInterface::isWerewolfTransformation).orElse(true))
+            PlayerAuxiliaryCapabilityInterface aux = player.getData(PlayerAuxiliaryCapability.INSTANCE);
+            if (aux == null || !aux.isWerewolfTransformation())
                 return false;
             typedFunctionToExecute.accept(event, aux);
             return true;
@@ -47,13 +23,15 @@ public class EventUtils {
         return false;
     }
 
-    @SuppressWarnings("unchecked")
-    public static <T extends Player, U extends LazyOptional<? extends IGenericCapability>> void onJoin(T player, BiConsumer<T, U> typedFunctionToExecute, Capability<?> cap) {
+    public static <T extends Player, U extends IGenericCapability> void onJoin(T player, BiConsumer<T, U> typedFunctionToExecute, Supplier<AttachmentType<U>> cap) {
         Minecraft mainThread = Minecraft.getInstance();
-        if (player != null && !player.level.isClientSide) {
-            U capabilityInstance = (U) player.getCapability(cap);
-            mainThread.tell(() -> typedFunctionToExecute.accept(player, capabilityInstance));
+        if (player != null && !player.level().isClientSide) {
+            U capabilityInstance = player.getData(cap);
+            if (mainThread != null) {
+                mainThread.tell(() -> typedFunctionToExecute.accept(player, capabilityInstance));
+            } else {
+                typedFunctionToExecute.accept(player, capabilityInstance);
+            }
         }
     }
-
 }

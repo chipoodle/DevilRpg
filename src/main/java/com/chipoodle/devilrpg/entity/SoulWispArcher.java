@@ -41,7 +41,7 @@ public class SoulWispArcher extends SoulWisp implements RangedAttackMob {
         this.goalSelector.addGoal(0, new FloatGoal(this));
         this.goalSelector.addGoal(3, new WaterAvoidingRandomFlyingGoal(this, 1.0D));
         this.goalSelector.addGoal(1, new RangedAttackGoal(this, 1.25D, 20, 10.0F));
-        this.goalSelector.addGoal(5, new FollowOwnerGoal(this, 1.0D, 10.0F, 2.0F, false));
+        this.goalSelector.addGoal(5, new FollowOwnerGoal(this, 1.0D, 10.0F, 2.0F));
         this.goalSelector.addGoal(9, new SoulWisp.WanderGoal());
         this.goalSelector.addGoal(10, new LookAtPlayerGoal(this, Mob.class, 8.0F));
         this.goalSelector.addGoal(2, new RandomLookAroundGoal(this));
@@ -60,15 +60,15 @@ public class SoulWispArcher extends SoulWisp implements RangedAttackMob {
         double d2 = target.getZ() - this.getZ();
         double d3 = Math.sqrt(d0 * d0 + d2 * d2);
 
-        var snowballEntity = new FrostBall(this.level, this);
+        var snowballEntity = new FrostBall(this.level(), this);
 
         PlayerSkillCapabilityInterface unwrappedPlayerCapability = IGenericCapability.getUnwrappedPlayerCapability((Player) getOwner(), PlayerSkillCapability.INSTANCE);
         Integer i = unwrappedPlayerCapability.getSkillsPoints().get(SkillEnum.SUMMON_WISP_ARCHER);
 
         snowballEntity.updateLevel(this, i);
-        snowballEntity.shoot(d0, d1 + d3 * (double) 0.1F, d2, 1.6F, (float) (14 - this.level.getDifficulty().getId() * 4));
+        snowballEntity.shoot(d0, d1 + d3 * (double) 0.1F, d2, 1.6F, (float) (14 - this.level().getDifficulty().getId() * 4));
         this.playSound(SoundEvents.SKELETON_SHOOT, 1.0F, 1.0F / (this.getRandom().nextFloat() * 0.4F + 0.8F));
-        this.level.addFreshEntity(snowballEntity);
+        this.level().addFreshEntity(snowballEntity);
         //this.setHealth(this.getHealth() -1.5F);
     }
 

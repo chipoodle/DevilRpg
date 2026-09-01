@@ -11,14 +11,14 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.MobRenderer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import org.jetbrains.annotations.NotNull;
 
 @OnlyIn(Dist.CLIENT)
 public class SoulBearRenderer extends MobRenderer<SoulBear, SoulBearModelHeart<SoulBear>> {
     //private static final ResourceLocation POLAR_BEAR_TEXTURE = new ResourceLocation("textures/entity/bear/polarbear.png");
-    public static final ResourceLocation POLAR_BEAR_TEXTURE = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soul/soul_heart_white.png");
+    public static final ResourceLocation POLAR_BEAR_TEXTURE = ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "textures/entity/soul/soul_heart_white.png");
 
     public SoulBearRenderer(EntityRendererProvider.Context entityRendererProviderContext) {
         super(entityRendererProviderContext, new SoulBearModelHeart<>(entityRendererProviderContext.bakeLayer(SoulBearModelHeart.LAYER_LOCATION)), 0.9F);

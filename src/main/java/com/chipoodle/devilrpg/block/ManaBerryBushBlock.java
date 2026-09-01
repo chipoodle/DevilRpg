@@ -1,5 +1,7 @@
 package com.chipoodle.devilrpg.block;
 
+import net.minecraft.world.ItemInteractionResult;
+import com.mojang.serialization.MapCodec;
 import com.chipoodle.devilrpg.blockentity.ManaBerryBlockEntity;
 import com.chipoodle.devilrpg.init.ModEntityBlocks;
 import net.minecraft.core.BlockPos;
@@ -32,6 +34,13 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class ManaBerryBushBlock extends BushBlock implements EntityBlock {
+    public static final MapCodec<ManaBerryBushBlock> CODEC = simpleCodec(ManaBerryBushBlock::new);
+
+    @Override
+    protected MapCodec<? extends BushBlock> codec() {
+        return CODEC;
+    }
+
     //private static final float HURT_SPEED_THRESHOLD = 0.003F;
     //public static final int MAX_AGE = 3;
     public static final IntegerProperty AGE = BlockStateProperties.AGE_3;
@@ -66,11 +75,11 @@ public class ManaBerryBushBlock extends BushBlock implements EntityBlock {
         return p_57284_.getValue(AGE) < 3;
     }
 
-    public @NotNull InteractionResult use(BlockState blockState, @NotNull Level level, @NotNull BlockPos blockPos, @NotNull Player player, @NotNull InteractionHand interactionHand, @NotNull BlockHitResult blockHitResult) {
+    public @NotNull ItemInteractionResult useItemOn(@NotNull ItemStack itemStack, @NotNull BlockState blockState, @NotNull Level level, @NotNull BlockPos blockPos, @NotNull Player player, @NotNull InteractionHand interactionHand, @NotNull BlockHitResult blockHitResult) {
         int i = blockState.getValue(AGE);
         boolean flag = i == 3;
         if (!flag && player.getItemInHand(interactionHand).is(Items.BONE_MEAL)) {
-            return InteractionResult.PASS;
+            return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         } else if (i > 1) {
             int j = 1 + level.random.nextInt(2);
             popResource(level, blockPos, new ItemStack(Items.SWEET_BERRIES, j + (flag ? 1 : 0)));
@@ -78,9 +87,9 @@ public class ManaBerryBushBlock extends BushBlock implements EntityBlock {
             BlockState blockstate = blockState.setValue(AGE, 1);
             level.setBlock(blockPos, blockstate, 2);
             level.gameEvent(GameEvent.BLOCK_CHANGE, blockPos, GameEvent.Context.of(player, blockstate));
-            return InteractionResult.sidedSuccess(level.isClientSide);
+            return ItemInteractionResult.sidedSuccess(level.isClientSide);
         } else {
-            return super.use(blockState, level, blockPos, player, interactionHand, blockHitResult);
+            return super.useItemOn(itemStack, blockState, level, blockPos, player, interactionHand, blockHitResult);
         }
     }
 

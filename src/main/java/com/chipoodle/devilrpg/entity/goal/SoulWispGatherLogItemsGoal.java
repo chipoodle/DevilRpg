@@ -63,7 +63,7 @@ public class SoulWispGatherLogItemsGoal extends Goal {
     }
 
     private List<ItemEntity> getNearbyWoodItems() {
-        return soulWisp.level.getEntitiesOfClass(ItemEntity.class, soulWisp.getBoundingBox().inflate(RADIUS),
+        return soulWisp.level().getEntitiesOfClass(ItemEntity.class, soulWisp.getBoundingBox().inflate(RADIUS),
                 item -> {
                     ItemStack stack = item.getItem();
                     if (stack.getItem() instanceof BlockItem blockItem) {

@@ -1,19 +1,13 @@
 package com.chipoodle.devilrpg.capability.mana;
 
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.capabilities.CapabilityManager;
-import net.minecraftforge.common.capabilities.CapabilityToken;
-import net.minecraftforge.common.capabilities.RegisterCapabilitiesEvent;
+import com.chipoodle.devilrpg.init.ModCapabilities;
+import net.neoforged.neoforge.attachment.AttachmentType;
 
+import java.util.function.Supplier;
 
 public class PlayerManaCapability {
-    public static final Capability<PlayerManaCapabilityInterface> INSTANCE = CapabilityManager.get(new CapabilityToken<>() {
-    });
+    public static final Supplier<AttachmentType<PlayerManaCapabilityInterface>> INSTANCE = ModCapabilities.PLAYER_MANA;
 
     private PlayerManaCapability() {
-    }
-
-    public static void register(RegisterCapabilitiesEvent event) {
-        event.register(PlayerManaCapabilityInterface.class);
     }
 }

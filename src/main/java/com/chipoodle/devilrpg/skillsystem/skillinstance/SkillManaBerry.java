@@ -36,8 +36,8 @@ public class SkillManaBerry extends AbstractSkillSeedsInInventoryExecutor {
         Direction nearestDirection = Direction.getNearest(playerLookVector.x, 0, playerLookVector.z);
         BlockPos playerBlockPos = player.blockPosition();
         BlockPos newBlockpos = playerBlockPos.relative(nearestDirection);
-        BlockState belowBlockstate = player.level.getBlockState(newBlockpos.below());
-        boolean canPlace = player.level.isEmptyBlock(newBlockpos) && belowBlockstate.is(BlockTags.DIRT);
+        BlockState belowBlockstate = player.level().getBlockState(newBlockpos.below());
+        boolean canPlace = player.level().isEmptyBlock(newBlockpos) && belowBlockstate.is(BlockTags.DIRT);
 
         return !player.getCooldowns().isOnCooldown(icon.getItem()) && canPlace && hasSeeds;
     }

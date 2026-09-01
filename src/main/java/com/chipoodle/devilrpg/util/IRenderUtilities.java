@@ -14,8 +14,8 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -41,9 +41,9 @@ public interface IRenderUtilities {
         if (dyeColorIn == DyeColor.WHITE) {
             return new float[]{0.9019608F, 0.9019608F, 0.9019608F};
         } else {
-            float[] afloat = dyeColorIn.getTextureDiffuseColors();
+            int color = dyeColorIn.getTextureDiffuseColor();
             float f = 0.75F;
-            return new float[]{afloat[0] * 0.75F, afloat[1] * 0.75F, afloat[2] * 0.75F};
+            return new float[]{((color >> 16) & 0xFF) / 255F * f, ((color >> 8) & 0xFF) / 255F * f, (color & 0xFF) / 255F * f};
         }
     }
 
@@ -190,7 +190,7 @@ public interface IRenderUtilities {
                 double spawnZ = playerZ + offsetZ;
 
                 // Genera la partícula en la posición calculada
-                player.level.addParticle(particleTypes, spawnX, spawnY, spawnZ, 0.0, 0.0, 0.0);
+                player.level().addParticle(particleTypes, spawnX, spawnY, spawnZ, 0.0, 0.0, 0.0);
             }
         }
     }

@@ -11,7 +11,7 @@ import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.pathfinder.BlockPathTypes;
+import net.minecraft.world.level.pathfinder.PathType;
 import net.minecraft.world.level.pathfinder.WalkNodeEvaluator;
 
 import java.util.EnumSet;
@@ -34,7 +34,7 @@ public class SoulWispFollowOwnerGoal extends Goal {
 
     public SoulWispFollowOwnerGoal(SoulWisp soulWisp, double speedModifier, float startDistance, float stopDistance, boolean canFly) {
         this.soulWisp = soulWisp;
-        this.level = soulWisp.level;
+        this.level = soulWisp.level();
         this.speedModifier = speedModifier;
         this.navigation = soulWisp.getNavigation();
         this.startDistance = startDistance;
@@ -59,7 +59,7 @@ public class SoulWispFollowOwnerGoal extends Goal {
         } else {
             this.owner = owner;
             if(soulWisp instanceof SoulWispChopper soulWispChopper) {
-                return soulWispChopper.goalSelector.getRunningGoals()
+                return soulWispChopper.goalSelector.getAvailableGoals().stream()
                         .filter(goal->goal.getGoal() instanceof SoulWispChopLogsGoal
                                 || goal.getGoal() instanceof SoulWispGatherLogItemsGoal)
                         .toList().isEmpty();
@@ -84,14 +84,14 @@ public class SoulWispFollowOwnerGoal extends Goal {
 
     public void start() {
         this.timeToRecalcPath = 0;
-        this.oldWaterCost = this.soulWisp.getPathfindingMalus(BlockPathTypes.WATER);
-        this.soulWisp.setPathfindingMalus(BlockPathTypes.WATER, 0.0F);
+        this.oldWaterCost = this.soulWisp.getPathfindingMalus(PathType.WATER);
+        this.soulWisp.setPathfindingMalus(PathType.WATER, 0.0F);
     }
 
     public void stop() {
         this.owner = null;
         this.navigation.stop();
-        this.soulWisp.setPathfindingMalus(BlockPathTypes.WATER, this.oldWaterCost);
+        this.soulWisp.setPathfindingMalus(PathType.WATER, this.oldWaterCost);
     }
 
     public void tick() {
@@ -135,10 +135,6 @@ public class SoulWispFollowOwnerGoal extends Goal {
     }
 
     private boolean canTeleportTo(BlockPos p_25308_) {
-        BlockPathTypes blockpathtypes = WalkNodeEvaluator.getBlockPathTypeStatic(this.level, p_25308_.mutable());
-        if (blockpathtypes != BlockPathTypes.WALKABLE) {
-            return false;
-        } else {
             BlockState blockstate = this.level.getBlockState(p_25308_.below());
             if (!this.canFly && blockstate.getBlock() instanceof LeavesBlock) {
                 return false;
@@ -146,7 +142,6 @@ public class SoulWispFollowOwnerGoal extends Goal {
                 BlockPos blockpos = p_25308_.subtract(this.soulWisp.blockPosition());
                 return this.level.noCollision(this.soulWisp, this.soulWisp.getBoundingBox().move(blockpos));
             }
-        }
     }
 
     private int randomIntInclusive(int p_25301_, int p_25302_) {

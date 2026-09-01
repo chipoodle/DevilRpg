@@ -27,11 +27,12 @@ import net.minecraft.world.item.CrossbowItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.UseAnim;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.scores.DisplaySlot;
 import net.minecraft.world.scores.Objective;
-import net.minecraft.world.scores.Score;
+import net.minecraft.world.scores.ScoreAccess;
 import net.minecraft.world.scores.Scoreboard;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import org.jetbrains.annotations.NotNull;
 
 @OnlyIn(Dist.CLIENT)
@@ -52,9 +53,9 @@ public class WerewolfHumanRenderer extends LivingEntityRenderer<AbstractClientPl
 
    public void render(@NotNull AbstractClientPlayer p_117788_, float p_117789_, float p_117790_, @NotNull PoseStack p_117791_, @NotNull MultiBufferSource p_117792_, int p_117793_) {
       this.setModelProperties(p_117788_);
-      //if (net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(new net.minecraftforge.client.event.RenderPlayerEvent.Pre(p_117788_, this, p_117790_, p_117791_, p_117792_, p_117793_))) return;
+      //if (net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(new net.neoforged.neoforge.client.event.RenderPlayerEvent.Pre(p_117788_, this, p_117790_, p_117791_, p_117792_, p_117793_))) return;
       super.render(p_117788_, p_117789_, p_117790_, p_117791_, p_117792_, p_117793_);
-      //net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(new net.minecraftforge.client.event.RenderPlayerEvent.Post(p_117788_, this, p_117790_, p_117791_, p_117792_, p_117793_));
+      //net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(new net.neoforged.neoforge.client.event.RenderPlayerEvent.Post(p_117788_, this, p_117790_, p_117791_, p_117792_, p_117793_));
    }
 
    public @NotNull Vec3 getRenderOffset(AbstractClientPlayer p_117785_, float p_117786_) {
@@ -131,7 +132,7 @@ public class WerewolfHumanRenderer extends LivingEntityRenderer<AbstractClientPl
             return HumanoidModel.ArmPose.CROSSBOW_HOLD;
          }
 
-         HumanoidModel.ArmPose forgeArmPose = net.minecraftforge.client.extensions.common.IClientItemExtensions.of(itemstack).getArmPose(p_117795_, p_117796_, itemstack);
+         HumanoidModel.ArmPose forgeArmPose = net.neoforged.neoforge.client.extensions.common.IClientItemExtensions.of(itemstack).getArmPose(p_117795_, p_117796_, itemstack);
          if (forgeArmPose != null) return forgeArmPose;
 
          return HumanoidModel.ArmPose.ITEM;
@@ -139,7 +140,7 @@ public class WerewolfHumanRenderer extends LivingEntityRenderer<AbstractClientPl
    }
 
    public ResourceLocation getTextureLocation(AbstractClientPlayer p_117783_) {
-      return p_117783_.getSkinTextureLocation();
+      return p_117783_.getSkin().texture();
    }
 
    protected void scale(AbstractClientPlayer p_117798_, PoseStack p_117799_, float p_117800_) {
@@ -147,30 +148,30 @@ public class WerewolfHumanRenderer extends LivingEntityRenderer<AbstractClientPl
       p_117799_.scale(0.9375F, 0.9375F, 0.9375F);
    }
 
-   protected void renderNameTag(AbstractClientPlayer p_117808_, Component p_117809_, PoseStack p_117810_, MultiBufferSource p_117811_, int p_117812_) {
+   protected void renderNameTag(AbstractClientPlayer p_117808_, Component p_117809_, PoseStack p_117810_, MultiBufferSource p_117811_, int p_117812_, float p_117813_) {
       double d0 = this.entityRenderDispatcher.distanceToSqr(p_117808_);
       p_117810_.pushPose();
       if (d0 < 100.0D) {
          Scoreboard scoreboard = p_117808_.getScoreboard();
-         Objective objective = scoreboard.getDisplayObjective(2);
+         Objective objective = scoreboard.getDisplayObjective(DisplaySlot.BELOW_NAME);
          if (objective != null) {
-            Score score = scoreboard.getOrCreatePlayerScore(p_117808_.getScoreboardName(), objective);
-            super.renderNameTag(p_117808_, Component.literal(Integer.toString(score.getScore())).append(CommonComponents.SPACE).append(objective.getDisplayName()), p_117810_, p_117811_, p_117812_);
+            ScoreAccess score = scoreboard.getOrCreatePlayerScore(p_117808_, objective);
+            super.renderNameTag(p_117808_, Component.literal(Integer.toString(score.get())).append(CommonComponents.SPACE).append(objective.getDisplayName()), p_117810_, p_117811_, p_117812_, p_117813_);
             p_117810_.translate(0.0F, 9.0F * 1.15F * 0.025F, 0.0F);
          }
       }
 
-      super.renderNameTag(p_117808_, p_117809_, p_117810_, p_117811_, p_117812_);
+      super.renderNameTag(p_117808_, p_117809_, p_117810_, p_117811_, p_117812_, p_117813_);
       p_117810_.popPose();
    }
 
    public void renderRightHand(PoseStack p_117771_, MultiBufferSource p_117772_, int p_117773_, AbstractClientPlayer p_117774_) {
-      if(!net.minecraftforge.client.ForgeHooksClient.renderSpecificFirstPersonArm(p_117771_, p_117772_, p_117773_, p_117774_, HumanoidArm.RIGHT))
+      if(!net.neoforged.neoforge.client.ClientHooks.renderSpecificFirstPersonArm(p_117771_, p_117772_, p_117773_, p_117774_, HumanoidArm.RIGHT))
       this.renderHand(p_117771_, p_117772_, p_117773_, p_117774_, (this.model).rightArm, (this.model).rightSleeve);
    }
 
    public void renderLeftHand(PoseStack p_117814_, MultiBufferSource p_117815_, int p_117816_, AbstractClientPlayer p_117817_) {
-      if(!net.minecraftforge.client.ForgeHooksClient.renderSpecificFirstPersonArm(p_117814_, p_117815_, p_117816_, p_117817_, HumanoidArm.LEFT))
+      if(!net.neoforged.neoforge.client.ClientHooks.renderSpecificFirstPersonArm(p_117814_, p_117815_, p_117816_, p_117817_, HumanoidArm.LEFT))
       this.renderHand(p_117814_, p_117815_, p_117816_, p_117817_, (this.model).leftArm, (this.model).leftSleeve);
    }
 
@@ -182,15 +183,15 @@ public class WerewolfHumanRenderer extends LivingEntityRenderer<AbstractClientPl
       playermodel.swimAmount = 0.0F;
       playermodel.setupAnim(p_117779_, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F);
       p_117780_.xRot = 0.0F;
-      p_117780_.render(p_117776_, p_117777_.getBuffer(RenderType.entitySolid(p_117779_.getSkinTextureLocation())), p_117778_, OverlayTexture.NO_OVERLAY);
+      p_117780_.render(p_117776_, p_117777_.getBuffer(RenderType.entitySolid(p_117779_.getSkin().texture())), p_117778_, OverlayTexture.NO_OVERLAY);
       p_117781_.xRot = 0.0F;
-      p_117781_.render(p_117776_, p_117777_.getBuffer(RenderType.entityTranslucent(p_117779_.getSkinTextureLocation())), p_117778_, OverlayTexture.NO_OVERLAY);
+      p_117781_.render(p_117776_, p_117777_.getBuffer(RenderType.entityTranslucent(p_117779_.getSkin().texture())), p_117778_, OverlayTexture.NO_OVERLAY);
    }
 
-   protected void setupRotations(AbstractClientPlayer p_117802_, PoseStack p_117803_, float p_117804_, float p_117805_, float p_117806_) {
+   protected void setupRotations(AbstractClientPlayer p_117802_, PoseStack p_117803_, float p_117804_, float p_117805_, float p_117806_, float p_117807_) {
       float f = p_117802_.getSwimAmount(p_117806_);
       if (p_117802_.isFallFlying()) {
-         super.setupRotations(p_117802_, p_117803_, p_117804_, p_117805_, p_117806_);
+         super.setupRotations(p_117802_, p_117803_, p_117804_, p_117805_, p_117806_, p_117807_);
          float f1 = (float)p_117802_.getFallFlyingTicks() + p_117806_;
          float f2 = Mth.clamp(f1 * f1 / 100.0F, 0.0F, 1.0F);
          if (!p_117802_.isAutoSpinAttack()) {
@@ -207,7 +208,7 @@ public class WerewolfHumanRenderer extends LivingEntityRenderer<AbstractClientPl
             p_117803_.mulPose(Axis.YP.rotation((float)(Math.signum(d3) * Math.acos(d2))));
          }
       } else if (f > 0.0F) {
-         super.setupRotations(p_117802_, p_117803_, p_117804_, p_117805_, p_117806_);
+         super.setupRotations(p_117802_, p_117803_, p_117804_, p_117805_, p_117806_, p_117807_);
          float f3 = p_117802_.isInWater() || p_117802_.isInFluidType((fluidType, height) -> p_117802_.canSwimInFluidType(fluidType)) ? -90.0F - p_117802_.getXRot() : -90.0F;
          float f4 = Mth.lerp(f, 0.0F, f3);
          p_117803_.mulPose(Axis.XP.rotationDegrees(f4));
@@ -215,7 +216,7 @@ public class WerewolfHumanRenderer extends LivingEntityRenderer<AbstractClientPl
             p_117803_.translate(0.0F, -1.0F, 0.3F);
          }
       } else {
-         super.setupRotations(p_117802_, p_117803_, p_117804_, p_117805_, p_117806_);
+         super.setupRotations(p_117802_, p_117803_, p_117804_, p_117805_, p_117806_, p_117807_);
       }
 
    }

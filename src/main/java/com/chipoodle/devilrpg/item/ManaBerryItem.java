@@ -19,7 +19,7 @@ public class ManaBerryItem extends Item {
     }
 
     @Override
-    public int getUseDuration(@NotNull ItemStack stack) {
+    public int getUseDuration(@NotNull ItemStack stack, LivingEntity entity) {
         // Duración estándar del consumo de alimentos en ticks
         return 32;
     }
@@ -28,11 +28,6 @@ public class ManaBerryItem extends Item {
     public @NotNull UseAnim getUseAnimation(@NotNull ItemStack stack) {
         // Establecer la animación de "comer"
         return UseAnim.EAT;
-    }
-
-    @Override
-    public boolean isEdible() {
-        return true;
     }
 
 

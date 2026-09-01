@@ -18,7 +18,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.material.Material;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.HashMap;
@@ -38,7 +37,7 @@ public class SkillBloomingSanctuary extends AbstractSkillSeedsInInventoryExecuto
     public boolean arePreconditionsMetBeforeConsumingResource(Player player) {
 
         BlockPos playerBlockPos = player.blockPosition();
-        //BlockState playerBlockState = player.level.getBlockState(playerBlockPos);
+        //BlockState playerBlockState = player.level().getBlockState(playerBlockPos);
         Vec3 playerLookVector = player.getLookAngle();
         Direction nearestDirection = Direction.getNearest(playerLookVector.x, 0, playerLookVector.z);
         //DevilRpg.LOGGER.info("-------->Direction: {}", nearestDirection);
@@ -46,10 +45,9 @@ public class SkillBloomingSanctuary extends AbstractSkillSeedsInInventoryExecuto
 
         boolean hasSeeds = super.arePreconditionsMetBeforeConsumingResource(player);
 
-        boolean canPlace = (player.level.getBlockState(newBlockpos).getMaterial().equals(Material.REPLACEABLE_PLANT) ||
-                player.level.getBlockState(newBlockpos).getMaterial().equals(Material.TOP_SNOW) ||
-                player.level.getBlockState(newBlockpos).getBlock().equals(Blocks.AIR))
-                && SoulVineBlock.hasAtLeasOneSolidNeighbourPerpendicularToGrowDirection(player.level, newBlockpos, nearestDirection);
+        boolean canPlace = (player.level().getBlockState(newBlockpos).canBeReplaced() ||
+                player.level().getBlockState(newBlockpos).isAir())
+                && SoulVineBlock.hasAtLeasOneSolidNeighbourPerpendicularToGrowDirection(player.level(), newBlockpos, nearestDirection);
 
 
         return !player.getCooldowns().isOnCooldown(icon.getItem()) && canPlace && hasSeeds;
@@ -77,7 +75,7 @@ public class SkillBloomingSanctuary extends AbstractSkillSeedsInInventoryExecuto
         consumeSeed(playerIn);
 
 
-        playerIn.getLevel()
+        playerIn.level()
                 .setBlockAndUpdate(
                         newBlockpos,
                         createdBlock.defaultBlockState()
@@ -87,15 +85,15 @@ public class SkillBloomingSanctuary extends AbstractSkillSeedsInInventoryExecuto
                 );
 
         // Establecer el propietario del bloque
-        if (playerIn.getLevel().getBlockEntity(newBlockpos) instanceof BloomingSanctuaryBlockEntity blockEntity) {
+        if (playerIn.level().getBlockEntity(newBlockpos) instanceof BloomingSanctuaryBlockEntity blockEntity) {
             blockEntity.setOwnerUUID(playerIn.getUUID());
         }
 
 
         BlockState sporeBlossomState = ModBlocks.UPWARD_SPORE_BLOSSOM_BLOCK.get().defaultBlockState();
         BlockPos topBlockPos = newBlockpos.above();
-        if (playerIn.getLevel().getBlockState(topBlockPos).getBlock().equals(Blocks.AIR)) {
-            playerIn.getLevel()
+        if (playerIn.level().getBlockState(topBlockPos).getBlock().equals(Blocks.AIR)) {
+            playerIn.level()
                     .setBlockAndUpdate(
                             topBlockPos,
                             sporeBlossomState

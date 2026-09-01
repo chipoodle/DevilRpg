@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.skillsystem.skillinstance;
 
+import net.minecraft.core.Holder;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
@@ -78,25 +79,25 @@ public class PlayerPassiveSkillSkinArmorAttributeExecutor extends AbstractPlayer
 
     private void initializeArmorAttributes(Player playerIn) {
         if (skinArmorAttributeModifier == null ||
-                skinArmorAttributeModifier.getAmount() != Double.valueOf(parentCapability.getSkillsPoints().get(SkillEnum.SKIN_ARMOR)) * ARMOR_FACTOR) {
+                skinArmorAttributeModifier.amount() != Double.valueOf(parentCapability.getSkillsPoints().get(SkillEnum.SKIN_ARMOR)) * ARMOR_FACTOR) {
             removeCurrentSkinArmorModifiers();
             skinArmorAttributeModifier = createNewAttributeModifiers(ATTRIBUTE_MODIFIER_ARMOR_UNIQUE_NAME, ARMOR_FACTOR);
-            HashMap<String, UUID> capAttModifiersHashMap = parentCapability.getAttributeModifiers();
-            addAttributeToCapability(capAttModifiersHashMap, Attributes.ARMOR, skinArmorAttributeModifier.getId());
+            HashMap<String, String> capAttModifiersHashMap = parentCapability.getAttributeModifiers();
+            addAttributeToCapability(capAttModifiersHashMap, Attributes.ARMOR, skinArmorAttributeModifier.id());
             parentCapability.setAttributeModifiers(capAttModifiersHashMap, playerIn);
-            DevilRpg.LOGGER.info("----------------------->Add {}", skinArmorAttributeModifier.getId());
+            DevilRpg.LOGGER.info("----------------------->Add {}", skinArmorAttributeModifier.id());
         }
     }
 
     private void initializeToughnessAttributes(Player playerIn) {
         if (skinToughnessAttributeModifier == null ||
-                skinToughnessAttributeModifier.getAmount() != Double.valueOf(parentCapability.getSkillsPoints().get(SkillEnum.SKIN_ARMOR)) * TOUGHNESS_FACTOR) {
+                skinToughnessAttributeModifier.amount() != Double.valueOf(parentCapability.getSkillsPoints().get(SkillEnum.SKIN_ARMOR)) * TOUGHNESS_FACTOR) {
             removeCurrentSkinToughnessModifiers();
             skinToughnessAttributeModifier = createNewAttributeModifiers(ATTRIBUTE_MODIFIER_TOUGHNESS_UNIQUE_NAME, TOUGHNESS_FACTOR);
-            HashMap<String, UUID> capAttModifiersHashMap = parentCapability.getAttributeModifiers();
-            addAttributeToCapability(capAttModifiersHashMap, Attributes.ARMOR_TOUGHNESS, skinToughnessAttributeModifier.getId());
+            HashMap<String, String> capAttModifiersHashMap = parentCapability.getAttributeModifiers();
+            addAttributeToCapability(capAttModifiersHashMap, Attributes.ARMOR_TOUGHNESS, skinToughnessAttributeModifier.id());
             parentCapability.setAttributeModifiers(capAttModifiersHashMap, playerIn);
-            DevilRpg.LOGGER.info("----------------------->Add {}", skinToughnessAttributeModifier.getId());
+            DevilRpg.LOGGER.info("----------------------->Add {}", skinToughnessAttributeModifier.id());
         }
     }
 
@@ -115,7 +116,7 @@ public class PlayerPassiveSkillSkinArmorAttributeExecutor extends AbstractPlayer
     }
 
     private void removeCurrentSkinArmorModifiers() {
-        //HashMap<String, UUID> attributeModifiers = parentCapability.getAttributeModifiers();
+        //HashMap<String, String> attributeModifiers = parentCapability.getAttributeModifiers();
         removeCurrentModifierFromPlayer(playerIn, skinArmorAttributeModifier, Attributes.ARMOR);
         //UUID uuid = removeAttributeFromCapability(attributeModifiers, Attributes.ARMOR);
         //parentCapability.setAttributeModifiers(attributeModifiers, playerIn);
@@ -124,7 +125,7 @@ public class PlayerPassiveSkillSkinArmorAttributeExecutor extends AbstractPlayer
     }
 
     private void removeCurrentSkinToughnessModifiers() {
-        //HashMap<String, UUID> attributeModifiers = parentCapability.getAttributeModifiers();
+        //HashMap<String, String> attributeModifiers = parentCapability.getAttributeModifiers();
         removeCurrentModifierFromPlayer(playerIn, skinToughnessAttributeModifier, Attributes.ARMOR_TOUGHNESS);
         //UUID uuid = removeAttributeFromCapability(attributeModifiers, Attributes.ARMOR);
         //parentCapability.setAttributeModifiers(attributeModifiers, playerIn);
@@ -133,12 +134,12 @@ public class PlayerPassiveSkillSkinArmorAttributeExecutor extends AbstractPlayer
     }
 
     private void addCurrentModifiers() {
-        //HashMap<String, UUID> attributeModifiers = parentCapability.getAttributeModifiers();
-        //addAttributeToCapability(attributeModifiers, Attributes.ARMOR, skinArmorAttributeModifier.getId());
+        //HashMap<String, String> attributeModifiers = parentCapability.getAttributeModifiers();
+        //addAttributeToCapability(attributeModifiers, Attributes.ARMOR, skinArmorAttributeModifier.id());
         addCurrentModifierTransiently(playerIn, Attributes.ARMOR, skinArmorAttributeModifier);
         addCurrentModifierTransiently(playerIn, Attributes.ARMOR_TOUGHNESS, skinToughnessAttributeModifier);
         //parentCapability.setAttributeModifiers(attributeModifiers, playerIn);
-        //DevilRpg.LOGGER.info("----------------------->Add {}",skinArmorAttributeModifier.getId());
+        //DevilRpg.LOGGER.info("----------------------->Add {}",skinArmorAttributeModifier.id());
         DevilRpg.LOGGER.info("----------------------->addCurrentModifierTransiently(): {}", skinArmorAttributeModifier);
         DevilRpg.LOGGER.info("----------------------->addCurrentModifierTransiently(): {}", skinToughnessAttributeModifier);
     }
@@ -165,12 +166,12 @@ public class PlayerPassiveSkillSkinArmorAttributeExecutor extends AbstractPlayer
         if (head.getItem() instanceof ArmorItem headItem && chest.getItem() instanceof ArmorItem chestItem &&
                 legs.getItem() instanceof ArmorItem legsItem && feet.getItem() instanceof ArmorItem feetItem) {
 
-            ArmorMaterial headMaterial = headItem.getMaterial();
-            ArmorMaterial chestMaterial = chestItem.getMaterial();
-            ArmorMaterial legsMaterial = legsItem.getMaterial();
-            ArmorMaterial feetMaterial = feetItem.getMaterial();
+            Holder<ArmorMaterial> headMaterial = headItem.getMaterial();
+            Holder<ArmorMaterial> chestMaterial = chestItem.getMaterial();
+            Holder<ArmorMaterial> legsMaterial = legsItem.getMaterial();
+            Holder<ArmorMaterial> feetMaterial = feetItem.getMaterial();
 
-            DevilRpg.LOGGER.info("----------------------->Material head : {} chest: {} legs: {} feet: {}", headMaterial.getName(), chestMaterial.getName(), legsMaterial.getName(), feetMaterial.getName());
+            DevilRpg.LOGGER.info("----------------------->Material head : {} chest: {} legs: {} feet: {}", headMaterial.getRegisteredName(), chestMaterial.getRegisteredName(), legsMaterial.getRegisteredName(), feetMaterial.getRegisteredName());
 
             if (headMaterial.equals(ArmorMaterials.LEATHER) &&
                     chestMaterial.equals(ArmorMaterials.LEATHER) &&

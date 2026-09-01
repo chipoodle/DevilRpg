@@ -6,20 +6,20 @@ import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInter
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.event.entity.EntityEvent;
-import net.minecraftforge.event.entity.living.LivingEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.event.entity.EntityEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 
-@Mod.EventBusSubscriber(modid = DevilRpg.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
+@EventBusSubscriber(modid = DevilRpg.MODID, bus = EventBusSubscriber.Bus.GAME)
 public class PlayerSizeForgeEventSubscriber {
 
     public static final float WEREWOLF_EXTRA_HEIGHT = 0.500f;
     public static final float WEREWOLF_EXTRA_WIDTH = 0.150f;
 
     /**
-     * Changes the size of the druid's hit box when transforming into a werewolf
+     * Changes the size of the druid's hit box when transforming into a werewolf.
+     * The eye height is derived from the entity dimensions automatically in 1.21.
+     *
      * @param event
      */
     @SubscribeEvent
@@ -28,40 +28,23 @@ public class PlayerSizeForgeEventSubscriber {
         if (!(event.getEntity() instanceof Player player))
             return;
 
-        //DevilRpg.LOGGER.info("----------------------->ModEventSubscriber.onSizeChanged()");
-
         EntityDimensions oldSize = event.getOldSize();
-        float oldEyeHeight = event.getOldEyeHeight();
-        LazyOptional<PlayerAuxiliaryCapabilityInterface> capability = player.getCapability(PlayerAuxiliaryCapability.INSTANCE);
-        if (!capability.isPresent() || !capability.map(PlayerAuxiliaryCapabilityInterface::isWerewolfTransformation).orElse(true)) {
+        PlayerAuxiliaryCapabilityInterface capability = player.getData(PlayerAuxiliaryCapability.INSTANCE);
+        if (capability == null || !capability.isWerewolfTransformation()) {
             event.setNewSize(EntityType.PLAYER.getDimensions());
-            event.setNewEyeHeight(player.getEyeHeight(player.getPose()));
         } else {
             EntityDimensions newSize;
-            if(event.getEntity().isCrouching()){
+            if (event.getEntity().isCrouching()) {
 
-                newSize = new EntityDimensions(EntityType.PLAYER.getDimensions().width + WEREWOLF_EXTRA_WIDTH + 0.430f,
-                        EntityType.PLAYER.getDimensions().height - 0.200f, EntityType.PLAYER.getDimensions().fixed);
+                newSize = EntityDimensions.scalable(EntityType.PLAYER.getDimensions().width() + WEREWOLF_EXTRA_WIDTH + 0.430f,
+                        EntityType.PLAYER.getDimensions().height() - 0.200f);
+                event.setNewSize(newSize);
+            } else {
+                newSize = EntityDimensions.scalable(EntityType.PLAYER.getDimensions().width() + WEREWOLF_EXTRA_WIDTH,
+                        EntityType.PLAYER.getDimensions().height() + WEREWOLF_EXTRA_HEIGHT);
                 event.setNewSize(newSize);
             }
-            else{
-                newSize = new EntityDimensions(EntityType.PLAYER.getDimensions().width + WEREWOLF_EXTRA_WIDTH,
-                        EntityType.PLAYER.getDimensions().height + WEREWOLF_EXTRA_HEIGHT, EntityType.PLAYER.getDimensions().fixed);
-                event.setNewSize(newSize);
-                event.setNewEyeHeight(player.getEyeHeight(player.getPose())+ WEREWOLF_EXTRA_HEIGHT );
-            }
-
-
-
-
         }
-
-
-    }
-
-    @SubscribeEvent
-    public static void onLivingTickEvent(LivingEvent.LivingTickEvent event) {
-
     }
 
 }

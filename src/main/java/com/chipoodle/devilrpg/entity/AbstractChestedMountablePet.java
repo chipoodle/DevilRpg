@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.entity;
 
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -24,6 +25,11 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Objects;
 
 public class AbstractChestedMountablePet extends AbstractMountablePet {
+    @Override
+    public void equipSaddle(ItemStack stack, SoundSource sound) {
+        this.inventory.setItem(0, stack);
+    }
+
     public static final int INV_CHEST_COUNT = 15;
     private static final EntityDataAccessor<Boolean> DATA_ID_CHEST = SynchedEntityData.defineId(AbstractChestedMountablePet.class, EntityDataSerializers.BOOLEAN);
 
@@ -40,9 +46,9 @@ public class AbstractChestedMountablePet extends AbstractMountablePet {
         Objects.requireNonNull(this.getAttribute(Attributes.MAX_HEALTH)).setBaseValue(generateMaxHealth(p_218803_::nextInt));
     }
 
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(DATA_ID_CHEST, false);
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(DATA_ID_CHEST, false);
     }
 
     public boolean hasChest() {
@@ -58,13 +64,13 @@ public class AbstractChestedMountablePet extends AbstractMountablePet {
     }
 
     protected float getPassengersRidingOffsetY(EntityDimensions p_298002_, float p_300957_) {
-        return p_298002_.height - (this.isBaby() ? 0.15625F : 0.3875F) * p_300957_;
+        return p_298002_.height() - (this.isBaby() ? 0.15625F : 0.3875F) * p_300957_;
     }
 
     protected void dropEquipment() {
         super.dropEquipment();
         if (this.hasChest()) {
-            if (!this.level.isClientSide) {
+            if (!this.level().isClientSide) {
                 this.spawnAtLocation(Blocks.CHEST);
             }
 
@@ -84,7 +90,7 @@ public class AbstractChestedMountablePet extends AbstractMountablePet {
                 if (!itemstack.isEmpty()) {
                     CompoundTag compoundtag = new CompoundTag();
                     compoundtag.putByte("Slot", (byte) i);
-                    itemstack.save(compoundtag);
+                    itemstack.save(this.level().registryAccess(), compoundtag);
                     listtag.add(compoundtag);
                 }
             }
@@ -105,7 +111,7 @@ public class AbstractChestedMountablePet extends AbstractMountablePet {
                 CompoundTag compoundtag = listtag.getCompound(i);
                 int j = compoundtag.getByte("Slot") & 255;
                 if (j >= 2 && j < this.inventory.getContainerSize()) {
-                    this.inventory.setItem(j, ItemStack.of(compoundtag));
+                    this.inventory.setItem(j, ItemStack.parse(this.level().registryAccess(), compoundtag).orElse(ItemStack.EMPTY));
                 }
             }
         }
@@ -152,12 +158,12 @@ public class AbstractChestedMountablePet extends AbstractMountablePet {
 
                 if (!this.isTame()) {
                     this.makeMad();
-                    return InteractionResult.sidedSuccess(this.level.isClientSide);
+                    return InteractionResult.sidedSuccess(this.level().isClientSide);
                 }
 
                 if (!this.hasChest() && itemstack.is(Items.CHEST)) {
                     this.equipChest(player, itemstack);
-                    return InteractionResult.sidedSuccess(this.level.isClientSide);
+                    return InteractionResult.sidedSuccess(this.level().isClientSide);
                 }
             }
 

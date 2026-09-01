@@ -1,19 +1,13 @@
 package com.chipoodle.devilrpg.capability.stamina;
 
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.capabilities.CapabilityManager;
-import net.minecraftforge.common.capabilities.CapabilityToken;
-import net.minecraftforge.common.capabilities.RegisterCapabilitiesEvent;
+import com.chipoodle.devilrpg.init.ModCapabilities;
+import net.neoforged.neoforge.attachment.AttachmentType;
 
+import java.util.function.Supplier;
 
 public class PlayerStaminaCapability {
-    public static final Capability<PlayerStaminaCapabilityInterface> INSTANCE = CapabilityManager.get(new CapabilityToken<>() {
-    });
+    public static final Supplier<AttachmentType<PlayerStaminaCapabilityInterface>> INSTANCE = ModCapabilities.PLAYER_STAMINA;
 
     private PlayerStaminaCapability() {
-    }
-
-    public static void register(RegisterCapabilitiesEvent event) {
-        event.register(PlayerStaminaCapabilityInterface.class);
     }
 }

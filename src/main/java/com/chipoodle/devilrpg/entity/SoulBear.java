@@ -1,5 +1,9 @@
 package com.chipoodle.devilrpg.entity;
 
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.SimpleMenuProvider;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.resources.ResourceLocation;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapability;
@@ -49,16 +53,13 @@ import net.minecraft.world.entity.animal.horse.AbstractHorse;
 import net.minecraft.world.entity.animal.horse.Llama;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.HorseArmorItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.scores.Team;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.network.NetworkHooks;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
@@ -69,7 +70,7 @@ import java.util.stream.Collectors;
 
 public class SoulBear extends AbstractChestedHorse implements ITamableEntity, ISoulEntity, PowerableMob, NeutralMob, IPassiveMinionUpdater<SoulBear> {
 
-    private static final UUID ARMOR_MODIFIER_UUID = UUID.fromString("556E1665-8B10-40C8-8F9D-CF9B1667F295");
+    private static final ResourceLocation ARMOR_MODIFIER_ID = ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "soul_bear_armor");
     private static final UniformInt PERSISTENT_ANGER_TIME = TimeUtil.rangeOfSeconds(20, 39);
     private static final int PROBABILITY_MULTIPLIER = 5;
     private static final int DURATION_TICKS = 100;
@@ -175,7 +176,7 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
                     minion.setSoulBearInventory(soulBearInventory, (Player) getOwner());
                 }
                 this.removeAllEffects();
-                this.equipSaddle(null);
+                this.equipSaddle(ItemStack.EMPTY, SoundSource.NEUTRAL);
             }
         }
         //tame(owner);
@@ -199,8 +200,8 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
 
         //this.setTypeVariant(compound.getInt("Variant"));
         if (compound.contains("ArmorItem", 10)) {
-            ItemStack itemstack = ItemStack.of(compound.getCompound("ArmorItem"));
-            if (!itemstack.isEmpty() && this.isArmor(itemstack)) {
+            ItemStack itemstack = ItemStack.parse(this.level().registryAccess(), compound.getCompound("ArmorItem")).orElse(ItemStack.EMPTY);
+            if (!itemstack.isEmpty() && !itemstack.isEmpty()) {
                 this.inventory.setItem(1, itemstack);
             }
         }
@@ -218,7 +219,7 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
 
         //compound.putInt("Variant", this.getTypeVariant());
         if (!this.inventory.getItem(1).isEmpty()) {
-            compound.put("ArmorItem", this.inventory.getItem(1).save(new CompoundTag()));
+            compound.put("ArmorItem", this.inventory.getItem(1).save(this.level().registryAccess(), new CompoundTag()));
         }
 
         PlayerMinionCapabilityInterface minion = IGenericCapability.getUnwrappedPlayerCapability((Player) getOwner(), PlayerMinionCapability.INSTANCE);
@@ -229,8 +230,8 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
     public void aiStep() {
         super.aiStep();
 
-        if (!this.level.isClientSide) {
-            this.updatePersistentAnger((ServerLevel) this.level, true);
+        if (!this.level().isClientSide) {
+            this.updatePersistentAnger((ServerLevel) this.level(), true);
         }
 
         addToAiStep(this);
@@ -266,7 +267,7 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
                 DevilRpg.LOGGER.info("---------->doHurtTarget warBear: {} probability: {} Range of success: {}, enemies: {}, main damage: {} splash damage: {}, armor: {} owner: {} owneruuid: {}", warBear,
                         probability, warBear * PROBABILITY_MULTIPLIER, acquireAllLookTargetsByClass.size(), attackDamage, attackDamage * SPLASH_DAMAGE_FACTOR, Objects.requireNonNull(this.getAttribute(Attributes.ARMOR)).getValue(), getOwner(), getOwnerUUID());
             }
-            this.doEnchantDamageEffects(this, target);
+            // doEnchantDamageEffects was removed in 1.21
         }
         return flag;
     }
@@ -330,11 +331,10 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
     @Override
     public void die(@NotNull DamageSource cause) {
         if (getOwner() != null) {
-            LazyOptional<PlayerMinionCapabilityInterface> minionCap = getOwner()
-                    .getCapability(PlayerMinionCapability.INSTANCE);
-            if (!minionCap.isPresent())
+            PlayerMinionCapabilityInterface minionCap = getOwner().getData(PlayerMinionCapability.INSTANCE);
+            if (minionCap == null)
                 return;
-            minionCap.ifPresent(x -> x.removeSoulBear((Player) getOwner(), this));
+            minionCap.removeSoulBear((Player) getOwner(), this);
         }
         // super.onDeath(cause);
         customOnDeath();
@@ -346,10 +346,10 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
             addAdditionalSaveData(c);
         }
 
-        level.broadcastEntityEvent(this, (byte) 3);
+        level().broadcastEntityEvent(this, (byte) 3);
         this.dead = true;
         this.remove(RemovalReason.DISCARDED);
-        IRenderUtilities.customDeadParticles(this.level, this.random, this);
+        IRenderUtilities.customDeadParticles(this.level(), this.random, this);
     }
 
     /**
@@ -365,10 +365,6 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
      *
      * @return The packet with data about your entity
      */
-    @Override
-    public @NotNull Packet<ClientGamePacketListener> getAddEntityPacket() {
-        return NetworkHooks.getEntitySpawningPacket(this);
-    }
 
 
     @Override
@@ -400,31 +396,26 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
     }
 
     @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        //this.entityData.define(DATA_STANDING_ID, false);
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        //builder.define(DATA_STANDING_ID, false);
     }
 
     @Override
     public void containerChanged(@NotNull Container container) {
-        ItemStack itemstack = this.getArmor();
+        ItemStack itemstack = this.getBodyArmorAccess().getItem(0);
         super.containerChanged(container);
-        ItemStack itemstack1 = this.getArmor();
-        if (this.tickCount > 20 && this.isArmor(itemstack1) && itemstack != itemstack1) {
+        ItemStack itemstack1 = this.getBodyArmorAccess().getItem(0);
+        if (this.tickCount > 20 && !itemstack1.isEmpty() && itemstack != itemstack1) {
             this.playSound(SoundEvents.HORSE_ARMOR, 0.5F, 1.0F);
         }
 
     }
 
-    @Override
     public boolean canWearArmor() {
         return true;
     }
 
-    @Override
-    public boolean isArmor(ItemStack p_190682_1_) {
-        return p_190682_1_.getItem() instanceof HorseArmorItem;
-    }
 
 
     /**
@@ -433,7 +424,7 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
     @Override
     public void tick() {
         super.tick();
-        if (this.level.isClientSide) {
+        if (this.level().isClientSide) {
             if (this.clientSideStandAnimation != this.clientSideStandAnimationO) {
                 this.refreshDimensions();
             }
@@ -450,8 +441,8 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
             --this.warningSoundTicks;
         }
 
-        if (!this.level.isClientSide) {
-            this.updatePersistentAnger((ServerLevel) this.level, true);
+        if (!this.level().isClientSide) {
+            this.updatePersistentAnger((ServerLevel) this.level(), true);
         }
 
     }
@@ -473,7 +464,7 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
 
                 if (!this.isTame()) {
                     this.makeMad();
-                    return InteractionResult.sidedSuccess(this.level.isClientSide);
+                    return InteractionResult.sidedSuccess(this.level().isClientSide);
                 }
             }
 
@@ -482,16 +473,6 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
     }
 
 
-    @Override
-    public @NotNull EntityDimensions getDimensions(@NotNull Pose poseIn) {
-        if (this.clientSideStandAnimation > 0.0F) {
-            float f = this.clientSideStandAnimation / 6.0F;
-            float f1 = 1.0F + f;
-            return super.getDimensions(poseIn).scale(1.0F, f1);
-        } else {
-            return super.getDimensions(poseIn);
-        }
-    }
 
 
     // Method from PolarBear
@@ -522,12 +503,12 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
     }
 
     @Override
-    public SpawnGroupData finalizeSpawn(@NotNull ServerLevelAccessor p_29533_, @NotNull DifficultyInstance p_29534_, @NotNull MobSpawnType p_29535_, @Nullable SpawnGroupData p_29536_, @Nullable CompoundTag p_29537_) {
+    public SpawnGroupData finalizeSpawn(@NotNull ServerLevelAccessor p_29533_, @NotNull DifficultyInstance p_29534_, @NotNull MobSpawnType p_29535_, @Nullable SpawnGroupData p_29536_) {
         if (p_29536_ == null) {
             p_29536_ = new AgeableMob.AgeableMobGroupData(1.0F);
         }
 
-        return super.finalizeSpawn(p_29533_, p_29534_, p_29535_, p_29536_, p_29537_);
+        return super.finalizeSpawn(p_29533_, p_29534_, p_29535_, p_29536_);
     }
 
     public boolean isAttacking() {
@@ -559,23 +540,22 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
         this.setDropChance(EquipmentSlot.CHEST, 0.0F);
     }
 
-    @Override
     protected void updateContainerEquipment() {
-        if (!this.level.isClientSide) {
-            super.updateContainerEquipment();
+        if (!this.level().isClientSide) {
+    
             this.setArmorEquipment(this.inventory.getItem(1));
             this.setDropChance(EquipmentSlot.CHEST, 0.0F);
         }
     }
 
     private void setArmorEquipment(ItemStack p_213804_1_) {
-        this.setArmor(p_213804_1_);
-        if (!this.level.isClientSide) {
-            Objects.requireNonNull(this.getAttribute(Attributes.ARMOR)).removeModifier(ARMOR_MODIFIER_UUID);
-            if (this.isArmor(p_213804_1_)) {
-                int i = ((HorseArmorItem) p_213804_1_.getItem()).getProtection();
+        this.getBodyArmorAccess().setItem(0, p_213804_1_);
+        if (!this.level().isClientSide) {
+            Objects.requireNonNull(this.getAttribute(Attributes.ARMOR)).removeModifier(ARMOR_MODIFIER_ID);
+            if (!p_213804_1_.isEmpty()) {
+                int i = 0; // Horse armor protection is handled through the equippable component in 1.21
                 if (i != 0) {
-                    Objects.requireNonNull(this.getAttribute(Attributes.ARMOR)).addTransientModifier(new AttributeModifier(ARMOR_MODIFIER_UUID, "Soul bear armor bonus", i, AttributeModifier.Operation.ADDITION));
+                    Objects.requireNonNull(this.getAttribute(Attributes.ARMOR)).addTransientModifier(new AttributeModifier(ARMOR_MODIFIER_ID, i, AttributeModifier.Operation.ADD_VALUE));
                 }
             }
         }
@@ -619,10 +599,6 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
         this.mountBear = mountBear;
     }
 
-    @Override
-    public @NotNull Level getLevel() {
-        return this.level;
-    }
 
     //////////////////////////////////////////
 
@@ -657,20 +633,15 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
         //return this.getFlag(2);
     }
 
-    @Override
-    public void setTame(boolean isTamed) {
-        super.setTamed(isTamed);
-        //this.setFlag(2, isTamed);
-    }
-
+    
     @Override
     public void tame(Player player) {
-        this.setTame(true);
+        this.setTamed(true);
         this.setOwnerUUID(player.getUUID());
         if (player instanceof ServerPlayer) {
             CriteriaTriggers.TAME_ANIMAL.trigger((ServerPlayer) player, this);
         }
-        this.level.broadcastEntityEvent(this, (byte) 7);
+        this.level().broadcastEntityEvent(this, (byte) 7);
     }
 
     @Override
@@ -680,7 +651,7 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
             itemStack.shrink(1);
         }
 
-        if (this.level.isClientSide) {
+        if (this.level().isClientSide) {
             return InteractionResult.CONSUME;
         } else {
             return flag ? InteractionResult.SUCCESS : InteractionResult.PASS;
@@ -692,14 +663,13 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
         return false;
     }
 
-    @Override
     public boolean canBeLeashed(@NotNull Player player) {
         return false;
     }
 
     @Override
     public void openCustomInventoryScreen(@NotNull Player player) {
-        if (!this.level.isClientSide && (!this.isVehicle() || this.hasPassenger(player)) && this.isTame()) {
+        if (!this.level().isClientSide && (!this.isVehicle() || this.hasPassenger(player)) && this.isTame()) {
             //player.openHorseInventory(this, this.inventory);
             openBearInventory(this, this.inventory, (ServerPlayer) player);
         }
@@ -711,27 +681,9 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
             player.closeContainer();
         }
 
-        player.nextContainerCounter();
-        player.connection.send(new ClientboundHorseScreenOpenPacket(player.containerCounter, p_9060_.getContainerSize(), abstractHorse.getId()));
-
-        //player.containerMenu = new HorseInventoryMenu(player.containerCounter, player.getInventory(), p_9060_, abstractHorse);
-        player.containerMenu = new MountablePetContainerMenu(player.containerCounter, player.getInventory(), p_9060_, abstractHorse);
-
-
-        player.initMenu(player.containerMenu);
-        net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(new net.minecraftforge.event.entity.player.PlayerContainerEvent.Open(player, player.containerMenu));
+        player.openMenu(new SimpleMenuProvider((id, inventory, p) -> new MountablePetContainerMenu(id, inventory, p_9060_, abstractHorse), abstractHorse.getDisplayName()));
     }
 
-    @Override
-    public Team getTeam() {
-        if (this.isTame()) {
-            LivingEntity livingentity = this.getOwner();
-            if (livingentity != null) {
-                return livingentity.getTeam();
-            }
-        }
-        return super.getTeam();
-    }
 
     @Override
     public boolean isAlliedTo(@NotNull Entity entity) {
@@ -756,14 +708,14 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
         }
 
         @Override
-        protected void checkAndPerformAttack(@NotNull LivingEntity enemy, double distToEnemySqr) {
+        protected void checkAndPerformAttack(@NotNull LivingEntity enemy) {
             double d0 = this.getAttackReachSqr(enemy);
-            if (distToEnemySqr <= d0 && this.isTimeToAttack()) {
+            if (this.mob.distanceToSqr(enemy) <= d0 && this.isTimeToAttack()) {
                 SoulBear.this.setAttacking(true);
                 this.resetAttackCooldown();
                 this.mob.doHurtTarget(enemy);
                 SoulBear.this.setStanding(false);
-            } else if (distToEnemySqr <= d0 * 2.0D) {
+            } else if (this.mob.distanceToSqr(enemy) <= d0 * 2.0D) {
                 if (this.isTimeToAttack()) {
                     SoulBear.this.setAttacking(false);
                     SoulBear.this.setStanding(false);
@@ -794,8 +746,7 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
             super.stop();
         }
 
-        @Override
-        protected double getAttackReachSqr(LivingEntity attackTarget) {
+            protected double getAttackReachSqr(LivingEntity attackTarget) {
             return 4.0F + attackTarget.getBbWidth();
         }
     }

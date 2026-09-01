@@ -17,12 +17,12 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 public class WerewolfItemInHandRenderer {
-    private static final RenderType MAP_BACKGROUND = RenderType.text(new ResourceLocation("textures/map/map_background.png"));
-    private static final RenderType MAP_BACKGROUND_CHECKERBOARD = RenderType.text(new ResourceLocation("textures/map/map_background_checkerboard.png"));
+    private static final RenderType MAP_BACKGROUND = RenderType.text(ResourceLocation.parse("textures/map/map_background.png"));
+    private static final RenderType MAP_BACKGROUND_CHECKERBOARD = RenderType.text(ResourceLocation.parse("textures/map/map_background_checkerboard.png"));
     private static final float ITEM_SWING_X_POS_SCALE = -0.4F;
     private static final float ITEM_SWING_Y_POS_SCALE = 0.2F;
     private static final float ITEM_SWING_Z_POS_SCALE = -0.2F;
@@ -152,7 +152,7 @@ public class WerewolfItemInHandRenderer {
 
     private void applyEatTransform(PoseStack p_109331_, float p_109332_, HumanoidArm p_109333_, ItemStack p_109334_) {
         float f = (float) this.minecraft.player.getUseItemRemainingTicks() - p_109332_ + 1.0F;
-        float f1 = f / (float) p_109334_.getUseDuration();
+        float f1 = f / (float) p_109334_.getUseDuration(this.minecraft.player);
         if (f1 < 0.8F) {
             float f2 = Mth.abs(Mth.cos(f / 4.0F * (float) Math.PI) * 0.1F);
             p_109331_.translate(0.0F, f2, 0.0F);
@@ -169,7 +169,7 @@ public class WerewolfItemInHandRenderer {
     private void applyBrushTransform(PoseStack p_273513_, float p_273245_, HumanoidArm p_273726_, ItemStack p_272809_, float p_273333_) {
         this.applyItemArmTransform(p_273513_, p_273726_, p_273333_);
         float f = (float) this.minecraft.player.getUseItemRemainingTicks() - p_273245_ + 1.0F;
-        float f1 = 1.0F - f / (float) p_272809_.getUseDuration();
+        float f1 = 1.0F - f / (float) p_272809_.getUseDuration(this.minecraft.player);
         float f2 = -90.0F;
         float f3 = 60.0F;
         int i = 45;
@@ -219,14 +219,14 @@ public class WerewolfItemInHandRenderer {
         if (iteminhandrenderer$handrenderselection.renderMainHand) {
             float f4 = interactionhand == InteractionHand.MAIN_HAND ? f : 0.0F;
             float f5 = 1.0F - Mth.lerp(partialTicks, this.oMainHandHeight, this.mainHandHeight);
-            //if(!net.minecraftforge.client.ForgeHooksClient.renderSpecificFirstPersonHand(InteractionHand.MAIN_HAND, poseStack, multiBufferSource, packedLight, partialTicks, f1, f4, f5, this.mainHandItem))
+            //if(!net.neoforged.neoforge.client.ForgeHooksClient.renderSpecificFirstPersonHand(InteractionHand.MAIN_HAND, poseStack, multiBufferSource, packedLight, partialTicks, f1, f4, f5, this.mainHandItem))
             this.renderArmWithItem(player, partialTicks, f1, InteractionHand.MAIN_HAND, f4, this.mainHandItem, f5, poseStack, multiBufferSource, packedLight);
         }
 
         if (iteminhandrenderer$handrenderselection.renderOffHand) {
             float f6 = interactionhand == InteractionHand.OFF_HAND ? f : 0.0F;
             float f7 = 1.0F - Mth.lerp(partialTicks, this.oOffHandHeight, this.offHandHeight);
-            //if(!net.minecraftforge.client.ForgeHooksClient.renderSpecificFirstPersonHand(InteractionHand.OFF_HAND, poseStack, multiBufferSource, packedLight, partialTicks, f1, f6, f7, this.offHandItem))
+            //if(!net.neoforged.neoforge.client.ForgeHooksClient.renderSpecificFirstPersonHand(InteractionHand.OFF_HAND, poseStack, multiBufferSource, packedLight, partialTicks, f1, f6, f7, this.offHandItem))
             this.renderArmWithItem(player, partialTicks, f1, InteractionHand.OFF_HAND, f6, this.offHandItem, f7, poseStack, multiBufferSource, packedLight);
         }
 
@@ -265,7 +265,7 @@ public class WerewolfItemInHandRenderer {
                         p_109379_.mulPose(Axis.XP.rotationDegrees(-13.935F));
                         p_109379_.mulPose(Axis.YP.rotationDegrees((float) k * 35.3F));
                         p_109379_.mulPose(Axis.ZP.rotationDegrees((float) k * -9.785F));
-                        float f8 = (float) itemStack.getUseDuration() - ((float) this.minecraft.player.getUseItemRemainingTicks() - partialTicks + 1.0F);
+                        float f8 = (float) itemStack.getUseDuration(player) - ((float) this.minecraft.player.getUseItemRemainingTicks() - partialTicks + 1.0F);
                         float f12 = f8 / 20.0F;
                         f12 = (f12 * f12 + f12 * 2.0F) / 3.0F;
                         if (f12 > 1.0F) {
@@ -289,7 +289,7 @@ public class WerewolfItemInHandRenderer {
                         p_109379_.mulPose(Axis.XP.rotationDegrees(-55.0F));
                         p_109379_.mulPose(Axis.YP.rotationDegrees((float) k * 35.3F));
                         p_109379_.mulPose(Axis.ZP.rotationDegrees((float) k * -9.785F));
-                        float f7 = (float) itemStack.getUseDuration() - ((float) this.minecraft.player.getUseItemRemainingTicks() - partialTicks + 1.0F);
+                        float f7 = (float) itemStack.getUseDuration(player) - ((float) this.minecraft.player.getUseItemRemainingTicks() - partialTicks + 1.0F);
                         float f11 = f7 / 10.0F;
                         if (f11 > 1.0F) {
                             f11 = 1.0F;
@@ -351,8 +351,8 @@ public class WerewolfItemInHandRenderer {
             this.offHandHeight = Mth.clamp(this.offHandHeight - 0.4F, 0.0F, 1.0F);
         } else {
             float f = localplayer.getAttackStrengthScale(1.0F);
-            boolean requipM = net.minecraftforge.client.ForgeHooksClient.shouldCauseReequipAnimation(this.mainHandItem, itemstack, localplayer.getInventory().selected);
-            boolean requipO = net.minecraftforge.client.ForgeHooksClient.shouldCauseReequipAnimation(this.offHandItem, itemstack1, -1);
+            boolean requipM = net.neoforged.neoforge.client.ClientHooks.shouldCauseReequipAnimation(this.mainHandItem, itemstack, localplayer.getInventory().selected);
+            boolean requipO = net.neoforged.neoforge.client.ClientHooks.shouldCauseReequipAnimation(this.offHandItem, itemstack1, -1);
 
             if (!requipM && this.mainHandItem != itemstack) this.mainHandItem = itemstack;
             if (!requipO && this.offHandItem != itemstack1) this.offHandItem = itemstack1;

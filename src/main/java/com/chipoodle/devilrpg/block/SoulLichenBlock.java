@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.block;
 
+import com.mojang.serialization.MapCodec;
 import com.chipoodle.devilrpg.blockentity.SoulLichenBlockEntity;
 import com.chipoodle.devilrpg.entity.ITamableEntity;
 import com.chipoodle.devilrpg.init.ModEntities;
@@ -39,6 +40,13 @@ import java.util.function.ToIntFunction;
 import java.util.stream.Collectors;
 
 public class SoulLichenBlock extends MultifaceBlock implements SimpleWaterloggedBlock, EntityBlock {
+    public static final MapCodec<SoulLichenBlock> CODEC = simpleCodec(SoulLichenBlock::new);
+
+    @Override
+    protected MapCodec<? extends MultifaceBlock> codec() {
+        return CODEC;
+    }
+
 
     public static final BooleanProperty WATERLOGGED = BlockStateProperties.WATERLOGGED;
     public static final IntegerProperty SKILL_LEVEL = IntegerProperty.create("soullichen_level", 0, 30);
@@ -74,7 +82,7 @@ public class SoulLichenBlock extends MultifaceBlock implements SimpleWaterlogged
     public static boolean stateCanBeReplaced(BlockState blockState, SoulLichenBlock soulLichenBlock) {
         return blockState.isAir() || blockState.is(soulLichenBlock) ||
                 blockState.is(Blocks.WATER) && blockState.getFluidState().isSource() ||
-                blockState.is(Blocks.GRASS) || blockState.is(Blocks.SNOW);
+                blockState.is(Blocks.SHORT_GRASS) || blockState.is(Blocks.SNOW);
     }
 
     public static void applySoulLichenEffects(@NotNull Level level, @NotNull Entity entity, Player owner) {

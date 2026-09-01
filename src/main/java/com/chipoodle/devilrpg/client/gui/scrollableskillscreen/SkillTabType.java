@@ -2,18 +2,21 @@ package com.chipoodle.devilrpg.client.gui.scrollableskillscreen;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.client.gui.GuiComponent;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.entity.ItemRenderer;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.client.gui.ScreenUtils;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
+import net.neoforged.neoforge.client.gui.ScreenUtils;
 
 @OnlyIn(Dist.CLIENT)
 public enum SkillTabType {
     ABOVE(0, 0, 28, 32, 8), BELOW(84, 0, 28, 32, 8), LEFT(0, 64, 32, 28, 5), RIGHT(96, 64, 32, 28, 5);
 
     public static final int MAX_TABS = java.util.Arrays.stream(values()).mapToInt(e -> e.max).sum();
+    private static final ResourceLocation TABS_LOCATION = ResourceLocation.parse("textures/gui/advancements/tabs.png");
     private final int textureX;
     private final int textureY;
     private final int width;
@@ -32,7 +35,7 @@ public enum SkillTabType {
         return this.max;
     }
 
-    public void renderTabSelectorBackground(PoseStack poseStack, GuiComponent abstractGui, int offsetX, int offsetY, boolean isSelected, int index) {
+    public void renderTabSelectorBackground(GuiGraphics guiGraphics, int offsetX, int offsetY, boolean isSelected, int index) {
         int i = this.textureX;
         if (index > 0) {
             i += this.width;
@@ -43,11 +46,11 @@ public enum SkillTabType {
         }
 
         int j = isSelected ? this.textureY + this.height : this.textureY;
-        GuiComponent.blit(poseStack, offsetX + this.getX(index), offsetY + this.getY(index), i, j, this.width,
+        guiGraphics.blit(TABS_LOCATION, offsetX + this.getX(index), offsetY + this.getY(index), i, j, this.width,
                 this.height);
     }
 
-    public void drawIcon(PoseStack p_275292_,int offsetX, int offsetY, int index, ItemRenderer renderItemIn, ItemStack stack) {
+    public void drawIcon(GuiGraphics guiGraphics, int offsetX, int offsetY, int index, ItemRenderer renderItemIn, ItemStack stack) {
         int i = offsetX + this.getX(index);
         int j = offsetY + this.getY(index);
         switch (this) {
@@ -68,11 +71,12 @@ public enum SkillTabType {
                 j += 5;
         }
 
-        renderItemIn.renderAndDecorateFakeItem(p_275292_,stack, i, j);
+        guiGraphics.renderFakeItem(stack, i, j);
+        guiGraphics.renderItemDecorations(Minecraft.getInstance().font, stack, i, j);
 
     }
 
-    public void drawIconImage(PoseStack poseStack, int offsetX, int offsetY, int index, SkillWidget skillWidget) {
+    public void drawIconImage(GuiGraphics guiGraphics, int offsetX, int offsetY, int index, SkillWidget skillWidget) {
         int i = offsetX + this.getX(index);
         int j = offsetY + this.getY(index);
         switch (this) {
@@ -99,6 +103,7 @@ public enum SkillTabType {
         float yScale = height / SkillWidget.BUTTON_IMAGE_SIZE;
 
 
+        PoseStack poseStack = guiGraphics.pose();
         poseStack.pushPose();
         RenderSystem.enableDepthTest();
         RenderSystem.setShaderTexture(0, skillWidget.getDisplayInfo().getImage());
@@ -107,7 +112,7 @@ public enum SkillTabType {
         poseStack.scale(xScale, yScale, 0);
         poseStack.translate(i * -1.0f, j * -1.0f, 0);
 
-        ScreenUtils.blitWithBorder(poseStack, i, j, 0, 0, SkillWidget.BUTTON_IMAGE_SIZE, SkillWidget.BUTTON_IMAGE_SIZE, SkillWidget.BUTTON_IMAGE_SIZE, SkillWidget.BUTTON_IMAGE_SIZE, 0, 1);
+        ScreenUtils.blitWithBorder(guiGraphics, i, j, 0, 0, SkillWidget.BUTTON_IMAGE_SIZE, SkillWidget.BUTTON_IMAGE_SIZE, SkillWidget.BUTTON_IMAGE_SIZE, SkillWidget.BUTTON_IMAGE_SIZE, 0, 1);
         poseStack.popPose();
 
     }

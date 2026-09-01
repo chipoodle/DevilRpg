@@ -60,7 +60,7 @@ public class SoulWispPlantSaplingsGoal extends Goal {
         if (soulWisp.getOwner() == null)
             return Optional.empty();
 
-        return soulWisp.level.getEntitiesOfClass(ItemEntity.class, soulWisp.getOwner().getBoundingBox().inflate(RADIUS),
+        return soulWisp.level().getEntitiesOfClass(ItemEntity.class, soulWisp.getOwner().getBoundingBox().inflate(RADIUS),
                         item -> isSapling(item.getItem()))
                 .stream()
                 .min(Comparator.comparingDouble(item -> item.distanceTo(soulWisp)));
@@ -96,7 +96,7 @@ public class SoulWispPlantSaplingsGoal extends Goal {
 
     // Busca un lugar válido para plantar el sapling y se mueve hacia allí
     private void moveToPlantingPositionAndPlant() {
-        Level level = soulWisp.level;
+        Level level = soulWisp.level();
 
         LivingEntity owner = soulWisp.getOwner();
         if (owner == null)

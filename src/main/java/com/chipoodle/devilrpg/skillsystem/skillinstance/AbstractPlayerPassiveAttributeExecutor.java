@@ -1,8 +1,11 @@
 package com.chipoodle.devilrpg.skillsystem.skillinstance;
 
+import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.skillsystem.AbstractSkillExecutor;
 import com.chipoodle.devilrpg.util.SkillEnum;
+import net.minecraft.core.Holder;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
@@ -11,7 +14,10 @@ import net.minecraft.world.level.Level;
 
 import java.util.*;
 
-
+/**
+ * Base class for passive skills that apply transient attribute modifiers to the player.
+ * In 1.20.5+ attribute modifiers are identified by {@link ResourceLocation} instead of UUID.
+ */
 public abstract class AbstractPlayerPassiveAttributeExecutor extends AbstractSkillExecutor {
 
     public AbstractPlayerPassiveAttributeExecutor(PlayerSkillCapabilityInterface parentCapability) {
@@ -19,49 +25,52 @@ public abstract class AbstractPlayerPassiveAttributeExecutor extends AbstractSki
     }
 
     protected AttributeModifier createNewAttributeModifier(String attributeModifierUniqueName, Double value) {
-        return new AttributeModifier(attributeModifierUniqueName, value, AttributeModifier.Operation.ADDITION);
+        return new AttributeModifier(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, attributeModifierUniqueName), value, AttributeModifier.Operation.ADD_VALUE);
     }
 
     protected void removeCurrentModifierFromPlayer(Player playerIn,
                                                    AttributeModifier attributeModifier,
-                                                   Attribute attribute) {
+                                                   Holder<Attribute> attribute) {
         if (attributeModifier != null) {
-            Objects.requireNonNull(playerIn.getAttribute(attribute)).removeModifier(attributeModifier.getId());
+            Objects.requireNonNull(playerIn.getAttribute(attribute)).removeModifier(attributeModifier.id());
         }
     }
 
     protected void addCurrentModifierTransiently(Player playerIn,
-                                                 Attribute attribute,
+                                                 Holder<Attribute> attribute,
                                                  AttributeModifier attributeModifier) {
-        if (Objects.requireNonNull(playerIn.getAttribute(attribute)).getModifier(attributeModifier.getId()) != null)
-            Objects.requireNonNull(playerIn.getAttribute(attribute)).removeModifier(attributeModifier.getId());
-        Objects.requireNonNull(playerIn.getAttribute(attribute)).addTransientModifier(attributeModifier);
+        AttributeInstance instance = Objects.requireNonNull(playerIn.getAttribute(attribute));
+        if (instance.getModifier(attributeModifier.id()) != null)
+            instance.removeModifier(attributeModifier.id());
+        instance.addTransientModifier(attributeModifier);
     }
 
     protected void addCurrentModifierPermanently(Player playerIn,
-                                                 Attribute attribute,
+                                                 Holder<Attribute> attribute,
                                                  AttributeModifier attributeModifier) {
-        if (Objects.requireNonNull(playerIn.getAttribute(attribute)).getModifier(attributeModifier.getId()) != null)
-            Objects.requireNonNull(playerIn.getAttribute(attribute)).removeModifier(attributeModifier.getId());
-        Objects.requireNonNull(playerIn.getAttribute(attribute)).addPermanentModifier(attributeModifier);
+        AttributeInstance instance = Objects.requireNonNull(playerIn.getAttribute(attribute));
+        if (instance.getModifier(attributeModifier.id()) != null)
+            instance.removeModifier(attributeModifier.id());
+        instance.addPermanentModifier(attributeModifier);
     }
 
     protected AttributeModifier findAttributeModifierForPlayerByName(Player playerIn,
-                                                                     Attribute attribute,
+                                                                     Holder<Attribute> attribute,
                                                                      String attributeModifierUniqueName) {
         AttributeInstance modifiedAttributeInstance = playerIn.getAttribute(attribute);
         assert modifiedAttributeInstance != null;
         Set<AttributeModifier> modifiers = modifiedAttributeInstance.getModifiers();
-        return modifiers.stream().filter(mod -> mod.getName().equals(attributeModifierUniqueName)).findAny()
+        ResourceLocation id = ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, attributeModifierUniqueName);
+        return modifiers.stream().filter(mod -> mod.id().equals(id)).findAny()
                 .orElse(null);
     }
 
     protected AttributeModifier getAttributeModifierForPlayer(Player playerIn,
-                                                              Attribute attribute,
-                                                              UUID attributeUuid) {
+                                                              Holder<Attribute> attribute,
+                                                              ResourceLocation attributeModifierId) {
         AttributeInstance modifiedAttributeInstance = playerIn.getAttribute(attribute);
         assert modifiedAttributeInstance != null;
-        return modifiedAttributeInstance.getModifier(attributeUuid);
+        return modifiedAttributeInstance.getModifier(attributeModifierId);
     }
 
     /**

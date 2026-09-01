@@ -14,15 +14,15 @@ import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import org.jetbrains.annotations.NotNull;
 
 @OnlyIn(Dist.CLIENT)
 public class CubeModel<T extends LivingEntity> extends HierarchicalModel<T> {
 
-    //public static final ModelLayerLocation LAYER_LOCATION = new ModelLayerLocation(new ResourceLocation(DevilRpg.MODID, "soulbearheart"), "main");
-    public static final ModelLayerLocation LAYER_LOCATION = new ModelLayerLocation(new ResourceLocation(DevilRpg.MODID, "cubemodel"), "armor");
+    //public static final ModelLayerLocation LAYER_LOCATION = new ModelLayerLocation(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "soulbearheart"), "main");
+    public static final ModelLayerLocation LAYER_LOCATION = new ModelLayerLocation(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "cubemodel"), "armor");
 
     public final ModelPart root;
     private final ModelPart shield;
@@ -53,8 +53,8 @@ public class CubeModel<T extends LivingEntity> extends HierarchicalModel<T> {
     }
 
     @Override
-    public void renderToBuffer(@NotNull PoseStack p_103111_, @NotNull VertexConsumer p_103112_, int p_103113_, int p_103114_, float p_103115_, float p_103116_, float p_103117_, float p_103118_) {
-        super.renderToBuffer(p_103111_, p_103112_, p_103113_, p_103114_, p_103115_, p_103116_, p_103117_, p_103118_);
+    public void renderToBuffer(@NotNull PoseStack p_103111_, @NotNull VertexConsumer p_103112_, int p_103113_, int p_103114_, int p_103115_) {
+        super.renderToBuffer(p_103111_, p_103112_, p_103113_, p_103114_, p_103115_);
     }
 
     @Override

@@ -45,9 +45,9 @@ public class SoulWispForester extends SoulWisp {
     }
 
     @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(DATA_CHOPPING, false);
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(DATA_CHOPPING, false);
     }
 
     public void updateLevel(Player owner) {
@@ -82,8 +82,8 @@ public class SoulWispForester extends SoulWisp {
         ItemStack mobItemStack = this.getItemInHand(hand);
         Item item = mobItemStack.getItem();
         if (!item.equals(Items.AIR)) {
-            ItemEntity itementity = new ItemEntity(this.level, this.getX(), this.getY(), this.getZ(), mobItemStack);
-            this.level.addFreshEntity(itementity);
+            ItemEntity itementity = new ItemEntity(this.level(), this.getX(), this.getY(), this.getZ(), mobItemStack);
+            this.level().addFreshEntity(itementity);
         }
     }
 

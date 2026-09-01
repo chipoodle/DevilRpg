@@ -9,10 +9,10 @@ import com.chipoodle.devilrpg.DevilRpg;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.ViewportEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.ViewportEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -23,7 +23,7 @@ import java.lang.reflect.Method;
  *
  * @author Chipoodle
  */
-@EventBusSubscriber(modid = DevilRpg.MODID, bus = EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
+@EventBusSubscriber(modid = DevilRpg.MODID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
 public final class ClientForgeCustomCameraEventSubscriber {
     private static final Class<?>[] types = {double.class, double.class, double.class};
     private static boolean firstPersonView = false;
@@ -102,7 +102,7 @@ public final class ClientForgeCustomCameraEventSubscriber {
         // Establecemos la posición de la cámara para simular la vista de primera persona
         cameraMoveMethod.invoke(event.getCamera(), 4.80D, 0.20D, 0.0D);
         // Ajustamos la rotación de la cámara para coincidir con la vista de primera persona
-        event.getCamera().setAnglesInternal(player.getYRot(), player.getXRot());
+        // Camera.setAnglesInternal was removed in 1.21
         originalCameraType = CameraType.FIRST_PERSON;
     }
 

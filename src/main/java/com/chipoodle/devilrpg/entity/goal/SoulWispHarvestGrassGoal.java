@@ -94,7 +94,7 @@ public class SoulWispHarvestGrassGoal extends Goal {
     private void plantSaplingFirst() {
         BlockPos suitablePos = findSuitableSoil();
         if (suitablePos != null) {
-            Level level = soulWisp.level;
+            Level level = soulWisp.level();
             level.setBlock(suitablePos, Blocks.OAK_SAPLING.defaultBlockState(), 3);
 
             // Remueve el sapling de su inventario
@@ -110,7 +110,7 @@ public class SoulWispHarvestGrassGoal extends Goal {
      * Busca un bloque de pasto en el radio
      */
     private BlockPos findNearbyGrassBlock() {
-        Level level = soulWisp.level;
+        Level level = soulWisp.level();
         LivingEntity owner = soulWisp.getOwner();
         if (owner == null)
             return null;
@@ -124,7 +124,7 @@ public class SoulWispHarvestGrassGoal extends Goal {
                     BlockState blockState = level.getBlockState(pos);
                     Block block = blockState.getBlock();
 
-                    if (block == Blocks.GRASS || block == Blocks.TALL_GRASS) {
+                    if (block == Blocks.SHORT_GRASS || block == Blocks.TALL_GRASS) {
                         return pos;
                     }
                 }
@@ -138,7 +138,7 @@ public class SoulWispHarvestGrassGoal extends Goal {
         if (soulWisp.getOwner() == null)
             return Optional.empty();
 
-        return soulWisp.level.getEntitiesOfClass(ItemEntity.class, soulWisp.getOwner().getBoundingBox().inflate(SEARCH_GRASS_RADIUS),
+        return soulWisp.level().getEntitiesOfClass(ItemEntity.class, soulWisp.getOwner().getBoundingBox().inflate(SEARCH_GRASS_RADIUS),
                         item -> isSapling(item.getItem()))
                 .stream()
                 .min(Comparator.comparingDouble(item -> item.distanceTo(soulWisp)));
@@ -153,7 +153,7 @@ public class SoulWispHarvestGrassGoal extends Goal {
         }
 
         if (targetGrassPos != null) {
-            Level level = soulWisp.level;
+            Level level = soulWisp.level();
             BlockState blockState = level.getBlockState(targetGrassPos);
             Block block = blockState.getBlock();
 
@@ -188,7 +188,7 @@ public class SoulWispHarvestGrassGoal extends Goal {
     }
 
     private List<ItemEntity> getNearbySeedItems() {
-        return soulWisp.level.getEntitiesOfClass(ItemEntity.class, soulWisp.getBoundingBox().inflate(PICKUP_SEED_RADIUS),
+        return soulWisp.level().getEntitiesOfClass(ItemEntity.class, soulWisp.getBoundingBox().inflate(PICKUP_SEED_RADIUS),
                 item -> {
                     ItemStack stack = item.getItem();
                     return stack.is(Items.WHEAT_SEEDS); // Si es ua semilla
@@ -201,7 +201,7 @@ public class SoulWispHarvestGrassGoal extends Goal {
      * Busca un suelo adecuado para plantar un sapling
      */
     private BlockPos findSuitableSoil() {
-        Level level = soulWisp.level;
+        Level level = soulWisp.level();
         BlockPos soulWispPos = soulWisp.blockPosition();
 
         for (int x = -SEARCH_GRASS_RADIUS; x <= SEARCH_GRASS_RADIUS; x++) {

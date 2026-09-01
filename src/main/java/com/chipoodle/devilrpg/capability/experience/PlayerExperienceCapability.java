@@ -1,19 +1,13 @@
 package com.chipoodle.devilrpg.capability.experience;
 
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.capabilities.CapabilityManager;
-import net.minecraftforge.common.capabilities.CapabilityToken;
-import net.minecraftforge.common.capabilities.RegisterCapabilitiesEvent;
+import com.chipoodle.devilrpg.init.ModCapabilities;
+import net.neoforged.neoforge.attachment.AttachmentType;
 
+import java.util.function.Supplier;
 
 public class PlayerExperienceCapability {
-    public static final Capability<PlayerExperienceCapabilityInterface> INSTANCE = CapabilityManager.get(new CapabilityToken<>() {
-    });
+    public static final Supplier<AttachmentType<PlayerExperienceCapabilityInterface>> INSTANCE = ModCapabilities.PLAYER_EXPERIENCE;
 
     private PlayerExperienceCapability() {
-    }
-
-    public static void register(RegisterCapabilitiesEvent event) {
-        event.register(PlayerExperienceCapabilityInterface.class);
     }
 }

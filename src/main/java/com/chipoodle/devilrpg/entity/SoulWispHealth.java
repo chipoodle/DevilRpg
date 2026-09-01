@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.entity;
 
+import net.minecraft.core.Holder;
 import com.chipoodle.devilrpg.init.ModEntities;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.server.level.ServerLevel;
@@ -27,7 +28,7 @@ public class SoulWispHealth extends SoulWisp {
         return ModEntities.WISP_HEALTH.get().create(level);
     }
 
-    public void setSecondaryEffect(Integer points, MobEffect regeneration) {
+    public void setSecondaryEffect(Integer points, Holder<MobEffect> regeneration) {
         if (points > 0) efectoSecundario = regeneration;
     }
 }

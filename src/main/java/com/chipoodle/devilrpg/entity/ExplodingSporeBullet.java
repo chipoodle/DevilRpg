@@ -45,11 +45,9 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
-import net.minecraft.world.level.pathfinder.BlockPathTypes;
+import net.minecraft.world.level.pathfinder.PathType;
 import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
@@ -59,6 +57,11 @@ import java.util.Objects;
 import java.util.UUID;
 
 public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, FlyingAnimal, ITamableEntity, ISoulEntity {
+
+    @Override
+    public double distanceToSqr(@NotNull LivingEntity livingentity) {
+        return super.distanceToSqr(livingentity);
+    }
     public static final int TICKS_PER_FLAP = Mth.ceil(1.4959966F);
     public static final int REMAINING_TICKS_ALIVE = 600;
     private static final EntityDataAccessor<Byte> DATA_FLAGS_ID = SynchedEntityData.defineId(ExplodingSporeBullet.class, EntityDataSerializers.BYTE);
@@ -76,21 +79,21 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
         super(p_27717_, p_27718_);
         this.moveControl = new FlyingMoveControl(this, 20, true);
         this.lookControl = new ExplodingSporeBulletLookControl(this);
-        //this.setPathfindingMalus(BlockPathTypes.DANGER_FIRE, -1.0F);
-        //this.setPathfindingMalus(BlockPathTypes.WATER, -1.0F);
-        //this.setPathfindingMalus(BlockPathTypes.WATER_BORDER, 16.0F);
-        //this.setPathfindingMalus(BlockPathTypes.COCOA, -1.0F);
-        this.setPathfindingMalus(BlockPathTypes.FENCE, -1.0F);
+        //this.setPathfindingMalus(PathType.DANGER_FIRE, -1.0F);
+        //this.setPathfindingMalus(PathType.WATER, -1.0F);
+        //this.setPathfindingMalus(PathType.WATER_BORDER, 16.0F);
+        //this.setPathfindingMalus(PathType.COCOA, -1.0F);
+        this.setPathfindingMalus(PathType.FENCE, -1.0F);
     }
 
     public static AttributeSupplier.Builder createAttributes() {
         return Mob.createMobAttributes().add(Attributes.MAX_HEALTH, 10.0D).add(Attributes.FLYING_SPEED, 0.6D).add(Attributes.MOVEMENT_SPEED, 0.3D).add(Attributes.ATTACK_DAMAGE, 2.0D).add(Attributes.FOLLOW_RANGE, 48.0D);
     }
 
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(DATA_FLAGS_ID, (byte) 0);
-        this.entityData.define(DATA_REMAINING_ANGER_TIME, 0);
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(DATA_FLAGS_ID, (byte) 0);
+        builder.define(DATA_REMAINING_ANGER_TIME, 0);
     }
 
     public float getWalkTargetValue(@NotNull BlockPos p_27788_, LevelReader p_27789_) {
@@ -136,7 +139,7 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
         super.readAdditionalSaveData(p_27793_);
         //this.setHasStung(p_27793_.getBoolean("HasStung"));
         //this.stayOutOfHiveCountdown = p_27793_.getInt("CannotEnterHiveTicks");
-        this.readPersistentAngerSaveData(this.level, p_27793_);
+        this.readPersistentAngerSaveData(this.level(), p_27793_);
     }
 
     public boolean doHurtTarget(Entity target) {
@@ -146,9 +149,9 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
             if (target instanceof LivingEntity) {
                 ((LivingEntity) target).setStingerCount(((LivingEntity) target).getStingerCount() + 1);
                 int i = 0;
-                if (this.level.getDifficulty() == Difficulty.NORMAL) {
+                if (this.level().getDifficulty() == Difficulty.NORMAL) {
                     i = 10;
-                } else if (this.level.getDifficulty() == Difficulty.HARD) {
+                } else if (this.level().getDifficulty() == Difficulty.HARD) {
                     i = 18;
                 }
 
@@ -170,7 +173,7 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
         super.tick();
         if (this.random.nextFloat() < 0.05F) {
             for (int i = 0; i < this.random.nextInt(2) + 1; ++i) {
-                this.spawnFluidParticle(this.level, this.getX() - (double) 0.3F, this.getX() + (double) 0.3F, this.getZ() - (double) 0.3F, this.getZ() + (double) 0.3F, this.getY(0.5D), ParticleTypes.FALLING_NECTAR);
+                this.spawnFluidParticle(this.level(), this.getX() - (double) 0.3F, this.getX() + (double) 0.3F, this.getZ() - (double) 0.3F, this.getZ() + (double) 0.3F, this.getY(0.5D), ParticleTypes.FALLING_NECTAR);
             }
         }
 
@@ -211,8 +214,8 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
             }
         }
 
-        if (!this.level.isClientSide) {
-            this.updatePersistentAnger((ServerLevel) this.level, false);
+        if (!this.level().isClientSide) {
+            this.updatePersistentAnger((ServerLevel) this.level(), false);
         }
 
     }
@@ -250,7 +253,7 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
 
     public void aiStep() {
         super.aiStep();
-        if (!this.level.isClientSide) {
+        if (!this.level().isClientSide) {
 
             boolean flag = this.isAngry() && /*!this.hasStung() && */this.getTarget() != null && this.getTarget().distanceToSqr(this) < 4.0D;
             this.setRolling(flag);
@@ -288,7 +291,7 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
     protected @NotNull PathNavigation createNavigation(@NotNull Level p_27815_) {
         FlyingPathNavigation flyingpathnavigation = new FlyingPathNavigation(this, p_27815_) {
             public boolean isStableDestination(BlockPos p_27947_) {
-                return !this.level.getBlockState(p_27947_.below()).isAir();
+                return !ExplodingSporeBullet.this.level().getBlockState(p_27947_.below()).isAir();
             }
 
             public void tick() {
@@ -331,7 +334,7 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
     }
 
     protected float getStandingEyeHeight(@NotNull Pose p_27804_, @NotNull EntityDimensions p_27805_) {
-        return p_27805_.height * 0.5F;
+        return p_27805_.height() * 0.5F;
     }
 
     protected void checkFallDamage(double p_27754_, boolean p_27755_, @NotNull BlockState p_27756_, @NotNull BlockPos p_27757_) {
@@ -342,7 +345,7 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
     }
 
     public boolean isFlying() {
-        return !this.onGround;
+        return !this.onGround();
     }
 
     @Override
@@ -354,9 +357,6 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
         }
     }
 
-    public @NotNull MobType getMobType() {
-        return MobType.ARTHROPOD;
-    }
 
     @Deprecated // FORGE: use jumpInFluid instead
     protected void jumpInLiquid(@NotNull TagKey<Fluid> p_204061_) {
@@ -368,7 +368,7 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
     }
 
     @Override
-    public void jumpInFluid(net.minecraftforge.fluids.@NotNull FluidType type) {
+    public void jumpInFluid(net.neoforged.neoforge.fluids.@NotNull FluidType type) {
         this.jumpInLiquidInternal();
     }
 
@@ -394,9 +394,9 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
     @Override
     public void die(@NotNull DamageSource cause) {
         if (getOwner() != null) {
-            LazyOptional<PlayerMinionCapabilityInterface> minionCap = getOwner()
-                    .getCapability(PlayerMinionCapability.INSTANCE);
-            if (!minionCap.isPresent())
+            PlayerMinionCapabilityInterface minionCap = getOwner()
+                    .getData(PlayerMinionCapability.INSTANCE);
+            if (minionCap == null)
                 return;
         }
         // super.onDeath(cause);
@@ -404,16 +404,12 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
     }
 
     private void customOnDeath() {
-        level.broadcastEntityEvent(this, (byte) 3);
+        level().broadcastEntityEvent(this, (byte) 3);
         this.dead = true;
         this.remove(RemovalReason.DISCARDED);
-        IRenderUtilities.customDeadParticles(this.level, this.random, this);
+        IRenderUtilities.customDeadParticles(this.level(), this.random, this);
     }
 
-    @Override
-    public Packet<ClientGamePacketListener> getAddEntityPacket() {
-        return NetworkHooks.getEntitySpawningPacket(this);
-    }
 
     @Override
     public LivingEntity getOwner() {
@@ -424,15 +420,7 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
         }
     }
 
-    @Override
-    public @NotNull Level getLevel() {
-        return this.level;
-    }
 
-    @Override
-    public double distanceToSqr(LivingEntity livingentity) {
-        return super.distanceToSqr(livingentity);
-    }
 
     @Override
     public float getXRot() {
@@ -471,10 +459,10 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
     }
 
     private void explodeCreeper() {
-        if (!this.level.isClientSide) {
+        if (!this.level().isClientSide) {
             float explosionRadius = 1;
             this.dead = true;
-            this.level.explode(this, this.getX(), this.getY(), this.getZ(), explosionRadius, false, Level.ExplosionInteraction.MOB);
+            this.level().explode(this, this.getX(), this.getY(), this.getZ(), explosionRadius, false, Level.ExplosionInteraction.MOB);
             this.discard();
             this.spawnLingeringCloud();
         }
@@ -484,7 +472,7 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
     private void spawnLingeringCloud() {
         Collection<MobEffectInstance> collection = this.getActiveEffects();
         if (!collection.isEmpty()) {
-            AreaEffectCloud areaeffectcloud = new AreaEffectCloud(this.level, this.getX(), this.getY(), this.getZ());
+            AreaEffectCloud areaeffectcloud = new AreaEffectCloud(this.level(), this.getX(), this.getY(), this.getZ());
             areaeffectcloud.setRadius(2.0F);
             areaeffectcloud.setRadiusOnUse(-0.5F);
             areaeffectcloud.setWaitTime(10);
@@ -495,7 +483,7 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
                 areaeffectcloud.addEffect(new MobEffectInstance(mobeffectinstance));
             }
 
-            this.level.addFreshEntity(areaeffectcloud);
+            this.level().addFreshEntity(areaeffectcloud);
         }
 
     }
@@ -549,7 +537,7 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
         }
 
         public boolean canUse() {
-            long i = this.mob.level.getGameTime();
+            long i = this.mob.level().getGameTime();
             if (i - this.lastCanUseCheck < 20L) {
                 return false;
             } else {
@@ -619,7 +607,7 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
             LivingEntity livingentity = this.mob.getTarget();
             if (livingentity != null) {
                 this.mob.getLookControl().setLookAt(livingentity, 30.0F, 30.0F);
-                double d0 = this.mob.getPerceivedTargetDistanceSquareForMeleeAttack(livingentity);
+                double d0 = this.mob.distanceToSqr(livingentity);
                 this.ticksUntilNextPathRecalculation = Math.max(this.ticksUntilNextPathRecalculation - 1, 0);
                 if ((this.followingTargetEvenIfNotSeen || this.mob.getSensing().hasLineOfSight(livingentity)) && this.ticksUntilNextPathRecalculation <= 0 && (this.pathedTargetX == 0.0D && this.pathedTargetY == 0.0D && this.pathedTargetZ == 0.0D || livingentity.distanceToSqr(this.pathedTargetX, this.pathedTargetY, this.pathedTargetZ) >= 1.0D || this.mob.getRandom().nextFloat() < 0.05F)) {
                     this.pathedTargetX = livingentity.getX();

@@ -103,7 +103,7 @@ public class AggressiveZombieEntity extends Zombie {
         super.setPos(x, y, z);
 
         if (spawnDistance == 0) { // Solo se calcula al momento del spawn
-            Player nearestPlayer = this.level.getNearestPlayer(this, MAX_DISTANCE);
+            Player nearestPlayer = this.level().getNearestPlayer(this, MAX_DISTANCE);
             if (nearestPlayer != null) {
                 PlayerAuxiliaryCapabilityInterface playerCapability = IGenericCapability.getUnwrappedPlayerCapability(nearestPlayer, PlayerAuxiliaryCapability.INSTANCE);
                 Vec3 playerSpawn = playerCapability.getSpawnPoint();
@@ -169,29 +169,12 @@ public class AggressiveZombieEntity extends Zombie {
                 double d1 = target.getX() - zombie.getX();
                 double d2 = target.getY(0.5D) - zombie.getY(0.5D);
                 double d3 = target.getZ() - zombie.getZ();
-                SmallFireball fireball = new SmallFireball(zombie.level, zombie, d1 + zombie.getRandom().nextGaussian() * d0, d2, d3 + zombie.getRandom().nextGaussian() * d0);
+                SmallFireball fireball = new SmallFireball(zombie.level(), zombie, new Vec3(d1 + zombie.getRandom().nextGaussian() * d0, d2, d3 + zombie.getRandom().nextGaussian() * d0));
                 fireball.setPos(fireball.getX(), zombie.getY(0.5D) + 0.5D, fireball.getZ());
-                zombie.level.addFreshEntity(fireball);
+                zombie.level().addFreshEntity(fireball);
                 attackTimer = 60; // Tiempo entre ataques
             }
         }
     }
 
-    @Override
-    public int getExperienceReward() {
-        if (spawnDistance <= 0) {
-            return super.getExperienceReward();
-        }
-
-        int baseXP = 5; // Experiencia base de un zombie normal
-
-        // Aplicamos una función logarítmica para el crecimiento de la experiencia
-        int extraXP = (int) (2 * Math.log(spawnDistance + 1)); // +1 para evitar log(0)
-
-        int totalXP = baseXP + extraXP;
-
-        DevilRpg.LOGGER.info("XP Calculation => spawnDistance: {} | totalXP: {}", spawnDistance, totalXP);
-
-        return totalXP;
-    }
 }

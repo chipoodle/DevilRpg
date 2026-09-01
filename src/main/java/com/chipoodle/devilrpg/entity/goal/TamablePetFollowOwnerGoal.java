@@ -10,7 +10,7 @@ import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.pathfinder.BlockPathTypes;
+import net.minecraft.world.level.pathfinder.PathType;
 import net.minecraft.world.level.pathfinder.WalkNodeEvaluator;
 
 import java.util.EnumSet;
@@ -29,7 +29,7 @@ public class TamablePetFollowOwnerGoal extends Goal {
 
     public TamablePetFollowOwnerGoal(ITamableEntity p_i225711_1_, double p_i225711_2_, float p_i225711_4_, float p_i225711_5_, boolean p_i225711_6_) {
         this.tamable = p_i225711_1_;
-        this.level = p_i225711_1_.getLevel();
+        this.level = p_i225711_1_.level();
         this.speedModifier = p_i225711_2_;
         this.navigation = p_i225711_1_.getNavigation();
         this.startDistance = p_i225711_4_;
@@ -69,14 +69,14 @@ public class TamablePetFollowOwnerGoal extends Goal {
 
     public void start() {
         this.timeToRecalcPath = 0;
-        this.oldWaterCost = this.tamable.getPathfindingMalus(BlockPathTypes.WATER);
-        this.tamable.setPathfindingMalus(BlockPathTypes.WATER, 0.0F);
+        this.oldWaterCost = this.tamable.getPathfindingMalus(PathType.WATER);
+        this.tamable.setPathfindingMalus(PathType.WATER, 0.0F);
     }
 
     public void stop() {
         this.owner = null;
         this.navigation.stop();
-        this.tamable.setPathfindingMalus(BlockPathTypes.WATER, this.oldWaterCost);
+        this.tamable.setPathfindingMalus(PathType.WATER, this.oldWaterCost);
     }
 
     public void tick() {
@@ -122,17 +122,12 @@ public class TamablePetFollowOwnerGoal extends Goal {
     }
 
     private boolean canTeleportTo(BlockPos p_226329_1_) {
-       BlockPathTypes pathnodetype = WalkNodeEvaluator.getBlockPathTypeStatic(this.level, p_226329_1_.mutable());
-        if (pathnodetype != BlockPathTypes.WALKABLE) {
+        BlockState blockstate = this.level.getBlockState(p_226329_1_.below());
+        if (!this.canFly && blockstate.getBlock() instanceof LeavesBlock) {
             return false;
         } else {
-            BlockState blockstate = this.level.getBlockState(p_226329_1_.below());
-            if (!this.canFly && blockstate.getBlock() instanceof LeavesBlock) {
-                return false;
-            } else {
-                BlockPos blockpos = p_226329_1_.subtract(this.tamable.blockPosition());
-                return this.level.noCollision(this.tamable.getEntity(), this.tamable.getBoundingBox().move(blockpos));
-            }
+            BlockPos blockpos = p_226329_1_.subtract(this.tamable.blockPosition());
+            return this.level.noCollision(this.tamable.getEntity(), this.tamable.getBoundingBox().move(blockpos));
         }
     }
 

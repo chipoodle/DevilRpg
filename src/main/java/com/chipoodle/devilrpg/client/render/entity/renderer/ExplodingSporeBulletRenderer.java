@@ -14,13 +14,13 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import org.jetbrains.annotations.NotNull;
 
 @OnlyIn(Dist.CLIENT)
 public class ExplodingSporeBulletRenderer <T extends Entity> extends EntityRenderer<T> {
-    private static final ResourceLocation TEXTURE_LOCATION = new ResourceLocation("textures/entity/shulker/spark.png");
+    private static final ResourceLocation TEXTURE_LOCATION = ResourceLocation.parse("textures/entity/shulker/spark.png");
     private static final RenderType RENDER_TYPE = RenderType.entityTranslucent(TEXTURE_LOCATION);
     private final ExplodingSporeBulletModel<T> model;
 
@@ -47,13 +47,13 @@ public class ExplodingSporeBulletRenderer <T extends Entity> extends EntityRende
 
         // Cambiar el color a rojo aquí
         VertexConsumer vertexconsumer = multiBufferSource.getBuffer(this.model.renderType(TEXTURE_LOCATION));
-        this.model.renderToBuffer(poseStack, vertexconsumer, p_115867_, OverlayTexture.NO_OVERLAY, 1.0F, 0.0F, 0.0F, 1.0F); // Rojo sólido
+        this.model.renderToBuffer(poseStack, vertexconsumer, p_115867_, OverlayTexture.NO_OVERLAY, 0xFFFF0000); // Rojo sólido
 
         poseStack.scale(1.5F, 1.5F, 1.5F);
         VertexConsumer vertexconsumer1 = multiBufferSource.getBuffer(RENDER_TYPE);
 
         // Cambiar el color a rojo aquí también
-        this.model.renderToBuffer(poseStack, vertexconsumer1, p_115867_, OverlayTexture.NO_OVERLAY, 0.9F, 0.1F, 0.1F, 0.15F); // Rojo con transparencia
+        this.model.renderToBuffer(poseStack, vertexconsumer1, p_115867_, OverlayTexture.NO_OVERLAY, 0x26E51919); // Rojo con transparencia
         poseStack.popPose();
         super.render(entity, p_115863_, p_115864_, poseStack, multiBufferSource, p_115867_);
     }

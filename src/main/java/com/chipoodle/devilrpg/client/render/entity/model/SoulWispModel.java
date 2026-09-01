@@ -15,18 +15,18 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import org.jetbrains.annotations.NotNull;
 
 @OnlyIn(Dist.CLIENT)
 public class SoulWispModel<T extends SoulWisp> extends HierarchicalModel<T> implements ArmedModel {
 
-    public static final ModelLayerLocation DEFAULT_LAYER_LOCATION = new ModelLayerLocation(new ResourceLocation(DevilRpg.MODID, "soulwisp"), "main");
-    public static final ModelLayerLocation ARCHER_LAYER_LOCATION = new ModelLayerLocation(new ResourceLocation(DevilRpg.MODID, "soulwisparcher"), "main");
-    public static final ModelLayerLocation HEALTH_LAYER_LOCATION = new ModelLayerLocation(new ResourceLocation(DevilRpg.MODID, "soulwisphealth"), "main");
-    public static final ModelLayerLocation CHOPPER_LAYER_LOCATION = new ModelLayerLocation(new ResourceLocation(DevilRpg.MODID, "soulwispchopper"), "main");
-    public static final ModelLayerLocation FORESTER_LAYER_LOCATION = new ModelLayerLocation(new ResourceLocation(DevilRpg.MODID, "soulwispforester"), "main");
+    public static final ModelLayerLocation DEFAULT_LAYER_LOCATION = new ModelLayerLocation(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "soulwisp"), "main");
+    public static final ModelLayerLocation ARCHER_LAYER_LOCATION = new ModelLayerLocation(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "soulwisparcher"), "main");
+    public static final ModelLayerLocation HEALTH_LAYER_LOCATION = new ModelLayerLocation(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "soulwisphealth"), "main");
+    public static final ModelLayerLocation CHOPPER_LAYER_LOCATION = new ModelLayerLocation(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "soulwispchopper"), "main");
+    public static final ModelLayerLocation FORESTER_LAYER_LOCATION = new ModelLayerLocation(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "soulwispforester"), "main");
     private final ModelPart root;
     private final ModelPart body;
     private final ModelPart rightArm;

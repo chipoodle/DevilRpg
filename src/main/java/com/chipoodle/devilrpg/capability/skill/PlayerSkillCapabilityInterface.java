@@ -27,8 +27,8 @@ public interface PlayerSkillCapabilityInterface extends IGenericCapability {
     void setResourceCostPoints(HashMap<SkillEnum, Integer> points, Player player);
     HashMap<SkillEnum, ResourceType> getResourceType();
     void setResourceType(HashMap<SkillEnum, ResourceType> points, Player player);
-    HashMap<String, UUID> getAttributeModifiers();
-    void setAttributeModifiers(HashMap<String, UUID> modifiers, Player player);
+    HashMap<String, String> getAttributeModifiers();
+    void setAttributeModifiers(HashMap<String, String> modifiers, Player player);
     SkillEnum getSkillFromByteArray(CompoundTag triggeredskill);
     CompoundTag setSkillToByteArray(SkillEnum skillEnum);
     @SuppressWarnings("unchecked")

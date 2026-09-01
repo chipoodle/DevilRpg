@@ -8,7 +8,7 @@ import net.minecraft.world.entity.monster.Zombie;
 import org.jetbrains.annotations.NotNull;
 
 public class AggressiveZombieRenderer extends ZombieRenderer {
-    private static final ResourceLocation TEXTURE =  new ResourceLocation(DevilRpg.MODID + ":textures/entity/aggressive_zombie/aggressive_zombie.png");
+    private static final ResourceLocation TEXTURE =  ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "textures/entity/aggressive_zombie/aggressive_zombie.png");
 
     public AggressiveZombieRenderer(EntityRendererProvider.Context context) {
         super(context);

@@ -1,11 +1,13 @@
 package com.chipoodle.devilrpg.capability.stamina;
 
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
+import net.neoforged.neoforge.network.PacketDistributor;
 import com.chipoodle.devilrpg.init.ModNetwork;
-import com.chipoodle.devilrpg.network.handler.PlayerStaminaClientServerHandler;
+import com.chipoodle.devilrpg.network.payload.PlayerStaminaPayload;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.network.PacketDistributor;
 
 
 public class PlayerStaminaCapabilityImplementation implements PlayerStaminaCapabilityInterface {
@@ -22,7 +24,7 @@ public class PlayerStaminaCapabilityImplementation implements PlayerStaminaCapab
     @Override
     public void setStamina(float stamina, Player player) {
         this.stamina = stamina;
-        if (!player.level.isClientSide)
+        if (!player.level().isClientSide)
             sendStaminaChangesToClient((ServerPlayer) player);
         else
             sendStaminaChangesToServer();
@@ -32,7 +34,7 @@ public class PlayerStaminaCapabilityImplementation implements PlayerStaminaCapab
     public void addStamina(float staminaAdded, Player player) {
         this.stamina += staminaAdded;
         stamina = Math.max(Math.min(stamina, maxStamina),0.0f);
-        if (!player.level.isClientSide)
+        if (!player.level().isClientSide)
             sendStaminaChangesToClient((ServerPlayer) player);
         else
             sendStaminaChangesToServer();
@@ -46,7 +48,7 @@ public class PlayerStaminaCapabilityImplementation implements PlayerStaminaCapab
     @Override
     public void setMaxStamina(float maxStamina, Player player) {
         this.maxStamina = maxStamina;
-        if (!player.level.isClientSide)
+        if (!player.level().isClientSide)
             sendStaminaChangesToClient((ServerPlayer) player);
         else
             sendStaminaChangesToServer();
@@ -60,7 +62,7 @@ public class PlayerStaminaCapabilityImplementation implements PlayerStaminaCapab
     @Override
     public void setRegeneration(float regeneration, Player player) {
         this.regeneration = regeneration;
-        if (!player.level.isClientSide)
+        if (!player.level().isClientSide)
             sendStaminaChangesToClient((ServerPlayer) player);
         else
             sendStaminaChangesToServer();
@@ -75,7 +77,7 @@ public class PlayerStaminaCapabilityImplementation implements PlayerStaminaCapab
     }
 
     @Override
-    public CompoundTag serializeNBT() {
+    public CompoundTag serializeNBT(HolderLookup.Provider provider) {
         CompoundTag nbt = new CompoundTag();
         nbt.putFloat("stamina", stamina);
         nbt.putFloat("maxStamina", maxStamina);
@@ -84,17 +86,17 @@ public class PlayerStaminaCapabilityImplementation implements PlayerStaminaCapab
     }
 
     @Override
-    public void deserializeNBT(CompoundTag compound) {
+    public void deserializeNBT(HolderLookup.Provider provider, CompoundTag compound) {
         stamina = compound.getFloat("stamina");
         maxStamina = compound.getFloat("maxStamina");
         regeneration = compound.getFloat("regeneration");
     }
 
     private void sendStaminaChangesToServer() {
-        ModNetwork.CHANNEL.sendToServer(new PlayerStaminaClientServerHandler(serializeNBT()));
+        PacketDistributor.sendToServer(new PlayerStaminaPayload(serializeNBT(RegistryAccess.EMPTY)));
     }
 
     private void sendStaminaChangesToClient(ServerPlayer pe) {
-        ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> pe), new PlayerStaminaClientServerHandler(serializeNBT()));
+        PacketDistributor.sendToPlayer(pe, new PlayerStaminaPayload(serializeNBT(RegistryAccess.EMPTY)));
     }
 }

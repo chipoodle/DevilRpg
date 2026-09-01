@@ -52,13 +52,13 @@ public class PlayerPassiveWerewolfVitalityAttributeExecutor extends AbstractPlay
 
     private void initializeAttributes(Player playerIn) {
         if (hitAttributeModifier == null ||
-                hitAttributeModifier.getAmount() != Double.valueOf(parentCapability.getSkillsPoints().get(SkillEnum.WEREWOLF_VITALITY)) * HEALTH_FACTOR) {
+                hitAttributeModifier.amount() != Double.valueOf(parentCapability.getSkillsPoints().get(SkillEnum.WEREWOLF_VITALITY)) * HEALTH_FACTOR) {
             removeCurrentWerwolfVitalityModifiers();
             hitAttributeModifier = createNewAttributeModifiers();
-            HashMap<String, UUID> capAttModifiersHashMap = parentCapability.getAttributeModifiers();
-            addAttributeToCapability(capAttModifiersHashMap, Attributes.MAX_HEALTH, hitAttributeModifier.getId());
+            HashMap<String, String> capAttModifiersHashMap = parentCapability.getAttributeModifiers();
+            addAttributeToCapability(capAttModifiersHashMap, Attributes.MAX_HEALTH, hitAttributeModifier.id());
             parentCapability.setAttributeModifiers(capAttModifiersHashMap, playerIn);
-            DevilRpg.LOGGER.info("----------------------->Add {}", hitAttributeModifier.getId());
+            DevilRpg.LOGGER.info("----------------------->Add {}", hitAttributeModifier.id());
         }
     }
 
@@ -77,7 +77,7 @@ public class PlayerPassiveWerewolfVitalityAttributeExecutor extends AbstractPlay
     }
 
     private void removeCurrentWerwolfVitalityModifiers() {
-        //HashMap<String, UUID> attributeModifiers = parentCapability.getAttributeModifiers();
+        //HashMap<String, String> attributeModifiers = parentCapability.getAttributeModifiers();
         removeCurrentModifierFromPlayer(playerIn, hitAttributeModifier, Attributes.MAX_HEALTH);
         //UUID uuid = removeAttributeFromCapability(attributeModifiers, Attributes.MAX_HEALTH);
         //parentCapability.setAttributeModifiers(attributeModifiers, playerIn);
@@ -88,11 +88,11 @@ public class PlayerPassiveWerewolfVitalityAttributeExecutor extends AbstractPlay
     }
 
     private void addCurrentModifiers() {
-        //HashMap<String, UUID> attributeModifiers = parentCapability.getAttributeModifiers();
-        //addAttributeToCapability(attributeModifiers, Attributes.ARMOR, skinArmorAttributeModifier.getId());
+        //HashMap<String, String> attributeModifiers = parentCapability.getAttributeModifiers();
+        //addAttributeToCapability(attributeModifiers, Attributes.ARMOR, skinArmorAttributeModifier.id());
         addCurrentModifierTransiently(playerIn, Attributes.MAX_HEALTH, hitAttributeModifier);
         //parentCapability.setAttributeModifiers(attributeModifiers, playerIn);
-        //DevilRpg.LOGGER.info("----------------------->Add {}",skinArmorAttributeModifier.getId());
+        //DevilRpg.LOGGER.info("----------------------->Add {}",skinArmorAttributeModifier.id());
         DevilRpg.LOGGER.info("----------------------->addCurrentModifierTransiently(): {}", hitAttributeModifier);
     }
 

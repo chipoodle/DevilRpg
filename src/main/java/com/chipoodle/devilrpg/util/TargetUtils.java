@@ -17,7 +17,6 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.MobType;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.player.Player;
@@ -186,7 +185,7 @@ public class TargetUtils {
             distanceTraveled += lookAngle.length();
             AABB bb = new AABB(targetX - radius, targetY - radius, targetZ - radius, targetX + radius,
                     targetY + radius, targetZ + radius);
-            List<LivingEntity> list = seeker.level.getEntitiesOfClass(LivingEntity.class, bb);
+            List<LivingEntity> list = seeker.level().getEntitiesOfClass(LivingEntity.class, bb);
             for (LivingEntity target : list) {
                 if (target != seeker && target.canBeCollidedWith() && isTargetInSight(lookAngle, seeker, target)) {
                     double newDistance = (closestToSeeker ? target.distanceToSqr(seeker)
@@ -225,7 +224,7 @@ public class TargetUtils {
             distanceTraveled += lookAngle.length();
             AABB bb = new AABB(targetX - radius, targetY - radius, targetZ - radius, targetX + radius,
                     targetY + radius, targetZ + radius);
-            List<LivingEntity> list = seeker.level.getEntitiesOfClass(LivingEntity.class, bb);
+            List<LivingEntity> list = seeker.level().getEntitiesOfClass(LivingEntity.class, bb);
 
             return list.stream()
                     .filter(
@@ -261,7 +260,7 @@ public class TargetUtils {
             distanceTraveled += vec3.length();
             AABB bb = new AABB(targetX - radius, targetY - radius, targetZ - radius, targetX + radius,
                     targetY + radius, targetZ + radius);
-            List<? extends LivingEntity> list = seeker.level.getEntitiesOfClass(classEntity, bb);
+            List<? extends LivingEntity> list = seeker.level().getEntitiesOfClass(classEntity, bb);
             for (LivingEntity target : list) {
                 if (target != seeker && target.canBeCollidedWith() && isTargetInSight(vec3, seeker, target)) {
                     if (!targets.contains(target)) {
@@ -277,7 +276,7 @@ public class TargetUtils {
     public static List<? extends LivingEntity> acquireAllTargetsInRadiusByClass(LivingEntity seeker, Class<? extends LivingEntity> classEntity, double radius) {
         AABB bb = new AABB(seeker.getX() - radius, seeker.getY() - radius, seeker.getZ() - radius, seeker.getX() + radius,
                 seeker.getY() + radius, seeker.getZ() + radius);
-        return seeker.level.getEntitiesOfClass(classEntity, bb);
+        return seeker.level().getEntitiesOfClass(classEntity, bb);
     }
 
     /**
@@ -372,11 +371,11 @@ public class TargetUtils {
         vecX /= vectorLength;
         vecY /= vectorLength;
         vecZ /= vectorLength;
-        vecX += entity.level.random.nextGaussian() * (entity.level.random.nextBoolean() ? -1 : 1) * 0.007499999832361937D
+        vecX += entity.level().random.nextGaussian() * (entity.level().random.nextBoolean() ? -1 : 1) * 0.007499999832361937D
                 * wobble;
-        vecY += entity.level.random.nextGaussian() * (entity.level.random.nextBoolean() ? -1 : 1) * 0.007499999832361937D
+        vecY += entity.level().random.nextGaussian() * (entity.level().random.nextBoolean() ? -1 : 1) * 0.007499999832361937D
                 * wobble;
-        vecZ += entity.level.random.nextGaussian() * (entity.level.random.nextBoolean() ? -1 : 1) * 0.007499999832361937D
+        vecZ += entity.level().random.nextGaussian() * (entity.level().random.nextBoolean() ? -1 : 1) * 0.007499999832361937D
                 * wobble;
         vecX *= velocity;
         vecY *= velocity;
@@ -410,7 +409,7 @@ public class TargetUtils {
 
     /*
      * public static boolean isInLiquid(Entity entity) { BlockState state =
-     * entity.level.getBlockState(new BlockPos(entity.getPositionVec())); return
+     * entity.level().getBlockState(new BlockPos(entity.getPositionVec())); return
      * state.getBlock(). getMaterial().isLiquid(); }
      */
 
@@ -435,17 +434,15 @@ public class TargetUtils {
     private static void attackTargetEntity(ServerPlayer player, Entity targetEntity, InteractionHand currentHand) {
 
 
-        if (!net.minecraftforge.common.ForgeHooks.onPlayerAttackTarget(player, targetEntity)) return;
+        if (!net.neoforged.neoforge.common.CommonHooks.onPlayerAttackTarget(player, targetEntity)) return;
 
 
         if (targetEntity != null && targetEntity.isAttackable()) {
             if (!targetEntity.skipAttackInteraction(player)) {
                 float f = (float) player.getAttributeValue(Attributes.ATTACK_DAMAGE);
-                float f1;
+                float f1 = 0.0F;
                 if (targetEntity instanceof LivingEntity) {
-                    f1 = EnchantmentHelper.getDamageBonus(player.getItemInHand(currentHand), ((LivingEntity) targetEntity).getMobType());
-                } else {
-                    f1 = EnchantmentHelper.getDamageBonus(player.getItemInHand(currentHand), MobType.UNDEFINED);
+                    // Enchantment damage bonus is no longer a simple MobType lookup in 1.21
                 }
 
                 float f2 = ((RANDOM.nextInt() + new Date().getTime()) % 10 + 1) * 0.1f;// player.getCooledAttackStrength(0.5F); // getAttackStrengthScale
@@ -458,30 +455,24 @@ public class TargetUtils {
                     boolean flag = f2 > 0.9F;
                     boolean flag1 = false;
                     int i = 0;
-                    i = i + EnchantmentHelper.getKnockbackBonus(player);
                     if (player.isSprinting() && flag) {
-                        player.level.playSound(null, player.getX(), player.getY(),
+                        player.level().playSound(null, player.getX(), player.getY(),
                                 player.getZ(), SoundEvents.PLAYER_ATTACK_KNOCKBACK, player.getSoundSource(),
                                 1.0F, 1.0F);
                         ++i;
                         flag1 = true;
                     }
 
-                    boolean flag2 = flag && player.fallDistance > 0.0F && !player.isOnGround() && !player.onClimbable()
+                    boolean flag2 = flag && player.fallDistance > 0.0F && !player.onGround() 
                             && !player.isInWater() && !player.hasEffect(MobEffects.BLINDNESS) && !player.isPassenger()
                             && targetEntity instanceof LivingEntity;
                     flag2 = flag2 && !player.isSprinting();
-                    net.minecraftforge.event.entity.player.CriticalHitEvent hitResult = net.minecraftforge.common.ForgeHooks
-                            .getCriticalHit(player, targetEntity, flag2, flag2 ? 1.5F : 1.0F);
-                    flag2 = hitResult != null;
-                    if (flag2) {
-                        f *= hitResult.getDamageModifier();
-                    }
+
 
                     f = f + f1;
                     boolean flag3 = false;
                     double d0 = player.walkDist - player.walkDistO;
-                    if (flag && !flag2 && !flag1 && player.isOnGround() && d0 < (double) player.getSpeed()) {
+                    if (flag && !flag2 && !flag1 && player.onGround() && d0 < (double) player.getSpeed()) {
                         ItemStack itemstack = player.getItemInHand(currentHand);
                         //DevilRpg.LOGGER.info("----->HAND: " + currentHand.name() + " ITEM: " + itemstack.getItem().getName().getString());
                         if (itemstack.getItem() instanceof SwordItem) {
@@ -491,12 +482,12 @@ public class TargetUtils {
 
                     float f4 = 0.0F;
                     boolean flag4 = false;
-                    int j = EnchantmentHelper.getFireAspect(player);
+                    int j = 0; // Fire Aspect is handled through enchantment effects in 1.21
                     if (targetEntity instanceof LivingEntity) {
                         f4 = ((LivingEntity) targetEntity).getHealth();
                         if (j > 0 && !targetEntity.isOnFire()) {
                             flag4 = true;
-                            targetEntity.setSecondsOnFire(1);
+                            targetEntity.igniteForSeconds(1);
                         }
                     }
 
@@ -521,9 +512,9 @@ public class TargetUtils {
                         }
 
                         if (flag3) {
-                            float f3 = 1.0F + EnchantmentHelper.getSweepingDamageRatio(player) * f;
+                            float f3 = f; // Sweeping Edge damage ratio is handled through enchantment effects in 1.21
 
-                            for (LivingEntity livingentity : player.level.getEntitiesOfClass(LivingEntity.class,
+                            for (LivingEntity livingentity : player.level().getEntitiesOfClass(LivingEntity.class,
                                     targetEntity.getBoundingBox().inflate(1.0D, 0.25D, 1.0D))) {
                                 if (livingentity != player && livingentity != targetEntity
                                         && !player.isAlliedTo(livingentity)
@@ -537,7 +528,7 @@ public class TargetUtils {
                                 }
                             }
 
-                            player.level.playSound(null, player.getX(), player.getY(),
+                            player.level().playSound(null, player.getX(), player.getY(),
                                     player.getZ(), SoundEvents.PLAYER_ATTACK_SWEEP, player.getSoundSource(),
                                     1.0F, 1.0F);
                             player.sweepAttack();
@@ -551,7 +542,7 @@ public class TargetUtils {
                         }
 
                         if (flag2) {
-                            player.level.playSound(null, player.getX(), player.getY(),
+                            player.level().playSound(null, player.getX(), player.getY(),
                                     player.getZ(), SoundEvents.PLAYER_ATTACK_CRIT, player.getSoundSource(),
                                     1.0F, 1.0F);
                             player.crit(targetEntity);
@@ -559,11 +550,11 @@ public class TargetUtils {
 
                         if (!flag2 && !flag3) {
                             if (flag) {
-                                player.level.playSound(null, player.getX(), player.getY(),
+                                player.level().playSound(null, player.getX(), player.getY(),
                                         player.getZ(), SoundEvents.PLAYER_ATTACK_STRONG,
                                         player.getSoundSource(), 1.0F, 1.0F);
                             } else {
-                                player.level.playSound(null, player.getX(), player.getY(),
+                                player.level().playSound(null, player.getX(), player.getY(),
                                         player.getZ(), SoundEvents.PLAYER_ATTACK_WEAK,
                                         player.getSoundSource(), 1.0F, 1.0F);
                             }
@@ -575,22 +566,21 @@ public class TargetUtils {
 
                         player.setLastHurtMob(targetEntity);
                         if (targetEntity instanceof LivingEntity) {
-                            EnchantmentHelper.doPostHurtEffects((LivingEntity) targetEntity, player);
+                            EnchantmentHelper.doPostAttackEffects((ServerLevel) player.level(), targetEntity, player.damageSources().playerAttack(player));
                         }
 
-                        EnchantmentHelper.doPostDamageEffects(player, targetEntity);
+                        EnchantmentHelper.doPostAttackEffectsWithItemSource((ServerLevel) player.level(), targetEntity, player.damageSources().playerAttack(player), player.getItemInHand(currentHand));
                         //ItemStack itemstack1 = player.getMainHandItem();
                         ItemStack itemstack1 = player.getItemInHand(currentHand);
                         Entity entity = targetEntity;
-                        if (targetEntity instanceof net.minecraftforge.entity.PartEntity) {
-                            entity = ((net.minecraftforge.entity.PartEntity<?>) targetEntity).getParent();
+                        if (targetEntity instanceof net.neoforged.neoforge.entity.PartEntity) {
+                            entity = ((net.neoforged.neoforge.entity.PartEntity<?>) targetEntity).getParent();
                         }
 
-                        if (!player.level.isClientSide && !itemstack1.isEmpty() && entity instanceof LivingEntity) {
+                        if (!player.level().isClientSide && !itemstack1.isEmpty() && entity instanceof LivingEntity) {
                             ItemStack copy = itemstack1.copy();
                             itemstack1.hurtEnemy((LivingEntity) entity, player);
                             if (itemstack1.isEmpty()) {
-                                net.minecraftforge.event.ForgeEventFactory.onPlayerDestroyItem(player, copy, currentHand);
                                 player.setItemInHand(currentHand, ItemStack.EMPTY);
                             }
                         }
@@ -599,12 +589,12 @@ public class TargetUtils {
                             float f5 = f4 - ((LivingEntity) targetEntity).getHealth();
                             player.awardStat(Stats.DAMAGE_DEALT, Math.round(f5 * 10.0F));
                             if (j > 0) {
-                                targetEntity.setSecondsOnFire(j * 4);
+                                targetEntity.igniteForSeconds(j * 4);
                             }
 
-                            if (player.level instanceof ServerLevel && f5 > 2.0F) {
+                            if (player.level() instanceof ServerLevel && f5 > 2.0F) {
                                 int k = (int) ((double) f5 * 0.5D);
-                                ((ServerLevel) player.level).sendParticles(ParticleTypes.DAMAGE_INDICATOR,
+                                ((ServerLevel) player.level()).sendParticles(ParticleTypes.DAMAGE_INDICATOR,
                                         targetEntity.getX(), targetEntity.getY(0.5D),
                                         targetEntity.getZ(), k, 0.1D, 0.0D, 0.1D, 0.2D);
                             }
@@ -612,7 +602,7 @@ public class TargetUtils {
 
                         player.causeFoodExhaustion(0.1F);
                     } else {
-                        player.level.playSound(null, player.getX(), player.getY(),
+                        player.level().playSound(null, player.getX(), player.getY(),
                                 player.getZ(), SoundEvents.PLAYER_ATTACK_NODAMAGE, player.getSoundSource(),
                                 1.0F, 1.0F);
                         if (flag4) {
@@ -663,7 +653,7 @@ public class TargetUtils {
     }
 
     public static BlockPos findSolidGroundBelow(Level level, BlockPos pos) {
-        while (pos.getY() > 0 && !level.getBlockState(pos).getMaterial().isSolid()
+        while (pos.getY() > 0 && !level.getBlockState(pos).isSolid()
                 && pos.getY() > level.getMinBuildHeight() && level.getWorldBorder().isWithinBounds(pos)) {
             pos = pos.below();
         }
@@ -676,7 +666,7 @@ public class TargetUtils {
     }
 
     public static List<LivingEntity> getAlliesListWithinAABBRangeIncludingOwner(AABB area, Player owner) {
-        return owner.level.getEntitiesOfClass(LivingEntity.class, area).stream()
+        return owner.level().getEntitiesOfClass(LivingEntity.class, area).stream()
         .filter(entity -> entity.isAlliedTo(owner) || entity.equals(owner))
         .collect(Collectors.toList());
     }

@@ -7,16 +7,16 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.StringSplitter;
-import net.minecraft.client.gui.GuiComponent;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.*;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.client.gui.ScreenUtils;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
+import net.neoforged.neoforge.client.gui.ScreenUtils;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -34,7 +34,7 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 @OnlyIn(Dist.CLIENT)
-public class SkillWidget extends GuiComponent {
+public class SkillWidget {
     // static final int BUTTON_IMAGE_SIZE = 512;
     public static final int BUTTON_IMAGE_SIZE = 256;
     public static final int TARGET_BUTTON_IMAGE_SIZE = 20;
@@ -46,7 +46,7 @@ public class SkillWidget extends GuiComponent {
     private static final String SKILL_GUI_IMG_LOCATION = DevilRpg.MODID + ":textures/gui/skill";
     private static final int[] LINE_BREAK_VALUES = new int[]{0, 10, -10, 25, -25};
     private static final net.minecraft.network.chat.Component MANA_COST = net.minecraft.network.chat.Component.translatable("gui.skills.mana_cost");
-    public static ResourceLocation WIDGETS = new ResourceLocation(SKILL_GUI_IMG_LOCATION + "/widgets.png");
+    public static ResourceLocation WIDGETS = ResourceLocation.parse(SKILL_GUI_IMG_LOCATION + "/widgets.png");
     private static List<ResourceLocation> resourceLocations = new ArrayList<>();
     private static int resourceIndex = 0;
     private final SkillTab skillTabGui;
@@ -179,7 +179,7 @@ public class SkillWidget extends GuiComponent {
                                 String relativePath = directory.relativize(path).toString();
                                 String resourcePath = SKILL_GUI_IMG_LOCATION + "/widget/" + relativePath.replace(File.separator, "/");
                                 // Crea un ResourceLocation y agrégalo a la lista
-                                return new ResourceLocation(resourcePath);
+                                return ResourceLocation.parse(resourcePath);
                             })
                             .sorted()
                             .toList();
@@ -281,7 +281,7 @@ public class SkillWidget extends GuiComponent {
      * @param x
      * @param y
      */
-    public void drawSkills(PoseStack matrixStack, int x, int y) {
+    public void drawSkills(GuiGraphics guiGraphics, int x, int y) {
         // DevilRpg.LOGGER.info("|---drawSkill x" +x+" y "+y+" title: "+
         // this.displayInfo.getTitle());
 
@@ -294,21 +294,21 @@ public class SkillWidget extends GuiComponent {
             RenderSystem.setShaderTexture(0, WIDGETS);
 
             // Pinta el icono del botón
-            blit(matrixStack, x + this.x + 3, y + this.y, this.getDisplayInfo().getFrame().getIcon(),
+            guiGraphics.blit(WIDGETS, x + this.x + 3, y + this.y, this.getDisplayInfo().getFrame().getIcon(),
                     128 + skillState.getId() * FRAME_SIZE, FRAME_SIZE, FRAME_SIZE);
 
             // Pinta el marco botón
-            drawButton(matrixStack, x, y, false, this.getDisplayInfo().getImage(), false, isDisabled());
+            drawButton(guiGraphics, x, y, false, this.getDisplayInfo().getImage(), false, isDisabled());
 
             // Pinta a los hijos
             for (SkillWidget childrenEntry : this.children) {
-                childrenEntry.drawSkills(matrixStack, x, y);
+                childrenEntry.drawSkills(guiGraphics, x, y);
             }
         }
 
     }
 
-    public void drawHoveredSkill(PoseStack matrixStack, int x, int y, float fade, int width, int height) {
+    public void drawHoveredSkill(GuiGraphics guiGraphics, int x, int y, float fade, int width, int height) {
         boolean widthFlag = width + x + this.x + this.width + FRAME_SIZE >= this.skillTabGui.getScreen().width;
         String skillProgressString = this.skillProgress == null ? null : this.skillProgress.getSkillPointText();
         int i = skillProgressString == null ? 0 : this.minecraft.font.width(skillProgressString);
@@ -360,48 +360,48 @@ public class SkillWidget extends GuiComponent {
 
         if (!this.description.isEmpty()) {
             if (flag1) {
-                this.render9Sprite(matrixStack, i1, l + FRAME_SIZE - j1, this.width, j1, 10, 200, FRAME_SIZE, 0, 52);
+                this.render9Sprite(guiGraphics, i1, l + FRAME_SIZE - j1, this.width, j1, 10, 200, FRAME_SIZE, 0, 52);
             } else {
-                this.render9Sprite(matrixStack, i1, l, this.width, j1, 10, 200, FRAME_SIZE, 0, 52);
+                this.render9Sprite(guiGraphics, i1, l, this.width, j1, 10, 200, FRAME_SIZE, 0, 52);
             }
         }
 
         // pinta la mitad izquierda de la barra del título
-        blit(matrixStack, i1, l, 0, advancementstate.getId() * FRAME_SIZE, j, FRAME_SIZE);
+        guiGraphics.blit(WIDGETS, i1, l, 0, advancementstate.getId() * FRAME_SIZE, j, FRAME_SIZE);
         // pinta la mitad derecha de la barra del título
-        blit(matrixStack, i1 + j, l, 200 - k, advancementstate1.getId() * FRAME_SIZE, k, FRAME_SIZE);
+        guiGraphics.blit(WIDGETS, i1 + j, l, 200 - k, advancementstate1.getId() * FRAME_SIZE, k, FRAME_SIZE);
         // Pinta el marco del boton
-        blit(matrixStack, x + this.x + 3, y + this.y, this.getDisplayInfo().getFrame().getIcon(),
+        guiGraphics.blit(WIDGETS, x + this.x + 3, y + this.y, this.getDisplayInfo().getFrame().getIcon(),
                 128 + advancementstate2.getId() * FRAME_SIZE, FRAME_SIZE, FRAME_SIZE);
 
         if (widthFlag) {
             // pinta título
-            this.minecraft.font.drawShadow(matrixStack, this.title, (i1 + 5), (y + this.y + 9), -1);
+            guiGraphics.drawString(this.minecraft.font, this.title, (i1 + 5), (y + this.y + 9), -1, true);
             if (skillProgressString != null) {
-                this.minecraft.font.drawShadow(matrixStack, skillProgressString, (x + this.x - i), (y + this.y + 9),
-                        -1);
+                guiGraphics.drawString(this.minecraft.font, skillProgressString, (x + this.x - i), (y + this.y + 9),
+                        -1, true);
             }
         } else {
             // pinta título
-            this.minecraft.font.drawShadow(matrixStack, this.title, (x + this.x + 32), (y + this.y + 9), -1);
+            guiGraphics.drawString(this.minecraft.font, this.title, (x + this.x + 32), (y + this.y + 9), -1, true);
             if (skillProgressString != null) {
-                this.minecraft.font.drawShadow(matrixStack, skillProgressString, (x + this.x + this.width - i - 5),
-                        (y + this.y + 9), -1);
+                guiGraphics.drawString(this.minecraft.font, skillProgressString, (x + this.x + this.width - i - 5),
+                        (y + this.y + 9), -1, true);
             }
         }
 
         if (flag1) {
             for (int k1 = 0; k1 < this.description.size(); ++k1) {
                 // Pinta contenido
-                this.minecraft.font.draw(matrixStack, this.description.get(k1), (i1 + 5),
-                        (float) (l + FRAME_SIZE - j1 + 7 + k1 * 9), -5592406);
+                guiGraphics.drawString(this.minecraft.font, this.description.get(k1), (i1 + 5),
+                        (l + FRAME_SIZE - j1 + 7 + k1 * 9), -5592406, false);
             }
 
         } else {
             for (int l1 = 0; l1 < this.description.size(); ++l1) {
                 // Pinta contenido
-                this.minecraft.font.draw(matrixStack, this.description.get(l1), (i1 + 5),
-                        (float) (y + this.y + 9 + 17 + l1 * 9), -5592406);
+                guiGraphics.drawString(this.minecraft.font, this.description.get(l1), (i1 + 5),
+                        (y + this.y + 9 + 17 + l1 * 9), -5592406, false);
             }
         }
 
@@ -409,29 +409,29 @@ public class SkillWidget extends GuiComponent {
         RenderSystem.setShader(GameRenderer::getPositionTexShader);
         RenderSystem.setShaderTexture(0, WIDGETS);
         // Pinta el ícono del botón
-        blit(matrixStack, x + this.x + 3, y + this.y, this.getDisplayInfo().getFrame().getIcon(),
+        guiGraphics.blit(WIDGETS, x + this.x + 3, y + this.y, this.getDisplayInfo().getFrame().getIcon(),
                 128 + skillState.getId() * FRAME_SIZE, FRAME_SIZE, FRAME_SIZE);
 
-        drawButton(matrixStack, x, y, false, this.getDisplayInfo().getImage(), false, isDisabled());
+        drawButton(guiGraphics, x, y, false, this.getDisplayInfo().getImage(), false, isDisabled());
 
         // Pinta el icono del marco
         // this.minecraft.getItemRenderer().renderItemAndEffectIntoGuiWithoutEntity(this.displayInfo.getIcon(),x
         // + this.x + 8, y + this.y + 5);
     }
 
-    protected void render9Sprite(PoseStack p_97288_, int p_97289_, int p_97290_, int p_97291_, int p_97292_, int p_97293_, int p_97294_, int p_97295_, int p_97296_, int p_97297_) {
-        blit(p_97288_, p_97289_, p_97290_, p_97296_, p_97297_, p_97293_, p_97293_);
-        this.renderRepeating(p_97288_, p_97289_ + p_97293_, p_97290_, p_97291_ - p_97293_ - p_97293_, p_97293_, p_97296_ + p_97293_, p_97297_, p_97294_ - p_97293_ - p_97293_, p_97295_);
-        blit(p_97288_, p_97289_ + p_97291_ - p_97293_, p_97290_, p_97296_ + p_97294_ - p_97293_, p_97297_, p_97293_, p_97293_);
-        blit(p_97288_, p_97289_, p_97290_ + p_97292_ - p_97293_, p_97296_, p_97297_ + p_97295_ - p_97293_, p_97293_, p_97293_);
-        this.renderRepeating(p_97288_, p_97289_ + p_97293_, p_97290_ + p_97292_ - p_97293_, p_97291_ - p_97293_ - p_97293_, p_97293_, p_97296_ + p_97293_, p_97297_ + p_97295_ - p_97293_, p_97294_ - p_97293_ - p_97293_, p_97295_);
-        blit(p_97288_, p_97289_ + p_97291_ - p_97293_, p_97290_ + p_97292_ - p_97293_, p_97296_ + p_97294_ - p_97293_, p_97297_ + p_97295_ - p_97293_, p_97293_, p_97293_);
-        this.renderRepeating(p_97288_, p_97289_, p_97290_ + p_97293_, p_97293_, p_97292_ - p_97293_ - p_97293_, p_97296_, p_97297_ + p_97293_, p_97294_, p_97295_ - p_97293_ - p_97293_);
-        this.renderRepeating(p_97288_, p_97289_ + p_97293_, p_97290_ + p_97293_, p_97291_ - p_97293_ - p_97293_, p_97292_ - p_97293_ - p_97293_, p_97296_ + p_97293_, p_97297_ + p_97293_, p_97294_ - p_97293_ - p_97293_, p_97295_ - p_97293_ - p_97293_);
-        this.renderRepeating(p_97288_, p_97289_ + p_97291_ - p_97293_, p_97290_ + p_97293_, p_97293_, p_97292_ - p_97293_ - p_97293_, p_97296_ + p_97294_ - p_97293_, p_97297_ + p_97293_, p_97294_, p_97295_ - p_97293_ - p_97293_);
+    protected void render9Sprite(GuiGraphics guiGraphics, int p_97289_, int p_97290_, int p_97291_, int p_97292_, int p_97293_, int p_97294_, int p_97295_, int p_97296_, int p_97297_) {
+        guiGraphics.blit(WIDGETS, p_97289_, p_97290_, p_97296_, p_97297_, p_97293_, p_97293_);
+        this.renderRepeating(guiGraphics, p_97289_ + p_97293_, p_97290_, p_97291_ - p_97293_ - p_97293_, p_97293_, p_97296_ + p_97293_, p_97297_, p_97294_ - p_97293_ - p_97293_, p_97295_);
+        guiGraphics.blit(WIDGETS, p_97289_ + p_97291_ - p_97293_, p_97290_, p_97296_ + p_97294_ - p_97293_, p_97297_, p_97293_, p_97293_);
+        guiGraphics.blit(WIDGETS, p_97289_, p_97290_ + p_97292_ - p_97293_, p_97296_, p_97297_ + p_97295_ - p_97293_, p_97293_, p_97293_);
+        this.renderRepeating(guiGraphics, p_97289_ + p_97293_, p_97290_ + p_97292_ - p_97293_, p_97291_ - p_97293_ - p_97293_, p_97293_, p_97296_ + p_97293_, p_97297_ + p_97295_ - p_97293_, p_97294_ - p_97293_ - p_97293_, p_97295_);
+        guiGraphics.blit(WIDGETS, p_97289_ + p_97291_ - p_97293_, p_97290_ + p_97292_ - p_97293_, p_97296_ + p_97294_ - p_97293_, p_97297_ + p_97295_ - p_97293_, p_97293_, p_97293_);
+        this.renderRepeating(guiGraphics, p_97289_, p_97290_ + p_97293_, p_97293_, p_97292_ - p_97293_ - p_97293_, p_97296_, p_97297_ + p_97293_, p_97294_, p_97295_ - p_97293_ - p_97293_);
+        this.renderRepeating(guiGraphics, p_97289_ + p_97293_, p_97290_ + p_97293_, p_97291_ - p_97293_ - p_97293_, p_97292_ - p_97293_ - p_97293_, p_97296_ + p_97293_, p_97297_ + p_97293_, p_97294_ - p_97293_ - p_97293_, p_97295_ - p_97293_ - p_97293_);
+        this.renderRepeating(guiGraphics, p_97289_ + p_97291_ - p_97293_, p_97290_ + p_97293_, p_97293_, p_97292_ - p_97293_ - p_97293_, p_97296_ + p_97294_ - p_97293_, p_97297_ + p_97293_, p_97294_, p_97295_ - p_97293_ - p_97293_);
     }
 
-    protected void renderRepeating(PoseStack p_97278_, int p_97279_, int p_97280_, int p_97281_, int p_97282_, int p_97283_, int p_97284_, int p_97285_, int p_97286_) {
+    protected void renderRepeating(GuiGraphics guiGraphics, int p_97279_, int p_97280_, int p_97281_, int p_97282_, int p_97283_, int p_97284_, int p_97285_, int p_97286_) {
         for (int i = 0; i < p_97281_; i += p_97285_) {
             int j = p_97279_ + i;
             int k = Math.min(p_97285_, p_97281_ - i);
@@ -439,7 +439,7 @@ public class SkillWidget extends GuiComponent {
             for (int l = 0; l < p_97282_; l += p_97286_) {
                 int i1 = p_97280_ + l;
                 int j1 = Math.min(p_97286_, p_97282_ - l);
-                blit(p_97278_, j, i1, p_97283_, p_97284_, k, j1);
+                guiGraphics.blit(WIDGETS, j, i1, p_97283_, p_97284_, k, j1);
             }
         }
 
@@ -455,8 +455,10 @@ public class SkillWidget extends GuiComponent {
      * @param disabled
      */
     @SuppressWarnings("deprecation")
-    public void drawButton(PoseStack matrixStack, int x, int y, boolean mostrarPuntos, ResourceLocation image,
+    public void drawButton(GuiGraphics guiGraphics, int x, int y, boolean mostrarPuntos, ResourceLocation image,
                            boolean superpuesto, boolean disabled) {
+
+        PoseStack matrixStack = guiGraphics.pose();
 
         if (mostrarPuntos) {
             // Pinta puntos asignados/puntos máximos
@@ -490,7 +492,7 @@ public class SkillWidget extends GuiComponent {
         matrixStack.translate((posX), (posY), 0);
         matrixStack.scale(xScale, yScale, 0);
         matrixStack.translate(posX * -1.0f, posY * -1.0f, 0);
-        ScreenUtils.blitWithBorder(matrixStack, (int) (posX + BUTTON_IMAGE_SIZE * 0.302734375),
+        ScreenUtils.blitWithBorder(guiGraphics, (int) (posX + BUTTON_IMAGE_SIZE * 0.302734375),
                 (int) (posY + BUTTON_IMAGE_SIZE * 0.1171875), 0, 0, BUTTON_IMAGE_SIZE, BUTTON_IMAGE_SIZE,
                 BUTTON_IMAGE_SIZE, BUTTON_IMAGE_SIZE, 0, 1);
 
@@ -574,26 +576,26 @@ public class SkillWidget extends GuiComponent {
     // Caché para almacenar la forma y variaciones fijas de cada conexión
     private static final Map<String, int[]> branchVariationCache = new HashMap<>();
 
-    public void drawConnectionLineToParent(PoseStack matrixStack, int x, int y, boolean dropShadow) {
-        drawConnectionLineToParent(matrixStack, x, y, dropShadow, 0);
+    public void drawConnectionLineToParent(GuiGraphics guiGraphics, int x, int y, boolean dropShadow) {
+        drawConnectionLineToParent(guiGraphics, x, y, dropShadow, 0);
     }
 
-    public void drawConnectionLineToParent(PoseStack matrixStack, int x, int y, boolean dropShadow, int depth) {
+    public void drawConnectionLineToParent(GuiGraphics guiGraphics, int x, int y, boolean dropShadow, int depth) {
         if (this.parent != null) {
             int startX = x + this.parent.x + FRAME_SIZE / 2;
             int startY = y + this.parent.y + FRAME_SIZE / 2;
             int endX = x + this.x + FRAME_SIZE / 2;
             int endY = y + this.y + FRAME_SIZE / 2;
 
-            drawCurvedLine(matrixStack, startX, startY, endX, endY, dropShadow, depth);
+            drawCurvedLine(guiGraphics, startX, startY, endX, endY, dropShadow, depth);
         }
 
         for (SkillWidget skillWidget : this.children) {
-            skillWidget.drawConnectionLineToParent(matrixStack, x, y, dropShadow, depth + 1);
+            skillWidget.drawConnectionLineToParent(guiGraphics, x, y, dropShadow, depth + 1);
         }
     }
 
-    private void drawCurvedLine(PoseStack matrixStack, int startX, int startY, int endX, int endY, boolean dropShadow, int depth) {
+    private void drawCurvedLine(GuiGraphics guiGraphics, int startX, int startY, int endX, int endY, boolean dropShadow, int depth) {
         String cacheKey = this.parent.hashCode() + "->" + this.hashCode();
 
         // Variación almacenada para cada rama
@@ -608,10 +610,10 @@ public class SkillWidget extends GuiComponent {
 
         int thickness = Math.max(5 - depth, 2); // Ajustado para mejor rendimiento
 
-        drawSmoothCurvedLine(matrixStack, startX, startY, midX, midY, endX, endY, thickness);
+        drawSmoothCurvedLine(guiGraphics, startX, startY, midX, midY, endX, endY, thickness);
     }
 
-    private void drawSmoothCurvedLine(PoseStack matrixStack, int x1, int y1, int midX, int midY, int x2, int y2, int thickness) {
+    private void drawSmoothCurvedLine(GuiGraphics guiGraphics, int x1, int y1, int midX, int midY, int x2, int y2, int thickness) {
         int colorDark = 0xFF5C3317; // Marrón oscuro
         int colorLight = 0xFFD2B48C; // Marrón claro
 
@@ -620,18 +622,18 @@ public class SkillWidget extends GuiComponent {
             double ratio = (i + thickness / 2) / (double) thickness; // Controla el gradiente vertical
             int color = interpolateColor(colorDark, colorLight, ratio);
 
-            drawGradientBezier(matrixStack, x1, y1 + i, midX, midY + i, x2, y2 + i, color);
+            drawGradientBezier(guiGraphics, x1, y1 + i, midX, midY + i, x2, y2 + i, color);
         }
     }
 
-    private void drawGradientBezier(PoseStack matrixStack, int x1, int y1, int midX, int midY, int x2, int y2, int color) {
+    private void drawGradientBezier(GuiGraphics guiGraphics, int x1, int y1, int midX, int midY, int x2, int y2, int color) {
         int prevX = x1, prevY = y1;
 
         for (double t = 0; t <= 1; t += 0.02) {
             int x = (int) ((1 - t) * (1 - t) * x1 + 2 * (1 - t) * t * midX + t * t * x2);
             int y = (int) ((1 - t) * (1 - t) * y1 + 2 * (1 - t) * t * midY + t * t * y2);
 
-            drawThickSegment(matrixStack, prevX, prevY, x, y, color);
+            drawThickSegment(guiGraphics, prevX, prevY, x, y, color);
             prevX = x;
             prevY = y;
         }
@@ -654,7 +656,7 @@ public class SkillWidget extends GuiComponent {
         return (0xFF << 24) | (r << 16) | (g << 8) | b;
     }
 
-    private void drawThickSegment(PoseStack matrixStack, int x1, int y1, int x2, int y2, int color) {
+    private void drawThickSegment(GuiGraphics guiGraphics, int x1, int y1, int x2, int y2, int color) {
         int dx = Math.abs(x2 - x1);
         int dy = Math.abs(y2 - y1);
         int sx = x1 < x2 ? 1 : -1;
@@ -662,7 +664,7 @@ public class SkillWidget extends GuiComponent {
         int err = dx - dy;
 
         while (true) {
-            fill(matrixStack, x1, y1, x1 + 1, y1 + 1, color);
+            guiGraphics.fill(x1, y1, x1 + 1, y1 + 1, color);
             if (x1 == x2 && y1 == y2) break;
             int e2 = 2 * err;
             if (e2 > -dy) {

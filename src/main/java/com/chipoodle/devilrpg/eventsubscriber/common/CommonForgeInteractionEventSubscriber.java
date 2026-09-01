@@ -5,6 +5,7 @@
  */
 package com.chipoodle.devilrpg.eventsubscriber.common;
 
+import net.neoforged.neoforge.network.PacketDistributor;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
@@ -15,8 +16,7 @@ import com.chipoodle.devilrpg.capability.stamina.PlayerStaminaCapability;
 import com.chipoodle.devilrpg.capability.stamina.PlayerStaminaCapabilityInterface;
 import com.chipoodle.devilrpg.entity.ISoulEntity;
 import com.chipoodle.devilrpg.entity.ITamableEntity;
-import com.chipoodle.devilrpg.init.ModNetwork;
-import com.chipoodle.devilrpg.network.handler.PotionClientHandler;
+import com.chipoodle.devilrpg.network.payload.PotionPayload;
 import com.chipoodle.devilrpg.util.EventUtils;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.core.BlockPos;
@@ -26,19 +26,17 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.event.entity.EntityJoinLevelEvent;
-import net.minecraftforge.event.entity.living.LivingEvent.LivingJumpEvent;
-import net.minecraftforge.event.entity.living.LivingFallEvent;
-import net.minecraftforge.event.entity.living.LivingHurtEvent;
-import net.minecraftforge.event.entity.living.MobEffectEvent;
-import net.minecraftforge.event.entity.player.AttackEntityEvent;
-import net.minecraftforge.event.entity.player.CriticalHitEvent;
-import net.minecraftforge.event.entity.player.PlayerInteractEvent;
-import net.minecraftforge.eventbus.api.EventPriority;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
-import net.minecraftforge.network.PacketDistributor;
+import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
+import net.neoforged.neoforge.event.entity.living.LivingEvent.LivingJumpEvent;
+import net.neoforged.neoforge.event.entity.living.LivingFallEvent;
+import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
+import net.neoforged.neoforge.event.entity.living.MobEffectEvent;
+import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
+import net.neoforged.neoforge.event.entity.player.CriticalHitEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+import net.neoforged.bus.api.EventPriority;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 import java.util.function.BiConsumer;
 
@@ -47,7 +45,7 @@ import java.util.function.BiConsumer;
  * @author Christian
  */
 
-@EventBusSubscriber(modid = DevilRpg.MODID, bus = EventBusSubscriber.Bus.FORGE)
+@EventBusSubscriber(modid = DevilRpg.MODID, bus = EventBusSubscriber.Bus.GAME)
 public class CommonForgeInteractionEventSubscriber {
 
     public static final double XY_JUMP_FACTOR = 2;
@@ -59,12 +57,12 @@ public class CommonForgeInteractionEventSubscriber {
     public static void onLivingJumpEvent(LivingJumpEvent event) {
         if (event.getEntity() instanceof Player) {
             //Salta más cuando está transformado
-            BiConsumer<LivingJumpEvent, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, auxiliar) -> {
+            BiConsumer<LivingJumpEvent, PlayerAuxiliaryCapabilityInterface> c = (eve, auxiliar) -> {
                 Vec3 motion = eve.getEntity().getDeltaMovement();
 
-                LazyOptional<PlayerSkillCapabilityInterface> skillCap = event.getEntity()
-                        .getCapability(PlayerSkillCapability.INSTANCE);
-                int points = skillCap.map(x -> x.getSkillsPoints().get(SkillEnum.TRANSFORM_WEREWOLF)).orElseThrow();
+                PlayerSkillCapabilityInterface skillCap = event.getEntity()
+                        .getData(PlayerSkillCapability.INSTANCE);
+                int points = skillCap.getSkillsPoints().get(SkillEnum.TRANSFORM_WEREWOLF);
                 double yJumpFactor = (points * 0.005) + 0.03f; // max 0.13
                 double xyJumpFactor = (points * 0.05) + 1; // Salta el doble de distancia hacia todas direcciones cuando points = 20 (x controla rectas, z diagonales)
                 eve.getEntity().setDeltaMovement(motion.x() * xyJumpFactor, motion.y() + yJumpFactor, motion.z() * xyJumpFactor);
@@ -80,7 +78,7 @@ public class CommonForgeInteractionEventSubscriber {
     public static void onLivingFallEvent(LivingFallEvent event) {
         if (event.getEntity() instanceof Player) {
             //el daño por caida es menor cuando está transformado
-            BiConsumer<LivingFallEvent, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, auxiliar) -> {
+            BiConsumer<LivingFallEvent, PlayerAuxiliaryCapabilityInterface> c = (eve, auxiliar) -> {
                 if (eve.getDistance() > 1) {
                     eve.setDistance(eve.getDistance() - 1);
                 }
@@ -91,7 +89,7 @@ public class CommonForgeInteractionEventSubscriber {
 
     @SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
     public static void onRightClickItem(PlayerInteractEvent.RightClickItem event) {
-        BiConsumer<PlayerInteractEvent.RightClickItem, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, aux) -> {
+        BiConsumer<PlayerInteractEvent.RightClickItem, PlayerAuxiliaryCapabilityInterface> c = (eve, aux) -> {
             eve.getEntity().swinging = false;
             eve.setCanceled(true);
 
@@ -103,7 +101,7 @@ public class CommonForgeInteractionEventSubscriber {
 
     @SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
     public static void onLeftClickBlock(PlayerInteractEvent.LeftClickBlock event) {
-        BiConsumer<PlayerInteractEvent.LeftClickBlock, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, aux) -> {
+        BiConsumer<PlayerInteractEvent.LeftClickBlock, PlayerAuxiliaryCapabilityInterface> c = (eve, aux) -> {
             eve.getEntity().swinging = false;
             eve.setCanceled(true);
         };
@@ -112,7 +110,7 @@ public class CommonForgeInteractionEventSubscriber {
 
     @SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
     public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
-        BiConsumer<PlayerInteractEvent.RightClickBlock, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, aux) -> {
+        BiConsumer<PlayerInteractEvent.RightClickBlock, PlayerAuxiliaryCapabilityInterface> c = (eve, aux) -> {
             eve.getEntity().swinging = false;
             eve.setCanceled(true);
         };
@@ -121,7 +119,7 @@ public class CommonForgeInteractionEventSubscriber {
 
     @SubscribeEvent(priority = EventPriority.HIGHEST, receiveCanceled = true)
     public static void onEntityInteractSpecific(PlayerInteractEvent.EntityInteractSpecific event) {
-        BiConsumer<PlayerInteractEvent.EntityInteractSpecific, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, aux) -> {
+        BiConsumer<PlayerInteractEvent.EntityInteractSpecific, PlayerAuxiliaryCapabilityInterface> c = (eve, aux) -> {
             eve.getEntity().swinging = false;
             eve.setCanceled(true);
 
@@ -131,7 +129,7 @@ public class CommonForgeInteractionEventSubscriber {
 
     @SubscribeEvent(priority = EventPriority.HIGHEST, receiveCanceled = true)
     public static void onEntityInteract(PlayerInteractEvent.EntityInteract event) {
-        BiConsumer<PlayerInteractEvent.EntityInteract, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, aux) -> {
+        BiConsumer<PlayerInteractEvent.EntityInteract, PlayerAuxiliaryCapabilityInterface> c = (eve, aux) -> {
             eve.getEntity().swinging = false;
             eve.setCanceled(true);
             //DevilRpg.LOGGER.debug("--------EntityInteract {}",event.getResult());
@@ -141,7 +139,7 @@ public class CommonForgeInteractionEventSubscriber {
 
     @SubscribeEvent
     public static void onAttack(AttackEntityEvent event) {
-        BiConsumer<AttackEntityEvent, LazyOptional<PlayerAuxiliaryCapabilityInterface>> c = (eve, aux) -> {
+        BiConsumer<AttackEntityEvent, PlayerAuxiliaryCapabilityInterface> c = (eve, aux) -> {
             eve.getEntity().swinging = false;
             //eve.setCanceled(true);
             PlayerStaminaCapabilityInterface staminaCap = IGenericCapability.getUnwrappedPlayerCapability(event.getEntity(), PlayerStaminaCapability.INSTANCE);
@@ -192,18 +190,18 @@ public class CommonForgeInteractionEventSubscriber {
                         event.getEffectInstance() != null
         ) {
             LivingEntity owner = minion.getOwner();
-            if (owner instanceof ServerPlayer && !event.getEntity().level.isClientSide()) {
+            if (owner instanceof ServerPlayer && !event.getEntity().level().isClientSide()) {
                 MobEffectInstance potionEffect = event.getEffectInstance();
-                CompoundTag effectInstanceNbt = potionEffect.save(new CompoundTag());
-                effectInstanceNbt.putUUID(PotionClientHandler.ENTITY_ID_KEY, event.getEntity().getUUID());
-                effectInstanceNbt.putString(PotionClientHandler.EFFECT_EVENT_TYPE, event.getClass().getSimpleName());
-                ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> ((ServerPlayer) owner)), new PotionClientHandler(effectInstanceNbt));
+                CompoundTag effectInstanceNbt = (CompoundTag) potionEffect.save();
+                effectInstanceNbt.putUUID(PotionPayload.ENTITY_ID_KEY, event.getEntity().getUUID());
+                effectInstanceNbt.putString(PotionPayload.EFFECT_EVENT_TYPE, event.getClass().getSimpleName());
+                PacketDistributor.sendToPlayer((ServerPlayer) owner, new PotionPayload(effectInstanceNbt));
             }
         }
     }
 
     @SubscribeEvent
-    public static void onLivingHurtEvent(LivingHurtEvent event) {
+    public static void onLivingHurtEvent(LivingIncomingDamageEvent event) {
 
         // DevilRpg.LOGGER.debug("Entity {} source {} ammount {}",event.getEntity().getClass().getName(),event.getSource(),event.getAmount());
 

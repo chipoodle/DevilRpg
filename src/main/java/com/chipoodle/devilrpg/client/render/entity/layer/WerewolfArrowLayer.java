@@ -10,8 +10,9 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.projectile.Arrow;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraft.world.item.ItemStack;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 @OnlyIn(Dist.CLIENT)
 public class WerewolfArrowLayer<T extends LivingEntity, M extends WerewolfTransformedModel<T>> extends WerewolfStuckInBodyLayer<T, M> {
@@ -28,7 +29,7 @@ public class WerewolfArrowLayer<T extends LivingEntity, M extends WerewolfTransf
 
     protected void renderStuckItem(PoseStack p_116569_, MultiBufferSource p_116570_, int p_116571_, Entity p_116572_, float p_116573_, float p_116574_, float p_116575_, float p_116576_) {
         float f = Mth.sqrt(p_116573_ * p_116573_ + p_116575_ * p_116575_);
-        Arrow arrow = new Arrow(p_116572_.level, p_116572_.getX(), p_116572_.getY(), p_116572_.getZ());
+        Arrow arrow = new Arrow(p_116572_.level(), p_116572_.getX(), p_116572_.getY(), p_116572_.getZ(), ItemStack.EMPTY, ItemStack.EMPTY);
         arrow.setYRot((float) (Math.atan2(p_116573_, p_116575_) * (double) (180F / (float) Math.PI)));
         arrow.setXRot((float) (Math.atan2(p_116574_, f) * (double) (180F / (float) Math.PI)));
         arrow.yRotO = arrow.getYRot();

@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.blockentity;
 
+import net.minecraft.tags.BlockTags;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.block.SoulMinerVineBlock;
@@ -11,7 +12,6 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.material.Material;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -136,22 +136,14 @@ public class SoulMinerVineBlockEntity extends BlockEntity {
     }
 
     private boolean isMineable(BlockState blockState) {
-        Material material = blockState.getMaterial();
         // Verifica si el bloque es roca, tierra o minerales
-        return material == Material.STONE
-                || material == Material.METAL
-                || material == Material.HEAVY_METAL
-                || material == Material.DIRT
-                || material == Material.GRASS
-                || material == Material.CLAY
-                || material == Material.SAND
-                || material == Material.LEAVES
-                || material == Material.MOSS
-                || material == Material.SNOW
-                || material == Material.TOP_SNOW
-                || material == Material.WEB
-                || blockState.getBlock().equals(Blocks.NETHERRACK)
-                || blockState.getBlock().equals(Blocks.BASALT)
+        return blockState.is(BlockTags.MINEABLE_WITH_PICKAXE)
+                || blockState.is(BlockTags.MINEABLE_WITH_SHOVEL)
+                || blockState.is(BlockTags.MINEABLE_WITH_AXE)
+                || blockState.is(BlockTags.LEAVES)
+                || blockState.is(Blocks.NETHERRACK)
+                || blockState.is(Blocks.BASALT)
+                || blockState.is(Blocks.SNOW)
                 ;
     }
 }

@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.block;
 
+import com.mojang.serialization.MapCodec;
 import com.chipoodle.devilrpg.blockentity.BloomingSanctuaryBlockEntity;
 import com.chipoodle.devilrpg.init.ModBlocks;
 import com.chipoodle.devilrpg.init.ModEntityBlocks;
@@ -31,6 +32,13 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Collection;
 
 public class BloomingSanctuaryBlock extends FallingBlock implements EntityBlock {
+    public static final MapCodec<BloomingSanctuaryBlock> CODEC = simpleCodec(BloomingSanctuaryBlock::new);
+
+    @Override
+    protected MapCodec<? extends FallingBlock> codec() {
+        return CODEC;
+    }
+
 
     public static final VoxelShape SHAPE = Block.box(0.0D, 0.0D, 0.0D, 15.0D, 15.0D, 15.0D);
     public static final DirectionProperty DIRECTIONS = BlockStateProperties.FACING;

@@ -16,15 +16,15 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 import java.util.List;
 
 @OnlyIn(Dist.CLIENT)
 public class WerewolfHumanModel<T extends LivingEntity> extends HumanoidModel<T> {
 
-	public static final ModelLayerLocation WEREWOLF_LAYER_LOCATION = new ModelLayerLocation(new ResourceLocation(DevilRpg.MODID, "werewolfhumanlayer"), "main");
+	public static final ModelLayerLocation WEREWOLF_LAYER_LOCATION = new ModelLayerLocation(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "werewolfhumanlayer"), "main");
 	private static final String EAR = "ear";
 	private static final String CLOAK = "cloak";
 	private static final String LEFT_SLEEVE = "left_sleeve";

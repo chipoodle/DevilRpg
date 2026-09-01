@@ -25,17 +25,18 @@ import net.minecraft.world.item.CrossbowItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.UseAnim;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.scores.DisplaySlot;
 import net.minecraft.world.scores.Objective;
-import net.minecraft.world.scores.Score;
+import net.minecraft.world.scores.ScoreAccess;
 import net.minecraft.world.scores.Scoreboard;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import org.jetbrains.annotations.NotNull;
 
 @OnlyIn(Dist.CLIENT)
 public class WerewolfRenderer extends LivingEntityRenderer<AbstractClientPlayer, WerewolfTransformedModel<AbstractClientPlayer>> {
 
-    public static final ResourceLocation WEREWOLF_TEXTURE = new ResourceLocation(DevilRpg.MODID + ":/textures/entity/werewolf/wolftimber.png");
+    public static final ResourceLocation WEREWOLF_TEXTURE = ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "textures/entity/werewolf/wolftimber.png");
 
     public WerewolfRenderer(EntityRendererProvider.Context context, boolean p_174558_) {
         super(context, new WerewolfTransformedModel<>(context.bakeLayer(WerewolfTransformedModel.WEREWOLF_LAYER_LOCATION)), 0.5F);
@@ -86,7 +87,7 @@ public class WerewolfRenderer extends LivingEntityRenderer<AbstractClientPlayer,
                 return HumanoidModel.ArmPose.CROSSBOW_HOLD;
             }
 
-            HumanoidModel.ArmPose forgeArmPose = net.minecraftforge.client.extensions.common.IClientItemExtensions.of(itemstack).getArmPose(p_117795_, p_117796_, itemstack);
+            HumanoidModel.ArmPose forgeArmPose = net.neoforged.neoforge.client.extensions.common.IClientItemExtensions.of(itemstack).getArmPose(p_117795_, p_117796_, itemstack);
             if (forgeArmPose != null) return forgeArmPose;
 
             return HumanoidModel.ArmPose.ITEM;
@@ -143,20 +144,20 @@ public class WerewolfRenderer extends LivingEntityRenderer<AbstractClientPlayer,
         p_117799_.scale(f, f, f);*/
     }
 
-    protected void renderNameTag(AbstractClientPlayer p_117808_, Component p_117809_, PoseStack p_117810_, MultiBufferSource p_117811_, int p_117812_) {
+    protected void renderNameTag(AbstractClientPlayer p_117808_, Component p_117809_, PoseStack p_117810_, MultiBufferSource p_117811_, int p_117812_, float p_117813_) {
         double d0 = this.entityRenderDispatcher.distanceToSqr(p_117808_);
         p_117810_.pushPose();
         if (d0 < 100.0D) {
             Scoreboard scoreboard = p_117808_.getScoreboard();
-            Objective objective = scoreboard.getDisplayObjective(2);
+            Objective objective = scoreboard.getDisplayObjective(DisplaySlot.BELOW_NAME);
             if (objective != null) {
-                Score score = scoreboard.getOrCreatePlayerScore(p_117808_.getScoreboardName(), objective);
-                super.renderNameTag(p_117808_, Component.literal(Integer.toString(score.getScore())).append(" ").append(objective.getDisplayName()), p_117810_, p_117811_, p_117812_);
+                ScoreAccess score = scoreboard.getOrCreatePlayerScore(p_117808_, objective);
+                super.renderNameTag(p_117808_, Component.literal(Integer.toString(score.get())).append(" ").append(objective.getDisplayName()), p_117810_, p_117811_, p_117812_, p_117813_);
                 p_117810_.translate(0.0F, 9.0F * 1.15F * 0.025F, 0.0F);
             }
         }
 
-        super.renderNameTag(p_117808_, p_117809_, p_117810_, p_117811_, p_117812_);
+        super.renderNameTag(p_117808_, p_117809_, p_117810_, p_117811_, p_117812_, p_117813_);
         p_117810_.popPose();
     }
 
@@ -181,10 +182,10 @@ public class WerewolfRenderer extends LivingEntityRenderer<AbstractClientPlayer,
         arm.render(poseStack, bufferSource.getBuffer(RenderType.entityTranslucent(WerewolfRenderer.WEREWOLF_TEXTURE)), packedLight, OverlayTexture.NO_OVERLAY);
     }
 
-    protected void setupRotations(AbstractClientPlayer entity, @NotNull PoseStack cameraPosition, float cameraRotation, float entityRotation, float entityPitch) {
+    protected void setupRotations(AbstractClientPlayer entity, @NotNull PoseStack cameraPosition, float cameraRotation, float entityRotation, float entityPitch, float scale) {
         float f = entity.getSwimAmount(entityPitch);
         if (entity.isFallFlying()) {
-            super.setupRotations(entity, cameraPosition, cameraRotation, entityRotation, entityPitch);
+            super.setupRotations(entity, cameraPosition, cameraRotation, entityRotation, entityPitch, scale);
             float f1 = (float) entity.getFallFlyingTicks() + entityPitch;
             float f2 = Mth.clamp(f1 * f1 / 100.0F, 0.0F, 1.0F);
             if (!entity.isAutoSpinAttack()) {
@@ -201,7 +202,7 @@ public class WerewolfRenderer extends LivingEntityRenderer<AbstractClientPlayer,
                 cameraPosition.mulPose(Axis.YP.rotation((float) (Math.signum(d3) * Math.acos(d2))));
             }
         } else if (f > 0.0F) {
-            super.setupRotations(entity, cameraPosition, cameraRotation, entityRotation, entityPitch);
+            super.setupRotations(entity, cameraPosition, cameraRotation, entityRotation, entityPitch, scale);
             float f3 = entity.isInWater() || entity.isInFluidType((fluidType, height) -> entity.canSwimInFluidType(fluidType)) ? -90.0F - entity.getXRot() : -90.0F;
             float f4 = Mth.lerp(f, 0.0F, f3);
             cameraPosition.mulPose(Axis.XP.rotationDegrees(f4));
@@ -209,7 +210,7 @@ public class WerewolfRenderer extends LivingEntityRenderer<AbstractClientPlayer,
                 cameraPosition.translate(0.0F, -1.0F, 0.3F);
             }
         } else {
-            super.setupRotations(entity, cameraPosition, cameraRotation, entityRotation, entityPitch);
+            super.setupRotations(entity, cameraPosition, cameraRotation, entityRotation, entityPitch, scale);
         }
 
     }

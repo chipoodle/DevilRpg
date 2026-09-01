@@ -2,7 +2,6 @@ package com.chipoodle.devilrpg.client.render.entity.layer;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.client.render.entity.model.WerewolfTransformedModel;
-import com.google.common.collect.Maps;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -15,16 +14,13 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ArmorItem;
+import net.minecraft.world.item.ArmorMaterial;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-
-import javax.annotation.Nullable;
-import java.util.Map;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 @OnlyIn(Dist.CLIENT)
 public class WerewolfArmorLayer<T extends LivingEntity, M extends WerewolfTransformedModel<T>, A extends WerewolfTransformedModel<T>> extends RenderLayer<T, M> {
-   private static final Map<String, ResourceLocation> ARMOR_LOCATION_CACHE = Maps.newHashMap();
    private final A innerModel;
    private final A outerModel;
 
@@ -50,15 +46,14 @@ public class WerewolfArmorLayer<T extends LivingEntity, M extends WerewolfTransf
             net.minecraft.client.model.Model model = getArmorModelHook(livingEntity, itemstack, p_117122_, p_117124_);
             boolean flag = this.usesInnerModel(p_117122_);
             boolean flag1 = itemstack.hasFoil();
-            if (armoritem instanceof net.minecraft.world.item.DyeableLeatherItem) {
-               int i = ((net.minecraft.world.item.DyeableLeatherItem)armoritem).getColor(itemstack);
-               float f = (float)(i >> 16 & 255) / 255.0F;
-               float f1 = (float)(i >> 8 & 255) / 255.0F;
-               float f2 = (float)(i & 255) / 255.0F;
-               this.renderModel(p_117119_, multiBufferSource, p_117123_, flag1, model, f, f1, f2, this.getArmorResource(livingEntity, itemstack, p_117122_, null));
-               this.renderModel(p_117119_, multiBufferSource, p_117123_, flag1, model, 1.0F, 1.0F, 1.0F, this.getArmorResource(livingEntity, itemstack, p_117122_, "overlay"));
-            } else {
-               this.renderModel(p_117119_, multiBufferSource, p_117123_, flag1, model, 1.0F, 1.0F, 1.0F, this.getArmorResource(livingEntity, itemstack, p_117122_, null));
+            ArmorMaterial armormaterial = armoritem.getMaterial().value();
+            int i = net.neoforged.neoforge.client.extensions.common.IClientItemExtensions.of(itemstack).getDefaultDyeColor(itemstack);
+            for (int j = 0; j < armormaterial.layers().size(); j++) {
+               ArmorMaterial.Layer layer = armormaterial.layers().get(j);
+               int k = net.neoforged.neoforge.client.extensions.common.IClientItemExtensions.of(itemstack).getArmorLayerTintColor(itemstack, livingEntity, layer, j, i);
+               if (k != 0) {
+                  this.renderModel(p_117119_, multiBufferSource, p_117123_, flag1, model, k, this.getArmorResource(livingEntity, itemstack, layer, flag, p_117122_));
+               }
             }
 
          }
@@ -89,12 +84,9 @@ public class WerewolfArmorLayer<T extends LivingEntity, M extends WerewolfTransf
 
    }
 
-   private void renderModel(PoseStack p_117107_, MultiBufferSource p_117108_, int p_117109_, ArmorItem p_117110_, boolean p_117111_, A p_117112_, boolean p_117113_, float p_117114_, float p_117115_, float p_117116_, @Nullable String p_117117_) {
-       renderModel(p_117107_, p_117108_, p_117109_, p_117111_, p_117112_, p_117114_, p_117115_, p_117116_, this.getArmorLocation(p_117110_, p_117113_, p_117117_));
-   }
-   private void renderModel(PoseStack p_117107_, MultiBufferSource p_117108_, int p_117109_, boolean p_117111_, net.minecraft.client.model.Model p_117112_, float p_117114_, float p_117115_, float p_117116_, ResourceLocation armorResource) {
-      VertexConsumer vertexconsumer = ItemRenderer.getArmorFoilBuffer(p_117108_, RenderType.armorCutoutNoCull(armorResource), false, p_117111_);
-      p_117112_.renderToBuffer(p_117107_, vertexconsumer, p_117109_, OverlayTexture.NO_OVERLAY, p_117114_, p_117115_, p_117116_, 1.0F);
+   private void renderModel(PoseStack p_117107_, MultiBufferSource p_117108_, int p_117109_, boolean p_117111_, net.minecraft.client.model.Model p_117112_, int color, ResourceLocation armorResource) {
+      VertexConsumer vertexconsumer = ItemRenderer.getArmorFoilBuffer(p_117108_, RenderType.armorCutoutNoCull(armorResource), p_117111_);
+      p_117112_.renderToBuffer(p_117107_, vertexconsumer, p_117109_, OverlayTexture.NO_OVERLAY, color);
    }
 
    private A getArmorModel(EquipmentSlot p_117079_) {
@@ -103,15 +95,6 @@ public class WerewolfArmorLayer<T extends LivingEntity, M extends WerewolfTransf
 
    private boolean usesInnerModel(EquipmentSlot p_117129_) {
       return p_117129_ == EquipmentSlot.LEGS;
-   }
-
-   @Deprecated //Use the more sensitive version getArmorResource below
-   private ResourceLocation getArmorLocation(ArmorItem p_117081_, boolean p_117082_, @Nullable String p_117083_) {
-      String s = "textures/models/armor/" + p_117081_.getMaterial().getName() + "_layer_" + (p_117082_ ? 2 : 1) + (p_117083_ == null ? "" : "_" + p_117083_) + ".png";
-
-      DevilRpg.LOGGER.info("---------> path armor layer: {}",s);
-
-      return ARMOR_LOCATION_CACHE.computeIfAbsent(s, ResourceLocation::new);
    }
 
    /*=================================== FORGE START =========================================*/
@@ -128,30 +111,13 @@ public class WerewolfArmorLayer<T extends LivingEntity, M extends WerewolfTransf
     *
     * @param entity Entity wearing the armor
     * @param stack ItemStack for the armor
+    * @param layer Armor material layer
+    * @param innerModel Whether the inner armor model is used
     * @param slot Slot ID that the item is in
-    * @param type Subtype, can be null or "overlay"
     * @return ResourceLocation pointing at the armor's texture
     */
-   public ResourceLocation getArmorResource(net.minecraft.world.entity.Entity entity, ItemStack stack, EquipmentSlot slot, @Nullable String type) {
-      ArmorItem item = (ArmorItem)stack.getItem();
-      String texture = item.getMaterial().getName();
-      String domain = "minecraft";
-      int idx = texture.indexOf(':');
-      if (idx != -1) {
-         domain = texture.substring(0, idx);
-         texture = texture.substring(idx + 1);
-      }
-      String s1 = String.format(java.util.Locale.ROOT, "%s:textures/models/armor/%s_layer_%d%s.png", domain, texture, (usesInnerModel(slot) ? 2 : 1), type == null ? "" : String.format(java.util.Locale.ROOT, "_%s", type));
-
-      s1 = net.minecraftforge.client.ForgeHooksClient.getArmorTexture(entity, stack, s1, slot, type);
-      ResourceLocation resourcelocation = ARMOR_LOCATION_CACHE.get(s1);
-
-      if (resourcelocation == null) {
-         resourcelocation = new ResourceLocation(s1);
-         ARMOR_LOCATION_CACHE.put(s1, resourcelocation);
-      }
-
-      return resourcelocation;
+   public ResourceLocation getArmorResource(net.minecraft.world.entity.Entity entity, ItemStack stack, ArmorMaterial.Layer layer, boolean innerModel, EquipmentSlot slot) {
+      return net.neoforged.neoforge.client.ClientHooks.getArmorTexture(entity, stack, layer, innerModel, slot);
    }
    /*=================================== FORGE END ===========================================*/
 }

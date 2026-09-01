@@ -18,14 +18,14 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import org.jetbrains.annotations.NotNull;
 
 @OnlyIn(Dist.CLIENT)
 public class LichenSeedBallRenderer extends EntityRenderer<LichenSeedBall> {
-    private static final ResourceLocation ICE_TEXTURES = new ResourceLocation(
-            DevilRpg.MODID + ":textures/entity/lichenseedball/lichenseedball_green.png");
+    private static final ResourceLocation ICE_TEXTURES = ResourceLocation.fromNamespaceAndPath(
+            DevilRpg.MODID, "textures/entity/lichenseedball/lichenseedball_green.png");
     private final SkullModel model;
 
     public LichenSeedBallRenderer(EntityRendererProvider.Context p_174449_) {
@@ -51,7 +51,7 @@ public class LichenSeedBallRenderer extends EntityRenderer<LichenSeedBall> {
         float f1 = Mth.lerp(p_116486_, p_116484_.xRotO, p_116484_.getXRot());
         VertexConsumer vertexconsumer = p_116488_.getBuffer(this.model.renderType(this.getTextureLocation(p_116484_)));
         this.model.setupAnim(0.0F, f, f1);
-        this.model.renderToBuffer(p_116487_, vertexconsumer, p_116489_, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
+        this.model.renderToBuffer(p_116487_, vertexconsumer, p_116489_, OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
         p_116487_.popPose();
         super.render(p_116484_, p_116485_, p_116486_, p_116487_, p_116488_, p_116489_);
     }

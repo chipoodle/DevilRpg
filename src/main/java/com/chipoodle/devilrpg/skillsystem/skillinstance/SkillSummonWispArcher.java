@@ -68,7 +68,7 @@ public class SkillSummonWispArcher extends AbstractSkillExecutor {
         if (!levelIn.isEmptyBlock(blockPos))
             blockPos = blockPos.above();
 
-        SoulWispArcher sw = ModEntities.WISP_ARCHER.get().create((ServerLevel) levelIn, null, null, blockPos, MobSpawnType.MOB_SUMMONED, true, true);
+        SoulWispArcher sw = ModEntities.WISP_ARCHER.get().create((ServerLevel) levelIn, null, blockPos, MobSpawnType.MOB_SUMMONED, true, true);
         Objects.requireNonNull(sw).updateLevel(playerIn);
         sw.moveTo(blockPos, Mth.wrapDegrees(rand.nextFloat() * 360.0F), 0.0F);
         levelIn.addFreshEntity(sw);

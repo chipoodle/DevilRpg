@@ -7,8 +7,6 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
 import net.minecraft.ChatFormatting;
 import net.minecraft.advancements.DisplayInfo;
-import net.minecraft.advancements.FrameType;
-import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentUtils;
 import net.minecraft.network.chat.HoverEvent;
@@ -290,7 +288,7 @@ public class SkillElement {
 		}
 
 		public SkillElement register(Consumer<SkillElement> consumer, String id) {
-			SkillElement skillElement = this.build(new ResourceLocation(id));
+			SkillElement skillElement = this.build(ResourceLocation.parse(id));
 			consumer.accept(skillElement);
 			return skillElement;
 		}
@@ -312,7 +310,7 @@ public class SkillElement {
 			return jsonobject;
 		}
 
-		public void writeTo(FriendlyByteBuf buf) {
+		/*public void writeTo(FriendlyByteBuf buf) {
 			if (this.parentId == null) {
 				buf.writeBoolean(false);
 			} else {
@@ -326,7 +324,7 @@ public class SkillElement {
 				buf.writeBoolean(true);
 				this.display.write(buf);
 			}
-		}
+		}*/
 
 		public String toString() {
 			return "Task SkillElement{parentId=" + this.parentId + ", display=" + this.display + ", rewards="
@@ -338,10 +336,10 @@ public class SkillElement {
 				if (!json.has("id"))
 					throw new JsonSyntaxException("SkillElement id cannot be empty");
 
-				ResourceLocation id = new ResourceLocation(GsonHelper.getAsString(json, "id"));
+				ResourceLocation id = ResourceLocation.parse(GsonHelper.getAsString(json, "id"));
 
 				ResourceLocation resourcelocation = json.has("parent")
-						? new ResourceLocation(GsonHelper.getAsString(json, "parent"))
+						? ResourceLocation.parse(GsonHelper.getAsString(json, "parent"))
 						: null;
 
 				SkillDisplayInfo displayinfo = json.has("display")
@@ -374,10 +372,10 @@ public class SkillElement {
 				if (!json.has("id"))
 					throw new JsonSyntaxException("SkillElement id cannot be empty");
 
-				ResourceLocation id = new ResourceLocation(json.get("id").getAsString());
+				ResourceLocation id = ResourceLocation.parse(json.get("id").getAsString());
 
 				ResourceLocation resourcelocation = json.has("parent")
-						? new ResourceLocation(GsonHelper.getAsString(json, "parent"))
+						? ResourceLocation.parse(GsonHelper.getAsString(json, "parent"))
 						: null;
 
 				SkillDisplayInfo displayinfo = json.has("display")

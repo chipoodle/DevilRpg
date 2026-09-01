@@ -17,7 +17,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.material.Material;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.HashMap;
@@ -37,13 +36,13 @@ public class SkillSoulShieldVine extends AbstractSkillSeedsInInventoryExecutor {
     @Override
     public boolean arePreconditionsMetBeforeConsumingResource(Player player) {
         BlockPos playerBlockPos = player.blockPosition();
-        //BlockState playerBlockState = player.level.getBlockState(playerBlockPos);
+        //BlockState playerBlockState = player.level().getBlockState(playerBlockPos);
         Vec3 playerLookVector = player.getLookAngle();
         Direction nearestDirection = Direction.getNearest(playerLookVector.x, 0, playerLookVector.z);
         //DevilRpg.LOGGER.info("-------->Direction: {}", nearestDirection);
         //BlockPos newBlockpos = playerBlockPos.relative(nearestDirection);
         /*boolean canPlace = playerBlockState.getBlock().equals(Blocks.AIR)
-                && player.level.getBlockState(newBlockpos).getBlock().equals(Blocks.AIR);*/
+                && player.level().getBlockState(newBlockpos).getBlock().equals(Blocks.AIR);*/
 
         boolean hasSeeds = super.arePreconditionsMetBeforeConsumingResource(player);
 
@@ -91,7 +90,7 @@ public class SkillSoulShieldVine extends AbstractSkillSeedsInInventoryExecutor {
                     if (distanceSquared <= radius * radius && distanceSquared * 2.1 >= radius * radius) {
                         // Solo colocar el bloque si el espacio está vacío
                         if (level.getBlockState(domeBlockPos).getBlock().equals(Blocks.AIR)
-                                || level.getBlockState(domeBlockPos).getMaterial().equals(Material.REPLACEABLE_PLANT)) {
+                                || level.getBlockState(domeBlockPos).canBeReplaced()) {
 
                             Direction directionFromPlayer = getDirectionFromOffset(x, y, z);
                             //DevilRpg.LOGGER.info(directionFromPlayer);

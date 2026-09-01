@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.block;
 
+import com.mojang.serialization.MapCodec;
 import com.chipoodle.devilrpg.blockentity.SoulShieldVineBlockEntity;
 import com.chipoodle.devilrpg.init.ModBlocks;
 import com.chipoodle.devilrpg.init.ModEntityBlocks;
@@ -32,6 +33,13 @@ import java.util.Comparator;
 import java.util.List;
 
 public class SoulShieldVineBlock extends Block implements EntityBlock {
+    public static final MapCodec<SoulShieldVineBlock> CODEC = simpleCodec(SoulShieldVineBlock::new);
+
+    @Override
+    protected MapCodec<? extends Block> codec() {
+        return CODEC;
+    }
+
 
     public static final VoxelShape SHAPE = Block.box(0.0D, 0.0D, 0.0D, 15.0D, 15.0D, 15.0D);
     public static final DirectionProperty DIRECTIONS = BlockStateProperties.FACING;

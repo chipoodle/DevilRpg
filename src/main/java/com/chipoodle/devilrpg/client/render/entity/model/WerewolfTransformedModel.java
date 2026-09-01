@@ -18,8 +18,8 @@ import net.minecraft.world.entity.AnimationState;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Vector3f;
 
@@ -28,9 +28,9 @@ import java.util.List;
 @OnlyIn(Dist.CLIENT)
 public class WerewolfTransformedModel<T extends Entity> extends HierarchicalModel<T> implements ArmedModel, HeadedModel {
     // This layer location should be baked with EntityRendererProvider.Context in the entity renderer and passed into this model's constructor
-    public static final ModelLayerLocation WEREWOLF_LAYER_LOCATION = new ModelLayerLocation(new ResourceLocation(DevilRpg.MODID, "werewolftransformedlayer"), "main");
-    public static final ModelLayerLocation WEREWOLF_INNER_ARMOR_LAYER_LOCATION = new ModelLayerLocation(new ResourceLocation(DevilRpg.MODID, "werewolftransformed_inner_armor_layer"), "main");
-    public static final ModelLayerLocation WEREWOLF_OUTER_ARMOR_LAYER_LOCATION = new ModelLayerLocation(new ResourceLocation(DevilRpg.MODID, "werewolftransformed_outer_armor_layer"), "main");
+    public static final ModelLayerLocation WEREWOLF_LAYER_LOCATION = new ModelLayerLocation(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "werewolftransformedlayer"), "main");
+    public static final ModelLayerLocation WEREWOLF_INNER_ARMOR_LAYER_LOCATION = new ModelLayerLocation(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "werewolftransformed_inner_armor_layer"), "main");
+    public static final ModelLayerLocation WEREWOLF_OUTER_ARMOR_LAYER_LOCATION = new ModelLayerLocation(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "werewolftransformed_outer_armor_layer"), "main");
 
 
     private static final Vector3f ANIMATION_VECTOR_CACHE = new Vector3f();
@@ -417,11 +417,11 @@ public class WerewolfTransformedModel<T extends Entity> extends HierarchicalMode
     }
 
     @Override
-    public void renderToBuffer(@NotNull PoseStack poseStack, @NotNull VertexConsumer vertexConsumer, int packedLight, int packedOverlay, float red, float green, float blue, float alpha) {
-        head.render(poseStack, vertexConsumer, packedLight, packedOverlay, red, green, blue, alpha);
-        arms.render(poseStack, vertexConsumer, packedLight, packedOverlay, red, green, blue, alpha);
-        body.render(poseStack, vertexConsumer, packedLight, packedOverlay, red, green, blue, alpha);
-        legs.render(poseStack, vertexConsumer, packedLight, packedOverlay, red, green, blue, alpha);
+    public void renderToBuffer(@NotNull PoseStack poseStack, @NotNull VertexConsumer vertexConsumer, int packedLight, int packedOverlay, int color) {
+        head.render(poseStack, vertexConsumer, packedLight, packedOverlay, color);
+        arms.render(poseStack, vertexConsumer, packedLight, packedOverlay, color);
+        body.render(poseStack, vertexConsumer, packedLight, packedOverlay, color);
+        legs.render(poseStack, vertexConsumer, packedLight, packedOverlay, color);
     }
 
     @Override

@@ -65,7 +65,7 @@ public class SkillSummonWispHealth extends AbstractSkillExecutor {
         if (!levelIn.isEmptyBlock(blockPos))
             blockPos = blockPos.above();
 
-        SoulWispHealth sw = ModEntities.WISP_HEALTH.get().create((ServerLevel) levelIn, null, null, blockPos, MobSpawnType.MOB_SUMMONED, true, true);
+        SoulWispHealth sw = ModEntities.WISP_HEALTH.get().create((ServerLevel) levelIn, null, blockPos, MobSpawnType.MOB_SUMMONED, true, true);
         Objects.requireNonNull(sw).updateLevel(playerIn);
         sw.moveTo(blockPos, Mth.wrapDegrees(rand.nextFloat() * 360.0F), 0.0F);
         levelIn.addFreshEntity(sw);

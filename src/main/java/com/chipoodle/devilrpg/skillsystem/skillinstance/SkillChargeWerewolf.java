@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.skillsystem.skillinstance;
 
+import net.minecraft.world.item.ItemStack;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
@@ -36,7 +37,7 @@ public class SkillChargeWerewolf extends AbstractSkillExecutor {
     @Override
     public boolean arePreconditionsMetBeforeConsumingResource(Player player) {
         PlayerAuxiliaryCapabilityInterface auxiliary = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerAuxiliaryCapability.INSTANCE);
-        return auxiliary.isWerewolfTransformation() && player.isOnGround() && !player.getCooldowns().isOnCooldown(icon.getItem());
+        return auxiliary.isWerewolfTransformation() && player.onGround() && !player.getCooldowns().isOnCooldown(icon.getItem());
     }
 
     @Override
@@ -70,20 +71,20 @@ public class SkillChargeWerewolf extends AbstractSkillExecutor {
                 //DevilRpg.LOGGER.info("isOnGround move server");
                 MobEffectInstance m = new MobEffectInstance(MobEffects.DAMAGE_BOOST, DAMAGE_BOOST_DURATION_IN_TICKS, chargePoints);
                 player.addEffect(m);
-                player.startAutoSpinAttack(autoSpinAttackTicks);
+                player.startAutoSpinAttack(autoSpinAttackTicks, 0.0F, ItemStack.EMPTY);
 
                 // Reproduce un sonido
                 levelIn.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.NEUTRAL, 0.5F, 0.4F / (new Random().nextFloat() * 0.4F + 0.8F));
             } else {
                 Minecraft m = Minecraft.getInstance();
                 LocalPlayer clientPlayer = m.player;
-                if (clientPlayer != null && clientPlayer.isOnGround()) {
+                if (clientPlayer != null && clientPlayer.onGround()) {
 
 
                     clientPlayer.push(f1, f2+ ELEVATION_FACTOR, f3);
                     //clientPlayer.move(MoverType.SELF, new Vec3(0.0D, 2.1999999F, 0.0D));
                     DevilRpg.LOGGER.info("isOnGround move client");
-                    clientPlayer.startAutoSpinAttack(autoSpinAttackTicks);
+                    clientPlayer.startAutoSpinAttack(autoSpinAttackTicks, 0.0F, ItemStack.EMPTY);
                 }
             }
             player.getCooldowns().addCooldown(icon.getItem(), 20);

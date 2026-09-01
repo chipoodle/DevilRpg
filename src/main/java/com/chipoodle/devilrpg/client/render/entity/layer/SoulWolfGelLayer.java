@@ -14,15 +14,15 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import org.jetbrains.annotations.NotNull;
 
 @OnlyIn(Dist.CLIENT)
 public class SoulWolfGelLayer<T extends SoulWolf> extends GhostEnergyLayer<T, SoulWolfModelHeart<T>> {
     //private static final ResourceLocation WOLF_GEL = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soul/soulgelghost.png");
-    private static final ResourceLocation WOLF_GEL = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soul/air_small.png");
-    private static final ResourceLocation WOLF_GEL_ANGRY = new ResourceLocation(DevilRpg.MODID + ":textures/entity/soul/firestone3.png");
+    private static final ResourceLocation WOLF_GEL = ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "textures/entity/soul/air_small.png");
+    private static final ResourceLocation WOLF_GEL_ANGRY = ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "textures/entity/soul/firestone3.png");
     private final EntityModel<T> soulWolfModel;
     RenderLayerParent<T, SoulWolfModelHeart<T>> renderLayerParent;
 
@@ -57,8 +57,9 @@ public class SoulWolfGelLayer<T extends SoulWolf> extends GhostEnergyLayer<T, So
             float[] rgbArray = IRenderUtilities.groovyRed(entity, partialTicks);
             this.getParentModel().prepareMobModel(entity, p_117425_, p_117426_, partialTicks);
             this.getParentModel().setupAnim(entity, p_117425_, p_117426_, p_117428_, p_117429_, p_117430_);
-            this.getParentModel().renderToBuffer(p_117421_, vertexconsumer, p_117423_, LivingEntityRenderer.getOverlayCoords(entity, 0.0F), 1.0F, 1.0F, 1.0F, 1.0F);
-            coloredCutoutModelCopyLayerRender(this.getParentModel(), this.getParentModel(), this.getTextureLocation(entity), p_117421_, p_117422_, p_117423_, entity, p_117425_, p_117426_, p_117428_, p_117429_, p_117430_, partialTicks, rgbArray[0], rgbArray[1], rgbArray[2]);
+            this.getParentModel().renderToBuffer(p_117421_, vertexconsumer, p_117423_, LivingEntityRenderer.getOverlayCoords(entity, 0.0F), 0xFFFFFFFF);
+            int color = 0xFF000000 | ((int) (rgbArray[0] * 255.0F) << 16) | ((int) (rgbArray[1] * 255.0F) << 8) | (int) (rgbArray[2] * 255.0F);
+            coloredCutoutModelCopyLayerRender(this.getParentModel(), this.getParentModel(), this.getTextureLocation(entity), p_117421_, p_117422_, p_117423_, entity, p_117425_, p_117426_, p_117428_, p_117429_, p_117430_, partialTicks, color);
         }
     }
 }

@@ -5,6 +5,7 @@
  */
 package com.chipoodle.devilrpg.eventsubscriber.client;
 
+import net.minecraft.resources.ResourceLocation;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.client.gui.hud.ManaBarHudOverlay;
 import com.chipoodle.devilrpg.client.gui.hud.MinionPortraitHudOverlay;
@@ -14,11 +15,11 @@ import com.chipoodle.devilrpg.client.render.entity.model.*;
 import com.chipoodle.devilrpg.client.render.entity.renderer.*;
 import com.chipoodle.devilrpg.init.ModEntities;
 import net.minecraft.client.renderer.entity.ZombieRenderer;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.EntityRenderersEvent;
-import net.minecraftforge.client.event.RegisterGuiOverlaysEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 /**
  * Subscribe to events from the MOD EventBus that should be handled on the
@@ -86,13 +87,13 @@ public final class ClientModRegistryEventSubscriber {
     }
 
     @SubscribeEvent
-    public static void onRegisterGuiOverlaysEvent(final RegisterGuiOverlaysEvent event) {
-        DevilRpg.LOGGER.info("----------------------->ClientModEventSubscriber.onRegisterGuiOverlaysEvent");
+    public static void onRegisterGuiLayersEvent(final RegisterGuiLayersEvent event) {
+        DevilRpg.LOGGER.info("----------------------->ClientModEventSubscriber.onRegisterGuiLayersEvent");
 
-        event.registerAboveAll("mana", ManaBarHudOverlay.HUD_MANA_BAR);
-        event.registerAboveAll("stamina", StaminaBarHudOverlay.HUD_STAMINA_BAR);
-        event.registerAboveAll("minion_portrait", MinionPortraitHudOverlay.HUD_MINION_PORTRAITS);
-        event.registerAboveAll("skill_icons", SkillsIconHudOverlay.HUD_SKILL_ICONS);
+        event.registerAboveAll(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "mana"), ManaBarHudOverlay.HUD_MANA_BAR);
+        event.registerAboveAll(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "stamina"), StaminaBarHudOverlay.HUD_STAMINA_BAR);
+        event.registerAboveAll(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "minion_portrait"), MinionPortraitHudOverlay.HUD_MINION_PORTRAITS);
+        event.registerAboveAll(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "skill_icons"), SkillsIconHudOverlay.HUD_SKILL_ICONS);
 
     }
 

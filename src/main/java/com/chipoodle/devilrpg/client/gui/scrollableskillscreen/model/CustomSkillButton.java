@@ -3,14 +3,16 @@ package com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.client.gui.ScreenUtils;
+import net.neoforged.neoforge.client.gui.ScreenUtils;
 
 
 public class CustomSkillButton extends Button {
+    private static final ResourceLocation WIDGETS_LOCATION = ResourceLocation.parse("textures/gui/advancements/widgets.png");
     private final float xScale;
     private final float yScale;
     private final float scaledText;
@@ -48,7 +50,7 @@ public class CustomSkillButton extends Button {
      * Draws this button to the screen.
      */
     @Override
-    public void renderWidget(PoseStack poseStack, int mouseX, int mouseY, float partialTicks) {
+    public void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
         //super.renderButton(poseStack, mouseX, mouseY, partialTicks);
         if (this.visible) {
             Minecraft instance = Minecraft.getInstance();
@@ -67,10 +69,11 @@ public class CustomSkillButton extends Button {
             */
 
 
+            PoseStack poseStack = guiGraphics.pose();
             poseStack.pushPose();
             int i = this.isHoveredOrFocused()? 2 : 1;
             //ScreenUtils.blitWithBorder(poseStack, WIDGETS_LOCATION, this.getX(), this.getY(), 0, 46 + i * 20, this.width, this.height, 200, 20, 2, 3, 2, 2, this.getBlitOffset());
-            ScreenUtils.blitWithBorder(poseStack, WIDGETS_LOCATION, this.getX(), this.getY(), 0, 46 + i * 20, this.width, this.height, 200, 20, 2, 3, 2, 2, 0);
+            ScreenUtils.blitWithBorder(guiGraphics, WIDGETS_LOCATION, this.getX(), this.getY(), 0, 46 + i * 20, this.width, this.height, 200, 20, 2, 3, 2, 2, 0);
             poseStack.popPose();
 
             RenderSystem.setShader(GameRenderer::getPositionTexShader);
@@ -82,7 +85,7 @@ public class CustomSkillButton extends Button {
             RenderSystem.enableDepthTest();
             // Pinta el icono del botón
             //blit(poseStack, getX(), getY(), this.getBlitOffset(), 0.0F, 0.0F, this.width, this.height, this.width, this.height);
-            blit(poseStack, getX(), getY(), 0, 0.0F, 0.0F, this.width, this.height, this.width, this.height);
+            guiGraphics.blit(skillResourceLocation, getX(), getY(), 0, 0.0F, 0.0F, this.width, this.height, this.width, this.height);
             //this.renderTexture(poseStack, this.resourceLocation, this.getX(), this.getY(), 0.0F, 0.0F, this.yDiffTex, this.width, this.height, this.width, this.height);
 
 
@@ -90,7 +93,7 @@ public class CustomSkillButton extends Button {
             poseStack.pushPose();
             poseStack.translate((this.getX() - this.getX() * 0.5f) - 1, (this.getY() - this.getY() * 0.5f) - 1, 0);
             poseStack.scale(0.5f, 0.5f, 0);
-            drawCenteredString(poseStack, instance.font, this.getMessage(), this.getX() + this.width + 3, this.getY() + (this.height) + 23, getFGColor());
+            guiGraphics.drawCenteredString(instance.font, this.getMessage(), this.getX() + this.width + 3, this.getY() + (this.height) + 23, getFGColor());
             poseStack.popPose();
 
         }

@@ -2,7 +2,7 @@ package com.chipoodle.devilrpg.config;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import net.minecraft.world.item.DyeColor;
-import net.minecraftforge.common.ForgeConfigSpec;
+import net.neoforged.neoforge.common.ModConfigSpec;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,14 +16,14 @@ import java.util.List;
  */
 final class ClientConfig {
 
-    final ForgeConfigSpec.BooleanValue clientBoolean;
-    final ForgeConfigSpec.ConfigValue<List<String>> clientStringList;
-    final ForgeConfigSpec.EnumValue<DyeColor> clientDyeColorEnum;
+    final ModConfigSpec.BooleanValue clientBoolean;
+    final ModConfigSpec.ConfigValue<List<String>> clientStringList;
+    final ModConfigSpec.EnumValue<DyeColor> clientDyeColorEnum;
 
-    final ForgeConfigSpec.BooleanValue modelTranslucency;
-    final ForgeConfigSpec.DoubleValue modelScale;
+    final ModConfigSpec.BooleanValue modelTranslucency;
+    final ModConfigSpec.DoubleValue modelScale;
 
-    ClientConfig(final ForgeConfigSpec.Builder builder) {
+    ClientConfig(final ModConfigSpec.Builder builder) {
         builder.push("general");
         clientBoolean = builder
                 .comment("An example boolean in the client config")

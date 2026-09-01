@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.blockentity;
 
+import net.minecraft.world.level.block.Blocks;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.block.SoulVineBlock;
 import com.chipoodle.devilrpg.init.ModEntityBlocks;
@@ -9,7 +10,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.material.Material;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -77,7 +77,7 @@ public class SoulVineBlockEntity extends BlockEntity {
                     // DevilRpg.LOGGER.info("nextDirection--> {}", nextDirection);
                     childBlockPos = currentBlockPos.relative(nextDirection);
                     childBlockState = world.getBlockState(childBlockPos);
-                    if (childBlockState.isAir() || childBlockState.getMaterial().equals(Material.REPLACEABLE_PLANT)) {
+                    if (childBlockState.isAir() || childBlockState.is(Blocks.SHORT_GRASS)) {
                         if (hasAtLeasOneSolidNeighbourPerpendicularToGrowDirection(world, childBlockPos, nextDirection)) {
                             state = setBlockDirection(state, world, currentBlockPos, nextDirection);
                             createChildBlock(state, world, currentDirection, childBlockPos, currentBlockPos, nextDirection);

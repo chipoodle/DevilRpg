@@ -11,8 +11,8 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.PowerableMob;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import org.jetbrains.annotations.NotNull;
 
 
@@ -30,7 +30,7 @@ public abstract class GhostEnergyLayer<T extends Entity & PowerableMob, M extend
             this.getParentModel().copyPropertiesTo(entitymodel);
             VertexConsumer vertexconsumer = multiBufferSource.getBuffer(RenderType.energySwirl(this.getTextureLocation(entity), this.xOffset(f) % 1.0F, f * 0.01F % 1.0F));
             entitymodel.setupAnim(entity, p_116974_, p_116975_, p_116977_, p_116978_, p_116979_);
-            entitymodel.renderToBuffer(poseStack, vertexconsumer, p_116972_, OverlayTexture.NO_OVERLAY, 0.5F, 0.5F, 0.5F, 1.0F);
+            entitymodel.renderToBuffer(poseStack, vertexconsumer, p_116972_, OverlayTexture.NO_OVERLAY, 0xFF7F7F7F);
         }
     }
 

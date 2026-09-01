@@ -20,7 +20,7 @@ public interface ISoulEntity {
     default void addToAiStep(ITamableEntity thisEntity) {
         if (thisEntity.getOwnerUUID() == null || thisEntity.getOwner() == null || !thisEntity.getOwner().isAlive() || !thisEntity.isTame()) {
             DamageSource damagesource = new DamageSource(
-                    thisEntity.getLevel()
+                    thisEntity.level()
                     .registryAccess()
                     .registryOrThrow(Registries.DAMAGE_TYPE)
                             .getHolderOrThrow(ModDamageTypes.MINION_DEATH));

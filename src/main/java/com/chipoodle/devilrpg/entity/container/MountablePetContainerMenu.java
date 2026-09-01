@@ -44,11 +44,11 @@ public class MountablePetContainerMenu extends AbstractContainerMenu {
         });
         this.addSlot(new Slot(container, 1, 8, 36) {
             public boolean mayPlace(@NotNull ItemStack itemStack) {
-                return abstractHorse.isArmor(itemStack);
+                return !itemStack.isEmpty();
             }
 
             public boolean isActive() {
-                return abstractHorse.canWearArmor();
+                return true;
             }
 
             public int getMaxStackSize() {

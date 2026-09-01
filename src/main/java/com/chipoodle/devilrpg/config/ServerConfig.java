@@ -2,7 +2,7 @@ package com.chipoodle.devilrpg.config;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import net.minecraft.world.item.DyeColor;
-import net.minecraftforge.common.ForgeConfigSpec;
+import net.neoforged.neoforge.common.ModConfigSpec;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,18 +16,18 @@ import java.util.List;
  */
 final class ServerConfig {
 
-    final ForgeConfigSpec.BooleanValue serverBoolean;
-    final ForgeConfigSpec.ConfigValue<List<String>> serverStringList;
-    final ForgeConfigSpec.ConfigValue<DyeColor> serverEnumDyeColor;
+    final ModConfigSpec.BooleanValue serverBoolean;
+    final ModConfigSpec.ConfigValue<List<String>> serverStringList;
+    final ModConfigSpec.ConfigValue<DyeColor> serverEnumDyeColor;
 
-    final ForgeConfigSpec.IntValue electricFurnaceEnergySmeltCostPerTick;
-    final ForgeConfigSpec.IntValue heatCollectorTransferAmountPerTick;
+    final ModConfigSpec.IntValue electricFurnaceEnergySmeltCostPerTick;
+    final ModConfigSpec.IntValue heatCollectorTransferAmountPerTick;
 
-    final ForgeConfigSpec.IntValue wolfSpawnDistance;
-    final ForgeConfigSpec.IntValue bearSpawnDistance;
-    final ForgeConfigSpec.IntValue wispSpawnDistance;
+    final ModConfigSpec.IntValue wolfSpawnDistance;
+    final ModConfigSpec.IntValue bearSpawnDistance;
+    final ModConfigSpec.IntValue wispSpawnDistance;
 
-    ServerConfig(final ForgeConfigSpec.Builder builder) {
+    ServerConfig(final ModConfigSpec.Builder builder) {
         builder.push("general");
         serverBoolean = builder
                 .comment("An example boolean in the server config")

@@ -16,19 +16,20 @@ out
 # gradle
 build
 .gradle
+.gradle-home
 
 # other
 eclipse
 run
+mcmodsrepo
 
-# Files from Forge MDK
-forge*changelog.txt
-/src/main/java/com/chipoodle/devilrpg/eventsubscriber/common/LoginEventSuscriber.java
-/src/main/resources/assets/devilrpg/textures/gui/skill/widget/
+# local migration tooling (sandbox workaround, not part of the project)
+.migration-tools
+
+# Files from NeoForge MDK
 /run-data/
 /logs/
 /options.txt
-/build.gradle
 /config/fml.toml
-/config/forge-client.toml
-/config/forge-common.toml
+/config/neoforge-client.toml
+/config/neoforge-common.toml

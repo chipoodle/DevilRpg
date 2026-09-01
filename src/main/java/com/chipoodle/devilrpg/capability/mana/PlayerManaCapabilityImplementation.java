@@ -1,11 +1,13 @@
 package com.chipoodle.devilrpg.capability.mana;
 
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
+import net.neoforged.neoforge.network.PacketDistributor;
 import com.chipoodle.devilrpg.init.ModNetwork;
-import com.chipoodle.devilrpg.network.handler.PlayerManaClientServerHandler;
+import com.chipoodle.devilrpg.network.payload.PlayerManaPayload;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.network.PacketDistributor;
 
 
 public class PlayerManaCapabilityImplementation implements PlayerManaCapabilityInterface {
@@ -22,7 +24,7 @@ public class PlayerManaCapabilityImplementation implements PlayerManaCapabilityI
     @Override
     public void setMana(float mana, Player player) {
         this.mana = mana;
-        if (!player.level.isClientSide)
+        if (!player.level().isClientSide)
             sendManaChangesToClient((ServerPlayer) player);
         else
             sendManaChangesToServer();
@@ -36,7 +38,7 @@ public class PlayerManaCapabilityImplementation implements PlayerManaCapabilityI
     @Override
     public void setMaxMana(float maxMana, Player player) {
         this.maxMana = maxMana;
-        if (!player.level.isClientSide)
+        if (!player.level().isClientSide)
             sendManaChangesToClient((ServerPlayer) player);
         else
             sendManaChangesToServer();
@@ -58,7 +60,7 @@ public class PlayerManaCapabilityImplementation implements PlayerManaCapabilityI
         }
 
         // Sincronizar los cambios con el cliente o el servidor según el lado
-        if (!player.level.isClientSide) {
+        if (!player.level().isClientSide) {
             sendManaChangesToClient((ServerPlayer) player);
         } else {
             sendManaChangesToServer();
@@ -73,7 +75,7 @@ public class PlayerManaCapabilityImplementation implements PlayerManaCapabilityI
     @Override
     public void setRegeneration(float regeneration, Player player) {
         this.regeneration = regeneration;
-        if (!player.level.isClientSide)
+        if (!player.level().isClientSide)
             sendManaChangesToClient((ServerPlayer) player);
         else
             sendManaChangesToServer();
@@ -88,7 +90,7 @@ public class PlayerManaCapabilityImplementation implements PlayerManaCapabilityI
     }
 
     @Override
-    public CompoundTag serializeNBT() {
+    public CompoundTag serializeNBT(HolderLookup.Provider provider) {
         CompoundTag nbt = new CompoundTag();
         nbt.putFloat("mana", mana);
         nbt.putFloat("maxMana", maxMana);
@@ -97,18 +99,18 @@ public class PlayerManaCapabilityImplementation implements PlayerManaCapabilityI
     }
 
     @Override
-    public void deserializeNBT(CompoundTag compound) {
+    public void deserializeNBT(HolderLookup.Provider provider, CompoundTag compound) {
         mana = compound.getFloat("mana");
         maxMana = compound.getFloat("maxMana");
         regeneration = compound.getFloat("regeneration");
     }
 
     private void sendManaChangesToServer() {
-        ModNetwork.CHANNEL.sendToServer(new PlayerManaClientServerHandler(serializeNBT()));
+        PacketDistributor.sendToServer(new PlayerManaPayload(serializeNBT(RegistryAccess.EMPTY)));
     }
 
     private void sendManaChangesToClient(ServerPlayer pe) {
-        ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> pe),
-                new PlayerManaClientServerHandler(serializeNBT()));
+        PacketDistributor.sendToPlayer(pe,
+                new PlayerManaPayload(serializeNBT(RegistryAccess.EMPTY)));
     }
 }

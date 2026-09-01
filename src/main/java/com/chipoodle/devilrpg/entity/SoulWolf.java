@@ -32,10 +32,8 @@ import net.minecraft.world.entity.animal.horse.Llama;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.network.NetworkHooks;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
@@ -75,7 +73,7 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
         this.goalSelector.addGoal(2, new SitWhenOrderedToGoal(this));
         this.goalSelector.addGoal(4, new LeapAtTargetGoal(this, 0.4F));
         this.goalSelector.addGoal(5, new MeleeAttackGoal(this, 1.0D, true));
-        this.goalSelector.addGoal(6, new FollowOwnerGoal(this, 1.0D, 10.0F, 2.0F, false));
+        this.goalSelector.addGoal(6, new FollowOwnerGoal(this, 1.0D, 10.0F, 2.0F));
         this.goalSelector.addGoal(8, new WaterAvoidingRandomStrollGoal(this, 1.0D));
         this.goalSelector.addGoal(10, new LookAtPlayerGoal(this, Player.class, 8.0F));
         this.goalSelector.addGoal(10, new RandomLookAroundGoal(this));
@@ -173,7 +171,7 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
                 frostbite * PROBABILITY_MULTIPLIER, mobEffectInstance != null ? mobEffectInstance.getAmplifier() : 0, getOwner().getName().getString(), getOwnerUUID());
 
         if (flag) {
-            this.doEnchantDamageEffects(this, target);
+            // doEnchantDamageEffects removed in 1.21
         }
         return flag;
     }
@@ -220,21 +218,21 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
     @Override
     public void die(@NotNull DamageSource cause) {
         if (getOwner() != null) {
-            LazyOptional<PlayerMinionCapabilityInterface> minionCap = getOwner()
-                    .getCapability(PlayerMinionCapability.INSTANCE);
-            if (!minionCap.isPresent())
+            PlayerMinionCapabilityInterface minionCap = getOwner()
+                    .getData(PlayerMinionCapability.INSTANCE);
+            if (minionCap == null)
                 return;
-            minionCap.ifPresent(x -> x.removeSoulWolf((Player) getOwner(), this));
+            minionCap.removeSoulWolf((Player) getOwner(), this);
         }
         // super.onDeath(cause);
         customOnDeath();
     }
 
     private void customOnDeath() {
-        level.broadcastEntityEvent(this, (byte) 3);
+        level().broadcastEntityEvent(this, (byte) 3);
         this.dead = true;
         this.remove(RemovalReason.DISCARDED);
-        IRenderUtilities.customDeadParticles(this.level, this.random, this);
+        IRenderUtilities.customDeadParticles(this.level(), this.random, this);
     }
 
     /**
@@ -250,10 +248,6 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
      *
      * @return The packet with data about your entity
      */
-    @Override
-    public Packet<ClientGamePacketListener> getAddEntityPacket() {
-        return NetworkHooks.getEntitySpawningPacket(this);
-    }
 
     /**
      * Get the experience points the entity currently has.
@@ -305,10 +299,6 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
 
     }
 
-    @Override
-    public @NotNull Level getLevel() {
-        return this.level;
-    }
 
     @Override
     public double distanceToSqr(LivingEntity livingentity) {
