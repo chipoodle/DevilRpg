@@ -11,16 +11,19 @@ import com.chipoodle.devilrpg.skillsystem.AbstractSkillSeedsInInventoryExecutor;
 import com.chipoodle.devilrpg.util.PowerEnum;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiComponent;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraftforge.client.gui.overlay.IGuiOverlay;
+import org.lwjgl.opengl.GL11;
 
 import java.util.HashMap;
 import java.util.Objects;
@@ -41,8 +44,11 @@ public class SkillsIconHudOverlay {
         Player player = mc.player;
         Font font = mc.font;
 
+        if(player == null)
+            return ;
+
         PlayerSkillCapabilityInterface skillCap = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerSkillCapability.INSTANCE);
-        if (skillCap == null || player == null || player.isCreative())
+        if (player.isCreative())
             return;
 
         final HashMap<PowerEnum, SkillEnum> powerToSkillDictionary = skillCap.getSkillsNameOfPowers();
@@ -102,7 +108,6 @@ public class SkillsIconHudOverlay {
         }
 
         boolean hasSeeds = !seedStack.isEmpty();
-        float seedOpacity = hasSeeds ? 1.0F : 0.3F;
         int seedX = x + width - 8;
         int seedY = y - 2;
 
@@ -110,10 +115,19 @@ public class SkillsIconHudOverlay {
         poseStack.translate(seedX, seedY, 0);
         poseStack.scale(0.5f, 0.5f, 1.0f);
         RenderSystem.enableBlend();
-        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, seedOpacity);
+
         if (hasSeeds) {
+            RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
             mc.getItemRenderer().renderGuiItem(poseStack, seedStack, 0, 0);
         }
+        else {
+            // Ícono gris apagado cuando no hay semillas
+            ItemStack graySeedStack = new ItemStack(Items.WHEAT_SEEDS);
+            RenderSystem.setShaderColor(0.3F, 0.3F, 0.3F, 0.5F); // Gris oscuro semitransparente
+            mc.getItemRenderer().renderGuiItem(poseStack, graySeedStack, 0, 0);
+            RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+        }
+
         RenderSystem.disableBlend();
         poseStack.popPose();
     }
