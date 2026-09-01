@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "devilrpg:block/bloomingsanctuary"
+    "layer0": "devilrpg:block/bloomingsanctuary_green"
   }
 }

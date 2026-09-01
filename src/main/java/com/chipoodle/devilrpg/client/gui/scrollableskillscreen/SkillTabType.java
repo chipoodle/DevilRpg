@@ -16,7 +16,7 @@ public enum SkillTabType {
     ABOVE(0, 0, 28, 32, 8), BELOW(84, 0, 28, 32, 8), LEFT(0, 64, 32, 28, 5), RIGHT(96, 64, 32, 28, 5);
 
     public static final int MAX_TABS = java.util.Arrays.stream(values()).mapToInt(e -> e.max).sum();
-    private static final ResourceLocation TABS_LOCATION = ResourceLocation.parse("textures/gui/advancements/tabs.png");
+    private static final ResourceLocation TABS_LOCATION = ResourceLocation.parse("devilrpg:textures/gui/advancements/tabs.png");
     private final int textureX;
     private final int textureY;
     private final int width;

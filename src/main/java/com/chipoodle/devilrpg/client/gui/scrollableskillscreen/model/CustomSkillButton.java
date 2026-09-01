@@ -12,7 +12,7 @@ import net.neoforged.neoforge.client.gui.ScreenUtils;
 
 
 public class CustomSkillButton extends Button {
-    private static final ResourceLocation WIDGETS_LOCATION = ResourceLocation.parse("textures/gui/advancements/widgets.png");
+    private static final ResourceLocation WIDGETS_LOCATION = ResourceLocation.parse("devilrpg:textures/gui/advancements/widgets.png");
     private final float xScale;
     private final float yScale;
     private final float scaledText;
