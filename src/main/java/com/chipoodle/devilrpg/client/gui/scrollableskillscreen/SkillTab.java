@@ -5,7 +5,6 @@ import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model.SkillTreeNode;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import com.google.common.collect.Maps;
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -148,9 +147,11 @@ public class SkillTab {
     /**
      * Pinta la imagen de fondo dinámicamente inclusive al hacer scroll
      *
-     * @param poseStack
+     * @param guiGraphics
+     * @param x coordenada absoluta X del area del arbol (origen)
+     * @param y coordenada absoluta Y del area del arbol (origen)
      */
-    public void drawContents(GuiGraphics guiGraphics) {
+    public void drawContents(GuiGraphics guiGraphics, int x, int y) {
         if (!this.centered) {
             //Con este controlamos la posciion en x de los botones del árbol
             this.scrollX = (137 - (this.maxX + this.minX) / 2D);
@@ -158,37 +159,20 @@ public class SkillTab {
             this.scrollY = (84 - (this.maxY + this.minY) / 2D);
             this.centered = true;
         }
+        // En 1.21.1 el recorte por depth-buffer de 1.19.4 dejó de funcionar (los fills de la
+        // GUI ya no escriben en el depth buffer), por lo que el árbol se dibujaba sin recortar
+        // y quedaba invisible/borroso. Vanilla ahora usa scissor en AdvancementTab.drawContents;
+        // replicamos ese enfoque para recortar el contenido del árbol a la ventana.
+        guiGraphics.enableScissor(x, y, x + TAB_BACKGROUND_X, y + TAB_BACKGROUND_Y);
         PoseStack poseStack = guiGraphics.pose();
         poseStack.pushPose();
-        poseStack.translate(0.0F, 0.0F, 950.0F);
-        RenderSystem.enableDepthTest();
-        RenderSystem.colorMask(false, false, false, false);
-        // Oculta el fondo fuera de la ventana
-        guiGraphics.fill(4680, 2260, -4680, -2260, -16777216);
-        RenderSystem.colorMask(true, true, true, true);
-        poseStack.translate(0.0F, 0.0F, -950.0F);
-        RenderSystem.depthFunc(518);
-        // Pinta el fondo
+        poseStack.translate(x, y, 0.0F);
+        // Pinta el fondo negro del area del arbol (como antes)
         guiGraphics.fill(TAB_BACKGROUND_X, TAB_BACKGROUND_Y, 0, 0, -16777216);
-        RenderSystem.depthFunc(515);
-        ResourceLocation resourcelocation = this.displayInfo.getBackground();
-        if (resourcelocation != null) {
-            RenderSystem.setShaderTexture(0, resourcelocation);
-        } else {
-            RenderSystem.setShaderTexture(0, TextureManager.INTENTIONAL_MISSING_TEXTURE);
-        }
-
         // Pinta el mosaico dinámico del fondo así como los iconos y las conexiones del arbol de habilidades
         generateBackgroundImageChunks(guiGraphics);
-
-        RenderSystem.depthFunc(518);
-        poseStack.translate(0.0F, 0.0F, -950.0F);
-        RenderSystem.colorMask(false, false, false, false);
-        guiGraphics.fill(4680, 2260, -4680, -2260, -16777216);
-        RenderSystem.colorMask(true, true, true, true);
-        poseStack.translate(0.0F, 0.0F, 950.0F);
-        RenderSystem.depthFunc(515);
         poseStack.popPose();
+        guiGraphics.disableScissor();
     }
 
     /**

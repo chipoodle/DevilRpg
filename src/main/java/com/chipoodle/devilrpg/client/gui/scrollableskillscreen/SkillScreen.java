@@ -398,16 +398,8 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
             guiGraphics.drawCenteredString(this.font, EMPTY, i, offsetTop + WINDOW_AREA_OFFSET_Y + 56 - WINDOW_AREA_OFFSET_X / 2, -1);
             guiGraphics.drawCenteredString(this.font, SAD_LABEL, i, offsetTop + WINDOW_AREA_OFFSET_Y + INNER_SCREEN_HEIGHT - WINDOW_AREA_OFFSET_X, -1);
         } else {
-            // Pinta el fondo con elementos
-            PoseStack poseStack = guiGraphics.pose();
-            poseStack.pushPose();
-            // Se posiciona al inicio de la ventana + offsets
-            poseStack.translate((float) (offsetLeft + WINDOW_AREA_OFFSET_X),(float) (offsetTop + WINDOW_AREA_OFFSET_Y), 0.0F);
-            // Pinta el fondo del tab
-            RenderSystem.applyModelViewMatrix();
-            selectedSkillTabGui.drawContents(guiGraphics);
-            poseStack.popPose();
-            RenderSystem.applyModelViewMatrix();
+            // Pinta el fondo con elementos (drawContents aplica su propio scissor y translate)
+            selectedSkillTabGui.drawContents(guiGraphics, offsetLeft + WINDOW_AREA_OFFSET_X, offsetTop + WINDOW_AREA_OFFSET_Y);
             RenderSystem.depthFunc(515);
             RenderSystem.disableDepthTest();
         }
