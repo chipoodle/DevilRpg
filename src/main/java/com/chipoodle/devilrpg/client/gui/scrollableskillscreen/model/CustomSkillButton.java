@@ -71,12 +71,6 @@ public class CustomSkillButton extends Button {
 
 
             PoseStack poseStack = guiGraphics.pose();
-            poseStack.pushPose();
-            int i = this.isHoveredOrFocused()? 2 : 1;
-            //ScreenUtils.blitWithBorder(poseStack, WIDGETS_LOCATION, this.getX(), this.getY(), 0, 46 + i * 20, this.width, this.height, 200, 20, 2, 3, 2, 2, this.getBlitOffset());
-            SkillWidget.forceNearestFilter(WIDGETS_LOCATION);
-            ScreenUtils.blitWithBorder(guiGraphics, WIDGETS_LOCATION, this.getX(), this.getY(), 0, 46 + i * 20, this.width, this.height, 200, 20, 2, 3, 2, 2, 0);
-            poseStack.popPose();
 
             RenderSystem.setShader(GameRenderer::getPositionTexShader);
             SkillWidget.forceNearestFilter(skillResourceLocation);
@@ -85,13 +79,11 @@ public class CustomSkillButton extends Button {
             RenderSystem.enableBlend();
             RenderSystem.defaultBlendFunc();
             RenderSystem.enableDepthTest();
-            // Pinta el icono del botón (insetado para que el marco/borde del botón se vea
-            // alrededor; si se dibuja a tamano completo cubre el marco y queda "sin fondo")
+            // Pinta el icono completo al tamano del boton. El icono (y el empty-box) ya incluyen
+            // su propio marco; el 9-slice de vanilla (blitWithBorder) renderizaba mal en 1.21.1
+            // (boton partido por la mitad), por eso se dibuja solo el icono, como en el HUD.
             //blit(poseStack, getX(), getY(), this.getBlitOffset(), 0.0F, 0.0F, this.width, this.height, this.width, this.height);
-            int iconInset = 3;
-            guiGraphics.blit(skillResourceLocation, getX() + iconInset, getY() + iconInset, 0, 0.0F, 0.0F,
-                    this.width - iconInset * 2, this.height - iconInset * 2,
-                    this.width - iconInset * 2, this.height - iconInset * 2);
+            guiGraphics.blit(skillResourceLocation, getX(), getY(), 0, 0.0F, 0.0F, this.width, this.height, this.width, this.height);
             //this.renderTexture(poseStack, this.resourceLocation, this.getX(), this.getY(), 0.0F, 0.0F, this.yDiffTex, this.width, this.height, this.width, this.height);
 
 
