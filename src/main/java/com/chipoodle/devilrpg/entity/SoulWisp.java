@@ -108,6 +108,7 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         super.defineSynchedData(builder);
+        builder.define(DATA_REMAINING_ANGER_TIME, 0);
     }
 
     @Override
