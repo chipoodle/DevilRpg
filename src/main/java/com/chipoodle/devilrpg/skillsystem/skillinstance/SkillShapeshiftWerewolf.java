@@ -106,7 +106,7 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassiveAttributeExecu
             DevilRpg.LOGGER.info("max movement speed {}", maxMovementSpeed);
             DevilRpg.LOGGER.debug("==========> Step after transformation: {}", Objects.requireNonNull(player.getAttribute(Attributes.STEP_HEIGHT)).getValue());
         } else {
-            IRenderUtilities.rotationParticles(Minecraft.getInstance().level, RandomSource.create(), player, ParticleTypes.EFFECT, 17, 1);
+            IRenderUtilities.rotationParticles(player.level(), RandomSource.create(), player, ParticleTypes.EFFECT, 17, 1);
         }
     }
 

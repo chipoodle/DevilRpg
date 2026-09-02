@@ -78,7 +78,9 @@ public final class ClientForgePlayerRenderEventSubscriber {
     @SubscribeEvent
     public static void onRenderHandEvent(RenderHandEvent event) {
         BiConsumer<RenderHandEvent, PlayerAuxiliaryCapabilityInterface> c = (eve, auxiliar) -> {
-            // not cancellable in 1.21
+            // RenderHandEvent SÍ es cancelable en NeoForge 1.21.1. Al transformarnos cancelamos
+            // la mano vanilla para que solo se dibuje la del hombre lobo y no se superpongan.
+            eve.setCanceled(true);
         };
 
         Minecraft instance = Minecraft.getInstance();

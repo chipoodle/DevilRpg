@@ -255,7 +255,7 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
         if (flag) {
             int probability = random.nextInt(100);
             if (warBear > 0 && probability <= (warBear * PROBABILITY_MULTIPLIER)) {
-                IRenderUtilities.rotationParticles(Minecraft.getInstance().level, random, this,
+                IRenderUtilities.rotationParticles(this.level(), random, this,
                         ParticleTypes.EXPLOSION, NUMBER_OF_PARTICLES_WAR_BEAR, RADIUS_PARTICLES);
                 double radius = 3;
                 List<LivingEntity> acquireAllLookTargetsByClass = TargetUtils

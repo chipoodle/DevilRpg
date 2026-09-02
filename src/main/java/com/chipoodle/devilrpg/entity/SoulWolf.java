@@ -161,7 +161,7 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
             } else
                 this.addEffect(frostbiteEffect);
             //IRenderUtilities.rotationParticles(Minecraft.getInstance().level, random, this, ParticleTypes.FLASH, NUMBER_OF_PARTICLES_FROST_BITE, RADIUS_PARTICLES);
-            IRenderUtilities.rotationParticles(Minecraft.getInstance().level, random, this, ParticleTypes.WARPED_SPORE, NUMBER_OF_PARTICLES_FROST_BITE, RADIUS_PARTICLES);
+            IRenderUtilities.rotationParticles(this.level(), random, this, ParticleTypes.WARPED_SPORE, NUMBER_OF_PARTICLES_FROST_BITE, RADIUS_PARTICLES);
         }
         double attackDamage = this.getAttributeValue(Attributes.ATTACK_DAMAGE);
         boolean flag = target.hurt(this.damageSources().mobAttack(this), (float) (attackDamage));
@@ -180,7 +180,7 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
     public boolean hurt(@NotNull DamageSource damageSource, float amount) {
 
         int probability = random.nextInt(100);
-        if (iceArmor > 0 && probability <= (iceArmor * PROBABILITY_MULTIPLIER) && Minecraft.getInstance().level != null) {
+        if (iceArmor > 0 && probability <= (iceArmor * PROBABILITY_MULTIPLIER) && !this.level().isClientSide) {
             //IRenderUtilities.rotationParticles(Minecraft.getInstance().level, random, this, ParticleTypes.SNOWFLAKE, NUMBER_OF_PARTICLES_ICE_ARMOR, RADIUS_PARTICLES);
             MobEffectInstance iceArmorEffect = new MobEffectInstance(MobEffects.ABSORPTION, ICE_ARMOR_DURATION_TICKS, iceArmor * ICE_ARMOR_EFFECT_FACTOR, true, false);
             MobEffectInstance active = this.getEffect(MobEffects.ABSORPTION);
