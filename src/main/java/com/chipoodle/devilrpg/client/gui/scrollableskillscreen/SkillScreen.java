@@ -70,6 +70,15 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     private int offsetTop;
     /** Escala para que la ventana (302x210) quepa en la pantalla virtual con cualquier guiScale */
     private float fitScale = 1.0F;
+    /** Evita que super.render vuelva a dibujar el fondo encima de la ventana ya renderizada */
+    private boolean skipBackgroundRenderOnce = false;
+
+    @Override
+    public void renderBackground(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        if (!this.skipBackgroundRenderOnce) {
+            super.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
+        }
+    }
     private InputConstants.Key openScreenKeyPressed;
     private SkillWidget draggedSkillWidget;
     private double posicionMouseX;
@@ -186,11 +195,8 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        // Igual que vanilla AdvancementsScreen: super.render PRIMERO (dibuja renderBackground
-        // + los botones) y LUEGO el contenido de la ventana encima. Si super.render se llamaba
-        // al final, su renderBackground (gradiente oscuro translucido) se dibujaba ENCIMA de la
-        // ventana ya pintada y esta aparecia borrosa/oscura "en segundo plano".
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
+        // Fondo UNA sola vez, antes de la ventana (no se repite encima de esta)
+        this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
 
         // Escala la ventana para que quepa en la pantalla virtual con cualquier guiScale.
         // Con guiScale 1-2 fitScale=1 y el comportamiento es identico al original.
@@ -216,6 +222,11 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
         this.renderWindow(guiGraphics);
         this.renderTooltips(guiGraphics, mouseX, mouseY);
         pose.popPose();
+        // Botones ENCIMA de la ventana: super.render dibuja los renderables, pero con
+        // skipBackgroundRenderOnce desactivamos su renderBackground para no velar la ventana.
+        this.skipBackgroundRenderOnce = true;
+        super.render(guiGraphics, mouseX, mouseY, partialTick);
+        this.skipBackgroundRenderOnce = false;
         this.renderSkillButtonPressed(guiGraphics);
     }
 
