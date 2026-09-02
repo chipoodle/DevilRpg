@@ -25,6 +25,9 @@ import java.util.Random;
 public class SkillChargeWerewolf extends AbstractSkillExecutor {
     public static final int DAMAGE_BOOST_DURATION_IN_TICKS = 25;
     public static final double MAX_UP_BLOCKS = 2.0;
+    // Multiplicador del dano del charge sobre el ataque del hombre lobo. Sube/baja este valor
+    // para hacer mas/menos dano. 1.0 = dano = ataque base + items + pasivos + DAMAGE_BOOST.
+    public static final float CHARGE_DAMAGE_MULTIPLIER = 1.0F;
 
     public SkillChargeWerewolf(PlayerSkillCapabilityInterface parentCapability) {
         super(parentCapability);
@@ -71,11 +74,12 @@ public class SkillChargeWerewolf extends AbstractSkillExecutor {
             int autoSpinAttackTicks = 10;
             if (!levelIn.isClientSide) {
                 int chargePoints = parentCapability.getSkillsPoints().get(SkillEnum.CHARGE);
-                // Daño real del spin attack: usar el ataque del hombre lobo (incluye pasivo + items).
-                float chargeDamage = (float) player.getAttributeValue(Attributes.ATTACK_DAMAGE);
+                // Aplicar el DAMAGE_BOOST ANTES de calcular el dano para que cuente
+                // (suma a ATTACK_DAMAGE y por tanto al dano del spin).
+                player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, DAMAGE_BOOST_DURATION_IN_TICKS, chargePoints));
+                // Dano = ataque del hombre lobo (base + items + pasivos + el buff recien aplicado) x multiplicador.
+                float chargeDamage = (float) (player.getAttributeValue(Attributes.ATTACK_DAMAGE) * CHARGE_DAMAGE_MULTIPLIER);
                 player.push(f1, f2, f3);
-                MobEffectInstance m = new MobEffectInstance(MobEffects.DAMAGE_BOOST, DAMAGE_BOOST_DURATION_IN_TICKS, chargePoints);
-                player.addEffect(m);
                 player.startAutoSpinAttack(autoSpinAttackTicks, chargeDamage, ItemStack.EMPTY);
 
                 // Reproduce un sonido
@@ -84,7 +88,7 @@ public class SkillChargeWerewolf extends AbstractSkillExecutor {
                 Minecraft m = Minecraft.getInstance();
                 LocalPlayer clientPlayer = m.player;
                 if (clientPlayer != null && clientPlayer.onGround()) {
-                    float chargeDamage = (float) clientPlayer.getAttributeValue(Attributes.ATTACK_DAMAGE);
+                    float chargeDamage = (float) (clientPlayer.getAttributeValue(Attributes.ATTACK_DAMAGE) * CHARGE_DAMAGE_MULTIPLIER);
                     clientPlayer.push(f1, f2, f3);
                     clientPlayer.startAutoSpinAttack(autoSpinAttackTicks, chargeDamage, ItemStack.EMPTY);
                 }
