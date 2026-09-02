@@ -46,8 +46,11 @@ public enum SkillTabType {
         }
 
         int j = isSelected ? this.textureY + this.height : this.textureY;
+        // Tinte acorde al skin de la ventana (tono marron; la seleccionada mas clara)
+        RenderSystem.setShaderColor(isSelected ? 1.0F : 0.6F, isSelected ? 0.9F : 0.5F, isSelected ? 0.75F : 0.42F, 1.0F);
         guiGraphics.blit(TABS_LOCATION, offsetX + this.getX(index), offsetY + this.getY(index), i, j, this.width,
                 this.height);
+        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
     }
 
     public void drawIcon(GuiGraphics guiGraphics, int offsetX, int offsetY, int index, ItemRenderer renderItemIn, ItemStack stack) {

@@ -146,9 +146,9 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     }
 
     private void addThemeButtons() {
-        int offLeft = offsetLeft;
-        int offTop = offsetTop;
-
+        // Botones de cambio de tema, en la barra de info inferior a la DERECHA (la zona
+        // izquierda la ocupa el mensaje de puntos sin usar) para que no se estorben.
+        int infoY = (int) (offsetTop + WINDOW_HEIGHT * this.fitScale) + 2;
 
         Button themeForward = Button.builder(
                         Component.literal(">"),
@@ -156,8 +156,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
                             SkillWidget.changeWidgetTheme(true);
                         }
                 )
-                .pos((WINDOW_AREA_OFFSET_X + offLeft + 10) + ((SkillWidget.FRAME_SIZE + 10) + 30),
-                        WINDOW_AREA_OFFSET_Y + offTop + INNER_SCREEN_HEIGHT + 20)
+                .pos((int) (offsetLeft + (WINDOW_WIDTH - 28) * this.fitScale), infoY)
                 .size(20, 20)
                 .build();
 
@@ -167,12 +166,10 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
                             SkillWidget.changeWidgetTheme(false);
                         }
                 )
-                .pos((WINDOW_AREA_OFFSET_X + offLeft + 10) + ((SkillWidget.FRAME_SIZE + 10) ),
-                        WINDOW_AREA_OFFSET_Y + offTop + INNER_SCREEN_HEIGHT + 20)
+                .pos((int) (offsetLeft + (WINDOW_WIDTH - 48) * this.fitScale), infoY)
                 .size(20, 20)
                 .build();
 
-        //this.font.draw(poseStack, "theme: ", (offsetLeft + 8), (offsetTop + 6), 4210752);
         addRenderableWidget(themeForward);
         addRenderableWidget(themeBackwards);
     }
@@ -390,6 +387,8 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
             }
 
             RenderSystem.defaultBlendFunc();
+            // Reset del tinte de las pestañas para no afectar a los iconos
+            RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
             // Pinta el ícono o la imagen de la pestaña (tab)
             int k = 0;
             for (SkillTab skillTab : this.tabs.values()) {
@@ -400,15 +399,15 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
             }
             RenderSystem.disableBlend();
 
-            // Pinta el título
-            guiGraphics.drawString(this.font, GUI_LABEL, 8, 6, 4210752);
+            // Pinta el título (blanco para que se vea sobre el marco oscuro)
+            guiGraphics.drawString(this.font, GUI_LABEL, 8, 6, 0xFFFFFF);
 
             int unspentPoints = expCap == null ? -1 : expCap.getUnspentPoints();
-            if (unspentPoints != 0) {
-                Component unspentSkillHolder = Component.literal(UNSPENT_LABEL.getString() + " " + unspentPoints);
-                //Pinta puntos sin usar
-                guiGraphics.drawString(this.font, unspentSkillHolder, 8, WINDOW_HEIGHT, 4210752);
-            }
+            int currentLevel = expCap == null ? -1 : expCap.getCurrentLevel();
+            Component infoHolder = Component.literal(
+                    "Level: " + currentLevel + "    " + UNSPENT_LABEL.getString() + ": " + unspentPoints);
+            //Pinta nivel + puntos sin usar (blanco, en la barra de info inferior, a la izquierda)
+            guiGraphics.drawString(this.font, infoHolder, 8, WINDOW_HEIGHT + 2, 0xFFFFFF);
 
             //this.font.draw(poseStack, Component.literal("x:"+d.format(posicionMouseX)+" y:"+d.format(posicionMouseY)), (float) posicionMouseX,(float)posicionMouseY, 10526880);
         }
