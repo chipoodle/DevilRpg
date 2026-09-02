@@ -85,9 +85,13 @@ public class CustomSkillButton extends Button {
             RenderSystem.enableBlend();
             RenderSystem.defaultBlendFunc();
             RenderSystem.enableDepthTest();
-            // Pinta el icono del botón
+            // Pinta el icono del botón (insetado para que el marco/borde del botón se vea
+            // alrededor; si se dibuja a tamano completo cubre el marco y queda "sin fondo")
             //blit(poseStack, getX(), getY(), this.getBlitOffset(), 0.0F, 0.0F, this.width, this.height, this.width, this.height);
-            guiGraphics.blit(skillResourceLocation, getX(), getY(), 0, 0.0F, 0.0F, this.width, this.height, this.width, this.height);
+            int iconInset = 3;
+            guiGraphics.blit(skillResourceLocation, getX() + iconInset, getY() + iconInset, 0, 0.0F, 0.0F,
+                    this.width - iconInset * 2, this.height - iconInset * 2,
+                    this.width - iconInset * 2, this.height - iconInset * 2);
             //this.renderTexture(poseStack, this.resourceLocation, this.getX(), this.getY(), 0.0F, 0.0F, this.yDiffTex, this.width, this.height, this.width, this.height);
 
 
