@@ -599,6 +599,24 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
         this.mountBear = mountBear;
     }
 
+    @Override
+    public LivingEntity getControllingPassenger() {
+        // Oso magico: al montarlo (mountBear>0) es controlable sin necesidad de silla.
+        if (this.mountBear > 0) {
+            Entity entity = this.getFirstPassenger();
+            if (entity instanceof Player)
+                return (Player) entity;
+        }
+        return super.getControllingPassenger();
+    }
+
+    @Override
+    public boolean isSaddled() {
+        // Tratar el oso magico como "ensillado" cuando es montable, para que AbstractHorse
+        // (travel) lea la entrada del jugador y se pueda controlar sin una silla de caballo.
+        return this.mountBear > 0 || super.isSaddled();
+    }
+
 
     //////////////////////////////////////////
 

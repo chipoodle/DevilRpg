@@ -627,7 +627,12 @@ public class TargetUtils {
     public static BlockHitResult getPlayerBlockRayResult() {
         Minecraft instance = Minecraft.getInstance();
         HitResult hitResult = instance.hitResult;
-        return (BlockHitResult) hitResult;
+        if (hitResult != null && hitResult.getType() == HitResult.Type.BLOCK) {
+            return (BlockHitResult) hitResult;
+        }
+        // Si el jugador apunta a una entidad (p.ej. el oso), no es un BLOCK -> devolver null
+        // para que los callers usen una posicion alternativa en vez de lanzar ClassCastException.
+        return null;
     }
 
     public static HitResult getPlayerRayResult() {

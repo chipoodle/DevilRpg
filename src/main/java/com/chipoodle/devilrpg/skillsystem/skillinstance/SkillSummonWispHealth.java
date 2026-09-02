@@ -61,7 +61,7 @@ public class SkillSummonWispHealth extends AbstractSkillExecutor {
 
     private SoulWisp summonWisp(Level levelIn, Player playerIn, Random rand) {
         BlockHitResult playerBlockRayResult = TargetUtils.getPlayerBlockRayResult();
-        BlockPos blockPos = playerBlockRayResult.getBlockPos();
+        BlockPos blockPos = playerBlockRayResult != null ? playerBlockRayResult.getBlockPos() : playerIn.blockPosition();
         if (!levelIn.isEmptyBlock(blockPos))
             blockPos = blockPos.above();
 
