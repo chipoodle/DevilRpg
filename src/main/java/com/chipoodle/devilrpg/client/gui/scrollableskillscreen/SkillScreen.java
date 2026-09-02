@@ -39,8 +39,8 @@ import java.util.*;
 
 @OnlyIn(Dist.CLIENT)
 public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IListener {
-    private static final int INITIAL_TEXTURE_WIDTH = 308;
-    private static final int INITIAL_TEXTURE_HEIGHT = 256;
+    private static final int INITIAL_TEXTURE_WIDTH = 302;
+    private static final int INITIAL_TEXTURE_HEIGHT = 236;
     private static final int INNER_SCREEN_WIDTH = 282;
     private static final int INNER_SCREEN_HEIGHT = 162;
     private static final int WINDOW_AREA_OFFSET_X = 10;
