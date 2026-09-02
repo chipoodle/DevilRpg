@@ -186,17 +186,19 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        // Igual que vanilla AdvancementsScreen: super.render PRIMERO (dibuja renderBackground
+        // + los botones) y LUEGO el contenido de la ventana encima. Si super.render se llamaba
+        // al final, su renderBackground (gradiente oscuro translucido) se dibujaba ENCIMA de la
+        // ventana ya pintada y esta aparecia borrosa/oscura "en segundo plano".
+        super.render(guiGraphics, mouseX, mouseY, partialTick);
 
         // Escala la ventana para que quepa en la pantalla virtual con cualquier guiScale.
-        // Con guiScale 3 (virtual 284x160) la ventana de 302x210 se desbordaba y el
-        // contenido se veia ampliado/borroso. Con guiScale 1-2 fitScale=1 y el
-        // comportamiento es identico al original.
+        // Con guiScale 1-2 fitScale=1 y el comportamiento es identico al original.
         this.fitScale = Math.min(1.0F,
                 Math.min((float) this.width / WINDOW_WIDTH, (float) this.height / WINDOW_HEIGHT));
         offsetLeft = (this.width - (int) (WINDOW_WIDTH * this.fitScale)) / 2;
         offsetTop = (this.height - (int) (WINDOW_HEIGHT * this.fitScale)) / 2;
 
-        this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
         if (maxPages != 0) {
             Component page = Component.literal(String.format("%d / %d", tabPage + 1, maxPages + 1));
             int width = this.font.width(page);
@@ -214,7 +216,6 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
         this.renderWindow(guiGraphics);
         this.renderTooltips(guiGraphics, mouseX, mouseY);
         pose.popPose();
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
         this.renderSkillButtonPressed(guiGraphics);
     }
 
