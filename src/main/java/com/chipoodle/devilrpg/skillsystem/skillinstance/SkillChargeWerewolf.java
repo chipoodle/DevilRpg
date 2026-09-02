@@ -27,7 +27,9 @@ public class SkillChargeWerewolf extends AbstractSkillExecutor {
     public static final double MAX_UP_BLOCKS = 2.0;
     // Multiplicador del dano del charge sobre el ataque del hombre lobo. Sube/baja este valor
     // para hacer mas/menos dano. 1.0 = dano = ataque base + items + pasivos + DAMAGE_BOOST.
-    public static final float CHARGE_DAMAGE_MULTIPLIER = 1.0F;
+    public static final float CHARGE_DAMAGE_MULTIPLIER = 1.1F;
+    // Danio extra aditivo por nivel de habilidad (escale con el nivel del CHARGE, poco a poco).
+    public static final float CHARGE_DAMAGE_PER_LEVEL = 0.2F;
 
     public SkillChargeWerewolf(PlayerSkillCapabilityInterface parentCapability) {
         super(parentCapability);
@@ -72,13 +74,14 @@ public class SkillChargeWerewolf extends AbstractSkillExecutor {
             float f2 = lookUp * (float) MAX_UP_BLOCKS;
 
             int autoSpinAttackTicks = 10;
+            int chargePoints = parentCapability.getSkillsPoints().get(SkillEnum.CHARGE);
             if (!levelIn.isClientSide) {
-                int chargePoints = parentCapability.getSkillsPoints().get(SkillEnum.CHARGE);
                 // Aplicar el DAMAGE_BOOST ANTES de calcular el dano para que cuente
                 // (suma a ATTACK_DAMAGE y por tanto al dano del spin).
                 player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, DAMAGE_BOOST_DURATION_IN_TICKS, chargePoints));
-                // Dano = ataque del hombre lobo (base + items + pasivos + el buff recien aplicado) x multiplicador.
-                float chargeDamage = (float) (player.getAttributeValue(Attributes.ATTACK_DAMAGE) * CHARGE_DAMAGE_MULTIPLIER);
+                // Dano = ataque del hombre lobo (base + items + pasivos + el buff recien aplicado)
+                // x multiplicador + un extra pequeno por nivel de habilidad.
+                float chargeDamage = (float) (player.getAttributeValue(Attributes.ATTACK_DAMAGE) * CHARGE_DAMAGE_MULTIPLIER + chargePoints * CHARGE_DAMAGE_PER_LEVEL);
                 player.push(f1, f2, f3);
                 player.startAutoSpinAttack(autoSpinAttackTicks, chargeDamage, ItemStack.EMPTY);
 
@@ -88,7 +91,7 @@ public class SkillChargeWerewolf extends AbstractSkillExecutor {
                 Minecraft m = Minecraft.getInstance();
                 LocalPlayer clientPlayer = m.player;
                 if (clientPlayer != null && clientPlayer.onGround()) {
-                    float chargeDamage = (float) (clientPlayer.getAttributeValue(Attributes.ATTACK_DAMAGE) * CHARGE_DAMAGE_MULTIPLIER);
+                    float chargeDamage = (float) (clientPlayer.getAttributeValue(Attributes.ATTACK_DAMAGE) * CHARGE_DAMAGE_MULTIPLIER + chargePoints * CHARGE_DAMAGE_PER_LEVEL);
                     clientPlayer.push(f1, f2, f3);
                     clientPlayer.startAutoSpinAttack(autoSpinAttackTicks, chargeDamage, ItemStack.EMPTY);
                 }
