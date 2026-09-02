@@ -1,11 +1,13 @@
 package com.chipoodle.devilrpg.client.render.entity.renderer;
 
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
+import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.util.EventUtils;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.model.PlayerModel;
+import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.EntityModelSet;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.player.LocalPlayer;
@@ -96,9 +98,33 @@ public class WerewolfCustomRendererHelper {
         if (!EventUtils.onWerewolfTransformation(event.getEntity(), c, event) && newWolf != null) {
             newWolf = null;
             event.getEntity().refreshDimensions();
-            //IRenderUtilities.rotationParticles(Minecraft.getInstance().level, random, event.getEntity(), ParticleTypes.EFFECT, 17, 1);
+            // Restaurar el modelo del jugador (oculto durante la transformacion)
+            setPlayerModelVisible(event.getRenderer(), true);
         }
 
+    }
+
+    /**
+     * Oculta/restaura el modelo del jugador via reflection (RenderPlayerEvent.Pre ya no es
+     * cancelable en 1.21.1, asi que para que no aparezca el modelo normal junto al lobo se
+     * ponen invisibles las partes del modelo del jugador).
+     */
+    public static void setPlayerModelVisible(LivingEntityRenderer<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> renderer, boolean visible) {
+        try {
+            PlayerModel<AbstractClientPlayer> model = renderer.getModel();
+            for (Field f : model.getClass().getFields()) {
+                if (ModelPart.class.isAssignableFrom(f.getType())) {
+                    ModelPart part = (ModelPart) f.get(model);
+                    if (part != null) {
+                        Field vf = ModelPart.class.getDeclaredField("visible");
+                        vf.setAccessible(true);
+                        vf.setBoolean(part, visible);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            DevilRpg.LOGGER.error("setPlayerModelVisible fallo: {}", e.toString());
+        }
     }
 
     public static void render(AbstractClientPlayer entity, float i,float partialTicks, PoseStack poseStack, MultiBufferSource multiBufferSource, int packedLight) {

@@ -53,9 +53,11 @@ public final class ClientForgePlayerRenderEventSubscriber {
     public static void onPlayerRender(RenderPlayerEvent.Pre event) {
         BiConsumer<RenderPlayerEvent.Pre, PlayerAuxiliaryCapabilityInterface> c = (eve, auxiliar) -> {
             // En 1.21.1 RenderPlayerEvent.Pre ya no es cancelable, asi que NO se dibuja aqui
-            // (se dibujaria debajo del modelo normal del jugador). Solo se prepara el renderer.
+            // (se dibujaria debajo del modelo normal del jugador). Solo se prepara el renderer
+            // y se oculta el modelo del jugador (reflection) para que no aparezca junto al lobo.
             WerewolfCustomRendererHelper.init(eve.getRenderer());
             WerewolfCustomRendererHelper.createRenderer(eve.getEntity());
+            WerewolfCustomRendererHelper.setPlayerModelVisible(eve.getRenderer(), false);
         };
         WerewolfCustomRendererHelper.releaseRender(event, c);
     }
