@@ -46,8 +46,8 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     private static final int WINDOW_AREA_OFFSET_X = 10;
     private static final int WINDOW_AREA_OFFSET_Y = 18;
     private static final int WINDOW_WIDTH = 302;
-    private static final int WINDOW_HEIGHT = 190;
-    private static final int INFO_SPACE = 20;
+    private static final int WINDOW_HEIGHT = 210;
+    private static final int INFO_SPACE = 26;
     private static final String IMG_LOCATION = DevilRpg.MODID + ":textures/gui/";
     private static final ResourceLocation WINDOW_LOCATION = ResourceLocation.parse(IMG_LOCATION + "window-256b.png");
     private static final ResourceLocation TABS_LOCATION = ResourceLocation.parse(IMG_LOCATION + "advancements/tabs.png");
@@ -404,9 +404,10 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
 
             int unspentPoints = expCap == null ? -1 : expCap.getUnspentPoints();
             int currentLevel = expCap == null ? -1 : expCap.getCurrentLevel();
+            // Mensaje compacto para no chocar con los botones de tema (derecha)
             Component infoHolder = Component.literal(
-                    "Level: " + currentLevel + "    " + UNSPENT_LABEL.getString() + ": " + unspentPoints);
-            //Pinta nivel + puntos sin usar (blanco, en la barra de info inferior, a la izquierda)
+                    "Lv " + currentLevel + "  \u00B7  " + UNSPENT_LABEL.getString() + " " + unspentPoints);
+            //Pinta nivel + puntos sin usar (blanco, barra de info inferior, a la izquierda)
             guiGraphics.drawString(this.font, infoHolder, 8, WINDOW_HEIGHT + 2, 0xFFFFFF);
 
             //this.font.draw(poseStack, Component.literal("x:"+d.format(posicionMouseX)+" y:"+d.format(posicionMouseY)), (float) posicionMouseX,(float)posicionMouseY, 10526880);
