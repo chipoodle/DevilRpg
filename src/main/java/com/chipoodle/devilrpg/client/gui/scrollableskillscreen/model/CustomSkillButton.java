@@ -14,6 +14,7 @@ import net.neoforged.neoforge.client.gui.ScreenUtils;
 
 public class CustomSkillButton extends Button {
     private static final ResourceLocation WIDGETS_LOCATION = ResourceLocation.parse("devilrpg:textures/gui/advancements/widgets.png");
+    private static final ResourceLocation EMPTY_SLOT_IMAGE = ResourceLocation.parse("devilrpg:textures/gui/empty-box.png");
     private final float xScale;
     private final float yScale;
     private final float scaledText;
@@ -73,18 +74,35 @@ public class CustomSkillButton extends Button {
             PoseStack poseStack = guiGraphics.pose();
 
             RenderSystem.setShader(GameRenderer::getPositionTexShader);
-            SkillWidget.forceNearestFilter(skillResourceLocation);
-            RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, this.alpha);
 
             RenderSystem.enableBlend();
             RenderSystem.defaultBlendFunc();
             RenderSystem.enableDepthTest();
-            // Pinta el icono completo al tamano del boton. El icono (y el empty-box) ya incluyen
-            // su propio marco; el 9-slice de vanilla (blitWithBorder) renderizaba mal en 1.21.1
-            // (boton partido por la mitad), por eso se dibuja solo el icono, como en el HUD.
-            //blit(poseStack, getX(), getY(), this.getBlitOffset(), 0.0F, 0.0F, this.width, this.height, this.width, this.height);
-            guiGraphics.blit(skillResourceLocation, getX(), getY(), 0, 0.0F, 0.0F, this.width, this.height, this.width, this.height);
-            //this.renderTexture(poseStack, this.resourceLocation, this.getX(), this.getY(), 0.0F, 0.0F, this.yDiffTex, this.width, this.height, this.width, this.height);
+
+            // Fondo: imagen por defecto (empty-box) como ranura del boton.
+            SkillWidget.forceNearestFilter(EMPTY_SLOT_IMAGE);
+            RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+            guiGraphics.blit(EMPTY_SLOT_IMAGE, getX(), getY(), 0, 0.0F, 0.0F, this.width, this.height,
+                    this.width, this.height);
+
+            // Icono de la skill encima (si hay skill asignada); el empty-box queda detras.
+            // Los iconos de skill tienen fondo transparente, asi que el marco del empty-box
+            // se ve alrededor.
+            if (this.skillResourceLocation != null && !this.skillResourceLocation.equals(EMPTY_SLOT_IMAGE)) {
+                SkillWidget.forceNearestFilter(this.skillResourceLocation);
+                RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, this.alpha);
+                guiGraphics.blit(this.skillResourceLocation, getX(), getY(), 0, 0.0F, 0.0F, this.width, this.height,
+                        this.width, this.height);
+            }
+
+            // Contorno iluminado al pasar el mouse (antes lo daba el 9-slice, eliminado)
+            if (this.isHoveredOrFocused()) {
+                int borderColor = 0xFFF0E0B8;
+                guiGraphics.fill(getX(), getY(), getX() + this.width, getY() + 1, borderColor);
+                guiGraphics.fill(getX(), getY() + this.height - 1, getX() + this.width, getY() + this.height, borderColor);
+                guiGraphics.fill(getX(), getY(), getX() + 1, getY() + this.height, borderColor);
+                guiGraphics.fill(getX() + this.width - 1, getY(), getX() + this.width, getY() + this.height, borderColor);
+            }
 
 
             //Pinta el texto debajo del botón
