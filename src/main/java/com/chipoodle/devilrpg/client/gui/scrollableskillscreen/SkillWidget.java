@@ -286,9 +286,14 @@ public class SkillWidget {
      * sin configurar el filtro y OpenGL usa el valor por defecto (MAG=GL_LINEAR), por lo que
      * al ampliarlas (la ventana de skills amplía texturas de 256px) se ven borrosas/desenfocadas.
      * Con NEAREST la ampliación queda nítida (pixelada) como en 1.19.4.
+     * Nota: debe enlazar el id directamente (RenderSystem.setShaderTexture no re-enlaza si la
+     * textura ya estaba activa, con lo que _texParameter aplicaría a otra textura).
      */
     public static void forceNearestFilter(ResourceLocation rl) {
-        RenderSystem.setShaderTexture(0, rl);
+        Minecraft.getInstance().getTextureManager().getTexture(rl); // asegura que exista/subida
+        int id = Minecraft.getInstance().getTextureManager().getTexture(rl).getId();
+        GlStateManager._activeTexture(0);
+        GlStateManager._bindTexture(id);
         GlStateManager._texParameter(3553, 10240, 9728); // GL_TEXTURE_MAG_FILTER = GL_NEAREST
         GlStateManager._texParameter(3553, 10241, 9728); // GL_TEXTURE_MIN_FILTER = GL_NEAREST
     }
