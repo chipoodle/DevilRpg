@@ -83,7 +83,9 @@ public class SkillsIconHudOverlay {
 
             // Renderizar icono
             guiGraphics.setColor(1.0F, color, color, onCooldown ? 0.5F : 1.0F);
-            guiGraphics.blit(resourceLocation, x, y, 0, 0, ICON_SIZE, ICON_SIZE);
+            // Blit de 9 args (textura completa al tamano del icono); el de 7 args asume
+            // textura de 256px y con iconos de 128px mostraba solo una esquina.
+            guiGraphics.blit(resourceLocation, x, y, 0, 0.0F, 0.0F, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE);
             guiGraphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
 
             // Indicador de semillas si es necesario
