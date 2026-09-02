@@ -22,9 +22,9 @@ import java.util.HashMap;
 
 
 public class MinionPassiveAttributes {
-    public static final String PASSIVE_MINION_HEALTH = "PASSIVE_MINION_HEALTH";
-    public static final String PASSIVE_WAR_BEAR_HEALTH = "PASSIVE_WAR_BEAR_HEALTH";
-    public static final String PASSIVE_WAR_BEAR_KNOCKBACK_RES = "PASSIVE_WAR_BEAR_KNOCKBACK";
+    public static final String PASSIVE_MINION_HEALTH = "passive_minion_health";
+    public static final String PASSIVE_WAR_BEAR_HEALTH = "passive_war_bear_health";
+    public static final String PASSIVE_WAR_BEAR_KNOCKBACK_RES = "passive_war_bear_knockback";
     private final Level levelIn;
     private float factor;
     private Player playerIn;

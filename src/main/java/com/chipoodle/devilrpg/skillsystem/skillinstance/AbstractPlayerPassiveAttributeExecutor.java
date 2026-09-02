@@ -25,7 +25,8 @@ public abstract class AbstractPlayerPassiveAttributeExecutor extends AbstractSki
     }
 
     protected AttributeModifier createNewAttributeModifier(String attributeModifierUniqueName, Double value) {
-        return new AttributeModifier(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, attributeModifierUniqueName), value, AttributeModifier.Operation.ADD_VALUE);
+        // 1.21.1 validates ResourceLocation paths ([a-z0-9/._-]); enum .name() is uppercase so normalize to lowercase.
+        return new AttributeModifier(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, attributeModifierUniqueName.toLowerCase(Locale.ROOT)), value, AttributeModifier.Operation.ADD_VALUE);
     }
 
     protected void removeCurrentModifierFromPlayer(Player playerIn,
@@ -60,7 +61,7 @@ public abstract class AbstractPlayerPassiveAttributeExecutor extends AbstractSki
         AttributeInstance modifiedAttributeInstance = playerIn.getAttribute(attribute);
         assert modifiedAttributeInstance != null;
         Set<AttributeModifier> modifiers = modifiedAttributeInstance.getModifiers();
-        ResourceLocation id = ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, attributeModifierUniqueName);
+        ResourceLocation id = ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, attributeModifierUniqueName.toLowerCase(Locale.ROOT));
         return modifiers.stream().filter(mod -> mod.id().equals(id)).findAny()
                 .orElse(null);
     }
