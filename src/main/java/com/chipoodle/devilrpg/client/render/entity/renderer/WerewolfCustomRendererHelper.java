@@ -15,6 +15,8 @@ import net.minecraft.client.renderer.ItemInHandRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.block.BlockRenderDispatcher;
 import net.minecraft.client.renderer.entity.*;
+import net.minecraft.client.renderer.entity.layers.ItemInHandLayer;
+import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.api.distmarker.Dist;
@@ -22,6 +24,9 @@ import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.client.event.RenderPlayerEvent;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 
@@ -104,10 +109,14 @@ public class WerewolfCustomRendererHelper {
 
     }
 
+    private static List<RenderLayer<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>>> hiddenHandLayers = null;
+
     /**
      * Oculta/restaura el modelo del jugador via reflection (RenderPlayerEvent.Pre ya no es
      * cancelable en 1.21.1, asi que para que no aparezca el modelo normal junto al lobo se
-     * ponen invisibles las partes del modelo del jugador).
+     * ponen invisibles las partes del modelo del jugador). Tambien oculta la capa de items
+     * en mano (PlayerItemInHandLayer) para que el lobo no muestre el objeto (ataca con las
+     * garras; los stats/durabilidad del item se usan igual en la logica de daño).
      */
     public static void setPlayerModelVisible(LivingEntityRenderer<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> renderer, boolean visible) {
         try {
@@ -122,8 +131,37 @@ public class WerewolfCustomRendererHelper {
                     }
                 }
             }
+            setPlayerItemLayersHidden(renderer, !visible);
         } catch (Exception e) {
             DevilRpg.LOGGER.error("setPlayerModelVisible fallo: {}", e.toString());
+        }
+    }
+
+    private static void setPlayerItemLayersHidden(LivingEntityRenderer<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> renderer, boolean hide) {
+        try {
+            Field layersField = LivingEntityRenderer.class.getDeclaredField("layers");
+            layersField.setAccessible(true);
+            @SuppressWarnings("unchecked")
+            List<RenderLayer<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>>> layers =
+                    (List<RenderLayer<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>>>) layersField.get(renderer);
+            if (hide) {
+                if (hiddenHandLayers == null) {
+                    hiddenHandLayers = new ArrayList<>();
+                    Iterator<RenderLayer<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>>> it = layers.iterator();
+                    while (it.hasNext()) {
+                        RenderLayer<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> layer = it.next();
+                        if (layer instanceof ItemInHandLayer) {
+                            hiddenHandLayers.add(layer);
+                            it.remove();
+                        }
+                    }
+                }
+            } else if (hiddenHandLayers != null) {
+                layers.addAll(hiddenHandLayers);
+                hiddenHandLayers = null;
+            }
+        } catch (Exception e) {
+            DevilRpg.LOGGER.error("setPlayerItemLayersHidden fallo: {}", e.toString());
         }
     }
 
