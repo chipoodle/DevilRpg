@@ -2,6 +2,8 @@ package com.chipoodle.devilrpg.entity;
 
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.SimpleMenuProvider;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.ResourceLocation;
 import com.chipoodle.devilrpg.DevilRpg;
@@ -94,6 +96,9 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
 
     private Integer warBear = 0;
     private Integer mountBear = 0;
+
+    // Sincronizado al cliente para que el oso sepa (y el jugador controla) que es montable.
+    private static final EntityDataAccessor<Integer> DATA_MOUNT_BEAR = SynchedEntityData.defineId(SoulBear.class, EntityDataSerializers.INT);
 
 
     public SoulBear(EntityType<? extends SoulBear> type, Level worldIn) {
@@ -398,7 +403,7 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         super.defineSynchedData(builder);
-        //builder.define(DATA_STANDING_ID, false);
+        builder.define(DATA_MOUNT_BEAR, 0);
     }
 
     @Override
@@ -449,8 +454,8 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
 
     @Override
     public @NotNull InteractionResult mobInteract(@NotNull Player player, @NotNull InteractionHand interactionHand) {
-        DevilRpg.LOGGER.info("----------------------->mobInteract mountBear:{}. this.isVehicle(): {}", mountBear, this.isVehicle());
-        if (mountBear <= 0) {
+        DevilRpg.LOGGER.info("----------------------->mobInteract mountBear:{}. this.isVehicle(): {}", getMountBearLevel(), this.isVehicle());
+        if (getMountBearLevel() <= 0) {
             return InteractionResult.PASS;
         }
 
@@ -597,12 +602,13 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
 
     public void setMountBear(Integer mountBear) {
         this.mountBear = mountBear;
+        this.entityData.set(DATA_MOUNT_BEAR, mountBear == null ? 0 : mountBear);
     }
 
     @Override
     public LivingEntity getControllingPassenger() {
         // Oso magico: al montarlo (mountBear>0) es controlable sin necesidad de silla.
-        if (this.mountBear > 0) {
+        if (this.getMountBearLevel() > 0) {
             Entity entity = this.getFirstPassenger();
             if (entity instanceof Player)
                 return (Player) entity;
@@ -614,7 +620,13 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
     public boolean isSaddled() {
         // Tratar el oso magico como "ensillado" cuando es montable, para que AbstractHorse
         // (travel) lea la entrada del jugador y se pueda controlar sin una silla de caballo.
-        return this.mountBear > 0 || super.isSaddled();
+        return this.getMountBearLevel() > 0 || super.isSaddled();
+    }
+
+    private int getMountBearLevel() {
+        Level lvl = this.level();
+        // En el cliente el campo mountBear llega a 0 (no se setea), asi que leemos la data sync.
+        return (lvl != null && lvl.isClientSide) ? this.entityData.get(DATA_MOUNT_BEAR) : this.mountBear;
     }
 
 
