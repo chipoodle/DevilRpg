@@ -34,8 +34,8 @@ public class SkillTab {
     private static final int WIDGET_WIDTH = 28;
     // private static final int TAB_BACKGROUND_X = 234;
     // private static final int TAB_BACKGROUND_Y = 113;
-    public static final int TAB_BACKGROUND_X = 284;
-    public static final int TAB_BACKGROUND_Y = 163;
+    public static final int TAB_BACKGROUND_X = 288;
+    public static final int TAB_BACKGROUND_Y = 176;
     private final Minecraft minecraft;
     private final SkillScreen screen;
     private final SkillTabType type;
@@ -159,9 +159,9 @@ public class SkillTab {
                              int scissorX, int scissorY, int scissorW, int scissorH) {
         if (!this.centered) {
             //Con este controlamos la posciion en x de los botones del árbol
-            this.scrollX = (137 - (this.maxX + this.minX) / 2D);
+            this.scrollX = ((TAB_BACKGROUND_X - 10) / 2 - (this.maxX + this.minX) / 2D);
             //Con este controlamos la altura de los botones del árbol
-            this.scrollY = (84 - (this.maxY + this.minY) / 2D);
+            this.scrollY = ((TAB_BACKGROUND_Y + 5) / 2 - (this.maxY + this.minY) / 2D);
             this.centered = true;
         }
         // En 1.21.1 el recorte por depth-buffer de 1.19.4 dejó de funcionar (los fills de la

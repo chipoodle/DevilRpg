@@ -373,9 +373,11 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
         RenderSystem.enableBlend();
         RenderSystem.setShader(GameRenderer::getPositionTexShader);
         // Pinta la pantalla exterior (coordenadas locales de la ventana; el pose ya esta
-        // trasladado/escalado por render())
+        // trasladado/escalado por render()). Se tiñe de marron acorde a las pestañas.
         SkillWidget.forceNearestFilter(WINDOW_LOCATION);
+        RenderSystem.setShaderColor(0.85F, 0.72F, 0.52F, 1.0F);
         guiGraphics.blit(WINDOW_LOCATION, 0, 0, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT + INFO_SPACE, INITIAL_TEXTURE_WIDTH, INITIAL_TEXTURE_HEIGHT);
+        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
 
         if (this.tabs.size() > 1) {
             SkillWidget.forceNearestFilter(TABS_LOCATION);
