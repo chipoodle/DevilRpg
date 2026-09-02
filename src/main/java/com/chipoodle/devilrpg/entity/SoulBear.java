@@ -686,24 +686,6 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
     }
 
     @Override
-    public void openCustomInventoryScreen(@NotNull Player player) {
-        if (!this.level().isClientSide && (!this.isVehicle() || this.hasPassenger(player)) && this.isTame()) {
-            //player.openHorseInventory(this, this.inventory);
-            openBearInventory(this, this.inventory, (ServerPlayer) player);
-        }
-
-    }
-
-    public void openBearInventory(AbstractHorse abstractHorse, Container p_9060_, ServerPlayer player) {
-        if (player.containerMenu != player.inventoryMenu) {
-            player.closeContainer();
-        }
-
-        player.openMenu(new SimpleMenuProvider((id, inventory, p) -> new MountablePetContainerMenu(id, inventory, p_9060_, abstractHorse), abstractHorse.getDisplayName()));
-    }
-
-
-    @Override
     public boolean isAlliedTo(@NotNull Entity entity) {
         if (this.isTame()) {
             LivingEntity livingentity = this.getOwner();
