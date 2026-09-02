@@ -52,23 +52,26 @@ public final class ClientForgePlayerRenderEventSubscriber {
     @SubscribeEvent
     public static void onPlayerRender(RenderPlayerEvent.Pre event) {
         BiConsumer<RenderPlayerEvent.Pre, PlayerAuxiliaryCapabilityInterface> c = (eve, auxiliar) -> {
-            // not cancellable in 1.21
+            // En 1.21.1 RenderPlayerEvent.Pre ya no es cancelable, asi que NO se dibuja aqui
+            // (se dibujaria debajo del modelo normal del jugador). Solo se prepara el renderer.
             WerewolfCustomRendererHelper.init(eve.getRenderer());
             WerewolfCustomRendererHelper.createRenderer(eve.getEntity());
-            WerewolfCustomRendererHelper.render((AbstractClientPlayer) eve.getEntity(), 0, eve.getPartialTick(), eve.getPoseStack(), eve.getMultiBufferSource(), eve.getPackedLight());
         };
         WerewolfCustomRendererHelper.releaseRender(event, c);
     }
 
     @SubscribeEvent
     public static void onPlayerRender(RenderPlayerEvent.Post event) {
-        BiConsumer<RenderPlayerEvent.Post, PlayerAuxiliaryCapabilityInterface> c = (eve, auxiliar) -> {
-            // not cancellable in 1.21
-            LivingEntityRenderer<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> renderer = eve.getRenderer();
-
-
-        };
-
+        LocalPlayer player = Minecraft.getInstance().player;
+        if (player != null && EventUtils.onWerewolfTransformation(player, (eve, auxiliar) -> {
+            // Dibuja el hombre lobo ENCIMA del modelo del jugador (Post) para cubrirlo y
+            // evitar el doble modelo (Pre ya no se puede cancelar en 1.21.1).
+            if (WerewolfCustomRendererHelper.newWolf != null) {
+                WerewolfCustomRendererHelper.render((AbstractClientPlayer) eve.getEntity(), 0,
+                        eve.getPartialTick(), eve.getPoseStack(), eve.getMultiBufferSource(), eve.getPackedLight());
+            }
+        }, event)) {
+        }
     }
     @SubscribeEvent
     public static void onRenderHandEvent(RenderHandEvent event) {
