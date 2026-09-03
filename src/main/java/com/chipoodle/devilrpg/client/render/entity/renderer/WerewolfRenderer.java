@@ -37,6 +37,8 @@ import org.jetbrains.annotations.NotNull;
 public class WerewolfRenderer extends LivingEntityRenderer<AbstractClientPlayer, WerewolfTransformedModel<AbstractClientPlayer>> {
 
     public static final ResourceLocation WEREWOLF_TEXTURE = ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "textures/entity/werewolf/wolftimber.png");
+    // Roll (90 grados) hacia afuera para la mano en 1ra persona, espejado por mano.
+    private static final float FIRST_PERSON_ARM_ROLL = (float) Math.PI / 2F;
 
     public WerewolfRenderer(EntityRendererProvider.Context context, boolean p_174558_) {
         super(context, new WerewolfTransformedModel<>(context.bakeLayer(WerewolfTransformedModel.WEREWOLF_LAYER_LOCATION)), 0.5F);
@@ -162,14 +164,11 @@ public class WerewolfRenderer extends LivingEntityRenderer<AbstractClientPlayer,
     }
 
     public void renderRightHand(PoseStack poseStack, MultiBufferSource multiBufferSource, int packedLight, AbstractClientPlayer player) {
-        // El modelo de Blockbench tiene rightArm/leftArm invertidos: model.leftArm es el brazo
-        // DERECHO fisico y model.rightArm el IZQUIERDO. Por eso usamos leftArm aqui.
-        this.renderHand(poseStack, multiBufferSource, packedLight, player, (this.model).leftArm, null/*(this.model).rightSleeve*/);
+        this.renderHand(poseStack, multiBufferSource, packedLight, player, (this.model).rightArm, null/*(this.model).rightSleeve*/);
     }
 
     public void renderLeftHand(PoseStack poseStack, MultiBufferSource multiBufferSource, int packedLight, AbstractClientPlayer player) {
-        // Invertido tambien aqui: model.rightArm es el brazo IZQUIERDO fisico.
-        this.renderHand(poseStack, multiBufferSource, packedLight, player, (this.model).rightArm, null/*(this.model).leftSleeve*/);
+        this.renderHand(poseStack, multiBufferSource, packedLight, player, (this.model).leftArm, null/*(this.model).leftSleeve*/);
     }
 
     private void renderHand(PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, AbstractClientPlayer player, ModelPart arm, ModelPart sleeve) {
@@ -180,8 +179,13 @@ public class WerewolfRenderer extends LivingEntityRenderer<AbstractClientPlayer,
         //werewolfHumanModel.swimAmount = 0.0F;
         werewolfHumanModel.setupAnim(player, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F);
         arm.xRot = 0.0F;
+        // Rotar 90 grados hacia afuera (roll espejado por mano: derecha +, izquierda -) para que
+        // la palma/garra no quede girada hacia adentro.
+        float rollSign = (arm == werewolfHumanModel.rightArm) ? 1.0F : -1.0F;
+        arm.zRot = rollSign * FIRST_PERSON_ARM_ROLL;
         arm.render(poseStack, bufferSource.getBuffer(RenderType.entitySolid(WerewolfRenderer.WEREWOLF_TEXTURE)), packedLight, OverlayTexture.NO_OVERLAY);
         arm.xRot = 0.0F;
+        arm.zRot = rollSign * FIRST_PERSON_ARM_ROLL;
         arm.render(poseStack, bufferSource.getBuffer(RenderType.entityTranslucent(WerewolfRenderer.WEREWOLF_TEXTURE)), packedLight, OverlayTexture.NO_OVERLAY);
     }
 
