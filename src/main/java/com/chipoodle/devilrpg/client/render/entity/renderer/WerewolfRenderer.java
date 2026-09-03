@@ -37,9 +37,6 @@ import org.jetbrains.annotations.NotNull;
 public class WerewolfRenderer extends LivingEntityRenderer<AbstractClientPlayer, WerewolfTransformedModel<AbstractClientPlayer>> {
 
     public static final ResourceLocation WEREWOLF_TEXTURE = ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "textures/entity/werewolf/wolftimber.png");
-    // Roll del brazo en 1ra persona para que la palma no quede hacia arriba (se gira el ModelPart,
-    // no el poseStack, para no sacar el brazo fuera de la camara). Ajustar +/- si queda invertido.
-    private static final float FIRST_PERSON_ARM_ROLL = (float) Math.PI / 2F;
 
     public WerewolfRenderer(EntityRendererProvider.Context context, boolean p_174558_) {
         super(context, new WerewolfTransformedModel<>(context.bakeLayer(WerewolfTransformedModel.WEREWOLF_LAYER_LOCATION)), 0.5F);
@@ -180,13 +177,8 @@ public class WerewolfRenderer extends LivingEntityRenderer<AbstractClientPlayer,
         //werewolfHumanModel.swimAmount = 0.0F;
         werewolfHumanModel.setupAnim(player, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F);
         arm.xRot = 0.0F;
-        // Roll espejado por mano (derecha +, izquierda -) para que ambas se vean y la palma
-        // quede hacia abajo/lado en vez de hacia arriba.
-        float rollSign = (arm == werewolfHumanModel.rightArm) ? 1.0F : -1.0F;
-        arm.zRot = rollSign * FIRST_PERSON_ARM_ROLL;
         arm.render(poseStack, bufferSource.getBuffer(RenderType.entitySolid(WerewolfRenderer.WEREWOLF_TEXTURE)), packedLight, OverlayTexture.NO_OVERLAY);
         arm.xRot = 0.0F;
-        arm.zRot = rollSign * FIRST_PERSON_ARM_ROLL;
         arm.render(poseStack, bufferSource.getBuffer(RenderType.entityTranslucent(WerewolfRenderer.WEREWOLF_TEXTURE)), packedLight, OverlayTexture.NO_OVERLAY);
     }
 

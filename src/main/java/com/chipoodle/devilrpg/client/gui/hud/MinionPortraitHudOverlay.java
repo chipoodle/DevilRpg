@@ -98,7 +98,7 @@ public class MinionPortraitHudOverlay {
         guiGraphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
         poseStack.translate(vanillaExpLeftX + 20 * i, vanillaExpTopY, 0);
 
-        poseStack.scale(0.1f, 0.1f, 0.1f);
+        poseStack.scale(0.2f, 0.2f, 0.2f);
         // Mostrar el ICONO COMPLETO dentro del recuadro. El blit de 7 args asumia textura 256x256
         // y recortaba solo un trozo del icono (por eso se veia enorme y solo una parte). Usamos
         // la variante de 9 args escalando la textura 256x256 al tamano del recuadro.
