@@ -123,7 +123,8 @@ public enum SkillTabType {
     public int getX(int index) {
         switch (this) {
             case ABOVE:
-                return (this.width + 4) * index;
+                // Posicionadas a la DERECHA (sobre las pestañas del marco), en la franja superior.
+                return 190 + (this.width + 4) * index;
             case BELOW:
                 return (this.width + 4) * index;
             case LEFT:
@@ -138,7 +139,7 @@ public enum SkillTabType {
     public int getY(int index) {
         switch (this) {
             case ABOVE:
-                return -this.height + 4;
+                return 8;
             case BELOW:
                 return 136;
             case LEFT:

@@ -59,7 +59,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     private static final Component EMPTY = Component.translatable("advancements.empty");
     private static final Component GUI_LABEL = Component.translatable("gui.skills.title");
     private static final Component UNSPENT_LABEL = Component.translatable("gui.skills.unspent");
-    public static final int POWER_INITIAL_X_POSITION = 100;
+    public static final int POWER_INITIAL_X_POSITION = 150;
     private static int tabPage, maxPages;
     private final ClientSkillBuilderFromJson clientSkillManager;
     private final Map<SkillElement, SkillTab> tabs = Maps.newLinkedHashMap();
@@ -587,7 +587,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
             int drawnSkillLevel = 0;
             CustomSkillButton powerButtons = new CustomSkillButton(
                     ( offLeft) + POWER_INITIAL_X_POSITION + (k * (SkillWidget.FRAME_SIZE + 8)),
-                    WINDOW_AREA_OFFSET_Y + offTop + INNER_SCREEN_HEIGHT + 4,
+                    WINDOW_AREA_OFFSET_Y + offTop + INNER_SCREEN_HEIGHT + 12,
                     SkillWidget.FRAME_SIZE - 5, // 3
                     SkillWidget.FRAME_SIZE - 5, // 4
                     ClientModKeyInputEventSubscriber.KeyEvent.getKeyName(powerEnum),
