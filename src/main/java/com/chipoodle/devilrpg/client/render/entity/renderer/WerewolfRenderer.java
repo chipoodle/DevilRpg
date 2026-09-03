@@ -162,11 +162,14 @@ public class WerewolfRenderer extends LivingEntityRenderer<AbstractClientPlayer,
     }
 
     public void renderRightHand(PoseStack poseStack, MultiBufferSource multiBufferSource, int packedLight, AbstractClientPlayer player) {
-        this.renderHand(poseStack, multiBufferSource, packedLight, player, (this.model).rightArm, null/*(this.model).rightSleeve*/);
+        // El modelo de Blockbench tiene rightArm/leftArm invertidos: model.leftArm es el brazo
+        // DERECHO fisico y model.rightArm el IZQUIERDO. Por eso usamos leftArm aqui.
+        this.renderHand(poseStack, multiBufferSource, packedLight, player, (this.model).leftArm, null/*(this.model).rightSleeve*/);
     }
 
     public void renderLeftHand(PoseStack poseStack, MultiBufferSource multiBufferSource, int packedLight, AbstractClientPlayer player) {
-        this.renderHand(poseStack, multiBufferSource, packedLight, player, (this.model).leftArm, null/*(this.model).leftSleeve*/);
+        // Invertido tambien aqui: model.rightArm es el brazo IZQUIERDO fisico.
+        this.renderHand(poseStack, multiBufferSource, packedLight, player, (this.model).rightArm, null/*(this.model).leftSleeve*/);
     }
 
     private void renderHand(PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, AbstractClientPlayer player, ModelPart arm, ModelPart sleeve) {
