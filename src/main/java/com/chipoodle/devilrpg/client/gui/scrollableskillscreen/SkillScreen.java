@@ -59,7 +59,13 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     private static final Component EMPTY = Component.translatable("advancements.empty");
     private static final Component GUI_LABEL = Component.translatable("gui.skills.title");
     private static final Component UNSPENT_LABEL = Component.translatable("gui.skills.unspent");
-    public static final int POWER_INITIAL_X_POSITION = 150;
+    public static final int POWER_INITIAL_X_POSITION = 145;
+    // Separacion extra entre botones (se suma a SkillWidget.FRAME_SIZE). Mas alto = mas juntos/lejos.
+    public static final int POWER_BUTTON_GAP = 1;
+    // Desplazamiento vertical de los botones desde su base. Mas alto = mas abajo.
+    public static final int POWER_BUTTON_Y_OFFSET = 6;
+    // Se resta a SkillWidget.FRAME_SIZE para el tamano (alto y ancho) de cada boton.
+    public static final int POWER_BUTTON_SHRINK = 6;
     private static int tabPage, maxPages;
     private final ClientSkillBuilderFromJson clientSkillManager;
     private final Map<SkillElement, SkillTab> tabs = Maps.newLinkedHashMap();
@@ -590,11 +596,21 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
         //k = powerList.size();
         for (PowerEnum powerEnum : powerList) {
             int drawnSkillLevel = 0;
+            // --- Calcular posicion y tamano del boton con variables descriptivas ---
+            // Separacion horizontal entre el centro de cada boton.
+            int powerButtonSpacing = SkillWidget.FRAME_SIZE + POWER_BUTTON_GAP;
+            // Posicion X de este boton (indice k).
+            int powerButtonX = offLeft + POWER_INITIAL_X_POSITION + (k * powerButtonSpacing);
+            // Posicion Y de este boton (fila inferior, desplazada por POWER_BUTTON_Y_OFFSET).
+            int powerButtonY = WINDOW_AREA_OFFSET_Y + offTop + INNER_SCREEN_HEIGHT + POWER_BUTTON_Y_OFFSET;
+            // Tamano (ancho y alto) del boton.
+            int powerButtonSize = SkillWidget.FRAME_SIZE - POWER_BUTTON_SHRINK;
+
             CustomSkillButton powerButtons = new CustomSkillButton(
-                    ( offLeft) + POWER_INITIAL_X_POSITION + (k * (SkillWidget.FRAME_SIZE + 3)),
-                    WINDOW_AREA_OFFSET_Y + offTop + INNER_SCREEN_HEIGHT + 2,
-                    SkillWidget.FRAME_SIZE - 6, // 3
-                    SkillWidget.FRAME_SIZE - 6, // 4
+                    powerButtonX,
+                    powerButtonY,
+                    powerButtonSize,
+                    powerButtonSize,
                     ClientModKeyInputEventSubscriber.KeyEvent.getKeyName(powerEnum),
                     EMPTY_POWER_IMAGE_RESOURCE,
                     SkillWidget.BUTTON_IMAGE_SIZE, // 7
