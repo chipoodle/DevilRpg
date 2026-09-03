@@ -418,8 +418,13 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
             // Mensaje compacto para no chocar con los botones de tema (derecha)
             Component infoHolder = Component.literal(
                     "Lv " + currentLevel + "  \u00B7  " + UNSPENT_LABEL.getString() + " " + unspentPoints);
-            //Pinta nivel + puntos sin usar (blanco, en la placa inferior-izquierda del marco)
-            guiGraphics.drawString(this.font, infoHolder, 46, 198, 0xFFFFFF);
+            //Pinta nivel + puntos sin usar, con fuente mas pequeña para que quepa en la placa del marco.
+            PoseStack psInfo = guiGraphics.pose();
+            psInfo.pushPose();
+            psInfo.translate(46, 198, 0);
+            psInfo.scale(0.7F, 0.7F, 1.0F);
+            guiGraphics.drawString(this.font, infoHolder, 0, 0, 0xFFFFFF);
+            psInfo.popPose();
 
             //this.font.draw(poseStack, Component.literal("x:"+d.format(posicionMouseX)+" y:"+d.format(posicionMouseY)), (float) posicionMouseX,(float)posicionMouseY, 10526880);
         }
@@ -588,8 +593,8 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
             CustomSkillButton powerButtons = new CustomSkillButton(
                     ( offLeft) + POWER_INITIAL_X_POSITION + (k * (SkillWidget.FRAME_SIZE + 3)),
                     WINDOW_AREA_OFFSET_Y + offTop + INNER_SCREEN_HEIGHT + 2,
-                    SkillWidget.FRAME_SIZE - 10, // 3
-                    SkillWidget.FRAME_SIZE - 10, // 4
+                    SkillWidget.FRAME_SIZE - 6, // 3
+                    SkillWidget.FRAME_SIZE - 6, // 4
                     ClientModKeyInputEventSubscriber.KeyEvent.getKeyName(powerEnum),
                     EMPTY_POWER_IMAGE_RESOURCE,
                     SkillWidget.BUTTON_IMAGE_SIZE, // 7
