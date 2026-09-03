@@ -13,7 +13,7 @@ import net.neoforged.neoforge.client.gui.ScreenUtils;
 
 @OnlyIn(Dist.CLIENT)
 public enum SkillTabType {
-    ABOVE(0, 0, 28, 32, 8), BELOW(84, 0, 28, 32, 8), LEFT(0, 64, 32, 28, 5), RIGHT(96, 64, 32, 28, 5);
+    ABOVE(0, 0, 24, 28, 8), BELOW(84, 0, 28, 32, 8), LEFT(0, 64, 32, 28, 5), RIGHT(96, 64, 32, 28, 5);
 
     public static final int MAX_TABS = java.util.Arrays.stream(values()).mapToInt(e -> e.max).sum();
     private static final ResourceLocation TABS_LOCATION = ResourceLocation.parse("devilrpg:textures/gui/advancements/tabs.png");
@@ -123,8 +123,8 @@ public enum SkillTabType {
     public int getX(int index) {
         switch (this) {
             case ABOVE:
-                // Posicionadas a la DERECHA (sobre las pestañas del marco), en la franja superior.
-                return 190 + (this.width + 4) * index;
+                // Posicionadas a la DERECHA (sobre las pestañas del marco), juntas entre si.
+                return 190 + (this.width + 1) * index;
             case BELOW:
                 return (this.width + 4) * index;
             case LEFT:

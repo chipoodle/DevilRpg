@@ -586,10 +586,10 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
         for (PowerEnum powerEnum : powerList) {
             int drawnSkillLevel = 0;
             CustomSkillButton powerButtons = new CustomSkillButton(
-                    ( offLeft) + POWER_INITIAL_X_POSITION + (k * (SkillWidget.FRAME_SIZE + 8)),
-                    WINDOW_AREA_OFFSET_Y + offTop + INNER_SCREEN_HEIGHT + 12,
-                    SkillWidget.FRAME_SIZE - 5, // 3
-                    SkillWidget.FRAME_SIZE - 5, // 4
+                    ( offLeft) + POWER_INITIAL_X_POSITION + (k * (SkillWidget.FRAME_SIZE + 3)),
+                    WINDOW_AREA_OFFSET_Y + offTop + INNER_SCREEN_HEIGHT + 2,
+                    SkillWidget.FRAME_SIZE - 10, // 3
+                    SkillWidget.FRAME_SIZE - 10, // 4
                     ClientModKeyInputEventSubscriber.KeyEvent.getKeyName(powerEnum),
                     EMPTY_POWER_IMAGE_RESOURCE,
                     SkillWidget.BUTTON_IMAGE_SIZE, // 7
