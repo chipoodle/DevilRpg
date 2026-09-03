@@ -93,11 +93,6 @@ public class WerewolfItemInHandRenderer {
     private static final float BOW_CHARGE_SHAKE_Z_SCALE = 0.0F;
     private static final float BOW_CHARGE_Z_SCALE = 0.2F;
     private static final float BOW_MIN_SHAKE_CHARGE = 0.1F;
-    // Roll correctivo del brazo en 1ra persona. El modelo del hombre lobo tiene el brazo/palma
-    // con una orientacion de reposo distinta a la del jugador (queda la palma hacia arriba y el
-    // swing arriba/abajo en vez de lado/lado). Este roll endereza la presentacion. Si quedara
-    // girado al reves, cambia el signo (90.0F <-> -90.0F).
-    private static final float FIRST_PERSON_ARM_ROLL_DEGREES = -90.0F;
     private final Minecraft minecraft;
     private final EntityRenderDispatcher entityRenderDispatcher;
     private final ItemRenderer itemRenderer;
@@ -146,10 +141,6 @@ public class WerewolfItemInHandRenderer {
         poseStack.translate(0.0F, 0.0F, -1.7F);//
         //WerewolfRenderer werewolfRenderer = (WerewolfRenderer) this.entityRenderDispatcher.getRenderer(abstractclientplayer);
         WerewolfRenderer werewolfRenderer = this.werewolfenderer;
-
-        // Corregir el roll del brazo del hombre lobo (palma arriba -> hacia el lado/abajo) de modo
-        // que el swing de ataque sea de lado a lado y no arriba/abajo.
-        poseStack.mulPose(Axis.ZP.rotationDegrees(f * FIRST_PERSON_ARM_ROLL_DEGREES));
 
         if (flag) {
             werewolfRenderer.renderRightHand(poseStack, multiBufferSource, packedLight, abstractclientplayer);

@@ -98,7 +98,7 @@ public class MinionPortraitHudOverlay {
         guiGraphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
         poseStack.translate(vanillaExpLeftX + 20 * i, vanillaExpTopY, 0);
 
-        poseStack.scale(0.2f, 0.2f, 0.2f);
+        poseStack.scale(0.1f, 0.1f, 0.1f);
         guiGraphics.blit(overlayBar, 0, 0, 0, 0, BAR_WIDTH, BAR_HEIGHT);
         poseStack.pushPose();
 
