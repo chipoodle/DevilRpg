@@ -16,7 +16,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-import static com.chipoodle.devilrpg.block.SoulShieldVineBlock.DECAY_STAGE;
 import static com.chipoodle.devilrpg.block.SoulVineBlock.*;
 
 public class SoulVineBlockEntity extends BlockEntity {
