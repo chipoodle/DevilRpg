@@ -39,8 +39,10 @@ import java.util.*;
 
 @OnlyIn(Dist.CLIENT)
 public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IListener {
-    private static final int INITIAL_TEXTURE_WIDTH = 302;
-    private static final int INITIAL_TEXTURE_HEIGHT = 236;
+    // El marco del usuario es 1419x1108 (misma proporcion que 302x236). Se dibuja completo,
+    // escalado a la ventana de 302x(WINDOW_HEIGHT+INFO_SPACE) para aprovechar su nitidez.
+    private static final int INITIAL_TEXTURE_WIDTH = 1419;
+    private static final int INITIAL_TEXTURE_HEIGHT = 1108;
     private static final int INNER_SCREEN_WIDTH = 282;
     private static final int INNER_SCREEN_HEIGHT = 162;
     private static final int WINDOW_AREA_OFFSET_X = 10;
@@ -376,7 +378,14 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
         // trasladado/escalado por render()). Se tiñe de marron acorde a las pestañas.
         SkillWidget.forceNearestFilter(WINDOW_LOCATION);
         RenderSystem.setShaderColor(0.85F, 0.72F, 0.52F, 1.0F);
-        guiGraphics.blit(WINDOW_LOCATION, 0, 0, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT + INFO_SPACE, INITIAL_TEXTURE_WIDTH, INITIAL_TEXTURE_HEIGHT);
+        // Dibuja el marco completo (1419x1108) escalado al tamano de la ventana (302x236)
+        // para usar su alta resolucion sin tocar las posiciones del layout.
+        PoseStack ps = guiGraphics.pose();
+        ps.pushPose();
+        ps.scale((float) WINDOW_WIDTH / INITIAL_TEXTURE_WIDTH,
+                (float) (WINDOW_HEIGHT + INFO_SPACE) / INITIAL_TEXTURE_HEIGHT, 1.0F);
+        guiGraphics.blit(WINDOW_LOCATION, 0, 0, 0, 0, INITIAL_TEXTURE_WIDTH, INITIAL_TEXTURE_HEIGHT, INITIAL_TEXTURE_WIDTH, INITIAL_TEXTURE_HEIGHT);
+        ps.popPose();
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
 
         if (this.tabs.size() > 1) {
@@ -409,8 +418,8 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
             // Mensaje compacto para no chocar con los botones de tema (derecha)
             Component infoHolder = Component.literal(
                     "Lv " + currentLevel + "  \u00B7  " + UNSPENT_LABEL.getString() + " " + unspentPoints);
-            //Pinta nivel + puntos sin usar (blanco, barra de info inferior, a la izquierda)
-            guiGraphics.drawString(this.font, infoHolder, 8, WINDOW_HEIGHT + 2, 0xFFFFFF);
+            //Pinta nivel + puntos sin usar (blanco, en la placa inferior-izquierda del marco)
+            guiGraphics.drawString(this.font, infoHolder, 46, 198, 0xFFFFFF);
 
             //this.font.draw(poseStack, Component.literal("x:"+d.format(posicionMouseX)+" y:"+d.format(posicionMouseY)), (float) posicionMouseX,(float)posicionMouseY, 10526880);
         }

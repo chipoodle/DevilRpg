@@ -34,8 +34,8 @@ public class SkillTab {
     private static final int WIDGET_WIDTH = 28;
     // private static final int TAB_BACKGROUND_X = 234;
     // private static final int TAB_BACKGROUND_Y = 113;
-    public static final int TAB_BACKGROUND_X = 288;
-    public static final int TAB_BACKGROUND_Y = 176;
+    public static final int TAB_BACKGROUND_X = 282;
+    public static final int TAB_BACKGROUND_Y = 162;
     private final Minecraft minecraft;
     private final SkillScreen screen;
     private final SkillTabType type;
@@ -172,8 +172,9 @@ public class SkillTab {
         PoseStack poseStack = guiGraphics.pose();
         poseStack.pushPose();
         poseStack.translate(localX, localY, 0.0F);
-        // Pinta el fondo negro del area del arbol (como antes)
-        guiGraphics.fill(TAB_BACKGROUND_X, TAB_BACKGROUND_Y, 0, 0, -16777216);
+        // Pinta el fondo negro del area del arbol (como antes). OJO: el orden de los argumentos
+        // estaba invertido (fill(X, Y, 0, 0)) por lo que el fondo no se dibujaba bien.
+        guiGraphics.fill(0, 0, TAB_BACKGROUND_X, TAB_BACKGROUND_Y, -16777216);
         // Pinta el mosaico dinámico del fondo así como los iconos y las conexiones del arbol de habilidades
         generateBackgroundImageChunks(guiGraphics);
         poseStack.popPose();
@@ -191,8 +192,6 @@ public class SkillTab {
     private void generateBackgroundImageChunks(GuiGraphics guiGraphics) {
         int i = Mth.floor(this.scrollX);
         int j = Mth.floor(this.scrollY);
-        int k = i % BACKGROUND_CHUNKS;
-        int l = j % BACKGROUND_CHUNKS;
 
         // Textura teselable generada a partir de mandala-a.png (64x64 seamless).
         // Se repite en mosaico a 1:1 -> patron nitido (la imagen original de 1414x1414
@@ -203,9 +202,11 @@ public class SkillTab {
         // Fuerza filtrado NEAREST para que la ampliacion de la textura se vea nitida
         SkillWidget.forceNearestFilter(resourcelocation);
 
+        // El fondo es FIJO (alineado al origen del area, sin offset del scroll) para que el
+        // patron no quede desplazado unos pixeles; solo el contenido (nodos/conexiones) scrollea.
         for (int i1 = -1; i1 <= BACKGROUND_CHUNKS_X_LOOP; ++i1) {
             for (int j1 = -1; j1 <= BACKGROUND_CHUNKS_Y_LOOP; ++j1) {
-                guiGraphics.blit(resourcelocation, k + BACKGROUND_CHUNKS * i1, l + BACKGROUND_CHUNKS * j1, 0.0F, 0.0F,
+                guiGraphics.blit(resourcelocation, BACKGROUND_CHUNKS * i1, BACKGROUND_CHUNKS * j1, 0.0F, 0.0F,
                         BACKGROUND_CHUNKS, BACKGROUND_CHUNKS, BACKGROUND_CHUNKS, BACKGROUND_CHUNKS);
             }
         }
