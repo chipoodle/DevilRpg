@@ -180,10 +180,13 @@ public class WerewolfRenderer extends LivingEntityRenderer<AbstractClientPlayer,
         //werewolfHumanModel.swimAmount = 0.0F;
         werewolfHumanModel.setupAnim(player, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F);
         arm.xRot = 0.0F;
-        arm.zRot = FIRST_PERSON_ARM_ROLL;
+        // Roll espejado por mano (derecha +, izquierda -) para que ambas se vean y la palma
+        // quede hacia abajo/lado en vez de hacia arriba.
+        float rollSign = (arm == werewolfHumanModel.rightArm) ? 1.0F : -1.0F;
+        arm.zRot = rollSign * FIRST_PERSON_ARM_ROLL;
         arm.render(poseStack, bufferSource.getBuffer(RenderType.entitySolid(WerewolfRenderer.WEREWOLF_TEXTURE)), packedLight, OverlayTexture.NO_OVERLAY);
         arm.xRot = 0.0F;
-        arm.zRot = FIRST_PERSON_ARM_ROLL;
+        arm.zRot = rollSign * FIRST_PERSON_ARM_ROLL;
         arm.render(poseStack, bufferSource.getBuffer(RenderType.entityTranslucent(WerewolfRenderer.WEREWOLF_TEXTURE)), packedLight, OverlayTexture.NO_OVERLAY);
     }
 
