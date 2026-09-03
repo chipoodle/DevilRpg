@@ -38,7 +38,7 @@ public class SkillChargeWerewolf extends AbstractSkillExecutor {
     // Velocidad horizontal de la embestida (para que atraviese a los enemigos, no se detenga en el primero).
     public static final float CHARGE_SPEED = 3.0F;
     // Distancia (bloques) a lo largo del recorrido donde se dania a las entidades.
-    public static final double CHARGE_RANGE_BLOCKS = 4.0;
+    public static final double CHARGE_RANGE_BLOCKS = 5.0;
     // Empuje (knockback) aplicado a cada enemigo golpeado por la embestida.
     public static final double CHARGE_KNOCKBACK = 0.4;
 
