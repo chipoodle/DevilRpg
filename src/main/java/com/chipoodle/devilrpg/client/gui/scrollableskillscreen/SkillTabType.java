@@ -46,8 +46,8 @@ public enum SkillTabType {
         }
 
         int j = isSelected ? this.textureY + this.height : this.textureY;
-        // Tinte acorde al skin de la ventana (tono marron; la seleccionada mas clara)
-        RenderSystem.setShaderColor(isSelected ? 1.0F : 0.6F, isSelected ? 0.9F : 0.5F, isSelected ? 0.75F : 0.42F, 1.0F);
+        // Tinte acorde al marco (tono naranja-madera, acorde al degradado de la imagen; la seleccionada mas clara)
+        RenderSystem.setShaderColor(isSelected ? 1.0F : 0.72F, isSelected ? 0.6F : 0.42F, isSelected ? 0.3F : 0.22F, 1.0F);
         guiGraphics.blit(TABS_LOCATION, offsetX + this.getX(index), offsetY + this.getY(index), i, j, this.width,
                 this.height);
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
@@ -123,8 +123,8 @@ public enum SkillTabType {
     public int getX(int index) {
         switch (this) {
             case ABOVE:
-                // Posicionadas a la DERECHA (sobre las pestañas del marco), en la franja superior.
-                return 190 + (this.width + 4) * index;
+                // Posicionadas a la DERECHA (sobre las pestañas del marco), juntas entre si (gap 1).
+                return 210 + (this.width + 1) * index;
             case BELOW:
                 return (this.width + 4) * index;
             case LEFT:
