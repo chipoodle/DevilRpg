@@ -39,16 +39,16 @@ import java.util.*;
 
 @OnlyIn(Dist.CLIENT)
 public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IListener {
-    // El marco del usuario es 1419x1108 (misma proporcion que 302x236). Se dibuja completo,
-    // escalado a la ventana de 302x(WINDOW_HEIGHT+INFO_SPACE) para aprovechar su nitidez.
-    private static final int INITIAL_TEXTURE_WIDTH = 1419;
-    private static final int INITIAL_TEXTURE_HEIGHT = 1108;
+    // El marco del usuario es 1317x1194. Se dibuja completo, escalado a la ventana de
+    // 302 x (WINDOW_HEIGHT+INFO_SPACE) para aprovechar su nitidez.
+    private static final int INITIAL_TEXTURE_WIDTH = 1317;
+    private static final int INITIAL_TEXTURE_HEIGHT = 1194;
     private static final int INNER_SCREEN_WIDTH = 282;
     private static final int INNER_SCREEN_HEIGHT = 162;
     private static final int WINDOW_AREA_OFFSET_X = 10;
-    private static final int WINDOW_AREA_OFFSET_Y = 18;
+    private static final int WINDOW_AREA_OFFSET_Y = -2;
     private static final int WINDOW_WIDTH = 302;
-    private static final int WINDOW_HEIGHT = 210;
+    private static final int WINDOW_HEIGHT = 230;
     private static final int INFO_SPACE = 26;
     private static final String IMG_LOCATION = DevilRpg.MODID + ":textures/gui/";
     private static final ResourceLocation WINDOW_LOCATION = ResourceLocation.parse(IMG_LOCATION + "window-256b.png");
@@ -59,11 +59,11 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     private static final Component EMPTY = Component.translatable("advancements.empty");
     private static final Component GUI_LABEL = Component.translatable("gui.skills.title");
     private static final Component UNSPENT_LABEL = Component.translatable("gui.skills.unspent");
-    public static final int POWER_INITIAL_X_POSITION = 145;
+    public static final int POWER_INITIAL_X_POSITION = 140;
     // Separacion extra entre botones (se suma a SkillWidget.FRAME_SIZE). Mas alto = mas juntos/lejos.
-    public static final int POWER_BUTTON_GAP = 1;
+    public static final int POWER_BUTTON_GAP = 5;
     // Desplazamiento vertical de los botones desde su base. Mas alto = mas abajo.
-    public static final int POWER_BUTTON_Y_OFFSET = 6;
+    public static final int POWER_BUTTON_Y_OFFSET = 8;
     // Se resta a SkillWidget.FRAME_SIZE para el tamano (alto y ancho) de cada boton.
     public static final int POWER_BUTTON_SHRINK = 6;
     private static int tabPage, maxPages;
@@ -594,17 +594,19 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
         int offTop = offsetTop;
         PowerEnum[] powerList = PowerEnum.values();
         //k = powerList.size();
+        // Tamano (ancho y alto) del boton.
+        float  xFix = -0.0f;
+        int powerButtonSize = SkillWidget.FRAME_SIZE - POWER_BUTTON_SHRINK;
         for (PowerEnum powerEnum : powerList) {
+            xFix+= -0.15f; //0.22f;
             int drawnSkillLevel = 0;
             // --- Calcular posicion y tamano del boton con variables descriptivas ---
             // Separacion horizontal entre el centro de cada boton.
-            int powerButtonSpacing = SkillWidget.FRAME_SIZE + POWER_BUTTON_GAP;
+            int powerButtonSpacing = powerButtonSize + POWER_BUTTON_GAP;
             // Posicion X de este boton (indice k).
-            int powerButtonX = offLeft + POWER_INITIAL_X_POSITION + (k * powerButtonSpacing);
+            int powerButtonX = offLeft + POWER_INITIAL_X_POSITION + (int)(k * powerButtonSpacing+xFix);
             // Posicion Y de este boton (fila inferior, desplazada por POWER_BUTTON_Y_OFFSET).
             int powerButtonY = WINDOW_AREA_OFFSET_Y + offTop + INNER_SCREEN_HEIGHT + POWER_BUTTON_Y_OFFSET;
-            // Tamano (ancho y alto) del boton.
-            int powerButtonSize = SkillWidget.FRAME_SIZE - POWER_BUTTON_SHRINK;
 
             CustomSkillButton powerButtons = new CustomSkillButton(
                     powerButtonX,
