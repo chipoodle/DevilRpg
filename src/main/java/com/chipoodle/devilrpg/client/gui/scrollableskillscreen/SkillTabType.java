@@ -123,8 +123,8 @@ public enum SkillTabType {
     public int getX(int index) {
         switch (this) {
             case ABOVE:
-                // Posicionadas a la DERECHA (sobre las pestañas del marco), juntas entre si (gap 1).
-                return 210 + (this.width + 1) * index;
+                // Posicionadas a la IZQUIERDA de la franja superior, juntas entre si (gap 1).
+                return 170 + (this.width + 1) * index;
             case BELOW:
                 return (this.width + 4) * index;
             case LEFT:
