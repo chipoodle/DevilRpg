@@ -62,7 +62,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     // Separacion extra entre botones (se suma a SkillWidget.FRAME_SIZE). Mas alto = mas juntos/lejos.
     public static final int POWER_BUTTON_GAP = 5;
     // Desplazamiento vertical de los botones desde su base. Mas alto = mas abajo.
-    public static final int POWER_BUTTON_Y_OFFSET = 18;
+    public static final int POWER_BUTTON_Y_OFFSET = 21;
     // Se resta a SkillWidget.FRAME_SIZE para el tamano (alto y ancho) de cada boton.
     public static final int POWER_BUTTON_SHRINK = 6;
     private static int tabPage, maxPages;

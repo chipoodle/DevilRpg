@@ -178,9 +178,11 @@ public class SkillWidget {
                                 // Convierte la ruta del archivo a una ruta relativa al directorio del mod
                                 String relativePath = directory.relativize(path).toString();
                                 String resourcePath = SKILL_GUI_IMG_LOCATION + "/widget/" + relativePath.replace(File.separator, "/");
-                                // Crea un ResourceLocation y agrégalo a la lista
-                                return ResourceLocation.parse(resourcePath);
+                                // tryParse (no lanza) en vez de parse: los nombres con mayusculas
+                                // (ID autogenerados tipo _Hq8RXe3p_) no son validos en 1.21.1 y se descartan.
+                                return ResourceLocation.tryParse(resourcePath);
                             })
+                            .filter(resourceLocation -> resourceLocation != null)
                             .sorted()
                             .toList();
                 }
