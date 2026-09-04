@@ -46,9 +46,6 @@ public class SkillWidget {
     private static final String SKILL_GUI_IMG_LOCATION = DevilRpg.MODID + ":textures/gui/skill";
     private static final int[] LINE_BREAK_VALUES = new int[]{0, 10, -10, 25, -25};
     private static final net.minecraft.network.chat.Component MANA_COST = net.minecraft.network.chat.Component.translatable("gui.skills.mana_cost");
-    // Escala del tooltip (caja + descripcion) para reducir el tamaño de la fuente un 30% y que
-    // las descripciones largas quepan mejor.
-    private static final float TOOLTIP_SCALE = 0.7F;
     public static ResourceLocation WIDGETS = ResourceLocation.parse(SKILL_GUI_IMG_LOCATION + "/widgets.png");
     private static List<ResourceLocation> resourceLocations = new ArrayList<>();
     private static int resourceIndex = 0;
@@ -376,19 +373,13 @@ public class SkillWidget {
         }
 
         int j1 = 32 + this.description.size() * 9;
-        int tooltipTop = flag1 ? l + FRAME_SIZE - j1 : l;
-
-        // Escala el tooltip (caja + descripcion) un 30% mas pequeño, alrededor de su esquina
-        // superior-izquierda, para reducir la fuente y que quepan descripciones largas.
-        PoseStack pose = guiGraphics.pose();
 
         if (!this.description.isEmpty()) {
-            pose.pushPose();
-            pose.translate(i1, tooltipTop, 0);
-            pose.scale(TOOLTIP_SCALE, TOOLTIP_SCALE, 1.0F);
-            pose.translate(-i1, -tooltipTop, 0);
-            this.render9Sprite(guiGraphics, i1, tooltipTop, this.width, j1, 10, 200, FRAME_SIZE, 0, 52);
-            pose.popPose();
+            if (flag1) {
+                this.render9Sprite(guiGraphics, i1, l + FRAME_SIZE - j1, this.width, j1, 10, 200, FRAME_SIZE, 0, 52);
+            } else {
+                this.render9Sprite(guiGraphics, i1, l, this.width, j1, 10, 200, FRAME_SIZE, 0, 52);
+            }
         }
 
         // pinta la mitad izquierda de la barra del título
@@ -415,29 +406,19 @@ public class SkillWidget {
             }
         }
 
-        // La descripcion se dibuja escalada (fuente 30% mas pequeña) dentro de la caja.
         if (flag1) {
-            pose.pushPose();
-            pose.translate(i1, tooltipTop, 0);
-            pose.scale(TOOLTIP_SCALE, TOOLTIP_SCALE, 1.0F);
-            pose.translate(-i1, -tooltipTop, 0);
             for (int k1 = 0; k1 < this.description.size(); ++k1) {
                 // Pinta contenido
                 guiGraphics.drawString(this.minecraft.font, this.description.get(k1), (i1 + 5),
-                        (tooltipTop + 7 + k1 * 9), -5592406, false);
+                        (l + FRAME_SIZE - j1 + 7 + k1 * 9), -5592406, false);
             }
-            pose.popPose();
+
         } else {
-            pose.pushPose();
-            pose.translate(i1, tooltipTop, 0);
-            pose.scale(TOOLTIP_SCALE, TOOLTIP_SCALE, 1.0F);
-            pose.translate(-i1, -tooltipTop, 0);
             for (int l1 = 0; l1 < this.description.size(); ++l1) {
                 // Pinta contenido
                 guiGraphics.drawString(this.minecraft.font, this.description.get(l1), (i1 + 5),
-                        (tooltipTop + 26 + l1 * 9), -5592406, false);
+                        (y + this.y + 9 + 17 + l1 * 9), -5592406, false);
             }
-            pose.popPose();
         }
 
         SkillState skillState = getSkillState();
