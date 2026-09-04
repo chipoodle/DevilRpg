@@ -31,9 +31,7 @@ public class SkillTab {
 
     private static final int WIDGET_HEIGHT = 27;
     private static final int WIDGET_WIDTH = 28;
-    // private static final int TAB_BACKGROUND_X = 234;
-    // private static final int TAB_BACKGROUND_Y = 113;
-    public static final int TAB_BACKGROUND_WIDTH = 258; //282
+    public static final int TAB_BACKGROUND_WIDTH = 260; //282
     public static final int TAB_BACKGROUND_HEIGHT = 172;
     private final Minecraft minecraft;
     private final SkillScreen screen;
