@@ -35,7 +35,7 @@ public class SkillTab {
     // private static final int TAB_BACKGROUND_X = 234;
     // private static final int TAB_BACKGROUND_Y = 113;
     public static final int TAB_BACKGROUND_X = 282;
-    public static final int TAB_BACKGROUND_Y = 162;
+    public static final int TAB_BACKGROUND_Y = 206;
     private final Minecraft minecraft;
     private final SkillScreen screen;
     private final SkillTabType type;
