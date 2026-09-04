@@ -9,7 +9,6 @@ import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model.ClientSkillBuilderFromJson;
 import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model.CustomSkillButton;
 import com.chipoodle.devilrpg.eventsubscriber.client.ClientModKeyInputEventSubscriber;
-import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.network.payload.PlayerPassiveSkillPayload;
 import com.chipoodle.devilrpg.util.PowerEnum;
 import com.chipoodle.devilrpg.util.SkillEnum;
@@ -45,8 +44,8 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     private static final int INITIAL_TEXTURE_HEIGHT = 1194;
     private static final int INNER_SCREEN_WIDTH = 282;
     private static final int INNER_SCREEN_HEIGHT = 162;
-    private static final int WINDOW_AREA_OFFSET_X = 10;
-    private static final int WINDOW_AREA_OFFSET_Y = 34;
+    private static final int TAB_BACKGROUND_WINDOW_AREA_OFFSET_X = 22;
+    private static final int TAB_BACKGROUND_WINDOW_AREA_OFFSET_Y = 36;
     private static final int WINDOW_WIDTH = 302;
     private static final int WINDOW_HEIGHT = 248;
     private static final int INFO_SPACE = 26;
@@ -63,7 +62,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     // Separacion extra entre botones (se suma a SkillWidget.FRAME_SIZE). Mas alto = mas juntos/lejos.
     public static final int POWER_BUTTON_GAP = 5;
     // Desplazamiento vertical de los botones desde su base. Mas alto = mas abajo.
-    public static final int POWER_BUTTON_Y_OFFSET = 8;
+    public static final int POWER_BUTTON_Y_OFFSET = 18;
     // Se resta a SkillWidget.FRAME_SIZE para el tamano (alto y ancho) de cada boton.
     public static final int POWER_BUTTON_SHRINK = 6;
     private static int tabPage, maxPages;
@@ -289,7 +288,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
                         break;
                     } else {
                         SkillWidget skillEntryGui = selectedTab.getIfInsideIncludingChildren(
-                                lmX - WINDOW_AREA_OFFSET_X, lmY - WINDOW_AREA_OFFSET_Y);
+                                lmX - TAB_BACKGROUND_WINDOW_AREA_OFFSET_X, lmY - TAB_BACKGROUND_WINDOW_AREA_OFFSET_Y);
                         if (skillEntryGui != null && skillEntryGui.getSkillElement().getParent() != null && !skillEntryGui.isDisabled()) {
                             DevilRpg.LOGGER.info("|----------- mouseClicked: {}", skillEntryGui.getSkillElement().getSkillCapability());
                             this.playDownSound(Minecraft.getInstance().getSoundManager());
@@ -316,7 +315,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
                 double lmX = (mouseX - offsetLeft) / this.fitScale;
                 double lmY = (mouseY - offsetTop) / this.fitScale;
                 draggedSkillWidget = selectedTab.getIfInsideIncludingChildren(
-                        lmX - WINDOW_AREA_OFFSET_X, lmY - WINDOW_AREA_OFFSET_Y);
+                        lmX - TAB_BACKGROUND_WINDOW_AREA_OFFSET_X, lmY - TAB_BACKGROUND_WINDOW_AREA_OFFSET_Y);
                 if (draggedSkillWidget != null && (draggedSkillWidget.isDisabled() || !draggedSkillWidget.getSkillProgress().hasProgress())) {
                     draggedSkillWidget = null;
                 }
@@ -450,21 +449,21 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
         SkillTab selectedSkillTabGui = this.selectedTab;
         // Pinta el fondo vacío cuando no hay elementos
         if (selectedSkillTabGui == null) {
-            guiGraphics.fill(WINDOW_AREA_OFFSET_X, WINDOW_AREA_OFFSET_Y,
-                    WINDOW_AREA_OFFSET_X + INNER_SCREEN_WIDTH,
-                    WINDOW_AREA_OFFSET_Y + INNER_SCREEN_HEIGHT, -16777216);
-            int i = WINDOW_AREA_OFFSET_X + 117;
-            guiGraphics.drawCenteredString(this.font, EMPTY, i, WINDOW_AREA_OFFSET_Y + 56 - WINDOW_AREA_OFFSET_X / 2, -1);
-            guiGraphics.drawCenteredString(this.font, SAD_LABEL, i, WINDOW_AREA_OFFSET_Y + INNER_SCREEN_HEIGHT - WINDOW_AREA_OFFSET_X, -1);
+            guiGraphics.fill(TAB_BACKGROUND_WINDOW_AREA_OFFSET_X, TAB_BACKGROUND_WINDOW_AREA_OFFSET_Y,
+                    TAB_BACKGROUND_WINDOW_AREA_OFFSET_X + INNER_SCREEN_WIDTH,
+                    TAB_BACKGROUND_WINDOW_AREA_OFFSET_Y + INNER_SCREEN_HEIGHT, -16777216);
+            int i = TAB_BACKGROUND_WINDOW_AREA_OFFSET_X + 117;
+            guiGraphics.drawCenteredString(this.font, EMPTY, i, TAB_BACKGROUND_WINDOW_AREA_OFFSET_Y + 56 - TAB_BACKGROUND_WINDOW_AREA_OFFSET_X / 2, -1);
+            guiGraphics.drawCenteredString(this.font, SAD_LABEL, i, TAB_BACKGROUND_WINDOW_AREA_OFFSET_Y + INNER_SCREEN_HEIGHT - TAB_BACKGROUND_WINDOW_AREA_OFFSET_X, -1);
         } else {
             // Pinta el fondo con elementos: drawContents aplica su propio translate (origen
             // local de la ventana) y el scissor en coordenadas de pantalla (virtual)
             selectedSkillTabGui.drawContents(guiGraphics,
-                    WINDOW_AREA_OFFSET_X, WINDOW_AREA_OFFSET_Y,
-                    (int) (offsetLeft + WINDOW_AREA_OFFSET_X * this.fitScale),
-                    (int) (offsetTop + WINDOW_AREA_OFFSET_Y * this.fitScale),
-                    (int) (SkillTab.TAB_BACKGROUND_X * this.fitScale),
-                    (int) (SkillTab.TAB_BACKGROUND_Y * this.fitScale));
+                    TAB_BACKGROUND_WINDOW_AREA_OFFSET_X, TAB_BACKGROUND_WINDOW_AREA_OFFSET_Y,
+                    (int) (offsetLeft + TAB_BACKGROUND_WINDOW_AREA_OFFSET_X * this.fitScale),
+                    (int) (offsetTop + TAB_BACKGROUND_WINDOW_AREA_OFFSET_Y * this.fitScale),
+                    (int) (SkillTab.TAB_BACKGROUND_WIDTH * this.fitScale),
+                    (int) (SkillTab.TAB_BACKGROUND_HEIGHT * this.fitScale));
             RenderSystem.depthFunc(515);
             RenderSystem.disableDepthTest();
         }
@@ -481,10 +480,10 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
             PoseStack poseStack = guiGraphics.pose();
             poseStack.pushPose();
             //RenderSystem.enableDepthTest();
-            poseStack.translate(WINDOW_AREA_OFFSET_X, WINDOW_AREA_OFFSET_Y, 400.0F);
+            poseStack.translate(TAB_BACKGROUND_WINDOW_AREA_OFFSET_X, TAB_BACKGROUND_WINDOW_AREA_OFFSET_Y, 400.0F);
             this.selectedTab.drawTabTooltips(guiGraphics,
-                    (int) lmX - WINDOW_AREA_OFFSET_X,
-                    (int) lmY - WINDOW_AREA_OFFSET_Y,
+                    (int) lmX - TAB_BACKGROUND_WINDOW_AREA_OFFSET_X,
+                    (int) lmY - TAB_BACKGROUND_WINDOW_AREA_OFFSET_Y,
                     0, 0);
             RenderSystem.disableDepthTest();
             poseStack.popPose();
@@ -598,7 +597,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
         float  xFix = -0.0f;
         int powerButtonSize = SkillWidget.FRAME_SIZE - POWER_BUTTON_SHRINK;
         for (PowerEnum powerEnum : powerList) {
-            xFix+= -0.15f; //0.22f;
+            xFix+= -0.0f; //0.22f;
             int drawnSkillLevel = 0;
             // --- Calcular posicion y tamano del boton con variables descriptivas ---
             // Separacion horizontal entre el centro de cada boton.
@@ -606,7 +605,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
             // Posicion X de este boton (indice k).
             int powerButtonX = offLeft + POWER_INITIAL_X_POSITION + (int)(k * powerButtonSpacing+xFix);
             // Posicion Y de este boton (fila inferior, desplazada por POWER_BUTTON_Y_OFFSET).
-            int powerButtonY = WINDOW_AREA_OFFSET_Y + offTop + INNER_SCREEN_HEIGHT + POWER_BUTTON_Y_OFFSET;
+            int powerButtonY = TAB_BACKGROUND_WINDOW_AREA_OFFSET_Y + offTop + INNER_SCREEN_HEIGHT + POWER_BUTTON_Y_OFFSET;
 
             CustomSkillButton powerButtons = new CustomSkillButton(
                     powerButtonX,

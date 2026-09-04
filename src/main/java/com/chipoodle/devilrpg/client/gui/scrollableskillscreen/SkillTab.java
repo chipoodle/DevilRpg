@@ -9,7 +9,6 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.entity.ItemRenderer;
-import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
@@ -34,8 +33,8 @@ public class SkillTab {
     private static final int WIDGET_WIDTH = 28;
     // private static final int TAB_BACKGROUND_X = 234;
     // private static final int TAB_BACKGROUND_Y = 113;
-    public static final int TAB_BACKGROUND_X = 282;
-    public static final int TAB_BACKGROUND_Y = 206;
+    public static final int TAB_BACKGROUND_WIDTH = 258; //282
+    public static final int TAB_BACKGROUND_HEIGHT = 172;
     private final Minecraft minecraft;
     private final SkillScreen screen;
     private final SkillTabType type;
@@ -159,9 +158,9 @@ public class SkillTab {
                              int scissorX, int scissorY, int scissorW, int scissorH) {
         if (!this.centered) {
             //Con este controlamos la posciion en x de los botones del árbol
-            this.scrollX = ((TAB_BACKGROUND_X - 10) / 2 - (this.maxX + this.minX) / 2D);
+            this.scrollX = ((TAB_BACKGROUND_WIDTH - 10) / 2 - (this.maxX + this.minX) / 2D);
             //Con este controlamos la altura de los botones del árbol
-            this.scrollY = ((TAB_BACKGROUND_Y + 5) / 2 - (this.maxY + this.minY) / 2D);
+            this.scrollY = ((TAB_BACKGROUND_HEIGHT + 5) / 2 - (this.maxY + this.minY) / 2D);
             this.centered = true;
         }
         // En 1.21.1 el recorte por depth-buffer de 1.19.4 dejó de funcionar (los fills de la
@@ -174,7 +173,7 @@ public class SkillTab {
         poseStack.translate(localX, localY, 0.0F);
         // Pinta el fondo negro del area del arbol (como antes). OJO: el orden de los argumentos
         // estaba invertido (fill(X, Y, 0, 0)) por lo que el fondo no se dibujaba bien.
-        guiGraphics.fill(0, 0, TAB_BACKGROUND_X, TAB_BACKGROUND_Y, -16777216);
+        guiGraphics.fill(0, 0, TAB_BACKGROUND_WIDTH, TAB_BACKGROUND_HEIGHT, -16777216);
         // Pinta el mosaico dinámico del fondo así como los iconos y las conexiones del arbol de habilidades
         generateBackgroundImageChunks(guiGraphics);
         poseStack.popPose();
@@ -232,9 +231,9 @@ public class SkillTab {
         poseStack.pushPose();
         poseStack.translate(0.0F, 0.0F, -200.0F);
         // Pinta la sombra que cubre el fondo cuando se hace hoover en una habilidad
-        guiGraphics.fill(0, 0, TAB_BACKGROUND_X, TAB_BACKGROUND_Y, Mth.floor(this.fade * 255.0F) << 24);
+        guiGraphics.fill(0, 0, TAB_BACKGROUND_WIDTH, TAB_BACKGROUND_HEIGHT, Mth.floor(this.fade * 255.0F) << 24);
         boolean flag = false;
-        if (mouseX > 0 && mouseX < TAB_BACKGROUND_X && mouseY > 0 && mouseY < TAB_BACKGROUND_Y) {
+        if (mouseX > 0 && mouseX < TAB_BACKGROUND_WIDTH && mouseY > 0 && mouseY < TAB_BACKGROUND_HEIGHT) {
             int i = Mth.floor(this.scrollX);// posición del fondo en x. Cambia cuando se posiciona con el drag del mouse
             int j = Mth.floor(this.scrollY);// posición del fondo en y. Cambia cuando se posiciona con el drag del mouse
 
@@ -260,12 +259,12 @@ public class SkillTab {
     }
 
     public void dragSelectedGui(double dragX, double dragY) {
-        if (this.maxX - this.minX > TAB_BACKGROUND_X) {
-            this.scrollX = Mth.clamp(this.scrollX + dragX, -(this.maxX - TAB_BACKGROUND_X), 0.0D);
+        if (this.maxX - this.minX > TAB_BACKGROUND_WIDTH) {
+            this.scrollX = Mth.clamp(this.scrollX + dragX, -(this.maxX - TAB_BACKGROUND_WIDTH), 0.0D);
         }
 
-        if (this.maxY - this.minY > TAB_BACKGROUND_Y) {
-            this.scrollY = Mth.clamp(this.scrollY + dragY, -(this.maxY - TAB_BACKGROUND_Y), 0.0D);
+        if (this.maxY - this.minY > TAB_BACKGROUND_HEIGHT) {
+            this.scrollY = Mth.clamp(this.scrollY + dragY, -(this.maxY - TAB_BACKGROUND_HEIGHT), 0.0D);
         }
 
     }
