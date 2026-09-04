@@ -415,8 +415,8 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
             }
             RenderSystem.disableBlend();
 
-            // Pinta el título (blanco para que se vea sobre el marco oscuro)
-            guiGraphics.drawString(this.font, GUI_LABEL, 8, 6, 0xFFFFFF);
+            // Pinta el título sobre el cartel "Skills" del marco (blanco sobre la placa)
+            guiGraphics.drawString(this.font, GUI_LABEL, 18, 17, 0xFFFFFF);
 
             int unspentPoints = expCap == null ? -1 : expCap.getUnspentPoints();
             int currentLevel = expCap == null ? -1 : expCap.getCurrentLevel();
@@ -426,7 +426,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
             //Pinta nivel + puntos sin usar, con fuente mas pequeña para que quepa en la placa del marco.
             PoseStack psInfo = guiGraphics.pose();
             psInfo.pushPose();
-            psInfo.translate(46, 198, 0);
+            psInfo.translate(46, 221, 0);
             psInfo.scale(0.7F, 0.7F, 1.0F);
             guiGraphics.drawString(this.font, infoHolder, 0, 0, 0xFFFFFF);
             psInfo.popPose();

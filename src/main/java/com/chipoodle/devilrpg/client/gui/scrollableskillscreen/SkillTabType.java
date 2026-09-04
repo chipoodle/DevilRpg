@@ -139,7 +139,7 @@ public enum SkillTabType {
     public int getY(int index) {
         switch (this) {
             case ABOVE:
-                return 8;
+                return 5;
             case BELOW:
                 return 136;
             case LEFT:
