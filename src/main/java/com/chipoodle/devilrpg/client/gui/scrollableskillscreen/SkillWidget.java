@@ -373,13 +373,19 @@ public class SkillWidget {
         }
 
         int j1 = 32 + this.description.size() * 9;
+        // Posicion Y de la caja del tooltip (arriba o abajo del nodo). Se limita a los bordes de la
+        // pantalla para que una descripcion larga NUNCA se corte (si no cabe arriba, baja; si se pasa
+        // abajo, sube). La fuente y la caja mantienen su tamaño original (ancho = barra de titulo).
+        int boxTop = flag1 ? l + FRAME_SIZE - j1 : l;
+        int screenHeight = this.minecraft.getWindow().getGuiScaledHeight();
+        if (boxTop < 0) {
+            boxTop = 0;
+        } else if (boxTop + j1 > screenHeight) {
+            boxTop = Math.max(0, screenHeight - j1);
+        }
 
         if (!this.description.isEmpty()) {
-            if (flag1) {
-                this.render9Sprite(guiGraphics, i1, l + FRAME_SIZE - j1, this.width, j1, 10, 200, FRAME_SIZE, 0, 52);
-            } else {
-                this.render9Sprite(guiGraphics, i1, l, this.width, j1, 10, 200, FRAME_SIZE, 0, 52);
-            }
+            this.render9Sprite(guiGraphics, i1, boxTop, this.width, j1, 10, 200, FRAME_SIZE, 0, 52);
         }
 
         // pinta la mitad izquierda de la barra del título
@@ -408,16 +414,16 @@ public class SkillWidget {
 
         if (flag1) {
             for (int k1 = 0; k1 < this.description.size(); ++k1) {
-                // Pinta contenido
+                // Pinta contenido dentro de la caja
                 guiGraphics.drawString(this.minecraft.font, this.description.get(k1), (i1 + 5),
-                        (l + FRAME_SIZE - j1 + 7 + k1 * 9), -5592406, false);
+                        (boxTop + 7 + k1 * 9), -5592406, false);
             }
 
         } else {
             for (int l1 = 0; l1 < this.description.size(); ++l1) {
-                // Pinta contenido
+                // Pinta contenido dentro de la caja
                 guiGraphics.drawString(this.minecraft.font, this.description.get(l1), (i1 + 5),
-                        (y + this.y + 9 + 17 + l1 * 9), -5592406, false);
+                        (boxTop + 26 + l1 * 9), -5592406, false);
             }
         }
 
