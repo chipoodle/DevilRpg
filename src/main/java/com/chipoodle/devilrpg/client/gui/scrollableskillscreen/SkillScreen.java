@@ -46,7 +46,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     private static final int INNER_SCREEN_HEIGHT = 162;
     private static final int TAB_BACKGROUND_WINDOW_AREA_OFFSET_X = 22;
     private static final int TAB_BACKGROUND_WINDOW_AREA_OFFSET_Y = 36;
-    private static final int WINDOW_WIDTH = 302;
+    private static final int WINDOW_WIDTH = 304;
     private static final int WINDOW_HEIGHT = 248;
     private static final int INFO_SPACE = 26;
     private static final String IMG_LOCATION = DevilRpg.MODID + ":textures/gui/";
@@ -58,7 +58,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     private static final Component EMPTY = Component.translatable("advancements.empty");
     private static final Component GUI_LABEL = Component.translatable("gui.skills.title");
     private static final Component UNSPENT_LABEL = Component.translatable("gui.skills.unspent");
-    public static final int POWER_INITIAL_X_POSITION = 140;
+    public static final int POWER_INITIAL_X_POSITION = 141;
     // Separacion extra entre botones (se suma a SkillWidget.FRAME_SIZE). Mas alto = mas juntos/lejos.
     public static final int POWER_BUTTON_GAP = 5;
     // Desplazamiento vertical de los botones desde su base. Mas alto = mas abajo.
@@ -416,7 +416,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
             RenderSystem.disableBlend();
 
             // Pinta el título sobre el cartel "Skills" del marco (blanco sobre la placa)
-            guiGraphics.drawString(this.font, GUI_LABEL, 18, 17, 0xFFFFFF);
+            guiGraphics.drawString(this.font, GUI_LABEL, 30, 17, 0xFFFFFF);
 
             int unspentPoints = expCap == null ? -1 : expCap.getUnspentPoints();
             int currentLevel = expCap == null ? -1 : expCap.getCurrentLevel();
@@ -426,7 +426,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
             //Pinta nivel + puntos sin usar, con fuente mas pequeña para que quepa en la placa del marco.
             PoseStack psInfo = guiGraphics.pose();
             psInfo.pushPose();
-            psInfo.translate(46, 221, 0);
+            psInfo.translate(46, 252, 0);
             psInfo.scale(0.7F, 0.7F, 1.0F);
             guiGraphics.drawString(this.font, infoHolder, 0, 0, 0xFFFFFF);
             psInfo.popPose();
