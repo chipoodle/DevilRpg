@@ -40,8 +40,10 @@ public class PlayerPassiveKnockBackResistanceExecutor extends AbstractPlayerPass
                 this.playerIn = player;
             }
 
-            Integer absorptionTicks = Integer.valueOf(parameters.get(ABSORPTION_TICKS));
-            Integer blockPoints = Integer.valueOf(parameters.get(BLOCK_POINTS));
+            // Estos parametros solo los pone SkillWerewolfBlocking; si el pasivo se dispara solo
+            // (pulsando su boton) el mapa viene vacio y habria null -> NumberFormatException.
+            Integer absorptionTicks = parameters.get(ABSORPTION_TICKS) != null ? Integer.valueOf(parameters.get(ABSORPTION_TICKS)) : 800;
+            Integer blockPoints = parameters.get(BLOCK_POINTS) != null ? Integer.valueOf(parameters.get(BLOCK_POINTS)) : 0;
 
 
             PlayerAuxiliaryCapabilityInterface auxiliary = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerAuxiliaryCapability.INSTANCE);
