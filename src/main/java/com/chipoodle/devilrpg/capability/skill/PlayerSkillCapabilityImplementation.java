@@ -353,10 +353,26 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
     public void triggerPassive(Player sender, CompoundTag triggeredSkill) {
         //if (!sender.level().isClientSide) {
         SkillEnum skillFromByteArray = getSkillFromByteArray(triggeredSkill);
-        //DevilRpg.LOGGER.debug("PlayerSkillCapability triggerPassive(ServerPlayer, triggeredSkill) {} {}", sender, skillFromByteArray);
+        // Regla: un pasivo hijo de un skill ACTIVO no se ejecuta solo; lo ejecuta su padre activo
+        // con sus parametros (executePassiveChildren). Solo los pasivos "raiz" (sin padre activo)
+        // se aplican aqui al asignarles puntos. Esto evita ejecutar a KNOCKBACK_RESISTANCE etc. con
+        // un mapa vacio.
+        if (skillFromByteArray == SkillEnum.EMPTY || isChildOfActiveSkill(skillFromByteArray)) {
+            return;
+        }
         AbstractSkillExecutor skill = getLoadedSkillExecutor(skillFromByteArray);
         skill.execute(sender.level(), sender, new HashMap<>());
         //}
+    }
+
+    /** Devuelve true si el pasivo es descendiente (hijo o nieto...) de algun skill activo del arbol. */
+    private boolean isChildOfActiveSkill(SkillEnum passive) {
+        for (SkillEnum active : SkillEnum.getActiveSkills()) {
+            if (getPassivesFromActiveSkill(active).contains(passive)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private AbstractSkillExecutor getSkill(PowerEnum triggeredPower) {
