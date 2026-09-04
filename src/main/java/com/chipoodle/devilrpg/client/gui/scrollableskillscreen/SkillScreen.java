@@ -46,9 +46,9 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     private static final int INNER_SCREEN_WIDTH = 282;
     private static final int INNER_SCREEN_HEIGHT = 162;
     private static final int WINDOW_AREA_OFFSET_X = 10;
-    private static final int WINDOW_AREA_OFFSET_Y = 38;
+    private static final int WINDOW_AREA_OFFSET_Y = 34;
     private static final int WINDOW_WIDTH = 302;
-    private static final int WINDOW_HEIGHT = 230;
+    private static final int WINDOW_HEIGHT = 248;
     private static final int INFO_SPACE = 26;
     private static final String IMG_LOCATION = DevilRpg.MODID + ":textures/gui/";
     private static final ResourceLocation WINDOW_LOCATION = ResourceLocation.parse(IMG_LOCATION + "window-256b.png");
