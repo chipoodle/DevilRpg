@@ -46,8 +46,6 @@ public class SkillWidget {
     private static final String SKILL_GUI_IMG_LOCATION = DevilRpg.MODID + ":textures/gui/skill";
     private static final int[] LINE_BREAK_VALUES = new int[]{0, 10, -10, 25, -25};
     private static final net.minecraft.network.chat.Component MANA_COST = net.minecraft.network.chat.Component.translatable("gui.skills.mana_cost");
-    // Escala SOLO del texto de la descripcion del tooltip (fuente mas pequeña) sin tocar la caja.
-    private static final float TOOLTIP_SCALE = 0.7F;
     public static ResourceLocation WIDGETS = ResourceLocation.parse(SKILL_GUI_IMG_LOCATION + "/widgets.png");
     private static List<ResourceLocation> resourceLocations = new ArrayList<>();
     private static int resourceIndex = 0;
@@ -374,11 +372,14 @@ public class SkillWidget {
             i1 = x + this.x;
         }
 
-        int j1 = (int) ((32 + this.description.size() * 9) * TOOLTIP_SCALE);
-        int boxTop = flag1 ? l + FRAME_SIZE - j1 : l;
+        int j1 = 32 + this.description.size() * 9;
 
         if (!this.description.isEmpty()) {
-            this.render9Sprite(guiGraphics, i1, boxTop, this.width, j1, 10, 200, FRAME_SIZE, 0, 52);
+            if (flag1) {
+                this.render9Sprite(guiGraphics, i1, l + FRAME_SIZE - j1, this.width, j1, 10, 200, FRAME_SIZE, 0, 52);
+            } else {
+                this.render9Sprite(guiGraphics, i1, l, this.width, j1, 10, 200, FRAME_SIZE, 0, 52);
+            }
         }
 
         // pinta la mitad izquierda de la barra del título
@@ -405,19 +406,20 @@ public class SkillWidget {
             }
         }
 
-        // Descripcion con la fuente 30% mas pequeña (SOLO el texto; la caja queda pegada a la barra
-        // de titulo y con el mismo ancho). Se escala alrededor del inicio del texto.
-        int textStartY = flag1 ? boxTop + 7 : boxTop + 26;
-        PoseStack pose = guiGraphics.pose();
-        pose.pushPose();
-        pose.translate(i1 + 5, textStartY, 0);
-        pose.scale(TOOLTIP_SCALE, TOOLTIP_SCALE, 1.0F);
-        pose.translate(-(i1 + 5), -textStartY, 0);
-        for (int k1 = 0; k1 < this.description.size(); ++k1) {
-            // Pinta contenido dentro de la caja
-            guiGraphics.drawString(this.minecraft.font, this.description.get(k1), (i1 + 5), (textStartY + k1 * 9), -5592406, false);
+        if (flag1) {
+            for (int k1 = 0; k1 < this.description.size(); ++k1) {
+                // Pinta contenido
+                guiGraphics.drawString(this.minecraft.font, this.description.get(k1), (i1 + 5),
+                        (l + FRAME_SIZE - j1 + 7 + k1 * 9), -5592406, false);
+            }
+
+        } else {
+            for (int l1 = 0; l1 < this.description.size(); ++l1) {
+                // Pinta contenido
+                guiGraphics.drawString(this.minecraft.font, this.description.get(l1), (i1 + 5),
+                        (y + this.y + 9 + 17 + l1 * 9), -5592406, false);
+            }
         }
-        pose.popPose();
 
         SkillState skillState = getSkillState();
         RenderSystem.setShader(GameRenderer::getPositionTexShader);
