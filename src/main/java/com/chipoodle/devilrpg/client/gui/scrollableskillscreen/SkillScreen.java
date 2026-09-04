@@ -84,6 +84,16 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     /** Evita que super.render vuelva a dibujar el fondo encima de la ventana ya renderizada */
     private boolean skipBackgroundRenderOnce = false;
 
+    /** Convierte la coord X de pantalla a coord local de la ventana (dividiendo por fitScale). */
+    private double localX(double screenX) {
+        return (screenX - offsetLeft) / this.fitScale;
+    }
+
+    /** Convierte la coord Y de pantalla a coord local de la ventana (dividiendo por fitScale). */
+    private double localY(double screenY) {
+        return (screenY - offsetTop) / this.fitScale;
+    }
+
     @Override
     public void renderBackground(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         if (!this.skipBackgroundRenderOnce) {
@@ -144,7 +154,6 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
             // pinta boton >
             addRenderableWidget(Button.builder(Component.literal(">"), b -> tabPage = Math.min(tabPage + 1, maxPages))
                     .pos(guiLeft + WINDOW_WIDTH - 20, guiTop - 50).size(20, 20).build());
-            maxPages = this.tabs.size() / SkillTabType.MAX_TABS;
         }
 
         //////////////////////////////////////////
@@ -206,13 +215,8 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
         // Fondo UNA sola vez, antes de la ventana (no se repite encima de esta)
         this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
 
-        // Escala la ventana para que quepa en la pantalla virtual con cualquier guiScale.
-        // Con guiScale 1-2 fitScale=1 y el comportamiento es identico al original.
-        this.fitScale = Math.min(1.0F,
-                Math.min((float) this.width / WINDOW_WIDTH, (float) this.height / WINDOW_HEIGHT));
-        offsetLeft = (this.width - (int) (WINDOW_WIDTH * this.fitScale)) / 2;
-        offsetTop = (this.height - (int) (WINDOW_HEIGHT * this.fitScale)) / 2;
-
+        // fitScale/offsetLeft/offsetTop se calculan en init() (no cambian entre frames; en un resize
+        // MC vuelve a llamar a init()). Aqui solo se usan, no se recalculan por frame.
         if (maxPages != 0) {
             Component page = Component.literal(String.format("%d / %d", tabPage + 1, maxPages + 1));
             int width = this.font.width(page);
@@ -283,8 +287,8 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (button == ButtonMouse.LEFT_BUTTON) {
-            double lmX = (mouseX - offsetLeft) / this.fitScale;
-            double lmY = (mouseY - offsetTop) / this.fitScale;
+            double lmX = localX(mouseX);
+            double lmY = localY(mouseY);
             for (SkillTab rootSkillTabGui : this.tabs.values()) {
                 if (rootSkillTabGui.getPage() == tabPage) {
                     if (rootSkillTabGui.isInsideTabSelector(0, 0, lmX, lmY)) {
@@ -316,8 +320,8 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
             this.isScrolling = false;
 
             if (!isDraggingToPowerButton) {
-                double lmX = (mouseX - offsetLeft) / this.fitScale;
-                double lmY = (mouseY - offsetTop) / this.fitScale;
+                double lmX = localX(mouseX);
+                double lmY = localY(mouseY);
                 draggedSkillWidget = selectedTab.getIfInsideIncludingChildren(
                         lmX - TAB_BACKGROUND_WINDOW_AREA_OFFSET_X, lmY - TAB_BACKGROUND_WINDOW_AREA_OFFSET_Y);
                 if (draggedSkillWidget != null && (draggedSkillWidget.isDisabled() || !draggedSkillWidget.getSkillProgress().hasProgress())) {
@@ -477,8 +481,8 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     private void renderTooltips(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
         // mouse en coordenadas locales de la ventana (diseno)
-        double lmX = (mouseX - offsetLeft) / this.fitScale;
-        double lmY = (mouseY - offsetTop) / this.fitScale;
+        double lmX = localX(mouseX);
+        double lmY = localY(mouseY);
         // pinta los tooltips de los botones
         if (this.selectedTab != null) {
             PoseStack poseStack = guiGraphics.pose();
