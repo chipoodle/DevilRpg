@@ -65,6 +65,10 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     public static final int POWER_BUTTON_Y_OFFSET = 21;
     // Se resta a SkillWidget.FRAME_SIZE para el tamano (alto y ancho) de cada boton.
     public static final int POWER_BUTTON_SHRINK = 6;
+    public static final int SKILL_LABEL_X = 72;
+    public static final int SKILL_LABEL_Y = 19;
+    public static final int UNSPENT_POINTS_LABEL_X = 46;
+    public static final int UNSPENT_POINTS_LABEL_Y = 230;
     private static int tabPage, maxPages;
     private final ClientSkillBuilderFromJson clientSkillManager;
     private final Map<SkillElement, SkillTab> tabs = Maps.newLinkedHashMap();
@@ -416,7 +420,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
             RenderSystem.disableBlend();
 
             // Pinta el título sobre el cartel "Skills" del marco (blanco sobre la placa)
-            guiGraphics.drawString(this.font, GUI_LABEL, 30, 17, 0xFFFFFF);
+            guiGraphics.drawString(this.font, GUI_LABEL, SKILL_LABEL_X, SKILL_LABEL_Y, 0xFFFFFF);
 
             int unspentPoints = expCap == null ? -1 : expCap.getUnspentPoints();
             int currentLevel = expCap == null ? -1 : expCap.getCurrentLevel();
@@ -426,7 +430,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
             //Pinta nivel + puntos sin usar, con fuente mas pequeña para que quepa en la placa del marco.
             PoseStack psInfo = guiGraphics.pose();
             psInfo.pushPose();
-            psInfo.translate(46, 252, 0);
+            psInfo.translate(UNSPENT_POINTS_LABEL_X, UNSPENT_POINTS_LABEL_Y, 0);
             psInfo.scale(0.7F, 0.7F, 1.0F);
             guiGraphics.drawString(this.font, infoHolder, 0, 0, 0xFFFFFF);
             psInfo.popPose();
@@ -602,10 +606,12 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
             // --- Calcular posicion y tamano del boton con variables descriptivas ---
             // Separacion horizontal entre el centro de cada boton.
             int powerButtonSpacing = powerButtonSize + POWER_BUTTON_GAP;
-            // Posicion X de este boton (indice k).
-            int powerButtonX = offLeft + POWER_INITIAL_X_POSITION + (int)(k * powerButtonSpacing+xFix);
+            // Posicion X de este boton (indice k). Multiplicar las coords de diseno por fitScale
+            // para que queden alineadas con la ventana cuando se escala (evita que se descuadre
+            // segun el tamano de la ventana / guiScale).
+            int powerButtonX = offLeft + (int) ((POWER_INITIAL_X_POSITION + k * powerButtonSpacing + xFix) * this.fitScale);
             // Posicion Y de este boton (fila inferior, desplazada por POWER_BUTTON_Y_OFFSET).
-            int powerButtonY = TAB_BACKGROUND_WINDOW_AREA_OFFSET_Y + offTop + INNER_SCREEN_HEIGHT + POWER_BUTTON_Y_OFFSET;
+            int powerButtonY = offTop + (int) ((TAB_BACKGROUND_WINDOW_AREA_OFFSET_Y + INNER_SCREEN_HEIGHT + POWER_BUTTON_Y_OFFSET) * this.fitScale);
 
             CustomSkillButton powerButtons = new CustomSkillButton(
                     powerButtonX,
