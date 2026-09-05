@@ -146,7 +146,12 @@ public interface IRenderUtilities {
             x = -Mth.sin(f) * distanciaDesdeElCentro + living.getRandomX(0.9D);
             z = -Mth.cos(f) * distanciaDesdeElCentro + living.getRandomZ(0.9D);
             f += (float) (Math.PI * 2 / numberOfParticles);
-            Level.addParticle(particle, x, y, z, d0, d1, d2);
+            // En servidor, addParticle no envia nada a los clientes; usar sendParticles.
+            if (Level instanceof ServerLevel serverLevel) {
+                serverLevel.sendParticles(particle, x, y, z, 1, d0, d1, d2, 0.0);
+            } else {
+                Level.addParticle(particle, x, y, z, d0, d1, d2);
+            }
         }
     }
 
@@ -170,6 +175,28 @@ public interface IRenderUtilities {
         } else {
             // Cliente (raro): addParticle local.
             level.addParticle(ParticleTypes.FLASH, sx, sy, sz, 0.0, 0.0, 0.0);
+        }
+    }
+
+    /**
+     * Explosion de GUERRA (War Bear) grande alrededor del oso. Usa {@link ServerLevel#sendParticles}
+     * para que las particulas lleguen a los clientes. Explosiones grandes + chispas de golpe critico,
+     * del mismo tamaño (o mayor) que la explosion de hielo del Frost Bite.
+     */
+    static void warbearExplosion(Level level, RandomSource rand, LivingEntity living) {
+        double x = living.getX();
+        double y = living.getY(0.5D);
+        double z = living.getZ();
+        if (level instanceof ServerLevel serverLevel) {
+            // Explosion central grande.
+            serverLevel.sendParticles(ParticleTypes.EXPLOSION_EMITTER, x, y, z, 1, 0.0, 0.0, 0.0, 0.0);
+            serverLevel.sendParticles(ParticleTypes.EXPLOSION, x, y, z, 4, 1.0, 0.4, 1.0, 0.1);
+            // Chispas de golpe critico alrededor (impacto del AOE).
+            serverLevel.sendParticles(ParticleTypes.CRIT, x, y, z, 22, 1.4, 1.0, 1.4, 0.7);
+            // Destello.
+            serverLevel.sendParticles(ParticleTypes.FLASH, x, y, z, 1, 0.0, 0.0, 0.0, 0.0);
+        } else {
+            level.addParticle(ParticleTypes.EXPLOSION, x, y, z, 0.0, 0.0, 0.0);
         }
     }
 
