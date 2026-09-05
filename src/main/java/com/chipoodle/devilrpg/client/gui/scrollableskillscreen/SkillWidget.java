@@ -158,6 +158,31 @@ public class SkillWidget {
         }
     }
 
+    /**
+     * Fija el skin por defecto del arbol de habilidades a
+     * "a-gui-texture-widget-for-rpg-game-celtic-style-forest_92_raw". Si no existe en la carpeta de
+     * widgets, usa el primero disponible.
+     */
+    public static void applyDefaultTheme() {
+        List<ResourceLocation> themes = loadWidgetThemeImages();
+        if (themes.isEmpty()) {
+            return;
+        }
+        ResourceLocation defaultTheme = null;
+        for (ResourceLocation rl : themes) {
+            if (rl.getPath().contains("forest_92_raw")) {
+                defaultTheme = rl;
+                break;
+            }
+        }
+        if (defaultTheme == null) {
+            defaultTheme = themes.get(0);
+        }
+        WIDGETS = defaultTheme;
+        resourceIndex = themes.indexOf(defaultTheme);
+        DevilRpg.LOGGER.info("[SkillWidget] Skin por defecto aplicado: {}", defaultTheme);
+    }
+
     public static List<ResourceLocation> loadWidgetThemeImages() {
         if (!resourceLocations.isEmpty()) {
             return resourceLocations;

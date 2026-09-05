@@ -157,7 +157,10 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
         }
 
         //////////////////////////////////////////
-        addThemeButtons();
+        // Skin del arbol de habilidades: se fija el por defecto (forest_92_raw) y se desactivan
+        // los botones < > de cambio de tema.
+        SkillWidget.applyDefaultTheme();
+        //addThemeButtons();
 
         maxPages = this.tabs.size() / SkillTabType.MAX_TABS;
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
