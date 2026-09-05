@@ -30,7 +30,7 @@ import java.util.HashMap;
 
 public class ClientModKeyInputEventSubscriber {
 
-    private static final KeyMapping[] KEYS = new KeyMapping[7];
+    private static final KeyMapping[] KEYS = new KeyMapping[8];
     private static final HashMap<PowerEnum, KeyMapping> keyBindingsHash = new HashMap<>();
 
     @EventBusSubscriber(modid = DevilRpg.MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
@@ -45,6 +45,7 @@ public class ClientModKeyInputEventSubscriber {
             KEYS[4] = new KeyMapping("key.power5", -1, "key.categories.devilrpg");
             KEYS[5] = new KeyMapping("key.power6", -1, "key.categories.devilrpg");
             KEYS[6] = new KeyMapping("key.skill_gui", -1, "key.categories.devilrpg");
+            KEYS[7] = new KeyMapping("key.cycle_skill_set", 75, "key.categories.devilrpg"); // K
 
             keyBindingsHash.put(PowerEnum.POWER1, KEYS[0]);
             keyBindingsHash.put(PowerEnum.POWER2, KEYS[1]);
@@ -124,6 +125,10 @@ public class ClientModKeyInputEventSubscriber {
                 //DevilRpg.LOGGER.debug(KEYS[5].getKey().getDisplayName());
                 //SkillScreen.open(Minecraft.getInstance().player,KEYS[4].getKey());
                 Minecraft.getInstance().tell(() -> Minecraft.getInstance().setScreen(new SkillScreen(KEYS[5].getKey())));
+            }
+            // Rota hacia adelante el conjunto de skills asignados (loadout).
+            if (KEYS[7].consumeClick()) {
+                if (skill != null) skill.rotateSkillSet(1, p);
             }
 
         }

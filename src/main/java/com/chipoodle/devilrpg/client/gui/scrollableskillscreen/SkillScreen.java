@@ -166,6 +166,25 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         addPowerButtons();
         loadAssignedPowerButtons();
+
+        // Botones para rotar entre conjuntos de skills asignados (loadouts).
+        addSkillSetButtons();
+    }
+
+    /** Botones ◀ ▶ para rotar el conjunto de skills activo (loadout) y recargar los botones de poder. */
+    private void addSkillSetButtons() {
+        int y = (int) (offsetTop + WINDOW_HEIGHT * this.fitScale) + 24;
+        addRenderableWidget(Button.builder(Component.literal("◀"), b -> switchSkillSet(-1))
+                .pos((int) (offsetLeft + (WINDOW_WIDTH - 66) * this.fitScale), y).size(18, 18).build());
+        addRenderableWidget(Button.builder(Component.literal("▶"), b -> switchSkillSet(1))
+                .pos((int) (offsetLeft + (WINDOW_WIDTH - 44) * this.fitScale), y).size(18, 18).build());
+    }
+
+    private void switchSkillSet(int delta) {
+        if (skillCap != null) {
+            skillCap.rotateSkillSet(delta, player);
+            loadAssignedPowerButtons();
+        }
     }
 
     private void addThemeButtons() {

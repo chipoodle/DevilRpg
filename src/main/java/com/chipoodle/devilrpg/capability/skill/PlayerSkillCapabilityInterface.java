@@ -19,6 +19,12 @@ import java.util.UUID;
 public interface PlayerSkillCapabilityInterface extends IGenericCapability {
     HashMap<PowerEnum, SkillEnum> getSkillsNameOfPowers();
     void setSkillsNameOfPowers(HashMap<PowerEnum, SkillEnum> names, Player player);
+    /** Numero de conjuntos (loadouts) de skills asignados a los botones de poder. */
+    int getSkillSetCount();
+    /** Indice del conjunto de skills activo (0-based). */
+    int getActiveSkillSetIndex();
+    /** Rota el conjunto de skills activo en {@code delta} (+1 adelante / -1 atras) y lo sincroniza. */
+    void rotateSkillSet(int delta, Player player);
     HashMap<SkillEnum, Integer> getSkillsPoints();
     void setSkillsPoints(HashMap<SkillEnum, Integer> points, Player player);
     HashMap<SkillEnum, Integer> getMaxSkillsPoints();

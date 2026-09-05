@@ -45,6 +45,10 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
     public final static String ATTRIBUTE_MODIFIER_KEY = "AttributeModifier";
     public final static String SKILL_BYTE_ARRAY_KEY = "PassiveKey";
     private static final String IMAGES_OF_SKILLS_KEY = "ImagesOfSkills";
+    /** Lista de conjuntos de skills asignados a los botones de poder (loadouts). */
+    public static final String SKILL_SETS_KEY = "SkillSets";
+    /** Indice del conjunto de skills activo. */
+    public static final String ACTIVE_SKILL_SET_KEY = "ActiveSkillSet";
     private final ClientSkillBuilderFromJson clientBuilder = new ClientSkillBuilderFromJson();
     private final SingletonSkillExecutorFactory singletonSkillExecutorFactory;
     private CompoundTag nbt = new CompoundTag();
@@ -117,25 +121,90 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
     @SuppressWarnings("unchecked")
     @Override
     public HashMap<PowerEnum, SkillEnum> getSkillsNameOfPowers() {
-        try {
-            return (HashMap<PowerEnum, SkillEnum>) BytesUtil.toObject(nbt.getByteArray(POWERS_KEY));
-        } catch (ClassNotFoundException | IOException e) {
-            DevilRpg.LOGGER.error("Error en getSkillsNameOfPowers", e);
-            return null;
-        }
+        List<HashMap<PowerEnum, SkillEnum>> sets = loadSkillSets();
+        int idx = clampActiveIndex(sets.size());
+        return sets.get(idx);
     }
 
     @Override
     public void setSkillsNameOfPowers(HashMap<PowerEnum, SkillEnum> names, Player player) {
+        List<HashMap<PowerEnum, SkillEnum>> sets = loadSkillSets();
+        int idx = clampActiveIndex(sets.size());
+        sets.set(idx, names);
+        saveSkillSets(sets);
+        if (!player.level().isClientSide) {
+            sendSkillChangesToClient((ServerPlayer) player);
+        } else {
+            sendSkillChangesToServer();
+        }
+    }
+
+    @Override
+    public int getSkillSetCount() {
+        return Math.max(1, loadSkillSets().size());
+    }
+
+    @Override
+    public int getActiveSkillSetIndex() {
+        return nbt.getInt(ACTIVE_SKILL_SET_KEY);
+    }
+
+    @Override
+    public void rotateSkillSet(int delta, Player player) {
+        List<HashMap<PowerEnum, SkillEnum>> sets = loadSkillSets();
+        if (sets.size() <= 1) {
+            // Crear un segundo conjunto vacio para poder rotar.
+            sets.add(new HashMap<>());
+            saveSkillSets(sets);
+        }
+        int count = sets.size();
+        int newIdx = ((getActiveSkillSetIndex() + delta) % count + count) % count;
+        nbt.putInt(ACTIVE_SKILL_SET_KEY, newIdx);
+        if (!player.level().isClientSide) {
+            sendSkillChangesToClient((ServerPlayer) player);
+        } else {
+            sendSkillChangesToServer();
+        }
+    }
+
+    private int clampActiveIndex(int count) {
+        return Math.max(0, Math.min(nbt.getInt(ACTIVE_SKILL_SET_KEY), count - 1));
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<HashMap<PowerEnum, SkillEnum>> loadSkillSets() {
         try {
-            nbt.putByteArray(POWERS_KEY, BytesUtil.toByteArray(names));
-            if (!player.level().isClientSide) {
-                sendSkillChangesToClient((ServerPlayer) player);
-            } else {
-                sendSkillChangesToServer();
+            Object o = BytesUtil.toObject(nbt.getByteArray(SKILL_SETS_KEY));
+            if (o instanceof List<?> list) {
+                List<HashMap<PowerEnum, SkillEnum>> sets = new ArrayList<>();
+                for (Object el : list) {
+                    if (el instanceof HashMap<?, ?> m) {
+                        sets.add((HashMap<PowerEnum, SkillEnum>) m);
+                    }
+                }
+                if (!sets.isEmpty()) {
+                    return sets;
+                }
             }
+        } catch (Exception e) {
+            DevilRpg.LOGGER.error("Error en loadSkillSets", e);
+        }
+        // Fallback: un unico conjunto desde POWERS_KEY (compatibilidad con datos antiguos).
+        List<HashMap<PowerEnum, SkillEnum>> sets = new ArrayList<>();
+        HashMap<PowerEnum, SkillEnum> existing = null;
+        try {
+            existing = (HashMap<PowerEnum, SkillEnum>) BytesUtil.toObject(nbt.getByteArray(POWERS_KEY));
+        } catch (Exception ignored) {
+        }
+        sets.add(existing == null ? new HashMap<>() : existing);
+        return sets;
+    }
+
+    private void saveSkillSets(List<HashMap<PowerEnum, SkillEnum>> sets) {
+        try {
+            nbt.putByteArray(SKILL_SETS_KEY, BytesUtil.toByteArray(new ArrayList<>(sets)));
         } catch (IOException e) {
-            DevilRpg.LOGGER.error("Error en setSkillsNameOfPowers", e);
+            DevilRpg.LOGGER.error("Error en saveSkillSets", e);
         }
     }
 
