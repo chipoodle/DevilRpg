@@ -112,7 +112,8 @@ public class SoulMinerVineBlockEntity extends BlockEntity {
 
         Integer currentAge = state.getValue(AGE); // Obtener el AGE actual
         int skillLevel = state.getValue(LEVEL); // Obtener el nivel de habilidad
-        int maxBranchLength = (int) Math.round((skillLevel + 5) * BRANCH_DEPTH_MULTIPLIER); // +30% de profundidad
+        int maxBranchLength = Math.min(SoulMinerVineBlock.MAX_VINE_AGE,
+                (int) Math.round((skillLevel + 5) * BRANCH_DEPTH_MULTIPLIER)); // +30% de profundidad, sin superar AGE max
         int currentDecay = state.getValue(DECAY_STAGE);
         Direction currentDirection = state.getValue(DIRECTIONS);
         Integer duration = TICK_FACTOR;

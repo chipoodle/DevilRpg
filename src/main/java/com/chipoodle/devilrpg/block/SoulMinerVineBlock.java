@@ -44,8 +44,10 @@ public class SoulMinerVineBlock extends Block implements EntityBlock {
 
     public static final VoxelShape SHAPE = Block.box(4.0D, 0.0D, 4.0D, 12.0D, 15.0D, 12.0D);
 
+    // Maximo de AGE. Ampliado para permitir que la planta sea un 30% mas profunda.
+    public static final int MAX_VINE_AGE = 40;
     // Cambiar AGE a un rango de 0 a 30
-    public static final IntegerProperty AGE = IntegerProperty.create("age", 0, 30);
+    public static final IntegerProperty AGE = IntegerProperty.create("age", 0, MAX_VINE_AGE);
 
     public static final DirectionProperty DIRECTIONS = BlockStateProperties.FACING;
     public static final IntegerProperty LEVEL = IntegerProperty.create("soulvine_level", 0, 25);
