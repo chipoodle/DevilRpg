@@ -163,7 +163,7 @@ public final class InitModEventSubscriber {
                 SpawnPlacementTypes.ON_GROUND, // Tipo de spawn (en el suelo)
                 Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, // Altura del spawn
                 AggressiveZombieEntity::checkSpawnRules,
-                RegisterSpawnPlacementsEvent.Operation.AND // Reemplazar cualquier regla existente
+                RegisterSpawnPlacementsEvent.Operation.REPLACE // Para una entidad modded nueva: REPLACE setea el placement (AND solo combina con uno ya existente)
         );
     }
 
