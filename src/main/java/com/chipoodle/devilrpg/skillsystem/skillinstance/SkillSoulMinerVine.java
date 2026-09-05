@@ -1,6 +1,7 @@
 package com.chipoodle.devilrpg.skillsystem.skillinstance;
 
 import com.chipoodle.devilrpg.block.SoulMinerVineBlock;
+import com.chipoodle.devilrpg.blockentity.SoulMinerVineBlockEntity;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
@@ -88,6 +89,10 @@ public class SkillSoulMinerVine extends AbstractSkillSeedsInInventoryExecutor {
                                 .setValue(SoulMinerVineBlock.LEVEL, skillPoints)
                                 .setValue(SoulMinerVineBlock.HAS_CHILDREN, false)
                 );
+        // Marcar este bloque como la RAÍZ de la planta (destino de los items minados).
+        if (level.getBlockEntity(newBlockpos) instanceof SoulMinerVineBlockEntity minerBE) {
+            minerBE.setRootInfo(newBlockpos, null);
+        }
     }
 
 }
