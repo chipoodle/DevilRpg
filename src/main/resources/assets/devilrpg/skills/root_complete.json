@@ -316,7 +316,7 @@
     {
         "id": "shapeshifting:skin_armor",
         "display": {
-            "description": "Using leather armor hardens shapeshifter defense",
+            "description": "While a werewolf, wearing complete leather armor grants diamond-grade defense and is gradually repaired, so it lasts as long as diamond.",
             "icon": {
                 "item": "minecraft:glass_pane",
                 "minecraft:glass_panenbt": 1

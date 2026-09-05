@@ -43,6 +43,9 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ArmorItem;
+import net.minecraft.world.item.ArmorMaterials;
+import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.attachment.AttachmentType;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.entity.EntityLeaveLevelEvent;
@@ -50,6 +53,7 @@ import net.neoforged.neoforge.event.entity.living.LivingEquipmentChangeEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerSetSpawnEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerXpEvent;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -99,8 +103,44 @@ public class PlayerCapabilityForgeEventSubscriber {
                 Math.round(XP_KEPT * 100), clone.experienceLevel, original.experienceLevel, clone.totalExperience);
     }
 
-    private static <T extends IGenericCapability> void clonePlayerCapability(PlayerEvent.Clone e, Supplier<AttachmentType<T>> cap) {
-        Player originalPlayer = e.getOriginal();
+    /**
+     * Skin Armor: mientras el jugador esta transformado en hombre lobo y lleva armadura de CUERO
+     * COMPLETA, la armadura se repara gradualmente (su durabilidad se mantiene alta como si fuera
+     * de diamante). Al volver a humano se deja de reparar y vuelve a desgastarse con normalidad.
+     */
+    @SubscribeEvent
+    public static void onPlayerTick(PlayerTickEvent.Post event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) {
+            return;
+        }
+        // Cada 5 ticks (~0.25s) se repara 1 punto de durabilidad por pieza.
+        if (player.tickCount % 5 != 0) {
+            return;
+        }
+        PlayerAuxiliaryCapabilityInterface aux = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerAuxiliaryCapability.INSTANCE);
+        if (aux == null || !aux.isWerewolfTransformation()) {
+            return;
+        }
+        repairLeatherArmor(player);
+    }
+
+    /** Repara 1 punto de durabilidad en cada pieza de cuero que no este al maximo. */
+    private static void repairLeatherArmor(ServerPlayer player) {
+        EquipmentSlot[] slots = {EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET};
+        for (EquipmentSlot slot : slots) {
+            ItemStack stack = player.getItemBySlot(slot);
+            if (stack.getItem() instanceof ArmorItem armorItem
+                    && armorItem.getMaterial().equals(ArmorMaterials.LEATHER)
+                    && stack.isDamageableItem()) {
+                int damage = stack.getDamageValue();
+                if (damage > 0) {
+                    stack.setDamageValue(damage - 1);
+                }
+            }
+        }
+    }
+
+    private static <T extends IGenericCapability> void clonePlayerCapability(PlayerEvent.Clone e, Supplier<AttachmentType<T>> cap) {        Player originalPlayer = e.getOriginal();
         Player actualPlayer = e.getEntity();
 
         CompoundTag originalCompound = originalPlayer.getData(cap).serializeNBT(originalPlayer.level().registryAccess());

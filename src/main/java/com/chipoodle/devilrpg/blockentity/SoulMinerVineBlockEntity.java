@@ -31,6 +31,8 @@ public class SoulMinerVineBlockEntity extends BlockEntity {
     public static final int TICK_FACTOR = 140;
     /** Multiplica la longitud de la rama para que la planta cae un 30% mas profundo. */
     private static final double BRANCH_DEPTH_MULTIPLIER = 1.3D;
+    /** Probabilidad (0..1) de que la planta prefiera cavar hacia ABAJO (las demas veces toma rutas alternativas). */
+    private static final float DOWN_BIAS_PROBABILITY = 0.4F;
     private Long timeOfCreation = null;
 
     /**
@@ -304,18 +306,19 @@ public class SoulMinerVineBlockEntity extends BlockEntity {
     }
 
     /**
-     * Direcciones de crecimiento sesgadas hacia ABAJO: DOWN aparece 3 veces al inicio, de modo que la
-     * enredadera tiende a cavar mas hacia abajo que hacia los lados.
+     * Direcciones de crecimiento con sesgo MODERADO hacia abajo: con una probabilidad de
+     * {@link #DOWN_BIAS_PROBABILITY} se prioriza DOWN, pero el resto del tiempo se elige una ruta
+     * aleatoria (down u otras), de modo que la planta cae mas hacia abajo sin dejar de tomar
+     * rutas alternativas.
      */
     private List<Direction> growthDirections(RandomSource randomSource) {
         List<Direction> dirs = new ArrayList<>(Direction.allShuffled(randomSource));
-        List<Direction> biased = new ArrayList<>(List.of(Direction.DOWN, Direction.DOWN, Direction.DOWN));
-        for (Direction d : dirs) {
-            if (d != Direction.DOWN) {
-                biased.add(d);
-            }
+        if (randomSource.nextFloat() < DOWN_BIAS_PROBABILITY) {
+            // Preferir ABAJO solo en esta ocasion: ponerlo primero en la lista.
+            dirs.remove(Direction.DOWN);
+            dirs.add(0, Direction.DOWN);
         }
-        return biased;
+        return dirs;
     }
 
     private boolean isMineable(BlockState blockState) {
