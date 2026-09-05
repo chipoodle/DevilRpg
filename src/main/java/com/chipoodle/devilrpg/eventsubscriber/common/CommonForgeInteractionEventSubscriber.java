@@ -237,32 +237,41 @@ public class CommonForgeInteractionEventSubscriber {
         if (FROZEN.isEmpty()) {
             return;
         }
-        event.getServer().getAllLevels().forEach(level -> {
-            if (!(level instanceof ServerLevel serverLevel)) {
-                return;
+        var server = event.getServer();
+        // Se itera una copia de las claves para poder actualizar/eliminar con seguridad
+        // (los entries de ConcurrentHashMap son inmutables y no permiten setValue).
+        for (UUID id : new java.util.ArrayList<>(FROZEN.keySet())) {
+            Integer remaining = FROZEN.get(id);
+            if (remaining == null) {
+                continue;
             }
-            FROZEN.entrySet().removeIf(entry -> {
-                LivingEntity entity = serverLevel.getEntity(entry.getKey()) instanceof LivingEntity living ? living : null;
-                if (entity == null || entity.isRemoved()) {
-                    return true; // ya no existe la entidad
+            // Buscar la entidad en cualquier nivel del servidor.
+            LivingEntity living = null;
+            for (ServerLevel level : server.getAllLevels()) {
+                if (level.getEntity(id) instanceof LivingEntity l) {
+                    living = l;
+                    break;
                 }
-                int remaining = entry.getValue() - 1;
-                if (remaining <= 0) {
-                    // Se acabo el efecto de congelacion.
-                    return true;
-                }
-                // Emitir particulas de hielo cada 3 ticks.
-                if (entity.tickCount % 3 == 0) {
-                    double x = entity.getX();
-                    double y = entity.getY();
-                    double z = entity.getZ();
-                    serverLevel.sendParticles(ParticleTypes.SNOWFLAKE, x, y + 0.3, z, 2, 0.35, 0.2, 0.35, 0.05);
-                    serverLevel.sendParticles(ParticleTypes.CRIT, x, y + 0.1, z, 1, 0.2, 0.15, 0.2, 0.1);
-                }
-                entry.setValue(remaining);
-                return false;
-            });
-        });
+            }
+            if (living == null || living.isRemoved()) {
+                FROZEN.remove(id); // ya no existe -> limpiar
+                continue;
+            }
+            int next = remaining - 1;
+            if (next <= 0) {
+                FROZEN.remove(id); // se acabo el efecto -> limpiar
+                continue;
+            }
+            // Emitir particulas de hielo cada 3 ticks en el nivel de la entidad.
+            if (living.tickCount % 3 == 0 && living.level() instanceof ServerLevel sl) {
+                double x = living.getX();
+                double y = living.getY();
+                double z = living.getZ();
+                sl.sendParticles(ParticleTypes.SNOWFLAKE, x, y + 0.3, z, 2, 0.35, 0.2, 0.35, 0.05);
+                sl.sendParticles(ParticleTypes.CRIT, x, y + 0.1, z, 1, 0.2, 0.15, 0.2, 0.1);
+            }
+            FROZEN.put(id, next);
+        }
     }
 
     @SubscribeEvent
