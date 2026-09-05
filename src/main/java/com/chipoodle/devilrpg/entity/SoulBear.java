@@ -736,7 +736,10 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
         @Override
         protected void checkAndPerformAttack(@NotNull LivingEntity enemy) {
             double d0 = this.getAttackReachSqr(enemy);
-            if (this.mob.distanceToSqr(enemy) <= d0 && this.isTimeToAttack()) {
+            // Mientras el oso ya se esta parando/atacando, el golpe alcanza mas lejos para acertar
+            // a enemigos en movimiento durante el wind-up (antes se escapaban del rango).
+            double strikeReach = (SoulBear.this.isAttacking() || SoulBear.this.isStanding()) ? d0 * 1.6D : d0;
+            if (this.mob.distanceToSqr(enemy) <= strikeReach && this.isTimeToAttack()) {
                 SoulBear.this.setAttacking(true);
                 this.resetAttackCooldown();
                 this.mob.doHurtTarget(enemy);
@@ -773,7 +776,7 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
         }
 
             protected double getAttackReachSqr(LivingEntity attackTarget) {
-            return 4.0F + attackTarget.getBbWidth();
+            return 9.0F + attackTarget.getBbWidth();
         }
     }
 
