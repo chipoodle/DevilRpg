@@ -173,21 +173,26 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
 
     @SuppressWarnings("unchecked")
     private List<HashMap<PowerEnum, SkillEnum>> loadSkillSets() {
-        try {
-            Object o = BytesUtil.toObject(nbt.getByteArray(SKILL_SETS_KEY));
-            if (o instanceof List<?> list) {
-                List<HashMap<PowerEnum, SkillEnum>> sets = new ArrayList<>();
-                for (Object el : list) {
-                    if (el instanceof HashMap<?, ?> m) {
-                        sets.add((HashMap<PowerEnum, SkillEnum>) m);
+        // Solo intentar deserializar si hay datos (evita EOFException por array vacio cuando la
+        // clave aun no existe, p. ej. en mundos/jugadores que nunca rotaron de conjunto).
+        byte[] data = nbt.getByteArray(SKILL_SETS_KEY);
+        if (data != null && data.length > 0) {
+            try {
+                Object o = BytesUtil.toObject(data);
+                if (o instanceof List<?> list) {
+                    List<HashMap<PowerEnum, SkillEnum>> sets = new ArrayList<>();
+                    for (Object el : list) {
+                        if (el instanceof HashMap<?, ?> m) {
+                            sets.add((HashMap<PowerEnum, SkillEnum>) m);
+                        }
+                    }
+                    if (!sets.isEmpty()) {
+                        return sets;
                     }
                 }
-                if (!sets.isEmpty()) {
-                    return sets;
-                }
+            } catch (Exception e) {
+                DevilRpg.LOGGER.error("Error en loadSkillSets", e);
             }
-        } catch (Exception e) {
-            DevilRpg.LOGGER.error("Error en loadSkillSets", e);
         }
         // Fallback: un unico conjunto desde POWERS_KEY (compatibilidad con datos antiguos).
         List<HashMap<PowerEnum, SkillEnum>> sets = new ArrayList<>();
