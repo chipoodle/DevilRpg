@@ -171,19 +171,39 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
         addSkillSetButtons();
     }
 
-    /** Botones ◀ ▶ para rotar el conjunto de skills activo (loadout) y recargar los botones de poder. */
+    /**
+     * Botones ◀ ▶ para rotar el conjunto de skills activo (loadout). Son transparentes (sin caja
+     * gris): dibujan solo la flecha en color madera para que coincidan con la flecha pintada en el
+     * marco (que queda debajo), y funcionan como zona de clic encima de ella.
+     */
     private void addSkillSetButtons() {
         int y = (int) (offsetTop + WINDOW_HEIGHT * this.fitScale) + 24;
-        addRenderableWidget(Button.builder(Component.literal("◀"), b -> switchSkillSet(-1))
-                .pos((int) (offsetLeft + (WINDOW_WIDTH - 66) * this.fitScale), y).size(18, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("▶"), b -> switchSkillSet(1))
-                .pos((int) (offsetLeft + (WINDOW_WIDTH - 44) * this.fitScale), y).size(18, 18).build());
+        addRenderableWidget(new FrameArrowButton((int) (offsetLeft + (WINDOW_WIDTH - 66) * this.fitScale), y, 18, 18, "◀", () -> switchSkillSet(-1)));
+        addRenderableWidget(new FrameArrowButton((int) (offsetLeft + (WINDOW_WIDTH - 44) * this.fitScale), y, 18, 18, "▶", () -> switchSkillSet(1)));
     }
 
     private void switchSkillSet(int delta) {
         if (skillCap != null) {
             skillCap.rotateSkillSet(delta, player);
             loadAssignedPowerButtons();
+        }
+    }
+
+    /**
+     * Boton de flecha sin fondo visible: solo pinta la flecha en tono madera (similar a la del marco).
+     * Sirve como zona de clic sobre la flecha dibujada en la imagen de fondo.
+     */
+    private static class FrameArrowButton extends Button {
+        FrameArrowButton(int x, int y, int w, int h, String arrow, Runnable onClick) {
+            super(x, y, w, h, Component.literal(arrow), b -> onClick.run(), Button.DEFAULT_SPRITES);
+        }
+
+        @Override
+        protected void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+            // No dibujar la caja gris; solo la flecha en color madera (se ve la del marco debajo).
+            int color = this.isHovered() ? 0xFFE0A05A : 0xFF9C6B3A;
+            guiGraphics.drawCenteredString(Minecraft.getInstance().font, this.getMessage(),
+                    this.getX() + this.getWidth() / 2, this.getY() + (this.getHeight() - 8) / 2, color);
         }
     }
 
