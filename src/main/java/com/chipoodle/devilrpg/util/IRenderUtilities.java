@@ -116,7 +116,7 @@ public interface IRenderUtilities {
             double d0 = rand.nextGaussian() * 0.02D;
             double d1 = rand.nextGaussian() * 0.02D;
             double d2 = rand.nextGaussian() * 0.02D;
-            Level.addParticle(ParticleTypes.END_ROD, living.getRandomX(1.0D), living.getRandomY() + 0.5D, living.getRandomZ(1.0D), d0, d1, d2);
+            spawnParticle(Level, ParticleTypes.END_ROD, living.getRandomX(1.0D), living.getRandomY() + 0.5D, living.getRandomZ(1.0D), d0, d1, d2);
         }
     }
 
@@ -126,7 +126,7 @@ public interface IRenderUtilities {
             double d0 = rand.nextGaussian() * 0.02D;
             double d1 = rand.nextGaussian() * 0.02D;
             double d2 = rand.nextGaussian() * 0.02D;
-            Level.addParticle(particle, living.getRandomX(1.0D), living.getRandomY() + 1.5D, living.getRandomZ(1.0D), d0, d1, d2);
+            spawnParticle(Level, particle, living.getRandomX(1.0D), living.getRandomY() + 1.5D, living.getRandomZ(1.0D), d0, d1, d2);
         }
     }
 
@@ -253,7 +253,7 @@ public interface IRenderUtilities {
                 double spawnZ = playerZ + offsetZ;
 
                 // Genera la partícula en la posición calculada
-                player.level().addParticle(particleTypes, spawnX, spawnY, spawnZ, 0.0, 0.0, 0.0);
+                spawnParticle(player.level(), particleTypes, spawnX, spawnY, spawnZ, 0.0, 0.0, 0.0);
             }
         }
     }
