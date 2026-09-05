@@ -20,6 +20,7 @@ import net.minecraft.client.GameNarrator;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
@@ -69,6 +70,14 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     public static final int SKILL_LABEL_Y = 19;
     public static final int UNSPENT_POINTS_LABEL_X = 46;
     public static final int UNSPENT_POINTS_LABEL_Y = 230;
+
+    // --- Botones de rotar conjunto de skills (loadouts) ---
+    /** Distancia desde el borde derecho del marco a la X del botón ◀ (bájala = más a la derecha). */
+    public static final int SKILL_SET_BUTTON_RIGHT_MARGIN = 66;
+    /** Separación horizontal entre el botón ◀ y el ▶. */
+    public static final int SKILL_SET_BUTTON_SPACING = 22;
+    /** Desplazamiento vertical bajo la ventana (sube/baja los botones). */
+    public static final int SKILL_SET_BUTTON_Y_OFFSET = 24;
     private static int tabPage, maxPages;
     private final ClientSkillBuilderFromJson clientSkillManager;
     private final Map<SkillElement, SkillTab> tabs = Maps.newLinkedHashMap();
@@ -177,9 +186,11 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
      * marco (que queda debajo), y funcionan como zona de clic encima de ella.
      */
     private void addSkillSetButtons() {
-        int y = (int) (offsetTop + WINDOW_HEIGHT * this.fitScale) + 24;
-        addRenderableWidget(new FrameArrowButton((int) (offsetLeft + (WINDOW_WIDTH - 66) * this.fitScale), y, 18, 18, "◀", () -> switchSkillSet(-1)));
-        addRenderableWidget(new FrameArrowButton((int) (offsetLeft + (WINDOW_WIDTH - 44) * this.fitScale), y, 18, 18, "▶", () -> switchSkillSet(1)));
+        int y = (int) (offsetTop + WINDOW_HEIGHT * this.fitScale) + SKILL_SET_BUTTON_Y_OFFSET;
+        int leftX = (int) (offsetLeft + (WINDOW_WIDTH - SKILL_SET_BUTTON_RIGHT_MARGIN) * this.fitScale);
+        int rightX = (int) (offsetLeft + (WINDOW_WIDTH - SKILL_SET_BUTTON_RIGHT_MARGIN + SKILL_SET_BUTTON_SPACING) * this.fitScale);
+        addRenderableWidget(new FrameArrowButton(leftX, y, SKILL_SET_BUTTON_SPACING, SKILL_SET_BUTTON_SPACING, "◀", () -> switchSkillSet(-1)));
+        addRenderableWidget(new FrameArrowButton(rightX, y, SKILL_SET_BUTTON_SPACING, SKILL_SET_BUTTON_SPACING, "▶", () -> switchSkillSet(1)));
     }
 
     private void switchSkillSet(int delta) {
@@ -193,9 +204,17 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
      * Boton de flecha sin fondo visible: solo pinta la flecha en tono madera (similar a la del marco).
      * Sirve como zona de clic sobre la flecha dibujada en la imagen de fondo.
      */
-    private static class FrameArrowButton extends Button {
+    private static class FrameArrowButton extends AbstractButton {
+        private final Runnable onClickAction;
+
         FrameArrowButton(int x, int y, int w, int h, String arrow, Runnable onClick) {
-            super(x, y, w, h, Component.literal(arrow), b -> onClick.run(), Button.DEFAULT_SPRITES);
+            super(x, y, w, h, Component.literal(arrow));
+            this.onClickAction = onClick;
+        }
+
+        @Override
+        public void onPress() {
+            onClickAction.run();
         }
 
         @Override
@@ -204,6 +223,10 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
             int color = this.isHovered() ? 0xFFE0A05A : 0xFF9C6B3A;
             guiGraphics.drawCenteredString(Minecraft.getInstance().font, this.getMessage(),
                     this.getX() + this.getWidth() / 2, this.getY() + (this.getHeight() - 8) / 2, color);
+        }
+
+        @Override
+        protected void updateWidgetNarration(net.minecraft.client.gui.narration.NarrationElementOutput narrationOutput) {
         }
     }
 
