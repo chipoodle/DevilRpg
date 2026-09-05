@@ -24,11 +24,16 @@ import org.jetbrains.annotations.Nullable;
  */
 public class AggressiveZombieSpawnRule implements CustomSpawnRule {
 
-    private static final int MIN_PLAYER_DISTANCE = 200;   // por debajo: probabilidad 0
-    private static final int MAX_PLAYER_DISTANCE = 1500;  // por encima: probabilidad 1
-    private static final int MIN_SPAWN_DISTANCE = 48;     // minimo lejos del jugador (bloques)
-    private static final int MAX_SPAWN_DISTANCE = 96;     // maximo lejos del jugador (bloques)
-    private static final int SURFACE_SEARCH_DOWN = 16;    // bloques hacia abajo para hallar suelo
+    // --- Configuracion de esta regla (usa constantes) ---
+    private static final int MIN_INTERVAL_SECONDS = 30;      // intervalo minimo entre intentos (30 s)
+    private static final int MAX_INTERVAL_SECONDS = 7 * 60;  // intervalo maximo entre intentos (7 min)
+    private static final int MAX_ALIVE_IN_WORLD = 30;        // limite de zombies agresivos vivos simultaneos
+
+    private static final int MIN_PLAYER_DISTANCE = 200;      // por debajo: probabilidad 0
+    private static final int MAX_PLAYER_DISTANCE = 1500;     // por encima: probabilidad 1
+    private static final int MIN_SPAWN_DISTANCE = 48;        // minimo lejos del jugador (bloques)
+    private static final int MAX_SPAWN_DISTANCE = 96;        // maximo lejos del jugador (bloques)
+    private static final int SURFACE_SEARCH_DOWN = 16;       // bloques hacia abajo para hallar suelo
 
     @Override
     public EntityType<? extends Mob> getEntityType() {
@@ -37,12 +42,17 @@ public class AggressiveZombieSpawnRule implements CustomSpawnRule {
 
     @Override
     public int getMinIntervalTicks() {
-        return 30 * 20; // 30 segundos
+        return MIN_INTERVAL_SECONDS * 20;
     }
 
     @Override
     public int getMaxIntervalTicks() {
-        return 10 * 60 * 20; // 10 minutos
+        return MAX_INTERVAL_SECONDS * 20;
+    }
+
+    @Override
+    public int getMaxAliveInLevel() {
+        return MAX_ALIVE_IN_WORLD;
     }
 
     @Override

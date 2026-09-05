@@ -42,4 +42,13 @@ public interface CustomSpawnRule {
     /** Configura la entidad tras crearla. Por defecto no hace nada (la entidad puede auto-configurarse). */
     default void configureEntity(Mob entity, ServerLevel level, ServerPlayer player) {
     }
+
+    /**
+     * Numero maximo de criaturas de ESTE tipo que pueden existir a la vez en el nivel (mundo).
+     * Cuando se alcanza, el spawneador deja de crear mas hasta que alguna muera/desaparezca.
+     * Por defecto sin limite.
+     */
+    default int getMaxAliveInLevel() {
+        return Integer.MAX_VALUE;
+    }
 }
