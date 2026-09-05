@@ -41,6 +41,8 @@ import java.util.Objects;
 
 public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, PowerableMob, IPassiveMinionUpdater<SoulWolf> {
     public static final int FROSTBITE_DURATION_TICKS = 20;
+    /** Duracion de la congelacion (lento/inmovil) que aplica el Frost Bite al objetivo. */
+    private static final int FROZEN_DURATION_TICKS = 60;
     private static final int ICE_ARMOR_EFFECT_FACTOR = 2;
     private static final double RADIUS_PARTICLES = 0.7;
     //private static final int NUMBER_OF_PARTICLES_ICE_ARMOR = 11;
@@ -162,6 +164,12 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
                 this.addEffect(frostbiteEffect);
             //Explosion de hielo que sale del hocico del lobo al morder (Frost Bite).
             IRenderUtilities.frostBiteExplosion(this.level(), random, this);
+            DevilRpg.LOGGER.debug("----------> frost byte explosion!! ");
+            // Congelar al objetivo: queda lento/inmovil y actuando lento unos segundos.
+            if (target instanceof LivingEntity living) {
+                living.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, FROZEN_DURATION_TICKS, 3, true, false));
+                living.addEffect(new MobEffectInstance(MobEffects.DIG_SLOWDOWN, FROZEN_DURATION_TICKS, 2, true, false));
+            }
         }
         double attackDamage = this.getAttributeValue(Attributes.ATTACK_DAMAGE);
         boolean flag = target.hurt(this.damageSources().mobAttack(this), (float) (attackDamage));
