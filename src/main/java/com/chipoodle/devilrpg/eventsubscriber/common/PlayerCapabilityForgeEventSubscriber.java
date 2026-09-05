@@ -68,6 +68,9 @@ import java.util.function.Supplier;
 @EventBusSubscriber(modid = DevilRpg.MODID, bus = EventBusSubscriber.Bus.GAME)
 public class PlayerCapabilityForgeEventSubscriber {
 
+    /** Fraccion de XP que se conserva al morir (el resto se pierde). */
+    private static final double XP_KEPT = 0.9;
+
     @SubscribeEvent
     public static void onPlayerClone(PlayerEvent.Clone e) {
         if (e.isWasDeath()) {
@@ -89,11 +92,11 @@ public class PlayerCapabilityForgeEventSubscriber {
     private static void restoreNinetyPercentXp(PlayerEvent.Clone e) {
         Player original = e.getOriginal();
         Player clone = e.getEntity();
-        clone.totalExperience = (int) Math.floor(original.totalExperience * 0.9);
-        clone.experienceLevel = (int) Math.floor(original.experienceLevel * 0.9);
+        clone.totalExperience = (int) Math.floor(original.totalExperience * XP_KEPT);
+        clone.experienceLevel = (int) Math.floor(original.experienceLevel * XP_KEPT);
         clone.experienceProgress = original.experienceProgress;
-        DevilRpg.LOGGER.info("[XP] Restaurado al 90%% tras morir: nivel {} (antes {}), {} XP",
-                clone.experienceLevel, original.experienceLevel, clone.totalExperience);
+        DevilRpg.LOGGER.info("[XP] Restaurado al {}%% tras morir: nivel {} (antes {}), {} XP",
+                Math.round(XP_KEPT * 100), clone.experienceLevel, original.experienceLevel, clone.totalExperience);
     }
 
     private static <T extends IGenericCapability> void clonePlayerCapability(PlayerEvent.Clone e, Supplier<AttachmentType<T>> cap) {

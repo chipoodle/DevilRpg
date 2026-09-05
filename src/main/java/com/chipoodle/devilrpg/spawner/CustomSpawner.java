@@ -120,11 +120,14 @@ public class CustomSpawner {
                         player.getGameProfile().getName());
                 continue;
             }
-            // Cantidad aleatoria entre min y max de la regla (respetando el tope de vivos).
+            // Cantidad aleatoria entre min y max de la regla.
             int toSpawn = rule.getMinSpawnCount()
                     + level.random.nextInt(rule.getMaxSpawnCount() - rule.getMinSpawnCount() + 1);
+            // Nunca exceder el tope de criaturas vivas del mundo aunque toque spawnear en grupo.
+            int remainingSlots = maxAlive - alive;
+            toSpawn = Math.min(toSpawn, remainingSlots);
             int spawned = 0;
-            for (int i = 0; i < toSpawn && alive + spawned < maxAlive; i++) {
+            for (int i = 0; i < toSpawn; i++) {
                 BlockPos pos = i == 0 ? anchor : rule.findSpawnPosition(level, player);
                 if (pos != null) {
                     spawn(rule, player, pos);
