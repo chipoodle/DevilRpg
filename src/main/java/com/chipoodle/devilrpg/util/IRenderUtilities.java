@@ -14,6 +14,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 
@@ -146,6 +147,27 @@ public interface IRenderUtilities {
             z = -Mth.cos(f) * distanciaDesdeElCentro + living.getRandomZ(0.9D);
             f += (float) (Math.PI * 2 / numberOfParticles);
             Level.addParticle(particle, x, y, z, d0, d1, d2);
+        }
+    }
+
+    /**
+     * Explosion de hielo que sale del hocico de una criatura (usado por el Frost Bite del lobo).
+     * Emite un flash en el hocico y una rociada de particulas de hielo hacia delante/arriba.
+     */
+    static void frostBiteExplosion(Level level, RandomSource rand, LivingEntity living) {
+        Vec3 eye = living.getEyePosition();
+        Vec3 look = living.getLookAngle();
+        double sx = eye.x + look.x * 0.4;
+        double sy = eye.y - 0.1;
+        double sz = eye.z + look.z * 0.4;
+        // Flash de explosion en el hocico.
+        level.addParticle(ParticleTypes.FLASH, sx, sy, sz, 0.0, 0.0, 0.0);
+        // Rociada de hielo (explosion) hacia delante/arriba.
+        for (int i = 0; i < 16; i++) {
+            double vx = look.x + rand.nextGaussian() * 0.25;
+            double vy = look.y + rand.nextGaussian() * 0.25 + 0.25;
+            double vz = look.z + rand.nextGaussian() * 0.25;
+            level.addParticle(ParticleTypes.SNOWFLAKE, sx, sy, sz, vx, vy, vz);
         }
     }
 

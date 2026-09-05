@@ -160,8 +160,8 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
                 active.update(frostbiteEffect);
             } else
                 this.addEffect(frostbiteEffect);
-            //IRenderUtilities.rotationParticles(Minecraft.getInstance().level, random, this, ParticleTypes.FLASH, NUMBER_OF_PARTICLES_FROST_BITE, RADIUS_PARTICLES);
-            IRenderUtilities.rotationParticles(this.level(), random, this, ParticleTypes.WARPED_SPORE, NUMBER_OF_PARTICLES_FROST_BITE, RADIUS_PARTICLES);
+            //Explosion de hielo que sale del hocico del lobo al morder (Frost Bite).
+            IRenderUtilities.frostBiteExplosion(this.level(), random, this);
         }
         double attackDamage = this.getAttributeValue(Attributes.ATTACK_DAMAGE);
         boolean flag = target.hurt(this.damageSources().mobAttack(this), (float) (attackDamage));

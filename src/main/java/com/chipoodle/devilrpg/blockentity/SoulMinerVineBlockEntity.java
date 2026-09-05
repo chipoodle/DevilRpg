@@ -8,6 +8,7 @@ import com.chipoodle.devilrpg.init.ModEntityBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
@@ -28,6 +29,8 @@ import static com.chipoodle.devilrpg.block.SoulMinerVineBlock.*;
 public class SoulMinerVineBlockEntity extends BlockEntity {
 
     public static final int TICK_FACTOR = 140;
+    /** Multiplica la longitud de la rama para que la planta cae un 30% mas profundo. */
+    private static final double BRANCH_DEPTH_MULTIPLIER = 1.3D;
     private Long timeOfCreation = null;
 
     /**
@@ -109,7 +112,7 @@ public class SoulMinerVineBlockEntity extends BlockEntity {
 
         Integer currentAge = state.getValue(AGE); // Obtener el AGE actual
         int skillLevel = state.getValue(LEVEL); // Obtener el nivel de habilidad
-        int maxBranchLength = skillLevel + 5; // Longitud máxima determinada por el nivel de habilidad
+        int maxBranchLength = (int) Math.round((skillLevel + 5) * BRANCH_DEPTH_MULTIPLIER); // +30% de profundidad
         int currentDecay = state.getValue(DECAY_STAGE);
         Direction currentDirection = state.getValue(DIRECTIONS);
         Integer duration = TICK_FACTOR;
@@ -136,7 +139,7 @@ public class SoulMinerVineBlockEntity extends BlockEntity {
                 BlockPos childBlockPos;
                 BlockState childBlockState;
 
-                ArrayList<Direction> directions = new ArrayList<>(Direction.allShuffled(randomSource));
+                ArrayList<Direction> directions = new ArrayList<>(growthDirections(randomSource));
 
                 for (Direction nextDirection : directions) {
                     childBlockPos = currentBlockPos.relative(nextDirection);
@@ -182,7 +185,7 @@ public class SoulMinerVineBlockEntity extends BlockEntity {
         linkChild(serverLevel, childBlockPos, this.worldPosition);
 
 
-        List<Direction> possibleDirections = new ArrayList<>(Direction.allShuffled(randomSource));
+        List<Direction> possibleDirections = new ArrayList<>(growthDirections(randomSource));
         possibleDirections.remove(currentDirection.getOpposite()); // Evitar volver hacia atrás
 
 
@@ -233,6 +236,8 @@ public class SoulMinerVineBlockEntity extends BlockEntity {
         if (transportBuffer.isEmpty()) {
             return;
         }
+        // Rastro de particulas indicando el flujo del pipe hacia la raiz.
+        spawnFlowParticles(level);
         if (parentPos == null) {
             // Es la raiz: escupir todos los items en el suelo.
             spitOutItems(level);
@@ -273,6 +278,43 @@ public class SoulMinerVineBlockEntity extends BlockEntity {
             level.addFreshEntity(new ItemEntity(level, x, y, z, stack.copy()));
         }
         transportBuffer.clear();
+    }
+
+    /** Emite particulas del flujo del pipe hacia la raiz. */
+    private void spawnFlowParticles(ServerLevel level) {
+        double px = this.worldPosition.getX() + 0.5;
+        double py = this.worldPosition.getY() + 0.5;
+        double pz = this.worldPosition.getZ() + 0.5;
+        double vx = 0.0, vy = 0.0, vz = 0.0;
+        if (parentPos != null) {
+            vx = parentPos.getX() - this.worldPosition.getX();
+            vy = parentPos.getY() - this.worldPosition.getY();
+            vz = parentPos.getZ() - this.worldPosition.getZ();
+            double len = Math.sqrt(vx * vx + vy * vy + vz * vz);
+            if (len > 0) {
+                vx /= len;
+                vy /= len;
+                vz /= len;
+            }
+        } else {
+            vy = 0.3; // la raiz expulsa hacia arriba
+        }
+        level.sendParticles(ParticleTypes.SOUL, px, py, pz, 1, vx * 0.06, vy * 0.06, vz * 0.06, 0.05);
+    }
+
+    /**
+     * Direcciones de crecimiento sesgadas hacia ABAJO: DOWN aparece 3 veces al inicio, de modo que la
+     * enredadera tiende a cavar mas hacia abajo que hacia los lados.
+     */
+    private List<Direction> growthDirections(RandomSource randomSource) {
+        List<Direction> dirs = new ArrayList<>(Direction.allShuffled(randomSource));
+        List<Direction> biased = new ArrayList<>(List.of(Direction.DOWN, Direction.DOWN, Direction.DOWN));
+        for (Direction d : dirs) {
+            if (d != Direction.DOWN) {
+                biased.add(d);
+            }
+        }
+        return biased;
     }
 
     private boolean isMineable(BlockState blockState) {
