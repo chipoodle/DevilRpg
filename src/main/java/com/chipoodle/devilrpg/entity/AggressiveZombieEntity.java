@@ -37,6 +37,12 @@ public class AggressiveZombieEntity extends Zombie {
         super(type, world);
     }
 
+    // No es sensible al sol: puede patrullar tanto de dia como de noche sin quemarse.
+    @Override
+    protected boolean isSunSensitive() {
+        return false;
+    }
+
     // Configurar atributos personalizados
     public static AttributeSupplier.Builder setAttributes() {
         return Zombie.createAttributes()
