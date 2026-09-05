@@ -20,6 +20,7 @@
     "key.power5": "Power 5",
     "key.power6": "Power 6",
     "key.skill_gui": "Skill GUI",
+    "key.cycle_skill_set": "Rotate Skill Set",
     "gui.skills.title": "Skills", 
     "gui.skills.mana_cost": "Mana cost:", 
     "gui.skills.unspent": "Unspent:",

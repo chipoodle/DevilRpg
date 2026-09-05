@@ -262,6 +262,21 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
         super.render(guiGraphics, mouseX, mouseY, partialTick);
         this.skipBackgroundRenderOnce = false;
         this.renderSkillButtonPressed(guiGraphics);
+        this.renderSkillSetIndicator(guiGraphics);
+    }
+
+    /** Muestra el conjunto de skills activo ("Set X/Y") junto a los botones ◀ ▶. */
+    private void renderSkillSetIndicator(GuiGraphics guiGraphics) {
+        if (skillCap == null) {
+            return;
+        }
+        int current = skillCap.getActiveSkillSetIndex() + 1;
+        int total = skillCap.getSkillSetCount();
+        String label = "Set " + current + "/" + total;
+        int textWidth = this.font.width(label);
+        int x = (int) (offsetLeft + (WINDOW_WIDTH - 66) * this.fitScale);
+        int y = (int) (offsetTop + WINDOW_HEIGHT * this.fitScale) + 24;
+        guiGraphics.drawString(this.font, label, x - textWidth - 4, y + 4, 0xFFFFAA, true);
     }
 
     private void renderSkillButtonPressed(GuiGraphics guiGraphics) {
