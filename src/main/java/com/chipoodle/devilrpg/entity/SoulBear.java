@@ -264,7 +264,7 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
                 double radius = 3;
                 List<LivingEntity> acquireAllLookTargetsByClass = TargetUtils
                         .acquireAllTargetsInRadiusByClass(this, LivingEntity.class, radius).stream()
-                        .filter(entity -> !isAlliedTo(entity)).collect(Collectors.toList());
+                        .filter(entity -> !isAllyForWarBearAoe(entity)).collect(Collectors.toList());
 
                 acquireAllLookTargetsByClass.forEach(
                         mob -> mob.hurt(this.damageSources().mobAttack(this), (float) (attackDamage * SPLASH_DAMAGE_FACTOR)));
@@ -711,6 +711,21 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
 
         boolean isOnSameTeam = super.isAlliedTo(entity);
         return isOnSameTeam || isEntitySameOwnerAsThis(entity, this);
+    }
+
+    /**
+     * True si la entidad NO debe recibir dano del AOE del War Bear: el propio dueno, un tamable del
+     * mismo dueno, o cualquiera con quien este oso es aliado.
+     */
+    private boolean isAllyForWarBearAoe(Entity entity) {
+        LivingEntity owner = this.getOwner();
+        if (owner != null && (entity == owner || Objects.equals(entity, owner))) {
+            return true;
+        }
+        if (entity instanceof ITamableEntity tamable && Objects.equals(tamable.getOwner(), owner)) {
+            return true;
+        }
+        return this.isAlliedTo(entity);
     }
 
     class MeleeAttackGoal extends net.minecraft.world.entity.ai.goal.MeleeAttackGoal {

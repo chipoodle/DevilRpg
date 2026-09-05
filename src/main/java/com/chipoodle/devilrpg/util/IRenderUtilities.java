@@ -156,6 +156,18 @@ public interface IRenderUtilities {
     }
 
     /**
+     * Spawnea una particula de forma segura: en servidor usa {@link ServerLevel#sendParticles}
+     * (si no, no llega a los clientes); en cliente usa {@link Level#addParticle}.
+     */
+    static void spawnParticle(Level level, ParticleOptions particle, double x, double y, double z, double vx, double vy, double vz) {
+        if (level instanceof ServerLevel serverLevel) {
+            serverLevel.sendParticles(particle, x, y, z, 1, vx, vy, vz, 0.0);
+        } else {
+            level.addParticle(particle, x, y, z, vx, vy, vz);
+        }
+    }
+
+    /**
      * Explosion de hielo que sale del hocico de una criatura (usado por el Frost Bite del lobo).
      * En el servidor se usa {@link ServerLevel#sendParticles} (si no, las particulas no llegan a los
      * clientes y no se ven). Flash + rociada de cristales de hielo + particulas de golpe critico.

@@ -540,7 +540,7 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
         }
 
         if (this.isBaby() && i > 0) {
-            this.level().addParticle(ParticleTypes.HAPPY_VILLAGER, this.getRandomX(1.0D), this.getRandomY() + 0.5D, this.getRandomZ(1.0D), 0.0D, 0.0D, 0.0D);
+            com.chipoodle.devilrpg.util.IRenderUtilities.spawnParticle(this.level(), ParticleTypes.HAPPY_VILLAGER, this.getRandomX(1.0D), this.getRandomY() + 0.5D, this.getRandomZ(1.0D), 0.0D, 0.0D, 0.0D);
             if (!this.level().isClientSide) {
                 this.ageUp(i);
             }
@@ -982,7 +982,7 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
             double d0 = this.random.nextGaussian() * 0.02D;
             double d1 = this.random.nextGaussian() * 0.02D;
             double d2 = this.random.nextGaussian() * 0.02D;
-            this.level().addParticle(particleoptions, this.getRandomX(1.0D), this.getRandomY() + 0.5D, this.getRandomZ(1.0D), d0, d1, d2);
+            com.chipoodle.devilrpg.util.IRenderUtilities.spawnParticle(this.level(), particleoptions, this.getRandomX(1.0D), this.getRandomY() + 0.5D, this.getRandomZ(1.0D), d0, d1, d2);
         }
 
     }

@@ -211,7 +211,7 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassiveAttributeExecu
             double speedY = rand.nextGaussian() * 0.02D;
             double speedZ = rand.nextGaussian() * 0.02D;
 
-            player.level().addParticle(ParticleTypes.CLOUD, dx + (vec.x() * movement), dy,
+            com.chipoodle.devilrpg.util.IRenderUtilities.spawnParticle(player.level(), ParticleTypes.CLOUD, dx + (vec.x() * movement), dy,
                     dz + (vec.z() * movement), speedX, speedY, speedZ);
         }
     }
