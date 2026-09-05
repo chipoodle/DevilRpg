@@ -99,10 +99,10 @@ public class CustomSpawner {
     private void trySpawn(CustomSpawnRule rule, List<ServerPlayer> players) {
         // Respetar el limite de criaturas vivas de este tipo en el mundo.
         int alive = countAlive(rule);
-        if (alive >= rule.getMaxAliveInLevel()) {
+        int maxAlive = rule.getMaxAliveInLevel();
+        if (alive >= maxAlive) {
             DevilRpg.LOGGER.info("[CustomSpawner] {} en {} - {} vivos, tope {} alcanzado, NO se spawnea",
-                    rule.getEntityType().getDescriptionId(), level.dimension().location(), alive,
-                    rule.getMaxAliveInLevel());
+                    rule.getEntityType().getDescriptionId(), level.dimension().location(), alive, maxAlive);
             return;
         }
         for (ServerPlayer player : players) {
@@ -113,14 +113,27 @@ public class CustomSpawner {
                         player.getGameProfile().getName());
                 continue;
             }
-            BlockPos pos = rule.findSpawnPosition(level, player);
-            if (pos != null) {
-                spawn(rule, player, pos);
-                return; // solo un spawn por vencimiento de temporizador
+            BlockPos anchor = rule.findSpawnPosition(level, player);
+            if (anchor == null) {
+                DevilRpg.LOGGER.debug("[CustomSpawner] {} en {} - no hay posicion valida para jugador {}",
+                        rule.getEntityType().getDescriptionId(), level.dimension().location(),
+                        player.getGameProfile().getName());
+                continue;
             }
-            DevilRpg.LOGGER.debug("[CustomSpawner] {} en {} - no hay posicion valida para jugador {}",
-                    rule.getEntityType().getDescriptionId(), level.dimension().location(),
-                    player.getGameProfile().getName());
+            // Cantidad aleatoria entre min y max de la regla (respetando el tope de vivos).
+            int toSpawn = rule.getMinSpawnCount()
+                    + level.random.nextInt(rule.getMaxSpawnCount() - rule.getMinSpawnCount() + 1);
+            int spawned = 0;
+            for (int i = 0; i < toSpawn && alive + spawned < maxAlive; i++) {
+                BlockPos pos = i == 0 ? anchor : rule.findSpawnPosition(level, player);
+                if (pos != null) {
+                    spawn(rule, player, pos);
+                    spawned++;
+                }
+            }
+            DevilRpg.LOGGER.debug("[CustomSpawner] {} en {} - se intentaron {} de {}",
+                    rule.getEntityType().getDescriptionId(), level.dimension().location(), spawned, toSpawn);
+            return; // solo un grupo por vencimiento de temporizador
         }
     }
 

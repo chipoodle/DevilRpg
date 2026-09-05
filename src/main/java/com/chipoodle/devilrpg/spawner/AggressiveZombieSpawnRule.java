@@ -57,6 +57,16 @@ public class AggressiveZombieSpawnRule implements CustomSpawnRule {
     }
 
     @Override
+    public int getMinSpawnCount() {
+        return 1;
+    }
+
+    @Override
+    public int getMaxSpawnCount() {
+        return 3;
+    }
+
+    @Override
     public float getSpawnChance(ServerLevel level, ServerPlayer player) {
         Vec3 spawnPoint = getSpawnPoint(player);
         if (spawnPoint == null) {

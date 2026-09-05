@@ -71,6 +71,8 @@ public class PlayerCapabilityForgeEventSubscriber {
     @SubscribeEvent
     public static void onPlayerClone(PlayerEvent.Clone e) {
         if (e.isWasDeath()) {
+            // Al morir, conservar el 90% del XP (el nivel no se pierde del todo).
+            restoreNinetyPercentXp(e);
             clonePlayerCapability(e, PlayerAuxiliaryCapability.INSTANCE);
             clonePlayerCapability(e, PlayerExperienceCapability.INSTANCE);
             clonePlayerCapability(e, PlayerManaCapability.INSTANCE);
@@ -78,6 +80,20 @@ public class PlayerCapabilityForgeEventSubscriber {
             clonePlayerCapability(e, PlayerMinionCapability.INSTANCE);
             clonePlayerCapability(e, PlayerSkillCapability.INSTANCE);
         }
+    }
+
+    /**
+     * Tras morir, el {@code experienceLevel} vanilla se resetea a 0. Como el nivel del mod se deriva
+     * de el, se conserva el 90% (tanto del nivel como del XP total) para que solo se pierda el 10%.
+     */
+    private static void restoreNinetyPercentXp(PlayerEvent.Clone e) {
+        Player original = e.getOriginal();
+        Player clone = e.getEntity();
+        clone.totalExperience = (int) Math.floor(original.totalExperience * 0.9);
+        clone.experienceLevel = (int) Math.floor(original.experienceLevel * 0.9);
+        clone.experienceProgress = original.experienceProgress;
+        DevilRpg.LOGGER.info("[XP] Restaurado al 90%% tras morir: nivel {} (antes {}), {} XP",
+                clone.experienceLevel, original.experienceLevel, clone.totalExperience);
     }
 
     private static <T extends IGenericCapability> void clonePlayerCapability(PlayerEvent.Clone e, Supplier<AttachmentType<T>> cap) {

@@ -51,4 +51,17 @@ public interface CustomSpawnRule {
     default int getMaxAliveInLevel() {
         return Integer.MAX_VALUE;
     }
+
+    /**
+     * Numero minimo de criaturas a spawneaer cuando se cumple la regla (junto con
+     * {@link #getMaxSpawnCount()} se elige una cantidad aleatoria entre ambos). Por defecto 1.
+     */
+    default int getMinSpawnCount() {
+        return 1;
+    }
+
+    /** Numero maximo de criaturas a spawneaer (aleatorio entre {@link #getMinSpawnCount()} y este). Por defecto 1. */
+    default int getMaxSpawnCount() {
+        return 1;
+    }
 }
