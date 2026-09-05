@@ -20,14 +20,18 @@ import com.chipoodle.devilrpg.network.payload.PotionPayload;
 import com.chipoodle.devilrpg.util.EventUtils;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.entity.living.LivingEvent.LivingJumpEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.event.entity.living.LivingFallEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.MobEffectEvent;
@@ -38,6 +42,9 @@ import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 
 
@@ -213,10 +220,54 @@ public class CommonForgeInteractionEventSubscriber {
 
     }
 
+    /** Registro de entidades congeladas (UUID -> ticks restantes) para emitir particulas de hielo. */
+    private static final Map<UUID, Integer> FROZEN = new ConcurrentHashMap<>();
+
+    /** Marca una criatura como congelada durante {@code ticks}. */
+    public static void markFrozen(UUID entityId, int ticks) {
+        FROZEN.put(entityId, ticks);
+    }
+
+    /**
+     * Mientras un enemigo este congelado (Frost Bite), emite particulas de hielo en sus patas/cuerpo
+     * durante los segundos que dura el efecto, para visualizar la congelacion sin usar render layers.
+     */
+    @SubscribeEvent
+    public static void onServerTickFrozen(ServerTickEvent.Post event) {
+        if (FROZEN.isEmpty()) {
+            return;
+        }
+        event.getServer().getAllLevels().forEach(level -> {
+            if (!(level instanceof ServerLevel serverLevel)) {
+                return;
+            }
+            FROZEN.entrySet().removeIf(entry -> {
+                LivingEntity entity = serverLevel.getEntity(entry.getKey()) instanceof LivingEntity living ? living : null;
+                if (entity == null || entity.isRemoved()) {
+                    return true; // ya no existe la entidad
+                }
+                int remaining = entry.getValue() - 1;
+                if (remaining <= 0) {
+                    // Se acabo el efecto de congelacion.
+                    return true;
+                }
+                // Emitir particulas de hielo cada 3 ticks.
+                if (entity.tickCount % 3 == 0) {
+                    double x = entity.getX();
+                    double y = entity.getY();
+                    double z = entity.getZ();
+                    serverLevel.sendParticles(ParticleTypes.SNOWFLAKE, x, y + 0.3, z, 2, 0.35, 0.2, 0.35, 0.05);
+                    serverLevel.sendParticles(ParticleTypes.CRIT, x, y + 0.1, z, 1, 0.2, 0.15, 0.2, 0.1);
+                }
+                entry.setValue(remaining);
+                return false;
+            });
+        });
+    }
+
     @SubscribeEvent
     public static void onEntitySpawn(EntityJoinLevelEvent event) {
-        if (!event.getLevel().isClientSide() && event.getEntity() instanceof Player player) {
-            PlayerAuxiliaryCapabilityInterface playerCapability = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerAuxiliaryCapability.INSTANCE);
+        if (!event.getLevel().isClientSide() && event.getEntity() instanceof Player player) {            PlayerAuxiliaryCapabilityInterface playerCapability = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerAuxiliaryCapability.INSTANCE);
             Vec3 spawnPoint = playerCapability.getSpawnPoint();
             if (spawnPoint == null) {
                 playerCapability.setSpawnPoint(player.position(), player);

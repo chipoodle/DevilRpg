@@ -169,6 +169,7 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
             if (target instanceof LivingEntity living) {
                 living.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, FROZEN_DURATION_TICKS, 3, true, false));
                 living.addEffect(new MobEffectInstance(MobEffects.DIG_SLOWDOWN, FROZEN_DURATION_TICKS, 2, true, false));
+                com.chipoodle.devilrpg.eventsubscriber.common.CommonForgeInteractionEventSubscriber.markFrozen(living.getUUID(), FROZEN_DURATION_TICKS);
             }
         }
         double attackDamage = this.getAttributeValue(Attributes.ATTACK_DAMAGE);
