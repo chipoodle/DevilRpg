@@ -157,7 +157,11 @@ public final class InitModEventSubscriber {
     @SubscribeEvent
     public static void onSpawnPlacementRegister(RegisterSpawnPlacementsEvent event) {
         DevilRpg.LOGGER.info("----------------------->InitModEventSubscriber.onSpawnPlacementRegister()");
-        // Registrar las reglas de spawn para AggressiveZombieEntity
+        // El spawn natural de vanilla esta DESACTIVADO para las entidades custom: ahora las
+        // spawnea el CustomSpawner (CustomSpawnerTickHandler) segun sus reglas propias.
+        // Si mas adelante quieres que alguna entidad vuelva a spawnear de forma natural,
+        // descomenta el registro correspondiente:
+        /*
         event.register(
                 ModEntities.AGGRESSIVE_ZOMBIE.get(), // Tu entidad registrada
                 SpawnPlacementTypes.ON_GROUND, // Tipo de spawn (en el suelo)
@@ -165,6 +169,7 @@ public final class InitModEventSubscriber {
                 AggressiveZombieEntity::checkSpawnRules,
                 RegisterSpawnPlacementsEvent.Operation.REPLACE // Para una entidad modded nueva: REPLACE setea el placement (AND solo combina con uno ya existente)
         );
+        */
     }
 
 }
