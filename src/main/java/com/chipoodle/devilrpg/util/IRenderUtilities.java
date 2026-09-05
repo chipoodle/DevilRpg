@@ -152,7 +152,8 @@ public interface IRenderUtilities {
 
     /**
      * Explosion de hielo que sale del hocico de una criatura (usado por el Frost Bite del lobo).
-     * Emite un flash en el hocico y una rociada de particulas de hielo hacia delante/arriba.
+     * En el servidor se usa {@link ServerLevel#sendParticles} (si no, las particulas no llegan a los
+     * clientes y no se ven). Flash + rociada de cristales de hielo + particulas de golpe critico.
      */
     static void frostBiteExplosion(Level level, RandomSource rand, LivingEntity living) {
         Vec3 eye = living.getEyePosition();
@@ -160,14 +161,15 @@ public interface IRenderUtilities {
         double sx = eye.x + look.x * 0.4;
         double sy = eye.y - 0.1;
         double sz = eye.z + look.z * 0.4;
-        // Flash de explosion en el hocico.
-        level.addParticle(ParticleTypes.FLASH, sx, sy, sz, 0.0, 0.0, 0.0);
-        // Rociada de hielo (explosion) hacia delante/arriba.
-        for (int i = 0; i < 16; i++) {
-            double vx = look.x + rand.nextGaussian() * 0.25;
-            double vy = look.y + rand.nextGaussian() * 0.25 + 0.25;
-            double vz = look.z + rand.nextGaussian() * 0.25;
-            level.addParticle(ParticleTypes.SNOWFLAKE, sx, sy, sz, vx, vy, vz);
+        if (level instanceof ServerLevel serverLevel) {
+            // Flash de explosion en el hocico.
+            serverLevel.sendParticles(ParticleTypes.FLASH, sx, sy, sz, 1, 0.0, 0.0, 0.0, 0.0);
+            // Rociada de hielo (copos) + particulas de golpe critico (mas vistosas).
+            serverLevel.sendParticles(ParticleTypes.SNOWFLAKE, sx, sy, sz, 20, 0.35, 0.35, 0.35, 0.5);
+            serverLevel.sendParticles(ParticleTypes.CRIT, sx, sy, sz, 24, 0.3, 0.3, 0.3, 0.6);
+        } else {
+            // Cliente (raro): addParticle local.
+            level.addParticle(ParticleTypes.FLASH, sx, sy, sz, 0.0, 0.0, 0.0);
         }
     }
 
