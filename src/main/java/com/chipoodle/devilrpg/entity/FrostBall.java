@@ -10,6 +10,8 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.projectile.ThrowableItemProjectile;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -86,6 +88,10 @@ public class FrostBall extends ThrowableItemProjectile implements ISoulEntity {
 
         //targetEntity.hurt(this.damageSources().thrown(this, this.getOwner()), (float)damage);
         targetEntity.setIsInPowderSnow(true);
+        // El hielo ralentiza al enemigo golpeado durante 1 segundo (20 ticks).
+        if (targetEntity instanceof LivingEntity living) {
+            living.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 20, 0));
+        }
     }
 
     /**
