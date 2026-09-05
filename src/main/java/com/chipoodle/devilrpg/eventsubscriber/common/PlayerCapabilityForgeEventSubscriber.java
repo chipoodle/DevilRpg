@@ -75,6 +75,13 @@ public class PlayerCapabilityForgeEventSubscriber {
     /** Fraccion de XP que se conserva al morir (el resto se pierde). */
     private static final double XP_KEPT = 0.9;
 
+    /**
+     * Cada cuantos ticks se repara 1 punto de durabilidad por pieza de cuero mientras se esta
+     * transformado. 50 ticks = 2.5s (10x mas lento que antes) para simular la durabilidad de un
+     * armadura de diamante.
+     */
+    private static final int ARMOR_REPAIR_INTERVAL_TICKS = 50;
+
     @SubscribeEvent
     public static void onPlayerClone(PlayerEvent.Clone e) {
         if (e.isWasDeath()) {
@@ -113,8 +120,9 @@ public class PlayerCapabilityForgeEventSubscriber {
         if (!(event.getEntity() instanceof ServerPlayer player)) {
             return;
         }
-        // Cada 5 ticks (~0.25s) se repara 1 punto de durabilidad por pieza.
-        if (player.tickCount % 5 != 0) {
+        // Reparar muy despacio (cada ARMOR_REPAIR_INTERVAL_TICKS) para simular la durabilidad de
+        // una armadura de diamante: la de cuero se desgasta mucho mas lento mientras eres lobo.
+        if (player.tickCount % ARMOR_REPAIR_INTERVAL_TICKS != 0) {
             return;
         }
         PlayerAuxiliaryCapabilityInterface aux = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerAuxiliaryCapability.INSTANCE);
