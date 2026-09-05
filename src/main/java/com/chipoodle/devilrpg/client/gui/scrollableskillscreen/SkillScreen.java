@@ -78,6 +78,12 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     public static final int SKILL_SET_BUTTON_SPACING = 25;
     /** Desplazamiento vertical bajo la ventana (sube/baja los botones). */
     public static final int SKILL_SET_BUTTON_Y_OFFSET = -6;
+
+    // --- Etiqueta del conjunto de skills activo (Set X/Y) ---
+    /** Separación horizontal a la izquierda del botón ◀ (bájala para acercar el label). */
+    public static final int SKILL_SET_LABEL_X_OFFSET = 4;
+    /** Posición vertical del label desde la base de la ventana (bájala = más arriba). */
+    public static final int SKILL_SET_LABEL_Y_OFFSET = 28;
     private static int tabPage, maxPages;
     private final ClientSkillBuilderFromJson clientSkillManager;
     private final Map<SkillElement, SkillTab> tabs = Maps.newLinkedHashMap();
@@ -310,18 +316,18 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
         this.renderSkillSetIndicator(guiGraphics);
     }
 
-    /** Muestra el conjunto de skills activo ("Set X/Y") junto a los botones ◀ ▶. */
+    /** Muestra el conjunto de skills activo ("Set X/Y", traducible) junto a los botones ◀ ▶. */
     private void renderSkillSetIndicator(GuiGraphics guiGraphics) {
         if (skillCap == null) {
             return;
         }
         int current = skillCap.getActiveSkillSetIndex() + 1;
         int total = skillCap.getSkillSetCount();
-        String label = "Set " + current + "/" + total;
+        Component label = Component.translatable("gui.skills.skill_set", current, total);
         int textWidth = this.font.width(label);
-        int x = (int) (offsetLeft + (WINDOW_WIDTH - 66) * this.fitScale);
-        int y = (int) (offsetTop + WINDOW_HEIGHT * this.fitScale) + 24;
-        guiGraphics.drawString(this.font, label, x - textWidth - 4, y + 4, 0xFFFFAA, true);
+        int x = (int) (offsetLeft + (WINDOW_WIDTH - SKILL_SET_BUTTON_RIGHT_MARGIN) * this.fitScale);
+        int y = (int) (offsetTop + WINDOW_HEIGHT * this.fitScale) + SKILL_SET_LABEL_Y_OFFSET;
+        guiGraphics.drawString(this.font, label, x - textWidth - SKILL_SET_LABEL_X_OFFSET, y, 0xFFFFAA, true);
     }
 
     private void renderSkillButtonPressed(GuiGraphics guiGraphics) {

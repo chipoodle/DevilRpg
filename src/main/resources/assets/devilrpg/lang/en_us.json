@@ -24,6 +24,7 @@
     "gui.skills.title": "Skills", 
     "gui.skills.mana_cost": "Mana cost:", 
     "gui.skills.unspent": "Unspent:",
+    "gui.skills.skill_set": "Set %1$s/%2$s",
     "item.devilrpg.item_vacio": "Empty Item",
     "block.devilrpg.soulvine": "Soulvine",
     "block.devilrpg.soulshieldvine": "Dome of vines",
