@@ -47,7 +47,8 @@ public final class ModEntities {
 			() -> EntityType.Builder.of(SoulBear::new, MobCategory.CREATURE)
 					.sized(EntityType.POLAR_BEAR.getWidth(), EntityType.POLAR_BEAR.getHeight())
 					.build(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, SOUL_BEAR_NAME).toString()));
-	public static final DeferredHolder<EntityType<?>, EntityType<SoulWispHealth>> WISP_HEALTH = ENTITY_TYPES.register(WISP_HEALTH_NAME,
+
+    public static final DeferredHolder<EntityType<?>, EntityType<SoulWispHealth>> WISP_HEALTH = ENTITY_TYPES.register(WISP_HEALTH_NAME,
 			() -> EntityType.Builder.of(SoulWispHealth::new, MobCategory.CREATURE)
 					.sized(EntityType.ALLAY.getWidth(), EntityType.ALLAY.getHeight())
 					.build(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, WISP_HEALTH_NAME).toString()));

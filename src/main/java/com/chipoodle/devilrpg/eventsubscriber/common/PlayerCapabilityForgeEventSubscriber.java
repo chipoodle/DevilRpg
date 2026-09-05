@@ -77,10 +77,10 @@ public class PlayerCapabilityForgeEventSubscriber {
 
     /**
      * Cada cuantos ticks se repara 1 punto de durabilidad por pieza de cuero mientras se esta
-     * transformado. 50 ticks = 2.5s (10x mas lento que antes) para simular la durabilidad de un
+     * transformado. 120 ticks = 6s (10x mas lento que antes) para simular la durabilidad de un
      * armadura de diamante.
      */
-    private static final int ARMOR_REPAIR_INTERVAL_TICKS = 50;
+    private static final int ARMOR_REPAIR_INTERVAL_TICKS = 120;
 
     @SubscribeEvent
     public static void onPlayerClone(PlayerEvent.Clone e) {

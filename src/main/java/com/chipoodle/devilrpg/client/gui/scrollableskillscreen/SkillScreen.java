@@ -73,11 +73,11 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
 
     // --- Botones de rotar conjunto de skills (loadouts) ---
     /** Distancia desde el borde derecho del marco a la X del botón ◀ (bájala = más a la derecha). */
-    public static final int SKILL_SET_BUTTON_RIGHT_MARGIN = 66;
+    public static final int SKILL_SET_BUTTON_RIGHT_MARGIN = 63;
     /** Separación horizontal entre el botón ◀ y el ▶. */
-    public static final int SKILL_SET_BUTTON_SPACING = 22;
+    public static final int SKILL_SET_BUTTON_SPACING = 25;
     /** Desplazamiento vertical bajo la ventana (sube/baja los botones). */
-    public static final int SKILL_SET_BUTTON_Y_OFFSET = 24;
+    public static final int SKILL_SET_BUTTON_Y_OFFSET = -6;
     private static int tabPage, maxPages;
     private final ClientSkillBuilderFromJson clientSkillManager;
     private final Map<SkillElement, SkillTab> tabs = Maps.newLinkedHashMap();
@@ -223,6 +223,8 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
             int color = this.isHovered() ? 0xFFE0A05A : 0xFF9C6B3A;
             guiGraphics.drawCenteredString(Minecraft.getInstance().font, this.getMessage(),
                     this.getX() + this.getWidth() / 2, this.getY() + (this.getHeight() - 8) / 2, color);
+
+            //super.renderWidget(guiGraphics, mouseX, mouseY, partialTick);
         }
 
         @Override

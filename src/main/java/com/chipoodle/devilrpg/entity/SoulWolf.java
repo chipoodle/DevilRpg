@@ -42,7 +42,7 @@ import java.util.Objects;
 public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, PowerableMob, IPassiveMinionUpdater<SoulWolf> {
     public static final int FROSTBITE_DURATION_TICKS = 20;
     /** Duracion de la congelacion (lento/inmovil) que aplica el Frost Bite al objetivo. */
-    private static final int FROZEN_DURATION_TICKS = 60;
+    private static final int FROZEN_DURATION_TICKS = 30;
     private static final int ICE_ARMOR_EFFECT_FACTOR = 2;
     private static final double RADIUS_PARTICLES = 0.7;
     //private static final int NUMBER_OF_PARTICLES_ICE_ARMOR = 11;
