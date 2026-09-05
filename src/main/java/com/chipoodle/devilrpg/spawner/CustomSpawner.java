@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.spawner;
 
+import com.chipoodle.devilrpg.DevilRpg;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -85,18 +86,31 @@ public class CustomSpawner {
                 continue;
             }
             // Temporizador vencido: intentar spawnear
+            DevilRpg.LOGGER.info("[CustomSpawner] {} en {} - temporizador vencido, intentando spawn de {}",
+                    level.dimension().location(), rule.getEntityType().getDescriptionId(),
+                    (remainingTicks.getOrDefault(rule, 0) == 0 ? "ahora" : "-"));
             trySpawn(rule, players);
             remainingTicks.put(rule, nextInterval(rule));
+            DevilRpg.LOGGER.debug("[CustomSpawner] {} en {} - proximo intento en {} ticks",
+                    level.dimension().location(), rule.getEntityType().getDescriptionId(), remainingTicks.get(rule));
         }
     }
 
     private void trySpawn(CustomSpawnRule rule, List<ServerPlayer> players) {
         // Respetar el limite de criaturas vivas de este tipo en el mundo.
-        if (countAlive(rule) >= rule.getMaxAliveInLevel()) {
+        int alive = countAlive(rule);
+        if (alive >= rule.getMaxAliveInLevel()) {
+            DevilRpg.LOGGER.info("[CustomSpawner] {} en {} - {} vivos, tope {} alcanzado, NO se spawnea",
+                    rule.getEntityType().getDescriptionId(), level.dimension().location(), alive,
+                    rule.getMaxAliveInLevel());
             return;
         }
         for (ServerPlayer player : players) {
-            if (level.random.nextFloat() >= rule.getSpawnChance(level, player)) {
+            float chance = rule.getSpawnChance(level, player);
+            if (level.random.nextFloat() >= chance) {
+                DevilRpg.LOGGER.debug("[CustomSpawner] {} en {} - probabilidad {} fallo para jugador {}",
+                        rule.getEntityType().getDescriptionId(), level.dimension().location(), chance,
+                        player.getGameProfile().getName());
                 continue;
             }
             BlockPos pos = rule.findSpawnPosition(level, player);
@@ -104,6 +118,9 @@ public class CustomSpawner {
                 spawn(rule, player, pos);
                 return; // solo un spawn por vencimiento de temporizador
             }
+            DevilRpg.LOGGER.debug("[CustomSpawner] {} en {} - no hay posicion valida para jugador {}",
+                    rule.getEntityType().getDescriptionId(), level.dimension().location(),
+                    player.getGameProfile().getName());
         }
     }
 
@@ -119,6 +136,8 @@ public class CustomSpawner {
         EntityType<? extends Mob> type = rule.getEntityType();
         Mob mob = type.create(level, null, pos, MobSpawnType.MOB_SUMMONED, true, true);
         if (mob == null) {
+            DevilRpg.LOGGER.error("[CustomSpawner] {} en {} - No se pudo crear la entidad en {}",
+                    rule.getEntityType().getDescriptionId(), level.dimension().location(), pos);
             return;
         }
         // Colocar en el centro del bloque, mirando al jugador para que "patrulle" hacia el.
@@ -129,6 +148,9 @@ public class CustomSpawner {
         mob.setDeltaMovement(0, 0, 0);
         rule.configureEntity(mob, level, player);
         level.addFreshEntity(mob);
+        DevilRpg.LOGGER.info("[CustomSpawner] {} en {} - SPAWNEADO en {} (jugador objetivo {})",
+                rule.getEntityType().getDescriptionId(), level.dimension().location(), pos,
+                player.getGameProfile().getName());
     }
 
     private int nextInterval(CustomSpawnRule rule) {
