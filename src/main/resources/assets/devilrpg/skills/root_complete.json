@@ -3,7 +3,7 @@
         "id": "summoning:root",
         "display": {
             "description": {
-                "text": "Summoning spiritual animals",
+                "text": "Bind the animal spirits of the wild to your will and call them forth to fight beside you",
                 "color": "blue"
             },
             "icon": {
@@ -26,8 +26,8 @@
         "id": "shapeshifting:root",
         "display": {
             "description": {
-                "text": "Through the mystic contemplation and communion with nature, the Druid can link with the animal spirits and shape his body gaining their power",
-	                "color": "blue"
+                "text": "Through mystic contemplation and communion with nature, the druid links with the animal spirits and shapes his body, gaining their power",
+                "color": "blue"
             },
             "icon": {
                 "item": "minecraft:stone"
@@ -49,7 +49,7 @@
         "id": "nature:root",
         "display": {
             "description": {
-                "text": "Marks the druid's first step in mastering the arcane forces of nature, allowing them to harness natural energies and transmute seeds into powerful abilities.It sets the foundation for commanding vines, plants, and the elements in harmony with nature’s balance.",
+                "text": "Marks the druid's first step in mastering the arcane forces of nature, transmuting seeds into powerful abilities and commanding vines, plants and the elements in harmony",
                 "color": "gold"
             },
             "icon": {
@@ -71,7 +71,7 @@
     {
         "id": "nature:soulvine",
         "display": {
-            "description": "The Soul Vine dynamically grows in the direction the player is looking, spreading and creating new vines as it advances. The vine’s growth speed and lifespan depend on your skill level, with higher levels extending its reach and duration. Activation requires a seed from your inventory, which will be consumed upon use.",
+            "description": "A spirit vine grows where your gaze rests, spreading and burrowing as it advances. Higher skill lengthens its reach and lifespan. Consumes a seed.",
             "icon": {
                 "item": "devilrpg:item_vine"
             },
@@ -91,7 +91,7 @@
     {
         "id": "nature:manaberry",
         "display": {
-            "description": "Harnesses the druid’s arcane mastery to transmute a seed into a Mana berry bush, which draws energy from the earth to grow. As it matures, it produces blue berries that restore mana. Bound by nature’s cycles, the bush withers and vanishes after its lifespan. Requires a seed from your inventory, which is consumed during transmutation.",
+            "description": "Transmute a seed into a mana-berry bush that draws life from the soil, yielding berries that restore mana before withering with the seasons. Consumes a seed.",
             "icon": {
                 "item": "devilrpg:item_vine"
             },
@@ -111,7 +111,7 @@
     {
         "id": "nature:soulminervine",
         "display": {
-            "description": "Summon a Soul Miner Vine that burrows and grows randomly, mining nearby stone or ores as it expands. The vine branches out in unpredictable directions, breaking blocks in its path. As your power level increases, the vine grows farther and mines faster. Requires at least one seed in your inventory, which will be consumed upon activation.",
+            "description": "A miner vine burrows and branches, breaking stone and ore in its path and carrying the spoils to its root. Higher skill digs deeper and faster. Consumes a seed.",
             "icon": {
                 "item": "devilrpg:item_vine"
             },
@@ -131,7 +131,7 @@
     {
         "id": "nature:soulshieldvine",
         "display": {
-            "description": "Instantly creates a protective dome of vines around you, shielding you from incoming attacks for a limited duration. Requires at least one seed in your inventory, which will be consumed upon activation.",
+            "description": "Raises a living dome of vines around you, shielding you from harm for a short time. Consumes a seed.",
             "icon": {
                 "item": "devilrpg:item_vine"
             },
@@ -151,7 +151,7 @@
     {
         "id": "nature:soulshieldvine_radius",
         "display": {
-            "description": "Extends the radius of the vine dome.",
+            "description": "Widen the protective dome of vines, granting it a greater reach.",
             "icon": {
                 "item": "minecraft:glass_pane",
                 "minecraft:glass_panenbt": 1
@@ -172,7 +172,7 @@
     {
         "id": "nature:blooming_sanctuary",
         "display": {
-            "description": "Creates a sanctuary that grants a regeneration to the player and allies. consumes 1 mana per tick. Requires a seed from your inventory, which will be consumed upon activation.",
+            "description": "Blooms a sanctuary that regenerates you and your allies. Drains mana while it stands. Consumes a seed.",
             "icon": {
                 "item": "devilrpg:item_vine"
             },
@@ -192,7 +192,7 @@
     {
         "id": "nature:floras_vigor",
         "display": {
-            "description": "There is a chance that some parts of the area of flora's vigor get fertilized. Consumes more mana",
+            "description": "Nature's favor: parts of the sanctuary may flourish and be fertilized, at a greater cost of mana.",
             "icon": {
                 "item": "minecraft:glass_pane",
                 "minecraft:glass_panenbt": 1
@@ -213,7 +213,7 @@
     {
         "id": "nature:soullichen",
         "display": {
-            "description": "A parasite is thrown onto the enemy, slowing them down and causing damage over time. If the enemy dies while under the parasite’s effect, a lichen will grow at the location, slowing and damaging nearby enemies within a radius. Requires a seed from your inventory, which will be consumed upon activation.",
+            "description": "Hurl a parasite that clings to the foe, slowing and withering it. If it dies tainted, a lichen blooms and harms nearby enemies. Consumes a seed.",
             "icon": {
                 "item": "devilrpg:item_vine"
             },
@@ -233,7 +233,7 @@
     {
         "id": "nature:vinefleshpuppet",
         "display": {
-            "description": "A spore is thrown onto the enemy. If the enemy dies while under the spore’s effect, a spore-spraying mushroom will grow on the corpse, releasing spores that damage nearby enemies. Requires a seed from your inventory, which will be consumed upon activation.",
+            "description": "Cast a spore that clings to the enemy. Should it perish, a flesh-eating mushroom sprouts, its spores wounding all nearby. Consumes a seed.",
             "icon": {
                 "item": "devilrpg:item_vine"
             },
@@ -253,7 +253,7 @@
     {
         "id": "nature:mana_pool",
         "display": {
-            "description": "Extends the pool of mana",
+            "description": "Deepen your inner wellspring of mana, granting a greater reserve.",
             "icon": {
                 "item": "minecraft:glass_pane",
                 "minecraft:glass_panenbt": 1
@@ -274,7 +274,7 @@
     {
         "id": "nature:mana_regeneration",
         "display": {
-            "description": "Increments regeneration of mana",
+            "description": "Quickens the ebb and flow of your mana, restoring it faster.",
             "icon": {
                 "item": "minecraft:glass_pane",
                 "minecraft:glass_panenbt": 1
@@ -295,7 +295,7 @@
     {
         "id": "shapeshifting:werewolf",
         "display": {
-            "description": "Shapeshifts into a Werewolf",
+            "description": "Yield to the beast within and take the form of a werewolf, trading your human frame for fang and claw.",
             "icon": {
                 "item": "minecraft:glass_pane",
                 "minecraft:glass_panenbt": 1
@@ -316,7 +316,7 @@
     {
         "id": "shapeshifting:skin_armor",
         "display": {
-            "description": "While a werewolf, complete leather armor is hardened, gaining defense that increases with each point invested in this skill (up to netherite-grade protection at max level), and is gradually repaired so it lasts as long as diamond.",
+            "description": "While a werewolf, complete leather armor hardens, its defense rising with each point invested (up to netherite-grade at max level), and is slowly repaired so it lasts as long as diamond.",
             "icon": {
                 "item": "minecraft:glass_pane",
                 "minecraft:glass_panenbt": 1
@@ -337,7 +337,7 @@
     {
         "id": "shapeshifting:werewolf_vitality",
         "display": {
-            "description": "Increases vitality",
+            "description": "The beast's heart beats stronger, increasing your maximum health in beast form.",
             "icon": {
                 "item": "minecraft:glass_pane",
                 "minecraft:glass_panenbt": 1
@@ -358,7 +358,7 @@
     {
         "id": "shapeshifting:werewolfhit",
         "display": {
-            "description": "Werewolf hits are much powerful",
+            "description": "Your claws strike with savage force, dealing far greater damage in beast form.",
             "icon": {
                 "item": "minecraft:glass_pane",
                 "minecraft:glass_panenbt": 1
@@ -379,7 +379,7 @@
     {
         "id": "shapeshifting:charge",
         "display": {
-            "description": "Charges at the enemy",
+            "description": "Hurl yourself forward in a furious charge, striking and knocking back the enemies in your path.",
             "icon": {
                 "item": "devilrpg:item_charge"
             },
@@ -399,7 +399,7 @@
     {
         "id": "shapeshifting:block",
         "display": {
-            "description": "Absorbs a portion of incoming damage for a duration",
+            "description": "Harden your hide to absorb a portion of incoming damage for a time.",
             "icon": {
                 "item": "devilrpg:item_block"
             },
@@ -419,7 +419,7 @@
     {
         "id": "shapeshifting:knockback_resistance",
         "display": {
-            "description": "Makes you resistant to knock-back for the duration of the skill",
+            "description": "Root yourself to the earth, becoming resistant to being knocked back while the skill endures.",
             "icon": {
                 "item": "minecraft:glass_pane",
                 "minecraft:glass_panenbt": 1
@@ -440,7 +440,7 @@
     {
         "id": "summoning:wolf",
         "display": {
-            "description": "Summon up to three spiritual wolves to aid you in battle",
+            "description": "Call up to three spirit wolves from the forest to fight beside you.",
             "icon": {
                 "item": "devilrpg:item_summon"
             },
@@ -460,7 +460,7 @@
     {
         "id": "summoning:wolffrostbite",
         "display": {
-            "description": "Frostbite for wolf!",
+            "description": "Your spirit wolf's bite chills to the bone, slowing and freezing its prey with an icy burst.",
             "icon": {
                 "item": "minecraft:glass_pane",
                 "minecraft:glass_panenbt": 1
@@ -481,7 +481,7 @@
     {
         "id": "summoning:wolficearmor",
         "display": {
-            "description": "Strikes against a spirit wolf retaliate against the attacker. Gives the wolf some armor defense",
+            "description": "A mantle of ice cloaks your wolf, fending off blows and granting the beast armor defense.",
             "icon": {
                 "item": "minecraft:glass_pane",
                 "minecraft:glass_panenbt": 1
@@ -502,7 +502,7 @@
     {
         "id": "summoning:bear",
         "display": {
-            "description": "Summon a spiritual bear to aid you in battle",
+            "description": "Summon a mighty spirit bear to guard and fight by your side.",
             "icon": {
                 "item": "devilrpg:item_summon"
             },
@@ -522,7 +522,7 @@
     {
         "id": "summoning:mountbear",
         "display": {
-            "description": "Allows the druid to ride its bear companion",
+            "description": "Bond with your bear and ride it across the land.",
             "icon": {
                 "item": "minecraft:glass_pane",
                 "minecraft:glass_panenbt": 1
@@ -543,7 +543,7 @@
     {
         "id": "summoning:warbear",
         "display": {
-            "description": "War bear",
+            "description": "Awaken the bear's fury: its blows burst into a shockwave that harms nearby foes.",
             "icon": {
                 "item": "minecraft:glass_pane",
                 "minecraft:glass_panenbt": 1
@@ -564,7 +564,7 @@
     {
         "id": "summoning:minionvitality",
         "display": {
-            "description": "Gives vitality to all minions",
+            "description": "Lend your life-force to your minions, increasing their vitality.",
             "icon": {
                 "item": "minecraft:glass_pane",
                 "minecraft:glass_panenbt": 2
@@ -585,7 +585,7 @@
     {
         "id": "summoning:wisparmy",
         "display": {
-            "description": "Increases the number of wisps that can be invoked at the same time",
+            "description": "Call more forest wisps into your service at once.",
             "icon": {
                 "item": "minecraft:glass_pane",
                 "minecraft:glass_panenbt": 2
@@ -606,7 +606,7 @@
     {
         "id": "summoning:wisphealth",
         "display": {
-            "description": "Summon a forest wisp that bless you with mother nature's aura",
+            "description": "Summon a forest wisp whose mother-nature aura blesses you with vitality.",
             "icon": {
                 "item": "devilrpg:item_summon"
             },
@@ -626,7 +626,7 @@
     {
         "id": "summoning:wispregeneration",
         "display": {
-            "description": "Wisp emanates an aura that regenerates the health of allies",
+            "description": "The wisp's aura regenerates the health of you and your allies.",
             "icon": {
                 "item": "minecraft:glass_pane",
                 "minecraft:glass_panenbt": 1
@@ -647,7 +647,7 @@
     {
         "id": "summoning:wisparcher",
         "display": {
-            "description": "Ranged Wisp",
+            "description": "Summon a wisp that hurls frostbolts at your foes from afar.",
             "icon": {
                 "item": "devilrpg:item_summon"
             },
@@ -667,7 +667,7 @@
     {
         "id": "summoning:wispchopper",
         "display": {
-            "description": "Woodcutter Wisp",
+            "description": "Summon a woodcutter wisp that fells trees for you.",
             "icon": {
                 "item": "devilrpg:item_summon"
             },
@@ -687,7 +687,7 @@
     {
         "id": "summoning:wisplogcollector",
         "display": {
-            "description": "Wisp that collects logs and gives them to his master",
+            "description": "The wisp gathers felled logs and carries them to its master.",
             "icon": {
                 "item": "minecraft:glass_pane",
                 "minecraft:glass_panenbt": 1
@@ -708,7 +708,7 @@
     {
         "id": "summoning:wispforester",
         "display": {
-            "description": "Forester Wisp",
+            "description": "Summon a forester wisp that tends the wilds and gathers nature's bounty.",
             "icon": {
                 "item": "devilrpg:item_summon"
             },
@@ -728,7 +728,7 @@
     {
         "id": "summoning:wispseedcollector",
         "display": {
-            "description": "Wisp that harvests grass, collects seeds and gives them to his master",
+            "description": "The wisp harvests grass, gathering seeds to bring to its master.",
             "icon": {
                 "item": "minecraft:glass_pane",
                 "minecraft:glass_panenbt": 1
