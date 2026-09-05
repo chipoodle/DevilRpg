@@ -16,7 +16,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.block.BlockRenderDispatcher;
 import net.minecraft.client.renderer.entity.*;
 import net.minecraft.client.renderer.entity.layers.ItemInHandLayer;
-import net.minecraft.client.renderer.entity.layers.ArmorLayer;
+import net.minecraft.client.renderer.entity.layers.HumanoidArmorLayer;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.player.Player;
@@ -151,9 +151,9 @@ public class WerewolfCustomRendererHelper {
                     Iterator<RenderLayer<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>>> it = layers.iterator();
                     while (it.hasNext()) {
                         RenderLayer<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> layer = it.next();
-                        // Oculta tambien la armadura (ArmorLayer/HumanoidArmorLayer) para que no se vea
+                        // Oculta tambien la armadura (HumanoidArmorLayer) para que no se vea
                         // incrustada en el cuerpo del lobo; solo se muestran las capas no relacionadas.
-                        if (layer instanceof ItemInHandLayer || layer instanceof ArmorLayer) {
+                        if (layer instanceof ItemInHandLayer || layer instanceof HumanoidArmorLayer) {
                             hiddenHandLayers.add(layer);
                             it.remove();
                         }
