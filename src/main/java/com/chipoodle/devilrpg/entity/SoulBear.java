@@ -259,8 +259,8 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
         //this.setTypeVariant(compound.getInt("Variant"));
         if (compound.contains("ArmorItem", 10)) {
             ItemStack itemstack = ItemStack.parse(this.level().registryAccess(), compound.getCompound("ArmorItem")).orElse(ItemStack.EMPTY);
-            if (!itemstack.isEmpty() && this.inventory.getContainerSize() > 1) {
-                this.inventory.setItem(1, itemstack);
+            if (!itemstack.isEmpty()) {
+                this.getBodyArmorAccess().setItem(0, itemstack);
             }
         }
 
@@ -292,8 +292,10 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
         }
         compound.put("SoulBearItems", items);
 
-        if (this.inventory.getContainerSize() > 1 && !this.inventory.getItem(1).isEmpty()) {
-            compound.put("ArmorItem", this.inventory.getItem(1).save(this.level().registryAccess(), new CompoundTag()));
+        // Guardar la armadura desde el contenedor de armadura del caballo (no del almacenamiento).
+        ItemStack armorStack = this.getBodyArmorAccess().getItem(0);
+        if (!armorStack.isEmpty()) {
+            compound.put("ArmorItem", armorStack.save(this.level().registryAccess(), new CompoundTag()));
         }
 
         PlayerMinionCapabilityInterface minion = IGenericCapability.getUnwrappedPlayerCapability((Player) getOwner(), PlayerMinionCapability.INSTANCE);
@@ -496,17 +498,6 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
         return true;
     }
 
-    // Abre el inventario del oso con el menu custom (slots de montura y armadura de SOLO LECTURA).
-    // Se usa el MenuType registrado (MountablePetContainerMenu) para que el cliente lo dibuje con la
-    // pantalla custom (MountablePetScreen) y el servidor aplique la logica de solo lectura.
-    @Override
-    public void openCustomInventoryScreen(@NotNull Player player) {
-        if (!this.level().isClientSide && (!this.isVehicle() || this.hasPassenger(player)) && this.isTame()) {
-            player.openMenu(new SimpleMenuProvider((id, inventory, playerMenu) ->
-                    new MountablePetContainerMenu(id, inventory, this.inventory, this), this.getDisplayName()));
-        }
-    }
-
 
 
     /**
@@ -632,12 +623,9 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
     }
 
     protected void updateContainerEquipment() {
+        // La montura (slot 0) y la armadura (contenedor de armadura) se gestionan en applyRidingGear().
+        // Aqui solo garantizamos que la armadura no se suelte al morir.
         if (!this.level().isClientSide) {
-            // Solo accedemos al slot 1 si el inventario tiene al menos 2 huecos (puede ser tamano 1
-            // antes de que setMountBear reconstruya el contenedor segun getInventoryColumns()).
-            if (this.inventory.getContainerSize() > 1) {
-                this.setArmorEquipment(this.inventory.getItem(1));
-            }
             this.setDropChance(EquipmentSlot.CHEST, 0.0F);
         }
     }
@@ -717,14 +705,10 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
             }
         }
 
-        if (this.inventory.getContainerSize() > 1) {
-            ItemStack armor = war > 0 ? new ItemStack(this.getHorseArmorItem(war)) : ItemStack.EMPTY;
-            if (!this.inventory.getItem(1).is(war > 0 ? this.getHorseArmorItem(war) : Items.AIR)) {
-                this.inventory.setItem(1, armor);
-            }
-        }
-
-        this.updateContainerEquipment();
+        // Armadura directamente en el contenedor de armadura del caballo (slot de armadura), NO en el
+        // almacenamiento, para que en la GUI vanilla aparezca solo en el slot de armadura.
+        this.setArmorEquipment(war > 0 ? new ItemStack(this.getHorseArmorItem(war)) : ItemStack.EMPTY);
+        this.setDropChance(EquipmentSlot.CHEST, 0.0F);
     }
 
     // Armadura de caballo segun el nivel de War Bear (mas nivel = mejor material).
@@ -760,12 +744,18 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
         return this.getMountBearLevel() > 0;
     }
 
-    // Ancho del inventario de almacenamiento del oso. AHORA es fijo (5 columnas = 16 huecos) cuando es
-    // montable para que el placeholder del menu en el cliente coincida con el contenedor real (en 1.21.1
-    // no se puede pasar el tamano dinamico al MenuType). La diferencia entre niveles queda en el JUMP.
+    // Ancho del inventario de almacenamiento del oso, escalado por el nivel de Riding Bear (tope: 2):
+    //   nivel 0 = sin cofre (0 columnas -> tamano 1, sin inventario, sin montar)
+    //   nivel 1 = 2 columnas (tamano 2*3+1 = 7) -> mitad del espacio total
+    //   nivel 2 = 5 columnas (tamano 5*3+1 = 16) -> inventario completo (maximo de caballo)
+    // (Usamos el menu vanilla de caballo, que re-consulta la entidad en el cliente y maneja el tamano
+    // dinamico sin desincronizar.)
     @Override
     public int getInventoryColumns() {
-        return this.getMountBearLevel() > 0 ? 5 : 0;
+        int level = this.getMountBearLevel();
+        if (level <= 0) return 0;
+        if (level == 2) return 5;
+        return 2;
     }
 
     private int getMountBearLevel() {
