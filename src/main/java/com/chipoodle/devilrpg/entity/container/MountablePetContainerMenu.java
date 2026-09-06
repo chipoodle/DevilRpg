@@ -22,15 +22,18 @@ public class MountablePetContainerMenu extends AbstractContainerMenu {
     private final Container armorContainer;
     private final AbstractHorse horse;
     private final int storageCapacity;
+    private final int entityId;
 
     /**
      * Constructor del CLIENTE (lo crea el MenuType con los datos extra del paquete: capacidad de
-     * almacenamiento). El contenedor tiene siempre 5 columnas (=16 huecos) para que el fondo horse.png
-     * se vea bien; la "mitad" se controla limitando cuantos slots estan ACTIVOS.
+     * almacenamiento y id de la entidad para dibujar el oso). El contenedor tiene siempre 5 columnas
+     * (=16 huecos) para que el fondo horse.png se vea bien; la "mitad" se controla limitando cuantos
+     * slots estan ACTIVOS.
      */
-    public MountablePetContainerMenu(int id, Inventory inventory, int storageCapacity) {
+    public MountablePetContainerMenu(int id, Inventory inventory, int storageCapacity, int entityId) {
         super(ModContainers.MOUNTABLE_PET_MENU.get(), id);
         this.storageCapacity = Math.max(0, storageCapacity);
+        this.entityId = entityId;
         this.horseContainer = new SimpleContainer(16);
         this.armorContainer = new SimpleContainer(1);
         this.horse = null;
@@ -41,6 +44,7 @@ public class MountablePetContainerMenu extends AbstractContainerMenu {
     public MountablePetContainerMenu(int id, Inventory inventory, Container container, final AbstractHorse abstractHorse) {
         super(ModContainers.MOUNTABLE_PET_MENU.get(), id);
         this.storageCapacity = abstractHorse instanceof SoulBear sb ? sb.getMountStorageCapacity() : DEFAULT_STORAGE;
+        this.entityId = abstractHorse != null ? abstractHorse.getId() : -1;
         this.horseContainer = container;
         this.armorContainer = abstractHorse != null ? abstractHorse.getBodyArmorAccess() : new SimpleContainer(1);
         this.horse = abstractHorse;
@@ -131,6 +135,16 @@ public class MountablePetContainerMenu extends AbstractContainerMenu {
     /** Capacidad de almacenamiento (slots activos) segun el nivel; usado por la pantalla. */
     public int getStorageCapacity() {
         return this.storageCapacity;
+    }
+
+    /** Lista de slots del menu (para que la pantalla pinte los deshabilitados). */
+    public java.util.List<Slot> getSlotsList() {
+        return this.slots;
+    }
+
+    /** Id de la entidad (oso) para dibujarla en la pantalla. */
+    public int getEntityId() {
+        return this.entityId;
     }
 
     public @NotNull ItemStack quickMoveStack(@NotNull Player player, int id) {

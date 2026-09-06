@@ -507,7 +507,11 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
             player.openMenu(
                     new SimpleMenuProvider((id, inventory, playerMenu) ->
                             new MountablePetContainerMenu(id, inventory, this.inventory, this), this.getDisplayName()),
-                    buffer -> buffer.writeInt(this.getMountStorageCapacity()));
+                    buffer -> {
+                        int cap = this.getMountStorageCapacity();
+                        buffer.writeInt(cap > 0 ? cap : 15);
+                        buffer.writeInt(this.getId());
+                    });
         }
     }
 

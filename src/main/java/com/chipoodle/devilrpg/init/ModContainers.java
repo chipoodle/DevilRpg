@@ -19,5 +19,5 @@ public class ModContainers {
             CONTAINERS.register("mountable_pet",
                     () -> IMenuTypeExtension.create(
                             (IContainerFactory<MountablePetContainerMenu>) (id, inv, data) ->
-                                    new MountablePetContainerMenu(id, inv, data.readInt())));
+                                    new MountablePetContainerMenu(id, inv, data.readInt(), data.readInt())));
 }
