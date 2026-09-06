@@ -622,11 +622,11 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
         return this.getMountBearLevel() > 0 || super.isSaddled();
     }
 
-    // El oso siempre "tiene cofre" para mostrar su inventario de almacenamiento en el menu
-    // de caballo (como un burro), ademas de la montura y la armadura.
+    // El oso muestra su inventario de almacenamiento (como un burro) SOLO cuando tiene puntos en
+    // Riding Bear; sin puntos no debe verse con cofres ni poder montarse.
     @Override
     public boolean hasChest() {
-        return true;
+        return this.getMountBearLevel() > 0;
     }
 
     private int getMountBearLevel() {
