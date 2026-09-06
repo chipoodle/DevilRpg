@@ -37,11 +37,9 @@ public class MountablePetScreen extends AbstractContainerScreen<MountablePetCont
         // Fondo (region util 176x166 de la textura 256x256).
         guiGraphics.blit(HORSE_LOCATION, leftPos, topPos, 0, 0, this.imageWidth, this.imageHeight);
 
-        int columns = this.menu.getInventoryColumns();
-        if (columns > 0) {
-            // Caja de almacenamiento (se ensancha segun las columnas del oso).
-            guiGraphics.blitSprite(CHEST_SLOTS_SPRITE, leftPos + 79, topPos + 17, columns * 18, 54);
-        }
+        // Caja de almacenamiento SIEMPRE a 5 columnas (90px) para cubrir el cuerpo oscuro del horse.png
+        // y evitar la caja negra. Los slots inactivos (mitad en nivel 1) se ocultan/nodesactivan aparte.
+        guiGraphics.blitSprite(CHEST_SLOTS_SPRITE, leftPos + 79, topPos + 17, 5 * 18, 54);
         // Slot de montura.
         guiGraphics.blitSprite(SADDLE_SLOT_SPRITE, leftPos + 7, topPos + 17, 18, 18);
         // Slot de armadura.

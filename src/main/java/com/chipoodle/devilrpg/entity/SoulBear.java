@@ -499,15 +499,15 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
     }
 
     // Abre el inventario del oso con el menu custom (montura/armadura de SOLO LECTURA). Se pasa por el
-    // paquete el numero de columnas para que el CLIENTE cree el placeholder del MISMO tamano que el
-    // servidor (asi el inventario mitad/normal por nivel queda sincronizado y sin crashes).
+    // paquete el numero de slots de almacenamiento USABLES para que el CLIENTE limite los slots activos
+    // igual que el servidor (mitad en 1 punto, completo en 2) y sin desincronizar.
     @Override
     public void openCustomInventoryScreen(@NotNull Player player) {
         if (!this.level().isClientSide && (!this.isVehicle() || this.hasPassenger(player)) && this.isTame()) {
             player.openMenu(
                     new SimpleMenuProvider((id, inventory, playerMenu) ->
                             new MountablePetContainerMenu(id, inventory, this.inventory, this), this.getDisplayName()),
-                    buffer -> buffer.writeInt(this.getInventoryColumns()));
+                    buffer -> buffer.writeInt(this.getMountStorageCapacity()));
         }
     }
 
@@ -757,18 +757,20 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
         return this.getMountBearLevel() > 0;
     }
 
-    // Ancho del inventario de almacenamiento del oso, escalado por el nivel de Riding Bear (tope: 2):
-    //   nivel 0 = sin cofre (0 columnas -> tamano 1, sin inventario, sin montar)
-    //   nivel 1 = 2 columnas (tamano 2*3+1 = 7) -> mitad del espacio total
-    //   nivel 2 = 5 columnas (tamano 5*3+1 = 16) -> inventario completo (maximo de caballo)
-    // (Usamos el menu vanilla de caballo, que re-consulta la entidad en el cliente y maneja el tamano
-    // dinamico sin desincronizar.)
+    // Ancho del inventario de almacenamiento: SIEMPRE 5 columnas (= 16 huecos) cuando montable, para que
+    // la pantalla (horse.png) se vea bien sin caja negra. La diferencia entre niveles (mitad/completo) se
+    // controla con cuantos slots ESTAN ACTIVOS: vease getMountStorageCapacity().
     @Override
     public int getInventoryColumns() {
+        return this.getMountBearLevel() > 0 ? 5 : 0;
+    }
+
+    // Numero de slots de almacenamiento USABLES segun el nivel de Riding Bear:
+    //   1 punto = 7 (mitad) · 2 puntos = 15 (completo).
+    public int getMountStorageCapacity() {
         int level = this.getMountBearLevel();
         if (level <= 0) return 0;
-        if (level == 2) return 5;
-        return 2;
+        return level >= 2 ? 15 : 7;
     }
 
     private int getMountBearLevel() {

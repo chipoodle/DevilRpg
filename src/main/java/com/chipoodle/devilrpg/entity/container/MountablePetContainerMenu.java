@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.entity.container;
 
+import com.chipoodle.devilrpg.entity.SoulBear;
 import com.chipoodle.devilrpg.init.ModContainers;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
@@ -15,22 +16,22 @@ import org.jetbrains.annotations.NotNull;
 
 public class MountablePetContainerMenu extends AbstractContainerMenu {
 
-    private static final int DEFAULT_COLUMNS = 5;
+    private static final int DEFAULT_STORAGE = 15;   // 5 columnas x 3 filas = 15 slots de almacenamiento.
 
     private final Container horseContainer;
     private final Container armorContainer;
     private final AbstractHorse horse;
-    private final int inventoryColumns;
+    private final int storageCapacity;
 
     /**
-     * Constructor del CLIENTE (lo crea el MenuType con los datos extra del paquete: columnas).
-     * Asi el placeholder tiene el MISMO tamano y ancho de almacenamiento que el contenedor del servidor,
-     * y ambos lados quedan sincronizados (evita desajustes/crashes con el tamano dinamico del inventario).
+     * Constructor del CLIENTE (lo crea el MenuType con los datos extra del paquete: capacidad de
+     * almacenamiento). El contenedor tiene siempre 5 columnas (=16 huecos) para que el fondo horse.png
+     * se vea bien; la "mitad" se controla limitando cuantos slots estan ACTIVOS.
      */
-    public MountablePetContainerMenu(int id, Inventory inventory, int inventoryColumns) {
+    public MountablePetContainerMenu(int id, Inventory inventory, int storageCapacity) {
         super(ModContainers.MOUNTABLE_PET_MENU.get(), id);
-        this.inventoryColumns = Math.max(0, inventoryColumns);
-        this.horseContainer = new SimpleContainer(this.inventoryColumns * 3 + 1);
+        this.storageCapacity = Math.max(0, storageCapacity);
+        this.horseContainer = new SimpleContainer(16);
         this.armorContainer = new SimpleContainer(1);
         this.horse = null;
         addAllSlots(this.horseContainer, this.armorContainer, null, inventory);
@@ -39,7 +40,7 @@ public class MountablePetContainerMenu extends AbstractContainerMenu {
     /** Constructor del SERVIDOR con el contenedor real (montura+almacenamiento) y la armadura real. */
     public MountablePetContainerMenu(int id, Inventory inventory, Container container, final AbstractHorse abstractHorse) {
         super(ModContainers.MOUNTABLE_PET_MENU.get(), id);
-        this.inventoryColumns = abstractHorse != null ? abstractHorse.getInventoryColumns() : DEFAULT_COLUMNS;
+        this.storageCapacity = abstractHorse instanceof SoulBear sb ? sb.getMountStorageCapacity() : DEFAULT_STORAGE;
         this.horseContainer = container;
         this.armorContainer = abstractHorse != null ? abstractHorse.getBodyArmorAccess() : new SimpleContainer(1);
         this.horse = abstractHorse;
@@ -47,8 +48,10 @@ public class MountablePetContainerMenu extends AbstractContainerMenu {
         addAllSlots(this.horseContainer, this.armorContainer, abstractHorse, inventory);
     }
 
-    /** Agrega montura (0), armadura (contenedor de armadura), almacenamiento (1+) e inventario del jugador. */
+    /** Agrega montura (0), armadura (cont. de armadura), almacenamiento (1+) e inventario del jugador. */
     private void addAllSlots(Container container, Container armorContainer, AbstractHorse abstractHorse, Inventory inventory) {
+        int columns = 5;
+
         // Slot de montura (index 0): SOLO LECTURA (se auto-equipa).
         this.addSlot(new Slot(container, 0, 8, 18) {
             @Override
@@ -90,13 +93,19 @@ public class MountablePetContainerMenu extends AbstractContainerMenu {
             }
         });
 
-        // Almacenamiento (montura en index 0, items desde index 1), en cuadricula de 'inventoryColumns'
-        // (2 columnas en nivel 1 = mitad, 5 en nivel 2 = completo). Coincide con el fondo de caballo.
-        int columns = Math.max(1, this.inventoryColumns);
+        // Almacenamiento (montura en index 0, items desde index 1) en cuadricula 5x3 (como el caballo).
+        // Solo los primeros 'storageCapacity' slots estan ACTIVOS (mitad en nivel 1, completo en nivel 2);
+        // el resto se muestra desactivado (no se puede colocar ni sacar).
         int storageSize = Math.max(0, container.getContainerSize() - 1);
         for (int k = 0; k < (storageSize + columns - 1) / columns; ++k) {
             for (int l = 0; l < columns && (k * columns + l) < storageSize; ++l) {
-                this.addSlot(new Slot(container, 1 + k * columns + l, 80 + l * 18, 18 + k * 18));
+                final int position = k * columns + l;
+                this.addSlot(new Slot(container, 1 + position, 80 + l * 18, 18 + k * 18) {
+                    @Override
+                    public boolean isActive() {
+                        return storageCapacity > 0 && position < storageCapacity;
+                    }
+                });
             }
         }
 
@@ -119,9 +128,9 @@ public class MountablePetContainerMenu extends AbstractContainerMenu {
         return !this.horse.hasInventoryChanged(this.horseContainer) && this.horseContainer.stillValid(player) && this.horse.isAlive() && this.horse.distanceTo(player) < 8.0F;
     }
 
-    /** Columnas del almacenamiento (0 sin cofre, 2 en nivel 1, 5 en nivel 2). Usado por la pantalla. */
-    public int getInventoryColumns() {
-        return this.inventoryColumns;
+    /** Capacidad de almacenamiento (slots activos) segun el nivel; usado por la pantalla. */
+    public int getStorageCapacity() {
+        return this.storageCapacity;
     }
 
     public @NotNull ItemStack quickMoveStack(@NotNull Player player, int id) {
