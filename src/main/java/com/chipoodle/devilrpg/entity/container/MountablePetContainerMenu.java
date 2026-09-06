@@ -23,9 +23,10 @@ public class MountablePetContainerMenu extends AbstractContainerMenu {
     /** Constructor usado por el MenuType al re-crear el menu en el cliente. */
     public MountablePetContainerMenu(int id, Inventory inventory) {
         super(ModContainers.MOUNTABLE_PET_MENU.get(), id);
-        // Contenedor placeholder del mismo tamano que el inventario del oso (2 + 27) para que el
-        // cliente tenga los mismos slots y reciba el sync del servidor.
-        this.horseContainer = new SimpleContainer(2 + 27);
+        // Contenedor placeholder del MISMO tamano que el inventario del oso cuando es montable
+        // (5 columnas -> getInventorySize(5) = 5*3+1 = 16) para que cliente y servidor tengan los
+        // mismos slots y el sync no desemboque en desajustes ni crashes.
+        this.horseContainer = new SimpleContainer(16);
         this.horse = null;
         addAllSlots(this.horseContainer, null, inventory);
     }
@@ -43,9 +44,14 @@ public class MountablePetContainerMenu extends AbstractContainerMenu {
         int size = container.getContainerSize();
         // Solo montura/armadura si el contenedor tiene al menos 2 huecos (evita out-of-bounds).
         if (size >= 1) {
+            // Slot de montura: de SOLO LECTURA (no se puede colocar ni quitar; se auto-equipa por codigo).
             this.addSlot(new Slot(container, 0, 8, 18) {
                 public boolean mayPlace(@NotNull ItemStack p_39677_) {
-                    return p_39677_.is(Items.SADDLE) && !this.hasItem() && (abstractHorse == null || abstractHorse.isSaddleable());
+                    return false;
+                }
+
+                public boolean mayPickup(@NotNull Player player) {
+                    return false;
                 }
 
                 public boolean isActive() {
@@ -54,9 +60,14 @@ public class MountablePetContainerMenu extends AbstractContainerMenu {
             });
         }
         if (size >= 2) {
+            // Slot de armadura: de SOLO LECTURA (no se puede colocar ni quitar; se auto-equipa por codigo).
             this.addSlot(new Slot(container, 1, 8, 36) {
                 public boolean mayPlace(@NotNull ItemStack itemStack) {
-                    return !itemStack.isEmpty();
+                    return false;
+                }
+
+                public boolean mayPickup(@NotNull Player player) {
+                    return false;
                 }
 
                 public boolean isActive() {
@@ -69,12 +80,14 @@ public class MountablePetContainerMenu extends AbstractContainerMenu {
             });
         }
 
-        // Huecos de almacenamiento del oso (items desde la posicion 2 en adelante), en cuadricula 3x9.
-        // Nunca agregar slots fuera del tamaño real del contenedor.
+        // Huecos de almacenamiento del oso (items desde la posicion 2 en adelante), en cuadricula 5x3
+        // (como el hces del caballo, para que coincida con el fondo horse.png). Nunca agregar slots
+        // fuera del tamaño real del contenedor.
+        int columns = abstractHorse != null ? abstractHorse.getInventoryColumns() : 5;
         int storageSize = Math.max(0, size - 2);
-        for (int k = 0; k < (storageSize + 8) / 9; ++k) {
-            for (int l = 0; l < 9 && (k * 9 + l) < storageSize; ++l) {
-                this.addSlot(new Slot(container, 2 + k * 9 + l, 80 + l * 18, 18 + k * 18));
+        for (int k = 0; k < (storageSize + columns - 1) / columns; ++k) {
+            for (int l = 0; l < columns && (k * columns + l) < storageSize; ++l) {
+                this.addSlot(new Slot(container, 2 + k * columns + l, 80 + l * 18, 18 + k * 18));
             }
         }
 
@@ -90,14 +103,17 @@ public class MountablePetContainerMenu extends AbstractContainerMenu {
     }
 
     public boolean stillValid(@NotNull Player player) {
+        // En el cliente la instancia no tiene la entidad (horse==null); confiamos en que el servidor
+        // valida, asi el menu no se cierra de golpe en el cliente.
         if (horse == null) {
-            return false;
+            return true;
         }
         return !this.horse.hasInventoryChanged(this.horseContainer) && this.horseContainer.stillValid(player) && this.horse.isAlive() && this.horse.distanceTo(player) < 8.0F;
     }
 
     public @NotNull ItemStack quickMoveStack(@NotNull Player player, int id) {
-        if (id == 0)
+        // Montura (0) y armadura (1) son de solo lectura: no se mueven por shift-click.
+        if (id == 0 || id == 1)
             return ItemStack.EMPTY;
 
         ItemStack itemstack = ItemStack.EMPTY;
@@ -153,8 +169,8 @@ public class MountablePetContainerMenu extends AbstractContainerMenu {
 
     @Override
     public void clicked(int i, int p_150401_, @NotNull ClickType clickType, @NotNull Player player) {
-        //If it is saddle (index 0) return without performing any action
-        if (i == 0)
+        //If it is saddle (index 0) or armor (index 1) return without performing any action (solo lectura)
+        if (i == 0 || i == 1)
             return;
         super.clicked(i, p_150401_, clickType, player);
     }
