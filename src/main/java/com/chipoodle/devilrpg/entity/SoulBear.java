@@ -192,6 +192,12 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
         Objects.requireNonNull(this.getAttribute(Attributes.FOLLOW_RANGE)).setBaseValue(16.0D);
         Objects.requireNonNull(this.getAttribute(Attributes.ATTACK_DAMAGE)).setBaseValue((1.4 * puntosAsignados) + 4); // 5.4-32
         Objects.requireNonNull(this.getAttribute(Attributes.JUMP_STRENGTH)).setBaseValue(0.7D + ((double) mountBear / 5));
+        // Con puntos en Riding Bear, hasChest() == true -> getInventoryColumns() == 9 -> el inventario
+        // se recrea al tamaño correcto (2 + 3*9 = 29), conservando el contenido (slot 1 = armadura).
+        // Sin esto el inventario quedaba con un tamaño erroneo y la GUI de montura/cofre reventaba.
+        if (this.getMountBearLevel() > 0) {
+            this.createInventory();
+        }
         setHealth((float) saludMaxima);
         DevilRpg.LOGGER.debug("----------------------->SoulBear.updateLevel(). Owner {}. isTame {}.  ", owner.getUUID(), this.isTame());
     }
@@ -627,6 +633,12 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
     @Override
     public boolean hasChest() {
         return this.getMountBearLevel() > 0;
+    }
+
+    // Ancho del inventario de almacenamiento del oso: 9 columnas (3x9 = 27 huecos) cuando montable.
+    @Override
+    public int getInventoryColumns() {
+        return this.hasChest() ? 9 : 0;
     }
 
     private int getMountBearLevel() {
