@@ -198,9 +198,11 @@ public class SoulMinerVineBlockEntity extends BlockEntity {
         serverLevel.setBlockAndUpdate(currentBlockPos, blockState.setValue(HAS_CHILDREN, true));
         // El hijo hereda la raiz y su padre es este bloque.
         linkChild(serverLevel, childBlockPos, this.worldPosition);
-        // El hijo hereda el reloj de la raiz para marchitarse a la vez con el resto de la vid.
+        // El hijo hereda el reloj y el nivel para tener el MISMO tiempo de vida (antes nacía con
+        // skillLevel=0 -> duración corta, mientras la raíz duraba por el skill).
         if (serverLevel.getBlockEntity(childBlockPos) instanceof SoulMinerVineBlockEntity childBE) {
             childBE.setTimeOfCreation(this.timeOfCreation);
+            childBE.setSkillLevel(this.skillLevel);
         }
 
 

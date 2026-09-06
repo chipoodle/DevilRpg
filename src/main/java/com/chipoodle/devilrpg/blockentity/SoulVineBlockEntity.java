@@ -171,9 +171,11 @@ public class SoulVineBlockEntity extends BlockEntity {
         //DevilRpg.LOGGER.debug("======> Age {} currentDirection {} childDirection {}", AGE, currentDirection, childDirection);
 
         serverLevel.setBlockAndUpdate(childBlockPos, childBlockState);
-        // El hijo hereda el reloj de la raiz para que toda la vid se marchite a la vez.
+        // El hijo hereda el reloj y el nivel de la vid para que toda la planta tenga el MISMO tiempo de
+        // vida (antes el hijo nacía con skillLevel=0 -> duración corta, mientras la raíz duraba por el skill).
         if (serverLevel.getBlockEntity(childBlockPos) instanceof SoulVineBlockEntity childBE) {
             childBE.setTimeOfCreation(this.timeOfCreation);
+            childBE.setSkillLevel(this.skillLevel);
         }
     }
 }
