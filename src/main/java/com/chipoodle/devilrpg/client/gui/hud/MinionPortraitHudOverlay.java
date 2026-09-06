@@ -164,7 +164,7 @@ public class MinionPortraitHudOverlay {
             poseStack.pushPose();
             poseStack.translate(0, BAR_HEIGHT + 14, 0); // pegado debajo de la barra de salud
             poseStack.scale(1.0f, 2.0f, 1.0f);
-            poseStack.translate(1, 1, 0);
+            poseStack.translate(-1, 1, 0); // 2px a la izquierda para alinear con la barra de salud
             // Fondo negro (borde) a lo largo de todo el ancho.
             guiGraphics.fill(0, 0, BAR_WIDTH, 10, 0xFF000000);
             // Mismo ancho y punto de inicio que la barra de salud (empieza en x=1, ancho BAR_WIDTH-2).
