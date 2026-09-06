@@ -202,20 +202,10 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
         Objects.requireNonNull(this.getAttribute(Attributes.FOLLOW_RANGE)).setBaseValue(16.0D);
         Objects.requireNonNull(this.getAttribute(Attributes.ATTACK_DAMAGE)).setBaseValue((1.4 * puntosAsignados) + 4); // 5.4-32
         /**
-         * Altura de salto del SoulBear (JUMP_STRENGTH). Depende de los puntos de Riding Bear (tope: 2):
-         *   - 0 puntos: pasivo no aplicado -> salto base (0.7) y no se puede montar.
-         *   - 1 punto : se puede montar; el salto es la MITAD del maximo de un caballo (0.5).
-         *   - 2 puntos: salto MAXIMO que puede tener un caballo (1.0 = 0.4 + 3*0.2 en generateJumpStrength).
+         * Altura de salto del SoulBear (JUMP_STRENGTH). Se ajusta DINAMICAMENTE en aiStep():
+         * solo se potencia cuando el oso esta montado (valor normal de caballo, 0.5 en 1 punto
+         * y 0.7 en 2 puntos) y sin montar queda en 0.4, para que no sobre-salte ni se lastime.
          */
-        float jumpStrength;
-        if (mountBear <= 0) {
-            jumpStrength = 0.7F;   // base (pasivo no aplicado)
-        } else if (mountBear == 1) {
-            jumpStrength = 0.5F;   // mitad del maximo de un caballo
-        } else {
-            jumpStrength = 1.0F;   // maximo que puede tener un caballo
-        }
-        Objects.requireNonNull(this.getAttribute(Attributes.JUMP_STRENGTH)).setBaseValue(jumpStrength);
         // Con puntos en Riding Bear, hasChest() == true y el inventario se escala por nivel (1pto=2 cols,
         // 2ptos=5), recreandose al tamano correcto y conservando el contenido (slot 1 = armadura).
         // Sin esto el inventario quedaba con un tamano erroneo y la GUI de montura/cofre reventaba.
@@ -310,6 +300,17 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
 
         if (!this.level().isClientSide) {
             this.updatePersistentAnger((ServerLevel) this.level(), true);
+
+            // Ajuste dinamico del salto: SOLO se potencia cuando el oso esta siendo montado, y con un
+            // valor NORMAL de caballo (no exagerado) para que no sobre-salte ni se lastime al caer.
+            //   2 puntos (montado) = 0.7 (salto normal de caballo)
+            //   1 punto  (montado) = 0.5
+            //   sin montar           = 0.4 (sin impulso)
+            boolean mounted = this.isVehicle();
+            double jump = mounted
+                    ? (this.getMountBearLevel() >= 2 ? 0.7 : 0.5)
+                    : 0.4;
+            Objects.requireNonNull(this.getAttribute(Attributes.JUMP_STRENGTH)).setBaseValue(jump);
         }
 
         addToAiStep(this);
