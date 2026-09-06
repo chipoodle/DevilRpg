@@ -110,15 +110,6 @@ public class MinionPortraitHudOverlay {
         poseStack.pushPose();
 
         poseStack.pushPose();
-        poseStack.scale(1.0f, 2.0f, 1.0f);
-        poseStack.translate(0, -40, 0);
-        //Barra negra de fondo
-        guiGraphics.blit(bars, 0, BAR_HEIGHT, 0, BAR_HEIGHT, (BAR_WIDTH + 20), 9);
-        poseStack.scale(1.04f, 1.2f, 1.0f);
-        poseStack.translate(-1.2f, -12.0f, 0);
-        guiGraphics.blit(bars, 0, BAR_HEIGHT - 2, 0, BAR_HEIGHT + 9, (int) (BAR_WIDTH * (entity.getArmorValue() / 20f)), 9);
-        poseStack.popPose();
-        poseStack.pushPose();
         poseStack.translate(0, BAR_HEIGHT + 2, 0);
         poseStack.scale(1.0f, 2.0f, 1.0f);
         poseStack.translate(1, 1, 0);
@@ -164,6 +155,30 @@ public class MinionPortraitHudOverlay {
         }
         poseStack.popPose();
         poseStack.popPose();
+
+        // Barra de ARMADURA: mismo tamano que la de salud, justo debajo, con su valor numerico.
+        // Solo se muestra si el minion tiene armadura (getArmorValue() > 0).
+        if (entity.getArmorValue() > 0) {
+            float armorValue = Math.min(20.0F, entity.getArmorValue());
+            poseStack.pushPose();
+            poseStack.translate(0, BAR_HEIGHT + 24, 0); // justo debajo de la barra de salud
+            poseStack.scale(1.0f, 2.0f, 1.0f);
+            poseStack.translate(1, 1, 0);
+            // Fondo negro + relleno gris, mismo ancho maximo que la barra de salud.
+            guiGraphics.fill(0, 0, BAR_WIDTH, 9, 0xFF000000);
+            int armorWidth = (int) ((BAR_WIDTH - 2) * Math.min(1, armorValue / 20f));
+            guiGraphics.fill(1, 0, armorWidth + 1, 9, 0xFFB0B0B0);
+            String sa = dCurrent.format(entity.getArmorValue());
+            int ta = fr.width(sa);
+            poseStack.translate(1 + ta + (float) ta / 2, -0.5f, 0);
+            poseStack.pushPose();
+            poseStack.scale(1.6f, 0.8f, 1);
+            guiGraphics.drawString(fr, sa, -fr.width(sa) + 1, 2, 0x2A2A00);
+            guiGraphics.drawString(fr, sa, -fr.width(sa), 1, 0xFFFFFF);
+            poseStack.popPose();
+            poseStack.popPose();
+        }
+
         poseStack.popPose();
         poseStack.popPose();
     }
