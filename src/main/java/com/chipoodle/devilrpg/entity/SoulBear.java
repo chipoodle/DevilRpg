@@ -630,8 +630,11 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
         return 0;
     }
 
+    // La armadura se guarda en getBodyArmorAccess() (lo hace setArmorEquipment). Devuelve ese item para
+    // que la capa de armadura (SoulBearArmorLayer) y canUseSlot lo vean. getItemBySlot(CHEST) no lee
+    // ese contenedor en un caballo, asi que devolvia vacio y la armadura no se renderizaba.
     public ItemStack getArmor() {
-        return this.getItemBySlot(EquipmentSlot.CHEST);
+        return this.getBodyArmorAccess().getItem(0);
     }
 
     private void setArmor(ItemStack p_213805_1_) {
