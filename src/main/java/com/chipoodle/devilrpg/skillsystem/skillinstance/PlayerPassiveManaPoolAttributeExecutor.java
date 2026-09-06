@@ -36,7 +36,7 @@ public class PlayerPassiveManaPoolAttributeExecutor extends AbstractPlayerPassiv
                 this.playerIn = playerIn;
             }
 
-            Integer manaPoolPoints = parentCapability.getSkillsPoints().get(SkillEnum.MANA_POOL);
+            Integer manaPoolPoints = parentCapability.getSkillsPoints(SkillEnum.MANA_POOL);
             PlayerManaCapabilityInterface mana = IGenericCapability.getUnwrappedPlayerCapability(playerIn, PlayerManaCapability.INSTANCE);
             mana.setMaxMana(BASE_MANA_POOL+manaPoolPoints,playerIn);
 

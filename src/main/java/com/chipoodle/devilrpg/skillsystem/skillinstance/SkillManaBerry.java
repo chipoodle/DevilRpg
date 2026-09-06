@@ -64,7 +64,7 @@ public class SkillManaBerry extends AbstractSkillSeedsInInventoryExecutor {
             // Consumir una semilla del inventario
             consumeSeed(playerIn);
 
-            int skillPoints = skillCap.getSkillsPoints().get(SkillEnum.MANA_BERRY);
+            int skillPoints = skillCap.getSkillsPoints(SkillEnum.MANA_BERRY);
             level
                     .setBlockAndUpdate(
                             newBlockpos,

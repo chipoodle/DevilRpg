@@ -550,7 +550,8 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
     @Override
     public int getSkillsPoints(SkillEnum skillEnum) {
         HashMap<SkillEnum, Integer> skillsPoints = this.getSkillsPoints();
-        return skillsPoints.getOrDefault(skillEnum,0);
+        if (skillsPoints == null) return 0;
+        return skillsPoints.getOrDefault(skillEnum, 0);
     }
 
 }

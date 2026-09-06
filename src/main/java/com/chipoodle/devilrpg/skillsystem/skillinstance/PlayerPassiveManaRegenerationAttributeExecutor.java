@@ -38,7 +38,7 @@ public class PlayerPassiveManaRegenerationAttributeExecutor extends AbstractPlay
                 this.playerIn = playerIn;
             }
 
-            Integer manaRegenSkillPoints = parentCapability.getSkillsPoints().get(SkillEnum.MANA_REGENERATION);
+            Integer manaRegenSkillPoints = parentCapability.getSkillsPoints(SkillEnum.MANA_REGENERATION);
             PlayerManaCapabilityInterface manaCapability = IGenericCapability.getUnwrappedPlayerCapability(playerIn, PlayerManaCapability.INSTANCE);
             manaCapability.setRegeneration((REGENERATION + (manaRegenSkillPoints * REGENERATION_FACTOR)),playerIn);
 

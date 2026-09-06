@@ -32,7 +32,7 @@ public class PassiveFlorasVigorExecutor extends AbstractPlayerPassiveAttributeEx
                 this.playerIn = playerIn;
             }
 
-            Integer skillPoints = parentCapability.getSkillsPoints().get(SkillEnum.FLORAS_VIGOR);
+            Integer skillPoints = parentCapability.getSkillsPoints(SkillEnum.FLORAS_VIGOR);
             DevilRpg.LOGGER.info("-----------------------> Executing passive PassiveFlorasVigorExecutor skillPoints:{}",skillPoints);
         }
     }

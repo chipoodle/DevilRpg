@@ -28,6 +28,9 @@ public class MinionPassiveAttributes {
     private final Level levelIn;
     private float factor;
     private Player playerIn;
+    // Puntos de skills cacheados una sola vez (getSkillsPoints deserializa el mapa completo por NBT
+    // en cada llamada; antes se llamaba varias veces por cada minion). Null-safe.
+    private HashMap<SkillEnum, Integer> skills;
 
     public MinionPassiveAttributes(ITamableEntity entity) {
         DevilRpg.LOGGER.info("||---->MinionPassiveAttributes entity {}", ((LivingEntity) entity).getUUID());
@@ -38,6 +41,12 @@ public class MinionPassiveAttributes {
             return;
 
         playerIn = (Player) owner;
+
+        // Obtener los puntos de skills UNA sola vez (la deserializacion del NBT es costosa).
+        PlayerSkillCapabilityInterface parentCapability = IGenericCapability.getUnwrappedPlayerCapability(playerIn, PlayerSkillCapability.INSTANCE);
+        if (parentCapability != null) {
+            this.skills = parentCapability.getSkillsPoints();
+        }
 
         if (entity instanceof SoulWolf) {
             factor = 0.3333f;
@@ -58,18 +67,20 @@ public class MinionPassiveAttributes {
         apply(entity);
     }
 
+    private int skillPoint(SkillEnum key) {
+        return skills == null ? 0 : skills.getOrDefault(key, 0);
+    }
+
 
     @SuppressWarnings("unchecked")
     private void apply(ITamableEntity entity) {
         DevilRpg.LOGGER.info("||---->MinionPassiveAttributes apply");
 
         if (!levelIn.isClientSide && playerIn != null) {
-            PlayerSkillCapabilityInterface parentCapability = IGenericCapability.getUnwrappedPlayerCapability(playerIn,
-                    PlayerSkillCapability.INSTANCE);
             HashMap<Holder<Attribute>, AttributeModifier> attributes = new HashMap<>();
             attributes.put(Attributes.MAX_HEALTH,
                     new AttributeModifier(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, PASSIVE_MINION_HEALTH),
-                            factor * parentCapability.getSkillsPoints().get(SkillEnum.MINION_VITALITY),
+                            factor * skillPoint(SkillEnum.MINION_VITALITY),
                             AttributeModifier.Operation.ADD_VALUE));
             IPassiveMinionUpdater<ITamableEntity> minion = (IPassiveMinionUpdater<ITamableEntity>) entity;
             minion.applyPassives(attributes, entity);
@@ -77,10 +88,8 @@ public class MinionPassiveAttributes {
     }
 
     private void applyPassives(SoulBear entity) {
-        PlayerSkillCapabilityInterface parentCapability = IGenericCapability.getUnwrappedPlayerCapability(playerIn,
-                PlayerSkillCapability.INSTANCE);
-        Integer warBear = parentCapability.getSkillsPoints().get(SkillEnum.WAR_BEAR);
-        Integer mountBear = parentCapability.getSkillsPoints().get(SkillEnum.MOUNT_BEAR);
+        int warBear = skillPoint(SkillEnum.WAR_BEAR);
+        int mountBear = skillPoint(SkillEnum.MOUNT_BEAR);
         DevilRpg.LOGGER.info("||---->MinionPassiveAttributes SoulBearEntity warbear:{} factor: {}", warBear, factor);
         DevilRpg.LOGGER.info("||---->MinionPassiveAttributes SoulBearEntity mountBear:{} factor: {}", mountBear, factor);
 
@@ -94,16 +103,13 @@ public class MinionPassiveAttributes {
         attributes.put(Attributes.KNOCKBACK_RESISTANCE, new AttributeModifier(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, PASSIVE_WAR_BEAR_KNOCKBACK_RES), 0.1666666666 * warBear,
                 AttributeModifier.Operation.ADD_VALUE));
 
-
         entity.applyPassives(attributes, entity);
-
     }
 
     private void applyPassives(SoulWolf entity) {
         DevilRpg.LOGGER.info("||---->MinionPassiveAttributes SoulWolfEntity");
-        PlayerSkillCapabilityInterface parentCapability = IGenericCapability.getUnwrappedPlayerCapability(playerIn, PlayerSkillCapability.INSTANCE);
-        Integer frostbite = parentCapability.getSkillsPoints().get(SkillEnum.WOLF_FROSTBITE);
-        Integer iceArmor = parentCapability.getSkillsPoints().get(SkillEnum.WOLF_ICE_ARMOR);
+        Integer frostbite = skillPoint(SkillEnum.WOLF_FROSTBITE);
+        Integer iceArmor = skillPoint(SkillEnum.WOLF_ICE_ARMOR);
 
         entity.setFrostbite(frostbite);
         entity.setIceArmor(iceArmor);
@@ -111,24 +117,23 @@ public class MinionPassiveAttributes {
 
     private void applyPassives(SoulWisp entity) {
         DevilRpg.LOGGER.info("||---->MinionPassiveAttributes SoulWispEntity");
-        PlayerSkillCapabilityInterface parentCapability = IGenericCapability.getUnwrappedPlayerCapability(playerIn, PlayerSkillCapability.INSTANCE);
         if (entity instanceof SoulWispHealth soulWispHealth) {
-            Integer points = parentCapability.getSkillsPoints().get(SkillEnum.WISP_REGENERATION);
-            soulWispHealth.setSecondaryEffect(points, MobEffects.REGENERATION);
+            int points = skillPoint(SkillEnum.WISP_REGENERATION);
+            if (points > 0)
+                soulWispHealth.setSecondaryEffect(points, MobEffects.REGENERATION);
         }
 
         if (entity instanceof SoulWispChopper soulWispChopper) {
-            Integer points = parentCapability.getSkillsPoints().get(SkillEnum.WISP_LOG_COLLECTOR);
-            if (points != null && points > 0)
+            int points = skillPoint(SkillEnum.WISP_LOG_COLLECTOR);
+            if (points > 0)
                 soulWispChopper.goalSelector.addGoal(2, new SoulWispGatherLogItemsGoal(soulWispChopper));
         }
 
         if (entity instanceof SoulWispForester soulWispForester) {
-            Integer points = parentCapability.getSkillsPoints().get(SkillEnum.WISP_SEED_COLLECTOR);
-            if (points != null && points > 0)
+            int points = skillPoint(SkillEnum.WISP_SEED_COLLECTOR);
+            if (points > 0)
                 soulWispForester.goalSelector.addGoal(3, new SoulWispHarvestGrassGoal(soulWispForester));
         }
-
     }
 
     private void applyPassives(SunflowerShulker entity) {

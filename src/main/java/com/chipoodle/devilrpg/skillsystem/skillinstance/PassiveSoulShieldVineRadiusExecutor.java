@@ -32,7 +32,7 @@ public class PassiveSoulShieldVineRadiusExecutor extends AbstractPlayerPassiveAt
                 this.playerIn = playerIn;
             }
 
-            Integer skillPoints = parentCapability.getSkillsPoints().get(SkillEnum.SOULSHIELDVINE_RADIUS);
+            Integer skillPoints = parentCapability.getSkillsPoints(SkillEnum.SOULSHIELDVINE_RADIUS);
             //PlayerManaCapabilityInterface manaCapability = IGenericCapability.getUnwrappedPlayerCapability(playerIn, PlayerManaCapability.INSTANCE);
             //manaCapability.setRegeneration((REGENERATION + (skillPoints * REGENERATION_FACTOR)),playerIn);
 

@@ -117,7 +117,7 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassiveAttributeExecu
     private void createNewAttributeModifiersSpeed() {
         speedAttributeModifier = createNewAttributeModifier(
                 SkillEnum.TRANSFORM_WEREWOLF.name() + SPEED,
-                parentCapability.getSkillsPoints().get(SkillEnum.TRANSFORM_WEREWOLF) * 0.0045);
+                parentCapability.getSkillsPoints(SkillEnum.TRANSFORM_WEREWOLF) * 0.0045);
         DevilRpg.LOGGER.info("----------------------->createNewAttributeModifiersSpeed(): {}", speedAttributeModifier);
     }
 

@@ -51,6 +51,7 @@ public class SkillSummonSoulWolf extends AbstractSkillExecutor {
                 PlayerMinionCapabilityInterface min = player.getData(PlayerMinionCapability.INSTANCE);
                 min.removeAllSoulBear(player);
                 ConcurrentLinkedQueue<UUID> keys = min.getSoulWolfMinions();
+                if (keys == null) keys = new ConcurrentLinkedQueue<>(); // getSoulWolfMinions puede devolver null si falla la deserializacion del NBT
 
                 keys.offer(summonSoulWolf(level, player, rand).getUUID());
                 if (keys.size() > NUMBER_OF_SUMMONS) {

@@ -79,7 +79,7 @@ public class PlayerPassiveSkillSkinArmorAttributeExecutor extends AbstractPlayer
 
     private void initializeArmorAttributes(Player playerIn) {
         if (skinArmorAttributeModifier == null ||
-                skinArmorAttributeModifier.amount() != Double.valueOf(parentCapability.getSkillsPoints().get(SkillEnum.SKIN_ARMOR)) * ARMOR_FACTOR) {
+                skinArmorAttributeModifier.amount() != Double.valueOf(parentCapability.getSkillsPoints(SkillEnum.SKIN_ARMOR)) * ARMOR_FACTOR) {
             removeCurrentSkinArmorModifiers();
             skinArmorAttributeModifier = createNewAttributeModifiers(ATTRIBUTE_MODIFIER_ARMOR_UNIQUE_NAME, ARMOR_FACTOR);
             HashMap<String, String> capAttModifiersHashMap = parentCapability.getAttributeModifiers();
@@ -91,7 +91,7 @@ public class PlayerPassiveSkillSkinArmorAttributeExecutor extends AbstractPlayer
 
     private void initializeToughnessAttributes(Player playerIn) {
         if (skinToughnessAttributeModifier == null ||
-                skinToughnessAttributeModifier.amount() != Double.valueOf(parentCapability.getSkillsPoints().get(SkillEnum.SKIN_ARMOR)) * TOUGHNESS_FACTOR) {
+                skinToughnessAttributeModifier.amount() != Double.valueOf(parentCapability.getSkillsPoints(SkillEnum.SKIN_ARMOR)) * TOUGHNESS_FACTOR) {
             removeCurrentSkinToughnessModifiers();
             skinToughnessAttributeModifier = createNewAttributeModifiers(ATTRIBUTE_MODIFIER_TOUGHNESS_UNIQUE_NAME, TOUGHNESS_FACTOR);
             HashMap<String, String> capAttModifiersHashMap = parentCapability.getAttributeModifiers();
@@ -108,7 +108,7 @@ public class PlayerPassiveSkillSkinArmorAttributeExecutor extends AbstractPlayer
     private AttributeModifier createNewAttributeModifiers(String uniqueName, double factor) {
         AttributeModifier newAttributeModifier = createNewAttributeModifier(
                 uniqueName,
-                Double.valueOf(parentCapability.getSkillsPoints().get(SkillEnum.SKIN_ARMOR)) * factor
+                Double.valueOf(parentCapability.getSkillsPoints(SkillEnum.SKIN_ARMOR)) * factor
         );
         //DevilRpg.LOGGER.info("||----------------------->createNewAttributeModifiers SKIN_ARMOR: {}", parentCapability.getSkillsPoints().get(SkillEnum.SKIN_ARMOR));
         DevilRpg.LOGGER.info("----------------------->createNewAttributeModifiers(): {}", newAttributeModifier);

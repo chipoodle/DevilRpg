@@ -55,7 +55,7 @@ public class PlayerPassiveWerewolfHitAttributeExecutor extends AbstractPlayerPas
 
     private void initializeAttributes(Player playerIn) {
         if (hitAttributeModifier == null ||
-                hitAttributeModifier.amount() != Double.valueOf(parentCapability.getSkillsPoints().get(SkillEnum.WEREWOLF_HIT)) * HIT_FACTOR) {
+                hitAttributeModifier.amount() != Double.valueOf(parentCapability.getSkillsPoints(SkillEnum.WEREWOLF_HIT)) * HIT_FACTOR) {
             removeCurrentWerewolfHitModifiers();
             hitAttributeModifier = createNewAttributeModifiers();
             HashMap<String, String> capAttModifiersHashMap = parentCapability.getAttributeModifiers();
@@ -72,7 +72,7 @@ public class PlayerPassiveWerewolfHitAttributeExecutor extends AbstractPlayerPas
     private AttributeModifier createNewAttributeModifiers() {
         AttributeModifier newAttributeModifier = createNewAttributeModifier(
                 ATTRIBUTE_MODIFIER_UNIQUE_NAME,
-                Double.valueOf(parentCapability.getSkillsPoints().get(SkillEnum.WEREWOLF_HIT)) * HIT_FACTOR
+                Double.valueOf(parentCapability.getSkillsPoints(SkillEnum.WEREWOLF_HIT)) * HIT_FACTOR
         );
         //DevilRpg.LOGGER.info("||----------------------->createNewAttributeModifiers SKIN_ARMOR: {}", parentCapability.getSkillsPoints().get(SkillEnum.SKIN_ARMOR));
         DevilRpg.LOGGER.info("----------------------->createNewAttributeModifiers(): {}", newAttributeModifier);

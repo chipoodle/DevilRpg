@@ -48,7 +48,7 @@ public class PlayerPassiveKnockBackResistanceExecutor extends AbstractPlayerPass
 
 
             PlayerAuxiliaryCapabilityInterface auxiliary = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerAuxiliaryCapability.INSTANCE);
-            Integer skillPoints = parentCapability.getSkillsPoints().get(SkillEnum.KNOCKBACK_RESISTANCE);
+            Integer skillPoints = parentCapability.getSkillsPoints(SkillEnum.KNOCKBACK_RESISTANCE);
 
             DevilRpg.LOGGER.info("-----------------------> Executing passive PlayerPassiveKnockBackResistanceExecutor skillPoints:{}",skillPoints);
 

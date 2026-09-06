@@ -84,7 +84,7 @@ public class SkillSoulVine extends AbstractSkillSeedsInInventoryExecutor {
             // Consumir una semilla del inventario
             consumeSeed(playerIn);
 
-            int skillPoints = skillCap.getSkillsPoints().get(SkillEnum.SOULVINE);
+            int skillPoints = skillCap.getSkillsPoints(SkillEnum.SOULVINE);
             level
                     .setBlockAndUpdate(
                             newBlockpos,

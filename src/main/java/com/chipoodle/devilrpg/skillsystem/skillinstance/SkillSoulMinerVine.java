@@ -30,7 +30,7 @@ public class SkillSoulMinerVine extends AbstractSkillSeedsInInventoryExecutor {
 
     @Override
     public SkillEnum getSkillEnum() {
-        return SkillEnum.SOULSHIELDVINE;
+        return SkillEnum.SOULMINERVINE;
     }
 
     @Override
@@ -79,7 +79,7 @@ public class SkillSoulMinerVine extends AbstractSkillSeedsInInventoryExecutor {
         // Consumir una semilla del inventario
         consumeSeed(playerIn);
 
-        int skillPoints = skillCap.getSkillsPoints().get(SkillEnum.SOULMINERVINE);
+        int skillPoints = skillCap.getSkillsPoints(SkillEnum.SOULMINERVINE);
         level
                 .setBlockAndUpdate(
                         newBlockpos,

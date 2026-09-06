@@ -46,7 +46,7 @@ public class SkillWerewolfBlocking extends AbstractPlayerPassiveAttributeExecuto
 
         //if (!player.getCooldowns().isOnCooldown(ModItems.ITEM_VACIO.get())) {
         if (!player.getCooldowns().isOnCooldown(icon.getItem())) {
-            int blockPoints = parentCapability.getSkillsPoints().get(getSkillEnum());
+            int blockPoints = parentCapability.getSkillsPoints(getSkillEnum());
             // Reproduce un sonido
             levelIn.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.ARMOR_EQUIP_LEATHER, SoundSource.NEUTRAL, 0.5F, 0.4F / (new Random().nextFloat() * 0.4F + 0.8F));
 

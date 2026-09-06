@@ -70,8 +70,8 @@ public class SkillSoulShieldVine extends AbstractSkillSeedsInInventoryExecutor {
     private void createDome(Level level, Player playerIn, PlayerSkillCapabilityInterface skillCap) {
         BlockPos playerBlockPos = playerIn.blockPosition();
         SoulShieldVineBlock createdBlock = ModBlocks.SOUL_SHIELD_VINE_BLOCK.get();
-        int radius = 2 + skillCap.getSkillsPoints().get(SkillEnum.SOULSHIELDVINE_RADIUS);  // Ajusta el radio de la esfera
-        int skillPoints = skillCap.getSkillsPoints().get(SkillEnum.SOULSHIELDVINE);
+        int radius = 2 + skillCap.getSkillsPoints(SkillEnum.SOULSHIELDVINE_RADIUS);  // Ajusta el radio de la esfera
+        int skillPoints = skillCap.getSkillsPoints(SkillEnum.SOULSHIELDVINE);
 
 
         // Consumir una semilla del inventario

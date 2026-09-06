@@ -52,6 +52,7 @@ public class SkillSummonWispArcher extends AbstractSkillExecutor {
 
                 PlayerSkillCapabilityInterface playerCap = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerSkillCapability.INSTANCE);
                 int maxSummons = playerCap.getSkillsPoints(SkillEnum.WISP_ARMY);
+                if (maxSummons <= 0) return; // sin tope de Wisp Army no invocar (si no, se invoca y se mata al instante)
 
                 PlayerMinionCapabilityInterface minionCap = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerMinionCapability.INSTANCE);
                 minionCap.summonWispComplete(levelIn, player, rand, () -> summonWisp(levelIn, player, rand), maxSummons, SoulWispArcher.class);

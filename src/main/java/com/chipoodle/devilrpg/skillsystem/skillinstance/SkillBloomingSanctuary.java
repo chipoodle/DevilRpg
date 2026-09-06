@@ -59,7 +59,7 @@ public class SkillBloomingSanctuary extends AbstractSkillSeedsInInventoryExecuto
             if (!levelIn.isClientSide) {
                 levelIn.playSound(null, player.getX(), player.getY(), player.getZ(),
                         SoundEvents.GRASS_PLACE, SoundSource.BLOCKS, 0.5F, 1.0F);
-                createSanctuary(player, parentCapability.getSkillsPoints().get(SkillEnum.BLOOMING_SANCTUARY));
+                createSanctuary(player, parentCapability.getSkillsPoints(SkillEnum.BLOOMING_SANCTUARY));
                 player.getCooldowns().addCooldown(icon.getItem(), 200); // Cooldown de 10 segundos
             }
         }

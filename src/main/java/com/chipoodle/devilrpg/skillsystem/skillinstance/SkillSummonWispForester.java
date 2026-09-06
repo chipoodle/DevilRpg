@@ -51,6 +51,7 @@ public class SkillSummonWispForester extends AbstractSkillExecutor {
 
                 PlayerSkillCapabilityInterface playerCap = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerSkillCapability.INSTANCE);
                 int maxSummons = playerCap.getSkillsPoints(SkillEnum.WISP_ARMY);
+                if (maxSummons <= 0) return; // sin tope de Wisp Army no invocar
 
                 PlayerMinionCapabilityInterface minionCap = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerMinionCapability.INSTANCE);
                 minionCap.summonWispComplete(level, player, rand, () -> summonWisp(level, player, rand), maxSummons, SoulWispForester.class);

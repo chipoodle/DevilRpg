@@ -84,7 +84,7 @@ public class SkillChargeWerewolf extends AbstractSkillExecutor {
             f3 *= CHARGE_SPEED;
 
             int autoSpinAttackTicks = 10;
-            int chargePoints = parentCapability.getSkillsPoints().get(SkillEnum.CHARGE);
+            int chargePoints = parentCapability.getSkillsPoints(SkillEnum.CHARGE);
             if (!levelIn.isClientSide) {
                 // Aplicar el DAMAGE_BOOST ANTES de calcular el dano para que cuente
                 // (suma a ATTACK_DAMAGE y por tanto al dano del charge).

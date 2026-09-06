@@ -41,7 +41,7 @@ public class SkillFrostBall /*extends AbstractSkillExecutor */{
                 FrostBall snowballEntity = new FrostBall(levelIn, player);
 
                 PlayerSkillCapabilityInterface unwrappedPlayerCapability = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerSkillCapability.INSTANCE);
-                Integer i = unwrappedPlayerCapability.getSkillsPoints().get(SkillEnum.FROSTBALL);
+                Integer i = unwrappedPlayerCapability.getSkillsPoints(SkillEnum.FROSTBALL);
 
                 snowballEntity.updateLevel(player, i);
                 snowballEntity.shootFromRotation(player, player.getXRot(), player.getYRot(), 0.0F, 1.5F, 1.0F);
