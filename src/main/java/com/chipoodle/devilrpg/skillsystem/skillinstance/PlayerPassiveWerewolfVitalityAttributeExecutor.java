@@ -53,7 +53,11 @@ public class PlayerPassiveWerewolfVitalityAttributeExecutor extends AbstractPlay
     private void initializeAttributes(Player playerIn) {
         if (hitAttributeModifier == null ||
                 hitAttributeModifier.amount() != Double.valueOf(parentCapability.getSkillsPoints(SkillEnum.WEREWOLF_VITALITY)) * HEALTH_FACTOR) {
-            removeCurrentWerwolfVitalityModifiers();
+            // Al re-estructurar el modifier (p.ej. subio el nivel estando transformado) NO clamps la vida:
+            // la guardamos/re-ponemos para no perder salud (el nuevo max se aplica en add() justo despues).
+            float healthBefore = playerIn.getHealth();
+            removeCurrentWerwolfVitalityModifiers(false);
+            playerIn.setHealth(healthBefore);
             hitAttributeModifier = createNewAttributeModifiers();
             HashMap<String, String> capAttModifiersHashMap = parentCapability.getAttributeModifiers();
             addAttributeToCapability(capAttModifiersHashMap, Attributes.MAX_HEALTH, hitAttributeModifier.id());
@@ -76,13 +80,14 @@ public class PlayerPassiveWerewolfVitalityAttributeExecutor extends AbstractPlay
         return newAttributeModifier;
     }
 
-    private void removeCurrentWerwolfVitalityModifiers() {
+    private void removeCurrentWerwolfVitalityModifiers(boolean clampHealth) {
         //HashMap<String, String> attributeModifiers = parentCapability.getAttributeModifiers();
         removeCurrentModifierFromPlayer(playerIn, hitAttributeModifier, Attributes.MAX_HEALTH);
         //UUID uuid = removeAttributeFromCapability(attributeModifiers, Attributes.MAX_HEALTH);
         //parentCapability.setAttributeModifiers(attributeModifiers, playerIn);
         //DevilRpg.LOGGER.info("----------------------->Remove {}",uuid);
-        if (playerIn.getHealth() > playerIn.getMaxHealth())
+        // Solo clampamos la vida al QUITAR el bono (de-transformar), no al re-estructurar (para no perder salud).
+        if (clampHealth && playerIn.getHealth() > playerIn.getMaxHealth())
             playerIn.setHealth(playerIn.getMaxHealth());
         DevilRpg.LOGGER.info("----------------------->removeCurrentModifiers(): {}", hitAttributeModifier);
     }
@@ -103,6 +108,6 @@ public class PlayerPassiveWerewolfVitalityAttributeExecutor extends AbstractPlay
     }
 
     public void remove() {
-        removeCurrentWerwolfVitalityModifiers();
+        removeCurrentWerwolfVitalityModifiers(true);
     }
 }

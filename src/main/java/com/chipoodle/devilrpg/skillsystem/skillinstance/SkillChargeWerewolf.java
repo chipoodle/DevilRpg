@@ -95,8 +95,9 @@ public class SkillChargeWerewolf extends AbstractSkillExecutor {
 
                 // Impulso del dash (se desvanece con la friccion hasta parar).
                 player.push(f1, f2, f3);
-                // Danar + empujar a TODAS las entidades a lo largo del recorrido (atraviesa a todos).
-                damageEntitiesAlongPath(levelIn, player, f1, f3, chargeDamage);
+                // Danar + empujar a TODAS las entidades a lo largo del recorrido (atraviesa a todos),
+                // siguiendo tambien el desplazamiento vertical (f2) para golpear la altura real.
+                damageEntitiesAlongPath(levelIn, player, f1, f3, f2, chargeDamage);
                 // Animacion de giro (visual); el dano real lo hace damageEntitiesAlongPath.
                 player.startAutoSpinAttack(autoSpinAttackTicks, 0.0F, ItemStack.EMPTY);
 
@@ -106,9 +107,10 @@ public class SkillChargeWerewolf extends AbstractSkillExecutor {
                 Minecraft m = Minecraft.getInstance();
                 LocalPlayer clientPlayer = m.player;
                 if (clientPlayer != null && clientPlayer.onGround()) {
-                    float chargeDamage = (float) (clientPlayer.getAttributeValue(Attributes.ATTACK_DAMAGE) * CHARGE_DAMAGE_MULTIPLIER + chargePoints * CHARGE_DAMAGE_PER_LEVEL);
                     clientPlayer.push(f1, f2, f3);
-                    clientPlayer.startAutoSpinAttack(autoSpinAttackTicks, chargeDamage, ItemStack.EMPTY);
+                    // 0.0F igual que el servidor: el dano real lo aplica damageEntitiesAlongPath en el
+                    // servidor (con el DAMAGE_BOOST); el autoSpinAttack del cliente es solo visual.
+                    clientPlayer.startAutoSpinAttack(autoSpinAttackTicks, 0.0F, ItemStack.EMPTY);
                 }
             }
             player.getCooldowns().addCooldown(icon.getItem(), 20);
@@ -120,7 +122,7 @@ public class SkillChargeWerewolf extends AbstractSkillExecutor {
      * direccion horizontal dada), para que el charge atraviese a los enemigos y no se detenga
      * en el primero. Cada entidad se golpea una sola vez.
      */
-    private void damageEntitiesAlongPath(Level level, Player player, float dx, float dz, float damage) {
+    private void damageEntitiesAlongPath(Level level, Player player, float dx, float dz, float dy, float damage) {
         double hLen = Mth.sqrt(dx * dx + dz * dz);
         if (hLen < 1.0E-4) return;
         double nx = dx / hLen;
@@ -130,7 +132,9 @@ public class SkillChargeWerewolf extends AbstractSkillExecutor {
         for (double d = 0.5; d <= CHARGE_RANGE_BLOCKS; d += 0.5) {
             double cx = origin.x + nx * d;
             double cz = origin.z + nz * d;
-            AABB box = new AABB(cx - 0.6, origin.y - 1.0, cz - 0.6, cx + 0.6, origin.y + 2.0, cz + 0.6);
+            // Desplazamiento vertical aproximado a lo largo del recorrido (sigue el impulso f2).
+            double cy = origin.y + dy * (d / CHARGE_RANGE_BLOCKS);
+            AABB box = new AABB(cx - 0.6, cy - 1.0, cz - 0.6, cx + 0.6, cy + 2.0, cz + 0.6);
             for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, box, en -> en != player && en.isAlive() && !en.isAlliedTo(player))) {
                 if (hit.add(e)) {
                     e.hurt(player.damageSources().mobAttack(player), damage);

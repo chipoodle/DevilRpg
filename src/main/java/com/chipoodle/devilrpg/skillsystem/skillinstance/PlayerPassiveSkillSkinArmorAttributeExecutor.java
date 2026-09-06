@@ -13,7 +13,6 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.ArmorMaterial;
-import net.minecraft.world.item.ArmorMaterials;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
@@ -173,10 +172,12 @@ public class PlayerPassiveSkillSkinArmorAttributeExecutor extends AbstractPlayer
 
             DevilRpg.LOGGER.info("----------------------->Material head : {} chest: {} legs: {} feet: {}", headMaterial.getRegisteredName(), chestMaterial.getRegisteredName(), legsMaterial.getRegisteredName(), feetMaterial.getRegisteredName());
 
-            if (headMaterial.equals(ArmorMaterials.LEATHER) &&
-                    chestMaterial.equals(ArmorMaterials.LEATHER) &&
-                    legsMaterial.equals(ArmorMaterials.LEATHER) &&
-                    feetMaterial.equals(ArmorMaterials.LEATHER)) {
+            // Comparar el material por VALOR (nombre registrado), no por referencia (Holder.equals):
+            // asi la armadura de cuero de vanilla o de un datapack/mod cuenta igual.
+            if ("minecraft:leather".equals(headMaterial.getRegisteredName()) &&
+                    "minecraft:leather".equals(chestMaterial.getRegisteredName()) &&
+                    "minecraft:leather".equals(legsMaterial.getRegisteredName()) &&
+                    "minecraft:leather".equals(feetMaterial.getRegisteredName())) {
                 parameters.put(PlayerPassiveSkillSkinArmorAttributeExecutor.IS_COMPLETE_ARMOR, "true");
             } else {
                 parameters.put(PlayerPassiveSkillSkinArmorAttributeExecutor.IS_COMPLETE_ARMOR, "false");

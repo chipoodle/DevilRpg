@@ -11,6 +11,7 @@ import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.tags.BlockTags;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
@@ -65,13 +66,15 @@ public class SkillManaBerry extends AbstractSkillSeedsInInventoryExecutor {
             consumeSeed(playerIn);
 
             int skillPoints = skillCap.getSkillsPoints(SkillEnum.MANA_BERRY);
+            // La propiedad LEVEL va de 0 a 30; clampeamos para no lanzar IllegalArgumentException.
+            int clampedLevel = Mth.clamp(skillPoints, 0, 30);
             level
                     .setBlockAndUpdate(
                             newBlockpos,
                             createdBlock.defaultBlockState()
                                     //.setValue(SoulVineBlock.AGE, 1)
                                     //.setValue(SoulVineBlock.DIRECTIONS, nearestDirection)
-                                    .setValue(ManaBerryBushBlock.LEVEL, skillPoints)
+                                    .setValue(ManaBerryBushBlock.LEVEL, clampedLevel)
                             //.setValue(SoulVineBlock.HAS_CHILDREN, false)
                     );
 
