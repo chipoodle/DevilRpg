@@ -30,6 +30,10 @@ public class SoulVineBlockEntity extends BlockEntity {
     public int getSkillLevel() { return skillLevel; }
     public void setSkillLevel(int skillLevel) { this.skillLevel = skillLevel; this.setChanged(); }
 
+    // Permite que los bloques hijos hereden el momento de creacion de la raiz, para que TODA la vid
+    // se marchite a la vez (antes cada bloque tenia su propio reloj y la raiz duraba mas).
+    public void setTimeOfCreation(long timeOfCreation) { this.timeOfCreation = timeOfCreation; this.setChanged(); }
+
     @Override
     protected void saveAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
@@ -56,7 +60,7 @@ public class SoulVineBlockEntity extends BlockEntity {
         int skillLevel = this.skillLevel;
         int currentDecay = state.getValue(DECAY_STAGE);
         Direction currentDirection = state.getValue(DIRECTIONS);
-        Integer duration = skillLevel * TICK_FACTOR + 60;
+        Integer duration = (skillLevel * TICK_FACTOR + 60) * 2; // vida el doble (era x1)
         boolean hasChildren = state.getValue(HAS_CHILDREN);
 
         //DevilRpg.LOGGER.info("-------->tick. Age {} ", currentAge);
@@ -167,6 +171,10 @@ public class SoulVineBlockEntity extends BlockEntity {
         //DevilRpg.LOGGER.debug("======> Age {} currentDirection {} childDirection {}", AGE, currentDirection, childDirection);
 
         serverLevel.setBlockAndUpdate(childBlockPos, childBlockState);
+        // El hijo hereda el reloj de la raiz para que toda la vid se marchite a la vez.
+        if (serverLevel.getBlockEntity(childBlockPos) instanceof SoulVineBlockEntity childBE) {
+            childBE.setTimeOfCreation(this.timeOfCreation);
+        }
     }
 }
 

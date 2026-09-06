@@ -66,6 +66,9 @@ public class SoulMinerVineBlockEntity extends BlockEntity {
         this.setChanged();
     }
 
+    // Los hijos heredan el reloj de la raiz para que toda la vid se marchite a la vez.
+    public void setTimeOfCreation(long timeOfCreation) { this.timeOfCreation = timeOfCreation; this.setChanged(); }
+
     /** Añade items al buffer de transporte (vienen de un bloque minado o de un hijo). */
     public void addToBuffer(List<ItemStack> items) {
         this.transportBuffer.addAll(items);
@@ -126,7 +129,8 @@ public class SoulMinerVineBlockEntity extends BlockEntity {
                 (int) Math.round((skillLevel + 5) * BRANCH_DEPTH_MULTIPLIER)); // +30% de profundidad, sin superar AGE max
         int currentDecay = state.getValue(DECAY_STAGE);
         Direction currentDirection = state.getValue(DIRECTIONS);
-        Integer duration = TICK_FACTOR;
+        // Vida del miner vine: antes era fija (140 ticks), ahora escala con el nivel y es mas larga.
+        Integer duration = skillLevel * 20 + TICK_FACTOR * 2;
         boolean hasChildren = state.getValue(HAS_CHILDREN);
 
         long timeElapsed = world.getGameTime() - timeOfCreation;
@@ -194,6 +198,10 @@ public class SoulMinerVineBlockEntity extends BlockEntity {
         serverLevel.setBlockAndUpdate(currentBlockPos, blockState.setValue(HAS_CHILDREN, true));
         // El hijo hereda la raiz y su padre es este bloque.
         linkChild(serverLevel, childBlockPos, this.worldPosition);
+        // El hijo hereda el reloj de la raiz para marchitarse a la vez con el resto de la vid.
+        if (serverLevel.getBlockEntity(childBlockPos) instanceof SoulMinerVineBlockEntity childBE) {
+            childBE.setTimeOfCreation(this.timeOfCreation);
+        }
 
 
         List<Direction> possibleDirections = new ArrayList<>(growthDirections(randomSource));
