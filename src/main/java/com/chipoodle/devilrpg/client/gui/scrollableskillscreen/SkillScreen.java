@@ -81,9 +81,9 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
 
     // --- Etiqueta del conjunto de skills activo (Set X/Y) ---
     /** Separación horizontal a la izquierda del botón ◀ (bájala para acercar el label). */
-    public static final int SKILL_SET_LABEL_X_OFFSET = 4;
+    public static final int SKILL_SET_LABEL_X_OFFSET = 19;
     /** Posición vertical del label desde la base de la ventana (bájala = más arriba). */
-    public static final int SKILL_SET_LABEL_Y_OFFSET = 28;
+    public static final int SKILL_SET_LABEL_Y_OFFSET = -1;
     private static int tabPage, maxPages;
     private final ClientSkillBuilderFromJson clientSkillManager;
     private final Map<SkillElement, SkillTab> tabs = Maps.newLinkedHashMap();
