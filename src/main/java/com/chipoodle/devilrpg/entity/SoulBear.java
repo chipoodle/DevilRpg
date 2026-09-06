@@ -212,7 +212,9 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
         //this.setTypeVariant(compound.getInt("Variant"));
         if (compound.contains("ArmorItem", 10)) {
             ItemStack itemstack = ItemStack.parse(this.level().registryAccess(), compound.getCompound("ArmorItem")).orElse(ItemStack.EMPTY);
-            if (!itemstack.isEmpty() && !itemstack.isEmpty()) {
+            // El inventario puede ser tamano 1 si aun no se reconstruyo (setMountBear corre despues de
+            // readAdditionalSaveData); protegemos el acceso al slot 1 para no reventar.
+            if (!itemstack.isEmpty() && this.inventory.getContainerSize() > 1) {
                 this.inventory.setItem(1, itemstack);
             }
         }
@@ -229,7 +231,7 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
         compound.putBoolean("Sitting", this.orderedToSit);
 
         //compound.putInt("Variant", this.getTypeVariant());
-        if (!this.inventory.getItem(1).isEmpty()) {
+        if (this.inventory.getContainerSize() > 1 && !this.inventory.getItem(1).isEmpty()) {
             compound.put("ArmorItem", this.inventory.getItem(1).save(this.level().registryAccess(), new CompoundTag()));
         }
 
@@ -552,8 +554,11 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
 
     protected void updateContainerEquipment() {
         if (!this.level().isClientSide) {
-    
-            this.setArmorEquipment(this.inventory.getItem(1));
+            // Solo accedemos al slot 1 si el inventario tiene al menos 2 huecos (puede ser tamano 1
+            // antes de que setMountBear reconstruya el contenedor segun getInventoryColumns()).
+            if (this.inventory.getContainerSize() > 1) {
+                this.setArmorEquipment(this.inventory.getItem(1));
+            }
             this.setDropChance(EquipmentSlot.CHEST, 0.0F);
         }
     }
@@ -608,6 +613,13 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
     public void setMountBear(Integer mountBear) {
         this.mountBear = mountBear;
         this.entityData.set(DATA_MOUNT_BEAR, mountBear == null ? 0 : mountBear);
+        // IMPORTANTE: updateLevel() corre ANTES que setMountBear(), asi que ahi el inventario veia
+        // mountBear=0 y NO se reconstruia (quedaba de tamano 1 segun getInventorySize(0)=1). Es aqui,
+        // ya con el valor correcto, donde se recrea el inventario al tamano que pide getInventoryColumns().
+        // createInventory() conserva el contenido viejo (armadura en slot 0/1) al redimensionar.
+        if (this.getMountBearLevel() > 0) {
+            this.createInventory();
+        }
     }
 
     @Override
@@ -635,10 +647,19 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
         return this.getMountBearLevel() > 0;
     }
 
-    // Ancho del inventario de almacenamiento del oso: 9 columnas (3x9 = 27 huecos) cuando montable.
+    // Ancho del inventario de almacenamiento del oso, escalado por el nivel de Riding Bear:
+    //   nivel 0 = sin cofre (0 columnas -> tamano 1)
+    //   nivel 1 = 2 columnas (tamano 2*3+1 = 7)
+    //   nivel 2 = 5 columnas (tamano 5*3+1 = 16)
+    //   nivel 3+ = 9 columnas (tamano 9*3+1 = 28)
+    // Asi se ve una diferencia clara entre 1 y 2 puntos (y mas almacenamiento con nivel alto).
     @Override
     public int getInventoryColumns() {
-        return this.hasChest() ? 9 : 0;
+        int level = this.getMountBearLevel();
+        if (level <= 0) return 0;
+        if (level >= 3) return 9;
+        if (level == 2) return 5;
+        return 2;
     }
 
     private int getMountBearLevel() {
