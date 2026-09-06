@@ -40,31 +40,38 @@ public class MountablePetContainerMenu extends AbstractContainerMenu {
 
     /** Agrega los slots de montura, armadura, almacenamiento e inventario del jugador (layout de caballo). */
     private void addAllSlots(Container container, AbstractHorse abstractHorse, Inventory inventory) {
-        this.addSlot(new Slot(container, 0, 8, 18) {
-            public boolean mayPlace(@NotNull ItemStack p_39677_) {
-                return p_39677_.is(Items.SADDLE) && !this.hasItem() && (abstractHorse == null || abstractHorse.isSaddleable());
-            }
+        int size = container.getContainerSize();
+        // Solo montura/armadura si el contenedor tiene al menos 2 huecos (evita out-of-bounds).
+        if (size >= 1) {
+            this.addSlot(new Slot(container, 0, 8, 18) {
+                public boolean mayPlace(@NotNull ItemStack p_39677_) {
+                    return p_39677_.is(Items.SADDLE) && !this.hasItem() && (abstractHorse == null || abstractHorse.isSaddleable());
+                }
 
-            public boolean isActive() {
-                return abstractHorse == null || abstractHorse.isSaddleable();
-            }
-        });
-        this.addSlot(new Slot(container, 1, 8, 36) {
-            public boolean mayPlace(@NotNull ItemStack itemStack) {
-                return !itemStack.isEmpty();
-            }
+                public boolean isActive() {
+                    return abstractHorse == null || abstractHorse.isSaddleable();
+                }
+            });
+        }
+        if (size >= 2) {
+            this.addSlot(new Slot(container, 1, 8, 36) {
+                public boolean mayPlace(@NotNull ItemStack itemStack) {
+                    return !itemStack.isEmpty();
+                }
 
-            public boolean isActive() {
-                return true;
-            }
+                public boolean isActive() {
+                    return true;
+                }
 
-            public int getMaxStackSize() {
-                return 1;
-            }
-        });
+                public int getMaxStackSize() {
+                    return 1;
+                }
+            });
+        }
 
         // Huecos de almacenamiento del oso (items desde la posicion 2 en adelante), en cuadricula 3x9.
-        int storageSize = Math.max(0, container.getContainerSize() - 2);
+        // Nunca agregar slots fuera del tamaño real del contenedor.
+        int storageSize = Math.max(0, size - 2);
         for (int k = 0; k < (storageSize + 8) / 9; ++k) {
             for (int l = 0; l < 9 && (k * 9 + l) < storageSize; ++l) {
                 this.addSlot(new Slot(container, 2 + k * 9 + l, 80 + l * 18, 18 + k * 18));
