@@ -37,6 +37,10 @@ import java.util.function.BiConsumer;
 @EventBusSubscriber(modid = DevilRpg.MODID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
 public final class ClientForgePlayerEventSubscriber {
 
+    // Para detectar el cambio de estado de transformacion (lobo<->humano) y refrescar el hitbox del
+    // cliente (primera persona) en ese momento, sin depender de que se renderice el modelo.
+    private static boolean lastWerewolfTransformation = false;
+
     @SubscribeEvent
     public static void onLeftClickEmpty(PlayerInteractEvent.LeftClickEmpty event) {
         BiConsumer<PlayerInteractEvent.LeftClickEmpty, PlayerAuxiliaryCapabilityInterface> c = (eve, aux) -> {
@@ -100,6 +104,12 @@ public final class ClientForgePlayerEventSubscriber {
             PlayerAuxiliaryCapabilityInterface auxCapability = IGenericCapability.getUnwrappedPlayerCapability(event.getEntity(), PlayerAuxiliaryCapability.INSTANCE);
             boolean werewolfTransformation = auxCapability.isWerewolfTransformation();
             boolean werewolfAttack = auxCapability.isWerewolfAttack();
+            // Al cambiar el estado de transformacion, refrescar el hitbox del cliente (primera persona)
+            // para que el tamaño lobo/humano se aplique sin esperar a agacharse ni al render del modelo.
+            if (werewolfTransformation != lastWerewolfTransformation) {
+                lastWerewolfTransformation = werewolfTransformation;
+                event.getEntity().refreshDimensions();
+            }
             if (werewolfTransformation && werewolfAttack) {
                 int points = skillCapability.getSkillsPoints().get(SkillEnum.TRANSFORM_WEREWOLF);
                 float t = (15L - points * 0.5F);

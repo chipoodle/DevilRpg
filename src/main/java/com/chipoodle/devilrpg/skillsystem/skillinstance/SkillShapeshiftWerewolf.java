@@ -83,6 +83,10 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassiveAttributeExecu
             PlayerAuxiliaryCapabilityInterface aux = player.getData(PlayerAuxiliaryCapability.INSTANCE);
             boolean transformation = aux.isWerewolfTransformation();
             aux.setWerewolfTransformation(!transformation, player);
+            // Refrescar el hitbox al transformarse (crecer/encoger) para que el evento Size lo actualice
+            // en ambas direcciones. Antes dependia del RenderPlayerEvent (que no corre en primera persona,
+            // por eso al volver a humano el hitbox quedaba en tamano lobo hasta agacharse).
+            player.refreshDimensions();
 
             removeCurrentModifiersSpeed(player);
             removeCurrentModifiersStep(player);
