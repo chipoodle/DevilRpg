@@ -25,6 +25,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundHorseScreenOpenPacket;
@@ -164,6 +165,13 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
             saludMaxima = 5 * this.puntosAsignados + SALUD_INICIAL;
             initialArmor = (1.0D * 0.410 * puntosAsignados) + 3;
 
+            // Fijar el nivel de montura/guerra desde los puntos actuales ANTES de restaurar el inventario:
+            // setMountBear() recrea el contenedor al tamano correcto y deja bien el salto (JUMP).
+            Integer mountPoint = skill.getSkillsPoints().get(SkillEnum.MOUNT_BEAR);
+            Integer warPoint = skill.getSkillsPoints().get(SkillEnum.WAR_BEAR);
+            if (mountPoint != null) this.setMountBear(mountPoint);
+            if (warPoint != null) this.setWarBear(warPoint);
+
             PlayerMinionCapabilityInterface minion = IGenericCapability.getUnwrappedPlayerCapability((Player) getOwner(), PlayerMinionCapability.INSTANCE);
             CompoundTag soulBearInventory = minion.getSoulBearInventory();
 
@@ -221,13 +229,32 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
         super.readAdditionalSaveData(compound);
 
         this.orderedToSit = compound.getBoolean("Sitting");
-        //this.setInSittingPose(this.orderedToSit);
+
+        // Restaurar el nivel de montura ANTES de tocar el inventario: asi setMountBear recrea el contenedor
+        // al tamano correcto (createInventory) y caben todos los items guardados (antes quedaba en tamano 1
+        // y se perdian o reventaba).
+        if (compound.contains("MountBear")) {
+            this.setMountBear(compound.getInt("MountBear"));
+        }
+        if (compound.contains("WarBear")) {
+            this.setWarBear(compound.getInt("WarBear"));
+        }
+
+        // Restaurar TODOS los items (montura slot 0, armadura slot 1, almacenamiento 2+).
+        if (compound.contains("SoulBearItems", 9)) {
+            ListTag listtag = compound.getList("SoulBearItems", 10);
+            for (int i = 0; i < listtag.size(); ++i) {
+                CompoundTag slotTag = listtag.getCompound(i);
+                int slot = slotTag.getByte("Slot") & 255;
+                if (slot >= 0 && slot < this.inventory.getContainerSize()) {
+                    this.inventory.setItem(slot, ItemStack.parse(this.level().registryAccess(), slotTag).orElse(ItemStack.EMPTY));
+                }
+            }
+        }
 
         //this.setTypeVariant(compound.getInt("Variant"));
         if (compound.contains("ArmorItem", 10)) {
             ItemStack itemstack = ItemStack.parse(this.level().registryAccess(), compound.getCompound("ArmorItem")).orElse(ItemStack.EMPTY);
-            // El inventario puede ser tamano 1 si aun no se reconstruyo (setMountBear corre despues de
-            // readAdditionalSaveData); protegemos el acceso al slot 1 para no reventar.
             if (!itemstack.isEmpty() && this.inventory.getContainerSize() > 1) {
                 this.inventory.setItem(1, itemstack);
             }
@@ -244,13 +271,31 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
 
         compound.putBoolean("Sitting", this.orderedToSit);
 
-        //compound.putInt("Variant", this.getTypeVariant());
+        // Guardar el nivel de montura para poder redimensionar el inventario al restaurar.
+        compound.putInt("MountBear", this.getMountBearLevel());
+        compound.putInt("WarBear", this.warBear == null ? 0 : this.warBear);
+
+        // Guardar TODOS los items (montura slot 0, armadura slot 1, almacenamiento 2+). Asi no se pierden
+        // entre invocaciones del oso ni al morir (customOnDeath llama a addAdditionalSaveData).
+        ListTag items = new ListTag();
+        for (int i = 0; i < this.inventory.getContainerSize(); ++i) {
+            ItemStack stack = this.inventory.getItem(i);
+            if (!stack.isEmpty()) {
+                CompoundTag slotTag = (CompoundTag) stack.save(this.level().registryAccess(), new CompoundTag());
+                slotTag.putByte("Slot", (byte) i);
+                items.add(slotTag);
+            }
+        }
+        compound.put("SoulBearItems", items);
+
         if (this.inventory.getContainerSize() > 1 && !this.inventory.getItem(1).isEmpty()) {
             compound.put("ArmorItem", this.inventory.getItem(1).save(this.level().registryAccess(), new CompoundTag()));
         }
 
         PlayerMinionCapabilityInterface minion = IGenericCapability.getUnwrappedPlayerCapability((Player) getOwner(), PlayerMinionCapability.INSTANCE);
-        minion.setSoulBearInventory(compound, (Player) getOwner());
+        if (minion != null) {
+            minion.setSoulBearInventory(compound, (Player) getOwner());
+        }
     }
 
     @Override
@@ -434,6 +479,11 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
         ItemStack itemstack1 = this.getBodyArmorAccess().getItem(0);
         if (this.tickCount > 20 && !itemstack1.isEmpty() && itemstack != itemstack1) {
             this.playSound(SoundEvents.HORSE_ARMOR, 0.5F, 1.0F);
+        }
+        // Al colocar/quitar un item, persiste el inventario en el capability del jugador (por usuario),
+        // para que los items se recuperen al volver a invocar el oso aunque este muera o desaparezca.
+        if (this.tickCount > 20 && !this.level().isClientSide && this.getOwner() != null) {
+            addAdditionalSaveData(new CompoundTag());
         }
 
     }
