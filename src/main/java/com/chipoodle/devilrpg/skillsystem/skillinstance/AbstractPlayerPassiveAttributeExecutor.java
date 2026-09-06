@@ -59,7 +59,7 @@ public abstract class AbstractPlayerPassiveAttributeExecutor extends AbstractSki
                                                                      Holder<Attribute> attribute,
                                                                      String attributeModifierUniqueName) {
         AttributeInstance modifiedAttributeInstance = playerIn.getAttribute(attribute);
-        assert modifiedAttributeInstance != null;
+        Objects.requireNonNull(modifiedAttributeInstance);
         Set<AttributeModifier> modifiers = modifiedAttributeInstance.getModifiers();
         ResourceLocation id = ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, attributeModifierUniqueName.toLowerCase(Locale.ROOT));
         return modifiers.stream().filter(mod -> mod.id().equals(id)).findAny()
@@ -70,7 +70,7 @@ public abstract class AbstractPlayerPassiveAttributeExecutor extends AbstractSki
                                                               Holder<Attribute> attribute,
                                                               ResourceLocation attributeModifierId) {
         AttributeInstance modifiedAttributeInstance = playerIn.getAttribute(attribute);
-        assert modifiedAttributeInstance != null;
+        Objects.requireNonNull(modifiedAttributeInstance);
         return modifiedAttributeInstance.getModifier(attributeModifierId);
     }
 

@@ -79,7 +79,7 @@ public class BloomingSanctuaryBlockEntity extends BlockEntity {
 
         if (skillCap == null) {
             skillCap = IGenericCapability.getUnwrappedPlayerCapability(owner, PlayerSkillCapability.INSTANCE);
-            florasVigorPoints = skillCap.getSkillsPoints().get(SkillEnum.FLORAS_VIGOR);
+            florasVigorPoints = skillCap.getSkillsPoints(SkillEnum.FLORAS_VIGOR);
         }
 
         manaCapability.addMana(MANA_TO_ADD, owner); // Gasto de mana por tick
