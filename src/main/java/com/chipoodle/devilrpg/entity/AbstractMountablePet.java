@@ -348,7 +348,8 @@ public abstract class AbstractMountablePet extends TamableAnimal implements Cont
     }
 
     protected int getInventorySize() {
-        return 2;
+        // Montura (0) + armadura (1) + inventario de almacenamiento (27 huecos, 3x9).
+        return 2 + 27;
     }
 
     protected void createInventory() {

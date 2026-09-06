@@ -55,11 +55,12 @@ public class MountablePetContainerMenu extends AbstractContainerMenu {
                 return 1;
             }
         });
-        if (this.hasChest(abstractHorse)) {
-            for (int k = 0; k < 3; ++k) {
-                for (int l = 0; l < ((AbstractChestedHorse) abstractHorse).getInventoryColumns(); ++l) {
-                    this.addSlot(new Slot(container, 2 + l + k * ((AbstractChestedHorse) abstractHorse).getInventoryColumns(), 80 + l * 18, 18 + k * 18));
-                }
+        // Huecos de almacenamiento del oso (items desde la posicion 2 en adelante), en cuadricula
+        // de 9 columnas. Se muestran aunque la mascota no sea un caballo con cofre.
+        int storageSize = Math.max(0, container.getContainerSize() - 2);
+        for (int k = 0; k < (storageSize + 8) / 9; ++k) {
+            for (int l = 0; l < 9 && (k * 9 + l) < storageSize; ++l) {
+                this.addSlot(new Slot(container, 2 + k * 9 + l, 80 + l * 18, 18 + k * 18));
             }
         }
 
