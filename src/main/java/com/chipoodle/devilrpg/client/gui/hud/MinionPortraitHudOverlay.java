@@ -167,9 +167,10 @@ public class MinionPortraitHudOverlay {
             poseStack.translate(1, 1, 0);
             // Fondo negro (borde) a lo largo de todo el ancho.
             guiGraphics.fill(0, 0, BAR_WIDTH, 10, 0xFF000000);
-            int armorWidth = (int) ((BAR_WIDTH - 4) * Math.min(1, armorValue / 20f));
-            int x1 = 2;
-            int x2 = armorWidth + 2;
+            // Mismo ancho y punto de inicio que la barra de salud (empieza en x=1, ancho BAR_WIDTH-2).
+            int armorWidth = (int) ((BAR_WIDTH - 2) * Math.min(1, armorValue / 20f));
+            int x1 = 1;
+            int x2 = 1 + armorWidth;
             // Volumen: 3 franjas horizontales (claro arriba, medio, oscuro abajo).
             guiGraphics.fill(x1, 1, x2, 4, 0xFFE8E8E8);
             guiGraphics.fill(x1, 4, x2, 7, 0xFF9E9E9E);
