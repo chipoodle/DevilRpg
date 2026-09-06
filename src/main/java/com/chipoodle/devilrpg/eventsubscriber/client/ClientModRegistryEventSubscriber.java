@@ -11,13 +11,16 @@ import com.chipoodle.devilrpg.client.gui.hud.ManaBarHudOverlay;
 import com.chipoodle.devilrpg.client.gui.hud.MinionPortraitHudOverlay;
 import com.chipoodle.devilrpg.client.gui.hud.SkillsIconHudOverlay;
 import com.chipoodle.devilrpg.client.gui.hud.StaminaBarHudOverlay;
+import com.chipoodle.devilrpg.client.gui.screen.MountablePetScreen;
 import com.chipoodle.devilrpg.client.render.entity.model.*;
 import com.chipoodle.devilrpg.client.render.entity.renderer.*;
+import com.chipoodle.devilrpg.init.ModContainers;
 import com.chipoodle.devilrpg.init.ModEntities;
 import net.minecraft.client.renderer.entity.ZombieRenderer;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
+import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 
@@ -84,6 +87,12 @@ public final class ClientModRegistryEventSubscriber {
         //ItemBlockRenderTypes.setRenderLayer(ModBlocks.SOUL_VINE_BLOCK.get(), RenderType.translucent());
         //event.registerEntityRenderer(ModEntityTypes.WISP.get(), SoulWispHumanoidRenderer::new);
 
+    }
+
+    /** Registra la pantalla del inventario de la mascota montable (oso), estilo caballo/burro. */
+    @SubscribeEvent
+    public static void onRegisterMenuScreens(final RegisterMenuScreensEvent event) {
+        event.register(ModContainers.MOUNTABLE_PET_MENU.get(), MountablePetScreen::new);
     }
 
     @SubscribeEvent

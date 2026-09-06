@@ -622,6 +622,13 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
         return this.getMountBearLevel() > 0 || super.isSaddled();
     }
 
+    // El oso siempre "tiene cofre" para mostrar su inventario de almacenamiento en el menu
+    // de caballo (como un burro), ademas de la montura y la armadura.
+    @Override
+    public boolean hasChest() {
+        return true;
+    }
+
     private int getMountBearLevel() {
         Level lvl = this.level();
         // En el cliente el campo mountBear llega a 0 (no se setea), asi que leemos la data sync.

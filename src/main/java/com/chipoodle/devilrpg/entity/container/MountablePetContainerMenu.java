@@ -1,7 +1,8 @@
 package com.chipoodle.devilrpg.entity.container;
 
+import com.chipoodle.devilrpg.init.ModContainers;
 import net.minecraft.world.Container;
-import net.minecraft.world.entity.animal.horse.AbstractChestedHorse;
+import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.animal.horse.AbstractHorse;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -19,27 +20,33 @@ public class MountablePetContainerMenu extends AbstractContainerMenu {
     private final Container horseContainer;
     private final AbstractHorse horse;
 
-    public MountablePetContainerMenu(int i, Inventory inventory) {
-        super(null, i);
-        horseContainer = null;
-        horse = null;
-
+    /** Constructor usado por el MenuType al re-crear el menu en el cliente. */
+    public MountablePetContainerMenu(int id, Inventory inventory) {
+        super(ModContainers.MOUNTABLE_PET_MENU.get(), id);
+        // Contenedor placeholder del mismo tamano que el inventario del oso (2 + 27) para que el
+        // cliente tenga los mismos slots y reciba el sync del servidor.
+        this.horseContainer = new SimpleContainer(2 + 27);
+        this.horse = null;
+        addAllSlots(this.horseContainer, null, inventory);
     }
 
     public MountablePetContainerMenu(int id, Inventory inventory, Container container, final AbstractHorse abstractHorse) {
-        super((MenuType<?>) null, id);
+        super(ModContainers.MOUNTABLE_PET_MENU.get(), id);
         this.horseContainer = container;
         this.horse = abstractHorse;
-        int i = 3;
         container.startOpen(inventory.player);
-        int j = -18;
+        addAllSlots(container, abstractHorse, inventory);
+    }
+
+    /** Agrega los slots de montura, armadura, almacenamiento e inventario del jugador (layout de caballo). */
+    private void addAllSlots(Container container, AbstractHorse abstractHorse, Inventory inventory) {
         this.addSlot(new Slot(container, 0, 8, 18) {
             public boolean mayPlace(@NotNull ItemStack p_39677_) {
-                return p_39677_.is(Items.SADDLE) && !this.hasItem() && abstractHorse.isSaddleable();
+                return p_39677_.is(Items.SADDLE) && !this.hasItem() && (abstractHorse == null || abstractHorse.isSaddleable());
             }
 
             public boolean isActive() {
-                return abstractHorse.isSaddleable();
+                return abstractHorse == null || abstractHorse.isSaddleable();
             }
         });
         this.addSlot(new Slot(container, 1, 8, 36) {
@@ -55,8 +62,8 @@ public class MountablePetContainerMenu extends AbstractContainerMenu {
                 return 1;
             }
         });
-        // Huecos de almacenamiento del oso (items desde la posicion 2 en adelante), en cuadricula
-        // de 9 columnas. Se muestran aunque la mascota no sea un caballo con cofre.
+
+        // Huecos de almacenamiento del oso (items desde la posicion 2 en adelante), en cuadricula 3x9.
         int storageSize = Math.max(0, container.getContainerSize() - 2);
         for (int k = 0; k < (storageSize + 8) / 9; ++k) {
             for (int l = 0; l < 9 && (k * 9 + l) < storageSize; ++l) {
@@ -64,24 +71,22 @@ public class MountablePetContainerMenu extends AbstractContainerMenu {
             }
         }
 
+        // Inventario del jugador.
         for (int i1 = 0; i1 < 3; ++i1) {
             for (int k1 = 0; k1 < 9; ++k1) {
                 this.addSlot(new Slot(inventory, k1 + i1 * 9 + 9, 8 + k1 * 18, 102 + i1 * 18 + -18));
             }
         }
-
         for (int j1 = 0; j1 < 9; ++j1) {
             this.addSlot(new Slot(inventory, j1, 8 + j1 * 18, 142));
         }
-
     }
 
     public boolean stillValid(@NotNull Player player) {
+        if (horse == null) {
+            return false;
+        }
         return !this.horse.hasInventoryChanged(this.horseContainer) && this.horseContainer.stillValid(player) && this.horse.isAlive() && this.horse.distanceTo(player) < 8.0F;
-    }
-
-    private boolean hasChest(AbstractHorse abstractHorse) {
-        return abstractHorse instanceof AbstractChestedHorse && ((AbstractChestedHorse) abstractHorse).hasChest();
     }
 
     public @NotNull ItemStack quickMoveStack(@NotNull Player player, int id) {
