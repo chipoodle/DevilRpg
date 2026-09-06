@@ -630,22 +630,21 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
     }
 
     private int getMountBearLevel() {
-        // null-safe: durante la construccion (AbstractHorse llama a hasChest via getInventoryColumns)
-        // mountBear aun es null y la data sync puede no estar registrada. Devolver 0 sin crashear.
-        Integer value = this.mountBear;
-        if (value == null) {
+        Level lvl = this.level();
+        if (lvl != null && lvl.isClientSide) {
+            // Cliente: leer SIEMPRE el valor sincronizado (el campo llega a 0/null en el cliente;
+            // si se usa el campo se pierde la sincronizacion y hasChest/jump verian 0).
             try {
-                Level lvl = this.level();
-                if (lvl != null && lvl.isClientSide) {
-                    Integer synced = this.entityData.get(DATA_MOUNT_BEAR);
-                    if (synced != null) {
-                        value = synced;
-                    }
+                Integer synced = this.entityData.get(DATA_MOUNT_BEAR);
+                if (synced != null) {
+                    return synced;
                 }
             } catch (Exception ignored) {
             }
+            return this.mountBear == null ? 0 : this.mountBear;
         }
-        return value == null ? 0 : value;
+        // Servidor (incluye la construccion): usar el campo, null-safe.
+        return this.mountBear == null ? 0 : this.mountBear;
     }
 
 
