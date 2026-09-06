@@ -192,17 +192,22 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
         Objects.requireNonNull(this.getAttribute(Attributes.FOLLOW_RANGE)).setBaseValue(16.0D);
         Objects.requireNonNull(this.getAttribute(Attributes.ATTACK_DAMAGE)).setBaseValue((1.4 * puntosAsignados) + 4); // 5.4-32
         /**
-         * Altura de salto del SoulBear (JUMP_STRENGTH).
-         * Depende de los puntos asignados a MountBear: a mayor nivel de montura, mayor salto.
-         * Formula: 0.7 + (mountBear / 5)
-         *   - 0 puntos: 0.7
-         *   - 1 punto : 0.9
-         *   - 2 puntos: 1.1
-         *   - 5 puntos: 1.7
+         * Altura de salto del SoulBear (JUMP_STRENGTH). Depende de los puntos de Riding Bear (tope: 2):
+         *   - 0 puntos: pasivo no aplicado -> salto base (0.7) y no se puede montar.
+         *   - 1 punto : se puede montar; el salto es la MITAD del maximo de un caballo (0.5).
+         *   - 2 puntos: salto MAXIMO que puede tener un caballo (1.0 = 0.4 + 3*0.2 en generateJumpStrength).
          */
-        Objects.requireNonNull(this.getAttribute(Attributes.JUMP_STRENGTH)).setBaseValue(0.7D + ((double) mountBear / 5));
+        float jumpStrength;
+        if (mountBear <= 0) {
+            jumpStrength = 0.7F;   // base (pasivo no aplicado)
+        } else if (mountBear == 1) {
+            jumpStrength = 0.5F;   // mitad del maximo de un caballo
+        } else {
+            jumpStrength = 1.0F;   // maximo que puede tener un caballo
+        }
+        Objects.requireNonNull(this.getAttribute(Attributes.JUMP_STRENGTH)).setBaseValue(jumpStrength);
         // Con puntos en Riding Bear, hasChest() == true y el inventario se escala por nivel (1pto=2 cols,
-        // 2ptos=5, 3+ptos=9), recreandose al tamano correcto y conservando el contenido (slot 1 = armadura).
+        // 2ptos=5), recreandose al tamano correcto y conservando el contenido (slot 1 = armadura).
         // Sin esto el inventario quedaba con un tamano erroneo y la GUI de montura/cofre reventaba.
         if (this.getMountBearLevel() > 0) {
             this.createInventory();
@@ -656,17 +661,15 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
         return this.getMountBearLevel() > 0;
     }
 
-    // Ancho del inventario de almacenamiento del oso, escalado por el nivel de Riding Bear:
-    //   nivel 0 = sin cofre (0 columnas -> tamano 1)
-    //   nivel 1 = 2 columnas (tamano 2*3+1 = 7)
-    //   nivel 2 = 5 columnas (tamano 5*3+1 = 16)
-    //   nivel 3+ = 9 columnas (tamano 9*3+1 = 28)
-    // Asi se ve una diferencia clara entre 1 y 2 puntos (y mas almacenamiento con nivel alto).
+    // Ancho del inventario de almacenamiento del oso, escalado por el nivel de Riding Bear (tope: 2):
+    //   nivel 0 = sin cofre (0 columnas -> tamano 1, sin inventario, sin montar)
+    //   nivel 1 = 2 columnas (tamano 2*3+1 = 7) -> mitad del espacio total
+    //   nivel 2 = 5 columnas (tamano 5*3+1 = 16) -> inventario completo (maximo de caballo)
+    // Asi se ve la diferencia entre 1 y 2 puntos (mas almacenamiento con nivel 2).
     @Override
     public int getInventoryColumns() {
         int level = this.getMountBearLevel();
         if (level <= 0) return 0;
-        if (level >= 3) return 9;
         if (level == 2) return 5;
         return 2;
     }
