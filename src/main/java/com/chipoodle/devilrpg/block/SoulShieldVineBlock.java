@@ -43,7 +43,6 @@ public class SoulShieldVineBlock extends Block implements EntityBlock {
 
     public static final VoxelShape SHAPE = Block.box(0.0D, 0.0D, 0.0D, 15.0D, 15.0D, 15.0D);
     public static final DirectionProperty DIRECTIONS = BlockStateProperties.FACING;
-    public static final IntegerProperty LEVEL = IntegerProperty.create("soulshieldvine_level", 0, 30);
     public static final DirectionProperty SOULVINE_FACING = DirectionProperty.create("soulshieldvine_facing", BlockStateProperties.FACING.getPossibleValues());
 
     public static final IntegerProperty DECAY_STAGE = IntegerProperty.create("decay_stage", 0, 3);
@@ -55,7 +54,6 @@ public class SoulShieldVineBlock extends Block implements EntityBlock {
         growthDirection = Direction.UP;
         this.registerDefaultState(this.defaultBlockState()
                 .setValue(DIRECTIONS, growthDirection)
-                .setValue(LEVEL, 0)
                 .setValue(SOULVINE_FACING, Direction.UP)
                 .setValue(DECAY_STAGE, 0)
         );
@@ -113,7 +111,6 @@ public class SoulShieldVineBlock extends Block implements EntityBlock {
     public @NotNull BlockState getStateForPlacement(LevelAccessor levelAccessor) {
         return this.defaultBlockState()
                 .setValue(DIRECTIONS, Direction.getRandom(levelAccessor.getRandom()))
-                .setValue(LEVEL, 0)
                 .setValue(SOULVINE_FACING, Direction.UP)
                 .setValue(DECAY_STAGE, 0)
                 ;
@@ -132,7 +129,6 @@ public class SoulShieldVineBlock extends Block implements EntityBlock {
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> stateDefinition) {
         stateDefinition
                 .add(DIRECTIONS)
-                .add(LEVEL)
                 .add(SOULVINE_FACING)
                 .add(DECAY_STAGE)
         ;

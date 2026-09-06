@@ -1,6 +1,7 @@
 package com.chipoodle.devilrpg.skillsystem.skillinstance;
 
 import com.chipoodle.devilrpg.block.SoulShieldVineBlock;
+import com.chipoodle.devilrpg.blockentity.SoulShieldVineBlockEntity;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
@@ -100,8 +101,13 @@ public class SkillSoulShieldVine extends AbstractSkillSeedsInInventoryExecutor {
                                     createdBlock.defaultBlockState()
                                             //.setValue(SoulShieldVineBlock.AGE, 1)
                                             .setValue(SoulShieldVineBlock.DIRECTIONS, directionFromPlayer)
-                                            .setValue(SoulShieldVineBlock.LEVEL, skillPoints)
                             );
+
+                            // El nivel de la vid se guarda en el BlockEntity (ya no como propiedad del
+                            // blockstate, para reducir el espacio de estados y acelerar la carga).
+                            if (level.getBlockEntity(domeBlockPos) instanceof SoulShieldVineBlockEntity shieldBE) {
+                                shieldBE.setSkillLevel(skillPoints);
+                            }
                         }
                     }
                 }

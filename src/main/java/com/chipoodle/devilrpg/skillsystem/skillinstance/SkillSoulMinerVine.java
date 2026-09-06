@@ -86,9 +86,14 @@ public class SkillSoulMinerVine extends AbstractSkillSeedsInInventoryExecutor {
                         createdBlock.defaultBlockState()
                                 .setValue(SoulMinerVineBlock.AGE, 1)
                                 .setValue(SoulMinerVineBlock.DIRECTIONS, nearestDirection)
-                                .setValue(SoulMinerVineBlock.LEVEL, skillPoints)
                                 .setValue(SoulMinerVineBlock.HAS_CHILDREN, false)
                 );
+
+        // El nivel de la vid se guarda en el BlockEntity (ya no como propiedad del blockstate,
+        // para reducir el espacio de estados del bloque y acelerar la carga).
+        if (level.getBlockEntity(newBlockpos) instanceof SoulMinerVineBlockEntity minerBE) {
+            minerBE.setSkillLevel(skillPoints);
+        }
         // Marcar este bloque como la RAÍZ de la planta (destino de los items minados).
         if (level.getBlockEntity(newBlockpos) instanceof SoulMinerVineBlockEntity minerBE) {
             minerBE.setRootInfo(newBlockpos, null);

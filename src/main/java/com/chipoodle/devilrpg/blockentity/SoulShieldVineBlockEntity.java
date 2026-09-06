@@ -4,6 +4,8 @@ import com.chipoodle.devilrpg.block.SoulShieldVineBlock;
 import com.chipoodle.devilrpg.init.ModEntityBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -18,10 +20,28 @@ public class SoulShieldVineBlockEntity extends BlockEntity {
     private Long timeOfCreation = null;
 
     private boolean directionChanged = false;
+    // Skill level (antes propiedad LEVEL del blockstate). Movido aqui para reducir el espacio de
+    // estados del bloque (el mayor multiplicador que el modelo no usaba). Persistido en NBT.
+    private int skillLevel = 0;
+
+    public int getSkillLevel() { return skillLevel; }
+    public void setSkillLevel(int skillLevel) { this.skillLevel = skillLevel; this.setChanged(); }
 
 
     public SoulShieldVineBlockEntity(BlockPos pos, BlockState state) {
         super(ModEntityBlocks.SOUL_SHIELD_VINE_ENTITY_BLOCK.get(), pos, state);
+    }
+
+    @Override
+    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
+        tag.putInt("skillLevel", skillLevel);
+    }
+
+    @Override
+    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
+        this.skillLevel = tag.getInt("skillLevel");
     }
 
     public void tick(@NotNull BlockState state, @NotNull ServerLevel world, @NotNull BlockPos currentBlockPos, @NotNull RandomSource randomSource) {
@@ -29,7 +49,7 @@ public class SoulShieldVineBlockEntity extends BlockEntity {
             timeOfCreation = world.getGameTime();
         }
 
-        int skillLevel = state.getValue(LEVEL);
+        int skillLevel = this.skillLevel;
         int currentDecay = state.getValue(DECAY_STAGE);
         Direction currentDirection = state.getValue(DIRECTIONS);
 

@@ -44,12 +44,12 @@ public class SoulVineBlock extends Block implements EntityBlock {
 
 
     public static final VoxelShape SHAPE = Block.box(4.0D, 0.0D, 4.0D, 12.0D, 15.0D, 12.0D);
+    // Reducido el espacio de estados moviendo LEVEL (skill level) al BlockEntity: era el mayor multiplicador
+    // (26-31x) que el modelo NO usaba. Se conservan AGE + DIRECTIONS + HAS_CHILDREN + SOULVINE_FACING + DECAY_STAGE.
     public static final IntegerProperty AGE = BlockStateProperties.AGE_25;
     public static final DirectionProperty DIRECTIONS = BlockStateProperties.FACING;
     public static final BooleanProperty HAS_CHILDREN = BooleanProperty.create("soulvine_has_children");
     public static final DirectionProperty SOULVINE_FACING = DirectionProperty.create("soulvine_facing", BlockStateProperties.FACING.getPossibleValues());
-
-    public static final IntegerProperty LEVEL = IntegerProperty.create("soulvine_level", 0, 30);
     public static final IntegerProperty DECAY_STAGE = IntegerProperty.create("decay_stage", 0, 3);
 
     private static final Integer MAX_AGE = 25;
@@ -61,7 +61,6 @@ public class SoulVineBlock extends Block implements EntityBlock {
         this.registerDefaultState(this.defaultBlockState()
                 .setValue(AGE, 0)
                 .setValue(DIRECTIONS, growthDirection)
-                .setValue(LEVEL, 0)
                 .setValue(HAS_CHILDREN, false)
                 .setValue(SOULVINE_FACING,Direction.UP)
                 .setValue(DECAY_STAGE,0)
@@ -129,10 +128,8 @@ public class SoulVineBlock extends Block implements EntityBlock {
         return this.defaultBlockState()
                 .setValue(AGE, levelAccessor.getRandom().nextInt(MAX_AGE))
                 .setValue(DIRECTIONS, Direction.getRandom(levelAccessor.getRandom()))
-                .setValue(LEVEL, levelAccessor.getRandom().nextInt())
                 .setValue(HAS_CHILDREN, false)
-                .setValue(SOULVINE_FACING,Direction.UP)
-                .setValue(DECAY_STAGE,0)
+                .setValue(SOULVINE_FACING, Direction.UP)
                 ;
     }
 
@@ -150,7 +147,6 @@ public class SoulVineBlock extends Block implements EntityBlock {
         stateDefinition
                 .add(AGE)
                 .add(DIRECTIONS)
-                .add(LEVEL)
                 .add(HAS_CHILDREN)
                 .add(SOULVINE_FACING)
                 .add(DECAY_STAGE)

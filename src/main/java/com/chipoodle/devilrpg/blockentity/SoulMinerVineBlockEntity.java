@@ -34,6 +34,12 @@ public class SoulMinerVineBlockEntity extends BlockEntity {
     /** Probabilidad (0..1) de que la planta prefiera cavar hacia ABAJO (las demas veces toma rutas alternativas). */
     private static final float DOWN_BIAS_PROBABILITY = 0.4F;
     private Long timeOfCreation = null;
+    // Skill level (antes propiedad LEVEL del blockstate). Movido aqui para reducir el espacio de
+    // estados del bloque (el mayor multiplicador que el modelo no usaba). Persistido en NBT.
+    private int skillLevel = 0;
+
+    public int getSkillLevel() { return skillLevel; }
+    public void setSkillLevel(int skillLevel) { this.skillLevel = skillLevel; this.setChanged(); }
 
     /**
      * Posicion de la raiz de la planta (el primer bloque creado al lanzar el poder). Todos los
@@ -69,6 +75,7 @@ public class SoulMinerVineBlockEntity extends BlockEntity {
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
+        tag.putInt("skillLevel", skillLevel);
         if (rootPos != null) tag.putLong("rootPos", rootPos.asLong());
         if (parentPos != null) tag.putLong("parentPos", parentPos.asLong());
         if (!transportBuffer.isEmpty()) {
@@ -83,6 +90,7 @@ public class SoulMinerVineBlockEntity extends BlockEntity {
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
+        this.skillLevel = tag.getInt("skillLevel");
         if (tag.contains("rootPos")) rootPos = BlockPos.of(tag.getLong("rootPos"));
         if (tag.contains("parentPos")) parentPos = BlockPos.of(tag.getLong("parentPos"));
         if (tag.contains("transportBuffer")) {
@@ -113,7 +121,7 @@ public class SoulMinerVineBlockEntity extends BlockEntity {
         transportItems(world);
 
         Integer currentAge = state.getValue(AGE); // Obtener el AGE actual
-        int skillLevel = state.getValue(LEVEL); // Obtener el nivel de habilidad
+        int skillLevel = this.skillLevel; // Obtener el nivel de habilidad
         int maxBranchLength = Math.min(SoulMinerVineBlock.MAX_VINE_AGE,
                 (int) Math.round((skillLevel + 5) * BRANCH_DEPTH_MULTIPLIER)); // +30% de profundidad, sin superar AGE max
         int currentDecay = state.getValue(DECAY_STAGE);
