@@ -498,6 +498,19 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
         return true;
     }
 
+    // Abre el inventario del oso con el menu custom (montura/armadura de SOLO LECTURA). Se pasa por el
+    // paquete el numero de columnas para que el CLIENTE cree el placeholder del MISMO tamano que el
+    // servidor (asi el inventario mitad/normal por nivel queda sincronizado y sin crashes).
+    @Override
+    public void openCustomInventoryScreen(@NotNull Player player) {
+        if (!this.level().isClientSide && (!this.isVehicle() || this.hasPassenger(player)) && this.isTame()) {
+            player.openMenu(
+                    new SimpleMenuProvider((id, inventory, playerMenu) ->
+                            new MountablePetContainerMenu(id, inventory, this.inventory, this), this.getDisplayName()),
+                    buffer -> buffer.writeInt(this.getInventoryColumns()));
+        }
+    }
+
 
 
     /**
