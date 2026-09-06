@@ -156,25 +156,33 @@ public class MinionPortraitHudOverlay {
         poseStack.popPose();
         poseStack.popPose();
 
-        // Barra de ARMADURA: mismo tamano que la de salud, justo debajo, con su valor numerico.
-        // Solo se muestra si el minion tiene armadura (getArmorValue() > 0).
+        // Barra de ARMADURA: mismo tamano que la de salud, justo debajo, con su valor numerico centrado.
+        // Solo se muestra si el minion tiene armadura (getArmorValue() > 0). Se usa un degradado de 3
+        // tonos de gris (claro/medio/oscuro) para darle volumen, como la barra de salud.
         if (entity.getArmorValue() > 0) {
             float armorValue = Math.min(20.0F, entity.getArmorValue());
             poseStack.pushPose();
-            poseStack.translate(0, BAR_HEIGHT + 24, 0); // justo debajo de la barra de salud
+            poseStack.translate(0, BAR_HEIGHT + 14, 0); // pegado debajo de la barra de salud
             poseStack.scale(1.0f, 2.0f, 1.0f);
             poseStack.translate(1, 1, 0);
-            // Fondo negro + relleno gris, mismo ancho maximo que la barra de salud.
-            guiGraphics.fill(0, 0, BAR_WIDTH, 9, 0xFF000000);
-            int armorWidth = (int) ((BAR_WIDTH - 2) * Math.min(1, armorValue / 20f));
-            guiGraphics.fill(1, 0, armorWidth + 1, 9, 0xFFB0B0B0);
+            // Fondo negro (borde) a lo largo de todo el ancho.
+            guiGraphics.fill(0, 0, BAR_WIDTH, 10, 0xFF000000);
+            int armorWidth = (int) ((BAR_WIDTH - 4) * Math.min(1, armorValue / 20f));
+            int x1 = 2;
+            int x2 = armorWidth + 2;
+            // Volumen: 3 franjas horizontales (claro arriba, medio, oscuro abajo).
+            guiGraphics.fill(x1, 1, x2, 4, 0xFFE8E8E8);
+            guiGraphics.fill(x1, 4, x2, 7, 0xFF9E9E9E);
+            guiGraphics.fill(x1, 7, x2, 9, 0xFF6A6A6A);
+            // Valor numerico centrado sobre la barra.
             String sa = dCurrent.format(entity.getArmorValue());
             int ta = fr.width(sa);
-            poseStack.translate(1 + ta + (float) ta / 2, -0.5f, 0);
+            float centerX = BAR_WIDTH / 2.0f - 0.8f * ta;
+            poseStack.translate(centerX, -0.5f, 0);
             poseStack.pushPose();
             poseStack.scale(1.6f, 0.8f, 1);
-            guiGraphics.drawString(fr, sa, -fr.width(sa) + 1, 2, 0x2A2A00);
-            guiGraphics.drawString(fr, sa, -fr.width(sa), 1, 0xFFFFFF);
+            guiGraphics.drawString(fr, sa, 1, 2, 0x2A2A00);
+            guiGraphics.drawString(fr, sa, 0, 1, 0xFFFFFF);
             poseStack.popPose();
             poseStack.popPose();
         }
