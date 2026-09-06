@@ -34,7 +34,10 @@ public class SoulBearArmorLayer<T extends SoulBear> extends RenderLayer<T, SoulB
 
     public void render(@NotNull PoseStack poseStack, @NotNull MultiBufferSource multiBufferSource, int p_117034_, T entity, float p_117036_, float p_117037_, float p_117038_, float p_117039_, float p_117040_, float p_117041_) {
         ItemStack itemstack = entity.getArmor();
-        if (itemstack.getItem() instanceof ArmorItem) {
+        // Las armaduras de caballo (Items.*_HORSE_ARMOR) NO son subclases de ArmorItem, son
+        // HorseArmorItem; por eso el 'instanceof ArmorItem' hacia que NUNCA se dibujara. Renderizamos
+        // cuando hay cualquier armadura equipada (no vacia), tintada con su color si es teñible.
+        if (!itemstack.isEmpty()) {
             this.getParentModel().copyPropertiesTo(this.model);
             this.model.prepareMobModel(entity, p_117036_, p_117037_, p_117038_);
             this.model.setupAnim(entity, p_117036_, p_117037_, p_117039_, p_117040_, p_117041_);
