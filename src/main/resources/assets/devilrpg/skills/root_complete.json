@@ -71,7 +71,7 @@
     {
         "id": "nature:soulvine",
         "display": {
-            "description": "A spirit vine grows where your gaze rests, spreading and burrowing as it advances. Higher skill lengthens its reach and lifespan. Consumes a seed.",
+            "description": "A spirit vine rises where your gaze rests, growing upward and through the land. You may climb it wherever it passes; higher skill lengthens its reach and lifespan. Consumes a seed.",
             "icon": {
                 "item": "devilrpg:item_vine"
             },
@@ -522,7 +522,7 @@
     {
         "id": "summoning:mountbear",
         "display": {
-            "description": "Bond with your bear and ride it across the land. The deeper the bond, the higher it leaps: each point of Riding Bear strengthens your spirit-bear's jump.",
+            "description": "Bond with your bear and ride it across the land. Each point saddles the spirit-bear, deepens its carrying pouches (half at one point, full at two), and strengthens its leap.",
             "icon": {
                 "item": "minecraft:glass_pane",
                 "minecraft:glass_panenbt": 1
@@ -543,7 +543,7 @@
     {
         "id": "summoning:warbear",
         "display": {
-            "description": "Awaken the bear's fury: its blows burst into a shockwave that harms nearby foes.",
+            "description": "Awaken the bear's fury: its blows burst into a shockwave that harms nearby foes, and each point hardens the spirit-bear with finer armor (leather to diamond).",
             "icon": {
                 "item": "minecraft:glass_pane",
                 "minecraft:glass_panenbt": 1
