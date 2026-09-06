@@ -191,10 +191,19 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
         Objects.requireNonNull(this.getAttribute(Attributes.ARMOR)).setBaseValue(initialArmor + warBear);
         Objects.requireNonNull(this.getAttribute(Attributes.FOLLOW_RANGE)).setBaseValue(16.0D);
         Objects.requireNonNull(this.getAttribute(Attributes.ATTACK_DAMAGE)).setBaseValue((1.4 * puntosAsignados) + 4); // 5.4-32
+        /**
+         * Altura de salto del SoulBear (JUMP_STRENGTH).
+         * Depende de los puntos asignados a MountBear: a mayor nivel de montura, mayor salto.
+         * Formula: 0.7 + (mountBear / 5)
+         *   - 0 puntos: 0.7
+         *   - 1 punto : 0.9
+         *   - 2 puntos: 1.1
+         *   - 5 puntos: 1.7
+         */
         Objects.requireNonNull(this.getAttribute(Attributes.JUMP_STRENGTH)).setBaseValue(0.7D + ((double) mountBear / 5));
-        // Con puntos en Riding Bear, hasChest() == true -> getInventoryColumns() == 9 -> el inventario
-        // se recrea al tamaño correcto (2 + 3*9 = 29), conservando el contenido (slot 1 = armadura).
-        // Sin esto el inventario quedaba con un tamaño erroneo y la GUI de montura/cofre reventaba.
+        // Con puntos en Riding Bear, hasChest() == true y el inventario se escala por nivel (1pto=2 cols,
+        // 2ptos=5, 3+ptos=9), recreandose al tamano correcto y conservando el contenido (slot 1 = armadura).
+        // Sin esto el inventario quedaba con un tamano erroneo y la GUI de montura/cofre reventaba.
         if (this.getMountBearLevel() > 0) {
             this.createInventory();
         }

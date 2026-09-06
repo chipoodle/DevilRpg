@@ -522,7 +522,7 @@
     {
         "id": "summoning:mountbear",
         "display": {
-            "description": "Bond with your bear and ride it across the land.",
+            "description": "Bond with your bear and ride it across the land. The deeper the bond, the higher it leaps: each point of Riding Bear strengthens your spirit-bear's jump.",
             "icon": {
                 "item": "minecraft:glass_pane",
                 "minecraft:glass_panenbt": 1
