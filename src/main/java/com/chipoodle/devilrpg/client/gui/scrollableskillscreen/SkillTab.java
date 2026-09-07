@@ -44,12 +44,12 @@ public class SkillTab {
     /** Alto (px) del área de tooltip/descripción de un widget de skill. */
     private static final int WIDGET_HEIGHT = 27;
     /** Ancho (px) del área de tooltip/descripción de un widget de skill. */
-    private static final int WIDGET_WIDTH = 28;
+    private static final int WIDGET_WIDTH = 32;
 
     /** Ancho del área visible donde se dibuja el árbol de habilidades (mosaico + skills). */
     public static final int TAB_BACKGROUND_WIDTH = 260; //282
     /** Alto del área visible donde se dibuja el árbol de habilidades (mosaico + skills). */
-    public static final int TAB_BACKGROUND_HEIGHT = 172;
+    public static final int TAB_BACKGROUND_HEIGHT = 170;
     private final Minecraft minecraft;
     private final SkillScreen screen;
     private final SkillTabType type;
