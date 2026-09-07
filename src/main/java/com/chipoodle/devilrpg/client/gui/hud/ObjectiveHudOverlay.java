@@ -63,13 +63,14 @@ public class ObjectiveHudOverlay {
     private static String directionArrow(double dx, double dz, float playerYaw) {
         // Yaw del objetivo en la convención de MC: vector delantero = (-sin(yaw), 0, cos(yaw)),
         // por lo que yaw que mira hacia (dx,dz) es atan2(-dx, dz).
+        // En MC el yaw positivo gira a la DERECHA, así que rel>0 = el objetivo queda a tu derecha.
         double targetYaw = Math.toDegrees(Math.atan2(-dx, dz));
         double rel = targetYaw - playerYaw;
         while (rel > 180.0) rel -= 360.0;
         while (rel < -180.0) rel += 360.0;
-        if (rel > -45.0 && rel <= 45.0) return "↑";
-        if (rel > 45.0 && rel <= 135.0) return "←";
-        if (rel < -45.0 && rel >= -135.0) return "→";
-        return "↓";
+        if (rel > -45.0 && rel <= 45.0) return "↑";   // adelante
+        if (rel > 45.0 && rel <= 135.0) return "→";   // a la derecha
+        if (rel < -45.0 && rel >= -135.0) return "←"; // a la izquierda
+        return "↓";                                    // atrás
     }
 }
