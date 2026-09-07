@@ -322,7 +322,7 @@
                 "minecraft:glass_panenbt": 1
             },
             "title": "Thick hide",
-            "image": "devilrpg:textures/gui/skill/layered-armor.png",
+            "image": "devilrpg:textures/gui/skill/fur-shirt.png",
             "frame": "goal"
         },
         "capability": "skin_armor",
