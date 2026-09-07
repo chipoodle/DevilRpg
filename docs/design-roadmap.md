@@ -113,9 +113,9 @@ Con esto, un zombie generado lejos del spawn **y/o** tarde en la partida es más
 
 - **Amenaza**: `ThreatLevel.MAX_EXTRA_DIFFICULTY` (0.8 = +80%) y `FULL_THREAT_TICKS` (3 h).
 - **Objetivo**: `ObjectiveTargets.BASE_DISTANCE` (800), `STEP_DISTANCE` (600), `REACH_RADIUS` (24).
-- **Horda**: `HordeManager.BASE_INTERVAL_TICKS` (20 min al inicio), `MIN_INTERVAL_TICKS` (50 min con
-  máxima amenaza), `MAX_EXTRA_MEMBERS` (6). El tamaño base es 1 enemigo con amenaza 0 (jugador débil) y
-  crece con la amenaza; a máxima amenaza las hordas son grandes/fuertes pero menos frecuentes.
+- **Horda**: `HordeManager.BASE_INTERVAL_TICKS` (20 min al inicio), `MIN_INTERVAL_TICKS` (3 min con máxima
+  amenaza, es decir a más amenaza salen más seguido), `MAX_EXTRA_MEMBERS` (6). El tamaño base es 1 enemigo
+  con amenaza 0 (jugador débil) y crece con la amenaza.
 
 > TODO (siguiente): que las hordas apunten al **asentamiento más cercano** en vez de al jugador, para
 > conectar con la Iteración 3.
