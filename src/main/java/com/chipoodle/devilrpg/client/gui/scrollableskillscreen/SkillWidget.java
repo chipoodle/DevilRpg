@@ -36,16 +36,29 @@ import java.util.stream.Stream;
 @OnlyIn(Dist.CLIENT)
 public class SkillWidget {
     // static final int BUTTON_IMAGE_SIZE = 512;
+    /** Tamaño (px) de la imagen fuente del icono/botón de cada skill (PNG 256x256). */
     public static final int BUTTON_IMAGE_SIZE = 256;
+    /** Tamaño (px, en la GUI) al que se dibuja el icono del botón (el destino del escalado). */
     public static final int TARGET_BUTTON_IMAGE_SIZE = 20;
+    /** Tamaño del marco que rodea a cada nodo de skill. Define la caja del icono y su hitbox. */
     public static final int FRAME_SIZE = 26;
+
+    /** Separación base (px) entre nodos de skill en Y. */
     public static final float Y_DISTANCE = 27.0F;
+    /** Separación base (px) entre nodos de skill en X. */
     public static final float X_DISTANCE = 27.0F;
+    /** Factor que multiplica la coordenada X del skill (del JSON) para posicionar el nodo. */
     public static final double X_DISTANCE_FACTOR = 1.7;
+    /** Factor que multiplica la coordenada Y del skill (del JSON) para posicionar el nodo. */
     public static final double Y_DISTANCE_FACTOR = 1.3;
+
+    /** Ruta base de las texturas de la GUI de skills (textures/gui/skill). */
     private static final String SKILL_GUI_IMG_LOCATION = DevilRpg.MODID + ":textures/gui/skill";
+    /** Desplazamientos (px) usados para ajustar los saltos de línea en el tooltip de la skill. */
     private static final int[] LINE_BREAK_VALUES = new int[]{0, 10, -10, 25, -25};
+    /** Etiqueta de coste de maná (gui.skills.mana_cost), añadida a la descripción cuando aplica. */
     private static final net.minecraft.network.chat.Component MANA_COST = net.minecraft.network.chat.Component.translatable("gui.skills.mana_cost");
+    /** Textura del atlas de widgets (marcos, barras) usado para pintar los estados de los nodos. */
     public static ResourceLocation WIDGETS = ResourceLocation.parse(SKILL_GUI_IMG_LOCATION + "/widgets.png");
     private static List<ResourceLocation> resourceLocations = new ArrayList<>();
     private static int resourceIndex = 0;

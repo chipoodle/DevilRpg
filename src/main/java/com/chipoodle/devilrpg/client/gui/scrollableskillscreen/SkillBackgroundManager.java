@@ -20,11 +20,11 @@ import java.util.List;
  */
 public final class SkillBackgroundManager {
 
-    /** Fondo por defecto: mosaico teselado a partir de mandala-tile.png. */
+    /** Fondo por defecto: el mosaico teselado (mandala-tile.png) que se pintaba antes de poder cambiarlo. */
     public static final ResourceLocation DEFAULT_BACKGROUND = ResourceLocation.fromNamespaceAndPath(
             DevilRpg.MODID, "textures/gui/skill/mandala-tile.png");
 
-    /** Ruta lógica del directorio de mandalas dentro del namespace del mod. */
+    /** Ruta lógica (sin namespace) del directorio donde están las imágenes de mandalas seleccionables. */
     private static final String MANDALAS_PATH = "textures/gui/mandalas";
 
     /** Lista de fondos: índice 0 = default, resto = imágenes de mandalas/ (ordenadas por nombre). */
