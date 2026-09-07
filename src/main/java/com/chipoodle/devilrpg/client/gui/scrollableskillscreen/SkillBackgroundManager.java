@@ -4,13 +4,9 @@ import com.chipoodle.devilrpg.DevilRpg;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Gestor de los fondos del árbol de habilidades.
@@ -36,9 +32,6 @@ public final class SkillBackgroundManager {
 
     /** Índice del fondo seleccionado. */
     private static int selectedIndex = 0;
-
-    /** Caché del tamaño nativo (w, h) de cada PNG de fondo. */
-    private static final Map<ResourceLocation, int[]> SIZE_CACHE = new HashMap<>();
 
     private SkillBackgroundManager() {
     }
@@ -88,34 +81,6 @@ public final class SkillBackgroundManager {
         String path = getSelected().getPath();
         int slash = path.lastIndexOf('/');
         return slash >= 0 ? path.substring(slash + 1) : path;
-    }
-
-    /**
-     * Devuelve el tamaño nativo (ancho, alto) en píxeles de una imagen de fondo, leyéndolo del
-     * resource pack la primera vez y cacheándolo después (para no leer el archivo en cada frame).
-     */
-    public static int[] getSize(ResourceLocation rl) {
-        return SIZE_CACHE.computeIfAbsent(rl, loc -> {
-            try {
-                Minecraft mc = Minecraft.getInstance();
-                if (mc != null && mc.getResourceManager() != null) {
-                    try (InputStream in = mc.getResourceManager().getResource(loc).orElseThrow().open()) {
-                        byte[] header = new byte[24];
-                        int read = in.read(header);
-                        if (read >= 24) {
-                            int w = ((header[16] & 0xFF) << 24) | ((header[17] & 0xFF) << 16)
-                                    | ((header[18] & 0xFF) << 8) | (header[19] & 0xFF);
-                            int h = ((header[20] & 0xFF) << 24) | ((header[21] & 0xFF) << 16)
-                                    | ((header[22] & 0xFF) << 8) | (header[23] & 0xFF);
-                            return new int[]{w, h};
-                        }
-                    }
-                }
-            } catch (IOException e) {
-                DevilRpg.LOGGER.error("Error leyendo el tamaño del fondo {}", loc, e);
-            }
-            return new int[]{256, 256};
-        });
     }
 
     /** Avanza al siguiente fondo (vuelve al primero al pasar el último). */

@@ -190,27 +190,13 @@ public class SkillTab {
         int i = Mth.floor(this.scrollX);
         int j = Mth.floor(this.scrollY);
 
-        ResourceLocation bg = SkillBackgroundManager.getSelected();
+        // Fondo seleccionado: se usa la MISMA instruccion de dibujo que el mosaico por defecto
+        // (teselado 64x64 con filtro NEAREST y offset de scroll). Lo unico que cambia es el nombre
+        // de la imagen -> la de mandala-tile.png por defecto o la elegida con los botones.
+        ResourceLocation resourcelocation = SkillBackgroundManager.getSelected();
 
-        // Conserva la MISMA funcionalidad de mosaico que el fondo original: la imagen se tesela y
-        // se desplaza junto al arbol con el scroll. Lo unico que cambia es cual imagen se usa.
-        //
-        // - Fondo por defecto (mandala-tile.png): se muestrea la propia tesela (0,0,64,64) y se repite
-        //   a 1:1, exactamente como antes (nitido, patron sin cambios).
-        // - Imagen elegida de mandalas/: se escala la imagen COMPLETA a una tesela de 64x64 y se repite,
-        //   para que se vea el mandala entero como mosaico.
-        int texW;
-        int texH;
-        if (SkillBackgroundManager.isDefaultSelected()) {
-            // Teselado original: muestrea la region (0,0,64,64) de la textura del mosaico.
-            SkillWidget.forceNearestFilter(bg);
-            texW = BACKGROUND_CHUNKS;
-            texH = BACKGROUND_CHUNKS;
-        } else {
-            int[] size = SkillBackgroundManager.getSize(bg);
-            texW = Math.max(1, size[0]);
-            texH = Math.max(1, size[1]);
-        }
+        // Fuerza filtrado NEAREST para que la ampliacion de la textura se vea nitida
+        SkillWidget.forceNearestFilter(resourcelocation);
 
         // El fondo se dibuja en mosaico aplicando el offset del scroll (i/j) para que se mueva
         // junto al arbol de habilidades al arrastrar con el mouse. El rango se calcula dinamicamente
@@ -221,8 +207,8 @@ public class SkillTab {
         int toY = (int) Math.floor((double) (TAB_BACKGROUND_HEIGHT - j) / BACKGROUND_CHUNKS) + 1;
         for (int i1 = fromX; i1 <= toX; ++i1) {
             for (int j1 = fromY; j1 <= toY; ++j1) {
-                guiGraphics.blit(bg, i + BACKGROUND_CHUNKS * i1, j + BACKGROUND_CHUNKS * j1, 0.0F, 0.0F,
-                        BACKGROUND_CHUNKS, BACKGROUND_CHUNKS, texW, texH);
+                guiGraphics.blit(resourcelocation, i + BACKGROUND_CHUNKS * i1, j + BACKGROUND_CHUNKS * j1, 0.0F, 0.0F,
+                        BACKGROUND_CHUNKS, BACKGROUND_CHUNKS, BACKGROUND_CHUNKS, BACKGROUND_CHUNKS);
             }
         }
 
