@@ -49,6 +49,8 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
     public static final String SKILL_SETS_KEY = "SkillSets";
     /** Indice del conjunto de skills activo. */
     public static final String ACTIVE_SKILL_SET_KEY = "ActiveSkillSet";
+    /** Numero maximo de conjuntos de skills rotables (tecla K). */
+    public static final int MAX_SKILL_SETS = 3;
     private final ClientSkillBuilderFromJson clientBuilder = new ClientSkillBuilderFromJson();
     private final SingletonSkillExecutorFactory singletonSkillExecutorFactory;
     private CompoundTag nbt = new CompoundTag();
@@ -141,7 +143,7 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
 
     @Override
     public int getSkillSetCount() {
-        return Math.max(1, loadSkillSets().size());
+        return MAX_SKILL_SETS;
     }
 
     @Override
@@ -152,9 +154,13 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
     @Override
     public void rotateSkillSet(int delta, Player player) {
         List<HashMap<PowerEnum, SkillEnum>> sets = loadSkillSets();
-        if (sets.size() <= 1) {
-            // Crear un segundo conjunto vacio para poder rotar.
+        // Crear conjuntos vacios de sobra hasta MAX_SKILL_SETS (3) para poder rotar entre ellos.
+        boolean grew = false;
+        while (sets.size() < MAX_SKILL_SETS) {
             sets.add(new HashMap<>());
+            grew = true;
+        }
+        if (grew) {
             saveSkillSets(sets);
         }
         int count = sets.size();
