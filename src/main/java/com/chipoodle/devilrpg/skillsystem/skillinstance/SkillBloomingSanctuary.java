@@ -11,9 +11,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
@@ -100,34 +97,5 @@ public class SkillBloomingSanctuary extends AbstractSkillSeedsInInventoryExecuto
                     );
         }
 
-    }
-
-    private Direction getDirectionFromOffset(int x, int y, int z) {
-        if (Math.abs(x) > Math.abs(z)) {
-            return x > 0 ? Direction.EAST : Direction.WEST;
-        } else if (Math.abs(z) > Math.abs(x)) {
-            return z > 0 ? Direction.SOUTH : Direction.NORTH;
-        } else if (y > 0) {
-            return Direction.UP;
-        } else {
-            return Direction.DOWN;
-        }
-    }
-
-
-    private void applySanctuaryEffects(Level level, Player player, int radius) {
-        BlockPos playerPos = player.blockPosition();
-        level.getEntitiesOfClass(LivingEntity.class, player.getBoundingBox().inflate(radius))
-                .forEach(entity -> {
-                    double distance = entity.blockPosition().distSqr(playerPos);
-
-                    if (entity instanceof Player || entity.isAlliedTo(player)) {
-                        // Aplicar regeneración a jugadores y aliados
-                        entity.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 100, 1));
-                    } else if (distance <= radius * radius) {
-                        // Aplicar ralentización a enemigos
-                        entity.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 1));
-                    }
-                });
     }
 }

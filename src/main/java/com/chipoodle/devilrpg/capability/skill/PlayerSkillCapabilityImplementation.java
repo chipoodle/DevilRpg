@@ -213,19 +213,26 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
         }
     }
 
+    // Cache del mapa de skill points: evita deserializar el byte[] (serializacion Java) en CADA
+    // llamada. Se invalida en setSkillsPoints y deserializeNBT para no usar datos desactualizados.
+    private HashMap<SkillEnum, Integer> skillsCache;
+
     @SuppressWarnings("unchecked")
     @Override
     public HashMap<SkillEnum, Integer> getSkillsPoints() {
+        if (skillsCache != null) return skillsCache;
         try {
-            return (HashMap<SkillEnum, Integer>) BytesUtil.toObject(nbt.getByteArray(SKILLS_KEY));
+            skillsCache = (HashMap<SkillEnum, Integer>) BytesUtil.toObject(nbt.getByteArray(SKILLS_KEY));
         } catch (ClassNotFoundException | IOException e) {
             DevilRpg.LOGGER.error("Error en getSkillsPoints", e);
             return null;
         }
+        return skillsCache;
     }
 
     @Override
     public void setSkillsPoints(HashMap<SkillEnum, Integer> points, Player player) {
+        skillsCache = null; // los puntos cambian -> invalidar la cache
         try {
             nbt.putByteArray(SKILLS_KEY, BytesUtil.toByteArray(points));
             if (!player.level().isClientSide) {
@@ -509,6 +516,7 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
     @Override
     public void deserializeNBT(HolderLookup.Provider provider, CompoundTag nbt) {
         this.nbt = nbt;
+        skillsCache = null; // el NBT cambia -> invalidar la cache de skill points
     }
 
 
