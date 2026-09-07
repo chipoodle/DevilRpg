@@ -43,7 +43,10 @@ public final class SkillBackgroundManager {
             Minecraft mc = Minecraft.getInstance();
             if (mc != null && mc.getResourceManager() != null) {
                 mc.getResourceManager()
-                        .listResources(MANDALAS_PATH, rl -> rl.getPath().endsWith(".png"))
+                        .listResources(MANDALAS_PATH, rl -> {
+                            String path = rl.getPath();
+                            return path.endsWith(".png") || path.endsWith(".jpg");
+                        })
                         .keySet().stream()
                         .sorted(Comparator.comparing(ResourceLocation::getPath))
                         .forEach(list::add);
