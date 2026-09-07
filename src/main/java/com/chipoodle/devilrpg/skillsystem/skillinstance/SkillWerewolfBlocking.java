@@ -7,7 +7,6 @@ import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.util.Mth;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.player.Player;
@@ -53,7 +52,7 @@ public class SkillWerewolfBlocking extends AbstractPlayerPassiveAttributeExecuto
             if (!levelIn.isClientSide) {
                 //if (!levelIn.isClientSide) {
 
-                int absorptionLevel = Mth.abs(blockPoints / 5); //4to nivel de absorption
+                int absorptionLevel = blockPoints / 5; //4to nivel de absorption (blockPoints ya es >= 0)
                 //DevilRpg.LOGGER.debug("Absorption level: {}",absorptionLevel);
 
                 // Aplica el efecto de resistencia al daño por 2 segundos

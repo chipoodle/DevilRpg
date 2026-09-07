@@ -53,7 +53,8 @@ public class SkillSummonSoulBear extends AbstractSkillExecutor {
                 ConcurrentLinkedQueue<UUID> keys = min.getSoulBearMinions();
                 if (keys == null) keys = new ConcurrentLinkedQueue<>(); // getSoulBearMinions puede devolver null si falla la deserializacion del NBT
 
-                if (!keys.isEmpty()) {
+                // Limitar el numero de osos invocados a NUMBER_OF_SUMMONS (eliminar los mas viejos de sobra).
+                while (keys.size() >= NUMBER_OF_SUMMONS) {
                     UUID key = keys.remove();
                     SoulBear e = (SoulBear) min.getTamableByUUID(key, player.level());
                     if (e != null)

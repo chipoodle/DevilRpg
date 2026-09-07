@@ -54,8 +54,8 @@ public class PlayerPassiveWerewolfHitAttributeExecutor extends AbstractPlayerPas
     }
 
     private void initializeAttributes(Player playerIn) {
-        if (hitAttributeModifier == null ||
-                hitAttributeModifier.amount() != Double.valueOf(parentCapability.getSkillsPoints(SkillEnum.WEREWOLF_HIT)) * HIT_FACTOR) {
+        double expectedAmount = Double.valueOf(parentCapability.getSkillsPoints(SkillEnum.WEREWOLF_HIT)) * HIT_FACTOR;
+        if (hitAttributeModifier == null || Double.compare(hitAttributeModifier.amount(), expectedAmount) != 0) {
             removeCurrentWerewolfHitModifiers();
             hitAttributeModifier = createNewAttributeModifiers();
             HashMap<String, String> capAttModifiersHashMap = parentCapability.getAttributeModifiers();
