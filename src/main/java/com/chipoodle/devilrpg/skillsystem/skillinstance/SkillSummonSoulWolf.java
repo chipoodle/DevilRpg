@@ -62,8 +62,8 @@ public class SkillSummonSoulWolf extends AbstractSkillExecutor {
                 }
                 min.setSoulWolfMinions(keys, player);
             }
+            player.getCooldowns().addCooldown(icon.getItem(), 20);
         }
-        player.getCooldowns().addCooldown(icon.getItem(), 20);
     }
 
     private SoulWolf summonSoulWolf(Level levelIn, Player playerIn, Random rand) {

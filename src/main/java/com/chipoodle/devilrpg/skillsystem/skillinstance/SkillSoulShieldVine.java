@@ -77,6 +77,10 @@ public class SkillSoulShieldVine extends AbstractSkillSeedsInInventoryExecutor {
         // Consumir una semilla del inventario
         consumeSeed(playerIn);
 
+        // Radio al cuadrado (una sola vez, fuera del bucle).
+        double maxRadiusSquared = radius * radius;
+        double minRadiusSquared = maxRadiusSquared / 2.1;
+
         // Iterar sobre un cubo de dimensiones 2 * radius + 1 centrado en el jugador
         for (int x = -radius; x <= radius; x++) {
             for (int y = -radius; y <= radius; y++) {
@@ -87,11 +91,11 @@ public class SkillSoulShieldVine extends AbstractSkillSeedsInInventoryExecutor {
                     // Calcular la distancia desde el centro (jugador) hasta el bloque actual
                     double distanceSquared = x * x + y * y + z * z;
 
-                    // Comprobar si el bloque está dentro de la esfera (<= radio^2)
-                    if (distanceSquared <= radius * radius && distanceSquared * 2.1 >= radius * radius) {
-                        // Solo colocar el bloque si el espacio está vacío
-                        if (level.getBlockState(domeBlockPos).getBlock().equals(Blocks.AIR)
-                                || level.getBlockState(domeBlockPos).canBeReplaced()) {
+                    // Comprobar si el bloque está dentro de la esfera (capa <= radio^2)
+                    if (distanceSquared <= maxRadiusSquared && distanceSquared >= minRadiusSquared) {
+                        // Solo colocar el bloque si el espacio está vacío (una sola consulta de estado)
+                        BlockState currentState = level.getBlockState(domeBlockPos);
+                        if (currentState.getBlock().equals(Blocks.AIR) || currentState.canBeReplaced()) {
 
                             Direction directionFromPlayer = getDirectionFromOffset(x, y, z);
                             //DevilRpg.LOGGER.info(directionFromPlayer);

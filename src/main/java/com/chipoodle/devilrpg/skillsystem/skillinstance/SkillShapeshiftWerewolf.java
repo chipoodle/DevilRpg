@@ -74,7 +74,6 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassiveAttributeExecu
             DevilRpg.LOGGER.debug("==========> Step just before transformation: {}", Objects.requireNonNull(player.getAttribute(Attributes.STEP_HEIGHT)).getValue());
 
 
-            Random rand = new Random();
             PlayerStaminaCapabilityInterface stamina = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerStaminaCapability.INSTANCE);
             stamina.setStamina(0,player);
 
@@ -102,7 +101,7 @@ public class SkillShapeshiftWerewolf extends AbstractPlayerPassiveAttributeExecu
             } else {
                 worldIn.playSound(null, player.getX(), player.getY(), player.getZ(),
                         SoundEvents.NOTE_BLOCK_BASS, SoundSource.NEUTRAL, 0.5F,
-                        0.4F / (new Random().nextFloat() * 0.4F + 0.8F));
+                        0.4F / (rand.nextFloat() * 0.4F + 0.8F));
             }
 
             super.executePassiveChildren(getSkillEnum(), worldIn, player);

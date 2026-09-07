@@ -82,9 +82,12 @@ public abstract class AbstractPlayerPassiveAttributeExecutor extends AbstractSki
      */
     protected void executePassiveChildren(SkillEnum skillEnum, Level level, Player playerIn) {
         List<SkillEnum> passivesFromActiveSkill = parentCapability.getPassivesFromActiveSkill(skillEnum);
+        // Un solo HashMap reutilizado: se limpia por pasivo (equivale a un mapa fresco, sin churn de objetos).
+        HashMap<String, String> parameters = new HashMap<>();
         for (SkillEnum passiveEnum : passivesFromActiveSkill) {
+            parameters.clear();
             AbstractSkillExecutor loadedSkill = parentCapability.getLoadedSkillExecutor(passiveEnum);
-            loadedSkill.execute(level, playerIn, new HashMap<>());
+            loadedSkill.execute(level, playerIn, parameters);
         }
     }
 

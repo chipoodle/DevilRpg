@@ -70,7 +70,6 @@ public class SkillSoulMinerVine extends AbstractSkillSeedsInInventoryExecutor {
     private void setVine(Level level, Player playerIn, PlayerSkillCapabilityInterface skillCap) {
         BlockPos playerBlockPos = playerIn.blockPosition();
         SoulMinerVineBlock createdBlock = ModBlocks.SOUL_MINER_VINE_BLOCK.get();
-        BlockState playerBlockState = level.getBlockState(playerBlockPos);
         Vec3 playerLookVector = playerIn.getLookAngle();
         Direction nearestDirection = Direction.getNearest(playerLookVector.x, 0, playerLookVector.z);
         //DevilRpg.LOGGER.info("-------->Direction: {}", nearestDirection);
@@ -89,13 +88,9 @@ public class SkillSoulMinerVine extends AbstractSkillSeedsInInventoryExecutor {
                                 .setValue(SoulMinerVineBlock.HAS_CHILDREN, false)
                 );
 
-        // El nivel de la vid se guarda en el BlockEntity (ya no como propiedad del blockstate,
-        // para reducir el espacio de estados del bloque y acelerar la carga).
+        // Una sola consulta del BlockEntity: setear nivel + marcarlo como RAIZ de la planta.
         if (level.getBlockEntity(newBlockpos) instanceof SoulMinerVineBlockEntity minerBE) {
             minerBE.setSkillLevel(skillPoints);
-        }
-        // Marcar este bloque como la RAÍZ de la planta (destino de los items minados).
-        if (level.getBlockEntity(newBlockpos) instanceof SoulMinerVineBlockEntity minerBE) {
             minerBE.setRootInfo(newBlockpos, null);
         }
     }
