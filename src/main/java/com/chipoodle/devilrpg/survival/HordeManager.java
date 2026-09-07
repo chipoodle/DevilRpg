@@ -23,10 +23,10 @@ import java.util.Random;
  */
 public final class HordeManager {
 
-    /** Intervalo base entre hordas (ticks) con amenaza 0. */
-    private static final int BASE_INTERVAL_TICKS = 600;  // 30 s
-    /** Intervalo mínimo entre hordas (ticks) con amenaza máxima. */
-    private static final int MIN_INTERVAL_TICKS = 200;   // 10 s
+    /** Intervalo base entre hordas (ticks) con amenaza 0 (jugador débil al inicio -> hordas raras). */
+    private static final int BASE_INTERVAL_TICKS = 5 * 60 * 20;  // 5 minutos
+    /** Intervalo mínimo entre hordas (ticks) con amenaza máxima (partida avanzada). */
+    private static final int MIN_INTERVAL_TICKS = 45 * 20;        // 45 segundos
     /** Máximo de enemigos extra que añade la amenaza máxima. */
     private static final int MAX_EXTRA_MEMBERS = 6;
 
