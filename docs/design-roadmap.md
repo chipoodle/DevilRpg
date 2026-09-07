@@ -71,7 +71,8 @@ Con esto, un zombie generado lejos del spawn **y/o** tarde en la partida es más
 ### 3.2 Objetivo direccional (te empuja a salir)
 
 - **`ObjectiveTargets.targetOf(spawn, index)`** → el objetivo `i` está a `800 + i*600` bloques del spawn,
-  en direcciones variadas (ángulo áureo). Determinista → server y cliente calculan el mismo punto.
+  en **una dirección fija** (el mismo rumbo para todos, para que la flecha no salte de dirección y no
+  confunda). Determinista → server y cliente calculan el mismo punto.
 - **`ObjectiveManager.tick(player)`** (en el tick del jugador, servidor): si el jugador está a ≤24 bloques
   del objetivo, avanza el índice (y se sincroniza al cliente). Cada objetivo está **más lejos**, lo que
   obliga a seguir avanzando y a no establecerse.
@@ -112,9 +113,9 @@ Con esto, un zombie generado lejos del spawn **y/o** tarde en la partida es más
 
 - **Amenaza**: `ThreatLevel.MAX_EXTRA_DIFFICULTY` (0.8 = +80%) y `FULL_THREAT_TICKS` (3 h).
 - **Objetivo**: `ObjectiveTargets.BASE_DISTANCE` (800), `STEP_DISTANCE` (600), `REACH_RADIUS` (24).
-- **Horda**: `HordeManager.BASE_INTERVAL_TICKS` (5 min al inicio), `MIN_INTERVAL_TICKS` (45 s con máxima
-  amenaza), `MAX_EXTRA_MEMBERS` (6). El tamaño base es 1 enemigo con amenaza 0 (jugador débil) y crece
-  con la amenaza.
+- **Horda**: `HordeManager.BASE_INTERVAL_TICKS` (20 min al inicio), `MIN_INTERVAL_TICKS` (50 min con
+  máxima amenaza), `MAX_EXTRA_MEMBERS` (6). El tamaño base es 1 enemigo con amenaza 0 (jugador débil) y
+  crece con la amenaza; a máxima amenaza las hordas son grandes/fuertes pero menos frecuentes.
 
 > TODO (siguiente): que las hordas apunten al **asentamiento más cercano** en vez de al jugador, para
 > conectar con la Iteración 3.

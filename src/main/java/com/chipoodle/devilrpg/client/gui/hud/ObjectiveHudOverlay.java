@@ -61,7 +61,9 @@ public class ObjectiveHudOverlay {
      * Usa la convención de yaw de MC (0 = sur, yaw positivo hacia la izquierda).
      */
     private static String directionArrow(double dx, double dz, float playerYaw) {
-        double targetYaw = Math.toDegrees(Math.atan2(dx, dz));
+        // Yaw del objetivo en la convención de MC: vector delantero = (-sin(yaw), 0, cos(yaw)),
+        // por lo que yaw que mira hacia (dx,dz) es atan2(-dx, dz).
+        double targetYaw = Math.toDegrees(Math.atan2(-dx, dz));
         double rel = targetYaw - playerYaw;
         while (rel > 180.0) rel -= 360.0;
         while (rel < -180.0) rel += 360.0;
