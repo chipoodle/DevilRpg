@@ -2,6 +2,7 @@ package com.chipoodle.devilrpg.entity.goal;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.entity.SoulWisp;
+import com.chipoodle.devilrpg.entity.SoulWispRanger;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
@@ -31,6 +32,10 @@ public class SoulWispPlantSaplingsGoal extends Goal {
 
     @Override
     public boolean canUse() {
+        // Solo planta en la fase de PLANTAR (no en la de cortar).
+        if (this.soulWisp instanceof SoulWispRanger ranger && !ranger.isPlantingPhase()) {
+            return false;
+        }
         return findNearbySapling().isPresent() || hasSaplingsInHands();
     }
 
@@ -113,6 +118,10 @@ public class SoulWispPlantSaplingsGoal extends Goal {
                         plantSapling(level, targetPlantingPos, EquipmentSlot.MAINHAND)) {
                     DevilRpg.LOGGER.info("Sapling plantado en " + targetPlantingPos);
                     targetPlantingPos = null; // Reinicia la búsqueda
+                    // Plantó un sapling -> ahora prioriza cortar.
+                    if (this.soulWisp instanceof SoulWispRanger ranger) {
+                        ranger.setPlantingPhase(false);
+                    }
                 }
             }
         }

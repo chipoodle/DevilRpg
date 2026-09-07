@@ -29,6 +29,10 @@ public class SoulWispGatherLogItemsGoal extends Goal {
 
     @Override
     public boolean canUse() {
+        // Solo entrega la madera en la fase de CORTE (no en la de plantar).
+        if (this.soulWisp instanceof com.chipoodle.devilrpg.entity.SoulWispRanger ranger && ranger.isPlantingPhase()) {
+            return false;
+        }
         if (isInventoryFull) {
             inventoryFullTicks++;
             if (inventoryFullTicks > INVENTORY_FULL_COOLDOWN) {

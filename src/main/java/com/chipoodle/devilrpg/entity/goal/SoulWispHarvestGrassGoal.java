@@ -37,6 +37,10 @@ public class SoulWispHarvestGrassGoal extends Goal {
 
     @Override
     public boolean canUse() {
+        // Solo cosecha césped/semillas en la fase de PLANTAR.
+        if (this.soulWisp instanceof com.chipoodle.devilrpg.entity.SoulWispRanger ranger && !ranger.isPlantingPhase()) {
+            return false;
+        }
         if (isInventoryFull) {
             inventoryFullTicks++;
             if (inventoryFullTicks > INVENTORY_FULL_COOLDOWN) {

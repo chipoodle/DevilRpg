@@ -2,6 +2,7 @@ package com.chipoodle.devilrpg.entity.goal;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.entity.SoulWisp;
+import com.chipoodle.devilrpg.entity.SoulWispRanger;
 import net.minecraft.core.BlockPos;
 import net.minecraft.stats.Stats;
 import net.minecraft.tags.BlockTags;
@@ -43,6 +44,10 @@ public class SoulWispChopLogsGoal extends Goal {
 
     @Override
     public boolean canUse() {
+        // Solo corta en la fase de CORTE (no en la de plantar) y si lleva un hacha.
+        if (!(this.soulWisp instanceof SoulWispRanger ranger) || ranger.isPlantingPhase() || !ranger.hasAxe()) {
+            return false;
+        }
         BlockPos closestLogPos = getClosestLogOrLeafBlock();
         if (closestLogPos != null && soulWisp.hasItemInMainHand() && !soulWisp.hasItemInOffHand()) {
             this.targetBlockPos = closestLogPos;
@@ -132,8 +137,13 @@ public class SoulWispChopLogsGoal extends Goal {
             ItemStack mainHandItem = soulWisp.getMainHandItem();
             this.ticksUntilNextHit = blockState.is(BlockTags.LOGS) ? TICKS_UNTIL_NEXT_HIT_LOG : TICKS_UNTIL_NEXT_HIT_LEAVES;
             this.hurtAndBreak(1, this.soulWisp, (entity) -> {}, mainHandItem, (Player) soulWisp.getOwner());
-            if (this.soulWisp.level().destroyBlock(targetBlockPos, true, soulWisp))
+            if (this.soulWisp.level().destroyBlock(targetBlockPos, true, soulWisp)) {
                 resetTargetBlock();
+                // Cortó un tronco -> ahora prioriza plantar.
+                if (this.soulWisp instanceof SoulWispRanger ranger) {
+                    ranger.setPlantingPhase(true);
+                }
+            }
             //this.currentTicksWithoutChopping = 0;
         } else {
             this.ticksUntilNextHit--;

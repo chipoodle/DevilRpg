@@ -32,8 +32,43 @@ import org.jetbrains.annotations.Nullable;
  */
 public class SoulWispRanger extends SoulWisp {
 
+    /** Si true está en la fase de "plantar/recolectar"; si false, en la de "cortar". */
+    private boolean plantingPhase = false;
+    /** Ticks transcurridos en la fase actual (para el timeout que alterna). */
+    private int phaseTicks = 0;
+    /** Max ticks en una fase antes de alternar (5 s). */
+    private static final int PHASE_TIMEOUT_TICKS = 100;
+
     public SoulWispRanger(EntityType<? extends SoulWispRanger> type, Level worldIn) {
         super(type, worldIn);
+    }
+
+    public boolean isPlantingPhase() {
+        return plantingPhase;
+    }
+
+    public void setPlantingPhase(boolean plantingPhase) {
+        this.plantingPhase = plantingPhase;
+        this.phaseTicks = 0;
+    }
+
+    /** true si la entidad lleva un hacha en la mano principal (necesario para cortar). */
+    public boolean hasAxe() {
+        return this.getItemInHand(InteractionHand.MAIN_HAND).getItem() instanceof AxeItem;
+    }
+
+    @Override
+    public void aiStep() {
+        super.aiStep();
+        this.phaseTicks++;
+        // Alternar: si la fase actual se estanca demasiado, pasar a la otra.
+        if (this.phaseTicks > PHASE_TIMEOUT_TICKS) {
+            setPlantingPhase(!this.plantingPhase);
+        }
+        // Si se supone que debe cortar pero no tiene hacha -> pasar a plantar (que puede hacer).
+        if (!this.plantingPhase && !this.hasAxe()) {
+            setPlantingPhase(true);
+        }
     }
 
     @Override
@@ -80,6 +115,8 @@ public class SoulWispRanger extends SoulWisp {
                     itemstack.setCount(1);
                     this.setItemInHand(InteractionHand.MAIN_HAND, itemstack);
                     this.removeInteractionItem(player, playerItemStack);
+                    // Al recibir el hacha, pasa a priorizar el corte.
+                    this.setPlantingPhase(false);
                     this.level().playSound(player, this, SoundEvents.ALLAY_ITEM_GIVEN, SoundSource.NEUTRAL, 2.0F, 1.0F);
                     return InteractionResult.SUCCESS;
                 }

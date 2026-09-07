@@ -667,7 +667,7 @@
     {
         "id": "summoning:wispranger",
         "display": {
-            "description": "Summon a ranger wisp that fells trees, plants saplings and gathers nature's bounty.",
+            "description": "Summon a ranger wisp that fells trees (needs an axe), plants saplings, and gathers wood and seeds, alternating between tasks.",
             "icon": {
                 "item": "devilrpg:item_summon"
             },
