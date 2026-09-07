@@ -39,36 +39,80 @@ import java.util.*;
 
 @OnlyIn(Dist.CLIENT)
 public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IListener {
-    // El marco del usuario es 1317x1194. Se dibuja completo, escalado a la ventana de
-    // 302 x (WINDOW_HEIGHT+INFO_SPACE) para aprovechar su nitidez.
+    // ============================================================================================
+    // SISTEMA DE COORDENADAS DE LA VENTANA
+    // --------------------------------------------------------------------------------------------
+    // La pantalla de skills está formada por:
+    //   1) La VENTANA PRINCIPAL (el marco dibujado por renderWindow): es la imagen window-256b.png,
+    //      de tamaño nativo INITIAL_TEXTURE_WIDTH x INITIAL_TEXTURE_HEIGHT, que se escala (ps.scale)
+    //      a un tamaño de diseño de WINDOW_WIDTH x (WINDOW_HEIGHT + INFO_SPACE).
+    //   2) La VENTANA INTERIOR (donde se ve el árbol de habilidades sobre el mosaico): es el área
+    //      rectangular que empieza en (TAB_BACKGROUND_WINDOW_AREA_OFFSET_X, _Y) dentro de la ventana
+    //      y mide INNER_SCREEN_WIDTH x INNER_SCREEN_HEIGHT. Aquí se dibuja el fondo (mosaico) y los
+    //      skills.
+    // Todas estas constantes están en "unidades de diseño de la ventana" (window-local). En tiempo de
+    // render se transforman a píxeles de pantalla multiplicando por fitScale y sumando offsetLeft/offsetTop.
+    // ============================================================================================
+
+    // ---- Textura base / ventana principal ----
+    /** Ancho nativo (px) del marco de la ventana (window-256b.png). Se usa para escalarlo a la ventana. */
     private static final int INITIAL_TEXTURE_WIDTH = 1317;
+    /** Alto nativo (px) del marco de la ventana (window-256b.png). */
     private static final int INITIAL_TEXTURE_HEIGHT = 1194;
-    private static final int INNER_SCREEN_WIDTH = 282;
-    private static final int INNER_SCREEN_HEIGHT = 160;
-    private static final int TAB_BACKGROUND_WINDOW_AREA_OFFSET_X = 22;
-    private static final int TAB_BACKGROUND_WINDOW_AREA_OFFSET_Y = 38;
+    /** Ancho de la ventana en unidades de diseño (destino del escalado de INITIAL_TEXTURE_WIDTH). */
     private static final int WINDOW_WIDTH = 304;
+    /** Alto de la ventana en unidades de diseño (destino del escalado de INITIAL_TEXTURE_HEIGHT). */
     private static final int WINDOW_HEIGHT = 248;
+    /**
+     * Espacio extra reservado al pie de la ventana (para los botones de poder/slots asignados).
+     * El alto total de la ventana = WINDOW_HEIGHT + INFO_SPACE.
+     */
     private static final int INFO_SPACE = 26;
+    /** Prefijo de ruta de todas las texturas de la GUI (textures/gui/). */
     private static final String IMG_LOCATION = DevilRpg.MODID + ":textures/gui/";
+    /** Textura del marco de la ventana principal. */
     private static final ResourceLocation WINDOW_LOCATION = ResourceLocation.parse(IMG_LOCATION + "window-256b.png");
+    /** Textura de las pestañas (tabs) superiores de categorías. */
     private static final ResourceLocation TABS_LOCATION = ResourceLocation.parse(IMG_LOCATION + "advancements/tabs.png");
+    /** Textura del "hueco" (empty-box) que ocupa un slot de poder sin skill asignada. */
     private static final ResourceLocation EMPTY_POWER_IMAGE_RESOURCE = ResourceLocation.parse(IMG_LOCATION + "empty-box.png");
 
+    // ---- Ventana interior (área del árbol de habilidades / mosaico) ----
+    /** Ancho del área interior donde se dibuja el árbol (y su mosaico de fondo), en unidades de diseño. */
+    private static final int INNER_SCREEN_WIDTH = 282;
+    /** Alto del área interior donde se dibuja el árbol (y su mosaico de fondo). */
+    private static final int INNER_SCREEN_HEIGHT = 160;
+    /** Desplazamiento X del origen del área interior dentro de la ventana principal. */
+    private static final int TAB_BACKGROUND_WINDOW_AREA_OFFSET_X = 22;
+    /** Desplazamiento Y del origen del área interior dentro de la ventana principal. */
+    private static final int TAB_BACKGROUND_WINDOW_AREA_OFFSET_Y = 38;
+
+    // ---- Textos (labels) traducibles de la ventana ----
+    /** Texto que se muestra cuando una categoría está vacía (no hay skills). */
     private static final Component SAD_LABEL = Component.translatable("advancements.sad_label");
+    /** Texto "vacío" que se pinta dentro del área del árbol cuando no hay nada que mostrar. */
     private static final Component EMPTY = Component.translatable("advancements.empty");
+    /** Título de la pantalla (gui.skills.title). */
     private static final Component GUI_LABEL = Component.translatable("gui.skills.title");
+    /** Etiqueta de "puntos sin gastar" (gui.skills.unspent). */
     private static final Component UNSPENT_LABEL = Component.translatable("gui.skills.unspent");
+
+    // ---- Botones de poder (slots de skill asignados) ----
+    /** X (unidades de diseño) donde empieza la fila de botones de poder. */
     public static final int POWER_INITIAL_X_POSITION = 141;
-    // Separacion extra entre botones (se suma a SkillWidget.FRAME_SIZE). Mas alto = mas juntos/lejos.
+    /** Separación horizontal entre botones de poder (se suma a SkillWidget.FRAME_SIZE). Más alto = más separados. */
     public static final int POWER_BUTTON_GAP = 5;
-    // Desplazamiento vertical de los botones desde su base. Mas alto = mas abajo.
+    /** Desplazamiento vertical de los botones desde su base. Más alto = más abajo. */
     public static final int POWER_BUTTON_Y_OFFSET = 21;
-    // Se resta a SkillWidget.FRAME_SIZE para el tamano (alto y ancho) de cada boton.
+    /** Tamaño (alto y ancho) del botón = SkillWidget.FRAME_SIZE - este valor. Más alto = botón más pequeño. */
     public static final int POWER_BUTTON_SHRINK = 6;
+    /** X del texto "skills" (label) junto a la fila de botones de poder. */
     public static final int SKILL_LABEL_X = 72;
+    /** Y del texto "skills" (label). */
     public static final int SKILL_LABEL_Y = 19;
+    /** X del label de "puntos sin gastar". */
     public static final int UNSPENT_POINTS_LABEL_X = 46;
+    /** Y del label de "puntos sin gastar". */
     public static final int UNSPENT_POINTS_LABEL_Y = 230;
 
     // --- Botones de rotar conjunto de skills (loadouts) ---
@@ -92,9 +136,11 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     private SkillTab selectedTab;
     private boolean isScrolling;
     private boolean isDraggingToPowerButton;
+    /** X (px de pantalla) del borde izquierdo de la ventana principal (= borde de la ventana de diseño). */
     private int offsetLeft;
+    /** Y (px de pantalla) del borde superior de la ventana principal. */
     private int offsetTop;
-    /** Escala para que la ventana (302x210) quepa en la pantalla virtual con cualquier guiScale */
+    /** Escala para que la ventana de diseño (WINDOW_WIDTH x WINDOW_HEIGHT+INFO_SPACE) quepa en la pantalla virtual con cualquier guiScale. */
     private float fitScale = 1.0F;
     /** Evita que super.render vuelva a dibujar el fondo encima de la ventana ya renderizada */
     private boolean skipBackgroundRenderOnce = false;
