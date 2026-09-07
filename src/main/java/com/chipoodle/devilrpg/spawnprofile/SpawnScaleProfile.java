@@ -26,10 +26,13 @@ package com.chipoodle.devilrpg.spawnprofile;
  *
  * @param minDistance       distancia por debajo de la cual la probabilidad es 0 (zona protegida / sin spawn)
  * @param maxDistance       distancia a partir de la cual la probabilidad es 1 (máxima intensidad)
+ * @param minHardDistance   a lo que se reduce la zona protegida con la amenaza máxima
  * @param maxScaleMultiplier incremento del factor de escala en la distancia máxima (ej. 1.3 = +30%)
  * @param baseHealth        vida base sobre la que se aplica el factor de escala
  * @param baseSpeed         velocidad base sobre la que se aplica el factor de escala
  * @param baseDamage        daño base sobre el que se aplica el factor de escala
+ * @param baseXp            experiencia base que da la entidad (sin escalar)
+ * @param maxXpMultiplier   aumento de experiencia a la distancia máxima (0 = sin aumento)
  */
 public record SpawnScaleProfile(
         /** Distancia por debajo de la cual la probabilidad es 0 (zona protegida / sin spawn). */
@@ -45,7 +48,11 @@ public record SpawnScaleProfile(
         /** Velocidad base sobre la que se aplica el factor de escala. */
         double baseSpeed,
         /** Daño base sobre el que se aplica el factor de escala. */
-        double baseDamage) {
+        double baseDamage,
+        /** Experiencia base que da la entidad (en la zona protegida, sin escalar). */
+        int baseXp,
+        /** Multiplicador extra de experiencia a la distancia máxima (0 = sin aumento). */
+        double maxXpMultiplier) {
 
     /**
      * Distancia mínima efectiva según la amenaza (0..1). Con amenaza 0 es {@code minDistance} y con
@@ -95,5 +102,18 @@ public record SpawnScaleProfile(
     /** {@link #scaleFactor(double, double)} con amenaza 0. */
     public double scaleFactor(double distance) {
         return scaleFactor(distance, 0.0);
+    }
+
+    /**
+     * Experiencia que da la entidad según la distancia y la amenaza: {@code baseXp} en la zona protegida y
+     * {@code baseXp * (1 + maxXpMultiplier)} a la distancia máxima (0 = sin aumento por distancia).
+     */
+    public int experienceReward(double distance, double threat) {
+        return (int) Math.round(baseXp * (1.0 + normalize(distance, threat) * maxXpMultiplier));
+    }
+
+    /** {@link #experienceReward(double, double)} con amenaza 0. */
+    public int experienceReward(double distance) {
+        return experienceReward(distance, 0.0);
     }
 }

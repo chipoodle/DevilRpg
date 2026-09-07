@@ -117,10 +117,13 @@ Con esto, un zombie generado lejos del spawn **y/o** tarde en la partida es más
 ## 5) Configuración rápida
 
 - **Amenaza**: `ThreatLevel.MAX_EXTRA_DIFFICULTY` (0.8 = +80%) y `FULL_THREAT_TICKS` (3 h).
+- **Perfil del zombie (`AggressiveZombieSpawnProfile.INSTANCE`)**: `minDistance` 200, `maxDistance` 3000,
+  `minHardDistance` 50, `maxScaleMultiplier` 3.5 (atributos hasta +350%), bases vanilla (vida 20, velocidad 0.23,
+  daño 3.0), `baseXp` 20 y `maxXpMultiplier` 4.0 (XP hasta +400% a distancia máxima).
 - **Objetivo**: `ObjectiveTargets.BASE_DISTANCE` (800), `STEP_DISTANCE` (600), `REACH_RADIUS` (24).
 - **Zona protegida que se encoge**: en `SpawnScaleProfile`, `minDistance` (200 al inicio) se reduce con la
   amenaza hasta `minHardDistance` (50 a máxima). Se configura con `minHardDistance` y
-  `effectiveMinDistance(threat)`; la probabilidad/escalado aceptan el `threat`.
+  `effectiveMinDistance(threat)`; la probabilidad/escalado/XP aceptan el `threat`.
 - **Horda**: `HordeManager.BASE_INTERVAL_TICKS` (20 min al inicio), `MIN_INTERVAL_TICKS` (3 min con máxima
   amenaza), `BASE_HORDE_SIZE` (3) y `MAX_EXTRA_MEMBERS` (12). El tamaño planeado es
   `BASE_HORDE_SIZE + amenaza*MAX_EXTRA_MEMBERS` (3 → 15 al máximo), y cada zombie pasa por la probabilidad

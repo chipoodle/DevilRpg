@@ -48,12 +48,13 @@ public class AggressiveZombieEntity extends Zombie {
         return false;
     }
 
-    // Configurar atributos personalizados
+    // Configurar atributos personalizados: se usan las bases del perfil (ahora iguales a un zombie normal).
     public static AttributeSupplier.Builder setAttributes() {
+        SpawnScaleProfile p = SPAWN_PROFILE;
         return Zombie.createAttributes()
-                .add(Attributes.MAX_HEALTH, 20.0D) // Salud base
-                .add(Attributes.MOVEMENT_SPEED, 0.2D) // Velocidad base
-                .add(Attributes.ATTACK_DAMAGE, 6.5D) // Daño base
+                .add(Attributes.MAX_HEALTH, p.baseHealth())
+                .add(Attributes.MOVEMENT_SPEED, p.baseSpeed())
+                .add(Attributes.ATTACK_DAMAGE, p.baseDamage())
                 .add(Attributes.FOLLOW_RANGE, 64.0D); // Rango de detección base
     }
 
@@ -142,6 +143,15 @@ public class AggressiveZombieEntity extends Zombie {
                 Objects.requireNonNull(this.getAttribute(Attributes.MAX_HEALTH)).getValue(),
                 Objects.requireNonNull(this.getAttribute(Attributes.MOVEMENT_SPEED)).getValue(),
                 Objects.requireNonNull(this.getAttribute(Attributes.ATTACK_DAMAGE)).getValue());
+    }
+
+    /**
+     * La experiencia que suelta el zombie crece con la distancia (y la amenaza), configurable en el perfil.
+     * <code>LivingEntity.getExperienceReward(...)</code> usa este valor; aquí se escala según la distancia.
+     */
+    @Override
+    protected int getBaseExperienceReward() {
+        return SPAWN_PROFILE.experienceReward(spawnDistance, spawnThreat);
     }
 
     // Clase interna para el comportamiento de lanzar fuego
