@@ -19,6 +19,7 @@ public class PlayerAuxiliaryCapabilityImplementation implements PlayerAuxiliaryC
     protected boolean swingingMainHand = false;
 
     protected Vec3 spawnPoint = null;
+    protected int objectiveIndex = 0;
 
     @Override
     public boolean isWerewolfAttack() {
@@ -84,13 +85,28 @@ public class PlayerAuxiliaryCapabilityImplementation implements PlayerAuxiliaryC
     }
 
     @Override
+    public int getObjectiveIndex() {
+        return objectiveIndex;
+    }
+
+    @Override
+    public void setObjectiveIndex(int objectiveIndex, Player player) {
+        this.objectiveIndex = objectiveIndex;
+        if (!player.level().isClientSide) sendAuxiliaryChangesToClient((ServerPlayer) player);
+        else sendAuxiliaryChangesToServer();
+    }
+
+    @Override
     public CompoundTag serializeNBT(HolderLookup.Provider provider) {
         CompoundTag nbt = new CompoundTag();
         nbt.putBoolean("werewolfAttack", werewolfAttack);
         nbt.putBoolean("werewolfTransformation", werewolfTransformation);
         //no es necesario persistir que mano está moviendose
         //nbt.putBoolean("swingingMainHand", swingingMainHand);
-        nbt.putString("spawnPoint", spawnPoint.toString());
+        if (spawnPoint != null) {
+            nbt.putString("spawnPoint", spawnPoint.toString());
+        }
+        nbt.putInt("objectiveIndex", objectiveIndex);
         return nbt;
     }
 
@@ -103,6 +119,9 @@ public class PlayerAuxiliaryCapabilityImplementation implements PlayerAuxiliaryC
         // Verificar si existe el campo "spawnPoint" antes de deserializar
         if (nbt.contains("spawnPoint")) {
             spawnPoint = TargetUtils.stringToVec3(nbt.getString("spawnPoint"));
+        }
+        if (nbt.contains("objectiveIndex")) {
+            objectiveIndex = nbt.getInt("objectiveIndex");
         }
     }
 

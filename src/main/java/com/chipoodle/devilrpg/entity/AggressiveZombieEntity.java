@@ -6,6 +6,7 @@ import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
 import com.chipoodle.devilrpg.spawnprofile.AggressiveZombieSpawnProfile;
 import com.chipoodle.devilrpg.spawnprofile.SpawnScaleProfile;
+import com.chipoodle.devilrpg.survival.ThreatLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
@@ -34,6 +35,7 @@ public class AggressiveZombieEntity extends Zombie {
     private static final SpawnScaleProfile SPAWN_PROFILE = AggressiveZombieSpawnProfile.INSTANCE;
 
     private double spawnDistance = 0;  // Se guarda al spawnear el zombie
+    private double spawnThreat = 1.0;  // Amenaza global al spawnear (combina con la distancia)
     private boolean attributesAdjusted = false; // Para asegurarnos de que solo se ajusta una vez
 
     public AggressiveZombieEntity(EntityType<? extends Zombie> type, Level world) {
@@ -112,7 +114,8 @@ public class AggressiveZombieEntity extends Zombie {
                 Vec3 playerSpawn = playerCapability.getSpawnPoint();
                 if (playerSpawn != null) {
                     spawnDistance = Math.sqrt(this.blockPosition().distSqr(new BlockPos((int) playerSpawn.x, (int) playerSpawn.y, (int) playerSpawn.z)));
-                    DevilRpg.LOGGER.info("Zombie Spawned at: {} | Player Spawn Point: {} | Distance: {}", this.blockPosition(), playerSpawn, spawnDistance);
+                    spawnThreat = ThreatLevel.multiplier(this.level());
+                    DevilRpg.LOGGER.info("Zombie Spawned at: {} | Player Spawn Point: {} | Distance: {} | Threat: {}", this.blockPosition(), playerSpawn, spawnDistance, String.format("%.2f", spawnThreat));
                 }
             }
         }
@@ -123,8 +126,9 @@ public class AggressiveZombieEntity extends Zombie {
             return; // Si está en la zona de spawn, no cambia atributos
         }
 
-        // Factor de escala lineal segun la distancia (1.0 en la zona protegida -> 1.0+multiplier al max).
-        double scaleFactor = SPAWN_PROFILE.scaleFactor(spawnDistance);
+        // Factor de escala lineal segun la distancia (1.0 en la zona protegida -> 1.0+multiplier al max),
+        // multiplicado por la amenaza global (tiempo) al momento del spawn.
+        double scaleFactor = SPAWN_PROFILE.scaleFactor(spawnDistance) * spawnThreat;
 
         // Aplicar el escalado sobre los valores base del perfil
         Objects.requireNonNull(this.getAttribute(Attributes.MAX_HEALTH)).setBaseValue(SPAWN_PROFILE.baseHealth() * scaleFactor);

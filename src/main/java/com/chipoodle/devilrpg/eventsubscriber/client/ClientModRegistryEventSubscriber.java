@@ -9,6 +9,7 @@ import net.minecraft.resources.ResourceLocation;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.client.gui.hud.ManaBarHudOverlay;
 import com.chipoodle.devilrpg.client.gui.hud.MinionPortraitHudOverlay;
+import com.chipoodle.devilrpg.client.gui.hud.ObjectiveHudOverlay;
 import com.chipoodle.devilrpg.client.gui.hud.SkillsIconHudOverlay;
 import com.chipoodle.devilrpg.client.gui.hud.StaminaBarHudOverlay;
 import com.chipoodle.devilrpg.client.gui.screen.MountablePetScreen;
@@ -103,6 +104,7 @@ public final class ClientModRegistryEventSubscriber {
         event.registerAboveAll(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "stamina"), StaminaBarHudOverlay.HUD_STAMINA_BAR);
         event.registerAboveAll(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "minion_portrait"), MinionPortraitHudOverlay.HUD_MINION_PORTRAITS);
         event.registerAboveAll(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "skill_icons"), SkillsIconHudOverlay.HUD_SKILL_ICONS);
+        event.registerAboveAll(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "objective"), ObjectiveHudOverlay.HUD_OBJECTIVE);
 
     }
 

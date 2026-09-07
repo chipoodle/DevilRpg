@@ -32,6 +32,7 @@ import com.chipoodle.devilrpg.network.payload.PlayerPassiveSkillPayload;
 import com.chipoodle.devilrpg.network.payload.PlayerSkillTreePayload;
 import com.chipoodle.devilrpg.network.payload.PlayerStaminaPayload;
 import com.chipoodle.devilrpg.skillsystem.AbstractSkillExecutor;
+import com.chipoodle.devilrpg.survival.ObjectiveManager;
 import com.chipoodle.devilrpg.util.EventUtils;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.nbt.CompoundTag;
@@ -120,6 +121,8 @@ public class PlayerCapabilityForgeEventSubscriber {
         if (!(event.getEntity() instanceof ServerPlayer player)) {
             return;
         }
+        // Objetivo de progresión: comprueba si el jugador alcanzó el objetivo y avanza al siguiente.
+        ObjectiveManager.tick(player);
         // Reparar muy despacio (cada ARMOR_REPAIR_INTERVAL_TICKS) para simular la durabilidad de
         // una armadura de diamante: la de cuero se desgasta mucho mas lento mientras eres lobo.
         if (player.tickCount % ARMOR_REPAIR_INTERVAL_TICKS != 0) {

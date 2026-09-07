@@ -24,4 +24,8 @@ public interface PlayerAuxiliaryCapabilityInterface extends IGenericCapability {
     Vec3 getSpawnPoint();
     void setSpawnPoint(Vec3 blockPos, Player player);
 
+    /** Índice del objetivo de progresión actual (crece al completarlo; obliga a alejarse del spawn). */
+    int getObjectiveIndex();
+    void setObjectiveIndex(int objectiveIndex, Player player);
+
 }

@@ -3,6 +3,7 @@ package com.chipoodle.devilrpg.eventsubscriber.common;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.spawner.AggressiveZombieSpawnRule;
 import com.chipoodle.devilrpg.spawner.CustomSpawner;
+import com.chipoodle.devilrpg.survival.HordeManager;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -34,6 +35,9 @@ public class CustomSpawnerTickHandler {
                 return s;
             });
             spawner.tick();
+
+            // Hordas periodicas (tam y frecuencia escalan con la amenaza global por tiempo).
+            HordeManager.tick(level);
         });
     }
 }
