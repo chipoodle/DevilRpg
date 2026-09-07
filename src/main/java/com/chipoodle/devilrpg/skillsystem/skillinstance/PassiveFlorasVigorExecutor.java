@@ -10,8 +10,6 @@ import java.util.HashMap;
 
 public class PassiveFlorasVigorExecutor extends AbstractPlayerPassiveAttributeExecutor {
 
-    private Player playerIn;
-
     public PassiveFlorasVigorExecutor(PlayerSkillCapabilityInterface parentCapability) {
         super(parentCapability);
         DevilRpg.LOGGER.info("----------------------->CONSTRUCTOR PassiveFlorasVigorExecutor. Parent capability: {}", parentCapability);
@@ -27,10 +25,6 @@ public class PassiveFlorasVigorExecutor extends AbstractPlayerPassiveAttributeEx
     @Override
     public void execute(Level levelIn, Player playerIn, HashMap<String, String> parameters) {
         if (!levelIn.isClientSide) {
-
-            if (this.playerIn == null) {
-                this.playerIn = playerIn;
-            }
 
             Integer skillPoints = parentCapability.getSkillsPoints(SkillEnum.FLORAS_VIGOR);
             DevilRpg.LOGGER.info("-----------------------> Executing passive PassiveFlorasVigorExecutor skillPoints:{}",skillPoints);

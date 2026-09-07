@@ -10,8 +10,6 @@ import java.util.HashMap;
 
 public class PassiveSoulShieldVineRadiusExecutor extends AbstractPlayerPassiveAttributeExecutor {
 
-    private Player playerIn;
-
     public PassiveSoulShieldVineRadiusExecutor(PlayerSkillCapabilityInterface parentCapability) {
         super(parentCapability);
         DevilRpg.LOGGER.info("----------------------->CONSTRUCTOR PlayerPassiveSoulShieldVineRadiusExecutor. Parent capability: {}", parentCapability);
@@ -27,10 +25,6 @@ public class PassiveSoulShieldVineRadiusExecutor extends AbstractPlayerPassiveAt
     @Override
     public void execute(Level levelIn, Player playerIn, HashMap<String, String> parameters) {
         if (!levelIn.isClientSide) {
-
-            if (this.playerIn == null) {
-                this.playerIn = playerIn;
-            }
 
             Integer skillPoints = parentCapability.getSkillsPoints(SkillEnum.SOULSHIELDVINE_RADIUS);
             //PlayerManaCapabilityInterface manaCapability = IGenericCapability.getUnwrappedPlayerCapability(playerIn, PlayerManaCapability.INSTANCE);

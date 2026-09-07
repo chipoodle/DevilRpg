@@ -12,7 +12,6 @@ import net.minecraft.world.level.Level;
 import java.util.HashMap;
 
 public class PlayerPassiveManaPoolAttributeExecutor extends AbstractPlayerPassiveAttributeExecutor {
-    private Player playerIn;
 
     private static final Integer BASE_MANA_POOL = 30; // must be the same as PlayerManaCapabilityImplementation.maxMana initially
 
@@ -31,10 +30,6 @@ public class PlayerPassiveManaPoolAttributeExecutor extends AbstractPlayerPassiv
     @Override
     public void execute(Level levelIn, Player playerIn, HashMap<String, String> parameters) {
         if (!levelIn.isClientSide) {
-
-            if (this.playerIn == null) {
-                this.playerIn = playerIn;
-            }
 
             Integer manaPoolPoints = parentCapability.getSkillsPoints(SkillEnum.MANA_POOL);
             PlayerManaCapabilityInterface mana = IGenericCapability.getUnwrappedPlayerCapability(playerIn, PlayerManaCapability.INSTANCE);
