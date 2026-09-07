@@ -28,14 +28,18 @@ public final class RitualCircleGenerator {
             return;
         }
 
-        // Anillo de piedras alrededor del centro.
-        int radius = 4;
-        for (int a = 0; a < 10; a++) {
-            double angle = (a / 10.0) * Math.PI * 2.0;
+        // Anillo de piedras alrededor del centro (el doble de radio, más columnas y cada una de 3 bloques).
+        int radius = 8;
+        int columns = 20;
+        for (int a = 0; a < columns; a++) {
+            double angle = (a / (double) columns) * Math.PI * 2.0;
             int x = (int) Math.round(center.getX() + Math.cos(angle) * radius);
             int z = (int) Math.round(center.getZ() + Math.sin(angle) * radius);
-            level.setBlock(new BlockPos(x, center.getY(), z),
-                    (a % 2 == 0 ? Blocks.COBBLESTONE : Blocks.MOSSY_COBBLESTONE).defaultBlockState(), 3);
+            net.minecraft.world.level.block.Block block = (a % 2 == 0 ? Blocks.COBBLESTONE : Blocks.MOSSY_COBBLESTONE);
+            // Columna de 3 bloques de alto.
+            for (int h = 0; h < 3; h++) {
+                level.setBlock(new BlockPos(x, center.getY() + h, z), block.defaultBlockState(), 3);
+            }
         }
 
         // Restos de clérigos (bloques de hueso) cerca del anillo.
