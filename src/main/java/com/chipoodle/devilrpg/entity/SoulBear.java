@@ -100,6 +100,9 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
     private Integer warBear = 0;
     private Integer mountBear = 0;
 
+    // True mientras el jugador tiene abierto el inventario/cofre del oso: el oso no se mueve.
+    private boolean inventoryOpen;
+
     // Sincronizado al cliente para que el oso sepa (y el jugador controla) que es montable.
     private static final EntityDataAccessor<Integer> DATA_MOUNT_BEAR = SynchedEntityData.defineId(SoulBear.class, EntityDataSerializers.INT);
 
@@ -311,6 +314,10 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
                     ? (this.getMountBearLevel() >= 2 ? 0.7 : 0.5)
                     : 0.4;
             Objects.requireNonNull(this.getAttribute(Attributes.JUMP_STRENGTH)).setBaseValue(jump);
+            // Mientras el inventario/cofre del oso esta abierto, el oso no se mueve.
+            if (this.inventoryOpen) {
+                this.getNavigation().stop();
+            }
         }
 
         addToAiStep(this);
@@ -710,6 +717,14 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
             this.createInventory();
         }
         this.applyRidingGear();
+    }
+
+    public boolean isInventoryOpen() {
+        return inventoryOpen;
+    }
+
+    public void setInventoryOpen(boolean inventoryOpen) {
+        this.inventoryOpen = inventoryOpen;
     }
 
     // Equipa/limpia automaticamente la montura (slot 0, segun Riding Bear) y la armadura de caballo

@@ -50,6 +50,10 @@ public class MountablePetContainerMenu extends AbstractContainerMenu {
         this.horse = abstractHorse;
         container.startOpen(inventory.player);
         addAllSlots(this.horseContainer, this.armorContainer, abstractHorse, inventory);
+        // Al abrir el cofre del oso, marcarlo para que no se mueva mientras el inventario esta abierto.
+        if (abstractHorse instanceof SoulBear sb) {
+            sb.setInventoryOpen(true);
+        }
     }
 
     /** Agrega montura (0), armadura (cont. de armadura), almacenamiento (1+) e inventario del jugador. */
@@ -192,6 +196,10 @@ public class MountablePetContainerMenu extends AbstractContainerMenu {
     public void removed(@NotNull Player player) {
         super.removed(player);
         this.horseContainer.stopOpen(player);
+        // Al cerrar el inventario/cofre del oso, permitir que vuelva a moverse.
+        if (this.horse instanceof SoulBear sb) {
+            sb.setInventoryOpen(false);
+        }
     }
 
     @Override
