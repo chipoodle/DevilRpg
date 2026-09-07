@@ -1,8 +1,12 @@
 package com.chipoodle.devilrpg.survival;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.capability.IGenericCapability;
+import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
+import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
 import com.chipoodle.devilrpg.entity.AggressiveZombieEntity;
 import com.chipoodle.devilrpg.init.ModEntities;
+import com.chipoodle.devilrpg.spawnprofile.AggressiveZombieSpawnProfile;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -15,11 +19,19 @@ import java.util.Map;
 import java.util.Random;
 
 /**
- * Hordas periódicas: cada cierto tiempo (que se acorta con la amenaza global) aparece una partida de
- * enemigos cerca de un jugador, con tamaño y frecuencia crecientes según {@link ThreatLevel}.
+ * Hordas periódicas: cada cierto tiempo (que se acorta con la amenaza global) se intenta spawnear una
+ * partida de enemigos cerca de un jugador.
  * <p>
- * Es un "evento" independiente del {@code CustomSpawner}; se registra en el tick del servidor junto a
- * las otros sistemas de supervivencia.
+ * Los zombies de la horda están <b>sometidos al {@link com.chipoodle.devilrpg.spawnprofile.SpawnScaleProfile}</b>:
+ * cada uno se spawnea solo si pasa la probabilidad según la distancia del jugador a su punto de inicio.
+ * Así:
+ * <ul>
+ *   <li>Dentro de la zona protegida (&lt; minDistance): probabilidad 0 → no spawnea ninguno.</li>
+ *   <li>De minDistance a maxDistance: spawnea una fracción según la curva.</li>
+ *   <li>A maxDistance o más: probabilidad 1 → spawnean todos los de la horda.</li>
+ * </ul>
+ * La horda ataca al jugador que esté <b>más lejos</b> de su spawn (el más "aventurero"); si todos están
+ * en la zona protegida, el evento no spawnea nada (el jugador está a salvo cerca de su base).
  */
 public final class HordeManager {
 
@@ -51,34 +63,76 @@ public final class HordeManager {
     private static void spawnHorde(ServerLevel level, double threat) {
         ServerPlayer target = pickPlayer(level);
         if (target == null) {
-            return;
+            return; // nadie está fuera de la zona protegida -> sin horda
         }
+        double distance = distanceToSpawn(target);
+        if (distance < 0.0) {
+            return; // sin spawn point registrado
+        }
+        double probability = AggressiveZombieSpawnProfile.INSTANCE.probability(distance);
+
         Random random = new Random();
-        int count = 1 + (int) Math.round(threat * MAX_EXTRA_MEMBERS);
+        int plannedCount = 1 + (int) Math.round(threat * MAX_EXTRA_MEMBERS);
+        int spawned = 0;
         Vec3 base = target.position();
-        for (int i = 0; i < count; i++) {
+        for (int i = 0; i < plannedCount; i++) {
+            // Cada zombie de la horda pasa por la probabilidad del SpawnScaleProfile (distancia).
+            if (random.nextDouble() >= probability) {
+                continue;
+            }
             double angle = random.nextDouble() * Math.PI * 2.0D;
             double dist = 20 + random.nextDouble() * 24;
             BlockPos pos = new BlockPos(
                     (int) Math.floor(base.x + Math.cos(angle) * dist),
                     (int) Math.floor(base.y),
                     (int) Math.floor(base.z + Math.sin(angle) * dist));
-
             AggressiveZombieEntity zombie = ModEntities.AGGRESSIVE_ZOMBIE.get()
                     .create(level, null, pos, MobSpawnType.MOB_SUMMONED, true, true);
             if (zombie != null) {
                 zombie.moveTo(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D, 0.0F, 0.0F);
                 level.addFreshEntity(zombie);
+                spawned++;
             }
         }
-        DevilRpg.LOGGER.info("[Horde] {} enemigos cerca de {} (amenaza {})", count, target.getGameProfile().getName(), String.format("%.2f", threat));
+        DevilRpg.LOGGER.info("[Horde] {} spawneados de {} cerca de {} (distancia {} prob {})",
+                spawned, plannedCount, target.getGameProfile().getName(),
+                Math.round(distance), String.format("%.2f", probability));
     }
 
+    /**
+     * Elige al jugador <b>más lejos</b> de su punto de inicio (el más "aventurero"). Si todos los
+     * jugadores están dentro de la zona protegida (&lt; minDistance), devuelve {@code null} (sin horda).
+     */
     private static ServerPlayer pickPlayer(ServerLevel level) {
         List<? extends ServerPlayer> players = level.players();
         if (players.isEmpty()) {
             return null;
         }
-        return players.get(new Random().nextInt(players.size()));
+        ServerPlayer best = null;
+        double bestDistance = -1.0;
+        for (ServerPlayer p : players) {
+            double d = distanceToSpawn(p);
+            if (d >= bestDistance) {
+                bestDistance = d;
+                best = p;
+            }
+        }
+        double min = AggressiveZombieSpawnProfile.INSTANCE.minDistance();
+        return bestDistance > min ? best : null;
+    }
+
+    /** Distancia horizontal del jugador a su punto de inicio (o -1 si no tiene). */
+    private static double distanceToSpawn(ServerPlayer player) {
+        PlayerAuxiliaryCapabilityInterface aux = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerAuxiliaryCapability.INSTANCE);
+        if (aux == null) {
+            return -1.0;
+        }
+        Vec3 spawn = aux.getSpawnPoint();
+        if (spawn == null) {
+            return -1.0;
+        }
+        double dx = player.getX() - spawn.x;
+        double dz = player.getZ() - spawn.z;
+        return Math.sqrt(dx * dx + dz * dz);
     }
 }

@@ -84,7 +84,12 @@ Con esto, un zombie generado lejos del spawn **y/o** tarde en la partida es más
 ### 3.3 Horda periódica
 
 - **`HordeManager.tick(level)`** (en el tick del servidor): cada cierto intervalo (que se acorta con la
-  amenaza; 30 s → 10 s) spawnea una partida de `AggressiveZombieEntity` cerca de un jugador.
+  amenaza; 20 min → 3 min) intenta spawnear una partida de `AggressiveZombieEntity`.
+- Los zombies de la horda están **sometidos al `SpawnScaleProfile`**: cada uno spawnea solo si pasa la
+  probabilidad según la **distancia del jugador a su spawn**. Zona protegida (<200) → 0; de 200 a 1500 →
+  fracción; ≥1500 → todos.
+- La horda ataca al jugador **más lejos de su spawn**; si todos están en la zona protegida, no spawnea
+  nada (el jugador está a salvo cerca de su base).
 - El **tamaño** crece con la amenaza (`1 + round(amenaza*6)`).
 
 ---
