@@ -26,8 +26,7 @@ public final class ModEntities {
 	private static final String WISP_CURSE_NAME = "wisp_curse";
 	public static final String WISP_BOMB_NAME = "wisp_bomb";
 	public static final String WISP_ARCHER_NAME = "wisp_archer";
-	private static final String WISP_CHOPPER_NAME = "wisp_chopper";
-	private static final String WISP_FORESTER_NAME = "wisp_forester";
+	private static final String WISP_RANGER_NAME = "wisp_ranger"; // guardabosque: fusion de chopper+forester
 	public static final String SOUL_FROSTBALL_NAME = "soul_frostball";
 	private static final String LICHEN_SEED_BALL_NAME = "lichen_seedball";
 	private static final String VINE_FLESH_BALL_NAME = "vine_flesh_ball";
@@ -59,15 +58,10 @@ public final class ModEntities {
 			.sized(EntityType.ALLAY.getWidth(), EntityType.ALLAY.getHeight())
 			.build(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, WISP_ARCHER_NAME).toString()));
 
-	public static final DeferredHolder<EntityType<?>, EntityType<SoulWispChopper>> WISP_CHOPPER = ENTITY_TYPES.register(WISP_CHOPPER_NAME,
-			() -> EntityType.Builder.of(SoulWispChopper::new, MobCategory.CREATURE)
-			.sized(EntityType.ALLAY.getWidth(), EntityType.ALLAY.getHeight())
-			.build(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, WISP_CHOPPER_NAME).toString()));
-
-	public static final DeferredHolder<EntityType<?>, EntityType<SoulWispForester>> WISP_FORESTER = ENTITY_TYPES.register(WISP_FORESTER_NAME,
-			() -> EntityType.Builder.of(SoulWispForester::new, MobCategory.CREATURE)
+	public static final DeferredHolder<EntityType<?>, EntityType<SoulWispRanger>> WISP_RANGER = ENTITY_TYPES.register(WISP_RANGER_NAME,
+			() -> EntityType.Builder.of(SoulWispRanger::new, MobCategory.CREATURE)
 					.sized(EntityType.ALLAY.getWidth(), EntityType.ALLAY.getHeight())
-					.build(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, WISP_FORESTER_NAME).toString()));
+					.build(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, WISP_RANGER_NAME).toString()));
 
 	public static final DeferredHolder<EntityType<?>, EntityType<FrostBall>> SOUL_FROSTBALL = ENTITY_TYPES.register(SOUL_FROSTBALL_NAME,
 			() -> EntityType.Builder.<FrostBall>of(FrostBall::new, MobCategory.MISC)

@@ -47,15 +47,10 @@ public class SingletonSkillExecutorFactory {
                     skillPool.put(SkillEnum.SUMMON_WISP_ARCHER, new SkillSummonWispArcher(parentCapability));
                 return skillPool.get(SkillEnum.SUMMON_WISP_ARCHER);
             }
-            case SUMMON_WISP_CHOPPER -> {
-                if (!skillPool.containsKey(SkillEnum.SUMMON_WISP_CHOPPER))
-                    skillPool.put(SkillEnum.SUMMON_WISP_CHOPPER, new SkillSummonWispChopper(parentCapability));
-                return skillPool.get(SkillEnum.SUMMON_WISP_CHOPPER);
-            }
-            case SUMMON_WISP_FORESTER -> {
-                if (!skillPool.containsKey(SkillEnum.SUMMON_WISP_FORESTER))
-                    skillPool.put(SkillEnum.SUMMON_WISP_FORESTER, new SkillSummonWispForester(parentCapability));
-                return skillPool.get(SkillEnum.SUMMON_WISP_FORESTER);
+            case SUMMON_WISP_RANGER -> {
+                if (!skillPool.containsKey(SkillEnum.SUMMON_WISP_RANGER))
+                    skillPool.put(SkillEnum.SUMMON_WISP_RANGER, new SkillSummonWispRanger(parentCapability));
+                return skillPool.get(SkillEnum.SUMMON_WISP_RANGER);
             }
             case TRANSFORM_WEREWOLF -> {
                 if (!skillPool.containsKey(SkillEnum.TRANSFORM_WEREWOLF))

@@ -80,10 +80,8 @@ public class MinionPortraitHudOverlay {
                     renderEntityPortrait(guiGraphics, i++, h.getHealth(), h.getMaxHealth(), skillCap.getImagesOfSkills().get(SkillEnum.SUMMON_WISP_HEALTH), h);
                 if (h instanceof SoulWispArcher)
                     renderEntityPortrait(guiGraphics, i++, h.getHealth(), h.getMaxHealth(), skillCap.getImagesOfSkills().get(SkillEnum.SUMMON_WISP_ARCHER), h);
-                if (h instanceof SoulWispChopper)
-                    renderEntityPortrait(guiGraphics, i++, h.getHealth(), h.getMaxHealth(), skillCap.getImagesOfSkills().get(SkillEnum.SUMMON_WISP_CHOPPER), h);
-                if (h instanceof SoulWispForester)
-                    renderEntityPortrait(guiGraphics, i++, h.getHealth(), h.getMaxHealth(), skillCap.getImagesOfSkills().get(SkillEnum.SUMMON_WISP_FORESTER), h);
+                if (h instanceof SoulWispRanger)
+                    renderEntityPortrait(guiGraphics, i++, h.getHealth(), h.getMaxHealth(), skillCap.getImagesOfSkills().get(SkillEnum.SUMMON_WISP_RANGER), h);
             }
         }
     };

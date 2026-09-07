@@ -52,8 +52,7 @@ public final class InitModEventSubscriber {
         //event.put(ModEntities.WISP.get(), SoulWisp.setAttributes().build());
         event.put(ModEntities.WISP_HEALTH.get(), SoulWispHealth.setAttributes().build());
         event.put(ModEntities.WISP_ARCHER.get(), SoulWispArcher.setAttributes().build());
-        event.put(ModEntities.WISP_CHOPPER.get(), SoulWispChopper.setAttributes().build());
-        event.put(ModEntities.WISP_FORESTER.get(), SoulWispForester.setAttributes().build());
+        event.put(ModEntities.WISP_RANGER.get(), SoulWispRanger.setAttributes().build());
         event.put(ModEntities.SUNFLOWER_SHULKER.get(), SunflowerShulker.createAttributes().build());
         event.put(ModEntities.EXPLODING_SPORE_BULLET.get(),ExplodingSporeBullet.createAttributes().build());
         event.put(ModEntities.AGGRESSIVE_ZOMBIE.get(), AggressiveZombieEntity.setAttributes().build());

@@ -123,16 +123,13 @@ public class MinionPassiveAttributes {
                 soulWispHealth.setSecondaryEffect(points, MobEffects.REGENERATION);
         }
 
-        if (entity instanceof SoulWispChopper soulWispChopper) {
-            int points = skillPoint(SkillEnum.WISP_LOG_COLLECTOR);
-            if (points > 0)
-                soulWispChopper.goalSelector.addGoal(2, new SoulWispGatherLogItemsGoal(soulWispChopper));
-        }
-
-        if (entity instanceof SoulWispForester soulWispForester) {
-            int points = skillPoint(SkillEnum.WISP_SEED_COLLECTOR);
-            if (points > 0)
-                soulWispForester.goalSelector.addGoal(3, new SoulWispHarvestGrassGoal(soulWispForester));
+        if (entity instanceof SoulWispRanger ranger) {
+            int logPoints = skillPoint(SkillEnum.WISP_LOG_COLLECTOR);
+            if (logPoints > 0)
+                ranger.goalSelector.addGoal(2, new SoulWispGatherLogItemsGoal(ranger));
+            int seedPoints = skillPoint(SkillEnum.WISP_SEED_COLLECTOR);
+            if (seedPoints > 0)
+                ranger.goalSelector.addGoal(3, new SoulWispHarvestGrassGoal(ranger));
         }
     }
 

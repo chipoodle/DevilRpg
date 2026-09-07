@@ -39,12 +39,8 @@ public class ModItems {
             () -> new DeferredSpawnEggItem(ModEntities.WISP_ARCHER, 0x944c7f, 0x6b3636,
                     new Item.Properties().stacksTo(16)));
 
-    public static final DeferredHolder<Item, DeferredSpawnEggItem> SOULWISP_CHOPPER_SPAWN_EGG = ITEMS.register("soulwisp_chopper_spawn_egg",
-            () -> new DeferredSpawnEggItem(ModEntities.WISP_CHOPPER, 0x944e7f, 0x7b3636,
-                    new Item.Properties().stacksTo(16)));
-
-    public static final DeferredHolder<Item, DeferredSpawnEggItem> SOULWISP_FORESTER_SPAWN_EGG = ITEMS.register("soulwisp_forester_spawn_egg",
-            () -> new DeferredSpawnEggItem(ModEntities.WISP_FORESTER, 0x944e7f, 0x8b3636,
+    public static final DeferredHolder<Item, DeferredSpawnEggItem> SOULWISP_RANGER_SPAWN_EGG = ITEMS.register("soulwisp_ranger_spawn_egg",
+            () -> new DeferredSpawnEggItem(ModEntities.WISP_RANGER, 0x944e7f, 0x8b3636,
                     new Item.Properties().stacksTo(16)));
 
     public static final DeferredHolder<Item, DeferredSpawnEggItem> AGGRESSIVE_ZOMBIE_SPAWN_EGG = ITEMS.register("aggressive_zombie_spawn_egg",

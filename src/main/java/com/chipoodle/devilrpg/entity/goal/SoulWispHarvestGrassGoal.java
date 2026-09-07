@@ -1,7 +1,7 @@
 package com.chipoodle.devilrpg.entity.goal;
 
 import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.entity.SoulWispForester;
+import com.chipoodle.devilrpg.entity.SoulWisp;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
@@ -26,12 +26,12 @@ public class SoulWispHarvestGrassGoal extends Goal {
 
     private static final Random RANDOM = new Random();
 
-    private final SoulWispForester soulWisp;
+    private final SoulWisp soulWisp;
     private boolean isInventoryFull = false;
     private int inventoryFullTicks = 0;
     private BlockPos targetGrassPos = null; // Posición del pasto que está recolectando
 
-    public SoulWispHarvestGrassGoal(SoulWispForester soulWisp) {
+    public SoulWispHarvestGrassGoal(SoulWisp soulWisp) {
         this.soulWisp = soulWisp;
     }
 

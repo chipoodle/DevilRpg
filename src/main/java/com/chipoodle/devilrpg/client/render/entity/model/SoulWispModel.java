@@ -2,7 +2,6 @@ package com.chipoodle.devilrpg.client.render.entity.model;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.entity.SoulWisp;
-import com.chipoodle.devilrpg.entity.SoulWispChopper;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.model.ArmedModel;
 import net.minecraft.client.model.HierarchicalModel;
@@ -25,8 +24,7 @@ public class SoulWispModel<T extends SoulWisp> extends HierarchicalModel<T> impl
     public static final ModelLayerLocation DEFAULT_LAYER_LOCATION = new ModelLayerLocation(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "soulwisp"), "main");
     public static final ModelLayerLocation ARCHER_LAYER_LOCATION = new ModelLayerLocation(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "soulwisparcher"), "main");
     public static final ModelLayerLocation HEALTH_LAYER_LOCATION = new ModelLayerLocation(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "soulwisphealth"), "main");
-    public static final ModelLayerLocation CHOPPER_LAYER_LOCATION = new ModelLayerLocation(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "soulwispchopper"), "main");
-    public static final ModelLayerLocation FORESTER_LAYER_LOCATION = new ModelLayerLocation(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "soulwispforester"), "main");
+    public static final ModelLayerLocation RANGER_LAYER_LOCATION = new ModelLayerLocation(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "soulwispranger"), "main");
     private final ModelPart root;
     private final ModelPart body;
     private final ModelPart rightArm;
@@ -67,7 +65,7 @@ public class SoulWispModel<T extends SoulWisp> extends HierarchicalModel<T> impl
         float f = Mth.cos(p_104031_ * 5.5F * ((float) Math.PI / 180F)) * 0.1F;
         this.rightArm.zRot = ((float) Math.PI / 5F) + f;
         this.leftArm.zRot = -(((float) Math.PI / 5F) + f);
-        if (entity instanceof SoulWispChopper chopper && chopper.isChopping()) {
+        if (entity.isChopping()) {
             //this.body.xRot = 0.0F;
             this.body.xRot =1.0995574F + Mth.cos(p_104031_ * 45.836624F * ((float) Math.PI / 180F)) * ((float) Math.PI / 180F) * 16.2F;
             this.setArmsCharging(entity.getMainHandItem(), entity.getOffhandItem(), f);

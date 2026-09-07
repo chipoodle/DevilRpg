@@ -7,7 +7,7 @@ import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.entity.SoulWisp;
-import com.chipoodle.devilrpg.entity.SoulWispChopper;
+import com.chipoodle.devilrpg.entity.SoulWispRanger;
 import com.chipoodle.devilrpg.init.ModEntities;
 import com.chipoodle.devilrpg.skillsystem.AbstractSkillExecutor;
 import com.chipoodle.devilrpg.util.SkillEnum;
@@ -26,15 +26,15 @@ import java.util.HashMap;
 import java.util.Objects;
 import java.util.Random;
 
-public class SkillSummonWispChopper extends AbstractSkillExecutor {
+public class SkillSummonWispRanger extends AbstractSkillExecutor {
 
-    public SkillSummonWispChopper(PlayerSkillCapabilityImplementation parentCapability) {
+    public SkillSummonWispRanger(PlayerSkillCapabilityImplementation parentCapability) {
         super(parentCapability);
     }
 
     @Override
     public SkillEnum getSkillEnum() {
-        return SkillEnum.SUMMON_WISP_CHOPPER;
+        return SkillEnum.SUMMON_WISP_RANGER;
     }
 
     @Override
@@ -54,7 +54,7 @@ public class SkillSummonWispChopper extends AbstractSkillExecutor {
                 if (maxSummons <= 0) return; // sin tope de Wisp Army no invocar
 
                 PlayerMinionCapabilityInterface minionCap = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerMinionCapability.INSTANCE);
-                minionCap.summonWispComplete(level, player, rand, () -> summonWisp(level, player, rand), maxSummons, SoulWispChopper.class);
+                minionCap.summonWispComplete(level, player, rand, () -> summonWisp(level, player, rand), maxSummons, SoulWispRanger.class);
             }
         }
         player.getCooldowns().addCooldown(icon.getItem(), 20);
@@ -66,7 +66,7 @@ public class SkillSummonWispChopper extends AbstractSkillExecutor {
         if (!levelIn.isEmptyBlock(blockPos))
             blockPos = blockPos.above();
 
-        SoulWispChopper sw = ModEntities.WISP_CHOPPER.get().create((ServerLevel) levelIn, null, blockPos, MobSpawnType.MOB_SUMMONED, true, true);
+        SoulWispRanger sw = ModEntities.WISP_RANGER.get().create((ServerLevel) levelIn, null, blockPos, MobSpawnType.MOB_SUMMONED, true, true);
         Objects.requireNonNull(sw).updateLevel(playerIn);
         sw.moveTo(blockPos, Mth.wrapDegrees(rand.nextFloat() * 360.0F), 0.0F);
         levelIn.addFreshEntity(sw);

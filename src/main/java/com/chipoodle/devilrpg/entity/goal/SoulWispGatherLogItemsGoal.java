@@ -1,6 +1,6 @@
 package com.chipoodle.devilrpg.entity.goal;
 import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.entity.SoulWispChopper;
+import com.chipoodle.devilrpg.entity.SoulWisp;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.ai.goal.Goal;
@@ -19,11 +19,11 @@ public class SoulWispGatherLogItemsGoal extends Goal {
     private static final int INVENTORY_FULL_COOLDOWN = 100;
     private static final int RADIUS = 10; // Radio de búsqueda para bloques e ítems
 
-    private final SoulWispChopper soulWisp;
+    private final SoulWisp soulWisp;
     private boolean isInventoryFull = false;
     private int inventoryFullTicks = 0;
 
-    public SoulWispGatherLogItemsGoal(SoulWispChopper soulWisp) {
+    public SoulWispGatherLogItemsGoal(SoulWisp soulWisp) {
         this.soulWisp = soulWisp;
     }
 

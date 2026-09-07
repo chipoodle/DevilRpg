@@ -1,7 +1,7 @@
 package com.chipoodle.devilrpg.entity.goal;
 
 import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.entity.SoulWispChopper;
+import com.chipoodle.devilrpg.entity.SoulWisp;
 import net.minecraft.core.BlockPos;
 import net.minecraft.stats.Stats;
 import net.minecraft.tags.BlockTags;
@@ -29,14 +29,14 @@ public class SoulWispChopLogsGoal extends Goal {
     private static final int TICKS_UNTIL_NEXT_HIT_LOG = 15;
     private static final int TICKS_UNTIL_NEXT_HIT_LEAVES = 3;
     private static final int TICKS_WITHOUT_CHOPPING = 30;
-    private final SoulWispChopper soulWisp;
+    private final SoulWisp soulWisp;
     private final int RADIUS = 10;
     private BlockPos targetBlockPos;
     private int ticksUntilNextHit;
     private int currentTicksWithoutChopping;
 
 
-    public SoulWispChopLogsGoal(SoulWispChopper soulWisp) {
+    public SoulWispChopLogsGoal(SoulWisp soulWisp) {
         this.soulWisp = soulWisp;
         resetTargetBlock();
     }

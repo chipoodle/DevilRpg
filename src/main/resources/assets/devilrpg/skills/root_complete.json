@@ -597,7 +597,7 @@
         "rewards": {},
         "capability": "wisp_army",
         "skillmanacost":{
-            "maxskilllevel":"4",
+            "maxskilllevel":"3",
             "manacost":"0",
             "resourcetype":"mana"
         },
@@ -665,18 +665,18 @@
         "parent": "summoning:wisparmy"
     },
     {
-        "id": "summoning:wispchopper",
+        "id": "summoning:wispranger",
         "display": {
-            "description": "Summon a woodcutter wisp that fells trees for you.",
+            "description": "Summon a ranger wisp that fells trees, plants saplings and gathers nature's bounty.",
             "icon": {
                 "item": "devilrpg:item_summon"
             },
-            "title": "Woodcutter wisp",
+            "title": "Ranger wisp",
             "image": "devilrpg:textures/gui/skill/axe-in-stump.png",
             "frame": "task"
         },
         "rewards": {},
-        "capability": "summon_wisp_chopper",
+        "capability": "summon_wisp_ranger",
         "skillmanacost":{
             "maxskilllevel":"20",
             "manacost":"15",
@@ -703,27 +703,7 @@
             "resourcetype":"mana"
         },
         "rewards": {},
-        "parent": "summoning:wispchopper"
-    },
-    {
-        "id": "summoning:wispforester",
-        "display": {
-            "description": "Summon a forester wisp that tends the wilds and gathers nature's bounty.",
-            "icon": {
-                "item": "devilrpg:item_summon"
-            },
-            "title": "Forester wisp",
-            "image": "devilrpg:textures/gui/skill/circle-forest.png",
-            "frame": "task"
-        },
-        "rewards": {},
-        "capability": "summon_wisp_forester",
-        "skillmanacost":{
-            "maxskilllevel":"20",
-            "manacost":"15",
-            "resourcetype":"mana"
-        },
-        "parent": "summoning:wisparmy"
+        "parent": "summoning:wispranger"
     },
     {
         "id": "summoning:wispseedcollector",
@@ -744,6 +724,6 @@
             "resourcetype":"mana"
         },
         "rewards": {},
-        "parent": "summoning:wispforester"
+        "parent": "summoning:wispranger"
     }
 ]

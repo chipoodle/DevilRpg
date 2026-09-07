@@ -67,6 +67,7 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
     protected static final int DURATION_TICKS = 120;
 
     private static final EntityDataAccessor<Integer> DATA_REMAINING_ANGER_TIME = SynchedEntityData.defineId(SoulWisp.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Boolean> DATA_CHOPPING = SynchedEntityData.defineId(SoulWisp.class, EntityDataSerializers.BOOLEAN);
     private static final UniformInt PERSISTENT_ANGER_TIME = TimeUtil.rangeOfSeconds(20, 39);
     private final int SALUD_INICIAL = 4;
 
@@ -109,6 +110,15 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         super.defineSynchedData(builder);
         builder.define(DATA_REMAINING_ANGER_TIME, 0);
+        builder.define(DATA_CHOPPING, false);
+    }
+
+    public boolean isChopping() {
+        return this.entityData.get(DATA_CHOPPING);
+    }
+
+    public void setChopping(boolean chopping) {
+        this.entityData.set(DATA_CHOPPING, chopping);
     }
 
     @Override

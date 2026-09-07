@@ -1,7 +1,7 @@
 package com.chipoodle.devilrpg.entity.goal;
 
 import com.chipoodle.devilrpg.entity.SoulWisp;
-import com.chipoodle.devilrpg.entity.SoulWispChopper;
+import com.chipoodle.devilrpg.entity.SoulWispRanger;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
@@ -58,8 +58,8 @@ public class SoulWispFollowOwnerGoal extends Goal {
             return false;
         } else {
             this.owner = owner;
-            if(soulWisp instanceof SoulWispChopper soulWispChopper) {
-                return soulWispChopper.goalSelector.getAvailableGoals().stream()
+            if(soulWisp instanceof SoulWispRanger ranger) {
+                return ranger.goalSelector.getAvailableGoals().stream()
                         .filter(goal->goal.getGoal() instanceof SoulWispChopLogsGoal
                                 || goal.getGoal() instanceof SoulWispGatherLogItemsGoal)
                         .toList().isEmpty();

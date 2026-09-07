@@ -22,8 +22,7 @@ public class ModCreativeTabs {
                 populator.accept(ModItems.SOULBEAR_SPAWN_EGG.get());
                 populator.accept(ModItems.SOULWISP_HEALTH_SPAWN_EGG.get());
                 populator.accept(ModItems.SOULWISP_ARCHER_SPAWN_EGG.get());
-                populator.accept(ModItems.SOULWISP_CHOPPER_SPAWN_EGG.get());
-                populator.accept(ModItems.SOULWISP_FORESTER_SPAWN_EGG.get());
+                populator.accept(ModItems.SOULWISP_RANGER_SPAWN_EGG.get());
                 populator.accept(ModItems.AGGRESSIVE_ZOMBIE_SPAWN_EGG.get());
             })
             .build());
