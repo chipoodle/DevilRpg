@@ -10,10 +10,10 @@ public final class AggressiveZombieSpawnProfile {
     public static final SpawnScaleProfile INSTANCE = new SpawnScaleProfile(
             200,    // minDistance: no spawnea en los primeros 200 bloques (zona protegida)
             1500,   // maxDistance: probabilidad 1 a partir de 1500 bloques
-            1.3,    // maxScaleMultiplier: +30% de atributos en la distancia máxima
+            1.5,    // maxScaleMultiplier: +50% de atributos en la distancia máxima
             20.0,   // baseHealth
-            0.2,    // baseSpeed
-            3.25    // baseDamage
+            0.15,   // baseSpeed
+            2.25    // baseDamage
     );
 
     private AggressiveZombieSpawnProfile() {
