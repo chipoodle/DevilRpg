@@ -611,7 +611,7 @@
                 "item": "devilrpg:item_summon"
             },
             "title": "Health Wisp",
-            "image": "devilrpg:textures/gui/skill/jellyfish.png",
+            "image": "devilrpg:textures/gui/skill/healing.png",
             "frame": "task"
         },
         "rewards": {},
@@ -652,7 +652,7 @@
                 "item": "devilrpg:item_summon"
             },
             "title": "Ranged wisp",
-            "image": "devilrpg:textures/gui/skill/ice-spear.png",
+            "image": "devilrpg:textures/gui/skill/bowman.png",
             "frame": "task"
         },
         "rewards": {},
@@ -672,7 +672,7 @@
                 "item": "devilrpg:item_summon"
             },
             "title": "Ranger wisp",
-            "image": "devilrpg:textures/gui/skill/axe-in-stump.png",
+            "image": "devilrpg:textures/gui/skill/stump-regrowth.png",
             "frame": "task"
         },
         "rewards": {},
