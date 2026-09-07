@@ -118,10 +118,7 @@ public class SoulWispPlantSaplingsGoal extends Goal {
                         plantSapling(level, targetPlantingPos, EquipmentSlot.MAINHAND)) {
                     DevilRpg.LOGGER.info("Sapling plantado en " + targetPlantingPos);
                     targetPlantingPos = null; // Reinicia la búsqueda
-                    // Plantó un sapling -> ahora prioriza cortar.
-                    if (this.soulWisp instanceof SoulWispRanger ranger) {
-                        ranger.setPlantingPhase(false);
-                    }
+                    // El ciclo de plantar lo alterna el propio wisp (aiStep), no aqui.
                 }
             }
         }

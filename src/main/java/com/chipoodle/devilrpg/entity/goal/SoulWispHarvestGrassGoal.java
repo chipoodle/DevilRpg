@@ -50,12 +50,12 @@ public class SoulWispHarvestGrassGoal extends Goal {
             return false;
         }
 
-        // 🔴 Verificar si tiene un sapling en la mano principal o secundaria
+        // 🔴 Verificar si tiene un sapling en la mano principal o secundaria (entonces va a plantarlo)
         ItemStack mainHandItem = soulWisp.getMainHandItem();
         ItemStack offHandItem = soulWisp.getOffhandItem();
 
-        if (isSapling(mainHandItem) || isSapling(offHandItem) || findNearbySapling().isPresent()) {
-            return false; // 🔴 No ejecutar si tiene un sapling
+        if (isSapling(mainHandItem) || isSapling(offHandItem)) {
+            return false; // 🔴 No cosechar si va a plantar un sapling
         }
 
         return findNearbyGrassBlock() != null;

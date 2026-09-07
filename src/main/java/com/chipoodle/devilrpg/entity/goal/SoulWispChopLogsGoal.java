@@ -139,10 +139,7 @@ public class SoulWispChopLogsGoal extends Goal {
             this.hurtAndBreak(1, this.soulWisp, (entity) -> {}, mainHandItem, (Player) soulWisp.getOwner());
             if (this.soulWisp.level().destroyBlock(targetBlockPos, true, soulWisp)) {
                 resetTargetBlock();
-                // Cortó un tronco -> ahora prioriza plantar.
-                if (this.soulWisp instanceof SoulWispRanger ranger) {
-                    ranger.setPlantingPhase(true);
-                }
+                // El ciclo de corte lo alterna el propio wisp (aiStep), no aqui.
             }
             //this.currentTicksWithoutChopping = 0;
         } else {

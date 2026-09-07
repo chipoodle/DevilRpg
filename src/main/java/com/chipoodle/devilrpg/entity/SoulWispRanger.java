@@ -34,10 +34,10 @@ public class SoulWispRanger extends SoulWisp {
 
     /** Si true está en la fase de "plantar/recolectar"; si false, en la de "cortar". */
     private boolean plantingPhase = false;
-    /** Ticks transcurridos en la fase actual (para el timeout que alterna). */
+    /** Ticks transcurridos en la fase actual (para alternar cuando termina el ciclo). */
     private int phaseTicks = 0;
-    /** Max ticks en una fase antes de alternar (5 s). */
-    private static final int PHASE_TIMEOUT_TICKS = 100;
+    /** Duración de cada ciclo de fase (cortar <-> plantar) antes de alternar (8 s). */
+    private static final int PHASE_TIMEOUT_TICKS = 160;
 
     public SoulWispRanger(EntityType<? extends SoulWispRanger> type, Level worldIn) {
         super(type, worldIn);
