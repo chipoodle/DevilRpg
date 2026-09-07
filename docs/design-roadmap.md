@@ -128,6 +128,10 @@ Con esto, un zombie generado lejos del spawn **y/o** tarde en la partida es más
   amenaza), `BASE_HORDE_SIZE` (3) y `MAX_EXTRA_MEMBERS` (12). El tamaño planeado es
   `BASE_HORDE_SIZE + amenaza*MAX_EXTRA_MEMBERS` (3 → 15 al máximo), y cada zombie pasa por la probabilidad
   del `SpawnScaleProfile` (distancia + amenaza).
+- **Presión nocturna de base (`NormalZombieEntity`/`NormalZombieSpawnRule`/`NormalZombieSpawnProfile`)**:
+  un zombie "normal" (se ve y quema como el vanilla) que spawnea **sin zona protegida** (`minDistance=0`),
+  solo de noche, para que el jugador sienta presión desde el inicio incluso cerca del spawn. Se cuenta por
+  separado del agresivo (clase propia). Configurable: `maxDistance` 500, `maxScaleMultiplier` 2.0.
 
 > TODO (siguiente): que las hordas apunten al **asentamiento más cercano** en vez de al jugador, para
 > conectar con la Iteración 3.

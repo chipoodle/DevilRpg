@@ -3,6 +3,7 @@ package com.chipoodle.devilrpg.eventsubscriber.common;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.spawner.AggressiveZombieSpawnRule;
 import com.chipoodle.devilrpg.spawner.CustomSpawner;
+import com.chipoodle.devilrpg.spawner.NormalZombieSpawnRule;
 import com.chipoodle.devilrpg.survival.HordeManager;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
@@ -32,6 +33,7 @@ public class CustomSpawnerTickHandler {
                 CustomSpawner s = new CustomSpawner(l);
                 // Aqui se registran las entidades custom. Anade mas reglas para mas mobs.
                 s.register(new AggressiveZombieSpawnRule());
+                s.register(new NormalZombieSpawnRule());
                 return s;
             });
             spawner.tick();

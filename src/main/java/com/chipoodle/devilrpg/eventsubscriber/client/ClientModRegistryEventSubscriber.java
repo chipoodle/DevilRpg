@@ -85,6 +85,8 @@ public final class ClientModRegistryEventSubscriber {
         event.registerEntityRenderer(ModEntities.SUNFLOWER_SHULKER.get(), SunflowerShulkerRenderer::new);
         event.registerEntityRenderer(ModEntities.EXPLODING_SPORE_BULLET.get(), ExplodingSporeBulletRenderer::new);
         event.registerEntityRenderer(ModEntities.AGGRESSIVE_ZOMBIE.get(), AggressiveZombieRenderer::new);
+        // El zombie "normal" se ve y se comporta como el vanilla -> reutiliza ZombieRenderer.
+        event.registerEntityRenderer(ModEntities.NORMAL_ZOMBIE.get(), ZombieRenderer::new);
         //ItemBlockRenderTypes.setRenderLayer(ModBlocks.SOUL_VINE_BLOCK.get(), RenderType.translucent());
         //event.registerEntityRenderer(ModEntityTypes.WISP.get(), SoulWispHumanoidRenderer::new);
 
