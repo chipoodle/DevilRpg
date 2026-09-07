@@ -348,6 +348,15 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     }
 
     @Override
+    /**
+     * Punto de entrada del render de la pantalla. Orden:
+     * 1) Fondo de la GUI (renderBackground, una sola vez).
+     * 2) Indicador de página (X / Y) si hay varias pestañas.
+     * 3) Traslada el pose por (offsetLeft, offsetTop) y lo escala por fitScale (unidades de diseño -> px).
+     * 4) renderInside (ventana interior: árbol+mosaico) y renderWindow (marco + pestañas + título + info).
+     * 5) super.render para dibujar los botones renderables (encima de la ventana).
+     * 6) Indicadores superpuestos (skill arrastrado, "Set X/Y", nombre del fondo).
+     */
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         // Fondo UNA sola vez, antes de la ventana (no se repite encima de esta)
         this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
@@ -542,6 +551,12 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     }
 
     @SuppressWarnings("deprecation")
+    /**
+     * Pinta la VENTANA PRINCIPAL de la pantalla de skills: el marco (window-256b.png) escalado al
+     * tamaño de diseño (WINDOW_WIDTH x WINDOW_HEIGHT+INFO_SPACE) y, encima, las pestañas (tabs), su
+     * icono, el título "Skills" y la info de nivel/puntos sin usar. Todo en coordenadas locales de la
+     * ventana (el pose ya fue trasladado/escalado por {@link #render}).
+     */
     public void renderWindow(GuiGraphics guiGraphics) {
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
         RenderSystem.enableBlend();
@@ -605,11 +620,14 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     static DecimalFormat d = new DecimalFormat("#,###.#");
 
     /**
-     * Pinta el fondo incluyendo los botones de las skills
+     * Pinta la VENTANA INTERIOR: el área donde se ve el árbol de habilidades (el rectángulo que empieza
+     * en TAB_BACKGROUND_WINDOW_AREA_OFFSET_X/Y y mide INNER_SCREEN_WIDTH x INNER_SCREEN_HEIGHT). Si hay
+     * una pestaña seleccionada dibuja su contenido (mosaico de fondo + árbol) con recorte (scissor) y
+     * sus tooltips; si no, pinta el mensaje "vacío"/"triste".
      *
-     * @param poseStack poseStack
-     * @param mouseX X mouse
-     * @param mouseY Y mouse
+     * @param guiGraphics objeto de dibujo de la GUI
+     * @param mouseX      X del cursor (px de pantalla)
+     * @param mouseY      Y del cursor (px de pantalla)
      */
     @SuppressWarnings("deprecation")
     private void renderInside(GuiGraphics guiGraphics, int mouseX, int mouseY) {

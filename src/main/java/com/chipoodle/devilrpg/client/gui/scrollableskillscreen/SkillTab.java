@@ -24,14 +24,31 @@ import java.util.stream.Collectors;
 
 @OnlyIn(Dist.CLIENT)
 public class SkillTab {
+    // ---- Constantes de dibujo del contenido del árbol de habilidades ----
+    // El contenido se dibuja en coordenadas locales del área interior (la "ventana interior" de la
+    // pantalla: el rectángulo que empieza en (TAB_BACKGROUND_WINDOW_AREA_OFFSET_X/Y) y mide
+    // INNER_SCREEN_WIDTH x INNER_SCREEN_HEIGHT). Estas constantes definen su tamaño y el del mosaico.
+
+    /** (No usado) nº de repeticiones del mosaico en X (legado/antiguo; mantenido por referencia). */
     private static final int BACKGROUND_CHUNKS_X_LOOP = 5;//18
+    /** (No usado) nº de repeticiones del mosaico en Y (legado/antiguo; mantenido por referencia). */
     private static final int BACKGROUND_CHUNKS_Y_LOOP = 3;//11
 
+    /**
+     * Tamaño (px en unidades de diseño) de cada "chunk" del fondo en mosaico. Es a la vez el tamaño de
+     * la tesela dibujada y el tamaño de la región de textura muestreada (0,0,64,64). Al repetirla con el
+     * offset del scroll se forma el fondo que se mueve con el árbol.
+     */
     private static final int BACKGROUND_CHUNKS = 64;//16
 
+    /** Alto (px) del área de tooltip/descripción de un widget de skill. */
     private static final int WIDGET_HEIGHT = 27;
+    /** Ancho (px) del área de tooltip/descripción de un widget de skill. */
     private static final int WIDGET_WIDTH = 28;
+
+    /** Ancho del área visible donde se dibuja el árbol de habilidades (mosaico + skills). */
     public static final int TAB_BACKGROUND_WIDTH = 260; //282
+    /** Alto del área visible donde se dibuja el árbol de habilidades (mosaico + skills). */
     public static final int TAB_BACKGROUND_HEIGHT = 172;
     private final Minecraft minecraft;
     private final SkillScreen screen;
@@ -142,15 +159,18 @@ public class SkillTab {
     }
 
     /**
-     * Pinta la imagen de fondo dinámicamente inclusive al hacer scroll
+     * Pinta el contenido de la VENTANA INTERIOR (el área del árbol de habilidades): el fondo negro,
+     * el mosaico dinámico (generado por {@link #generateBackgroundImageChunks}) y las líneas y los
+     * iconos del árbol, todo recortado (scissor) al rectángulo del área para que el contenido que se
+     * sale no se dibuje fuera de la ventana.
      *
-     * @param guiGraphics
-     * @param localX     origen X local de la ventana (translate del pose)
-     * @param localY     origen Y local de la ventana (translate del pose)
-     * @param scissorX   coordenada X de pantalla (virtual) del area del arbol
-     * @param scissorY   coordenada Y de pantalla (virtual) del area del arbol
-     * @param scissorW   ancho del area del arbol en pantalla (virtual)
-     * @param scissorH   alto del area del arbol en pantalla (virtual)
+     * @param guiGraphics objeto de dibujo de la GUI
+     * @param localX      origen X local de la ventana interior (translate aplicado al pose)
+     * @param localY      origen Y local de la ventana interior (translate aplicado al pose)
+     * @param scissorX    X de pantalla (virtual) del borde izquierdo del área del árbol
+     * @param scissorY    Y de pantalla (virtual) del borde superior del área del árbol
+     * @param scissorW    ancho del área del árbol en pantalla (virtual)
+     * @param scissorH    alto del área del árbol en pantalla (virtual)
      */
     public void drawContents(GuiGraphics guiGraphics, int localX, int localY,
                              int scissorX, int scissorY, int scissorW, int scissorH) {
