@@ -44,9 +44,9 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     private static final int INITIAL_TEXTURE_WIDTH = 1317;
     private static final int INITIAL_TEXTURE_HEIGHT = 1194;
     private static final int INNER_SCREEN_WIDTH = 282;
-    private static final int INNER_SCREEN_HEIGHT = 162;
+    private static final int INNER_SCREEN_HEIGHT = 160;
     private static final int TAB_BACKGROUND_WINDOW_AREA_OFFSET_X = 22;
-    private static final int TAB_BACKGROUND_WINDOW_AREA_OFFSET_Y = 36;
+    private static final int TAB_BACKGROUND_WINDOW_AREA_OFFSET_Y = 38;
     private static final int WINDOW_WIDTH = 304;
     private static final int WINDOW_HEIGHT = 248;
     private static final int INFO_SPACE = 26;

@@ -562,7 +562,7 @@ public class SkillWidget {
         }
 
         String text = String.valueOf(level);
-        float scale = 0.7F;
+        float scale = 0.5F;
         int textW = (int) (this.minecraft.font.width(text) * scale);
         int textH = (int) (this.minecraft.font.lineHeight * scale);
 
