@@ -257,4 +257,9 @@ public class SkillProgress implements Comparable<SkillProgress> {
 	public int getMaxSkillPoints() {
 		return this.maxSkillPoint;
 	}
+
+	/** Nivel actual (puntos asignados) de la skill. */
+	public int getSkillPoint() {
+		return this.skillPoint;
+	}
 }

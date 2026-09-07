@@ -341,6 +341,9 @@ public class SkillWidget {
             // Pinta el marco botón
             drawButton(guiGraphics, x, y, false, this.getDisplayInfo().getImage(), false, isDisabled());
 
+            // Pinta el nivel actual como número pequeño en la esquina inferior derecha
+            drawLevelBadge(guiGraphics, x, y);
+
             // Pinta a los hijos
             for (SkillWidget childrenEntry : this.children) {
                 childrenEntry.drawSkills(guiGraphics, x, y);
@@ -542,6 +545,42 @@ public class SkillWidget {
 
         matrixStack.popPose();
 
+    }
+
+    /**
+     * Dibuja un número pequeño con el nivel actual (puntos asignados) en la esquina
+     * inferior derecha del icono, para ver el nivel de la skill de un vistazo sin
+     * pasar el cursor.
+     */
+    private void drawLevelBadge(GuiGraphics guiGraphics, int x, int y) {
+        if (this.skillProgress == null) {
+            return;
+        }
+        int level = this.skillProgress.getSkillPoint();
+        if (level <= 0) {
+            return; // solo skills con puntos asignados
+        }
+
+        String text = String.valueOf(level);
+        float scale = 0.7F;
+        int textW = (int) (this.minecraft.font.width(text) * scale);
+        int textH = (int) (this.minecraft.font.lineHeight * scale);
+
+        // Marco del icono: (x + this.x + 3, y + this.y), tamaño FRAME_SIZE
+        int fx = x + this.x + 3;
+        int fy = y + this.y;
+        int bx = fx + FRAME_SIZE - 3 - textW; // borde derecho (un poco dentro del marco)
+        int by = fy + FRAME_SIZE - 3 - textH; // borde inferior
+
+        // Fondo oscuro para que el número se lea sobre el icono
+        guiGraphics.fill(bx - 1, by - 1, bx + textW + 1, by + textH + 1, 0xA0000000);
+
+        PoseStack pose = guiGraphics.pose();
+        pose.pushPose();
+        pose.translate(bx, by, 0);
+        pose.scale(scale, scale, 1);
+        guiGraphics.drawString(this.minecraft.font, text, 0, 0, 0xFFFFFF, false);
+        pose.popPose();
     }
 
     public boolean isMouseOver(int scrollX, int scrollY, int mouseX, int mouseY) {
