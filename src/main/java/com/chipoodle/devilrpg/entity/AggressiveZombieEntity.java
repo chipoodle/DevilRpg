@@ -4,6 +4,8 @@ import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
+import com.chipoodle.devilrpg.spawnprofile.AggressiveZombieSpawnProfile;
+import com.chipoodle.devilrpg.spawnprofile.SpawnScaleProfile;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
@@ -27,8 +29,9 @@ import java.util.Objects;
 
 public class AggressiveZombieEntity extends Zombie {
 
-    private static final int MIN_DISTANCE = 200;  // No spawnea en los primeros 200 bloques
-    private static final int MAX_DISTANCE = 1500; // Distancia después de la cual la probabilidad es 100%
+    // Los limites de distancia (200..1500) y la base/escala de atributos viven en
+    // AggressiveZombieSpawnProfile (SpawnScaleProfile), compartidos con su spawnRule sin acoplamiento.
+    private static final SpawnScaleProfile SPAWN_PROFILE = AggressiveZombieSpawnProfile.INSTANCE;
 
     private double spawnDistance = 0;  // Se guarda al spawnear el zombie
     private boolean attributesAdjusted = false; // Para asegurarnos de que solo se ajusta una vez
@@ -62,7 +65,7 @@ public class AggressiveZombieEntity extends Zombie {
     }
 
     public static boolean checkSpawnRules(EntityType<AggressiveZombieEntity> entityType, ServerLevelAccessor world, MobSpawnType spawnType, BlockPos pos, RandomSource random) {
-        Player nearestPlayer = world.getNearestPlayer(pos.getX(), pos.getY(), pos.getZ(), MAX_DISTANCE, false);
+        Player nearestPlayer = world.getNearestPlayer(pos.getX(), pos.getY(), pos.getZ(), SPAWN_PROFILE.maxDistance(), false);
 
         if (nearestPlayer == null) {
             return false; // No hay jugadores cercanos, no spawnea
@@ -84,14 +87,8 @@ public class AggressiveZombieEntity extends Zombie {
     }
 
     private static double calculateSpawnProbability(double distance) {
-        if (distance < MIN_DISTANCE) {
-            return 0.0; // No spawnear dentro de los primeros 70 bloques
-        }
-        if (distance > MAX_DISTANCE) {
-            return 1.0; // Probabilidad máxima después de 2000 bloques
-        }
-        // Ajustamos la curva de spawn para hacerla progresiva (lineal)
-        return (distance - MIN_DISTANCE) / (MAX_DISTANCE - MIN_DISTANCE);
+        // Curva de probabilidad unificada (zona protegida -> max), igual que la usada por la spawnRule.
+        return SPAWN_PROFILE.probability(distance);
     }
 
     @Override
@@ -109,7 +106,7 @@ public class AggressiveZombieEntity extends Zombie {
         super.setPos(x, y, z);
 
         if (spawnDistance == 0) { // Solo se calcula al momento del spawn
-            Player nearestPlayer = this.level().getNearestPlayer(this, MAX_DISTANCE);
+            Player nearestPlayer = this.level().getNearestPlayer(this, SPAWN_PROFILE.maxDistance());
             if (nearestPlayer != null) {
                 PlayerAuxiliaryCapabilityInterface playerCapability = IGenericCapability.getUnwrappedPlayerCapability(nearestPlayer, PlayerAuxiliaryCapability.INSTANCE);
                 Vec3 playerSpawn = playerCapability.getSpawnPoint();
@@ -122,26 +119,17 @@ public class AggressiveZombieEntity extends Zombie {
     }
 
     private void adjustAttributesBasedOnSpawnDistance() {
-        if (spawnDistance < MIN_DISTANCE) {
+        if (spawnDistance < SPAWN_PROFILE.minDistance()) {
             return; // Si está en la zona de spawn, no cambia atributos
         }
 
-        // Normalizar la distancia entre 0 (MIN_DISTANCE) y 1 (MAX_DISTANCE)
-        double normalizedDistance = (spawnDistance - MIN_DISTANCE) / (MAX_DISTANCE - MIN_DISTANCE);
+        // Factor de escala lineal segun la distancia (1.0 en la zona protegida -> 1.0+multiplier al max).
+        double scaleFactor = SPAWN_PROFILE.scaleFactor(spawnDistance);
 
-
-        // Aplicar un crecimiento lineal en función de la distancia
-        double scaleFactor = 1.0 + (normalizedDistance * 1.3);
-
-        // Valores base de los atributos
-        double baseHealth = 20.0D;
-        double baseSpeed = 0.2D;
-        double baseDamage = 3.25D;
-
-        // Aplicar escalado lineal sin limitaciones
-        Objects.requireNonNull(this.getAttribute(Attributes.MAX_HEALTH)).setBaseValue(baseHealth * scaleFactor);
-        Objects.requireNonNull(this.getAttribute(Attributes.MOVEMENT_SPEED)).setBaseValue(baseSpeed * scaleFactor);
-        Objects.requireNonNull(this.getAttribute(Attributes.ATTACK_DAMAGE)).setBaseValue(baseDamage * scaleFactor);
+        // Aplicar el escalado sobre los valores base del perfil
+        Objects.requireNonNull(this.getAttribute(Attributes.MAX_HEALTH)).setBaseValue(SPAWN_PROFILE.baseHealth() * scaleFactor);
+        Objects.requireNonNull(this.getAttribute(Attributes.MOVEMENT_SPEED)).setBaseValue(SPAWN_PROFILE.baseSpeed() * scaleFactor);
+        Objects.requireNonNull(this.getAttribute(Attributes.ATTACK_DAMAGE)).setBaseValue(SPAWN_PROFILE.baseDamage() * scaleFactor);
 
         DevilRpg.LOGGER.info("Attributes Scaled => scaleFactor: {} | DISTANCE: {} | MAX_HEALTH: {} | MOVEMENT_SPEED: {} | ATTACK_DAMAGE: {}",
                 scaleFactor,

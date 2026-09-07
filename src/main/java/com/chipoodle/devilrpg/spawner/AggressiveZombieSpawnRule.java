@@ -5,6 +5,8 @@ import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
 import com.chipoodle.devilrpg.init.ModEntities;
+import com.chipoodle.devilrpg.spawnprofile.AggressiveZombieSpawnProfile;
+import com.chipoodle.devilrpg.spawnprofile.SpawnScaleProfile;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -30,8 +32,10 @@ public class AggressiveZombieSpawnRule implements CustomSpawnRule {
     private static final int MAX_INTERVAL_SECONDS = 3 * 60;  // intervalo maximo entre intentos (3 min)
     private static final int MAX_ALIVE_IN_WORLD = 30;        // limite de zombies agresivos vivos simultaneos
 
-    private static final int MIN_PLAYER_DISTANCE = 200;      // por debajo: probabilidad 0
-    private static final int MAX_PLAYER_DISTANCE = 1500;     // por encima: probabilidad 1
+    // Limites de distancia (debil a fuerte) y base/escala de atributos tomados del perfil compartido,
+    // para no duplicarlos y no acoplarse con la entidad.
+    private static final SpawnScaleProfile PROFILE = AggressiveZombieSpawnProfile.INSTANCE;
+
     private static final int MIN_SPAWN_DISTANCE = 48;        // minimo lejos del jugador (bloques)
     private static final int MAX_SPAWN_DISTANCE = 96;        // maximo lejos del jugador (bloques)
     private static final int SURFACE_SEARCH_DOWN = 16;       // bloques hacia abajo para hallar suelo
@@ -75,15 +79,15 @@ public class AggressiveZombieSpawnRule implements CustomSpawnRule {
             return 0.0F;
         }
         double distance = Math.sqrt(player.distanceToSqr(spawnPoint));
-        if (distance < MIN_PLAYER_DISTANCE) {
+        if (distance < PROFILE.minDistance()) {
             DevilRpg.LOGGER.debug("[AggressiveZombieSpawnRule] Jugador {} a {} bloques (< {}), prob. 0",
-                    player.getGameProfile().getName(), Math.round(distance), MIN_PLAYER_DISTANCE);
+                    player.getGameProfile().getName(), Math.round(distance), PROFILE.minDistance());
             return 0.0F;
         }
-        if (distance > MAX_PLAYER_DISTANCE) {
+        if (distance > PROFILE.maxDistance()) {
             return 1.0F;
         }
-        float chance = (float) ((distance - MIN_PLAYER_DISTANCE) / (MAX_PLAYER_DISTANCE - MIN_PLAYER_DISTANCE));
+        float chance = (float) PROFILE.probability(distance);
         DevilRpg.LOGGER.debug("[AggressiveZombieSpawnRule] Jugador {} a {} bloques, prob. {}",
                 player.getGameProfile().getName(), Math.round(distance), String.format("%.2f", chance));
         return chance;
