@@ -1,0 +1,132 @@
+package com.chipoodle.devilrpg.client.gui.scrollableskillscreen;
+
+import com.chipoodle.devilrpg.DevilRpg;
+import net.minecraft.client.Minecraft;
+import net.minecraft.resources.ResourceLocation;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Gestor de los fondos del árbol de habilidades.
+ * <p>
+ * Mantiene la lista de fondos disponibles (el mosaico por defecto mandala-tile.png y cada una de
+ * las imágenes de {@code textures/gui/mandalas/}) y el índice del seleccionado, para poder recorrerlos
+ * con los botones temporales de la pantalla y elegir cuál será el definitivo.
+ * <p>
+ * El índice es estático para que la selección se conserve al cerrar y reabrir la pantalla durante la
+ * sesión (es una herramienta de previsualización/elección).
+ */
+public final class SkillBackgroundManager {
+
+    /** Fondo por defecto: mosaico teselado a partir de mandala-tile.png. */
+    public static final ResourceLocation DEFAULT_BACKGROUND = ResourceLocation.fromNamespaceAndPath(
+            DevilRpg.MODID, "textures/gui/skill/mandala-tile.png");
+
+    /** Ruta lógica del directorio de mandalas dentro del namespace del mod. */
+    private static final String MANDALAS_PATH = "textures/gui/mandalas";
+
+    /** Lista de fondos: índice 0 = default, resto = imágenes de mandalas/ (ordenadas por nombre). */
+    private static List<ResourceLocation> backgrounds;
+
+    /** Índice del fondo seleccionado. */
+    private static int selectedIndex = 0;
+
+    /** Caché del tamaño nativo (w, h) de cada PNG de fondo. */
+    private static final Map<ResourceLocation, int[]> SIZE_CACHE = new HashMap<>();
+
+    private SkillBackgroundManager() {
+    }
+
+    private static List<ResourceLocation> buildBackgrounds() {
+        List<ResourceLocation> list = new ArrayList<>();
+        list.add(DEFAULT_BACKGROUND);
+        try {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc != null && mc.getResourceManager() != null) {
+                mc.getResourceManager()
+                        .listResources(MANDALAS_PATH, rl -> rl.getPath().endsWith(".png"))
+                        .keySet().stream()
+                        .sorted(Comparator.comparing(ResourceLocation::getPath))
+                        .forEach(list::add);
+            }
+        } catch (Exception e) {
+            DevilRpg.LOGGER.error("Error cargando fondos de mandalas", e);
+        }
+        if (list.isEmpty()) {
+            list.add(DEFAULT_BACKGROUND);
+        }
+        return list;
+    }
+
+    private static List<ResourceLocation> getBackgrounds() {
+        if (backgrounds == null) {
+            backgrounds = buildBackgrounds();
+        }
+        return backgrounds;
+    }
+
+    /** Devuelve el ResourceLocation del fondo actualmente seleccionado. */
+    public static ResourceLocation getSelected() {
+        List<ResourceLocation> list = getBackgrounds();
+        int idx = Math.max(0, Math.min(selectedIndex, list.size() - 1));
+        return list.get(idx);
+    }
+
+    /** true si el fondo seleccionado es el mosaico por defecto (mandala-tile.png). */
+    public static boolean isDefaultSelected() {
+        return getSelected().equals(DEFAULT_BACKGROUND);
+    }
+
+    /** Nombre de archivo del fondo seleccionado (sin la ruta), para mostrarlo bajo los botones. */
+    public static String getSelectedName() {
+        String path = getSelected().getPath();
+        int slash = path.lastIndexOf('/');
+        return slash >= 0 ? path.substring(slash + 1) : path;
+    }
+
+    /**
+     * Devuelve el tamaño nativo (ancho, alto) en píxeles de una imagen de fondo, leyéndolo del
+     * resource pack la primera vez y cacheándolo después (para no leer el archivo en cada frame).
+     */
+    public static int[] getSize(ResourceLocation rl) {
+        return SIZE_CACHE.computeIfAbsent(rl, loc -> {
+            try {
+                Minecraft mc = Minecraft.getInstance();
+                if (mc != null && mc.getResourceManager() != null) {
+                    try (InputStream in = mc.getResourceManager().getResource(loc).orElseThrow().open()) {
+                        byte[] header = new byte[24];
+                        int read = in.read(header);
+                        if (read >= 24) {
+                            int w = ((header[16] & 0xFF) << 24) | ((header[17] & 0xFF) << 16)
+                                    | ((header[18] & 0xFF) << 8) | (header[19] & 0xFF);
+                            int h = ((header[20] & 0xFF) << 24) | ((header[21] & 0xFF) << 16)
+                                    | ((header[22] & 0xFF) << 8) | (header[23] & 0xFF);
+                            return new int[]{w, h};
+                        }
+                    }
+                }
+            } catch (IOException e) {
+                DevilRpg.LOGGER.error("Error leyendo el tamaño del fondo {}", loc, e);
+            }
+            return new int[]{256, 256};
+        });
+    }
+
+    /** Avanza al siguiente fondo (vuelve al primero al pasar el último). */
+    public static void next() {
+        List<ResourceLocation> list = getBackgrounds();
+        selectedIndex = (selectedIndex + 1) % list.size();
+    }
+
+    /** Retrocede al fondo anterior (vuelve al último al pasar el primero). */
+    public static void prev() {
+        List<ResourceLocation> list = getBackgrounds();
+        selectedIndex = (selectedIndex - 1 + list.size()) % list.size();
+    }
+}

@@ -190,28 +190,37 @@ public class SkillTab {
         int i = Mth.floor(this.scrollX);
         int j = Mth.floor(this.scrollY);
 
-        // Textura teselable generada a partir de mandala-a.png (64x64 seamless).
-        // Se repite en mosaico a 1:1 -> patron nitido (la imagen original de 1414x1414
-        // se aplastaba en cada baldosa y se veia borrosa).
-        ResourceLocation resourcelocation = ResourceLocation.parse(
-                DevilRpg.MODID + ":textures/gui/skill/mandala-tile.png");
+        ResourceLocation bg = SkillBackgroundManager.getSelected();
 
-        // Fuerza filtrado NEAREST para que la ampliacion de la textura se vea nitida
-        SkillWidget.forceNearestFilter(resourcelocation);
+        if (SkillBackgroundManager.isDefaultSelected()) {
+            // Textura teselable generada a partir de mandala-a.png (64x64 seamless).
+            // Se repite en mosaico a 1:1 -> patron nitido (la imagen original de 1414x1414
+            // se aplastaba en cada baldosa y se veia borrosa).
+            ResourceLocation resourcelocation = bg;
 
-        // El fondo se dibuja en mosaico aplicando el offset del scroll (i/j) para que se mueva
-        // junto al arbol de habilidades al arrastrar con el mouse. El rango se calcula dinamicamente
-        // para que siempre cubra el area visible (0..TAB_BACKGROUND_WIDTH/HEIGHT) sin huecos.
-        int fromX = (int) Math.floor((double) (0 - i) / BACKGROUND_CHUNKS) - 1;
-        int toX = (int) Math.floor((double) (TAB_BACKGROUND_WIDTH - i) / BACKGROUND_CHUNKS) + 1;
-        int fromY = (int) Math.floor((double) (0 - j) / BACKGROUND_CHUNKS) - 1;
-        int toY = (int) Math.floor((double) (TAB_BACKGROUND_HEIGHT - j) / BACKGROUND_CHUNKS) + 1;
-        for (int i1 = fromX; i1 <= toX; ++i1) {
-            for (int j1 = fromY; j1 <= toY; ++j1) {
-                guiGraphics.blit(resourcelocation, i + BACKGROUND_CHUNKS * i1, j + BACKGROUND_CHUNKS * j1, 0.0F, 0.0F,
-                        BACKGROUND_CHUNKS, BACKGROUND_CHUNKS, BACKGROUND_CHUNKS, BACKGROUND_CHUNKS);
+            // Fuerza filtrado NEAREST para que la ampliacion de la textura se vea nitida
+            SkillWidget.forceNearestFilter(resourcelocation);
+
+            // El fondo se dibuja en mosaico aplicando el offset del scroll (i/j) para que se mueva
+            // junto al arbol de habilidades al arrastrar con el mouse. El rango se calcula dinamicamente
+            // para que siempre cubra el area visible (0..TAB_BACKGROUND_WIDTH/HEIGHT) sin huecos.
+            int fromX = (int) Math.floor((double) (0 - i) / BACKGROUND_CHUNKS) - 1;
+            int toX = (int) Math.floor((double) (TAB_BACKGROUND_WIDTH - i) / BACKGROUND_CHUNKS) + 1;
+            int fromY = (int) Math.floor((double) (0 - j) / BACKGROUND_CHUNKS) - 1;
+            int toY = (int) Math.floor((double) (TAB_BACKGROUND_HEIGHT - j) / BACKGROUND_CHUNKS) + 1;
+            for (int i1 = fromX; i1 <= toX; ++i1) {
+                for (int j1 = fromY; j1 <= toY; ++j1) {
+                    guiGraphics.blit(resourcelocation, i + BACKGROUND_CHUNKS * i1, j + BACKGROUND_CHUNKS * j1, 0.0F, 0.0F,
+                            BACKGROUND_CHUNKS, BACKGROUND_CHUNKS, BACKGROUND_CHUNKS, BACKGROUND_CHUNKS);
+                }
             }
+        } else {
+            // Fondo elegido entre las imágenes de mandalas/: se muestra la imagen completa,
+            // estirada para cubrir el área del árbol (no se tesela ni se recorta).
+            int[] size = SkillBackgroundManager.getSize(bg);
+            guiGraphics.blit(bg, 0, 0, TAB_BACKGROUND_WIDTH, TAB_BACKGROUND_HEIGHT, size[0], size[1]);
         }
+
         // pinta las lineas
         this.root.drawConnectionLineToParent(guiGraphics, i, j, true);
         this.root.drawConnectionLineToParent(guiGraphics, i, j, false);
