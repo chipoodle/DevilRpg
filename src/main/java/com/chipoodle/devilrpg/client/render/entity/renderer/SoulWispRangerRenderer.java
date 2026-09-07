@@ -1,6 +1,7 @@
 package com.chipoodle.devilrpg.client.render.entity.renderer;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.client.render.entity.layer.SoulWispGelLayer;
 import com.chipoodle.devilrpg.client.render.entity.model.SoulWispModel;
 import com.chipoodle.devilrpg.entity.SoulWispRanger;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
@@ -14,11 +15,12 @@ import org.jetbrains.annotations.NotNull;
 
 @OnlyIn(Dist.CLIENT)
 public class SoulWispRangerRenderer extends MobRenderer<SoulWispRanger, SoulWispModel<SoulWispRanger>> {
-    public static final ResourceLocation ALLAY_TEXTURE = ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "textures/entity/soulwisp/allay_yellow.png");
+    public static final ResourceLocation ALLAY_TEXTURE = ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "textures/entity/soulwisp/allay_green.png");
 
     public SoulWispRangerRenderer(EntityRendererProvider.Context p_234551_) {
         super(p_234551_, new SoulWispModel<>(p_234551_.bakeLayer(SoulWispModel.RANGER_LAYER_LOCATION)), 0.4F);
         this.addLayer(new ItemInHandLayer<>(this, p_234551_.getItemInHandRenderer()));
+        this.addLayer(new SoulWispGelLayer<>(this, p_234551_.getModelSet()));
     }
 
     @Override

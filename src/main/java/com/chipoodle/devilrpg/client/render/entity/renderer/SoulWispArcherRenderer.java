@@ -1,6 +1,7 @@
 package com.chipoodle.devilrpg.client.render.entity.renderer;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.client.render.entity.layer.SoulWispGelLayer;
 import com.chipoodle.devilrpg.client.render.entity.model.SoulWispModel;
 import com.chipoodle.devilrpg.entity.SoulWispArcher;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
@@ -19,6 +20,7 @@ public class SoulWispArcherRenderer extends MobRenderer<SoulWispArcher, SoulWisp
 	public SoulWispArcherRenderer(EntityRendererProvider.Context p_234551_) {
 		super(p_234551_, new SoulWispModel<>(p_234551_.bakeLayer(SoulWispModel.ARCHER_LAYER_LOCATION)), 0.4F);
 		this.addLayer(new ItemInHandLayer<>(this, p_234551_.getItemInHandRenderer()));
+		this.addLayer(new SoulWispGelLayer<>(this, p_234551_.getModelSet()));
 	}
 
 	@Override
