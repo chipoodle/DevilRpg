@@ -24,6 +24,10 @@ public interface PlayerAuxiliaryCapabilityInterface extends IGenericCapability {
     Vec3 getSpawnPoint();
     void setSpawnPoint(Vec3 blockPos, Player player);
 
+    /** Punto de inicio del mundo (el círculo ritual). Se usa para la dificultad y los objetivos; es distinto del respawn (cama). */
+    Vec3 getAnchorPoint();
+    void setAnchorPoint(Vec3 anchorPoint, Player player);
+
     /** Índice del objetivo de progresión actual (crece al completarlo; obliga a alejarse del spawn). */
     int getObjectiveIndex();
     void setObjectiveIndex(int objectiveIndex, Player player);

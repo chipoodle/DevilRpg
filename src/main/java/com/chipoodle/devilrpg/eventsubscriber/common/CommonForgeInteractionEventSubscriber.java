@@ -281,6 +281,11 @@ public class CommonForgeInteractionEventSubscriber {
             if (spawnPoint == null) {
                 playerCapability.setSpawnPoint(player.position(), player);
             }
+            // El ANCLA (círculo ritual de inicio del mundo) se fija una sola vez al spawn del mundo.
+            if (playerCapability.getAnchorPoint() == null && event.getLevel() instanceof ServerLevel serverLevel) {
+                BlockPos anchor = serverLevel.getSharedSpawnPos();
+                playerCapability.setAnchorPoint(Vec3.atCenterOf(anchor), player);
+            }
         }
         /*if (!event.getLevel().isClientSide() && event.getEntity() instanceof Zombie) {
             if (event.getLevel().getRandom().nextInt(100) < 5) { // Probabilidad del 5%

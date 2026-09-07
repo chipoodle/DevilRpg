@@ -30,9 +30,12 @@ public final class ObjectiveManager {
         if (aux == null) {
             return;
         }
-        Vec3 spawn = aux.getSpawnPoint();
+        Vec3 spawn = aux.getAnchorPoint();
         if (spawn == null) {
-            return; // sin spawn registrado -> sin objetivos
+            spawn = aux.getSpawnPoint(); // respaldo: si aún no hay ancla, usar el spawn del jugador
+        }
+        if (spawn == null) {
+            return; // sin ancla/sin spawn -> sin objetivos
         }
         int index = aux.getObjectiveIndex();
         BlockPos target = ObjectiveTargets.targetOf(spawn, index);

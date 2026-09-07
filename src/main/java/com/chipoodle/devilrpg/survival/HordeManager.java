@@ -124,13 +124,16 @@ public final class HordeManager {
         return bestDistance > min ? best : null;
     }
 
-    /** Distancia horizontal del jugador a su punto de inicio (o -1 si no tiene). */
+    /** Distancia horizontal del jugador a su punto de inicio (ancla; o el spawn si no hay ancla). */
     private static double distanceToSpawn(ServerPlayer player) {
         PlayerAuxiliaryCapabilityInterface aux = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerAuxiliaryCapability.INSTANCE);
         if (aux == null) {
             return -1.0;
         }
-        Vec3 spawn = aux.getSpawnPoint();
+        Vec3 spawn = aux.getAnchorPoint();
+        if (spawn == null) {
+            spawn = aux.getSpawnPoint();
+        }
         if (spawn == null) {
             return -1.0;
         }

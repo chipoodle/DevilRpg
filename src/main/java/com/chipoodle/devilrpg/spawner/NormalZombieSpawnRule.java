@@ -107,6 +107,10 @@ public class NormalZombieSpawnRule implements CustomSpawnRule {
 
     private Vec3 getSpawnPoint(ServerPlayer player) {
         PlayerAuxiliaryCapabilityInterface cap = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerAuxiliaryCapability.INSTANCE);
-        return cap == null ? null : cap.getSpawnPoint();
+        if (cap == null) {
+            return null;
+        }
+        Vec3 anchor = cap.getAnchorPoint();
+        return anchor != null ? anchor : cap.getSpawnPoint();
     }
 }

@@ -112,7 +112,10 @@ public class AggressiveZombieEntity extends Zombie {
             Player nearestPlayer = this.level().getNearestPlayer(this, SPAWN_PROFILE.maxDistance());
             if (nearestPlayer != null) {
                 PlayerAuxiliaryCapabilityInterface playerCapability = IGenericCapability.getUnwrappedPlayerCapability(nearestPlayer, PlayerAuxiliaryCapability.INSTANCE);
-                Vec3 playerSpawn = playerCapability.getSpawnPoint();
+                Vec3 playerSpawn = playerCapability.getAnchorPoint();
+                if (playerSpawn == null) {
+                    playerSpawn = playerCapability.getSpawnPoint();
+                }
                 if (playerSpawn != null) {
                     spawnDistance = Math.sqrt(this.blockPosition().distSqr(new BlockPos((int) playerSpawn.x, (int) playerSpawn.y, (int) playerSpawn.z)));
                     spawnThreat = ThreatLevel.current(this.level());

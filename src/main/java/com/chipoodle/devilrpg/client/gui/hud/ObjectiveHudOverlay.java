@@ -33,9 +33,12 @@ public class ObjectiveHudOverlay {
         if (aux == null) {
             return;
         }
-        Vec3 spawn = aux.getSpawnPoint();
+        Vec3 spawn = aux.getAnchorPoint();
         if (spawn == null) {
-            return; // sin spawn -> sin objetivo
+            spawn = aux.getSpawnPoint();
+        }
+        if (spawn == null) {
+            return; // sin ancla -> sin objetivo
         }
         int index = aux.getObjectiveIndex();
         BlockPos target = ObjectiveTargets.targetOf(spawn, index);
