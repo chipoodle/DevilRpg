@@ -19,6 +19,7 @@ import com.chipoodle.devilrpg.entity.ITamableEntity;
 import com.chipoodle.devilrpg.network.payload.PotionPayload;
 import com.chipoodle.devilrpg.util.EventUtils;
 import com.chipoodle.devilrpg.util.SkillEnum;
+import com.chipoodle.devilrpg.world.RitualCircleGenerator;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
@@ -285,6 +286,7 @@ public class CommonForgeInteractionEventSubscriber {
             if (playerCapability.getAnchorPoint() == null && event.getLevel() instanceof ServerLevel serverLevel) {
                 BlockPos anchor = serverLevel.getSharedSpawnPos();
                 playerCapability.setAnchorPoint(Vec3.atCenterOf(anchor), player);
+                RitualCircleGenerator.generate(serverLevel, anchor);
             }
         }
         /*if (!event.getLevel().isClientSide() && event.getEntity() instanceof Zombie) {

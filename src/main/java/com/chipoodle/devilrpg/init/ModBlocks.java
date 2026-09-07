@@ -72,4 +72,12 @@ public final class ModBlocks {
     public static final DeferredHolder<Block, UpwardSporeBlossomBlock> UPWARD_SPORE_BLOSSOM_BLOCK = BLOCKS.register("upward_spore_blossom", () -> new UpwardSporeBlossomBlock(
             BlockBehaviour.Properties.ofFullCopy(Blocks.SPORE_BLOSSOM).randomTicks()
     ));
+
+    public static final DeferredHolder<Block, LoreStoneBlock> LORE_STONE_BLOCK = BLOCKS.register("lore_stone", () -> new LoreStoneBlock(
+            BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.STONE)
+                    .strength(2.0F)
+                    .sound(SoundType.STONE)
+                    .requiresCorrectToolForDrops()
+    ));
 }
