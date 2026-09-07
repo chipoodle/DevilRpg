@@ -36,7 +36,9 @@ public record SpawnScaleProfile(
         int minDistance,
         /** Distancia a partir de la cual la probabilidad es 1 (máxima intensidad). */
         int maxDistance,
-        /** Incremento del factor de escala en la distancia máxima (ej. 1.3 = +30%). */
+        /** Valor al que se reduce {@code minDistance} con la amenaza máxima (la zona protegida se encoge). */
+        int minHardDistance,
+        /** Incremento del factor de escala en la distancia máxima (ej. 1.5 = +50%). */
         double maxScaleMultiplier,
         /** Vida base sobre la que se aplica el factor de escala. */
         double baseHealth,
@@ -46,28 +48,52 @@ public record SpawnScaleProfile(
         double baseDamage) {
 
     /**
-     * Normaliza la distancia al intervalo [0, 1] dentro del rango [minDistance, maxDistance].
-     * Devuelve 0 en o por debajo de minDistance y 1 en o por encima de maxDistance.
+     * Distancia mínima efectiva según la amenaza (0..1). Con amenaza 0 es {@code minDistance} y con
+     * amenaza 1 se reduce a {@code minHardDistance}. Así la zona protegida se encoge con el tiempo.
      */
-    public double normalize(double distance) {
-        if (distance <= minDistance) return 0.0;
+    public double effectiveMinDistance(double threat) {
+        return minDistance + (minHardDistance - minDistance) * threat;
+    }
+
+    /**
+     * Normaliza la distancia al intervalo [0, 1] teniendo en cuenta el mínimo efectivo (que depende de
+     * la amenaza). Devuelve 0 en o por debajo del mínimo y 1 en o por encima de maxDistance.
+     */
+    public double normalize(double distance, double threat) {
+        double min = effectiveMinDistance(threat);
+        if (distance <= min) return 0.0;
         if (distance >= maxDistance) return 1.0;
-        return (distance - minDistance) / (double) (maxDistance - minDistance);
+        return (distance - min) / (double) (maxDistance - min);
+    }
+
+    /** {@link #normalize(double, double)} con amenaza 0 (mínimo sin encoger). */
+    public double normalize(double distance) {
+        return normalize(distance, 0.0);
     }
 
     /**
-     * Probabilidad de spawn: 0 por debajo de minDistance, 1 por encima de maxDistance y lineal en el
-     * tramo intermedio. Idéntica a la curva usada por la entidad cuando ajusta sus atributos.
+     * Probabilidad de spawn teniendo en cuenta la amenaza (la zona protegida se encoge con el tiempo).
+     * 0 en la zona protegida, 1 a maxDistance, lineal en el tramo intermedio.
      */
+    public double probability(double distance, double threat) {
+        return normalize(distance, threat);
+    }
+
+    /** {@link #probability(double, double)} con amenaza 0. */
     public double probability(double distance) {
-        return normalize(distance);
+        return probability(distance, 0.0);
     }
 
     /**
-     * Factor de escala de atributos a una distancia dada: 1.0 en la zona protegida y
+     * Factor de escala de atributos teniendo en cuenta la amenaza: 1.0 en la zona protegida (efectiva) y
      * {@code 1.0 + maxScaleMultiplier} en la distancia máxima.
      */
+    public double scaleFactor(double distance, double threat) {
+        return 1.0 + normalize(distance, threat) * maxScaleMultiplier;
+    }
+
+    /** {@link #scaleFactor(double, double)} con amenaza 0. */
     public double scaleFactor(double distance) {
-        return 1.0 + normalize(distance) * maxScaleMultiplier;
+        return scaleFactor(distance, 0.0);
     }
 }

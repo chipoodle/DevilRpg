@@ -39,8 +39,10 @@ public final class HordeManager {
     private static final int BASE_INTERVAL_TICKS = 20 * 60 * 20;  // 20 minutos
     /** Intervalo mínimo entre hordas (ticks) con amenaza máxima (partida avanzada -> más seguido). */
     private static final int MIN_INTERVAL_TICKS = 3 * 60 * 20;    // 3 minutos
-    /** Máximo de enemigos extra que añade la amenaza máxima. */
-    private static final int MAX_EXTRA_MEMBERS = 6;
+    /** Tamaño base de la horda con amenaza 0. */
+    private static final int BASE_HORDE_SIZE = 3;
+    /** Enemigos extra que añade la amenaza máxima (tamaño total = BASE_HORDE_SIZE + amenaza*this). */
+    private static final int MAX_EXTRA_MEMBERS = 12;
 
     private static final Map<ServerLevel, Integer> TICKS = new HashMap<>();
 
@@ -61,7 +63,7 @@ public final class HordeManager {
     }
 
     private static void spawnHorde(ServerLevel level, double threat) {
-        ServerPlayer target = pickPlayer(level);
+        ServerPlayer target = pickPlayer(level, threat);
         if (target == null) {
             return; // nadie está fuera de la zona protegida -> sin horda
         }
@@ -69,14 +71,14 @@ public final class HordeManager {
         if (distance < 0.0) {
             return; // sin spawn point registrado
         }
-        double probability = AggressiveZombieSpawnProfile.INSTANCE.probability(distance);
+        double probability = AggressiveZombieSpawnProfile.INSTANCE.probability(distance, threat);
 
         Random random = new Random();
-        int plannedCount = 1 + (int) Math.round(threat * MAX_EXTRA_MEMBERS);
+        int plannedCount = BASE_HORDE_SIZE + (int) Math.round(threat * MAX_EXTRA_MEMBERS);
         int spawned = 0;
         Vec3 base = target.position();
         for (int i = 0; i < plannedCount; i++) {
-            // Cada zombie de la horda pasa por la probabilidad del SpawnScaleProfile (distancia).
+            // Cada zombie de la horda pasa por la probabilidad del SpawnScaleProfile (distancia + amenaza).
             if (random.nextDouble() >= probability) {
                 continue;
             }
@@ -101,9 +103,10 @@ public final class HordeManager {
 
     /**
      * Elige al jugador <b>más lejos</b> de su punto de inicio (el más "aventurero"). Si todos los
-     * jugadores están dentro de la zona protegida (&lt; minDistance), devuelve {@code null} (sin horda).
+     * jugadores están dentro de la zona protegida (efectiva, que se encoge con la amenaza), devuelve
+     * {@code null} (sin horda).
      */
-    private static ServerPlayer pickPlayer(ServerLevel level) {
+    private static ServerPlayer pickPlayer(ServerLevel level, double threat) {
         List<? extends ServerPlayer> players = level.players();
         if (players.isEmpty()) {
             return null;
@@ -117,7 +120,7 @@ public final class HordeManager {
                 best = p;
             }
         }
-        double min = AggressiveZombieSpawnProfile.INSTANCE.minDistance();
+        double min = AggressiveZombieSpawnProfile.INSTANCE.effectiveMinDistance(threat);
         return bestDistance > min ? best : null;
     }
 

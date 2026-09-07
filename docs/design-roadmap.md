@@ -118,9 +118,13 @@ Con esto, un zombie generado lejos del spawn **y/o** tarde en la partida es más
 
 - **Amenaza**: `ThreatLevel.MAX_EXTRA_DIFFICULTY` (0.8 = +80%) y `FULL_THREAT_TICKS` (3 h).
 - **Objetivo**: `ObjectiveTargets.BASE_DISTANCE` (800), `STEP_DISTANCE` (600), `REACH_RADIUS` (24).
+- **Zona protegida que se encoge**: en `SpawnScaleProfile`, `minDistance` (200 al inicio) se reduce con la
+  amenaza hasta `minHardDistance` (50 a máxima). Se configura con `minHardDistance` y
+  `effectiveMinDistance(threat)`; la probabilidad/escalado aceptan el `threat`.
 - **Horda**: `HordeManager.BASE_INTERVAL_TICKS` (20 min al inicio), `MIN_INTERVAL_TICKS` (3 min con máxima
-  amenaza, es decir a más amenaza salen más seguido), `MAX_EXTRA_MEMBERS` (6). El tamaño base es 1 enemigo
-  con amenaza 0 (jugador débil) y crece con la amenaza.
+  amenaza), `BASE_HORDE_SIZE` (3) y `MAX_EXTRA_MEMBERS` (12). El tamaño planeado es
+  `BASE_HORDE_SIZE + amenaza*MAX_EXTRA_MEMBERS` (3 → 15 al máximo), y cada zombie pasa por la probabilidad
+  del `SpawnScaleProfile` (distancia + amenaza).
 
 > TODO (siguiente): que las hordas apunten al **asentamiento más cercano** en vez de al jugador, para
 > conectar con la Iteración 3.

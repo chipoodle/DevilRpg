@@ -7,6 +7,7 @@ import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInter
 import com.chipoodle.devilrpg.init.ModEntities;
 import com.chipoodle.devilrpg.spawnprofile.AggressiveZombieSpawnProfile;
 import com.chipoodle.devilrpg.spawnprofile.SpawnScaleProfile;
+import com.chipoodle.devilrpg.survival.ThreatLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -79,15 +80,18 @@ public class AggressiveZombieSpawnRule implements CustomSpawnRule {
             return 0.0F;
         }
         double distance = Math.sqrt(player.distanceToSqr(spawnPoint));
-        if (distance < PROFILE.minDistance()) {
+        // La zona protegida (min) se encoge con la amenaza (tiempo).
+        double threat = ThreatLevel.current(level);
+        double min = PROFILE.effectiveMinDistance(threat);
+        if (distance < min) {
             DevilRpg.LOGGER.debug("[AggressiveZombieSpawnRule] Jugador {} a {} bloques (< {}), prob. 0",
-                    player.getGameProfile().getName(), Math.round(distance), PROFILE.minDistance());
+                    player.getGameProfile().getName(), Math.round(distance), Math.round(min));
             return 0.0F;
         }
         if (distance > PROFILE.maxDistance()) {
             return 1.0F;
         }
-        float chance = (float) PROFILE.probability(distance);
+        float chance = (float) PROFILE.probability(distance, threat);
         DevilRpg.LOGGER.debug("[AggressiveZombieSpawnRule] Jugador {} a {} bloques, prob. {}",
                 player.getGameProfile().getName(), Math.round(distance), String.format("%.2f", chance));
         return chance;

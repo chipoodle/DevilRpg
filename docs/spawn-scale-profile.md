@@ -56,12 +56,17 @@ entidad. Ambas dependen solo del perfil (un `record` puro).
 ### Métodos de `SpawnScaleProfile`
 
 ```java
-SpawnScaleProfile p = new SpawnScaleProfile(200, 1500, 1.3, 20.0, 0.2, 3.25);
+SpawnScaleProfile p = new SpawnScaleProfile(200, 1500, 50, 1.5, 20.0, 0.2, 3.25);
+// nuevo 3º campo: minHardDistance (la zona protegida se encoge hasta aqui a maxima amenaza)
 
-p.probability(distance); // 0..1 → probabilidad de spawn (0 bajo min, 1 sobre max, lineal entre medio)
-p.normalize(distance);   // 0..1 → (distance-min)/(max-min), satura en los bordes
-p.scaleFactor(distance); // 1.0 + normalize*maxScaleMultiplier → multiplicador de atributos
+p.probability(distance, threat); // 0..1 -> probabilidad de spawn (0 bajo el minimo EFECTIVO, 1 sobre max, lineal)
+p.normalize(distance, threat);   // 0..1 -> (distance-minEfectivo)/(max-minEfectivo), satura en los bordes
+p.scaleFactor(distance, threat); // 1.0 + normalize*maxScaleMultiplier -> multiplicador de atributos
+// Los overloads sin threat usan amenaza 0 (zona protegida sin encoger).
 ```
+
+Los métodos aceptan un parámetro `threat` (0..1) para que la **zona protegida se encoga con el tiempo**
+(`minDistance` -> `minHardDistance`). Los overloads sin `threat` usan amenaza 0 (mínimo sin encoger).
 
 ---
 

@@ -114,7 +114,7 @@ public class AggressiveZombieEntity extends Zombie {
                 Vec3 playerSpawn = playerCapability.getSpawnPoint();
                 if (playerSpawn != null) {
                     spawnDistance = Math.sqrt(this.blockPosition().distSqr(new BlockPos((int) playerSpawn.x, (int) playerSpawn.y, (int) playerSpawn.z)));
-                    spawnThreat = ThreatLevel.multiplier(this.level());
+                    spawnThreat = ThreatLevel.current(this.level());
                     DevilRpg.LOGGER.info("Zombie Spawned at: {} | Player Spawn Point: {} | Distance: {} | Threat: {}", this.blockPosition(), playerSpawn, spawnDistance, String.format("%.2f", spawnThreat));
                 }
             }
@@ -126,9 +126,10 @@ public class AggressiveZombieEntity extends Zombie {
             return; // Si está en la zona de spawn, no cambia atributos
         }
 
-        // Factor de escala lineal segun la distancia (1.0 en la zona protegida -> 1.0+multiplier al max),
-        // multiplicado por la amenaza global (tiempo) al momento del spawn.
-        double scaleFactor = SPAWN_PROFILE.scaleFactor(spawnDistance) * spawnThreat;
+        // Escalado lineal por distancia (con la zona protegida que se encoge con la amenaza), multiplicado
+        // por la fuerza que aporta el tiempo (amenaza) al momento del spawn.
+        double scaleFactor = SPAWN_PROFILE.scaleFactor(spawnDistance, spawnThreat)
+                * (1.0 + spawnThreat * ThreatLevel.MAX_EXTRA_DIFFICULTY);
 
         // Aplicar el escalado sobre los valores base del perfil
         Objects.requireNonNull(this.getAttribute(Attributes.MAX_HEALTH)).setBaseValue(SPAWN_PROFILE.baseHealth() * scaleFactor);
