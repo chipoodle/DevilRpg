@@ -124,7 +124,15 @@ public class ClientModKeyInputEventSubscriber {
                 //DevilRpg.LOGGER.debug(KEYS[5].saveString() + " pressed. " + KEYS[5].getKey().getValue());
                 //DevilRpg.LOGGER.debug(KEYS[5].getKey().getDisplayName());
                 //SkillScreen.open(Minecraft.getInstance().player,KEYS[4].getKey());
-                Minecraft.getInstance().tell(() -> Minecraft.getInstance().setScreen(new SkillScreen(KEYS[5].getKey())));
+                // Alternar: si la pantalla de skills ya está abierta, cerrarla; si no, abrirla.
+                // Usa onClose() (y no setScreen(null)) para que la pantalla haga su limpieza.
+                // Se pasa KEYS[6] (la tecla skill_gui) para que la pantalla cierre con la MISMA tecla.
+                Minecraft mc = Minecraft.getInstance();
+                if (mc.screen instanceof SkillScreen) {
+                    mc.screen.onClose();
+                } else {
+                    mc.setScreen(new SkillScreen(KEYS[6].getKey()));
+                }
             }
             // Rota hacia adelante el conjunto de skills asignados (loadout).
             if (KEYS[7].consumeClick()) {
