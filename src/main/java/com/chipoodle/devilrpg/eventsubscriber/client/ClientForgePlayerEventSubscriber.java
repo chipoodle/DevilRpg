@@ -112,8 +112,12 @@ public final class ClientForgePlayerEventSubscriber {
             }
             if (werewolfTransformation && werewolfAttack) {
                 int points = skillCapability.getSkillsPoints().get(SkillEnum.TRANSFORM_WEREWOLF);
-                float t = (15L - points * 0.5F);
-                long attackTime = (long) t;
+                // Velocidad de ataque del hombre lobo: nivel 1 = 8 ticks (rápido, mejor que arma de una mano),
+                // nivel 20 = 5 ticks (igual que antes). Curva que sube rápido al inicio para que cada nivel se note.
+                double u = (20.0 - points) / 19.0; // 1.0 en nivel 1, 0.0 en nivel 20
+                if (u > 1.0) u = 1.0;              // nivel 0 = velocidad de nivel 1
+                double t = 5.0 + 3.0 * Math.pow(u, 1.3);
+                long attackTime = Math.max(1L, (long) t);
                 if (Math.floor(event.getEntity().tickCount % attackTime) == 0) {
                     SkillShapeshiftWerewolf skill = (SkillShapeshiftWerewolf) skillCapability.getLoadedSkillExecutor(SkillEnum.TRANSFORM_WEREWOLF);
                     skill.playerTickEventAttack(event.getEntity(), auxCapability);

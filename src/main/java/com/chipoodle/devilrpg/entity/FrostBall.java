@@ -88,9 +88,9 @@ public class FrostBall extends ThrowableItemProjectile implements ISoulEntity {
 
         //targetEntity.hurt(this.damageSources().thrown(this, this.getOwner()), (float)damage);
         targetEntity.setIsInPowderSnow(true);
-        // El hielo ralentiza al enemigo golpeado durante 1 segundo (20 ticks).
+        // El hielo ralentiza al enemigo golpeado: Slowness II (amplificador 1 = -30% de velocidad) durante 3 segundos.
         if (targetEntity instanceof LivingEntity living) {
-            living.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 20, 0));
+            living.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 1));
         }
     }
 
