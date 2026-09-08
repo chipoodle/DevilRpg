@@ -195,22 +195,38 @@ public final class VillageGenerator {
             BlockPos to = pts.get((i + 1) % pts.size());
             connect(level, from, to, cells);
         }
-        // Puertas de valla en los accesos de los caminos (ejes cardinales).
+        // Altura uniforme de la valla para todo el anillo (mediana de la altura de cada celda), para que
+        // no quede "escalonada" en terreno ondulado y cada tramo se apoye sobre un relleno de tierra.
+        List<Integer> heights = new ArrayList<>();
+        for (long k : cells) {
+            heights.add(groundY(level, (int) (k >> 32), (int) (k & 0xFFFFFFFFL)));
+        }
+        Collections.sort(heights);
+        int fenceY = heights.get(heights.size() / 2);
+
+        // Valla asentada al suelo (3 bloques de alto), con puertas de valla en los accesos.
         for (long k : cells) {
             int x = (int) (k >> 32);
             int z = (int) (k & 0xFFFFFFFFL);
-            int y = groundY(level, x, z);
-            BlockState state;
+            int g = groundY(level, x, z); // suelo real de esta celda
             boolean northSouthGate = Math.abs(z - center.getZ()) == r && x == center.getX();
             boolean eastWestGate = Math.abs(x - center.getX()) == r && z == center.getZ();
-            if (northSouthGate) {
-                state = Blocks.OAK_FENCE_GATE.defaultBlockState().setValue(FenceGateBlock.FACING, Direction.NORTH);
-            } else if (eastWestGate) {
-                state = Blocks.OAK_FENCE_GATE.defaultBlockState().setValue(FenceGateBlock.FACING, Direction.EAST);
-            } else {
-                state = Blocks.OAK_FENCE.defaultBlockState();
+            // Rellenar con tierra desde el suelo hasta la base de la valla para que nunca quede colgando.
+            for (int y = g; y <= fenceY; y++) {
+                level.setBlock(new BlockPos(x, y, z), Blocks.DIRT.defaultBlockState(), 3);
             }
-            level.setBlock(new BlockPos(x, y + 1, z), state, 3);
+            // 3 bloques de valla / puerta.
+            for (int i = 1; i <= 3; i++) {
+                BlockState state;
+                if (northSouthGate) {
+                    state = Blocks.OAK_FENCE_GATE.defaultBlockState().setValue(FenceGateBlock.FACING, Direction.NORTH);
+                } else if (eastWestGate) {
+                    state = Blocks.OAK_FENCE_GATE.defaultBlockState().setValue(FenceGateBlock.FACING, Direction.EAST);
+                } else {
+                    state = Blocks.OAK_FENCE.defaultBlockState();
+                }
+                level.setBlock(new BlockPos(x, fenceY + i, z), state, 3);
+            }
         }
     }
 
