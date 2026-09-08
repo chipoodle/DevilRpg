@@ -421,20 +421,30 @@ public class TargetUtils {
         if (player.gameMode.getGameModeForPlayer() == GameType.SPECTATOR) {
             player.setCamera(targetEntity);
         } else {
-            // player.attackTargetEntityWithCurrentItem(targetEntity);
-            attackTargetEntity(player, targetEntity, currentHand);
+            boolean hit = attackTargetEntity(player, targetEntity, currentHand);
+            // Desgaste natural del arma en la mano que golpea (main u off). Se aplica siempre que el
+            // golpe conecte, para que el arma se desgaste como al atacar con una mano en vanilla.
+            if (hit && targetEntity instanceof LivingEntity livingTarget) {
+                ItemStack stack = player.getItemInHand(currentHand);
+                if (!stack.isEmpty()) {
+                    stack.hurtEnemy(livingTarget, player);
+                    if (stack.isEmpty()) {
+                        player.setItemInHand(currentHand, ItemStack.EMPTY);
+                    }
+                }
+            }
         }
-
     }
 
     /**
      * Attacks for the player the targeted entity with the currently equipped item.
      * The equipped item has hurtEnemy called on it. Args: targetEntity
      */
-    private static void attackTargetEntity(ServerPlayer player, Entity targetEntity, InteractionHand currentHand) {
+    private static boolean attackTargetEntity(ServerPlayer player, Entity targetEntity, InteractionHand currentHand) {
 
+        boolean hit = false;
 
-        if (!net.neoforged.neoforge.common.CommonHooks.onPlayerAttackTarget(player, targetEntity)) return;
+        if (!net.neoforged.neoforge.common.CommonHooks.onPlayerAttackTarget(player, targetEntity)) return false;
 
 
         if (targetEntity != null && targetEntity.isAttackable()) {
@@ -493,6 +503,7 @@ public class TargetUtils {
 
                     Vec3 vector3d = targetEntity.getDeltaMovement();
                     boolean flag5 = targetEntity.hurt(player.damageSources().playerAttack(player), f);
+                    hit = flag5;
                     if (flag5) {
                         if (i > 0) {
                             if (targetEntity instanceof LivingEntity) {
@@ -570,20 +581,6 @@ public class TargetUtils {
                         }
 
                         EnchantmentHelper.doPostAttackEffectsWithItemSource((ServerLevel) player.level(), targetEntity, player.damageSources().playerAttack(player), player.getItemInHand(currentHand));
-                        //ItemStack itemstack1 = player.getMainHandItem();
-                        ItemStack itemstack1 = player.getItemInHand(currentHand);
-                        Entity entity = targetEntity;
-                        if (targetEntity instanceof net.neoforged.neoforge.entity.PartEntity) {
-                            entity = ((net.neoforged.neoforge.entity.PartEntity<?>) targetEntity).getParent();
-                        }
-
-                        if (!player.level().isClientSide && !itemstack1.isEmpty() && entity instanceof LivingEntity) {
-                            ItemStack copy = itemstack1.copy();
-                            itemstack1.hurtEnemy((LivingEntity) entity, player);
-                            if (itemstack1.isEmpty()) {
-                                player.setItemInHand(currentHand, ItemStack.EMPTY);
-                            }
-                        }
 
                         if (targetEntity instanceof LivingEntity) {
                             float f5 = f4 - ((LivingEntity) targetEntity).getHealth();
@@ -613,6 +610,7 @@ public class TargetUtils {
 
             }
         }
+        return hit;
     }
 
     public static Entity getEntityByUUID(ServerLevel w, UUID uuid) {
