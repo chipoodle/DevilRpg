@@ -4,6 +4,7 @@ import com.chipoodle.devilrpg.init.ModBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 
 /**
@@ -73,8 +74,18 @@ public final class RitualCircleGenerator {
         level.setBlock(center, ModBlocks.LORE_STONE_BLOCK.get().defaultBlockState(), 3);
     }
 
-    /** Y del suelo (top de terreno sólido) en una columna (x, z). */
+    /**
+     * Y del suelo sólido (ignora agua/lava) en una columna (x, z). Si la superficie es agua, baja hasta
+     * el fondo sólido para que los pilares queden en tierra aunque estén sumergidos.
+     */
     private static int groundY(ServerLevel level, int x, int z) {
-        return level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, new BlockPos(x, 0, z)).getY();
+        int y = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, new BlockPos(x, 0, z)).getY();
+        for (int yy = y; yy > y - 48; yy--) {
+            BlockState bs = level.getBlockState(new BlockPos(x, yy, z));
+            if (bs.isSolid() && bs.getBlock() != Blocks.WATER && bs.getBlock() != Blocks.LAVA) {
+                return yy + 1; // base del pilar = justo encima del bloque sólido
+            }
+        }
+        return y;
     }
 }
