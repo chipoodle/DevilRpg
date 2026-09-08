@@ -28,17 +28,33 @@ public final class RitualCircleGenerator {
             return;
         }
 
-        // Anillo de piedras alrededor del centro (el doble de radio, más columnas y cada una de 3 bloques).
-        int radius = 8;
-        int columns = 20;
+        // Anillo de piedras alrededor del centro (grande, con algunas columnas dobles + barra = trilitos).
+        int radius = 12;
+        int columns = 24;
         for (int a = 0; a < columns; a++) {
             double angle = (a / (double) columns) * Math.PI * 2.0;
             int x = (int) Math.round(center.getX() + Math.cos(angle) * radius);
             int z = (int) Math.round(center.getZ() + Math.sin(angle) * radius);
             net.minecraft.world.level.block.Block block = (a % 2 == 0 ? Blocks.COBBLESTONE : Blocks.MOSSY_COBBLESTONE);
-            // Columna de 3 bloques de alto.
-            for (int h = 0; h < 3; h++) {
-                level.setBlock(new BlockPos(x, center.getY() + h, z), block.defaultBlockState(), 3);
+
+            // Cada 5ª columna se hace un "trilito": dos pilares (3 bloques) + barra horizontal encima.
+            boolean trilithon = (a % 5 == 0);
+            if (trilithon) {
+                // Segundo pilar, desplazado 1 bloque en la tangente del anillo (-sin, cos).
+                int tx = x + (int) Math.round(-Math.sin(angle));
+                int tz = z + (int) Math.round(Math.cos(angle));
+                for (int h = 0; h < 3; h++) {
+                    level.setBlock(new BlockPos(x, center.getY() + h, z), block.defaultBlockState(), 3);
+                    level.setBlock(new BlockPos(tx, center.getY() + h, tz), block.defaultBlockState(), 3);
+                }
+                // Barra horizontal (lintel) sobre ambos pilares.
+                level.setBlock(new BlockPos(x, center.getY() + 3, z), block.defaultBlockState(), 3);
+                level.setBlock(new BlockPos(tx, center.getY() + 3, tz), block.defaultBlockState(), 3);
+            } else {
+                // Columna simple de 3 bloques de alto.
+                for (int h = 0; h < 3; h++) {
+                    level.setBlock(new BlockPos(x, center.getY() + h, z), block.defaultBlockState(), 3);
+                }
             }
         }
 
