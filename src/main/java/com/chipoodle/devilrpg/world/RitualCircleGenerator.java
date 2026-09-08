@@ -36,12 +36,14 @@ public final class RitualCircleGenerator {
             int z = (int) Math.round(center.getZ() + Math.sin(angle) * radius);
             net.minecraft.world.level.block.Block block = (a % 2 == 0 ? Blocks.COBBLESTONE : Blocks.MOSSY_COBBLESTONE);
 
-            // Cada 5ª columna se hace un "trilito": dos pilares (3 bloques) + barra horizontal encima.
+            // Cada 5ª columna se hace un "trilito": columna [hueco] columna, con barra que los cruza.
             boolean trilithon = (a % 5 == 0);
             if (trilithon) {
-                // Segundo pilar, desplazado 1 bloque en la tangente del anillo (-sin, cos).
-                int tx = x + (int) Math.round(-Math.sin(angle));
-                int tz = z + (int) Math.round(Math.cos(angle));
+                // Segundo pilar a 2 bloques en la tangente (-2*sin, 2*cos), dejando un hueco en medio.
+                int tx = x + (int) Math.round(-2 * Math.sin(angle));
+                int tz = z + (int) Math.round(2 * Math.cos(angle));
+                int mx = x + (int) Math.round(-Math.sin(angle));
+                int mz = z + (int) Math.round(Math.cos(angle));
                 // Base común = el más bajo de los dos terrenos, para que la barra quede horizontal y
                 // ambos pilares queden asentados (el del lado más alto queda un poco "encajado").
                 int baseY = Math.min(groundY(level, x, z), groundY(level, tx, tz));
@@ -49,8 +51,9 @@ public final class RitualCircleGenerator {
                     level.setBlock(new BlockPos(x, baseY + h, z), block.defaultBlockState(), 3);
                     level.setBlock(new BlockPos(tx, baseY + h, tz), block.defaultBlockState(), 3);
                 }
-                // Barra horizontal (lintel) sobre ambos pilares.
+                // Barra horizontal que cruza ambos pilares (y el hueco) por encima.
                 level.setBlock(new BlockPos(x, baseY + 3, z), block.defaultBlockState(), 3);
+                level.setBlock(new BlockPos(mx, baseY + 3, mz), block.defaultBlockState(), 3);
                 level.setBlock(new BlockPos(tx, baseY + 3, tz), block.defaultBlockState(), 3);
             } else {
                 // Columna simple de 3 bloques asentada en su propio terreno.
