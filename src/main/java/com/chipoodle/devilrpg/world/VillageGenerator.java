@@ -42,8 +42,11 @@ public final class VillageGenerator {
     /** Radio de la valla (un 30% más grande que antes). */
     private static final int FENCE_RADIUS = 29;
 
-    /** Radio del área que se nivela alrededor del centro de la aldea. */
-    private static final int LEVEL_RADIUS = 16;
+    /**
+     * Radio del área que se nivela alrededor del centro (todo hasta donde empieza la valla, para que no
+     * queden huecos ni abismos entre la zona nivelada y la valla).
+     */
+    private static final int LEVEL_RADIUS = FENCE_RADIUS + 2;
 
     /** Profundidad máxima (en bloques hacia abajo) de la estructura flotante bajo la isla. */
     private static final int ISLAND_SUPPORT_DEPTH = 9;
@@ -78,7 +81,7 @@ public final class VillageGenerator {
         // isla flotante ya que el objetivo no se puede mover. Si no, nivelar el terreno como siempre.
         boolean overWater = waterSurface(level, center.getX(), center.getZ()) >= 0;
         if (overWater) {
-            buildFloatingIsland(level, center, FENCE_RADIUS + 4);
+            buildFloatingIsland(level, center, LEVEL_RADIUS);
         } else {
             levelTerrain(level, center, LEVEL_RADIUS);
         }
@@ -170,9 +173,9 @@ public final class VillageGenerator {
     }
 
     /**
-     * Construye una isla flotante bajo la aldea cuando esta cae sobre agua. Cubre la superficie con una
-     * capa de tierra (isla) y, por debajo, una estructura de troncos que se estrecha hacia el fondo
-     * (como una base flotante). Así la aldea no queda sumergida aunque el objetivo esté en el océano.
+     * Construye la base de la aldea cuando esta cae sobre agua. Cubre TODA el área (hasta donde empieza la
+     * valla) con tierra al mismo nivel, y por debajo una estructura de troncos que se estrecha hacia el
+     * fondo (como una base flotante). Así no quedan huecos ni abismos entre la superficie y la valla.
      */
     private static void buildFloatingIsland(ServerLevel level, BlockPos center, int radius) {
         int surfaceY = waterSurface(level, center.getX(), center.getZ()); // superficie del agua
@@ -182,9 +185,15 @@ public final class VillageGenerator {
             for (int z = -radius; z <= radius; z++) {
                 BlockPos top = new BlockPos(center.getX() + x, islandTop, center.getZ() + z);
                 int g = groundY(level, top.getX(), top.getZ());
-                // Capa de tierra de la isla (rellenar hasta el tope si hay hueco bajo el agua).
-                for (int y = g; y < islandTop; y++) {
+                // Rellenar con tierra TODA la columna hasta islandTop (por debajo del nivel de la isla).
+                for (int y = Math.min(g, islandTop); y < islandTop; y++) {
                     level.setBlock(new BlockPos(top.getX(), y, top.getZ()), Blocks.DIRT.defaultBlockState(), 3);
+                }
+                // Si el terreno sobresale por encima de la isla, recortarlo para dejar la superficie plana.
+                if (g > islandTop) {
+                    for (int y = islandTop + 1; y < g; y++) {
+                        level.setBlock(new BlockPos(top.getX(), y, top.getZ()), Blocks.AIR.defaultBlockState(), 3);
+                    }
                 }
                 level.setBlock(top, Blocks.GRASS_BLOCK.defaultBlockState(), 3);
                 // Estructura descendente de troncos, que se estrecha con la profundidad (base flotante).
@@ -240,9 +249,9 @@ public final class VillageGenerator {
     }
 
     /**
-     * Nivela el terreno del área de la aldea: toma la altura base (mediana de las alturas de suelo) y
-     * rellena con tierra las columnas que estén por debajo. Así se suaviza la pendiente y se rellenan los
-     * hoyos, pero no se aplana todo (las zonas más altas se conservan).
+     * Nivela el terreno del área de la aldea: toma la altura base (mediana de las alturas de suelo), rellena
+     * con tierra las columnas que estén por debajo y recorta las que estén por encima, dejando toda el área
+     * (hasta donde empieza la valla) al mismo nivel para que no queden abismos ni desniveles.
      */
     private static void levelTerrain(ServerLevel level, BlockPos center, int radius) {
         List<Integer> heights = new ArrayList<>();
@@ -257,10 +266,16 @@ public final class VillageGenerator {
         for (int x = -radius; x <= radius; x++) {
             for (int z = -radius; z <= radius; z++) {
                 int g = groundY(level, center.getX() + x, center.getZ() + z);
-                // Rellenar solo hasta el nivel base; las columnas por encima se dejan (pendiente suave).
+                // Rellenar las columnas que estén por debajo del nivel base.
                 for (int y = g; y < baseY; y++) {
                     level.setBlock(new BlockPos(center.getX() + x, y, center.getZ() + z), Blocks.DIRT.defaultBlockState(), 3);
                 }
+                // Recortar las columnas que sobresalgan por encima del nivel base.
+                for (int y = baseY + 1; y < g; y++) {
+                    level.setBlock(new BlockPos(center.getX() + x, y, center.getZ() + z), Blocks.AIR.defaultBlockState(), 3);
+                }
+                // Asegurar la capa superficial al nivel base.
+                level.setBlock(new BlockPos(center.getX() + x, baseY - 1, center.getZ() + z), Blocks.DIRT.defaultBlockState(), 3);
             }
         }
     }
