@@ -5,6 +5,7 @@ import com.chipoodle.devilrpg.spawner.AggressiveZombieSpawnRule;
 import com.chipoodle.devilrpg.spawner.CustomSpawner;
 import com.chipoodle.devilrpg.spawner.NormalZombieSpawnRule;
 import com.chipoodle.devilrpg.survival.HordeManager;
+import com.chipoodle.devilrpg.world.VillageManager;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -40,6 +41,8 @@ public class CustomSpawnerTickHandler {
 
             // Hordas periodicas (tam y frecuencia escalan con la amenaza global por tiempo).
             HordeManager.tick(level);
+            // Asedios a las aldeas (iteracion 3 en miniatura).
+            VillageManager.tick(level);
         });
     }
 }

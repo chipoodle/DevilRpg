@@ -4,6 +4,7 @@ import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
+import com.chipoodle.devilrpg.world.VillageManager;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
@@ -41,8 +42,9 @@ public final class ObjectiveManager {
         BlockPos target = ObjectiveTargets.targetOf(spawn, index);
 
         if (ObjectiveTargets.horizontalDistSqr(player.blockPosition(), target) <= (double) (REACH_RADIUS * REACH_RADIUS)) {
-            aux.setObjectiveIndex(index + 1, player);
-            DevilRpg.LOGGER.info("[Objective] Jugador {} alcanzó el objetivo {} -> siguiente {}", player.getGameProfile().getName(), index, index + 1);
+            // Al llegar a la aldea se inicia el asedio; el avance del objetivo lo hace VillageManager
+            // cuando la aldea se salva o cae. Aquí NO se avanza de inmediato.
+            VillageManager.start(player.serverLevel(), player, index, target);
         }
     }
 }
