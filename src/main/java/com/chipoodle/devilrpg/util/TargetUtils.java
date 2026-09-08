@@ -27,6 +27,8 @@ import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.*;
 
+import net.neoforged.neoforge.event.EventHooks;
+
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -422,13 +424,19 @@ public class TargetUtils {
             player.setCamera(targetEntity);
         } else {
             boolean hit = attackTargetEntity(player, targetEntity, currentHand);
-            // Desgaste natural del arma en la mano que golpea (main u off). Se aplica siempre que el
-            // golpe conecte, para que el arma se desgaste como al atacar con una mano en vanilla.
+            // Desgaste en la mano que golpea (main u off), replicando el bloque de Player.attack() vanilla:
+            // hurtEnemy (aplica desgaste + Unbreaking) -> postHurtEnemy si se rompió -> onPlayerDestroyItem
+            // y limpiar la mano si el arma se agotó. Así ambas manos se desgastan con encantamientos incluidos.
             if (hit && targetEntity instanceof LivingEntity livingTarget) {
                 ItemStack stack = player.getItemInHand(currentHand);
                 if (!stack.isEmpty()) {
-                    stack.hurtEnemy(livingTarget, player);
+                    ItemStack copy = stack.copy();
+                    boolean broke = stack.hurtEnemy(livingTarget, player);
+                    if (broke) {
+                        stack.postHurtEnemy(livingTarget, player);
+                    }
                     if (stack.isEmpty()) {
+                        EventHooks.onPlayerDestroyItem(player, copy, currentHand);
                         player.setItemInHand(currentHand, ItemStack.EMPTY);
                     }
                 }
