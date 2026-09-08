@@ -6,6 +6,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.entity.animal.IronGolem;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.npc.VillagerProfession;
 import net.minecraft.world.level.block.BedBlock;
@@ -79,18 +80,65 @@ public final class VillageGenerator {
         } else {
             levelTerrain(level, center, LEVEL_RADIUS);
         }
-        BlockPos h0 = hut(level, center.offset(-9, 0, -1));
-        BlockPos h1 = hut(level, center.offset(9, 0, -2));
-        BlockPos h2 = hut(level, center.offset(0, 0, 9));
+        // Cabañas separadas entre sí (offset más grandes para dejar más espacio entre ellas).
+        BlockPos h0 = hut(level, center.offset(-13, 0, -2));
+        BlockPos h1 = hut(level, center.offset(12, 0, -3));
+        BlockPos h2 = hut(level, center.offset(-2, 0, 13));
+        // Campana en el centro de la aldea.
+        bell(level, center);
+
+        // Caminos de 2 bloques de ancho desde el centro hasta cada cabaña.
         paths(level, center, h0, h1, h2);
 
         // Aldeanos justo frente a la puerta de cada cabaña (más alejados del centro para dejar espacio
         // libre y permitir que la valla sea más grande).
-        spawnVillager(level, center.offset(-9, 0, -4), VillagerProfession.FARMER);
-        spawnVillager(level, center.offset(9, 0, -5), VillagerProfession.WEAPONSMITH);
-        spawnVillager(level, center.offset(0, 0, 7), VillagerProfession.CLERIC);
+        spawnVillager(level, center.offset(-13, 0, -5), VillagerProfession.FARMER);
+        spawnVillager(level, center.offset(12, 0, -6), VillagerProfession.WEAPONSMITH);
+        spawnVillager(level, center.offset(-2, 0, 10), VillagerProfession.CLERIC);
+
+        // Golem de hierro que protege la aldea.
+        spawnIronGolem(level, center.offset(3, 0, 3));
+
+        // Faroles con poste distribuidos por la aldea (evitan spawn de zombies con la mecánica vanilla).
+        torches(level, center);
 
         fence(level, center);
+    }
+
+    /** Coloca una campana en el centro de la aldea (marcador de la villa). */
+    private static void bell(ServerLevel level, BlockPos center) {
+        int y = groundY(level, center.getX(), center.getZ());
+        level.setBlock(new BlockPos(center.getX(), y, center.getZ()), Blocks.BELL.defaultBlockState(), 3);
+    }
+
+    /**
+     * Coloca faroles distribuidos por la aldea (poste de valla + antorcha/lanterna encima) en 3 puntos,
+     * para evitar que los zombies normales aparezcan de noche con la mecánica vanilla (luz).
+     */
+    private static void torches(ServerLevel level, BlockPos center) {
+        int[][] spots = {
+                {6, 0, -6},
+                {-7, 0, 6},
+                {0, 0, -11},
+        };
+        for (int[] s : spots) {
+            BlockPos spot = center.offset(s[0], 0, s[2]);
+            int y = groundY(level, spot.getX(), spot.getZ());
+            // Poste de valla (2 bloques) y lantern/antorcha encima.
+            level.setBlock(new BlockPos(spot.getX(), y, spot.getZ()), Blocks.OAK_FENCE.defaultBlockState(), 3);
+            level.setBlock(new BlockPos(spot.getX(), y + 1, spot.getZ()), Blocks.OAK_FENCE.defaultBlockState(), 3);
+            level.setBlock(new BlockPos(spot.getX(), y + 2, spot.getZ()), Blocks.LANTERN.defaultBlockState(), 3);
+        }
+    }
+
+    /** Spawnea un golem de hierro que defiende la aldea. */
+    private static void spawnIronGolem(ServerLevel level, BlockPos pos) {
+        IronGolem golem = EntityType.IRON_GOLEM.create(level, null, pos, MobSpawnType.MOB_SUMMONED, true, true);
+        if (golem != null) {
+            golem.moveTo(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D, 0.0F, 0.0F);
+            golem.setPersistenceRequired();
+            level.addFreshEntity(golem);
+        }
     }
 
     /**
@@ -124,21 +172,32 @@ public final class VillageGenerator {
         }
     }
 
-    /** Camino de tierra apisonada (el de pala) entre el centro y cada cabaña. */
+    /** Camino de tierra apisonada (el de pala) de 2 bloques de ancho entre el centro y cada cabaña. */
     private static void paths(ServerLevel level, BlockPos center, BlockPos h0, BlockPos h1, BlockPos h2) {
         line(level, center, h0);
         line(level, center, h1);
         line(level, center, h2);
     }
 
+    /** Dibuja un camino de tierra apisonada de 2 bloques de ancho entre dos puntos. */
     private static void line(ServerLevel level, BlockPos from, BlockPos to) {
+        int dx = Integer.signum(to.getX() - from.getX());
+        int dz = Integer.signum(to.getZ() - from.getZ());
+        // Perpendicular al camino: si va en X, el ancho se reparte en Z; si va en Z, en X.
+        int widthX = dx == 0 ? 1 : 0;
+        int widthZ = dz == 0 ? 1 : 0;
         int steps = Math.max(Math.abs(to.getX() - from.getX()), Math.abs(to.getZ() - from.getZ()));
         for (int i = 0; i <= steps; i++) {
-            double t = steps == 0 ? 1.0 : (double) i / steps;
-            int x = (int) Math.round(from.getX() + (to.getX() - from.getX()) * t);
-            int z = (int) Math.round(from.getZ() + (to.getZ() - from.getZ()) * t);
-            int y = groundY(level, x, z);
-            level.setBlock(new BlockPos(x, y, z), Blocks.DIRT_PATH.defaultBlockState(), 3);
+            // Avance principal por el eje dominante.
+            int x = from.getX() + (int) Math.round((to.getX() - from.getX()) * (i / (double) Math.max(1, steps)));
+            int z = from.getZ() + (int) Math.round((to.getZ() - from.getZ()) * (i / (double) Math.max(1, steps)));
+            // Ancho de 2 bloques en la dirección perpendicular.
+            for (int w = 0; w <= 1; w++) {
+                int px = x + widthX * w;
+                int pz = z + widthZ * w;
+                int y = groundY(level, px, pz);
+                level.setBlock(new BlockPos(px, y, pz), Blocks.DIRT_PATH.defaultBlockState(), 3);
+            }
         }
     }
 
