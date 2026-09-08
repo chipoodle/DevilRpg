@@ -20,15 +20,14 @@ public final class RitualCircleGenerator {
 
     /** Genera el círculo en el spawn del mundo si aún no se generó (si la roca ya existe, no hace nada). */
     public static void generate(ServerLevel level, BlockPos spawn) {
-        int y = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, spawn).getY();
-        BlockPos center = new BlockPos(spawn.getX(), y, spawn.getZ());
+        BlockPos center = new BlockPos(spawn.getX(), groundY(level, spawn.getX(), spawn.getZ()), spawn.getZ());
 
         // Si la roca de los clérigos ya está puesta, el círculo ya se generó antes.
         if (level.getBlockState(center).is(ModBlocks.LORE_STONE_BLOCK.get())) {
             return;
         }
 
-        // Anillo de piedras alrededor del centro (grande, con algunas columnas dobles + barra = trilitos).
+        // Anillo de piedras alrededor del centro: cada columna se asienta en su propio terreno.
         int radius = 12;
         int columns = 24;
         for (int a = 0; a < columns; a++) {
@@ -43,27 +42,36 @@ public final class RitualCircleGenerator {
                 // Segundo pilar, desplazado 1 bloque en la tangente del anillo (-sin, cos).
                 int tx = x + (int) Math.round(-Math.sin(angle));
                 int tz = z + (int) Math.round(Math.cos(angle));
+                // Base común = el más bajo de los dos terrenos, para que la barra quede horizontal y
+                // ambos pilares queden asentados (el del lado más alto queda un poco "encajado").
+                int baseY = Math.min(groundY(level, x, z), groundY(level, tx, tz));
                 for (int h = 0; h < 3; h++) {
-                    level.setBlock(new BlockPos(x, center.getY() + h, z), block.defaultBlockState(), 3);
-                    level.setBlock(new BlockPos(tx, center.getY() + h, tz), block.defaultBlockState(), 3);
+                    level.setBlock(new BlockPos(x, baseY + h, z), block.defaultBlockState(), 3);
+                    level.setBlock(new BlockPos(tx, baseY + h, tz), block.defaultBlockState(), 3);
                 }
                 // Barra horizontal (lintel) sobre ambos pilares.
-                level.setBlock(new BlockPos(x, center.getY() + 3, z), block.defaultBlockState(), 3);
-                level.setBlock(new BlockPos(tx, center.getY() + 3, tz), block.defaultBlockState(), 3);
+                level.setBlock(new BlockPos(x, baseY + 3, z), block.defaultBlockState(), 3);
+                level.setBlock(new BlockPos(tx, baseY + 3, tz), block.defaultBlockState(), 3);
             } else {
-                // Columna simple de 3 bloques de alto.
+                // Columna simple de 3 bloques asentada en su propio terreno.
+                int baseY = groundY(level, x, z);
                 for (int h = 0; h < 3; h++) {
-                    level.setBlock(new BlockPos(x, center.getY() + h, z), block.defaultBlockState(), 3);
+                    level.setBlock(new BlockPos(x, baseY + h, z), block.defaultBlockState(), 3);
                 }
             }
         }
 
-        // Restos de clérigos (bloques de hueso) cerca del anillo.
-        level.setBlock(center.offset(2, 0, 0), Blocks.BONE_BLOCK.defaultBlockState(), 3);
-        level.setBlock(center.offset(-2, 0, 1), Blocks.BONE_BLOCK.defaultBlockState(), 3);
-        level.setBlock(center.offset(0, 0, -2), Blocks.BONE_BLOCK.defaultBlockState(), 3);
+        // Restos de clérigos (bloques de hueso) cerca del centro, asentados.
+        level.setBlock(center.offset(2, 0, 0).atY(groundY(level, center.getX() + 2, center.getZ())), Blocks.BONE_BLOCK.defaultBlockState(), 3);
+        level.setBlock(center.offset(-2, 0, 1).atY(groundY(level, center.getX() - 2, center.getZ() + 1)), Blocks.BONE_BLOCK.defaultBlockState(), 3);
+        level.setBlock(center.offset(0, 0, -2).atY(groundY(level, center.getX(), center.getZ() - 2)), Blocks.BONE_BLOCK.defaultBlockState(), 3);
 
-        // Roca de los clérigos (la que se lee) en el centro.
+        // Roca de los clérigos (la que se lee) en el centro, asentada.
         level.setBlock(center, ModBlocks.LORE_STONE_BLOCK.get().defaultBlockState(), 3);
+    }
+
+    /** Y del suelo (top de terreno sólido) en una columna (x, z). */
+    private static int groundY(ServerLevel level, int x, int z) {
+        return level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, new BlockPos(x, 0, z)).getY();
     }
 }
