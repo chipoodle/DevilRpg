@@ -16,61 +16,67 @@ import net.minecraft.world.item.Items;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 
 /**
- * Gestor del asedio a la primera aldea. Cuando el jugador llega a la aldea (objetivo), se genera y se
- * lanza una ola de monstruos. El jugador debe defender:
- * <ul>
- *   <li>Si limpia la ola a tiempo -> la aldea se salva: recibe recompensa (materiales + exp + una receta
- *       en libro) y el objetivo avanza a la siguiente aldea.</li>
- *   <li>Si no logra limpiarla a tiempo -> la aldea cae: avanza el objetivo sin recompensa.</li>
- * </ul>
+ * Gestor del asedio a la primera aldea. La aldea se pre-genera antes de que el jugador llegue; al llegar,
+ * tras un pequeño margen para explorar, se lanza una ola de monstruos desde fuera de la valla. Si el
+ * jugador la limpia a tiempo -> la aldea se salva (recompensa + avanza el objetivo); si no -> cae (avanza
+ * sin recompensa).
  */
 public final class VillageManager {
 
+    /** Distancia a la que se pre-genera la aldea antes de llegar el jugador. */
+    public static final int PRE_GENERATE_RADIUS = 140;
+    /** Radio de llegada al objetivo (se considera "en la aldea"). */
+    public static final int ARRIVE_RADIUS = 24;
+    /** Ticks de margen para explorar la aldea antes del asedio (40 s). */
+    private static final int GRACE_TICKS = 40 * 20;
+    /** Ticks extra para limpiar la ola tras el asedio (2 min). */
+    private static final int SIEGE_TIMEOUT_TICKS = 2 * 60 * 20;
     private static final int DEFAULT_WAVE = 6;
-    private static final long TIMEOUT_TICKS = 3 * 60 * 20; // 3 minutos para defender
 
     private static final Map<ServerLevel, List<VillageDefense>> DEFENSES = new HashMap<>();
+    private static final Set<String> GENERATED = new HashSet<>();
 
     private VillageManager() {
     }
 
-    /** Lanza el asedio a la aldea en {@code center} (se genera y spawnea la ola). */
-    public static void start(ServerLevel level, ServerPlayer player, int objectiveIndex, BlockPos center) {
+    /** Pre-genera la aldea (cabañas + aldeanos + valla) en una zona de tierra firme, si aún no existe. */
+    public static void preGenerate(ServerLevel level, int objectiveIndex, BlockPos target) {
+        String key = level.dimension().location() + ":" + objectiveIndex;
+        if (GENERATED.contains(key)) {
+            return;
+        }
+        BlockPos land = VillageGenerator.findLand(level, target);
+        VillageGenerator.generate(level, land);
+        GENERATED.add(key);
+        DevilRpg.LOGGER.info("[Village] Aldea {} pre-generada en {}", objectiveIndex, land);
+    }
+
+    /** Inicia el asedio al llegar el jugador a la aldea (con un margen antes de la ola). */
+    public static void start(ServerLevel level, ServerPlayer player, int objectiveIndex, BlockPos target) {
         // No re-lanzar si ya hay un asedio activo para este jugador/objetivo.
         for (VillageDefense d : DEFENSES.getOrDefault(level, List.of())) {
             if (d.playerUUID.equals(player.getUUID()) && d.objectiveIndex == objectiveIndex) {
                 return;
             }
         }
-        VillageGenerator.generate(level, center);
-
-        Random random = new Random();
-        List<UUID> wave = new ArrayList<>();
-        for (int i = 0; i < DEFAULT_WAVE; i++) {
-            double angle = random.nextDouble() * Math.PI * 2.0D;
-            BlockPos pos = center.offset((int) Math.round(Math.cos(angle) * 8), 0, (int) Math.round(Math.sin(angle) * 8));
-            AggressiveZombieEntity zombie = ModEntities.AGGRESSIVE_ZOMBIE.get()
-                    .create(level, null, pos, MobSpawnType.MOB_SUMMONED, true, true);
-            if (zombie != null) {
-                zombie.moveTo(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D, 0.0F, 0.0F);
-                level.addFreshEntity(zombie);
-                wave.add(zombie.getUUID());
-            }
+        if (!GENERATED.contains(level.dimension().location() + ":" + objectiveIndex)) {
+            preGenerate(level, objectiveIndex, target);
         }
+        BlockPos land = VillageGenerator.findLand(level, target);
         DEFENSES.computeIfAbsent(level, l -> new ArrayList<>())
-                .add(new VillageDefense(objectiveIndex, player.getUUID(), center, wave, 0L));
-
-        player.displayClientMessage(Component.literal("¡Defiende la aldea de los monstruos!"), false);
-        DevilRpg.LOGGER.info("[Village] Asedio iniciado en {} para {}", center, player.getGameProfile().getName());
+                .add(new VillageDefense(objectiveIndex, player.getUUID(), land));
+        player.displayClientMessage(Component.literal("Llegaste a la aldea... los monstruos se acercan."), false);
     }
 
-    /** Se llama en el tick del servidor: resuelve los asedios activos. */
+    /** Se llama en el tick del servidor: gestiona el margen, la ola y la resolución del asedio. */
     public static void tick(ServerLevel level) {
         List<VillageDefense> list = DEFENSES.get(level);
         if (list == null || list.isEmpty()) {
@@ -79,25 +85,55 @@ public final class VillageManager {
         for (int i = list.size() - 1; i >= 0; i--) {
             VillageDefense d = list.get(i);
             d.tickTicks++;
-            boolean waveCleared = isWaveCleared(level, d.wave);
-            if (waveCleared || d.tickTicks > TIMEOUT_TICKS) {
-                boolean saved = waveCleared; // salvada si limpió la ola
-                ServerPlayer player = level.getServer().getPlayerList().getPlayer(d.playerUUID);
-                if (player == null) {
+
+            // Tras el margen de exploración, lanza la ola desde FUERA de la valla.
+            if (!d.waveSpawned && d.tickTicks >= GRACE_TICKS) {
+                spawnWave(level, d);
+                d.waveSpawned = true;
+                ServerPlayer p = level.getServer().getPlayerList().getPlayer(d.playerUUID);
+                if (p != null) {
+                    p.displayClientMessage(Component.literal("¡Defiende la aldea de los monstruos!"), false);
+                }
+            }
+
+            if (d.waveSpawned) {
+                boolean waveCleared = isWaveCleared(level, d.wave);
+                if (waveCleared || d.tickTicks > GRACE_TICKS + SIEGE_TIMEOUT_TICKS) {
+                    boolean saved = waveCleared;
+                    ServerPlayer player = level.getServer().getPlayerList().getPlayer(d.playerUUID);
+                    if (player != null) {
+                        if (saved) {
+                            grantReward(player);
+                            player.displayClientMessage(Component.literal("¡Has salvado la aldea! El objetivo avanza."), false);
+                        } else {
+                            player.displayClientMessage(Component.literal("La aldea cayó... El objetivo avanza."), false);
+                        }
+                        PlayerAuxiliaryCapabilityInterface aux = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerAuxiliaryCapability.INSTANCE);
+                        if (aux != null) {
+                            aux.setObjectiveIndex(d.objectiveIndex + 1, player);
+                        }
+                    }
                     list.remove(i);
-                    continue;
                 }
-                if (saved) {
-                    grantReward(player);
-                    player.displayClientMessage(Component.literal("¡Has salvado la aldea! El objetivo avanza."), false);
-                } else {
-                    player.displayClientMessage(Component.literal("La aldea cayó... El objetivo avanza."), false);
-                }
-                PlayerAuxiliaryCapabilityInterface aux = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerAuxiliaryCapability.INSTANCE);
-                if (aux != null) {
-                    aux.setObjectiveIndex(d.objectiveIndex + 1, player);
-                }
-                list.remove(i);
+            }
+        }
+    }
+
+    private static void spawnWave(ServerLevel level, VillageDefense d) {
+        Random random = new Random();
+        for (int i = 0; i < DEFAULT_WAVE; i++) {
+            double angle = random.nextDouble() * Math.PI * 2.0D;
+            // Fuera de la valla (radio ~14, la valla está a 10).
+            int dist = 14 + random.nextInt(6);
+            int x = (int) Math.round(d.center.getX() + Math.cos(angle) * dist);
+            int z = (int) Math.round(d.center.getZ() + Math.sin(angle) * dist);
+            int y = VillageGenerator.findLand(level, new BlockPos(x, 0, z)).getY();
+            AggressiveZombieEntity zombie = ModEntities.AGGRESSIVE_ZOMBIE.get()
+                    .create(level, null, new BlockPos(x, y, z), MobSpawnType.MOB_SUMMONED, true, true);
+            if (zombie != null) {
+                zombie.moveTo(x + 0.5D, y, z + 0.5D, 0.0F, 0.0F);
+                level.addFreshEntity(zombie);
+                d.wave.add(zombie.getUUID());
             }
         }
     }
@@ -106,7 +142,7 @@ public final class VillageManager {
         for (UUID uuid : wave) {
             net.minecraft.world.entity.Entity e = level.getEntity(uuid);
             if (e != null && e.isAlive()) {
-                return false; // al menos uno sigue vivo
+                return false;
             }
         }
         return true;
@@ -124,15 +160,14 @@ public final class VillageManager {
         final int objectiveIndex;
         final UUID playerUUID;
         final BlockPos center;
-        final List<UUID> wave;
+        final List<UUID> wave = new ArrayList<>();
         long tickTicks;
+        boolean waveSpawned;
 
-        VillageDefense(int objectiveIndex, UUID playerUUID, BlockPos center, List<UUID> wave, long tickTicks) {
+        VillageDefense(int objectiveIndex, UUID playerUUID, BlockPos center) {
             this.objectiveIndex = objectiveIndex;
             this.playerUUID = playerUUID;
             this.center = center;
-            this.wave = wave;
-            this.tickTicks = tickTicks;
         }
     }
 }

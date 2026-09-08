@@ -40,10 +40,15 @@ public final class ObjectiveManager {
         }
         int index = aux.getObjectiveIndex();
         BlockPos target = ObjectiveTargets.targetOf(spawn, index);
+        double distSqr = ObjectiveTargets.horizontalDistSqr(player.blockPosition(), target);
 
-        if (ObjectiveTargets.horizontalDistSqr(player.blockPosition(), target) <= (double) (REACH_RADIUS * REACH_RADIUS)) {
-            // Al llegar a la aldea se inicia el asedio; el avance del objetivo lo hace VillageManager
-            // cuando la aldea se salva o cae. Aquí NO se avanza de inmediato.
+        // Pre-generar la aldea cuando el jugador se acerca (antes de llegar, para que no aparezca de golpe).
+        if (distSqr <= (double) (VillageManager.PRE_GENERATE_RADIUS * VillageManager.PRE_GENERATE_RADIUS)) {
+            VillageManager.preGenerate(player.serverLevel(), index, target);
+        }
+
+        // Al llegar, se inicia el asedio (con un margen); el avance lo hace VillageManager al resolverse.
+        if (distSqr <= (double) (REACH_RADIUS * REACH_RADIUS)) {
             VillageManager.start(player.serverLevel(), player, index, target);
         }
     }
