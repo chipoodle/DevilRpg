@@ -42,6 +42,9 @@ public final class VillageGenerator {
     /** Radio del área que se nivela alrededor del centro de la aldea. */
     private static final int LEVEL_RADIUS = 12;
 
+    /** Profundidad máxima (en bloques hacia abajo) de la estructura flotante bajo la isla. */
+    private static final int ISLAND_SUPPORT_DEPTH = 9;
+
     /** Dirección hacia afuera de la puerta (la cabaña mira al norte). */
     private static final Direction FRONT = Direction.NORTH;
 
@@ -68,7 +71,14 @@ public final class VillageGenerator {
     /** Genera las cabañas, los aldeanos, los caminos y la valla alrededor del centro. */
     public static void generate(ServerLevel level, BlockPos center) {
         clearVegetation(level, center, FENCE_RADIUS + 4);
-        levelTerrain(level, center, LEVEL_RADIUS);
+        // Si hay agua en la columna del centro (el objetivo cayó en el océano o un lago), construir una
+        // isla flotante ya que el objetivo no se puede mover. Si no, nivelar el terreno como siempre.
+        boolean overWater = waterSurface(level, center.getX(), center.getZ()) >= 0;
+        if (overWater) {
+            buildFloatingIsland(level, center, FENCE_RADIUS + 4);
+        } else {
+            levelTerrain(level, center, LEVEL_RADIUS);
+        }
         BlockPos h0 = hut(level, center.offset(-9, 0, -1));
         BlockPos h1 = hut(level, center.offset(9, 0, -2));
         BlockPos h2 = hut(level, center.offset(0, 0, 9));
@@ -81,6 +91,37 @@ public final class VillageGenerator {
         spawnVillager(level, center.offset(0, 0, 7), VillagerProfession.CLERIC);
 
         fence(level, center);
+    }
+
+    /**
+     * Construye una isla flotante bajo la aldea cuando esta cae sobre agua. Cubre la superficie con una
+     * capa de tierra (isla) y, por debajo, una estructura de troncos que se estrecha hacia el fondo
+     * (como una base flotante). Así la aldea no queda sumergida aunque el objetivo esté en el océano.
+     */
+    private static void buildFloatingIsland(ServerLevel level, BlockPos center, int radius) {
+        int surfaceY = waterSurface(level, center.getX(), center.getZ()); // superficie del agua
+        // El suelo de la isla queda justo sobre el nivel del agua.
+        int islandTop = surfaceY + 1;
+        for (int x = -radius; x <= radius; x++) {
+            for (int z = -radius; z <= radius; z++) {
+                BlockPos top = new BlockPos(center.getX() + x, islandTop, center.getZ() + z);
+                int g = groundY(level, top.getX(), top.getZ());
+                // Capa de tierra de la isla (rellenar hasta el tope si hay hueco bajo el agua).
+                for (int y = g; y < islandTop; y++) {
+                    level.setBlock(new BlockPos(top.getX(), y, top.getZ()), Blocks.DIRT.defaultBlockState(), 3);
+                }
+                level.setBlock(top, Blocks.GRASS_BLOCK.defaultBlockState(), 3);
+                // Estructura descendente de troncos, que se estrecha con la profundidad (base flotante).
+                int dist = Math.max(Math.abs(x), Math.abs(z));
+                for (int depth = 1; depth <= ISLAND_SUPPORT_DEPTH; depth++) {
+                    int shrink = depth; // el cono se estrecha 1 bloque por nivel
+                    if (dist > radius - shrink) continue;
+                    int y = islandTop - depth;
+                    if (y <= level.getMinBuildHeight()) break;
+                    level.setBlock(new BlockPos(top.getX(), y, top.getZ()), Blocks.OAK_LOG.defaultBlockState(), 3);
+                }
+            }
+        }
     }
 
     /** Camino de tierra apisonada (el de pala) entre el centro y cada cabaña. */
@@ -237,7 +278,7 @@ public final class VillageGenerator {
         // 1) Suelo de la cabaña = el del centro (ya nivelado), para no apilar tierra hasta un máximo.
         int floorY = groundY(level, base.getX(), base.getZ());
         // 2) Si el centro está bajo agua, subir el piso sobre la superficie y sostener la casa con pilares.
-        int waterSurface = waterTop(level, base.getX(), base.getZ());
+        int waterSurface = waterSurface(level, base.getX(), base.getZ());
         boolean overWater = waterSurface > floorY;
         if (overWater) {
             floorY = waterSurface + 1;
@@ -337,19 +378,22 @@ public final class VillageGenerator {
         }
     }
 
-    /** Superficie del agua (Y del bloque de agua más alto) en una columna, o floorY si no hay agua. */
-    private static int waterTop(ServerLevel level, int x, int z) {
+    /**
+     * Altura (Y) de la superficie del agua en una columna: el bloque de agua más alto donde encuentra
+     * agua sobre un bloque sólido. Devuelve {@code -1} si no hay agua (tierra firme).
+     */
+    private static int waterSurface(ServerLevel level, int x, int z) {
         int y = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, new BlockPos(x, 0, z)).getY();
         for (int yy = y; yy > y - 48; yy--) {
             BlockState bs = level.getBlockState(new BlockPos(x, yy, z));
             if (bs.getBlock() == Blocks.WATER) {
                 return yy;
             }
-            if (bs.isSolid() && bs.getBlock() != Blocks.WATER) {
-                return yy + 1;
+            if (bs.isSolid() && bs.getBlock() != Blocks.WATER && bs.getBlock() != Blocks.LAVA) {
+                return -1; // bloque sólido por encima del agua -> tierra firme
             }
         }
-        return y;
+        return -1;
     }
 
     private static void door(ServerLevel level, BlockPos pos) {
