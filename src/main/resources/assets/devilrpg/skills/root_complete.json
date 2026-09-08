@@ -295,7 +295,7 @@
     {
         "id": "shapeshifting:werewolf",
         "display": {
-            "description": "Yield to the beast within and take the form of a werewolf, trading your human frame for fang and claw.",
+            "description": "Yield to the beast within and take the form of a werewolf, trading your human frame for fang and claw. While transformed, mana drains constantly; investing levels reduces the drain.",
             "icon": {
                 "item": "minecraft:glass_pane",
                 "minecraft:glass_panenbt": 1
