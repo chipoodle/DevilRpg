@@ -39,11 +39,11 @@ import java.util.Set;
  */
 public final class VillageGenerator {
 
-    /** Radio de la valla (más grande para dar espacio libre de movimiento en el interior). */
-    private static final int FENCE_RADIUS = 22;
+    /** Radio de la valla (un 30% más grande que antes). */
+    private static final int FENCE_RADIUS = 29;
 
     /** Radio del área que se nivela alrededor del centro de la aldea. */
-    private static final int LEVEL_RADIUS = 12;
+    private static final int LEVEL_RADIUS = 16;
 
     /** Profundidad máxima (en bloques hacia abajo) de la estructura flotante bajo la isla. */
     private static final int ISLAND_SUPPORT_DEPTH = 9;
@@ -82,10 +82,10 @@ public final class VillageGenerator {
         } else {
             levelTerrain(level, center, LEVEL_RADIUS);
         }
-        // Cabañas separadas entre sí (offset más grandes para dejar más espacio entre ellas).
-        BlockPos h0 = hut(level, center.offset(-13, 0, -2));
-        BlockPos h1 = hut(level, center.offset(12, 0, -3));
-        BlockPos h2 = hut(level, center.offset(-2, 0, 13));
+        // Cabañas separadas entre sí (offset más grandes, escalados con el nuevo radio).
+        BlockPos h0 = hut(level, center.offset(-17, 0, -3));
+        BlockPos h1 = hut(level, center.offset(16, 0, -4));
+        BlockPos h2 = hut(level, center.offset(-3, 0, 17));
         // Campana en el centro de la aldea.
         bell(level, center);
 
@@ -94,12 +94,12 @@ public final class VillageGenerator {
 
         // Aldeanos justo frente a la puerta de cada cabaña (más alejados del centro para dejar espacio
         // libre y permitir que la valla sea más grande).
-        spawnVillager(level, center.offset(-13, 0, -5), VillagerProfession.FARMER);
-        spawnVillager(level, center.offset(12, 0, -6), VillagerProfession.WEAPONSMITH);
-        spawnVillager(level, center.offset(-2, 0, 10), VillagerProfession.CLERIC);
+        spawnVillager(level, center.offset(-17, 0, -6), VillagerProfession.FARMER);
+        spawnVillager(level, center.offset(16, 0, -7), VillagerProfession.WEAPONSMITH);
+        spawnVillager(level, center.offset(-3, 0, 14), VillagerProfession.CLERIC);
 
         // Golem de hierro que protege la aldea.
-        spawnIronGolem(level, center.offset(3, 0, 3));
+        spawnIronGolem(level, center.offset(4, 0, 4));
 
         // Faroles con poste distribuidos por la aldea (evitan spawn de zombies con la mecánica vanilla).
         torches(level, center);
@@ -110,27 +110,43 @@ public final class VillageGenerator {
     /** Coloca una campana en el centro de la aldea (marcador de la villa), sobre un soporte de piedra. */
     private static void bell(ServerLevel level, BlockPos center) {
         int y = groundY(level, center.getX(), center.getZ());
-        // groundY devuelve un bloque sobre el sólido; apoyamos la campana con un bloque de piedra debajo
-        // para que no se rompa (la campana FLOOR necesita bloque sólido debajo).
+        // Limpiar la columna del centro por arriba para que no quede tierra apilada sobre la campana.
+        clearColumnAbove(level, center.getX(), center.getZ(), y);
+        // Apoyar la campana con un bloque de piedra debajo (la campana FLOOR necesita bloque sólido debajo).
         level.setBlock(new BlockPos(center.getX(), y - 1, center.getZ()), Blocks.STONE.defaultBlockState(), 3);
         level.setBlock(new BlockPos(center.getX(), y, center.getZ()),
                 Blocks.BELL.defaultBlockState().setValue(BellBlock.FACING, Direction.SOUTH).setValue(BellBlock.ATTACHMENT, BellAttachType.FLOOR), 3);
     }
 
+    /** Quita el aire y bloques que queden en la columna por encima de {@code baseY+1} (deja la campana al aire). */
+    private static void clearColumnAbove(ServerLevel level, int x, int z, int baseY) {
+        for (int yy = baseY + 1; yy <= baseY + 8 && yy < level.getMaxBuildHeight(); yy++) {
+            BlockState bs = level.getBlockState(new BlockPos(x, yy, z));
+            if (bs.isAir()) continue;
+            // Solo limpiar bloques que no sean estructuras (tierra/cesped de la isla o nivelado).
+            level.setBlock(new BlockPos(x, yy, z), Blocks.AIR.defaultBlockState(), 3);
+        }
+    }
+
     /**
-     * Coloca faroles distribuidos por la aldea (poste de valla + antorcha/lanterna encima) en 3 puntos,
-     * para evitar que los zombies normales aparezcan de noche con la mecánica vanilla (luz).
+     * Coloca faroles distribuidos por la aldea (poste de valla + lanterna encima) en varios puntos, para
+     * evitar que los zombies normales aparezcan de noche con la mecánica vanilla (luz).
      */
     private static void torches(ServerLevel level, BlockPos center) {
         int[][] spots = {
-                {6, 0, -6},
-                {-7, 0, 6},
-                {0, 0, -11},
+                {8, 0, -8},
+                {-9, 0, 8},
+                {0, 0, -15},
+                {12, 0, 6},
+                {-13, 0, -6},
+                {5, 0, 14},
+                {0, 0, 15},
+                {-16, 0, 5},
         };
         for (int[] s : spots) {
             BlockPos spot = center.offset(s[0], 0, s[2]);
             int y = groundY(level, spot.getX(), spot.getZ());
-            // Poste de valla (2 bloques) y lantern/antorcha encima.
+            // Poste de valla (2 bloques) y lanterna encima.
             level.setBlock(new BlockPos(spot.getX(), y, spot.getZ()), Blocks.OAK_FENCE.defaultBlockState(), 3);
             level.setBlock(new BlockPos(spot.getX(), y + 1, spot.getZ()), Blocks.OAK_FENCE.defaultBlockState(), 3);
             level.setBlock(new BlockPos(spot.getX(), y + 2, spot.getZ()), Blocks.LANTERN.defaultBlockState(), 3);
