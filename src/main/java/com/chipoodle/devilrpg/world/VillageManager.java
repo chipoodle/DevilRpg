@@ -41,6 +41,8 @@ public final class VillageManager {
     private static final int SIEGE_TIMEOUT_TICKS = 2 * 60 * 20;
     /** Número base de monstruos agresivos en la ola (escala con el índice del objetivo). */
     private static final int DEFAULT_WAVE = 8;
+    /** Incremento máximo de la ola por alejarse (límite: no crece infinitamente). */
+    private static final int MAX_WAVE_EXTRA = 20;
     /** Zona mínima/máxima (bloques) a la que spawnea la ola, FUERA de la valla (radio 29). */
     private static final int WAVE_SPAWN_MIN = 32;
     private static final int WAVE_SPAWN_MAX = 40;
@@ -125,8 +127,8 @@ public final class VillageManager {
 
     private static void spawnWave(ServerLevel level, VillageDefense d) {
         Random random = new Random();
-        // La ola crece con el índice del objetivo (más lejos del ancla => más agresivos).
-        int count = DEFAULT_WAVE + Math.min(d.objectiveIndex, 10) * 2;
+        // La ola crece al alejarse del ancla, pero con un LÍMITE: no se extiende infinitamente.
+        int count = DEFAULT_WAVE + Math.min(d.objectiveIndex * 2, MAX_WAVE_EXTRA);
         for (int i = 0; i < count; i++) {
             double angle = random.nextDouble() * Math.PI * 2.0D;
             // FUERA de la valla (radio 29): spawnea entre 32 y 40 bloques del centro.

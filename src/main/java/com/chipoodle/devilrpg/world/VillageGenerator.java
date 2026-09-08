@@ -82,18 +82,24 @@ public final class VillageGenerator {
         } else {
             levelTerrain(level, center, LEVEL_RADIUS);
         }
-        // Cabañas separadas entre sí (offset más grandes, escalados con el nuevo radio).
-        BlockPos h0 = hut(level, center.offset(-17, 0, -3));
-        BlockPos h1 = hut(level, center.offset(16, 0, -4));
-        BlockPos h2 = hut(level, center.offset(-3, 0, 17));
-        // Campana en el centro de la aldea.
-        bell(level, center);
+        // Posiciones de las cabañas (base). La puerta mira a FRONT (norte), en base.z-2.
+        BlockPos h0 = center.offset(-17, 0, -3);
+        BlockPos h1 = center.offset(16, 0, -4);
+        BlockPos h2 = center.offset(-3, 0, 17);
 
-        // Caminos de 2 bloques de ancho desde el centro hasta cada cabaña.
+        // Caminos PRIMERO, sobre el suelo nivelado (así no se generan sobre el techo de las casas ni
+        // sobre la campana). Van del centro hasta justo frente a la puerta de cada cabaña.
         paths(level, center, h0, h1, h2);
 
-        // Aldeanos justo frente a la puerta de cada cabaña (más alejados del centro para dejar espacio
-        // libre y permitir que la valla sea más grande).
+        // Construir las cabañas DESPUÉS del camino (el camino no queda sobre ellas).
+        hut(level, h0);
+        hut(level, h1);
+        hut(level, h2);
+
+        // Campana al final, en el centro, limpiando su columna (nadie la tapa).
+        bell(level, center);
+
+        // Aldeanos justo frente a la puerta de cada cabaña.
         spawnVillager(level, center.offset(-17, 0, -6), VillagerProfession.FARMER);
         spawnVillager(level, center.offset(16, 0, -7), VillagerProfession.WEAPONSMITH);
         spawnVillager(level, center.offset(-3, 0, 14), VillagerProfession.CLERIC);
@@ -196,22 +202,34 @@ public final class VillageGenerator {
 
     /** Camino de tierra apisonada (el de pala) de 2 bloques de ancho entre el centro y cada cabaña. */
     private static void paths(ServerLevel level, BlockPos center, BlockPos h0, BlockPos h1, BlockPos h2) {
-        line(level, center, h0);
-        line(level, center, h1);
-        line(level, center, h2);
+        line(level, center, doorApproach(h0));
+        line(level, center, doorApproach(h1));
+        line(level, center, doorApproach(h2));
     }
 
-    /** Dibuja un camino de tierra apisonada de 2 bloques de ancho en el plano XZ entre dos puntos. */
+    /** Punto justo frente a la puerta de una cabaña (la puerta mira a {@link VillageGenerator#FRONT}). */
+    private static BlockPos doorApproach(BlockPos hutCenter) {
+        int fx = FRONT.getStepX() * 3;
+        int fz = FRONT.getStepZ() * 3;
+        return hutCenter.offset(fx, 0, fz);
+    }
+
+    /**
+     * Dibuja un camino de tierra apisonada de 2 bloques de ancho en el plano XZ entre dos puntos, a ras
+     * de suelo. No toca la celda del centro (donde va la campana) y, si una posición quedó elevada (sobre
+     * el techo de una casa), baja el camino a la superficie real rellenando con tierra hasta el suelo.
+     */
     private static void line(ServerLevel level, BlockPos from, BlockPos to) {
         int steps = Math.max(Math.abs(to.getX() - from.getX()), Math.abs(to.getZ() - from.getZ()));
         // El ancho de 2 bloques se aplica en el eje perpendicular a la dirección del camino (en el plano XZ).
-        // En diagonales usamos el eje dominante para no dejar el camino de 1 solo bloque.
         boolean horizontal = Math.abs(to.getX() - from.getX()) >= Math.abs(to.getZ() - from.getZ());
         int widthX = horizontal ? 0 : 1;
         int widthZ = horizontal ? 1 : 0;
         for (int i = 0; i <= steps; i++) {
             int x = from.getX() + (int) Math.round((to.getX() - from.getX()) * (i / (double) Math.max(1, steps)));
             int z = from.getZ() + (int) Math.round((to.getZ() - from.getZ()) * (i / (double) Math.max(1, steps)));
+            // No dibujar sobre la celda del centro (ahí va la campana).
+            if (x == from.getX() && z == from.getZ()) continue;
             for (int w = 0; w <= 1; w++) {
                 int px = x + widthX * w;
                 int pz = z + widthZ * w;
