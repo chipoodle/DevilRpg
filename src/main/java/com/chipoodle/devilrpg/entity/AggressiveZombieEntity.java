@@ -184,7 +184,7 @@ public class AggressiveZombieEntity extends Zombie {
                 SmallFireball fireball = new SmallFireball(zombie.level(), zombie, new Vec3(d1 + zombie.getRandom().nextGaussian() * d0, d2, d3 + zombie.getRandom().nextGaussian() * d0));
                 fireball.setPos(fireball.getX(), zombie.getY(0.5D) + 0.5D, fireball.getZ());
                 zombie.level().addFreshEntity(fireball);
-                attackTimer = 60; // Tiempo entre ataques
+                attackTimer = 120; // Tiempo entre ataques (recarga del fuego, el doble de lenta)
             }
         }
     }
