@@ -10,6 +10,7 @@ import net.minecraft.world.entity.animal.IronGolem;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.npc.VillagerProfession;
 import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.BellBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.BushBlock;
@@ -19,6 +20,7 @@ import net.minecraft.world.level.block.GrowingPlantBlock;
 import net.minecraft.world.level.block.StairBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BedPart;
+import net.minecraft.world.level.block.state.properties.BellAttachType;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.levelgen.Heightmap;
 
@@ -105,10 +107,14 @@ public final class VillageGenerator {
         fence(level, center);
     }
 
-    /** Coloca una campana en el centro de la aldea (marcador de la villa). */
+    /** Coloca una campana en el centro de la aldea (marcador de la villa), sobre un soporte de piedra. */
     private static void bell(ServerLevel level, BlockPos center) {
         int y = groundY(level, center.getX(), center.getZ());
-        level.setBlock(new BlockPos(center.getX(), y, center.getZ()), Blocks.BELL.defaultBlockState(), 3);
+        // groundY devuelve un bloque sobre el sólido; apoyamos la campana con un bloque de piedra debajo
+        // para que no se rompa (la campana FLOOR necesita bloque sólido debajo).
+        level.setBlock(new BlockPos(center.getX(), y - 1, center.getZ()), Blocks.STONE.defaultBlockState(), 3);
+        level.setBlock(new BlockPos(center.getX(), y, center.getZ()),
+                Blocks.BELL.defaultBlockState().setValue(BellBlock.FACING, Direction.SOUTH).setValue(BellBlock.ATTACHMENT, BellAttachType.FLOOR), 3);
     }
 
     /**
@@ -179,19 +185,17 @@ public final class VillageGenerator {
         line(level, center, h2);
     }
 
-    /** Dibuja un camino de tierra apisonada de 2 bloques de ancho entre dos puntos. */
+    /** Dibuja un camino de tierra apisonada de 2 bloques de ancho en el plano XZ entre dos puntos. */
     private static void line(ServerLevel level, BlockPos from, BlockPos to) {
-        int dx = Integer.signum(to.getX() - from.getX());
-        int dz = Integer.signum(to.getZ() - from.getZ());
-        // Perpendicular al camino: si va en X, el ancho se reparte en Z; si va en Z, en X.
-        int widthX = dx == 0 ? 1 : 0;
-        int widthZ = dz == 0 ? 1 : 0;
         int steps = Math.max(Math.abs(to.getX() - from.getX()), Math.abs(to.getZ() - from.getZ()));
+        // El ancho de 2 bloques se aplica en el eje perpendicular a la dirección del camino (en el plano XZ).
+        // En diagonales usamos el eje dominante para no dejar el camino de 1 solo bloque.
+        boolean horizontal = Math.abs(to.getX() - from.getX()) >= Math.abs(to.getZ() - from.getZ());
+        int widthX = horizontal ? 0 : 1;
+        int widthZ = horizontal ? 1 : 0;
         for (int i = 0; i <= steps; i++) {
-            // Avance principal por el eje dominante.
             int x = from.getX() + (int) Math.round((to.getX() - from.getX()) * (i / (double) Math.max(1, steps)));
             int z = from.getZ() + (int) Math.round((to.getZ() - from.getZ()) * (i / (double) Math.max(1, steps)));
-            // Ancho de 2 bloques en la dirección perpendicular.
             for (int w = 0; w <= 1; w++) {
                 int px = x + widthX * w;
                 int pz = z + widthZ * w;
