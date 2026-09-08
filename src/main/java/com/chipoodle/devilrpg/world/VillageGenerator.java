@@ -67,7 +67,7 @@ public final class VillageGenerator {
 
     /** Genera las cabañas, los aldeanos, los caminos y la valla alrededor del centro. */
     public static void generate(ServerLevel level, BlockPos center) {
-        clearVegetation(level, center, FENCE_RADIUS);
+        clearVegetation(level, center, FENCE_RADIUS + 4);
         levelTerrain(level, center, LEVEL_RADIUS);
         BlockPos h0 = hut(level, center.offset(-9, 0, -1));
         BlockPos h1 = hut(level, center.offset(9, 0, -2));
@@ -192,23 +192,35 @@ public final class VillageGenerator {
         return ((long) x << 32) | (z & 0xFFFFFFFFL);
     }
 
-    /** Limpia la vegetación (árboles, flores, hierba, cactus, cañas, etc.) dentro del radio, por columna. */
+    /** ¿Es un bloque de vegetación que debe limpiarse? */
+    private static boolean isVegetation(BlockState state) {
+        if (state.isAir()) return false;
+        return state.is(BlockTags.LOGS)
+                || state.is(BlockTags.LEAVES)
+                || state.getBlock() instanceof BushBlock
+                || state.getBlock() instanceof GrowingPlantBlock
+                || state.getBlock() == Blocks.CACTUS
+                || state.getBlock() == Blocks.BAMBOO
+                || state.getBlock() == Blocks.BAMBOO_SAPLING
+                || state.getBlock() == Blocks.SUGAR_CANE;
+    }
+
+    /**
+     * Limpia TODA la vegetación (árboles, follaje, flores, pasto, bambú, cactus, cañas, etc.) dentro del
+     * radio. Barre la columna completa desde el bloque más alto (heightmap) hacia abajo, para que cubra
+     * también los tallos/árboles que nacen en el suelo y no solo la punta (el bambú es un bloque sólido,
+     * así que no bastaba con usar la "superficie" del suelo). Se llama ANTES de generar la aldea.
+     */
     private static void clearVegetation(ServerLevel level, BlockPos center, int radius) {
         for (int x = center.getX() - radius; x <= center.getX() + radius; x++) {
             for (int z = center.getZ() - radius; z <= center.getZ() + radius; z++) {
-                int surface = groundY(level, x, z);
-                // Escanear desde justo debajo de la superficie (para plantas bajas) hasta 16 bloques arriba
-                // (para árboles). Así cubre el terreno real, no un rango fijo alrededor del centro.
-                for (int y = surface - 2; y <= surface + 16; y++) {
+                int topY = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING, new BlockPos(x, 0, z)).getY();
+                // Desde el bloque más alto de la columna hacia abajo ~60 bloques: cubre árboles, bambú y
+                // cualquier planta que nazca en el suelo, aunque su base esté varios bloques por debajo.
+                for (int y = topY; y > topY - 60 && y >= level.getMinBuildHeight(); y--) {
                     BlockPos pos = new BlockPos(x, y, z);
                     BlockState state = level.getBlockState(pos);
-                    if (state.isAir()) continue;
-                    Block block = state.getBlock();
-                    boolean vegetation = state.is(BlockTags.LOGS) || state.is(BlockTags.LEAVES)
-                            || block instanceof BushBlock || block instanceof GrowingPlantBlock
-                            || block == Blocks.CACTUS || block == Blocks.BAMBOO || block == Blocks.BAMBOO_SAPLING
-                            || block == Blocks.SUGAR_CANE;
-                    if (vegetation) {
+                    if (isVegetation(state)) {
                         level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
                     }
                 }
