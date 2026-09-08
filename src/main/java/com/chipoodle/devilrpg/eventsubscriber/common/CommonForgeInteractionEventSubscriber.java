@@ -287,6 +287,8 @@ public class CommonForgeInteractionEventSubscriber {
                 BlockPos anchor = serverLevel.getSharedSpawnPos();
                 playerCapability.setAnchorPoint(Vec3.atCenterOf(anchor), player);
                 RitualCircleGenerator.generate(serverLevel, anchor);
+                // (TEMPORAL, para probar) Subir al jugador a nivel 200 de experiencia.
+                player.giveExperienceLevels(200 - player.experienceLevel);
             }
         }
         /*if (!event.getLevel().isClientSide() && event.getEntity() instanceof Zombie) {

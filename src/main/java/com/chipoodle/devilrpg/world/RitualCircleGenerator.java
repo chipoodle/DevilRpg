@@ -3,7 +3,11 @@ package com.chipoodle.devilrpg.world;
 import com.chipoodle.devilrpg.init.ModBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.ChestBlock;
+import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 
@@ -72,6 +76,25 @@ public final class RitualCircleGenerator {
 
         // Roca de los clérigos (la que se lee) en el centro, asentada.
         level.setBlock(center, ModBlocks.LORE_STONE_BLOCK.get().defaultBlockState(), 3);
+
+        // (TEMPORAL, para probar) Cofre con equipo de inicio junto a la roca.
+        giftChest(level, center.offset(1, 0, 0));
+    }
+
+    /** (TEMPORAL) Cofre junto al círculo con armadura de cuero, 2 espadas de piedra y botellas de XP. */
+    private static void giftChest(ServerLevel level, BlockPos pos) {
+        pos = new BlockPos(pos.getX(), groundY(level, pos.getX(), pos.getZ()), pos.getZ());
+        level.setBlock(pos, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.TYPE,
+                net.minecraft.world.level.block.state.properties.ChestType.SINGLE), 3);
+        if (level.getBlockEntity(pos) instanceof ChestBlockEntity chest) {
+            chest.setItem(0, new ItemStack(Items.LEATHER_HELMET));
+            chest.setItem(1, new ItemStack(Items.LEATHER_CHESTPLATE));
+            chest.setItem(2, new ItemStack(Items.LEATHER_LEGGINGS));
+            chest.setItem(3, new ItemStack(Items.LEATHER_BOOTS));
+            chest.setItem(4, new ItemStack(Items.STONE_SWORD));
+            chest.setItem(5, new ItemStack(Items.STONE_SWORD));
+            chest.setItem(6, new ItemStack(Items.EXPERIENCE_BOTTLE, 16));
+        }
     }
 
     /**
