@@ -21,19 +21,26 @@ import net.minecraft.world.level.block.state.properties.BedPart;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.levelgen.Heightmap;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
  * Genera una aldea simple (cabañas con puerta y cama + aldeanos + valla de madera con puertas) en un
- * punto del mundo. Las cabañas y la valla se asientan al terreno real (aplanando la base para no flotar
- * en pendientes), se evitar el agua, se limpia la vegetación del interior y la valla se cierra de forma
- * continua para que los aldeanos puedan transitar.
+ * punto del mundo. Antes de construir se limpia la vegetación del interior y se nivela el terreno a un
+ * nivel base (rellenando los hoyos con tierra, suavizando la pendiente sin aplanarlo del todo). Las
+ * cabañas y la valla se asientan al terreno nivelado, la valla se cierra de forma continua y conectada
+ * (sin huecos en las diagonales) para que los aldeanos puedan transitar.
  */
 public final class VillageGenerator {
 
     /** Radio de la valla (más grande para dar espacio libre de movimiento en el interior). */
     private static final int FENCE_RADIUS = 22;
+
+    /** Radio del área que se nivela alrededor del centro de la aldea. */
+    private static final int LEVEL_RADIUS = 12;
 
     /** Dirección hacia afuera de la puerta (la cabaña mira al norte). */
     private static final Direction FRONT = Direction.NORTH;
@@ -61,6 +68,7 @@ public final class VillageGenerator {
     /** Genera las cabañas, los aldeanos, los caminos y la valla alrededor del centro. */
     public static void generate(ServerLevel level, BlockPos center) {
         clearVegetation(level, center, FENCE_RADIUS);
+        levelTerrain(level, center, LEVEL_RADIUS);
         BlockPos h0 = hut(level, center.offset(-9, 0, -1));
         BlockPos h1 = hut(level, center.offset(9, 0, -2));
         BlockPos h2 = hut(level, center.offset(0, 0, 9));
@@ -94,38 +102,89 @@ public final class VillageGenerator {
     }
 
     /**
-     * Valla de madera CLOSA y conectada alrededor de la aldea: un círculo continuo de 1 bloque, con
-     * puertas de valla en los accesos (norte/sur/este/oeste) para que los aldeanos puedan salir.
+     * Nivela el terreno del área de la aldea: toma la altura base (mediana de las alturas de suelo) y
+     * rellena con tierra las columnas que estén por debajo. Así se suaviza la pendiente y se rellenan los
+     * hoyos, pero no se aplana todo (las zonas más altas se conservan).
+     */
+    private static void levelTerrain(ServerLevel level, BlockPos center, int radius) {
+        List<Integer> heights = new ArrayList<>();
+        for (int x = -radius; x <= radius; x++) {
+            for (int z = -radius; z <= radius; z++) {
+                heights.add(groundY(level, center.getX() + x, center.getZ() + z));
+            }
+        }
+        Collections.sort(heights);
+        int baseY = heights.get(heights.size() / 2); // mediana
+
+        for (int x = -radius; x <= radius; x++) {
+            for (int z = -radius; z <= radius; z++) {
+                int g = groundY(level, center.getX() + x, center.getZ() + z);
+                // Rellenar solo hasta el nivel base; las columnas por encima se dejan (pendiente suave).
+                for (int y = g; y < baseY; y++) {
+                    level.setBlock(new BlockPos(center.getX() + x, y, center.getZ() + z), Blocks.DIRT.defaultBlockState(), 3);
+                }
+            }
+        }
+    }
+
+    /**
+     * Valla de madera cerrada y CONECTADA alrededor de la aldea. El anillo se dibuja con pasos
+     * cardinales (nunca diagonales) para que cada valla tenga vecino ortogonal y no queden huecos; donde
+     * habría un salto diagonal se inserta la valla intermedia. Se dejan puertas de valla en los accesos
+     * (norte/sur/este/oeste).
      */
     private static void fence(ServerLevel level, BlockPos center) {
         int r = FENCE_RADIUS;
-        Set<Long> ring = new HashSet<>();
-        for (int x = -r; x <= r; x++) {
-            int zTop = (int) Math.round(Math.sqrt(r * r - x * x));
-            ring.add(key(x, zTop));
-            ring.add(key(x, -zTop));
+        // Puntos del anillo en orden angular, deduplicando consecutivos.
+        List<BlockPos> pts = new ArrayList<>();
+        int samples = 720;
+        for (int a = 0; a <= samples; a++) {
+            double ang = (a / (double) samples) * Math.PI * 2.0;
+            int x = (int) Math.round(center.getX() + Math.cos(ang) * r);
+            int z = (int) Math.round(center.getZ() + Math.sin(ang) * r);
+            BlockPos p = new BlockPos(x, 0, z);
+            if (pts.isEmpty() || !pts.get(pts.size() - 1).equals(p)) {
+                pts.add(p);
+            }
         }
-        for (int z = -r; z <= r; z++) {
-            int xSide = (int) Math.round(Math.sqrt(r * r - z * z));
-            ring.add(key(xSide, z));
-            ring.add(key(-xSide, z));
+        // Conectar con pasos cardinales (cada tramo nunca deja un hueco diagonal).
+        Set<Long> cells = new HashSet<>();
+        for (int i = 0; i < pts.size(); i++) {
+            BlockPos from = pts.get(i);
+            BlockPos to = pts.get((i + 1) % pts.size());
+            connect(level, from, to, cells);
         }
-        // Puertas de valla en los ejes (accesos de los caminos).
-        Set<Long> gates = Set.of(key(0, r), key(0, -r), key(r, 0), key(-r, 0));
-
-        for (long k : ring) {
+        // Puertas de valla en los accesos de los caminos (ejes cardinales).
+        for (long k : cells) {
             int x = (int) (k >> 32);
-            int z = (int) k;
-            int y = groundY(level, center.getX() + x, center.getZ() + z);
+            int z = (int) (k & 0xFFFFFFFFL);
+            int y = groundY(level, x, z);
             BlockState state;
-            if (gates.contains(k)) {
-                // En los accesos norte/sur la valla corre este-oeste; en este/oeste corre norte-sur.
-                Direction facing = (Math.abs(z) == r) ? Direction.NORTH : Direction.EAST;
-                state = Blocks.OAK_FENCE_GATE.defaultBlockState().setValue(FenceGateBlock.FACING, facing);
+            boolean northSouthGate = Math.abs(z - center.getZ()) == r && x == center.getX();
+            boolean eastWestGate = Math.abs(x - center.getX()) == r && z == center.getZ();
+            if (northSouthGate) {
+                state = Blocks.OAK_FENCE_GATE.defaultBlockState().setValue(FenceGateBlock.FACING, Direction.NORTH);
+            } else if (eastWestGate) {
+                state = Blocks.OAK_FENCE_GATE.defaultBlockState().setValue(FenceGateBlock.FACING, Direction.EAST);
             } else {
                 state = Blocks.OAK_FENCE.defaultBlockState();
             }
-            level.setBlock(new BlockPos(center.getX() + x, y + 1, center.getZ() + z), state, 3);
+            level.setBlock(new BlockPos(x, y + 1, z), state, 3);
+        }
+    }
+
+    /** Añade los bloques de un tramo recto (solo pasos cardinales) al conjunto de celdas de la valla. */
+    private static void connect(ServerLevel level, BlockPos from, BlockPos to, Set<Long> cells) {
+        cells.add(key(from.getX(), from.getZ()));
+        int x = from.getX();
+        int z = from.getZ();
+        while (x != to.getX() || z != to.getZ()) {
+            if (x != to.getX()) {
+                x += Math.signum(to.getX() - x);
+            } else if (z != to.getZ()) {
+                z += Math.signum(to.getZ() - z);
+            }
+            cells.add(key(x, z));
         }
     }
 
@@ -133,11 +192,14 @@ public final class VillageGenerator {
         return ((long) x << 32) | (z & 0xFFFFFFFFL);
     }
 
-    /** Limpia la vegetación (árboles, flores, hierba, cactus, cañas, etc.) dentro del radio. */
+    /** Limpia la vegetación (árboles, flores, hierba, cactus, cañas, etc.) dentro del radio, por columna. */
     private static void clearVegetation(ServerLevel level, BlockPos center, int radius) {
         for (int x = center.getX() - radius; x <= center.getX() + radius; x++) {
             for (int z = center.getZ() - radius; z <= center.getZ() + radius; z++) {
-                for (int y = center.getY() - 1; y <= center.getY() + 18; y++) {
+                int surface = groundY(level, x, z);
+                // Escanear desde justo debajo de la superficie (para plantas bajas) hasta 16 bloques arriba
+                // (para árboles). Así cubre el terreno real, no un rango fijo alrededor del centro.
+                for (int y = surface - 2; y <= surface + 16; y++) {
                     BlockPos pos = new BlockPos(x, y, z);
                     BlockState state = level.getBlockState(pos);
                     if (state.isAir()) continue;
@@ -155,18 +217,13 @@ public final class VillageGenerator {
     }
 
     /**
-     * Cabaña asentada al terreno con 3 bloques de alto en el interior, puerta al frente, escaleras en la
-     * entrada cuando queda alto sobre el suelo, y —si el centro está bajo agua— piso sobre el agua con
-     * pilares de valla que bajan al menos 3 bloques y terminan en un bloque de madera.
+     * Cabaña asentada al terreno nivelado con 3 bloques de alto en el interior, puerta al frente, cama de
+     * 2 bloques (pie + cabeza), escaleras en la entrada cuando queda alto sobre el suelo, y —si el centro
+     * está bajo agua— piso sobre el agua con pilares de valla que bajan al menos 3 bloques.
      */
     private static BlockPos hut(ServerLevel level, BlockPos base) {
-        // 1) Suelo más alto del área 5x5 para apoyar la cabaña sin que flote.
+        // 1) Suelo de la cabaña = el del centro (ya nivelado), para no apilar tierra hasta un máximo.
         int floorY = groundY(level, base.getX(), base.getZ());
-        for (int x = -2; x <= 2; x++) {
-            for (int z = -2; z <= 2; z++) {
-                floorY = Math.max(floorY, groundY(level, base.getX() + x, base.getZ() + z));
-            }
-        }
         // 2) Si el centro está bajo agua, subir el piso sobre la superficie y sostener la casa con pilares.
         int waterSurface = waterTop(level, base.getX(), base.getZ());
         boolean overWater = waterSurface > floorY;
@@ -210,19 +267,28 @@ public final class VillageGenerator {
                 }
             }
         }
-        // Techo (nivel 4 = floorY+3), solo sobre el perímetro y cubriendo todo el hueco.
+        // Techo (nivel 4 = floorY+3), cubriendo todo el hueco.
         for (int x = -2; x <= 2; x++) {
             for (int z = -2; z <= 2; z++) {
                 level.setBlock(new BlockPos(base.getX() + x, floorY + 3, base.getZ() + z), Blocks.SPRUCE_PLANKS.defaultBlockState(), 3);
             }
         }
-        // 6) Puerta en el frente (z=-2, mirando hacia afuera), cama dentro, y escaleras si el suelo exterior queda muy abajo.
+        // 6) Puerta en el frente (z=-2, mirando hacia afuera), cama de 2 bloques (pie + cabeza), y escaleras.
         BlockPos doorBottom = new BlockPos(base.getX(), floorY, base.getZ() - 2);
         door(level, doorBottom);
-        level.setBlock(new BlockPos(base.getX(), floorY, base.getZ()),
-                Blocks.RED_BED.defaultBlockState().setValue(BedBlock.FACING, Direction.SOUTH).setValue(BedBlock.PART, BedPart.FOOT), 3);
+        bed(level, new BlockPos(base.getX(), floorY, base.getZ()));
         entranceStairs(level, doorBottom);
         return new BlockPos(base.getX(), floorY, base.getZ());
+    }
+
+    /** Coloca una cama completa (pie + cabeza) mirando hacia el sur (dentro de la cabaña). */
+    private static void bed(ServerLevel level, BlockPos footPos) {
+        BlockState foot = Blocks.RED_BED.defaultBlockState()
+                .setValue(BedBlock.FACING, Direction.SOUTH).setValue(BedBlock.PART, BedPart.FOOT);
+        BlockState head = Blocks.RED_BED.defaultBlockState()
+                .setValue(BedBlock.FACING, Direction.SOUTH).setValue(BedBlock.PART, BedPart.HEAD);
+        level.setBlock(footPos, foot, 3);
+        level.setBlock(footPos.relative(Direction.SOUTH), head, 3);
     }
 
     /** Pilar de vallas que baja desde el piso hasta el fondo marino, ≥3 bloques bajo el agua, terminando en madera. */
