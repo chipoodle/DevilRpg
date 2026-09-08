@@ -14,6 +14,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.stats.Stats;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -510,7 +511,15 @@ public class TargetUtils {
                     }
 
                     Vec3 vector3d = targetEntity.getDeltaMovement();
-                    boolean flag5 = targetEntity.hurt(player.damageSources().playerAttack(player), f);
+                    // Daño con encantamientos vanilla (Sharpness, Smite, Bane, Impaling...) del arma en la
+                    // mano que golpea, replicando Player.attack(): EnchantmentHelper.modifyDamage aplica
+                    // el bonus de DANO sobre el dano base ya escalado por la fuerza del golpe.
+                    ItemStack weaponStack = player.getItemInHand(currentHand);
+                    DamageSource damageSource = player.damageSources().playerAttack(player);
+                    if (player.level() instanceof ServerLevel serverLevel && !weaponStack.isEmpty()) {
+                        f = EnchantmentHelper.modifyDamage(serverLevel, weaponStack, targetEntity, damageSource, f);
+                    }
+                    boolean flag5 = targetEntity.hurt(damageSource, f);
                     hit = flag5;
                     if (flag5) {
                         if (i > 0) {
