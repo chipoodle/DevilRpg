@@ -17,6 +17,7 @@ import net.minecraft.world.level.block.BushBlock;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.GrowingPlantBlock;
+import net.minecraft.world.level.block.RotatedPillarBlock;
 import net.minecraft.world.level.block.StairBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BedPart;
@@ -113,7 +114,56 @@ public final class VillageGenerator {
         // Faroles con poste distribuidos por la aldea (evitan spawn de zombies con la mecánica vanilla).
         torches(level, center);
 
+        // Torre de vigilancia en un punto estratégico (cerca de la entrada norte, mirando hacia fuera).
+        tower(level, center.offset(-9, 0, -20));
+
         fence(level, center);
+    }
+
+    /**
+     * Torre de vigilancia de cobblestone (para futuros arqueros/guardias): base sólida, hueco interior,
+     * plataforma superior con almenas y escalera de acceso lateral.
+     */
+    private static void tower(ServerLevel level, BlockPos base) {
+        int y = groundY(level, base.getX(), base.getZ());
+        int height = 6; // altura útil de la torre
+        // Paredes de la torre (3x3, hueco interior).
+        for (int i = 0; i < height; i++) {
+            for (int x = -1; x <= 1; x++) {
+                for (int z = -1; z <= 1; z++) {
+                    boolean wallTower = Math.abs(x) == 1 || Math.abs(z) == 1;
+                    if (wallTower) {
+                        level.setBlock(new BlockPos(base.getX() + x, y + i, base.getZ() + z), Blocks.COBBLESTONE.defaultBlockState(), 3);
+                    } else {
+                        level.setBlock(new BlockPos(base.getX() + x, y + i, base.getZ() + z), Blocks.AIR.defaultBlockState(), 3);
+                    }
+                }
+            }
+        }
+        // Plataforma superior (piso de madera).
+        int topY = y + height;
+        for (int x = -1; x <= 1; x++) {
+            for (int z = -1; z <= 1; z++) {
+                level.setBlock(new BlockPos(base.getX() + x, topY, base.getZ() + z), Blocks.OAK_PLANKS.defaultBlockState(), 3);
+            }
+        }
+        // Almenas (murete) alrededor del borde superior.
+        for (int x = -1; x <= 1; x++) {
+            for (int z = -1; z <= 1; z++) {
+                boolean edge = Math.abs(x) == 1 || Math.abs(z) == 1;
+                if (edge && (x + z) % 2 == 0) { // espacios intercalados
+                    level.setBlock(new BlockPos(base.getX() + x, topY + 1, base.getZ() + z), Blocks.COBBLESTONE.defaultBlockState(), 3);
+                }
+            }
+        }
+        // Escalera de acceso por un lateral (sube en espiral simple: una cara).
+        for (int i = 0; i < height; i++) {
+            level.setBlock(new BlockPos(base.getX(), y + i, base.getZ() + 1), Blocks.AIR.defaultBlockState(), 3);
+            if (i < 2) {
+                level.setBlock(new BlockPos(base.getX(), y + i, base.getZ() + 2), Blocks.DIRT.defaultBlockState(), 3);
+            }
+        }
+        level.setBlock(new BlockPos(base.getX(), y + 1, base.getZ() + 2), Blocks.OAK_PLANKS.defaultBlockState(), 3);
     }
 
     /** Coloca una campana en el centro de la aldea (marcador de la villa), sobre un soporte de piedra. */
@@ -283,14 +333,14 @@ public final class VillageGenerator {
     }
 
     /**
-     * Valla de madera cerrada y CONECTADA alrededor de la aldea. El anillo se dibuja con pasos
-     * cardinales (nunca diagonales) para que cada valla tenga vecino ortogonal y no queden huecos; donde
-     * habría un salto diagonal se inserta la valla intermedia. Se dejan puertas de valla en los accesos
-     * (norte/sur/este/oeste).
+     * Muro de madera y piedra alrededor de la aldea, más realista: logs horizontales (2 bloques de alto)
+     * con columnas verticales de cobblestone cada cierta distancia, y 4 entradas de cobblestone en los
+     * puntos cardinales (norte/sur/este/oeste).
      */
     private static void fence(ServerLevel level, BlockPos center) {
         int r = FENCE_RADIUS;
-        // Puntos del anillo en orden angular, deduplicando consecutivos.
+        // Anillo en orden angular (deduplicando consecutivos), para poder recorrerlo y conocer la
+        // dirección de cada tramo.
         List<BlockPos> pts = new ArrayList<>();
         int samples = 720;
         for (int a = 0; a <= samples; a++) {
@@ -302,51 +352,60 @@ public final class VillageGenerator {
                 pts.add(p);
             }
         }
-        // Conectar con pasos cardinales (cada tramo nunca deja un hueco diagonal).
-        Set<Long> cells = new HashSet<>();
+        // Secuencia continua de celdas del muro (rellenando los saltos con pasos cardinales para que no
+        // queden huecos en la diagonal).
+        List<BlockPos> ring = new ArrayList<>();
         for (int i = 0; i < pts.size(); i++) {
             BlockPos from = pts.get(i);
             BlockPos to = pts.get((i + 1) % pts.size());
-            connect(level, from, to, cells);
+            fillCardinal(from, to, ring);
         }
-        // Altura uniforme de la valla para todo el anillo (mediana de la altura de cada celda), para que
-        // no quede "escalonada" en terreno ondulado y cada tramo se apoye sobre un relleno de tierra.
+
+        // Altura uniforme (mediana) para que el muro no quede escalonado en terreno ondulado.
         List<Integer> heights = new ArrayList<>();
-        for (long k : cells) {
-            heights.add(groundY(level, (int) (k >> 32), (int) (k & 0xFFFFFFFFL)));
+        for (BlockPos p : ring) {
+            heights.add(groundY(level, p.getX(), p.getZ()));
         }
         Collections.sort(heights);
-        int fenceY = heights.get(heights.size() / 2);
+        int baseY = heights.get(heights.size() / 2);
+        // Rellenar el suelo del anillo a la altura base.
+        for (BlockPos p : ring) {
+            int g = groundY(level, p.getX(), p.getZ());
+            for (int y = g; y <= baseY; y++) {
+                level.setBlock(new BlockPos(p.getX(), y, p.getZ()), Blocks.DIRT.defaultBlockState(), 3);
+            }
+        }
 
-        // Valla asentada al suelo (3 bloques de alto), con puertas de valla en los accesos.
-        for (long k : cells) {
-            int x = (int) (k >> 32);
-            int z = (int) (k & 0xFFFFFFFFL);
-            int g = groundY(level, x, z); // suelo real de esta celda
-            boolean northSouthGate = Math.abs(z - center.getZ()) == r && x == center.getX();
-            boolean eastWestGate = Math.abs(x - center.getX()) == r && z == center.getZ();
-            // Rellenar con tierra desde el suelo hasta la base de la valla para que nunca quede colgando.
-            for (int y = g; y <= fenceY; y++) {
-                level.setBlock(new BlockPos(x, y, z), Blocks.DIRT.defaultBlockState(), 3);
+        // Recorrer el muro bloque a bloque, detectando columnas y entradas.
+        int columnEvery = 4;  // una columna de cobblestone cada 4 bloques de muro
+        int idx = 0;
+        int n = ring.size();
+        for (int i = 0; i < n; i++) {
+            BlockPos cur = ring.get(i);
+            BlockPos next = ring.get((i + 1) % n);
+            // Dirección del tramo: eje horizontal del log (X si la pared corre en X, Z si corre en Z).
+            Direction.Axis wallAxis = cur.getX() != next.getX() ? Direction.Axis.X : Direction.Axis.Z;
+
+            // Entradas en los 4 puntos cardinales.
+            boolean northEntrance = cur.getZ() == center.getZ() - r && cur.getX() == center.getX();
+            boolean southEntrance = cur.getZ() == center.getZ() + r && cur.getX() == center.getX();
+            boolean eastEntrance = cur.getX() == center.getX() + r && cur.getZ() == center.getZ();
+            boolean westEntrance = cur.getX() == center.getX() - r && cur.getZ() == center.getZ();
+
+            if (northEntrance || southEntrance || eastEntrance || westEntrance) {
+                entrance(level, center, cur, r, baseY);
+            } else if (idx % columnEvery == 0) {
+                column(level, cur, baseY);
+            } else {
+                wall(level, cur, baseY, wallAxis);
             }
-            // 3 bloques de valla / puerta.
-            for (int i = 1; i <= 3; i++) {
-                BlockState state;
-                if (northSouthGate) {
-                    state = Blocks.OAK_FENCE_GATE.defaultBlockState().setValue(FenceGateBlock.FACING, Direction.NORTH);
-                } else if (eastWestGate) {
-                    state = Blocks.OAK_FENCE_GATE.defaultBlockState().setValue(FenceGateBlock.FACING, Direction.EAST);
-                } else {
-                    state = Blocks.OAK_FENCE.defaultBlockState();
-                }
-                level.setBlock(new BlockPos(x, fenceY + i, z), state, 3);
-            }
+            idx++;
         }
     }
 
-    /** Añade los bloques de un tramo recto (solo pasos cardinales) al conjunto de celdas de la valla. */
-    private static void connect(ServerLevel level, BlockPos from, BlockPos to, Set<Long> cells) {
-        cells.add(key(from.getX(), from.getZ()));
+    /** Añade a {@code ring} los bloques de un tramo recto entre dos puntos, con pasos cardinales (sin huecos). */
+    private static void fillCardinal(BlockPos from, BlockPos to, List<BlockPos> ring) {
+        ring.add(from);
         int x = from.getX();
         int z = from.getZ();
         while (x != to.getX() || z != to.getZ()) {
@@ -355,12 +414,39 @@ public final class VillageGenerator {
             } else if (z != to.getZ()) {
                 z += Math.signum(to.getZ() - z);
             }
-            cells.add(key(x, z));
+            ring.add(new BlockPos(x, 0, z));
         }
     }
 
-    private static long key(int x, int z) {
-        return ((long) x << 32) | (z & 0xFFFFFFFFL);
+    /** Bloque de muro: 2 logs horizontales (eje según la pared), sobre el suelo. */
+    private static void wall(ServerLevel level, BlockPos p, int baseY, Direction.Axis axis) {
+        BlockState log = Blocks.OAK_LOG.defaultBlockState().setValue(RotatedPillarBlock.AXIS, axis);
+        level.setBlock(new BlockPos(p.getX(), baseY + 1, p.getZ()), log, 3);
+        level.setBlock(new BlockPos(p.getX(), baseY + 2, p.getZ()), log, 3);
+    }
+
+    /** Columna vertical de cobblestone (3 bloques) con un pequeño remate. */
+    private static void column(ServerLevel level, BlockPos p, int baseY) {
+        for (int i = 1; i <= 3; i++) {
+            level.setBlock(new BlockPos(p.getX(), baseY + i, p.getZ()), Blocks.COBBLESTONE.defaultBlockState(), 3);
+        }
+        level.setBlock(new BlockPos(p.getX(), baseY + 4, p.getZ()), Blocks.COBBLESTONE_STAIRS.defaultBlockState(), 3);
+    }
+
+    /**
+     * Entrada de cobblestone en un punto cardinal: columna de cobblestone a cada lado, hueco central y
+     * dintel de cobblestone encima. El eje de la entrada es perpendicular a la dirección cardinal.
+     */
+    private static void entrance(ServerLevel level, BlockPos center, BlockPos p, int r, int baseY) {
+        // Eje perpendicular a la entrada (si la entrada está en N/S, los lados se reparten en X; si en E/O, en Z).
+        boolean northSouth = Math.abs(p.getZ() - center.getZ()) == r;
+        int signX = northSouth ? 1 : 0;
+        int signZ = northSouth ? 0 : 1;
+        for (int i = 1; i <= 3; i++) {
+            level.setBlock(new BlockPos(p.getX() - signX, baseY + i, p.getZ() - signZ), Blocks.COBBLESTONE.defaultBlockState(), 3);
+            level.setBlock(new BlockPos(p.getX() + signX, baseY + i, p.getZ() + signZ), Blocks.COBBLESTONE.defaultBlockState(), 3);
+        }
+        level.setBlock(new BlockPos(p.getX(), baseY + 4, p.getZ()), Blocks.COBBLESTONE.defaultBlockState(), 3);
     }
 
     /** ¿Es un bloque de vegetación que debe limpiarse? */
