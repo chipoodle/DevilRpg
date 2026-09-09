@@ -359,11 +359,31 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
 
     @Override
     public boolean hurt(@NotNull DamageSource damageSource, float amount) {
+        // El oso NO debe recibir daño de su propio dueño ni de los minions del mismo dueño (igual que un
+        // lobo invocado, que se une al team del jugador y por eso no se le puede pegar). Como SoulBear
+        // extiende AbstractChestedHorse (no TamableAnimal), no se une solo al team del dueño, así que lo
+        // protegemos aquí: si el atacante es aliado del dueño, se ignora el daño.
+        Entity attacker = damageSource.getEntity();
+        if (shouldIgnoreOwnerDamage(attacker)) {
+            return false;
+        }
         boolean hurt = super.hurt(damageSource, amount);
         if (hurt) {
 
         }
         return hurt;
+    }
+
+    /** ¿El atacante es el dueño, o un tamable del mismo dueño (no debe dañarlo)? */
+    private boolean shouldIgnoreOwnerDamage(Entity attacker) {
+        if (attacker == null) return false;
+        LivingEntity owner = this.getOwner();
+        if (owner == null) return false;
+        if (attacker == owner) return true; // el propio dueño
+        if (attacker instanceof ITamableEntity tamable && Objects.equals(tamable.getOwner(), owner)) {
+            return true; // otro minion del mismo dueño
+        }
+        return false;
     }
 
     @Override
