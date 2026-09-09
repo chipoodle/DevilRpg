@@ -188,15 +188,16 @@ public class AggressiveZombieEntity extends Zombie {
     }
 
     /**
-     * Goal: romper el bloque que le estorba SOLO cuando el zombie está atascado (el pathfinding no
-     * progresa y hay un bloque sólido adelante). Rompe bloques "débiles" por defecto y, si su nivel lo
-     * permite ({@link #canBreakObsidian()}), también piedra/obsidiana. No rompe si puede pasar normal.
+     * Goal: romper el obstáculo que le estorba SOLO cuando el zombie no consigue progresar hacia su
+     * objetivo (aunque se balancee/salte o el enemigo se mueva). Si la distancia al objetivo no mejora
+     * durante un tiempo, rompe el bloque que le bloquea el paso. Rompe bloques "débiles" por defecto y,
+     * si su nivel lo permite ({@link #canBreakObsidian()}), también piedra/obsidiana.
      */
     static class BreakBlockGoal extends Goal {
         private final AggressiveZombieEntity zombie;
         private BlockPos blockToBreak = null;
-        private int stuckTicks = 0;
-        private double lastX, lastZ;
+        private int noProgressTicks = 0;
+        private double bestDist = Double.MAX_VALUE;
 
         public BreakBlockGoal(AggressiveZombieEntity zombie) {
             this.zombie = zombie;
@@ -204,10 +205,7 @@ public class AggressiveZombieEntity extends Zombie {
 
         @Override
         public boolean canUse() {
-            if (zombie.getTarget() == null || !zombie.getTarget().isAlive()) {
-                return false;
-            }
-            return isBlockedAhead();
+            return zombie.getTarget() != null && zombie.getTarget().isAlive();
         }
 
         @Override
@@ -217,55 +215,71 @@ public class AggressiveZombieEntity extends Zombie {
 
         @Override
         public void start() {
-            stuckTicks = 0;
-            lastX = zombie.getX();
-            lastZ = zombie.getZ();
+            noProgressTicks = 0;
+            bestDist = distToTarget();
         }
 
         @Override
         public void tick() {
-            // Detectar atasco: si en 60 ticks no se movió, romper el bloque que tiene delante.
-            double dx = zombie.getX() - lastX;
-            double dz = zombie.getZ() - lastZ;
-            if (dx * dx + dz * dz < 0.01D) {
-                stuckTicks++;
+            double dist = distToTarget();
+            // Mejoró la distancia? reiniciar el contador de falta de progreso.
+            if (dist < bestDist - 0.5D) {
+                bestDist = dist;
+                noProgressTicks = 0;
             } else {
-                stuckTicks = 0;
-                lastX = zombie.getX();
-                lastZ = zombie.getZ();
+                noProgressTicks++;
             }
-            if (stuckTicks >= 60) {
+
+            // Tras un buen rato sin acercarse al objetivo, intentar romper el bloque que estorba.
+            if (noProgressTicks >= 100) {
                 blockToBreak = blockingBlockAhead();
                 if (blockToBreak != null) {
                     breakBlock(blockToBreak);
+                    // Tras romper, dar un margen para que el pathfinding se recalcule.
+                    noProgressTicks = -60;
+                } else {
+                    // No hay bloque directo: reiniciar para no quedarse en bucle.
+                    noProgressTicks = 0;
                 }
-                stuckTicks = 0;
-                lastX = zombie.getX();
-                lastZ = zombie.getZ();
-            } else if (blockToBreak != null) {
-                zombie.getNavigation().moveTo(blockToBreak.getX(), blockToBreak.getY(), blockToBreak.getZ(), 1.0D);
             }
         }
 
-        /** ¿Hay un bloque sólido rompible justo delante (a la altura del cuerpo)? */
-        private boolean isBlockedAhead() {
-            return blockingBlockAhead() != null;
+        private double distToTarget() {
+            Entity target = zombie.getTarget();
+            return target == null ? Double.MAX_VALUE : zombie.distanceToSqr(target.position());
         }
 
+        /**
+         * Busca el bloque sólido rompible que más probablemente estorba el paso: mira varias posiciones
+         * alrededor (a la altura del cuerpo y un bloque arriba, en las 4 direcciones) y devuelve el más
+         * cercano al objetivo.
+         */
         private BlockPos blockingBlockAhead() {
             Entity target = zombie.getTarget();
             if (target == null) return null;
-            int sx = Integer.signum((int) Math.floor(target.getX()) - zombie.blockPosition().getX());
-            int sz = Integer.signum((int) Math.floor(target.getZ()) - zombie.blockPosition().getZ());
-            BlockPos ahead = new BlockPos(
-                    zombie.blockPosition().getX() + sx,
-                    zombie.blockPosition().getY(),
-                    zombie.blockPosition().getZ() + sz);
-            BlockState bs = zombie.level().getBlockState(ahead);
-            if (!bs.isAir() && bs.isSolid() && canBreak(bs)) {
-                return ahead;
+            BlockPos zPos = zombie.blockPosition();
+            BlockPos best = null;
+            double bestScore = Double.MAX_VALUE;
+            int sx = Integer.signum((int) Math.floor(target.getX()) - zPos.getX());
+            int sz = Integer.signum((int) Math.floor(target.getZ()) - zPos.getZ());
+            for (int dy = 0; dy <= 1; dy++) {
+                for (int dx = -1; dx <= 1; dx++) {
+                    for (int dz = -1; dz <= 1; dz++) {
+                        // Priorizar la dirección hacia el objetivo y adyacentes.
+                        if (dx == 0 && dz == 0) continue;
+                        BlockPos candidate = new BlockPos(zPos.getX() + dx, zPos.getY() + dy, zPos.getZ() + dz);
+                        BlockState bs = zombie.level().getBlockState(candidate);
+                        if (!bs.isAir() && bs.isSolid() && canBreak(bs)) {
+                            double score = Math.abs(dx - sx) + Math.abs(dz - sz) + dy * 0.5D;
+                            if (score < bestScore) {
+                                bestScore = score;
+                                best = candidate;
+                            }
+                        }
+                    }
+                }
             }
-            return null;
+            return best;
         }
 
         private boolean canBreak(BlockState state) {
