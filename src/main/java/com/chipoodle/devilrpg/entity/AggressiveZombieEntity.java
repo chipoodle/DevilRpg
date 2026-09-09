@@ -46,6 +46,8 @@ public class AggressiveZombieEntity extends Zombie {
 
     /** Centro de la aldea objetivo (para que los zombies del asedio converjan hacia él). */
     private BlockPos villageCenter = null;
+    /** Si el asedio sigue activo (el zombie sigue marchando al centro). Se desactiva cuando la aldea cae. */
+    private boolean goToCenterActive = true;
     /** Umbral de distancia para que el zombie pueda romper obsidiana (más lejos = más nivel). */
     private static final double OBSIDIAN_THRESHOLD = 700;
 
@@ -60,6 +62,15 @@ public class AggressiveZombieEntity extends Zombie {
 
     public BlockPos getVillageCenter() {
         return villageCenter;
+    }
+
+    /** Siempre que se asigne centro, el asedio arranca activo. */
+    public void setGoToCenterActive(boolean active) {
+        this.goToCenterActive = active;
+    }
+
+    public boolean isGoToCenterActive() {
+        return goToCenterActive;
     }
 
     /** ¿Puede este zombie romper obsidiana? (depende de su nivel = distancia de spawn). */
@@ -516,7 +527,8 @@ public class AggressiveZombieEntity extends Zombie {
      * Al llegar (o encontrar un objetivo) el comportamiento normal retoma el control.
      */
     static class MoveToVillageCenterGoal extends Goal {
-        private static final double ARRIVE_DIST = 6.0D * 6.0D;
+        // Se considera "llegado" al estar a 3 bloques de radio del centro (el goal deja de apuntar ahí).
+        private static final double ARRIVE_DIST = 3.0D * 3.0D;
         private static final int BREAK_EVERY_TICKS = 60;
         private static final double IMPROVEMENT_THRESHOLD = 1.5D;
         private final AggressiveZombieEntity zombie;
@@ -529,6 +541,9 @@ public class AggressiveZombieEntity extends Zombie {
 
         @Override
         public boolean canUse() {
+            if (!zombie.isGoToCenterActive()) {
+                return false; // la aldea cayó -> dejar de converger al centro
+            }
             if (zombie.getTarget() != null) {
                 return false; // ya tiene a quién atacar
             }

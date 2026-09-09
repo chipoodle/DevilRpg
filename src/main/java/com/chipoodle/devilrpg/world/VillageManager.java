@@ -117,6 +117,10 @@ public final class VillageManager {
                             aux.setObjectiveIndex(d.objectiveIndex + 1, player);
                         }
                     }
+                    // Si la aldea cayó, los zombies vivos que quedan ya no deben converger al centro.
+                    if (!saved) {
+                        disableGoToCenter(level, d.wave);
+                    }
                     list.remove(i);
                 }
             }
@@ -153,6 +157,16 @@ public final class VillageManager {
             }
         }
         return true;
+    }
+
+    /** Desactiva el goal de converger al centro en los zombies vivos de la ola (cuando la aldea cayó). */
+    private static void disableGoToCenter(ServerLevel level, List<UUID> wave) {
+        for (UUID uuid : wave) {
+            net.minecraft.world.entity.Entity e = level.getEntity(uuid);
+            if (e instanceof AggressiveZombieEntity zombie) {
+                zombie.setGoToCenterActive(false);
+            }
+        }
     }
 
     private static void grantReward(ServerPlayer player) {
