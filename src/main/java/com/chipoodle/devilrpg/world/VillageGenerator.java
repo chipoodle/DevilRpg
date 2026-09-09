@@ -421,19 +421,20 @@ public final class VillageGenerator {
         }
     }
 
-    /** Bloque de muro: 2 logs horizontales (eje según la pared), sobre el suelo. */
+    /** Bloque de muro: 2 logs horizontales (eje según la pared), apoyados sobre la superficie de la aldea. */
     private static void wall(ServerLevel level, BlockPos p, int baseY, Direction.Axis axis) {
         BlockState log = Blocks.OAK_LOG.defaultBlockState().setValue(RotatedPillarBlock.AXIS, axis);
+        // baseY es la superficie transitable; el bloque sólido está en baseY-1. El primer log va en baseY.
+        level.setBlock(new BlockPos(p.getX(), baseY, p.getZ()), log, 3);
         level.setBlock(new BlockPos(p.getX(), baseY + 1, p.getZ()), log, 3);
-        level.setBlock(new BlockPos(p.getX(), baseY + 2, p.getZ()), log, 3);
     }
 
-    /** Columna vertical de cobblestone (3 bloques) con un pequeño remate. */
+    /** Columna vertical de cobblestone (3 bloques sobre la superficie) con un pequeño remate. */
     private static void column(ServerLevel level, BlockPos p, int baseY) {
-        for (int i = 1; i <= 3; i++) {
+        for (int i = 0; i <= 2; i++) {
             level.setBlock(new BlockPos(p.getX(), baseY + i, p.getZ()), Blocks.COBBLESTONE.defaultBlockState(), 3);
         }
-        level.setBlock(new BlockPos(p.getX(), baseY + 4, p.getZ()), Blocks.COBBLESTONE_STAIRS.defaultBlockState(), 3);
+        level.setBlock(new BlockPos(p.getX(), baseY + 3, p.getZ()), Blocks.COBBLESTONE_STAIRS.defaultBlockState(), 3);
     }
 
     /**
@@ -445,11 +446,11 @@ public final class VillageGenerator {
         boolean northSouth = Math.abs(p.getZ() - center.getZ()) == r;
         int signX = northSouth ? 1 : 0;
         int signZ = northSouth ? 0 : 1;
-        for (int i = 1; i <= 3; i++) {
+        for (int i = 0; i <= 2; i++) {
             level.setBlock(new BlockPos(p.getX() - signX, baseY + i, p.getZ() - signZ), Blocks.COBBLESTONE.defaultBlockState(), 3);
             level.setBlock(new BlockPos(p.getX() + signX, baseY + i, p.getZ() + signZ), Blocks.COBBLESTONE.defaultBlockState(), 3);
         }
-        level.setBlock(new BlockPos(p.getX(), baseY + 4, p.getZ()), Blocks.COBBLESTONE.defaultBlockState(), 3);
+        level.setBlock(new BlockPos(p.getX(), baseY + 3, p.getZ()), Blocks.COBBLESTONE.defaultBlockState(), 3);
     }
 
     /** ¿Es un bloque de vegetación que debe limpiarse? */
