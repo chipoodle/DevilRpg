@@ -90,8 +90,11 @@ public class AggressiveZombieEntity extends Zombie {
     }
 
     /**
-     * Busca el bloque sólido rompible más cercano en la dirección de {@code towards} y lo rompe. Usado por
-     * el goal de marchar al centro cuando el zombie está rodeando sin acercarse (bloqueado por el muro).
+     * Busca el bloque sólido rompible más cercano en la dirección de {@code towards} y lo rompe de forma
+     * AGRESIVA: destruye el bloque del cuerpo (+1) y, si el objetivo está arriba (necesita saltar en
+     * diagonal), también el de arriba (+2) para abrir un hueco de 2 bloques por el que pueda subir.
+     * Además, aleatoriamente destruye bloques contiguos al central (misma fila, +1/+2 pegados) para
+     * ensanchar el paso. Usado al ir al centro cuando el zombie está bloqueado por el muro.
      */
     private void breakBlockTowards(BlockPos towards) {
         BlockPos zPos = blockPosition();
@@ -115,8 +118,43 @@ public class AggressiveZombieEntity extends Zombie {
                 }
             }
         }
-        if (best != null) {
-            breakBlockAt(best);
+        if (best == null) {
+            return;
+        }
+        // Destruir el bloque principal.
+        breakBlockAt(best);
+        // Dirección principal hacia el objetivo (para saber si el objetivo está más arriba).
+        boolean targetAbove = towards.getY() > zPos.getY();
+        int dirX = Integer.signum(best.getX() - zPos.getX());
+        int dirZ = Integer.signum(best.getZ() - zPos.getZ());
+        // Si el objetivo está arriba, destruir también el bloque +2 (arriba del principal) para poder saltar.
+        if (targetAbove) {
+            BlockPos above = best.above();
+            if (canBreakBlock(level().getBlockState(above))) {
+                breakBlockAt(above);
+            }
+        }
+        // Aleatoriamente destruir un bloque contiguo al central (misma fila +1, o +1/+2 al lado) para
+        // ensanchar el paso, con probabilidad moderada.
+        RandomSource random = level().random;
+        if (random.nextFloat() < 0.5F) {
+            int side = random.nextBoolean() ? 1 : -1;
+            BlockPos adjacent;
+            if (dirX != 0) {
+                adjacent = new BlockPos(best.getX(), best.getY(), best.getZ() + side);
+            } else {
+                adjacent = new BlockPos(best.getX() + side, best.getY(), best.getZ());
+            }
+            if (canBreakBlock(level().getBlockState(adjacent))) {
+                breakBlockAt(adjacent);
+            }
+            // Si objetivo arriba, también el +2 del contiguo.
+            if (targetAbove) {
+                BlockPos adjacentAbove = adjacent.above();
+                if (canBreakBlock(level().getBlockState(adjacentAbove))) {
+                    breakBlockAt(adjacentAbove);
+                }
+            }
         }
     }
 
@@ -466,6 +504,14 @@ public class AggressiveZombieEntity extends Zombie {
 
         private void breakBlock(BlockPos pos) {
             zombie.breakBlockAt(pos);
+            // Si el objetivo está arriba, romper también el bloque +2 para abrir espacio de salto.
+            Entity target = zombie.getTarget();
+            if (target != null && target.getY() > zombie.getY()) {
+                BlockPos above = pos.above();
+                if (zombie.canBreakBlock(zombie.level().getBlockState(above))) {
+                    zombie.breakBlockAt(above);
+                }
+            }
         }
     }
 
