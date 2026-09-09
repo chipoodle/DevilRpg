@@ -640,4 +640,19 @@ public final class VillageGenerator {
         }
         return y;
     }
+
+    /**
+     * Y de spawn segura en una columna: si hay suelo sólido (isla o terreno) usa su superficie transitable;
+     * si es agua abierta, devuelve justo sobre la superficie del agua para que la entidad no se hunda.
+     */
+    public static int spawnY(ServerLevel level, int x, int z) {
+        int g = groundY(level, x, z);
+        // Si debajo de groundY-1 hay agua, es agua abierta -> spawn sobre la superficie del agua.
+        BlockState aboveGround = level.getBlockState(new BlockPos(x, g - 1, z));
+        if (aboveGround.getBlock() == Blocks.WATER) {
+            int surface = waterSurface(level, x, z);
+            return Math.max(surface, g) + 1;
+        }
+        return g;
+    }
 }

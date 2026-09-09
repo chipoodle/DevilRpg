@@ -25,6 +25,11 @@ public final class ObjectiveTargets {
     public static final int MIN_DISTANCE = 800;
     /** Distancia máxima del objetivo desde el spawn (bloques). */
     public static final int MAX_DISTANCE = 1200;
+    /**
+     * Distancia mínima que aumenta cada objetivo respecto al anterior (bloques). Garantiza que los
+     * objetivos no se solapen (separación >= OBJECTIVE_STEP - (MAX-MIN) = 200 bloques).
+     */
+    private static final int OBJECTIVE_STEP = 600;
     /** Radio horizontal (bloques) para considerar el objetivo alcanzado. */
     public static final int REACH_RADIUS = 24;
     /** Semilla base para la posición del objetivo (se combina con el índice). */
@@ -45,12 +50,15 @@ public final class ObjectiveTargets {
     }
 
     /**
-     * Distancia seudoaleatoria determinista entre {@link #MIN_DISTANCE} y {@link #MAX_DISTANCE} según el
-     * índice de objetivo. Mismo resultado en servidor y cliente (misma semilla, sin estado del mundo).
+     * Distancia seudoaleatoria determinista del objetivo: el primero cae entre 800 y 1200, y cada objetivo
+     * siguiente se aleja al menos {@link #OBJECTIVE_STEP} bloques (con variación). Así los objetivos nunca
+     * se superponen, sin romper la sincronización servidor/cliente.
      */
     private static double distanceFor(int objectiveIndex) {
         Random rnd = new Random(SEED + objectiveIndex);
-        return MIN_DISTANCE + rnd.nextDouble() * (MAX_DISTANCE - MIN_DISTANCE);
+        double base = MIN_DISTANCE + objectiveIndex * OBJECTIVE_STEP;
+        double variation = rnd.nextDouble() * (MAX_DISTANCE - MIN_DISTANCE);
+        return base + variation;
     }
 
     /** Distancia horizontal al cuadrado entre una posición y el objetivo. */

@@ -53,16 +53,15 @@ public final class VillageManager {
     private VillageManager() {
     }
 
-    /** Pre-genera la aldea (cabañas + aldeanos + valla) en una zona de tierra firme, si aún no existe. */
+    /** Pre-genera la aldea (cabañas + aldeanos + valla) en el punto del objetivo, si aún no existe. */
     public static void preGenerate(ServerLevel level, int objectiveIndex, BlockPos target) {
         String key = level.dimension().location() + ":" + objectiveIndex;
         if (GENERATED.contains(key)) {
             return;
         }
-        BlockPos land = VillageGenerator.findLand(level, target);
-        VillageGenerator.generate(level, land);
+        VillageGenerator.generate(level, target);
         GENERATED.add(key);
-        DevilRpg.LOGGER.info("[Village] Aldea {} pre-generada en {}", objectiveIndex, land);
+        DevilRpg.LOGGER.info("[Village] Aldea {} pre-generada en {}", objectiveIndex, target);
     }
 
     /** Inicia el asedio al llegar el jugador a la aldea (con un margen antes de la ola). */
@@ -76,9 +75,8 @@ public final class VillageManager {
         if (!GENERATED.contains(level.dimension().location() + ":" + objectiveIndex)) {
             preGenerate(level, objectiveIndex, target);
         }
-        BlockPos land = VillageGenerator.findLand(level, target);
         DEFENSES.computeIfAbsent(level, l -> new ArrayList<>())
-                .add(new VillageDefense(objectiveIndex, player.getUUID(), land));
+                .add(new VillageDefense(objectiveIndex, player.getUUID(), target));
         player.displayClientMessage(Component.literal("Llegaste a la aldea... los monstruos se acercan."), false);
     }
 
@@ -135,7 +133,7 @@ public final class VillageManager {
             int dist = WAVE_SPAWN_MIN + random.nextInt(WAVE_SPAWN_MAX - WAVE_SPAWN_MIN);
             int x = (int) Math.round(d.center.getX() + Math.cos(angle) * dist);
             int z = (int) Math.round(d.center.getZ() + Math.sin(angle) * dist);
-            int y = VillageGenerator.findLand(level, new BlockPos(x, 0, z)).getY();
+            int y = VillageGenerator.spawnY(level, x, z);
             AggressiveZombieEntity zombie = ModEntities.AGGRESSIVE_ZOMBIE.get()
                     .create(level, null, new BlockPos(x, y, z), MobSpawnType.MOB_SUMMONED, true, true);
             if (zombie != null) {
