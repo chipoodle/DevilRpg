@@ -13,6 +13,7 @@ import net.minecraft.tags.FluidTags;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
@@ -193,10 +194,13 @@ public class AggressiveZombieEntity extends Zombie {
         this.goalSelector.addGoal(2, new EscapeWaterGoal(this));
         // Romper el bloque que le estorba cuando está atascado (pero no atacar casas si puede pasar).
         this.goalSelector.addGoal(3, new BreakBlockGoal(this));
-        this.goalSelector.addGoal(4, new MeleeAttackGoal(this, 1.2D, false)); // Ataque cuerpo a cuerpo más rápido
-        this.goalSelector.addGoal(5, new FireballAttackGoal(this)); // Lanzar fuego como los Blaze
+        // Comportamiento de MANADA: dispersarse y rodear al objetivo, no apilarse en línea recta. Solo
+        // actúa mientras el zombie NO está bien posicionado; al estarlo, cede el control a MeleeAttack.
+        this.goalSelector.addGoal(4, new HerdBehaviorGoal(this, 1.2D));
+        this.goalSelector.addGoal(5, new MeleeAttackGoal(this, 1.2D, false)); // Ataque cuerpo a cuerpo
+        this.goalSelector.addGoal(6, new FireballAttackGoal(this)); // Lanzar fuego como los Blaze
         // Si no hay objetivo, marchar hacia el centro de la aldea (para no merodear fuera).
-        this.goalSelector.addGoal(6, new MoveToVillageCenterGoal(this));
+        this.goalSelector.addGoal(7, new MoveToVillageCenterGoal(this));
         this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, Player.class, true)); // Detectar jugadores
         // También ataca a las invocaciones (minions) del jugador, no solo al jugador.
         this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, TamableAnimal.class, 10, true, false,
@@ -590,6 +594,86 @@ public class AggressiveZombieEntity extends Zombie {
         private double centerDistSqr() {
             BlockPos center = zombie.getVillageCenter();
             return center == null ? Double.MAX_VALUE : distSqr(center);
+        }
+    }
+
+    /**
+     * Goal: comportamiento de MANADA. Cuando tiene un objetivo, cuenta cuántos otros zombies
+     * <b>agresivos</b> del mismo bando están atacando a ese mismo objetivo y, en vez de ir todos en línea
+     * recta (apilándose), cada uno persigue un <b>punto de flanqueo</b> alrededor del objetivo según su
+     * "número de miembro". Así rodean al jugador desde ángulos distintos. Cuando están bien posicionados
+     * (cerca del objetivo), el {@link MeleeAttackGoal} (mayor prioridad) toma el control y atacan.
+     */
+    static class HerdBehaviorGoal extends Goal {
+        private final AggressiveZombieEntity zombie;
+        private final double speed;
+        private static final double RADIUS = 3.5D;            // distancia de flanqueo alrededor del objetivo
+        private static final double ARRIVE_SQR = 2.5D * 2.5D; // considerar "posicionado" a < 2.5 bloques del flanco
+        private Vec3 flankPoint = null;
+        private int frameTicks = 0;
+
+        public HerdBehaviorGoal(AggressiveZombieEntity zombie, double speed) {
+            this.zombie = zombie;
+            this.speed = speed;
+        }
+
+        @Override
+        public boolean canUse() {
+            LivingEntity target = zombie.getTarget();
+            if (target == null || !target.isAlive()) return false;
+            // Solo mientras NO está bien posicionado; al estar cerca de su flanco, cede el control a MeleeAttack.
+            return zombie.distanceToSqr(flankPointOr(target)) > ARRIVE_SQR;
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            return canUse();
+        }
+
+        @Override
+        public void start() {
+            frameTicks = 0;
+            recomputeFlankPoint();
+        }
+
+        @Override
+        public void tick() {
+            LivingEntity target = zombie.getTarget();
+            if (target == null) return;
+            if (frameTicks++ % 40 == 0) {
+                recomputeFlankPoint();
+            }
+            if (flankPoint != null) {
+                zombie.getNavigation().moveTo(flankPoint.x, flankPoint.y, flankPoint.z, speed);
+            }
+        }
+
+        /** Punto de flanqueo, o la posición del objetivo como respaldo (para el cálculo de distancia). */
+        private Vec3 flankPointOr(LivingEntity target) {
+            if (flankPoint != null) return flankPoint;
+            return target.position();
+        }
+
+        /**
+         * Reparte a los zombies agresivos que atacan al MISMO objetivo en ángulos distintos alrededor de
+         * él, usando un índice estable por UUID, para que se dispersen en círculo en vez de apilarse.
+         */
+        private void recomputeFlankPoint() {
+            LivingEntity target = zombie.getTarget();
+            if (target == null) {
+                flankPoint = null;
+                return;
+            }
+            java.util.List<AggressiveZombieEntity> pack = zombie.level().getEntitiesOfClass(
+                    AggressiveZombieEntity.class, zombie.getBoundingBox().inflate(12.0D),
+                    other -> other != zombie && other.getTarget() == target && other.isAlive());
+            int packSize = pack.size() + 1; // + este zombie
+            int index = Math.floorMod((int) zombie.getUUID().getLeastSignificantBits(), packSize);
+            double slotAngle = (2.0 * Math.PI) * index / (double) Math.max(1, packSize);
+            double angle = slotAngle;
+            double tx = target.getX() + Math.cos(angle) * RADIUS;
+            double tz = target.getZ() + Math.sin(angle) * RADIUS;
+            flankPoint = new Vec3(tx, target.getY(), tz);
         }
     }
 
