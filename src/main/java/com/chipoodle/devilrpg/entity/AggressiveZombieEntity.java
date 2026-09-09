@@ -67,6 +67,59 @@ public class AggressiveZombieEntity extends Zombie {
         return spawnDistance >= OBSIDIAN_THRESHOLD;
     }
 
+    /** ¿Puede romper este bloque? (nunca bedrock; obsidiana solo si su nivel lo permite). */
+    private boolean canBreakBlock(BlockState state) {
+        Block b = state.getBlock();
+        if (b == Blocks.BEDROCK || b == Blocks.WATER || b == Blocks.LAVA || b == Blocks.AIR) {
+            return false;
+        }
+        if (b == Blocks.OBSIDIAN || b == Blocks.CRYING_OBSIDIAN) {
+            return canBreakObsidian();
+        }
+        return true; // madera, tierra, grava, arena, lana...
+    }
+
+    /** Rompe el bloque en la posición, respetando el límite de obsidiana. */
+    private void breakBlockAt(BlockPos pos) {
+        BlockState bs = level().getBlockState(pos);
+        Block b = bs.getBlock();
+        if ((b == Blocks.OBSIDIAN || b == Blocks.CRYING_OBSIDIAN) && !canBreakObsidian()) {
+            return;
+        }
+        level().destroyBlock(pos, true);
+    }
+
+    /**
+     * Busca el bloque sólido rompible más cercano en la dirección de {@code towards} y lo rompe. Usado por
+     * el goal de marchar al centro cuando el zombie está rodeando sin acercarse (bloqueado por el muro).
+     */
+    private void breakBlockTowards(BlockPos towards) {
+        BlockPos zPos = blockPosition();
+        int sx = Integer.signum(towards.getX() - zPos.getX());
+        int sz = Integer.signum(towards.getZ() - zPos.getZ());
+        BlockPos best = null;
+        double bestScore = Double.MAX_VALUE;
+        for (int dy = 0; dy <= 1; dy++) {
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    if (dx == 0 && dz == 0) continue;
+                    BlockPos candidate = new BlockPos(zPos.getX() + dx, zPos.getY() + dy, zPos.getZ() + dz);
+                    BlockState bs = level().getBlockState(candidate);
+                    if (!bs.isAir() && bs.isSolid() && canBreakBlock(bs)) {
+                        double score = Math.abs(dx - sx) + Math.abs(dz - sz) + dy * 0.5D;
+                        if (score < bestScore) {
+                            bestScore = score;
+                            best = candidate;
+                        }
+                    }
+                }
+            }
+        }
+        if (best != null) {
+            breakBlockAt(best);
+        }
+    }
+
     // No es sensible al sol: puede patrullar tanto de dia como de noche sin quemarse.
     @Override
     protected boolean isSunSensitive() {
@@ -285,16 +338,18 @@ public class AggressiveZombieEntity extends Zombie {
     }
 
     /**
-     * Goal: romper el obstáculo que le estorba SOLO cuando el zombie no consigue progresar hacia su
-     * objetivo (aunque se balancee/salte o el enemigo se mueva). Si la distancia al objetivo no mejora
-     * durante un tiempo, rompe el bloque que le bloquea el paso. Rompe bloques "débiles" por defecto y,
-     * si su nivel lo permite ({@link #canBreakObsidian()}), también piedra/obsidiana.
+     * Goal: romper el obstáculo que le estorba cuando el zombie no logra acercarse a su objetivo, aunque
+     * se balancee o rodee (el problema es la deriva/orbitación, no la inmovilidad). Lleva un registro del
+     * mejor avance real (distancia al objetivo) y, si tras un periodo no mejoró, rompe el bloque delante.
+     * Rompe bloques "débiles" por defecto y obsidiana si su nivel lo permite ({@link #canBreakObsidian()}).
      */
     static class BreakBlockGoal extends Goal {
+        private static final int BREAK_EVERY_TICKS = 60;      // evaluar romper cada 3 s
+        private static final double IMPROVEMENT_THRESHOLD = 1.5D; // avance mínimo que cuenta como progreso
         private final AggressiveZombieEntity zombie;
         private BlockPos blockToBreak = null;
-        private int noProgressTicks = 0;
-        private double bestDist = Double.MAX_VALUE;
+        private double anchorDist = Double.MAX_VALUE;   // distancia al inicio de medir
+        private int evalTicks = 0;
 
         public BreakBlockGoal(AggressiveZombieEntity zombie) {
             this.zombie = zombie;
@@ -312,32 +367,30 @@ public class AggressiveZombieEntity extends Zombie {
 
         @Override
         public void start() {
-            noProgressTicks = 0;
-            bestDist = distToTarget();
+            anchorDist = distToTarget();
+            evalTicks = 0;
+            blockToBreak = null;
         }
 
         @Override
         public void tick() {
+            evalTicks++;
             double dist = distToTarget();
-            // Mejoró la distancia? reiniciar el contador de falta de progreso.
-            if (dist < bestDist - 0.5D) {
-                bestDist = dist;
-                noProgressTicks = 0;
-            } else {
-                noProgressTicks++;
+            // Si el zombie se acercó de verdad (mejoró >= threshold desde el ancla), re-anclar: hay progreso.
+            if (dist < anchorDist - IMPROVEMENT_THRESHOLD) {
+                anchorDist = dist;
+                evalTicks = 0;
+                return;
             }
-
-            // Tras un buen rato sin acercarse al objetivo, intentar romper el bloque que estorba.
-            if (noProgressTicks >= 100) {
+            // Si ya pasó el periodo sin mejorar lo suficiente, está orbitando: romper el bloque delante.
+            if (evalTicks >= BREAK_EVERY_TICKS) {
                 blockToBreak = blockingBlockAhead();
                 if (blockToBreak != null) {
                     breakBlock(blockToBreak);
-                    // Tras romper, dar un margen para que el pathfinding se recalcule.
-                    noProgressTicks = -60;
-                } else {
-                    // No hay bloque directo: reiniciar para no quedarse en bucle.
-                    noProgressTicks = 0;
                 }
+                // Re-anclar tras intentar romper.
+                anchorDist = distToTarget();
+                evalTicks = 0;
             }
         }
 
@@ -347,9 +400,8 @@ public class AggressiveZombieEntity extends Zombie {
         }
 
         /**
-         * Busca el bloque sólido rompible que más probablemente estorba el paso: mira varias posiciones
-         * alrededor (a la altura del cuerpo y un bloque arriba, en las 4 direcciones) y devuelve el más
-         * cercano al objetivo.
+         * Busca el bloque sólido rompible que más probablemente estorba el paso: mira posiciones alrededor
+         * (a la altura del cuerpo y uno arriba, en las 4 direcciones) priorizando la ruta hacia el objetivo.
          */
         private BlockPos blockingBlockAhead() {
             Entity target = zombie.getTarget();
@@ -362,7 +414,6 @@ public class AggressiveZombieEntity extends Zombie {
             for (int dy = 0; dy <= 1; dy++) {
                 for (int dx = -1; dx <= 1; dx++) {
                     for (int dz = -1; dz <= 1; dz++) {
-                        // Priorizar la dirección hacia el objetivo y adyacentes.
                         if (dx == 0 && dz == 0) continue;
                         BlockPos candidate = new BlockPos(zPos.getX() + dx, zPos.getY() + dy, zPos.getZ() + dz);
                         BlockState bs = zombie.level().getBlockState(candidate);
@@ -380,33 +431,26 @@ public class AggressiveZombieEntity extends Zombie {
         }
 
         private boolean canBreak(BlockState state) {
-            Block b = state.getBlock();
-            if (b == Blocks.BEDROCK || b == Blocks.WATER || b == Blocks.LAVA || b == Blocks.AIR) {
-                return false;
-            }
-            if (b == Blocks.OBSIDIAN || b == Blocks.CRYING_OBSIDIAN) {
-                return zombie.canBreakObsidian();
-            }
-            return true; // madera, tierra, grava, arena, lana...
+            return zombie.canBreakBlock(state);
         }
 
         private void breakBlock(BlockPos pos) {
-            BlockState bs = zombie.level().getBlockState(pos);
-            Block b = bs.getBlock();
-            if ((b == Blocks.OBSIDIAN || b == Blocks.CRYING_OBSIDIAN) && !zombie.canBreakObsidian()) {
-                return;
-            }
-            zombie.level().destroyBlock(pos, true);
+            zombie.breakBlockAt(pos);
         }
     }
 
     /**
      * Goal: si el zombie no tiene objetivo de ataque y conoce el centro de la aldea, marcha hacia él.
-     * Al llegar (o encontrar un objetivo) el comportamiento normal (ataque/patrulla) retoma el control.
+     * Si está rodeando sin acercarse (bloqueado por el muro), rompe el bloque delante para entrar.
+     * Al llegar (o encontrar un objetivo) el comportamiento normal retoma el control.
      */
     static class MoveToVillageCenterGoal extends Goal {
-        private final AggressiveZombieEntity zombie;
         private static final double ARRIVE_DIST = 6.0D * 6.0D;
+        private static final int BREAK_EVERY_TICKS = 60;
+        private static final double IMPROVEMENT_THRESHOLD = 1.5D;
+        private final AggressiveZombieEntity zombie;
+        private double anchorDist = Double.MAX_VALUE;
+        private int evalTicks = 0;
 
         public MoveToVillageCenterGoal(AggressiveZombieEntity zombie) {
             this.zombie = zombie;
@@ -418,7 +462,7 @@ public class AggressiveZombieEntity extends Zombie {
                 return false; // ya tiene a quién atacar
             }
             BlockPos center = zombie.getVillageCenter();
-            return center != null && zombie.distanceToSqr(center.getX(), center.getY(), center.getZ()) > ARRIVE_DIST;
+            return center != null && distSqr(center) > ARRIVE_DIST;
         }
 
         @Override
@@ -427,11 +471,39 @@ public class AggressiveZombieEntity extends Zombie {
         }
 
         @Override
+        public void start() {
+            anchorDist = centerDistSqr();
+            evalTicks = 0;
+        }
+
+        @Override
         public void tick() {
             BlockPos center = zombie.getVillageCenter();
-            if (center != null) {
-                zombie.getNavigation().moveTo(center.getX(), center.getY(), center.getZ(), 1.0D);
+            if (center == null) return;
+            zombie.getNavigation().moveTo(center.getX(), center.getY(), center.getZ(), 1.0D);
+
+            evalTicks++;
+            double dist = centerDistSqr();
+            if (dist < anchorDist - IMPROVEMENT_THRESHOLD) {
+                anchorDist = dist;
+                evalTicks = 0;
+                return;
             }
+            // Rodeando sin acercarse: romper el bloque delante (para atravesar el muro si hace falta).
+            if (evalTicks >= BREAK_EVERY_TICKS) {
+                zombie.breakBlockTowards(center);
+                anchorDist = centerDistSqr();
+                evalTicks = 0;
+            }
+        }
+
+        private double distSqr(BlockPos center) {
+            return zombie.distanceToSqr(center.getX(), center.getY(), center.getZ());
+        }
+
+        private double centerDistSqr() {
+            BlockPos center = zombie.getVillageCenter();
+            return center == null ? Double.MAX_VALUE : distSqr(center);
         }
     }
 
