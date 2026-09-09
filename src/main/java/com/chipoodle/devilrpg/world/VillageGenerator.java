@@ -214,9 +214,11 @@ public final class VillageGenerator {
 
     /** Spawnea un golem de hierro que defiende la aldea. */
     private static void spawnIronGolem(ServerLevel level, BlockPos pos) {
-        IronGolem golem = EntityType.IRON_GOLEM.create(level, null, pos, MobSpawnType.MOB_SUMMONED, true, true);
+        // Fijar la Y al suelo real (la isla/terreno) para que no spawnee bajo la aldea ni se sofoque.
+        int y = spawnY(level, pos.getX(), pos.getZ());
+        IronGolem golem = EntityType.IRON_GOLEM.create(level, null, new BlockPos(pos.getX(), y, pos.getZ()), MobSpawnType.MOB_SUMMONED, true, true);
         if (golem != null) {
-            golem.moveTo(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D, 0.0F, 0.0F);
+            golem.moveTo(pos.getX() + 0.5D, y, pos.getZ() + 0.5D, 0.0F, 0.0F);
             golem.setPersistenceRequired();
             level.addFreshEntity(golem);
         }

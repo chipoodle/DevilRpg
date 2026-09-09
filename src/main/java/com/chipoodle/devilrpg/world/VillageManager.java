@@ -138,6 +138,7 @@ public final class VillageManager {
                     .create(level, null, new BlockPos(x, y, z), MobSpawnType.MOB_SUMMONED, true, true);
             if (zombie != null) {
                 zombie.moveTo(x + 0.5D, y, z + 0.5D, 0.0F, 0.0F);
+                zombie.setVillageCenter(d.center); // para que converja hacia la aldea si no ataca
                 level.addFreshEntity(zombie);
                 d.wave.add(zombie.getUUID());
             }

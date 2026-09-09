@@ -24,6 +24,9 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.SmallFireball;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 
@@ -39,8 +42,27 @@ public class AggressiveZombieEntity extends Zombie {
     private double spawnThreat = 1.0;  // Amenaza global al spawnear (combina con la distancia)
     private boolean attributesAdjusted = false; // Para asegurarnos de que solo se ajusta una vez
 
+    /** Centro de la aldea objetivo (para que los zombies del asedio converjan hacia él). */
+    private BlockPos villageCenter = null;
+    /** Umbral de distancia para que el zombie pueda romper obsidiana (más lejos = más nivel). */
+    private static final double OBSIDIAN_THRESHOLD = 700;
+
     public AggressiveZombieEntity(EntityType<? extends Zombie> type, Level world) {
         super(type, world);
+    }
+
+    /** Asigna el centro de la aldea a la que apunta este zombie. */
+    public void setVillageCenter(BlockPos center) {
+        this.villageCenter = center;
+    }
+
+    public BlockPos getVillageCenter() {
+        return villageCenter;
+    }
+
+    /** ¿Puede este zombie romper obsidiana? (depende de su nivel = distancia de spawn). */
+    public boolean canBreakObsidian() {
+        return spawnDistance >= OBSIDIAN_THRESHOLD;
     }
 
     // No es sensible al sol: puede patrullar tanto de dia como de noche sin quemarse.
@@ -63,8 +85,12 @@ public class AggressiveZombieEntity extends Zombie {
     protected void registerGoals() {
         super.registerGoals();
         this.goalSelector.addGoal(1, new FloatGoal(this)); // Flotar en agua
-        this.goalSelector.addGoal(2, new MeleeAttackGoal(this, 1.2D, false)); // Ataque cuerpo a cuerpo más rápido
-        this.goalSelector.addGoal(3, new FireballAttackGoal(this)); // Lanzar fuego como los Blaze
+        // Romper el bloque que le estorba cuando está atascado (pero no atacar casas si puede pasar).
+        this.goalSelector.addGoal(2, new BreakBlockGoal(this));
+        this.goalSelector.addGoal(3, new MeleeAttackGoal(this, 1.2D, false)); // Ataque cuerpo a cuerpo más rápido
+        this.goalSelector.addGoal(4, new FireballAttackGoal(this)); // Lanzar fuego como los Blaze
+        // Si no hay objetivo, marchar hacia el centro de la aldea (para no merodear fuera).
+        this.goalSelector.addGoal(5, new MoveToVillageCenterGoal(this));
         this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, Player.class, true)); // Detectar jugadores
         // También ataca a las invocaciones (minions) del jugador, no solo al jugador.
         this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, TamableAnimal.class, 10, true, false,
@@ -161,6 +187,143 @@ public class AggressiveZombieEntity extends Zombie {
         return SPAWN_PROFILE.experienceReward(spawnDistance, spawnThreat);
     }
 
+    /**
+     * Goal: romper el bloque que le estorba SOLO cuando el zombie está atascado (el pathfinding no
+     * progresa y hay un bloque sólido adelante). Rompe bloques "débiles" por defecto y, si su nivel lo
+     * permite ({@link #canBreakObsidian()}), también piedra/obsidiana. No rompe si puede pasar normal.
+     */
+    static class BreakBlockGoal extends Goal {
+        private final AggressiveZombieEntity zombie;
+        private BlockPos blockToBreak = null;
+        private int stuckTicks = 0;
+        private double lastX, lastZ;
+
+        public BreakBlockGoal(AggressiveZombieEntity zombie) {
+            this.zombie = zombie;
+        }
+
+        @Override
+        public boolean canUse() {
+            if (zombie.getTarget() == null || !zombie.getTarget().isAlive()) {
+                return false;
+            }
+            return isBlockedAhead();
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            return canUse();
+        }
+
+        @Override
+        public void start() {
+            stuckTicks = 0;
+            lastX = zombie.getX();
+            lastZ = zombie.getZ();
+        }
+
+        @Override
+        public void tick() {
+            // Detectar atasco: si en 60 ticks no se movió, romper el bloque que tiene delante.
+            double dx = zombie.getX() - lastX;
+            double dz = zombie.getZ() - lastZ;
+            if (dx * dx + dz * dz < 0.01D) {
+                stuckTicks++;
+            } else {
+                stuckTicks = 0;
+                lastX = zombie.getX();
+                lastZ = zombie.getZ();
+            }
+            if (stuckTicks >= 60) {
+                blockToBreak = blockingBlockAhead();
+                if (blockToBreak != null) {
+                    breakBlock(blockToBreak);
+                }
+                stuckTicks = 0;
+                lastX = zombie.getX();
+                lastZ = zombie.getZ();
+            } else if (blockToBreak != null) {
+                zombie.getNavigation().moveTo(blockToBreak.getX(), blockToBreak.getY(), blockToBreak.getZ(), 1.0D);
+            }
+        }
+
+        /** ¿Hay un bloque sólido rompible justo delante (a la altura del cuerpo)? */
+        private boolean isBlockedAhead() {
+            return blockingBlockAhead() != null;
+        }
+
+        private BlockPos blockingBlockAhead() {
+            Entity target = zombie.getTarget();
+            if (target == null) return null;
+            int sx = Integer.signum((int) Math.floor(target.getX()) - zombie.blockPosition().getX());
+            int sz = Integer.signum((int) Math.floor(target.getZ()) - zombie.blockPosition().getZ());
+            BlockPos ahead = new BlockPos(
+                    zombie.blockPosition().getX() + sx,
+                    zombie.blockPosition().getY(),
+                    zombie.blockPosition().getZ() + sz);
+            BlockState bs = zombie.level().getBlockState(ahead);
+            if (!bs.isAir() && bs.isSolid() && canBreak(bs)) {
+                return ahead;
+            }
+            return null;
+        }
+
+        private boolean canBreak(BlockState state) {
+            Block b = state.getBlock();
+            if (b == Blocks.BEDROCK || b == Blocks.WATER || b == Blocks.LAVA || b == Blocks.AIR) {
+                return false;
+            }
+            if (b == Blocks.OBSIDIAN || b == Blocks.CRYING_OBSIDIAN) {
+                return zombie.canBreakObsidian();
+            }
+            return true; // madera, tierra, grava, arena, lana...
+        }
+
+        private void breakBlock(BlockPos pos) {
+            BlockState bs = zombie.level().getBlockState(pos);
+            Block b = bs.getBlock();
+            if ((b == Blocks.OBSIDIAN || b == Blocks.CRYING_OBSIDIAN) && !zombie.canBreakObsidian()) {
+                return;
+            }
+            zombie.level().destroyBlock(pos, true);
+        }
+    }
+
+    /**
+     * Goal: si el zombie no tiene objetivo de ataque y conoce el centro de la aldea, marcha hacia él.
+     * Al llegar (o encontrar un objetivo) el comportamiento normal (ataque/patrulla) retoma el control.
+     */
+    static class MoveToVillageCenterGoal extends Goal {
+        private final AggressiveZombieEntity zombie;
+        private static final double ARRIVE_DIST = 6.0D * 6.0D;
+
+        public MoveToVillageCenterGoal(AggressiveZombieEntity zombie) {
+            this.zombie = zombie;
+        }
+
+        @Override
+        public boolean canUse() {
+            if (zombie.getTarget() != null) {
+                return false; // ya tiene a quién atacar
+            }
+            BlockPos center = zombie.getVillageCenter();
+            return center != null && zombie.distanceToSqr(center.getX(), center.getY(), center.getZ()) > ARRIVE_DIST;
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            return canUse();
+        }
+
+        @Override
+        public void tick() {
+            BlockPos center = zombie.getVillageCenter();
+            if (center != null) {
+                zombie.getNavigation().moveTo(center.getX(), center.getY(), center.getZ(), 1.0D);
+            }
+        }
+    }
+
     // Clase interna para el comportamiento de lanzar fuego
     static class FireballAttackGoal extends Goal {
         private final AggressiveZombieEntity zombie;
@@ -188,7 +351,7 @@ public class AggressiveZombieEntity extends Zombie {
                 SmallFireball fireball = new SmallFireball(zombie.level(), zombie, new Vec3(d1 + zombie.getRandom().nextGaussian() * d0, d2, d3 + zombie.getRandom().nextGaussian() * d0));
                 fireball.setPos(fireball.getX(), zombie.getY(0.5D) + 0.5D, fireball.getZ());
                 zombie.level().addFreshEntity(fireball);
-                attackTimer = 120; // Tiempo entre ataques (recarga del fuego, el doble de lenta)
+                attackTimer = 240; // Tiempo entre ataques
             }
         }
     }
