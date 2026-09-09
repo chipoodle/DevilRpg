@@ -354,22 +354,53 @@ public class AggressiveZombieEntity extends Zombie {
         }
 
         /**
-         * Si hay un bloque de tierra justo un nivel por encima de la orilla a la que nada, da un impulso
-         * vertical y horizontal para trepar el escalón (y no quedarse flotando en el borde).
-         * Devuelve {@code true} si saltó.
+         * Intenta trepar hacia la orilla. Si hay un bloque de tierra justo un nivel por encima (escalón),
+         * da un salto. Si delante hay una pared de tierra demasiado alta (2+) que no puede trepar, coloca
+         * primero un bloque de tierra como ESCALÓN y luego salta sobre él.
+         * Devuelve {@code true} si saltó o colocó el escalón.
          */
         private boolean jumpTowardShore() {
             BlockPos zPos = zombie.blockPosition();
             int sx = Integer.signum(shore.getX() - zPos.getX());
             int sz = Integer.signum(shore.getZ() - zPos.getZ());
-            // Bloque delante, a la altura de la cabeza (1 arriba) — el escalón de tierra a trepar.
-            BlockPos step = new BlockPos(zPos.getX() + sx, zPos.getY() + 1, zPos.getZ() + sz);
-            BlockState stepBlock = zombie.level().getBlockState(step);
-            if (!stepBlock.isAir() && stepBlock.isSolid() && !zombie.level().getFluidState(step).is(FluidTags.WATER)) {
-                zombie.setDeltaMovement(sx * 0.35D, 0.42D, sz * 0.35D);
+            if (sx == 0 && sz == 0) return false;
+            // Bloque delante a la altura del cuerpo (nivel del zombie, sobre agua/aire).
+            BlockPos body = new BlockPos(zPos.getX() + sx, zPos.getY(), zPos.getZ() + sz);
+            // Bloque delante a la altura de la cabeza (+1) — la pared a trepar.
+            BlockPos head = body.above();
+            BlockState headBlock = zombie.level().getBlockState(head);
+            BlockState bodyBlock = zombie.level().getBlockState(body);
+
+            boolean headIsWall = !headBlock.isAir() && headBlock.isSolid() && !zombie.level().getFluidState(head).is(FluidTags.WATER);
+
+            // Caso 1: escalón de 1 bloque ya presente arriba del cuerpo vacío -> saltar.
+            if (headIsWall && (bodyBlock.isAir() || zombie.level().getFluidState(body).is(FluidTags.WATER))) {
+                zombie.setDeltaMovement(sx * 0.35D, 0.5D, sz * 0.35D);
+                return true;
+            }
+
+            // Caso 2: la pared es muy alta (cabeza ocupada con tierra y cuerpo vacío) -> colocar un bloque
+            // de tierra como escalón en el espacio del cuerpo, y saltar sobre él.
+            boolean bodyEmpty = bodyBlock.isAir() || zombie.level().getFluidState(body).is(FluidTags.WATER);
+            if (bodyEmpty && isWallTooHigh(zPos, sx, sz)) {
+                zombie.level().setBlock(body, Blocks.DIRT.defaultBlockState(), 3); // escalón
+                zombie.level().destroyBlock(body.above(), true); // limpiar sobre el escalón si hay algo rompible
+                zombie.setDeltaMovement(sx * 0.35D, 0.5D, sz * 0.35D);
                 return true;
             }
             return false;
+        }
+
+        /** ¿La pared delante es demasiado alta para trepar de un salto (2+ bloques de pared de tierra)? */
+        private boolean isWallTooHigh(BlockPos zPos, int sx, int sz) {
+            for (int dy = 1; dy <= 2; dy++) {
+                BlockPos b = new BlockPos(zPos.getX() + sx, zPos.getY() + dy, zPos.getZ() + sz);
+                BlockState bs = zombie.level().getBlockState(b);
+                if (bs.isAir() || !bs.isSolid() || zombie.level().getFluidState(b).is(FluidTags.WATER)) {
+                    return false; // hay hueco -> se puede trepar
+                }
+            }
+            return true; // 2 bloques de pared sólida seguidos
         }
 
         /** ¿Realmente atascado? (en agua y sin avanzar; se usa como señal de arranque). */
