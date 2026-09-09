@@ -8,6 +8,8 @@ import com.chipoodle.devilrpg.spawnprofile.AggressiveZombieSpawnProfile;
 import com.chipoodle.devilrpg.spawnprofile.SpawnScaleProfile;
 import com.chipoodle.devilrpg.survival.ThreatLevel;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -85,12 +87,14 @@ public class AggressiveZombieEntity extends Zombie {
     protected void registerGoals() {
         super.registerGoals();
         this.goalSelector.addGoal(1, new FloatGoal(this)); // Flotar en agua
+        // Si está en el agua atascado, nadar hacia la orilla más cercana (prioridad alta, antes de romper).
+        this.goalSelector.addGoal(2, new EscapeWaterGoal(this));
         // Romper el bloque que le estorba cuando está atascado (pero no atacar casas si puede pasar).
-        this.goalSelector.addGoal(2, new BreakBlockGoal(this));
-        this.goalSelector.addGoal(3, new MeleeAttackGoal(this, 1.2D, false)); // Ataque cuerpo a cuerpo más rápido
-        this.goalSelector.addGoal(4, new FireballAttackGoal(this)); // Lanzar fuego como los Blaze
+        this.goalSelector.addGoal(3, new BreakBlockGoal(this));
+        this.goalSelector.addGoal(4, new MeleeAttackGoal(this, 1.2D, false)); // Ataque cuerpo a cuerpo más rápido
+        this.goalSelector.addGoal(5, new FireballAttackGoal(this)); // Lanzar fuego como los Blaze
         // Si no hay objetivo, marchar hacia el centro de la aldea (para no merodear fuera).
-        this.goalSelector.addGoal(5, new MoveToVillageCenterGoal(this));
+        this.goalSelector.addGoal(6, new MoveToVillageCenterGoal(this));
         this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, Player.class, true)); // Detectar jugadores
         // También ataca a las invocaciones (minions) del jugador, no solo al jugador.
         this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, TamableAnimal.class, 10, true, false,
@@ -185,6 +189,99 @@ public class AggressiveZombieEntity extends Zombie {
     @Override
     protected int getBaseExperienceReward() {
         return SPAWN_PROFILE.experienceReward(spawnDistance, spawnThreat);
+    }
+
+    /**
+     * Goal: si el zombie está en el agua y atascado (no progresa hacia su objetivo ni sale del agua),
+     * buscar la orilla (bloque de tierra) más cercana y nadar hacia ella para desatascarse. Se activa con
+     * prioridad alta, antes que romper o atacar, para que no se quede saltando en el agua fuera de la aldea.
+     */
+    static class EscapeWaterGoal extends Goal {
+        private final AggressiveZombieEntity zombie;
+        private BlockPos shore = null;
+        private int stuckTicks = 0;
+        private double lastX, lastZ;
+
+        public EscapeWaterGoal(AggressiveZombieEntity zombie) {
+            this.zombie = zombie;
+        }
+
+        @Override
+        public boolean canUse() {
+            return zombie.isInWater() && zombie.isInWaterOrRain() && isReallyStuck();
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            return zombie.isInWater() && zombie.isInWaterOrRain();
+        }
+
+        @Override
+        public void start() {
+            stuckTicks = 0;
+            lastX = zombie.getX();
+            lastZ = zombie.getZ();
+            shore = findNearestShore();
+            if (shore != null) {
+                // Nadar hacia la orilla (el pathfinding navega por el agua hacia el bloque de tierra).
+                zombie.getNavigation().moveTo(shore.getX(), shore.getY(), shore.getZ(), 1.2D);
+            }
+        }
+
+        @Override
+        public void tick() {
+            double dx = zombie.getX() - lastX;
+            double dz = zombie.getZ() - lastZ;
+            if (dx * dx + dz * dz < 0.01D) {
+                stuckTicks++;
+            } else {
+                stuckTicks = 0;
+                lastX = zombie.getX();
+                lastZ = zombie.getZ();
+            }
+            // Si no avanza en 80 ticks, re-buscar la orilla y re-navegar.
+            if (stuckTicks >= 80) {
+                shore = findNearestShore();
+                if (shore != null) {
+                    zombie.getNavigation().moveTo(shore.getX(), shore.getY(), shore.getZ(), 1.2D);
+                }
+                stuckTicks = 0;
+                lastX = zombie.getX();
+                lastZ = zombie.getZ();
+            }
+        }
+
+        /** ¿Realmente atascado? (en agua y sin avanzar; se usa como señal de arranque). */
+        private boolean isReallyStuck() {
+            return true; // Si está en el agua y lejos de tierra, siempre intenta salir.
+        }
+
+        /** Busca el bloque de tierra (no agua) más cercano dentro de un radio, escaneando en espiral. */
+        private BlockPos findNearestShore() {
+            BlockPos pos = zombie.blockPosition();
+            int r = 0;
+            while (r <= 16) {
+                for (int x = -r; x <= r; x++) {
+                    for (int z = -r; z <= r; z++) {
+                        if (Math.abs(x) != r && Math.abs(z) != r) continue; // borde del cuadrado
+                        BlockPos cand = new BlockPos(pos.getX() + x, pos.getY(), pos.getZ() + z);
+                        BlockPos ground = new BlockPos(cand.getX(), cand.getY() - 1, cand.getZ());
+                        if (isLand(ground)) {
+                            return ground.above();
+                        }
+                    }
+                }
+                r++;
+            }
+            return null;
+        }
+
+        private boolean isLand(BlockPos pos) {
+            if (!zombie.level().getFluidState(pos).is(FluidTags.WATER)) {
+                return zombie.level().getBlockState(pos).isSolid();
+            }
+            return false;
+        }
     }
 
     /**
