@@ -3,7 +3,6 @@ package com.chipoodle.devilrpg.spawner;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
-import com.chipoodle.devilrpg.init.ModEntities;
 import com.chipoodle.devilrpg.spawnprofile.NormalZombieSpawnProfile;
 import com.chipoodle.devilrpg.spawnprofile.SpawnScaleProfile;
 import com.chipoodle.devilrpg.survival.ThreatLevel;
@@ -12,15 +11,15 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.monster.Vex;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Regla de spawn del {@code NormalZombieEntity}: presión nocturna de base que ataca al jugador desde el
- * inicio, incluso en la zona segura (su perfil tiene {@code minDistance = 0}, sin zona protegida).
- * <p>
- * Solo spawnea de noche (de día el zombie normal se quemaría), y su probabilidad crece con la distancia
- * del jugador a su punto de inicio según el {@code NormalZombieSpawnProfile}.
+ * Regla de spawn de los <b>vexes</b> (reemplaza a los zombies normales): amenaza aérea que ataca al
+ * jugador y puede spawnear de día (a diferencia de los zombies, que se queman al sol). Mantiene las
+ * mismas reglas de probabilidad por distancia del jugador a su punto de inicio según
+ * {@code NormalZombieSpawnProfile}.
  */
 public class NormalZombieSpawnRule implements CustomSpawnRule {
 
@@ -28,14 +27,14 @@ public class NormalZombieSpawnRule implements CustomSpawnRule {
 
     private static final int MIN_INTERVAL_SECONDS = 20;     // intervalo minimo entre intentos (20 s)
     private static final int MAX_INTERVAL_SECONDS = 2 * 60; // intervalo maximo entre intentos (2 min)
-    private static final int MAX_ALIVE_IN_WORLD = 15;       // limite de zombies normales vivos
+    private static final int MAX_ALIVE_IN_WORLD = 15;       // limite de vexes vivos
     private static final int MIN_SPAWN_DISTANCE = 4;        // minimo cerca del jugador
     private static final int MAX_SPAWN_DISTANCE = 24;       // maximo cerca del jugador
     private static final int SURFACE_SEARCH_DOWN = 8;       // bloques hacia abajo para hallar suelo
 
     @Override
     public EntityType<? extends Mob> getEntityType() {
-        return ModEntities.NORMAL_ZOMBIE.get();
+        return EntityType.VEX; // vex vanilla: vuela y puede spawnear de día
     }
 
     @Override
@@ -50,16 +49,12 @@ public class NormalZombieSpawnRule implements CustomSpawnRule {
 
     @Override
     public float getSpawnChance(ServerLevel level, ServerPlayer player) {
-        // Solo de noche: el zombie normal se quema al sol, así que de día no tiene sentido spawnearlo.
-        if (!level.isNight()) {
-            return 0.0F;
-        }
+        // Los vexes no se queman al sol: pueden spawnear tanto de día como de noche.
         Vec3 spawn = getSpawnPoint(player);
         if (spawn == null) {
             return 0.0F;
         }
         double distance = Math.sqrt(player.distanceToSqr(spawn));
-        // minDistance = 0 -> sin zona protegida, probabilidad > 0 desde el inicio.
         return (float) PROFILE.probability(distance, ThreatLevel.current(level));
     }
 
@@ -92,6 +87,17 @@ public class NormalZombieSpawnRule implements CustomSpawnRule {
     @Override
     public int getMaxSpawnCount() {
         return 2;
+    }
+
+    @Override
+    public void configureEntity(Mob entity, ServerLevel level, ServerPlayer player) {
+        if (entity instanceof Vex vex) {
+            // Vida limitada: el vex se desvanece a los 2 minutos para no acumularse.
+            vex.setLimitedLife(2 * 60 * 20);
+            // Atacar al jugador objetivo (el VexChargeAttackGoal persigue a getTarget()).
+            vex.setTarget(player);
+            vex.setPersistenceRequired();
+        }
     }
 
     @Nullable
