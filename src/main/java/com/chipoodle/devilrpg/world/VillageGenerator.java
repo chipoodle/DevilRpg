@@ -242,7 +242,9 @@ public final class VillageGenerator {
             for (int w = 0; w <= 1; w++) {
                 int px = x + widthX * w;
                 int pz = z + widthZ * w;
-                int y = groundY(level, px, pz);
+                // groundY da el bloque transitable (uno sobre el sólido); el camino va SOBRE el bloque
+                // sólido de la superficie, un bloque por debajo, para quedar a ras de suelo.
+                int y = groundY(level, px, pz) - 1;
                 level.setBlock(new BlockPos(px, y, pz), Blocks.DIRT_PATH.defaultBlockState(), 3);
             }
         }
