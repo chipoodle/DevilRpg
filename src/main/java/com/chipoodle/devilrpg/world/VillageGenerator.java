@@ -370,10 +370,11 @@ public final class VillageGenerator {
         }
         Collections.sort(heights);
         int baseY = heights.get(heights.size() / 2);
-        // Rellenar el suelo del anillo a la altura base.
+        // Rellenar el suelo del anillo hasta justo debajo de la superficie (sin dejar el bloque de tierra
+        // que sobresalía por encima del nivel de la villa). El muro se apoya en el suelo de la aldea.
         for (BlockPos p : ring) {
             int g = groundY(level, p.getX(), p.getZ());
-            for (int y = g; y <= baseY; y++) {
+            for (int y = g; y < baseY; y++) {
                 level.setBlock(new BlockPos(p.getX(), y, p.getZ()), Blocks.DIRT.defaultBlockState(), 3);
             }
         }
