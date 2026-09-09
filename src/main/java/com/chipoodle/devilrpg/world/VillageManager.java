@@ -35,8 +35,8 @@ public final class VillageManager {
     public static final int PRE_GENERATE_RADIUS = 140;
     /** Radio de llegada al objetivo (se considera "en la aldea"). */
     public static final int ARRIVE_RADIUS = 24;
-    /** Ticks de margen para explorar la aldea antes del asedio (40 s). */
-    private static final int GRACE_TICKS = 40 * 20;
+    /** Ticks de margen para explorar la aldea antes del asedio (90 s). */
+    private static final int GRACE_TICKS = 90 * 20;
     /** Ticks extra para limpiar la ola tras el asedio (2 min). */
     private static final int SIEGE_TIMEOUT_TICKS = 2 * 60 * 20;
     /** Número base de monstruos agresivos en la ola (escala con el índice del objetivo). */
