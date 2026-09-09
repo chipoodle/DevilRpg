@@ -253,6 +253,7 @@ public class AggressiveZombieEntity extends Zombie {
         private final AggressiveZombieEntity zombie;
         private BlockPos shore = null;
         private int stuckTicks = 0;
+        private int jumpCooldown = 0;
         private double lastX, lastZ;
 
         public EscapeWaterGoal(AggressiveZombieEntity zombie) {
@@ -272,6 +273,7 @@ public class AggressiveZombieEntity extends Zombie {
         @Override
         public void start() {
             stuckTicks = 0;
+            jumpCooldown = 0;
             lastX = zombie.getX();
             lastZ = zombie.getZ();
             shore = findNearestShore();
@@ -302,6 +304,34 @@ public class AggressiveZombieEntity extends Zombie {
                 lastX = zombie.getX();
                 lastZ = zombie.getZ();
             }
+            // Saltar hacia la orilla si está en el agua y hay un bloque de tierra un nivel arriba delante
+            // (el desnivel de 1 bloque que no puede trepar desde el agua). Cada ~20 ticks para no saltar sin parar.
+            if (zombie.isInWater() && shore != null && --jumpCooldown <= 0) {
+                if (jumpTowardShore()) {
+                    jumpCooldown = 20;
+                } else {
+                    jumpCooldown = 5;
+                }
+            }
+        }
+
+        /**
+         * Si hay un bloque de tierra justo un nivel por encima de la orilla a la que nada, da un impulso
+         * vertical y horizontal para trepar el escalón (y no quedarse flotando en el borde).
+         * Devuelve {@code true} si saltó.
+         */
+        private boolean jumpTowardShore() {
+            BlockPos zPos = zombie.blockPosition();
+            int sx = Integer.signum(shore.getX() - zPos.getX());
+            int sz = Integer.signum(shore.getZ() - zPos.getZ());
+            // Bloque delante, a la altura de la cabeza (1 arriba) — el escalón de tierra a trepar.
+            BlockPos step = new BlockPos(zPos.getX() + sx, zPos.getY() + 1, zPos.getZ() + sz);
+            BlockState stepBlock = zombie.level().getBlockState(step);
+            if (!stepBlock.isAir() && stepBlock.isSolid() && !zombie.level().getFluidState(step).is(FluidTags.WATER)) {
+                zombie.setDeltaMovement(sx * 0.35D, 0.42D, sz * 0.35D);
+                return true;
+            }
+            return false;
         }
 
         /** ¿Realmente atascado? (en agua y sin avanzar; se usa como señal de arranque). */
