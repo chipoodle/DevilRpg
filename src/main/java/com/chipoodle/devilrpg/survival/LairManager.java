@@ -68,6 +68,19 @@ public final class LairManager {
      * cayera ahí quedaría atrapado y ardiendo (se perdería la tanda), así que nunca se spawnea dentro.
      */
     private static final int SPAWN_MIN_DISTANCE = 8;
+    /**
+     * Tope de enemigos vivos por guarida (sin contar al guardián). Las tandas siguen llegando hasta llenar
+     * este cupo, y en cuanto matas a algunos vuelven a aparecer hasta rellenarlo.
+     */
+    private static final int MAX_LAIR_MOBS = 30;
+    /**
+     * Si matas al guardián y <b>no</b> rompes el núcleo, la guarida vuelve a consagrar uno y a sellarlo tras
+     * este tiempo (de guarida activa, o sea con jugador cerca). Deja una ventana de sobra para rematar el
+     * núcleo, y evita que la guarida quede inerte para siempre por haber pasado por ahí una vez.
+     */
+    private static final int GUARDIAN_RESPAWN_TICKS = 3 * 60 * 20;
+    /** Radio de seguridad para volver a sellar: nunca se sella con un jugador pegado al núcleo. */
+    private static final double RESEAL_SAFE_RADIUS = 8.0D;
     /** Radio que patrullan los enemigos alrededor del núcleo de la guarida. */
     private static final int PATROL_RADIUS = 24;
 
@@ -85,12 +98,6 @@ public final class LairManager {
     /** Cada cuánto se le recuerda al jugador que el núcleo está sellado. */
     private static final int SEAL_HINT_TICKS = 100;
     private static final double SEAL_HINT_RADIUS = 24.0D;
-    /**
-     * Red de seguridad: si el sello sigue en pie tras este tiempo de guarida <b>activa</b> (con jugador
-     * cerca), se abre igual. Evita que un cultivador atascado o inalcanzable deje el objetivo bloqueado. Como
-     * un sello roto no puede convivir con un guardián vivo, al dispararse también <b>retira</b> al guardián.
-     */
-    private static final long SEAL_FORCE_OPEN_TICKS = 10L * 60L * 20L;
 
     private static final Map<ServerLevel, List<Lair>> LAIRS = new HashMap<>();
     private static final Set<String> GENERATED = new HashSet<>();
@@ -135,15 +142,6 @@ public final class LairManager {
             if (lair.cleared) {
                 continue;
             }
-            // 1b) El sello: la caja que blinda el núcleo se abre cuando MUERE el guardián de la guarida (el
-            //     cultivador). Una vez abierta ya no vuelve, aunque luego aparezca otro cultivador.
-            int cultivators = countCultivators(level, lair);
-            if (cultivators > 0 && !lair.guardianSeen) {
-                lair.guardianSeen = true;
-                // El reloj de la red de seguridad cuenta desde que HAY guardián, no desde la primera visita:
-                // así no se dispara por tiempo acumulado de visitas anteriores sin guardián.
-                lair.activeTicks = 0;
-            }
             // 2) Spawnear enemigos solo si hay un jugador cerca de la guarida.
             Player near = level.getNearestPlayer(
                     lair.center.getX(), lair.center.getY(), lair.center.getZ(),
@@ -151,25 +149,25 @@ public final class LairManager {
             if (near == null) {
                 continue;
             }
-            lair.activeTicks++;
-            // El sello cae SOLO si el guardián murió de verdad (nos avisa el propio cultivador en die()), o
-            // por la red de seguridad por tiempo. OJO: antes se deducía de "no hay ningún cultivador cerca", y
-            // eso también es cierto cuando el guardián simplemente no está (despawn, o aún no ha aparecido),
-            // así que el sello se caía solo y el núcleo quedaba indefenso sin haber matado a nadie.
-            if (!lair.sealBroken) {
-                if (lair.guardianDead) {
-                    openSeal(level, lair);
-                } else if (lair.guardianSeen && lair.activeTicks > SEAL_FORCE_OPEN_TICKS) {
-                    // Red de seguridad: hubo guardián pero no hay forma de matarlo (atascado, inalcanzable o
-                    // desaparecido). Se retira si sigue vivo y se abre el sello.
-                    if (cultivators > 0) {
-                        dismissGuardian(level, lair);
-                    }
-                    openSeal(level, lair);
+            // 2a) El sello cae SOLO porque el guardián murió de verdad (avisa el propio cultivador desde
+            //     die()). El guardián nunca se retira ni muere solo: aparece una vez y ahí se queda.
+            if (!lair.sealBroken && lair.guardianDead) {
+                openSeal(level, lair);
+            }
+            // 2a-bis) Sin guardián y con el sello roto: si el jugador no aprovechó para romper el núcleo, la
+            //     guarida vuelve a consagrar un guardián y a sellarlo (ver respawnGuardian()).
+            if (lair.sealBroken && lair.guardianDead) {
+                if (++lair.respawnTicks >= GUARDIAN_RESPAWN_TICKS) {
+                    respawnGuardian(level, lair);
                 }
             }
             // 2b) El núcleo sigue en pie: se defiende de quien se acerque.
             defendCore(level, lair);
+            // 2c) El guardián aparece EN CUANTO la guarida se activa, sin esperar a la primera tanda: así el
+            //     sello (que existe desde que se generó la guarida) nunca está puesto sin nadie a quien matar.
+            if (!lair.sealBroken && !lair.guardianDead && countCultivators(level, lair) == 0) {
+                spawnOne(level, lair, near, new Random(), true);
+            }
             if (--lair.spawnTimer > 0) {
                 continue;
             }
@@ -200,33 +198,42 @@ public final class LairManager {
     }
 
     /**
-     * Retira al guardián vivo de una guarida (red de seguridad del sello). Se usa solo cuando el sello se
-     * abre por tiempo: así el estado queda coherente — <b>nunca hay un cultivador vivo con el sello roto</b>.
-     * Es una salida de emergencia para que un guardián atascado o inalcanzable no bloquee el objetivo.
+     * La guarida <b>vuelve a consagrar un guardián</b> y a sellar el núcleo. Ocurre solo si mataste al
+     * guardián y dejaste el núcleo en pie: la guarida no se queda inerte para siempre por haber pasado por
+     * ahí una vez. Los enemigos siguen apareciendo igual durante todo el proceso.
+     * <p>
+     * Nunca se sella con un jugador pegado al núcleo: la caja de sellos lo dejaría encerrado dentro (y
+     * asfixiándose). Si hay alguien cerca del núcleo, se reintenta en el siguiente tick.
      */
-    private static void dismissGuardian(ServerLevel level, Lair lair) {
-        int left = 0;
-        for (SculkCultivatorEntity cult : level.getEntitiesOfClass(SculkCultivatorEntity.class,
-                new AABB(lair.center).inflate(ACTIVATION_RADIUS))) {
-            level.sendParticles(ParticleTypes.SCULK_SOUL, cult.getX(), cult.getY() + 1.0D, cult.getZ(),
-                    25, 0.4D, 0.6D, 0.4D, 0.02D);
-            cult.discard();
-            left++;
+    private static void respawnGuardian(ServerLevel level, Lair lair) {
+        if (!playersNear(level, lair.corePos, RESEAL_SAFE_RADIUS).isEmpty()) {
+            return;
         }
-        if (left > 0) {
-            DevilRpg.LOGGER.info("[Lair] Guardián de la guarida {} retirado por tiempo ({} cultivadores)",
-                    lair.objectiveIndex, left);
-            for (Player p : playersNear(level, lair.corePos, 64.0D)) {
-                p.displayClientMessage(
-                        Component.literal("El guardián abandona el santuario: el sello se deshace."), false);
-            }
+        Mob guardian = spawnOne(level, lair, null, new Random(), true);
+        if (guardian == null) {
+            return; // no se pudo crear: se reintenta
+        }
+        LairGenerator.buildSealCage(level, lair.corePos);
+        lair.guardianDead = false;
+        lair.sealBroken = false;
+        lair.respawnTicks = 0;
+        DevilRpg.LOGGER.info("[Lair] La guarida {} ha consagrado un nuevo guardián: núcleo sellado de nuevo",
+                lair.objectiveIndex);
+        double cx = lair.corePos.getX() + 0.5D;
+        double cy = lair.corePos.getY() + 1.0D;
+        double cz = lair.corePos.getZ() + 0.5D;
+        level.sendParticles(ParticleTypes.SCULK_SOUL, cx, cy, cz, 50, 1.0D, 1.0D, 1.0D, 0.02D);
+        level.playSound(null, lair.corePos, SoundEvents.SCULK_SHRIEKER_SHRIEK, SoundSource.BLOCKS, 1.4F, 0.7F);
+        for (Player p : playersNear(level, lair.corePos, 64.0D)) {
+            p.displayClientMessage(Component.literal(
+                    "Un nuevo guardián consagra el santuario: el núcleo vuelve a estar sellado."), false);
         }
     }
 
     /**
      * Abre el <b>sello</b> del núcleo: retira la caja de sellos y lo anuncia (partículas, sonido y aviso a
-     * los jugadores que estén cerca). A partir de ahí el núcleo queda expuesto y se puede destruir, y la
-     * guarida <b>ya no vuelve a criar guardianes</b>: el estado es siempre "sello roto = sin cultivador".
+     * los jugadores que estén cerca). A partir de ahí el núcleo queda expuesto y se puede destruir — si el
+     * jugador no lo aprovecha, {@link #respawnGuardian} lo vuelve a sellar con un guardián nuevo.
      */
     private static void openSeal(ServerLevel level, Lair lair) {
         lair.sealBroken = true;
@@ -334,22 +341,22 @@ public final class LairManager {
     /** Spawnea una tanda de enemigos alrededor de la guarida. */
     private static void spawnWave(ServerLevel level, Lair lair, Player player) {
         Random random = new Random();
-        // La guarida "más lejana" del ancla genera más enemigos y incluye vexes helados.
-        int count = WAVE_SIZE + Math.min(lair.objectiveIndex, 6);
-        // Mantiene UN cultivador del sculk (el que cría la granja y expande la infección) MIENTRAS EL SELLO
-        // SIGA EN PIE. Con el sello roto ya no se crían guardianes: su ritual está roto y el núcleo queda
-        // expuesto, así que no puede aparecer un cultivador vivo junto a un sello abierto.
-        if (!lair.sealBroken && countCultivators(level, lair) == 0) {
-            spawnOne(level, lair, player, random, true);
-            count--;
+        // El guardián lo cría tick() en cuanto la guarida se activa, no aquí: esta tanda es solo la horda.
+        // El resto de la tanda llena el cupo de la guarida: si ya hay MAX_LAIR_MOBS vivos no llega nadie, y
+        // en cuanto el jugador mata a algunos, las tandas siguientes los reponen hasta volver al cupo.
+        int room = MAX_LAIR_MOBS - countLairMobs(level, lair);
+        if (room <= 0) {
+            return;
         }
+        // La guarida "más lejana" del ancla genera más enemigos e incluye vexes helados.
+        int count = Math.min(WAVE_SIZE + Math.min(lair.objectiveIndex, 6), room);
         for (int i = 0; i < count; i++) {
             spawnOne(level, lair, player, random, false);
         }
     }
 
-    /** Spawnea un enemigo de la guarida (cultivador, vex helado o zombie agresivo). */
-    private static void spawnOne(ServerLevel level, Lair lair, Player player, Random random, boolean cultivator) {
+    /** Spawnea un enemigo de la guarida (cultivador, vex helado o zombie agresivo). Devuelve el mob creado. */
+    private static Mob spawnOne(ServerLevel level, Lair lair, Player player, Random random, boolean cultivator) {
         double angle = random.nextDouble() * Math.PI * 2.0;
         // Siempre fuera del foso del santuario (ver SPAWN_MIN_DISTANCE).
         int dist = SPAWN_MIN_DISTANCE + random.nextInt(Math.max(1, SPAWN_RADIUS - 6));
@@ -378,13 +385,22 @@ public final class LairManager {
             }
             level.addFreshEntity(mob);
         }
+        return mob;
+    }
+
+    /**
+     * Enemigos vivos de la guarida <b>sin contar al guardián</b>, para el cupo de {@link #MAX_LAIR_MOBS}.
+     */
+    private static int countLairMobs(ServerLevel level, Lair lair) {
+        AABB box = new AABB(lair.center).inflate(ACTIVATION_RADIUS);
+        return level.getEntitiesOfClass(AggressiveZombieEntity.class, box).size()
+                + level.getEntitiesOfClass(FrostVexEntity.class, box).size();
     }
 
     /** Cuenta los cultivadores del sculk vivos cerca de la guarida. */
     private static int countCultivators(ServerLevel level, Lair lair) {
         int r = ACTIVATION_RADIUS;
-        return level.getEntitiesOfClass(SculkCultivatorEntity.class,
-                new net.minecraft.world.phys.AABB(lair.center).inflate(r)).size();
+        return level.getEntitiesOfClass(SculkCultivatorEntity.class, new AABB(lair.center).inflate(r)).size();
     }
 
     /** Se invoca cuando el núcleo de una guarida es destruido: la limpia y da recompensa al jugador. */
@@ -409,14 +425,12 @@ public final class LairManager {
         final BlockPos corePos;
         boolean cleared;
         int spawnTimer = SPAWN_INTERVAL_TICKS / 2; // primera tanda algo antes
-        /** ¿Ha llegado a vivir un cultivador (guardián) en esta guarida? */
-        boolean guardianSeen;
-        /** ¿Ha MUERTO el guardián? Solo esto (o la red de seguridad) rompe el sello. */
+        /** ¿Ha MUERTO el guardián? Solo eso rompe el sello. */
         boolean guardianDead;
-        /** ¿Ya se abrió el sello del núcleo? Una vez abierto no se vuelve a cerrar. */
+        /** ¿Está roto el sello del núcleo (núcleo expuesto)? */
         boolean sealBroken;
-        /** Ticks que la guarida ha estado activa (con jugador cerca), para la red de seguridad del sello. */
-        long activeTicks;
+        /** Ticks (de guarida activa) desde la muerte del guardián; al llegar al tope se consagra otro. */
+        int respawnTicks;
 
         Lair(int objectiveIndex, BlockPos center, BlockPos corePos) {
             this.objectiveIndex = objectiveIndex;

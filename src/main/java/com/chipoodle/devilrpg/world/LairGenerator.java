@@ -202,8 +202,12 @@ public final class LairGenerator {
         return corePos;
     }
 
-    /** Construye la caja de sellos (inquebrantable) que blinda el núcleo hasta que muera el cultivador. */
-    private static void buildSealCage(ServerLevel level, BlockPos corePos) {
+    /**
+     * Construye la caja de sellos (inquebrantable) que blinda el núcleo hasta que muera el cultivador.
+     * <b>Público</b> porque {@code LairManager} la vuelve a levantar cuando la guarida consagra un guardián
+     * nuevo (si mataste al anterior y no rompiste el núcleo).
+     */
+    public static void buildSealCage(ServerLevel level, BlockPos corePos) {
         BlockState seal = ModBlocks.SCULK_SEAL_BLOCK.get().defaultBlockState();
         for (int x = -SEAL_RADIUS; x <= SEAL_RADIUS; x++) {
             for (int y = -SEAL_RADIUS; y <= SEAL_RADIUS; y++) {

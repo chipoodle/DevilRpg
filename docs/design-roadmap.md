@@ -207,20 +207,21 @@ Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el ju
      Las espinas de hueso van **desfasadas media muesca** para que ninguna tape un puente, y los 4 bloques
      de caída son más de lo que un mob baja por sí solo (`maxFallDistance` = 3), así que no se meten dentro
      y se quedan atrapados.
-  2. **Sello del cultivador** (`SculkSealBlock`, bloque `sculk_seal`): caja **3×3×3 inquebrantable**
+  2. **Sello del guardián** (`SculkSealBlock`, bloque `sculk_seal`): caja **3×3×3 inquebrantable**
      (dureza −1, como la piedra base; sin objeto, sin loot table y fuera del inventario creativo) que
-     **blinda el núcleo**. `LairManager` la abre cuando **el guardián muere de verdad**, con partículas,
-     sonido y aviso. La señal es un **callback de muerte**: `SculkCultivatorEntity.die()` avisa a
-     `LairManager.onGuardianKilled()` pasando el núcleo de su guarida. Es importante que sea un evento y no un
-     sondeo: deducirlo de "no hay ningún cultivador cerca" era un error, porque esa ausencia también significa
-     *todavía no ha aparecido* o *se ha ido* — con esa deducción el sello se caía solo y el núcleo aparecía
-     indefenso sin haber matado a nadie. Por lo mismo el guardián **no despawna por distancia**
-     (`removeWhenFarAway() → false`). Una vez roto el sello esa guarida **ya no vuelve a criar guardianes**, y
-     la red de seguridad por tiempo **retira al guardián vivo antes de abrir** (si no, se veía un cultivador
-     tan tranquilo junto a una barrera ya caída). El sello se abre igual tras **10 min con guardián presente**
-     (el reloj arranca cuando aparece, no al llegar), para que un guardián atascado o inalcanzable no deje el
-     objetivo bloqueado. Mientras esté sellado, al acercarse sale el recordatorio "mata al cultivador del
-     sculk para romper el sello".
+     **blinda el núcleo**. El guardián (el cultivador) **aparece una vez, en cuanto la guarida se activa, y
+     ahí se queda hasta que lo mates**: no muere ni se retira solo, y **no despawna por distancia**
+     (`removeWhenFarAway() → false`). La única señal que rompe el sello es un **evento de muerte**:
+     `SculkCultivatorEntity.die()` avisa a `LairManager.onGuardianKilled()`. Es clave que sea un evento y no
+     un sondeo: deducirlo de "no hay ningún cultivador cerca" era un error, porque esa ausencia también
+     significa *todavía no ha aparecido* o *se ha ido* — con esa deducción el sello se caía solo y el núcleo
+     aparecía indefenso sin haber matado a nadie.
+     **Si matas al guardián y no rompes el núcleo**, la guarida **vuelve a consagrar uno** (y a sellarlo) tras
+     **3 min de guarida activa** (`GUARDIAN_RESPAWN_TICKS`): el estado sigue siendo coherente
+     (*sello puesto ⟺ guardián vivo*), no se queda inerte para siempre por haber pasado por ahí una vez, y el
+     núcleo se rompe en segundos, así que da tiempo de sobra. Nunca se sella con un jugador a menos de 8
+     bloques del núcleo, para no dejarlo encerrado en la caja. Mientras esté sellado, al acercarse sale el
+     recordatorio "mata al cultivador del sculk para romper el sello".
   3. **El núcleo se defiende** (`LairManager.defendCore`): aura de **Oscuridad** en radio 8, y una vez roto
      el sello además **colmillos de invocador** alrededor de quien se acerque cada 4 s (con 0.4 s de aviso,
      así que se esquivan). Picar el núcleo es una pelea bajo presión, no un trámite.
@@ -279,7 +280,11 @@ Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el ju
   espectador, inmune) y suelta el que ya tuviera si el jugador pasa a creativo a mitad de la persecución.
 - **Spawn de enemigos**: `LairManager.tick` — si hay un jugador a **<64 bloques** de la guarida, cada **25 s**
   spawnea una tanda (`3 + min(objetivo,6)` enemigos) **a 8–15 bloques** del centro (nunca más cerca: dentro
-  del foso caerían dentro y se perdería la tanda). Los zombies agresivos **patrullan un radio de 24
+  del foso caerían dentro y se perdería la tanda). Hay un **cupo de 30 enemigos vivos por guarida**
+  (`MAX_LAIR_MOBS`, sin contar al guardián): las tandas siguen llegando hasta llenarlo y, en cuanto matas a
+  algunos, las siguientes los reponen. Las tandas siguen llegando **aunque hayas matado al guardián** y el
+  sello esté roto: la guarida solo enmudece cuando **destruyes el núcleo**. (El spawner nocturno por el mundo
+  tiene su propio cupo aparte, también de 30, y no se toca.) Los zombies agresivos **patrullan un radio de 24
   bloques** alrededor del núcleo (goal `PatrolHomeGoal`); en guaridas lejanas (objetivo ≥ 2) aparece también
   algún **vex helado**.
 - **Limpiar la guarida**: al destruir el núcleo, `LairCoreBlock.onRemove` → `LairManager.onCoreBroken`
