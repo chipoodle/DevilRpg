@@ -357,6 +357,11 @@ public class AggressiveZombieEntity extends Zombie {
 
         public EscapeWaterGoal(AggressiveZombieEntity zombie) {
             this.zombie = zombie;
+            // Este goal NAVEGA (nada hacia la orilla), así que declara MOVE: sin flags, GoalSelector lo deja
+            // arrancar aunque otro goal de más prioridad esté corriendo y no lo bloquea — y los flags son el
+            // ÚNICO mecanismo de prioridad. Con MOVE, mientras sale del agua manda él (prioridad 2) sobre la
+            // manada (4) y el ataque (5).
+            this.setFlags(java.util.EnumSet.of(Goal.Flag.MOVE));
         }
 
         @Override
@@ -477,6 +482,10 @@ public class AggressiveZombieEntity extends Zombie {
 
         public BreakBlockGoal(AggressiveZombieEntity zombie) {
             this.zombie = zombie;
+            // A PROPÓSITO sin flags: este goal es un observador pasivo que solo rompe bloques cuando detecta
+            // que el zombie no progresa. NO navega ni mira, así que no debe pedir MOVE/LOOK; si los pidiera,
+            // como se registra en prioridad 3 (más alta que la manada y que el ataque), bloquearía al
+            // MeleeAttackGoal de forma permanente mientras haya objetivo y el zombie no atacaría nunca.
         }
 
         @Override
@@ -587,6 +596,9 @@ public class AggressiveZombieEntity extends Zombie {
 
         public MoveToVillageCenterGoal(AggressiveZombieEntity zombie) {
             this.zombie = zombie;
+            // Navega hasta el centro de la aldea: declara MOVE/LOOK para que su prioridad (7) sea real y no
+            // pelee por la navegación con MeleeAttackGoal (5) ni con PatrolHomeGoal (8).
+            this.setFlags(java.util.EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
         }
 
         @Override
@@ -661,6 +673,9 @@ public class AggressiveZombieEntity extends Zombie {
 
         public PatrolHomeGoal(AggressiveZombieEntity zombie) {
             this.zombie = zombie;
+            // Navega (vuelve al hogar o ronda): declara MOVE/LOOK. Es el goal de menor prioridad (8), así que
+            // con los flags cualquier goal de combate puede interrumpirlo, que es lo que se quiere.
+            this.setFlags(java.util.EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
         }
 
         @Override
@@ -735,6 +750,14 @@ public class AggressiveZombieEntity extends Zombie {
         public HerdBehaviorGoal(AggressiveZombieEntity zombie, double speed) {
             this.zombie = zombie;
             this.speed = speed;
+            // CLAVE para que el comportamiento de manada funcione de verdad: este goal navega al punto de
+            // flanqueo, así que pide MOVE/LOOK. Antes (sin flags) corría a la vez que el MeleeAttackGoal, y
+            // como MeleeAttackGoal se registra DESPUÉS (prioridad 5) y vuelve a trazar ruta cada 4-11 ticks,
+            // su ruta en línea recta pisaba la de flanqueo casi siempre: el rodeo quedaba anulado. Con MOVE,
+            // el flanqueo (prioridad 4) manda mientras se coloca, y al llegar a su flanco canUse() pasa a
+            // false, suelta el flag y el MeleeAttackGoal retoma el control y ataca: el relevo que documenta
+            // el javadoc de esta clase.
+            this.setFlags(java.util.EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
         }
 
         @Override
@@ -804,11 +827,21 @@ public class AggressiveZombieEntity extends Zombie {
 
         public FireballAttackGoal(AggressiveZombieEntity zombie) {
             this.zombie = zombie;
+            // A PROPÓSITO sin flags: es un ataque a distancia instantáneo que NO navega ni mira (dispara
+            // usando posiciones y se apoya en el SmallFireball). Si pidiera MOVE/LOOK bloquearía el
+            // movimiento del zombie mientras tenga objetivo, que es justo lo contrario de lo que se busca.
         }
 
         @Override
         public boolean canUse() {
             return zombie.getTarget() != null && zombie.getTarget().isAlive();
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            // Sin esto, el Goal.canContinueToUse() por defecto (true) lo dejaba "corriendo" para siempre
+            // incluso después de morir el objetivo.
+            return canUse();
         }
 
         @Override

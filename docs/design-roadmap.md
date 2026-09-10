@@ -148,6 +148,15 @@ siguiente está implementado y probado.
   estar bien posicionados (<2.5 bloques de su flanco), ceden el control a `MeleeAttackGoal` para golpear.
 - **Targeting de minions**: detectan al instante **todas** las invocaciones del jugador (lobos, wisps y el
   oso), usando `LivingEntity` + predicado `ITamableEntity` con dueño (el oso no es `TamableAnimal`).
+- **Control de prioridades (importante si añades goals)**: `GoalSelector` **solo** arbitra por prioridad a
+  través de los *control flags*. Un goal que **no** declara `setFlags` es invisible para ese mecanismo:
+  arranca aunque otro de más prioridad esté corriendo y no lo bloquea, así que acaba **peleándose por la
+  navegación** (gana el último que llame a `moveTo` ese tick). Por eso los goals que navegan declaran
+  `MOVE`/`LOOK` aquí, y por eso el `HerdBehaviorGoal` no funcionaba como manada: al no declarar `MOVE`
+  corría a la vez que `MeleeAttackGoal` (registrado después y re-trazando ruta cada 4-11 ticks), que pisaba
+  su ruta de flanqueo. En cambio hay goals que **a propósito** no llevan flags porque **no navegan ni miran**
+  y no deben bloquear el movimiento: `BreakBlockGoal` (observador pasivo) y `FireballAttackGoal` (ataque a
+  distancia instantáneo). Lo mismo aplica al `LaunchSnowballGoal` del vex helado y al `ShulkerPeekGoal`.
 
 ### 3b.4 Presión de enemigos
 
