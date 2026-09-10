@@ -11,9 +11,12 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.monster.Vex;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Objects;
 
 /**
  * Regla de spawn de los <b>vexes</b>: amenaza aérea que ataca al jugador y puede spawnear de día (a
@@ -88,9 +91,27 @@ public class VexSpawnRule implements CustomSpawnRule {
         return 2;
     }
 
+    /** Clave del dato persistente donde se guarda la XP escalada del vex (se aplica al morir). */
+    public static final String VEX_XP_KEY = "devilrpg:vex_xp";
+
     @Override
     public void configureEntity(Mob entity, ServerLevel level, ServerPlayer player) {
         if (entity instanceof Vex vex) {
+            // Escalar atributos por distancia + amenaza, IGUAL que el AggressiveZombieEntity.
+            Vec3 spawnPoint = getSpawnPoint(player);
+            if (spawnPoint != null) {
+                double distance = Math.sqrt(vex.blockPosition().distSqr(
+                        new BlockPos((int) spawnPoint.x, (int) spawnPoint.y, (int) spawnPoint.z)));
+                double threat = ThreatLevel.current(level);
+                double scaleFactor = PROFILE.scaleFactor(distance, threat)
+                        * (1.0 + threat * ThreatLevel.MAX_EXTRA_DIFFICULTY);
+                Objects.requireNonNull(vex.getAttribute(Attributes.MAX_HEALTH)).setBaseValue(PROFILE.baseHealth() * scaleFactor);
+                Objects.requireNonNull(vex.getAttribute(Attributes.MOVEMENT_SPEED)).setBaseValue(PROFILE.baseSpeed() * scaleFactor);
+                Objects.requireNonNull(vex.getAttribute(Attributes.ATTACK_DAMAGE)).setBaseValue(PROFILE.baseDamage() * scaleFactor);
+                vex.setHealth(vex.getMaxHealth()); // llenar la vida ya escalada
+                // XP escalada: se guarda en el vex y se aplica cuando muere (evento de drop de XP).
+                vex.getPersistentData().putInt(VEX_XP_KEY, PROFILE.experienceReward(distance, threat));
+            }
             // Vida limitada: el vex se desvanece a los 2 minutos para no acumularse.
             vex.setLimitedLife(2 * 60 * 20);
             // Atacar al jugador objetivo (el VexChargeAttackGoal persigue a getTarget()).
