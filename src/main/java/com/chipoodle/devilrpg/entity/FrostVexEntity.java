@@ -19,6 +19,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
@@ -74,10 +75,30 @@ public class FrostVexEntity extends Vex {
         if (snowballCooldown > 0) {
             snowballCooldown--;
         }
+        // Si el jugador que perseguía pasó a creativo/espectador, se suelta el objetivo en el acto: no se
+        // ataca a quien no puede ser dañado. (setTarget ya impide adquirirlo; esto cubre el cambio a mitad.)
+        if (getTarget() != null && !getTarget().canBeSeenAsEnemy()) {
+            setTarget(null);
+        }
         if (!attributesAdjusted) {
             adjustAttributesBasedOnSpawnDistance();
             attributesAdjusted = true;
         }
+    }
+
+    /**
+     * Nunca acepta como objetivo a un jugador en <b>creativo o espectador</b> (ni a una entidad inmune).
+     * <p>
+     * Los goals vanilla ya filtran eso por su cuenta vía {@code canBeSeenAsEnemy()}, pero el mod asigna el
+     * objetivo <b>a mano</b> al spawnear el vex ({@code VexSpawnRule} y {@code LairManager.spawnOne}), y eso
+     * se salta el filtro: sin esta guarda, los vexes perseguían y atacaban a un jugador en creativo.
+     */
+    @Override
+    public void setTarget(@Nullable LivingEntity target) {
+        if (target != null && !target.canBeSeenAsEnemy()) {
+            return;
+        }
+        super.setTarget(target);
     }
 
     @Override

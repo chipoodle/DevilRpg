@@ -234,14 +234,18 @@ Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el ju
     lejos), sale corriendo en dirección contraria a velocidad de sprint. Al desaparecer la amenaza el goal
     suelta el control y **vuelve a sus labores**; si se alejó demasiado, `PatrolHomeGoal` lo trae de vuelta
     al santuario. Los jugadores en creativo/espectador se ignoran, para poder observarlo trabajar.
-  - **Granja macabra**: `LairGenerator` construye un **corral cercado dentro de la plataforma**, con un
-    parche de sculk y **2 catalizadores** dentro (para que el sacrificio alimente la infección donde el
-    animal realmente muere) y ganado inicial (vacas, ovejas, cerdos, pollos). El anillo de valla está
-    **cerrado del todo** y su **única entrada es una puerta de madera** (en el lado que mira al corredor):
-    los animales **no pueden abrir puertas**, y el cultivador sí — tiene `OpenDoorGoal` y su pathfinding lleva
-    `setCanOpenDoors(true)`, exactamente como los aldeanos. Antes había un hueco con dos verjas abiertas y el
-    ganado se escapaba. El cultivador **cría** el ganado (`BreedAnimalsGoal`) y **sacrifica** el excedente
-    sobre el sculk (`SacrificeGoal`).
+  - **Granja macabra**: `LairGenerator` construye el corral <b>como un foso</b> de **2 bloques de
+    profundidad** en la plataforma, con **3 bloques de orla plana** alrededor (sin orla, el terreno empezaría
+    a bajar en el borde del foso y la pared quedaría de 1 bloque por ese lado: los animales se escaparían).
+    En el fondo hay un parche de sculk y **2 catalizadores** (para que el sacrificio alimente la infección
+    donde el animal realmente muere) y el ganado inicial (vacas, ovejas, cerdos, pollos). Los animales **no
+    pueden saltar 2 bloques**, así que el foso los contiene igual que una valla. **Nada de vallas**: una valla
+    no es un bloque convertible por el sculk, así que un cercado de vallas frenaba la infección justo en el
+    corral; las paredes del foso son tierra convertible y el foso es un hueco, así que la mancha entra y sale
+    sin obstáculo. La **salida es exclusiva del cultivador**: un escalón de 1 bloque en el borde (el resto del
+    foso conserva su pared de 2) más una **puerta de madera** cerrada, que los animales no pueden abrir y él
+    sí (`OpenDoorGoal` + `setCanOpenDoors(true)`, como los aldeanos). El cultivador **cría** el ganado
+    (`BreedAnimalsGoal`) y **sacrifica** el excedente sobre el sculk (`SacrificeGoal`).
   - **El ganado está protegido de los demás enemigos**: los animales del corral llevan la etiqueta
     `devilrpg_livestock` y el `AggressiveZombieEntity` **excluye** a los animales marcados de su caza dentro
     de la guarida. Sin esto, en cuanto el cultivador mataba a uno los demás zombies arrasaban el rebaño
@@ -255,6 +259,10 @@ Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el ju
     y acabarían peleándose por la navegación.
 - **Núcleo asaltable** (`LairCoreBlock`, bloque `lair_core`): el bloque brillante en el centro del
   santuario, dentro de la caja de sellos. Mientras el núcleo exista, la guarida está **activa**.
+- **Nada persigue a un jugador en creativo**: los *goals* vanilla filtran por `canBeSeenAsEnemy()`, pero el
+  mod asigna el objetivo **a mano** al spawnear (`VexSpawnRule` y `LairManager.spawnOne`) y eso salta el
+  filtro. `FrostVexEntity` ahora **rechaza** como objetivo a quien no pueda ser visto como enemigo (creativo,
+  espectador, inmune) y suelta el que ya tuviera si el jugador pasa a creativo a mitad de la persecución.
 - **Spawn de enemigos**: `LairManager.tick` — si hay un jugador a **<64 bloques** de la guarida, cada **25 s**
   spawnea una tanda (`3 + min(objetivo,6)` enemigos) **a 8–15 bloques** del centro (nunca más cerca: dentro
   del foso caerían dentro y se perdería la tanda). Los zombies agresivos **patrullan un radio de 24

@@ -37,6 +37,15 @@ public final class LairGenerator {
     /** Radio del corral macabro y distancia a la que se sitúa del centro de la guarida. */
     private static final int FARM_RADIUS = 4;
     private static final int FARM_DISTANCE = RADIUS + FARM_RADIUS + 4;
+    /**
+     * Orla <b>plana</b> alrededor del corral, dentro de la plataforma. Es imprescindible: el corral es un
+     * foso y, si el terreno empezara a bajar justo en su borde (como pasa en el talud exterior), la pared del
+     * foso quedaría de 1 bloque por ese lado y los animales se escaparían. Con la orla, el foso siempre tiene
+     * sus 2 bloques de pared alrededor.
+     */
+    private static final int FARM_RIM = 3;
+    /** Profundidad del corral-foso: 2 bloques, más de lo que salta un animal, así que no se escapan. */
+    private static final int FARM_DEPTH = 2;
     /** Medio ancho del corredor que une la guarida con el corral (todo a la misma altura). */
     private static final int CORRIDOR_HALF = 3;
     /** Profundidad de la base cónica cuando la plataforma flota sobre agua. */
@@ -45,7 +54,7 @@ public final class LairGenerator {
     private static final int SLOPE_WIDTH = 6;
     private static final int SLOPE_HEIGHT = 3;
     /** Extensión a recorrer en los barridos: la plataforma entera más el talud. */
-    private static final int EXTENT = FARM_DISTANCE + FARM_RADIUS + SLOPE_WIDTH;
+    private static final int EXTENT = FARM_DISTANCE + FARM_RADIUS + FARM_RIM + SLOPE_WIDTH;
     /** Radio (desde el centro de la guarida) de las antorchas de almas. */
     private static final int TORCH_RADIUS = RADIUS - 3;
     /** Radio de la caja de sellos que blinda el núcleo (1 => caja de 3x3x3, con el núcleo en el centro). */
@@ -75,7 +84,7 @@ public final class LairGenerator {
     private static double platformDistance(double x, double z) {
         double dLair = Math.sqrt(x * x + z * z) - RADIUS;
         double dx = x - FARM_DISTANCE;
-        double dFarm = Math.sqrt(dx * dx + z * z) - FARM_RADIUS;
+        double dFarm = Math.sqrt(dx * dx + z * z) - (FARM_RADIUS + FARM_RIM);
         // Corredor: distancia al segmento (0,0)-(FARM_DISTANCE,0) menos su medio ancho.
         double t = Math.max(0.0, Math.min(FARM_DISTANCE, x));
         double dCorridor = Math.sqrt((x - t) * (x - t) + z * z) - CORRIDOR_HALF;
@@ -243,60 +252,82 @@ public final class LairGenerator {
         }
     }
 
-    /** ¿La posición relativa (x, z) cae dentro del corral (o su borde)? */
+    /** ¿La posición relativa (x, z) cae dentro del corral (o su orla plana)? */
     private static boolean insideFarm(int x, int z) {
         double dx = x - FARM_DISTANCE;
-        return Math.sqrt(dx * dx + z * z) <= FARM_RADIUS + 1;
+        return Math.sqrt(dx * dx + z * z) <= FARM_RADIUS + FARM_RIM;
     }
 
     /**
-     * Construye la granja macabra: un corral cercado, al mismo nivel que el suelo de la guarida, con una
-     * abertura abierta hacia el corredor (para que el cultivador entre y salga) y ganado inicial. Dentro hay
-     * un parche de sculk y catalizadores, para que lo que muera ahí alimente la infección como en el altar.
+     * Construye la granja macabra: el ganado vive en un <b>foso de {@link #FARM_DEPTH} bloques</b>, con un
+     * parche de sculk y catalizadores en el fondo (para que lo que se sacrifique ahí alimente la infección).
+     * <p>
+     * <b>Nada de vallas</b>: una valla no es un bloque convertible por el sculk, así que un cercado de vallas
+     * frenaba la infección justo en el corral. Las paredes del foso son tierra (convertible) y el foso es un
+     * hueco, así que la mancha entra y sale sin obstáculo. Los animales no pueden saltar 2 bloques, así que el
+     * foso los contiene igual que una valla.
+     * <p>
+     * La <b>salida es exclusiva del cultivador</b>: un escalón de 1 bloque en el borde (el resto del foso tiene
+     * su pared entera de 2) y una puerta de madera cerrada en el borde de fuera. Los animales no pueden abrir
+     * puertas; el cultivador sí ({@code OpenDoorGoal} + {@code setCanOpenDoors(true)}, como los aldeanos).
      */
     private static void buildFarm(ServerLevel level, BlockPos center, int baseY) {
-        // Suelo: tierra muerta, con un parche central de sculk.
+        int floor = baseY - FARM_DEPTH; // nivel transitable del fondo del foso
+
+        // 1) Cavar el foso (el disco del corral).
+        for (int x = -FARM_RADIUS; x <= FARM_RADIUS; x++) {
+            for (int z = -FARM_RADIUS; z <= FARM_RADIUS; z++) {
+                if (x * x + z * z > FARM_RADIUS * FARM_RADIUS) continue;
+                carveFarmColumn(level, center.getX() + x, center.getZ() + z, baseY, floor);
+            }
+        }
+        // Las dos columnas vecinas a la salida se cavan COMPLETAS: así la pared sigue teniendo sus 2 bloques a
+        // los lados y el único escalón que sube desde el fondo es el de la salida.
+        carveFarmColumn(level, center.getX() - FARM_RADIUS, center.getZ() - 1, baseY, floor);
+        carveFarmColumn(level, center.getX() - FARM_RADIUS, center.getZ() + 1, baseY, floor);
+
+        // 2) Fondo del foso: parche de sculk en el centro (donde caen los sacrificios), tierra muerta alrededor.
         for (int x = -FARM_RADIUS; x <= FARM_RADIUS; x++) {
             for (int z = -FARM_RADIUS; z <= FARM_RADIUS; z++) {
                 int sq = x * x + z * z;
                 if (sq > FARM_RADIUS * FARM_RADIUS) continue;
-                int px = center.getX() + x;
-                int pz = center.getZ() + z;
-                Block floor = sq <= 2 ? Blocks.SCULK : Blocks.COARSE_DIRT;
-                level.setBlock(new BlockPos(px, baseY - 1, pz), floor.defaultBlockState(), 3);
-                for (int y = baseY; y < baseY + 3; y++) {
-                    if (level.getBlockState(new BlockPos(px, y, pz)).isSolid()) {
-                        level.setBlock(new BlockPos(px, y, pz), Blocks.AIR.defaultBlockState(), 3);
-                    }
-                }
+                Block block = sq <= 2 ? Blocks.SCULK : Blocks.COARSE_DIRT;
+                level.setBlock(new BlockPos(center.getX() + x, floor - 1, center.getZ() + z),
+                        block.defaultBlockState(), 3);
             }
         }
-        // Dos catalizadores dentro del corral: expanden la infección cuando muere un animal encima.
-        level.setBlock(new BlockPos(center.getX() + 2, baseY - 1, center.getZ() + 2),
+        // Dos catalizadores en el fondo: expanden la infección cuando muere un animal encima.
+        level.setBlock(new BlockPos(center.getX() + 2, floor - 1, center.getZ() + 2),
                 Blocks.SCULK_CATALYST.defaultBlockState(), 3);
-        level.setBlock(new BlockPos(center.getX() + 2, baseY - 1, center.getZ() - 2),
+        level.setBlock(new BlockPos(center.getX() + 2, floor - 1, center.getZ() - 2),
                 Blocks.SCULK_CATALYST.defaultBlockState(), 3);
 
-        // Cerca: SIEMPRE a baseY (el suelo ya está nivelado, así que no flota ni se ondula). El anillo se
-        // cierra entero: es lo que impide que el ganado se escape.
-        int posts = 24;
-        for (int a = 0; a < posts; a++) {
-            double angle = (a / (double) posts) * Math.PI * 2.0;
-            int x = center.getX() + (int) Math.round(Math.cos(angle) * FARM_RADIUS);
-            int z = center.getZ() + (int) Math.round(Math.sin(angle) * FARM_RADIUS);
-            level.setBlock(new BlockPos(x, baseY, z), Blocks.OAK_FENCE.defaultBlockState(), 3);
+        // 3) Salida del cultivador: escalón de 1 bloque en el borde -X (el que mira al corredor) y puerta
+        //    cerrada justo fuera. La columna del escalón se sube un bloque respecto al fondo del foso.
+        int stepX = center.getX() - FARM_RADIUS;
+        int stepZ = center.getZ();
+        for (int y = baseY - 1; y < baseY + 2; y++) {
+            level.setBlock(new BlockPos(stepX, y, stepZ), Blocks.AIR.defaultBlockState(), 3);
         }
-        // Única entrada: una PUERTA de madera en el lado -X (el que mira al corredor y a la guarida). Se usa
-        // una puerta y no un hueco ni una verja abierta porque los animales no pueden abrir puertas, y el
-        // cultivador SÍ (tiene OpenDoorGoal + el pathfinding con setCanOpenDoors(true), como los aldeanos).
-        BlockPos doorPos = new BlockPos(center.getX() - FARM_RADIUS, baseY, center.getZ());
-        placeDoor(level, doorPos, Direction.WEST);
+        level.setBlock(new BlockPos(stepX, floor, stepZ), Blocks.COARSE_DIRT.defaultBlockState(), 3);
+        placeDoor(level, new BlockPos(stepX - 1, baseY, stepZ), Direction.WEST);
 
-        // Ganado inicial, dentro del corral.
-        spawnAnimal(level, center, baseY, EntityType.COW, 2);
-        spawnAnimal(level, center, baseY, EntityType.SHEEP, 2);
-        spawnAnimal(level, center, baseY, EntityType.PIG, 1);
-        spawnAnimal(level, center, baseY, EntityType.CHICKEN, 2);
+        // Ganado inicial, en el fondo del foso.
+        spawnAnimal(level, center, floor, EntityType.COW, 2);
+        spawnAnimal(level, center, floor, EntityType.SHEEP, 2);
+        spawnAnimal(level, center, floor, EntityType.PIG, 1);
+        spawnAnimal(level, center, floor, EntityType.CHICKEN, 2);
+    }
+
+    /**
+     * Cava una columna del foso del corral: deja el suelo transitable en {@code floor} (bloque sólido justo
+     * debajo) y despeja el aire por encima, incluido lo que hubiera a nivel del suelo.
+     */
+    private static void carveFarmColumn(ServerLevel level, int px, int pz, int baseY, int floor) {
+        for (int y = floor; y < baseY + 2; y++) {
+            level.setBlock(new BlockPos(px, y, pz), Blocks.AIR.defaultBlockState(), 3);
+        }
+        level.setBlock(new BlockPos(px, floor - 1, pz), Blocks.COARSE_DIRT.defaultBlockState(), 3);
     }
 
     /** Coloca una puerta de dos bloques (mitad inferior + superior), cerrada. */
