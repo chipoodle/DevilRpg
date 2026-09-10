@@ -75,10 +75,15 @@ public final class LairManager {
     private static final int MAX_LAIR_MOBS = 30;
     /**
      * Si matas al guardián y <b>no</b> rompes el núcleo, la guarida cría un <b>guardián de relevo</b> tras
-     * este tiempo (de guarida activa, o sea con jugador cerca). El sello no vuelve: el núcleo ya queda
-     * expuesto para siempre.
+     * este tiempo (de guarida activa, o sea con jugador cerca) y <b>vuelve a sellar el núcleo</b>.
      */
     private static final int GUARDIAN_RESPAWN_TICKS = 3 * 60 * 20;
+    /**
+     * Radio de seguridad para volver a sellar: si hay un jugador más cerca del núcleo que esto, la
+     * consagración se pospone (avisando). La caja de sellos ocupa 3×3×3 alrededor del núcleo, así que 3
+     * bloques garantiza que nadie quede dentro de ella.
+     */
+    private static final double RESEAL_CLEAR_RADIUS = 3.0D;
     /** Radio que patrullan los enemigos alrededor del núcleo de la guarida. */
     private static final int PATROL_RADIUS = 24;
 
@@ -200,23 +205,38 @@ public final class LairManager {
     }
 
     /**
-     * La guarida cría un <b>guardián de relevo</b> si mataste al anterior y dejaste el núcleo en pie.
+     * La guarida cría un <b>guardián de relevo</b> y <b>vuelve a sellar el núcleo</b>, si mataste al anterior
+     * y dejaste el núcleo en pie. Ocurre a los {@link #GUARDIAN_RESPAWN_TICKS} de la muerte, y cada muerte
+     * programa su propio relevo.
      * <p>
-     * El <b>sello NO se vuelve a levantar</b>: una vez roto, el núcleo queda expuesto para siempre. Eso es
-     * justo lo que permite que el relevo salga estés donde estés — volver a encerrar el núcleo en la caja de
-     * sellos con el jugador al lado lo dejaría dentro, asfixiándose (y era lo que impedía que saliera el
-     * guardián nuevo: la guarda de "no sellar si hay alguien cerca del núcleo" lo posponía sin avisar).
-     * El guardián nuevo sigue haciendo su trabajo —cría, sacrifica y siembra catalizadores—, así que la
-     * infección de la guarida sigue creciendo, y sigue siendo una presa que da XP.
+     * El relevo sale con partículas y sonido <b>alrededor del guardián</b> (no del núcleo) para que se note
+     * quién ha vuelto. La caja de sellos no se puede levantar con alguien dentro del círculo —lo dejaría
+     * encerrado y asfixiándose—, así que en ese caso se pospone y se le avisa por la barra de acción para que
+     * se aparte: sin ese aviso parecería que el relevo no funciona.
      */
     private static void respawnGuardian(ServerLevel level, Lair lair) {
+        if (!playersNear(level, lair.corePos, RESEAL_CLEAR_RADIUS).isEmpty()) {
+            // Se pospone (y se reintenta cada tick). Aviso cada 3 s para no saturar.
+            if (lair.respawnTicks % 60 == 0) {
+                for (Player p : playersNear(level, lair.corePos, 64.0D)) {
+                    p.displayClientMessage(Component.literal(
+                            "El santuario no puede consagrar un guardián mientras estés en el círculo: apártate del núcleo.")
+                            .withStyle(ChatFormatting.DARK_AQUA), true);
+                }
+            }
+            return;
+        }
         Mob guardian = spawnOne(level, lair, null, new Random(), true);
         if (guardian == null) {
             return; // no se pudo crear: se reintenta en el siguiente tick
         }
+        LairGenerator.buildSealCage(level, lair.corePos);
         lair.guardianReborn = true;
+        lair.guardianDead = false;
+        lair.sealBroken = false; // el sello vuelve a estar en pie
         lair.respawnTicks = 0;
-        DevilRpg.LOGGER.info("[Lair] La guarida {} ha criado un guardián de relevo", lair.objectiveIndex);
+        DevilRpg.LOGGER.info("[Lair] La guarida {} ha consagrado un guardián de relevo: núcleo sellado de nuevo",
+                lair.objectiveIndex);
         // Partículas bien visibles ALREDEDOR DEL GUARDIÁN (no del núcleo) para que se note que ha vuelto.
         level.sendParticles(ParticleTypes.SCULK_SOUL,
                 guardian.getX(), guardian.getY() + 1.0D, guardian.getZ(), 90, 0.7D, 1.1D, 0.7D, 0.03D);
@@ -225,8 +245,8 @@ public final class LairManager {
         level.playSound(null, guardian.blockPosition(), SoundEvents.SCULK_SHRIEKER_SHRIEK,
                 SoundSource.HOSTILE, 2.0F, 0.6F);
         for (Player p : playersNear(level, lair.corePos, 64.0D)) {
-            p.displayClientMessage(
-                    Component.literal("¡Un nuevo guardián del sculk ha vuelto al santuario!"), false);
+            p.displayClientMessage(Component.literal(
+                    "¡Un nuevo guardián del sculk ha vuelto y ha sellado el núcleo!"), false);
         }
     }
 

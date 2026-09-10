@@ -216,14 +216,14 @@ Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el ju
      un sondeo: deducirlo de "no hay ningún cultivador cerca" era un error, porque esa ausencia también
      significa *todavía no ha aparecido* o *se ha ido* — con esa deducción el sello se caía solo y el núcleo
      aparecía indefenso sin haber matado a nadie.
-     **Si matas al guardián y no rompes el núcleo**, la guarida cría un <b>guardián de relevo</b> tras **3 min
-     de guarida activa** (`GUARDIAN_RESPAWN_TICKS`), con **partículas de alma de sculk y sonido alrededor del
-     guardián nuevo** (no del núcleo) y aviso en el chat, para que se note que ha vuelto. El relevo **no
-     vuelve a sellar**: una vez roto, el sello queda roto y el núcleo expuesto para siempre. Eso es lo que
-     permite que salga estés donde estés — volver a levantar la caja de sellos con el jugador al lado lo
-     dejaría dentro asfixiándose, y la guarda que lo evitaba era justo lo que impedía que apareciera el
-     guardián nuevo. El relevo sigue con su trabajo (cría, sacrifica y siembra catalizadores), así que la
-     infección de la guarida sigue creciendo. Cada muerte programa su propio relevo. Mientras esté sellado,
+     **Si matas al guardián y no rompes el núcleo**, la guarida cría un <b>guardián de relevo</b> y <b>vuelve
+     a sellar el núcleo</b> tras **3 min de guarida activa** (`GUARDIAN_RESPAWN_TICKS`); cada muerte programa
+     su propio relevo, así que una guarida viva nunca se queda sin guardián. El relevo sale con **partículas
+     de alma de sculk (90) + `sculk_charge_pop` (30) y sonido de shrieker ALREDEDOR DEL GUARDIÁN** (no del
+     núcleo, para que se note quién ha vuelto) y aviso en el chat. La caja de sellos no puede levantarse con
+     alguien dentro del círculo —lo dejaría encerrado y asfixiándose—, así que si hay un jugador a menos de
+     `RESEAL_CLEAR_RADIUS` (3 bloques) del núcleo la consagración se **pospone con un aviso por la barra de
+     acción** para que se aparte: sin ese aviso parecería que el relevo no funciona. Mientras esté sellado,
      al acercarse sale el recordatorio "mata al cultivador del sculk para romper el sello".
   3. **El núcleo se defiende** (`LairManager.defendCore`): aura de **Oscuridad** en radio 8, y una vez roto
      el sello además **colmillos de invocador** alrededor de quien se acerque cada 4 s (con 0.4 s de aviso,
