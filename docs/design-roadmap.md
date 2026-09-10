@@ -382,6 +382,9 @@ Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el ju
   `GUARDIAN_RESPAWN_TICKS` 3 min (relevo del guardián si no rompes el núcleo), `SPAWN_INTERVAL_TICKS` 25 s,
   `ACTIVATION_RADIUS` 64, `CORE_AURA_RADIUS` 8, `CORE_FANG_TICKS` 4 s, `MIN_DISTANCE_FROM_OBJECTIVE` 75.
 
+> TODO (siguiente): que las hordas apunten al **asentamiento más cercano** en vez de al jugador, para
+> conectar con la Iteración 3.
+
 ---
 
 ## 6) Notas de trabajo (para el agente)
