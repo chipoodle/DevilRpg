@@ -12,6 +12,8 @@ import com.chipoodle.devilrpg.world.LairGenerator;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtUtils;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.server.level.ServerLevel;
@@ -69,7 +71,7 @@ public class SculkCultivatorEntity extends AbstractIllager implements RangedAtta
     /** Radio en el que el cultivador trabaja (respecto al núcleo de su guarida). */
     private static final int WORK_RADIUS = 24;
     /** Bloques de sculk necesarios para "condensar" un catalizador nuevo. */
-    private static final int SCULK_PER_CATALYST = 24;
+    private static final int SCULK_PER_CATALYST = 22;
     /**
      * Máximo de catalizadores que mantiene por guarida. Cada catalizador es un foco de expansión
      * independiente (en vanilla <b>nunca</b> se crean solos: el sculk solo genera sensores y chilladores), así
@@ -154,6 +156,28 @@ public class SculkCultivatorEntity extends AbstractIllager implements RangedAtta
     }
 
     /**
+     * Guarda a qué guarida pertenece el guardián. <b>Es imprescindible</b>: al morir, el cultivador avisa a su
+     * guarida con ese dato para que caiga el sello. Sin guardarlo, un guardián que sobrevive a un reinicio de
+     * la partida se queda sin "hogar", muere sin avisar y <b>el sello nunca se rompe</b> (el núcleo queda
+     * inaccesible con el guardián ya muerto).
+     */
+    @Override
+    public void addAdditionalSaveData(CompoundTag tag) {
+        super.addAdditionalSaveData(tag);
+        if (homePos != null) {
+            tag.put("DevilRpgLairCore", NbtUtils.writeBlockPos(homePos));
+            tag.putInt("DevilRpgLairRadius", homeRadius);
+        }
+    }
+
+    @Override
+    public void readAdditionalSaveData(CompoundTag tag) {
+        super.readAdditionalSaveData(tag);
+        NbtUtils.readBlockPos(tag, "DevilRpgLairCore").ifPresent(pos -> homePos = pos);
+        homeRadius = tag.getInt("DevilRpgLairRadius");
+    }
+
+    /**
      * Avisa a su guarida cuando el guardián <b>muere de verdad</b>: es lo único que rompe el sello. Se hace
      * aquí y no contando cultivadores vivos, porque su ausencia también significa "todavía no ha aparecido" o
      * "se ha ido", y con esa deducción el sello caía solo.
@@ -161,9 +185,11 @@ public class SculkCultivatorEntity extends AbstractIllager implements RangedAtta
     @Override
     public void die(DamageSource cause) {
         BlockPos lair = homePos; // se captura antes de super.die(), que puede limpiar el estado
+        BlockPos deathPos = blockPosition();
         super.die(cause);
-        if (lair != null && !level().isClientSide && level() instanceof ServerLevel serverLevel) {
-            LairManager.onGuardianKilled(serverLevel, lair);
+        if (!level().isClientSide && level() instanceof ServerLevel serverLevel) {
+            // Se avisa también si no tiene hogar: LairManager busca entonces la guarida más cercana.
+            LairManager.onGuardianKilled(serverLevel, lair, deathPos);
         }
     }
 

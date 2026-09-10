@@ -84,6 +84,13 @@ public final class LairManager {
      * bloques garantiza que nadie quede dentro de ella.
      */
     private static final double RESEAL_CLEAR_RADIUS = 3.0D;
+    /**
+     * Radio para reconocer a qué guarida pertenece un guardián que murió <b>sin recordar su hogar</b> (p. ej.
+     * uno guardado por una versión anterior, de antes de que el hogar se guardara en NBT, o creado con huevo
+     * de spawn): se le asigna la guarida <b>más cercana</b> dentro de este radio. Las guaridas están a ≥200
+     * bloques entre sí, así que 64 no es ambiguo.
+     */
+    private static final int GUARDIAN_MATCH_RADIUS = 64;
     /** Radio que patrullan los enemigos alrededor del núcleo de la guarida. */
     private static final int PATROL_RADIUS = 24;
 
@@ -190,23 +197,50 @@ public final class LairManager {
      * {@code SculkCultivatorEntity} desde {@code die()}, pasando el núcleo de su guarida (que guarda como
      * "hogar"). Es la única señal fiable de "hay que romper el sello": contar cultivadores no sirve, porque
      * su ausencia también significa "todavía no ha aparecido" o "se ha ido".
+     *
+     * @param lairCore núcleo de su guarida, o {@code null} si el guardián no lo tenía (p. ej. un guardián
+     *                 guardado por una versión anterior, o creado con huevo de spawn). En ese caso se busca la
+     *                 guarida <b>más cercana</b> a {@code deathPos}, que es la suya: si no, moriría sin avisar
+     *                 y <b>el sello no caería nunca</b> (núcleo inaccesible con el guardián ya muerto).
      */
-    public static void onGuardianKilled(ServerLevel level, BlockPos lairCore) {
+    public static void onGuardianKilled(ServerLevel level, BlockPos lairCore, BlockPos deathPos) {
         List<Lair> list = LAIRS.get(level);
         if (list == null) {
             return;
         }
-        for (Lair lair : list) {
-            if (!lair.cleared && lair.corePos.equals(lairCore)) {
-                lair.guardianDead = true;
-                // Cada muerte programa su propio relevo (a los GUARDIAN_RESPAWN_TICKS).
-                lair.guardianReborn = false;
-                lair.respawnTicks = 0;
-                DevilRpg.LOGGER.info("[Lair] Guardián de la guarida {} ha muerto: el sello va a caer",
-                        lair.objectiveIndex);
-                return;
+        Lair found = null;
+        double bestDist = Double.MAX_VALUE;
+        if (lairCore != null) {
+            for (Lair lair : list) {
+                if (!lair.cleared && lair.corePos.equals(lairCore)) {
+                    found = lair;
+                    break;
+                }
             }
         }
+        if (found == null) {
+            for (Lair lair : list) {
+                if (lair.cleared) {
+                    continue;
+                }
+                double dist = lair.center.distSqr(deathPos);
+                if (dist < bestDist && dist <= (double) GUARDIAN_MATCH_RADIUS * GUARDIAN_MATCH_RADIUS) {
+                    bestDist = dist;
+                    found = lair;
+                }
+            }
+        }
+        if (found == null) {
+            DevilRpg.LOGGER.warn("[Lair] Murió un guardián en {} pero no se encontró su guarida (radio {})",
+                    deathPos, GUARDIAN_MATCH_RADIUS);
+            return;
+        }
+        found.guardianDead = true;
+        // Cada muerte programa su propio relevo (a los GUARDIAN_RESPAWN_TICKS).
+        found.guardianReborn = false;
+        found.respawnTicks = 0;
+        DevilRpg.LOGGER.info("[Lair] Guardián de la guarida {} ha muerto: el sello va a caer",
+                found.objectiveIndex);
     }
 
     /**
