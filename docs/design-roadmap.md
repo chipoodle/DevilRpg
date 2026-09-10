@@ -209,14 +209,18 @@ Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el ju
      y se quedan atrapados.
   2. **Sello del cultivador** (`SculkSealBlock`, bloque `sculk_seal`): caja **3×3×3 inquebrantable**
      (dureza −1, como la piedra base; sin objeto, sin loot table y fuera del inventario creativo) que
-     **blinda el núcleo**. `LairManager` la abre cuando **no queda guardián**, es decir cuando el cultivador
-     muere, con partículas, sonido y aviso. El estado es **coherente por construcción: sello roto ⟺ sin
-     cultivador**, y para que lo sea: una vez roto el sello esa guarida **ya no vuelve a criar guardianes**, y
-     la red de seguridad por tiempo **retira al guardián vivo antes de abrir** el sello (si no, se veía un
-     cultivador tan tranquilo junto a una barrera ya caída, que no tiene sentido). Mientras esté sellado, al
-     acercarse sale el recordatorio "mata al cultivador del sculk para romper el sello". El sello se abre
-     igual tras **10 min de guarida activa**, para que un guardián atascado o inalcanzable no deje el
-     objetivo bloqueado.
+     **blinda el núcleo**. `LairManager` la abre cuando **el guardián muere de verdad**, con partículas,
+     sonido y aviso. La señal es un **callback de muerte**: `SculkCultivatorEntity.die()` avisa a
+     `LairManager.onGuardianKilled()` pasando el núcleo de su guarida. Es importante que sea un evento y no un
+     sondeo: deducirlo de "no hay ningún cultivador cerca" era un error, porque esa ausencia también significa
+     *todavía no ha aparecido* o *se ha ido* — con esa deducción el sello se caía solo y el núcleo aparecía
+     indefenso sin haber matado a nadie. Por lo mismo el guardián **no despawna por distancia**
+     (`removeWhenFarAway() → false`). Una vez roto el sello esa guarida **ya no vuelve a criar guardianes**, y
+     la red de seguridad por tiempo **retira al guardián vivo antes de abrir** (si no, se veía un cultivador
+     tan tranquilo junto a una barrera ya caída). El sello se abre igual tras **10 min con guardián presente**
+     (el reloj arranca cuando aparece, no al llegar), para que un guardián atascado o inalcanzable no deje el
+     objetivo bloqueado. Mientras esté sellado, al acercarse sale el recordatorio "mata al cultivador del
+     sculk para romper el sello".
   3. **El núcleo se defiende** (`LairManager.defendCore`): aura de **Oscuridad** en radio 8, y una vez roto
      el sello además **colmillos de invocador** alrededor de quien se acerque cada 4 s (con 0.4 s de aviso,
      así que se esquivan). Picar el núcleo es una pelea bajo presión, no un trámite.

@@ -6,6 +6,7 @@ import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
 import com.chipoodle.devilrpg.spawnprofile.AggressiveZombieSpawnProfile;
 import com.chipoodle.devilrpg.spawnprofile.SpawnScaleProfile;
+import com.chipoodle.devilrpg.survival.LairManager;
 import com.chipoodle.devilrpg.survival.ThreatLevel;
 import com.chipoodle.devilrpg.world.LairGenerator;
 import net.minecraft.core.BlockPos;
@@ -123,6 +124,30 @@ public class SculkCultivatorEntity extends AbstractIllager {
     @Override
     public boolean canJoinRaid() {
         return false;
+    }
+
+    /**
+     * El guardián <b>no desaparece por distancia</b>. Si pudiera despawnear, la guarida se quedaría sin nadie
+     * a quien matar, el sello no tendría forma de caer (salvo la red de seguridad por tiempo) y el jugador se
+     * encontraría el núcleo indefenso sin haber matado a nadie.
+     */
+    @Override
+    public boolean removeWhenFarAway(double distanceToClosestPlayer) {
+        return false;
+    }
+
+    /**
+     * Avisa a su guarida cuando el guardián <b>muere de verdad</b>: es lo único que rompe el sello. Se hace
+     * aquí y no contando cultivadores vivos, porque su ausencia también significa "todavía no ha aparecido" o
+     * "se ha ido", y con esa deducción el sello caía solo.
+     */
+    @Override
+    public void die(DamageSource cause) {
+        BlockPos lair = homePos; // se captura antes de super.die(), que puede limpiar el estado
+        super.die(cause);
+        if (lair != null && !level().isClientSide && level() instanceof ServerLevel serverLevel) {
+            LairManager.onGuardianKilled(serverLevel, lair);
+        }
     }
 
     /** Obligatorio de {@code Raider}, pero nunca hay raid propia: no aplica ninguna mejora. */

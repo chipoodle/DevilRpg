@@ -138,8 +138,11 @@ public final class LairManager {
             // 1b) El sello: la caja que blinda el núcleo se abre cuando MUERE el guardián de la guarida (el
             //     cultivador). Una vez abierta ya no vuelve, aunque luego aparezca otro cultivador.
             int cultivators = countCultivators(level, lair);
-            if (cultivators > 0) {
+            if (cultivators > 0 && !lair.guardianSeen) {
                 lair.guardianSeen = true;
+                // El reloj de la red de seguridad cuenta desde que HAY guardián, no desde la primera visita:
+                // así no se dispara por tiempo acumulado de visitas anteriores sin guardián.
+                lair.activeTicks = 0;
             }
             // 2) Spawnear enemigos solo si hay un jugador cerca de la guarida.
             Player near = level.getNearestPlayer(
@@ -149,14 +152,16 @@ public final class LairManager {
                 continue;
             }
             lair.activeTicks++;
-            // El sello se abre cuando NO queda guardián. Si se abre por la red de seguridad (tiempo), el
-            // guardián que siga vivo se retira antes: si no, quedaría un cultivador vivo con el sello ya roto,
-            // que es contradictorio y confunde (barrera caída y el guardián tan tranquilo).
+            // El sello cae SOLO si el guardián murió de verdad (nos avisa el propio cultivador en die()), o
+            // por la red de seguridad por tiempo. OJO: antes se deducía de "no hay ningún cultivador cerca", y
+            // eso también es cierto cuando el guardián simplemente no está (despawn, o aún no ha aparecido),
+            // así que el sello se caía solo y el núcleo quedaba indefenso sin haber matado a nadie.
             if (!lair.sealBroken) {
-                if (cultivators == 0 && lair.guardianSeen) {
-                    openSeal(level, lair); // el guardián murió: se rompe el sello
-                } else if (lair.activeTicks > SEAL_FORCE_OPEN_TICKS) {
-                    // Red de seguridad: nunca apareció guardián, o el que hay está atascado/inalcanzable.
+                if (lair.guardianDead) {
+                    openSeal(level, lair);
+                } else if (lair.guardianSeen && lair.activeTicks > SEAL_FORCE_OPEN_TICKS) {
+                    // Red de seguridad: hubo guardián pero no hay forma de matarlo (atascado, inalcanzable o
+                    // desaparecido). Se retira si sigue vivo y se abre el sello.
                     if (cultivators > 0) {
                         dismissGuardian(level, lair);
                     }
@@ -170,6 +175,27 @@ public final class LairManager {
             }
             lair.spawnTimer = SPAWN_INTERVAL_TICKS;
             spawnWave(level, lair, near);
+        }
+    }
+
+    /**
+     * Se invoca cuando el <b>guardián</b> de una guarida muere de verdad. Lo llama el propio
+     * {@code SculkCultivatorEntity} desde {@code die()}, pasando el núcleo de su guarida (que guarda como
+     * "hogar"). Es la única señal fiable de "hay que romper el sello": contar cultivadores no sirve, porque
+     * su ausencia también significa "todavía no ha aparecido" o "se ha ido".
+     */
+    public static void onGuardianKilled(ServerLevel level, BlockPos lairCore) {
+        List<Lair> list = LAIRS.get(level);
+        if (list == null) {
+            return;
+        }
+        for (Lair lair : list) {
+            if (!lair.cleared && lair.corePos.equals(lairCore)) {
+                lair.guardianDead = true;
+                DevilRpg.LOGGER.info("[Lair] Guardián de la guarida {} ha muerto: el sello va a caer",
+                        lair.objectiveIndex);
+                return;
+            }
         }
     }
 
@@ -204,6 +230,7 @@ public final class LairManager {
      */
     private static void openSeal(ServerLevel level, Lair lair) {
         lair.sealBroken = true;
+        lair.guardianDead = true; // el sello roto implica que ya no hay guardián
         Block seal = ModBlocks.SCULK_SEAL_BLOCK.get();
         int removed = 0;
         int r = LairGenerator.SEAL_RADIUS;
@@ -384,6 +411,8 @@ public final class LairManager {
         int spawnTimer = SPAWN_INTERVAL_TICKS / 2; // primera tanda algo antes
         /** ¿Ha llegado a vivir un cultivador (guardián) en esta guarida? */
         boolean guardianSeen;
+        /** ¿Ha MUERTO el guardián? Solo esto (o la red de seguridad) rompe el sello. */
+        boolean guardianDead;
         /** ¿Ya se abrió el sello del núcleo? Una vez abierto no se vuelve a cerrar. */
         boolean sealBroken;
         /** Ticks que la guarida ha estado activa (con jugador cerca), para la red de seguridad del sello. */
