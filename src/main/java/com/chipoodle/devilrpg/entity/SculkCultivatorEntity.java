@@ -21,6 +21,8 @@ import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.entity.ai.goal.OpenDoorGoal;
+import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
 import net.minecraft.world.entity.ai.util.DefaultRandomPos;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.monster.AbstractIllager;
@@ -85,6 +87,12 @@ public class SculkCultivatorEntity extends AbstractIllager {
 
     public SculkCultivatorEntity(EntityType<? extends AbstractIllager> type, Level level) {
         super(type, level);
+        // El corral de su granja es un cercado CERRADO con una única puerta de madera (así el ganado no se
+        // escapa). Para poder entrar a criar y sacrificar necesita las dos mitades de la mecánica de puertas,
+        // igual que los aldeanos: el pathfinding que las considera transitables...
+        if (getNavigation() instanceof GroundPathNavigation groundNavigation) {
+            groundNavigation.setCanOpenDoors(true);
+        }
     }
 
     /** Mismas reglas (perfil y escalado) que el zombie agresivo. */
@@ -187,6 +195,9 @@ public class SculkCultivatorEntity extends AbstractIllager {
         this.goalSelector.addGoal(2, new SacrificeGoal(this));
         this.goalSelector.addGoal(3, new BreedAnimalsGoal(this));
         this.goalSelector.addGoal(4, new PlantCatalystGoal(this));
+        // ...y la otra mitad: abrir de verdad la puerta del corral cuando se topa con ella yendo a trabajar.
+        // (OpenDoorGoal no declara flags: solo abre puertas, no navega, así que convive con el goal de turno.)
+        this.goalSelector.addGoal(5, new OpenDoorGoal(this, true));
         // Patrullar el radio de su guarida cuando no tiene nada que hacer (y volver tras una huida).
         this.goalSelector.addGoal(8, new PatrolHomeGoal(this));
     }

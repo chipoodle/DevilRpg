@@ -7,6 +7,7 @@ import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInter
 import com.chipoodle.devilrpg.spawnprofile.AggressiveZombieSpawnProfile;
 import com.chipoodle.devilrpg.spawnprofile.SpawnScaleProfile;
 import com.chipoodle.devilrpg.survival.ThreatLevel;
+import com.chipoodle.devilrpg.world.LairGenerator;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.tags.FluidTags;
@@ -243,10 +244,19 @@ public class AggressiveZombieEntity extends Zombie {
                 this::isAnimalInsideHome));
     }
 
-    /** ¿El animal está dentro del radio de la guarida? (para que muera sobre el sculk y lo expanda). */
+    /**
+     * ¿Es una presa válida para el zombie? Sí si es un animal dentro del radio de su guarida... salvo que sea
+     * <b>ganado de la granja macabra</b> (etiqueta {@link LairGenerator#LIVESTOCK_TAG}). Ese rebaño es del
+     * cultivador: si los demás enemigos de la guarida lo cazan, el cultivador se queda sin nada que criar ni
+     * sacrificar y la granja deja de tener sentido. Los animales <b>salvajes</b> que entren en la guarida sí
+     * se siguen cazando (así es como la infección se alimenta sola).
+     */
     private boolean isAnimalInsideHome(LivingEntity target) {
         BlockPos home = getHomePos();
         if (home == null || getHomeRadius() <= 0) {
+            return false;
+        }
+        if (LairGenerator.isLivestock(target)) {
             return false;
         }
         double r = getHomeRadius();

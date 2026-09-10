@@ -1,7 +1,6 @@
 package com.chipoodle.devilrpg.entity.goal;
 
 import com.chipoodle.devilrpg.entity.SoulWisp;
-import com.chipoodle.devilrpg.entity.SoulWispRanger;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
@@ -17,7 +16,12 @@ import net.minecraft.world.level.pathfinder.WalkNodeEvaluator;
 import java.util.EnumSet;
 
 public class SoulWispFollowOwnerGoal extends Goal {
-    public static final int TELEPORT_WHEN_DISTANCE_IS = 12;
+    /**
+     * Distancia a la que el wisp, si sigue sin poder llegar al dueño, se <b>teletransporta</b> a su lado.
+     * Está por encima del `startDistance` (16) a propósito: entre 16 y 32 el wisp <b>vuela</b> de vuelta y
+     * solo se teletransporta si de verdad no consigue alcanzarlo.
+     */
+    public static final int TELEPORT_WHEN_DISTANCE_IS = 32;
     private static final int MIN_HORIZONTAL_DISTANCE_FROM_PLAYER_WHEN_TELEPORTING = 2;
     private static final int MAX_HORIZONTAL_DISTANCE_FROM_PLAYER_WHEN_TELEPORTING = 3;
     private static final int MAX_VERTICAL_DISTANCE_FROM_PLAYER_WHEN_TELEPORTING = 1;
@@ -57,13 +61,12 @@ public class SoulWispFollowOwnerGoal extends Goal {
         } else if (this.soulWisp.distanceToSqr(owner) < (double) (this.startDistance * this.startDistance)) {
             return false;
         } else {
+            // Antes había aquí un caso especial que devolvía false si el ranger tenía los goals de cortar o
+            // recoger madera registrados — y como SIEMPRE tiene el de cortar, en la práctica el ranger nunca
+            // seguía a su dueño. Se quitó a propósito: ahora, si el dueño se aleja más allá de startDistance,
+            // suelta la tarea y vuelve (los goals de trabajo declaran el flag MOVE, así que esta prioridad
+            // manda de verdad mientras está activo).
             this.owner = owner;
-            if(soulWisp instanceof SoulWispRanger ranger) {
-                return ranger.goalSelector.getAvailableGoals().stream()
-                        .filter(goal->goal.getGoal() instanceof SoulWispChopLogsGoal
-                                || goal.getGoal() instanceof SoulWispGatherLogItemsGoal)
-                        .toList().isEmpty();
-            }
             return true;
         }
     }
@@ -98,7 +101,7 @@ public class SoulWispFollowOwnerGoal extends Goal {
         this.soulWisp.getLookControl().setLookAt(this.owner, 10.0F, (float) this.soulWisp.getMaxHeadXRot());
         if (--this.timeToRecalcPath <= 0) {
             this.timeToRecalcPath = this.adjustedTickDelay(10);
-            if (this.soulWisp.distanceToSqr(this.owner) >= 144.0D) {
+            if (this.soulWisp.distanceToSqr(this.owner) >= (double) (TELEPORT_WHEN_DISTANCE_IS * TELEPORT_WHEN_DISTANCE_IS)) {
                 this.teleportToOwner();
             } else {
                 this.navigation.moveTo(this.owner, this.speedModifier);

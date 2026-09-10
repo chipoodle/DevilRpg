@@ -11,6 +11,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
 
+import java.util.EnumSet;
 import java.util.List;
 
 public class SoulWispGatherLogItemsGoal extends Goal {
@@ -25,6 +26,8 @@ public class SoulWispGatherLogItemsGoal extends Goal {
 
     public SoulWispGatherLogItemsGoal(SoulWisp soulWisp) {
         this.soulWisp = soulWisp;
+        // Navega: declara MOVE para que su prioridad sea real (ver SoulWispChopLogsGoal).
+        this.setFlags(EnumSet.of(Goal.Flag.MOVE));
     }
 
     @Override

@@ -193,9 +193,10 @@ Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el ju
   **corredor** y el **corral**, nivelados **al mismo nivel** (mediana del terreno de toda la huella, vía
   `platformDistance()`); eso garantiza que el corral quede exactamente a la altura del suelo de la guarida.
   Superficie: **sculk** en el núcleo corrupto (radio 8) y **tierra muerta** alrededor con **venas de sculk**,
-  más **espinas de hueso** en el anillo exterior, **telarañas** dispersas y **tótems con calaveras** en las
-  diagonales. En tierra lleva un **talud exterior** (meseta natural); si cae sobre **agua**, se construye
-  sobre una **plataforma al nivel del agua** con base cónica (nunca queda sumergida).
+  más **espinas de hueso** en el anillo exterior y **tótems con calaveras** en las diagonales. *(Las
+  telarañas se quitaron: ensuciaban el santuario sin aportar nada.)* En tierra lleva un **talud exterior**
+  (meseta natural); si cae sobre **agua**, se construye sobre una **plataforma al nivel del agua** con base
+  cónica (nunca queda sumergida).
 - **Santuario defendido** (el núcleo no se asalta impunemente). Tres capas:
   1. **Foso perimetral** (`buildMoat`): anillo de radio 3.5–6 con **4 bloques de caída** y el **fondo de
      arena de almas**. **No lleva magma a propósito**: un foso es un hueco de aire y **el sculk no cruza un
@@ -235,9 +236,17 @@ Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el ju
     al santuario. Los jugadores en creativo/espectador se ignoran, para poder observarlo trabajar.
   - **Granja macabra**: `LairGenerator` construye un **corral cercado dentro de la plataforma**, con un
     parche de sculk y **2 catalizadores** dentro (para que el sacrificio alimente la infección donde el
-    animal realmente muere), ganado inicial (vacas, ovejas, cerdos, pollos) y una **abertura con dos puertas
-    abiertas** hacia el corredor (el cultivador no puede abrir puertas). El cultivador **cría** el ganado
-    (`BreedAnimalsGoal`) y **sacrifica** el excedente sobre el sculk (`SacrificeGoal`).
+    animal realmente muere) y ganado inicial (vacas, ovejas, cerdos, pollos). El anillo de valla está
+    **cerrado del todo** y su **única entrada es una puerta de madera** (en el lado que mira al corredor):
+    los animales **no pueden abrir puertas**, y el cultivador sí — tiene `OpenDoorGoal` y su pathfinding lleva
+    `setCanOpenDoors(true)`, exactamente como los aldeanos. Antes había un hueco con dos verjas abiertas y el
+    ganado se escapaba. El cultivador **cría** el ganado (`BreedAnimalsGoal`) y **sacrifica** el excedente
+    sobre el sculk (`SacrificeGoal`).
+  - **El ganado está protegido de los demás enemigos**: los animales del corral llevan la etiqueta
+    `devilrpg_livestock` y el `AggressiveZombieEntity` **excluye** a los animales marcados de su caza dentro
+    de la guarida. Sin esto, en cuanto el cultivador mataba a uno los demás zombies arrasaban el rebaño
+    entero y la granja se quedaba sin nada que criar. Los animales **salvajes** que entren en la guarida sí
+    siguen siendo cazados (así es como la infección se alimenta sola).
   - **Siembra catalizadores** (`PlantCatalystGoal`): cuando la infección ya cubre suficiente sculk,
     **extrae** bloques de sculk del terreno y los condensa en un **catalizador nuevo**, colocándolo en el
     borde de la infección (hasta 6 por guarida). Así la mancha sigue creciendo en mancha de aceite.
@@ -265,6 +274,12 @@ Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el ju
   **asaltar** (ver 3c).
 - ✅ **Objetivos defendidos**: el núcleo de una guarida ya no es un bloque suelto — foso con
   puentes, **sello** que solo cae al matar al cultivador, y el propio núcleo atacando (ver 3c).
+- ✅ **Minions que atienden a su dueño**: el wisp **ranger** abandona su tarea y vuelve cuando el jugador se
+  aleja **más de 16 bloques** (deja de seguirlo al acercarse a 12; solo se teletransporta si de verdad no
+  consigue alcanzarlo, a 32). Para que eso funcione hubo que declarar el flag `MOVE` en sus cuatro goals de
+  trabajo (cortar, recoger madera, plantar, cosechar) y quitar un caso especial que **desactivaba** el
+  seguimiento en cuanto el ranger tenía el goal de cortar registrado — o sea que en la práctica nunca seguía
+  a su dueño.
 - ⬜ Se fortalecen con el tiempo (ya arrancado con `ThreatLevel`).
 
 ### Iteración 3 — Asentamientos vivos (pilar 3)

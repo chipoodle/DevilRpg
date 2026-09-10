@@ -33,6 +33,8 @@ public class SoulWispHarvestGrassGoal extends Goal {
 
     public SoulWispHarvestGrassGoal(SoulWisp soulWisp) {
         this.soulWisp = soulWisp;
+        // Navega: declara MOVE para que su prioridad sea real (ver SoulWispChopLogsGoal).
+        this.setFlags(EnumSet.of(Goal.Flag.MOVE));
     }
 
     @Override

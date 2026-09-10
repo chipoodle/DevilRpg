@@ -14,6 +14,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.SaplingBlock;
 
+import java.util.EnumSet;
 import java.util.Comparator;
 import java.util.Optional;
 
@@ -28,6 +29,8 @@ public class SoulWispPlantSaplingsGoal extends Goal {
 
     public SoulWispPlantSaplingsGoal(SoulWisp soulWisp) {
         this.soulWisp = soulWisp;
+        // Navega: declara MOVE para que su prioridad sea real (ver SoulWispChopLogsGoal).
+        this.setFlags(EnumSet.of(Goal.Flag.MOVE));
     }
 
     @Override

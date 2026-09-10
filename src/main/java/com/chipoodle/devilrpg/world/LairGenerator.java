@@ -7,9 +7,10 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.FenceGateBlock;
+import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.MultifaceBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.levelgen.Heightmap;
 
 import java.util.ArrayList;
@@ -184,22 +185,10 @@ public final class LairGenerator {
                     Blocks.SOUL_TORCH.defaultBlockState(), 3);
         }
 
-        // 5) Telarañas dispersas (ambiente de guarida), nunca dentro del corral.
-        for (int x = -RADIUS; x <= RADIUS; x++) {
-            for (int z = -RADIUS; z <= RADIUS; z++) {
-                if (Math.sqrt(x * x + z * z) > RADIUS - 1) continue;
-                if ((x * 31 + z * 17) % 7 != 0 || (x == 0 && z == 0) || insideFarm(x, z)) continue;
-                BlockPos webPos = new BlockPos(center.getX() + x, baseY, center.getZ() + z);
-                if (level.getBlockState(webPos).isAir()) {
-                    level.setBlock(webPos, Blocks.COBWEB.defaultBlockState(), 3);
-                }
-            }
-        }
-
-        // 6) Granja macabra: corral con ganado que el cultivador criará y sacrificará sobre el sculk.
+        // 5) Granja macabra: corral cerrado con ganado que el cultivador criará y sacrificará sobre el sculk.
         buildFarm(level, farmCenter, baseY);
 
-        // 7) Foso del santuario: se cava AL FINAL, para que nada de lo anterior quede flotando dentro.
+        // 6) Foso del santuario: se cava AL FINAL, para que nada de lo anterior quede flotando dentro.
         buildMoat(level, center, baseY);
         return corePos;
     }
@@ -288,7 +277,8 @@ public final class LairGenerator {
         level.setBlock(new BlockPos(center.getX() + 2, baseY - 1, center.getZ() - 2),
                 Blocks.SCULK_CATALYST.defaultBlockState(), 3);
 
-        // Cerca: SIEMPRE a baseY (el suelo ya está nivelado, así que no flota ni se ondula).
+        // Cerca: SIEMPRE a baseY (el suelo ya está nivelado, así que no flota ni se ondula). El anillo se
+        // cierra entero: es lo que impide que el ganado se escape.
         int posts = 24;
         for (int a = 0; a < posts; a++) {
             double angle = (a / (double) posts) * Math.PI * 2.0;
@@ -296,17 +286,38 @@ public final class LairGenerator {
             int z = center.getZ() + (int) Math.round(Math.sin(angle) * FARM_RADIUS);
             level.setBlock(new BlockPos(x, baseY, z), Blocks.OAK_FENCE.defaultBlockState(), 3);
         }
-        // Abertura hacia el corredor (lado -X del corral), con dos puertas abiertas: el cultivador pasa y el
-        // jugador puede cerrarlas.
-        BlockState openGate = Blocks.OAK_FENCE_GATE.defaultBlockState().setValue(FenceGateBlock.OPEN, true);
-        level.setBlock(new BlockPos(center.getX() - FARM_RADIUS, baseY, center.getZ()), openGate, 3);
-        level.setBlock(new BlockPos(center.getX() - FARM_RADIUS, baseY, center.getZ() + 1), openGate, 3);
+        // Única entrada: una PUERTA de madera en el lado -X (el que mira al corredor y a la guarida). Se usa
+        // una puerta y no un hueco ni una verja abierta porque los animales no pueden abrir puertas, y el
+        // cultivador SÍ (tiene OpenDoorGoal + el pathfinding con setCanOpenDoors(true), como los aldeanos).
+        BlockPos doorPos = new BlockPos(center.getX() - FARM_RADIUS, baseY, center.getZ());
+        placeDoor(level, doorPos, Direction.WEST);
 
         // Ganado inicial, dentro del corral.
         spawnAnimal(level, center, baseY, EntityType.COW, 2);
         spawnAnimal(level, center, baseY, EntityType.SHEEP, 2);
         spawnAnimal(level, center, baseY, EntityType.PIG, 1);
         spawnAnimal(level, center, baseY, EntityType.CHICKEN, 2);
+    }
+
+    /** Coloca una puerta de dos bloques (mitad inferior + superior), cerrada. */
+    private static void placeDoor(ServerLevel level, BlockPos pos, Direction facing) {
+        level.setBlock(pos, Blocks.OAK_DOOR.defaultBlockState()
+                .setValue(DoorBlock.FACING, facing).setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER), 3);
+        level.setBlock(pos.above(), Blocks.OAK_DOOR.defaultBlockState()
+                .setValue(DoorBlock.FACING, facing).setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER), 3);
+    }
+
+    /**
+     * Marca del <b>ganado de la granja macabra</b>. Los animales del corral llevan esta etiqueta para que los
+     * demás enemigos de la guarida (los {@code AggressiveZombieEntity}) <b>no los cazen</b>: son el rebaño del
+     * cultivador y si los matan se queda sin nada que criar ni sacrificar. Los animales <b>salvajes</b> que
+     * entren en la guarida sí siguen siendo cazados (así es como la infección se alimenta sola).
+     */
+    public static final String LIVESTOCK_TAG = "devilrpg_livestock";
+
+    /** ¿Es ganado de una granja macabra? (ver {@link #LIVESTOCK_TAG}). */
+    public static boolean isLivestock(net.minecraft.world.entity.Entity entity) {
+        return entity.getTags().contains(LIVESTOCK_TAG);
     }
 
     /** Spawnea {@code count} animales del tipo dado dentro del corral, a la altura del suelo. */
@@ -320,6 +331,8 @@ public final class LairGenerator {
             if (animal != null) {
                 animal.moveTo(x + 0.5D, baseY, z + 0.5D, level.random.nextFloat() * 360.0F, 0.0F);
                 animal.setPersistenceRequired();
+                // Es ganado del cultivador, no una presa: los zombies de la guarida no deben cazarlo.
+                animal.addTag(LIVESTOCK_TAG);
                 level.addFreshEntity(animal);
             }
         }

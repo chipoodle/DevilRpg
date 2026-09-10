@@ -21,6 +21,7 @@ import net.minecraft.world.level.pathfinder.WalkNodeEvaluator;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -39,6 +40,10 @@ public class SoulWispChopLogsGoal extends Goal {
 
     public SoulWispChopLogsGoal(SoulWisp soulWisp) {
         this.soulWisp = soulWisp;
+        // Navega, así que declara el flag MOVE: sin flags, GoalSelector lo deja arrancar aunque otro goal de
+        // más prioridad esté corriendo y no lo bloquea (los flags son el único mecanismo de prioridad), y
+        // acabaría peleándose por la navegación con el goal de seguir al dueño.
+        this.setFlags(EnumSet.of(Goal.Flag.MOVE));
         resetTargetBlock();
     }
 

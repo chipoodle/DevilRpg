@@ -74,7 +74,10 @@ public class SoulWispRanger extends SoulWisp {
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new PanicGoal(this, 1.25D));
-        this.goalSelector.addGoal(1, new SoulWispFollowOwnerGoal(this, 1.0D, 8.0F, 12.0F, true));
+        // Seguir al dueño: empieza a seguirlo cuando se aleja MÁS de 16 bloques, y deja de seguirlo al
+        // acercarse a 12. Como los goals de trabajo ya declaran el flag MOVE, esta prioridad 1 es real: si el
+        // dueño se aleja 16+ bloques el ranger ABANDONA su tarea y vuelve; al llegar cerca, retoma el trabajo.
+        this.goalSelector.addGoal(1, new SoulWispFollowOwnerGoal(this, 1.0D, 16.0F, 12.0F, true));
         this.goalSelector.addGoal(2, new SoulWispPlantSaplingsGoal(this));
         this.goalSelector.addGoal(3, new SoulWispChopLogsGoal(this));
         this.goalSelector.addGoal(4, new FloatGoal(this));
