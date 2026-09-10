@@ -359,11 +359,21 @@ public class AggressiveZombieEntity extends Zombie {
      * prioridad alta, antes que romper o atacar, para que no se quede saltando en el agua fuera de la aldea.
      */
     static class EscapeWaterGoal extends Goal {
+        /** Ticks nadando sin avanzar antes de considerar que está atascado y tocarle buscar la orilla. */
+        private static final int STUCK_TICKS_BEFORE_TRYING = 40;
+        /** Tope de intentos seguidos de salir del agua antes de soltar el control. */
+        private static final int MAX_ESCAPE_TICKS = 200;
+
         private final AggressiveZombieEntity zombie;
         private BlockPos shore = null;
         private int stuckTicks = 0;
         private int jumpCooldown = 0;
         private double lastX, lastZ;
+        // Seguimiento mientras el goal NO está corriendo, para saber si de verdad está atascado.
+        private double trackX = Double.NaN, trackZ = 0;
+        private int idleStuckTicks = 0;
+        private int escapeTicks = 0;
+        private int retryCooldown = 0;
 
         public EscapeWaterGoal(AggressiveZombieEntity zombie) {
             this.zombie = zombie;
@@ -374,20 +384,48 @@ public class AggressiveZombieEntity extends Zombie {
             this.setFlags(java.util.EnumSet.of(Goal.Flag.MOVE));
         }
 
+        /**
+         * Solo se activa si de verdad está <b>atascado</b> en el agua (nada y no avanza). Antes se activaba
+         * con solo tocar agua (el antiguo {@code isReallyStuck()} devolvía {@code true} siempre), y como tiene
+         * prioridad 2 eso le bloqueaba TODO lo demás —romper bloques, marchar al centro y atacar—, así que
+         * un zombie en el agua se quedaba nadando en el sitio sin hacer nada. Con la aldea flotante rodeada de
+         * agua y las oleadas saliendo a 32–40 bloques (en el agua), eso dejaba al asedio entero inútil.
+         */
         @Override
         public boolean canUse() {
-            return zombie.isInWater() && zombie.isInWaterOrRain() && isReallyStuck();
+            if (!zombie.isInWater() || !zombie.isInWaterOrRain()) {
+                trackX = Double.NaN;
+                idleStuckTicks = 0;
+                return false;
+            }
+            if (retryCooldown > 0) {
+                retryCooldown--;
+                return false;
+            }
+            // Mientras nada y avanza, no está atascado: que manden el ataque, la manada, romper o el centro.
+            double dx = zombie.getX() - trackX;
+            double dz = zombie.getZ() - trackZ;
+            if (Double.isNaN(trackX) || dx * dx + dz * dz > 0.01D) {
+                trackX = zombie.getX();
+                trackZ = zombie.getZ();
+                idleStuckTicks = 0;
+                return false;
+            }
+            return ++idleStuckTicks > STUCK_TICKS_BEFORE_TRYING;
         }
 
         @Override
         public boolean canContinueToUse() {
-            return zombie.isInWater() && zombie.isInWaterOrRain();
+            // Si en MAX_ESCAPE_TICKS no lo consigue, suelta el control: así deja turno a romper los bloques
+            // que le estorban (que es justo lo que hace falta cuando la orilla tiene una pared).
+            return zombie.isInWater() && zombie.isInWaterOrRain() && escapeTicks < MAX_ESCAPE_TICKS;
         }
 
         @Override
         public void start() {
             stuckTicks = 0;
             jumpCooldown = 0;
+            escapeTicks = 0;
             lastX = zombie.getX();
             lastZ = zombie.getZ();
             shore = findNearestShore();
@@ -398,7 +436,16 @@ public class AggressiveZombieEntity extends Zombie {
         }
 
         @Override
+        public void stop() {
+            // Al rendirse, deja el turno el mismo tiempo que lo intentó antes de volver a probar.
+            retryCooldown = MAX_ESCAPE_TICKS;
+            trackX = Double.NaN;
+            idleStuckTicks = 0;
+        }
+
+        @Override
         public void tick() {
+            escapeTicks++;
             double dx = zombie.getX() - lastX;
             double dz = zombie.getZ() - lastZ;
             if (dx * dx + dz * dz < 0.01D) {
@@ -443,11 +490,6 @@ public class AggressiveZombieEntity extends Zombie {
             zombie.setDeltaMovement(vx, vy, vz);
         }
 
-        /** ¿Realmente atascado? (en agua y sin avanzar; se usa como señal de arranque). */
-        private boolean isReallyStuck() {
-            return true; // Si está en el agua y lejos de tierra, siempre intenta salir.
-        }
-
         /** Busca el bloque de tierra (no agua) más cercano dentro de un radio, escaneando en espiral. */
         private BlockPos findNearestShore() {
             BlockPos pos = zombie.blockPosition();
@@ -456,10 +498,14 @@ public class AggressiveZombieEntity extends Zombie {
                 for (int x = -r; x <= r; x++) {
                     for (int z = -r; z <= r; z++) {
                         if (Math.abs(x) != r && Math.abs(z) != r) continue; // borde del cuadrado
-                        BlockPos cand = new BlockPos(pos.getX() + x, pos.getY(), pos.getZ() + z);
-                        BlockPos ground = new BlockPos(cand.getX(), cand.getY() - 1, cand.getZ());
-                        if (isLand(ground)) {
-                            return ground.above();
+                        // Se mira el suelo a la altura de sus pies y también uno por encima: en las islas al
+                        // nivel del agua el bloque de tierra queda a la MISMA altura que el agua de al lado,
+                        // así que mirando solo por debajo no lo encontraría.
+                        for (int dy = -1; dy <= 0; dy++) {
+                            BlockPos ground = new BlockPos(pos.getX() + x, pos.getY() + dy, pos.getZ() + z);
+                            if (isLand(ground)) {
+                                return ground.above();
+                            }
                         }
                     }
                 }
@@ -525,15 +571,55 @@ public class AggressiveZombieEntity extends Zombie {
                 evalTicks = 0;
                 return;
             }
-            // Si ya pasó el periodo sin mejorar lo suficiente, está orbitando: romper el bloque delante.
+            // Si ya pasó el periodo sin mejorar lo suficiente, está orbitando o chocando: hay que abrirse paso.
             if (evalTicks >= BREAK_EVERY_TICKS) {
-                blockToBreak = blockingBlockAhead();
-                if (blockToBreak != null) {
-                    breakBlock(blockToBreak);
+                Entity target = zombie.getTarget();
+                boolean targetAbove = target != null && target.getY() > zombie.getY() + 1.0D;
+                if (targetAbove) {
+                    // El objetivo está ARRIBA: un túnel a su propia altura no le sirve para subir. Rompe un
+                    // ESCALÓN: la columna de delante a la altura de la cabeza (y una más arriba), de modo que
+                    // el obstáculo quede en un bloque de alto que SÍ puede saltar.
+                    breakStepAhead(target);
+                } else {
+                    blockToBreak = blockingBlockAhead();
+                    if (blockToBreak != null) {
+                        breakBlock(blockToBreak);
+                    }
                 }
                 // Re-anclar tras intentar romper.
                 anchorDist = distToTarget();
                 evalTicks = 0;
+            }
+        }
+
+        /**
+         * Abre un <b>escalón</b> hacia el objetivo cuando este está por encima: rompe los bloques de la
+         * columna de delante a la altura de la cabeza y uno más arriba. Así un muro de 2–3 bloques queda
+         * convertido en un escalón de 1 bloque, que el zombie puede saltar y luego repetir para seguir subiendo.
+         */
+        private void breakStepAhead(Entity target) {
+            BlockPos zPos = zombie.blockPosition();
+            int sx = Integer.signum((int) Math.floor(target.getX()) - zPos.getX());
+            int sz = Integer.signum((int) Math.floor(target.getZ()) - zPos.getZ());
+            // Columnas candidatas: primero las que van hacia el objetivo, y si está justo encima, las cuatro.
+            int[][] dirs = (sx == 0 && sz == 0)
+                    ? new int[][]{{1, 0}, {-1, 0}, {0, 1}, {0, -1}}
+                    : new int[][]{{sx, 0}, {0, sz}, {sx, sz}};
+            for (int[] d : dirs) {
+                if (d[0] == 0 && d[1] == 0) continue;
+                int px = zPos.getX() + d[0];
+                int pz = zPos.getZ() + d[1];
+                boolean broke = false;
+                for (int dy = 1; dy <= 2; dy++) { // altura de la cabeza y uno más arriba
+                    BlockPos p = new BlockPos(px, zPos.getY() + dy, pz);
+                    if (canBreak(zombie.level().getBlockState(p))) {
+                        zombie.breakBlockAt(p);
+                        broke = true;
+                    }
+                }
+                if (broke) {
+                    return;
+                }
             }
         }
 
@@ -579,12 +665,19 @@ public class AggressiveZombieEntity extends Zombie {
 
         private void breakBlock(BlockPos pos) {
             zombie.breakBlockAt(pos);
-            // Si el objetivo está arriba, romper también el bloque +2 para abrir espacio de salto.
+            // Abrir SIEMPRE el hueco de 2 de alto (cuerpo + cabeza). Antes solo se rompía el de arriba si el
+            // objetivo estaba más alto, así que contra una valla de 2 bloques el zombie picaba el de abajo,
+            // seguía sin caber y necesitaba otra ronda entera (3 s más) para el de arriba.
+            BlockPos above = pos.above();
+            if (zombie.canBreakBlock(zombie.level().getBlockState(above))) {
+                zombie.breakBlockAt(above);
+            }
+            // Y si el objetivo está todavía más arriba, uno más: así el hueco queda en escalón de subida.
             Entity target = zombie.getTarget();
-            if (target != null && target.getY() > zombie.getY()) {
-                BlockPos above = pos.above();
-                if (zombie.canBreakBlock(zombie.level().getBlockState(above))) {
-                    zombie.breakBlockAt(above);
+            if (target != null && target.getY() > zombie.getY() + 1.0D) {
+                BlockPos higher = above.above();
+                if (zombie.canBreakBlock(zombie.level().getBlockState(higher))) {
+                    zombie.breakBlockAt(higher);
                 }
             }
         }

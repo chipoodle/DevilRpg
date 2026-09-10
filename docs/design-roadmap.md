@@ -139,13 +139,20 @@ siguiente está implementado y probado.
 ### 3b.3 Comportamiento de los zombies del asedio (`AggressiveZombieEntity`)
 
 - **Romper obstáculos**: si no progresan hacia su objetivo (aunque se balanceen o el enemigo se mueva),
-  rompen el bloque delante. Destrucción **agresiva**: si el objetivo está arriba, rompen `+1` y `+2` para
-  abrir hueco de salto, y aleatoriamente un bloque contiguo. Solo rompen al estar **bloqueados**; obsidiana
-  solo si su nivel (distancia) ≥ 700; nunca bedrock.
+  rompen el bloque delante. Destrucción **agresiva**: abren **siempre un hueco de 2 de alto** (cuerpo +
+  cabeza) —con solo el de abajo el zombie no cabe y tardaba el doble—, y si el objetivo está **más arriba**
+  rompen también un bloque más para dejar **escalón de subida** (`breakStepAhead`: rompen la columna de
+  delante a la altura de la cabeza, convirtiendo un muro en un escalón de 1 bloque que sí pueden saltar; y
+  repiten para seguir subiendo). Solo rompen al estar **bloqueados**; obsidiana solo si su nivel (distancia)
+  ≥ 700; nunca bedrock.
+- **Salir del agua**: si están en agua y **atascados** (nadan y no avanzan 2 s), buscan la orilla más cercana
+  y nadan hacia ella, con empujes hacia arriba para trepar el desnivel. Solo se activa si de verdad no
+  avanzan y **se rinde a los 10 s** para ceder el turno a romper/marchar/atacar: antes se activaba con solo
+  tocar agua (`isReallyStuck()` devolvía `true` siempre) y, con prioridad 2, **bloqueaba todo lo demás** —
+  con la aldea flotante rodeada de agua y las oleadas saliendo a 32–40 bloques (en el agua), dejaba al
+  asedio entero nadando en el sitio sin romper ni atacar.
 - **Convergen al centro**: si no tienen objetivo de ataque y conocen el centro, marchan hacia él; al llegar
   a **3 bloques de radio** el goal se apaga. Si la aldea **cae**, se les desactiva ese goal.
-- **Salir del agua**: si están en agua y atascados, nadan a la orilla más cercana; si hay una pared alta,
-  se impulsan hacia arriba/la orilla (y colocan un escalón para trepar el desnivel de la isla).
 - **Comportamiento de MANADA** (Fase 2): los zombies agresivos que atacan al **mismo objetivo** se
   **reparten en ángulos distintos** alrededor de él (punto de flanqueo derivado de su UUID, radio 3.5)
   en vez de apilarse en línea recta; así lo **rodean** desde varios lados. Recalculan cada 40 ticks y, al
