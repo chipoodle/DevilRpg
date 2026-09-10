@@ -138,13 +138,19 @@ siguiente está implementado y probado.
   a **3 bloques de radio** el goal se apaga. Si la aldea **cae**, se les desactiva ese goal.
 - **Salir del agua**: si están en agua y atascados, nadan a la orilla más cercana; si hay una pared alta,
   se impulsan hacia arriba/la orilla (y colocan un escalón para trepar el desnivel de la isla).
+- **Comportamiento de MANADA** (Fase 2): los zombies agresivos que atacan al **mismo objetivo** se
+  **reparten en ángulos distintos** alrededor de él (punto de flanqueo derivado de su UUID, radio 3.5)
+  en vez de apilarse en línea recta; así lo **rodean** desde varios lados. Recalculan cada 40 ticks y, al
+  estar bien posicionados (<2.5 bloques de su flanco), ceden el control a `MeleeAttackGoal` para golpear.
+- **Targeting de minions**: detectan al instante **todas** las invocaciones del jugador (lobos, wisps y el
+  oso), usando `LivingEntity` + predicado `ITamableEntity` con dueño (el oso no es `TamableAnimal`).
 
 ### 3b.4 Presión de enemigos
 
 - La amenaza nocturna de base dejó de ser un **zombie normal** (que solo spawnea de noche y se quema al
   sol) y ahora es un **vex** (`EntityType.VEX`): vuela, **spawnea de día y de noche**, ataca al jugador al
-  ser configurado, y tiene vida limitada. Mantiene las mismas reglas de probabilidad por distancia
-  (`NormalZombieSpawnProfile`).
+  ser configurado, y tiene vida limitada. Tiene su propio **`VexSpawnProfile`** y **`VexSpawnRule`**
+  (el `NormalZombieEntity`/`NormalZombieSpawnRule`/`NormalZombieSpawnProfile` fueron **eliminados**).
 - Los **minions invocados** (`SoulWolf`, `SoulBear`, wisps) **no reciben daño de su propio dueño** ni de
   otros minions del mismo dueño. El `SoulWolf` (extends `TamableAnimal`) ya se unía al team; el
   `SoulBear` (extends `AbstractChestedHorse`) se protege explícitamente en `hurt()`.
@@ -160,10 +166,10 @@ las cabañas.)
 
 ## 4) Roadmap (próximas iteraciones)
 
-### Iteración 2 — Enemigos inteligentes (pilar 2)
-- Comportamiento de manada (rodea, esquiva, usa el terreno).
-- **Guaridas** que **cambian el terreno** alrededor (placas, estructuras) y que el jugador puede asaltar.
-- Se fortalecen con el tiempo (ya arrancado con `ThreatLevel`).
+### Iteración 2 — Enemigos inteligentes (pilar 2) — EN CURSO 🚧
+- ✅ **Comportamiento de manada**: rodean al objetivo desde ángulos distintos (ver 3b.3).
+- ⬜ **Guaridas** que **cambian el terreno** alrededor (placas, estructuras) y que el jugador puede asaltar.
+- ⬜ Se fortalecen con el tiempo (ya arrancado con `ThreatLevel`).
 
 ### Iteración 3 — Asentamientos vivos (pilar 3)
 - Aldeanos que **construyen/reparan/fortifican**, **cultivan**, **necesitan comer**, **envejecen** y se
@@ -181,22 +187,24 @@ las cabañas.)
 ## 5) Configuración rápida
 
 - **Amenaza**: `ThreatLevel.MAX_EXTRA_DIFFICULTY` (0.8 = +80%) y `FULL_THREAT_TICKS` (3 h).
-- **Perfil del zombie (`AggressiveZombieSpawnProfile.INSTANCE`)**: `minDistance` 200, `maxDistance` 3000,
-  `minHardDistance` 50, `maxScaleMultiplier` 3.5 (atributos hasta +350%), bases vanilla (vida 20, velocidad 0.23,
-  daño 3.0), `baseXp` 20 y `maxXpMultiplier` 4.0 (XP hasta +400% a distancia máxima).
+- **Perfil del zombie (`AggressiveZombieSpawnProfile.INSTANCE`)**: `minDistance` 67, `maxDistance` 3000,
+  `minHardDistance` 17, `maxScaleMultiplier` 3.5 (atributos hasta +350%), bases reducidas a un tercio
+  (vida 6.67, velocidad 0.038, daño 0.5), `baseXp` 20 y `maxXpMultiplier` 4.5 (XP hasta +450% a distancia
+  máxima).
 - **Objetivo**: `ObjectiveTargets.MIN_DISTANCE` (800), `MAX_DISTANCE` (1200), `OBJECTIVE_STEP` (600),
   `REACH_RADIUS` (24). La distancia del objetivo `i` = `800 + i*600 + rnd*400`, garantizando separación ≥
   200 bloques.
-- **Zona protegida que se encoge**: en `SpawnScaleProfile`, `minDistance` (200 al inicio) se reduce con la
-  amenaza hasta `minHardDistance` (50 a máxima). Se configura con `minHardDistance` y
+- **Zona protegida que se encoge**: en `SpawnScaleProfile`, `minDistance` (67 al inicio) se reduce con la
+  amenaza hasta `minHardDistance` (17 a máxima). Se configura con `minHardDistance` y
   `effectiveMinDistance(threat)`; la probabilidad/escalado/XP aceptan el `threat`.
 - **Horda**: `HordeManager.BASE_INTERVAL_TICKS` (20 min al inicio), `MIN_INTERVAL_TICKS` (3 min con máxima
   amenaza), `BASE_HORDE_SIZE` (3) y `MAX_EXTRA_MEMBERS` (12). El tamaño planeado es
   `BASE_HORDE_SIZE + amenaza*MAX_EXTRA_MEMBERS` (3 → 15 al máximo), y cada zombie pasa por la probabilidad
   del `SpawnScaleProfile` (distancia + amenaza).
-- **Presión de vexes (`NormalZombieSpawnRule`/`NormalZombieSpawnProfile`)**:
+- **Presión de vexes (`VexSpawnRule`/`VexSpawnProfile`)**:
   `EntityType.VEX`, sin zona protegida (`minDistance=0`), spawnea de día y noche cerca del jugador
-  (4–24 bloques), límite 15 vivos, vida limitada 2 min. Configurable: `maxDistance` 500,
+  (4–24 bloques), límite 15 vivos, vida limitada 2 min. Atributos base reducidos a un tercio (vida 6.67,
+  velocidad 0.077, daño 1.0) y `maxXpMultiplier` 4.5. Configurable: `maxDistance` 500,
   `maxScaleMultiplier` 2.0.
 - **Aldea (**`VillageGenerator`/`VillageManager`)**: `FENCE_RADIUS` 29, `LEVEL_RADIUS` 31,
   `GRACE_TICKS` 90 s, `SIEGE_TIMEOUT_TICKS` 2 min, `DEFAULT_WAVE` 8 + `min(objectiveIndex*2, 20)`,

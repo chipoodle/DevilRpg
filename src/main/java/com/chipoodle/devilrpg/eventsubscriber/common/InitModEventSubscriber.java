@@ -56,7 +56,6 @@ public final class InitModEventSubscriber {
         event.put(ModEntities.SUNFLOWER_SHULKER.get(), SunflowerShulker.createAttributes().build());
         event.put(ModEntities.EXPLODING_SPORE_BULLET.get(),ExplodingSporeBullet.createAttributes().build());
         event.put(ModEntities.AGGRESSIVE_ZOMBIE.get(), AggressiveZombieEntity.setAttributes().build());
-        event.put(ModEntities.NORMAL_ZOMBIE.get(), NormalZombieEntity.setAttributes().build());
 
     }
 

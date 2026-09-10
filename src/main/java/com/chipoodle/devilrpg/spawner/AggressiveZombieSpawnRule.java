@@ -33,13 +33,13 @@ public class AggressiveZombieSpawnRule implements CustomSpawnRule {
     private static final int MAX_INTERVAL_SECONDS = 3 * 60;  // intervalo maximo entre intentos (3 min)
     private static final int MAX_ALIVE_IN_WORLD = 30;        // limite de zombies agresivos vivos simultaneos
 
-    // Limites de distancia (debil a fuerte) y base/escala de atributos tomados del perfil compartido,
-    // para no duplicarlos y no acoplarse con la entidad.
-    private static final SpawnScaleProfile PROFILE = AggressiveZombieSpawnProfile.INSTANCE;
-
     private static final int MIN_SPAWN_DISTANCE = 48;        // minimo lejos del jugador (bloques)
     private static final int MAX_SPAWN_DISTANCE = 96;        // maximo lejos del jugador (bloques)
     private static final int SURFACE_SEARCH_DOWN = 16;       // bloques hacia abajo para hallar suelo
+
+    // Limites de distancia (debil a fuerte) y base/escala de atributos tomados del perfil compartido,
+    // para no duplicarlos y no acoplarse con la entidad.
+    private static final SpawnScaleProfile PROFILE = AggressiveZombieSpawnProfile.INSTANCE;
 
     @Override
     public EntityType<? extends Mob> getEntityType() {

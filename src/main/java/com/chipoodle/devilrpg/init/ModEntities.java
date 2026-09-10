@@ -35,7 +35,6 @@ public final class ModEntities {
 	private static final String GENERIC_ITEM_PROJECTILE_NAME = "generic_item_projectile";
 
 	public static final String AGGRESSIVE_ZOMBIE_NAME = "aggressive_zombie";
-	public static final String NORMAL_ZOMBIE_NAME = "normal_zombie";
 
 
 	public static final DeferredHolder<EntityType<?>, EntityType<SoulWolf>> SOUL_WOLF = ENTITY_TYPES.register(SOUL_WOLF_NAME,
@@ -99,10 +98,4 @@ public final class ModEntities {
 							.sized(0.6F, 1.95F) // Tamaño del mob
 							.clientTrackingRange(8)
 							.build(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, AGGRESSIVE_ZOMBIE_NAME).toString()));
-
-	public static final DeferredHolder<EntityType<?>, EntityType<NormalZombieEntity>> NORMAL_ZOMBIE = ENTITY_TYPES.register(NORMAL_ZOMBIE_NAME,
-					() -> EntityType.Builder.of(NormalZombieEntity::new, MobCategory.MONSTER)
-							.sized(0.6F, 1.95F) // Tamaño del mob
-							.clientTrackingRange(8)
-							.build(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, NORMAL_ZOMBIE_NAME).toString()));
 }
