@@ -36,8 +36,14 @@ import java.util.Set;
  */
 public final class LairManager {
 
-    /** Distancia mínima/máxima (bloques) a la que se genera la guarida respecto al objetivo. */
-    private static final int MIN_DISTANCE_FROM_OBJECTIVE = 55;
+    /**
+     * Distancia mínima/máxima (bloques) a la que se genera la guarida respecto al objetivo.
+     * <p>
+     * La mínima NO es arbitraria: la guarida es una plataforma que (con el corral y su talud) llega a ~28
+     * bloques de su centro, y la aldea del objetivo nivela hasta 31 y escalona hasta 41. Con 72 siempre queda
+     * separada del borde de la aldea.
+     */
+    private static final int MIN_DISTANCE_FROM_OBJECTIVE = 72;
     private static final int MAX_DISTANCE_FROM_OBJECTIVE = 95;
     /** Radio en el que el jugador "activa" la guarida (hace que spawnee). */
     private static final int ACTIVATION_RADIUS = 64;

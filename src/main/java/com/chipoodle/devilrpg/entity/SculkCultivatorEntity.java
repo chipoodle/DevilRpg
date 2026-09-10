@@ -318,10 +318,13 @@ public class SculkCultivatorEntity extends AbstractIllager {
     static class SacrificeGoal extends Goal {
         /** Si no hay ganado suficiente, espera antes de volver a consultarlo. */
         private static final int RETRY_TICKS = 40;
+        /** Si en este tiempo no consigue llegar a la víctima, desiste (no se queda atascado persiguiéndola). */
+        private static final int REACH_TIMEOUT_TICKS = 300;
 
         private final SculkCultivatorEntity cult;
         private Animal victim = null;
         private int cooldown = RETRY_TICKS;
+        private int reachTicks = 0;
 
         SacrificeGoal(SculkCultivatorEntity cult) {
             this.cult = cult;
@@ -344,18 +347,21 @@ public class SculkCultivatorEntity extends AbstractIllager {
                 cooldown = RETRY_TICKS;
                 return false;
             }
+            reachTicks = 0;
             return true;
         }
 
         @Override
         public boolean canContinueToUse() {
-            return victim != null && victim.isAlive() && cult.getTarget() == null;
+            return victim != null && victim.isAlive() && cult.getTarget() == null
+                    && reachTicks <= REACH_TIMEOUT_TICKS;
         }
 
         @Override
         public void tick() {
             if (victim == null) return;
             if (cult.distanceToSqr(victim) > 4.0D) {
+                reachTicks++;
                 cult.getNavigation().moveTo(victim, 1.0D);
             } else {
                 victim.hurt(cult.damageSources().mobAttack(cult), Float.MAX_VALUE);
@@ -366,6 +372,7 @@ public class SculkCultivatorEntity extends AbstractIllager {
         @Override
         public void stop() {
             victim = null;
+            reachTicks = 0;
             cooldown = RETRY_TICKS;
         }
     }
