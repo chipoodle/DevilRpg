@@ -144,6 +144,9 @@ public final class LairManager {
             if (mob instanceof AggressiveZombieEntity zombie) {
                 // Patrullan un radio alrededor del núcleo de la guarida (no se quedan pegados ni se pierden).
                 zombie.setHome(lair.corePos, PATROL_RADIUS);
+            } else if (mob instanceof SculkCultivatorEntity cultivatorMob) {
+                // El cultivador trabaja la infección dentro de ese mismo radio.
+                cultivatorMob.setHome(lair.corePos, PATROL_RADIUS);
             } else if (mob instanceof FrostVexEntity vex) {
                 vex.setTarget(player);
             }
