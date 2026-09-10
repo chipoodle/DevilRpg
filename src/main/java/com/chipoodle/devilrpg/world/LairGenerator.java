@@ -2,18 +2,25 @@ package com.chipoodle.devilrpg.world;
 
 import com.chipoodle.devilrpg.init.ModBlocks;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 /**
  * Genera una <b>guarida</b> en el mundo: un claro corrupto que <b>cambia el terreno</b> a su alrededor
  * (tierra muerta, arena de almas, espinas de hueso, telarañas) con un <b>núcleo</b> en el centro
  * ({@link ModBlocks#LAIR_CORE_BLOCK}). Mientras el núcleo exista, la guarida spawnea enemigos (lo gestiona
  * {@code LairManager}); al destruirlo, la guarida queda limpiada. Es un lugar que el jugador puede asaltar.
+ * <p>
+ * Si el punto cae sobre agua, la guarida se construye sobre una <b>plataforma al nivel del agua</b> (con
+ * base cónica), así nunca queda sumergida. En tierra se nivela el claro y se le añade un <b>talud</b>
+ * exterior para que parezca una meseta natural y no un cubo.
  */
 public final class LairGenerator {
 
@@ -21,6 +28,11 @@ public final class LairGenerator {
     private static final int RADIUS = 7;
     /** Radio del "núcleo corrupto" central (arena de almas). */
     private static final int CORRUPT_RADIUS = 4;
+    /** Profundidad de la base cónica cuando la guarida flota sobre agua. */
+    private static final int SUPPORT_DEPTH = 6;
+    /** Ancho/altura del talud exterior que suaviza el borde en tierra. */
+    private static final int SLOPE_WIDTH = 6;
+    private static final int SLOPE_HEIGHT = 3;
 
     private LairGenerator() {
     }
@@ -30,35 +42,34 @@ public final class LairGenerator {
      * o {@code null} si no hubo sitio válido.
      */
     public static BlockPos generate(ServerLevel level, BlockPos center) {
-        int baseY = groundY(level, center.getX(), center.getZ());
+        // ¿El punto cae sobre agua? Si sí, se construye una plataforma AL NIVEL del agua (no sumergida).
+        int waterLevel = VillageGenerator.waterSurface(level, center.getX(), center.getZ());
+        int baseY; // posición transitable de la guarida (el suelo sólido queda en baseY-1)
+        if (waterLevel >= 0) {
+            baseY = waterLevel + 1;
+            buildFloatingBase(level, center, RADIUS, waterLevel);
+        } else {
+            baseY = levelTerrain(level, center, RADIUS);
+            addOuterSlope(level, center, RADIUS, baseY);
+        }
         if (baseY <= level.getMinBuildHeight()) {
             return null;
         }
 
-        // 1) Nivelar y "corromper" el terreno: aplanar el área y cambiar la superficie.
+        // 1) Marcar la superficie: arena de almas en el centro, tierra muerta alrededor, y despejar arriba.
         for (int x = -RADIUS; x <= RADIUS; x++) {
             for (int z = -RADIUS; z <= RADIUS; z++) {
                 double dist = Math.sqrt(x * x + z * z);
                 if (dist > RADIUS) continue;
                 int px = center.getX() + x;
                 int pz = center.getZ() + z;
-                int g = groundY(level, px, pz);
-                // Rellenar por debajo hasta el nivel base (terreno muerto).
-                for (int y = g; y < baseY; y++) {
-                    level.setBlock(new BlockPos(px, y, pz), Blocks.COARSE_DIRT.defaultBlockState(), 3);
-                }
-                // Recortar lo que sobresalga (dejar el claro despejado).
-                for (int y = baseY; y <= g; y++) {
-                    if (level.getBlockState(new BlockPos(px, y, pz)).isSolid()) {
-                        level.setBlock(new BlockPos(px, y, pz), Blocks.AIR.defaultBlockState(), 3);
-                    }
-                }
-                // Superficie: arena de almas en el centro, tierra muerta alrededor.
                 Block surface = dist <= CORRUPT_RADIUS ? Blocks.SOUL_SAND : Blocks.COARSE_DIRT;
                 level.setBlock(new BlockPos(px, baseY - 1, pz), surface.defaultBlockState(), 3);
-                // Despejar 4 bloques por encima de la superficie.
                 for (int y = baseY; y < baseY + 4; y++) {
-                    level.setBlock(new BlockPos(px, y, pz), Blocks.AIR.defaultBlockState(), 3);
+                    BlockState above = level.getBlockState(new BlockPos(px, y, pz));
+                    if (above.isSolid()) {
+                        level.setBlock(new BlockPos(px, y, pz), Blocks.AIR.defaultBlockState(), 3);
+                    }
                 }
             }
         }
@@ -86,7 +97,7 @@ public final class LairGenerator {
         BlockPos corePos = new BlockPos(center.getX(), baseY, center.getZ());
         level.setBlock(corePos, ModBlocks.LAIR_CORE_BLOCK.get().defaultBlockState(), 3);
 
-        // 4) Tótems con calaveras y antorchas de alma en los cardinales.
+        // 4) Tótems con calaveras en los cardinales.
         int[][] cardinal = {{RADIUS - 2, 0}, {-RADIUS + 2, 0}, {0, RADIUS - 2}, {0, -RADIUS + 2}};
         for (int[] c : cardinal) {
             int x = center.getX() + c[0];
@@ -114,6 +125,109 @@ public final class LairGenerator {
             }
         }
         return corePos;
+    }
+
+    /**
+     * Nivela el claro a la mediana de alturas y devuelve el nivel transitable resultante.
+     */
+    private static int levelTerrain(ServerLevel level, BlockPos center, int radius) {
+        List<Integer> heights = new ArrayList<>();
+        for (int x = -radius; x <= radius; x++) {
+            for (int z = -radius; z <= radius; z++) {
+                heights.add(groundY(level, center.getX() + x, center.getZ() + z));
+            }
+        }
+        Collections.sort(heights);
+        int baseY = heights.get(heights.size() / 2);
+        for (int x = -radius; x <= radius; x++) {
+            for (int z = -radius; z <= radius; z++) {
+                int px = center.getX() + x;
+                int pz = center.getZ() + z;
+                int g = groundY(level, px, pz);
+                for (int y = g; y < baseY; y++) {
+                    level.setBlock(new BlockPos(px, y, pz), Blocks.DIRT.defaultBlockState(), 3);
+                }
+                for (int y = baseY + 1; y < g; y++) {
+                    level.setBlock(new BlockPos(px, y, pz), Blocks.AIR.defaultBlockState(), 3);
+                }
+                level.setBlock(new BlockPos(px, baseY - 1, pz), Blocks.DIRT.defaultBlockState(), 3);
+            }
+        }
+        return baseY;
+    }
+
+    /**
+     * Talud exterior de la guarida (en tierra): pendiente escalonada en el borde para que parezca una
+     * meseta natural y no un cubo.
+     */
+    private static void addOuterSlope(ServerLevel level, BlockPos center, int innerRadius, int baseY) {
+        int outer = innerRadius + SLOPE_WIDTH;
+        for (int x = -outer; x <= outer; x++) {
+            for (int z = -outer; z <= outer; z++) {
+                double dist = Math.sqrt(x * x + z * z);
+                if (dist <= innerRadius || dist > outer) continue;
+                double fraction = (dist - innerRadius) / (double) SLOPE_WIDTH;
+                int targetY = baseY - (int) Math.round(fraction * SLOPE_HEIGHT);
+                int px = center.getX() + x;
+                int pz = center.getZ() + z;
+                int g = groundY(level, px, pz);
+                for (int y = g; y < targetY; y++) {
+                    level.setBlock(new BlockPos(px, y, pz), Blocks.DIRT.defaultBlockState(), 3);
+                }
+                for (int y = targetY; y < g; y++) {
+                    if (level.getBlockState(new BlockPos(px, y, pz)).isSolid()) {
+                        level.setBlock(new BlockPos(px, y, pz), Blocks.AIR.defaultBlockState(), 3);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Construye la base de la guarida cuando cae sobre agua: plataforma circular con el suelo A NIVEL del
+     * agua (reemplazando la capa superior de agua) y, debajo, una base cónica de tierra/piedra que se
+     * estrecha (como una isla), para que no se vea sumergida ni como un cubo cuadrado.
+     */
+    private static void buildFloatingBase(ServerLevel level, BlockPos center, int radius, int waterLevel) {
+        // 1) Plataforma: rellenar/recortar cada columna hasta el nivel del agua (suelo sólido en waterLevel).
+        for (int x = -radius; x <= radius; x++) {
+            for (int z = -radius; z <= radius; z++) {
+                double dist = Math.sqrt(x * x + z * z);
+                if (dist > radius) continue;
+                int px = center.getX() + x;
+                int pz = center.getZ() + z;
+                int g = groundY(level, px, pz);
+                for (int y = Math.min(g, waterLevel); y < waterLevel; y++) {
+                    level.setBlock(new BlockPos(px, y, pz), Blocks.DIRT.defaultBlockState(), 3);
+                }
+                if (g > waterLevel) {
+                    for (int y = waterLevel; y < g; y++) {
+                        if (level.getBlockState(new BlockPos(px, y, pz)).isSolid()) {
+                            level.setBlock(new BlockPos(px, y, pz), Blocks.AIR.defaultBlockState(), 3);
+                        }
+                    }
+                }
+                // El bloque de suelo queda al nivel del agua (no por encima).
+                level.setBlock(new BlockPos(px, waterLevel - 1, pz), Blocks.DIRT.defaultBlockState(), 3);
+            }
+        }
+        // 2) Base cónica (circular) que se estrecha hacia abajo, como una isla/montaña.
+        for (int x = -radius; x <= radius; x++) {
+            for (int z = -radius; z <= radius; z++) {
+                double dist = Math.sqrt(x * x + z * z);
+                if (dist > radius) continue;
+                int px = center.getX() + x;
+                int pz = center.getZ() + z;
+                for (int depth = 1; depth <= SUPPORT_DEPTH; depth++) {
+                    double shrink = depth * 0.9;
+                    if (dist > radius - shrink) continue;
+                    int y = waterLevel - 1 - depth;
+                    if (y <= level.getMinBuildHeight()) break;
+                    Block block = depth <= SUPPORT_DEPTH / 2 ? Blocks.DIRT : Blocks.STONE;
+                    level.setBlock(new BlockPos(px, y, pz), block.defaultBlockState(), 3);
+                }
+            }
+        }
     }
 
     /** Busca tierra firme (no agua/lava) cerca de {@code origin}, para no generar la guarida en el agua. */

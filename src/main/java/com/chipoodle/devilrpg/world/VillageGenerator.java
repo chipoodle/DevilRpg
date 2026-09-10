@@ -52,6 +52,11 @@ public final class VillageGenerator {
     /** Profundidad máxima (en bloques hacia abajo) de la estructura flotante bajo la isla. */
     private static final int ISLAND_SUPPORT_DEPTH = 9;
 
+    /** Ancho (bloques) del talud exterior que suaviza el borde de la aldea (meseta natural). */
+    private static final int SLOPE_WIDTH = 10;
+    /** Cuántos bloques baja el terreno a lo largo del talud. */
+    private static final int SLOPE_HEIGHT = 5;
+
     /** Dirección hacia afuera de la puerta (la cabaña mira al norte). */
     private static final Direction FRONT = Direction.NORTH;
 
@@ -77,7 +82,8 @@ public final class VillageGenerator {
 
     /** Genera las cabañas, los aldeanos, los caminos y la valla alrededor del centro. */
     public static void generate(ServerLevel level, BlockPos center) {
-        clearVegetation(level, center, FENCE_RADIUS + 4);
+        // Limpiar hasta cubrir el talud exterior (que rodea el área nivelada).
+        clearVegetation(level, center, LEVEL_RADIUS + SLOPE_WIDTH);
         // Si hay agua en la columna del centro (el objetivo cayó en el océano o un lago), construir una
         // isla flotante ya que el objetivo no se puede mover. Si no, nivelar el terreno como siempre.
         boolean overWater = waterSurface(level, center.getX(), center.getZ()) >= 0;
@@ -231,10 +237,12 @@ public final class VillageGenerator {
      */
     private static void buildFloatingIsland(ServerLevel level, BlockPos center, int radius) {
         int surfaceY = waterSurface(level, center.getX(), center.getZ()); // superficie del agua
-        // El suelo de la isla queda justo sobre el nivel del agua.
-        int islandTop = surfaceY + 1;
+        // El suelo de la isla queda A NIVEL del agua (reemplaza la capa superior de agua).
+        int islandTop = surfaceY;
         for (int x = -radius; x <= radius; x++) {
             for (int z = -radius; z <= radius; z++) {
+                double dist = Math.sqrt(x * x + z * z);
+                if (dist > radius) continue; // base CIRCULAR (no cuadrada)
                 BlockPos top = new BlockPos(center.getX() + x, islandTop, center.getZ() + z);
                 int g = groundY(level, top.getX(), top.getZ());
                 // Rellenar con tierra TODA la columna hasta islandTop (por debajo del nivel de la isla).
@@ -248,14 +256,24 @@ public final class VillageGenerator {
                     }
                 }
                 level.setBlock(top, Blocks.GRASS_BLOCK.defaultBlockState(), 3);
-                // Estructura descendente de troncos, que se estrecha con la profundidad (base flotante).
-                int dist = Math.max(Math.abs(x), Math.abs(z));
+            }
+        }
+        // Base de apoyo en forma de MONTAÑA (cono circular que se estrecha suavemente hacia abajo), en vez
+        // de un cubo cuadrado: usa distancia euclidiana y decrece de a poco, como las islas del terreno.
+        for (int x = -radius; x <= radius; x++) {
+            for (int z = -radius; z <= radius; z++) {
+                double dist = Math.sqrt(x * x + z * z);
+                if (dist > radius) continue;
                 for (int depth = 1; depth <= ISLAND_SUPPORT_DEPTH; depth++) {
-                    int shrink = depth; // el cono se estrecha 1 bloque por nivel
+                    // El radio del cono se estrecha ~1 bloque por nivel (suave, circular).
+                    double shrink = depth * 0.9;
                     if (dist > radius - shrink) continue;
                     int y = islandTop - depth;
                     if (y <= level.getMinBuildHeight()) break;
-                    level.setBlock(new BlockPos(top.getX(), y, top.getZ()), Blocks.OAK_LOG.defaultBlockState(), 3);
+                    // Tierra/piedra como cuerpo de la "montaña", con troncos en el borde (raíces).
+                    boolean root = dist > radius - shrink - 1.0;
+                    Block block = root ? Blocks.OAK_LOG : (depth <= ISLAND_SUPPORT_DEPTH / 2 ? Blocks.DIRT : Blocks.STONE);
+                    level.setBlock(new BlockPos(center.getX() + x, y, center.getZ() + z), block.defaultBlockState(), 3);
                 }
             }
         }
@@ -330,6 +348,46 @@ public final class VillageGenerator {
                 }
                 // Asegurar la capa superficial al nivel base.
                 level.setBlock(new BlockPos(center.getX() + x, baseY - 1, center.getZ() + z), Blocks.DIRT.defaultBlockState(), 3);
+            }
+        }
+        // Talud exterior: una pendiente escalonada en el borde para que la aldea parezca una MESETA natural
+        // (como el terreno vanilla) en vez de un cubo de paredes verticales.
+        addOuterSlope(level, center, radius, baseY);
+    }
+
+    /**
+     * Añade un talud (pendiente escalonada) alrededor del área plana de la aldea: cuanto más lejos del
+     * borde, más baja el terreno, hasta encontrarse con el terreno natural. Así el borde no es un corte
+     * vertical (cubo) sino una meseta con laderas, como las que genera el terreno vanilla.
+     */
+    private static void addOuterSlope(ServerLevel level, BlockPos center, int innerRadius, int baseY) {
+        int outer = innerRadius + SLOPE_WIDTH;
+        for (int x = -outer; x <= outer; x++) {
+            for (int z = -outer; z <= outer; z++) {
+                double dist = Math.sqrt(x * x + z * z);
+                if (dist <= innerRadius || dist > outer) continue;
+                double fraction = (dist - innerRadius) / (double) SLOPE_WIDTH;
+                int stepsDown = (int) Math.round(fraction * SLOPE_HEIGHT);
+                int targetY = baseY - stepsDown;
+                int px = center.getX() + x;
+                int pz = center.getZ() + z;
+                int g = groundY(level, px, pz);
+                // Rellenar hasta el nivel del talud si el terreno está por debajo.
+                for (int y = g; y < targetY; y++) {
+                    level.setBlock(new BlockPos(px, y, pz), Blocks.DIRT.defaultBlockState(), 3);
+                }
+                // Recortar si el terreno natural sobresale por encima del talud.
+                for (int y = targetY; y < g; y++) {
+                    BlockState bs = level.getBlockState(new BlockPos(px, y, pz));
+                    if (bs.isSolid()) {
+                        level.setBlock(new BlockPos(px, y, pz), Blocks.AIR.defaultBlockState(), 3);
+                    }
+                }
+                // Capa superficial del talud (cesped), salvo que sea agua.
+                BlockPos surface = new BlockPos(px, targetY - 1, pz);
+                if (!level.getBlockState(surface).is(Blocks.WATER)) {
+                    level.setBlock(surface, Blocks.GRASS_BLOCK.defaultBlockState(), 3);
+                }
             }
         }
     }
@@ -602,7 +660,7 @@ public final class VillageGenerator {
      * Altura (Y) de la superficie del agua en una columna: el bloque de agua más alto donde encuentra
      * agua sobre un bloque sólido. Devuelve {@code -1} si no hay agua (tierra firme).
      */
-    private static int waterSurface(ServerLevel level, int x, int z) {
+    public static int waterSurface(ServerLevel level, int x, int z) {
         int y = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, new BlockPos(x, 0, z)).getY();
         for (int yy = y; yy > y - 48; yy--) {
             BlockState bs = level.getBlockState(new BlockPos(x, yy, z));

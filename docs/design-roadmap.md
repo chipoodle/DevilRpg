@@ -117,8 +117,10 @@ siguiente está implementado y probado.
 - **Limpieza de vegetación** (árboles, follaje, flores, pasto, bambú, cactus, caña) barriendo la columna
   completa, antes de generar.
 - **Nivelación del terreno** a una mediana, rellenando hoyos y recortando excesos, hasta el radio de la
-  valla (para no dejar abismos ni charcos). En **agua** se construye una **isla flotante** (capa de
-  tierra/cesped + estructura de troncos descendente), porque el objetivo no se puede mover.
+  valla (para no dejar abismos ni charcos), más un **talud exterior escalonado** (`addOuterSlope`) para que
+  la aldea parezca una **meseta natural** y no un cubo de paredes verticales. En **agua** se construye una
+  **isla flotante** con el suelo **A NIVEL del agua** (reemplaza la capa superior) y base **cónica circular**
+  (tierra/piedra con "raíces" de tronco en el borde), porque el objetivo no se puede mover.
 - **3 cabañas** con interior de 3 bloques de alto, puerta, cama completa (pie+cabeza), escaleras alineadas
   a la puerta y cimientos con pilares si están sobre agua.
 - **Caminos de 2 bloques de ancho** en el plano XZ, de tierra apisonada, a ras de suelo, que no pasan
@@ -179,6 +181,8 @@ Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el ju
 - **Terreno cambiado** (`LairGenerator`): aplana y "corrompe" un claro de radio 7 — **arena de almas** en el
   centro (radio 4) y **tierra muerta** alrededor, con **espinas de hueso** en el anillo exterior,
   **telarañas** dispersas, tótems con **calaveras de esqueleto** y **antorchas de alma** en los cardinales.
+  En tierra lleva un **talud exterior** (meseta natural); si cae sobre **agua**, se construye sobre una
+  **plataforma al nivel del agua** con base cónica (nunca queda sumergida).
 - **Núcleo asaltable** (`LairCoreBlock`, bloque `lair_core`): altar central 3×3 (blackstone con esquinas de
   obsidiana llorosa) y el núcleo brillante encima. Mientras el núcleo exista, la guarida está **activa**.
 - **Spawn de enemigos**: `LairManager.tick` — si hay un jugador a **<64 bloques** de la guarida, cada **25 s**
