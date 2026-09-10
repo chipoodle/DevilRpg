@@ -30,9 +30,10 @@ public class VexSpawnRule implements CustomSpawnRule {
     private static final int MIN_INTERVAL_SECONDS = 20;     // intervalo minimo entre intentos (20 s)
     private static final int MAX_INTERVAL_SECONDS = 2 * 60; // intervalo maximo entre intentos (2 min)
     private static final int MAX_ALIVE_IN_WORLD = 15;       // limite de vexes vivos
-    private static final int MIN_SPAWN_DISTANCE = 4;        // minimo cerca del jugador
+    private static final int MIN_SPAWN_DISTANCE = 8;        // minimo cerca del jugador
     private static final int MAX_SPAWN_DISTANCE = 24;       // maximo cerca del jugador
     private static final int SURFACE_SEARCH_DOWN = 8;       // bloques hacia abajo para hallar suelo
+    private static final int SURFACE_SEARCH_UP = 2;         // bloques hacia arriba para hallar suelo
 
     @Override
     public EntityType<? extends Mob> getEntityType() {
@@ -102,9 +103,14 @@ public class VexSpawnRule implements CustomSpawnRule {
         }
     }
 
+    /**
+     * Busca un punto de suelo válido (bloque sólido con aire encima) en la columna, empezando un poco por
+     * ENCIMA de la altura del jugador y bajando. Así también funciona si el terreno del punto de spawn
+     * está un par de bloques más alto que el jugador (hondonadas, escalones).
+     */
     @Nullable
     private BlockPos findSurface(ServerLevel level, BlockPos start) {
-        for (int y = start.getY(); y > start.getY() - SURFACE_SEARCH_DOWN; y--) {
+        for (int y = start.getY() + SURFACE_SEARCH_UP; y > start.getY() - SURFACE_SEARCH_DOWN; y--) {
             BlockPos pos = new BlockPos(start.getX(), y, start.getZ());
             if (level.getBlockState(pos).isSolid() && level.getBlockState(pos.above()).isAir()) {
                 return pos.above();

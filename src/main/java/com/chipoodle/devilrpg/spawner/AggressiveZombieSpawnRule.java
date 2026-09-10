@@ -36,6 +36,7 @@ public class AggressiveZombieSpawnRule implements CustomSpawnRule {
     private static final int MIN_SPAWN_DISTANCE = 48;        // minimo lejos del jugador (bloques)
     private static final int MAX_SPAWN_DISTANCE = 96;        // maximo lejos del jugador (bloques)
     private static final int SURFACE_SEARCH_DOWN = 16;       // bloques hacia abajo para hallar suelo
+    private static final int SURFACE_SEARCH_UP = 2;          // bloques hacia arriba para hallar suelo
 
     // Limites de distancia (debil a fuerte) y base/escala de atributos tomados del perfil compartido,
     // para no duplicarlos y no acoplarse con la entidad.
@@ -113,9 +114,15 @@ public class AggressiveZombieSpawnRule implements CustomSpawnRule {
         return null;
     }
 
+    /**
+     * Busca un punto de suelo válido (bloque sólido con aire encima) en la columna, empezando un poco por
+     * ENCIMA de la altura del jugador y bajando. Así también funciona si el terreno del punto de spawn
+     * está un par de bloques más alto que el jugador (hondonadas, escalones), y a la vez no se cuela en
+     * cuevas profundas más abajo.
+     */
     @Nullable
     private BlockPos findSurface(ServerLevel level, BlockPos start) {
-        for (int y = start.getY(); y > start.getY() - SURFACE_SEARCH_DOWN; y--) {
+        for (int y = start.getY() + SURFACE_SEARCH_UP; y > start.getY() - SURFACE_SEARCH_DOWN; y--) {
             BlockPos pos = new BlockPos(start.getX(), y, start.getZ());
             if (level.getBlockState(pos).isSolid() && level.getBlockState(pos.above()).isAir()) {
                 return pos.above();
