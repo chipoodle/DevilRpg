@@ -121,14 +121,19 @@ public final class LairManager {
                 + rnd.nextInt(Math.max(1, MAX_DISTANCE_FROM_OBJECTIVE - MIN_DISTANCE_FROM_OBJECTIVE));
         int x = (int) Math.round(target.getX() + Math.cos(angle) * distance);
         int z = (int) Math.round(target.getZ() + Math.sin(angle) * distance);
-        BlockPos land = LairGenerator.findLand(level, new BlockPos(x, target.getY(), z));
-        BlockPos corePos = LairGenerator.generate(level, land);
+        // Se genera EN LA POSICIÓN DETERMINISTA, sin moverla a la tierra más cercana (igual que la aldea, que
+        // se genera en el objetivo). Antes se llamaba a findLand, que desplazaba el centro hasta 24 bloques
+        // buscando tierra seca: en la costa el centro acababa en tierra con la huella casi toda en el mar, y
+        // la guarida se construía nivelada al fondo marino, SUMERGIDA. Ahora, si la zona cae sobre agua, se
+        // levanta una plataforma al nivel del agua (mismas reglas que la aldea).
+        BlockPos spot = new BlockPos(x, target.getY(), z);
+        BlockPos corePos = LairGenerator.generate(level, spot);
         if (corePos == null) {
             return;
         }
-        LAIRS.computeIfAbsent(level, l -> new ArrayList<>()).add(new Lair(objectiveIndex, land, corePos));
+        LAIRS.computeIfAbsent(level, l -> new ArrayList<>()).add(new Lair(objectiveIndex, spot, corePos));
         GENERATED.add(key);
-        DevilRpg.LOGGER.info("[Lair] Guarida {} pre-generada en {} (nucleo en {})", objectiveIndex, land, corePos);
+        DevilRpg.LOGGER.info("[Lair] Guarida {} pre-generada en {} (nucleo en {})", objectiveIndex, spot, corePos);
     }
 
     /** Se llama en el tick del servidor: verifica los núcleos y spawnea enemigos de las guaridas activas. */

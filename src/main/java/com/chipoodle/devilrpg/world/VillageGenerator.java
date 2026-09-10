@@ -80,15 +80,53 @@ public final class VillageGenerator {
         return origin;
     }
 
+    /**
+     * <b>Regla de agua compartida</b> por la aldea y la guarida: devuelve el nivel del agua (su superficie) si
+     * la zona cae sobre agua, o {@code -1} si es tierra firme.
+     * <p>
+     * Se considera "sobre agua" si la <b>columna central</b> es agua (que es lo que se miraba antes) <b>o si
+     * el agua es al menos la mitad de la zona</b>. Mirar solo la columna central fallaba en la costa: el
+     * centro caía en tierra, el resto de la zona en el mar, se elegía el camino de tierra y, como la mediana
+     * de alturas se iba al fondo marino, la obra quedaba <b>sumergida</b>. Con la mitad o más de la zona en
+     * tierra, en cambio, la mediana ya cae en tierra y las columnas de agua se rellenan hasta ese nivel, así
+     * que no hace falta isla.
+     *
+     * @param radius radio de la zona a revisar (incluyendo el talud, para detectar la costa a tiempo)
+     */
+    public static int waterSurfaceForArea(ServerLevel level, BlockPos center, int radius) {
+        int centerSurface = waterSurface(level, center.getX(), center.getZ());
+        List<Integer> surfaces = new ArrayList<>();
+        int columns = 0;
+        for (int x = -radius; x <= radius; x++) {
+            for (int z = -radius; z <= radius; z++) {
+                if (x * x + z * z > radius * radius) continue; // disco, igual que la plataforma
+                columns++;
+                int surface = waterSurface(level, center.getX() + x, center.getZ() + z);
+                if (surface >= 0) {
+                    surfaces.add(surface);
+                }
+            }
+        }
+        if (columns == 0 || surfaces.isEmpty()) {
+            return -1;
+        }
+        if (centerSurface < 0 && surfaces.size() * 2 < columns) {
+            return -1; // centro en tierra y el agua es minoría: se nivela como siempre
+        }
+        Collections.sort(surfaces);
+        return surfaces.get(surfaces.size() / 2); // mediana: estable en costas
+    }
+
     /** Genera las cabañas, los aldeanos, los caminos y la valla alrededor del centro. */
     public static void generate(ServerLevel level, BlockPos center) {
         // Limpiar hasta cubrir el talud exterior (que rodea el área nivelada).
         clearVegetation(level, center, LEVEL_RADIUS + SLOPE_WIDTH);
-        // Si hay agua en la columna del centro (el objetivo cayó en el océano o un lago), construir una
-        // isla flotante ya que el objetivo no se puede mover. Si no, nivelar el terreno como siempre.
-        boolean overWater = waterSurface(level, center.getX(), center.getZ()) >= 0;
-        if (overWater) {
-            buildFloatingIsland(level, center, LEVEL_RADIUS);
+        // Si la zona cae sobre agua (ver waterSurfaceForArea), construir una isla flotante AL NIVEL DEL AGUA:
+        // la aldea no se puede mover del objetivo, así que si el objetivo cayó en el océano o un lago, se
+        // levanta la isla. Si no, nivelar el terreno como siempre.
+        int waterLevel = waterSurfaceForArea(level, center, LEVEL_RADIUS + SLOPE_WIDTH);
+        if (waterLevel >= 0) {
+            buildFloatingIsland(level, center, LEVEL_RADIUS, waterLevel);
         } else {
             levelTerrain(level, center, LEVEL_RADIUS);
         }
@@ -235,9 +273,9 @@ public final class VillageGenerator {
      * valla) con tierra al mismo nivel, y por debajo una estructura de troncos que se estrecha hacia el
      * fondo (como una base flotante). Así no quedan huecos ni abismos entre la superficie y la valla.
      */
-    private static void buildFloatingIsland(ServerLevel level, BlockPos center, int radius) {
-        int surfaceY = waterSurface(level, center.getX(), center.getZ()); // superficie del agua
-        // El suelo de la isla queda A NIVEL del agua (reemplaza la capa superior de agua).
+    private static void buildFloatingIsland(ServerLevel level, BlockPos center, int radius, int surfaceY) {
+        // El suelo de la isla queda A NIVEL del agua (reemplaza la capa superior de agua). El nivel lo decide
+        // waterSurfaceForArea (mediana de las columnas con agua), no una sola columna.
         int islandTop = surfaceY;
         for (int x = -radius; x <= radius; x++) {
             for (int z = -radius; z <= radius; z++) {

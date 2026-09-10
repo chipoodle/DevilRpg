@@ -97,8 +97,12 @@ public final class LairGenerator {
      */
     public static BlockPos generate(ServerLevel level, BlockPos center) {
         BlockPos farmCenter = center.offset(FARM_DISTANCE, 0, 0);
-        // ¿El punto cae sobre agua? Si sí, se construye una plataforma AL NIVEL del agua (no sumergida).
-        int waterLevel = VillageGenerator.waterSurface(level, center.getX(), center.getZ());
+        // Mismas reglas que la aldea (VillageGenerator.waterSurfaceForArea): si la zona cae sobre agua, se
+        // construye una plataforma AL NIVEL DEL AGUA y no queda sumergida. OJO: esto se decide sobre TODA la
+        // huella, no sobre la columna del centro. Decidiéndolo por el centro, una guarida en la costa (centro
+        // en tierra, resto en el mar) elegía el camino de tierra y, como la mediana de alturas se iba al fondo
+        // marino, quedaba construida bajo el agua.
+        int waterLevel = VillageGenerator.waterSurfaceForArea(level, center, EXTENT);
         int baseY; // posición transitable de la plataforma (el suelo sólido queda en baseY-1)
         if (waterLevel >= 0) {
             baseY = waterLevel + 1;
@@ -500,23 +504,6 @@ public final class LairGenerator {
                 }
             }
         }
-    }
-
-    /** Busca tierra firme (no agua/lava) cerca de {@code origin}, para no generar la guarida en el agua. */
-    public static BlockPos findLand(ServerLevel level, BlockPos origin) {
-        for (int r = 0; r < 24; r++) {
-            for (int x = origin.getX() - r; x <= origin.getX() + r; x++) {
-                for (int z = origin.getZ() - r; z <= origin.getZ() + r; z++) {
-                    int y = groundY(level, x, z);
-                    Block below = level.getBlockState(new BlockPos(x, y - 1, z)).getBlock();
-                    if (below != Blocks.WATER && below != Blocks.LAVA
-                            && level.getBlockState(new BlockPos(x, y, z)).isAir()) {
-                        return new BlockPos(x, y, z);
-                    }
-                }
-            }
-        }
-        return origin;
     }
 
     /** Y del suelo sólido (ignora agua/lava) en una columna (x, z). */

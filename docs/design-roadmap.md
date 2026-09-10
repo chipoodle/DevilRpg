@@ -121,6 +121,10 @@ siguiente está implementado y probado.
   la aldea parezca una **meseta natural** y no un cubo de paredes verticales. En **agua** se construye una
   **isla flotante** con el suelo **A NIVEL del agua** (reemplaza la capa superior) y base **cónica circular**
   (tierra/piedra con "raíces" de tronco en el borde), porque el objetivo no se puede mover.
+  La decisión de "¿esto es agua?" la toma **`VillageGenerator.waterSurfaceForArea()`**, la **regla compartida
+  con la guarida**: es agua si la **columna central** lo es *o* si el agua es **al menos la mitad de la zona**
+  (se mira un disco que incluye el talud). Mirar solo la columna central fallaba en la costa — centro en
+  tierra, resto en el mar — y la obra acababa nivelada al fondo marino, **sumergida**.
 - **3 cabañas** con interior de 3 bloques de alto, puerta, cama completa (pie+cabeza), escaleras alineadas
   a la puerta y cimientos con pilares si están sobre agua.
 - **Caminos de 2 bloques de ancho** en el plano XZ, de tierra apisonada, a ras de suelo, que no pasan
@@ -196,7 +200,11 @@ Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el ju
   más **espinas de hueso** en el anillo exterior y **tótems con calaveras** en las diagonales. *(Las
   telarañas se quitaron: ensuciaban el santuario sin aportar nada.)* En tierra lleva un **talud exterior**
   (meseta natural); si cae sobre **agua**, se construye sobre una **plataforma al nivel del agua** con base
-  cónica (nunca queda sumergida).
+  cónica (nunca queda sumergida), decidido con la **misma regla que la aldea**
+  (`VillageGenerator.waterSurfaceForArea`). Y se genera **en la posición determinista**, sin moverla: antes
+  llamaba a un `findLand` que desplazaba el centro hasta 24 bloques buscando tierra seca, y en la costa eso
+  dejaba el centro en tierra con la huella casi toda en el mar, así que la guarida se nivelaba al fondo
+  marino y quedaba **sumergida**.
 - **Santuario defendido** (el núcleo no se asalta impunemente). Tres capas:
   1. **Foso perimetral** (`buildMoat`): anillo de radio 3.5–6 con **4 bloques de caída** y el **fondo de
      arena de almas**. **No lleva magma a propósito**: un foso es un hueco de aire y **el sculk no cruza un
