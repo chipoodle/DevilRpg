@@ -14,7 +14,7 @@ public final class VexSpawnProfile {
             2.0,    // maxScaleMultiplier: escala mas leve que el agresivo (+200%)
             6.67,   // baseHealth (un tercio de la base del vex)
             0.077,  // baseSpeed (un tercio de la base anterior)
-            1.0,    // baseDamage (un tercio de la base anterior)
+            0.34,    // baseDamage (un tercio de la base anterior)
             5,      // baseXp
             4.5     // maxXpMultiplier: +450% de XP en la distancia máxima
     );

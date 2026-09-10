@@ -5,6 +5,7 @@ import com.chipoodle.devilrpg.spawner.AggressiveZombieSpawnRule;
 import com.chipoodle.devilrpg.spawner.CustomSpawner;
 import com.chipoodle.devilrpg.spawner.VexSpawnRule;
 import com.chipoodle.devilrpg.survival.HordeManager;
+import com.chipoodle.devilrpg.survival.LairManager;
 import com.chipoodle.devilrpg.world.VillageManager;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
@@ -43,6 +44,8 @@ public class CustomSpawnerTickHandler {
             HordeManager.tick(level);
             // Asedios a las aldeas (iteracion 3 en miniatura).
             VillageManager.tick(level);
+            // Guaridas (iteracion 2): focos de enemigos que el jugador puede asaltar.
+            LairManager.tick(level);
         });
     }
 }

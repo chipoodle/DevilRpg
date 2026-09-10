@@ -80,4 +80,13 @@ public final class ModBlocks {
                     .sound(SoundType.STONE)
                     .requiresCorrectToolForDrops()
     ));
+
+    public static final DeferredHolder<Block, LairCoreBlock> LAIR_CORE_BLOCK = BLOCKS.register("lair_core", () -> new LairCoreBlock(
+            BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.COLOR_BLACK)
+                    .strength(3.5F)
+                    .sound(SoundType.SCULK)
+                    .lightLevel(state -> 7)
+                    .requiresCorrectToolForDrops()
+    ));
 }

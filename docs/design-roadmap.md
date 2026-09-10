@@ -159,7 +159,6 @@ siguiente está implementado y probado.
   `SoulBear` (extends `AbstractChestedHorse`) se protege explícitamente en `hurt()`.
 
 ### 3b.5 Nota de diseño sobre el motor vanilla
-
 Las villas **no** se generan con el motor vanilla (Jigsaw/`StructureTemplate`), porque ese sistema es
 data-driven y coloca estructuras por bioma, no en una coordenada determinista del objetivo. Mantenemos el
 generador propio de `VillageGenerator`. (Posible mejora futura: reutilizar `StructureTemplate` solo para
@@ -167,11 +166,35 @@ las cabañas.)
 
 ---
 
+## 3c) Iteración 2 — GUARIDAS ✅ (en curso)
+
+Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.
+
+- **Posición determinista**: `LairManager.preGenerate(level, objectiveIndex, target)` genera una guarida
+  por objetivo, **desplazada 55–95 bloques** del objetivo con un ángulo derivado del índice (semilla fija),
+  así el jugador la encuentra al explorar y server/cliente coinciden sin sincronizar. Se pre-genera junto a
+  la aldea cuando el jugador se acerca (radio 140).
+- **Terreno cambiado** (`LairGenerator`): aplana y "corrompe" un claro de radio 7 — **arena de almas** en el
+  centro (radio 4) y **tierra muerta** alrededor, con **espinas de hueso** en el anillo exterior,
+  **telarañas** dispersas, tótems con **calaveras de esqueleto** y **antorchas de alma** en los cardinales.
+- **Núcleo asaltable** (`LairCoreBlock`, bloque `lair_core`): altar central 3×3 (blackstone con esquinas de
+  obsidiana llorosa) y el núcleo brillante encima. Mientras el núcleo exista, la guarida está **activa**.
+- **Spawn de enemigos**: `LairManager.tick` — si hay un jugador a **<64 bloques** de la guarida, cada **20 s**
+  spawnea una tanda (`3 + min(objetivo,6)` enemigos) en un radio de 14 alrededor. Los zombies agresivos
+  **convergen al núcleo** (usan su goal de "ir al centro"); en guaridas lejanas (objetivo ≥ 2) aparece
+  también algún **vex helado**.
+- **Limpiar la guarida**: al destruir el núcleo, `LairCoreBlock.onRemove` → `LairManager.onCoreBroken`
+  marca la guarida como limpiada (deja de spawnear), avisa al jugador y da recompensa (XP, huesos, arena de
+  almas, esmeraldas). `tick` también detecta si el núcleo desapareció (persistencia natural sin SavedData).
+
+---
+
 ## 4) Roadmap (próximas iteraciones)
 
 ### Iteración 2 — Enemigos inteligentes (pilar 2) — EN CURSO 🚧
 - ✅ **Comportamiento de manada**: rodean al objetivo desde ángulos distintos (ver 3b.3).
-- ⬜ **Guaridas** que **cambian el terreno** alrededor (placas, estructuras) y que el jugador puede asaltar.
+- ✅ **Guaridas**: focos de enemigos que **cambian el terreno** a su alrededor y que el jugador puede
+  **asaltar** (ver 3c).
 - ⬜ Se fortalecen con el tiempo (ya arrancado con `ThreatLevel`).
 
 ### Iteración 3 — Asentamientos vivos (pilar 3)

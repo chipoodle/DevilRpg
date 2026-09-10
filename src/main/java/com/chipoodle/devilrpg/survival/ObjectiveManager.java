@@ -45,6 +45,8 @@ public final class ObjectiveManager {
         // Pre-generar la aldea cuando el jugador se acerca (antes de llegar, para que no aparezca de golpe).
         if (distSqr <= (double) (VillageManager.PRE_GENERATE_RADIUS * VillageManager.PRE_GENERATE_RADIUS)) {
             VillageManager.preGenerate(player.serverLevel(), index, target);
+            // La guarida asociada a este objetivo (foco de enemigos asaltable) tambien se pre-genera.
+            LairManager.preGenerate(player.serverLevel(), index, target);
         }
 
         // Al llegar, se inicia el asedio (con un margen); el avance lo hace VillageManager al resolverse.
