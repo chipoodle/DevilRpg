@@ -17,7 +17,13 @@ public class ModCreativeTabs {
             .title(Component.translatable("item_group." + DevilRpg.MODID + "." + ModItems.CREATIVE_TAB_NAME))
             .icon(() -> new ItemStack(ModItems.ITEM_VACIO.get()))
             .displayItems((enabledFlags, populator) -> {
-                ModBlocks.BLOCKS.getEntries().forEach(blockRegistryObject -> populator.accept(blockRegistryObject.get()));
+                ModBlocks.BLOCKS.getEntries().forEach(blockRegistryObject -> {
+                    // Los sellos de las guaridas son bloques de estructura (inquebrantables): no se reparten.
+                    if (blockRegistryObject == ModBlocks.SCULK_SEAL_BLOCK) {
+                        return;
+                    }
+                    populator.accept(blockRegistryObject.get());
+                });
                 populator.accept(ModItems.SOULWOLF_SPAWN_EGG.get());
                 populator.accept(ModItems.SOULBEAR_SPAWN_EGG.get());
                 populator.accept(ModItems.SOULWISP_HEALTH_SPAWN_EGG.get());

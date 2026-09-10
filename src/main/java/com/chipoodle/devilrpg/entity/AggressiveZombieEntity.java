@@ -100,10 +100,15 @@ public class AggressiveZombieEntity extends Zombie {
         return spawnDistance >= OBSIDIAN_THRESHOLD;
     }
 
-    /** ¿Puede romper este bloque? (nunca bedrock; obsidiana solo si su nivel lo permite). */
+    /** ¿Puede romper este bloque? (nunca los inquebrantables; obsidiana solo si su nivel lo permite). */
     private boolean canBreakBlock(BlockState state) {
         Block b = state.getBlock();
         if (b == Blocks.BEDROCK || b == Blocks.WATER || b == Blocks.LAVA || b == Blocks.AIR) {
+            return false;
+        }
+        // Cualquier bloque inquebrantable (dureza -1), como el SELLO que blinda el núcleo de una guarida:
+        // si el zombie pudiera picarlo, se saltaría el requisito de matar al cultivador.
+        if (b.defaultDestroyTime() < 0.0F) {
             return false;
         }
         if (b == Blocks.OBSIDIAN || b == Blocks.CRYING_OBSIDIAN) {
@@ -112,10 +117,13 @@ public class AggressiveZombieEntity extends Zombie {
         return true; // madera, tierra, grava, arena, lana...
     }
 
-    /** Rompe el bloque en la posición, respetando el límite de obsidiana. */
+    /** Rompe el bloque en la posición, respetando el límite de obsidiana y los bloques inquebrantables. */
     private void breakBlockAt(BlockPos pos) {
         BlockState bs = level().getBlockState(pos);
         Block b = bs.getBlock();
+        if (b.defaultDestroyTime() < 0.0F) {
+            return; // inquebrantable
+        }
         if ((b == Blocks.OBSIDIAN || b == Blocks.CRYING_OBSIDIAN) && !canBreakObsidian()) {
             return;
         }

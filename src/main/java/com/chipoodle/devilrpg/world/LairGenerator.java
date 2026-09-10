@@ -31,8 +31,8 @@ public final class LairGenerator {
 
     /** Radio de la plataforma principal (el "claro" de la guarida, donde está el altar). */
     private static final int RADIUS = 10;
-    /** Radio del "núcleo corrupto" central (sculk). */
-    private static final int CORRUPT_RADIUS = 6;
+    /** Radio del "núcleo corrupto" (sculk): cubre el santuario y el anillo alrededor del foso. */
+    private static final int CORRUPT_RADIUS = 8;
     /** Radio del corral macabro y distancia a la que se sitúa del centro de la guarida. */
     private static final int FARM_RADIUS = 4;
     private static final int FARM_DISTANCE = RADIUS + FARM_RADIUS + 4;
@@ -47,6 +47,15 @@ public final class LairGenerator {
     private static final int EXTENT = FARM_DISTANCE + FARM_RADIUS + SLOPE_WIDTH;
     /** Radio (desde el centro de la guarida) de las antorchas de almas. */
     private static final int TORCH_RADIUS = RADIUS - 3;
+    /** Radio de la caja de sellos que blinda el núcleo (1 => caja de 3x3x3, con el núcleo en el centro). */
+    public static final int SEAL_RADIUS = 1;
+    /**
+     * Foso perimetral del santuario: anillo entre estos dos radios (en bloques) y su profundidad. El fondo
+     * lleva magma (daña al que cae) y solo se cruza por los cuatro <b>puentes de hueso</b> de los cardinales.
+     */
+    private static final double MOAT_INNER = 3.5D;
+    private static final double MOAT_OUTER = 6.0D;
+    private static final int MOAT_DEPTH = 4;
 
     private LairGenerator() {
     }
@@ -116,10 +125,11 @@ public final class LairGenerator {
             }
         }
 
-        // 2) Espinas de hueso alrededor (pilares que "marcan" la guarida), sin invadir el corral.
+        // 2) Espinas de hueso alrededor (pilares que "marcan" la guarida). Van desfasadas media muesca para
+        //    que NINGUNA caiga en los cardinales: ahí están los puentes del foso y no deben estorbar.
         int spines = 16;
         for (int a = 0; a < spines; a++) {
-            double angle = (a / (double) spines) * Math.PI * 2.0;
+            double angle = ((a + 0.5) / spines) * Math.PI * 2.0;
             int x = (int) Math.round(Math.cos(angle) * (RADIUS - 1));
             int z = (int) Math.round(Math.sin(angle) * (RADIUS - 1));
             if (insideFarm(x, z)) continue;
@@ -130,37 +140,39 @@ public final class LairGenerator {
             }
         }
 
-        // 3) Altar central 3x3 con el núcleo en el centro y CATALIZADORES de sculk alrededor: cuando un mob
-        //    muere encima, la infección de sculk se expande sola (mecánica vanilla del catalizador).
+        // 3) Santuario: el núcleo, blindado por la CAJA DE SELLOS (inquebrantable mientras viva el cultivador
+        //    de la guarida; de abrirla se encarga LairManager). Sobre la isla interior del foso van los
+        //    CATALIZADORES de sculk: cuando un mob muere encima, la infección se expande sola.
         for (int x = -1; x <= 1; x++) {
             for (int z = -1; z <= 1; z++) {
-                BlockState altar;
-                if (Math.abs(x) == 1 && Math.abs(z) == 1) {
-                    altar = Blocks.CRYING_OBSIDIAN.defaultBlockState(); // esquinas
-                } else if (x == 0 && z == 0) {
-                    altar = Blocks.SCULK.defaultBlockState(); // bajo el núcleo
-                } else {
-                    altar = Blocks.SCULK_CATALYST.defaultBlockState(); // expande la infección
-                }
-                level.setBlock(new BlockPos(center.getX() + x, baseY - 1, center.getZ() + z), altar, 3);
+                level.setBlock(new BlockPos(center.getX() + x, baseY - 1, center.getZ() + z),
+                        Blocks.SCULK.defaultBlockState(), 3);
             }
         }
         BlockPos corePos = new BlockPos(center.getX(), baseY, center.getZ());
         level.setBlock(corePos, ModBlocks.LAIR_CORE_BLOCK.get().defaultBlockState(), 3);
+        buildSealCage(level, corePos);
+        // Catalizadores en las diagonales de la isla (los cardinales son la entrada de los puentes).
+        for (int[] c : new int[][]{{2, 2}, {-2, 2}, {2, -2}, {-2, -2}}) {
+            level.setBlock(new BlockPos(center.getX() + c[0], baseY - 1, center.getZ() + c[1]),
+                    Blocks.SCULK_CATALYST.defaultBlockState(), 3);
+        }
+        // Losa de obsidiana llorosa donde cada puente toca la isla.
+        for (int[] c : new int[][]{{3, 0}, {-3, 0}, {0, 3}, {0, -3}}) {
+            level.setBlock(new BlockPos(center.getX() + c[0], baseY - 1, center.getZ() + c[1]),
+                    Blocks.CRYING_OBSIDIAN.defaultBlockState(), 3);
+        }
 
-        // 4) Tótems con calaveras en los cardinales (el del lado del corral se omite: lo ocupa el corral).
-        int[][] cardinal = {{RADIUS - 2, 0}, {-RADIUS + 2, 0}, {0, RADIUS - 2}, {0, -RADIUS + 2}};
-        for (int[] c : cardinal) {
-            if (insideFarm(c[0], c[1])) continue;
+        // 4) Tótems con calaveras en las diagonales (los cardinales son las entradas de los puentes) y
+        //    antorchas de almas marcando cada entrada.
+        for (int[] c : new int[][]{{6, 6}, {-6, 6}, {6, -6}, {-6, -6}}) {
             int x = center.getX() + c[0];
             int z = center.getZ() + c[1];
             level.setBlock(new BlockPos(x, baseY, z), Blocks.OAK_FENCE.defaultBlockState(), 3);
             level.setBlock(new BlockPos(x, baseY + 1, z), Blocks.OAK_FENCE.defaultBlockState(), 3);
             level.setBlock(new BlockPos(x, baseY + 2, z), Blocks.SKELETON_SKULL.defaultBlockState(), 3);
         }
-        // Antorchas de almas en las diagonales, dentro de la plataforma.
-        for (int[] c : new int[][]{{TORCH_RADIUS, TORCH_RADIUS}, {-TORCH_RADIUS, TORCH_RADIUS},
-                {TORCH_RADIUS, -TORCH_RADIUS}, {-TORCH_RADIUS, -TORCH_RADIUS}}) {
+        for (int[] c : new int[][]{{TORCH_RADIUS, 0}, {-TORCH_RADIUS, 0}, {0, TORCH_RADIUS}, {0, -TORCH_RADIUS}}) {
             if (insideFarm(c[0], c[1])) continue;
             level.setBlock(new BlockPos(center.getX() + c[0], baseY, center.getZ() + c[1]),
                     Blocks.SOUL_TORCH.defaultBlockState(), 3);
@@ -180,7 +192,57 @@ public final class LairGenerator {
 
         // 6) Granja macabra: corral con ganado que el cultivador criará y sacrificará sobre el sculk.
         buildFarm(level, farmCenter, baseY);
+
+        // 7) Foso del santuario: se cava AL FINAL, para que nada de lo anterior quede flotando dentro.
+        buildMoat(level, center, baseY);
         return corePos;
+    }
+
+    /** Construye la caja de sellos (inquebrantable) que blinda el núcleo hasta que muera el cultivador. */
+    private static void buildSealCage(ServerLevel level, BlockPos corePos) {
+        BlockState seal = ModBlocks.SCULK_SEAL_BLOCK.get().defaultBlockState();
+        for (int x = -SEAL_RADIUS; x <= SEAL_RADIUS; x++) {
+            for (int y = -SEAL_RADIUS; y <= SEAL_RADIUS; y++) {
+                for (int z = -SEAL_RADIUS; z <= SEAL_RADIUS; z++) {
+                    if (x == 0 && y == 0 && z == 0) continue; // el centro es el núcleo
+                    level.setBlock(corePos.offset(x, y, z), seal, 3);
+                }
+            }
+        }
+    }
+
+    /**
+     * Cava el foso que rodea el santuario: un anillo de {@link #MOAT_DEPTH} bloques de profundidad con el
+     * fondo de <b>magma</b> (daña y castiga al que cae). Solo se cruza por los cuatro <b>puentes de hueso</b>
+     * de los cardinales, de un bloque de ancho, así que llegar al núcleo obliga a rodear, saltar o construir
+     * bajo el fuego enemigo.
+     */
+    private static void buildMoat(ServerLevel level, BlockPos center, int baseY) {
+        int outer = (int) Math.ceil(MOAT_OUTER);
+        for (int x = -outer; x <= outer; x++) {
+            for (int z = -outer; z <= outer; z++) {
+                double dist = Math.sqrt(x * x + z * z);
+                if (dist < MOAT_INNER || dist > MOAT_OUTER) continue;
+                int px = center.getX() + x;
+                int pz = center.getZ() + z;
+                if (x == 0 || z == 0) {
+                    // Puente de hueso: se conserva el suelo y se despeja lo que haya encima.
+                    level.setBlock(new BlockPos(px, baseY - 1, pz), Blocks.BONE_BLOCK.defaultBlockState(), 3);
+                    for (int y = baseY; y < baseY + 4; y++) {
+                        if (level.getBlockState(new BlockPos(px, y, pz)).isSolid()) {
+                            level.setBlock(new BlockPos(px, y, pz), Blocks.AIR.defaultBlockState(), 3);
+                        }
+                    }
+                    continue;
+                }
+                // Foso: se vacía hasta el fondo y se pone magma.
+                for (int y = baseY - 1; y > baseY - MOAT_DEPTH; y--) {
+                    level.setBlock(new BlockPos(px, y, pz), Blocks.AIR.defaultBlockState(), 3);
+                }
+                level.setBlock(new BlockPos(px, baseY - MOAT_DEPTH, pz),
+                        Blocks.MAGMA_BLOCK.defaultBlockState(), 3);
+            }
+        }
     }
 
     /** ¿La posición relativa (x, z) cae dentro del corral (o su borde)? */

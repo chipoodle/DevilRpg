@@ -89,4 +89,17 @@ public final class ModBlocks {
                     .lightLevel(state -> 7)
                     .requiresCorrectToolForDrops()
     ));
+
+    /**
+     * Sello del sculk: caja inquebrantable que blinda el núcleo de una guarida mientras vive su cultivador.
+     * <b>No tiene objeto a propósito</b> (es bloque de estructura) y no aparece en la pestaña creativa.
+     */
+    public static final DeferredHolder<Block, SculkSealBlock> SCULK_SEAL_BLOCK = BLOCKS.register("sculk_seal", () -> new SculkSealBlock(
+            BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.COLOR_BLACK)
+                    .strength(-1.0F, 3_600_000.0F)
+                    .sound(SoundType.SCULK)
+                    .lightLevel(state -> 5)
+                    .noLootTable()
+    ));
 }
