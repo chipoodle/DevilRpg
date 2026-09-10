@@ -202,8 +202,9 @@ public class AggressiveZombieEntity extends Zombie {
         // Si no hay objetivo, marchar hacia el centro de la aldea (para no merodear fuera).
         this.goalSelector.addGoal(7, new MoveToVillageCenterGoal(this));
         this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, Player.class, true)); // Detectar jugadores
-        // También ataca a las invocaciones (minions) del jugador, no solo al jugador.
-        this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, TamableAnimal.class, 10, true, false,
+        // También ataca a las invocaciones (minions) del jugador, no solo al jugador. Usamos LivingEntity
+        // (no TamableAnimal) para cubrir también al oso, que extiende AbstractChestedHorse y no TamableAnimal.
+        this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, LivingEntity.class, 10, true, false,
                 (target) -> target instanceof ITamableEntity it && it.getOwner() != null));
     }
 
