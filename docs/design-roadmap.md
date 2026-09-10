@@ -209,11 +209,14 @@ Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el ju
      y se quedan atrapados.
   2. **Sello del cultivador** (`SculkSealBlock`, bloque `sculk_seal`): caja **3×3×3 inquebrantable**
      (dureza −1, como la piedra base; sin objeto, sin loot table y fuera del inventario creativo) que
-     **blinda el núcleo**. `LairManager` la abre cuando **muere el guardián** de esa guarida (el cultivador),
-     con partículas, sonido y aviso; una vez abierta **no vuelve**, aunque después aparezca otro cultivador.
-     Mientras esté sellado, al acercarse sale el recordatorio "mata al cultivador del sculk para romper el
-     sello". El sello se abre igual tras **10 min de guarida activa** (red de seguridad: un cultivador
-     atascado o inalcanzable no puede dejar el objetivo bloqueado).
+     **blinda el núcleo**. `LairManager` la abre cuando **no queda guardián**, es decir cuando el cultivador
+     muere, con partículas, sonido y aviso. El estado es **coherente por construcción: sello roto ⟺ sin
+     cultivador**, y para que lo sea: una vez roto el sello esa guarida **ya no vuelve a criar guardianes**, y
+     la red de seguridad por tiempo **retira al guardián vivo antes de abrir** el sello (si no, se veía un
+     cultivador tan tranquilo junto a una barrera ya caída, que no tiene sentido). Mientras esté sellado, al
+     acercarse sale el recordatorio "mata al cultivador del sculk para romper el sello". El sello se abre
+     igual tras **10 min de guarida activa**, para que un guardián atascado o inalcanzable no deje el
+     objetivo bloqueado.
   3. **El núcleo se defiende** (`LairManager.defendCore`): aura de **Oscuridad** en radio 8, y una vez roto
      el sello además **colmillos de invocador** alrededor de quien se acerque cada 4 s (con 0.4 s de aviso,
      así que se esquivan). Picar el núcleo es una pelea bajo presión, no un trámite.
@@ -245,7 +248,14 @@ Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el ju
     sin obstáculo. La **salida es exclusiva del cultivador**: un escalón de 1 bloque en el borde (el resto del
     foso conserva su pared de 2) más una **puerta de madera** cerrada, que los animales no pueden abrir y él
     sí (`OpenDoorGoal` + `setCanOpenDoors(true)`, como los aldeanos). El cultivador **cría** el ganado
-    (`BreedAnimalsGoal`) y **sacrifica** el excedente sobre el sculk (`SacrificeGoal`).
+    (`BreedAnimalsGoal`) y **sacrifica** el excedente sobre el sculk (`SacrificeGoal`), pero con **dos reglas
+    que evitan que vacíe el corral**: (a) solo cuenta al **ganado** etiquetado, no a los animales salvajes que
+    anden por la guarida — contarlos a ellos hacía que la cuenta nunca bajara del mínimo y siguiera matando
+    ganado hasta dejar una sola especie (solo sobrevivían los pollos, que además se reproducen solos poniendo
+    huevos); y (b) **nunca sacrifica por debajo de `MIN_LIVESTOCK` (6) ni a una especie con menos de 3
+    adultos**, así siempre queda pareja para criar. Además `BreedAnimalsGoal` pone en celo a **dos** animales
+    de la misma especie: con uno solo no se aparean (`Animal` necesita pareja), y por eso el rebaño antes solo
+    menguaba.
   - **El ganado está protegido de los demás enemigos**: los animales del corral llevan la etiqueta
     `devilrpg_livestock` y el `AggressiveZombieEntity` **excluye** a los animales marcados de su caza dentro
     de la guarida. Sin esto, en cuanto el cultivador mataba a uno los demás zombies arrasaban el rebaño

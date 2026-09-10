@@ -7,6 +7,7 @@ import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInter
 import com.chipoodle.devilrpg.spawnprofile.AggressiveZombieSpawnProfile;
 import com.chipoodle.devilrpg.spawnprofile.SpawnScaleProfile;
 import com.chipoodle.devilrpg.survival.ThreatLevel;
+import com.chipoodle.devilrpg.world.LairGenerator;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.sounds.SoundEvent;
@@ -60,8 +61,21 @@ public class SculkCultivatorEntity extends AbstractIllager {
     private static final int SCULK_PER_CATALYST = 24;
     /** Máximo de catalizadores que mantiene por guarida. */
     private static final int MAX_CATALYSTS = 6;
-    /** Animales en el corral a partir de los cuales empieza a sacrificar. */
-    private static final int SACRIFICE_THRESHOLD = 5;
+    /**
+     * Tamaño mínimo del rebaño: <b>por debajo de esto el cultivador no sacrifica nada</b>. Sin este suelo, el
+     * corral se vaciaba: la cuenta de animales incluye a los salvajes que andan por la guarida, así que el
+     * número nunca bajaba del umbral y seguía matando ganado hasta dejar una sola especie.
+     */
+    private static final int MIN_LIVESTOCK = 6;
+    /** Tamaño a partir del cual deja de criar (banda con {@link #MIN_LIVESTOCK}, para que no oscile). */
+    private static final int MAX_LIVESTOCK = 8;
+    /**
+     * Adultos de la <b>misma especie</b> que deben quedar para poder sacrificar uno: con 3 se sacrifica uno y
+     * quedan 2, que es una pareja de cría. Así nunca desaparece una especie del corral (que es justo lo que
+     * pasaba: se comía vacas, ovejas y cerdos y solo sobrevivían los pollos, que además se reproducen solos
+     * poniendo huevos).
+     */
+    private static final int SPECIES_KEEP = 3;
 
     /** Radio en el que se siente amenazado por un jugador (y sale corriendo). */
     static final double THREAT_RADIUS_PLAYER = 12.0D;
@@ -317,6 +331,23 @@ public class SculkCultivatorEntity extends AbstractIllager {
                 a -> a.isAlive() && a.distanceToSqr(c.getX() + 0.5D, c.getY() + 0.5D, c.getZ() + 0.5D) <= (double) r * r);
     }
 
+    /**
+     * El <b>rebaño del corral</b>: solo los animales marcados como ganado ({@code LIVESTOCK_TAG}). Es a
+     * propósito que no cuente a los animales <b>salvajes</b> que anden por la guarida: esos son presa de los
+     * zombies, y si entraran en la cuenta del cultivador, su presencia evitaría que el número bajara del
+     * mínimo y el cultivador seguiría sacrificando ganado hasta dejar el corral con una sola especie.
+     */
+    private List<Animal> livestock() {
+        return nearbyAnimals().stream().filter(LairGenerator::isLivestock).toList();
+    }
+
+    /** Adultos vivos de la misma especie que {@code sample} dentro del rebaño dado. */
+    private static long adultsOfSameSpecies(List<Animal> herd, Animal sample) {
+        return herd.stream()
+                .filter(a -> !a.isBaby() && a.getType() == sample.getType())
+                .count();
+    }
+
     // ------------------------------------------------------------------
     // Goals
     // ------------------------------------------------------------------
@@ -467,8 +498,9 @@ public class SculkCultivatorEntity extends AbstractIllager {
     }
 
     /**
-     * Goal: cuando el ganado crece lo suficiente, sacrifica un animal sobre el sculk (alimenta al
-     * catalizador, que expande la infección).
+     * Goal: cuando el rebaño crece <b>por encima del mínimo</b>, sacrifica un animal sobre el sculk (alimenta
+     * al catalizador, que expande la infección). Nunca sacrifica por debajo de {@link #MIN_LIVESTOCK} ni a una
+     * especie que se quedaría sin pareja ({@link #SPECIES_KEEP}): el corral se mantiene vivo y variado.
      */
     static class SacrificeGoal extends Goal {
         /** Si no hay ganado suficiente, espera antes de volver a consultarlo. */
@@ -492,18 +524,31 @@ public class SculkCultivatorEntity extends AbstractIllager {
                 cooldown--;
                 return false;
             }
-            List<Animal> animals = cult.nearbyAnimals();
-            if (animals.size() < SACRIFICE_THRESHOLD) {
+            List<Animal> herd = cult.livestock();
+            // Con el rebaño en el mínimo (o por debajo) NO se sacrifica nada: el corral no se vacía.
+            if (herd.size() <= MIN_LIVESTOCK) {
                 cooldown = RETRY_TICKS;
                 return false;
             }
-            victim = animals.stream().min(Comparator.comparingDouble(a -> a.distanceToSqr(cult))).orElse(null);
+            victim = pickVictim(herd);
             if (victim == null) {
                 cooldown = RETRY_TICKS;
                 return false;
             }
             reachTicks = 0;
             return true;
+        }
+
+        /**
+         * Elige víctima: el adulto más cercano <b>de una especie con al menos {@link #SPECIES_KEEP} adultos</b>
+         * (así tras el sacrificio quedan 2, que es una pareja de cría y la especie no desaparece del corral).
+         */
+        private Animal pickVictim(List<Animal> herd) {
+            return herd.stream()
+                    .filter(a -> !a.isBaby())
+                    .filter(a -> adultsOfSameSpecies(herd, a) >= SPECIES_KEEP)
+                    .min(Comparator.comparingDouble(a -> a.distanceToSqr(cult)))
+                    .orElse(null);
         }
 
         @Override
@@ -538,6 +583,8 @@ public class SculkCultivatorEntity extends AbstractIllager {
 
         private final SculkCultivatorEntity cult;
         private Animal target = null;
+        /** Segunda pareja: hay que poner en celo a DOS de la misma especie o no se aparean. */
+        private Animal partner = null;
         private int cooldown = RETRY_TICKS;
 
         BreedAnimalsGoal(SculkCultivatorEntity cult) {
@@ -551,19 +598,27 @@ public class SculkCultivatorEntity extends AbstractIllager {
                 cooldown--;
                 return false;
             }
-            List<Animal> animals = cult.nearbyAnimals();
-            if (animals.size() >= SACRIFICE_THRESHOLD + 4) {
+            List<Animal> herd = cult.livestock();
+            if (herd.size() >= MAX_LIVESTOCK) {
                 cooldown = RETRY_TICKS;
                 return false;
             }
-            target = animals.stream()
-                    .filter(a -> !a.isInLove() && a.canFallInLove())
+            target = herd.stream()
+                    .filter(a -> !a.isBaby() && !a.isInLove() && a.canFallInLove())
                     .min(Comparator.comparingDouble(a -> a.distanceToSqr(cult)))
                     .orElse(null);
             if (target == null) {
                 cooldown = RETRY_TICKS;
                 return false;
             }
+            // Pareja: otro adulto de la MISMA especie que también pueda enamorarse. Con uno solo en celo el
+            // apareamiento no ocurre (Animal necesita pareja), y por eso antes el rebaño solo menguaba.
+            Animal chosen = target;
+            partner = herd.stream()
+                    .filter(a -> a != chosen && !a.isBaby() && a.getType() == chosen.getType())
+                    .filter(a -> !a.isInLove() && a.canFallInLove())
+                    .min(Comparator.comparingDouble(a -> a.distanceToSqr(cult)))
+                    .orElse(null);
             return true;
         }
 
@@ -579,8 +634,12 @@ public class SculkCultivatorEntity extends AbstractIllager {
                 cult.getNavigation().moveTo(target, 1.0D);
             } else {
                 target.setInLove(null);
+                if (partner != null && partner.isAlive()) {
+                    partner.setInLove(null);
+                }
                 cooldown = RETRY_TICKS * 3;
                 target = null;
+                partner = null;
             }
         }
 

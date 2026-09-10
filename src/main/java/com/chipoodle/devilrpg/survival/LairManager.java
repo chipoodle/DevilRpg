@@ -87,7 +87,8 @@ public final class LairManager {
     private static final double SEAL_HINT_RADIUS = 24.0D;
     /**
      * Red de seguridad: si el sello sigue en pie tras este tiempo de guarida <b>activa</b> (con jugador
-     * cerca), se abre igual. Evita que un cultivador atascado o inalcanzable deje el objetivo bloqueado.
+     * cerca), se abre igual. Evita que un cultivador atascado o inalcanzable deje el objetivo bloqueado. Como
+     * un sello roto no puede convivir con un guardián vivo, al dispararse también <b>retira</b> al guardián.
      */
     private static final long SEAL_FORCE_OPEN_TICKS = 10L * 60L * 20L;
 
@@ -148,9 +149,19 @@ public final class LairManager {
                 continue;
             }
             lair.activeTicks++;
-            if (!lair.sealBroken
-                    && ((lair.guardianSeen && cultivators == 0) || lair.activeTicks > SEAL_FORCE_OPEN_TICKS)) {
-                openSeal(level, lair);
+            // El sello se abre cuando NO queda guardián. Si se abre por la red de seguridad (tiempo), el
+            // guardián que siga vivo se retira antes: si no, quedaría un cultivador vivo con el sello ya roto,
+            // que es contradictorio y confunde (barrera caída y el guardián tan tranquilo).
+            if (!lair.sealBroken) {
+                if (cultivators == 0 && lair.guardianSeen) {
+                    openSeal(level, lair); // el guardián murió: se rompe el sello
+                } else if (lair.activeTicks > SEAL_FORCE_OPEN_TICKS) {
+                    // Red de seguridad: nunca apareció guardián, o el que hay está atascado/inalcanzable.
+                    if (cultivators > 0) {
+                        dismissGuardian(level, lair);
+                    }
+                    openSeal(level, lair);
+                }
             }
             // 2b) El núcleo sigue en pie: se defiende de quien se acerque.
             defendCore(level, lair);
@@ -163,8 +174,33 @@ public final class LairManager {
     }
 
     /**
+     * Retira al guardián vivo de una guarida (red de seguridad del sello). Se usa solo cuando el sello se
+     * abre por tiempo: así el estado queda coherente — <b>nunca hay un cultivador vivo con el sello roto</b>.
+     * Es una salida de emergencia para que un guardián atascado o inalcanzable no bloquee el objetivo.
+     */
+    private static void dismissGuardian(ServerLevel level, Lair lair) {
+        int left = 0;
+        for (SculkCultivatorEntity cult : level.getEntitiesOfClass(SculkCultivatorEntity.class,
+                new AABB(lair.center).inflate(ACTIVATION_RADIUS))) {
+            level.sendParticles(ParticleTypes.SCULK_SOUL, cult.getX(), cult.getY() + 1.0D, cult.getZ(),
+                    25, 0.4D, 0.6D, 0.4D, 0.02D);
+            cult.discard();
+            left++;
+        }
+        if (left > 0) {
+            DevilRpg.LOGGER.info("[Lair] Guardián de la guarida {} retirado por tiempo ({} cultivadores)",
+                    lair.objectiveIndex, left);
+            for (Player p : playersNear(level, lair.corePos, 64.0D)) {
+                p.displayClientMessage(
+                        Component.literal("El guardián abandona el santuario: el sello se deshace."), false);
+            }
+        }
+    }
+
+    /**
      * Abre el <b>sello</b> del núcleo: retira la caja de sellos y lo anuncia (partículas, sonido y aviso a
-     * los jugadores que estén cerca). A partir de ahí el núcleo queda expuesto y se puede destruir.
+     * los jugadores que estén cerca). A partir de ahí el núcleo queda expuesto y se puede destruir, y la
+     * guarida <b>ya no vuelve a criar guardianes</b>: el estado es siempre "sello roto = sin cultivador".
      */
     private static void openSeal(ServerLevel level, Lair lair) {
         lair.sealBroken = true;
@@ -273,8 +309,10 @@ public final class LairManager {
         Random random = new Random();
         // La guarida "más lejana" del ancla genera más enemigos y incluye vexes helados.
         int count = WAVE_SIZE + Math.min(lair.objectiveIndex, 6);
-        // Además, mantiene UN cultivador del sculk (el que cría la granja y expande la infección).
-        if (countCultivators(level, lair) == 0) {
+        // Mantiene UN cultivador del sculk (el que cría la granja y expande la infección) MIENTRAS EL SELLO
+        // SIGA EN PIE. Con el sello roto ya no se crían guardianes: su ritual está roto y el núcleo queda
+        // expuesto, así que no puede aparecer un cultivador vivo junto a un sello abierto.
+        if (!lair.sealBroken && countCultivators(level, lair) == 0) {
             spawnOne(level, lair, player, random, true);
             count--;
         }
