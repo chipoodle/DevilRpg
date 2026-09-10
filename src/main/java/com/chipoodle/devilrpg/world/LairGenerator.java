@@ -130,14 +130,33 @@ public final class LairGenerator {
             }
         }
         // 1b) Venas de sculk salpicando el terreno alrededor del núcleo corrupto.
+        //
+        //      OJO con la cara: en un MultifaceBlock la propiedad se llama por DONDE ESTÁ EL APOYO, no por
+        //      dónde se ve la vena. `UP_AABB` es la franja de ARRIBA del hueco (y 15→16), así que `up=true`
+        //      cuelga del bloque de encima; `DOWN_AABB` es la franja de ABAJO (y 0→1), así que una vena
+        //      TUMBADA en el suelo es `down=true`. Aquí estaba el bug: puestas con `up=true` en el suelo, con
+        //      aire encima, quedaban FLOTANDO en el aire. (El soul lichen del mod ya usaba DOWN, por eso aquél
+        //      se ve bien.) Además `setBlock` no valida la colocación, así que el juego no las borraba.
         for (int x = -RADIUS; x <= RADIUS; x++) {
             for (int z = -RADIUS; z <= RADIUS; z++) {
                 double dist = Math.sqrt(x * x + z * z);
                 if (dist > RADIUS || dist <= CORRUPT_RADIUS) continue;
                 if ((x * 31 + z * 17) % 5 != 0) continue;
-                level.setBlock(new BlockPos(center.getX() + x, baseY, center.getZ() + z),
-                        Blocks.SCULK_VEIN.defaultBlockState()
-                                .setValue(MultifaceBlock.getFaceProperty(Direction.UP), true), 3);
+                BlockPos veinPos = new BlockPos(center.getX() + x, baseY, center.getZ() + z);
+                BlockState current = level.getBlockState(veinPos);
+                if (!level.getBlockState(veinPos.below()).isSolid()) {
+                    // Sin suelo debajo no hay dónde apoyarla: si había una vena vieja mal puesta (flotando),
+                    // se limpia en vez de dejarla ahí colgada.
+                    if (current.is(Blocks.SCULK_VEIN)) {
+                        level.setBlock(veinPos, Blocks.AIR.defaultBlockState(), 3);
+                    }
+                    continue;
+                }
+                // Si ya había una vena, se reescribe (así se corrigen las que quedaron flotando de antes);
+                // cualquier otra cosa que ocupe el hueco se respeta.
+                if (!current.isAir() && !current.is(Blocks.SCULK_VEIN)) continue;
+                level.setBlock(veinPos, Blocks.SCULK_VEIN.defaultBlockState()
+                        .setValue(MultifaceBlock.getFaceProperty(Direction.DOWN), true), 3);
             }
         }
 
@@ -202,12 +221,8 @@ public final class LairGenerator {
         return corePos;
     }
 
-    /**
-     * Construye la caja de sellos (inquebrantable) que blinda el núcleo hasta que muera el cultivador.
-     * <b>Público</b> porque {@code LairManager} la vuelve a levantar cuando la guarida consagra un guardián
-     * nuevo (si mataste al anterior y no rompiste el núcleo).
-     */
-    public static void buildSealCage(ServerLevel level, BlockPos corePos) {
+    /** Construye la caja de sellos (inquebrantable) que blinda el núcleo hasta que muera el guardián. */
+    private static void buildSealCage(ServerLevel level, BlockPos corePos) {
         BlockState seal = ModBlocks.SCULK_SEAL_BLOCK.get().defaultBlockState();
         for (int x = -SEAL_RADIUS; x <= SEAL_RADIUS; x++) {
             for (int y = -SEAL_RADIUS; y <= SEAL_RADIUS; y++) {

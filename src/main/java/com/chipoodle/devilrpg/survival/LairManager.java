@@ -74,13 +74,11 @@ public final class LairManager {
      */
     private static final int MAX_LAIR_MOBS = 30;
     /**
-     * Si matas al guardián y <b>no</b> rompes el núcleo, la guarida vuelve a consagrar uno y a sellarlo tras
-     * este tiempo (de guarida activa, o sea con jugador cerca). Deja una ventana de sobra para rematar el
-     * núcleo, y evita que la guarida quede inerte para siempre por haber pasado por ahí una vez.
+     * Si matas al guardián y <b>no</b> rompes el núcleo, la guarida cría un <b>guardián de relevo</b> tras
+     * este tiempo (de guarida activa, o sea con jugador cerca). El sello no vuelve: el núcleo ya queda
+     * expuesto para siempre.
      */
     private static final int GUARDIAN_RESPAWN_TICKS = 3 * 60 * 20;
-    /** Radio de seguridad para volver a sellar: nunca se sella con un jugador pegado al núcleo. */
-    private static final double RESEAL_SAFE_RADIUS = 8.0D;
     /** Radio que patrullan los enemigos alrededor del núcleo de la guarida. */
     private static final int PATROL_RADIUS = 24;
 
@@ -154,9 +152,10 @@ public final class LairManager {
             if (!lair.sealBroken && lair.guardianDead) {
                 openSeal(level, lair);
             }
-            // 2a-bis) Sin guardián y con el sello roto: si el jugador no aprovechó para romper el núcleo, la
-            //     guarida vuelve a consagrar un guardián y a sellarlo (ver respawnGuardian()).
-            if (lair.sealBroken && lair.guardianDead) {
+            // 2a-bis) Si mataste al guardián y dejaste el núcleo en pie, la guarida cría un guardián de relevo
+            //     tras un tiempo (una vez por muerte). El sello NO vuelve: una vez roto, el núcleo sigue
+            //     expuesto. Así el relevo sale estés donde estés.
+            if (lair.guardianDead && !lair.guardianReborn) {
                 if (++lair.respawnTicks >= GUARDIAN_RESPAWN_TICKS) {
                     respawnGuardian(level, lair);
                 }
@@ -190,6 +189,9 @@ public final class LairManager {
         for (Lair lair : list) {
             if (!lair.cleared && lair.corePos.equals(lairCore)) {
                 lair.guardianDead = true;
+                // Cada muerte programa su propio relevo (a los GUARDIAN_RESPAWN_TICKS).
+                lair.guardianReborn = false;
+                lair.respawnTicks = 0;
                 DevilRpg.LOGGER.info("[Lair] Guardián de la guarida {} ha muerto: el sello va a caer",
                         lair.objectiveIndex);
                 return;
@@ -198,35 +200,33 @@ public final class LairManager {
     }
 
     /**
-     * La guarida <b>vuelve a consagrar un guardián</b> y a sellar el núcleo. Ocurre solo si mataste al
-     * guardián y dejaste el núcleo en pie: la guarida no se queda inerte para siempre por haber pasado por
-     * ahí una vez. Los enemigos siguen apareciendo igual durante todo el proceso.
+     * La guarida cría un <b>guardián de relevo</b> si mataste al anterior y dejaste el núcleo en pie.
      * <p>
-     * Nunca se sella con un jugador pegado al núcleo: la caja de sellos lo dejaría encerrado dentro (y
-     * asfixiándose). Si hay alguien cerca del núcleo, se reintenta en el siguiente tick.
+     * El <b>sello NO se vuelve a levantar</b>: una vez roto, el núcleo queda expuesto para siempre. Eso es
+     * justo lo que permite que el relevo salga estés donde estés — volver a encerrar el núcleo en la caja de
+     * sellos con el jugador al lado lo dejaría dentro, asfixiándose (y era lo que impedía que saliera el
+     * guardián nuevo: la guarda de "no sellar si hay alguien cerca del núcleo" lo posponía sin avisar).
+     * El guardián nuevo sigue haciendo su trabajo —cría, sacrifica y siembra catalizadores—, así que la
+     * infección de la guarida sigue creciendo, y sigue siendo una presa que da XP.
      */
     private static void respawnGuardian(ServerLevel level, Lair lair) {
-        if (!playersNear(level, lair.corePos, RESEAL_SAFE_RADIUS).isEmpty()) {
-            return;
-        }
         Mob guardian = spawnOne(level, lair, null, new Random(), true);
         if (guardian == null) {
-            return; // no se pudo crear: se reintenta
+            return; // no se pudo crear: se reintenta en el siguiente tick
         }
-        LairGenerator.buildSealCage(level, lair.corePos);
-        lair.guardianDead = false;
-        lair.sealBroken = false;
+        lair.guardianReborn = true;
         lair.respawnTicks = 0;
-        DevilRpg.LOGGER.info("[Lair] La guarida {} ha consagrado un nuevo guardián: núcleo sellado de nuevo",
-                lair.objectiveIndex);
-        double cx = lair.corePos.getX() + 0.5D;
-        double cy = lair.corePos.getY() + 1.0D;
-        double cz = lair.corePos.getZ() + 0.5D;
-        level.sendParticles(ParticleTypes.SCULK_SOUL, cx, cy, cz, 50, 1.0D, 1.0D, 1.0D, 0.02D);
-        level.playSound(null, lair.corePos, SoundEvents.SCULK_SHRIEKER_SHRIEK, SoundSource.BLOCKS, 1.4F, 0.7F);
+        DevilRpg.LOGGER.info("[Lair] La guarida {} ha criado un guardián de relevo", lair.objectiveIndex);
+        // Partículas bien visibles ALREDEDOR DEL GUARDIÁN (no del núcleo) para que se note que ha vuelto.
+        level.sendParticles(ParticleTypes.SCULK_SOUL,
+                guardian.getX(), guardian.getY() + 1.0D, guardian.getZ(), 90, 0.7D, 1.1D, 0.7D, 0.03D);
+        level.sendParticles(ParticleTypes.SCULK_CHARGE_POP,
+                guardian.getX(), guardian.getY() + 1.0D, guardian.getZ(), 30, 0.6D, 0.8D, 0.6D, 0.0D);
+        level.playSound(null, guardian.blockPosition(), SoundEvents.SCULK_SHRIEKER_SHRIEK,
+                SoundSource.HOSTILE, 2.0F, 0.6F);
         for (Player p : playersNear(level, lair.corePos, 64.0D)) {
-            p.displayClientMessage(Component.literal(
-                    "Un nuevo guardián consagra el santuario: el núcleo vuelve a estar sellado."), false);
+            p.displayClientMessage(
+                    Component.literal("¡Un nuevo guardián del sculk ha vuelto al santuario!"), false);
         }
     }
 
@@ -427,9 +427,11 @@ public final class LairManager {
         int spawnTimer = SPAWN_INTERVAL_TICKS / 2; // primera tanda algo antes
         /** ¿Ha MUERTO el guardián? Solo eso rompe el sello. */
         boolean guardianDead;
+        /** ¿Ya se crió el guardián de relevo de esta muerte? (cada muerte programa el suyo) */
+        boolean guardianReborn;
         /** ¿Está roto el sello del núcleo (núcleo expuesto)? */
         boolean sealBroken;
-        /** Ticks (de guarida activa) desde la muerte del guardián; al llegar al tope se consagra otro. */
+        /** Ticks (de guarida activa) desde la muerte del guardián; al llegar al tope sale el relevo. */
         int respawnTicks;
 
         Lair(int objectiveIndex, BlockPos center, BlockPos corePos) {

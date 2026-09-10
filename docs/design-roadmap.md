@@ -216,12 +216,15 @@ Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el ju
      un sondeo: deducirlo de "no hay ningún cultivador cerca" era un error, porque esa ausencia también
      significa *todavía no ha aparecido* o *se ha ido* — con esa deducción el sello se caía solo y el núcleo
      aparecía indefenso sin haber matado a nadie.
-     **Si matas al guardián y no rompes el núcleo**, la guarida **vuelve a consagrar uno** (y a sellarlo) tras
-     **3 min de guarida activa** (`GUARDIAN_RESPAWN_TICKS`): el estado sigue siendo coherente
-     (*sello puesto ⟺ guardián vivo*), no se queda inerte para siempre por haber pasado por ahí una vez, y el
-     núcleo se rompe en segundos, así que da tiempo de sobra. Nunca se sella con un jugador a menos de 8
-     bloques del núcleo, para no dejarlo encerrado en la caja. Mientras esté sellado, al acercarse sale el
-     recordatorio "mata al cultivador del sculk para romper el sello".
+     **Si matas al guardián y no rompes el núcleo**, la guarida cría un <b>guardián de relevo</b> tras **3 min
+     de guarida activa** (`GUARDIAN_RESPAWN_TICKS`), con **partículas de alma de sculk y sonido alrededor del
+     guardián nuevo** (no del núcleo) y aviso en el chat, para que se note que ha vuelto. El relevo **no
+     vuelve a sellar**: una vez roto, el sello queda roto y el núcleo expuesto para siempre. Eso es lo que
+     permite que salga estés donde estés — volver a levantar la caja de sellos con el jugador al lado lo
+     dejaría dentro asfixiándose, y la guarda que lo evitaba era justo lo que impedía que apareciera el
+     guardián nuevo. El relevo sigue con su trabajo (cría, sacrifica y siembra catalizadores), así que la
+     infección de la guarida sigue creciendo. Cada muerte programa su propio relevo. Mientras esté sellado,
+     al acercarse sale el recordatorio "mata al cultivador del sculk para romper el sello".
   3. **El núcleo se defiende** (`LairManager.defendCore`): aura de **Oscuridad** en radio 8, y una vez roto
      el sello además **colmillos de invocador** alrededor de quien se acerque cada 4 s (con 0.4 s de aviso,
      así que se esquivan). Picar el núcleo es una pelea bajo presión, no un trámite.
@@ -348,5 +351,21 @@ Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el ju
   `GRACE_TICKS` 90 s, `SIEGE_TIMEOUT_TICKS` 2 min, `DEFAULT_WAVE` 8 + `min(objectiveIndex*2, 20)`,
   oleadas a 32–40 bloques del centro (fuera de la valla).
 
-> TODO (siguiente): que las hordas apunten al **asentamiento más cercano** en vez de al jugador, para
-> conectar con la Iteración 3.
+- **Guarida (`LairManager`)**: `MAX_LAIR_MOBS` 30 (cupo de enemigos vivos por guarida, sin el guardián),
+  `GUARDIAN_RESPAWN_TICKS` 3 min (relevo del guardián si no rompes el núcleo), `SPAWN_INTERVAL_TICKS` 25 s,
+  `ACTIVATION_RADIUS` 64, `CORE_AURA_RADIUS` 8, `CORE_FANG_TICKS` 4 s, `MIN_DISTANCE_FROM_OBJECTIVE` 75.
+
+---
+
+## 6) Notas de trabajo (para el agente)
+
+- **Minecraft bloquea el jar de NeoForge** (`build/moddev/artifacts/neoforge-*.jar`) mientras está abierto, así
+  que `gradlew compileJava` falla con `AccessDeniedException`. **Mata el proceso sin preguntar** (no molesta
+  al usuario): busca `java.exe` con `DevLaunch|fml.modFolders` en la línea de comandos y haz
+  `Stop-Process -Force`. El jugador tendrá que reiniciar el juego de todas formas para probar los cambios.
+- **Commitea todos los cambios**, incluidos los **ajustes de balance del usuario** que aparezcan en el árbol
+  de trabajo (perfiles de spawn, intervalos...). No los dejes fuera por "no ser míos".
+- Comando de compilación:
+  `$env:GRADLE_USER_HOME="C:\Users\Christian\Documents\DevilRpg\.gradle-home"; .\gradlew.bat compileJava --console=plain`
+- **Las guaridas se regeneran** al acercarse al objetivo (el estado de `LairManager` es en memoria), así que
+  los cambios de `LairGenerator` se ven al reiniciar y volver al objetivo, no hacen falta mundos nuevos.
