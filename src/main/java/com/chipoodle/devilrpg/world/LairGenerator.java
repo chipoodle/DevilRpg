@@ -50,12 +50,18 @@ public final class LairGenerator {
     /** Radio de la caja de sellos que blinda el núcleo (1 => caja de 3x3x3, con el núcleo en el centro). */
     public static final int SEAL_RADIUS = 1;
     /**
-     * Foso perimetral del santuario: anillo entre estos dos radios (en bloques) y su profundidad. El fondo
-     * lleva magma (daña al que cae) y solo se cruza por los cuatro <b>puentes de hueso</b> de los cardinales.
+     * Foso perimetral del santuario: anillo entre estos dos radios (en bloques) y la profundidad a la que
+     * queda su <b>fondo transitable</b> (medida desde el nivel del suelo de la guarida).
+     * <p>
+     * El fondo es de <b>arena de almas</b> y NO de magma, a propósito: la infección de sculk tiene que poder
+     * seguir extendiéndose y un foso de magma la encerraría (el sculk no puede cruzar un hueco de aire, pero
+     * sí bajar por el subsuelo y cruzar el fondo del foso si es sólido y convertible). Además, 4 bloques de
+     * caída es más de lo que un mob se atreve a bajar ({@code maxFallDistance} es 3), así que no se meten
+     * dentro y se quedan atrapados.
      */
     private static final double MOAT_INNER = 3.5D;
     private static final double MOAT_OUTER = 6.0D;
-    private static final int MOAT_DEPTH = 4;
+    private static final int MOAT_FLOOR_DEPTH = 5;
 
     private LairGenerator() {
     }
@@ -212,10 +218,13 @@ public final class LairGenerator {
     }
 
     /**
-     * Cava el foso que rodea el santuario: un anillo de {@link #MOAT_DEPTH} bloques de profundidad con el
-     * fondo de <b>magma</b> (daña y castiga al que cae). Solo se cruza por los cuatro <b>puentes de hueso</b>
-     * de los cardinales, de un bloque de ancho, así que llegar al núcleo obliga a rodear, saltar o construir
-     * bajo el fuego enemigo.
+     * Cava el foso que rodea al santuario: un anillo de 4 bloques de caída con el <b>fondo de arena de
+     * almas</b>. Solo se cruza andando por los cuatro <b>puentes de hueso</b> de los cardinales, de un bloque
+     * de ancho, así que llegar al núcleo obliga a rodear o a construir bajo el fuego enemigo.
+     * <p>
+     * <b>La infección sí puede cruzar</b>: el sculk baja por el subsuelo de la isla, cruza el fondo (arena de
+     * almas, que es convertible) y sube por el otro lado. Con magma en el fondo eso era imposible y el foso
+     * actuaba de barrera que contenía la mancha.
      */
     private static void buildMoat(ServerLevel level, BlockPos center, int baseY) {
         int outer = (int) Math.ceil(MOAT_OUTER);
@@ -235,12 +244,12 @@ public final class LairGenerator {
                     }
                     continue;
                 }
-                // Foso: se vacía hasta el fondo y se pone magma.
-                for (int y = baseY - 1; y > baseY - MOAT_DEPTH; y--) {
+                // Foso: se vacía hasta el fondo y se pone un suelo sólido y convertible por el sculk.
+                for (int y = baseY - 1; y > baseY - MOAT_FLOOR_DEPTH; y--) {
                     level.setBlock(new BlockPos(px, y, pz), Blocks.AIR.defaultBlockState(), 3);
                 }
-                level.setBlock(new BlockPos(px, baseY - MOAT_DEPTH, pz),
-                        Blocks.MAGMA_BLOCK.defaultBlockState(), 3);
+                level.setBlock(new BlockPos(px, baseY - MOAT_FLOOR_DEPTH, pz),
+                        Blocks.SOUL_SAND.defaultBlockState(), 3);
             }
         }
     }

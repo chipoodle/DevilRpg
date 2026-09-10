@@ -188,10 +188,15 @@ Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el ju
   diagonales. En tierra lleva un **talud exterior** (meseta natural); si cae sobre **agua**, se construye
   sobre una **plataforma al nivel del agua** con base cónica (nunca queda sumergida).
 - **Santuario defendido** (el núcleo no se asalta impunemente). Tres capas:
-  1. **Foso perimetral** (`buildMoat`): anillo de radio 3.5–6 y **4 de fondo** con **magma** en el fondo
-     (daña y castiga al que cae). Solo se cruza por **cuatro puentes de hueso de 1 de ancho** en los
-     cardinales, marcados con antorcha de alma y losa de obsidiana llorosa al tocar la isla. Las espinas de
-     hueso van **desfasadas media muesca** para que ninguna tape un puente.
+  1. **Foso perimetral** (`buildMoat`): anillo de radio 3.5–6 con **4 bloques de caída** y el **fondo de
+     arena de almas**. **No lleva magma a propósito**: un foso es un hueco de aire y **el sculk no cruza un
+     hueco**, así que el fondo tiene que ser **sólido y convertible** — la infección baja por el subsuelo de
+     la isla, cruza el fondo y sube por el otro lado. Con magma en el fondo eso era imposible y el foso
+     actuaba de barrera que contenía la mancha. Se cruza andando por **cuatro puentes de hueso de 1 de
+     ancho** en los cardinales, marcados con antorcha de alma y losa de obsidiana llorosa al tocar la isla.
+     Las espinas de hueso van **desfasadas media muesca** para que ninguna tape un puente, y los 4 bloques
+     de caída son más de lo que un mob baja por sí solo (`maxFallDistance` = 3), así que no se meten dentro
+     y se quedan atrapados.
   2. **Sello del cultivador** (`SculkSealBlock`, bloque `sculk_seal`): caja **3×3×3 inquebrantable**
      (dureza −1, como la piedra base; sin objeto, sin loot table y fuera del inventario creativo) que
      **blinda el núcleo**. `LairManager` la abre cuando **muere el guardián** de esa guarida (el cultivador),
@@ -210,7 +215,15 @@ Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el ju
 - **Cultivador del sculk** (`SculkCultivatorEntity`): aparece **una por guarida** y se dedica a cultivar la
   infección. Es un **`AbstractIllager`** (usa el **modelo y la textura reales del Invocador** con un tinte
   escarlata del mod), así que **no se une a los raids vanilla** y **replica a mano** el escalado por
-  distancia+amenaza y la XP del zombie agresivo (mismo perfil). Su trabajo:
+  distancia+amenaza y la XP del zombie agresivo (mismo perfil).
+  - **No pelea. Es un cobarde.** No tiene **ningún** goal de ataque ni `targetSelector`: literalmente solo
+    trabaja y huye. Escala en fuerza y rapidez como el resto de enemigos, pero eso solo lo hace más duro de
+    matar, no más agresivo. Sus tres labores más la huida:
+  - **Huir** (`FleeThreatGoal`): si un jugador se le acerca a **≤12 bloques** (o una invocación suya a ≤9),
+    o si **le han hecho daño** hace poco (memoria de 6 s, y entonces huye incluso de quien le disparó desde
+    lejos), sale corriendo en dirección contraria a velocidad de sprint. Al desaparecer la amenaza el goal
+    suelta el control y **vuelve a sus labores**; si se alejó demasiado, `PatrolHomeGoal` lo trae de vuelta
+    al santuario. Los jugadores en creativo/espectador se ignoran, para poder observarlo trabajar.
   - **Granja macabra**: `LairGenerator` construye un **corral cercado dentro de la plataforma**, con un
     parche de sculk y **2 catalizadores** dentro (para que el sacrificio alimente la infección donde el
     animal realmente muere), ganado inicial (vacas, ovejas, cerdos, pollos) y una **abertura con dos puertas
@@ -219,11 +232,14 @@ Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el ju
   - **Siembra catalizadores** (`PlantCatalystGoal`): cuando la infección ya cubre suficiente sculk,
     **extrae** bloques de sculk del terreno y los condensa en un **catalizador nuevo**, colocándolo en el
     borde de la infección (hasta 6 por guarida). Así la mancha sigue creciendo en mancha de aceite.
+  - **Nota técnica**: todos sus goals declaran `setFlags(MOVE, LOOK)`. Sin flags, `GoalSelector` los deja
+    arrancar aunque otro de más prioridad esté corriendo (los flags son el *único* mecanismo de prioridad),
+    y acabarían peleándose por la navegación.
 - **Núcleo asaltable** (`LairCoreBlock`, bloque `lair_core`): el bloque brillante en el centro del
   santuario, dentro de la caja de sellos. Mientras el núcleo exista, la guarida está **activa**.
 - **Spawn de enemigos**: `LairManager.tick` — si hay un jugador a **<64 bloques** de la guarida, cada **25 s**
   spawnea una tanda (`3 + min(objetivo,6)` enemigos) **a 8–15 bloques** del centro (nunca más cerca: dentro
-  del foso caerían al magma y se perdería la tanda). Los zombies agresivos **patrullan un radio de 24
+  del foso caerían dentro y se perdería la tanda). Los zombies agresivos **patrullan un radio de 24
   bloques** alrededor del núcleo (goal `PatrolHomeGoal`); en guaridas lejanas (objetivo ≥ 2) aparece también
   algún **vex helado**.
 - **Limpiar la guarida**: al destruir el núcleo, `LairCoreBlock.onRemove` → `LairManager.onCoreBroken`
@@ -238,7 +254,7 @@ Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el ju
 - ✅ **Comportamiento de manada**: rodean al objetivo desde ángulos distintos (ver 3b.3).
 - ✅ **Guaridas**: focos de enemigos que **cambian el terreno** a su alrededor y que el jugador puede
   **asaltar** (ver 3c).
-- ✅ **Objetivos defendidos**: el núcleo de una guarida ya no es un bloque suelto — foso de magma con
+- ✅ **Objetivos defendidos**: el núcleo de una guarida ya no es un bloque suelto — foso con
   puentes, **sello** que solo cae al matar al cultivador, y el propio núcleo atacando (ver 3c).
 - ⬜ Se fortalecen con el tiempo (ya arrancado con `ThreatLevel`).
 
