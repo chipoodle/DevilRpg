@@ -22,6 +22,7 @@ import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
+import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.monster.Zombie;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.SmallFireball;
@@ -228,6 +229,20 @@ public class AggressiveZombieEntity extends Zombie {
         // (no TamableAnimal) para cubrir también al oso, que extiende AbstractChestedHorse y no TamableAnimal.
         this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, LivingEntity.class, 10, true, false,
                 (target) -> target instanceof ITamableEntity it && it.getOwner() != null));
+        // Cazar ANIMALES que estén dentro de su guarida: al morir sobre el sculk, el catalizador de la
+        // guarida expande la infección (mecánica vanilla). Solo aplica a los que tienen un hogar (guarida).
+        this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, Animal.class, 10, true, false,
+                this::isAnimalInsideHome));
+    }
+
+    /** ¿El animal está dentro del radio de la guarida? (para que muera sobre el sculk y lo expanda). */
+    private boolean isAnimalInsideHome(LivingEntity target) {
+        BlockPos home = getHomePos();
+        if (home == null || getHomeRadius() <= 0) {
+            return false;
+        }
+        double r = getHomeRadius();
+        return target.distanceToSqr(home.getX() + 0.5D, home.getY() + 0.5D, home.getZ() + 0.5D) <= r * r;
     }
 
     public static boolean checkSpawnRules(EntityType<AggressiveZombieEntity> entityType, ServerLevelAccessor world, MobSpawnType spawnType, BlockPos pos, RandomSource random) {

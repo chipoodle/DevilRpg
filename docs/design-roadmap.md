@@ -178,11 +178,16 @@ Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el ju
   por objetivo, **desplazada 55–95 bloques** del objetivo con un ángulo derivado del índice (semilla fija),
   así el jugador la encuentra al explorar y server/cliente coinciden sin sincronizar. Se pre-genera junto a
   la aldea cuando el jugador se acerca (radio 140).
-- **Terreno cambiado** (`LairGenerator`): aplana y "corrompe" un claro de radio 7 — **arena de almas** en el
-  centro (radio 4) y **tierra muerta** alrededor, con **espinas de hueso** en el anillo exterior,
-  **telarañas** dispersas, tótems con **calaveras de esqueleto** y **antorchas de alma** en los cardinales.
-  En tierra lleva un **talud exterior** (meseta natural); si cae sobre **agua**, se construye sobre una
-  **plataforma al nivel del agua** con base cónica (nunca queda sumergida).
+- **Terreno cambiado** (`LairGenerator`): aplana y "corrompe" un claro de radio 7 — **sculk** en el centro
+  (radio 4) y **tierra muerta** alrededor con **venas de sculk**, más **espinas de hueso** en el anillo
+  exterior, **telarañas** dispersas, tótems con **calaveras de esqueleto** y **antorchas de alma** en los
+  cardinales. En tierra lleva un **talud exterior** (meseta natural); si cae sobre **agua**, se construye
+  sobre una **plataforma al nivel del agua** con base cónica (nunca queda sumergida).
+- **Infección de sculk que se EXPANDE** (mecánica vanilla): el altar tiene **catalizadores de sculk**
+  alrededor del núcleo. Los catalizadores convierten los bloques cercanos en sculk cuando muere un mob
+  encima. Para alimentarlos, los zombies de la guarida **cazan animales dentro del radio de su hogar**
+  (`NearestAttackableTargetGoal` filtrado por `isAnimalInsideHome`): la presa muere sobre el sculk y la
+  infección crece sola. Cuanto más tiempo dejes viva una guarida, más se extiende.
 - **Núcleo asaltable** (`LairCoreBlock`, bloque `lair_core`): altar central 3×3 (blackstone con esquinas de
   obsidiana llorosa) y el núcleo brillante encima. Mientras el núcleo exista, la guarida está **activa**.
 - **Spawn de enemigos**: `LairManager.tick` — si hay un jugador a **<64 bloques** de la guarida, cada **25 s**

@@ -2,9 +2,11 @@ package com.chipoodle.devilrpg.world;
 
 import com.chipoodle.devilrpg.init.ModBlocks;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.MultifaceBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 
@@ -56,15 +58,22 @@ public final class LairGenerator {
             return null;
         }
 
-        // 1) Marcar la superficie: arena de almas en el centro, tierra muerta alrededor, y despejar arriba.
+        // 1) Marcar la superficie: SCULK en el centro (infección), tierra muerta alrededor con venas de
+        //    sculk. Los catalizadores del altar (abajo) expanden la infección cuando muere un mob encima.
         for (int x = -RADIUS; x <= RADIUS; x++) {
             for (int z = -RADIUS; z <= RADIUS; z++) {
                 double dist = Math.sqrt(x * x + z * z);
                 if (dist > RADIUS) continue;
                 int px = center.getX() + x;
                 int pz = center.getZ() + z;
-                Block surface = dist <= CORRUPT_RADIUS ? Blocks.SOUL_SAND : Blocks.COARSE_DIRT;
+                Block surface = dist <= CORRUPT_RADIUS ? Blocks.SCULK : Blocks.COARSE_DIRT;
                 level.setBlock(new BlockPos(px, baseY - 1, pz), surface.defaultBlockState(), 3);
+                // Venas de sculk salpicando el terreno circundante.
+                if (dist > CORRUPT_RADIUS && (x * 31 + z * 17) % 5 == 0) {
+                    level.setBlock(new BlockPos(px, baseY, pz),
+                            Blocks.SCULK_VEIN.defaultBlockState()
+                                    .setValue(MultifaceBlock.getFaceProperty(Direction.UP), true), 3);
+                }
                 for (int y = baseY; y < baseY + 4; y++) {
                     BlockState above = level.getBlockState(new BlockPos(px, y, pz));
                     if (above.isSolid()) {
@@ -85,12 +94,18 @@ public final class LairGenerator {
             }
         }
 
-        // 3) Altar central 3x3 con el núcleo en el centro.
+        // 3) Altar central 3x3 con el núcleo en el centro y CATALIZADORES de sculk alrededor: cuando un mob
+        //    muere encima, la infección de sculk se expande sola (mecánica vanilla del catalizador).
         for (int x = -1; x <= 1; x++) {
             for (int z = -1; z <= 1; z++) {
-                BlockState altar = (Math.abs(x) == 1 && Math.abs(z) == 1)
-                        ? Blocks.CRYING_OBSIDIAN.defaultBlockState() // esquinas
-                        : Blocks.BLACKSTONE.defaultBlockState();
+                BlockState altar;
+                if (Math.abs(x) == 1 && Math.abs(z) == 1) {
+                    altar = Blocks.CRYING_OBSIDIAN.defaultBlockState(); // esquinas
+                } else if (x == 0 && z == 0) {
+                    altar = Blocks.SCULK.defaultBlockState(); // bajo el núcleo
+                } else {
+                    altar = Blocks.SCULK_CATALYST.defaultBlockState(); // expande la infección
+                }
                 level.setBlock(new BlockPos(center.getX() + x, baseY - 1, center.getZ() + z), altar, 3);
             }
         }
