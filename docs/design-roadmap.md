@@ -148,9 +148,12 @@ siguiente está implementado y probado.
 ### 3b.4 Presión de enemigos
 
 - La amenaza nocturna de base dejó de ser un **zombie normal** (que solo spawnea de noche y se quema al
-  sol) y ahora es un **vex** (`EntityType.VEX`): vuela, **spawnea de día y de noche**, ataca al jugador al
-  ser configurado, y tiene vida limitada. Tiene su propio **`VexSpawnProfile`** y **`VexSpawnRule`**
-  (el `NormalZombieEntity`/`NormalZombieSpawnRule`/`NormalZombieSpawnProfile` fueron **eliminados**).
+  sol) y ahora es un **vex helado** (`FrostVexEntity`, entidad propia que extiende `Vex`): vuela,
+  **spawnea de día y de noche**, escala atributos por distancia+amenaza (como el zombie agresivo) y, además
+  del ataque melee heredado, **lanza una bola de hielo** (`FrostBall`, la misma del wisp) con enfriamiento
+  (4 s). Su ciclo natural: lanza la bola → cooldown → ataca melee (se acerca y se aleja volando) → al
+  volver a estar a distancia el cooldown ya terminó y vuelve a lanzar. Tiene su propio **`VexSpawnProfile`**
+  y **`VexSpawnRule`**.
 - Los **minions invocados** (`SoulWolf`, `SoulBear`, wisps) **no reciben daño de su propio dueño** ni de
   otros minions del mismo dueño. El `SoulWolf` (extends `TamableAnimal`) ya se unía al team; el
   `SoulBear` (extends `AbstractChestedHorse`) se protege explícitamente en `hurt()`.
@@ -202,10 +205,10 @@ las cabañas.)
   `BASE_HORDE_SIZE + amenaza*MAX_EXTRA_MEMBERS` (3 → 15 al máximo), y cada zombie pasa por la probabilidad
   del `SpawnScaleProfile` (distancia + amenaza).
 - **Presión de vexes (`VexSpawnRule`/`VexSpawnProfile`)**:
-  `EntityType.VEX`, sin zona protegida (`minDistance=0`), spawnea de día y noche cerca del jugador
-  (4–24 bloques), límite 15 vivos, vida limitada 2 min. Atributos base reducidos a un tercio (vida 6.67,
-  velocidad 0.077, daño 1.0) y `maxXpMultiplier` 4.5. Configurable: `maxDistance` 500,
-  `maxScaleMultiplier` 2.0.
+  `FrostVexEntity` (extiende `Vex`), sin zona protegida (`minDistance=0`), spawnea de día y noche cerca del
+  jugador (4–24 bloques), límite 15 vivos, vida limitada 2 min. Atributos base reducidos a un tercio
+  (vida 6.67, velocidad 0.077, daño 1.0) y `maxXpMultiplier` 4.5; **escala atributos y XP** por
+  distancia+amenaza. Configurable: `maxDistance` 500, `maxScaleMultiplier` 2.0.
 - **Aldea (**`VillageGenerator`/`VillageManager`)**: `FENCE_RADIUS` 29, `LEVEL_RADIUS` 31,
   `GRACE_TICKS` 90 s, `SIEGE_TIMEOUT_TICKS` 2 min, `DEFAULT_WAVE` 8 + `min(objectiveIndex*2, 20)`,
   oleadas a 32–40 bloques del centro (fuera de la valla).

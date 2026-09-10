@@ -15,8 +15,12 @@ import com.chipoodle.devilrpg.client.gui.hud.StaminaBarHudOverlay;
 import com.chipoodle.devilrpg.client.gui.screen.MountablePetScreen;
 import com.chipoodle.devilrpg.client.render.entity.model.*;
 import com.chipoodle.devilrpg.client.render.entity.renderer.*;
+import com.chipoodle.devilrpg.entity.FrostVexEntity;
 import com.chipoodle.devilrpg.init.ModContainers;
 import com.chipoodle.devilrpg.init.ModEntities;
+import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.client.renderer.entity.VexRenderer;
+import net.minecraft.world.entity.monster.Vex;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
@@ -82,6 +86,9 @@ public final class ClientModRegistryEventSubscriber {
         event.registerEntityRenderer(ModEntities.SUNFLOWER_SHULKER.get(), SunflowerShulkerRenderer::new);
         event.registerEntityRenderer(ModEntities.EXPLODING_SPORE_BULLET.get(), ExplodingSporeBulletRenderer::new);
         event.registerEntityRenderer(ModEntities.AGGRESSIVE_ZOMBIE.get(), AggressiveZombieRenderer::new);
+        // FrostVexEntity extiende Vex; VexModel no es genérico, así que reutilizamos el renderer vanilla
+        // del vex con un cast controlado (la entidad ES un Vex, por lo que el renderer es válido).
+        event.registerEntityRenderer(ModEntities.FROST_VEX.get(), frostVexRendererProvider());
         //ItemBlockRenderTypes.setRenderLayer(ModBlocks.SOUL_VINE_BLOCK.get(), RenderType.translucent());
         //event.registerEntityRenderer(ModEntityTypes.WISP.get(), SoulWispHumanoidRenderer::new);
 
@@ -103,6 +110,17 @@ public final class ClientModRegistryEventSubscriber {
         event.registerAboveAll(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "skill_icons"), SkillsIconHudOverlay.HUD_SKILL_ICONS);
         event.registerAboveAll(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "objective"), ObjectiveHudOverlay.HUD_OBJECTIVE);
 
+    }
+
+    /**
+     * Proveedor del renderer del {@link FrostVexEntity}: reutiliza el {@code VexRenderer} vanilla. El
+     * {@code VexModel} no es genérico (es {@code HierarchicalModel<Vex>}), por lo que se hace un cast
+     * controlado; es seguro porque {@code FrostVexEntity} ES un {@code Vex}.
+     */
+    @SuppressWarnings("unchecked")
+    private static EntityRendererProvider<FrostVexEntity> frostVexRendererProvider() {
+        EntityRendererProvider<Vex> provider = VexRenderer::new;
+        return (EntityRendererProvider<FrostVexEntity>) (EntityRendererProvider<?>) provider;
     }
 
 }

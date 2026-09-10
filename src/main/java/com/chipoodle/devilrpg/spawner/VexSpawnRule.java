@@ -3,6 +3,8 @@ package com.chipoodle.devilrpg.spawner;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
+import com.chipoodle.devilrpg.entity.FrostVexEntity;
+import com.chipoodle.devilrpg.init.ModEntities;
 import com.chipoodle.devilrpg.spawnprofile.SpawnScaleProfile;
 import com.chipoodle.devilrpg.spawnprofile.VexSpawnProfile;
 import com.chipoodle.devilrpg.survival.ThreatLevel;
@@ -11,17 +13,15 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.monster.Vex;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Objects;
-
 /**
- * Regla de spawn de los <b>vexes</b>: amenaza aérea que ataca al jugador y puede spawnear de día (a
- * diferencia de los zombies, que se queman al sol). Usa su propio {@link VexSpawnProfile} para la
- * probabilidad por distancia del jugador a su punto de inicio.
+ * Regla de spawn de los <b>vexes helados</b> ({@link FrostVexEntity}): amenaza aérea que ataca al jugador
+ * con cuerpo a cuerpo y bolas de hielo, y puede spawnear de día (a diferencia de los zombies, que se
+ * queman al sol). Usa su propio {@link VexSpawnProfile} para la probabilidad por distancia del jugador a
+ * su punto de inicio.
  */
 public class VexSpawnRule implements CustomSpawnRule {
 
@@ -36,7 +36,7 @@ public class VexSpawnRule implements CustomSpawnRule {
 
     @Override
     public EntityType<? extends Mob> getEntityType() {
-        return EntityType.VEX; // vex vanilla: vuela y puede spawnear de día
+        return ModEntities.FROST_VEX.get(); // vex propio: vuela, lanza bolas de hielo y escala atributos
     }
 
     @Override
@@ -91,30 +91,12 @@ public class VexSpawnRule implements CustomSpawnRule {
         return 2;
     }
 
-    /** Clave del dato persistente donde se guarda la XP escalada del vex (se aplica al morir). */
-    public static final String VEX_XP_KEY = "devilrpg:vex_xp";
-
     @Override
     public void configureEntity(Mob entity, ServerLevel level, ServerPlayer player) {
         if (entity instanceof Vex vex) {
-            // Escalar atributos por distancia + amenaza, IGUAL que el AggressiveZombieEntity.
-            Vec3 spawnPoint = getSpawnPoint(player);
-            if (spawnPoint != null) {
-                double distance = Math.sqrt(vex.blockPosition().distSqr(
-                        new BlockPos((int) spawnPoint.x, (int) spawnPoint.y, (int) spawnPoint.z)));
-                double threat = ThreatLevel.current(level);
-                double scaleFactor = PROFILE.scaleFactor(distance, threat)
-                        * (1.0 + threat * ThreatLevel.MAX_EXTRA_DIFFICULTY);
-                Objects.requireNonNull(vex.getAttribute(Attributes.MAX_HEALTH)).setBaseValue(PROFILE.baseHealth() * scaleFactor);
-                Objects.requireNonNull(vex.getAttribute(Attributes.MOVEMENT_SPEED)).setBaseValue(PROFILE.baseSpeed() * scaleFactor);
-                Objects.requireNonNull(vex.getAttribute(Attributes.ATTACK_DAMAGE)).setBaseValue(PROFILE.baseDamage() * scaleFactor);
-                vex.setHealth(vex.getMaxHealth()); // llenar la vida ya escalada
-                // XP escalada: se guarda en el vex y se aplica cuando muere (evento de drop de XP).
-                vex.getPersistentData().putInt(VEX_XP_KEY, PROFILE.experienceReward(distance, threat));
-            }
-            // Vida limitada: el vex se desvanece a los 2 minutos para no acumularse.
-            vex.setLimitedLife(2 * 60 * 20);
-            // Atacar al jugador objetivo (el VexChargeAttackGoal persigue a getTarget()).
+            // El escalado de atributos y de XP lo hace la propia entidad (FrostVexEntity), igual que el
+            // AggressiveZombieEntity. Aquí solo se le da vida limitada y se le asigna el objetivo.
+            vex.setLimitedLife(2 * 60 * 20); // se desvanece a los 2 minutos para no acumularse
             vex.setTarget(player);
             vex.setPersistenceRequired();
         }
