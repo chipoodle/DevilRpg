@@ -89,8 +89,8 @@ public final class ClientModRegistryEventSubscriber {
         // FrostVexEntity extiende Vex; VexModel no es genérico, así que reutilizamos el renderer vanilla
         // del vex con un cast controlado (la entidad ES un Vex, por lo que el renderer es válido).
         event.registerEntityRenderer(ModEntities.FROST_VEX.get(), frostVexRendererProvider());
-        // El cultivador del sculk es un zombie: reutiliza el renderer del zombie agresivo.
-        event.registerEntityRenderer(ModEntities.SCULK_CULTIVATOR.get(), AggressiveZombieRenderer::new);
+        // El cultivador del sculk usa el modelo del Invocador con tinte escarlata (cultista del sculk).
+        event.registerEntityRenderer(ModEntities.SCULK_CULTIVATOR.get(), SculkCultivatorRenderer::new);
         //ItemBlockRenderTypes.setRenderLayer(ModBlocks.SOUL_VINE_BLOCK.get(), RenderType.translucent());
         //event.registerEntityRenderer(ModEntityTypes.WISP.get(), SoulWispHumanoidRenderer::new);
 
