@@ -24,6 +24,7 @@ public class ModCreativeTabs {
                 populator.accept(ModItems.SOULWISP_ARCHER_SPAWN_EGG.get());
                 populator.accept(ModItems.SOULWISP_RANGER_SPAWN_EGG.get());
                 populator.accept(ModItems.AGGRESSIVE_ZOMBIE_SPAWN_EGG.get());
+                populator.accept(ModItems.FROST_VEX_SPAWN_EGG.get());
             })
             .build());
 }

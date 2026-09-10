@@ -46,6 +46,10 @@ public class ModItems {
     public static final DeferredHolder<Item, DeferredSpawnEggItem> AGGRESSIVE_ZOMBIE_SPAWN_EGG = ITEMS.register("aggressive_zombie_spawn_egg",
             () -> new DeferredSpawnEggItem(ModEntities.AGGRESSIVE_ZOMBIE, 0x144e7f, 0xab3634,
                     new Item.Properties().stacksTo(16)));
+
+    public static final DeferredHolder<Item, DeferredSpawnEggItem> FROST_VEX_SPAWN_EGG = ITEMS.register("frost_vex_spawn_egg",
+            () -> new DeferredSpawnEggItem(ModEntities.FROST_VEX, 0x2f5f8f, 0xd8ecff,
+                    new Item.Properties().stacksTo(16)));
     private static Map<ResourceLocation, Item> itemDictionary;
     private static Map<Item, ResourceLocation> locationDictionary;
 
