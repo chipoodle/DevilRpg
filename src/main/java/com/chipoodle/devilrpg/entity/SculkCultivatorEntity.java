@@ -11,11 +11,12 @@ import com.chipoodle.devilrpg.survival.ThreatLevel;
 import com.chipoodle.devilrpg.world.LairGenerator;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Holder;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.entity.Entity;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.TamableAnimal;
@@ -24,12 +25,21 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.goal.OpenDoorGoal;
+import net.minecraft.world.entity.ai.goal.RangedAttackGoal;
+import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
 import net.minecraft.world.entity.ai.util.DefaultRandomPos;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.monster.AbstractIllager;
 import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.monster.RangedAttackMob;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.ThrownPotion;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.alchemy.Potion;
+import net.minecraft.world.item.alchemy.PotionContents;
+import net.minecraft.world.item.alchemy.Potions;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.AABB;
@@ -52,7 +62,7 @@ import java.util.Objects;
  * Comparte las <b>mismas reglas de escalado</b> que el {@link AggressiveZombieEntity} (perfil por
  * distancia + amenaza, y XP escalada), replicadas aquí porque hereda de {@code AbstractIllager}.
  */
-public class SculkCultivatorEntity extends AbstractIllager {
+public class SculkCultivatorEntity extends AbstractIllager implements RangedAttackMob {
 
     private static final SpawnScaleProfile SPAWN_PROFILE = AggressiveZombieSpawnProfile.INSTANCE;
 
@@ -78,23 +88,17 @@ public class SculkCultivatorEntity extends AbstractIllager {
      */
     private static final int SPECIES_KEEP = 3;
 
-    /** Radio en el que se siente amenazado por un jugador (y sale corriendo). */
-    static final double THREAT_RADIUS_PLAYER = 12.0D;
-    /** Radio en el que lo asustan las invocaciones del jugador (mascotas con dueño). */
-    static final double THREAT_RADIUS_MINION = 9.0D;
-    /** Tras recibir daño huye al menos este tiempo, aunque el atacante se aleje (memoria del susto). */
-    private static final int FLEE_AFTER_HURT_TICKS = 120;
-    /** Radio en el que sigue considerando amenaza a quien le hizo daño, mientras está en pánico. */
-    private static final double PANIC_ATTACKER_RADIUS = 32.0D;
+    /**
+     * Cada cuántos ticks lanza una poción. La bruja vanilla usa 60 (3 s) con radio 10, así que el doble de
+     * recarga (6 s) lo deja claramente más débil, como se pidió.
+     */
+    private static final int POTION_ATTACK_INTERVAL = 120;
+    /** Radio desde el que lanza (el mismo que la bruja). Dentro de él se para y dispara. */
+    private static final float POTION_ATTACK_RADIUS = 10.0F;
 
     private double spawnDistance = 0;
     private double spawnThreat = 1.0;
     private boolean attributesAdjusted = false;
-
-    /** Tick hasta el que huye por haber recibido daño hace poco. */
-    private int fleeUntil = 0;
-    /** Quien le hizo daño por última vez (lo busca mientras está en pánico). */
-    private LivingEntity lastAttacker = null;
 
     /** "Hogar" (núcleo de su guarida): patrulla un radio alrededor. */
     private BlockPos homePos = null;
@@ -117,7 +121,10 @@ public class SculkCultivatorEntity extends AbstractIllager {
                 .add(Attributes.MAX_HEALTH, p.baseHealth())
                 .add(Attributes.MOVEMENT_SPEED, p.baseSpeed())
                 .add(Attributes.ATTACK_DAMAGE, p.baseDamage())
-                .add(Attributes.FOLLOW_RANGE, 64.0D);
+                // Alcance de detección ACOTADO (la bruja usa 16): es el guardián de su guarida y no debe
+                // perseguir al jugador por medio mapa. Con 32 defiende toda la plataforma de la guarida
+                // (~31 bloques) y se queda en ella.
+                .add(Attributes.FOLLOW_RANGE, 32.0D);
     }
 
     /** No se une a los raids vanilla: solo sirve a su guarida. */
@@ -164,53 +171,37 @@ public class SculkCultivatorEntity extends AbstractIllager {
 
     @Override
     public IllagerArmPose getArmPose() {
-        // El cultivador NUNCA pelea (no tiene goals de ataque), así que siempre va "obrando".
-        return IllagerArmPose.SPELLCASTING;
+        // Con objetivo va "conjurando" (brazos al frente, como el Invocador al lanzar); sin él, tranquilo.
+        return getTarget() != null ? IllagerArmPose.SPELLCASTING : IllagerArmPose.CROSSED;
     }
 
     /**
-     * El cultivador es un cobarde: no ataca a nadie. Si le hacen daño, recuerda el susto y a quien se lo
-     * hizo, y huye (ver {@link FleeThreatGoal}).
+     * Lanza una <b>poción salpicada</b> al objetivo, como la bruja, pero <b>más débil</b>: mismo radio, el
+     * doble de recarga (ver {@link #POTION_ATTACK_INTERVAL}) y sin las variedades fuertes que usa la bruja
+     * (nada de daño fuerte ni veneno), así que solo puede hacer daño 6 de vez en cuando.
      */
     @Override
-    public boolean hurt(DamageSource source, float amount) {
-        boolean damaged = super.hurt(source, amount);
-        if (damaged && !level().isClientSide) {
-            fleeUntil = tickCount + FLEE_AFTER_HURT_TICKS;
-            Entity attacker = source.getEntity();
-            lastAttacker = attacker instanceof LivingEntity living ? living : null;
+    public void performRangedAttack(LivingEntity target, float distanceFactor) {
+        Vec3 velocity = target.getDeltaMovement();
+        double dx = target.getX() + velocity.x - getX();
+        double dy = target.getEyeY() - 1.1D - getY();
+        double dz = target.getZ() + velocity.z - getZ();
+        double horizontal = Math.sqrt(dx * dx + dz * dz);
+        Holder<Potion> potion = Potions.HARMING;
+        if (horizontal >= 8.0D && !target.hasEffect(MobEffects.MOVEMENT_SLOWDOWN)) {
+            potion = Potions.SLOWNESS; // de lejos frena, para poder seguir a distancia
+        } else if (horizontal <= 3.0D && !target.hasEffect(MobEffects.WEAKNESS)) {
+            potion = Potions.WEAKNESS; // de cerca debilita, que es su defensa
         }
-        return damaged;
-    }
-
-    /**
-     * ¿Está aterrado por haber recibido daño hace poco? (Nombre propio a propósito: {@code isPanicking()}
-     * ya existe en {@code PathfinderMob} y significa otra cosa — que hay un {@code PanicGoal} corriendo.)
-     */
-    boolean isTerrified() {
-        return tickCount < fleeUntil;
-    }
-
-    /**
-     * La amenaza actual: el jugador (o invocación suya) más cercano, o —si está en pánico— quien le hizo daño
-     * aunque ya esté lejos. Los jugadores en creativo/espectador se ignoran, para poder observarlo trabajar.
-     */
-    LivingEntity findThreat() {
-        if (isTerrified() && lastAttacker != null && lastAttacker.isAlive()
-                && distanceToSqr(lastAttacker) <= PANIC_ATTACKER_RADIUS * PANIC_ATTACKER_RADIUS) {
-            return lastAttacker;
+        ThrownPotion thrown = new ThrownPotion(level(), this);
+        thrown.setItem(PotionContents.createItemStack(Items.SPLASH_POTION, potion));
+        thrown.setXRot(thrown.getXRot() - -20.0F);
+        thrown.shoot(dx, dy + horizontal * 0.2D, dz, 0.75F, 8.0F);
+        if (!isSilent()) {
+            level().playSound(null, getX(), getY(), getZ(), SoundEvents.WITCH_THROW, getSoundSource(), 1.0F,
+                    0.8F + random.nextFloat() * 0.4F);
         }
-        Player player = level().getNearestPlayer(this, THREAT_RADIUS_PLAYER);
-        if (player != null && player.isAlive() && !player.isCreative() && !player.isSpectator()) {
-            return player;
-        }
-        for (LivingEntity nearby : level().getEntitiesOfClass(LivingEntity.class,
-                getBoundingBox().inflate(THREAT_RADIUS_MINION))) {
-            if (isOwnedMinion(nearby)) {
-                return nearby;
-            }
-        }
-        return null;
+        level().addFreshEntity(thrown);
     }
 
     /** ¿Es una invocación del jugador (mascota con dueño)? */
@@ -226,19 +217,25 @@ public class SculkCultivatorEntity extends AbstractIllager {
         // A propósito NO se llama a super.registerGoals(): Raider añade los goals de raid vanilla
         // (bandera de líder, PathfindToRaid, celebración, moverse por aldeas) que aquí no aplican.
         //
-        // El cultivador NO tiene ningún goal de ataque ni targetSelector: no pelea. Solo trabaja (sus tres
-        // labores) y huye si se siente amenazado, volviendo a sus labores cuando pasa el peligro.
+        // El guardián pelea como una BRUJA debilitada: se queda a distancia (10 bloques, como la bruja) y
+        // lanza pociones salpicadas, con el DOBLE de recarga que ella. Ya no huye: antes se alejaba demasiado
+        // y el asalto se convertía en perseguirlo por medio mapa.
         this.goalSelector.addGoal(0, new FloatGoal(this));
-        this.goalSelector.addGoal(1, new FleeThreatGoal(this));
-        // Tareas de cultivador (su "trabajo").
+        this.goalSelector.addGoal(1, new RangedAttackGoal(this, 1.0D, POTION_ATTACK_INTERVAL, POTION_ATTACK_RADIUS));
+        // Tareas de cultivador (su "trabajo", cuando no tiene a quién lanzar).
         this.goalSelector.addGoal(2, new SacrificeGoal(this));
         this.goalSelector.addGoal(3, new BreedAnimalsGoal(this));
         this.goalSelector.addGoal(4, new PlantCatalystGoal(this));
         // ...y la otra mitad: abrir de verdad la puerta del corral cuando se topa con ella yendo a trabajar.
         // (OpenDoorGoal no declara flags: solo abre puertas, no navega, así que convive con el goal de turno.)
         this.goalSelector.addGoal(5, new OpenDoorGoal(this, true));
-        // Patrullar el radio de su guarida cuando no tiene nada que hacer (y volver tras una huida).
+        // Patrullar el radio de su guarida cuando no tiene nada que hacer.
         this.goalSelector.addGoal(8, new PatrolHomeGoal(this));
+        // Objetivos: jugadores e invocaciones con dueño. Los goals vanilla ya ignoran a los jugadores en
+        // creativo/espectador, así que se puede seguir observándolo trabajar.
+        this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, Player.class, true));
+        this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, LivingEntity.class, 10, true, false,
+                (target) -> isOwnedMinion(target)));
     }
 
     // ------------------------------------------------------------------
@@ -376,99 +373,6 @@ public class SculkCultivatorEntity extends AbstractIllager {
     // ------------------------------------------------------------------
     // Goals
     // ------------------------------------------------------------------
-
-    /**
-     * Goal: el cultivador es un <b>cobarde</b>. No pelea: si un jugador (o una invocación suya) se le acerca,
-     * o si le han hecho daño hace poco, <b>sale corriendo en dirección contraria</b>. Cuando la amenaza
-     * desaparece el goal suelta el control y vuelve a sus labores; además {@link PatrolHomeGoal} lo trae de
-     * vuelta al santuario si se alejó demasiado huyendo.
-     */
-    static class FleeThreatGoal extends Goal {
-        /** Cada cuánto se vuelve a buscar amenaza (no hace falta preguntar cada tick). */
-        private static final int CHECK_TICKS = 10;
-        /** Cada cuánto se recalcula la ruta de huida. */
-        private static final int REPATH_TICKS = 20;
-        /** Distancia (horizontal/vertical) a la que busca el punto de huida. */
-        private static final int FLEE_DISTANCE = 16;
-        private static final int FLEE_VERTICAL = 7;
-        /** Corre más rápido que trabajando: las piernas se lo llevan. */
-        private static final double SPRINT_SPEED = 1.5D;
-        /** Sigue huyendo un poco más allá del borde del radio de amenaza, para no quedarse justo al filo. */
-        private static final double KEEP_FLEEING_MARGIN = 4.0D;
-
-        private final SculkCultivatorEntity cult;
-        private LivingEntity threat;
-        private int checkCooldown;
-        private int repathTicks;
-
-        FleeThreatGoal(SculkCultivatorEntity cult) {
-            this.cult = cult;
-            // Sin flags, un goal puede arrancar aunque otro de más prioridad esté corriendo y no lo bloquea:
-            // los flags son el único mecanismo de prioridad de GoalSelector. Los navegadores piden MOVE/LOOK.
-            this.setFlags(java.util.EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
-        }
-
-        @Override
-        public boolean canUse() {
-            if (cult.isTerrified()) {
-                return true; // le acaban de pegar: sale corriendo ya
-            }
-            if (checkCooldown > 0) {
-                checkCooldown--;
-                return false;
-            }
-            checkCooldown = CHECK_TICKS;
-            threat = cult.findThreat();
-            return threat != null;
-        }
-
-        @Override
-        public boolean canContinueToUse() {
-            if (cult.isTerrified()) {
-                return true;
-            }
-            if (threat == null || !threat.isAlive()) {
-                return false;
-            }
-            double limit = threatRadius(threat) + KEEP_FLEEING_MARGIN;
-            return cult.distanceToSqr(threat) <= limit * limit;
-        }
-
-        @Override
-        public void start() {
-            repathTicks = 0;
-        }
-
-        @Override
-        public void tick() {
-            if (--repathTicks > 0) {
-                return;
-            }
-            repathTicks = REPATH_TICKS;
-            if (threat == null || !threat.isAlive()) {
-                threat = cult.findThreat();
-            }
-            // Huye en dirección contraria a la amenaza; si no ve a nadie (pánico sin atacante a la vista), a
-            // un punto al azar. DefaultRandomPos respeta el terreno, así que no se tira por un barranco.
-            Vec3 away = threat != null && threat.isAlive()
-                    ? DefaultRandomPos.getPosAway(cult, FLEE_DISTANCE, FLEE_VERTICAL, threat.position())
-                    : DefaultRandomPos.getPos(cult, FLEE_DISTANCE, FLEE_VERTICAL);
-            if (away != null) {
-                cult.getNavigation().moveTo(away.x, away.y, away.z, SPRINT_SPEED);
-            }
-        }
-
-        @Override
-        public void stop() {
-            threat = null;
-            repathTicks = 0;
-            checkCooldown = 0; // la próxima vez que se plantee, que vuelva a mirar enseguida
-        }
-
-        private static double threatRadius(LivingEntity entity) {
-            return entity instanceof Player ? THREAT_RADIUS_PLAYER : THREAT_RADIUS_MINION;
-        }
-    }
 
     /** Patrulla el radio de su guarida (vuelve si se aleja; ronda la zona si no tiene objetivo). */
     static class PatrolHomeGoal extends Goal {

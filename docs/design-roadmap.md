@@ -255,11 +255,14 @@ Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el ju
   - **No pelea. Es un cobarde.** No tiene **ningún** goal de ataque ni `targetSelector`: literalmente solo
     trabaja y huye. Escala en fuerza y rapidez como el resto de enemigos, pero eso solo lo hace más duro de
     matar, no más agresivo. Sus tres labores más la huida:
-  - **Huir** (`FleeThreatGoal`): si un jugador se le acerca a **≤12 bloques** (o una invocación suya a ≤9),
-    o si **le han hecho daño** hace poco (memoria de 6 s, y entonces huye incluso de quien le disparó desde
-    lejos), sale corriendo en dirección contraria a velocidad de sprint. Al desaparecer la amenaza el goal
-    suelta el control y **vuelve a sus labores**; si se alejó demasiado, `PatrolHomeGoal` lo trae de vuelta
-    al santuario. Los jugadores en creativo/espectador se ignoran, para poder observarlo trabajar.
+  - **Pelea como una bruja debilitada**: se queda **a distancia** (radio 10, como la bruja) y lanza
+    **pociones salpicadas** (`RangedAttackGoal` + `performRangedAttack`), pero con el **doble de recarga**
+    (120 ticks = 6 s, frente a los 60 de la bruja) y **sin las variedades fuertes** (nada de daño fuerte ni
+    veneno): de lejos frena con Lentitud, de cerca debilita con Debilidad, y en medio solo puede hacer 6 de
+    daño. Su `FOLLOW_RANGE` es **32** (no 64): es el guardián de su guarida y no debe perseguir al jugador por
+    medio mapa. **Antes huía** (`FleeThreatGoal`) y se alejaba demasiado, así que el asalto se convertía en
+    perseguirlo; ahora planta cara. Mientras tiene objetivo no atiende la granja (el goal de ataque tiene más
+    prioridad); al quedarse sin objetivo vuelve a criar, sacrificar y sembrar catalizadores.
   - **Granja macabra**: `LairGenerator` construye el corral <b>como un foso</b> de **2 bloques de
     profundidad** en la plataforma, con **3 bloques de orla plana** alrededor (sin orla, el terreno empezaría
     a bajar en el borde del foso y la pared quedaría de 1 bloque por ese lado: los animales se escaparían).

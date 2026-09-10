@@ -11,7 +11,7 @@ public final class VexSpawnProfile {
             0,      // minDistance: sin zona protegida (spawnea desde el inicio, cerca del spawn)
             500,    // maxDistance: amenaza local cerca de la base
             0,      // minHardDistance: no hay minimo que encoger
-            2.0,    // maxScaleMultiplier: escala mas leve que el agresivo (+200%)
+            2.5,    // maxScaleMultiplier: escala mas leve que el agresivo (+250%)
             6.67,   // baseHealth (un tercio de la base del vex)
             0.077,  // baseSpeed (un tercio de la base anterior)
             0.34,    // baseDamage (un tercio de la base anterior)
