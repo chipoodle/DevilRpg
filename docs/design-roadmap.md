@@ -175,34 +175,57 @@ las cabañas.)
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.
 
 - **Posición determinista**: `LairManager.preGenerate(level, objectiveIndex, target)` genera una guarida
-  por objetivo, **desplazada 55–95 bloques** del objetivo con un ángulo derivado del índice (semilla fija),
+  por objetivo, **desplazada 72–94 bloques** del objetivo con un ángulo derivado del índice (semilla fija),
   así el jugador la encuentra al explorar y server/cliente coinciden sin sincronizar. Se pre-genera junto a
-  la aldea cuando el jugador se acerca (radio 140).
-- **Terreno cambiado** (`LairGenerator`): aplana y "corrompe" un claro de radio 7 — **sculk** en el centro
-  (radio 4) y **tierra muerta** alrededor con **venas de sculk**, más **espinas de hueso** en el anillo
-  exterior, **telarañas** dispersas, tótems con **calaveras de esqueleto** y **antorchas de alma** en los
-  cardinales. En tierra lleva un **talud exterior** (meseta natural); si cae sobre **agua**, se construye
+  la aldea cuando el jugador se acerca (radio 140). El mínimo **no es arbitrario**: la guarida es una
+  plataforma que llega a ~28 bloques de su centro (corral incluido) y la aldea nivela hasta 31 y escalona
+  hasta 41, así que a menos distancia las dos obras se comerían el terreno.
+- **Terreno cambiado** (`LairGenerator`): **una sola plataforma** de radio 10 que incluye la guarida, un
+  **corredor** y el **corral**, nivelados **al mismo nivel** (mediana del terreno de toda la huella, vía
+  `platformDistance()`); eso garantiza que el corral quede exactamente a la altura del suelo de la guarida.
+  Superficie: **sculk** en el núcleo corrupto (radio 8) y **tierra muerta** alrededor con **venas de sculk**,
+  más **espinas de hueso** en el anillo exterior, **telarañas** dispersas y **tótems con calaveras** en las
+  diagonales. En tierra lleva un **talud exterior** (meseta natural); si cae sobre **agua**, se construye
   sobre una **plataforma al nivel del agua** con base cónica (nunca queda sumergida).
-- **Infección de sculk que se EXPANDE** (mecánica vanilla): el altar tiene **catalizadores de sculk**
-  alrededor del núcleo. Los catalizadores convierten los bloques cercanos en sculk cuando muere un mob
-  encima. Para alimentarlos, los zombies de la guarida **cazan animales dentro del radio de su hogar**
+- **Santuario defendido** (el núcleo no se asalta impunemente). Tres capas:
+  1. **Foso perimetral** (`buildMoat`): anillo de radio 3.5–6 y **4 de fondo** con **magma** en el fondo
+     (daña y castiga al que cae). Solo se cruza por **cuatro puentes de hueso de 1 de ancho** en los
+     cardinales, marcados con antorcha de alma y losa de obsidiana llorosa al tocar la isla. Las espinas de
+     hueso van **desfasadas media muesca** para que ninguna tape un puente.
+  2. **Sello del cultivador** (`SculkSealBlock`, bloque `sculk_seal`): caja **3×3×3 inquebrantable**
+     (dureza −1, como la piedra base; sin objeto, sin loot table y fuera del inventario creativo) que
+     **blinda el núcleo**. `LairManager` la abre cuando **muere el guardián** de esa guarida (el cultivador),
+     con partículas, sonido y aviso; una vez abierta **no vuelve**, aunque después aparezca otro cultivador.
+     Mientras esté sellado, al acercarse sale el recordatorio "mata al cultivador del sculk para romper el
+     sello". El sello se abre igual tras **10 min de guarida activa** (red de seguridad: un cultivador
+     atascado o inalcanzable no puede dejar el objetivo bloqueado).
+  3. **El núcleo se defiende** (`LairManager.defendCore`): aura de **Oscuridad** en radio 8, y una vez roto
+     el sello además **colmillos de invocador** alrededor de quien se acerque cada 4 s (con 0.4 s de aviso,
+     así que se esquivan). Picar el núcleo es una pelea bajo presión, no un trámite.
+- **Infección de sculk que se EXPANDE** (mecánica vanilla): el santuario tiene **catalizadores de sculk**
+  en las diagonales de la isla. Los catalizadores convierten los bloques cercanos en sculk cuando muere un
+  mob encima. Para alimentarlos, los zombies de la guarida **cazan animales dentro del radio de su hogar**
   (`NearestAttackableTargetGoal` filtrado por `isAnimalInsideHome`): la presa muere sobre el sculk y la
   infección crece sola. Cuanto más tiempo dejes viva una guarida, más se extiende.
-- **Cultivador del sculk** (`SculkCultivatorEntity`, entidad propia que extiende `AggressiveZombieEntity`,
-  así que comparte **las mismas reglas de escalado/XP**): aparece **una por guarida** y se dedica a
-  cultivar la infección:
-  - **Granja macabra**: `LairGenerator` construye un **corral** con puerta y ganado inicial (vacas, ovejas,
-    cerdos, pollos). El cultivador lo **cría** (`BreedAnimalsGoal`: alimenta a los animales para que se
-    apareen) y **sacrifica** parte del ganado sobre el sculk cuando ya hay bastantes (`SacrificeGoal`).
+- **Cultivador del sculk** (`SculkCultivatorEntity`): aparece **una por guarida** y se dedica a cultivar la
+  infección. Es un **`AbstractIllager`** (usa el **modelo y la textura reales del Invocador** con un tinte
+  escarlata del mod), así que **no se une a los raids vanilla** y **replica a mano** el escalado por
+  distancia+amenaza y la XP del zombie agresivo (mismo perfil). Su trabajo:
+  - **Granja macabra**: `LairGenerator` construye un **corral cercado dentro de la plataforma**, con un
+    parche de sculk y **2 catalizadores** dentro (para que el sacrificio alimente la infección donde el
+    animal realmente muere), ganado inicial (vacas, ovejas, cerdos, pollos) y una **abertura con dos puertas
+    abiertas** hacia el corredor (el cultivador no puede abrir puertas). El cultivador **cría** el ganado
+    (`BreedAnimalsGoal`) y **sacrifica** el excedente sobre el sculk (`SacrificeGoal`).
   - **Siembra catalizadores** (`PlantCatalystGoal`): cuando la infección ya cubre suficiente sculk,
     **extrae** bloques de sculk del terreno y los condensa en un **catalizador nuevo**, colocándolo en el
     borde de la infección (hasta 6 por guarida). Así la mancha sigue creciendo en mancha de aceite.
-- **Núcleo asaltable** (`LairCoreBlock`, bloque `lair_core`): altar central 3×3 (blackstone con esquinas de
-  obsidiana llorosa) y el núcleo brillante encima. Mientras el núcleo exista, la guarida está **activa**.
+- **Núcleo asaltable** (`LairCoreBlock`, bloque `lair_core`): el bloque brillante en el centro del
+  santuario, dentro de la caja de sellos. Mientras el núcleo exista, la guarida está **activa**.
 - **Spawn de enemigos**: `LairManager.tick` — si hay un jugador a **<64 bloques** de la guarida, cada **25 s**
-  spawnea una tanda (`3 + min(objetivo,6)` enemigos) en un radio de 14 alrededor. Los zombies agresivos
-  **patrullan un radio de 24 bloques** alrededor del núcleo (goal `PatrolHomeGoal`: si se alejan vuelven, y
-  sin objetivo rondan la zona); en guaridas lejanas (objetivo ≥ 2) aparece también algún **vex helado**.
+  spawnea una tanda (`3 + min(objetivo,6)` enemigos) **a 8–15 bloques** del centro (nunca más cerca: dentro
+  del foso caerían al magma y se perdería la tanda). Los zombies agresivos **patrullan un radio de 24
+  bloques** alrededor del núcleo (goal `PatrolHomeGoal`); en guaridas lejanas (objetivo ≥ 2) aparece también
+  algún **vex helado**.
 - **Limpiar la guarida**: al destruir el núcleo, `LairCoreBlock.onRemove` → `LairManager.onCoreBroken`
   marca la guarida como limpiada (deja de spawnear), avisa al jugador y da recompensa (XP, huesos, arena de
   almas, esmeraldas). `tick` también detecta si el núcleo desapareció (persistencia natural sin SavedData).
@@ -215,6 +238,8 @@ Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el ju
 - ✅ **Comportamiento de manada**: rodean al objetivo desde ángulos distintos (ver 3b.3).
 - ✅ **Guaridas**: focos de enemigos que **cambian el terreno** a su alrededor y que el jugador puede
   **asaltar** (ver 3c).
+- ✅ **Objetivos defendidos**: el núcleo de una guarida ya no es un bloque suelto — foso de magma con
+  puentes, **sello** que solo cae al matar al cultivador, y el propio núcleo atacando (ver 3c).
 - ⬜ Se fortalecen con el tiempo (ya arrancado con `ThreatLevel`).
 
 ### Iteración 3 — Asentamientos vivos (pilar 3)
