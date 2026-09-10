@@ -70,8 +70,18 @@ public class SculkCultivatorEntity extends AbstractIllager implements RangedAtta
     private static final int WORK_RADIUS = 24;
     /** Bloques de sculk necesarios para "condensar" un catalizador nuevo. */
     private static final int SCULK_PER_CATALYST = 24;
-    /** Máximo de catalizadores que mantiene por guarida. */
-    private static final int MAX_CATALYSTS = 6;
+    /**
+     * Máximo de catalizadores que mantiene por guarida. Cada catalizador es un foco de expansión
+     * independiente (en vanilla <b>nunca</b> se crean solos: el sculk solo genera sensores y chilladores), así
+     * que este número es el que decide cuánto puede seguir creciendo la mancha. Con 6 se quedaba corta: la
+     * guarida ya nace con 6 (4 en el santuario + 2 en el corral), así que el guardián solo podía poner 2 más.
+     */
+    private static final int MAX_CATALYSTS = 12;
+    /** Hasta cuántos bloques por debajo del núcleo se cuenta/mira (el fondo del foso del corral está a 3). */
+    private static final int SCAN_BELOW = 4;
+    /** Capas hacia arriba y hacia abajo que revisa al buscar dónde plantar (para que la mancha trepe y baje). */
+    private static final int PLANT_LAYERS_UP = 3;
+    private static final int PLANT_LAYERS_DOWN = 5;
     /**
      * Tamaño mínimo del rebaño: <b>por debajo de esto el cultivador no sacrifica nada</b>. Sin este suelo, el
      * corral se vaciaba: la cuenta de animales incluye a los salvajes que andan por la guarida, así que el
@@ -320,16 +330,19 @@ public class SculkCultivatorEntity extends AbstractIllager implements RangedAtta
      * Escanea <b>una sola vez</b> el radio de trabajo y devuelve
      * <code>[bloques de infección, catalizadores]</code>. Es un barrido caro (miles de posiciones), así
      * que el goal que lo usa lo llama con caché, nunca cada tick.
+     * <p>
+     * El barrido baja hasta {@link #SCAN_BELOW} bloques por debajo del núcleo a propósito: el corral es un
+     * foso y sus catalizadores están en el fondo, tres bloques más abajo. Con la ventana anterior (solo −2..+2)
+     * esos catalizadores <b>no se contaban</b>, así que el guardián creía tener menos de los que hay.
      */
     private int[] scanInfection() {
         BlockPos c = workCenter();
         int r = workRadius();
         int sculk = 0;
         int catalysts = 0;
-        // Solo la capa superficial: la infección es un manto sobre el terreno, no rellena el volumen.
         for (int x = -r; x <= r; x++) {
             for (int z = -r; z <= r; z++) {
-                for (int y = -2; y <= 2; y++) {
+                for (int y = -SCAN_BELOW; y <= 2; y++) {
                     var state = level().getBlockState(c.offset(x, y, z));
                     if (state.is(Blocks.SCULK)) {
                         sculk++;
@@ -596,6 +609,8 @@ public class SculkCultivatorEntity extends AbstractIllager implements RangedAtta
         private int sculkCount = 0;
         private int catalystCount = 0;
         private int reachTicks = 0;
+        /** Último punto al que no consiguió llegar, para no volver a elegirlo y quedarse en bucle. */
+        private BlockPos lastFailed = null;
 
         PlantCatalystGoal(SculkCultivatorEntity cult) {
             this.cult = cult;
@@ -644,27 +659,44 @@ public class SculkCultivatorEntity extends AbstractIllager implements RangedAtta
             consumeNearbySculk(spot);
             cult.level().setBlock(spot, Blocks.SCULK_CATALYST.defaultBlockState(), 3);
             cooldown = PLANT_COOLDOWN_TICKS;
+            lastFailed = null; // se pudo: que vuelva a considerar cualquier punto
             spot = null;
         }
 
         @Override
         public void stop() {
+            // Si se rinde por no poder llegar, apunta el punto para no volver a elegirlo y quedarse en bucle.
+            if (spot != null && reachTicks > REACH_TIMEOUT_TICKS) {
+                lastFailed = spot;
+            }
             spot = null;
             reachTicks = 0;
         }
 
+        /**
+         * Busca dónde plantar el catalizador nuevo: un hueco de aire con suelo sólido debajo y que toque sculk.
+         * <p>
+         * Se revisan <b>varias capas</b> (de {@link #PLANT_LAYERS_UP} por encima del núcleo a
+         * {@link #PLANT_LAYERS_DOWN} por debajo) y de arriba hacia abajo: antes solo se miraba la capa del
+         * suelo del núcleo, así que la mancha no podía trepar por un desnivel ni bajar al fondo del foso del
+         * corral. Se empieza por arriba para que primero avance por la superficie y, cuando ya no queden
+         * huecos ahí, siga por las capas de abajo.
+         */
         private BlockPos findEdgeSpot() {
             BlockPos c = cult.workCenter();
             int r = cult.workRadius();
-            for (int x = -r; x <= r; x++) {
-                for (int z = -r; z <= r; z++) {
-                    BlockPos ground = new BlockPos(c.getX() + x, c.getY() - 1, c.getZ() + z);
-                    BlockPos above = ground.above();
-                    if (!cult.level().getBlockState(above).isAir()) continue;
-                    if (!cult.level().getBlockState(ground).isSolid()) continue;
-                    if (cult.level().getBlockState(ground).is(Blocks.SCULK_CATALYST)) continue;
-                    if (touchesSculk(above)) {
-                        return above;
+            for (int dy = PLANT_LAYERS_UP; dy >= -PLANT_LAYERS_DOWN; dy--) {
+                for (int x = -r; x <= r; x++) {
+                    for (int z = -r; z <= r; z++) {
+                        BlockPos above = new BlockPos(c.getX() + x, c.getY() + dy, c.getZ() + z);
+                        if (above.equals(lastFailed)) continue; // ese ya no se pudo alcanzar: no repetir
+                        BlockPos ground = above.below();
+                        if (!cult.level().getBlockState(above).isAir()) continue;
+                        if (!cult.level().getBlockState(ground).isSolid()) continue;
+                        if (cult.level().getBlockState(ground).is(Blocks.SCULK_CATALYST)) continue;
+                        if (touchesSculk(above)) {
+                            return above;
+                        }
                     }
                 }
             }

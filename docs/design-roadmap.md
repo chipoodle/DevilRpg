@@ -289,7 +289,16 @@ Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el ju
     siguen siendo cazados (así es como la infección se alimenta sola).
   - **Siembra catalizadores** (`PlantCatalystGoal`): cuando la infección ya cubre suficiente sculk,
     **extrae** bloques de sculk del terreno y los condensa en un **catalizador nuevo**, colocándolo en el
-    borde de la infección (hasta 6 por guarida). Así la mancha sigue creciendo en mancha de aceite.
+    borde de la infección (hasta `MAX_CATALYSTS` = **12** por guarida). Es **imprescindible** para que la
+    mancha siga creciendo: en vanilla los catalizadores **nunca se crean solos** (la expansión del sculk solo
+    genera sensores y chilladores, ver `SculkBlock.getRandomGrowthState`), y un catalizador solo florece
+    cuando muere un mob a **≤8 bloques** (su `GameEventListener`), con una carga igual a la **XP** del mob
+    muerto. O sea: sin catalizadores nuevos, el frente se queda donde llegan los que ya hay.
+    Detalles afinados: el barrido cuenta hasta **4 bloques por debajo** del núcleo, así que **sí cuenta los 2
+    catalizadores del fondo del foso del corral** (antes no, y por eso creía tener 6 cuando la ventana
+    contaba 4); y busca hueco en **varias capas** (3 arriba, 5 abajo, de arriba hacia abajo), así la mancha
+    puede **trepar desniveles y bajar al foso** en vez de quedarse en una sola capa. Si un punto no es
+    alcanzable, lo apunta para no volver a elegirlo y no quedarse en bucle.
   - **Nota técnica**: todos sus goals declaran `setFlags(MOVE, LOOK)`. Sin flags, `GoalSelector` los deja
     arrancar aunque otro de más prioridad esté corriendo (los flags son el *único* mecanismo de prioridad),
     y acabarían peleándose por la navegación.
