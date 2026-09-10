@@ -3,8 +3,8 @@ package com.chipoodle.devilrpg.spawner;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
-import com.chipoodle.devilrpg.spawnprofile.NormalZombieSpawnProfile;
 import com.chipoodle.devilrpg.spawnprofile.SpawnScaleProfile;
+import com.chipoodle.devilrpg.spawnprofile.VexSpawnProfile;
 import com.chipoodle.devilrpg.survival.ThreatLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -16,14 +16,13 @@ import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Regla de spawn de los <b>vexes</b> (reemplaza a los zombies normales): amenaza aérea que ataca al
- * jugador y puede spawnear de día (a diferencia de los zombies, que se queman al sol). Mantiene las
- * mismas reglas de probabilidad por distancia del jugador a su punto de inicio según
- * {@code NormalZombieSpawnProfile}.
+ * Regla de spawn de los <b>vexes</b>: amenaza aérea que ataca al jugador y puede spawnear de día (a
+ * diferencia de los zombies, que se queman al sol). Usa su propio {@link VexSpawnProfile} para la
+ * probabilidad por distancia del jugador a su punto de inicio.
  */
-public class NormalZombieSpawnRule implements CustomSpawnRule {
+public class VexSpawnRule implements CustomSpawnRule {
 
-    private static final SpawnScaleProfile PROFILE = NormalZombieSpawnProfile.INSTANCE;
+    private static final SpawnScaleProfile PROFILE = VexSpawnProfile.INSTANCE;
 
     private static final int MIN_INTERVAL_SECONDS = 20;     // intervalo minimo entre intentos (20 s)
     private static final int MAX_INTERVAL_SECONDS = 2 * 60; // intervalo maximo entre intentos (2 min)

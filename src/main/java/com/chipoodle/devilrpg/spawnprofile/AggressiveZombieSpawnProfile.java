@@ -8,15 +8,15 @@ package com.chipoodle.devilrpg.spawnprofile;
 public final class AggressiveZombieSpawnProfile {
 
     public static final SpawnScaleProfile INSTANCE = new SpawnScaleProfile(
-            200,    // minDistance: no spawnea en los primeros 200 bloques (zona protegida)
+            67,     // minDistance: zona protegida reducida a un tercio (antes 200)
             3000,   // maxDistance: probabilidad 1 a partir de 3000 bloques
-            50,     // minHardDistance: la zona protegida se encoge hasta 50 bloques a máxima amenaza
+            17,     // minHardDistance: la zona protegida se encoge hasta 17 bloques a máxima amenaza
             3.5,    // maxScaleMultiplier: +350% de atributos en la distancia máxima
-            20.0,   // baseHealth (valor de un zombie normal)
-            0.115,  // baseSpeed (la mitad, mas lento)
-            1.5,    // baseDamage (la mitad, menos fuerza)
+            6.67,   // baseHealth (un tercio del zombie normal)
+            0.038,  // baseSpeed (un tercio de la base anterior)
+            0.5,    // baseDamage (un tercio de la base anterior)
             20,     // baseXp (experiencia base, como un mob normal)
-            4.0     // maxXpMultiplier: +400% de XP en la distancia máxima
+            4.5     // maxXpMultiplier: +450% de XP en la distancia máxima
     );
 
     private AggressiveZombieSpawnProfile() {
