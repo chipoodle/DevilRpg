@@ -3,6 +3,7 @@ package com.chipoodle.devilrpg.survival;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.entity.AggressiveZombieEntity;
 import com.chipoodle.devilrpg.entity.FrostVexEntity;
+import com.chipoodle.devilrpg.entity.SculkCultivatorEntity;
 import com.chipoodle.devilrpg.init.ModBlocks;
 import com.chipoodle.devilrpg.init.ModEntities;
 import com.chipoodle.devilrpg.world.LairGenerator;
@@ -112,28 +113,49 @@ public final class LairManager {
         Random random = new Random();
         // La guarida "más lejana" del ancla genera más enemigos y incluye vexes helados.
         int count = WAVE_SIZE + Math.min(lair.objectiveIndex, 6);
-        for (int i = 0; i < count; i++) {
-            double angle = random.nextDouble() * Math.PI * 2.0;
-            int dist = 4 + random.nextInt(SPAWN_RADIUS);
-            int x = (int) Math.round(lair.center.getX() + Math.cos(angle) * dist);
-            int z = (int) Math.round(lair.center.getZ() + Math.sin(angle) * dist);
-            int y = VillageGenerator.spawnY(level, x, z);
-            // Mezcla: mayormente zombies agresivos, y algún vex helado en guaridas lejanas.
-            boolean frost = lair.objectiveIndex >= 2 && random.nextInt(4) == 0;
-            Mob mob = frost
-                    ? ModEntities.FROST_VEX.get().create(level, null, new BlockPos(x, y, z), MobSpawnType.MOB_SUMMONED, true, true)
-                    : ModEntities.AGGRESSIVE_ZOMBIE.get().create(level, null, new BlockPos(x, y, z), MobSpawnType.MOB_SUMMONED, true, true);
-            if (mob != null) {
-                mob.moveTo(x + 0.5D, y, z + 0.5D, random.nextFloat() * 360.0F, 0.0F);
-                if (mob instanceof AggressiveZombieEntity zombie) {
-                    // Patrullan un radio alrededor del núcleo de la guarida (no se quedan pegados ni se pierden).
-                    zombie.setHome(lair.corePos, PATROL_RADIUS);
-                } else if (mob instanceof FrostVexEntity vex) {
-                    vex.setTarget(player);
-                }
-                level.addFreshEntity(mob);
-            }
+        // Además, mantiene UN cultivador del sculk (el que cría la granja y expande la infección).
+        if (countCultivators(level, lair) == 0) {
+            spawnOne(level, lair, player, random, true);
+            count--;
         }
+        for (int i = 0; i < count; i++) {
+            spawnOne(level, lair, player, random, false);
+        }
+    }
+
+    /** Spawnea un enemigo de la guarida (cultivador, vex helado o zombie agresivo). */
+    private static void spawnOne(ServerLevel level, Lair lair, Player player, Random random, boolean cultivator) {
+        double angle = random.nextDouble() * Math.PI * 2.0;
+        int dist = 4 + random.nextInt(SPAWN_RADIUS);
+        int x = (int) Math.round(lair.center.getX() + Math.cos(angle) * dist);
+        int z = (int) Math.round(lair.center.getZ() + Math.sin(angle) * dist);
+        int y = VillageGenerator.spawnY(level, x, z);
+        boolean frost = !cultivator && lair.objectiveIndex >= 2 && random.nextInt(4) == 0;
+        Mob mob;
+        if (cultivator) {
+            mob = ModEntities.SCULK_CULTIVATOR.get().create(level, null, new BlockPos(x, y, z), MobSpawnType.MOB_SUMMONED, true, true);
+        } else if (frost) {
+            mob = ModEntities.FROST_VEX.get().create(level, null, new BlockPos(x, y, z), MobSpawnType.MOB_SUMMONED, true, true);
+        } else {
+            mob = ModEntities.AGGRESSIVE_ZOMBIE.get().create(level, null, new BlockPos(x, y, z), MobSpawnType.MOB_SUMMONED, true, true);
+        }
+        if (mob != null) {
+            mob.moveTo(x + 0.5D, y, z + 0.5D, random.nextFloat() * 360.0F, 0.0F);
+            if (mob instanceof AggressiveZombieEntity zombie) {
+                // Patrullan un radio alrededor del núcleo de la guarida (no se quedan pegados ni se pierden).
+                zombie.setHome(lair.corePos, PATROL_RADIUS);
+            } else if (mob instanceof FrostVexEntity vex) {
+                vex.setTarget(player);
+            }
+            level.addFreshEntity(mob);
+        }
+    }
+
+    /** Cuenta los cultivadores del sculk vivos cerca de la guarida. */
+    private static int countCultivators(ServerLevel level, Lair lair) {
+        int r = ACTIVATION_RADIUS;
+        return level.getEntitiesOfClass(SculkCultivatorEntity.class,
+                new net.minecraft.world.phys.AABB(lair.center).inflate(r)).size();
     }
 
     /** Se invoca cuando el núcleo de una guarida es destruido: la limpia y da recompensa al jugador. */

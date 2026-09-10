@@ -50,6 +50,10 @@ public class ModItems {
     public static final DeferredHolder<Item, DeferredSpawnEggItem> FROST_VEX_SPAWN_EGG = ITEMS.register("frost_vex_spawn_egg",
             () -> new DeferredSpawnEggItem(ModEntities.FROST_VEX, 0x2f5f8f, 0xd8ecff,
                     new Item.Properties().stacksTo(16)));
+
+    public static final DeferredHolder<Item, DeferredSpawnEggItem> SCULK_CULTIVATOR_SPAWN_EGG = ITEMS.register("sculk_cultivator_spawn_egg",
+            () -> new DeferredSpawnEggItem(ModEntities.SCULK_CULTIVATOR, 0x0e2422, 0x1fb8a6,
+                    new Item.Properties().stacksTo(16)));
     private static Map<ResourceLocation, Item> itemDictionary;
     private static Map<Item, ResourceLocation> locationDictionary;
 

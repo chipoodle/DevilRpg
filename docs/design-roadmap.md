@@ -188,6 +188,15 @@ Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el ju
   encima. Para alimentarlos, los zombies de la guarida **cazan animales dentro del radio de su hogar**
   (`NearestAttackableTargetGoal` filtrado por `isAnimalInsideHome`): la presa muere sobre el sculk y la
   infección crece sola. Cuanto más tiempo dejes viva una guarida, más se extiende.
+- **Cultivador del sculk** (`SculkCultivatorEntity`, entidad propia que extiende `AggressiveZombieEntity`,
+  así que comparte **las mismas reglas de escalado/XP**): aparece **una por guarida** y se dedica a
+  cultivar la infección:
+  - **Granja macabra**: `LairGenerator` construye un **corral** con puerta y ganado inicial (vacas, ovejas,
+    cerdos, pollos). El cultivador lo **cría** (`BreedAnimalsGoal`: alimenta a los animales para que se
+    apareen) y **sacrifica** parte del ganado sobre el sculk cuando ya hay bastantes (`SacrificeGoal`).
+  - **Siembra catalizadores** (`PlantCatalystGoal`): cuando la infección ya cubre suficiente sculk,
+    **extrae** bloques de sculk del terreno y los condensa en un **catalizador nuevo**, colocándolo en el
+    borde de la infección (hasta 6 por guarida). Así la mancha sigue creciendo en mancha de aceite.
 - **Núcleo asaltable** (`LairCoreBlock`, bloque `lair_core`): altar central 3×3 (blackstone con esquinas de
   obsidiana llorosa) y el núcleo brillante encima. Mientras el núcleo exista, la guarida está **activa**.
 - **Spawn de enemigos**: `LairManager.tick` — si hay un jugador a **<64 bloques** de la guarida, cada **25 s**

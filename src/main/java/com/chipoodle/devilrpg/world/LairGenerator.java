@@ -4,6 +4,7 @@ import com.chipoodle.devilrpg.init.ModBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.MultifaceBlock;
@@ -139,7 +140,59 @@ public final class LairGenerator {
                 }
             }
         }
+
+        // 6) Granja macabra: un corral con ganado que el cultivador criará y sacrificará sobre el sculk.
+        buildFarm(level, center.offset(RADIUS + 6, 0, 0), baseY);
         return corePos;
+    }
+
+    /**
+     * Construye la granja macabra: un corral cercado con una puerta y ganado inicial (vacas, ovejas,
+     * cerdos y pollos). El cultivador del sculk se encarga de criarlos y sacrificar algunos sobre el sculk.
+     */
+    private static void buildFarm(ServerLevel level, BlockPos center, int baseY) {
+        int r = 5;
+        for (int a = 0; a < 28; a++) {
+            double angle = (a / 28.0) * Math.PI * 2.0;
+            int x = (int) Math.round(center.getX() + Math.cos(angle) * r);
+            int z = (int) Math.round(center.getZ() + Math.sin(angle) * r);
+            int y = groundY(level, x, z);
+            // Una puerta de valla en un lado para que el cultivador pueda entrar.
+            boolean gate = (a == 7);
+            level.setBlock(new BlockPos(x, y, z),
+                    gate ? Blocks.OAK_FENCE_GATE.defaultBlockState() : Blocks.OAK_FENCE.defaultBlockState(), 3);
+        }
+        // Suelo del corral: tierra muerta para que combine con la guarida.
+        for (int x = -r; x <= r; x++) {
+            for (int z = -r; z <= r; z++) {
+                if (Math.sqrt(x * x + z * z) > r) continue;
+                int px = center.getX() + x;
+                int pz = center.getZ() + z;
+                int g = groundY(level, px, pz);
+                level.setBlock(new BlockPos(px, g - 1, pz), Blocks.COARSE_DIRT.defaultBlockState(), 3);
+            }
+        }
+        // Ganado inicial.
+        spawnAnimal(level, center, EntityType.COW, 2);
+        spawnAnimal(level, center, EntityType.SHEEP, 2);
+        spawnAnimal(level, center, EntityType.PIG, 1);
+        spawnAnimal(level, center, EntityType.CHICKEN, 2);
+    }
+
+    /** Spawnea {@code count} animales del tipo dado alrededor del centro del corral. */
+    private static void spawnAnimal(ServerLevel level, BlockPos center, net.minecraft.world.entity.EntityType<? extends net.minecraft.world.entity.animal.Animal> type, int count) {
+        for (int i = 0; i < count; i++) {
+            int x = center.getX() + level.random.nextInt(5) - 2;
+            int z = center.getZ() + level.random.nextInt(5) - 2;
+            int y = groundY(level, x, z);
+            var animal = type.create(level, null, new BlockPos(x, y, z),
+                    net.minecraft.world.entity.MobSpawnType.MOB_SUMMONED, true, true);
+            if (animal != null) {
+                animal.moveTo(x + 0.5D, y, z + 0.5D, level.random.nextFloat() * 360.0F, 0.0F);
+                animal.setPersistenceRequired();
+                level.addFreshEntity(animal);
+            }
+        }
     }
 
     /**
