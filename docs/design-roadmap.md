@@ -107,6 +107,8 @@ siguiente está implementado y probado.
   antes de que el jugador llegue (a 140 bloques). Se cachea por dimensión+índice.
 - Al llegar (≤24 bloques), se inicia el **asedio** (`VillageManager.start`): se da un margen de
   exploración y se lanza una **ola de zombies agresivos** desde fuera de la valla.
+- **Aviso previo**: al entrar en **100 bloques** de la aldea, el jugador recibe un mensaje ("Divisas una
+  aldea a lo lejos...") y un **sonido de campana** lejana, una sola vez por objetivo/jugador.
 - Al resolver el asedio (la ola se limpia o pasa el tiempo): **salvada** → recompensa + avanza el objetivo;
   **caída** → avanza el objetivo sin recompensa y se desactiva el goal "ir al centro" en los vivos.
 
@@ -179,10 +181,10 @@ Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el ju
   **telarañas** dispersas, tótems con **calaveras de esqueleto** y **antorchas de alma** en los cardinales.
 - **Núcleo asaltable** (`LairCoreBlock`, bloque `lair_core`): altar central 3×3 (blackstone con esquinas de
   obsidiana llorosa) y el núcleo brillante encima. Mientras el núcleo exista, la guarida está **activa**.
-- **Spawn de enemigos**: `LairManager.tick` — si hay un jugador a **<64 bloques** de la guarida, cada **20 s**
+- **Spawn de enemigos**: `LairManager.tick` — si hay un jugador a **<64 bloques** de la guarida, cada **25 s**
   spawnea una tanda (`3 + min(objetivo,6)` enemigos) en un radio de 14 alrededor. Los zombies agresivos
-  **convergen al núcleo** (usan su goal de "ir al centro"); en guaridas lejanas (objetivo ≥ 2) aparece
-  también algún **vex helado**.
+  **patrullan un radio de 24 bloques** alrededor del núcleo (goal `PatrolHomeGoal`: si se alejan vuelven, y
+  sin objetivo rondan la zona); en guaridas lejanas (objetivo ≥ 2) aparece también algún **vex helado**.
 - **Limpiar la guarida**: al destruir el núcleo, `LairCoreBlock.onRemove` → `LairManager.onCoreBroken`
   marca la guarida como limpiada (deja de spawnear), avisa al jugador y da recompensa (XP, huesos, arena de
   almas, esmeraldas). `tick` también detecta si el núcleo desapareció (persistencia natural sin SavedData).

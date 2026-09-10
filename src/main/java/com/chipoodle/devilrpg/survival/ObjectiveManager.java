@@ -49,6 +49,11 @@ public final class ObjectiveManager {
             LairManager.preGenerate(player.serverLevel(), index, target);
         }
 
+        // Avisar de la presencia de la aldea al acercarse (una sola vez por jugador y objetivo).
+        if (distSqr <= (double) (VillageManager.NOTICE_RADIUS * VillageManager.NOTICE_RADIUS)) {
+            VillageManager.noticeIfNear(player.serverLevel(), player, index, target);
+        }
+
         // Al llegar, se inicia el asedio (con un margen); el avance lo hace VillageManager al resolverse.
         if (distSqr <= (double) (REACH_RADIUS * REACH_RADIUS)) {
             VillageManager.start(player.serverLevel(), player, index, target);

@@ -49,6 +49,9 @@ public class AggressiveZombieEntity extends Zombie {
     private BlockPos villageCenter = null;
     /** Si el asedio sigue activo (el zombie sigue marchando al centro). Se desactiva cuando la aldea cae. */
     private boolean goToCenterActive = true;
+    /** "Hogar" del zombie (p. ej. el núcleo de una guarida): patrulla un radio alrededor suyo. */
+    private BlockPos homePos = null;
+    private int homeRadius = 0;
     /** Umbral de distancia para que el zombie pueda romper obsidiana (más lejos = más nivel). */
     private static final double OBSIDIAN_THRESHOLD = 700;
 
@@ -63,6 +66,23 @@ public class AggressiveZombieEntity extends Zombie {
 
     public BlockPos getVillageCenter() {
         return villageCenter;
+    }
+
+    /**
+     * Asigna un "hogar" con un radio de patrulla (p. ej. el núcleo de una guarida): el zombie se queda
+     * rondando esa zona en vez de alejarse o pegarse al centro exacto.
+     */
+    public void setHome(BlockPos home, int radius) {
+        this.homePos = home;
+        this.homeRadius = radius;
+    }
+
+    public BlockPos getHomePos() {
+        return homePos;
+    }
+
+    public int getHomeRadius() {
+        return homeRadius;
     }
 
     /** Siempre que se asigne centro, el asedio arranca activo. */
@@ -201,6 +221,8 @@ public class AggressiveZombieEntity extends Zombie {
         this.goalSelector.addGoal(6, new FireballAttackGoal(this)); // Lanzar fuego como los Blaze
         // Si no hay objetivo, marchar hacia el centro de la aldea (para no merodear fuera).
         this.goalSelector.addGoal(7, new MoveToVillageCenterGoal(this));
+        // Y si tiene un "hogar" (guarida), patrullar su radio.
+        this.goalSelector.addGoal(8, new PatrolHomeGoal(this));
         this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, Player.class, true)); // Detectar jugadores
         // También ataca a las invocaciones (minions) del jugador, no solo al jugador. Usamos LivingEntity
         // (no TamableAnimal) para cubrir también al oso, que extiende AbstractChestedHorse y no TamableAnimal.
@@ -549,6 +571,9 @@ public class AggressiveZombieEntity extends Zombie {
             if (!zombie.isGoToCenterActive()) {
                 return false; // la aldea cayó -> dejar de converger al centro
             }
+            if (zombie.getHomePos() != null) {
+                return false; // tiene un hogar (guarida): patrulla en su lugar
+            }
             if (zombie.getTarget() != null) {
                 return false; // ya tiene a quién atacar
             }
@@ -595,6 +620,77 @@ public class AggressiveZombieEntity extends Zombie {
         private double centerDistSqr() {
             BlockPos center = zombie.getVillageCenter();
             return center == null ? Double.MAX_VALUE : distSqr(center);
+        }
+    }
+
+    /**
+     * Goal: si el zombie tiene un <b>hogar</b> con radio (p. ej. el núcleo de su guarida), patrulla esa
+     * zona: si se aleja más allá del radio vuelve hacia el hogar, y si está dentro y sin objetivo de ataque
+     * deambula por los alrededores. Así los enemigos de una guarida no se quedan pegados al centro ni se
+     * pierden por el mundo.
+     */
+    static class PatrolHomeGoal extends Goal {
+        private final AggressiveZombieEntity zombie;
+        private static final double SPEED = 1.0D;
+        private static final int WANDER_INTERVAL_TICKS = 60; // cada 3 s elige un nuevo punto de ronda
+        private int wanderTicks = 0;
+        private double wanderX, wanderZ;
+
+        public PatrolHomeGoal(AggressiveZombieEntity zombie) {
+            this.zombie = zombie;
+        }
+
+        @Override
+        public boolean canUse() {
+            BlockPos home = zombie.getHomePos();
+            if (home == null || zombie.getHomeRadius() <= 0) {
+                return false;
+            }
+            // Fuera del radio -> siempre vuelve. Dentro -> patrulla solo si no está atacando.
+            return outsideRadius(home) || zombie.getTarget() == null;
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            return canUse();
+        }
+
+        @Override
+        public void start() {
+            wanderTicks = 0;
+        }
+
+        @Override
+        public void tick() {
+            BlockPos home = zombie.getHomePos();
+            if (home == null) {
+                return;
+            }
+            // 1) Si se alejó demasiado, volver al hogar.
+            if (outsideRadius(home)) {
+                zombie.getNavigation().moveTo(home.getX(), home.getY(), home.getZ(), SPEED);
+                return;
+            }
+            // 2) Si tiene objetivo, el ataque manda (este goal no interfiere).
+            if (zombie.getTarget() != null) {
+                return;
+            }
+            // 3) Sin objetivo: rondar un punto aleatorio dentro del radio del hogar.
+            if (--wanderTicks <= 0 || zombie.getNavigation().isDone()) {
+                java.util.Random random = new java.util.Random();
+                double angle = random.nextDouble() * Math.PI * 2.0;
+                double dist = random.nextDouble() * zombie.getHomeRadius();
+                wanderX = home.getX() + Math.cos(angle) * dist;
+                wanderZ = home.getZ() + Math.sin(angle) * dist;
+                wanderTicks = WANDER_INTERVAL_TICKS;
+                zombie.getNavigation().moveTo(wanderX, home.getY(), wanderZ, SPEED);
+            }
+        }
+
+        /** ¿Está el zombie más allá del radio de patrulla de su hogar? */
+        private boolean outsideRadius(BlockPos home) {
+            double r = zombie.getHomeRadius();
+            return zombie.distanceToSqr(home.getX() + 0.5D, home.getY() + 0.5D, home.getZ() + 0.5D) > r * r;
         }
     }
 

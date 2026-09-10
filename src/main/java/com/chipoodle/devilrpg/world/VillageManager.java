@@ -10,6 +10,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -35,6 +37,8 @@ public final class VillageManager {
     public static final int PRE_GENERATE_RADIUS = 140;
     /** Radio de llegada al objetivo (se considera "en la aldea"). */
     public static final int ARRIVE_RADIUS = 24;
+    /** Radio al que se AVISA al jugador de que hay una aldea cerca (antes de llegar). */
+    public static final int NOTICE_RADIUS = 100;
     /** Ticks de margen para explorar la aldea antes del asedio (90 s). */
     private static final int GRACE_TICKS = 90 * 20;
     /** Ticks extra para limpiar la ola tras el asedio (2 min). */
@@ -49,8 +53,26 @@ public final class VillageManager {
 
     private static final Map<ServerLevel, List<VillageDefense>> DEFENSES = new HashMap<>();
     private static final Set<String> GENERATED = new HashSet<>();
+    /** Claves (dimension:objetivo:jugador) a las que ya se avisó de la presencia de la aldea. */
+    private static final Set<String> NOTICED = new HashSet<>();
 
     private VillageManager() {
+    }
+
+    /**
+     * Avisa al jugador de que hay una aldea cerca (una única vez por jugador y objetivo): mensaje en
+     * pantalla y sonido de campana lejana. Se dispara al entrar en {@link #NOTICE_RADIUS} bloques.
+     */
+    public static void noticeIfNear(ServerLevel level, ServerPlayer player, int objectiveIndex, BlockPos target) {
+        String key = level.dimension().location() + ":" + objectiveIndex + ":" + player.getUUID();
+        if (NOTICED.contains(key)) {
+            return;
+        }
+        NOTICED.add(key);
+        player.displayClientMessage(Component.literal(
+                "Divisas una aldea a lo lejos... la campana llama, y algo se agita en la oscuridad."), false);
+        level.playSound(null, player.getX(), player.getY(), player.getZ(),
+                SoundEvents.BELL_BLOCK, SoundSource.AMBIENT, 1.0F, 1.0F);
     }
 
     /** Pre-genera la aldea (cabañas + aldeanos + valla) en el punto del objetivo, si aún no existe. */

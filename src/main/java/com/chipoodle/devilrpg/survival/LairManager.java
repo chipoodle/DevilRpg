@@ -41,11 +41,13 @@ public final class LairManager {
     /** Radio en el que el jugador "activa" la guarida (hace que spawnee). */
     private static final int ACTIVATION_RADIUS = 64;
     /** Cada cuántos ticks intenta spawnear una tanda mientras el jugador está cerca. */
-    private static final int SPAWN_INTERVAL_TICKS = 20 * 20;
+    private static final int SPAWN_INTERVAL_TICKS = 25 * 20;
     /** Cuántos enemigos spawnea por tanda. */
     private static final int WAVE_SIZE = 3;
     /** Radio alrededor de la guarida donde spawnean sus enemigos. */
     private static final int SPAWN_RADIUS = 14;
+    /** Radio que patrullan los enemigos alrededor del núcleo de la guarida. */
+    private static final int PATROL_RADIUS = 24;
 
     private static final Map<ServerLevel, List<Lair>> LAIRS = new HashMap<>();
     private static final Set<String> GENERATED = new HashSet<>();
@@ -124,7 +126,8 @@ public final class LairManager {
             if (mob != null) {
                 mob.moveTo(x + 0.5D, y, z + 0.5D, random.nextFloat() * 360.0F, 0.0F);
                 if (mob instanceof AggressiveZombieEntity zombie) {
-                    zombie.setVillageCenter(lair.corePos); // convergen al núcleo de la guarida
+                    // Patrullan un radio alrededor del núcleo de la guarida (no se quedan pegados ni se pierden).
+                    zombie.setHome(lair.corePos, PATROL_RADIUS);
                 } else if (mob instanceof FrostVexEntity vex) {
                     vex.setTarget(player);
                 }
