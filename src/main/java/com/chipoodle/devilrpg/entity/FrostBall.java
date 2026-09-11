@@ -33,7 +33,15 @@ public class FrostBall extends ThrowableItemProjectile implements ISoulEntity {
     }
 
     public FrostBall(Level levelIn, LivingEntity throwerIn) {
-        super(ModEntities.SOUL_FROSTBALL.get(), throwerIn, levelIn);
+        this(ModEntities.SOUL_FROSTBALL.get(), throwerIn, levelIn);
+    }
+
+    /**
+     * Para las subclases (p. ej. la lanza de hielo del wisp arquero): mismo comportamiento que la bola de
+     * hielo, pero con su propio tipo de entidad.
+     */
+    protected FrostBall(EntityType<? extends FrostBall> type, LivingEntity throwerIn, Level levelIn) {
+        super(type, throwerIn, levelIn);
     }
 
 

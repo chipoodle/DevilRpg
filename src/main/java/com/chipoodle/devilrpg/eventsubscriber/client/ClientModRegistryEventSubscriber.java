@@ -76,6 +76,7 @@ public final class ClientModRegistryEventSubscriber {
         event.registerEntityRenderer(ModEntities.SOUL_WOLF.get(), SoulWolfRenderer::new);
         event.registerEntityRenderer(ModEntities.SOUL_BEAR.get(), SoulBearRenderer::new);
         event.registerEntityRenderer(ModEntities.SOUL_FROSTBALL.get(), FrostBallRenderer::new);
+        event.registerEntityRenderer(ModEntities.ICE_SPEAR.get(), IceSpearRenderer::new);
         event.registerEntityRenderer(ModEntities.GENERIC_ITEM_PROJECTILE.get(), ExplodingSporeBulletRenderer::new);
         event.registerEntityRenderer(ModEntities.LICHEN_SEED_BALL.get(), LichenSeedBallRenderer::new);
         event.registerEntityRenderer(ModEntities.VINE_FLESH_BALL.get(), VineFleshBallRenderer::new);

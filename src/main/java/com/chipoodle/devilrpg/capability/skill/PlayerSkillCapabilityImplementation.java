@@ -54,11 +54,17 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
     private final ClientSkillBuilderFromJson clientBuilder = new ClientSkillBuilderFromJson();
     private final SingletonSkillExecutorFactory singletonSkillExecutorFactory;
     private CompoundTag nbt = new CompoundTag();
+    /**
+     * Copia del NBT recién creado (con TODAS las skills del mod, sus niveles máximos, costes e iconos). Sirve
+     * para agregar a las partidas guardadas las skills que se hayan añadido al mod DESPUÉS de guardarlas.
+     */
+    private CompoundTag defaultNbt;
 
     public PlayerSkillCapabilityImplementation() {
         if (nbt.isEmpty()) {
             initNbt();
         }
+        defaultNbt = nbt.copy();
         singletonSkillExecutorFactory = new SingletonSkillExecutorFactory(this);
     }
 
@@ -522,7 +528,56 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
     @Override
     public void deserializeNBT(HolderLookup.Provider provider, CompoundTag nbt) {
         this.nbt = nbt;
+        this.addMissingSkills(); // partidas viejas: agrega las skills nuevas del mod
         skillsCache = null; // el NBT cambia -> invalidar la cache de skill points
+    }
+
+    /**
+     * Agrega a la partida guardada las skills que el mod haya añadido <b>después</b> de guardarla.
+     * <p>
+     * El NBT del jugador guarda los mapas enteros (puntos, nivel máximo, coste de maná, tipo de recurso e
+     * icono). Una skill nueva no está en esos mapas: el árbol la mostraba a 0/0 y, al pulsarla, reventaba con
+     * {@code NullPointerException} porque su nivel máximo era {@code null}. Aquí solo se <b>añaden</b> las
+     * claves que falten: nunca se toca un valor que el jugador ya tenía.
+     */
+    private void addMissingSkills() {
+        if (defaultNbt == null) {
+            return;
+        }
+        mergeMissingEntries(SKILLS_KEY);
+        mergeMissingEntries(MAX_SKILLS_KEY);
+        mergeMissingEntries(MANA_COST_KEY);
+        mergeMissingEntries(RESOURCE_TYPE_KEY);
+        mergeMissingEntries(IMAGES_OF_SKILLS_KEY);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void mergeMissingEntries(String key) {
+        if (!nbt.contains(key) || !defaultNbt.contains(key)) {
+            return;
+        }
+        try {
+            HashMap<Object, Object> current = (HashMap<Object, Object>) BytesUtil.toObject(nbt.getByteArray(key));
+            HashMap<Object, Object> defaults = (HashMap<Object, Object>) BytesUtil.toObject(defaultNbt.getByteArray(key));
+            if (current == null || defaults == null) {
+                return;
+            }
+            boolean changed = false;
+            for (Object skill : defaults.keySet()) {
+                Object value = defaults.get(skill);
+                if (value == null) {
+                    continue; // p. ej. una skill sin imagen: no se copia la nada
+                }
+                if (current.putIfAbsent(skill, value) == null) {
+                    changed = true;
+                }
+            }
+            if (changed) {
+                nbt.putByteArray(key, BytesUtil.toByteArray(current));
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            DevilRpg.LOGGER.error("Error al agregar las skills nuevas del mod al jugador ({})", key, e);
+        }
     }
 
 

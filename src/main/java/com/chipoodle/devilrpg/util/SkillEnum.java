@@ -23,6 +23,8 @@ public enum SkillEnum {
     WISP_REGENERATION("WispRegeneration","Wisp Regeneration" ,"wisp_regeneration" ,false , true ),
     WISP_LOG_COLLECTOR("WispLogCollector","Wisp Log Collector" ,"wisp_log_collector" ,false , true ),
     WISP_SEED_COLLECTOR("WispSeedCollector","Wisp Seed Collector" ,"wisp_seed_collector" ,false , true ),
+    /** Pasivo del wisp arquero: probabilidad de lanzar 3 lanzas de hielo explosivas que persiguen enemigos. */
+    WISP_ICE_SPEAR("WispIceSpear","Ice Spear Volley" ,"wisp_ice_spear" ,false , true ),
     //FROSTBALL("Frostball","Frostball","frostball",true,false),
     SUMMON_WISP_HEALTH("SummonWispHealth","Wisp Health","summon_wisp_health",true,false),
     SUMMON_WISP_ARCHER("SummonWispArcher","Archer Wisp","summon_wisp_archer",true,false),

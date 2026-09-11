@@ -28,6 +28,8 @@ public final class ModEntities {
 	public static final String WISP_ARCHER_NAME = "wisp_archer";
 	private static final String WISP_RANGER_NAME = "wisp_ranger"; // guardabosque: fusion de chopper+forester
 	public static final String SOUL_FROSTBALL_NAME = "soul_frostball";
+	/** Lanza de hielo explosiva del pasivo nuevo del wisp arquero (3 por disparo especial). */
+	public static final String ICE_SPEAR_NAME = "ice_spear";
 	private static final String LICHEN_SEED_BALL_NAME = "lichen_seedball";
 	private static final String VINE_FLESH_BALL_NAME = "vine_flesh_ball";
 	private static final String SUNFLOWER_SHULKER_NAME = "sunflower_shulker";
@@ -112,4 +114,15 @@ public final class ModEntities {
 							.sized(0.6F, 1.95F)
 							.clientTrackingRange(8)
 							.build(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, SCULK_CULTIVATOR_NAME).toString()));
+
+	/**
+	 * Lanza de hielo del wisp arquero: un proyectil más grande que la bola de hielo, que persigue al enemigo
+	 * más cercano y estalla con salpicadura (sin romper terreno). Es un proyectil, no un mob: categoría MISC.
+	 */
+	public static final DeferredHolder<EntityType<?>, EntityType<IceSpear>> ICE_SPEAR = ENTITY_TYPES.register(ICE_SPEAR_NAME,
+			() -> EntityType.Builder.<IceSpear>of(IceSpear::new, MobCategory.MISC)
+					.sized(0.6F, 0.6F)
+					.clientTrackingRange(6)
+					.updateInterval(2)
+					.build(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, ICE_SPEAR_NAME).toString()));
 }

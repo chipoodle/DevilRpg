@@ -189,6 +189,20 @@ siguiente está implementado y probado.
 - Los **minions invocados** (`SoulWolf`, `SoulBear`, wisps) **no reciben daño de su propio dueño** ni de
   otros minions del mismo dueño. El `SoulWolf` (extends `TamableAnimal`) ya se unía al team; el
   `SoulBear` (extends `AbstractChestedHorse`) se protege explícitamente en `hurt()`.
+- **Pasivos de esbirro con probabilidad que escala con los puntos** (mismo patrón que la *mordida gélida* del
+  lobo): el **wisp arquero** tiene el pasivo **`wisp_ice_spear`** (*Ice spear volley*, nodo hijo de
+  *Ranged wisp*, 5 niveles, icono `ice-spear.png`). Con un **7% de probabilidad por punto** (35% al máximo) el
+  disparo deja de ser la bola de hielo y se convierte en una **andanada de 3 lanzas de hielo** (`IceSpear`,
+  entidad propia): más grandes que la bola (escala 2.2, a plena luz), **persiguen** al objetivo del wisp —y si
+  no lo tiene, al enemigo válido más cercano— y **estallan con salpicadura** de 3 bloques (daño + empuje +
+  lentitud) **sin romper terreno** y sin dañar al dueño ni a los demás esbirros: la explosión es manual
+  (partículas + sonido + daño en área), no `level.explode`, justo para eso. La lanza se dibuja con su propio
+  icono de habilidad a través del item interno `ice_spear_projectile`.
+- Las partidas guardadas reciben las **skills nuevas** del mod automáticamente: al cargar, la capability de
+  skills añade al NBT del jugador las claves que falten (puntos, nivel máximo, coste de maná, tipo de recurso
+  e icono) tomándolas de una copia por defecto creada al construir la capability. Sin eso, una skill añadida
+  después de guardar la partida aparecía como 0/0 en el árbol y reventaba con `NullPointerException` al
+  pulsarla (su nivel máximo era `null`).
 
 ### 3b.5 Nota de diseño sobre el motor vanilla
 Las villas **no** se generan con el motor vanilla (Jigsaw/`StructureTemplate`), porque ese sistema es

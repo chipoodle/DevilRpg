@@ -725,5 +725,26 @@
         },
         "rewards": {},
         "parent": "summoning:wispranger"
+    },
+    {
+        "id": "summoning:wispicespear",
+        "display": {
+            "description": "Whenever your archer wisp shoots, it may instead hurl a volley of three oversized ice spears. They hunt down the nearest foe on their own and burst in a freezing splash that hurts everything around, without harming the land or your allies.",
+            "icon": {
+                "item": "minecraft:glass_pane",
+                "minecraft:glass_panenbt": 1
+            },
+            "title": "Ice spear volley",
+            "image": "devilrpg:textures/gui/skill/ice-spear.png",
+            "frame": "goal"
+        },
+        "capability": "wisp_ice_spear",
+        "skillmanacost":{
+            "maxskilllevel":"5",
+            "manacost":"0",
+            "resourcetype":"mana"
+        },
+        "rewards": {},
+        "parent": "summoning:wisparcher"
     }
 ]
