@@ -87,6 +87,17 @@ public final class SkillBackgroundManager {
         return slash >= 0 ? path.substring(slash + 1) : path;
     }
 
+    /** Índice del fondo seleccionado (0-based), para poder mostrar "3/39" bajo los botones. */
+    public static int getSelectedIndex() {
+        List<ResourceLocation> list = getBackgrounds();
+        return Math.max(0, Math.min(selectedIndex, list.size() - 1));
+    }
+
+    /** Cuántos fondos hay disponibles. */
+    public static int getBackgroundCount() {
+        return getBackgrounds().size();
+    }
+
     /** Avanza al siguiente fondo (vuelve al primero al pasar el último). */
     public static void next() {
         List<ResourceLocation> list = getBackgrounds();

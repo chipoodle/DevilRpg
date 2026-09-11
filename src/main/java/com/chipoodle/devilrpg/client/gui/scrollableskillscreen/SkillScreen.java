@@ -170,6 +170,8 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     private PlayerSkillCapabilityInterface skillCap;
     private PlayerExperienceCapabilityInterface expCap;
     private Set<CustomSkillButton> powerButtonList;
+    /** Y donde se pinta el nombre del fondo actual (debajo de los botones de selección de fondo). */
+    private int backgroundButtonY;
 
     private SkillScreen() {
         super(GameNarrator.NO_TITLE);
@@ -230,6 +232,9 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
 
         // Botones para rotar entre conjuntos de skills asignados (loadouts).
         addSkillSetButtons();
+
+        // Botones ◀ ▶ para recorrer los fondos del árbol de habilidades.
+        addBackgroundButtons();
     }
 
     /**
@@ -250,6 +255,23 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
             skillCap.rotateSkillSet(delta, player);
             loadAssignedPowerButtons();
         }
+    }
+
+    /**
+     * Botones ◀ ▶ para recorrer los fondos del árbol de habilidades: ◀ retrocede, ▶ avanza (dan la vuelta al
+     * llegar al final) y debajo se muestra el nombre del fondo con su número ("mandala-ag.png  3/39").
+     * <p>
+     * Están a propósito (se quitaron una vez y se echaron de menos): son la forma de elegir el fondo sin tocar
+     * código y de previsualizar fondos nuevos.
+     */
+    private void addBackgroundButtons() {
+        int midX = this.width / 2;
+        int by = this.height - 44;
+        this.backgroundButtonY = by + 24;
+        addRenderableWidget(Button.builder(Component.literal("◀"), b -> SkillBackgroundManager.prev())
+                .pos(midX - 34, by).size(20, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("▶"), b -> SkillBackgroundManager.next())
+                .pos(midX + 14, by).size(20, 20).build());
     }
 
     /**
@@ -369,6 +391,14 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
         this.skipBackgroundRenderOnce = false;
         this.renderSkillButtonPressed(guiGraphics);
         this.renderSkillSetIndicator(guiGraphics);
+        this.renderBackgroundName(guiGraphics);
+    }
+
+    /** Muestra bajo los botones el fondo actual ("nombre  3/39") para saber cuál está puesto. */
+    private void renderBackgroundName(GuiGraphics guiGraphics) {
+        String label = SkillBackgroundManager.getSelectedName() + "  "
+                + (SkillBackgroundManager.getSelectedIndex() + 1) + "/" + SkillBackgroundManager.getBackgroundCount();
+        guiGraphics.drawCenteredString(this.font, label, this.width / 2, this.backgroundButtonY, 0xFFCC66);
     }
 
     /** Muestra el conjunto de skills activo ("Set X/Y", traducible) junto a los botones ◀ ▶. */
