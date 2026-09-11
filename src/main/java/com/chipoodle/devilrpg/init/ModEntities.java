@@ -121,7 +121,7 @@ public final class ModEntities {
 	 */
 	public static final DeferredHolder<EntityType<?>, EntityType<IceSpear>> ICE_SPEAR = ENTITY_TYPES.register(ICE_SPEAR_NAME,
 			() -> EntityType.Builder.<IceSpear>of(IceSpear::new, MobCategory.MISC)
-					.sized(0.6F, 0.6F)
+					.sized(0.4F, 0.4F)
 					.clientTrackingRange(6)
 					.updateInterval(2)
 					.build(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, ICE_SPEAR_NAME).toString()));

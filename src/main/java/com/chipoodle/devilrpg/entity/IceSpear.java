@@ -1,7 +1,6 @@
 package com.chipoodle.devilrpg.entity;
 
 import com.chipoodle.devilrpg.init.ModEntities;
-import com.chipoodle.devilrpg.init.ModItems;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
@@ -17,11 +16,12 @@ import net.minecraft.world.entity.animal.IronGolem;
 import net.minecraft.world.entity.animal.Turtle;
 import net.minecraft.world.entity.animal.horse.Llama;
 import net.minecraft.world.entity.npc.Villager;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -32,33 +32,50 @@ import java.util.UUID;
 /**
  * <b>Lanza de hielo</b> del pasivo del wisp arquero ({@code wisp_ice_spear}).
  * <p>
- * Es la "bola de hielo grande": hereda de {@link FrostBall} (mismo daño directo, misma lentitud y mismas
- * partículas de hielo), pero además:
+ * Comparte con {@link FrostBall} la lentitud que aplica al golpear, pero es un proyectil propio, más lento y
+ * de daño contenido, y además:
  * <ul>
  *   <li><b>Persigue</b> al enemigo: cada tick corrige su rumbo hacia el objetivo del wisp que la lanzó y, si
  *       ya no lo tiene, hacia el enemigo válido más cercano. Por eso "realmente sigue" al enemigo, en vez de
- *       volar en línea recta como la espora del hongo.</li>
- *   <li><b>Estalla</b> con salpicadura (daño en área + empuje + lentitud) al chocar con algo, al quedarse sin
- *       tiempo o al alcanzar a su víctima. La salpicadura es <b>manual</b>: no rompe terreno, no hace cráter y
- *       no daña al dueño, a sus otros esbirros ni al propio wisp (una explosión de verdad sí los dañaría).</li>
+ *       volar en línea recta como la espora del hongo. Va despacio justo para que se vea esa corrección (sale
+ *       con desviación y va enderezándose, como un cohete).</li>
+ *   <li><b>Estalla</b> con una salpicadura <b>pequeña</b> (daño en área + empujoncito + lentitud) al chocar con
+ *       algo, al quedarse sin tiempo o al alcanzar a su víctima. La salpicadura es <b>manual</b>: no rompe
+ *       terreno, no hace cráter y no daña al dueño, a sus otros esbirros ni al propio wisp (una explosión de
+ *       verdad sí los dañaría).</li>
  * </ul>
+ * Se dibuja con {@code textures/entity/frostball/freeze_texture.png} (ver {@code IceSpearRenderer}).
  */
 public class IceSpear extends FrostBall {
 
-    /** Velocidad de crucero (bloques/tick). Más rápida que la bola de hielo normal. */
-    private static final double SPEED = 1.15D;
+    /**
+     * Velocidad de crucero (bloques/tick). <b>Lenta a propósito</b>: así se ve salir cada lanza, corregir la
+     * trayectoria en el aire e impactar, en vez de cruzar el mapa de un tirón.
+     */
+    private static final double SPEED = 0.8D;
     /** Radio en el que busca a quién perseguir. */
     private static final double HOMING_RADIUS = 24.0D;
-    /** Radio de la salpicadura al estallar. */
-    private static final double SPLASH_RADIUS = 3.0D;
+    /** Radio de la salpicadura al estallar (pequeño: es un estallido de hielo, no una bomba). */
+    private static final double SPLASH_RADIUS = 1.8D;
     /** Ticks máximos de vuelo: si no acierta, estalla igual (antes de desaparecer sin más). */
     private static final int MAX_LIFETIME_TICKS = 120;
     /** Cuánta velocidad conserva y cuánta gira hacia el enemigo cada tick (0..1). */
     private static final double MOMENTUM = 0.72D;
     private static final double STEERING = 0.65D;
 
+    // --- Daño (bajo a propósito) ---------------------------------------------------------------------
+    // Con los 3 impactos juntos hay que quedar POR DEBAJO del daño que hacía una sola explosión de la versión
+    // anterior (2.5 + 0.12*puntos de salpicadura). Al máximo (20 puntos) esto da 1.5 directo + 1.2 de
+    // salpicadura por lanza: aunque acierten las tres, el total se queda corto frente a aquella explosión.
+    private static final float DIRECT_DAMAGE_BASE = 0.6F;
+    private static final float DIRECT_DAMAGE_PER_POINT = 0.045F;
+    private static final float SPLASH_DAMAGE_BASE = 0.5F;
+    private static final float SPLASH_DAMAGE_PER_POINT = 0.035F;
+
+    /** Daño del impacto directo (el que se lleva la víctima a la que da de lleno). */
+    private float directDamage = DIRECT_DAMAGE_BASE;
     /** Daño de la salpicadura. Se escala con los puntos del wisp arquero, como el daño directo. */
-    private float splashDamage = 2.5F;
+    private float splashDamage = SPLASH_DAMAGE_BASE;
     /** ¿Ya estalló? Evita que estalle dos veces por golpear en el mismo tick a entidad y bloque. */
     private boolean exploded;
 
@@ -70,16 +87,11 @@ public class IceSpear extends FrostBall {
         super(ModEntities.ICE_SPEAR.get(), thrower, level);
     }
 
-    /** La lanza se dibuja con el icono de la habilidad (ver {@code models/item/ice_spear_projectile.json}). */
-    @Override
-    protected @NotNull Item getDefaultItem() {
-        return ModItems.ICE_SPEAR_PROJECTILE.get();
-    }
-
     @Override
     public void updateLevel(LivingEntity owner, int puntosAsignados) {
         super.updateLevel(owner, puntosAsignados);
-        this.splashDamage = 2.5F + puntosAsignados * 0.12F;
+        this.directDamage = DIRECT_DAMAGE_BASE + puntosAsignados * DIRECT_DAMAGE_PER_POINT;
+        this.splashDamage = SPLASH_DAMAGE_BASE + puntosAsignados * SPLASH_DAMAGE_PER_POINT;
     }
 
     @Override
@@ -181,10 +193,28 @@ public class IceSpear extends FrostBall {
     protected void onHit(@NotNull HitResult result) {
         boolean firstHit = !this.exploded;
         this.exploded = true;
-        // El impacto directo (daño + lentitud + partículas de hielo) y el descarte los hace FrostBall.
+        // El descarte y las partículas de hielo los hace FrostBall; el daño directo lo pone onHitEntity.
         super.onHit(result);
         if (firstHit && !this.level().isClientSide) {
             this.splash();
+        }
+    }
+
+    /**
+     * Impacto directo: daño propio (más bajo que el de la bola de hielo, ver las constantes de daño) y la
+     * misma lentitud. No se llama a {@code super.onHitEntity} a propósito: eso aplicaría ADEMÁS el daño de la
+     * bola de hielo, que escala mucho más fuerte (1 + 0.17 por punto) y es justo lo que hay que evitar.
+     */
+    @Override
+    protected void onHitEntity(@NotNull EntityHitResult result) {
+        Entity targetEntity = result.getEntity();
+        Entity thrower = this.getOwner();
+        targetEntity.hurt(thrower instanceof LivingEntity living
+                ? this.damageSources().mobAttack(living)
+                : this.damageSources().generic(), this.directDamage);
+        targetEntity.setIsInPowderSnow(true);
+        if (targetEntity instanceof LivingEntity living) {
+            living.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 1));
         }
     }
 
@@ -207,20 +237,36 @@ public class IceSpear extends FrostBall {
             victim.hurt(source, this.splashDamage);
             victim.setIsInPowderSnow(true);
             victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 1));
-            // Empuje hacia afuera del centro de la explosión (como una explosión de verdad).
+            // Empuje suave hacia afuera del centro del estallido (es un estallido de hielo, no una bomba).
             Vec3 push = victim.position().subtract(this.position());
             if (push.lengthSqr() > 1.0E-4D) {
-                Vec3 direction = push.normalize().scale(0.6D);
-                victim.push(direction.x, 0.35D, direction.z);
+                Vec3 direction = push.normalize().scale(0.35D);
+                victim.push(direction.x, 0.2D, direction.z);
                 victim.hurtMarked = true;
             }
         }
-        server.sendParticles(ParticleTypes.EXPLOSION_EMITTER, this.getX(), this.getY() + 0.2D, this.getZ(),
+        // Estallido PEQUEÑO: la explosión menuda de vanilla y unos pocos copos, con un sonido más discreto.
+        server.sendParticles(ParticleTypes.EXPLOSION, this.getX(), this.getY() + 0.15D, this.getZ(),
                 1, 0.0D, 0.0D, 0.0D, 0.0D);
         server.sendParticles(ParticleTypes.SNOWFLAKE, this.getX(), this.getY(), this.getZ(),
-                40, 1.1D, 1.1D, 1.1D, 0.06D);
-        server.playSound(null, this.blockPosition(), SoundEvents.GLASS_BREAK, SoundSource.HOSTILE, 1.4F, 0.6F);
+                12, 0.6D, 0.6D, 0.6D, 0.03D);
+        server.playSound(null, this.blockPosition(), SoundEvents.GLASS_BREAK, SoundSource.HOSTILE, 0.8F, 1.1F);
     }
 
-    /** La lanza estalla al tocar a una entidad; el daño directo lo aplica {@link FrostBall#onHitEntity}. */
+    /**
+     * Al morir revienta en copos de nieve. Se salta las partículas del item del proyectil heredadas de
+     * {@link FrostBall}: la lanza se dibuja con su propia textura de escarcha (ver {@code IceSpearRenderer}).
+     */
+    @OnlyIn(Dist.CLIENT)
+    @Override
+    public void handleEntityEvent(byte id) {
+        if (id == 3) {
+            for (int i = 0; i < 10; ++i) {
+                this.level().addParticle(ParticleTypes.SNOWFLAKE, this.getX(), this.getY(), this.getZ(),
+                        0.0D, 0.0D, 0.0D);
+            }
+        } else {
+            super.handleEntityEvent(id);
+        }
+    }
 }

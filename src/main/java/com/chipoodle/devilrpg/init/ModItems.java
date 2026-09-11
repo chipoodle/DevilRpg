@@ -23,13 +23,6 @@ public class ModItems {
     public static final DeferredHolder<Item, Item> ITEM_SUMMON = ITEMS.register("item_summon", () -> new Item(new Item.Properties()));
     public static final DeferredHolder<Item, Item> ITEM_FROST = ITEMS.register("item_frost", () -> new Item(new Item.Properties()));
     public static final DeferredHolder<Item, Item> ITEM_VINE = ITEMS.register("item_vine", () -> new Item(new Item.Properties()));
-    /**
-     * Item "de mentira" que solo existe para DIBUJAR la lanza de hielo del wisp arquero: los proyectiles se
-     * renderizan con el item que devuelve {@code getDefaultItem()} (igual que la bola de hielo usa la bola de
-     * nieve). Su textura es el propio icono de la habilidad ({@code gui/skill/ice-spear.png}), así la lanza se
-     * ve como su icono. No está en la pestaña creativa: no se puede obtener ni soltar.
-     */
-    public static final DeferredHolder<Item, Item> ICE_SPEAR_PROJECTILE = ITEMS.register("ice_spear_projectile", () -> new Item(new Item.Properties()));
     public static final DeferredHolder<Item, Item> MANA_BERRY = ITEMS.register("mana_berry",
             () -> new ManaBerryItem(new Item.Properties().food(new FoodProperties.Builder().nutrition(4).saturationModifier(0.3f).build())));
 

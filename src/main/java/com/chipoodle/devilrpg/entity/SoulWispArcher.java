@@ -21,6 +21,7 @@ import net.minecraft.world.entity.monster.RangedAttackMob;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -35,12 +36,27 @@ public class SoulWispArcher extends SoulWisp implements RangedAttackMob {
     // --- Pasivo "Ice spear volley" (skill wisp_ice_spear) -------------------------------------------
     /** Probabilidad (en %) POR PUNTO de que un disparo sea la andanada de lanzas de hielo. 5 puntos = 35%. */
     private static final int ICE_SPEAR_PROBABILITY_PER_POINT = 7;
-    /** Cuántas lanzas lanza el poder especial. */
+    /** Cuántas lanzas lanza el poder especial, una detrás de otra. */
     private static final int ICE_SPEAR_COUNT = 3;
-    /** Apertura del abanico: fracción de la distancia al objetivo que se desvía cada lanza a los lados. */
-    private static final double ICE_SPEAR_SPREAD = 0.16D;
-    /** Velocidad con la que sale cada lanza (luego el guiado de {@link IceSpear} manda). */
-    private static final float ICE_SPEAR_LAUNCH_SPEED = 1.4F;
+    /** Ticks entre una lanza y la siguiente: salen EN SUCESIÓN, como cohetes, no todas de golpe. */
+    private static final int ICE_SPEAR_INTERVAL_TICKS = 7;
+    /** Velocidad de salida (el guiado de {@link IceSpear} mantiene luego su velocidad de crucero). */
+    private static final float ICE_SPEAR_LAUNCH_SPEED = 0.9F;
+    /**
+     * Desviación inicial de cada lanza. A propósito: salen algo torcidas y el guiado las va enderezando hacia
+     * el enemigo, que es lo que da el efecto de "cohete corrigiendo la trayectoria".
+     */
+    private static final float ICE_SPEAR_INACCURACY = 5.0F;
+
+    /** Lanzas que faltan por salir de la andanada en curso (0 = no hay ninguna). */
+    private int pendingIceSpears;
+    /** Ticks que faltan para la siguiente lanza de la andanada. */
+    private int nextIceSpearTicks;
+    /** Puntos del dueño congelados al empezar la andanada (para no releerlos lanza a lanza). */
+    private int pendingIceSpearPoints;
+    /** A quién apuntaba la andanada; si muere, las lanzas que falten salen hacia donde mira el wisp. */
+    @Nullable
+    private LivingEntity iceSpearAim;
 
     public SoulWispArcher(EntityType<? extends SoulWispArcher> type, Level level) {
         super(type, level);
@@ -84,9 +100,13 @@ public class SoulWispArcher extends SoulWisp implements RangedAttackMob {
         int spearPoints = skills == null ? 0 : skills.getOrDefault(SkillEnum.WISP_ICE_SPEAR, 0);
 
         // PASIVO "Ice spear volley": con una probabilidad que sube con los puntos, el disparo normal se
-        // convierte en una andanada de 3 lanzas de hielo grandes, explosivas y que persiguen al enemigo.
+        // convierte en una andanada de lanzas de hielo explosivas que salen en sucesión (ver aiStep()).
+        if (this.pendingIceSpears > 0) {
+            // Ya está saliendo la andanada: estos disparos SON el poder especial, no se suma la bola normal.
+            return;
+        }
         if (spearPoints > 0 && this.getRandom().nextInt(100) < spearPoints * ICE_SPEAR_PROBABILITY_PER_POINT) {
-            this.shootIceSpears(d0, d1, d2, d3, archerPoints);
+            this.startIceSpearVolley(target, archerPoints);
             return;
         }
 
@@ -99,23 +119,50 @@ public class SoulWispArcher extends SoulWisp implements RangedAttackMob {
     }
 
     /**
-     * Lanza las 3 lanzas de hielo del pasivo en abanico. El abanico se abre en perpendicular a la línea de
-     * tiro, así que las tres salen hacia el enemigo pero cubriendo un poco a los lados: aunque se mueva, alguna
-     * llega. Cada lanza persigue a su objetivo por su cuenta y estalla con salpicadura (ver {@link IceSpear}).
+     * Arranca la andanada: la primera lanza sale ya y las demás van saliendo en {@link #aiStep()}, una cada
+     * {@link #ICE_SPEAR_INTERVAL_TICKS} ticks. Así se ven salir en cadena y cada una corrigiendo su rumbo.
      */
-    private void shootIceSpears(double dx, double dy, double dz, double horizontal, int archerPoints) {
-        double perpendicularX = horizontal < 1.0E-4D ? 1.0D : -dz / horizontal;
-        double perpendicularZ = horizontal < 1.0E-4D ? 0.0D : dx / horizontal;
-        for (int i = 0; i < ICE_SPEAR_COUNT; i++) {
-            double offset = (i - (ICE_SPEAR_COUNT - 1) / 2.0D) * ICE_SPEAR_SPREAD * Math.max(horizontal, 1.0D);
-            IceSpear spear = new IceSpear(this.level(), this);
-            spear.updateLevel(this, archerPoints);
-            spear.shoot(dx + perpendicularX * offset, dy + horizontal * (double) 0.1F, dz + perpendicularZ * offset,
-                    ICE_SPEAR_LAUNCH_SPEED, 1.0F);
-            this.level().addFreshEntity(spear);
+    private void startIceSpearVolley(LivingEntity target, int archerPoints) {
+        this.pendingIceSpears = ICE_SPEAR_COUNT;
+        this.nextIceSpearTicks = 0;
+        this.pendingIceSpearPoints = archerPoints;
+        this.iceSpearAim = target;
+        this.launchOneIceSpear();
+    }
+
+    @Override
+    public void aiStep() {
+        super.aiStep();
+        if (!this.level().isClientSide && this.pendingIceSpears > 0 && --this.nextIceSpearTicks <= 0) {
+            this.launchOneIceSpear();
         }
-        this.playSound(SoundEvents.EVOKER_CAST_SPELL, 1.0F, 1.3F);
-        this.playSound(SoundEvents.SKELETON_SHOOT, 1.0F, 0.8F);
+    }
+
+    /** Saca la siguiente lanza de la andanada, apuntando al objetivo (o hacia delante si ya murió). */
+    private void launchOneIceSpear() {
+        this.pendingIceSpears--;
+        this.nextIceSpearTicks = ICE_SPEAR_INTERVAL_TICKS;
+        LivingEntity aim = this.iceSpearAim;
+        double dx;
+        double dy;
+        double dz;
+        if (aim != null && aim.isAlive()) {
+            dx = aim.getX() - this.getX();
+            dy = aim.getY(0.3333333333333333D) - this.getY();
+            dz = aim.getZ() - this.getZ();
+        } else {
+            // El objetivo murió entre lanza y lanza: sale hacia delante y el guiado busca otro enemigo.
+            Vec3 look = this.getLookAngle();
+            dx = look.x * 10.0D;
+            dy = look.y * 10.0D;
+            dz = look.z * 10.0D;
+        }
+        double horizontal = Math.sqrt(dx * dx + dz * dz);
+        IceSpear spear = new IceSpear(this.level(), this);
+        spear.updateLevel(this, this.pendingIceSpearPoints);
+        spear.shoot(dx, dy + horizontal * (double) 0.12F, dz, ICE_SPEAR_LAUNCH_SPEED, ICE_SPEAR_INACCURACY);
+        this.level().addFreshEntity(spear);
+        this.playSound(SoundEvents.SNOW_GOLEM_SHOOT, 1.0F, 0.75F);
     }
 
     public void updateLevel(Player owner) {

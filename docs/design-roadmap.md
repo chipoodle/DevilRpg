@@ -193,11 +193,19 @@ siguiente está implementado y probado.
   lobo): el **wisp arquero** tiene el pasivo **`wisp_ice_spear`** (*Ice spear volley*, nodo hijo de
   *Ranged wisp*, 5 niveles, icono `ice-spear.png`). Con un **7% de probabilidad por punto** (35% al máximo) el
   disparo deja de ser la bola de hielo y se convierte en una **andanada de 3 lanzas de hielo** (`IceSpear`,
-  entidad propia): más grandes que la bola (escala 2.2, a plena luz), **persiguen** al objetivo del wisp —y si
-  no lo tiene, al enemigo válido más cercano— y **estallan con salpicadura** de 3 bloques (daño + empuje +
-  lentitud) **sin romper terreno** y sin dañar al dueño ni a los demás esbirros: la explosión es manual
-  (partículas + sonido + daño en área), no `level.explode`, justo para eso. La lanza se dibuja con su propio
-  icono de habilidad a través del item interno `ice_spear_projectile`.
+  entidad propia) que **salen en sucesión** (una cada 7 ticks, no las tres de golpe) y **despacio**, para que
+  se vea cada una salir, **corregir la trayectoria** en el aire —salen con desviación inicial y el guiado las
+  endereza, como cohetes— e impactar. **Persiguen** al objetivo del wisp y, si no lo tiene, al enemigo válido
+  más cercano. Al chocar (o al agotarse) **estallan con una salpicadura pequeña** (1.8 bloques: daño + empujón
+  + lentitud) **sin romper terreno** y sin dañar al dueño ni a los demás esbirros: el estallido es manual
+  (partículas + sonido + daño en área), no `level.explode`, justo para eso. El daño es **bajo a propósito**:
+  0.6 + 0.045·puntos directo y 0.5 + 0.035·puntos de salpicadura (al máximo, 1.5 y 1.2 por lanza), de modo que
+  los tres impactos juntos quedan **por debajo** del daño que hacía una sola explosión de la primera versión
+  (2.5 + 0.12·puntos). Se dibuja con `textures/entity/frostball/freeze_texture.png` mediante un renderer
+  billboard propio (`IceSpearRenderer`): al ser una textura de entidad (fuera de `textures/item` y
+  `textures/block`) **no está en el atlas de bloques**, así que un modelo de item la mostraría como textura
+  perdida — de ahí el quad a mano con `RenderType.entityCutoutNoCull`, que además siempre mira a la cámara y
+  nunca se ve "de canto".
 - Las partidas guardadas reciben las **skills nuevas** del mod automáticamente: al cargar, la capability de
   skills añade al NBT del jugador las claves que falten (puntos, nivel máximo, coste de maná, tipo de recurso
   e icono) tomándolas de una copia por defecto creada al construir la capability. Sin eso, una skill añadida
