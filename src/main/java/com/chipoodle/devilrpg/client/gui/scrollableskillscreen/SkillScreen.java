@@ -239,8 +239,10 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
         // de renderBackgroundName() en render(), y vuelve a activar applySavedSelection() en el manager.
         // addBackgroundButtons();
 
-        // Botones ◀ ▶ (y "Def") para recorrer los skins de widget de los nodos, para comparar combinaciones.
-        addThemeButtons();
+        // Botones ◀ ▶ (y "Def") del skin de widget: OCULTOS a propósito, ya está elegido (ver el valor por
+        // defecto en SkillWidget.applyDefaultTheme() y la config de cliente). Para recuperar el selector,
+        // descomenta esta llamada y la de renderWidgetName() en render().
+        // addThemeButtons();
     }
 
     /**
@@ -389,7 +391,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
         this.renderSkillButtonPressed(guiGraphics);
         this.renderSkillSetIndicator(guiGraphics);
         // this.renderBackgroundName(guiGraphics); // etiqueta del fondo: oculta junto con sus botones
-        this.renderWidgetName(guiGraphics);
+        // this.renderWidgetName(guiGraphics); // etiqueta del skin de widget: oculta junto con sus botones
     }
 
     /** Muestra bajo los botones el fondo actual ("nombre  3/39") para saber cuál está puesto. */

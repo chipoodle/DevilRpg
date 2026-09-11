@@ -79,19 +79,20 @@ public class CustomSkillButton extends Button {
             RenderSystem.defaultBlendFunc();
             RenderSystem.enableDepthTest();
 
-            // Fondo: imagen por defecto (empty-box) como ranura del boton.
-            SkillWidget.forceNearestFilter(EMPTY_SLOT_IMAGE);
-            RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-            guiGraphics.blit(EMPTY_SLOT_IMAGE, getX(), getY(), 0, 0.0F, 0.0F, this.width, this.height,
-                    this.width, this.height);
-
-            // Icono de la skill encima (si hay skill asignada); el empty-box queda detras.
-            // Los iconos de skill tienen fondo transparente, asi que el marco del empty-box
-            // se ve alrededor.
-            if (this.skillResourceLocation != null && !this.skillResourceLocation.equals(EMPTY_SLOT_IMAGE)) {
+            // Fondo de la ranura: la caja vacía (empty-box) SOLO se pinta en las ranuras SIN skill. En las que
+            // ya tienen una skill asignada no se pinta nada detrás (antes sí: la caja asomaba alrededor del
+            // icono porque los iconos tienen el fondo transparente, y ensuciaba la ranura elegida).
+            boolean hasSkill = this.skillResourceLocation != null
+                    && !this.skillResourceLocation.equals(EMPTY_SLOT_IMAGE);
+            if (hasSkill) {
                 SkillWidget.forceNearestFilter(this.skillResourceLocation);
                 RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, this.alpha);
                 guiGraphics.blit(this.skillResourceLocation, getX(), getY(), 0, 0.0F, 0.0F, this.width, this.height,
+                        this.width, this.height);
+            } else {
+                SkillWidget.forceNearestFilter(EMPTY_SLOT_IMAGE);
+                RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+                guiGraphics.blit(EMPTY_SLOT_IMAGE, getX(), getY(), 0, 0.0F, 0.0F, this.width, this.height,
                         this.width, this.height);
             }
 

@@ -233,10 +233,11 @@ public class SkillWidget {
                 }
             }
         }
-        // 2) El skin por defecto.
+        // 2) El skin por defecto: el atlas original (antes se llamaba widgets.png, ahora lleva el prefijo
+        // comun). Es el unico que encaja con las coordenadas fijas con las que se recortan los marcos.
         ResourceLocation defaultTheme = null;
         for (ResourceLocation rl : themes) {
-            if (rl.getPath().contains("forest_92_raw")) {
+            if (rl.getPath().contains("forest_2_raw")) {
                 defaultTheme = rl;
                 break;
             }
