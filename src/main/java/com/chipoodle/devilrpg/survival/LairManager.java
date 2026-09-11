@@ -315,12 +315,18 @@ public final class LairManager {
      */
     private static void respawnGuardian(ServerLevel level, Lair lair) {
         if (!playersNear(level, lair.corePos, RESEAL_CLEAR_RADIUS).isEmpty()) {
-            // Se pospone (y se reintenta cada tick). Aviso cada 3 s para no saturar.
-            if (lair.respawnTicks % 60 == 0) {
+            // Se pospone (y se reintenta cada tick) mientras haya alguien DENTRO del círculo: levantar la caja
+            // con alguien ahí lo dejaría encerrado y asfixiándose. El aviso va al CHAT (no a la barra de
+            // acción, que se pierde de vista) y se registra en el log, porque si no parece que el relevo no
+            // funciona: el jugador se queda esperando pegado al núcleo y no entiende por qué no sale.
+            if (lair.respawnTicks % 200 == 0) {
+                DevilRpg.LOGGER.info("[Lair] Relevo de la guarida {} pospuesto: hay un jugador dentro del "
+                        + "círculo del núcleo, y la caja de sellos no puede levantarse con él ahí",
+                        lair.objectiveIndex);
                 for (Player p : playersNear(level, lair.corePos, 64.0D)) {
                     p.displayClientMessage(Component.literal(
-                            "El santuario no puede consagrar un guardián mientras estés en el círculo: apártate del núcleo.")
-                            .withStyle(ChatFormatting.DARK_AQUA), true);
+                            "El guardián no puede consagrarse mientras estés dentro del círculo del núcleo: "
+                                    + "apártate unos bloques y saldrá."), false);
                 }
             }
             return;
@@ -503,10 +509,13 @@ public final class LairManager {
         // en cuanto el jugador mata a algunos, las tandas siguientes los reponen hasta volver al cupo.
         int room = MAX_LAIR_MOBS - countLairMobs(level, lair);
         if (room <= 0) {
+            DevilRpg.LOGGER.info("[Lair] Guarida {}: cupo lleno ({}/{}), no llega la tanda", lair.objectiveIndex,
+                    MAX_LAIR_MOBS - room, MAX_LAIR_MOBS);
             return;
         }
         // La guarida "más lejana" del ancla genera más enemigos e incluye vexes helados.
         int count = Math.min(WAVE_SIZE + Math.min(lair.objectiveIndex, 6), room);
+        DevilRpg.LOGGER.info("[Lair] Guarida {}: tanda de {} enemigos", lair.objectiveIndex, count);
         for (int i = 0; i < count; i++) {
             spawnOne(level, lair, player, random, false);
         }
@@ -547,9 +556,13 @@ public final class LairManager {
 
     /**
      * Enemigos vivos de la guarida <b>sin contar al guardián</b>, para el cupo de {@link #MAX_LAIR_MOBS}.
+     * <p>
+     * Se cuentan solo los que están dentro del <b>radio de patrulla</b> (24), no en los 64 de activación: si
+     * se contaban los rezagados escondidos a 30–60 bloques, llenaban el cupo y la guarida parecía muerta
+     * (no spawneaba nada aunque no hubiera nadie combatiendo).
      */
     private static int countLairMobs(ServerLevel level, Lair lair) {
-        AABB box = new AABB(lair.center).inflate(ACTIVATION_RADIUS);
+        AABB box = new AABB(lair.center).inflate(PATROL_RADIUS);
         return level.getEntitiesOfClass(AggressiveZombieEntity.class, box).size()
                 + level.getEntitiesOfClass(FrostVexEntity.class, box).size();
     }
