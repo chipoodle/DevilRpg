@@ -381,7 +381,7 @@ Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el ju
 
 ## 4) Roadmap (próximas iteraciones)
 
-### Iteración 2 — Enemigos inteligentes (pilar 2) — EN CURSO 🚧
+### Iteración 2 — Enemigos inteligentes (pilar 2) — COMPLETA ✅
 - ✅ **Comportamiento de manada**: rodean al objetivo desde ángulos distintos (ver 3b.3).
 - ✅ **Guaridas**: focos de enemigos que **cambian el terreno** a su alrededor y que el jugador puede
   **asaltar** (ver 3c).
@@ -393,7 +393,22 @@ Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el ju
   trabajo (cortar, recoger madera, plantar, cosechar) y quitar un caso especial que **desactivaba** el
   seguimiento en cuanto el ranger tenía el goal de cortar registrado — o sea que en la práctica nunca seguía
   a su dueño.
-- ⬜ Se fortalecen con el tiempo (ya arrancado con `ThreatLevel`).
+- ✅ **Se fortalecen con el tiempo** (`VeteranGrowth`): el enemigo que **sobrevive** crece por su cuenta, además
+  del escalado que ya traía del spawn (distancia × amenaza). Sube un **rango cada 2 min vivo** (solo cuenta
+  mientras está cargado, o sea con alguien cerca: no crecen en el vacío) y **cada baja que hace le adelanta
+  30 s**, así que los que han matado aldeanos o esbirros se vuelven peligrosos antes. Cada rango da **+12%
+  vida, +8% daño, +3% velocidad y +3% tamaño** (se ven más grandes a simple vista) y **+25% de XP al morir**,
+  para que la pelea larga valga la pena. El rango y el progreso se guardan en **NBT**, así que un veterano que
+  te sobrevive sigue siéndolo al volver a cargar. Al subir de rango avisa con **partículas de ira + gruñido**
+  (y un log `[Veterano]`), y el crecimiento solo se aplica **en el servidor**. Está en los dos enemigos que
+  campan por el mundo: **zombie agresivo** (incluidos los de las hordas, asedios y guaridas) y **vex helado**.
+  El **guardián de la guarida NO crece**: es una pieza fija de su santuario y crecería sin tope mientras
+  farmeas la guarida.
+  - Contrapartida: el escalado se aplica llamando a un único método **idempotente** que siempre parte de las
+    bases del perfil (`base × distancia/amenaza × rango`), así que subir de rango no apila modificadores ni
+    se descuadra al recargar. Al subir de rango, además, se le **suma la vida que acaba de ganar** (si no, un
+    veterano herido seguiría herido y el crecimiento no se notaría). En el spawn NO se le cura la vida: eso
+    dejaría el balance actual tal cual está (los escalados nacen con la vida base, no con la máxima escalada).
 
 ### Iteración 3 — Asentamientos vivos (pilar 3)
 - Aldeanos que **construyen/reparan/fortifican**, **cultivan**, **necesitan comer**, **envejecen** y se
@@ -437,6 +452,11 @@ Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el ju
 - **Guarida (`LairManager`)**: `MAX_LAIR_MOBS` 30 (cupo de enemigos vivos por guarida, sin el guardián),
   `GUARDIAN_RESPAWN_TICKS` 3 min (relevo del guardián si no rompes el núcleo), `SPAWN_INTERVAL_TICKS` 25 s,
   `ACTIVATION_RADIUS` 64, `CORE_AURA_RADIUS` 8, `CORE_FANG_TICKS` 4 s, `MIN_DISTANCE_FROM_OBJECTIVE` 75.
+
+- **Veteranos (`VeteranGrowth`)**: `MAX_RANK` 5, `TICKS_PER_RANK` 2 min (2400 ticks), `TICKS_PER_KILL` 30 s,
+  `HEALTH_PER_RANK` 0.12, `DAMAGE_PER_RANK` 0.08, `SPEED_PER_RANK` 0.03, `SCALE_PER_RANK` 0.03 y
+  `XP_PER_RANK` 0.25 (a rango 5: ×1.6 vida, ×1.4 daño, ×1.15 velocidad, ×1.15 tamaño y ×2.25 XP). Aplicado a
+  `AggressiveZombieEntity` y `FrostVexEntity` (ambos necesitan `Attributes.SCALE` en su proveedor de atributos).
 
 > TODO (siguiente): que las hordas apunten al **asentamiento más cercano** en vez de al jugador, para
 > conectar con la Iteración 3.
