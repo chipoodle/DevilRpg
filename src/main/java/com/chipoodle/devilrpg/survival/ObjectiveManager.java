@@ -51,6 +51,9 @@ public final class ObjectiveManager {
         // ADEMÁS: las guaridas de los objetivos CERCANOS al jugador (aunque ya estén superados) siguen
         // gestionadas, para que volver a una guarida vieja no la encuentre muerta.
         LairManager.preGenerateNearby(player.serverLevel(), spawn, index, player.blockPosition());
+        // Y lo mismo con las ALDEAS de objetivos ya superados: si vuelves a una aldea que dejaste sin resolver,
+        // debe seguir viva (y poder asediarse) en vez de quedarse congelada.
+        VillageManager.manageNearby(player.serverLevel(), player, spawn, index);
 
         // Avisar de la presencia de la aldea al acercarse (una sola vez por jugador y objetivo).
         if (distSqr <= (double) (VillageManager.NOTICE_RADIUS * VillageManager.NOTICE_RADIUS)) {

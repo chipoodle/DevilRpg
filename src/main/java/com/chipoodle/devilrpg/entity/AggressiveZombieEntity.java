@@ -925,6 +925,15 @@ public class AggressiveZombieEntity extends Zombie {
 
     // Clase interna para el comportamiento de lanzar fuego
     static class FireballAttackGoal extends Goal {
+        /** Distancia MÍNIMA: si está pegado, que use el ataque cuerpo a cuerpo. */
+        private static final double MIN_FIREBALL_RANGE = 3.0D;
+        /** Distancia MÁXIMA al objetivo para lanzar fuego. */
+        private static final double MAX_FIREBALL_RANGE = 16.0D;
+        /** Reintento corto cuando no puede disparar, para hacerlo en cuanto el objetivo esté a tiro. */
+        private static final int OUT_OF_RANGE_RETRY_TICKS = 20;
+        /** Tiempo entre ataques cuando sí dispara. */
+        private static final int ATTACK_INTERVAL_TICKS = 240;
+
         private final AggressiveZombieEntity zombie;
         private int attackTimer;
 
@@ -947,21 +956,43 @@ public class AggressiveZombieEntity extends Zombie {
             return canUse();
         }
 
+        /**
+         * ¿Está el objetivo a tiro? Hay que estar entre {@link #MIN_FIREBALL_RANGE} y
+         * {@link #MAX_FIREBALL_RANGE} <b>y con línea de visión</b>. Antes no se comprobaba nada: el zombie
+         * lanzaba bolas de fuego a cualquier distancia y a través de las paredes (el {@code d0 = 4.0} del código
+         * original solo era la dispersión aleatoria del disparo, no un alcance).
+         */
+        private boolean isInFireballRange(Entity target) {
+            double distanceSqr = zombie.distanceToSqr(target);
+            if (distanceSqr < MIN_FIREBALL_RANGE * MIN_FIREBALL_RANGE
+                    || distanceSqr > MAX_FIREBALL_RANGE * MAX_FIREBALL_RANGE) {
+                return false;
+            }
+            return zombie.getSensing().hasLineOfSight(target);
+        }
+
         @Override
         public void tick() {
             Entity target = zombie.getTarget();
             if (target == null) return;
 
-            if (--attackTimer <= 0) {
-                double d0 = 4.0D; // Distancia máxima para lanzar fuego
-                double d1 = target.getX() - zombie.getX();
-                double d2 = target.getY(0.5D) - zombie.getY(0.5D);
-                double d3 = target.getZ() - zombie.getZ();
-                SmallFireball fireball = new SmallFireball(zombie.level(), zombie, new Vec3(d1 + zombie.getRandom().nextGaussian() * d0, d2, d3 + zombie.getRandom().nextGaussian() * d0));
-                fireball.setPos(fireball.getX(), zombie.getY(0.5D) + 0.5D, fireball.getZ());
-                zombie.level().addFreshEntity(fireball);
-                attackTimer = 240; // Tiempo entre ataques
+            if (--attackTimer > 0) return;
+
+            if (!isInFireballRange(target)) {
+                // Reintenta pronto: así dispara en cuanto el objetivo entre en rango o deje de estar tras un
+                // muro, en vez de esperar los 240 ticks completos sin haber disparado.
+                attackTimer = OUT_OF_RANGE_RETRY_TICKS;
+                return;
             }
+
+            double d0 = 4.0D; // dispersión aleatoria del disparo
+            double d1 = target.getX() - zombie.getX();
+            double d2 = target.getY(0.5D) - zombie.getY(0.5D);
+            double d3 = target.getZ() - zombie.getZ();
+            SmallFireball fireball = new SmallFireball(zombie.level(), zombie, new Vec3(d1 + zombie.getRandom().nextGaussian() * d0, d2, d3 + zombie.getRandom().nextGaussian() * d0));
+            fireball.setPos(fireball.getX(), zombie.getY(0.5D) + 0.5D, fireball.getZ());
+            zombie.level().addFreshEntity(fireball);
+            attackTimer = ATTACK_INTERVAL_TICKS; // Tiempo entre ataques
         }
     }
 

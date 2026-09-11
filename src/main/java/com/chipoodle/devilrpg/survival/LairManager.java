@@ -1,6 +1,9 @@
 package com.chipoodle.devilrpg.survival;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.capability.IGenericCapability;
+import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapability;
+import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapabilityInterface;
 import com.chipoodle.devilrpg.entity.AggressiveZombieEntity;
 import com.chipoodle.devilrpg.entity.FrostVexEntity;
 import com.chipoodle.devilrpg.entity.SculkCultivatorEntity;
@@ -671,6 +674,16 @@ public final class LairManager {
     }
 
     /** Datos de una guarida: centro, núcleo y estado. */
+    /**
+     * Puntos de habilidad que paga destruir el núcleo de una guarida: {@code 4 + 1 por cada 3 objetivos ya
+     * superados}, con tope 10. Son la moneda del árbol de skills (1 por nivel de experiencia) y llenar todos
+     * los árboles pide nivel 300+, así que las misiones también empujan la progresión. Dan algo más que salvar
+     * una aldea ({@code VillageManager}) porque el asalto a la guarida es más duro y más largo.
+     */
+    private static int lairSkillPoints(int objectiveIndex) {
+        return Math.min(4 + Math.max(0, objectiveIndex) / 3, 10);
+    }
+
     private static final class Lair {
         final int objectiveIndex;
         final BlockPos center;
@@ -709,6 +722,18 @@ public final class LairManager {
                 player.addItem(new ItemStack(Items.BONE, 8));
                 player.addItem(new ItemStack(Items.SOUL_SAND, 6));
                 player.addItem(new ItemStack(Items.EMERALD, 3));
+                // Ayuda de puntos de habilidad, como al salvar una aldea; aquí algo más porque asaltar una
+                // guarida es más duro y más largo. Escala suave con el objetivo, con tope.
+                int skillPoints = lairSkillPoints(objectiveIndex);
+                PlayerExperienceCapabilityInterface expCap =
+                        IGenericCapability.getUnwrappedPlayerCapability(player, PlayerExperienceCapability.INSTANCE);
+                if (expCap != null) {
+                    expCap.addUnspentPoints(skillPoints, player);
+                    player.displayClientMessage(Component.literal(
+                            "El sculk se apaga: +" + skillPoints + " puntos de habilidad."), false);
+                    DevilRpg.LOGGER.info("[Lair] Guarida {} limpiada: +{} puntos de habilidad (quedan {})",
+                            objectiveIndex, skillPoints, expCap.getUnspentPoints());
+                }
             }
         }
 

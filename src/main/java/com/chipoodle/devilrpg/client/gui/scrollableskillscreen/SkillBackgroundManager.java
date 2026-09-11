@@ -1,6 +1,7 @@
 package com.chipoodle.devilrpg.client.gui.scrollableskillscreen;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.config.ConfigHolder;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 
@@ -64,8 +65,33 @@ public final class SkillBackgroundManager {
     private static List<ResourceLocation> getBackgrounds() {
         if (backgrounds == null) {
             backgrounds = buildBackgrounds();
+            applySavedSelection();
         }
         return backgrounds;
+    }
+
+    /**
+     * Aplica el fondo guardado en la config de cliente (el que se eligió con los botones en una sesión
+     * anterior). Si el archivo ya no existe, se queda el de por defecto.
+     */
+    private static void applySavedSelection() {
+        String saved = ConfigHolder.getSkillBackground();
+        if (saved == null || saved.isEmpty()) {
+            return;
+        }
+        for (int i = 0; i < backgrounds.size(); i++) {
+            if (fileNameOf(backgrounds.get(i)).equals(saved)) {
+                selectedIndex = i;
+                return;
+            }
+        }
+    }
+
+    /** Nombre de archivo de un fondo (sin la ruta). */
+    private static String fileNameOf(ResourceLocation resourceLocation) {
+        String path = resourceLocation.getPath();
+        int slash = path.lastIndexOf('/');
+        return slash >= 0 ? path.substring(slash + 1) : path;
     }
 
     /** Devuelve el ResourceLocation del fondo actualmente seleccionado. */
@@ -82,9 +108,7 @@ public final class SkillBackgroundManager {
 
     /** Nombre de archivo del fondo seleccionado (sin la ruta), para mostrarlo bajo los botones. */
     public static String getSelectedName() {
-        String path = getSelected().getPath();
-        int slash = path.lastIndexOf('/');
-        return slash >= 0 ? path.substring(slash + 1) : path;
+        return fileNameOf(getSelected());
     }
 
     /** Índice del fondo seleccionado (0-based), para poder mostrar "3/39" bajo los botones. */
@@ -98,15 +122,22 @@ public final class SkillBackgroundManager {
         return getBackgrounds().size();
     }
 
-    /** Avanza al siguiente fondo (vuelve al primero al pasar el último). */
+    /** Avanza al siguiente fondo (vuelve al primero al pasar el último) y lo guarda en la config. */
     public static void next() {
         List<ResourceLocation> list = getBackgrounds();
         selectedIndex = (selectedIndex + 1) % list.size();
+        persistSelection();
     }
 
-    /** Retrocede al fondo anterior (vuelve al último al pasar el primero). */
+    /** Retrocede al fondo anterior (vuelve al último al pasar el primero) y lo guarda en la config. */
     public static void prev() {
         List<ResourceLocation> list = getBackgrounds();
         selectedIndex = (selectedIndex - 1 + list.size()) % list.size();
+        persistSelection();
+    }
+
+    /** Guarda el fondo elegido para que siga puesto la próxima vez que se abra el juego. */
+    private static void persistSelection() {
+        ConfigHolder.setSkillBackground(getSelectedName());
     }
 }

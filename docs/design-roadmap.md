@@ -125,6 +125,15 @@ siguiente está implementado y probado.
   que las misiones también empujan la progresión. Se cobran con `PlayerExperienceCapability.addUnspentPoints`
   (que suma a `unspentPoints` y sincroniza con el cliente) y el jugador lo ve en el chat
   ("La aldea te lo agradece: +N puntos de habilidad."). Si la aldea **cae** no hay recompensa (ni puntos).
+- **Las aldeas de objetivos ya superados siguen vivas** (`VillageManager.manageNearby`, llamada desde
+  `ObjectiveManager.tick` junto a `LairManager.preGenerateNearby`): cualquier aldea a menos de
+  `PRE_GENERATE_RADIUS` (140) del jugador se pre-genera, avisa y **puede asediarse**, aunque su objetivo ya
+  esté superado. Antes, al avanzar de objetivo la aldea anterior dejaba de gestionarse: si volvías, no
+  pre-generaba, no avisaba y no se podía asediar (aldeas "muertas" por el mundo). Los tres pasos son
+  idempotentes (pre-generado, avisado y resuelto se guardan en `VillageSavedData`), así que llamarlo cada tick
+  no repite nada.
+- **El núcleo de la guarida también paga puntos de habilidad** (`lairSkillPoints`: 4 + 1 por cada 3 objetivos,
+  tope 10): algo más que salvar una aldea porque asaltar la guarida es más duro y más largo.
 
 ### 3b.2 Generación de la aldea (`VillageGenerator`)
 
@@ -462,6 +471,19 @@ el tiempo y se gasta en una lista de planos, más un `Goal` de "ir a construir" 
 - **Guarida (`LairManager`)**: `MAX_LAIR_MOBS` 30 (cupo de enemigos vivos por guarida, sin el guardián),
   `GUARDIAN_RESPAWN_TICKS` 3 min (relevo del guardián si no rompes el núcleo), `SPAWN_INTERVAL_TICKS` 25 s,
   `ACTIVATION_RADIUS` 64, `CORE_AURA_RADIUS` 8, `CORE_FANG_TICKS` 4 s, `MIN_DISTANCE_FROM_OBJECTIVE` 75.
+
+- **Puntos de habilidad por misión**: aldea salvada = `siegeSkillPoints` (3 + índice/4, tope 8); núcleo de
+  guarida destruido = `lairSkillPoints` (4 + índice/3, tope 10).
+
+- **Bola de fuego del zombi agresivo (`FireballAttackGoal`)**: dispara solo entre **3 y 16 bloques** y con
+  **línea de visión**; si no puede, reintenta cada **20 ticks** (1 s) en vez de esperar los 240 completos.
+
+- **UI del árbol de skills (`SkillScreen`)**: abajo hay dos parejas de botones, la izquierda para el **fondo**
+  (`SkillBackgroundManager`) y la derecha para el **skin de widget** de los nodos (`SkillWidget`), cada una con
+  su etiqueta `nombre  n/total`; `Def` devuelve el skin de widget al por defecto. La elección de los dos se
+  guarda en la **config de cliente** (`skills_ui.skillBackground` y `skills_ui.skillWidgetSkin`), así que
+  sobrevive al reinicio. La lista de skins se lee con el `ResourceManager` (recorrer la carpeta del classloader
+  con `Files.walk` devolvía vacío dentro del jar) y excluye los `template*`.
 
 > TODO (siguiente): que las hordas apunten al **asentamiento más cercano** en vez de al jugador, para
 > conectar con la Iteración 3.

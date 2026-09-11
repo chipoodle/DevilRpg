@@ -8,6 +8,7 @@ import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapability;
 import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapabilityInterface;
 import com.chipoodle.devilrpg.entity.AggressiveZombieEntity;
 import com.chipoodle.devilrpg.init.ModEntities;
+import com.chipoodle.devilrpg.survival.ObjectiveTargets;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -17,6 +18,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -93,6 +95,36 @@ public final class VillageManager {
         VillageGenerator.generate(level, target);
         saved.markGenerated(objectiveIndex);
         DevilRpg.LOGGER.info("[Village] Aldea {} pre-generada en {}", objectiveIndex, target);
+    }
+
+    /**
+     * Gestiona también las aldeas de objetivos <b>ya superados</b> que el jugador tenga cerca, no solo la del
+     * objetivo actual.
+     * <p>
+     * Antes, en cuanto avanzabas de objetivo la aldea anterior dejaba de gestionarse: si volvías a ella (o
+     * pasabas cerca), no se pre-generaba, no avisaba y no se podía asediar — se quedaba congelada, y con el
+     * tiempo eso dejaba aldeas "muertas" por el mundo. Ahora, cualquier aldea a menos de
+     * {@link #PRE_GENERATE_RADIUS} bloques del jugador se pre-genera, avisa y puede asediarse; los tres pasos
+     * son idempotentes (pre-generado, avisado y resuelto se guardan en {@link VillageSavedData}), así que
+     * llamarlo cada tick no repite nada.
+     */
+    public static void manageNearby(ServerLevel level, ServerPlayer player, Vec3 anchor, int currentIndex) {
+        VillageSavedData saved = VillageSavedData.get(level);
+        BlockPos playerPos = player.blockPosition();
+        for (int i = 0; i <= currentIndex; i++) {
+            BlockPos target = ObjectiveTargets.targetOf(anchor, i);
+            double distSqr = ObjectiveTargets.horizontalDistSqr(playerPos, target);
+            if (distSqr > (double) PRE_GENERATE_RADIUS * PRE_GENERATE_RADIUS) {
+                continue;
+            }
+            if (!saved.isGenerated(i)) {
+                preGenerate(level, i, target);
+            }
+            noticeIfNear(level, player, i, target);
+            if (distSqr <= (double) ARRIVE_RADIUS * ARRIVE_RADIUS) {
+                start(level, player, i, target);
+            }
+        }
     }
 
     /** Inicia el asedio al llegar el jugador a la aldea (con un margen antes de la ola). */

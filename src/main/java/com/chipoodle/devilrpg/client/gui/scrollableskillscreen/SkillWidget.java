@@ -1,6 +1,7 @@
 package com.chipoodle.devilrpg.client.gui.scrollableskillscreen;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.config.ConfigHolder;
 import com.google.common.collect.Lists;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -161,6 +162,7 @@ public class SkillWidget {
         resourceIndex = forward ? (resourceIndex + 1) % size : (resourceIndex - 1 + size) % size;
         WIDGETS = resourceLocations.get(resourceIndex);
         userChoseTheme = true; // eleccion del jugador: applyDefaultTheme() ya no la pisa
+        ConfigHolder.setSkillWidgetSkin(getWidgetName()); // y sobrevive al reinicio del juego
         DevilRpg.LOGGER.info("[SkillWidget] Skin de widget: {} ({}/{})", getWidgetName(), resourceIndex + 1, size);
     }
 
@@ -196,6 +198,7 @@ public class SkillWidget {
     /** Vuelve al skin por defecto ({@code forest_92_raw} si está, si no el primero de la lista). */
     public static void resetWidgetTheme() {
         userChoseTheme = false;
+        ConfigHolder.setSkillWidgetSkin(""); // "" = por defecto, tambien en la config
         applyDefaultTheme();
         DevilRpg.LOGGER.info("[SkillWidget] Skin de widget vuelto al por defecto: {}", getWidgetName());
     }
@@ -217,6 +220,20 @@ public class SkillWidget {
         if (themes.isEmpty()) {
             return;
         }
+        // 1) El skin guardado en la config de cliente (elegido con los botones en una sesion anterior).
+        String saved = ConfigHolder.getSkillWidgetSkin();
+        if (saved != null && !saved.isEmpty()) {
+            for (ResourceLocation rl : themes) {
+                if (fileNameOf(rl).equals(saved)) {
+                    WIDGETS = rl;
+                    resourceIndex = themes.indexOf(rl);
+                    userChoseTheme = true; // ya es una eleccion del jugador: no se pisa con el default
+                    DevilRpg.LOGGER.info("[SkillWidget] Skin de widget guardado aplicado: {}", rl);
+                    return;
+                }
+            }
+        }
+        // 2) El skin por defecto.
         ResourceLocation defaultTheme = null;
         for (ResourceLocation rl : themes) {
             if (rl.getPath().contains("forest_92_raw")) {
@@ -230,6 +247,13 @@ public class SkillWidget {
         WIDGETS = defaultTheme;
         resourceIndex = themes.indexOf(defaultTheme);
         DevilRpg.LOGGER.info("[SkillWidget] Skin por defecto aplicado: {}", defaultTheme);
+    }
+
+    /** Nombre de archivo de un skin (sin la ruta). */
+    private static String fileNameOf(ResourceLocation resourceLocation) {
+        String path = resourceLocation.getPath();
+        int slash = path.lastIndexOf('/');
+        return slash >= 0 ? path.substring(slash + 1) : path;
     }
 
     /**
