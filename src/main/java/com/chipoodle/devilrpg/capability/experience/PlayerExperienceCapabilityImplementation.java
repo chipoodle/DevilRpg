@@ -54,6 +54,24 @@ public class PlayerExperienceCapabilityImplementation implements PlayerExperienc
         return 0;
     }
 
+    /**
+     * Regala puntos de habilidad (recompensas de misión). No toca {@code maximumLevel} a propósito: ese es el
+     * "nivel más alto alcanzado" y sirve para saber cuántos puntos ha ganado el jugador subiendo de nivel; si lo
+     * subiéramos aquí, al llegar de verdad a ese nivel dejaría de cobrar sus puntos.
+     */
+    @Override
+    public void addUnspentPoints(int points, Player pe) {
+        if (points <= 0 || pe == null) {
+            return;
+        }
+        this.unspentPoints += points;
+        if (!pe.level().isClientSide) {
+            sendExperienceChangesToClient((ServerPlayer) pe);
+        } else {
+            sendExperienceChangesToServer();
+        }
+    }
+
     @Override
     public CompoundTag serializeNBT(HolderLookup.Provider provider) {
         CompoundTag nbt = new CompoundTag();

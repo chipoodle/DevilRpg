@@ -119,6 +119,12 @@ siguiente está implementado y probado.
   Sin esta regla, unos pocos zombies escondidos que nunca llegaban al centro —y por tanto no se podían matar—
   hacían caer la aldea sin que el jugador pudiera evitarlo: *si no llegan, no asedian, no pueden ganar*. Si
   **todos** los supervivientes están dentro, entonces sí cae.
+- **La recompensa paga puntos de habilidad**: salvar la aldea da hierro, cuero, un libro, 50 de XP vanilla y
+  **puntos de habilidad** (`siegeSkillPoints`: 3 + 1 por cada 4 objetivos ya superados, tope 8). Son la misma
+  moneda del árbol de skills (1 por nivel de experiencia) y llenar **todos** los árboles pide nivel 300+, así
+  que las misiones también empujan la progresión. Se cobran con `PlayerExperienceCapability.addUnspentPoints`
+  (que suma a `unspentPoints` y sincroniza con el cliente) y el jugador lo ve en el chat
+  ("La aldea te lo agradece: +N puntos de habilidad."). Si la aldea **cae** no hay recompensa (ni puntos).
 
 ### 3b.2 Generación de la aldea (`VillageGenerator`)
 

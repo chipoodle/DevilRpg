@@ -4,6 +4,8 @@ import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
+import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapability;
+import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapabilityInterface;
 import com.chipoodle.devilrpg.entity.AggressiveZombieEntity;
 import com.chipoodle.devilrpg.init.ModEntities;
 import net.minecraft.core.BlockPos;
@@ -147,10 +149,10 @@ public final class VillageManager {
                     ServerPlayer player = level.getServer().getPlayerList().getPlayer(d.playerUUID);
                     if (player != null) {
                         if (waveCleared) {
-                            grantReward(player);
+                            grantReward(player, d.objectiveIndex);
                             player.displayClientMessage(Component.literal("¡Has salvado la aldea! El objetivo avanza."), false);
                         } else if (siegeFailed) {
-                            grantReward(player);
+                            grantReward(player, d.objectiveIndex);
                             player.displayClientMessage(Component.literal(
                                     "Los monstruos no lograron entrar: ¡la aldea está a salvo! El objetivo avanza."), false);
                         } else {
@@ -233,11 +235,35 @@ public final class VillageManager {
         }
     }
 
-    private static void grantReward(ServerPlayer player) {
+    /**
+     * Puntos de habilidad que paga salvar una aldea. Son la moneda del árbol de skills (1 por nivel de
+     * experiencia), y llenar TODOS los árboles pide nivel 300+, así que las misiones también ayudan. Escala
+     * suave con el objetivo para que los asedios tardíos (más duros) paguen mejor, con tope.
+     */
+    private static int siegeSkillPoints(int objectiveIndex) {
+        return Math.min(3 + Math.max(0, objectiveIndex) / 4, 8);
+    }
+
+    /**
+     * Recompensa por salvar la aldea: materiales, un libro, experiencia de vanilla y una <b>ayuda de puntos de
+     * habilidad</b> (ver {@link #siegeSkillPoints(int)}). No se llama si la aldea cae.
+     */
+    private static void grantReward(ServerPlayer player, int objectiveIndex) {
         player.addItem(new ItemStack(Items.IRON_INGOT, 8));
         player.addItem(new ItemStack(Items.LEATHER, 6));
         player.addItem(new ItemStack(Items.WRITTEN_BOOK)); // receta (por ahora un libro genérico)
         player.giveExperiencePoints(50);
+
+        int skillPoints = siegeSkillPoints(objectiveIndex);
+        PlayerExperienceCapabilityInterface expCap =
+                IGenericCapability.getUnwrappedPlayerCapability(player, PlayerExperienceCapability.INSTANCE);
+        if (expCap != null) {
+            expCap.addUnspentPoints(skillPoints, player);
+            player.displayClientMessage(Component.literal(
+                    "La aldea te lo agradece: +" + skillPoints + " puntos de habilidad."), false);
+            DevilRpg.LOGGER.info("[Village] Aldea {} salvada: +{} puntos de habilidad (quedan {})",
+                    objectiveIndex, skillPoints, expCap.getUnspentPoints());
+        }
     }
 
     /** Datos de un asedio en curso. */

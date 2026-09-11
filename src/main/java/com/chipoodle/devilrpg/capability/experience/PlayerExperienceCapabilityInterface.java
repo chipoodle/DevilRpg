@@ -12,6 +12,12 @@ public interface PlayerExperienceCapabilityInterface extends IGenericCapability 
 
     void setCurrentLevel(int currentLevel, Player pe);
 
+    /**
+     * Regala puntos de habilidad ya disponibles, sin pasar por subir de nivel. Son la moneda del árbol de
+     * skills, así que se usan para recompensas de misión (salvar una aldea, destruir un núcleo de guarida...).
+     */
+    void addUnspentPoints(int points, Player pe);
+
     int consumePoint();
 
 }
