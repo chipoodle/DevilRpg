@@ -94,8 +94,11 @@ public final class LairGenerator {
     /**
      * Genera la guarida centrada en {@code center}. Devuelve la posición del núcleo (el bloque asaltable),
      * o {@code null} si no hubo sitio válido.
+     *
+     * @param sealCore {@code false} para <b>no</b> levantar la caja de sellos: se usa al volver a una guarida
+     *                 cuyo sello ya estaba roto (el estado se conserva entre sesiones con {@code LairSavedData})
      */
-    public static BlockPos generate(ServerLevel level, BlockPos center) {
+    public static BlockPos generate(ServerLevel level, BlockPos center, boolean sealCore) {
         BlockPos farmCenter = center.offset(FARM_DISTANCE, 0, 0);
         // Mismas reglas que la aldea (VillageGenerator.waterSurfaceForArea): si la zona cae sobre agua, se
         // construye una plataforma AL NIVEL DEL AGUA y no queda sumergida. OJO: esto se decide sobre TODA la
@@ -190,7 +193,9 @@ public final class LairGenerator {
         }
         BlockPos corePos = new BlockPos(center.getX(), baseY, center.getZ());
         level.setBlock(corePos, ModBlocks.LAIR_CORE_BLOCK.get().defaultBlockState(), 3);
-        buildSealCage(level, corePos);
+        if (sealCore) {
+            buildSealCage(level, corePos);
+        }
         // Catalizadores en las diagonales de la isla (los cardinales son la entrada de los puentes).
         for (int[] c : new int[][]{{2, 2}, {-2, 2}, {2, -2}, {-2, -2}}) {
             level.setBlock(new BlockPos(center.getX() + c[0], baseY - 1, center.getZ() + c[1]),

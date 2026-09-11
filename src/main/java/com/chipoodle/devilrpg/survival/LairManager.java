@@ -121,6 +121,14 @@ public final class LairManager {
         if (GENERATED.contains(key)) {
             return;
         }
+        LairSavedData saved = LairSavedData.get(level);
+        // Si ya la limpiaste, no se genera NADA: el núcleo no vuelve a aparecer. Sin esto, al reiniciar la
+        // partida la guarida renacía entera (terreno, núcleo y guardián) y la recompensa se podía repetir.
+        if (saved.isCleared(objectiveIndex)) {
+            GENERATED.add(key);
+            DevilRpg.LOGGER.info("[Lair] Guarida {} ya estaba limpiada: no se regenera", objectiveIndex);
+            return;
+        }
         // Posición determinista: ángulo/distancia derivados del índice del objetivo.
         Random rnd = new Random(0x1A18L + objectiveIndex);
         double angle = rnd.nextDouble() * Math.PI * 2.0;
@@ -134,13 +142,21 @@ public final class LairManager {
         // la guarida se construía nivelada al fondo marino, SUMERGIDA. Ahora, si la zona cae sobre agua, se
         // levanta una plataforma al nivel del agua (mismas reglas que la aldea).
         BlockPos spot = new BlockPos(x, target.getY(), z);
-        BlockPos corePos = LairGenerator.generate(level, spot);
+        // Si el sello ya estaba roto, la guarida vuelve SIN caja de sellos (el núcleo queda expuesto).
+        boolean sealBroken = saved.isSealBroken(objectiveIndex);
+        BlockPos corePos = LairGenerator.generate(level, spot, !sealBroken);
         if (corePos == null) {
             return;
         }
-        LAIRS.computeIfAbsent(level, l -> new ArrayList<>()).add(new Lair(objectiveIndex, spot, corePos));
+        Lair lair = new Lair(objectiveIndex, spot, corePos);
+        if (sealBroken) {
+            lair.sealBroken = true;
+            lair.guardianDead = true; // no hay guardián: el relevo saldrá a los GUARDIAN_RESPAWN_TICKS
+        }
+        LAIRS.computeIfAbsent(level, l -> new ArrayList<>()).add(lair);
         GENERATED.add(key);
-        DevilRpg.LOGGER.info("[Lair] Guarida {} pre-generada en {} (nucleo en {})", objectiveIndex, spot, corePos);
+        DevilRpg.LOGGER.info("[Lair] Guarida {} pre-generada en {} (nucleo en {}, sello {})",
+                objectiveIndex, spot, corePos, sealBroken ? "ROTO" : "en pie");
     }
 
     /** Se llama en el tick del servidor: verifica los núcleos y spawnea enemigos de las guaridas activas. */
@@ -274,6 +290,7 @@ public final class LairManager {
         lair.guardianDead = false;
         lair.sealBroken = false; // el sello vuelve a estar en pie
         lair.respawnTicks = 0;
+        LairSavedData.get(level).setSealBroken(lair.objectiveIndex, false); // el sello vuelve: que se sepa
         DevilRpg.LOGGER.info("[Lair] La guarida {} ha consagrado un guardián de relevo: núcleo sellado de nuevo",
                 lair.objectiveIndex);
         // Partículas bien visibles ALREDEDOR DEL GUARDIÁN (no del núcleo) para que se note que ha vuelto.
@@ -297,6 +314,7 @@ public final class LairManager {
     private static void openSeal(ServerLevel level, Lair lair) {
         lair.sealBroken = true;
         lair.guardianDead = true; // el sello roto implica que ya no hay guardián
+        LairSavedData.get(level).setSealBroken(lair.objectiveIndex, true); // que siga roto al reiniciar
         Block seal = ModBlocks.SCULK_SEAL_BLOCK.get();
         int removed = 0;
         int r = LairGenerator.SEAL_RADIUS;
@@ -503,6 +521,8 @@ public final class LairManager {
         void clear(ServerLevel level, Player player) {
             this.cleared = true;
             this.sealBroken = true;
+            // Se guarda: una guarida limpiada NO vuelve a generarse en la próxima sesión.
+            LairSavedData.get(level).markCleared(objectiveIndex);
             // Red de seguridad: si quedara algún sello en pie, se retira (el núcleo ya no está).
             removeLeftoverSeal(level);
             DevilRpg.LOGGER.info("[Lair] Guarida {} limpiada en {}", objectiveIndex, corePos);
