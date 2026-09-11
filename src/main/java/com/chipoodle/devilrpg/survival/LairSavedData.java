@@ -1,11 +1,17 @@
 package com.chipoodle.devilrpg.survival;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtUtils;
+import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.saveddata.SavedData;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -25,6 +31,8 @@ public final class LairSavedData extends SavedData {
 
     /** Objetivos cuya guarida ya fue limpiada (núcleo destruido): no se vuelven a generar. */
     private final Set<Integer> cleared = new HashSet<>();
+    /** Núcleo exacto de cada guarida limpiada, para poder COMPROBAR que de verdad está destruida. */
+    private final Map<Integer, BlockPos> clearedCores = new HashMap<>();
     /** Objetivos cuyo sello ya fue roto: al volver, el núcleo queda expuesto (no se reconstruye la caja). */
     private final Set<Integer> sealBroken = new HashSet<>();
 
@@ -39,6 +47,13 @@ public final class LairSavedData extends SavedData {
         for (int index : tag.getIntArray("Cleared")) {
             data.cleared.add(index);
         }
+        // Núcleo de cada guarida limpiada (puede no estar en datos antiguos: entonces se deja sin posición).
+        for (Tag element : tag.getList("ClearedCores", Tag.TAG_COMPOUND)) {
+            CompoundTag entry = (CompoundTag) element;
+            int index = entry.getInt("Index");
+            NbtUtils.readBlockPos(entry, "Core").ifPresent(pos -> data.clearedCores.put(index, pos));
+            data.cleared.add(index);
+        }
         for (int index : tag.getIntArray("SealBroken")) {
             data.sealBroken.add(index);
         }
@@ -49,6 +64,14 @@ public final class LairSavedData extends SavedData {
     public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
         tag.putIntArray("Cleared", toArray(cleared));
         tag.putIntArray("SealBroken", toArray(sealBroken));
+        ListTag coresTag = new ListTag();
+        for (Map.Entry<Integer, BlockPos> entry : clearedCores.entrySet()) {
+            CompoundTag coreTag = new CompoundTag();
+            coreTag.putInt("Index", entry.getKey());
+            coreTag.put("Core", NbtUtils.writeBlockPos(entry.getValue()));
+            coresTag.add(coreTag);
+        }
+        tag.put("ClearedCores", coresTag);
         return tag;
     }
 
@@ -66,13 +89,37 @@ public final class LairSavedData extends SavedData {
         return cleared.contains(objectiveIndex);
     }
 
+    /** Núcleo que tenía una guarida limpiada (para comprobar que de verdad está destruida), o {@code null}. */
+    public BlockPos getClearedCore(int objectiveIndex) {
+        return clearedCores.get(objectiveIndex);
+    }
+
     /** ¿El sello de esta guarida ya está roto? (entonces el núcleo queda expuesto al volver) */
     public boolean isSealBroken(int objectiveIndex) {
         return sealBroken.contains(objectiveIndex);
     }
 
-    public void markCleared(int objectiveIndex) {
-        if (cleared.add(objectiveIndex)) {
+    public void markCleared(int objectiveIndex, BlockPos corePos) {
+        boolean changed = cleared.add(objectiveIndex);
+        if (corePos != null && !corePos.equals(clearedCores.put(objectiveIndex, corePos))) {
+            changed = true;
+        }
+        if (changed) {
+            setDirty();
+        }
+    }
+
+    /**
+     * Deshace la marca de "limpiada". Se usa cuando la marca era <b>errónea</b> (el núcleo sigue en el mundo):
+     * una marca falsa dejaba la guarida muerta para siempre —sin oleadas, sin guardián y con la caja de
+     * sellos en pie—, porque ese estado también se guardaba.
+     */
+    public void unmarkCleared(int objectiveIndex) {
+        boolean changed = cleared.remove(objectiveIndex);
+        if (clearedCores.remove(objectiveIndex) != null) {
+            changed = true;
+        }
+        if (changed) {
             setDirty();
         }
     }
