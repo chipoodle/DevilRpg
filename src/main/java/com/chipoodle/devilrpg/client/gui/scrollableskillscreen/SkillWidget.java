@@ -220,24 +220,25 @@ public class SkillWidget {
         if (themes.isEmpty()) {
             return;
         }
-        // 1) El skin guardado en la config de cliente (elegido con los botones en una sesion anterior).
-        String saved = ConfigHolder.getSkillWidgetSkin();
-        if (saved != null && !saved.isEmpty()) {
-            for (ResourceLocation rl : themes) {
-                if (fileNameOf(rl).equals(saved)) {
-                    WIDGETS = rl;
-                    resourceIndex = themes.indexOf(rl);
-                    userChoseTheme = true; // ya es una eleccion del jugador: no se pisa con el default
-                    DevilRpg.LOGGER.info("[SkillWidget] Skin de widget guardado aplicado: {}", rl);
-                    return;
-                }
-            }
-        }
-        // 2) El skin por defecto: el atlas original (antes se llamaba widgets.png, ahora lleva el prefijo
-        // comun). Es el unico que encaja con las coordenadas fijas con las que se recortan los marcos.
+        // 1) El skin por defecto: el elegido a mano (a-gui-texture-widget-...-forest_94.png).
+        // NOTA: el selector de skins está OCULTO, así que NO se aplica la preferencia guardada en la config
+        // (si no, seguiría mandando el último que se probó con los botones). Si algún día se vuelven a mostrar
+        // los botones, descomenta el bloque de abajo para recuperar la preferencia guardada.
+        // String saved = ConfigHolder.getSkillWidgetSkin();
+        // if (saved != null && !saved.isEmpty()) {
+        //     for (ResourceLocation rl : themes) {
+        //         if (fileNameOf(rl).equals(saved)) {
+        //             WIDGETS = rl;
+        //             resourceIndex = themes.indexOf(rl);
+        //             userChoseTheme = true;
+        //             DevilRpg.LOGGER.info("[SkillWidget] Skin de widget guardado aplicado: {}", rl);
+        //             return;
+        //         }
+        //     }
+        // }
         ResourceLocation defaultTheme = null;
         for (ResourceLocation rl : themes) {
-            if (rl.getPath().contains("forest_2_raw")) {
+            if (fileNameOf(rl).equals("a-gui-texture-widget-for-rpg-game-celtic-style-forest_94.png")) {
                 defaultTheme = rl;
                 break;
             }
