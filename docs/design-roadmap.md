@@ -304,6 +304,13 @@ Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el ju
     y acabarían peleándose por la navegación.
 - **Núcleo asaltable** (`LairCoreBlock`, bloque `lair_core`): el bloque brillante en el centro del
   santuario, dentro de la caja de sellos. Mientras el núcleo exista, la guarida está **activa**.
+- **El estado de la aldea también PERSISTE** (`VillageSavedData`, otro `SavedData` por dimensión, con el mismo
+  patrón): **`Generated`** (la aldea **no se vuelve a generar** encima de la que ya hay: antes, al reiniciar,
+  se nivelaba el terreno y se reconstruían cabañas y valla, cargándose lo que hubieras construido cerca),
+  **`Resolved`** (el asedio ya resuelto no se relanza, así no se puede repetir la recompensa volviendo al
+  objetivo) y **`Noticed`** (el aviso de "divisas una aldea a lo lejos" no se repite). Los asedios **en curso**
+  no se persisten a propósito: si cierras el juego a mitad, al volver la aldea tiene otra vez su margen y su
+  ola, que es más justo que reanudar una ola con zombies ya descargados.
 - **Nada persigue a un jugador en creativo**: los *goals* vanilla filtran por `canBeSeenAsEnemy()`, pero el
   mod asigna el objetivo **a mano** al spawnear (`VexSpawnRule` y `LairManager.spawnOne`) y eso salta el
   filtro. `FrostVexEntity` ahora **rechaza** como objetivo a quien no pueda ser visto como enemigo (creativo,
