@@ -41,7 +41,7 @@ import java.util.Set;
 public final class VillageGenerator {
 
     /** Radio de la valla (un 30% más grande que antes). */
-    private static final int FENCE_RADIUS = 29;
+    public static final int FENCE_RADIUS = 29;
 
     /**
      * Radio del área que se nivela alrededor del centro (todo hasta donde empieza la valla, para que no

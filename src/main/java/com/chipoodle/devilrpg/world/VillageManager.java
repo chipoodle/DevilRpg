@@ -48,6 +48,11 @@ public final class VillageManager {
     /** Zona mínima/máxima (bloques) a la que spawnea la ola, FUERA de la valla (radio 29). */
     private static final int WAVE_SPAWN_MIN = 32;
     private static final int WAVE_SPAWN_MAX = 40;
+    /**
+     * Radio del <b>perímetro</b> de la aldea (la valla, {@code VillageGenerator.FENCE_RADIUS}): a partir de
+     * aquí se considera que un zombie del asedio <b>no ha entrado</b>.
+     */
+    private static final int PERIMETER_RADIUS = VillageGenerator.FENCE_RADIUS;
 
     private static final Map<ServerLevel, List<VillageDefense>> DEFENSES = new HashMap<>();
 
@@ -132,13 +137,22 @@ public final class VillageManager {
 
             if (d.waveSpawned) {
                 boolean waveCleared = isWaveCleared(level, d.wave);
-                if (waveCleared || d.tickTicks > GRACE_TICKS + SIEGE_TIMEOUT_TICKS) {
-                    boolean saved = waveCleared;
+                boolean timeout = d.tickTicks > GRACE_TICKS + SIEGE_TIMEOUT_TICKS;
+                if (waveCleared || timeout) {
+                    // Al acabarse el tiempo, si queda algún zombie FUERA del perímetro (sin pasar los muros) se
+                    // considera que el asedio FRACASÓ y la aldea se salva. Sin esta regla, unos pocos zombies
+                    // escondidos que nunca llegan al centro (y por tanto no se pueden matar) hacían caer la
+                    // aldea sin que el jugador pudiera evitarlo: si no llegan, no asedian, no pueden ganar.
+                    boolean siegeFailed = timeout && !waveCleared && !allZombiesInsidePerimeter(level, d);
                     ServerPlayer player = level.getServer().getPlayerList().getPlayer(d.playerUUID);
                     if (player != null) {
-                        if (saved) {
+                        if (waveCleared) {
                             grantReward(player);
                             player.displayClientMessage(Component.literal("¡Has salvado la aldea! El objetivo avanza."), false);
+                        } else if (siegeFailed) {
+                            grantReward(player);
+                            player.displayClientMessage(Component.literal(
+                                    "Los monstruos no lograron entrar: ¡la aldea está a salvo! El objetivo avanza."), false);
                         } else {
                             player.displayClientMessage(Component.literal("La aldea cayó... El objetivo avanza."), false);
                         }
@@ -147,10 +161,10 @@ public final class VillageManager {
                             aux.setObjectiveIndex(d.objectiveIndex + 1, player);
                         }
                     }
-                    // Si la aldea cayó, los zombies vivos que quedan ya no deben converger al centro.
-                    if (!saved) {
-                        disableGoToCenter(level, d.wave);
-                    }
+                    // Los que queden vivos dejan de asediar (no convergen al centro): los que no llegaron a
+                    // entrar se quedan por el mundo como zombies agresivos normales, con el escalado por
+                    // distancia que ya traen de su spawn.
+                    disableGoToCenter(level, d.wave);
                     // Se guarda que este asedio ya se resolvió: no se relanza al reiniciar la partida.
                     VillageSavedData.get(level).markSiegeResolved(d.objectiveIndex);
                     list.remove(i);
@@ -186,6 +200,24 @@ public final class VillageManager {
             net.minecraft.world.entity.Entity e = level.getEntity(uuid);
             if (e != null && e.isAlive()) {
                 return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * ¿Están <b>todos</b> los zombies vivos de la ola dentro del perímetro de la aldea (pasados los muros)?
+     * Se usa al agotarse el tiempo: si alguno se quedó fuera, el asedio fracasó y la aldea se salva.
+     */
+    private static boolean allZombiesInsidePerimeter(ServerLevel level, VillageDefense d) {
+        double perimeterSqr = (double) PERIMETER_RADIUS * PERIMETER_RADIUS;
+        for (UUID uuid : d.wave) {
+            net.minecraft.world.entity.Entity e = level.getEntity(uuid);
+            if (e == null || !e.isAlive()) {
+                continue;
+            }
+            if (e.distanceToSqr(d.center.getX() + 0.5D, d.center.getY() + 0.5D, d.center.getZ() + 0.5D) > perimeterSqr) {
+                return false; // éste no llegó a entrar
             }
         }
         return true;

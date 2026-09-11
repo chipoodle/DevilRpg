@@ -109,8 +109,16 @@ siguiente está implementado y probado.
   exploración y se lanza una **ola de zombies agresivos** desde fuera de la valla.
 - **Aviso previo**: al entrar en **100 bloques** de la aldea, el jugador recibe un mensaje ("Divisas una
   aldea a lo lejos...") y un **sonido de campana** lejana, una sola vez por objetivo/jugador.
-- Al resolver el asedio (la ola se limpia o pasa el tiempo): **salvada** → recompensa + avanza el objetivo;
-  **caída** → avanza el objetivo sin recompensa y se desactiva el goal "ir al centro" en los vivos.
+- Al resolver el asedio: **salvada** → recompensa + avanza el objetivo; **caída** → avanza el objetivo sin
+  recompensa. En los dos casos, los zombies vivos de la ola dejan de asediar (se les desactiva el goal "ir al
+  centro") y se quedan por el mundo como **zombies agresivos normales**, con el escalado por distancia que ya
+  traen de su spawn.
+- **Regla del perímetro (fin del tiempo)**: cuando se agota el tiempo (`GRACE_TICKS` + `SIEGE_TIMEOUT_TICKS`),
+  si queda algún zombie de la ola **fuera del perímetro** de la aldea (sin pasar los muros,
+  `PERIMETER_RADIUS` = la valla), el asedio se considera **fracasado** y **la aldea se salva** (con recompensa).
+  Sin esta regla, unos pocos zombies escondidos que nunca llegaban al centro —y por tanto no se podían matar—
+  hacían caer la aldea sin que el jugador pudiera evitarlo: *si no llegan, no asedian, no pueden ganar*. Si
+  **todos** los supervivientes están dentro, entonces sí cae.
 
 ### 3b.2 Generación de la aldea (`VillageGenerator`)
 
