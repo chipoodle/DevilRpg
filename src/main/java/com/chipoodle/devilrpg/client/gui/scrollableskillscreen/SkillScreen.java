@@ -234,8 +234,10 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
         // Botones para rotar entre conjuntos de skills asignados (loadouts).
         addSkillSetButtons();
 
-        // Botones ◀ ▶ para recorrer los fondos del árbol de habilidades.
-        addBackgroundButtons();
+        // Botones ◀ ▶ del FONDO: OCULTOS a propósito (el fondo ya está elegido y fijo, ver
+        // SkillBackgroundManager.DEFAULT_BACKGROUND). Para recuperar el selector, descomenta esta llamada y la
+        // de renderBackgroundName() en render(), y vuelve a activar applySavedSelection() en el manager.
+        // addBackgroundButtons();
 
         // Botones ◀ ▶ (y "Def") para recorrer los skins de widget de los nodos, para comparar combinaciones.
         addThemeButtons();
@@ -386,7 +388,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
         this.skipBackgroundRenderOnce = false;
         this.renderSkillButtonPressed(guiGraphics);
         this.renderSkillSetIndicator(guiGraphics);
-        this.renderBackgroundName(guiGraphics);
+        // this.renderBackgroundName(guiGraphics); // etiqueta del fondo: oculta junto con sus botones
         this.renderWidgetName(guiGraphics);
     }
 

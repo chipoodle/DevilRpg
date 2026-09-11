@@ -22,9 +22,14 @@ import java.util.List;
  */
 public final class SkillBackgroundManager {
 
-    /** Fondo por defecto: el mosaico teselado (mandala-tile.png) que se pintaba antes de poder cambiarlo. */
+    /**
+     * Fondo por defecto del árbol de habilidades: el elegido por el usuario. Es el índice 0 de la lista, así
+     * que es el que se pinta siempre que no se elija otro (y ahora mismo no se puede elegir: los botones del
+     * fondo están ocultos, ver {@code SkillScreen}). Las demás imágenes siguen en {@code textures/gui/mandalas}
+     * por si algún día se vuelve a activar el selector.
+     */
     public static final ResourceLocation DEFAULT_BACKGROUND = ResourceLocation.fromNamespaceAndPath(
-            DevilRpg.MODID, "textures/gui/skill/mandala-tile.png");
+            DevilRpg.MODID, "textures/gui/mandalas/openart-image_uq0j3jlc_1706511264937_raw.png");
 
     /** Ruta lógica (sin namespace) del directorio donde están las imágenes de mandalas seleccionables. */
     private static final String MANDALAS_PATH = "textures/gui/mandalas";
@@ -65,7 +70,10 @@ public final class SkillBackgroundManager {
     private static List<ResourceLocation> getBackgrounds() {
         if (backgrounds == null) {
             backgrounds = buildBackgrounds();
-            applySavedSelection();
+            // El selector de fondo está OCULTO (los botones no se dibujan), así que no se aplica la elección
+            // guardada en la config: manda siempre el DEFAULT_BACKGROUND de arriba. Si algún día se vuelven a
+            // mostrar los botones, descomenta esta línea para recuperar la preferencia guardada.
+            // applySavedSelection();
         }
         return backgrounds;
     }
