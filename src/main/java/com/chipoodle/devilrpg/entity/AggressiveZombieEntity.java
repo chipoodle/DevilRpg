@@ -7,15 +7,9 @@ import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInter
 import com.chipoodle.devilrpg.spawnprofile.AggressiveZombieSpawnProfile;
 import com.chipoodle.devilrpg.spawnprofile.SpawnScaleProfile;
 import com.chipoodle.devilrpg.survival.ThreatLevel;
-import com.chipoodle.devilrpg.survival.VeteranGrowth;
 import com.chipoodle.devilrpg.world.LairGenerator;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
@@ -23,7 +17,6 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.TamableAnimal;
-import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
@@ -53,13 +46,6 @@ public class AggressiveZombieEntity extends Zombie {
     private double spawnDistance = 0;  // Se guarda al spawnear el zombie
     private double spawnThreat = 1.0;  // Amenaza global al spawnear (combina con la distancia)
     private boolean attributesAdjusted = false; // Para asegurarnos de que solo se ajusta una vez
-
-    /**
-     * Progreso hacia el siguiente rango de "veterano" (ticks vivo + bajas) y rango actual. Ver
-     * {@link VeteranGrowth}: el zombie que sobrevive se fortalece solo, y el rango se guarda en NBT.
-     */
-    private int veteranProgress = 0;
-    private int veteranRank = 0;
 
     /** Centro de la aldea objetivo (para que los zombies del asedio converjan hacia él). */
     private BlockPos villageCenter = null;
@@ -227,9 +213,7 @@ public class AggressiveZombieEntity extends Zombie {
                 .add(Attributes.MAX_HEALTH, p.baseHealth())
                 .add(Attributes.MOVEMENT_SPEED, p.baseSpeed())
                 .add(Attributes.ATTACK_DAMAGE, p.baseDamage())
-                .add(Attributes.FOLLOW_RANGE, 64.0D) // Rango de detección base
-                // Tamaño: lo usan los "veteranos" para crecer a la vista (ver VeteranGrowth).
-                .add(Attributes.SCALE, 1.0D);
+                .add(Attributes.FOLLOW_RANGE, 64.0D); // Rango de detección base
     }
 
     @Override
@@ -311,11 +295,9 @@ public class AggressiveZombieEntity extends Zombie {
         super.aiStep();
 
         if (!attributesAdjusted) {
-            adjustAttributesBasedOnSpawnDistance(false);
+            adjustAttributesBasedOnSpawnDistance();
             attributesAdjusted = true; // Solo se ejecuta una vez
         }
-        // "Se fortalecen con el tiempo": el que sobrevive crece (ver VeteranGrowth).
-        tickVeteranGrowth();
     }
 
     @Override
@@ -339,119 +321,36 @@ public class AggressiveZombieEntity extends Zombie {
         }
     }
 
-    /**
-     * Aplica los atributos del zombie sumando las <b>dos</b> escalaciones del mod:
-     * <ol>
-     *   <li>la de <b>spawn</b>: distancia (con la zona protegida que se encoge) × amenaza del mundo;</li>
-     *   <li>la de <b>tiempo</b>: los rangos de {@link VeteranGrowth} que ha ganado sobreviviendo.</li>
-     * </ol>
-     * Es idempotente (siempre parte de las bases del perfil), así que se puede volver a llamar cada vez que
-     * sube de rango sin miedo a que los multiplicadores se apilen.
-     *
-     * @param healGainedHealth al subir de rango, sumarle también la vida que acaba de ganar (si no, un
-     *                         veterano herido seguiría herido y el crecimiento no se notaría). En el spawn
-     *                         va en {@code false} para no alterar el balance que ya había.
-     */
-    private void adjustAttributesBasedOnSpawnDistance(boolean healGainedHealth) {
-        // La zona protegida no tiene escalado por distancia; los veteranos sí crecen aunque estén dentro.
-        double scaleFactor = spawnDistance >= SPAWN_PROFILE.minDistance()
-                ? SPAWN_PROFILE.scaleFactor(spawnDistance, spawnThreat) * (1.0 + spawnThreat * ThreatLevel.MAX_EXTRA_DIFFICULTY)
-                : 1.0;
-
-        float maxHealthBefore = this.getMaxHealth();
-
-        // Aplicar el escalado sobre los valores base del perfil (distancia/amenaza × rango de veterano).
-        Objects.requireNonNull(this.getAttribute(Attributes.MAX_HEALTH)).setBaseValue(
-                SPAWN_PROFILE.baseHealth() * scaleFactor * VeteranGrowth.multiplier(veteranRank, VeteranGrowth.HEALTH_PER_RANK));
-        Objects.requireNonNull(this.getAttribute(Attributes.MOVEMENT_SPEED)).setBaseValue(
-                SPAWN_PROFILE.baseSpeed() * scaleFactor * VeteranGrowth.multiplier(veteranRank, VeteranGrowth.SPEED_PER_RANK));
-        Objects.requireNonNull(this.getAttribute(Attributes.ATTACK_DAMAGE)).setBaseValue(
-                SPAWN_PROFILE.baseDamage() * scaleFactor * VeteranGrowth.multiplier(veteranRank, VeteranGrowth.DAMAGE_PER_RANK));
-        AttributeInstance scaleAttribute = this.getAttribute(Attributes.SCALE);
-        if (scaleAttribute != null) {
-            scaleAttribute.setBaseValue(VeteranGrowth.multiplier(veteranRank, VeteranGrowth.SCALE_PER_RANK));
+    private void adjustAttributesBasedOnSpawnDistance() {
+        if (spawnDistance < SPAWN_PROFILE.minDistance()) {
+            return; // Si está en la zona de spawn, no cambia atributos
         }
 
-        float maxHealthAfter = this.getMaxHealth();
-        if (healGainedHealth && maxHealthAfter > maxHealthBefore) {
-            this.setHealth(Math.min(maxHealthAfter, this.getHealth() + (maxHealthAfter - maxHealthBefore)));
-        }
+        // Escalado lineal por distancia (con la zona protegida que se encoge con la amenaza), multiplicado
+        // por la fuerza que aporta el tiempo (amenaza) al momento del spawn.
+        double scaleFactor = SPAWN_PROFILE.scaleFactor(spawnDistance, spawnThreat)
+                * (1.0 + spawnThreat * ThreatLevel.MAX_EXTRA_DIFFICULTY);
 
-        DevilRpg.LOGGER.info("Attributes Scaled => scaleFactor: {} | DISTANCE: {} | RANGO: {} (x{}) | MAX_HEALTH: {} | MOVEMENT_SPEED: {} | ATTACK_DAMAGE: {}",
+        // Aplicar el escalado sobre los valores base del perfil
+        Objects.requireNonNull(this.getAttribute(Attributes.MAX_HEALTH)).setBaseValue(SPAWN_PROFILE.baseHealth() * scaleFactor);
+        Objects.requireNonNull(this.getAttribute(Attributes.MOVEMENT_SPEED)).setBaseValue(SPAWN_PROFILE.baseSpeed() * scaleFactor);
+        Objects.requireNonNull(this.getAttribute(Attributes.ATTACK_DAMAGE)).setBaseValue(SPAWN_PROFILE.baseDamage() * scaleFactor);
+
+        DevilRpg.LOGGER.info("Attributes Scaled => scaleFactor: {} | DISTANCE: {} | MAX_HEALTH: {} | MOVEMENT_SPEED: {} | ATTACK_DAMAGE: {}",
                 scaleFactor,
                 spawnDistance,
-                veteranRank,
-                String.format("%.2f", VeteranGrowth.multiplier(veteranRank, VeteranGrowth.HEALTH_PER_RANK)),
                 Objects.requireNonNull(this.getAttribute(Attributes.MAX_HEALTH)).getValue(),
                 Objects.requireNonNull(this.getAttribute(Attributes.MOVEMENT_SPEED)).getValue(),
                 Objects.requireNonNull(this.getAttribute(Attributes.ATTACK_DAMAGE)).getValue());
     }
 
     /**
-     * Cuenta el tiempo vivo (y las bajas) y sube de rango cuando toca. Solo en el servidor y con el zombie
-     * vivo: el progreso se acumula únicamente mientras la entidad está cargada (o sea, con alguien cerca), así
-     * que no crecen "en el vacío" mientras no juegas.
-     */
-    private void tickVeteranGrowth() {
-        if (this.level().isClientSide || !this.isAlive()) {
-            return;
-        }
-        this.veteranProgress++;
-        int rank = VeteranGrowth.rankFor(this.veteranProgress);
-        if (rank > this.veteranRank) {
-            this.veteranRank = rank;
-            adjustAttributesBasedOnSpawnDistance(true);
-            announceVeteranRankUp(rank);
-        }
-    }
-
-    /** Aviso visible de la subida de rango (partículas + gruñido) para que el jugador lo note en plena pelea. */
-    private void announceVeteranRankUp(int rank) {
-        if (!(this.level() instanceof ServerLevel server)) {
-            return;
-        }
-        server.sendParticles(ParticleTypes.ANGRY_VILLAGER, this.getX(), this.getY() + 1.4D, this.getZ(),
-                12, 0.5D, 0.6D, 0.5D, 0.02D);
-        server.playSound(null, this.blockPosition(), SoundEvents.ZOMBIE_AMBIENT, SoundSource.HOSTILE, 0.9F, 0.7F);
-        DevilRpg.LOGGER.info("[Veterano] Zombie agresivo sube a rango {} ({}) en {}",
-                rank, VeteranGrowth.rankName(rank), this.blockPosition());
-    }
-
-    /**
-     * Cada baja que hace el zombie le adelanta el reloj: los que han matado aldeanos o esbirros se vuelven
-     * veteranos antes. El rango lo aplica {@link #tickVeteranGrowth()} en el siguiente tick.
-     */
-    @Override
-    public boolean killedEntity(ServerLevel level, LivingEntity killed) {
-        boolean result = super.killedEntity(level, killed);
-        this.veteranProgress += VeteranGrowth.TICKS_PER_KILL;
-        return result;
-    }
-
-    /**
-     * La experiencia que suelta el zombie crece con la distancia (y la amenaza), configurable en el perfil, y
-     * también con su rango de veterano: matar al que llevaba media hora vivo vale más.
-     * <code>LivingEntity.getExperienceReward(...)</code> usa este valor.
+     * La experiencia que suelta el zombie crece con la distancia (y la amenaza), configurable en el perfil.
+     * <code>LivingEntity.getExperienceReward(...)</code> usa este valor; aquí se escala según la distancia.
      */
     @Override
     protected int getBaseExperienceReward() {
-        int base = SPAWN_PROFILE.experienceReward(spawnDistance, spawnThreat);
-        return (int) Math.round(base * VeteranGrowth.multiplier(veteranRank, VeteranGrowth.XP_PER_RANK));
-    }
-
-    /** El rango y su progreso viajan con el zombie: un veterano que te sobrevive sigue siéndolo al volver. */
-    @Override
-    public void addAdditionalSaveData(CompoundTag tag) {
-        super.addAdditionalSaveData(tag);
-        tag.putInt("DevilRpgVeteranProgress", this.veteranProgress);
-        tag.putInt("DevilRpgVeteranRank", this.veteranRank);
-    }
-
-    @Override
-    public void readAdditionalSaveData(CompoundTag tag) {
-        super.readAdditionalSaveData(tag);
-        this.veteranProgress = tag.getInt("DevilRpgVeteranProgress");
-        this.veteranRank = Math.min(VeteranGrowth.MAX_RANK, tag.getInt("DevilRpgVeteranRank"));
+        return SPAWN_PROFILE.experienceReward(spawnDistance, spawnThreat);
     }
 
     /**

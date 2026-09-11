@@ -7,16 +7,10 @@ import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInter
 import com.chipoodle.devilrpg.spawnprofile.SpawnScaleProfile;
 import com.chipoodle.devilrpg.spawnprofile.VexSpawnProfile;
 import com.chipoodle.devilrpg.survival.ThreatLevel;
-import com.chipoodle.devilrpg.survival.VeteranGrowth;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.Goal;
@@ -55,13 +49,6 @@ public class FrostVexEntity extends Vex {
     private boolean attributesAdjusted = false;
     private int snowballCooldown = 0;
 
-    /**
-     * Progreso hacia el siguiente rango de "veterano" (ticks vivo + bajas) y rango actual. Ver
-     * {@link VeteranGrowth}: el vex que sobrevive se fortalece solo, y el rango se guarda en NBT.
-     */
-    private int veteranProgress = 0;
-    private int veteranRank = 0;
-
     public FrostVexEntity(EntityType<? extends Vex> type, Level level) {
         super(type, level);
     }
@@ -72,9 +59,7 @@ public class FrostVexEntity extends Vex {
         return Vex.createAttributes()
                 .add(Attributes.MAX_HEALTH, p.baseHealth())
                 .add(Attributes.MOVEMENT_SPEED, p.baseSpeed())
-                .add(Attributes.ATTACK_DAMAGE, p.baseDamage())
-                // Tamaño: lo usan los "veteranos" para crecer a la vista (ver VeteranGrowth).
-                .add(Attributes.SCALE, 1.0D);
+                .add(Attributes.ATTACK_DAMAGE, p.baseDamage());
     }
 
     @Override
@@ -96,11 +81,9 @@ public class FrostVexEntity extends Vex {
             setTarget(null);
         }
         if (!attributesAdjusted) {
-            adjustAttributesBasedOnSpawnDistance(false);
+            adjustAttributesBasedOnSpawnDistance();
             attributesAdjusted = true;
         }
-        // "Se fortalecen con el tiempo": el que sobrevive crece (ver VeteranGrowth).
-        tickVeteranGrowth();
     }
 
     /**
@@ -140,96 +123,20 @@ public class FrostVexEntity extends Vex {
         }
     }
 
-    /**
-     * Escala vida/velocidad/daño por distancia y amenaza (misma fórmula que el zombie agresivo) y, encima, por
-     * los rangos de {@link VeteranGrowth} que haya ganado sobreviviendo. Es idempotente: siempre parte de las
-     * bases del perfil, así que se puede llamar otra vez al subir de rango sin apilar multiplicadores.
-     *
-     * @param healGainedHealth si además hay que curarle la vida que acaba de ganar con el rango (en el spawn
-     *                         no hace falta: el vex ya se pone a tope de vida).
-     */
-    private void adjustAttributesBasedOnSpawnDistance(boolean healGainedHealth) {
+    /** Escala vida/velocidad/daño por distancia y amenaza (misma fórmula que el zombie agresivo). */
+    private void adjustAttributesBasedOnSpawnDistance() {
         double scaleFactor = SPAWN_PROFILE.scaleFactor(spawnDistance, spawnThreat)
                 * (1.0 + spawnThreat * ThreatLevel.MAX_EXTRA_DIFFICULTY);
-
-        float maxHealthBefore = this.getMaxHealth();
-
-        Objects.requireNonNull(this.getAttribute(Attributes.MAX_HEALTH)).setBaseValue(
-                SPAWN_PROFILE.baseHealth() * scaleFactor * VeteranGrowth.multiplier(veteranRank, VeteranGrowth.HEALTH_PER_RANK));
-        Objects.requireNonNull(this.getAttribute(Attributes.MOVEMENT_SPEED)).setBaseValue(
-                SPAWN_PROFILE.baseSpeed() * scaleFactor * VeteranGrowth.multiplier(veteranRank, VeteranGrowth.SPEED_PER_RANK));
-        Objects.requireNonNull(this.getAttribute(Attributes.ATTACK_DAMAGE)).setBaseValue(
-                SPAWN_PROFILE.baseDamage() * scaleFactor * VeteranGrowth.multiplier(veteranRank, VeteranGrowth.DAMAGE_PER_RANK));
-        AttributeInstance scaleAttribute = this.getAttribute(Attributes.SCALE);
-        if (scaleAttribute != null) {
-            scaleAttribute.setBaseValue(VeteranGrowth.multiplier(veteranRank, VeteranGrowth.SCALE_PER_RANK));
-        }
-
-        float maxHealthAfter = this.getMaxHealth();
-        if (healGainedHealth && maxHealthAfter > maxHealthBefore) {
-            this.setHealth(Math.min(maxHealthAfter, this.getHealth() + (maxHealthAfter - maxHealthBefore)));
-        } else {
-            this.setHealth(this.getMaxHealth());
-        }
+        Objects.requireNonNull(this.getAttribute(Attributes.MAX_HEALTH)).setBaseValue(SPAWN_PROFILE.baseHealth() * scaleFactor);
+        Objects.requireNonNull(this.getAttribute(Attributes.MOVEMENT_SPEED)).setBaseValue(SPAWN_PROFILE.baseSpeed() * scaleFactor);
+        Objects.requireNonNull(this.getAttribute(Attributes.ATTACK_DAMAGE)).setBaseValue(SPAWN_PROFILE.baseDamage() * scaleFactor);
+        this.setHealth(this.getMaxHealth());
     }
 
-    /**
-     * Cuenta el tiempo vivo (y las bajas) y sube de rango cuando toca. Solo en el servidor y con el vex vivo:
-     * el progreso se acumula únicamente mientras la entidad está cargada (o sea, con alguien cerca).
-     */
-    private void tickVeteranGrowth() {
-        if (this.level().isClientSide || !this.isAlive()) {
-            return;
-        }
-        this.veteranProgress++;
-        int rank = VeteranGrowth.rankFor(this.veteranProgress);
-        if (rank > this.veteranRank) {
-            this.veteranRank = rank;
-            adjustAttributesBasedOnSpawnDistance(true);
-            announceVeteranRankUp(rank);
-        }
-    }
-
-    /** Aviso visible de la subida de rango (partículas + chillido) para que el jugador lo note. */
-    private void announceVeteranRankUp(int rank) {
-        if (!(this.level() instanceof ServerLevel server)) {
-            return;
-        }
-        server.sendParticles(ParticleTypes.ANGRY_VILLAGER, this.getX(), this.getY() + 0.8D, this.getZ(),
-                12, 0.4D, 0.4D, 0.4D, 0.02D);
-        server.playSound(null, this.blockPosition(), SoundEvents.VEX_CHARGE, SoundSource.HOSTILE, 0.9F, 0.7F);
-        DevilRpg.LOGGER.info("[Veterano] Vex helado sube a rango {} ({}) en {}",
-                rank, VeteranGrowth.rankName(rank), this.blockPosition());
-    }
-
-    /** Cada baja que hace el vex le adelanta el reloj: los que han matado se vuelven veteranos antes. */
-    @Override
-    public boolean killedEntity(ServerLevel level, LivingEntity killed) {
-        boolean result = super.killedEntity(level, killed);
-        this.veteranProgress += VeteranGrowth.TICKS_PER_KILL;
-        return result;
-    }
-
-    /** XP escalada por distancia + amenaza (como el zombie agresivo) y por rango de veterano. */
+    /** XP escalada por distancia + amenaza (como el zombie agresivo). */
     @Override
     protected int getBaseExperienceReward() {
-        int base = SPAWN_PROFILE.experienceReward(spawnDistance, spawnThreat);
-        return (int) Math.round(base * VeteranGrowth.multiplier(veteranRank, VeteranGrowth.XP_PER_RANK));
-    }
-
-    /** El rango y su progreso viajan con el vex: un veterano que te sobrevive sigue siéndolo al volver. */
-    @Override
-    public void addAdditionalSaveData(CompoundTag tag) {
-        super.addAdditionalSaveData(tag);
-        tag.putInt("DevilRpgVeteranProgress", this.veteranProgress);
-        tag.putInt("DevilRpgVeteranRank", this.veteranRank);
-    }
-
-    @Override
-    public void readAdditionalSaveData(CompoundTag tag) {
-        super.readAdditionalSaveData(tag);
-        this.veteranProgress = tag.getInt("DevilRpgVeteranProgress");
-        this.veteranRank = Math.min(VeteranGrowth.MAX_RANK, tag.getInt("DevilRpgVeteranRank"));
+        return SPAWN_PROFILE.experienceReward(spawnDistance, spawnThreat);
     }
 
     public double getSpawnDistance() {

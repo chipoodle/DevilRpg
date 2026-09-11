@@ -36,7 +36,6 @@ import com.chipoodle.devilrpg.survival.ObjectiveManager;
 import com.chipoodle.devilrpg.util.EventUtils;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
@@ -156,15 +155,6 @@ public class PlayerCapabilityForgeEventSubscriber {
 
         CompoundTag originalCompound = originalPlayer.getData(cap).serializeNBT(originalPlayer.level().registryAccess());
         actualPlayer.getData(cap).deserializeNBT(actualPlayer.level().registryAccess(), originalCompound);
-    }
-
-    @SubscribeEvent
-    public static void onPlayerLogsIn(PlayerEvent.PlayerLoggedInEvent event) {
-        Player player = event.getEntity();
-        PlayerManaCapabilityInterface manaCap = IGenericCapability.getUnwrappedPlayerCapability(player,
-                PlayerManaCapability.INSTANCE);
-        String message1 = String.format("Mana disponible: %f ", manaCap.getMana());
-        player.displayClientMessage(Component.literal(message1), false);
     }
 
     @SubscribeEvent

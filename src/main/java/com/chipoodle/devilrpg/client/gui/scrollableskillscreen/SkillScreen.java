@@ -170,7 +170,6 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     private PlayerSkillCapabilityInterface skillCap;
     private PlayerExperienceCapabilityInterface expCap;
     private Set<CustomSkillButton> powerButtonList;
-    private int backgroundButtonY;
 
     private SkillScreen() {
         super(GameNarrator.NO_TITLE);
@@ -231,9 +230,6 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
 
         // Botones para rotar entre conjuntos de skills asignados (loadouts).
         addSkillSetButtons();
-
-        // Botones temporales para recorrer el fondo del árbol de habilidades (fuera de la ventana).
-        addBackgroundButtons();
     }
 
     /**
@@ -254,20 +250,6 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
             skillCap.rotateSkillSet(delta, player);
             loadAssignedPowerButtons();
         }
-    }
-
-    /**
-     * Botones temporales (fuera del área de la ventana de habilidades) para recorrer los fondos del
-     * árbol: ◀ retrocede, ▶ avanza. Muestran abajo el nombre del fondo actual.
-     */
-    private void addBackgroundButtons() {
-        int midX = this.width / 2;
-        int by = this.height - 44;
-        this.backgroundButtonY = by + 24;
-        addRenderableWidget(Button.builder(Component.literal("◀"), b -> SkillBackgroundManager.prev())
-                .pos(midX - 34, by).size(20, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("▶"), b -> SkillBackgroundManager.next())
-                .pos(midX + 14, by).size(20, 20).build());
     }
 
     /**
@@ -387,13 +369,6 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
         this.skipBackgroundRenderOnce = false;
         this.renderSkillButtonPressed(guiGraphics);
         this.renderSkillSetIndicator(guiGraphics);
-        this.renderBackgroundName(guiGraphics);
-    }
-
-    /** Muestra debajo de los botones temporales el nombre del fondo actual del árbol de habilidades. */
-    private void renderBackgroundName(GuiGraphics guiGraphics) {
-        String name = SkillBackgroundManager.getSelectedName();
-        guiGraphics.drawCenteredString(this.font, name, this.width / 2, this.backgroundButtonY, 0xFFCC66);
     }
 
     /** Muestra el conjunto de skills activo ("Set X/Y", traducible) junto a los botones ◀ ▶. */

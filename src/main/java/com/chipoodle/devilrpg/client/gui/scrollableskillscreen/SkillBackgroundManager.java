@@ -9,14 +9,15 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * Gestor de los fondos del árbol de habilidades.
+ * Gestor del fondo del árbol de habilidades.
  * <p>
- * Mantiene la lista de fondos disponibles (el mosaico por defecto mandala-tile.png y cada una de
- * las imágenes de {@code textures/gui/mandalas/}) y el índice del seleccionado, para poder recorrerlos
- * con los botones temporales de la pantalla y elegir cuál será el definitivo.
+ * Mantiene la lista de fondos disponibles (el mosaico por defecto {@code mandala-tile.png} y cada una de las
+ * imágenes de {@code textures/gui/mandalas/}) y el índice del seleccionado; {@code SkillTab} pide el fondo con
+ * {@link #getSelected()}.
  * <p>
- * El índice es estático para que la selección se conserve al cerrar y reabrir la pantalla durante la
- * sesión (es una herramienta de previsualización/elección).
+ * Los botones temporales que recorrían los fondos para elegir el definitivo <b>se quitaron</b> (eran
+ * herramienta de desarrollo), así que hoy siempre se usa el fondo por defecto (índice 0). La lista de mandalas
+ * se sigue cargando para cuando exista un selector de verdad.
  */
 public final class SkillBackgroundManager {
 
