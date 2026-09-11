@@ -48,6 +48,9 @@ public final class ObjectiveManager {
             // La guarida asociada a este objetivo (foco de enemigos asaltable) tambien se pre-genera.
             LairManager.preGenerate(player.serverLevel(), index, target);
         }
+        // ADEMÁS: las guaridas de los objetivos CERCANOS al jugador (aunque ya estén superados) siguen
+        // gestionadas, para que volver a una guarida vieja no la encuentre muerta.
+        LairManager.preGenerateNearby(player.serverLevel(), spawn, index, player.blockPosition());
 
         // Avisar de la presencia de la aldea al acercarse (una sola vez por jugador y objetivo).
         if (distSqr <= (double) (VillageManager.NOTICE_RADIUS * VillageManager.NOTICE_RADIUS)) {

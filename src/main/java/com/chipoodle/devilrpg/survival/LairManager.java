@@ -26,6 +26,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -91,6 +92,12 @@ public final class LairManager {
      * bloques entre sí, así que 64 no es ambiguo.
      */
     private static final int GUARDIAN_MATCH_RADIUS = 64;
+    /**
+     * Radio (respecto al <b>objetivo</b>) en el que se asegura que la guarida de ese objetivo exista y se
+     * gestione. Igual que el radio con el que se pre-genera la aldea: la guarida está a 75–95 del objetivo,
+     * así que 140 cubre llegar a ella.
+     */
+    private static final int NEARBY_OBJECTIVE_RADIUS = 140;
     /** Radio que patrullan los enemigos alrededor del núcleo de la guarida. */
     private static final int PATROL_RADIUS = 24;
 
@@ -115,9 +122,28 @@ public final class LairManager {
     private LairManager() {
     }
 
+    /**
+     * Asegura que las guaridas de los objetivos <b>cercanos al jugador</b> estén creadas y se gestionen, no
+     * solo la del objetivo actual.
+     * <p>
+     * Es imprescindible: {@code preGenerate} solo se llamaba con el índice del objetivo <b>actual</b>, así que
+     * al volver a una guarida de un objetivo ya superado (a 540 m del actual, por ejemplo) esa guarida
+     * <b>nunca se registraba</b> en esta sesión: no spawneaba nada, no aparecía su guardián y su estado
+     * guardado ni se comprobaba. Daba igual esperar. Con esto, cualquier guarida a la que te acerques queda
+     * viva y gestionada, sin importar en qué punto de la progresión estés.
+     */
+    public static void preGenerateNearby(ServerLevel level, Vec3 anchor, int currentIndex, BlockPos playerPos) {
+        for (int i = 0; i <= currentIndex; i++) {
+            BlockPos target = ObjectiveTargets.targetOf(anchor, i);
+            if (ObjectiveTargets.horizontalDistSqr(playerPos, target)
+                    <= (double) NEARBY_OBJECTIVE_RADIUS * NEARBY_OBJECTIVE_RADIUS) {
+                preGenerate(level, i, target);
+            }
+        }
+    }
+
     /** Pre-genera la guarida asociada al objetivo {@code objectiveIndex}, si aún no existe. */
-    public static void preGenerate(ServerLevel level, int objectiveIndex, BlockPos target) {
-        String key = level.dimension().location() + ":" + objectiveIndex;
+    public static void preGenerate(ServerLevel level, int objectiveIndex, BlockPos target) {        String key = level.dimension().location() + ":" + objectiveIndex;
         if (GENERATED.contains(key)) {
             return;
         }
