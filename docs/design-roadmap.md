@@ -320,6 +320,13 @@ Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el ju
 - **Limpiar la guarida**: al destruir el núcleo, `LairCoreBlock.onRemove` → `LairManager.onCoreBroken`
   marca la guarida como limpiada (deja de spawnear), avisa al jugador y da recompensa (XP, huesos, arena de
   almas, esmeraldas). `tick` también detecta si el núcleo desapareció (persistencia natural sin SavedData).
+- **El estado de las guaridas PERSISTE** (`LairSavedData`, un `SavedData` por dimensión, como los raids de
+  vanilla), indexado por el índice del objetivo porque la posición de la guarida es determinista a partir de
+  él: no hace falta guardar coordenadas. Guarda **`Cleared`** (una guarida limpiada **no se vuelve a
+  generar**: antes, al reiniciar la partida, renacía entera con su núcleo, su guardián y su caja de sellos, y
+  la recompensa se podía repetir) y **`SealBroken`** (al volver, la guarida se regenera **sin** la caja de
+  sellos —`LairGenerator.generate(level, spot, sealCore)`— y el relevo del guardián arranca su cuenta de 3 min
+  como si acabaras de matarlo).
 
 ---
 
