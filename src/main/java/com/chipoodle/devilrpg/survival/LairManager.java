@@ -93,6 +93,14 @@ public final class LairManager {
      */
     private static final int GUARDIAN_MATCH_RADIUS = 64;
     /**
+     * Radio en el que se busca a los guardianes <b>vivos</b> de una guarida para decidir si ya tiene uno y
+     * para retirar duplicados. Es más generoso que {@link #GUARDIAN_MATCH_RADIUS} porque el guardián puede
+     * perseguir a un jugador lejos del núcleo: si se contaba solo a 64 y se había alejado, la guarida creía
+     * que no tenía guardián y <b>creaba otro</b> (dos guardianes a la vez). Como las guaridas están a ≥200
+     * bloques entre sí, 96 sigue sin ser ambiguo.
+     */
+    private static final int GUARDIAN_COUNT_RADIUS = 96;
+    /**
      * Radio (respecto al <b>objetivo</b>) en el que se asegura que la guarida de ese objetivo exista y se
      * gestione. Igual que el radio con el que se pre-genera la aldea: la guarida está a 75–95 del objetivo,
      * así que 140 cubre llegar a ella.
@@ -224,13 +232,25 @@ public final class LairManager {
             if (near == null) {
                 continue;
             }
-            // 2a) El sello cae SOLO porque el guardián murió de verdad (avisa el propio cultivador desde
-            //     die()). El guardián nunca se retira ni muere solo: aparece una vez y ahí se queda.
-            if (!lair.sealBroken && lair.guardianDead) {
+            // 2a) Cuántos guardianes vivos tiene la guarida AHORA mismo. Esta llamada además ADOPTA a los
+            //     cultivadores sin hogar que anden por aquí (los dejó una sesión anterior, o salieron de un
+            //     huevo de spawn) y RETIRA los duplicados: una guarida tiene UN guardián, no dos.
+            int guardians = guardiansAlive(level, lair);
+            // 2a-bis) Una "muerte" que no deja a la guarida sin guardián es fantasma: el que murió no era el
+            //     guardián de esta guarida (o había otro vivo). No rompe el sello y no programa relevo.
+            if (lair.guardianDead && guardians > 0) {
+                lair.guardianDead = false;
+                lair.guardianReborn = false;
+                lair.respawnTicks = 0;
+            }
+            // 2a-ter) El sello cae SOLO porque el guardián murió de verdad (avisa el propio cultivador desde
+            //     die()) y SOLO si de verdad no queda ningún guardián vivo: el guardián nunca se retira ni
+            //     muere solo, aparece una vez y ahí se queda.
+            if (!lair.sealBroken && lair.guardianDead && guardians == 0) {
                 openSeal(level, lair);
             }
-            // 2a-bis) Si mataste al guardián y dejaste el núcleo en pie, la guarida cría un guardián de relevo
-            //     tras un tiempo (una vez por muerte). El sello NO vuelve: una vez roto, el núcleo sigue
+            // 2a-quater) Si mataste al guardián y dejaste el núcleo en pie, la guarida cría un guardián de
+            //     relevo tras un tiempo (una vez por muerte). El sello NO vuelve: una vez roto, el núcleo sigue
             //     expuesto. Así el relevo sale estés donde estés.
             if (lair.guardianDead && !lair.guardianReborn) {
                 if (++lair.respawnTicks >= GUARDIAN_RESPAWN_TICKS) {
@@ -241,7 +261,7 @@ public final class LairManager {
             defendCore(level, lair);
             // 2c) El guardián aparece EN CUANTO la guarida se activa, sin esperar a la primera tanda: así el
             //     sello (que existe desde que se generó la guarida) nunca está puesto sin nadie a quien matar.
-            if (!lair.sealBroken && !lair.guardianDead && countCultivators(level, lair) == 0) {
+            if (!lair.sealBroken && !lair.guardianDead && guardians == 0) {
                 spawnOne(level, lair, near, new Random(), true);
             }
             if (--lair.spawnTimer > 0) {
@@ -329,6 +349,17 @@ public final class LairManager {
                                     + "apártate unos bloques y saldrá."), false);
                 }
             }
+            return;
+        }
+        // Si la guarida YA tiene un guardián vivo, no se consagra otro: la "muerte" que programó este relevo
+        // no era la del guardián de esta guarida (un cultivador de huevo de spawn, o uno viejo que se había
+        // alejado), y sin esta comprobación acababan saliendo DOS guardianes a la vez.
+        if (guardiansAlive(level, lair) > 0) {
+            lair.guardianDead = false;
+            lair.guardianReborn = false;
+            lair.respawnTicks = 0;
+            DevilRpg.LOGGER.info("[Lair] La guarida {} ya tiene un guardián vivo: no se consagra relevo",
+                    lair.objectiveIndex);
             return;
         }
         Mob guardian = spawnOne(level, lair, null, new Random(), true);
@@ -567,10 +598,61 @@ public final class LairManager {
                 + level.getEntitiesOfClass(FrostVexEntity.class, box).size();
     }
 
-    /** Cuenta los cultivadores del sculk vivos cerca de la guarida. */
-    private static int countCultivators(ServerLevel level, Lair lair) {
-        int r = ACTIVATION_RADIUS;
-        return level.getEntitiesOfClass(SculkCultivatorEntity.class, new AABB(lair.center).inflate(r)).size();
+    /**
+     * Guardianes <b>vivos</b> que pertenecen a esta guarida, y de paso deja la guarida con <b>uno solo</b>.
+     * <p>
+     * Hay tres formas de acabar con dos guardianes a la vez, y las tres se corrigen aquí:
+     * <ul>
+     *   <li>Un guardián de una <b>sesión anterior</b>: no se retira nunca y se guarda con el mundo, pero si su
+     *       trozo aún no estaba cargado cuando la guarida se activó, el conteo no lo veía y nacía otro.</li>
+     *   <li>Un guardián que <b>persiguió</b> a un jugador más allá del radio de conteo (por eso este radio es
+     *       más amplio que {@link #GUARDIAN_MATCH_RADIUS}).</li>
+     *   <li>Un cultivador <b>sin hogar</b> (huevo de spawn, o guardado por una versión anterior): se adopta
+     *       —se le asigna el núcleo de esta guarida como hogar— en vez de dejar que la guarida crie otro.</li>
+     * </ul>
+     * De los que pertenecen a la guarida se queda el <b>más viejo vivo</b> (el id más bajo, que es el que se
+     * creó antes) y los duplicados vivos se retiran con un aviso en el log y un golpe de partículas, para que
+     * se note que fue el sculk y no un fallo. Los que están muriendo se dejan en paz: su {@code die()} ya avisa
+     * a {@link #onGuardianKilled}.
+     */
+    private static int guardiansAlive(ServerLevel level, Lair lair) {
+        List<SculkCultivatorEntity> mine = new ArrayList<>();
+        for (SculkCultivatorEntity guardian : level.getEntitiesOfClass(SculkCultivatorEntity.class,
+                new AABB(lair.corePos).inflate(GUARDIAN_COUNT_RADIUS))) {
+            BlockPos home = guardian.getHomePos();
+            if (home == null) {
+                guardian.setHome(lair.corePos, PATROL_RADIUS);
+                DevilRpg.LOGGER.info("[Lair] Guardián sin hogar adoptado por la guarida {} (estaba en {})",
+                        lair.objectiveIndex, guardian.blockPosition());
+                home = lair.corePos;
+            }
+            if (home.closerThan(lair.corePos, GUARDIAN_MATCH_RADIUS)) {
+                mine.add(guardian);
+            }
+        }
+        SculkCultivatorEntity keeper = null;
+        for (SculkCultivatorEntity guardian : mine) {
+            if (guardian.isDeadOrDying()) {
+                continue;
+            }
+            if (keeper == null || guardian.getId() < keeper.getId()) {
+                keeper = guardian;
+            }
+        }
+        int alive = keeper == null ? 0 : 1;
+        if (keeper != null) {
+            for (SculkCultivatorEntity guardian : mine) {
+                if (guardian == keeper || guardian.isDeadOrDying()) {
+                    continue;
+                }
+                DevilRpg.LOGGER.warn("[Lair] La guarida {} tenía {} guardianes: se retira el duplicado y se "
+                        + "queda el más antiguo", lair.objectiveIndex, mine.size());
+                level.sendParticles(ParticleTypes.SCULK_SOUL, guardian.getX(), guardian.getY() + 1.0D,
+                        guardian.getZ(), 25, 0.4D, 0.7D, 0.4D, 0.02D);
+                guardian.discard();
+            }
+        }
+        return alive;
     }
 
     /** Se invoca cuando el núcleo de una guarida es destruido: la limpia y da recompensa al jugador. */
