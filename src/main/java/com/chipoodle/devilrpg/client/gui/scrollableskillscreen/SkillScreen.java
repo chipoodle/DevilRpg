@@ -172,6 +172,8 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     private Set<CustomSkillButton> powerButtonList;
     /** Y donde se pinta el nombre del fondo actual (debajo de los botones de selección de fondo). */
     private int backgroundButtonY;
+    /** Y donde se pinta el nombre del skin de widget actual (debajo de sus botones). */
+    private int themeButtonY;
 
     private SkillScreen() {
         super(GameNarrator.NO_TITLE);
@@ -223,7 +225,6 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
         // Skin del arbol de habilidades: se fija el por defecto (forest_92_raw) y se desactivan
         // los botones < > de cambio de tema.
         SkillWidget.applyDefaultTheme();
-        //addThemeButtons();
 
         maxPages = this.tabs.size() / SkillTabType.MAX_TABS;
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -235,6 +236,9 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
 
         // Botones ◀ ▶ para recorrer los fondos del árbol de habilidades.
         addBackgroundButtons();
+
+        // Botones ◀ ▶ (y "Def") para recorrer los skins de widget de los nodos, para comparar combinaciones.
+        addThemeButtons();
     }
 
     /**
@@ -306,33 +310,24 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
         }
     }
 
+    /**
+     * Botones para recorrer los <b>skins de widget</b> de los nodos (marcos y barras), en la misma fila que los
+     * del fondo pero a la derecha: ◀ ▶ cambian de skin al instante y "Def" vuelve al skin por defecto.
+     * <p>
+     * Sirven para buscar la mejor combinación fondo + widget sin tocar código. La elección se mantiene al
+     * cerrar y reabrir la pantalla (ver {@code SkillWidget.userChoseTheme}), pero no sobrevive a reiniciar el
+     * juego.
+     */
     private void addThemeButtons() {
-        // Botones de cambio de tema, en la barra de info inferior a la DERECHA (la zona
-        // izquierda la ocupa el mensaje de puntos sin usar) para que no se estorben.
-        int infoY = (int) (offsetTop + WINDOW_HEIGHT * this.fitScale) + 2;
-
-        Button themeForward = Button.builder(
-                        Component.literal(">"),
-                        b -> {
-                            SkillWidget.changeWidgetTheme(true);
-                        }
-                )
-                .pos((int) (offsetLeft + (WINDOW_WIDTH - 28) * this.fitScale), infoY)
-                .size(20, 20)
-                .build();
-
-        Button themeBackwards = Button.builder(
-                        Component.literal("<"),
-                        b -> {
-                            SkillWidget.changeWidgetTheme(false);
-                        }
-                )
-                .pos((int) (offsetLeft + (WINDOW_WIDTH - 48) * this.fitScale), infoY)
-                .size(20, 20)
-                .build();
-
-        addRenderableWidget(themeForward);
-        addRenderableWidget(themeBackwards);
+        int midX = this.width / 2;
+        int by = this.height - 44;
+        this.themeButtonY = by + 34;
+        addRenderableWidget(Button.builder(Component.literal("◀"), b -> SkillWidget.changeWidgetTheme(false))
+                .pos(midX + 96, by).size(20, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("▶"), b -> SkillWidget.changeWidgetTheme(true))
+                .pos(midX + 120, by).size(20, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("Def"), b -> SkillWidget.resetWidgetTheme())
+                .pos(midX + 144, by).size(26, 20).build());
     }
 
     @Override
@@ -392,6 +387,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
         this.renderSkillButtonPressed(guiGraphics);
         this.renderSkillSetIndicator(guiGraphics);
         this.renderBackgroundName(guiGraphics);
+        this.renderWidgetName(guiGraphics);
     }
 
     /** Muestra bajo los botones el fondo actual ("nombre  3/39") para saber cuál está puesto. */
@@ -399,6 +395,13 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
         String label = SkillBackgroundManager.getSelectedName() + "  "
                 + (SkillBackgroundManager.getSelectedIndex() + 1) + "/" + SkillBackgroundManager.getBackgroundCount();
         guiGraphics.drawCenteredString(this.font, label, this.width / 2, this.backgroundButtonY, 0xFFCC66);
+    }
+
+    /** Muestra bajo sus botones el skin de widget actual ("forest_92_raw.png  12/21"). */
+    private void renderWidgetName(GuiGraphics guiGraphics) {
+        String label = SkillWidget.getWidgetShortName() + "  "
+                + (SkillWidget.getWidgetIndex() + 1) + "/" + SkillWidget.getWidgetCount();
+        guiGraphics.drawCenteredString(this.font, label, this.width / 2 + 133, this.themeButtonY, 0xFFCC66);
     }
 
     /** Muestra el conjunto de skills activo ("Set X/Y", traducible) junto a los botones ◀ ▶. */

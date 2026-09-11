@@ -19,19 +19,10 @@ import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.client.gui.ScreenUtils;
 
 import javax.annotation.Nullable;
-import java.io.File;
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.nio.file.FileVisitOption;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Stream;
 
 @OnlyIn(Dist.CLIENT)
 public class SkillWidget {
@@ -54,6 +45,10 @@ public class SkillWidget {
 
     /** Ruta base de las texturas de la GUI de skills (textures/gui/skill). */
     private static final String SKILL_GUI_IMG_LOCATION = DevilRpg.MODID + ":textures/gui/skill";
+    /** Carpeta (ruta de recursos) donde viven los skins de widget que recorren los botones. */
+    private static final String WIDGET_TEXTURES_PATH = "textures/gui/skill/widget";
+    /** Prefijo que comparten todos los skins generados; se quita del nombre que se muestra en pantalla. */
+    private static final String WIDGET_COMMON_PREFIX = "a-gui-texture-widget-for-rpg-game-celtic-style-";
     /** Desplazamientos (px) usados para ajustar los saltos de línea en el tooltip de la skill. */
     private static final int[] LINE_BREAK_VALUES = new int[]{0, 10, -10, 25, -25};
     /** Etiqueta de coste de maná (gui.skills.mana_cost), añadida a la descripción cuando aplica. */
@@ -62,6 +57,8 @@ public class SkillWidget {
     public static ResourceLocation WIDGETS = ResourceLocation.parse(SKILL_GUI_IMG_LOCATION + "/widgets.png");
     private static List<ResourceLocation> resourceLocations = new ArrayList<>();
     private static int resourceIndex = 0;
+    /** ¿El jugador eligió skin con los botones? Si sí, {@code applyDefaultTheme()} no se lo pisa. */
+    private static boolean userChoseTheme = false;
     private final SkillTab skillTabGui;
     private final SkillElement skillElement;
     private final SkillDisplayInfo displayInfo;
@@ -157,26 +154,65 @@ public class SkillWidget {
     public static void changeWidgetTheme(boolean forward) {
         resourceLocations = loadWidgetThemeImages();
         int size = resourceLocations.size();
-
-        if (size > 0) {
-            if (forward) {
-                // Move forward in the list
-                resourceIndex = (resourceIndex + 1) % size;
-            } else {
-                // Move backward in the list
-                resourceIndex = (resourceIndex - 1 + size) % size;
-            }
-
-            WIDGETS = resourceLocations.get(resourceIndex);
+        if (size == 0) {
+            return;
         }
+        // Move forward / backward in the list
+        resourceIndex = forward ? (resourceIndex + 1) % size : (resourceIndex - 1 + size) % size;
+        WIDGETS = resourceLocations.get(resourceIndex);
+        userChoseTheme = true; // eleccion del jugador: applyDefaultTheme() ya no la pisa
+        DevilRpg.LOGGER.info("[SkillWidget] Skin de widget: {} ({}/{})", getWidgetName(), resourceIndex + 1, size);
+    }
+
+    /** Nombre de archivo del skin actual (sin la ruta), para la etiqueta de los botones. */
+    public static String getWidgetName() {
+        String path = WIDGETS.getPath();
+        int slash = path.lastIndexOf('/');
+        return slash >= 0 ? path.substring(slash + 1) : path;
+    }
+
+    /**
+     * Nombre corto del skin para la etiqueta de los botones: quita el prefijo común larguísimo
+     * ({@code a-gui-texture-widget-for-rpg-game-celtic-style-}) que comparten todos los archivos, porque si no
+     * la etiqueta no cabe en pantalla. En el log sigue saliendo el nombre completo.
+     */
+    public static String getWidgetShortName() {
+        String name = getWidgetName();
+        return name.startsWith(WIDGET_COMMON_PREFIX) ? name.substring(WIDGET_COMMON_PREFIX.length()) : name;
+    }
+
+    /** Índice (0-based) del skin actual en la lista. */
+    public static int getWidgetIndex() {
+        List<ResourceLocation> list = loadWidgetThemeImages();
+        int idx = list.indexOf(WIDGETS);
+        return idx >= 0 ? idx : resourceIndex;
+    }
+
+    /** Cuántos skins de widget hay disponibles. */
+    public static int getWidgetCount() {
+        return loadWidgetThemeImages().size();
+    }
+
+    /** Vuelve al skin por defecto ({@code forest_92_raw} si está, si no el primero de la lista). */
+    public static void resetWidgetTheme() {
+        userChoseTheme = false;
+        applyDefaultTheme();
+        DevilRpg.LOGGER.info("[SkillWidget] Skin de widget vuelto al por defecto: {}", getWidgetName());
     }
 
     /**
      * Fija el skin por defecto del arbol de habilidades a
      * "a-gui-texture-widget-for-rpg-game-celtic-style-forest_92_raw". Si no existe en la carpeta de
      * widgets, usa el primero disponible.
+     * <p>
+     * Si el jugador ya eligió un skin con los botones, <b>no se pisa</b>: antes se llamaba en cada apertura
+     * de la pantalla y la elección se perdía al cerrar y volver a abrir, lo que hacía imposible comparar
+     * combinaciones de fondo + widget.
      */
     public static void applyDefaultTheme() {
+        if (userChoseTheme) {
+            return;
+        }
         List<ResourceLocation> themes = loadWidgetThemeImages();
         if (themes.isEmpty()) {
             return;
@@ -196,39 +232,35 @@ public class SkillWidget {
         DevilRpg.LOGGER.info("[SkillWidget] Skin por defecto aplicado: {}", defaultTheme);
     }
 
+    /**
+     * Lista de skins disponibles: <b>todas</b> las imágenes de {@code textures/gui/skill/widget} menos las
+     * que empiezan por {@code template} (esas son bocetos sueltos, no atlas completos de la interfaz).
+     * <p>
+     * Se listan con el {@code ResourceManager} del cliente y no recorriendo la carpeta del classloader
+     * ({@code Files.walk}): dentro del jar empaquetado los recursos <b>no</b> son un directorio del disco, así
+     * que el listado viejo devolvía vacío y los botones de skin no hacían nada fuera del entorno de
+     * desarrollo.
+     */
     public static List<ResourceLocation> loadWidgetThemeImages() {
         if (!resourceLocations.isEmpty()) {
             return resourceLocations;
         }
-
         try {
-            // Obtén la URL de los recursos desde el classloader del mod
-            URL resourceURL = DevilRpg.class.getClassLoader().getResource("assets/devilrpg/textures/gui/skill/widget");
-
-            if (resourceURL != null) {
-                Path directory = Paths.get(resourceURL.toURI());
-
-                // Utiliza Files.walk para recorrer el directorio y encontrar archivos que cumplan con ciertos criterios
-                try (Stream<Path> walk = Files.walk(directory, FileVisitOption.FOLLOW_LINKS)) {
-                    resourceLocations = walk.filter(Files::isRegularFile)
-                            .filter(path -> path.getFileName().toString().startsWith("a-gui-texture-widget-for-rpg-game-celtic-style") && path.toString().endsWith(".png"))
-                            .map(path -> {
-                                // Convierte la ruta del archivo a una ruta relativa al directorio del mod
-                                String relativePath = directory.relativize(path).toString();
-                                String resourcePath = SKILL_GUI_IMG_LOCATION + "/widget/" + relativePath.replace(File.separator, "/");
-                                // tryParse (no lanza) en vez de parse: los nombres con mayusculas
-                                // (ID autogenerados tipo _Hq8RXe3p_) no son validos en 1.21.1 y se descartan.
-                                return ResourceLocation.tryParse(resourcePath);
-                            })
-                            .filter(resourceLocation -> resourceLocation != null)
-                            .sorted()
-                            .toList();
-                }
-            }
-        } catch (IOException | URISyntaxException e) {
-            throw new RuntimeException(e);
+            Map<ResourceLocation, ?> found = Minecraft.getInstance().getResourceManager()
+                    .listResources(WIDGET_TEXTURES_PATH, resourceLocation -> {
+                        String file = resourceLocation.getPath();
+                        if (!file.endsWith(".png")) {
+                            return false;
+                        }
+                        String name = file.substring(file.lastIndexOf('/') + 1);
+                        return !name.startsWith("template");
+                    });
+            resourceLocations = found.keySet().stream().sorted().toList();
+            DevilRpg.LOGGER.info("[SkillWidget] Skins de widget encontrados: {}", resourceLocations.size());
+        } catch (Exception e) {
+            DevilRpg.LOGGER.error("Error listando los skins de widget", e);
+            resourceLocations = new ArrayList<>();
         }
-
         return resourceLocations;
     }
 
