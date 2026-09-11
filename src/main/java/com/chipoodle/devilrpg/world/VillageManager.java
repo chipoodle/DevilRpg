@@ -52,9 +52,6 @@ public final class VillageManager {
     private static final int WAVE_SPAWN_MAX = 40;
 
     private static final Map<ServerLevel, List<VillageDefense>> DEFENSES = new HashMap<>();
-    private static final Set<String> GENERATED = new HashSet<>();
-    /** Claves (dimension:objetivo:jugador) a las que ya se avisó de la presencia de la aldea. */
-    private static final Set<String> NOTICED = new HashSet<>();
 
     private VillageManager() {
     }
@@ -62,27 +59,34 @@ public final class VillageManager {
     /**
      * Avisa al jugador de que hay una aldea cerca (una única vez por jugador y objetivo): mensaje en
      * pantalla y sonido de campana lejana. Se dispara al entrar en {@link #NOTICE_RADIUS} bloques.
+     * El aviso se guarda, para no repetirlo en cada partida.
      */
     public static void noticeIfNear(ServerLevel level, ServerPlayer player, int objectiveIndex, BlockPos target) {
-        String key = level.dimension().location() + ":" + objectiveIndex + ":" + player.getUUID();
-        if (NOTICED.contains(key)) {
+        VillageSavedData saved = VillageSavedData.get(level);
+        if (saved.isNoticed(objectiveIndex, player.getUUID())) {
             return;
         }
-        NOTICED.add(key);
+        saved.markNoticed(objectiveIndex, player.getUUID());
         player.displayClientMessage(Component.literal(
                 "Divisas una aldea a lo lejos... la campana llama, y algo se agita en la oscuridad."), false);
         level.playSound(null, player.getX(), player.getY(), player.getZ(),
                 SoundEvents.BELL_BLOCK, SoundSource.AMBIENT, 1.0F, 1.0F);
     }
 
-    /** Pre-genera la aldea (cabañas + aldeanos + valla) en el punto del objetivo, si aún no existe. */
+    /**
+     * Pre-genera la aldea (cabañas + aldeanos + valla) en el punto del objetivo, si aún no existe.
+     * <p>
+     * La marca de "ya generada" es <b>persistente</b>: antes vivía en memoria y, al reiniciar la partida, la
+     * aldea se volvía a generar <b>encima</b> de la que ya había (nivelaba el terreno, despejaba vegetación y
+     * reconstruía cabañas y valla, cargándose lo que hubieras construido cerca).
+     */
     public static void preGenerate(ServerLevel level, int objectiveIndex, BlockPos target) {
-        String key = level.dimension().location() + ":" + objectiveIndex;
-        if (GENERATED.contains(key)) {
+        VillageSavedData saved = VillageSavedData.get(level);
+        if (saved.isGenerated(objectiveIndex)) {
             return;
         }
         VillageGenerator.generate(level, target);
-        GENERATED.add(key);
+        saved.markGenerated(objectiveIndex);
         DevilRpg.LOGGER.info("[Village] Aldea {} pre-generada en {}", objectiveIndex, target);
     }
 
@@ -94,7 +98,13 @@ public final class VillageManager {
                 return;
             }
         }
-        if (!GENERATED.contains(level.dimension().location() + ":" + objectiveIndex)) {
+        // Ni si el asedio de este objetivo ya se resolvió (salvada o caída): se guarda, así que al reiniciar
+        // la partida no se puede repetir la recompensa ni volver a asediar la misma aldea.
+        VillageSavedData saved = VillageSavedData.get(level);
+        if (saved.isSiegeResolved(objectiveIndex)) {
+            return;
+        }
+        if (!saved.isGenerated(objectiveIndex)) {
             preGenerate(level, objectiveIndex, target);
         }
         DEFENSES.computeIfAbsent(level, l -> new ArrayList<>())
@@ -143,6 +153,8 @@ public final class VillageManager {
                     if (!saved) {
                         disableGoToCenter(level, d.wave);
                     }
+                    // Se guarda que este asedio ya se resolvió: no se relanza al reiniciar la partida.
+                    VillageSavedData.get(level).markSiegeResolved(d.objectiveIndex);
                     list.remove(i);
                 }
             }
