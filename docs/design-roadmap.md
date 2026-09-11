@@ -329,11 +329,17 @@ Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el ju
   almas, esmeraldas). `tick` también detecta si el núcleo desapareció (persistencia natural sin SavedData).
 - **El estado de las guaridas PERSISTE** (`LairSavedData`, un `SavedData` por dimensión, como los raids de
   vanilla), indexado por el índice del objetivo porque la posición de la guarida es determinista a partir de
-  él: no hace falta guardar coordenadas. Guarda **`Cleared`** (una guarida limpiada **no se vuelve a
-  generar**: antes, al reiniciar la partida, renacía entera con su núcleo, su guardián y su caja de sellos, y
-  la recompensa se podía repetir) y **`SealBroken`** (al volver, la guarida se regenera **sin** la caja de
-  sellos —`LairGenerator.generate(level, spot, sealCore)`— y el relevo del guardián arranca su cuenta de 3 min
-  como si acabaras de matarlo).
+  él: no hace falta guardar coordenadas. Guarda **`Cleared`** (con la **posición del núcleo**, para poder
+  comprobar la marca; una guarida limpiada **no se vuelve a generar**: antes, al reiniciar la partida, renacía
+  entera con su núcleo, su guardián y su caja de sellos, y la recompensa se podía repetir) y **`SealBroken`**
+  (al volver, la guarida se regenera **sin** la caja de sellos —`LairGenerator.generate(level, spot,
+  sealCore)`— y el relevo del guardián arranca su cuenta de 3 min como si acabaras de matarlo).
+- **El núcleo se comprueba con TOLERANCIA y se auto-repara**: buscarlo en una posición exacta era frágil (si la
+  altura calculada varía un bloque entre sesiones, la guarida se daba por limpiada **por error** y quedaba
+  muerta para siempre: sin oleadas, sin guardián y con la caja de sellos en pie, porque el borrado de la caja
+  apuntaba a la posición equivocada). Ahora `findCoreNear` busca en **±3 vertical y ±1 horizontal**,
+  `syncCorePos` **corrige** la posición guardada si el núcleo se movió, y si una marca de `Cleared` resulta
+  **falsa** (el núcleo sigue ahí) se **deshace** y la guarida se restaura.
 
 ---
 
