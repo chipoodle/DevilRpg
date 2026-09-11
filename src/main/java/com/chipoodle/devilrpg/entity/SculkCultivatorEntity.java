@@ -44,6 +44,9 @@ import net.minecraft.world.item.alchemy.PotionContents;
 import net.minecraft.world.item.alchemy.Potions;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.SculkCatalystBlock;
+import net.minecraft.world.level.block.entity.SculkCatalystBlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
@@ -246,6 +249,45 @@ public class SculkCultivatorEntity extends AbstractIllager implements RangedAtta
             return tamable.getOwner() != null;
         }
         return entity instanceof TamableAnimal animal && animal.getOwner() != null;
+    }
+
+    /** Carga que un sacrificio mete a los catalizadores cercanos (ver {@link #feedNearbyCatalysts}). */
+    private static final int SACRIFICE_CHARGE = 20;
+    /** Radio (el mismo que usa el catalizador vanilla para "oír" una muerte: 8) alrededor del sacrificio. */
+    private static final int CATALYST_FEED_RADIUS = 8;
+
+    /**
+     * <b>Alimenta de verdad</b> la infección con un sacrificio: carga los catalizadores de alrededor para que
+     * expandan el sculk.
+     * <p>
+     * Hace falta porque la carga que da el catalizador vanilla es <b>la XP del mob</b> y cada bloque que crece
+     * cuesta 10: una vaca u oveja da 1–3, o sea prácticamente nada, y por eso no se veía extenderse la mancha
+     * al sacrificar. Aquí el sacrificio es un <b>ritual</b>, así que mete una carga fija decente
+     * ({@link #SACRIFICE_CHARGE}) a cada catalizador cercano, más el pulso visual y el sonido del catalizador
+     * para que se note.
+     */
+    private void feedNearbyCatalysts(BlockPos deathPos) {
+        int fed = 0;
+        for (BlockPos pos : BlockPos.betweenClosed(
+                deathPos.offset(-CATALYST_FEED_RADIUS, -4, -CATALYST_FEED_RADIUS),
+                deathPos.offset(CATALYST_FEED_RADIUS, 4, CATALYST_FEED_RADIUS))) {
+            BlockState state = level().getBlockState(pos);
+            if (!state.is(Blocks.SCULK_CATALYST)) {
+                continue;
+            }
+            if (level().getBlockEntity(pos) instanceof SculkCatalystBlockEntity catalyst) {
+                catalyst.getListener().getSculkSpreader().addCursors(deathPos, SACRIFICE_CHARGE);
+                fed++;
+            }
+            if (state.hasProperty(SculkCatalystBlock.PULSE) && !state.getValue(SculkCatalystBlock.PULSE)) {
+                level().setBlock(pos, state.setValue(SculkCatalystBlock.PULSE, true), 3);
+                level().scheduleTick(pos, state.getBlock(), 8);
+            }
+        }
+        if (fed > 0) {
+            DevilRpg.LOGGER.info("[Sculk] Sacrificio en {} alimentó {} catalizador(es) con carga {}",
+                    deathPos, fed, SACRIFICE_CHARGE);
+        }
     }
 
     @Override
@@ -531,7 +573,10 @@ public class SculkCultivatorEntity extends AbstractIllager implements RangedAtta
                 reachTicks++;
                 cult.getNavigation().moveTo(victim, 1.0D);
             } else {
+                BlockPos deathPos = victim.blockPosition();
                 victim.hurt(cult.damageSources().mobAttack(cult), Float.MAX_VALUE);
+                // El sacrificio alimenta los catalizadores de alrededor: la XP de una vaca (1-3) no mueve nada.
+                cult.feedNearbyCatalysts(deathPos);
                 victim = null;
             }
         }

@@ -265,8 +265,13 @@ public final class LairGenerator {
                 int px = center.getX() + x;
                 int pz = center.getZ() + z;
                 if (x == 0 || z == 0) {
-                    // Puente de hueso: se conserva el suelo y se despeja lo que haya encima.
+                    // Puente de hueso: es una LOSA de un bloque sobre el foso, con AIRE debajo, para que el foso
+                    // quede completo (antes había tierra debajo del puente y el foso se veía a medias). Se
+                    // despeja también lo que haya por encima.
                     level.setBlock(new BlockPos(px, baseY - 1, pz), Blocks.BONE_BLOCK.defaultBlockState(), 3);
+                    for (int y = baseY - 2; y > baseY - MOAT_FLOOR_DEPTH; y--) {
+                        level.setBlock(new BlockPos(px, y, pz), Blocks.AIR.defaultBlockState(), 3);
+                    }
                     for (int y = baseY; y < baseY + 4; y++) {
                         if (level.getBlockState(new BlockPos(px, y, pz)).isSolid()) {
                             level.setBlock(new BlockPos(px, y, pz), Blocks.AIR.defaultBlockState(), 3);
@@ -334,15 +339,23 @@ public final class LairGenerator {
         level.setBlock(new BlockPos(center.getX() + 2, floor - 1, center.getZ() - 2),
                 Blocks.SCULK_CATALYST.defaultBlockState(), 3);
 
-        // 3) Salida del cultivador: escalón de 1 bloque en el borde -X (el que mira al corredor) y puerta
-        //    cerrada justo fuera. La columna del escalón se sube un bloque respecto al fondo del foso.
-        int stepX = center.getX() - FARM_RADIUS;
-        int stepZ = center.getZ();
-        for (int y = baseY - 1; y < baseY + 2; y++) {
-            level.setBlock(new BlockPos(stepX, y, stepZ), Blocks.AIR.defaultBlockState(), 3);
+        // 3) Salida del cultivador, SIN saltos encadenados: la puerta va en el propio borde del foso y <b>a la
+        //    altura del FONDO</b>, y fuera de ella una escalera de dos escalones de 1 bloque sube al llano.
+        //    Antes el escalón estaba dentro y la puerta en el borde de arriba, así que había que encadenar dos
+        //    saltos: el guardián caía al foso y se quedaba dentro. La puerta sigue conteniendo a los animales
+        //    (no pueden abrirla) y la escalera queda FUERA, así que desde el fondo solo se sale por la puerta.
+        int gateX = center.getX() - FARM_RADIUS; // borde del foso que mira al corredor
+        int gateZ = center.getZ();
+        level.setBlock(new BlockPos(gateX, floor - 1, gateZ), Blocks.COARSE_DIRT.defaultBlockState(), 3);
+        for (int y = floor; y < baseY + 1; y++) {
+            level.setBlock(new BlockPos(gateX, y, gateZ), Blocks.AIR.defaultBlockState(), 3);
         }
-        level.setBlock(new BlockPos(stepX, floor, stepZ), Blocks.COARSE_DIRT.defaultBlockState(), 3);
-        placeDoor(level, new BlockPos(stepX - 1, baseY, stepZ), Direction.WEST);
+        placeDoor(level, new BlockPos(gateX, floor, gateZ), Direction.WEST); // puerta a la altura del fondo
+        // Escalera de fuera: un escalón intermedio y luego el llano (los dos de 1 bloque).
+        for (int y = floor; y < baseY + 1; y++) {
+            level.setBlock(new BlockPos(gateX - 1, y, gateZ), Blocks.AIR.defaultBlockState(), 3);
+        }
+        level.setBlock(new BlockPos(gateX - 1, floor, gateZ), Blocks.COARSE_DIRT.defaultBlockState(), 3);
 
         // Ganado inicial, en el fondo del foso.
         spawnAnimal(level, center, floor, EntityType.COW, 2);
