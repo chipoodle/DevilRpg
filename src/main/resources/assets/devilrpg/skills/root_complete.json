@@ -233,18 +233,18 @@
     {
         "id": "nature:vinefleshpuppet",
         "display": {
-            "description": "Cast a spore that clings to the enemy. Should it perish, a flesh-eating mushroom sprouts, its spores wounding all nearby. Consumes a seed.",
+            "description": "PASSIVE of the parasite: your parasite also plants a flesh-eating mushroom in the foe, gnawing at it over time. Should the foe perish while infected, a flesh puppet sprouts from the corpse and fights at your side. More points make the mushroom stronger and last longer.",
             "icon": {
                 "item": "devilrpg:item_vine"
             },
             "title": "Parasyte mushroom",
             "image": "devilrpg:textures/gui/skill/mushroom-gills.png",
-            "frame": "task"
+            "frame": "goal"
         },
         "capability": "vinefleshball",
         "skillmanacost":{
             "maxskilllevel":"20",
-            "manacost":"15",
+            "manacost":"0",
             "resourcetype":"mana"
         },
         "rewards": {},

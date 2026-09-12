@@ -4,6 +4,7 @@ import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.effects.MobEffectEntangling;
+import com.chipoodle.devilrpg.effects.MobEffectVineFleshPuppet;
 import com.chipoodle.devilrpg.init.ModEntities;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.core.BlockPos;
@@ -93,6 +94,19 @@ public class LichenSeedBall extends ThrowableItemProjectile implements ISoulEnti
                 MobEffectInstance instance = MobEffectEntangling.createInstance(durationInTicks,amplifierLevel , (Player) getOwner());
                 livingEntity.addEffect(instance);
                 //((Player)getOwner()).addEffect(instance);
+
+                // PASIVO "Parasyte mushroom" (antes era un poder aparte, con su propia bola de esporas): si el
+                // jugador tiene puntos en él, el parásito infecta ADEMÁS con el hongo carnívoro, que va royendo
+                // al enemigo y, si muere infectado, hace brotar un títere de carne del cadáver.
+                // Misma escala que usaba la bola de esporas (20 niveles → amplificador 0-4 y 140-340 ticks).
+                int mushroomPoints = unwrappedPlayerCapability.getSkillsPoints()
+                        .getOrDefault(SkillEnum.VINEFLESHBALL, 0);
+                if (mushroomPoints > 0) {
+                    int mushroomAmplifier = Math.max(0, Math.min(mushroomPoints / 4, 4));
+                    int mushroomDuration = 140 + mushroomPoints * 10;
+                    livingEntity.addEffect(MobEffectVineFleshPuppet.createInstance(
+                            mushroomDuration, mushroomAmplifier, (Player) getOwner()));
+                }
             }
         }
 

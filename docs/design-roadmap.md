@@ -518,6 +518,17 @@ el tiempo y se gasta en una lista de planos, más un `Goal` de "ir a construir" 
   aldeanos: 0 = la aldea ha caído), `SIEGE_WARN_RADIUS` 160 (a quién se avisa) y spawn de la horda a
   `FENCE_RADIUS + 3 … + 19` = **32–48** bloques del centro.
 
+- **Fusión parásito + hongo (árbol de Naturaleza)**: el poder es **`soullichen`** (*Soullichen*, el parásito
+  que se pega al enemigo y lo lentece/consume) y el **hongo** (`vinefleshball`, *Parasyte mushroom*) pasó de
+  ser un poder aparte a ser su **pasivo de 20 niveles** (`activeSkill = false`, `manacost` 0, `frame` "goal"):
+  en el árbol ya no se puede asignar a una tecla, solo subirle niveles, y lo aplica su padre activo. Al
+  impactar, el parásito aplica su atadura y, **si el jugador tiene puntos en el hongo**, infecta además con el
+  hongo carnívoro (`MobEffectVineFleshPuppet`: daño con el tiempo y, si el infectado muere, del cadáver brota
+  un títere de carne `SunflowerShulker` que pelea para ti). Los puntos ya invertidos se conservan, y el nivel
+  del hongo escala la duración/amplificador de la infección **y** la fuerza del títere. Nota: el ejecutor
+  viejo (`SkillVineFleshPuppet`) sigue existiendo, así que si tenías el hongo asignado a una tecla esa tecla
+  sigue lanzando la bola de esporas (ahora redundante); se puede reasignar al parásito.
+
 - **Guarida (`LairManager`)**: `MAX_LAIR_MOBS` 30 (cupo de enemigos vivos por guarida, sin el guardián),
   `GUARDIAN_RESPAWN_TICKS` 3 min (relevo del guardián si no rompes el núcleo), `SPAWN_INTERVAL_TICKS` 25 s,
   `ACTIVATION_RADIUS` 64, `CORE_AURA_RADIUS` 8, `CORE_FANG_TICKS` 4 s, `MIN_DISTANCE_FROM_OBJECTIVE` 75.

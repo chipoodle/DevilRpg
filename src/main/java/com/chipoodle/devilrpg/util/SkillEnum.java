@@ -41,7 +41,13 @@ public enum SkillEnum {
     SOULSHIELDVINE_RADIUS("SoulShieldVineRadius","Vine Dome Radius","soulshieldvine_radius",false,false),
     SOULMINERVINE("SoulMinerVine","Miner Vine","soulminervine",true,false),
     SOULLICHEN("Soullichen","Soullichen","soullichen",true,false),
-    VINEFLESHBALL("Vinefleshball","Vinefleshball","vinefleshball",true,false),
+    /**
+     * PASIVO del parásito ({@code soullichen}), 20 niveles. Antes era un poder aparte que lanzaba su propia
+     * bola de esporas; ahora el parásito infecta ADEMÁS con el hongo carnívoro (ver
+     * {@code LichenSeedBall.onHitEntity}), así que {@code activeSkill = false}: no se puede asignar como
+     * poder, solo subir sus 20 niveles en el árbol, y lo aplica su padre activo.
+     */
+    VINEFLESHBALL("Vinefleshball","Parasyte mushroom","vinefleshball",false,false),
     MANA_BERRY("ManaBerry","Mana Berry","manaberry",true,false),
     MANA_POOL("ManaPool","Mana Pool","mana_pool",false,false),
     MANA_REGENERATION("ManaRegeneration","Mana Regeneration","mana_regeneration",false,false),
