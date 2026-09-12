@@ -81,12 +81,17 @@ public class SkillsIconHudOverlay {
             float cooldownPercent = player.getCooldowns().getCooldownPercent(item, 0);
             float color = 1f - (cooldownPercent) / 1.5f;
 
-            // Renderizar icono
-            guiGraphics.setColor(1.0F, color, color, onCooldown ? 0.5F : 1.0F);
-            // Blit de 9 args (textura completa al tamano del icono); el de 7 args asume
-            // textura de 256px y con iconos de 128px mostraba solo una esquina.
-            guiGraphics.blit(resourceLocation, x, y, 0, 0.0F, 0.0F, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE);
-            guiGraphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
+            // Renderizar icono: SOLO si el poder tiene una skill con imagen. Los huecos sin asignar pintaban
+            // la caja oscura (empty-box) y esa caja negra es justo lo que sobra en el HUD; de un hueco vacío
+            // queda únicamente el nombre de su tecla (ver renderKeyName más abajo).
+            boolean hasIcon = !EMPTY_POWER_IMAGE_RESOURCE.equals(resourceLocation);
+            if (hasIcon) {
+                guiGraphics.setColor(1.0F, color, color, onCooldown ? 0.5F : 1.0F);
+                // Blit de 9 args (textura completa al tamano del icono); el de 7 args asume
+                // textura de 256px y con iconos de 128px mostraba solo una esquina.
+                guiGraphics.blit(resourceLocation, x, y, 0, 0.0F, 0.0F, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE);
+                guiGraphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
+            }
 
             // Indicador de semillas si es necesario
             if (!aSkillEnum.equals(SkillEnum.EMPTY)) {
