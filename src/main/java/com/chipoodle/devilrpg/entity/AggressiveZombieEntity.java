@@ -336,6 +336,11 @@ public class AggressiveZombieEntity extends Zombie {
         Objects.requireNonNull(this.getAttribute(Attributes.MOVEMENT_SPEED)).setBaseValue(SPAWN_PROFILE.baseSpeed() * scaleFactor);
         Objects.requireNonNull(this.getAttribute(Attributes.ATTACK_DAMAGE)).setBaseValue(SPAWN_PROFILE.baseDamage() * scaleFactor);
 
+        // Subir la vida ACTUAL al nuevo máximo: al escalar solo se cambiaba el máximo, así que un zombie
+        // escalado nacía con la vida base del perfil (9) y el máximo escalado (hasta ~76), o sea HERIDO, y el
+        // escalado de vida apenas se notaba en combate. El vex helado ya lo hacía así.
+        this.setHealth(this.getMaxHealth());
+
         DevilRpg.LOGGER.info("Attributes Scaled => scaleFactor: {} | DISTANCE: {} | MAX_HEALTH: {} | MOVEMENT_SPEED: {} | ATTACK_DAMAGE: {}",
                 scaleFactor,
                 spawnDistance,

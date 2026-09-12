@@ -590,10 +590,11 @@ la **guarida** (`LairManager.spawnWave`: 3 cada 25 s a 8–14 bloques del centro
   `spawnDistance` se recalcula con la posición actual (el campo no se guarda en NBT).
 - Dentro de la **zona protegida** (`spawnDistance < minDistance`) el zombie **no escala nada** (sale con las
   bases del perfil).
-- **Quirk conocido (sin arreglar a propósito)**: al escalar se sube la vida **máxima** pero no la **actual**,
-  así que un zombie escalado nace con vida `baseHealth` y máximo escalado (o sea, herido). El vex sí se cura a
-  tope (`setHealth(getMaxHealth())`) en su propio método. Arreglarlo es una línea en el zombie agresivo, pero
-  cambia el balance (los escalados durarían bastante más), así que queda a decisión del diseño.
+- **Vida al spawnear (arreglado)**: antes, al escalar se subía la vida **máxima** pero no la **actual**, así
+  que un zombie escalado nacía con vida `baseHealth` (9) y máximo escalado (hasta ≈76): o sea **herido**, y el
+  escalado de vida casi no se notaba en combate. Ahora, tras aplicar el escalado, el zombie agresivo sube su
+  vida actual al nuevo máximo (`setHealth(getMaxHealth())`), igual que ya hacía el vex helado. Efecto de
+  balance: un zombie lejano aguanta bastante más que antes (hasta ×8.46 de vida a máxima distancia + amenaza).
 - El comentario de `VexSpawnProfile` dice "sin zona protegida" pero el valor real es **67** (heredado del
   zombie): el vex también respeta zona protegida, solo que pequeña. Comentario desactualizado.
 
