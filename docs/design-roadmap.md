@@ -648,8 +648,11 @@ la **guarida** (`LairManager.spawnWave`: 3 cada 25 s a 8–14 bloques del centro
     `Files.walk` devolvía vacío dentro del jar) y excluye los `template*`.
 - **Ranuras de skill (pantalla y HUD), sin caja oscura**: el `empty-box.png` (la caja negra) **ya no se pinta
   en ninguna ranura**: en `CustomSkillButton` solo se dibuja el icono de la skill asignada, y en
-  `SkillsIconHudOverlay` el icono del HUD se dibuja solo si el poder tiene skill con imagen (de un hueco vacío
-  queda únicamente el nombre de su tecla). El borde iluminado al pasar el mouse se mantiene.
+  `SkillsIconHudOverlay` el icono del HUD se dibuja solo si el poder tiene skill con imagen. Además, en el
+  **HUD** una ranura sin skill **no muestra nada** (ni icono ni nombre de tecla), mientras que en la
+  **pantalla de habilidades** las teclas se muestran **siempre** (allí los huecos son espacios de asignación y
+  la tecla es la referencia para asignar). Las ranuras con skill del HUD no se mueven de su sitio cuando otra
+  queda vacía (no se compacta la barra). El borde iluminado al pasar el mouse se mantiene.
 
 > TODO (siguiente): que las hordas apunten al **asentamiento más cercano** en vez de al jugador, para
 > conectar con la Iteración 3.

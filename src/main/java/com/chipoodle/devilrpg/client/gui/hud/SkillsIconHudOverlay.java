@@ -82,8 +82,7 @@ public class SkillsIconHudOverlay {
             float color = 1f - (cooldownPercent) / 1.5f;
 
             // Renderizar icono: SOLO si el poder tiene una skill con imagen. Los huecos sin asignar pintaban
-            // la caja oscura (empty-box) y esa caja negra es justo lo que sobra en el HUD; de un hueco vacío
-            // queda únicamente el nombre de su tecla (ver renderKeyName más abajo).
+            // la caja oscura (empty-box) y esa caja negra es justo lo que sobra en el HUD.
             boolean hasIcon = !EMPTY_POWER_IMAGE_RESOURCE.equals(resourceLocation);
             if (hasIcon) {
                 guiGraphics.setColor(1.0F, color, color, onCooldown ? 0.5F : 1.0F);
@@ -101,8 +100,13 @@ public class SkillsIconHudOverlay {
                 }
             }
 
-            // Renderizar nombre de la tecla con menos espacio vertical
-            renderKeyName(guiGraphics, font, x, y, ICON_SIZE, ICON_SIZE, keyName, onCooldown);
+            // Nombre de la tecla: también SOLO si la ranura tiene skill. En el HUD, una ranura vacía no
+            // muestra NADA (ni icono ni tecla); en la pantalla de habilidades sí se muestran siempre las teclas,
+            // porque allí los huecos son espacios de asignación. Ojo: se sigue incrementando `i` para que las
+            // ranuras con skill NO se muevan de su sitio (si no, la barra se compactaría al perder una skill).
+            if (hasIcon) {
+                renderKeyName(guiGraphics, font, x, y, ICON_SIZE, ICON_SIZE, keyName, onCooldown);
+            }
             i++;
         }
     };
