@@ -518,8 +518,27 @@ el tiempo y se gasta en una lista de planos, más un `Goal` de "ir a construir" 
   aldeanos: 0 = la aldea ha caído), `SIEGE_WARN_RADIUS` 160 (a quién se avisa) y spawn de la horda a
   `FENCE_RADIUS + 3 … + 19` = **32–48** bloques del centro.
 
-- **Fusión parásito + hongo (árbol de Naturaleza)**: el poder es **`soullichen`** (*Soullichen*, el parásito
-  que se pega al enemigo y lo lentece/consume) y el **hongo** (`vinefleshball`, *Parasyte mushroom*) pasó de
+- **Minions persistentes (lobo, oso y wisp)**: los minions se guardan por **UUID** en la capability del jugador
+  (`PlayerMinionCapability`) y ahora **sobreviven a salir y volver a entrar**, sin duplicarse:
+  - **Al desconectarse** (`PlayerLoggedOutEvent`): se guarda el **NBT completo** de cada minion vivo (más su
+    dimensión y posición) en `Stored_Minions` y se saca del mundo con `discard()` (no dispara `die()`, así no
+    ensucia las listas). No se quedan sueltos por el mundo mientras no juegas.
+  - **Al entrar**: `restoreStoredMinions` **adopta** los que sigan existiendo (caso de corte de luz: no se llegó
+    a guardar y siguen en el mundo) y **recrea** los que ya no estén. Para distinguir "está en un chunk
+    descargado" de "ya no existe" se **fuerza la carga de su chunk** y se reintenta. Nunca se recrea "por si
+    acaso": eso es exactamente lo que duplicaría. Después se traen junto al jugador.
+  - **Al morir**: se matan los vivos y se olvida lo guardado (no vuelven).
+  - **Al cambiar de dimensión**: se teletransportan contigo (`DimensionTransition`), en el siguiente tick del
+    servidor para que el nivel destino ya esté aplicado.
+  - **El shulker del hongo NO se guarda**: es temporal (1 min) y muere si el dueño no está
+    (`ISoulEntity.despawnsWithoutOwner()` → `true`; lobo, oso y wisp lo sobrescriben a `false`, así que solo
+    mueren si el dueño **existe y está muerto**). Antes, "no encuentro al dueño" mataba a todos.
+  - **Anti-duplicado (bug que ya existía)**: al invocar se **mira** el minion más viejo sin quitarlo de la lista
+    hasta confirmar que existe de verdad; antes se hacía `poll()`/`remove()` a ciegas, así que un minion
+    descargado se olvidaba pero seguía vivo y al cargarse tenías uno de más (p. ej. 4 lobos). El cupo es el
+    tamaño de la lista, no lo que esté cargado.
+
+- **Fusión parásito + hongo (árbol de Naturaleza)**: el poder es **`soullichen`** (*Soullichen*, el parásito  que se pega al enemigo y lo lentece/consume) y el **hongo** (`vinefleshball`, *Parasyte mushroom*) pasó de
   ser un poder aparte a ser su **pasivo de 20 niveles** (`activeSkill = false`, `manacost` 0, `frame` "goal"):
   en el árbol ya no se puede asignar a una tecla, solo subirle niveles, y lo aplica su padre activo. Al
   impactar, el parásito aplica su atadura y, **si el jugador tiene puntos en el hongo**, infecta además con el

@@ -55,10 +55,13 @@ public class SkillSummonSoulWolf extends AbstractSkillExecutor {
 
                 keys.offer(summonSoulWolf(level, player, rand).getUUID());
                 if (keys.size() > NUMBER_OF_SUMMONS) {
-                    UUID key = keys.remove();
-                    SoulWolf e = (SoulWolf) min.getTamableByUUID(key, player.level());
+                    // Se MIRA el más viejo sin quitarlo de la lista hasta saber que existe de verdad: si se
+                    // quitara a ciegas, un lobo en un chunk descargado (o guardado al desconectarse) se
+                    // olvidaría pero seguiría vivo, y al cargarse tendrías uno de más (duplicado).
+                    UUID key = keys.peek();
+                    SoulWolf e = key == null ? null : (SoulWolf) min.getTamableByUUID(key, player.level());
                     if (e != null)
-                        min.removeSoulWolf(player, e);
+                        min.removeSoulWolf(player, e); // ya quita el UUID de la lista
                 }
                 min.setSoulWolfMinions(keys, player);
             }

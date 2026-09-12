@@ -37,6 +37,7 @@ import com.chipoodle.devilrpg.util.EventUtils;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
@@ -95,8 +96,10 @@ public class PlayerCapabilityForgeEventSubscriber {
     @SubscribeEvent
     public static void onPlayerClone(PlayerEvent.Clone e) {
         if (e.isWasDeath()) {
-            // Al morir se conserva el NIVEL y solo se pierde un 10% de la experiencia del nivel.
+            // Al morir se conserva el NIVEL y solo se pierde un 5% de la experiencia del nivel.
             applyDeathXpPenalty(e);
+            // Regla de diseño: al morir el jugador, sus minions se van con él (y no vuelven al entrar).
+            releaseMinionsOnDeath(e.getOriginal());
             clonePlayerCapability(e, PlayerAuxiliaryCapability.INSTANCE);
             clonePlayerCapability(e, PlayerExperienceCapability.INSTANCE);
             clonePlayerCapability(e, PlayerManaCapability.INSTANCE);
@@ -199,6 +202,41 @@ public class PlayerCapabilityForgeEventSubscriber {
         actualPlayer.getData(cap).deserializeNBT(actualPlayer.level().registryAccess(), originalCompound);
     }
 
+    /**
+     * Regla de diseño: al morir el jugador sus minions desaparecen y no vuelven. Se matan los vivos (que
+     * además se suicidan solos al ver al dueño muerto, esto es la red de seguridad) y se olvida lo guardado.
+     */
+    private static void releaseMinionsOnDeath(Player original) {
+        PlayerMinionCapabilityInterface minionCap =
+                IGenericCapability.getUnwrappedPlayerCapability(original, PlayerMinionCapability.INSTANCE);
+        if (minionCap == null) {
+            return;
+        }
+        minionCap.removeAllSoulWolf(original);
+        minionCap.removeAllSoulBear(original);
+        minionCap.removeAllWisp(original);
+        minionCap.clearStoredMinions(original);
+    }
+
+    /**
+     * Al desconectarse el jugador, sus minions se guardan (NBT completo + dónde estaban) y se sacan del
+     * mundo: así no se quedan sueltos mientras no juegas y vuelven contigo al entrar. Si el corte es brusco
+     * (luz, crash) esto no se ejecuta: el minion se queda en el mundo y al volver se <b>adopta</b> — nunca se
+     * duplica.
+     */
+    @SubscribeEvent
+    public static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
+        Player player = event.getEntity();
+        if (player.level().isClientSide) {
+            return;
+        }
+        PlayerMinionCapabilityInterface minionCap =
+                IGenericCapability.getUnwrappedPlayerCapability(player, PlayerMinionCapability.INSTANCE);
+        if (minionCap != null) {
+            minionCap.storeAllMinions(player);
+        }
+    }
+
     @SubscribeEvent
     public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
         Player player = event.getEntity();
@@ -224,6 +262,20 @@ public class PlayerCapabilityForgeEventSubscriber {
             CompoundTag compoundTag = aSkillCap.setSkillToByteArray(skillEnum);
             PacketDistributor.sendToServer(new PlayerPassiveSkillPayload(compoundTag));
         });
+
+        // Los minions persistentes (lobo, oso, wisp) siguen al jugador de dimensión. Se hace en el siguiente
+        // tick del servidor para asegurar que el jugador ya está en el nivel destino (el evento puede llegar
+        // con la dimensión vieja todavía puesta).
+        MinecraftServer server = player.getServer();
+        if (server != null) {
+            server.execute(() -> {
+                PlayerMinionCapabilityInterface minionCap =
+                        IGenericCapability.getUnwrappedPlayerCapability(player, PlayerMinionCapability.INSTANCE);
+                if (minionCap != null) {
+                    minionCap.bringMinionsToPlayer(player);
+                }
+            });
+        }
     }
 
     @SubscribeEvent
@@ -248,8 +300,10 @@ public class PlayerCapabilityForgeEventSubscriber {
             BiConsumer<Player, PlayerAuxiliaryCapabilityInterface> auxBiConsumer = shapeshiftToNormal();
             auxBiConsumer.accept(player, player.getData(PlayerAuxiliaryCapability.INSTANCE));
 
-            BiConsumer<Player, PlayerMinionCapabilityInterface> minBiConsumer = removeMinions(player);
-            minBiConsumer.accept(player, player.getData(PlayerMinionCapability.INSTANCE));
+            // Los minions NO se tocan aquí: este evento también salta al morir y al cambiar de dimensión, y
+            // cada caso tiene su propio tratamiento (guardarlos al desconectarse, matarlos al morir y
+            // llevarlos contigo al cambiar de dimensión). Antes se borraban todos aquí, que es justo lo que
+            // hacía que no sobrevivieran a salir y volver a entrar.
         }
     }
 
@@ -302,16 +356,19 @@ public class PlayerCapabilityForgeEventSubscriber {
         BiConsumer<Player, PlayerAuxiliaryCapabilityInterface> auxBiConsumer = shapeshiftToNormal();
         EventUtils.onJoin(player, auxBiConsumer, PlayerAuxiliaryCapability.INSTANCE);
 
-        BiConsumer<Player, PlayerMinionCapabilityInterface> minBiConsumer = removeMinions(player);
+        BiConsumer<Player, PlayerMinionCapabilityInterface> minBiConsumer = restoreMinions(player);
         EventUtils.onJoin(player, minBiConsumer, PlayerMinionCapability.INSTANCE);
     }
 
-    private static BiConsumer<Player, PlayerMinionCapabilityInterface> removeMinions(Player player) {
+    /**
+     * Al entrar al mundo se <b>devuelven</b> los minions guardados (adoptando los que sigan en el mundo y
+     * recreando los que ya no estén) en vez de borrarlos. Antes se borraban todos aquí, y por eso no
+     * sobrevivían a salir y volver a entrar. El estado vive en la capability de minions del jugador.
+     */
+    private static BiConsumer<Player, PlayerMinionCapabilityInterface> restoreMinions(Player player) {
         return (aPlayer, theMin) -> {
             if (!aPlayer.isLocalPlayer()) {
-                theMin.removeAllSoulWolf(player);
-                theMin.removeAllSoulBear(player);
-                theMin.removeAllWisp(player);
+                theMin.restoreStoredMinions(aPlayer);
             }
         };
     }

@@ -140,6 +140,15 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
 
     }
 
+    /**
+     * Minion persistente: NO muere por no encontrar al dueño (desconectado o en otra dimensión). Solo muere
+     * si el dueño existe y está muerto, o si lo matan. Vale para los tres wisps (salud, arquero y ranger).
+     */
+    @Override
+    public boolean despawnsWithoutOwner() {
+        return false;
+    }
+
     public void updateLevel(Player owner, Holder<MobEffect> efectoPrimario, Holder<MobEffect> efectoSecundario, SkillEnum wispType, boolean esBeneficioso) {
         tame(owner);
         PlayerSkillCapabilityInterface skill = Objects.requireNonNull(getOwner()).getData(PlayerSkillCapability.INSTANCE);

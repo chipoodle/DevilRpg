@@ -160,6 +160,16 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
 
     }
 
+    /**
+     * Minion persistente: NO muere por no encontrar al dueño (desconectado o en otra dimensión). Solo muere
+     * si el dueño existe y está muerto, o si lo matan. Su estado (incluido el inventario) se guarda en la
+     * capability de minions del jugador.
+     */
+    @Override
+    public boolean despawnsWithoutOwner() {
+        return false;
+    }
+
     public void updateLevel(Player owner) {
         tame(owner);
         DevilRpg.LOGGER.debug("-------> updateLevel getOwnerUUID() {} ", this.getOwnerUUID());

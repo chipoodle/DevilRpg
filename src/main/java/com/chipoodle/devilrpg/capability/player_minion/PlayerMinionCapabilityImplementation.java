@@ -14,19 +14,28 @@ import com.chipoodle.devilrpg.network.payload.PlayerMinionPayload;
 import com.chipoodle.devilrpg.util.BytesUtil;
 import com.chipoodle.devilrpg.util.TargetUtils;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.portal.DimensionTransition;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Random;
 import java.util.UUID;
@@ -39,6 +48,8 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
     public final static String SOULBEAR_MINION_KEY = "Bear_Minions";
     public final static String WISP_MINIONS_KEY = "Wisp_Minions";
     public final static String SOULBEAR_INVENTORY_KEY = "Soulbear_Inventory";
+    /** Minions guardados al desconectarse el jugador (lista de {Id, Dimension, Pos, Data}). */
+    public final static String STORED_MINIONS_KEY = "Stored_Minions";
     private CompoundTag nbt = new CompoundTag();
 
     public PlayerMinionCapabilityImplementation() {
@@ -343,11 +354,208 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
 
     private void removeOldestWispIfNecessary(ConcurrentLinkedQueue<UUID> keys, int maxSummons, Player player) {
         if (keys.size() > maxSummons) {
-            UUID removedKey = keys.poll();
-            SoulWisp oldestWisp = (SoulWisp) getTamableByUUID(removedKey, player.level());
+            // OJO: se MIRA el más viejo, pero NO se quita de la lista hasta saber que el wisp existe de verdad.
+            // Antes se hacía `poll()` primero: si ese wisp estaba en un chunk descargado (o guardado), la lista
+            // lo olvidaba pero el wisp seguía vivo, así que al cargarse de nuevo tenías uno de más (duplicado).
+            UUID oldestKey = keys.peek();
+            SoulWisp oldestWisp = oldestKey == null ? null : (SoulWisp) getTamableByUUID(oldestKey, player.level());
             if (oldestWisp != null) {
-                removeWisp(player, oldestWisp);
+                removeWisp(player, oldestWisp); // removeWisp ya quita el UUID de la lista
             }
         }
+    }
+
+    // --- Persistencia de minions: que te sigan al salir, volver a entrar y cambiar de dimensión -----
+
+    /** Lista de minions guardados: cada entrada es {Id (UUID), Dimension, Pos (long), Data (NBT completo)}. */
+    private ListTag storedMinionsTag() {
+        if (!nbt.contains(STORED_MINIONS_KEY, Tag.TAG_LIST)) {
+            nbt.put(STORED_MINIONS_KEY, new ListTag());
+        }
+        return nbt.getList(STORED_MINIONS_KEY, Tag.TAG_COMPOUND);
+    }
+
+    /** Todas las UUIDs de minions (de las tres listas), sin repetir y sin petar si alguna vuelve null. */
+    private List<UUID> allMinionIds() {
+        List<UUID> ids = new ArrayList<>();
+        for (ConcurrentLinkedQueue<UUID> queue : List.of(getSoulWolfMinions(), getSoulBearMinions(), getWispMinions())) {
+            if (queue != null) {
+                ids.addAll(queue);
+            }
+        }
+        return ids;
+    }
+
+    /**
+     * Guarda los minions vivos (NBT completo + dimensión + posición) en los datos del jugador y los saca del
+     * mundo. Se llama al desconectarse: así no se quedan sueltos por el mundo mientras no juegas, y vuelven
+     * contigo al entrar. Los que no estén cargados se dejan como están (su UUID sigue en la lista y se
+     * adoptarán al volver).
+     */
+    @Override
+    public void storeAllMinions(Player player) {
+        if (player == null || player.level().isClientSide) {
+            return;
+        }
+        MinecraftServer server = player.getServer();
+        if (server == null) {
+            return;
+        }
+        ListTag stored = storedMinionsTag();
+        int count = 0;
+        for (UUID id : allMinionIds()) {
+            Entity entity = findLoadedAnywhere(server, id);
+            if (!(entity instanceof ITamableEntity)) {
+                continue;
+            }
+            CompoundTag entry = new CompoundTag();
+            entry.putUUID("Id", entity.getUUID());
+            entry.putString("Dimension", entity.level().dimension().location().toString());
+            entry.putLong("Pos", entity.blockPosition().asLong());
+            CompoundTag data = new CompoundTag();
+            entity.saveWithoutId(data);
+            entry.put("Data", data);
+            stored.add(entry);
+            // Se saca del mundo SIN morir (discard no dispara die(), así no ensucia las listas de minions).
+            entity.discard();
+            count++;
+        }
+        if (count > 0) {
+            DevilRpg.LOGGER.info("[Minion] {} minion(es) guardados para {} (vuelven al entrar)",
+                    count, player.getName().getString());
+            if (player instanceof ServerPlayer serverPlayer) {
+                sendSkillChangesToClient(serverPlayer);
+            }
+        }
+    }
+
+    /**
+     * Devuelve los minions guardados: <b>adopta</b> los que sigan existiendo en el mundo (el caso de un corte
+     * de luz, en el que no se llegaron a guardar) y <b>recrea</b> los que ya no estén. Nunca recrea "por si
+     * acaso": eso es lo que duplicaría. Después los trae junto al jugador.
+     */
+    @Override
+    public void restoreStoredMinions(Player player) {
+        if (player == null || player.level().isClientSide || !(player.level() instanceof ServerLevel playerLevel)) {
+            return;
+        }
+        MinecraftServer server = player.getServer();
+        if (server == null) {
+            return;
+        }
+        ListTag stored = storedMinionsTag();
+        if (stored.isEmpty()) {
+            return;
+        }
+        int restored = 0;
+        for (Tag element : stored) {
+            CompoundTag entry = (CompoundTag) element;
+            if (!entry.hasUUID("Id")) {
+                continue;
+            }
+            UUID id = entry.getUUID("Id");
+            BlockPos pos = BlockPos.of(entry.getLong("Pos"));
+            ServerLevel storedLevel = levelOf(server, entry.getString("Dimension"));
+            ITamableEntity minion = null;
+            if (storedLevel != null) {
+                minion = resolveMinion(storedLevel, id, pos);
+            }
+            if (minion == null) {
+                minion = recreateMinion(entry, playerLevel, player);
+            }
+            if (minion == null) {
+                continue; // no se pudo recuperar: se descarta la entrada (mejor perderlo que duplicarlo)
+            }
+            bringToPlayer(minion, player, playerLevel);
+            restored++;
+        }
+        stored.clear();
+        DevilRpg.LOGGER.info("[Minion] {} minion(es) devueltos a {}", restored, player.getName().getString());
+        if (player instanceof ServerPlayer serverPlayer) {
+            sendSkillChangesToClient(serverPlayer);
+        }
+    }
+
+    /** Lleva a los minions vivos junto al jugador, cambiándolos de dimensión si hace falta. */
+    @Override
+    public void bringMinionsToPlayer(Player player) {
+        if (player == null || player.level().isClientSide || !(player.level() instanceof ServerLevel playerLevel)) {
+            return;
+        }
+        MinecraftServer server = player.getServer();
+        if (server == null) {
+            return;
+        }
+        for (UUID id : allMinionIds()) {
+            Entity entity = findLoadedAnywhere(server, id);
+            if (entity instanceof ITamableEntity minion) {
+                bringToPlayer(minion, player, playerLevel);
+            }
+        }
+    }
+
+    /** Olvida los minions guardados (al morir el jugador, que además los mata). */
+    @Override
+    public void clearStoredMinions(Player player) {
+        nbt.put(STORED_MINIONS_KEY, new ListTag());
+        if (player instanceof ServerPlayer serverPlayer) {
+            sendSkillChangesToClient(serverPlayer);
+        }
+    }
+
+    /** Busca una entidad por UUID en todos los niveles del servidor (solo encuentra las cargadas). */
+    private Entity findLoadedAnywhere(MinecraftServer server, UUID id) {
+        for (ServerLevel level : server.getAllLevels()) {
+            Entity entity = level.getEntity(id);
+            if (entity != null) {
+                return entity;
+            }
+        }
+        return null;
+    }
+
+    private ServerLevel levelOf(MinecraftServer server, String dimensionId) {
+        try {
+            return server.getLevel(ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse(dimensionId)));
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * ¿Sigue existiendo el minion? Si no está cargado, se fuerza la carga de su chunk (donde estaba al
+     * guardarse) y se reintenta: así se distingue "está en un chunk descargado" de "ya no existe".
+     */
+    private ITamableEntity resolveMinion(ServerLevel level, UUID id, BlockPos pos) {
+        Entity entity = level.getEntity(id);
+        if (entity == null) {
+            level.getChunk(pos.getX() >> 4, pos.getZ() >> 4);
+            entity = level.getEntity(id);
+        }
+        return entity instanceof ITamableEntity minion ? minion : null;
+    }
+
+    /** Recrea un minion desde su NBT guardado, junto al jugador (conserva su UUID: las listas siguen valiendo). */
+    private ITamableEntity recreateMinion(CompoundTag entry, ServerLevel level, Player player) {
+        CompoundTag data = entry.getCompound("Data");
+        return EntityType.create(data, level)
+                .map(entity -> {
+                    entity.moveTo(player.getX(), player.getY(), player.getZ(), player.getYRot(), 0.0F);
+                    level.addFreshEntity(entity);
+                    return entity instanceof ITamableEntity minion ? minion : null;
+                })
+                .orElse(null);
+    }
+
+    /** Trae un minion al lado del jugador, cambiándolo de dimensión si está en otra. */
+    private void bringToPlayer(ITamableEntity minion, Player player, ServerLevel playerLevel) {
+        Entity entity = (Entity) minion;
+        if (entity.level() != playerLevel) {
+            entity = entity.changeDimension(new DimensionTransition(playerLevel, player, DimensionTransition.DO_NOTHING));
+            if (entity == null) {
+                return;
+            }
+        }
+        entity.teleportTo(player.getX(), player.getY(), player.getZ());
     }
 }

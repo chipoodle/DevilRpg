@@ -93,6 +93,15 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
         this.targetSelector.addGoal(8, new ResetUniversalAngerTargetGoal<>(this, true));
     }
 
+    /**
+     * Minion persistente: NO muere por no encontrar al dueño (desconectado o en otra dimensión). Solo muere
+     * si el dueño existe y está muerto, o si lo matan. Su estado se guarda en la capability de minions.
+     */
+    @Override
+    public boolean despawnsWithoutOwner() {
+        return false;
+    }
+
     public void updateLevel(Player owner) {
         tame(owner);
         PlayerSkillCapabilityInterface skill = IGenericCapability.getUnwrappedPlayerCapability((Player) getOwner(), PlayerSkillCapability.INSTANCE);

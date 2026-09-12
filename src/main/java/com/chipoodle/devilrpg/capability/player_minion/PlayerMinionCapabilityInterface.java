@@ -47,4 +47,18 @@ public interface PlayerMinionCapabilityInterface extends IGenericCapability {
 
     void summonWispComplete(Level levelIn, Player player, Random rand, Supplier<SoulWisp> summonWispFunction, int maxSummons, Class<? extends SoulWisp> instance);
 
+    // --- Persistencia: que los minions te sigan al salir, volver a entrar y cambiar de dimensión -----
+
+    /** Guarda los minions vivos (NBT + dimensión + posición) en los datos del jugador y los saca del mundo. */
+    void storeAllMinions(Player player);
+
+    /** Devuelve los minions guardados: adopta los que sigan en el mundo y recrea los que ya no estén. */
+    void restoreStoredMinions(Player player);
+
+    /** Lleva a los minions vivos junto al jugador, cambiándolos de dimensión si hace falta. */
+    void bringMinionsToPlayer(Player player);
+
+    /** Olvida los minions guardados (al morir el jugador, que además los mata). */
+    void clearStoredMinions(Player player);
+
 }
