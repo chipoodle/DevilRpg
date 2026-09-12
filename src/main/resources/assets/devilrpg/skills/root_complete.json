@@ -233,7 +233,7 @@
     {
         "id": "nature:vinefleshpuppet",
         "display": {
-            "description": "PASSIVE of the parasite: your parasite also plants a flesh-eating mushroom in the foe, gnawing at it over time. Should the foe perish while infected, a flesh puppet sprouts from the corpse and fights at your side. More points make the mushroom stronger and last longer.",
+            "description": "Your parasite also plants a flesh-eating mushroom in the foe: it gnaws at them from within and, should the host perish, a flesh puppet rises from the corpse to fight at your side. Higher skill makes the growth bite deeper and last longer.",
             "icon": {
                 "item": "devilrpg:item_vine"
             },
