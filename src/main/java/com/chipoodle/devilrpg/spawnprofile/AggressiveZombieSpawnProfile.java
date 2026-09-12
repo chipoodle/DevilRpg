@@ -11,7 +11,7 @@ public final class AggressiveZombieSpawnProfile {
             67,     // minDistance: zona protegida reducida a un tercio (antes 200)
             3000,   // maxDistance: probabilidad 1 a partir de 3000 bloques
             17,     // minHardDistance: la zona protegida se encoge hasta 17 bloques a máxima amenaza
-            3.7,    // maxScaleMultiplier: +350% de atributos en la distancia máxima
+            3.5,    // maxScaleMultiplier: +350% de atributos en la distancia máxima
             9,   // baseHealth
             0.068,  // baseSpeed
             0.7,    // baseDamage

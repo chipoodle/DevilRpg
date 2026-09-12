@@ -492,7 +492,7 @@ el tiempo y se gasta en una lista de planos, más un `Goal` de "ir a construir" 
   `threatFullHours` (3 h **jugadas**). Los lee `ThreatLevel` (`current`, `maxExtraDifficulty()`,
   `fullThreatTicks()`); si la config no está cargada (cliente), usa los valores por defecto.
 - **Perfil del zombie (`AggressiveZombieSpawnProfile.INSTANCE`)**: `minDistance` 67, `maxDistance` 3000,
-  `minHardDistance` 17, `maxScaleMultiplier` 3.7, `baseHealth` 9, `baseSpeed` 0.068, `baseDamage` 0.7,
+  `minHardDistance` 17, `maxScaleMultiplier` 3.5, `baseHealth` 9, `baseSpeed` 0.068, `baseDamage` 0.7,
   `baseXp` 20 y `maxXpMultiplier` 4.5. **Detalle completo en 5.1.**
 - **Objetivo**: `ObjectiveTargets.MIN_DISTANCE` (800), `MAX_DISTANCE` (1200), `OBJECTIVE_STEP` (600),
   `REACH_RADIUS` (24). La distancia del objetivo `i` = `800 + i*600 + rnd*400`, garantizando separación ≥
@@ -562,11 +562,14 @@ o sea que a **máxima distancia + amenaza máxima** (3 h de partida) el multipli
 
 | | zombie agresivo (max 3000) | vex helado (max 1000) |
 |---|---|---|
-| factor máximo | `4.7 · 1.8 = 8.46×` | `3.5 · 1.8 = 6.3×` |
-| vida | 9 → **≈76** | 6.67 → **≈42** |
-| velocidad | 0.068 → **≈0.58** | 0.077 → **≈0.49** |
-| daño | 0.7 → **≈5.9** | 0.34 → **≈2.1** |
+| factor máximo | `4.5 · 1.8 = 8.1×` | `3.5 · 1.8 = 6.3×` |
+| vida | 9 → **≈73** | 6.67 → **≈42** |
+| velocidad | 0.068 → **≈0.55** | 0.077 → **≈0.49** |
+| daño | 0.7 → **≈5.7** | 0.34 → **≈2.1** |
 | XP al morir | 20·5.5 = **110** | 5·5.5 = **≈28** |
+
+(Los números del zombie son con `maxScaleMultiplier` 3.5; el usuario lo bajó desde 3.7 al arreglar la vida al
+spawnear, porque los escalados pasaron a durar mucho más.)
 
 **Instancias que existen hoy** (solo hay dos perfiles):
 
@@ -604,19 +607,32 @@ la **guarida** (`LairManager.spawnWave`: 3 cada 25 s a 8–14 bloques del centro
 - Dentro de la **zona protegida** (`spawnDistance < minDistance`) el zombie **no escala nada** (sale con las
   bases del perfil).
 - **Vida al spawnear (arreglado)**: antes, al escalar se subía la vida **máxima** pero no la **actual**, así
-  que un zombie escalado nacía con vida `baseHealth` (9) y máximo escalado (hasta ≈76): o sea **herido**, y el
+  que un zombie escalado nacía con vida `baseHealth` (9) y máximo escalado (hasta ≈73): o sea **herido**, y el
   escalado de vida casi no se notaba en combate. Ahora, tras aplicar el escalado, el zombie agresivo sube su
   vida actual al nuevo máximo (`setHealth(getMaxHealth())`), igual que ya hacía el vex helado. Efecto de
-  balance: un zombie lejano aguanta bastante más que antes (hasta ×8.46 de vida a máxima distancia + amenaza).
+  balance: un zombie lejano aguanta mucho más que antes (hasta ×8.1 de vida a máxima distancia + amenaza), y
+  por eso el `maxScaleMultiplier` se bajó de 3.7 a 3.5.
 - El comentario de `VexSpawnProfile` dice "sin zona protegida" pero el valor real es **67** (heredado del
   zombie): el vex también respeta zona protegida, solo que pequeña. Comentario desactualizado.
 
-- **UI del árbol de skills (`SkillScreen`)**: abajo hay dos parejas de botones, la izquierda para el **fondo**
-  (`SkillBackgroundManager`) y la derecha para el **skin de widget** de los nodos (`SkillWidget`), cada una con
-  su etiqueta `nombre  n/total`; `Def` devuelve el skin de widget al por defecto. La elección de los dos se
-  guarda en la **config de cliente** (`skills_ui.skillBackground` y `skills_ui.skillWidgetSkin`), así que
-  sobrevive al reinicio. La lista de skins se lee con el `ResourceManager` (recorrer la carpeta del classloader
-  con `Files.walk` devolvía vacío dentro del jar) y excluye los `template*`.
+- **UI del árbol de skills (`SkillScreen`)**: el **fondo** y el **skin de widget** de los nodos ya están
+  elegidos, así que los dos selectores están **ocultos** (llamadas comentadas en `SkillScreen` con la nota de
+  qué descomentar para recuperarlos; al recuperarlos hay que reactivar también `applySavedSelection()` en
+  `SkillBackgroundManager` y el bloque de la config en `SkillWidget.applyDefaultTheme()`):
+  - Fondo fijo: `SkillBackgroundManager.DEFAULT_BACKGROUND` = `openart-image_uq0j3jlc_1706511264937_raw.png`.
+    Las demás imágenes siguen en `textures/gui/mandalas` (no se borra ninguna).
+  - Skin de widget fijo: `SkillWidget` usa `a-gui-texture-widget-for-rpg-game-celtic-style-forest_94.png`
+    (comparación por nombre de archivo exacto). El atlas original es el único que encaja 100% con las
+    coordenadas fijas con las que se recortan los marcos; los skins generados por IA traen textos y formas
+    horneadas y se ven recortados.
+  - Mientras los selectores estén ocultos **no se lee** la preferencia guardada en la config de cliente
+    (`skills_ui.skillBackground` / `skills_ui.skillWidgetSkin`), para que mande siempre el valor por defecto
+    del código. La lista de skins se lee con el `ResourceManager` (recorrer la carpeta del classloader con
+    `Files.walk` devolvía vacío dentro del jar) y excluye los `template*`.
+- **Ranuras de skill (pantalla y HUD), sin caja oscura**: el `empty-box.png` (la caja negra) **ya no se pinta
+  en ninguna ranura**: en `CustomSkillButton` solo se dibuja el icono de la skill asignada, y en
+  `SkillsIconHudOverlay` el icono del HUD se dibuja solo si el poder tiene skill con imagen (de un hueco vacío
+  queda únicamente el nombre de su tecla). El borde iluminado al pasar el mouse se mantiene.
 
 > TODO (siguiente): que las hordas apunten al **asentamiento más cercano** en vez de al jugador, para
 > conectar con la Iteración 3.
