@@ -571,11 +571,22 @@ o sea que a **máxima distancia + amenaza máxima** (3 h de partida) el multipli
 | Perfil | Lo usan | Para qué |
 |---|---|---|
 | `AggressiveZombieSpawnProfile.INSTANCE` | `AggressiveZombieEntity` | atributos base + escalado + XP |
-| | `SculkCultivatorEntity` (guardián) | **solo las bases** (`baseHealth/Speed/Damage`) — el guardián no escala por distancia, vive en su guarida |
+| | `SculkCultivatorEntity` (guardián de la guarida) | atributos base + **escalado por distancia/amenaza y XP** (tiene su propio `setPos`/`adjustAttributesBasedOnSpawnDistance`, igual que el zombie; además se cura a tope al escalar) |
 | | `AggressiveZombieSpawnRule` | `probability` + `effectiveMinDistance` para el spawn natural |
 | | `HordeManager` | `probability` (cada miembro de la horda) y `effectiveMinDistance` (quién puede recibir horda) |
 | `VexSpawnProfile.INSTANCE` | `FrostVexEntity` | atributos base + escalado + XP |
 | | `VexSpawnRule` | `probability` + `effectiveMinDistance` para el spawn natural de vexes |
+
+**Dónde se configura la amenaza (`ThreatLevel`, no está en la config TOML)**: `MAX_EXTRA_DIFFICULTY = 0.8`
+(**público**) y `FULL_THREAT_TICKS = 3.0 · 60 · 60 · 20` = **216 000 ticks** (**privado**, por eso no se ve desde
+fuera). `current(level) = clamp(level.getGameTime() / FULL_THREAT_TICKS, 0, 1)`, y ojo: `getGameTime()` son
+ticks **con el mundo cargado**, o sea *tiempo jugado* (no tiempo real; con el juego cerrado no avanza). Es
+decir, "amenaza máxima (3 h)" = 3 horas jugadas en ese mundo. **Consumidores**: los **tres** mobs que capturan
+`spawnThreat` al spawnear (zombie agresivo, vex helado y cultivador), las dos reglas de spawn
+(`probability` + `effectiveMinDistance`) y `HordeManager` (intervalo 20 min → 3 min, tamaño 3 → 15 y
+probabilidad). Para tunearlo hay que editar esas constantes y recompilar; si se quiere ajustar en caliente,
+lo suyo es moverlas a `ServerConfig` (`devilrpg-server.toml`). En el log se ve la amenaza de cada spawn:
+`Zombie Spawned at: ... | Threat: 0.42`.
 
 **Quién NO usa el perfil** (spawns dirigidos por evento, no por probabilidad): las oleadas del **asedio** a la
 aldea (`VillageManager.spawnWave`: `8 + min(índice·2, 20)` mobs a 32–40 bloques del centro), los enemigos de
