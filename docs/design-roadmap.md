@@ -488,7 +488,9 @@ el tiempo y se gasta en una lista de planos, más un `Goal` de "ir a construir" 
 
 ## 5) Configuración rápida
 
-- **Amenaza**: `ThreatLevel.MAX_EXTRA_DIFFICULTY` (0.8 = +80%) y `FULL_THREAT_TICKS` (3 h).
+- **Amenaza**: en **`devilrpg-server.toml`**, sección `[threat]`: `threatMaxExtraDifficulty` (0.8 = +80%) y
+  `threatFullHours` (3 h **jugadas**). Los lee `ThreatLevel` (`current`, `maxExtraDifficulty()`,
+  `fullThreatTicks()`); si la config no está cargada (cliente), usa los valores por defecto.
 - **Perfil del zombie (`AggressiveZombieSpawnProfile.INSTANCE`)**: `minDistance` 67, `maxDistance` 3000,
   `minHardDistance` 17, `maxScaleMultiplier` 3.7, `baseHealth` 9, `baseSpeed` 0.068, `baseDamage` 0.7,
   `baseXp` 20 y `maxXpMultiplier` 4.5. **Detalle completo en 5.1.**
@@ -577,15 +579,15 @@ o sea que a **máxima distancia + amenaza máxima** (3 h de partida) el multipli
 | `VexSpawnProfile.INSTANCE` | `FrostVexEntity` | atributos base + escalado + XP |
 | | `VexSpawnRule` | `probability` + `effectiveMinDistance` para el spawn natural de vexes |
 
-**Dónde se configura la amenaza (`ThreatLevel`, no está en la config TOML)**: `MAX_EXTRA_DIFFICULTY = 0.8`
-(**público**) y `FULL_THREAT_TICKS = 3.0 · 60 · 60 · 20` = **216 000 ticks** (**privado**, por eso no se ve desde
-fuera). `current(level) = clamp(level.getGameTime() / FULL_THREAT_TICKS, 0, 1)`, y ojo: `getGameTime()` son
-ticks **con el mundo cargado**, o sea *tiempo jugado* (no tiempo real; con el juego cerrado no avanza). Es
-decir, "amenaza máxima (3 h)" = 3 horas jugadas en ese mundo. **Consumidores**: los **tres** mobs que capturan
-`spawnThreat` al spawnear (zombie agresivo, vex helado y cultivador), las dos reglas de spawn
-(`probability` + `effectiveMinDistance`) y `HordeManager` (intervalo 20 min → 3 min, tamaño 3 → 15 y
-probabilidad). Para tunearlo hay que editar esas constantes y recompilar; si se quiere ajustar en caliente,
-lo suyo es moverlas a `ServerConfig` (`devilrpg-server.toml`). En el log se ve la amenaza de cada spawn:
+**Dónde se configura la amenaza (`ThreatLevel` → `devilrpg-server.toml`, sección `[threat]`)**:
+`threatMaxExtraDifficulty` (por defecto **0.8** = +80%) y `threatFullHours` (por defecto **3** h). Antes eran
+constantes dentro de `ThreatLevel` (`MAX_EXTRA_DIFFICULTY` pública y `FULL_THREAT_TICKS` privada), así que
+había que recompilar; ahora se ajustan en caliente con `/reload`-style (reiniciando el mundo o con el comando
+de recarga de configs). `current(level) = clamp(level.getGameTime() / fullThreatTicks(), 0, 1)` y ojo:
+`getGameTime()` son ticks **con el mundo cargado**, o sea *tiempo jugado* (no tiempo real; con el juego cerrado
+no avanza). **Consumidores**: los **tres** mobs que capturan `spawnThreat` al spawnear (zombie agresivo, vex
+helado y cultivador), las dos reglas de spawn (`probability` + `effectiveMinDistance`) y `HordeManager`
+(intervalo 20 min → 3 min, tamaño 3 → 15 y probabilidad). En el log se ve la amenaza de cada spawn:
 `Zombie Spawned at: ... | Threat: 0.42`.
 
 **Quién NO usa el perfil** (spawns dirigidos por evento, no por probabilidad): las oleadas del **asedio** a la

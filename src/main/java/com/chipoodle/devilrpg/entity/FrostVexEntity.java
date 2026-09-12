@@ -126,7 +126,7 @@ public class FrostVexEntity extends Vex {
     /** Escala vida/velocidad/daño por distancia y amenaza (misma fórmula que el zombie agresivo). */
     private void adjustAttributesBasedOnSpawnDistance() {
         double scaleFactor = SPAWN_PROFILE.scaleFactor(spawnDistance, spawnThreat)
-                * (1.0 + spawnThreat * ThreatLevel.MAX_EXTRA_DIFFICULTY);
+                * (1.0 + spawnThreat * ThreatLevel.maxExtraDifficulty());
         Objects.requireNonNull(this.getAttribute(Attributes.MAX_HEALTH)).setBaseValue(SPAWN_PROFILE.baseHealth() * scaleFactor);
         Objects.requireNonNull(this.getAttribute(Attributes.MOVEMENT_SPEED)).setBaseValue(SPAWN_PROFILE.baseSpeed() * scaleFactor);
         Objects.requireNonNull(this.getAttribute(Attributes.ATTACK_DAMAGE)).setBaseValue(SPAWN_PROFILE.baseDamage() * scaleFactor);

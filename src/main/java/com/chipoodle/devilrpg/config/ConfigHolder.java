@@ -73,4 +73,28 @@ public final class ConfigHolder {
             // Igual que arriba: mejor perder la preferencia que crashear la pantalla.
         }
     }
+
+    /**
+     * Cuánto sube la dificultad por la amenaza a su máximo (0.8 = +80%). Es una config de SERVIDOR.
+     * <p>
+     * El cliente también llama a {@code ThreatLevel} (las entidades existen en los dos lados), y ahí la config
+     * de servidor no está cargada: en ese caso se devuelve el valor por defecto en vez de reventar. Es
+     * inofensivo, porque los atributos reales los manda el servidor.
+     */
+    public static double getThreatMaxExtraDifficulty() {
+        try {
+            return SERVER.threatMaxExtraDifficulty.get();
+        } catch (Exception e) {
+            return 0.8D;
+        }
+    }
+
+    /** Horas JUGADAS hasta que la amenaza llega al máximo (por defecto 3). */
+    public static double getThreatFullHours() {
+        try {
+            return SERVER.threatFullHours.get();
+        } catch (Exception e) {
+            return 3.0D;
+        }
+    }
 }

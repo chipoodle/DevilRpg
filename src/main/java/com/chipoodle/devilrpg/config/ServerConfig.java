@@ -27,6 +27,11 @@ final class ServerConfig {
     final ModConfigSpec.IntValue bearSpawnDistance;
     final ModConfigSpec.IntValue wispSpawnDistance;
 
+    /** Cuánto puede subir la dificultad por la amenaza del mundo a su máximo (0.8 = +80%). */
+    final ModConfigSpec.DoubleValue threatMaxExtraDifficulty;
+    /** Horas JUGADAS (con el mundo cargado) hasta que la amenaza llega a su máximo. */
+    final ModConfigSpec.DoubleValue threatFullHours;
+
     ServerConfig(final ModConfigSpec.Builder builder) {
         builder.push("general");
         serverBoolean = builder
@@ -62,6 +67,21 @@ final class ServerConfig {
                 .comment("Spawn distance when summoning")
                 .translation(DevilRpg.MODID + ".config.wispSpawnDistance")
                 .defineInRange("wispSpawnDistance", 3, 0, Integer.MAX_VALUE);
+        builder.pop();
+
+        // --- Amenaza del mundo (escalación por TIEMPO; la de distancia es SpawnScaleProfile) ---
+        builder.push("threat");
+        threatMaxExtraDifficulty = builder
+                .comment("Cuanto puede subir la dificultad por la amenaza a su maximo (0.8 = +80%).",
+                        "Se multiplica ENCIMA del factor de distancia: a maxima distancia y amenaza maxima el",
+                        "factor real de los enemigos es (1 + maxScaleMultiplier del perfil) x (1 + este valor).")
+                .translation(DevilRpg.MODID + ".config.threatMaxExtraDifficulty")
+                .defineInRange("threatMaxExtraDifficulty", 0.8D, 0.0D, 10.0D);
+        threatFullHours = builder
+                .comment("Horas JUGADAS (tiempo con el mundo cargado, no tiempo real) hasta que la amenaza",
+                        "llega a su maximo. 3 = tres horas de partida. Con el juego cerrado no avanza.")
+                .translation(DevilRpg.MODID + ".config.threatFullHours")
+                .defineInRange("threatFullHours", 3.0D, 0.05D, 240.0D);
         builder.pop();
     }
 

@@ -329,7 +329,7 @@ public class AggressiveZombieEntity extends Zombie {
         // Escalado lineal por distancia (con la zona protegida que se encoge con la amenaza), multiplicado
         // por la fuerza que aporta el tiempo (amenaza) al momento del spawn.
         double scaleFactor = SPAWN_PROFILE.scaleFactor(spawnDistance, spawnThreat)
-                * (1.0 + spawnThreat * ThreatLevel.MAX_EXTRA_DIFFICULTY);
+                * (1.0 + spawnThreat * ThreatLevel.maxExtraDifficulty());
 
         // Aplicar el escalado sobre los valores base del perfil
         Objects.requireNonNull(this.getAttribute(Attributes.MAX_HEALTH)).setBaseValue(SPAWN_PROFILE.baseHealth() * scaleFactor);
