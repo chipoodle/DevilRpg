@@ -509,12 +509,17 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
                 }
             }
 
-            if (draggedSkillWidget != null
-                    && draggedSkillWidget.getSkillElement()  != null
+            // Solo se puede arrastrar a una tecla un skill ACTIVO (los pasivos no se asignan: se aplican solos
+            // o los ejecuta su skill padre). Antes esto se filtraba "de rebote" por el marco (solo los `TASK`
+            // se arrastraban), así que cualquier pasivo con marco task/challenge se colaba.
+            boolean draggableToPower = draggedSkillWidget != null
+                    && draggedSkillWidget.getSkillElement() != null
                     && draggedSkillWidget.getSkillElement().getDisplay() != null
                     && draggedSkillWidget.getSkillElement().getDisplay().getFrame() != null
                     && draggedSkillWidget.getSkillElement().getDisplay().getFrame().equals(SkillFrameType.TASK)
-                    && !draggedSkillWidget.isDisabled()) {
+                    && !draggedSkillWidget.getSkillElement().getSkillCapability().isPassive()
+                    && !draggedSkillWidget.isDisabled();
+            if (draggableToPower) {
                 isDraggingToPowerButton = true;
                 posicionMouseX = mouseX - draggedSkillWidget.getX() - SkillWidget.FRAME_SIZE / ((double) 2);
                 posicionMouseY = mouseY - draggedSkillWidget.getY() - SkillWidget.FRAME_SIZE / ((double) 2);
@@ -537,7 +542,11 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int state) {
         boolean returned = super.mouseReleased(mouseX, mouseY, state);
-        if (state == ButtonMouse.RIGHT_BUTTON && draggedSkillWidget != null && draggedSkillWidget.getSkillElement().getParent() != null) { // botón derecho
+        // Doble comprobación de que no se asigna un PASIVO a una tecla (por si el arrastre se iniciara de
+        // cualquier otra forma): los pasivos no se asignan, se aplican solos o los ejecuta su padre activo.
+        if (state == ButtonMouse.RIGHT_BUTTON && draggedSkillWidget != null
+                && draggedSkillWidget.getSkillElement().getParent() != null
+                && !draggedSkillWidget.getSkillElement().getSkillCapability().isPassive()) { // botón derecho
             DevilRpg.LOGGER.info("|----------- rightMouseReleases: {}, mousex: {}, mousey:{}", draggedSkillWidget.getSkillElement().getSkillCapability().getName(), mouseX, mouseY);
 
             CustomSkillButton copy = powerButtonList.stream().filter(x -> x.isInside(mouseX, mouseY)).findAny().orElse(null);
