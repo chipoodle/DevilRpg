@@ -414,6 +414,50 @@ Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el ju
 - El jugador **ayuda a progresar** pero no son dependientes.
 - **Riesgo real**: la aldea puede **caer** y el jugador debe buscar otra.
 
+#### 3.1 Primer paso: las hordas apuntan al asentamiento, no al jugador (PLAN, no implementado)
+Hoy **todo gira alrededor del jugador**: `AggressiveZombieEntity` tiene en el `targetSelector` prioridad **1**
+un `NearestAttackableTargetGoal<Player>`, y `HordeManager.spawnHorde` elige un *jugador* y lanza la horda a
+20–44 bloques de él. La aldea solo se asedia cuando el jugador **llega** (`VillageManager.start`). La
+intención es que el mundo tenga **sus propios conflictos** y que el jugador sea quien decide intervenir.
+
+Lo bueno: **casi toda la fontanería ya existe**. `AggressiveZombieEntity` ya tiene `villageCenter`,
+`goToCenterActive` y `MoveToVillageCenterGoal` (prioridad 7), y `VillageManager` ya sabe resolver un asedio
+con su premio y su estado guardado. El trabajo es **de quién es el objetivo y quién dispara el asedio**:
+
+1. **`SettlementRegistry`** (nuevo, o extender `VillageSavedData`): por cada aldea pre-generada guardar su
+   centro, radio de valla, estado (`próspera` / `asediada` / `caída`) y una **presión** numérica. La presión
+   crece con el **tiempo de juego** (determinista, así avanza aunque no haya nadie cerca ni el chunk esté
+   cargado) y con los enemigos que sobrevivan cerca; se reinicia al salvar la aldea y salta al máximo cuando
+   cae. Persistirla en `VillageSavedData` (hoy los asedios en curso **no** se persisten a propósito: con
+   asedios dirigidos por el mundo, la presión **sí** debe persistir).
+2. **`HordeManager` elige asentamiento, no jugador**: en lugar de `pickPlayer`, busca la aldea **más cercana**
+   al ancla del jugador (o la de mayor presión) y lanza la horda **entre la aldea y el monte**, a 32–48
+   bloques del centro y **fuera de la valla** (`FENCE_RADIUS` = 29). A cada zombie se le pone
+   `setVillageCenter(aldea)` + `goToCenterActive = true`, así que **marchan a la aldea** usando los goals que
+   ya existen. La probabilidad/tamaño siguen saliendo del `SpawnScaleProfile` (distancia al ancla + amenaza),
+   como ahora.
+3. **Objetivos del enemigo en modo asedio**: en `AggressiveZombieEntity`, cuando el zombie va a un
+   asentamiento (`villageCenter != null`), subir la prioridad de atacar **aldeanos y defensas**
+   (`Villager`, `IronGolem`, gatos/perros… o sea los mobs de la aldea) **por encima** del jugador, y dejar al
+   jugador como objetivo normal si él les dispara (`HurtByTargetGoal`). Fuera de un asedio, el
+   comportamiento actual no cambia (el jugador sigue siendo el objetivo prioritario).
+4. **La defensa de la aldea**: campana de alarma (el jugador la oye desde lejos y el HUD/objetivo avisa),
+   aldeanos refugiándose en las casas (vanilla ya lo hace al huir), golems defendiendo (vanilla), y la
+   **muerte de aldeanos** bajando la "salud" del asentamiento. Si la presión llega al máximo y no hay nadie
+   defendiendo, la aldea **cae**: los aldeanos supervivientes huyen, el asentamiento pasa a `caída` y deja de
+   dar recompensas (y el jugador debe buscar otra, como pide el pilar 3).
+5. **El jugador decide**: si va a defenderla a tiempo, asedio normal y premio actual (`siegeSkillPoints`);
+   si la ignora, la pierde para siempre. Es la diferencia entre "la aldea espera a que llegues" y "la aldea
+   vive su propia guerra".
+6. **Alcance de esta primera entrega**: solo **hordas y zombies agresivos** (los vexes siguen siendo la
+   presión personal de la noche alrededor del jugador). Los aldeanos que **construyen/reparan/cultivan/
+   envejecen** son el resto de la Iteración 3 y van después.
+
+Pendientes técnicos que hay que resolver en el camino: `villageCenter` **no se guarda en NBT** (un zombie
+asediador que se recarga pierde su destino), el cupo de mobs y los logs (`[Village]`, `[Horda]`) para poder
+seguir el asedio, y que el asedio dirigido por el mundo **no** dispare la recompensa si el jugador no está
+cerca (o sí, como "noticia" en el chat).
+
 ### Iteración 4 — El abismo vertical (estilo *Made in Abyss*)
 - El mundo genera un **abismo descendente infinito** por capas en vez de extenderse en horizontal.
 - La escalación por "distancia al spawn" se convierte en **profundidad** (el mismo `SpawnScaleProfile`,
@@ -446,9 +490,8 @@ el tiempo y se gasta en una lista de planos, más un `Goal` de "ir a construir" 
 
 - **Amenaza**: `ThreatLevel.MAX_EXTRA_DIFFICULTY` (0.8 = +80%) y `FULL_THREAT_TICKS` (3 h).
 - **Perfil del zombie (`AggressiveZombieSpawnProfile.INSTANCE`)**: `minDistance` 67, `maxDistance` 3000,
-  `minHardDistance` 17, `maxScaleMultiplier` 3.5 (atributos hasta +350%), bases reducidas a un tercio
-  (vida 6.67, velocidad 0.038, daño 0.5), `baseXp` 20 y `maxXpMultiplier` 4.5 (XP hasta +450% a distancia
-  máxima).
+  `minHardDistance` 17, `maxScaleMultiplier` 3.7, `baseHealth` 9, `baseSpeed` 0.068, `baseDamage` 0.7,
+  `baseXp` 20 y `maxXpMultiplier` 4.5. **Detalle completo en 5.1.**
 - **Objetivo**: `ObjectiveTargets.MIN_DISTANCE` (800), `MAX_DISTANCE` (1200), `OBJECTIVE_STEP` (600),
   `REACH_RADIUS` (24). La distancia del objetivo `i` = `800 + i*600 + rnd*400`, garantizando separación ≥
   200 bloques.
@@ -458,12 +501,12 @@ el tiempo y se gasta en una lista de planos, más un `Goal` de "ir a construir" 
 - **Horda**: `HordeManager.BASE_INTERVAL_TICKS` (20 min al inicio), `MIN_INTERVAL_TICKS` (3 min con máxima
   amenaza), `BASE_HORDE_SIZE` (3) y `MAX_EXTRA_MEMBERS` (12). El tamaño planeado es
   `BASE_HORDE_SIZE + amenaza*MAX_EXTRA_MEMBERS` (3 → 15 al máximo), y cada zombie pasa por la probabilidad
-  del `SpawnScaleProfile` (distancia + amenaza).
-- **Presión de vexes (`VexSpawnRule`/`VexSpawnProfile`)**:
-  `FrostVexEntity` (extiende `Vex`), sin zona protegida (`minDistance=0`), spawnea de día y noche cerca del
-  jugador (4–24 bloques), límite 15 vivos, vida limitada 2 min. Atributos base reducidos a un tercio
-  (vida 6.67, velocidad 0.077, daño 1.0) y `maxXpMultiplier` 4.5; **escala atributos y XP** por
-  distancia+amenaza. Configurable: `maxDistance` 500, `maxScaleMultiplier` 2.0.
+  del `SpawnScaleProfile` (distancia + amenaza). Hoy la horda se lanza alrededor de un **jugador** que esté
+  fuera de la zona protegida, a **20–44 bloques** de él en círculo.
+- **Presión de vexes (`VexSpawnRule`/`VexSpawnProfile`)**: `FrostVexEntity` (extiende `Vex`), `minDistance` 67,
+  `maxDistance` 1000, `maxScaleMultiplier` 2.5, `baseHealth` 6.67, `baseSpeed` 0.077, `baseDamage` 0.34,
+  `baseXp` 5, `maxXpMultiplier` 4.5. Spawnea de día y de **noche**, a **12–24 bloques del jugador**, límite
+  **15 vivos**, intervalo 20 s–2 min. **Detalle completo en 5.1.**
 - **Aldea (**`VillageGenerator`/`VillageManager`)**: `FENCE_RADIUS` 29, `LEVEL_RADIUS` 31,
   `GRACE_TICKS` 90 s, `SIEGE_TIMEOUT_TICKS` 2 min, `DEFAULT_WAVE` 8 + `min(objectiveIndex*2, 20)`,
   oleadas a 32–40 bloques del centro (fuera de la valla).
@@ -477,6 +520,82 @@ el tiempo y se gasta en una lista de planos, más un `Goal` de "ir a construir" 
 
 - **Bola de fuego del zombi agresivo (`FireballAttackGoal`)**: dispara solo entre **3 y 16 bloques** y con
   **línea de visión**; si no puede, reintenta cada **20 ticks** (1 s) en vez de esperar los 240 completos.
+
+### 5.1 Perfiles de spawn (`SpawnScaleProfile`): qué hace cada campo y cada instancia
+
+`SpawnScaleProfile` es un `record` **neutro** (no depende de ninguna entidad): es el **origen único de verdad**
+de la escalación por distancia. Lo comparten la entidad (para escalar vida/velocidad/daño/XP) y su
+`SpawnRule` (para la probabilidad de spawn), sin acoplarse entre sí.
+
+**Campos** (`minDistance`, `maxDistance`, `minHardDistance`, `maxScaleMultiplier`, `baseHealth`, `baseSpeed`,
+`baseDamage`, `baseXp`, `maxXpMultiplier`).
+
+**Fórmulas** (todas reciben `distance` = distancia horizontal al **punto de ancla del jugador** y
+`threat` = `ThreatLevel.current(level)` en `[0,1]`):
+
+| Función | Fórmula | Comentario |
+|---|---|---|
+| `effectiveMinDistance(threat)` | `min + (minHard − min)·threat` | la zona protegida se **encoge** con el tiempo (3 h a amenaza 1) |
+| `normalize(d, threat)` | `0` si `d ≤ min`; **`1` si `d ≥ maxDistance`**; si no `(d − min)/(max − min)` | **está acotada en [0,1]** |
+| `probability(d, threat)` | `= normalize` | probabilidad de spawn (0 en la zona protegida, 1 al llegar a `maxDistance`) |
+| `scaleFactor(d, threat)` | `1 + normalize·maxScaleMultiplier` | multiplicador de atributos |
+| `experienceReward(d, threat)` | `round(baseXp·(1 + normalize·maxXpMultiplier))` | XP que suelta al morir |
+
+**Respuesta a "¿qué pasa si se pasa de la distancia máxima?"**: **nada más crece, todo se satura.**
+`normalize` devuelve `1.0` en cuanto `d ≥ maxDistance`, así que a partir de ahí:
+`probability = 1` (siempre spawnea), `scaleFactor = 1 + maxScaleMultiplier` **constante** y
+`experienceReward = baseXp·(1 + maxXpMultiplier)` **constante**. El `maxScaleMultiplier` se aplica **entero**
+pero no sigue aumentando por mucho que te alejes. (Antes de eso la curva es lineal entre el mínimo efectivo y
+`maxDistance`.)
+
+**Ojo, el tiempo se multiplica ENCIMA del factor de distancia.** En `AggressiveZombieEntity` y
+`FrostVexEntity` el factor final es:
+
+```
+factor = SPAWN_PROFILE.scaleFactor(spawnDistance, spawnThreat) · (1 + spawnThreat · ThreatLevel.MAX_EXTRA_DIFFICULTY)
+```
+
+o sea que a **máxima distancia + amenaza máxima** (3 h de partida) el multiplicador real es
+`(1 + maxScaleMultiplier) · 1.8`:
+
+| | zombie agresivo (max 3000) | vex helado (max 1000) |
+|---|---|---|
+| factor máximo | `4.7 · 1.8 = 8.46×` | `3.5 · 1.8 = 6.3×` |
+| vida | 9 → **≈76** | 6.67 → **≈42** |
+| velocidad | 0.068 → **≈0.58** | 0.077 → **≈0.49** |
+| daño | 0.7 → **≈5.9** | 0.34 → **≈2.1** |
+| XP al morir | 20·5.5 = **110** | 5·5.5 = **≈28** |
+
+**Instancias que existen hoy** (solo hay dos perfiles):
+
+| Perfil | Lo usan | Para qué |
+|---|---|---|
+| `AggressiveZombieSpawnProfile.INSTANCE` | `AggressiveZombieEntity` | atributos base + escalado + XP |
+| | `SculkCultivatorEntity` (guardián) | **solo las bases** (`baseHealth/Speed/Damage`) — el guardián no escala por distancia, vive en su guarida |
+| | `AggressiveZombieSpawnRule` | `probability` + `effectiveMinDistance` para el spawn natural |
+| | `HordeManager` | `probability` (cada miembro de la horda) y `effectiveMinDistance` (quién puede recibir horda) |
+| `VexSpawnProfile.INSTANCE` | `FrostVexEntity` | atributos base + escalado + XP |
+| | `VexSpawnRule` | `probability` + `effectiveMinDistance` para el spawn natural de vexes |
+
+**Quién NO usa el perfil** (spawns dirigidos por evento, no por probabilidad): las oleadas del **asedio** a la
+aldea (`VillageManager.spawnWave`: `8 + min(índice·2, 20)` mobs a 32–40 bloques del centro), los enemigos de
+la **guarida** (`LairManager.spawnWave`: 3 cada 25 s a 8–14 bloques del centro, tope 30 vivos) y los
+`preGenerate`/spawns de mobs concretos. Sus atributos sí salen del perfil (al spawnear la entidad lee
+`spawnDistance`/`spawnThreat` igual que cualquier otra).
+
+**Detalles que conviene tener presentes**:
+- El escalado se aplica **UNA vez**, en el primer `aiStep` tras spawnear (`attributesAdjusted`), y
+  `spawnDistance`/`spawnThreat` se **capturan al spawnear** (`setPos`): un mob que nace lejos y luego se
+  acerca sigue siendo fuerte, y uno que nace cerca y se aleja sigue siendo débil. Al **recargar** la partida,
+  `spawnDistance` se recalcula con la posición actual (el campo no se guarda en NBT).
+- Dentro de la **zona protegida** (`spawnDistance < minDistance`) el zombie **no escala nada** (sale con las
+  bases del perfil).
+- **Quirk conocido (sin arreglar a propósito)**: al escalar se sube la vida **máxima** pero no la **actual**,
+  así que un zombie escalado nace con vida `baseHealth` y máximo escalado (o sea, herido). El vex sí se cura a
+  tope (`setHealth(getMaxHealth())`) en su propio método. Arreglarlo es una línea en el zombie agresivo, pero
+  cambia el balance (los escalados durarían bastante más), así que queda a decisión del diseño.
+- El comentario de `VexSpawnProfile` dice "sin zona protegida" pero el valor real es **67** (heredado del
+  zombie): el vex también respeta zona protegida, solo que pequeña. Comentario desactualizado.
 
 - **UI del árbol de skills (`SkillScreen`)**: abajo hay dos parejas de botones, la izquierda para el **fondo**
   (`SkillBackgroundManager`) y la derecha para el **skin de widget** de los nodos (`SkillWidget`), cada una con
