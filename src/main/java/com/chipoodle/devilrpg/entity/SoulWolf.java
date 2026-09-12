@@ -48,7 +48,7 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
     //private static final int NUMBER_OF_PARTICLES_ICE_ARMOR = 11;
     private static final int PROBABILITY_MULTIPLIER = 4;
     private static final int ICE_ARMOR_DURATION_TICKS = 140;
-    private static final int INITIAL_HEALTH = 11;
+    private static final int INITIAL_HEALTH = 15;
     private static final int NUMBER_OF_PARTICLES_FROST_BITE = 11;
     private int puntosAsignados = 0;
     private double saludMaxima = INITIAL_HEALTH;
