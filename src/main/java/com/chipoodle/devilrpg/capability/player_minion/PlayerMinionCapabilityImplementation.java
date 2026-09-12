@@ -4,14 +4,19 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.core.RegistryAccess;
 import net.neoforged.neoforge.network.PacketDistributor;
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.capability.IGenericCapability;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.entity.ITamableEntity;
 import com.chipoodle.devilrpg.entity.SoulBear;
 import com.chipoodle.devilrpg.entity.SoulWisp;
 import com.chipoodle.devilrpg.entity.SoulWolf;
 import com.chipoodle.devilrpg.init.ModDamageTypes;
+import com.chipoodle.devilrpg.init.ModEntities;
 import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.network.payload.PlayerMinionPayload;
 import com.chipoodle.devilrpg.util.BytesUtil;
+import com.chipoodle.devilrpg.util.SkillEnum;
 import com.chipoodle.devilrpg.util.TargetUtils;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
@@ -28,6 +33,7 @@ import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -426,8 +432,12 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
             return;
         }
         ListTag stored = storedMinionsTag();
+        List<UUID> ids = allMinionIds();
+        // Poda: si un minion ya no está en las listas del jugador (murió, se le soltó...), su copia guardada
+        // se tira. Si no se podara, al entrar resucitaría un minion que el jugador ya no tiene.
+        pruneStoredEntries(stored, ids);
         int count = 0;
-        for (UUID id : allMinionIds()) {
+        for (UUID id : ids) {
             Entity entity = findLoadedAnywhere(server, id);
             if (!(entity instanceof ITamableEntity) || !entity.isAlive()) {
                 continue; // descargado o muerto: se conserva la copia anterior
@@ -438,14 +448,42 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
                 // Se saca del mundo SIN morir (discard no dispara die(), así no ensucia las listas de minions).
                 entity.discard();
             }
+            if (removeFromWorld) {
+                DevilRpg.LOGGER.info("[Minion] guardado {} {} dim={} pos={} (salud {}/{})",
+                        EntityType.getKey(entity.getType()), id,
+                        entity.level().dimension().location(),
+                        entity.blockPosition(),
+                        String.format("%.1f", entity instanceof LivingEntity living ? living.getHealth() : 0f),
+                        String.format("%.1f", entity instanceof LivingEntity living ? living.getMaxHealth() : 0f));
+            }
             count++;
         }
-        if (count > 0 && removeFromWorld) {
+        if (removeFromWorld) {
             DevilRpg.LOGGER.info("[Minion] {} minion(es) guardados para {} (vuelven al entrar)",
                     count, player.getName().getString());
+        } else {
+            // Copia periódica: a nivel debug para no llenar el log cada 10 s.
+            DevilRpg.LOGGER.debug("[Minion] copia periódica para {}: {} minion(es) en el mundo, {} entrada(s) guardadas",
+                    player.getName().getString(), count, stored.size());
         }
         if (player instanceof ServerPlayer serverPlayer && removeFromWorld) {
             sendSkillChangesToClient(serverPlayer);
+        }
+    }
+
+    /** Tira las copias guardadas de minions que ya no están en las listas del jugador. */
+    private void pruneStoredEntries(ListTag stored, List<UUID> currentIds) {
+        for (int i = stored.size() - 1; i >= 0; i--) {
+            CompoundTag entry = stored.getCompound(i);
+            if (!entry.hasUUID("Id")) {
+                stored.remove(i);
+                continue;
+            }
+            UUID id = entry.getUUID("Id");
+            if (!currentIds.contains(id)) {
+                DevilRpg.LOGGER.info("[Minion] olvido la copia guardada de {} (ya no es un minion tuyo)", id);
+                stored.remove(i);
+            }
         }
     }
 
@@ -455,10 +493,23 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
         entry.putUUID("Id", entity.getUUID());
         entry.putString("Dimension", entity.level().dimension().location().toString());
         entry.putLong("Pos", entity.blockPosition().asLong());
-        CompoundTag data = new CompoundTag();
-        entity.saveWithoutId(data);
-        entry.put("Data", data);
+        entry.put("Data", saveEntityData(entity));
         return entry;
+    }
+
+    /**
+     * NBT completo de la entidad, listo para volver a crearla.
+     * <p>
+     * <b>OJO, ESTE ERA EL BUG</b>: {@code saveWithoutId} <b>no escribe el campo {@code id}</b> (por eso se llama
+     * "without id"; el id solo lo pone {@code Entity.save()}, que además se niega a guardar si la entidad va
+     * montada). Sin ese campo {@code EntityType.create} no sabe qué crear: escribe en el log
+     * {@code Skipping Entity with id} (con el id <b>vacío</b>, ese warning es la firma de este bug) y devuelve
+     * vacío. Por eso los minions nunca volvían.
+     */
+    private CompoundTag saveEntityData(Entity entity) {
+        CompoundTag data = entity.saveWithoutId(new CompoundTag());
+        data.putString("id", EntityType.getKey(entity.getType()).toString());
+        return data;
     }
 
     /** Quita de la lista la entrada de ese minion, si la hay (para reemplazarla, no para duplicarla). */
@@ -486,33 +537,49 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
             return;
         }
         ListTag stored = storedMinionsTag();
+        DevilRpg.LOGGER.info("[Minion] {} entrada(s) guardadas para {} al entrar", stored.size(), player.getName().getString());
         if (stored.isEmpty()) {
             return;
         }
         int restored = 0;
-        for (Tag element : stored) {
-            CompoundTag entry = (CompoundTag) element;
+        // Al revés: así se pueden quitar las entradas recuperadas sin descolocar el índice.
+        for (int i = stored.size() - 1; i >= 0; i--) {
+            CompoundTag entry = stored.getCompound(i);
             if (!entry.hasUUID("Id")) {
+                DevilRpg.LOGGER.warn("[Minion] entrada guardada sin UUID: la tiro");
+                stored.remove(i);
                 continue;
             }
             UUID id = entry.getUUID("Id");
             BlockPos pos = BlockPos.of(entry.getLong("Pos"));
-            ServerLevel storedLevel = levelOf(server, entry.getString("Dimension"));
+            String dimension = entry.getString("Dimension");
+            String typeId = entry.getCompound("Data").getString("id");
+            ServerLevel storedLevel = levelOf(server, dimension);
             ITamableEntity minion = null;
+            boolean recreated = false;
             if (storedLevel != null) {
                 minion = resolveMinion(storedLevel, id, pos);
             }
             if (minion == null) {
                 minion = recreateMinion(entry, playerLevel, player);
+                recreated = minion != null;
             }
             if (minion == null) {
-                continue; // no se pudo recuperar: se descarta la entrada (mejor perderlo que duplicarlo)
+                // NO se borra: se deja la copia para el próximo intento. Antes se borraba SIEMPRE al final,
+                // así que un fallo de recreación destruía el minion para siempre (y sin copia en el mundo).
+                DevilRpg.LOGGER.warn("[Minion] NO pude recuperar {} (tipo '{}', dim {}, pos {}); dejo la copia guardada",
+                        id, typeId.isEmpty() ? "desconocido" : typeId, dimension, pos);
+                continue;
             }
             bringToPlayer(minion, player, playerLevel);
+            stored.remove(i);
             restored++;
+            DevilRpg.LOGGER.info("[Minion] devuelto {} {} ({}), dim {} pos {}",
+                    recreated ? "RECREADO" : "adoptado", id,
+                    typeId.isEmpty() ? "sin tipo en la copia" : typeId, dimension, pos);
         }
-        stored.clear();
-        DevilRpg.LOGGER.info("[Minion] {} minion(es) devueltos a {}", restored, player.getName().getString());
+        DevilRpg.LOGGER.info("[Minion] {} minion(es) devueltos a {} (quedan {} copia(s) sin recuperar)",
+                restored, player.getName().getString(), stored.size());
         if (player instanceof ServerPlayer serverPlayer) {
             sendSkillChangesToClient(serverPlayer);
         }
@@ -528,11 +595,19 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
         if (server == null) {
             return;
         }
+        int brought = 0;
         for (UUID id : allMinionIds()) {
             Entity entity = findLoadedAnywhere(server, id);
             if (entity instanceof ITamableEntity minion) {
                 bringToPlayer(minion, player, playerLevel);
+                brought++;
+                DevilRpg.LOGGER.info("[Minion] traigo junto a {} el {} {} que seguia vivo en {}",
+                        player.getName().getString(), EntityType.getKey(entity.getType()), id,
+                        entity.level().dimension().location());
             }
+        }
+        if (brought > 0) {
+            DevilRpg.LOGGER.info("[Minion] {} minion(es) vivos traidos junto a {}", brought, player.getName().getString());
         }
     }
 
@@ -580,13 +655,75 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
     /** Recrea un minion desde su NBT guardado, junto al jugador (conserva su UUID: las listas siguen valiendo). */
     private ITamableEntity recreateMinion(CompoundTag entry, ServerLevel level, Player player) {
         CompoundTag data = entry.getCompound("Data");
+        // Copias escritas por la version con el bug: les falta el campo "id". Se deduce de las listas del
+        // jugador (el UUID sigue estando en la lista de lobos, osos o wisps), que es información fiable.
+        if (!data.contains("id", Tag.TAG_STRING) || data.getString("id").isEmpty()) {
+            String inferred = inferEntityId(entry.hasUUID("Id") ? entry.getUUID("Id") : null, player);
+            if (inferred == null) {
+                DevilRpg.LOGGER.warn("[Minion] la copia de {} no tiene campo 'id' y no puedo deducir el tipo",
+                        entry.hasUUID("Id") ? entry.getUUID("Id") : "(sin uuid)");
+                return null;
+            }
+            data.putString("id", inferred);
+            entry.put("Data", data);
+            DevilRpg.LOGGER.info("[Minion] copia antigua sin 'id': deduzco que {} es un {}", entry.getUUID("Id"), inferred);
+        }
         return EntityType.create(data, level)
                 .map(entity -> {
+                    if (!(entity instanceof ITamableEntity minion)) {
+                        return null;
+                    }
+                    // El NBT del lobo y del wisp guarda el dueño como TEXTO VACÍO (putString("Owner", "") en su
+                    // addAdditionalSaveData, que machaca el UUID de TamableAnimal). Sin volver a asignarlo,
+                    // getOwnerUUID() es null -> isTame() false -> addToAiStep lo mata en el primer tick.
+                    minion.tame(player);
                     entity.moveTo(player.getX(), player.getY(), player.getZ(), player.getYRot(), 0.0F);
                     level.addFreshEntity(entity);
-                    return entity instanceof ITamableEntity minion ? minion : null;
+                    return minion;
                 })
                 .orElse(null);
+    }
+
+    /**
+     * Deduce el tipo de entidad de una copia guardada antigua (sin campo {@code id}) a partir de la lista de
+     * minions en la que sigue su UUID. Para los wisps (que comparten lista) se elige la clase con más puntos
+     * del jugador; es una deducción, no un dato, así que se avisa en el log.
+     */
+    private String inferEntityId(UUID id, Player player) {
+        if (id == null) {
+            return null;
+        }
+        if (getSoulWolfMinions().contains(id)) {
+            return EntityType.getKey(ModEntities.SOUL_WOLF.get()).toString();
+        }
+        if (getSoulBearMinions().contains(id)) {
+            return EntityType.getKey(ModEntities.SOUL_BEAR.get()).toString();
+        }
+        if (getWispMinions().contains(id)) {
+            return wispTypeWithMostPoints(player);
+        }
+        return null;
+    }
+
+    /** De los tres wisps invocables, el que tenga más puntos en el árbol del jugador (empate -> salud). */
+    private String wispTypeWithMostPoints(Player player) {
+        int health = 0;
+        int archer = 0;
+        int ranger = 0;
+        PlayerSkillCapabilityInterface skill =
+                IGenericCapability.getUnwrappedPlayerCapability(player, PlayerSkillCapability.INSTANCE);
+        if (skill != null && skill.getSkillsPoints() != null) {
+            health = skill.getSkillsPoints().getOrDefault(SkillEnum.SUMMON_WISP_HEALTH, 0);
+            archer = skill.getSkillsPoints().getOrDefault(SkillEnum.SUMMON_WISP_ARCHER, 0);
+            ranger = skill.getSkillsPoints().getOrDefault(SkillEnum.SUMMON_WISP_RANGER, 0);
+        }
+        if (archer > health && archer >= ranger) {
+            return EntityType.getKey(ModEntities.WISP_ARCHER.get()).toString();
+        }
+        if (ranger > health && ranger > archer) {
+            return EntityType.getKey(ModEntities.WISP_RANGER.get()).toString();
+        }
+        return EntityType.getKey(ModEntities.WISP_HEALTH.get()).toString();
     }
 
     /** Trae un minion al lado del jugador, cambiándolo de dimensión si está en otra. */

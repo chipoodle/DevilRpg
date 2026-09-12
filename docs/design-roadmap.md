@@ -539,6 +539,28 @@ el tiempo y se gasta en una lista de planos, más un `Goal` de "ir a construir" 
   - **El shulker del hongo NO se guarda**: es temporal (1 min) y muere si el dueño no está
     (`ISoulEntity.despawnsWithoutOwner()` → `true`; lobo, oso y wisp lo sobrescriben a `false`, así que solo
     mueren si el dueño **existe y está muerto**). Antes, "no encuentro al dueño" mataba a todos.
+  - **BUG GRANDE (arreglado): `saveWithoutId` NO escribe el campo `id`.** Se llamaba
+    `entity.saveWithoutId(data)` para guardar el minion, pero ese método **no pone `id`** (por eso se llama
+    "without id"; el `id` solo lo escribe `Entity.save()`, que además se niega a guardar si la entidad va
+    montada). Sin `id`, `EntityType.create` no sabe qué crear: registra en el log
+    **`Skipping Entity with id`** (con el id **vacío**: ese warning sin nada detrás es la firma de este bug),
+    devuelve vacío y el minion no vuelve. Y como el `restore` hacía `stored.clear()` **siempre** al final, cada
+    intento fallido **borraba las copias para siempre**. Arreglado: el `id` se escribe a mano en
+    `saveEntityData`, y las entradas que no se pueden recuperar **se conservan** (`restoreStoredMinions` solo
+    borra las que sí recuperó, y avisa con `[Minion] NO pude recuperar ...`).
+  - **SEGUNDO BUG: el dueño se guarda como texto vacío.** `SoulWolf.addAdditionalSaveData` y `SoulWisp` hacen
+    `putString("Owner", "")` **después** de `super`, machacando el UUID que escribe `TamableAnimal`. Eso sale y
+    entra del NBT sin problema, pero un minion **recreado** quedaba con `getOwnerUUID() == null` →
+    `isTame() == false` → `ISoulEntity.addToAiStep` lo mataba **en el primer tick**. Por eso `recreateMinion`
+    llama a `minion.tame(player)` antes de soltarlo en el mundo.
+  - **Copias viejas sin `id`**: `recreateMinion` deduce el tipo del UUID (sigue en la lista de lobos, osos o
+    wisps) y lo escribe en la copia; para los wisps (que comparten lista) usa la clase con más puntos del
+    jugador y lo avisa en el log. Es una red de seguridad para partidas guardadas con la versión con el bug.
+  - **Poda**: al capturar se tiran las copias cuyo UUID ya no está en ninguna lista del jugador (`pruneStoredEntries`),
+    para no resucitar un minion que el jugador ya no tiene.
+  - **Logs de diagnóstico** (todos con la etiqueta `[Minion]`): al capturar, una línea por minion guardado con
+    tipo, UUID, dimensión, posición y salud; al entrar, cuántas copias hay, una línea por minion (adoptado o
+    recreado) y las que no se pudieron recuperar; y al traerlos, una línea por minion vivo.
   - **Anti-duplicado (bug que ya existía)**: al invocar se **mira** el minion más viejo sin quitarlo de la lista
     hasta confirmar que existe de verdad; antes se hacía `poll()`/`remove()` a ciegas, así que un minion
     descargado se olvidaba pero seguía vivo y al cargarse tenías uno de más (p. ej. 4 lobos). El cupo es el
@@ -723,3 +745,13 @@ la **guarida** (`LairManager.spawnWave`: 3 cada 25 s a 8–14 bloques del centro
   `$env:GRADLE_USER_HOME="C:\Users\Christian\Documents\DevilRpg\.gradle-home"; .\gradlew.bat compileJava --console=plain`
 - **Las guaridas se regeneran** al acercarse al objetivo (el estado de `LairManager` es en memoria), así que
   los cambios de `LairGenerator` se ven al reiniciar y volver al objetivo, no hacen falta mundos nuevos.
+- **Herramientas de NBT para recuperar partidas** (`build/recover/NbtTool.java` y `build/*.py`, **ignorados por
+  git** porque `build/` está en `.gitignore`: si se limpia `build/`, se pierden). Leen y escriben el NBT del
+  jugador con las **clases reales de Minecraft**, sin arrancar el juego:
+  `java -cp "build\classes\java\main;build\recover\libs\*" build\recover\NbtTool.java <archivo.dat> [--keys|--snbt <i>]`
+  (`libs\` se armó copiando de las cachés de Gradle el jar `neoforge-*-merged.jar` + fastutil/log4j/logging/asm...).
+  El modo `--restore-minions-from <viejo.dat> <tipoWisp> <destino.dat>` recupera `Stored_Minions` del respaldo
+  que el propio juego deja (`playerdata/<uuid>.dat_old`), deduce el tipo de cada entrada por la lista en la que
+  sigue su UUID y lo escribe, dejando copia `.bak`. Dos reglas: **el juego tiene que estar cerrado** (si está
+  abierto, al salir sobrescribe el archivo con lo que tiene en memoria y se pierde el arreglo) y **verificar
+  antes/después** con `build/diffnbt.py` (0 diferencias fuera de lo tocado = el cambio fue quirúrgico).
