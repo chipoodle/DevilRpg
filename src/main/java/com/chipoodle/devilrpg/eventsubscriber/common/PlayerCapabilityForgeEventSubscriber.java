@@ -36,6 +36,7 @@ import com.chipoodle.devilrpg.survival.ObjectiveManager;
 import com.chipoodle.devilrpg.util.EventUtils;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
@@ -60,6 +61,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.function.BiConsumer;
@@ -74,6 +76,14 @@ public class PlayerCapabilityForgeEventSubscriber {
 
     /** Fraccion de XP que se conserva al morir (el resto se pierde). */
     private static final double XP_KEPT = 0.9;
+
+    /**
+     * Aviso de la XP perdida al morir, pendiente de mostrar al reaparecer.
+     * <p>
+     * Se guarda aquí y no se manda desde {@code PlayerEvent.Clone} porque en ese momento la entidad clonada
+     * todavía no es el jugador vivo: se manda al recibir {@code PlayerRespawnEvent}, que sí lo es.
+     */
+    private static final Map<UUID, String> PENDING_DEATH_XP_MESSAGE = new HashMap<>();
 
     /**
      * Cada cuantos ticks se repara 1 punto de durabilidad por pieza de cuero mientras se esta
@@ -99,6 +109,9 @@ public class PlayerCapabilityForgeEventSubscriber {
     /**
      * Tras morir, el {@code experienceLevel} vanilla se resetea a 0. Como el nivel del mod se deriva
      * de el, se conserva el 90% (tanto del nivel como del XP total) para que solo se pierda el 10%.
+     * <p>
+     * Además se prepara el aviso al jugador con el porcentaje y <b>cuánto</b> ha perdido (niveles y puntos de
+     * XP), porque antes la pérdida solo quedaba en el log del servidor y morir parecía no costar nada.
      */
     private static void restoreNinetyPercentXp(PlayerEvent.Clone e) {
         Player original = e.getOriginal();
@@ -108,6 +121,16 @@ public class PlayerCapabilityForgeEventSubscriber {
         clone.experienceProgress = original.experienceProgress;
         DevilRpg.LOGGER.info("[XP] Restaurado al {}%% tras morir: nivel {} (antes {}), {} XP",
                 Math.round(XP_KEPT * 100), clone.experienceLevel, original.experienceLevel, clone.totalExperience);
+
+        int lostLevels = Math.max(0, original.experienceLevel - clone.experienceLevel);
+        int lostXp = Math.max(0, original.totalExperience - clone.totalExperience);
+        if (lostLevels <= 0 && lostXp <= 0) {
+            return; // no había nada que perder (muerte a nivel 0): no se avisa de una pérdida de cero
+        }
+        int lostPercent = (int) Math.round((1.0D - XP_KEPT) * 100.0D);
+        PENDING_DEATH_XP_MESSAGE.put(clone.getUUID(), "Has muerto: pierdes el " + lostPercent
+                + "% de tu experiencia (" + lostLevels + " niveles y " + lostXp + " de XP; nivel "
+                + original.experienceLevel + " -> " + clone.experienceLevel + ").");
     }
 
     /**
@@ -163,6 +186,12 @@ public class PlayerCapabilityForgeEventSubscriber {
 
         if (player.level().isClientSide) {
             return;
+        }
+
+        // Aviso de la experiencia que se perdió al morir (la calculó restoreNinetyPercentXp en el Clone).
+        String deathXpMessage = PENDING_DEATH_XP_MESSAGE.remove(player.getUUID());
+        if (deathXpMessage != null) {
+            player.displayClientMessage(Component.literal(deathXpMessage), false);
         }
     }
 
