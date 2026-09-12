@@ -74,8 +74,8 @@ import java.util.function.Supplier;
 @EventBusSubscriber(modid = DevilRpg.MODID, bus = EventBusSubscriber.Bus.GAME)
 public class PlayerCapabilityForgeEventSubscriber {
 
-    /** Fraccion de XP que se conserva al morir (el resto se pierde). */
-    private static final double XP_KEPT = 0.9;
+    /** Fraccion de XP que se conserva al morir: 0.95 = se pierde un 5%. */
+    private static final double XP_KEPT = 0.95;
 
     /**
      * Aviso de la XP perdida al morir, pendiente de mostrar al reaparecer.
