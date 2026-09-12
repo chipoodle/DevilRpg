@@ -520,13 +520,19 @@ el tiempo y se gasta en una lista de planos, más un `Goal` de "ir a construir" 
 
 - **Minions persistentes (lobo, oso y wisp)**: los minions se guardan por **UUID** en la capability del jugador
   (`PlayerMinionCapability`) y ahora **sobreviven a salir y volver a entrar**, sin duplicarse:
-  - **Al desconectarse** (`PlayerLoggedOutEvent`): se guarda el **NBT completo** de cada minion vivo (más su
-    dimensión y posición) en `Stored_Minions` y se saca del mundo con `discard()` (no dispara `die()`, así no
-    ensucia las listas). No se quedan sueltos por el mundo mientras no juegas.
-  - **Al entrar**: `restoreStoredMinions` **adopta** los que sigan existiendo (caso de corte de luz: no se llegó
-    a guardar y siguen en el mundo) y **recrea** los que ya no estén. Para distinguir "está en un chunk
-    descargado" de "ya no existe" se **fuerza la carga de su chunk** y se reintenta. Nunca se recrea "por si
-    acaso": eso es exactamente lo que duplicaría. Después se traen junto al jugador.
+  - **Copia periódica** (`PlayerTickEvent.Post`, cada 10 s → `captureMinions(player, false)`): guarda el NBT
+    completo de cada minion vivo (más su dimensión y posición) en `Stored_Minions`, **reemplazando** la entrada
+    anterior (por UUID, no se acumulan). Esta copia es lo que hace fiables los otros dos casos.
+  - **Al desconectarse** (`PlayerLoggedOutEvent`): `captureMinions(player, true)`, que además saca los minions
+    del mundo con `discard()` (no dispara `die()`, así no ensucia las listas). Es solo "mejor esfuerzo": ese
+    evento salta **después** de que el servidor guarde al jugador, así que lo escrito solo ahí **no llega al
+    disco** (fue el bug por el que los minions no volvían). La copia que vale es la periódica.
+  - **Al entrar**: primero `restoreStoredMinions` (**adopta** los que sigan existiendo; **recrea** solo los que
+    ya no estén —para distinguir "chunk descargado" de "muerto" se fuerza la carga de su chunk— y **nunca**
+    recrea "por si acaso", que es justo lo que duplicaría) y después `bringMinionsToPlayer`, que además trae a
+    los minions que sigan **vivos en el mundo sin copia guardada** (corte de luz, y partidas anteriores a este
+    cambio). Las dos llamadas van **directas en el hilo del servidor**: `EventUtils.onJoin` las difería al hilo
+    del cliente, que es incorrecto para tocar entidades.
   - **Al morir**: se matan los vivos y se olvida lo guardado (no vuelven).
   - **Al cambiar de dimensión**: se teletransportan contigo (`DimensionTransition`), en el siguiente tick del
     servidor para que el nivel destino ya esté aplicado.
