@@ -95,8 +95,8 @@ public class PlayerCapabilityForgeEventSubscriber {
     @SubscribeEvent
     public static void onPlayerClone(PlayerEvent.Clone e) {
         if (e.isWasDeath()) {
-            // Al morir, conservar el 90% del XP (el nivel no se pierde del todo).
-            restoreNinetyPercentXp(e);
+            // Al morir se conserva el NIVEL y solo se pierde un 10% de la experiencia del nivel.
+            applyDeathXpPenalty(e);
             clonePlayerCapability(e, PlayerAuxiliaryCapability.INSTANCE);
             clonePlayerCapability(e, PlayerExperienceCapability.INSTANCE);
             clonePlayerCapability(e, PlayerManaCapability.INSTANCE);
@@ -107,30 +107,49 @@ public class PlayerCapabilityForgeEventSubscriber {
     }
 
     /**
-     * Tras morir, el {@code experienceLevel} vanilla se resetea a 0. Como el nivel del mod se deriva
-     * de el, se conserva el 90% (tanto del nivel como del XP total) para que solo se pierda el 10%.
+     * Penalización por muerte: <b>se conserva el nivel</b> y solo se pierde el 10% de la experiencia
+     * acumulada dentro de ese nivel.
      * <p>
-     * Además se prepara el aviso al jugador con el porcentaje y <b>cuánto</b> ha perdido (niveles y puntos de
-     * XP), porque antes la pérdida solo quedaba en el log del servidor y morir parecía no costar nada.
+     * Vanilla resetea la XP del jugador al morir (el clon nace en nivel 0 y sin progreso), así que aquí se
+     * restaura desde {@code original}: el nivel <b>tal cual estaba</b> y la barra al 90% de donde estaba. O
+     * sea que no se pierden niveles —el nivel del mod (los puntos de habilidad) se deriva de él, así que
+     * tampoco— pero sí hay que volver a ganar esa experiencia para seguir subiendo.
+     * <p>
+     * <b>Antes estaba mal</b>: hacía {@code nivel × 0.9} (morir a nivel 42 te dejaba en 37), que es justo lo
+     * contrario a la intención de diseño.
+     * <p>
+     * Además deja preparado el aviso al jugador con el porcentaje y <b>cuánto</b> ha perdido, porque antes la
+     * pérdida solo quedaba en el log del servidor y morir parecía no costar nada.
      */
-    private static void restoreNinetyPercentXp(PlayerEvent.Clone e) {
+    private static void applyDeathXpPenalty(PlayerEvent.Clone e) {
         Player original = e.getOriginal();
         Player clone = e.getEntity();
-        clone.totalExperience = (int) Math.floor(original.totalExperience * XP_KEPT);
-        clone.experienceLevel = (int) Math.floor(original.experienceLevel * XP_KEPT);
-        clone.experienceProgress = original.experienceProgress;
-        DevilRpg.LOGGER.info("[XP] Restaurado al {}%% tras morir: nivel {} (antes {}), {} XP",
-                Math.round(XP_KEPT * 100), clone.experienceLevel, original.experienceLevel, clone.totalExperience);
 
-        int lostLevels = Math.max(0, original.experienceLevel - clone.experienceLevel);
-        int lostXp = Math.max(0, original.totalExperience - clone.totalExperience);
-        if (lostLevels <= 0 && lostXp <= 0) {
-            return; // no había nada que perder (muerte a nivel 0): no se avisa de una pérdida de cero
+        // El NIVEL no se toca: se recupera el que tenía antes de morir.
+        clone.experienceLevel = original.experienceLevel;
+        // La experiencia del nivel sí: se conserva el 90% de la barra.
+        float progressBefore = original.experienceProgress;
+        clone.experienceProgress = progressBefore * (float) XP_KEPT;
+        // Contador de XP acumulada (solo estadística: no decide el nivel ni la barra).
+        clone.totalExperience = (int) Math.floor(original.totalExperience * XP_KEPT);
+
+        int xpNeeded = Math.max(1, original.getXpNeededForNextLevel());
+        int lostPoints = Math.max(0, Math.round((progressBefore - clone.experienceProgress) * xpNeeded));
+
+        DevilRpg.LOGGER.info("[XP] Muerte: nivel {} CONSERVADO, barra {}% -> {}% y {} de {} puntos perdidos ({} XP total)",
+                clone.experienceLevel,
+                Math.round(progressBefore * 100.0F),
+                Math.round(clone.experienceProgress * 100.0F),
+                lostPoints, xpNeeded, clone.totalExperience);
+
+        if (lostPoints <= 0) {
+            return; // no había experiencia acumulada en el nivel: no se avisa de una pérdida de cero
         }
         int lostPercent = (int) Math.round((1.0D - XP_KEPT) * 100.0D);
         PENDING_DEATH_XP_MESSAGE.put(clone.getUUID(), "Has muerto: pierdes el " + lostPercent
-                + "% de tu experiencia (" + lostLevels + " niveles y " + lostXp + " de XP; nivel "
-                + original.experienceLevel + " -> " + clone.experienceLevel + ").");
+                + "% de la experiencia de tu nivel (" + lostPoints + " de " + xpNeeded + " puntos). "
+                + "Conservas el nivel " + clone.experienceLevel
+                + ": vuelve a ganar esa experiencia para seguir subiendo.");
     }
 
     /**

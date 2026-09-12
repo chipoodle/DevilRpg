@@ -523,6 +523,15 @@ el tiempo y se gasta en una lista de planos, más un `Goal` de "ir a construir" 
 - **Bola de fuego del zombi agresivo (`FireballAttackGoal`)**: dispara solo entre **3 y 16 bloques** y con
   **línea de visión**; si no puede, reintenta cada **20 ticks** (1 s) en vez de esperar los 240 completos.
 
+- **Al morir el jugador (penalización de XP)**: `PlayerCapabilityForgeEventSubscriber` (`XP_KEPT = 0.9`) — se
+  **conserva el nivel** y solo se pierde el **10% de la experiencia del nivel** (la barra se queda al 90% de
+  donde estaba); hay que volver a ganar esa experiencia para seguir subiendo. Antes estaba **mal**: hacía
+  `nivel × 0.9`, o sea que morir a nivel 42 te dejaba en 37 (perder niveles), justo lo contrario a la
+  intención. Como el nivel del mod (puntos de habilidad) se deriva de `experienceLevel`, tampoco se pierden
+  puntos de habilidad. Al reaparecer, el jugador recibe un aviso en el chat con el porcentaje y cuánto:
+  *"Has muerto: pierdes el 10% de la experiencia de tu nivel (4 de 45 puntos). Conservas el nivel 42: vuelve a
+  ganar esa experiencia para seguir subiendo."* (si no había experiencia acumulada en el nivel, no se avisa).
+
 ### 5.1 Perfiles de spawn (`SpawnScaleProfile`): qué hace cada campo y cada instancia
 
 `SpawnScaleProfile` es un `record` **neutro** (no depende de ninguna entidad): es el **origen único de verdad**
