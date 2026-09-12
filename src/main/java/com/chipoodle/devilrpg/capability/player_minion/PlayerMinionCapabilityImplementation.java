@@ -272,6 +272,13 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
                             .registryOrThrow(Registries.DAMAGE_TYPE)
                             .getHolderOrThrow(ModDamageTypes.MINION_DEATH));
             entity.hurt(damagesource, Integer.MAX_VALUE);
+            if (entity.isAlive()) {
+                DevilRpg.LOGGER.warn("[Minion] el lobo {} se quito de la lista pero NO murio con el dano de minion",
+                        entity.getUUID());
+            }
+        } else {
+            DevilRpg.LOGGER.warn("[Minion] no puedo quitar al lobo {} de la lista (¿ya no estaba? entity={})",
+                    entity == null ? "(null)" : entity.getUUID(), entity != null);
         }
     }
 
@@ -549,6 +556,7 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
         ListTag stored = storedMinionsTag();
         DevilRpg.LOGGER.info("[Minion] {} entrada(s) guardadas para {} al entrar", stored.size(), player.getName().getString());
         if (stored.isEmpty()) {
+            enforceSoulWolfCap(player); // aunque no haya copias, el cupo se respeta (listas heredadas)
             return;
         }
         int restored = 0;
@@ -616,6 +624,7 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
         }
         DevilRpg.LOGGER.info("[Minion] {} devuelto(s), {} limpiado(s) y {} copia(s) pendientes para {}",
                 restored, cleaned, stored.size(), player.getName().getString());
+        enforceSoulWolfCap(player);
         if (player instanceof ServerPlayer serverPlayer) {
             sendSkillChangesToClient(serverPlayer);
         }
@@ -654,6 +663,41 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
         if (player instanceof ServerPlayer serverPlayer) {
             sendSkillChangesToClient(serverPlayer);
         }
+    }
+
+    /**
+     * Respeta el cupo de lobos: si la lista tiene más de la cuenta, se van los <b>más viejos</b> (los primeros
+     * de la lista). Es lo mismo que hace la invocación, pero al entrar, para que las listas heredadas de
+     * versiones antiguas (que crecían sin sustituir a nadie) vuelvan solas al cupo.
+     */
+    @Override
+    public void enforceSoulWolfCap(Player player) {
+        if (player == null || player.level().isClientSide) {
+            return;
+        }
+        ConcurrentLinkedQueue<UUID> wolves = getSoulWolfMinions();
+        if (wolves.size() <= SOUL_WOLF_CAPACITY) {
+            return;
+        }
+        DevilRpg.LOGGER.info("[Minion] cupo de lobos: tienes {} y el cupo es {}; se van los mas viejos",
+                wolves.size(), SOUL_WOLF_CAPACITY);
+        int guard = 0;
+        while (wolves.size() > SOUL_WOLF_CAPACITY && guard++ < SOUL_WOLF_CAPACITY + 8) {
+            UUID oldest = wolves.peek();
+            ITamableEntity wolf = oldest == null ? null : getTamableByUUID(oldest, player.level());
+            if (!(wolf instanceof SoulWolf soulWolf)) {
+                // No lo quito a ciegas: si estuviera en un chunk descargado, lo olvidaría y seguiría vivo.
+                DevilRpg.LOGGER.warn("[Minion] cupo de lobos: el mas viejo ({}) no aparece en el mundo, no lo quito", oldest);
+                break;
+            }
+            int before = wolves.size();
+            removeSoulWolf(player, soulWolf); // quita el UUID de la lista y lo mata
+            if (wolves.size() >= before) {
+                DevilRpg.LOGGER.warn("[Minion] cupo de lobos: no pude quitar a {} de la lista", oldest);
+                break;
+            }
+        }
+        DevilRpg.LOGGER.info("[Minion] cupo de lobos: quedan {}", wolves.size());
     }
 
     /** Busca una entidad por UUID en todos los niveles del servidor (solo encuentra las cargadas). */

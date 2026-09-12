@@ -13,6 +13,14 @@ import java.util.function.Supplier;
 
 
 public interface PlayerMinionCapabilityInterface extends IGenericCapability {
+
+    /**
+     * Cuántos lobos puede tener el jugador a la vez. Lo respetan la invocación
+     * ({@code SkillSummonSoulWolf}) y la entrada al mundo ({@code enforceSoulWolfCap}): si la lista tiene más
+     * (por listas heredadas con fantasmas), se van los más viejos.
+     */
+    int SOUL_WOLF_CAPACITY = 3;
+
     ConcurrentLinkedQueue<UUID> getSoulWolfMinions();
 
     void setSoulWolfMinions(ConcurrentLinkedQueue<UUID> minions, Player player);
@@ -64,5 +72,12 @@ public interface PlayerMinionCapabilityInterface extends IGenericCapability {
 
     /** Olvida los minions guardados (al morir el jugador, que además los mata). */
     void clearStoredMinions(Player player);
+
+    /**
+     * Respeta el cupo de lobos ({@link #SOUL_WOLF_CAPACITY}): si la lista tiene más de los que debería, quita y
+     * mata a los <b>más viejos</b>. Se llama al entrar, para que una lista heredada (versiones anteriores
+     * dejaban crecer la lista sin sustituir a nadie) vuelva al cupo sola.
+     */
+    void enforceSoulWolfCap(Player player);
 
 }

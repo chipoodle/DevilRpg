@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.skillsystem.skillinstance;
 
+import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapability;
 import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityInterface;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
@@ -26,7 +27,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class SkillSummonSoulWolf extends AbstractSkillExecutor {
 
-    private static final int NUMBER_OF_SUMMONS = 3;
+    /** El cupo vive en la capability: lo respetan la invocación y la entrada al mundo. */
+    private static final int NUMBER_OF_SUMMONS = PlayerMinionCapabilityInterface.SOUL_WOLF_CAPACITY;
 
     public SkillSummonSoulWolf(PlayerSkillCapabilityInterface parentCapability) {
         super(parentCapability);
@@ -46,6 +48,7 @@ public class SkillSummonSoulWolf extends AbstractSkillExecutor {
     public void execute(Level level, Player player, HashMap<String, String> parameters) {
         if (!player.getCooldowns().isOnCooldown(icon.getItem())) {
             if (!level.isClientSide) {
+                try {
                 Random rand = new Random();
                 level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.CHICKEN_EGG, SoundSource.NEUTRAL, 0.5F, 0.4F / (rand.nextFloat() * 0.4F + 0.8F));
                 PlayerMinionCapabilityInterface min = player.getData(PlayerMinionCapability.INSTANCE);
@@ -54,16 +57,38 @@ public class SkillSummonSoulWolf extends AbstractSkillExecutor {
                 if (keys == null) keys = new ConcurrentLinkedQueue<>(); // getSoulWolfMinions puede devolver null si falla la deserializacion del NBT
 
                 keys.offer(summonSoulWolf(level, player, rand).getUUID());
-                if (keys.size() > NUMBER_OF_SUMMONS) {
-                    // Se MIRA el más viejo sin quitarlo de la lista hasta saber que existe de verdad: si se
-                    // quitara a ciegas, un lobo en un chunk descargado (o guardado al desconectarse) se
-                    // olvidaría pero seguiría vivo, y al cargarse tendrías uno de más (duplicado).
+                DevilRpg.LOGGER.info("[Minion] lobo invocado: {} en la lista (cupo {})", keys.size(), NUMBER_OF_SUMMONS);
+                // Antes esto era un `if` (un solo intento) y, si el más viejo no aparecía, la lista crecía sin
+                // límite: invocabas y no sustituía a nadie. Ahora es un bucle hasta bajar del cupo, con tope de
+                // seguridad y logs, para que converja siempre.
+                int intentos = 0;
+                while (keys.size() > NUMBER_OF_SUMMONS && intentos++ < NUMBER_OF_SUMMONS + 4) {
                     UUID key = keys.peek();
-                    SoulWolf e = key == null ? null : (SoulWolf) min.getTamableByUUID(key, player.level());
-                    if (e != null)
-                        min.removeSoulWolf(player, e); // ya quita el UUID de la lista
+                    SoulWolf viejo = key == null ? null : (SoulWolf) min.getTamableByUUID(key, player.level());
+                    if (viejo == null) {
+                        // Diagnostico: la persistencia SI encuentra a los minions con level.getEntity(uuid), asi
+                        // que si aqui no aparece hay que ver si es el nivel o la busqueda.
+                        net.minecraft.world.entity.Entity directo = key == null ? null
+                                : (player.level() instanceof ServerLevel sl ? sl.getEntity(key) : null);
+                        DevilRpg.LOGGER.warn("[Minion] el lobo mas viejo ({}) no aparece: nivel={} clientSide={} getEntity directo={} claseJugador={}",
+                                key, player.level().dimension().location(), player.level().isClientSide, directo, player.getClass().getSimpleName());
+                        break;
+                    }
+                    int antes = keys.size();
+                    DevilRpg.LOGGER.info("[Minion] sustituyo al lobo mas viejo {}", key);
+                    min.removeSoulWolf(player, viejo); // ya quita el UUID de la lista
+                    if (keys.size() >= antes) {
+                        DevilRpg.LOGGER.warn("[Minion] quite el lobo {} pero la lista sigue en {}: la lista que uso la skill no es la de la capability", key, keys.size());
+                        break;
+                    }
                 }
                 min.setSoulWolfMinions(keys, player);
+                DevilRpg.LOGGER.info("[Minion] fin de la invocacion: {} lobo(s) en la lista", keys.size());
+            } catch (Exception e) {
+                // Si algo peta aqui, el lobo YA esta invocado pero no se sustituye a nadie: exactamente el
+                // sintoma de "invoco y no sustituye". Antes esa excepcion se perdia.
+                DevilRpg.LOGGER.error("[Minion] ERROR invocando lobo: la lista puede haber crecido sin sustituir", e);
+            }
             }
             player.getCooldowns().addCooldown(icon.getItem(), 20);
         }
