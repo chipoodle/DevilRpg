@@ -651,8 +651,9 @@ la **guarida** (`LairManager.spawnWave`: 3 cada 25 s a 8–14 bloques del centro
   `SkillsIconHudOverlay` el icono del HUD se dibuja solo si el poder tiene skill con imagen. Además, en el
   **HUD** una ranura sin skill **no muestra nada** (ni icono ni nombre de tecla), mientras que en la
   **pantalla de habilidades** las teclas se muestran **siempre** (allí los huecos son espacios de asignación y
-  la tecla es la referencia para asignar). Las ranuras con skill del HUD no se mueven de su sitio cuando otra
-  queda vacía (no se compacta la barra). El borde iluminado al pasar el mouse se mantiene.
+  la tecla es la referencia para asignar). Además la barra del HUD **se compacta**: las ranuras sin skill no
+  ocupan sitio, así que las skills asignadas quedan pegadas a la izquierda sin huecos en medio. El borde
+  iluminado al pasar el mouse se mantiene.
 
 > TODO (siguiente): que las hordas apunten al **asentamiento más cercano** en vez de al jugador, para
 > conectar con la Iteración 3.

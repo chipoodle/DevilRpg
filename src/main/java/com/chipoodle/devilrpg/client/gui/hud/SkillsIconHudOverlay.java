@@ -74,39 +74,36 @@ public class SkillsIconHudOverlay {
 
             ResourceLocation resourceLocation = skillCap.getImagesOfSkills().getOrDefault(aSkillEnum, EMPTY_POWER_IMAGE_RESOURCE);
 
-            // Posicionamiento ajustado
+            // Ranura SIN skill: no se dibuja nada (ni icono ni tecla) y NO ocupa sitio, así que la barra se
+            // compacta: las skills asignadas quedan pegadas a la izquierda, sin huecos en medio.
+            if (EMPTY_POWER_IMAGE_RESOURCE.equals(resourceLocation)) {
+                continue;
+            }
+
+            // Posicionamiento ajustado (solo cuenta ranuras con skill, de ahí que `i` se incremente al final)
             int x = (screenWidth - INITIAL_X) + (i * ICON_SPACING);
             int y = screenHeight - BASE_Y_OFFSET;
             boolean onCooldown = player.getCooldowns().isOnCooldown(item);
             float cooldownPercent = player.getCooldowns().getCooldownPercent(item, 0);
             float color = 1f - (cooldownPercent) / 1.5f;
 
-            // Renderizar icono: SOLO si el poder tiene una skill con imagen. Los huecos sin asignar pintaban
-            // la caja oscura (empty-box) y esa caja negra es justo lo que sobra en el HUD.
-            boolean hasIcon = !EMPTY_POWER_IMAGE_RESOURCE.equals(resourceLocation);
-            if (hasIcon) {
-                guiGraphics.setColor(1.0F, color, color, onCooldown ? 0.5F : 1.0F);
-                // Blit de 9 args (textura completa al tamano del icono); el de 7 args asume
-                // textura de 256px y con iconos de 128px mostraba solo una esquina.
-                guiGraphics.blit(resourceLocation, x, y, 0, 0.0F, 0.0F, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE);
-                guiGraphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
-            }
+            // Renderizar icono (la caja oscura empty-box ya no se pinta nunca en el HUD).
+            guiGraphics.setColor(1.0F, color, color, onCooldown ? 0.5F : 1.0F);
+            // Blit de 9 args (textura completa al tamano del icono); el de 7 args asume
+            // textura de 256px y con iconos de 128px mostraba solo una esquina.
+            guiGraphics.blit(resourceLocation, x, y, 0, 0.0F, 0.0F, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE);
+            guiGraphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
 
             // Indicador de semillas si es necesario
-            if (!aSkillEnum.equals(SkillEnum.EMPTY)) {
-                AbstractSkillExecutor loadedSkillExecutor = skillCap.getLoadedSkillExecutor(aSkillEnum);
-                if (loadedSkillExecutor instanceof AbstractSkillSeedsInInventoryExecutor) {
-                    renderSeedIndicator(guiGraphics, x, y, ICON_SIZE, player);
-                }
+            AbstractSkillExecutor loadedSkillExecutor = skillCap.getLoadedSkillExecutor(aSkillEnum);
+            if (loadedSkillExecutor instanceof AbstractSkillSeedsInInventoryExecutor) {
+                renderSeedIndicator(guiGraphics, x, y, ICON_SIZE, player);
             }
 
-            // Nombre de la tecla: también SOLO si la ranura tiene skill. En el HUD, una ranura vacía no
-            // muestra NADA (ni icono ni tecla); en la pantalla de habilidades sí se muestran siempre las teclas,
-            // porque allí los huecos son espacios de asignación. Ojo: se sigue incrementando `i` para que las
-            // ranuras con skill NO se muevan de su sitio (si no, la barra se compactaría al perder una skill).
-            if (hasIcon) {
-                renderKeyName(guiGraphics, font, x, y, ICON_SIZE, ICON_SIZE, keyName, onCooldown);
-            }
+            // Nombre de la tecla: aquí solo se llega con skill asignada, así que siempre se dibuja. (En la
+            // pantalla de habilidades las teclas se muestran siempre, porque allí los huecos son espacios de
+            // asignación; en el HUD una ranura vacía no muestra nada.)
+            renderKeyName(guiGraphics, font, x, y, ICON_SIZE, ICON_SIZE, keyName, onCooldown);
             i++;
         }
     };
