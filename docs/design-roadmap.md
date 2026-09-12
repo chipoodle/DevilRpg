@@ -414,49 +414,43 @@ Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el ju
 - El jugador **ayuda a progresar** pero no son dependientes.
 - **Riesgo real**: la aldea puede **caer** y el jugador debe buscar otra.
 
-#### 3.1 Primer paso: las hordas apuntan al asentamiento, no al jugador (PLAN, no implementado)
+#### 3.1 Las hordas apuntan al asentamiento, no al jugador — IMPLEMENTADO (paso 1 y 2) ✅
 Hoy **todo gira alrededor del jugador**: `AggressiveZombieEntity` tiene en el `targetSelector` prioridad **1**
 un `NearestAttackableTargetGoal<Player>`, y `HordeManager.spawnHorde` elige un *jugador* y lanza la horda a
 20–44 bloques de él. La aldea solo se asedia cuando el jugador **llega** (`VillageManager.start`). La
 intención es que el mundo tenga **sus propios conflictos** y que el jugador sea quien decide intervenir.
 
-Lo bueno: **casi toda la fontanería ya existe**. `AggressiveZombieEntity` ya tiene `villageCenter`,
+Lo bueno: **casi toda la fontanería ya existía**. `AggressiveZombieEntity` ya tiene `villageCenter`,
 `goToCenterActive` y `MoveToVillageCenterGoal` (prioridad 7), y `VillageManager` ya sabe resolver un asedio
-con su premio y su estado guardado. El trabajo es **de quién es el objetivo y quién dispara el asedio**:
+con su premio y su estado guardado. Lo implementado:
 
-1. **`SettlementRegistry`** (nuevo, o extender `VillageSavedData`): por cada aldea pre-generada guardar su
-   centro, radio de valla, estado (`próspera` / `asediada` / `caída`) y una **presión** numérica. La presión
-   crece con el **tiempo de juego** (determinista, así avanza aunque no haya nadie cerca ni el chunk esté
-   cargado) y con los enemigos que sobrevivan cerca; se reinicia al salvar la aldea y salta al máximo cuando
-   cae. Persistirla en `VillageSavedData` (hoy los asedios en curso **no** se persisten a propósito: con
-   asedios dirigidos por el mundo, la presión **sí** debe persistir).
-2. **`HordeManager` elige asentamiento, no jugador**: en lugar de `pickPlayer`, busca la aldea **más cercana**
-   al ancla del jugador (o la de mayor presión) y lanza la horda **entre la aldea y el monte**, a 32–48
-   bloques del centro y **fuera de la valla** (`FENCE_RADIUS` = 29). A cada zombie se le pone
-   `setVillageCenter(aldea)` + `goToCenterActive = true`, así que **marchan a la aldea** usando los goals que
-   ya existen. La probabilidad/tamaño siguen saliendo del `SpawnScaleProfile` (distancia al ancla + amenaza),
-   como ahora.
-3. **Objetivos del enemigo en modo asedio**: en `AggressiveZombieEntity`, cuando el zombie va a un
-   asentamiento (`villageCenter != null`), subir la prioridad de atacar **aldeanos y defensas**
-   (`Villager`, `IronGolem`, gatos/perros… o sea los mobs de la aldea) **por encima** del jugador, y dejar al
-   jugador como objetivo normal si él les dispara (`HurtByTargetGoal`). Fuera de un asedio, el
-   comportamiento actual no cambia (el jugador sigue siendo el objetivo prioritario).
-4. **La defensa de la aldea**: campana de alarma (el jugador la oye desde lejos y el HUD/objetivo avisa),
-   aldeanos refugiándose en las casas (vanilla ya lo hace al huir), golems defendiendo (vanilla), y la
-   **muerte de aldeanos** bajando la "salud" del asentamiento. Si la presión llega al máximo y no hay nadie
-   defendiendo, la aldea **cae**: los aldeanos supervivientes huyen, el asentamiento pasa a `caída` y deja de
-   dar recompensas (y el jugador debe buscar otra, como pide el pilar 3).
-5. **El jugador decide**: si va a defenderla a tiempo, asedio normal y premio actual (`siegeSkillPoints`);
-   si la ignora, la pierde para siempre. Es la diferencia entre "la aldea espera a que llegues" y "la aldea
-   vive su propia guerra".
-6. **Alcance de esta primera entrega**: solo **hordas y zombies agresivos** (los vexes siguen siendo la
-   presión personal de la noche alrededor del jugador). Los aldeanos que **construyen/reparan/cultivan/
-   envejecen** son el resto de la Iteración 3 y van después.
+1. ✅ **Estado de asentamiento persistido** (`VillageSavedData`): por aldea, una **presión** (ticks de juego
+   sin que nadie la atienda) y el flag de **caída**. La presión no necesita tickear nada: se acumula al
+   consultarla (`accruePressure`), así que avanza igual aunque el chunk esté descargado y es determinista.
+   Al defender la aldea se reinicia a cero.
+2. ✅ **`HordeManager` elige aldea**: cuando toca horda, busca la aldea **más descuidada** (mayor presión, por
+   encima de `PRESSURE_MIN_TICKS` = 8 min) de las que están a menos de `HORDE_TARGET_RADIUS` (220) del
+   jugador, ya generadas, no caídas y no atacadas en ese momento. Lanza la horda **a 32–48 bloques del
+   centro** (justo fuera de la valla de 29) y a cada zombie le pone `setVillageCenter(...)` +
+   `setGoToCenterActive(true)`, así que **marchan a la aldea** con los goals que ya existían. Si no hay
+   ninguna aldea candidata, la horda va a por el jugador como antes. Logs `[Horda]`/`[Village]`.
+3. ✅ **Los enemigos atacan a los aldeanos** (`AggressiveZombieEntity`): nuevo objetivo `Villager` (prioridad
+   4) y `IronGolem` (prioridad 5, solo si el zombie va a por una aldea). El jugador sigue siendo la
+   prioridad 1, así que si vas a defenderlos **te atraen a ti** y la aldea solo cae si no vas.
+4. ✅ **Resolución del asedio del mundo** (`VillageManager.tickWorldSieges`): si los enemigos caen, la aldea
+   **resiste** (presión a cero + aviso a los jugadores cercanos); si se queda **sin aldeanos**, la aldea
+   **cae** (`markFallen`, no vuelve a ser objetivo) y, si era la del objetivo actual, **el objetivo avanza**
+   para quien lo tuviera pendiente (se perdió). Las aldeas caídas ya no generan presión.
+5. ✅ **El destino viaja con el zombie**: `villageCenter`, `goToCenterActive` y el hogar de guarida se guardan
+   en NBT, así que un asediador que se recarga a mitad de camino **no pierde su destino** (antes sí).
+6. ✅ **De paso, un bug latente**: al resolver un asedio, el objetivo avanzaba con `objectiveIndex + 1` sin
+   comprobar que fuera el objetivo **actual**; desde que existen aldeas de objetivos superados (ver 3b.1),
+   defender una aldea vieja habría hecho **retroceder** el índice. Ahora solo avanza si es el actual.
 
-Pendientes técnicos que hay que resolver en el camino: `villageCenter` **no se guarda en NBT** (un zombie
-asediador que se recarga pierde su destino), el cupo de mobs y los logs (`[Village]`, `[Horda]`) para poder
-seguir el asedio, y que el asedio dirigido por el mundo **no** dispare la recompensa si el jugador no está
-cerca (o sí, como "noticia" en el chat).
+**Pendiente de esta iteración** (siguientes pasos): que defender una aldea de una horda del mundo dé
+recompensa propia (hoy solo reinicia la presión y avisa); "salud" de la aldea por aldeanos vivos (hoy solo
+0 aldeanos = caída); aldeas caídas con aspecto de ruinas; y el resto del pilar 3 (aldeanos que construyen,
+reparan, cultivan, comen y envejecen).
 
 ### Iteración 4 — El abismo vertical (estilo *Made in Abyss*)
 - El mundo genera un **abismo descendente infinito** por capas en vez de extenderse en horizontal.
@@ -512,6 +506,12 @@ el tiempo y se gasta en una lista de planos, más un `Goal` de "ir a construir" 
 - **Aldea (**`VillageGenerator`/`VillageManager`)**: `FENCE_RADIUS` 29, `LEVEL_RADIUS` 31,
   `GRACE_TICKS` 90 s, `SIEGE_TIMEOUT_TICKS` 2 min, `DEFAULT_WAVE` 8 + `min(objectiveIndex*2, 20)`,
   oleadas a 32–40 bloques del centro (fuera de la valla).
+
+- **Asentamientos vivos (`VillageSavedData` + `HordeManager`, Iteración 3)**: `HORDE_TARGET_RADIUS` 220
+  (radio respecto al jugador para buscar aldea a la que mandar la horda), `PRESSURE_MIN_TICKS` 8 min de
+  juego (presión mínima para que una aldea sea objetivo), `FALLEN_CHECK_RADIUS` 48 (radio para contar
+  aldeanos: 0 = la aldea ha caído), `SIEGE_WARN_RADIUS` 160 (a quién se avisa) y spawn de la horda a
+  `FENCE_RADIUS + 3 … + 19` = **32–48** bloques del centro.
 
 - **Guarida (`LairManager`)**: `MAX_LAIR_MOBS` 30 (cupo de enemigos vivos por guarida, sin el guardián),
   `GUARDIAN_RESPAWN_TICKS` 3 min (relevo del guardián si no rompes el núcleo), `SPAWN_INTERVAL_TICKS` 25 s,

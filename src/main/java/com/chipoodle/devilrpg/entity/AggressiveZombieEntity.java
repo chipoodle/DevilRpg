@@ -9,6 +9,9 @@ import com.chipoodle.devilrpg.spawnprofile.SpawnScaleProfile;
 import com.chipoodle.devilrpg.survival.ThreatLevel;
 import com.chipoodle.devilrpg.world.LairGenerator;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtUtils;
 import net.minecraft.network.chat.Component;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.util.RandomSource;
@@ -24,7 +27,9 @@ import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.animal.Animal;
+import net.minecraft.world.entity.animal.IronGolem;
 import net.minecraft.world.entity.monster.Zombie;
+import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.SmallFireball;
 import net.minecraft.world.level.Level;
@@ -242,6 +247,14 @@ public class AggressiveZombieEntity extends Zombie {
         // guarida expande la infección (mecánica vanilla). Solo aplica a los que tienen un hogar (guarida).
         this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, Animal.class, 10, true, false,
                 this::isAnimalInsideHome));
+        // ALDEANOS: el mundo también es hostil con los asentamientos. Es lo que hace que una horda que marcha
+        // a por una aldea sea una amenaza real para sus habitantes (y no solo para el jugador): si el jugador
+        // no va a defenderla, los aldeanos caen.
+        this.targetSelector.addGoal(4, new NearestAttackableTargetGoal<>(this, Villager.class, true));
+        // Golems (defensas de la aldea) SOLO si el zombie va a por una aldea: así uno suelto no se pelea con
+        // un golem que no le estaba haciendo nada.
+        this.targetSelector.addGoal(5, new NearestAttackableTargetGoal<>(this, IronGolem.class, 10, true, false,
+                (target) -> this.getVillageCenter() != null));
     }
 
     /**
@@ -261,6 +274,34 @@ public class AggressiveZombieEntity extends Zombie {
         }
         double r = getHomeRadius();
         return target.distanceToSqr(home.getX() + 0.5D, home.getY() + 0.5D, home.getZ() + 0.5D) <= r * r;
+    }
+
+    /**
+     * El destino y el "hogar" viajan con el zombie. Importante desde la Iteración 3: un zombie de una horda
+     * que marcha a por una aldea <b>no debe perder su destino</b> si el mundo se recarga a mitad del asedio
+     * (antes {@code villageCenter} no se guardaba y al recargar se quedaba sin saber a dónde iba).
+     */
+    @Override
+    public void addAdditionalSaveData(CompoundTag tag) {
+        super.addAdditionalSaveData(tag);
+        if (villageCenter != null) {
+            tag.put("DevilRpgVillageCenter", NbtUtils.writeBlockPos(villageCenter));
+        }
+        tag.putBoolean("DevilRpgGoToCenter", goToCenterActive);
+        if (homePos != null) {
+            tag.put("DevilRpgHomePos", NbtUtils.writeBlockPos(homePos));
+            tag.putInt("DevilRpgHomeRadius", homeRadius);
+        }
+    }
+
+    @Override
+    public void readAdditionalSaveData(CompoundTag tag) {
+        super.readAdditionalSaveData(tag);
+        NbtUtils.readBlockPos(tag, "DevilRpgVillageCenter").ifPresent(pos -> villageCenter = pos);
+        // Sin el campo (mobs de partidas viejas) se asume true, que es el valor por defecto de siempre.
+        goToCenterActive = !tag.contains("DevilRpgGoToCenter") || tag.getBoolean("DevilRpgGoToCenter");
+        NbtUtils.readBlockPos(tag, "DevilRpgHomePos").ifPresent(pos -> homePos = pos);
+        homeRadius = tag.getInt("DevilRpgHomeRadius");
     }
 
     public static boolean checkSpawnRules(EntityType<AggressiveZombieEntity> entityType, ServerLevelAccessor world, MobSpawnType spawnType, BlockPos pos, RandomSource random) {

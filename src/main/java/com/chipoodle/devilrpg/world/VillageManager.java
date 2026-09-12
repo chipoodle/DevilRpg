@@ -16,8 +16,11 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.entity.npc.Villager;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
@@ -135,6 +138,11 @@ public final class VillageManager {
                 return;
             }
         }
+        // Ni si el mundo ya la está atacando por su cuenta (horda dirigida a esta aldea): no se apilan dos
+        // oleadas sobre la misma aldea.
+        if (isUnderWorldSiege(level, objectiveIndex)) {
+            return;
+        }
         // Ni si el asedio de este objetivo ya se resolvió (salvada o caída): se guarda, así que al reiniciar
         // la partida no se puede repetir la recompensa ni volver a asediar la misma aldea.
         VillageSavedData saved = VillageSavedData.get(level);
@@ -151,6 +159,10 @@ public final class VillageManager {
 
     /** Se llama en el tick del servidor: gestiona el margen, la ola y la resolución del asedio. */
     public static void tick(ServerLevel level) {
+        // Hordas que el MUNDO manda contra una aldea (Iteración 3): se resuelven aparte de los asedios que
+        // arranca el jugador al llegar.
+        tickWorldSieges(level);
+
         List<VillageDefense> list = DEFENSES.get(level);
         if (list == null || list.isEmpty()) {
             return;
@@ -180,18 +192,27 @@ public final class VillageManager {
                     boolean siegeFailed = timeout && !waveCleared && !allZombiesInsidePerimeter(level, d);
                     ServerPlayer player = level.getServer().getPlayerList().getPlayer(d.playerUUID);
                     if (player != null) {
+                        PlayerAuxiliaryCapabilityInterface aux = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerAuxiliaryCapability.INSTANCE);
+                        // El objetivo solo avanza si es el objetivo ACTUAL: desde la Iteración 3 también se
+                        // pueden asediar aldeas de objetivos ya superados (siguen vivas y gestionadas), y
+                        // avanzar el índice con uno viejo haría RETROCEDER al jugador.
+                        boolean isCurrentObjective = aux != null && aux.getObjectiveIndex() == d.objectiveIndex;
                         if (waveCleared) {
                             grantReward(player, d.objectiveIndex);
-                            player.displayClientMessage(Component.literal("¡Has salvado la aldea! El objetivo avanza."), false);
+                            player.displayClientMessage(Component.literal(isCurrentObjective
+                                    ? "¡Has salvado la aldea! El objetivo avanza."
+                                    : "¡Has salvado la aldea!"), false);
                         } else if (siegeFailed) {
                             grantReward(player, d.objectiveIndex);
-                            player.displayClientMessage(Component.literal(
-                                    "Los monstruos no lograron entrar: ¡la aldea está a salvo! El objetivo avanza."), false);
+                            player.displayClientMessage(Component.literal(isCurrentObjective
+                                    ? "Los monstruos no lograron entrar: ¡la aldea está a salvo! El objetivo avanza."
+                                    : "Los monstruos no lograron entrar: ¡la aldea está a salvo!"), false);
                         } else {
-                            player.displayClientMessage(Component.literal("La aldea cayó... El objetivo avanza."), false);
+                            player.displayClientMessage(Component.literal(isCurrentObjective
+                                    ? "La aldea cayó... El objetivo avanza."
+                                    : "La aldea cayó..."), false);
                         }
-                        PlayerAuxiliaryCapabilityInterface aux = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerAuxiliaryCapability.INSTANCE);
-                        if (aux != null) {
+                        if (isCurrentObjective) {
                             aux.setObjectiveIndex(d.objectiveIndex + 1, player);
                         }
                     }
@@ -295,6 +316,176 @@ public final class VillageManager {
                     "La aldea te lo agradece: +" + skillPoints + " puntos de habilidad."), false);
             DevilRpg.LOGGER.info("[Village] Aldea {} salvada: +{} puntos de habilidad (quedan {})",
                     objectiveIndex, skillPoints, expCap.getUnspentPoints());
+        }
+    }
+
+    // --- Iteración 3: el mundo también juega (hordas que van a por una aldea) -------------------------
+
+    /** Aldea objetivo de una horda: su índice de objetivo y el centro (la posición del objetivo). */
+    public record Settlement(int objectiveIndex, BlockPos center) {
+    }
+
+    /** Radio (respecto al jugador) en el que se buscan aldeas a las que mandar una horda. */
+    private static final double HORDE_TARGET_RADIUS = 220.0D;
+    /** Presión (ticks de abandono) a partir de la cual una aldea empieza a ser objetivo de las hordas. */
+    private static final int PRESSURE_MIN_TICKS = 8 * 60 * 20;   // 8 min de juego
+    /** Radio alrededor del centro donde se cuentan los aldeanos para decidir si la aldea ha caído. */
+    private static final double FALLEN_CHECK_RADIUS = 48.0D;
+    /** Radio al que se avisa a los jugadores de lo que pasa en una aldea. */
+    private static final double SIEGE_WARN_RADIUS = 160.0D;
+    /** Asedios dirigidos por el mundo (en curso). Como {@link #DEFENSES}, no se persisten. */
+    private static final Map<ServerLevel, List<WorldSiege>> WORLD_SIEGES = new HashMap<>();
+
+    /**
+     * Elige la aldea que debe atacar una horda: la <b>más descuidada</b> (mayor presión) de las que están a
+     * menos de {@link #HORDE_TARGET_RADIUS} del jugador, ya generadas, que no hayan caído y que no estén ya
+     * bajo ataque. Devuelve {@code null} si no hay ninguna (entonces la horda va a por el jugador, como antes).
+     * <p>
+     * La presión se acumula aquí mismo: son ticks de juego que la aldea lleva sin que nadie la atienda, así
+     * que avanza aunque el chunk esté descargado.
+     */
+    public static Settlement pickHordeTarget(ServerLevel level, ServerPlayer player, int currentIndex) {
+        Vec3 anchor = anchorOf(player);
+        if (anchor == null) {
+            return null;
+        }
+        VillageSavedData saved = VillageSavedData.get(level);
+        long gameTime = level.getGameTime();
+        BlockPos playerPos = player.blockPosition();
+        Settlement best = null;
+        int bestPressure = 0;
+        for (int i = 0; i <= currentIndex; i++) {
+            if (saved.isFallen(i) || !saved.isGenerated(i) || isUnderAttack(level, i)) {
+                continue;
+            }
+            BlockPos target = ObjectiveTargets.targetOf(anchor, i);
+            if (ObjectiveTargets.horizontalDistSqr(playerPos, target) > HORDE_TARGET_RADIUS * HORDE_TARGET_RADIUS) {
+                continue;
+            }
+            int pressure = saved.accruePressure(i, gameTime);
+            if (pressure < PRESSURE_MIN_TICKS || pressure <= bestPressure) {
+                continue;
+            }
+            bestPressure = pressure;
+            best = new Settlement(i, target);
+        }
+        if (best != null) {
+            DevilRpg.LOGGER.info("[Village] Horda dirigida a la aldea {} (presión {} min sin atención)",
+                    best.objectiveIndex(), Math.round(bestPressure / 1200.0D));
+        }
+        return best;
+    }
+
+    /**
+     * Registra una horda del mundo que va a por una aldea. La resuelve {@link #tickWorldSieges}: si los
+     * enemigos caen, la aldea resiste (y su presión vuelve a cero); si se queda sin aldeanos, la aldea cae.
+     */
+    public static void startWorldSiege(ServerLevel level, Settlement settlement, List<UUID> wave) {
+        if (wave.isEmpty()) {
+            return;
+        }
+        WORLD_SIEGES.computeIfAbsent(level, l -> new ArrayList<>())
+                .add(new WorldSiege(settlement.objectiveIndex(), settlement.center(), wave));
+        DevilRpg.LOGGER.info("[Village] La aldea {} está siendo atacada: {} enemigos marchan a por ella",
+                settlement.objectiveIndex(), wave.size());
+        announceNearby(level, settlement.center(),
+                "Los tambores suenan: los monstruos marchan contra una aldea cercana.");
+    }
+
+    /** Resuelve los asedios del mundo: aldea resiste (se reinicia su presión) o cae (sin aldeanos). */
+    private static void tickWorldSieges(ServerLevel level) {
+        List<WorldSiege> list = WORLD_SIEGES.get(level);
+        if (list == null || list.isEmpty()) {
+            return;
+        }
+        VillageSavedData saved = VillageSavedData.get(level);
+        for (int i = list.size() - 1; i >= 0; i--) {
+            WorldSiege siege = list.get(i);
+            if (isWaveCleared(level, siege.wave)) {
+                saved.resetPressure(siege.objectiveIndex);
+                DevilRpg.LOGGER.info("[Village] La aldea {} resistió el ataque (presión reiniciada)",
+                        siege.objectiveIndex);
+                announceNearby(level, siege.center, "La aldea ha resistido: los monstruos han sido rechazados.");
+                list.remove(i);
+                continue;
+            }
+            if (countVillagers(level, siege.center) == 0) {
+                saved.markFallen(siege.objectiveIndex);
+                DevilRpg.LOGGER.info("[Village] La aldea {} ha CAÍDO: no quedan aldeanos", siege.objectiveIndex);
+                announceNearby(level, siege.center, "La aldea ha caído: no queda nadie con vida entre sus muros.");
+                // El objetivo avanza para quien lo tuviera pendiente: esa aldea ya no se puede salvar. Se
+                // marca como resuelta para que no se lance además el asedio clásico al llegar.
+                for (ServerPlayer p : level.players()) {
+                    PlayerAuxiliaryCapabilityInterface aux = IGenericCapability.getUnwrappedPlayerCapability(p, PlayerAuxiliaryCapability.INSTANCE);
+                    if (aux != null && aux.getObjectiveIndex() == siege.objectiveIndex) {
+                        p.displayClientMessage(Component.literal(
+                                "La aldea del objetivo ha caído... El objetivo avanza."), false);
+                        aux.setObjectiveIndex(siege.objectiveIndex + 1, p);
+                    }
+                }
+                disableGoToCenter(level, siege.wave);
+                list.remove(i);
+            }
+        }
+    }
+
+    /** ¿Esa aldea está siendo atacada ahora mismo (por el jugador o por el mundo)? */
+    private static boolean isUnderAttack(ServerLevel level, int objectiveIndex) {
+        return isUnderWorldSiege(level, objectiveIndex) || isUnderPlayerSiege(level, objectiveIndex);
+    }
+
+    private static boolean isUnderWorldSiege(ServerLevel level, int objectiveIndex) {
+        for (WorldSiege siege : WORLD_SIEGES.getOrDefault(level, List.of())) {
+            if (siege.objectiveIndex == objectiveIndex) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean isUnderPlayerSiege(ServerLevel level, int objectiveIndex) {
+        for (VillageDefense defense : DEFENSES.getOrDefault(level, List.of())) {
+            if (defense.objectiveIndex == objectiveIndex) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Aldeanos vivos alrededor del centro de una aldea. */
+    private static int countVillagers(ServerLevel level, BlockPos center) {
+        return level.getEntitiesOfClass(Villager.class, new AABB(center).inflate(FALLEN_CHECK_RADIUS)).size();
+    }
+
+    /** Manda un mensaje a los jugadores que estén cerca de la aldea. */
+    private static void announceNearby(ServerLevel level, BlockPos center, String message) {
+        for (ServerPlayer p : level.players()) {
+            if (p.blockPosition().distSqr(center) <= SIEGE_WARN_RADIUS * SIEGE_WARN_RADIUS) {
+                p.displayClientMessage(Component.literal(message), false);
+            }
+        }
+    }
+
+    /** Punto de inicio del jugador (ancla; o su spawn si aún no hay ancla). */
+    private static Vec3 anchorOf(Player player) {
+        PlayerAuxiliaryCapabilityInterface aux = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerAuxiliaryCapability.INSTANCE);
+        if (aux == null) {
+            return null;
+        }
+        Vec3 anchor = aux.getAnchorPoint();
+        return anchor != null ? anchor : aux.getSpawnPoint();
+    }
+
+    /** Datos de un asedio dirigido por el mundo (horda que va a por una aldea por su cuenta). */
+    private static final class WorldSiege {
+        final int objectiveIndex;
+        final BlockPos center;
+        final List<UUID> wave;
+
+        WorldSiege(int objectiveIndex, BlockPos center, List<UUID> wave) {
+            this.objectiveIndex = objectiveIndex;
+            this.center = center;
+            this.wave = wave;
         }
     }
 
