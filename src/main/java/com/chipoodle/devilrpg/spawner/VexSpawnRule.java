@@ -96,8 +96,13 @@ public class VexSpawnRule implements CustomSpawnRule {
     public void configureEntity(Mob entity, ServerLevel level, ServerPlayer player) {
         if (entity instanceof Vex vex) {
             // El escalado de atributos y de XP lo hace la propia entidad (FrostVexEntity), igual que el
-            // AggressiveZombieEntity. Aquí solo se le da vida limitada y se le asigna el objetivo.
-            vex.setLimitedLife(2 * 60 * 20); // se desvanece a los 2 minutos para no acumularse
+            // AggressiveEntity. Aquí solo se le asigna el objetivo.
+            //
+            // OJO: ya NO se le da vida limitada (antes `setLimitedLife(2 * 60 * 20)`). Con vida limitada el vex
+            // moría "de inanición" a los 2 minutos (vanilla lo mata con `damageSources().starve()`), y como no
+            // lo mataba el jugador NO soltaba experiencia: parecía que los vexes no daban XP. El tope
+            // `MAX_ALIVE_IN_WORLD` (15) ya evita que se acumulen, así que ahora todos se pueden matar y dan su
+            // XP. Si algún día se acumulan demasiado, basta con volver a poner la línea del setLimitedLife.
             vex.setTarget(player);
             vex.setPersistenceRequired();
         }

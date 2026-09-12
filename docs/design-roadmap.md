@@ -501,8 +501,13 @@ el tiempo y se gasta en una lista de planos, más un `Goal` de "ir a construir" 
   fuera de la zona protegida, a **20–44 bloques** de él en círculo.
 - **Presión de vexes (`VexSpawnRule`/`VexSpawnProfile`)**: `FrostVexEntity` (extiende `Vex`), `minDistance` 67,
   `maxDistance` 1000, `maxScaleMultiplier` 2.5, `baseHealth` 6.67, `baseSpeed` 0.077, `baseDamage` 0.34,
-  `baseXp` 5, `maxXpMultiplier` 4.5. Spawnea de día y de **noche**, a **12–24 bloques del jugador**, límite
-  **15 vivos**, intervalo 20 s–2 min. **Detalle completo en 5.1.**
+  `baseXp` **15** (subido desde 5: con 5 parecía que los vexes no daban XP), `maxXpMultiplier` 4.5 (hasta ~82
+  lejos de la base). Spawnea de día y de **noche**, a **12–24 bloques del jugador**, límite **15 vivos**,
+  intervalo 20 s–2 min. **Detalle completo en 5.1.**
+  - **Ya NO tienen vida limitada**: antes `VexSpawnRule` les ponía `setLimitedLife(2 min)` y, al agotarse,
+  vanilla los mata con `damageSources().starve()` → **no contaba como baja del jugador y no soltaban XP**
+  (por eso parecía que "matar un vex no da experiencia"). El tope de 15 vivos ya evita que se acumulen, así
+  que ahora todos se pueden matar y dan su XP. Para revertirlo, basta con volver a poner esa línea.
 - **Aldea (**`VillageGenerator`/`VillageManager`)**: `FENCE_RADIUS` 29, `LEVEL_RADIUS` 31,
   `GRACE_TICKS` 90 s, `SIEGE_TIMEOUT_TICKS` 2 min, `DEFAULT_WAVE` 8 + `min(objectiveIndex*2, 20)`,
   oleadas a 32–40 bloques del centro (fuera de la valla).
