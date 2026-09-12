@@ -52,6 +52,17 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
     public final static String STORED_MINIONS_KEY = "Stored_Minions";
     private CompoundTag nbt = new CompoundTag();
 
+    /*
+     * Cache de las listas de minions. Antes CADA llamada a getSoulWolfMinions()/getSoulBearMinions()/
+     * getWispMinions() deserializaba el byte[] del NBT con serializacion Java (ObjectInputStream), y el HUD
+     * de retratos las pedia TRES veces POR FRAME. Con la cache se deserializa una sola vez y se reutiliza la
+     * misma cola (ConcurrentLinkedQueue, segura para varios hilos: el render y el hilo principal la tocan a
+     * la vez). Se invalida al recibir NBT nuevo (deserializeNBT) y los setter guardan directamente la cola.
+     */
+    private ConcurrentLinkedQueue<UUID> soulWolfMinionsCache;
+    private ConcurrentLinkedQueue<UUID> soulBearMinionsCache;
+    private ConcurrentLinkedQueue<UUID> wispMinionsCache;
+
     public PlayerMinionCapabilityImplementation() {
         ConcurrentLinkedQueue<UUID> soulwolf;
         ConcurrentLinkedQueue<UUID> soulbear;
@@ -73,19 +84,34 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
         }
     }
 
+    /**
+     * Deserializa una de las listas del NBT. Devuelve siempre una cola (vacia si el dato falta o esta
+     * corrupto) en vez de null: asi ninguna llamada revienta con NullPointerException.
+     */
     @SuppressWarnings("unchecked")
+    private ConcurrentLinkedQueue<UUID> readMinionQueue(String key) {
+        try {
+            Object read = BytesUtil.toObject(nbt.getByteArray(key));
+            if (read instanceof ConcurrentLinkedQueue<?>) {
+                return (ConcurrentLinkedQueue<UUID>) read;
+            }
+        } catch (ClassNotFoundException | IOException | RuntimeException e) {
+            DevilRpg.LOGGER.error("Error al leer los minions de {}", key, e);
+        }
+        return new ConcurrentLinkedQueue<>();
+    }
+
     @Override
     public ConcurrentLinkedQueue<UUID> getSoulWolfMinions() {
-        try {
-            return (ConcurrentLinkedQueue<UUID>) BytesUtil.toObject(nbt.getByteArray(SOULWOLF_MINION_KEY));
-        } catch (ClassNotFoundException | IOException e) {
-            DevilRpg.LOGGER.error("Error en getSoulWolfMinions", e);
-            return null;
+        if (soulWolfMinionsCache == null) {
+            soulWolfMinionsCache = readMinionQueue(SOULWOLF_MINION_KEY);
         }
+        return soulWolfMinionsCache;
     }
 
     @Override
     public void setSoulWolfMinions(ConcurrentLinkedQueue<UUID> soulWolMinions, Player player) {
+        soulWolfMinionsCache = soulWolMinions;
         try {
             nbt.putByteArray(SOULWOLF_MINION_KEY, BytesUtil.toByteArray(soulWolMinions));
             if (!player.level().isClientSide) {
@@ -98,37 +124,27 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
         }
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public ConcurrentLinkedQueue<UUID> getSoulBearMinions() {
-        try {
-            return (ConcurrentLinkedQueue<UUID>) BytesUtil.toObject(nbt.getByteArray(SOULBEAR_MINION_KEY));
-        } catch (ClassNotFoundException | IOException e) {
-            DevilRpg.LOGGER.error("Error en getSoulBearMinions", e);
-            return null;
+        if (soulBearMinionsCache == null) {
+            soulBearMinionsCache = readMinionQueue(SOULBEAR_MINION_KEY);
         }
+        return soulBearMinionsCache;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public ConcurrentLinkedQueue<UUID> getAllMinions() {
-        try {
-            ConcurrentLinkedQueue<UUID> soulbears = (ConcurrentLinkedQueue<UUID>) BytesUtil.toObject(nbt.getByteArray(SOULBEAR_MINION_KEY));
-            ConcurrentLinkedQueue<UUID> soulwolves = (ConcurrentLinkedQueue<UUID>) BytesUtil.toObject(nbt.getByteArray(SOULWOLF_MINION_KEY));
-            ConcurrentLinkedQueue<UUID> wisps = (ConcurrentLinkedQueue<UUID>) BytesUtil.toObject(nbt.getByteArray(WISP_MINIONS_KEY));
-            soulbears.addAll(soulwolves);
-            soulbears.addAll(wisps);
-            return soulbears;
-
-        } catch (ClassNotFoundException | IOException e) {
-            DevilRpg.LOGGER.error("Error en getAllMinions", e);
-            return new ConcurrentLinkedQueue<>();
-        }
+        // Cola NUEVA: si reutilizaramos la cache del oso, le meteriamos dentro los lobos y los wisps.
+        ConcurrentLinkedQueue<UUID> all = new ConcurrentLinkedQueue<>(getSoulBearMinions());
+        all.addAll(getSoulWolfMinions());
+        all.addAll(getWispMinions());
+        return all;
     }
 
 
     @Override
     public void setSoulBearMinions(ConcurrentLinkedQueue<UUID> soulBearMinions, Player player) {
+        soulBearMinionsCache = soulBearMinions;
         try {
             nbt.putByteArray(SOULBEAR_MINION_KEY, BytesUtil.toByteArray(soulBearMinions));
             if (!player.level().isClientSide) {
@@ -141,19 +157,17 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
         }
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public ConcurrentLinkedQueue<UUID> getWispMinions() {
-        try {
-            return (ConcurrentLinkedQueue<UUID>) BytesUtil.toObject(nbt.getByteArray(WISP_MINIONS_KEY));
-        } catch (ClassNotFoundException | IOException e) {
-            DevilRpg.LOGGER.error("Error en getWispMinions", e);
-            return new ConcurrentLinkedQueue<>();
+        if (wispMinionsCache == null) {
+            wispMinionsCache = readMinionQueue(WISP_MINIONS_KEY);
         }
+        return wispMinionsCache;
     }
 
     @Override
     public void setWispMinions(ConcurrentLinkedQueue<UUID> wispMinions, Player player) {
+        wispMinionsCache = wispMinions;
         try {
             nbt.putByteArray(WISP_MINIONS_KEY, BytesUtil.toByteArray(wispMinions));
             if (!player.level().isClientSide) {
@@ -306,6 +320,10 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
     @Override
     public void deserializeNBT(HolderLookup.Provider provider, CompoundTag nbt) {
         this.nbt = nbt;
+        // NBT nuevo (sincronizacion cliente<->servidor): las colas cacheadas ya no valen.
+        this.soulWolfMinionsCache = null;
+        this.soulBearMinionsCache = null;
+        this.wispMinionsCache = null;
     }
 
     private void sendSkillChangesToServer() {

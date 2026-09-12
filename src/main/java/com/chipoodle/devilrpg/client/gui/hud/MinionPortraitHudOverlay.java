@@ -54,6 +54,8 @@ public class MinionPortraitHudOverlay {
         if (skillCap == null || minionCap == null)
             return;
 
+        // Estas tres llamadas se hacian EN CADA FRAME y cada una deserializaba el byte[] del NBT del jugador
+        // (serializacion Java: carisima). Ahora la capability cachea las colas, asi que aqui ya no cuesta nada.
         ConcurrentLinkedQueue<UUID> soulwolfMinionKeys = minionCap.getSoulWolfMinions();
         ConcurrentLinkedQueue<UUID> soulbearMinionKeys = minionCap.getSoulBearMinions();
         ConcurrentLinkedQueue<UUID> wispMinionKeys = minionCap.getWispMinions();

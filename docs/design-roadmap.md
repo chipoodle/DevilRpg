@@ -543,6 +543,16 @@ el tiempo y se gasta en una lista de planos, más un `Goal` de "ir a construir" 
     hasta confirmar que existe de verdad; antes se hacía `poll()`/`remove()` a ciegas, así que un minion
     descargado se olvidaba pero seguía vivo y al cargarse tenías uno de más (p. ej. 4 lobos). El cupo es el
     tamaño de la lista, no lo que esté cargado.
+  - **Rendimiento (cache de las listas)**: `getSoulWolfMinions`/`getSoulBearMinions`/`getWispMinions`
+    deserializaban el `byte[]` del NBT (**serialización Java**, lo más caro del proceso) **en cada llamada**, y el
+    HUD de retratos las pedía **tres veces por frame**. Ahora la capability cachea las tres colas y las invalida
+    en `deserializeNBT` (que es por donde entra el NBT sincronizado); los *setter* guardan directamente la cola
+    que reciben. La cache devuelve **la misma** `ConcurrentLinkedQueue`: es segura entre hilos (el render y el
+    hilo principal la tocan a la vez) y su iterador es *weakly consistent*, así que quitar elementos mientras se
+    recorre (lo que hace `removeAllSoulWolf` y compañía) no revienta. Dos detalles si se toca: `getAllMinions()`
+    devuelve una cola **nueva** a propósito (si reutilizara la del oso, le metería dentro los lobos y los wisps),
+    y los getter ya **no devuelven `null`** (cola vacía si el dato falta o está corrupto), con lo que se acabaron
+    los `NullPointerException` latentes y el spam de errores en el log.
 
 - **Fusión parásito + hongo (árbol de Naturaleza)**: el poder es **`soullichen`** (*Soullichen*, el parásito  que se pega al enemigo y lo lentece/consume) y el **hongo** (`vinefleshball`, *Parasyte mushroom*) pasó de
   ser un poder aparte a ser su **pasivo de 20 niveles** (`activeSkill = false`, `manacost` 0, `frame` "goal"):
