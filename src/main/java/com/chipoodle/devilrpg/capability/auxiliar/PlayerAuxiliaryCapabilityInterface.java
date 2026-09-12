@@ -32,4 +32,11 @@ public interface PlayerAuxiliaryCapabilityInterface extends IGenericCapability {
     int getObjectiveIndex();
     void setObjectiveIndex(int objectiveIndex, Player player);
 
+    /**
+     * ¿Ya ha leído la piedra de lore del círculo ritual? La primera lectura da la experiencia de un nivel,
+     * una sola vez por jugador (si no, la piedra sería una granja de XP infinita).
+     */
+    boolean isLoreStoneRead();
+    void setLoreStoneRead(boolean read, Player player);
+
 }

@@ -532,6 +532,14 @@ el tiempo y se gasta en una lista de planos, más un `Goal` de "ir a construir" 
   *"Has muerto: pierdes el 10% de la experiencia de tu nivel (4 de 45 puntos). Conservas el nivel 42: vuelve a
   ganar esa experiencia para seguir subiendo."* (si no había experiencia acumulada en el nivel, no se avisa).
 
+- **Primera lectura de la piedra de lore (`LoreStoneBlock`)**: la piedra del centro del círculo ritual regala
+  **la experiencia justa para subir un nivel** (`getXpNeededForNextLevel()`, o sea el tamaño de la barra del
+  nivel actual), **una sola vez por jugador**: el flag `loreStoneRead` se guarda en la capability auxiliar del
+  jugador (NBT), así que sobrevive al reinicio; sin ese flag la piedra sería una granja de XP infinita. Al
+  subir de nivel el mod concede además el punto de habilidad correspondiente (evento `PlayerXpEvent.LevelChange`),
+  así que la primera lectura es también el primer punto del árbol. Avisa en el chat ("La piedra te bendice: +N
+  de experiencia (subes de nivel).") y lo registra como `[LoreStone]`.
+
 ### 5.1 Perfiles de spawn (`SpawnScaleProfile`): qué hace cada campo y cada instancia
 
 `SpawnScaleProfile` es un `record` **neutro** (no depende de ninguna entidad): es el **origen único de verdad**

@@ -21,6 +21,8 @@ public class PlayerAuxiliaryCapabilityImplementation implements PlayerAuxiliaryC
     protected Vec3 spawnPoint = null;
     protected Vec3 anchorPoint = null;
     protected int objectiveIndex = 0;
+    /** Si ya leyó la piedra de lore del círculo ritual (la primera lectura da la XP de un nivel). */
+    protected boolean loreStoneRead = false;
 
     @Override
     public boolean isWerewolfAttack() {
@@ -103,6 +105,18 @@ public class PlayerAuxiliaryCapabilityImplementation implements PlayerAuxiliaryC
     }
 
     @Override
+    public boolean isLoreStoneRead() {
+        return loreStoneRead;
+    }
+
+    @Override
+    public void setLoreStoneRead(boolean read, Player player) {
+        this.loreStoneRead = read;
+        if (!player.level().isClientSide) sendAuxiliaryChangesToClient((ServerPlayer) player);
+        else sendAuxiliaryChangesToServer();
+    }
+
+    @Override
     public void setAnchorPoint(Vec3 anchorPoint, Player player) {
         this.anchorPoint = anchorPoint;
         if (!player.level().isClientSide) sendAuxiliaryChangesToClient((ServerPlayer) player);
@@ -123,6 +137,7 @@ public class PlayerAuxiliaryCapabilityImplementation implements PlayerAuxiliaryC
             nbt.putString("anchorPoint", anchorPoint.toString());
         }
         nbt.putInt("objectiveIndex", objectiveIndex);
+        nbt.putBoolean("loreStoneRead", loreStoneRead);
         return nbt;
     }
 
@@ -142,6 +157,8 @@ public class PlayerAuxiliaryCapabilityImplementation implements PlayerAuxiliaryC
         if (nbt.contains("objectiveIndex")) {
             objectiveIndex = nbt.getInt("objectiveIndex");
         }
+        // Partidas viejas (sin el campo): false = todavía no la ha leído, así que la primera lectura sí da XP.
+        loreStoneRead = nbt.getBoolean("loreStoneRead");
     }
 
     private void sendAuxiliaryChangesToServer() {
