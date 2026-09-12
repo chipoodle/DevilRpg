@@ -56,6 +56,12 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
     public final static String SOULBEAR_INVENTORY_KEY = "Soulbear_Inventory";
     /** Minions guardados al desconectarse el jugador (lista de {Id, Dimension, Pos, Data}). */
     public final static String STORED_MINIONS_KEY = "Stored_Minions";
+    /**
+     * Cuántas veces seguidas tiene que faltar un minion de una copia periódica para quitarlo de las listas.
+     * Dos (no una) para no borrar por un fallo tonto: la copia puede ser de hasta 10 s antes y el minion pudo
+     * andar una casilla mientras su trozo seguía cargado (por eso se cargan las 9 casillas de alrededor).
+     */
+    private static final int STORED_MISSES_BEFORE_DROP = 2;
     private CompoundTag nbt = new CompoundTag();
 
     /*
@@ -443,7 +449,7 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
                 continue; // descargado o muerto: se conserva la copia anterior
             }
             removeStoredEntry(stored, id);
-            stored.add(buildStoredEntry(entity));
+            stored.add(buildStoredEntry(entity, removeFromWorld));
             if (removeFromWorld) {
                 // Se saca del mundo SIN morir (discard no dispara die(), así no ensucia las listas de minions).
                 entity.discard();
@@ -488,11 +494,15 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
     }
 
     /** Construye la entrada guardada de un minion: UUID, dimensión, posición y NBT completo. */
-    private CompoundTag buildStoredEntry(Entity entity) {
+    private CompoundTag buildStoredEntry(Entity entity, boolean stowed) {
         CompoundTag entry = new CompoundTag();
         entry.putUUID("Id", entity.getUUID());
         entry.putString("Dimension", entity.level().dimension().location().toString());
         entry.putLong("Pos", entity.blockPosition().asLong());
+        // Stowed = la copia se hizo al SACAR el minion del mundo (al desconectarse), así que si al entrar no
+        // aparece hay que recrearlo. En una copia periódica (Stowed false) el minion sigue en el mundo: si al
+        // entrar no está, es que se murió mientras no mirabas y entonces NO se resucita (se limpia la lista).
+        entry.putBoolean("Stowed", stowed);
         entry.put("Data", saveEntityData(entity));
         return entry;
     }
@@ -542,6 +552,7 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
             return;
         }
         int restored = 0;
+        int cleaned = 0;
         // Al revés: así se pueden quitar las entradas recuperadas sin descolocar el índice.
         for (int i = stored.size() - 1; i >= 0; i--) {
             CompoundTag entry = stored.getCompound(i);
@@ -555,31 +566,56 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
             String dimension = entry.getString("Dimension");
             String typeId = entry.getCompound("Data").getString("id");
             ServerLevel storedLevel = levelOf(server, dimension);
-            ITamableEntity minion = null;
-            boolean recreated = false;
-            if (storedLevel != null) {
-                minion = resolveMinion(storedLevel, id, pos);
-            }
-            if (minion == null) {
-                minion = recreateMinion(entry, playerLevel, player);
-                recreated = minion != null;
-            }
-            if (minion == null) {
-                // NO se borra: se deja la copia para el próximo intento. Antes se borraba SIEMPRE al final,
-                // así que un fallo de recreación destruía el minion para siempre (y sin copia en el mundo).
-                DevilRpg.LOGGER.warn("[Minion] NO pude recuperar {} (tipo '{}', dim {}, pos {}); dejo la copia guardada",
-                        id, typeId.isEmpty() ? "desconocido" : typeId, dimension, pos);
+            ITamableEntity minion = storedLevel != null ? resolveMinion(storedLevel, id, pos) : null;
+
+            if (minion != null) {
+                // Sigue existiendo (cargado, o en un trozo que acabamos de cargar): se adopta, no se recrea.
+                entry.remove("Misses");
+                bringToPlayer(minion, player, playerLevel);
+                stored.remove(i);
+                restored++;
+                DevilRpg.LOGGER.info("[Minion] devuelto ADOPTADO {} ({}), dim {} pos {}",
+                        id, typeId.isEmpty() ? "sin tipo en la copia" : typeId, dimension, pos);
                 continue;
             }
-            bringToPlayer(minion, player, playerLevel);
-            stored.remove(i);
-            restored++;
-            DevilRpg.LOGGER.info("[Minion] devuelto {} {} ({}), dim {} pos {}",
-                    recreated ? "RECREADO" : "adoptado", id,
-                    typeId.isEmpty() ? "sin tipo en la copia" : typeId, dimension, pos);
+
+            // No aparece. ¿La copia se hizo al sacarlo del mundo (salida) o es una foto periódica?
+            // Las copias antiguas (sin el campo) se tratan como "de salida", que es lo que eran.
+            boolean stowed = !entry.contains("Stowed") || entry.getBoolean("Stowed");
+            if (stowed) {
+                minion = recreateMinion(entry, playerLevel, player);
+                if (minion == null) {
+                    // NO se borra: se deja la copia para el próximo intento. Antes se borraba SIEMPRE al final,
+                    // así que un fallo de recreación destruía el minion para siempre.
+                    DevilRpg.LOGGER.warn("[Minion] NO pude recuperar {} (tipo '{}', dim {}, pos {}); dejo la copia guardada",
+                            id, typeId.isEmpty() ? "desconocido" : typeId, dimension, pos);
+                    continue;
+                }
+                bringToPlayer(minion, player, playerLevel);
+                stored.remove(i);
+                restored++;
+                DevilRpg.LOGGER.info("[Minion] devuelto RECREADO {} ({}), dim {} pos {}",
+                        id, typeId.isEmpty() ? "sin tipo en la copia" : typeId, dimension, pos);
+                continue;
+            }
+
+            // Foto periódica de un minion que ya no está: se murió mientras no mirabas. No se resucita: se
+            // cuenta el fallo y, al segundo, se quita de las listas (así no se acumulan minions muertos).
+            int misses = entry.getInt("Misses") + 1;
+            if (misses >= STORED_MISSES_BEFORE_DROP) {
+                boolean forgotten = forgetMinionId(player, id);
+                stored.remove(i);
+                cleaned++;
+                DevilRpg.LOGGER.info("[Minion] {} ya no existe ({} fallos): {} de tus listas",
+                        id, misses, forgotten ? "lo quito" : "no estaba en ninguna");
+            } else {
+                entry.putInt("Misses", misses);
+                DevilRpg.LOGGER.info("[Minion] no encuentro a {} ({}), aviso {}/{}: si vuelve a faltar al entrar lo quito de las listas",
+                        id, typeId.isEmpty() ? "sin tipo" : typeId, misses, STORED_MISSES_BEFORE_DROP);
+            }
         }
-        DevilRpg.LOGGER.info("[Minion] {} minion(es) devueltos a {} (quedan {} copia(s) sin recuperar)",
-                restored, player.getName().getString(), stored.size());
+        DevilRpg.LOGGER.info("[Minion] {} devuelto(s), {} limpiado(s) y {} copia(s) pendientes para {}",
+                restored, cleaned, stored.size(), player.getName().getString());
         if (player instanceof ServerPlayer serverPlayer) {
             sendSkillChangesToClient(serverPlayer);
         }
@@ -646,10 +682,40 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
     private ITamableEntity resolveMinion(ServerLevel level, UUID id, BlockPos pos) {
         Entity entity = level.getEntity(id);
         if (entity == null) {
-            level.getChunk(pos.getX() >> 4, pos.getZ() >> 4);
+            // Se cargan también las 8 casillas de alrededor: la copia puede ser de hasta 10 s antes, así que el
+            // minion pudo andar una casilla mientras su trozo seguía cargado. getEntity(UUID) busca entre TODAS
+            // las entidades cargadas del nivel, así que con esas 9 casillas basta.
+            int cx = pos.getX() >> 4;
+            int cz = pos.getZ() >> 4;
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    level.getChunk(cx + dx, cz + dz);
+                }
+            }
             entity = level.getEntity(id);
         }
         return entity instanceof ITamableEntity minion ? minion : null;
+    }
+
+    /** Quita un UUID de las listas de minions (lobo, oso, wisp). Se usa cuando se confirma que ya no existe. */
+    private boolean forgetMinionId(Player player, UUID id) {
+        boolean removed = false;
+        ConcurrentLinkedQueue<UUID> wolves = getSoulWolfMinions();
+        if (wolves.remove(id)) {
+            setSoulWolfMinions(wolves, player);
+            removed = true;
+        }
+        ConcurrentLinkedQueue<UUID> bears = getSoulBearMinions();
+        if (bears.remove(id)) {
+            setSoulBearMinions(bears, player);
+            removed = true;
+        }
+        ConcurrentLinkedQueue<UUID> wisps = getWispMinions();
+        if (wisps.remove(id)) {
+            setWispMinions(wisps, player);
+            removed = true;
+        }
+        return removed;
     }
 
     /** Recrea un minion desde su NBT guardado, junto al jugador (conserva su UUID: las listas siguen valiendo). */

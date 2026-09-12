@@ -445,11 +445,16 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
      */
     @Override
     public void die(@NotNull DamageSource cause) {
-        if (getOwner() != null) {
-            PlayerMinionCapabilityInterface minionCap = getOwner().getData(PlayerMinionCapability.INSTANCE);
-            if (minionCap == null)
-                return;
-            minionCap.removeSoulBear((Player) getOwner(), this);
+        // resolveOwnerForRemoval (no getOwner): con el jugador en otra dimension getOwner() es null y el UUID
+        // del oso se quedaba en la lista para siempre.
+        Player owner = resolveOwnerForRemoval();
+        if (owner != null) {
+            PlayerMinionCapabilityInterface minionCap = owner.getData(PlayerMinionCapability.INSTANCE);
+            if (minionCap != null) {
+                minionCap.removeSoulBear(owner, this);
+            }
+        } else {
+            DevilRpg.LOGGER.info("[Minion] el oso {} murio sin dueno localizable; la copia guardada se limpiara al entrar", getUUID());
         }
         // super.onDeath(cause);
         customOnDeath();

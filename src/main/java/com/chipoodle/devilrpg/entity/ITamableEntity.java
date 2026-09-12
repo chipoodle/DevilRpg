@@ -117,4 +117,26 @@ public interface ITamableEntity extends IAttachmentHolder, OwnableEntity, Leasha
     void tame(Player p_193101_1_);
 
     DamageSources damageSources();
+
+    /**
+     * El dueño para poder quitarse de la lista de minions al morir.
+     * <p>
+     * {@code getOwner()} solo busca al jugador <b>en su propio nivel</b>, así que si el jugador está en otra
+     * dimensión (o desconectado) devuelve {@code null}. Con el {@code getOwner() != null} que había en los
+     * {@code die()} de lobo, oso y wisp, un minion que moría con el dueño en otra dimensión <b>no se quitaba
+     * nunca de la lista</b>: ahí se acumulaban UUIDs de minions muertos (que después desbordaban el cupo).
+     * Aquí se busca al jugador en <b>todo el servidor</b> por su UUID.
+     */
+    @Nullable
+    default Player resolveOwnerForRemoval() {
+        if (getOwner() instanceof Player player) {
+            return player;
+        }
+        UUID ownerId = getOwnerUUID();
+        net.minecraft.server.MinecraftServer server = getEntity().getServer();
+        if (server == null || ownerId == null) {
+            return null;
+        }
+        return server.getPlayerList().getPlayer(ownerId);
+    }
 }

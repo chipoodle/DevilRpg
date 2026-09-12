@@ -235,12 +235,16 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
      */
     @Override
     public void die(@NotNull DamageSource cause) {
-        if (getOwner() != null) {
-            PlayerMinionCapabilityInterface minionCap = getOwner()
-                    .getData(PlayerMinionCapability.INSTANCE);
-            if (minionCap == null)
-                return;
-            minionCap.removeSoulWolf((Player) getOwner(), this);
+        // resolveOwnerForRemoval (no getOwner): si el jugador esta en otra dimension, getOwner() es null y el
+        // UUID del lobo se quedaba en la lista para siempre.
+        Player owner = resolveOwnerForRemoval();
+        if (owner != null) {
+            PlayerMinionCapabilityInterface minionCap = owner.getData(PlayerMinionCapability.INSTANCE);
+            if (minionCap != null) {
+                minionCap.removeSoulWolf(owner, this);
+            }
+        } else {
+            DevilRpg.LOGGER.info("[Minion] el lobo {} murio sin dueno localizable; la copia guardada se limpiara al entrar", getUUID());
         }
         // super.onDeath(cause);
         customOnDeath();

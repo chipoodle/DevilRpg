@@ -558,6 +558,19 @@ el tiempo y se gasta en una lista de planos, más un `Goal` de "ir a construir" 
     jugador y lo avisa en el log. Es una red de seguridad para partidas guardadas con la versión con el bug.
   - **Poda**: al capturar se tiran las copias cuyo UUID ya no está en ninguna lista del jugador (`pruneStoredEntries`),
     para no resucitar un minion que el jugador ya no tiene.
+  - **POR QUÉ SE ACUMULABAN MINIONS MUERTOS EN LAS LISTAS (arreglado)**: el `die()` de lobo, oso y wisp quita el
+    UUID de la lista **solo si `getOwner() != null`**, y `getOwner()` busca al jugador **en su propio nivel**.
+    Con el jugador en **otra dimensión (o desconectado)** devolvía `null`, así que el minion moría y su UUID se
+    quedaba en la lista **para siempre**: el cupo (3 lobos) se llenaba de fantasmas y el jugador podía acabar con
+    más minions de los que debería. Ahora los tres usan `ITamableEntity.resolveOwnerForRemoval()`, que si
+    `getOwner()` falla busca al jugador en **todo el servidor** por su UUID. (De paso: el `die()` de los tres
+    hacía `if (minionCap == null) return;`, que se saltaba `customOnDeath()`; ahora ya no.)
+  - **Autolimpieza de copias huérfanas**: cada copia se marca `Stowed`. `true` = se hizo al **sacar** el minion
+    del mundo al desconectarse (si al entrar no aparece, se **recrea**: la copia manda). `false` = **foto
+    periódica** de un minion que sigue en el mundo: si al entrar no aparece (se cargan también las 8 casillas de
+    alrededor de su última posición, porque la foto puede ser de hasta 10 s antes y pudo andar una casilla) es
+    que **murió mientras no mirabas**, así que **no se resucita**: se apunta un fallo y al segundo se quita de
+    las listas. Las copias antiguas (sin el campo) se tratan como `Stowed`, que es lo que eran.
   - **Logs de diagnóstico** (todos con la etiqueta `[Minion]`): al capturar, una línea por minion guardado con
     tipo, UUID, dimensión, posición y salud; al entrar, cuántas copias hay, una línea por minion (adoptado o
     recreado) y las que no se pudieron recuperar; y al traerlos, una línea por minion vivo.
@@ -752,6 +765,9 @@ la **guarida** (`LairManager.spawnWave`: 3 cada 25 s a 8–14 bloques del centro
   (`libs\` se armó copiando de las cachés de Gradle el jar `neoforge-*-merged.jar` + fastutil/log4j/logging/asm...).
   El modo `--restore-minions-from <viejo.dat> <tipoWisp> <destino.dat>` recupera `Stored_Minions` del respaldo
   que el propio juego deja (`playerdata/<uuid>.dat_old`), deduce el tipo de cada entrada por la lista en la que
-  sigue su UUID y lo escribe, dejando copia `.bak`. Dos reglas: **el juego tiene que estar cerrado** (si está
-  abierto, al salir sobrescribe el archivo con lo que tiene en memoria y se pierde el arreglo) y **verificar
-  antes/después** con `build/diffnbt.py` (0 diferencias fuera de lo tocado = el cambio fue quirúrgico).
+  sigue su UUID y lo escribe, dejando copia `.bak`. Dos reglas: **el juego tiene que estar cerrado** —no basta
+  con que "no moleste": si está abierto, al salir **sobrescribe el archivo con lo que tiene en memoria** y el
+  arreglo se pierde **sin ningún aviso** (pasó el 12-sep-2026: la inyección de los minions se perdió así)— y
+  **verificar antes/después** con `build/diffnbt.py` (0 diferencias fuera de lo tocado = el cambio fue
+  quirúrgico). El modo `--forget <uuid>…` quita UUIDs concretos de las listas de minions (solo tras comprobar
+  con `build/finduuid.py` que **no existen en ningún archivo de región**, es decir que están muertos de verdad).

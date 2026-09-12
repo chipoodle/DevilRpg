@@ -2,6 +2,7 @@ package com.chipoodle.devilrpg.entity;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.core.Holder;
+import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapability;
 import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityInterface;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
@@ -429,12 +430,16 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
      */
     @Override
     public void die(@NotNull DamageSource cause) {
-        if (getOwner() != null) {
-            PlayerMinionCapabilityInterface minionCap = getOwner()
-                    .getData(PlayerMinionCapability.INSTANCE);
-            if (minionCap == null)
-                return;
-            minionCap.removeWisp((Player) getOwner(), this);
+        // resolveOwnerForRemoval (no getOwner): con el jugador en otra dimension getOwner() es null y el UUID
+        // del wisp se quedaba en la lista para siempre (asi se acumulaban minions muertos).
+        Player owner = resolveOwnerForRemoval();
+        if (owner != null) {
+            PlayerMinionCapabilityInterface minionCap = owner.getData(PlayerMinionCapability.INSTANCE);
+            if (minionCap != null) {
+                minionCap.removeWisp(owner, this);
+            }
+        } else {
+            DevilRpg.LOGGER.info("[Minion] el wisp {} murio sin dueno localizable; la copia guardada se limpiara al entrar", getUUID());
         }
         if (!this.level().isClientSide)
             dropAllDeathLoot((ServerLevel) level(), cause);
