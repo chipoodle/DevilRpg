@@ -49,8 +49,12 @@ public interface PlayerMinionCapabilityInterface extends IGenericCapability {
 
     // --- Persistencia: que los minions te sigan al salir, volver a entrar y cambiar de dimensión -----
 
-    /** Guarda los minions vivos (NBT + dimensión + posición) en los datos del jugador y los saca del mundo. */
-    void storeAllMinions(Player player);
+    /**
+     * Guarda la copia del estado de los minions vivos (NBT + dimensión + posición), reemplazando la anterior.
+     * Se llama periódicamente (copia de seguridad para cortes de luz) y al desconectarse con
+     * {@code removeFromWorld = true} (además los saca del mundo para que no queden sueltos).
+     */
+    void captureMinions(Player player, boolean removeFromWorld);
 
     /** Devuelve los minions guardados: adopta los que sigan en el mundo y recrea los que ya no estén. */
     void restoreStoredMinions(Player player);

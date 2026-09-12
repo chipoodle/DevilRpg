@@ -93,6 +93,9 @@ public class PlayerCapabilityForgeEventSubscriber {
      */
     private static final int ARMOR_REPAIR_INTERVAL_TICKS = 120;
 
+    /** Cada cuántos ticks se guarda una copia del estado de los minions (10 s). Ver {@code captureMinions}. */
+    private static final int MINION_CAPTURE_INTERVAL_TICKS = 200;
+
     @SubscribeEvent
     public static void onPlayerClone(PlayerEvent.Clone e) {
         if (e.isWasDeath()) {
@@ -167,6 +170,16 @@ public class PlayerCapabilityForgeEventSubscriber {
         }
         // Objetivo de progresión: comprueba si el jugador alcanzó el objetivo y avanza al siguiente.
         ObjectiveManager.tick(player);
+        // Copia de seguridad del estado de los minions cada MINION_CAPTURE_INTERVAL_TICKS (10 s). Es lo que
+        // hace fiables las dos cosas raras: un corte de luz (no hay evento de salida) y que el guardado al
+        // desconectarse llegue tarde (el servidor guarda al jugador ANTES de ese evento).
+        if (player.tickCount % MINION_CAPTURE_INTERVAL_TICKS == 0) {
+            PlayerMinionCapabilityInterface minionCap =
+                    IGenericCapability.getUnwrappedPlayerCapability(player, PlayerMinionCapability.INSTANCE);
+            if (minionCap != null) {
+                minionCap.captureMinions(player, false);
+            }
+        }
         // Reparar muy despacio (cada ARMOR_REPAIR_INTERVAL_TICKS) para simular la durabilidad de
         // una armadura de diamante: la de cuero se desgasta mucho mas lento mientras eres lobo.
         if (player.tickCount % ARMOR_REPAIR_INTERVAL_TICKS != 0) {
@@ -233,7 +246,7 @@ public class PlayerCapabilityForgeEventSubscriber {
         PlayerMinionCapabilityInterface minionCap =
                 IGenericCapability.getUnwrappedPlayerCapability(player, PlayerMinionCapability.INSTANCE);
         if (minionCap != null) {
-            minionCap.storeAllMinions(player);
+            minionCap.captureMinions(player, true);
         }
     }
 
@@ -356,21 +369,20 @@ public class PlayerCapabilityForgeEventSubscriber {
         BiConsumer<Player, PlayerAuxiliaryCapabilityInterface> auxBiConsumer = shapeshiftToNormal();
         EventUtils.onJoin(player, auxBiConsumer, PlayerAuxiliaryCapability.INSTANCE);
 
-        BiConsumer<Player, PlayerMinionCapabilityInterface> minBiConsumer = restoreMinions(player);
-        EventUtils.onJoin(player, minBiConsumer, PlayerMinionCapability.INSTANCE);
-    }
-
-    /**
-     * Al entrar al mundo se <b>devuelven</b> los minions guardados (adoptando los que sigan en el mundo y
-     * recreando los que ya no estén) en vez de borrarlos. Antes se borraban todos aquí, y por eso no
-     * sobrevivían a salir y volver a entrar. El estado vive en la capability de minions del jugador.
-     */
-    private static BiConsumer<Player, PlayerMinionCapabilityInterface> restoreMinions(Player player) {
-        return (aPlayer, theMin) -> {
-            if (!aPlayer.isLocalPlayer()) {
-                theMin.restoreStoredMinions(aPlayer);
-            }
-        };
+        // MINIONS: la restauración va DIRECTA (no por EventUtils.onJoin), porque ese helper difiere la llamada
+        // al hilo del CLIENTE y aquí hay que tocar entidades del servidor. Y el guardado NO se hace solo aquí:
+        // PlayerLoggedOutEvent salta DESPUÉS de que el servidor guarde al jugador, así que lo escrito ahí no
+        // llegaba al disco (era el bug por el que los minions no volvían). La copia buena es la periódica de
+        // onPlayerTick (cada MINION_CAPTURE_INTERVAL_TICKS).
+        PlayerMinionCapabilityInterface minionCap =
+                IGenericCapability.getUnwrappedPlayerCapability(player, PlayerMinionCapability.INSTANCE);
+        if (minionCap != null) {
+            // 1) Devuelve los minions guardados (adoptando los que sigan por el mundo y recreando los que ya
+            //    no estén). 2) Y trae los que sigan VIVOS en el mundo sin copia guardada: es el caso de un
+            //    corte de luz y también el de partidas anteriores a este cambio.
+            minionCap.restoreStoredMinions(player);
+            minionCap.bringMinionsToPlayer(player);
+        }
     }
 
     private static BiConsumer<Player, PlayerAuxiliaryCapabilityInterface> shapeshiftToNormal() {

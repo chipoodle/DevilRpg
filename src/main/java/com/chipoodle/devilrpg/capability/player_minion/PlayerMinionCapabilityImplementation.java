@@ -387,13 +387,19 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
     }
 
     /**
-     * Guarda los minions vivos (NBT completo + dimensión + posición) en los datos del jugador y los saca del
-     * mundo. Se llama al desconectarse: así no se quedan sueltos por el mundo mientras no juegas, y vuelven
-     * contigo al entrar. Los que no estén cargados se dejan como están (su UUID sigue en la lista y se
-     * adoptarán al volver).
+     * Guarda la copia del estado de los minions vivos (NBT completo + dimensión + posición).
+     * <p>
+     * Se llama <b>periódicamente</b> (cada pocos segundos) y también al desconectarse con
+     * {@code removeFromWorld = true}. La copia periódica es lo que hace que esto funcione: el evento de
+     * desconexión salta <b>después</b> de que el servidor haya guardado al jugador, así que lo que se
+     * escribiera solo ahí no llegaba al disco (era el bug por el que los minions no volvían). Con la copia
+     * periódica el estado ya está en los datos del jugador, y un corte de luz tampoco lo pierde.
+     * <p>
+     * Las entradas se <b>reemplazan</b> por UUID (no se acumulan) y si el minion no está cargado o está
+     * muerto se deja la entrada anterior como estaba.
      */
     @Override
-    public void storeAllMinions(Player player) {
+    public void captureMinions(Player player, boolean removeFromWorld) {
         if (player == null || player.level().isClientSide) {
             return;
         }
@@ -405,26 +411,44 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
         int count = 0;
         for (UUID id : allMinionIds()) {
             Entity entity = findLoadedAnywhere(server, id);
-            if (!(entity instanceof ITamableEntity)) {
-                continue;
+            if (!(entity instanceof ITamableEntity) || !entity.isAlive()) {
+                continue; // descargado o muerto: se conserva la copia anterior
             }
-            CompoundTag entry = new CompoundTag();
-            entry.putUUID("Id", entity.getUUID());
-            entry.putString("Dimension", entity.level().dimension().location().toString());
-            entry.putLong("Pos", entity.blockPosition().asLong());
-            CompoundTag data = new CompoundTag();
-            entity.saveWithoutId(data);
-            entry.put("Data", data);
-            stored.add(entry);
-            // Se saca del mundo SIN morir (discard no dispara die(), así no ensucia las listas de minions).
-            entity.discard();
+            removeStoredEntry(stored, id);
+            stored.add(buildStoredEntry(entity));
+            if (removeFromWorld) {
+                // Se saca del mundo SIN morir (discard no dispara die(), así no ensucia las listas de minions).
+                entity.discard();
+            }
             count++;
         }
-        if (count > 0) {
+        if (count > 0 && removeFromWorld) {
             DevilRpg.LOGGER.info("[Minion] {} minion(es) guardados para {} (vuelven al entrar)",
                     count, player.getName().getString());
-            if (player instanceof ServerPlayer serverPlayer) {
-                sendSkillChangesToClient(serverPlayer);
+        }
+        if (player instanceof ServerPlayer serverPlayer && removeFromWorld) {
+            sendSkillChangesToClient(serverPlayer);
+        }
+    }
+
+    /** Construye la entrada guardada de un minion: UUID, dimensión, posición y NBT completo. */
+    private CompoundTag buildStoredEntry(Entity entity) {
+        CompoundTag entry = new CompoundTag();
+        entry.putUUID("Id", entity.getUUID());
+        entry.putString("Dimension", entity.level().dimension().location().toString());
+        entry.putLong("Pos", entity.blockPosition().asLong());
+        CompoundTag data = new CompoundTag();
+        entity.saveWithoutId(data);
+        entry.put("Data", data);
+        return entry;
+    }
+
+    /** Quita de la lista la entrada de ese minion, si la hay (para reemplazarla, no para duplicarla). */
+    private void removeStoredEntry(ListTag stored, UUID id) {
+        for (int i = stored.size() - 1; i >= 0; i--) {
+            CompoundTag entry = stored.getCompound(i);
+            if (entry.hasUUID("Id") && id.equals(entry.getUUID("Id"))) {
+                stored.remove(i);
             }
         }
     }
