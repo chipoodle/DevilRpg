@@ -30,7 +30,7 @@ public class VexSpawnRule implements CustomSpawnRule {
     private static final int MIN_INTERVAL_SECONDS = 20;     // intervalo minimo entre intentos (20 s)
     private static final int MAX_INTERVAL_SECONDS = 2 * 60; // intervalo maximo entre intentos (2 min)
     private static final int MAX_ALIVE_IN_WORLD = 15;       // limite de vexes vivos
-    private static final int MIN_SPAWN_DISTANCE = 8;        // minimo cerca del jugador
+    private static final int MIN_SPAWN_DISTANCE = 12;        // minimo cerca del jugador
     private static final int MAX_SPAWN_DISTANCE = 24;       // maximo cerca del jugador
     private static final int SURFACE_SEARCH_DOWN = 8;       // bloques hacia abajo para hallar suelo
     private static final int SURFACE_SEARCH_UP = 2;         // bloques hacia arriba para hallar suelo

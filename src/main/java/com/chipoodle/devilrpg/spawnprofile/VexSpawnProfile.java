@@ -8,8 +8,8 @@ package com.chipoodle.devilrpg.spawnprofile;
 public final class VexSpawnProfile {
 
     public static final SpawnScaleProfile INSTANCE = new SpawnScaleProfile(
-            0,      // minDistance: sin zona protegida (spawnea desde el inicio, cerca del spawn)
-            500,    // maxDistance: amenaza local cerca de la base
+            67,      // minDistance: sin zona protegida (spawnea desde el inicio, cerca del spawn)
+            1000,    // maxDistance: amenaza local cerca de la base
             0,      // minHardDistance: no hay minimo que encoger
             2.5,    // maxScaleMultiplier: escala mas leve que el agresivo (+250%)
             6.67,   // baseHealth (un tercio de la base del vex)
