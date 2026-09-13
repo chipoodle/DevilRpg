@@ -85,7 +85,7 @@ public class SkillSoulVine extends AbstractSkillSeedsInInventoryExecutor {
     private void setVine(Level level, Player playerIn, PlayerSkillCapabilityInterface skillCap) {
         BlockPos playerBlockPos = playerIn.blockPosition();
         SoulVineBlock createdBlock = ModBlocks.SOUL_VINE_BLOCK.get();
-        // La vid nace apuntando a donde miras: crece recta en esa dirección (puente) hasta topar con algo.
+        // La vid nace apuntando a donde miras: crece siguiendo la trayectoria exacta de la mirada.
         Direction nearestDirection = lookDirection(playerIn);
         BlockPos newBlockpos = playerBlockPos.relative(nearestDirection);
         {
@@ -110,6 +110,10 @@ public class SkillSoulVine extends AbstractSkillSeedsInInventoryExecutor {
                 // Modo puente: crece RECTO hacia donde miras, sin necesitar pared, hasta topar con suelo,
                 // pared o techo (entonces vuelve a la mecánica normal de agarre).
                 svbe.setBridging(true);
+                // La trayectoria que persigue TODA la vid: el vector de la mirada tal cual (en 3D), para que
+                // un ángulo de 45° dé una escalera de 45° y no se encasille en un solo eje.
+                Vec3 look = playerIn.getLookAngle();
+                svbe.setAim(look.x, look.y, look.z);
             }
 
 

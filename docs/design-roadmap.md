@@ -613,17 +613,37 @@ el tiempo y se gasta en una lista de planos, más un `Goal` de "ir a construir" 
     precondición): ahora solo se pide que el sitio de delante esté libre, porque el puente empieza en el aire.
   - Si mirar en vertical no deja sitio para el primer bloque (p. ej. mirando al suelo que pisas), la dirección
     cae a la **horizontal** de la mirada para que el lanzamiento no falle.
-  - **Orden de preferencia al topar** (lo que se cambió después de probarlo): antes la lista era
-    `[dirección actual, DOWN, UP, …]` porque se ordenaba por `Direction.get3DDataValue()` (DOWN=0) y por eso la
-    vid **se iba siempre hacia abajo** en cuanto chocaba con una pared. Ahora el orden es explícito:
-    **`[dirección actual, UP, DOWN, NORTE, SUR, OESTE, ESTE]`**, es decir **sigue recto** en la trayectoria de la
-    mirada, luego **trepa** por la pared (el sólido de enfrente es perpendicular a `UP`, así que la regla del
-    sólido perpendicular se cumple sola), después **baja** y solo como último recurso **rodea por los lados**.
-    El bloque "de más allá" (cuando el hueco contiguo está libre pero no tiene sólido perpendicular) usa el
-    **mismo criterio**.
-  - Para poder verificarlo desde fuera, cuando la vid cambia de rumbo deja un `DEBUG`
-    `[Soulvine] la vid cambia de rumbo: A -> B en P` en `run/logs/debug.log`, además del ya existente
-    `[Soulvine] el puente topo con …`.
+  - **Trayectoria de la mirada (escalera tipo DDA)**. La vid guarda el **vector exacto** de la mirada
+    (`aimX/aimY/aimZ`, normalizado) y un **error acumulado por eje** (`errX/errY/errZ`). En cada paso se suma
+    el **peso** de la mirada en cada eje (los pesos son `|aim|` normalizado a **suma 1**, así cada paso reparte
+    exactamente un bloque y el error se queda acotado: con los pesos sin normalizar el eje dominante se
+    desbordaba y la escalera salía más plana que la mirada) y se **descuenta un bloque entero** al eje que de
+    verdad avanzó; el eje con más error es el que avanza. Así una mirada a **45° da una escalera de 45°**
+    (alterna los dos ejes) y una casi horizontal avanza casi siempre en horizontal con un escalón de vez en
+    cuando. Si un paso no se puede dar (pared), ese eje **no descuenta nada** y lo reintenta en el paso
+    siguiente.
+  - **Al topar con algo** el paso ideal ya está bloqueado, así que se eligen las alternativas **ordenadas por
+    producto escalar con la mirada** (la que menos se aparta de la trayectoria va antes) y, **en caso de
+    empate**, primero **el rumbo que ya traía la vid** (para no zigzaguear cuando el eje de la mirada está
+    tapado) y después el orden base **ARRIBA → ABAJO → lados**. Es decir: la vid **sigue el contorno del
+    obstáculo** (baja por la pared si mirabas hacia abajo, trepa si mirabas de frente) sin abandonar la
+    trayectoria, y solo rodea cuando no le queda otra. *(Antes la lista se ordenaba por
+    `Direction.get3DDataValue()`, y como DOWN=0 va antes que UP=1 la vid **se iba siempre hacia abajo**.)*
+  - Con trayectoria, el paso que sigue la mirada **no exige sólido perpendicular** (es el puente: puede ir
+    por el aire); los **desvíos sí** lo exigen, que es lo que la hace "agarrarse" al contorno del obstáculo.
+    El bloque "de más allá" (cuando el hueco contiguo está libre pero sin sólido perpendicular) usa el mismo
+    criterio de orden.
+  - El algoritmo está **simulado fuera del juego** en `build/vinesim.py` (herramienta de `build/`, ignorada
+    por git): imprime la escalera de varias miradas, el camino contra una pared y contra un suelo, y la
+    comprobación a 200 pasos de que el ángulo del camino **clava** el de la mirada (`cos = 1.0` en todas) y
+    de que el error no deriva. Útil porque las pruebas en juego tardan y la vid dura ~46 s.
+  - **El reloj de la vid se guarda en el NBT** (`timeOfCreation`), junto al `skillLevel`, el `bridging` y toda
+    la trayectoria (`hasAim`, `aim*`, `err*`), y los hijos lo heredan. Antes vivía **solo en memoria**: al salir
+    de la partida y volver a entrar el bloque se cargaba sin reloj, así que la vid **rejuvenecía entera** y
+    empezaba a envejecer de cero (y a vivir de nuevo completo). Las vids guardadas antes de este arreglo no
+    tienen el dato y se reinician una última vez.
+  - Para poder verificarlo desde fuera: `[Soulvine] el puente topo con …` y, en cada cambio de rumbo,
+    `[Soulvine] la vid cambia de rumbo: A -> B en P` (ambos `DEBUG`, en `run/logs/debug.log`).
 
 - **Fusión parásito + hongo (árbol de Naturaleza)**: el poder es **`soullichen`** (*Soullichen*, el parásito  que se pega al enemigo y lo lentece/consume) y el **hongo** (`vinefleshball`, *Parasyte mushroom*) pasó de
   ser un poder aparte a ser su **pasivo de 20 niveles** (`activeSkill = false`, `manacost` 0, `frame` "goal"):
