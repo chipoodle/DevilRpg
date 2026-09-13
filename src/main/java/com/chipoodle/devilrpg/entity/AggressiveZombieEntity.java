@@ -8,13 +8,16 @@ import com.chipoodle.devilrpg.spawnprofile.AggressiveZombieSpawnProfile;
 import com.chipoodle.devilrpg.spawnprofile.SpawnScaleProfile;
 import com.chipoodle.devilrpg.survival.ThreatLevel;
 import com.chipoodle.devilrpg.world.LairGenerator;
+import com.chipoodle.devilrpg.world.VillageManager;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -59,6 +62,12 @@ public class AggressiveZombieEntity extends Zombie {
     /** "Hogar" del zombie (p. ej. el núcleo de una guarida): patrulla un radio alrededor suyo. */
     private BlockPos homePos = null;
     private int homeRadius = 0;
+    /**
+     * Índice de la aldea a la que va esta horda del mundo ({@code -1} = no es de una horda a una aldea). Sirve
+     * para apuntar como <b>defensores</b> a los jugadores que le peguen, que son los únicos que cobran la
+     * recompensa al rechazarla (ver {@link VillageManager#registerDefender}).
+     */
+    private int worldSiegeIndex = -1;
     /** Umbral de distancia para que el zombie pueda romper obsidiana (más lejos = más nivel). */
     private static final double OBSIDIAN_THRESHOLD = 700;
 
@@ -99,6 +108,41 @@ public class AggressiveZombieEntity extends Zombie {
 
     public boolean isGoToCenterActive() {
         return goToCenterActive;
+    }
+
+    /** Marca este zombie como parte de una horda del mundo que va a por la aldea de ese objetivo. */
+    public void setWorldSiegeIndex(int objectiveIndex) {
+        this.worldSiegeIndex = objectiveIndex;
+    }
+
+    public int getWorldSiegeIndex() {
+        return worldSiegeIndex;
+    }
+
+    /**
+     * Si este zombie va a por una aldea, quien le haga daño (el jugador o un minion suyo) queda apuntado como
+     * defensor de esa aldea. La recompensa por rechazar la horda se paga <b>solo a quien participa</b>: si la
+     * aldea se defiende sola con sus golems, no cobra nadie.
+     */
+    @Override
+    public boolean hurt(@NotNull DamageSource source, float amount) {
+        if (worldSiegeIndex >= 0 && !level().isClientSide && level() instanceof ServerLevel serverLevel) {
+            VillageManager.registerDefender(serverLevel, worldSiegeIndex, source.getEntity());
+        }
+        return super.hurt(source, amount);
+    }
+
+    /**
+     * Al morir, se quita de la lista de atacantes VIVOS de su horda. La recompensa por rechazarla se paga solo
+     * cuando esa lista se queda vacía, es decir cuando de verdad se han matado todos: así no se cobra por
+     * alejarse y dejar que los chunks se descarguen (que a efectos del nivel es como si no existieran).
+     */
+    @Override
+    public void die(@NotNull DamageSource cause) {
+        if (worldSiegeIndex >= 0 && !level().isClientSide && level() instanceof ServerLevel serverLevel) {
+            VillageManager.onWorldSiegeAttackerKilled(serverLevel, getUUID());
+        }
+        super.die(cause);
     }
 
     /** ¿Puede este zombie romper obsidiana? (depende de su nivel = distancia de spawn). */
@@ -288,6 +332,7 @@ public class AggressiveZombieEntity extends Zombie {
             tag.put("DevilRpgVillageCenter", NbtUtils.writeBlockPos(villageCenter));
         }
         tag.putBoolean("DevilRpgGoToCenter", goToCenterActive);
+        tag.putInt("DevilRpgWorldSiegeIndex", worldSiegeIndex);
         if (homePos != null) {
             tag.put("DevilRpgHomePos", NbtUtils.writeBlockPos(homePos));
             tag.putInt("DevilRpgHomeRadius", homeRadius);
@@ -300,6 +345,7 @@ public class AggressiveZombieEntity extends Zombie {
         NbtUtils.readBlockPos(tag, "DevilRpgVillageCenter").ifPresent(pos -> villageCenter = pos);
         // Sin el campo (mobs de partidas viejas) se asume true, que es el valor por defecto de siempre.
         goToCenterActive = !tag.contains("DevilRpgGoToCenter") || tag.getBoolean("DevilRpgGoToCenter");
+        worldSiegeIndex = tag.contains("DevilRpgWorldSiegeIndex") ? tag.getInt("DevilRpgWorldSiegeIndex") : -1;
         NbtUtils.readBlockPos(tag, "DevilRpgHomePos").ifPresent(pos -> homePos = pos);
         homeRadius = tag.getInt("DevilRpgHomeRadius");
     }

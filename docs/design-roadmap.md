@@ -465,10 +465,26 @@ con su premio y su estado guardado. Lo implementado:
    comprobar que fuera el objetivo **actual**; desde que existen aldeas de objetivos superados (ver 3b.1),
    defender una aldea vieja habría hecho **retroceder** el índice. Ahora solo avanza si es el actual.
 
-**Pendiente de esta iteración** (siguientes pasos): que defender una aldea de una horda del mundo dé
-recompensa propia (hoy solo reinicia la presión y avisa); "salud" de la aldea por aldeanos vivos (hoy solo
-0 aldeanos = caída); aldeas caídas con aspecto de ruinas; y el resto del pilar 3 (aldeanos que construyen,
+7. ✅ **Recompensa propia por rechazar la horda del mundo**: al resolverse el asedio, los jugadores que
+   **participaron** cobran `WORLD_SIEGE_REWARD_EXPERIENCE_LEVELS` = **1 nivel de experiencia** (que trae su punto
+   de habilidad por el camino normal, ver `util/MissionRewards`) más 4 lingotes de hierro "del pueblo".
+   - Participar = haberle pegado a algún enemigo de esa horda. El zombie lleva su aldea en
+     `worldSiegeIndex` (NBT) y en `hurt` avisa a `VillageManager.registerDefender`; vale también el daño de tus
+     **minions** (si el atacante tiene dueño, el mérito es del dueño).
+   - **Antídoto contra el exploit**: la lista de la horda guarda solo atacantes **vivos** (cada muerte se
+     descuenta en `die` → `onWorldSiegeAttackerKilled`). La recompensa solo se paga si esa lista quedó
+     **vacía**, es decir si de verdad los mataron. Antes bastaba con alejarse para que los chunks se
+     descargaran y el asedio se diera por "resistido"; ahora, si la horda "desaparece" sin morir, la aldea
+     resiste igual (se reinicia su presión, como siempre) pero **no se paga nada** y queda en el log.
+
+**Pendiente de esta iteración** (siguientes pasos): "salud" de la aldea por aldeanos vivos (hoy solo 0
+aldeanos = caída); aldeas caídas con aspecto de ruinas; y el resto del pilar 3 (aldeanos que construyen,
 reparan, cultivan, comen y envejecen).
+
+> Nota conocida, sin tocar: el asedio **clásico** (el que dispara el jugador al llegar a la aldea) sigue
+> usando la regla vieja de "si no se les encuentra, la ola está limpia", así que ahí alejarse y dejar que se
+> descarguen los chunks todavía cuenta como aldea salvada. Se puede endurecer con el mismo truco de contar
+> muertes si se quiere.
 
 ### Iteración 4 — El abismo vertical (estilo *Made in Abyss*)
 - El mundo genera un **abismo descendente infinito** por capas en vez de extenderse en horizontal.

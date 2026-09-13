@@ -17,18 +17,23 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.OwnableEntity;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -343,6 +348,13 @@ public final class VillageManager {
     private static final double FALLEN_CHECK_RADIUS = 48.0D;
     /** Radio al que se avisa a los jugadores de lo que pasa en una aldea. */
     private static final double SIEGE_WARN_RADIUS = 160.0D;
+    /**
+     * Niveles de experiencia que paga rechazar una horda del mundo (la que el mundo manda a por una aldea sin
+     * que el jugador la provoque). Igual que salvar la aldea en el asedio clásico: 1 nivel, y su punto de
+     * habilidad llega por el camino normal. Se paga <b>solo a quien participó</b> (le pegó a algún enemigo de
+     * esa horda), así que si la aldea se defiende sola no cobra nadie.
+     */
+    private static final int WORLD_SIEGE_REWARD_EXPERIENCE_LEVELS = 1;
     /** Asedios dirigidos por el mundo (en curso). Como {@link #DEFENSES}, no se persisten. */
     private static final Map<ServerLevel, List<WorldSiege>> WORLD_SIEGES = new HashMap<>();
 
@@ -416,6 +428,8 @@ public final class VillageManager {
                 DevilRpg.LOGGER.info("[Village] La aldea {} resistió el ataque (presión reiniciada)",
                         siege.objectiveIndex);
                 announceNearby(level, siege.center, "La aldea ha resistido: los monstruos han sido rechazados.");
+                // Recompensa para quien la defendió (ver registerDefender).
+                rewardWorldSiegeDefenders(level, siege);
                 list.remove(i);
                 continue;
             }
@@ -442,6 +456,80 @@ public final class VillageManager {
     /** ¿Esa aldea está siendo atacada ahora mismo (por el jugador o por el mundo)? */
     private static boolean isUnderAttack(ServerLevel level, int objectiveIndex) {
         return isUnderWorldSiege(level, objectiveIndex) || isUnderPlayerSiege(level, objectiveIndex);
+    }
+
+    /**
+     * Apunta a un <b>defensor</b> de la aldea: lo llama {@code AggressiveZombieEntity.hurt} cada vez que
+     * alguien le pega a un enemigo de una horda del mundo. Vale el jugador y también sus <b>minions</b> (el
+     * mérito es del dueño), que es como pelea medio mod. Si esa aldea no tiene horda en curso, no hace nada.
+     */
+    public static void registerDefender(ServerLevel level, int objectiveIndex, @Nullable Entity attacker) {
+        Player player = playerBehind(attacker);
+        if (player == null) {
+            return;
+        }
+        for (WorldSiege siege : WORLD_SIEGES.getOrDefault(level, List.of())) {
+            if (siege.objectiveIndex == objectiveIndex) {
+                siege.defenders.add(player.getUUID());
+                return;
+            }
+        }
+    }
+
+    /** El jugador detrás de un atacante: él mismo, o el dueño si el que pega es un minion suyo. */
+    @Nullable
+    private static Player playerBehind(@Nullable Entity attacker) {
+        if (attacker instanceof Player player) {
+            return player;
+        }
+        if (attacker instanceof OwnableEntity ownable && ownable.getOwner() instanceof Player owner) {
+            return owner;
+        }
+        return null;
+    }
+
+    /**
+     * Un atacante de una horda del mundo ha muerto: se quita de la lista de <b>atacantes vivos</b> de su asedio.
+     * Eso es lo que permite distinguir "los mataron a todos" de "se descargaron los chunks al alejarse el
+     * jugador", y que la recompensa solo se cobre en el primer caso.
+     */
+    public static void onWorldSiegeAttackerKilled(ServerLevel level, UUID attacker) {
+        for (WorldSiege siege : WORLD_SIEGES.getOrDefault(level, List.of())) {
+            siege.wave.remove(attacker);
+        }
+    }
+
+    /**
+     * Paga a quienes defendieron la aldea de una horda del mundo: <b>1 nivel de experiencia</b> (su punto de
+     * habilidad llega por el camino normal) y unos lingotes que el pueblo comparte. Si nadie intervino, la
+     * aldea se defendió sola y no se paga nada.
+     */
+    private static void rewardWorldSiegeDefenders(ServerLevel level, WorldSiege siege) {
+        if (!siege.wave.isEmpty()) {
+            // El asedio se da por resuelto porque los atacantes han dejado de estar cargados (el jugador se
+            // alejó y se descargaron los chunks), no porque los mataran: no se paga nada.
+            DevilRpg.LOGGER.info("[Village] Aldea {} resistió sin que nadie limpiara la horda ({} atacantes "
+                            + "sin confirmar): sin recompensa", siege.objectiveIndex, siege.wave.size());
+            return;
+        }
+        if (siege.defenders.isEmpty()) {
+            DevilRpg.LOGGER.info("[Village] Aldea {} resistió sin ayuda de nadie: sin recompensa",
+                    siege.objectiveIndex);
+            return;
+        }
+        for (UUID uuid : siege.defenders) {
+            ServerPlayer player = level.getServer().getPlayerList().getPlayer(uuid);
+            if (player == null) {
+                continue; // se desconectó antes de que acabara
+            }
+            int puntosGanados = MissionRewards.giveExperienceLevels(player, WORLD_SIEGE_REWARD_EXPERIENCE_LEVELS);
+            String premio = MissionRewards.describe(WORLD_SIEGE_REWARD_EXPERIENCE_LEVELS, puntosGanados);
+            player.displayClientMessage(Component.literal(
+                    "Rechazaste la horda que iba a por la aldea: " + premio + " y el pueblo te da hierro."), false);
+            player.addItem(new ItemStack(Items.IRON_INGOT, 4));
+            DevilRpg.LOGGER.info("[Village] Aldea {} resistió: {} para {}", siege.objectiveIndex, premio,
+                    player.getGameProfile().getName());
+        }
     }
 
     private static boolean isUnderWorldSiege(ServerLevel level, int objectiveIndex) {
@@ -491,6 +579,12 @@ public final class VillageManager {
         final int objectiveIndex;
         final BlockPos center;
         final List<UUID> wave;
+        /**
+         * En los asedios del mundo esta lista guarda solo los atacantes <b>vivos</b>: cada muerte se descuenta
+         * ({@link #onWorldSiegeAttackerKilled}), así que quedar vacía significa "los mataron a todos". Eso es lo
+         * que separa una defensa de verdad de un asedio que se resolvió porque el jugador se alejó.
+         */
+        final Set<UUID> defenders = new HashSet<>();
 
         WorldSiege(int objectiveIndex, BlockPos center, List<UUID> wave) {
             this.objectiveIndex = objectiveIndex;

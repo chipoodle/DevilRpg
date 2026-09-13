@@ -120,6 +120,9 @@ public final class HordeManager {
                     // Marchan a la aldea con los goals que ya existían (MoveToVillageCenterGoal).
                     zombie.setVillageCenter(settlement.center());
                     zombie.setGoToCenterActive(true);
+                    // Y quedan marcados con la aldea a la que van: quien les pegue queda apuntado como
+                    // defensor y cobra la recompensa si la horda es rechazada.
+                    zombie.setWorldSiegeIndex(settlement.objectiveIndex());
                     wave.add(zombie.getUUID());
                 }
                 level.addFreshEntity(zombie);
