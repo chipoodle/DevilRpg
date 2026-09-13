@@ -751,11 +751,19 @@ public final class VillageGenerator {
         return pos;
     }
 
+    /** Los tres sitios fijos de aldeano de la aldea (uno por profesión), relativos al centro. */
+    private static final BlockPos[] VILLAGER_SPOTS = {
+            new BlockPos(-17, 0, -6), new BlockPos(16, 0, -7), new BlockPos(-3, 0, 14)
+    };
+    private static final VillagerProfession[] VILLAGER_SPECIALTIES = {
+            VillagerProfession.FARMER, VillagerProfession.WEAPONSMITH, VillagerProfession.CLERIC
+    };
+
     /** Vuelve a poner los aldeanos y el golem de una aldea ya construida (ver {@code VillageManager}). */
     public static void spawnVillagers(ServerLevel level, BlockPos center) {
-        spawnVillager(level, center.offset(-17, 0, -6), VillagerProfession.FARMER);
-        spawnVillager(level, center.offset(16, 0, -7), VillagerProfession.WEAPONSMITH);
-        spawnVillager(level, center.offset(-3, 0, 14), VillagerProfession.CLERIC);
+        for (int slot = 0; slot < VILLAGER_SPOTS.length; slot++) {
+            spawnOneVillager(level, center, slot);
+        }
         // El golem SOLO si no hay ya uno: al repoblar una aldea cuyo golem sobrevivió, antes aparecía un
         // segundo golem (bug visto en juego).
         if (level.getEntitiesOfClass(IronGolem.class, new AABB(center).inflate(48.0D)).isEmpty()) {
@@ -763,6 +771,16 @@ public final class VillageGenerator {
         } else {
             DevilRpg.LOGGER.debug("[Village] la aldea ya tiene golem: no se duplica");
         }
+    }
+
+    /**
+     * Repone <b>un</b> aldeano en la aldea, en el sitio que le toque según {@code slot} (los tres sitios fijos,
+     * uno por profesión). Lo usa la repoblación escalonada de {@code VillageManager}: una aldea debilitada se
+     * recupera de a poco (un aldeano por intervalo) en vez de aparecer repoblada de golpe.
+     */
+    public static void spawnOneVillager(ServerLevel level, BlockPos center, int slot) {
+        int i = Math.floorMod(slot, VILLAGER_SPOTS.length);
+        spawnVillager(level, center.offset(VILLAGER_SPOTS[i]), VILLAGER_SPECIALTIES[i]);
     }
 
     /** Y del suelo sólido (ignora agua/lava) en una columna (x, z). */
