@@ -685,7 +685,7 @@ public final class LairManager {
      * el premio sube de verdad la barra y el nivel del jugador. Aquí son <b>2</b> porque asaltar la guarida es
      * más duro y más largo que salvar una aldea.
      */
-    private static final int LAIR_REWARD_EXPERIENCE_LEVELS = 2;
+    private static final int LAIR_REWARD_EXPERIENCE_LEVELS = 1;
 
     private static final class Lair {
         final int objectiveIndex;
