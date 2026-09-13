@@ -563,17 +563,20 @@ public final class LairManager {
         int x = (int) Math.round(lair.center.getX() + Math.cos(angle) * dist);
         int z = (int) Math.round(lair.center.getZ() + Math.sin(angle) * dist);
         int y = VillageGenerator.spawnY(level, x, z);
+        // Nunca dentro de un bloque: si la columna estuviera tapada, se sube al primer hueco de 2 de alto.
+        // (Antes un enemigo podía aparecer enterrado y asfixiarse: el guardián se moría solo y el sello se abría.)
+        BlockPos posicion = VillageGenerator.huecoLibre(level, new BlockPos(x, y, z));
         boolean frost = !cultivator && lair.objectiveIndex >= 2 && random.nextInt(4) == 0;
         Mob mob;
         if (cultivator) {
-            mob = ModEntities.SCULK_CULTIVATOR.get().create(level, null, new BlockPos(x, y, z), MobSpawnType.MOB_SUMMONED, true, true);
+            mob = ModEntities.SCULK_CULTIVATOR.get().create(level, null, posicion, MobSpawnType.MOB_SUMMONED, true, true);
         } else if (frost) {
-            mob = ModEntities.FROST_VEX.get().create(level, null, new BlockPos(x, y, z), MobSpawnType.MOB_SUMMONED, true, true);
+            mob = ModEntities.FROST_VEX.get().create(level, null, posicion, MobSpawnType.MOB_SUMMONED, true, true);
         } else {
-            mob = ModEntities.AGGRESSIVE_ZOMBIE.get().create(level, null, new BlockPos(x, y, z), MobSpawnType.MOB_SUMMONED, true, true);
+            mob = ModEntities.AGGRESSIVE_ZOMBIE.get().create(level, null, posicion, MobSpawnType.MOB_SUMMONED, true, true);
         }
         if (mob != null) {
-            mob.moveTo(x + 0.5D, y, z + 0.5D, random.nextFloat() * 360.0F, 0.0F);
+            mob.moveTo(posicion.getX() + 0.5D, posicion.getY(), posicion.getZ() + 0.5D, random.nextFloat() * 360.0F, 0.0F);
             if (mob instanceof AggressiveZombieEntity zombie) {
                 // Patrullan un radio alrededor del núcleo de la guarida (no se quedan pegados ni se pierden).
                 zombie.setHome(lair.corePos, PATROL_RADIUS);

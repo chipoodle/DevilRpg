@@ -152,6 +152,14 @@ public final class VillageManager {
         if (!saved.isGenerated(objectiveIndex)) {
             preGenerate(level, objectiveIndex, target);
         }
+        // REPARACIÓN: si la aldea está generada, no ha caído y al llegar NO queda ningún aldeano, se vuelven a
+        // poner (aldeanos + golem). Pasa cuando mueren por un bug o por mobs mientras el jugador no estaba —
+        // antes te encontrabas la aldea vacía y ya no se repoblaba nunca (se genera una sola vez). Si la aldea
+        // YA cayó (isFallen) no se toca: la derrota es definitiva.
+        if (!saved.isFallen(objectiveIndex) && countVillagers(level, target) == 0) {
+            VillageGenerator.spawnVillagers(level, target);
+            DevilRpg.LOGGER.info("[Village] Aldea {} estaba vacia: aldeanos y golem repuestos", objectiveIndex);
+        }
         DEFENSES.computeIfAbsent(level, l -> new ArrayList<>())
                 .add(new VillageDefense(objectiveIndex, player.getUUID(), target));
         player.displayClientMessage(Component.literal("Llegaste a la aldea... los monstruos se acercan."), false);

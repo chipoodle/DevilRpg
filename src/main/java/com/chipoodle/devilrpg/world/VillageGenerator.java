@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.world;
 
+import com.chipoodle.devilrpg.DevilRpg;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -147,13 +148,8 @@ public final class VillageGenerator {
         // Campana al final, en el centro, limpiando su columna (nadie la tapa).
         bell(level, center);
 
-        // Aldeanos justo frente a la puerta de cada cabaña.
-        spawnVillager(level, center.offset(-17, 0, -6), VillagerProfession.FARMER);
-        spawnVillager(level, center.offset(16, 0, -7), VillagerProfession.WEAPONSMITH);
-        spawnVillager(level, center.offset(-3, 0, 14), VillagerProfession.CLERIC);
-
-        // Golem de hierro que protege la aldea.
-        spawnIronGolem(level, center.offset(4, 0, 4));
+        // Aldeanos justo frente a la puerta de cada cabaña, y el golem que protege la aldea.
+        spawnVillagers(level, center);
 
         // Faroles con poste distribuidos por la aldea (evitan spawn de zombies con la mecánica vanilla).
         torches(level, center);
@@ -258,13 +254,16 @@ public final class VillageGenerator {
 
     /** Spawnea un golem de hierro que defiende la aldea. */
     private static void spawnIronGolem(ServerLevel level, BlockPos pos) {
-        // Fijar la Y al suelo real (la isla/terreno) para que no spawnee bajo la aldea ni se sofoque.
+        // Fijar la Y al suelo real (la isla/terreno) y comprobar que quepa, para que no spawnee bajo la aldea
+        // ni se asfixie.
         int y = spawnY(level, pos.getX(), pos.getZ());
-        IronGolem golem = EntityType.IRON_GOLEM.create(level, null, new BlockPos(pos.getX(), y, pos.getZ()), MobSpawnType.MOB_SUMMONED, true, true);
+        BlockPos posicion = huecoLibre(level, new BlockPos(pos.getX(), y, pos.getZ()));
+        IronGolem golem = EntityType.IRON_GOLEM.create(level, null, posicion, MobSpawnType.MOB_SUMMONED, true, true);
         if (golem != null) {
-            golem.moveTo(pos.getX() + 0.5D, y, pos.getZ() + 0.5D, 0.0F, 0.0F);
+            golem.moveTo(posicion.getX() + 0.5D, posicion.getY(), posicion.getZ() + 0.5D, 0.0F, 0.0F);
             golem.setPersistenceRequired();
             level.addFreshEntity(golem);
+            DevilRpg.LOGGER.debug("[Village] golem de hierro en {}", posicion);
         }
     }
 
@@ -720,13 +719,43 @@ public final class VillageGenerator {
     }
 
     private static void spawnVillager(ServerLevel level, BlockPos pos, VillagerProfession profession) {
-        Villager villager = EntityType.VILLAGER.create(level, null, pos, MobSpawnType.MOB_SUMMONED, true, true);
+        // OJO: NO se usa la Y que nos pasan (la del centro de la aldea). El terreno nivelado puede quedar a otra
+        // altura en esta columna (el centro es una columna suelta y las cabañas y caminos ya usan groundY por
+        // columna), así que un aldeano colocado a la Y del centro quedaba ENTERRADO: se asfixiaba y moría en
+        // ~10 s (1 de daño cada 10 ticks x 20 de vida) y al llegar a la aldea no había ningún aldeano.
+        BlockPos posicion = huecoLibre(level, new BlockPos(pos.getX(), groundY(level, pos.getX(), pos.getZ()), pos.getZ()));
+        Villager villager = EntityType.VILLAGER.create(level, null, posicion, MobSpawnType.MOB_SUMMONED, true, true);
         if (villager != null) {
             villager.setVillagerData(villager.getVillagerData().setProfession(profession));
-            villager.moveTo(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D, 0.0F, 0.0F);
+            villager.moveTo(posicion.getX() + 0.5D, posicion.getY(), posicion.getZ() + 0.5D, 0.0F, 0.0F);
             villager.setPersistenceRequired();
             level.addFreshEntity(villager);
+            DevilRpg.LOGGER.debug("[Village] aldeano {} en {}", profession, posicion);
         }
+    }
+
+    /**
+     * Primer hueco de 2 bloques de alto (pies y cabeza libres) desde {@code pos} hacia arriba. Es la red de
+     * seguridad para que ninguna entidad de la aldea aparezca dentro de un bloque y se asfixie.
+     */
+    public static BlockPos huecoLibre(ServerLevel level, BlockPos pos) {
+        BlockPos p = pos;
+        for (int i = 0; i < 8; i++) {
+            if (level.getBlockState(p).getCollisionShape(level, p).isEmpty()
+                    && level.getBlockState(p.above()).getCollisionShape(level, p.above()).isEmpty()) {
+                return p;
+            }
+            p = p.above();
+        }
+        return pos;
+    }
+
+    /** Vuelve a poner los aldeanos y el golem de una aldea ya construida (ver {@code VillageManager}). */
+    public static void spawnVillagers(ServerLevel level, BlockPos center) {
+        spawnVillager(level, center.offset(-17, 0, -6), VillagerProfession.FARMER);
+        spawnVillager(level, center.offset(16, 0, -7), VillagerProfession.WEAPONSMITH);
+        spawnVillager(level, center.offset(-3, 0, 14), VillagerProfession.CLERIC);
+        spawnIronGolem(level, center.offset(4, 0, 4));
     }
 
     /** Y del suelo sólido (ignora agua/lava) en una columna (x, z). */

@@ -189,6 +189,13 @@ public class SculkCultivatorEntity extends AbstractIllager implements RangedAtta
     public void die(DamageSource cause) {
         BlockPos lair = homePos; // se captura antes de super.die(), que puede limpiar el estado
         BlockPos deathPos = blockPosition();
+        if (!level().isClientSide) {
+            // Diagnóstico: el sello se abre cuando el guardián muere, así que hay que saber POR QUÉ murió
+            // (antes solo se veía "ha muerto" y no había forma de distinguir asfixia, caída o un atacante).
+            DevilRpg.LOGGER.info("[Lair] guardián {} muere en {} por '{}' (atacante: {})",
+                    getUUID(), deathPos, cause.getMsgId(),
+                    cause.getEntity() != null ? cause.getEntity().getName().getString() : "ninguno");
+        }
         super.die(cause);
         if (!level().isClientSide && level() instanceof ServerLevel serverLevel) {
             // Se avisa también si no tiene hogar: LairManager busca entonces la guarida más cercana.

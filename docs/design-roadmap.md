@@ -154,6 +154,15 @@ siguiente está implementado y probado.
   sobre las cabañas ni la campana.
 - **Campana** en el centro (sobre soporte de piedra, columna limpia).
 - **Golem de hierro** de guardia (Y fijada al suelo de la isla para no sofocarse).
+- **Aldeanos y golem: SIEMPRE en la superficie de SU columna, nunca a la Y del centro.** Bug arreglado el
+  12-sep-2026: se colocaban en `center.offset(...)` (la Y del centro), pero el terreno se nivela a una
+  **mediana** y las cabañas/caminos usan `groundY` **por columna**; si la mediana quedaba por encima del
+  centro, los 3 aldeanos aparecían **enterrados**, se asfixiaban y morían en ~10 s (1 de daño cada 10 ticks ×
+  20 de vida = los 9 s exactos que se veían en el log) → **al llegar a la aldea no había nadie**. Ahora usan
+  `groundY` de su columna y pasan por **`huecoLibre()`** (primer hueco de 2 bloques de alto), la misma red de
+  seguridad que usan los enemigos de la guarida. Además, al llegar a una aldea generada, **no caída** y
+  **vacía**, se repueblan aldeanos y golem (`VillageManager.start`): antes, como la aldea se genera **una sola
+  vez**, una vez muertos no volvían nunca. Si la aldea ya cayó (`isFallen`) no se toca: la derrota es definitiva.
 - **Faroles con poste** distribuidos (evitan spawn de zombies con la mecánica vanilla).
 - **Muro** de **logs horizontales + columnas de cobblestone** cada 4 bloques, con **4 entradas de
   cobblestone** en los cardinales, **a ras del suelo** (sin bloque de tierra sobresaliente ni hueco
