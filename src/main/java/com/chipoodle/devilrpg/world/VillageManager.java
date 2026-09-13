@@ -302,34 +302,35 @@ public final class VillageManager {
     }
 
     /**
-     * Puntos de habilidad que paga salvar una aldea. Son la moneda del árbol de skills (1 por nivel de
-     * experiencia), y llenar TODOS los árboles pide nivel 300+, así que las misiones también ayudan. Escala
-     * suave con el objetivo para que los asedios tardíos (más duros) paguen mejor, con tope.
+     * Niveles de experiencia vanilla que paga salvar una aldea. La recompensa va <b>en experiencia</b>: subir
+     * un nivel dispara el flujo de siempre del mod ({@code PlayerXpEvent.LevelChange} →
+     * {@code setCurrentLevel}, que da <b>1 punto de habilidad por nivel</b>), así que el punto llega con la
+     * experiencia de verdad en vez de regalarse suelto. Antes se regalaban 3 puntos directos con
+     * {@code addUnspentPoints}, que no subían nada la experiencia.
      */
-    private static int siegeSkillPoints(int objectiveIndex) {
-        return Math.min(3 + Math.max(0, objectiveIndex) / 4, 8);
-    }
+    private static final int REWARD_EXPERIENCE_LEVELS = 1;
 
     /**
-     * Recompensa por salvar la aldea: materiales, un libro, experiencia de vanilla y una <b>ayuda de puntos de
-     * habilidad</b> (ver {@link #siegeSkillPoints(int)}). No se llama si la aldea cae.
+     * Recompensa por salvar la aldea: materiales, un libro y <b>1 nivel de experiencia</b> (que trae su punto
+     * de habilidad por el camino normal). No se llama si la aldea cae.
      */
     private static void grantReward(ServerPlayer player, int objectiveIndex) {
         player.addItem(new ItemStack(Items.IRON_INGOT, 8));
         player.addItem(new ItemStack(Items.LEATHER, 6));
         player.addItem(new ItemStack(Items.WRITTEN_BOOK)); // receta (por ahora un libro genérico)
-        player.giveExperiencePoints(50);
 
-        int skillPoints = siegeSkillPoints(objectiveIndex);
         PlayerExperienceCapabilityInterface expCap =
                 IGenericCapability.getUnwrappedPlayerCapability(player, PlayerExperienceCapability.INSTANCE);
-        if (expCap != null) {
-            expCap.addUnspentPoints(skillPoints, player);
-            player.displayClientMessage(Component.literal(
-                    "La aldea te lo agradece: +" + skillPoints + " puntos de habilidad."), false);
-            DevilRpg.LOGGER.info("[Village] Aldea {} salvada: +{} puntos de habilidad (quedan {})",
-                    objectiveIndex, skillPoints, expCap.getUnspentPoints());
-        }
+        int puntosAntes = expCap != null ? expCap.getUnspentPoints() : 0;
+        // El evento de subida de nivel es síncrono, así que cuando vuelve de aquí el punto ya está sumado.
+        player.giveExperienceLevels(REWARD_EXPERIENCE_LEVELS);
+        int puntosGanados = expCap != null ? expCap.getUnspentPoints() - puntosAntes : 0;
+
+        String premio = "+" + REWARD_EXPERIENCE_LEVELS + " nivel de experiencia"
+                + (puntosGanados > 0 ? " (+" + puntosGanados + " punto de habilidad)" : "");
+        player.displayClientMessage(Component.literal("La aldea te lo agradece: " + premio + "."), false);
+        DevilRpg.LOGGER.info("[Village] Aldea {} salvada: {} (quedan {} puntos)",
+                objectiveIndex, premio, expCap != null ? expCap.getUnspentPoints() : -1);
     }
 
     // --- Iteración 3: el mundo también juega (hordas que van a por una aldea) -------------------------

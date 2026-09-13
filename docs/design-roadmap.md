@@ -119,12 +119,15 @@ siguiente está implementado y probado.
   Sin esta regla, unos pocos zombies escondidos que nunca llegaban al centro —y por tanto no se podían matar—
   hacían caer la aldea sin que el jugador pudiera evitarlo: *si no llegan, no asedian, no pueden ganar*. Si
   **todos** los supervivientes están dentro, entonces sí cae.
-- **La recompensa paga puntos de habilidad**: salvar la aldea da hierro, cuero, un libro, 50 de XP vanilla y
-  **puntos de habilidad** (`siegeSkillPoints`: 3 + 1 por cada 4 objetivos ya superados, tope 8). Son la misma
-  moneda del árbol de skills (1 por nivel de experiencia) y llenar **todos** los árboles pide nivel 300+, así
-  que las misiones también empujan la progresión. Se cobran con `PlayerExperienceCapability.addUnspentPoints`
-  (que suma a `unspentPoints` y sincroniza con el cliente) y el jugador lo ve en el chat
-  ("La aldea te lo agradece: +N puntos de habilidad."). Si la aldea **cae** no hay recompensa (ni puntos).
+- **La recompensa va en experiencia, no en puntos sueltos**: salvar la aldea da hierro, cuero, un libro y
+  **`REWARD_EXPERIENCE_LEVELS` = 1 nivel de experiencia vanilla**. El punto de habilidad llega **solo**, por el
+  camino de siempre: `giveExperienceLevels` dispara `PlayerXpEvent.LevelChange` (que NeoForge inyecta
+  **antes** de sumar el nivel, así que `e.getLevels()` es el delta) → `setCurrentLevel(experienceLevel + 1)` →
+  como supera `maximumLevel`, suma 1 a `unspentPoints`. Así la recompensa **también sube la barra y el nivel**
+  del jugador. *(Antes se regalaban `siegeSkillPoints` = 3 + índice/4, tope 8, con `addUnspentPoints`: no
+  subían nada la experiencia, así que no contaban para el nivel.)* El chat lo dice tal cual
+  ("La aldea te lo agradece: +1 nivel de experiencia (+1 punto de habilidad).") y si por lo que sea el nivel no
+  diera punto (p. ej. ya cobrado antes) el mensaje omite el paréntesis. Si la aldea **cae** no hay recompensa.
 - **Las aldeas de objetivos ya superados siguen vivas** (`VillageManager.manageNearby`, llamada desde
   `ObjectiveManager.tick` junto a `LairManager.preGenerateNearby`): cualquier aldea a menos de
   `PRE_GENERATE_RADIUS` (140) del jugador se pre-genera, avisa y **puede asediarse**, aunque su objetivo ya
@@ -667,8 +670,9 @@ el tiempo y se gasta en una lista de planos, más un `Goal` de "ir a construir" 
   `GUARDIAN_RESPAWN_TICKS` 3 min (relevo del guardián si no rompes el núcleo), `SPAWN_INTERVAL_TICKS` 25 s,
   `ACTIVATION_RADIUS` 64, `CORE_AURA_RADIUS` 8, `CORE_FANG_TICKS` 4 s, `MIN_DISTANCE_FROM_OBJECTIVE` 75.
 
-- **Puntos de habilidad por misión**: aldea salvada = `siegeSkillPoints` (3 + índice/4, tope 8); núcleo de
-  guarida destruido = `lairSkillPoints` (4 + índice/3, tope 10).
+- **Puntos de habilidad por misión**: aldea salvada = **1 nivel de experiencia** (`REWARD_EXPERIENCE_LEVELS`),
+  que trae su punto por el camino normal (antes eran `siegeSkillPoints` = 3 + índice/4, tope 8, regalados con
+  `addUnspentPoints`); núcleo de guarida destruido = `lairSkillPoints` (4 + índice/3, tope 10, todavía directos).
 
 - **Bola de fuego del zombi agresivo (`FireballAttackGoal`)**: dispara solo entre **3 y 16 bloques** y con
   **línea de visión**; si no puede, reintenta cada **20 ticks** (1 s) en vez de esperar los 240 completos.
