@@ -43,6 +43,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.portal.DimensionTransition;
+import net.minecraft.world.phys.AABB;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -67,6 +68,8 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
      * andar una casilla mientras su trozo seguía cargado (por eso se cargan las 9 casillas de alrededor).
      */
     private static final int STORED_MISSES_BEFORE_DROP = 2;
+    /** Radio (en bloques) en el que se buscan minions huérfanos: los minions siempre andan cerca del jugador. */
+    private static final double ORPHAN_CHECK_RADIUS = 96.0D;
     private CompoundTag nbt = new CompoundTag();
 
     /*
@@ -271,7 +274,47 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
     }
 
     /**
-     * Mata a un minion con el daño de minion (dispara su {@code die()}: partículas, drop y limpieza de listas).
+     * Quita del mundo los minions <b>huérfanos</b>: entidades de nuestras clases, tameadas a este jugador, que
+     * <b>ya no están en ninguna de sus listas</b>.
+     * <p>
+     * Son restos de bugs antiguos (los wisps que se sustituían y <b>no morían</b>, por ejemplo): seguían al
+     * jugador como si fueran suyos, no salían en el HUD porque no están en las listas, y no desaparecían nunca
+     * porque, al seguir tameados, {@code ISoulEntity.addToAiStep} no los mata. Se limpian al entrar y en cada
+     * copia periódica. Nunca se toca a un minion que SÍ esté en las listas, ni a uno que no sea de este jugador.
+     */
+    private void limpiarMinionsHuerfanos(Player player) {
+        if (player == null || player.level().isClientSide || !(player.level() instanceof ServerLevel level)) {
+            return;
+        }
+        List<UUID> conocidos = allMinionIds();
+        AABB area = player.getBoundingBox().inflate(ORPHAN_CHECK_RADIUS);
+        int quitados = 0;
+        quitados += quitarHuerfanos(level.getEntitiesOfClass(SoulWisp.class, area), conocidos, player);
+        quitados += quitarHuerfanos(level.getEntitiesOfClass(SoulWolf.class, area), conocidos, player);
+        quitados += quitarHuerfanos(level.getEntitiesOfClass(SoulBear.class, area), conocidos, player);
+        if (quitados > 0) {
+            DevilRpg.LOGGER.info("[Minion] {} minion(es) huerfano(s) quitados del mundo (no estaban en tus listas)", quitados);
+        }
+    }
+
+    private int quitarHuerfanos(List<? extends Entity> entidades, List<UUID> conocidos, Player player) {
+        int quitados = 0;
+        for (Entity entity : entidades) {
+            if (!(entity instanceof ITamableEntity minion) || conocidos.contains(entity.getUUID())) {
+                continue;
+            }
+            if (!player.getUUID().equals(minion.getOwnerUUID())) {
+                continue; // no es tuyo: no se toca
+            }
+            DevilRpg.LOGGER.info("[Minion] quito un minion huerfano {} ({}) que ya no estaba en tus listas",
+                    EntityType.getKey(entity.getType()), entity.getUUID());
+            entity.discard();
+            quitados++;
+        }
+        return quitados;
+    }
+
+    /** Mata a un minion con el daño de minion (dispara su {@code die()}: partículas, drop y limpieza de listas).
      * Si por lo que sea el daño no lo mata, se saca del mundo igual: un minion que ya no es del jugador no puede
      * quedarse vivo por ahí.
      */
@@ -475,6 +518,9 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
         // Poda: si un minion ya no está en las listas del jugador (murió, se le soltó...), su copia guardada
         // se tira. Si no se podara, al entrar resucitaría un minion que el jugador ya no tiene.
         pruneStoredEntries(stored, ids);
+        // Y de paso, los minions HUERFANOS que anden por ahí (tameados a ti pero fuera de tus listas) se quitan:
+        // si no, se quedan contigo para siempre porque addToAiStep no mata a un minion tameado.
+        limpiarMinionsHuerfanos(player);
         int count = 0;
         for (UUID id : ids) {
             Entity entity = findLoadedAnywhere(server, id);
@@ -652,6 +698,7 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
         DevilRpg.LOGGER.info("[Minion] {} devuelto(s), {} limpiado(s) y {} copia(s) pendientes para {}",
                 restored, cleaned, stored.size(), player.getName().getString());
         enforceSoulWolfCap(player);
+        limpiarMinionsHuerfanos(player);
         if (player instanceof ServerPlayer serverPlayer) {
             sendSkillChangesToClient(serverPlayer);
         }
