@@ -10,6 +10,9 @@ import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.entity.ITamableEntity;
 import com.chipoodle.devilrpg.entity.SoulBear;
 import com.chipoodle.devilrpg.entity.SoulWisp;
+import com.chipoodle.devilrpg.entity.SoulWispArcher;
+import com.chipoodle.devilrpg.entity.SoulWispHealth;
+import com.chipoodle.devilrpg.entity.SoulWispRanger;
 import com.chipoodle.devilrpg.entity.SoulWolf;
 import com.chipoodle.devilrpg.init.ModDamageTypes;
 import com.chipoodle.devilrpg.init.ModEntities;
@@ -247,39 +250,57 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
 
     @Override
     public void removeWisp(Player owner, SoulWisp entity) {
+        if (entity == null) {
+            return;
+        }
         ConcurrentLinkedQueue<UUID> wisp = getWispMinions();
-        if (wisp != null && entity != null && wisp.contains(entity.getUUID())) {
-            wisp.remove(entity.getUUID());
-            setWispMinions(wisp, owner);
-            DamageSource damagesource = new DamageSource(
-                    entity.level()
-                            .registryAccess()
-                            .registryOrThrow(Registries.DAMAGE_TYPE)
-                            .getHolderOrThrow(ModDamageTypes.MINION_DEATH));
-            entity.hurt(damagesource, Integer.MAX_VALUE);
+        if (wisp != null) {
+            if (wisp.remove(entity.getUUID())) {
+                setWispMinions(wisp, owner);
+            } else {
+                // No estaba en la lista (p. ej. quien llama ya lo quitó al sustituirlo). ANTES esto hacía que
+                // NI SE MATARA: el wisp viejo se quedaba suelto en el mundo (3 wisps en el mundo, 1 en la lista).
+                DevilRpg.LOGGER.warn("[Minion] el wisp {} no estaba en la lista; lo quito del mundo igual", entity.getUUID());
+            }
+        }
+        killMinion(entity);
+    }
+
+    /**
+     * Mata a un minion con el daño de minion (dispara su {@code die()}: partículas, drop y limpieza de listas).
+     * Si por lo que sea el daño no lo mata, se saca del mundo igual: un minion que ya no es del jugador no puede
+     * quedarse vivo por ahí.
+     */
+    private void killMinion(Entity entity) {
+        if (entity == null) {
+            return;
+        }
+        DamageSource damagesource = new DamageSource(
+                entity.level()
+                        .registryAccess()
+                        .registryOrThrow(Registries.DAMAGE_TYPE)
+                        .getHolderOrThrow(ModDamageTypes.MINION_DEATH));
+        entity.hurt(damagesource, Integer.MAX_VALUE);
+        if (entity.isAlive()) {
+            DevilRpg.LOGGER.warn("[Minion] {} NO murio con el dano de minion; lo saco del mundo a la fuerza", entity.getUUID());
+            entity.discard();
         }
     }
 
     @Override
     public void removeSoulWolf(Player owner, SoulWolf entity) {
-        ConcurrentLinkedQueue<UUID> soulwolf = getSoulWolfMinions();
-        if (soulwolf != null && entity != null && soulwolf.contains(entity.getUUID())) {
-            soulwolf.remove(entity.getUUID());
-            setSoulWolfMinions(soulwolf, owner);
-            DamageSource damagesource = new DamageSource(
-                    entity.level()
-                            .registryAccess()
-                            .registryOrThrow(Registries.DAMAGE_TYPE)
-                            .getHolderOrThrow(ModDamageTypes.MINION_DEATH));
-            entity.hurt(damagesource, Integer.MAX_VALUE);
-            if (entity.isAlive()) {
-                DevilRpg.LOGGER.warn("[Minion] el lobo {} se quito de la lista pero NO murio con el dano de minion",
-                        entity.getUUID());
-            }
-        } else {
-            DevilRpg.LOGGER.warn("[Minion] no puedo quitar al lobo {} de la lista (¿ya no estaba? entity={})",
-                    entity == null ? "(null)" : entity.getUUID(), entity != null);
+        if (entity == null) {
+            return;
         }
+        ConcurrentLinkedQueue<UUID> soulwolf = getSoulWolfMinions();
+        if (soulwolf != null) {
+            if (soulwolf.remove(entity.getUUID())) {
+                setSoulWolfMinions(soulwolf, owner);
+            } else {
+                DevilRpg.LOGGER.warn("[Minion] el lobo {} no estaba en la lista; lo quito del mundo igual", entity.getUUID());
+            }
+        }
+        killMinion(entity);
     }
 
     @Override
@@ -306,18 +327,18 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
 
     @Override
     public void removeSoulBear(Player owner, SoulBear entity) {
-        ConcurrentLinkedQueue<UUID> soulbear = getSoulBearMinions();
-        if (soulbear != null && entity != null && soulbear.contains(entity.getUUID())) {
-            soulbear.remove(entity.getUUID());
-            setSoulBearMinions(soulbear, owner);
-            DamageSource damagesource = new DamageSource(
-                    entity.level()
-                            .registryAccess()
-                            .registryOrThrow(Registries.DAMAGE_TYPE)
-                            .getHolderOrThrow(ModDamageTypes.MINION_DEATH));
-            entity.hurt(damagesource, Integer.MAX_VALUE);
+        if (entity == null) {
+            return;
         }
-
+        ConcurrentLinkedQueue<UUID> soulbear = getSoulBearMinions();
+        if (soulbear != null) {
+            if (soulbear.remove(entity.getUUID())) {
+                setSoulBearMinions(soulbear, owner);
+            } else {
+                DevilRpg.LOGGER.warn("[Minion] el oso {} no estaba en la lista; lo quito del mundo igual", entity.getUUID());
+            }
+        }
+        killMinion(entity);
     }
 
     @Override
@@ -383,9 +404,10 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
     }
 
     private void replaceExistingWisp(Player player, SoulWisp existingWisp, ConcurrentLinkedQueue<UUID> keys, Supplier<SoulWisp> summonWispFunction) {
-        keys.remove(existingWisp.getUUID());
+        // OJO: NO quitar aquí el UUID antes de removeWisp. removeWisp quita el UUID de la lista Y mata al wisp;
+        // si se quitaba antes, y como getWispMinions() devuelve la MISMA cola cacheada, la comprobación interna
+        // fallaba y el wisp viejo NO moría: se quedaba suelto en el mundo (tenías 3 wisps en el mundo y 1 en la lista).
         removeWisp(player, existingWisp);
-
         keys.offer(summonWispFunction.get().getUUID());
     }
 
@@ -579,7 +601,7 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
             if (minion != null) {
                 // Sigue existiendo (cargado, o en un trozo que acabamos de cargar): se adopta, no se recrea.
                 entry.remove("Misses");
-                ensureOwner(minion, player);
+                prepareAdoptedMinion(minion, player);
                 bringToPlayer(minion, player, playerLevel);
                 stored.remove(i);
                 restored++;
@@ -645,7 +667,7 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
         for (UUID id : allMinionIds()) {
             Entity entity = findLoadedAnywhere(server, id);
             if (entity instanceof ITamableEntity minion) {
-                ensureOwner(minion, player);
+                prepareAdoptedMinion(minion, player);
                 bringToPlayer(minion, player, playerLevel);
                 brought++;
                 DevilRpg.LOGGER.info("[Minion] traigo junto a {} el {} {} que seguia vivo en {}",
@@ -839,19 +861,38 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
     }
 
     /**
-     * Se asegura de que el minion tenga dueño. Los NBT guardados por versiones anteriores escribían
-     * {@code Owner} como <b>texto vacío</b> y machacaban el UUID, así que un minion <b>adoptado</b> (recargado
-     * del mundo, o que venía de una partida vieja) se quedaba <b>sin dueño</b>: no te seguía, atacaba por su
-     * cuenta y el log de daño del lobo reventaba con {@code NullPointerException} porque {@code getOwner()} era
-     * null (eso tumbaba el servidor). Aquí se le vuelve a asignar el jugador.
+     * Deja listo un minion <b>adoptado</b> (recargado del mundo, no recreado): le reasigna el dueño si lo perdió
+     * y le vuelve a aplicar su <b>nivel de invocación</b>.
+     * <p>
+     * Hace falta porque eso <b>no se guarda en el NBT</b>: {@code puntosAsignados}, los atributos escalados y, en
+     * los wisps, {@code efectoPrimario}/{@code esBeneficioso}. Sin esto, un wisp de salud <b>adoptado no da su
+     * aura</b> (ni los lobos ni el jugador ganan los corazones extra de health_boost) y los lobos pierden el
+     * escalado por puntos de habilidad. Bug que se vio al adoptar minions que ya estaban en el mundo.
+     * <p>
+     * <b>El orden importa</b>: primero {@code tame()}, porque {@code SoulWisp.updateLevel} hace
+     * {@code Objects.requireNonNull(getOwner())} y {@code SoulWolf.updateLevel} lee los puntos del dueño.
      */
-    private void ensureOwner(ITamableEntity minion, Player player) {
-        if (minion.getOwnerUUID() != null && minion.isTame()) {
+    private void prepareAdoptedMinion(ITamableEntity minion, Player player) {
+        if (minion.getOwnerUUID() == null || !minion.isTame()) {
+            minion.tame(player);
+            DevilRpg.LOGGER.info("[Minion] {} no tenia dueno guardado (NBT antiguo): se lo reasigno a {}",
+                    minion.getEntity() != null ? minion.getEntity().getUUID() : "(minion)", player.getName().getString());
+        }
+        if (minion instanceof SoulWolf wolf) {
+            wolf.updateLevel(player);
+        } else if (minion instanceof SoulWispHealth wisp) {
+            wisp.updateLevel(player);
+        } else if (minion instanceof SoulWispArcher wisp) {
+            wisp.updateLevel(player);
+        } else if (minion instanceof SoulWispRanger wisp) {
+            wisp.updateLevel(player);
+        } else if (minion instanceof SoulBear bear) {
+            bear.updateLevel(player);
+        } else {
             return;
         }
-        minion.tame(player);
-        DevilRpg.LOGGER.info("[Minion] {} no tenia dueno guardado (NBT antiguo): se lo reasigno a {}",
-                minion.getEntity() != null ? minion.getEntity().getUUID() : "(minion)", player.getName().getString());
+        DevilRpg.LOGGER.info("[Minion] {} reescalado con tus puntos de habilidad (aura del wisp reaplicada)",
+                minion.getEntity() != null ? minion.getEntity().getUUID() : "(minion)");
     }
 
     /** Trae un minion al lado del jugador, cambiándolo de dimensión si está en otra. */
