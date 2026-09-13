@@ -229,8 +229,7 @@ public class SunflowerShulker extends TamableAnimal implements ITamableEntity, I
         compoundTag.putByte("AttachFace", (byte) this.getAttachFace().get3DDataValue());
         compoundTag.putByte("Peek", this.entityData.get(DATA_PEEK_ID));
         compoundTag.putByte("Color", this.entityData.get(DATA_COLOR_ID));
-        compoundTag.putString("OwnerUUID", "");
-        compoundTag.putString("Owner", "");
+        // No escribir "Owner"/"OwnerUUID" como texto vacio (machacaba el UUID del dueno).
         compoundTag.putInt("limitedLifeTicks", limitedLifeTicks);
     }
 

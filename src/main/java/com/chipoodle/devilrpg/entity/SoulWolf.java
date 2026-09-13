@@ -128,8 +128,10 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
     @Override
     public void addAdditionalSaveData(@NotNull CompoundTag compound) {
         super.addAdditionalSaveData(compound);
-        compound.putString("OwnerUUID", "");
-        compound.putString("Owner", "");
+        // OJO: aqui habia `putString("OwnerUUID", "")` y `putString("Owner", "")`, que MACHACABAN el UUID del
+        // dueno que escribe TamableAnimal. Al recargar el minion (adoptado desde el mundo, o tras un reinicio)
+        // se quedaba SIN dueno: no te seguia, atacaba por su cuenta y ademas reventaba el log de doHurtTarget
+        // con NullPointerException (getOwner() es null) -> crash del servidor. No volver a ponerlo.
     }
 
     @Override
@@ -184,9 +186,13 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
         double attackDamage = this.getAttributeValue(Attributes.ATTACK_DAMAGE);
         boolean flag = target.hurt(this.damageSources().mobAttack(this), (float) (attackDamage));
         MobEffectInstance mobEffectInstance = this.getEffect(MobEffects.DAMAGE_BOOST);
+        // getOwner() puede ser null (minion sin dueno guardado): antes esto petaba con NullPointerException y
+        // tumbaba el servidor solo por escribir una linea de debug.
+        LivingEntity dueno = getOwner();
         DevilRpg.LOGGER.debug("---------->doHurtTarget attdmg {} + frostbite: {} random: {} <= limit: {} effect lvl {} owner: {}  owneruuid: {}"
                 , attackDamage, Math.round((double) frostbite / 2), randomNumber,
-                frostbite * PROBABILITY_MULTIPLIER, mobEffectInstance != null ? mobEffectInstance.getAmplifier() : 0, getOwner().getName().getString(), getOwnerUUID());
+                frostbite * PROBABILITY_MULTIPLIER, mobEffectInstance != null ? mobEffectInstance.getAmplifier() : 0,
+                dueno != null ? dueno.getName().getString() : "(sin dueno)", getOwnerUUID());
 
         if (flag) {
             // doEnchantDamageEffects removed in 1.21

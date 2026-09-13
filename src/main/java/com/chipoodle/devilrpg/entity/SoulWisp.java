@@ -175,8 +175,8 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
     @Override
     public void addAdditionalSaveData(@NotNull CompoundTag compound) {
         super.addAdditionalSaveData(compound);
-        compound.putString("OwnerUUID", "");
-        compound.putString("Owner", "");
+        // No escribir "Owner"/"OwnerUUID" como texto vacio: machacaba el UUID del dueno de TamableAnimal y el
+        // wisp recargado (adoptado o tras un reinicio) se quedaba sin dueno.
     }
 
     /**

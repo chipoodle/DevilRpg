@@ -131,8 +131,7 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
         //compoundTag.putBoolean("HasStung", this.hasStung());
         //compoundTag.putInt("CannotEnterHiveTicks", this.stayOutOfHiveCountdown);
         this.addPersistentAngerSaveData(compoundTag);
-        compoundTag.putString("OwnerUUID", "");
-        compoundTag.putString("Owner", "");
+        // No escribir "Owner"/"OwnerUUID" como texto vacio (machacaba el UUID del dueno).
     }
 
     public void readAdditionalSaveData(CompoundTag p_27793_) {

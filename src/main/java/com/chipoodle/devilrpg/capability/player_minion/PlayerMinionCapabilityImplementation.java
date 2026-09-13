@@ -579,6 +579,7 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
             if (minion != null) {
                 // Sigue existiendo (cargado, o en un trozo que acabamos de cargar): se adopta, no se recrea.
                 entry.remove("Misses");
+                ensureOwner(minion, player);
                 bringToPlayer(minion, player, playerLevel);
                 stored.remove(i);
                 restored++;
@@ -644,6 +645,7 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
         for (UUID id : allMinionIds()) {
             Entity entity = findLoadedAnywhere(server, id);
             if (entity instanceof ITamableEntity minion) {
+                ensureOwner(minion, player);
                 bringToPlayer(minion, player, playerLevel);
                 brought++;
                 DevilRpg.LOGGER.info("[Minion] traigo junto a {} el {} {} que seguia vivo en {}",
@@ -836,9 +838,24 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
         return EntityType.getKey(ModEntities.WISP_HEALTH.get()).toString();
     }
 
+    /**
+     * Se asegura de que el minion tenga dueño. Los NBT guardados por versiones anteriores escribían
+     * {@code Owner} como <b>texto vacío</b> y machacaban el UUID, así que un minion <b>adoptado</b> (recargado
+     * del mundo, o que venía de una partida vieja) se quedaba <b>sin dueño</b>: no te seguía, atacaba por su
+     * cuenta y el log de daño del lobo reventaba con {@code NullPointerException} porque {@code getOwner()} era
+     * null (eso tumbaba el servidor). Aquí se le vuelve a asignar el jugador.
+     */
+    private void ensureOwner(ITamableEntity minion, Player player) {
+        if (minion.getOwnerUUID() != null && minion.isTame()) {
+            return;
+        }
+        minion.tame(player);
+        DevilRpg.LOGGER.info("[Minion] {} no tenia dueno guardado (NBT antiguo): se lo reasigno a {}",
+                minion.getEntity() != null ? minion.getEntity().getUUID() : "(minion)", player.getName().getString());
+    }
+
     /** Trae un minion al lado del jugador, cambiándolo de dimensión si está en otra. */
-    private void bringToPlayer(ITamableEntity minion, Player player, ServerLevel playerLevel) {
-        Entity entity = (Entity) minion;
+    private void bringToPlayer(ITamableEntity minion, Player player, ServerLevel playerLevel) {        Entity entity = (Entity) minion;
         if (entity.level() != playerLevel) {
             entity = entity.changeDimension(new DimensionTransition(playerLevel, player, DimensionTransition.DO_NOTHING));
             if (entity == null) {

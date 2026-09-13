@@ -273,8 +273,8 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
     @Override // pause menu, dead
     public void addAdditionalSaveData(@NotNull CompoundTag compound) {
         super.addAdditionalSaveData(compound);
-        compound.putString("OwnerUUID", "");
-        compound.putString("Owner", "");
+        // No escribir "Owner"/"OwnerUUID" como texto vacio: machacaba el UUID del dueno y el oso recargado
+        // (adoptado o tras un reinicio) se quedaba sin dueno.
 
         compound.putBoolean("Sitting", this.orderedToSit);
 
