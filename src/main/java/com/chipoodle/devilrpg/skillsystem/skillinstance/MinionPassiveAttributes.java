@@ -37,6 +37,15 @@ public class MinionPassiveAttributes {
         levelIn = entity.level();
         LivingEntity owner = entity.getOwner();
 
+        if (!(owner instanceof Player)) {
+            // getOwner() mira SOLO en el nivel, y durante EntityJoinLevelEvent (cuando el mod aplica los pasivos
+            // a un minion que acaba de aparecer o de cargarse) el jugador TODAVIA no esta registrado ahi, asi que
+            // devuelve null y este constructor salia por donde vino SIN APLICAR NINGUN PASIVO (ni vitalidad, ni
+            // hielo del lobo, ni regeneracion del wisp). El dueno SI esta ya en la lista del servidor: se busca
+            // ahi por su UUID. El log de arriba sale antes de esta comprobacion, por eso parecia que si aplicaba.
+            owner = buscarDuenoEnServidor(entity);
+        }
+
         if (!(entity instanceof IPassiveMinionUpdater && owner instanceof Player))
             return;
 
@@ -65,6 +74,17 @@ public class MinionPassiveAttributes {
             applyPassives((SunflowerShulker) entity);
         }
         apply(entity);
+    }
+
+    /** Busca al dueño del minion en la lista de jugadores del servidor (funciona aunque aún no esté en el nivel). */
+    private static LivingEntity buscarDuenoEnServidor(ITamableEntity entity) {
+        java.util.UUID id = entity.getOwnerUUID();
+        net.minecraft.server.MinecraftServer server = entity.getEntity() != null ? entity.getEntity().getServer() : null;
+        if (server == null || id == null) {
+            return null;
+        }
+        net.minecraft.server.level.ServerPlayer player = server.getPlayerList().getPlayer(id);
+        return player;
     }
 
     private int skillPoint(SkillEnum key) {
