@@ -27,10 +27,12 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
+import net.neoforged.neoforge.event.entity.living.LivingChangeTargetEvent;
 import net.neoforged.neoforge.event.entity.living.LivingEvent.LivingJumpEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.event.entity.living.LivingFallEvent;
@@ -216,9 +218,54 @@ public class CommonForgeInteractionEventSubscriber {
 
     @SubscribeEvent
     public static void onLivingHurtEvent(LivingIncomingDamageEvent event) {
+        if (event.getEntity().level().isClientSide()) {
+            return;
+        }
+        Entity atacante = event.getSource().getEntity();
+        if (atacante == null) {
+            // Sin atacante (p. ej. el daño MINION_DEATH con el que el mod retira minions) no se toca NUNCA.
+            return;
+        }
+        if (esFuegoAmigo(event.getEntity(), atacante)) {
+            event.setCanceled(true);
+        }
+    }
 
-        // DevilRpg.LOGGER.debug("Entity {} source {} ammount {}",event.getEntity().getClass().getName(),event.getSource(),event.getAmount());
+    /**
+     * Blindaje anti-fuego-amigo: un minion no puede <b>apuntar</b> a otro minion del mismo dueño (ni a su dueño).
+     * <p>
+     * Ya había protecciones ({@code isAlliedTo}, {@code wantsToAttack}), pero las usan los goals de targeting y
+     * el {@code HurtByTargetGoal} de vanilla — venganza al ser herido, que además <b>avisa a los demás lobos con
+     * setAlertOthers()</b> — se las salta. Un golpe suelto acababa con la manada entera mordiéndose entre sí.
+     */
+    @SubscribeEvent
+    public static void onLivingChangeTarget(LivingChangeTargetEvent event) {
+        if (event.getEntity().level().isClientSide()) {
+            return;
+        }
+        if (esFuegoAmigo(event.getEntity(), event.getNewAboutToBeSetTarget())) {
+            event.setNewAboutToBeSetTarget(null);
+        }
+    }
 
+    /**
+     * ¿Esto sería fuego amigo? Sí cuando el que ataca es el dueño del minion agredido, o cuando los dos son
+     * minions del <b>mismo</b> dueño.
+     */
+    private static boolean esFuegoAmigo(Entity victima, Entity atacante) {
+        if (victima == null || atacante == null || victima == atacante) {
+            return false;
+        }
+        if (victima instanceof ITamableEntity minion
+                && minion.getOwnerUUID() != null
+                && minion.getOwnerUUID().equals(atacante.getUUID())) {
+            return true; // el dueño pegando a su propio minion
+        }
+        if (atacante instanceof ITamableEntity atacanteMinion && victima instanceof ITamableEntity victimaMinion) {
+            return atacanteMinion.getOwnerUUID() != null
+                    && atacanteMinion.getOwnerUUID().equals(victimaMinion.getOwnerUUID());
+        }
+        return false;
     }
 
     /** Registro de entidades congeladas (UUID -> ticks restantes) para emitir particulas de hielo. */

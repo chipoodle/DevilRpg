@@ -252,7 +252,9 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
 
     @Override
     public void removeWisp(Player owner, SoulWisp entity) {
-        if (entity == null) {
+        if (entity == null || owner == null || owner.level().isClientSide) {
+            // El cliente no toca listas ni mata entidades: de eso se encarga el servidor (que es quien sincroniza).
+            // Antes esto corría también en el hilo de render al morir un minion en el cliente, con discards y avisos inútiles.
             return;
         }
         ConcurrentLinkedQueue<UUID> wisp = getWispMinions();
@@ -291,8 +293,8 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
 
     @Override
     public void removeSoulWolf(Player owner, SoulWolf entity) {
-        if (entity == null) {
-            return;
+        if (entity == null || owner == null || owner.level().isClientSide) {
+            return; // solo el servidor toca listas y mata minions
         }
         ConcurrentLinkedQueue<UUID> soulwolf = getSoulWolfMinions();
         if (soulwolf != null) {
@@ -329,8 +331,8 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
 
     @Override
     public void removeSoulBear(Player owner, SoulBear entity) {
-        if (entity == null) {
-            return;
+        if (entity == null || owner == null || owner.level().isClientSide) {
+            return; // solo el servidor toca listas y mata minions
         }
         ConcurrentLinkedQueue<UUID> soulbear = getSoulBearMinions();
         if (soulbear != null) {

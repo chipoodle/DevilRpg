@@ -191,8 +191,9 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
         // getOwner() puede ser null (minion sin dueno guardado): antes esto petaba con NullPointerException y
         // tumbaba el servidor solo por escribir una linea de debug.
         LivingEntity dueno = getOwner();
-        DevilRpg.LOGGER.debug("---------->doHurtTarget attdmg {} + frostbite: {} random: {} <= limit: {} effect lvl {} owner: {}  owneruuid: {}"
-                , attackDamage, Math.round((double) frostbite / 2), randomNumber,
+        DevilRpg.LOGGER.debug("---------->doHurtTarget a {} ({}) attdmg {} + frostbite: {} random: {} <= limit: {} effect lvl {} owner: {}  owneruuid: {}"
+                , target.getName().getString(), target.getType(),
+                attackDamage, Math.round((double) frostbite / 2), randomNumber,
                 frostbite * PROBABILITY_MULTIPLIER, mobEffectInstance != null ? mobEffectInstance.getAmplifier() : 0,
                 dueno != null ? dueno.getName().getString() : "(sin dueno)", getOwnerUUID());
 
