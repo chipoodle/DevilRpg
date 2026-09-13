@@ -71,7 +71,7 @@
     {
         "id": "nature:soulvine",
         "display": {
-            "description": "A spirit vine rises where your gaze rests, growing upward and through the land. You may climb it wherever it passes; higher skill lengthens its reach and lifespan. Consumes a seed.",
+            "description": "A spirit vine rises where your gaze rests and grows straight as an arrow in that very direction, so it can span a chasm or a ravine like a living bridge. The moment it meets ground, wall or ceiling it clings and keeps growing along the land. You may climb it wherever it passes; higher skill lengthens its reach and lifespan. Consumes a seed.",
             "icon": {
                 "item": "devilrpg:item_vine"
             },
@@ -729,7 +729,7 @@
     {
         "id": "summoning:wispicespear",
         "display": {
-            "description": "Whenever your archer wisp shoots, it may instead hurl a volley of three oversized ice spears. They hunt down the nearest foe on their own and burst in a freezing splash that hurts everything around, without harming the land or your allies. Every spear sips half a point of your mana, and the volley simply stops the moment your mana runs dry.",
+            "description": "Now and then your archer wisp hurls a volley of three oversized ice spears that hunt down the nearest foe and burst in a freezing splash, sparing your allies and the land. Each spear sips half a point of your mana; when it runs dry, the volley stops.",
             "icon": {
                 "item": "minecraft:glass_pane",
                 "minecraft:glass_panenbt": 1

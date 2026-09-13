@@ -30,6 +30,17 @@ public class SoulVineBlockEntity extends BlockEntity {
     public int getSkillLevel() { return skillLevel; }
     public void setSkillLevel(int skillLevel) { this.skillLevel = skillLevel; this.setChanged(); }
 
+    /**
+     * Modo PUENTE: la vid crece <b>en línea recta</b> en la dirección con la que se lanzó (la mirada del
+     * jugador) <b>sin necesitar ninguna pared al lado</b>, para poder cruzar barrancos y abismos. Se apaga en
+     * cuanto la vid <b>topa</b> con algo (suelo, pared o techo): a partir de ahí vuelve a la mecánica de
+     * siempre (agarrarse a las superficies y elegir dirección).
+     */
+    private boolean bridging = false;
+
+    public boolean isBridging() { return bridging; }
+    public void setBridging(boolean bridging) { this.bridging = bridging; this.setChanged(); }
+
     // Permite que los bloques hijos hereden el momento de creacion de la raiz, para que TODA la vid
     // se marchite a la vez (antes cada bloque tenia su propio reloj y la raiz duraba mas).
     public void setTimeOfCreation(long timeOfCreation) { this.timeOfCreation = timeOfCreation; this.setChanged(); }
@@ -38,12 +49,14 @@ public class SoulVineBlockEntity extends BlockEntity {
     protected void saveAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
         tag.putInt("skillLevel", skillLevel);
+        tag.putBoolean("bridging", bridging);
     }
 
     @Override
     public void loadAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
         this.skillLevel = tag.getInt("skillLevel");
+        this.bridging = tag.getBoolean("bridging");
     }
 
 
@@ -84,6 +97,24 @@ public class SoulVineBlockEntity extends BlockEntity {
             //DevilRpg.LOGGER.info("-------->Direction: {}, AGE {}, LEVEL {}, duration: {}", currentDirection, currentAge, skillLevel, duration);
 
             if (!hasChildren) {
+
+                // MODO PUENTE: mientras esté activo, la vid crece RECTO en la dirección del lanzamiento
+                // (la mirada del jugador) sin exigir una pared al lado, que es lo que permite cruzar un vacío.
+                // Se apaga en cuanto TOPA con algo (suelo, pared o techo): a partir de ahí valen las reglas
+                // de siempre, así que la vid sigue trepando o rodeando como antes.
+                if (bridging) {
+                    BlockPos aheadPos = currentBlockPos.relative(currentDirection);
+                    BlockState aheadState = world.getBlockState(aheadPos);
+                    if (aheadState.isAir() || aheadState.is(Blocks.SHORT_GRASS)) {
+                        state = setBlockDirection(state, world, currentBlockPos, currentDirection);
+                        createChildBlock(state, world, currentDirection, aheadPos, currentBlockPos, currentDirection);
+                        return true;
+                    }
+                    this.bridging = false;
+                    this.setChanged();
+                    DevilRpg.LOGGER.debug("[Soulvine] el puente topo con {} en {}: sigue con el crecimiento normal",
+                            aheadState.getBlock(), aheadPos);
+                }
 
                 //DevilRpg.LOGGER.info("--------> currentDirection: {} age: {}", currentDirection, currentAge);
 
@@ -176,6 +207,8 @@ public class SoulVineBlockEntity extends BlockEntity {
         if (serverLevel.getBlockEntity(childBlockPos) instanceof SoulVineBlockEntity childBE) {
             childBE.setTimeOfCreation(this.timeOfCreation);
             childBE.setSkillLevel(this.skillLevel);
+            // El puente sigue siendo puente: el hijo hereda el modo hasta que alguno tope con algo.
+            childBE.setBridging(this.bridging);
         }
     }
 }

@@ -16,6 +16,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.HashMap;
@@ -34,21 +35,34 @@ public class SkillSoulVine extends AbstractSkillSeedsInInventoryExecutor {
 
     @Override
     public boolean arePreconditionsMetBeforeConsumingResource(Player player) {
-        BlockPos playerBlockPos = player.blockPosition();
-        //BlockState playerBlockState = player.level().getBlockState(playerBlockPos);
-        Vec3 playerLookVector = player.getLookAngle();
-        Direction nearestDirection = Direction.getNearest(playerLookVector.x, 0, playerLookVector.z);
-        //DevilRpg.LOGGER.info("-------->Direction: {}", nearestDirection);
-        BlockPos newBlockpos = playerBlockPos.relative(nearestDirection);
+        if (player.getCooldowns().isOnCooldown(icon.getItem())) {
+            return false;
+        }
+        // Antes se exigía una PARED al lado (la vid se agarraba a ella), y por eso no se podía lanzar al vacío.
+        // Para que sirva de puente solo se pide que el sitio de delante esté libre: la vid ya crece recta desde
+        // el primer bloque y se agarra sola cuando tope con algo.
+        BlockPos start = player.blockPosition().relative(lookDirection(player));
+        return puedeEmpezarEn(player.level(), start)
+                && super.arePreconditionsMetBeforeConsumingResource(player);
+    }
 
-        boolean hasSeeds = super.arePreconditionsMetBeforeConsumingResource(player);
+    /**
+     * Dirección en la que crece la vid: la mirada del jugador <b>en 3D</b> (así puedes lanzarla hacia abajo para
+     * bajar por una barranca o hacia arriba para subir), con <b>respaldo horizontal</b> si apuntar en vertical no
+     * deja sitio para el primer bloque (por ejemplo, mirando al suelo que pisas).
+     */
+    private static Direction lookDirection(Player player) {
+        Vec3 look = player.getLookAngle();
+        Direction completa = Direction.getNearest(look.x, look.y, look.z);
+        if (puedeEmpezarEn(player.level(), player.blockPosition().relative(completa))) {
+            return completa;
+        }
+        return Direction.getNearest(look.x, 0.0D, look.z);
+    }
 
-        boolean canPlace = (player.level().getBlockState(newBlockpos).canBeReplaced() ||
-                player.level().getBlockState(newBlockpos).isAir())
-                && SoulVineBlock.hasAtLeasOneSolidNeighbourPerpendicularToGrowDirection(player.level(), newBlockpos, nearestDirection);
-
-
-        return !player.getCooldowns().isOnCooldown(icon.getItem()) && canPlace && hasSeeds;
+    private static boolean puedeEmpezarEn(Level level, BlockPos pos) {
+        BlockState state = level.getBlockState(pos);
+        return state.isAir() || state.canBeReplaced();
     }
 
     @Override
@@ -71,14 +85,9 @@ public class SkillSoulVine extends AbstractSkillSeedsInInventoryExecutor {
     private void setVine(Level level, Player playerIn, PlayerSkillCapabilityInterface skillCap) {
         BlockPos playerBlockPos = playerIn.blockPosition();
         SoulVineBlock createdBlock = ModBlocks.SOUL_VINE_BLOCK.get();
-        //BlockState playerBlockState = level.getBlockState(playerBlockPos);
-        Vec3 playerLookVector = playerIn.getLookAngle();
-        Direction nearestDirection = Direction.getNearest(playerLookVector.x, 0, playerLookVector.z);
-        //DevilRpg.LOGGER.info("-------->Direction: {}", nearestDirection);
+        // La vid nace apuntando a donde miras: crece recta en esa dirección (puente) hasta topar con algo.
+        Direction nearestDirection = lookDirection(playerIn);
         BlockPos newBlockpos = playerBlockPos.relative(nearestDirection);
-        /*if (playerBlockState.getBlock().equals(Blocks.AIR)
-                && level.getBlockState(newBlockpos).getBlock().equals(Blocks.AIR)
-                && SoulVineBlock.hasAtLeasOneSolidNeighbourPerpendicularToGrowDirection(level, newBlockpos, nearestDirection)) */
         {
 
             // Consumir una semilla del inventario
@@ -98,6 +107,9 @@ public class SkillSoulVine extends AbstractSkillSeedsInInventoryExecutor {
             // para reducir el espacio de estados del bloque y acelerar la carga).
             if (level.getBlockEntity(newBlockpos) instanceof SoulVineBlockEntity svbe) {
                 svbe.setSkillLevel(skillPoints);
+                // Modo puente: crece RECTO hacia donde miras, sin necesitar pared, hasta topar con suelo,
+                // pared o techo (entonces vuelve a la mecánica normal de agarre).
+                svbe.setBridging(true);
             }
 
 

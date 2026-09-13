@@ -602,6 +602,20 @@ el tiempo y se gasta en una lista de planos, más un `Goal` de "ir a construir" 
     y los getter ya **no devuelven `null`** (cola vacía si el dato falta o está corrupto), con lo que se acabaron
     los `NullPointerException` latentes y el spam de errores en el log.
 
+- **`soulvine` (Soulvine): modo puente**. La vid ya no nace "pegada" a una pared: al lanzarla crece
+  **recta en la dirección de la mirada** (en **3D**, así sirve también para bajar por una barranca o subir), sin
+  necesitar ningún sólido al lado, así que **cruza abismos y barrancas como un puente**. En cuanto **topa** con
+  suelo, pared o techo **y todavía le queda crecimiento**, se apaga el modo puente y sigue con la **mecánica de
+  siempre** (elegir dirección y agarrarse a las superficies, con la regla del sólido perpendicular). Detalles:
+  - El modo se guarda en el **BlockEntity** (`bridging`, persistido en NBT) y **lo heredan los hijos**, para no
+    ampliar el espacio de estados del bloque (`LEVEL` ya se movió al BlockEntity por eso mismo).
+  - Antes la skill exigía **una pared al lado** para poder lanzarse (`hasAtLeasOneSolidNeighbour…` en la
+    precondición): ahora solo se pide que el sitio de delante esté libre, porque el puente empieza en el aire.
+  - Si mirar en vertical no deja sitio para el primer bloque (p. ej. mirando al suelo que pisas), la dirección
+    cae a la **horizontal** de la mirada para que el lanzamiento no falle.
+  - Al topar, la mecánica vieja hace el resto: si choca contra una pared, la regla del sólido perpendicular le
+    permite **subir por ella** (el sólido de enfrente es perpendicular a `UP`).
+
 - **Fusión parásito + hongo (árbol de Naturaleza)**: el poder es **`soullichen`** (*Soullichen*, el parásito  que se pega al enemigo y lo lentece/consume) y el **hongo** (`vinefleshball`, *Parasyte mushroom*) pasó de
   ser un poder aparte a ser su **pasivo de 20 niveles** (`activeSkill = false`, `manacost` 0, `frame` "goal"):
   en el árbol ya no se puede asignar a una tecla, solo subirle niveles, y lo aplica su padre activo. Al
