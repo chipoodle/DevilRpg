@@ -1,6 +1,9 @@
 package com.chipoodle.devilrpg.entity;
 
+import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
+import com.chipoodle.devilrpg.capability.mana.PlayerManaCapability;
+import com.chipoodle.devilrpg.capability.mana.PlayerManaCapabilityInterface;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.init.ModEntities;
@@ -47,6 +50,12 @@ public class SoulWispArcher extends SoulWisp implements RangedAttackMob {
      * el enemigo, que es lo que da el efecto de "cohete corrigiendo la trayectoria".
      */
     private static final float ICE_SPEAR_INACCURACY = 5.0F;
+    /**
+     * Maná que le cuesta al dueño <b>cada lanza</b> de la andanada (medio punto). Si al dueño no le llega para
+     * la siguiente, la andanada se corta ahí: no sale esa lanza ni las que quedaban. El disparo normal (bola de
+     * escarcha) es gratis.
+     */
+    private static final float MANA_PER_ICE_SPEAR = 0.5F;
 
     /** Lanzas que faltan por salir de la andanada en curso (0 = no hay ninguna). */
     private int pendingIceSpears;
@@ -105,7 +114,8 @@ public class SoulWispArcher extends SoulWisp implements RangedAttackMob {
             // Ya está saliendo la andanada: estos disparos SON el poder especial, no se suma la bola normal.
             return;
         }
-        if (spearPoints > 0 && this.getRandom().nextInt(100) < spearPoints * ICE_SPEAR_PROBABILITY_PER_POINT) {
+        if (spearPoints > 0 && manaSuficiente()
+                && this.getRandom().nextInt(100) < spearPoints * ICE_SPEAR_PROBABILITY_PER_POINT) {
             this.startIceSpearVolley(target, archerPoints);
             return;
         }
@@ -140,6 +150,15 @@ public class SoulWispArcher extends SoulWisp implements RangedAttackMob {
 
     /** Saca la siguiente lanza de la andanada, apuntando al objetivo (o hacia delante si ya murió). */
     private void launchOneIceSpear() {
+        // PRIMERO el maná: cada lanza le cuesta MANA_PER_ICE_SPEAR al dueño. Si no le llega, la andanada se corta
+        // AQUÍ (no sale esta lanza ni las que quedaban), que es justo lo que se pidió.
+        if (!cobrarManaAlDueno()) {
+            DevilRpg.LOGGER.info("[WispArcher] al dueno no le queda mana: la andanada se corta (quedaban {} lanza(s))",
+                    this.pendingIceSpears);
+            this.pendingIceSpears = 0;
+            this.iceSpearAim = null;
+            return;
+        }
         this.pendingIceSpears--;
         this.nextIceSpearTicks = ICE_SPEAR_INTERVAL_TICKS;
         LivingEntity aim = this.iceSpearAim;
@@ -167,6 +186,37 @@ public class SoulWispArcher extends SoulWisp implements RangedAttackMob {
 
     public void updateLevel(Player owner) {
         super.updateLevel(owner, null, null, SkillEnum.SUMMON_WISP_ARCHER, true);
+    }
+
+    /**
+     * ¿Le llega al dueño para al menos una lanza? No cobra nada: el cobro es por lanza, al dispararla. Si no le
+     * llega, ni se empieza la andanada (así el wisp no pierde el ataque: dispara la bola de escarcha normal).
+     */
+    private boolean manaSuficiente() {
+        if (!(this.getOwner() instanceof Player owner)) {
+            return true; // sin dueño (p. ej. huevo de spawn): no se cobra a nadie
+        }
+        PlayerManaCapabilityInterface mana = IGenericCapability.getUnwrappedPlayerCapability(owner, PlayerManaCapability.INSTANCE);
+        return mana == null || mana.getMana() >= MANA_PER_ICE_SPEAR;
+    }
+
+    /**
+     * Le cobra al dueño el maná de una lanza. Devuelve {@code false} <b>sin cobrar nada</b> si no le llega, y el
+     * que llama corta la andanada. Un wisp sin dueño no cobra a nadie y dispara igual.
+     */
+    private boolean cobrarManaAlDueno() {
+        if (!(this.getOwner() instanceof Player owner)) {
+            return true;
+        }
+        PlayerManaCapabilityInterface mana = IGenericCapability.getUnwrappedPlayerCapability(owner, PlayerManaCapability.INSTANCE);
+        if (mana == null) {
+            return true;
+        }
+        if (mana.getMana() < MANA_PER_ICE_SPEAR) {
+            return false;
+        }
+        mana.addMana(-MANA_PER_ICE_SPEAR, owner); // addMana recorta a [0, max] y sincroniza con el cliente
+        return true;
     }
 
     @Nullable

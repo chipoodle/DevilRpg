@@ -216,7 +216,11 @@ siguiente está implementado y probado.
   (partículas + sonido + daño en área), no `level.explode`, justo para eso. El daño es **bajo a propósito**:
   0.6 + 0.045·puntos directo y 0.5 + 0.035·puntos de salpicadura (al máximo, 1.5 y 1.2 por lanza), de modo que
   los tres impactos juntos quedan **por debajo** del daño que hacía una sola explosión de la primera versión
-  (2.5 + 0.12·puntos). Se dibuja con `textures/entity/frostball/freeze_texture.png` mediante un renderer
+  (2.5 + 0.12·puntos). **Cada lanza le cuesta medio punto de maná al dueño** (`MANA_PER_ICE_SPEAR = 0.5F` en
+  `SoulWispArcher`): se cobra **por lanza, al dispararla**, y si al dueño no le llega para la siguiente, la
+  andanada **se corta ahí mismo** (no sale esa lanza ni las que quedaban). Si no le llega ni para la primera, la
+  andanada **ni se empieza** y el wisp dispara la bola de escarcha normal, que es **gratis**. Un wisp sin dueño
+  (por ejemplo de huevo de spawn) no le cobra a nadie. Se dibuja con `textures/entity/frostball/freeze_texture.png` mediante un renderer
   billboard propio (`IceSpearRenderer`): al ser una textura de entidad (fuera de `textures/item` y
   `textures/block`) **no está en el atlas de bloques**, así que un modelo de item la mostraría como textura
   perdida — de ahí el quad a mano con `RenderType.entityCutoutNoCull`, que además siempre mira a la cámara y
