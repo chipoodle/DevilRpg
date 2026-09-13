@@ -21,6 +21,7 @@ import net.minecraft.world.level.block.GrowingPlantBlock;
 import net.minecraft.world.level.block.RotatedPillarBlock;
 import net.minecraft.world.level.block.StairBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.level.block.state.properties.BedPart;
 import net.minecraft.world.level.block.state.properties.BellAttachType;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
@@ -755,7 +756,13 @@ public final class VillageGenerator {
         spawnVillager(level, center.offset(-17, 0, -6), VillagerProfession.FARMER);
         spawnVillager(level, center.offset(16, 0, -7), VillagerProfession.WEAPONSMITH);
         spawnVillager(level, center.offset(-3, 0, 14), VillagerProfession.CLERIC);
-        spawnIronGolem(level, center.offset(4, 0, 4));
+        // El golem SOLO si no hay ya uno: al repoblar una aldea cuyo golem sobrevivió, antes aparecía un
+        // segundo golem (bug visto en juego).
+        if (level.getEntitiesOfClass(IronGolem.class, new AABB(center).inflate(48.0D)).isEmpty()) {
+            spawnIronGolem(level, center.offset(4, 0, 4));
+        } else {
+            DevilRpg.LOGGER.debug("[Village] la aldea ya tiene golem: no se duplica");
+        }
     }
 
     /** Y del suelo sólido (ignora agua/lava) en una columna (x, z). */
