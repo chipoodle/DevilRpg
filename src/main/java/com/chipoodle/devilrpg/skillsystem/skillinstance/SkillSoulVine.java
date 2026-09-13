@@ -38,18 +38,17 @@ public class SkillSoulVine extends AbstractSkillSeedsInInventoryExecutor {
         if (player.getCooldowns().isOnCooldown(icon.getItem())) {
             return false;
         }
-        // Antes se exigía una PARED al lado (la vid se agarraba a ella), y por eso no se podía lanzar al vacío.
-        // Para que sirva de puente solo se pide que el sitio de delante esté libre: la vid ya crece recta desde
-        // el primer bloque y se agarra sola cuando tope con algo.
-        BlockPos start = player.blockPosition().relative(lookDirection(player));
-        return puedeEmpezarEn(player.level(), start)
+        // La vid nace en el bloque donde estas parado (justo encima del suelo que pisas, para que no parezca
+        // que flota), asi que solo se pide que ESE sitio se pueda ocupar. Antes se pedia el sitio de delante,
+        // de la epoca en que la vid se agarraba a una pared.
+        return puedeEmpezarEn(player.level(), player.blockPosition())
                 && super.arePreconditionsMetBeforeConsumingResource(player);
     }
 
     /**
-     * Dirección en la que crece la vid: la mirada del jugador <b>en 3D</b> (así puedes lanzarla hacia abajo para
-     * bajar por una barranca o hacia arriba para subir), con <b>respaldo horizontal</b> si apuntar en vertical no
-     * deja sitio para el primer bloque (por ejemplo, mirando al suelo que pisas).
+     * Dirección con la que nace el bloque raíz: la mirada del jugador <b>en 3D</b>, con <b>respaldo
+     * horizontal</b> si apuntar en vertical no deja sitio (por ejemplo, mirando al suelo que pisas). Es solo la
+     * dirección "de cara" del primer bloque; el crecimiento lo lleva la trayectoria guardada en el BlockEntity.
      */
     private static Direction lookDirection(Player player) {
         Vec3 look = player.getLookAngle();
@@ -62,7 +61,8 @@ public class SkillSoulVine extends AbstractSkillSeedsInInventoryExecutor {
 
     private static boolean puedeEmpezarEn(Level level, BlockPos pos) {
         BlockState state = level.getBlockState(pos);
-        return state.isAir() || state.canBeReplaced();
+        // Tambien vale si hay fluido (nadando): el bloque de vid sustituye al agua sin problema.
+        return state.isAir() || state.canBeReplaced() || !state.getFluidState().isEmpty();
     }
 
     @Override
@@ -83,11 +83,12 @@ public class SkillSoulVine extends AbstractSkillSeedsInInventoryExecutor {
     }
 
     private void setVine(Level level, Player playerIn, PlayerSkillCapabilityInterface skillCap) {
-        BlockPos playerBlockPos = playerIn.blockPosition();
+        // La raiz nace en el bloque donde estas parado, es decir JUSTO ENCIMA del bloque que pisas: asi la vid
+        // siempre sale del suelo y no queda flotando cuando el terreno de al lado esta mas bajo.
+        BlockPos newBlockpos = playerIn.blockPosition();
         SoulVineBlock createdBlock = ModBlocks.SOUL_VINE_BLOCK.get();
         // La vid nace apuntando a donde miras: crece siguiendo la trayectoria exacta de la mirada.
         Direction nearestDirection = lookDirection(playerIn);
-        BlockPos newBlockpos = playerBlockPos.relative(nearestDirection);
         {
 
             // Consumir una semilla del inventario

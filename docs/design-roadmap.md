@@ -610,9 +610,10 @@ el tiempo y se gasta en una lista de planos, más un `Goal` de "ir a construir" 
   - El modo se guarda en el **BlockEntity** (`bridging`, persistido en NBT) y **lo heredan los hijos**, para no
     ampliar el espacio de estados del bloque (`LEVEL` ya se movió al BlockEntity por eso mismo).
   - Antes la skill exigía **una pared al lado** para poder lanzarse (`hasAtLeasOneSolidNeighbour…` en la
-    precondición): ahora solo se pide que el sitio de delante esté libre, porque el puente empieza en el aire.
-  - Si mirar en vertical no deja sitio para el primer bloque (p. ej. mirando al suelo que pisas), la dirección
-    cae a la **horizontal** de la mirada para que el lanzamiento no falle.
+    precondición), y después solo que el sitio de delante estuviera libre. Con la raíz a los pies basta con que
+    el bloque donde estás parado se pueda ocupar.
+  - Si mirar en vertical no deja sitio para el bloque de delante, la **dirección "de cara"** del primer bloque
+    cae a la **horizontal** de la mirada (solo es cosmética: el crecimiento lo manda la trayectoria).
   - **Trayectoria de la mirada (escalera tipo DDA)**. La vid guarda el **vector exacto** de la mirada
     (`aimX/aimY/aimZ`, normalizado) y un **error acumulado por eje** (`errX/errY/errZ`). En cada paso se suma
     el **peso** de la mirada en cada eje (los pesos son `|aim|` normalizado a **suma 1**, así cada paso reparte
@@ -622,6 +623,13 @@ el tiempo y se gasta en una lista de planos, más un `Goal` de "ir a construir" 
     (alterna los dos ejes) y una casi horizontal avanza casi siempre en horizontal con un escalón de vez en
     cuando. Si un paso no se puede dar (pared), ese eje **no descuenta nada** y lo reintenta en el paso
     siguiente.
+  - **El bloque raíz nace en el bloque donde está parado el jugador**, es decir justo encima del bloque que
+    pisa, para que la vid **salga del suelo** y no parezca que flota (antes nacía un bloque por delante y, si
+    el terreno de al lado estaba más bajo, el primer bloque quedaba en el aire). Como el bloque de vid es
+    `noCollission`, el jugador puede quedarse dentro sin que le empuje; la precondición de la skill ahora solo
+    pide que **ese** sitio se pueda ocupar (aire, reemplazable o con fluido, para poder lanzarla nadando), y la
+    dirección "de cara" del primer bloque sigue saliendo de la mirada (con respaldo horizontal si apuntas al
+    suelo que pisas).
   - **Al topar con algo** el paso ideal ya está bloqueado, así que se eligen las alternativas **ordenadas por
     producto escalar con la mirada** (la que menos se aparta de la trayectoria va antes) y, **en caso de
     empate**, primero **el rumbo que ya traía la vid** (para no zigzaguear cuando el eje de la mirada está

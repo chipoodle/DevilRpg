@@ -71,7 +71,7 @@
     {
         "id": "nature:soulvine",
         "display": {
-            "description": "A spirit vine grows from where your gaze rests and follows that exact line: aim at 45 degrees and it climbs at 45, aim down a ravine and it dives after you, so it can span a chasm or a cliff like a living bridge. The moment it meets ground, wall or ceiling it hugs the surface and keeps tracing your line as best it can. You may climb it wherever it passes; higher skill lengthens its reach and lifespan. Consumes a seed.",
+            "description": "A spirit vine sprouts at your feet and follows the exact line of your gaze: aim at 45 degrees and it climbs at 45, aim down a ravine and it dives after you, so it can span a chasm or a cliff like a living bridge. The moment it meets ground, wall or ceiling it hugs the surface and keeps tracing your line as best it can. You may climb it wherever it passes; higher skill lengthens its reach and lifespan. Consumes a seed.",
             "icon": {
                 "item": "devilrpg:item_vine"
             },
