@@ -761,13 +761,16 @@ la **guarida** (`LairManager.spawnWave`: 3 cada 25 s a 8–14 bloques del centro
 - **Herramientas de NBT para recuperar partidas** (`build/recover/NbtTool.java` y `build/*.py`, **ignorados por
   git** porque `build/` está en `.gitignore`: si se limpia `build/`, se pierden). Leen y escriben el NBT del
   jugador con las **clases reales de Minecraft**, sin arrancar el juego:
-  `java -cp "build\classes\java\main;build\recover\libs\*" build\recover\NbtTool.java <archivo.dat> [--keys|--snbt <i>]`
+  `java -cp "build\classes\java\main;build\recover\libs\*" build\recover\NbtTool.java <archivo.dat> [--keys|--find|--snbt <i>]`
   (`libs\` se armó copiando de las cachés de Gradle el jar `neoforge-*-merged.jar` + fastutil/log4j/logging/asm...).
-  El modo `--restore-minions-from <viejo.dat> <tipoWisp> <destino.dat>` recupera `Stored_Minions` del respaldo
-  que el propio juego deja (`playerdata/<uuid>.dat_old`), deduce el tipo de cada entrada por la lista en la que
-  sigue su UUID y lo escribe, dejando copia `.bak`. Dos reglas: **el juego tiene que estar cerrado** —no basta
-  con que "no moleste": si está abierto, al salir **sobrescribe el archivo con lo que tiene en memoria** y el
-  arreglo se pierde **sin ningún aviso** (pasó el 12-sep-2026: la inyección de los minions se perdió así)— y
-  **verificar antes/después** con `build/diffnbt.py` (0 diferencias fuera de lo tocado = el cambio fue
-  quirúrgico). El modo `--forget <uuid>…` quita UUIDs concretos de las listas de minions (solo tras comprobar
-  con `build/finduuid.py` que **no existen en ningún archivo de región**, es decir que están muertos de verdad).
+  El modo `--restore-minions-from <viejo.dat> <tipoWisp> <destino.dat>` copia `Stored_Minions` de un respaldo, y
+  `--forget <uuid>…` quita UUIDs concretos de las listas (solo tras comprobar con `build/finduuid.py` que **no
+  existen en ningún archivo de región**, o sea que están muertos de verdad).
+- **⚠️ EN SINGLEPLAYER EL ANFITRIÓN SE GUARDA (Y SE LEE) EN `level.dat`, NO EN `playerdata/<uuid>.dat`.** El
+  jugador está en `Data.Player.neoforge:attachments...` de `level.dat`; el juego **también** escribe
+  `playerdata/<uuid>.dat` con lo mismo, pero **lo que lee al cargar el mundo es `level.dat`**. Esto costó una
+  tarde entera el 12-sep-2026: toqué `playerdata/<uuid>.dat` (inyecté 4 minions, limpié listas) y **nada de eso
+  llegó al juego**; peor, la lista "limpia" parecía volver con los fantasmas en su sitio (en realidad el juego
+  nunca vio mi archivo). Para tocar la partida hay que escribir en **`level.dat`** (y, por coherencia, en el
+  `playerdata` para que no se contradigan). Comprobar SIEMPRE con `NbtTool … --find` en **los dos** archivos, y
+  **con el juego cerrado**: al salir, el juego escribe ambos desde memoria y revienta cualquier cambio.
