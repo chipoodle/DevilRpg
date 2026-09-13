@@ -127,6 +127,19 @@ public final class VillageManager {
             if (distSqr <= (double) ARRIVE_RADIUS * ARRIVE_RADIUS) {
                 start(level, player, i, target);
             }
+            // REPARACIÓN (idempotente y barata: 1 vez cada 5 s): aldea generada, NO caída, sin asedio en curso y
+            // SIN aldeanos -> se repueblan aldeanos y golem. Va AQUÍ y no en start() porque start() sale antes si
+            // el asedio de ese objetivo ya se resolvió (aldea "salvada"), y entonces la aldea se quedaba vacía
+            // para siempre: es justo el caso que reportó el jugador (llegó a una aldea ya salvada, sin aldeanos).
+            // No se toca si la aldea ya cayó (isFallen: la derrota es definitiva) ni si hay asedio en curso
+            // (si no, repoblaríamos mientras los monstruos la están matando).
+            if (level.getGameTime() % 100L == 0L
+                    && !saved.isFallen(i)
+                    && !isUnderAttack(level, i)
+                    && countVillagers(level, target) == 0) {
+                VillageGenerator.spawnVillagers(level, target);
+                DevilRpg.LOGGER.info("[Village] Aldea {} estaba vacia: aldeanos y golem repuestos", i);
+            }
         }
     }
 
@@ -151,14 +164,6 @@ public final class VillageManager {
         }
         if (!saved.isGenerated(objectiveIndex)) {
             preGenerate(level, objectiveIndex, target);
-        }
-        // REPARACIÓN: si la aldea está generada, no ha caído y al llegar NO queda ningún aldeano, se vuelven a
-        // poner (aldeanos + golem). Pasa cuando mueren por un bug o por mobs mientras el jugador no estaba —
-        // antes te encontrabas la aldea vacía y ya no se repoblaba nunca (se genera una sola vez). Si la aldea
-        // YA cayó (isFallen) no se toca: la derrota es definitiva.
-        if (!saved.isFallen(objectiveIndex) && countVillagers(level, target) == 0) {
-            VillageGenerator.spawnVillagers(level, target);
-            DevilRpg.LOGGER.info("[Village] Aldea {} estaba vacia: aldeanos y golem repuestos", objectiveIndex);
         }
         DEFENSES.computeIfAbsent(level, l -> new ArrayList<>())
                 .add(new VillageDefense(objectiveIndex, player.getUUID(), target));
