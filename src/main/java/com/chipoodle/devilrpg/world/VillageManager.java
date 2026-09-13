@@ -11,11 +11,14 @@ import com.chipoodle.devilrpg.init.ModEntities;
 import com.chipoodle.devilrpg.survival.ObjectiveTargets;
 import com.chipoodle.devilrpg.util.MissionRewards;
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.OwnableEntity;
@@ -66,6 +69,39 @@ public final class VillageManager {
      * aquí se considera que un zombie del asedio <b>no ha entrado</b>.
      */
     private static final int PERIMETER_RADIUS = VillageGenerator.FENCE_RADIUS;
+
+    // --- Salud del asentamiento (Iteración 3, paso 2) ----------------------------------------------
+
+    /** Aldeanos que tiene una aldea sana (los que pone el generador): es el tope de la "salud". */
+    public static final int VILLAGERS_FOR_FULL_HEALTH = 3;
+    /** Cada cuánto se repone UN aldeano en una aldea debilitada (5 min). */
+    private static final int REPOPULATE_INTERVAL_TICKS = 5 * 60 * 20;
+    /**
+     * Cuánta presión extra acumula la aldea por cada aldeano que le falta. Con 1 aldeano acumula el doble, y
+     * vacía dos veces y media: <i>los monstruos huelen la debilidad</i>.
+     */
+    private static final double PRESSURE_PER_MISSING_VILLAGER = 0.5D;
+    /** Cada cuánto se pasa revista a los aldeanos de una aldea (10 s). */
+    private static final int VILLAGE_POLL_TICKS = 200;
+
+    // --- Vida del asentamiento (Iteración 3, paso 4) ------------------------------------------------
+
+    /** Comida que produce la granja en cada latido de la aldea. */
+    private static final int FARM_YIELD = 4;
+    /** Comida que come cada aldeano en cada latido. */
+    private static final int FOOD_PER_VILLAGER = 1;
+    /** Despensa máxima de la aldea. */
+    private static final int MAX_FOOD = 64;
+    /** Comida que cuesta que llegue un aldeano nuevo (nacer o mudarse). */
+    private static final int FOOD_TO_GROW = 8;
+    /** Cada cuánto reparan la aldea sus aldeanos (3 min). Tiene que ser múltiplo de {@link #VILLAGE_POLL_TICKS}. */
+    private static final int REPAIR_INTERVAL_TICKS = 3 * 60 * 20;
+    /** Etiqueta de los datos persistentes del aldeano con su fecha de nacimiento. */
+    private static final String BORN_TAG = "DevilRpgVillagerBorn";
+    /** A partir de esta edad (2 días de juego) el aldeano es viejo y va más lento. */
+    private static final long VILLAGER_OLD_AGE_TICKS = 2L * 24000L;
+    /** Al llegar aquí (3 días de juego) el aldeano muere de viejo y deja el relevo a los jóvenes. */
+    private static final long VILLAGER_LIFESPAN_TICKS = 3L * 24000L;
 
     private static final Map<ServerLevel, List<VillageDefense>> DEFENSES = new HashMap<>();
 
@@ -133,18 +169,33 @@ public final class VillageManager {
             if (distSqr <= (double) ARRIVE_RADIUS * ARRIVE_RADIUS) {
                 start(level, player, i, target);
             }
-            // REPARACIÓN (idempotente y barata: 1 vez cada 5 s): aldea generada, NO caída, sin asedio en curso y
-            // SIN aldeanos -> se repueblan aldeanos y golem. Va AQUÍ y no en start() porque start() sale antes si
-            // el asedio de ese objetivo ya se resolvió (aldea "salvada"), y entonces la aldea se quedaba vacía
-            // para siempre: es justo el caso que reportó el jugador (llegó a una aldea ya salvada, sin aldeanos).
+            // SALUD DE LA ALDEA (Iteración 3): se cuenta a los aldeanos vivos y la aldea se recupera DE A POCO.
+            // Antes solo se repoblaba la aldea VACÍA, y de golpe (3 aldeanos + golem): ahora una aldea
+            // debilitada repone un aldeano cada REPOPULATE_INTERVAL_TICKS, y una vacía se rehace entera de una
+            // vez para que no quede muerta si el jugador llega justo después de una masacre. Va AQUÍ y no en
+            // start() porque start() sale antes si el asedio de ese objetivo ya se resolvió (aldea "salvada"),
+            // y entonces la aldea se quedaba vacía para siempre: es el caso que reportó el jugador.
             // No se toca si la aldea ya cayó (isFallen: la derrota es definitiva) ni si hay asedio en curso
             // (si no, repoblaríamos mientras los monstruos la están matando).
-            if (level.getGameTime() % 100L == 0L
-                    && !saved.isFallen(i)
-                    && !isUnderAttack(level, i)
-                    && countVillagers(level, target) == 0) {
-                VillageGenerator.spawnVillagers(level, target);
-                DevilRpg.LOGGER.info("[Village] Aldea {} estaba vacia: aldeanos y golem repuestos", i);
+            if (level.getGameTime() % VILLAGE_POLL_TICKS == 0L && !saved.isFallen(i) && !isUnderAttack(level, i)) {
+                int vivos = observeVillagers(level, saved, i, target);
+                if (vivos > 0) {
+                    tickVillageLife(level, saved, i, target, vivos);
+                }
+                if (vivos == 0) {
+                    VillageGenerator.spawnVillagers(level, target);
+                    saved.markRepopulated(i, level.getGameTime());
+                    DevilRpg.LOGGER.info("[Village] Aldea {} estaba vacia: aldeanos y golem repuestos", i);
+                } else if (vivos > 0 && vivos < VILLAGERS_FOR_FULL_HEALTH
+                        && level.getGameTime() - saved.getRepopulatedAt(i) >= REPOPULATE_INTERVAL_TICKS
+                        && saved.getFood(i) >= FOOD_TO_GROW) {
+                    // Crecer cuesta comida: una aldea hambrienta no se recupera hasta que la granja produzca.
+                    VillageGenerator.spawnOneVillager(level, target, vivos);
+                    saved.setFood(i, saved.getFood(i) - FOOD_TO_GROW);
+                    saved.markRepopulated(i, level.getGameTime());
+                    DevilRpg.LOGGER.info("[Village] Aldea {} se recupera: aldeano {}/{} (comida {})",
+                            i, vivos + 1, VILLAGERS_FOR_FULL_HEALTH, saved.getFood(i));
+                }
             }
         }
     }
@@ -227,6 +278,10 @@ public final class VillageManager {
                                     ? "Los monstruos no lograron entrar: ¡la aldea está a salvo! El objetivo avanza."
                                     : "Los monstruos no lograron entrar: ¡la aldea está a salvo!"), false);
                         } else {
+                            // La aldea ha caído de verdad (los monstruos entraron y sobrevivieron al tiempo):
+                            // se marca caída (definitiva) y queda en ruinas. Antes solo se avisaba por chat y la
+                            // aldea seguía "viva", así que el gestor la repoblaba más tarde como si nada.
+                            fallVillage(level, VillageSavedData.get(level), d.objectiveIndex, d.center);
                             player.displayClientMessage(Component.literal(isCurrentObjective
                                     ? "La aldea cayó... El objetivo avanza."
                                     : "La aldea cayó..."), false);
@@ -384,7 +439,7 @@ public final class VillageManager {
             if (ObjectiveTargets.horizontalDistSqr(playerPos, target) > HORDE_TARGET_RADIUS * HORDE_TARGET_RADIUS) {
                 continue;
             }
-            int pressure = saved.accruePressure(i, gameTime);
+            int pressure = saved.accruePressure(i, gameTime, pressureMultiplier(saved.getHealth(i)));
             if (pressure < PRESSURE_MIN_TICKS || pressure <= bestPressure) {
                 continue;
             }
@@ -433,9 +488,9 @@ public final class VillageManager {
                 list.remove(i);
                 continue;
             }
-            if (countVillagers(level, siege.center) == 0) {
-                saved.markFallen(siege.objectiveIndex);
-                DevilRpg.LOGGER.info("[Village] La aldea {} ha CAÍDO: no quedan aldeanos", siege.objectiveIndex);
+            int vivos = observeVillagers(level, saved, siege.objectiveIndex, siege.center);
+            if (vivos == 0) {
+                fallVillage(level, saved, siege.objectiveIndex, siege.center);
                 announceNearby(level, siege.center, "La aldea ha caído: no queda nadie con vida entre sus muros.");
                 // El objetivo avanza para quien lo tuviera pendiente: esa aldea ya no se puede salvar. Se
                 // marca como resuelta para que no se lance además el asedio clásico al llegar.
@@ -553,6 +608,91 @@ public final class VillageManager {
     /** Aldeanos vivos alrededor del centro de una aldea. */
     private static int countVillagers(ServerLevel level, BlockPos center) {
         return level.getEntitiesOfClass(Villager.class, new AABB(center).inflate(FALLEN_CHECK_RADIUS)).size();
+    }
+
+    /**
+     * Cuenta los aldeanos vivos de una aldea y apunta su <b>salud</b>. Si el chunk no está cargado devuelve
+     * {@link VillageSavedData#HEALTH_UNKNOWN} y no toca nada: contar entidades descargadas daría 0 y la aldea
+     * parecería muerta (se marcaría caída sin motivo y se repoblaría a lo tonto).
+     */
+    private static int observeVillagers(ServerLevel level, VillageSavedData saved, int objectiveIndex, BlockPos center) {
+        if (!level.isLoaded(center)) {
+            return VillageSavedData.HEALTH_UNKNOWN;
+        }
+        int vivos = countVillagers(level, center);
+        saved.setHealth(objectiveIndex, vivos);
+        return vivos;
+    }
+
+    /** Una aldea con pocos aldeanos acumula presión más rápido: los monstruos van a por las débiles. */
+    private static double pressureMultiplier(int health) {
+        if (health == VillageSavedData.HEALTH_UNKNOWN || health >= VILLAGERS_FOR_FULL_HEALTH) {
+            return 1.0D;
+        }
+        return 1.0D + (VILLAGERS_FOR_FULL_HEALTH - Math.max(0, health)) * PRESSURE_PER_MISSING_VILLAGER;
+    }
+
+    /**
+     * Un latido de la vida de la aldea (cada {@link #VILLAGE_POLL_TICKS}, solo en aldeas en paz y con aldeanos):
+     * <ul>
+     *   <li><b>Cultivan y comen</b>: la granja produce comida y cada aldeano consume la suya. Sin despensa la
+     *       aldea pasa hambre y no crece (ver {@link #FOOD_TO_GROW}).</li>
+     *   <li><b>Reparan</b>: una aldea sana vuelve a levantar lo que se cayó en el último ataque.</li>
+     *   <li><b>Envejecen</b>: ver {@link #ageVillagers}.</li>
+     * </ul>
+     */
+    private static void tickVillageLife(ServerLevel level, VillageSavedData saved, int objectiveIndex, BlockPos center, int vivos) {
+        int antes = saved.getFood(objectiveIndex);
+        int comida = Math.min(MAX_FOOD, antes + FARM_YIELD) - vivos * FOOD_PER_VILLAGER;
+        saved.setFood(objectiveIndex, comida);
+        if (antes > 0 && comida <= 0) {
+            DevilRpg.LOGGER.info("[Village] La aldea {} se quedo sin comida: no crecera hasta que la granja produzca",
+                    objectiveIndex);
+        }
+        // Solo las aldeas SANAS y en paz se ponen a reparar (una debilitada está a otras cosas).
+        if (vivos >= VILLAGERS_FOR_FULL_HEALTH && level.getGameTime() % REPAIR_INTERVAL_TICKS == 0L) {
+            VillageGenerator.repair(level, center);
+            DevilRpg.LOGGER.info("[Village] La aldea {} ha sido reparada por sus aldeanos (comida {})",
+                    objectiveIndex, saved.getFood(objectiveIndex));
+        }
+        ageVillagers(level, center);
+    }
+
+    /**
+     * <b>Envejecimiento</b>: la primera vez que se ve a un aldeano se le apunta la fecha de nacimiento en sus
+     * datos persistentes (viaja con él en el guardado). Los viejos van más lentos y, al terminar su vida,
+     * mueren y dejan el relevo: la aldea repone aldeanos con la comida de la granja.
+     */
+    private static void ageVillagers(ServerLevel level, BlockPos center) {
+        for (Villager villager : level.getEntitiesOfClass(Villager.class, new AABB(center).inflate(FALLEN_CHECK_RADIUS))) {
+            CompoundTag datos = villager.getPersistentData();
+            if (!datos.contains(BORN_TAG)) {
+                datos.putLong(BORN_TAG, level.getGameTime());
+                continue;
+            }
+            long edad = level.getGameTime() - datos.getLong(BORN_TAG);
+            if (edad >= VILLAGER_LIFESPAN_TICKS) {
+                DevilRpg.LOGGER.info("[Village] Un aldeano de {} murio de viejo ({} dias de juego)",
+                        center, edad / 24000L);
+                villager.kill();
+            } else if (edad >= VILLAGER_OLD_AGE_TICKS && !villager.hasEffect(MobEffects.MOVEMENT_SLOWDOWN)) {
+                villager.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 20 * 60, 0, false, false));
+            }
+        }
+    }
+
+    /**
+     * La aldea cae: se queda sin aldeanos y eso es <b>definitivo</b> (no vuelve a ser objetivo de hordas ni se
+     * repuebla). Se deja en <b>ruinas</b> ({@link VillageGenerator#ruin}) para que el jugador vea lo que pasó
+     * cuando vuelva. Idempotente: si ya estaba caída no hace nada.
+     */
+    private static void fallVillage(ServerLevel level, VillageSavedData saved, int objectiveIndex, BlockPos center) {
+        if (saved.isFallen(objectiveIndex)) {
+            return;
+        }
+        saved.markFallen(objectiveIndex);
+        VillageGenerator.ruin(level, center, objectiveIndex);
+        DevilRpg.LOGGER.info("[Village] La aldea {} ha CAÍDO y queda en ruinas", objectiveIndex);
     }
 
     /** Manda un mensaje a los jugadores que estén cerca de la aldea. */

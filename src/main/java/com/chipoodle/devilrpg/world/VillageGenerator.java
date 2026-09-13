@@ -5,6 +5,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BlockTags;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.animal.IronGolem;
@@ -15,6 +16,7 @@ import net.minecraft.world.level.block.BellBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.BushBlock;
+import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.GrowingPlantBlock;
@@ -148,6 +150,9 @@ public final class VillageGenerator {
 
         // Campana al final, en el centro, limpiando su columna (nadie la tapa).
         bell(level, center);
+
+        // Granja: da trabajo al aldeano granjero y produce la comida que come la aldea (Iteración 3).
+        farm(level, center);
 
         // Aldeanos justo frente a la puerta de cada cabaña, y el golem que protege la aldea.
         spawnVillagers(level, center);
@@ -808,5 +813,104 @@ public final class VillageGenerator {
             return Math.max(surface, g) + 1;
         }
         return g;
+    }
+
+    // --- Iteración 3: la aldea viva ----------------------------------------------------------------
+
+    /**
+     * <b>Reparación</b> de la aldea: vuelve a levantar caminos, cabañas, faroles, valla y granja. Es lo mismo
+     * que hace {@link #generate} pero <b>sin tocar el terreno</b> (nivelar o despejar vegetación destrozaría lo
+     * que el jugador haya construido cerca). La llama {@code VillageManager} cada cierto tiempo en aldeas
+     * tranquilas y con aldeanos vivos: <i>los aldeanos reparan su aldea</i>.
+     */
+    public static void repair(ServerLevel level, BlockPos center) {
+        BlockPos h0 = center.offset(-17, 0, -3);
+        BlockPos h1 = center.offset(16, 0, -4);
+        BlockPos h2 = center.offset(-3, 0, 17);
+        paths(level, center, h0, h1, h2);
+        hut(level, h0);
+        hut(level, h1);
+        hut(level, h2);
+        torches(level, center);
+        farm(level, center);
+        fence(level, center);
+    }
+
+    /**
+     * <b>Granja</b> de la aldea: dos parcelas con su acequia, los cultivos ya crecidos y un compostador (el
+     * puesto de trabajo del granjero). Es lo que hace que el aldeano granjero tenga faena y que la aldea
+     * produzca la <b>comida</b> que luego se come (ver {@code VillageManager}).
+     */
+    private static void farm(ServerLevel level, BlockPos center) {
+        plot(level, center.offset(-16, 0, 8));
+        plot(level, center.offset(8, 0, 6));
+    }
+
+    /** Parcela de 9x5: cuatro filas de cultivos, acequia de agua en medio y compostador al lado. */
+    private static void plot(ServerLevel level, BlockPos corner) {
+        Block[] plants = {Blocks.WHEAT, Blocks.CARROTS, Blocks.POTATOES};
+        for (int dx = 0; dx < 9; dx++) {
+            for (int dz = 0; dz < 5; dz++) {
+                int x = corner.getX() + dx;
+                int z = corner.getZ() + dz;
+                int y = groundY(level, x, z);
+                if (dz == 2) {
+                    // Acequia central: el agua va a ras de suelo y riega las cuatro filas.
+                    level.setBlock(new BlockPos(x, y - 1, z), Blocks.WATER.defaultBlockState(), Block.UPDATE_ALL);
+                    level.setBlock(new BlockPos(x, y, z), Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+                    continue;
+                }
+                level.setBlock(new BlockPos(x, y - 1, z), Blocks.FARMLAND.defaultBlockState(), Block.UPDATE_ALL);
+                BlockState crop = plants[dx % plants.length].defaultBlockState();
+                if (crop.getBlock() instanceof CropBlock cropBlock) {
+                    // Cada cultivo tiene su edad máxima (el trigo 7, la remolacha 3): se pregunta, no se asume.
+                    crop = crop.setValue(CropBlock.AGE, cropBlock.getMaxAge());
+                }
+                level.setBlock(new BlockPos(x, y, z), crop, Block.UPDATE_ALL);
+            }
+        }
+        BlockPos composter = new BlockPos(corner.getX() - 1, groundY(level, corner.getX() - 1, corner.getZ()), corner.getZ());
+        level.setBlock(composter, Blocks.COMPOSTER.defaultBlockState(), Block.UPDATE_ALL);
+    }
+
+    /**
+     * Convierte la aldea en <b>ruinas</b> (Iteración 3): se derrumba parte de lo construido y el sitio se llena
+     * de telarañas y piedra mohosa. Es <b>determinista</b> (semilla sacada del objetivo), así que la misma aldea
+     * caída se ve igual siempre, y solo se llama una vez: al caer la aldea.
+     */
+    public static void ruin(ServerLevel level, BlockPos center, int objectiveIndex) {
+        RandomSource random = RandomSource.create(objectiveIndex * 31L + 7L);
+        int base = spawnY(level, center.getX(), center.getZ());
+        int cambiados = 0;
+        // Tope de cambios: la pasada es una sola vez, pero no queremos clavar el servidor con 30.000 bloques.
+        int maxCambios = 2500;
+        for (int dx = -FENCE_RADIUS; dx <= FENCE_RADIUS && cambiados < maxCambios; dx++) {
+            for (int dz = -FENCE_RADIUS; dz <= FENCE_RADIUS && cambiados < maxCambios; dz++) {
+                if (dx * dx + dz * dz > FENCE_RADIUS * FENCE_RADIUS) {
+                    continue;
+                }
+                for (int dy = 0; dy <= 7; dy++) {
+                    BlockPos pos = new BlockPos(center.getX() + dx, base + dy, center.getZ() + dz);
+                    BlockState state = level.getBlockState(pos);
+                    if (state.isAir() || state.is(Blocks.BEDROCK)) {
+                        continue;
+                    }
+                    float r = random.nextFloat();
+                    if (r < 0.35F) {
+                        level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
+                    } else if (r < 0.45F) {
+                        level.setBlock(pos, Blocks.COBWEB.defaultBlockState(), Block.UPDATE_CLIENTS);
+                    } else if (r < 0.55F) {
+                        level.setBlock(pos, Blocks.MOSSY_COBBLESTONE.defaultBlockState(), Block.UPDATE_CLIENTS);
+                    } else if (r < 0.62F) {
+                        level.setBlock(pos, Blocks.CRACKED_STONE_BRICKS.defaultBlockState(), Block.UPDATE_CLIENTS);
+                    } else {
+                        continue;
+                    }
+                    cambiados++;
+                }
+            }
+        }
+        DevilRpg.LOGGER.info("[Village] Aldea {} queda en ruinas: {} bloques cambiados", objectiveIndex, cambiados);
     }
 }

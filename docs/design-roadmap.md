@@ -477,9 +477,38 @@ con su premio y su estado guardado. Lo implementado:
      descargaran y el asedio se diera por "resistido"; ahora, si la horda "desaparece" sin morir, la aldea
      resiste igual (se reinicia su presión, como siempre) pero **no se paga nada** y queda en el log.
 
-**Pendiente de esta iteración** (siguientes pasos): "salud" de la aldea por aldeanos vivos (hoy solo 0
-aldeanos = caída); aldeas caídas con aspecto de ruinas; y el resto del pilar 3 (aldeanos que construyen,
-reparan, cultivan, comen y envejecen).
+**Iteración 3 — CERRADA ✅.** Los tres pasos que faltaban:
+
+8. ✅ **Salud de la aldea por aldeanos vivos** (antes solo "0 aldeanos = caída"). La salud es el número de
+   aldeanos vivos y se guarda en `VillageSavedData` (`getHealth`/`setHealth`, con `HEALTH_UNKNOWN` = -1 si
+   nunca se ha podido mirar la aldea). Reglas:
+   - **Se cuenta solo si el chunk está cargado** (`level.isLoaded(center)`, ver `observeVillagers`). Contar
+     entidades descargadas daría 0 y la aldea se marcaría caída sin motivo: ese era un bug latente.
+   - **Una aldea debilitada atrae más hordas**: la presión se acumula multiplicada por
+     `pressureMultiplier` = 1 + (aldeanos que faltan) × `PRESSURE_PER_MISSING_VILLAGER` (0,5). Con 1 aldeano
+     acumula el doble; vacía, 2,5 veces.
+   - **Se recupera de a poco**: una aldea debilitada repone **un aldeano cada `REPOPULATE_INTERVAL_TICKS`**
+     (5 min) y solo si tiene comida (`FOOD_TO_GROW` = 8). Una aldea **vacía** se rehace entera de golpe
+     (aldeanos + golem), como antes, para que no quede muerta si llegas justo después de una masacre.
+9. ✅ **Aldeas caídas = ruinas**. Al caer se marca `markFallen` y se llama a `VillageGenerator.ruin`, que
+   **derruye parte de lo construido** (35% aire, telarañas, piedra mohosa y ladrillo agrietado) en un disco del
+   radio de la valla. Es **determinista** (semilla por objetivo) y con tope de 2.500 bloques por pasada, y solo
+   ocurre una vez. Ojo: ahora caer es **definitivo también en el asedio clásico** (antes solo avisaba por chat
+   y el gestor repoblaba la aldea después, como si no hubiera pasado nada).
+10. ✅ **Aldeanos que cultivan, comen, reparan y envejecen** (`VillageManager.tickVillageLife`, un latido cada
+    `VILLAGE_POLL_TICKS` = 10 s, solo en aldeas **en paz** con aldeanos vivos):
+    - **Cultivan**: el generador planta **dos parcelas** de 9×5 (trigo, zanahorias y patatas, acequia central y
+      compostador) — `VillageGenerator.farm`. Así el aldeano granjero (que ya sabe cosechar en vanilla) tiene
+      faena y la aldea produce comida.
+    - **Comen**: la granja suma `FARM_YIELD` = 4 por latido y cada aldeano come 1 (`FOOD_PER_VILLAGER`), con
+      despensa tope de 64. Sin comida la aldea **pasa hambre y no crece** (queda en el log).
+    - **Reparan**: una aldea **sana** (3 aldeanos) y en paz vuelve a levantar caminos, cabañas, faroles, granja y
+      valla cada `REPAIR_INTERVAL_TICKS` (3 min) con `VillageGenerator.repair`, que hace lo mismo que
+      `generate` pero **sin tocar el terreno** (nivelar o despejar vegetación destrozaría lo que construya el
+      jugador cerca).
+    - **Envejecen**: a cada aldeano se le apunta la fecha de nacimiento en sus datos persistentes
+      (`BORN_TAG`) la primera vez que se le ve. A los **2 días** de juego se vuelve viejo (Lentitud) y a los
+      **3 días muere de viejo**, dejando el relevo: la aldea repone aldeanos con la comida de la granja.
 
 > Nota conocida, sin tocar: el asedio **clásico** (el que dispara el jugador al llegar a la aldea) sigue
 > usando la regla vieja de "si no se les encuentra, la ola está limpia", así que ahí alejarse y dejar que se

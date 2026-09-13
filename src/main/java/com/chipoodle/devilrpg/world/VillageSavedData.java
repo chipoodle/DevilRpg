@@ -29,16 +29,22 @@ import java.util.UUID;
  * Desde la Iteración 3 guarda además el <b>estado de asentamiento</b> que hace que el mundo viva solo:
  * <ul>
  *   <li><b>Presión</b>: ticks de juego que la aldea lleva <b>sin que nadie la atienda</b>. No hace falta
- *       tickear nada: se acumula al consultarla ({@link #accruePressure(int, long)}), así que es determinista
- *       y avanza igual aunque el chunk esté descargado. Cuando la presión pasa el mínimo, las hordas empiezan
- *       a apuntar a esa aldea; al defenderla se reinicia.</li>
- *   <li><b>Caída</b>: la aldea se quedó sin aldeanos a causa de una horda. No vuelve a ser objetivo de hordas
- *       y, si era la del objetivo actual, este avanza (se perdió).</li>
+ *       tickear nada: se acumula al consultarla ({@link #accruePressure(int, long, double)}), así que es
+ *       determinista y avanza igual aunque el chunk esté descargado. Cuando la presión pasa el mínimo, las
+ *       hordas empiezan a apuntar a esa aldea; al defenderla se reinicia. Una aldea <b>debilitada</b>
+ *       (pocos aldeanos) acumula presión más rápido.</li>
+ *   <li><b>Caída</b>: la aldea se quedó sin aldeanos a causa de una horda. No vuelve a ser objetivo de hordas,
+ *       queda en <b>ruinas</b> y, si era la del objetivo actual, este avanza (se perdió).</li>
+ *   <li><b>Salud</b>: aldeanos vivos la última vez que se pudo mirar la aldea ({@link #getHealth}), cuándo se
+ *       repobló por última vez y la <b>comida</b> almacenada (la granja la produce, los aldeanos la comen).</li>
  * </ul>
  */
 public final class VillageSavedData extends SavedData {
 
     private static final String FILE_ID = "devilrpg_villages";
+
+    /** La aldea todavía no se ha podido mirar (chunk descargado), así que su salud es desconocida. */
+    public static final int HEALTH_UNKNOWN = -1;
 
     /** Objetivos cuya aldea ya está construida: no se vuelve a generar el terreno. */
     private final Set<Integer> generated = new HashSet<>();
@@ -51,6 +57,12 @@ public final class VillageSavedData extends SavedData {
     private final Map<Integer, Long> pressureSince = new HashMap<>();
     /** Aldeas que ya han caído (sin aldeanos): dejan de ser objetivo de las hordas. */
     private final Set<Integer> fallen = new HashSet<>();
+    /** Salud de la aldea = aldeanos vivos la última vez que se pudo contar. */
+    private final Map<Integer, Integer> health = new HashMap<>();
+    /** Última vez que se repobló la aldea (tick de juego), para ir de uno en uno. */
+    private final Map<Integer, Long> repopulatedAt = new HashMap<>();
+    /** Comida almacenada: la granja la produce y cada aldeano consume. */
+    private final Map<Integer, Integer> food = new HashMap<>();
 
     public static VillageSavedData get(ServerLevel level) {
         return level.getDataStorage().computeIfAbsent(
@@ -78,6 +90,18 @@ public final class VillageSavedData extends SavedData {
             data.pressureTicks.put(index, entry.getInt("Ticks"));
             data.pressureSince.put(index, entry.getLong("Since"));
         }
+        // Salud, repoblación y comida de cada aldea (una entrada por aldea).
+        for (Tag element : tag.getList("Settlement", Tag.TAG_COMPOUND)) {
+            CompoundTag entry = (CompoundTag) element;
+            int index = entry.getInt("Index");
+            if (entry.contains("Health")) {
+                data.health.put(index, entry.getInt("Health"));
+            }
+            if (entry.contains("RepopulatedAt")) {
+                data.repopulatedAt.put(index, entry.getLong("RepopulatedAt"));
+            }
+            data.food.put(index, entry.getInt("Food"));
+        }
         return data;
     }
 
@@ -100,6 +124,23 @@ public final class VillageSavedData extends SavedData {
             pressureTag.add(one);
         }
         tag.put("Pressure", pressureTag);
+        ListTag settlementTag = new ListTag();
+        Set<Integer> villages = new HashSet<>(health.keySet());
+        villages.addAll(repopulatedAt.keySet());
+        villages.addAll(food.keySet());
+        for (int index : villages) {
+            CompoundTag one = new CompoundTag();
+            one.putInt("Index", index);
+            if (health.containsKey(index)) {
+                one.putInt("Health", health.get(index));
+            }
+            if (repopulatedAt.containsKey(index)) {
+                one.putLong("RepopulatedAt", repopulatedAt.get(index));
+            }
+            one.putInt("Food", food.getOrDefault(index, 0));
+            settlementTag.add(one);
+        }
+        tag.put("Settlement", settlementTag);
         return tag;
     }
 
@@ -147,14 +188,20 @@ public final class VillageSavedData extends SavedData {
     // --- Estado de asentamiento (Iteración 3) -----------------------------------------------------
 
     /**
-     * Suma a la presión de la aldea los ticks transcurridos desde la última vez que se miró y devuelve el
-     * total acumulado. La primera consulta solo fija el punto de partida (presión 0).
+     * Suma a la presión de la aldea los ticks transcurridos desde la última vez que se miró (multiplicados por
+     * {@code multiplier}, que es como se premia a las aldeas débiles) y devuelve el total acumulado. La primera
+     * consulta solo fija el punto de partida (presión 0).
      */
     public int accruePressure(int objectiveIndex, long gameTime) {
+        return accruePressure(objectiveIndex, gameTime, 1.0D);
+    }
+
+    public int accruePressure(int objectiveIndex, long gameTime, double multiplier) {
         long since = pressureSince.getOrDefault(objectiveIndex, gameTime);
         int previous = pressureTicks.getOrDefault(objectiveIndex, 0);
         long elapsed = Math.max(0L, gameTime - since);
-        int accrued = (int) Math.min(Integer.MAX_VALUE, previous + elapsed);
+        long weight = (long) (elapsed * Math.max(0.0D, multiplier));
+        int accrued = (int) Math.min(Integer.MAX_VALUE, previous + weight);
         pressureSince.put(objectiveIndex, gameTime);
         if (accrued != previous) {
             pressureTicks.put(objectiveIndex, accrued);
@@ -188,6 +235,47 @@ public final class VillageSavedData extends SavedData {
             resolved.add(objectiveIndex); // caída = asedio resuelto (no se relanza)
             pressureTicks.remove(objectiveIndex);
             pressureSince.remove(objectiveIndex);
+            setDirty();
+        }
+    }
+
+    // --- Salud del asentamiento (Iteración 3, paso 2) ---------------------------------------------
+
+    /**
+     * Aldeanos vivos la última vez que se pudo contar ({@link #HEALTH_UNKNOWN} si nunca se ha mirado, p. ej.
+     * porque el chunk está descargado). No se cuenta en vivo a propósito: cuando el jugador está lejos el
+     * recuento daría 0 y la aldea parecería muerta.
+     */
+    public int getHealth(int objectiveIndex) {
+        return health.getOrDefault(objectiveIndex, HEALTH_UNKNOWN);
+    }
+
+    public void setHealth(int objectiveIndex, int villagers) {
+        if (health.getOrDefault(objectiveIndex, HEALTH_UNKNOWN) != villagers) {
+            health.put(objectiveIndex, villagers);
+            setDirty();
+        }
+    }
+
+    /** Tick de juego en el que se repobló la aldea por última vez. */
+    public long getRepopulatedAt(int objectiveIndex) {
+        return repopulatedAt.getOrDefault(objectiveIndex, 0L);
+    }
+
+    public void markRepopulated(int objectiveIndex, long gameTime) {
+        repopulatedAt.put(objectiveIndex, gameTime);
+        setDirty();
+    }
+
+    /** Comida almacenada en la aldea (la produce la granja, la comen los aldeanos). */
+    public int getFood(int objectiveIndex) {
+        return food.getOrDefault(objectiveIndex, 0);
+    }
+
+    public void setFood(int objectiveIndex, int value) {
+        int clamped = Math.max(0, value);
+        if (food.getOrDefault(objectiveIndex, 0) != clamped) {
+            food.put(objectiveIndex, clamped);
             setDirty();
         }
     }
