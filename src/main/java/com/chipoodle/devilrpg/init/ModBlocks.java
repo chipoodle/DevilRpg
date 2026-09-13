@@ -92,7 +92,10 @@ public final class ModBlocks {
 
     /**
      * Sello del sculk: caja inquebrantable que blinda el núcleo de una guarida mientras vive su cultivador.
-     * <b>No tiene objeto a propósito</b> (es bloque de estructura) y no aparece en la pestaña creativa.
+     * Es un bloque de estructura y no se reparte en la pestaña creativa ({@code ModCreativeTabs} lo salta), pero
+     * <b>sí tiene objeto</b>: {@code InitModEventSubscriber.onRegisterItems} crea un {@code BlockItem} para
+     * TODOS los bloques del mod, así que necesita su modelo de objeto
+     * ({@code assets/devilrpg/models/item/sculk_seal.json}) o el cliente avisa de que falta.
      */
     public static final DeferredHolder<Block, SculkSealBlock> SCULK_SEAL_BLOCK = BLOCKS.register("sculk_seal", () -> new SculkSealBlock(
             BlockBehaviour.Properties.of()
