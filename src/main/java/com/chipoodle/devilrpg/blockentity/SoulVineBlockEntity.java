@@ -14,7 +14,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
 import static com.chipoodle.devilrpg.block.SoulVineBlock.*;
@@ -120,12 +119,20 @@ public class SoulVineBlockEntity extends BlockEntity {
 
                 BlockPos childBlockPos;
                 BlockState childBlockState;
-                List<Direction> possibleValues = new ArrayList<>(DIRECTIONS.getPossibleValues()
-                        .stream()
-                        .filter(x -> x != currentDirection)
-                        .sorted(Comparator.comparingInt(Direction::get3DDataValue)).toList());
-                //DevilRpg.LOGGER.info("Ordered list--> {}", possibleValues);
-                possibleValues.add(0, currentDirection);
+                // Orden de preferencia al topar con algo (antes era [direccion actual, DOWN, UP, ...] y por eso
+                // la vid se iba SIEMPRE hacia abajo al llegar a una pared):
+                //   1) seguir recto en la direccion del lanzamiento,
+                //   2) trepar hacia ARRIBA (subir por la pared),
+                //   3) bajar hacia ABAJO,
+                //   4) y solo como ultimo recurso rodear por los lados.
+                List<Direction> possibleValues = new ArrayList<>();
+                possibleValues.add(currentDirection);
+                for (Direction candidate : new Direction[]{Direction.UP, Direction.DOWN,
+                        Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST}) {
+                    if (candidate != currentDirection) {
+                        possibleValues.add(candidate);
+                    }
+                }
                 for (Direction nextDirection : possibleValues) {
                     // DevilRpg.LOGGER.info("nextDirection--> {}", nextDirection);
                     childBlockPos = currentBlockPos.relative(nextDirection);
@@ -133,24 +140,21 @@ public class SoulVineBlockEntity extends BlockEntity {
                     if (childBlockState.isAir() || childBlockState.is(Blocks.SHORT_GRASS)) {
                         if (hasAtLeasOneSolidNeighbourPerpendicularToGrowDirection(world, childBlockPos, nextDirection)) {
                             state = setBlockDirection(state, world, currentBlockPos, nextDirection);
+                            if (nextDirection != currentDirection) {
+                                DevilRpg.LOGGER.debug("[Soulvine] la vid cambia de rumbo: {} -> {} en {}",
+                                        currentDirection, nextDirection, currentBlockPos);
+                            }
                             createChildBlock(state, world, currentDirection, childBlockPos, currentBlockPos, nextDirection);
                             return true;
                         } else {
-                            //Verifica el siguiente del siguiente
-                            List<Direction> adjacentDirections = new ArrayList<>(DIRECTIONS.getPossibleValues().stream()
-                                    .filter(dir -> !dir.equals(nextDirection))
-                                    .filter(dir -> !dir.equals(nextDirection.getOpposite()))
-                                    .sorted(Comparator.comparingInt(Direction::get3DDataValue))
-                                    .toList());
-
-
-                            if (adjacentDirections.contains(Direction.DOWN)) {
-                                adjacentDirections.remove(Direction.DOWN);
-                                adjacentDirections.add(0, Direction.DOWN);
-                            }
-                            if (adjacentDirections.contains(Direction.UP)) {
-                                adjacentDirections.remove(Direction.UP);
-                                adjacentDirections.add(0, Direction.UP);
+                            //Verifica el siguiente del siguiente, con el MISMO criterio de preferencia que
+                            //arriba (primero arriba, luego abajo, y los lados al final).
+                            List<Direction> adjacentDirections = new ArrayList<>();
+                            for (Direction candidate : new Direction[]{Direction.UP, Direction.DOWN,
+                                    Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST}) {
+                                if (candidate != nextDirection && candidate != nextDirection.getOpposite()) {
+                                    adjacentDirections.add(candidate);
+                                }
                             }
 
                             for (Direction adjacentDirection : adjacentDirections) {

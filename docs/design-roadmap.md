@@ -613,8 +613,17 @@ el tiempo y se gasta en una lista de planos, más un `Goal` de "ir a construir" 
     precondición): ahora solo se pide que el sitio de delante esté libre, porque el puente empieza en el aire.
   - Si mirar en vertical no deja sitio para el primer bloque (p. ej. mirando al suelo que pisas), la dirección
     cae a la **horizontal** de la mirada para que el lanzamiento no falle.
-  - Al topar, la mecánica vieja hace el resto: si choca contra una pared, la regla del sólido perpendicular le
-    permite **subir por ella** (el sólido de enfrente es perpendicular a `UP`).
+  - **Orden de preferencia al topar** (lo que se cambió después de probarlo): antes la lista era
+    `[dirección actual, DOWN, UP, …]` porque se ordenaba por `Direction.get3DDataValue()` (DOWN=0) y por eso la
+    vid **se iba siempre hacia abajo** en cuanto chocaba con una pared. Ahora el orden es explícito:
+    **`[dirección actual, UP, DOWN, NORTE, SUR, OESTE, ESTE]`**, es decir **sigue recto** en la trayectoria de la
+    mirada, luego **trepa** por la pared (el sólido de enfrente es perpendicular a `UP`, así que la regla del
+    sólido perpendicular se cumple sola), después **baja** y solo como último recurso **rodea por los lados**.
+    El bloque "de más allá" (cuando el hueco contiguo está libre pero no tiene sólido perpendicular) usa el
+    **mismo criterio**.
+  - Para poder verificarlo desde fuera, cuando la vid cambia de rumbo deja un `DEBUG`
+    `[Soulvine] la vid cambia de rumbo: A -> B en P` en `run/logs/debug.log`, además del ya existente
+    `[Soulvine] el puente topo con …`.
 
 - **Fusión parásito + hongo (árbol de Naturaleza)**: el poder es **`soullichen`** (*Soullichen*, el parásito  que se pega al enemigo y lo lentece/consume) y el **hongo** (`vinefleshball`, *Parasyte mushroom*) pasó de
   ser un poder aparte a ser su **pasivo de 20 niveles** (`activeSkill = false`, `manacost` 0, `frame` "goal"):
