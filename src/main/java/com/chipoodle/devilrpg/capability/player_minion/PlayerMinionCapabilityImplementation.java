@@ -371,12 +371,12 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
     }
 
     private void sendSkillChangesToServer() {
-        PacketDistributor.sendToServer(new PlayerMinionPayload(serializeNBT(RegistryAccess.EMPTY)));
+        PacketDistributor.sendToServer(new PlayerMinionPayload(serializeNBT(RegistryAccess.EMPTY).copy()));
     }
 
     private void sendSkillChangesToClient(ServerPlayer pe) {
         PacketDistributor.sendToPlayer(pe,
-                new PlayerMinionPayload(serializeNBT(RegistryAccess.EMPTY)));
+                new PlayerMinionPayload(serializeNBT(RegistryAccess.EMPTY).copy()));
     }
 
     @Override

@@ -93,10 +93,10 @@ public class PlayerStaminaCapabilityImplementation implements PlayerStaminaCapab
     }
 
     private void sendStaminaChangesToServer() {
-        PacketDistributor.sendToServer(new PlayerStaminaPayload(serializeNBT(RegistryAccess.EMPTY)));
+        PacketDistributor.sendToServer(new PlayerStaminaPayload(serializeNBT(RegistryAccess.EMPTY).copy()));
     }
 
     private void sendStaminaChangesToClient(ServerPlayer pe) {
-        PacketDistributor.sendToPlayer(pe, new PlayerStaminaPayload(serializeNBT(RegistryAccess.EMPTY)));
+        PacketDistributor.sendToPlayer(pe, new PlayerStaminaPayload(serializeNBT(RegistryAccess.EMPTY).copy()));
     }
 }

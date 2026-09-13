@@ -162,10 +162,10 @@ public class PlayerAuxiliaryCapabilityImplementation implements PlayerAuxiliaryC
     }
 
     private void sendAuxiliaryChangesToServer() {
-        PacketDistributor.sendToServer(new PlayerAuxiliarPayload(serializeNBT(RegistryAccess.EMPTY)));
+        PacketDistributor.sendToServer(new PlayerAuxiliarPayload(serializeNBT(RegistryAccess.EMPTY).copy()));
     }
 
     private void sendAuxiliaryChangesToClient(ServerPlayer pe) {
-        PacketDistributor.sendToPlayer(pe, new PlayerAuxiliarPayload(serializeNBT(RegistryAccess.EMPTY)));
+        PacketDistributor.sendToPlayer(pe, new PlayerAuxiliarPayload(serializeNBT(RegistryAccess.EMPTY).copy()));
     }
 }

@@ -89,13 +89,13 @@ public class PlayerExperienceCapabilityImplementation implements PlayerExperienc
     }
 
     private void sendExperienceChangesToServer() {
-        PacketDistributor.sendToServer(new PlayerExperiencePayload(serializeNBT(RegistryAccess.EMPTY)));
+        PacketDistributor.sendToServer(new PlayerExperiencePayload(serializeNBT(RegistryAccess.EMPTY).copy()));
     }
 
     private void sendExperienceChangesToClient(ServerPlayer pe) {
         DevilRpg.LOGGER.info("----------> sendExperienceChangesToClient. unspentPoints: " + unspentPoints);
         PacketDistributor.sendToPlayer(pe,
-                new PlayerExperiencePayload(serializeNBT(RegistryAccess.EMPTY)));
+                new PlayerExperiencePayload(serializeNBT(RegistryAccess.EMPTY).copy()));
 
     }
 }

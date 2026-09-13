@@ -375,7 +375,7 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
                     alliesList = getAlliesListWithinAABBRange(axisalignedbb);
                     // Diagnostico: cada 80 ticks dice a cuantos alcanza y con que efectos. Asi se ve en el log si
                     // el aura sale sin efecto primario/secundario (pasivos no aplicados) o sin objetivos.
-                    DevilRpg.LOGGER.debug("[Wisp] aura: niveles={} primario={} secundario={} alcance={} aliado(s)",
+                    DevilRpg.LOGGER.debug("[Wisp] aura: niveles={} primario={} secundario={} alcance={} aliados={}",
                             niveles, primaryEffect, secondaryEffect, DISTANCIA_EFECTO, alliesList.size());
                     applyPrimaryEffect(primaryEffect, potenciaPocion, alliesList);
                     if (secondaryEffect != null) {

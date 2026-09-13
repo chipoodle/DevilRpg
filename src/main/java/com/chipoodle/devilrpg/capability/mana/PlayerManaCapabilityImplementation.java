@@ -106,11 +106,11 @@ public class PlayerManaCapabilityImplementation implements PlayerManaCapabilityI
     }
 
     private void sendManaChangesToServer() {
-        PacketDistributor.sendToServer(new PlayerManaPayload(serializeNBT(RegistryAccess.EMPTY)));
+        PacketDistributor.sendToServer(new PlayerManaPayload(serializeNBT(RegistryAccess.EMPTY).copy()));
     }
 
     private void sendManaChangesToClient(ServerPlayer pe) {
         PacketDistributor.sendToPlayer(pe,
-                new PlayerManaPayload(serializeNBT(RegistryAccess.EMPTY)));
+                new PlayerManaPayload(serializeNBT(RegistryAccess.EMPTY).copy()));
     }
 }

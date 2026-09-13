@@ -587,12 +587,12 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
     }
 
     private void sendSkillChangesToServer() {
-        PacketDistributor.sendToServer(new PlayerSkillTreePayload(serializeNBT(RegistryAccess.EMPTY)));
+        PacketDistributor.sendToServer(new PlayerSkillTreePayload(serializeNBT(RegistryAccess.EMPTY).copy()));
     }
 
     private void sendSkillChangesToClient(ServerPlayer pe) {
         PacketDistributor.sendToPlayer(pe,
-                new PlayerSkillTreePayload(serializeNBT(RegistryAccess.EMPTY)));
+                new PlayerSkillTreePayload(serializeNBT(RegistryAccess.EMPTY).copy()));
     }
 
     @Override
