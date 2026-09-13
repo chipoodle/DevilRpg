@@ -13,8 +13,10 @@ public interface PlayerExperienceCapabilityInterface extends IGenericCapability 
     void setCurrentLevel(int currentLevel, Player pe);
 
     /**
-     * Regala puntos de habilidad ya disponibles, sin pasar por subir de nivel. Son la moneda del árbol de
-     * skills, así que se usan para recompensas de misión (salvar una aldea, destruir un núcleo de guarida...).
+     * Regala puntos de habilidad ya disponibles, sin pasar por subir de nivel. Herramienta genérica (por ejemplo
+     * para pruebas o para algún regalo puntual): las <b>recompensas de misión ya NO usan esto</b>, ahora pagan
+     * <b>niveles de experiencia</b> y el punto llega por {@link #setCurrentLevel(int, Player)}
+     * (ver {@code com.chipoodle.devilrpg.util.MissionRewards}).
      */
     void addUnspentPoints(int points, Player pe);
 

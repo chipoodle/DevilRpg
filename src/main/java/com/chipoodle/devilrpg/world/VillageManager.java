@@ -9,6 +9,7 @@ import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapabilityIn
 import com.chipoodle.devilrpg.entity.AggressiveZombieEntity;
 import com.chipoodle.devilrpg.init.ModEntities;
 import com.chipoodle.devilrpg.survival.ObjectiveTargets;
+import com.chipoodle.devilrpg.util.MissionRewards;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -319,16 +320,11 @@ public final class VillageManager {
         player.addItem(new ItemStack(Items.LEATHER, 6));
         player.addItem(new ItemStack(Items.WRITTEN_BOOK)); // receta (por ahora un libro genérico)
 
+        int puntosGanados = MissionRewards.giveExperienceLevels(player, REWARD_EXPERIENCE_LEVELS);
+        String premio = MissionRewards.describe(REWARD_EXPERIENCE_LEVELS, puntosGanados);
+        player.displayClientMessage(Component.literal("La aldea te lo agradece: " + premio + "."), false);
         PlayerExperienceCapabilityInterface expCap =
                 IGenericCapability.getUnwrappedPlayerCapability(player, PlayerExperienceCapability.INSTANCE);
-        int puntosAntes = expCap != null ? expCap.getUnspentPoints() : 0;
-        // El evento de subida de nivel es síncrono, así que cuando vuelve de aquí el punto ya está sumado.
-        player.giveExperienceLevels(REWARD_EXPERIENCE_LEVELS);
-        int puntosGanados = expCap != null ? expCap.getUnspentPoints() - puntosAntes : 0;
-
-        String premio = "+" + REWARD_EXPERIENCE_LEVELS + " nivel de experiencia"
-                + (puntosGanados > 0 ? " (+" + puntosGanados + " punto de habilidad)" : "");
-        player.displayClientMessage(Component.literal("La aldea te lo agradece: " + premio + "."), false);
         DevilRpg.LOGGER.info("[Village] Aldea {} salvada: {} (quedan {} puntos)",
                 objectiveIndex, premio, expCap != null ? expCap.getUnspentPoints() : -1);
     }

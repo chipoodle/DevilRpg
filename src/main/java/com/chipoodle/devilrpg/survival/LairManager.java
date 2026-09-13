@@ -9,6 +9,7 @@ import com.chipoodle.devilrpg.entity.FrostVexEntity;
 import com.chipoodle.devilrpg.entity.SculkCultivatorEntity;
 import com.chipoodle.devilrpg.init.ModBlocks;
 import com.chipoodle.devilrpg.init.ModEntities;
+import com.chipoodle.devilrpg.util.MissionRewards;
 import com.chipoodle.devilrpg.world.LairGenerator;
 import com.chipoodle.devilrpg.world.VillageGenerator;
 import net.minecraft.ChatFormatting;
@@ -678,14 +679,13 @@ public final class LairManager {
 
     /** Datos de una guarida: centro, núcleo y estado. */
     /**
-     * Puntos de habilidad que paga destruir el núcleo de una guarida: {@code 4 + 1 por cada 3 objetivos ya
-     * superados}, con tope 10. Son la moneda del árbol de skills (1 por nivel de experiencia) y llenar todos
-     * los árboles pide nivel 300+, así que las misiones también empujan la progresión. Dan algo más que salvar
-     * una aldea ({@code VillageManager}) porque el asalto a la guarida es más duro y más largo.
+     * Niveles de experiencia que paga destruir el núcleo de una guarida. Igual que salvar una aldea
+     * ({@code VillageManager.REWARD_EXPERIENCE_LEVELS} = 1), la recompensa va EN EXPERIENCIA: subir un nivel
+     * dispara {@code PlayerXpEvent.LevelChange}, que es lo que da <b>1 punto de habilidad por nivel</b>, así que
+     * el premio sube de verdad la barra y el nivel del jugador. Aquí son <b>2</b> porque asaltar la guarida es
+     * más duro y más largo que salvar una aldea.
      */
-    private static int lairSkillPoints(int objectiveIndex) {
-        return Math.min(4 + Math.max(0, objectiveIndex) / 3, 10);
-    }
+    private static final int LAIR_REWARD_EXPERIENCE_LEVELS = 2;
 
     private static final class Lair {
         final int objectiveIndex;
@@ -721,22 +721,19 @@ public final class LairManager {
             DevilRpg.LOGGER.info("[Lair] Guarida {} limpiada en {}", objectiveIndex, corePos);
             if (player != null) {
                 player.displayClientMessage(Component.literal("¡Has destruido la guarida! El lugar queda en silencio."), false);
-                player.giveExperiencePoints(40 + objectiveIndex * 15);
                 player.addItem(new ItemStack(Items.BONE, 8));
                 player.addItem(new ItemStack(Items.SOUL_SAND, 6));
                 player.addItem(new ItemStack(Items.EMERALD, 3));
-                // Ayuda de puntos de habilidad, como al salvar una aldea; aquí algo más porque asaltar una
-                // guarida es más duro y más largo. Escala suave con el objetivo, con tope.
-                int skillPoints = lairSkillPoints(objectiveIndex);
+                // Recompensa EN EXPERIENCIA, como al salvar una aldea: los niveles traen sus puntos de
+                // habilidad por el camino normal del mod (1 por nivel). Antes se regalaban 4..10 puntos sueltos
+                // con addUnspentPoints, que no subían nada la experiencia.
+                int puntosGanados = MissionRewards.giveExperienceLevels(player, LAIR_REWARD_EXPERIENCE_LEVELS);
+                String premio = MissionRewards.describe(LAIR_REWARD_EXPERIENCE_LEVELS, puntosGanados);
+                player.displayClientMessage(Component.literal("El sculk se apaga: " + premio + "."), false);
                 PlayerExperienceCapabilityInterface expCap =
                         IGenericCapability.getUnwrappedPlayerCapability(player, PlayerExperienceCapability.INSTANCE);
-                if (expCap != null) {
-                    expCap.addUnspentPoints(skillPoints, player);
-                    player.displayClientMessage(Component.literal(
-                            "El sculk se apaga: +" + skillPoints + " puntos de habilidad."), false);
-                    DevilRpg.LOGGER.info("[Lair] Guarida {} limpiada: +{} puntos de habilidad (quedan {})",
-                            objectiveIndex, skillPoints, expCap.getUnspentPoints());
-                }
+                DevilRpg.LOGGER.info("[Lair] Guarida {} limpiada: {} (quedan {} puntos)",
+                        objectiveIndex, premio, expCap != null ? expCap.getUnspentPoints() : -1);
             }
         }
 

@@ -135,8 +135,10 @@ siguiente está implementado y probado.
   pre-generaba, no avisaba y no se podía asediar (aldeas "muertas" por el mundo). Los tres pasos son
   idempotentes (pre-generado, avisado y resuelto se guardan en `VillageSavedData`), así que llamarlo cada tick
   no repite nada.
-- **El núcleo de la guarida también paga puntos de habilidad** (`lairSkillPoints`: 4 + 1 por cada 3 objetivos,
-  tope 10): algo más que salvar una aldea porque asaltar la guarida es más duro y más largo.
+- **El núcleo de la guarida usa la misma recompensa** (`LAIR_REWARD_EXPERIENCE_LEVELS` = **2 niveles de
+  experiencia**, con su punto de habilidad cada uno): el doble que salvar una aldea porque asaltar la guarida es
+  más duro y más largo. Las dos recompensas pasan por `util/MissionRewards.giveExperienceLevels` (que devuelve
+  los puntos ganados para poder decirlo en el chat) y `MissionRewards.describe` arma el texto del premio.
 
 ### 3b.2 Generación de la aldea (`VillageGenerator`)
 
@@ -670,9 +672,13 @@ el tiempo y se gasta en una lista de planos, más un `Goal` de "ir a construir" 
   `GUARDIAN_RESPAWN_TICKS` 3 min (relevo del guardián si no rompes el núcleo), `SPAWN_INTERVAL_TICKS` 25 s,
   `ACTIVATION_RADIUS` 64, `CORE_AURA_RADIUS` 8, `CORE_FANG_TICKS` 4 s, `MIN_DISTANCE_FROM_OBJECTIVE` 75.
 
-- **Puntos de habilidad por misión**: aldea salvada = **1 nivel de experiencia** (`REWARD_EXPERIENCE_LEVELS`),
-  que trae su punto por el camino normal (antes eran `siegeSkillPoints` = 3 + índice/4, tope 8, regalados con
-  `addUnspentPoints`); núcleo de guarida destruido = `lairSkillPoints` (4 + índice/3, tope 10, todavía directos).
+- **Puntos de habilidad por misión**: se pagan **en experiencia** (`util/MissionRewards`), nunca en puntos
+  sueltos: aldea salvada = **1 nivel** (`VillageManager.REWARD_EXPERIENCE_LEVELS`) y núcleo de guarida destruido
+  = **2 niveles** (`LairManager.LAIR_REWARD_EXPERIENCE_LEVELS`). Cada nivel trae su punto de habilidad por el
+  camino normal (`PlayerXpEvent.LevelChange` → `setCurrentLevel`, 1 punto por nivel). Antes eran
+  `siegeSkillPoints` (3 + índice/4, tope 8) y `lairSkillPoints` (4 + índice/3, tope 10) regalados con
+  `addUnspentPoints`, que **no subían nada la experiencia**; también se quitaron los `giveExperiencePoints`
+  sueltos (50 en la aldea, 40 + 15·índice en la guarida) para que el premio sea exactamente los niveles dados.
 
 - **Bola de fuego del zombi agresivo (`FireballAttackGoal`)**: dispara solo entre **3 y 16 bloques** y con
   **línea de visión**; si no puede, reintenta cada **20 ticks** (1 s) en vez de esperar los 240 completos.
