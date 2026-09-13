@@ -7,6 +7,8 @@ import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
+import com.chipoodle.devilrpg.capability.tamable_minion.TamableMinionCapability;
+import com.chipoodle.devilrpg.capability.tamable_minion.TamableMinionCapabilityInterface;
 import com.chipoodle.devilrpg.entity.ITamableEntity;
 import com.chipoodle.devilrpg.entity.SoulBear;
 import com.chipoodle.devilrpg.entity.SoulWisp;
@@ -882,6 +884,7 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
                 DevilRpg.LOGGER.info("[Minion] {} no tenia dueno guardado (NBT antiguo): se lo reasigno a {}",
                         minion.getEntity() != null ? minion.getEntity().getUUID() : "(minion)", player.getName().getString());
             }
+            boolean conocido = true;
             if (minion instanceof SoulWolf wolf) {
                 wolf.updateLevel(player);
             } else if (minion instanceof SoulWispHealth wisp) {
@@ -893,13 +896,27 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
             } else if (minion instanceof SoulBear bear) {
                 bear.updateLevel(player);
             } else {
-                return;
+                conocido = false;
             }
-            DevilRpg.LOGGER.info("[Minion] {} reescalado con tus puntos de habilidad (aura del wisp reaplicada)",
-                    minion.getEntity() != null ? minion.getEntity().getUUID() : "(minion)");
+            // LOS PASIVOS, SIEMPRE DESPUES de updateLevel, y por dos motivos:
+            //  1) Los aplica onApplyPetPassives en EntityJoinLevelEvent: en un minion ADOPTADO (cargado del
+            //     trozo) eso pasa ANTES de que entres al mundo, con getOwner() == null, asi que
+            //     MinionPassiveAttributes sale por donde vino y el minion se queda SIN NINGUN pasivo.
+            //  2) updateLevel deja efectoSecundario = null, y es el pasivo (WISP_REGENERATION) el que pone el
+            //     efecto SECUNDARIO: si se aplican antes, la regeneracion del wisp se pierde.
+            // Reaplicarlos es idempotente: applyPassives quita el modificador anterior por id antes de ponerlo.
+            TamableMinionCapabilityInterface pasivos =
+                    IGenericCapability.getUnwrappedMinionCapability(minion, TamableMinionCapability.INSTANCE);
+            if (pasivos != null) {
+                pasivos.applyPassives(minion);
+            }
+            if (conocido) {
+                DevilRpg.LOGGER.info("[Minion] {} nivel de invocacion y pasivos reaplicados (aura y regeneracion del wisp)",
+                        minion.getEntity() != null ? minion.getEntity().getUUID() : "(minion)");
+            }
         } catch (Exception e) {
             // Nunca dejar que esto tumbe la restauracion (ni el evento de entrada al mundo).
-            DevilRpg.LOGGER.error("[Minion] no pude reaplicar el nivel de invocacion a un minion adoptado", e);
+            DevilRpg.LOGGER.error("[Minion] no pude reaplicar nivel/pasivos a un minion recuperado", e);
         }
     }
 
