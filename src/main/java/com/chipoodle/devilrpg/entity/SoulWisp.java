@@ -152,7 +152,9 @@ public abstract class SoulWisp extends TamableAnimal implements ITamableEntity, 
 
     public void updateLevel(Player owner, Holder<MobEffect> efectoPrimario, Holder<MobEffect> efectoSecundario, SkillEnum wispType, boolean esBeneficioso) {
         tame(owner);
-        PlayerSkillCapabilityInterface skill = Objects.requireNonNull(getOwner()).getData(PlayerSkillCapability.INSTANCE);
+        // Usar el `owner` que nos pasan, NO getOwner(): durante el evento de entrada al mundo el jugador todavia
+        // no esta registrado en el nivel, getOwner() es null y el requireNonNull petaba (te echaba de la partida).
+        PlayerSkillCapabilityInterface skill = owner.getData(PlayerSkillCapability.INSTANCE);
         this.efectoPrimario = efectoPrimario;
         this.efectoSecundario = efectoSecundario;
         this.esBeneficioso = esBeneficioso;

@@ -380,8 +380,15 @@ public class PlayerCapabilityForgeEventSubscriber {
             // 1) Devuelve los minions guardados (adoptando los que sigan por el mundo y recreando los que ya
             //    no estén). 2) Y trae los que sigan VIVOS en el mundo sin copia guardada: es el caso de un
             //    corte de luz y también el de partidas anteriores a este cambio.
-            minionCap.restoreStoredMinions(player);
-            minionCap.bringMinionsToPlayer(player);
+            // ENVUELTO EN try/catch A PROPÓSITO: esto corre dentro del evento de entrada al mundo y, si algo
+            // peta aquí, el servidor NO te deja entrar ("Couldn't place player in world" / "Invalid player
+            // data"). Un problema con un minion nunca debe impedirte jugar. Paso el 12-sep-2026 con un NPE.
+            try {
+                minionCap.restoreStoredMinions(player);
+                minionCap.bringMinionsToPlayer(player);
+            } catch (Exception e) {
+                DevilRpg.LOGGER.error("[Minion] error restaurando minions al entrar (sigo, para que puedas jugar)", e);
+            }
         }
     }
 

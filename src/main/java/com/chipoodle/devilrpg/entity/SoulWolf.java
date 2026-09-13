@@ -104,7 +104,9 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
 
     public void updateLevel(Player owner) {
         tame(owner);
-        PlayerSkillCapabilityInterface skill = IGenericCapability.getUnwrappedPlayerCapability((Player) getOwner(), PlayerSkillCapability.INSTANCE);
+        // Usar el `owner` que nos pasan, NO getOwner(): durante el evento de entrada al mundo el jugador todavia
+        // no esta registrado en el nivel, getOwner() devuelve null y esto petaba (y te echaba de la partida).
+        PlayerSkillCapabilityInterface skill = IGenericCapability.getUnwrappedPlayerCapability(owner, PlayerSkillCapability.INSTANCE);
         if (skill != null) {
             this.puntosAsignados = skill.getSkillsPoints().get(SkillEnum.SUMMON_SOUL_WOLF);
             saludMaxima = this.puntosAsignados + INITIAL_HEALTH;

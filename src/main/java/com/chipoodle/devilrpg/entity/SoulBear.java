@@ -187,7 +187,7 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
             if (mountPoint != null) this.setMountBear(mountPoint);
             if (warPoint != null) this.setWarBear(warPoint);
 
-            PlayerMinionCapabilityInterface minion = IGenericCapability.getUnwrappedPlayerCapability((Player) getOwner(), PlayerMinionCapability.INSTANCE);
+            PlayerMinionCapabilityInterface minion = IGenericCapability.getUnwrappedPlayerCapability(owner, PlayerMinionCapability.INSTANCE);
             CompoundTag soulBearInventory = minion.getSoulBearInventory();
 
             if (soulBearInventory == null) {

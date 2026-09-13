@@ -813,6 +813,9 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
                     minion.tame(player);
                     entity.moveTo(player.getX(), player.getY(), player.getZ(), player.getYRot(), 0.0F);
                     level.addFreshEntity(entity);
+                    // Tambien al RECREAR: el escalado por puntos y el aura del wisp no vienen en el NBT, asi que
+                    // sin esto un minion recreado tampoco daba su aura (solo funcionaba al invocarlo de nuevo).
+                    prepareAdoptedMinion(minion, player);
                     return minion;
                 })
                 .orElse(null);
@@ -873,26 +876,31 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
      * {@code Objects.requireNonNull(getOwner())} y {@code SoulWolf.updateLevel} lee los puntos del dueño.
      */
     private void prepareAdoptedMinion(ITamableEntity minion, Player player) {
-        if (minion.getOwnerUUID() == null || !minion.isTame()) {
-            minion.tame(player);
-            DevilRpg.LOGGER.info("[Minion] {} no tenia dueno guardado (NBT antiguo): se lo reasigno a {}",
-                    minion.getEntity() != null ? minion.getEntity().getUUID() : "(minion)", player.getName().getString());
+        try {
+            if (minion.getOwnerUUID() == null || !minion.isTame()) {
+                minion.tame(player);
+                DevilRpg.LOGGER.info("[Minion] {} no tenia dueno guardado (NBT antiguo): se lo reasigno a {}",
+                        minion.getEntity() != null ? minion.getEntity().getUUID() : "(minion)", player.getName().getString());
+            }
+            if (minion instanceof SoulWolf wolf) {
+                wolf.updateLevel(player);
+            } else if (minion instanceof SoulWispHealth wisp) {
+                wisp.updateLevel(player);
+            } else if (minion instanceof SoulWispArcher wisp) {
+                wisp.updateLevel(player);
+            } else if (minion instanceof SoulWispRanger wisp) {
+                wisp.updateLevel(player);
+            } else if (minion instanceof SoulBear bear) {
+                bear.updateLevel(player);
+            } else {
+                return;
+            }
+            DevilRpg.LOGGER.info("[Minion] {} reescalado con tus puntos de habilidad (aura del wisp reaplicada)",
+                    minion.getEntity() != null ? minion.getEntity().getUUID() : "(minion)");
+        } catch (Exception e) {
+            // Nunca dejar que esto tumbe la restauracion (ni el evento de entrada al mundo).
+            DevilRpg.LOGGER.error("[Minion] no pude reaplicar el nivel de invocacion a un minion adoptado", e);
         }
-        if (minion instanceof SoulWolf wolf) {
-            wolf.updateLevel(player);
-        } else if (minion instanceof SoulWispHealth wisp) {
-            wisp.updateLevel(player);
-        } else if (minion instanceof SoulWispArcher wisp) {
-            wisp.updateLevel(player);
-        } else if (minion instanceof SoulWispRanger wisp) {
-            wisp.updateLevel(player);
-        } else if (minion instanceof SoulBear bear) {
-            bear.updateLevel(player);
-        } else {
-            return;
-        }
-        DevilRpg.LOGGER.info("[Minion] {} reescalado con tus puntos de habilidad (aura del wisp reaplicada)",
-                minion.getEntity() != null ? minion.getEntity().getUUID() : "(minion)");
     }
 
     /** Trae un minion al lado del jugador, cambiándolo de dimensión si está en otra. */
