@@ -166,11 +166,13 @@ siguiente está implementado y probado.
     plantilla no los deje emparedados. *(Esto se añadió porque el jugador entró a una aldea vieja, con cabañas
     procedurales y medio enterradas, y con razón lo reportó como que "todo estaba roto": no era una regresión del
     código nuevo, era que la migración no cubría las casas.)*
-- **Nivelado al terreno de ALREDEDOR y suelo a ras**: la huella de cada construcción se nivela a la
-  **mediana del anillo de terreno que la rodea** (`nivelDeAlrededores`, margen 4), no a su propia huella: con la
-  mediana propia, si el solar venía alto (p. ej. el zócalo de tierra que dejaba la cabaña vieja) la casa quedaba
-  **subida encima**. Y el **suelo de la plantilla va en el bloque de superficie** (`origen.y = nivel - 1`), no en el
-  aire de encima: con `nivel` la casa salía **un bloque más alta** que el patio (reportado en juego). Se recorta el
+- **Nivelado al patio INMEDIATO (mínimo) y suelo a ras**: la huella de cada construcción se nivela al
+  **mínimo del anillo de terreno pegado a ella** (`nivelDeAlrededores`, margen 2 y **mínimo**, no mediana). Con la
+  mediana de un anillo ancho (4 bloques) y el terreno de la aldea en pendiente, la referencia caía **1 bloque por
+  encima** del patio y la casa subía a un relleno; se **midió en el guardado del jugador**: las **6 puertas** de la
+  aldea a Y=72..74 con el bloque de fuera a 71..73. Con el mínimo la construcción queda **a ras o algo metida** en
+  el lado alto del terreno, **nunca por encima**. Y el **suelo de la plantilla va en el bloque de superficie**
+  (`origen.y = nivel - 1`), no en el aire de encima (con `nivel` la casa salía otro bloque más alta). Se recorta el
   terreno que sobra —solo si es natural— y se rellena con tierra lo que falta. Además, `escalonDeEntrada` pone
   escaleras de roble delante de la puerta si el suelo de fuera quedó más bajo que el piso. La misma nivelación usa
   la granja (que ya ponía agua y tierra en la capa de superficie, por eso esa sí se veía bien).
