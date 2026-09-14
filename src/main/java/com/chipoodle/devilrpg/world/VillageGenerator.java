@@ -47,6 +47,11 @@ public final class VillageGenerator {
     /** Radio de la valla (un 30% más grande que antes). */
     public static final int FENCE_RADIUS = 29;
 
+    /** Esquinas de las parcelas de la granja (relativas al centro) y tamaño de cada parcela. */
+    private static final int[][] FARM_PLOTS = {{-16, 8}, {8, 6}};
+    private static final int PLOT_WIDTH = 9;
+    private static final int PLOT_DEPTH = 5;
+
     /**
      * Radio del área que se nivela alrededor del centro (todo hasta donde empieza la valla, para que no
      * queden huecos ni abismos entre la zona nivelada y la valla).
@@ -240,15 +245,19 @@ public final class VillageGenerator {
     private static void torches(ServerLevel level, BlockPos center) {
         int[][] spots = {
                 {8, 0, -8},
-                {-9, 0, 8},
                 {0, 0, -15},
-                {12, 0, 6},
+                {12, 0, 12},
                 {-13, 0, -6},
                 {5, 0, 14},
                 {0, 0, 15},
-                {-16, 0, 5},
+                {-19, 0, 8},
         };
         for (int[] s : spots) {
+            // NUNCA dentro de la granja: antes había un farol plantado en medio del trigo (visto en juego).
+            if (insideFarm(s[0], s[2])) {
+                DevilRpg.LOGGER.debug("[Village] farol en ({}, {}) omitido: cae dentro de la granja", s[0], s[2]);
+                continue;
+            }
             BlockPos spot = center.offset(s[0], 0, s[2]);
             int y = groundY(level, spot.getX(), spot.getZ());
             // Poste de valla (2 bloques) y lanterna encima.
@@ -842,18 +851,41 @@ public final class VillageGenerator {
      * produzca la <b>comida</b> que luego se come (ver {@code VillageManager}).
      */
     private static void farm(ServerLevel level, BlockPos center) {
-        plot(level, center.offset(-16, 0, 8));
-        plot(level, center.offset(8, 0, 6));
+        for (int[] plot : FARM_PLOTS) {
+            plot(level, center.offset(plot[0], 0, plot[1]));
+        }
+    }
+
+    /**
+     * ¿Esa posición (relativa al centro de la aldea) cae dentro de alguna parcela de la granja? Se usa para no
+     * plantar faroles encima de los cultivos. Lleva 1 bloque de margen para que el poste no roce la parcela.
+     */
+    private static boolean insideFarm(int x, int z) {
+        for (int[] plot : FARM_PLOTS) {
+            if (x >= plot[0] - 1 && x <= plot[0] + PLOT_WIDTH
+                    && z >= plot[1] - 1 && z <= plot[1] + PLOT_DEPTH) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Parcela de 9x5: cuatro filas de cultivos, acequia de agua en medio y compostador al lado. */
     private static void plot(ServerLevel level, BlockPos corner) {
         Block[] plants = {Blocks.WHEAT, Blocks.CARROTS, Blocks.POTATOES};
-        for (int dx = 0; dx < 9; dx++) {
-            for (int dz = 0; dz < 5; dz++) {
+        for (int dx = 0; dx < PLOT_WIDTH; dx++) {
+            for (int dz = 0; dz < PLOT_DEPTH; dz++) {
                 int x = corner.getX() + dx;
                 int z = corner.getZ() + dz;
                 int y = groundY(level, x, z);
+                // Despejar la columna de la parcela (3 bloques): así se lleva por delante cualquier poste de
+                // farol que hubiera caído aquí, que dejaba la lanterna flotando en medio del trigo.
+                for (int dy = 1; dy <= 3; dy++) {
+                    BlockPos arriba = new BlockPos(x, y + dy, z);
+                    if (!level.getBlockState(arriba).isAir()) {
+                        level.setBlock(arriba, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+                    }
+                }
                 if (dz == 2) {
                     // Acequia central: el agua va a ras de suelo y riega las cuatro filas.
                     level.setBlock(new BlockPos(x, y - 1, z), Blocks.WATER.defaultBlockState(), Block.UPDATE_ALL);

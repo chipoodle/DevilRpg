@@ -499,7 +499,11 @@ con su premio y su estado guardado. Lo implementado:
     `VILLAGE_POLL_TICKS` = 10 s, solo en aldeas **en paz** con aldeanos vivos):
     - **Cultivan**: el generador planta **dos parcelas** de 9×5 (trigo, zanahorias y patatas, acequia central y
       compostador) — `VillageGenerator.farm`. Así el aldeano granjero (que ya sabe cosechar en vanilla) tiene
-      faena y la aldea produce comida.
+      faena y la aldea produce comida. Las parcelas viven en `FARM_PLOTS` (esquina relativa al centro) con
+      `PLOT_WIDTH`/`PLOT_DEPTH`, y los **faroles nunca se plantan dentro** (`insideFarm`, con 1 bloque de
+      margen): antes había un poste con lanterna en medio del trigo (visto en juego). Además, al plantar una
+      parcela se **despeja su columna** (3 bloques), así que un farol viejo que hubiera caído ahí desaparece en
+      la siguiente reparación.
     - **Comen**: la granja suma `FARM_YIELD` = 4 por latido y cada aldeano come 1 (`FOOD_PER_VILLAGER`), con
       despensa tope de 64. Sin comida la aldea **pasa hambre y no crece** (queda en el log).
     - **Reparan**: una aldea **sana** (3 aldeanos) y en paz vuelve a levantar caminos, cabañas, faroles, granja y
