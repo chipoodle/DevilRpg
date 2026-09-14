@@ -260,8 +260,16 @@ plantillas `StructureTemplate` de vanilla (`village/plains/houses/...`) cargadas
 `Optional`) y colocadas con `template.placeInWorld(level, origen, origen, new StructurePlaceSettings(), random,
 Block.UPDATE_CLIENTS)`. Como se colocan a mano y **no** pasa el algoritmo de jigsaw, hay que limpiar los bloques
 **técnicos** que traen las plantillas (`minecraft:jigsaw` —el "conector" con el que el juego encaja las piezas—
-y `minecraft:structure_void` —celda "no toques esto"—): se sustituyen por un bloque vecino real
-(`rellenoParaTecnico`) para que no quede, por ejemplo, un agujero de 1×1 en el suelo de la casa.
+y `minecraft:structure_void` —celda "no toques esto"—). Se resuelven con el dato del **propio juego**
+(`bloqueTecnicoFinal`): se lee el `final_state` del `JigsawBlockEntity` y se coloca ese estado, que es justo lo
+que vanilla pondría al conectar la pieza. Detalle de 1.21: `JigsawBlockEntity.getFinalState()` devuelve el
+**texto** del estado (`"minecraft:oak_planks"`), no un `BlockState`, así que se parsea con
+`BlockStateParser.parseForBlock(level.holderLookup(Registries.BLOCK), texto, false).blockState()`. Si el
+`final_state` es aire (o es un `structure_void`), se copia un bloque vecino real (`rellenoParaTecnico`) para no
+dejar un agujero. Ejemplo real de `plains_small_house_1`: su jigsaw de entrada
+(`name=minecraft:building_entrance`, pool `village/plains/streets`, `final_state=oak_stairs[facing=east,…]`) se
+convierte en el **escalón de la entrada**, y el de `name=minecraft:bottom` (pool `village/plains/villagers`,
+`final_state=oak_planks`) en una **tabla del suelo**.
 
 ---
 

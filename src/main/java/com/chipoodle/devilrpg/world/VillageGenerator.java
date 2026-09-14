@@ -1,9 +1,12 @@
 package com.chipoodle.devilrpg.world;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import net.minecraft.commands.arguments.blocks.BlockStateParser;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BlockTags;
@@ -24,6 +27,7 @@ import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.GrowingPlantBlock;
 import net.minecraft.world.level.block.RotatedPillarBlock;
 import net.minecraft.world.level.block.StairBlock;
+import net.minecraft.world.level.block.entity.JigsawBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.level.block.state.properties.BedPart;
@@ -402,9 +406,9 @@ public final class VillageGenerator {
                     BlockPos p = origen.offset(dx, dy, dz);
                     BlockState state = level.getBlockState(p);
                     if (state.is(Blocks.JIGSAW) || state.is(Blocks.STRUCTURE_VOID)) {
-                        // Bloque técnico de la plantilla (el "conector" de la aldea de vanilla): se rellena con
-                        // algo de al lado para no dejar un agujero, sobre todo cuando cae en el suelo.
-                        level.setBlock(p, rellenoParaTecnico(level, p), Block.UPDATE_CLIENTS);
+                        // Bloque técnico de la plantilla: se sustituye por lo que el propio juego declara para
+                        // ese enchufe (ver bloqueTecnicoFinal).
+                        level.setBlock(p, bloqueTecnicoFinal(level, p), Block.UPDATE_CLIENTS);
                         continue;
                     }
                     if (state.getBlock() instanceof DoorBlock
@@ -425,9 +429,40 @@ public final class VillageGenerator {
     }
 
     /**
-     * Con qué rellenar un bloque técnico de una plantilla ({@code jigsaw}/{@code structure_void}): se copia un
-     * vecino que sí sea un bloque de verdad, mirando primero los lados (el suelo o la pared que lo rodea) y
-     * después arriba y abajo. Si no hubiera ninguno, se deja aire.
+     * Con qué sustituir un bloque técnico de una plantilla una vez colocada a mano.
+     * <p>
+     * Lo <b>correcto</b> es lo que declara el propio juego: los {@code minecraft:jigsaw} son los "enchufes" con
+     * los que vanilla encaja las piezas de la aldea, y cada uno guarda un <b>{@code final_state}</b>: el bloque
+     * que el juego pondría en esa celda al hacer la conexión (el del camino, por ejemplo, o aire). Se usa ese,
+     * parseándolo con {@link BlockStateParser} porque en 1.21 {@link JigsawBlockEntity#getFinalState()} devuelve
+     * el texto del estado, no un {@code BlockState} (el estado puede referirse a bloques aún no cargados).
+     * Si el {@code final_state} es aire —o si es un {@code structure_void}, que no tiene enchufe— se copia un
+     * vecino real para no dejar un agujero (típicamente en el suelo de la casa).
+     */
+    private static BlockState bloqueTecnicoFinal(ServerLevel level, BlockPos pos) {
+        if (level.getBlockEntity(pos) instanceof JigsawBlockEntity jigsaw) {
+            String texto = jigsaw.getFinalState();
+            if (texto != null && !texto.isBlank()) {
+                try {
+                    BlockState finalState = BlockStateParser
+                            .parseForBlock(level.holderLookup(Registries.BLOCK), texto, false)
+                            .blockState();
+                    if (!finalState.isAir()) {
+                        return finalState;
+                    }
+                } catch (CommandSyntaxException e) {
+                    DevilRpg.LOGGER.warn("[Village] final_state ilegible '{}' en {}: se rellena con un vecino",
+                            texto, pos);
+                }
+            }
+        }
+        return rellenoParaTecnico(level, pos);
+    }
+
+    /**
+     * Último recurso para un bloque técnico sin {@code final_state}: se copia un vecino que sí sea un bloque de
+     * verdad, mirando primero los lados (el suelo o la pared que lo rodea) y después arriba y abajo. Si no
+     * hubiera ninguno, se deja aire.
      */
     private static BlockState rellenoParaTecnico(ServerLevel level, BlockPos pos) {
         Direction[] orden = {Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST,
