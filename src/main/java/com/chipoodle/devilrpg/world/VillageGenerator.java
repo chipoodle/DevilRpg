@@ -172,6 +172,9 @@ public final class VillageGenerator {
 
         // --- A partir de aquí se GRABA el plano canónico (solo estructuras, no terreno) ---
         iniciarGrabacion();
+        // COTA DE LA ALDEA: todo se coloca a este nivel (el suelo llano del pueblo), así no hay zanjas ni casas
+        // hundidas por nivelar cada construcción por su cuenta.
+        int nivelVilla = nivelDeLaAldea(level, center);
         // Posiciones de las casas (base). Desde la Iteración 3 refinada son CASAS DE VERDAD, plantillas del
         // propio juego (ver placeVanillaHouse), no cabañas procedurales.
         BlockPos h0 = center.offset(-17, 0, -3);
@@ -183,11 +186,11 @@ public final class VillageGenerator {
         // sitio de la vieja torre va la IGLESIA del juego.
         RandomSource casas = RandomSource.create(center.asLong());
         BlockPos[] puertas = new BlockPos[5];
-        puertas[0] = placeVanillaHouse(level, h0, casaAleatoria(casas));
-        puertas[1] = placeVanillaHouse(level, h1, casaAleatoria(casas));
-        puertas[2] = placeVanillaHouse(level, h2, casaAleatoria(casas));
-        puertas[3] = placeVanillaHouse(level, center.offset(10, 0, -18), casaGrandeAleatoria(casas));
-        puertas[4] = placeVanillaHouse(level, baseDeIglesia(center), iglesiaAleatoria(casas));
+        puertas[0] = placeVanillaHouse(level, h0, casaAleatoria(casas), nivelVilla);
+        puertas[1] = placeVanillaHouse(level, h1, casaAleatoria(casas), nivelVilla);
+        puertas[2] = placeVanillaHouse(level, h2, casaAleatoria(casas), nivelVilla);
+        puertas[3] = placeVanillaHouse(level, center.offset(10, 0, -18), casaGrandeAleatoria(casas), nivelVilla);
+        puertas[4] = placeVanillaHouse(level, baseDeIglesia(center), iglesiaAleatoria(casas), nivelVilla);
 
         // Caminos DESPUÉS, del centro a la puerta de cada construcción (ya se sabe dónde está).
         paths(level, center, puertas);
@@ -287,11 +290,10 @@ public final class VillageGenerator {
      * suelo de su barrio</b>. Se <b>recorta</b> el terreno que sobra (solo si es natural, nunca lo que hayas
      * construido tú) y se <b>rellena</b> con tierra lo que falta.
      */
-    private static int nivelarHuella(ServerLevel level, BlockPos base, int anchoX, int anchoZ) {
-        int nivel = nivelDeAlrededores(level, base, anchoX, anchoZ);
-        // Se allana la huella MÁS una terraza alrededor (MARGEN_TERRAZA): si solo se allanara la huella, el patio
-        // de al lado seguiría con su pendiente y la casa parecería hundida por un lado (visto en juego). Con la
-        // terraza, la casa y su patio quedan a ras, y el escalón de entrada cubre cualquier desnivel que quede.
+    private static int nivelarHuella(ServerLevel level, BlockPos base, int anchoX, int anchoZ, int nivel) {
+        // Se allana la huella MÁS una terraza alrededor (MARGEN_TERRAZA) a la COTA DE LA ALDEA que nos pasan: al no
+        // calcular un nivel propio, la casa no puede quedar ni más alta ni más baja que el suelo del pueblo, así que
+        // no aparecen zanjas (que era lo que pasaba al nivelar cada casa por su cuenta).
         for (int dx = -MARGEN_TERRAZA; dx < anchoX + MARGEN_TERRAZA; dx++) {
             for (int dz = -MARGEN_TERRAZA; dz < anchoZ + MARGEN_TERRAZA; dz++) {
                 int x = base.getX() + dx;
@@ -374,6 +376,9 @@ public final class VillageGenerator {
         BlockPos[] bases = basesDeCasas(center);
         BlockPos[] puertas = new BlockPos[bases.length];
         RandomSource casas = RandomSource.create(center.asLong());
+        // Se vuelve a allanar TODO el terreno de la aldea a una sola cota (protegiendo lo que no sea natural) y las
+        // casas se colocan a esa cota: así desaparecen las zanjas y los hundimientos de las aldeas ya construidas.
+        int nivelVilla = levelTerrain(level, center, LEVEL_RADIUS);
         for (int i = 0; i < bases.length; i++) {
             BlockPos base = bases[i];
             // SEGURIDAD: si hay aldeanos o golems dentro de la casa que se va a rehacer, se les saca a la plaza
@@ -393,7 +398,7 @@ public final class VillageGenerator {
                 }
             }
             puertas[i] = placeVanillaHouse(level, base,
-                    i == bases.length - 1 ? casaGrandeAleatoria(casas) : casaAleatoria(casas));
+                    i == bases.length - 1 ? casaGrandeAleatoria(casas) : casaAleatoria(casas), nivelVilla);
         }
         paths(level, center, puertas);
         DevilRpg.LOGGER.info("[Village] Aldea vieja en {}: cabañas sustituidas por casas del juego", center);
@@ -479,7 +484,8 @@ public final class VillageGenerator {
                 }
             }
         }
-        placeVanillaHouse(level, base, iglesiaAleatoria(RandomSource.create(center.asLong())));
+        placeVanillaHouse(level, base, iglesiaAleatoria(RandomSource.create(center.asLong())),
+                nivelDeLaAldea(level, center));
         DevilRpg.LOGGER.info("[Village] Aldea en {}: torre de vigilancia sustituida por una iglesia", center);
     }
 
@@ -716,7 +722,7 @@ public final class VillageGenerator {
      * traen las plantillas (<code>jigsaw</code> y <code>structure_void</code>) y, si la casa no trae cama, se le
      * pone una: los aldeanos necesitan cama para criar.
      */
-    private static BlockPos placeVanillaHouse(ServerLevel level, BlockPos base, String id) {
+    private static BlockPos placeVanillaHouse(ServerLevel level, BlockPos base, String id, int nivel) {
         // OJO: en 1.21 getOrCreate devuelve la plantilla directamente (no un Optional).
         StructureTemplate template = level.getStructureManager()
                 .getOrCreate(ResourceLocation.withDefaultNamespace(id));
@@ -726,11 +732,10 @@ public final class VillageGenerator {
             return base.offset(0, 0, -2);
         }
         Vec3i tam = template.getSize();
-        // Nivel de la casa = la mediana del terreno que la RODEA (ver nivelarHuella). El suelo de la plantilla
-        // (su capa y=0) va en `nivel - 1`: así sustituye al bloque de superficie del patio y el piso queda A RAS
-        // del suelo de fuera. Antes se ponía en `nivel`, que es el AIRE sobre el patio, y la casa salía un bloque
-        // más alta que el terreno (reportado en juego).
-        int nivel = nivelarHuella(level, base, tam.getX(), tam.getZ());
+        // La casa se nivela a la COTA DE LA ALDEA que nos pasan (no a un nivel propio: eso era lo que dejaba zanjas
+        // y casas hundidas). El suelo de la plantilla (su capa y=0) va en `nivel - 1`, es decir en el bloque de
+        // superficie del pueblo, así el piso queda A RAS del suelo.
+        nivelarHuella(level, base, tam.getX(), tam.getZ(), nivel);
         BlockPos origen = new BlockPos(base.getX(), nivel - 1, base.getZ());
         // 1) Solar limpio: fuera todo lo que haya en la huella de la casa (y 4 bloques por encima del tejado).
         for (int dx = 0; dx < tam.getX(); dx++) {
@@ -974,11 +979,14 @@ public final class VillageGenerator {
     }
 
     /**
-     * Nivela el terreno del área de la aldea: toma la altura base (mediana de las alturas de suelo), rellena
-     * con tierra las columnas que estén por debajo y recorta las que estén por encima, dejando toda el área
-     * (hasta donde empieza la valla) al mismo nivel para que no queden abismos ni desniveles.
+     * Nivela el terreno del área de la aldea a <b>UNA sola cota</b> (la mediana del área) y devuelve esa cota: todas
+     * las construcciones se colocan luego a ese nivel, así <b>no hay zanjas ni casas hundidas</b> (que es lo que
+     * pasaba cuando cada casa se nivelaba por su cuenta).
+     * <p>
+     * Se rellena con tierra lo que esté por debajo y se recorta lo que sobresalga, <b>solo si es terreno natural</b>:
+     * así se puede volver a llamar en una aldea ya construida (migración) sin cargarse lo que haya puesto el jugador.
      */
-    private static void levelTerrain(ServerLevel level, BlockPos center, int radius) {
+    public static int levelTerrain(ServerLevel level, BlockPos center, int radius) {
         List<Integer> heights = new ArrayList<>();
         for (int x = -radius; x <= radius; x++) {
             for (int z = -radius; z <= radius; z++) {
@@ -990,22 +998,32 @@ public final class VillageGenerator {
 
         for (int x = -radius; x <= radius; x++) {
             for (int z = -radius; z <= radius; z++) {
+                BlockPos columna = new BlockPos(center.getX() + x, 0, center.getZ() + z);
                 int g = groundY(level, center.getX() + x, center.getZ() + z);
                 // Rellenar las columnas que estén por debajo del nivel base.
                 for (int y = g; y < baseY; y++) {
-                    colocar(level, new BlockPos(center.getX() + x, y, center.getZ() + z), Blocks.DIRT.defaultBlockState(), 3);
+                    colocar(level, columna.atY(y), Blocks.DIRT.defaultBlockState(), 3);
                 }
-                // Recortar las columnas que sobresalgan por encima del nivel base.
-                for (int y = baseY + 1; y < g; y++) {
-                    colocar(level, new BlockPos(center.getX() + x, y, center.getZ() + z), Blocks.AIR.defaultBlockState(), 3);
+                // Recortar las columnas que sobresalgan por encima del nivel base (solo terreno natural).
+                for (int y = baseY; y < g; y++) {
+                    if (esTerrenoNatural(level.getBlockState(columna.atY(y)))) {
+                        colocar(level, columna.atY(y), Blocks.AIR.defaultBlockState(), 3);
+                    }
                 }
-                // Asegurar la capa superficial al nivel base.
-                colocar(level, new BlockPos(center.getX() + x, baseY - 1, center.getZ() + z), Blocks.DIRT.defaultBlockState(), 3);
             }
         }
         // Talud exterior: una pendiente escalonada en el borde para que la aldea parezca una MESETA natural
         // (como el terreno vanilla) en vez de un cubo de paredes verticales.
         addOuterSlope(level, center, radius, baseY);
+        return baseY;
+    }
+
+    /**
+     * La cota a la que está el suelo llano de la aldea: se mira el anillo que rodea al centro (a 3-6 bloques),
+     * que cae dentro del área nivelada. Es el nivel al que se colocan <b>todas</b> las construcciones.
+     */
+    public static int nivelDeLaAldea(ServerLevel level, BlockPos center) {
+        return nivelDeAlrededores(level, center.offset(-3, 0, -3), 6, 6);
     }
 
     /**
@@ -1502,8 +1520,13 @@ public final class VillageGenerator {
      * produzca la <b>comida</b> que luego se come (ver {@code VillageManager}).
      */
     public static void farm(ServerLevel level, BlockPos center) {
+        farm(level, center, nivelDeLaAldea(level, center));
+    }
+
+    /** Igual, pero a la cota que le digan (la de la aldea, para que la huerta quede al mismo nivel que el resto). */
+    public static void farm(ServerLevel level, BlockPos center, int nivel) {
         for (int[] plot : FARM_PLOTS) {
-            plot(level, center.offset(plot[0], 0, plot[1]));
+            plot(level, center.offset(plot[0], 0, plot[1]), nivel);
         }
     }
 
@@ -1531,12 +1554,11 @@ public final class VillageGenerator {
      * ({@code FarmBlock.isNearWater}), el trigo se <b>secaba</b> (visto en juego). Ahora el agua y la tierra de
      * cultivo van a la <b>misma altura</b> y las columnas bajas se rellenan de tierra hasta ese nivel.
      */
-    private static void plot(ServerLevel level, BlockPos corner) {
+    private static void plot(ServerLevel level, BlockPos corner, int nivel) {
         Block[] plants = {Blocks.WHEAT, Blocks.CARROTS, Blocks.POTATOES};
-        // 1) La parcela se nivela a un solo nivel (la mediana de sus columnas, ver nivelarHuella): si cada
-        // columna usara su propio groundY, la acequia quedaba un bloque por debajo de la tierra de cultivo y el
-        // trigo se secaba (la tierra solo se hidrata con agua a su nivel o uno por encima).
-        int base = nivelarHuella(level, corner, PLOT_WIDTH, PLOT_DEPTH);
+        // 1) La parcela se nivela a LA COTA DE LA ALDEA (la que nos pasan): agua y tierra de cultivo a la misma
+        // altura que el resto del pueblo, así ni se seca ni queda en un hoyo.
+        int base = nivelarHuella(level, corner, PLOT_WIDTH, PLOT_DEPTH, nivel);
         for (int dx = 0; dx < PLOT_WIDTH; dx++) {
             for (int dz = 0; dz < PLOT_DEPTH; dz++) {
                 int x = corner.getX() + dx;
