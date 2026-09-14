@@ -537,11 +537,19 @@ con su premio y su estado guardado. Lo implementado:
     - **Reparan un aldeano obrero, andando y bloque a bloque** (`VillagerRepairGoal`). Antes lo hacía el gestor
       con un `repair()` que reconstruía caminos, cabañas, faroles, granja y valla **en un solo tick**: si mirabas,
       la aldea aparecía de la nada, y encima podía reconstruir sobre lo que hubieras construido tú. Ahora:
-      - El gestor guarda el **plano** de la aldea (`VillageGenerator.captureBlueprint`: paleta + posiciones
-        comprimidas + índices, persistido en `VillageSavedData`), con los bloques que hay por encima del suelo
-        natural **y también los que están a ras de suelo** (composteros, suelos de las casas, base de la torre,
-        caminos): antes empezaba a mirar un bloque más arriba y todo eso quedaba fuera, así que el obrero no lo
-        reponía. Se saltan el terreno natural y la vegetación (`esTerrenoNatural`), que eso no se "repara".
+      - **El plano es CANÓNICO** (`CURRENT_LAYOUT = 4`): no se fotografía la aldea leyendo el mundo, lo **graba el
+        propio generador mientras construye**. `VillageGenerator.generate` devuelve el plano: enciende una
+        grabadora justo después del terreno (limpieza, nivelado, isla) y **todo** lo que colocan las estructuras
+        pasa por `colocar(...)`, que apunta el bloque. Las casas, cuyos bloques los pone
+        `StructureTemplate.placeInWorld` (no pasa por `colocar`), se apuntan con `apuntarCaja` una vez limpiados
+        los bloques técnicos. Al final `aPlano()` descarta aire y terreno natural… **salvo el agua y la tierra de
+        cultivo de la granja**, que se conservan para que el obrero pueda reponer la acequia (los cultivos no: son
+        del granjero). Se guarda en `VillageManager.preGenerate`, con la aldea recién hecha.
+        *Por qué importa*: al capturar leyendo el mundo, el plano era una **foto**: si la aldea ya estaba dañada
+        (o se capturaba tras una horda, porque la captura espera a que acabe el asedio), ese destrozo pasaba a
+        considerarse "lo correcto" y el obrero lo mantenía para siempre. Con el plano canónico eso ya no puede
+        pasar. Las aldeas **de partidas viejas** (sin plano canónico posible) siguen con la captura por escaneo
+        (`captureBlueprint`) al aplicarles la migración de trazado.
       - El **obrero** es un aldeano marcado en sus datos persistentes (`BUILDER_TAG`); el gestor lo nombra (el
         primer adulto) y le repone su goal cada vez que lo ve, porque los goals no se guardan con la partida.
       - El goal busca el hueco **más cercano** (`findRepairTarget`: lo que debería estar y no está, hasta 40

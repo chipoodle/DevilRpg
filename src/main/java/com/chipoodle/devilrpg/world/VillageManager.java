@@ -115,9 +115,12 @@ public final class VillageManager {
      *       tierra de cultivo y los cultivos se secaban.</li>
      *   <li>3: el plano de la aldea apunta también lo que está <b>a ras de suelo</b> (composteros, suelos de las
      *       casas, base de la torre, caminos), que antes quedaba fuera y el obrero no reponía.</li>
+     *   <li>4: el plano es <b>canónico</b>: lo graba el propio generador mientras construye la aldea
+     *       ({@code VillageGenerator.generate} devuelve el plano), en vez de fotografiarla leyendo el mundo. Así
+     *       el daño previo (o capturar la aldea en mal momento) ya no se confunde con "lo correcto".</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 3;
+    public static final int CURRENT_LAYOUT = 4;
     /** Radio alrededor del obrero en el que se buscan huecos que reponer. */
     private static final double REPAIR_SEARCH_RADIUS = 40.0D;
     /** Cuánto puede estar el hueco por encima / por debajo del obrero para que intente alcanzarlo. */
@@ -164,9 +167,19 @@ public final class VillageManager {
         if (saved.isGenerated(objectiveIndex)) {
             return;
         }
-        VillageGenerator.generate(level, target);
+        // `generate` devuelve el PLANO CANÓNICO de la aldea (lo que el generador colocó mientras construía), así
+        // que se guarda aquí mismo, con la aldea recién hecha: el obrero sabrá qué reponer sin depender de en qué
+        // estado se encontrara la aldea después.
+        VillageSavedData.Blueprint plano = VillageGenerator.generate(level, target);
         saved.markGenerated(objectiveIndex);
-        DevilRpg.LOGGER.info("[Village] Aldea {} pre-generada en {}", objectiveIndex, target);
+        if (plano != null) {
+            saved.setBlueprint(objectiveIndex, plano);
+            saved.setLayout(objectiveIndex, CURRENT_LAYOUT);
+            DevilRpg.LOGGER.info("[Village] Aldea {} pre-generada en {} (plano de {} bloques)",
+                    objectiveIndex, target, plano.size());
+        } else {
+            DevilRpg.LOGGER.info("[Village] Aldea {} pre-generada en {}", objectiveIndex, target);
+        }
     }
 
     /**
