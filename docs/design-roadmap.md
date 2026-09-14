@@ -570,8 +570,10 @@ con su premio y su estado guardado. Lo implementado:
         pasa por `colocar(...)`, que apunta el bloque. Las casas, cuyos bloques los pone
         `StructureTemplate.placeInWorld` (no pasa por `colocar`), se apuntan con `apuntarCaja` una vez limpiados
         los bloques técnicos. Al final `aPlano()` descarta aire y terreno natural… **salvo el agua y la tierra de
-        cultivo de la granja**, que se conservan para que el obrero pueda reponer la acequia (los cultivos no: son
-        del granjero). Se guarda en `VillageManager.preGenerate`, con la aldea recién hecha.
+        cultivo de la granja**, que se conservan para que el obrero pueda reponer la acequia y las parcelas
+        pisoteadas (los cultivos no: son del granjero). Esa regla la comparten el plano canónico **y el escaneo**
+        del mundo que se hace al migrar una aldea vieja (`seDescartaDelPlano`): el escaneo antes saltaba la tierra
+        de cultivo, así que esas aldeas no la tenían en el plano y el obrero no reponía la parcela. Se guarda en `VillageManager.preGenerate`, con la aldea recién hecha.
         *Por qué importa*: al capturar leyendo el mundo, el plano era una **foto**: si la aldea ya estaba dañada
         (o se capturaba tras una horda, porque la captura espera a que acabe el asedio), ese destrozo pasaba a
         considerarse "lo correcto" y el obrero lo mantenía para siempre. Con el plano canónico eso ya no puede
