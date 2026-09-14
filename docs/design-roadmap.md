@@ -518,12 +518,14 @@ con su premio y su estado guardado. Lo implementado:
 10. ✅ **Aldeanos que cultivan, comen, reparan y envejecen** (`VillageManager.tickVillageLife`, un latido cada
     `VILLAGE_POLL_TICKS` = 10 s, solo en aldeas **en paz** con aldeanos vivos):
     - **Cultivan**: el generador planta **dos parcelas** de 9×5 (trigo, zanahorias y patatas, acequia central y
-      compostador) — `VillageGenerator.farm`. Así el aldeano granjero (que ya sabe cosechar en vanilla) tiene
-      faena y la aldea produce comida. Las parcelas viven en `FARM_PLOTS` (esquina relativa al centro) con
-      `PLOT_WIDTH`/`PLOT_DEPTH`, y los **faroles nunca se plantan dentro** (`insideFarm`, con 1 bloque de
-      margen): antes había un poste con lanterna en medio del trigo (visto en juego). Además, al plantar una
-      parcela se **despeja su columna** (3 bloques), así que un farol viejo que hubiera caído ahí desaparece en
-      cuanto se planta la parcela (en la generación o en la primera captura del plano de una aldea vieja).
+      compostador) — `VillageGenerator.farm`. Cada parcela se nivela a **un solo nivel** (`base` = la columna más
+      alta de su huella) y se **limpia antes de rehacerse**: si cada columna usara su propio `groundY`, en terreno
+      irregular la acequia quedaba un bloque por debajo de la tierra de cultivo y el trigo se **secaba** (la
+      tierra solo se hidrata con agua a su nivel o uno por encima, `FarmBlock.isNearWater`); y al rehacerla sin
+      limpiar quedaban capas viejas debajo y **dos composteadores apilados**. El compostero tiene además su
+      propia limpieza de columna. Las parcelas viven en `FARM_PLOTS` (esquina relativa al centro) con
+      `PLOT_WIDTH`/`PLOT_DEPTH`/`PLOT_WATER_ROW`, y los **faroles nunca se plantan dentro** (`insideFarm`, con 1
+      bloque de margen).
     - **Comen pan de verdad**: a un aldeano que aún no puede criar (vanilla pide **12 puntos** de comida:
       `Villager.canBreed`) se le deja **un pan en el suelo** que recoge él mismo (`ItemEntity` + `wantsToPickUp`
       vanilla), y con eso nacen **crías** de verdad. Un pan por latido y solo si la despensa tiene para pagarlo

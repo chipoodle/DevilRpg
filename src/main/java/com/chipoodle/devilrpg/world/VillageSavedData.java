@@ -95,6 +95,12 @@ public final class VillageSavedData extends SavedData {
     }
 
     private final Map<Integer, Blueprint> blueprints = new HashMap<>();
+    /**
+     * Versión del <b>trazado</b> de la aldea que ya tiene aplicada ({@link VillageManager#CURRENT_LAYOUT}). Sirve
+     * para arreglar las aldeas ya construidas cuando cambia el diseño: si su versión es menor, el gestor vuelve a
+     * levantar las partes afectadas (p. ej. la granja, cuyo agua quedaba un bloque por debajo de la tierra).
+     */
+    private final Map<Integer, Integer> layout = new HashMap<>();
 
     public static VillageSavedData get(ServerLevel level) {
         return level.getDataStorage().computeIfAbsent(
@@ -134,6 +140,9 @@ public final class VillageSavedData extends SavedData {
             }
             if (entry.contains("StarvingSince")) {
                 data.starvingSince.put(index, entry.getLong("StarvingSince"));
+            }
+            if (entry.contains("Layout")) {
+                data.layout.put(index, entry.getInt("Layout"));
             }
             data.food.put(index, entry.getInt("Food"));
         }
@@ -175,6 +184,7 @@ public final class VillageSavedData extends SavedData {
         villages.addAll(repopulatedAt.keySet());
         villages.addAll(food.keySet());
         villages.addAll(starvingSince.keySet());
+        villages.addAll(layout.keySet());
         for (int index : villages) {
             CompoundTag one = new CompoundTag();
             one.putInt("Index", index);
@@ -186,6 +196,9 @@ public final class VillageSavedData extends SavedData {
             }
             if (starvingSince.containsKey(index)) {
                 one.putLong("StarvingSince", starvingSince.get(index));
+            }
+            if (layout.containsKey(index)) {
+                one.putInt("Layout", layout.get(index));
             }
             one.putInt("Food", food.getOrDefault(index, 0));
             settlementTag.add(one);
@@ -378,5 +391,17 @@ public final class VillageSavedData extends SavedData {
     public void setBlueprint(int objectiveIndex, Blueprint blueprint) {
         blueprints.put(objectiveIndex, blueprint);
         setDirty();
+    }
+
+    /** Versión del trazado de la aldea que ya tiene aplicada ({@code 0} = de antes de llevar la cuenta). */
+    public int getLayout(int objectiveIndex) {
+        return layout.getOrDefault(objectiveIndex, 0);
+    }
+
+    public void setLayout(int objectiveIndex, int version) {
+        if (layout.getOrDefault(objectiveIndex, 0) != version) {
+            layout.put(objectiveIndex, version);
+            setDirty();
+        }
     }
 }

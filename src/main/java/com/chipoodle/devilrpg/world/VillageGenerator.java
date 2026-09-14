@@ -61,6 +61,8 @@ public final class VillageGenerator {
     private static final int[][] FARM_PLOTS = {{-16, 8}, {8, 6}};
     private static final int PLOT_WIDTH = 9;
     private static final int PLOT_DEPTH = 5;
+    /** Fila de la acequia dentro de la parcela (la del medio). */
+    private static final int PLOT_WATER_ROW = PLOT_DEPTH / 2;
 
     /**
      * Radio del área que se nivela alrededor del centro (todo hasta donde empieza la valla, para que no
@@ -373,17 +375,35 @@ public final class VillageGenerator {
      * pone una: los aldeanos necesitan cama para criar.
      */
     private static BlockPos placeVanillaHouse(ServerLevel level, BlockPos base, String id) {
-        int y = groundY(level, base.getX(), base.getZ());
-        BlockPos origen = new BlockPos(base.getX(), y, base.getZ());
         // OJO: en 1.21 getOrCreate devuelve la plantilla directamente (no un Optional).
         StructureTemplate template = level.getStructureManager()
                 .getOrCreate(ResourceLocation.withDefaultNamespace(id));
         if (template == null) {
             // No debería pasar (son plantillas del juego): se deja el solar libre y se sigue con la aldea.
             DevilRpg.LOGGER.warn("[Village] No se encontro la casa {}: se deja el solar vacio", id);
-            return origen.offset(0, 0, -2);
+            return base.offset(0, 0, -2);
         }
         Vec3i tam = template.getSize();
+        // Nivel de la casa = la columna MÁS ALTA de su huella. Antes se usaba solo la columna de la esquina, así
+        // que en terreno irregular la casa podía quedar 2 bloques por encima del suelo ("sobre patas", visto en
+        // juego). Con el nivel más alto, ninguna parte flota y las columnas bajas se rellenan de tierra.
+        int nivel = Integer.MIN_VALUE;
+        for (int dx = 0; dx < tam.getX(); dx++) {
+            for (int dz = 0; dz < tam.getZ(); dz++) {
+                nivel = Math.max(nivel, groundY(level, base.getX() + dx, base.getZ() + dz));
+            }
+        }
+        BlockPos origen = new BlockPos(base.getX(), nivel, base.getZ());
+        // 0) Cimentación: se rellena de tierra cada columna baja hasta dejar el suelo justo debajo de la casa.
+        for (int dx = 0; dx < tam.getX(); dx++) {
+            for (int dz = 0; dz < tam.getZ(); dz++) {
+                int x = base.getX() + dx;
+                int z = base.getZ() + dz;
+                for (int y = groundY(level, x, z); y < nivel; y++) {
+                    level.setBlock(new BlockPos(x, y, z), Blocks.DIRT.defaultBlockState(), Block.UPDATE_CLIENTS);
+                }
+            }
+        }
         // 1) Solar limpio: fuera todo lo que haya en la huella de la casa (y 4 bloques por encima del tejado).
         for (int dx = 0; dx < tam.getX(); dx++) {
             for (int dz = 0; dz < tam.getZ(); dz++) {
@@ -1052,39 +1072,73 @@ public final class VillageGenerator {
         return false;
     }
 
-    /** Parcela de 9x5: cuatro filas de cultivos, acequia de agua en medio y compostador al lado. */
+    /**
+     * Parcela de {@code PLOT_WIDTH}×{@code PLOT_DEPTH} (9×5): cuatro filas de cultivos, acequia de agua en medio
+     * y compostador al lado.
+     * <p>
+     * La parcela se nivela a <b>un solo nivel</b> ({@code base} = la columna más alta del terreno): antes cada
+     * columna usaba <b>su</b> {@code groundY}, así que en terreno irregular la acequia quedaba un bloque por
+     * debajo de la tierra de cultivo y, como la tierra solo se hidrata con agua a su nivel o uno por encima
+     * ({@code FarmBlock.isNearWater}), el trigo se <b>secaba</b> (visto en juego). Ahora el agua y la tierra de
+     * cultivo van a la <b>misma altura</b> y las columnas bajas se rellenan de tierra hasta ese nivel.
+     */
     private static void plot(ServerLevel level, BlockPos corner) {
         Block[] plants = {Blocks.WHEAT, Blocks.CARROTS, Blocks.POTATOES};
+        // 1) Nivel único de toda la parcela: la columna más alta manda.
+        int base = Integer.MIN_VALUE;
+        for (int dx = 0; dx < PLOT_WIDTH; dx++) {
+            for (int dz = 0; dz < PLOT_DEPTH; dz++) {
+                base = Math.max(base, groundY(level, corner.getX() + dx, corner.getZ() + dz));
+            }
+        }
         for (int dx = 0; dx < PLOT_WIDTH; dx++) {
             for (int dz = 0; dz < PLOT_DEPTH; dz++) {
                 int x = corner.getX() + dx;
                 int z = corner.getZ() + dz;
-                int y = groundY(level, x, z);
-                // Despejar la columna de la parcela (3 bloques): así se lleva por delante cualquier poste de
-                // farol que hubiera caído aquí, que dejaba la lanterna flotando en medio del trigo.
-                for (int dy = 1; dy <= 3; dy++) {
-                    BlockPos arriba = new BlockPos(x, y + dy, z);
-                    if (!level.getBlockState(arriba).isAir()) {
-                        level.setBlock(arriba, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+                int suelo = groundY(level, x, z);
+                // 2) Solar LIMPIO: se quita todo lo que hubiera desde el suelo hacia arriba (cultivos, tierra de
+                // cultivo, agua y restos de una versión anterior del trazado). Sin esto, al rehacer la parcela
+                // quedaban capas viejas debajo y el agua terminaba un bloque por debajo del cultivo: se secaba.
+                for (int y = suelo - 1; y <= base + 3; y++) {
+                    BlockPos p = new BlockPos(x, y, z);
+                    if (!level.getBlockState(p).isAir()) {
+                        level.setBlock(p, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
                     }
                 }
-                if (dz == 2) {
-                    // Acequia central: el agua va a ras de suelo y riega las cuatro filas.
-                    level.setBlock(new BlockPos(x, y - 1, z), Blocks.WATER.defaultBlockState(), Block.UPDATE_ALL);
-                    level.setBlock(new BlockPos(x, y, z), Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+                // 3) Rellenar de tierra hasta el nivel de la parcela (así no queda la acequia en un hoyo).
+                for (int y = suelo - 1; y < base - 1; y++) {
+                    level.setBlock(new BlockPos(x, y, z), Blocks.DIRT.defaultBlockState(), Block.UPDATE_ALL);
+                }
+                if (dz == PLOT_WATER_ROW) {
+                    // Acequia central: el agua va a ras de la tierra de cultivo y riega las cuatro filas.
+                    level.setBlock(new BlockPos(x, base - 1, z), Blocks.WATER.defaultBlockState(), Block.UPDATE_ALL);
                     continue;
                 }
-                level.setBlock(new BlockPos(x, y - 1, z), Blocks.FARMLAND.defaultBlockState(), Block.UPDATE_ALL);
+                level.setBlock(new BlockPos(x, base - 1, z), Blocks.FARMLAND.defaultBlockState(), Block.UPDATE_ALL);
                 BlockState crop = plants[dx % plants.length].defaultBlockState();
                 if (crop.getBlock() instanceof CropBlock cropBlock) {
                     // Cada cultivo tiene su edad máxima (el trigo 7, la remolacha 3): se pregunta, no se asume.
                     crop = crop.setValue(CropBlock.AGE, cropBlock.getMaxAge());
                 }
-                level.setBlock(new BlockPos(x, y, z), crop, Block.UPDATE_ALL);
+                level.setBlock(new BlockPos(x, base, z), crop, Block.UPDATE_ALL);
             }
         }
-        BlockPos composter = new BlockPos(corner.getX() - 1, groundY(level, corner.getX() - 1, corner.getZ()), corner.getZ());
-        level.setBlock(composter, Blocks.COMPOSTER.defaultBlockState(), Block.UPDATE_ALL);
+        // Compostero (puesto de trabajo del granjero). Se limpia SU columna antes: al rehacer la parcela con otro
+        // nivel quedaba el compostero viejo debajo y se veían dos apilados (visto en juego).
+        int compX = corner.getX() - 1;
+        int compZ = corner.getZ();
+        int sueloCompostero = groundY(level, compX, compZ);
+        int nivelCompostero = Math.max(base, sueloCompostero);
+        for (int y = sueloCompostero - 1; y <= nivelCompostero + 3; y++) {
+            BlockPos p = new BlockPos(compX, y, compZ);
+            if (!level.getBlockState(p).isAir()) {
+                level.setBlock(p, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+            }
+        }
+        for (int y = sueloCompostero - 1; y < nivelCompostero - 1; y++) {
+            level.setBlock(new BlockPos(compX, y, compZ), Blocks.DIRT.defaultBlockState(), Block.UPDATE_ALL);
+        }
+        level.setBlock(new BlockPos(compX, nivelCompostero, compZ), Blocks.COMPOSTER.defaultBlockState(), Block.UPDATE_ALL);
     }
 
     /**

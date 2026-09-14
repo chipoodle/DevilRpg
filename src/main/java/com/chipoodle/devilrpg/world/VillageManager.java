@@ -107,6 +107,15 @@ public final class VillageManager {
 
     /** Marca (en los datos persistentes del aldeano) del que es el <b>obrero</b> de la aldea. */
     public static final String BUILDER_TAG = "DevilRpgBuilder";
+    /**
+     * Versión del trazado de la aldea. Se sube cuando cambia el diseño y hay que <b>arreglar las ya construidas</b>:
+     * <ul>
+     *   <li>1: granja con cultivos, acequia y compostador.</li>
+     *   <li>2: la parcela se nivela a un solo nivel, porque antes el agua quedaba un bloque por debajo de la
+     *       tierra de cultivo y los cultivos se secaban.</li>
+     * </ul>
+     */
+    public static final int CURRENT_LAYOUT = 2;
     /** Radio alrededor del obrero en el que se buscan huecos que reponer. */
     private static final double REPAIR_SEARCH_RADIUS = 40.0D;
     /** Cuánto puede estar el hueco por encima / por debajo del obrero para que intente alcanzarlo. */
@@ -711,8 +720,16 @@ public final class VillageManager {
      * pone antes la granja, para que el plano la incluya.
      */
     private static void prepareRepairs(ServerLevel level, VillageSavedData saved, int objectiveIndex, BlockPos center, List<Villager> aldeanos) {
-        if (!saved.hasBlueprint(objectiveIndex)) {
+        // Cambios de TRAZADO que hay que aplicar también a las aldeas ya construidas. La versión 2 arregla la
+        // granja: antes el agua de la acequia quedaba un bloque por debajo de la tierra de cultivo y los cultivos
+        // se secaban (la tierra solo se hidrata con agua a su nivel o uno por encima).
+        if (saved.getLayout(objectiveIndex) < CURRENT_LAYOUT) {
             VillageGenerator.farm(level, center);
+            saved.setLayout(objectiveIndex, CURRENT_LAYOUT);
+            DevilRpg.LOGGER.info("[Village] Aldea {}: trazado actualizado a la version {} (granja)",
+                    objectiveIndex, CURRENT_LAYOUT);
+        }
+        if (!saved.hasBlueprint(objectiveIndex)) {
             VillageSavedData.Blueprint plano = VillageGenerator.captureBlueprint(level, center);
             saved.setBlueprint(objectiveIndex, plano);
             DevilRpg.LOGGER.info("[Village] Aldea {}: plano guardado ({} bloques)", objectiveIndex, plano.size());
