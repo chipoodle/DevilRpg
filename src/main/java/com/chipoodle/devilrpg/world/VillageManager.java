@@ -113,9 +113,11 @@ public final class VillageManager {
      *   <li>1: granja con cultivos, acequia y compostador.</li>
      *   <li>2: la parcela se nivela a un solo nivel, porque antes el agua quedaba un bloque por debajo de la
      *       tierra de cultivo y los cultivos se secaban.</li>
+     *   <li>3: el plano de la aldea apunta también lo que está <b>a ras de suelo</b> (composteros, suelos de las
+     *       casas, base de la torre, caminos), que antes quedaba fuera y el obrero no reponía.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 2;
+    public static final int CURRENT_LAYOUT = 3;
     /** Radio alrededor del obrero en el que se buscan huecos que reponer. */
     private static final double REPAIR_SEARCH_RADIUS = 40.0D;
     /** Cuánto puede estar el hueco por encima / por debajo del obrero para que intente alcanzarlo. */
@@ -725,8 +727,11 @@ public final class VillageManager {
         // se secaban (la tierra solo se hidrata con agua a su nivel o uno por encima).
         if (saved.getLayout(objectiveIndex) < CURRENT_LAYOUT) {
             VillageGenerator.farm(level, center);
+            // El plano también se tira: hay que volver a capturarlo con las reglas nuevas (versión 3 apunta ya lo
+            // que está a ras de suelo: composteros, suelos de las casas, base de la torre, caminos).
+            saved.clearBlueprint(objectiveIndex);
             saved.setLayout(objectiveIndex, CURRENT_LAYOUT);
-            DevilRpg.LOGGER.info("[Village] Aldea {}: trazado actualizado a la version {} (granja)",
+            DevilRpg.LOGGER.info("[Village] Aldea {}: trazado actualizado a la version {} (granja y plano)",
                     objectiveIndex, CURRENT_LAYOUT);
         }
         if (!saved.hasBlueprint(objectiveIndex)) {

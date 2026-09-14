@@ -449,6 +449,29 @@ public final class VillageGenerator {
     }
 
     /**
+     * ¿Es terreno natural? Eso <b>no</b> se apunta en el plano de la aldea: la tierra, la hierba, el agua, la
+     * piedra, la arena y la vegetación no se "reparan" (si no, el obrero se pondría a rellenar los hoyos que caves
+     * tú, o a replantar árboles). Lo que sí entra son las cosas construidas, incluidas las que van a ras de suelo:
+     * los caminos de tierra apisonada, el suelo de las casas, los composteros, la base de la torre...
+     */
+    private static boolean esTerrenoNatural(BlockState state) {
+        if (!state.getFluidState().isEmpty() || state.is(BlockTags.LEAVES) || state.is(BlockTags.LOGS)) {
+            return true;
+        }
+        Block block = state.getBlock();
+        if (block instanceof CropBlock || block instanceof BushBlock) {
+            return true;
+        }
+        return block == Blocks.GRASS_BLOCK || block == Blocks.DIRT || block == Blocks.COARSE_DIRT
+                || block == Blocks.ROOTED_DIRT || block == Blocks.PODZOL || block == Blocks.MYCELIUM
+                || block == Blocks.FARMLAND || block == Blocks.STONE || block == Blocks.DEEPSLATE
+                || block == Blocks.GRAVEL || block == Blocks.SAND || block == Blocks.RED_SAND
+                || block == Blocks.SANDSTONE || block == Blocks.CLAY || block == Blocks.SNOW_BLOCK
+                || block == Blocks.ICE || block == Blocks.PACKED_ICE || block == Blocks.MUD
+                || block == Blocks.MOSS_BLOCK || block == Blocks.BEDROCK;
+    }
+
+    /**
      * Con qué sustituir un bloque técnico de una plantilla una vez colocada a mano.
      * <p>
      * Lo <b>correcto</b> es lo que declara el propio juego: los {@code minecraft:jigsaw} son los "enchufes" con
@@ -1020,11 +1043,14 @@ public final class VillageGenerator {
                 int x = center.getX() + dx;
                 int z = center.getZ() + dz;
                 int base = groundY(level, x, z);
-                for (int dy = 0; dy <= 9; dy++) {
+                // Se mira DESDE el propio bloque de superficie (base-1) hacia arriba. Antes empezaba en `base`, así
+                // que todo lo que está a ras de suelo se quedaba fuera del plano y el obrero no lo reponía: el suelo
+                // de las casas, los composteros, la base de la torre o los caminos. El terreno natural (tierra,
+                // hierba, agua, piedra...) sí se salta, que eso no se "repara".
+                for (int dy = -1; dy <= 9; dy++) {
                     BlockPos pos = new BlockPos(x, base + dy, z);
                     BlockState state = level.getBlockState(pos);
-                    if (state.isAir() || state.is(BlockTags.LEAVES) || state.is(BlockTags.LOGS)
-                            || state.getBlock() instanceof CropBlock) {
+                    if (state.isAir() || esTerrenoNatural(state)) {
                         continue;
                     }
                     Integer indice = indices.get(state);

@@ -539,8 +539,9 @@ con su premio y su estado guardado. Lo implementado:
       la aldea aparecía de la nada, y encima podía reconstruir sobre lo que hubieras construido tú. Ahora:
       - El gestor guarda el **plano** de la aldea (`VillageGenerator.captureBlueprint`: paleta + posiciones
         comprimidas + índices, persistido en `VillageSavedData`), con los bloques que hay por encima del suelo
-        natural y **sin** vegetación ni cultivos (los árboles y la huerta son de la granja y del granjero).
-        A las aldeas de partidas viejas se les pone antes la granja, para que el plano la incluya.
+        natural **y también los que están a ras de suelo** (composteros, suelos de las casas, base de la torre,
+        caminos): antes empezaba a mirar un bloque más arriba y todo eso quedaba fuera, así que el obrero no lo
+        reponía. Se saltan el terreno natural y la vegetación (`esTerrenoNatural`), que eso no se "repara".
       - El **obrero** es un aldeano marcado en sus datos persistentes (`BUILDER_TAG`); el gestor lo nombra (el
         primer adulto) y le repone su goal cada vez que lo ve, porque los goals no se guardan con la partida.
       - El goal busca el hueco **más cercano** (`findRepairTarget`: lo que debería estar y no está, hasta 40

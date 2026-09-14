@@ -393,6 +393,13 @@ public final class VillageSavedData extends SavedData {
         setDirty();
     }
 
+    /** Tira el plano para que se vuelva a capturar (cuando cambia el trazado o la forma de capturarlo). */
+    public void clearBlueprint(int objectiveIndex) {
+        if (blueprints.remove(objectiveIndex) != null) {
+            setDirty();
+        }
+    }
+
     /** Versión del trazado de la aldea que ya tiene aplicada ({@code 0} = de antes de llevar la cuenta). */
     public int getLayout(int objectiveIndex) {
         return layout.getOrDefault(objectiveIndex, 0);
