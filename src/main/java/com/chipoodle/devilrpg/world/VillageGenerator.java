@@ -221,17 +221,10 @@ public final class VillageGenerator {
             bloques.put(pos.asLong(), state);
         }
 
-        /**
-         * ¿Ese bloque se descarta del plano? Fuera el aire (los despejes) y el terreno natural (tierra, hierba,
-         * piedra, vegetación…), que no se "repara". <b>Excepción</b>: el agua y la tierra de cultivo de la granja
-         * SÍ se conservan, porque las construyó el generador y así el obrero puede reponer la acequia si la
-         * destruyen. Los cultivos no: esos son cosa del granjero (si no, el obrero y él se pisarían el trabajo).
-         */
+        /** ¿Ese bloque se descarta del plano? Misma regla que {@link #seDescartaDelPlano} (aire y terreno natural,
+         *  conservando la tierra de cultivo y el agua de la granja). */
         private boolean seDescarta(BlockState state) {
-            if (state.is(Blocks.WATER) || state.is(Blocks.FARMLAND)) {
-                return false;
-            }
-            return state.isAir() || esTerrenoNatural(state);
+            return seDescartaDelPlano(state);
         }
 
         /**
@@ -311,26 +304,32 @@ public final class VillageGenerator {
     }
 
     /**
-     * Nivel del <b>patio que rodea</b> a una construcción: la altura <b>más baja</b> del suelo en el anillo
+     * Nivel del <b>patio que rodea</b> a una construcción: la <b>mediana</b> de la altura del suelo del anillo
      * inmediato (a {@link #MARGEN_ALREDEDORES} bloques, fuera de la huella).
      * <p>
-     * Se coge el <b>mínimo</b> y no la mediana a propósito: el terreno de la aldea tiene pendiente, así que la
-     * mediana de un anillo ancho caía 1 bloque por encima del patio inmediato y la casa acababa subida a un
-     * relleno (medido en partida: puertas a 74 con el patio a 73, en las 6 puertas de la aldea). Con el mínimo la
-     * construcción queda <b>a ras del patio o ligeramente metida</b> en el lado alto del terreno, nunca por encima.
+     * Es la mediana <b>del patio pegado</b> a la casa, no la de un anillo ancho: con el anillo a 4 bloques, la
+     * pendiente del terreno de la aldea hacía que la referencia cayera 1 bloque por encima del patio y la casa
+     * subiera a un relleno (medido en partida). Y tampoco el <b>mínimo</b>, que dejaba todas las casas un bloque
+     * <b>hundidas</b>. Con la mediana del patio, la casa queda a ras del suelo que la rodea y, si el terreno tiene
+     * desnivel, el lado bajo se sube con el <b>escalón de entrada</b> ({@link #escalonDeEntrada}), que es lo que
+     * pidió el jugador: mejor un escalón que una casa hundida.
      */
     private static int nivelDeAlrededores(ServerLevel level, BlockPos base, int anchoX, int anchoZ) {
-        int minimo = Integer.MAX_VALUE;
+        List<Integer> alturas = new ArrayList<>();
         for (int dx = -MARGEN_ALREDEDORES; dx < anchoX + MARGEN_ALREDEDORES; dx++) {
             for (int dz = -MARGEN_ALREDEDORES; dz < anchoZ + MARGEN_ALREDEDORES; dz++) {
                 boolean enLaHuella = dx >= 0 && dz >= 0 && dx < anchoX && dz < anchoZ;
                 if (enLaHuella) {
                     continue; // solo el anillo: la huella puede tener el zócalo que queremos corregir
                 }
-                minimo = Math.min(minimo, groundY(level, base.getX() + dx, base.getZ() + dz));
+                alturas.add(groundY(level, base.getX() + dx, base.getZ() + dz));
             }
         }
-        return minimo == Integer.MAX_VALUE ? groundY(level, base.getX(), base.getZ()) : minimo;
+        if (alturas.isEmpty()) {
+            return groundY(level, base.getX(), base.getZ());
+        }
+        Collections.sort(alturas);
+        return alturas.get(alturas.size() / 2);
     }
 
     /** Posiciones base de las casas de la aldea, relativas al centro (las mismas que usa {@link #generate}). */
@@ -817,6 +816,24 @@ public final class VillageGenerator {
                             .setValue(StairBlock.HALF, Half.BOTTOM),
                     Block.UPDATE_ALL);
         }
+    }
+
+    /**
+     * ¿Ese bloque se descarta al capturar un plano? Fuera el aire (los despejes) y el terreno natural (tierra,
+     * hierba, piedra, vegetación…), que no se "repara". <b>Excepción</b>: el agua y la tierra de cultivo de la
+     * granja SÍ se conservan, porque las construyó el generador y así el obrero puede reponer la parcela si
+     * alguien la pisotea (la tierra de cultivo se convierte en tierra al saltar encima) o si le vacían la acequia.
+     * Los cultivos no: esos son cosa del granjero.
+     * <p>
+     * OJO: esto lo usan <b>los dos</b> caminos, el plano canónico (grabado al construir) y el escaneo del mundo que
+     * se hace al migrar una aldea vieja. El escaneo antes saltaba la tierra de cultivo, así que los planos de las
+     * aldeas migradas no la tenían y el obrero no reponía las parcelas pisoteadas.
+     */
+    static boolean seDescartaDelPlano(BlockState state) {
+        if (state.is(Blocks.FARMLAND) || state.is(Blocks.WATER)) {
+            return false;
+        }
+        return state.isAir() || esTerrenoNatural(state);
     }
 
     /**
@@ -1442,7 +1459,7 @@ public final class VillageGenerator {
                 for (int dy = -1; dy <= 9; dy++) {
                     BlockPos pos = new BlockPos(x, base + dy, z);
                     BlockState state = level.getBlockState(pos);
-                    if (state.isAir() || esTerrenoNatural(state)) {
+                    if (seDescartaDelPlano(state)) {
                         continue;
                     }
                     Integer indice = indices.get(state);
