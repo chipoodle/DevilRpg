@@ -650,12 +650,15 @@ public final class VillageGenerator {
      * A los jugadores no se les toca.
      */
     private static void sacarVecinosDe(ServerLevel level, BlockPos base, BlockPos center) {
-        int suelo = spawnY(level, center.getX(), center.getZ());
+        // Destino: la plaza, pero buscando un hueco libre de verdad (en el centro está la campana, y no queremos
+        // dejar a nadie dentro de un bloque).
+        BlockPos destino = huecoLibre(level,
+                new BlockPos(center.getX(), spawnY(level, center.getX(), center.getZ()), center.getZ()));
         List<LivingEntity> dentro = new ArrayList<>();
         dentro.addAll(level.getEntitiesOfClass(Villager.class, new AABB(base).inflate(5.0D, 9.0D, 5.0D)));
         dentro.addAll(level.getEntitiesOfClass(IronGolem.class, new AABB(base).inflate(5.0D, 9.0D, 5.0D)));
         for (LivingEntity entidad : dentro) {
-            entidad.teleportTo(center.getX() + 0.5D, suelo, center.getZ() + 0.5D);
+            entidad.teleportTo(destino.getX() + 0.5D, destino.getY(), destino.getZ() + 0.5D);
             DevilRpg.LOGGER.info("[Village] {} sacado de la casa que se va a rehacer", entidad.getName().getString());
         }
     }
