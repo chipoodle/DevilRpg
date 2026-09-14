@@ -153,10 +153,14 @@ siguiente está implementado y probado.
   con la guarida**: es agua si la **columna central** lo es *o* si el agua es **al menos la mitad de la zona**
   (se mira un disco que incluye el talud). Mirar solo la columna central fallaba en la costa — centro en
   tierra, resto en el mar — y la obra acababa nivelada al fondo marino, **sumergida**.
-- **3 cabañas** con interior de 3 bloques de alto, puerta, cama completa (pie+cabeza), escaleras alineadas
-  a la puerta y cimientos con pilares si están sobre agua.
-- **Caminos de 2 bloques de ancho** en el plano XZ, de tierra apisonada, a ras de suelo, que no pasan
-  sobre las cabañas ni la campana.
+- **3 casas del propio juego** (refinamiento posterior, ver 3b.5): son plantillas `StructureTemplate` de
+  vanilla (`minecraft:village/plains/houses/plains_small_house_1..8`, `plains_medium_house_1/2`) colocadas con
+  `StructureTemplateManager.getOrCreate` + `placeInWorld`, elegidas de forma determinista por la posición de la
+  aldea. Traen su propio interior, su cama (los aldeanos necesitan cama para criar) y su puesto de trabajo.
+  Antes eran cabañas procedurales (`hut()`, que sigue en el código como legado).
+- **Caminos de 2 bloques de ancho** en el plano XZ, de tierra apisonada, a ras de suelo, que van del centro a la
+  **puerta real** de cada casa (se mira el bloque de la puerta y su `FACING`, porque cada plantilla la pone donde
+  quiere) y no pasan sobre las casas ni la campana.
 - **Campana** en el centro (sobre soporte de piedra, columna limpia).
 - **Golem de hierro** de guardia (Y fijada al suelo de la isla para no sofocarse).
 - **Aldeanos y golem: SIEMPRE en la superficie de SU columna, nunca a la Y del centro.** Bug arreglado el
@@ -245,11 +249,19 @@ siguiente está implementado y probado.
   después de guardar la partida aparecía como 0/0 en el árbol y reventaba con `NullPointerException` al
   pulsarla (su nivel máximo era `null`).
 
-### 3b.5 Nota de diseño sobre el motor vanilla
-Las villas **no** se generan con el motor vanilla (Jigsaw/`StructureTemplate`), porque ese sistema es
-data-driven y coloca estructuras por bioma, no en una coordenada determinista del objetivo. Mantenemos el
-generador propio de `VillageGenerator`. (Posible mejora futura: reutilizar `StructureTemplate` solo para
-las cabañas.)
+### 3b.5 Nota de diseño sobre el motor vanilla — RESUELTA ✅
+Las villas **no** se generan con el motor vanilla (Jigsaw), porque ese sistema es **data-driven** y coloca
+estructuras por bioma con `StructureSet`/`Structure`, no en una coordenada determinista del objetivo, y está
+pensado para ejecutarse durante la generación del chunk, no bajo demanda al acercarse el jugador. Mantenemos el
+generador propio de `VillageGenerator`.
+**Pero sí se reutilizan las CONSTRUCCIONES del juego**: desde el refinamiento de la Iteración 3 las 3 casas son
+plantillas `StructureTemplate` de vanilla (`village/plains/houses/...`) cargadas con
+`level.getStructureManager().getOrCreate(ResourceLocation)` (en 1.21 devuelve la plantilla directamente, no un
+`Optional`) y colocadas con `template.placeInWorld(level, origen, origen, new StructurePlaceSettings(), random,
+Block.UPDATE_CLIENTS)`. Como se colocan a mano y **no** pasa el algoritmo de jigsaw, hay que limpiar los bloques
+**técnicos** que traen las plantillas (`minecraft:jigsaw` —el "conector" con el que el juego encaja las piezas—
+y `minecraft:structure_void` —celda "no toques esto"—): se sustituyen por un bloque vecino real
+(`rellenoParaTecnico`) para que no quede, por ejemplo, un agujero de 1×1 en el suelo de la casa.
 
 ---
 

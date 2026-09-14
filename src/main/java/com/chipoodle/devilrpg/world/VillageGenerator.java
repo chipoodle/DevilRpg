@@ -3,6 +3,8 @@ package com.chipoodle.devilrpg.world;
 import com.chipoodle.devilrpg.DevilRpg;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Vec3i;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.util.RandomSource;
@@ -28,6 +30,8 @@ import net.minecraft.world.level.block.state.properties.BedPart;
 import net.minecraft.world.level.block.state.properties.BellAttachType;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
+import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -141,19 +145,21 @@ public final class VillageGenerator {
         } else {
             levelTerrain(level, center, LEVEL_RADIUS);
         }
-        // Posiciones de las cabañas (base). La puerta mira a FRONT (norte), en base.z-2.
+        // Posiciones de las casas (base). Desde la Iteración 3 refinada son CASAS DE VERDAD, plantillas del
+        // propio juego (ver placeVanillaHouse), no cabañas procedurales.
         BlockPos h0 = center.offset(-17, 0, -3);
         BlockPos h1 = center.offset(16, 0, -4);
         BlockPos h2 = center.offset(-3, 0, 17);
 
-        // Caminos PRIMERO, sobre el suelo nivelado (así no se generan sobre el techo de las casas ni
-        // sobre la campana). Van del centro hasta justo frente a la puerta de cada cabaña.
-        paths(level, center, h0, h1, h2);
+        // CASAS PRIMERO: hay que colocarlas para saber dónde quedó cada puerta (cada plantilla la trae donde
+        // quiere) y que los caminos lleguen de verdad a ella.
+        RandomSource casas = RandomSource.create(center.asLong());
+        BlockPos p0 = placeVanillaHouse(level, h0, casaAleatoria(casas));
+        BlockPos p1 = placeVanillaHouse(level, h1, casaAleatoria(casas));
+        BlockPos p2 = placeVanillaHouse(level, h2, casaAleatoria(casas));
 
-        // Construir las cabañas DESPUÉS del camino (el camino no queda sobre ellas).
-        hut(level, h0);
-        hut(level, h1);
-        hut(level, h2);
+        // Caminos DESPUÉS, del centro a la puerta de cada casa (ya se sabe dónde está).
+        paths(level, center, p0, p1, p2);
 
         // Campana al final, en el centro, limpiando su columna (nadie la tapa).
         bell(level, center);
@@ -333,18 +339,125 @@ public final class VillageGenerator {
         }
     }
 
-    /** Camino de tierra apisonada (el de pala) de 2 bloques de ancho entre el centro y cada cabaña. */
-    private static void paths(ServerLevel level, BlockPos center, BlockPos h0, BlockPos h1, BlockPos h2) {
-        line(level, center, doorApproach(h0));
-        line(level, center, doorApproach(h1));
-        line(level, center, doorApproach(h2));
+    /**
+     * Casas de aldea del <b>propio juego</b> (plantillas {@code minecraft:village/plains/houses/...}) que se usan
+     * como hogares de la aldea: construcciones de verdad, con su interior, su cama y su puesto de trabajo, en vez
+     * de las cabañas procedurales de antes. Se eligen de forma determinista por la posición de la aldea.
+     */
+    private static final String[] VANILLA_HOUSES = {
+            "village/plains/houses/plains_small_house_1",
+            "village/plains/houses/plains_small_house_2",
+            "village/plains/houses/plains_small_house_3",
+            "village/plains/houses/plains_small_house_4",
+            "village/plains/houses/plains_small_house_5",
+            "village/plains/houses/plains_small_house_6",
+            "village/plains/houses/plains_small_house_7",
+            "village/plains/houses/plains_small_house_8",
+            "village/plains/houses/plains_medium_house_1",
+            "village/plains/houses/plains_medium_house_2",
+    };
+
+    private static String casaAleatoria(RandomSource random) {
+        return VANILLA_HOUSES[random.nextInt(VANILLA_HOUSES.length)];
     }
 
-    /** Punto justo frente a la puerta de una cabaña (la puerta mira a {@link VillageGenerator#FRONT}). */
-    private static BlockPos doorApproach(BlockPos hutCenter) {
-        int fx = FRONT.getStepX() * 3;
-        int fz = FRONT.getStepZ() * 3;
-        return hutCenter.offset(fx, 0, fz);
+    /**
+     * Coloca una <b>casa de aldea del propio juego</b> (<code>StructureTemplate</code> de vanilla) y devuelve la
+     * posición de su puerta, para que el camino llegue a ella de verdad. Antes de colocarla se despeja su solar
+     * (si no, quedarían hojas, tierra o piedra dentro de la casa), después se quitan los bloques técnicos que
+     * traen las plantillas (<code>jigsaw</code> y <code>structure_void</code>) y, si la casa no trae cama, se le
+     * pone una: los aldeanos necesitan cama para criar.
+     */
+    private static BlockPos placeVanillaHouse(ServerLevel level, BlockPos base, String id) {
+        int y = groundY(level, base.getX(), base.getZ());
+        BlockPos origen = new BlockPos(base.getX(), y, base.getZ());
+        // OJO: en 1.21 getOrCreate devuelve la plantilla directamente (no un Optional).
+        StructureTemplate template = level.getStructureManager()
+                .getOrCreate(ResourceLocation.withDefaultNamespace(id));
+        if (template == null) {
+            // No debería pasar (son plantillas del juego): se deja el solar libre y se sigue con la aldea.
+            DevilRpg.LOGGER.warn("[Village] No se encontro la casa {}: se deja el solar vacio", id);
+            return origen.offset(0, 0, -2);
+        }
+        Vec3i tam = template.getSize();
+        // 1) Solar limpio: fuera todo lo que haya en la huella de la casa (y 4 bloques por encima del tejado).
+        for (int dx = 0; dx < tam.getX(); dx++) {
+            for (int dz = 0; dz < tam.getZ(); dz++) {
+                for (int dy = 0; dy < tam.getY() + 4; dy++) {
+                    BlockPos p = origen.offset(dx, dy, dz);
+                    if (!level.getBlockState(p).isAir()) {
+                        level.setBlock(p, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
+                    }
+                }
+            }
+        }
+        // 2) La construcción del juego, tal cual viene.
+        template.placeInWorld(level, origen, origen, new StructurePlaceSettings(), level.random, Block.UPDATE_CLIENTS);
+        // 3) Limpieza de bloques técnicos, y de paso se busca la puerta y se cuentan las camas.
+        BlockPos puerta = null;
+        int camas = 0;
+        for (int dx = 0; dx < tam.getX(); dx++) {
+            for (int dz = 0; dz < tam.getZ(); dz++) {
+                for (int dy = 0; dy < tam.getY(); dy++) {
+                    BlockPos p = origen.offset(dx, dy, dz);
+                    BlockState state = level.getBlockState(p);
+                    if (state.is(Blocks.JIGSAW) || state.is(Blocks.STRUCTURE_VOID)) {
+                        // Bloque técnico de la plantilla (el "conector" de la aldea de vanilla): se rellena con
+                        // algo de al lado para no dejar un agujero, sobre todo cuando cae en el suelo.
+                        level.setBlock(p, rellenoParaTecnico(level, p), Block.UPDATE_CLIENTS);
+                        continue;
+                    }
+                    if (state.getBlock() instanceof DoorBlock
+                            && state.getValue(DoorBlock.HALF) == DoubleBlockHalf.LOWER) {
+                        puerta = p;
+                    }
+                    if (state.getBlock() instanceof BedBlock) {
+                        camas++;
+                    }
+                }
+            }
+        }
+        if (camas == 0) {
+            bed(level, origen.offset(tam.getX() / 2, 0, tam.getZ() / 2));
+        }
+        DevilRpg.LOGGER.debug("[Village] Casa {} colocada en {} (puerta {})", id, origen, puerta);
+        return puerta != null ? puerta : origen.offset(0, 0, -2);
+    }
+
+    /**
+     * Con qué rellenar un bloque técnico de una plantilla ({@code jigsaw}/{@code structure_void}): se copia un
+     * vecino que sí sea un bloque de verdad, mirando primero los lados (el suelo o la pared que lo rodea) y
+     * después arriba y abajo. Si no hubiera ninguno, se deja aire.
+     */
+    private static BlockState rellenoParaTecnico(ServerLevel level, BlockPos pos) {
+        Direction[] orden = {Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST,
+                Direction.UP, Direction.DOWN};
+        for (Direction dir : orden) {
+            BlockState vecino = level.getBlockState(pos.relative(dir));
+            if (!vecino.isAir() && !vecino.is(Blocks.JIGSAW) && !vecino.is(Blocks.STRUCTURE_VOID)
+                    && vecino.getFluidState().isEmpty()) {
+                return vecino;
+            }
+        }
+        return Blocks.AIR.defaultBlockState();
+    }
+
+    /** Camino de tierra apisonada (el de pala) de 2 bloques de ancho entre el centro y cada casa. */
+    private static void paths(ServerLevel level, BlockPos center, BlockPos p0, BlockPos p1, BlockPos p2) {
+        line(level, center, doorApproach(level, p0));
+        line(level, center, doorApproach(level, p1));
+        line(level, center, doorApproach(level, p2));
+    }
+
+    /**
+     * Punto frente a la puerta de una casa: se mira la puerta <b>de verdad</b> (las casas de vanilla traen la
+     * suya y no siempre da al norte) y se sale 2 bloques hacia donde ella da. Si esa posición no fuera una
+     * puerta, se usa el frente clásico ({@link #FRONT}).
+     */
+    private static BlockPos doorApproach(ServerLevel level, BlockPos door) {
+        BlockState state = level.getBlockState(door);
+        Direction fuera = state.getBlock() instanceof DoorBlock ? state.getValue(DoorBlock.FACING) : FRONT;
+        return door.relative(fuera, 2);
     }
 
     /**
@@ -773,7 +886,7 @@ public final class VillageGenerator {
 
     /** Los tres sitios fijos de aldeano de la aldea (uno por profesión), relativos al centro. */
     private static final BlockPos[] VILLAGER_SPOTS = {
-            new BlockPos(-17, 0, -6), new BlockPos(16, 0, -7), new BlockPos(-3, 0, 14)
+            new BlockPos(-8, 0, -8), new BlockPos(9, 0, -8), new BlockPos(-2, 0, -11)
     };
     private static final VillagerProfession[] VILLAGER_SPECIALTIES = {
             VillagerProfession.FARMER, VillagerProfession.WEAPONSMITH, VillagerProfession.CLERIC
