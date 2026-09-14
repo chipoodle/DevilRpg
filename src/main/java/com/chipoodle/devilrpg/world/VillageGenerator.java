@@ -755,9 +755,10 @@ public final class VillageGenerator {
             }
         }
         // Cama de respaldo en las CASAS que no traigan ninguna (los aldeanos necesitan cama para criar). A la
-        // iglesia no se le pone: no es un dormitorio.
+        // iglesia no se le pone: no es un dormitorio. OJO con la altura: la cama va en la capa de ARRIBA del
+        // suelo (dy = 1), que es el nivel por el que se anda dentro de la casa.
         if (camas == 0 && !esIglesia(id)) {
-            bed(level, origen.offset(tam.getX() / 2, 0, tam.getZ() / 2));
+            bed(level, origen.offset(tam.getX() / 2, 1, tam.getZ() / 2));
         }
         // Las casas GRANDES llevan una cama extra: en vanilla hace falta una cama libre por cría, así que con 4
         // camas la aldea puede crecer hasta 4 aldeanos.
