@@ -711,10 +711,12 @@ public final class VillageGenerator {
             return base.offset(0, 0, -2);
         }
         Vec3i tam = template.getSize();
-        // Nivel de la casa = la MEDIANA de las columnas de su huella (ver nivelarHuella): ni sobre un zócalo de
-        // tierra ni enterrada, a ras del suelo de alrededor.
+        // Nivel de la casa = la mediana del terreno que la RODEA (ver nivelarHuella). El suelo de la plantilla
+        // (su capa y=0) va en `nivel - 1`: así sustituye al bloque de superficie del patio y el piso queda A RAS
+        // del suelo de fuera. Antes se ponía en `nivel`, que es el AIRE sobre el patio, y la casa salía un bloque
+        // más alta que el terreno (reportado en juego).
         int nivel = nivelarHuella(level, base, tam.getX(), tam.getZ());
-        BlockPos origen = new BlockPos(base.getX(), nivel, base.getZ());
+        BlockPos origen = new BlockPos(base.getX(), nivel - 1, base.getZ());
         // 1) Solar limpio: fuera todo lo que haya en la huella de la casa (y 4 bloques por encima del tejado).
         for (int dx = 0; dx < tam.getX(); dx++) {
             for (int dz = 0; dz < tam.getZ(); dz++) {
@@ -906,8 +908,10 @@ public final class VillageGenerator {
 
     /**
      * Dibuja un camino de tierra apisonada de 2 bloques de ancho en el plano XZ entre dos puntos, a ras
-     * de suelo. No toca la celda del centro (donde va la campana) y, si una posición quedó elevada (sobre
-     * el techo de una casa), baja el camino a la superficie real rellenando con tierra hasta el suelo.
+     * de suelo (sobre el bloque de superficie). No toca la celda del centro (donde va la campana) y <b>no dibuja
+     * nada donde el suelo esté a otra altura</b>: antes, al pasar por encima de una casa, `groundY` devolvía el
+     * TEJADO y el camino se pintaba encima del tejado (arrancándole bloques), así que ahora esas columnas se
+     * saltan y el camino solo existe donde hay patio al mismo nivel.
      */
     private static void line(ServerLevel level, BlockPos from, BlockPos to) {
         int steps = Math.max(Math.abs(to.getX() - from.getX()), Math.abs(to.getZ() - from.getZ()));
@@ -915,6 +919,7 @@ public final class VillageGenerator {
         boolean horizontal = Math.abs(to.getX() - from.getX()) >= Math.abs(to.getZ() - from.getZ());
         int widthX = horizontal ? 0 : 1;
         int widthZ = horizontal ? 1 : 0;
+        int nivelCamino = groundY(level, from.getX(), from.getZ()) - 1; // el patio, a la altura del centro
         for (int i = 0; i <= steps; i++) {
             int x = from.getX() + (int) Math.round((to.getX() - from.getX()) * (i / (double) Math.max(1, steps)));
             int z = from.getZ() + (int) Math.round((to.getZ() - from.getZ()) * (i / (double) Math.max(1, steps)));
@@ -926,6 +931,9 @@ public final class VillageGenerator {
                 // groundY da el bloque transitable (uno sobre el sólido); el camino va SOBRE el bloque
                 // sólido de la superficie, un bloque por debajo, para quedar a ras de suelo.
                 int y = groundY(level, px, pz) - 1;
+                if (Math.abs(y - nivelCamino) > 1) {
+                    continue; // ahí hay una construcción (o un desnivel fuerte): el camino no sube por encima
+                }
                 colocar(level, new BlockPos(px, y, pz), Blocks.DIRT_PATH.defaultBlockState(), 3);
             }
         }

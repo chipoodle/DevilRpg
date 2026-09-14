@@ -130,17 +130,20 @@ public final class VillageManager {
      *   <li>8: las construcciones se nivelan al <b>terreno de alrededor</b> (antes, a la mediana de su propia
      *       huella: si el solar venía alto, la casa quedaba sobre un zócalo), la <b>iglesia</b> del juego sustituye
      *       a la torre procedural y la aldea pasa a <b>4 aldeanos</b>.</li>
+     *   <li>9: el suelo de las casas va en el bloque de superficie (antes uno más arriba, así que la casa quedaba
+     *       <b>un bloque por encima</b> del patio) y los caminos ya <b>no se dibujan sobre los tejados</b>.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 8;
+    public static final int CURRENT_LAYOUT = 9;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
      * 1 = las tres casas del juego, 2 = las cuatro (la última es la "grande", con cama extra), 3 = además la
-     * <b>iglesia</b> en el sitio de la vieja torre. Se sube cuando cambia el número o el tipo de construcciones, y
-     * la migración solo hace lo que falte (rehacer una casa borra lo que tenga dentro).
+     * <b>iglesia</b> en el sitio de la vieja torre, 4 = casas con el <b>suelo a ras</b> del patio (antes iban un
+     * bloque altas). Se sube cuando cambia el número, el tipo o la <b>altura</b> de las construcciones, y la
+     * migración solo hace lo que falte (rehacer una casa borra lo que tenga dentro).
      */
-    public static final int CURRENT_HOUSES = 3;
+    public static final int CURRENT_HOUSES = 4;
     /** Radio alrededor del obrero en el que se buscan huecos que reponer. */
     private static final double REPAIR_SEARCH_RADIUS = 40.0D;
     /** Cuánto puede estar el hueco por encima / por debajo del obrero para que intente alcanzarlo. */
