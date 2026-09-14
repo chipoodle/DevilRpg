@@ -12,6 +12,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.animal.IronGolem;
 import net.minecraft.world.entity.npc.Villager;
@@ -310,6 +311,53 @@ public final class VillageGenerator {
         return nivel;
     }
 
+    /** Posiciones base de las 3 casas de la aldea, relativas al centro (las mismas que usa {@link #generate}). */
+    public static BlockPos[] basesDeCasas(BlockPos center) {
+        return new BlockPos[]{
+                center.offset(-17, 0, -3),
+                center.offset(16, 0, -4),
+                center.offset(-3, 0, 17),
+        };
+    }
+
+    /**
+     * <b>Migración de aldeas viejas</b>: sustituye las cabañas procedurales ({@link #hut}, las de las partidas
+     * anteriores) por las <b>casas del juego</b>. Por cada casa se limpia su solar y se coloca la plantilla nueva.
+     * <p>
+     * El despeje quita <b>solo lo construido</b> (nunca el terreno: se salta lo que devuelve
+     * {@link #esTerrenoNatural}) en una caja alrededor de la base, que se lleva también el tejado, los muebles y
+     * cualquier escalón suelto de la cabaña vieja. Después se vuelven a trazar los caminos, porque la puerta de
+     * la casa nueva puede dar a otro lado.
+     */
+    public static BlockPos[] actualizarCasas(ServerLevel level, BlockPos center) {
+        BlockPos[] bases = basesDeCasas(center);
+        BlockPos[] puertas = new BlockPos[bases.length];
+        RandomSource casas = RandomSource.create(center.asLong());
+        for (int i = 0; i < bases.length; i++) {
+            BlockPos base = bases[i];
+            // SEGURIDAD: si hay aldeanos o golems dentro de la casa que se va a rehacer, se les saca a la plaza
+            // antes de tocar nada. Si no, al colocar la plantilla podrían quedar dentro de una pared (asfixia).
+            sacarVecinosDe(level, base, center);
+            for (int dx = -4; dx <= 4; dx++) {
+                for (int dz = -4; dz <= 4; dz++) {
+                    int suelo = groundY(level, base.getX() + dx, base.getZ() + dz);
+                    for (int dy = -2; dy <= 9; dy++) {
+                        BlockPos p = new BlockPos(base.getX() + dx, suelo + dy, base.getZ() + dz);
+                        BlockState state = level.getBlockState(p);
+                        if (state.isAir() || esTerrenoNatural(state)) {
+                            continue; // el terreno (y el agua, los caminos y los cultivos) no se toca aquí
+                        }
+                        colocar(level, p, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
+                    }
+                }
+            }
+            puertas[i] = placeVanillaHouse(level, base, casaAleatoria(casas));
+        }
+        paths(level, center, puertas[0], puertas[1], puertas[2]);
+        DevilRpg.LOGGER.info("[Village] Aldea vieja en {}: cabañas sustituidas por casas del juego", center);
+        return puertas;
+    }
+
     /**
      * Coloca un bloque y, si se está grabando, lo apunta en el plano. <b>Todo</b> lo que construye el generador
      * pasa por aquí: así el plano es lo que la aldea <i>debe</i> ser, no una foto del estado en que se la
@@ -597,20 +645,18 @@ public final class VillageGenerator {
     }
 
     /**
-     * Repasa las puertas de un plano y les pone el <b>escalón de entrada</b> que falte
-     * ({@link #escalonDeEntrada}). Es la migración de aldeas ya construidas: las casas que quedaron sobre un
-     * zócalo de tierra no se pueden rehacer sin destrozar lo que el jugador tenga dentro, pero el acceso se
-     * arregla con unas escaleras delante de la puerta.
+     * Saca de una casa (caja de ±5 alrededor de su base) a los aldeanos y golems que estén dentro, y los deja en
+     * la plaza de la aldea. Se usa antes de rehacer una casa para que nadie quede enterrado por la plantilla nueva.
+     * A los jugadores no se les toca.
      */
-    public static void escalonesDeEntrada(ServerLevel level, VillageSavedData.Blueprint plano) {
-        if (plano == null) {
-            return;
-        }
-        for (int i = 0; i < plano.size(); i++) {
-            BlockState state = plano.stateAt(i);
-            if (state.getBlock() instanceof DoorBlock && state.getValue(DoorBlock.HALF) == DoubleBlockHalf.LOWER) {
-                escalonDeEntrada(level, plano.posAt(i));
-            }
+    private static void sacarVecinosDe(ServerLevel level, BlockPos base, BlockPos center) {
+        int suelo = spawnY(level, center.getX(), center.getZ());
+        List<LivingEntity> dentro = new ArrayList<>();
+        dentro.addAll(level.getEntitiesOfClass(Villager.class, new AABB(base).inflate(5.0D, 9.0D, 5.0D)));
+        dentro.addAll(level.getEntitiesOfClass(IronGolem.class, new AABB(base).inflate(5.0D, 9.0D, 5.0D)));
+        for (LivingEntity entidad : dentro) {
+            entidad.teleportTo(center.getX() + 0.5D, suelo, center.getZ() + 0.5D);
+            DevilRpg.LOGGER.info("[Village] {} sacado de la casa que se va a rehacer", entidad.getName().getString());
         }
     }
 
@@ -981,6 +1027,15 @@ public final class VillageGenerator {
     }
 
     /**
+     * <b>LEGACY — NO USAR.</b> Cabaña procedural de las primeras versiones de la aldea (3 bloques de alto en el
+     * interior, puerta al frente, cama, escaleras y cimientos con pilares).
+     * <p>
+     * Desde el refinamiento de la Iteración 3 las casas son <b>plantillas del propio juego</b>
+     * ({@link #placeVanillaHouse}), así que esta ya no se llama desde ningún sitio: se deja como referencia
+     * histórica y para no perder el código, pero <b>no la llames</b> (o tendrías aldeas con cabañas viejas otra
+     * vez, que es justo el problema que se arregló). {@code VillageManager} sustituye las que existan con
+     * {@link #actualizarCasas}.
+     * <p>
      * Cabaña asentada al terreno nivelado con 3 bloques de alto en el interior, puerta al frente, cama de
      * 2 bloques (pie + cabeza), escaleras en la entrada cuando queda alto sobre el suelo, y —si el centro
      * está bajo agua— piso sobre el agua con pilares de valla que bajan al menos 3 bloques.

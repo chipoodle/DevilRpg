@@ -119,11 +119,13 @@ public final class VillageManager {
      *       ({@code VillageGenerator.generate} devuelve el plano), en vez de fotografiarla leyendo el mundo. Así
      *       el daño previo (o capturar la aldea en mal momento) ya no se confunde con "lo correcto".</li>
      *   <li>5: las construcciones se nivelan a la <b>mediana</b> de su huella (con la más alta quedaban subidas
-     *       sobre un zócalo de tierra) y las casas llevan <b>escalón de entrada</b>. La migración solo pone los
-     *       escalones en las aldeas viejas: rehacer las casas destrozaría lo que el jugador tenga dentro.</li>
+     *       sobre un zócalo de tierra) y las casas llevan <b>escalón de entrada</b>.</li>
+     *   <li>6: las aldeas viejas cambian sus <b>cabañas procedurales por las casas del juego</b>
+     *       (`VillageGenerator.actualizarCasas`), con la marca persistida `hasNewHouses` para no rehacer dos veces
+     *       una casa ya nueva.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 5;
+    public static final int CURRENT_LAYOUT = 6;
     /** Radio alrededor del obrero en el que se buscan huecos que reponer. */
     private static final double REPAIR_SEARCH_RADIUS = 40.0D;
     /** Cuánto puede estar el hueco por encima / por debajo del obrero para que intente alcanzarlo. */
@@ -178,6 +180,8 @@ public final class VillageManager {
         if (plano != null) {
             saved.setBlueprint(objectiveIndex, plano);
             saved.setLayout(objectiveIndex, CURRENT_LAYOUT);
+            // Esta aldea nace ya con las casas del juego: que la migración no las vuelva a construir.
+            saved.setNewHouses(objectiveIndex, true);
             DevilRpg.LOGGER.info("[Village] Aldea {} pre-generada en {} (plano de {} bloques)",
                     objectiveIndex, target, plano.size());
         } else {
@@ -738,19 +742,23 @@ public final class VillageManager {
      * pone antes la granja, para que el plano la incluya.
      */
     private static void prepareRepairs(ServerLevel level, VillageSavedData saved, int objectiveIndex, BlockPos center, List<Villager> aldeanos) {
-        // Cambios de TRAZADO que hay que aplicar también a las aldeas ya construidas. La versión 2 arregla la
-        // granja: antes el agua de la acequia quedaba un bloque por debajo de la tierra de cultivo y los cultivos
-        // se secaban (la tierra solo se hidrata con agua a su nivel o uno por encima).
+        // Cambios de TRAZADO que hay que aplicar también a las aldeas ya construidas:
+        //  1-2: granja (cultivos, acequia, compostero) y su nivelado a un solo nivel.
+        //  3:   el plano apunta también lo que está a ras de suelo.
+        //  4:   el plano pasa a ser canónico (lo graba el generador).
+        //  5:   nivelado por mediana + escalón de entrada en las casas.
+        //  6:   las cabañas procedurales se sustituyen por CASAS DEL JUEGO (con la marca `hasNewHouses`, para no
+        //       reconstruir las que ya son nuevas: rehacer una casa borra lo que haya dentro).
         if (saved.getLayout(objectiveIndex) < CURRENT_LAYOUT) {
+            if (!saved.hasNewHouses(objectiveIndex)) {
+                VillageGenerator.actualizarCasas(level, center);
+                saved.setNewHouses(objectiveIndex, true);
+            }
             VillageGenerator.farm(level, center);
-            // Escalones de entrada: las casas ya construidas que quedaron sobre un zócalo de tierra se arreglan
-            // por el lado del acceso (rehacerlas destrozaría lo que el jugador tenga dentro).
-            VillageGenerator.escalonesDeEntrada(level, saved.getBlueprint(objectiveIndex));
-            // El plano también se tira: hay que volver a capturarlo con las reglas nuevas (versión 3 apunta ya lo
-            // que está a ras de suelo: composteros, suelos de las casas, base de la torre, caminos).
+            // El plano se tira: hay que volver a capturarlo, ya con las casas nuevas y con las reglas actuales.
             saved.clearBlueprint(objectiveIndex);
             saved.setLayout(objectiveIndex, CURRENT_LAYOUT);
-            DevilRpg.LOGGER.info("[Village] Aldea {}: trazado actualizado a la version {} (granja, escalones y plano)",
+            DevilRpg.LOGGER.info("[Village] Aldea {}: trazado actualizado a la version {} (casas, granja y plano)",
                     objectiveIndex, CURRENT_LAYOUT);
         }
         if (!saved.hasBlueprint(objectiveIndex)) {

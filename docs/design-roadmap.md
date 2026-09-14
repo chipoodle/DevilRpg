@@ -157,7 +157,15 @@ siguiente está implementado y probado.
   vanilla (`minecraft:village/plains/houses/plains_small_house_1..8`, `plains_medium_house_1/2`) colocadas con
   `StructureTemplateManager.getOrCreate` + `placeInWorld`, elegidas de forma determinista por la posición de la
   aldea. Traen su propio interior, su cama (los aldeanos necesitan cama para criar) y su puesto de trabajo.
-  Antes eran cabañas procedurales (`hut()`, que sigue en el código como legado).
+  Antes eran cabañas procedurales (`hut()`, que sigue en el código marcado como **LEGACY — NO USAR**).
+  - **Las aldeas ya construidas también se convierten**: `VillageManager` (`CURRENT_LAYOUT = 6`) llama a
+    `VillageGenerator.actualizarCasas`, que borra la cabaña vieja (solo lo construido: `esTerrenoNatural` protege
+    el terreno) y coloca la casa del juego en su sitio, y vuelve a trazar los caminos a la puerta nueva. La marca
+    persistida **`hasNewHouses`** evita rehacer una casa que ya es nueva (rehacerla borraría lo que tenga dentro).
+    Antes de tocar una casa se **saca a aldeanos y golems** que estén dentro (`sacarVecinosDe`) para que la
+    plantilla no los deje emparedados. *(Esto se añadió porque el jugador entró a una aldea vieja, con cabañas
+    procedurales y medio enterradas, y con razón lo reportó como que "todo estaba roto": no era una regresión del
+    código nuevo, era que la migración no cubría las casas.)*
 - **Nivelado por mediana y escalón de entrada**: la huella de cada construcción se nivela a la **mediana** de sus
   columnas (`nivelarHuella`: recorta el terreno que sobra —solo si es natural— y rellena con tierra lo que falta).
   Con la columna **más alta** las casas quedaban subidas sobre un zócalo de tierra y **no se podía entrar**

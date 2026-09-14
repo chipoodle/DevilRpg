@@ -101,6 +101,12 @@ public final class VillageSavedData extends SavedData {
      * levantar las partes afectadas (p. ej. la granja, cuyo agua quedaba un bloque por debajo de la tierra).
      */
     private final Map<Integer, Integer> layout = new HashMap<>();
+    /**
+     * ¿Esta aldea ya tiene las <b>casas del juego</b>? Las aldeas de partidas viejas tienen cabañas procedurales
+     * ({@code VillageGenerator.hut}) y hay que sustituirlas una vez. Se guarda para no volver a reconstruirlas
+     * (rehacer una casa borra lo que hubiera dentro).
+     */
+    private final Map<Integer, Boolean> casasNuevas = new HashMap<>();
 
     public static VillageSavedData get(ServerLevel level) {
         return level.getDataStorage().computeIfAbsent(
@@ -144,6 +150,9 @@ public final class VillageSavedData extends SavedData {
             if (entry.contains("Layout")) {
                 data.layout.put(index, entry.getInt("Layout"));
             }
+            if (entry.contains("CasasNuevas")) {
+                data.casasNuevas.put(index, entry.getBoolean("CasasNuevas"));
+            }
             data.food.put(index, entry.getInt("Food"));
         }
         // Planos de las aldeas (paleta de estados + posiciones + índices).
@@ -185,6 +194,7 @@ public final class VillageSavedData extends SavedData {
         villages.addAll(food.keySet());
         villages.addAll(starvingSince.keySet());
         villages.addAll(layout.keySet());
+        villages.addAll(casasNuevas.keySet());
         for (int index : villages) {
             CompoundTag one = new CompoundTag();
             one.putInt("Index", index);
@@ -199,6 +209,9 @@ public final class VillageSavedData extends SavedData {
             }
             if (layout.containsKey(index)) {
                 one.putInt("Layout", layout.get(index));
+            }
+            if (casasNuevas.containsKey(index)) {
+                one.putBoolean("CasasNuevas", casasNuevas.get(index));
             }
             one.putInt("Food", food.getOrDefault(index, 0));
             settlementTag.add(one);
@@ -408,6 +421,18 @@ public final class VillageSavedData extends SavedData {
     public void setLayout(int objectiveIndex, int version) {
         if (layout.getOrDefault(objectiveIndex, 0) != version) {
             layout.put(objectiveIndex, version);
+            setDirty();
+        }
+    }
+
+    /** ¿Esta aldea ya tiene las casas del juego (y no las cabañas procedurales de las partidas viejas)? */
+    public boolean hasNewHouses(int objectiveIndex) {
+        return casasNuevas.getOrDefault(objectiveIndex, false);
+    }
+
+    public void setNewHouses(int objectiveIndex, boolean value) {
+        if (casasNuevas.getOrDefault(objectiveIndex, false) != value) {
+            casasNuevas.put(objectiveIndex, value);
             setDirty();
         }
     }
