@@ -140,20 +140,23 @@ public final class VillageManager {
      *       hundidas) y el desnivel se salva con el <b>escalón de entrada</b>, como pidió el jugador. Además el
      *       plano capturado por <b>escaneo</b> (aldeas migradas) ya incluye la <b>tierra de cultivo y el agua</b> de
      *       la granja: antes las saltaba, así que el obrero no reponía las parcelas pisoteadas.</li>
+     *   <li>12: se allana también una <b>terraza</b> (patio de `MARGEN_TERRAZA` bloques) alrededor de cada
+     *       construcción: allanar solo la huella dejaba el patio de al lado con su pendiente y la casa parecía
+     *       hundida por un lado. El nivel se saca ahora del anillo que hay <b>justo fuera</b> de la terraza.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 11;
+    public static final int CURRENT_LAYOUT = 12;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
      * 1 = las tres casas del juego, 2 = las cuatro (la última es la "grande", con cama extra), 3 = además la
      * <b>iglesia</b> en el sitio de la vieja torre, 4 = casas con el <b>suelo a ras</b> del patio (antes iban un
      * bloque altas), 5 = con el nivel de referencia corregido (mínimo del patio), 6 = con la <b>mediana del
-     * patio inmediato</b> y escalón para el desnivel (el mínimo las dejaba hundidas). Se sube cuando cambia el
-     * número, el tipo o la <b>altura</b> de las construcciones, y la migración solo hace lo que falte (rehacer una
-     * casa borra lo que tenga dentro).
+     * patio inmediato</b> y escalón para el desnivel (el mínimo las dejaba hundidas), 7 = con <b>terraza</b>
+     * allanada alrededor. Se sube cuando cambia el número, el tipo o la <b>altura</b> de las construcciones, y la
+     * migración solo hace lo que falte (rehacer una casa borra lo que tenga dentro).
      */
-    public static final int CURRENT_HOUSES = 6;
+    public static final int CURRENT_HOUSES = 7;
     /** Radio alrededor del obrero en el que se buscan huecos que reponer. */
     private static final double REPAIR_SEARCH_RADIUS = 40.0D;
     /** Cuánto puede estar el hueco por encima / por debajo del obrero para que intente alcanzarlo. */

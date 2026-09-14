@@ -69,6 +69,11 @@ public final class VillageGenerator {
     private static final int PLOT_WATER_ROW = PLOT_DEPTH / 2;
     /** Distancia a la que se mira el patio que rodea una construcción para nivelarla. */
     private static final int MARGEN_ALREDEDORES = 2;
+    /** Bloques de <b>terraza</b> (patio llano) que se allanan alrededor de una construcción. */
+    private static final int MARGEN_TERRAZA = 2;
+    /** Anillo (desde/hasta) del que se saca el nivel de la terraza: fuera de ella, para no leer su propio relleno. */
+    private static final int ANILLO_MIN = MARGEN_TERRAZA + 1;
+    private static final int ANILLO_MAX = MARGEN_TERRAZA + 4;
 
     /**
      * Radio del área que se nivela alrededor del centro (todo hasta donde empieza la valla, para que no
@@ -284,8 +289,11 @@ public final class VillageGenerator {
      */
     private static int nivelarHuella(ServerLevel level, BlockPos base, int anchoX, int anchoZ) {
         int nivel = nivelDeAlrededores(level, base, anchoX, anchoZ);
-        for (int dx = 0; dx < anchoX; dx++) {
-            for (int dz = 0; dz < anchoZ; dz++) {
+        // Se allana la huella MÁS una terraza alrededor (MARGEN_TERRAZA): si solo se allanara la huella, el patio
+        // de al lado seguiría con su pendiente y la casa parecería hundida por un lado (visto en juego). Con la
+        // terraza, la casa y su patio quedan a ras, y el escalón de entrada cubre cualquier desnivel que quede.
+        for (int dx = -MARGEN_TERRAZA; dx < anchoX + MARGEN_TERRAZA; dx++) {
+            for (int dz = -MARGEN_TERRAZA; dz < anchoZ + MARGEN_TERRAZA; dz++) {
                 int x = base.getX() + dx;
                 int z = base.getZ() + dz;
                 int suelo = groundY(level, x, z);
@@ -316,11 +324,17 @@ public final class VillageGenerator {
      */
     private static int nivelDeAlrededores(ServerLevel level, BlockPos base, int anchoX, int anchoZ) {
         List<Integer> alturas = new ArrayList<>();
-        for (int dx = -MARGEN_ALREDEDORES; dx < anchoX + MARGEN_ALREDEDORES; dx++) {
-            for (int dz = -MARGEN_ALREDEDORES; dz < anchoZ + MARGEN_ALREDEDORES; dz++) {
+        for (int dx = -ANILLO_MAX; dx < anchoX + ANILLO_MAX; dx++) {
+            for (int dz = -ANILLO_MAX; dz < anchoZ + ANILLO_MAX; dz++) {
                 boolean enLaHuella = dx >= 0 && dz >= 0 && dx < anchoX && dz < anchoZ;
                 if (enLaHuella) {
-                    continue; // solo el anillo: la huella puede tener el zócalo que queremos corregir
+                    continue; // la huella puede tener el zócalo que queremos corregir
+                }
+                // Distancia (en cuadrícula) al borde de la huella. La terraza (hasta ANILLO_MIN) no cuenta, porque
+                // la vamos a allanar nosotros: se mira el terreno de justo fuera.
+                int dist = Math.max(Math.max(-dx, dx - (anchoX - 1)), Math.max(-dz, dz - (anchoZ - 1)));
+                if (dist < ANILLO_MIN) {
+                    continue;
                 }
                 alturas.add(groundY(level, base.getX() + dx, base.getZ() + dz));
             }
