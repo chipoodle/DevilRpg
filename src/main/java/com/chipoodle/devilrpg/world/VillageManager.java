@@ -22,6 +22,7 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.OwnableEntity;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -87,13 +88,17 @@ public final class VillageManager {
     // --- Vida del asentamiento (Iteración 3, paso 4) ------------------------------------------------
 
     /** Comida que produce la granja en cada latido de la aldea. */
-    private static final int FARM_YIELD = 4;
+    private static final int FARM_YIELD = 8;
     /** Comida que come cada aldeano en cada latido. */
     private static final int FOOD_PER_VILLAGER = 1;
+    /** Puntos de comida que da un pan (es lo que vale en vanilla). */
+    private static final int FOOD_PER_BREAD = 4;
     /** Despensa máxima de la aldea. */
     private static final int MAX_FOOD = 64;
     /** Comida que cuesta que llegue un aldeano nuevo (nacer o mudarse). */
     private static final int FOOD_TO_GROW = 8;
+    /** Tiempo de hambre continua (ticks) antes de que se muera un aldeano: 10 min. */
+    private static final long STARVATION_DEATH_TICKS = 10L * 60L * 20L;
     /** Cada cuánto reparan la aldea sus aldeanos (3 min). Tiene que ser múltiplo de {@link #VILLAGE_POLL_TICKS}. */
     private static final int REPAIR_INTERVAL_TICKS = 3 * 60 * 20;
     /** Etiqueta de los datos persistentes del aldeano con su fecha de nacimiento. */
@@ -190,7 +195,8 @@ public final class VillageManager {
                         && level.getGameTime() - saved.getRepopulatedAt(i) >= REPOPULATE_INTERVAL_TICKS
                         && saved.getFood(i) >= FOOD_TO_GROW) {
                     // Crecer cuesta comida: una aldea hambrienta no se recupera hasta que la granja produzca.
-                    VillageGenerator.spawnOneVillager(level, target, vivos);
+                    // El que llega nace CRÍA (crece sola, mecánica vanilla): así se ve el relevo generacional.
+                    VillageGenerator.spawnOneVillager(level, target, vivos, true);
                     saved.setFood(i, saved.getFood(i) - FOOD_TO_GROW);
                     saved.markRepopulated(i, level.getGameTime());
                     DevilRpg.LOGGER.info("[Village] Aldea {} se recupera: aldeano {}/{} (comida {})",
@@ -662,38 +668,117 @@ public final class VillageManager {
         int antes = saved.getFood(objectiveIndex);
         int comida = Math.min(MAX_FOOD, antes + FARM_YIELD) - vivos * FOOD_PER_VILLAGER;
         saved.setFood(objectiveIndex, comida);
-        if (antes > 0 && comida <= 0) {
-            DevilRpg.LOGGER.info("[Village] La aldea {} se quedo sin comida: no crecera hasta que la granja produzca",
-                    objectiveIndex);
+
+        List<Villager> aldeanos = level.getEntitiesOfClass(Villager.class, new AABB(center).inflate(FALLEN_CHECK_RADIUS));
+
+        // HAMBRE: si la despensa está vacía, los aldeanos se quedan débiles y, si se alarga, muere alguno.
+        if (comida <= 0) {
+            if (saved.getStarvingSince(objectiveIndex) == 0L) {
+                saved.setStarvingSince(objectiveIndex, level.getGameTime());
+                DevilRpg.LOGGER.info("[Village] La aldea {} se quedo sin comida: pasa hambre", objectiveIndex);
+                announceNearby(level, center, "La aldea pasa hambre: sus granjas no dan abasto.");
+            }
+            starveVillagers(level, saved, objectiveIndex, aldeanos);
+        } else if (saved.getStarvingSince(objectiveIndex) != 0L) {
+            saved.setStarvingSince(objectiveIndex, 0L);
+            DevilRpg.LOGGER.info("[Village] La aldea {} vuelve a tener comida", objectiveIndex);
         }
+
+        // COMER DE VERDAD: se les reparte pan (lo recogen ellos) para que puedan criar como en vanilla.
+        feedVillagers(level, saved, objectiveIndex, aldeanos);
+
         // Solo las aldeas SANAS y en paz se ponen a reparar (una debilitada está a otras cosas).
         if (vivos >= VILLAGERS_FOR_FULL_HEALTH && level.getGameTime() % REPAIR_INTERVAL_TICKS == 0L) {
             VillageGenerator.repair(level, center);
             DevilRpg.LOGGER.info("[Village] La aldea {} ha sido reparada por sus aldeanos (comida {})",
                     objectiveIndex, saved.getFood(objectiveIndex));
         }
-        ageVillagers(level, center);
+
+        ageVillagers(level, aldeanos);
     }
 
     /**
-     * <b>Envejecimiento</b>: la primera vez que se ve a un aldeano se le apunta la fecha de nacimiento en sus
-     * datos persistentes (viaja con él en el guardado). Los viejos van más lentos y, al terminar su vida,
-     * mueren y dejan el relevo: la aldea repone aldeanos con la comida de la granja.
+     * Reparte <b>pan de verdad</b>: a un aldeano que todavía no puede criar (en vanilla hacen falta 12 puntos de
+     * comida en total) se le deja un pan en el suelo, que <b>recoge él mismo</b>. Así se ve la comida, se la
+     * llevan andando y con eso nacen crías. Cada pan cuesta {@link #FOOD_PER_BREAD} de la despensa y solo se
+     * reparte uno por latido, para que la aldea no se quede sin reservas. A los viejos no se les da: ya no crían.
      */
-    private static void ageVillagers(ServerLevel level, BlockPos center) {
-        for (Villager villager : level.getEntitiesOfClass(Villager.class, new AABB(center).inflate(FALLEN_CHECK_RADIUS))) {
-            CompoundTag datos = villager.getPersistentData();
-            if (!datos.contains(BORN_TAG)) {
-                datos.putLong(BORN_TAG, level.getGameTime());
-                continue;
+    private static void feedVillagers(ServerLevel level, VillageSavedData saved, int objectiveIndex, List<Villager> aldeanos) {
+        if (saved.getFood(objectiveIndex) < FOOD_PER_BREAD) {
+            return; // despensa vacía: no hay pan que repartir
+        }
+        for (Villager villager : aldeanos) {
+            if (villager.isBaby() || villager.canBreed()) {
+                continue; // las crías no comen de la despensa y el que ya puede criar no lo necesita
             }
-            long edad = level.getGameTime() - datos.getLong(BORN_TAG);
-            if (edad >= VILLAGER_LIFESPAN_TICKS) {
-                DevilRpg.LOGGER.info("[Village] Un aldeano de {} murio de viejo ({} dias de juego)",
-                        center, edad / 24000L);
-                villager.kill();
-            } else if (edad >= VILLAGER_OLD_AGE_TICKS && !villager.hasEffect(MobEffects.MOVEMENT_SLOWDOWN)) {
+            if (ageOf(level, villager) >= VILLAGER_OLD_AGE_TICKS) {
+                continue; // viejo: ya no cría, no se le da pan
+            }
+            ItemEntity pan = new ItemEntity(level, villager.getX(), villager.getY() + 0.4D, villager.getZ(),
+                    new ItemStack(Items.BREAD));
+            pan.setDefaultPickUpDelay();
+            level.addFreshEntity(pan);
+            saved.setFood(objectiveIndex, saved.getFood(objectiveIndex) - FOOD_PER_BREAD);
+            return; // uno por latido
+        }
+    }
+
+    /**
+     * Consecuencias del hambre: mientras la aldea no tenga comida, sus aldeanos van con <b>Debilidad</b> y
+     * <b>Lentitud</b>, y si el hambre dura más de {@link #STARVATION_DEATH_TICKS} (10 min) <b>muere uno</b>.
+     */
+    private static void starveVillagers(ServerLevel level, VillageSavedData saved, int objectiveIndex, List<Villager> aldeanos) {
+        for (Villager villager : aldeanos) {
+            if (!villager.hasEffect(MobEffects.WEAKNESS)) {
+                villager.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 20 * 60, 0, false, false));
+            }
+            if (!villager.hasEffect(MobEffects.MOVEMENT_SLOWDOWN)) {
                 villager.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 20 * 60, 0, false, false));
+            }
+        }
+        long desde = saved.getStarvingSince(objectiveIndex);
+        if (desde != 0L && level.getGameTime() - desde >= STARVATION_DEATH_TICKS && !aldeanos.isEmpty()) {
+            Villager victima = aldeanos.get(level.random.nextInt(aldeanos.size()));
+            DevilRpg.LOGGER.info("[Village] Un aldeano de la aldea {} ha muerto de hambre", objectiveIndex);
+            victima.hurt(level.damageSources().generic(), Float.MAX_VALUE);
+            // El contador se reinicia: el siguiente no cae hasta dentro de otros 10 min de hambre.
+            saved.setStarvingSince(objectiveIndex, level.getGameTime());
+        }
+    }
+
+    /**
+     * <b>Edad</b> de un aldeano en ticks de juego: la primera vez que se le ve se le apunta la fecha de
+     * nacimiento en sus datos persistentes (viaja con él en el guardado). {@code 0} si acaba de conocerse.
+     */
+    private static long ageOf(ServerLevel level, Villager villager) {
+        CompoundTag datos = villager.getPersistentData();
+        if (!datos.contains(BORN_TAG)) {
+            datos.putLong(BORN_TAG, level.getGameTime());
+            return 0L;
+        }
+        return level.getGameTime() - datos.getLong(BORN_TAG);
+    }
+
+    /**
+     * <b>Envejecimiento visible</b>: a partir de {@link #VILLAGER_OLD_AGE_TICKS} (2 días de juego) el aldeano es
+     * viejo: va más lento y más débil (y ya no se le reparte pan, así que no cría). Al llegar a
+     * {@link #VILLAGER_LIFESPAN_TICKS} (3 días) muere de viejo con la animación y el sonido de muerte normales,
+     * no con un borrado seco.
+     */
+    private static void ageVillagers(ServerLevel level, List<Villager> aldeanos) {
+        for (Villager villager : aldeanos) {
+            long edad = ageOf(level, villager);
+            if (edad >= VILLAGER_LIFESPAN_TICKS) {
+                DevilRpg.LOGGER.info("[Village] Un aldeano murio de viejo a los {} dias de juego",
+                        edad / 24000L);
+                villager.hurt(level.damageSources().generic(), Float.MAX_VALUE);
+            } else if (edad >= VILLAGER_OLD_AGE_TICKS) {
+                if (!villager.hasEffect(MobEffects.MOVEMENT_SLOWDOWN)) {
+                    villager.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 20 * 60, 0, false, false));
+                }
+                if (!villager.hasEffect(MobEffects.WEAKNESS)) {
+                    villager.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 20 * 60, 0, false, false));
+                }
             }
         }
     }

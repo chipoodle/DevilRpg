@@ -733,7 +733,7 @@ public final class VillageGenerator {
                 .setValue(DoorBlock.FACING, FRONT).setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER), 3);
     }
 
-    private static void spawnVillager(ServerLevel level, BlockPos pos, VillagerProfession profession) {
+    private static void spawnVillager(ServerLevel level, BlockPos pos, VillagerProfession profession, boolean baby) {
         // OJO: NO se usa la Y que nos pasan (la del centro de la aldea). El terreno nivelado puede quedar a otra
         // altura en esta columna (el centro es una columna suelta y las cabañas y caminos ya usan groundY por
         // columna), así que un aldeano colocado a la Y del centro quedaba ENTERRADO: se asfixiaba y moría en
@@ -742,10 +742,14 @@ public final class VillageGenerator {
         Villager villager = EntityType.VILLAGER.create(level, null, posicion, MobSpawnType.MOB_SUMMONED, true, true);
         if (villager != null) {
             villager.setVillagerData(villager.getVillagerData().setProfession(profession));
+            if (baby) {
+                // Los que llegan para repoblar una aldea debilitada nacen CRÍAS y crecen solos (vanilla).
+                villager.setBaby(true);
+            }
             villager.moveTo(posicion.getX() + 0.5D, posicion.getY(), posicion.getZ() + 0.5D, 0.0F, 0.0F);
             villager.setPersistenceRequired();
             level.addFreshEntity(villager);
-            DevilRpg.LOGGER.debug("[Village] aldeano {} en {}", profession, posicion);
+            DevilRpg.LOGGER.debug("[Village] aldeano {} en {} (bebe: {})", profession, posicion, baby);
         }
     }
 
@@ -776,7 +780,7 @@ public final class VillageGenerator {
     /** Vuelve a poner los aldeanos y el golem de una aldea ya construida (ver {@code VillageManager}). */
     public static void spawnVillagers(ServerLevel level, BlockPos center) {
         for (int slot = 0; slot < VILLAGER_SPOTS.length; slot++) {
-            spawnOneVillager(level, center, slot);
+            spawnOneVillager(level, center, slot, false);
         }
         // El golem SOLO si no hay ya uno: al repoblar una aldea cuyo golem sobrevivió, antes aparecía un
         // segundo golem (bug visto en juego).
@@ -790,11 +794,12 @@ public final class VillageGenerator {
     /**
      * Repone <b>un</b> aldeano en la aldea, en el sitio que le toque según {@code slot} (los tres sitios fijos,
      * uno por profesión). Lo usa la repoblación escalonada de {@code VillageManager}: una aldea debilitada se
-     * recupera de a poco (un aldeano por intervalo) en vez de aparecer repoblada de golpe.
+     * recupera de a poco. Con {@code baby} el que llega nace <b>cría</b> y crece sola (vanilla), que es como se
+     * ve el relevo generacional.
      */
-    public static void spawnOneVillager(ServerLevel level, BlockPos center, int slot) {
+    public static void spawnOneVillager(ServerLevel level, BlockPos center, int slot, boolean baby) {
         int i = Math.floorMod(slot, VILLAGER_SPOTS.length);
-        spawnVillager(level, center.offset(VILLAGER_SPOTS[i]), VILLAGER_SPECIALTIES[i]);
+        spawnVillager(level, center.offset(VILLAGER_SPOTS[i]), VILLAGER_SPECIALTIES[i], baby);
     }
 
     /** Y del suelo sólido (ignora agua/lava) en una columna (x, z). */

@@ -504,15 +504,23 @@ con su premio y su estado guardado. Lo implementado:
       margen): antes había un poste con lanterna en medio del trigo (visto en juego). Además, al plantar una
       parcela se **despeja su columna** (3 bloques), así que un farol viejo que hubiera caído ahí desaparece en
       la siguiente reparación.
-    - **Comen**: la granja suma `FARM_YIELD` = 4 por latido y cada aldeano come 1 (`FOOD_PER_VILLAGER`), con
-      despensa tope de 64. Sin comida la aldea **pasa hambre y no crece** (queda en el log).
+    - **Comen pan de verdad**: a un aldeano que aún no puede criar (vanilla pide **12 puntos** de comida:
+      `Villager.canBreed`) se le deja **un pan en el suelo** que recoge él mismo (`ItemEntity` + `wantsToPickUp`
+      vanilla), y con eso nacen **crías** de verdad. Un pan por latido y solo si la despensa tiene para pagarlo
+      (`FOOD_PER_BREAD` = 4). A los **viejos no se les da**: ya no crían.
+    - **Hambre con consecuencias**: si la despensa llega a 0 (`starvingSince` persistido), los aldeanos van con
+      **Debilidad** y **Lentitud** mientras dure y, si el hambre pasa de `STARVATION_DEATH_TICKS` (10 min),
+      **muere uno** (y el contador se reinicia). La aldea también deja de crecer: un aldeano nuevo cuesta 8.
+      La granja da `FARM_YIELD` = 8 por latido y cada aldeano come 1 (despensa tope 64).
     - **Reparan**: una aldea **sana** (3 aldeanos) y en paz vuelve a levantar caminos, cabañas, faroles, granja y
       valla cada `REPAIR_INTERVAL_TICKS` (3 min) con `VillageGenerator.repair`, que hace lo mismo que
       `generate` pero **sin tocar el terreno** (nivelar o despejar vegetación destrozaría lo que construya el
       jugador cerca).
-    - **Envejecen**: a cada aldeano se le apunta la fecha de nacimiento en sus datos persistentes
-      (`BORN_TAG`) la primera vez que se le ve. A los **2 días** de juego se vuelve viejo (Lentitud) y a los
-      **3 días muere de viejo**, dejando el relevo: la aldea repone aldeanos con la comida de la granja.
+    - **Envejecen y hay relevo**: a cada aldeano se le apunta la fecha de nacimiento en sus datos persistentes
+      (`BORN_TAG`) la primera vez que se le ve. A los **2 días** de juego se vuelve viejo (Lentitud + Debilidad, y
+      deja de recibir pan, así que ya no cría) y a los **3 días muere de viejo** con la animación y el sonido
+      normales de muerte (no con un borrado seco). Los que llegan para repoblar una aldea debilitada nacen
+      **crías** (`setBaby(true)`), que crecen solas como en vanilla: el relevo se ve.
 
 11. ✅ **El asedio clásico también exige limpiar la horda para cobrar** (era la última rendija que quedaba):
     sus zombies van marcados con el índice de la aldea (el mismo campo `worldSiegeIndex` que usan las hordas

@@ -63,6 +63,8 @@ public final class VillageSavedData extends SavedData {
     private final Map<Integer, Long> repopulatedAt = new HashMap<>();
     /** Comida almacenada: la granja la produce y cada aldeano consume. */
     private final Map<Integer, Integer> food = new HashMap<>();
+    /** Desde cuándo la aldea pasa hambre (0 = tiene comida). Sirve para las consecuencias del hambre. */
+    private final Map<Integer, Long> starvingSince = new HashMap<>();
 
     public static VillageSavedData get(ServerLevel level) {
         return level.getDataStorage().computeIfAbsent(
@@ -100,6 +102,9 @@ public final class VillageSavedData extends SavedData {
             if (entry.contains("RepopulatedAt")) {
                 data.repopulatedAt.put(index, entry.getLong("RepopulatedAt"));
             }
+            if (entry.contains("StarvingSince")) {
+                data.starvingSince.put(index, entry.getLong("StarvingSince"));
+            }
             data.food.put(index, entry.getInt("Food"));
         }
         return data;
@@ -128,6 +133,7 @@ public final class VillageSavedData extends SavedData {
         Set<Integer> villages = new HashSet<>(health.keySet());
         villages.addAll(repopulatedAt.keySet());
         villages.addAll(food.keySet());
+        villages.addAll(starvingSince.keySet());
         for (int index : villages) {
             CompoundTag one = new CompoundTag();
             one.putInt("Index", index);
@@ -136,6 +142,9 @@ public final class VillageSavedData extends SavedData {
             }
             if (repopulatedAt.containsKey(index)) {
                 one.putLong("RepopulatedAt", repopulatedAt.get(index));
+            }
+            if (starvingSince.containsKey(index)) {
+                one.putLong("StarvingSince", starvingSince.get(index));
             }
             one.putInt("Food", food.getOrDefault(index, 0));
             settlementTag.add(one);
@@ -276,6 +285,26 @@ public final class VillageSavedData extends SavedData {
         int clamped = Math.max(0, value);
         if (food.getOrDefault(objectiveIndex, 0) != clamped) {
             food.put(objectiveIndex, clamped);
+            setDirty();
+        }
+    }
+
+    /**
+     * Desde cuándo la aldea pasa hambre (tick de juego; {@code 0} = tiene comida). Con esto se miden las
+     * consecuencias: mientras dura, los aldeanos están débiles, y si se alarga muere alguno.
+     */
+    public long getStarvingSince(int objectiveIndex) {
+        return starvingSince.getOrDefault(objectiveIndex, 0L);
+    }
+
+    public void setStarvingSince(int objectiveIndex, long gameTime) {
+        long anterior = starvingSince.getOrDefault(objectiveIndex, 0L);
+        if (anterior != gameTime) {
+            if (gameTime == 0L) {
+                starvingSince.remove(objectiveIndex);
+            } else {
+                starvingSince.put(objectiveIndex, gameTime);
+            }
             setDirty();
         }
     }
