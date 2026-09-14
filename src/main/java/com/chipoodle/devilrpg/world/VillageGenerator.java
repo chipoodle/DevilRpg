@@ -31,8 +31,10 @@ import net.minecraft.world.level.levelgen.Heightmap;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -832,22 +834,49 @@ public final class VillageGenerator {
     // --- Iteración 3: la aldea viva ----------------------------------------------------------------
 
     /**
-     * <b>Reparación</b> de la aldea: vuelve a levantar caminos, cabañas, faroles, valla y granja. Es lo mismo
-     * que hace {@link #generate} pero <b>sin tocar el terreno</b> (nivelar o despejar vegetación destrozaría lo
-     * que el jugador haya construido cerca). La llama {@code VillageManager} cada cierto tiempo en aldeas
-     * tranquilas y con aldeanos vivos: <i>los aldeanos reparan su aldea</i>.
+     * Captura el <b>plano</b> de la aldea: todos los bloques que hay por encima del suelo natural dentro del
+     * radio de la valla (sin vegetación ni cultivos: los árboles y la huerta son cosa del campo y del granjero).
+     * Es lo que usa el <b>aldeano obrero</b> ({@code VillagerRepairGoal}) para saber qué falta y volver a
+     * ponerlo bloque a bloque, en vez de que el gestor reconstruya la aldea entera de golpe.
      */
-    public static void repair(ServerLevel level, BlockPos center) {
-        BlockPos h0 = center.offset(-17, 0, -3);
-        BlockPos h1 = center.offset(16, 0, -4);
-        BlockPos h2 = center.offset(-3, 0, 17);
-        paths(level, center, h0, h1, h2);
-        hut(level, h0);
-        hut(level, h1);
-        hut(level, h2);
-        torches(level, center);
-        farm(level, center);
-        fence(level, center);
+    public static VillageSavedData.Blueprint captureBlueprint(ServerLevel level, BlockPos center) {
+        List<BlockState> palette = new ArrayList<>();
+        Map<BlockState, Integer> indices = new HashMap<>();
+        List<Long> posiciones = new ArrayList<>();
+        List<Integer> estados = new ArrayList<>();
+        for (int dx = -FENCE_RADIUS; dx <= FENCE_RADIUS; dx++) {
+            for (int dz = -FENCE_RADIUS; dz <= FENCE_RADIUS; dz++) {
+                if (dx * dx + dz * dz > FENCE_RADIUS * FENCE_RADIUS) {
+                    continue;
+                }
+                int x = center.getX() + dx;
+                int z = center.getZ() + dz;
+                int base = groundY(level, x, z);
+                for (int dy = 0; dy <= 9; dy++) {
+                    BlockPos pos = new BlockPos(x, base + dy, z);
+                    BlockState state = level.getBlockState(pos);
+                    if (state.isAir() || state.is(BlockTags.LEAVES) || state.is(BlockTags.LOGS)
+                            || state.getBlock() instanceof CropBlock) {
+                        continue;
+                    }
+                    Integer indice = indices.get(state);
+                    if (indice == null) {
+                        indice = palette.size();
+                        palette.add(state);
+                        indices.put(state, indice);
+                    }
+                    posiciones.add(pos.asLong());
+                    estados.add(indice);
+                }
+            }
+        }
+        long[] posicionesArray = new long[posiciones.size()];
+        int[] estadosArray = new int[estados.size()];
+        for (int i = 0; i < posicionesArray.length; i++) {
+            posicionesArray[i] = posiciones.get(i);
+            estadosArray[i] = estados.get(i);
+        }
+        return new VillageSavedData.Blueprint(palette, posicionesArray, estadosArray);
     }
 
     /**
@@ -855,7 +884,7 @@ public final class VillageGenerator {
      * puesto de trabajo del granjero). Es lo que hace que el aldeano granjero tenga faena y que la aldea
      * produzca la <b>comida</b> que luego se come (ver {@code VillageManager}).
      */
-    private static void farm(ServerLevel level, BlockPos center) {
+    public static void farm(ServerLevel level, BlockPos center) {
         for (int[] plot : FARM_PLOTS) {
             plot(level, center.offset(plot[0], 0, plot[1]));
         }

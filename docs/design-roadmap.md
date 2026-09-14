@@ -503,7 +503,7 @@ con su premio y su estado guardado. Lo implementado:
       `PLOT_WIDTH`/`PLOT_DEPTH`, y los **faroles nunca se plantan dentro** (`insideFarm`, con 1 bloque de
       margen): antes había un poste con lanterna en medio del trigo (visto en juego). Además, al plantar una
       parcela se **despeja su columna** (3 bloques), así que un farol viejo que hubiera caído ahí desaparece en
-      la siguiente reparación.
+      cuanto se planta la parcela (en la generación o en la primera captura del plano de una aldea vieja).
     - **Comen pan de verdad**: a un aldeano que aún no puede criar (vanilla pide **12 puntos** de comida:
       `Villager.canBreed`) se le deja **un pan en el suelo** que recoge él mismo (`ItemEntity` + `wantsToPickUp`
       vanilla), y con eso nacen **crías** de verdad. Un pan por latido y solo si la despensa tiene para pagarlo
@@ -512,10 +512,21 @@ con su premio y su estado guardado. Lo implementado:
       **Debilidad** y **Lentitud** mientras dure y, si el hambre pasa de `STARVATION_DEATH_TICKS` (10 min),
       **muere uno** (y el contador se reinicia). La aldea también deja de crecer: un aldeano nuevo cuesta 8.
       La granja da `FARM_YIELD` = 8 por latido y cada aldeano come 1 (despensa tope 64).
-    - **Reparan**: una aldea **sana** (3 aldeanos) y en paz vuelve a levantar caminos, cabañas, faroles, granja y
-      valla cada `REPAIR_INTERVAL_TICKS` (3 min) con `VillageGenerator.repair`, que hace lo mismo que
-      `generate` pero **sin tocar el terreno** (nivelar o despejar vegetación destrozaría lo que construya el
-      jugador cerca).
+    - **Reparan un aldeano obrero, andando y bloque a bloque** (`VillagerRepairGoal`). Antes lo hacía el gestor
+      con un `repair()` que reconstruía caminos, cabañas, faroles, granja y valla **en un solo tick**: si mirabas,
+      la aldea aparecía de la nada, y encima podía reconstruir sobre lo que hubieras construido tú. Ahora:
+      - El gestor guarda el **plano** de la aldea (`VillageGenerator.captureBlueprint`: paleta + posiciones
+        comprimidas + índices, persistido en `VillageSavedData`), con los bloques que hay por encima del suelo
+        natural y **sin** vegetación ni cultivos (los árboles y la huerta son de la granja y del granjero).
+        A las aldeas de partidas viejas se les pone antes la granja, para que el plano la incluya.
+      - El **obrero** es un aldeano marcado en sus datos persistentes (`BUILDER_TAG`); el gestor lo nombra (el
+        primer adulto) y le repone su goal cada vez que lo ve, porque los goals no se guardan con la partida.
+      - El goal busca el hueco **más cercano** (`findRepairTarget`: lo que debería estar y no está, hasta 40
+        bloques y ±5/6 de altura), va **caminando** hasta él, se para, mira, da el golpe (`swing`) y **coloca el
+        bloque del plano** con su sonido. Un bloque cada ~3 s, con descansos, para que se le vea trabajar.
+      - **Nunca pisa nada**: solo repone si en esa posición hay **aire** (si lo puso el jugador, se salta el
+        hueco). Y no trabaja en plena refriega ni si se aleja más de 48 del centro.
+      - Los huecos inalcanzables se descartan por un rato (`saltados`) para no quedarse en bucle.
     - **Envejecen y hay relevo**: a cada aldeano se le apunta la fecha de nacimiento en sus datos persistentes
       (`BORN_TAG`) la primera vez que se le ve. A los **2 días** de juego se vuelve viejo (Lentitud + Debilidad, y
       deja de recibir pan, así que ya no cría) y a los **3 días muere de viejo** con la animación y el sonido

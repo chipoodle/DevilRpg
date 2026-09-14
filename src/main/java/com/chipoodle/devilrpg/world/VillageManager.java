@@ -7,6 +7,7 @@ import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInter
 import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapability;
 import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapabilityInterface;
 import com.chipoodle.devilrpg.entity.AggressiveZombieEntity;
+import com.chipoodle.devilrpg.entity.goal.VillagerRepairGoal;
 import com.chipoodle.devilrpg.init.ModEntities;
 import com.chipoodle.devilrpg.survival.ObjectiveTargets;
 import com.chipoodle.devilrpg.util.MissionRewards;
@@ -22,11 +23,13 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.OwnableEntity;
+import net.minecraft.world.entity.ai.goal.WrappedGoal;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
@@ -99,8 +102,16 @@ public final class VillageManager {
     private static final int FOOD_TO_GROW = 8;
     /** Tiempo de hambre continua (ticks) antes de que se muera un aldeano: 10 min. */
     private static final long STARVATION_DEATH_TICKS = 10L * 60L * 20L;
-    /** Cada cuánto reparan la aldea sus aldeanos (3 min). Tiene que ser múltiplo de {@link #VILLAGE_POLL_TICKS}. */
-    private static final int REPAIR_INTERVAL_TICKS = 3 * 60 * 20;
+
+    // --- Obrero de la aldea (Iteración 3, A1) ------------------------------------------------------
+
+    /** Marca (en los datos persistentes del aldeano) del que es el <b>obrero</b> de la aldea. */
+    public static final String BUILDER_TAG = "DevilRpgBuilder";
+    /** Radio alrededor del obrero en el que se buscan huecos que reponer. */
+    private static final double REPAIR_SEARCH_RADIUS = 40.0D;
+    /** Cuánto puede estar el hueco por encima / por debajo del obrero para que intente alcanzarlo. */
+    private static final int REPAIR_MAX_UP = 5;
+    private static final int REPAIR_MAX_DOWN = 6;
     /** Etiqueta de los datos persistentes del aldeano con su fecha de nacimiento. */
     private static final String BORN_TAG = "DevilRpgVillagerBorn";
     /** A partir de esta edad (2 días de juego) el aldeano es viejo y va más lento. */
@@ -687,14 +698,106 @@ public final class VillageManager {
         // COMER DE VERDAD: se les reparte pan (lo recogen ellos) para que puedan criar como en vanilla.
         feedVillagers(level, saved, objectiveIndex, aldeanos);
 
-        // Solo las aldeas SANAS y en paz se ponen a reparar (una debilitada está a otras cosas).
-        if (vivos >= VILLAGERS_FOR_FULL_HEALTH && level.getGameTime() % REPAIR_INTERVAL_TICKS == 0L) {
-            VillageGenerator.repair(level, center);
-            DevilRpg.LOGGER.info("[Village] La aldea {} ha sido reparada por sus aldeanos (comida {})",
-                    objectiveIndex, saved.getFood(objectiveIndex));
-        }
+        // OBRERO: se asegura de que exista el PLANO de la aldea y de que haya un aldeano que repare. El trabajo
+        // lo hace su goal, andando y bloque a bloque (ver VillagerRepairGoal): aquí solo se prepara.
+        prepareRepairs(level, saved, objectiveIndex, center, aldeanos);
 
         ageVillagers(level, aldeanos);
+    }
+
+    /**
+     * Deja la aldea lista para repararse <b>sola y de verdad</b>: captura el <b>plano</b> la primera vez (qué
+     * bloque debería haber en cada sitio) y nombra un <b>obrero</b> si no lo hay. Al de partidas viejas se le
+     * pone antes la granja, para que el plano la incluya.
+     */
+    private static void prepareRepairs(ServerLevel level, VillageSavedData saved, int objectiveIndex, BlockPos center, List<Villager> aldeanos) {
+        if (!saved.hasBlueprint(objectiveIndex)) {
+            VillageGenerator.farm(level, center);
+            VillageSavedData.Blueprint plano = VillageGenerator.captureBlueprint(level, center);
+            saved.setBlueprint(objectiveIndex, plano);
+            DevilRpg.LOGGER.info("[Village] Aldea {}: plano guardado ({} bloques)", objectiveIndex, plano.size());
+        }
+        for (Villager villager : aldeanos) {
+            if (villager.getPersistentData().getBoolean(BUILDER_TAG)) {
+                // Los goals no se guardan con la partida: al volver a verlo se le repone el suyo.
+                asegurarGoalDeObrero(villager, center, objectiveIndex);
+                return;
+            }
+        }
+        for (Villager villager : aldeanos) {
+            if (villager.isBaby()) {
+                continue;
+            }
+            villager.getPersistentData().putBoolean(BUILDER_TAG, true);
+            asegurarGoalDeObrero(villager, center, objectiveIndex);
+            DevilRpg.LOGGER.info("[Village] Aldea {}: {} es el obrero de la aldea", objectiveIndex, villager.getUUID());
+            return;
+        }
+    }
+
+    private static void asegurarGoalDeObrero(Villager villager, BlockPos center, int objectiveIndex) {
+        for (WrappedGoal wrapped : villager.goalSelector.getAvailableGoals()) {
+            if (wrapped.getGoal() instanceof VillagerRepairGoal) {
+                return;
+            }
+        }
+        villager.goalSelector.addGoal(3, new VillagerRepairGoal(villager, center, objectiveIndex));
+    }
+
+    /** ¿Esa aldea está siendo atacada ahora mismo? (el obrero no trabaja en plena refriega). */
+    public static boolean isVillageUnderAttack(ServerLevel level, int objectiveIndex) {
+        return isUnderAttack(level, objectiveIndex);
+    }
+
+    /**
+     * El hueco del plano que hay que reponer más cercano al obrero (un bloque que debería estar y no está), o
+     * {@code null} si no hay nada roto a su alcance. {@code excluir} trae las posiciones comprimidas que el
+     * obrero ya descartó por inalcanzables.
+     */
+    @Nullable
+    public static BlockPos findRepairTarget(ServerLevel level, int objectiveIndex, BlockPos from, Set<Long> excluir) {
+        VillageSavedData.Blueprint plano = VillageSavedData.get(level).getBlueprint(objectiveIndex);
+        if (plano == null) {
+            return null;
+        }
+        BlockPos mejor = null;
+        double mejorDist = REPAIR_SEARCH_RADIUS * REPAIR_SEARCH_RADIUS;
+        for (int i = 0; i < plano.size(); i++) {
+            BlockPos pos = plano.posAt(i);
+            if (excluir.contains(pos.asLong())) {
+                continue;
+            }
+            int dy = pos.getY() - from.getY();
+            if (dy > REPAIR_MAX_UP || dy < -REPAIR_MAX_DOWN) {
+                continue;
+            }
+            // Solo se repone lo que FALTA: si ahí hay algo (suyo, del jugador o del asedio) no se toca.
+            if (!level.getBlockState(pos).isAir()) {
+                continue;
+            }
+            double dist = pos.distSqr(from);
+            if (dist < mejorDist) {
+                mejorDist = dist;
+                mejor = pos;
+            }
+        }
+        return mejor;
+    }
+
+    /** El bloque que debería haber en esa posición según el plano de la aldea ({@code null} si no está en él). */
+    @Nullable
+    public static BlockState blueprintState(ServerLevel level, int objectiveIndex, BlockPos pos) {
+        VillageSavedData.Blueprint plano = VillageSavedData.get(level).getBlueprint(objectiveIndex);
+        if (plano == null) {
+            return null;
+        }
+        long comprimida = pos.asLong();
+        for (int i = 0; i < plano.size(); i++) {
+            if (plano.positions()[i] == comprimida) {
+                return plano.stateAt(i);
+            }
+        }
+        return null;
     }
 
     /**

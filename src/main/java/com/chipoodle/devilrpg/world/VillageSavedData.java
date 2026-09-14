@@ -1,15 +1,23 @@
 package com.chipoodle.devilrpg.world;
 
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderGetter;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtUtils;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.saveddata.SavedData;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -66,6 +74,28 @@ public final class VillageSavedData extends SavedData {
     /** Desde cuándo la aldea pasa hambre (0 = tiene comida). Sirve para las consecuencias del hambre. */
     private final Map<Integer, Long> starvingSince = new HashMap<>();
 
+    /**
+     * Planos de las aldeas: qué bloque debería haber en cada sitio (fuera del suelo natural). Los usa el
+     * <b>aldeano obrero</b> para saber qué falta y volver a ponerlo bloque a bloque. Se guardan como paleta +
+     * dos arrays paralelos (posiciones comprimidas con {@link BlockPos#asLong} e índices de la paleta) para que
+     * el guardado no engorde.
+     */
+    public record Blueprint(List<BlockState> palette, long[] positions, int[] states) {
+        public int size() {
+            return positions.length;
+        }
+
+        public BlockPos posAt(int index) {
+            return BlockPos.of(positions[index]);
+        }
+
+        public BlockState stateAt(int index) {
+            return palette.get(states[index]);
+        }
+    }
+
+    private final Map<Integer, Blueprint> blueprints = new HashMap<>();
+
     public static VillageSavedData get(ServerLevel level) {
         return level.getDataStorage().computeIfAbsent(
                 new SavedData.Factory<>(VillageSavedData::new, VillageSavedData::load), FILE_ID);
@@ -106,6 +136,17 @@ public final class VillageSavedData extends SavedData {
                 data.starvingSince.put(index, entry.getLong("StarvingSince"));
             }
             data.food.put(index, entry.getInt("Food"));
+        }
+        // Planos de las aldeas (paleta de estados + posiciones + índices).
+        HolderGetter<Block> blocks = registries.lookupOrThrow(Registries.BLOCK);
+        for (Tag element : tag.getList("Blueprints", Tag.TAG_COMPOUND)) {
+            CompoundTag entry = (CompoundTag) element;
+            List<BlockState> palette = new ArrayList<>();
+            for (Tag stateTag : entry.getList("Palette", Tag.TAG_COMPOUND)) {
+                palette.add(NbtUtils.readBlockState(blocks, (CompoundTag) stateTag));
+            }
+            data.blueprints.put(entry.getInt("Index"),
+                    new Blueprint(palette, entry.getLongArray("Pos"), entry.getIntArray("State")));
         }
         return data;
     }
@@ -150,6 +191,20 @@ public final class VillageSavedData extends SavedData {
             settlementTag.add(one);
         }
         tag.put("Settlement", settlementTag);
+        ListTag blueprintTag = new ListTag();
+        for (Map.Entry<Integer, Blueprint> entry : blueprints.entrySet()) {
+            CompoundTag one = new CompoundTag();
+            one.putInt("Index", entry.getKey());
+            ListTag paletteTag = new ListTag();
+            for (BlockState state : entry.getValue().palette()) {
+                paletteTag.add(NbtUtils.writeBlockState(state));
+            }
+            one.put("Palette", paletteTag);
+            one.putLongArray("Pos", entry.getValue().positions());
+            one.putIntArray("State", entry.getValue().states());
+            blueprintTag.add(one);
+        }
+        tag.put("Blueprints", blueprintTag);
         return tag;
     }
 
@@ -307,5 +362,21 @@ public final class VillageSavedData extends SavedData {
             }
             setDirty();
         }
+    }
+
+    // --- Plano de la aldea (Iteración 3, obrero) ---------------------------------------------------
+
+    public boolean hasBlueprint(int objectiveIndex) {
+        return blueprints.containsKey(objectiveIndex);
+    }
+
+    /** El plano de esa aldea, o {@code null} si todavía no se ha capturado. */
+    public Blueprint getBlueprint(int objectiveIndex) {
+        return blueprints.get(objectiveIndex);
+    }
+
+    public void setBlueprint(int objectiveIndex, Blueprint blueprint) {
+        blueprints.put(objectiveIndex, blueprint);
+        setDirty();
     }
 }
