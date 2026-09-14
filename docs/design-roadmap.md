@@ -166,16 +166,26 @@ siguiente está implementado y probado.
     plantilla no los deje emparedados. *(Esto se añadió porque el jugador entró a una aldea vieja, con cabañas
     procedurales y medio enterradas, y con razón lo reportó como que "todo estaba roto": no era una regresión del
     código nuevo, era que la migración no cubría las casas.)*
-- **Nivelado al patio INMEDIATO (mínimo) y suelo a ras**: la huella de cada construcción se nivela al
-  **mínimo del anillo de terreno pegado a ella** (`nivelDeAlrededores`, margen 2 y **mínimo**, no mediana). Con la
-  mediana de un anillo ancho (4 bloques) y el terreno de la aldea en pendiente, la referencia caía **1 bloque por
-  encima** del patio y la casa subía a un relleno; se **midió en el guardado del jugador**: las **6 puertas** de la
-  aldea a Y=72..74 con el bloque de fuera a 71..73. Con el mínimo la construcción queda **a ras o algo metida** en
-  el lado alto del terreno, **nunca por encima**. Y el **suelo de la plantilla va en el bloque de superficie**
-  (`origen.y = nivel - 1`), no en el aire de encima (con `nivel` la casa salía otro bloque más alta). Se recorta el
-  terreno que sobra —solo si es natural— y se rellena con tierra lo que falta. Además, `escalonDeEntrada` pone
-  escaleras de roble delante de la puerta si el suelo de fuera quedó más bajo que el piso. La misma nivelación usa
-  la granja (que ya ponía agua y tierra en la capa de superficie, por eso esa sí se veía bien).
+- **UNA sola cota para toda la aldea (trazados 13→15) y suelo a ras**: la cota (el nivel por el que se anda) se
+  calcula **una vez**, con el terreno **limpio** (`generate`: isla → nivel del agua + 1; tierra → mediana de
+  `levelTerrain`), y **todas** las construcciones —las 4 casas, la iglesia y la granja— se colocan a ella. El
+  **suelo de la plantilla va en el bloque de superficie** (`origen.y = nivel - 1`). Nivelar cada casa por su cuenta
+  (mínimo o mediana de su patio, trazados 10-12) era lo que dejaba **zanjas** alrededor y casas hundidas; y
+  recalcular la cota con la aldea ya construida la dejaba **un bloque alta**, porque `groundY` sobre una casa
+  devuelve su **tejado** (medido en el guardado del jugador: suelo de la plaza a y=62 con los suelos de las casas a
+  y=63, cada casa con su terraza de un bloque). En una aldea **ya construida** la cota se **lee de la plaza**
+  (`cotaDeLaPlaza`: disco de radio 6 en el centro, donde no hay nada encima) y se nivela a ella. El nivelado,
+  además, **nunca rellena encima de una construcción** ni **recorta troncos** (`esTerrenoRecortable`): el relleno
+  era a ciegas y **enterraba el muro** de la aldea, y el recorte daba los troncos por "terreno natural" y los
+  borraba. `escalonDeEntrada` sigue poniendo escaleras de roble delante de la puerta si el suelo de fuera quedó más
+  bajo que el piso, y la granja usa la **misma** cota (antes la recalculaba a mitad de obra, con las casas y la
+  iglesia ya colocadas).
+- **El muro entra en el plano y se rehace al migrar**: el muro es de **troncos** (`wall`) y `seDescartaDelPlano`
+  los descartaba como si fueran vegetación, así que no estaban en el plano y el obrero **no podía reponer** los que
+  rompe un asedio (era el bug del jugador: "al defender la aldea, las maderas del muro no vuelven nunca"). Ahora
+  los troncos **sí** entran en el plano y, en la migración de trazado, `VillageGenerator.rehacerMuro` **reconstruye
+  el muro entero** (limpia la franja del muro y lo vuelve a levantar con `fence`): cuando el muro queda enterrado o
+  pierde troncos, esos huecos no están en ningún plano y no se pueden reparar bloque a bloque.
 - **Los caminos no suben por los tejados**: `line()` colocaba el camino con `groundY` **por columna**, y sobre una
   casa eso devuelve el **tejado**, así que el camino se pintaba encima y le arrancaba bloques. Ahora se saltan las
   columnas que no estén a la altura del patio (más de 1 bloque de diferencia).
@@ -661,7 +671,8 @@ el tiempo y se gasta en una lista de planos, más un `Goal` de "ir a construir" 
   del `SpawnScaleProfile` (distancia + amenaza). Hoy la horda se lanza alrededor de un **jugador** que esté
   fuera de la zona protegida, a **20–44 bloques** de él en círculo.
 - **Presión de vexes (`VexSpawnRule`/`VexSpawnProfile`)**: `FrostVexEntity` (extiende `Vex`), `minDistance` 67,
-  `maxDistance` 1000, `maxScaleMultiplier` 2.5, `baseHealth` 6.67, `baseSpeed` 0.077, `baseDamage` 0.34,
+  `maxDistance` 1000, `maxScaleMultiplier` 2.5, `baseHealth` **3** (un tercio de la vida del vex: 6.67 era dos
+  tercios y la dejaba al doble del resto del perfil), `baseSpeed` 0.077, `baseDamage` 0.34,
   `baseXp` **15** (subido desde 5: con 5 parecía que los vexes no daban XP), `maxXpMultiplier` 4.5 (hasta ~82
   lejos de la base). Spawnea de día y de **noche**, a **12–24 bloques del jugador**, límite **15 vivos**,
   intervalo 20 s–2 min. **Detalle completo en 5.1.**
@@ -965,8 +976,11 @@ la **guarida** (`LairManager.spawnWave`: 3 cada 25 s a 8–14 bloques del centro
   ocupan sitio, así que las skills asignadas quedan pegadas a la izquierda sin huecos en medio. El borde
   iluminado al pasar el mouse se mantiene.
 
-> TODO (siguiente): que las hordas apunten al **asentamiento más cercano** en vez de al jugador, para
-> conectar con la Iteración 3.
+> ✅ HECHO (Iteración 3, apartado 3.1 punto 2): las hordas apuntan al **asentamiento más cercano** (el más
+> descuidado por presión) en vez de al jugador, y si no hay ninguna aldea candidata van a por él como antes
+> (`HordeManager` + `VillageSavedData`). Lo que queda de la Iteración 3 está cerrado; lo siguiente del roadmap es
+> la **Iteración 4** (el abismo vertical) y la **Iteración 5** (los enemigos fortifican su base), que sigue
+> PENDIENTE.
 
 ---
 

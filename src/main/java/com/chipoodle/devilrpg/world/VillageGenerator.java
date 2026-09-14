@@ -1571,11 +1571,14 @@ public final class VillageGenerator {
                 int x = center.getX() + dx;
                 int z = center.getZ() + dz;
                 int base = groundY(level, x, z);
-                // Se mira DESDE el propio bloque de superficie (base-1) hacia arriba. Antes empezaba en `base`, así
-                // que todo lo que está a ras de suelo se quedaba fuera del plano y el obrero no lo reponía: el suelo
-                // de las casas, los composteros, la base de la torre o los caminos. El terreno natural (tierra,
-                // hierba, agua, piedra...) sí se salta, que eso no se "repara".
-                for (int dy = -1; dy <= 9; dy++) {
+                // Se mira DESDE dos bloques por debajo del suelo transitable (base-2) hacia arriba. Antes empezaba
+                // en `base`, así que todo lo que está a ras de suelo se quedaba fuera del plano y el obrero no lo
+                // reponía: el suelo de las casas, los composteros, la base de la torre o los caminos. El segundo
+                // bloque de abajo hace falta por el MURO: son dos troncos y, visto desde `base`, la columna del
+                // muro tiene su bloque más alto en `base+1`, así que `groundY` sube a `base+2` y el tronco de ABAJO
+                // (el que rompe un asedio) quedaba fuera del plano y no se reponía nunca. El terreno natural
+                // (tierra, hierba, agua, piedra...) sí se salta, que eso no se "repara".
+                for (int dy = -2; dy <= 9; dy++) {
                     BlockPos pos = new BlockPos(x, base + dy, z);
                     BlockState state = level.getBlockState(pos);
                     if (seDescartaDelPlano(state)) {
