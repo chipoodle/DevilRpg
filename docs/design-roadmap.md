@@ -563,8 +563,19 @@ con su premio y su estado guardado. Lo implementado:
         considerarse "lo correcto" y el obrero lo mantenía para siempre. Con el plano canónico eso ya no puede
         pasar. Las aldeas **de partidas viejas** (sin plano canónico posible) siguen con la captura por escaneo
         (`captureBlueprint`) al aplicarles la migración de trazado.
-      - El **obrero** es un aldeano marcado en sus datos persistentes (`BUILDER_TAG`); el gestor lo nombra (el
-        primer adulto) y le repone su goal cada vez que lo ve, porque los goals no se guardan con la partida.
+      - El **obrero** ya no es uno solo: la aldea nombra hasta `MAX_BUILDERS` = **3** (dejando al granjero para la
+        huerta si hay gente de sobra) y se **reparten los huecos** con reservas (`reclamarHueco`/`liberarHueco`, con
+        caducidad de 1 min), así no se amontonan en el mismo agujero. El ritmo también subió: medio segundo de
+        golpe y medio de descanso por bloque (`WORK_TICKS`/`REST_TICKS` = 10), cuando antes eran 1 s + 2 s.
+      - También repone la **tierra pisoteada**: saltar sobre la tierra de cultivo la convierte en tierra (vanilla),
+        así que si el plano dice tierra de cultivo o acequia y ahora hay tierra/hierba, se vuelve a poner
+        (`necesitaReparacion`). Lo que no toca es nada que no sea eso: si pones tú un bloque, se respeta.
+        *Ojo*: los **cultivos** no están en el plano a propósito (son del granjero); si el granjero no tiene
+        semillas, la parcela puede quedar sin planta aunque la tierra quede bien.
+      - **Cuarta casa**: `generate` coloca 4 casas y la última es siempre una **grande**
+        (`CASAS_GRANDES` = `plains_medium_house_1/2`) con una **cama extra** dentro (`camaExtra`): en vanilla hace
+        falta una cama libre por cría, así que la aldea pasa a poder llegar a 4 aldeanos. Las aldeas ya migradas la
+        reciben con `asegurarCuartaCasa` (versión de casas `CURRENT_HOUSES`, para no rehacer las otras tres).
       - El goal busca el hueco **más cercano** (`findRepairTarget`: lo que debería estar y no está, hasta 40
         bloques y ±5/6 de altura), va **caminando** hasta él, se para, mira, da el golpe (`swing`) y **coloca el
         bloque del plano** con su sonido. Un bloque cada ~3 s, con descansos, para que se le vea trabajar.

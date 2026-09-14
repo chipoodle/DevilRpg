@@ -30,10 +30,10 @@ public class VillagerRepairGoal extends Goal {
 
     /** Distancia a la que el aldeano ya llega a colocar el bloque. */
     private static final double REACH = 4.5D;
-    /** Ticks "trabajando" antes de colocar (1 s): se le ve dar el golpe. */
-    private static final int WORK_TICKS = 20;
-    /** Descanso entre bloque y bloque (2 s): su IA normal recupera el mando un momento y no parece una máquina. */
-    private static final int REST_TICKS = 40;
+    /** Ticks "trabajando" antes de colocar (medio segundo): se le ve dar el golpe, pero sin eternizarse. */
+    private static final int WORK_TICKS = 10;
+    /** Descanso entre bloque y bloque (medio segundo). Antes eran 2 s y el obrero tardaba una eternidad. */
+    private static final int REST_TICKS = 10;
     /**
      * Descanso cuando NO hay nada que reparar (5 s). Importante: buscar huecos recorre el plano entero leyendo
      * bloques, así que no se puede hacer en cada tick.
@@ -78,16 +78,24 @@ public class VillagerRepairGoal extends Goal {
         if (villager.blockPosition().distSqr(center) > MAX_DISTANCE_FROM_CENTER * MAX_DISTANCE_FROM_CENTER) {
             return false;
         }
-        target = VillageManager.findRepairTarget(level, objectiveIndex, villager.blockPosition(), saltados);
+        target = VillageManager.findRepairTarget(level, objectiveIndex, villager.blockPosition(), saltados, villager.getUUID());
         if (target == null && !saltados.isEmpty()) {
             // Ya no queda nada alcanzable: se olvida la lista de descartados para volver a intentarlo más tarde.
             saltados.clear();
-            target = VillageManager.findRepairTarget(level, objectiveIndex, villager.blockPosition(), saltados);
+            target = VillageManager.findRepairTarget(level, objectiveIndex, villager.blockPosition(), saltados, villager.getUUID());
         }
         if (target == null) {
             restTicks = IDLE_REST_TICKS; // nada roto: no volver a recorrer el plano hasta dentro de 5 s
+            return false;
         }
-        return target != null;
+        // Se reclama el hueco para que otro obrero no vaya al mismo sitio (varios comparten el trabajo).
+        if (!VillageManager.reclamarHueco(level, target, villager.getUUID())) {
+            // Otro se lo quedó primero: se prueba en el siguiente intento sin gastar el descanso largo.
+            restTicks = REST_TICKS;
+            target = null;
+            return false;
+        }
+        return true;
     }
 
     @Override
@@ -107,8 +115,10 @@ public class VillagerRepairGoal extends Goal {
         if (target == null || !(villager.level() instanceof ServerLevel level)) {
             return;
         }
-        // Si el hueco ya no está (lo repuso otro o el jugador volvió a poner algo), se pasa al siguiente.
-        if (!level.getBlockState(target).isAir()) {
+        // Si el hueco ya no hace falta (lo repuso otro, o el jugador volvió a poner algo), se pasa al siguiente.
+        // OJO: no basta con "está en aire": si era tierra de cultivo y alguien la pisoteó (queda tierra), también
+        // hay que reponerla (ver VillageManager.necesitaReparacion).
+        if (!VillageManager.necesitaReparacion(level, objectiveIndex, target)) {
             target = null;
             return;
         }
@@ -128,10 +138,12 @@ public class VillagerRepairGoal extends Goal {
         workTicks = 0;
         BlockState state = VillageManager.blueprintState(level, objectiveIndex, target);
         if (state != null) {
-            level.setBlock(target, state, Block.UPDATE_ALL);
-            level.playSound(null, target, state.getSoundType().getPlaceSound(), SoundSource.BLOCKS, 0.8F, 1.0F);
-            DevilRpg.LOGGER.debug("[Village] El obrero repuso {} en {}", state.getBlock(), target);
+            BlockPos puesto = target;
+            level.setBlock(puesto, state, Block.UPDATE_ALL);
+            level.playSound(null, puesto, state.getSoundType().getPlaceSound(), SoundSource.BLOCKS, 0.8F, 1.0F);
+            DevilRpg.LOGGER.debug("[Village] El obrero repuso {} en {}", state.getBlock(), puesto);
         }
+        VillageManager.liberarHueco(level, target);
         target = null; // el siguiente hueco lo busca canUse() tras el descanso
     }
 
@@ -139,6 +151,9 @@ public class VillagerRepairGoal extends Goal {
     public void stop() {
         if (target != null && stuckTicks >= STUCK_LIMIT) {
             saltados.add(target.asLong());
+        }
+        if (target != null) {
+            VillageManager.liberarHueco((ServerLevel) villager.level(), target);
         }
         target = null;
         restTicks = REST_TICKS;

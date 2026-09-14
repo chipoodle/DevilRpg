@@ -102,11 +102,11 @@ public final class VillageSavedData extends SavedData {
      */
     private final Map<Integer, Integer> layout = new HashMap<>();
     /**
-     * ¿Esta aldea ya tiene las <b>casas del juego</b>? Las aldeas de partidas viejas tienen cabañas procedurales
-     * ({@code VillageGenerator.hut}) y hay que sustituirlas una vez. Se guarda para no volver a reconstruirlas
-     * (rehacer una casa borra lo que hubiera dentro).
+     * Versión de las <b>casas</b> de la aldea: 0 = cabañas procedurales de las partidas viejas, 1 = las tres casas
+     * del juego, 2 = las cuatro (con la grande y su cama extra). Se guarda para no reconstruir de más: rehacer una
+     * casa borra lo que hubiera dentro.
      */
-    private final Map<Integer, Boolean> casasNuevas = new HashMap<>();
+    private final Map<Integer, Integer> casasVersion = new HashMap<>();
 
     public static VillageSavedData get(ServerLevel level) {
         return level.getDataStorage().computeIfAbsent(
@@ -150,8 +150,11 @@ public final class VillageSavedData extends SavedData {
             if (entry.contains("Layout")) {
                 data.layout.put(index, entry.getInt("Layout"));
             }
-            if (entry.contains("CasasNuevas")) {
-                data.casasNuevas.put(index, entry.getBoolean("CasasNuevas"));
+            if (entry.contains("CasasVersion")) {
+                data.casasVersion.put(index, entry.getInt("CasasVersion"));
+            } else if (entry.getBoolean("CasasNuevas")) {
+                // Guardado de la versión anterior (era un booleano): "sí tenía casas nuevas" = versión 1.
+                data.casasVersion.put(index, 1);
             }
             data.food.put(index, entry.getInt("Food"));
         }
@@ -194,7 +197,7 @@ public final class VillageSavedData extends SavedData {
         villages.addAll(food.keySet());
         villages.addAll(starvingSince.keySet());
         villages.addAll(layout.keySet());
-        villages.addAll(casasNuevas.keySet());
+        villages.addAll(casasVersion.keySet());
         for (int index : villages) {
             CompoundTag one = new CompoundTag();
             one.putInt("Index", index);
@@ -210,8 +213,8 @@ public final class VillageSavedData extends SavedData {
             if (layout.containsKey(index)) {
                 one.putInt("Layout", layout.get(index));
             }
-            if (casasNuevas.containsKey(index)) {
-                one.putBoolean("CasasNuevas", casasNuevas.get(index));
+            if (casasVersion.containsKey(index)) {
+                one.putInt("CasasVersion", casasVersion.get(index));
             }
             one.putInt("Food", food.getOrDefault(index, 0));
             settlementTag.add(one);
@@ -425,14 +428,14 @@ public final class VillageSavedData extends SavedData {
         }
     }
 
-    /** ¿Esta aldea ya tiene las casas del juego (y no las cabañas procedurales de las partidas viejas)? */
-    public boolean hasNewHouses(int objectiveIndex) {
-        return casasNuevas.getOrDefault(objectiveIndex, false);
+    /** Versión de las casas de la aldea (0 = cabañas viejas, 1 = tres casas del juego, 2 = cuatro). */
+    public int getCasasVersion(int objectiveIndex) {
+        return casasVersion.getOrDefault(objectiveIndex, 0);
     }
 
-    public void setNewHouses(int objectiveIndex, boolean value) {
-        if (casasNuevas.getOrDefault(objectiveIndex, false) != value) {
-            casasNuevas.put(objectiveIndex, value);
+    public void setCasasVersion(int objectiveIndex, int version) {
+        if (casasVersion.getOrDefault(objectiveIndex, 0) != version) {
+            casasVersion.put(objectiveIndex, version);
             setDirty();
         }
     }

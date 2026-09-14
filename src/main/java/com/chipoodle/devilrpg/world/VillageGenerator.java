@@ -172,14 +172,16 @@ public final class VillageGenerator {
         BlockPos h2 = center.offset(-3, 0, 17);
 
         // CASAS PRIMERO: hay que colocarlas para saber dónde quedó cada puerta (cada plantilla la trae donde
-        // quiere) y que los caminos lleguen de verdad a ella.
+        // quiere) y que los caminos lleguen de verdad a ella. La última es la "grande" (con cama extra).
         RandomSource casas = RandomSource.create(center.asLong());
-        BlockPos p0 = placeVanillaHouse(level, h0, casaAleatoria(casas));
-        BlockPos p1 = placeVanillaHouse(level, h1, casaAleatoria(casas));
-        BlockPos p2 = placeVanillaHouse(level, h2, casaAleatoria(casas));
+        BlockPos[] puertas = new BlockPos[4];
+        puertas[0] = placeVanillaHouse(level, h0, casaAleatoria(casas));
+        puertas[1] = placeVanillaHouse(level, h1, casaAleatoria(casas));
+        puertas[2] = placeVanillaHouse(level, h2, casaAleatoria(casas));
+        puertas[3] = placeVanillaHouse(level, center.offset(10, 0, -18), casaGrandeAleatoria(casas));
 
         // Caminos DESPUÉS, del centro a la puerta de cada casa (ya se sabe dónde está).
-        paths(level, center, p0, p1, p2);
+        paths(level, center, puertas);
 
         // Campana al final, en el centro, limpiando su columna (nadie la tapa).
         bell(level, center);
@@ -311,12 +313,15 @@ public final class VillageGenerator {
         return nivel;
     }
 
-    /** Posiciones base de las 3 casas de la aldea, relativas al centro (las mismas que usa {@link #generate}). */
+    /** Posiciones base de las casas de la aldea, relativas al centro (las mismas que usa {@link #generate}). */
     public static BlockPos[] basesDeCasas(BlockPos center) {
         return new BlockPos[]{
                 center.offset(-17, 0, -3),
                 center.offset(16, 0, -4),
                 center.offset(-3, 0, 17),
+                // La cuarta casa (la "grande", con cama extra) va al norte, en el hueco libre entre la torre y la
+                // primera casa, sin pisar la granja ni los caminos.
+                center.offset(10, 0, -18),
         };
     }
 
@@ -351,11 +356,24 @@ public final class VillageGenerator {
                     }
                 }
             }
-            puertas[i] = placeVanillaHouse(level, base, casaAleatoria(casas));
+            puertas[i] = placeVanillaHouse(level, base,
+                    i == bases.length - 1 ? casaGrandeAleatoria(casas) : casaAleatoria(casas));
         }
-        paths(level, center, puertas[0], puertas[1], puertas[2]);
+        paths(level, center, puertas);
         DevilRpg.LOGGER.info("[Village] Aldea vieja en {}: cabañas sustituidas por casas del juego", center);
         return puertas;
+    }
+
+    /**
+     * Añade <b>solo la cuarta casa</b> (la grande, con su cama extra) y su camino. Es el paso que necesitan las
+     * aldeas que ya se migraron cuando solo había tres casas: así no se vuelven a tocar las otras tres (rehacer una
+     * casa borra lo que tenga dentro).
+     */
+    public static void asegurarCuartaCasa(ServerLevel level, BlockPos center) {
+        BlockPos base = basesDeCasas(center)[3];
+        BlockPos puerta = placeVanillaHouse(level, base, casaGrandeAleatoria(RandomSource.create(center.asLong())));
+        paths(level, center, puerta);
+        DevilRpg.LOGGER.info("[Village] Aldea en {}: añadida la cuarta casa (la grande)", center);
     }
 
     /**
@@ -568,8 +586,51 @@ public final class VillageGenerator {
             "village/plains/houses/plains_medium_house_2",
     };
 
+    /**
+     * Casas <b>grandes</b>: la cuarta casa de la aldea es siempre una de estas, y además se le pone una
+     * <b>cama extra</b> dentro (ver {@link #camaExtra}). En vanilla hace falta una cama libre por cría, así que
+     * con 4 camas la aldea puede llegar a 4 aldeanos.
+     */
+    private static final String[] CASAS_GRANDES = {
+            "village/plains/houses/plains_medium_house_1",
+            "village/plains/houses/plains_medium_house_2",
+    };
+
+    private static boolean esCasaGrande(String id) {
+        for (String grande : CASAS_GRANDES) {
+            if (grande.equals(id)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static String casaGrandeAleatoria(RandomSource random) {
+        return CASAS_GRANDES[random.nextInt(CASAS_GRANDES.length)];
+    }
+
     private static String casaAleatoria(RandomSource random) {
         return VANILLA_HOUSES[random.nextInt(VANILLA_HOUSES.length)];
+    }
+
+    /**
+     * Pone una <b>cama extra</b> dentro de una casa (para las grandes): busca un hueco libre de dos bloques con
+     * suelo firme debajo y coloca la cama ahí. Es lo que permite que la aldea críe más aldeanos.
+     */
+    private static void camaExtra(ServerLevel level, BlockPos origen, Vec3i tam) {
+        for (int dx = 1; dx < tam.getX() - 1; dx++) {
+            for (int dz = 1; dz < tam.getZ() - 2; dz++) {
+                BlockPos pies = origen.offset(dx, 1, dz);
+                BlockPos cabeza = pies.relative(Direction.SOUTH);
+                if (level.getBlockState(pies).isAir() && level.getBlockState(cabeza).isAir()
+                        && level.getBlockState(pies.below()).isSolid()
+                        && level.getBlockState(cabeza.below()).isSolid()) {
+                    bed(level, pies);
+                    DevilRpg.LOGGER.debug("[Village] Cama extra en {} ({})", pies, tam);
+                    return;
+                }
+            }
+        }
     }
 
     /**
@@ -632,6 +693,11 @@ public final class VillageGenerator {
         }
         if (camas == 0) {
             bed(level, origen.offset(tam.getX() / 2, 0, tam.getZ() / 2));
+        }
+        // Las casas GRANDES llevan una cama extra: en vanilla hace falta una cama libre por cría, así que con 4
+        // camas la aldea puede crecer hasta 4 aldeanos.
+        if (esCasaGrande(id)) {
+            camaExtra(level, origen, tam);
         }
         // Escalón de entrada: si el suelo de fuera quedó por debajo del piso de la casa, se sube con escaleras
         // pegadas a la puerta (si no, no se puede entrar al edificio).
@@ -758,10 +824,10 @@ public final class VillageGenerator {
     }
 
     /** Camino de tierra apisonada (el de pala) de 2 bloques de ancho entre el centro y cada casa. */
-    private static void paths(ServerLevel level, BlockPos center, BlockPos p0, BlockPos p1, BlockPos p2) {
-        line(level, center, doorApproach(level, p0));
-        line(level, center, doorApproach(level, p1));
-        line(level, center, doorApproach(level, p2));
+    private static void paths(ServerLevel level, BlockPos center, BlockPos... puertas) {
+        for (BlockPos puerta : puertas) {
+            line(level, center, doorApproach(level, puerta));
+        }
     }
 
     /**

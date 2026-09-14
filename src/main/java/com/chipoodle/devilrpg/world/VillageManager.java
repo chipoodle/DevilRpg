@@ -26,9 +26,11 @@ import net.minecraft.world.entity.OwnableEntity;
 import net.minecraft.world.entity.ai.goal.WrappedGoal;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.npc.Villager;
+import net.minecraft.world.entity.npc.VillagerProfession;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -123,14 +125,36 @@ public final class VillageManager {
      *   <li>6: las aldeas viejas cambian sus <b>cabañas procedurales por las casas del juego</b>
      *       (`VillageGenerator.actualizarCasas`), con la marca persistida `hasNewHouses` para no rehacer dos veces
      *       una casa ya nueva.</li>
+     *   <li>7: cuarta casa (la "grande", con <b>cama extra</b>) y reparación de la <b>tierra pisoteada</b>. La
+     *       versión de casas (`CURRENT_HOUSES`) decide si hay que rehacer las tres viejas o solo añadir la cuarta.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 6;
+    public static final int CURRENT_LAYOUT = 7;
+
+    /**
+     * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
+     * 1 = las tres casas del juego, 2 = las cuatro (la última es la "grande", con cama extra). Se sube cuando
+     * cambia el número o el tipo de casas, y la migración solo toca lo que falte (rehacer una casa borra lo que
+     * tenga dentro).
+     */
+    public static final int CURRENT_HOUSES = 2;
     /** Radio alrededor del obrero en el que se buscan huecos que reponer. */
     private static final double REPAIR_SEARCH_RADIUS = 40.0D;
     /** Cuánto puede estar el hueco por encima / por debajo del obrero para que intente alcanzarlo. */
     private static final int REPAIR_MAX_UP = 5;
     private static final int REPAIR_MAX_DOWN = 6;
+    /** Cuántos obreros puede tener una aldea a la vez (se reparten los huecos). */
+    private static final int MAX_BUILDERS = 3;
+    /** Si un obrero se queda atascado con un hueco, la reserva caduca y otro puede cogerlo. */
+    private static final long CLAIM_TIMEOUT_TICKS = 60L * 20L;
+    /**
+     * Reservas de huecos: posición comprimida → (obrero que lo tiene, tick en que lo cogió). Es lo que evita que
+     * varios obreros vayan al MISMO agujero cuando hay más de uno trabajando.
+     */
+    private static final Map<ServerLevel, Map<Long, Reclamo>> CLAIMS = new HashMap<>();
+
+    private record Reclamo(UUID builder, long tick) {
+    }
     /** Etiqueta de los datos persistentes del aldeano con su fecha de nacimiento. */
     private static final String BORN_TAG = "DevilRpgVillagerBorn";
     /** A partir de esta edad (2 días de juego) el aldeano es viejo y va más lento. */
@@ -180,8 +204,8 @@ public final class VillageManager {
         if (plano != null) {
             saved.setBlueprint(objectiveIndex, plano);
             saved.setLayout(objectiveIndex, CURRENT_LAYOUT);
-            // Esta aldea nace ya con las casas del juego: que la migración no las vuelva a construir.
-            saved.setNewHouses(objectiveIndex, true);
+            // Esta aldea nace ya con las casas del juego (las cuatro): que la migración no las vuelva a construir.
+            saved.setCasasVersion(objectiveIndex, CURRENT_HOUSES);
             DevilRpg.LOGGER.info("[Village] Aldea {} pre-generada en {} (plano de {} bloques)",
                     objectiveIndex, target, plano.size());
         } else {
@@ -750,10 +774,15 @@ public final class VillageManager {
         //  6:   las cabañas procedurales se sustituyen por CASAS DEL JUEGO (con la marca `hasNewHouses`, para no
         //       reconstruir las que ya son nuevas: rehacer una casa borra lo que haya dentro).
         if (saved.getLayout(objectiveIndex) < CURRENT_LAYOUT) {
-            if (!saved.hasNewHouses(objectiveIndex)) {
+            int casas = saved.getCasasVersion(objectiveIndex);
+            if (casas < 1) {
+                // Cabañas procedurales: se sustituyen todas por las casas del juego (y ya se añade la cuarta).
                 VillageGenerator.actualizarCasas(level, center);
-                saved.setNewHouses(objectiveIndex, true);
+            } else if (casas < CURRENT_HOUSES) {
+                // Ya tenía las tres casas del juego: solo falta la cuarta (la grande, con cama extra).
+                VillageGenerator.asegurarCuartaCasa(level, center);
             }
+            saved.setCasasVersion(objectiveIndex, CURRENT_HOUSES);
             VillageGenerator.farm(level, center);
             // El plano se tira: hay que volver a capturarlo, ya con las casas nuevas y con las reglas actuales.
             saved.clearBlueprint(objectiveIndex);
@@ -766,22 +795,53 @@ public final class VillageManager {
             saved.setBlueprint(objectiveIndex, plano);
             DevilRpg.LOGGER.info("[Village] Aldea {}: plano guardado ({} bloques)", objectiveIndex, plano.size());
         }
+        // OBREROS: puede haber VARIOS (hasta MAX_BUILDERS) repartiéndose el trabajo. Los goals no se guardan con
+        // la partida, así que se les repone cada vez que se les ve; y si faltan obreros, se nombran aldeanos
+        // adultos, dejando al granjero para la huerta siempre que haya alguien más.
+        int marcados = 0;
         for (Villager villager : aldeanos) {
             if (villager.getPersistentData().getBoolean(BUILDER_TAG)) {
-                // Los goals no se guardan con la partida: al volver a verlo se le repone el suyo.
                 asegurarGoalDeObrero(villager, center, objectiveIndex);
+                marcados++;
+            }
+        }
+        int adultos = 0;
+        for (Villager villager : aldeanos) {
+            if (!villager.isBaby()) {
+                adultos++;
+            }
+        }
+        // Se reserva al menos un aldeano para lo suyo (huerta, comercio...) si hay gente de sobra.
+        int deseados = Math.max(1, Math.min(MAX_BUILDERS, adultos - 1));
+        for (Villager villager : aldeanos) {
+            if (marcados >= deseados) {
                 return;
             }
-        }
-        for (Villager villager : aldeanos) {
-            if (villager.isBaby()) {
+            if (villager.isBaby() || villager.getPersistentData().getBoolean(BUILDER_TAG)
+                    || villager.getVillagerData().getProfession() == VillagerProfession.FARMER) {
                 continue;
             }
-            villager.getPersistentData().putBoolean(BUILDER_TAG, true);
-            asegurarGoalDeObrero(villager, center, objectiveIndex);
-            DevilRpg.LOGGER.info("[Village] Aldea {}: {} es el obrero de la aldea", objectiveIndex, villager.getUUID());
-            return;
+            marcarObrero(villager, center, objectiveIndex);
+            marcados++;
         }
+        // Si no había más que granjeros, se tira de ellos (mejor una huerta más lenta que una aldea en ruinas).
+        for (Villager villager : aldeanos) {
+            if (marcados >= deseados) {
+                return;
+            }
+            if (villager.isBaby() || villager.getPersistentData().getBoolean(BUILDER_TAG)) {
+                continue;
+            }
+            marcarObrero(villager, center, objectiveIndex);
+            marcados++;
+        }
+    }
+
+    /** Marca a un aldeano como obrero y le pone el goal de reparación. */
+    private static void marcarObrero(Villager villager, BlockPos center, int objectiveIndex) {
+        villager.getPersistentData().putBoolean(BUILDER_TAG, true);
+        asegurarGoalDeObrero(villager, center, objectiveIndex);
+        DevilRpg.LOGGER.info("[Village] Aldea {}: {} es obrero de la aldea", objectiveIndex, villager.getUUID());
     }
 
     private static void asegurarGoalDeObrero(Villager villager, BlockPos center, int objectiveIndex) {
@@ -799,12 +859,12 @@ public final class VillageManager {
     }
 
     /**
-     * El hueco del plano que hay que reponer más cercano al obrero (un bloque que debería estar y no está), o
-     * {@code null} si no hay nada roto a su alcance. {@code excluir} trae las posiciones comprimidas que el
-     * obrero ya descartó por inalcanzables.
+     * El hueco del plano que hay que reponer más cercano al obrero, o {@code null} si no hay nada roto a su
+     * alcance. {@code excluir} trae las posiciones comprimidas que ese obrero ya descartó por inalcanzables, y
+     * se saltan los huecos que otro obrero tenga reservados.
      */
     @Nullable
-    public static BlockPos findRepairTarget(ServerLevel level, int objectiveIndex, BlockPos from, Set<Long> excluir) {
+    public static BlockPos findRepairTarget(ServerLevel level, int objectiveIndex, BlockPos from, Set<Long> excluir, UUID builder) {
         VillageSavedData.Blueprint plano = VillageSavedData.get(level).getBlueprint(objectiveIndex);
         if (plano == null) {
             return null;
@@ -813,15 +873,15 @@ public final class VillageManager {
         double mejorDist = REPAIR_SEARCH_RADIUS * REPAIR_SEARCH_RADIUS;
         for (int i = 0; i < plano.size(); i++) {
             BlockPos pos = plano.posAt(i);
-            if (excluir.contains(pos.asLong())) {
+            long comprimida = pos.asLong();
+            if (excluir.contains(comprimida) || reclamadoPorOtro(level, comprimida, builder)) {
                 continue;
             }
             int dy = pos.getY() - from.getY();
             if (dy > REPAIR_MAX_UP || dy < -REPAIR_MAX_DOWN) {
                 continue;
             }
-            // Solo se repone lo que FALTA: si ahí hay algo (suyo, del jugador o del asedio) no se toca.
-            if (!level.getBlockState(pos).isAir()) {
+            if (!necesitaReparacion(level.getBlockState(pos), plano.stateAt(i))) {
                 continue;
             }
             double dist = pos.distSqr(from);
@@ -831,6 +891,66 @@ public final class VillageManager {
             }
         }
         return mejor;
+    }
+
+    /**
+     * ¿Hay que reponer algo en esa posición? Se repone si está en <b>aire</b> (lo típico: lo rompió un asedio) o si
+     * el bloque que hay es el resultado de un destrozo concreto: la <b>tierra de cultivo se convierte en tierra</b>
+     * cuando alguien salta encima, así que si el plano dice tierra de cultivo (o la acequia) y ahora hay tierra o
+     * hierba, se vuelve a poner. Cualquier otra cosa (lo que haya puesto el jugador) no se toca.
+     */
+    private static boolean necesitaReparacion(BlockState actual, BlockState esperado) {
+        if (actual.isAir()) {
+            return true;
+        }
+        if (actual.equals(esperado)) {
+            return false;
+        }
+        boolean eraHuerta = esperado.is(Blocks.FARMLAND) || esperado.is(Blocks.WATER);
+        boolean pisoteada = actual.is(Blocks.DIRT) || actual.is(Blocks.GRASS_BLOCK) || actual.is(Blocks.COARSE_DIRT)
+                || actual.is(Blocks.PODZOL) || actual.is(Blocks.ROOTED_DIRT);
+        return eraHuerta && pisoteada;
+    }
+
+    /** Lo mismo, mirando el plano: ¿ese hueco hay que reponerlo? (lo consulta el obrero en cada tick). */
+    public static boolean necesitaReparacion(ServerLevel level, int objectiveIndex, BlockPos pos) {
+        BlockState esperado = blueprintState(level, objectiveIndex, pos);
+        return esperado != null && necesitaReparacion(level.getBlockState(pos), esperado);
+    }
+
+    /**
+     * Reserva un hueco para un obrero. Devuelve {@code false} si otro lo tiene cogido todavía (así, con varios
+     * obreros, cada uno va a un sitio distinto en vez de amontonarse en el mismo agujero).
+     */
+    public static boolean reclamarHueco(ServerLevel level, BlockPos pos, UUID builder) {
+        Map<Long, Reclamo> mapa = CLAIMS.computeIfAbsent(level, l -> new HashMap<>());
+        long ahora = level.getGameTime();
+        if (reclamadoPorOtro(level, pos.asLong(), builder)) {
+            return false;
+        }
+        if (mapa.size() > 512) {
+            mapa.values().removeIf(reclamo -> ahora - reclamo.tick() >= CLAIM_TIMEOUT_TICKS);
+        }
+        mapa.put(pos.asLong(), new Reclamo(builder, ahora));
+        return true;
+    }
+
+    /** Suelta la reserva de un hueco (al colocarlo, al abandonarlo o al parar el goal). */
+    public static void liberarHueco(ServerLevel level, BlockPos pos) {
+        Map<Long, Reclamo> mapa = CLAIMS.get(level);
+        if (mapa != null) {
+            mapa.remove(pos.asLong());
+        }
+    }
+
+    private static boolean reclamadoPorOtro(ServerLevel level, long posComprimida, UUID builder) {
+        Map<Long, Reclamo> mapa = CLAIMS.get(level);
+        if (mapa == null) {
+            return false;
+        }
+        Reclamo reclamo = mapa.get(posComprimida);
+        return reclamo != null && !reclamo.builder().equals(builder)
+                && level.getGameTime() - reclamo.tick() < CLAIM_TIMEOUT_TICKS;
     }
 
     /** El bloque que debería haber en esa posición según el plano de la aldea ({@code null} si no está en él). */
