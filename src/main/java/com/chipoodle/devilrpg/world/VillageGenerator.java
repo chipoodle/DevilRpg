@@ -308,15 +308,20 @@ public final class VillageGenerator {
                     }
                 }
                 for (int y = suelo; y < nivel; y++) {
-                    colocar(level, new BlockPos(x, y, z), Blocks.DIRT.defaultBlockState(), Block.UPDATE_CLIENTS);
+                    BlockState actual = level.getBlockState(new BlockPos(x, y, z));
+                    if (!actual.isAir() && !esTerrenoNatural(actual)) {
+                        continue; // no se tapa nada construido
+                    }
+                    // La capa que se pisa va con CÉSPED (no tierra): si el patio se rellenó, se ve verde como el
+                    // resto y no como un borde marrón alrededor de la casa.
+                    colocar(level, new BlockPos(x, y, z),
+                            (y == nivel - 1 ? Blocks.GRASS_BLOCK : Blocks.DIRT).defaultBlockState(),
+                            Block.UPDATE_CLIENTS);
                 }
             }
         }
         return nivel;
     }
-
-    /** Distancia a la que se mira el patio que rodea una construcción para nivelarla. */
-    private static final int MARGEN_ALREDEDORES = 2;
 
     /** Posiciones base de las casas de la aldea, relativas al centro (las mismas que usa {@link #generate}). */
     public static BlockPos[] basesDeCasas(BlockPos center) {
@@ -408,11 +413,16 @@ public final class VillageGenerator {
     }
 
     /**
-     * <b>Iglesias</b> del propio juego (los templos de aldea de vanilla): traen campanario y campana, así que
-     * sustituyen a la torre procedural de vigilancia ({@link #tower}, ahora LEGACY).
+     * <b>Iglesia</b> de la aldea: el <b>templo con campanario</b> del propio juego. Sustituye a la torre
+     * procedural de vigilancia ({@link #tower}, ahora LEGACY).
+     * <p>
+     * El juego trae dos templos y solo se usa uno: {@code plains_temple_4}, que es el que tiene <b>torre</b>
+     * (12 bloques de alto). El otro ({@code plains_temple_3}) es un edificio bajo de 11x7x7 <b>sin torre</b> y el
+     * jugador, con razón, lo veía como un cobertizo y no como una iglesia ("¿dónde está la iglesia?"). Ojo: la
+     * campana de la aldea es la de la <b>plaza</b> — ninguna de las dos plantillas trae campana dentro, aunque el
+     * comentario antiguo decía que sí.
      */
     private static final String[] IGLESIAS = {
-            "village/plains/houses/plains_temple_3",
             "village/plains/houses/plains_temple_4",
     };
 
@@ -702,11 +712,19 @@ public final class VillageGenerator {
             return base.offset(0, 0, -2);
         }
         Vec3i tam = template.getSize();
-        // La casa se nivela a la COTA DE LA ALDEA que nos pasan (no a un nivel propio: eso era lo que dejaba zanjas
-        // y casas hundidas). El suelo de la plantilla (su capa y=0) va en `nivel - 1`, es decir en el bloque de
-        // superficie del pueblo, así el piso queda A RAS del suelo.
+        // La casa se coloca de forma que SU PUERTA quede a la cota de la aldea (el nivel por el que se anda): así
+        // se entra sin escalón y sin quedar hundido. No vale colocar siempre la capa y=0 en `nivel-1`, porque cada
+        // plantilla del juego tiene la puerta a una altura distinta (medido leyendo las plantillas):
+        //   · casa pequeña y templo 3: base en y=0, puerta en y=1  -> origen en nivel-1
+        //   · casa MEDIANA: y=0 es una plataforma de TIERRA de 13x11 y la puerta está en y=2 -> origen en nivel-2.
+        //     Con el nivel-1 de antes, esa plataforma de tierra quedaba a la vista como un borde marrón alrededor
+        //     de la casa (el jugador lo veía como "una zanja") y el piso/puerta quedaban un bloque por encima del
+        //     patio.
+        //   · templo 4 (la iglesia con campanario): puerta en y=0 -> origen en nivel. Con el nivel-1 de antes, la
+        //     puerta de la iglesia quedaba enterrada medio bloque y la iglesia parecía rota.
+        int puertaY = alturaDeLaPuerta(template);
         nivelarHuella(level, base, tam.getX(), tam.getZ(), nivel);
-        BlockPos origen = new BlockPos(base.getX(), nivel - 1, base.getZ());
+        BlockPos origen = new BlockPos(base.getX(), nivel - puertaY, base.getZ());
         // 1) Solar limpio: fuera todo lo que haya en la huella de la casa (y 4 bloques por encima del tejado).
         for (int dx = 0; dx < tam.getX(); dx++) {
             for (int dz = 0; dz < tam.getZ(); dz++) {
@@ -764,6 +782,25 @@ public final class VillageGenerator {
         apuntarCaja(level, origen, tam);
         DevilRpg.LOGGER.debug("[Village] Casa {} colocada en {} (puerta {})", id, origen, puerta);
         return puerta != null ? puerta : origen.offset(0, 0, -2);
+    }
+
+    /**
+     * Y (dentro de la plantilla) de la <b>mitad de abajo de la puerta</b>: es la altura a la que hay que dejar la
+     * plantilla para que se entre a ras del suelo de la aldea.
+     * <p>
+     * Si la plantilla no trae puerta (no debería pasar en las casas de aldea), se devuelve 1, que es lo que usan
+     * las casas pequeñas del juego.
+     */
+    private static int alturaDeLaPuerta(StructureTemplate template) {
+        for (StructureTemplate.StructureBlockInfo info
+                : template.filterBlocks(BlockPos.ZERO, new StructurePlaceSettings(), Blocks.OAK_DOOR)) {
+            BlockState state = info.state();
+            if (state.getBlock() instanceof DoorBlock
+                    && state.getValue(DoorBlock.HALF) == DoubleBlockHalf.LOWER) {
+                return info.pos().getY();
+            }
+        }
+        return 1;
     }
 
     /**
@@ -1008,13 +1045,15 @@ public final class VillageGenerator {
             for (int z = -radius; z <= radius; z++) {
                 BlockPos columna = new BlockPos(center.getX() + x, 0, center.getZ() + z);
                 int g = groundY(level, center.getX() + x, center.getZ() + z);
-                // Rellenar las columnas que estén por debajo del nivel base (sin tapar lo construido).
+                // Rellenar las columnas que estén por debajo del nivel base (sin tapar lo construido). La capa que
+                // se pisa va con césped, para que un relleno no se vea como un parche de tierra.
                 for (int y = g; y < baseY; y++) {
                     BlockState actual = level.getBlockState(columna.atY(y));
                     if (!actual.isAir() && !esTerrenoNatural(actual)) {
                         continue;
                     }
-                    colocar(level, columna.atY(y), Blocks.DIRT.defaultBlockState(), 3);
+                    colocar(level, columna.atY(y),
+                            (y == baseY - 1 ? Blocks.GRASS_BLOCK : Blocks.DIRT).defaultBlockState(), 3);
                 }
                 // Recortar lo que sobresalga del nivel base (solo terreno, nunca el muro ni un árbol).
                 for (int y = baseY; y < g; y++) {

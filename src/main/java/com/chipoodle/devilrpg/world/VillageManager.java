@@ -164,9 +164,22 @@ public final class VillageManager {
      *             entran en el plano</b>, así que el obrero puede reponerlos cuando un asedio los rompe (era el bug
      *             del jugador: al defender la aldea, las maderas del muro no volvían nunca).</li>
      *       </ul></li>
+     *   <li>16: cada construcción se coloca <b>alineada por su propia puerta</b> (`alturaDeLaPuerta`), no con la
+     *       capa y=0 en `nivel-1`. Leyendo las plantillas del juego, cada una tiene la puerta a una altura distinta:
+     *       <ul>
+     *         <li>la casa <b>mediana</b> (y la cuarta casa, que siempre es mediana) trae en y=0 una <b>plataforma de
+     *             TIERRA de 13x11</b> y la puerta en y=2: con el nivel-1 de antes esa tierra quedaba a la vista como
+     *             un borde marrón que el jugador veía como "una zanja" y la casa quedaba un bloque alta;</li>
+     *         <li>el <b>templo con campanario</b> (`plains_temple_4`, la iglesia) tiene la puerta en y=0, así que con
+     *             el nivel-1 quedaba con la puerta medio enterrada y parecía rota;</li>
+     *         <li>y el relleno del nivelado pone <b>césped</b> en la capa que se pisa (antes tierra: se veía como un
+     *             parche marrón alrededor de las casas).</li>
+     *       </ul>
+     *       Además la iglesia es siempre el templo <b>con torre</b>: el otro templo del juego es un edificio bajo sin
+     *       torre y sin campana, y el jugador lo veía como un cobertizo ("¿dónde está la iglesia?").</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 15;
+    public static final int CURRENT_LAYOUT = 16;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -176,10 +189,12 @@ public final class VillageManager {
      * patio inmediato</b> y escalón para el desnivel (el mínimo las dejaba hundidas), 7 = con <b>terraza</b>
      * allanada alrededor, 8 = con la <b>aldea entera a una sola cota</b> (sin zanjas), 9 = a la <b>cota de la
      * plaza</b> (con la mediana contaminada por los tejados quedaban un bloque altas, con su zanja de un bloque
-     * alrededor). Se sube cuando cambia el número, el tipo o la <b>altura</b> de las construcciones, y la migración
-     * solo hace lo que falte (rehacer una casa borra lo que tenga dentro).
+     * alrededor), 10 = <b>alineadas por su puerta</b> (la casa mediana entierra así su plataforma de tierra, que se
+     * veía como un borde/zanja marrón) y con la <b>iglesia del campanario</b> (`plains_temple_4`). Se sube cuando
+     * cambia el número, el tipo o la <b>altura</b> de las construcciones, y la migración solo hace lo que falte
+     * (rehacer una casa borra lo que tenga dentro).
      */
-    public static final int CURRENT_HOUSES = 9;
+    public static final int CURRENT_HOUSES = 10;
     /** Radio alrededor del obrero en el que se buscan huecos que reponer. */
     private static final double REPAIR_SEARCH_RADIUS = 40.0D;
     /** Cuánto puede estar el hueco por encima / por debajo del obrero para que intente alcanzarlo. */
