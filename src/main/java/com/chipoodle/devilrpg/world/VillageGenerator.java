@@ -67,13 +67,8 @@ public final class VillageGenerator {
     private static final int PLOT_DEPTH = 5;
     /** Fila de la acequia dentro de la parcela (la del medio). */
     private static final int PLOT_WATER_ROW = PLOT_DEPTH / 2;
-    /** Distancia a la que se mira el patio que rodea una construcción para nivelarla. */
-    private static final int MARGEN_ALREDEDORES = 2;
     /** Bloques de <b>terraza</b> (patio llano) que se allanan alrededor de una construcción. */
     private static final int MARGEN_TERRAZA = 2;
-    /** Anillo (desde/hasta) del que se saca el nivel de la terraza: fuera de ella, para no leer su propio relleno. */
-    private static final int ANILLO_MIN = MARGEN_TERRAZA + 1;
-    private static final int ANILLO_MAX = MARGEN_TERRAZA + 4;
 
     /**
      * Radio del área que se nivela alrededor del centro (todo hasta donde empieza la valla, para que no
@@ -163,18 +158,21 @@ public final class VillageGenerator {
         // Si la zona cae sobre agua (ver waterSurfaceForArea), construir una isla flotante AL NIVEL DEL AGUA:
         // la aldea no se puede mover del objetivo, así que si el objetivo cayó en el océano o un lago, se
         // levanta la isla. Si no, nivelar el terreno como siempre.
+        //
+        // OJO: de aquí sale la COTA DE LA ALDEA (el nivel al que se coloca TODO). Se hereda del propio terreno, sin
+        // muestrear nada: muestrear un anillo con `groundY` era el error de siempre, porque sobre una casa devuelve
+        // el TEJADO y la cota salía un bloque alta (medido en el guardado: suelo a y=62 y suelos de casa a y=63).
         int waterLevel = waterSurfaceForArea(level, center, LEVEL_RADIUS + SLOPE_WIDTH);
+        int nivelVilla;
         if (waterLevel >= 0) {
             buildFloatingIsland(level, center, LEVEL_RADIUS, waterLevel);
+            nivelVilla = waterLevel + 1; // el suelo de la isla va al nivel del agua: se anda un bloque por encima
         } else {
-            levelTerrain(level, center, LEVEL_RADIUS);
+            nivelVilla = levelTerrain(level, center, LEVEL_RADIUS);
         }
 
         // --- A partir de aquí se GRABA el plano canónico (solo estructuras, no terreno) ---
         iniciarGrabacion();
-        // COTA DE LA ALDEA: todo se coloca a este nivel (el suelo llano del pueblo), así no hay zanjas ni casas
-        // hundidas por nivelar cada construcción por su cuenta.
-        int nivelVilla = nivelDeLaAldea(level, center);
         // Posiciones de las casas (base). Desde la Iteración 3 refinada son CASAS DE VERDAD, plantillas del
         // propio juego (ver placeVanillaHouse), no cabañas procedurales.
         BlockPos h0 = center.offset(-17, 0, -3);
@@ -198,8 +196,11 @@ public final class VillageGenerator {
         // Campana al final, en el centro, limpiando su columna (nadie la tapa).
         bell(level, center);
 
-        // Granja: da trabajo al aldeano granjero y produce la comida que come la aldea (Iteración 3).
-        farm(level, center);
+        // Granja: da trabajo al aldeano granjero y produce la comida que come la aldea (Iteración 3). Se le pasa
+        // LA COTA YA CALCULADA: si la recalculara aquí, la muestra del terreno incluiría las casas y la iglesia
+        // recién colocadas (`groundY` sobre un tejado devuelve el tejado) y el nivelado subiría la aldea un
+        // bloque: casas hundidas, zanjas y el muro enterrado (el bug que reportó el jugador).
+        farm(level, center, nivelVilla);
 
         // Aldeanos frente a las casas, y el golem que protege la aldea.
         spawnVillagers(level, center);
@@ -282,13 +283,14 @@ public final class VillageGenerator {
     }
 
     /**
-     * Nivela la <b>huella</b> de una construcción y devuelve el nivel al que ha quedado.
+     * Nivela la <b>huella</b> de una construcción (más un pequeño patio alrededor) a la cota que le pasan y devuelve
+     * esa cota.
      * <p>
-     * El nivel de referencia NO se saca de la propia huella (ahí puede haber un zócalo de tierra heredado, y la
-     * casa acababa subida encima: visto en juego), sino del <b>anillo de terreno que la rodea</b>
-     * ({@link #nivelDeAlrededores}, mediana a 4 bloques de distancia): así la construcción queda <b>a ras del
-     * suelo de su barrio</b>. Se <b>recorta</b> el terreno que sobra (solo si es natural, nunca lo que hayas
-     * construido tú) y se <b>rellena</b> con tierra lo que falta.
+     * La cota es SIEMPRE la de la aldea ({@link #prepararTerreno}), nunca una calculada aquí: intentar deducir el
+     * nivel de cada construcción por su cuenta fue el origen de todas las casas altas, hundidas y de las zanjas
+     * alrededor (y de paso, muestrear con {@code groundY} cerca de una casa devuelve el <b>tejado</b>). Se
+     * <b>recorta</b> el terreno que sobra (solo si es natural, nunca lo que hayas construido tú) y se <b>rellena</b>
+     * con tierra lo que falta.
      */
     private static int nivelarHuella(ServerLevel level, BlockPos base, int anchoX, int anchoZ, int nivel) {
         // Se allana la huella MÁS una terraza alrededor (MARGEN_TERRAZA) a la COTA DE LA ALDEA que nos pasan: al no
@@ -313,40 +315,8 @@ public final class VillageGenerator {
         return nivel;
     }
 
-    /**
-     * Nivel del <b>patio que rodea</b> a una construcción: la <b>mediana</b> de la altura del suelo del anillo
-     * inmediato (a {@link #MARGEN_ALREDEDORES} bloques, fuera de la huella).
-     * <p>
-     * Es la mediana <b>del patio pegado</b> a la casa, no la de un anillo ancho: con el anillo a 4 bloques, la
-     * pendiente del terreno de la aldea hacía que la referencia cayera 1 bloque por encima del patio y la casa
-     * subiera a un relleno (medido en partida). Y tampoco el <b>mínimo</b>, que dejaba todas las casas un bloque
-     * <b>hundidas</b>. Con la mediana del patio, la casa queda a ras del suelo que la rodea y, si el terreno tiene
-     * desnivel, el lado bajo se sube con el <b>escalón de entrada</b> ({@link #escalonDeEntrada}), que es lo que
-     * pidió el jugador: mejor un escalón que una casa hundida.
-     */
-    private static int nivelDeAlrededores(ServerLevel level, BlockPos base, int anchoX, int anchoZ) {
-        List<Integer> alturas = new ArrayList<>();
-        for (int dx = -ANILLO_MAX; dx < anchoX + ANILLO_MAX; dx++) {
-            for (int dz = -ANILLO_MAX; dz < anchoZ + ANILLO_MAX; dz++) {
-                boolean enLaHuella = dx >= 0 && dz >= 0 && dx < anchoX && dz < anchoZ;
-                if (enLaHuella) {
-                    continue; // la huella puede tener el zócalo que queremos corregir
-                }
-                // Distancia (en cuadrícula) al borde de la huella. La terraza (hasta ANILLO_MIN) no cuenta, porque
-                // la vamos a allanar nosotros: se mira el terreno de justo fuera.
-                int dist = Math.max(Math.max(-dx, dx - (anchoX - 1)), Math.max(-dz, dz - (anchoZ - 1)));
-                if (dist < ANILLO_MIN) {
-                    continue;
-                }
-                alturas.add(groundY(level, base.getX() + dx, base.getZ() + dz));
-            }
-        }
-        if (alturas.isEmpty()) {
-            return groundY(level, base.getX(), base.getZ());
-        }
-        Collections.sort(alturas);
-        return alturas.get(alturas.size() / 2);
-    }
+    /** Distancia a la que se mira el patio que rodea una construcción para nivelarla. */
+    private static final int MARGEN_ALREDEDORES = 2;
 
     /** Posiciones base de las casas de la aldea, relativas al centro (las mismas que usa {@link #generate}). */
     public static BlockPos[] basesDeCasas(BlockPos center) {
@@ -376,9 +346,9 @@ public final class VillageGenerator {
         BlockPos[] bases = basesDeCasas(center);
         BlockPos[] puertas = new BlockPos[bases.length];
         RandomSource casas = RandomSource.create(center.asLong());
-        // Se vuelve a allanar TODO el terreno de la aldea a una sola cota (protegiendo lo que no sea natural) y las
+        // Se vuelve a dejar TODO el terreno de la aldea a una sola cota (protegiendo lo que no sea natural) y las
         // casas se colocan a esa cota: así desaparecen las zanjas y los hundimientos de las aldeas ya construidas.
-        int nivelVilla = levelTerrain(level, center, LEVEL_RADIUS);
+        int nivelVilla = prepararTerreno(level, center);
         for (int i = 0; i < bases.length; i++) {
             BlockPos base = bases[i];
             // SEGURIDAD: si hay aldeanos o golems dentro de la casa que se va a rehacer, se les saca a la plaza
@@ -485,7 +455,7 @@ public final class VillageGenerator {
             }
         }
         placeVanillaHouse(level, base, iglesiaAleatoria(RandomSource.create(center.asLong())),
-                nivelDeLaAldea(level, center));
+                prepararTerreno(level, center));
         DevilRpg.LOGGER.info("[Village] Aldea en {}: torre de vigilancia sustituida por una iglesia", center);
     }
 
@@ -852,6 +822,13 @@ public final class VillageGenerator {
         if (state.is(Blocks.FARMLAND) || state.is(Blocks.WATER)) {
             return false;
         }
+        // El MURO de la aldea es de TRONCOS: si se descartaran como si fueran vegetación, no estarían en el plano
+        // y el obrero no podría reponer los que rompe un asedio (era justo el bug del jugador: "cuando la aldea se
+        // defiende, todas las maderas del muro desaparecen y no vuelven"). La vegetación dentro del recinto no es
+        // un problema: el generador la limpia antes de construir, así que cualquier tronco de ahí dentro es el muro.
+        if (state.is(BlockTags.LOGS)) {
+            return false;
+        }
         return state.isAir() || esTerrenoNatural(state);
     }
 
@@ -876,6 +853,16 @@ public final class VillageGenerator {
                 || block == Blocks.SANDSTONE || block == Blocks.CLAY || block == Blocks.SNOW_BLOCK
                 || block == Blocks.ICE || block == Blocks.PACKED_ICE || block == Blocks.MUD
                 || block == Blocks.MOSS_BLOCK || block == Blocks.BEDROCK;
+    }
+
+    /**
+     * ¿Ese bloque es <b>terreno que puede sobrar</b> al nivelar? Es el terreno natural de verdad (tierra, hierba,
+     * piedra, arena, agua…) <b>sin</b> los troncos ni las hojas: esos son el <b>muro de la aldea</b> (o un árbol),
+     * y recortarlos con el nivelado era lo que hacía desaparecer las maderas del muro al renivelar una aldea ya
+     * construida.
+     */
+    private static boolean esTerrenoRecortable(BlockState state) {
+        return esTerrenoNatural(state) && !state.is(BlockTags.LOGS) && !state.is(BlockTags.LEAVES);
     }
 
     /**
@@ -985,6 +972,11 @@ public final class VillageGenerator {
      * <p>
      * Se rellena con tierra lo que esté por debajo y se recorta lo que sobresalga, <b>solo si es terreno natural</b>:
      * así se puede volver a llamar en una aldea ya construida (migración) sin cargarse lo que haya puesto el jugador.
+     * <p>
+     * OJO: la mediana se saca del propio terreno, así que esto es para terreno <b>limpio</b> (antes de construir).
+     * En una aldea ya construida la muestra sale falseada (las casas, y sobre todo sus tejados, cuentan como
+     * "suelo": `groundY` sobre un tejado devuelve el tejado) y la mediana sube un bloque; para eso está
+     * {@link #prepararTerreno}, que lee la cota de la plaza y nivela a ella.
      */
     public static int levelTerrain(ServerLevel level, BlockPos center, int radius) {
         List<Integer> heights = new ArrayList<>();
@@ -995,18 +987,38 @@ public final class VillageGenerator {
         }
         Collections.sort(heights);
         int baseY = heights.get(heights.size() / 2); // mediana
+        nivelar(level, center, radius, baseY);
+        return baseY;
+    }
 
+    /**
+     * Deja el terreno del área a la cota {@code baseY} (la que le digan) y añade el talud exterior.
+     * <p>
+     * Dos protecciones imprescindibles, porque esto se llama también en aldeas <b>ya construidas</b>:
+     * <ul>
+     *   <li>Al <b>rellenar</b> solo se pone tierra donde hay aire o terreno natural: nunca se tapa una
+     *       construcción. El relleno era a ciegas y enterraba los troncos del muro de la aldea (medido en el
+     *       guardado del jugador: el muro desaparecía bajo la tierra al renivelar).</li>
+     *   <li>Al <b>recortar</b> solo se quita terreno de verdad ({@link #esTerrenoRecortable}): los troncos y las
+     *       hojas no son "terreno que sobra", así que el muro no se desmonta al renivelar.</li>
+     * </ul>
+     */
+    private static void nivelar(ServerLevel level, BlockPos center, int radius, int baseY) {
         for (int x = -radius; x <= radius; x++) {
             for (int z = -radius; z <= radius; z++) {
                 BlockPos columna = new BlockPos(center.getX() + x, 0, center.getZ() + z);
                 int g = groundY(level, center.getX() + x, center.getZ() + z);
-                // Rellenar las columnas que estén por debajo del nivel base.
+                // Rellenar las columnas que estén por debajo del nivel base (sin tapar lo construido).
                 for (int y = g; y < baseY; y++) {
+                    BlockState actual = level.getBlockState(columna.atY(y));
+                    if (!actual.isAir() && !esTerrenoNatural(actual)) {
+                        continue;
+                    }
                     colocar(level, columna.atY(y), Blocks.DIRT.defaultBlockState(), 3);
                 }
-                // Recortar las columnas que sobresalgan por encima del nivel base (solo terreno natural).
+                // Recortar lo que sobresalga del nivel base (solo terreno, nunca el muro ni un árbol).
                 for (int y = baseY; y < g; y++) {
-                    if (esTerrenoNatural(level.getBlockState(columna.atY(y)))) {
+                    if (esTerrenoRecortable(level.getBlockState(columna.atY(y)))) {
                         colocar(level, columna.atY(y), Blocks.AIR.defaultBlockState(), 3);
                     }
                 }
@@ -1015,15 +1027,49 @@ public final class VillageGenerator {
         // Talud exterior: una pendiente escalonada en el borde para que la aldea parezca una MESETA natural
         // (como el terreno vanilla) en vez de un cubo de paredes verticales.
         addOuterSlope(level, center, radius, baseY);
-        return baseY;
     }
 
     /**
-     * La cota a la que está el suelo llano de la aldea: se mira el anillo que rodea al centro (a 3-6 bloques),
-     * que cae dentro del área nivelada. Es el nivel al que se colocan <b>todas</b> las construcciones.
+     * <b>Cota de una aldea ya construida</b>: se <b>lee</b> de la plaza (el centro, donde no hay casas) y se
+     * nivela el terreno a ella. Es la que usan las migraciones de aldeas viejas.
+     * <p>
+     * Nunca se recalcula la mediana de toda el área (como hace {@link #levelTerrain} en terreno limpio): con la
+     * aldea construida esa muestra incluye los <b>tejados</b> (`groundY` sobre una casa devuelve su tejado, no el
+     * suelo) y el <b>muro</b>, así que la mediana salía un bloque alta. Ese bloque de más es exactamente lo que
+     * producía las casas "arriba por un bloque", las zanjas de un bloque alrededor y el muro enterrado bajo la
+     * tierra (todo medido en el guardado del jugador).
+     * <p>
+     * Si la aldea va <b>sobre agua</b>, la cota es la de la isla (nivel del agua + 1) y <b>no</b> se nivela nada:
+     * allanar ahí rellenaría el mar.
      */
-    public static int nivelDeLaAldea(ServerLevel level, BlockPos center) {
-        return nivelDeAlrededores(level, center.offset(-3, 0, -3), 6, 6);
+    public static int prepararTerreno(ServerLevel level, BlockPos center) {
+        int waterLevel = waterSurfaceForArea(level, center, LEVEL_RADIUS + SLOPE_WIDTH);
+        if (waterLevel >= 0) {
+            return waterLevel + 1;
+        }
+        int cota = cotaDeLaPlaza(level, center);
+        nivelar(level, center, LEVEL_RADIUS, cota);
+        return cota;
+    }
+
+    /**
+     * La cota (nivel por el que se anda) del <b>suelo llano de la plaza</b>: la mediana de {@code groundY} en un
+     * disco pequeño alrededor del centro. Es el único trozo de la aldea del que se puede fiar la medida cuando ya
+     * hay construcciones, porque en la plaza no hay ninguna (ni casas, ni muro, ni granja).
+     */
+    private static int cotaDeLaPlaza(ServerLevel level, BlockPos center) {
+        List<Integer> alturas = new ArrayList<>();
+        int radio = 6;
+        for (int x = -radio; x <= radio; x++) {
+            for (int z = -radio; z <= radio; z++) {
+                if (x * x + z * z > radio * radio) {
+                    continue;
+                }
+                alturas.add(groundY(level, center.getX() + x, center.getZ() + z));
+            }
+        }
+        Collections.sort(alturas);
+        return alturas.get(alturas.size() / 2);
     }
 
     /**
@@ -1043,14 +1089,17 @@ public final class VillageGenerator {
                 int px = center.getX() + x;
                 int pz = center.getZ() + z;
                 int g = groundY(level, px, pz);
-                // Rellenar hasta el nivel del talud si el terreno está por debajo.
+                // Rellenar hasta el nivel del talud si el terreno está por debajo (sin tapar lo construido).
                 for (int y = g; y < targetY; y++) {
+                    BlockState actual = level.getBlockState(new BlockPos(px, y, pz));
+                    if (!actual.isAir() && !esTerrenoNatural(actual)) {
+                        continue;
+                    }
                     colocar(level, new BlockPos(px, y, pz), Blocks.DIRT.defaultBlockState(), 3);
                 }
-                // Recortar si el terreno natural sobresale por encima del talud.
+                // Recortar si el terreno natural sobresale por encima del talud (nunca troncos ni construcciones).
                 for (int y = targetY; y < g; y++) {
-                    BlockState bs = level.getBlockState(new BlockPos(px, y, pz));
-                    if (bs.isSolid()) {
+                    if (esTerrenoRecortable(level.getBlockState(new BlockPos(px, y, pz)))) {
                         colocar(level, new BlockPos(px, y, pz), Blocks.AIR.defaultBlockState(), 3);
                     }
                 }
@@ -1064,14 +1113,12 @@ public final class VillageGenerator {
     }
 
     /**
-     * Muro de madera y piedra alrededor de la aldea, más realista: logs horizontales (2 bloques de alto)
-     * con columnas verticales de cobblestone cada cierta distancia, y 4 entradas de cobblestone en los
-     * puntos cardinales (norte/sur/este/oeste).
+     * Las celdas del <b>anillo del muro</b>, en orden angular y sin huecos: se muestrea el círculo y se rellenan
+     * los saltos entre muestras con pasos cardinales. Lo usan {@link #fence} (construirlo) y
+     * {@link #rehacerMuro} (limpiar los restos antes de reconstruirlo).
      */
-    private static void fence(ServerLevel level, BlockPos center) {
+    private static List<BlockPos> anilloDelMuro(BlockPos center) {
         int r = FENCE_RADIUS;
-        // Anillo en orden angular (deduplicando consecutivos), para poder recorrerlo y conocer la
-        // dirección de cada tramo.
         List<BlockPos> pts = new ArrayList<>();
         int samples = 720;
         for (int a = 0; a <= samples; a++) {
@@ -1083,14 +1130,54 @@ public final class VillageGenerator {
                 pts.add(p);
             }
         }
-        // Secuencia continua de celdas del muro (rellenando los saltos con pasos cardinales para que no
-        // queden huecos en la diagonal).
         List<BlockPos> ring = new ArrayList<>();
         for (int i = 0; i < pts.size(); i++) {
-            BlockPos from = pts.get(i);
-            BlockPos to = pts.get((i + 1) % pts.size());
-            fillCardinal(from, to, ring);
+            fillCardinal(pts.get(i), pts.get((i + 1) % pts.size()), ring);
         }
+        return ring;
+    }
+
+    /**
+     * <b>Rehace el muro</b> de una aldea ya construida (migración): limpia los restos que hayan quedado en la
+     * línea del muro (troncos enterrados por un nivelado viejo, columnas sueltas, peldaños) y lo vuelve a levantar
+     * entero con {@link #fence}.
+     * <p>
+     * Hace falta porque el muro no se puede "reparar" bloque a bloque cuando lo que falta <b>no está en el plano</b>:
+     * un tronco enterrado o comido por el nivelado dejaba un hueco de aire que ningún plano recuerda. Aquí el muro
+     * se reconstruye desde cero, que es determinista (misma línea, mismas entradas), así que la aldea recupera su
+     * muro exactamente como lo haría una aldea nueva.
+     */
+    public static void rehacerMuro(ServerLevel level, BlockPos center) {
+        List<BlockPos> ring = anilloDelMuro(center);
+        List<Integer> heights = new ArrayList<>();
+        for (BlockPos p : ring) {
+            heights.add(groundY(level, p.getX(), p.getZ()));
+        }
+        Collections.sort(heights);
+        int baseY = heights.get(heights.size() / 2);
+        // Se limpia la franja del muro (de la superficie hacia arriba) quitando SOLO lo que no es terreno: los
+        // restos del muro viejo. Nunca se toca el suelo.
+        for (BlockPos p : ring) {
+            for (int y = baseY - 1; y <= baseY + 5; y++) {
+                BlockState state = level.getBlockState(new BlockPos(p.getX(), y, p.getZ()));
+                if (state.isAir() || esTerrenoNatural(state)) {
+                    continue;
+                }
+                level.setBlock(new BlockPos(p.getX(), y, p.getZ()), Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
+            }
+        }
+        fence(level, center);
+        DevilRpg.LOGGER.info("[Village] Aldea en {}: muro reconstruido", center);
+    }
+
+    /**
+     * Muro de madera y piedra alrededor de la aldea, más realista: logs horizontales (2 bloques de alto)
+     * con columnas verticales de cobblestone cada cierta distancia, y 4 entradas de cobblestone en los
+     * puntos cardinales (norte/sur/este/oeste).
+     */
+    private static void fence(ServerLevel level, BlockPos center) {
+        int r = FENCE_RADIUS;
+        List<BlockPos> ring = anilloDelMuro(center);
 
         // Altura uniforme (mediana) para que el muro no quede escalonado en terreno ondulado.
         List<Integer> heights = new ArrayList<>();
@@ -1520,7 +1607,7 @@ public final class VillageGenerator {
      * produzca la <b>comida</b> que luego se come (ver {@code VillageManager}).
      */
     public static void farm(ServerLevel level, BlockPos center) {
-        farm(level, center, nivelDeLaAldea(level, center));
+        farm(level, center, prepararTerreno(level, center));
     }
 
     /** Igual, pero a la cota que le digan (la de la aldea, para que la huerta quede al mismo nivel que el resto). */

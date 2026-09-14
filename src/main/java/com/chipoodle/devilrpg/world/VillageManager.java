@@ -147,9 +147,26 @@ public final class VillageManager {
      *       construcciones se colocan a ella): nivelar cada casa por su cuenta era lo que dejaba <b>zanjas</b>
      *       alrededor y casas hundidas. La migración vuelve a allanar el terreno (protegiendo lo que no sea
      *       natural) y rehace casas y granja a esa cota.</li>
+     *   <li>14: la cota de la aldea se <b>hereda del terreno</b> (`prepararTerreno`: la isla devuelve su nivel y el
+     *       terreno se nivela y devuelve su cota) en vez de deducirse muestreando un anillo con `groundY`, que sobre
+     *       una casa devuelve el <b>tejado</b>: medido en el guardado, el suelo de la aldea estaba a y=62 y los
+     *       suelos de las casas a y=63 (un bloque altos) en una aldea sobre el océano.</li>
+     *   <li>15: <b>el renivelado deja de comerse la aldea</b>. Tres arreglos que iban juntos:
+     *       <ul>
+     *         <li>la cota de una aldea <b>ya construida</b> se lee de la <b>plaza</b> (`cotaDeLaPlaza`), no de la
+     *             mediana de toda el área: con las casas puestas esa mediana incluye los <b>tejados</b> y salía un
+     *             bloque alta, que es el bloque de más que dejaba las casas "arriba", las <b>zanjas</b> de un
+     *             bloque alrededor y el <b>muro enterrado</b> (medido en el guardado: troncos del muro con tierra
+     *             encima y el suelo de la plaza a y=62 con los suelos de las casas a y=63);</li>
+     *         <li>el nivelado ya no <b>rellena encima de una construcción</b> ni <b>recorta troncos</b>: el relleno
+     *             era a ciegas y enterraba el muro, y el recorte daba los troncos por "terreno natural";</li>
+     *         <li>el <b>muro se reconstruye</b> en la migración (`VillageGenerator.rehacerMuro`) y sus <b>troncos
+     *             entran en el plano</b>, así que el obrero puede reponerlos cuando un asedio los rompe (era el bug
+     *             del jugador: al defender la aldea, las maderas del muro no volvían nunca).</li>
+     *       </ul></li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 13;
+    public static final int CURRENT_LAYOUT = 15;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -157,11 +174,12 @@ public final class VillageManager {
      * <b>iglesia</b> en el sitio de la vieja torre, 4 = casas con el <b>suelo a ras</b> del patio (antes iban un
      * bloque altas), 5 = con el nivel de referencia corregido (mínimo del patio), 6 = con la <b>mediana del
      * patio inmediato</b> y escalón para el desnivel (el mínimo las dejaba hundidas), 7 = con <b>terraza</b>
-     * allanada alrededor, 8 = con la <b>aldea entera a una sola cota</b> (sin zanjas). Se sube cuando cambia el
-     * número, el tipo o la <b>altura</b> de las construcciones, y la migración solo hace lo que falte (rehacer una
-     * casa borra lo que tenga dentro).
+     * allanada alrededor, 8 = con la <b>aldea entera a una sola cota</b> (sin zanjas), 9 = a la <b>cota de la
+     * plaza</b> (con la mediana contaminada por los tejados quedaban un bloque altas, con su zanja de un bloque
+     * alrededor). Se sube cuando cambia el número, el tipo o la <b>altura</b> de las construcciones, y la migración
+     * solo hace lo que falte (rehacer una casa borra lo que tenga dentro).
      */
-    public static final int CURRENT_HOUSES = 8;
+    public static final int CURRENT_HOUSES = 9;
     /** Radio alrededor del obrero en el que se buscan huecos que reponer. */
     private static final double REPAIR_SEARCH_RADIUS = 40.0D;
     /** Cuánto puede estar el hueco por encima / por debajo del obrero para que intente alcanzarlo. */
@@ -800,18 +818,21 @@ public final class VillageManager {
         if (saved.getLayout(objectiveIndex) < CURRENT_LAYOUT) {
             int casas = saved.getCasasVersion(objectiveIndex);
             if (casas < CURRENT_HOUSES) {
-                // Se rehacen TODAS las construcciones con el nivelado nuevo (al terreno de alrededor, no a su
-                // propia huella) y se añaden las que falten (cuarta casa e iglesia). OJO: rehacer una casa borra lo
-                // que tenga dentro; queda en el log con un WARN.
+                // Se rehacen TODAS las construcciones con el nivelado nuevo (a la cota de la plaza, no a la mediana
+                // contaminada por los tejados) y se añaden las que falten (cuarta casa e iglesia). OJO: rehacer una
+                // casa borra lo que tenga dentro; queda en el log con un WARN.
                 VillageGenerator.actualizarCasas(level, center);
                 VillageGenerator.actualizarTemplo(level, center);
                 saved.setCasasVersion(objectiveIndex, CURRENT_HOUSES);
             }
+            // El MURO se reconstruye entero: si un nivelado viejo lo enterró o se comió sus troncos, sus huecos no
+            // están en ningún plano y el obrero no podría reponerlos nunca (el muro no se puede "reparar a medias").
+            VillageGenerator.rehacerMuro(level, center);
             VillageGenerator.farm(level, center);
-            // El plano se tira: hay que volver a capturarlo, ya con las casas nuevas y con las reglas actuales.
+            // El plano se tira: hay que volver a capturarlo, ya con las casas nuevas, el muro y las reglas actuales.
             saved.clearBlueprint(objectiveIndex);
             saved.setLayout(objectiveIndex, CURRENT_LAYOUT);
-            DevilRpg.LOGGER.info("[Village] Aldea {}: trazado actualizado a la version {} (casas, granja y plano)",
+            DevilRpg.LOGGER.info("[Village] Aldea {}: trazado actualizado a la version {} (casas, muro, granja y plano)",
                     objectiveIndex, CURRENT_LAYOUT);
         }
         if (!saved.hasBlueprint(objectiveIndex)) {
