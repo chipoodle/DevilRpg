@@ -67,8 +67,8 @@ public final class VillageGenerator {
     private static final int PLOT_DEPTH = 5;
     /** Fila de la acequia dentro de la parcela (la del medio). */
     private static final int PLOT_WATER_ROW = PLOT_DEPTH / 2;
-    /** Distancia a la que se mira el terreno de alrededor para nivelar una construcción. */
-    private static final int MARGEN_ALREDEDORES = 4;
+    /** Distancia a la que se mira el patio que rodea una construcción para nivelarla. */
+    private static final int MARGEN_ALREDEDORES = 2;
 
     /**
      * Radio del área que se nivela alrededor del centro (todo hasta donde empieza la valla, para que no
@@ -311,24 +311,26 @@ public final class VillageGenerator {
     }
 
     /**
-     * Nivel del <b>terreno de alrededor</b> de una construcción: la mediana de la altura del suelo en el anillo
-     * que la rodea (a {@link #MARGEN_ALREDEDORES} bloques). Es lo que evita que una casa quede sobre un zócalo
-     * (cuando el solar venía alto) o enterrada (cuando venía bajo).
+     * Nivel del <b>patio que rodea</b> a una construcción: la altura <b>más baja</b> del suelo en el anillo
+     * inmediato (a {@link #MARGEN_ALREDEDORES} bloques, fuera de la huella).
+     * <p>
+     * Se coge el <b>mínimo</b> y no la mediana a propósito: el terreno de la aldea tiene pendiente, así que la
+     * mediana de un anillo ancho caía 1 bloque por encima del patio inmediato y la casa acababa subida a un
+     * relleno (medido en partida: puertas a 74 con el patio a 73, en las 6 puertas de la aldea). Con el mínimo la
+     * construcción queda <b>a ras del patio o ligeramente metida</b> en el lado alto del terreno, nunca por encima.
      */
     private static int nivelDeAlrededores(ServerLevel level, BlockPos base, int anchoX, int anchoZ) {
-        List<Integer> alturas = new ArrayList<>();
+        int minimo = Integer.MAX_VALUE;
         for (int dx = -MARGEN_ALREDEDORES; dx < anchoX + MARGEN_ALREDEDORES; dx++) {
             for (int dz = -MARGEN_ALREDEDORES; dz < anchoZ + MARGEN_ALREDEDORES; dz++) {
                 boolean enLaHuella = dx >= 0 && dz >= 0 && dx < anchoX && dz < anchoZ;
                 if (enLaHuella) {
                     continue; // solo el anillo: la huella puede tener el zócalo que queremos corregir
                 }
-                alturas.add(groundY(level, base.getX() + dx, base.getZ() + dz));
+                minimo = Math.min(minimo, groundY(level, base.getX() + dx, base.getZ() + dz));
             }
         }
-        Collections.sort(alturas);
-        return alturas.isEmpty() ? groundY(level, base.getX(), base.getZ())
-                : alturas.get(alturas.size() / 2);
+        return minimo == Integer.MAX_VALUE ? groundY(level, base.getX(), base.getZ()) : minimo;
     }
 
     /** Posiciones base de las casas de la aldea, relativas al centro (las mismas que usa {@link #generate}). */
