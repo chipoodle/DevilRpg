@@ -6,6 +6,7 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.player.Player;
+import com.chipoodle.devilrpg.entity.ZombieFireball;
 import net.minecraft.world.entity.projectile.SmallFireball;
 
 import java.util.EnumSet;
@@ -86,7 +87,7 @@ public class MiniFireAttackGoal extends Goal {
                         }
 
                         for (int i = 0; i < 1; ++i) {
-                            SmallFireball smallfireball = new SmallFireball(this.mobEntity.level(), this.mobEntity, new Vec3(this.mobEntity.getRandom().triangle(d1, 2.297D * d4), d2, this.mobEntity.getRandom().triangle(d3, 2.297D * d4)));
+                            SmallFireball smallfireball = new ZombieFireball(this.mobEntity.level(), this.mobEntity, new Vec3(this.mobEntity.getRandom().triangle(d1, 2.297D * d4), d2, this.mobEntity.getRandom().triangle(d3, 2.297D * d4)));
                             smallfireball.setPos(smallfireball.getX(), this.mobEntity.getY(0.5D) + 0.5D, smallfireball.getZ());
                             this.mobEntity.level().addFreshEntity(smallfireball);
                         }

@@ -790,6 +790,13 @@ el tiempo y se gasta en una lista de planos, más un `Goal` de "ir a construir" 
 
 - **Bola de fuego del zombi agresivo (`FireballAttackGoal`)**: dispara solo entre **3 y 16 bloques** y con
   **línea de visión**; si no puede, reintenta cada **20 ticks** (1 s) en vez de esperar los 240 completos.
+  Lanza `ZombieFireball` (hereda de `SmallFireball`): **no incendia el terreno**. El `SmallFireball` de vanilla
+  hacía `setBlockAndUpdate(pos, FIRE)` al chocar, así que cada disparo que daba en el suelo dejaba un foco
+  ardiendo —en partida se veía como "fuego que aparece al azar" y con la aldea de madera era un incendio
+  asegurado—. La subclase apaga el fuego que el proyectil acaba de encender (comprobando `Blocks.FIRE`/
+  `SOUL_FIRE` antes de borrarlo). El daño a entidades no cambia: al que le da, le sigue prendiendo. No hay que
+  registrar tipo ni renderer: el cliente dibuja con el renderer de vanilla porque el tipo sigue siendo
+  `minecraft:small_fireball` (los proyectiles son `noSave`, no se serializan).
 
 - **Al morir el jugador (penalización de XP)**: `PlayerCapabilityForgeEventSubscriber` (`XP_KEPT = 0.95`) — se
   **conserva el nivel** y solo se pierde el **5% de la experiencia del nivel** (la barra se queda al 95% de

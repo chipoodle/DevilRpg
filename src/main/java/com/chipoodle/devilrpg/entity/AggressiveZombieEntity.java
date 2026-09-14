@@ -1082,7 +1082,7 @@ public class AggressiveZombieEntity extends Zombie {
             double d1 = target.getX() - zombie.getX();
             double d2 = target.getY(0.5D) - zombie.getY(0.5D);
             double d3 = target.getZ() - zombie.getZ();
-            SmallFireball fireball = new SmallFireball(zombie.level(), zombie, new Vec3(d1 + zombie.getRandom().nextGaussian() * d0, d2, d3 + zombie.getRandom().nextGaussian() * d0));
+            SmallFireball fireball = new ZombieFireball(zombie.level(), zombie, new Vec3(d1 + zombie.getRandom().nextGaussian() * d0, d2, d3 + zombie.getRandom().nextGaussian() * d0));
             fireball.setPos(fireball.getX(), zombie.getY(0.5D) + 0.5D, fireball.getZ());
             zombie.level().addFreshEntity(fireball);
             attackTimer = ATTACK_INTERVAL_TICKS; // Tiempo entre ataques
