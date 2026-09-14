@@ -63,9 +63,10 @@ public class AggressiveZombieEntity extends Zombie {
     private BlockPos homePos = null;
     private int homeRadius = 0;
     /**
-     * Índice de la aldea a la que va esta horda del mundo ({@code -1} = no es de una horda a una aldea). Sirve
-     * para apuntar como <b>defensores</b> a los jugadores que le peguen, que son los únicos que cobran la
-     * recompensa al rechazarla (ver {@link VillageManager#registerDefender}).
+     * Índice de la aldea a la que va esta horda ({@code -1} = no va a ninguna aldea). Lo usan <b>los dos</b>
+     * asedios: el clásico que dispara el jugador al llegar y las hordas que manda el mundo. Sirve para dos
+     * cosas: apuntar como <b>defensores</b> a los jugadores que le peguen (y a sus minions) y descontar su
+     * muerte de la ola, de forma que la recompensa solo se pague si de verdad se limpió la horda.
      */
     private int worldSiegeIndex = -1;
     /** Umbral de distancia para que el zombie pueda romper obsidiana (más lejos = más nivel). */
@@ -140,7 +141,7 @@ public class AggressiveZombieEntity extends Zombie {
     @Override
     public void die(@NotNull DamageSource cause) {
         if (worldSiegeIndex >= 0 && !level().isClientSide && level() instanceof ServerLevel serverLevel) {
-            VillageManager.onWorldSiegeAttackerKilled(serverLevel, getUUID());
+            VillageManager.onSiegeAttackerKilled(serverLevel, getUUID());
         }
         super.die(cause);
     }

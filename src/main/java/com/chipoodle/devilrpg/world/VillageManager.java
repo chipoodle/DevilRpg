@@ -268,10 +268,21 @@ public final class VillageManager {
                         // avanzar el índice con uno viejo haría RETROCEDER al jugador.
                         boolean isCurrentObjective = aux != null && aux.getObjectiveIndex() == d.objectiveIndex;
                         if (waveCleared) {
-                            grantReward(player, d.objectiveIndex);
-                            player.displayClientMessage(Component.literal(isCurrentObjective
-                                    ? "¡Has salvado la aldea! El objetivo avanza."
-                                    : "¡Has salvado la aldea!"), false);
+                            if (d.wave.isEmpty()) {
+                                grantReward(player, d.objectiveIndex);
+                                player.displayClientMessage(Component.literal(isCurrentObjective
+                                        ? "¡Has salvado la aldea! El objetivo avanza."
+                                        : "¡Has salvado la aldea!"), false);
+                            } else {
+                                // La ola se dio por limpia porque los atacantes dejaron de estar cargados (el
+                                // jugador se alejó y se descargaron los chunks), no porque los matara: la aldea
+                                // se salva igual, pero NO hay recompensa. Misma regla que en las hordas del mundo.
+                                DevilRpg.LOGGER.info("[Village] Aldea {} salvada sin limpiar la horda ({} atacantes "
+                                                + "sin confirmar): sin recompensa", d.objectiveIndex, d.wave.size());
+                                player.displayClientMessage(Component.literal(isCurrentObjective
+                                        ? "Los monstruos se dispersaron: la aldea está a salvo. El objetivo avanza."
+                                        : "Los monstruos se dispersaron: la aldea está a salvo."), false);
+                            }
                         } else if (siegeFailed) {
                             grantReward(player, d.objectiveIndex);
                             player.displayClientMessage(Component.literal(isCurrentObjective
@@ -318,6 +329,9 @@ public final class VillageManager {
             if (zombie != null) {
                 zombie.moveTo(x + 0.5D, y, z + 0.5D, 0.0F, 0.0F);
                 zombie.setVillageCenter(d.center); // para que converja hacia la aldea si no ataca
+                // Marcado con la aldea: al morir se descuenta de la ola, y así la recompensa solo se paga si
+                // de verdad se limpió la horda (no si se dispersó al descargarse los chunks).
+                zombie.setWorldSiegeIndex(d.objectiveIndex);
                 level.addFreshEntity(zombie);
                 d.wave.add(zombie.getUUID());
             }
@@ -544,13 +558,16 @@ public final class VillageManager {
     }
 
     /**
-     * Un atacante de una horda del mundo ha muerto: se quita de la lista de <b>atacantes vivos</b> de su asedio.
-     * Eso es lo que permite distinguir "los mataron a todos" de "se descargaron los chunks al alejarse el
-     * jugador", y que la recompensa solo se cobre en el primer caso.
+     * Un atacante de una horda ha muerto: se quita de la lista de <b>atacantes vivos</b> de su asedio (tanto de
+     * los asedios del mundo como del asedio clásico del jugador). Eso permite distinguir "los mataron a todos"
+     * de "se descargaron los chunks al alejarse el jugador", y que la recompensa solo se cobre en el primer caso.
      */
-    public static void onWorldSiegeAttackerKilled(ServerLevel level, UUID attacker) {
+    public static void onSiegeAttackerKilled(ServerLevel level, UUID attacker) {
         for (WorldSiege siege : WORLD_SIEGES.getOrDefault(level, List.of())) {
             siege.wave.remove(attacker);
+        }
+        for (VillageDefense defense : DEFENSES.getOrDefault(level, List.of())) {
+            defense.wave.remove(attacker);
         }
     }
 

@@ -514,10 +514,14 @@ con su premio y su estado guardado. Lo implementado:
       (`BORN_TAG`) la primera vez que se le ve. A los **2 días** de juego se vuelve viejo (Lentitud) y a los
       **3 días muere de viejo**, dejando el relevo: la aldea repone aldeanos con la comida de la granja.
 
-> Nota conocida, sin tocar: el asedio **clásico** (el que dispara el jugador al llegar a la aldea) sigue
-> usando la regla vieja de "si no se les encuentra, la ola está limpia", así que ahí alejarse y dejar que se
-> descarguen los chunks todavía cuenta como aldea salvada. Se puede endurecer con el mismo truco de contar
-> muertes si se quiere.
+11. ✅ **El asedio clásico también exige limpiar la horda para cobrar** (era la última rendija que quedaba):
+    sus zombies van marcados con el índice de la aldea (el mismo campo `worldSiegeIndex` que usan las hordas
+    del mundo) y su muerte los descuenta de `VillageDefense.wave` (`AggressiveZombieEntity.die` →
+    `VillageManager.onSiegeAttackerKilled`, que mira las dos listas). Si la ola se da por limpia **sin que
+    nadie haya muerto** (te alejaste y se descargaron los chunks), la aldea se salva y el objetivo avanza
+    igual —el jugador estuvo allí— pero **no hay recompensa**, y el chat dice "Los monstruos se dispersaron".
+    La rama de "los monstruos no lograron entrar" (timeout con atacantes vivos fuera de la valla) sigue
+    pagando como siempre: ahí los atacantes están vivos a propósito y la aldea se salvó de verdad.
 
 ### Iteración 4 — El abismo vertical (estilo *Made in Abyss*)
 - El mundo genera un **abismo descendente infinito** por capas en vez de extenderse en horizontal.
