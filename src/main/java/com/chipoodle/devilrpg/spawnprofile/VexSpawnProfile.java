@@ -16,7 +16,7 @@ public final class VexSpawnProfile {
             2000,    // maxDistance: amenaza local cerca de la base
             17,      // minHardDistance: no hay minimo que encoger
             2.5,    // maxScaleMultiplier: escala mas leve que el agresivo (+250%)
-            6.67,   // baseHealth (un tercio de la base del vex)
+            3.0,   // baseHealth (un tercio de la base del vex)
             0.071,  // baseSpeed (un tercio de la base anterior)
             0.34,    // baseDamage (un tercio de la base anterior)
             15,     // baseXp: 5 -> 15 para que matar un vex se note (hasta 15*5.5 = 82 lejos de la base)
