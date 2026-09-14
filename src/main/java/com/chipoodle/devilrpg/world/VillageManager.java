@@ -118,9 +118,12 @@ public final class VillageManager {
      *   <li>4: el plano es <b>canónico</b>: lo graba el propio generador mientras construye la aldea
      *       ({@code VillageGenerator.generate} devuelve el plano), en vez de fotografiarla leyendo el mundo. Así
      *       el daño previo (o capturar la aldea en mal momento) ya no se confunde con "lo correcto".</li>
+     *   <li>5: las construcciones se nivelan a la <b>mediana</b> de su huella (con la más alta quedaban subidas
+     *       sobre un zócalo de tierra) y las casas llevan <b>escalón de entrada</b>. La migración solo pone los
+     *       escalones en las aldeas viejas: rehacer las casas destrozaría lo que el jugador tenga dentro.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 4;
+    public static final int CURRENT_LAYOUT = 5;
     /** Radio alrededor del obrero en el que se buscan huecos que reponer. */
     private static final double REPAIR_SEARCH_RADIUS = 40.0D;
     /** Cuánto puede estar el hueco por encima / por debajo del obrero para que intente alcanzarlo. */
@@ -740,11 +743,14 @@ public final class VillageManager {
         // se secaban (la tierra solo se hidrata con agua a su nivel o uno por encima).
         if (saved.getLayout(objectiveIndex) < CURRENT_LAYOUT) {
             VillageGenerator.farm(level, center);
+            // Escalones de entrada: las casas ya construidas que quedaron sobre un zócalo de tierra se arreglan
+            // por el lado del acceso (rehacerlas destrozaría lo que el jugador tenga dentro).
+            VillageGenerator.escalonesDeEntrada(level, saved.getBlueprint(objectiveIndex));
             // El plano también se tira: hay que volver a capturarlo con las reglas nuevas (versión 3 apunta ya lo
             // que está a ras de suelo: composteros, suelos de las casas, base de la torre, caminos).
             saved.clearBlueprint(objectiveIndex);
             saved.setLayout(objectiveIndex, CURRENT_LAYOUT);
-            DevilRpg.LOGGER.info("[Village] Aldea {}: trazado actualizado a la version {} (granja y plano)",
+            DevilRpg.LOGGER.info("[Village] Aldea {}: trazado actualizado a la version {} (granja, escalones y plano)",
                     objectiveIndex, CURRENT_LAYOUT);
         }
         if (!saved.hasBlueprint(objectiveIndex)) {

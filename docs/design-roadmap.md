@@ -158,6 +158,11 @@ siguiente está implementado y probado.
   `StructureTemplateManager.getOrCreate` + `placeInWorld`, elegidas de forma determinista por la posición de la
   aldea. Traen su propio interior, su cama (los aldeanos necesitan cama para criar) y su puesto de trabajo.
   Antes eran cabañas procedurales (`hut()`, que sigue en el código como legado).
+- **Nivelado por mediana y escalón de entrada**: la huella de cada construcción se nivela a la **mediana** de sus
+  columnas (`nivelarHuella`: recorta el terreno que sobra —solo si es natural— y rellena con tierra lo que falta).
+  Con la columna **más alta** las casas quedaban subidas sobre un zócalo de tierra y **no se podía entrar**
+  (visto en juego); con la más baja se enterraban. Además, `escalonDeEntrada` pone escaleras de roble delante de
+  la puerta si el suelo de fuera quedó más bajo que el piso. La misma nivelación usa la granja.
 - **Caminos de 2 bloques de ancho** en el plano XZ, de tierra apisonada, a ras de suelo, que van del centro a la
   **puerta real** de cada casa (se mira el bloque de la puerta y su `FACING`, porque cada plantilla la pone donde
   quiere) y no pasan sobre las casas ni la campana.

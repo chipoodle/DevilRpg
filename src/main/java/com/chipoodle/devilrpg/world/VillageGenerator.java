@@ -33,11 +33,13 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.level.block.state.properties.BedPart;
 import net.minecraft.world.level.block.state.properties.BellAttachType;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
+import net.minecraft.world.level.block.state.properties.Half;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -272,6 +274,43 @@ public final class VillageGenerator {
     }
 
     /**
+     * Nivela la <b>huella</b> de una construcción a un nivel único y devuelve ese nivel.
+     * <p>
+     * El nivel es la <b>mediana</b> de las columnas de la huella, no la más alta: con la más alta la construcción
+     * quedaba subida sobre un zócalo de tierra y no se podía entrar sin escalón (visto en juego), y con la más
+     * baja se enterraba. Se <b>recorta</b> el terreno que sobra (solo si es natural, nunca lo que hayas construido
+     * tú) y se <b>rellena</b> con tierra lo que falta, así la construcción queda a ras del suelo de alrededor.
+     */
+    private static int nivelarHuella(ServerLevel level, BlockPos base, int anchoX, int anchoZ) {
+        int[] alturas = new int[anchoX * anchoZ];
+        int n = 0;
+        for (int dx = 0; dx < anchoX; dx++) {
+            for (int dz = 0; dz < anchoZ; dz++) {
+                alturas[n++] = groundY(level, base.getX() + dx, base.getZ() + dz);
+            }
+        }
+        Arrays.sort(alturas);
+        int nivel = alturas[alturas.length / 2];
+        for (int dx = 0; dx < anchoX; dx++) {
+            for (int dz = 0; dz < anchoZ; dz++) {
+                int x = base.getX() + dx;
+                int z = base.getZ() + dz;
+                int suelo = groundY(level, x, z);
+                for (int y = nivel; y < suelo; y++) {
+                    BlockPos p = new BlockPos(x, y, z);
+                    if (esTerrenoNatural(level.getBlockState(p))) {
+                        colocar(level, p, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
+                    }
+                }
+                for (int y = suelo; y < nivel; y++) {
+                    colocar(level, new BlockPos(x, y, z), Blocks.DIRT.defaultBlockState(), Block.UPDATE_CLIENTS);
+                }
+            }
+        }
+        return nivel;
+    }
+
+    /**
      * Coloca un bloque y, si se está grabando, lo apunta en el plano. <b>Todo</b> lo que construye el generador
      * pasa por aquí: así el plano es lo que la aldea <i>debe</i> ser, no una foto del estado en que se la
      * encontró (que era el problema de capturarlo leyendo el mundo: si la aldea ya estaba dañada, ese daño se
@@ -502,26 +541,10 @@ public final class VillageGenerator {
             return base.offset(0, 0, -2);
         }
         Vec3i tam = template.getSize();
-        // Nivel de la casa = la columna MÁS ALTA de su huella. Antes se usaba solo la columna de la esquina, así
-        // que en terreno irregular la casa podía quedar 2 bloques por encima del suelo ("sobre patas", visto en
-        // juego). Con el nivel más alto, ninguna parte flota y las columnas bajas se rellenan de tierra.
-        int nivel = Integer.MIN_VALUE;
-        for (int dx = 0; dx < tam.getX(); dx++) {
-            for (int dz = 0; dz < tam.getZ(); dz++) {
-                nivel = Math.max(nivel, groundY(level, base.getX() + dx, base.getZ() + dz));
-            }
-        }
+        // Nivel de la casa = la MEDIANA de las columnas de su huella (ver nivelarHuella): ni sobre un zócalo de
+        // tierra ni enterrada, a ras del suelo de alrededor.
+        int nivel = nivelarHuella(level, base, tam.getX(), tam.getZ());
         BlockPos origen = new BlockPos(base.getX(), nivel, base.getZ());
-        // 0) Cimentación: se rellena de tierra cada columna baja hasta dejar el suelo justo debajo de la casa.
-        for (int dx = 0; dx < tam.getX(); dx++) {
-            for (int dz = 0; dz < tam.getZ(); dz++) {
-                int x = base.getX() + dx;
-                int z = base.getZ() + dz;
-                for (int y = groundY(level, x, z); y < nivel; y++) {
-                    colocar(level, new BlockPos(x, y, z), Blocks.DIRT.defaultBlockState(), Block.UPDATE_CLIENTS);
-                }
-            }
-        }
         // 1) Solar limpio: fuera todo lo que haya en la huella de la casa (y 4 bloques por encima del tejado).
         for (int dx = 0; dx < tam.getX(); dx++) {
             for (int dz = 0; dz < tam.getZ(); dz++) {
@@ -562,10 +585,55 @@ public final class VillageGenerator {
         if (camas == 0) {
             bed(level, origen.offset(tam.getX() / 2, 0, tam.getZ() / 2));
         }
+        // Escalón de entrada: si el suelo de fuera quedó por debajo del piso de la casa, se sube con escaleras
+        // pegadas a la puerta (si no, no se puede entrar al edificio).
+        if (puerta != null) {
+            escalonDeEntrada(level, puerta);
+        }
         // Los bloques de la plantilla los coloca placeInWorld, no `colocar`: se apuntan ahora, ya limpios.
         apuntarCaja(level, origen, tam);
         DevilRpg.LOGGER.debug("[Village] Casa {} colocada en {} (puerta {})", id, origen, puerta);
         return puerta != null ? puerta : origen.offset(0, 0, -2);
+    }
+
+    /**
+     * Repasa las puertas de un plano y les pone el <b>escalón de entrada</b> que falte
+     * ({@link #escalonDeEntrada}). Es la migración de aldeas ya construidas: las casas que quedaron sobre un
+     * zócalo de tierra no se pueden rehacer sin destrozar lo que el jugador tenga dentro, pero el acceso se
+     * arregla con unas escaleras delante de la puerta.
+     */
+    public static void escalonesDeEntrada(ServerLevel level, VillageSavedData.Blueprint plano) {
+        if (plano == null) {
+            return;
+        }
+        for (int i = 0; i < plano.size(); i++) {
+            BlockState state = plano.stateAt(i);
+            if (state.getBlock() instanceof DoorBlock && state.getValue(DoorBlock.HALF) == DoubleBlockHalf.LOWER) {
+                escalonDeEntrada(level, plano.posAt(i));
+            }
+        }
+    }
+
+    /**
+     * Pone un <b>escalón de entrada</b> delante de una puerta: si el suelo de fuera está por debajo del piso de la
+     * casa, se apilan escaleras de roble en la columna de delante (mirando hacia la casa) hasta el nivel del piso.
+     * Sin esto, una casa cuyo terreno de alrededor quedó más bajo no se puede entrar.
+     */
+    private static void escalonDeEntrada(ServerLevel level, BlockPos puerta) {
+        BlockState estadoPuerta = level.getBlockState(puerta);
+        if (!(estadoPuerta.getBlock() instanceof DoorBlock)) {
+            return;
+        }
+        Direction fuera = estadoPuerta.getValue(DoorBlock.FACING);
+        BlockPos exterior = puerta.relative(fuera);
+        int piso = puerta.getY() - 1; // el suelo de la casa: la puerta va justo encima
+        for (int y = groundY(level, exterior.getX(), exterior.getZ()); y <= piso; y++) {
+            colocar(level, new BlockPos(exterior.getX(), y, exterior.getZ()),
+                    Blocks.OAK_STAIRS.defaultBlockState()
+                            .setValue(StairBlock.FACING, fuera.getOpposite())
+                            .setValue(StairBlock.HALF, Half.BOTTOM),
+                    Block.UPDATE_ALL);
+        }
     }
 
     /**
@@ -1230,30 +1298,21 @@ public final class VillageGenerator {
      */
     private static void plot(ServerLevel level, BlockPos corner) {
         Block[] plants = {Blocks.WHEAT, Blocks.CARROTS, Blocks.POTATOES};
-        // 1) Nivel único de toda la parcela: la columna más alta manda.
-        int base = Integer.MIN_VALUE;
-        for (int dx = 0; dx < PLOT_WIDTH; dx++) {
-            for (int dz = 0; dz < PLOT_DEPTH; dz++) {
-                base = Math.max(base, groundY(level, corner.getX() + dx, corner.getZ() + dz));
-            }
-        }
+        // 1) La parcela se nivela a un solo nivel (la mediana de sus columnas, ver nivelarHuella): si cada
+        // columna usara su propio groundY, la acequia quedaba un bloque por debajo de la tierra de cultivo y el
+        // trigo se secaba (la tierra solo se hidrata con agua a su nivel o uno por encima).
+        int base = nivelarHuella(level, corner, PLOT_WIDTH, PLOT_DEPTH);
         for (int dx = 0; dx < PLOT_WIDTH; dx++) {
             for (int dz = 0; dz < PLOT_DEPTH; dz++) {
                 int x = corner.getX() + dx;
                 int z = corner.getZ() + dz;
-                int suelo = groundY(level, x, z);
-                // 2) Solar LIMPIO: se quita todo lo que hubiera desde el suelo hacia arriba (cultivos, tierra de
-                // cultivo, agua y restos de una versión anterior del trazado). Sin esto, al rehacer la parcela
-                // quedaban capas viejas debajo y el agua terminaba un bloque por debajo del cultivo: se secaba.
-                for (int y = suelo - 1; y <= base + 3; y++) {
+                // 2) Solar LIMPIO: se quita lo que hubiera por encima del suelo (cultivos, restos de una versión
+                // anterior del trazado...). Sin esto quedaban capas viejas y dos composteadores apilados.
+                for (int y = base; y <= base + 3; y++) {
                     BlockPos p = new BlockPos(x, y, z);
                     if (!level.getBlockState(p).isAir()) {
                         colocar(level, p, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
                     }
-                }
-                // 3) Rellenar de tierra hasta el nivel de la parcela (así no queda la acequia en un hoyo).
-                for (int y = suelo - 1; y < base - 1; y++) {
-                    colocar(level, new BlockPos(x, y, z), Blocks.DIRT.defaultBlockState(), Block.UPDATE_ALL);
                 }
                 if (dz == PLOT_WATER_ROW) {
                     // Acequia central: el agua va a ras de la tierra de cultivo y riega las cuatro filas.
