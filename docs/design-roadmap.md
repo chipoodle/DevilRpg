@@ -166,11 +166,18 @@ siguiente está implementado y probado.
     plantilla no los deje emparedados. *(Esto se añadió porque el jugador entró a una aldea vieja, con cabañas
     procedurales y medio enterradas, y con razón lo reportó como que "todo estaba roto": no era una regresión del
     código nuevo, era que la migración no cubría las casas.)*
-- **Nivelado por mediana y escalón de entrada**: la huella de cada construcción se nivela a la **mediana** de sus
-  columnas (`nivelarHuella`: recorta el terreno que sobra —solo si es natural— y rellena con tierra lo que falta).
-  Con la columna **más alta** las casas quedaban subidas sobre un zócalo de tierra y **no se podía entrar**
-  (visto en juego); con la más baja se enterraban. Además, `escalonDeEntrada` pone escaleras de roble delante de
-  la puerta si el suelo de fuera quedó más bajo que el piso. La misma nivelación usa la granja.
+- **Nivelado al terreno de ALREDEDOR y escalón de entrada**: la huella de cada construcción se nivela a la
+  **mediana del anillo de terreno que la rodea** (`nivelDeAlrededores`, margen 4), no a su propia huella: con la
+  mediana propia, si el solar venía alto (p. ej. el zócalo de tierra que dejaba la cabaña vieja) la casa quedaba
+  **subida encima** (reportado en juego dos veces). Se recorta el terreno que sobra —solo si es natural— y se
+  rellena con tierra lo que falta. Además, `escalonDeEntrada` pone escaleras de roble delante de la puerta si el
+  suelo de fuera quedó más bajo que el piso. La misma nivelación usa la granja.
+- **La iglesia es una construcción del juego**: en el sitio de la vieja torre de vigilancia procedural
+  (`tower`, ahora **LEGACY — NO USAR**) va un **templo de aldea de vanilla** (`plains_temple_3/4`), que ya trae
+  campanario y campana. A las iglesias **no** se les pone cama de respaldo (`esIglesia`).
+- **Cuatro aldeanos**: la aldea nace con **4** (`VILLAGERS_FOR_FULL_HEALTH`, 4 casas y 4 camas), uno por casa; el
+  cuarto es **herrero** (`VillagerProfession.TOOLSMITH`), pensado para la futura economía de la aldea. Con 4
+  adultos, la aldea nombra hasta **3 obreros** y deja al granjero con la huerta.
 - **Caminos de 2 bloques de ancho** en el plano XZ, de tierra apisonada, a ras de suelo, que van del centro a la
   **puerta real** de cada casa (se mira el bloque de la puerta y su `FACING`, porque cada plantilla la pone donde
   quiere) y no pasan sobre las casas ni la campana.

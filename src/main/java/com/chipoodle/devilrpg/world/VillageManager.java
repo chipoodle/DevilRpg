@@ -79,7 +79,7 @@ public final class VillageManager {
     // --- Salud del asentamiento (Iteración 3, paso 2) ----------------------------------------------
 
     /** Aldeanos que tiene una aldea sana (los que pone el generador): es el tope de la "salud". */
-    public static final int VILLAGERS_FOR_FULL_HEALTH = 3;
+    public static final int VILLAGERS_FOR_FULL_HEALTH = 4;
     /** Cada cuánto se repone UN aldeano en una aldea debilitada (5 min). */
     private static final int REPOPULATE_INTERVAL_TICKS = 5 * 60 * 20;
     /**
@@ -127,17 +127,20 @@ public final class VillageManager {
      *       una casa ya nueva.</li>
      *   <li>7: cuarta casa (la "grande", con <b>cama extra</b>) y reparación de la <b>tierra pisoteada</b>. La
      *       versión de casas (`CURRENT_HOUSES`) decide si hay que rehacer las tres viejas o solo añadir la cuarta.</li>
+     *   <li>8: las construcciones se nivelan al <b>terreno de alrededor</b> (antes, a la mediana de su propia
+     *       huella: si el solar venía alto, la casa quedaba sobre un zócalo), la <b>iglesia</b> del juego sustituye
+     *       a la torre procedural y la aldea pasa a <b>4 aldeanos</b>.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 7;
+    public static final int CURRENT_LAYOUT = 8;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
-     * 1 = las tres casas del juego, 2 = las cuatro (la última es la "grande", con cama extra). Se sube cuando
-     * cambia el número o el tipo de casas, y la migración solo toca lo que falte (rehacer una casa borra lo que
-     * tenga dentro).
+     * 1 = las tres casas del juego, 2 = las cuatro (la última es la "grande", con cama extra), 3 = además la
+     * <b>iglesia</b> en el sitio de la vieja torre. Se sube cuando cambia el número o el tipo de construcciones, y
+     * la migración solo hace lo que falte (rehacer una casa borra lo que tenga dentro).
      */
-    public static final int CURRENT_HOUSES = 2;
+    public static final int CURRENT_HOUSES = 3;
     /** Radio alrededor del obrero en el que se buscan huecos que reponer. */
     private static final double REPAIR_SEARCH_RADIUS = 40.0D;
     /** Cuánto puede estar el hueco por encima / por debajo del obrero para que intente alcanzarlo. */
@@ -775,14 +778,14 @@ public final class VillageManager {
         //       reconstruir las que ya son nuevas: rehacer una casa borra lo que haya dentro).
         if (saved.getLayout(objectiveIndex) < CURRENT_LAYOUT) {
             int casas = saved.getCasasVersion(objectiveIndex);
-            if (casas < 1) {
-                // Cabañas procedurales: se sustituyen todas por las casas del juego (y ya se añade la cuarta).
+            if (casas < CURRENT_HOUSES) {
+                // Se rehacen TODAS las construcciones con el nivelado nuevo (al terreno de alrededor, no a su
+                // propia huella) y se añaden las que falten (cuarta casa e iglesia). OJO: rehacer una casa borra lo
+                // que tenga dentro; queda en el log con un WARN.
                 VillageGenerator.actualizarCasas(level, center);
-            } else if (casas < CURRENT_HOUSES) {
-                // Ya tenía las tres casas del juego: solo falta la cuarta (la grande, con cama extra).
-                VillageGenerator.asegurarCuartaCasa(level, center);
+                VillageGenerator.actualizarTemplo(level, center);
+                saved.setCasasVersion(objectiveIndex, CURRENT_HOUSES);
             }
-            saved.setCasasVersion(objectiveIndex, CURRENT_HOUSES);
             VillageGenerator.farm(level, center);
             // El plano se tira: hay que volver a capturarlo, ya con las casas nuevas y con las reglas actuales.
             saved.clearBlueprint(objectiveIndex);

@@ -67,6 +67,8 @@ public final class VillageGenerator {
     private static final int PLOT_DEPTH = 5;
     /** Fila de la acequia dentro de la parcela (la del medio). */
     private static final int PLOT_WATER_ROW = PLOT_DEPTH / 2;
+    /** Distancia a la que se mira el terreno de alrededor para nivelar una construcción. */
+    private static final int MARGEN_ALREDEDORES = 4;
 
     /**
      * Radio del área que se nivela alrededor del centro (todo hasta donde empieza la valla, para que no
@@ -172,15 +174,17 @@ public final class VillageGenerator {
         BlockPos h2 = center.offset(-3, 0, 17);
 
         // CASAS PRIMERO: hay que colocarlas para saber dónde quedó cada puerta (cada plantilla la trae donde
-        // quiere) y que los caminos lleguen de verdad a ella. La última es la "grande" (con cama extra).
+        // quiere) y que los caminos lleguen de verdad a ella. La última es la "grande" (con cama extra), y en el
+        // sitio de la vieja torre va la IGLESIA del juego.
         RandomSource casas = RandomSource.create(center.asLong());
-        BlockPos[] puertas = new BlockPos[4];
+        BlockPos[] puertas = new BlockPos[5];
         puertas[0] = placeVanillaHouse(level, h0, casaAleatoria(casas));
         puertas[1] = placeVanillaHouse(level, h1, casaAleatoria(casas));
         puertas[2] = placeVanillaHouse(level, h2, casaAleatoria(casas));
         puertas[3] = placeVanillaHouse(level, center.offset(10, 0, -18), casaGrandeAleatoria(casas));
+        puertas[4] = placeVanillaHouse(level, baseDeIglesia(center), iglesiaAleatoria(casas));
 
-        // Caminos DESPUÉS, del centro a la puerta de cada casa (ya se sabe dónde está).
+        // Caminos DESPUÉS, del centro a la puerta de cada construcción (ya se sabe dónde está).
         paths(level, center, puertas);
 
         // Campana al final, en el centro, limpiando su columna (nadie la tapa).
@@ -195,8 +199,8 @@ public final class VillageGenerator {
         // Faroles con poste distribuidos por la aldea (evitan spawn de zombies con la mecánica vanilla).
         torches(level, center);
 
-        // Torre de vigilancia en un punto estratégico (cerca de la entrada norte, mirando hacia fuera).
-        tower(level, center.offset(-9, 0, -20));
+        // (La vieja torre de vigilancia procedural ya no se pone: en su sitio va la IGLESIA del juego, que se
+        // coloca arriba con las demás construcciones y trae campanario.)
 
         fence(level, center);
 
@@ -277,23 +281,16 @@ public final class VillageGenerator {
     }
 
     /**
-     * Nivela la <b>huella</b> de una construcción a un nivel único y devuelve ese nivel.
+     * Nivela la <b>huella</b> de una construcción y devuelve el nivel al que ha quedado.
      * <p>
-     * El nivel es la <b>mediana</b> de las columnas de la huella, no la más alta: con la más alta la construcción
-     * quedaba subida sobre un zócalo de tierra y no se podía entrar sin escalón (visto en juego), y con la más
-     * baja se enterraba. Se <b>recorta</b> el terreno que sobra (solo si es natural, nunca lo que hayas construido
-     * tú) y se <b>rellena</b> con tierra lo que falta, así la construcción queda a ras del suelo de alrededor.
+     * El nivel de referencia NO se saca de la propia huella (ahí puede haber un zócalo de tierra heredado, y la
+     * casa acababa subida encima: visto en juego), sino del <b>anillo de terreno que la rodea</b>
+     * ({@link #nivelDeAlrededores}, mediana a 4 bloques de distancia): así la construcción queda <b>a ras del
+     * suelo de su barrio</b>. Se <b>recorta</b> el terreno que sobra (solo si es natural, nunca lo que hayas
+     * construido tú) y se <b>rellena</b> con tierra lo que falta.
      */
     private static int nivelarHuella(ServerLevel level, BlockPos base, int anchoX, int anchoZ) {
-        int[] alturas = new int[anchoX * anchoZ];
-        int n = 0;
-        for (int dx = 0; dx < anchoX; dx++) {
-            for (int dz = 0; dz < anchoZ; dz++) {
-                alturas[n++] = groundY(level, base.getX() + dx, base.getZ() + dz);
-            }
-        }
-        Arrays.sort(alturas);
-        int nivel = alturas[alturas.length / 2];
+        int nivel = nivelDeAlrededores(level, base, anchoX, anchoZ);
         for (int dx = 0; dx < anchoX; dx++) {
             for (int dz = 0; dz < anchoZ; dz++) {
                 int x = base.getX() + dx;
@@ -311,6 +308,27 @@ public final class VillageGenerator {
             }
         }
         return nivel;
+    }
+
+    /**
+     * Nivel del <b>terreno de alrededor</b> de una construcción: la mediana de la altura del suelo en el anillo
+     * que la rodea (a {@link #MARGEN_ALREDEDORES} bloques). Es lo que evita que una casa quede sobre un zócalo
+     * (cuando el solar venía alto) o enterrada (cuando venía bajo).
+     */
+    private static int nivelDeAlrededores(ServerLevel level, BlockPos base, int anchoX, int anchoZ) {
+        List<Integer> alturas = new ArrayList<>();
+        for (int dx = -MARGEN_ALREDEDORES; dx < anchoX + MARGEN_ALREDEDORES; dx++) {
+            for (int dz = -MARGEN_ALREDEDORES; dz < anchoZ + MARGEN_ALREDEDORES; dz++) {
+                boolean enLaHuella = dx >= 0 && dz >= 0 && dx < anchoX && dz < anchoZ;
+                if (enLaHuella) {
+                    continue; // solo el anillo: la huella puede tener el zócalo que queremos corregir
+                }
+                alturas.add(groundY(level, base.getX() + dx, base.getZ() + dz));
+            }
+        }
+        Collections.sort(alturas);
+        return alturas.isEmpty() ? groundY(level, base.getX(), base.getZ())
+                : alturas.get(alturas.size() / 2);
     }
 
     /** Posiciones base de las casas de la aldea, relativas al centro (las mismas que usa {@link #generate}). */
@@ -335,6 +353,9 @@ public final class VillageGenerator {
      * la casa nueva puede dar a otro lado.
      */
     public static BlockPos[] actualizarCasas(ServerLevel level, BlockPos center) {
+        // Aviso: rehacer una casa borra lo que haya dentro (queda en el log con un WARN).
+        DevilRpg.LOGGER.warn("[Village] Aldea en {}: se rehacen las casas al nivel del terreno (se pierde lo de "
+                + "dentro de las casas viejas)", center);
         BlockPos[] bases = basesDeCasas(center);
         BlockPos[] puertas = new BlockPos[bases.length];
         RandomSource casas = RandomSource.create(center.asLong());
@@ -362,18 +383,6 @@ public final class VillageGenerator {
         paths(level, center, puertas);
         DevilRpg.LOGGER.info("[Village] Aldea vieja en {}: cabañas sustituidas por casas del juego", center);
         return puertas;
-    }
-
-    /**
-     * Añade <b>solo la cuarta casa</b> (la grande, con su cama extra) y su camino. Es el paso que necesitan las
-     * aldeas que ya se migraron cuando solo había tres casas: así no se vuelven a tocar las otras tres (rehacer una
-     * casa borra lo que tenga dentro).
-     */
-    public static void asegurarCuartaCasa(ServerLevel level, BlockPos center) {
-        BlockPos base = basesDeCasas(center)[3];
-        BlockPos puerta = placeVanillaHouse(level, base, casaGrandeAleatoria(RandomSource.create(center.asLong())));
-        paths(level, center, puerta);
-        DevilRpg.LOGGER.info("[Village] Aldea en {}: añadida la cuarta casa (la grande)", center);
     }
 
     /**
@@ -409,8 +418,60 @@ public final class VillageGenerator {
     }
 
     /**
-     * Torre de vigilancia de cobblestone (para futuros arqueros/guardias): base sólida, hueco interior,
-     * plataforma superior con almenas y escalera de acceso lateral.
+     * <b>Iglesias</b> del propio juego (los templos de aldea de vanilla): traen campanario y campana, así que
+     * sustituyen a la torre procedural de vigilancia ({@link #tower}, ahora LEGACY).
+     */
+    private static final String[] IGLESIAS = {
+            "village/plains/houses/plains_temple_3",
+            "village/plains/houses/plains_temple_4",
+    };
+
+    /** Dónde va la iglesia de la aldea (el mismo sitio que ocupaba la torre de vigilancia). */
+    private static BlockPos baseDeIglesia(BlockPos center) {
+        return center.offset(-9, 0, -20);
+    }
+
+    private static String iglesiaAleatoria(RandomSource random) {
+        return IGLESIAS[random.nextInt(IGLESIAS.length)];
+    }
+
+    /** ¿Esa plantilla es una iglesia (templo)? Las iglesias no llevan cama: no se les pone ninguna. */
+    private static boolean esIglesia(String id) {
+        for (String iglesia : IGLESIAS) {
+            if (iglesia.equals(id)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Sustituye la <b>torre procedural</b> vieja por la <b>iglesia del juego</b> en una aldea ya construida: se
+     * limpia el solar (solo lo construido: el terreno se protege) y se coloca el templo, que ya trae campanario.
+     */
+    public static void actualizarTemplo(ServerLevel level, BlockPos center) {
+        BlockPos base = baseDeIglesia(center);
+        for (int dx = -4; dx <= 4; dx++) {
+            for (int dz = -4; dz <= 4; dz++) {
+                int suelo = groundY(level, base.getX() + dx, base.getZ() + dz);
+                for (int dy = -2; dy <= 12; dy++) {
+                    BlockPos p = new BlockPos(base.getX() + dx, suelo + dy, base.getZ() + dz);
+                    BlockState state = level.getBlockState(p);
+                    if (state.isAir() || esTerrenoNatural(state)) {
+                        continue;
+                    }
+                    colocar(level, p, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
+                }
+            }
+        }
+        placeVanillaHouse(level, base, iglesiaAleatoria(RandomSource.create(center.asLong())));
+        DevilRpg.LOGGER.info("[Village] Aldea en {}: torre de vigilancia sustituida por una iglesia", center);
+    }
+
+    /**
+     * <b>LEGACY — NO USAR.</b> Torre de vigilancia procedural (dos pilares de cobblestone con plataforma). Desde
+     * que la aldea usa las construcciones del juego, la sustituye una <b>iglesia</b> de vanilla
+     * ({@link #actualizarTemplo}), así que ya no se llama.
      */
     private static void tower(ServerLevel level, BlockPos base) {
         int y = groundY(level, base.getX(), base.getZ());
@@ -691,7 +752,9 @@ public final class VillageGenerator {
                 }
             }
         }
-        if (camas == 0) {
+        // Cama de respaldo en las CASAS que no traigan ninguna (los aldeanos necesitan cama para criar). A la
+        // iglesia no se le pone: no es un dormitorio.
+        if (camas == 0 && !esIglesia(id)) {
             bed(level, origen.offset(tam.getX() / 2, 0, tam.getZ() / 2));
         }
         // Las casas GRANDES llevan una cama extra: en vanilla hace falta una cama libre por cría, así que con 4
@@ -1274,12 +1337,18 @@ public final class VillageGenerator {
         return pos;
     }
 
-    /** Los tres sitios fijos de aldeano de la aldea (uno por profesión), relativos al centro. */
+    /**
+     * Los cuatro sitios fijos de aldeano de la aldea (uno por profesión), relativos al centro. Son 4 desde que
+     * hay 4 casas (y 4 camas): así la cuarta casa tiene su dueño. El <b>herrero</b> (TOOLSMITH) es el que en el
+     * futuro trabajará los materiales de la aldea.
+     */
     private static final BlockPos[] VILLAGER_SPOTS = {
-            new BlockPos(-8, 0, -8), new BlockPos(9, 0, -8), new BlockPos(-2, 0, -11)
+            new BlockPos(-8, 0, -8), new BlockPos(9, 0, -8), new BlockPos(-2, 0, -11),
+            new BlockPos(14, 0, -8)
     };
     private static final VillagerProfession[] VILLAGER_SPECIALTIES = {
-            VillagerProfession.FARMER, VillagerProfession.WEAPONSMITH, VillagerProfession.CLERIC
+            VillagerProfession.FARMER, VillagerProfession.WEAPONSMITH, VillagerProfession.CLERIC,
+            VillagerProfession.TOOLSMITH
     };
 
     /** Vuelve a poner los aldeanos y el golem de una aldea ya construida (ver {@code VillageManager}). */
