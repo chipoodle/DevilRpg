@@ -94,9 +94,14 @@ public final class VillagePantry {
     /** El cofre (simple o <b>doble</b>) de la despensa, o {@code null} si esa aldea aún no tiene kiosco. */
     @Nullable
     public static Container despensa(ServerLevel level, BlockPos center) {
-        BlockPos p = pos(center);
-        // Se busca un cofre cerca del kiosco y se pide el contenedor COMBINADO: un cofre doble da 54 ranuras.
-        for (BlockPos q : BlockPos.betweenClosed(p.offset(-6, -4, -6), p.offset(6, 4, 6))) {
+        // OJO: la búsqueda se centra en LA COTA DEL PUEBLO, nunca en la Y del centro del objetivo: esa Y puede ser
+        // cualquier cosa (en la partida del jugador era 101 con la aldea en la 63), así que la caja de búsqueda caía
+        // en el aire, no encontraba el cofre y `asegurarKiosco` volvía a construir el kiosco EN CADA LATIDO: el log
+        // se llenaba de "kiosco colocados" cada 10 s y cada reconstrucción BORRABA el cofre con lo que tuviera
+        // dentro (por eso el granjero nunca dejaba comida: se la borraban).
+        int nivel = VillageGenerator.cotaDeLaPlaza(level, center);
+        BlockPos p = new BlockPos(center.getX(), nivel + 1, center.getZ() + 1);
+        for (BlockPos q : BlockPos.betweenClosed(p.offset(-6, -3, -6), p.offset(6, 3, 6))) {
             BlockState state = level.getBlockState(q);
             if (state.getBlock() instanceof ChestBlock cofre) {
                 Container c = ChestBlock.getContainer(cofre, state, level, q.immutable(), true);

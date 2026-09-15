@@ -932,9 +932,11 @@ public final class VillageManager {
                 asegurarGoalDeRecolector(villager, center, objectiveIndex);
             }
         }
+        // El RECOLECTOR (holgazán) no cuenta para el reparto de obreros: es un puesto fijo y no debe acabar de
+        // constructor (si no, se pasa el día reparando y no recoge nada).
         int adultos = 0;
         for (Villager villager : aldeanos) {
-            if (!villager.isBaby()) {
+            if (!villager.isBaby() && villager.getVillagerData().getProfession() != VillagerProfession.NITWIT) {
                 adultos++;
             }
         }
@@ -945,8 +947,9 @@ public final class VillageManager {
                 return;
             }
             if (villager.isBaby() || villager.getPersistentData().getBoolean(BUILDER_TAG)
-                    || villager.getVillagerData().getProfession() == VillagerProfession.FARMER) {
-                continue;
+                    || villager.getVillagerData().getProfession() == VillagerProfession.FARMER
+                    || villager.getVillagerData().getProfession() == VillagerProfession.NITWIT) {
+                continue; // el granjero cuida la huerta y el holgazán es el recolector: no se tocan
             }
             marcarObrero(villager, center, objectiveIndex);
             marcados++;
@@ -956,7 +959,8 @@ public final class VillageManager {
             if (marcados >= deseados) {
                 return;
             }
-            if (villager.isBaby() || villager.getPersistentData().getBoolean(BUILDER_TAG)) {
+            if (villager.isBaby() || villager.getPersistentData().getBoolean(BUILDER_TAG)
+                    || villager.getVillagerData().getProfession() == VillagerProfession.NITWIT) {
                 continue;
             }
             marcarObrero(villager, center, objectiveIndex);
