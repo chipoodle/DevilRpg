@@ -208,6 +208,10 @@ public class PlayerCapabilityForgeEventSubscriber {
             if (player.tickCount % 20 == 0 && player.level() instanceof net.minecraft.server.level.ServerLevel serverLevel) {
                 VillageManager.refrescarEtiquetas(serverLevel, (net.minecraft.server.level.ServerPlayer) player);
             }
+            // Efectos de las aldeas cada 10 ticks: haz de luz del sello místico y partículas de intrusión enemiga.
+            if (player.tickCount % 10 == 0 && player.level() instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+                VillageManager.efectosDeAldeas(serverLevel, (net.minecraft.server.level.ServerPlayer) player);
+            }
         }
         // Reparar muy despacio (cada ARMOR_REPAIR_INTERVAL_TICKS) para simular la durabilidad de
         // una armadura de diamante: la de cuero se desgasta mucho mas lento mientras eres lobo.

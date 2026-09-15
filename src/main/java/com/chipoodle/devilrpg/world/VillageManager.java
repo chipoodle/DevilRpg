@@ -221,9 +221,12 @@ public final class VillageManager {
      *       de alto). Ahora la cota es la de la aldea y la limpieza previa quita los restos del muro de verdad
      *       (troncos, piedra, escaleras, muretes), así que el trozo de más desaparece. Esta versión existe porque el
      *       arreglo era solo de código y las aldeas en 21 no volvían a migrar.</li>
+     *   <li>23: el <b>kiosco es más grande</b> (plataforma 7x7 y postes de 4, antes 5x5 y 3), con el cofre del centro
+     *       conservado al agrandarlo. Las casas se rehacen (casas 14) con <b>más camas</b> (hasta 4 por casa, para que
+     *       duerman los niños) y una <b>segunda puerta</b> en la pared de enfrente.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 22;
+    public static final int CURRENT_LAYOUT = 23;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -240,11 +243,12 @@ public final class VillageManager {
      * 12 = con el <b>solar relleno hasta el suelo del pueblo</b> (la casa mediana dejaba huecos de DOS bloques: el
      * despeje no baja ya de la capa de superficie y se rellena la columna donde la plantilla no pone nada),
      * 13 = con el <b>nivelado que respeta los troncos</b> (el margen de la parcela de la granja le borraba a la casa
-     * una fila entera de postes de la pared).
+     * una fila entera de postes de la pared), 14 = con <b>más camas</b> (hasta 4 por casa, para que duerman los niños)
+     * y una <b>segunda puerta</b> en la pared de enfrente.
      * Se sube cuando cambia el número, el tipo o la <b>altura</b> de las construcciones, y la migración solo hace lo
      * que falte (rehacer una casa borra lo que tenga dentro).
      */
-    public static final int CURRENT_HOUSES = 13;
+    public static final int CURRENT_HOUSES = 14;
     /** Radio alrededor del obrero en el que se buscan huecos que reponer. */
     private static final double REPAIR_SEARCH_RADIUS = 40.0D;
     /** Cuánto puede estar el hueco por encima / por debajo del obrero para que intente alcanzarlo. */
@@ -1436,6 +1440,48 @@ public final class VillageManager {
                 "La campana tañe una sola vez... y un zumbido antiguo recorre el empedrado: "
                         + "el poder místico sella la aldea. Ninguna criatura de la oscuridad podrá alzarse entre sus muros."), false);
         DevilRpg.LOGGER.info("[Village] Aldea en {}: sello místico activo (no aparecerán enemigos dentro)", center);
+    }
+
+    /**
+     * Efectos visuales de las aldeas, cada pocos ticks: el <b>haz de luz</b> del sello místico (una columna de
+     * partículas sobre el faro del kiosco) y las <b>partículas oscuras</b> de los enemigos que entran en una aldea
+     * asediada (así se ve la intrusión desde lejos).
+     */
+    public static void efectosDeAldeas(ServerLevel level, ServerPlayer player) {
+        VillageSavedData saved = VillageSavedData.get(level);
+        for (int i = 0; i <= MAX_OBJECTIVES; i++) {
+            BlockPos centro = centroDe(level, i);
+            if (centro == null || !saved.isGenerated(i)) {
+                continue;
+            }
+            double distSqr = player.blockPosition().distSqr(centro);
+            boolean protegida = saved.isSiegeResolved(i) && !saved.isFallen(i);
+            // HAZ DE LUZ: columna de partículas brillantes sobre el faro del kiosco (se ve a lo lejos).
+            if (protegida && distSqr < 128.0D * 128.0D) {
+                int cota = VillageGenerator.cotaDeLaPlaza(level, centro);
+                for (int h = 0; h < 14; h++) {
+                    level.sendParticles(net.minecraft.core.particles.ParticleTypes.END_ROD,
+                            centro.getX() + 0.5D, cota + 6.0D + h * 0.9D, centro.getZ() + 0.5D,
+                            1, 0.08D, 0.0D, 0.08D, 0.0D);
+                }
+            }
+            // INTRUSIÓN: chispas oscuras sobre los enemigos que están dentro del perímetro de la aldea.
+            if (distSqr < 160.0D * 160.0D) {
+                double limite = (double) VillageGenerator.FENCE_RADIUS * VillageGenerator.FENCE_RADIUS;
+                for (net.minecraft.world.entity.Mob mob : level.getEntitiesOfClass(net.minecraft.world.entity.Mob.class,
+                        new AABB(centro).inflate(VillageGenerator.FENCE_RADIUS + 8.0D))) {
+                    if (mob.getType().getCategory() != net.minecraft.world.entity.MobCategory.MONSTER) {
+                        continue;
+                    }
+                    double dx = mob.getX() - centro.getX();
+                    double dz = mob.getZ() - centro.getZ();
+                    if (dx * dx + dz * dz <= limite) {
+                        level.sendParticles(net.minecraft.core.particles.ParticleTypes.SCULK_SOUL,
+                                mob.getX(), mob.getY() + 1.9D, mob.getZ(), 2, 0.25D, 0.15D, 0.25D, 0.01D);
+                    }
+                }
+            }
+        }
     }
 
     /** Manda un mensaje a los jugadores que estén cerca de la aldea. */

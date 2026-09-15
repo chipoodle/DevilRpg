@@ -78,6 +78,8 @@ public final class VillageGenerator {
     private static final int PLOT_WATER_ROW = PLOT_DEPTH / 2;
     /** Bloques de <b>terraza</b> (patio llano) que se allanan alrededor de una construcción. */
     private static final int MARGEN_TERRAZA = 2;
+    /** Camas que se intentan dejar en cada casa (una por cría posible; antes solía haber una sola). */
+    private static final int MIN_CAMAS_POR_CASA = 4;
     /**
      * Hasta cuántos bloques por debajo de la superficie se busca suelo al rellenar el solar de una construcción
      * (la casa mediana dejaba huecos de dos bloques: ver {@code placeVanillaHouse}).
@@ -414,8 +416,10 @@ public final class VillageGenerator {
         if (nivel <= level.getMinBuildHeight() + 1) {
             return;
         }
-        if (VillagePantry.despensa(level, center) != null) {
-            return; // el kiosco (con su cofre) ya está
+        if (VillagePantry.despensa(level, center) != null
+                && level.getBlockState(new BlockPos(center.getX() + KIOSCO_RADIO, nivel, center.getZ()))
+                        .is(Blocks.STONE_BRICKS)) {
+            return; // el kiosco ya está (con su cofre) y con el tamaño actual
         }
         kiosco(level, center, nivel);
         VillagePantry.remesaInicial(VillagePantry.despensa(level, center));
@@ -564,6 +568,63 @@ public final class VillageGenerator {
     }
 
     /**
+     * Coloca <b>camas de más</b> dentro de una casa (hasta {@code cuantas}): busca huecos libres de dos bloques con
+     * suelo firme y va poniendo camas. Con más camas la aldea puede crecer (cada cría necesita una cama libre).
+     *
+     * @return cuántas camas colocó de verdad
+     */
+    private static int camasExtra(ServerLevel level, BlockPos origen, Vec3i tam, int cuantas) {
+        int puestas = 0;
+        for (int dy = 1; dy < tam.getY() - 1 && puestas < cuantas; dy++) {
+            for (int dx = 1; dx < tam.getX() - 1 && puestas < cuantas; dx++) {
+                for (int dz = 1; dz < tam.getZ() - 2 && puestas < cuantas; dz++) {
+                    BlockPos pies = origen.offset(dx, dy, dz);
+                    BlockPos cabeza = pies.relative(Direction.SOUTH);
+                    if (!level.getBlockState(pies).isAir() || !level.getBlockState(cabeza).isAir()) {
+                        continue;
+                    }
+                    if (!level.getBlockState(pies.below()).isSolid() || !level.getBlockState(cabeza.below()).isSolid()) {
+                        continue;
+                    }
+                    bed(level, pies);
+                    puestas++;
+                }
+            }
+        }
+        return puestas;
+    }
+
+    /**
+     * Segunda <b>puerta</b> en la pared de enfrente de la casa (para poder cruzarla). Solo se pone si en esa pared hay
+     * un bloque macizo y hay aire a los dos lados: así nunca se abre un boquete en la plantilla.
+     */
+    private static void puertaExtra(ServerLevel level, BlockPos origen, Vec3i tam, BlockPos puerta) {
+        // La puerta original está en el interior de la caja: se refleja en el eje Z (pared de enfrente).
+        int dx = puerta.getX() - origen.getX();
+        int dy = puerta.getY() - origen.getY();
+        int dz = tam.getZ() - 1 - (puerta.getZ() - origen.getZ());
+        BlockPos espejo = origen.offset(dx, dy, dz);
+        BlockState pared = level.getBlockState(espejo);
+        if (pared.isAir() || !pared.isSolid() || pared.getBlock() instanceof DoorBlock) {
+            return;
+        }
+        BlockPos fuera = espejo.relative(Direction.NORTH);
+        BlockPos dentro = espejo.relative(Direction.SOUTH);
+        if (!level.getBlockState(fuera).isAir() || !level.getBlockState(dentro).isAir()) {
+            return;
+        }
+        if (!level.getBlockState(espejo.above()).isSolid()) {
+            return; // hace falta el dintel para colgar la puerta de arriba
+        }
+        colocar(level, espejo, Blocks.OAK_DOOR.defaultBlockState()
+                .setValue(DoorBlock.FACING, Direction.SOUTH)
+                .setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER), Block.UPDATE_ALL);
+        colocar(level, espejo.above(), Blocks.OAK_DOOR.defaultBlockState()
+                .setValue(DoorBlock.FACING, Direction.SOUTH)
+                .setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER), Block.UPDATE_ALL);
+    }
+
+    /**
      * <b>Iglesia</b> de la aldea: el <b>templo con campanario</b> del propio juego. Sustituye a la torre
      * procedural de vigilancia ({@link #tower}, ahora LEGACY).
      * <p>
@@ -667,10 +728,10 @@ public final class VillageGenerator {
         colocar(level, new BlockPos(base.getX(), y + 1, base.getZ() + 2), Blocks.OAK_PLANKS.defaultBlockState(), 3);
     }
 
-    /** Lado del kiosco de la plaza (radio): 2 -> plataforma de 5x5. */
-    private static final int KIOSCO_RADIO = 2;
+    /** Lado del kiosco de la plaza (radio): 3 -> plataforma de 7x7 (antes 5x5: el jugador lo quería más grande). */
+    private static final int KIOSCO_RADIO = 3;
     /** Altura de los cuatro postes del kiosco sobre la plataforma. */
-    private static final int KIOSCO_POSTE = 3;
+    private static final int KIOSCO_POSTE = 4;
 
     /**
      * <b>Kiosco de la plaza</b>: plataforma de piedra con <b>4 salidas</b> (una escalera en el centro de cada lado),
@@ -728,8 +789,15 @@ public final class VillageGenerator {
                 Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true), 3);
         // El cofre DOBLE de la despensa, sobre la plataforma. Las dos mitades se marcan LEFT/RIGHT a mano: al
         // colocarlas con setBlock no pasa por la colocación de vanilla y sin esto quedarían dos cofres sueltos.
-        colocar(level, new BlockPos(cx, nivel + 1, cz + 1), cofre(ChestType.LEFT), 3);
-        colocar(level, new BlockPos(cx + 1, nivel + 1, cz + 1), cofre(ChestType.RIGHT), 3);
+        // OJO: si el cofre YA está, no se vuelve a colocar (al agrandar el kiosco se vaciaría lo que tuviera dentro).
+        BlockPos cofreA = new BlockPos(cx, nivel + 1, cz + 1);
+        BlockPos cofreB = new BlockPos(cx + 1, nivel + 1, cz + 1);
+        if (!level.getBlockState(cofreA).is(Blocks.CHEST)) {
+            colocar(level, cofreA, cofre(ChestType.LEFT), 3);
+        }
+        if (!level.getBlockState(cofreB).is(Blocks.CHEST)) {
+            colocar(level, cofreB, cofre(ChestType.RIGHT), 3);
+        }
     }
 
     /** Cofre mirando al sur; {@code tipo} marca la mitad (LEFT/RIGHT) para formar un cofre doble. */
@@ -1021,11 +1089,22 @@ public final class VillageGenerator {
         // suelo (dy = 1), que es el nivel por el que se anda dentro de la casa.
         if (camas == 0 && !esIglesia(id)) {
             bed(level, origen.offset(tam.getX() / 2, 1, tam.getZ() / 2));
+            camas++;
+        }
+        // CAMAS DE MÁS: las casas se llenan hasta MIN_CAMAS_POR_CASA (los niños duermen aquí, y con más camas la
+        // aldea puede crecer más allá de los 4 aldeanos de antes).
+        if (!esIglesia(id) && camas < MIN_CAMAS_POR_CASA) {
+            camas += camasExtra(level, origen, tam, MIN_CAMAS_POR_CASA - camas);
         }
         // Las casas GRANDES llevan una cama extra: en vanilla hace falta una cama libre por cría, así que con 4
         // camas la aldea puede crecer hasta 4 aldeanos.
         if (esCasaGrande(id)) {
             camaExtra(level, origen, tam);
+        }
+        // PUERTA EXTRA: una segunda puerta en la pared de enfrente (la casa se puede cruzar). Solo se pone si esa
+        // pared es maciza y hay aire a los dos lados, así no se rompe la plantilla.
+        if (puerta != null && !esIglesia(id)) {
+            puertaExtra(level, origen, tam, puerta);
         }
         // Escalón de entrada: si el suelo de fuera quedó por debajo del piso de la casa, se sube con escaleras
         // pegadas a la puerta (si no, no se puede entrar al edificio).
