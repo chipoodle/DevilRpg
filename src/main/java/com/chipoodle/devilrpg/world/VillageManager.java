@@ -197,9 +197,18 @@ public final class VillageManager {
      *       quedaba una capa corto, dejando el compostero en el aire. Medido en el guardado: compostero en la 64 con
      *       el suelo del pueblo en la 62. Ahora se quita el viejo, se mide el suelo limpio, se rellena la columna
      *       hasta la capa de debajo (césped arriba) y se apoya el compostero ahí.</li>
+     *   <li>20: <b>el nivelado ya no trata los TRONCOS como terreno</b>. `nivelarHuella` (huella + terraza de cada
+     *       construcción y de cada parcela de la granja), `nivelar` (área de la aldea) y el talud usaban
+     *       `esTerrenoNatural`, que da los troncos por "terreno natural": al recortar, <b>borraban los postes de
+     *       tronco de las paredes</b> y al rellenar los <b>tapaban con tierra</b>. Como el margen de una parcela de
+     *       la granja se solapa con la casa de al lado (parcela en (-16,8) con margen 2 y caja de la casa hasta
+     *       z=+7), la migración le comía a la casa una <b>fila entera de postes</b>: es el "le falta parte de la
+     *       pared entre ventanas" del jugador. Auditoría bloque a bloque contra las plantillas del juego (12
+     *       plantillas reales, 7 aldeas, 5 construcciones cada una): los 11 bloques que faltaban eran exactamente
+     *       esa fila. Ahora las tres rutas usan `esTerrenoRecortable` (terreno de verdad, sin troncos ni hojas).</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 19;
+    public static final int CURRENT_LAYOUT = 20;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -214,11 +223,13 @@ public final class VillageManager {
      * <b>borde del solar a nivel</b> (se devuelve el césped a la capa de superficie alrededor de las paredes: la
      * caja de la plantilla es más grande que el edificio y quedaba una zanja de un bloque alrededor de cada casa),
      * 12 = con el <b>solar relleno hasta el suelo del pueblo</b> (la casa mediana dejaba huecos de DOS bloques: el
-     * despeje no baja ya de la capa de superficie y se rellena la columna donde la plantilla no pone nada).
+     * despeje no baja ya de la capa de superficie y se rellena la columna donde la plantilla no pone nada),
+     * 13 = con el <b>nivelado que respeta los troncos</b> (el margen de la parcela de la granja le borraba a la casa
+     * una fila entera de postes de la pared).
      * Se sube cuando cambia el número, el tipo o la <b>altura</b> de las construcciones, y la migración solo hace lo
      * que falte (rehacer una casa borra lo que tenga dentro).
      */
-    public static final int CURRENT_HOUSES = 12;
+    public static final int CURRENT_HOUSES = 13;
     /** Radio alrededor del obrero en el que se buscan huecos que reponer. */
     private static final double REPAIR_SEARCH_RADIUS = 40.0D;
     /** Cuánto puede estar el hueco por encima / por debajo del obrero para que intente alcanzarlo. */

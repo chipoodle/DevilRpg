@@ -308,14 +308,19 @@ public final class VillageGenerator {
                 int suelo = groundY(level, x, z);
                 for (int y = nivel; y < suelo; y++) {
                     BlockPos p = new BlockPos(x, y, z);
-                    if (esTerrenoNatural(level.getBlockState(p))) {
+                    // OJO: `esTerrenoRecortable`, NO `esTerrenoNatural`. Éste último da los TRONCOS por terreno y
+                    // este recorte se los comía: la terraza de una construcción (o el margen de una parcela de la
+                    // granja, que se solapa con la casa de al lado) le borraba a la casa los postes de tronco de la
+                    // pared -> "le falta parte de la pared entre ventanas" (medido en el guardado: los 11 bloques
+                    // que faltaban eran una fila entera de postes, en la fila del margen de la parcela).
+                    if (esTerrenoRecortable(level.getBlockState(p))) {
                         colocar(level, p, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
                     }
                 }
                 for (int y = suelo; y < nivel; y++) {
                     BlockState actual = level.getBlockState(new BlockPos(x, y, z));
-                    if (!actual.isAir() && !esTerrenoNatural(actual)) {
-                        continue; // no se tapa nada construido
+                    if (!actual.isAir() && !esTerrenoRecortable(actual)) {
+                        continue; // no se tapa nada construido (ni un tronco del muro o de una casa)
                     }
                     // La capa que se pisa va con CÉSPED (no tierra): si el patio se rellenó, se ve verde como el
                     // resto y no como un borde marrón alrededor de la casa.
@@ -1103,8 +1108,8 @@ public final class VillageGenerator {
                 // se pisa va con césped, para que un relleno no se vea como un parche de tierra.
                 for (int y = g; y < baseY; y++) {
                     BlockState actual = level.getBlockState(columna.atY(y));
-                    if (!actual.isAir() && !esTerrenoNatural(actual)) {
-                        continue;
+                    if (!actual.isAir() && !esTerrenoRecortable(actual)) {
+                        continue; // ni lo construido ni los troncos (muro, casas) se tapan
                     }
                     colocar(level, columna.atY(y),
                             (y == baseY - 1 ? Blocks.GRASS_BLOCK : Blocks.DIRT).defaultBlockState(), 3);
@@ -1186,10 +1191,11 @@ public final class VillageGenerator {
                 // Rellenar hasta el nivel del talud si el terreno está por debajo (sin tapar lo construido).
                 for (int y = g; y < targetY; y++) {
                     BlockState actual = level.getBlockState(new BlockPos(px, y, pz));
-                    if (!actual.isAir() && !esTerrenoNatural(actual)) {
+                    if (!actual.isAir() && !esTerrenoRecortable(actual)) {
                         continue;
                     }
-                    colocar(level, new BlockPos(px, y, pz), Blocks.DIRT.defaultBlockState(), 3);
+                    colocar(level, new BlockPos(px, y, pz),
+                            (y == targetY - 1 ? Blocks.GRASS_BLOCK : Blocks.DIRT).defaultBlockState(), 3);
                 }
                 // Recortar si el terreno natural sobresale por encima del talud (nunca troncos ni construcciones).
                 for (int y = targetY; y < g; y++) {
@@ -1647,8 +1653,15 @@ public final class VillageGenerator {
     // --- Iteración 3: la aldea viva ----------------------------------------------------------------
 
     /**
-     * Captura el <b>plano</b> de la aldea: todos los bloques que hay por encima del suelo natural dentro del
-     * radio de la valla (sin vegetación ni cultivos: los árboles y la huerta son cosa del campo y del granjero).
+     * Hasta cuántos bloques por encima del suelo del pueblo se apunta en el plano (la torre de la iglesia es lo más
+     * alto que hay: {@code plains_temple_4} mide 12 de alto).
+     */
+    private static final int ALTURA_MAXIMA_DEL_PLANO = 12;
+
+    /**
+     * Captura el <b>plano</b> de la aldea: todos los bloques construidos dentro del radio de la valla, en una banda
+     * de altura medida desde la <b>cota de la aldea</b> (sin vegetación ni cultivos: los árboles y la huerta son cosa
+     * del campo y del granjero).
      * Es lo que usa el <b>aldeano obrero</b> ({@code VillagerRepairGoal}) para saber qué falta y volver a
      * ponerlo bloque a bloque, en vez de que el gestor reconstruya la aldea entera de golpe.
      */
@@ -1657,6 +1670,7 @@ public final class VillageGenerator {
         Map<BlockState, Integer> indices = new HashMap<>();
         List<Long> posiciones = new ArrayList<>();
         List<Integer> estados = new ArrayList<>();
+        int nivel = cotaDeLaPlaza(level, center); // cota del suelo del pueblo (leída de la plaza, no del tejado)
         for (int dx = -FENCE_RADIUS; dx <= FENCE_RADIUS; dx++) {
             for (int dz = -FENCE_RADIUS; dz <= FENCE_RADIUS; dz++) {
                 if (dx * dx + dz * dz > FENCE_RADIUS * FENCE_RADIUS) {
@@ -1664,16 +1678,15 @@ public final class VillageGenerator {
                 }
                 int x = center.getX() + dx;
                 int z = center.getZ() + dz;
-                int base = groundY(level, x, z);
-                // Se mira DESDE dos bloques por debajo del suelo transitable (base-2) hacia arriba. Antes empezaba
-                // en `base`, así que todo lo que está a ras de suelo se quedaba fuera del plano y el obrero no lo
-                // reponía: el suelo de las casas, los composteros, la base de la torre o los caminos. El segundo
-                // bloque de abajo hace falta por el MURO: son dos troncos y, visto desde `base`, la columna del
-                // muro tiene su bloque más alto en `base+1`, así que `groundY` sube a `base+2` y el tronco de ABAJO
-                // (el que rompe un asedio) quedaba fuera del plano y no se reponía nunca. El terreno natural
-                // (tierra, hierba, agua, piedra...) sí se salta, que eso no se "repara".
-                for (int dy = -2; dy <= 9; dy++) {
-                    BlockPos pos = new BlockPos(x, base + dy, z);
+                // La banda se mide desde LA COTA DE LA ALDEA (la plaza), NO desde el suelo de cada columna: `groundY`
+                // sobre una casa devuelve su TEJADO, así que el escaneo empezaba por ENCIMA del tejado y el cuerpo
+                // de la casa (paredes, suelo, ventanas, postes de tronco) se quedaba FUERA del plano: el obrero no
+                // podía reponerlo. Auditoría bloque a bloque contra las plantillas del juego: los planos capturados
+                // así cubrían solo el 20-50% de cada construcción.
+                // Se empieza 2 bloques por debajo del nivel por el que se anda (suelo de las casas, caminos,
+                // composteros y el tronco de abajo del muro) y se sube hasta cubrir la torre de la iglesia.
+                for (int y = nivel - 2; y <= nivel + ALTURA_MAXIMA_DEL_PLANO; y++) {
+                    BlockPos pos = new BlockPos(x, y, z);
                     BlockState state = level.getBlockState(pos);
                     if (seDescartaDelPlano(state)) {
                         continue;
@@ -1790,8 +1803,8 @@ public final class VillageGenerator {
         for (int y = sueloCompostero - 1; y < nivelCompostero; y++) {
             BlockPos p = new BlockPos(compX, y, compZ);
             BlockState actual = level.getBlockState(p);
-            if (!actual.isAir() && !esTerrenoNatural(actual)) {
-                continue; // no se tapa nada construido
+            if (!actual.isAir() && !esTerrenoRecortable(actual)) {
+                continue; // no se tapa nada construido (ni un tronco)
             }
             colocar(level, p, (y == nivelCompostero - 1 ? Blocks.GRASS_BLOCK : Blocks.DIRT).defaultBlockState(),
                     Block.UPDATE_ALL);
