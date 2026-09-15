@@ -249,9 +249,12 @@ public final class VillageManager {
      *       herrero de herramientas: son los <b>puestos de trabajo</b> de los dos herreros, que hasta ahora no
      *       existían en la aldea (el jugador lo notó: "hay un herrero pero no veo su estación de trabajo"). Entra en
      *       el plano, con su camino.</li>
+     *   <li>27: la <b>granja pasa a 4 carriles por lado</b> (parcela de 9x5 a 9x9, 72 cultivos por parcela) y se
+     *       recolocan las dos parcelas a (-20,10) y (10,6): las aldeas ya construidas tienen que rehacer sus
+     *       bancales (y las parcelas nuevas tapan a las viejas, así que no quedan bancales sueltos).</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 26;
+    public static final int CURRENT_LAYOUT = 27;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
