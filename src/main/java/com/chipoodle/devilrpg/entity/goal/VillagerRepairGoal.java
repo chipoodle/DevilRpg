@@ -1,6 +1,7 @@
 package com.chipoodle.devilrpg.entity.goal;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.world.VillageGenerator;
 import com.chipoodle.devilrpg.world.VillageManager;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -39,8 +40,11 @@ public class VillagerRepairGoal extends Goal {
      * bloques, así que no se puede hacer en cada tick.
      */
     private static final int IDLE_REST_TICKS = 100;
-    /** Si el obrero se aleja más de esto del centro de la aldea, deja de trabajar (no se pierde por el mundo). */
-    private static final double MAX_DISTANCE_FROM_CENTER = 48.0D;
+    /**
+     * Si el obrero se aleja más de esto del centro de la aldea, deja de trabajar (no se pierde por el mundo).
+     * Derivado del radio de la aldea: con un valor fijo, al agrandarla habría dejado de reparar el borde.
+     */
+    private static final double MAX_DISTANCE_FROM_CENTER = VillageGenerator.FENCE_RADIUS + 12.0D;
     /** Si no logra acercarse en este tiempo (ticks sin llegar), abandona ese hueco. */
     private static final int STUCK_LIMIT = 100;
 

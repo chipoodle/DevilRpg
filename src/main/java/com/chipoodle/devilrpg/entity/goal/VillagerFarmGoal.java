@@ -47,8 +47,8 @@ public class VillagerFarmGoal extends Goal {
     private static final int IDLE_REST_TICKS = 80;
     /** Si no logra acercarse en este tiempo, abandona el objetivo. */
     private static final int STUCK_LIMIT = 120;
-    /** Si se aleja más de esto del centro, deja de trabajar. */
-    private static final double MAX_DISTANCE_FROM_CENTER = 48.0D;
+    /** Si se aleja más de esto del centro, deja de trabajar (derivado del radio de la aldea). */
+    private static final double MAX_DISTANCE_FROM_CENTER = VillageGenerator.FENCE_RADIUS + 12.0D;
     /** Trigo que lleva encima antes de ir a la despensa: cada 4 cosechas baja a guardarlo y hornear. */
     private static final int LLEVAR_TRIGO = 4;
     /** Semillas que se guarda como mucho: si lleva más, las suelta (si no, se le llena el inventario y no le cabe el trigo). */

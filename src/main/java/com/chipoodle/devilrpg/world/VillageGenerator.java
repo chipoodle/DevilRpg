@@ -2141,8 +2141,9 @@ public final class VillageGenerator {
             spawnOneVillager(level, center, slot, false);
         }
         // El golem SOLO si no hay ya uno: al repoblar una aldea cuyo golem sobrevivió, antes aparecía un
-        // segundo golem (bug visto en juego).
-        if (level.getEntitiesOfClass(IronGolem.class, new AABB(center).inflate(48.0D)).isEmpty()) {
+        // segundo golem (bug visto en juego). El radio va DERIVADO del tamaño de la aldea (con el recinto
+        // agrandado un golem que estuviera junto al muro se quedaba fuera de un radio fijo).
+        if (level.getEntitiesOfClass(IronGolem.class, new AABB(center).inflate(FENCE_RADIUS + 20.0D)).isEmpty()) {
             spawnIronGolem(level, center.offset(4, 0, 4));
         } else {
             DevilRpg.LOGGER.debug("[Village] la aldea ya tiene golem: no se duplica");
