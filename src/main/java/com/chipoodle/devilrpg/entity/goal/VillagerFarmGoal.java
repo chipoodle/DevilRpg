@@ -100,7 +100,11 @@ public class VillagerFarmGoal extends Goal {
         if (VillageManager.estaDescansando(villager)) {
             return false;
         }
-        if (villager.blockPosition().distSqr(center) > MAX_DISTANCE_FROM_CENTER * MAX_DISTANCE_FROM_CENTER) {
+        // Distancia HORIZONTAL al centro: la Y del centro puede ser la del spawn del jugador y no debe contar (la
+        // aldea es un recinto en el plano XZ).
+        double dxCentro = villager.getX() - center.getX();
+        double dzCentro = villager.getZ() - center.getZ();
+        if (dxCentro * dxCentro + dzCentro * dzCentro > MAX_DISTANCE_FROM_CENTER * MAX_DISTANCE_FROM_CENTER) {
             return false;
         }
         Container despensa = VillagePantry.despensa(level, center);

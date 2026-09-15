@@ -59,8 +59,14 @@ public final class VillagePantry {
     /** Distancia (en bloques) a la que un aldeano ya "alcanza" la despensa para dejar o coger cosas. */
     public static final double ALCANCE_DESPENSA = 5.0D;
 
+    /**
+     * Posición real del cofre de la despensa (o {@code null} si no se encuentra). La caja de búsqueda se mide desde
+     * <b>la cota</b>, nunca desde la Y del centro (esa puede ser la del spawn del jugador y la búsqueda caería en el
+     * aire).
+     */
     public static BlockPos posReal(ServerLevel level, BlockPos center) {
-        BlockPos p = pos(center);
+        int nivel = VillageGenerator.cotaDeLaPlaza(level, center);
+        BlockPos p = new BlockPos(center.getX() + OFFSET.getX(), nivel + 1, center.getZ() + OFFSET.getZ());
         if (level.getBlockState(p).is(Blocks.CHEST)) {
             return p;
         }

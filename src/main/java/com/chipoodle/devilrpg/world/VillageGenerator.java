@@ -916,7 +916,7 @@ public final class VillageGenerator {
             return;
         }
         BlockPos base = baseDeHerreria(center);
-        if (buscarBloque(level, base, Blocks.GRINDSTONE) == null) {
+        if (buscarBloque(level, base, nivel, Blocks.GRINDSTONE) == null) {
             // OJO: colocar la plantilla borra lo que haya en su solar (queda en el log con un WARN por casa).
             BlockPos puerta = placeVanillaHouse(level, base, HERRERIAS[0], nivel);
             // Camino hasta su puerta, como a las casas.
@@ -925,16 +925,25 @@ public final class VillageGenerator {
             }
             DevilRpg.LOGGER.info("[Village] Aldea en {}: herreria construida en {} (puerta {})", center, base, puerta);
         }
-        if (buscarBloque(level, base, Blocks.SMITHING_TABLE) == null) {
+        if (buscarBloque(level, base, nivel, Blocks.SMITHING_TABLE) == null) {
             puestoDeTrabajo(level, base, nivel, Blocks.SMITHING_TABLE);
             DevilRpg.LOGGER.info("[Village] Aldea en {}: mesa de herreria puesta en el taller", center);
         }
     }
 
-    /** Busca un bloque concreto en el solar de un edificio (para saber si ya está construido o puesto). */
+    /**
+     * Busca un bloque concreto en el solar de un edificio (para saber si ya está construido o puesto).
+     * <p>
+     * OJO CON LA Y: la caja se mide desde {@code nivel} (LA COTA), NUNCA desde la Y de la base. La base se construye
+     * con la Y del centro del objetivo, que es la del spawn del jugador (101 con la aldea a 75): buscando el muelle
+     * a esa altura no se encontraba NUNCA, así que la herrería se volvía a construir cada 10 s y, al destruir su
+     * cofre, el juego TIRABA EL BOTÍN al suelo (mecánica vanilla de `Containers.dropContentsOnDestroy`): el jugador
+     * veía la herrería "escupiendo" espadas, picos, antorchas y puertas sin razón.
+     */
     @Nullable
-    private static BlockPos buscarBloque(ServerLevel level, BlockPos base, Block bloque) {
-        for (BlockPos q : BlockPos.betweenClosed(base.offset(-1, -3, -1), base.offset(12, 9, 12))) {
+    private static BlockPos buscarBloque(ServerLevel level, BlockPos base, int nivel, Block bloque) {
+        for (BlockPos q : BlockPos.betweenClosed(new BlockPos(base.getX() - 1, nivel - 3, base.getZ() - 1),
+                new BlockPos(base.getX() + 12, nivel + 9, base.getZ() + 12))) {
             if (level.getBlockState(q).is(bloque)) {
                 return q.immutable();
             }

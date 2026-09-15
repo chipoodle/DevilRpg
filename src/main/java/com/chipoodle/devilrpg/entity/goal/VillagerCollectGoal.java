@@ -81,7 +81,8 @@ public class VillagerCollectGoal extends Goal {
         if (VillageManager.estaDescansando(villager)) {
             return false;
         }
-        if (villager.blockPosition().distSqr(center) > RADIO * RADIO) {
+        // Distancia HORIZONTAL al centro (la Y del centro no cuenta: la aldea es un recinto en el plano XZ).
+        if (distanciaHorizontalAlCentro() > RADIO * RADIO) {
             return false;
         }
         // Con las manos llenas, al almacén (a su punto de apoyo: el cofre es sólido y no se navega hacia él).
@@ -177,6 +178,17 @@ public class VillagerCollectGoal extends Goal {
         destino = null;
         restTicks = REST_TICKS;
         VillageManager.parar(villager);
+    }
+
+    /**
+     * Distancia <b>horizontal</b> (en el plano XZ) al centro de la aldea, al cuadrado. La Y no se mira a propósito:
+     * el centro puede traer cualquier Y (la del spawn del jugador) y mirarla dejaba al aldeano fuera de su propio
+     * pueblo.
+     */
+    private double distanciaHorizontalAlCentro() {
+        double dx = villager.getX() - center.getX();
+        double dz = villager.getZ() - center.getZ();
+        return dx * dx + dz * dz;
     }
 
     private void ir() {

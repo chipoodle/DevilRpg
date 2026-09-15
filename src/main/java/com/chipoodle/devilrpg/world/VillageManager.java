@@ -369,6 +369,16 @@ public final class VillageManager {
         BlockPos playerPos = player.blockPosition();
         for (int i = 0; i <= currentIndex; i++) {
             BlockPos target = ObjectiveTargets.targetOf(anchor, i);
+            // LA Y DEL CENTRO ES LA DE LA ALDEA, no la del spawn del jugador: `targetOf` da la altura del ancla (en la
+            // partida, 101 con las aldeas a 62-75) y esa Y se arrastraba a TODA la aldea (los goals buscaban los
+            // cultivos a esa altura y no veían ninguno, el granjero daba vueltas sin cosechar, el recolector no
+            // recogía y los zombies del asedio intentaban caminar 30 bloques por encima del pueblo).
+            if (saved.isGenerated(i)) {
+                BlockPos centro = centroDe(level, i);
+                if (centro != null) {
+                    target = new BlockPos(target.getX(), centro.getY(), target.getZ());
+                }
+            }
             double distSqr = ObjectiveTargets.horizontalDistSqr(playerPos, target);
             if (distSqr > (double) PRE_GENERATE_RADIUS * PRE_GENERATE_RADIUS) {
                 continue;

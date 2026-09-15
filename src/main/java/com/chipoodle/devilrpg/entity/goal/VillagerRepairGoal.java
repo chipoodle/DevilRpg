@@ -83,7 +83,10 @@ public class VillagerRepairGoal extends Goal {
         if (VillageManager.estaDescansando(villager)) {
             return false;
         }
-        if (villager.blockPosition().distSqr(center) > MAX_DISTANCE_FROM_CENTER * MAX_DISTANCE_FROM_CENTER) {
+        // Distancia HORIZONTAL al centro: la Y del centro puede ser la del spawn del jugador y no debe contar.
+        double dxCentro = villager.getX() - center.getX();
+        double dzCentro = villager.getZ() - center.getZ();
+        if (dxCentro * dxCentro + dzCentro * dzCentro > MAX_DISTANCE_FROM_CENTER * MAX_DISTANCE_FROM_CENTER) {
             return false;
         }
         target = VillageManager.findRepairTarget(level, objectiveIndex, villager.blockPosition(), saltados, villager.getUUID());
