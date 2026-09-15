@@ -30,5 +30,10 @@ public final class DevilRpgConfig {
     public static int WOLF_SPAWN_DISTANCE;
     public static double WISP_SPAWN_DISTANCE;
     public static double BEAR_SPAWN_DISTANCE;
+    /**
+     * ¿Se pone un texto flotante sobre la cabeza de cada aldeano con lo que está haciendo? Se configura en
+     * {@code devilrpg-server.toml}, sección {@code [village]}, clave {@code mostrarActividadAldeanos}.
+     */
+    public static boolean MOSTRAR_ACTIVIDAD_ALDEANOS = true;
 
 }

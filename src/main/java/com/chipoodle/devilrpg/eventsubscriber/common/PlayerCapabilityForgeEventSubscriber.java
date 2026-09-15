@@ -204,6 +204,10 @@ public class PlayerCapabilityForgeEventSubscriber {
                     minionCap.restoreStoredMinions(player);
                 }
             }
+            // Texto flotante sobre la cabeza de los aldeanos ("que esta haciendo cada uno"), cada segundo.
+            if (player.tickCount % 20 == 0 && player.level() instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+                VillageManager.refrescarEtiquetas(serverLevel, (net.minecraft.server.level.ServerPlayer) player);
+            }
         }
         // Reparar muy despacio (cada ARMOR_REPAIR_INTERVAL_TICKS) para simular la durabilidad de
         // una armadura de diamante: la de cuero se desgasta mucho mas lento mientras eres lobo.

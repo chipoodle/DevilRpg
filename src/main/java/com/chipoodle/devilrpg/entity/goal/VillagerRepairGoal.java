@@ -143,6 +143,7 @@ public class VillagerRepairGoal extends Goal {
         workTicks = 0;
         BlockState state = VillageManager.blueprintState(level, objectiveIndex, target);
         if (state != null) {
+            VillageManager.ponerActividad(villager, "Reparando la aldea");
             BlockPos puesto = target;
             level.setBlock(puesto, state, Block.UPDATE_ALL);
             level.playSound(null, puesto, state.getSoundType().getPlaceSound(), SoundSource.BLOCKS, 0.8F, 1.0F);

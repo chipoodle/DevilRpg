@@ -1103,6 +1103,74 @@ public final class VillageManager {
     /** Tope de objetivos que se miran al comprobar la protección (de sobra para cualquier partida). */
     private static final int MAX_OBJECTIVES = 64;
 
+    /** Marca (en los datos del aldeano) de que el nombre flotante lo puso el mod, y cuándo. */
+    public static final String ACTIVIDAD_TAG = "DevilRpgActividad";
+    private static final String ACTIVIDAD_HORA_TAG = "DevilRpgActividadTick";
+
+    /**
+     * Pone el <b>texto flotante</b> sobre la cabeza del aldeano con lo que está haciendo (se ve en el juego en tiempo
+     * real). Se usa la etiqueta de nombre de vanilla, así que funciona igual en un jugador y en servidor.
+     * <p>
+     * Se puede apagar en {@code devilrpg-server.toml} → {@code [village] mostrarActividadAldeanos = false}: en ese
+     * caso se retira el texto (solo si lo puso el mod, para no borrar un nombre que le hayas puesto tú).
+     */
+    public static void ponerActividad(Villager villager, @Nullable String texto) {
+        boolean activado = com.chipoodle.devilrpg.config.DevilRpgConfig.MOSTRAR_ACTIVIDAD_ALDEANOS;
+        boolean esNuestro = villager.getPersistentData().getBoolean(ACTIVIDAD_TAG);
+        if (!activado) {
+            if (esNuestro) {
+                villager.setCustomName(null);
+                villager.setCustomNameVisible(false);
+                villager.getPersistentData().putBoolean(ACTIVIDAD_TAG, false);
+            }
+            return;
+        }
+        if (texto == null) {
+            return;
+        }
+        villager.getPersistentData().putLong(ACTIVIDAD_HORA_TAG, villager.level().getGameTime());
+        String actual = villager.getCustomName() == null ? "" : villager.getCustomName().getString();
+        if (!texto.equals(actual)) {
+            villager.setCustomName(Component.literal(texto));
+            villager.setCustomNameVisible(true);
+            villager.getPersistentData().putBoolean(ACTIVIDAD_TAG, true);
+        }
+    }
+
+    /** ¿Ese aldeano ha dicho lo que hace hace poco? (si no, se le pone el texto genérico). */
+    private static boolean actividadReciente(Villager villager) {
+        long t = villager.getPersistentData().getLong(ACTIVIDAD_HORA_TAG);
+        return t != 0L && villager.level().getGameTime() - t < 60L;
+    }
+
+    /**
+     * Refresco <b>genérico</b> de las etiquetas: si un aldeano no ha dicho nada hace un segundo, se le pone lo que
+     * está haciendo según su cerebro vanilla (trabajando, de charla, paseando, durmiendo) para que nunca se quede sin
+     * texto ni con uno viejo. Lo llama el tick del jugador cada segundo.
+     */
+    public static void refrescarEtiquetas(ServerLevel level, ServerPlayer player) {
+        if (!com.chipoodle.devilrpg.config.DevilRpgConfig.MOSTRAR_ACTIVIDAD_ALDEANOS) {
+            return;
+        }
+        for (Villager villager : level.getEntitiesOfClass(Villager.class,
+                new AABB(player.blockPosition()).inflate(64.0D))) {
+            if (actividadReciente(villager)) {
+                continue;
+            }
+            if (villager.isSleeping() || estaDescansando(villager)) {
+                ponerActividad(villager, "Durmiendo");
+            } else if (villager.isBaby()) {
+                ponerActividad(villager, "Jugando");
+            } else if (villager.getBrain().isActive(net.minecraft.world.entity.schedule.Activity.WORK)) {
+                ponerActividad(villager, "Trabajando");
+            } else if (villager.getBrain().isActive(net.minecraft.world.entity.schedule.Activity.MEET)) {
+                ponerActividad(villager, "De charla");
+            } else {
+                ponerActividad(villager, "Paseando");
+            }
+        }
+    }
+
     /**
      * ¿El aldeano está en su <b>hora de descanso</b> (yendo a la cama o dentro de ella)? Mientras descansa, NINGÚN
      * goal del pueblo debe estar activo: si no, el aldeano se queda "andando" en la cama (sus goals tienen el flag

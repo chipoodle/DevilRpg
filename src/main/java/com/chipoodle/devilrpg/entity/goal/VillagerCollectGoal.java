@@ -129,6 +129,7 @@ public class VillagerCollectGoal extends Goal {
             }
             villager.getNavigation().stop();
             villager.swing(InteractionHand.MAIN_HAND);
+            VillageManager.ponerActividad(villager, "Recogiendo");
             ItemStack stack = objetivo.getItem().copy();
             int antes = stack.getCount();
             ItemStack resto = guardarEnInventario(stack);
@@ -157,6 +158,7 @@ public class VillagerCollectGoal extends Goal {
                 return;
             }
             villager.getNavigation().stop();
+            VillageManager.ponerActividad(villager, "Guardando en el almacen");
             descargar(level);
             destino = null;
             restTicks = REST_TICKS;

@@ -176,10 +176,22 @@ public class VillagerFarmGoal extends Goal {
         }
         workTicks = 0;
         switch (tarea) {
-            case COSECHAR -> cosechar(level);
-            case PLANTAR -> plantar(level);
-            case FERTILIZAR -> fertilizar(level);
-            case DESPENSA -> enLaDespensa(level);
+            case COSECHAR -> {
+                VillageManager.ponerActividad(villager, "Cosechando");
+                cosechar(level);
+            }
+            case PLANTAR -> {
+                VillageManager.ponerActividad(villager, "Sembrando");
+                plantar(level);
+            }
+            case FERTILIZAR -> {
+                VillageManager.ponerActividad(villager, "Abonando");
+                fertilizar(level);
+            }
+            case DESPENSA -> {
+                VillageManager.ponerActividad(villager, "Llevando la cosecha");
+                enLaDespensa(level);
+            }
         }
         target = null;
         restTicks = REST_TICKS;

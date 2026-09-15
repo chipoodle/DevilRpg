@@ -31,6 +31,8 @@ final class ServerConfig {
     final ModConfigSpec.DoubleValue threatMaxExtraDifficulty;
     /** Horas JUGADAS (con el mundo cargado) hasta que la amenaza llega a su máximo. */
     final ModConfigSpec.DoubleValue threatFullHours;
+    /** ¿Se pone un texto flotante sobre la cabeza de cada aldeano con lo que está haciendo? */
+    final ModConfigSpec.BooleanValue mostrarActividadAldeanos;
 
     ServerConfig(final ModConfigSpec.Builder builder) {
         builder.push("general");
@@ -82,6 +84,15 @@ final class ServerConfig {
                         "llega a su maximo. 3 = tres horas de partida. Con el juego cerrado no avanza.")
                 .translation(DevilRpg.MODID + ".config.threatFullHours")
                 .defineInRange("threatFullHours", 3.0D, 0.05D, 240.0D);
+        builder.pop();
+
+        // --- Aldea: texto flotante sobre la cabeza de los aldeanos ---
+        builder.push("village");
+        mostrarActividadAldeanos = builder
+                .comment("Pone un texto flotante sobre la cabeza de cada aldeano diciendo lo que esta haciendo",
+                        "(Cosechando, Reparando, Recogiendo, Durmiendo...). Ponlo en false para apagarlo.")
+                .translation(DevilRpg.MODID + ".config.mostrarActividadAldeanos")
+                .define("mostrarActividadAldeanos", true);
         builder.pop();
     }
 
