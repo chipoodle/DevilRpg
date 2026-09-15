@@ -207,6 +207,20 @@ siguiente está implementado y probado.
 - **La iglesia es una construcción del juego**: en el sitio de la vieja torre de vigilancia procedural
   (`tower`, ahora **LEGACY — NO USAR**) va un **templo de aldea de vanilla** (`plains_temple_3/4`), que ya trae
   campanario y campana. A las iglesias **no** se les pone cama de respaldo (`esIglesia`).
+- **Herrería (trazado 26)**: la aldea tiene la casa de herrero del juego (`plains_weaponsmith_1`: fragua con lava,
+  muelle de afilar y arca) en el hueco libre del norte, entre la iglesia y la casa grande, **con su camino**. Es el
+  único sitio donde cabe su huella de 9×11 (comprobado con las huellas máximas de casas, iglesia, parcelas, almacén,
+  kiosco, faroles y sitios de aldeano). Dentro lleva también la **mesa de herrería** (`smithing_table`, que la
+  plantilla no trae): son los **puestos de trabajo** de los dos herreros de la aldea, que hasta el trazado 26 **no
+  existían** (el jugador lo notó: "hay un herrero pero no veo su estación de trabajo"). Sin puesto de trabajo el
+  aldeano no puede reclamarlo y el juego le acaba **borrando el oficio** (`ResetProfession`).
+  `esVivienda` deja fuera iglesia y herrería: no se les ponen camas ni segunda puerta. `asegurarHerreria` es
+  idempotente y la llaman la generación y la migración.
+- **Etiqueta sobre el aldeano**: arriba el **nombre y el oficio**, debajo lo que está haciendo
+  (`"Anselmo (Granjero)\nCosechando"`). El nombre sale del **UUID** (al azar pero estable, sin guardar nada) y el
+  oficio se traduce con las claves del propio juego (`entity.minecraft.villager.<oficio>`). La etiqueta de nombre de
+  vanilla admite varias líneas (el `StringSplitter` corta en el carácter 10). Todo esto se puede apagar con
+  `[village] mostrarActividadAldeanos = false`.
 - **Cuatro aldeanos**: la aldea nace con **4** (`VILLAGERS_FOR_FULL_HEALTH`, 4 casas y 4 camas), uno por casa; el
   cuarto es **herrero** (`VillagerProfession.TOOLSMITH`), pensado para la futura economía de la aldea. Con 4
   adultos, la aldea nombra hasta **3 obreros** y deja al granjero con la huerta.
@@ -290,7 +304,11 @@ siguiente está implementado y probado.
   `SoulWispArcher`): se cobra **por lanza, al dispararla**, y si al dueño no le llega para la siguiente, la
   andanada **se corta ahí mismo** (no sale esa lanza ni las que quedaban). Si no le llega ni para la primera, la
   andanada **ni se empieza** y el wisp dispara la bola de escarcha normal, que es **gratis**. Un wisp sin dueño
-  (por ejemplo de huevo de spawn) no le cobra a nadie. Se dibuja con `textures/entity/frostball/freeze_texture.png` mediante un renderer
+  (por ejemplo de huevo de spawn) no le cobra a nadie. **A los ANIMALES no los ataca por su cuenta**: su
+  `NearestAttackableTargetGoal` iba a por **cualquier `Mob`** (solo excluía aldeanos, llamas, tortugas y golems), así
+  que masacraba las vacas, cerdos, ovejas y mascotas del jugador al pasar. Ahora los animales (`Animal`,
+  `WaterAnimal`, `AmbientCreature`) solo son objetivo si **su dueño los está atacando** (el último bicho al que atacó
+  el jugador, o el animal que lo tiene a él por agresor), y un wisp sin dueño no los toca nunca. Se dibuja con `textures/entity/frostball/freeze_texture.png` mediante un renderer
   billboard propio (`IceSpearRenderer`): al ser una textura de entidad (fuera de `textures/item` y
   `textures/block`) **no está en el atlas de bloques**, así que un modelo de item la mostraría como textura
   perdida — de ahí el quad a mano con `RenderType.entityCutoutNoCull`, que además siempre mira a la cámara y
