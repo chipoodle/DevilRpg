@@ -177,9 +177,16 @@ public final class VillageManager {
      *       </ul>
      *       Además la iglesia es siempre el templo <b>con torre</b>: el otro templo del juego es un edificio bajo sin
      *       torre y sin campana, y el jugador lo veía como un cobertizo ("¿dónde está la iglesia?").</li>
+     *   <li>17: <b>se acabó la zanja de un bloque alrededor de las casas</b>. El despeje del solar borra la caja
+     *       ENTERA de la plantilla (incluida la capa de césped) y casi todas las plantillas del juego son más
+     *       pequeñas que su caja: el borde que queda alrededor de las paredes se quedaba un bloque por debajo del
+     *       suelo del pueblo. Ahora, después de colocar la construcción, se devuelve el <b>césped</b> a la capa de
+     *       superficie en los huecos del solar (y también donde el nivelado recortó el terreno, que dejaba la
+     *       tierra a la vista). Medido en el guardado: el suelo dentro de la caja de la casa mediana estaba en la
+     *       capa 61 y el del pueblo en la 62 (un bloque de zanja), con la puerta ya a ras.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 16;
+    public static final int CURRENT_LAYOUT = 17;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -190,11 +197,13 @@ public final class VillageManager {
      * allanada alrededor, 8 = con la <b>aldea entera a una sola cota</b> (sin zanjas), 9 = a la <b>cota de la
      * plaza</b> (con la mediana contaminada por los tejados quedaban un bloque altas, con su zanja de un bloque
      * alrededor), 10 = <b>alineadas por su puerta</b> (la casa mediana entierra así su plataforma de tierra, que se
-     * veía como un borde/zanja marrón) y con la <b>iglesia del campanario</b> (`plains_temple_4`). Se sube cuando
-     * cambia el número, el tipo o la <b>altura</b> de las construcciones, y la migración solo hace lo que falte
-     * (rehacer una casa borra lo que tenga dentro).
+     * veía como un borde/zanja marrón) y con la <b>iglesia del campanario</b> (`plains_temple_4`), 11 = con el
+     * <b>borde del solar a nivel</b> (se devuelve el césped a la capa de superficie alrededor de las paredes: la
+     * caja de la plantilla es más grande que el edificio y quedaba una zanja de un bloque alrededor de cada casa).
+     * Se sube cuando cambia el número, el tipo o la <b>altura</b> de las construcciones, y la migración solo hace lo
+     * que falte (rehacer una casa borra lo que tenga dentro).
      */
-    public static final int CURRENT_HOUSES = 10;
+    public static final int CURRENT_HOUSES = 11;
     /** Radio alrededor del obrero en el que se buscan huecos que reponer. */
     private static final double REPAIR_SEARCH_RADIUS = 40.0D;
     /** Cuánto puede estar el hueco por encima / por debajo del obrero para que intente alcanzarlo. */

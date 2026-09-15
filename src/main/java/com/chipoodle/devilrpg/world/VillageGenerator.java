@@ -318,9 +318,22 @@ public final class VillageGenerator {
                             (y == nivel - 1 ? Blocks.GRASS_BLOCK : Blocks.DIRT).defaultBlockState(),
                             Block.UPDATE_CLIENTS);
                 }
+                // Si el nivelado RECORTÓ el terreno, la capa que se pisa se quedó con la tierra de debajo a la vista:
+                // se le devuelve el césped para que no se vea un parche marrón alrededor de la construcción.
+                ponerCesped(level, x, z, nivel);
             }
         }
         return nivel;
+    }
+
+    /** Le devuelve el césped a la capa que se pisa si el nivelado la dejó con tierra (nunca toca una construcción). */
+    private static void ponerCesped(ServerLevel level, int x, int z, int nivel) {
+        BlockPos p = new BlockPos(x, nivel - 1, z);
+        BlockState actual = level.getBlockState(p);
+        if (actual.is(Blocks.DIRT) || actual.is(Blocks.COARSE_DIRT) || actual.is(Blocks.PODZOL)
+                || actual.is(Blocks.ROOTED_DIRT) || actual.is(Blocks.MYCELIUM)) {
+            colocar(level, p, Blocks.GRASS_BLOCK.defaultBlockState(), Block.UPDATE_CLIENTS);
+        }
     }
 
     /** Posiciones base de las casas de la aldea, relativas al centro (las mismas que usa {@link #generate}). */
@@ -738,7 +751,23 @@ public final class VillageGenerator {
         }
         // 2) La construcción del juego, tal cual viene.
         template.placeInWorld(level, origen, origen, new StructurePlaceSettings(), level.random, Block.UPDATE_CLIENTS);
-        // 3) Limpieza de bloques técnicos, y de paso se busca la puerta y se cuentan las camas.
+        // 3) Devuelve el CÉSPED a la capa de superficie en los huecos del solar que la plantilla no ocupa.
+        // El despeje del paso 1 borra el solar ENTERO (incluida la capa de césped) y casi todas las plantillas del
+        // juego son más pequeñas que su caja: dejan un borde alrededor de las paredes que se queda un bloque por
+        // debajo del suelo del pueblo -> eso era LA ZANJA de un bloque que salía alrededor de todas las casas.
+        // Solo se rellena donde no hay construcción y hay suelo debajo (nunca debajo de una puerta: la puerta va en
+        // la capa de arriba, así que rellenar la de superficie devuelve el suelo al nivel del resto).
+        BlockPos sueloDelPueblo = new BlockPos(origen.getX(), nivel - 1, origen.getZ());
+        for (int dx = 0; dx < tam.getX(); dx++) {
+            for (int dz = 0; dz < tam.getZ(); dz++) {
+                BlockPos p = sueloDelPueblo.offset(dx, 0, dz);
+                if (!level.getBlockState(p).isAir() || !level.getBlockState(p.below()).isSolid()) {
+                    continue;
+                }
+                colocar(level, p, Blocks.GRASS_BLOCK.defaultBlockState(), Block.UPDATE_CLIENTS);
+            }
+        }
+        // 4) Limpieza de bloques técnicos, y de paso se busca la puerta y se cuentan las camas.
         BlockPos puerta = null;
         int camas = 0;
         for (int dx = 0; dx < tam.getX(); dx++) {
@@ -1061,6 +1090,7 @@ public final class VillageGenerator {
                         colocar(level, columna.atY(y), Blocks.AIR.defaultBlockState(), 3);
                     }
                 }
+                ponerCesped(level, columna.getX(), columna.getZ(), baseY);
             }
         }
         // Talud exterior: una pendiente escalonada en el borde para que la aldea parezca una MESETA natural
