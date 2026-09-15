@@ -49,8 +49,10 @@ public class VillagerFarmGoal extends Goal {
     private static final int STUCK_LIMIT = 120;
     /** Si se aleja más de esto del centro, deja de trabajar. */
     private static final double MAX_DISTANCE_FROM_CENTER = 48.0D;
-    /** Trigo que lleva encima antes de ir a la despensa a moler y hornear (alto a propósito: primero la tierra). */
-    private static final int LLEVAR_TRIGO = 8;
+    /** Trigo que lleva encima antes de ir a la despensa a moler y hornear. */
+    private static final int LLEVAR_TRIGO = 3;
+    /** Semillas que se guarda como mucho: si lleva más, las suelta (si no, se le llena el inventario y no le cabe el trigo). */
+    private static final int SEMILLAS_MAX = 8;
     /** Hogazas como mucho por visita (para que se le vea trabajar). */
     private static final int HORNEAR_MAX = 2;
     /** Harina de huesos que se lleva encima como mucho. */
@@ -200,6 +202,14 @@ public class VillagerFarmGoal extends Goal {
         level.destroyBlock(target, false);
         level.setBlock(target, crop.getStateForAge(0), Block.UPDATE_ALL); // replantado en el sitio
         for (ItemStack drop : drops) {
+            // Las SEMILLAS solo hasta un tope: si se le llenan los 8 huecos con semillas, el trigo ya no le cabe, se le
+            // cae al suelo y nunca acumula las 3 unidades que disparan el viaje a la despensa (por eso el cofre seguía
+            // con las 12 semillas iniciales y la aldea pasaba hambre).
+            if (esSemilla(drop) && semillasEnMano() >= SEMILLAS_MAX) {
+                level.addFreshEntity(new ItemEntity(level, target.getX() + 0.5D, target.getY() + 0.5D,
+                        target.getZ() + 0.5D, drop));
+                continue;
+            }
             ItemStack resto = guardarEnInventario(drop);
             if (!resto.isEmpty()) {
                 level.addFreshEntity(new ItemEntity(level, target.getX() + 0.5D, target.getY() + 0.5D,
@@ -236,6 +246,7 @@ public class VillagerFarmGoal extends Goal {
     private void enLaDespensa(ServerLevel level) {
         Container despensa = VillagePantry.despensa(level, center);
         if (despensa == null) {
+            DevilRpg.LOGGER.warn("[Village] El granjero llego al kiosco y NO encontro la despensa (aldea en {})", center);
             return;
         }
         // 1) Compostero lleno -> harina de huesos para la despensa (el abono de la aldea lo produce ella misma).
@@ -285,7 +296,9 @@ public class VillagerFarmGoal extends Goal {
             }
         }
         if (horneadas > 0) {
-            DevilRpg.LOGGER.debug("[Village] El granjero horneo {} pan(es) en la despensa", horneadas);
+            DevilRpg.LOGGER.info("[Village] El granjero guardo su trigo y horneo {} pan(es) en la despensa", horneadas);
+        } else {
+            DevilRpg.LOGGER.debug("[Village] El granjero visito la despensa (no habia trigo para hornear)");
         }
     }
 
@@ -363,12 +376,19 @@ public class VillagerFarmGoal extends Goal {
     }
 
     private boolean tieneSemillas() {
+        return semillasEnMano() > 0;
+    }
+
+    /** Cuántas semillas lleva encima (sumando todos los tipos). */
+    private int semillasEnMano() {
+        int n = 0;
         for (int i = 0; i < villager.getInventory().getContainerSize(); i++) {
-            if (esSemilla(villager.getInventory().getItem(i))) {
-                return true;
+            ItemStack s = villager.getInventory().getItem(i);
+            if (esSemilla(s)) {
+                n += s.getCount();
             }
         }
-        return false;
+        return n;
     }
 
     /** Saca una semilla del inventario (y devuelve la semilla que debe plantarse, o vacío). */
