@@ -224,7 +224,8 @@ siguiente está implementado y probado.
     alrededor. Ahora la caja se mide desde **la cota** (`buscarBloque(level, base, nivel, bloque)`).
 - **Etiqueta sobre el aldeano**: arriba el **nombre y el oficio**, debajo lo que está haciendo
   (`"Anselmo (Granjero)\nCosechando"`). El nombre sale del **UUID** (al azar pero estable, sin guardar nada) y el
-  oficio se traduce con las claves del propio juego (`entity.minecraft.villager.<oficio>`). **El salto de línea hay
+  oficio se pone con los nombres del mod en español ("Granjero", "Herrero de armas", "Herrero de herramientas",
+  "Clérigo", "Recolector"), con el nombre traducido del juego como reserva para oficios de vanilla. **El salto de línea hay
   que pintarlo a mano**: la etiqueta de nombre de vanilla se dibuja con `Font.drawInBatch(Component, ...)`, que **no
   parte las líneas** (solo lo hacen `MultiLineLabel`/`drawWordWrap`), así que el `\n` salía como un glifo raro en
   medio del texto (el "LF" que reportó el jugador). Lo resuelve `VillageNameTagSubscriber` (cliente): intercepta
@@ -629,6 +630,13 @@ con su premio y su estado guardado. Lo implementado:
         (`VillageManager.parar`).
       - **El recolector es el holgazán**: su `canUse` exigía la marca de OBRERO (`BUILDER_TAG`), que el recolector no
         tiene nunca, así que **nunca recogía nada** (los objetos se quedaban tirados: 155 en una aldea del guardado).
+      - **Atascado = NO ACERCARSE** (no "ir andando"): los tres goals cuentan `stuckTicks` solo cuando el aldeano no
+        mejora su distancia más corta del viaje (`mejorDistancia`). Contando cada tick, el goal se rendía a los 120
+        ticks (6 s) aunque fuera avanzando, así que un viaje a la despensa **no lo terminaba nunca** y el granjero se
+        quedaba ciclado con la cosecha encima (el jugador lo vio: "no sube al kiosco a poner la cosecha").
+      - **El punto de apoyo de la despensa va en el patio, delante de la escalera**: `puntoDeApoyo` era
+        `(centro, cota, centro.z + 4)` y el kiosco pone justo ahí su escalera de acceso, así que la "casilla de suelo"
+        era un bloque sólido. Ahora va dos bloques más allá (patio llano) y el aldeano descarga sin subirse a nada.
     - **Comen pan de verdad**: a un aldeano que aún no puede criar (vanilla pide **12 puntos** de comida:
       `Villager.canBreed`) se le deja **un pan en el suelo** que recoge él mismo (`ItemEntity` + `wantsToPickUp`
       vanilla), y con eso nacen **crías** de verdad. Un pan por latido y solo si la despensa tiene para pagarlo
