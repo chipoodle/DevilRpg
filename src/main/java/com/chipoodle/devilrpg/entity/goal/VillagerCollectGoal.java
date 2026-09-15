@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.entity.goal;
 
+import com.chipoodle.devilrpg.world.VillageGenerator;
 import com.chipoodle.devilrpg.world.VillageManager;
 import com.chipoodle.devilrpg.world.VillageStorage;
 import net.minecraft.core.BlockPos;
@@ -32,8 +33,11 @@ public class VillagerCollectGoal extends Goal {
     private static final int REST_TICKS = 20;
     private static final int IDLE_REST_TICKS = 100;
     private static final int STUCK_LIMIT = 120;
-    /** Radio alrededor del centro donde recoge (no se va por el mundo a por cosas). */
-    private static final double RADIO = 40.0D;
+    /**
+     * Radio alrededor del centro donde recoge (no se va por el mundo a por cosas). Derivado del radio de la valla:
+     * con el recinto agrandado (36) un radio fijo de 40 dejaba los objetos del borde del pueblo sin recoger.
+     */
+    private static final double RADIO = VillageGenerator.FENCE_RADIUS + 6.0D;
     /** Solo se recogen objetos que lleven un rato en el suelo (5 s): así no le quita a nadie lo que acaba de soltar. */
     private static final int EDAD_MINIMA = 100;
 

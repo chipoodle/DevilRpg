@@ -69,9 +69,13 @@ public final class VillageManager {
     private static final int DEFAULT_WAVE = 8;
     /** Incremento máximo de la ola por alejarse (límite: no crece infinitamente). */
     private static final int MAX_WAVE_EXTRA = 20;
-    /** Zona mínima/máxima (bloques) a la que spawnea la ola, FUERA de la valla (radio 29). */
-    private static final int WAVE_SPAWN_MIN = 32;
-    private static final int WAVE_SPAWN_MAX = 40;
+    /**
+     * Zona mínima/máxima (bloques) a la que spawnea la ola: <b>derivada del radio de la valla</b>, siempre FUERA.
+     * <p>
+     * Antes eran 32/40 fijos: al agrandar la aldea (radio 36) los monstruos habrían aparecido <b>dentro</b> del muro.
+     */
+    private static final int WAVE_SPAWN_MIN = VillageGenerator.FENCE_RADIUS + 3;
+    private static final int WAVE_SPAWN_MAX = VillageGenerator.FENCE_RADIUS + 11;
     /**
      * Radio del <b>perímetro</b> de la aldea (la valla, {@code VillageGenerator.FENCE_RADIUS}): a partir de
      * aquí se considera que un zombie del asedio <b>no ha entrado</b>.
@@ -224,9 +228,15 @@ public final class VillageManager {
      *   <li>23: el <b>kiosco es más grande</b> (plataforma 7x7 y postes de 4, antes 5x5 y 3), con el cofre del centro
      *       conservado al agrandarlo. Las casas se rehacen (casas 14) con <b>más camas</b> (hasta 4 por casa, para que
      *       duerman los niños) y una <b>segunda puerta</b> en la pared de enfrente.</li>
+     *   <li>24: la <b>aldea es más grande</b>: radio de la valla de 29 a 36 (+24% de recinto). Los solares se
+     *       reparten a 20-25 bloques del centro (antes 16-18, todo apelotonado), la granja se separa, la iglesia va
+     *       a su cuadrante y los sitios de los aldeanos se reparten en un anillo. En la migración se <b>derriba el
+     *       trazado antiguo</b> (casas, iglesia, parcelas y caminos viejos) y se borra el <b>anillo del muro viejo
+     *       (radio 29)</b>, que si no quedaría una muralla cruzando el pueblo por dentro. Las casas se rehacen
+     *       (casas 15) en los solares nuevos.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 23;
+    public static final int CURRENT_LAYOUT = 24;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -244,13 +254,14 @@ public final class VillageManager {
      * despeje no baja ya de la capa de superficie y se rellena la columna donde la plantilla no pone nada),
      * 13 = con el <b>nivelado que respeta los troncos</b> (el margen de la parcela de la granja le borraba a la casa
      * una fila entera de postes de la pared), 14 = con <b>más camas</b> (hasta 4 por casa, para que duerman los niños)
-     * y una <b>segunda puerta</b> en la pared de enfrente.
+     * y una <b>segunda puerta</b> en la pared de enfrente, 15 = en los <b>solares nuevos</b> de la aldea agrandada
+     * (radio 36; antes a 16-18 del centro, ahora a 20-25 y repartidas por cuadrantes).
      * Se sube cuando cambia el número, el tipo o la <b>altura</b> de las construcciones, y la migración solo hace lo
      * que falte (rehacer una casa borra lo que tenga dentro).
      */
-    public static final int CURRENT_HOUSES = 14;
-    /** Radio alrededor del obrero en el que se buscan huecos que reponer. */
-    private static final double REPAIR_SEARCH_RADIUS = 40.0D;
+    public static final int CURRENT_HOUSES = 15;
+    /** Radio alrededor del obrero en el que se buscan huecos que reponer (derivado del radio de la aldea). */
+    private static final double REPAIR_SEARCH_RADIUS = VillageGenerator.FENCE_RADIUS + 4.0D;
     /** Cuánto puede estar el hueco por encima / por debajo del obrero para que intente alcanzarlo. */
     private static final int REPAIR_MAX_UP = 5;
     private static final int REPAIR_MAX_DOWN = 6;
@@ -512,7 +523,7 @@ public final class VillageManager {
         int count = DEFAULT_WAVE + Math.min(d.objectiveIndex * 2, MAX_WAVE_EXTRA);
         for (int i = 0; i < count; i++) {
             double angle = random.nextDouble() * Math.PI * 2.0D;
-            // FUERA de la valla (radio 29): spawnea entre 32 y 40 bloques del centro.
+            // FUERA de la valla (radio 36): spawnea entre WAVE_SPAWN_MIN y WAVE_SPAWN_MAX bloques del centro.
             int dist = WAVE_SPAWN_MIN + random.nextInt(WAVE_SPAWN_MAX - WAVE_SPAWN_MIN);
             int x = (int) Math.round(d.center.getX() + Math.cos(angle) * dist);
             int z = (int) Math.round(d.center.getZ() + Math.sin(angle) * dist);
@@ -607,7 +618,7 @@ public final class VillageManager {
     /** Presión (ticks de abandono) a partir de la cual una aldea empieza a ser objetivo de las hordas. */
     private static final int PRESSURE_MIN_TICKS = 8 * 60 * 20;   // 8 min de juego
     /** Radio alrededor del centro donde se cuentan los aldeanos para decidir si la aldea ha caído. */
-    private static final double FALLEN_CHECK_RADIUS = 48.0D;
+    private static final double FALLEN_CHECK_RADIUS = VillageGenerator.FENCE_RADIUS + 28;
     /** Radio al que se avisa a los jugadores de lo que pasa en una aldea. */
     private static final double SIEGE_WARN_RADIUS = 160.0D;
     /**

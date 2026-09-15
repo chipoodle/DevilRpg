@@ -68,11 +68,11 @@ import java.util.Set;
  */
 public final class VillageGenerator {
 
-    /** Radio de la valla (un 30% más grande que antes). */
-    public static final int FENCE_RADIUS = 29;
+    /** Radio de la valla (aldea agrandada: de 29 a 36, +24% de superficie protegida y sitio para más casas). */
+    public static final int FENCE_RADIUS = 36;
 
     /** Esquinas de las parcelas de la granja (relativas al centro) y tamaño de cada parcela. */
-    private static final int[][] FARM_PLOTS = {{-16, 8}, {8, 6}};
+    private static final int[][] FARM_PLOTS = {{-20, 10}, {10, 8}};
     private static final int PLOT_WIDTH = 9;
     private static final int PLOT_DEPTH = 5;
     /** Fila de la acequia dentro de la parcela (la del medio). */
@@ -197,20 +197,20 @@ public final class VillageGenerator {
         // --- A partir de aquí se GRABA el plano canónico (solo estructuras, no terreno) ---
         iniciarGrabacion();
         // Posiciones de las casas (base). Desde la Iteración 3 refinada son CASAS DE VERDAD, plantillas del
-        // propio juego (ver placeVanillaHouse), no cabañas procedurales.
-        BlockPos h0 = center.offset(-17, 0, -3);
-        BlockPos h1 = center.offset(16, 0, -4);
-        BlockPos h2 = center.offset(-3, 0, 17);
+        // propio juego (ver placeVanillaHouse), no cabañas procedurales. Los solares salen de basesDeCasas: una
+        // sola lista, para que el generador y la migración no se puedan desincronizar (antes estaban escritos dos
+        // veces y al agrandar la aldea una de las dos copias se quedaba con el trazado viejo).
+        BlockPos[] bases = basesDeCasas(center);
 
         // CASAS PRIMERO: hay que colocarlas para saber dónde quedó cada puerta (cada plantilla la trae donde
         // quiere) y que los caminos lleguen de verdad a ella. La última es la "grande" (con cama extra), y en el
         // sitio de la vieja torre va la IGLESIA del juego.
         RandomSource casas = RandomSource.create(center.asLong());
         BlockPos[] puertas = new BlockPos[5];
-        puertas[0] = placeVanillaHouse(level, h0, casaAleatoria(casas), nivelVilla);
-        puertas[1] = placeVanillaHouse(level, h1, casaAleatoria(casas), nivelVilla);
-        puertas[2] = placeVanillaHouse(level, h2, casaAleatoria(casas), nivelVilla);
-        puertas[3] = placeVanillaHouse(level, center.offset(10, 0, -18), casaGrandeAleatoria(casas), nivelVilla);
+        puertas[0] = placeVanillaHouse(level, bases[0], casaAleatoria(casas), nivelVilla);
+        puertas[1] = placeVanillaHouse(level, bases[1], casaAleatoria(casas), nivelVilla);
+        puertas[2] = placeVanillaHouse(level, bases[2], casaAleatoria(casas), nivelVilla);
+        puertas[3] = placeVanillaHouse(level, bases[3], casaGrandeAleatoria(casas), nivelVilla);
         puertas[4] = placeVanillaHouse(level, baseDeIglesia(center), iglesiaAleatoria(casas), nivelVilla);
 
         // Caminos DESPUÉS, del centro a la puerta de cada construcción (ya se sabe dónde está).
@@ -482,16 +482,199 @@ public final class VillageGenerator {
         }
     }
 
-    /** Posiciones base de las casas de la aldea, relativas al centro (las mismas que usa {@link #generate}). */
+    /**
+     * Posiciones base de las casas de la aldea, relativas al centro (las mismas que usa {@link #generate}).
+     * <p>
+     * Con la aldea agrandada (radio 36) los solares se han <b>repartido</b>: cada casa va a un cuadrante distinto, a
+     * unos 21-25 bloques del centro, dejando sitio entre ellas (y hueco para las casas que construya el obrero más
+     * adelante). Antes estaban a 16-18 y todo quedaba apelotonado.
+     */
     public static BlockPos[] basesDeCasas(BlockPos center) {
         return new BlockPos[]{
-                center.offset(-17, 0, -3),
-                center.offset(16, 0, -4),
-                center.offset(-3, 0, 17),
-                // La cuarta casa (la "grande", con cama extra) va al norte, en el hueco libre entre la torre y la
-                // primera casa, sin pisar la granja ni los caminos.
-                center.offset(10, 0, -18),
+                center.offset(-21, 0, -4),
+                center.offset(20, 0, -5),
+                center.offset(-5, 0, 21),
+                // La cuarta casa (la "grande", con cama extra) va al norte, en su propio cuadrante.
+                center.offset(13, 0, -23),
         };
+    }
+
+    /**
+     * Solares del <b>trazado ANTIGUO</b> (el de antes de agrandar la aldea al radio 36): las cuatro casas, la
+     * iglesia vieja y las dos parcelas de la granja. Están escritos aquí a mano y <b>no</b> se deben "arreglar":
+     * son las coordenadas del pasado, y su único uso es <b>limpiarlas</b> al migrar.
+     * <p>
+     * Hacen falta porque los solares nuevos caen a 20-25 del centro y los viejos a 16-18: al reconstruir la aldea
+     * en el sitio nuevo, las construcciones viejas se quedaban <b>de pie</b> (una al lado de la otra, con la iglesia
+     * vieja y el campo viejo incluidos) y el pueblo quedaba con el doble de edificios.
+     */
+    private static final int[][] SOLARES_ANTIGUOS = {
+            {-17, -3}, {16, -4}, {-3, 17}, {10, -18}, // casas (la 4ª, la grande)
+            {-9, -20},                                // iglesia
+    };
+    /** Esquinas de las parcelas de la granja del trazado antiguo (se devuelven a césped). */
+    private static final int[][] PARCELAS_ANTIGUAS = {{-16, 8}, {8, 6}};
+    /** Radio de la valla del trazado antiguo: su anillo hay que borrarlo, que si no queda un muro dentro. */
+    private static final int RADIO_MURO_ANTIGUO = 29;
+
+    /**
+     * <b>Limpia el trazado antiguo</b> de una aldea que se migra al trazado agrandado: quita las construcciones de
+     * los solares viejos (casas e iglesia), devuelve a césped las parcelas viejas de la granja y barre los caminos
+     * de tierra apisonada del trazado viejo (los caminos nuevos se vuelven a dibujar después, en
+     * {@link #actualizarCasas}).
+     * <p>
+     * Solo se lleva lo <b>construido</b>: el terreno, los troncos y las hojas no se tocan.
+     */
+    public static void limpiarTrazadoAntiguo(ServerLevel level, BlockPos center) {
+        int nivel = cotaDeLaPlaza(level, center);
+        if (nivel <= level.getMinBuildHeight() + 1) {
+            return;
+        }
+        int quitados = 0;
+        // 1) Construcciones viejas. La caja va desde la base hacia +x/+z porque la base de una plantilla es su
+        //    ESQUINA, no su centro (la mayor es la casa mediana, 13x11): de -2 a +13 en x y de -2 a +12 en z cubre
+        //    cualquier casa vieja con margen. NO se puede ensanchar más: la casa vieja de (-17,-3) está a 14 bloques
+        //    del centro y el kiosco (radio 3) empieza en x=-3, así que una caja más ancha le arrancaría el borde.
+        for (int[] solar : SOLARES_ANTIGUOS) {
+            BlockPos c = center.offset(solar[0], 0, solar[1]);
+            sacarVecinosDe(level, c, center); // nadie dentro de una casa que se va a derribar
+            for (int dx = -2; dx <= 13; dx++) {
+                for (int dz = -2; dz <= 12; dz++) {
+                    for (int y = nivel - 1; y <= nivel + 13; y++) {
+                        BlockPos p = new BlockPos(c.getX() + dx, y, c.getZ() + dz);
+                        BlockState state = level.getBlockState(p);
+                        if (state.isAir() || esTerrenoNatural(state) || state.is(BlockTags.LOGS)) {
+                            continue; // el terreno y el muro de la aldea no se tocan
+                        }
+                        colocar(level, p, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
+                        quitados++;
+                    }
+                }
+            }
+            // El suelo de las casas viejas era de TIERRA: al derribarlas quedaban parches marrones. Se devuelve el
+            // césped a la capa que se pisa (solo donde no haya quedado nada construido).
+            for (int dx = -2; dx <= 13; dx++) {
+                for (int dz = -2; dz <= 12; dz++) {
+                    ponerCesped(level, c.getX() + dx, c.getZ() + dz, nivel);
+                }
+            }
+        }
+        // 2) MURO VIEJO (radio 29): al agrandar la aldea ese anillo queda DENTRO del recinto, así que hay que
+        //    borrarlo o el pueblo se queda con una muralla de troncos y piedra cruzándolo por medio. Se hace AQUÍ,
+        //    antes de levantar las casas nuevas: el anillo de 29 cruza por dentro de dos de los solares nuevos
+        //    (los de (20,-5) y (-5,21)) y limpiarlo después les arrancaría trozos de pared.
+        int muroViejo = 0;
+        for (BlockPos p : anilloDelMuro(center, RADIO_MURO_ANTIGUO)) {
+            for (int y = nivel - 1; y <= nivel + 8; y++) {
+                BlockPos q = new BlockPos(p.getX(), y, p.getZ());
+                BlockState state = level.getBlockState(q);
+                boolean restosDeMuro = state.is(Blocks.OAK_LOG) || state.is(Blocks.COBBLESTONE)
+                        || state.is(Blocks.COBBLESTONE_STAIRS) || state.is(Blocks.COBBLESTONE_WALL)
+                        || state.is(Blocks.COBBLESTONE_SLAB);
+                if (!restosDeMuro) {
+                    continue;
+                }
+                colocar(level, q, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
+                muroViejo++;
+            }
+            // El relleno de tierra del muro viejo se devuelve a césped: si no, queda una franja de tierra a la vista.
+            ponerCesped(level, p.getX(), p.getZ(), nivel);
+        }
+        // 3) Parcelas viejas de la granja: tierra de cultivo, acequia, losas, cultivos y composteros se devuelven a
+        //    césped. `farm()` corre DESPUÉS y vuelve a hacer las parcelas en su sitio nuevo.
+        for (int[] parcela : PARCELAS_ANTIGUAS) {
+            BlockPos c = center.offset(parcela[0], 0, parcela[1]);
+            for (int dx = -1; dx <= PLOT_WIDTH; dx++) {
+                for (int dz = -1; dz <= PLOT_DEPTH; dz++) {
+                    int x = c.getX() + dx;
+                    int z = c.getZ() + dz;
+                    for (int y = nivel - 1; y <= nivel + 3; y++) {
+                        BlockPos p = new BlockPos(x, y, z);
+                        BlockState state = level.getBlockState(p);
+                        if (state.isAir() || state.is(BlockTags.LOGS) || state.is(BlockTags.LEAVES)) {
+                            continue;
+                        }
+                        if (y == nivel - 1) {
+                            // La capa que se pisa vuelve a ser césped (era tierra de cultivo o la acequia).
+                            if (state.is(Blocks.FARMLAND) || state.is(Blocks.WATER)
+                                    || esTerrenoRecortable(state)) {
+                                colocar(level, p, Blocks.GRASS_BLOCK.defaultBlockState(), Block.UPDATE_ALL);
+                            }
+                            continue;
+                        }
+                        colocar(level, p, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+                        quitados++;
+                    }
+                }
+            }
+        }
+        // 4) Caminos del trazado viejo: los de tierra apisonada a ras de suelo se borran TODOS y `paths()` los
+        //    vuelve a trazar hacia las puertas nuevas. Si no, quedarían caminos que llevan a casas que ya no están.
+        int caminos = 0;
+        for (int dx = -FENCE_RADIUS; dx <= FENCE_RADIUS; dx++) {
+            for (int dz = -FENCE_RADIUS; dz <= FENCE_RADIUS; dz++) {
+                if (dx * dx + dz * dz > FENCE_RADIUS * FENCE_RADIUS) {
+                    continue;
+                }
+                for (int y = nivel - 2; y <= nivel + 1; y++) {
+                    BlockPos p = new BlockPos(center.getX() + dx, y, center.getZ() + dz);
+                    if (level.getBlockState(p).is(Blocks.DIRT_PATH)) {
+                        colocar(level, p, Blocks.GRASS_BLOCK.defaultBlockState(), Block.UPDATE_CLIENTS);
+                        caminos++;
+                    }
+                }
+            }
+        }
+        DevilRpg.LOGGER.info("[Village] Aldea en {}: trazado antiguo limpiado ({} bloques, {} muro viejo, "
+                + "{} camino)", center, quitados, muroViejo, caminos);
+    }
+
+    /**
+     * Limpia la <b>vegetación del anexo</b>: el terreno que entra en el recinto al agrandar la aldea (del muro
+     * viejo hacia fuera, radio {@link #RADIO_MURO_ANTIGUO} - 3 hasta el final del talud) estaba <b>fuera</b> de la
+     * aldea, así que puede tener árboles que se quedarían dentro del pueblo, sobre el talud o atravesando el muro
+     * nuevo.
+     * <p>
+     * Hay que llamarlo <b>antes</b> de nivelar: el nivelado respeta los troncos a propósito (los del muro son
+     * troncos), así que un árbol en un hoyo acaba con el hoyo rellenado a su alrededor y el árbol dentro. Se salta
+     * la caja del <b>almacén</b>, cuyos postes también son troncos y caen justo en el borde de la banda.
+     */
+    public static void limpiarVegetacionDelAnexo(ServerLevel level, BlockPos center) {
+        int rMin = RADIO_MURO_ANTIGUO - 3;
+        int rMax = LEVEL_RADIUS + SLOPE_WIDTH;
+        BlockPos almacen = VillageStorage.centro(center);
+        int quitados = 0;
+        for (int dx = -rMax; dx <= rMax; dx++) {
+            for (int dz = -rMax; dz <= rMax; dz++) {
+                double dist = Math.sqrt(dx * dx + dz * dz);
+                if (dist <= rMin || dist > rMax) {
+                    continue;
+                }
+                int x = center.getX() + dx;
+                int z = center.getZ() + dz;
+                if (Math.abs(x - almacen.getX()) <= 4 && Math.abs(z - almacen.getZ()) <= 4) {
+                    continue; // los postes del almacén no son vegetación
+                }
+                int topY = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING, new BlockPos(x, 0, z)).getY();
+                // De arriba abajo: se quitan hojas y troncos y se PARA al llegar al suelo (así no se baja 60 bloques
+                // por columna para nada).
+                for (int y = topY; y > topY - 60 && y >= level.getMinBuildHeight(); y--) {
+                    BlockPos p = new BlockPos(x, y, z);
+                    BlockState state = level.getBlockState(p);
+                    if (isVegetation(state)) {
+                        colocar(level, p, Blocks.AIR.defaultBlockState(), 3);
+                        quitados++;
+                        continue;
+                    }
+                    if (!state.isAir()) {
+                        break; // suelo: se acabó el árbol
+                    }
+                }
+            }
+        }
+        if (quitados > 0) {
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: {} bloques de vegetacion quitados del anexo", center, quitados);
+        }
     }
 
     /**
@@ -512,7 +695,14 @@ public final class VillageGenerator {
         RandomSource casas = RandomSource.create(center.asLong());
         // Se vuelve a dejar TODO el terreno de la aldea a una sola cota (protegiendo lo que no sea natural) y las
         // casas se colocan a esa cota: así desaparecen las zanjas y los hundimientos de las aldeas ya construidas.
+        // El ANEXO (el terreno que ahora entra en el recinto) estaba fuera de la aldea: su vegetación se quita ANTES
+        // de nivelar, porque el nivelado respeta los troncos (los del muro son troncos) y un árbol en un hoyo acaba
+        // con el hoyo rellenado a su alrededor y el árbol dentro.
+        limpiarVegetacionDelAnexo(level, center);
         int nivelVilla = prepararTerreno(level, center);
+        // Se derriba el TRAZADO ANTIGUO (casas, iglesia, parcelas y caminos de los solares viejos) antes de levantar
+        // el nuevo: si no, la aldea agrandada tendría los edificios nuevos Y los viejos, uno al lado del otro.
+        limpiarTrazadoAntiguo(level, center);
         for (int i = 0; i < bases.length; i++) {
             BlockPos base = bases[i];
             // SEGURIDAD: si hay aldeanos o golems dentro de la casa que se va a rehacer, se les saca a la plaza
@@ -663,9 +853,9 @@ public final class VillageGenerator {
             "village/plains/houses/plains_temple_4",
     };
 
-    /** Dónde va la iglesia de la aldea (el mismo sitio que ocupaba la torre de vigilancia). */
+    /** Dónde va la iglesia de la aldea (repartida también con la aldea agrandada). */
     private static BlockPos baseDeIglesia(BlockPos center) {
-        return center.offset(-9, 0, -20);
+        return center.offset(-12, 0, -25);
     }
 
     private static String iglesiaAleatoria(RandomSource random) {
@@ -855,7 +1045,8 @@ public final class VillageGenerator {
     private static void torches(ServerLevel level, BlockPos center) {
         int[][] spots = {
                 {8, 0, -8},
-                {0, 0, -15},
+                // (0,-15) caía DENTRO de la iglesia nueva (x -12..0, z -25..-13): el farol salía en su tejado.
+                {5, 0, -12},
                 {12, 0, 12},
                 {-13, 0, -6},
                 {5, 0, 14},
@@ -1523,7 +1714,11 @@ public final class VillageGenerator {
      * {@link #rehacerMuro} (limpiar los restos antes de reconstruirlo).
      */
     private static List<BlockPos> anilloDelMuro(BlockPos center) {
-        int r = FENCE_RADIUS;
+        return anilloDelMuro(center, FENCE_RADIUS);
+    }
+
+    /** Las celdas del anillo de un radio concreto (ver {@link #anilloDelMuro(BlockPos)}). */
+    private static List<BlockPos> anilloDelMuro(BlockPos center, int r) {
         List<BlockPos> pts = new ArrayList<>();
         int samples = 720;
         for (int a = 0; a <= samples; a++) {
@@ -1553,7 +1748,6 @@ public final class VillageGenerator {
      * muro exactamente como lo haría una aldea nueva.
      */
     public static void rehacerMuro(ServerLevel level, BlockPos center) {
-        List<BlockPos> ring = anilloDelMuro(center);
         // LA COTA DEL MURO ES LA DE LA ALDEA, no la mediana de `groundY` en el anillo: en el anillo está el MURO
         // VIEJO y los troncos son sólidos, así que `groundY` devolvía su tope y el muro se reconstruía un bloque más
         // alto en CADA migración (el jugador lo vio: ya iba por 6 de alto).
@@ -1561,7 +1755,12 @@ public final class VillageGenerator {
         // Se limpia la franja del muro quitando SOLO los restos del muro (troncos, piedra, escaleras, muretes), nunca
         // el terreno. Ojo: los troncos NO se pueden dar por "terreno natural" (eso era lo que dejaba el muro viejo en
         // pie y el nuevo encima).
-        for (BlockPos p : ring) {
+        //
+        // El anillo del trazado ANTIGUO (radio 29) NO se limpia aquí: lo hace `limpiarTrazadoAntiguo` dentro de la
+        // migración de casas, ANTES de levantar las casas nuevas. Aquí sería tarde y le arrancaría trozos de pared a
+        // las dos casas nuevas que caen sobre ese anillo.
+        int quitados = 0;
+        for (BlockPos p : anilloDelMuro(center)) {
             for (int y = baseY - 1; y <= baseY + 8; y++) {
                 BlockPos q = new BlockPos(p.getX(), y, p.getZ());
                 BlockState state = level.getBlockState(q);
@@ -1572,10 +1771,12 @@ public final class VillageGenerator {
                     continue;
                 }
                 level.setBlock(q, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
+                quitados++;
             }
         }
         fence(level, center);
-        DevilRpg.LOGGER.info("[Village] Aldea en {}: muro reconstruido a la cota {}", center, baseY);
+        DevilRpg.LOGGER.info("[Village] Aldea en {}: muro reconstruido a la cota {} ({} restos quitados)",
+                center, baseY, quitados);
     }
 
     /**
@@ -1890,13 +2091,16 @@ public final class VillageGenerator {
     }
 
     /**
-     * Los cuatro sitios fijos de aldeano de la aldea (uno por profesión), relativos al centro. Son 4 desde que
-     * hay 4 casas (y 4 camas): así la cuarta casa tiene su dueño. El <b>herrero</b> (TOOLSMITH) es el que en el
-     * futuro trabajará los materiales de la aldea.
+     * Los sitios fijos de aldeano de la aldea (uno por profesión), relativos al centro. Son 5 desde que hay 5
+     * puestos (granjero, dos herreros, clérigo y el holgazán recolector).
+     * <p>
+     * Van <b>repartidos en un anillo</b> a unos 13-15 bloques de la plaza: antes estaban apelotonados al norte
+     * (x -11..14, z -11..2) y con los solares nuevos, que empiezan a 20-21 del centro, alguno podía caer dentro de
+     * una casa. El anillo de 13-15 queda entre el kiosco (radio 3) y los solares, siempre en patio abierto.
      */
     private static final BlockPos[] VILLAGER_SPOTS = {
-            new BlockPos(-8, 0, -8), new BlockPos(9, 0, -8), new BlockPos(-2, 0, -11),
-            new BlockPos(14, 0, -8), new BlockPos(-11, 0, 2)
+            new BlockPos(-13, 0, -8), new BlockPos(12, 0, -8), new BlockPos(-4, 0, 13),
+            new BlockPos(15, 0, 3), new BlockPos(4, 0, 13)
     };
     /**
      * Oficios de la aldea, en el orden en que se ocupan los sitios:

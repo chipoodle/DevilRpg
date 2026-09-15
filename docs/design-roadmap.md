@@ -505,8 +505,8 @@ con su premio y su estado guardado. Lo implementado:
    Al defender la aldea se reinicia a cero.
 2. ✅ **`HordeManager` elige aldea**: cuando toca horda, busca la aldea **más descuidada** (mayor presión, por
    encima de `PRESSURE_MIN_TICKS` = 8 min) de las que están a menos de `HORDE_TARGET_RADIUS` (220) del
-   jugador, ya generadas, no caídas y no atacadas en ese momento. Lanza la horda **a 32–48 bloques del
-   centro** (justo fuera de la valla de 29) y a cada zombie le pone `setVillageCenter(...)` +
+   jugador, ya generadas, no caídas y no atacadas en ese momento. Lanza la horda **a `FENCE_RADIUS + 3 … + 19`
+   bloques del centro** (39–55 con el radio 36: siempre fuera de la valla) y a cada zombie le pone `setVillageCenter(...)` +
    `setGoToCenterActive(true)`, así que **marchan a la aldea** con los goals que ya existían. Si no hay
    ninguna aldea candidata, la horda va a por el jugador como antes. Logs `[Horda]`/`[Village]`.
 3. ✅ **Los enemigos atacan a los aldeanos** (`AggressiveZombieEntity`): nuevo objetivo `Villager` (prioridad
@@ -680,15 +680,23 @@ el tiempo y se gasta en una lista de planos, más un `Goal` de "ir a construir" 
   vanilla los mata con `damageSources().starve()` → **no contaba como baja del jugador y no soltaban XP**
   (por eso parecía que "matar un vex no da experiencia"). El tope de 15 vivos ya evita que se acumulen, así
   que ahora todos se pueden matar y dan su XP. Para revertirlo, basta con volver a poner esa línea.
-- **Aldea (**`VillageGenerator`/`VillageManager`)**: `FENCE_RADIUS` 29, `LEVEL_RADIUS` 31,
-  `GRACE_TICKS` 90 s, `SIEGE_TIMEOUT_TICKS` 2 min, `DEFAULT_WAVE` 8 + `min(objectiveIndex*2, 20)`,
-  oleadas a 32–40 bloques del centro (fuera de la valla).
+- **Aldea (**`VillageGenerator`/`VillageManager`)**: `FENCE_RADIUS` 36 (agrandada desde 29: +24 % de recinto),
+  `LEVEL_RADIUS` 38, `GRACE_TICKS` 90 s, `SIEGE_TIMEOUT_TICKS` 2 min, `DEFAULT_WAVE` 8 + `min(objectiveIndex*2, 20)`,
+  oleadas a `FENCE_RADIUS + 3 … + 11` = **39–47** bloques del centro (fuera de la valla; antes eran 32–40 fijos y
+  con el radio 36 habrían aparecido **dentro** del muro).
+  - **Solares repartidos** (trazado 24): las 4 casas van a 20–25 bloques del centro, una por cuadrante
+    (`basesDeCasas`), la granja se separa a `(-20,10)` y `(10,8)`, la iglesia a `(-12,-25)` y los 5 sitios de
+    aldeano se reparten en un anillo de 13–15. La migración **derriba el trazado antiguo** (casas, iglesia y
+    parcelas viejas) y borra el **anillo del muro viejo (radio 29)**, que si no quedaría una muralla cruzando el
+    pueblo por dentro. Tamaños reales medidos en las plantillas del juego: casa pequeña 7x7, mediana 13x11,
+    iglesia (`plains_temple_4`) 10x12x7 → la huella máxima (base + 12 en x, + 10 en z) cabe con holgura.
 
 - **Asentamientos vivos (`VillageSavedData` + `HordeManager`, Iteración 3)**: `HORDE_TARGET_RADIUS` 220
   (radio respecto al jugador para buscar aldea a la que mandar la horda), `PRESSURE_MIN_TICKS` 8 min de
-  juego (presión mínima para que una aldea sea objetivo), `FALLEN_CHECK_RADIUS` 48 (radio para contar
-  aldeanos: 0 = la aldea ha caído), `SIEGE_WARN_RADIUS` 160 (a quién se avisa) y spawn de la horda a
-  `FENCE_RADIUS + 3 … + 19` = **32–48** bloques del centro.
+  juego (presión mínima para que una aldea sea objetivo), `FALLEN_CHECK_RADIUS` = `FENCE_RADIUS + 28` = 64
+  (radio para contar aldeanos: 0 = la aldea ha caído; antes 48 fijo, que con el recinto nuevo se quedaba corto),
+  `SIEGE_WARN_RADIUS` 160 (a quién se avisa) y spawn de la horda a `FENCE_RADIUS + 3 … + 19` = **39–55**
+  bloques del centro.
 
 - **Minions persistentes (lobo, oso y wisp)**: los minions se guardan por **UUID** en la capability del jugador
   (`PlayerMinionCapability`) y ahora **sobreviven a salir y volver a entrar**, sin duplicarse:
