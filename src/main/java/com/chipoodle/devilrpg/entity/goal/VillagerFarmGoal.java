@@ -101,10 +101,10 @@ public class VillagerFarmGoal extends Goal {
             return false;
         }
         Container despensa = VillagePantry.despensa(level, center);
-        // 1) Con trigo suficiente encima, A LA DESPENSA (aunque queden cultivos maduros): si el depósito se deja para
-        // el final, en una parcela grande SIEMPRE hay algo maduro y el granjero se pasa la vida cosechando sin llevar
-        // NADA al cofre (por eso el cofre seguía con las 12 semillas y la aldea moría de hambre). Se va cada 4 de trigo.
-        if (trigoEnMano() >= LLEVAR_TRIGO && despensa != null) {
+        // 1) Con trigo o vegetales suficientes encima, A LA DESPENSA (aunque queden cultivos maduros): si el depósito
+        // se deja para el final, en una parcela grande SIEMPRE hay algo maduro y el granjero se pasa la vida
+        // cosechando sin llevar NADA al cofre. Se va cada 4 unidades entre trigo y vegetales.
+        if (trigoEnMano() + vegetalesEnMano() >= LLEVAR_TRIGO && despensa != null) {
             tarea = Tarea.DESPENSA;
             target = VillagePantry.puntoDeApoyo(level, center);
             return true;
@@ -264,10 +264,13 @@ public class VillagerFarmGoal extends Goal {
                 }
             }
         }
-        // 2) Todo el trigo que lleve encima, a la despensa.
+        // 2) TODO lo comestible que lleve encima, a la despensa: el trigo (para el pan) y los VEGETALES (zanahoria,
+        // patata y betabel). Antes solo se guardaba el TRIGO, así que lo demás se quedaba en su inventario o se caía al
+        // suelo: el contador de comida de la aldea mira LO QUE HAY EN LA DESPENSA, no lo plantado, así que la aldea
+        // pasaba hambre con la huerta llena (y moría gente teniendo comida).
         for (int i = 0; i < villager.getInventory().getContainerSize(); i++) {
             ItemStack s = villager.getInventory().getItem(i);
-            if (s.is(Items.WHEAT)) {
+            if (s.is(Items.WHEAT) || VillagePantry.esVegetal(s)) {
                 ItemStack resto = VillagePantry.guardar(despensa, s.copy());
                 villager.getInventory().setItem(i, resto);
             }
@@ -361,6 +364,18 @@ public class VillagerFarmGoal extends Goal {
         for (int i = 0; i < villager.getInventory().getContainerSize(); i++) {
             ItemStack s = villager.getInventory().getItem(i);
             if (s.is(Items.WHEAT)) {
+                n += s.getCount();
+            }
+        }
+        return n;
+    }
+
+    /** Vegetales (zanahoria, patata, betabel) que lleva encima: también son comida de la aldea. */
+    private int vegetalesEnMano() {
+        int n = 0;
+        for (int i = 0; i < villager.getInventory().getContainerSize(); i++) {
+            ItemStack s = villager.getInventory().getItem(i);
+            if (VillagePantry.esVegetal(s)) {
                 n += s.getCount();
             }
         }
