@@ -945,6 +945,11 @@ public final class VillageManager {
         // ALMACÉN del pueblo: cobertizo con cofre doble (que crece) donde el constructor recolector va dejando lo que
         // recoge. Es una construcción aparte, al lado de la plaza.
         VillageGenerator.asegurarAlmacen(level, center);
+        // PROFESIONES PERDIDAS: a los aldeanos de una partida vieja el juego les BORRÓ el oficio (el cerebro
+        // vanilla trae `ResetProfession`: sin puesto de trabajo en el cerebro, con XP 0 y nivel 1, devuelve al
+        // aldeano a SIN OFICIO). Sin granjero no hay huerta ni pan y la aldea pasa hambre con la despensa vacía,
+        // así que aquí se le devuelve el oficio que falta a cada aldeano que se quedó sin ninguno.
+        reponerProfesiones(level, aldeanos, objectiveIndex);
         // GRANJERO: los goals no se guardan con la partida, así que se le repone cada vez que se le ve. Cultiva,
         // cosecha, fertiliza con la harina del compostero y trae el trigo a la despensa.
         for (Villager villager : aldeanos) {
@@ -1002,6 +1007,47 @@ public final class VillageManager {
             }
             marcarObrero(villager, center, objectiveIndex);
             marcados++;
+        }
+    }
+
+    /**
+     * Devuelve el <b>oficio perdido</b> a los aldeanos que se quedaron <b>sin ninguno</b>.
+     * <p>
+     * Hace falta porque el cerebro vanilla trae el comportamiento {@code ResetProfession}: si el aldeano no tiene
+     * un puesto de trabajo ({@code JOB_SITE}) en el cerebro, su XP es 0 y su nivel es 1, el juego le <b>borra la
+     * profesión</b> y lo deja de SIN OFICIO. Nuestros aldeanos se nombran por código, así que en las aldeas ya
+     * construidas TODOS acabaron sin oficio: no había granjero (nadie cosechaba ni horneaba, la despensa se
+     * quedaba con la remesa inicial y la aldea pasaba hambre con la huerta llena), ni herreros, ni recolector.
+     * <p>
+     * Se repone <b>la profesión que falta</b> (igual que al repoblar), no una cualquiera, y se le pone 1 de XP para
+     * que el juego no se la vuelva a borrar.
+     */
+    private static void reponerProfesiones(ServerLevel level, List<Villager> aldeanos, int objectiveIndex) {
+        List<VillagerProfession> presentes = new ArrayList<>();
+        List<Villager> sinOficio = new ArrayList<>();
+        for (Villager villager : aldeanos) {
+            if (villager.isBaby()) {
+                continue;
+            }
+            VillagerProfession profesion = villager.getVillagerData().getProfession();
+            if (profesion == VillagerProfession.NONE) {
+                sinOficio.add(villager);
+            } else if (!presentes.contains(profesion)) {
+                presentes.add(profesion);
+            }
+        }
+        for (Villager villager : sinOficio) {
+            int slot = VillageGenerator.slotDeProfesionFaltante(presentes);
+            if (slot < 0) {
+                return; // ya están todos los oficios cubiertos
+            }
+            VillagerProfession nueva = VillageGenerator.profesionDeSlot(slot);
+            villager.setVillagerData(villager.getVillagerData().setProfession(nueva));
+            // Con 1 de XP el comportamiento vanilla `ResetProfession` (que exige XP 0) ya no le borra el oficio.
+            villager.setVillagerXp(Math.max(1, villager.getVillagerXp()));
+            villager.refreshBrain(level); // que su cerebro active lo de su oficio (granja, comercio...)
+            presentes.add(nueva);
+            DevilRpg.LOGGER.info("[Village] Aldea {}: aldeano sin oficio recupera el puesto de {}", objectiveIndex, nueva);
         }
     }
 

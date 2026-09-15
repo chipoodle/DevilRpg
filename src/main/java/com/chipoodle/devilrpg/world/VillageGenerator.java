@@ -398,6 +398,19 @@ public final class VillageGenerator {
     }
 
     /**
+     * Pone un cultivo <b>recién plantado</b> (edad 0), con su propia propiedad de edad. Es como se siembra la huerta
+     * de una aldea nueva: ver {@code plot()}.
+     */
+    public static BlockState cultivoInicial(BlockState state) {
+        for (Property<?> p : state.getProperties()) {
+            if (p instanceof IntegerProperty edad && "age".equals(edad.getName())) {
+                return state.setValue(edad, 0);
+            }
+        }
+        return state;
+    }
+
+    /**
      * Esquina de las dos parcelas de la granja de esa aldea. Lo usan los aldeanos que trabajan la tierra
      * ({@code VillagerFarmGoal}) para saber dónde plantar y cosechar, y el obrero para no poner faroles encima.
      */
@@ -2063,6 +2076,14 @@ public final class VillageGenerator {
         Villager villager = EntityType.VILLAGER.create(level, null, posicion, MobSpawnType.MOB_SUMMONED, true, true);
         if (villager != null) {
             villager.setVillagerData(villager.getVillagerData().setProfession(profession));
+            // SIN ESTO LA PROFESIÓN SE PIERDE: el cerebro vanilla trae el comportamiento `ResetProfession`, que
+            // devuelve al aldeano a SIN OFICIO cuando no tiene `JOB_SITE` en el cerebro, su XP es 0 y su nivel es 1.
+            // Nuestros aldeanos se nombran por código (no reclaman un puesto de trabajo del juego), así que a los
+            // pocos segundos TODOS volvían a `none`: la aldea se quedaba SIN GRANJERO (nadie cosechaba, nadie
+            // horneaba pan y la despensa nunca se llenaba: la aldea pasaba hambre con la huerta llena) y sin
+            // herreros. Con 1 de XP la condición `getVillagerXp() == 0` ya no se cumple y la profesión se mantiene.
+            // (Medido en el guardado del jugador: aldea 10 con 4 aldeanos `none` + 1 holgazán a los 38 s de nacer.)
+            villager.setVillagerXp(1);
             if (baby) {
                 // Los que llegan para repoblar una aldea debilitada nacen CRÍAS y crecen solos (vanilla).
                 villager.setBaby(true);
@@ -2133,6 +2154,14 @@ public final class VillageGenerator {
             }
         }
         return -1;
+    }
+
+    /**
+     * Profesión que le toca al puesto {@code slot} (los puestos de {@link #VILLAGER_SPOTS}). Lo usa la aldea para
+     * <b>devolverle el oficio</b> a un aldeano que se quedó sin ninguno (ver {@code VillageManager}).
+     */
+    public static VillagerProfession profesionDeSlot(int slot) {
+        return VILLAGER_SPECIALTIES[Math.floorMod(slot, VILLAGER_SPECIALTIES.length)];
     }
 
     /** Vuelve a poner los aldeanos y el golem de una aldea ya construida (ver {@code VillageManager}). */
@@ -2350,7 +2379,13 @@ public final class VillageGenerator {
                 colocar(level, new BlockPos(x, base - 1, z), Blocks.FARMLAND.defaultBlockState(), Block.UPDATE_ALL);
                 BlockState crop = plants[dx % plants.length].defaultBlockState();
                 // Cada cultivo tiene SU propiedad de edad y su máximo (el trigo 0-7, el betabel 0-3): se pregunta.
-                crop = cultivoMaduro(crop);
+                // Se planta JOVEN (no maduro): una huerta madura de salida es una cosecha servida y cualquier
+                // aldeano (o el propio cerebro vanilla del granjero, `HarvestFarmland`) la arrasa en los primeros
+                // segundos de llegar el jugador, dejando la parcela pelada y los cultivos tirados por el suelo como
+                // items (era lo que se veía al llegar a una aldea nueva). Joven, la aldea ve crecer su huerta y la
+                // cosecha la hace el granjero, que SÍ la lleva a la despensa (con la harina de huesos de la remesa
+                // crece enseguida).
+                crop = cultivoInicial(crop);
                 colocar(level, new BlockPos(x, base, z), crop, Block.UPDATE_ALL);
             }
         }
