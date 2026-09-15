@@ -7,6 +7,7 @@ import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInter
 import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapability;
 import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapabilityInterface;
 import com.chipoodle.devilrpg.entity.AggressiveZombieEntity;
+import com.chipoodle.devilrpg.entity.goal.VillagerFarmGoal;
 import com.chipoodle.devilrpg.entity.goal.VillagerRepairGoal;
 import com.chipoodle.devilrpg.init.ModEntities;
 import com.chipoodle.devilrpg.survival.ObjectiveTargets;
@@ -92,13 +93,18 @@ public final class VillageManager {
 
     // --- Vida del asentamiento (Iteración 3, paso 4) ------------------------------------------------
 
-    /** Comida que produce la granja en cada latido de la aldea. */
-    private static final int FARM_YIELD = 8;
-    /** Comida que come cada aldeano en cada latido. */
-    private static final int FOOD_PER_VILLAGER = 1;
+    /**
+     * Comida que come la aldea: <b>cada minuto de juego</b> se lleva un punto por aldeano vivo de la
+     * <b>despensa</b> (ver {@code VillagePantry}). Ya no hay "la granja produce 8" en abstracto: lo que se come es
+     * el trigo que el granjero cultiva y el pan que hornea.
+     */
+    private static final int EAT_INTERVAL_TICKS = 60 * 20;
     /** Puntos de comida que da un pan (es lo que vale en vanilla). */
     private static final int FOOD_PER_BREAD = 4;
-    /** Despensa máxima de la aldea. */
+    /**
+     * Tope de la despensa a efectos del contador de comida (el barril real aguanta más, pero con esto basta para
+     * que la aldea esté "llena": pan, carne y trigo de sobra).
+     */
     private static final int MAX_FOOD = 64;
     /** Comida que cuesta que llegue un aldeano nuevo (nacer o mudarse). */
     private static final int FOOD_TO_GROW = 8;
@@ -816,15 +822,20 @@ public final class VillageManager {
     /**
      * Un latido de la vida de la aldea (cada {@link #VILLAGE_POLL_TICKS}, solo en aldeas en paz y con aldeanos):
      * <ul>
-     *   <li><b>Cultivan y comen</b>: la granja produce comida y cada aldeano consume la suya. Sin despensa la
-     *       aldea pasa hambre y no crece (ver {@link #FOOD_TO_GROW}).</li>
+     *   <li><b>Come de su despensa</b>: cada minuto de juego la aldea se lleva una ración por aldeano vivo del
+     *       barril de la plaza. Lo que hay dentro es lo que ha cultivado y horneado su granjero
+     *       ({@code VillagePantry} + {@code VillagerFarmGoal}), así que sin granjero no hay pan y llega el hambre.</li>
+     *   <li><b>Reparte pan</b> para que críen (vanilla pide 12 puntos de comida).</li>
      *   <li><b>Reparan</b>: una aldea sana vuelve a levantar lo que se cayó en el último ataque.</li>
      *   <li><b>Envejecen</b>: ver {@link #ageVillagers}.</li>
      * </ul>
      */
     private static void tickVillageLife(ServerLevel level, VillageSavedData saved, int objectiveIndex, BlockPos center, int vivos) {
-        int antes = saved.getFood(objectiveIndex);
-        int comida = Math.min(MAX_FOOD, antes + FARM_YIELD) - vivos * FOOD_PER_VILLAGER;
+        // COMER: la despensa es la fuente de verdad. Se vacía de verdad (salen items del barril), no un contador.
+        if (level.getGameTime() % EAT_INTERVAL_TICKS == 0L) {
+            VillagePantry.sacarComida(VillagePantry.despensa(level, center), vivos);
+        }
+        int comida = Math.min(MAX_FOOD, VillagePantry.comida(level, center));
         saved.setFood(objectiveIndex, comida);
 
         List<Villager> aldeanos = level.getEntitiesOfClass(Villager.class, new AABB(center).inflate(FALLEN_CHECK_RADIUS));
@@ -834,7 +845,7 @@ public final class VillageManager {
             if (saved.getStarvingSince(objectiveIndex) == 0L) {
                 saved.setStarvingSince(objectiveIndex, level.getGameTime());
                 DevilRpg.LOGGER.info("[Village] La aldea {} se quedo sin comida: pasa hambre", objectiveIndex);
-                announceNearby(level, center, "La aldea pasa hambre: sus granjas no dan abasto.");
+                announceNearby(level, center, "La aldea pasa hambre: la despensa esta vacia.");
             }
             starveVillagers(level, saved, objectiveIndex, aldeanos);
         } else if (saved.getStarvingSince(objectiveIndex) != 0L) {
@@ -842,8 +853,8 @@ public final class VillageManager {
             DevilRpg.LOGGER.info("[Village] La aldea {} vuelve a tener comida", objectiveIndex);
         }
 
-        // COMER DE VERDAD: se les reparte pan (lo recogen ellos) para que puedan criar como en vanilla.
-        feedVillagers(level, saved, objectiveIndex, aldeanos);
+        // COMER DE VERDAD: se les reparte pan de la despensa (lo recogen ellos) para que puedan criar como en vanilla.
+        feedVillagers(level, saved, objectiveIndex, center, aldeanos);
 
         // OBRERO: se asegura de que exista el PLANO de la aldea y de que haya un aldeano que repare. El trabajo
         // lo hace su goal, andando y bloque a bloque (ver VillagerRepairGoal): aquí solo se prepara.
@@ -889,6 +900,16 @@ public final class VillageManager {
             VillageSavedData.Blueprint plano = VillageGenerator.captureBlueprint(level, center);
             saved.setBlueprint(objectiveIndex, plano);
             DevilRpg.LOGGER.info("[Village] Aldea {}: plano guardado ({} bloques)", objectiveIndex, plano.size());
+        }
+        // DESPENSA: el barril de la plaza (si falta). Es donde el granjero guarda el trigo, donde hornea el pan y de
+        // donde come la aldea; sin él no hay cadena de suministro (aldeas viejas no lo tenían).
+        VillageGenerator.asegurarDespensa(level, center);
+        // GRANJERO: los goals no se guardan con la partida, así que se le repone cada vez que se le ve. Cultiva,
+        // cosecha, fertiliza con la harina del compostero y trae el trigo a la despensa.
+        for (Villager villager : aldeanos) {
+            if (!villager.isBaby() && villager.getVillagerData().getProfession() == VillagerProfession.FARMER) {
+                asegurarGoalDeGranjero(villager, center, objectiveIndex);
+            }
         }
         // OBREROS: puede haber VARIOS (hasta MAX_BUILDERS) repartiéndose el trabajo. Los goals no se guardan con
         // la partida, así que se les repone cada vez que se les ve; y si faltan obreros, se nombran aldeanos
@@ -946,6 +967,16 @@ public final class VillageManager {
             }
         }
         villager.goalSelector.addGoal(3, new VillagerRepairGoal(villager, center, objectiveIndex));
+    }
+
+    /** Le pone al <b>granjero</b> su goal de cultivar/cosechar/fertilizar y llevar el trigo a la despensa. */
+    private static void asegurarGoalDeGranjero(Villager villager, BlockPos center, int objectiveIndex) {
+        for (WrappedGoal wrapped : villager.goalSelector.getAvailableGoals()) {
+            if (wrapped.getGoal() instanceof VillagerFarmGoal) {
+                return;
+            }
+        }
+        villager.goalSelector.addGoal(4, new VillagerFarmGoal(villager, center, objectiveIndex));
     }
 
     /** ¿Esa aldea está siendo atacada ahora mismo? (el obrero no trabaja en plena refriega). */
@@ -1065,15 +1096,14 @@ public final class VillageManager {
     }
 
     /**
-     * Reparte <b>pan de verdad</b>: a un aldeano que todavía no puede criar (en vanilla hacen falta 12 puntos de
-     * comida en total) se le deja un pan en el suelo, que <b>recoge él mismo</b>. Así se ve la comida, se la
-     * llevan andando y con eso nacen crías. Cada pan cuesta {@link #FOOD_PER_BREAD} de la despensa y solo se
-     * reparte uno por latido, para que la aldea no se quede sin reservas. A los viejos no se les da: ya no crían.
+     * Reparte <b>pan de verdad sacado de la despensa</b>: a un aldeano que todavía no puede criar (en vanilla hacen
+     * falta 12 puntos de comida en total) se le deja un pan en el suelo, que <b>recoge él mismo</b>. Así se ve la
+     * comida, se la llevan andando y con eso nacen crías. El pan <b>sale del barril</b> (si no hay pan horneado, no
+     * se reparte nada) y solo se da uno por latido, para que la aldea no se quede sin reservas. A los viejos no se
+     * les da: ya no crían.
      */
-    private static void feedVillagers(ServerLevel level, VillageSavedData saved, int objectiveIndex, List<Villager> aldeanos) {
-        if (saved.getFood(objectiveIndex) < FOOD_PER_BREAD) {
-            return; // despensa vacía: no hay pan que repartir
-        }
+    private static void feedVillagers(ServerLevel level, VillageSavedData saved, int objectiveIndex, BlockPos center,
+                                     List<Villager> aldeanos) {
         for (Villager villager : aldeanos) {
             if (villager.isBaby() || villager.canBreed()) {
                 continue; // las crías no comen de la despensa y el que ya puede criar no lo necesita
@@ -1081,13 +1111,24 @@ public final class VillageManager {
             if (ageOf(level, villager) >= VILLAGER_OLD_AGE_TICKS) {
                 continue; // viejo: ya no cría, no se le da pan
             }
-            ItemEntity pan = new ItemEntity(level, villager.getX(), villager.getY() + 0.4D, villager.getZ(),
-                    new ItemStack(Items.BREAD));
-            pan.setDefaultPickUpDelay();
-            level.addFreshEntity(pan);
-            saved.setFood(objectiveIndex, saved.getFood(objectiveIndex) - FOOD_PER_BREAD);
-            return; // uno por latido
+            // Un pan del barril (barril -> suelo -> lo recoge él): lo que come la aldea es lo que se cultivó y se
+            // horneó. Uno por latido, y si la despensa no tiene pan no se reparte nada.
+            if (darPanDeLaDespensa(level, center, villager)) {
+                return;
+            }
         }
+    }
+
+    /** Reparte un pan del barril al aldeano indicado (devuelve false si la despensa no tiene pan). */
+    private static boolean darPanDeLaDespensa(ServerLevel level, BlockPos center, Villager villager) {
+        if (VillagePantry.sacar(VillagePantry.despensa(level, center), s -> s.is(Items.BREAD), 1) == 0) {
+            return false;
+        }
+        ItemEntity pan = new ItemEntity(level, villager.getX(), villager.getY() + 0.4D, villager.getZ(),
+                new ItemStack(Items.BREAD));
+        pan.setDefaultPickUpDelay();
+        level.addFreshEntity(pan);
+        return true;
     }
 
     /**

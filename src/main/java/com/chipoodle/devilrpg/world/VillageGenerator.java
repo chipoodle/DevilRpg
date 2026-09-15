@@ -207,6 +207,9 @@ public final class VillageGenerator {
         // bloque: casas hundidas, zanjas y el muro enterrado (el bug que reportó el jugador).
         farm(level, center, nivelVilla);
 
+        // Despensa de la aldea (barril de la plaza): el centro de la cadena de suministro de comida.
+        asegurarDespensa(level, center);
+
         // Aldeanos frente a las casas, y el golem que protege la aldea.
         spawnVillagers(level, center);
 
@@ -344,6 +347,40 @@ public final class VillageGenerator {
                 || actual.is(Blocks.ROOTED_DIRT) || actual.is(Blocks.MYCELIUM)) {
             colocar(level, p, Blocks.GRASS_BLOCK.defaultBlockState(), Block.UPDATE_CLIENTS);
         }
+    }
+
+    /**
+     * Esquinas de las dos parcelas de la granja de esa aldea. Lo usan los aldeanos que trabajan la tierra
+     * ({@code VillagerFarmGoal}) para saber dónde plantar y cosechar, y el obrero para no poner faroles encima.
+     */
+    public static BlockPos[] parcelasDe(BlockPos center) {
+        BlockPos[] parcelas = new BlockPos[FARM_PLOTS.length];
+        for (int i = 0; i < FARM_PLOTS.length; i++) {
+            parcelas[i] = center.offset(FARM_PLOTS[i][0], 0, FARM_PLOTS[i][1]);
+        }
+        return parcelas;
+    }
+
+    /**
+     * Asegura la <b>despensa</b> de la aldea: un <b>barril de verdad</b> (contenedor) sobre una base de piedra en la
+     * plaza. Es el centro de la cadena de suministro: allí el granjero guarda el trigo y hornea el pan, y de allí
+     * come la aldea (ver {@code VillagePantry}). Idempotente: si ya está, no toca nada.
+     */
+    public static void asegurarDespensa(ServerLevel level, BlockPos center) {
+        BlockPos p = VillagePantry.pos(center);
+        if (level.getBlockState(p).is(Blocks.BARREL)) {
+            return;
+        }
+        int y = groundY(level, p.getX(), p.getZ());
+        if (y <= level.getMinBuildHeight() + 1) {
+            return;
+        }
+        colocar(level, new BlockPos(p.getX(), y - 1, p.getZ()), Blocks.STONE.defaultBlockState(), 3);
+        colocar(level, new BlockPos(p.getX(), y, p.getZ()), Blocks.BARREL.defaultBlockState(), 3);
+        // Remesa inicial: semillas para poder sembrar (sin esto no habría de dónde sacar el primer trigo), abono y
+        // un par de panes para aguantar hasta la primera cosecha.
+        VillagePantry.remesaInicial(VillagePantry.despensa(level, center));
+        DevilRpg.LOGGER.info("[Village] Aldea en {}: despensa colocada en {}", center, p);
     }
 
     /** Posiciones base de las casas de la aldea, relativas al centro (las mismas que usa {@link #generate}). */

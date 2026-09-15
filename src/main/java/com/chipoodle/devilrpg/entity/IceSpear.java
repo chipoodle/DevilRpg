@@ -67,10 +67,10 @@ public class IceSpear extends FrostBall {
     // Con los 3 impactos juntos hay que quedar POR DEBAJO del daño que hacía una sola explosión de la versión
     // anterior (2.5 + 0.12*puntos de salpicadura). Al máximo (20 puntos) esto da 1.5 directo + 1.2 de
     // salpicadura por lanza: aunque acierten las tres, el total se queda corto frente a aquella explosión.
-    private static final float DIRECT_DAMAGE_BASE = 0.6F;
-    private static final float DIRECT_DAMAGE_PER_POINT = 0.045F;
+    private static final float DIRECT_DAMAGE_BASE = 0.7F;
+    private static final float DIRECT_DAMAGE_PER_POINT = 0.055F;
     private static final float SPLASH_DAMAGE_BASE = 0.5F;
-    private static final float SPLASH_DAMAGE_PER_POINT = 0.035F;
+    private static final float SPLASH_DAMAGE_PER_POINT = 0.045F;
 
     /** Daño del impacto directo (el que se lleva la víctima a la que da de lleno). */
     private float directDamage = DIRECT_DAMAGE_BASE;
