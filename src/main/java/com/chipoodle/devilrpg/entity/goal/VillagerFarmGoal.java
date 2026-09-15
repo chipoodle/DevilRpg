@@ -4,6 +4,7 @@ import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.world.VillageGenerator;
 import com.chipoodle.devilrpg.world.VillageManager;
 import com.chipoodle.devilrpg.world.VillagePantry;
+import com.chipoodle.devilrpg.world.VillageStorage;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundSource;
@@ -57,6 +58,8 @@ public class VillagerFarmGoal extends Goal {
     private static final int HORNEAR_MAX = 2;
     /** Harina de huesos que se lleva encima como mucho. */
     private static final int HARINA_MAX = 4;
+    /** Cuánto puede traerse del almacén a la despensa en una visita (comida, semillas y abono del recolector). */
+    private static final int TRAER_DEL_ALMACEN = 64;
 
     private enum Tarea { COSECHAR, PLANTAR, FERTILIZAR, DESPENSA }
 
@@ -287,7 +290,17 @@ public class VillagerFarmGoal extends Goal {
                 villager.getInventory().setItem(i, resto);
             }
         }
-        // 3) Hornear: 3 de trigo por hogaza (la receta de vanilla), como mucho HORNEAR_MAX por visita.
+        // 3) LO DEL ALMACÉN, A LA DESPENSA: el recolector (holgazán) recoge del suelo lo que se cae por el pueblo
+        // —incluido lo que deja caer el propio juego cuando SU aldeano granjero cosecha, que tira el grano al
+        // suelo— y lo guarda en el almacén. Como el contador de comida de la aldea mira LA DESPENSA, esa comida se
+        // quedaba muerta de risa en el almacén y la aldea pasaba hambre con el almacén lleno. El granjero hace de
+        // puente en cada visita: se trae la comida, las semillas y el abono que el recolector haya guardado.
+        int traidos = VillagePantry.traspasar(VillageStorage.almacen(level, center), despensa,
+                s -> s.is(Items.WHEAT) || s.is(Items.BREAD) || s.is(Items.WHEAT_SEEDS) || s.is(Items.BEETROOT_SEEDS)
+                        || s.is(Items.BONE_MEAL) || VillagePantry.esVegetal(s)
+                        || VillagePantry.esCarneCruda(s) || VillagePantry.esCarneCocida(s),
+                TRAER_DEL_ALMACEN);
+        // 4) Hornear: 3 de trigo por hogaza (la receta de vanilla), como mucho HORNEAR_MAX por visita.
         int horneadas = 0;
         while (horneadas < HORNEAR_MAX
                 && VillagePantry.sacar(despensa, s -> s.is(Items.WHEAT), VillagePantry.WHEAT_PER_BREAD)
@@ -296,7 +309,7 @@ public class VillagerFarmGoal extends Goal {
             horneadas++;
             level.playSound(null, target, net.minecraft.sounds.SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.6F, 1.2F);
         }
-        // 4) Recambios: semillas y harina de huesos, si le faltan.
+        // 5) Recambios: semillas y harina de huesos, si le faltan.
         if (!tieneSemillas()) {
             for (ItemStack plantable : List.of(new ItemStack(Items.WHEAT_SEEDS, 4), new ItemStack(Items.CARROT, 3),
                     new ItemStack(Items.POTATO, 3), new ItemStack(Items.BEETROOT_SEEDS, 3))) {
@@ -315,6 +328,8 @@ public class VillagerFarmGoal extends Goal {
         }
         if (horneadas > 0) {
             DevilRpg.LOGGER.info("[Village] El granjero guardo su trigo y horneo {} pan(es) en la despensa", horneadas);
+        } else if (traidos > 0) {
+            DevilRpg.LOGGER.info("[Village] El granjero trajo {} unidad(es) de comida del almacen a la despensa", traidos);
         } else {
             DevilRpg.LOGGER.debug("[Village] El granjero visito la despensa (no habia trigo para hornear)");
         }

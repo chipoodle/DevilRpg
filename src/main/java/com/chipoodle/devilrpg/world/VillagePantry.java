@@ -128,6 +128,41 @@ public final class VillagePantry {
         return total;
     }
 
+    /**
+     * Pasa de {@code origen} a la despensa hasta {@code max} unidades que cumplan el filtro, y devuelve cuántas movió.
+     * <p>
+     * Lo usa el granjero para <b>traer a la despensa lo que el recolector guardó en el almacén</b>: el aldeano sin
+     * oficio recoge del suelo lo que se cae por el pueblo —incluido lo que deja caer el propio juego cuando su
+     * aldeano granjero cosecha— y lo guarda en el almacén. Si esa comida se quedara allí, la aldea pasaría hambre con
+     * el almacén lleno, porque el contador de comida mira <b>esta</b> despensa.
+     */
+    public static int traspasar(@Nullable Container origen, @Nullable Container destino,
+                                Predicate<ItemStack> cual, int max) {
+        if (origen == null || destino == null || max <= 0) {
+            return 0;
+        }
+        int movidos = 0;
+        for (int i = 0; i < origen.getContainerSize() && movidos < max; i++) {
+            ItemStack s = origen.getItem(i);
+            if (s.isEmpty() || !cual.test(s)) {
+                continue;
+            }
+            int cuantos = Math.min(s.getCount(), max - movidos);
+            ItemStack resto = guardar(destino, s.copyWithCount(cuantos));
+            int puestos = cuantos - resto.getCount();
+            if (puestos <= 0) {
+                break; // la despensa no admite más
+            }
+            s.shrink(puestos);
+            if (s.isEmpty()) {
+                origen.setItem(i, ItemStack.EMPTY);
+            }
+            origen.setChanged();
+            movidos += puestos;
+        }
+        return movidos;
+    }
+
     /** Cuánta <b>comida</b> hay en la despensa (lo que come la aldea). */
     public static int comida(ServerLevel level, BlockPos center) {
         Container c = despensa(level, center);
