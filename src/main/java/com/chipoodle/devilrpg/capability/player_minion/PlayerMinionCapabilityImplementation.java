@@ -601,6 +601,13 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
         return data;
     }
 
+    /**
+     * Cuánto tiempo (real) tiene que llevar un minion sin aparecer para dar su copia por perdida. Durante ese rato
+     * se reintenta la recuperación (al entrar los chunks tardan en cargarse), así que no se borra ninguna copia por
+     * un fallo pasajero.
+     */
+    private static final long MISSES_WINDOW_MS = 5L * 60L * 1000L;
+
     /** Quita de la lista la entrada de ese minion, si la hay (para reemplazarla, no para duplicarla). */
     private void removeStoredEntry(ListTag stored, UUID id) {
         for (int i = stored.size() - 1; i >= 0; i--) {
@@ -680,19 +687,26 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
                 continue;
             }
 
-            // Foto periódica de un minion que ya no está: se murió mientras no mirabas. No se resucita: se
-            // cuenta el fallo y, al segundo, se quita de las listas (así no se acumulan minions muertos).
+            // Foto periódica de un minion que ya no está: puede haberse muerto mientras no mirabas... o estar en un
+            // chunk que todavía no se ha cargado. Por eso el descarte es por TIEMPO REAL (5 min sin aparecer), no
+            // por número de intentos: al entrar se reintenta cada 10 s durante 90 s, y con el contador de "2 avisos"
+            // esos reintentos borraban la copia y el minion se perdía para siempre (el "a veces sí y a veces no").
             int misses = entry.getInt("Misses") + 1;
-            if (misses >= STORED_MISSES_BEFORE_DROP) {
+            long ahora = System.currentTimeMillis();
+            if (!entry.contains("MissedSince")) {
+                entry.putLong("MissedSince", ahora);
+            }
+            long desde = entry.getLong("MissedSince");
+            if (ahora - desde >= MISSES_WINDOW_MS) {
                 boolean forgotten = forgetMinionId(player, id);
                 stored.remove(i);
                 cleaned++;
-                DevilRpg.LOGGER.info("[Minion] {} ya no existe ({} fallos): {} de tus listas",
-                        id, misses, forgotten ? "lo quito" : "no estaba en ninguna");
+                DevilRpg.LOGGER.info("[Minion] {} ya no existe ({} intentos en {} s): {} de tus listas",
+                        id, misses, (ahora - desde) / 1000L, forgotten ? "lo quito" : "no estaba en ninguna");
             } else {
                 entry.putInt("Misses", misses);
-                DevilRpg.LOGGER.info("[Minion] no encuentro a {} ({}), aviso {}/{}: si vuelve a faltar al entrar lo quito de las listas",
-                        id, typeId.isEmpty() ? "sin tipo" : typeId, misses, STORED_MISSES_BEFORE_DROP);
+                DevilRpg.LOGGER.info("[Minion] no encuentro a {} ({}), intento {}: se reintenta hasta {} s",
+                        id, typeId.isEmpty() ? "sin tipo" : typeId, misses, MISSES_WINDOW_MS / 1000L);
             }
         }
         DevilRpg.LOGGER.info("[Minion] {} devuelto(s), {} limpiado(s) y {} copia(s) pendientes para {}",

@@ -66,13 +66,18 @@ public class SkillSummonSoulWolf extends AbstractSkillExecutor {
                     UUID key = keys.peek();
                     SoulWolf viejo = key == null ? null : (SoulWolf) min.getTamableByUUID(key, player.level());
                     if (viejo == null) {
-                        // Diagnostico: la persistencia SI encuentra a los minions con level.getEntity(uuid), asi
-                        // que si aqui no aparece hay que ver si es el nivel o la busqueda.
+                        // El más viejo no está cargado (chunk sin cargar) o ya murió sin avisar. Antes esto hacía
+                        // `break` y la lista crecía sin límite (el jugador acabó con 4, 5... lobos). Ahora se OLVIDA
+                        // esa entrada (si de verdad sigue vivo y vuelve a cargarse, la limpieza de huérfanos lo
+                        // quita) y el bucle sigue, así el cupo SIEMPRE converge.
                         net.minecraft.world.entity.Entity directo = key == null ? null
                                 : (player.level() instanceof ServerLevel sl ? sl.getEntity(key) : null);
-                        DevilRpg.LOGGER.warn("[Minion] el lobo mas viejo ({}) no aparece: nivel={} clientSide={} getEntity directo={} claseJugador={}",
-                                key, player.level().dimension().location(), player.level().isClientSide, directo, player.getClass().getSimpleName());
-                        break;
+                        DevilRpg.LOGGER.warn("[Minion] el lobo mas viejo ({}) no aparece (getEntity={}): lo olvido de la lista para respetar el cupo de {}",
+                                key, directo, NUMBER_OF_SUMMONS);
+                        if (!keys.remove(key)) {
+                            break; // la cola que usa la skill no es la de la capability: no dar vueltas
+                        }
+                        continue;
                     }
                     int antes = keys.size();
                     DevilRpg.LOGGER.info("[Minion] sustituyo al lobo mas viejo {}", key);

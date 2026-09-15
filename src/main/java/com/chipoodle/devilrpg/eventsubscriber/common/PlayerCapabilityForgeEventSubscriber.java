@@ -178,6 +178,14 @@ public class PlayerCapabilityForgeEventSubscriber {
                     IGenericCapability.getUnwrappedPlayerCapability(player, PlayerMinionCapability.INSTANCE);
             if (minionCap != null) {
                 minionCap.captureMinions(player, false);
+                // REINTENTO de la recuperación de minions durante el primer minuto y medio: al entrar, los chunks
+                // alrededor del jugador pueden NO estar cargados todavía, así que `getEntity(uuid)` devuelve null y
+                // el minion (lobo, oso, wisp de salud con su aura) no se recuperaba. Con dos entradas así, la copia
+                // se borraba y el minion se perdía para siempre: era el "a veces sí y a veces no". Ahora se
+                // reintenta cada 10 s hasta que sus chunks cargan.
+                if (player.tickCount < 1800) { // 90 s: los chunks tardan en cargarse tras entrar
+                    minionCap.restoreStoredMinions(player);
+                }
             }
         }
         // Reparar muy despacio (cada ARMOR_REPAIR_INTERVAL_TICKS) para simular la durabilidad de

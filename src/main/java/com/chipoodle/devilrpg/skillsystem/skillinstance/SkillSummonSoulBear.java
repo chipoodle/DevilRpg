@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.skillsystem.skillinstance;
 
+import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapability;
 import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityInterface;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
@@ -61,7 +62,14 @@ public class SkillSummonSoulBear extends AbstractSkillExecutor {
                     UUID key = keys.peek();
                     SoulBear e = key == null ? null : (SoulBear) min.getTamableByUUID(key, player.level());
                     if (e == null) {
-                        break; // no se puede resolver: no se olvida; el cupo se queda lleno
+                        // No se puede resolver (chunk sin cargar, o murió sin avisar). Antes se cortaba y el cupo se
+                        // quedaba lleno: podías acumular osos. Se olvida esa entrada y se sigue; si el oso sigue vivo
+                        // y vuelve a cargarse, la limpieza de huérfanos lo quita.
+                        if (!keys.remove(key)) {
+                            break;
+                        }
+                        DevilRpg.LOGGER.warn("[Minion] el oso mas viejo ({}) no aparece: lo olvido de la lista", key);
+                        continue;
                     }
                     min.removeSoulBear(player, e); // ya quita el UUID de la lista
                 }
