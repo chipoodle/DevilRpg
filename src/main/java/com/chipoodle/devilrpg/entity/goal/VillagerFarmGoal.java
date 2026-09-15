@@ -49,8 +49,8 @@ public class VillagerFarmGoal extends Goal {
     private static final int STUCK_LIMIT = 120;
     /** Si se aleja más de esto del centro, deja de trabajar. */
     private static final double MAX_DISTANCE_FROM_CENTER = 48.0D;
-    /** Trigo que lleva encima antes de ir a la despensa a moler y hornear. */
-    private static final int LLEVAR_TRIGO = 3;
+    /** Trigo que lleva encima antes de ir a la despensa: cada 4 cosechas baja a guardarlo y hornear. */
+    private static final int LLEVAR_TRIGO = 4;
     /** Semillas que se guarda como mucho: si lleva más, las suelta (si no, se le llena el inventario y no le cabe el trigo). */
     private static final int SEMILLAS_MAX = 8;
     /** Hogazas como mucho por visita (para que se le vea trabajar). */
@@ -101,16 +101,21 @@ public class VillagerFarmGoal extends Goal {
             return false;
         }
         Container despensa = VillagePantry.despensa(level, center);
-        // PRIMERO la tierra (cosechar y sembrar), y el viaje a la despensa DESPUÉS: si el cofre no aparece (roto por
-        // un asedio) o queda lejos, el granjero NO se puede quedar en bucle yendo a la despensa sin cosechar (era lo
-        // que veía el jugador: cultivos maduros y el granjero sin tocarlos).
-        // 1) Cultivo maduro: a cosecharlo.
+        // 1) Con trigo suficiente encima, A LA DESPENSA (aunque queden cultivos maduros): si el depósito se deja para
+        // el final, en una parcela grande SIEMPRE hay algo maduro y el granjero se pasa la vida cosechando sin llevar
+        // NADA al cofre (por eso el cofre seguía con las 12 semillas y la aldea moría de hambre). Se va cada 4 de trigo.
+        if (trigoEnMano() >= LLEVAR_TRIGO && despensa != null) {
+            tarea = Tarea.DESPENSA;
+            target = VillagePantry.puntoDeApoyo(level, center);
+            return true;
+        }
+        // 2) Cultivo maduro: a cosecharlo.
         target = buscarCultivo(level, true);
         if (target != null) {
             tarea = Tarea.COSECHAR;
             return true;
         }
-        // 2) Tierra de cultivo vacía y semillas: a plantar.
+        // 3) Tierra de cultivo vacía y semillas: a plantar.
         if (tieneSemillas() || VillagePantry.contar(despensa, VillagerFarmGoal::esSemilla) > 0) {
             target = buscarTierraVacia(level);
             if (target != null) {
@@ -118,7 +123,7 @@ public class VillagerFarmGoal extends Goal {
                 return true;
             }
         }
-        // 3) Cultivo creciendo y harina de huesos: a fertilizar (así hay pan antes).
+        // 4) Cultivo creciendo y harina de huesos: a fertilizar (así hay pan antes).
         if (harinaEnMano() > 0 || VillagePantry.contar(despensa, s -> s.is(Items.BONE_MEAL)) > 0) {
             target = buscarCultivo(level, false);
             if (target != null) {
@@ -126,10 +131,8 @@ public class VillagerFarmGoal extends Goal {
                 return true;
             }
         }
-        // 4) Con trigo de sobra (o sin semillas ni abono), a la despensa a descargar y a por recambios. Solo si la
-        // despensa EXISTE: si no, sigue con la tierra y lo que coseche se le cae al suelo antes que quedarse parado.
-        if (despensa != null
-                && (trigoEnMano() >= LLEVAR_TRIGO || !tieneSemillas() || harinaEnMano() == 0)) {
+        // 5) Sin semillas ni abono: a la despensa a por recambios (si existe; si no, sigue con la tierra).
+        if (despensa != null && (!tieneSemillas() || harinaEnMano() == 0)) {
             tarea = Tarea.DESPENSA;
             target = VillagePantry.puntoDeApoyo(level, center);
             return true;
