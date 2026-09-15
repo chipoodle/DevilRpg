@@ -21,6 +21,8 @@ import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.BellBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.Container;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.BushBlock;
 import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.DoorBlock;
@@ -363,15 +365,56 @@ public final class VillageGenerator {
 
     /**
      * Asegura la <b>despensa</b> de la aldea: un <b>barril de verdad</b> (contenedor) sobre una base de piedra en la
-     * plaza. Es el centro de la cadena de suministro: allí el granjero guarda el trigo y hornea el pan, y de allí
-     * come la aldea (ver {@code VillagePantry}). Idempotente: si ya está, no toca nada.
+     * plaza, <b>a la cota del pueblo</b>. Es el centro de la cadena de suministro: allí el granjero guarda el trigo y
+     * hornea el pan, y de allí come la aldea (ver {@code VillagePantry}).
+     * <p>
+     * Idempotente y <b>reparadora</b>: si el barril ya está a la cota, no toca nada. La comprobación se hace por la
+     * ALTURA DE LA ALDEA (no por la Y del centro, que puede caer en otra capa: con esa comprobación cada latido
+     * colocaba otro barril y, como {@code groundY} cuenta el barril como suelo, el barril subía un bloque por latido
+     * dejando una columna de piedra debajo, que es lo que veía el jugador). Además baja al suelo cualquier barril que
+     * haya quedado elevado por ese bug, conservando lo que tuviera dentro.
      */
     public static void asegurarDespensa(ServerLevel level, BlockPos center) {
         BlockPos p = VillagePantry.pos(center);
-        if (level.getBlockState(p).is(Blocks.BARREL)) {
+        int nivel = cotaDeLaPlaza(level, center);
+        BlockPos bueno = new BlockPos(p.getX(), nivel, p.getZ());
+        if (level.getBlockState(bueno).is(Blocks.BARREL)) {
+            return; // ya está donde debe
+        }
+        // Limpieza: barriles mal colocados (y su columna de piedra) alrededor del sitio de la despensa.
+        for (BlockPos q : BlockPos.betweenClosed(p.offset(-8, -8, -8), p.offset(8, 6, 8))) {
+            if (!level.getBlockState(q).is(Blocks.BARREL)) {
+                continue;
+            }
+            BlockPos malo = q.immutable();
+            List<ItemStack> dentro = new ArrayList<>();
+            if (level.getBlockEntity(malo) instanceof Container contenedor) {
+                for (int i = 0; i < contenedor.getContainerSize(); i++) {
+                    if (!contenedor.getItem(i).isEmpty()) {
+                        dentro.add(contenedor.getItem(i).copy());
+                    }
+                }
+            }
+            colocar(level, malo, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
+            // La columna de piedra que lo elevaba, hasta el suelo del pueblo.
+            for (int y = malo.getY() - 1; y > nivel - 1; y--) {
+                BlockPos abajo = new BlockPos(malo.getX(), y, malo.getZ());
+                if (level.getBlockState(abajo).is(Blocks.STONE)) {
+                    colocar(level, abajo, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
+                }
+            }
+            level.setBlockAndUpdate(bueno, Blocks.BARREL.defaultBlockState());
+            VillagePantry.remesaInicial(VillagePantry.despensa(level, center));
+            if (level.getBlockEntity(bueno) instanceof Container nuevo) {
+                for (ItemStack stack : dentro) {
+                    VillagePantry.guardar(nuevo, stack);
+                }
+            }
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: despensa recolocada a la cota {} (estaba en {})",
+                    center, nivel, malo.getY());
             return;
         }
-        int y = groundY(level, p.getX(), p.getZ());
+        int y = nivel;
         if (y <= level.getMinBuildHeight() + 1) {
             return;
         }
