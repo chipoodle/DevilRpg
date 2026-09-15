@@ -133,13 +133,13 @@ public class VillagerRepairGoal extends Goal {
         }
         villager.getLookControl().setLookAt(target.getX() + 0.5D, target.getY() + 0.5D, target.getZ() + 0.5D);
         if (villager.distanceToSqr(target.getX() + 0.5D, target.getY() + 0.5D, target.getZ() + 0.5D) > REACH * REACH) {
-            if (villager.getNavigation().isDone()) {
-                stuckTicks++;
-                irAlHueco();
-            }
+            // Al hueco se va POR EL CEREBRO en cada tick (ver VillageManager.caminarHacia): navegando a mano, el
+            // cerebro del aldeano le da otro destino y se va a otra parte.
+            VillageManager.caminarHacia(villager, target, 0.6F);
+            stuckTicks++;
             return;
         }
-        villager.getNavigation().stop();
+        VillageManager.parar(villager);
         villager.swing(InteractionHand.MAIN_HAND);
         if (++workTicks < WORK_TICKS) {
             return;
@@ -167,12 +167,12 @@ public class VillagerRepairGoal extends Goal {
         }
         target = null;
         restTicks = REST_TICKS;
-        villager.getNavigation().stop();
+        VillageManager.parar(villager);
     }
 
     private void irAlHueco() {
         if (target != null) {
-            villager.getNavigation().moveTo(target.getX() + 0.5D, target.getY(), target.getZ() + 0.5D, 0.6D);
+            VillageManager.caminarHacia(villager, target, 0.6F);
         }
     }
 

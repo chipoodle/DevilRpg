@@ -166,13 +166,14 @@ public class VillagerFarmGoal extends Goal {
         // Para la despensa vale un alcance mayor (el cofre está dentro del kiosco y no se navega hacia él).
         double alcance = tarea == Tarea.DESPENSA ? VillagePantry.ALCANCE_DESPENSA : REACH;
         if (villager.distanceToSqr(target.getX() + 0.5D, target.getY() + 0.5D, target.getZ() + 0.5D) > alcance * alcance) {
-            if (villager.getNavigation().isDone()) {
-                stuckTicks++;
-                irAlObjetivo();
-            }
+            // El rumbo se le da POR EL CEREBRO en cada tick (ver VillageManager.caminarHacia): navegando a mano, el
+            // cerebro del aldeano lo manda a su puesto, a la plaza o a pasear y se va a otro lado a mitad de camino
+            // ("primero da vueltas y se va a otro lado antes de recogerlos").
+            VillageManager.caminarHacia(villager, target, 0.6F);
+            stuckTicks++;
             return;
         }
-        villager.getNavigation().stop();
+        VillageManager.parar(villager);
         villager.swing(InteractionHand.MAIN_HAND);
         if (++workTicks < WORK_TICKS) {
             return;
@@ -268,7 +269,7 @@ public class VillagerFarmGoal extends Goal {
             return;
         }
         // 1) Compostero lleno -> harina de huesos para la despensa (el abono de la aldea lo produce ella misma).
-        for (BlockPos p : VillageGenerator.parcelasDe(center)) {
+        for (BlockPos p : VillageGenerator.parcelasDe(level, center)) {
             BlockPos comp = p.offset(-1, 0, 0);
             for (int dy = -2; dy <= 2; dy++) {
                 BlockPos q = comp.offset(0, dy, 0);
@@ -339,16 +340,16 @@ public class VillagerFarmGoal extends Goal {
 
     private void irAlObjetivo() {
         if (target != null) {
-            villager.getNavigation().moveTo(target.getX() + 0.5D, target.getY(), target.getZ() + 0.5D, 0.6D);
+            VillageManager.caminarHacia(villager, target, 0.6F);
         }
     }
 
     /** Busca en las parcelas un cultivo maduro (o creciendo, si {@code maduro} es false). */
     @Nullable
     private BlockPos buscarCultivo(ServerLevel level, boolean maduro) {
-        for (BlockPos parcela : VillageGenerator.parcelasDe(center)) {
-            for (int dx = 0; dx < 9; dx++) {
-                for (int dz = 0; dz < 5; dz++) {
+        for (BlockPos parcela : VillageGenerator.parcelasDe(level, center)) {
+            for (int dx = 0; dx < VillageGenerator.PLOT_WIDTH; dx++) {
+                for (int dz = 0; dz < VillageGenerator.PLOT_DEPTH; dz++) {
                     BlockPos q = parcela.offset(dx, 0, dz);
                     for (int dy = -1; dy <= 1; dy++) {
                         BlockPos r = q.offset(0, dy, 0);
@@ -369,9 +370,9 @@ public class VillagerFarmGoal extends Goal {
     /** Busca tierra de cultivo con el hueco de arriba libre (para plantar). */
     @Nullable
     private BlockPos buscarTierraVacia(ServerLevel level) {
-        for (BlockPos parcela : VillageGenerator.parcelasDe(center)) {
-            for (int dx = 0; dx < 9; dx++) {
-                for (int dz = 0; dz < 5; dz++) {
+        for (BlockPos parcela : VillageGenerator.parcelasDe(level, center)) {
+            for (int dx = 0; dx < VillageGenerator.PLOT_WIDTH; dx++) {
+                for (int dz = 0; dz < VillageGenerator.PLOT_DEPTH; dz++) {
                     BlockPos q = parcela.offset(dx, 0, dz);
                     for (int dy = -1; dy <= 0; dy++) {
                         BlockPos tierra = q.offset(0, dy, 0);

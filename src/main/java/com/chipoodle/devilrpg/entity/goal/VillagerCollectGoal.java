@@ -67,7 +67,11 @@ public class VillagerCollectGoal extends Goal {
         if (villager.isBaby() || !(villager.level() instanceof ServerLevel level)) {
             return false;
         }
-        if (!villager.getPersistentData().getBoolean(VillageManager.BUILDER_TAG)) {
+        // El RECOLECTOR es el aldeano SIN OFICIO (holgazán): el goal solo se le engancha a él. OJO: antes se exigía
+        // la marca de OBRERO, que el recolector NUNCA tiene (los obreros se eligen entre los demás oficios), así que
+        // esta comprobación dejaba al recolector sin hacer nada NUNCA: los objetos del pueblo se quedaban tirados por
+        // el suelo (visto en el guardado: 155 objetos en una aldea).
+        if (villager.getVillagerData().getProfession() != net.minecraft.world.entity.npc.VillagerProfession.NITWIT) {
             return false;
         }
         if (VillageManager.isVillageUnderAttack(level, objectiveIndex)) {
@@ -125,13 +129,13 @@ public class VillagerCollectGoal extends Goal {
             BlockPos p = objetivo.blockPosition();
             villager.getLookControl().setLookAt(objetivo);
             if (villager.distanceToSqr(objetivo) > REACH * REACH) {
-                if (villager.getNavigation().isDone()) {
-                    stuckTicks++;
-                    villager.getNavigation().moveTo(objetivo, 0.6D);
-                }
+                // Se le manda POR EL CEREBRO, en cada tick: si se navega a mano, el cerebro del aldeano lo manda a
+                // otra parte y se va sin recogerlo.
+                VillageManager.caminarHacia(villager, p, 0.6F);
+                stuckTicks++;
                 return;
             }
-            villager.getNavigation().stop();
+            VillageManager.parar(villager);
             villager.swing(InteractionHand.MAIN_HAND);
             VillageManager.ponerActividad(villager, "Recogiendo");
             ItemStack stack = objetivo.getItem().copy();
@@ -155,13 +159,11 @@ public class VillagerCollectGoal extends Goal {
             villager.getLookControl().setLookAt(destino.getX() + 0.5D, destino.getY() + 0.5D, destino.getZ() + 0.5D);
             if (villager.distanceToSqr(destino.getX() + 0.5D, destino.getY() + 0.5D, destino.getZ() + 0.5D)
                     > VillageStorage.ALCANCE_ALMACEN * VillageStorage.ALCANCE_ALMACEN) {
-                if (villager.getNavigation().isDone()) {
-                    stuckTicks++;
-                    villager.getNavigation().moveTo(destino.getX() + 0.5D, destino.getY(), destino.getZ() + 0.5D, 0.6D);
-                }
+                VillageManager.caminarHacia(villager, destino, 0.6F);
+                stuckTicks++;
                 return;
             }
-            villager.getNavigation().stop();
+            VillageManager.parar(villager);
             VillageManager.ponerActividad(villager, "Guardando en el almacen");
             descargar(level);
             destino = null;
@@ -174,16 +176,16 @@ public class VillagerCollectGoal extends Goal {
         objetivo = null;
         destino = null;
         restTicks = REST_TICKS;
-        villager.getNavigation().stop();
+        VillageManager.parar(villager);
     }
 
     private void ir() {
         if (objetivo != null) {
-            villager.getNavigation().moveTo(objetivo, 0.6D);
+            VillageManager.caminarHacia(villager, objetivo.blockPosition(), 0.6F);
             return;
         }
         if (destino != null) {
-            villager.getNavigation().moveTo(destino.getX() + 0.5D, destino.getY(), destino.getZ() + 0.5D, 0.6D);
+            VillageManager.caminarHacia(villager, destino, 0.6F);
         }
     }
 

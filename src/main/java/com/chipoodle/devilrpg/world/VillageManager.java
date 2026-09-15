@@ -394,24 +394,34 @@ public final class VillageManager {
                     VillageGenerator.spawnVillagers(level, target);
                     saved.markRepopulated(i, level.getGameTime());
                     DevilRpg.LOGGER.info("[Village] Aldea {} estaba vacia: aldeanos y golem repuestos", i);
-                } else if (vivos > 0 && vivos < VILLAGERS_FOR_FULL_HEALTH
-                        && level.getGameTime() - saved.getRepopulatedAt(i) >= REPOPULATE_INTERVAL_TICKS
-                        && saved.getFood(i) >= FOOD_TO_GROW) {
-                    // Crecer cuesta comida: una aldea hambrienta no se recupera hasta que la granja produzca.
-                    // El que llega nace CRÍA (crece sola, mecánica vanilla): así se ve el relevo generacional.
-                    // Se repone LA PROFESIÓN QUE FALTA (si mataron al recolector, vuelve un recolector; si al
-                    // granjero, un granjero), no "el sitio siguiente".
+                } else if (vivos > 0 && vivos < VILLAGERS_FOR_FULL_HEALTH && saved.getFood(i) >= FOOD_TO_GROW) {
+                    // Qué oficios quedan vivos y cuál falta (si mataron al recolector, vuelve un recolector; si al
+                    // granjero, un granjero): no se repone "el sitio siguiente".
                     List<VillagerProfession> vivas = level
                             .getEntitiesOfClass(Villager.class, new AABB(target).inflate(FALLEN_CHECK_RADIUS)).stream()
                             .filter(v -> !v.isBaby())
                             .map(v -> v.getVillagerData().getProfession())
                             .toList();
                     int slot = VillageGenerator.slotDeProfesionFaltante(vivas);
-                    VillageGenerator.spawnOneVillager(level, target, slot < 0 ? vivos : slot, true);
-                    saved.setFood(i, saved.getFood(i) - FOOD_TO_GROW);
-                    saved.markRepopulated(i, level.getGameTime());
-                    DevilRpg.LOGGER.info("[Village] Aldea {} se recupera: aldeano {}/{} (comida {})",
-                            i, vivos + 1, VILLAGERS_FOR_FULL_HEALTH, saved.getFood(i));
+                    if (slot >= 0) {
+                        // OFICIO PERDIDO: se repone YA y ADULTO, sin esperar el turno de crecimiento (5 min) ni a que
+                        // crezca una cría (20 min). Una aldea sin recolector acumula basura por el suelo y sin
+                        // granjero pasa hambre, así que el relevo de un puesto que se ha quedado vacío no puede
+                        // tardar una eternidad (era la queja del jugador: "se murió el recolector").
+                        VillageGenerator.spawnOneVillager(level, target, slot, false);
+                        saved.setFood(i, saved.getFood(i) - FOOD_TO_GROW);
+                        saved.markRepopulated(i, level.getGameTime());
+                        DevilRpg.LOGGER.info("[Village] Aldea {}: repuesto el puesto de {} que se habia quedado vacio "
+                                + "(comida {})", i, VillageGenerator.profesionDeSlot(slot), saved.getFood(i));
+                    } else if (level.getGameTime() - saved.getRepopulatedAt(i) >= REPOPULATE_INTERVAL_TICKS) {
+                        // Crecer cuesta comida: una aldea hambrienta no se recupera hasta que la granja produzca.
+                        // El que llega nace CRÍA (crece sola, mecánica vanilla): así se ve el relevo generacional.
+                        VillageGenerator.spawnOneVillager(level, target, vivos, true);
+                        saved.setFood(i, saved.getFood(i) - FOOD_TO_GROW);
+                        saved.markRepopulated(i, level.getGameTime());
+                        DevilRpg.LOGGER.info("[Village] Aldea {} se recupera: aldeano {}/{} (comida {})",
+                                i, vivos + 1, VILLAGERS_FOR_FULL_HEALTH, saved.getFood(i));
+                    }
                 }
             }
         }
@@ -1144,8 +1154,40 @@ public final class VillageManager {
             maxZ = Math.max(maxZ, p.getZ());
         }
         BlockPos centro = new BlockPos((minX + maxX) / 2, 0, (minZ + maxZ) / 2);
-        cache.put(objectiveIndex, centro);
-        return centro;
+        // OJO CON LA Y: no vale 0. Los goals del pueblo usan este centro para buscar los CULTIVOS y los cofres
+        // (`parcela.offset(dx, 0, dz)` y luego un barrido de ±1 en vertical): con Y=0 buscaban a 60 bloques por
+        // debajo del suelo, no veían ni un cultivo y el granjero se pasaba el día dando vueltas sin cosechar
+        // ("hay betabel y zanahoria y no los cosecha"), y las distancias salían con un desnivel enorme. La Y que
+        // vale es LA COTA DE LA ALDEA (la capa por la que se anda, que es donde están los cultivos y los cofres).
+        if (!level.hasChunkAt(centro)) {
+            return centro; // chunk sin cargar: se devuelve sin cachear, para no guardar una Y mala
+        }
+        BlockPos conCota = new BlockPos(centro.getX(), VillageGenerator.cotaDeLaPlaza(level, centro), centro.getZ());
+        cache.put(objectiveIndex, conCota);
+        return conCota;
+    }
+
+    /**
+     * Manda a un aldeano a un sitio <b>por el cerebro</b> ({@code WALK_TARGET}/{@code LOOK_TARGET}), que es como se
+     * mueven los aldeanos del juego (igual que hace su propio {@code HarvestFarmland}).
+     * <p>
+     * NO se navega a mano ({@code getNavigation().moveTo}) porque el cerebro del aldeano escribe su propio destino
+     * en cada tick (ir a su puesto, a la plaza, a la cama, a pasear) y pisa el nuestro: el aldeano se iba a otro
+     * lado a mitad de camino ("primero da vueltas y se va a otro lado antes de recogerlos"). Poniendo el destino en
+     * el cerebro, el que camina es él y nadie le quita el rumbo.
+     */
+    public static void caminarHacia(Villager villager, BlockPos objetivo, float velocidad) {
+        villager.getBrain().setMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.WALK_TARGET,
+                new net.minecraft.world.entity.ai.memory.WalkTarget(
+                        new net.minecraft.world.entity.ai.behavior.BlockPosTracker(objetivo), velocidad, 1));
+        villager.getBrain().setMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.LOOK_TARGET,
+                new net.minecraft.world.entity.ai.behavior.BlockPosTracker(objetivo));
+    }
+
+    /** Deja de caminar: se quita el destino del cerebro para que no siga yendo a un sitio ya resuelto. */
+    public static void parar(Villager villager) {
+        villager.getBrain().eraseMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.WALK_TARGET);
+        villager.getNavigation().stop();
     }
 
     /** El plano cambió (migración): se tira el centro cacheado de esa aldea. */

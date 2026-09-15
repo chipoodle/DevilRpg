@@ -72,9 +72,14 @@ public final class VillageGenerator {
     public static final int FENCE_RADIUS = 36;
 
     /** Esquinas de las parcelas de la granja (relativas al centro) y tamaño de cada parcela. */
-    private static final int[][] FARM_PLOTS = {{-20, 10}, {10, 8}};
-    private static final int PLOT_WIDTH = 9;
-    private static final int PLOT_DEPTH = 5;
+    private static final int[][] FARM_PLOTS = {{-20, 10}, {10, 6}};
+    /** Ancho de la parcela (columnas de cultivo). */
+    public static final int PLOT_WIDTH = 9;
+    /**
+     * Fondo de la parcela: la acequia va en la fila del medio, así que salen <b>4 carriles de cultivo por lado</b>
+     * (antes 2: la parcela era de fondo 5 y la producción se quedaba corta: el jugador lo pidió).
+     */
+    public static final int PLOT_DEPTH = 9;
     /** Fila de la acequia dentro de la parcela (la del medio). */
     private static final int PLOT_WATER_ROW = PLOT_DEPTH / 2;
     /** Bloques de <b>terraza</b> (patio llano) que se allanan alrededor de una construcción. */
@@ -419,11 +424,16 @@ public final class VillageGenerator {
     /**
      * Esquina de las dos parcelas de la granja de esa aldea. Lo usan los aldeanos que trabajan la tierra
      * ({@code VillagerFarmGoal}) para saber dónde plantar y cosechar, y el obrero para no poner faroles encima.
+     * <p>
+     * La Y es <b>LA COTA DE LA ALDEA</b> (la capa por la que se anda, donde están los cultivos), nunca la Y del centro
+     * del objetivo ni la del centro que se saca del plano: con una Y mala el granjero buscaba los cultivos decenas de
+     * bloques por debajo del suelo, no veía ninguno y se pasaba el día dando vueltas sin cosechar.
      */
-    public static BlockPos[] parcelasDe(BlockPos center) {
+    public static BlockPos[] parcelasDe(ServerLevel level, BlockPos center) {
+        int cota = cotaDeLaPlaza(level, center);
         BlockPos[] parcelas = new BlockPos[FARM_PLOTS.length];
         for (int i = 0; i < FARM_PLOTS.length; i++) {
-            parcelas[i] = center.offset(FARM_PLOTS[i][0], 0, FARM_PLOTS[i][1]);
+            parcelas[i] = new BlockPos(center.getX() + FARM_PLOTS[i][0], cota, center.getZ() + FARM_PLOTS[i][1]);
         }
         return parcelas;
     }
@@ -1156,11 +1166,13 @@ public final class VillageGenerator {
                 {8, 0, -8},
                 // (0,-15) caía DENTRO de la iglesia nueva (x -12..0, z -25..-13): el farol salía en su tejado.
                 {5, 0, -12},
-                {12, 0, 12},
+                // (12,12) y (-19,8) caían dentro de las parcelas de la granja al agrandarlas a 9x9 (4 carriles por
+                // lado): el farol salía plantado entre los cultivos. Se corren a fuera del bancal.
+                {22, 0, 10},
                 {-13, 0, -6},
                 {5, 0, 14},
                 {0, 0, 15},
-                {-19, 0, 8},
+                {-24, 0, 20},
         };
         for (int[] s : spots) {
             // NUNCA dentro de la granja: antes había un farol plantado en medio del trigo (visto en juego).
