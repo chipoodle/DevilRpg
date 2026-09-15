@@ -216,9 +216,14 @@ public final class VillageManager {
      *   <li>21: se <b>quitan los caminos que quedaron encima de los tejados</b> (bug de la cota del kiosco) en todas las
      *       aldeas: la limpieza se hace en esta misma migración, porque `actualizarCasas` ya no corre en aldeas que
      *       tienen las casas al día y la limpieza no llegaba a ejecutarse.</li>
+     *   <li>22: el <b>muro vuelve a su altura</b>. Se medía su cota con `groundY` en el anillo (donde está el muro
+     *       viejo, cuyos troncos son sólidos), así que cada reconstrucción lo subía un bloque (el jugador lo vio de 6
+     *       de alto). Ahora la cota es la de la aldea y la limpieza previa quita los restos del muro de verdad
+     *       (troncos, piedra, escaleras, muretes), así que el trozo de más desaparece. Esta versión existe porque el
+     *       arreglo era solo de código y las aldeas en 21 no volvían a migrar.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 21;
+    public static final int CURRENT_LAYOUT = 22;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
