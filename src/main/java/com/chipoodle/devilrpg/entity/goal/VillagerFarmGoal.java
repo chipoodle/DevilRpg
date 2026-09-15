@@ -125,28 +125,39 @@ public class VillagerFarmGoal extends Goal {
             tarea = Tarea.COSECHAR;
             return true;
         }
-        // 3) Tierra de cultivo vacía y semillas: a plantar.
-        if (tieneSemillas() || VillagePantry.contar(despensa, VillagerFarmGoal::esSemilla) > 0) {
+        // 3) Tierra de cultivo vacía: a plantar. SOLO si lleva semillas EN LA MANO: `plantar()` las saca de su
+        // inventario, así que mandarlo a sembrar "porque en la despensa hay semillas" no hacía nada y lo dejaba en
+        // bucle igual que el paso 5 (si le faltan, el paso 5 lo manda a la despensa a por ellas).
+        if (tieneSemillas()) {
             target = buscarTierraVacia(level);
             if (target != null) {
                 tarea = Tarea.PLANTAR;
                 return true;
             }
         }
-        // 4) Cultivo creciendo y harina de huesos: a fertilizar (así hay pan antes).
-        if (harinaEnMano() > 0 || VillagePantry.contar(despensa, s -> s.is(Items.BONE_MEAL)) > 0) {
+        // 4) Cultivo creciendo: a fertilizar. SOLO si lleva harina de huesos encima, por el mismo motivo (si no la
+        // tiene, se la trae de la despensa en el paso 5).
+        if (harinaEnMano() > 0) {
             target = buscarCultivo(level, false);
             if (target != null) {
                 tarea = Tarea.FERTILIZAR;
                 return true;
             }
         }
-        // 5) Sin semillas ni abono: a la despensa a por recambios (si existe; si no, sigue con la tierra).
-        if (despensa != null && (!tieneSemillas() || harinaEnMano() == 0)) {
+        // 5) Recambios: a la despensa, pero SOLO si allí está lo que le falta. Antes bastaba con que le faltara algo
+        // en la mano, así que con la despensa sin harina de huesos (lo normal hasta que el compostero se llena) el
+        // granjero iba al kiosco, no hacía nada, volvía a elegir la misma tarea y se quedaba PLANTADO allí en bucle,
+        // con la etiqueta "Llevando la cosecha" y sin llevar nada encima (medido en el guardado del jugador:
+        // inventario con 5 semillas de trigo, 3 panes y 14 de betabel, y NINGUNA cosecha).
+        boolean haySemillas = VillagePantry.contar(despensa, VillagerFarmGoal::esSemilla) > 0;
+        boolean hayAbono = VillagePantry.contar(despensa, s -> s.is(Items.BONE_MEAL)) > 0;
+        if ((!tieneSemillas() && haySemillas) || (harinaEnMano() == 0 && hayAbono)) {
             tarea = Tarea.DESPENSA;
             target = VillagePantry.puntoDeApoyo(level, center);
             return true;
         }
+        // Nada que hacer (ni cultivo maduro, ni tierra libre, ni abono, ni recambios): a esperar. El cerebro del
+        // aldeano lo tiene paseando mientras, que es lo que hace un aldeano sin tarea.
         restTicks = IDLE_REST_TICKS;
         return false;
     }
@@ -210,7 +221,11 @@ public class VillagerFarmGoal extends Goal {
                 fertilizar(level);
             }
             case DESPENSA -> {
-                VillageManager.ponerActividad(villager, "Llevando la cosecha");
+                // La etiqueta dice lo que de verdad va a hacer: si lleva cosecha encima, la lleva; si no, va a por
+                // recambios. Antes decía siempre "Llevando la cosecha" aunque no llevara nada (el jugador lo veía
+                // plantado en el kiosco con esa etiqueta y sin poner nada en el cofre).
+                VillageManager.ponerActividad(villager,
+                        trigoEnMano() + vegetalesEnMano() > 0 ? "Llevando la cosecha" : "Buscando recambios");
                 enLaDespensa(level);
             }
         }
