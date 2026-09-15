@@ -1450,25 +1450,28 @@ public final class VillageGenerator {
      */
     public static void rehacerMuro(ServerLevel level, BlockPos center) {
         List<BlockPos> ring = anilloDelMuro(center);
-        List<Integer> heights = new ArrayList<>();
+        // LA COTA DEL MURO ES LA DE LA ALDEA, no la mediana de `groundY` en el anillo: en el anillo está el MURO
+        // VIEJO y los troncos son sólidos, así que `groundY` devolvía su tope y el muro se reconstruía un bloque más
+        // alto en CADA migración (el jugador lo vio: ya iba por 6 de alto).
+        int baseY = cotaDeLaPlaza(level, center);
+        // Se limpia la franja del muro quitando SOLO los restos del muro (troncos, piedra, escaleras, muretes), nunca
+        // el terreno. Ojo: los troncos NO se pueden dar por "terreno natural" (eso era lo que dejaba el muro viejo en
+        // pie y el nuevo encima).
         for (BlockPos p : ring) {
-            heights.add(groundY(level, p.getX(), p.getZ()));
-        }
-        Collections.sort(heights);
-        int baseY = heights.get(heights.size() / 2);
-        // Se limpia la franja del muro (de la superficie hacia arriba) quitando SOLO lo que no es terreno: los
-        // restos del muro viejo. Nunca se toca el suelo.
-        for (BlockPos p : ring) {
-            for (int y = baseY - 1; y <= baseY + 5; y++) {
-                BlockState state = level.getBlockState(new BlockPos(p.getX(), y, p.getZ()));
-                if (state.isAir() || esTerrenoNatural(state)) {
+            for (int y = baseY - 1; y <= baseY + 8; y++) {
+                BlockPos q = new BlockPos(p.getX(), y, p.getZ());
+                BlockState state = level.getBlockState(q);
+                boolean restosDeMuro = state.is(Blocks.OAK_LOG) || state.is(Blocks.COBBLESTONE)
+                        || state.is(Blocks.COBBLESTONE_STAIRS) || state.is(Blocks.COBBLESTONE_WALL)
+                        || state.is(Blocks.COBBLESTONE_SLAB);
+                if (!restosDeMuro) {
                     continue;
                 }
-                level.setBlock(new BlockPos(p.getX(), y, p.getZ()), Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
+                level.setBlock(q, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
             }
         }
         fence(level, center);
-        DevilRpg.LOGGER.info("[Village] Aldea en {}: muro reconstruido", center);
+        DevilRpg.LOGGER.info("[Village] Aldea en {}: muro reconstruido a la cota {}", center, baseY);
     }
 
     /**
@@ -1480,13 +1483,10 @@ public final class VillageGenerator {
         int r = FENCE_RADIUS;
         List<BlockPos> ring = anilloDelMuro(center);
 
-        // Altura uniforme (mediana) para que el muro no quede escalonado en terreno ondulado.
-        List<Integer> heights = new ArrayList<>();
-        for (BlockPos p : ring) {
-            heights.add(groundY(level, p.getX(), p.getZ()));
-        }
-        Collections.sort(heights);
-        int baseY = heights.get(heights.size() / 2);
+        // Altura del muro: LA COTA DE LA ALDEA (el anillo ya está allanado a esa cota). Antes se sacaba de la mediana
+        // de `groundY` en el anillo, y al reconstruir el muro esa medida devolvía el tope del muro viejo: el muro
+        // subía un bloque en cada migración.
+        int baseY = cotaDeLaPlaza(level, center);
         // Rellenar el suelo del anillo hasta justo debajo de la superficie (sin dejar el bloque de tierra
         // que sobresalía por encima del nivel de la villa). El muro se apoya en el suelo de la aldea.
         for (BlockPos p : ring) {
