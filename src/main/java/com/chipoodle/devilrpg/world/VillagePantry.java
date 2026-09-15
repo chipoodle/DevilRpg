@@ -30,6 +30,7 @@ public final class VillagePantry {
     public static final int FOOD_PER_BREAD = 4;
     public static final int FOOD_PER_COOKED_MEAT = 4;
     public static final int FOOD_PER_RAW_MEAT = 2;
+    public static final int FOOD_PER_VEGETABLE = 2;
     public static final int FOOD_PER_WHEAT = 1;
     /** Trigo que hace falta para una hogaza (la receta de vanilla son 3). */
     public static final int WHEAT_PER_BREAD = 3;
@@ -119,7 +120,14 @@ public final class VillagePantry {
         return contar(c, s -> s.is(Items.BREAD)) * FOOD_PER_BREAD
                 + contar(c, VillagePantry::esCarneCocida) * FOOD_PER_COOKED_MEAT
                 + contar(c, VillagePantry::esCarneCruda) * FOOD_PER_RAW_MEAT
+                + contar(c, s -> s.is(Items.BAKED_POTATO)) * FOOD_PER_COOKED_MEAT
+                + contar(c, VillagePantry::esVegetal) * FOOD_PER_VEGETABLE
                 + contar(c, s -> s.is(Items.WHEAT)) * FOOD_PER_WHEAT;
+    }
+
+    /** Vegetales que come la aldea: zanahoria, patata y betabel (el betabel también se cultiva en la parcela). */
+    public static boolean esVegetal(ItemStack s) {
+        return s.is(Items.CARROT) || s.is(Items.POTATO) || s.is(Items.BEETROOT);
     }
 
     public static boolean esCarneCruda(ItemStack s) {
@@ -142,7 +150,13 @@ public final class VillagePantry {
         if (cruda.is(Items.RABBIT)) return new ItemStack(Items.COOKED_RABBIT);
         if (cruda.is(Items.COD)) return new ItemStack(Items.COOKED_COD);
         if (cruda.is(Items.SALMON)) return new ItemStack(Items.COOKED_SALMON);
+        if (cruda.is(Items.POTATO)) return new ItemStack(Items.BAKED_POTATO); // patata asada
         return ItemStack.EMPTY;
+    }
+
+    /** ¿Se puede cocinar esto? (carne cruda o patata) */
+    public static boolean sePuedeCocinar(ItemStack s) {
+        return esCarneCruda(s) || s.is(Items.POTATO);
     }
 
     /** Guarda un stack en la despensa y devuelve lo que <b>no</b> cupo (vacío si entró todo). */
@@ -197,18 +211,26 @@ public final class VillagePantry {
         return sacadas;
     }
 
-    /** Saca comida de la despensa por valor (para que coma la aldea): pan primero, luego cocinado, luego crudo. */
+    /** Saca comida de la despensa por valor (para que coma la aldea): pan, carne, vegetales y trigo crudo. */
     public static int sacarComida(@Nullable Container c, int puntos) {
         int faltan = puntos;
         faltan -= sacar(c, s -> s.is(Items.BREAD), (faltan + FOOD_PER_BREAD - 1) / FOOD_PER_BREAD) * FOOD_PER_BREAD;
         if (faltan <= 0) {
             return puntos;
         }
-        int crudo = (faltan + FOOD_PER_RAW_MEAT - 1) / FOOD_PER_RAW_MEAT;
-        faltan -= sacar(c, VillagePantry::esCarneCocida, crudo) * FOOD_PER_COOKED_MEAT;
+        // Carne cocinada y patata asada (lo que cocina el cocinero).
+        faltan -= sacar(c, s -> esCarneCocida(s) || s.is(Items.BAKED_POTATO),
+                (faltan + FOOD_PER_COOKED_MEAT - 1) / FOOD_PER_COOKED_MEAT) * FOOD_PER_COOKED_MEAT;
         if (faltan <= 0) {
             return puntos;
         }
+        // Vegetales: zanahoria, patata y betabel.
+        faltan -= sacar(c, VillagePantry::esVegetal,
+                (faltan + FOOD_PER_VEGETABLE - 1) / FOOD_PER_VEGETABLE) * FOOD_PER_VEGETABLE;
+        if (faltan <= 0) {
+            return puntos;
+        }
+        // Carne cruda y, como último recurso, trigo.
         faltan -= sacar(c, VillagePantry::esCarneCruda, (faltan + FOOD_PER_RAW_MEAT - 1) / FOOD_PER_RAW_MEAT)
                 * FOOD_PER_RAW_MEAT;
         if (faltan <= 0) {

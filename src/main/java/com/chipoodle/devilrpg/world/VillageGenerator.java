@@ -24,6 +24,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.ChestBlock;
+import net.minecraft.world.level.block.LanternBlock;
 import net.minecraft.world.level.block.BushBlock;
 import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.DoorBlock;
@@ -420,6 +421,9 @@ public final class VillageGenerator {
                             Blocks.OAK_PLANKS.defaultBlockState(), 3);
                 }
             }
+            // Farol colgado del tejado: el almacén se ve (y se ilumina) de noche.
+            colocar(level, new BlockPos(c.getX(), nivel + 3, c.getZ()),
+                    Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true), 3);
             DevilRpg.LOGGER.info("[Village] Aldea en {}: almacen construido en {}", center, c);
         }
         // Cofres: si no hay ninguno, o si están TODOS llenos, se coloca otro doble (el almacén crece).
@@ -676,10 +680,13 @@ public final class VillageGenerator {
                         Blocks.STONE_BRICKS.defaultBlockState(), 3);
             }
         }
-        // La campana, ARRIBA, sobre el tejado.
-        colocar(level, new BlockPos(cx, nivel + KIOSCO_POSTE + 2, cz),
+        // La campana va DENTRO del kiosco, sobre la plataforma y al lado del cofre (a la izquierda según se entra).
+        colocar(level, new BlockPos(cx - 1, nivel + 1, cz + 1),
                 Blocks.BELL.defaultBlockState().setValue(BellBlock.FACING, Direction.SOUTH)
                         .setValue(BellBlock.ATTACHMENT, BellAttachType.FLOOR), 3);
+        // Un farol colgado del tejado, en el centro: el kiosco queda iluminado de noche.
+        colocar(level, new BlockPos(cx, nivel + KIOSCO_POSTE, cz),
+                Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true), 3);
         // El cofre DOBLE de la despensa, sobre la plataforma. Las dos mitades se marcan LEFT/RIGHT a mano: al
         // colocarlas con setBlock no pasa por la colocación de vanilla y sin esto quedarían dos cofres sueltos.
         colocar(level, new BlockPos(cx, nivel + 1, cz + 1), cofre(ChestType.LEFT), 3);
@@ -1901,7 +1908,7 @@ public final class VillageGenerator {
      * cultivo van a la <b>misma altura</b> y las columnas bajas se rellenan de tierra hasta ese nivel.
      */
     private static void plot(ServerLevel level, BlockPos corner, int nivel) {
-        Block[] plants = {Blocks.WHEAT, Blocks.CARROTS, Blocks.POTATOES};
+        Block[] plants = {Blocks.WHEAT, Blocks.CARROTS, Blocks.POTATOES, Blocks.BEETROOTS};
         // 1) La parcela se nivela a LA COTA DE LA ALDEA (la que nos pasan): agua y tierra de cultivo a la misma
         // altura que el resto del pueblo, así ni se seca ni queda en un hoyo.
         int base = nivelarHuella(level, corner, PLOT_WIDTH, PLOT_DEPTH, nivel);
