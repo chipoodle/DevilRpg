@@ -364,7 +364,15 @@ public final class VillageManager {
                         && saved.getFood(i) >= FOOD_TO_GROW) {
                     // Crecer cuesta comida: una aldea hambrienta no se recupera hasta que la granja produzca.
                     // El que llega nace CRÍA (crece sola, mecánica vanilla): así se ve el relevo generacional.
-                    VillageGenerator.spawnOneVillager(level, target, vivos, true);
+                    // Se repone LA PROFESIÓN QUE FALTA (si mataron al recolector, vuelve un recolector; si al
+                    // granjero, un granjero), no "el sitio siguiente".
+                    List<VillagerProfession> vivas = level
+                            .getEntitiesOfClass(Villager.class, new AABB(target).inflate(FALLEN_CHECK_RADIUS)).stream()
+                            .filter(v -> !v.isBaby())
+                            .map(v -> v.getVillagerData().getProfession())
+                            .toList();
+                    int slot = VillageGenerator.slotDeProfesionFaltante(vivas);
+                    VillageGenerator.spawnOneVillager(level, target, slot < 0 ? vivos : slot, true);
                     saved.setFood(i, saved.getFood(i) - FOOD_TO_GROW);
                     saved.markRepopulated(i, level.getGameTime());
                     DevilRpg.LOGGER.info("[Village] Aldea {} se recupera: aldeano {}/{} (comida {})",

@@ -1810,6 +1810,23 @@ public final class VillageGenerator {
             VillagerProfession.TOOLSMITH, VillagerProfession.NITWIT
     };
 
+    /**
+     * El sitio (slot) de la <b>primera profesión que le falta</b> a la aldea: si no hay ningún aldeano vivo con ese
+     * oficio, devuelve su sitio para reponerlo. Devuelve {@code -1} si están todas cubiertas.
+     * <p>
+     * Se usa al repoblar: antes se reponía "el sitio siguiente" (el número de aldeanos vivos), así que si mataban al
+     * recolector (último sitio) y quedaban 4 aldeanos, el nuevo salía con el oficio del sitio 4… o podía repetir un
+     * oficio y dejar la aldea sin el que de verdad faltaba.
+     */
+    public static int slotDeProfesionFaltante(java.util.Collection<VillagerProfession> vivas) {
+        for (int i = 0; i < VILLAGER_SPECIALTIES.length; i++) {
+            if (!vivas.contains(VILLAGER_SPECIALTIES[i])) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     /** Vuelve a poner los aldeanos y el golem de una aldea ya construida (ver {@code VillageManager}). */
     public static void spawnVillagers(ServerLevel level, BlockPos center) {
         for (int slot = 0; slot < VILLAGER_SPOTS.length; slot++) {
