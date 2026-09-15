@@ -195,7 +195,8 @@ siguiente está implementado y probado.
     85 columnas huecas, algunas de 9 bloques). Ahora cada columna hueca se rellena hacia abajo hasta el primer
     bloque firme (hasta 64) con césped arriba. Solo se tapan columnas de **aire**: el agua de la acequia de la
     granja se queda como está.
-- **El muro entra en el plano y se rehace al migrar**: el muro es de **troncos** (`wall`) y `seDescartaDelPlano`  los descartaba como si fueran vegetación, así que no estaban en el plano y el obrero **no podía reponer** los que
+- **El muro entra en el plano y se rehace al migrar**: el muro es de **troncos** (`wall`) y `seDescartaDelPlano`
+  los descartaba como si fueran vegetación, así que no estaban en el plano y el obrero **no podía reponer** los que
   rompe un asedio (era el bug del jugador: "al defender la aldea, las maderas del muro no vuelven nunca"). Ahora
   los troncos **sí** entran en el plano y, en la migración de trazado, `VillageGenerator.rehacerMuro` **reconstruye
   el muro entero** (limpia la franja del muro y lo vuelve a levantar con `fence`): cuando el muro queda enterrado o
