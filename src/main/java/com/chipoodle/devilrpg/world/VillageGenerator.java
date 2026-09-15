@@ -176,8 +176,9 @@ public final class VillageGenerator {
      * forma parte del diseño que el obrero debe reponer.
      */
     public static VillageSavedData.Blueprint generate(ServerLevel level, BlockPos center) {
-        // Limpiar hasta cubrir el talud exterior (que rodea el área nivelada).
-        clearVegetation(level, center, LEVEL_RADIUS + SLOPE_WIDTH);
+        // Despejar hasta cubrir el talud exterior (que rodea el área nivelada): dentro del volumen de la aldea no
+        // queda nada que no sea terreno (ni vegetación ni restos de estructuras del mundo).
+        despejarVolumen(level, center, LEVEL_RADIUS + SLOPE_WIDTH);
         // Si la zona cae sobre agua (ver waterSurfaceForArea), construir una isla flotante AL NIVEL DEL AGUA:
         // la aldea no se puede mover del objetivo, así que si el objetivo cayó en el océano o un lago, se
         // levanta la isla. Si no, nivelar el terreno como siempre.
@@ -1436,6 +1437,12 @@ public final class VillageGenerator {
      * piedra, la arena y la vegetación no se "reparan" (si no, el obrero se pondría a rellenar los hoyos que caves
      * tú, o a replantar árboles). Lo que sí entra son las cosas construidas, incluidas las que van a ras de suelo:
      * los caminos de tierra apisonada, el suelo de las casas, los composteros, la base de la torre...
+     * <p>
+     * OJO con los <b>MINERALES</b>: entran aquí como terreno. No lo estaban, y al allanar un monte con una veta
+     * dentro el recorte se llevaba la piedra de alrededor pero <b>dejaba los minerales FLOTANDO en el aire</b> (visto
+     * en juego), y encima los metía en el plano de la aldea como si fueran parte del pueblo (el obrero los
+     * "reparaba"). Lo mismo con el resto del subsuelo natural: {@code BASE_STONE_OVERWORLD} (piedra, granito,
+     * diorita, andesita, tuff, deepslate...), las tierras, la arena, la terracota, el hielo y la nieve.
      */
     private static boolean esTerrenoNatural(BlockState state) {
         if (!state.getFluidState().isEmpty() || state.is(BlockTags.LEAVES) || state.is(BlockTags.LOGS)) {
@@ -1445,7 +1452,17 @@ public final class VillageGenerator {
         if (block instanceof CropBlock || block instanceof BushBlock) {
             return true;
         }
-        return block == Blocks.GRASS_BLOCK || block == Blocks.DIRT || block == Blocks.COARSE_DIRT
+        // Vetas del overworld (piedra y deepslate), una por mineral.
+        if (state.is(BlockTags.COAL_ORES) || state.is(BlockTags.COPPER_ORES) || state.is(BlockTags.IRON_ORES)
+                || state.is(BlockTags.GOLD_ORES) || state.is(BlockTags.REDSTONE_ORES) || state.is(BlockTags.LAPIS_ORES)
+                || state.is(BlockTags.DIAMOND_ORES) || state.is(BlockTags.EMERALD_ORES)) {
+            return true;
+        }
+        return state.is(BlockTags.BASE_STONE_OVERWORLD) || state.is(BlockTags.BASE_STONE_NETHER)
+                || state.is(BlockTags.DIRT) || state.is(BlockTags.SAND) || state.is(BlockTags.TERRACOTTA)
+                || state.is(BlockTags.SCULK_REPLACEABLE) || state.is(BlockTags.ICE) || state.is(BlockTags.SNOW)
+                || state.is(BlockTags.NYLIUM)
+                || block == Blocks.GRASS_BLOCK || block == Blocks.DIRT || block == Blocks.COARSE_DIRT
                 || block == Blocks.ROOTED_DIRT || block == Blocks.PODZOL || block == Blocks.MYCELIUM
                 || block == Blocks.FARMLAND || block == Blocks.STONE || block == Blocks.DEEPSLATE
                 || block == Blocks.GRAVEL || block == Blocks.SAND || block == Blocks.RED_SAND
@@ -1632,6 +1649,54 @@ public final class VillageGenerator {
         // Talud exterior: una pendiente escalonada en el borde para que la aldea parezca una MESETA natural
         // (como el terreno vanilla) en vez de un cubo de paredes verticales.
         addOuterSlope(level, center, radius, baseY);
+        // Y, por último, se TAPAN los huecos del suelo (ver sellarSuelo): con el terreno llano, un barranco o una
+        // cueva justo debajo dejan agujeros en la plaza por los que se caen los aldeanos.
+        sellarSuelo(level, center, radius, baseY);
+    }
+
+    /**
+     * Cuántos bloques hacia abajo se rellena como mucho al tapar un hueco del suelo de la aldea (una barranca
+     * profunda se tapa entera igual: esto solo evita bajar sin fin en un agujero abierto al vacío).
+     */
+    private static final int PROFUNDIDAD_TAPADO = 64;
+
+    /**
+     * <b>Tapa los huecos del suelo de la aldea.</b>
+     * <p>
+     * El nivelado deja la aldea llana, pero si justo debajo pasa una <b>barranca, una cueva o una mina</b>, el
+     * recorte del terreno abre el techo de la cavidad y en la plaza quedan <b>agujeros</b> por los que se caen los
+     * aldeanos (visto en juego). Aquí, en cada columna del recinto cuya capa de suelo esté <b>hueca</b> (aire), se
+     * rellena hacia abajo con tierra hasta encontrar suelo firme, y se le devuelve el césped a la capa que se pisa.
+     * <p>
+     * Solo se tapan las columnas de <b>aire</b>: el agua de la acequia de la granja y la de un charco se dejan como
+     * están (y el agua de dentro del recinto la rellena antes el propio nivelado, porque cuenta como terreno).
+     */
+    private static void sellarSuelo(ServerLevel level, BlockPos center, int radius, int baseY) {
+        int tapados = 0;
+        for (int x = -radius; x <= radius; x++) {
+            for (int z = -radius; z <= radius; z++) {
+                if (x * x + z * z > radius * radius) {
+                    continue; // solo el recinto (disco), igual que el nivelado
+                }
+                int px = center.getX() + x;
+                int pz = center.getZ() + z;
+                if (!level.getBlockState(new BlockPos(px, baseY - 1, pz)).isAir()) {
+                    continue; // el suelo está: no hay hueco que tapar
+                }
+                for (int y = baseY - 1; y > baseY - PROFUNDIDAD_TAPADO && y > level.getMinBuildHeight(); y--) {
+                    BlockPos p = new BlockPos(px, y, pz);
+                    if (!level.getBlockState(p).isAir()) {
+                        break; // ya se llegó a suelo firme
+                    }
+                    colocar(level, p, (y == baseY - 1 ? Blocks.GRASS_BLOCK : Blocks.DIRT).defaultBlockState(), 3);
+                    tapados++;
+                }
+            }
+        }
+        if (tapados > 0) {
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: tapados {} bloques de huecos del suelo (barrancas/cuevas)",
+                    center, tapados);
+        }
     }
 
     /**
@@ -1902,25 +1967,43 @@ public final class VillageGenerator {
     }
 
     /**
-     * Limpia TODA la vegetación (árboles, follaje, flores, pasto, bambú, cactus, cañas, etc.) dentro del
-     * radio. Barre la columna completa desde el bloque más alto (heightmap) hacia abajo, para que cubra
-     * también los tallos/árboles que nacen en el suelo y no solo la punta (el bambú es un bloque sólido,
-     * así que no bastaba con usar la "superficie" del suelo). Se llama ANTES de generar la aldea.
+     * <b>Despeja el volumen de la aldea</b> en una aldea NUEVA: dentro del radio, se lleva <b>todo lo que no sea
+     * terreno natural</b> (árboles, follaje, flores, pasto, bambú, cañas, pero también <b>minas, mazmorras, ruinas,
+     * cofres y cualquier resto de estructura</b> que caiga dentro) barriendo la columna completa desde el bloque más
+     * alto (heightmap) hacia abajo.
+     * <p>
+     * Barrido por columna y no solo la superficie porque el bambú y los tallos nacen varios bloques por debajo. Y de
+     * todo el volumen porque lo que no se quita aquí <b>queda dentro del pueblo</b>: los minerales sueltos flotando
+     * tras el recorte (visto en juego) y las estructuras del mundo (una mina atravesando la plaza, con sus cofres)
+     * acaban además en el PLANO de la aldea, con lo que el obrero las "reparaba" como si fueran del pueblo.
+     * <p>
+     * Solo se usa al <b>generar</b> una aldea (todavía no hay nada construido): en la migración de una aldea ya
+     * construida, el despeje lo hacen las rutinas que solo quitan lo que no es terreno, para no derribar el pueblo.
      */
-    private static void clearVegetation(ServerLevel level, BlockPos center, int radius) {
+    private static void despejarVolumen(ServerLevel level, BlockPos center, int radius) {
+        int quitados = 0;
         for (int x = center.getX() - radius; x <= center.getX() + radius; x++) {
             for (int z = center.getZ() - radius; z <= center.getZ() + radius; z++) {
                 int topY = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING, new BlockPos(x, 0, z)).getY();
                 // Desde el bloque más alto de la columna hacia abajo ~60 bloques: cubre árboles, bambú y
-                // cualquier planta que nazca en el suelo, aunque su base esté varios bloques por debajo.
+                // cualquier planta o resto de estructura que esté varios bloques por debajo de la superficie.
                 for (int y = topY; y > topY - 60 && y >= level.getMinBuildHeight(); y--) {
                     BlockPos pos = new BlockPos(x, y, z);
                     BlockState state = level.getBlockState(pos);
-                    if (isVegetation(state)) {
+                    if (state.isAir()) {
+                        continue;
+                    }
+                    // La vegetación se va siempre (troncos y hojas incluidos, vegetación de por medio); del resto se
+                    // respeta SOLO el terreno natural (el agua y la lava también: de esas se encarga el nivelado).
+                    if (isVegetation(state) || !esTerrenoNatural(state)) {
                         colocar(level, pos, Blocks.AIR.defaultBlockState(), 3);
+                        quitados++;
                     }
                 }
             }
+        }
+        if (quitados > 0) {
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: despejados {} bloques del volumen de la aldea", center, quitados);
         }
     }
 

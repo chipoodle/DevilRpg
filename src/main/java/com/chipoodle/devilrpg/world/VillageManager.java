@@ -234,9 +234,17 @@ public final class VillageManager {
      *       trazado antiguo</b> (casas, iglesia, parcelas y caminos viejos) y se borra el <b>anillo del muro viejo
      *       (radio 29)</b>, que si no quedaría una muralla cruzando el pueblo por dentro. Las casas se rehacen
      *       (casas 15) en los solares nuevos.</li>
+     *   <li>25: <b>nada del mundo dentro de la aldea</b>. El <b>subsuelo natural entra como terreno</b> (piedra,
+     *       deepslate, tierra, arena y <b>los minerales</b>): antes no, así que al recortar un monte con una veta
+     *       dentro la piedra de alrededor se iba y los <b>minerales quedaban flotando en el aire</b> (visto en
+     *       juego), y encima entraban en el plano de la aldea (el obrero los "reparaba"). Además, el nivelado ahora
+     *       <b>tapa los huecos del suelo</b>: si debajo pasa una barranca, una cueva o una mina, el recorte abría su
+     *       techo y en la plaza quedaban agujeros por los que se caían los aldeanos. En las aldeas nuevas, el
+     *       volumen entero se despeja antes de construir (fuera minas, mazmorras y ruinas). El plano se vuelve a
+     *       capturar sin los minerales.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 24;
+    public static final int CURRENT_LAYOUT = 25;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
