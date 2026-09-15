@@ -523,6 +523,9 @@ public final class VillageGenerator {
             puertas[i] = placeVanillaHouse(level, base,
                     i == bases.length - 1 ? casaGrandeAleatoria(casas) : casaAleatoria(casas), nivelVilla);
         }
+        // Los caminos se vuelven a trazar DESPUÉS de quitar los que hubieran quedado en alto (encima de los tejados
+        // por el bug de la cota del kiosco): si no, seguirían ahí y el plano los daría por buenos.
+        limpiarCaminosFlotantes(level, center, nivelVilla);
         paths(level, center, puertas);
         DevilRpg.LOGGER.info("[Village] Aldea vieja en {}: cabañas sustituidas por casas del juego", center);
         return puertas;
@@ -1233,7 +1236,10 @@ public final class VillageGenerator {
         boolean horizontal = Math.abs(to.getX() - from.getX()) >= Math.abs(to.getZ() - from.getZ());
         int widthX = horizontal ? 0 : 1;
         int widthZ = horizontal ? 1 : 0;
-        int nivelCamino = groundY(level, from.getX(), from.getZ()) - 1; // el patio, a la altura del centro
+        // El nivel del camino se toma de LA COTA DE LA ALDEA (la plaza), NO de `groundY(centro)`: en el centro está
+        // el KIOSCO (con su tejado), así que `groundY` devolvía el tejado del kiosco y el camino se pintaba a esa
+        // altura, encima de los tejados de las casas (y los aldeanos acababan subidos ahí).
+        int nivelCamino = cotaDeLaPlaza(level, from) - 1; // el patio, a la altura del suelo
         for (int i = 0; i <= steps; i++) {
             int x = from.getX() + (int) Math.round((to.getX() - from.getX()) * (i / (double) Math.max(1, steps)));
             int z = from.getZ() + (int) Math.round((to.getZ() - from.getZ()) * (i / (double) Math.max(1, steps)));
@@ -1924,6 +1930,33 @@ public final class VillageGenerator {
      */
     public static void farm(ServerLevel level, BlockPos center) {
         farm(level, center, prepararTerreno(level, center));
+    }
+
+    /**
+     * Quita los <b>caminos que quedaron en alto</b> (encima de los tejados) por el bug de la cota del kiosco: los
+     * caminos de tierra apisonada solo pueden estar a ras del suelo del pueblo, así que cualquier {@code dirt_path}
+     * por encima de la cota es basura del trazado viejo.
+     */
+    private static void limpiarCaminosFlotantes(ServerLevel level, BlockPos center, int nivel) {
+        int quitados = 0;
+        for (int dx = -FENCE_RADIUS; dx <= FENCE_RADIUS; dx++) {
+            for (int dz = -FENCE_RADIUS; dz <= FENCE_RADIUS; dz++) {
+                if (dx * dx + dz * dz > FENCE_RADIUS * FENCE_RADIUS) {
+                    continue;
+                }
+                for (int y = nivel + 2; y <= nivel + 8; y++) {
+                    BlockPos p = new BlockPos(center.getX() + dx, y, center.getZ() + dz);
+                    if (level.getBlockState(p).is(Blocks.DIRT_PATH)) {
+                        colocar(level, p, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
+                        quitados++;
+                    }
+                }
+            }
+        }
+        if (quitados > 0) {
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: quitados {} camino(s) que quedaron encima de los tejados",
+                    center, quitados);
+        }
     }
 
     /** Igual, pero a la cota que le digan (la de la aldea, para que la huerta quede al mismo nivel que el resto). */
