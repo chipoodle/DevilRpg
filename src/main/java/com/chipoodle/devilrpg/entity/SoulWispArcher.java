@@ -17,8 +17,11 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.goal.*;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
+import net.minecraft.world.entity.ambient.AmbientCreature;
+import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.animal.IronGolem;
 import net.minecraft.world.entity.animal.Turtle;
+import net.minecraft.world.entity.animal.WaterAnimal;
 import net.minecraft.world.entity.animal.horse.Llama;
 import net.minecraft.world.entity.monster.RangedAttackMob;
 import net.minecraft.world.entity.npc.Villager;
@@ -86,8 +89,33 @@ public class SoulWispArcher extends SoulWisp implements RangedAttackMob {
                 !(entity instanceof Villager) &&
                 !(entity instanceof Llama) &&
                 !(entity instanceof Turtle) &&
-                !(entity instanceof IronGolem)));
+                !(entity instanceof IronGolem) &&
+                // ANIMALES: el wisp NO va a por animales (vacas, cerdos, ovejas, gallinas, lobos, caballos...) por su
+                // cuenta: son del jugador (granjas, mascotas, monturas) y el wisp los masacraba al pasar. Solo los
+                // ataca si SU DUEÑO los está atacando (o el animal se ha enfadado con el dueño porque él le pegó).
+                (!esAnimal(entity) || elDuenoLeEstaAtacando(entity))));
         this.targetSelector.addGoal(2, new HurtByTargetGoal(this));
+    }
+
+    /**
+     * ¿Es un animal (pasivo o neutral)? Se dejan en paz salvo que el dueño esté metido en la pelea: {@link Animal}
+     * cubre a los de tierra (vacas, cerdos, ovejas, lobos, caballos, zorros, osos polares...), {@link WaterAnimal} a
+     * los del agua y {@link AmbientCreature} a los murciélagos.
+     */
+    private static boolean esAnimal(LivingEntity entity) {
+        return entity instanceof Animal || entity instanceof WaterAnimal || entity instanceof AmbientCreature;
+    }
+
+    /**
+     * ¿El dueño está atacando a <b>ese</b> bicho? Se mira el último al que atacó el jugador y también si el bicho le
+     * tiene a él como su agresor (que es lo que pasa cuando le pegas a un lobo o a un oso polar): así el wisp ayuda en
+     * la pelea que ha empezado el dueño, pero no la empieza él.
+     */
+    private boolean elDuenoLeEstaAtacando(LivingEntity entity) {
+        if (!(this.getOwner() instanceof Player owner)) {
+            return false; // un wisp sin dueño no tiene a quién ayudar: no toca a los animales
+        }
+        return owner.getLastHurtMob() == entity || entity.getLastHurtByMob() == owner;
     }
 
     @Override

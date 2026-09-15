@@ -14,8 +14,10 @@ import com.chipoodle.devilrpg.init.ModEntities;
 import com.chipoodle.devilrpg.survival.ObjectiveTargets;
 import com.chipoodle.devilrpg.util.MissionRewards;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -242,9 +244,14 @@ public final class VillageManager {
      *       techo y en la plaza quedaban agujeros por los que se caían los aldeanos. En las aldeas nuevas, el
      *       volumen entero se despeja antes de construir (fuera minas, mazmorras y ruinas). El plano se vuelve a
      *       capturar sin los minerales.</li>
+     *   <li>26: la <b>herrería</b>. La aldea tiene el taller de herrero del propio juego
+     *       ({@code plains_weaponsmith_1}: fragua, muelle de afilar y arca) y dentro la <b>mesa de herrería</b> del
+     *       herrero de herramientas: son los <b>puestos de trabajo</b> de los dos herreros, que hasta ahora no
+     *       existían en la aldea (el jugador lo notó: "hay un herrero pero no veo su estación de trabajo"). Entra en
+     *       el plano, con su camino.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 25;
+    public static final int CURRENT_LAYOUT = 26;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -936,6 +943,9 @@ public final class VillageManager {
             // casas: por eso la limpieza anterior no llegaba a ejecutarse en aldeas ya actualizadas).
             VillageGenerator.limpiarCaminosFlotantes(level, center, VillageGenerator.cotaDeLaPlaza(level, center));
             VillageGenerator.farm(level, center);
+            // HERRERÍA: el taller de los herreros del juego, con su muelle y su mesa de herrería (sus puestos de
+            // trabajo). Va AQUÍ, antes de tirar el plano, para que la herrería y su camino entren en el plano nuevo.
+            VillageGenerator.asegurarHerreria(level, center);
             // El plano se tira: hay que volver a capturarlo, ya con las casas nuevas, el muro y las reglas actuales.
             saved.clearBlueprint(objectiveIndex);
             saved.setLayout(objectiveIndex, CURRENT_LAYOUT);
@@ -947,6 +957,9 @@ public final class VillageManager {
             saved.setBlueprint(objectiveIndex, plano);
             DevilRpg.LOGGER.info("[Village] Aldea {}: plano guardado ({} bloques)", objectiveIndex, plano.size());
         }
+        // HERRERÍA: en las aldeas que ya estaban al día (o en las nuevas) se asegura igualmente: es idempotente y así
+        // también se le repone la mesa de herrería si alguien se la llevó.
+        VillageGenerator.asegurarHerreria(level, center);
         // KIOSCO + DESPENSA: la plataforma de la plaza con su campana arriba y el cofre doble (si falta en aldeas
         // viejas). Es donde el granjero guarda el trigo, donde hornea el pan y de donde come la aldea.
         VillageGenerator.asegurarKiosco(level, center);
@@ -1177,8 +1190,36 @@ public final class VillageManager {
     private static final String ACTIVIDAD_HORA_TAG = "DevilRpgActividadTick";
 
     /**
-     * Pone el <b>texto flotante</b> sobre la cabeza del aldeano con lo que está haciendo (se ve en el juego en tiempo
-     * real). Se usa la etiqueta de nombre de vanilla, así que funciona igual en un jugador y en servidor.
+     * Nombres de pila de los aldeanos. Se le asigna uno <b>al azar pero estable</b>: se saca de su UUID, así que el
+     * mismo aldeano se llama siempre igual (y no hay que guardarlo en la partida).
+     */
+    private static final String[] NOMBRES = {
+            "Anselmo", "Bartolo", "Casimiro", "Dionisio", "Eustaquio", "Fabricio", "Gervasio", "Hipolito",
+            "Isidoro", "Jacinto", "Leoncio", "Mauricio", "Nicasio", "Onofre", "Prudencio", "Quintin",
+            "Remigio", "Saturnino", "Teodoro", "Ubaldo", "Valeriano", "Wenceslao", "Ximeno", "Zacarias",
+            "Aurelia", "Bibiana", "Cesarea", "Dorotea", "Eufemia", "Filomena", "Genoveva", "Hortensia",
+            "Isabel", "Josefa", "Leocadia", "Manuela", "Nicolasa", "Obdulia", "Petronila", "Ramona",
+            "Segismunda", "Tomasa", "Ursula", "Vicenta", "Waldina", "Ximena", "Yolanda", "Zenobia",
+    };
+
+    /** Nombre del aldeano: estable y sacado de su UUID (no hace falta guardarlo). */
+    public static String nombreDe(Villager villager) {
+        long bits = villager.getUUID().getMostSignificantBits() ^ villager.getUUID().getLeastSignificantBits();
+        return NOMBRES[Math.floorMod((int) (bits ^ (bits >>> 32)), NOMBRES.length)];
+    }
+
+    /** Nombre del <b>oficio</b> del aldeano, en el idioma del juego (los nombres del propio Minecraft). */
+    public static Component profesionDe(Villager villager) {
+        var profesion = villager.getVillagerData().getProfession();
+        ResourceLocation clave = BuiltInRegistries.VILLAGER_PROFESSION.getKey(profesion);
+        String nombre = clave != null ? clave.getPath() : "none";
+        return Component.translatable("entity.minecraft.villager." + nombre);
+    }
+
+    /**
+     * Pone el <b>texto flotante</b> sobre la cabeza del aldeano: <b>su nombre y su oficio</b> arriba y, debajo, lo que
+     * está haciendo (se ve en el juego en tiempo real). Se usa la etiqueta de nombre de vanilla (que admite varias
+     * líneas), así que funciona igual en un jugador y en servidor.
      * <p>
      * Se puede apagar en {@code devilrpg-server.toml} → {@code [village] mostrarActividadAldeanos = false}: en ese
      * caso se retira el texto (solo si lo puso el mod, para no borrar un nombre que le hayas puesto tú).
@@ -1197,10 +1238,13 @@ public final class VillageManager {
         if (texto == null) {
             return;
         }
+        // Etiqueta de tres datos: NOMBRE, OFICIO y lo que está haciendo. La profesión se lee en cada refresco, así
+        // que si le cambia el oficio (o se le repone, ver `reponerProfesiones`) la etiqueta se actualiza sola.
+        String etiqueta = nombreDe(villager) + " (" + profesionDe(villager).getString() + ")\n" + texto;
         villager.getPersistentData().putLong(ACTIVIDAD_HORA_TAG, villager.level().getGameTime());
         String actual = villager.getCustomName() == null ? "" : villager.getCustomName().getString();
-        if (!texto.equals(actual)) {
-            villager.setCustomName(Component.literal(texto));
+        if (!etiqueta.equals(actual)) {
+            villager.setCustomName(Component.literal(etiqueta));
             villager.setCustomNameVisible(true);
             villager.getPersistentData().putBoolean(ACTIVIDAD_TAG, true);
         }

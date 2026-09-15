@@ -207,12 +207,17 @@ public final class VillageGenerator {
         // quiere) y que los caminos lleguen de verdad a ella. La última es la "grande" (con cama extra), y en el
         // sitio de la vieja torre va la IGLESIA del juego.
         RandomSource casas = RandomSource.create(center.asLong());
-        BlockPos[] puertas = new BlockPos[5];
+        BlockPos[] puertas = new BlockPos[6];
         puertas[0] = placeVanillaHouse(level, bases[0], casaAleatoria(casas), nivelVilla);
         puertas[1] = placeVanillaHouse(level, bases[1], casaAleatoria(casas), nivelVilla);
         puertas[2] = placeVanillaHouse(level, bases[2], casaAleatoria(casas), nivelVilla);
         puertas[3] = placeVanillaHouse(level, bases[3], casaGrandeAleatoria(casas), nivelVilla);
         puertas[4] = placeVanillaHouse(level, baseDeIglesia(center), iglesiaAleatoria(casas), nivelVilla);
+        // HERRERÍA: el taller de los dos herreros, con la construcción de herrero del propio juego (fragua, muelle de
+        // afilar y arca). Se le pone dentro la mesa de herrería del herrero de HERRAMIENTAS, que la plantilla no trae.
+        puertas[5] = placeVanillaHouse(level, baseDeHerreria(center), HERRERIAS[0], nivelVilla);
+        // El herrero de HERRAMIENTAS necesita su mesa de herrería: la plantilla del de armas solo trae el muelle.
+        puestoDeTrabajo(level, baseDeHerreria(center), nivelVilla, Blocks.SMITHING_TABLE);
 
         // Caminos DESPUÉS, del centro a la puerta de cada construcción (ya se sabe dónde está).
         paths(level, center, puertas);
@@ -872,6 +877,81 @@ public final class VillageGenerator {
         return center.offset(-12, 0, -25);
     }
 
+    /**
+     * <b>Herrería</b> de la aldea: la <b>casa del herrero del propio juego</b> ({@code plains_weaponsmith_1}), con su
+     * fragua (lava), su muelle de afilar ({@code grindstone}, que es el <b>puesto de trabajo</b> del herrero de armas)
+     * y su arca. Se pone en el hueco libre del norte, entre la iglesia y la casa grande (único solar de 9x11 que queda
+     * dentro del recinto: comprobado con las huellas de todo lo demás).
+     * <p>
+     * Los dos herreros de la aldea viven aquí: la plantilla trae el muelle del de ARMAS y a la vuelta se le pone
+     * dentro la <b>mesa de herrería</b> ({@code smithing_table}) del de HERRAMIENTAS, que es su puesto de trabajo.
+     * Sin puesto de trabajo los aldeanos no pueden reclamarlo y el juego les acaba borrando el oficio.
+     */
+    private static final String[] HERRERIAS = {
+            "village/plains/houses/plains_weaponsmith_1",
+    };
+
+    private static BlockPos baseDeHerreria(BlockPos center) {
+        return center.offset(2, 0, -26);
+    }
+
+    /**
+     * Asegura la <b>herrería</b> de la aldea (y los puestos de trabajo de los dos herreros). Es <b>idempotente</b>:
+     * si la plantilla ya está puesta (se busca su muelle de afilar) no toca nada; si falta la mesa de herrería, la
+     * coloca. La usan la generación de aldeas nuevas y la migración de las ya construidas.
+     */
+    public static void asegurarHerreria(ServerLevel level, BlockPos center) {
+        int nivel = cotaDeLaPlaza(level, center);
+        if (nivel <= level.getMinBuildHeight() + 1) {
+            return;
+        }
+        BlockPos base = baseDeHerreria(center);
+        if (buscarBloque(level, base, Blocks.GRINDSTONE) == null) {
+            // OJO: colocar la plantilla borra lo que haya en su solar (queda en el log con un WARN por casa).
+            BlockPos puerta = placeVanillaHouse(level, base, HERRERIAS[0], nivel);
+            // Camino hasta su puerta, como a las casas.
+            if (puerta != null) {
+                line(level, center, doorApproach(level, puerta));
+            }
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: herreria construida en {} (puerta {})", center, base, puerta);
+        }
+        if (buscarBloque(level, base, Blocks.SMITHING_TABLE) == null) {
+            puestoDeTrabajo(level, base, nivel, Blocks.SMITHING_TABLE);
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: mesa de herreria puesta en el taller", center);
+        }
+    }
+
+    /** Busca un bloque concreto en el solar de un edificio (para saber si ya está construido o puesto). */
+    @Nullable
+    private static BlockPos buscarBloque(ServerLevel level, BlockPos base, Block bloque) {
+        for (BlockPos q : BlockPos.betweenClosed(base.offset(-1, -3, -1), base.offset(12, 9, 12))) {
+            if (level.getBlockState(q).is(bloque)) {
+                return q.immutable();
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Coloca un <b>puesto de trabajo</b> (mesa de herrería, muelle...) dentro de un edificio: el primer hueco libre
+     * con suelo firme y sitio de sobra, para no romper nada de la plantilla.
+     */
+    private static void puestoDeTrabajo(ServerLevel level, BlockPos base, int nivel, Block puesto) {
+        for (int dx = 1; dx <= 10; dx++) {
+            for (int dz = 1; dz <= 11; dz++) {
+                for (int dy = 0; dy <= 2; dy++) {
+                    BlockPos p = new BlockPos(base.getX() + dx, nivel + dy, base.getZ() + dz);
+                    if (level.getBlockState(p).isAir() && level.getBlockState(p.above()).isAir()
+                            && level.getBlockState(p.below()).isSolid()) {
+                        colocar(level, p, puesto.defaultBlockState(), Block.UPDATE_ALL);
+                        DevilRpg.LOGGER.debug("[Village] puesto de trabajo {} en {}", puesto, p);
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
     private static String iglesiaAleatoria(RandomSource random) {
         return IGLESIAS[random.nextInt(IGLESIAS.length)];
     }
@@ -884,6 +964,21 @@ public final class VillageGenerator {
             }
         }
         return false;
+    }
+
+    /** ¿Es la herrería? Tampoco es un dormitorio: no se le ponen camas ni puerta extra. */
+    private static boolean esHerreria(String id) {
+        for (String herreria : HERRERIAS) {
+            if (herreria.equals(id)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** ¿Es una VIVIENDA (casa)? Solo a las casas se les ponen camas de más y la segunda puerta. */
+    private static boolean esVivienda(String id) {
+        return !esIglesia(id) && !esHerreria(id);
     }
 
     /**
@@ -1314,26 +1409,26 @@ public final class VillageGenerator {
                 }
             }
         }
-        // Cama de respaldo en las CASAS que no traigan ninguna (los aldeanos necesitan cama para criar). A la
-        // iglesia no se le pone: no es un dormitorio. OJO con la altura: la cama va en la capa de ARRIBA del
-        // suelo (dy = 1), que es el nivel por el que se anda dentro de la casa.
-        if (camas == 0 && !esIglesia(id)) {
+        // Cama de respaldo en las CASAS que no traigan ninguna (los aldeanos necesitan cama para criar). Ni a la
+        // iglesia ni a la herrería se les pone: no son dormitorios. OJO con la altura: la cama va en la capa de
+        // ARRIBA del suelo (dy = 1), que es el nivel por el que se anda dentro de la casa.
+        if (camas == 0 && esVivienda(id)) {
             bed(level, origen.offset(tam.getX() / 2, 1, tam.getZ() / 2));
             camas++;
         }
         // CAMAS DE MÁS: las casas se llenan hasta MIN_CAMAS_POR_CASA (los niños duermen aquí, y con más camas la
         // aldea puede crecer más allá de los 4 aldeanos de antes).
-        if (!esIglesia(id) && camas < camasSegunTamano(tam)) {
+        if (esVivienda(id) && camas < camasSegunTamano(tam)) {
             camas += camasExtra(level, origen, tam, camasSegunTamano(tam) - camas, puerta);
         }
         // Las casas GRANDES llevan una cama extra: en vanilla hace falta una cama libre por cría, así que con 4
         // camas la aldea puede crecer hasta 4 aldeanos.
-        if (esCasaGrande(id)) {
+        if (esVivienda(id) && esCasaGrande(id)) {
             camaExtra(level, origen, tam);
         }
         // PUERTA EXTRA: una segunda puerta en la pared de enfrente (la casa se puede cruzar). Solo se pone si esa
         // pared es maciza y hay aire a los dos lados, así no se rompe la plantilla.
-        if (puerta != null && !esIglesia(id)) {
+        if (puerta != null && esVivienda(id)) {
             puertaExtra(level, origen, tam, puerta);
         }
         // Escalón de entrada: si el suelo de fuera quedó por debajo del piso de la casa, se sube con escaleras
