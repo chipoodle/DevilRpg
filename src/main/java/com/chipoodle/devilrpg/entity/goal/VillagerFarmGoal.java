@@ -194,7 +194,9 @@ public class VillagerFarmGoal extends Goal {
 
     private void cosechar(ServerLevel level) {
         BlockState state = level.getBlockState(target);
-        if (!(state.getBlock() instanceof CropBlock crop) || state.getValue(CropBlock.AGE) != crop.getMaxAge()) {
+        // OJO: la edad se lee con la propiedad del PROPIO cultivo (el betabel es 0-3 y el trigo 0-7).
+        if (!(state.getBlock() instanceof CropBlock crop)
+                || VillageGenerator.edadDelCultivo(state) != crop.getMaxAge()) {
             return;
         }
         List<ItemStack> drops = Block.getDrops(state, level, target, null);
@@ -309,7 +311,7 @@ public class VillagerFarmGoal extends Goal {
                         BlockPos r = q.offset(0, dy, 0);
                         BlockState s = level.getBlockState(r);
                         if (s.getBlock() instanceof CropBlock crop) {
-                            boolean esMaduro = s.getValue(CropBlock.AGE) == crop.getMaxAge();
+                            boolean esMaduro = VillageGenerator.edadDelCultivo(s) == crop.getMaxAge();
                             if (esMaduro == maduro) {
                                 return r;
                             }

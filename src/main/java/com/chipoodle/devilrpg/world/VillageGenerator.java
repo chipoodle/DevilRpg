@@ -39,6 +39,8 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.level.block.state.properties.BedPart;
 import net.minecraft.world.level.block.state.properties.BellAttachType;
 import net.minecraft.world.level.block.state.properties.ChestType;
+import net.minecraft.world.level.block.state.properties.Property;
+import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.block.state.properties.SlabType;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.block.state.properties.Half;
@@ -357,7 +359,37 @@ public final class VillageGenerator {
     }
 
     /**
-     * Esquinas de las dos parcelas de la granja de esa aldea. Lo usan los aldeanos que trabajan la tierra
+     * Edad actual de un cultivo, leyendo la propiedad {@code age} <b>de su propio estado</b>.
+     * <p>
+     * Hace falta porque cada cultivo tiene su rango: el trigo/zanahoria/patata usan {@code CropBlock.AGE} (0-7) y el
+     * <b>betabel</b> tiene la suya (0-3). Usar {@code CropBlock.AGE} a secas con el betabel petaba
+     * ({@code Cannot set property age ... does not exist in Block{minecraft:beetroots}}) y tumbaba el mundo al generar
+     * una aldea. {@code CropBlock.getAgeProperty()} es {@code protected}, así que se busca en el estado.
+     */
+    public static int edadDelCultivo(BlockState state) {
+        for (Property<?> p : state.getProperties()) {
+            if (p instanceof IntegerProperty edad && "age".equals(edad.getName())) {
+                return state.getValue(edad);
+            }
+        }
+        return -1;
+    }
+
+    /** Pone un cultivo en su edad <b>máxima</b>, con su propia propiedad de edad. */
+    public static BlockState cultivoMaduro(BlockState state) {
+        for (Property<?> p : state.getProperties()) {
+            if (p instanceof IntegerProperty edad && "age".equals(edad.getName())) {
+                int max = state.getBlock() instanceof CropBlock crop
+                        ? crop.getMaxAge()
+                        : edad.getPossibleValues().size() - 1;
+                return state.setValue(edad, Math.min(max, edad.getPossibleValues().size() - 1));
+            }
+        }
+        return state;
+    }
+
+    /**
+     * Esquina de las dos parcelas de la granja de esa aldea. Lo usan los aldeanos que trabajan la tierra
      * ({@code VillagerFarmGoal}) para saber dónde plantar y cosechar, y el obrero para no poner faroles encima.
      */
     public static BlockPos[] parcelasDe(BlockPos center) {
@@ -1958,10 +1990,8 @@ public final class VillageGenerator {
                 }
                 colocar(level, new BlockPos(x, base - 1, z), Blocks.FARMLAND.defaultBlockState(), Block.UPDATE_ALL);
                 BlockState crop = plants[dx % plants.length].defaultBlockState();
-                if (crop.getBlock() instanceof CropBlock cropBlock) {
-                    // Cada cultivo tiene su edad máxima (el trigo 7, la remolacha 3): se pregunta, no se asume.
-                    crop = crop.setValue(CropBlock.AGE, cropBlock.getMaxAge());
-                }
+                // Cada cultivo tiene SU propiedad de edad y su máximo (el trigo 0-7, el betabel 0-3): se pregunta.
+                crop = cultivoMaduro(crop);
                 colocar(level, new BlockPos(x, base, z), crop, Block.UPDATE_ALL);
             }
         }
