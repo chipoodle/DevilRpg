@@ -213,9 +213,12 @@ public final class VillageManager {
      *       pared entre ventanas" del jugador. Auditoría bloque a bloque contra las plantillas del juego (12
      *       plantillas reales, 7 aldeas, 5 construcciones cada una): los 11 bloques que faltaban eran exactamente
      *       esa fila. Ahora las tres rutas usan `esTerrenoRecortable` (terreno de verdad, sin troncos ni hojas).</li>
+     *   <li>21: se <b>quitan los caminos que quedaron encima de los tejados</b> (bug de la cota del kiosco) en todas las
+     *       aldeas: la limpieza se hace en esta misma migración, porque `actualizarCasas` ya no corre en aldeas que
+     *       tienen las casas al día y la limpieza no llegaba a ejecutarse.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 20;
+    public static final int CURRENT_LAYOUT = 21;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -892,6 +895,10 @@ public final class VillageManager {
             // El MURO se reconstruye entero: si un nivelado viejo lo enterró o se comió sus troncos, sus huecos no
             // están en ningún plano y el obrero no podría reponerlos nunca (el muro no se puede "reparar a medias").
             VillageGenerator.rehacerMuro(level, center);
+            // CAMINOS EN ALTO: los que el bug de la cota del kiosco dejó encima de los tejados se quitan aquí (esta
+            // migración corre siempre al subir la versión, mientras que `actualizarCasas` solo corre si cambian las
+            // casas: por eso la limpieza anterior no llegaba a ejecutarse en aldeas ya actualizadas).
+            VillageGenerator.limpiarCaminosFlotantes(level, center, VillageGenerator.cotaDeLaPlaza(level, center));
             VillageGenerator.farm(level, center);
             // El plano se tira: hay que volver a capturarlo, ya con las casas nuevas, el muro y las reglas actuales.
             saved.clearBlueprint(objectiveIndex);

@@ -1937,14 +1937,14 @@ public final class VillageGenerator {
      * caminos de tierra apisonada solo pueden estar a ras del suelo del pueblo, así que cualquier {@code dirt_path}
      * por encima de la cota es basura del trazado viejo.
      */
-    private static void limpiarCaminosFlotantes(ServerLevel level, BlockPos center, int nivel) {
+    public static void limpiarCaminosFlotantes(ServerLevel level, BlockPos center, int nivel) {
         int quitados = 0;
         for (int dx = -FENCE_RADIUS; dx <= FENCE_RADIUS; dx++) {
             for (int dz = -FENCE_RADIUS; dz <= FENCE_RADIUS; dz++) {
                 if (dx * dx + dz * dz > FENCE_RADIUS * FENCE_RADIUS) {
                     continue;
                 }
-                for (int y = nivel + 2; y <= nivel + 8; y++) {
+                for (int y = nivel + 2; y <= nivel + 12; y++) {
                     BlockPos p = new BlockPos(center.getX() + dx, y, center.getZ() + dz);
                     if (level.getBlockState(p).is(Blocks.DIRT_PATH)) {
                         colocar(level, p, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
