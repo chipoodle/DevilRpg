@@ -184,9 +184,17 @@ public final class VillageManager {
      *       superficie en los huecos del solar (y también donde el nivelado recortó el terreno, que dejaba la
      *       tierra a la vista). Medido en el guardado: el suelo dentro de la caja de la casa mediana estaba en la
      *       capa 61 y el del pueblo en la 62 (un bloque de zanja), con la puerta ya a ras.</li>
+     *   <li>18: <b>zanja de DOS bloques de las casas medianas</b>. El despeje del solar empezaba en
+     *       {@code origen.y = nivel - alturaDeLaPuerta}, y la casa mediana tiene la puerta en {@code y=2}: se llevaba
+     *       <b>dos</b> capas de suelo (61 y 62) y, donde la plantilla no pone nada (su caja es 13x11 y el edificio va
+     *       metido hacia dentro, con una plataforma de tierra llena de huecos), el terreno quedaba en la 60. Medido
+     *       en el guardado del jugador: {@code 62=aire 61=aire 60=tierra} en la caja de la casa mediana. Ahora el
+     *       despeje no baja nunca de la capa de superficie del pueblo y, después de colocar la construcción, se
+     *       <b>rellena la columna hasta el suelo del pueblo</b> (césped arriba, tierra debajo) donde la plantilla no
+     *       ponga nada. Solo afecta a las casas medianas, así que el jugador veía la zanja de 2 bloques en 2 casas.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 17;
+    public static final int CURRENT_LAYOUT = 18;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -199,11 +207,13 @@ public final class VillageManager {
      * alrededor), 10 = <b>alineadas por su puerta</b> (la casa mediana entierra así su plataforma de tierra, que se
      * veía como un borde/zanja marrón) y con la <b>iglesia del campanario</b> (`plains_temple_4`), 11 = con el
      * <b>borde del solar a nivel</b> (se devuelve el césped a la capa de superficie alrededor de las paredes: la
-     * caja de la plantilla es más grande que el edificio y quedaba una zanja de un bloque alrededor de cada casa).
+     * caja de la plantilla es más grande que el edificio y quedaba una zanja de un bloque alrededor de cada casa),
+     * 12 = con el <b>solar relleno hasta el suelo del pueblo</b> (la casa mediana dejaba huecos de DOS bloques: el
+     * despeje no baja ya de la capa de superficie y se rellena la columna donde la plantilla no pone nada).
      * Se sube cuando cambia el número, el tipo o la <b>altura</b> de las construcciones, y la migración solo hace lo
      * que falte (rehacer una casa borra lo que tenga dentro).
      */
-    public static final int CURRENT_HOUSES = 11;
+    public static final int CURRENT_HOUSES = 12;
     /** Radio alrededor del obrero en el que se buscan huecos que reponer. */
     private static final double REPAIR_SEARCH_RADIUS = 40.0D;
     /** Cuánto puede estar el hueco por encima / por debajo del obrero para que intente alcanzarlo. */

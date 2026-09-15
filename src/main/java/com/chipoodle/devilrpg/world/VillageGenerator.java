@@ -69,6 +69,11 @@ public final class VillageGenerator {
     private static final int PLOT_WATER_ROW = PLOT_DEPTH / 2;
     /** Bloques de <b>terraza</b> (patio llano) que se allanan alrededor de una construcción. */
     private static final int MARGEN_TERRAZA = 2;
+    /**
+     * Hasta cuántos bloques por debajo de la superficie se busca suelo al rellenar el solar de una construcción
+     * (la casa mediana dejaba huecos de dos bloques: ver {@code placeVanillaHouse}).
+     */
+    private static final int PROFUNDIDAD_SOLAR = 4;
 
     /**
      * Radio del área que se nivela alrededor del centro (todo hasta donde empieza la valla, para que no
@@ -739,10 +744,15 @@ public final class VillageGenerator {
         nivelarHuella(level, base, tam.getX(), tam.getZ(), nivel);
         BlockPos origen = new BlockPos(base.getX(), nivel - puertaY, base.getZ());
         // 1) Solar limpio: fuera todo lo que haya en la huella de la casa (y 4 bloques por encima del tejado).
+        // NUNCA se despeja por debajo de la capa de superficie del pueblo (`nivel - 1`): el despeje empezaba en
+        // `origen.y`, y en la casa mediana (puerta en y=2) eso son DOS capas de suelo por debajo del suelo del
+        // pueblo -> donde la plantilla no pone nada quedaba un hoyo de dos bloques (medido en el guardado:
+        // 62=aire, 61=aire, 60=tierra en la caja de la casa mediana).
+        int capaMinima = Math.max(origen.getY(), nivel - 1);
         for (int dx = 0; dx < tam.getX(); dx++) {
             for (int dz = 0; dz < tam.getZ(); dz++) {
-                for (int dy = 0; dy < tam.getY() + 4; dy++) {
-                    BlockPos p = origen.offset(dx, dy, dz);
+                for (int y = capaMinima; y < origen.getY() + tam.getY() + 4; y++) {
+                    BlockPos p = new BlockPos(origen.getX() + dx, y, origen.getZ() + dz);
                     if (!level.getBlockState(p).isAir()) {
                         colocar(level, p, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
                     }
@@ -751,20 +761,35 @@ public final class VillageGenerator {
         }
         // 2) La construcción del juego, tal cual viene.
         template.placeInWorld(level, origen, origen, new StructurePlaceSettings(), level.random, Block.UPDATE_CLIENTS);
-        // 3) Devuelve el CÉSPED a la capa de superficie en los huecos del solar que la plantilla no ocupa.
-        // El despeje del paso 1 borra el solar ENTERO (incluida la capa de césped) y casi todas las plantillas del
-        // juego son más pequeñas que su caja: dejan un borde alrededor de las paredes que se queda un bloque por
-        // debajo del suelo del pueblo -> eso era LA ZANJA de un bloque que salía alrededor de todas las casas.
-        // Solo se rellena donde no hay construcción y hay suelo debajo (nunca debajo de una puerta: la puerta va en
-        // la capa de arriba, así que rellenar la de superficie devuelve el suelo al nivel del resto).
-        BlockPos sueloDelPueblo = new BlockPos(origen.getX(), nivel - 1, origen.getZ());
+        // 3) Devuelve el SUELO DEL PUEBLO a los huecos del solar que la plantilla no ocupa.
+        // La caja de la plantilla es mayor que el edificio (y la casa mediana trae además una plataforma de tierra
+        // con huecos), así que donde la plantilla no pone nada el terreno quedaba 1 o 2 bloques por debajo del suelo
+        // del pueblo: LA ZANJA que se veía alrededor de las casas. Se rellena la columna hasta la capa de superficie
+        // (césped arriba, tierra debajo) SOLO si está hueca: nunca se tapa una construcción ni se sube nada por
+        // encima del suelo del pueblo.
+        int superficie = nivel - 1;
         for (int dx = 0; dx < tam.getX(); dx++) {
             for (int dz = 0; dz < tam.getZ(); dz++) {
-                BlockPos p = sueloDelPueblo.offset(dx, 0, dz);
-                if (!level.getBlockState(p).isAir() || !level.getBlockState(p.below()).isSolid()) {
-                    continue;
+                int x = origen.getX() + dx;
+                int z = origen.getZ() + dz;
+                int tope = Integer.MIN_VALUE;
+                for (int y = superficie; y >= superficie - PROFUNDIDAD_SOLAR; y--) {
+                    if (level.getBlockState(new BlockPos(x, y, z)).isSolid()) {
+                        tope = y;
+                        break;
+                    }
                 }
-                colocar(level, p, Blocks.GRASS_BLOCK.defaultBlockState(), Block.UPDATE_CLIENTS);
+                if (tope == Integer.MIN_VALUE || tope >= superficie) {
+                    continue; // ya está a nivel, o hay una construcción en la capa de superficie
+                }
+                for (int y = tope + 1; y <= superficie; y++) {
+                    BlockPos p = new BlockPos(x, y, z);
+                    if (!level.getBlockState(p).isAir()) {
+                        break;
+                    }
+                    colocar(level, p, y == superficie ? Blocks.GRASS_BLOCK.defaultBlockState()
+                                    : Blocks.DIRT.defaultBlockState(), Block.UPDATE_CLIENTS);
+                }
             }
         }
         // 4) Limpieza de bloques técnicos, y de paso se busca la puerta y se cuentan las camas.
