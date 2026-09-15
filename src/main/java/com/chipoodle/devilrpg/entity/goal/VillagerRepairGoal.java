@@ -75,6 +75,10 @@ public class VillagerRepairGoal extends Goal {
         if (VillageManager.isVillageUnderAttack(level, objectiveIndex)) {
             return false;
         }
+        // Ni en su hora de descanso: si no, el obrero se queda andando en la cama (sus goals ganan al cerebro).
+        if (VillageManager.estaDescansando(villager)) {
+            return false;
+        }
         if (villager.blockPosition().distSqr(center) > MAX_DISTANCE_FROM_CENTER * MAX_DISTANCE_FROM_CENTER) {
             return false;
         }
@@ -107,7 +111,8 @@ public class VillagerRepairGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
-        return target != null && isBuilder() && !villager.isBaby() && stuckTicks < STUCK_LIMIT;
+        return target != null && isBuilder() && !villager.isBaby() && stuckTicks < STUCK_LIMIT
+                && !VillageManager.estaDescansando(villager);
     }
 
     @Override

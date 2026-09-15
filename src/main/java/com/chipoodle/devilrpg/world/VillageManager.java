@@ -1000,6 +1000,19 @@ public final class VillageManager {
     }
 
     /**
+     * ¿El aldeano está en su <b>hora de descanso</b> (yendo a la cama o dentro de ella)? Mientras descansa, NINGÚN
+     * goal del pueblo debe estar activo: si no, el aldeano se queda "andando" en la cama (sus goals tienen el flag
+     * MOVE y ganan al cerebro vanilla que quiere dormir). Se mira el <b>cerebro</b> del aldeano (la actividad REST es
+     * la que usa vanilla para irse a dormir) y también {@code isSleeping} por si ya está dentro.
+     */
+    public static boolean estaDescansando(Villager villager) {
+        if (villager.isSleeping()) {
+            return true;
+        }
+        return villager.getBrain().isActive(net.minecraft.world.entity.schedule.Activity.REST);
+    }
+
+    /**
      * El hueco del plano que hay que reponer más cercano al obrero, o {@code null} si no hay nada roto a su
      * alcance. {@code excluir} trae las posiciones comprimidas que ese obrero ya descartó por inalcanzables, y
      * se saltan los huecos que otro obrero tenga reservados.

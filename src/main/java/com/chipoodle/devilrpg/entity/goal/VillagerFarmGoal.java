@@ -91,6 +91,10 @@ public class VillagerFarmGoal extends Goal {
         if (VillageManager.isVillageUnderAttack(level, objectiveIndex)) {
             return false;
         }
+        // Ni en su hora de descanso: el granjero también se va a la cama.
+        if (VillageManager.estaDescansando(villager)) {
+            return false;
+        }
         if (villager.blockPosition().distSqr(center) > MAX_DISTANCE_FROM_CENTER * MAX_DISTANCE_FROM_CENTER) {
             return false;
         }
@@ -142,7 +146,8 @@ public class VillagerFarmGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
-        return target != null && !villager.isBaby() && stuckTicks < STUCK_LIMIT;
+        return target != null && !villager.isBaby() && stuckTicks < STUCK_LIMIT
+                && !VillageManager.estaDescansando(villager);
     }
 
     @Override

@@ -69,6 +69,10 @@ public class VillagerCollectGoal extends Goal {
         if (VillageManager.isVillageUnderAttack(level, objectiveIndex)) {
             return false;
         }
+        // De noche, a dormir: ni recoge ni se queda andando por el pueblo.
+        if (VillageManager.estaDescansando(villager)) {
+            return false;
+        }
         if (villager.blockPosition().distSqr(center) > RADIO * RADIO) {
             return false;
         }
@@ -95,7 +99,7 @@ public class VillagerCollectGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
-        if (villager.isBaby() || stuckTicks >= STUCK_LIMIT) {
+        if (villager.isBaby() || stuckTicks >= STUCK_LIMIT || VillageManager.estaDescansando(villager)) {
             return false;
         }
         if (objetivo != null) {
