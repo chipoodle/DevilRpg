@@ -426,7 +426,9 @@ public final class VillageGenerator {
                     Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true), 3);
             DevilRpg.LOGGER.info("[Village] Aldea en {}: almacen construido en {}", center, c);
         }
-        // Cofres: si no hay ninguno, o si están TODOS llenos, se coloca otro doble (el almacén crece).
+        // Cofres: primero se recolocan los que hayan quedado flotando (bug de la Y del centro) y, si no hay ninguno o
+        // si están TODOS llenos, se coloca otro doble EN EL SUELO DEL ALMACÉN (el almacén crece hacia dentro).
+        VillageStorage.repararCofresFlotantes(level, center);
         if (VillageStorage.cofresColocados(level, center) == 0 || VillageStorage.lleno(level, center)) {
             if (VillageStorage.colocarSiguientePar(level, center)) {
                 DevilRpg.LOGGER.info("[Village] Aldea en {}: almacen ampliado ({} cofres)",
@@ -1311,8 +1313,11 @@ public final class VillageGenerator {
      * La cota (nivel por el que se anda) del <b>suelo llano de la plaza</b>: la mediana de {@code groundY} en un
      * disco pequeño alrededor del centro. Es el único trozo de la aldea del que se puede fiar la medida cuando ya
      * hay construcciones, porque en la plaza no hay ninguna (ni casas, ni muro, ni granja).
+     * <p>
+     * Pública porque la usan también el almacén y los goals de los aldeanos para saber a qué altura está el pueblo
+     * (colocar cosas a la Y del centro del objetivo es un error: puede caer en otra capa y quedar flotando).
      */
-    private static int cotaDeLaPlaza(ServerLevel level, BlockPos center) {
+    public static int cotaDeLaPlaza(ServerLevel level, BlockPos center) {
         List<Integer> alturas = new ArrayList<>();
         int radio = 6;
         for (int x = -radio; x <= radio; x++) {
