@@ -71,7 +71,10 @@ public class VillagerFarmGoal extends Goal {
     private Tarea tarea = Tarea.COSECHAR;
     private int workTicks;
     private int restTicks;
+    /** Ticks SIN ACERCARSE al objetivo (ver {@code tick}): andar hacia él no cuenta como estar atascado. */
     private int stuckTicks;
+    /** Distancia más corta lograda en este viaje: mientras baje, el granjero está avanzando. */
+    private double mejorDistancia = Double.MAX_VALUE;
 
     public VillagerFarmGoal(Villager villager, BlockPos center, int objectiveIndex) {
         this.villager = villager;
@@ -152,6 +155,7 @@ public class VillagerFarmGoal extends Goal {
     public void start() {
         workTicks = 0;
         stuckTicks = 0;
+        mejorDistancia = Double.MAX_VALUE;
         irAlObjetivo();
     }
 
@@ -169,12 +173,21 @@ public class VillagerFarmGoal extends Goal {
         villager.getLookControl().setLookAt(target.getX() + 0.5D, target.getY() + 0.5D, target.getZ() + 0.5D);
         // Para la despensa vale un alcance mayor (el cofre está dentro del kiosco y no se navega hacia él).
         double alcance = tarea == Tarea.DESPENSA ? VillagePantry.ALCANCE_DESPENSA : REACH;
-        if (villager.distanceToSqr(target.getX() + 0.5D, target.getY() + 0.5D, target.getZ() + 0.5D) > alcance * alcance) {
+        double distancia = Math.sqrt(villager.distanceToSqr(target.getX() + 0.5D, target.getY() + 0.5D, target.getZ() + 0.5D));
+        if (distancia > alcance) {
             // El rumbo se le da POR EL CEREBRO en cada tick (ver VillageManager.caminarHacia): navegando a mano, el
             // cerebro del aldeano lo manda a su puesto, a la plaza o a pasear y se va a otro lado a mitad de camino
             // ("primero da vueltas y se va a otro lado antes de recogerlos").
             VillageManager.caminarHacia(villager, target, 0.6F);
-            stuckTicks++;
+            // ATASCADO = NO ACERCARSE, no "estar andando": contar cada tick mandaba al granjero a empezar de cero cada
+            // 6 s (120 ticks) aunque fuera avanzando, así que un viaje a la despensa no lo terminaba NUNCA y se quedaba
+            // ciclado ("no sube al kiosco a poner la cosecha").
+            if (distancia < mejorDistancia - 0.5D) {
+                mejorDistancia = distancia;
+                stuckTicks = 0;
+            } else {
+                stuckTicks++;
+            }
             return;
         }
         VillageManager.parar(villager);

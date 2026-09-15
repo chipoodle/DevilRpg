@@ -44,16 +44,18 @@ public final class VillagePantry {
     }
 
     /**
-     * Punto de apoyo para que un aldeano vaya a la despensa: una casilla de suelo <b>delante del kiosco</b> (a la
-     * cota del pueblo, transitable).
+     * Punto de apoyo para que un aldeano vaya a la despensa: una casilla del <b>suelo llano delante de la escalera
+     * sur del kiosco</b> (a la cota del pueblo y transitable).
      * <p>
      * OJO: nunca se navega HACIA el cofre, porque es un bloque sólido y la navegación no puede "llegar" a esa
      * casilla: el aldeano se quedaba dando vueltas alrededor del kiosco sin descargar nada (el bug que vio el
-     * jugador). Se camina a este punto y se comprueba la distancia AL COFRE.
+     * jugador). Se camina a este punto y se comprueba la distancia AL COFRE. Y tiene que ser una casilla de SUELO: la
+     * escalera del kiosco está justo en el borde de la plataforma, así que el punto va DOS bloques más allá, en el
+     * patio, para que el aldeano no tenga que subirse a la escalera para descargar.
      */
     public static BlockPos puntoDeApoyo(ServerLevel level, BlockPos center) {
         int nivel = VillageGenerator.cotaDeLaPlaza(level, center);
-        return new BlockPos(center.getX(), nivel, center.getZ() + 4);
+        return new BlockPos(center.getX(), nivel, center.getZ() + VillageGenerator.kioscoRadio() + 3);
     }
 
     /** Distancia (en bloques) a la que un aldeano ya "alcanza" la despensa para dejar o coger cosas. */

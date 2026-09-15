@@ -57,6 +57,8 @@ public class VillagerRepairGoal extends Goal {
     private BlockPos target;
     private int workTicks;
     private int stuckTicks;
+    /** Distancia más corta lograda en este viaje al hueco: mientras baje, el obrero avanza. */
+    private double mejorDistancia = Double.MAX_VALUE;
     private int restTicks;
 
     public VillagerRepairGoal(Villager villager, BlockPos center, int objectiveIndex) {
@@ -113,6 +115,7 @@ public class VillagerRepairGoal extends Goal {
     public void start() {
         workTicks = 0;
         stuckTicks = 0;
+        mejorDistancia = Double.MAX_VALUE;
         irAlHueco();
     }
 
@@ -135,11 +138,18 @@ public class VillagerRepairGoal extends Goal {
             return;
         }
         villager.getLookControl().setLookAt(target.getX() + 0.5D, target.getY() + 0.5D, target.getZ() + 0.5D);
-        if (villager.distanceToSqr(target.getX() + 0.5D, target.getY() + 0.5D, target.getZ() + 0.5D) > REACH * REACH) {
+        double distancia = Math.sqrt(villager.distanceToSqr(target.getX() + 0.5D, target.getY() + 0.5D, target.getZ() + 0.5D));
+        if (distancia > REACH) {
             // Al hueco se va POR EL CEREBRO en cada tick (ver VillageManager.caminarHacia): navegando a mano, el
             // cerebro del aldeano le da otro destino y se va a otra parte.
             VillageManager.caminarHacia(villager, target, 0.6F);
-            stuckTicks++;
+            // Solo cuenta como atasco NO ACERCARSE (contar cada tick lo mandaba a empezar de cero a los 5 s).
+            if (distancia < mejorDistancia - 0.5D) {
+                mejorDistancia = distancia;
+                stuckTicks = 0;
+            } else {
+                stuckTicks++;
+            }
             return;
         }
         VillageManager.parar(villager);

@@ -1073,6 +1073,11 @@ public final class VillageGenerator {
 
     /** Lado del kiosco de la plaza (radio): 3 -> plataforma de 7x7 (antes 5x5: el jugador lo quería más grande). */
     private static final int KIOSCO_RADIO = 3;
+
+    /** Radio del kiosco (lo usa también la despensa para su punto de apoyo, que va en el patio de delante). */
+    public static int kioscoRadio() {
+        return KIOSCO_RADIO;
+    }
     /** Altura de los cuatro postes del kiosco sobre la plataforma. */
     private static final int KIOSCO_POSTE = 4;
 

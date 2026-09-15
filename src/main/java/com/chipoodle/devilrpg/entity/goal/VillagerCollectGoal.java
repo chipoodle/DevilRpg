@@ -49,7 +49,10 @@ public class VillagerCollectGoal extends Goal {
     @Nullable
     private BlockPos destino;
     private int restTicks;
+    /** Ticks SIN ACERCARSE a lo que va a por ello: andar hacia el objetivo no cuenta como estar atascado. */
     private int stuckTicks;
+    /** Distancia más corta lograda en este viaje. */
+    private double mejorDistancia = Double.MAX_VALUE;
 
     public VillagerCollectGoal(Villager villager, BlockPos center, int objectiveIndex) {
         this.villager = villager;
@@ -103,6 +106,7 @@ public class VillagerCollectGoal extends Goal {
     @Override
     public void start() {
         stuckTicks = 0;
+        mejorDistancia = Double.MAX_VALUE;
         ir();
     }
 
@@ -129,11 +133,18 @@ public class VillagerCollectGoal extends Goal {
             }
             BlockPos p = objetivo.blockPosition();
             villager.getLookControl().setLookAt(objetivo);
-            if (villager.distanceToSqr(objetivo) > REACH * REACH) {
+            double distancia = Math.sqrt(villager.distanceToSqr(objetivo));
+            if (distancia > REACH) {
                 // Se le manda POR EL CEREBRO, en cada tick: si se navega a mano, el cerebro del aldeano lo manda a
                 // otra parte y se va sin recogerlo.
                 VillageManager.caminarHacia(villager, p, 0.6F);
-                stuckTicks++;
+                // Solo cuenta como atasco NO ACERCARSE (contar cada tick lo mandaba a empezar de cero a los 6 s).
+                if (distancia < mejorDistancia - 0.5D) {
+                    mejorDistancia = distancia;
+                    stuckTicks = 0;
+                } else {
+                    stuckTicks++;
+                }
                 return;
             }
             VillageManager.parar(villager);
@@ -158,10 +169,16 @@ public class VillagerCollectGoal extends Goal {
         }
         if (destino != null) {
             villager.getLookControl().setLookAt(destino.getX() + 0.5D, destino.getY() + 0.5D, destino.getZ() + 0.5D);
-            if (villager.distanceToSqr(destino.getX() + 0.5D, destino.getY() + 0.5D, destino.getZ() + 0.5D)
-                    > VillageStorage.ALCANCE_ALMACEN * VillageStorage.ALCANCE_ALMACEN) {
+            double distancia = Math.sqrt(villager.distanceToSqr(destino.getX() + 0.5D, destino.getY() + 0.5D,
+                    destino.getZ() + 0.5D));
+            if (distancia > VillageStorage.ALCANCE_ALMACEN) {
                 VillageManager.caminarHacia(villager, destino, 0.6F);
-                stuckTicks++;
+                if (distancia < mejorDistancia - 0.5D) {
+                    mejorDistancia = distancia;
+                    stuckTicks = 0;
+                } else {
+                    stuckTicks++;
+                }
                 return;
             }
             VillageManager.parar(villager);

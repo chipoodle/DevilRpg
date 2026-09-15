@@ -1263,12 +1263,33 @@ public final class VillageManager {
         return NOMBRES[Math.floorMod((int) (bits ^ (bits >>> 32)), NOMBRES.length)];
     }
 
-    /** Nombre del <b>oficio</b> del aldeano, en el idioma del juego (los nombres del propio Minecraft). */
-    public static Component profesionDe(Villager villager) {
-        var profesion = villager.getVillagerData().getProfession();
+    /**
+     * Nombre del <b>oficio</b> del aldeano. Se usan los nombres del mod (en español, como el resto de sus textos) y
+     * para cualquier oficio de vanilla que acabe en la aldea se cae al nombre traducido del propio juego.
+     */
+    public static String nombreDeOficio(Villager villager) {
+        VillagerProfession profesion = villager.getVillagerData().getProfession();
+        if (profesion == VillagerProfession.FARMER) {
+            return "Granjero";
+        }
+        if (profesion == VillagerProfession.WEAPONSMITH) {
+            return "Herrero de armas";
+        }
+        if (profesion == VillagerProfession.TOOLSMITH) {
+            return "Herrero de herramientas";
+        }
+        if (profesion == VillagerProfession.CLERIC) {
+            return "Clérigo";
+        }
+        if (profesion == VillagerProfession.NITWIT) {
+            return "Recolector"; // el holgazán es el recolector de la aldea
+        }
+        if (profesion == VillagerProfession.NONE) {
+            return "Sin oficio";
+        }
         ResourceLocation clave = BuiltInRegistries.VILLAGER_PROFESSION.getKey(profesion);
-        String nombre = clave != null ? clave.getPath() : "none";
-        return Component.translatable("entity.minecraft.villager." + nombre);
+        return Component.translatable("entity.minecraft.villager." + (clave != null ? clave.getPath() : "none"))
+                .getString();
     }
 
     /**
@@ -1295,7 +1316,7 @@ public final class VillageManager {
         }
         // Etiqueta de tres datos: NOMBRE, OFICIO y lo que está haciendo. La profesión se lee en cada refresco, así
         // que si le cambia el oficio (o se le repone, ver `reponerProfesiones`) la etiqueta se actualiza sola.
-        String etiqueta = nombreDe(villager) + " (" + profesionDe(villager).getString() + ")\n" + texto;
+        String etiqueta = nombreDe(villager) + " (" + nombreDeOficio(villager) + ")\n" + texto;
         villager.getPersistentData().putLong(ACTIVIDAD_HORA_TAG, villager.level().getGameTime());
         String actual = villager.getCustomName() == null ? "" : villager.getCustomName().getString();
         if (!etiqueta.equals(actual)) {
