@@ -14,6 +14,7 @@ import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapability;
 import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapabilityInterface;
 import com.chipoodle.devilrpg.capability.mana.PlayerManaCapability;
 import com.chipoodle.devilrpg.capability.mana.PlayerManaCapabilityInterface;
+import com.chipoodle.devilrpg.world.VillageManager;
 import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapability;
 import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityInterface;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
@@ -163,6 +164,22 @@ public class PlayerCapabilityForgeEventSubscriber {
      * COMPLETA, la armadura se repara gradualmente (su durabilidad se mantiene alta como si fuera
      * de diamante). Al volver a humano se deja de reparar y vuelve a desgastarse con normalidad.
      */
+    /**
+     * <b>Sello místico de la aldea</b>: si una aldea ya venció su asedio y sigue viva, ninguna criatura <b>hostil</b>
+     * puede aparecer dentro de su perímetro (vanilla o del mod). Fuera, en el campo, se spawnea con normalidad: la
+     * horda sigue pudiendo llegar andando y atacar.
+     */
+    @SubscribeEvent
+    public static void onMobSpawnPositionCheck(net.neoforged.neoforge.event.entity.living.MobSpawnEvent.PositionCheck event) {
+        if (event.getEntity().getType().getCategory() != net.minecraft.world.entity.MobCategory.MONSTER) {
+            return;
+        }
+        if (VillageManager.estaProtegida((net.minecraft.server.level.ServerLevel) event.getLevel(),
+                event.getEntity().blockPosition())) {
+            event.setResult(net.neoforged.neoforge.event.entity.living.MobSpawnEvent.PositionCheck.Result.FAIL);
+        }
+    }
+
     @SubscribeEvent
     public static void onPlayerTick(PlayerTickEvent.Post event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) {

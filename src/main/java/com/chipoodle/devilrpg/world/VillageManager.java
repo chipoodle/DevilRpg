@@ -441,6 +441,7 @@ public final class VillageManager {
                         if (waveCleared) {
                             if (d.wave.isEmpty()) {
                                 grantReward(player, d.objectiveIndex);
+                                marcarSelloMistico(level, d.center, player);
                                 player.displayClientMessage(Component.literal(isCurrentObjective
                                         ? "¡Has salvado la aldea! El objetivo avanza."
                                         : "¡Has salvado la aldea!"), false);
@@ -456,6 +457,7 @@ public final class VillageManager {
                             }
                         } else if (siegeFailed) {
                             grantReward(player, d.objectiveIndex);
+                            marcarSelloMistico(level, d.center, player);
                             player.displayClientMessage(Component.literal(isCurrentObjective
                                     ? "Los monstruos no lograron entrar: ¡la aldea está a salvo! El objetivo avanza."
                                     : "Los monstruos no lograron entrar: ¡la aldea está a salvo!"), false);
@@ -1009,6 +1011,78 @@ public final class VillageManager {
         return isUnderAttack(level, objectiveIndex);
     }
 
+    /** Centros de las aldeas ya calculados (del plano), para no recorrer el plano en cada intento de spawn. */
+    private static final Map<ServerLevel, Map<Integer, BlockPos>> CENTROS = new HashMap<>();
+
+    /**
+     * Centro de una aldea: se saca del <b>plano</b> guardado (la caja de lo construido), así que vale también para
+     * aldeas que el jugador ya dejó atrás. Se cachea porque esto se consulta en cada intento de spawn.
+     */
+    @Nullable
+    public static BlockPos centroDe(ServerLevel level, int objectiveIndex) {
+        VillageSavedData saved = VillageSavedData.get(level);
+        Map<Integer, BlockPos> cache = CENTROS.computeIfAbsent(level, l -> new HashMap<>());
+        BlockPos cached = cache.get(objectiveIndex);
+        if (cached != null) {
+            return cached;
+        }
+        VillageSavedData.Blueprint plano = saved.getBlueprint(objectiveIndex);
+        if (plano == null || plano.size() == 0) {
+            return null;
+        }
+        int minX = Integer.MAX_VALUE;
+        int maxX = Integer.MIN_VALUE;
+        int minZ = Integer.MAX_VALUE;
+        int maxZ = Integer.MIN_VALUE;
+        for (int i = 0; i < plano.size(); i++) {
+            BlockPos p = plano.posAt(i);
+            minX = Math.min(minX, p.getX());
+            maxX = Math.max(maxX, p.getX());
+            minZ = Math.min(minZ, p.getZ());
+            maxZ = Math.max(maxZ, p.getZ());
+        }
+        BlockPos centro = new BlockPos((minX + maxX) / 2, 0, (minZ + maxZ) / 2);
+        cache.put(objectiveIndex, centro);
+        return centro;
+    }
+
+    /** El plano cambió (migración): se tira el centro cacheado de esa aldea. */
+    public static void olvidarCentro(ServerLevel level, int objectiveIndex) {
+        Map<Integer, BlockPos> cache = CENTROS.get(level);
+        if (cache != null) {
+            cache.remove(objectiveIndex);
+        }
+    }
+
+    /**
+     * ¿Ese punto cae dentro de una aldea <b>protegida</b>? Una aldea queda protegida cuando se <b>vence su asedio</b>
+     * (el clásico o una horda del mundo) y sigue viva: entonces ninguna criatura hostil puede <b>aparecer</b> entre
+     * sus muros (fuera sí, en el campo). Si la aldea cae (todos los aldeanos muertos) deja de estar protegida y queda
+     * abandonada.
+     */
+    public static boolean estaProtegida(ServerLevel level, BlockPos pos) {
+        VillageSavedData saved = VillageSavedData.get(level);
+        double limite = (double) VillageGenerator.FENCE_RADIUS * VillageGenerator.FENCE_RADIUS;
+        for (int i = 0; i <= MAX_OBJECTIVES; i++) {
+            if (!saved.isGenerated(i) || saved.isFallen(i) || !saved.isSiegeResolved(i)) {
+                continue;
+            }
+            BlockPos centro = centroDe(level, i);
+            if (centro == null) {
+                continue;
+            }
+            double dx = pos.getX() - centro.getX();
+            double dz = pos.getZ() - centro.getZ();
+            if (dx * dx + dz * dz <= limite && Math.abs(pos.getY() - level.getSeaLevel()) < 96) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Tope de objetivos que se miran al comprobar la protección (de sobra para cualquier partida). */
+    private static final int MAX_OBJECTIVES = 64;
+
     /**
      * ¿El aldeano está en su <b>hora de descanso</b> (yendo a la cama o dentro de ella)? Mientras descansa, NINGÚN
      * goal del pueblo debe estar activo: si no, el aldeano se queda "andando" en la cama (sus goals tienen el flag
@@ -1248,8 +1322,32 @@ public final class VillageManager {
             return;
         }
         saved.markFallen(objectiveIndex);
+        // La aldea cae: se apaga el sello (queda abandonada y las criaturas vuelven a poder aparecer entre las ruinas).
+        int cota = VillageGenerator.cotaDeLaPlaza(level, center);
+        BlockPos sello = new BlockPos(center.getX(), cota + 5, center.getZ());
+        if (level.getBlockState(sello).is(Blocks.BEACON)) {
+            level.setBlockAndUpdate(sello, Blocks.AIR.defaultBlockState());
+        }
         VillageGenerator.ruin(level, center, objectiveIndex);
         DevilRpg.LOGGER.info("[Village] La aldea {} ha CAÍDO y queda en ruinas", objectiveIndex);
+    }
+
+    /**
+     * <b>Sello místico de la aldea</b>: al vencer su asedio, la aldea queda protegida del poder de la oscuridad
+     * (ninguna criatura hostil puede <b>aparecer</b> entre sus muros; fuera, en el campo, sí) y se enciende un
+     * <b>faro</b> en lo alto del kiosco como señal. El sello dura mientras la aldea viva: si cae (todos los aldeanos
+     * muertos) queda abandonada y el poder se apaga.
+     */
+    private static void marcarSelloMistico(ServerLevel level, BlockPos center, ServerPlayer player) {
+        int cota = VillageGenerator.cotaDeLaPlaza(level, center);
+        BlockPos sello = new BlockPos(center.getX(), cota + 5, center.getZ());
+        if (!level.getBlockState(sello).is(Blocks.BEACON)) {
+            level.setBlockAndUpdate(sello, Blocks.BEACON.defaultBlockState());
+        }
+        player.displayClientMessage(Component.literal(
+                "La campana tañe una sola vez... y un zumbido antiguo recorre el empedrado: "
+                        + "el poder místico sella la aldea. Ninguna criatura de la oscuridad podrá alzarse entre sus muros."), false);
+        DevilRpg.LOGGER.info("[Village] Aldea en {}: sello místico activo (no aparecerán enemigos dentro)", center);
     }
 
     /** Manda un mensaje a los jugadores que estén cerca de la aldea. */

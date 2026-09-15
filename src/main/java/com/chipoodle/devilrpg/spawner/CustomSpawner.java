@@ -1,6 +1,7 @@
 package com.chipoodle.devilrpg.spawner;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.world.VillageManager;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -118,6 +119,13 @@ public class CustomSpawner {
                 DevilRpg.LOGGER.debug("[CustomSpawner] {} en {} - no hay posicion valida para jugador {}",
                         rule.getEntityType().getDescriptionId(), level.dimension().location(),
                         player.getGameProfile().getName());
+                continue;
+            }
+            // Nada hostil aparece DENTRO de una aldea protegida (sello místico tras vencer su asedio): fuera, en el
+            // campo, se spawnea con normalidad. Esto cubre a los enemigos del mod (vexes, zombies agresivos...).
+            if (VillageManager.estaProtegida(level, anchor)) {
+                DevilRpg.LOGGER.debug("[CustomSpawner] {} - posicion {} dentro de aldea protegida: no se spawnea",
+                        rule.getEntityType().getDescriptionId(), anchor);
                 continue;
             }
             // Cantidad aleatoria entre min y max de la regla.
