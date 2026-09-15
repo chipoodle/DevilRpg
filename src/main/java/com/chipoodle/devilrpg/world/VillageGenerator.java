@@ -21,6 +21,7 @@ import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.BellBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import org.jetbrains.annotations.Nullable;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.ChestBlock;
@@ -79,7 +80,7 @@ public final class VillageGenerator {
     /** Bloques de <b>terraza</b> (patio llano) que se allanan alrededor de una construcción. */
     private static final int MARGEN_TERRAZA = 2;
     /** Camas que se intentan dejar en cada casa (una por cría posible; antes solía haber una sola). */
-    private static final int MIN_CAMAS_POR_CASA = 4;
+    private static final int MIN_CAMAS_POR_CASA = 3;
     /**
      * Hasta cuántos bloques por debajo de la superficie se busca suelo al rellenar el solar de una construcción
      * (la casa mediana dejaba huecos de dos bloques: ver {@code placeVanillaHouse}).
@@ -570,18 +571,31 @@ public final class VillageGenerator {
     /**
      * Coloca <b>camas de más</b> dentro de una casa (hasta {@code cuantas}): busca huecos libres de dos bloques con
      * suelo firme y va poniendo camas. Con más camas la aldea puede crecer (cada cría necesita una cama libre).
+     * <p>
+     * OJO: la cama es un obstáculo, así que <b>nunca se pone en la entrada ni pegada a ella</b> (bloqueaba el paso y
+     * el aldeano se quedaba entrando y saliendo de la casa sin poder llegar a dormir) y se exige <b>aire encima</b>
+     * (una cama sin hueco arriba no sirve para dormir).
      *
      * @return cuántas camas colocó de verdad
      */
-    private static int camasExtra(ServerLevel level, BlockPos origen, Vec3i tam, int cuantas) {
+    private static int camasExtra(ServerLevel level, BlockPos origen, Vec3i tam, int cuantas, @Nullable BlockPos puerta) {
         int puestas = 0;
+        int pdx = puerta == null ? Integer.MIN_VALUE : puerta.getX() - origen.getX();
+        int pdz = puerta == null ? Integer.MIN_VALUE : puerta.getZ() - origen.getZ();
         for (int dy = 1; dy < tam.getY() - 1 && puestas < cuantas; dy++) {
             for (int dx = 1; dx < tam.getX() - 1 && puestas < cuantas; dx++) {
                 for (int dz = 1; dz < tam.getZ() - 2 && puestas < cuantas; dz++) {
+                    // La entrada y su casilla contigua quedan libres (pasillo de la casa).
+                    if (Math.abs(dx - pdx) <= 1 && Math.abs(dz - pdz) <= 1) {
+                        continue;
+                    }
                     BlockPos pies = origen.offset(dx, dy, dz);
                     BlockPos cabeza = pies.relative(Direction.SOUTH);
                     if (!level.getBlockState(pies).isAir() || !level.getBlockState(cabeza).isAir()) {
                         continue;
+                    }
+                    if (!level.getBlockState(pies.above()).isAir() || !level.getBlockState(cabeza.above()).isAir()) {
+                        continue; // sin hueco arriba la cama no se puede usar
                     }
                     if (!level.getBlockState(pies.below()).isSolid() || !level.getBlockState(cabeza.below()).isSolid()) {
                         continue;
@@ -1094,7 +1108,7 @@ public final class VillageGenerator {
         // CAMAS DE MÁS: las casas se llenan hasta MIN_CAMAS_POR_CASA (los niños duermen aquí, y con más camas la
         // aldea puede crecer más allá de los 4 aldeanos de antes).
         if (!esIglesia(id) && camas < MIN_CAMAS_POR_CASA) {
-            camas += camasExtra(level, origen, tam, MIN_CAMAS_POR_CASA - camas);
+            camas += camasExtra(level, origen, tam, MIN_CAMAS_POR_CASA - camas, puerta);
         }
         // Las casas GRANDES llevan una cama extra: en vanilla hace falta una cama libre por cría, así que con 4
         // camas la aldea puede crecer hasta 4 aldeanos.
