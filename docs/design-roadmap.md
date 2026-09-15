@@ -216,11 +216,21 @@ siguiente está implementado y probado.
   aldeano no puede reclamarlo y el juego le acaba **borrando el oficio** (`ResetProfession`).
   `esVivienda` deja fuera iglesia y herrería: no se les ponen camas ni segunda puerta. `asegurarHerreria` es
   idempotente y la llaman la generación y la migración.
+  - **OJO con la Y de las comprobaciones**: la caja con la que se busca el muelle para saber si la herrería ya está se
+    medía desde la Y de la base, que es **la del spawn del jugador** (el log lo delataba: `Aldea en {4809, 101, 4809}`
+    con la puerta en y=75). Con la caja a y=101 no se encontraba nunca y la herrería se **reconstruía cada 10 s**
+    (54 reconstrucciones seguidas en el log); cada una destruye su cofre y el juego **tira el botín al suelo**
+    (`Containers.dropContentsOnDestroy`), de ahí las espadas, picos, armaduras, sillas de montar y diamantes tirados
+    alrededor. Ahora la caja se mide desde **la cota** (`buscarBloque(level, base, nivel, bloque)`).
 - **Etiqueta sobre el aldeano**: arriba el **nombre y el oficio**, debajo lo que está haciendo
   (`"Anselmo (Granjero)\nCosechando"`). El nombre sale del **UUID** (al azar pero estable, sin guardar nada) y el
-  oficio se traduce con las claves del propio juego (`entity.minecraft.villager.<oficio>`). La etiqueta de nombre de
-  vanilla admite varias líneas (el `StringSplitter` corta en el carácter 10). Todo esto se puede apagar con
-  `[village] mostrarActividadAldeanos = false`.
+  oficio se traduce con las claves del propio juego (`entity.minecraft.villager.<oficio>`). **El salto de línea hay
+  que pintarlo a mano**: la etiqueta de nombre de vanilla se dibuja con `Font.drawInBatch(Component, ...)`, que **no
+  parte las líneas** (solo lo hacen `MultiLineLabel`/`drawWordWrap`), así que el `\n` salía como un glifo raro en
+  medio del texto (el "LF" que reportó el jugador). Lo resuelve `VillageNameTagSubscriber` (cliente): intercepta
+  `RenderNameTagEvent` y, solo para las etiquetas de aldeano con salto de línea, le dice al juego que **no** la pinte
+  (`setCanRender(TriState.FALSE)`) y dibuja las líneas una debajo de otra con la misma pose y las mismas pasadas
+  (fondo + texto) que vanilla. Todo esto se puede apagar con `[village] mostrarActividadAldeanos = false`.
 - **Cuatro aldeanos**: la aldea nace con **4** (`VILLAGERS_FOR_FULL_HEALTH`, 4 casas y 4 camas), uno por casa; el
   cuarto es **herrero** (`VillagerProfession.TOOLSMITH`), pensado para la futura economía de la aldea. Con 4
   adultos, la aldea nombra hasta **3 obreros** y deja al granjero con la huerta.
@@ -608,7 +618,10 @@ con su premio y su estado guardado. Lo implementado:
         lleno, y las distancias salían con un desnivel enorme (con Y=0 el `distSqr` mínimo era 64² = 4096 contra un
         tope de 60², así que el goal **no se activaba nunca**). Ahora `VillageGenerator.parcelasDe(level, center)`
         devuelve las parcelas a **la cota** y `centroDe` da el centro **con la cota como Y** (y no cachea si el chunk
-        no está cargado).
+        no está cargado). **Y el centro que se pasa a TODA la aldea** (goals, asedio, zombies) ya no es el del
+        `ObjectiveTargets` (que trae la Y del **spawn del jugador**): para una aldea generada se le pone la Y de la
+        cota en `manageNearby`. Los tres goals miden además la distancia al centro **en horizontal**: la aldea es un
+        recinto en el plano XZ y mirar la Y dejaba al aldeano fuera de su propio pueblo.
       - **Se camina por el CEREBRO**: los tres goals movían al aldeano con `getNavigation().moveTo(...)`, pero el
         cerebro escribe su propio destino en cada tick (su puesto, la plaza, la cama, pasear) y pisaba el nuestro: el
         aldeano se iba a otro lado a mitad de camino. Ahora el rumbo se le da con `VillageManager.caminarHacia`
