@@ -6,6 +6,8 @@ import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.ChestBlock;
+import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.function.Predicate;
@@ -22,8 +24,8 @@ import java.util.function.Predicate;
  */
 public final class VillagePantry {
 
-    /** Dónde se pone la despensa, relativo al centro de la aldea (en la plaza, en diagonal a la campana). */
-    private static final BlockPos OFFSET = new BlockPos(5, 0, 5);
+    /** Dónde está el cofre de la despensa, relativo al centro (dentro del kiosco de la plaza). */
+    private static final BlockPos OFFSET = new BlockPos(0, 1, 1);
     /** Cuánta comida aporta cada cosa guardada. El pan es la ración buena; el trigo, el doble de crudo. */
     public static final int FOOD_PER_BREAD = 4;
     public static final int FOOD_PER_COOKED_MEAT = 4;
@@ -41,16 +43,16 @@ public final class VillagePantry {
     }
 
     /**
-     * La posición <b>real</b> del barril (con su Y), para que los aldeanos caminen al sitio exacto. Si no hay
-     * barril devuelve la posición teórica.
+     * La posición <b>real</b> del cofre (con su Y), para que los aldeanos caminen al sitio exacto. Si no hay cofre
+     * devuelve la posición teórica.
      */
     public static BlockPos posReal(ServerLevel level, BlockPos center) {
         BlockPos p = pos(center);
-        if (level.getBlockState(p).is(Blocks.BARREL)) {
+        if (level.getBlockState(p).is(Blocks.CHEST)) {
             return p;
         }
-        for (BlockPos q : BlockPos.betweenClosed(p.offset(-8, -4, -8), p.offset(8, 4, 8))) {
-            if (level.getBlockState(q).is(Blocks.BARREL)) {
+        for (BlockPos q : BlockPos.betweenClosed(p.offset(-6, -4, -6), p.offset(6, 4, 6))) {
+            if (level.getBlockState(q).is(Blocks.CHEST)) {
                 return q.immutable();
             }
         }
@@ -76,17 +78,18 @@ public final class VillagePantry {
         guardar(c, new ItemStack(Items.BREAD, 2));
     }
 
-    /** El barril de la despensa, o {@code null} si esa aldea aún no tiene (aldeas viejas sin migrar). */
+    /** El cofre (simple o <b>doble</b>) de la despensa, o {@code null} si esa aldea aún no tiene kiosco. */
     @Nullable
     public static Container despensa(ServerLevel level, BlockPos center) {
         BlockPos p = pos(center);
-        if (level.getBlockEntity(p) instanceof Container c) {
-            return c;
-        }
-        // Por si el jugador la movió o la aldea es vieja: se busca un barril cerca del centro.
-        for (BlockPos q : BlockPos.betweenClosed(p.offset(-8, -4, -8), p.offset(8, 4, 8))) {
-            if (level.getBlockState(q).is(Blocks.BARREL) && level.getBlockEntity(q) instanceof Container c) {
-                return c;
+        // Se busca un cofre cerca del kiosco y se pide el contenedor COMBINADO: un cofre doble da 54 ranuras.
+        for (BlockPos q : BlockPos.betweenClosed(p.offset(-6, -4, -6), p.offset(6, 4, 6))) {
+            BlockState state = level.getBlockState(q);
+            if (state.getBlock() instanceof ChestBlock cofre) {
+                Container c = ChestBlock.getContainer(cofre, state, level, q.immutable(), true);
+                if (c != null) {
+                    return c;
+                }
             }
         }
         return null;

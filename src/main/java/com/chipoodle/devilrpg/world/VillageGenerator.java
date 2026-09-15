@@ -23,6 +23,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.BushBlock;
 import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.DoorBlock;
@@ -35,6 +36,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.level.block.state.properties.BedPart;
 import net.minecraft.world.level.block.state.properties.BellAttachType;
+import net.minecraft.world.level.block.state.properties.ChestType;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.block.state.properties.Half;
 import net.minecraft.world.level.levelgen.Heightmap;
@@ -200,8 +202,8 @@ public final class VillageGenerator {
         // Caminos DESPUÉS, del centro a la puerta de cada construcción (ya se sabe dónde está).
         paths(level, center, puertas);
 
-        // Campana al final, en el centro, limpiando su columna (nadie la tapa).
-        bell(level, center);
+        // Kiosco de la plaza: plataforma con 4 salidas, la campana ARRIBA y el cofre doble de la despensa dentro.
+        kiosco(level, center, nivelVilla);
 
         // Granja: da trabajo al aldeano granjero y produce la comida que come la aldea (Iteración 3). Se le pasa
         // LA COTA YA CALCULADA: si la recalculara aquí, la muestra del terreno incluiría las casas y la iglesia
@@ -209,8 +211,8 @@ public final class VillageGenerator {
         // bloque: casas hundidas, zanjas y el muro enterrado (el bug que reportó el jugador).
         farm(level, center, nivelVilla);
 
-        // Despensa de la aldea (barril de la plaza): el centro de la cadena de suministro de comida.
-        asegurarDespensa(level, center);
+        // Remesa inicial de la despensa (semillas, abono y un par de panes): el kiosco ya tiene el cofre doble.
+        VillagePantry.remesaInicial(VillagePantry.despensa(level, center));
 
         // Aldeanos frente a las casas, y el golem que protege la aldea.
         spawnVillagers(level, center);
@@ -364,66 +366,69 @@ public final class VillageGenerator {
     }
 
     /**
-     * Asegura la <b>despensa</b> de la aldea: un <b>barril de verdad</b> (contenedor) sobre una base de piedra en la
-     * plaza, <b>a la cota del pueblo</b>. Es el centro de la cadena de suministro: allí el granjero guarda el trigo y
-     * hornea el pan, y de allí come la aldea (ver {@code VillagePantry}).
+     * Asegura el <b>kiosco de la plaza</b> (y con él la <b>despensa</b>: el cofre doble de dentro) en aldeas que
+     * todavía no lo tienen. Es idempotente: si el cofre ya está a la cota del pueblo, no toca nada.
      * <p>
-     * Idempotente y <b>reparadora</b>: si el barril ya está a la cota, no toca nada. La comprobación se hace por la
-     * ALTURA DE LA ALDEA (no por la Y del centro, que puede caer en otra capa: con esa comprobación cada latido
-     * colocaba otro barril y, como {@code groundY} cuenta el barril como suelo, el barril subía un bloque por latido
-     * dejando una columna de piedra debajo, que es lo que veía el jugador). Además baja al suelo cualquier barril que
-     * haya quedado elevado por ese bug, conservando lo que tuviera dentro.
+     * Ojo con la comprobación: se hace por la <b>ALTURA DE LA ALDEA</b> y buscando el <b>cofre</b>, no por la Y del
+     * centro. Con la comprobación vieja (barril + Y del centro) cada latido colocaba otro contenedor y, como
+     * {@code groundY} cuenta el contenedor como suelo, la despensa subía un bloque por latido dejando una columna de
+     * piedra debajo (bug que vio el jugador).
      */
-    public static void asegurarDespensa(ServerLevel level, BlockPos center) {
-        BlockPos p = VillagePantry.pos(center);
+    public static void asegurarKiosco(ServerLevel level, BlockPos center) {
         int nivel = cotaDeLaPlaza(level, center);
-        BlockPos bueno = new BlockPos(p.getX(), nivel, p.getZ());
-        if (level.getBlockState(bueno).is(Blocks.BARREL)) {
-            return; // ya está donde debe
+        if (nivel <= level.getMinBuildHeight() + 1) {
+            return;
         }
-        // Limpieza: barriles mal colocados (y su columna de piedra) alrededor del sitio de la despensa.
-        for (BlockPos q : BlockPos.betweenClosed(p.offset(-8, -8, -8), p.offset(8, 6, 8))) {
-            if (!level.getBlockState(q).is(Blocks.BARREL)) {
-                continue;
+        if (VillagePantry.despensa(level, center) != null) {
+            return; // el kiosco (con su cofre) ya está
+        }
+        kiosco(level, center, nivel);
+        VillagePantry.remesaInicial(VillagePantry.despensa(level, center));
+        DevilRpg.LOGGER.info("[Village] Aldea en {}: kiosco de la plaza y despensa colocados a la cota {}", center, nivel);
+    }
+
+    /**
+     * Asegura el <b>almacén</b> de la aldea: un cobertizo de piedra con <b>cofre doble</b> donde el constructor (que
+     * también es recolector) deja lo que recoge por el pueblo. <b>Crece solo</b>: cuando sus cofres se llenan, se
+     * añade otro cofre doble en el siguiente hueco (hasta {@code VillageStorage.MAX_COFRES} dobles).
+     */
+    public static void asegurarAlmacen(ServerLevel level, BlockPos center) {
+        int nivel = cotaDeLaPlaza(level, center);
+        if (nivel <= level.getMinBuildHeight() + 1) {
+            return;
+        }
+        BlockPos c = VillageStorage.centro(center);
+        if (!(level.getBlockState(new BlockPos(c.getX(), nivel, c.getZ())).is(Blocks.STONE_BRICKS))) {
+            // Cobertizo: suelo 5x5, cuatro postes de tronco y tejado de tablones.
+            for (int dx = -2; dx <= 2; dx++) {
+                for (int dz = -2; dz <= 2; dz++) {
+                    colocar(level, new BlockPos(c.getX() + dx, nivel, c.getZ() + dz),
+                            Blocks.STONE_BRICKS.defaultBlockState(), 3);
+                }
             }
-            BlockPos malo = q.immutable();
-            List<ItemStack> dentro = new ArrayList<>();
-            if (level.getBlockEntity(malo) instanceof Container contenedor) {
-                for (int i = 0; i < contenedor.getContainerSize(); i++) {
-                    if (!contenedor.getItem(i).isEmpty()) {
-                        dentro.add(contenedor.getItem(i).copy());
+            for (int sx = -1; sx <= 1; sx += 2) {
+                for (int sz = -1; sz <= 1; sz += 2) {
+                    for (int i = 1; i <= 3; i++) {
+                        colocar(level, new BlockPos(c.getX() + sx * 2, nivel + i, c.getZ() + sz * 2),
+                                Blocks.OAK_LOG.defaultBlockState(), 3);
                     }
                 }
             }
-            colocar(level, malo, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
-            // La columna de piedra que lo elevaba, hasta el suelo del pueblo.
-            for (int y = malo.getY() - 1; y > nivel - 1; y--) {
-                BlockPos abajo = new BlockPos(malo.getX(), y, malo.getZ());
-                if (level.getBlockState(abajo).is(Blocks.STONE)) {
-                    colocar(level, abajo, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
+            for (int dx = -2; dx <= 2; dx++) {
+                for (int dz = -2; dz <= 2; dz++) {
+                    colocar(level, new BlockPos(c.getX() + dx, nivel + 4, c.getZ() + dz),
+                            Blocks.OAK_PLANKS.defaultBlockState(), 3);
                 }
             }
-            level.setBlockAndUpdate(bueno, Blocks.BARREL.defaultBlockState());
-            VillagePantry.remesaInicial(VillagePantry.despensa(level, center));
-            if (level.getBlockEntity(bueno) instanceof Container nuevo) {
-                for (ItemStack stack : dentro) {
-                    VillagePantry.guardar(nuevo, stack);
-                }
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: almacen construido en {}", center, c);
+        }
+        // Cofres: si no hay ninguno, o si están TODOS llenos, se coloca otro doble (el almacén crece).
+        if (VillageStorage.cofresColocados(level, center) == 0 || VillageStorage.lleno(level, center)) {
+            if (VillageStorage.colocarSiguientePar(level, center)) {
+                DevilRpg.LOGGER.info("[Village] Aldea en {}: almacen ampliado ({} cofres)",
+                        center, VillageStorage.cofresColocados(level, center));
             }
-            DevilRpg.LOGGER.info("[Village] Aldea en {}: despensa recolocada a la cota {} (estaba en {})",
-                    center, nivel, malo.getY());
-            return;
         }
-        int y = nivel;
-        if (y <= level.getMinBuildHeight() + 1) {
-            return;
-        }
-        colocar(level, new BlockPos(p.getX(), y - 1, p.getZ()), Blocks.STONE.defaultBlockState(), 3);
-        colocar(level, new BlockPos(p.getX(), y, p.getZ()), Blocks.BARREL.defaultBlockState(), 3);
-        // Remesa inicial: semillas para poder sembrar (sin esto no habría de dónde sacar el primer trigo), abono y
-        // un par de panes para aguantar hasta la primera cosecha.
-        VillagePantry.remesaInicial(VillagePantry.despensa(level, center));
-        DevilRpg.LOGGER.info("[Village] Aldea en {}: despensa colocada en {}", center, p);
     }
 
     /** Posiciones base de las casas de la aldea, relativas al centro (las mismas que usa {@link #generate}). */
@@ -619,15 +624,79 @@ public final class VillageGenerator {
         colocar(level, new BlockPos(base.getX(), y + 1, base.getZ() + 2), Blocks.OAK_PLANKS.defaultBlockState(), 3);
     }
 
-    /** Coloca una campana en el centro de la aldea (marcador de la villa), sobre un soporte de piedra. */
-    private static void bell(ServerLevel level, BlockPos center) {
-        int y = groundY(level, center.getX(), center.getZ());
-        // Limpiar la columna del centro por arriba para que no quede tierra apilada sobre la campana.
-        clearColumnAbove(level, center.getX(), center.getZ(), y);
-        // Apoyar la campana con un bloque de piedra debajo (la campana FLOOR necesita bloque sólido debajo).
-        colocar(level, new BlockPos(center.getX(), y - 1, center.getZ()), Blocks.STONE.defaultBlockState(), 3);
-        colocar(level, new BlockPos(center.getX(), y, center.getZ()),
-                Blocks.BELL.defaultBlockState().setValue(BellBlock.FACING, Direction.SOUTH).setValue(BellBlock.ATTACHMENT, BellAttachType.FLOOR), 3);
+    /** Lado del kiosco de la plaza (radio): 2 -> plataforma de 5x5. */
+    private static final int KIOSCO_RADIO = 2;
+    /** Altura de los cuatro postes del kiosco sobre la plataforma. */
+    private static final int KIOSCO_POSTE = 3;
+
+    /**
+     * <b>Kiosco de la plaza</b>: plataforma de piedra con <b>4 salidas</b> (una escalera en el centro de cada lado),
+     * cuatro postes, tejado y la <b>campana arriba</b>. Dentro, sobre la plataforma, el <b>cofre doble de la
+     * despensa</b>: el centro de la cadena de suministro (allí el granjero guarda el trigo y hornea el pan, y de
+     * allí come la aldea).
+     * <p>
+     * La despensa es un COFRE y no un barril <b>a propósito</b>: el barril es el puesto de trabajo del
+     * <b>pescador</b>, así que un aldeano sin oficio lo reclamaba y la aldea acababa con un pescador. El cofre no da
+     * oficio a nadie.
+     */
+    private static void kiosco(ServerLevel level, BlockPos center, int nivel) {
+        int r = KIOSCO_RADIO;
+        int cx = center.getX();
+        int cz = center.getZ();
+        // Si había una campana suelta en el centro (aldeas viejas), se quita: la campana va ahora arriba del kiosco.
+        for (int dy = -1; dy <= 1; dy++) {
+            BlockPos viejo = new BlockPos(cx, nivel + dy, cz);
+            if (level.getBlockState(viejo).is(Blocks.BELL)) {
+                colocar(level, viejo, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
+            }
+        }
+        // Plataforma 5x5 a la cota del pueblo: se anda un bloque por encima de la plaza.
+        for (int dx = -r; dx <= r; dx++) {
+            for (int dz = -r; dz <= r; dz++) {
+                colocar(level, new BlockPos(cx + dx, nivel, cz + dz), Blocks.STONE_BRICKS.defaultBlockState(), 3);
+            }
+        }
+        // 4 salidas: una escalera en el centro de cada lado, mirando hacia la plataforma (se sube de un paso).
+        colocar(level, new BlockPos(cx - r - 1, nivel, cz), escalera(Direction.EAST), 3);
+        colocar(level, new BlockPos(cx + r + 1, nivel, cz), escalera(Direction.WEST), 3);
+        colocar(level, new BlockPos(cx, nivel, cz - r - 1), escalera(Direction.SOUTH), 3);
+        colocar(level, new BlockPos(cx, nivel, cz + r + 1), escalera(Direction.NORTH), 3);
+        // Cuatro postes y el tejado.
+        for (int sx = -1; sx <= 1; sx += 2) {
+            for (int sz = -1; sz <= 1; sz += 2) {
+                for (int i = 1; i <= KIOSCO_POSTE; i++) {
+                    colocar(level, new BlockPos(cx + sx * r, nivel + i, cz + sz * r),
+                            Blocks.STONE_BRICKS.defaultBlockState(), 3);
+                }
+            }
+        }
+        for (int dx = -r; dx <= r; dx++) {
+            for (int dz = -r; dz <= r; dz++) {
+                colocar(level, new BlockPos(cx + dx, nivel + KIOSCO_POSTE + 1, cz + dz),
+                        Blocks.STONE_BRICKS.defaultBlockState(), 3);
+            }
+        }
+        // La campana, ARRIBA, sobre el tejado.
+        colocar(level, new BlockPos(cx, nivel + KIOSCO_POSTE + 2, cz),
+                Blocks.BELL.defaultBlockState().setValue(BellBlock.FACING, Direction.SOUTH)
+                        .setValue(BellBlock.ATTACHMENT, BellAttachType.FLOOR), 3);
+        // El cofre DOBLE de la despensa, sobre la plataforma. Las dos mitades se marcan LEFT/RIGHT a mano: al
+        // colocarlas con setBlock no pasa por la colocación de vanilla y sin esto quedarían dos cofres sueltos.
+        colocar(level, new BlockPos(cx, nivel + 1, cz + 1), cofre(ChestType.LEFT), 3);
+        colocar(level, new BlockPos(cx + 1, nivel + 1, cz + 1), cofre(ChestType.RIGHT), 3);
+    }
+
+    /** Cofre mirando al sur; {@code tipo} marca la mitad (LEFT/RIGHT) para formar un cofre doble. */
+    private static BlockState cofre(ChestType tipo) {
+        return Blocks.CHEST.defaultBlockState()
+                .setValue(ChestBlock.FACING, Direction.NORTH)
+                .setValue(ChestBlock.TYPE, tipo);
+    }
+
+    private static BlockState escalera(Direction hacia) {
+        return Blocks.STONE_BRICK_STAIRS.defaultBlockState()
+                .setValue(StairBlock.FACING, hacia)
+                .setValue(StairBlock.HALF, Half.BOTTOM);
     }
 
     /** Quita el aire y bloques que queden en la columna por encima de {@code baseY+1} (deja la campana al aire). */

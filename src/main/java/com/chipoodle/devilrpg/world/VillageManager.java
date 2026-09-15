@@ -7,6 +7,7 @@ import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInter
 import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapability;
 import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapabilityInterface;
 import com.chipoodle.devilrpg.entity.AggressiveZombieEntity;
+import com.chipoodle.devilrpg.entity.goal.VillagerCollectGoal;
 import com.chipoodle.devilrpg.entity.goal.VillagerFarmGoal;
 import com.chipoodle.devilrpg.entity.goal.VillagerRepairGoal;
 import com.chipoodle.devilrpg.init.ModEntities;
@@ -901,9 +902,12 @@ public final class VillageManager {
             saved.setBlueprint(objectiveIndex, plano);
             DevilRpg.LOGGER.info("[Village] Aldea {}: plano guardado ({} bloques)", objectiveIndex, plano.size());
         }
-        // DESPENSA: el barril de la plaza (si falta). Es donde el granjero guarda el trigo, donde hornea el pan y de
-        // donde come la aldea; sin él no hay cadena de suministro (aldeas viejas no lo tenían).
-        VillageGenerator.asegurarDespensa(level, center);
+        // KIOSCO + DESPENSA: la plataforma de la plaza con su campana arriba y el cofre doble (si falta en aldeas
+        // viejas). Es donde el granjero guarda el trigo, donde hornea el pan y de donde come la aldea.
+        VillageGenerator.asegurarKiosco(level, center);
+        // ALMACÉN del pueblo: cobertizo con cofre doble (que crece) donde el constructor recolector va dejando lo que
+        // recoge. Es una construcción aparte, al lado de la plaza.
+        VillageGenerator.asegurarAlmacen(level, center);
         // GRANJERO: los goals no se guardan con la partida, así que se le repone cada vez que se le ve. Cultiva,
         // cosecha, fertiliza con la harina del compostero y trae el trigo a la despensa.
         for (Villager villager : aldeanos) {
@@ -918,6 +922,7 @@ public final class VillageManager {
         for (Villager villager : aldeanos) {
             if (villager.getPersistentData().getBoolean(BUILDER_TAG)) {
                 asegurarGoalDeObrero(villager, center, objectiveIndex);
+                asegurarGoalDeRecolector(villager, center, objectiveIndex);
                 marcados++;
             }
         }
@@ -967,6 +972,16 @@ public final class VillageManager {
             }
         }
         villager.goalSelector.addGoal(3, new VillagerRepairGoal(villager, center, objectiveIndex));
+    }
+
+    /** Le pone al <b>constructor</b> su goal de recolector: recoge lo del pueblo y lo guarda en el almacén. */
+    private static void asegurarGoalDeRecolector(Villager villager, BlockPos center, int objectiveIndex) {
+        for (WrappedGoal wrapped : villager.goalSelector.getAvailableGoals()) {
+            if (wrapped.getGoal() instanceof VillagerCollectGoal) {
+                return;
+            }
+        }
+        villager.goalSelector.addGoal(5, new VillagerCollectGoal(villager, center, objectiveIndex));
     }
 
     /** Le pone al <b>granjero</b> su goal de cultivar/cosechar/fertilizar y llevar el trigo a la despensa. */
