@@ -79,8 +79,14 @@ public final class VillageGenerator {
     private static final int PLOT_WATER_ROW = PLOT_DEPTH / 2;
     /** Bloques de <b>terraza</b> (patio llano) que se allanan alrededor de una construcción. */
     private static final int MARGEN_TERRAZA = 2;
-    /** Camas que se intentan dejar en cada casa (una por cría posible; antes solía haber una sola). */
-    private static final int MIN_CAMAS_POR_CASA = 3;
+    /**
+     * Camas que caben en una casa <b>según su tamaño</b>: las pequeñas (interior de unos 5x5) aguantan 2 y las
+     * grandes/medianas 4. Meter más dejaba las camas apiladas o tapando el pasillo (el jugador lo vio).
+     */
+    private static int camasSegunTamano(Vec3i tam) {
+        int interior = Math.max(1, tam.getX() - 2) * Math.max(1, tam.getZ() - 2);
+        return interior >= 45 ? 4 : 2;
+    }
     /**
      * Hasta cuántos bloques por debajo de la superficie se busca suelo al rellenar el solar de una construcción
      * (la casa mediana dejaba huecos de dos bloques: ver {@code placeVanillaHouse}).
@@ -597,6 +603,11 @@ public final class VillageGenerator {
                     if (!level.getBlockState(pies.above()).isAir() || !level.getBlockState(cabeza.above()).isAir()) {
                         continue; // sin hueco arriba la cama no se puede usar
                     }
+                    // NI ENCIMA DE OTRA CAMA: una cama es sólida, así que servía de "suelo" y se apilaban.
+                    if (level.getBlockState(pies.below()).getBlock() instanceof net.minecraft.world.level.block.BedBlock
+                            || level.getBlockState(cabeza.below()).getBlock() instanceof net.minecraft.world.level.block.BedBlock) {
+                        continue;
+                    }
                     if (!level.getBlockState(pies.below()).isSolid() || !level.getBlockState(cabeza.below()).isSolid()) {
                         continue;
                     }
@@ -1107,8 +1118,8 @@ public final class VillageGenerator {
         }
         // CAMAS DE MÁS: las casas se llenan hasta MIN_CAMAS_POR_CASA (los niños duermen aquí, y con más camas la
         // aldea puede crecer más allá de los 4 aldeanos de antes).
-        if (!esIglesia(id) && camas < MIN_CAMAS_POR_CASA) {
-            camas += camasExtra(level, origen, tam, MIN_CAMAS_POR_CASA - camas, puerta);
+        if (!esIglesia(id) && camas < camasSegunTamano(tam)) {
+            camas += camasExtra(level, origen, tam, camasSegunTamano(tam) - camas, puerta);
         }
         // Las casas GRANDES llevan una cama extra: en vanilla hace falta una cama libre por cría, así que con 4
         // camas la aldea puede crecer hasta 4 aldeanos.
