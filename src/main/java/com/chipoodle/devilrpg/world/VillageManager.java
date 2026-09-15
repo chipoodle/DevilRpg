@@ -192,9 +192,14 @@ public final class VillageManager {
      *       despeje no baja nunca de la capa de superficie del pueblo y, después de colocar la construcción, se
      *       <b>rellena la columna hasta el suelo del pueblo</b> (césped arriba, tierra debajo) donde la plantilla no
      *       ponga nada. Solo afecta a las casas medianas, así que el jugador veía la zanja de 2 bloques en 2 casas.</li>
+     *   <li>19: <b>el compostero de la granja ya no flota</b>. Se medía el suelo ANTES de quitar el compostero viejo,
+     *       así que `groundY` lo contaba como suelo y el nuevo subía un bloque en cada migración; y el relleno se
+     *       quedaba una capa corto, dejando el compostero en el aire. Medido en el guardado: compostero en la 64 con
+     *       el suelo del pueblo en la 62. Ahora se quita el viejo, se mide el suelo limpio, se rellena la columna
+     *       hasta la capa de debajo (césped arriba) y se apoya el compostero ahí.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 18;
+    public static final int CURRENT_LAYOUT = 19;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),

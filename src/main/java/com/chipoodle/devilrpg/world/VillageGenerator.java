@@ -1769,20 +1769,32 @@ public final class VillageGenerator {
                 colocar(level, new BlockPos(x, base, z), crop, Block.UPDATE_ALL);
             }
         }
-        // Compostero (puesto de trabajo del granjero). Se limpia SU columna antes: al rehacer la parcela con otro
-        // nivel quedaba el compostero viejo debajo y se veían dos apilados (visto en juego).
+        // Compostero (puesto de trabajo del granjero). Tres cosas, en este orden (importa):
+        //  1) Se quita el compostero VIEJO de la columna ANTES de medir el suelo. Si no, `groundY` cuenta el
+        //     compostero como si fuera suelo y el nuevo sube un bloque en cada migración: medido en el guardado
+        //     del jugador, el compostero estaba en la capa 64 con el suelo del pueblo en la 62 (flotando).
+        //  2) Se mide el suelo ya limpio y se rellena la columna hasta la capa de DEBAJO del compostero (césped
+        //     arriba, tierra debajo). Antes el relleno se quedaba una capa corto (`y < nivelCompostero - 1`) y la
+        //     limpieza se llevaba por delante el bloque de superficie -> el compostero quedaba FLOTANDO.
+        //  3) Se coloca el compostero apoyado en esa capa.
         int compX = corner.getX() - 1;
         int compZ = corner.getZ();
-        int sueloCompostero = groundY(level, compX, compZ);
-        int nivelCompostero = Math.max(base, sueloCompostero);
-        for (int y = sueloCompostero - 1; y <= nivelCompostero + 3; y++) {
+        for (int y = nivel - PROFUNDIDAD_SOLAR - 2; y <= nivel + 6; y++) {
             BlockPos p = new BlockPos(compX, y, compZ);
-            if (!level.getBlockState(p).isAir()) {
+            if (level.getBlockState(p).is(Blocks.COMPOSTER)) {
                 colocar(level, p, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
             }
         }
-        for (int y = sueloCompostero - 1; y < nivelCompostero - 1; y++) {
-            colocar(level, new BlockPos(compX, y, compZ), Blocks.DIRT.defaultBlockState(), Block.UPDATE_ALL);
+        int sueloCompostero = groundY(level, compX, compZ);
+        int nivelCompostero = Math.max(base, sueloCompostero);
+        for (int y = sueloCompostero - 1; y < nivelCompostero; y++) {
+            BlockPos p = new BlockPos(compX, y, compZ);
+            BlockState actual = level.getBlockState(p);
+            if (!actual.isAir() && !esTerrenoNatural(actual)) {
+                continue; // no se tapa nada construido
+            }
+            colocar(level, p, (y == nivelCompostero - 1 ? Blocks.GRASS_BLOCK : Blocks.DIRT).defaultBlockState(),
+                    Block.UPDATE_ALL);
         }
         colocar(level, new BlockPos(compX, nivelCompostero, compZ), Blocks.COMPOSTER.defaultBlockState(), Block.UPDATE_ALL);
     }
