@@ -81,7 +81,7 @@ public final class VillageManager {
     // --- Salud del asentamiento (Iteración 3, paso 2) ----------------------------------------------
 
     /** Aldeanos que tiene una aldea sana (los que pone el generador): es el tope de la "salud". */
-    public static final int VILLAGERS_FOR_FULL_HEALTH = 4;
+    public static final int VILLAGERS_FOR_FULL_HEALTH = 5;
     /** Cada cuánto se repone UN aldeano en una aldea debilitada (5 min). */
     private static final int REPOPULATE_INTERVAL_TICKS = 5 * 60 * 20;
     /**
@@ -922,8 +922,14 @@ public final class VillageManager {
         for (Villager villager : aldeanos) {
             if (villager.getPersistentData().getBoolean(BUILDER_TAG)) {
                 asegurarGoalDeObrero(villager, center, objectiveIndex);
-                asegurarGoalDeRecolector(villager, center, objectiveIndex);
                 marcados++;
+            }
+        }
+        // RECOLECTOR: el aldeano sin oficio (holgazán) se dedica SOLO a recoger cosas y guardarlas en el almacén. El
+        // constructor, así, se dedica solo a reparar (antes llevaba los dos goals y se pasaba el día recolectando).
+        for (Villager villager : aldeanos) {
+            if (!villager.isBaby() && villager.getVillagerData().getProfession() == VillagerProfession.NITWIT) {
+                asegurarGoalDeRecolector(villager, center, objectiveIndex);
             }
         }
         int adultos = 0;
@@ -1059,6 +1065,15 @@ public final class VillageManager {
         }
         if (actual.equals(esperado)) {
             return false;
+        }
+        // HIELO (o nieve) donde el plano dice AGUA: en los biomas helados la acequia se congela, y el hielo no
+        // hidrata la tierra de cultivo (FarmBlock.isNearWater usa el fluido), así que los cultivos se secaban y la
+        // aldea pasaba hambre. Se repone el agua (y con la losa que la cubre ya no vuelve a congelarse).
+        boolean eraAgua = esperado.is(Blocks.WATER);
+        boolean congelada = actual.is(Blocks.ICE) || actual.is(Blocks.PACKED_ICE) || actual.is(Blocks.FROSTED_ICE)
+                || actual.is(Blocks.SNOW_BLOCK) || actual.is(Blocks.SNOW);
+        if (eraAgua && congelada) {
+            return true;
         }
         boolean eraHuerta = esperado.is(Blocks.FARMLAND) || esperado.is(Blocks.WATER);
         boolean pisoteada = actual.is(Blocks.DIRT) || actual.is(Blocks.GRASS_BLOCK) || actual.is(Blocks.COARSE_DIRT)

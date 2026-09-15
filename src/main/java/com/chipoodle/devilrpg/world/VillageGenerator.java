@@ -31,6 +31,7 @@ import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.GrowingPlantBlock;
 import net.minecraft.world.level.block.RotatedPillarBlock;
+import net.minecraft.world.level.block.SlabBlock;
 import net.minecraft.world.level.block.StairBlock;
 import net.minecraft.world.level.block.entity.JigsawBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -38,6 +39,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.level.block.state.properties.BedPart;
 import net.minecraft.world.level.block.state.properties.BellAttachType;
 import net.minecraft.world.level.block.state.properties.ChestType;
+import net.minecraft.world.level.block.state.properties.SlabType;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.block.state.properties.Half;
 import net.minecraft.world.level.levelgen.Heightmap;
@@ -1752,11 +1754,22 @@ public final class VillageGenerator {
      */
     private static final BlockPos[] VILLAGER_SPOTS = {
             new BlockPos(-8, 0, -8), new BlockPos(9, 0, -8), new BlockPos(-2, 0, -11),
-            new BlockPos(14, 0, -8)
+            new BlockPos(14, 0, -8), new BlockPos(-11, 0, 2)
     };
+    /**
+     * Oficios de la aldea, en el orden en que se ocupan los sitios:
+     * <ol>
+     *   <li><b>Granjero</b>: cultiva, cosecha, fertiliza y hornea el pan en la despensa.</li>
+     *   <li><b>Herrero de armas</b> y <b>clérigo</b>: los oficios "de oficio" de la aldea.</li>
+     *   <li><b>Herrero de herramientas</b>.</li>
+     *   <li><b>Holgazán</b> (nitwit) = el <b>RECOLECTOR</b>: no tiene oficio propio a propósito, así no reclama
+     *       ningún puesto de trabajo y se dedica <b>solo</b> a recoger cosas del pueblo y guardarlas en el almacén.
+     *       Antes esto lo hacía el constructor y se pasaba el día recolectando en vez de reparar.</li>
+     * </ol>
+     */
     private static final VillagerProfession[] VILLAGER_SPECIALTIES = {
             VillagerProfession.FARMER, VillagerProfession.WEAPONSMITH, VillagerProfession.CLERIC,
-            VillagerProfession.TOOLSMITH
+            VillagerProfession.TOOLSMITH, VillagerProfession.NITWIT
     };
 
     /** Vuelve a poner los aldeanos y el golem de una aldea ya construida (ver {@code VillageManager}). */
@@ -1930,8 +1943,17 @@ public final class VillageGenerator {
                     }
                 }
                 if (dz == PLOT_WATER_ROW) {
-                    // Acequia central: el agua va a ras de la tierra de cultivo y riega las cuatro filas.
+                    // Acequia central: el agua va a ras de la tierra de cultivo y riega las cuatro filas. Se CUBRE
+                    // con una losa (que se pisa) por dos motivos medidos en la partida del jugador:
+                    //  1) el agua expuesta se CONGELA en biomas helados (habia parcelas con `ice` en el canal): el
+                    //     hielo no hidrata (`FarmBlock.isNearWater` usa el fluido) y los cultivos se secaban, asi que
+                    //     la aldea pasaba hambre con la despensa vacia;
+                    //  2) al pisar el canal los aldeanos se caian dentro y PISOTEABAN la tierra de cultivo de al lado
+                    //     (la convertian en tierra), y el obrero no daba abasto a reponerla.
                     colocar(level, new BlockPos(x, base - 1, z), Blocks.WATER.defaultBlockState(), Block.UPDATE_ALL);
+                    colocar(level, new BlockPos(x, base, z),
+                            Blocks.OAK_SLAB.defaultBlockState().setValue(SlabBlock.TYPE, SlabType.BOTTOM),
+                            Block.UPDATE_ALL);
                     continue;
                 }
                 colocar(level, new BlockPos(x, base - 1, z), Blocks.FARMLAND.defaultBlockState(), Block.UPDATE_ALL);
