@@ -180,8 +180,22 @@ siguiente está implementado y probado.
   borraba. `escalonDeEntrada` sigue poniendo escaleras de roble delante de la puerta si el suelo de fuera quedó más
   bajo que el piso, y la granja usa la **misma** cota (antes la recalculaba a mitad de obra, con las casas y la
   iglesia ya colocadas).
-- **El muro entra en el plano y se rehace al migrar**: el muro es de **troncos** (`wall`) y `seDescartaDelPlano`
-  los descartaba como si fueran vegetación, así que no estaban en el plano y el obrero **no podía reponer** los que
+- **Nada del mundo dentro de la aldea (trazado 25)**: dentro del recinto **no queda nada** que no sea la aldea.
+  - El **subsuelo natural entra como terreno** (`esTerrenoNatural`), **minerales incluidos** (las ocho vetas del
+    overworld en piedra y en deepslate, `BASE_STONE_OVERWORLD`/`BASE_STONE_NETHER`, `DIRT`, `SAND`, `TERRACOTA`,
+    `ICE`, `SNOW`, `NYLIUM`, `SCULK_REPLACEABLE`). No lo estaban y al recortar un monte con una veta dentro la
+    piedra de alrededor se iba y **la veta quedaba flotando en el aire** (medido en el guardado: 106 minerales por
+    encima de la cota en una aldea), además de **colarse en el plano** (el obrero los "reparaba" como parte del
+    pueblo).
+  - `despejarVolumen` (aldea **nueva**): se barre el volumen entero y se quita todo lo que no sea terreno natural
+    —vegetación, pero también **minas, mazmorras, ruinas y cofres**—. En la migración de una aldea ya construida
+    **no** se usa (derribaría el pueblo): allí solo se quita lo que no es terreno.
+  - `sellarSuelo` (al final del nivelado, en las dos vías): si debajo pasa una **barranca, una cueva o una mina**,
+    el recorte del techo dejaba **agujeros en el suelo** de la aldea y los aldeanos **se caían** (visto en juego:
+    85 columnas huecas, algunas de 9 bloques). Ahora cada columna hueca se rellena hacia abajo hasta el primer
+    bloque firme (hasta 64) con césped arriba. Solo se tapan columnas de **aire**: el agua de la acequia de la
+    granja se queda como está.
+- **El muro entra en el plano y se rehace al migrar**: el muro es de **troncos** (`wall`) y `seDescartaDelPlano`  los descartaba como si fueran vegetación, así que no estaban en el plano y el obrero **no podía reponer** los que
   rompe un asedio (era el bug del jugador: "al defender la aldea, las maderas del muro no vuelven nunca"). Ahora
   los troncos **sí** entran en el plano y, en la migración de trazado, `VillageGenerator.rehacerMuro` **reconstruye
   el muro entero** (limpia la franja del muro y lo vuelve a levantar con `fence`): cuando el muro queda enterrado o
