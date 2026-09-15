@@ -587,8 +587,13 @@ con su premio y su estado guardado. Lo implementado:
    y el gestor repoblaba la aldea después, como si no hubiera pasado nada).
 10. ✅ **Aldeanos que cultivan, comen, reparan y envejecen** (`VillageManager.tickVillageLife`, un latido cada
     `VILLAGE_POLL_TICKS` = 10 s, solo en aldeas **en paz** con aldeanos vivos):
-    - **Cultivan**: el generador planta **dos parcelas** de 9×5 (trigo, zanahorias y patatas, acequia central y
-      compostador) — `VillageGenerator.farm`. Cada parcela se nivela a **un solo nivel** (`base` = la columna más
+    - **Cultivan**: el generador planta **dos parcelas** de **9×9** (trigo, zanahorias, patatas y betabel; acequia
+      central y
+      compostador) — `VillageGenerator.farm`. La acequia va en la fila del medio, así que salen **4 carriles de
+      cultivo por lado** (72 cultivos por parcela; antes la parcela era de 9×5 con 2 carriles por lado y la
+      producción se quedaba corta, el jugador lo pidió). Las parcelas están en `(-20,10)` y `(10,6)` (comprobado que
+      caben las dos con el almacén, la herrería, las casas, el kiosco y los sitios de aldeano, y que **tapan a las
+      parcelas viejas** para no dejar bancales sueltos). Cada parcela se nivela a **un solo nivel** (`base` = la columna más
       alta de su huella) y se **limpia antes de rehacerse**: si cada columna usara su propio `groundY`, en terreno
       irregular la acequia quedaba un bloque por debajo de la tierra de cultivo y el trigo se **secaba** (la
       tierra solo se hidrata con agua a su nivel o uno por encima, `FarmBlock.isNearWater`); y al rehacerla sin
@@ -596,6 +601,21 @@ con su premio y su estado guardado. Lo implementado:
       propia limpieza de columna. Las parcelas viven en `FARM_PLOTS` (esquina relativa al centro) con
       `PLOT_WIDTH`/`PLOT_DEPTH`/`PLOT_WATER_ROW`, y los **faroles nunca se plantan dentro** (`insideFarm`, con 1
       bloque de margen).
+      - **La Y del centro manda (y es la cota)**: los goals reciben el centro de la aldea, y ese centro llegaba con
+        una Y falsa — la del **spawn del jugador** (101 con la aldea a 62-75) o **0** desde `centroDe`. Con esa Y,
+        `parcela.offset(dx, 0, dz)` + barrido de ±1 buscaba los cultivos **decenas de bloques por debajo del suelo**:
+        el granjero no veía ni un cultivo (daba vueltas y se iba a la despensa sin cosechar nada) ni el compostero
+        lleno, y las distancias salían con un desnivel enorme (con Y=0 el `distSqr` mínimo era 64² = 4096 contra un
+        tope de 60², así que el goal **no se activaba nunca**). Ahora `VillageGenerator.parcelasDe(level, center)`
+        devuelve las parcelas a **la cota** y `centroDe` da el centro **con la cota como Y** (y no cachea si el chunk
+        no está cargado).
+      - **Se camina por el CEREBRO**: los tres goals movían al aldeano con `getNavigation().moveTo(...)`, pero el
+        cerebro escribe su propio destino en cada tick (su puesto, la plaza, la cama, pasear) y pisaba el nuestro: el
+        aldeano se iba a otro lado a mitad de camino. Ahora el rumbo se le da con `VillageManager.caminarHacia`
+        (`WALK_TARGET`/`LOOK_TARGET`, igual que el `HarvestFarmland` del juego) y se le quita al llegar
+        (`VillageManager.parar`).
+      - **El recolector es el holgazán**: su `canUse` exigía la marca de OBRERO (`BUILDER_TAG`), que el recolector no
+        tiene nunca, así que **nunca recogía nada** (los objetos se quedaban tirados: 155 en una aldea del guardado).
     - **Comen pan de verdad**: a un aldeano que aún no puede criar (vanilla pide **12 puntos** de comida:
       `Villager.canBreed`) se le deja **un pan en el suelo** que recoge él mismo (`ItemEntity` + `wantsToPickUp`
       vanilla), y con eso nacen **crías** de verdad. Un pan por latido y solo si la despensa tiene para pagarlo
