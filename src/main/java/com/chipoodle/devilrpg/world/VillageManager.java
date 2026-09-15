@@ -376,6 +376,7 @@ public final class VillageManager {
             if (saved.isGenerated(i)) {
                 BlockPos centro = centroDe(level, i);
                 if (centro != null) {
+                    // lint:ok I1 -- aquí SÍ se quiere la Y del plano, que ya es la cota (ver centroDe)
                     target = new BlockPos(target.getX(), centro.getY(), target.getZ());
                 }
             }
@@ -601,7 +602,12 @@ public final class VillageManager {
             if (e == null || !e.isAlive()) {
                 continue;
             }
-            if (e.distanceToSqr(d.center.getX() + 0.5D, d.center.getY() + 0.5D, d.center.getZ() + 0.5D) > perimeterSqr) {
+            // La distancia es HORIZONTAL: el perímetro es un disco del pueblo (en XZ). Midiendo en 3D, un zombie que
+            // estuviera un par de bloques por encima del suelo contaba como "no ha entrado" y la aldea se salvaba de
+            // rebote.
+            double dx = e.getX() - (d.center.getX() + 0.5D);
+            double dz = e.getZ() - (d.center.getZ() + 0.5D);
+            if (dx * dx + dz * dz > perimeterSqr) {
                 return false; // éste no llegó a entrar
             }
         }
@@ -1669,10 +1675,12 @@ public final class VillageManager {
         }
     }
 
-    /** Manda un mensaje a los jugadores que estén cerca de la aldea. */
+    /** Manda un mensaje a los jugadores que estén cerca de la aldea (distancia HORIZONTAL: la aldea es un recinto). */
     private static void announceNearby(ServerLevel level, BlockPos center, String message) {
         for (ServerPlayer p : level.players()) {
-            if (p.blockPosition().distSqr(center) <= SIEGE_WARN_RADIUS * SIEGE_WARN_RADIUS) {
+            double dx = p.getX() - center.getX();
+            double dz = p.getZ() - center.getZ();
+            if (dx * dx + dz * dz <= SIEGE_WARN_RADIUS * SIEGE_WARN_RADIUS) {
                 p.displayClientMessage(Component.literal(message), false);
             }
         }

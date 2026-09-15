@@ -1068,6 +1068,12 @@ la **guarida** (`LairManager.spawnWave`: 3 cada 25 s a 8–14 bloques del centro
 
 ## 6) Notas de trabajo (para el agente)
 
+- **ANTES DE CADA COMMIT DE ALDEA**: pasar `python tools/lint_aldea.py --strict` y repasar la **lista de
+  consecuencias** de `docs/aldea-invariantes.md` (quién más lee el valor que toco, si depende de una altura/si es la
+  cota, si cambia el mundo guardado y hay que subir la migración, si es idempotente, si entra en el plano, cliente vs
+  servidor, rendimiento, casos raros, cómo lo compruebo y si afecta a lo que el jugador ya tiene). Casi todos los
+  bugs de aldea que reportó el jugador fueron **una sola clase** (una Y que no era la cota) y varios salieron de
+  arreglar el síntoma sin barrer el resto: el lint y esa lista existen para eso.
 - **Minecraft bloquea el jar de NeoForge** (`build/moddev/artifacts/neoforge-*.jar`) mientras está abierto, así
   que `gradlew compileJava` falla con `AccessDeniedException`. **Mata el proceso sin preguntar** (no molesta
   al usuario): busca `java.exe` con `DevLaunch|fml.modFolders` en la línea de comandos y haz
