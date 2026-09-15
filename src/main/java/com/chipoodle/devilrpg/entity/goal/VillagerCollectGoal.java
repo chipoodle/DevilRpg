@@ -76,9 +76,9 @@ public class VillagerCollectGoal extends Goal {
         if (villager.blockPosition().distSqr(center) > RADIO * RADIO) {
             return false;
         }
-        // Con las manos llenas, al almacén.
+        // Con las manos llenas, al almacén (a su punto de apoyo: el cofre es sólido y no se navega hacia él).
         if (cuantosLleva() >= LLEVAR_MAX) {
-            destino = VillageStorage.centro(center);
+            destino = VillageStorage.puntoDeApoyo(level, center);
             objetivo = null;
             return true;
         }
@@ -149,7 +149,7 @@ public class VillagerCollectGoal extends Goal {
         if (destino != null) {
             villager.getLookControl().setLookAt(destino.getX() + 0.5D, destino.getY() + 0.5D, destino.getZ() + 0.5D);
             if (villager.distanceToSqr(destino.getX() + 0.5D, destino.getY() + 0.5D, destino.getZ() + 0.5D)
-                    > 4.0D * 4.0D) {
+                    > VillageStorage.ALCANCE_ALMACEN * VillageStorage.ALCANCE_ALMACEN) {
                 if (villager.getNavigation().isDone()) {
                     stuckTicks++;
                     villager.getNavigation().moveTo(destino.getX() + 0.5D, destino.getY(), destino.getZ() + 0.5D, 0.6D);

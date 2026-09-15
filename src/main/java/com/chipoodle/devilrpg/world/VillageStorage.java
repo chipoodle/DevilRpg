@@ -45,6 +45,18 @@ public final class VillageStorage {
     }
 
     /**
+     * Punto de apoyo para que un aldeano vaya al almacén: una casilla <b>del suelo del cobertizo</b> que no tiene
+     * cofre encima. No se navega hacia el cofre (es sólido y el aldeano se quedaría dando vueltas alrededor).
+     */
+    public static BlockPos puntoDeApoyo(ServerLevel level, BlockPos villageCenter) {
+        int nivel = VillageGenerator.cotaDeLaPlaza(level, villageCenter);
+        return new BlockPos(villageCenter.getX() + 19, nivel + 1, villageCenter.getZ() + 19);
+    }
+
+    /** Distancia a la que un aldeano ya alcanza el almacén para descargar. */
+    public static final double ALCANCE_ALMACEN = 5.0D;
+
+    /**
      * Posición REAL de uno de los cofres del almacén: X/Z del hueco y <b>Y = cota del pueblo + 1</b> (encima del
      * suelo del cobertizo). OJO: nunca la Y del centro del objetivo, que puede caer en otra capa y dejar el cofre
      * FLOTANDO por encima del almacén (el bug que vio el jugador).

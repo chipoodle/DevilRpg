@@ -44,9 +44,21 @@ public final class VillagePantry {
     }
 
     /**
-     * La posición <b>real</b> del cofre (con su Y), para que los aldeanos caminen al sitio exacto. Si no hay cofre
-     * devuelve la posición teórica.
+     * Punto de apoyo para que un aldeano vaya a la despensa: una casilla de suelo <b>delante del kiosco</b> (a la
+     * cota del pueblo, transitable).
+     * <p>
+     * OJO: nunca se navega HACIA el cofre, porque es un bloque sólido y la navegación no puede "llegar" a esa
+     * casilla: el aldeano se quedaba dando vueltas alrededor del kiosco sin descargar nada (el bug que vio el
+     * jugador). Se camina a este punto y se comprueba la distancia AL COFRE.
      */
+    public static BlockPos puntoDeApoyo(ServerLevel level, BlockPos center) {
+        int nivel = VillageGenerator.cotaDeLaPlaza(level, center);
+        return new BlockPos(center.getX(), nivel, center.getZ() + 4);
+    }
+
+    /** Distancia (en bloques) a la que un aldeano ya "alcanza" la despensa para dejar o coger cosas. */
+    public static final double ALCANCE_DESPENSA = 5.0D;
+
     public static BlockPos posReal(ServerLevel level, BlockPos center) {
         BlockPos p = pos(center);
         if (level.getBlockState(p).is(Blocks.CHEST)) {

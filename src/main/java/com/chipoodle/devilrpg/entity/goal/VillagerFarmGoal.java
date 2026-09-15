@@ -99,10 +99,12 @@ public class VillagerFarmGoal extends Goal {
             return false;
         }
         Container despensa = VillagePantry.despensa(level, center);
-        // 1) Con trigo encima, a la despensa: allí lo guarda y hornea pan.
+        // 1) Con trigo encima, a la despensa: allí lo guarda y hornea pan. Se camina al PUNTO DE APOYO (delante del
+        // kiosco), no al cofre: el cofre es un bloque sólido y la navegación no llega a esa casilla (el granjero se
+        // quedaba dando vueltas al kiosco sin dejar nada, que es lo que vio el jugador).
         if (trigoEnMano() >= LLEVAR_TRIGO) {
             tarea = Tarea.DESPENSA;
-            target = VillagePantry.posReal(level, center);
+            target = VillagePantry.puntoDeApoyo(level, center);
             return true;
         }
         // 2) Cultivo maduro: a cosecharlo.
@@ -130,7 +132,7 @@ public class VillagerFarmGoal extends Goal {
         // 5) Nada que hacer (o hay que ir a por semillas/harina): si la despensa tiene recambios, se va a por ellos.
         if (despensa != null && (!tieneSemillas() || harinaEnMano() == 0)) {
             tarea = Tarea.DESPENSA;
-            target = VillagePantry.posReal(level, center);
+            target = VillagePantry.puntoDeApoyo(level, center);
             return true;
         }
         restTicks = IDLE_REST_TICKS;
@@ -156,7 +158,9 @@ public class VillagerFarmGoal extends Goal {
             return;
         }
         villager.getLookControl().setLookAt(target.getX() + 0.5D, target.getY() + 0.5D, target.getZ() + 0.5D);
-        if (villager.distanceToSqr(target.getX() + 0.5D, target.getY() + 0.5D, target.getZ() + 0.5D) > REACH * REACH) {
+        // Para la despensa vale un alcance mayor (el cofre está dentro del kiosco y no se navega hacia él).
+        double alcance = tarea == Tarea.DESPENSA ? VillagePantry.ALCANCE_DESPENSA : REACH;
+        if (villager.distanceToSqr(target.getX() + 0.5D, target.getY() + 0.5D, target.getZ() + 0.5D) > alcance * alcance) {
             if (villager.getNavigation().isDone()) {
                 stuckTicks++;
                 irAlObjetivo();
