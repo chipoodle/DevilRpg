@@ -164,6 +164,9 @@ public class VillagerRepairGoal extends Goal {
             BlockPos puesto = target;
             level.setBlock(puesto, state, Block.UPDATE_ALL);
             level.playSound(null, puesto, state.getSoundType().getPlaceSound(), SoundSource.BLOCKS, 0.8F, 1.0F);
+            // Lo que acaba de reponer, en la cabeza (además del log): así se ve al obrero trabajar de verdad. El
+            // nombre del bloque va en español a mano: la traducción del juego la resolvería el servidor (en inglés).
+            VillageManager.ponerSuceso(villager, "Repuso " + VillageManager.nombreEnEspanol(state));
             DevilRpg.LOGGER.debug("[Village] El obrero repuso {} en {}", state.getBlock(), puesto);
         }
         VillageManager.liberarHueco(level, target);

@@ -220,13 +220,23 @@ public class VillagerCollectGoal extends Goal {
 
     /** Deja en el almacén todo lo que lleve de la lista blanca. */
     private void descargar(ServerLevel level) {
+        int guardados = 0;
         for (int i = 0; i < villager.getInventory().getContainerSize(); i++) {
             ItemStack s = villager.getInventory().getItem(i);
             if (s.isEmpty() || !esDelPueblo(s)) {
                 continue;
             }
+            int antes = s.getCount();
             ItemStack resto = VillageStorage.guardar(level, center, s.copy());
+            guardados += antes - resto.getCount();
             villager.getInventory().setItem(i, resto);
+        }
+        if (guardados > 0) {
+            // Lo que acaba de hacer, en la cabeza y en el log: antes el recolector no decía nada y no había forma de
+            // saber si estaba trabajando.
+            VillageManager.ponerSuceso(villager, "Guardo " + guardados + " cosa(s) en el almacen");
+            com.chipoodle.devilrpg.DevilRpg.LOGGER
+                    .info("[Village] El recolector guardo {} cosa(s) en el almacen", guardados);
         }
     }
 

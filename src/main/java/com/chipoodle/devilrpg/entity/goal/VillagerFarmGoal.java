@@ -290,6 +290,7 @@ public class VillagerFarmGoal extends Goal {
         }
         if (net.minecraft.world.item.BoneMealItem.growCrop(harina, level, target)) {
             level.playSound(null, target, net.minecraft.sounds.SoundEvents.BONE_MEAL_USE, SoundSource.BLOCKS, 0.8F, 1.0F);
+            VillageManager.ponerSuceso(villager, "Abono la huerta");
         }
     }
 
@@ -300,6 +301,7 @@ public class VillagerFarmGoal extends Goal {
             DevilRpg.LOGGER.warn("[Village] El granjero llego al kiosco y NO encontro la despensa (aldea en {})", center);
             return;
         }
+        int guardados = 0;
         // 1) Compostero lleno -> harina de huesos para la despensa (el abono de la aldea lo produce ella misma).
         for (BlockPos p : VillageGenerator.parcelasDe(level, center)) {
             BlockPos comp = p.offset(-1, 0, 0);
@@ -319,7 +321,9 @@ public class VillagerFarmGoal extends Goal {
         for (int i = 0; i < villager.getInventory().getContainerSize(); i++) {
             ItemStack s = villager.getInventory().getItem(i);
             if (s.is(Items.WHEAT) || VillagePantry.esVegetal(s)) {
+                int antes = s.getCount();
                 ItemStack resto = VillagePantry.guardar(despensa, s.copy());
+                guardados += antes - resto.getCount();
                 villager.getInventory().setItem(i, resto);
             }
         }
@@ -359,12 +363,25 @@ public class VillagerFarmGoal extends Goal {
                 guardarEnInventario(new ItemStack(Items.BONE_MEAL, coge));
             }
         }
-        if (horneadas > 0) {
-            DevilRpg.LOGGER.info("[Village] El granjero guardo su trigo y horneo {} pan(es) en la despensa", horneadas);
+        // LO QUE ACABA DE HACER, a la cabeza (y al log): es más informativo que el verbo de lo que está haciendo, y
+        // es lo que el jugador necesita para saber si la cadena de comida funciona sin abrir el log.
+        String suceso;
+        if (horneadas > 0 && guardados > 0) {
+            suceso = "Guardo " + guardados + " y horneo " + horneadas + " pan(es)";
+        } else if (horneadas > 0) {
+            suceso = "Horneo " + horneadas + " pan(es) en la despensa";
+        } else if (guardados > 0) {
+            suceso = "Guardo " + guardados + " en la despensa";
         } else if (traidos > 0) {
-            DevilRpg.LOGGER.info("[Village] El granjero trajo {} unidad(es) de comida del almacen a la despensa", traidos);
+            suceso = "Trajo " + traidos + " del almacen a la despensa";
         } else {
-            DevilRpg.LOGGER.debug("[Village] El granjero visito la despensa (no habia trigo para hornear)");
+            suceso = null; // no había nada que hacer: no se anuncia nada
+        }
+        if (suceso != null) {
+            VillageManager.ponerSuceso(villager, suceso);
+            DevilRpg.LOGGER.info("[Village] El granjero: {}", suceso);
+        } else {
+            DevilRpg.LOGGER.debug("[Village] El granjero visito la despensa (no habia nada que hacer)");
         }
     }
 

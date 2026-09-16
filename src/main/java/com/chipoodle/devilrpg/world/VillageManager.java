@@ -1249,6 +1249,78 @@ public final class VillageManager {
     /** Marca (en los datos del aldeano) de que el nombre flotante lo puso el mod, y cuándo. */
     public static final String ACTIVIDAD_TAG = "DevilRpgActividad";
     private static final String ACTIVIDAD_HORA_TAG = "DevilRpgActividadTick";
+    /** Cuándo fue lo último que <b>hizo</b> el aldeano (un suceso), para dejar verlo unos segundos. */
+    private static final String SUCESO_HORA_TAG = "DevilRpgSucesoTick";
+    /** Cuánto se queda en la cabeza lo que acaba de hacer (5 s): después vuelve sola la actividad de fondo. */
+    private static final int SUCESO_TICKS = 100;
+
+    /**
+     * Nombre del bloque <b>en español</b> para las etiquetas y los avisos.
+     * <p>
+     * OJO: no se usa {@code state.getBlock().getName()}, porque las traducciones las resuelve EL SERVIDOR y ahí el
+     * idioma es inglés (por eso la etiqueta enseñaba "Farmer"): los textos del mod van a mano, como el resto.
+     */
+    public static String nombreEnEspanol(net.minecraft.world.level.block.state.BlockState state) {
+        net.minecraft.world.level.block.Block b = state.getBlock();
+        if (b == net.minecraft.world.level.block.Blocks.OAK_LOG
+                || b == net.minecraft.world.level.block.Blocks.STRIPPED_OAK_LOG) {
+            return "tronco de roble";
+        }
+        if (b == net.minecraft.world.level.block.Blocks.OAK_PLANKS) {
+            return "tablones";
+        }
+        if (b == net.minecraft.world.level.block.Blocks.COBBLESTONE) {
+            return "piedra";
+        }
+        if (b == net.minecraft.world.level.block.Blocks.STONE_BRICKS
+                || b == net.minecraft.world.level.block.Blocks.MOSSY_STONE_BRICKS
+                || b == net.minecraft.world.level.block.Blocks.CRACKED_STONE_BRICKS) {
+            return "piedra labrada";
+        }
+        if (b == net.minecraft.world.level.block.Blocks.DIRT_PATH) {
+            return "camino";
+        }
+        if (b == net.minecraft.world.level.block.Blocks.OAK_SLAB) {
+            return "losa";
+        }
+        if (b == net.minecraft.world.level.block.Blocks.OAK_STAIRS
+                || b == net.minecraft.world.level.block.Blocks.COBBLESTONE_STAIRS) {
+            return "escaleras";
+        }
+        if (b == net.minecraft.world.level.block.Blocks.LANTERN) {
+            return "farol";
+        }
+        if (b == net.minecraft.world.level.block.Blocks.OAK_FENCE) {
+            return "valla";
+        }
+        if (b == net.minecraft.world.level.block.Blocks.GLASS_PANE
+                || b == net.minecraft.world.level.block.Blocks.WHITE_STAINED_GLASS_PANE) {
+            return "cristal";
+        }
+        if (b == net.minecraft.world.level.block.Blocks.DIRT
+                || b == net.minecraft.world.level.block.Blocks.GRASS_BLOCK) {
+            return "tierra";
+        }
+        if (b == net.minecraft.world.level.block.Blocks.OAK_DOOR) {
+            return "puerta";
+        }
+        if (b == net.minecraft.world.level.block.Blocks.OAK_PRESSURE_PLATE) {
+            return "placa";
+        }
+        if (b == net.minecraft.world.level.block.Blocks.COMPOSTER) {
+            return "compostero";
+        }
+        if (b == net.minecraft.world.level.block.Blocks.FARMLAND) {
+            return "tierra de cultivo";
+        }
+        if (b == net.minecraft.world.level.block.Blocks.WATER) {
+            return "agua";
+        }
+        if (b == net.minecraft.world.level.block.Blocks.BELL) {
+            return "campana";
+        }
+        return "un bloque";
+    }
 
     /**
      * Nombres de pila de los aldeanos. Se le asigna uno <b>al azar pero estable</b>: se saca de su UUID, así que el
@@ -1320,8 +1392,43 @@ public final class VillageManager {
         if (texto == null) {
             return;
         }
-        // Etiqueta de tres datos: NOMBRE, OFICIO y lo que está haciendo. La profesión se lee en cada refresco, así
-        // que si le cambia el oficio (o se le repone, ver `reponerProfesiones`) la etiqueta se actualiza sola.
+        // Si acaba de HACER algo, lo que hizo se queda unos segundos en la cabeza y no se pisa con el verbo de lo que
+        // está haciendo (que es lo de fondo y vuelve solo cuando el suceso caduca).
+        if (sucesoReciente(villager)) {
+            return;
+        }
+        etiqueta(villager, texto);
+    }
+
+    /**
+     * Pone en la cabeza del aldeano <b>lo que acaba de hacer</b> (un suceso): "Guardó 12 de trigo y horneó 2 panes",
+     * "Repuso Tronco de roble"... Es más informativo que el verbo de lo que está haciendo, así que se queda
+     * {@link #SUCESO_TICKS} (5 s) y después la etiqueta vuelve sola a la actividad.
+     * <p>
+     * El texto tiene que ser <b>corto</b> (una etiqueta de nombre no se parte sola y se dibuja en una línea): como
+     * arriba ya va el nombre y el oficio, aquí no hace falta repetir "el granjero".
+     */
+    public static void ponerSuceso(Villager villager, @Nullable String texto) {
+        if (!com.chipoodle.devilrpg.config.DevilRpgConfig.MOSTRAR_ACTIVIDAD_ALDEANOS || texto == null
+                || texto.isBlank()) {
+            return;
+        }
+        villager.getPersistentData().putLong(SUCESO_HORA_TAG, villager.level().getGameTime());
+        etiqueta(villager, texto);
+    }
+
+    /** ¿Ese aldeano acaba de hacer algo? (mientras sí, no se le pisa la etiqueta con la actividad de fondo). */
+    private static boolean sucesoReciente(Villager villager) {
+        long t = villager.getPersistentData().getLong(SUCESO_HORA_TAG);
+        return t != 0L && villager.level().getGameTime() - t < SUCESO_TICKS;
+    }
+
+    /**
+     * Escribe la etiqueta del aldeano: <b>NOMBRE y OFICIO</b> arriba y, debajo, el texto que le pasen (lo que hace o
+     * lo que acaba de hacer). La profesión se lee en cada refresco, así que si le cambia el oficio (o se le repone,
+     * ver {@code reponerProfesiones}) la etiqueta se actualiza sola.
+     */
+    private static void etiqueta(Villager villager, String texto) {
         String etiqueta = nombreDe(villager) + " (" + nombreDeOficio(villager) + ")\n" + texto;
         villager.getPersistentData().putLong(ACTIVIDAD_HORA_TAG, villager.level().getGameTime());
         String actual = villager.getCustomName() == null ? "" : villager.getCustomName().getString();
