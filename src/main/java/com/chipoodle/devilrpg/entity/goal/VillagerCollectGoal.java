@@ -273,7 +273,14 @@ public class VillagerCollectGoal extends Goal {
                 || s.is(Blocks.OAK_LOG.asItem()) || s.is(Blocks.OAK_PLANKS.asItem())
                 || s.is(Blocks.OAK_SAPLING.asItem()) || s.getDescriptionId().contains("sapling")
                 || s.getDescriptionId().contains("_log") || s.getDescriptionId().contains("_wool")
-                || s.getDescriptionId().contains("_seeds");
+                || s.getDescriptionId().contains("_seeds")
+                // MATERIALES DEL TALLER (lo que forjan los herreros): chips de metal (pepitas), carne de zombie podrida
+                // (de ahí sale el cuero) y chatarra de hierro (armas y armaduras viejas, que se funden en lingotes).
+                || s.is(Items.IRON_NUGGET) || s.is(Items.ROTTEN_FLESH)
+                || s.is(Items.IRON_SWORD) || s.is(Items.IRON_PICKAXE) || s.is(Items.IRON_AXE)
+                || s.is(Items.IRON_SHOVEL) || s.is(Items.IRON_HOE) || s.is(Items.SHIELD)
+                || s.is(Items.IRON_HELMET) || s.is(Items.IRON_CHESTPLATE) || s.is(Items.IRON_LEGGINGS)
+                || s.is(Items.IRON_BOOTS);
     }
 
     private int cuantosLleva() {

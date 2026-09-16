@@ -378,6 +378,41 @@ convierte en el **escalón de la entrada**, y el de `name=minecraft:bottom` (poo
 
 ---
 
+### 3b.8 Economía de materiales y taller (los dos herreros)
+
+La aldea tiene **dos herreros** con su puesto en la herrería y **producen de verdad**: cogen los materiales del
+**almacén**, trabajan en su sitio y dejan la pieza en el almacén (de ahí se equipará la milicia). El ciclo es real, no
+un contador: van al almacén, **se llevan** los ingredientes (los llevan encima, se les ve cargados), los trabajan en su
+puesto y **traen** lo fabricado. Queda en el log y en su etiqueta ("Forjó una espada de hierro").
+
+- **Reparto** (lo fijó el jugador): el **muelle de afilar** (herrero de ARMAS) hace **espadas, escudos, arcos y
+  flechas**; la **mesa de herrería** (herrero de HERRAMIENTAS) hace **armaduras** (de hierro si hay lingotes de sobra,
+  si no de cuero) y la **transformación de materiales**.
+- **Transformaciones**: 9 **chips de metal** (pepitas) → 1 lingote; **chatarra** de hierro (espadas, picos, hachas,
+  azadas, escudos y armaduras viejas) → 1 lingote por pieza; 9 **carne de zombie podrida** → 1 **cuero** (lo hace el de
+  herramientas en su mesa).
+- **De dónde sale el material**: los zombies agresivos **aparecen equipados** con arma y armaduras de hierro (35 % de
+  las veces, cada pieza al 50 %) y las sueltan al morir con **baja probabilidad**
+  (`PROBABILIDAD_SOLTAR_EQUIPO = 0.12`), y **siempre** sueltan **1-2 chips de metal** y a veces carne podrida. El
+  **recolector** los barre a su lista blanca (pepitas, carne podrida y chatarra incluidos) y los guarda en el almacén.
+  *Ojo*: por eso la lista blanca del recolector incluye ahora armas y armaduras de hierro — si dejas una tirada en el
+  suelo de una aldea más de 5 s, se la lleva al almacén.
+- **Objetivo de producción**: la indumentaria de la milicia (4 espadachines con escudo + 3 arqueros): 4 espadas, 4
+  escudos, 3 arcos, 64 flechas y 7 juegos de armadura (una pieza de cada por militar). Cuando el almacén tiene de
+  sobra, el herrero descansa (no fabrica sin fin).
+- **La cantera/mina NO entra en esta iteración** (queda para más adelante): el hierro viene de los zombies y del
+  reciclaje, así que la producción es lenta a propósito.
+
+### 3b.9 Lo que viene (milicia, leñador y granja anexa)
+
+- **Milicia**: aldeanos adultos **sobrantes** (solo cuando están cubiertos los oficios) se vuelven **guardia
+  espadachín** (espada + escudo, el escudo bloquea de verdad) o **arquero** (arco + flechas), **equipados del
+  almacén**. Necesitan una **barraca con muchas camas**, hacen **guardia alrededor**, de noche algunos se quedan **en
+  las puertas y rotan**, y con **4 guardias y 3 arqueros** se forman y **marchan a la guarida**.
+- **Leñador/reforestador**: tala y replanta (madera para arcos, flechas y tablones).
+- **Granja anexa de animales** (vacas, ovejas, puercos, gallinas) **fuera de la valla**, con su aldeano y dentro del
+  **patrullaje de la guardia**.
+
 ## 3c) Iteración 2 — GUARIDAS ✅ (en curso)
 
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.

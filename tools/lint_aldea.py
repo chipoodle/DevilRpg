@@ -116,7 +116,11 @@ def revisar():
 
 
 def aviso_migracion():
-    """I9: si el diff pendiente toca lo que se construye, tiene que subir CURRENT_LAYOUT."""
+    """I9: si el diff CAMBIA LO QUE SE CONSTRUYE, tiene que subir CURRENT_LAYOUT.
+
+    Ojo: no basta con tocar `VillageGenerator` (se le añaden ayudantes de SOLO LECTURA a menudo, como
+    `puestoDeHerreria`), asi que se miran solo las lineas AÑADIDAS que de verdad construyen algo.
+    """
     try:
         tocados = subprocess.run(['git', 'diff', '--name-only', 'HEAD'], cwd=RAIZ,
                                  capture_output=True, text=True, check=True).stdout
@@ -124,13 +128,21 @@ def aviso_migracion():
         return None
     if 'VillageGenerator.java' not in tocados:
         return None
-    diff = subprocess.run(['git', 'diff', 'HEAD', '--',
-                           'src/main/java/com/chipoodle/devilrpg/world/VillageManager.java'],
-                          cwd=RAIZ, capture_output=True, text=True).stdout
-    if 'CURRENT_LAYOUT = ' in diff:
+    diff_gen = subprocess.run(['git', 'diff', 'HEAD', '--',
+                               'src/main/java/com/chipoodle/devilrpg/world/VillageGenerator.java'],
+                              cwd=RAIZ, capture_output=True, text=True).stdout
+    construye = re.compile(r'^\+.*(colocar\(|placeInWorld\(|placeVanillaHouse\(|return center\.offset\(|'
+                           r'static final.*(FARM_PLOTS|PLOT_WIDTH|PLOT_DEPTH|KIOSCO_RADIO|KIOSCO_POSTE|'
+                           r'HERRERIAS|IGLESIAS|VANILLA_HOUSES|CASAS_GRANDES))')
+    if not any(construye.match(l) for l in diff_gen.splitlines()):
+        return None
+    diff_manager = subprocess.run(['git', 'diff', 'HEAD', '--',
+                                   'src/main/java/com/chipoodle/devilrpg/world/VillageManager.java'],
+                                  cwd=RAIZ, capture_output=True, text=True).stdout
+    if 'CURRENT_LAYOUT = ' in diff_manager:
         return None
     return ('I9', 'VillageGenerator.java', 0,
-            'se toca lo que se construye y el diff no sube CURRENT_LAYOUT',
+            'se añade CONSTRUCCIÓN y el diff no sube CURRENT_LAYOUT',
             'Si el mundo ya construido tiene que rehacerse, sube CURRENT_LAYOUT '
             '(y CURRENT_HOUSES si cambian las casas).')
 

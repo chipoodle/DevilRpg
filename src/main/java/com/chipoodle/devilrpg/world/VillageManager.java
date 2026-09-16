@@ -1005,6 +1005,16 @@ public final class VillageManager {
         // aldeano a SIN OFICIO). Sin granjero no hay huerta ni pan y la aldea pasa hambre con la despensa vacía,
         // así que aquí se le devuelve el oficio que falta a cada aldeano que se quedó sin ninguno.
         reponerProfesiones(level, aldeanos, objectiveIndex);
+        // HERREROS: los DOS (armas y herramientas) trabajan en el taller del pueblo: cogen los materiales del almacén,
+        // fabrican en su puesto (muelle de afilar / mesa de herrería) y dejan la pieza en el almacén, de donde se
+        // equipará la futura guardia. Los goals no se guardan con la partida: se reponen al verlos.
+        for (Villager villager : aldeanos) {
+            VillagerProfession profesion = villager.getVillagerData().getProfession();
+            if (!villager.isBaby()
+                    && (profesion == VillagerProfession.WEAPONSMITH || profesion == VillagerProfession.TOOLSMITH)) {
+                asegurarGoalDeHerrero(villager, center, objectiveIndex);
+            }
+        }
         // GRANJERO: los goals no se guardan con la partida, así que se le repone cada vez que se le ve. Cultiva,
         // cosecha, fertiliza con la harina del compostero y trae el trigo a la despensa.
         for (Villager villager : aldeanos) {
@@ -1167,8 +1177,18 @@ public final class VillageManager {
         villager.goalSelector.addGoal(5, new VillagerCollectGoal(villager, center, objectiveIndex));
     }
 
-    /** Le pone al <b>granjero</b> su goal de cultivar/cosechar/fertilizar y llevar el trigo a la despensa. */
-    private static void asegurarGoalDeGranjero(Villager villager, BlockPos center, int objectiveIndex) {
+    /** Le pone al <b>herrero</b> su goal de taller (coger material, fabricar en su puesto y dejarlo en el almacén). */
+    private static void asegurarGoalDeHerrero(Villager villager, BlockPos center, int objectiveIndex) {
+        for (WrappedGoal wrapped : villager.goalSelector.getAvailableGoals()) {
+            if (wrapped.getGoal() instanceof com.chipoodle.devilrpg.entity.goal.VillagerSmithGoal) {
+                return;
+            }
+        }
+        villager.goalSelector.addGoal(4, new com.chipoodle.devilrpg.entity.goal.VillagerSmithGoal(villager, center,
+                objectiveIndex));
+    }
+
+    /** Le pone al <b>granjero</b> su goal de cultivar/cosechar/fertilizar y llevar el trigo a la despensa. */    private static void asegurarGoalDeGranjero(Villager villager, BlockPos center, int objectiveIndex) {
         for (WrappedGoal wrapped : villager.goalSelector.getAvailableGoals()) {
             if (wrapped.getGoal() instanceof VillagerFarmGoal) {
                 return;

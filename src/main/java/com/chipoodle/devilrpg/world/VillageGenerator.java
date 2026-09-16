@@ -888,6 +888,21 @@ public final class VillageGenerator {
     }
 
     /**
+     * <b>Puesto de trabajo de un herrero</b> de la aldea: el <b>muelle de afilar</b> (el del herrero de ARMAS) o la
+     * <b>mesa de herrería</b> (el de HERRAMIENTAS). Lo usa su goal para ir a trabajar a su sitio.
+     *
+     * @param armas {@code true} para el muelle del herrero de armas, {@code false} para la mesa del de herramientas
+     */
+    @Nullable
+    public static BlockPos puestoDeHerreria(ServerLevel level, BlockPos center, boolean armas) {
+        int nivel = cotaDeLaPlaza(level, center);
+        if (nivel <= level.getMinBuildHeight() + 1) {
+            return null;
+        }
+        return buscarBloque(level, baseDeHerreria(center), nivel, armas ? Blocks.GRINDSTONE : Blocks.SMITHING_TABLE);
+    }
+
+    /**
      * <b>Herrería</b> de la aldea: la <b>casa del herrero del propio juego</b> ({@code plains_weaponsmith_1}), con su
      * fragua (lava), su muelle de afilar ({@code grindstone}, que es el <b>puesto de trabajo</b> del herrero de armas)
      * y su arca. Se pone en el hueco libre del norte, entre la iglesia y la casa grande (único solar de 9x11 que queda

@@ -19,6 +19,9 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -524,6 +527,61 @@ public class AggressiveZombieEntity extends Zombie {
         if (!attributesAdjusted) {
             adjustAttributesBasedOnSpawnDistance();
             attributesAdjusted = true; // Solo se ejecuta una vez
+        }
+        if (!equipoAsignado && !level().isClientSide) {
+            equiparAlAzar();
+            equipoAsignado = true;
+        }
+    }
+
+    /** Si ya se le ha sorteado el equipo (armas/armaduras) al aparecer. */
+    private boolean equipoAsignado;
+
+    /**
+     * Algunos zombies agresivos aparecen <b>equipados</b> (arma y armaduras de hierro) y las sueltan al morir con
+     * <b>baja probabilidad</b> ({@link #PROBABILIDAD_SOLTAR_EQUIPO}): es una de las fuentes de material de los
+     * herreros de la aldea (la otra son los <b>chips de metal</b> que sueltan siempre al morir).
+     */
+    private void equiparAlAzar() {
+        RandomSource random = level().random;
+        if (random.nextFloat() >= 0.35F) {
+            return; // la mayoría aparecen con las manos vacías
+        }
+        if (random.nextFloat() < 0.5F) {
+            setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_SWORD));
+        } else {
+            setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_AXE));
+        }
+        for (EquipmentSlot slot : new EquipmentSlot[]{EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS,
+                EquipmentSlot.FEET}) {
+            if (random.nextFloat() < 0.5F) {
+                setItemSlot(slot, new ItemStack(switch (slot) {
+                    case HEAD -> Items.IRON_HELMET;
+                    case CHEST -> Items.IRON_CHESTPLATE;
+                    case LEGS -> Items.IRON_LEGGINGS;
+                    default -> Items.IRON_BOOTS;
+                }));
+            }
+        }
+        // BAJA probabilidad de soltarlo al morir (lo normal es que se pierda), como pidió el jugador.
+        for (EquipmentSlot slot : EquipmentSlot.values()) {
+            if (!getItemBySlot(slot).isEmpty()) {
+                setDropChance(slot, PROBABILIDAD_SOLTAR_EQUIPO);
+            }
+        }
+    }
+
+    /** Probabilidad de que un zombie suelte la pieza de equipo que lleva (baja a propósito). */
+    private static final float PROBABILIDAD_SOLTAR_EQUIPO = 0.12F;
+
+    @Override
+    protected void dropCustomDeathLoot(ServerLevel level, DamageSource source, boolean hitByPlayer) {
+        super.dropCustomDeathLoot(level, source, hitByPlayer);
+        // CHIPS DE METAL: de aquí salen los lingotes que forjan los herreros (9 pepitas = 1 lingote).
+        int pepitas = 1 + level.random.nextInt(2);
+        spawnAtLocation(new ItemStack(Items.IRON_NUGGET, pepitas));
+        if (level.random.nextFloat() < 0.35F) {
+            spawnAtLocation(new ItemStack(Items.ROTTEN_FLESH));
         }
     }
 
