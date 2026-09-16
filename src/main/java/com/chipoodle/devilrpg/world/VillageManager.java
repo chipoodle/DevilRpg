@@ -1007,16 +1007,10 @@ public final class VillageManager {
                 asegurarGoalDeGranjero(villager, center, objectiveIndex);
             }
         }
-        // OBREROS: puede haber VARIOS (hasta MAX_BUILDERS) repartiéndose el trabajo. Los goals no se guardan con
-        // la partida, así que se les repone cada vez que se les ve; y si faltan obreros, se nombran aldeanos
-        // adultos, dejando al granjero para la huerta siempre que haya alguien más.
-        int marcados = 0;
-        for (Villager villager : aldeanos) {
-            if (villager.getPersistentData().getBoolean(BUILDER_TAG)) {
-                asegurarGoalDeObrero(villager, center, objectiveIndex);
-                marcados++;
-            }
-        }
+        // OBREROS: puede haber VARIOS (hasta MAX_BUILDERS) repartiéndose el trabajo, y se RECALCULA quiénes son en
+        // cada latido (ver más abajo), porque la marca de obrero no se le quitaba a NADIE: un granjero que fue
+        // obrero cuando la aldea estaba débil (murió gente y era el único adulto) se quedaba reparando caminos para
+        // siempre. El jugador lo vio: quitó un bloque del camino y fue el granjero a reponerlo en vez del obrero.
         // RECOLECTOR: el aldeano sin oficio (holgazán) se dedica SOLO a recoger cosas y guardarlas en el almacén. El
         // constructor, así, se dedica solo a reparar (antes llevaba los dos goals y se pasaba el día recolectando).
         for (Villager villager : aldeanos) {
@@ -1028,36 +1022,46 @@ public final class VillageManager {
         // constructor (si no, se pasa el día reparando y no recoge nada).
         int adultos = 0;
         for (Villager villager : aldeanos) {
-            if (!villager.isBaby() && villager.getVillagerData().getProfession() != VillagerProfession.NITWIT) {
+            if (puedeSerObrero(villager)) {
                 adultos++;
             }
         }
         // Se reserva al menos un aldeano para lo suyo (huerta, comercio...) si hay gente de sobra.
         int deseados = Math.max(1, Math.min(MAX_BUILDERS, adultos - 1));
-        for (Villager villager : aldeanos) {
-            if (marcados >= deseados) {
-                return;
+        // EL ORDEN MANDA: primero los que YA eran obreros y NO son granjeros (para no cambiarlos cada latido),
+        // después los demás adultos que no son granjero ni holgazán, y SOLO al final los granjeros (mejor una huerta
+        // más lenta que una aldea en ruinas). A los que SOBRAN se les quita la marca: el aldeano vuelve a su oficio.
+        List<Villager> orden = new ArrayList<>();
+        for (int pasada = 0; pasada < 4; pasada++) {
+            for (Villager villager : aldeanos) {
+                if (!puedeSerObrero(villager) || orden.contains(villager)) {
+                    continue;
+                }
+                boolean yaEra = villager.getPersistentData().getBoolean(BUILDER_TAG);
+                boolean esGranjero = villager.getVillagerData().getProfession() == VillagerProfession.FARMER;
+                boolean toca = switch (pasada) {
+                    case 0 -> yaEra && !esGranjero;   // los obreros de siempre que no son granjeros
+                    case 1 -> !yaEra && !esGranjero;  // los demás adultos con otro oficio
+                    case 2 -> yaEra;                  // un granjero que ya hacía de obrero
+                    default -> true;                  // y, si no llega nadie, cualquier granjero
+                };
+                if (toca) {
+                    orden.add(villager);
+                }
             }
-            if (villager.isBaby() || villager.getPersistentData().getBoolean(BUILDER_TAG)
-                    || villager.getVillagerData().getProfession() == VillagerProfession.FARMER
-                    || villager.getVillagerData().getProfession() == VillagerProfession.NITWIT) {
-                continue; // el granjero cuida la huerta y el holgazán es el recolector: no se tocan
-            }
-            marcarObrero(villager, center, objectiveIndex);
-            marcados++;
         }
-        // Si no había más que granjeros, se tira de ellos (mejor una huerta más lenta que una aldea en ruinas).
-        for (Villager villager : aldeanos) {
-            if (marcados >= deseados) {
-                return;
+        for (int i = 0; i < orden.size(); i++) {
+            if (i < deseados) {
+                marcarObrero(orden.get(i), center, objectiveIndex);
+            } else {
+                desmarcarObrero(orden.get(i));
             }
-            if (villager.isBaby() || villager.getPersistentData().getBoolean(BUILDER_TAG)
-                    || villager.getVillagerData().getProfession() == VillagerProfession.NITWIT) {
-                continue;
-            }
-            marcarObrero(villager, center, objectiveIndex);
-            marcados++;
         }
+    }
+
+    /** ¿Ese aldeano puede ser obrero? (ni crías ni el recolector, que tiene su propio puesto fijo). */
+    private static boolean puedeSerObrero(Villager villager) {
+        return !villager.isBaby() && villager.getVillagerData().getProfession() != VillagerProfession.NITWIT;
     }
 
     /**
@@ -1103,18 +1107,49 @@ public final class VillageManager {
 
     /** Marca a un aldeano como obrero y le pone el goal de reparación. */
     private static void marcarObrero(Villager villager, BlockPos center, int objectiveIndex) {
+        boolean yaEra = villager.getPersistentData().getBoolean(BUILDER_TAG);
         villager.getPersistentData().putBoolean(BUILDER_TAG, true);
-        asegurarGoalDeObrero(villager, center, objectiveIndex);
-        DevilRpg.LOGGER.info("[Village] Aldea {}: {} es obrero de la aldea", objectiveIndex, villager.getUUID());
+        // Un GRANJERO que tenga que hacer de obrero (no había más adultos) lleva la reparación POR DEBAJO de su goal
+        // de granja (prioridad 5 contra 4): primero la huerta y, cuando no tiene faena, repara. Si no, se pasaría el
+        // día reparando y la aldea pasaría hambre.
+        boolean esGranjero = villager.getVillagerData().getProfession() == VillagerProfession.FARMER;
+        asegurarGoalDeObrero(villager, center, objectiveIndex, esGranjero ? 5 : 3);
+        if (!yaEra) {
+            DevilRpg.LOGGER.info("[Village] Aldea {}: {} es obrero de la aldea", objectiveIndex, villager.getUUID());
+        }
     }
 
-    private static void asegurarGoalDeObrero(Villager villager, BlockPos center, int objectiveIndex) {
-        for (WrappedGoal wrapped : villager.goalSelector.getAvailableGoals()) {
+    /**
+     * Quita la marca de obrero (y su goal de reparación): el aldeano vuelve a lo suyo.
+     * <p>
+     * Hace falta porque la marca <b>no se le quitaba a nadie</b>: el granjero que hizo de obrero cuando la aldea se
+     * quedó sin adultos se pasaba la vida reparando caminos en vez de cuidar la huerta (el jugador lo vio: quitó un
+     * bloque del camino y apareció el granjero a reponerlo, con su etiqueta "Repuso camino").
+     */
+    private static void desmarcarObrero(Villager villager) {
+        if (!villager.getPersistentData().getBoolean(BUILDER_TAG)) {
+            return;
+        }
+        villager.getPersistentData().putBoolean(BUILDER_TAG, false);
+        for (WrappedGoal wrapped : List.copyOf(villager.goalSelector.getAvailableGoals())) {
             if (wrapped.getGoal() instanceof VillagerRepairGoal) {
-                return;
+                villager.goalSelector.removeGoal(wrapped.getGoal());
             }
         }
-        villager.goalSelector.addGoal(3, new VillagerRepairGoal(villager, center, objectiveIndex));
+        DevilRpg.LOGGER.info("[Village] {} deja de ser obrero de la aldea y vuelve a su oficio", villager.getUUID());
+    }
+
+    private static void asegurarGoalDeObrero(Villager villager, BlockPos center, int objectiveIndex, int prioridad) {
+        for (WrappedGoal wrapped : List.copyOf(villager.goalSelector.getAvailableGoals())) {
+            if (wrapped.getGoal() instanceof VillagerRepairGoal) {
+                if (wrapped.getPriority() == prioridad) {
+                    return;
+                }
+                villager.goalSelector.removeGoal(wrapped.getGoal()); // prioridad vieja: se corrige una vez
+                break;
+            }
+        }
+        villager.goalSelector.addGoal(prioridad, new VillagerRepairGoal(villager, center, objectiveIndex));
     }
 
     /** Le pone al <b>constructor</b> su goal de recolector: recoge lo del pueblo y lo guarda en el almacén. */
