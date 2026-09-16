@@ -240,15 +240,14 @@ siguiente está implementado y probado.
   `RenderNameTagEvent` y, solo para las etiquetas de aldeano con salto de línea, le dice al juego que **no** la pinte
   (`setCanRender(TriState.FALSE)`) y dibuja las líneas una debajo de otra con la misma pose y las mismas pasadas
   (fondo + texto) que vanilla. Todo esto se puede apagar con `[village] mostrarActividadAldeanos = false`.
-- **Cuatro aldeanos, un solo herrero (trazado 28)**: la aldea nace con **4**
-  (`VILLAGERS_FOR_FULL_HEALTH` = 4, 4 casas y 4 camas), **un oficio cada uno**: granjero, **herrero**
-  (`VillagerProfession.WEAPONSMITH`, su muelle de afilar en la herrería), clérigo y **recolector** (el holgazán). Con 4
-  adultos, la aldea nombra hasta **3 obreros** y deja al granjero con la huerta.
-  *Ojo*: al principio había **dos** herreros (de armas y de herramientas) con dos puestos (muelle + mesa de herrería);
-  el jugador lo corrigió a **uno**. El oficio de herrero de herramientas queda **retirado**
-  (`VillageGenerator.oficioRetirado`): a quien lo tuviera se le recoloca en el puesto que falte (o a la huerta si ya
-  están los cuatro cubiertos) y la **mesa de herrería se retira** del taller — una estación sin dueño acabaría dando
-  ese oficio a cualquier aldeano sin oficio que se subiera a ella (vanilla asigna el oficio del puesto de trabajo).
+- **Cinco aldeanos, DOS herreros (trazado 29)**: la aldea nace con **5** (`VILLAGERS_FOR_FULL_HEALTH` = 5, 5 puestos):
+  granjero, **herrero de armas**, clérigo, **herrero de herramientas** y **recolector** (el holgazán). Con 5 adultos, la
+  aldea nombra hasta **3 obreros** y deja al granjero con la huerta.
+  - Los **dos herreros** tienen su puesto en la herrería: el **muelle de afilar** del de armas y la **mesa de
+    herrería** del de herramientas. Hacen falta los dos porque van a **fabricar la indumentaria de la guardia**
+    (espada, escudo, armadura, arco y flechas) repartiéndose el trabajo. *Nota*: en el trazado 28 se dejó **un solo
+    herrero** y se quitó la mesa; el jugador lo corrigió y el 29 la repone (una estación sin dueño acabaría dando ese
+    oficio a cualquier aldeano sin oficio, por eso hay que decidir bien cuántos puestos hay).
 - **Caminos de 2 bloques de ancho** en el plano XZ, de tierra apisonada, a ras de suelo, que van del centro a la
   **puerta real** de cada casa (se mira el bloque de la puerta y su `FACING`, porque cada plantilla la pone donde
   quiere) y no pasan sobre las casas ni la campana.
