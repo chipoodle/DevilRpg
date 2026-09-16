@@ -665,6 +665,12 @@ aldeano y **dentro del patrullaje de la guardia**"*.
   entran en el **plano** para que el obrero los reponga (invariante I8). El **tope de crecimiento** de la aldea pasa
   de 5 a **`puestosDelPueblo()`** (6): sin eso, una aldea con sus cinco oficios cubiertos **nunca** habría tenido
   ganadero.
+- **La primera suelta del rebaño no espera nada (arreglado al revisar el guardado del jugador)**: la espera de 3
+  días es para **reponer** un corral que se quedó vacío, pero se medía desde `AnexoAnimales = 0` ("nunca soltado"),
+  así que en un mundo con **menos de 3 días de juego** (`gameTime` < 72000) la granja anexa se construía y **no
+  soltaba ni un animal**: el corral vacío y el ganadero solo, sin tener con qué trabajar. Medido en el guardado: el
+  anexo se construyó con el reloj del mundo en **24200**. Ahora la marca `0` suelta **ya** y la espera solo cuenta
+  para las reposiciones.
 - **Pendiente**: verlo en partida (el cliente tiene que reiniciarse para cargar el mod).
 
 ### 3b.15 El COCINERO, el hambre por aldeano y la cría por camas libres (etapa E)
@@ -708,6 +714,23 @@ aldeano** y que la cría dependa de que haya **cama libre**.
   el leñador, el ganadero, el cocinero, el guardia y el herrero **no estaban pasando** por sus reglas de "atascado =
   no acercarse" (I3) ni de "el aldeano camina por el cerebro" (I6). Ya están dentro; la única excepción —la distancia
   **en 3D** al tronco de un árbol, que sí es intencionada— va marcada con `lint:ok` y su porqué.
+- **El tope de población no puede impedir cubrir un PUESTO FIJO (arreglado al revisar el guardado del jugador)**: el
+  reparto de "repón el oficio que falta" estaba **dentro** de `vivos < puestosDelPueblo()`, y desde la etapa E el
+  tope es 7 (un puesto más). Una aldea que ya estaba **en el tope** (7 aldeanos: los 5 de antes + el ganadero + un
+  guardia holgazán) se quedaba **sin carnicero para siempre**: la cocina construida, el ahumador **sin dueño** y la
+  carne cruda de la despensa (5 de res y 2 de pollo, medidos en el guardado) sin cocinar, valiendo 2 puntos en vez
+  de 4. Ahora el puesto que falta se repone **aunque la aldea esté en el tope** (el tope es para **crecer**, no para
+  cubrir un puesto; el que llega de más engrosa la milicia) y sigue costando su comida.
+- **El pueblo cuenta a sus aldeanos hasta donde llegan sus propios goals**: el radio de conteo era `muro + 28` (64)
+  y el **leñador** trabaja hasta `muro + 40` (76): talando a 70 bloques **no contaba**, así que la aldea creía que se
+  le había muerto el recolector (y le reponía un **duplicado**) y su salud bajaba sin motivo. Ahora es `muro + 44`
+  (80), que cubre también el corral anexo (43-57).
+- **Revisión del log del jugador (aldea 0, migración 31→32)**, lo que se comprobó y salió bien: la migración corrió
+  entera (muro a la cota 63, anexo, **cocina en el kiosco**, plano de 2705 bloques); el hambre por aldeano reparte
+  **7 raciones para 7 aldeanos** con **14 camas** (una ración = un punto, no una hogaza por boca); y las "7 + 43
+  cosas que no eran comida" que se movieron de la despensa al almacén eran **semillas de calabaza** (el granjero
+  solo siembra trigo, zanahoria, patata y betabel), o sea la regla funcionando. El leñador no apareció en el log
+  porque en ese momento era **de noche** (los 7 aldeanos salen "Durmiendo" en el guardado), no porque estuviera roto.
 - **Pendiente**: verlo en partida (hay que reiniciar el cliente para cargar el mod) y **ajustar los números** del
   hambre con el log de medida (lo que se come por minuto contra lo que producen la huerta y el corral).
 

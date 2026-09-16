@@ -477,7 +477,7 @@ public final class VillageManager {
                     VillageGenerator.spawnVillagers(level, target);
                     saved.markRepopulated(i, level.getGameTime());
                     DevilRpg.LOGGER.info("[Village] Aldea {} estaba vacia: aldeanos y golem repuestos", i);
-                } else if (vivos > 0 && vivos < VillageGenerator.puestosDelPueblo() && saved.getFood(i) >= FOOD_TO_GROW) {
+                } else if (vivos > 0 && saved.getFood(i) >= FOOD_TO_GROW) {
                     // Qué oficios quedan vivos y cuál falta (si mataron al recolector, vuelve un recolector; si al
                     // granjero, un granjero): no se repone "el sitio siguiente".
                     List<VillagerProfession> vivas = level
@@ -487,16 +487,22 @@ public final class VillageManager {
                             .toList();
                     int slot = VillageGenerator.slotDeProfesionFaltante(vivas);
                     if (slot >= 0) {
-                        // OFICIO PERDIDO: se repone YA y ADULTO, sin esperar el turno de crecimiento (5 min) ni a que
+                        // PUESTO VACÍO: se repone YA y ADULTO, sin esperar el turno de crecimiento (5 min) ni a que
                         // crezca una cría (20 min). Una aldea sin recolector acumula basura por el suelo y sin
                         // granjero pasa hambre, así que el relevo de un puesto que se ha quedado vacío no puede
                         // tardar una eternidad (era la queja del jugador: "se murió el recolector").
+                        // OJO: esto NO se limita por el tope de población. El tope es para CRECER (crías), no para
+                        // cubrir un puesto FIJO: si la aldea ya tiene tanta gente como puestos, el que llega es uno
+                        // de más y los sobrantes son la milicia. Medido en el guardado del jugador: aldea con 7
+                        // aldeanos y tope 7, migrada a la etapa E, SIN carnicero y con el ahumador sin dueño — el
+                        // puesto nuevo no llegaba NUNCA porque el tope ya estaba lleno.
                         VillageGenerator.spawnOneVillager(level, target, slot, false);
                         saved.setFood(i, saved.getFood(i) - FOOD_TO_GROW);
                         saved.markRepopulated(i, level.getGameTime());
                         DevilRpg.LOGGER.info("[Village] Aldea {}: repuesto el puesto de {} que se habia quedado vacio "
                                 + "(comida {})", i, VillageGenerator.profesionDeSlot(slot), saved.getFood(i));
-                    } else if (level.getGameTime() - saved.getRepopulatedAt(i) >= REPOPULATE_INTERVAL_TICKS) {
+                    } else if (vivos < VillageGenerator.puestosDelPueblo()
+                            && level.getGameTime() - saved.getRepopulatedAt(i) >= REPOPULATE_INTERVAL_TICKS) {
                         // Crecer cuesta comida: una aldea hambrienta no se recupera hasta que la granja produzca.
                         // El que llega nace CRÍA (crece sola, mecánica vanilla): así se ve el relevo generacional.
                         VillageGenerator.spawnOneVillager(level, target, vivos, true);
@@ -759,8 +765,14 @@ public final class VillageManager {
     private static final double HORDE_TARGET_RADIUS = 220.0D;
     /** Presión (ticks de abandono) a partir de la cual una aldea empieza a ser objetivo de las hordas. */
     private static final int PRESSURE_MIN_TICKS = 8 * 60 * 20;   // 8 min de juego
-    /** Radio alrededor del centro donde se cuentan los aldeanos para decidir si la aldea ha caído. */
-    private static final double FALLEN_CHECK_RADIUS = VillageGenerator.FENCE_RADIUS + 28;
+    /**
+     * Radio alrededor del centro donde se cuentan los aldeanos para decidir si la aldea ha caído (y para saber qué
+     * oficios quedan vivos). Tiene que cubrir <b>hasta dónde llegan los goals del pueblo</b>: el <b>leñador</b>
+     * trabaja hasta {@code FENCE_RADIUS + 40} (76) y el corral anexo está a 43-57. Con el radio viejo (+28 = 64) un
+     * leñador talando a 70 bloques <b>no contaba</b>: la aldea creía que se le había muerto el recolector y le
+     * reponía un <b>duplicado</b>, y su salud bajaba sin motivo.
+     */
+    private static final double FALLEN_CHECK_RADIUS = VillageGenerator.FENCE_RADIUS + 44;
     /** Radio al que se avisa a los jugadores de lo que pasa en una aldea. */
     private static final double SIEGE_WARN_RADIUS = 160.0D;
     /**
@@ -1167,8 +1179,14 @@ public final class VillageManager {
         // REBAÑO: el corral se llena UNA vez (al construirlo o al migrar). Después, si se queda VACÍO (una horda, el
         // jugador...) se repone solo, pero con una espera larga (3 días de juego): ni la granja se queda muerta para
         // siempre ni es un grifo de carne gratis. La marca se guarda con la partida.
+        // OJO: la espera es SOLO para REPONER un corral que se quedó vacío. La PRIMERA vez (marca 0 = nunca se ha
+        // soltado el rebaño) se suelta YA. Midiendo la espera desde 0, en un mundo con menos de 3 días de juego
+        // (gameTime < 72000) el corral se quedaba VACÍO PARA SIEMPRE: medido en el guardado del jugador, la granja
+        // anexa se construyó con el reloj del mundo en 24200 (un mundo joven) y no soltó ni un animal.
+        long marcaRebano = saved.getAnexoAnimales(objectiveIndex);
         if (VillageGenerator.corralVacio(level, center)
-                && level.getGameTime() - saved.getAnexoAnimales(objectiveIndex) >= VillageGenerator.ANEXO_REBANO_ESPERA_TICKS) {
+                && (marcaRebano == 0L
+                    || level.getGameTime() - marcaRebano >= VillageGenerator.ANEXO_REBANO_ESPERA_TICKS)) {
             VillageGenerator.criarRebanoInicial(level, center);
             saved.setAnexoAnimales(objectiveIndex, level.getGameTime());
         }
