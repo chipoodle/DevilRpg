@@ -99,7 +99,14 @@ public final class VillagePantry {
         guardar(c, new ItemStack(Items.BREAD, 2));
     }
 
-    /** El cofre (simple o <b>doble</b>) de la despensa, o {@code null} si esa aldea aún no tiene kiosco. */
+    /**
+     * El cofre (simple o <b>doble</b>) de la despensa, o {@code null} si esa aldea aún no tiene kiosco.
+     * <p>
+     * Primero se mira <b>el sitio exacto</b> donde lo pone el kiosco (las dos mitades del cofre doble, a la cota del
+     * pueblo) y solo si ahí no hay nada se busca cerca. Antes se escaneaba una caja de ±6 bloques y se devolvía
+     * <b>el primer cofre que apareciera</b>: un cofre <b>del jugador</b> puesto en la plaza se lo quedaba la aldea
+     * como despensa (y ahora, con la limpieza de la despensa, la aldea le habría movido las cosas al almacén).
+     */
     @Nullable
     public static Container despensa(ServerLevel level, BlockPos center) {
         // OJO: la búsqueda se centra en LA COTA DEL PUEBLO, nunca en la Y del centro del objetivo: esa Y puede ser
@@ -108,15 +115,33 @@ public final class VillagePantry {
         // se llenaba de "kiosco colocados" cada 10 s y cada reconstrucción BORRABA el cofre con lo que tuviera
         // dentro (por eso el granjero nunca dejaba comida: se la borraban).
         int nivel = VillageGenerator.cotaDeLaPlaza(level, center);
-        BlockPos p = new BlockPos(center.getX(), nivel + 1, center.getZ() + 1);
-        for (BlockPos q : BlockPos.betweenClosed(p.offset(-6, -3, -6), p.offset(6, 3, 6))) {
-            BlockState state = level.getBlockState(q);
-            if (state.getBlock() instanceof ChestBlock cofre) {
-                Container c = ChestBlock.getContainer(cofre, state, level, q.immutable(), true);
-                if (c != null) {
-                    return c;
-                }
+        // 1) EL COFRE DEL KIOSCO, en su sitio exacto (ver `VillageGenerator.kiosco`: las dos mitades del cofre doble).
+        for (BlockPos exacto : new BlockPos[]{
+                new BlockPos(center.getX(), nivel + 1, center.getZ() + 1),
+                new BlockPos(center.getX() + 1, nivel + 1, center.getZ() + 1)}) {
+            Container c = cofreEn(level, exacto);
+            if (c != null) {
+                return c;
             }
+        }
+        // 2) Si no está (kiosco aún sin construir, o una aldea vieja con el cofre en otro lado), se busca SOLO dentro
+        //    del kiosco: su plataforma tiene radio 3, así que nada de la plaza del jugador entra aquí.
+        BlockPos p = new BlockPos(center.getX(), nivel + 1, center.getZ() + 1);
+        for (BlockPos q : BlockPos.betweenClosed(p.offset(-3, -3, -3), p.offset(3, 3, 3))) {
+            Container c = cofreEn(level, q.immutable());
+            if (c != null) {
+                return c;
+            }
+        }
+        return null;
+    }
+
+    /** El contenedor de ese bloque si es un cofre (o {@code null} si no lo es). */
+    @Nullable
+    private static Container cofreEn(ServerLevel level, BlockPos q) {
+        BlockState state = level.getBlockState(q);
+        if (state.getBlock() instanceof ChestBlock cofre) {
+            return ChestBlock.getContainer(cofre, state, level, q, true);
         }
         return null;
     }
@@ -217,6 +242,58 @@ public final class VillagePantry {
     /** ¿Se puede cocinar esto? (carne cruda o patata) */
     public static boolean sePuedeCocinar(ItemStack s) {
         return esCarneCruda(s) || s.is(Items.POTATO);
+    }
+
+    /**
+     * ¿Esto <b>va</b> en la despensa? La despensa es <b>la comida del pueblo</b> y los <b>recambios del granjero</b>
+     * (semillas y harina de huesos, que él mismo coge de aquí para sembrar y abonar). Todo lo demás (plumas, cuero,
+     * cuerda, lana, hierro, pepitas, troncos, tablones...) es material del <b>almacén</b> y se va de aquí.
+     */
+    public static boolean perteneceALaDespensa(ItemStack s) {
+        return s.is(Items.BREAD) || s.is(Items.WHEAT) || s.is(Items.BAKED_POTATO) || esVegetal(s)
+                || esCarneCruda(s) || esCarneCocida(s) || s.is(Items.APPLE)
+                || esSemilla(s) || s.is(Items.BONE_MEAL);
+    }
+
+    /**
+     * ¿Es una semilla de las que siembra el granjero? Es la <b>misma lista</b> que usa él
+     * ({@code VillagerFarmGoal.esSemilla}, que ahora llama aquí): si las dos listas se separan, el granjero se queda
+     * en bucle intentando sembrar algo que no sabe plantar.
+     */
+    public static boolean esSemilla(ItemStack s) {
+        return s.is(Items.WHEAT_SEEDS) || s.is(Items.CARROT) || s.is(Items.POTATO) || s.is(Items.BEETROOT_SEEDS);
+    }
+
+    /**
+     * <b>Limpia la despensa</b>: lo que no es comida ni recambio del granjero ({@link #perteneceALaDespensa}) se
+     * mueve al <b>almacén</b>. Lo pidió el jugador: <i>"los materiales que no pertenezcan a la despensa, que los
+     * muevan al almacén, como las plumas"</i>.
+     * <p>
+     * Si el almacén está lleno no se tira nada: el objeto se queda donde está (el jugador decide qué hacer con él).
+     *
+     * @return cuántas unidades se movieron de verdad (0 si no había nada que sacar)
+     */
+    public static int limpiarDespensa(ServerLevel level, BlockPos center) {
+        Container despensa = despensa(level, center);
+        if (despensa == null) {
+            return 0;
+        }
+        int movidos = 0;
+        for (int i = 0; i < despensa.getContainerSize(); i++) {
+            ItemStack s = despensa.getItem(i);
+            if (s.isEmpty() || perteneceALaDespensa(s)) {
+                continue;
+            }
+            ItemStack resto = VillageStorage.guardar(level, center, s.copy());
+            int puestos = s.getCount() - resto.getCount();
+            if (puestos <= 0) {
+                continue; // el almacén no admite más: se queda como estaba
+            }
+            despensa.setItem(i, resto);
+            despensa.setChanged();
+            movidos += puestos;
+        }
+        return movidos;
     }
 
     /** Guarda un stack en la despensa y devuelve lo que <b>no</b> cupo (vacío si entró todo). */

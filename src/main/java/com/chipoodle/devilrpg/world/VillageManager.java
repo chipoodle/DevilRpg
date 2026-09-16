@@ -1022,6 +1022,15 @@ public final class VillageManager {
         if (level.getGameTime() % EAT_INTERVAL_TICKS == 0L) {
             VillagePantry.sacarComida(VillagePantry.despensa(level, center), vivos);
         }
+        // LA DESPENSA ES PARA LA COMIDA: lo que no sea comida ni recambio del granjero (una pluma, cuero, hierro,
+        // un tronco...) se mueve al ALMACÉN. Lo pidió el jugador: "los materiales que no pertenezcan a la despensa,
+        // que los muevan al almacén, como las plumas". Así el barril no se llena de materiales y la comida no se
+        // queda sin sitio (ni el contador de comida mirando cosas que no se comen).
+        int sacados = VillagePantry.limpiarDespensa(level, center);
+        if (sacados > 0) {
+            DevilRpg.LOGGER.info("[Village] Aldea {}: {} cosas que no eran comida movidas de la despensa al almacen",
+                    objectiveIndex, sacados);
+        }
         int comida = Math.min(MAX_FOOD, VillagePantry.comida(level, center));
         saved.setFood(objectiveIndex, comida);
 

@@ -735,8 +735,9 @@ public class VillagerFarmGoal extends Goal {
         return resto;
     }
 
+    /** Las semillas que siembra. La lista vive en {@link VillagePantry#esSemilla} para no tener dos copias. */
     public static boolean esSemilla(ItemStack s) {
-        return s.is(Items.WHEAT_SEEDS) || s.is(Items.CARROT) || s.is(Items.POTATO) || s.is(Items.BEETROOT_SEEDS);
+        return VillagePantry.esSemilla(s);
     }
 
     /** El cultivo que crece de esa semilla. */
