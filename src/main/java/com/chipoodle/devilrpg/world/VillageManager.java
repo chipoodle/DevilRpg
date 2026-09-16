@@ -671,12 +671,20 @@ public final class VillageManager {
     /** Radio al que se avisa a los jugadores de lo que pasa en una aldea. */
     private static final double SIEGE_WARN_RADIUS = 160.0D;
     /**
-     * Niveles de experiencia que paga rechazar una horda del mundo (la que el mundo manda a por una aldea sin
-     * que el jugador la provoque). Igual que salvar la aldea en el asedio clásico: 1 nivel, y su punto de
-     * habilidad llega por el camino normal. Se paga <b>solo a quien participó</b> (le pegó a algún enemigo de
-     * esa horda), así que si la aldea se defiende sola no cobra nadie.
+     * Fracción de un punto de habilidad que paga rechazar una horda del mundo (la que el mundo manda a por una
+     * aldea sin que el jugador la provoque), o sea la enésima parte de la experiencia del nivel del jugador.
+     * <p>
+     * <b>Antes pagaba 1 nivel entero = 1 punto de habilidad por horda</b>, y esta recompensa es
+     * <b>repetible</b>: el mundo lanza una horda cada 3-20 min, así que en una tarde el jugador se completaba
+     * el árbol de habilidades sin jugar el resto del mod. Con 1/6 hacen falta 6 hordas rechazadas para un
+     * nivel (y su punto), que es lo que el jugador propuso. Lo que se sigue pagando es experiencia de verdad:
+     * sube la barra, respeta el nivel y escala con él (a nivel 30 la sexta parte son ~18 puntos).
+     * <p>
+     * Salvar una aldea en el <b>asedio clásico</b> sigue pagando 1 nivel entero
+     * ({@link #REWARD_EXPERIENCE_LEVELS}): aquel se resuelve <b>una sola vez por aldea</b> (queda guardado en
+     * {@code VillageSavedData}), así que no es farmeable.
      */
-    private static final int WORLD_SIEGE_REWARD_EXPERIENCE_LEVELS = 1;
+    private static final int WORLD_SIEGE_REWARD_FRACTION = 6;
     /** Asedios dirigidos por el mundo (en curso). Como {@link #DEFENSES}, no se persisten. */
     private static final Map<ServerLevel, List<WorldSiege>> WORLD_SIEGES = new HashMap<>();
 
@@ -825,9 +833,12 @@ public final class VillageManager {
     }
 
     /**
-     * Paga a quienes defendieron la aldea de una horda del mundo: <b>1 nivel de experiencia</b> (su punto de
-     * habilidad llega por el camino normal) y unos lingotes que el pueblo comparte. Si nadie intervino, la
-     * aldea se defendió sola y no se paga nada.
+     * Paga a quienes defendieron la aldea de una horda del mundo: <b>1/6 de un punto de habilidad</b> en
+     * experiencia (ver {@link #WORLD_SIEGE_REWARD_FRACTION}) y unos lingotes que el pueblo comparte. Si nadie
+     * intervino, la aldea se defendió sola y no se paga nada.
+     * <p>
+     * La fracción se calcula con el nivel <b>de cada defensor</b>, así que el mismo rechazo vale más para
+     * quien más nivel tiene: es la sexta parte de lo que le queda para subir.
      */
     private static void rewardWorldSiegeDefenders(ServerLevel level, WorldSiege siege) {
         if (!siege.wave.isEmpty()) {
@@ -847,8 +858,8 @@ public final class VillageManager {
             if (player == null) {
                 continue; // se desconectó antes de que acabara
             }
-            int puntosGanados = MissionRewards.giveExperienceLevels(player, WORLD_SIEGE_REWARD_EXPERIENCE_LEVELS);
-            String premio = MissionRewards.describe(WORLD_SIEGE_REWARD_EXPERIENCE_LEVELS, puntosGanados);
+            int xp = MissionRewards.giveSkillPointFraction(player, WORLD_SIEGE_REWARD_FRACTION);
+            String premio = MissionRewards.describeFraction(xp, WORLD_SIEGE_REWARD_FRACTION);
             player.displayClientMessage(Component.literal(
                     "Rechazaste la horda que iba a por la aldea: " + premio + " y el pueblo te da hierro."), false);
             player.addItem(new ItemStack(Items.IRON_INGOT, 4));

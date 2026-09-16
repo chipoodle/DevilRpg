@@ -626,8 +626,15 @@ con su premio y su estado guardado. Lo implementado:
    defender una aldea vieja habría hecho **retroceder** el índice. Ahora solo avanza si es el actual.
 
 7. ✅ **Recompensa propia por rechazar la horda del mundo**: al resolverse el asedio, los jugadores que
-   **participaron** cobran `WORLD_SIEGE_REWARD_EXPERIENCE_LEVELS` = **1 nivel de experiencia** (que trae su punto
-   de habilidad por el camino normal, ver `util/MissionRewards`) más 4 lingotes de hierro "del pueblo".
+   **participaron** cobran `WORLD_SIEGE_REWARD_FRACTION` = **1/6 de un punto de habilidad** (en experiencia: la
+   sexta parte de la barra de su nivel, ver `MissionRewards.giveSkillPointFraction`) más 4 lingotes de hierro
+   "del pueblo".
+   - **Por qué 1/6 y no un punto entero (cambio pedido por el jugador)**: esta recompensa es **repetible** (el
+     mundo manda una horda cada 3-20 min), así que pagando 1 nivel por horda el jugador se completaba el árbol
+     de habilidades en una tarde sin jugar el resto del mod. Con 1/6 hacen falta 6 hordas rechazadas para un
+     nivel (y su punto, que llega por el camino normal). El asedio **clásico** sí sigue pagando 1 nivel entero
+     porque se resuelve **una sola vez por aldea** (queda guardado en `VillageSavedData.markSiegeResolved`), o
+     sea que no es farmeable.
    - Participar = haberle pegado a algún enemigo de esa horda. El zombie lleva su aldea en
      `worldSiegeIndex` (NBT) y en `hurt` avisa a `VillageManager.registerDefender`; vale también el daño de tus
      **minions** (si el atacante tiene dueño, el mérito es del dueño).
@@ -982,6 +989,11 @@ el tiempo y se gasta en una lista de planos, más un `Goal` de "ir a construir" 
   `siegeSkillPoints` (3 + índice/4, tope 8) y `lairSkillPoints` (4 + índice/3, tope 10) regalados con
   `addUnspentPoints`, que **no subían nada la experiencia**; también se quitaron los `giveExperiencePoints`
   sueltos (50 en la aldea, 40 + 15·índice en la guarida) para que el premio sea exactamente los niveles dados.
+  - **Lo REPETIBLE se paga en fracción**: rechazar una horda del mundo da **1/6 de punto**
+    (`VillageManager.WORLD_SIEGE_REWARD_FRACTION` = 6) con `giveSkillPointFraction`, que es la sexta parte de la
+    barra del nivel del jugador: escala con él (7 XP a nivel 0, ~18 a nivel 30) y seis rechazos hacen un nivel.
+    Un nivel entero por horda era un punto por horda cada pocos minutos. Regla general: **recompensa que se
+    puede repetir sin límite → fracción; recompensa de un solo uso (aldea clásica, núcleo de guarida) → nivel**.
 
 - **Bola de fuego del zombi agresivo (`FireballAttackGoal`)**: dispara solo entre **3 y 16 bloques** y con
   **línea de visión**; si no puede, reintenta cada **20 ticks** (1 s) en vez de esperar los 240 completos.
