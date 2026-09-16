@@ -299,11 +299,34 @@ public class VillagerSmithGoal extends Goal {
                     List.of(new ItemStack(Items.IRON_NUGGET, PEPITAS_POR_LINGOTE)),
                     new ItemStack(Items.IRON_INGOT));
         }
-        // 2) Chatarra (armas y armaduras viejas de hierro) -> lingotes.
-        for (ItemStack chatarra : CHATARRA) {
+        // 2) Chatarra PURA (hierro que no se pone nadie) -> lingotes.
+        for (ItemStack chatarra : CHATARRA_SIEMPRE) {
             if (contar(almacen, chatarra.getItem()) > 0) {
                 return new Receta("Fundiendo chatarra", "Fundio chatarra en un lingote",
                         List.of(new ItemStack(chatarra.getItem(), 1)), new ItemStack(Items.IRON_INGOT));
+            }
+        }
+        // 2b) Equipo de hierro/malla que SÍ se pone la milicia (espada, escudo, armadura): se funde solo lo que
+        //     SOBRA de la reserva. Si no, el herrero fundía la única espada del almacén y el espadachín no tenía con
+        //     qué armarse nunca (ni armadura que ponerse, que es justo lo que el jugador quiere VER puesta).
+        for (ItemStack chatarra : CHATARRA_CON_RESERVA) {
+            if (haySobrante(almacen, chatarra.getItem())) {
+                return new Receta("Fundiendo chatarra", "Fundio chatarra en un lingote",
+                        List.of(new ItemStack(chatarra.getItem(), 1)), new ItemStack(Items.IRON_INGOT));
+            }
+        }
+        // 2c) Chatarra de ORO -> lingote de oro (el oro no lo quiere nadie para pelear: se funde entero y queda
+        //     como tesoro del almacén), y armadura de CUERO vieja -> cuero, también con reserva.
+        for (ItemStack chatarra : CHATARRA_DE_ORO) {
+            if (contar(almacen, chatarra.getItem()) > 0) {
+                return new Receta("Fundiendo oro", "Fundio chatarra de oro en un lingote",
+                        List.of(new ItemStack(chatarra.getItem(), 1)), new ItemStack(Items.GOLD_INGOT));
+            }
+        }
+        for (ItemStack viejo : CUERO_VIEJO) {
+            if (haySobrante(almacen, viejo.getItem())) {
+                return new Receta("Reciclando cuero", "Reciclo una armadura de cuero",
+                        List.of(new ItemStack(viejo.getItem(), 1)), new ItemStack(Items.LEATHER));
             }
         }
         // 3) Carne de zombie podrida -> cuero (lo hace el de herramientas, en su mesa).
@@ -395,12 +418,54 @@ public class VillagerSmithGoal extends Goal {
                 List.of(new ItemStack(material, cuantas)), new ItemStack(producto));
     }
 
-    /** Chatarra que se funde: armas y armaduras de hierro viejas (una pieza = un lingote). */
-    private static final List<ItemStack> CHATARRA = List.of(
-            new ItemStack(Items.IRON_SWORD), new ItemStack(Items.IRON_PICKAXE), new ItemStack(Items.IRON_AXE),
-            new ItemStack(Items.IRON_SHOVEL), new ItemStack(Items.IRON_HOE), new ItemStack(Items.SHIELD),
+    /**
+     * Chatarra que se funde en un <b>lingote de hierro</b> (una pieza = un lingote) y que <b>no se pone nadie</b>:
+     * herramientas viejas. Se funden siempre, sin reserva.
+     */
+    private static final List<ItemStack> CHATARRA_SIEMPRE = List.of(
+            new ItemStack(Items.IRON_PICKAXE), new ItemStack(Items.IRON_AXE),
+            new ItemStack(Items.IRON_SHOVEL), new ItemStack(Items.IRON_HOE));
+
+    /**
+     * Chatarra de hierro y de <b>malla</b> (que también es hierro) que <b>sí es equipo de la milicia</b>: espada,
+     * escudo y armadura. De estas piezas se guarda una {@link #RESERVA_DE_MILICIA reserva} en el almacén y solo se
+     * funde lo que sobra.
+     */
+    private static final List<ItemStack> CHATARRA_CON_RESERVA = List.of(
+            new ItemStack(Items.IRON_SWORD), new ItemStack(Items.SHIELD),
             new ItemStack(Items.IRON_HELMET), new ItemStack(Items.IRON_CHESTPLATE),
-            new ItemStack(Items.IRON_LEGGINGS), new ItemStack(Items.IRON_BOOTS));
+            new ItemStack(Items.IRON_LEGGINGS), new ItemStack(Items.IRON_BOOTS),
+            new ItemStack(Items.CHAINMAIL_HELMET), new ItemStack(Items.CHAINMAIL_CHESTPLATE),
+            new ItemStack(Items.CHAINMAIL_LEGGINGS), new ItemStack(Items.CHAINMAIL_BOOTS));
+
+    /**
+     * Chatarra de ORO (lo que llevan puesto los zombis, que sueltan oro a menudo): se funde <b>entera</b> en lingotes
+     * de oro, sin reserva — el oro no vale para pelear y así no acaba puesto en un guardia. Los lingotes quedan en el
+     * almacén como <b>tesoro del pueblo</b> (el jugador los puede retirar cuando quiera).
+     */
+    private static final List<ItemStack> CHATARRA_DE_ORO = List.of(
+            new ItemStack(Items.GOLDEN_SWORD), new ItemStack(Items.GOLDEN_PICKAXE), new ItemStack(Items.GOLDEN_AXE),
+            new ItemStack(Items.GOLDEN_SHOVEL), new ItemStack(Items.GOLDEN_HOE),
+            new ItemStack(Items.GOLDEN_HELMET), new ItemStack(Items.GOLDEN_CHESTPLATE),
+            new ItemStack(Items.GOLDEN_LEGGINGS), new ItemStack(Items.GOLDEN_BOOTS));
+
+    /** Armadura de CUERO vieja: se recicla en cuero (una pieza = un cuero). */
+    private static final List<ItemStack> CUERO_VIEJO = List.of(
+            new ItemStack(Items.LEATHER_HELMET), new ItemStack(Items.LEATHER_CHESTPLATE),
+            new ItemStack(Items.LEATHER_LEGGINGS), new ItemStack(Items.LEATHER_BOOTS));
+
+    /**
+     * Cuántas piezas de equipo del pueblo <b>no se funden nunca</b>: son la reserva de la milicia. Con la aldea
+     * equipándose del almacén (espada, escudo y armadura), si el herrero fundía la única espada que había, el
+     * espadachín se quedaba sin arma para siempre: el herrero la convertía en lingote y volvía a fabricar otra
+     * espada, en un ciclo que no dejaba nada puesto. Ahora se funde <b>solo lo que sobra</b> de esa reserva.
+     */
+    private static final int RESERVA_DE_MILICIA = 2;
+
+    /** ¿Hay más piezas de las que la milicia necesita en reserva? (entonces sí se puede fundir una). */
+    private static boolean haySobrante(Container almacen, net.minecraft.world.item.Item item) {
+        return contar(almacen, item) > RESERVA_DE_MILICIA;
+    }
 
     // --- utilidades ---------------------------------------------------------------------------------
 

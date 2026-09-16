@@ -587,14 +587,40 @@ El log de esa partida lo explica entero (01:50-02:00) y salieron **dos bugs de v
   2 tablones → 4 palos (`OBJETIVO_PALOS` = 64; arcos y flechas). Antes **nadie** convertía troncos en tablones ni en
   palos, así que el escudo, el arco y las flechas no se podían fabricar aunque hubiera madera en el almacén.
 
-### 3b.13 Lo que viene (granja anexa de animales y cocinero)
+### 3b.13 El pueblo RECOGE y RECICLA el equipo que sueltan los enemigos
 
-- **Milicia**: paso 1 ✅ (la barraca) y paso 2 ✅ (el oficio de guardia: alistamiento, equipo del almacén, ronda y
-  puertas con relevo). Falta el **combate** (ataque, escudo que bloquea, arqueros que disparan) y la **marcha a la
-  guarida**.
-- **Leñador/reforestador**: tala y replanta (madera para arcos, flechas y tablones).
+- **El fallo que reportó el jugador** (con captura): "tampoco no se está recogiendo la armadura soltada por el
+  zombie". Cierto y era **por lista blanca**: el recolector solo reconocía como "del pueblo" el hierro (espada, pico,
+  hacha, pala, azada, escudo y las **cuatro piezas de armadura de hierro**), así que la armadura de **cuero, malla y
+  oro** —que es justo la que más sueltan los zombis— **se quedaba tirada por el suelo para siempre**.
+- **Arreglado en el recolector** (`VillagerCollectGoal.esEquipoDeEnemigo`): ahora se recoge **cualquier pieza de
+  armadura** de las cuatro familias que llevan los zombis (**cuero, malla, hierro y oro**) más las **armas y
+  herramientas** de hierro y oro, los **escudos** y los **arcos y flechas** de los esqueletos (que la milicia
+  aprovecha tal cual). Lo que **no** se toca a propósito: armadura ni armas de **diamante o netherite** (eso es del
+  jugador) ni nada que no esté en la lista.
+- **Y no basta con recogerlo: hay que convertirlo en algo.** En la mesa del herrero se añaden las transformaciones que
+  faltaban (`VillagerSmithGoal`): **malla → lingote de hierro** (la malla también es hierro), **oro → lingote de oro**
+  (armas, herramientas y armadura de oro) y **armadura de cuero vieja → cuero** (una pieza = un cuero). Antes, todo
+  eso que ahora entra al almacén **no tenía ninguna receta** y se habría quedado ocupando cofre.
+- **Reserva de la milicia (`RESERVA_DE_MILICIA` = 2) — el detalle que casi rompe la etapa**: el herrero miraba el
+  almacén **antes** de que la milicia se equipara, así que con una sola espada de hierro la fundía en lingote y
+  volvía a fabricar otra espada: un ciclo que **nunca dejaba nada puesto**. Con la armadura pasaba lo mismo, y el
+  jugador quiere **ver** la armadura encima de los guardias. Ahora se separa la chatarra en dos:
+  - **chatarra pura** (picos, hachas, palas, azadas de hierro): **se funde siempre**, no la lleva nadie.
+  - **equipo de la milicia** (espada, escudo y armadura de hierro y de malla) y **cuero viejo**: se funde **solo lo
+    que sobra** de la reserva (con 3 piezas se funde 1 y quedan 2 para los guardias); el **oro sí se funde entero**,
+    porque el oro no vale para pelear y así no acaba puesto en un guardia: los lingotes quedan como **tesoro del
+    pueblo** (el jugador los retira del almacén cuando quiera).
+
+### 3b.14 Lo que viene (granja anexa de animales y cocinero)
+
+- **Milicia**: paso 1 ✅ (la barraca), paso 2 ✅ (el oficio de guardia: alistamiento, equipo del almacén, ronda y
+  puertas con relevo), paso 3 ✅ (el **combate**: espada, arco y escudo que bloquea de verdad, armadura de verdad) y
+  paso 4 ✅ (la **marcha a la guarida** con 4 espadachines y 3 arqueros).
+- **Leñador/reforestador**: ✅ (tala y replanta, y la cadena de la madera del herrero).
 - **Granja anexa de animales** (vacas, ovejas, puercos, gallinas) **fuera de la valla**, con su aldeano y dentro del
   **patrullaje de la guardia**.
+- **Comida por aldeano** (que cada uno tenga su hambre) y **cocinero** (crudo → cocinado).
 
 ## 3c) Iteración 2 — GUARIDAS ✅ (en curso)
 

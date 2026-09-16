@@ -10,12 +10,18 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.npc.Villager;
+import net.minecraft.core.Holder;
+import net.minecraft.world.item.ArmorItem;
+import net.minecraft.world.item.ArmorMaterial;
+import net.minecraft.world.item.ArmorMaterials;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.EnumSet;
+import java.util.List;
 
 /**
  * Goal del <b>constructor recolector</b>: además de reparar la aldea, recoge del suelo las cosas del pueblo
@@ -274,13 +280,39 @@ public class VillagerCollectGoal extends Goal {
                 || s.is(Blocks.OAK_SAPLING.asItem()) || s.getDescriptionId().contains("sapling")
                 || s.getDescriptionId().contains("_log") || s.getDescriptionId().contains("_wool")
                 || s.getDescriptionId().contains("_seeds")
-                // MATERIALES DEL TALLER (lo que forjan los herreros): chips de metal (pepitas), carne de zombie podrida
-                // (de ahí sale el cuero) y chatarra de hierro (armas y armaduras viejas, que se funden en lingotes).
+                // MATERIALES DEL TALLER (lo que forjan los herreros): chips de metal (pepitas) y carne de zombie
+                // podrida (de ahí sale el cuero).
                 || s.is(Items.IRON_NUGGET) || s.is(Items.ROTTEN_FLESH)
-                || s.is(Items.IRON_SWORD) || s.is(Items.IRON_PICKAXE) || s.is(Items.IRON_AXE)
-                || s.is(Items.IRON_SHOVEL) || s.is(Items.IRON_HOE) || s.is(Items.SHIELD)
-                || s.is(Items.IRON_HELMET) || s.is(Items.IRON_CHESTPLATE) || s.is(Items.IRON_LEGGINGS)
-                || s.is(Items.IRON_BOOTS);
+                // EQUIPO QUE SUELTAN LOS ENEMIGOS: ver `esEquipoDeEnemigo`.
+                || esEquipoDeEnemigo(s);
+    }
+
+    /** Materiales de armadura que el pueblo <b>recicla</b>: los que aparecen puestos en los zombis. */
+    private static final List<Holder<ArmorMaterial>> MATERIALES_DE_SAQUEO = List.of(
+            ArmorMaterials.LEATHER, ArmorMaterials.CHAIN, ArmorMaterials.IRON, ArmorMaterials.GOLD);
+
+    /** Armas y herramientas de enemigo que el pueblo recicla (el hierro y el oro que sueltan los zombis). */
+    private static final List<Item> ARMAS_DE_SAQUEO = List.of(
+            Items.IRON_SWORD, Items.IRON_PICKAXE, Items.IRON_AXE, Items.IRON_SHOVEL, Items.IRON_HOE,
+            Items.GOLDEN_SWORD, Items.GOLDEN_PICKAXE, Items.GOLDEN_AXE, Items.GOLDEN_SHOVEL, Items.GOLDEN_HOE,
+            Items.SHIELD);
+
+    /**
+     * <b>Equipo que sueltan los enemigos</b> y que el pueblo recoge para el almacén: <b>cualquier pieza de armadura</b>
+     * de cuero, malla, hierro u oro (son las que llevan puestos los zombis), las <b>armas y herramientas</b> de hierro
+     * u oro, y los <b>arcos y flechas</b> de los esqueletos (que la milicia aprovecha tal cual).
+     * <p>
+     * Antes esto era una lista solo de HIERRO, así que la armadura de <b>cuero, malla y oro</b> que sueltan los zombis
+     * se quedaba tirada en el suelo del pueblo para siempre (lo reportó el jugador con una captura).
+     * <p>
+     * Lo que <b>NO</b> se recoge a propósito: armadura ni armas de <b>diamante o netherite</b> (eso es del jugador, no
+     * del pueblo) ni ninguna otra cosa que se deje por el suelo.
+     */
+    public static boolean esEquipoDeEnemigo(ItemStack s) {
+        if (s.getItem() instanceof ArmorItem armadura) {
+            return MATERIALES_DE_SAQUEO.contains(armadura.getMaterial());
+        }
+        return ARMAS_DE_SAQUEO.contains(s.getItem()) || s.is(Items.BOW) || s.is(Items.ARROW);
     }
 
     private int cuantosLleva() {
