@@ -676,6 +676,11 @@ public final class VillageManager {
             net.minecraft.world.entity.Entity e = level.getEntity(uuid);
             if (e instanceof AggressiveZombieEntity zombie) {
                 zombie.setGoToCenterActive(false);
+                // Y se le quita la marca de asediador: con eso vuelve a poder DESCARTARSE por alejarse como cualquier
+                // otro bicho (mientras estaba en campaña no se desprendía de él a propósito, ver
+                // `AggressiveZombieEntity.removeWhenFarAway`). Si no, los supervivientes de cada asedio se quedarían
+                // por el mundo para siempre.
+                zombie.setWorldSiegeIndex(-1);
             }
         }
     }
@@ -848,6 +853,15 @@ public final class VillageManager {
     /** ¿Esa aldea está siendo atacada ahora mismo (por el jugador o por el mundo)? */
     private static boolean isUnderAttack(ServerLevel level, int objectiveIndex) {
         return isUnderWorldSiege(level, objectiveIndex) || isUnderPlayerSiege(level, objectiveIndex);
+    }
+
+    /**
+     * Lo mismo, público, para el <b>zombie asediador</b>: al cargarse comprueba si el asedio del que formaba parte
+     * sigue existiendo. Los asedios no se persisten, así que si el mundo se guardó a mitad (o el asedio se resolvió
+     * mientras el zombie estaba descargado), el zombie se queda sin campaña y hay que devolverle el descarte normal.
+     */
+    public static boolean hayAsedio(ServerLevel level, int objectiveIndex) {
+        return isUnderAttack(level, objectiveIndex);
     }
 
     /**

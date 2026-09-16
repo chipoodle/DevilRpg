@@ -548,6 +548,19 @@ El log de esa partida lo explica entero (01:50-02:00) y salieron **dos bugs de v
   vanilla manda a los aldeanos a la cama en la franja de descanso, el guardia **se acostaba**. **Arreglado**: el goal
   de guardia ya **no cede por la hora de descanso** (solo se corta si acaba durmiendo de verdad): de noche está de
   puerta, que es justo lo que pidió el jugador.
+- **Y por qué se quedó SIN SU PUNTO en la escaramuza inicial (arreglado)**: el log lo dice tal cual — *"Aldea 0
+  salvada sin limpiar la horda (3 atacantes sin confirmar): sin recompensa"*. La ola se lanza a 39-47 bloques del
+  centro, así que los zombies que caen a más de **32 bloques del jugador despawnean solos** (hostiles: 1/800 por tick
+  pasados 600 ticks sin acción) → **no mueren, pero desaparecen**; la lista de **atacantes vivos** se queda con sus
+  UUID, el asedio se resuelve como "salvada sin limpiar la horda" y **no paga**. Arreglado por la raíz:
+  - Un **asediador no se descarta por alejarse mientras está en campaña** (`AggressiveZombieEntity.removeWhenFarAway`:
+    los dos descartes por lejanía del juego — >128 y al azar >32 — pasan por ahí). Al resolverse el asedio el gestor le
+    quita la marca (`disableGoToCenter` → `setWorldSiegeIndex(-1)`) y vuelve a poder desparecer como cualquier zombie,
+    así que **no se acumulan** por el mundo.
+  - Red de seguridad: si a un asediador se lo lleva el juego **sin morir** (`/kill`, un descarte de otro mod, una
+    conversión), se le saca de la lista de atacantes vivos (`remove(DISCARDED)`), y al **cargarse** un asediador cuyo
+    asedio ya no existe se le quita la marca (`readAdditionalSaveData` → auto-curación). Un asedio no puede quedar
+    **imposible de cobrar** por un enemigo que ya no está en el mundo.
 - **El TECHO DEL KIOSCO ya se puede reponer ✅ (arreglado)**: el tejado está a la **cota+5** y el obrero solo alcanzaba
   **4,5** desde el suelo, así que se quedaba pegándose cabezazos debajo del agujero, se rendía a los 5 s y lo marcaba
   como **inalcanzable** (`saltados`). Medido con la geometría real (pies en la cota, centro del bloque de tejado 5,5

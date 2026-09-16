@@ -191,6 +191,40 @@ public class AggressiveZombieEntity extends Zombie {
         super.die(cause);
     }
 
+    /**
+     * Un <b>asediador</b> (asedio clásico o horda del mundo) <b>NO se descarta por alejarse</b> mientras siga en
+     * campaña contra una aldea.
+     * <p>
+     * Es la causa medida de que el jugador se quedara <b>sin su punto</b> al ganar la escaramuza inicial: la ola se
+     * lanza a 39-47 bloques del centro, así que los que caen a más de 32 del jugador <b>despawnean solos</b> (hostiles:
+     * 1/800 por tick cuando llevan 600 ticks sin acción) y la lista de atacantes vivos se queda con sus UUID. Al no
+     * morir nadie, el asedio se resuelve como "salvada sin limpiar la horda" y <b>no paga</b>. En el log del jugador:
+     * *"Aldea 0 salvada sin limpiar la horda (3 atacantes sin confirmar): sin recompensa"*.
+     * <p>
+     * El descarte por lejanía es justo lo que hace el juego en dos sitios (a más de 128 bloques, y al azar a más de
+     * 32), y los dos pasan por aquí, así que basta con este método. Al resolverse el asedio, el gestor les quita el
+     * destino y el índice ({@code VillageManager.disableGoToCenter}), y entonces vuelven a poder descartarse como
+     * cualquier otro zombie agresivo (no se acumulan por el mundo).
+     */
+    @Override
+    public boolean removeWhenFarAway(double distanciaAlJugador) {
+        return getWorldSiegeIndex() < 0 && super.removeWhenFarAway(distanciaAlJugador);
+    }
+
+    /**
+     * Red de seguridad: si a un asediador se lo lleva el juego <b>sin morir</b> (un {@code /kill}, un descarte de
+     * otro mod...), se le saca de la lista de atacantes vivos. Así un asedio no se queda <b>imposible de cobrar</b>
+     * por un enemigo que ya no existe y que nadie puede matar.
+     */
+    @Override
+    public void remove(@NotNull RemovalReason motivo) {
+        if (motivo == RemovalReason.DISCARDED && worldSiegeIndex >= 0 && !level().isClientSide
+                && level() instanceof ServerLevel serverLevel) {
+            VillageManager.onSiegeAttackerKilled(serverLevel, getUUID());
+        }
+        super.remove(motivo);
+    }
+
     /** ¿Puede este zombie romper obsidiana? (depende de su nivel = distancia de spawn). */
     public boolean canBreakObsidian() {
         return spawnDistance >= OBSIDIAN_THRESHOLD;
@@ -487,6 +521,13 @@ public class AggressiveZombieEntity extends Zombie {
         // Sin el campo (mobs de partidas viejas) se asume true, que es el valor por defecto de siempre.
         goToCenterActive = !tag.contains("DevilRpgGoToCenter") || tag.getBoolean("DevilRpgGoToCenter");
         worldSiegeIndex = tag.contains("DevilRpgWorldSiegeIndex") ? tag.getInt("DevilRpgWorldSiegeIndex") : -1;
+        // AUTO-CURACIÓN: si al cargar el asedio del que formaba parte YA no existe (los asedios no se persisten: se
+        // resolvió mientras este zombie estaba descargado, o el mundo se guardó a mitad), se le quita la marca de
+        // asediador. Si no, se quedaría para siempre sin poder descartarse por lejanía (ver `removeWhenFarAway`).
+        if (worldSiegeIndex >= 0 && !level().isClientSide && level() instanceof ServerLevel serverLevel
+                && !VillageManager.hayAsedio(serverLevel, worldSiegeIndex)) {
+            worldSiegeIndex = -1;
+        }
         NbtUtils.readBlockPos(tag, "DevilRpgHomePos").ifPresent(pos -> homePos = pos);
         homeRadius = tag.getInt("DevilRpgHomeRadius");
     }
