@@ -6,6 +6,7 @@ import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityInt
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.util.IRenderUtilities;
+import com.chipoodle.devilrpg.util.ObjetivosAmistosos;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
@@ -38,7 +39,13 @@ import net.minecraft.world.entity.ai.navigation.FlyingPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.ai.util.AirAndWaterRandomPos;
 import net.minecraft.world.entity.ai.util.HoverRandomPos;
+import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.animal.FlyingAnimal;
+import net.minecraft.world.entity.animal.IronGolem;
+import net.minecraft.world.entity.animal.horse.Llama;
+import net.minecraft.world.entity.monster.Enemy;
+import net.minecraft.world.entity.npc.AbstractVillager;
+import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -111,18 +118,23 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
         this.targetSelector.addGoal(2, new OwnerHurtTargetGoal(this));
         this.targetSelector.addGoal(3, (new HurtByTargetGoal(this)).setAlertOthers());
         this.targetSelector.addGoal(4,
-                new NearestAttackableTargetGoal<>(this, Mob.class, 10, false, false, (entity) ->
-                                   /* !(entity instanceof Villager)
-                                && !(entity instanceof Llama)
-                                && !(entity instanceof Turtle)
-                                && !(entity instanceof IronGolem)
-
-                                && */
-                        !(entity instanceof ITamableEntity
-                                && Objects.equals(((ITamableEntity) entity).getOwnerUUID(), this.getOwnerUUID()))
-                ));
+                new NearestAttackableTargetGoal<>(this, Mob.class, 10, false, false,
+                        (entity) -> esObjetivoDeLasEsporas(this, entity)));
         //this.targetSelector.addGoal(3, new ResetUniversalAngerTargetGoal<>(this, true));
         this.targetSelector.addGoal(8, new ResetUniversalAngerTargetGoal<>(this, true));
+    }
+
+    /**
+     * ¿Se puede lanzar una <b>espora</b> contra ese bicho? <b>NO</b> contra la gente del pueblo ni contra los bichos
+     * de casa: lo pidió el jugador ("las bombas que sacan los mushroom de mi skill no deben ir contra los aldeanos").
+     * <p>
+     * Antes esto era una lista de exclusiones <b>comentada</b> ({@code Villager}, {@code Llama}, {@code Turtle},
+     * {@code IronGolem}), así que las esporas <b>buscaban aldeanos como objetivo</b> y les tiraban la bomba encima.
+     * La regla vive ahora en {@link ObjetivosAmistosos} para que la usen también el minion que las dispara
+     * ({@code SunflowerShulker}) y el filtro de la explosión, y no se vuelva a quedar despistada en un sitio.
+     */
+    public static boolean esObjetivoDeLasEsporas(ExplodingSporeBullet espora, Entity entity) {
+        return ObjetivosAmistosos.sePuedeAtacar(espora, entity);
     }
 
     public void addAdditionalSaveData(@NotNull CompoundTag compoundTag) {

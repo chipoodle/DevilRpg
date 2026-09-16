@@ -8,6 +8,7 @@ import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.init.ModEntities;
 import com.chipoodle.devilrpg.util.IRenderUtilities;
+import com.chipoodle.devilrpg.util.ObjetivosAmistosos;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import com.chipoodle.devilrpg.util.TargetUtils;
 import net.minecraft.Util;
@@ -843,7 +844,12 @@ public class SunflowerShulker extends TamableAnimal implements ITamableEntity, I
 
     class ShulkerNearestAttackGoal extends NearestAttackableTargetGoal<Mob> {
         public ShulkerNearestAttackGoal(SunflowerShulker p_33505_) {
-            super(p_33505_, Mob.class, true);
+            // OJO: aquí NO había filtro ninguno, así que el minion ponía de objetivo a CUALQUIER bicho de al lado,
+            // aldeanos incluidos, y luego les disparaba las esporas (el aviso urgente del jugador: "las bombas que
+            // sacan los mushroom de mi skill no deben ir contra los aldeanos"). Ahora usa la regla común.
+            super(p_33505_, Mob.class, 10, true, false,
+                    (net.minecraft.world.entity.LivingEntity objetivo) ->
+                            ObjetivosAmistosos.sePuedeAtacar(p_33505_, objetivo));
         }
 
         public boolean canUse() {
