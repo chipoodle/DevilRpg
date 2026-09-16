@@ -240,9 +240,15 @@ siguiente está implementado y probado.
   `RenderNameTagEvent` y, solo para las etiquetas de aldeano con salto de línea, le dice al juego que **no** la pinte
   (`setCanRender(TriState.FALSE)`) y dibuja las líneas una debajo de otra con la misma pose y las mismas pasadas
   (fondo + texto) que vanilla. Todo esto se puede apagar con `[village] mostrarActividadAldeanos = false`.
-- **Cuatro aldeanos**: la aldea nace con **4** (`VILLAGERS_FOR_FULL_HEALTH`, 4 casas y 4 camas), uno por casa; el
-  cuarto es **herrero** (`VillagerProfession.TOOLSMITH`), pensado para la futura economía de la aldea. Con 4
+- **Cuatro aldeanos, un solo herrero (trazado 28)**: la aldea nace con **4**
+  (`VILLAGERS_FOR_FULL_HEALTH` = 4, 4 casas y 4 camas), **un oficio cada uno**: granjero, **herrero**
+  (`VillagerProfession.WEAPONSMITH`, su muelle de afilar en la herrería), clérigo y **recolector** (el holgazán). Con 4
   adultos, la aldea nombra hasta **3 obreros** y deja al granjero con la huerta.
+  *Ojo*: al principio había **dos** herreros (de armas y de herramientas) con dos puestos (muelle + mesa de herrería);
+  el jugador lo corrigió a **uno**. El oficio de herrero de herramientas queda **retirado**
+  (`VillageGenerator.oficioRetirado`): a quien lo tuviera se le recoloca en el puesto que falte (o a la huerta si ya
+  están los cuatro cubiertos) y la **mesa de herrería se retira** del taller — una estación sin dueño acabaría dando
+  ese oficio a cualquier aldeano sin oficio que se subiera a ella (vanilla asigna el oficio del puesto de trabajo).
 - **Caminos de 2 bloques de ancho** en el plano XZ, de tierra apisonada, a ras de suelo, que van del centro a la
   **puerta real** de cada casa (se mira el bloque de la puerta y su `FACING`, porque cada plantilla la pone donde
   quiere) y no pasan sobre las casas ni la campana.
@@ -279,6 +285,17 @@ siguiente está implementado y probado.
   asedio entero nadando en el sitio sin romper ni atacar.
 - **Convergen al centro**: si no tienen objetivo de ataque y conocen el centro, marchan hacia él; al llegar
   a **3 bloques de radio** el goal se apaga. Si la aldea **cae**, se les desactiva ese goal.
+  - **Rodean, puentean o taladran (en ese orden)**: al marchar se les amplía el presupuesto del buscador de
+    caminos (`setMaxVisitedNodesMultiplier(6)`, recalculando ruta cada 20 ticks) para que **encuentren la vuelta**
+    a una montaña. Si **hay ruta, no tocan nada** (pueden estar dando la vuelta). Solo si **no hay ruta** y llevan
+    un rato sin avanzar: **(1) PUENTE** si delante hay un abismo (dos bloques de aire con un vacío de 2+ debajo →
+    pone **adoquín** a la altura de los pies, uno por segundo) y **(2) TÚNEL lento**: como mucho
+    `TUNEL_PRESUPUESTO` = **40 bloques por marcha**, uno cada 2 s. Así una montaña grande **aguanta** y la aldea
+    puede salvarse por tiempo (elección del jugador). El presupuesto se recarga al empezar una marcha nueva.
+    **Nunca rompen ni construyen dentro del disco de la aldea** (`FENCE_RADIUS + 2`): el muro, las casas y la
+    huerta están todos dentro, así que no se cava por debajo ni se destroza nada al llegar; perseguir a un aldeano
+    dentro de la aldea sí rompe (es el asalto). Partículas y sonido donde trabajan, y un INFO al empezar a
+    taladrar o a poner el primer tablón, para poder comprobarlo.
 - **Comportamiento de MANADA** (Fase 2): los zombies agresivos que atacan al **mismo objetivo** se
   **reparten en ángulos distintos** alrededor de él (punto de flanqueo derivado de su UUID, radio 3.5)
   en vez de apilarse en línea recta; así lo **rodean** desde varios lados. Recalculan cada 40 ticks y, al
