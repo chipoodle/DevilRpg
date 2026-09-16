@@ -468,7 +468,19 @@ cosas: **equiparse del almacén**, **patrullar** de día y **guardar las puertas
   cuando: el arma llega cuando el herrero funda lingotes.
 - **Comprobado en las fuentes de 1.21**: los aldeanos **no registran ningún goal de vanilla** (todo su comportamiento
   es del **cerebro**), así que la prioridad 3 del goal de guardia **no pisa nada**.
-- **Lo que falta de la milicia** (siguiente paso): **que se les VEA el equipo**. El resto ya está:
+- **YA SE LES VE EL EQUIPO ✅ (modelo propio)**: se sustituye el renderer del aldeano por `GuardVillagerRenderer`
+  (registrado para `EntityType.VILLAGER`; `EntityRenderers.register` <b>sobrescribe</b> el de vanilla) y dentro:
+  - Si el aldeano **es guardia** (`GUARD_TAG`) se dibuja con **`GuardVillagerModel`**: el **cuerpo del jugador**
+    (`HumanoidModel`) con la **cabeza de aldeano** (su narizota como caja extra, en la esquina libre 0,32 del mapa de
+    texturas) y **una textura por tipo**: `village_guard_swordsman.png` (uniforme de acero) y
+    `village_guard_archer.png` (verde de monte).
+  - Si **no** es guardia, se **delega en el `VillagerRenderer` de vanilla**: su ropa de profesión y de bioma no
+    cambia. El renderer solo cambia a la milicia, y como la marca viaja con el aldeano, al alistarse o dejar la
+    guardia el cambio de modelo es inmediato.
+  - Con el modelo humanoid se le enchufan **las capas de vanilla**: `HumanoidArmorLayer` (casco, peto, grebas y
+    botas) e `ItemInHandLayer` (**espada, escudo, arco**), que era justo lo que no se podía con el modelo del
+    aldeano.
+  - Las texturas son **provisionales** (generadas por script, colores planos): se pueden retocar sin tocar código.
   - **COMBATE** (`VillagerGuardGoal`): lo primero que hace el guardia es **pelear**. Ve al monstruo más cercano a 16
     bloques **dentro del término de la aldea** (`RADIO_PERSEGUIR`) y va a por él: el **espadachín** levanta el
     **escudo** y pega con la espada (golpe cada segundo); el **arquero** dispara **flechas de verdad** (`Arrow` con

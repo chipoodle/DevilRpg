@@ -20,6 +20,7 @@ import com.chipoodle.devilrpg.init.ModContainers;
 import com.chipoodle.devilrpg.init.ModEntities;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.VexRenderer;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.monster.Vex;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
@@ -67,6 +68,8 @@ public final class ClientModRegistryEventSubscriber {
         event.registerLayerDefinition(WerewolfTransformedModel.WEREWOLF_LAYER_LOCATION, WerewolfTransformedModel::createBodyLayer);
         event.registerLayerDefinition(SunflowerShulkerModel.DEFAULT_LAYER_LOCATION, SunflowerShulkerModel::createBodyLayer);
         event.registerLayerDefinition(ExplodingSporeBulletModel.DEFAULT_LAYER_LOCATION, ExplodingSporeBulletModel::createBodyLayer);
+        // GUARDIA DE LA ALDEA: cuerpo de jugador + cabeza de aldeano (para poder enseñarle la armadura y el arma).
+        event.registerLayerDefinition(GuardVillagerModel.LAYER_LOCATION, GuardVillagerModel::createBodyLayer);
     }
 
     @SubscribeEvent
@@ -92,6 +95,10 @@ public final class ClientModRegistryEventSubscriber {
         event.registerEntityRenderer(ModEntities.FROST_VEX.get(), frostVexRendererProvider());
         // El cultivador del sculk usa el modelo del Invocador con tinte escarlata (cultista del sculk).
         event.registerEntityRenderer(ModEntities.SCULK_CULTIVATOR.get(), SculkCultivatorRenderer::new);
+        // GUARDIA DE LA ALDEA: se sustituye el renderer del ALDEANO por el nuestro (`EntityRenderers.register`
+        // sobrescribe el de vanilla). Dentro, el que no es guardia se dibuja con el renderer de vanilla, así que a los
+        // aldeanos normales no les cambia nada; a los guardias se les ve la armadura y la espada/arco.
+        event.registerEntityRenderer(EntityType.VILLAGER, GuardVillagerRenderer::new);
         //ItemBlockRenderTypes.setRenderLayer(ModBlocks.SOUL_VINE_BLOCK.get(), RenderType.translucent());
         //event.registerEntityRenderer(ModEntityTypes.WISP.get(), SoulWispHumanoidRenderer::new);
 
