@@ -279,6 +279,9 @@ public class VillagerCollectGoal extends Goal {
                 || s.is(Items.GOLD_INGOT) || s.is(Items.CARROT) || s.is(Items.POTATO)
                 || s.is(Blocks.OAK_LOG.asItem()) || s.is(Blocks.OAK_PLANKS.asItem())
                 || s.is(Blocks.OAK_SAPLING.asItem()) || s.getDescriptionId().contains("sapling")
+                // El PROPÁGULO del mangle se llama así (no "sapling"), pero es la semilla de un árbol y el leñador
+                // la planta: si no entra aquí, se queda tirada en el suelo del manglar para siempre.
+                || s.is(Items.MANGROVE_PROPAGULE)
                 || s.getDescriptionId().contains("_log") || s.getDescriptionId().contains("_wool")
                 || s.getDescriptionId().contains("_seeds")
                 // MATERIALES DEL TALLER (lo que forjan los herreros): chips de metal (pepitas) y carne de zombie

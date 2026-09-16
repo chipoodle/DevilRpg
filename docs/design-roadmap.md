@@ -577,11 +577,23 @@ El log de esa partida lo explica entero (01:50-02:00) y salieron **dos bugs de v
   fijos ya son granjero, los dos herreros, clérigo y recolector, y de los **sobrantes** sale la milicia, así que el
   leñador no puede gastar un puesto nuevo.
 - **Qué hace** (`VillagerLumberjackGoal`): **tala** árboles (recorre la columna de troncos hacia arriba, hasta 16) y
-  se lleva la madera encima; **replanta** una semilla en la base del que cortó (las coge del almacén: la lista blanca
-  del recolector ya incluye saplings); con 12 troncos, o cuando ya no ve árboles, va al **almacén** a descargar.
+  se lleva la madera encima; con 12 troncos, o cuando ya no ve árboles, va al **almacén** a descargar.
+- **Repoblación de verdad (lo pidió el jugador: *"que plante los saplings que encuentre de manera distribuida, puede
+  ser en el mismo lugar donde lo encontró"*)**. Tres reglas:
+  - **En el mismo sitio y con la misma especie**: cada árbol que tala lo **replanta en su base** con una semilla de
+    **su misma especie** (roble con roble, abedul con abedul...). Si en ese momento **no tiene semilla a mano**, el
+    sitio queda **apuntado** (`Hueco`, hasta 8) y vuelve a él con la primera que consiga: el hueco no se pierde.
+  - **Repartidas, no amontonadas**: cuando lleva una **pila de semillas** encima (8) o ya **no ve árboles**, se va a
+    plantarlas: elige un **claro** de tierra, a cielo abierto (sin cielo el sapling no crece) y **separado 5 bloques**
+    de cualquier tronco, hoja o semilla (`estaDespejado`), así que sale **un árbol por sitio**. Nunca planta dentro
+    de la valla ni en el corral anexo (ni en su margen de 3).
+  - **De dónde salen las semillas**: de las hojas que caen (las recoge el recolector, que es el mismo aldeano) y del
+    **almacén** (de ahí se lleva 16 por viaje). Antes solo se replantaba en el tronco recién cortado y, si no tenía
+    semilla en la mano, el monte se quedaba pelado con las semillas apiladas en el cofre.
 - **Solo tala árboles DE VERDAD y FUERA de la valla**: radio > muro + 3, y el tronco tiene que estar sobre tierra,
   tener **otro tronco encima** y tener **hojas cerca**. Con eso no se come el muro de la aldea ni las casas, que son
-  de troncos (era el riesgo evidente de esta etapa).
+  de troncos (era el riesgo evidente de esta etapa). El **plantado** usa el tag `DIRT` del juego (lo que de verdad
+  acepta un sapling): fuera la **arena** de la playa y el **camino de tierra**, donde la semilla saltaría.
 - **Cadena de la MADERA (sin esto los troncos no valían para nada)**: el herrero de **herramientas**, en su mesa,
   ahora también **asierra**: 1 tronco → 4 tablones (`OBJETIVO_TABLONES` = 32 en el almacén; el escudo pide 6) y
   2 tablones → 4 palos (`OBJETIVO_PALOS` = 64; arcos y flechas). Antes **nadie** convertía troncos en tablones ni en
