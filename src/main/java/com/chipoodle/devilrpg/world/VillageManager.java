@@ -257,9 +257,13 @@ public final class VillageManager {
      *       fabricar la indumentaria de la guardia (espada, escudo, armadura, arco y flechas) repartiéndose el
      *       trabajo. Esta versión repone la <b>mesa de herrería</b> que el 28 quitó —y con ella el oficio— y devuelve
      *       el tope de aldeanos a 5.</li>
+     *   <li>30: la <b>BARRACA de la milicia</b> al oeste del pueblo (huella 9x9, puerta al norte con su camino y
+     *       {@code BARRACA_CAMAS} = 8 camas): el edificio que pidió el jugador para la guardia ("una barraca con
+     *       MUCHAS CAMAS"). Las aldeas ya construidas la reciben aquí, porque el sitio que ocupa estaba vacío y no
+     *       hay que borrar nada de lo suyo (solo el volumen donde se levanta, que en el trazado actual es patio).</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 29;
+    public static final int CURRENT_LAYOUT = 30;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -991,6 +995,9 @@ public final class VillageManager {
             // HERRERÍA: el taller de los herreros del juego, con su muelle y su mesa de herrería (sus puestos de
             // trabajo). Va AQUÍ, antes de tirar el plano, para que la herrería y su camino entren en el plano nuevo.
             VillageGenerator.asegurarHerreria(level, center);
+            // BARRACA de la milicia: igual, antes de tirar el plano, para que el edificio y sus camas entren en el
+            // plano y el obrero los reponga.
+            VillageGenerator.asegurarBarraca(level, center);
             // El plano se tira: hay que volver a capturarlo, ya con las casas nuevas, el muro y las reglas actuales.
             saved.clearBlueprint(objectiveIndex);
             saved.setLayout(objectiveIndex, CURRENT_LAYOUT);
@@ -1005,6 +1012,9 @@ public final class VillageManager {
         // HERRERÍA: en las aldeas que ya estaban al día (o en las nuevas) se asegura igualmente: es idempotente y así
         // también se le repone la mesa de herrería si alguien se la llevó.
         VillageGenerator.asegurarHerreria(level, center);
+        // BARRACA de la milicia: lo mismo (idempotente). Si el jugador se llevó su suelo de piedra, se vuelve a
+        // levantar entera; si está, no se toca (reconstruirla borraría las camas y lo que haya dentro).
+        VillageGenerator.asegurarBarraca(level, center);
         // KIOSCO + DESPENSA: la plataforma de la plaza con su campana arriba y el cofre doble (si falta en aldeas
         // viejas). Es donde el granjero guarda el trigo, donde hornea el pan y de donde come la aldea.
         VillageGenerator.asegurarKiosco(level, center);

@@ -212,7 +212,7 @@ public final class VillageGenerator {
         // quiere) y que los caminos lleguen de verdad a ella. La última es la "grande" (con cama extra), y en el
         // sitio de la vieja torre va la IGLESIA del juego.
         RandomSource casas = RandomSource.create(center.asLong());
-        BlockPos[] puertas = new BlockPos[6];
+        BlockPos[] puertas = new BlockPos[7];
         puertas[0] = placeVanillaHouse(level, bases[0], casaAleatoria(casas), nivelVilla);
         puertas[1] = placeVanillaHouse(level, bases[1], casaAleatoria(casas), nivelVilla);
         puertas[2] = placeVanillaHouse(level, bases[2], casaAleatoria(casas), nivelVilla);
@@ -223,6 +223,9 @@ public final class VillageGenerator {
         puertas[5] = placeVanillaHouse(level, baseDeHerreria(center), HERRERIAS[0], nivelVilla);
         // El herrero de HERRAMIENTAS necesita su mesa de herrería: la plantilla del de armas solo trae el muelle.
         puestoDeTrabajo(level, baseDeHerreria(center), nivelVilla, Blocks.SMITHING_TABLE);
+        // BARRACA de la milicia (donde viven los guardias): va DESPUÉS de las casas, para que su solar no pise
+        // ninguno de sus solares ni el bancal, y ANTES de los caminos, para que su puerta tenga el suyo.
+        puertas[6] = barraca(level, baseDeBarraca(center), nivelVilla);
 
         // Caminos DESPUÉS, del centro a la puerta de cada construcción (ya se sabe dónde está).
         paths(level, center, puertas);
@@ -509,6 +512,113 @@ public final class VillageGenerator {
                         center, VillageStorage.cofresColocados(level, center));
             }
         }
+    }
+
+    /**
+     * Solar de la <b>BARRACA</b> de la milicia, relativo al centro: al <b>oeste</b> del pueblo (a 26,13), que es el
+     * cuadrante que queda libre (entre la casa del noroeste, el bancal de la granja y la puerta oeste del muro) y
+     * deja el edificio entero dentro de la valla.
+     */
+    public static BlockPos baseDeBarraca(BlockPos center) {
+        return center.offset(-26, 0, 13);
+    }
+
+    /** Radio de la barraca (huella de 9x9). */
+    private static final int BARRACA_RADIO = 4;
+    /** Camas de la barraca: dos filas de 4, una contra cada pared larga. */
+    public static final int BARRACA_CAMAS = 8;
+
+    /**
+     * Asegura la <b>BARRACA de la milicia</b> en una aldea que todavía no la tiene (migración y latido). Es
+     * idempotente: comprueba el <b>suelo a la cota</b> (como el kiosco y el almacén) y, si ya está, no toca nada —
+     * reconstruirla borraría las camas y lo que los guardias tengan dentro.
+     */
+    public static void asegurarBarraca(ServerLevel level, BlockPos center) {
+        int nivel = cotaDeLaPlaza(level, center);
+        if (nivel <= level.getMinBuildHeight() + 1) {
+            return;
+        }
+        BlockPos base = baseDeBarraca(center);
+        if (level.getBlockState(new BlockPos(base.getX(), nivel - 1, base.getZ())).is(Blocks.STONE_BRICKS)) {
+            return; // la barraca ya está y con el tamaño actual
+        }
+        BlockPos puerta = barraca(level, base, nivel);
+        // Camino de la plaza a su puerta (si no, los guardias tienen que trepar por el césped).
+        paths(level, center, doorApproach(level, puerta));
+        DevilRpg.LOGGER.info("[Village] Aldea en {}: barraca de la milicia construida en {} ({} camas)",
+                center, base, BARRACA_CAMAS);
+    }
+
+    /**
+     * Construye la <b>barraca</b> (suelo de piedra, paredes y tejado de tablones, puerta al norte y
+     * {@link #BARRACA_CAMAS} camas en dos filas con el pasillo en medio) y devuelve su puerta.
+     * <p>
+     * <b>Alturas</b> (invariante I1): {@code nivel} es <b>la capa que se pisa</b> del pueblo, así que el suelo
+     * sólido va en {@code nivel - 1} y las paredes, la puerta y las camas en {@code nivel}. Poniendo el suelo en
+     * {@code nivel} (como el kiosco, que va a propósito un bloque alto con sus escaleras) la barraca salía
+     * <b>un bloque alta</b>, con escalón en la puerta: es el mismo bug que se corrigió en las casas.
+     * <p>
+     * Todo pasa por {@link #colocar}, así que <b>entra en el plano</b> y el obrero la repone como cualquier otra
+     * construcción (invariante I8): una barraca construida al margen del plano no se repararía nunca.
+     */
+    private static BlockPos barraca(ServerLevel level, BlockPos base, int nivel) {
+        int r = BARRACA_RADIO;
+        int bx = base.getX();
+        int bz = base.getZ();
+        // 1) Huella NIVELADA a la cota del pueblo, como las casas: recorta el terreno natural que sobra y
+        //    RELLENA lo que falta. Hace falta de verdad: medido en el guardado, el cuadrante oeste de alguna aldea
+        //    tiene un charco (23 columnas de agua en la capa de superficie) y en otra faltaba el bloque de suelo
+        //    en 12 columnas: sin esto, el suelo de la barraca quedaría flotando. `nivelarHuella` toma la ESQUINA
+        //    (y solo mira su X/Z, pero se le da una Y que ya es la cota: invariante I1).
+        nivelarHuella(level, new BlockPos(bx - r, nivel, bz - r), 2 * r + 1, 2 * r + 1, nivel);
+        // 2) Solar: suelo de piedra en la capa de superficie (nivel-1) y el volumen de arriba al aire (así se va
+        //    la nieve/césped de la capa que se pisa, que si no queda dentro de la barraca).
+        for (int dx = -r; dx <= r; dx++) {
+            for (int dz = -r; dz <= r; dz++) {
+                colocar(level, new BlockPos(bx + dx, nivel - 1, bz + dz), Blocks.STONE_BRICKS.defaultBlockState(), 3);
+                for (int dy = 0; dy <= 4; dy++) {
+                    colocar(level, new BlockPos(bx + dx, nivel + dy, bz + dz), Blocks.AIR.defaultBlockState(), 3);
+                }
+            }
+        }
+        // 3) Paredes de tablones (3 de alto, de `nivel` a `nivel+2`) por el borde de la huella.
+        for (int dx = -r; dx <= r; dx++) {
+            for (int dz = -r; dz <= r; dz++) {
+                if (Math.abs(dx) != r && Math.abs(dz) != r) {
+                    continue; // interior
+                }
+                for (int dy = 0; dy <= 2; dy++) {
+                    colocar(level, new BlockPos(bx + dx, nivel + dy, bz + dz),
+                            Blocks.OAK_PLANKS.defaultBlockState(), 3);
+                }
+            }
+        }
+        // 4) Puerta de dos bloques en el centro de la pared NORTE, a la capa que se pisa (`nivel`): es por donde
+        //    llega el camino de la plaza y se entra sin escalón.
+        BlockPos puerta = new BlockPos(bx, nivel, bz - r);
+        colocar(level, puerta, Blocks.OAK_DOOR.defaultBlockState()
+                .setValue(DoorBlock.FACING, Direction.NORTH).setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER), 3);
+        colocar(level, puerta.above(), Blocks.OAK_DOOR.defaultBlockState()
+                .setValue(DoorBlock.FACING, Direction.NORTH).setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER), 3);
+        // 5) Tejado (nivel+3) y dos faroles colgados del centro: de noche la barraca se ve desde lejos y no
+        //    spawnean monstruos dentro (que es lo que evitaría que la guardia durmiera).
+        for (int dx = -r; dx <= r; dx++) {
+            for (int dz = -r; dz <= r; dz++) {
+                colocar(level, new BlockPos(bx + dx, nivel + 3, bz + dz), Blocks.OAK_PLANKS.defaultBlockState(), 3);
+            }
+        }
+        colocar(level, new BlockPos(bx, nivel + 2, bz - 1),
+                Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true), 3);
+        colocar(level, new BlockPos(bx, nivel + 2, bz + 1),
+                Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true), 3);
+        // 6) Las camas: dos filas de 4 en la capa que se pisa, con la CABECERA contra la pared (norte y sur) y el
+        //    pasillo en medio. Son las que dan litera a los guardias y las que dejan crecer al pueblo (vanilla pide
+        //    una cama libre por cría).
+        for (int dx = -r + 1; dx <= r - 1; dx += 2) {
+            bed(level, new BlockPos(bx + dx, nivel, bz - r + 2), Direction.NORTH);
+            bed(level, new BlockPos(bx + dx, nivel, bz + r - 2), Direction.SOUTH);
+        }
+        return puerta;
     }
 
     /**
@@ -2219,12 +2329,21 @@ public final class VillageGenerator {
 
     /** Coloca una cama completa (pie + cabeza) mirando hacia el sur (dentro de la cabaña). */
     private static void bed(ServerLevel level, BlockPos footPos) {
+        bed(level, footPos, Direction.SOUTH);
+    }
+
+    /**
+     * Coloca una cama completa (pie en {@code footPos} y cabecera un bloque hacia {@code facing}, que es donde va
+     * la almohada). La orientación se pasa porque la barraca tiene camas en dos paredes opuestas y todas con la
+     * cabecera contra la pared.
+     */
+    private static void bed(ServerLevel level, BlockPos footPos, Direction facing) {
         BlockState foot = Blocks.RED_BED.defaultBlockState()
-                .setValue(BedBlock.FACING, Direction.SOUTH).setValue(BedBlock.PART, BedPart.FOOT);
+                .setValue(BedBlock.FACING, facing).setValue(BedBlock.PART, BedPart.FOOT);
         BlockState head = Blocks.RED_BED.defaultBlockState()
-                .setValue(BedBlock.FACING, Direction.SOUTH).setValue(BedBlock.PART, BedPart.HEAD);
+                .setValue(BedBlock.FACING, facing).setValue(BedBlock.PART, BedPart.HEAD);
         colocar(level, footPos, foot, 3);
-        colocar(level, footPos.relative(Direction.SOUTH), head, 3);
+        colocar(level, footPos.relative(facing), head, 3);
     }
 
     /** Pilar de vallas que baja desde el piso hasta el fondo marino, ≥3 bloques bajo el agua, terminando en madera. */

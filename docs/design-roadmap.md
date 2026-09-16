@@ -403,12 +403,43 @@ puesto y **traen** lo fabricado. Queda en el log y en su etiqueta ("Forjó una e
 - **La cantera/mina NO entra en esta iteración** (queda para más adelante): el hierro viene de los zombies y del
   reciclaje, así que la producción es lenta a propósito.
 
-### 3b.9 Lo que viene (milicia, leñador y granja anexa)
+### 3b.9 La BARRACA de la milicia (milicia, paso 1)
 
-- **Milicia**: aldeanos adultos **sobrantes** (solo cuando están cubiertos los oficios) se vuelven **guardia
-  espadachín** (espada + escudo, el escudo bloquea de verdad) o **arquero** (arco + flechas), **equipados del
-  almacén**. Necesitan una **barraca con muchas camas**, hacen **guardia alrededor**, de noche algunos se quedan **en
-  las puertas y rotan**, y con **4 guardias y 3 arqueros** se forman y **marchan a la guarida**.
+El edificio que pidió el jugador para la guardia: *"necesitan una barraca con MUCHAS CAMAS"*. Va **antes** del
+reclutamiento porque los guardias tienen que vivir en algún sitio (y las camas son también las que dejan **crecer**
+al pueblo: vanilla pide una cama libre por cría).
+
+- **Sitio**: `baseDeBarraca(center)` = **(-26, 13)**, al **oeste** del pueblo. Es el cuadrante que quedaba libre
+  (entre la casa del noroeste, el bancal A de la granja, su compostero y el almacén de (18,18)) y deja el edificio
+  **entero dentro de la valla**: **medido en el guardado**, la esquina más lejana queda a **34,5** del centro con la
+  valla a **36**. El compostero del bancal A (-21,10) queda pegado a la pared este (1 bloque), sin solaparse.
+- **La barraca** (`barraca`): huella **9×9** — suelo de **piedra**, paredes y tejado de **tablones**, **puerta al
+  norte** (con su camino a la plaza) y **8 camas** (`BARRACA_CAMAS`) en dos filas de 4 con la cabecera contra la
+  pared y el pasillo en medio. Dos faroles colgados del centro: de noche se ve y no spawnean monstruos dentro.
+- **Alturas (invariante I1)**: `nivel` es **la capa que se pisa**, así que el suelo sólido va en **`nivel-1`** y las
+  paredes, la puerta y las camas en **`nivel`**. Poner el suelo en `nivel` (como el kiosco, que va a propósito un
+  bloque alto con sus escaleras) dejaba la barraca **un bloque alta**, con escalón en la puerta: el mismo bug que se
+  corrigió en las casas. Lo canta el lint si se pasa la Y del centro ([I1], de hecho saltó al escribirlo).
+- **El solar se NIVELA antes de construir** (`nivelarHuella`, como las casas): recorta el terreno natural que sobra
+  y **rellena los agujeros**, porque en el guardado el cuadrante oeste de una aldea tiene **charco** (23 columnas con
+  agua en la capa de superficie, aldea 7) y en otra **faltaba el bloque de suelo en 12 columnas** (aldea 8): sin eso
+  el suelo de la barraca quedaría flotando.
+- **Entra en el PLANO** (todo pasa por `colocar`, invariante I8), así que el obrero repone la barraca y sus camas
+  como cualquier otra construcción. Es **idempotente**: se comprueba el **suelo a la cota** (como el kiosco y el
+  almacén) y si ya está no se toca — reconstruirla borraría las camas y lo que haya dentro.
+- **Migración 30**: las aldeas ya construidas la reciben al migrar. **Medido en las 11 aldeas del guardado**: en la
+  10 (cota 75) y la 9 (cota 64) el solar estaba **vacío** (solo la capa de nieve/césped, que se quita); en las **7 y
+  8** (layout 20) lo cruza el **MURO VIEJO de radio 29** (42 y 59 bloques de tronco, piedra y escaleras) — la misma
+  migración lo borra **antes** con `limpiarTrazadoAntiguo` (que corre dentro de `actualizarCasas`) y la barraca
+  además limpia su propio volumen; en las **0-6** los chunks **no están generados** en el guardado, así que no se
+  puede medir (quedan sin comprobar).
+
+### 3b.10 Lo que viene (milicia, leñador y granja anexa)
+
+- **Milicia** (paso 1 ✅: la barraca): aldeanos adultos **sobrantes** (solo cuando están cubiertos los oficios) se
+  vuelven **guardia espadachín** (espada + escudo, el escudo bloquea de verdad) o **arquero** (arco + flechas),
+  **equipados del almacén**. Hacen **guardia alrededor**, de noche algunos se quedan **en las puertas y rotan**, y con
+  **4 guardias y 3 arqueros** se forman y **marchan a la guarida**.
 - **Leñador/reforestador**: tala y replanta (madera para arcos, flechas y tablones).
 - **Granja anexa de animales** (vacas, ovejas, puercos, gallinas) **fuera de la valla**, con su aldeano y dentro del
   **patrullaje de la guardia**.

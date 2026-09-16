@@ -115,6 +115,17 @@ def revisar():
     return fallos
 
 
+def _git(*args):
+    """Salida de `git` SIEMPRE en UTF-8.
+
+    Antes se leia con la codificacion del sistema (cp1252 en Windows) y el lint petaba con
+    UnicodeDecodeError en cuanto el diff traia un comentario en espanol con acentos: el hilo lector
+    de subprocess reventaba, stdout quedaba en None y el aviso de migracion (I9) daba TypeError.
+    """
+    return subprocess.run(['git', *args], cwd=RAIZ, capture_output=True,
+                          encoding='utf-8', errors='replace').stdout or ''
+
+
 def aviso_migracion():
     """I9: si el diff CAMBIA LO QUE SE CONSTRUYE, tiene que subir CURRENT_LAYOUT.
 
@@ -122,23 +133,20 @@ def aviso_migracion():
     `puestoDeHerreria`), asi que se miran solo las lineas AÑADIDAS que de verdad construyen algo.
     """
     try:
-        tocados = subprocess.run(['git', 'diff', '--name-only', 'HEAD'], cwd=RAIZ,
-                                 capture_output=True, text=True, check=True).stdout
+        tocados = _git('diff', '--name-only', 'HEAD')
     except Exception:
         return None
     if 'VillageGenerator.java' not in tocados:
         return None
-    diff_gen = subprocess.run(['git', 'diff', 'HEAD', '--',
-                               'src/main/java/com/chipoodle/devilrpg/world/VillageGenerator.java'],
-                              cwd=RAIZ, capture_output=True, text=True).stdout
+    diff_gen = _git('diff', 'HEAD', '--',
+                    'src/main/java/com/chipoodle/devilrpg/world/VillageGenerator.java')
     construye = re.compile(r'^\+.*(colocar\(|placeInWorld\(|placeVanillaHouse\(|return center\.offset\(|'
                            r'static final.*(FARM_PLOTS|PLOT_WIDTH|PLOT_DEPTH|KIOSCO_RADIO|KIOSCO_POSTE|'
                            r'HERRERIAS|IGLESIAS|VANILLA_HOUSES|CASAS_GRANDES))')
     if not any(construye.match(l) for l in diff_gen.splitlines()):
         return None
-    diff_manager = subprocess.run(['git', 'diff', 'HEAD', '--',
-                                   'src/main/java/com/chipoodle/devilrpg/world/VillageManager.java'],
-                                  cwd=RAIZ, capture_output=True, text=True).stdout
+    diff_manager = _git('diff', 'HEAD', '--',
+                        'src/main/java/com/chipoodle/devilrpg/world/VillageManager.java')
     if 'CURRENT_LAYOUT = ' in diff_manager:
         return None
     return ('I9', 'VillageGenerator.java', 0,

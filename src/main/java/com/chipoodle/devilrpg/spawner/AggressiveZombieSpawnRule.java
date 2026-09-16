@@ -21,7 +21,7 @@ import org.jetbrains.annotations.Nullable;
  * Regla de spawn del {@link com.chipoodle.devilrpg.entity.AggressiveZombieEntity}.
  * <p>
  * - Intervalo aleatorio: 30 s a 10 min.
- * - Spawnea a 48-96 bloques del jugador (como si llevara tiempo patrullando).
+ * - Spawnea a 38-86 bloques del jugador (como si llevara tiempo patrullando).
  * - La probabilidad sube cuanto mas lejos este el jugador de su punto de inicio, y los atributos
  *   (vida/velocidad/daño) escalan automaticamente con la distancia (lo hace la propia entidad en
  *   {@code adjustAttributesBasedOnSpawnDistance}).
@@ -33,8 +33,8 @@ public class AggressiveZombieSpawnRule implements CustomSpawnRule {
     private static final int MAX_INTERVAL_SECONDS = 3 * 60;  // intervalo maximo entre intentos (3 min)
     private static final int MAX_ALIVE_IN_WORLD = 30;        // limite de zombies agresivos vivos simultaneos
 
-    private static final int MIN_SPAWN_DISTANCE = 48;        // minimo lejos del jugador (bloques)
-    private static final int MAX_SPAWN_DISTANCE = 96;        // maximo lejos del jugador (bloques)
+    private static final int MIN_SPAWN_DISTANCE = 38;        // minimo lejos del jugador (bloques)
+    private static final int MAX_SPAWN_DISTANCE = 86;        // maximo lejos del jugador (bloques)
     private static final int SURFACE_SEARCH_DOWN = 16;       // bloques hacia abajo para hallar suelo
     private static final int SURFACE_SEARCH_UP = 2;          // bloques hacia arriba para hallar suelo
 
