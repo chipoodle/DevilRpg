@@ -1264,6 +1264,9 @@ public final class VillageManager {
         villager.getPersistentData().putInt(GUARD_INDEX_TAG, indice);
         // Un obrero que pasa a la guardia deja de ser obrero (tiene su puesto).
         desmarcarObrero(villager);
+        // OJO: el pánico del aldeano (que le hace huir) NO se puede quitar desde aquí: `Brain.addActivity` solo AÑADE
+        // comportamientos (no reemplaza) y `removeAllBehaviors` se lleva por delante el cerebro entero. Lo apaga el
+        // propio goal del guardia en combate, borrando los recuerdos que lo disparan (ver `VillagerGuardGoal.calmar`).
         if (center != null) {
             asegurarGoalDeGuardia(villager, center, objectiveIndex);
         }

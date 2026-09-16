@@ -468,9 +468,36 @@ cosas: **equiparse del almacén**, **patrullar** de día y **guardar las puertas
   cuando: el arma llega cuando el herrero funda lingotes.
 - **Comprobado en las fuentes de 1.21**: los aldeanos **no registran ningún goal de vanilla** (todo su comportamiento
   es del **cerebro**), así que la prioridad 3 del goal de guardia **no pisa nada**.
-- **Lo que falta de la milicia** (siguiente paso): **pelear**. Hoy el **pánico** del cerebro sigue activo, así que un
-  guardia **todavía huye** de los zombies aunque vaya armado; falta que ataque (y que el **escudo bloquee de verdad**),
-  que los arqueros **disparen**, y la **marcha a la guarida** con 4 guardias y 3 arqueros.
+- **Lo que falta de la milicia** (siguiente paso): **que se les VEA el equipo**. El resto ya está:
+  - **COMBATE** (`VillagerGuardGoal`): lo primero que hace el guardia es **pelear**. Ve al monstruo más cercano a 16
+    bloques **dentro del término de la aldea** (`RADIO_PERSEGUIR`) y va a por él: el **espadachín** levanta el
+    **escudo** y pega con la espada (golpe cada segundo); el **arquero** dispara **flechas de verdad** (`Arrow` con
+    dueño, que le gasta la mochila) cada 1,5 s y, si se queda sin flechas, vuelve al almacén a por más.
+  - **El escudo bloquea DE VERDAD y no hay que escribir nada**: `LivingEntity.hurt` (línea 1136 de las fuentes)
+    comprueba `isDamageSourceBlocked` en **cualquier** entidad que esté bloqueando, así que basta con
+    `startUsingItem(OFF_HAND)` para "levantarlo" (y `stopUsingItem` fuera de combate). El bloqueo de verdad (daño a
+    cero, desgaste del escudo y empujón al atacante) lo hace el juego.
+  - **No huyen**: al aldeano de vanilla, cuando le pegan, su cerebro le manda **huir** (actividad PANIC). Al guardia
+    se le apaga **borrándole los recuerdos de "me han pegado"** (`HURT_BY`/`HURT_BY_ENTITY`, en cada tick de combate)
+    y **escribiéndole el rumbo al enemigo en cada tick** (también pegado a él, que es donde el pánico ganaría la
+    carrera). *Probado y descartado*: vaciar la actividad PANIC no se puede — `Brain.addActivity` solo **añade**
+    comportamientos (no reemplaza la lista) y `removeAllBehaviors` se lleva el cerebro entero.
+  - **ARMADURA puesta**: además de espada/escudo (o arco/flechas), el guardia se pone del almacén las **4 piezas**
+    (casco, peto, grebas y botas) de lo que haya fabricado el pueblo (hierro o cuero). Cuenta para el daño de verdad
+    (el juego la usa), aunque **todavía no se dibuja** (ver abajo).
+- **Por qué NO se les ve el equipo (medido en las fuentes de 1.21)**: `VillagerRenderer` solo añade tres capas
+  (`CustomHeadLayer`, `VillagerProfessionLayer`, `CrossedArmsItemLayer`) — **no hay capa de armadura ni de objeto en
+  mano** — y `VillagerModel` **no** es `HumanoidModel` ni `ArmedModel`, así que `HumanoidArmorLayer` e
+  `ItemInHandLayer` no se le pueden enchufar tal cual. Lo que lleva puesto el guardia **no se ve**.
+  - **Sí es posible** lo que propone el jugador (modelo del jugador con cabeza de aldeano): un `HumanoidModel` propio
+    con una caja extra para la **nariz** del aldeano, un renderer registrado para `EntityType.VILLAGER` que decide por
+    la marca `GUARD_TAG` (guardia → modelo nuevo; aldeano normal → se delega en el `VillagerRenderer` de vanilla, para
+    no cambiar a nadie) y, con eso, las capas **`HumanoidArmorLayer` + `ItemInHandLayer`** de vanilla (el modelo
+    humanoid **sí** implementa `ArmedModel`). Hace falta **textura propia**: el layout UV del aldeano no es el del
+    jugador, así que no vale reutilizar su textura; la nariz puede ir en una zona libre del layout (0,32).
+  - Alternativa más barata y peor: una **capa de armadura a medida** que copie las poses del `VillagerModel`
+    (head/body/arms/legs) — la armadura se vería "encajada" y la espada quedaría pegada al pecho, porque el aldeano
+    tiene **un solo bloque de brazos**.
 
 ### 3b.11 Post-mortem: la caída de la aldea 10 (medido en el log del jugador)
 
