@@ -612,15 +612,58 @@ El log de esa partida lo explica entero (01:50-02:00) y salieron **dos bugs de v
     porque el oro no vale para pelear y así no acaba puesto en un guardia: los lingotes quedan como **tesoro del
     pueblo** (el jugador los retira del almacén cuando quiera).
 
-### 3b.14 Lo que viene (granja anexa de animales y cocinero)
+### 3b.14 La GRANJA ANEXA de animales y su GANADERO (etapa D)
 
-- **Milicia**: paso 1 ✅ (la barraca), paso 2 ✅ (el oficio de guardia: alistamiento, equipo del almacén, ronda y
-  puertas con relevo), paso 3 ✅ (el **combate**: espada, arco y escudo que bloquea de verdad, armadura de verdad) y
-  paso 4 ✅ (la **marcha a la guarida** con 4 espadachines y 3 arqueros).
+Lo que pidió el jugador: *"granja anexa de animales (vacas, ovejas, puercos, gallinas) **fuera de la valla**, con su
+aldeano y **dentro del patrullaje de la guardia**"*.
+
+- **Dónde**: al **este**, con el centro del corral a **50 bloques** del centro de la aldea (el muro está a 36 y el
+  talud de fuera baja hasta 48). Huella de **15x15** (`ANEXO_RADIO` = 7) **nivelada a la cota del pueblo** como las
+  casas y la barraca (`nivelarHuella`), más un **camino de tierra** de 3 de ancho que baja desde la **puerta este**
+  del muro (35 → 42 en X). Los bloques de dentro del recinto no se tocan: el nivelado solo recorta terreno natural.
+- **Qué lleva dentro**: **valla de roble** con una **puerta de madera** mirando al camino — la puerta es la clave,
+  porque **los aldeanos la abren y los animales no**: el ganadero entra y sale y el ganado se queda dentro—,
+  **cobertizo** al este (suelo de piedra, cuatro postes, tejado y **sin paredes**, para que pasen todos por debajo;
+  dentro su **cama**, su **telar** —el puesto de trabajo del pastor, sin él el juego le borra el oficio—, heno y un
+  farol), un **bebedero** de agua a ras del suelo y dos islas de paja más.
+- **El rebaño**: 2 vacas, 2 ovejas, 2 puercos y 4 gallinas, **persistentes** (no se los lleva el juego por lejanía).
+  Se sueltan **una vez** al construir el corral y, después, solo si el corral se queda **vacío** y ha pasado
+  **3 días de juego** (`ANEXO_REBANO_ESPERA_TICKS`, guardado en el `VillageSavedData`): ni la granja se queda muerta
+  para siempre si una horda mata a los animales, ni es un **grifo de carne gratis** (matarlos y esperar un rato).
+- **El GANADERO (`VillagerAnimalFarmGoal`)**: es el **sexto puesto fijo** del pueblo (antes eran cinco: granjero, dos
+  herreros, clérigo y recolector), con oficio de **pastor** (`SHEPHERD`) y su sitio de aparición **dentro del
+  corral** (a 47 del centro, **fuera del cobertizo**: si el punto cayera bajo su tejado, `groundY` devolvería la
+  altura del tejado y el aldeano aparecería encima). Lo que hace, por orden:
+  1. **Recoge** lo que suelta el corral (los **huevos** de las gallinas, lo de un sacrificio) y lo **baja al
+     almacén** — de ahí lo pasa el granjero a la despensa.
+  2. **Cría**: lleva comida a la pareja de la especie que esté por debajo de su tope (**trigo** para vacas y ovejas,
+     **zanahoria/patata/betabel** para puercos, **semillas** para gallinas). La comida sale de la **despensa** y solo
+     se usa si al pueblo le **sobra** (`COMIDA_PARA_CRIAR` = 24 puntos): si no, el ganadero se comería el pan de la
+     aldea para engordar animales. El parto lo hace el juego (`setInLove` + el `BreedGoal` de vanilla).
+  3. **Sacrifica** un adulto cuando hay **exceso** de esa especie (por encima del tope: 6, 8 las gallinas) o cuando a
+     la aldea le queda **poca comida** (< 12 puntos), y **nunca baja de la pareja** (2): la granja no se mata sola.
+     Los drops se recogen en el acto (carne, cuero, lana, plumas) y van al almacén.
+- **La guardia patrulla el corral (y lo defiende)**: cada **3 puntos** de la ronda de día, el guardia baja al corral
+  (con un punto distinto por guardia, para no apilarse) y la etiqueta dice "Patrullando el corral". Además el radio
+  de **persecución** sube de `FENCE_RADIUS + 8` (44) a `FENCE_RADIUS + 22` (58) y el de "término del pueblo" a
+  `+26` (62): con el radio viejo, un zombi dentro del corral (a 43-57 del centro) se paseaba **a 5 bloques de la
+  ronda sin que nadie fuera a por él** — el anexo quedaba fuera de la guardia, que es justo lo que el jugador pidió
+  que no pasara.
+- **Migración 31**: las aldeas ya construidas reciben el corral (con el rebaño) al latido siguiente, y los bloques
+  entran en el **plano** para que el obrero los reponga (invariante I8). El **tope de crecimiento** de la aldea pasa
+  de 5 a **`puestosDelPueblo()`** (6): sin eso, una aldea con sus cinco oficios cubiertos **nunca** habría tenido
+  ganadero.
+- **Pendiente**: verlo en partida (el cliente tiene que reiniciarse para cargar el mod) y el **cocinero** (etapa E),
+  que es lo que convierte la carne cruda en comida de verdad (2 → 4 puntos por pieza).
+
+### 3b.15 Lo que viene (el cocinero)
+
+- **Milicia**: ✅ completa (barraca, oficio, combate, escudo que bloquea, modelo propio, marcha a la guarida).
 - **Leñador/reforestador**: ✅ (tala y replanta, y la cadena de la madera del herrero).
-- **Granja anexa de animales** (vacas, ovejas, puercos, gallinas) **fuera de la valla**, con su aldeano y dentro del
-  **patrullaje de la guardia**.
-- **Comida por aldeano** (que cada uno tenga su hambre) y **cocinero** (crudo → cocinado).
+- **Granja anexa de animales**: ✅ (corral fuera de la valla, ganadero, cría, sacrificio de exceso y patrullaje de
+  la guardia).
+- **Lo siguiente**: el **cocinero** (crudo → cocinado: la carne cruda vale 2 puntos y la cocinada 4, así que es la
+  palanca natural del hambre) y el **hambre por aldeano**, con la **cría ligada a camas libres**.
 
 ## 3c) Iteración 2 — GUARIDAS ✅ (en curso)
 

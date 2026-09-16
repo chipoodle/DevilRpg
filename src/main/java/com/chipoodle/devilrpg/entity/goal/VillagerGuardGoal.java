@@ -64,13 +64,15 @@ public class VillagerGuardGoal extends Goal {
     private static final double REACH = 3.0D;
     /** Ticks de plantón en cada punto de la ronda, mirando al campo. */
     private static final int ESPERA_TICKS = 120;
+    /** Cada cuántos puntos de la ronda el guardia baja al <b>corral anexo</b> (etapa D). */
+    private static final int RONDA_CADA_ANEXO = 3;
     /** Cada cuánto cambia el relevo de puertas (2 min): así rotan en la misma noche. */
     private static final int RELEVO_TICKS = 2 * 60 * 20;
     /** Si se queda atascado (no se acerca) deja el punto y prueba con el siguiente. */
     private static final int STUCK_LIMIT = 200;
     private static final int REST_TICKS = 10;
     /** Si se aleja más de esto del centro de la aldea, deja de hacer la ronda. */
-    private static final double MAX_DISTANCE_FROM_CENTER = VillageGenerator.FENCE_RADIUS + 16.0D;
+    private static final double MAX_DISTANCE_FROM_CENTER = VillageGenerator.FENCE_RADIUS + 26.0D;
     /** Velocidad de la ronda (y de la carrera al almacén si le falta el arma). */
     private static final float VELOCIDAD = 0.6F;
     /** Flechas que se lleva el arquero del almacén de una vez. */
@@ -80,8 +82,14 @@ public class VillagerGuardGoal extends Goal {
 
     /** Radio en el que el guardia ve a un monstruo y va a por él. */
     private static final double RADIO_COMBATE = 16.0D;
-    /** Hasta dónde persigue: no se va del pueblo a matar zombis por el mundo (deriva del radio de la aldea). */
-    private static final double RADIO_PERSEGUIR = VillageGenerator.FENCE_RADIUS + 8.0D;
+    /**
+     * Hasta dónde persigue: no se va del pueblo a matar zombis por el mundo (deriva del radio de la aldea).
+     * <p>
+     * Llega hasta la <b>granja anexa</b> (etapa D): el corral está <b>fuera de la valla</b> (a 43-57 del centro), así
+     * que con el radio viejo ({@code FENCE_RADIUS + 8} = 44) los guardias <b>no defendían a los animales</b> ni al
+     * ganadero: un zombi que entrara al corral se paseaba a 5 bloques de la ronda sin que nadie fuera a por él.
+     */
+    private static final double RADIO_PERSEGUIR = VillageGenerator.FENCE_RADIUS + 22.0D;
     /** Distancia a la que el espadachín ya pega. */
     private static final double ALCANCE_ESPADA = 2.8D;
     /** Ticks entre golpes de espada y entre flechas. */
@@ -628,7 +636,14 @@ public class VillagerGuardGoal extends Goal {
             };
             return new BlockPos(center.getX() + dx, nivel, center.getZ() + dz);
         }
-        // Ronda: un punto distinto por paso y por guardia (determinista, sin tiradas).
+        // Ronda: un punto distinto por paso y por guardia (determinista, sin tiradas). Cada RONDA_CADA_ANEXO puntos
+        // de la ronda, el guardia baja al CORRAL ANEXO (fuera de la valla): es lo que pidió el jugador ("la granja
+        // anexa, dentro del patrullaje de la guardia").
+        if (paso % RONDA_CADA_ANEXO == 0 && VillageGenerator.anexoConstruido(level, center)) {
+            BlockPos corral = VillageGenerator.puntoDeApoyoAnexo(level, center);
+            // Cada guardia se coloca en un sitio distinto del corral (si no, los cuatro se apilan en el mismo bloque).
+            return corral.offset(0, 0, (indice % 5) * 2 - 4);
+        }
         double angulo = Math.toRadians((indice * 137.5D + paso * 47.0D) % 360.0D);
         int x = center.getX() + (int) Math.round(Math.cos(angulo) * RADIO_RONDA);
         int z = center.getZ() + (int) Math.round(Math.sin(angulo) * RADIO_RONDA);
@@ -638,7 +653,8 @@ public class VillagerGuardGoal extends Goal {
     /** Texto de lo que está haciendo (lo que se ve en su etiqueta). */
     private String actividadDeGuardia(ServerLevel level) {
         if (!level.isNight()) {
-            return "Patrullando la aldea";
+            return paso % RONDA_CADA_ANEXO == 0 && VillageGenerator.anexoConstruido(level, center)
+                    ? "Patrullando el corral" : "Patrullando la aldea";
         }
         int puerta = (int) ((level.getGameTime() / RELEVO_TICKS + indice) % 4L);
         String nombre = switch (puerta) {

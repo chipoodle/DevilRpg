@@ -107,6 +107,12 @@ public final class VillageSavedData extends SavedData {
      * casa borra lo que hubiera dentro.
      */
     private final Map<Integer, Integer> casasVersion = new HashMap<>();
+    /**
+     * Cuándo se le dio a la aldea el <b>rebaño inicial</b> del corral anexo (etapa D). Se guarda para no soltar
+     * animales nuevos cada latido: si el corral se queda vacío, se espera
+     * {@code VillageGenerator.ANEXO_REBANO_ESPERA_TICKS} antes de reponerlo.
+     */
+    private final Map<Integer, Long> anexoAnimales = new HashMap<>();
 
     public static VillageSavedData get(ServerLevel level) {
         return level.getDataStorage().computeIfAbsent(
@@ -156,6 +162,9 @@ public final class VillageSavedData extends SavedData {
                 // Guardado de la versión anterior (era un booleano): "sí tenía casas nuevas" = versión 1.
                 data.casasVersion.put(index, 1);
             }
+            if (entry.contains("AnexoAnimales")) {
+                data.anexoAnimales.put(index, entry.getLong("AnexoAnimales"));
+            }
             data.food.put(index, entry.getInt("Food"));
         }
         // Planos de las aldeas (paleta de estados + posiciones + índices).
@@ -198,6 +207,7 @@ public final class VillageSavedData extends SavedData {
         villages.addAll(starvingSince.keySet());
         villages.addAll(layout.keySet());
         villages.addAll(casasVersion.keySet());
+        villages.addAll(anexoAnimales.keySet());
         for (int index : villages) {
             CompoundTag one = new CompoundTag();
             one.putInt("Index", index);
@@ -215,6 +225,9 @@ public final class VillageSavedData extends SavedData {
             }
             if (casasVersion.containsKey(index)) {
                 one.putInt("CasasVersion", casasVersion.get(index));
+            }
+            if (anexoAnimales.containsKey(index)) {
+                one.putLong("AnexoAnimales", anexoAnimales.get(index));
             }
             one.putInt("Food", food.getOrDefault(index, 0));
             settlementTag.add(one);
@@ -436,6 +449,18 @@ public final class VillageSavedData extends SavedData {
     public void setCasasVersion(int objectiveIndex, int version) {
         if (casasVersion.getOrDefault(objectiveIndex, 0) != version) {
             casasVersion.put(objectiveIndex, version);
+            setDirty();
+        }
+    }
+
+    /** Cuándo se le dio el rebaño inicial al corral anexo ({@code 0} = nunca). */
+    public long getAnexoAnimales(int objectiveIndex) {
+        return anexoAnimales.getOrDefault(objectiveIndex, 0L);
+    }
+
+    public void setAnexoAnimales(int objectiveIndex, long gameTime) {
+        if (anexoAnimales.getOrDefault(objectiveIndex, 0L) != gameTime) {
+            anexoAnimales.put(objectiveIndex, gameTime);
             setDirty();
         }
     }

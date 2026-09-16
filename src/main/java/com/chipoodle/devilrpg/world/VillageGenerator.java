@@ -621,9 +621,221 @@ public final class VillageGenerator {
         return puerta;
     }
 
+    // --- GRANJA ANEXA DE ANIMALES (etapa D: fuera de la valla, con su aldeano y dentro del patrullaje) -----------
+
+    /** Distancia del centro de la aldea al centro del corral: el muro está a 36 y el talud de fuera baja hasta 48. */
+    private static final int ANEXO_DX = 50;
+    /** Radio del corral (huella de 15x15). */
+    public static final int ANEXO_RADIO = 7;
+    /** Ancho (en Z) del camino que baja de la puerta este del muro al corral. */
+    private static final int ANEXO_CAMINO_ANCHO = 5;
+    /**
+     * Cuánto se espera antes de volver a soltar el <b>rebaño inicial</b> si el corral se quedó <b>sin ningún
+     * animal</b> (los mató una horda, se los llevó el jugador...). Son 3 días de juego: la granja no se queda muerta
+     * para siempre, pero tampoco es un grifo de carne (si no, matar las vacas y esperar un rato daría comida gratis).
+     */
+    public static final long ANEXO_REBANO_ESPERA_TICKS = 3L * 24000L;
+
+    /** Especies del corral anexo (las que cría y cuida el ganadero). */
+    private static final List<EntityType<? extends net.minecraft.world.entity.animal.Animal>> ANEXO_ESPECIES =
+            List.of(EntityType.COW, EntityType.SHEEP, EntityType.PIG, EntityType.CHICKEN);
+
+    /** Las especies del corral (para que el ganadero recorra exactamente las mismas que se sueltan aquí). */
+    public static List<EntityType<? extends net.minecraft.world.entity.animal.Animal>> especiesDelCorral() {
+        return ANEXO_ESPECIES;
+    }
+
+    /** Centro del corral anexo (relativo al centro de la aldea): al <b>este</b>, fuera de la valla. */
+    public static BlockPos baseDeAnexo(BlockPos center) {
+        return center.offset(ANEXO_DX, 0, 0);
+    }
+
+    /** ¿Ese punto (X/Z) está dentro del corral anexo? (lo usan la guardia y el ganadero, sin mirar la Y). */
+    public static boolean estaEnElAnexo(BlockPos center, BlockPos p) {
+        BlockPos base = baseDeAnexo(center);
+        int dx = p.getX() - base.getX();
+        int dz = p.getZ() - base.getZ();
+        return Math.abs(dx) <= ANEXO_RADIO && Math.abs(dz) <= ANEXO_RADIO;
+    }
+
+    /**
+     * Punto de apoyo del corral: el suelo llano <b>dentro</b> del corral, al lado de la puerta (nunca la valla ni el
+     * bebedero: la navegación no puede "llegar" a un bloque sólido, ver {@code VillagePantry.puntoDeApoyo}).
+     */
+    public static BlockPos puntoDeApoyoAnexo(ServerLevel level, BlockPos center) {
+        int nivel = cotaDeLaPlaza(level, center);
+        BlockPos base = baseDeAnexo(center);
+        return new BlockPos(base.getX() - ANEXO_RADIO + 3, nivel, base.getZ());
+    }
+
+    /**
+     * Asegura la <b>granja anexa de animales</b> (corral de 15x15 con cobertizo, bebedero y camino desde la puerta
+     * este) en una aldea que todavía no la tiene. Es <b>idempotente</b> y, como el kiosco o la barraca, comprueba el
+     * suelo a la cota: si ya está, no toca nada (reconstruirla borraría lo que el jugador tenga dentro).
+     */
+    public static void asegurarGranjaAnexa(ServerLevel level, BlockPos center) {
+        int nivel = cotaDeLaPlaza(level, center);
+        if (nivel <= level.getMinBuildHeight() + 1) {
+            return;
+        }
+        if (anexoConstruido(level, center)) {
+            return; // el corral ya está: no se vuelve a construir
+        }
+        granjaAnexa(level, baseDeAnexo(center), nivel);
+        DevilRpg.LOGGER.info("[Village] Aldea en {}: granja anexa de animales construida en {} (corral de {}x{})",
+                center, baseDeAnexo(center), 2 * ANEXO_RADIO + 1, 2 * ANEXO_RADIO + 1);
+    }
+
+    /**
+     * ¿Está ya el corral anexo? Se miran <b>dos</b> marcas (la valla de la esquina y el suelo de piedra del
+     * cobertizo): así, si al jugador se le cae una valla suelta, la aldea <b>no</b> vuelve a levantar todo el corral
+     * encima de lo que tenga dentro.
+     * <p>
+     * Lo usa también la <b>guardia</b>: sin corral, su ronda no baja al anexo (patrullaría un descampado).
+     */
+    public static boolean anexoConstruido(ServerLevel level, BlockPos center) {
+        int nivel = cotaDeLaPlaza(level, center);
+        BlockPos base = baseDeAnexo(center);
+        boolean vallaEsquina = level.getBlockState(new BlockPos(base.getX() - ANEXO_RADIO, nivel,
+                base.getZ() - ANEXO_RADIO)).is(Blocks.OAK_FENCE);
+        boolean sueloCobertizo = level.getBlockState(new BlockPos(base.getX() + ANEXO_RADIO - 2, nivel - 1,
+                base.getZ())).is(Blocks.STONE_BRICKS);
+        return vallaEsquina && sueloCobertizo;
+    }
+
+    /**
+     * Construye el corral anexo: huella <b>nivelada a la cota del pueblo</b> (como las casas y la barraca: sin
+     * zanjas ni escalones), camino desde la puerta este del muro, valla de roble con <b>puerta de madera</b> (los
+     * aldeanos la abren, el ganado no), cobertizo con cama y telar del ganadero, bebedero de agua y heno.
+     * <p>
+     * Todo pasa por {@link #colocar}, así que <b>entra en el plano</b> (invariante I8) y el obrero lo repone.
+     */
+    private static void granjaAnexa(ServerLevel level, BlockPos base, int nivel) {
+        int r = ANEXO_RADIO;
+        int bx = base.getX();
+        int bz = base.getZ();
+        int cx = bx - ANEXO_DX; // X del centro de la aldea
+        // 1) HUELLA: el corral y el camino que baja del muro, a la cota del pueblo. `nivelarHuella` toma la ESQUINA
+        //    (y solo mira su X/Z, pero se le da una Y que ya es la cota: invariante I1).
+        nivelarHuella(level, new BlockPos(bx - r, nivel, bz - r), 2 * r + 1, 2 * r + 1, nivel);
+        int caminoDesde = cx + FENCE_RADIUS - 1;          // justo dentro de la puerta este
+        int caminoHasta = bx - r - 1;                     // hasta la puerta del corral
+        nivelarHuella(level, new BlockPos(caminoDesde, nivel, bz - ANEXO_CAMINO_ANCHO / 2),
+                caminoHasta - caminoDesde + 1, ANEXO_CAMINO_ANCHO, nivel);
+        // El camino, marcado en el suelo (la capa que se pisa es `nivel`, el suelo sólido `nivel-1`).
+        for (int x = caminoDesde; x <= caminoHasta; x++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                colocar(level, new BlockPos(x, nivel - 1, bz + dz), Blocks.DIRT_PATH.defaultBlockState(), 3);
+            }
+        }
+        // 2) LA VALLA: anillo de valla de roble (los animales no saltan 1,5 bloques) con la PUERTA en el lado OESTE,
+        //    mirando al camino de la aldea. La puerta es la clave: los aldeanos la ABREN y los animales no, así que
+        //    el ganadero entra y sale y el ganado se queda dentro.
+        for (int dx = -r; dx <= r; dx++) {
+            for (int dz = -r; dz <= r; dz++) {
+                boolean borde = Math.abs(dx) == r || Math.abs(dz) == r;
+                if (!borde || (dx == -r && dz == 0)) {
+                    continue; // interior, o el hueco de la puerta
+                }
+                colocar(level, new BlockPos(bx + dx, nivel, bz + dz), Blocks.OAK_FENCE.defaultBlockState(), 3);
+            }
+        }
+        BlockPos puerta = new BlockPos(bx - r, nivel, bz);
+        colocar(level, puerta, Blocks.OAK_DOOR.defaultBlockState()
+                .setValue(DoorBlock.FACING, Direction.WEST).setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER), 3);
+        colocar(level, puerta.above(), Blocks.OAK_DOOR.defaultBlockState()
+                .setValue(DoorBlock.FACING, Direction.WEST).setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER), 3);
+        // 3) COBERTIZO (al este, pegado a la valla): suelo de piedra, cuatro postes, tejado de tablones y SIN
+        //    paredes, para que el ganadero y el ganado pasen por debajo. Dentro: su CAMA, su TELAR (puesto de trabajo
+        //    de pastor), paja y un farol.
+        int sx1 = bx + r - 5;
+        int sx2 = bx + r - 1;
+        for (int x = sx1; x <= sx2; x++) {
+            for (int dz = -2; dz <= 2; dz++) {
+                colocar(level, new BlockPos(x, nivel - 1, bz + dz), Blocks.STONE_BRICKS.defaultBlockState(), 3);
+                for (int dy = 0; dy <= 3; dy++) {
+                    colocar(level, new BlockPos(x, nivel + dy, bz + dz), Blocks.AIR.defaultBlockState(), 3);
+                }
+                colocar(level, new BlockPos(x, nivel + 3, bz + dz), Blocks.OAK_PLANKS.defaultBlockState(), 3);
+            }
+        }
+        for (int[] esquina : new int[][]{{sx1, -2}, {sx1, 2}, {sx2, -2}, {sx2, 2}}) {
+            for (int dy = 0; dy <= 2; dy++) {
+                colocar(level, new BlockPos(esquina[0], nivel + dy, bz + esquina[1]),
+                        Blocks.OAK_LOG.defaultBlockState(), 3);
+            }
+        }
+        colocar(level, new BlockPos((sx1 + sx2) / 2, nivel + 2, bz),
+                Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true), 3);
+        bed(level, new BlockPos(sx1 + 1, nivel, bz - 1), Direction.SOUTH);
+        // El TELAR es el puesto de trabajo del pastor (vanilla): sin él, el juego le borra el oficio al aldeano.
+        // Va en el sitio exacto (el suelo del cobertizo ya está puesto, así que no hace falta buscar hueco).
+        colocar(level, new BlockPos(sx2 - 1, nivel, bz + 1), Blocks.LOOM.defaultBlockState(), 3);
+        colocar(level, new BlockPos(sx2 - 1, nivel, bz - 1), Blocks.HAY_BLOCK.defaultBlockState(), 3);
+        colocar(level, new BlockPos(sx1, nivel, bz + 1), Blocks.HAY_BLOCK.defaultBlockState(), 3);
+        // 4) BEBEDERO: una alberca de 3x1 a ras del suelo del corral (la capa que se pisa sigue libre).
+        for (int dx = -4; dx <= -2; dx++) {
+            colocar(level, new BlockPos(bx + dx, nivel - 1, bz + 4), Blocks.WATER.defaultBlockState(), 3);
+        }
+        // 5) Dos islas de paja más y un par de vallas sueltas donde rascarse: da vida al corral y no estorba.
+        colocar(level, new BlockPos(bx - 5, nivel, bz - 4), Blocks.HAY_BLOCK.defaultBlockState(), 3);
+        colocar(level, new BlockPos(bx + 2, nivel, bz - 5), Blocks.HAY_BLOCK.defaultBlockState(), 3);
+    }
+
+    /** ¿Está el corral <b>sin ningún animal</b> de las especies del anexo? (para el rebaño inicial). */
+    public static boolean corralVacio(ServerLevel level, BlockPos center) {
+        return animalesDelCorral(level, center).isEmpty();
+    }
+
+    /** Los animales del corral (solo las especies del anexo, no cualquier bicho que pase por ahí). */
+    public static List<net.minecraft.world.entity.animal.Animal> animalesDelCorral(ServerLevel level, BlockPos center) {
+        BlockPos base = baseDeAnexo(center);
+        AABB caja = new AABB(base).inflate(ANEXO_RADIO + 2, 8.0D, ANEXO_RADIO + 2);
+        List<net.minecraft.world.entity.animal.Animal> dentro = new ArrayList<>();
+        for (net.minecraft.world.entity.animal.Animal animal : level.getEntitiesOfClass(
+                net.minecraft.world.entity.animal.Animal.class, caja)) {
+            if (ANEXO_ESPECIES.contains(animal.getType())) {
+                dentro.add(animal);
+            }
+        }
+        return dentro;
+    }
+
+    /**
+     * Suelta el <b>rebaño inicial</b> del corral (2 vacas, 2 ovejas, 2 puercos y 4 gallinas). Lo llama el gestor de
+     * la aldea al construir el anexo y, después, solo si el corral se quedó <b>vacío</b> y ha pasado
+     * {@link #ANEXO_REBANO_ESPERA_TICKS} (ver {@code VillageManager}).
+     */
+    public static void criarRebanoInicial(ServerLevel level, BlockPos center) {
+        BlockPos base = baseDeAnexo(center);
+        int nivel = cotaDeLaPlaza(level, center);
+        criarAnimales(level, EntityType.COW, new BlockPos(base.getX() - 2, nivel, base.getZ() - 4), 2);
+        criarAnimales(level, EntityType.SHEEP, new BlockPos(base.getX() + 1, nivel, base.getZ() + 4), 2);
+        criarAnimales(level, EntityType.PIG, new BlockPos(base.getX() - 4, nivel, base.getZ() + 1), 2);
+        criarAnimales(level, EntityType.CHICKEN, new BlockPos(base.getX() - 1, nivel, base.getZ() + 2), 4);
+        DevilRpg.LOGGER.info("[Village] Aldea en {}: rebano inicial del corral anexo ({} animales)",
+                center, animalesDelCorral(level, center).size());
+    }
+
+    /** Suelta {@code cuantos} animales de esa especie, separados un poco para que no se apilen. */
+    private static void criarAnimales(ServerLevel level, EntityType<? extends net.minecraft.world.entity.animal.Animal> tipo,
+                                      BlockPos pos, int cuantos) {
+        for (int i = 0; i < cuantos; i++) {
+            net.minecraft.world.entity.animal.Animal animal = tipo.create(level);
+            if (animal == null) {
+                continue;
+            }
+            animal.moveTo(pos.getX() + 0.5D + (i % 2) * 0.8D, pos.getY(), pos.getZ() + 0.5D + (i / 2) * 0.8D,
+                    level.random.nextFloat() * 360.0F, 0.0F);
+            // Persistentes: que el juego no se los lleve por lejanía (el corral está fuera del muro y a veces el
+            // jugador está lejos). Se quedan donde viven.
+            animal.setPersistenceRequired();
+            level.addFreshEntity(animal);
+        }
+    }
+
     /**
      * Posiciones base de las casas de la aldea, relativas al centro (las mismas que usa {@link #generate}).
-     * <p>
      * Con la aldea agrandada (radio 36) los solares se han <b>repartido</b>: cada casa va a un cuadrante distinto, a
      * unos 21-25 bloques del centro, dejando sitio entre ellas (y hueco para las casas que construya el obrero más
      * adelante). Antes estaban a 16-18 y todo quedaba apelotonado.
@@ -2459,7 +2671,11 @@ public final class VillageGenerator {
      */
     private static final BlockPos[] VILLAGER_SPOTS = {
             new BlockPos(-13, 0, -8), new BlockPos(12, 0, -8), new BlockPos(-4, 0, 13),
-            new BlockPos(15, 0, 3), new BlockPos(4, 0, 13)
+            new BlockPos(15, 0, 3), new BlockPos(4, 0, 13),
+            // El GANADERO vive en su corral, FUERA de la valla (a 47 del centro, dentro del corral y fuera del
+            // cobertizo: si el punto cayera bajo su tejado, `groundY` devolvería la altura del TEJADO y el aldeano
+            // aparecería encima de él).
+            new BlockPos(47, 0, 0)
     };
     /**
      * Oficios de la aldea, en el orden en que se ocupan los sitios:
@@ -2470,12 +2686,23 @@ public final class VillageGenerator {
      *   <li><b>Holgazán</b> (nitwit) = el <b>RECOLECTOR</b>: no tiene oficio propio a propósito, así no reclama
      *       ningún puesto de trabajo y se dedica <b>solo</b> a recoger cosas del pueblo y guardarlas en el almacén.
      *       Antes esto lo hacía el constructor y se pasaba el día recolectando en vez de reparar.</li>
+     *   <li><b>Pastor</b> = el <b>GANADERO</b> de la granja anexa (etapa D): vive en el corral de fuera de la valla,
+     *       cría a los animales y baja la carne y la lana al almacén.</li>
      * </ol>
      */
     private static final VillagerProfession[] VILLAGER_SPECIALTIES = {
             VillagerProfession.FARMER, VillagerProfession.WEAPONSMITH, VillagerProfession.CLERIC,
-            VillagerProfession.TOOLSMITH, VillagerProfession.NITWIT
+            VillagerProfession.TOOLSMITH, VillagerProfession.NITWIT, VillagerProfession.SHEPHERD
     };
+
+    /**
+     * Cuántos <b>puestos fijos</b> tiene una aldea: uno por sitio de {@link #VILLAGER_SPOTS}. Lo usa el gestor como
+     * <b>tope de crecimiento</b>: la aldea crece hasta cubrir sus puestos (6 desde la etapa D, con el ganadero) y, a
+     * partir de ahí, los que nacen son gente de sobra (la milicia).
+     */
+    public static int puestosDelPueblo() {
+        return VILLAGER_SPOTS.length;
+    }
 
     /**
      * El sitio (slot) de la <b>primera profesión que le falta</b> a la aldea: si no hay ningún aldeano vivo con ese

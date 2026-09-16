@@ -283,9 +283,14 @@ public final class VillageManager {
      *       {@code BARRACA_CAMAS} = 8 camas): el edificio que pidió el jugador para la guardia ("una barraca con
      *       MUCHAS CAMAS"). Las aldeas ya construidas la reciben aquí, porque el sitio que ocupa estaba vacío y no
      *       hay que borrar nada de lo suyo (solo el volumen donde se levanta, que en el trazado actual es patio).</li>
+     *   <li>31: la <b>GRANJA ANEXA DE ANIMALES</b> (etapa D) al este y <b>fuera de la valla</b>: corral de 15x15 con
+     *       cobertizo (cama y telar del pastor), bebedero, heno y una puerta de madera al camino que baja de la
+     *       puerta este del muro. Con ella llega el <b>sexto puesto</b> del pueblo, el <b>ganadero</b> (pastor), que
+     *       cría el rebaño y baja la carne y la lana al almacén. Se construye donde antes solo estaba el talud, así
+     *       que no borra nada del jugador.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 30;
+    public static final int CURRENT_LAYOUT = 31;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -440,7 +445,7 @@ public final class VillageManager {
                     VillageGenerator.spawnVillagers(level, target);
                     saved.markRepopulated(i, level.getGameTime());
                     DevilRpg.LOGGER.info("[Village] Aldea {} estaba vacia: aldeanos y golem repuestos", i);
-                } else if (vivos > 0 && vivos < VILLAGERS_FOR_FULL_HEALTH && saved.getFood(i) >= FOOD_TO_GROW) {
+                } else if (vivos > 0 && vivos < VillageGenerator.puestosDelPueblo() && saved.getFood(i) >= FOOD_TO_GROW) {
                     // Qué oficios quedan vivos y cuál falta (si mataron al recolector, vuelve un recolector; si al
                     // granjero, un granjero): no se repone "el sitio siguiente".
                     List<VillagerProfession> vivas = level
@@ -466,7 +471,7 @@ public final class VillageManager {
                         saved.setFood(i, saved.getFood(i) - FOOD_TO_GROW);
                         saved.markRepopulated(i, level.getGameTime());
                         DevilRpg.LOGGER.info("[Village] Aldea {} se recupera: aldeano {}/{} (comida {})",
-                                i, vivos + 1, VILLAGERS_FOR_FULL_HEALTH, saved.getFood(i));
+                                i, vivos + 1, VillageGenerator.puestosDelPueblo(), saved.getFood(i));
                     }
                 }
             }
@@ -1096,6 +1101,9 @@ public final class VillageManager {
             // BARRACA de la milicia: igual, antes de tirar el plano, para que el edificio y sus camas entren en el
             // plano y el obrero los reponga.
             VillageGenerator.asegurarBarraca(level, center);
+            // GRANJA ANEXA de animales (etapa D): FUERA de la valla, al este, con su corral y su cobertizo. Va aquí
+            // por el mismo motivo: sus bloques tienen que entrar en el plano nuevo para que el obrero la reponga.
+            VillageGenerator.asegurarGranjaAnexa(level, center);
             // El plano se tira: hay que volver a capturarlo, ya con las casas nuevas, el muro y las reglas actuales.
             saved.clearBlueprint(objectiveIndex);
             saved.setLayout(objectiveIndex, CURRENT_LAYOUT);
@@ -1119,6 +1127,17 @@ public final class VillageManager {
         // ALMACÉN del pueblo: cobertizo con cofre doble (que crece) donde el constructor recolector va dejando lo que
         // recoge. Es una construcción aparte, al lado de la plaza.
         VillageGenerator.asegurarAlmacen(level, center);
+        // GRANJA ANEXA de animales (etapa D): igual (idempotente). Si el jugador se llevó la valla, se vuelve a
+        // levantar; si está, no se toca (reconstruirla borraría su cobertizo y lo que tenga dentro).
+        VillageGenerator.asegurarGranjaAnexa(level, center);
+        // REBAÑO: el corral se llena UNA vez (al construirlo o al migrar). Después, si se queda VACÍO (una horda, el
+        // jugador...) se repone solo, pero con una espera larga (3 días de juego): ni la granja se queda muerta para
+        // siempre ni es un grifo de carne gratis. La marca se guarda con la partida.
+        if (VillageGenerator.corralVacio(level, center)
+                && level.getGameTime() - saved.getAnexoAnimales(objectiveIndex) >= VillageGenerator.ANEXO_REBANO_ESPERA_TICKS) {
+            VillageGenerator.criarRebanoInicial(level, center);
+            saved.setAnexoAnimales(objectiveIndex, level.getGameTime());
+        }
         // PROFESIONES PERDIDAS: a los aldeanos de una partida vieja el juego les BORRÓ el oficio (el cerebro
         // vanilla trae `ResetProfession`: sin puesto de trabajo en el cerebro, con XP 0 y nivel 1, devuelve al
         // aldeano a SIN OFICIO). Sin granjero no hay huerta ni pan y la aldea pasa hambre con la despensa vacía,
@@ -1153,6 +1172,15 @@ public final class VillageManager {
                     && villager.getVillagerData().getProfession() == VillagerProfession.NITWIT) {
                 asegurarGoalDeRecolector(villager, center, objectiveIndex);
                 asegurarGoalDeLenador(villager, center, objectiveIndex);
+            }
+        }
+        // GANADERO (etapa D): el pastor vive con el rebaño en la granja anexa. Cría, recoge lo que sueltan los
+        // animales (huevos, lana, carne de los sacrificios) y lo baja al almacén. Es un puesto FIJO del pueblo, así
+        // que no lo toca el reparto de obreros ni la milicia.
+        for (Villager villager : aldeanos) {
+            if (!villager.isBaby() && !VillagerGuardGoal.esGuardia(villager)
+                    && villager.getVillagerData().getProfession() == VillagerProfession.SHEPHERD) {
+                asegurarGoalDeGanadero(villager, center, objectiveIndex);
             }
         }
         // GUARDIA (milicia): los aldeanos adultos que SOBRAN (cubiertos los puestos fijos: granjero, los dos
@@ -1203,9 +1231,15 @@ public final class VillageManager {
         }
     }
 
-    /** ¿Ese aldeano puede ser obrero? (ni crías, ni el recolector ni un guardia, que tienen su propio puesto). */
+    /**
+     * ¿Ese aldeano puede ser obrero? (ni crías, ni el recolector, ni el ganadero ni un guardia, que tienen su propio
+     * puesto). El ganadero entra aquí desde la etapa D: si no, el reparto de obreros se lo llevaba a reparar caminos
+     * y el rebaño se quedaba sin nadie que lo cuidara.
+     */
     private static boolean puedeSerObrero(Villager villager) {
-        return !villager.isBaby() && villager.getVillagerData().getProfession() != VillagerProfession.NITWIT
+        VillagerProfession profesion = villager.getVillagerData().getProfession();
+        return !villager.isBaby() && profesion != VillagerProfession.NITWIT
+                && profesion != VillagerProfession.SHEPHERD
                 && !VillagerGuardGoal.esGuardia(villager);
     }
 
@@ -1232,6 +1266,7 @@ public final class VillageManager {
         cupo.put(VillagerProfession.TOOLSMITH, 1);
         cupo.put(VillagerProfession.CLERIC, 1);
         cupo.put(VillagerProfession.NITWIT, 1); // el recolector
+        cupo.put(VillagerProfession.SHEPHERD, 1); // el ganadero de la granja anexa (etapa D)
 
         List<Villager> adultos = new ArrayList<>();
         for (Villager villager : aldeanos) {
@@ -1536,6 +1571,21 @@ public final class VillageManager {
         villager.goalSelector.addGoal(6, new VillagerLumberjackGoal(villager, center, objectiveIndex));
     }
 
+    /**
+     * Le pone al <b>ganadero</b> (pastor) su goal de la <b>granja anexa</b> (etapa D): va al corral de fuera de la
+     * valla, cría a los animales con la comida del pueblo, recoge lo que sueltan y lo baja al almacén. Prioridad
+     * <b>4</b>, la misma que el granjero y los herreros: es su oficio, no un extra.
+     */
+    private static void asegurarGoalDeGanadero(Villager villager, BlockPos center, int objectiveIndex) {
+        for (WrappedGoal wrapped : villager.goalSelector.getAvailableGoals()) {
+            if (wrapped.getGoal() instanceof com.chipoodle.devilrpg.entity.goal.VillagerAnimalFarmGoal) {
+                return;
+            }
+        }
+        villager.goalSelector.addGoal(4, new com.chipoodle.devilrpg.entity.goal.VillagerAnimalFarmGoal(villager,
+                center, objectiveIndex));
+    }
+
     /** Le pone al <b>herrero</b> su goal de taller (coger material, fabricar en su puesto y dejarlo en el almacén). */
     private static void asegurarGoalDeHerrero(Villager villager, BlockPos center, int objectiveIndex) {
         for (WrappedGoal wrapped : villager.goalSelector.getAvailableGoals()) {
@@ -1786,6 +1836,9 @@ public final class VillageManager {
         }
         if (profesion == VillagerProfession.NITWIT) {
             return "Recolector"; // el holgazán es el recolector de la aldea
+        }
+        if (profesion == VillagerProfession.SHEPHERD) {
+            return "Ganadero"; // el pastor de la granja anexa (etapa D)
         }
         if (profesion == VillagerProfession.NONE) {
             return "Sin oficio";

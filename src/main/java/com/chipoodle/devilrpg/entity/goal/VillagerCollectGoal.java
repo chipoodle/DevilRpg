@@ -2,6 +2,7 @@ package com.chipoodle.devilrpg.entity.goal;
 
 import com.chipoodle.devilrpg.world.VillageGenerator;
 import com.chipoodle.devilrpg.world.VillageManager;
+import com.chipoodle.devilrpg.world.VillagePantry;
 import com.chipoodle.devilrpg.world.VillageStorage;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -283,6 +284,9 @@ public class VillagerCollectGoal extends Goal {
                 // MATERIALES DEL TALLER (lo que forjan los herreros): chips de metal (pepitas) y carne de zombie
                 // podrida (de ahí sale el cuero).
                 || s.is(Items.IRON_NUGGET) || s.is(Items.ROTTEN_FLESH)
+                // LO DEL CORRAL ANEXO (etapa D): carne (cruda y cocinada), huevos, lana, plumas y cuero de los
+                // animales del ganadero. El ganadero lo baja al almacén y el granjero pasa la carne a la despensa.
+                || VillagePantry.esCarneCruda(s) || VillagePantry.esCarneCocida(s) || s.is(Items.EGG)
                 // EQUIPO QUE SUELTAN LOS ENEMIGOS: ver `esEquipoDeEnemigo`.
                 || esEquipoDeEnemigo(s);
     }
