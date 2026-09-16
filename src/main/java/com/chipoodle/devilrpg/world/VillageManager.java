@@ -86,9 +86,8 @@ public final class VillageManager {
 
     // --- Salud del asentamiento (Iteración 3, paso 2) ----------------------------------------------
 
-    /** Aldeanos que tiene una aldea sana (los que pone el generador): es el tope de la "salud". Son 4 oficios:
-     *  granjero, herrero, clérigo y recolector (un solo herrero por aldea). */
-    public static final int VILLAGERS_FOR_FULL_HEALTH = 4;
+    /** Aldeanos que tiene una aldea sana (los que pone el generador): es el tope de la "salud". */
+    public static final int VILLAGERS_FOR_FULL_HEALTH = 5;
     /** Cada cuánto se repone UN aldeano en una aldea debilitada (5 min). */
     private static final int REPOPULATE_INTERVAL_TICKS = 5 * 60 * 20;
     /**
@@ -253,14 +252,14 @@ public final class VillageManager {
      *   <li>27: la <b>granja pasa a 4 carriles por lado</b> (parcela de 9x5 a 9x9, 72 cultivos por parcela) y se
      *       recolocan las dos parcelas a (-20,10) y (10,6): las aldeas ya construidas tienen que rehacer sus
      *       bancales (y las parcelas nuevas tapan a las viejas, así que no quedan bancales sueltos).</li>
-     *   <li>28: <b>un solo herrero por aldea</b> (lo pidió el jugador: la herrería tiene un puesto de herrero). El
-     *       herrero de HERRAMIENTAS deja de ser oficio de la aldea y se retira su <b>mesa de herrería</b> del taller
-     *       (una estación sin dueño acabaría dando ese oficio a cualquier aldeano sin oficio que se subiera). A los
-     *       aldeanos que ya lo tuvieran se les recoloca en el puesto que falte. El pueblo nace con <b>4</b> aldeanos
-     *       (granjero, herrero, clérigo y recolector).</li>
+     *   <li>29: <b>vuelve el herrero de HERRAMIENTAS</b> (y con él su mesa en el taller). Se retiró en el 28 al dejar
+     *       un solo herrero por aldea, pero el jugador lo corrigió: hacen falta <b>los dos</b> herreros, que van a
+     *       fabricar la indumentaria de la guardia (espada, escudo, armadura, arco y flechas) repartiéndose el
+     *       trabajo. Esta versión repone la <b>mesa de herrería</b> que el 28 quitó —y con ella el oficio— y devuelve
+     *       el tope de aldeanos a 5.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 28;
+    public static final int CURRENT_LAYOUT = 29;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -1090,9 +1089,7 @@ public final class VillageManager {
                 continue;
             }
             VillagerProfession profesion = villager.getVillagerData().getProfession();
-            // Un oficio RETIRADO (el herrero de herramientas, desde que la aldea tiene un solo herrero) cuenta como
-            // "sin oficio": así se le recoloca en el puesto que falte y no queda un segundo herrero sin estación.
-            if (profesion == VillagerProfession.NONE || VillageGenerator.oficioRetirado(profesion)) {
+            if (profesion == VillagerProfession.NONE) {
                 sinOficio.add(villager);
             } else if (!presentes.contains(profesion)) {
                 presentes.add(profesion);
@@ -1101,17 +1098,7 @@ public final class VillageManager {
         for (Villager villager : sinOficio) {
             int slot = VillageGenerator.slotDeProfesionFaltante(presentes);
             if (slot < 0) {
-                // Están los cuatro oficios cubiertos. A un oficio RETIRADO (el segundo herrero) no se le deja como
-                // está —el jugador quiere UN herrero por aldea—: pasa a ayudar en la huerta.
-                if (VillageGenerator.oficioRetirado(villager.getVillagerData().getProfession())) {
-                    villager.setVillagerData(villager.getVillagerData()
-                            .setProfession(VillagerProfession.FARMER));
-                    villager.setVillagerXp(Math.max(1, villager.getVillagerXp()));
-                    villager.refreshBrain(level);
-                    DevilRpg.LOGGER.info("[Village] Aldea {}: el herrero de herramientas pasa a la huerta "
-                            + "(la aldea tiene un solo herrero)", objectiveIndex);
-                }
-                continue;
+                return; // ya están todos los oficios cubiertos
             }
             VillagerProfession nueva = VillageGenerator.profesionDeSlot(slot);
             villager.setVillagerData(villager.getVillagerData().setProfession(nueva));
@@ -1404,7 +1391,7 @@ public final class VillageManager {
             return "Granjero";
         }
         if (profesion == VillagerProfession.WEAPONSMITH) {
-            return "Herrero";
+            return "Herrero de armas";
         }
         if (profesion == VillagerProfession.TOOLSMITH) {
             return "Herrero de herramientas";
