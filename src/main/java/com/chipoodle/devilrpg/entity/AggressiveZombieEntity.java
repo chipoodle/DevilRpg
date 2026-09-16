@@ -8,6 +8,7 @@ import com.chipoodle.devilrpg.spawnprofile.AggressiveZombieSpawnProfile;
 import com.chipoodle.devilrpg.spawnprofile.SpawnScaleProfile;
 import com.chipoodle.devilrpg.survival.ThreatLevel;
 import com.chipoodle.devilrpg.world.LairGenerator;
+import com.chipoodle.devilrpg.world.VillageGenerator;
 import com.chipoodle.devilrpg.world.VillageManager;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
@@ -38,6 +39,8 @@ import net.minecraft.world.entity.projectile.SmallFireball;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
@@ -81,6 +84,42 @@ public class AggressiveZombieEntity extends Zombie {
         this.villageCenter = center;
     }
 
+    // --- Abrirse paso cuando la geografía bloquea la marcha a la aldea ---------------------------------
+    /**
+     * Bloques que puede taladrar un zombie en UNA marcha a la aldea. El túnel es <b>lento y con presupuesto</b> a
+     * propósito: una montaña grande tiene que poder aguantar y la aldea salvarse (lo pidió el jugador).
+     */
+    private static final int TUNEL_PRESUPUESTO = 40;
+    /** Ticks entre bloque y bloque del túnel (2 s): lento a propósito. */
+    private static final int TUNEL_ENTRE_BLOQUES = 40;
+    /** Ticks entre tabla y tabla del puente (1 s): un abismo se cruza despacio, tablón a tablón. */
+    private static final int PUENTE_ENTRE_BLOQUES = 20;
+    /** Radio (a partir del centro) dentro del cual el zombie NO rompe ni construye: solo tiene que LLEGAR al
+     *  perímetro. Así no se cava un túnel por debajo de la aldea ni se le destroza nada al pueblo al llegar. */
+    private static final double NO_TOCAR_LA_ALDEA = VillageGenerator.FENCE_RADIUS + 2.0D;
+
+    /** Bloques de túnel/puente que le quedan a este zombie en la marcha actual. */
+    private int tunelRestante = TUNEL_PRESUPUESTO;
+    private int tunelEspera;
+    private int puenteEspera;
+
+    /** Vuelve a darle presupuesto de túnel (al empezar una marcha nueva a la aldea). */
+    public void recargarTunel() {
+        this.tunelRestante = TUNEL_PRESUPUESTO;
+        this.tunelEspera = 0;
+        this.puenteEspera = 0;
+    }
+
+    /** Ticks de espera del túnel/puente. Se llama en cada tick del zombie (ver {@link #aiStep}). */
+    private void tickTunel() {
+        if (tunelEspera > 0) {
+            tunelEspera--;
+        }
+        if (puenteEspera > 0) {
+            puenteEspera--;
+        }
+    }
+
     public BlockPos getVillageCenter() {
         return villageCenter;
     }
@@ -102,9 +141,12 @@ public class AggressiveZombieEntity extends Zombie {
         return homeRadius;
     }
 
-    /** Siempre que se asigne centro, el asedio arranca activo. */
+    /** Siempre que se asigne centro, el asedio arranca activo (y con presupuesto de túnel nuevo). */
     public void setGoToCenterActive(boolean active) {
         this.goToCenterActive = active;
+        if (active) {
+            recargarTunel();
+        }
     }
 
     public boolean isGoToCenterActive() {
@@ -189,6 +231,11 @@ public class AggressiveZombieEntity extends Zombie {
      * ensanchar el paso. Usado al ir al centro cuando el zombie está bloqueado por el muro.
      */
     private void breakBlockTowards(BlockPos towards) {
+        // TÚNEL LENTO Y CON PRESUPUESTO: un bloque cada TUNEL_ENTRE_BLOQUES (2 s) y como mucho TUNEL_PRESUPUESTO por
+        // marcha. Una montaña grande aguanta y la aldea se salva (lo pidió el jugador).
+        if (tunelRestante <= 0 || tunelEspera > 0) {
+            return;
+        }
         BlockPos zPos = blockPosition();
         int sx = Integer.signum(towards.getX() - zPos.getX());
         int sz = Integer.signum(towards.getZ() - zPos.getZ());
@@ -199,6 +246,9 @@ public class AggressiveZombieEntity extends Zombie {
                 for (int dz = -1; dz <= 1; dz++) {
                     if (dx == 0 && dz == 0) continue;
                     BlockPos candidate = new BlockPos(zPos.getX() + dx, zPos.getY() + dy, zPos.getZ() + dz);
+                    if (dentroDeLaAldea(candidate)) {
+                        continue; // a la aldea no se le cava: solo hay que llegar al perímetro
+                    }
                     BlockState bs = level().getBlockState(candidate);
                     if (!bs.isAir() && bs.isSolid() && canBreakBlock(bs)) {
                         double score = Math.abs(dx - sx) + Math.abs(dz - sz) + dy * 0.5D;
@@ -215,6 +265,14 @@ public class AggressiveZombieEntity extends Zombie {
         }
         // Destruir el bloque principal.
         breakBlockAt(best);
+        if (tunelRestante == TUNEL_PRESUPUESTO) {
+            // Primer bloque de esta marcha: queda en el log (INFO) para poder comprobar que la horda se abre paso.
+            DevilRpg.LOGGER.info("[Siege] un zombie empieza a TALADRAR hacia la aldea en {} (presupuesto {} bloques)",
+                    best, TUNEL_PRESUPUESTO);
+        }
+        tunelRestante--;
+        tunelEspera = TUNEL_ENTRE_BLOQUES;
+        particulasDeTrabajo(best);
         // Dirección principal hacia el objetivo (para saber si el objetivo está más arriba).
         boolean targetAbove = towards.getY() > zPos.getY();
         int dirX = Integer.signum(best.getX() - zPos.getX());
@@ -222,7 +280,7 @@ public class AggressiveZombieEntity extends Zombie {
         // Si el objetivo está arriba, destruir también el bloque +2 (arriba del principal) para poder saltar.
         if (targetAbove) {
             BlockPos above = best.above();
-            if (canBreakBlock(level().getBlockState(above))) {
+            if (canBreakBlock(level().getBlockState(above)) && !dentroDeLaAldea(above)) {
                 breakBlockAt(above);
             }
         }
@@ -237,13 +295,13 @@ public class AggressiveZombieEntity extends Zombie {
             } else {
                 adjacent = new BlockPos(best.getX() + side, best.getY(), best.getZ());
             }
-            if (canBreakBlock(level().getBlockState(adjacent))) {
+            if (canBreakBlock(level().getBlockState(adjacent)) && !dentroDeLaAldea(adjacent)) {
                 breakBlockAt(adjacent);
             }
             // Si objetivo arriba, también el +2 del contiguo.
             if (targetAbove) {
                 BlockPos adjacentAbove = adjacent.above();
-                if (canBreakBlock(level().getBlockState(adjacentAbove))) {
+                if (canBreakBlock(level().getBlockState(adjacentAbove)) && !dentroDeLaAldea(adjacentAbove)) {
                     breakBlockAt(adjacentAbove);
                 }
             }
@@ -254,6 +312,85 @@ public class AggressiveZombieEntity extends Zombie {
     @Override
     protected boolean isSunSensitive() {
         return false;
+    }
+
+    /**
+     * ¿Esa posición cae <b>dentro de la aldea</b> (o su perímetro)? Ahí el zombie no rompe ni construye: lo único que
+     * tiene que hacer es <b>llegar</b> al perímetro. El muro, las casas, la huerta y el kiosco están todos dentro de
+     * ese disco, así que esta sola comprobación protege toda la obra del pueblo (y evita que se cuele por debajo).
+     */
+    private boolean dentroDeLaAldea(BlockPos pos) {
+        if (villageCenter == null) {
+            return false;
+        }
+        double dx = pos.getX() - villageCenter.getX();
+        double dz = pos.getZ() - villageCenter.getZ();
+        return dx * dx + dz * dz <= NO_TOCAR_LA_ALDEA * NO_TOCAR_LA_ALDEA;
+    }
+
+    /**
+     * <b>Puente</b>: si justo delante hay un hueco (dos bloques de aire con un vacío de 2 o más debajo), pone un
+     * adoquín a la altura de los pies para poder pisar. Un abismo se cruza así, tablón a tablón y despacio.
+     *
+     * @return {@code true} si ha puesto algo (entonces no hace falta taladrar)
+     */
+    private boolean puentearHacia(BlockPos towards) {
+        if (tunelRestante <= 0 || puenteEspera > 0) {
+            return false;
+        }
+        BlockPos zPos = blockPosition();
+        int sx = Integer.signum(towards.getX() - zPos.getX());
+        int sz = Integer.signum(towards.getZ() - zPos.getZ());
+        if (sx == 0 && sz == 0) {
+            return false;
+        }
+        // Delante en la dirección del objetivo: primero en diagonal (avanza en los dos ejes a la vez) y, si no,
+        // en los ejes por separado.
+        int[][] deltas = {{sx, sz}, {sx, 0}, {0, sz}};
+        for (int[] d : deltas) {
+            if (d[0] == 0 && d[1] == 0) {
+                continue;
+            }
+            BlockPos delante = new BlockPos(zPos.getX() + d[0], zPos.getY(), zPos.getZ() + d[1]);
+            if (dentroDeLaAldea(delante) || !level().getBlockState(delante).isAir()
+                    || !level().getBlockState(delante.above()).isAir()) {
+                continue;
+            }
+            // ¿Cuánto vacío hay debajo? Con menos de 2 no es un abismo (puede saltar o bajar andando).
+            int vacio = 0;
+            for (int i = 1; i <= 4; i++) {
+                if (!level().getBlockState(delante.below(i)).isAir()) {
+                    break;
+                }
+                vacio++;
+            }
+            if (vacio < 2) {
+                continue;
+            }
+            // Y tiene que estar EN EL BORDE: si debajo de él ya hay vacío, se está cayendo y no es el momento.
+            if (level().getBlockState(zPos.below()).isAir()) {
+                continue;
+            }
+            BlockState puente = Blocks.COBBLESTONE.defaultBlockState();
+            level().setBlock(delante, puente, Block.UPDATE_ALL);
+            level().playSound(null, delante, SoundType.STONE.getPlaceSound(), SoundSource.BLOCKS, 0.7F, 1.0F);
+            particulasDeTrabajo(delante);
+            if (puenteEspera == 0 && tunelRestante == TUNEL_PRESUPUESTO) {
+                DevilRpg.LOGGER.info("[Siege] un zombie empieza a PONER UN PUENTE hacia la aldea en {}", delante);
+            }
+            tunelRestante--;
+            puenteEspera = PUENTE_ENTRE_BLOQUES;
+            return true;
+        }
+        return false;
+    }
+
+    /** Partículas del sitio donde el zombie rompe o construye, para que el jugador lo vea desde lejos. */
+    private void particulasDeTrabajo(BlockPos pos) {
+        if (level() instanceof ServerLevel server) {
+            server.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE,
+                    pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D, 4, 0.3D, 0.3D, 0.3D, 0.01D);
+        }
     }
 
     // Configurar atributos personalizados: se usan las bases del perfil (ahora iguales a un zombie normal).
@@ -381,6 +518,8 @@ public class AggressiveZombieEntity extends Zombie {
     @Override
     public void aiStep() {
         super.aiStep();
+
+        tickTunel();
 
         if (!attributesAdjusted) {
             adjustAttributesBasedOnSpawnDistance();
@@ -786,9 +925,17 @@ public class AggressiveZombieEntity extends Zombie {
         private static final double ARRIVE_DIST = 3.0D * 3.0D;
         private static final int BREAK_EVERY_TICKS = 60;
         private static final double IMPROVEMENT_THRESHOLD = 1.5D;
+        /**
+         * Cuánto se le amplía al buscador de caminos su presupuesto de nodos mientras marcha a la aldea: es lo que le
+         * permite <b>RODEAR</b> una montaña en vez de rendirse al primer intento. Se recalcula la ruta cada
+         * {@link #REPATH_TICKS} (no en cada tick) para que esa búsqueda más cara no cueste una barbaridad.
+         */
+        private static final float RODEO_MULTIPLIER = 6.0F;
+        private static final int REPATH_TICKS = 20;
         private final AggressiveZombieEntity zombie;
         private double anchorDist = Double.MAX_VALUE;
         private int evalTicks = 0;
+        private int repathTicks = 0;
 
         public MoveToVillageCenterGoal(AggressiveZombieEntity zombie) {
             this.zombie = zombie;
@@ -821,13 +968,24 @@ public class AggressiveZombieEntity extends Zombie {
         public void start() {
             anchorDist = centerDistSqr();
             evalTicks = 0;
+            repathTicks = 0;
+            // RODEO: más presupuesto de búsqueda para que encuentre la vuelta a la montaña.
+            zombie.getNavigation().setMaxVisitedNodesMultiplier(RODEO_MULTIPLIER);
+        }
+
+        @Override
+        public void stop() {
+            zombie.getNavigation().resetMaxVisitedNodesMultiplier();
         }
 
         @Override
         public void tick() {
             BlockPos center = zombie.getVillageCenter();
             if (center == null) return;
-            zombie.getNavigation().moveTo(center.getX(), center.getY(), center.getZ(), 1.0D);
+            if (--repathTicks <= 0 || zombie.getNavigation().isDone()) {
+                zombie.getNavigation().moveTo(center.getX(), center.getY(), center.getZ(), 1.0D);
+                repathTicks = REPATH_TICKS;
+            }
 
             evalTicks++;
             double dist = centerDistSqr();
@@ -836,9 +994,14 @@ public class AggressiveZombieEntity extends Zombie {
                 evalTicks = 0;
                 return;
             }
-            // Rodeando sin acercarse: romper el bloque delante (para atravesar el muro si hace falta).
-            if (evalTicks >= BREAK_EVERY_TICKS) {
-                zombie.breakBlockTowards(center);
+            // ABRIRSE PASO, en este orden: (1) el RODEO ya lo intenta el buscador de caminos (con más presupuesto);
+            // si AÚN tiene ruta, se le deja caminar (puede estar dando la vuelta a la montaña, y taladrar ahí sería
+            // un destrozo tonto). (2) Si NO hay ruta y lleva un rato sin avanzar, primero PUENTE (si lo que hay
+            // delante es un abismo) y, si no, TÚNEL lento.
+            if (zombie.getNavigation().isDone() && evalTicks >= BREAK_EVERY_TICKS) {
+                if (!zombie.puentearHacia(center)) {
+                    zombie.breakBlockTowards(center);
+                }
                 anchorDist = centerDistSqr();
                 evalTicks = 0;
             }
