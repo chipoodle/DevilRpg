@@ -9,6 +9,7 @@ import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapabilityIn
 import com.chipoodle.devilrpg.entity.AggressiveZombieEntity;
 import com.chipoodle.devilrpg.entity.goal.VillagerCollectGoal;
 import com.chipoodle.devilrpg.entity.goal.VillagerFarmGoal;
+import com.chipoodle.devilrpg.entity.goal.VillagerGuardGoal;
 import com.chipoodle.devilrpg.entity.goal.VillagerRepairGoal;
 import com.chipoodle.devilrpg.init.ModEntities;
 import com.chipoodle.devilrpg.survival.ObjectiveTargets;
@@ -41,6 +42,7 @@ import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -122,6 +124,24 @@ public final class VillageManager {
 
     /** Marca (en los datos persistentes del aldeano) del que es el <b>obrero</b> de la aldea. */
     public static final String BUILDER_TAG = "DevilRpgBuilder";
+
+    // --- Guardia de la aldea (Iteración 3, milicia) ------------------------------------------------
+
+    /** Marca (en los datos persistentes del aldeano) del que está <b>alistado en la guardia</b>. */
+    public static final String GUARD_TAG = "DevilRpgGuardia";
+    /** Tipo de guardia: 0 = <b>espadachín</b> (espada + escudo), 1 = <b>arquero</b> (arco + flechas). */
+    public static final String GUARD_TYPE_TAG = "DevilRpgGuardiaTipo";
+    /**
+     * Número de guardia (0..{@code MILICIA_MAX-1}): fija su puerta en el relevo nocturno y su secuencia de ronda,
+     * para que no se apelotonen ni hagan todos el mismo recorrido.
+     */
+    public static final String GUARD_INDEX_TAG = "DevilRpgGuardiaPuesto";
+    /**
+     * Tamaño de la milicia: <b>4 espadachines y 3 arqueros</b>, que es la formación con la que el jugador quiere que
+     * marchen a la guarida. Si la aldea cría más gente que eso, los demás siguen con lo suyo (y pueden ser obreros).
+     */
+    public static final int MILICIA_MAX = 7;
+    private static final int MILICIA_ESPADACHINES = 4;
     /**
      * Versión del trazado de la aldea. Se sube cuando cambia el diseño y hay que <b>arreglar las ya construidas</b>:
      * <ul>
@@ -1031,7 +1051,7 @@ public final class VillageManager {
         // equipará la futura guardia. Los goals no se guardan con la partida: se reponen al verlos.
         for (Villager villager : aldeanos) {
             VillagerProfession profesion = villager.getVillagerData().getProfession();
-            if (!villager.isBaby()
+            if (!villager.isBaby() && !VillagerGuardGoal.esGuardia(villager)
                     && (profesion == VillagerProfession.WEAPONSMITH || profesion == VillagerProfession.TOOLSMITH)) {
                 asegurarGoalDeHerrero(villager, center, objectiveIndex);
             }
@@ -1039,7 +1059,8 @@ public final class VillageManager {
         // GRANJERO: los goals no se guardan con la partida, así que se le repone cada vez que se le ve. Cultiva,
         // cosecha, fertiliza con la harina del compostero y trae el trigo a la despensa.
         for (Villager villager : aldeanos) {
-            if (!villager.isBaby() && villager.getVillagerData().getProfession() == VillagerProfession.FARMER) {
+            if (!villager.isBaby() && !VillagerGuardGoal.esGuardia(villager)
+                    && villager.getVillagerData().getProfession() == VillagerProfession.FARMER) {
                 asegurarGoalDeGranjero(villager, center, objectiveIndex);
             }
         }
@@ -1050,10 +1071,15 @@ public final class VillageManager {
         // RECOLECTOR: el aldeano sin oficio (holgazán) se dedica SOLO a recoger cosas y guardarlas en el almacén. El
         // constructor, así, se dedica solo a reparar (antes llevaba los dos goals y se pasaba el día recolectando).
         for (Villager villager : aldeanos) {
-            if (!villager.isBaby() && villager.getVillagerData().getProfession() == VillagerProfession.NITWIT) {
+            if (!villager.isBaby() && !VillagerGuardGoal.esGuardia(villager)
+                    && villager.getVillagerData().getProfession() == VillagerProfession.NITWIT) {
                 asegurarGoalDeRecolector(villager, center, objectiveIndex);
             }
         }
+        // GUARDIA (milicia): los aldeanos adultos que SOBRAN (cubiertos los puestos fijos: granjero, los dos
+        // herreros, clérigo y recolector) se alistan. Se calcula ANTES del reparto de obreros, porque un guardia
+        // tiene su puesto y no puede acabar de constructor.
+        repartirGuardia(level, aldeanos, center, objectiveIndex);
         // El RECOLECTOR (holgazán) no cuenta para el reparto de obreros: es un puesto fijo y no debe acabar de
         // constructor (si no, se pasa el día reparando y no recoge nada).
         int adultos = 0;
@@ -1095,9 +1121,133 @@ public final class VillageManager {
         }
     }
 
-    /** ¿Ese aldeano puede ser obrero? (ni crías ni el recolector, que tiene su propio puesto fijo). */
+    /** ¿Ese aldeano puede ser obrero? (ni crías, ni el recolector ni un guardia, que tienen su propio puesto). */
     private static boolean puedeSerObrero(Villager villager) {
-        return !villager.isBaby() && villager.getVillagerData().getProfession() != VillagerProfession.NITWIT;
+        return !villager.isBaby() && villager.getVillagerData().getProfession() != VillagerProfession.NITWIT
+                && !VillagerGuardGoal.esGuardia(villager);
+    }
+
+    /**
+     * Alista en la <b>guardia</b> a los aldeanos adultos que <b>sobran</b> (lo pidió el jugador: la milicia se forma
+     * solo cuando están cubiertos los oficios del pueblo) y desalista a los que ya no sobran.
+     * <p>
+     * <b>Quién sobra</b>: se reparten los <b>puestos fijos</b> (1 granjero, 1 herrero de armas, 1 de herramientas,
+     * 1 clérigo y 1 recolector) en orden <b>estable</b> (por UUID): los primeros de cada oficio se quedan con su
+     * puesto y los demás son gente de sobra. Así la guardia no le quita el granjero ni los herreros a la aldea (que
+     * es lo que la dejaría sin comer y sin indumentaria) y con 5 aldeanos —los que tiene una aldea sana— no hay
+     * guardia: hacen falta <b>crías</b>, o sea una aldea que crece.
+     * <p>
+     * El <b>tipo</b> va por número: los primeros son espadachines y el resto arqueros, en la proporción que el
+     * jugador quiere para la marcha a la guarida (4 espadachines y 3 arqueros).
+     */
+    private static void repartirGuardia(ServerLevel level, List<Villager> aldeanos, BlockPos center,
+                                        int objectiveIndex) {
+        // Puestos fijos que NO pueden quedarse sin cubrir (cupo por oficio). Lo que sobre de cada oficio, o los
+        // oficios que no estén en la lista, son candidatos.
+        Map<VillagerProfession, Integer> cupo = new HashMap<>();
+        cupo.put(VillagerProfession.FARMER, 1);
+        cupo.put(VillagerProfession.WEAPONSMITH, 1);
+        cupo.put(VillagerProfession.TOOLSMITH, 1);
+        cupo.put(VillagerProfession.CLERIC, 1);
+        cupo.put(VillagerProfession.NITWIT, 1); // el recolector
+
+        List<Villager> adultos = new ArrayList<>();
+        for (Villager villager : aldeanos) {
+            if (puedeSerGuardia(villager)) {
+                adultos.add(villager);
+            }
+        }
+        adultos.sort(Comparator.comparing(v -> v.getUUID().toString())); // orden ESTABLE entre latidos
+
+        Map<VillagerProfession, Integer> usados = new HashMap<>();
+        List<Villager> sobrantes = new ArrayList<>();
+        for (Villager villager : adultos) {
+            VillagerProfession profesion = villager.getVillagerData().getProfession();
+            int yaHay = usados.getOrDefault(profesion, 0);
+            if (yaHay < cupo.getOrDefault(profesion, 0)) {
+                usados.put(profesion, yaHay + 1);
+                continue; // cubre un puesto fijo del pueblo
+            }
+            sobrantes.add(villager);
+        }
+
+        // Los primeros se alistan (hasta el tope de la milicia); el resto vuelve a la vida civil.
+        for (int i = 0; i < sobrantes.size(); i++) {
+            Villager villager = sobrantes.get(i);
+            if (i >= MILICIA_MAX) {
+                desalistarGuardia(villager);
+                continue;
+            }
+            alistarGuardia(level, villager, center, objectiveIndex, i,
+                    i < MILICIA_ESPADACHINES ? VillagerGuardGoal.ESPADACHIN : VillagerGuardGoal.ARQUERO);
+        }
+        // Y los que YA no sobran (murió gente, la aldea necesita su oficio) dejan la guardia: si no, la aldea se
+        // quedaría sin granjero o sin herreros por tener milicia.
+        for (Villager villager : aldeanos) {
+            if (VillagerGuardGoal.esGuardia(villager) && !sobrantes.contains(villager)) {
+                desalistarGuardia(villager);
+            }
+        }
+    }
+
+    /**
+     * ¿Ese aldeano puede alistarse? Basta con que <b>no sea una cría</b>: los puestos fijos se reparten en
+     * {@link #repartirGuardia}, así que el que no cubre ninguno es, por definición, gente de sobra (incluidos los
+     * que se quedaron <b>sin oficio</b> porque las cinco especialidades ya estaban cubiertas).
+     */
+    private static boolean puedeSerGuardia(Villager villager) {
+        return !villager.isBaby();
+    }
+
+    /** Alista a un aldeano (si no lo estaba) con su tipo y su número, y le pone su goal de guardia. */
+    private static void alistarGuardia(ServerLevel level, Villager villager, @Nullable BlockPos center,
+                                       int objectiveIndex, int indice, int tipo) {
+        boolean yaEra = VillagerGuardGoal.esGuardia(villager);
+        boolean mismoTipo = VillagerGuardGoal.tipoDe(villager) == tipo
+                && villager.getPersistentData().getInt(GUARD_INDEX_TAG) == indice;
+        villager.getPersistentData().putBoolean(GUARD_TAG, true);
+        villager.getPersistentData().putInt(GUARD_TYPE_TAG, tipo);
+        villager.getPersistentData().putInt(GUARD_INDEX_TAG, indice);
+        // Un obrero que pasa a la guardia deja de ser obrero (tiene su puesto).
+        desmarcarObrero(villager);
+        if (center != null) {
+            asegurarGoalDeGuardia(villager, center, objectiveIndex);
+        }
+        if (!yaEra) {
+            DevilRpg.LOGGER.info("[Village] Aldea {}: {} se alista en la guardia como {}",
+                    objectiveIndex, villager.getUUID(), tipo == VillagerGuardGoal.ARQUERO ? "arquero" : "espadachin");
+        } else if (!mismoTipo) {
+            DevilRpg.LOGGER.info("[Village] Aldea {}: {} cambia de puesto en la guardia (indice {}, {})",
+                    objectiveIndex, villager.getUUID(), indice,
+                    tipo == VillagerGuardGoal.ARQUERO ? "arquero" : "espadachin");
+        }
+    }
+
+    /** Saca a un aldeano de la guardia y le quita su goal (vuelve a su oficio). */
+    private static void desalistarGuardia(Villager villager) {
+        if (!VillagerGuardGoal.esGuardia(villager)) {
+            return;
+        }
+        villager.getPersistentData().putBoolean(GUARD_TAG, false);
+        for (WrappedGoal wrapped : List.copyOf(villager.goalSelector.getAvailableGoals())) {
+            if (wrapped.getGoal() instanceof VillagerGuardGoal) {
+                villager.goalSelector.removeGoal(wrapped.getGoal());
+            }
+        }
+        DevilRpg.LOGGER.info("[Village] {} deja la guardia y vuelve a su oficio", villager.getUUID());
+    }
+
+    /**
+     * Le pone al guardia su goal. Prioridad <b>3</b>: por delante de los goals de oficio (4), porque cuando está de
+     * guardia está de guardia; y por detrás de las prioridades de combate/huida de vanilla, que son más urgentes.
+     */
+    public static void asegurarGoalDeGuardia(Villager villager, BlockPos center, int objectiveIndex) {
+        for (WrappedGoal wrapped : List.copyOf(villager.goalSelector.getAvailableGoals())) {
+            if (wrapped.getGoal() instanceof VillagerGuardGoal) {
+                return;
+            }
+        }
+        villager.goalSelector.addGoal(3, new VillagerGuardGoal(villager, center, objectiveIndex));
     }
 
     /**
@@ -1427,6 +1577,12 @@ public final class VillageManager {
      * para cualquier oficio de vanilla que acabe en la aldea se cae al nombre traducido del propio juego.
      */
     public static String nombreDeOficio(Villager villager) {
+        // La guardia manda sobre el oficio: un guardia puede ser (por ejemplo) un segundo granjero, pero lo que el
+        // jugador tiene que ver en su etiqueta es que está de guardia y con qué.
+        if (VillagerGuardGoal.esGuardia(villager)) {
+            return VillagerGuardGoal.tipoDe(villager) == VillagerGuardGoal.ARQUERO
+                    ? "Guardia arquero" : "Guardia espadachín";
+        }
         VillagerProfession profesion = villager.getVillagerData().getProfession();
         if (profesion == VillagerProfession.FARMER) {
             return "Granjero";

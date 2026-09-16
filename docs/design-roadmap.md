@@ -434,12 +434,49 @@ al pueblo: vanilla pide una cama libre por cría).
   además limpia su propio volumen; en las **0-6** los chunks **no están generados** en el guardado, así que no se
   puede medir (quedan sin comprobar).
 
-### 3b.10 Lo que viene (milicia, leñador y granja anexa)
+### 3b.10 El oficio de GUARDIA (milicia, paso 2)
 
-- **Milicia** (paso 1 ✅: la barraca): aldeanos adultos **sobrantes** (solo cuando están cubiertos los oficios) se
-  vuelven **guardia espadachín** (espada + escudo, el escudo bloquea de verdad) o **arquero** (arco + flechas),
-  **equipados del almacén**. Hacen **guardia alrededor**, de noche algunos se quedan **en las puertas y rotan**, y con
-  **4 guardias y 3 arqueros** se forman y **marchan a la guarida**.
+Los aldeanos **sobrantes** se alistan (`VillageManager.repartirGuardia`) y su goal (`VillagerGuardGoal`) hace tres
+cosas: **equiparse del almacén**, **patrullar** de día y **guardar las puertas** de noche **rotando**.
+
+- **Quién sobra** (lo pidió el jugador: *"aldeanos adultos SOBRANTES"*): se reparten los **puestos fijos** del pueblo
+  (1 granjero, 1 herrero de armas, 1 de herramientas, 1 clérigo y 1 recolector) en orden **estable** (por UUID) y **el
+  resto** es gente de sobra. Así la milicia **no le quita el granjero ni los herreros** a la aldea (que es lo que la
+  dejaría sin comer y sin indumentaria) y una aldea sana de 5 aldeanos **no tiene guardia**: hacen falta **crías**.
+  Si la aldea vuelve a necesitar ese oficio (muere gente), el guardia **deja la milicia** (`desalistarGuardia`).
+- **Tipo por número**: los 4 primeros son **espadachines** y los 3 siguientes **arqueros** (`MILICIA_MAX` = 7), que es
+  la formación de la marcha a la guarida. Los guardias **no pueden ser obreros** (`puedeSerObrero` los excluye, y al
+  alistarse se les quita la marca de obrero y su goal de reparación: si no, seguirían reparando caminos).
+- **Equipo DEL ALMACÉN** (nada de regalo): el espadachín coge **espada de hierro** (mano principal) y **escudo**
+  (secundaria); el arquero, **arco** y **16 flechas**. Se comprueba **leyendo sus manos y su mochila**, así que si le
+  rompen el escudo o le quitan la espada **vuelve** al almacén. Si el pueblo todavía no tiene la pieza (los herreros
+  van despacio: el hierro sale de los zombies), el guardia **patrulla igual** y vuelve a mirar dentro de un rato (no se
+  queda yendo y viniendo). El objetivo de producción de los herreros ya es exactamente esta indumentaria (4 espadas, 4
+  escudos, 3 arcos, 64 flechas), así que la milicia se rearma sola.
+- **Ronda** (de día): punto a punto por **dentro del muro** (`RADIO_RONDA` = 29), con un plantón de 6 s en cada uno
+  mirando al campo; el punto sale de su número de guardia y del paso de la ronda (determinista, sin tiradas), así que
+  no van todos pegados.
+- **Puertas** (de noche): las **cuatro puertas** del muro (norte, sur, este, oeste). El puesto sale del **reloj de
+  juego** y de su número de guardia (`gameTime / RELEVO_TICKS + indice`), o sea que **rotan solos** cada 2 min y dos
+  guardias no coinciden en la misma puerta.
+- **Nada de esto cambia el mundo**: es oficio (datos persistentes del aldeano + goal), así que **no sube la
+  migración** (`CURRENT_LAYOUT` sigue en 30) y las aldeas guardadas no se tocan. En una aldea ya en marcha, los
+  guardias aparecen al primer latido que la pille cargada.
+- **Medido en el guardado del jugador**: la aldea 10 tiene **6 adultos** (2 granjeros: los demás oficios, cubiertos),
+  así que le sale **1 guardia espadachín** al primer latido. Su almacén todavía no tiene espada ni escudo (queda 1
+  pepita y 3 de carne podrida), así que al principio se le verá **patrullando sin arma** e yendo al almacén de vez en
+  cuando: el arma llega cuando el herrero funda lingotes.
+- **Comprobado en las fuentes de 1.21**: los aldeanos **no registran ningún goal de vanilla** (todo su comportamiento
+  es del **cerebro**), así que la prioridad 3 del goal de guardia **no pisa nada**.
+- **Lo que falta de la milicia** (siguiente paso): **pelear**. Hoy el **pánico** del cerebro sigue activo, así que un
+  guardia **todavía huye** de los zombies aunque vaya armado; falta que ataque (y que el **escudo bloquee de verdad**),
+  que los arqueros **disparen**, y la **marcha a la guarida** con 4 guardias y 3 arqueros.
+
+### 3b.11 Lo que viene (milicia, leñador y granja anexa)
+
+- **Milicia**: paso 1 ✅ (la barraca) y paso 2 ✅ (el oficio de guardia: alistamiento, equipo del almacén, ronda y
+  puertas con relevo). Falta el **combate** (ataque, escudo que bloquea, arqueros que disparan) y la **marcha a la
+  guarida**.
 - **Leñador/reforestador**: tala y replanta (madera para arcos, flechas y tablones).
 - **Granja anexa de animales** (vacas, ovejas, puercos, gallinas) **fuera de la valla**, con su aldeano y dentro del
   **patrullaje de la guardia**.
