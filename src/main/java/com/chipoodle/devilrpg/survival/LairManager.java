@@ -31,6 +31,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -686,6 +687,30 @@ public final class LairManager {
      * más duro y más largo que salvar una aldea.
      */
     private static final int LAIR_REWARD_EXPERIENCE_LEVELS = 1;
+
+    /**
+     * Núcleo de la guarida de ese objetivo, o {@code null} si esa guarida no está entre las cargadas. Lo usa la
+     * <b>milicia</b> de la aldea para saber a dónde marchar, sin duplicar el cálculo determinista de la posición.
+     */
+    @Nullable
+    public static BlockPos nucleoDe(ServerLevel level, int objectiveIndex) {
+        for (Lair lair : LAIRS.getOrDefault(level, List.of())) {
+            if (lair.objectiveIndex == objectiveIndex) {
+                return lair.corePos;
+            }
+        }
+        return null;
+    }
+
+    /** ¿Esa guarida ya está limpia (núcleo destruido)? Entonces la milicia ya no tiene nada que hacer allí. */
+    public static boolean estaLimpia(ServerLevel level, int objectiveIndex) {
+        for (Lair lair : LAIRS.getOrDefault(level, List.of())) {
+            if (lair.objectiveIndex == objectiveIndex) {
+                return lair.cleared;
+            }
+        }
+        return false;
+    }
 
     private static final class Lair {
         final int objectiveIndex;

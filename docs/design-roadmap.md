@@ -481,6 +481,18 @@ cosas: **equiparse del almacén**, **patrullar** de día y **guardar las puertas
     botas) e `ItemInHandLayer` (**espada, escudo, arco**), que era justo lo que no se podía con el modelo del
     aldeano.
   - Las texturas son **provisionales** (generadas por script, colores planos): se pueden retocar sin tocar código.
+- **MARCHA A LA GUARIDA ✅ (cierra la milicia)**: con la formación completa (**4 espadachines y 3 arqueros**) y la
+  aldea en paz (ni asedio ni monstruos dentro), `VillageManager.comprobarMarcha` declara el **asalto**: los guardias
+  van al **núcleo de la guarida** (`LairManager.nucleoDe`, a 75-95 bloques del pueblo, así que durante la marcha **no
+  cuenta la "correa"** de la aldea y sí ven a los enemigos de la guarida). Etiquetas *"Marchando a la guarida"* y, al
+  llegar, *"Asaltando la guarida"*. La marcha **se acaba** cuando la guarida queda limpia (núcleo destruido) o a los
+  **12 min** (una marcha eterna dejaría la aldea sin guardia si el núcleo está sellado) y entonces **vuelven andando**
+  (el destino pasa a ser un punto del pueblo; antes, "si se aleja más de X del centro, deja de trabajar" cortaba el
+  goal y el guardia se quedaba plantado donde lo pillara).
+  <p>
+  Con esto la **etapa C (milicia) queda cerrada**: alistamiento de los sobrantes, equipo del almacén (arma, escudo,
+  arco, flechas y armadura), ronda, puertas de noche con relevo, combate (espada/arco), escudo que bloquea de verdad,
+  modelo propio para que se le vea todo y marcha a la guarida.
   - **COMBATE** (`VillagerGuardGoal`): lo primero que hace el guardia es **pelear**. Ve al monstruo más cercano a 16
     bloques **dentro del término de la aldea** (`RADIO_PERSEGUIR`) y va a por él: el **espadachín** levanta el
     **escudo** y pega con la espada (golpe cada segundo); el **arquero** dispara **flechas de verdad** (`Arrow` con

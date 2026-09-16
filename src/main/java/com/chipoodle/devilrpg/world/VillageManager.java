@@ -1134,6 +1134,9 @@ public final class VillageManager {
         // herreros, clérigo y recolector) se alistan. Se calcula ANTES del reparto de obreros, porque un guardia
         // tiene su puesto y no puede acabar de constructor.
         repartirGuardia(level, aldeanos, center, objectiveIndex);
+        // MARCHA A LA GUARIDA: con la formación completa (4 espadachines y 3 arqueros) la milicia se va a atacar el
+        // núcleo de la guarida de la aldea. Se decide aquí, que es donde ya está la lista de aldeanos.
+        comprobarMarcha(level, aldeanos, center, objectiveIndex);
         // El RECOLECTOR (holgazán) no cuenta para el reparto de obreros: es un puesto fijo y no debe acabar de
         // constructor (si no, se pasa el día reparando y no recoge nada).
         int adultos = 0;
@@ -1305,6 +1308,94 @@ public final class VillageManager {
             }
         }
         villager.goalSelector.addGoal(3, new VillagerGuardGoal(villager, center, objectiveIndex));
+    }
+
+    // --- la marcha de la milicia contra la guarida --------------------------------------------------
+
+    /** Arqueros que hacen falta, con los espadachines, para que la milicia marche (la formación del jugador). */
+    private static final int MILICIA_ARCHEROS = MILICIA_MAX - MILICIA_ESPADACHINES;
+    /**
+     * Cuánto dura una marcha (12 min). Si se pasa, la milicia vuelve: una marcha eterna dejaría la aldea sin guardia
+     * para siempre si la guarida no se puede limpiar (por ejemplo, con el núcleo todavía sellado).
+     */
+    private static final int MARCHA_TICKS = 12 * 60 * 20;
+
+    /**
+     * Marcha de la milicia contra la guarida de la aldea: a dónde va y cuándo se le acaba el tiempo.
+     * <p>
+     * No se persiste a propósito (como {@code DEFENSES}): es un <b>asalto</b>. Si el mundo se recarga a mitad, los
+     * guardias están donde estaban y la marcha se puede volver a decidir en el siguiente latido.
+     */
+    private record Marcha(BlockPos destino, long fin) {
+    }
+
+    /** Marchas en curso por nivel y objetivo. */
+    private static final Map<ServerLevel, Map<Integer, Marcha>> MARCHAS = new HashMap<>();
+
+    /**
+     * A dónde marcha la milicia de esa aldea ahora mismo (el <b>núcleo de la guarida</b>), o {@code null} si no hay
+     * marcha. Lo consulta el goal del guardia en cada tick, así que empezar o acabar la marcha se nota al momento sin
+     * tener que tocar a cada aldeano.
+     */
+    @Nullable
+    public static BlockPos marchaDe(ServerLevel level, int objectiveIndex) {
+        Map<Integer, Marcha> mapa = MARCHAS.get(level);
+        Marcha marcha = mapa != null ? mapa.get(objectiveIndex) : null;
+        return marcha != null ? marcha.destino() : null;
+    }
+
+    /**
+     * Decide si la milicia <b>se forma y marcha</b> contra la guarida de la aldea (lo pidió el jugador: *"con 4
+     * guardias y 3 arqueros se forman y marchan a atacar la guarida"*), y cierra la marcha cuando toca.
+     * <ul>
+     *   <li><b>Marcha</b>: hace falta la formación completa (4 espadachines y 3 arqueros), que la guarida esté
+     *       cargada ({@code LairManager.nucleoDe}) y que la aldea esté en paz (nadie se va de asalto con la aldea
+     *       bajo ataque o con monstruos dentro).</li>
+     *   <li><b>Vuelta</b>: cuando la guarida queda limpia (núcleo destruido) o se acaba el tiempo.</li>
+     * </ul>
+     */
+    private static void comprobarMarcha(ServerLevel level, List<Villager> aldeanos, BlockPos center, int objectiveIndex) {
+        Marcha enCurso = MARCHAS.getOrDefault(level, Map.of()).get(objectiveIndex);
+        if (enCurso != null) {
+            boolean limpia = com.chipoodle.devilrpg.survival.LairManager.estaLimpia(level, objectiveIndex);
+            if (limpia || level.getGameTime() > enCurso.fin()) {
+                MARCHAS.get(level).remove(objectiveIndex);
+                announceNearby(level, center, "La milicia vuelve a la aldea"
+                        + (limpia ? ": la guarida ha quedado limpia." : ": se acabó el tiempo del asalto."));
+                DevilRpg.LOGGER.info("[Village] Aldea {}: la milicia vuelve ({})",
+                        objectiveIndex, limpia ? "guarida limpia" : "se acabo el tiempo");
+            }
+            return;
+        }
+        // Con la aldea en peligro NO se va nadie de asalto.
+        if (isUnderAttack(level, objectiveIndex) || hayEnemigosDentro(level, center)) {
+            return;
+        }
+        int espadachines = 0;
+        int arqueros = 0;
+        for (Villager villager : aldeanos) {
+            if (!VillagerGuardGoal.esGuardia(villager)) {
+                continue;
+            }
+            if (VillagerGuardGoal.tipoDe(villager) == VillagerGuardGoal.ARQUERO) {
+                arqueros++;
+            } else {
+                espadachines++;
+            }
+        }
+        if (espadachines < MILICIA_ESPADACHINES || arqueros < MILICIA_ARCHEROS) {
+            return; // todavía no está la formación
+        }
+        BlockPos nucleo = com.chipoodle.devilrpg.survival.LairManager.nucleoDe(level, objectiveIndex);
+        if (nucleo == null) {
+            return; // la guarida de esta aldea todavía no está generada
+        }
+        MARCHAS.computeIfAbsent(level, l -> new HashMap<>())
+                .put(objectiveIndex, new Marcha(nucleo, level.getGameTime() + MARCHA_TICKS));
+        announceNearby(level, center, "La milicia se forma: " + espadachines + " espadachines y " + arqueros
+                + " arqueros marchan contra la guarida.");
+        DevilRpg.LOGGER.info("[Village] Aldea {}: la milicia marcha contra la guarida en {} ({} espadachines, {} arqueros)",
+                objectiveIndex, nucleo, espadachines, arqueros);
     }
 
     /**

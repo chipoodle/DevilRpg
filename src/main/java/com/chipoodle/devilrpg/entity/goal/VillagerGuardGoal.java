@@ -119,6 +119,8 @@ public class VillagerGuardGoal extends Goal {
     /** Ticks que faltan para volver a buscar enemigo / para el siguiente golpe o flecha. */
     private int escanear;
     private int cadencia;
+    /** true mientras la milicia está de asalto en la guarida (lo dice {@code VillageManager.marchaDe}). */
+    private boolean marchando;
 
     public VillagerGuardGoal(Villager villager, BlockPos center, int objectiveIndex) {
         this.villager = villager;
@@ -153,12 +155,24 @@ public class VillagerGuardGoal extends Goal {
         // murió "Durmiendo" sin haber hecho una sola guardia de noche.
         double dx = villager.getX() - center.getX();
         double dz = villager.getZ() - center.getZ();
-        if (dx * dx + dz * dz > MAX_DISTANCE_FROM_CENTER * MAX_DISTANCE_FROM_CENTER) {
-            return false;
-        }
-        // PRIMERO el equipo: un guardia sin arma no tiene nada que hacer en la ronda (y así se le ve ir al
-        // almacén y volver armado, que es lo que pidió el jugador).
+        double dist2 = dx * dx + dz * dz;
+        // PRIMERO el equipo: un guardia sin arma no tiene nada que hacer (ni ronda ni asalto).
         equipando = !equipado(level);
+        // MARCHA A LA GUARIDA: si la milicia ha marchado, su sitio es el núcleo. Aquí la "correa" de la aldea no
+        // cuenta: el núcleo está a 75-95 bloques del pueblo, así que marchar es salirse del término a propósito.
+        BlockPos marcha = VillageManager.marchaDe(level, objectiveIndex);
+        marchando = marcha != null;
+        if (marchando) {
+            destino = equipando ? VillageStorage.puntoDeApoyo(level, center) : marcha;
+            return destino != null;
+        }
+        if (dist2 > MAX_DISTANCE_FROM_CENTER * MAX_DISTANCE_FROM_CENTER) {
+            // LEJOS del pueblo y sin marcha: está VOLVIENDO de un asalto (o se perdió). El destino es volver, no un
+            // punto de ronda: antes esto cortaba el goal y el guardia se quedaba plantado donde lo pillara.
+            destino = equipando ? VillageStorage.puntoDeApoyo(level, center)
+                    : new BlockPos(center.getX(), VillageGenerator.cotaDeLaPlaza(level, center), center.getZ());
+            return destino != null;
+        }
         destino = equipando ? VillageStorage.puntoDeApoyo(level, center) : puntoDeGuardia(level);
         return destino != null;
     }
@@ -215,6 +229,19 @@ public class VillagerGuardGoal extends Goal {
                 stuckTicks = 0;
             }
         }
+        // 3) MARCHA: el destino se refresca cada tick (puede empezar o acabar mientras el goal corre). Si se acabó y
+        //    el guardia está lejos del pueblo, el destino pasa a ser VOLVER.
+        BlockPos marcha = VillageManager.marchaDe(level, objectiveIndex);
+        marchando = marcha != null;
+        if (marchando && !equipando && !marcha.equals(destino)) {
+            destino = marcha;
+            mejorDistancia = Double.MAX_VALUE;
+            stuckTicks = 0;
+        } else if (!marchando && !equipando && !destino.closerThan(center, MAX_DISTANCE_FROM_CENTER)) {
+            destino = new BlockPos(center.getX(), VillageGenerator.cotaDeLaPlaza(level, center), center.getZ());
+            mejorDistancia = Double.MAX_VALUE;
+            stuckTicks = 0;
+        }
         villager.getLookControl().setLookAt(destino.getX() + 0.5D, destino.getY() + 0.5D, destino.getZ() + 0.5D);
         double distancia = Math.sqrt(villager.distanceToSqr(destino.getX() + 0.5D, destino.getY() + 0.5D,
                 destino.getZ() + 0.5D));
@@ -227,7 +254,8 @@ public class VillagerGuardGoal extends Goal {
             } else {
                 stuckTicks++;
             }
-            VillageManager.ponerActividad(villager, equipando ? "Yendo al almacén" : actividadDeGuardia(level));
+            VillageManager.ponerActividad(villager, equipando ? "Yendo al almacén"
+                    : (marchando ? "Marchando a la guarida" : actividadDeGuardia(level)));
             return;
         }
         VillageManager.parar(villager);
@@ -241,6 +269,12 @@ public class VillagerGuardGoal extends Goal {
             // Si el pueblo todavía NO tiene su pieza (los herreros van despacio: el hierro sale de los zombies), no se
             // queda yendo y viniendo al almacén: patrulla igual y vuelve a mirar dentro de un rato.
             restTicks = listo ? REST_TICKS : 400;
+            return;
+        }
+        if (marchando) {
+            // En el núcleo: se planta y pelea (el combate de arriba va primero en cada tick) y NO rota la ronda.
+            villager.swing(InteractionHand.MAIN_HAND);
+            VillageManager.ponerActividad(villager, "Asaltando la guarida");
             return;
         }
         // En el punto: un plantón mirando al campo (y el guardia gira la cabeza solo, con el look control).
@@ -281,10 +315,14 @@ public class VillagerGuardGoal extends Goal {
             if (!monstruo.isAlive() || monstruo.isRemoved()) {
                 continue;
             }
-            double dxAldea = monstruo.getX() - center.getX();
-            double dzAldea = monstruo.getZ() - center.getZ();
-            if (dxAldea * dxAldea + dzAldea * dzAldea > RADIO_PERSEGUIR * RADIO_PERSEGUIR) {
-                continue; // fuera del término: no lo persigue
+            if (!marchando) {
+                // Fuera de una marcha, el guardia no se va del término de la aldea a matar zombis (dejaría la puerta
+                // sola). En un ASALTO sí: la guarida está a 75-95 bloques del pueblo y está llena de enemigos.
+                double dxAldea = monstruo.getX() - center.getX();
+                double dzAldea = monstruo.getZ() - center.getZ();
+                if (dxAldea * dxAldea + dzAldea * dzAldea > RADIO_PERSEGUIR * RADIO_PERSEGUIR) {
+                    continue;
+                }
             }
             double dist = villager.distanceToSqr(monstruo);
             if (dist < mejorDist) {
