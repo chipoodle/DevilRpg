@@ -221,8 +221,6 @@ public final class VillageGenerator {
         // HERRERÍA: el taller de los dos herreros, con la construcción de herrero del propio juego (fragua, muelle de
         // afilar y arca). Se le pone dentro la mesa de herrería del herrero de HERRAMIENTAS, que la plantilla no trae.
         puertas[5] = placeVanillaHouse(level, baseDeHerreria(center), HERRERIAS[0], nivelVilla);
-        // El herrero de HERRAMIENTAS necesita su mesa de herrería: la plantilla del de armas solo trae el muelle.
-        puestoDeTrabajo(level, baseDeHerreria(center), nivelVilla, Blocks.SMITHING_TABLE);
 
         // Caminos DESPUÉS, del centro a la puerta de cada construcción (ya se sabe dónde está).
         paths(level, center, puertas);
@@ -925,9 +923,20 @@ public final class VillageGenerator {
             }
             DevilRpg.LOGGER.info("[Village] Aldea en {}: herreria construida en {} (puerta {})", center, base, puerta);
         }
-        if (buscarBloque(level, base, nivel, Blocks.SMITHING_TABLE) == null) {
-            puestoDeTrabajo(level, base, nivel, Blocks.SMITHING_TABLE);
-            DevilRpg.LOGGER.info("[Village] Aldea en {}: mesa de herreria puesta en el taller", center);
+        // Un solo herrero por aldea (lo pidió el jugador), así que la herrería tiene UN puesto de herrero: el muelle
+        // de afilar que ya trae la plantilla. Si quedaba la MESA de herrería de cuando había dos herreros (aldeas
+        // viejas), se retira: una estación sin dueño acabaría dando el oficio de herrero de herramientas a cualquier
+        // aldeano sin oficio que se subiera a ella.
+        quitarMesaDeHerreria(level, base, nivel);
+    }
+
+    /** Quita la mesa de herrería del taller si quedaba de cuando había dos herreros (un solo herrero por aldea). */
+    private static void quitarMesaDeHerreria(ServerLevel level, BlockPos base, int nivel) {
+        BlockPos mesa = buscarBloque(level, base, nivel, Blocks.SMITHING_TABLE);
+        if (mesa != null) {
+            colocar(level, mesa, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: retirada la mesa de herreria (la aldea tiene un solo herrero)",
+                    base);
         }
     }
 
@@ -949,26 +958,6 @@ public final class VillageGenerator {
             }
         }
         return null;
-    }
-
-    /**
-     * Coloca un <b>puesto de trabajo</b> (mesa de herrería, muelle...) dentro de un edificio: el primer hueco libre
-     * con suelo firme y sitio de sobra, para no romper nada de la plantilla.
-     */
-    private static void puestoDeTrabajo(ServerLevel level, BlockPos base, int nivel, Block puesto) {
-        for (int dx = 1; dx <= 10; dx++) {
-            for (int dz = 1; dz <= 11; dz++) {
-                for (int dy = 0; dy <= 2; dy++) {
-                    BlockPos p = new BlockPos(base.getX() + dx, nivel + dy, base.getZ() + dz);
-                    if (level.getBlockState(p).isAir() && level.getBlockState(p.above()).isAir()
-                            && level.getBlockState(p.below()).isSolid()) {
-                        colocar(level, p, puesto.defaultBlockState(), Block.UPDATE_ALL);
-                        DevilRpg.LOGGER.debug("[Village] puesto de trabajo {} en {}", puesto, p);
-                        return;
-                    }
-                }
-            }
-        }
     }
 
     private static String iglesiaAleatoria(RandomSource random) {
@@ -2316,32 +2305,40 @@ public final class VillageGenerator {
     }
 
     /**
-     * Los sitios fijos de aldeano de la aldea (uno por profesión), relativos al centro. Son 5 desde que hay 5
-     * puestos (granjero, dos herreros, clérigo y el holgazán recolector).
+     * Los sitios fijos de aldeano de la aldea (uno por oficio), relativos al centro. Son <b>4</b> desde que la aldea
+     * tiene un solo herrero (ver {@link #VILLAGER_SPECIALTIES}).
      * <p>
      * Van <b>repartidos en un anillo</b> a unos 13-15 bloques de la plaza: antes estaban apelotonados al norte
      * (x -11..14, z -11..2) y con los solares nuevos, que empiezan a 20-21 del centro, alguno podía caer dentro de
      * una casa. El anillo de 13-15 queda entre el kiosco (radio 3) y los solares, siempre en patio abierto.
      */
     private static final BlockPos[] VILLAGER_SPOTS = {
-            new BlockPos(-13, 0, -8), new BlockPos(12, 0, -8), new BlockPos(-4, 0, 13),
-            new BlockPos(15, 0, 3), new BlockPos(4, 0, 13)
+            new BlockPos(-13, 0, -8), new BlockPos(12, 0, -8), new BlockPos(-4, 0, 13), new BlockPos(15, 0, 3),
     };
     /**
      * Oficios de la aldea, en el orden en que se ocupan los sitios:
      * <ol>
      *   <li><b>Granjero</b>: cultiva, cosecha, fertiliza y hornea el pan en la despensa.</li>
-     *   <li><b>Herrero de armas</b> y <b>clérigo</b>: los oficios "de oficio" de la aldea.</li>
-     *   <li><b>Herrero de herramientas</b>.</li>
+     *   <li><b>Herrero</b> (herrero de armas): trabaja en la herrería del pueblo, en su <b>muelle de afilar</b>.</li>
+     *   <li><b>Clérigo</b>: el oficio "de oficio" de la aldea, con su alambique en la iglesia.</li>
      *   <li><b>Holgazán</b> (nitwit) = el <b>RECOLECTOR</b>: no tiene oficio propio a propósito, así no reclama
-     *       ningún puesto de trabajo y se dedica <b>solo</b> a recoger cosas del pueblo y guardarlas en el almacén.
-     *       Antes esto lo hacía el constructor y se pasaba el día recolectando en vez de reparar.</li>
+     *       ningún puesto de trabajo y se dedica <b>solo</b> a recoger cosas del pueblo y guardarlas en el almacén.</li>
      * </ol>
+     * OJO: había <b>DOS herreros</b> (de armas y de herramientas) y el jugador lo corrigió: <b>un solo herrero</b>,
+     * porque la herrería tiene un puesto de herrero. El de herramientas ya no es un oficio de la aldea; a los que
+     * queden con él en partidas viejas se les recoloca (ver {@code VillageManager.reponerProfesiones}).
      */
     private static final VillagerProfession[] VILLAGER_SPECIALTIES = {
             VillagerProfession.FARMER, VillagerProfession.WEAPONSMITH, VillagerProfession.CLERIC,
-            VillagerProfession.TOOLSMITH, VillagerProfession.NITWIT
+            VillagerProfession.NITWIT
     };
+
+    /**
+     * ¿Ese oficio ya no es de la aldea? (el herrero de HERRAMIENTAS se retiró al dejar un solo herrero por pueblo).
+     */
+    public static boolean oficioRetirado(VillagerProfession profesion) {
+        return profesion == VillagerProfession.TOOLSMITH;
+    }
 
     /**
      * El sitio (slot) de la <b>primera profesión que le falta</b> a la aldea: si no hay ningún aldeano vivo con ese
