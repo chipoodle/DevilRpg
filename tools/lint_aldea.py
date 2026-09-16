@@ -48,6 +48,14 @@ ALDEA = [
     os.path.join(GOALS, 'VillagerFarmGoal.java'),
     os.path.join(GOALS, 'VillagerCollectGoal.java'),
     os.path.join(GOALS, 'VillagerRepairGoal.java'),
+    # Goals de las etapas B-E: entraron despues de que el lint ya existiera y hasta ahora no estaban
+    # vigilados (el lenador, el ganadero, el lenador de la madera del herrero, el cocinero y la milicia).
+    # Son justo los que mas se mueven por el pueblo, asi que son los que mas pisan I3 e I6.
+    os.path.join(GOALS, 'VillagerAnimalFarmGoal.java'),
+    os.path.join(GOALS, 'VillagerCookGoal.java'),
+    os.path.join(GOALS, 'VillagerGuardGoal.java'),
+    os.path.join(GOALS, 'VillagerLumberjackGoal.java'),
+    os.path.join(GOALS, 'VillagerSmithGoal.java'),
 ]
 GOALS_JAVA = [r for r in ALDEA if os.path.basename(r).startswith('Villager')]
 

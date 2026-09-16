@@ -296,6 +296,8 @@ public class VillagerLumberjackGoal extends Goal {
                 if (base == null) {
                     continue;
                 }
+                // lint:ok I1 porque aqui `base` es el tronco de un arbol que existe, no el centro ni la base de la
+                // aldea: la distancia al arbol SI es en 3D (un tronco de la ladera esta mas abajo que el pueblo).
                 double dist = villager.distanceToSqr(base.getX() + 0.5D, base.getY() + 0.5D, base.getZ() + 0.5D);
                 if (dist < mejorDist) {
                     mejorDist = dist;

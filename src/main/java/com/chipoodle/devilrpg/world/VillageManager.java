@@ -24,12 +24,15 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.Container;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.OwnableEntity;
 import net.minecraft.world.entity.ai.goal.WrappedGoal;
+import net.minecraft.world.entity.ai.village.poi.PoiManager;
+import net.minecraft.world.entity.ai.village.poi.PoiTypes;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.npc.Villager;
@@ -108,8 +111,33 @@ public final class VillageManager {
      * Comida que come la aldea: <b>cada minuto de juego</b> se lleva un punto por aldeano vivo de la
      * <b>despensa</b> (ver {@code VillagePantry}). Ya no hay "la granja produce 8" en abstracto: lo que se come es
      * el trigo que el granjero cultiva y el pan que hornea.
+     * <p>
+     * Desde la etapa E la ración es <b>de cada aldeano</b> ({@link #COMIDA_TAG}): se le da de comer al que hace más
+     * tiempo que no come, y el que se queda sin ración pasa hambre <b>él</b> (no "la aldea" en abstracto). Cada
+     * ración vale <b>un punto de comida</b> (lo que comía la aldea entera por aldeano y minuto desde el principio):
+     * un pan son <b>4 raciones</b>, o sea que un pan da de comer a cuatro aldeanos.
      */
     private static final int EAT_INTERVAL_TICKS = 60 * 20;
+    /**
+     * Las raciones se reparten en el latido de la aldea que <b>cierra el minuto</b> (un {@code %} sobre
+     * {@code gameTime}), así que {@link #EAT_INTERVAL_TICKS} tiene que ser <b>múltiplo</b> de
+     * {@link #VILLAGE_POLL_TICKS}: si alguien cambia la cadencia del latido por un número que no lo divida, el
+     * minuto no caería nunca en un latido y <b>el pueblo no comería</b> (morirían de hambre en silencio). En vez de
+     * confiar en que nadie lo toque, se avisa al cargar la clase.
+     */
+    static {
+        if (EAT_INTERVAL_TICKS % VILLAGE_POLL_TICKS != 0) {
+            DevilRpg.LOGGER.error("[Village] EAT_INTERVAL_TICKS ({}) no es multiplo del latido de la aldea ({}):"
+                    + " las raciones no se repartirian nunca", EAT_INTERVAL_TICKS, VILLAGE_POLL_TICKS);
+        }
+    }
+    /** Marca (datos persistentes del aldeano) con el <b>gameTime de su última ración</b>: su hambre personal. */
+    private static final String COMIDA_TAG = "DevilRpgUltimaComida";
+    /**
+     * Raciones perdidas antes de que el hambre se note: a partir de aquí el aldeano va con <b>Debilidad</b> y
+     * <b>Lentitud</b> (3 raciones = 3 minutos sin comer).
+     */
+    private static final int HAMBRE_PACIENTE_TICKS = 3 * EAT_INTERVAL_TICKS;
     /** Puntos de comida que da un pan (es lo que vale en vanilla). */
     private static final int FOOD_PER_BREAD = 4;
     /**
@@ -288,9 +316,13 @@ public final class VillageManager {
      *       puerta este del muro. Con ella llega el <b>sexto puesto</b> del pueblo, el <b>ganadero</b> (pastor), que
      *       cría el rebaño y baja la carne y la lana al almacén. Se construye donde antes solo estaba el talud, así
      *       que no borra nada del jugador.</li>
+     *   <li>32: la <b>COCINA DEL PUEBLO</b> (etapa E): un <b>ahumador</b> (puesto de trabajo del <b>cocinero</b>) y su
+     *       mesa sobre la plataforma del kiosco, al lado de la despensa. Con ella llega el <b>séptimo puesto</b>, el
+     *       cocinero, que convierte la carne cruda y las patatas en su versión cocinada: en el contador de comida de
+     *       la aldea eso es el <b>doble</b> (crudo 2 puntos, cocinado 4).</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 31;
+    public static final int CURRENT_LAYOUT = 32;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -439,7 +471,7 @@ public final class VillageManager {
                     && !hayEnemigosDentro(level, target)) {
                 int vivos = observeVillagers(level, saved, i, target);
                 if (vivos > 0) {
-                    tickVillageLife(level, saved, i, target, vivos);
+                    tickVillageLife(level, saved, i, target);
                 }
                 if (vivos == 0) {
                     VillageGenerator.spawnVillagers(level, target);
@@ -1014,19 +1046,21 @@ public final class VillageManager {
     /**
      * Un latido de la vida de la aldea (cada {@link #VILLAGE_POLL_TICKS}, solo en aldeas en paz y con aldeanos):
      * <ul>
-     *   <li><b>Come de su despensa</b>: cada minuto de juego la aldea se lleva una ración por aldeano vivo del
-     *       barril de la plaza. Lo que hay dentro es lo que ha cultivado y horneado su granjero
-     *       ({@code VillagePantry} + {@code VillagerFarmGoal}), así que sin granjero no hay pan y llega el hambre.</li>
+     *   <li><b>Come de su despensa</b>: cada minuto de juego come <b>cada aldeano</b> (su ración personal, ver
+     *       {@link #repartirRaciones}), y el que se queda sin ella pasa hambre <b>él</b>, no "la aldea" en abstracto.
+     *       Lo que hay dentro es lo que ha cultivado y horneado su granjero ({@code VillagePantry} +
+     *       {@code VillagerFarmGoal}), así que sin granjero no hay pan y llega el hambre.</li>
      *   <li><b>Reparte pan</b> para que críen (vanilla pide 12 puntos de comida).</li>
      *   <li><b>Reparan</b>: una aldea sana vuelve a levantar lo que se cayó en el último ataque.</li>
      *   <li><b>Envejecen</b>: ver {@link #ageVillagers}.</li>
      * </ul>
      */
-    private static void tickVillageLife(ServerLevel level, VillageSavedData saved, int objectiveIndex, BlockPos center, int vivos) {
-        // COMER: la despensa es la fuente de verdad. Se vacía de verdad (salen items del barril), no un contador.
-        if (level.getGameTime() % EAT_INTERVAL_TICKS == 0L) {
-            VillagePantry.sacarComida(VillagePantry.despensa(level, center), vivos);
-        }
+    private static void tickVillageLife(ServerLevel level, VillageSavedData saved, int objectiveIndex, BlockPos center) {
+        List<Villager> aldeanos = level.getEntitiesOfClass(Villager.class, new AABB(center).inflate(FALLEN_CHECK_RADIUS));
+        // COMER, ALDEANO POR ALDEANO (etapa E): cada uno tiene SU hambre. Se reparte de uno en uno y primero al que
+        // hace más tiempo que no come, para que la comida que hay se reparta de verdad (antes era un contador de
+        // aldea: se comía "la aldea", y daba igual quién).
+        int raciones = repartirRaciones(level, center, aldeanos);
         // LA DESPENSA ES PARA LA COMIDA: lo que no sea comida ni recambio del granjero (una pluma, cuero, hierro,
         // un tronco...) se mueve al ALMACÉN. Lo pidió el jugador: "los materiales que no pertenezcan a la despensa,
         // que los muevan al almacén, como las plumas". Así el barril no se llena de materiales y la comida no se
@@ -1039,19 +1073,13 @@ public final class VillageManager {
         int comida = Math.min(MAX_FOOD, VillagePantry.comida(level, center));
         saved.setFood(objectiveIndex, comida);
 
-        List<Villager> aldeanos = level.getEntitiesOfClass(Villager.class, new AABB(center).inflate(FALLEN_CHECK_RADIUS));
+        // HAMBRE: cada aldeano que lleve sin comer más de HAMBRE_PACIENTE_TICKS va débil; y si se alarga, muere ÉL.
+        pasarHambre(level, saved, objectiveIndex, aldeanos);
 
-        // HAMBRE: si la despensa está vacía, los aldeanos se quedan débiles y, si se alarga, muere alguno.
-        if (comida <= 0) {
-            if (saved.getStarvingSince(objectiveIndex) == 0L) {
-                saved.setStarvingSince(objectiveIndex, level.getGameTime());
-                DevilRpg.LOGGER.info("[Village] La aldea {} se quedo sin comida: pasa hambre", objectiveIndex);
-                announceNearby(level, center, "La aldea pasa hambre: la despensa esta vacia.");
-            }
-            starveVillagers(level, saved, objectiveIndex, aldeanos);
-        } else if (saved.getStarvingSince(objectiveIndex) != 0L) {
-            saved.setStarvingSince(objectiveIndex, 0L);
-            DevilRpg.LOGGER.info("[Village] La aldea {} vuelve a tener comida", objectiveIndex);
+        // MEDIDA (para poder ajustar el hambre con números, no a ojo): cada 5 min, lo que hay y lo que se come.
+        if (level.getGameTime() % (5L * 60L * 20L) == 0L) {
+            DevilRpg.LOGGER.info("[Village] Aldea {}: comida {} puntos, {} aldeanos, {} camas, {} raciones en el ultimo minuto",
+                    objectiveIndex, comida, aldeanos.size(), contarCamas(level, center), raciones);
         }
 
         // COMER DE VERDAD: se les reparte pan de la despensa (lo recogen ellos) para que puedan criar como en vanilla.
@@ -1104,6 +1132,9 @@ public final class VillageManager {
             // GRANJA ANEXA de animales (etapa D): FUERA de la valla, al este, con su corral y su cobertizo. Va aquí
             // por el mismo motivo: sus bloques tienen que entrar en el plano nuevo para que el obrero la reponga.
             VillageGenerator.asegurarGranjaAnexa(level, center);
+            // COCINA del pueblo (etapa E): el ahumador del cocinero, en el kiosco. Va antes de tirar el plano para
+            // que entre en él y el obrero lo reponga.
+            VillageGenerator.asegurarCocina(level, center);
             // El plano se tira: hay que volver a capturarlo, ya con las casas nuevas, el muro y las reglas actuales.
             saved.clearBlueprint(objectiveIndex);
             saved.setLayout(objectiveIndex, CURRENT_LAYOUT);
@@ -1130,6 +1161,9 @@ public final class VillageManager {
         // GRANJA ANEXA de animales (etapa D): igual (idempotente). Si el jugador se llevó la valla, se vuelve a
         // levantar; si está, no se toca (reconstruirla borraría su cobertizo y lo que tenga dentro).
         VillageGenerator.asegurarGranjaAnexa(level, center);
+        // COCINA del pueblo (etapa E): el ahumador y la mesa del cocinero, en la plataforma del kiosco. Idempotente
+        // (va aparte de `asegurarKiosco` porque aquél sale antes de tiempo cuando el kiosco ya está).
+        VillageGenerator.asegurarCocina(level, center);
         // REBAÑO: el corral se llena UNA vez (al construirlo o al migrar). Después, si se queda VACÍO (una horda, el
         // jugador...) se repone solo, pero con una espera larga (3 días de juego): ni la granja se queda muerta para
         // siempre ni es un grifo de carne gratis. La marca se guarda con la partida.
@@ -1181,6 +1215,14 @@ public final class VillageManager {
             if (!villager.isBaby() && !VillagerGuardGoal.esGuardia(villager)
                     && villager.getVillagerData().getProfession() == VillagerProfession.SHEPHERD) {
                 asegurarGoalDeGanadero(villager, center, objectiveIndex);
+            }
+        }
+        // COCINERO (etapa E): el carnicero cocina en el ahumador del kiosco la carne cruda y las patatas: crudo = 2
+        // puntos de comida, cocinado = 4, así que es la palanca del hambre del pueblo. Puesto fijo, como el ganadero.
+        for (Villager villager : aldeanos) {
+            if (!villager.isBaby() && !VillagerGuardGoal.esGuardia(villager)
+                    && villager.getVillagerData().getProfession() == VillagerProfession.BUTCHER) {
+                asegurarGoalDeCocinero(villager, center, objectiveIndex);
             }
         }
         // GUARDIA (milicia): los aldeanos adultos que SOBRAN (cubiertos los puestos fijos: granjero, los dos
@@ -1240,6 +1282,7 @@ public final class VillageManager {
         VillagerProfession profesion = villager.getVillagerData().getProfession();
         return !villager.isBaby() && profesion != VillagerProfession.NITWIT
                 && profesion != VillagerProfession.SHEPHERD
+                && profesion != VillagerProfession.BUTCHER
                 && !VillagerGuardGoal.esGuardia(villager);
     }
 
@@ -1248,7 +1291,8 @@ public final class VillageManager {
      * solo cuando están cubiertos los oficios del pueblo) y desalista a los que ya no sobran.
      * <p>
      * <b>Quién sobra</b>: se reparten los <b>puestos fijos</b> (1 granjero, 1 herrero de armas, 1 de herramientas,
-     * 1 clérigo y 1 recolector) en orden <b>estable</b> (por UUID): los primeros de cada oficio se quedan con su
+     * 1 clérigo, 1 recolector, 1 ganadero y 1 cocinero) en orden <b>estable</b> (por UUID): los primeros de cada
+     * oficio se quedan con su
      * puesto y los demás son gente de sobra. Así la guardia no le quita el granjero ni los herreros a la aldea (que
      * es lo que la dejaría sin comer y sin indumentaria) y con 5 aldeanos —los que tiene una aldea sana— no hay
      * guardia: hacen falta <b>crías</b>, o sea una aldea que crece.
@@ -1267,6 +1311,7 @@ public final class VillageManager {
         cupo.put(VillagerProfession.CLERIC, 1);
         cupo.put(VillagerProfession.NITWIT, 1); // el recolector
         cupo.put(VillagerProfession.SHEPHERD, 1); // el ganadero de la granja anexa (etapa D)
+        cupo.put(VillagerProfession.BUTCHER, 1); // el cocinero del kiosco (etapa E)
 
         List<Villager> adultos = new ArrayList<>();
         for (Villager villager : aldeanos) {
@@ -1310,7 +1355,7 @@ public final class VillageManager {
     /**
      * ¿Ese aldeano puede alistarse? Basta con que <b>no sea una cría</b>: los puestos fijos se reparten en
      * {@link #repartirGuardia}, así que el que no cubre ninguno es, por definición, gente de sobra (incluidos los
-     * que se quedaron <b>sin oficio</b> porque las cinco especialidades ya estaban cubiertas).
+     * que se quedaron <b>sin oficio</b> porque los puestos del pueblo ya estaban cubiertos).
      */
     private static boolean puedeSerGuardia(Villager villager) {
         return !villager.isBaby();
@@ -1586,6 +1631,21 @@ public final class VillageManager {
                 center, objectiveIndex));
     }
 
+    /**
+     * Le pone al <b>cocinero</b> (carnicero) su goal de <b>cocina</b> (etapa E): cocina en el ahumador del kiosco la
+     * carne cruda y las patatas del pueblo (crudo = 2 puntos de comida, cocinado = 4). Prioridad <b>4</b>, como los
+     * demás oficios.
+     */
+    private static void asegurarGoalDeCocinero(Villager villager, BlockPos center, int objectiveIndex) {
+        for (WrappedGoal wrapped : villager.goalSelector.getAvailableGoals()) {
+            if (wrapped.getGoal() instanceof com.chipoodle.devilrpg.entity.goal.VillagerCookGoal) {
+                return;
+            }
+        }
+        villager.goalSelector.addGoal(4, new com.chipoodle.devilrpg.entity.goal.VillagerCookGoal(villager,
+                center, objectiveIndex));
+    }
+
     /** Le pone al <b>herrero</b> su goal de taller (coger material, fabricar en su puesto y dejarlo en el almacén). */
     private static void asegurarGoalDeHerrero(Villager villager, BlockPos center, int objectiveIndex) {
         for (WrappedGoal wrapped : villager.goalSelector.getAvailableGoals()) {
@@ -1840,6 +1900,9 @@ public final class VillageManager {
         if (profesion == VillagerProfession.SHEPHERD) {
             return "Ganadero"; // el pastor de la granja anexa (etapa D)
         }
+        if (profesion == VillagerProfession.BUTCHER) {
+            return "Cocinero"; // el carnicero de la cocina del kiosco (etapa E)
+        }
         if (profesion == VillagerProfession.NONE) {
             return "Sin oficio";
         }
@@ -2090,9 +2153,16 @@ public final class VillageManager {
      * comida, se la llevan andando y con eso nacen crías. El pan <b>sale del barril</b> (si no hay pan horneado, no
      * se reparte nada) y solo se da uno por latido, para que la aldea no se quede sin reservas. A los viejos no se
      * les da: ya no crían.
+     * <p>
+     * <b>La cría va ligada a las CAMAS LIBRES</b> (etapa E, lo pidió el jugador): si el pueblo no tiene una cama de
+     * sobra, no se reparte pan para criar. Es la regla de vanilla (una cama por aldeano) puesta donde de verdad
+     * decide algo: en la comida. Antes se repartía pan siempre y el pueblo crecía hasta que ya no cabía nadie.
      */
     private static void feedVillagers(ServerLevel level, VillageSavedData saved, int objectiveIndex, BlockPos center,
                                      List<Villager> aldeanos) {
+        if (!hayCamaLibre(level, center, aldeanos)) {
+            return; // sin cama libre no se cría: no se gasta el pan
+        }
         for (Villager villager : aldeanos) {
             if (villager.isBaby() || villager.canBreed()) {
                 continue; // las crías no comen de la despensa y el que ya puede criar no lo necesita
@@ -2121,26 +2191,113 @@ public final class VillageManager {
     }
 
     /**
-     * Consecuencias del hambre: mientras la aldea no tenga comida, sus aldeanos van con <b>Debilidad</b> y
-     * <b>Lentitud</b>, y si el hambre dura más de {@link #STARVATION_DEATH_TICKS} (10 min) <b>muere uno</b>.
+     * <b>Reparte las raciones</b> de este minuto: <b>una ración = un punto de comida</b> (lo mismo que comía la
+     * aldea antes, ahora repartido boca por boca) por cada aldeano que lleve sin comer {@link #EAT_INTERVAL_TICKS} o
+     * más, y <b>primero al que hace más tiempo que no come</b> (si la comida no llega para todos, el hambre se
+     * reparte en vez de cebar siempre a los mismos). Cada ración sale <b>de verdad</b> de la despensa.
+     * <p>
+     * OJO con cómo se saca: se pide el total <b>por valor y de una sola vez</b>. Sacando un punto por boca, uno a
+     * uno, cada aldeano se llevaría una <b>hogaza entera</b> (4 puntos: {@code sacarComida} redondea a piezas
+     * completas) y el pueblo comería cuatro veces más de lo que le toca. {@code sacarComida} devuelve los puntos que
+     * de verdad había, así que se marca como comidos a los que les tocó (los que llevaban más tiempo sin comer).
+     *
+     * @return cuántas raciones se han repartido (0 = el pueblo no tiene nada que dar)
      */
-    private static void starveVillagers(ServerLevel level, VillageSavedData saved, int objectiveIndex, List<Villager> aldeanos) {
+    private static int repartirRaciones(ServerLevel level, BlockPos center, List<Villager> aldeanos) {
+        if (level.getGameTime() % EAT_INTERVAL_TICKS != 0L) {
+            return 0; // las raciones se reparten en el latido del minuto
+        }
+        Container despensa = VillagePantry.despensa(level, center);
+        if (despensa == null || aldeanos.isEmpty()) {
+            return 0;
+        }
+        // El hambre de cada uno, leída UNA vez por aldeano (y de paso se le estrena la marca al que llega nuevo).
+        Map<Villager, Long> ultima = new HashMap<>();
         for (Villager villager : aldeanos) {
+            ultima.put(villager, ultimaComida(level, villager));
+        }
+        List<Villager> bocas = new ArrayList<>();
+        for (Villager villager : aldeanos) {
+            if (!villager.isBaby() && level.getGameTime() - ultima.get(villager) >= EAT_INTERVAL_TICKS) {
+                bocas.add(villager); // las crías maman de la aldea: no gastan ración
+            }
+        }
+        if (bocas.isEmpty()) {
+            return 0;
+        }
+        bocas.sort(Comparator.comparingLong(v -> ultima.get(v)));
+        int raciones = Math.min(VillagePantry.sacarComida(despensa, bocas.size()), bocas.size());
+        for (int i = 0; i < raciones; i++) {
+            marcarComida(level, bocas.get(i));
+        }
+        return raciones;
+    }
+
+    /** El <b>hambre de cada aldeano</b>: debilidad y lentitud a las {@link #HAMBRE_PACIENTE_TICKS} raciones sin comer,
+     *  y muerte por hambre a los {@link #STARVATION_DEATH_TICKS}. Antes moría "uno al azar de la aldea". */
+    private static void pasarHambre(ServerLevel level, VillageSavedData saved, int objectiveIndex,
+                                    List<Villager> aldeanos) {
+        boolean algunaBocaSinComer = false;
+        for (Villager villager : aldeanos) {
+            if (villager.isBaby()) {
+                continue;
+            }
+            long sinComer = level.getGameTime() - ultimaComida(level, villager);
+            if (sinComer < HAMBRE_PACIENTE_TICKS) {
+                continue;
+            }
+            algunaBocaSinComer = true;
             if (!villager.hasEffect(MobEffects.WEAKNESS)) {
                 villager.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 20 * 60, 0, false, false));
             }
             if (!villager.hasEffect(MobEffects.MOVEMENT_SLOWDOWN)) {
                 villager.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 20 * 60, 0, false, false));
             }
+            if (sinComer >= STARVATION_DEATH_TICKS) {
+                DevilRpg.LOGGER.info("[Village] Un aldeano de la aldea {} ha muerto de hambre ({} min sin comer)",
+                        objectiveIndex, sinComer / (60L * 20L));
+                villager.hurt(level.damageSources().generic(), Float.MAX_VALUE);
+            }
         }
-        long desde = saved.getStarvingSince(objectiveIndex);
-        if (desde != 0L && level.getGameTime() - desde >= STARVATION_DEATH_TICKS && !aldeanos.isEmpty()) {
-            Villager victima = aldeanos.get(level.random.nextInt(aldeanos.size()));
-            DevilRpg.LOGGER.info("[Village] Un aldeano de la aldea {} ha muerto de hambre", objectiveIndex);
-            victima.hurt(level.damageSources().generic(), Float.MAX_VALUE);
-            // El contador se reinicia: el siguiente no cae hasta dentro de otros 10 min de hambre.
-            saved.setStarvingSince(objectiveIndex, level.getGameTime());
+        // El aviso de aldea (una vez) y el de recuperación: es lo que se ve en el chat y en el log.
+        if (algunaBocaSinComer) {
+            if (saved.getStarvingSince(objectiveIndex) == 0L) {
+                saved.setStarvingSince(objectiveIndex, level.getGameTime());
+                DevilRpg.LOGGER.info("[Village] La aldea {} pasa hambre: hay bocas sin su racion", objectiveIndex);
+                BlockPos centro = centroDe(level, objectiveIndex); // el aviso es para el jugador que esté cerca
+                if (centro != null) {
+                    announceNearby(level, centro, "La aldea pasa hambre: la despensa esta vacia.");
+                }
+            }
+        } else if (saved.getStarvingSince(objectiveIndex) != 0L) {
+            saved.setStarvingSince(objectiveIndex, 0L);
+            DevilRpg.LOGGER.info("[Village] La aldea {} vuelve a tener comida", objectiveIndex);
         }
+    }
+
+    /** Cuándo comió por última vez ese aldeano (gameTime). La primera vez que se le ve, come ahora. */
+    private static long ultimaComida(ServerLevel level, Villager villager) {
+        CompoundTag datos = villager.getPersistentData();
+        if (!datos.contains(COMIDA_TAG)) {
+            datos.putLong(COMIDA_TAG, level.getGameTime());
+            return level.getGameTime();
+        }
+        return datos.getLong(COMIDA_TAG);
+    }
+
+    private static void marcarComida(ServerLevel level, Villager villager) {
+        villager.getPersistentData().putLong(COMIDA_TAG, level.getGameTime());
+    }
+
+    /** Camas del pueblo (puntos de interés `HOME` alrededor de la plaza): es el tope real de población. */
+    private static long contarCamas(ServerLevel level, BlockPos center) {
+        return level.getPoiManager().getCountInRange(h -> h.is(PoiTypes.HOME), center,
+                VillageGenerator.FENCE_RADIUS + 6, PoiManager.Occupancy.ANY);
+    }
+
+    /** ¿Hay una cama de sobra para una cría? (los aldeanos de la lista incluyen a las crías). */
+    private static boolean hayCamaLibre(ServerLevel level, BlockPos center, List<Villager> aldeanos) {
+        return contarCamas(level, center) > aldeanos.size();
     }
 
     /**

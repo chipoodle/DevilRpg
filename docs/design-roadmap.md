@@ -653,17 +653,61 @@ aldeano y **dentro del patrullaje de la guardia**"*.
   entran en el **plano** para que el obrero los reponga (invariante I8). El **tope de crecimiento** de la aldea pasa
   de 5 a **`puestosDelPueblo()`** (6): sin eso, una aldea con sus cinco oficios cubiertos **nunca** habría tenido
   ganadero.
-- **Pendiente**: verlo en partida (el cliente tiene que reiniciarse para cargar el mod) y el **cocinero** (etapa E),
-  que es lo que convierte la carne cruda en comida de verdad (2 → 4 puntos por pieza).
+- **Pendiente**: verlo en partida (el cliente tiene que reiniciarse para cargar el mod).
 
-### 3b.15 Lo que viene (el cocinero)
+### 3b.15 El COCINERO, el hambre por aldeano y la cría por camas libres (etapa E)
+
+Lo que pidió el jugador: cerrar la cadena de la comida con el **cocinero** (crudo → cocinado: la carne cruda vale
+**2 puntos** y la cocinada **4**, así que cocinar **duplica** la comida que ya había), que el hambre sea **de cada
+aldeano** y que la cría dependa de que haya **cama libre**.
+
+- **La cocina del pueblo** (`VillageGenerator.asegurarCocina`): un **ahumador** —el puesto de trabajo del carnicero:
+  sin él el juego le borra el oficio, la misma trampa que la mesa de herrería o el telar del ganadero— y su **mesa**,
+  en la **plataforma del kiosco**, al lado de la despensa (la cocina y el almacén de comida son lo mismo: así el
+  cocinero no tiene que ir y venir por el pueblo con la carne en la mano). Es **idempotente** y va **aparte** de
+  `asegurarKiosco`: aquél sale antes de tiempo cuando el kiosco ya está, así que con la comprobación dentro, a las
+  aldeas ya construidas **nunca** les habría llegado la cocina.
+- **El COCINERO** (`VillagerCookGoal`) es el **séptimo puesto** del pueblo (oficio carnicero, `BUTCHER`, con su sitio
+  de aparición en la plaza a 8,5 del centro y **fuera del tejado del kiosco**: si el punto cae bajo el tejado,
+  `groundY` devuelve el techo y el aldeano nace **encima**). Saca de la despensa lo que se puede cocinar y devuelve su
+  equivalente cocinado, **una pieza por una** (no inventa comida: la **transforma**), con su humo y su sonido. Camina
+  al **punto del patio** de la despensa —nunca *hacia* el ahumador: está dentro del kiosco, sobre la plataforma, y la
+  navegación no puede "llegar" a un bloque sólido— pero **mide contra el ahumador**: sin ese alcance propio,
+  "cocinaría" desde la otra punta de la plaza.
+- **El hambre es de CADA aldeano** (`COMIDA_TAG` en sus datos persistentes: el `gameTime` de su última ración). Cada
+  minuto de juego se reparte **una ración = un punto de comida** (lo que comía la aldea por aldeano y minuto desde el
+  principio) y **primero al que hace más tiempo que no come**: si la comida no alcanza, el hambre se reparte en vez de
+  cebar siempre a los mismos. Ojo con el detalle que casi se cuela: se pide **por valor y de una sola vez** —sacando
+  un punto por boca, uno a uno, cada aldeano se llevaba una **hogaza entera** (4 puntos: `sacarComida` redondea a
+  piezas completas) y el pueblo comía **cuatro veces** más de lo que le toca—, así que un pan da de comer a **cuatro**
+  aldeanos. Las **crías no gastan ración** (maman de la aldea); a las **3 raciones** perdidas (3 min) el aldeano va con
+  **Debilidad** y **Lentitud**, y a los **10 min** el que no comió **muere él** (antes moría "uno al azar de la
+  aldea", que es como se moría el granjero mientras el holgazán engordaba).
+- **La cría va ligada a las CAMAS LIBRES**: `feedVillagers` no reparte pan para criar si el pueblo no tiene una cama
+  de sobra (las camas se cuentan por su punto de interés `HOME` dentro del recinto). Es la regla de vanilla puesta
+  donde de verdad decide algo: sin ella el pueblo crecía hasta que ya no cabía nadie.
+- **MEDIDA, no a ojo**: cada 5 min el log dice lo que hay y lo que se come (puntos de comida, aldeanos, camas y
+  raciones del último minuto), que es lo que hace falta para ajustar el hambre con números.
+- **Migración 32** (`CURRENT_LAYOUT`): las aldeas ya construidas reciben la cocina al latido siguiente y sus bloques
+  entran en el **plano** para que el obrero la reponga (invariante I8). El **tope de crecimiento** pasa a
+  `puestosDelPueblo()` (7), y el cocinero queda fuera del reparto de obreros y de la milicia (cupo propio, como el
+  ganadero).
+- **El lint también vigila los goals nuevos**: `tools/lint_aldea.py` tenía en su lista solo los goals viejos, así que
+  el leñador, el ganadero, el cocinero, el guardia y el herrero **no estaban pasando** por sus reglas de "atascado =
+  no acercarse" (I3) ni de "el aldeano camina por el cerebro" (I6). Ya están dentro; la única excepción —la distancia
+  **en 3D** al tronco de un árbol, que sí es intencionada— va marcada con `lint:ok` y su porqué.
+- **Pendiente**: verlo en partida (hay que reiniciar el cliente para cargar el mod) y **ajustar los números** del
+  hambre con el log de medida (lo que se come por minuto contra lo que producen la huerta y el corral).
+
+### 3b.16 Lo que viene
 
 - **Milicia**: ✅ completa (barraca, oficio, combate, escudo que bloquea, modelo propio, marcha a la guarida).
 - **Leñador/reforestador**: ✅ (tala y replanta, y la cadena de la madera del herrero).
 - **Granja anexa de animales**: ✅ (corral fuera de la valla, ganadero, cría, sacrificio de exceso y patrullaje de
   la guardia).
-- **Lo siguiente**: el **cocinero** (crudo → cocinado: la carne cruda vale 2 puntos y la cocinada 4, así que es la
-  palanca natural del hambre) y el **hambre por aldeano**, con la **cría ligada a camas libres**.
+- **Cocinero, hambre por aldeano y cría por camas**: ✅ (ver 3b.15).
+- **Lo siguiente**: la **verificación en partida** de la cadena entera de la comida (huerta → despensa → cocina →
+  raciones) y, de ahí, lo que pida el jugador.
 
 ## 3c) Iteración 2 — GUARIDAS ✅ (en curso)
 

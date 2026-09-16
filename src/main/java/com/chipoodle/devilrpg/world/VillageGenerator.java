@@ -1492,6 +1492,50 @@ public final class VillageGenerator {
                 .setValue(ChestBlock.TYPE, tipo);
     }
 
+    // --- LA COCINA DEL PUEBLO (etapa E) -------------------------------------------------------------
+
+    /**
+     * El <b>ahumador</b> de la cocina del pueblo, sobre la plataforma del kiosco (relativo al centro). Es el
+     * <b>puesto de trabajo del cocinero</b>: sin él, el juego le borraría el oficio al aldeano (misma trampa que la
+     * mesa de herrería o el telar del ganadero).
+     * <p>
+     * Va <b>al lado de la despensa</b> a propósito: la cocina y el almacén de comida son lo mismo, así el cocinero no
+     * tiene que ir y venir por el pueblo con la carne en la mano.
+     */
+    public static BlockPos puestoDelCocinero(ServerLevel level, BlockPos center) {
+        int nivel = cotaDeLaPlaza(level, center);
+        return new BlockPos(center.getX() + 2, nivel + 1, center.getZ() + 1);
+    }
+
+    /**
+     * Asegura la <b>cocina del pueblo</b>: el ahumador (puesto del cocinero) y su mesa, sobre la plataforma del
+     * kiosco. Es <b>idempotente</b> y va aparte de {@link #asegurarKiosco} porque aquél sale antes de tiempo cuando el
+     * kiosco ya está: con la comprobación dentro, a las aldeas ya construidas <b>nunca</b> les habría llegado la
+     * cocina.
+     */
+    public static void asegurarCocina(ServerLevel level, BlockPos center) {
+        int nivel = cotaDeLaPlaza(level, center);
+        if (nivel <= level.getMinBuildHeight() + 1) {
+            return;
+        }
+        // Sin plataforma no hay dónde ponerla (quedaría flotando): primero el kiosco.
+        if (!level.getBlockState(new BlockPos(center.getX() + KIOSCO_RADIO, nivel, center.getZ()))
+                .is(Blocks.STONE_BRICKS)) {
+            return;
+        }
+        BlockPos ahumador = puestoDelCocinero(level, center);
+        if (level.getBlockState(ahumador).is(Blocks.SMOKER)) {
+            return; // la cocina ya está
+        }
+        colocar(level, ahumador, Blocks.SMOKER.defaultBlockState()
+                .setValue(net.minecraft.world.level.block.SmokerBlock.FACING, Direction.SOUTH), 3);
+        // La mesa de la cocina, en el centro de la plataforma (donde no estorba al cofre ni a la campana).
+        colocar(level, new BlockPos(center.getX(), nivel + 1, center.getZ()),
+                Blocks.CRAFTING_TABLE.defaultBlockState(), 3);
+        DevilRpg.LOGGER.info("[Village] Aldea en {}: cocina del pueblo puesta en el kiosco (ahumador en {})",
+                center, ahumador);
+    }
+
     private static BlockState escalera(Direction hacia) {
         return Blocks.STONE_BRICK_STAIRS.defaultBlockState()
                 .setValue(StairBlock.FACING, hacia)
@@ -2662,12 +2706,16 @@ public final class VillageGenerator {
     }
 
     /**
-     * Los sitios fijos de aldeano de la aldea (uno por profesión), relativos al centro. Son 5 desde que hay 5
-     * puestos (granjero, dos herreros, clérigo y el holgazán recolector).
+     * Los sitios fijos de aldeano de la aldea (uno por profesión), relativos al centro. Son <b>7</b> puestos
+     * (granjero, dos herreros, clérigo, el holgazán recolector, el ganadero del corral y el cocinero de la cocina).
      * <p>
      * Van <b>repartidos en un anillo</b> a unos 13-15 bloques de la plaza: antes estaban apelotonados al norte
      * (x -11..14, z -11..2) y con los solares nuevos, que empiezan a 20-21 del centro, alguno podía caer dentro de
      * una casa. El anillo de 13-15 queda entre el kiosco (radio 3) y los solares, siempre en patio abierto.
+     * <p>
+     * Los dos últimos puestos <b>no</b> van en ese anillo: el ganadero vive en el corral anexo (fuera de la valla) y
+     * el cocinero en la plaza. Ninguno de los dos puede caer bajo un tejado (el del cobertizo del corral o el del
+     * kiosco): {@code groundY} devolvería la altura del TEJADO y el aldeano aparecería <b>encima</b> de él.
      */
     private static final BlockPos[] VILLAGER_SPOTS = {
             new BlockPos(-13, 0, -8), new BlockPos(12, 0, -8), new BlockPos(-4, 0, 13),
@@ -2675,7 +2723,10 @@ public final class VillageGenerator {
             // El GANADERO vive en su corral, FUERA de la valla (a 47 del centro, dentro del corral y fuera del
             // cobertizo: si el punto cayera bajo su tejado, `groundY` devolvería la altura del TEJADO y el aldeano
             // aparecería encima de él).
-            new BlockPos(47, 0, 0)
+            new BlockPos(47, 0, 0),
+            // El COCINERO (etapa E) en la plaza, junto al kiosco y su cocina. Tampoco puede caer bajo el tejado del
+            // kiosco: `groundY` devolvería el tejado y el aldeano nacería ENCIMA de él.
+            new BlockPos(6, 0, 6)
     };
     /**
      * Oficios de la aldea, en el orden en que se ocupan los sitios:
@@ -2688,11 +2739,14 @@ public final class VillageGenerator {
      *       Antes esto lo hacía el constructor y se pasaba el día recolectando en vez de reparar.</li>
      *   <li><b>Pastor</b> = el <b>GANADERO</b> de la granja anexa (etapa D): vive en el corral de fuera de la valla,
      *       cría a los animales y baja la carne y la lana al almacén.</li>
+     *   <li><b>Carnicero</b> = el <b>COCINERO</b> de la aldea (etapa E): cocina en el ahumador del kiosco la carne
+     *       cruda y las patatas que le llegan (crudo = 2 puntos de comida, cocinado = 4).</li>
      * </ol>
      */
     private static final VillagerProfession[] VILLAGER_SPECIALTIES = {
             VillagerProfession.FARMER, VillagerProfession.WEAPONSMITH, VillagerProfession.CLERIC,
-            VillagerProfession.TOOLSMITH, VillagerProfession.NITWIT, VillagerProfession.SHEPHERD
+            VillagerProfession.TOOLSMITH, VillagerProfession.NITWIT, VillagerProfession.SHEPHERD,
+            VillagerProfession.BUTCHER
     };
 
     /**
