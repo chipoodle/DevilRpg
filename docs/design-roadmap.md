@@ -225,8 +225,16 @@ siguiente está implementado y probado.
 - **Etiqueta sobre el aldeano**: arriba el **nombre y el oficio**, debajo lo que está haciendo
   (`"Anselmo (Granjero)\nCosechando"`). El nombre sale del **UUID** (al azar pero estable, sin guardar nada) y el
   oficio se pone con los nombres del mod en español ("Granjero", "Herrero de armas", "Herrero de herramientas",
-  "Clérigo", "Recolector"), con el nombre traducido del juego como reserva para oficios de vanilla. **El salto de línea hay
-  que pintarlo a mano**: la etiqueta de nombre de vanilla se dibuja con `Font.drawInBatch(Component, ...)`, que **no
+  "Clérigo", "Recolector"), con el nombre traducido del juego como reserva para oficios de vanilla.
+  - **Y cuando hace algo, lo cuenta** (`ponerSuceso`): "Guardo 12 y horneo 2 pan(es)", "Trajo 6 del almacén",
+    "Repuso tronco de roble", "Guardo 5 cosa(s) en el almacén", "Abonó la huerta". El suceso se queda
+    `SUCESO_TICKS` (5 s) en la cabeza y después vuelve sola la actividad de fondo; mientras es reciente,
+    `ponerActividad` no lo pisa (ni los goals ni el refresco genérico de cada segundo). Los mismos sucesos van al log
+    (INFO), así que lo que se ve en la cabeza se puede comprobar. El texto va **corto** (una etiqueta de nombre no se
+    parte sola) y el nombre del bloque se traduce **a mano** (`VillageManager.nombreEnEspanol`): las traducciones las
+    resuelve el servidor, y ahí el idioma es inglés (de ahí el "Farmer" que salió una vez).
+  - **El salto de línea hay que pintarlo a mano**: la etiqueta de nombre de vanilla se dibuja con
+  `Font.drawInBatch(Component, ...)`, que **no
   parte las líneas** (solo lo hacen `MultiLineLabel`/`drawWordWrap`), así que el `\n` salía como un glifo raro en
   medio del texto (el "LF" que reportó el jugador). Lo resuelve `VillageNameTagSubscriber` (cliente): intercepta
   `RenderNameTagEvent` y, solo para las etiquetas de aldeano con salto de línea, le dice al juego que **no** la pinte
