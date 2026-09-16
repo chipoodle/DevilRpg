@@ -29,8 +29,21 @@ import java.util.Set;
  */
 public class VillagerRepairGoal extends Goal {
 
-    /** Distancia a la que el aldeano ya llega a colocar el bloque. */
+    /** Distancia a la que el aldeano ya llega a colocar el bloque (a la altura de sus pies). */
     private static final double REACH = 4.5D;
+    /**
+     * Alcance <b>extra por cada bloque que el hueco esté POR ENCIMA</b> del obrero (brazo estirado).
+     * <p>
+     * Hace falta de verdad, y está medido: el <b>techo del kiosco está a la cota+5</b> (la plataforma en la cota, los
+     * cuatro postes y el tejado encima) y con el alcance fijo de 4,5 <b>no se podía reponer nunca desde el suelo</b>:
+     * la distancia mínima a un bloque cinco por encima es 5,0 (justo debajo) o 5,8 (a tres bloques), así que el
+     * obrero se quedaba pegándose cabezazos debajo del agujero, se rendía a los 5 s y lo marcaba como inalcanzable
+     * ({@code saltados}). Con 0,4 por bloque, un hueco a 5 se alcanza desde 6,5: entra incluso de pie a 3 bloques.
+     * <p>
+     * No se sube el alcance base (4,5) porque eso dejaría al obrero colocando bloques "a distancia" a su altura, que
+     * se ve raro: lo que se estira es solo el brazo hacia ARRIBA.
+     */
+    private static final double REACH_EXTRA_POR_ALTURA = 0.4D;
     /** Ticks "trabajando" antes de colocar (medio segundo): se le ve dar el golpe, pero sin eternizarse. */
     private static final int WORK_TICKS = 10;
     /** Descanso entre bloque y bloque (medio segundo). Antes eran 2 s y el obrero tardaba una eternidad. */
@@ -139,7 +152,7 @@ public class VillagerRepairGoal extends Goal {
         }
         villager.getLookControl().setLookAt(target.getX() + 0.5D, target.getY() + 0.5D, target.getZ() + 0.5D);
         double distancia = Math.sqrt(villager.distanceToSqr(target.getX() + 0.5D, target.getY() + 0.5D, target.getZ() + 0.5D));
-        if (distancia > REACH) {
+        if (distancia > alcanceDe(target)) {
             // Al hueco se va POR EL CEREBRO en cada tick (ver VillageManager.caminarHacia): navegando a mano, el
             // cerebro del aldeano le da otro destino y se va a otra parte.
             VillageManager.caminarHacia(villager, target, 0.6F);
@@ -194,5 +207,15 @@ public class VillagerRepairGoal extends Goal {
 
     private boolean isBuilder() {
         return villager.getPersistentData().getBoolean(VillageManager.BUILDER_TAG);
+    }
+
+    /**
+     * Alcance para colocar <b>ese</b> bloque: el de siempre ({@link #REACH}) más lo que el hueco esté <b>por encima</b>
+     * del obrero, que es lo que le permite reponer el <b>techo del kiosco</b> (cota+5) desde el suelo. Los bloques a su
+     * altura o por debajo siguen con el alcance de siempre.
+     */
+    private double alcanceDe(BlockPos objetivo) {
+        int dy = Math.max(0, objetivo.getY() - villager.blockPosition().getY());
+        return REACH + dy * REACH_EXTRA_POR_ALTURA;
     }
 }

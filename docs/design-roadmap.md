@@ -548,10 +548,14 @@ El log de esa partida lo explica entero (01:50-02:00) y salieron **dos bugs de v
   vanilla manda a los aldeanos a la cama en la franja de descanso, el guardia **se acostaba**. **Arreglado**: el goal
   de guardia ya **no cede por la hora de descanso** (solo se corta si acaba durmiendo de verdad): de noche está de
   puerta, que es justo lo que pidió el jugador.
-- **Pendiente de la captura**: el **techo del kiosco** está a la cota+5 y el obrero solo alcanza **4,5** bloques
-  (`REACH`) con un límite de 5 de altura, así que desde la plaza **no puede** reponer un bloque del techo (distancia
-  mínima 5,1). Habría que acercar el alcance o dejarlo subir por las escaleras del kiosco: **sin arreglar** (no se ha
-  visto en partida todavía).
+- **El TECHO DEL KIOSCO ya se puede reponer ✅ (arreglado)**: el tejado está a la **cota+5** y el obrero solo alcanzaba
+  **4,5** desde el suelo, así que se quedaba pegándose cabezazos debajo del agujero, se rendía a los 5 s y lo marcaba
+  como **inalcanzable** (`saltados`). Medido con la geometría real (pies en la cota, centro del bloque de tejado 5,5
+  por encima): la distancia mínima es **5,50** justo debajo, 5,85 a dos bloques y **6,26** a tres — con 4,5 **no
+  llegaba nunca**. Ahora el alcance **crece con lo que el hueco esté por encima** (`REACH` 4,5 + **0,4 por bloque** =
+  **6,5** para el tejado), así que lo alcanza desde el patio hasta ~3,4 bloques de separación (el borde de la
+  plataforma, radio 3) o desde la propia plataforma. El alcance **base no se toca** (4,5 a la altura del obrero): lo
+  que se estira es solo el brazo hacia arriba, para no verle colocar bloques "a distancia".
 
 ### 3b.12 El LEÑADOR/REFORESTADOR (etapa B) y la cadena de la madera
 
