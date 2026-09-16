@@ -675,6 +675,14 @@ con su premio y su estado guardado. Lo implementado:
         huerta si hay gente de sobra) y se **reparten los huecos** con reservas (`reclamarHueco`/`liberarHueco`, con
         caducidad de 1 min), así no se amontonan en el mismo agujero. El ritmo también subió: medio segundo de
         golpe y medio de descanso por bloque (`WORK_TICKS`/`REST_TICKS` = 10), cuando antes eran 1 s + 2 s.
+      - **La lista de obreros se RECALCULA y se reconcilia** en cada latido: primero los que ya eran obreros y no son
+        granjeros, después los demás adultos con otro oficio y, solo como último recurso, un granjero. **A los que
+        sobran se les quita la marca y el goal** (`desmarcarObrero`). Antes la marca no se le quitaba a **nadie**, así
+        que el granjero que hizo de obrero cuando la aldea se quedó sin adultos (murió gente) se pasaba la vida
+        reparando caminos con su goal de reparación a prioridad 3, **por encima** de su goal de granja (4) — el
+        jugador lo vio: quitó un bloque del camino y apareció el granjero a reponerlo. Y si un granjero **tiene** que
+        hacer de obrero, ahora lleva la reparación a prioridad **5** (por debajo de la granja): primero la huerta y,
+        cuando no tiene faena, repara.
       - También repone la **tierra pisoteada**: saltar sobre la tierra de cultivo la convierte en tierra (vanilla),
         así que si el plano dice tierra de cultivo o acequia y ahora hay tierra/hierba, se vuelve a poner
         (`necesitaReparacion`). Lo que no toca es nada que no sea eso: si pones tú un bloque, se respeta.
