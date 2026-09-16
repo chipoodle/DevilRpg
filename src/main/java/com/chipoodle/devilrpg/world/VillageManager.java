@@ -10,6 +10,7 @@ import com.chipoodle.devilrpg.entity.AggressiveZombieEntity;
 import com.chipoodle.devilrpg.entity.goal.VillagerCollectGoal;
 import com.chipoodle.devilrpg.entity.goal.VillagerFarmGoal;
 import com.chipoodle.devilrpg.entity.goal.VillagerGuardGoal;
+import com.chipoodle.devilrpg.entity.goal.VillagerLumberjackGoal;
 import com.chipoodle.devilrpg.entity.goal.VillagerRepairGoal;
 import com.chipoodle.devilrpg.init.ModEntities;
 import com.chipoodle.devilrpg.survival.ObjectiveTargets;
@@ -1128,6 +1129,7 @@ public final class VillageManager {
             if (!villager.isBaby() && !VillagerGuardGoal.esGuardia(villager)
                     && villager.getVillagerData().getProfession() == VillagerProfession.NITWIT) {
                 asegurarGoalDeRecolector(villager, center, objectiveIndex);
+                asegurarGoalDeLenador(villager, center, objectiveIndex);
             }
         }
         // GUARDIA (milicia): los aldeanos adultos que SOBRAN (cubiertos los puestos fijos: granjero, los dos
@@ -1494,6 +1496,21 @@ public final class VillageManager {
             }
         }
         villager.goalSelector.addGoal(5, new VillagerCollectGoal(villager, center, objectiveIndex));
+    }
+
+    /**
+     * Le pone al <b>recolector</b> su goal de <b>leñador/reforestador</b> (etapa B), a prioridad <b>6</b>: por debajo
+     * de recoger (5), así que primero barre el pueblo y, cuando no hay nada que recoger, se va al monte a talar y
+     * replantar. Es el mismo aldeano a propósito: el pueblo no gasta un puesto más (los fijos ya son granjero, los dos
+     * herreros, clérigo y recolector, y de los sobrantes sale la milicia).
+     */
+    private static void asegurarGoalDeLenador(Villager villager, BlockPos center, int objectiveIndex) {
+        for (WrappedGoal wrapped : villager.goalSelector.getAvailableGoals()) {
+            if (wrapped.getGoal() instanceof VillagerLumberjackGoal) {
+                return;
+            }
+        }
+        villager.goalSelector.addGoal(6, new VillagerLumberjackGoal(villager, center, objectiveIndex));
     }
 
     /** Le pone al <b>herrero</b> su goal de taller (coger material, fabricar en su puesto y dejarlo en el almacén). */

@@ -60,6 +60,18 @@ public class VillagerSmithGoal extends Goal {
     /** Pepitas que hacen falta para un lingote (la receta de vanilla) y carne podrida para un cuero. */
     private static final int PEPITAS_POR_LINGOTE = 9;
     private static final int CARNE_POR_CUERO = 9;
+    /**
+     * Madera que quiere tener el pueblo en el almacén: tablones (escudos y obras) y palos (arcos y flechas). El
+     * <b>leñador</b> trae los troncos y el herrero de herramientas los parte en su mesa.
+     */
+    private static final int OBJETIVO_TABLONES = 32;
+    private static final int OBJETIVO_PALOS = 64;
+    /** Troncos que el herrero de herramientas sabe aserrar (los que trae el leñador y los del propio juego). */
+    private static final List<ItemStack> TRONCOS = List.of(
+            new ItemStack(Items.OAK_LOG), new ItemStack(Items.SPRUCE_LOG), new ItemStack(Items.BIRCH_LOG),
+            new ItemStack(Items.JUNGLE_LOG), new ItemStack(Items.ACACIA_LOG), new ItemStack(Items.DARK_OAK_LOG),
+            new ItemStack(Items.MANGROVE_LOG), new ItemStack(Items.CHERRY_LOG), new ItemStack(Items.CRIMSON_STEM),
+            new ItemStack(Items.WARPED_STEM));
 
     private enum Fase { RECOGER, TRABAJAR, ENTREGAR }
 
@@ -299,7 +311,25 @@ public class VillagerSmithGoal extends Goal {
             return new Receta("Curtiendo cuero", "Curtio " + CARNE_POR_CUERO + " carne podrida en un cuero",
                     List.of(new ItemStack(Items.ROTTEN_FLESH, CARNE_POR_CUERO)), new ItemStack(Items.LEATHER));
         }
-        // 4) Fabricar lo que falte, según el puesto.
+        // 4) MADERA: el leñador (etapa B) trae TRONCOS al almacén, y sin esto no había de dónde sacar tablones ni
+        //    palos: el escudo pide 6 tablones y el arco y las flechas, palos. Los parte el de HERRAMIENTAS en su mesa.
+        if (!armas) {
+            // 1 tronco -> 4 tablones (se guardan para los escudos y para el propio pueblo).
+            if (contar(almacen, Items.OAK_PLANKS) < OBJETIVO_TABLONES) {
+                for (ItemStack tronco : TRONCOS) {
+                    if (contar(almacen, tronco.getItem()) > 0) {
+                        return new Receta("Aserrando", "Aserro un tronco en 4 tablones",
+                                List.of(new ItemStack(tronco.getItem(), 1)), new ItemStack(Items.OAK_PLANKS, 4));
+                    }
+                }
+            }
+            // 2 tablones -> 4 palos (arcos y flechas).
+            if (contar(almacen, Items.STICK) < OBJETIVO_PALOS && contar(almacen, Items.OAK_PLANKS) >= 2) {
+                return new Receta("Haciendo palos", "Hizo 4 palos",
+                        List.of(new ItemStack(Items.OAK_PLANKS, 2)), new ItemStack(Items.STICK, 4));
+            }
+        }
+        // 5) Fabricar lo que falte, según el puesto.
         return armas ? recetaDeArmas(almacen) : recetaDeArmadura(almacen);
     }
 

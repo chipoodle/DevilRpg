@@ -553,7 +553,24 @@ El log de esa partida lo explica entero (01:50-02:00) y salieron **dos bugs de v
   mínima 5,1). Habría que acercar el alcance o dejarlo subir por las escaleras del kiosco: **sin arreglar** (no se ha
   visto en partida todavía).
 
-### 3b.12 Lo que viene (milicia, leñador y granja anexa)
+### 3b.12 El LEÑADOR/REFORESTADOR (etapa B) y la cadena de la madera
+
+- **Quién**: lo hace el **recolector** (el aldeano sin oficio), a **prioridad 6** (su goal de recoger es 5): primero
+  barre el pueblo y, cuando no hay nada que recoger, se va al monte. Es el mismo aldeano a propósito: los puestos
+  fijos ya son granjero, los dos herreros, clérigo y recolector, y de los **sobrantes** sale la milicia, así que el
+  leñador no puede gastar un puesto nuevo.
+- **Qué hace** (`VillagerLumberjackGoal`): **tala** árboles (recorre la columna de troncos hacia arriba, hasta 16) y
+  se lleva la madera encima; **replanta** una semilla en la base del que cortó (las coge del almacén: la lista blanca
+  del recolector ya incluye saplings); con 12 troncos, o cuando ya no ve árboles, va al **almacén** a descargar.
+- **Solo tala árboles DE VERDAD y FUERA de la valla**: radio > muro + 3, y el tronco tiene que estar sobre tierra,
+  tener **otro tronco encima** y tener **hojas cerca**. Con eso no se come el muro de la aldea ni las casas, que son
+  de troncos (era el riesgo evidente de esta etapa).
+- **Cadena de la MADERA (sin esto los troncos no valían para nada)**: el herrero de **herramientas**, en su mesa,
+  ahora también **asierra**: 1 tronco → 4 tablones (`OBJETIVO_TABLONES` = 32 en el almacén; el escudo pide 6) y
+  2 tablones → 4 palos (`OBJETIVO_PALOS` = 64; arcos y flechas). Antes **nadie** convertía troncos en tablones ni en
+  palos, así que el escudo, el arco y las flechas no se podían fabricar aunque hubiera madera en el almacén.
+
+### 3b.13 Lo que viene (granja anexa de animales y cocinero)
 
 - **Milicia**: paso 1 ✅ (la barraca) y paso 2 ✅ (el oficio de guardia: alistamiento, equipo del almacén, ronda y
   puertas con relevo). Falta el **combate** (ataque, escudo que bloquea, arqueros que disparan) y la **marcha a la
