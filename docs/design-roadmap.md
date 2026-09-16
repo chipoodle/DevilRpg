@@ -695,8 +695,13 @@ con su premio y su estado guardado. Lo implementado:
 
 7. ✅ **Recompensa propia por rechazar la horda del mundo**: al resolverse el asedio, los jugadores que
    **participaron** cobran `WORLD_SIEGE_REWARD_FRACTION` = **1/6 de un punto de habilidad** (en experiencia: la
-   sexta parte de la barra de su nivel, ver `MissionRewards.giveSkillPointFraction`) más 4 lingotes de hierro
-   "del pueblo".
+   sexta parte de la barra de su nivel, ver `MissionRewards.giveSkillPointFraction`) más un **botín pequeño y
+   variable** del pueblo: de **1 a 3 chips de metal** (pepitas de hierro) y hasta **2 de cuero**, tirados al azar.
+   - **Por qué así (lo corrigió el jugador dos veces)**: primero pagaba 1 nivel entero (o sea **1 punto de
+     habilidad por horda**, y el mundo manda una cada 3-20 min: el árbol de habilidades entero en una tarde), y
+     luego pasó a pagar 4 **lingotes de hierro** fijos. Como es una recompensa **repetible**, 4 lingotes por horda
+     convertían al pueblo en una mina: ahora son **pepitas** (9 = 1 lingote en la mesa del herrero), o sea **un
+     tercio de lingote** como mucho, y de vez en cuando un cuero.
    - **Por qué 1/6 y no un punto entero (cambio pedido por el jugador)**: esta recompensa es **repetible** (el
      mundo manda una horda cada 3-20 min), así que pagando 1 nivel por horda el jugador se completaba el árbol
      de habilidades en una tarde sin jugar el resto del mod. Con 1/6 hacen falta 6 hordas rechazadas para un

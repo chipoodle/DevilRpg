@@ -709,6 +709,17 @@ public final class VillageManager {
      * {@code VillageSavedData}), así que no es farmeable.
      */
     private static final int WORLD_SIEGE_REWARD_FRACTION = 6;
+    /**
+     * Botín de una horda rechazada: <b>chips de metal</b> (pepitas de hierro) y algo de <b>cuero</b>, al azar.
+     * <p>
+     * Son a propósito <b>pocos y variables</b> (lo pidió el jugador: los 4 lingotes de hierro fijos de antes eran
+     * demasiado). 9 chips son un lingote en la mesa del herrero de herramientas y 9 carnes podridas son un cuero,
+     * así que una horda viene a valer <b>un tercio de lingote</b> y, de vez en cuando, un cuero.
+     */
+    private static final int WORLD_SIEGE_REWARD_PEPITAS_MIN = 1;
+    private static final int WORLD_SIEGE_REWARD_PEPITAS_MAX = 3;
+    /** Cueros como mucho (0 entra: muchas veces no cae ninguno). */
+    private static final int WORLD_SIEGE_REWARD_CUEROS_MAX = 2;
     /** Asedios dirigidos por el mundo (en curso). Como {@link #DEFENSES}, no se persisten. */
     private static final Map<ServerLevel, List<WorldSiege>> WORLD_SIEGES = new HashMap<>();
 
@@ -858,11 +869,18 @@ public final class VillageManager {
 
     /**
      * Paga a quienes defendieron la aldea de una horda del mundo: <b>1/6 de un punto de habilidad</b> en
-     * experiencia (ver {@link #WORLD_SIEGE_REWARD_FRACTION}) y unos lingotes que el pueblo comparte. Si nadie
-     * intervino, la aldea se defendió sola y no se paga nada.
+     * experiencia (ver {@link #WORLD_SIEGE_REWARD_FRACTION}) y un <b>botín pequeño y variable</b> del pueblo
+     * (chips de metal y cuero). Si nadie intervino, la aldea se defendió sola y no se paga nada.
      * <p>
      * La fracción se calcula con el nivel <b>de cada defensor</b>, así que el mismo rechazo vale más para
      * quien más nivel tiene: es la sexta parte de lo que le queda para subir.
+     * <p>
+     * <b>El botín son pepitas, no lingotes</b> (lo pidió el jugador): antes daba 4 lingotes de hierro fijos, y
+     * esto es una recompensa <b>repetible</b> (una horda cada 3-20 min): 4 lingotes por horda convertían al
+     * pueblo en una mina. Ahora da entre {@link #WORLD_SIEGE_REWARD_PEPITAS_MIN} y
+     * {@link #WORLD_SIEGE_REWARD_PEPITAS_MAX} <b>chips de metal</b> y hasta
+     * {@link #WORLD_SIEGE_REWARD_CUEROS_MAX} de <b>cuero</b>, tirados al azar: 9 chips son un lingote en la mesa
+     * del herrero de herramientas, así que una horda viene a ser <b>un tercio de lingote</b> como mucho.
      */
     private static void rewardWorldSiegeDefenders(ServerLevel level, WorldSiege siege) {
         if (!siege.wave.isEmpty()) {
@@ -884,11 +902,21 @@ public final class VillageManager {
             }
             int xp = MissionRewards.giveSkillPointFraction(player, WORLD_SIEGE_REWARD_FRACTION);
             String premio = MissionRewards.describeFraction(xp, WORLD_SIEGE_REWARD_FRACTION);
+            // Botín ALEATORIO y corto: es lo que el pueblo tiene a mano, no un pago.
+            int pepitas = WORLD_SIEGE_REWARD_PEPITAS_MIN
+                    + player.getRandom().nextInt(WORLD_SIEGE_REWARD_PEPITAS_MAX - WORLD_SIEGE_REWARD_PEPITAS_MIN + 1);
+            int cueros = player.getRandom().nextInt(WORLD_SIEGE_REWARD_CUEROS_MAX + 1);
+            player.addItem(new ItemStack(Items.IRON_NUGGET, pepitas));
+            String botin = pepitas + (pepitas == 1 ? " chip" : " chips") + " de metal";
+            if (cueros > 0) {
+                player.addItem(new ItemStack(Items.LEATHER, cueros));
+                botin += " y " + cueros + " de cuero";
+            }
             player.displayClientMessage(Component.literal(
-                    "Rechazaste la horda que iba a por la aldea: " + premio + " y el pueblo te da hierro."), false);
-            player.addItem(new ItemStack(Items.IRON_INGOT, 4));
-            DevilRpg.LOGGER.info("[Village] Aldea {} resistió: {} para {}", siege.objectiveIndex, premio,
-                    player.getGameProfile().getName());
+                    "Rechazaste la horda que iba a por la aldea: " + premio + " y el pueblo te da " + botin + "."),
+                    false);
+            DevilRpg.LOGGER.info("[Village] Aldea {} resistió: {} y {} para {}", siege.objectiveIndex, premio,
+                    botin, player.getGameProfile().getName());
         }
     }
 
