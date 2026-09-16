@@ -23,15 +23,21 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Goal del <b>granjero</b>: la cadena de suministro de verdad de la aldea.
  * <ol>
  *   <li><b>Cosecha</b> los cultivos maduros de las parcelas de la aldea (y los <b>replanta</b>).</li>
  *   <li><b>Planta</b> en la tierra de cultivo vacía (semillas de su inventario o de la despensa).</li>
- *   <li><b>Fertiliza</b> con <b>harina de huesos</b> (la que da el compostero) para sacar pan antes.</li>
- *   <li><b>Lleva el trigo a la despensa</b> y allí lo convierte en <b>pan</b> (3 de trigo por hogaza).</li>
+ *   <li><b>Abona TODO el plantío</b> con <b>harina de huesos</b>: no una planta por salida, sino las que le quepan en
+ *       la tanda (16 por viaje), repartiéndolas por la parcela y sin repetir en las que ya fue.</li>
+ *   <li><b>Llena el compostero</b> con las semillas que le <b>sobran</b> (trigo y betabel): es de donde sale la harina
+ *       de huesos del paso 3.</li>
+ *   <li><b>Lleva el trigo a la despensa</b> y allí lo convierte en <b>pan</b> (3 de trigo por hogaza), vacía el
+ *       compostero ya lleno y se trae los recambios (semillas y abono).</li>
  * </ol>
  * Con esto la comida de la aldea ya no es un contador abstracto: sale del trigo que este aldeano cultiva de verdad
  * (ver {@link VillagePantry}).
@@ -54,14 +60,30 @@ public class VillagerFarmGoal extends Goal {
     private static final int LLEVAR_TRIGO = 4;
     /** Semillas que se guarda como mucho: si lleva más, las suelta (si no, se le llena el inventario y no le cabe el trigo). */
     private static final int SEMILLAS_MAX = 8;
+    /**
+     * Semillas de SOBRA que guarda para el <b>compostero</b> (además de las que necesita para sembrar). Antes las
+     * tiraba al suelo en cuanto pasaba de {@link #SEMILLAS_MAX}: el compostero NUNCA se llenaba (nadie le echaba
+     * nada), así que no había harina de huesos y el abono se quedaba sin hacer.
+     */
+    private static final int SEMILLAS_PARA_COMPOSTAR = 16;
+    /** Semillas que echa al compostero por visita (no se queda plantado allí). */
+    private static final int COMPOSTAR_MAX = 16;
+    /** Si la despensa tiene MÁS semillas que esto, se lleva unas cuantas para el compostero. */
+    private static final int SEMILLAS_SOBRANTES_EN_DESPENSA = 32;
     /** Hogazas como mucho por visita (para que se le vea trabajar). */
     private static final int HORNEAR_MAX = 2;
-    /** Harina de huesos que se lleva encima como mucho. */
-    private static final int HARINA_MAX = 4;
+    /**
+     * Harina de huesos que se lleva encima como mucho. Antes 4: con eso abonaba UNA planta por visita (lo pidió el
+     * jugador: "que abone todo el plantío, no nada más una planta"), así que ahora carga una tanda de 16 y las gasta
+     * seguidas por toda la parcela.
+     */
+    private static final int HARINA_MAX = 16;
+    /** Plantas que abona como mucho en una misma salida (para no echar la tarde abonando sin llevar nada al cofre). */
+    private static final int ABONAR_MAX = 32;
     /** Cuánto puede traerse del almacén a la despensa en una visita (comida, semillas y abono del recolector). */
     private static final int TRAER_DEL_ALMACEN = 64;
 
-    private enum Tarea { COSECHAR, PLANTAR, FERTILIZAR, DESPENSA }
+    private enum Tarea { COSECHAR, PLANTAR, FERTILIZAR, COMPOSTAR, DESPENSA }
 
     private final Villager villager;
     private final BlockPos center;
@@ -69,6 +91,11 @@ public class VillagerFarmGoal extends Goal {
     @Nullable
     private BlockPos target;
     private Tarea tarea = Tarea.COSECHAR;
+    /**
+     * Plantas que YA ha abonado en esta salida: así la harina de huesos se reparte por TODA la parcela en vez de
+     * gastarse entera en la primera planta que encuentra (que es lo que pasaba al no recordar por dónde iba).
+     */
+    private final Set<Long> abonadas = new HashSet<>();
     private int workTicks;
     private int restTicks;
     /** Ticks SIN ACERCARSE al objetivo (ver {@code tick}): andar hacia él no cuenta como estar atascado. */
@@ -136,15 +163,28 @@ public class VillagerFarmGoal extends Goal {
             }
         }
         // 4) Cultivo creciendo: a fertilizar. SOLO si lleva harina de huesos encima, por el mismo motivo (si no la
-        // tiene, se la trae de la despensa en el paso 5).
-        if (harinaEnMano() > 0) {
-            target = buscarCultivo(level, false);
+        // tiene, se la trae de la despensa en el paso 6). Se saltan los que YA abonó en esta salida: así el abono
+        // se reparte por toda la parcela (ver `abonadas`).
+        if (harinaEnMano() > 0 && abonadas.size() < ABONAR_MAX) {
+            target = buscarCultivoSinAbonar(level);
             if (target != null) {
                 tarea = Tarea.FERTILIZAR;
                 return true;
             }
         }
-        // 5) Recambios: a la despensa, pero SOLO si allí está lo que le falta. Antes bastaba con que le faltara algo
+        // 5) COMPOSTERO: las semillas que le SOBRAN (más de las que necesita para sembrar) van al compostero, que es
+        // lo que produce la harina de huesos con la que abona. Va DESPUÉS de sembrar y abonar (primero lo urgente) y
+        // sin él la harina se acababa y el abono se quedaba sin hacer, porque nadie llenaba nunca el compostero.
+        // OJO: se cuentan solo las COMPOSTABLES (trigo y betabel). Contando también la zanahoria y la patata, un
+        // granjero cargado de vegetales se pasaría el día yendo al compostero a no echar nada (bucle).
+        if (semillasCompostablesSobrantes() > 0) {
+            target = buscarCompostero(level);
+            if (target != null) {
+                tarea = Tarea.COMPOSTAR;
+                return true;
+            }
+        }
+        // 6) Recambios: a la despensa, pero SOLO si allí está lo que le falta. Antes bastaba con que le faltara algo
         // en la mano, así que con la despensa sin harina de huesos (lo normal hasta que el compostero se llena) el
         // granjero iba al kiosco, no hacía nada, volvía a elegir la misma tarea y se quedaba PLANTADO allí en bucle,
         // con la etiqueta "Llevando la cosecha" y sin llevar nada encima (medido en el guardado del jugador:
@@ -167,6 +207,7 @@ public class VillagerFarmGoal extends Goal {
         workTicks = 0;
         stuckTicks = 0;
         mejorDistancia = Double.MAX_VALUE;
+        abonadas.clear();
         irAlObjetivo();
     }
 
@@ -219,6 +260,24 @@ public class VillagerFarmGoal extends Goal {
             case FERTILIZAR -> {
                 VillageManager.ponerActividad(villager, "Abonando");
                 fertilizar(level);
+                // ABONAR TODO EL PLANTÍO, no una sola planta (lo pidió el jugador): si le queda harina y hay otro
+                // cultivo creciendo al que no haya ido todavía, SIGUE con él en la misma salida (el goal no termina).
+                // Antes el goal acababa tras una planta y volvía a elegir tarea, así que el abono se gastaba de uno
+                // en uno y la parcela no se abonaba nunca.
+                abonadas.add(target.asLong());
+                if (harinaEnMano() > 0 && abonadas.size() < ABONAR_MAX) {
+                    BlockPos siguiente = buscarCultivoSinAbonar(level);
+                    if (siguiente != null) {
+                        target = siguiente;
+                        mejorDistancia = Double.MAX_VALUE;
+                        stuckTicks = 0;
+                        return; // el goal sigue vivo con el siguiente cultivo
+                    }
+                }
+            }
+            case COMPOSTAR -> {
+                VillageManager.ponerActividad(villager, "Llenando el compostero");
+                compostar(level);
             }
             case DESPENSA -> {
                 // La etiqueta dice lo que de verdad va a hacer: si lleva cosecha encima, la lleva; si no, va a por
@@ -237,6 +296,7 @@ public class VillagerFarmGoal extends Goal {
     public void stop() {
         target = null;
         restTicks = REST_TICKS;
+        abonadas.clear(); // la próxima salida vuelve a poder abonar desde el principio
         villager.getNavigation().stop();
     }
 
@@ -255,8 +315,9 @@ public class VillagerFarmGoal extends Goal {
         for (ItemStack drop : drops) {
             // Las SEMILLAS solo hasta un tope: si se le llenan los 8 huecos con semillas, el trigo ya no le cabe, se le
             // cae al suelo y nunca acumula las 3 unidades que disparan el viaje a la despensa (por eso el cofre seguía
-            // con las 12 semillas iniciales y la aldea pasaba hambre).
-            if (esSemilla(drop) && semillasEnMano() >= SEMILLAS_MAX) {
+            // con las 12 semillas iniciales y la aldea pasaba hambre). El tope incluye las que guarda para el
+            // COMPOSTERO (`SEMILLAS_PARA_COMPOSTAR`): antes las soltaba al suelo y el compostero seguía vacío.
+            if (esSemilla(drop) && semillasEnMano() >= SEMILLAS_MAX + SEMILLAS_PARA_COMPOSTAR) {
                 level.addFreshEntity(new ItemEntity(level, target.getX() + 0.5D, target.getY() + 0.5D,
                         target.getZ() + 0.5D, drop));
                 continue;
@@ -363,6 +424,19 @@ public class VillagerFarmGoal extends Goal {
                 guardarEnInventario(new ItemStack(Items.BONE_MEAL, coge));
             }
         }
+        // 6) SEMILLAS DE SOBRA PARA EL COMPOSTERO: si la despensa va llena de semillas (el recolector barre las que
+        //    se caen por el pueblo) se lleva unas cuantas y las composta, que es de donde sale la harina de huesos con
+        //    la que abona. Solo cuando él no tiene ya de sobra, para no llenarse los huecos de semillas.
+        if (semillasSobrantes() == 0
+                && VillagePantry.contar(despensa, VillagerFarmGoal::esSemilla) > SEMILLAS_SOBRANTES_EN_DESPENSA) {
+            for (net.minecraft.world.item.Item semilla : List.of(Items.WHEAT_SEEDS, Items.BEETROOT_SEEDS)) {
+                int cogidas = VillagePantry.sacar(despensa, s -> s.is(semilla), COMPOSTAR_MAX);
+                if (cogidas > 0) {
+                    guardarEnInventario(new ItemStack(semilla, cogidas));
+                    break;
+                }
+            }
+        }
         // LO QUE ACABA DE HACER, a la cabeza (y al log): es más informativo que el verbo de lo que está haciendo, y
         // es lo que el jugador necesita para saber si la cadena de comida funciona sin abrir el log.
         String suceso;
@@ -396,12 +470,21 @@ public class VillagerFarmGoal extends Goal {
     /** Busca en las parcelas un cultivo maduro (o creciendo, si {@code maduro} es false). */
     @Nullable
     private BlockPos buscarCultivo(ServerLevel level, boolean maduro) {
+        return buscarCultivo(level, maduro, Set.of());
+    }
+
+    /** Igual, pero saltando las posiciones de {@code saltar} (las plantas que ya abonó en esta salida). */
+    @Nullable
+    private BlockPos buscarCultivo(ServerLevel level, boolean maduro, Set<Long> saltar) {
         for (BlockPos parcela : VillageGenerator.parcelasDe(level, center)) {
             for (int dx = 0; dx < VillageGenerator.PLOT_WIDTH; dx++) {
                 for (int dz = 0; dz < VillageGenerator.PLOT_DEPTH; dz++) {
                     BlockPos q = parcela.offset(dx, 0, dz);
                     for (int dy = -1; dy <= 1; dy++) {
                         BlockPos r = q.offset(0, dy, 0);
+                        if (!saltar.isEmpty() && saltar.contains(r.asLong())) {
+                            continue;
+                        }
                         BlockState s = level.getBlockState(r);
                         if (s.getBlock() instanceof CropBlock crop) {
                             boolean esMaduro = VillageGenerator.edadDelCultivo(s) == crop.getMaxAge();
@@ -414,6 +497,121 @@ public class VillagerFarmGoal extends Goal {
             }
         }
         return null;
+    }
+
+    /**
+     * Un cultivo que esté <b>creciendo</b> y al que <b>todavía no haya ido</b> en esta salida: es lo que hace que la
+     * harina de huesos se reparta por la parcela (abonar el plantío entero) en vez de gastarse en la primera planta
+     * que encuentre, que era lo que pasaba al no acordarse de por dónde iba.
+     */
+    @Nullable
+    private BlockPos buscarCultivoSinAbonar(ServerLevel level) {
+        return buscarCultivo(level, false, abonadas);
+    }
+
+    /**
+     * El <b>compostero</b> de la aldea que todavía <b>no está lleno</b>, o {@code null} si no hay. El compostero está
+     * pegado a la esquina de cada parcela (ver {@code VillageGenerator.plot}).
+     */
+    @Nullable
+    private BlockPos buscarCompostero(ServerLevel level) {
+        for (BlockPos parcela : VillageGenerator.parcelasDe(level, center)) {
+            BlockPos comp = parcela.offset(-1, 0, 0);
+            for (int dy = -2; dy <= 2; dy++) {
+                BlockPos q = comp.offset(0, dy, 0);
+                BlockState s = level.getBlockState(q);
+                if (s.is(Blocks.COMPOSTER) && s.getValue(ComposterBlock.LEVEL) < ComposterBlock.MAX_LEVEL) {
+                    return q;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Echa al <b>compostero</b> las semillas que le <b>sobran</b> (más de {@link #SEMILLAS_MAX}, que es lo que
+     * necesita para sembrar). De trigo y betabel: la <b>zanahoria y la patata NO</b>, que son semilla <b>y</b> comida.
+     * <p>
+     * El compostero lleno (nivel {@code READY}) lo vacía en la despensa al visitarla (ver {@link #enLaDespensa}), y esa
+     * harina de huesos es la que después usa para abonar. Sin este paso el compostero se quedaba <b>vacío para
+     * siempre</b> (nadie le echaba nada), la harina se acababa y el abono se quedaba sin hacer.
+     */
+    private void compostar(ServerLevel level) {
+        if (target == null) {
+            return;
+        }
+        BlockState state = level.getBlockState(target);
+        if (!state.is(Blocks.COMPOSTER)) {
+            return;
+        }
+        int echadas = 0;
+        // `ComposterBlock.insertItem` gasta UNA unidad del stack que se le pasa (y no la gasta si el compostero ya
+        // está lleno o si el objeto no es compostable), así que se le da un stack de 1 y se mira si se ha vaciado:
+        // así el bucle no se puede quedar dando vueltas.
+        while (echadas < COMPOSTAR_MAX && state.getValue(ComposterBlock.LEVEL) < ComposterBlock.MAX_LEVEL) {
+            ItemStack una = sacarSemillaSobrante();
+            if (una.isEmpty()) {
+                break; // no le quedan semillas de sobra
+            }
+            state = ComposterBlock.insertItem(villager, state, level, una, target);
+            if (!una.isEmpty()) {
+                guardarEnInventario(una); // no era compostable (no debería pasar): se le devuelve
+                break;
+            }
+            echadas++;
+        }
+        if (echadas > 0) {
+            level.levelEvent(1500, target, 1); // el humo del compostero, como cuando lo llena el jugador
+            level.playSound(null, target, net.minecraft.sounds.SoundEvents.COMPOSTER_FILL_SUCCESS,
+                    SoundSource.BLOCKS, 0.7F, 1.0F);
+            VillageManager.ponerSuceso(villager, "Lleno el compostero (" + echadas + ")");
+            DevilRpg.LOGGER.info("[Village] El granjero: Lleno el compostero con {} semilla(s)", echadas);
+        }
+    }
+
+    /** Cuántas semillas lleva encima que le <b>sobran</b> (más de las que necesita para sembrar). */
+    private int semillasSobrantes() {
+        return Math.max(0, semillasEnMano() - SEMILLAS_MAX);
+    }
+
+    /**
+     * Semillas <b>compostables</b> (trigo y betabel) que le sobran. La zanahoria y la patata <b>no</b> cuentan: son
+     * semilla <b>y</b> comida, así que no se tiran al compostero — y contarlas mandaba al granjero al compostero a no
+     * echar nada (bucle de viajes vacíos).
+     */
+    private int semillasCompostablesSobrantes() {
+        return Math.max(0, semillasCompostablesEnMano() - SEMILLAS_MAX);
+    }
+
+    /** Semillas de trigo y betabel que lleva encima. */
+    private int semillasCompostablesEnMano() {
+        int n = 0;
+        for (int i = 0; i < villager.getInventory().getContainerSize(); i++) {
+            ItemStack s = villager.getInventory().getItem(i);
+            if (s.is(Items.WHEAT_SEEDS) || s.is(Items.BEETROOT_SEEDS)) {
+                n += s.getCount();
+            }
+        }
+        return n;
+    }
+
+    /** Saca del inventario UNA semilla compostable que le sobre (trigo o betabel), o vacío si no tiene de sobra. */
+    private ItemStack sacarSemillaSobrante() {
+        if (semillasCompostablesSobrantes() <= 0) {
+            return ItemStack.EMPTY;
+        }
+        for (int i = 0; i < villager.getInventory().getContainerSize(); i++) {
+            ItemStack s = villager.getInventory().getItem(i);
+            if (s.is(Items.WHEAT_SEEDS) || s.is(Items.BEETROOT_SEEDS)) {
+                ItemStack una = s.copyWithCount(1);
+                s.shrink(1);
+                if (s.isEmpty()) {
+                    villager.getInventory().setItem(i, ItemStack.EMPTY);
+                }
+                return una;
+            }
+        }
+        return ItemStack.EMPTY;
     }
 
     /** Busca tierra de cultivo con el hueco de arriba libre (para plantar). */

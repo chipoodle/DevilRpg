@@ -109,9 +109,10 @@ public class VillagerGuardGoal extends Goal {
         if (villager.isBaby() || !esGuardia(villager) || !(villager.level() instanceof ServerLevel level)) {
             return false;
         }
-        if (VillageManager.estaDescansando(villager)) {
-            return false;
-        }
+        // OJO: aquí NO se comprueba `estaDescansando` (cosa que sí hacen los demás goals del pueblo): el guardia está
+        // de servicio también de NOCHE, que es cuando le toca la puerta. El cerebro vanilla lo manda a la cama en la
+        // franja de descanso y, cediendo el goal, el guardia se acostaba: medido en el log del jugador, el guardia
+        // murió "Durmiendo" sin haber hecho una sola guardia de noche.
         double dx = villager.getX() - center.getX();
         double dz = villager.getZ() - center.getZ();
         if (dx * dx + dz * dz > MAX_DISTANCE_FROM_CENTER * MAX_DISTANCE_FROM_CENTER) {
@@ -134,8 +135,9 @@ public class VillagerGuardGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
-        return esGuardia(villager) && !villager.isBaby() && stuckTicks < STUCK_LIMIT
-                && !VillageManager.estaDescansando(villager);
+        // Tampoco se corta por la hora de descanso: la guardia de noche es parte del servicio (ver `canUse`). Si el
+        // aldeano acabara durmiendo (por ejemplo porque el cerebro lo tumbó en la cama), el goal se corta igual.
+        return esGuardia(villager) && !villager.isBaby() && stuckTicks < STUCK_LIMIT && !villager.isSleeping();
     }
 
     @Override

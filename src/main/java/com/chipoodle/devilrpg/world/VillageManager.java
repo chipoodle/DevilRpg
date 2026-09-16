@@ -30,6 +30,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.OwnableEntity;
 import net.minecraft.world.entity.ai.goal.WrappedGoal;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.npc.VillagerProfession;
 import net.minecraft.world.entity.player.Player;
@@ -428,7 +429,8 @@ public final class VillageManager {
             // y entonces la aldea se quedaba vacía para siempre: es el caso que reportó el jugador.
             // No se toca si la aldea ya cayó (isFallen: la derrota es definitiva) ni si hay asedio en curso
             // (si no, repoblaríamos mientras los monstruos la están matando).
-            if (level.getGameTime() % VILLAGE_POLL_TICKS == 0L && !saved.isFallen(i) && !isUnderAttack(level, i)) {
+            if (level.getGameTime() % VILLAGE_POLL_TICKS == 0L && !saved.isFallen(i) && !isUnderAttack(level, i)
+                    && !hayEnemigosDentro(level, target)) {
                 int vivos = observeVillagers(level, saved, i, target);
                 if (vivos > 0) {
                     tickVillageLife(level, saved, i, target, vivos);
@@ -468,6 +470,30 @@ public final class VillageManager {
                 }
             }
         }
+    }
+
+    /**
+     * ¿Hay <b>monstruos DENTRO de la aldea</b> ahora mismo? No es lo mismo que {@link #isUnderAttack} (que mira los
+     * asedios declarados): en la partida del jugador hay zombies agresivos sueltos que entran al pueblo y matan
+     * aldeanos <b>sin que haya asedio</b>, y con eso el gestor seguía repoblando.
+     * <p>
+     * Medido en el log del jugador (aldea 10, 01:50-02:00): la aldea repuso <b>6 puestos seguidos</b> (8 de comida
+     * cada uno) entre zombies que mataban al recién llegado, con el <b>granjero ya muerto</b>; la despensa bajó de
+     * <b>20 a 0</b> y la aldea pasó hambre <b>por repoblar en plena masacre</b>. Con monstruos dentro no se repuebla:
+     * primero hay que limpiar el pueblo (o esperar a que se vayan).
+     * <p>
+     * La distancia es <b>horizontal</b> (invariante I2) y el radio es el del muro.
+     */
+    private static boolean hayEnemigosDentro(ServerLevel level, BlockPos center) {
+        double radio = VillageGenerator.FENCE_RADIUS;
+        for (Monster monstruo : level.getEntitiesOfClass(Monster.class, new AABB(center).inflate(radio))) {
+            double dx = monstruo.getX() - (center.getX() + 0.5D);
+            double dz = monstruo.getZ() - (center.getZ() + 0.5D);
+            if (dx * dx + dz * dz <= radio * radio) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Inicia el asedio al llegar el jugador a la aldea (con un margen antes de la ola). */

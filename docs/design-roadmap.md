@@ -472,7 +472,37 @@ cosas: **equiparse del almacén**, **patrullar** de día y **guardar las puertas
   guardia **todavía huye** de los zombies aunque vaya armado; falta que ataque (y que el **escudo bloquee de verdad**),
   que los arqueros **disparen**, y la **marcha a la guarida** con 4 guardias y 3 arqueros.
 
-### 3b.11 Lo que viene (milicia, leñador y granja anexa)
+### 3b.11 Post-mortem: la caída de la aldea 10 (medido en el log del jugador)
+
+El jugador preguntó *"¿por qué nadie repara el kiosco? ¿por qué están pasando hambre?"* con una captura de su aldea.
+El log de esa partida lo explica entero (01:50-02:00) y salieron **dos bugs de verdad**:
+
+- **Lo que pasó**: una **horda del mundo de 15 enemigos** marchó contra la aldea 10 (`[Horda] 15 de 15 enemigos hacia
+  la aldea 10`), los zombies entraron y fueron matando aldeanos uno a uno — **incluido el granjero** (Bartolo) — y a
+  las 01:59:58 la aldea **cayó** (`La aldea 10 ha CAÍDO y queda en ruinas: 947 bloques`). El kiosco que se ve roto en
+  la captura es de esos minutos.
+- **Por qué "nadie reparaba"**: durante un asedio **los goals del pueblo se paran a propósito** (`isVillageUnderAttack`
+  en `VillagerRepairGoal`, granjero, herreros y recolector): "en plena refriega nadie se pone a construir". El obrero
+  **sí** estaba reparando en cuanto no había asedio declarado (en el log se le ve reponiendo tablones, puertas, tierra
+  de cultivo y el compostero) y **lo mataron reparando** ("Ramona (Herrero de armas) *Repuso un bloque* was slain by
+  Aggressive Zombie").
+- **Por qué pasaban hambre (bug 1)**: con **monstruos dentro del pueblo pero sin asedio declarado** (zombies agresivos
+  sueltos) el gestor **seguía repoblando** los puestos que quedaban vacíos. El log tiene **6 reposiciones seguidas**
+  (8 de comida cada una) entre zombies que mataban al recién llegado y con el granjero ya muerto: la despensa cayó de
+  **comida 20 → 17 → 7 → 3 → 0** y la aldea murió de hambre *y* de la masacre a la vez. **Arreglado**: con monstruos
+  dentro del muro (`hayEnemigosDentro`, distancia horizontal, radio del muro) **no se repuebla**: primero hay que
+  limpiar el pueblo.
+- **Por qué el guardia no hacía la puerta (bug 2, mío)**: el guardia murió en el log **"Durmiendo"**, de viejo, sin
+  haber hecho una sola guardia de noche. La culpa era del propio goal: cedía con `estaDescansando`, y como el cerebro
+  vanilla manda a los aldeanos a la cama en la franja de descanso, el guardia **se acostaba**. **Arreglado**: el goal
+  de guardia ya **no cede por la hora de descanso** (solo se corta si acaba durmiendo de verdad): de noche está de
+  puerta, que es justo lo que pidió el jugador.
+- **Pendiente de la captura**: el **techo del kiosco** está a la cota+5 y el obrero solo alcanza **4,5** bloques
+  (`REACH`) con un límite de 5 de altura, así que desde la plaza **no puede** reponer un bloque del techo (distancia
+  mínima 5,1). Habría que acercar el alcance o dejarlo subir por las escaleras del kiosco: **sin arreglar** (no se ha
+  visto en partida todavía).
+
+### 3b.12 Lo que viene (milicia, leñador y granja anexa)
 
 - **Milicia**: paso 1 ✅ (la barraca) y paso 2 ✅ (el oficio de guardia: alistamiento, equipo del almacén, ronda y
   puertas con relevo). Falta el **combate** (ataque, escudo que bloquea, arqueros que disparan) y la **marcha a la
