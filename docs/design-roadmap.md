@@ -994,7 +994,39 @@ no está generando carne"*. Cuatro cosas, todas medidas:
     los cuatro medios lados (idempotente).
   - **El relevo tardaba**: la espera del rebaño y de la pareja pasa de **3 días de juego a 1**.
 
-### 3b.23 Lo que viene
+### 3b.23 LA MURALLA AL RADIO 62 (la granja, dentro)
+
+El jugador pidió: *"necesitamos que la villa sea más grande para que quepa la granja dentro, modifica todas las
+variables que estén relacionadas con el radio del pueblo para que se ajuste"*.
+
+- **Por qué**: con el muro a **36** el **corral anexo** (que ocupa de **43 a 57** del centro) quedaba **fuera**, y eso
+  costaba medido: los monstruos aparecían **dentro del corral** de noche y se comían al rebaño (las ovejas pasaron de
+  **5 a ninguna** entre dos sesiones) y la guardia no llegaba a defenderlo. Con el muro a **62** la **granja entera
+  cabe dentro** (el corral queda a 4 bloques de la valla).
+- **Las variables** (todas las que dependen del radio, en un solo sitio):
+  - `FENCE_RADIUS` **36 → 62**. De él se derivan solos `LEVEL_RADIUS` (+2, lo que se allana), `RADIO_EXTERIOR` (el fin
+    del talud, **74**) y, con ellos, el **nivelado**, el **talud**, la **orilla seca**, el **despeje**, las **rondas de
+    la guardia**, los límites de los goals de los oficios, el radio del **rebaño** y el de la **recogida**.
+  - **`TRAZADO`** nuevo (una tabla, relativa al centro) con las construcciones **repartidas** para que el pueblo llene
+    la muralla: **casas** (-36,-7) oeste, (28,-16) este, (-9,36) sur y (12,-32) norte (la grande) —antés a 21-25 del
+    centro, ahora a **33-38**—, **iglesia** (-21,-45), **taller de los herreros** (3,-47), **barraca** (-45,22),
+    **parcelas de la granja** (-30,14) y (10,4), **arboleda** (34..40, -41..-31) y los **puestos de los aldeanos** al
+    doble (24-27 del centro). El **almacén no se mueve** (va con `VillageStorage`, pegado a la plaza): moverlo dejaría
+    los cofres del pueblo —y todo lo que tienen dentro— tirados por el recinto viejo.
+  - **Derribo de los trazados viejos** al migrar: `SOLARES_ANTIGUOS` incluye ahora también las casas, la iglesia, el
+    taller y la barraca del trazado de **36**, y `RADIOS_MURO_ANTIGUOS` borra los **dos** anillos viejos (**29 y 36**)
+    para que el pueblo no se quede con dos murallas cruzándolo.
+  - `CURRENT_HOUSES` **15 → 16** (fuerza el rehacer completo, nivelado al radio nuevo incluido, que es lo que reparte
+    los solares) y `CURRENT_LAYOUT` **39 → 40**.
+  - **Herramientas**: la **guardia** ya no pisa el **corral** en su ronda (con la granja dentro, su valla ocupa de 43
+    a 57 al este: si el punto de ronda cae ahí, se corre al pasillo entre el corral y el muro) y la **guarida** se
+    aleja: su distancia mínima y máxima al objetivo pasan a derivarse de `RADIO_EXTERIOR` (**+36 / +56 = 110/130**),
+    porque con 75 las dos obras se pisarían.
+- **Verificado** con el comprobador del trazado (`build/trazado.py`): **0 solapes** entre las 13 construcciones, todas
+  dentro de la muralla (la esquina más lejana es el corral, a **58,5** de 62) y los **7 puestos** de los aldeanos en
+  patio libre (salvo el ganadero, que vive en el corral).
+
+### 3b.24 Lo que viene
 - **Milicia**: ✅ completa (barraca, oficio, combate, escudo que bloquea, modelo propio, marcha a la guarida).
 - **Leñador/reforestador**: ✅ (tala y replanta, la cadena de la madera del herrero y ahora también **despeja los
   árboles que quedaron dentro de la muralla**).
@@ -1008,6 +1040,7 @@ no está generando carne"*. Cuatro cosas, todas medidas:
 - **Huerta que no se reinicia, ganadero que llega aunque haya hambre y leñador que despeja la aldea**: ✅ (ver 3b.21).
 - **Recogida por oficio, despeje del recinto y corral iluminado**: ✅ (ver 3b.22).
 - **El árbol suelto se reconoce por su forma** (no por el plano, que en una aldea migrada miente): ✅ (ver 3b.22).
+- **La muralla al radio 62 (la granja, dentro)**: ✅ (ver 3b.23).
 - **Lo siguiente**: la **verificación en partida** de la cadena entera de la comida (huerta → despensa → cocina →
   raciones) y, de ahí, lo que pida el jugador.
 
