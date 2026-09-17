@@ -1708,6 +1708,16 @@ public final class VillageManager {
             VillagerProfession profesion = villager.getVillagerData().getProfession();
             if (profesion == VillagerProfession.NONE) {
                 sinOficio.add(villager);
+            } else if (!VillageGenerator.esOficioDelPueblo(profesion)) {
+                // OFICIO DE FUERA: el pueblo reparte SUS oficios, así que uno que no sea de la lista vuelve al
+                // reparto. Hace falta de verdad: en vanilla el <b>barril</b> es el puesto del <b>PESCADOR</b> y el
+                // <b>atril</b> el del bibliotecario, así que una cría que crecía y reclamaba uno de esos bloques (el
+                // jugador avisó de los barriles de la taberna) se convertía en pescador y el pueblo perdía un puesto.
+                // El pescador (y su edificio y su lago) llegarán más adelante, con su propia etapa.
+                sinOficio.add(villager);
+                villager.getBrain().eraseMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.JOB_SITE);
+                DevilRpg.LOGGER.info("[Village] Aldea {}: un aldeano habia tomado el oficio de {} (de fuera del"
+                        + " pueblo): vuelve al reparto de puestos", objectiveIndex, profesion);
             } else if (!presentes.contains(profesion)) {
                 presentes.add(profesion);
             }

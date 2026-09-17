@@ -597,6 +597,13 @@ public final class VillageGenerator {
             return;
         }
         BlockPos base = baseDeBarraca(center);
+        // El barril de la primera versión (etapa F) pasa a COFRE: el barril es el puesto del PESCADOR y aquí no hay
+        // pescadores (todavía). Se arregla en el sitio, sin rehacer la barraca.
+        BlockPos barril = new BlockPos(base.getX() - 2, nivel, base.getZ() + BARRACA_RADIO - 2);
+        if (level.getBlockState(barril).is(Blocks.BARREL)) {
+            // lint:ok I9 porque no se añade construcción: es un retrofit en el sitio de la pasada idempotente.
+            colocar(level, barril, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.NORTH), 3);
+        }
         // Testigo del trazado NUEVO (etapa F: barraca de DOS PISOS con sala de armas): el hogar del patio de
         // entrenamiento. Una barraca de una planta (sin hogar) se vuelve a levantar entera, que es lo que trae el
         // segundo piso con las camas y el patio.
@@ -696,7 +703,8 @@ public final class VillageGenerator {
         colocar(level, new BlockPos(bx + r - 2, nivel + 1, bz - r + 2), Blocks.TARGET.defaultBlockState(), 3);
         colocar(level, new BlockPos(bx, nivel - 1, bz + r - 1), Blocks.CAMPFIRE.defaultBlockState(), 3);
         colocar(level, new BlockPos(bx + 2, nivel, bz + r - 2), Blocks.CARTOGRAPHY_TABLE.defaultBlockState(), 3);
-        colocar(level, new BlockPos(bx - 2, nivel, bz + r - 2), Blocks.BARREL.defaultBlockState(), 3);
+        colocar(level, new BlockPos(bx - 2, nivel, bz + r - 2), Blocks.CHEST.defaultBlockState()
+                .setValue(ChestBlock.FACING, Direction.NORTH), 3);
         // 6) LA ESCALERA al dormitorio, pegada a la pared sur, con el hueco en el forjado.
         for (int i = 0; i < 4; i++) {
             BlockPos escalon = new BlockPos(bx + r - 1, nivel + i, bz + r - 1 - i);
@@ -3857,6 +3865,25 @@ public final class VillageGenerator {
     };
 
     /**
+     * ¿Ese oficio es uno de los del <b>pueblo</b>? Los de fuera (pescador, bibliotecario, cartógrafo, albañil...) no
+     * se usan: el pueblo reparte <b>sus</b> puestos, y un aldeano que tome otro oficio vuelve al reparto (ver
+     * {@code VillageManager.reponerProfesiones}).
+     * <p>
+     * Importa porque en vanilla cada <b>bloque de puesto de trabajo</b> da su oficio: el <b>barril</b> es del
+     * <b>pescador</b> y el atril del bibliotecario, así que una cría que creciera al lado de un barril suelto (los de
+     * la taberna, sin ir más lejos) se habría vuelto pescador. Hasta que el pescador tenga su edificio y su lago
+     * (etapa siguiente), el pueblo no usa barriles: las pipas de cerveza son de madera con corteza.
+     */
+    public static boolean esOficioDelPueblo(VillagerProfession profesion) {
+        for (VillagerProfession oficio : VILLAGER_SPECIALTIES) {
+            if (oficio == profesion) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Cuántos <b>puestos fijos</b> tiene una aldea: uno por sitio de {@link #VILLAGER_SPOTS}. Lo usa el gestor como
      * <b>tope de crecimiento</b>: la aldea crece hasta cubrir sus puestos (6 desde la etapa D, con el ganadero) y, a
      * partir de ahí, los que nacen son gente de sobra (la milicia).
@@ -4325,13 +4352,19 @@ public final class VillageGenerator {
         muroDeLaTaberna(level, bx, bz, ancho, fondo, nivel, true);
         muroDeLaTaberna(level, bx, bz, ancho, fondo, nivel, false);
         // 3) LA BARRA (al norte, junto a la puerta), las PIPAS DE CERVEZA detrás y el mostrador de tablones.
+        //    OJO con el bloque de las pipas: NO se usa `BARREL`, porque en vanilla el <b>barril es el puesto de
+        //    trabajo del PESCADOR</b> y un aldeano sin oficio (una cría que crece, por ejemplo) lo reclamaría y se
+        //    volvería pescador — un oficio que este pueblo <b>todavía no tiene</b> (tendrá su edificio y su lago más
+        //    adelante). Las pipas son de madera con corteza (`OAK_WOOD`), que se ve como un tonel y no es puesto de
+        //    nadie; el mostrador va de tronco descortezado, así que se distinguen.
         for (int x = 1; x <= 5; x++) {
             colocar(level, new BlockPos(bx + x, nivel, bz + 6), Blocks.STRIPPED_OAK_LOG.defaultBlockState(), 3);
-            colocar(level, new BlockPos(bx + x, nivel, bz + 5), Blocks.BARREL.defaultBlockState(), 3);
+            colocar(level, new BlockPos(bx + x, nivel, bz + 5), Blocks.OAK_WOOD.defaultBlockState(), 3);
         }
-        colocar(level, new BlockPos(bx + 3, nivel, bz + 4), Blocks.BARREL.defaultBlockState(), 3);
-        colocar(level, new BlockPos(bx + 4, nivel, bz + 4), Blocks.BARREL.defaultBlockState(), 3);
-        // 4) LA COCINA (esquina sureste): el AHUMADOR del cocinero, su mesa de trabajo, el caldero y dos barriles.
+        colocar(level, new BlockPos(bx + 3, nivel, bz + 4), Blocks.OAK_WOOD.defaultBlockState(), 3);
+        colocar(level, new BlockPos(bx + 4, nivel, bz + 4), Blocks.OAK_WOOD.defaultBlockState(), 3);
+        // 4) LA COCINA (esquina sureste): el AHUMADOR del cocinero, su mesa de trabajo, el caldero y su arca de
+        //    provisiones (un COFRE, no un barril: el barril es del pescador, ver arriba).
         colocar(level, new BlockPos(bx + ancho - 2, nivel, bz + fondo - 2), Blocks.SMOKER.defaultBlockState()
                 .setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING,
                         Direction.NORTH), 3);
@@ -4340,7 +4373,8 @@ public final class VillageGenerator {
         // lint:ok I9 porque la taberna entra con la migración 41 (ya subida en el cambio de la etapa F): esto es un
         // ajuste del mismo edificio dentro de esa misma versión, no una construcción nueva.
         colocar(level, new BlockPos(bx + ancho - 3, nivel, bz + fondo - 3), Blocks.CAULDRON.defaultBlockState(), 3);
-        colocar(level, new BlockPos(bx + ancho - 4, nivel, bz + fondo - 2), Blocks.BARREL.defaultBlockState(), 3);
+        colocar(level, new BlockPos(bx + ancho - 4, nivel, bz + fondo - 2), Blocks.CHEST.defaultBlockState()
+                .setValue(ChestBlock.FACING, Direction.NORTH), 3);
         // 5) LAS MESAS con sus sillas (poste de valla con plato y cuatro sillas de escalera alrededor).
         for (int[] mesa : new int[][]{{2, 3}, {6, 3}, {2, 8}, {6, 8}, {9, 9}}) {
             mesaconSillas(level, new BlockPos(bx + mesa[0], nivel, bz + mesa[1]));
@@ -4461,12 +4495,55 @@ public final class VillageGenerator {
      */
     public static void asegurarTaberna(ServerLevel level, BlockPos center) {
         int nivel = cotaDeLaPlaza(level, center);
-        if (nivel <= level.getMinBuildHeight() + 1 || tabernaConstruida(level, center)) {
+        if (nivel <= level.getMinBuildHeight() + 1) {
             return;
         }
-        taberna(level, baseDeLaTaberna(center), nivel);
+        BlockPos base = baseDeLaTaberna(center);
+        // RETROFIT DE LAS PIPAS: la primera versión de la taberna (etapa F) puso BARRILES detrás de la barra y en la
+        // cocina, y el barril es el puesto de trabajo del PESCADOR en vanilla: un aldeano sin oficio que lo reclamara
+        // se habría vuelto pescador (lo avisó el jugador). Las tabernas ya construidas se arreglan AQUÍ, en su sitio,
+        // sin rehacer el edificio (y sin tocar sus cofres): solo cambia el bloque de las pipas.
+        // lint:ok I9 porque no se añade construcción: es un RETROFIT en el sitio, aplicado por esta pasada idempotente
+        // (que corre en el latido), así que no hace falta subir CURRENT_LAYOUT para arreglar las aldeas ya migradas.
+        retrofitDeLasPipas(level, base, nivel);
+        if (tabernaConstruida(level, center)) {
+            return;
+        }
+        taberna(level, base, nivel);
         DevilRpg.LOGGER.info("[Village] Aldea en {}: taberna construida en {} (dos pisos, {}x{})",
-                center, baseDeLaTaberna(center), TABERNA_ANCHO, TABERNA_FONDO);
+                center, base, TABERNA_ANCHO, TABERNA_FONDO);
+    }
+
+    /**
+     * Cambia los <b>barriles</b> que la primera taberna puso por <b>madera con corteza</b> (las pipas) y por un
+     * <b>cofre</b> (la despensa de la cocina). Es lo que evita que un aldeano sin oficio reclame un barril y se
+     * convierta en <b>pescador</b> (vanilla): el pescador llegará con su edificio y su lago, más adelante.
+     */
+    private static void retrofitDeLasPipas(ServerLevel level, BlockPos base, int nivel) {
+        int bx = base.getX();
+        int bz = base.getZ();
+        List<BlockPos> pipas = new ArrayList<>();
+        for (int x = 1; x <= 5; x++) {
+            pipas.add(new BlockPos(bx + x, nivel, bz + 5));
+        }
+        pipas.add(new BlockPos(bx + 3, nivel, bz + 4));
+        pipas.add(new BlockPos(bx + 4, nivel, bz + 4));
+        int cambiados = 0;
+        for (BlockPos p : pipas) {
+            if (level.getBlockState(p).is(Blocks.BARREL)) {
+                colocar(level, p, Blocks.OAK_WOOD.defaultBlockState(), 3);
+                cambiados++;
+            }
+        }
+        BlockPos arca = new BlockPos(bx + TABERNA_ANCHO - 4, nivel, bz + TABERNA_FONDO - 2);
+        if (level.getBlockState(arca).is(Blocks.BARREL)) {
+            colocar(level, arca, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.NORTH), 3);
+            cambiados++;
+        }
+        if (cambiados > 0) {
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: {} barril(es) de la taberna cambiados (el barril es el"
+                    + " puesto del PESCADOR: el pueblo todavía no tiene ese oficio)", base, cambiados);
+        }
     }
 
     /**

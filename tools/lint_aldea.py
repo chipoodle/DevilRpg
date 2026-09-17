@@ -153,6 +153,11 @@ def aviso_migracion():
                            r'HERRERIAS|IGLESIAS|VANILLA_HOUSES|CASAS_GRANDES))')
     if not any(construye.match(l) for l in diff_gen.splitlines()):
         return None
+    # Excepcion justificada a mano en la propia linea: `// lint:ok I9 porque ...`. Se usa cuando NO es una
+    # construccion nueva que haya que rehacer, sino un RETROFIT en el sitio que arregla lo ya construido con una
+    # pasada idempotente (asi el mundo guardado se corrige sin subir la version del trazado).
+    if any('lint:ok I9' in l for l in diff_gen.splitlines() if l.startswith('+')):
+        return None
     diff_manager = _git('diff', 'HEAD', '--',
                         'src/main/java/com/chipoodle/devilrpg/world/VillageManager.java')
     if 'CURRENT_LAYOUT = ' in diff_manager:

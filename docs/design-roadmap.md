@@ -1078,6 +1078,18 @@ las camas"*.
   (ahí se planean las guaridas)—; arriba el **dormitorio** con las `BARRACA_CAMAS` camas, arca y faroles. El testigo de
   "ya está construida" pasa a ser el hogar, así que las barracas de una planta se vuelven a levantar al migrar.
 - **Lo que queda para después**: la **cerveza** (las pipas y la barra ya están puestas) y el **arte** de la taberna.
+- **Ojo con los puestos de trabajo de vanilla** (lo avisó el jugador): el **barril es el puesto del PESCADOR**, así que
+  un aldeano sin oficio (una cría que crece) que reclamara uno de los barriles de la taberna se habría vuelto
+  **pescador** — un oficio que este pueblo **todavía no tiene** (tendrá su edificio y su lago en una etapa siguiente).
+  Dos blindajes:
+  - Las **pipas de cerveza** y la despensa de la cocina ya **no son barriles**: las pipas son de **madera con corteza**
+    (`oak_wood`, se ven como toneles) y donde había un barril hay ahora un **cofre** (en la taberna y en la barraca).
+    Las tabernas ya construidas se arreglan **en el sitio** con un *retrofit* idempotente (ver `retrofitDeLasPipas`),
+    sin rehacer el edificio ni tocar sus cofres.
+  - **Red de seguridad de oficios** (`VillageGenerator.esOficioDelPueblo`): un aldeano que tome un oficio **de fuera
+    del pueblo** (pescador, bibliotecario, cartógrafo…) **vuelve al reparto** de puestos del pueblo (se le borra la
+    memoria del puesto de trabajo y `reponerProfesiones` le da uno de los suyos). Así ningún bloque de puesto de
+    trabajo suelto —también los que traen las plantillas de las casas de vanilla— le roba un puesto al pueblo.
 
 ### 3b.25 Lo que viene
 - **Milicia**: ✅ completa (barraca, oficio, combate, escudo que bloquea, modelo propio, marcha a la guarida).
