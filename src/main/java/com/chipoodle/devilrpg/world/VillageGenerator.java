@@ -3299,7 +3299,11 @@ public final class VillageGenerator {
                 }
                 int px = center.getX() + x;
                 int pz = center.getZ() + z;
-                int g = groundY(level, px, pz);
+                // OJO con la convención de `groundY`: devuelve LA CAPA QUE SE PISA (el suelo sólido está en g-1), que
+                // es la misma que usa `nivelar`. Comparando `g` con el bloque del suelo, TODAS las celdas se
+                // descartaban y el arreglo no hacía NADA (por eso el jugador volvió a ver el triangulito y en el log
+                // no salía ni una línea de "picos de las esquinas quitados").
+                int g = groundY(level, px, pz) - 1;   // el bloque de arriba de la columna
                 if (g > baseY - 1 || g < sueloBajo - 1) {
                     continue; // ni es el allanado del pueblo ni un pico ya rebajado
                 }
@@ -3310,14 +3314,14 @@ public final class VillageGenerator {
                 if (aldeaDeMar) {
                     cubos += ahogarElPico(level, px, pz, g, baseY, sueloBajo);
                 } else {
-                    for (int y = sueloBajo; y <= g; y++) {
+                    for (int y = sueloBajo - 1; y <= g; y++) {
                         BlockPos p = new BlockPos(px, y, pz);
                         if (esTerrenoRecortable(level.getBlockState(p))) {
                             colocar(level, p, Blocks.AIR.defaultBlockState(), 3);
                             cubos++;
                         }
                     }
-                    BlockPos surface = new BlockPos(px, sueloBajo - 1, pz);
+                    BlockPos surface = new BlockPos(px, sueloBajo - 2, pz);
                     if (level.getBlockState(surface).is(Blocks.DIRT)) {
                         colocar(level, surface, Blocks.GRASS_BLOCK.defaultBlockState(), 3);
                     }
