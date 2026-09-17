@@ -1144,8 +1144,9 @@ no se puede subir"*.
 - **La escalera nueva**: sube pegada al muro oeste, con la cara alta al norte (hacia donde sube) y dentro de una
   **caja** cerrada por el este: el hueco del forjado es un pozo de un bloque, y sin ese muro el primero que paseara
   por la galería se caería al comedor.
-- **La fachada da al oeste** (a la plaza): puerta doble, **porche** con toldo y enseña, y **camino** desde la plaza
-  (torcido a propósito: en recta cruzaba la **parcela de la granja**, y un camino no debe pisar los cultivos).
+- **La fachada da al oeste** (a la plaza): puerta en el centro del muro oeste, **porche** con toldo y enseña, y
+  **camino** desde la plaza (torcido a propósito: en recta cruzaba la **parcela de la granja**, y un camino no debe
+  pisar los cultivos).
 - **El solar se despeja entero** antes de levantarla —la taberna vieja **cabía dentro** de la nueva, así que sus
   muros, su forjado y su tejado se tiran de una vez— y **lo que hubiera en sus cofres se guarda antes en el almacén**:
   tirar un cofre tira su contenido al suelo (mecánica del juego) y el pueblo no puede perder lo que tenía guardado.
