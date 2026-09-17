@@ -286,6 +286,9 @@ public final class VillageGenerator {
         asegurarTaberna(level, center);
         // Y SU CAMINO: el que sale de la plaza y llega hasta la puerta oeste (la que da a la plaza).
         caminoALaTaberna(level, center);
+        // LA PESQUERA (etapa G): el lago, la caseta del pescador y su barril (el pueblo ya usa barriles: son suyos).
+        asegurarPesquera(level, center);
+        caminoALaPesquera(level, center);
 
         // Granja: da trabajo al aldeano granjero y produce la comida que come la aldea (Iteración 3). Se le pasa
         // LA COTA YA CALCULADA: si la recalculara aquí, la muestra del terreno incluiría las casas y la iglesia
@@ -1071,6 +1074,258 @@ public final class VillageGenerator {
     /** ¿Esa celda (relativa a la base del corral) es el <b>bebedero</b>? (agua a propósito: no se tapa) */
     private static boolean esBebedero(int dx, int dz) {
         return dz == 4 && dx >= -4 && dx <= -2;
+    }
+
+    // --- LA PESQUERA (etapa G: el pescador, su edificio y su lago) -----------------------------------
+
+    /**
+     * Dónde está la <b>pesquera</b>, relativa al centro: en el campo del <b>sureste</b>, que es el cuadrante que
+     * queda libre (la taberna está al este-norte, el almacén y el corral al este, los bancales al oeste y al
+     * suroeste). Es lo que pidió el jugador: <i>"el pescador tendrá su edificio y su lago más adelante"</i>.
+     */
+    private static final int[] PESQUERA = {20, 44};
+    /** Radio del <b>lago</b> (huella de 7x7) y peces que caben dentro. */
+    public static final int LAGO_RADIO = 3;
+    public static final int LAGO_PECES_MAX = 6;
+    /** Peces que se sueltan al construir la pesquera: el lago arranca con bandada y se repuebla solo, despacio. */
+    private static final int LAGO_PECES_INICIAL = 4;
+    /** Ancho (X) y fondo (Z) de la <b>caseta</b> del pescador. */
+    private static final int PESQUERA_ANCHO = 5;
+    private static final int PESQUERA_FONDO = 5;
+
+    /** La esquina de la caseta del pescador, relativa a la base de la pesquera (que es el CENTRO del lago). */
+    private static BlockPos casetaDeLaPesquera(BlockPos base, int nivel) {
+        return new BlockPos(base.getX() - PESQUERA_ANCHO / 2, nivel, base.getZ() - 10);
+    }
+
+    /** La base de la pesquera (el centro del lago), relativa al centro de la aldea. */
+    public static BlockPos baseDeLaPesquera(BlockPos center) {
+        return center.offset(PESQUERA[0], 0, PESQUERA[1]);
+    }
+
+    private static BlockPos puestoDelPescador(BlockPos base, int nivel) {
+        return new BlockPos(base.getX() + 1, nivel, base.getZ() - 5);
+    }
+
+    /**
+     * El <b>puesto de trabajo del pescador</b>: el <b>barril</b> de la pesquera, en la orilla junto a su puerta. En
+     * vanilla el barril es el puesto del <b>pescador</b>, y hasta esta etapa el pueblo no usaba barriles a propósito
+     * (las pipas de la taberna son de madera con corteza) para que nadie tomara ese oficio sin tener dónde pescar.
+     */
+    public static BlockPos puestoDelPescador(ServerLevel level, BlockPos center) {
+        return puestoDelPescador(baseDeLaPesquera(center), cotaDeLaPlaza(level, center));
+    }
+
+    private static BlockPos trabajoDelPescador(BlockPos base, int nivel) {
+        return new BlockPos(base.getX(), nivel, base.getZ() - 2);
+    }
+
+    /** Dónde se pone a pescar: el final de la <b>pasarela</b>, sobre el agua del lago. */
+    public static BlockPos trabajoDelPescador(ServerLevel level, BlockPos center) {
+        return trabajoDelPescador(baseDeLaPesquera(center), cotaDeLaPlaza(level, center));
+    }
+
+    /** La caja del lago, para buscar los peces que nadan dentro. La Y sale de la COTA, nunca de la del centro (I1). */
+    private static AABB cajaDelLago(ServerLevel level, BlockPos center) {
+        BlockPos base = baseDeLaPesquera(center);
+        int nivel = cotaDeLaPlaza(level, center);
+        return new AABB(base.getX() - LAGO_RADIO, nivel - 4.0D, base.getZ() - LAGO_RADIO,
+                base.getX() + LAGO_RADIO + 1, nivel + 2.0D, base.getZ() + LAGO_RADIO + 1);
+    }
+
+    /** Cuántos peces nadan ahora mismo en el lago. */
+    public static int pecesEnElLago(ServerLevel level, BlockPos center) {
+        return level.getEntitiesOfClass(net.minecraft.world.entity.animal.AbstractFish.class,
+                cajaDelLago(level, center)).size();
+    }
+
+    /** El pez <b>más cercano a la pasarela</b> (el que saca el pescador), o {@code null} si el lago está vacío. */
+    @Nullable
+    public static net.minecraft.world.entity.animal.AbstractFish pezMasCercano(ServerLevel level, BlockPos center) {
+        BlockPos trabajo = trabajoDelPescador(level, center);
+        net.minecraft.world.entity.animal.AbstractFish mejor = null;
+        double mejorDist = Double.MAX_VALUE;
+        for (net.minecraft.world.entity.animal.AbstractFish pez : level.getEntitiesOfClass(
+                net.minecraft.world.entity.animal.AbstractFish.class, cajaDelLago(level, center))) {
+            double d = pez.distanceToSqr(trabajo.getX() + 0.5D, trabajo.getY(), trabajo.getZ() + 0.5D);
+            if (d < mejorDist) {
+                mejorDist = d;
+                mejor = pez;
+            }
+        }
+        return mejor;
+    }
+
+    /**
+     * ¿Está la pesquera hecha? Vale el <b>agua del lago</b> o el <b>barril</b> (el puesto): con cualquiera de los dos
+     * se da por hecha, así que hace falta perder los dos para que el pueblo la reconstruya (reconstruirla volvería a
+     * soltar peces y podría deshacer lo que el jugador haya puesto alrededor).
+     */
+    public static boolean pesqueraConstruida(ServerLevel level, BlockPos center) {
+        int nivel = cotaDeLaPlaza(level, center);
+        BlockPos base = baseDeLaPesquera(center);
+        return level.getBlockState(new BlockPos(base.getX(), nivel - 1, base.getZ())).is(Blocks.WATER)
+                || level.getBlockState(puestoDelPescador(level, center)).is(Blocks.BARREL);
+    }
+
+    /**
+     * Asegura la <b>pesquera</b> (etapa G): el lago con su bandada, la caseta del pescador, su <b>barril</b> (el
+     * puesto), la pasarela y los faroles. Idempotente (ver {@link #pesqueraConstruida}); se llama al generar, en la
+     * migración y en el latido, como el resto de edificios del pueblo.
+     */
+    public static void asegurarPesquera(ServerLevel level, BlockPos center) {
+        int nivel = cotaDeLaPlaza(level, center);
+        if (nivel <= level.getMinBuildHeight() + 1) {
+            return;
+        }
+        if (pesqueraConstruida(level, center)) {
+            return;
+        }
+        pesquera(level, baseDeLaPesquera(center), nivel);
+        DevilRpg.LOGGER.info("[Village] Aldea en {}: pesquera construida en {} (lago de {}x{}, {} pez(ces) y su"
+                + " barril)", center, baseDeLaPesquera(center), 2 * LAGO_RADIO + 1, 2 * LAGO_RADIO + 1,
+                LAGO_PECES_INICIAL);
+    }
+
+    /**
+     * Construye la pesquera: el <b>lago</b> (7x7, dos capas de agua y fondo de arena, con su orilla seca), la
+     * <b>pasarela</b> de tablones hasta el centro del lago (donde se pone el pescador), la <b>caseta</b> de 5x5 con su
+     * puerta mirando al agua, su cama, su arca y su farol, el <b>barril</b> (el puesto de trabajo) y los peces.
+     */
+    private static void pesquera(ServerLevel level, BlockPos base, int nivel) {
+        int bx = base.getX();
+        int bz = base.getZ();
+        BlockState tablon = Blocks.DARK_OAK_PLANKS.defaultBlockState();
+        // 1) EL LAGO: 7x7 de agua a dos capas (nivel-1 y nivel-2) con el fondo de arena, y la orilla (un anillo
+        //    alrededor) seca y de arena, para que el agua no se salga ni haga cuadros con el césped.
+        for (int dx = -LAGO_RADIO - 1; dx <= LAGO_RADIO + 1; dx++) {
+            for (int dz = -LAGO_RADIO - 1; dz <= LAGO_RADIO + 1; dz++) {
+                boolean dentroDelLago = Math.abs(dx) <= LAGO_RADIO && Math.abs(dz) <= LAGO_RADIO;
+                BlockPos p = new BlockPos(bx + dx, nivel - 1, bz + dz);
+                if (dentroDelLago) {
+                    colocar(level, p, Blocks.WATER.defaultBlockState(), 3);
+                    colocar(level, p.below(), Blocks.WATER.defaultBlockState(), 3);
+                    colocar(level, new BlockPos(bx + dx, nivel - 3, bz + dz), Blocks.SAND.defaultBlockState(), 3);
+                } else {
+                    colocar(level, p, Blocks.SAND.defaultBlockState(), 3);
+                }
+                for (int y = nivel; y <= nivel + 4; y++) {
+                    colocar(level, new BlockPos(bx + dx, y, bz + dz), Blocks.AIR.defaultBlockState(), 3);
+                }
+            }
+        }
+        // 2) LA PASARELA: tablones sobre el agua, del borde norte al centro del lago, con sus postes dentro del agua.
+        for (int dz = -4; dz <= -1; dz++) {
+            colocar(level, new BlockPos(bx, nivel, bz + dz), tablon, 3);
+            if (dz != -4) {
+                colocar(level, new BlockPos(bx, nivel - 1, bz + dz), Blocks.OAK_FENCE.defaultBlockState(), 3);
+            }
+        }
+        // 3) LA CASETA del pescador: suelo de tablones, muros con la puerta en el centro del muro SUR (sale derecho a
+        //    la pasarela), ventanas de cristal, tejado a dos aguas, su cama, su arca y su farol.
+        BlockPos caseta = casetaDeLaPesquera(base, nivel);
+        for (int dx = 0; dx < PESQUERA_ANCHO; dx++) {
+            for (int dz = 0; dz < PESQUERA_FONDO; dz++) {
+                colocar(level, new BlockPos(caseta.getX() + dx, nivel - 1, caseta.getZ() + dz), tablon, 3);
+                for (int dy = 0; dy <= 4; dy++) {
+                    colocar(level, new BlockPos(caseta.getX() + dx, nivel + dy, caseta.getZ() + dz),
+                            Blocks.AIR.defaultBlockState(), 3);
+                }
+            }
+        }
+        for (int dx = 0; dx < PESQUERA_ANCHO; dx++) {
+            for (int dz = 0; dz < PESQUERA_FONDO; dz++) {
+                boolean borde = dx == 0 || dx == PESQUERA_ANCHO - 1 || dz == 0 || dz == PESQUERA_FONDO - 1;
+                if (!borde) {
+                    continue;
+                }
+                boolean puerta = dz == PESQUERA_FONDO - 1 && dx == PESQUERA_ANCHO / 2;
+                for (int dy = 0; dy <= 2; dy++) {
+                    BlockPos p = new BlockPos(caseta.getX() + dx, nivel + dy, caseta.getZ() + dz);
+                    if (puerta && dy <= 1) {
+                        colocar(level, p, Blocks.DARK_OAK_DOOR.defaultBlockState()
+                                .setValue(DoorBlock.FACING, Direction.SOUTH)
+                                .setValue(DoorBlock.HALF,
+                                        dy == 0 ? DoubleBlockHalf.LOWER : DoubleBlockHalf.UPPER), 3);
+                    } else if (dy == 0) {
+                        colocar(level, p, Blocks.STONE_BRICKS.defaultBlockState(), 3);
+                    } else if (dy == 1 && dz == PESQUERA_FONDO - 1 && dx % 2 == 1) {
+                        colocar(level, p, Blocks.GLASS_PANE.defaultBlockState(), 3);
+                    } else {
+                        colocar(level, p, tablon, 3);
+                    }
+                }
+            }
+        }
+        for (int dx = 0; dx < PESQUERA_ANCHO; dx++) {
+            for (int dz = 0; dz < PESQUERA_FONDO; dz++) {
+                colocar(level, new BlockPos(caseta.getX() + dx, nivel + 3, caseta.getZ() + dz), tablon, 3);
+                if (dz == PESQUERA_FONDO / 2) {
+                    colocar(level, new BlockPos(caseta.getX() + dx, nivel + 4, caseta.getZ() + dz), tablon, 3);
+                }
+            }
+        }
+        colocar(level, new BlockPos(caseta.getX() + 1, nivel + 2, caseta.getZ() + 2),
+                Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true), 3);
+        bed(level, new BlockPos(caseta.getX() + 1, nivel, caseta.getZ() + 1), Direction.SOUTH);
+        colocar(level, new BlockPos(caseta.getX() + 3, nivel, caseta.getZ() + 1),
+                Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.NORTH), 3);
+        // 4) EL PUESTO DEL PESCADOR: el BARRIL, en la orilla junto a la puerta. Es lo que le da el oficio.
+        colocar(level, puestoDelPescador(base, nivel), Blocks.BARREL.defaultBlockState(), 3);
+        // 5) FAROLES en dos esquinas del lago: la pesquera se ve de noche y el agua no cría bichos.
+        farolEnElPoste(level, new BlockPos(bx - LAGO_RADIO - 1, nivel + 2, bz - LAGO_RADIO - 1));
+        farolEnElPoste(level, new BlockPos(bx + LAGO_RADIO + 1, nivel + 2, bz + LAGO_RADIO + 1));
+        // 6) LOS PECES: el lago arranca con su bandada (y se repuebla solo: ver `reponerPecesDelLago`).
+        sueltaPeces(level, base, nivel, LAGO_PECES_INICIAL);
+    }
+
+    /**
+     * Suelta {@code cuantos} peces en el lago (dos de cada tres son <b>cods</b> y el tercero un <b>salmón</b>), en
+     * celdas de agua con agua encima, que es donde el pez nada. Son <b>peces de verdad</b>: el pescador saca uno y el
+     * lago se queda con uno menos, así que la comida del pueblo sale del lago, no de un contador.
+     */
+    private static int sueltaPeces(ServerLevel level, BlockPos base, int nivel, int cuantos) {
+        int puestos = 0;
+        for (int i = 0; i < cuantos; i++) {
+            int dx = level.random.nextInt(2 * LAGO_RADIO - 1) - (LAGO_RADIO - 1);
+            int dz = level.random.nextInt(2 * LAGO_RADIO - 1) - (LAGO_RADIO - 1);
+            BlockPos agua = new BlockPos(base.getX() + dx, nivel - 2, base.getZ() + dz);
+            if (!level.getBlockState(agua).is(Blocks.WATER) || !level.getBlockState(agua.above()).is(Blocks.WATER)) {
+                continue;
+            }
+            net.minecraft.world.entity.Entity creado = (i % 3 == 2 ? EntityType.SALMON : EntityType.COD).create(level);
+            if (!(creado instanceof net.minecraft.world.entity.Mob pez)) {
+                continue;
+            }
+            pez.moveTo(agua.getX() + 0.5D, agua.getY(), agua.getZ() + 0.5D,
+                    level.random.nextFloat() * 360.0F, 0.0F);
+            pez.setPersistenceRequired();
+            level.addFreshEntity(pez);
+            puestos++;
+        }
+        return puestos;
+    }
+
+    /**
+     * <b>Repuebla el lago</b>: si le quedan menos de {@link #LAGO_PECES_MAX} peces, suelta uno. Se llama desde el
+     * latido (cada dos minutos), así que el lago se recupera <b>despacio</b>: lo que el pueblo pesca está limitado por
+     * lo que cría su lago, no por un contador de comida.
+     */
+    public static int reponerPecesDelLago(ServerLevel level, BlockPos center) {
+        int nivel = cotaDeLaPlaza(level, center);
+        if (nivel <= level.getMinBuildHeight() + 1 || !pesqueraConstruida(level, center)) {
+            return 0;
+        }
+        if (pecesEnElLago(level, center) >= LAGO_PECES_MAX) {
+            return 0;
+        }
+        return sueltaPeces(level, baseDeLaPesquera(center), nivel, 1);
+    }
+
+    /** El <b>camino</b> del pueblo a la pesquera: de la plaza al lado oeste de la caseta (no cruza ningún bancal). */
+    public static void caminoALaPesquera(ServerLevel level, BlockPos center) {
+        BlockPos base = baseDeLaPesquera(center);
+        line(level, center, new BlockPos(base.getX() - 4, cotaDeLaPlaza(level, center), base.getZ() - 8));
     }
 
     // --- LA ARBOLEDA DEL PUEBLO (la madera de una aldea sin bosque) ---------------------------------
@@ -4072,7 +4327,9 @@ public final class VillageGenerator {
             new BlockPos(6, 0, 6),
             // El SEGUNDO GRANJERO (etapa F, lo pidió el jugador: "una 3ª parcela con su granjero porque hay poca
             // comida"): entre los dos bancales del sur, en patio abierto.
-            new BlockPos(-22, 0, 30)
+            new BlockPos(-22, 0, 30),
+            // El PESCADOR (etapa G): en patio abierto al norte de su pesquera (el lago está al sur, en (20,44)).
+            new BlockPos(20, 0, 30)
     };
     /**
      * Oficios de la aldea, en el orden en que se ocupan los sitios:
@@ -4094,7 +4351,7 @@ public final class VillageGenerator {
     private static final VillagerProfession[] VILLAGER_SPECIALTIES = {
             VillagerProfession.FARMER, VillagerProfession.WEAPONSMITH, VillagerProfession.CLERIC,
             VillagerProfession.TOOLSMITH, VillagerProfession.NITWIT, VillagerProfession.SHEPHERD,
-            VillagerProfession.BUTCHER, VillagerProfession.FARMER
+            VillagerProfession.BUTCHER, VillagerProfession.FARMER, VillagerProfession.FISHERMAN
     };
 
     /**

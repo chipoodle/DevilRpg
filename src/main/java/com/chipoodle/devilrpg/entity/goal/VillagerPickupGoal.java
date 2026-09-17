@@ -130,13 +130,17 @@ public class VillagerPickupGoal extends Goal {
             // El templo: lo que el clérigo puede aprovechar (carne podrida, oro y pólvora).
             return s -> s.is(Items.ROTTEN_FLESH) || s.is(Items.GOLD_NUGGET) || s.is(Items.GUNPOWDER);
         }
+        if (profesion == VillagerProfession.FISHERMAN) {
+            // La pesquera: el pescado crudo (el que se le cae al suelo y el que salta del lago a la orilla).
+            return s -> s.is(Items.COD) || s.is(Items.SALMON);
+        }
         return s -> false;
     }
 
     /** Dónde guarda lo que recoge: la comida a la <b>despensa</b> (que es lo que come el pueblo) y lo demás al almacén. */
     public static Destino destinoDe(VillagerProfession profesion) {
         if (profesion == VillagerProfession.FARMER || profesion == VillagerProfession.SHEPHERD
-                || profesion == VillagerProfession.BUTCHER) {
+                || profesion == VillagerProfession.BUTCHER || profesion == VillagerProfession.FISHERMAN) {
             return Destino.DESPENSA;
         }
         return Destino.ALMACEN;
@@ -155,6 +159,9 @@ public class VillagerPickupGoal extends Goal {
         if (profesion == VillagerProfession.CLERIC) {
             return "el clerigo";
         }
+        if (profesion == VillagerProfession.FISHERMAN) {
+            return "el pescador";
+        }
         return "el herrero";
     }
 
@@ -162,7 +169,8 @@ public class VillagerPickupGoal extends Goal {
     public static boolean tieneMateriales(VillagerProfession profesion) {
         return profesion == VillagerProfession.FARMER || profesion == VillagerProfession.SHEPHERD
                 || profesion == VillagerProfession.BUTCHER || profesion == VillagerProfession.CLERIC
-                || profesion == VillagerProfession.WEAPONSMITH || profesion == VillagerProfession.TOOLSMITH;
+                || profesion == VillagerProfession.WEAPONSMITH || profesion == VillagerProfession.TOOLSMITH
+                || profesion == VillagerProfession.FISHERMAN;
     }
 
     // --- el goal ------------------------------------------------------------------------------------

@@ -445,9 +445,18 @@ public final class VillageManager {
      *             <i>"vegetales como item por toda la parcela"</i> (lo que vio el jugador) y se replantaban brotes.
      *             Ahora una parcela ya hecha <b>no se toca</b>: solo se aseguran su compostero y su valla.</li>
      *       </ul></li>
+     *   <li>46: la <b>PESQUERA</b> (etapa G, lo pidió el jugador: <i>"el pescador tendrá su edificio y su lago más
+     *       adelante"</i>): un <b>lago</b> de 7x7 en el campo del sureste, con su pasarela, y la <b>caseta del
+     *       pescador</b> (5x5, con su puerta mirando al agua, su cama, su arca y su farol). El <b>barril</b> —que en
+     *       vanilla es el puesto del pescador y que el pueblo no usaba a propósito desde la etapa F— pasa a estar en
+     *       la pesquera, con su dueño: el <b>PESCADOR</b> es un puesto fijo más (9 en total), pesca peces <b>de
+     *       verdad</b> del lago (la entidad se va) y baja el pescado crudo a la despensa, donde el cocinero lo ahúma
+     *       (crudo = 2 puntos de comida, cocinado = 4, como la carne del corral: la segunda fuente de proteína). El
+     *       lago <b>se repuebla solo y despacio</b> (un pez cada dos minutos, hasta 6), así que la pesca está limitada
+     *       por lo que cría el lago y no por un contador.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 45;
+    public static final int CURRENT_LAYOUT = 46;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -1321,6 +1330,10 @@ public final class VillageManager {
             VillageGenerator.asegurarTaberna(level, center);
             // Y su CAMINO desde la plaza (torcido, para no cruzar la parcela de la granja).
             VillageGenerator.caminoALaTaberna(level, center);
+            // LA PESQUERA (etapa G): el lago, la caseta del pescador, su BARRIL (el puesto) y sus peces. Va antes de
+            // tirar el plano, como todo lo demás, y con su camino desde la plaza (tampoco cruza ningún bancal).
+            VillageGenerator.asegurarPesquera(level, center);
+            VillageGenerator.caminoALaPesquera(level, center);
             // REBAÑO ESCAPADO (una sola vez, al migrar): antes de que existiera la marca del rebaño, el ganado que se
             // colaba por el portón se perdía sin remedio y el corral se quedaba vacío (y sin carne). Aquí se reconoce
             // el que anda suelto FUERA de la muralla y cerca del corral; luego, en el latido, vuelve a casa.
@@ -1372,6 +1385,9 @@ public final class VillageManager {
         // TABERNA (etapa F): el comedor del pueblo (abajo) y la posada (arriba). Idempotente (se comprueba por su
         // barra): si el jugador se lleva media taberna, el pueblo la vuelve a levantar.
         VillageGenerator.asegurarTaberna(level, center);
+        // PESQUERA (etapa G): el lago del pescador, su caseta y su barril. Idempotente (vale el agua del lago o el
+        // barril como testigo): si el jugador se lleva media pesquera, el pueblo la vuelve a levantar.
+        VillageGenerator.asegurarPesquera(level, center);
         // REBAÑO: el corral se llena UNA vez (al construirlo o al migrar). Después se mantiene solo, con DOS reglas:
         //   1) RECOGER AL QUE SE ESCAPA. El corral solo tiene el portón, y el pueblo lo abre para pasar (el juego no
         //      deja que un aldeano abra una puerta de valla, de ahí `VillagerGateGoal`): con las horas, el ganado se
@@ -1396,6 +1412,12 @@ public final class VillageManager {
             } else if (VillageGenerator.reponerParejasDelCorral(level, center)) {
                 saved.setAnexoAnimales(objectiveIndex, level.getGameTime());
             }
+        }
+        // EL LAGO SE REPUEBLA: cada dos minutos, un pez (hasta el tope de 6). Lo que pesca el pueblo está limitado por
+        // lo que cría su lago, no por un contador de comida: el pescador saca un pez de verdad y el lago tarda en
+        // recuperarlo. (Se pregunta la cota y la lista de peces solo cada dos minutos, no por tick.)
+        if (level.getGameTime() % (20L * 120L) == 0L) {
+            VillageGenerator.reponerPecesDelLago(level, center);
         }
         // PROFESIONES PERDIDAS: a los aldeanos de una partida vieja el juego les BORRÓ el oficio (el cerebro
         // vanilla trae `ResetProfession`: sin puesto de trabajo en el cerebro, con XP 0 y nivel 1, devuelve al
@@ -1448,6 +1470,14 @@ public final class VillageManager {
             if (!villager.isBaby() && !VillagerGuardGoal.esGuardia(villager)
                     && villager.getVillagerData().getProfession() == VillagerProfession.BUTCHER) {
                 asegurarGoalDeCocinero(villager, center, objectiveIndex);
+            }
+        }
+        // PESCADOR (etapa G): pesca en el lago de su pesquera y baja el pescado crudo a la despensa (el cocinero lo
+        // ahúma: crudo = 2 puntos, cocinado = 4, igual que la carne del corral). Puesto fijo, como el ganadero.
+        for (Villager villager : aldeanos) {
+            if (!villager.isBaby() && !VillagerGuardGoal.esGuardia(villager)
+                    && villager.getVillagerData().getProfession() == VillagerProfession.FISHERMAN) {
+                asegurarGoalDelPescador(villager, center, objectiveIndex);
             }
         }
         // PORTONES del anexo (etapa E): los abre y los cierra el PUEBLO, porque el juego no deja que un aldeano abra
@@ -1894,6 +1924,20 @@ public final class VillageManager {
         }
         villager.goalSelector.addGoal(4, new com.chipoodle.devilrpg.entity.goal.VillagerAnimalFarmGoal(villager,
                 center, objectiveIndex));
+    }
+
+    /**
+     * Le pone al <b>pescador</b> su goal de <b>pesca</b> (etapa G): va a la pasarela de su pesquera, pesca un pez del
+     * lago (uno de verdad: se va del lago) y lo baja crudo a la despensa. Prioridad <b>4</b>, como los demás oficios.
+     */
+    private static void asegurarGoalDelPescador(Villager villager, BlockPos center, int objectiveIndex) {
+        for (WrappedGoal wrapped : villager.goalSelector.getAvailableGoals()) {
+            if (wrapped.getGoal() instanceof com.chipoodle.devilrpg.entity.goal.VillagerFisherGoal) {
+                return;
+            }
+        }
+        villager.goalSelector.addGoal(com.chipoodle.devilrpg.entity.goal.VillagerFisherGoal.PRIORIDAD,
+                new com.chipoodle.devilrpg.entity.goal.VillagerFisherGoal(villager, center, objectiveIndex));
     }
 
     /**

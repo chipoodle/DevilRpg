@@ -1215,7 +1215,37 @@ desalineada"* y *"¿por qué los vegetales están como item por toda la parcela?
   con sus 72 cultivos.
 - **Migración 45** (`CURRENT_LAYOUT`).
 
-### 3b.28 Lo que viene
+### 3b.28 La PESQUERA: el pescador, su edificio y su lago (etapa G)
+
+Lo pidió el jugador desde la etapa F: <i>"el barril es del pescador... el pescador tendrá su edificio y su lago más
+adelante"</i>. Durante cuatro etapas el pueblo <b>no usó barriles a propósito</b> (las pipas de la taberna se hicieron
+de madera con corteza, el caldero se quitó de la cocina) para que ningún aldeano sin oficio tomara un oficio que el
+pueblo no tenía. Ahora el barril <b>tiene dueño</b>.
+
+- **El lago** (`pesquera()`, en el campo del sureste, en (20, 44)): **7×7 de agua** a dos capas con el fondo de arena y
+  su <b>orilla seca</b> de arena, una <b>pasarela</b> de tablones hasta el centro (con sus postes dentro del agua,
+  donde se pone el pescador), dos <b>faroles</b> en las esquinas y el <b>camino</b> desde la plaza (que, como el de la
+  taberna, no cruza ningún bancal).
+- **La caseta** (5×5): suelo de tablones, muros con la <b>puerta en el centro del muro sur</b> (sale derecho a la
+  pasarela), ventanas de cristal, tejado a dos aguas, su <b>cama</b>, su <b>arca</b> y su farol. Y fuera, junto a la
+  puerta, el <b>BARRIL</b>: el puesto de trabajo del pescador en vanilla, que es lo que le da el oficio.
+- **El PESCADOR** es un <b>puesto fijo más</b> (nueve ya: dos granjeros, los dos herreros, el clérigo, el holgazán
+  recolector/leñador, el ganadero, el cocinero y él). Su goal (`VillagerFisherGoal`) va a la pasarela, se pone con la
+  caña (se le ve trabajar, con su salpicadura y su sonido) y **saca un pez DE VERDAD del lago**: la entidad se va del
+  lago y su pescado crudo va a la <b>despensa</b>, donde el cocinero lo ahúma (crudo = 2 puntos de comida, cocinado =
+  4, igual que la carne del corral: es la <b>segunda fuente de proteína</b> del pueblo).
+- **El lago se repuebla solo y despacio** (un pez cada dos minutos, hasta 6): lo que el pueblo come de pescado está
+  limitado por lo que **cría su lago**, no por un contador de comida. Al construirlo se suelta una bandada de 4
+  (dos de cada tres cods y el tercero salmón).
+- Y de paso: el pescador también <b>recoge del suelo</b> el pescado que se le cae (y el que salta a la orilla), a la
+  despensa, como los demás oficios con lo suyo.
+- **Verificado** de punta a punta con el arnés temporal y el servidor headless (chunks forzados, porque el latido
+  necesita jugador cerca): el lago, la orilla de arena, la pasarela, la caseta (suelo, puerta, cama y arca), el barril
+  y los peces están; el pescador existe con su goal; y **a los 73 s el lago tenía un pez menos (3 → 2) y la despensa
+  un pescado más (0 → 1)**.
+- **Migración 46** (`CURRENT_LAYOUT`).
+
+### 3b.29 Lo que viene
 - **Milicia**: ✅ completa (barraca, oficio, combate, escudo que bloquea, modelo propio, marcha a la guarida).
 - **Leñador/reforestador**: ✅ (tala y replanta, la cadena de la madera del herrero y ahora también **despeja los
   árboles que quedaron dentro de la muralla**).
@@ -1236,6 +1266,10 @@ desalineada"* y *"¿por qué los vegetales están como item por toda la parcela?
 - **La taberna grande (plano del INN, vuelo, escalera que sí se sube)**: ✅ (ver 3b.26).
 - **Escalera accesible y doble, chimenea por fuera, almacén al lado, corral alineado y huerta que no se reinicia**: ✅
   (ver 3b.27).
+- **Los barriles del pueblo y la basura de las copas**: ✅ (ver 3b.27).
+- **La PESQUERA (el pescador, su edificio y su lago)**: ✅ (ver 3b.28).
+- **Lo siguiente**: la <b>cerveza</b> de las pipas de la taberna (las pipas ya están puestas: son de madera con
+  corteza, para que el barril siga siendo del pescador) y, de ahí, lo que pida el jugador.
 - **Lo siguiente**: la **verificación en partida** de la cadena entera de la comida (huerta → despensa → cocina →
   raciones) y, de ahí, lo que pida el jugador (la **cerveza** de las pipas y el **pescador con su edificio y su lago**).
 
