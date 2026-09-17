@@ -244,6 +244,8 @@ public final class VillageGenerator {
         // LA ARBOLEDA DEL PUEBLO: cuatro plantones en un hueco de césped de la diagonal noreste. Es lo que da madera a
         // una aldea que nace sin bosque (una islita): el leñador los tala y los replanta como cualquier árbol.
         asegurarArboleda(level, center);
+        // Y LA ORILLA, seca y pareja, si la aldea nació al nivel del agua (si no, no se toca nada).
+        asegurarOrilla(level, center);
 
         // Remesa inicial de la despensa (semillas, abono y un par de panes): el kiosco ya tiene el cofre doble.
         VillagePantry.remesaInicial(VillagePantry.despensa(level, center));
@@ -938,6 +940,78 @@ public final class VillageGenerator {
             return Blocks.CHERRY_SAPLING;
         }
         return Blocks.OAK_SAPLING; // el de siempre (y el que traen los fundadores cuando no hay árbol claro)
+    }
+
+    // --- LA ORILLA DE LA ALDEA DE MAR (la islita) ---------------------------------------------------
+
+    /** Ancho (bloques) del anillo de <b>orilla seca</b> que se saca alrededor de una aldea que está al nivel del agua. */
+    private static final int ORILLA_ANCHO = 4;
+
+    /**
+     * <b>Alisa la orilla</b> de una aldea que está <b>al nivel del agua</b> (la islita).
+     * <p>
+     * El terreno llano del pueblo queda <b>a la misma altura que el mar</b>, así que el primer escalón del talud
+     * asoma a la cota en unas casillas y en otras queda un bloque por debajo: el resultado es una orilla <b>a
+     * cuadros</b> (medido en el guardado del jugador: agua a y=62 pegada a césped a y=62, en parches cuadrados).
+     * Aquí se rellena el anillo de orilla con <b>césped a la cota</b> —solo donde hay <b>agua o aire</b>, nunca encima
+     * de nada construido (el camino del corral anexo se respeta)— para que la isla tenga una <b>playa seca y pareja</b>
+     * y el agua empiece en un borde limpio.
+     * <p>
+     * En una aldea de <b>tierra adentro</b> no se toca nada: ahí el talud es lo que la hace parecer una meseta
+     * natural. Se decide mirando si hay <b>agua a la capa que se pisa</b> en el anillo (barato y sin guardar nada).
+     */
+    public static void asegurarOrilla(ServerLevel level, BlockPos center) {
+        int nivel = cotaDeLaPlaza(level, center);
+        if (nivel <= level.getMinBuildHeight() + 1) {
+            return;
+        }
+        int interior = LEVEL_RADIUS;
+        int exterior = interior + ORILLA_ANCHO;
+        if (!hayAguaEnElAnillo(level, center, nivel, interior, exterior)) {
+            return; // aldea de tierra adentro: su talud está bien como está
+        }
+        // La orilla, seca y pareja: césped a la cota en todo el anillo.
+        int puestos = 0;
+        for (int x = -exterior; x <= exterior; x++) {
+            for (int z = -exterior; z <= exterior; z++) {
+                double dist = Math.sqrt(x * x + z * z);
+                if (dist <= interior || dist > exterior) {
+                    continue;
+                }
+                int px = center.getX() + x;
+                int pz = center.getZ() + z;
+                for (int y = nivel - 1; y > nivel - 1 - PROFUNDIDAD_TAPADO && y > level.getMinBuildHeight(); y--) {
+                    BlockPos p = new BlockPos(px, y, pz);
+                    BlockState s = level.getBlockState(p);
+                    if (!s.isAir() && !s.is(Blocks.WATER)) {
+                        break; // suelo firme (o algo construido: hasta aquí)
+                    }
+                    colocar(level, p, (y == nivel - 1 ? Blocks.GRASS_BLOCK : Blocks.DIRT).defaultBlockState(), 3);
+                    puestos++;
+                }
+            }
+        }
+        if (puestos > 0) {
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: orilla seca y pareja ({} bloques de cesped en el anillo)",
+                    center, puestos);
+        }
+    }
+
+    /** ¿Hay agua a la <b>capa que se pisa</b> en el anillo del talud? (es lo que distingue una aldea de orilla) */
+    private static boolean hayAguaEnElAnillo(ServerLevel level, BlockPos center, int nivel, int interior, int exterior) {
+        for (int x = -exterior; x <= exterior; x += 2) {
+            for (int z = -exterior; z <= exterior; z += 2) {
+                double dist = Math.sqrt(x * x + z * z);
+                if (dist <= interior || dist > exterior) {
+                    continue;
+                }
+                if (level.getBlockState(new BlockPos(center.getX() + x, nivel - 1, center.getZ() + z))
+                        .is(Blocks.WATER)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /**

@@ -332,9 +332,13 @@ public final class VillageManager {
      *       mar): un rectángulo de césped en la diagonal noreste con <b>seis plantones</b> del árbol del bioma. Es la
      *       madera de una aldea <b>sin bosque</b>: los fundadores traen los plantones (como traen las semillas) y el
      *       leñador los tala y los replanta, con la excepción de "dentro de la valla no se tala" acotada a esa caja.</li>
+     *   <li>36: la <b>ORILLA SECA</b> de la aldea de mar (lo pidió el jugador al ver el borde "a cuadros"): cuando el
+     *       pueblo nace <b>al nivel del agua</b>, su terreno llano queda a la misma altura que el mar y el primer
+     *       escalón del talud asoma en unas casillas y en otras no. Se rellena el anillo de orilla con césped (solo
+     *       donde hay agua o aire) y la isla queda con su <b>playa pareja</b> y el agua en un borde limpio.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 35;
+    public static final int CURRENT_LAYOUT = 36;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -1165,6 +1169,8 @@ public final class VillageManager {
             // ARBOLEDA DEL PUEBLO (etapa E): los cuatro plantones del hueco de césped, para la aldea que nace donde no
             // hay bosque. Va antes de tirar el plano, como todo lo demás.
             VillageGenerator.asegurarArboleda(level, center);
+            // Y LA ORILLA de la aldea de mar (islita): seca y pareja, para que el agua no haga cuadros en el borde.
+            VillageGenerator.asegurarOrilla(level, center);
             // COCINA del pueblo (etapa E): el ahumador del cocinero, en el kiosco. Va antes de tirar el plano para
             // que entre en él y el obrero lo reponga.
             VillageGenerator.asegurarCocina(level, center);
@@ -1205,6 +1211,10 @@ public final class VillageManager {
         // llanura pelada) planta aquí sus cuatro árboles y el leñador los tala y los replanta: sin esto no habría
         // troncos y se caerían los tablones, los palos, los arcos, las flechas y los escudos.
         VillageGenerator.asegurarArboleda(level, center);
+        // Y LA ORILLA de la aldea de mar (islita): el terreno llano queda a la altura del agua, así que su borde sale
+        // "a cuadros" (agua a la cota pegada a césped a la cota). Se saca un anillo de playa seca y pareja; en una
+        // aldea de tierra adentro no toca nada (lo decide mirando si hay agua a la capa que se pisa en el anillo).
+        VillageGenerator.asegurarOrilla(level, center);
         // COCINA del pueblo (etapa E): el ahumador y la mesa del cocinero, en la plataforma del kiosco. Idempotente
         // (va aparte de `asegurarKiosco` porque aquél sale antes de tiempo cuando el kiosco ya está).
         VillageGenerator.asegurarCocina(level, center);
