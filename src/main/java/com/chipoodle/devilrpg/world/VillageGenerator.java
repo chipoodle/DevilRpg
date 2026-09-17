@@ -3336,14 +3336,15 @@ public final class VillageGenerator {
      * Hunde una celda del pico de la esquina hasta el <b>fondo natural</b> y la llena de <b>agua</b> hasta la
      * superficie del mar, para que en ese sitio haya agua como en el resto del mar de al lado.
      * <p>
-     * Devuelve cuántos bloques de agua ha puesto (0 si no ha tocado nada). No toca la celda si debajo del relleno no
-     * hay fondo marino sino tierra firme a la misma altura: ahí no hay mar que poner, y una playa natural se queda.
+     * Devuelve cuántos bloques de agua ha puesto. Se hunde <b>siempre</b> que la celda tenga <b>relleno del pueblo</b>
+     * encima (césped o tierra a la cota): da igual que el fondo natural esté a un bloque del agua o a veinte, porque el
+     * agua rellena hasta la superficie del mar y la celda queda como el mar de al lado. (Antes se saltaba cuando el
+     * fondo estaba a menos de tres bloques y esas celdas se quedaban como un <b>triangulito de tierra</b> pegado a la
+     * isla: es justo lo que el jugador volvió a ver en la vista desde arriba. Lo que sí se respeta es una <b>playa
+     * natural</b>: si la capa de arriba es arena o grava, esa celda no es relleno del pueblo y no se toca.)
      */
     private static int ahogarElPico(ServerLevel level, int px, int pz, int g, int baseY, int sueloBajo) {
         int fondo = fondoBajoElRelleno(level, px, pz, Math.min(g, baseY - 1));
-        if (fondo > baseY - 3) {
-            return 0; // tierra firme a ras del agua (una playa): no es un pico colgado sobre el mar
-        }
         int puestos = 0;
         // La superficie del mar de una aldea de mar es la capa que se pisa menos uno: el pueblo se nivela a
         // `nivelDelAgua + 1` (ver `prepararTerreno`). Se rellena de agua hasta ahí, como el mar de al lado.

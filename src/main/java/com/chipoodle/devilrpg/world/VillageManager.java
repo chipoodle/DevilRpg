@@ -388,9 +388,16 @@ public final class VillageManager {
      *         <li>La <b>barraca</b> pasa a <b>dos pisos</b>: abajo la sala de armas (maniquíes, dianas, hogar y mesa
      *             de mapas) y arriba las {@code BARRACA_CAMAS} camas.</li>
      *       </ul></li>
+     *   <li>42: el <b>triangulito de tierra de las esquinas</b> de la aldea de mar (el jugador lo volvió a ver desde
+     *       arriba): el primer arreglo de los picos <b>se saltaba</b> las celdas cuyo fondo natural estaba a uno o dos
+     *       bloques del agua —y eran justo las que quedaban como un triangulito pegado a la isla—. Ahora, en una aldea
+     *       de mar, <b>toda</b> celda de esquina con relleno del pueblo se hunde hasta el fondo natural y se llena de
+     *       agua hasta la superficie del mar (lo que sí se respeta es una <b>playa natural</b>: si la capa de arriba es
+     *       arena o grava, no es relleno del pueblo y no se toca). Verificado sobre su guardado: de las 180 celdas de
+     *       pico, <b>174 pasan a agua</b> y las 6 restantes son arena natural.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 41;
+    public static final int CURRENT_LAYOUT = 42;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
