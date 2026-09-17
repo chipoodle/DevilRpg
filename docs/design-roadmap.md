@@ -1022,6 +1022,13 @@ variables que estén relacionadas con el radio del pueblo para que se ajuste"*.
     a 57 al este: si el punto de ronda cae ahí, se corre al pasillo entre el corral y el muro) y la **guarida** se
     aleja: su distancia mínima y máxima al objetivo pasan a derivarse de `RADIO_EXTERIOR` (**+36 / +56 = 110/130**),
     porque con 75 las dos obras se pisarían.
+  - **El camino de la granja** sale ahora de la **plaza** hasta el portón del corral: su portón está en el lado
+    **oeste** y mira al pueblo, así que el tramo va en sentido contrario al de antes (cuando el corral estaba fuera,
+    el camino bajaba del muro hacia fuera; de hecho el bucle se escribía de mayor a menor X y con el corral dentro no
+    recorría ni un bloque).
+  - **Los radios de búsqueda de los oficios** crecen con el pueblo: el **recolector** busca a 70 de sí mismo (antes
+    40: desde la plaza no veía el botín de las refriegas, que cae a **43-52** del centro), y el **leñador** busca
+    árboles a 40 y claros a 48 (antes 32 y 40: con el muro a 62 no alcanzaba el monte de fuera desde el centro).
 - **Verificado** con el comprobador del trazado (`build/trazado.py`): **0 solapes** entre las 13 construcciones, todas
   dentro de la muralla (la esquina más lejana es el corral, a **58,5** de 62) y los **7 puestos** de los aldeanos en
   patio libre (salvo el ganadero, que vive en el corral).
