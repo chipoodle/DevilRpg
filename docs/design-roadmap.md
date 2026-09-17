@@ -1099,7 +1099,26 @@ las camas"*.
     memoria del puesto de trabajo y `reponerProfesiones` le da uno de los suyos). Así ningún bloque de puesto de
     trabajo suelto —también los que traen las plantillas de las casas de vanilla— le roba un puesto al pueblo.
 
-### 3b.25 Lo que viene
+### 3b.25 Los RESTOS COLGADOS de la aldea de montaña (la nieve flotando)
+
+El jugador mandó una vista desde arriba de su aldea de **montaña**: *"quita también la nieve que se quedó flotando
+cuando la aldea se genera en una montaña"*.
+
+- **La causa**: al recortar el terreno que sobresale de la cota, hay cosas que **no cuentan como suelo** y se quedan
+  colgando. La principal es la **nieve polvo** (`powder_snow`): **no bloquea el movimiento**, así que `groundY` (que
+  usa el mapa de alturas `MOTION_BLOCKING`) **no la ve**, el recorte para en el bloque de debajo y la nieve se queda
+  **en el aire**. Medido en su guardado (aldea 2, centro 1398/1366, cota 95): **589 bloques de `powder_snow`**
+  flotando dentro del término del pueblo, que es justo lo que se veía desde arriba.
+- **El arreglo** (`limpiarRestosColgados`, al generar y en la migración): dentro del término del pueblo, **por encima
+  de la cota** y hasta **+56**, se retira lo que está **sin nada debajo** (aire): **nieve** (capa, bloque y polvo),
+  **hielo** (normal, compacto y azul) y **plantas** (matas, flores, hierba alta, plantones, cañas, cactus…). Lo
+  **apoyado se queda** (la nieve del suelo del pueblo en un bioma nevado es lo normal) y todo lo **construido** no es
+  ni nieve ni planta, así que no se toca (tejados, segundos pisos, faroles colgados, vallas, camas…).
+- **Verificado** con `build/verifica_restos.py`: los **589** bloques de nieve polvo de su aldea de montaña son los que
+  quita la pasada (todos por encima de la cota y sin apoyo).
+- **Migración 43** (`CURRENT_LAYOUT`).
+
+### 3b.26 Lo que viene
 - **Milicia**: ✅ completa (barraca, oficio, combate, escudo que bloquea, modelo propio, marcha a la guarida).
 - **Leñador/reforestador**: ✅ (tala y replanta, la cadena de la madera del herrero y ahora también **despeja los
   árboles que quedaron dentro de la muralla**).
@@ -1116,6 +1135,7 @@ las camas"*.
 - **La muralla al radio 62 (la granja, dentro)**: ✅ (ver 3b.23).
 - **Etapa F: tercer bancal, bancales cercados e iluminados, bosque, taberna con posada y cuartel de dos pisos**: ✅
   (ver 3b.24).
+- **Los restos colgados de la aldea de montaña (nieve polvo flotando)**: ✅ (ver 3b.25).
 - **Lo siguiente**: la **verificación en partida** de la cadena entera de la comida (huerta → despensa → cocina →
   raciones) y, de ahí, lo que pida el jugador.
 
