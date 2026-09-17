@@ -70,11 +70,52 @@ import java.util.Set;
  */
 public final class VillageGenerator {
 
-    /** Radio de la valla (aldea agrandada: de 29 a 36, +24% de superficie protegida y sitio para más casas). */
-    public static final int FENCE_RADIUS = 36;
+    /**
+     * Radio de la valla. El pueblo ha crecido por etapas (29 → 36 → <b>62</b>): con 36 la <b>granja de animales</b>
+     * (el corral anexo, que ocupa de 43 a 57 del centro) quedaba <b>fuera de la muralla</b>, y eso traía dos
+     * problemas medidos en la partida del jugador: los monstruos aparecían dentro del corral de noche y se comían al
+     * rebaño, y la guardia no llegaba a defenderlo. Con el muro a 62 <b>la granja entera cabe dentro</b> (el corral
+     * queda a 4 bloques del muro) y la aldea tiene sitio para repartir los solares, la iglesia, el taller, la barraca,
+     * las parcelas y la arboleda sin apelotonarlos en el centro.
+     */
+    public static final int FENCE_RADIUS = 62;
 
-    /** Esquinas de las parcelas de la granja (relativas al centro) y tamaño de cada parcela. */
-    private static final int[][] FARM_PLOTS = {{-20, 10}, {10, 6}};
+    /**
+     * Coordenadas del trazado, <b>relativas al centro</b> del pueblo. Antes eran las del trazado de radio 36 y todas
+     * cabían apretadas en el centro; con el muro a 62 se han <b>repartido</b> por el recinto (cada cuadrante a su
+     * aire, sin solaparse con el almacén, que sigue pegado a la plaza) para que el pueblo <b>llene</b> la muralla:
+     * <ul>
+     *   <li><b>Casas</b>: (-36,-7) oeste, (28,-16) este-norte, (-9,36) sur, (12,-32) norte (la grande).</li>
+     *   <li><b>Iglesia</b> (-21,-45) y <b>taller de los herreros</b> (3,-47), al norte, cada uno en su hueco.</li>
+     *   <li><b>Barraca de la milicia</b> (-45,22), al suroeste.</li>
+     *   <li><b>Parcelas de la granja</b> (-30,14) y (10,4): la primera al oeste (lejos de la barraca) y la segunda
+     *       pegada a la plaza, que es donde el granjero trabaja y deja el trigo.</li>
+     *   <li><b>Arboleda</b>: (34..40, -41..-31), en la diagonal noreste, con sitio de sobra.</li>
+     *   <li><b>Corral anexo</b>: a 50 del centro (de 43 a 57), ahora <b>dentro</b> de la muralla a 4 bloques de ella.</li>
+     * </ul>
+     * El <b>almacén</b> no se mueve (va con {@code VillageStorage}, pegado a la plaza): moverlo dejaría los cofres
+     * del pueblo —y todo lo que tiene dentro— tirados por el recinto viejo.
+     */
+    private static final int[][] TRAZADO = {
+            // x, z  y qué es (para leerlo de un vistazo)
+            {-36, -7},   // casa 1 (oeste)
+            {28, -16},   // casa 2 (este)
+            {-9, 36},    // casa 3 (sur)
+            {12, -32},   // casa 4 (norte, la grande)
+            {-21, -45},  // iglesia
+            {3, -47},    // taller de los herreros
+            {-45, 22},   // barraca de la milicia
+            {-30, 14},   // parcela de la granja 1
+            {10, 4},     // parcela de la granja 2
+    };
+
+    /** La posición del trazado {@code i} (ver {@link #TRAZADO}) relativa al centro. */
+    private static BlockPos trazado(BlockPos center, int i) {
+        return center.offset(TRAZADO[i][0], 0, TRAZADO[i][1]);
+    }
+
+    /** Esquinas de las dos parcelas de la granja (relativas al centro) y tamaño de cada parcela. */
+    private static final int[][] FARM_PLOTS = {{-30, 14}, {10, 4}};
     /** Ancho de la parcela (columnas de cultivo). */
     public static final int PLOT_WIDTH = 9;
     /**
@@ -111,6 +152,11 @@ public final class VillageGenerator {
 
     /** Ancho (bloques) del talud exterior que suaviza el borde de la aldea (meseta natural). */
     private static final int SLOPE_WIDTH = 10;
+    /**
+     * Hasta dónde llega la aldea <b>por fuera</b>: el final del talud. Es el número que hay que mirar desde fuera
+     * (lo usa la guarida para no pisar el pueblo) cuando cambie el radio de la muralla.
+     */
+    public static final int RADIO_EXTERIOR = LEVEL_RADIUS + SLOPE_WIDTH;
     /** Cuántos bloques baja el terreno a lo largo del talud. */
     private static final int SLOPE_HEIGHT = 5;
 
@@ -528,7 +574,7 @@ public final class VillageGenerator {
      * deja el edificio entero dentro de la valla.
      */
     public static BlockPos baseDeBarraca(BlockPos center) {
-        return center.offset(-26, 0, 13);
+        return trazado(center, 6);
     }
 
     /** Radio de la barraca (huella de 9x9). */
@@ -878,14 +924,15 @@ public final class VillageGenerator {
 
     /**
      * Caja de la <b>arboleda del pueblo</b> (relativa al centro): un hueco de <b>césped</b> en la diagonal noreste,
-     * entre el solar de la casa grande y la valla. Está libre de todo lo demás: los caminos radiales van por los ejes,
-     * el anillo de 29 pasa por fuera de la caja y los solares empiezan más adentro. Es un <b>rectángulo de 7x11</b>
-     * (el jugador pidió alargarlo hacia el sur, que es donde sobra sitio: hasta la valla hay hueco de sobra).
+     * entre el solar de la casa grande y la valla. Está libre de todo lo demás: los caminos radiales van por los ejes
+     * y los solares empiezan más adentro. Es un <b>rectángulo de 7x11</b> (el jugador pidió alargarlo hacia el sur,
+     * que es donde sobra sitio: hasta la valla hay hueco de sobra). Con la aldea al radio 62 la caja se ha llevado a
+     * la diagonal (34..40, -41..-31), donde está libre y a 50 del centro.
      */
-    private static final int ARBOLEDA_X0 = 20;
-    private static final int ARBOLEDA_X1 = 26;
-    private static final int ARBOLEDA_Z0 = -24;
-    private static final int ARBOLEDA_Z1 = -14;
+    private static final int ARBOLEDA_X0 = 34;
+    private static final int ARBOLEDA_X1 = 40;
+    private static final int ARBOLEDA_Z0 = -41;
+    private static final int ARBOLEDA_Z1 = -31;
 
     /**
      * ¿Ese punto (X/Z) cae dentro de la <b>arboleda del pueblo</b>? Es la <b>única excepción</b> a la regla de "dentro
@@ -1543,42 +1590,52 @@ public final class VillageGenerator {
 
     /**
      * Posiciones base de las casas de la aldea, relativas al centro (las mismas que usa {@link #generate}).
-     * Con la aldea agrandada (radio 36) los solares se han <b>repartido</b>: cada casa va a un cuadrante distinto, a
-     * unos 21-25 bloques del centro, dejando sitio entre ellas (y hueco para las casas que construya el obrero más
-     * adelante). Antes estaban a 16-18 y todo quedaba apelotonado.
+     * Con la aldea agrandada <b>al radio 62</b> los solares se han <b>repartido</b> por el recinto: cada casa va a un
+     * cuadrante distinto, a unos 33-38 bloques del centro, dejando sitio entre ellas y sin pisar el almacén (que
+     * sigue pegado a la plaza), las parcelas, la iglesia, el taller ni la barraca. Con el trazado de 36 estaban a
+     * 21-25 y, al crecer la muralla, se habrían quedado apelotonadas en el centro.
      */
     public static BlockPos[] basesDeCasas(BlockPos center) {
         return new BlockPos[]{
-                center.offset(-21, 0, -4),
-                center.offset(20, 0, -5),
-                center.offset(-5, 0, 21),
+                trazado(center, 0),
+                trazado(center, 1),
+                trazado(center, 2),
                 // La cuarta casa (la "grande", con cama extra) va al norte, en su propio cuadrante.
-                center.offset(13, 0, -23),
+                trazado(center, 3),
         };
     }
 
     /**
-     * Solares del <b>trazado ANTIGUO</b> (el de antes de agrandar la aldea al radio 36): las cuatro casas, la
-     * iglesia vieja y las dos parcelas de la granja. Están escritos aquí a mano y <b>no</b> se deben "arreglar":
-     * son las coordenadas del pasado, y su único uso es <b>limpiarlas</b> al migrar.
-     * <p>
-     * Hacen falta porque los solares nuevos caen a 20-25 del centro y los viejos a 16-18: al reconstruir la aldea
-     * en el sitio nuevo, las construcciones viejas se quedaban <b>de pie</b> (una al lado de la otra, con la iglesia
-     * vieja y el campo viejo incluidos) y el pueblo quedaba con el doble de edificios.
+     * Solares de los trazados <b>ANTIGUOS</b>: las cuatro casas y la iglesia del trazado <b>de radio 29</b>, más las
+     * cuatro casas, la iglesia, el <b>taller de los herreros</b> y la <b>barraca</b> del trazado <b>de radio 36</b>.
+     * Están escritos aquí a mano y <b>no</b> se deben "arreglar": son las coordenadas del pasado, y su único uso es
+     * <b>limpiarlas</b> al migrar (si no, el pueblo se queda con los edificios viejos de pie al lado de los nuevos).
      */
     private static final int[][] SOLARES_ANTIGUOS = {
+            // Trazado de radio 29 (el más viejo)
             {-17, -3}, {16, -4}, {-3, 17}, {10, -18}, // casas (la 4ª, la grande)
             {-9, -20},                                // iglesia
+            // Trazado de radio 36 (el que se sustituye al pasar al radio 62)
+            {-21, -4}, {20, -5}, {-5, 21}, {13, -23}, // casas (la 4ª, la grande)
+            {-12, -25},                               // iglesia
+            {2, -26},                                 // taller de los herreros
+            {-26, 13},                                // barraca de la milicia
     };
-    /** Esquinas de las parcelas de la granja del trazado antiguo (se devuelven a césped). */
-    private static final int[][] PARCELAS_ANTIGUAS = {{-16, 8}, {8, 6}};
-    /** Radio de la valla del trazado antiguo: su anillo hay que borrarlo, que si no queda un muro dentro. */
-    private static final int RADIO_MURO_ANTIGUO = 29;
+    /**
+     * Esquinas de las parcelas de la granja de los trazados antiguos (se devuelven a césped): las del radio 29 y las
+     * del 36.
+     */
+    private static final int[][] PARCELAS_ANTIGUAS = {{-16, 8}, {8, 6}, {-20, 10}, {10, 6}};
+    /**
+     * Radios de las vallas de los trazados antiguos: esos anillos hay que <b>borrarlos</b>, que si no queda un muro
+     * (o dos) cruzando el pueblo por medio. El muro de la aldea se rehace en {@code rehacerMuro} al radio actual.
+     */
+    private static final int[] RADIOS_MURO_ANTIGUOS = {29, 36};
 
     /**
      * <b>Limpia el trazado antiguo</b> de una aldea que se migra al trazado agrandado: quita las construcciones de
-     * los solares viejos (casas e iglesia), devuelve a césped las parcelas viejas de la granja y barre los caminos
-     * de tierra apisonada del trazado viejo (los caminos nuevos se vuelven a dibujar después, en
+     * los solares viejos (casas, iglesia, taller y barraca), devuelve a césped las parcelas viejas de la granja y
+     * barre los caminos de tierra apisonada del trazado viejo (los caminos nuevos se vuelven a dibujar después, en
      * {@link #actualizarCasas}).
      * <p>
      * Solo se lleva lo <b>construido</b>: el terreno, los troncos y las hojas no se tocan.
@@ -1591,8 +1648,7 @@ public final class VillageGenerator {
         int quitados = 0;
         // 1) Construcciones viejas. La caja va desde la base hacia +x/+z porque la base de una plantilla es su
         //    ESQUINA, no su centro (la mayor es la casa mediana, 13x11): de -2 a +13 en x y de -2 a +12 en z cubre
-        //    cualquier casa vieja con margen. NO se puede ensanchar más: la casa vieja de (-17,-3) está a 14 bloques
-        //    del centro y el kiosco (radio 3) empieza en x=-3, así que una caja más ancha le arrancaría el borde.
+        //    cualquier casa vieja con margen.
         for (int[] solar : SOLARES_ANTIGUOS) {
             BlockPos c = center.offset(solar[0], 0, solar[1]);
             sacarVecinosDe(level, c, center); // nadie dentro de una casa que se va a derribar
@@ -1617,26 +1673,29 @@ public final class VillageGenerator {
                 }
             }
         }
-        // 2) MURO VIEJO (radio 29): al agrandar la aldea ese anillo queda DENTRO del recinto, así que hay que
-        //    borrarlo o el pueblo se queda con una muralla de troncos y piedra cruzándolo por medio. Se hace AQUÍ,
-        //    antes de levantar las casas nuevas: el anillo de 29 cruza por dentro de dos de los solares nuevos
-        //    (los de (20,-5) y (-5,21)) y limpiarlo después les arrancaría trozos de pared.
+        // 2) MUROS VIEJOS (radios 29 y 36): al agrandar la aldea esos anillos quedan DENTRO del recinto, así que hay
+        //    que borrarlos o el pueblo se queda con una muralla (o dos) de troncos y piedra cruzándolo por medio. Se
+        //    hace AQUÍ, antes de levantar las casas nuevas: los anillos viejos cruzan por dentro de los solares
+        //    nuevos y limpiarlos después les arrancaría trozos de pared.
         int muroViejo = 0;
-        for (BlockPos p : anilloDelMuro(center, RADIO_MURO_ANTIGUO)) {
-            for (int y = nivel - 1; y <= nivel + 8; y++) {
-                BlockPos q = new BlockPos(p.getX(), y, p.getZ());
-                BlockState state = level.getBlockState(q);
-                boolean restosDeMuro = state.is(Blocks.OAK_LOG) || state.is(Blocks.COBBLESTONE)
-                        || state.is(Blocks.COBBLESTONE_STAIRS) || state.is(Blocks.COBBLESTONE_WALL)
-                        || state.is(Blocks.COBBLESTONE_SLAB);
-                if (!restosDeMuro) {
-                    continue;
+        for (int radioViejo : RADIOS_MURO_ANTIGUOS) {
+            for (BlockPos p : anilloDelMuro(center, radioViejo)) {
+                for (int y = nivel - 1; y <= nivel + 8; y++) {
+                    BlockPos q = new BlockPos(p.getX(), y, p.getZ());
+                    BlockState state = level.getBlockState(q);
+                    boolean restosDeMuro = state.is(Blocks.OAK_LOG) || state.is(Blocks.COBBLESTONE)
+                            || state.is(Blocks.COBBLESTONE_STAIRS) || state.is(Blocks.COBBLESTONE_WALL)
+                            || state.is(Blocks.COBBLESTONE_SLAB);
+                    if (!restosDeMuro) {
+                        continue;
+                    }
+                    colocar(level, q, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
+                    muroViejo++;
                 }
-                colocar(level, q, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
-                muroViejo++;
+                // El relleno de tierra del muro viejo se devuelve a césped: si no, queda una franja de tierra a la
+                // vista.
+                ponerCesped(level, p.getX(), p.getZ(), nivel);
             }
-            // El relleno de tierra del muro viejo se devuelve a césped: si no, queda una franja de tierra a la vista.
-            ponerCesped(level, p.getX(), p.getZ(), nivel);
         }
         // 3) Parcelas viejas de la granja: tierra de cultivo, acequia, losas, cultivos y composteros se devuelven a
         //    césped. `farm()` corre DESPUÉS y vuelve a hacer las parcelas en su sitio nuevo.
@@ -1689,7 +1748,7 @@ public final class VillageGenerator {
 
     /**
      * Limpia la <b>vegetación del anexo</b>: el terreno que entra en el recinto al agrandar la aldea (del muro
-     * viejo hacia fuera, radio {@link #RADIO_MURO_ANTIGUO} - 3 hasta el final del talud) estaba <b>fuera</b> de la
+     * viejo hacia fuera, radio {@code RADIOS_MURO_ANTIGUOS[0]} - 3 hasta el final del talud) estaba <b>fuera</b> de la
      * aldea, así que puede tener árboles que se quedarían dentro del pueblo, sobre el talud o atravesando el muro
      * nuevo.
      * <p>
@@ -1697,7 +1756,8 @@ public final class VillageGenerator {
      * troncos), así que un árbol en un hoyo acaba con el hoyo rellenado a su alrededor y el árbol dentro. Se salta
      * la caja del <b>almacén</b>, cuyos postes también son troncos y caen justo en el borde de la banda.
      */
-    public static void limpiarVegetacionDelAnexo(ServerLevel level, BlockPos center) {        int rMin = RADIO_MURO_ANTIGUO - 3;
+    public static void limpiarVegetacionDelAnexo(ServerLevel level, BlockPos center) {
+        int rMin = RADIOS_MURO_ANTIGUOS[0] - 3;
         int rMax = LEVEL_RADIUS + SLOPE_WIDTH;
         BlockPos almacen = VillageStorage.centro(center);
         int quitados = 0;
@@ -2020,7 +2080,7 @@ public final class VillageGenerator {
 
     /** Dónde va la iglesia de la aldea (repartida también con la aldea agrandada). */
     private static BlockPos baseDeIglesia(BlockPos center) {
-        return center.offset(-12, 0, -25);
+        return trazado(center, 4);
     }
 
     /**
@@ -2053,7 +2113,7 @@ public final class VillageGenerator {
     };
 
     private static BlockPos baseDeHerreria(BlockPos center) {
-        return center.offset(2, 0, -26);
+        return trazado(center, 5);
     }
 
     /**
@@ -3670,20 +3730,21 @@ public final class VillageGenerator {
      * Los sitios fijos de aldeano de la aldea (uno por profesión), relativos al centro. Son <b>7</b> puestos
      * (granjero, dos herreros, clérigo, el holgazán recolector, el ganadero del corral y el cocinero de la cocina).
      * <p>
-     * Van <b>repartidos en un anillo</b> a unos 13-15 bloques de la plaza: antes estaban apelotonados al norte
-     * (x -11..14, z -11..2) y con los solares nuevos, que empiezan a 20-21 del centro, alguno podía caer dentro de
-     * una casa. El anillo de 13-15 queda entre el kiosco (radio 3) y los solares, siempre en patio abierto.
+     * Van <b>repartidos en un anillo</b> a unos 24-27 bloques de la plaza, entre el kiosco (radio 3) y los solares
+     * nuevos, que con el muro a 62 empiezan a 33-38: siempre en patio abierto y sin caer dentro de una casa, del
+     * almacén ni de las parcelas de la granja. (Con el trazado de 36 el anillo estaba a 13-15; al crecer la aldea se
+     * ha llevado al doble para que el centro no quede apelotonado.)
      * <p>
-     * Los dos últimos puestos <b>no</b> van en ese anillo: el ganadero vive en el corral anexo (fuera de la valla) y
-     * el cocinero en la plaza. Ninguno de los dos puede caer bajo un tejado (el del cobertizo del corral o el del
-     * kiosco): {@code groundY} devolvería la altura del TEJADO y el aldeano aparecería <b>encima</b> de él.
+     * Los dos últimos puestos <b>no</b> van en ese anillo: el ganadero vive en el corral y el cocinero en la plaza.
+     * Ninguno de los dos puede caer bajo un tejado (el del cobertizo del corral o el del kiosco): {@code groundY}
+     * devolvería la altura del TEJADO y el aldeano aparecería <b>encima</b> de él.
      */
     private static final BlockPos[] VILLAGER_SPOTS = {
-            new BlockPos(-13, 0, -8), new BlockPos(12, 0, -8), new BlockPos(-4, 0, 13),
-            new BlockPos(15, 0, 3), new BlockPos(4, 0, 13),
-            // El GANADERO vive en su corral, FUERA de la valla (a 47 del centro, dentro del corral y fuera del
-            // cobertizo: si el punto cayera bajo su tejado, `groundY` devolvería la altura del TEJADO y el aldeano
-            // aparecería encima de él).
+            new BlockPos(-22, 0, -14), new BlockPos(21, 0, -14), new BlockPos(-7, 0, 22),
+            new BlockPos(26, 0, 5), new BlockPos(7, 0, 22),
+            // El GANADERO vive en su corral (a 47 del centro, dentro del corral —que ahora está DENTRO de la muralla—
+            // y fuera del cobertizo: si el punto cayera bajo su tejado, `groundY` devolvería la altura del TEJADO y
+            // el aldeano aparecería encima de él).
             new BlockPos(47, 0, 0),
             // El COCINERO (etapa E) en la plaza, junto al kiosco y su cocina. Tampoco puede caer bajo el tejado del
             // kiosco: `groundY` devolvería el tejado y el aldeano nacería ENCIMA de él.

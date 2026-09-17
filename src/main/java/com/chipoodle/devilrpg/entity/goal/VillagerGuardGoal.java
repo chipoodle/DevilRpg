@@ -715,7 +715,15 @@ public class VillagerGuardGoal extends Goal {
         double angulo = Math.toRadians((indice * 137.5D + paso * 47.0D) % 360.0D);
         int x = center.getX() + (int) Math.round(Math.cos(angulo) * RADIO_RONDA);
         int z = center.getZ() + (int) Math.round(Math.sin(angulo) * RADIO_RONDA);
-        return new BlockPos(x, nivel, z);
+        BlockPos punto = new BlockPos(x, nivel, z);
+        // EL CORRAL no se pisa en la ronda: desde que la muralla creció al radio 62 la granja está DENTRO y su valla
+        // ocupa de 43 a 57 al este, así que un punto de la ronda de ese lado caería dentro del corral y el guardia se
+        // pasaría el día empujando la valla. Si cae dentro, se corre hacia el muro: queda en el pasillo entre el
+        // corral y la valla, que es por donde de verdad se pasa (y desde ahí ve a los animales).
+        if (VillageGenerator.estaEnElAnexo(center, punto)) {
+            punto = new BlockPos(center.getX() + VillageGenerator.FENCE_RADIUS - 3, nivel, z);
+        }
+        return punto;
     }
 
     /** ¿Este paso de la ronda le toca al <b>corral anexo</b>? (lo miran el destino y la etiqueta: uno solo) */

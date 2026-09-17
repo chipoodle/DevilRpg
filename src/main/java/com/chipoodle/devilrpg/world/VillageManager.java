@@ -358,9 +358,19 @@ public final class VillageManager {
      *       las refriegas) y cada oficio tiene su goal de <b>recogida por oficio</b> (el herrero el hierro y el equipo
      *       de los enemigos, el granjero el grano, el ganadero la carne, el cocinero lo que cocina, el clérigo lo
      *       suyo), que guarda la comida en la despensa y los materiales en el almacén.</li>
+     *   <li>40: <b>LA MURALLA SE VA AL RADIO 62</b> (lo pidió el jugador: "necesitamos que la villa sea más grande
+     *       para que quepa la granja dentro"): con el muro a 36 el <b>corral anexo</b> (que ocupa de 43 a 57 del
+     *       centro) quedaba <b>fuera</b>, y eso costaba medido: los monstruos aparecían dentro del corral de noche y
+     *       se comían al rebaño, y la guardia no llegaba a defenderlo. Con el muro a 62 <b>la granja entera cabe
+     *       dentro</b> (a 4 bloques de la valla) y el trazado se ha <b>repartido</b> por el recinto: las cuatro casas
+     *       de 21-25 pasan a 33-38 del centro, la iglesia, el taller y la barraca se van a sus cuadrantes, las
+     *       parcelas de la granja se separan (una al oeste y otra pegada a la plaza), la arboleda se lleva a la
+     *       diagonal noreste y los sitios de los aldeanos al doble de distancia. Los muros viejos (29 y 36) y las
+     *       construcciones del trazado de 36 se <b>derriban</b> al migrar: si no, el pueblo se queda con dos
+     *       murallas y con los edificios viejos al lado de los nuevos.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 39;
+    public static final int CURRENT_LAYOUT = 40;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -379,11 +389,13 @@ public final class VillageManager {
      * 13 = con el <b>nivelado que respeta los troncos</b> (el margen de la parcela de la granja le borraba a la casa
      * una fila entera de postes de la pared), 14 = con <b>más camas</b> (hasta 4 por casa, para que duerman los niños)
      * y una <b>segunda puerta</b> en la pared de enfrente, 15 = en los <b>solares nuevos</b> de la aldea agrandada
-     * (radio 36; antes a 16-18 del centro, ahora a 20-25 y repartidas por cuadrantes).
+     * (radio 36; antes a 16-18 del centro, ahora a 20-25 y repartidas por cuadrantes), 16 = en los <b>solares del
+     * trazado de radio 62</b> (a 33-38 del centro, repartidos para que la aldea llene la muralla nueva y para que la
+     * granja de animales quepa dentro).
      * Se sube cuando cambia el número, el tipo o la <b>altura</b> de las construcciones, y la migración solo hace lo
      * que falte (rehacer una casa borra lo que tenga dentro).
      */
-    public static final int CURRENT_HOUSES = 15;
+    public static final int CURRENT_HOUSES = 16;
     /** Radio alrededor del obrero en el que se buscan huecos que reponer (derivado del radio de la aldea). */
     private static final double REPAIR_SEARCH_RADIUS = VillageGenerator.FENCE_RADIUS + 4.0D;
     /** Cuánto puede estar el hueco por encima / por debajo del obrero para que intente alcanzarlo. */
