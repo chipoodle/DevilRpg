@@ -255,3 +255,17 @@ private void adjustAttributesBasedOnSpawnDistance() {
 | `baseHealth` | 20.0 | Vida base. |
 | `baseSpeed` | 0.2 | Velocidad base. |
 | `baseDamage` | 3.25 | Daño base. |
+
+## 9) Los logs del escalado (a DEBUG y solo en el servidor)
+
+Las dos trazas del escalado (`"Zombie Spawned at: ..."` y `"Attributes Scaled => ..."`, y su equivalente del
+`SculkCultivator`) son **log de depuración**: van a **DEBUG** y **solo en el servidor**.
+
+- **Por qué solo en el servidor**: `setPos` corre también en el cliente, así que cada zombie se registraba **dos
+  veces** y con **números distintos** (el cliente aplicaba otra distancia y sacaba hasta un ataque diferente).
+- **Por qué se salta la posición (0,0,0)**: el primer `setPos` de la construcción de la entidad es el origen, así
+  que la mitad de las líneas decían `BlockPos{x=0, y=0, z=0}` con una distancia que no era la del bicho. Entre eso y
+  el doble registro, una tanda de 3 zombis dejaba **~12 líneas INFO**.
+- **Para medirlo**: sube el nivel de log del mod a DEBUG (o pon un punto de ruptura); las trazas siguen ahí, con la
+  **ancla del jugador** (no su posición: es el punto con el que se escala) y la distancia.
+

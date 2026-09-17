@@ -734,13 +734,47 @@ aldeano** y que la cría dependa de que haya **cama libre**.
 - **Pendiente**: verlo en partida (hay que reiniciar el cliente para cargar el mod) y **ajustar los números** del
   hambre con el log de medida (lo que se come por minuto contra lo que producen la huerta y el corral).
 
-### 3b.16 Lo que viene
+### 3b.16 El GALLINERO y los PORTONES de valla (etapa E)
+
+Lo pidió el jugador: *"la puerta del corral es una puerta normal y debe ser puerta de corral, para que se conecte
+correctamente; el aldeano debe poder abrirla y cerrarla"* y *"una granja de pollos que no se salgan del corral, que
+estén encerrados, y que los huevos también se recojan"*.
+
+- **Portones de VALLA** (`VillageGenerator.asegurarPortones`): el corral y el gallinero llevan **puerta de valla**, que
+  es lo que **encaja con la valla** (la de madera quedaba como un parche suelto). En las aldeas que ya tenían corral
+  se retira la puerta vieja **entera** (sus dos mitades). Es idempotente y va **aparte** de `asegurarGranjaAnexa`
+  —que sale antes de tiempo cuando el corral ya está— para que llegue también a esas aldeas.
+- **Y quien los abre es el PUEBLO** (`VillagerGateGoal`): el juego **no deja** que un aldeano abra una puerta de
+  valla (su cerebro solo sabe abrir `DoorBlock`), así que sin este goal el ganadero se quedaría **fuera del
+  gallinero** (sin poder recoger los huevos) o **encerrado** en el corral. El goal **no ocupa banderas**: no mueve al
+  aldeano, así que va **a la vez** que su faena (caminar, cuidar el rebaño, patrullar). Dos reglas para que sea
+  educado: **solo abre** con un aldeano pegado al portón (el ganado no se escapa por un portón abierto todo el día) y
+  **solo cierra** el que abrió el propio pueblo (si lo abre el jugador, manda él; se lleva la cuenta en un registro
+  de portones "nuestros"). Se le pone a **todos los adultos** de la aldea: el ganadero vive ahí, la guardia patrulla
+  el corral y cualquiera puede bajar al anexo.
+- **El GALLINERO** (`VillageGenerator.gallinero`): un corralillo de valla **con tejado** (interior de 5x2) en la franja
+  **norte** del corral, compartiendo su valla por el oeste y el norte, con **paja para anidar**, farol y su **portón**
+  en la pared sur. Una valla sola **no encierra a una gallina** (aletea y salta): el **techo** es lo que de verdad las
+  deja encerradas, y además así los **huevos caen dentro** del corralillo, donde el ganadero los recoge (entra por el
+  portón, que el pueblo le abre). Las 4 gallinas del rebaño inicial **se sueltan ya dentro** y, al construir el
+  gallinero, las que anden sueltas por el corral **se meten** dentro (una sola vez).
+- **No le quita sitio a nadie**: la franja norte estaba libre (el cobertizo está al este, el bebedero al sur) y los
+  **puntos de patrulla de la guardia** se corren a `base-2 … base+6`: con los viejos (`base-4`) un guardia habría
+  tenido su punto **dentro** del gallinero y se habría pasado la ronda chocando con la valla.
+- **Migración 33** (`CURRENT_LAYOUT`): las aldeas ya construidas reciben el gallinero y los portones, y todo entra en
+  el **plano** para que el obrero lo reponga (invariante I8).
+- **Pendiente** (decisión del jugador, para más adelante): si los huevos se **cocinan** (un alimento nuevo) o se
+  **guardan** para que el cocinero haga **pasteles** con alguna mejora y materiales. De momento solo se **recogen** y
+  van al almacén, como hasta ahora.
+
+### 3b.17 Lo que viene
 
 - **Milicia**: ✅ completa (barraca, oficio, combate, escudo que bloquea, modelo propio, marcha a la guarida).
 - **Leñador/reforestador**: ✅ (tala y replanta, y la cadena de la madera del herrero).
 - **Granja anexa de animales**: ✅ (corral fuera de la valla, ganadero, cría, sacrificio de exceso y patrullaje de
   la guardia).
 - **Cocinero, hambre por aldeano y cría por camas**: ✅ (ver 3b.15).
+- **Gallinero y portones de valla**: ✅ (ver 3b.16).
 - **Lo siguiente**: la **verificación en partida** de la cadena entera de la comida (huerta → despensa → cocina →
   raciones) y, de ahí, lo que pida el jugador.
 

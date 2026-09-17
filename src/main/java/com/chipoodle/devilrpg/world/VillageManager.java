@@ -320,9 +320,13 @@ public final class VillageManager {
      *       mesa sobre la plataforma del kiosco, al lado de la despensa. Con ella llega el <b>séptimo puesto</b>, el
      *       cocinero, que convierte la carne cruda y las patatas en su versión cocinada: en el contador de comida de
      *       la aldea eso es el <b>doble</b> (crudo 2 puntos, cocinado 4).</li>
+     *   <li>33: el <b>GALLINERO</b> del corral anexo (etapa E, lo pidió el jugador: "una granja de pollos... que estén
+     *       encerrados y que los huevos se recojan") y los <b>PORTONES DE VALLA</b>: el corral y el gallinero llevan
+     *       puerta de valla (que encaja con la valla) en vez de la puerta de madera, y las abre y cierra el pueblo con
+     *       su goal, porque el juego no deja que un aldeano abra una puerta de valla.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 32;
+    public static final int CURRENT_LAYOUT = 33;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -1144,6 +1148,12 @@ public final class VillageManager {
             // GRANJA ANEXA de animales (etapa D): FUERA de la valla, al este, con su corral y su cobertizo. Va aquí
             // por el mismo motivo: sus bloques tienen que entrar en el plano nuevo para que el obrero la reponga.
             VillageGenerator.asegurarGranjaAnexa(level, center);
+            // GALLINERO y PORTONES del anexo (etapa E): los pollos encerrados con su tejado y las puertas de VALLA
+            // (en vez de la puerta de madera). Van aparte de `asegurarGranjaAnexa` —que sale antes de tiempo si el
+            // corral ya está— para que lleguen también a las aldeas que ya tenían corral, y antes de tirar el plano
+            // para que entren en él.
+            VillageGenerator.asegurarPortones(level, center);
+            VillageGenerator.asegurarGallinero(level, center);
             // COCINA del pueblo (etapa E): el ahumador del cocinero, en el kiosco. Va antes de tirar el plano para
             // que entre en él y el obrero lo reponga.
             VillageGenerator.asegurarCocina(level, center);
@@ -1173,6 +1183,12 @@ public final class VillageManager {
         // GRANJA ANEXA de animales (etapa D): igual (idempotente). Si el jugador se llevó la valla, se vuelve a
         // levantar; si está, no se toca (reconstruirla borraría su cobertizo y lo que tenga dentro).
         VillageGenerator.asegurarGranjaAnexa(level, center);
+        // GALLINERO y PORTONES del anexo (etapa E): idempotentes. El portón sustituye a la puerta vieja de madera (y
+        // lo abre el pueblo con `VillagerGateGoal`, porque el juego no deja que un aldeano abra una puerta de valla)
+        // y el gallinero mete a los pollos en un corralillo con tejado, para que no se salgan y sus huevos queden
+        // dentro, a mano del ganadero.
+        VillageGenerator.asegurarPortones(level, center);
+        VillageGenerator.asegurarGallinero(level, center);
         // COCINA del pueblo (etapa E): el ahumador y la mesa del cocinero, en la plataforma del kiosco. Idempotente
         // (va aparte de `asegurarKiosco` porque aquél sale antes de tiempo cuando el kiosco ya está).
         VillageGenerator.asegurarCocina(level, center);
@@ -1241,6 +1257,14 @@ public final class VillageManager {
             if (!villager.isBaby() && !VillagerGuardGoal.esGuardia(villager)
                     && villager.getVillagerData().getProfession() == VillagerProfession.BUTCHER) {
                 asegurarGoalDeCocinero(villager, center, objectiveIndex);
+            }
+        }
+        // PORTONES del anexo (etapa E): los abre y los cierra el PUEBLO, porque el juego no deja que un aldeano abra
+        // una puerta de valla. Se le pone a TODOS los adultos (al ganadero, que vive ahí; a la guardia, que patrulla
+        // el corral; y a cualquiera que baje al anexo), y no ocupa banderas: va a la vez que su faena.
+        for (Villager villager : aldeanos) {
+            if (!villager.isBaby()) {
+                asegurarGoalDePortones(villager, center);
             }
         }
         // GUARDIA (milicia): los aldeanos adultos que SOBRAN (cubiertos los puestos fijos: granjero, los dos
@@ -1662,6 +1686,20 @@ public final class VillageManager {
         }
         villager.goalSelector.addGoal(4, new com.chipoodle.devilrpg.entity.goal.VillagerCookGoal(villager,
                 center, objectiveIndex));
+    }
+
+    /**
+     * Le pone a un aldeano del pueblo el goal de los <b>portones</b> del anexo (etapa E): abre el suyo al acercarse y
+     * lo cierra al pasar. Prioridad <b>2</b> y <b>sin banderas</b>: no mueve al aldeano, así que va a la vez que su
+     * faena (si pidiera {@code MOVE}, se la interrumpiría).
+     */
+    private static void asegurarGoalDePortones(Villager villager, BlockPos center) {
+        for (WrappedGoal wrapped : villager.goalSelector.getAvailableGoals()) {
+            if (wrapped.getGoal() instanceof com.chipoodle.devilrpg.entity.goal.VillagerGateGoal) {
+                return;
+            }
+        }
+        villager.goalSelector.addGoal(2, new com.chipoodle.devilrpg.entity.goal.VillagerGateGoal(villager, center));
     }
 
     /** Le pone al <b>herrero</b> su goal de taller (coger material, fabricar en su puesto y dejarlo en el almacén). */

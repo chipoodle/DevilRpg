@@ -641,7 +641,14 @@ public class AggressiveZombieEntity extends Zombie {
                 if (playerSpawn != null) {
                     spawnDistance = Math.sqrt(this.blockPosition().distSqr(new BlockPos((int) playerSpawn.x, (int) playerSpawn.y, (int) playerSpawn.z)));
                     spawnThreat = ThreatLevel.current(this.level());
-                    DevilRpg.LOGGER.info("Zombie Spawned at: {} | Player Spawn Point: {} | Distance: {} | Threat: {}", this.blockPosition(), playerSpawn, spawnDistance, String.format("%.2f", spawnThreat));
+                    // El log va a DEBUG y SOLO en el servidor: esto corre también en el cliente (que escalaba con
+                    // OTRA distancia y sacaba un ataque distinto) y el primer `setPos` de la construcción es
+                    // (0,0,0), así que el log se llenaba de "spawned at 0,0,0" duplicado (12 líneas INFO por tanda
+                    // de 3 zombis). Y solo cuando la entidad YA está colocada en su sitio.
+                    if (!this.level().isClientSide
+                            && (this.getX() != 0.0D || this.getY() != 0.0D || this.getZ() != 0.0D)) {
+                        DevilRpg.LOGGER.debug("Zombie Spawned at: {} | Player Spawn Point: {} | Distance: {} | Threat: {}", this.blockPosition(), playerSpawn, spawnDistance, String.format("%.2f", spawnThreat));
+                    }
                 }
             }
         }
@@ -667,12 +674,15 @@ public class AggressiveZombieEntity extends Zombie {
         // escalado de vida apenas se notaba en combate. El vex helado ya lo hacía así.
         this.setHealth(this.getMaxHealth());
 
-        DevilRpg.LOGGER.info("Attributes Scaled => scaleFactor: {} | DISTANCE: {} | MAX_HEALTH: {} | MOVEMENT_SPEED: {} | ATTACK_DAMAGE: {}",
-                scaleFactor,
-                spawnDistance,
-                Objects.requireNonNull(this.getAttribute(Attributes.MAX_HEALTH)).getValue(),
-                Objects.requireNonNull(this.getAttribute(Attributes.MOVEMENT_SPEED)).getValue(),
-                Objects.requireNonNull(this.getAttribute(Attributes.ATTACK_DAMAGE)).getValue());
+        // El log, a DEBUG y solo en el servidor (el cliente aplica su propia cuenta y saldría con otros números).
+        if (!this.level().isClientSide) {
+            DevilRpg.LOGGER.debug("Attributes Scaled => scaleFactor: {} | DISTANCE: {} | MAX_HEALTH: {} | MOVEMENT_SPEED: {} | ATTACK_DAMAGE: {}",
+                    scaleFactor,
+                    spawnDistance,
+                    Objects.requireNonNull(this.getAttribute(Attributes.MAX_HEALTH)).getValue(),
+                    Objects.requireNonNull(this.getAttribute(Attributes.MOVEMENT_SPEED)).getValue(),
+                    Objects.requireNonNull(this.getAttribute(Attributes.ATTACK_DAMAGE)).getValue());
+        }
     }
 
     /**

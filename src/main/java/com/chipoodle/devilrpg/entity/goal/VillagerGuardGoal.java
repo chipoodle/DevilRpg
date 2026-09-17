@@ -642,7 +642,9 @@ public class VillagerGuardGoal extends Goal {
         if (paso % RONDA_CADA_ANEXO == 0 && VillageGenerator.anexoConstruido(level, center)) {
             BlockPos corral = VillageGenerator.puntoDeApoyoAnexo(level, center);
             // Cada guardia se coloca en un sitio distinto del corral (si no, los cuatro se apilan en el mismo bloque).
-            return corral.offset(0, 0, (indice % 5) * 2 - 4);
+            // La ronda va de `base-2` a `base+6` y no más al norte: el norte del corral es el GALLINERO (etapa E) y
+            // un punto dentro de él dejaría al guardia dando vueltas contra la valla.
+            return corral.offset(0, 0, (indice % 5) * 2 - 2);
         }
         double angulo = Math.toRadians((indice * 137.5D + paso * 47.0D) % 360.0D);
         int x = center.getX() + (int) Math.round(Math.cos(angulo) * RADIO_RONDA);

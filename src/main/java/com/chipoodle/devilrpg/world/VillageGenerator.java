@@ -668,6 +668,85 @@ public final class VillageGenerator {
         return new BlockPos(base.getX() - ANEXO_RADIO + 3, nivel, base.getZ());
     }
 
+    // --- EL GALLINERO (los pollos encerrados) y los PORTONES (etapa E) -------------------------------
+
+    /**
+     * Caja del <b>gallinero</b> (interior, relativa a la base del corral): la franja <b>norte</b>, pegada a la valla
+     * del corral por el oeste y el norte. Ahí no estorba a nada: el cobertizo está al este, el bebedero al sur y la
+     * <b>línea de patrulla de la guardia</b> ({@code x = base-4}, {@code z} de {@code base-2} a {@code base+6}) pasa
+     * fuera de la caja a propósito: un guardia no tiene que acabar dentro de un corral de pollos.
+     */
+    private static final int GALLINERO_X0 = -6;
+    private static final int GALLINERO_X1 = -2;
+    private static final int GALLINERO_Z0 = -6;
+    private static final int GALLINERO_Z1 = -5;
+    /** X (relativa a la base) del <b>portón</b> del gallinero, en el centro de su pared sur. */
+    private static final int GALLINERO_PUERTA_X = -4;
+
+    /** El <b>portón del corral</b> (en su valla oeste, mirando al camino de la aldea). */
+    public static BlockPos portonDelCorral(BlockPos center, int nivel) {
+        BlockPos base = baseDeAnexo(center);
+        return new BlockPos(base.getX() - ANEXO_RADIO, nivel, base.getZ());
+    }
+
+    /** El <b>portón del gallinero</b> (en su pared sur, mirando al corral). */
+    public static BlockPos portonDelGallinero(BlockPos center, int nivel) {
+        BlockPos base = baseDeAnexo(center);
+        return new BlockPos(base.getX() + GALLINERO_PUERTA_X, nivel, base.getZ() + GALLINERO_Z1 + 1);
+    }
+
+    /** Dónde se sueltan (y se meten) las gallinas: dentro del gallinero, en su esquina noroeste. */
+    public static BlockPos centroDelGallinero(BlockPos center, int nivel) {
+        BlockPos base = baseDeAnexo(center);
+        return new BlockPos(base.getX() + GALLINERO_X0, nivel, base.getZ() + GALLINERO_Z0);
+    }
+
+    /**
+     * Asegura los <b>portones de valla</b> del anexo en las aldeas que ya tenían el corral con una <b>puerta de
+     * madera</b>: la puerta no encaja con la valla y, además, el juego <b>sí</b> deja que un aldeano la abra (el
+     * portón no: lo abre el pueblo con {@code VillagerGateGoal}). Es idempotente y va <b>aparte</b> de
+     * {@code asegurarGranjaAnexa} porque aquél sale antes de tiempo cuando el corral ya está.
+     */
+    public static void asegurarPortones(ServerLevel level, BlockPos center) {
+        int nivel = cotaDeLaPlaza(level, center);
+        if (nivel <= level.getMinBuildHeight() + 1 || !anexoConstruido(level, center)) {
+            return; // sin cota o sin corral no hay portón que poner
+        }
+        BlockPos porton = portonDelCorral(center, nivel);
+        BlockState actual = level.getBlockState(porton);
+        if (actual.is(Blocks.OAK_FENCE_GATE) || !actual.is(Blocks.OAK_DOOR)) {
+            return; // ya hay portón, o ahí no hay una puerta vieja que cambiar (no se toca lo del jugador)
+        }
+        // Se va la puerta ENTERA (sus dos mitades: si no, queda media puerta flotando) y entra el portón.
+        colocar(level, porton.above(), Blocks.AIR.defaultBlockState(), 3);
+        colocar(level, porton, Blocks.OAK_FENCE_GATE.defaultBlockState()
+                .setValue(FenceGateBlock.FACING, Direction.WEST)
+                .setValue(FenceGateBlock.OPEN, false)
+                .setValue(FenceGateBlock.IN_WALL, false), 3);
+        DevilRpg.LOGGER.info("[Village] Aldea en {}: la puerta del corral anexo pasa a ser un porton de valla",
+                center);
+    }
+
+    /**
+     * Asegura el <b>gallinero</b> (el corralillo de los pollos: valla con <b>tejado</b> y su portón) en las aldeas
+     * que ya tenían el corral sin él. Idempotente: se comprueba por una <b>valla testigo</b> (la esquina sureste,
+     * segunda hilada), así que si el jugador se lleva una valla suelta no se reconstruye el gallinero encima.
+     */
+    public static void asegurarGallinero(ServerLevel level, BlockPos center) {
+        int nivel = cotaDeLaPlaza(level, center);
+        if (nivel <= level.getMinBuildHeight() + 1 || !anexoConstruido(level, center)) {
+            return;
+        }
+        BlockPos base = baseDeAnexo(center);
+        BlockPos testigo = new BlockPos(base.getX() + GALLINERO_X1 + 1, nivel + 1, base.getZ() + GALLINERO_Z1 + 1);
+        if (level.getBlockState(testigo).is(Blocks.OAK_FENCE)) {
+            return; // el gallinero ya está
+        }
+        gallinero(level, base, nivel);
+        DevilRpg.LOGGER.info("[Village] Aldea en {}: gallinero del corral anexo construido en {} (pollos encerrados)",
+                center, centroDelGallinero(center, nivel));
+    }
+
     /**
      * Asegura la <b>granja anexa de animales</b> (corral de 15x15 con cobertizo, bebedero y camino desde la puerta
      * este) en una aldea que todavía no la tiene. Es <b>idempotente</b> y, como el kiosco o la barraca, comprueba el
@@ -705,8 +784,9 @@ public final class VillageGenerator {
 
     /**
      * Construye el corral anexo: huella <b>nivelada a la cota del pueblo</b> (como las casas y la barraca: sin
-     * zanjas ni escalones), camino desde la puerta este del muro, valla de roble con <b>puerta de madera</b> (los
-     * aldeanos la abren, el ganado no), cobertizo con cama y telar del ganadero, bebedero de agua y heno.
+     * zanjas ni escalones), camino desde la puerta este del muro, valla de roble con <b>portón de valla</b> (que el
+     * pueblo abre con {@code VillagerGateGoal}: el juego no deja que un aldeano abra una puerta de valla),
+     * <b>gallinero</b> con tejado para los pollos, cobertizo con cama y telar del ganadero, bebedero de agua y heno.
      * <p>
      * Todo pasa por {@link #colocar}, así que <b>entra en el plano</b> (invariante I8) y el obrero lo repone.
      */
@@ -728,23 +808,23 @@ public final class VillageGenerator {
                 colocar(level, new BlockPos(x, nivel - 1, bz + dz), Blocks.DIRT_PATH.defaultBlockState(), 3);
             }
         }
-        // 2) LA VALLA: anillo de valla de roble (los animales no saltan 1,5 bloques) con la PUERTA en el lado OESTE,
-        //    mirando al camino de la aldea. La puerta es la clave: los aldeanos la ABREN y los animales no, así que
-        //    el ganadero entra y sale y el ganado se queda dentro.
+        // 2) LA VALLA: anillo de valla de roble (los animales no saltan 1,5 bloques) con el PORTÓN en el lado OESTE,
+        //    mirando al camino de la aldea. Es una puerta de VALLA (no una de madera): encaja con la valla, que era
+        //    lo que no cuadraba. OJO: el juego NO deja que un aldeano abra una puerta de valla, así que el pueblo se
+        //    la abre y se la cierra con su propio goal (`VillagerGateGoal`): el ganadero entra y sale y el ganado no.
         for (int dx = -r; dx <= r; dx++) {
             for (int dz = -r; dz <= r; dz++) {
                 boolean borde = Math.abs(dx) == r || Math.abs(dz) == r;
                 if (!borde || (dx == -r && dz == 0)) {
-                    continue; // interior, o el hueco de la puerta
+                    continue; // interior, o el hueco del portón
                 }
                 colocar(level, new BlockPos(bx + dx, nivel, bz + dz), Blocks.OAK_FENCE.defaultBlockState(), 3);
             }
         }
-        BlockPos puerta = new BlockPos(bx - r, nivel, bz);
-        colocar(level, puerta, Blocks.OAK_DOOR.defaultBlockState()
-                .setValue(DoorBlock.FACING, Direction.WEST).setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER), 3);
-        colocar(level, puerta.above(), Blocks.OAK_DOOR.defaultBlockState()
-                .setValue(DoorBlock.FACING, Direction.WEST).setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER), 3);
+        colocar(level, new BlockPos(bx - r, nivel, bz), Blocks.OAK_FENCE_GATE.defaultBlockState()
+                .setValue(FenceGateBlock.FACING, Direction.WEST)
+                .setValue(FenceGateBlock.OPEN, false)
+                .setValue(FenceGateBlock.IN_WALL, false), 3);
         // 3) COBERTIZO (al este, pegado a la valla): suelo de piedra, cuatro postes, tejado de tablones y SIN
         //    paredes, para que el ganadero y el ganado pasen por debajo. Dentro: su CAMA, su TELAR (puesto de trabajo
         //    de pastor), paja y un farol.
@@ -778,8 +858,88 @@ public final class VillageGenerator {
             colocar(level, new BlockPos(bx + dx, nivel - 1, bz + 4), Blocks.WATER.defaultBlockState(), 3);
         }
         // 5) Dos islas de paja más y un par de vallas sueltas donde rascarse: da vida al corral y no estorba.
-        colocar(level, new BlockPos(bx - 5, nivel, bz - 4), Blocks.HAY_BLOCK.defaultBlockState(), 3);
+        //    (La de (bx-5, bz-2) se movió al sur: su sitio viejo es ahora la pared del gallinero.)
+        colocar(level, new BlockPos(bx - 5, nivel, bz + 2), Blocks.HAY_BLOCK.defaultBlockState(), 3);
         colocar(level, new BlockPos(bx + 2, nivel, bz - 5), Blocks.HAY_BLOCK.defaultBlockState(), 3);
+        // 6) EL GALLINERO: los pollos, encerrados y con su tejado (y su portón, que el pueblo abre).
+        gallinero(level, base, nivel);
+    }
+
+    /**
+     * Construye el <b>gallinero</b>: un corralillo de valla <b>con tejado</b> dentro del corral anexo. Una valla sola
+     * no encierra a una gallina (aletea y salta), así que el techo es lo que de verdad las deja <b>encerradas</b>
+     * —que es lo que pidió el jugador— y además los <b>huevos</b> caen dentro del corralillo, a mano del ganadero.
+     * Comparte la valla del corral por el oeste y el norte, y su <b>portón</b> (pared sur, mirando al corral) lo abre
+     * el pueblo con {@code VillagerGateGoal}: los pollos no lo abren nunca.
+     */
+    private static void gallinero(ServerLevel level, BlockPos base, int nivel) {
+        int x0 = base.getX() + GALLINERO_X0;
+        int x1 = base.getX() + GALLINERO_X1;
+        int z0 = base.getZ() + GALLINERO_Z0;
+        int z1 = base.getZ() + GALLINERO_Z1;
+        // La SEGUNDA hilada de valla sobre la del corral (oeste y norte): es la que sujeta el tejado.
+        for (int z = z0 - 1; z <= z1 + 1; z++) {
+            colocar(level, new BlockPos(x0 - 1, nivel + 1, z), Blocks.OAK_FENCE.defaultBlockState(), 3);
+        }
+        for (int x = x0 - 1; x <= x1 + 1; x++) {
+            colocar(level, new BlockPos(x, nivel + 1, z0 - 1), Blocks.OAK_FENCE.defaultBlockState(), 3);
+        }
+        // Pared SUR (con el hueco del portón, dos bloques de alto) y pared ESTE.
+        int puertaX = base.getX() + GALLINERO_PUERTA_X;
+        for (int x = x0 - 1; x <= x1 + 1; x++) {
+            for (int dy = 0; dy <= 1; dy++) {
+                if (x == puertaX && dy == 0) {
+                    continue; // el hueco del portón (a ras de suelo; encima va la valla)
+                }
+                colocar(level, new BlockPos(x, nivel + dy, z1 + 1), Blocks.OAK_FENCE.defaultBlockState(), 3);
+            }
+        }
+        colocar(level, new BlockPos(puertaX, nivel, z1 + 1), Blocks.OAK_FENCE_GATE.defaultBlockState()
+                .setValue(FenceGateBlock.FACING, Direction.SOUTH)
+                .setValue(FenceGateBlock.OPEN, false)
+                .setValue(FenceGateBlock.IN_WALL, false), 3);
+        for (int z = z0 - 1; z <= z1 + 1; z++) {
+            for (int dy = 0; dy <= 1; dy++) {
+                colocar(level, new BlockPos(x1 + 1, nivel + dy, z), Blocks.OAK_FENCE.defaultBlockState(), 3);
+            }
+        }
+        // El TEJADO, un bloque por encima de las paredes y con un ala de sobra: es lo que de verdad las encierra.
+        for (int x = x0 - 1; x <= x1 + 1; x++) {
+            for (int z = z0 - 1; z <= z1 + 2; z++) {
+                colocar(level, new BlockPos(x, nivel + 2, z), Blocks.OAK_PLANKS.defaultBlockState(), 3);
+            }
+        }
+        // Dentro: paja para anidar (en la columna del ESTE, para no tapar la esquina donde se sueltan y se meten las
+        // gallinas) y un farol colgado del tejado, para verlas.
+        colocar(level, new BlockPos(x1, nivel, z0), Blocks.HAY_BLOCK.defaultBlockState(), 3);
+        colocar(level, new BlockPos(x1, nivel, z1), Blocks.HAY_BLOCK.defaultBlockState(), 3);
+        colocar(level, new BlockPos(puertaX, nivel + 1, z1),
+                Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true), 3);
+        // LA MUDANZA, en dos pasos y UNA sola vez (al construirlo; después, las de dentro ya no salen solas):
+        // 1) Las GALLINAS del corral entran al gallinero, repartidas por sus huecos libres (la columna de la paja no
+        //    cuenta, así que quedan 8 sitios: justo el tope de gallinas).
+        AABB corral = new AABB(base).inflate(ANEXO_RADIO + 2, 8.0D, ANEXO_RADIO + 2);
+        int columnasLibres = (GALLINERO_X1 - 1) - GALLINERO_X0 + 1;
+        int gallinas = 0;
+        for (net.minecraft.world.entity.animal.Chicken gallina
+                : level.getEntitiesOfClass(net.minecraft.world.entity.animal.Chicken.class, corral)) {
+            int celda = gallinas++ % (columnasLibres * 2);
+            gallina.moveTo(x0 + 0.5D + (celda % columnasLibres), nivel,
+                    z0 + 0.5D + (celda / columnasLibres), gallina.getYRot(), 0.0F);
+        }
+        // 2) Lo que NO sea gallina y estuviera justo donde se acaba de levantar el gallinero sale al corral: un
+        //    cerdo dentro de un corral de pollos estorba y, si le tocó una pared o la paja, se asfixia.
+        AABB cajaGallinero = new AABB(x0 - 1, nivel, z0 - 1, x1 + 2, nivel + 3, z1 + 2);
+        int sacados = 0;
+        for (net.minecraft.world.entity.animal.Animal animal : level.getEntitiesOfClass(
+                net.minecraft.world.entity.animal.Animal.class, cajaGallinero)) {
+            if (animal instanceof net.minecraft.world.entity.animal.Chicken) {
+                continue; // las gallinas se quedan (son las dueñas)
+            }
+            animal.moveTo(puertaX + 0.5D + (sacados % 2) * 0.9D, nivel, z1 + 2.5D + (sacados / 2) * 0.9D,
+                    animal.getYRot(), 0.0F);
+            sacados++;
+        }
     }
 
     /** ¿Está el corral <b>sin ningún animal</b> de las especies del anexo? (para el rebaño inicial). */
@@ -812,7 +972,9 @@ public final class VillageGenerator {
         criarAnimales(level, EntityType.COW, new BlockPos(base.getX() - 2, nivel, base.getZ() - 4), 2);
         criarAnimales(level, EntityType.SHEEP, new BlockPos(base.getX() + 1, nivel, base.getZ() + 4), 2);
         criarAnimales(level, EntityType.PIG, new BlockPos(base.getX() - 4, nivel, base.getZ() + 1), 2);
-        criarAnimales(level, EntityType.CHICKEN, new BlockPos(base.getX() - 1, nivel, base.getZ() + 2), 4);
+        // Las GALLINAS, DENTRO del gallinero: encerradas desde el primer día (una valla sola no las para y el
+        // jugador las quiere dentro, con sus huevos a mano del ganadero).
+        criarAnimales(level, EntityType.CHICKEN, centroDelGallinero(center, nivel), 4);
         DevilRpg.LOGGER.info("[Village] Aldea en {}: rebano inicial del corral anexo ({} animales)",
                 center, animalesDelCorral(level, center).size());
     }
