@@ -195,7 +195,7 @@ public class VillagerAnimalFarmGoal extends Goal {
     /**
      * Las especies que <b>se pueden criar</b> ahora mismo, de la que más hueco tiene a la que menos: pareja hecha
      * (dos adultos) y sitio hasta su tope. Con la aldea apretada de comida ({@code soloPareja}) solo salen las que
-     * están por debajo de la pareja.
+     * tienen <b>exactamente</b> la pareja (no se cría para engordar el rebaño, solo para no perder la semilla).
      */
     private List<EntityType<? extends Animal>> especiesParaCriar(List<Animal> corral, boolean soloPareja) {
         List<EntityType<? extends Animal>> candidatas = new ArrayList<>();
