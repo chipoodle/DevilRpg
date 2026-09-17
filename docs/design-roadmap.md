@@ -828,7 +828,31 @@ no hay? … una solución orgánica que no rompa las reglas ni el lore"*.
   que pasa con el corral.
 - **Migración 35** (`CURRENT_LAYOUT`): las aldeas ya construidas reciben su arboleda al latido siguiente.
 
-### 3b.18 Lo que viene
+### 3b.18 La ORILLA SECA (la aldea de mar)
+
+El jugador preguntó por *"esas esquinas de tierra afuera de la circunferencia"* y, al explicarle de dónde salían,
+eligió **alisar la línea de agua**.
+
+- **La causa, medida en su guardado**: su aldea nació **al nivel del mar** (una islita), así que el terreno llano del
+  pueblo (**y=62**) queda a la **misma altura que la superficie del agua** (también y=62). El primer escalón del talud
+  baja un bloque, así que **asoma a la cota en unas casillas y en otras queda sumergido** → la orilla sale **a
+  cuadros** (agua a y=62 pegada a césped a y=62, en parches cuadrados). Y como el terreno natural de la orilla está
+  3-4 bloques por debajo, además se veía la **tierra de las caras del talud**.
+- **El arreglo** (`VillageGenerator.asegurarOrilla`, idempotente: al generar, en la migración y en cada latido): si
+  la aldea es **de orilla** se saca un **anillo de playa seca y pareja**, de **4 bloques** de ancho justo por fuera
+  de la meseta (radio 38..42), con **césped a la cota** y tierra debajo (rellenando hacia abajo hasta suelo firme).
+  La isla gana 4 bloques de orilla, el agua empieza en un **borde limpio** (un círculo) y se acabaron los cuadros.
+- **Solo se toca agua o aire**: nada construido (el **camino del corral anexo** se respeta) y lo que ya es césped a
+  la cota se deja igual. Y **solo se hace en una aldea de mar**: lo decide mirando si hay **agua en la capa que se
+  pisa** dentro del anillo; en una aldea de tierra adentro **no toca nada** (ahí el talud es lo que la hace parecer
+  una meseta natural).
+- **Verificado con una simulación sobre su guardado** (solo lectura): en el anillo 38..42 hay **335 columnas con agua
+  arriba** y **415 con aire** (el terreno natural está por debajo), 252 que ya son césped y **10 con el camino del
+  corral** (esas no se tocan) → se rellenarían **1022 bloques**, repartidos **parejos por los cuatro octantes**
+  (253-259), o sea que la orilla queda **redonda**.
+- **Migración 36** (`CURRENT_LAYOUT`): entra en el plano y el obrero también mantiene la orilla.
+
+### 3b.19 Lo que viene
 
 - **Milicia**: ✅ completa (barraca, oficio, combate, escudo que bloquea, modelo propio, marcha a la guarida).
 - **Leñador/reforestador**: ✅ (tala y replanta, y la cadena de la madera del herrero).
@@ -837,6 +861,7 @@ no hay? … una solución orgánica que no rompa las reglas ni el lore"*.
 - **Cocinero, hambre por aldeano y cría por camas**: ✅ (ver 3b.15).
 - **Gallinero y portones de valla**: ✅ (ver 3b.16).
 - **Arboleda del pueblo (la madera de una aldea sin bosque)**: ✅ (ver 3b.17).
+- **Orilla seca de la aldea de mar**: ✅ (ver 3b.18).
 - **Lo siguiente**: la **verificación en partida** de la cadena entera de la comida (huerta → despensa → cocina →
   raciones) y, de ahí, lo que pida el jugador.
 
