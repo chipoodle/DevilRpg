@@ -1735,33 +1735,75 @@ public final class VillageGenerator {
     }
 
     /**
+     * ¿Ese tronco es un <b>árbol suelto</b> (del monte) y no parte de la aldea construida? Es la pregunta clave para
+     * despejar el recinto y para que el leñador sepa qué puede talar, y se contesta por la <b>forma</b>, no por el
+     * plano: el plano de una aldea migrada <b>también contiene los árboles</b> que se encontró dentro (al capturarlo
+     * se escanea el mundo y los troncos no se descartan a propósito, porque el muro y las casas son de troncos), así
+     * que preguntarle al plano daba "es del pueblo" para los 137 árboles del jugador.
+     * <p>
+     * Un árbol suelto cumple las tres:
+     * <ol>
+     *   <li>el tronco está <b>de pie</b> (eje Y): los tramos del muro son troncos <b>tumbados</b> (eje X o Z);</li>
+     *   <li>tiene <b>hojas cerca</b> por encima (un poste no las tiene);</li>
+     *   <li>no tiene <b>nada construido pegado</b> (ni tablones, ni piedra, ni vallas, ni cristales): los postes de las
+     *       casas van pegados a sus paredes.</li>
+     * </ol>
+     */
+    public static boolean esArbolSuelto(ServerLevel level, BlockPos p) {
+        BlockState state = level.getBlockState(p);
+        if (!state.is(BlockTags.LOGS)) {
+            return false;
+        }
+        if (state.hasProperty(RotatedPillarBlock.AXIS) && state.getValue(RotatedPillarBlock.AXIS) != Direction.Axis.Y) {
+            return false; // tronco tumbado: es un tramo del muro
+        }
+        // 1) hojas cerca, por encima: es lo que distingue un árbol de un poste. Se mira hasta 12 bloques arriba para
+        // que también cuente la base de un árbol alto (una selva los tiene de 20, pero con 12 sobra para los del
+        // pueblo y para no confundir un poste con las hojas de un árbol vecino).
+        boolean hojas = false;
+        for (int dy = 1; dy <= 12 && !hojas; dy++) {
+            for (BlockPos q : BlockPos.betweenClosed(p.offset(-2, dy, -2), p.offset(2, dy, 2))) {
+                if (level.getBlockState(q).is(BlockTags.LEAVES)) {
+                    hojas = true;
+                    break;
+                }
+            }
+        }
+        if (!hojas) {
+            return false;
+        }
+        // 2) nada construido pegado (los postes de las casas van pegados a sus paredes).
+        for (BlockPos q : BlockPos.betweenClosed(p.offset(-1, -1, -1), p.offset(1, 1, 1))) {
+            if (q.equals(p)) {
+                continue;
+            }
+            BlockState vecino = level.getBlockState(q);
+            if (vecino.isAir() || esTerrenoNatural(vecino)) {
+                continue; // aire, tierra, agua, hojas, otros troncos...: el monte
+            }
+            return false; // tablones, piedra, valla, cristal...: es parte de una construcción
+        }
+        return true;
+    }
+
+    /**
      * <b>Despeja los árboles que quedaron DENTRO del recinto</b> (menos los de la <b>arboleda del pueblo</b>), que es
      * lo que hace un pueblo al fundarse: se asienta en un claro, no dentro del bosque.
      * <p>
      * Hace falta porque el generador <b>sí</b> despeja el volumen al construir ({@code despejarVolumen}), pero las
      * aldeas <b>migradas</b> se encontraron el bosque ya dentro: medido en el guardado del jugador había <b>137
-     * árboles</b> de verdad dentro de la muralla, y encima quedaron <b>grabados en el plano</b> (al capturarlo se
-     * escanea el mundo, y los troncos no se descartan a propósito porque el muro y las casas son de troncos), así que
-     * el leñador los daba por construidos y no los tocaba <b>nunca</b> (lo reportó el jugador: "el leñador no está
-     * cortando los árboles que están dentro de la aldea").
+     * árboles</b> de verdad dentro de la muralla, y encima quedaron <b>grabados en el plano</b>, así que el leñador
+     * los daba por construidos y no los tocaba <b>nunca</b> (lo reportó el jugador: "el leñador no está cortando los
+     * árboles que están dentro de la aldea").
      * <p>
-     * Solo se quitan <b>troncos y hojas</b> (nunca otra cosa), y se <b>salta</b> todo tronco que esté en el
-     * {@code plano} de la aldea: el muro, los postes de las casas y los del almacén se quedan donde están. La
-     * arboleda del pueblo ({@link #enLaArboleda}) tampoco se toca: es la madera del pueblo.
-     *
-     * @param plano el plano <b>viejo</b> de la aldea (el de antes de esta migración) para proteger lo construido, o
-     *              {@code null} si no hay (una aldea nueva, que se despeja antes de construir).
+     * Solo se quitan <b>hojas</b> y troncos que pasen {@link #esArbolSuelto} (nunca otra cosa): el muro —troncos
+     * tumbados—, los postes de las casas y los del almacén se quedan donde están. La arboleda del pueblo
+     * ({@link #enLaArboleda}) tampoco se toca: es la madera del pueblo.
      */
-    public static int limpiarArbolesDeDentro(ServerLevel level, BlockPos center, @Nullable VillageSavedData.Blueprint plano) {
+    public static int limpiarArbolesDeDentro(ServerLevel level, BlockPos center) {
         int nivel = cotaDeLaPlaza(level, center);
         if (nivel <= level.getMinBuildHeight() + 1) {
             return 0;
-        }
-        java.util.Set<Long> construidos = new java.util.HashSet<>();
-        if (plano != null) {
-            for (long p : plano.positions()) {
-                construidos.add(p);
-            }
         }
         int quitados = 0;
         int troncos = 0;
@@ -1784,11 +1826,8 @@ public final class VillageGenerator {
                         quitados++;
                         continue;
                     }
-                    if (!state.is(BlockTags.LOGS)) {
-                        continue; // ni el terreno ni lo construido se tocan
-                    }
-                    if (construidos.contains(p.asLong())) {
-                        continue; // ese tronco lo puso el pueblo (el muro, una casa, el almacén)
+                    if (!esArbolSuelto(level, p)) {
+                        continue; // ni el terreno, ni lo construido, ni el muro
                     }
                     colocar(level, p, Blocks.AIR.defaultBlockState(), 3);
                     quitados++;

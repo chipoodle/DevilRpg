@@ -1167,9 +1167,10 @@ public final class VillageManager {
         if (saved.getLayout(objectiveIndex) < CURRENT_LAYOUT) {
             int casas = saved.getCasasVersion(objectiveIndex);
             // DESPEJE DEL RECINTO: los árboles que quedaron DENTRO de la muralla se quitan (el pueblo se funda en un
-            // claro). Va lo PRIMERO, antes de rehacer nada, y con el plano VIEJO en la mano para no tocar los troncos
-            // del muro ni los postes de las casas. Medido en el guardado del jugador: 137 árboles dentro.
-            VillageGenerator.limpiarArbolesDeDentro(level, center, saved.getBlueprint(objectiveIndex));
+            // claro). Va lo PRIMERO, antes de rehacer nada, y se distingue un árbol del muro por su FORMA (el muro son
+            // troncos tumbados y los postes de las casas van pegados a sus paredes), no por el plano: el plano de una
+            // aldea migrada también tiene dentro esos árboles. Medido en el guardado del jugador: 137 árboles dentro.
+            VillageGenerator.limpiarArbolesDeDentro(level, center);
             if (casas < CURRENT_HOUSES) {
                 // Se rehacen TODAS las construcciones con el nivelado nuevo (a la cota de la plaza, no a la mediana
                 // contaminada por los tejados) y se añaden las que falten (cuarta casa e iglesia). OJO: rehacer una

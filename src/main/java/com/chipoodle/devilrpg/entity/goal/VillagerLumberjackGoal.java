@@ -4,7 +4,6 @@ import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.world.VillageGenerator;
 import com.chipoodle.devilrpg.world.VillageManager;
 import com.chipoodle.devilrpg.world.VillagePantry;
-import com.chipoodle.devilrpg.world.VillageSavedData;
 import com.chipoodle.devilrpg.world.VillageStorage;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -31,9 +30,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumSet;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 /**
  * <b>Leñador / reforestador</b> de la aldea (etapa B): <b>tala árboles de verdad</b> alrededor del pueblo y <b>los
@@ -137,16 +134,6 @@ public class VillagerLumberjackGoal extends Goal {
     private int barridoCooldown;
     /** Cota de la aldea (para los plantones de la arboleda): se pregunta UNA vez, no en cada tick. */
     private int nivelAldea = Integer.MIN_VALUE;
-    /**
-     * Las posiciones del <b>plano</b> de la aldea (lo que construyó el pueblo) en un {@code Set}, para saber si un
-     * tronco es del muro/casa o un árbol del monte. {@code null} = todavía no se ha copiado (ver
-     * {@link #esParteDeLaAldea}).
-     */
-    @Nullable
-    private Set<Long> planoDeLaAldea;
-    private long planoConsultadoEn;
-    /** Cada cuánto se vuelve a copiar el plano (por si el obrero reconstruye algo). */
-    private static final long PLANO_REFRESCO_TICKS = 200L;
 
     public VillagerLumberjackGoal(Villager villager, BlockPos center, int objectiveIndex) {
         this.villager = villager;
@@ -567,14 +554,14 @@ public class VillagerLumberjackGoal extends Goal {
                 if (base == null) {
                     continue;
                 }
-                // DENTRO DEL RECINTO: el muro y las casas son de TRONCOS, así que no se tala a lo loco. Se tala solo
-                // si el árbol NO es parte de lo que construyó el pueblo (el plano dice qué bloques son suyos) — así
-                // caen los árboles del monte que quedaron dentro de la muralla, que es lo que pidió el jugador
-                // ("no está cortando los árboles de adentro de la villa": medido en su guardado había 137 árboles
-                // sueltos dentro de la valla)— y, por supuesto, la arboleda del pueblo.
+                // DENTRO DEL RECINTO: el muro y las casas son de TRONCOS, así que no se tala a lo loco: solo se tala un
+                // ÁRBOL SUELTO, y eso lo decide la FORMA (tronco de pie, con hojas cerca y sin nada construido pegado
+                // —ver `VillageGenerator.esArbolSuelto`—), no el plano: el plano de una aldea migrada también tiene
+                // dentro los árboles del monte que se encontró (137 medidos en el guardado del jugador), así que
+                // preguntarle al plano los daba por construidos y no se talaban NUNCA.
                 if (dCentro < RADIO_MINIMO
                         && !VillageGenerator.enLaArboleda(center, new BlockPos(x, 0, z))
-                        && esParteDeLaAldea(level, base)) {
+                        && !VillageGenerator.esArbolSuelto(level, base)) {
                     continue;
                 }
                 // lint:ok I1 porque aqui `base` es el tronco de un arbol que existe, no el centro ni la base de la
@@ -591,30 +578,14 @@ public class VillagerLumberjackGoal extends Goal {
 
     /**
      * ¿Ese tronco es <b>parte de la aldea construida</b> (el muro, el poste de una casa, el kiosco)? Entonces no se
-     * tala: se pregunta al <b>plano</b> de la aldea, que apunta cada bloque que puso el pueblo ({@code colocar}), y
-     * los árboles del monte no están en él. Es la forma exacta de distinguir un árbol de un poste sin adivinar por
-     * los alrededores (una casa con un árbol pegado engañaría a cualquier heurística).
-     * <p>
-     * Basta con mirar la <b>base</b> del tronco: el plano es un censo de posiciones, así que si la base no está en
-     * él, ese árbol no lo puso el pueblo (y si lo estuviera, ya no se toca). El plano se copia a un {@code Set} y se
-     * refresca cada {@link #PLANO_REFRESCO_TICKS}: la búsqueda de árboles recorre cientos de columnas y preguntarlo
-     * posición a posición sería un barrido lineal del plano por cada árbol.
+     * tala. Lo contesta {@link VillageGenerator#esArbolSuelto}: un árbol suelto está de pie, tiene hojas cerca y no
+     * tiene nada construido pegado. Antes se le preguntaba al <b>plano</b> de la aldea, y estaba mal: el plano de una
+     * aldea migrada también contiene los árboles del monte que se encontró dentro (al capturarlo se escanea el mundo y
+     * los troncos no se descartan a propósito, porque el muro y las casas son de troncos), así que el leñador daba por
+     * construidos los <b>137</b> árboles que el jugador veía dentro de su aldea.
      */
     private boolean esParteDeLaAldea(ServerLevel level, BlockPos base) {
-        if (planoDeLaAldea == null || level.getGameTime() - planoConsultadoEn >= PLANO_REFRESCO_TICKS) {
-            planoConsultadoEn = level.getGameTime();
-            VillageSavedData.Blueprint plano = VillageSavedData.get(level).getBlueprint(objectiveIndex);
-            if (plano == null) {
-                planoDeLaAldea = Set.of();
-            } else {
-                Set<Long> copia = new HashSet<>();
-                for (long pos : plano.positions()) {
-                    copia.add(pos);
-                }
-                planoDeLaAldea = copia;
-            }
-        }
-        return planoDeLaAldea.contains(base.asLong());
+        return !VillageGenerator.esArbolSuelto(level, base);
     }
 
     /**
