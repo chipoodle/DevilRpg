@@ -1118,7 +1118,45 @@ cuando la aldea se genera en una montaña"*.
   quita la pasada (todos por encima de la cota y sin apoyo).
 - **Migración 43** (`CURRENT_LAYOUT`).
 
-### 3b.26 Lo que viene
+### 3b.26 La TABERNA GRANDE (y la escalera que no se podía subir)
+
+El jugador mandó los **planos** (*Building map: Inn*, dos plantas) y el **arte conceptual** de una posada con
+entramado, con el encargo: *"arregla la taberna, está muy pequeña y muy sencilla; las escaleras están mal orientadas y
+no se puede subir"*.
+
+- **La escalera, medida antes de tocar nada**: en las escaleras del juego la **cara alta** (el escalón por el que se
+  sube) es la que marca `FACING` —comprobado en el `blockstates/oak_stairs.json` del propio juego: `facing=east` es el
+  modelo **sin rotar**, y su media losa alta está en `x=8..16`, o sea al **este**—. La taberna vieja subía hacia el
+  **norte** con las escaleras mirando al **sur**, así que se veían perfectas y **no se podía subir**. Lo mismo tenía la
+  escalera de la barraca (subía al norte mirando al oeste) y las **sillas** de las mesas (con el respaldo del lado de
+  la mesa, o sea de espaldas): las tres cosas van ahora en el sentido que les toca.
+- **El edificio** (`taberna()`, reescrito entero): **19×15** en la planta baja y **21×17** arriba, porque la planta
+  alta **vuela** un bloque sobre la baja (el *jetty* del arte, con las cabezas de viga a la vista). Muros **Tudor**:
+  cal (terracota blanca) con entramado de roble oscuro, postes cada cuatro bloques, ventanas de dos cristales, solera
+  de piedra labrada. Tejado a dos aguas muy empinado (teja de pizarra), **frontones** con su ventana y **chimenea de
+  ladrillo** pegada al muro norte.
+- **Abajo, el comedor**: la **cocina** del cocinero (cerrada, con su ahumador, horno, mesa y arca), el **hogar** con el
+  fuego metido en el muro (no se pisa, así nadie se quema) y su chimenea, la **barra** con las pipas de cerveza
+  (`OAK_WOOD`: el **barril** es el puesto del **pescador** y el caldero el del **curtidor**, oficios que el pueblo
+  todavía no tiene, y los dos están prohibidos en la taberna), **seis mesas** con sus sillas y la **escalera**.
+- **Arriba, la posada**: una **galería** que cruza la casa y **seis cuartos** (tres al norte y tres al sur) con **once
+  camas**, su arca y su farol; el cuarto del suroeste es el pequeño, recortado por la **caja de la escalera**.
+- **La escalera nueva**: sube pegada al muro oeste, con la cara alta al norte (hacia donde sube) y dentro de una
+  **caja** cerrada por el este: el hueco del forjado es un pozo de un bloque, y sin ese muro el primero que paseara
+  por la galería se caería al comedor.
+- **La fachada da al oeste** (a la plaza): puerta doble, **porche** con toldo y enseña, y **camino** desde la plaza
+  (torcido a propósito: en recta cruzaba la **parcela de la granja**, y un camino no debe pisar los cultivos).
+- **El solar se despeja entero** antes de levantarla —la taberna vieja **cabía dentro** de la nueva, así que sus
+  muros, su forjado y su tejado se tiran de una vez— y **lo que hubiera en sus cofres se guarda antes en el almacén**:
+  tirar un cofre tira su contenido al suelo (mecánica del juego) y el pueblo no puede perder lo que tenía guardado.
+- **Verificado** generando una aldea nueva en un mundo de prueba (arnés temporal + servidor headless) y leyendo los
+  bloques del guardado con `build/verifica_taberna.py`: suelo, postes de esquina, puerta, forjado con su hueco,
+  los cinco escalones con su `facing`, las seis mesas con sus cuatro sillas, la barra, la cocina, las once camas, las
+  seis arcas, el techo/tejado sin agujeros, la chimenea por encima del tejado, ningún bloque de oficio ajeno y el
+  camino de la plaza.
+- **Migración 44** (`CURRENT_LAYOUT`).
+
+### 3b.27 Lo que viene
 - **Milicia**: ✅ completa (barraca, oficio, combate, escudo que bloquea, modelo propio, marcha a la guarida).
 - **Leñador/reforestador**: ✅ (tala y replanta, la cadena de la madera del herrero y ahora también **despeja los
   árboles que quedaron dentro de la muralla**).
@@ -1136,8 +1174,9 @@ cuando la aldea se genera en una montaña"*.
 - **Etapa F: tercer bancal, bancales cercados e iluminados, bosque, taberna con posada y cuartel de dos pisos**: ✅
   (ver 3b.24).
 - **Los restos colgados de la aldea de montaña (nieve polvo flotando)**: ✅ (ver 3b.25).
+- **La taberna grande (plano del INN, vuelo, escalera que sí se sube)**: ✅ (ver 3b.26).
 - **Lo siguiente**: la **verificación en partida** de la cadena entera de la comida (huerta → despensa → cocina →
-  raciones) y, de ahí, lo que pida el jugador.
+  raciones) y, de ahí, lo que pida el jugador (la **cerveza** de las pipas y el **pescador con su edificio y su lago**).
 
 ## 3c) Iteración 2 — GUARIDAS ✅ (en curso)
 

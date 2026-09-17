@@ -284,6 +284,8 @@ public final class VillageGenerator {
 
         // LA TABERNA (etapa F): el comedor del pueblo, con la cocina del cocinero abajo y la posada (camas) arriba.
         asegurarTaberna(level, center);
+        // Y SU CAMINO: el que sale de la plaza y llega hasta la puerta oeste (la que da a la plaza).
+        caminoALaTaberna(level, center);
 
         // Granja: da trabajo al aldeano granjero y produce la comida que come la aldea (Iteración 3). Se le pasa
         // LA COTA YA CALCULADA: si la recalculara aquí, la muestra del terreno incluiría las casas y la iglesia
@@ -2463,14 +2465,15 @@ public final class VillageGenerator {
     // --- LA COCINA DEL PUEBLO (etapa E, en la taberna desde la etapa F) ------------------------------
 
     /**
-     * El <b>puesto del cocinero</b>: el ahumador de la <b>taberna</b> (etapa F). Antes estaba en la plataforma del
-     * kiosco, al lado de la despensa; desde que hay taberna, el cocinero trabaja en su cocina (esquina sureste de la
-     * taberna) y el pueblo va allí a comer.
+     * El <b>puesto del cocinero</b>: el ahumador de la <b>cocina de la taberna</b> (etapa F). Antes estaba en la
+     * plataforma del kiosco, al lado de la despensa; desde que hay taberna, el cocinero trabaja en su cocina (la
+     * esquina noroeste del comedor) y el pueblo va allí a comer. Su casilla de delante (un bloque al norte) queda
+     * libre a propósito: es donde se pone él a cocinar (ver {@code VillagerCookGoal}).
      */
     public static BlockPos puestoDelCocinero(ServerLevel level, BlockPos center) {
         int nivel = cotaDeLaPlaza(level, center);
         BlockPos base = baseDeLaTaberna(center);
-        return new BlockPos(base.getX() + TABERNA_ANCHO - 2, nivel, base.getZ() + TABERNA_FONDO - 2);
+        return new BlockPos(base.getX() + TABERNA_COCINA[0], nivel, base.getZ() + TABERNA_COCINA[1]);
     }
 
     /**
@@ -4342,283 +4345,649 @@ public final class VillageGenerator {
 
     // --- LA TABERNA (etapa F: la posada del pueblo) --------------------------------------------------------------
 
-    /** Ancho (X) y fondo (Z) de la taberna, y cuánto sube cada piso. */
-    public static final int TABERNA_ANCHO = 13;
-    public static final int TABERNA_FONDO = 12;
-    /** Altura libre del piso de abajo (el de la taberna) y del de arriba (el de las camas). */
-    private static final int TABERNA_ALTO_PISO = 4;
+    /**
+     * <b>Medidas de la taberna.</b> La primera taberna (etapa F) era pequeña y sosa —13x12, dos pisos bajos y una
+     * escalera pegada a la pared— y el jugador la vio <i>"muy pequeña y muy sencilla"</i>, así que se rehízo con los
+     * planos que trajo (el <i>Building map: Inn</i> de dos plantas) y el arte conceptual de la posada con entramado:
+     * la planta baja es el <b>comedor</b> (cocina, hogar con chimenea, barra con las pipas, seis mesas y la escalera)
+     * y la planta alta la <b>posada</b> (seis cuartos con sus camas alrededor de una galería).
+     * <p>
+     * La <b>fachada mira al oeste</b> (a la plaza): la puerta va en el centro del muro oeste con su porche y su
+     * toldo, y el camino del pueblo llega desde la plaza. La planta alta <b>vuela</b> un bloque sobre la baja (el
+     * <i>jetty</i> de las casas con entramado del arte) y el tejado es a dos aguas, muy empinado, con los frontones
+     * de cal y madera y la <b>chimenea de ladrillo</b> pegada al muro norte.
+     */
+    public static final int TABERNA_ANCHO = 19;
+    /** Fondo (Z) de la taberna. */
+    public static final int TABERNA_FONDO = 15;
+    /** Lo que sube el suelo de la posada sobre la cota del pueblo (y lo que sube el alero sobre ese suelo). */
+    private static final int TABERNA_PISO2 = 5;
+    private static final int TABERNA_ALERO = 5;
+    /** Cuánto vuela la planta alta sobre la baja: sus muros van un bloque por fuera. */
+    private static final int TABERNA_VUELO = 1;
+    /** La puerta: una sola, en el centro del muro oeste, que es el que mira a la plaza. */
+    private static final int TABERNA_PUERTA = 7;
+    /**
+     * La <b>caja de la escalera</b> (sube pegada al muro oeste, de sur a norte) en la planta de la posada. Va
+     * cerrada por el este con un muro: el hueco del forjado es un pozo de un bloque de ancho, así que sin ese muro
+     * cualquiera que paseara por la galería se caería al comedor. El escalón de abajo arranca <b>pegado al muro
+     * sur</b>, para que el pozo no deje ningún rincón sin cerrar por el que caerse.
+     */
+    private static final int TABERNA_ESCALERA_X = 1;
+    private static final int TABERNA_ESCALERA_Z0 = 10;
+    private static final int TABERNA_ESCALERA_Z1 = 14;
+    /** El hogar (con su chimenea), en el muro norte; y el ahumador del cocinero, en la cocina. */
+    private static final int[] TABERNA_HOGAR = {9, 0};
+    private static final int[] TABERNA_COCINA = {4, 2};
+    /** Las seis mesas del comedor, relativas a la esquina de la taberna. */
+    private static final int[][] TABERNA_MESAS = {{10, 3}, {14, 4}, {16, 7}, {14, 10}, {10, 10}, {3, 11}};
 
     /**
-     * Coordenada de la taberna, relativa al centro: <b>pegada al almacén</b> (que está en 18,18), al este, en el
-     * hueco libre entre el almacén, la casa del este y el corral. Lo pidió el jugador: <i>"una taberna donde trabaje
-     * el cocinero y todos vayan a comer ahí... el almacén puede estar a lado de la taberna"</i>.
+     * Coordenada de la taberna, relativa al centro: al <b>sureste</b>, pegada al almacén (que está en 18,18) y en el
+     * cuadrante libre entre el almacén, la casa del este y el corral. Lo pidió el jugador: <i>"una taberna donde
+     * trabaje el cocinero y todos vayan a comer ahí... el almacén puede estar a lado de la taberna"</i>.
      */
-    private static final int[] TABERNA = {24, 16};
+    private static final int[] TABERNA = {24, 14};
 
     /** La esquina (base) de la taberna, relativa al centro. */
     public static BlockPos baseDeLaTaberna(BlockPos center) {
         return center.offset(TABERNA[0], 0, TABERNA[1]);
     }
 
+    /** La <b>puerta</b> de la taberna: el centro del muro oeste, que es el que mira a la plaza. */
+    public static BlockPos puertaDeLaTaberna(ServerLevel level, BlockPos center) {
+        int nivel = cotaDeLaPlaza(level, center);
+        BlockPos base = baseDeLaTaberna(center);
+        return new BlockPos(base.getX(), nivel, base.getZ() + TABERNA_PUERTA);
+    }
+
     /**
-     * Los <b>puntos de la taberna</b> donde se sienta el pueblo a comer (las cuatro mesas) a la cota del pueblo. Los
-     * usa el goal de la taberna: cada aldeano va al suyo (repartidos por su UUID) y así no se apilan todos en la misma
-     * silla.
+     * Los <b>puntos de la taberna</b> donde come el pueblo: el centro de cada una de las seis mesas, a la cota del
+     * pueblo. Los usa el goal de la taberna: cada aldeano va al suyo (repartidos por su UUID) y así no se apilan
+     * todos en la misma mesa.
      */
     public static BlockPos[] puntosDeLaTaberna(BlockPos center, int nivel) {
         BlockPos base = baseDeLaTaberna(center);
-        int[][] sitios = {{3, 3}, {6, 3}, {3, 8}, {6, 8}, {9, 5}, {9, 9}};
-        BlockPos[] puntos = new BlockPos[sitios.length];
-        for (int i = 0; i < sitios.length; i++) {
-            puntos[i] = new BlockPos(base.getX() + sitios[i][0], nivel, base.getZ() + sitios[i][1]);
+        BlockPos[] puntos = new BlockPos[TABERNA_MESAS.length];
+        for (int i = 0; i < TABERNA_MESAS.length; i++) {
+            puntos[i] = new BlockPos(base.getX() + TABERNA_MESAS[i][0], nivel, base.getZ() + TABERNA_MESAS[i][1]);
         }
         return puntos;
     }
 
-    /** ¿Está la taberna construida? (valla testigo: la barra, que está en el piso de abajo) */
+    /**
+     * ¿Está la taberna construida? El testigo son sus <b>cuatro postes de esquina</b>, que en esta taberna son de
+     * <b>roble oscuro</b>: es lo que la distingue de la primera taberna (de roble claro), así que una aldea que
+     * todavía tenga la vieja <b>no</b> pasa esta prueba y se le levanta la nueva. Con cuatro testigos, hace falta que
+     * se caigan los cuatro para que el pueblo la reconstruya entera (y reconstruirla tira lo que haya dentro).
+     */
     public static boolean tabernaConstruida(ServerLevel level, BlockPos center) {
-        BlockPos base = baseDeLaTaberna(center);
         int nivel = cotaDeLaPlaza(level, center);
-        for (int x = 1; x <= 4; x++) {
-            if (level.getBlockState(new BlockPos(base.getX() + x, nivel, base.getZ() + 6)).is(Blocks.STRIPPED_OAK_LOG)) {
-                return true; // la barra
+        BlockPos base = baseDeLaTaberna(center);
+        int[][] esquinas = {{0, 0}, {TABERNA_ANCHO - 1, 0}, {0, TABERNA_FONDO - 1}, {TABERNA_ANCHO - 1, TABERNA_FONDO - 1}};
+        for (int[] e : esquinas) {
+            if (level.getBlockState(new BlockPos(base.getX() + e[0], nivel + 1, base.getZ() + e[1]))
+                    .is(Blocks.DARK_OAK_LOG)) {
+                return true;
             }
         }
         return false;
     }
 
     /**
-     * Construye la <b>TABERNA</b> (etapa F): dos pisos. Abajo, el <b>comedor</b>: barra, pipas de cerveza (barrels, para
-     * la cerveza que vendrá más adelante), mesas con sus sillas, la <b>cocina</b> (ahumador del cocinero, mesa de
-     * trabajo y caldero) y faroles por todas partes. Arriba, la <b>posada</b>: seis camas para los viajeros (y para la
-     * milicia cuando no está de guardia), con sus arcas. La puerta da al norte, al pueblo, y tiene porche con faroles.
+     * Construye la <b>TABERNA</b>: dos plantas y tejado a dos aguas. Abajo, el <b>comedor</b>: la <b>cocina</b> del
+     * cocinero, el <b>hogar</b> con su chimenea, la <b>barra</b> con las pipas, seis mesas con sus sillas, la
+     * escalera y faroles por todas partes. Arriba, la <b>posada</b>: seis cuartos con sus camas alrededor de la
+     * galería (para los viajeros y para la milicia cuando no está de guardia). La puerta da al <b>oeste</b>, a la
+     * plaza, con porche, toldo y enseña.
      * <p>
      * Todo pasa por {@link #colocar}, así que <b>entra en el plano</b> (invariante I8) y el obrero lo repone.
      */
-    private static void taberna(ServerLevel level, BlockPos base, int nivel) {
+    private static void taberna(ServerLevel level, BlockPos center, BlockPos base, int nivel) {
         int bx = base.getX();
         int bz = base.getZ();
         int ancho = TABERNA_ANCHO;
         int fondo = TABERNA_FONDO;
-        int y1 = nivel + TABERNA_ALTO_PISO;              // suelo del piso de arriba
-        int techo = y1 + TABERNA_ALTO_PISO;              // base del tejado
-        BlockState tablon = Blocks.OAK_PLANKS.defaultBlockState();
-        // 1) SUELO Y FORJADO: piedra debajo, tablones en la capa que se pisa; el forjado del piso de arriba y los
-        //    dos huecos limpios (para que no queden bloques viejos dentro).
-        for (int dx = -1; dx <= ancho; dx++) {
-            for (int dz = -1; dz <= fondo; dz++) {
+        int y1 = nivel + TABERNA_PISO2;                  // donde se anda en la posada
+        int yTecho = y1 + TABERNA_ALERO;                 // el alero: de ahí para arriba, el tejado
+        // 1) EL SOLAR, DESPEJADO. El despeje cubre también la taberna VIEJA (la de 13x12 cabía dentro de ésta: si no,
+        //    sus muros, su forjado y su tejado se quedarían dentro del edificio nuevo) y lo que hubiera en sus cofres
+        //    se guarda ANTES en el almacén, porque tirar un cofre tira su contenido al suelo.
+        despejarSolarDeLaTaberna(level, center, bx, bz, nivel, yTecho + 12);
+        // 2) CIMIENTOS Y SUELO: piedra debajo, zócalo de piedra labrada alrededor (se ve, como en el arte) y tablones
+        //    en la capa que se pisa. La planta baja se anda a la cota del pueblo, como el resto de las casas.
+        for (int dx = -TABERNA_VUELO - 1; dx <= ancho + TABERNA_VUELO; dx++) {
+            for (int dz = -TABERNA_VUELO - 1; dz <= fondo + TABERNA_VUELO; dz++) {
+                boolean dentro = dx >= 0 && dx < ancho && dz >= 0 && dz < fondo;
                 colocar(level, new BlockPos(bx + dx, nivel - 2, bz + dz), Blocks.COBBLESTONE.defaultBlockState(), 3);
+                colocar(level, new BlockPos(bx + dx, nivel - 1, bz + dz),
+                        dentro ? Blocks.DARK_OAK_PLANKS.defaultBlockState()
+                               : Blocks.STONE_BRICKS.defaultBlockState(), 3);
             }
         }
-        for (int dx = 0; dx < ancho; dx++) {
-            for (int dz = 0; dz < fondo; dz++) {
-                colocar(level, new BlockPos(bx + dx, nivel - 1, bz + dz), tablon, 3);
-                for (int y = nivel; y < y1 - 1; y++) {
-                    colocar(level, new BlockPos(bx + dx, y, bz + dz), Blocks.AIR.defaultBlockState(), 3);
-                }
-                colocar(level, new BlockPos(bx + dx, y1 - 1, bz + dz), tablon, 3);
-                for (int y = y1; y < techo; y++) {
-                    colocar(level, new BlockPos(bx + dx, y, bz + dz), Blocks.AIR.defaultBlockState(), 3);
-                }
-            }
+        // 3) LOS CUATRO MUROS DE LA PLANTA BAJA: cal y entramado de roble oscuro, con la PUERTA en el centro del muro
+        //    oeste (el que mira a la plaza, por donde el pueblo entra a comer).
+        muroTudor(level, bx, bz, 0, 1, fondo, nivel, TABERNA_PISO2 - 1, 2, TABERNA_PUERTA, Direction.WEST, true);
+        muroTudor(level, bx + ancho - 1, bz, 0, 1, fondo, nivel, TABERNA_PISO2 - 1, 2, -1, Direction.WEST, true);
+        muroTudor(level, bx, bz, 1, 0, ancho, nivel, TABERNA_PISO2 - 1, 2, -1, Direction.WEST, true);
+        muroTudor(level, bx, bz + fondo - 1, 1, 0, ancho, nivel, TABERNA_PISO2 - 1, 2, -1, Direction.WEST, true);
+        // 4) EL COMEDOR: la cocina del cocinero (con su ahumador), el hogar con su chimenea, la barra con las pipas y
+        //    las seis mesas con sus sillas.
+        cocinaDeLaTaberna(level, bx, bz, nivel);
+        hogarDeLaTaberna(level, bx, bz, nivel);
+        barraDeLaTaberna(level, bx, bz, nivel);
+        for (int[] mesa : TABERNA_MESAS) {
+            mesaConSillas(level, new BlockPos(bx + mesa[0], nivel, bz + mesa[1]));
         }
-        // 2) MUROS (dos pisos): piedra en la base, tablones, postes de tronco en esquinas y medios, ventanas de
-        //    cristal y la PUERTA en el centro de la pared norte (la que mira al pueblo).
-        muroDeLaTaberna(level, bx, bz, ancho, fondo, nivel, true);
-        muroDeLaTaberna(level, bx, bz, ancho, fondo, nivel, false);
-        // 3) LA BARRA (al norte, junto a la puerta), las PIPAS DE CERVEZA detrás y el mostrador de tablones.
-        //    OJO con el bloque de las pipas: NO se usa `BARREL`, porque en vanilla el <b>barril es el puesto de
-        //    trabajo del PESCADOR</b> y un aldeano sin oficio (una cría que crece, por ejemplo) lo reclamaría y se
-        //    volvería pescador — un oficio que este pueblo <b>todavía no tiene</b> (tendrá su edificio y su lago más
-        //    adelante). Las pipas son de madera con corteza (`OAK_WOOD`), que se ve como un tonel y no es puesto de
-        //    nadie; el mostrador va de tronco descortezado, así que se distinguen.
-        for (int x = 1; x <= 5; x++) {
-            colocar(level, new BlockPos(bx + x, nivel, bz + 6), Blocks.STRIPPED_OAK_LOG.defaultBlockState(), 3);
-            colocar(level, new BlockPos(bx + x, nivel, bz + 5), Blocks.OAK_WOOD.defaultBlockState(), 3);
-        }
-        colocar(level, new BlockPos(bx + 3, nivel, bz + 4), Blocks.OAK_WOOD.defaultBlockState(), 3);
-        colocar(level, new BlockPos(bx + 4, nivel, bz + 4), Blocks.OAK_WOOD.defaultBlockState(), 3);
-        // 4) LA COCINA (esquina sureste): el AHUMADOR del cocinero, su mesa de trabajo, el caldero y su arca de
-        //    provisiones (un COFRE, no un barril: el barril es del pescador, ver arriba).
-        colocar(level, new BlockPos(bx + ancho - 2, nivel, bz + fondo - 2), Blocks.SMOKER.defaultBlockState()
-                .setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING,
-                        Direction.NORTH), 3);
-        colocar(level, new BlockPos(bx + ancho - 3, nivel, bz + fondo - 2), Blocks.CRAFTING_TABLE.defaultBlockState(), 3);
-        // El caldero va DIAGONAL al ahumador (no delante): la casilla de delante es donde se pone el cocinero.
-        // lint:ok I9 porque la taberna entra con la migración 41 (ya subida en el cambio de la etapa F): esto es un
-        // ajuste del mismo edificio dentro de esa misma versión, no una construcción nueva.
-        colocar(level, new BlockPos(bx + ancho - 3, nivel, bz + fondo - 3), Blocks.CAULDRON.defaultBlockState(), 3);
-        colocar(level, new BlockPos(bx + ancho - 4, nivel, bz + fondo - 2), Blocks.CHEST.defaultBlockState()
-                .setValue(ChestBlock.FACING, Direction.NORTH), 3);
-        // 5) LAS MESAS con sus sillas (poste de valla con plato y cuatro sillas de escalera alrededor).
-        for (int[] mesa : new int[][]{{2, 3}, {6, 3}, {2, 8}, {6, 8}, {9, 9}}) {
-            mesaconSillas(level, new BlockPos(bx + mesa[0], nivel, bz + mesa[1]));
-        }
-        // 6) LA ESCALERA al piso de arriba: cuatro escalones pegados a la pared oeste, con el hueco en el forjado.
-        for (int i = 0; i < TABERNA_ALTO_PISO; i++) {
-            BlockPos escalon = new BlockPos(bx + 1, nivel + i, bz + fondo - 2 - i);
-            colocar(level, escalon, Blocks.OAK_STAIRS.defaultBlockState()
-                    .setValue(StairBlock.FACING, Direction.SOUTH).setValue(StairBlock.HALF, Half.BOTTOM), 3);
-            colocar(level, escalon.above(), Blocks.AIR.defaultBlockState(), 3);
-            colocar(level, new BlockPos(bx + 1, y1 - 1, bz + fondo - 2 - i), Blocks.AIR.defaultBlockState(), 3);
-        }
-        colocar(level, new BlockPos(bx + 1, y1 - 1, bz + fondo - 2 - TABERNA_ALTO_PISO),
-                tablon, 3); // el borde del hueco, para no caerse por él
-        // 7) EL PISO DE ARRIBA: la POSADA. Seis camas (dos filas de tres) con su farol y dos arcas para los viajeros.
-        for (int i = 0; i < 3; i++) {
-            bed(level, new BlockPos(bx + 2 + i * 3, y1, bz + 1), Direction.SOUTH);
-            bed(level, new BlockPos(bx + 2 + i * 3, y1, bz + fondo - 2), Direction.NORTH);
-        }
-        for (int i = 0; i < 3; i++) {
-            colocar(level, new BlockPos(bx + 2 + i * 3, y1 + 2, bz + 3), Blocks.LANTERN.defaultBlockState(), 3);
-            colocar(level, new BlockPos(bx + 2 + i * 3, y1 + 2, bz + fondo - 4), Blocks.LANTERN.defaultBlockState(), 3);
-        }
-        colocar(level, new BlockPos(bx + ancho - 2, y1, bz + fondo - 3), Blocks.CHEST.defaultBlockState()
-                .setValue(ChestBlock.FACING, Direction.WEST), 3);
-        colocar(level, new BlockPos(bx + ancho - 2, y1, bz + fondo - 5), Blocks.CHEST.defaultBlockState()
-                .setValue(ChestBlock.FACING, Direction.WEST), 3);
-        // 8) FAROLES del comedor (colgados del forjado) y del porche: la taberna tiene que verse de noche.
-        for (int[] luz : new int[][]{{2, 2}, {6, 2}, {2, 7}, {6, 7}, {ancho - 3, 5}, {ancho - 2, 9}}) {
-            colocar(level, new BlockPos(bx + luz[0], y1 - 1, bz + luz[1]),
-                    Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true), 3);
-        }
-        // 9) TEJADO: alero de tablones alrededor y una cumbrera a dos aguas.
-        for (int dx = -1; dx <= ancho; dx++) {
-            for (int dz = -1; dz <= fondo; dz++) {
-                boolean borde = dx == -1 || dx == ancho || dz == -1 || dz == fondo;
-                if (borde) {
-                    colocar(level, new BlockPos(bx + dx, techo, bz + dz), tablon, 3);
-                } else {
-                    colocar(level, new BlockPos(bx + dx, techo, bz + dz), tablon, 3);
-                }
-            }
-        }
-        for (int dx = 0; dx < ancho; dx++) {
-            colocar(level, new BlockPos(bx + dx, techo + 1, bz + 1), tablon, 3);
-            colocar(level, new BlockPos(bx + dx, techo + 1, bz + fondo - 2), tablon, 3);
-        }
-        // 10) PORCHE de la puerta (norte): dos postes, tejadillo y dos faroles.
-        colocar(level, new BlockPos(bx + ancho / 2 - 3, nivel, bz - 1), Blocks.OAK_FENCE.defaultBlockState(), 3);
-        colocar(level, new BlockPos(bx + ancho / 2 + 3, nivel, bz - 1), Blocks.OAK_FENCE.defaultBlockState(), 3);
-        for (int dx = -3; dx <= 3; dx++) {
-            colocar(level, new BlockPos(bx + ancho / 2 + dx, nivel + 3, bz - 1), tablon, 3);
-        }
-        colocar(level, new BlockPos(bx + ancho / 2 - 3, nivel + 2, bz - 1),
-                Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true), 3);
-        colocar(level, new BlockPos(bx + ancho / 2 + 3, nivel + 2, bz - 1),
-                Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true), 3);
+        // 5) LA ESCALERA (sube pegada al muro oeste, dentro de su caja) y EL FORJADO DE LA POSADA, con su hueco.
+        //    El orden importa: la escalera se coloca DESPUÉS del forjado, porque el hueco es justo donde ella sube.
+        forjadoDeLaPosada(level, bx, bz, nivel);
+        escaleraDeLaTaberna(level, bx, bz, nivel, y1);
+        // 6) LOS MUROS DE LA POSADA, un bloque por fuera de los de abajo (el vuelo del arte conceptual): la cal y el
+        //    entramado de arriba se apoyan en las cabezas de viga del forjado.
+        int largoTramo = fondo + 2 * TABERNA_VUELO;
+        int largoFrente = ancho + 2 * TABERNA_VUELO;
+        muroTudor(level, bx - TABERNA_VUELO, bz - TABERNA_VUELO, 0, 1, largoTramo, y1, TABERNA_ALERO, 2, -1,
+                Direction.WEST, false);
+        muroTudor(level, bx + ancho, bz - TABERNA_VUELO, 0, 1, largoTramo, y1, TABERNA_ALERO, 2, -1,
+                Direction.WEST, false);
+        muroTudor(level, bx - TABERNA_VUELO, bz - TABERNA_VUELO, 1, 0, largoFrente, y1, TABERNA_ALERO, 2, -1,
+                Direction.WEST, false);
+        muroTudor(level, bx - TABERNA_VUELO, bz + fondo, 1, 0, largoFrente, y1, TABERNA_ALERO, 2, -1,
+                Direction.WEST, false);
+        // 7) LA POSADA (los cuartos, las camas y la galería), su techo de tablones y el TEJADO a dos aguas.
+        posadaDeLaTaberna(level, bx, bz, y1, yTecho);
+        techoDeLaPosada(level, bx, bz, yTecho);
+        tejadoDeLaTaberna(level, bx, bz, fondo, yTecho);
+        // La chimenea, la ÚLTIMA: tiene que atravesar el forjado, el techo y el tejado (si fuera antes, el tejado
+        // la enterraría).
+        chimeneaDeLaTaberna(level, bx, bz, nivel, yTecho);
+        // 8) EL PORCHE de la puerta (al oeste, dando a la plaza) y TODAS LAS LUCES de la taberna.
+        porcheDeLaTaberna(level, bx, bz, nivel);
+        lucesDeLaTaberna(level, bx, bz, nivel, y1, yTecho);
+    }
+
+    /** ¿Es esta celda (relativa a la esquina) el <b>hueco de la escalera</b> en el forjado de la posada? */
+    private static boolean esHuecoDeLaEscalera(int dx, int dz) {
+        return dx == TABERNA_ESCALERA_X && dz >= TABERNA_ESCALERA_Z0 && dz <= TABERNA_ESCALERA_Z1;
     }
 
     /**
-     * Los <b>cuatro muros</b> de la taberna (los dos pisos a la vez): piedra en la base, tablones, postes de tronco en
-     * las esquinas y en los medios, ventanas de cristal a media altura y la <b>puerta</b> de dos bloques en el centro
-     * de la pared <b>norte</b> (la que mira al pueblo).
+     * El <b>forjado de la posada</b>: el suelo del piso de arriba (y el techo del comedor) en tablones de roble
+     * oscuro. Cubre TODO el vuelo (un bloque por fuera de los muros de abajo) menos el <b>hueco de la escalera</b>, y
+     * remata el borde con las <b>cabezas de viga</b> del vuelo (los troncos que se ven bajo el alero).
      */
-    private static void muroDeLaTaberna(ServerLevel level, int bx, int bz, int ancho, int fondo, int nivel,
-                                        boolean esNorte) {
-        int[][] lados = esNorte
-                ? new int[][]{{0, 0, ancho, 1}, {0, fondo - 1, ancho, 1}}
-                : new int[][]{{0, 0, 1, fondo}, {ancho - 1, 0, 1, fondo}};
-        for (int[] lado : lados) {
-            int pasos = Math.max(lado[2], lado[3]);
-            for (int i = 0; i < pasos; i++) {
-                int x = bx + lado[0] + (lado[2] > 1 ? i : 0);
-                int z = bz + lado[1] + (lado[3] > 1 ? i : 0);
-                int indice = lado[2] > 1 ? i : i;
-                boolean poste = indice == 0 || indice == pasos - 1 || indice == pasos / 2;
-                boolean puerta = esNorte && lado[1] == 0 && indice == ancho / 2;
-                for (int dy = 0; dy < TABERNA_ALTO_PISO * 2 + 1; dy++) {
-                    BlockPos p = new BlockPos(x, nivel + dy, z);
-                    if (puerta && dy <= 1) {
-                        colocar(level, p, Blocks.OAK_DOOR.defaultBlockState()
-                                .setValue(DoorBlock.FACING, Direction.NORTH)
-                                .setValue(DoorBlock.HALF, dy == 0 ? DoubleBlockHalf.LOWER : DoubleBlockHalf.UPPER), 3);
-                    } else if (dy == 0) {
-                        colocar(level, p, Blocks.COBBLESTONE.defaultBlockState(), 3);
-                    } else if (poste) {
-                        colocar(level, p, Blocks.OAK_LOG.defaultBlockState(), 3);
-                    } else if ((dy == 2 || dy == TABERNA_ALTO_PISO + 2) && indice % 3 == 1) {
-                        colocar(level, p, Blocks.GLASS_PANE.defaultBlockState(), 3);
-                    } else {
-                        colocar(level, p, Blocks.OAK_PLANKS.defaultBlockState(), 3);
-                    }
+    private static void forjadoDeLaPosada(ServerLevel level, int bx, int bz, int nivel) {
+        int y = nivel + TABERNA_PISO2 - 1;
+        for (int dx = -TABERNA_VUELO; dx <= TABERNA_ANCHO + TABERNA_VUELO - 1; dx++) {
+            for (int dz = -TABERNA_VUELO; dz <= TABERNA_FONDO + TABERNA_VUELO - 1; dz++) {
+                if (esHuecoDeLaEscalera(dx, dz)) {
+                    continue;
+                }
+                colocar(level, new BlockPos(bx + dx, y, bz + dz), Blocks.DARK_OAK_PLANKS.defaultBlockState(), 3);
+            }
+        }
+        // Las cabezas de viga: en el anillo que vuela (fuera de los muros de abajo), un tronco cada cuatro bloques,
+        // justo debajo del forjado. Es lo que hace que el vuelo se vea SOSTENIDO (y no flotando).
+        for (int dx = -TABERNA_VUELO; dx <= TABERNA_ANCHO + TABERNA_VUELO - 1; dx++) {
+            for (int dz = -TABERNA_VUELO; dz <= TABERNA_FONDO + TABERNA_VUELO - 1; dz++) {
+                boolean vuela = dx < 0 || dx >= TABERNA_ANCHO || dz < 0 || dz >= TABERNA_FONDO;
+                if (vuela && (dx + dz) % 4 == 0) {
+                    colocar(level, new BlockPos(bx + dx, y - 1, bz + dz), Blocks.DARK_OAK_LOG.defaultBlockState(), 3);
                 }
             }
         }
     }
 
-    /** Una <b>mesa</b> de la taberna: poste de valla con su plato (placa) y cuatro sillas de escalera alrededor. */
-    private static void mesaconSillas(ServerLevel level, BlockPos centro) {
-        colocar(level, centro, Blocks.OAK_FENCE.defaultBlockState(), 3);
+    /**
+     * La <b>escalera</b> al piso de arriba: sube pegada al muro oeste, de sur a norte, y desemboca en la galería de
+     * la posada. Va dentro de una <b>caja</b> cerrada por el este, porque el hueco del forjado es un pozo de un
+     * bloque de ancho y sin ese muro se caería dentro quien paseara por la galería.
+     * <p>
+     * <b>OJO con la orientación</b>: en las escaleras del juego la cara alta (por donde se sube) es la que marca
+     * {@code FACING}. La taberna vieja subía hacia el norte con las escaleras mirando al sur, así que se veían bien y
+     * <b>no se podía subir</b> (lo reportó el jugador): aquí van mirando al <b>norte</b>, que es hacia donde suben.
+     */
+    private static void escaleraDeLaTaberna(ServerLevel level, int bx, int bz, int nivel, int y1) {
+        int alto = TABERNA_PISO2;
+        for (int i = 0; i < alto; i++) {
+            BlockPos escalon = new BlockPos(bx + TABERNA_ESCALERA_X, nivel + i, bz + TABERNA_ESCALERA_Z1 - i);
+            colocar(level, escalon, Blocks.DARK_OAK_STAIRS.defaultBlockState()
+                    .setValue(StairBlock.FACING, Direction.NORTH).setValue(StairBlock.HALF, Half.BOTTOM), 3);
+            colocar(level, escalon.above(), Blocks.AIR.defaultBlockState(), 3);
+        }
+        // La caja: el muro del este, del suelo de la posada al techo (la boca de la escalera queda al norte, en la
+        // galería, que es donde se desemboca).
+        for (int dz = TABERNA_ESCALERA_Z0 - 1; dz <= TABERNA_ESCALERA_Z1; dz++) {
+            for (int y = y1; y < y1 + TABERNA_ALERO; y++) {
+                colocar(level, new BlockPos(bx + TABERNA_ESCALERA_X + 1, y, bz + dz),
+                        Blocks.DARK_OAK_PLANKS.defaultBlockState(), 3);
+            }
+        }
+    }
+
+    /**
+     * Un <b>tramo de muro Tudor</b>: <b>solera</b> (piedra labrada en la planta baja, tablones en el vuelo de la
+     * posada), paneles de <b>cal</b> (terracota blanca) con el <b>entramado de roble oscuro</b> —postes cada cuatro
+     * bloques y viga arriba— y <b>ventanas</b> de dos cristales entre poste y poste. Si {@code indicePuerta >= 0}, en
+     * esa celda va la <b>puerta</b> de dos bloques, que es por donde entra el pueblo.
+     * <p>
+     * El tramo se recorre desde {@code (x0,z0)} sumando {@code (dx,dz)} {@code largo} veces: el mismo método sirve
+     * para los cuatro muros y para las dos plantas (lo único que cambia es dónde está la solera y la ventana).
+     */
+    private static void muroTudor(ServerLevel level, int x0, int z0, int dx, int dz, int largo, int yBase, int alto,
+                                  int kVentana, int indicePuerta, Direction miraPuerta, boolean plantaBaja) {
+        for (int i = 0; i < largo; i++) {
+            int x = x0 + dx * i;
+            int z = z0 + dz * i;
+            boolean poste = i % 4 == 0 || i == largo - 1;
+            boolean ventana = i % 4 == 1 || i % 4 == 2;
+            for (int k = 0; k < alto; k++) {
+                BlockPos p = new BlockPos(x, yBase + k, z);
+                if (i == indicePuerta && k <= 1) {
+                    colocar(level, p, Blocks.DARK_OAK_DOOR.defaultBlockState()
+                            .setValue(DoorBlock.FACING, miraPuerta)
+                            .setValue(DoorBlock.HALF, k == 0 ? DoubleBlockHalf.LOWER : DoubleBlockHalf.UPPER), 3);
+                } else if (poste) {
+                    colocar(level, p, Blocks.DARK_OAK_LOG.defaultBlockState(), 3);
+                } else if (k == 0) {
+                    colocar(level, p, (plantaBaja ? Blocks.STONE_BRICKS : Blocks.DARK_OAK_PLANKS).defaultBlockState(), 3);
+                } else if (k == alto - 1) {
+                    colocar(level, p, Blocks.DARK_OAK_PLANKS.defaultBlockState(), 3);
+                } else if (ventana && k == kVentana) {
+                    colocar(level, p, Blocks.GLASS_PANE.defaultBlockState(), 3);
+                } else {
+                    colocar(level, p, Blocks.WHITE_TERRACOTTA.defaultBlockState(), 3);
+                }
+            }
+        }
+    }
+
+    /**
+     * La <b>cocina</b> del comedor (esquina noroeste, cerrada con sus dos tabiques): el <b>ahumador</b> del cocinero
+     * —su puesto de trabajo, que es el que busca {@code VillagerCookGoal}— con la casilla de delante libre para que
+     * se ponga a cocinar, el horno, la mesa de trabajo, su arca y un farol.
+     * <p>
+     * <b>OJO con los bloques que se ponen aquí</b>: nada de <b>barriles</b> (puesto del PESCADOR) ni de
+     * <b>calderos</b> (puesto del CURTIDOR) — un aldeano sin oficio los reclamaría y se pondría un oficio que este
+     * pueblo no tiene. El hogar va de ladrillo y el fuego es un campfire metido en el muro, así que no se pisa.
+     */
+    private static void cocinaDeLaTaberna(ServerLevel level, int bx, int bz, int nivel) {
+        int alto = TABERNA_PISO2 - 1;
+        BlockState tablon = Blocks.DARK_OAK_PLANKS.defaultBlockState();
+        // Los dos tabiques (el este y el sur), con el hueco de la puerta en el sur.
+        for (int dz = 1; dz <= 5; dz++) {
+            for (int k = 0; k < alto; k++) {
+                colocar(level, new BlockPos(bx + 6, nivel + k, bz + dz), tablon, 3);
+            }
+        }
+        for (int dx = 1; dx <= 6; dx++) {
+            for (int k = 0; k < alto; k++) {
+                if (dx == 3 && k <= 1) {
+                    continue; // la puerta de la cocina (dos de alto)
+                }
+                colocar(level, new BlockPos(bx + dx, nivel + k, bz + 5), tablon, 3);
+            }
+        }
+        // El puesto del cocinero: el ahumador (con su casilla de delante libre: él se pone al norte).
+        colocar(level, new BlockPos(bx + TABERNA_COCINA[0], nivel, bz + TABERNA_COCINA[1]),
+                Blocks.SMOKER.defaultBlockState().setValue(
+                        net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING,
+                        Direction.NORTH), 3);
+        colocar(level, new BlockPos(bx + 2, nivel, bz + 2), Blocks.CRAFTING_TABLE.defaultBlockState(), 3);
+        colocar(level, new BlockPos(bx + 1, nivel, bz + 1), Blocks.FURNACE.defaultBlockState()
+                .setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING,
+                        Direction.SOUTH), 3);
+        colocar(level, new BlockPos(bx + 5, nivel, bz + 4), Blocks.CHEST.defaultBlockState()
+                .setValue(ChestBlock.FACING, Direction.WEST), 3);
+        colocar(level, new BlockPos(bx + 1, nivel, bz + 4), Blocks.POTTED_FERN.defaultBlockState(), 3);
+    }
+
+    /**
+     * El <b>hogar</b> de la taberna: un hogar de ladrillo en el muro norte, con el <b>fuego</b> metido dentro del
+     * muro (una casilla que no se pisa, así nadie se quema al pasar) y su repisa de madera. La <b>chimenea</b> que
+     * sale de aquí se pone al final ({@link #chimeneaDeLaTaberna}), cuando ya está el tejado: así la atraviesa en vez
+     * de quedar enterrada debajo.
+     */
+    private static void hogarDeLaTaberna(ServerLevel level, int bx, int bz, int nivel) {
+        int hx = TABERNA_HOGAR[0];
+        int hz = TABERNA_HOGAR[1];
+        for (int dx = hx - 1; dx <= hx + 1; dx++) {
+            for (int k = 0; k <= 2; k++) {
+                colocar(level, new BlockPos(bx + dx, nivel + k, bz + hz), Blocks.BRICKS.defaultBlockState(), 3);
+            }
+        }
+        // El fuego, en la boca del hogar (el aire de encima deja ver la llama desde el comedor).
+        colocar(level, new BlockPos(bx + hx, nivel, bz + hz), Blocks.CAMPFIRE.defaultBlockState(), 3);
+        colocar(level, new BlockPos(bx + hx, nivel + 1, bz + hz), Blocks.AIR.defaultBlockState(), 3);
+        colocar(level, new BlockPos(bx + hx, nivel + 2, bz + hz), Blocks.AIR.defaultBlockState(), 3);
+        // Y el hogar se remata con su repisa de madera, a la altura de la viga del muro.
+        for (int dx = hx - 2; dx <= hx + 2; dx++) {
+            colocar(level, new BlockPos(bx + dx, nivel + TABERNA_PISO2 - 1, bz + hz),
+                    Blocks.DARK_OAK_PLANKS.defaultBlockState(), 3);
+        }
+    }
+
+    /**
+     * La <b>chimenea</b> del hogar: sube pegada al muro norte por dentro de la casa, atraviesa el forjado de la
+     * posada, el techo y el <b>tejado</b> (por eso se coloca la última: si no, el tejado la taparía), y sale por
+     * encima de la cumbrera con su remate de losa.
+     */
+    private static void chimeneaDeLaTaberna(ServerLevel level, int bx, int bz, int nivel, int yTecho) {
+        int hx = TABERNA_HOGAR[0];
+        int hz = TABERNA_HOGAR[1];
+        for (int y = nivel + 3; y <= yTecho + 5; y++) {
+            colocar(level, new BlockPos(bx + hx, y, bz + hz), Blocks.BRICKS.defaultBlockState(), 3);
+        }
+        colocar(level, new BlockPos(bx + hx, yTecho + 6, bz + hz), Blocks.BRICK_SLAB.defaultBlockState(), 3);
+    }
+
+    /**
+     * La <b>barra</b> del comedor, en el muro sur: el mostrador de tronco descortezado y, detrás, las <b>pipas</b> de
+     * cerveza contra la pared.
+     * <p>
+     * <b>OJO con el bloque de las pipas</b>: NO se usa {@code BARREL}, porque en vanilla el <b>barril es el puesto de
+     * trabajo del PESCADOR</b> y un aldeano sin oficio (una cría que crece, por ejemplo) lo reclamaría y se volvería
+     * pescador — un oficio que este pueblo <b>todavía no tiene</b> (tendrá su edificio y su lago más adelante). Las
+     * pipas son de madera con corteza ({@code OAK_WOOD}), que se ve como un tonel y no es puesto de nadie; el
+     * mostrador va de tronco descortezado, así que se distinguen.
+     */
+    private static void barraDeLaTaberna(ServerLevel level, int bx, int bz, int nivel) {
+        for (int dx = 5; dx <= 11; dx++) {
+            colocar(level, new BlockPos(bx + dx, nivel, bz + 12), Blocks.STRIPPED_OAK_LOG.defaultBlockState(), 3);
+            colocar(level, new BlockPos(bx + dx, nivel, bz + 13), Blocks.OAK_WOOD.defaultBlockState(), 3);
+        }
+        colocar(level, new BlockPos(bx + 8, nivel, bz + 11), Blocks.POTTED_DANDELION.defaultBlockState(), 3);
+    }
+
+    /**
+     * La <b>posada</b> (el piso de arriba): una <b>galería</b> de dos bloques de ancho que cruza la casa de este a
+     * oeste, con <b>seis cuartos</b> alrededor (tres al norte y tres al sur) y sus <b>camas</b>, sus arcas y sus
+     * faroles. Es el plano del <i>Building map: Inn</i> que trajo el jugador, con el cuarto pequeño del suroeste
+     * recortado por la caja de la escalera.
+     */
+    private static void posadaDeLaTaberna(ServerLevel level, int bx, int bz, int y1, int yTecho) {
+        int alto = yTecho - y1;
+        BlockState tablon = Blocks.DARK_OAK_PLANKS.defaultBlockState();
+        // Los dos muros de la galería (norte en lz=6 y sur en lz=9), con la puerta de cada cuarto.
+        int[] puertas = {2, 9, 15};
+        for (int dx = 0; dx < TABERNA_ANCHO; dx++) {
+            boolean puertaNorte = false;
+            boolean puertaSur = false;
+            for (int p : puertas) {
+                puertaNorte |= dx == p;
+                puertaSur |= dx == p + 1;   // el cuarto pequeño del suroeste tiene la puerta corrida
+            }
+            if (dx >= 2) {
+                muroDeCuarto(level, bx + dx, bz + 9, y1, alto, tablon, puertaSur, Direction.NORTH);
+            }
+            muroDeCuarto(level, bx + dx, bz + 6, y1, alto, tablon, puertaNorte, Direction.SOUTH);
+        }
+        // Los tabiques que separan los cuartos entre sí (a los dos lados de la galería).
+        for (int dx : new int[]{6, 12}) {
+            for (int dz = 0; dz <= 5; dz++) {
+                for (int k = 0; k < alto; k++) {
+                    colocar(level, new BlockPos(bx + dx, y1 + k, bz + dz), tablon, 3);
+                }
+            }
+            for (int dz = 10; dz <= 14; dz++) {
+                for (int k = 0; k < alto; k++) {
+                    colocar(level, new BlockPos(bx + dx, y1 + k, bz + dz), tablon, 3);
+                }
+            }
+        }
+        // LAS CAMAS: dos por cuarto (una en el cuarto pequeño) con la cabecera contra el muro.
+        int[][] camas = {{1, 1, -1}, {4, 1, -1},                       // cuarto noroeste (cabeza al norte)
+                {8, 1, -1}, {10, 1, -1},                               // norte (centro)
+                {14, 1, -1}, {17, 1, -1},                              // noreste
+                {4, 13, 1},                                            // suroeste (el pequeño, junto a la escalera)
+                {8, 13, 1}, {10, 13, 1},                               // sur (centro)
+                {14, 13, 1}, {17, 13, 1}};                             // sureste
+        for (int[] c : camas) {
+            bed(level, new BlockPos(bx + c[0], y1, bz + c[1]), c[2] < 0 ? Direction.NORTH : Direction.SOUTH);
+        }
+        // LAS ARCAS de cada cuarto (una por cuarto, en su esquina).
+        int[][] arcas = {{5, 0}, {7, 0}, {18, 0}, {5, 10}, {11, 10}, {18, 10}};
+        for (int[] a : arcas) {
+            Direction mira = a[1] < 7 ? Direction.NORTH : Direction.SOUTH;
+            colocar(level, new BlockPos(bx + a[0], y1, bz + a[1]),
+                    Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, mira), 3);
+        }
+    }
+
+    /** Un muro de la posada con su puerta (o sin ella): tablones de roble oscuro y, si toca, la puerta. */
+    private static void muroDeCuarto(ServerLevel level, int x, int z, int y1, int alto, BlockState tablon,
+                                     boolean conPuerta, Direction mira) {
+        for (int k = 0; k < alto; k++) {
+            if (conPuerta && k <= 1) {
+                colocar(level, new BlockPos(x, y1 + k, z), Blocks.DARK_OAK_DOOR.defaultBlockState()
+                        .setValue(DoorBlock.FACING, mira)
+                        .setValue(DoorBlock.HALF, k == 0 ? DoubleBlockHalf.LOWER : DoubleBlockHalf.UPPER), 3);
+            } else {
+                colocar(level, new BlockPos(x, y1 + k, z), tablon, 3);
+            }
+        }
+    }
+
+    /** Una <b>mesa</b> del comedor: poste de valla con su plato (placa) y cuatro <b>sillas</b> de escalera alrededor. */
+    private static void mesaConSillas(ServerLevel level, BlockPos centro) {
+        colocar(level, centro, Blocks.DARK_OAK_FENCE.defaultBlockState(), 3);
         colocar(level, centro.above(), Blocks.OAK_PRESSURE_PLATE.defaultBlockState(), 3);
-        // Las sillas miran a la mesa: la de arriba (norte) mira al sur, y así las cuatro.
-        Object[][] sillas = {{1, 0, Direction.WEST}, {-1, 0, Direction.EAST},
-                {0, 1, Direction.NORTH}, {0, -1, Direction.SOUTH}};
+        // OJO con la orientación de las sillas: en una escalera del juego la cara alta (la que marca FACING) es el
+        // respaldo, así que la silla "mira" al lado contrario. El respaldo va del lado de FUERA, para que quien se
+        // siente quede de cara a la mesa (antes estaban justo al revés, de espaldas).
+        Object[][] sillas = {{1, 0, Direction.EAST}, {-1, 0, Direction.WEST},
+                {0, 1, Direction.SOUTH}, {0, -1, Direction.NORTH}};
         for (Object[] s : sillas) {
             // lint:ok I1 porque la Y de `centro` es la COTA de la aldea que le pasa `taberna()` (no la del centro
             // del objetivo): la mesa se coloca a la capa que se pisa.
             BlockPos p = new BlockPos(centro.getX() + (int) s[0], centro.getY(), centro.getZ() + (int) s[1]);
-            colocar(level, p, Blocks.OAK_STAIRS.defaultBlockState()
+            colocar(level, p, Blocks.DARK_OAK_STAIRS.defaultBlockState()
                     .setValue(StairBlock.FACING, (Direction) s[2])
                     .setValue(StairBlock.HALF, Half.BOTTOM), 3);
         }
     }
 
+    /** El <b>techo de la posada</b>: los tablones de los que cuelgan los faroles y sobre los que se apoya el tejado. */
+    private static void techoDeLaPosada(ServerLevel level, int bx, int bz, int yTecho) {
+        for (int dx = 0; dx < TABERNA_ANCHO; dx++) {
+            for (int dz = 0; dz < TABERNA_FONDO; dz++) {
+                colocar(level, new BlockPos(bx + dx, yTecho - 1, bz + dz),
+                        Blocks.DARK_OAK_PLANKS.defaultBlockState(), 3);
+            }
+        }
+    }
+
     /**
-     * Asegura la <b>taberna</b> en aldeas ya construidas (idempotente: se comprueba por su barra). Se llama al generar,
+     * El <b>tejado a dos aguas</b>: la cumbrera va en el eje X, en medio del fondo, y las dos vertientes bajan hasta
+     * el alero (que <b>vuela</b> dos bloques por fuera de los muros de la posada). Cada vertiente es una escalera de
+     * tejas —con la cara alta mirando a la cumbrera, que es hacia donde sube— y el hueco de dentro va <b>macizo</b>,
+     * para que no quede una buhardilla a oscuras donde críen los bichos. Los <b>frontones</b> (este y oeste) se
+     * cierran con cal y entramado, con su ventana.
+     */
+    private static void tejadoDeLaTaberna(ServerLevel level, int bx, int bz, int fondo, int yTecho) {
+        int ancho = TABERNA_ANCHO;
+        int cumbrera = (fondo - 1) / 2;
+        int pasos = cumbrera + TABERNA_VUELO + 1;   // hasta que las dos vertientes se juntan en la cumbrera
+        for (int p = 0; p < pasos; p++) {
+            int y = yTecho + p;
+            int zN = bz - TABERNA_VUELO - 1 + p;
+            int zS = bz + fondo + TABERNA_VUELO - p;
+            for (int dx = -TABERNA_VUELO - 1; dx <= ancho + TABERNA_VUELO; dx++) {
+                colocar(level, new BlockPos(bx + dx, y, zN), Blocks.DEEPSLATE_TILE_STAIRS.defaultBlockState()
+                        .setValue(StairBlock.FACING, Direction.SOUTH).setValue(StairBlock.HALF, Half.BOTTOM), 3);
+                colocar(level, new BlockPos(bx + dx, y, zS), Blocks.DEEPSLATE_TILE_STAIRS.defaultBlockState()
+                        .setValue(StairBlock.FACING, Direction.NORTH).setValue(StairBlock.HALF, Half.BOTTOM), 3);
+                // El relleno macizo va SOLO por dentro de los frontones: en la columna de fuera (la que vuela sobre
+                // el frontón) se dejan los dos bordes de teja y nada más, que si no el alero tapa la cal y el
+                // entramado del frontón (y el frontón es lo bonito de una casa con entramado).
+                if (dx > -TABERNA_VUELO - 1 && dx < ancho + TABERNA_VUELO) {
+                    for (int z = zN + 1; z <= zS - 1; z++) {
+                        colocar(level, new BlockPos(bx + dx, y, z), Blocks.DEEPSLATE_TILES.defaultBlockState(), 3);
+                    }
+                }
+            }
+        }
+        for (int dx = -TABERNA_VUELO - 1; dx <= ancho + TABERNA_VUELO; dx++) {
+            colocar(level, new BlockPos(bx + dx, yTecho + pasos, bz + cumbrera),
+                    Blocks.DEEPSLATE_TILE_SLAB.defaultBlockState(), 3);
+        }
+        // Los frontones: el triángulo que cierra el tejado por el este y por el oeste.
+        for (int dz = -TABERNA_VUELO; dz <= fondo + TABERNA_VUELO - 1; dz++) {
+            int arriba = Math.min(Math.min(dz + TABERNA_VUELO + 1, fondo + TABERNA_VUELO - dz), pasos - 1);
+            for (int y = yTecho; y < yTecho + arriba; y++) {
+                for (int dx : new int[]{-TABERNA_VUELO, ancho + TABERNA_VUELO - 1}) {
+                    BlockState estado;
+                    if (y == yTecho || y == yTecho + arriba - 1 || (y - yTecho) % 3 == 0) {
+                        estado = Blocks.DARK_OAK_PLANKS.defaultBlockState();
+                    } else if (y == yTecho + 2 && Math.abs(dz - cumbrera) <= 1) {
+                        estado = Blocks.GLASS_PANE.defaultBlockState();
+                    } else {
+                        estado = Blocks.WHITE_TERRACOTTA.defaultBlockState();
+                    }
+                    colocar(level, new BlockPos(bx + dx, y, bz + dz), estado, 3);
+                }
+            }
+        }
+    }
+
+    /**
+     * El <b>porche</b> de la puerta (al oeste, dando a la plaza): dos postes, el <b>toldo</b> que baja hacia fuera, la
+     * <b>enseña</b> de la taberna colgada con su farol y un par de <b>pipas</b> al lado de la puerta. Es lo primero
+     * que se ve al llegar al pueblo.
+     */
+    private static void porcheDeLaTaberna(ServerLevel level, int bx, int bz, int nivel) {
+        int pz = TABERNA_PUERTA;
+        for (int dz : new int[]{pz - 3, pz + 3}) {
+            for (int k = 0; k <= 2; k++) {
+                colocar(level, new BlockPos(bx - 3, nivel + k, bz + dz), Blocks.DARK_OAK_FENCE.defaultBlockState(), 3);
+            }
+        }
+        for (int dz = pz - 3; dz <= pz + 3; dz++) {
+            colocar(level, new BlockPos(bx - 2, nivel + TABERNA_PISO2 - 1, bz + dz),
+                    Blocks.DARK_OAK_STAIRS.defaultBlockState()
+                            .setValue(StairBlock.FACING, Direction.EAST).setValue(StairBlock.HALF, Half.BOTTOM), 3);
+            colocar(level, new BlockPos(bx - 3, nivel + TABERNA_PISO2 - 2, bz + dz),
+                    Blocks.DARK_OAK_STAIRS.defaultBlockState()
+                            .setValue(StairBlock.FACING, Direction.EAST).setValue(StairBlock.HALF, Half.BOTTOM), 3);
+        }
+        for (int dz = pz - 1; dz <= pz + 1; dz++) {
+            colocar(level, new BlockPos(bx - 2, nivel + TABERNA_PISO2 - 2, bz + dz),
+                    Blocks.DARK_OAK_PLANKS.defaultBlockState(), 3);
+        }
+        colocar(level, new BlockPos(bx - 2, nivel + TABERNA_PISO2 - 3, bz + pz),
+                Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true), 3);
+        colocar(level, new BlockPos(bx - 3, nivel + TABERNA_PISO2 - 2, bz + pz - 3),
+                Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true), 3);
+        colocar(level, new BlockPos(bx - 3, nivel + TABERNA_PISO2 - 2, bz + pz + 3),
+                Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true), 3);
+        colocar(level, new BlockPos(bx - 2, nivel, bz + pz - 2), Blocks.OAK_WOOD.defaultBlockState(), 3);
+        colocar(level, new BlockPos(bx - 2, nivel, bz + pz + 2), Blocks.OAK_WOOD.defaultBlockState(), 3);
+    }
+
+    /** Un farol <b>colgado</b> (de un bloque sólido que tiene encima). */
+    private static void colgar(ServerLevel level, BlockPos pos) {
+        colocar(level, pos, Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true), 3);
+    }
+
+    /**
+     * Las <b>luces</b> de la taberna: faroles colgados del forjado en el comedor, del techo en la galería y en los
+     * cuartos, y un par bajo el toldo del porche. Una taberna a oscuras es una taberna con bichos dentro.
+     */
+    private static void lucesDeLaTaberna(ServerLevel level, int bx, int bz, int nivel, int y1, int yTecho) {
+        int[][] comedor = {{2, 3}, {5, 3}, {9, 3}, {13, 3}, {16, 3}, {4, 7}, {9, 7}, {13, 7}, {16, 8},
+                {4, 11}, {9, 12}, {14, 12}, {16, 12}};
+        for (int[] l : comedor) {
+            colgar(level, new BlockPos(bx + l[0], nivel + TABERNA_PISO2 - 2, bz + l[1]));
+        }
+        int[][] posada = {{3, 3}, {9, 3}, {16, 3}, {4, 12}, {9, 12}, {16, 12}, {6, 7}, {12, 7},
+                {TABERNA_ESCALERA_X, TABERNA_ESCALERA_Z0 + 2}};
+        for (int[] l : posada) {
+            colgar(level, new BlockPos(bx + l[0], yTecho - 2, bz + l[1]));
+        }
+        // La galería va a media altura entre los dos pisos: su farol cuelga del techo de la posada.
+        for (int dx : new int[]{3, 9, 15}) {
+            colgar(level, new BlockPos(bx + dx, yTecho - 2, bz + 7));
+        }
+    }
+
+    /**
+     * Despeja el <b>solar de la taberna</b> antes de levantarla. Cubre de sobra la taberna vieja (que cabía dentro de
+     * la nueva), así que aquí se tiran de una vez sus muros, su forjado y su tejado.
+     * <p>
+     * Lo que hubiera en <b>cofres</b> se guarda ANTES en el <b>almacén del pueblo</b>: tirar un cofre tira su
+     * contenido al suelo (mecánica del juego) y el pueblo no puede perder lo que tenía guardado.
+     */
+    private static void despejarSolarDeLaTaberna(ServerLevel level, BlockPos center, int bx, int bz, int nivel,
+                                                 int hastaY) {
+        for (int dx = -TABERNA_VUELO - 2; dx <= TABERNA_ANCHO + TABERNA_VUELO + 1; dx++) {
+            for (int dz = -TABERNA_VUELO - 2; dz <= TABERNA_FONDO + TABERNA_VUELO + 1; dz++) {
+                for (int y = nivel; y <= hastaY; y++) {
+                    BlockPos p = new BlockPos(bx + dx, y, bz + dz);
+                    if (level.getBlockState(p).isAir()) {
+                        continue;
+                    }
+                    if (level.getBlockEntity(p) instanceof Container contenedor) {
+                        guardarEnElAlmacen(level, center, contenedor);
+                    }
+                    colocar(level, p, Blocks.AIR.defaultBlockState(), 3);
+                }
+            }
+        }
+    }
+
+    /**
+     * Vacía un contenedor en el <b>almacén del pueblo</b>. Lo que no quepa ahí se deja caer en el almacén: el
+     * recolector del pueblo lo recoge y lo guarda (mejor eso que perderlo al tirar el cofre donde estaba).
+     */
+    private static void guardarEnElAlmacen(ServerLevel level, BlockPos center, Container contenedor) {
+        for (int i = 0; i < contenedor.getContainerSize(); i++) {
+            ItemStack pila = contenedor.getItem(i);
+            if (pila.isEmpty()) {
+                continue;
+            }
+            ItemStack sobra = VillageStorage.guardar(level, center, pila.copy());
+            contenedor.setItem(i, ItemStack.EMPTY);
+            if (!sobra.isEmpty()) {
+                Block.popResource(level, VillageStorage.centro(center), sobra);
+            }
+        }
+        contenedor.setChanged();
+    }
+
+    /**
+     * El <b>camino de la plaza a la taberna</b>: sale de la plaza hacia el sur y luego tuerce al este. No va en
+     * recta porque la recta cruza la <b>parcela de la granja</b> (que está en medio), y un camino no debe pisar los
+     * cultivos; muere en la puerta oeste, que es la que da a la plaza.
+     */
+    public static void caminoALaTaberna(ServerLevel level, BlockPos center) {
+        BlockPos esquina = center.offset(2, 0, 24);
+        line(level, center, esquina);
+        BlockPos puerta = puertaDeLaTaberna(level, center);
+        line(level, esquina, new BlockPos(puerta.getX() - 2, puerta.getY(), puerta.getZ()));
+    }
+
+    /**
+     * Asegura la <b>taberna</b> en aldeas ya construidas. Es <b>idempotente</b>: se comprueba por sus cuatro postes
+     * de esquina, que en esta taberna son de <b>roble oscuro</b> (la vieja era de roble claro). Se llama al generar,
      * en la migración y en el latido, como el resto de edificios del pueblo.
+     * <p>
+     * Si la aldea todavía tiene la <b>taberna vieja</b> (13x12, con la escalera que no se podía subir), la prueba
+     * falla y aquí se levanta la nueva: su solar se despeja entero —la vieja cabía dentro— y lo que hubiera en sus
+     * cofres se guarda antes en el almacén.
      */
     public static void asegurarTaberna(ServerLevel level, BlockPos center) {
         int nivel = cotaDeLaPlaza(level, center);
         if (nivel <= level.getMinBuildHeight() + 1) {
             return;
         }
-        BlockPos base = baseDeLaTaberna(center);
-        // RETROFIT DE LAS PIPAS: la primera versión de la taberna (etapa F) puso BARRILES detrás de la barra y en la
-        // cocina, y el barril es el puesto de trabajo del PESCADOR en vanilla: un aldeano sin oficio que lo reclamara
-        // se habría vuelto pescador (lo avisó el jugador). Las tabernas ya construidas se arreglan AQUÍ, en su sitio,
-        // sin rehacer el edificio (y sin tocar sus cofres): solo cambia el bloque de las pipas.
-        // lint:ok I9 porque no se añade construcción: es un RETROFIT en el sitio, aplicado por esta pasada idempotente
-        // (que corre en el latido), así que no hace falta subir CURRENT_LAYOUT para arreglar las aldeas ya migradas.
-        retrofitDeLasPipas(level, base, nivel);
         if (tabernaConstruida(level, center)) {
             return;
         }
-        taberna(level, base, nivel);
-        DevilRpg.LOGGER.info("[Village] Aldea en {}: taberna construida en {} (dos pisos, {}x{})",
-                center, base, TABERNA_ANCHO, TABERNA_FONDO);
-    }
-
-    /**
-     * Cambia los <b>barriles</b> que la primera taberna puso por <b>madera con corteza</b> (las pipas) y por un
-     * <b>cofre</b> (la despensa de la cocina). Es lo que evita que un aldeano sin oficio reclame un barril y se
-     * convierta en <b>pescador</b> (vanilla): el pescador llegará con su edificio y su lago, más adelante.
-     */
-    private static void retrofitDeLasPipas(ServerLevel level, BlockPos base, int nivel) {
-        int bx = base.getX();
-        int bz = base.getZ();
-        List<BlockPos> pipas = new ArrayList<>();
-        for (int x = 1; x <= 5; x++) {
-            pipas.add(new BlockPos(bx + x, nivel, bz + 5));
-        }
-        pipas.add(new BlockPos(bx + 3, nivel, bz + 4));
-        pipas.add(new BlockPos(bx + 4, nivel, bz + 4));
-        int cambiados = 0;
-        for (BlockPos p : pipas) {
-            if (level.getBlockState(p).is(Blocks.BARREL)) {
-                colocar(level, p, Blocks.OAK_WOOD.defaultBlockState(), 3);
-                cambiados++;
-            }
-        }
-        BlockPos arca = new BlockPos(bx + TABERNA_ANCHO - 4, nivel, bz + TABERNA_FONDO - 2);
-        if (level.getBlockState(arca).is(Blocks.BARREL)) {
-            colocar(level, arca, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.NORTH), 3);
-            cambiados++;
-        }
-        if (cambiados > 0) {
-            DevilRpg.LOGGER.info("[Village] Aldea en {}: {} barril(es) de la taberna cambiados (el barril es el"
-                    + " puesto del PESCADOR: el pueblo todavía no tiene ese oficio)", base, cambiados);
-        }
+        BlockPos base = baseDeLaTaberna(center);
+        taberna(level, center, base, nivel);
+        DevilRpg.LOGGER.info("[Village] Aldea en {}: taberna construida en {} (dos plantas de cal y entramado con"
+                + " vuelo, {}x{})", center, base, TABERNA_ANCHO, TABERNA_FONDO);
     }
 
     /**

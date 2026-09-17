@@ -403,9 +403,26 @@ public final class VillageManager {
      *       de nieve polvo</b> flotando dentro del recinto, que es lo que se veía desde arriba. Ahora se retiran (solo
      *       los que <b>no tienen nada debajo</b>) la nieve, el hielo y las plantas colgadas. La nieve apoyada en el
      *       suelo del pueblo se queda.</li>
+     *   <li>44: la <b>TABERNA GRANDE</b> (lo pidió el jugador: <i>"arregla la taberna, está muy pequeña y muy
+     *       sencilla; las escaleras están mal orientadas y no se puede subir"</i>). Se rehace entera con el plano que
+     *       trajo (el <i>Building map: Inn</i>) y el arte conceptual de la posada con entramado:
+     *       <ul>
+     *         <li>Pasa de <b>13×12 a 19×15</b> (y a 21×17 en la planta alta, que <b>vuela</b> un bloque sobre la baja,
+     *             el <i>jetty</i> del arte) y de dos pisos bajos a dos pisos de cuatro bloques de alto.</li>
+     *         <li>Abajo, el <b>comedor</b>: la <b>cocina</b> del cocinero (con su ahumador), el <b>hogar</b> de
+     *             ladrillo con su chimenea, la <b>barra</b> con las pipas, <b>seis mesas</b> con sus sillas y la
+     *             escalera. Arriba, la <b>posada</b>: <b>seis cuartos</b> con once camas alrededor de una galería.</li>
+     *         <li>La <b>ESCALERA</b> iba al revés (subía al norte mirando al sur), así que se veía bien y no se podía
+     *             subir: en las escaleras del juego la cara alta —por donde se sube— es la que marca {@code FACING}.
+     *             Ahora sube dentro de su <b>caja</b> cerrada, pegada al muro oeste, y desemboca en la galería.</li>
+     *         <li>La <b>fachada da al oeste</b> (a la plaza), con <b>porche</b>, toldo, enseña y <b>camino</b> desde la
+     *             plaza (el camino va torcido a propósito: en recta cruzaba la parcela de la granja).</li>
+     *         <li>El <b>solar se despeja entero</b> antes de levantarla (la taberna vieja cabía dentro) y lo que
+     *             hubiera en sus cofres se guarda antes en el <b>almacén</b>, para no perder nada.</li>
+     *       </ul></li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 43;
+    public static final int CURRENT_LAYOUT = 44;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -1267,7 +1284,12 @@ public final class VillageManager {
             VillageGenerator.asegurarCocina(level, center);
             // Y LA TABERNA (etapa F): el comedor del pueblo con la cocina dentro y la posada arriba. Va antes del
             // plano, como todo lo demás (y antes de la cocina, que ahora vive en ella: la llama `asegurarCocina`).
+            // Desde la migración 44 es la taberna GRANDE: si la aldea todavía tiene la vieja (de roble claro), la
+            // prueba de `tabernaConstruida` falla, `asegurarTaberna` despeja su solar entero (la vieja cabía dentro)
+            // y levanta la nueva; lo que hubiera en sus cofres se guarda antes en el almacén.
             VillageGenerator.asegurarTaberna(level, center);
+            // Y su CAMINO desde la plaza (torcido, para no cruzar la parcela de la granja).
+            VillageGenerator.caminoALaTaberna(level, center);
             // REBAÑO ESCAPADO (una sola vez, al migrar): antes de que existiera la marca del rebaño, el ganado que se
             // colaba por el portón se perdía sin remedio y el corral se quedaba vacío (y sin carne). Aquí se reconoce
             // el que anda suelto FUERA de la muralla y cerca del corral; luego, en el latido, vuelve a casa.
