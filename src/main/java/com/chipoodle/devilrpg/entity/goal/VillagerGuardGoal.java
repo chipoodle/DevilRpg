@@ -11,6 +11,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.monster.Monster;
@@ -19,6 +20,7 @@ import net.minecraft.world.entity.projectile.Arrow;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.EnumSet;
@@ -104,6 +106,12 @@ public class VillagerGuardGoal extends Goal {
     private static final double ALCANCE_ESPADA = 2.8D;
     /** Ticks entre golpes de espada y entre flechas. */
     private static final int CADENCIA_ESPADA = 20;
+    /**
+     * Daño base del <b>espadazo</b> del guardia. No se puede sacar del atributo {@code ATTACK_DAMAGE} (el aldeano no
+     * lo tiene, ver {@link #golpearConLaEspada}): es la base de un espadachín (4) y a eso se le suma el <b>filo</b> del
+     * arma que lleva forjada.
+     */
+    private static final float DANO_BASE_ESPADA = 4.0F;
     private static final int CADENCIA_ARCO = 30;
     /** Cada cuántos ticks vuelve a mirar si hay enemigo cerca (buscar entidades no se hace por tick). */
     private static final int ESCANEO_TICKS = 10;
@@ -401,8 +409,34 @@ public class VillagerGuardGoal extends Goal {
         }
         cadencia = CADENCIA_ESPADA;
         villager.swing(InteractionHand.MAIN_HAND);
-        villager.doHurtTarget(objetivo);
+        golpearConLaEspada(level, objetivo);
         level.playSound(null, villager.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.HOSTILE, 0.5F, 1.2F);
+    }
+
+    /**
+     * El <b>espadazo del guardia</b>. No se puede usar {@code villager.doHurtTarget(...)}: ese método pide el
+     * atributo {@code ATTACK_DAMAGE} de quien golpea y el <b>aldeano no lo tiene</b> (vanilla solo le da vida y
+     * velocidad), así que el juego se caía con
+     * {@code IllegalArgumentException: Can't find attribute minecraft:generic.attack_damage} en cuanto un guardia
+     * alcanzaba a un monstruo (crash medido en la partida del jugador: un espadachín recién alistado atacando a una
+     * araña).
+     * <p>
+     * El daño se calcula a mano: la base del espadachín más el <b>filo</b> del arma que lleva (los herreros del pueblo
+     * les forjan espadas de hierro, y a veces con encantamientos), y se aplica con el aldeano como <b>atacante</b>
+     * ({@code mobAttack}), así que el monstruo reacciona (se gira, ataca de vuelta) igual que si le hubiera pegado
+     * un jugador.
+     */
+    private void golpearConLaEspada(ServerLevel level, Monster objetivo) {
+        ItemStack arma = villager.getMainHandItem();
+        DamageSource fuente = level.damageSources().mobAttack(villager);
+        // El filo (y demás encantamientos del arma) se aplican con la API del juego, que es la que usa `doHurtTarget`.
+        float dano = EnchantmentHelper.modifyDamage(level, arma, objetivo, fuente, DANO_BASE_ESPADA);
+        objetivo.hurt(fuente, dano);
+        EnchantmentHelper.doPostAttackEffectsWithItemSource(level, objetivo, fuente, arma);
+        // El empujón del espadazo (el de vanilla lo da `Mob.doHurtTarget`): knockback hacia donde mira el guardia.
+        double dx = Math.sin(Math.toRadians(villager.getYRot()));
+        double dz = -Math.cos(Math.toRadians(villager.getYRot()));
+        objetivo.knockback(0.4D, -dx, -dz);
     }
 
     /** Arquero: flechas desde lejos (y si se queda sin flechas, el tick lo manda al almacén). */
