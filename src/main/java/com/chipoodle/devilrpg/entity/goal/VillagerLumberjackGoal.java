@@ -7,6 +7,7 @@ import com.chipoodle.devilrpg.world.VillagePantry;
 import com.chipoodle.devilrpg.world.VillageStorage;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.ItemTags;
@@ -49,8 +50,11 @@ import java.util.List;
  * deja el jugador en el almacén) terminan en el monte, no apiladas en un cofre.
  * <p>
  * <b>Solo tala árboles DE VERDAD y fuera de la valla</b>, que es lo importante: el muro de la aldea y las casas son de
- * troncos, así que dentro del recinto no se toca nada. Un tronco cuenta como árbol si su base está sobre tierra y
- * tiene <b>hojas cerca</b> y otro tronco encima (un poste suelto no).
+ * troncos, así que dentro del recinto no se toca nada —con <b>una excepción</b>: la <b>arboleda del pueblo</b>
+ * ({@link VillageGenerator#enLaArboleda}), el hueco de césped donde la aldea planta <b>sus</b> árboles. Es la madera
+ * de una aldea que nace <b>sin bosque</b> (una islita): ahí sí se tala y se replanta, y mientras no haya crecido
+ * ninguno el leñador <b>abona los plantones</b> con la harina de huesos del compostero del granjero. Un tronco cuenta
+ * como árbol si su base está sobre tierra y tiene <b>hojas cerca</b> y otro tronco encima (un poste suelto no).
  */
 public class VillagerLumberjackGoal extends Goal {
 
@@ -86,8 +90,8 @@ public class VillagerLumberjackGoal extends Goal {
      * más cercanos, no con las 800 columnas del barrido.
      */
     private static final int CANDIDATOS_A_COMPROBAR = 8;
-    /** Ticks entre barridos de "¿hay algún claro donde plantar?" (también mira muchas columnas). */
-    private static final int BUSCAR_CLARO_COOLDOWN = 40;
+    /** Ticks entre los barridos caros: buscar un claro donde plantar y mirar cómo va la arboleda del pueblo. */
+    private static final int BARRIDO_COOLDOWN = 40;
     /** Margen alrededor del corral anexo donde NO se planta: una rama no tiene que caerle al ganadero encima. */
     private static final int MARGEN_ANEXO = 3;
     /** Radio de búsqueda de árboles ALREDEDOR DEL LEÑADOR, y radio mínimo (fuera de la valla, que es de troncos). */
@@ -100,7 +104,7 @@ public class VillagerLumberjackGoal extends Goal {
     /** Velocidad al ir al árbol (y al almacén). */
     private static final float VELOCIDAD = 0.6F;
 
-    private enum Fase { TALAR, PLANTAR, ENTREGAR }
+    private enum Fase { TALAR, PLANTAR, ABONAR, ENTREGAR }
 
     /**
      * Un <b>hueco que se quedó sin replantar</b>: dónde estaba el árbol que se taló y de qué <b>especie</b> era (para
@@ -121,7 +125,9 @@ public class VillagerLumberjackGoal extends Goal {
     private int restTicks;
     private int stuckTicks;
     private double mejorDistancia = Double.MAX_VALUE;
-    private int claroCooldown;
+    private int barridoCooldown;
+    /** Cota de la aldea (para los plantones de la arboleda): se pregunta UNA vez, no en cada tick. */
+    private int nivelAldea = Integer.MIN_VALUE;
 
     public VillagerLumberjackGoal(Villager villager, BlockPos center, int objectiveIndex) {
         this.villager = villager;
@@ -136,8 +142,8 @@ public class VillagerLumberjackGoal extends Goal {
             restTicks--;
             return false;
         }
-        if (claroCooldown > 0) {
-            claroCooldown--;
+        if (barridoCooldown > 0) {
+            barridoCooldown--;
         }
         if (villager.isBaby() || !(villager.level() instanceof ServerLevel level)) {
             return false;
@@ -170,9 +176,9 @@ public class VillagerLumberjackGoal extends Goal {
         int semillas = semillasEnMano();
         if (semillas >= SEMILLAS_PARA_PLANTAR || (tronco == null && semillas > 0)) {
             BlockPos hueco = primerPendiente(level);
-            if (hueco == null && claroCooldown <= 0) {
+            if (hueco == null && barridoCooldown <= 0) {
                 hueco = buscarClaro(level);
-                claroCooldown = BUSCAR_CLARO_COOLDOWN;
+                barridoCooldown = BARRIDO_COOLDOWN;
             }
             if (hueco != null) {
                 fase = Fase.PLANTAR;
@@ -184,6 +190,22 @@ public class VillagerLumberjackGoal extends Goal {
             fase = Fase.TALAR;
             target = tronco;
             return true;
+        }
+        // ABONAR LA ARBOLEDA DEL PUEBLO: mientras no tenga NI UN árbol y el pueblo tenga harina de huesos (la del
+        // compostero del granjero), el leñador la abona. Es lo que hace que una aldea sin bosque —una islita— tenga
+        // madera en minutos en vez de esperar a que los plantones crezcan solos. En cuanto crece el primer árbol deja
+        // de gastar harina: a partir de ahí la arboleda se sostiene sola (se tala y se replanta). El barrido es caro
+        // (mira la arboleda entera), así que va con el mismo cooldown que la búsqueda de claro.
+        if (barridoCooldown <= 0) {
+            barridoCooldown = BARRIDO_COOLDOWN;
+            if (necesitaAbonoLaArboleda(level)) {
+                BlockPos planton = plantonDeLaArboledaMasCercano(level);
+                if (planton != null && contenedorConHarina(level) != null) {
+                    fase = Fase.ABONAR;
+                    target = planton;
+                    return true;
+                }
+            }
         }
         // Sin árboles ni semillas en la mano: si el almacén tiene semillas, va a por ellas (para replantar).
         if (semillas == 0 && haySemillasEnElAlmacen(level)) {
@@ -230,6 +252,7 @@ public class VillagerLumberjackGoal extends Goal {
             VillageManager.ponerActividad(villager, switch (fase) {
                 case TALAR -> "Yendo al arbol";
                 case PLANTAR -> "Yendo a plantar";
+                case ABONAR -> "Yendo a la arboleda";
                 case ENTREGAR -> "Llevando la madera";
             });
             return;
@@ -240,6 +263,7 @@ public class VillagerLumberjackGoal extends Goal {
             VillageManager.ponerActividad(villager, switch (fase) {
                 case TALAR -> "Talando";
                 case PLANTAR -> "Plantando";
+                case ABONAR -> "Abonando la arboleda";
                 case ENTREGAR -> "Guardando la madera";
             });
             return;
@@ -248,6 +272,7 @@ public class VillagerLumberjackGoal extends Goal {
         switch (fase) {
             case TALAR -> talar(level);
             case PLANTAR -> plantar(level);
+            case ABONAR -> abonar(level);
             case ENTREGAR -> entregar(level);
         }
         target = null;
@@ -355,6 +380,97 @@ public class VillagerLumberjackGoal extends Goal {
         level.playSound(null, pos, plantado.getSoundType().getPlaceSound(), SoundSource.BLOCKS, 0.7F, 1.0F);
     }
 
+    /**
+     * <b>Abona la arboleda del pueblo</b>: echa una <b>harina de huesos</b> del almacén (la que el granjero saca del
+     * compostero) al plantón al que fue, para que el árbol crezca ya. Es lo que hace que una aldea <b>sin bosque</b>
+     * —una islita— tenga madera en minutos en vez de esperar a que los plantones crezcan solos: no se inventa madera,
+     * se cuida la que el pueblo plantó. El leñador deja de hacerlo en cuanto crece el primer árbol (ver
+     * {@link #necesitaAbonoLaArboleda}).
+     */
+    private void abonar(ServerLevel level) {
+        if (target == null || !level.getBlockState(target).is(BlockTags.SAPLINGS)) {
+            return; // ya no hay plantón (creció, o alguien lo quitó)
+        }
+        Container almacen = contenedorConHarina(level);
+        if (almacen == null) {
+            return; // el pueblo no tiene harina (todavía no ha llenado el compostero)
+        }
+        ItemStack harina = new ItemStack(Items.BONE_MEAL, 1);
+        if (VillagePantry.sacar(almacen, s -> s.is(Items.BONE_MEAL), 1) <= 0) {
+            return;
+        }
+        if (net.minecraft.world.item.BoneMealItem.growCrop(harina, level, target)) {
+            level.playSound(null, target, SoundEvents.BONE_MEAL_USE, SoundSource.BLOCKS, 0.8F, 1.0F);
+            VillageManager.ponerSuceso(villager, "Abono la arboleda");
+            DevilRpg.LOGGER.info("[Village] El lenador: abona la arboleda del pueblo en {}", target);
+        }
+    }
+
+    /**
+     * ¿Toca abonar la arboleda? Sí mientras tenga <b>algún plantón</b> y <b>ningún árbol</b>: en cuanto crece el
+     * primero, la arboleda se sostiene sola (el leñador la tala y la replanta) y no hay que gastar más harina.
+     */
+    private boolean necesitaAbonoLaArboleda(ServerLevel level) {
+        boolean hayPlanton = false;
+        for (BlockPos p : VillageGenerator.plantonesDeLaArboleda(center, nivelDeLaAldea(level))) {
+            for (int dy = 0; dy <= ALTURA_MAX; dy++) {
+                BlockState s = level.getBlockState(p.above(dy));
+                if (s.is(BlockTags.LOGS)) {
+                    return false; // ya hay un árbol: la arboleda está en marcha
+                }
+                if (s.is(BlockTags.SAPLINGS)) {
+                    hayPlanton = true;
+                }
+            }
+        }
+        return hayPlanton;
+    }
+
+    /** El plantón de la arboleda más cercano (el que se abona), o {@code null} si no queda ninguno. */
+    @Nullable
+    private BlockPos plantonDeLaArboledaMasCercano(ServerLevel level) {
+        BlockPos mejor = null;
+        double mejorDist = Double.MAX_VALUE;
+        for (BlockPos p : VillageGenerator.plantonesDeLaArboleda(center, nivelDeLaAldea(level))) {
+            if (!level.getBlockState(p).is(BlockTags.SAPLINGS)) {
+                continue;
+            }
+            double d = villager.distanceToSqr(p.getX() + 0.5D, p.getY() + 0.5D, p.getZ() + 0.5D);
+            if (d < mejorDist) {
+                mejorDist = d;
+                mejor = p;
+            }
+        }
+        return mejor;
+    }
+
+    /**
+     * Dónde está la <b>harina de huesos</b> del pueblo, o {@code null} si no hay. OJO: la hace el granjero en su
+     * compostero y la guarda en la <b>despensa</b> (ahí vive, junto a las semillas y el abono, porque es un recambio
+     * suyo); en el almacén solo aparece si la trajo el recolector de lo que cayó al suelo antes de que el granjero la
+     * pasara. Se mira en los dos sitios: quedarse solo con el almacén dejaba la arboleda sin abonar nunca.
+     */
+    @Nullable
+    private Container contenedorConHarina(ServerLevel level) {
+        Container despensa = VillagePantry.despensa(level, center);
+        if (VillagePantry.contar(despensa, s -> s.is(Items.BONE_MEAL)) > 0) {
+            return despensa;
+        }
+        Container almacen = VillageStorage.almacen(level, center);
+        if (VillagePantry.contar(almacen, s -> s.is(Items.BONE_MEAL)) > 0) {
+            return almacen;
+        }
+        return null;
+    }
+
+    /** La cota de la aldea (para los plantones de la arboleda): se pregunta UNA vez, no en cada tick. */
+    private int nivelDeLaAldea(ServerLevel level) {
+        if (nivelAldea == Integer.MIN_VALUE) {
+            nivelAldea = VillageGenerator.cotaDeLaPlaza(level, center);
+        }
+        return nivelAldea;
+    }
+
     /** Deja la madera en el almacén y coge semillas para seguir replantando. */
     private void entregar(ServerLevel level) {
         for (int i = 0; i < villager.getInventory().getContainerSize(); i++) {
@@ -397,8 +513,8 @@ public class VillagerLumberjackGoal extends Goal {
                 double dCentroX = x - center.getX();
                 double dCentroZ = z - center.getZ();
                 double dCentro = Math.sqrt(dCentroX * dCentroX + dCentroZ * dCentroZ);
-                if (dCentro < RADIO_MINIMO) {
-                    continue; // dentro del pueblo no se tala (el muro y las casas son de troncos)
+                if (dCentro < RADIO_MINIMO && !VillageGenerator.enLaArboleda(center, new BlockPos(x, 0, z))) {
+                    continue; // dentro del pueblo no se tala (el muro y las casas son de troncos)... salvo en su arboleda
                 }
                 if (dCentro > RADIO_MAXIMO) {
                     continue;
@@ -435,8 +551,9 @@ public class VillagerLumberjackGoal extends Goal {
                 double dCentroX = x - center.getX();
                 double dCentroZ = z - center.getZ();
                 double dCentro = Math.sqrt(dCentroX * dCentroX + dCentroZ * dCentroZ);
-                if (dCentro < RADIO_MINIMO || dCentro > RADIO_MAXIMO) {
-                    continue; // dentro de la valla no se planta (como no se tala) y muy lejos tampoco
+                if ((dCentro < RADIO_MINIMO && !VillageGenerator.enLaArboleda(center, new BlockPos(x, 0, z)))
+                        || dCentro > RADIO_MAXIMO) {
+                    continue; // dentro de la valla no se planta (como no se tala), salvo en su arboleda; y muy lejos tampoco
                 }
                 if (enElAnexo(x, z)) {
                     continue; // el corral de los animales: no se le planta un árbol encima

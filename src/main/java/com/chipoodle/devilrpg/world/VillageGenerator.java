@@ -9,6 +9,7 @@ import net.minecraft.core.Vec3i;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.BiomeTags;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.EntityType;
@@ -35,6 +36,7 @@ import net.minecraft.world.level.block.RotatedPillarBlock;
 import net.minecraft.world.level.block.SlabBlock;
 import net.minecraft.world.level.block.StairBlock;
 import net.minecraft.world.level.block.entity.JigsawBlockEntity;
+import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.level.block.state.properties.BedPart;
@@ -238,6 +240,10 @@ public final class VillageGenerator {
         // recién colocadas (`groundY` sobre un tejado devuelve el tejado) y el nivelado subiría la aldea un
         // bloque: casas hundidas, zanjas y el muro enterrado (el bug que reportó el jugador).
         farm(level, center, nivelVilla);
+
+        // LA ARBOLEDA DEL PUEBLO: cuatro plantones en un hueco de césped de la diagonal noreste. Es lo que da madera a
+        // una aldea que nace sin bosque (una islita): el leñador los tala y los replanta como cualquier árbol.
+        asegurarArboleda(level, center);
 
         // Remesa inicial de la despensa (semillas, abono y un par de panes): el kiosco ya tiene el cofre doble.
         VillagePantry.remesaInicial(VillagePantry.despensa(level, center));
@@ -813,6 +819,108 @@ public final class VillageGenerator {
     /** ¿Esa celda (relativa a la base del corral) es el <b>bebedero</b>? (agua a propósito: no se tapa) */
     private static boolean esBebedero(int dx, int dz) {
         return dz == 4 && dx >= -4 && dx <= -2;
+    }
+
+    // --- LA ARBOLEDA DEL PUEBLO (la madera de una aldea sin bosque) ---------------------------------
+
+    /**
+     * Caja de la <b>arboleda del pueblo</b> (relativa al centro): un hueco de <b>césped</b> en la diagonal noreste,
+     * entre el solar de la casa grande y la valla. Está libre de todo lo demás: los caminos radiales van por los ejes,
+     * el anillo de 29 pasa por fuera de la caja y los solares empiezan más adentro.
+     */
+    private static final int ARBOLEDA_X0 = 20;
+    private static final int ARBOLEDA_X1 = 26;
+    private static final int ARBOLEDA_Z0 = -24;
+    private static final int ARBOLEDA_Z1 = -18;
+
+    /**
+     * ¿Ese punto (X/Z) cae dentro de la <b>arboleda del pueblo</b>? Es la <b>única excepción</b> a la regla de "dentro
+     * de la valla no se tala" (el muro y las casas son de troncos): la arboleda es <b>de la aldea</b> y ahí el leñador
+     * tala y replanta a propósito.
+     */
+    public static boolean enLaArboleda(BlockPos center, BlockPos p) {
+        int dx = p.getX() - center.getX();
+        int dz = p.getZ() - center.getZ();
+        return dx >= ARBOLEDA_X0 && dx <= ARBOLEDA_X1 && dz >= ARBOLEDA_Z0 && dz <= ARBOLEDA_Z1;
+    }
+
+    /** Las <b>cuatro esquinas</b> donde van los plantones (rejilla 2x2 a la cota del pueblo). */
+    public static BlockPos[] plantonesDeLaArboleda(BlockPos center, int nivel) {
+        return new BlockPos[]{
+                new BlockPos(center.getX() + ARBOLEDA_X0 + 1, nivel, center.getZ() + ARBOLEDA_Z0 + 1),
+                new BlockPos(center.getX() + ARBOLEDA_X0 + 1, nivel, center.getZ() + ARBOLEDA_Z1 - 1),
+                new BlockPos(center.getX() + ARBOLEDA_X1 - 1, nivel, center.getZ() + ARBOLEDA_Z0 + 1),
+                new BlockPos(center.getX() + ARBOLEDA_X1 - 1, nivel, center.getZ() + ARBOLEDA_Z1 - 1),
+        };
+    }
+
+    /**
+     * <b>La arboleda del pueblo.</b> Es la respuesta a la aldea que nace donde <b>no hay bosque</b> (una islita, un
+     * desierto, una llanura pelada): sin árboles no hay troncos, y sin troncos se caen los tablones, los palos, los
+     * arcos, las flechas y los escudos, así que el pueblo dejaría de ser autosuficiente. Los <b>fundadores traen los
+     * plantones</b> —igual que traen las semillas de la remesa inicial de la despensa— y el <b>leñador</b> los tala y
+     * los replanta como cualquier árbol: madera de verdad, de árboles que crecen de verdad, sin contadores ni magia.
+     * <p>
+     * OJO: los plantones se ponen con {@code level.setBlock} <b>DIRECTO</b>, no con {@link #colocar}: así <b>no entran
+     * en el plano</b>. Si entraran, el obrero vería "aquí debería haber un plantón" donde ya hay un <b>árbol</b> y lo
+     * "repararía" devolviéndolo a plantón en cada latido (la arboleda nunca crecería).
+     */
+    public static void asegurarArboleda(ServerLevel level, BlockPos center) {
+        int nivel = cotaDeLaPlaza(level, center);
+        if (nivel <= level.getMinBuildHeight() + 1) {
+            return;
+        }
+        // El SUELO: césped a la cota (en una islita ya está; en arena, piedra o nieve se trae tierra). Solo se toca el
+        // terreno natural (o el hueco): lo que haya puesto el jugador no se toca.
+        for (int dx = ARBOLEDA_X0; dx <= ARBOLEDA_X1; dx++) {
+            for (int dz = ARBOLEDA_Z0; dz <= ARBOLEDA_Z1; dz++) {
+                BlockPos suelo = new BlockPos(center.getX() + dx, nivel - 1, center.getZ() + dz);
+                BlockState actual = level.getBlockState(suelo);
+                if (actual.isAir() || actual.is(Blocks.WATER) || esTerrenoRecortable(actual)) {
+                    colocar(level, suelo, Blocks.GRASS_BLOCK.defaultBlockState(), 3);
+                }
+            }
+        }
+        Block planton = plantonDelBioma(level, center);
+        int puestos = 0;
+        for (BlockPos p : plantonesDeLaArboleda(center, nivel)) {
+            if (!level.getBlockState(p).isAir()) {
+                continue; // ya hay un plantón, un árbol (o algo del jugador): no se toca
+            }
+            if (!level.getBlockState(p.below()).is(BlockTags.DIRT)) {
+                continue; // sin tierra debajo no crece
+            }
+            level.setBlock(p, planton.defaultBlockState(), Block.UPDATE_ALL); // DIRECTO: fuera del plano (ver arriba)
+            puestos++;
+        }
+        if (puestos > 0) {
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: arboleda del pueblo plantada ({} plantones de {})",
+                    center, puestos, planton.getName().getString());
+        }
+    }
+
+    /**
+     * El <b>árbol de la tierra</b> para la arboleda (el que plantarían los fundadores): el del bioma donde está el
+     * pueblo, y <b>roble</b> si no hay uno claro (una islita, una playa, mar abierto). Así la arboleda no desentona.
+     */
+    private static Block plantonDelBioma(ServerLevel level, BlockPos center) {
+        var bioma = level.getBiome(center);
+        if (bioma.is(BiomeTags.IS_TAIGA) || bioma.value().getBaseTemperature() < 0.15F) {
+            return Blocks.SPRUCE_SAPLING; // taiga o cualquier tierra fría (allí el árbol de siempre es la picea)
+        }
+        if (bioma.is(BiomeTags.IS_JUNGLE)) {
+            return Blocks.JUNGLE_SAPLING;
+        }
+        if (bioma.is(BiomeTags.IS_SAVANNA) || bioma.is(BiomeTags.IS_BADLANDS)) {
+            return Blocks.ACACIA_SAPLING;
+        }
+        if (bioma.is(Biomes.DARK_FOREST)) {
+            return Blocks.DARK_OAK_SAPLING;
+        }
+        if (bioma.is(Biomes.CHERRY_GROVE)) {
+            return Blocks.CHERRY_SAPLING;
+        }
+        return Blocks.OAK_SAPLING; // el de siempre (y el que traen los fundadores cuando no hay árbol claro)
     }
 
     /**

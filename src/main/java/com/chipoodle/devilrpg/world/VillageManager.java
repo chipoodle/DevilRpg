@@ -328,9 +328,13 @@ public final class VillageManager {
      *       corral se tapa (en su partida la franja oeste se quedó sin suelo, con el agua del mar por debajo, y sin
      *       apoyo la puerta de madera se cayó sola) y la <b>cerca y el portón</b> se reponen en cada latido
      *       ({@code asegurarCercaDelAnexo}), así que un hueco no deja escapar a los animales.</li>
+     *   <li>35: la <b>ARBOLEDA DEL PUEBLO</b> (etapa E, lo pidió el jugador al pensar en la aldea que nace en medio del
+     *       mar): un hueco de césped en la diagonal noreste con <b>cuatro plantones</b> del árbol del bioma. Es la
+     *       madera de una aldea <b>sin bosque</b>: los fundadores traen los plantones (como traen las semillas) y el
+     *       leñador los tala y los replanta, con la excepción de "dentro de la valla no se tala" acotada a esa caja.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 34;
+    public static final int CURRENT_LAYOUT = 35;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -1158,6 +1162,9 @@ public final class VillageManager {
             // lleguen también a las aldeas que ya tenían corral, y antes de tirar el plano para que entren en él.
             VillageGenerator.asegurarGallinero(level, center);
             VillageGenerator.asegurarCercaDelAnexo(level, center);
+            // ARBOLEDA DEL PUEBLO (etapa E): los cuatro plantones del hueco de césped, para la aldea que nace donde no
+            // hay bosque. Va antes de tirar el plano, como todo lo demás.
+            VillageGenerator.asegurarArboleda(level, center);
             // COCINA del pueblo (etapa E): el ahumador del cocinero, en el kiosco. Va antes de tirar el plano para
             // que entre en él y el obrero lo reponga.
             VillageGenerator.asegurarCocina(level, center);
@@ -1194,6 +1201,10 @@ public final class VillageManager {
         // se salgan y sus huevos queden dentro, a mano del ganadero.
         VillageGenerator.asegurarCercaDelAnexo(level, center);
         VillageGenerator.asegurarGallinero(level, center);
+        // ARBOLEDA DEL PUEBLO (etapa E): idempotente. La aldea que nace sin bosque (una islita, un desierto, una
+        // llanura pelada) planta aquí sus cuatro árboles y el leñador los tala y los replanta: sin esto no habría
+        // troncos y se caerían los tablones, los palos, los arcos, las flechas y los escudos.
+        VillageGenerator.asegurarArboleda(level, center);
         // COCINA del pueblo (etapa E): el ahumador y la mesa del cocinero, en la plataforma del kiosco. Idempotente
         // (va aparte de `asegurarKiosco` porque aquél sale antes de tiempo cuando el kiosco ya está).
         VillageGenerator.asegurarCocina(level, center);

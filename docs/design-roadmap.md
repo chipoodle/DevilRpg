@@ -594,6 +594,10 @@ El log de esa partida lo explica entero (01:50-02:00) y salieron **dos bugs de v
   tener **otro tronco encima** y tener **hojas cerca**. Con eso no se come el muro de la aldea ni las casas, que son
   de troncos (era el riesgo evidente de esta etapa). El **plantado** usa el tag `DIRT` del juego (lo que de verdad
   acepta un sapling): fuera la **arena** de la playa y el **camino de tierra**, donde la semilla saltaría.
+- **La arboleda del pueblo (etapa E)**: el leñador también tala y replanta en la **arboleda del pueblo** —la única
+  excepción a "dentro de la valla no se tala"— y, mientras no haya crecido ningún árbol ahí, **abona los plantones**
+  con la harina de huesos del compostero del granjero. Es lo que da madera a una aldea que nace **sin bosque** (una
+  islita, un desierto, una llanura pelada): ver 3b.17.
 - **Cadena de la MADERA (sin esto los troncos no valían para nada)**: el herrero de **herramientas**, en su mesa,
   ahora también **asierra**: 1 tronco → 4 tablones (`OBJETIVO_TABLONES` = 32 en el almacén; el escudo pide 6) y
   2 tablones → 4 palos (`OBJETIVO_PALOS` = 64; arcos y flechas). Antes **nadie** convertía troncos en tablones ni en
@@ -781,7 +785,42 @@ estén encerrados, y que los huevos también se recojan"*.
   **guardan** para que el cocinero haga **pasteles** con alguna mejora y materiales. De momento solo se **recogen** y
   van al almacén, como hasta ahora.
 
-### 3b.17 Lo que viene
+### 3b.17 La ARBOLEDA DEL PUEBLO (la madera de una aldea sin bosque)
+
+Lo planteó el jugador: *"cuando la aldea se genera en medio del mar, ¿cómo va a cortar y plantar árboles el leñador si
+no hay? … una solución orgánica que no rompa las reglas ni el lore"*.
+
+- **El problema, medido en su partida**: la aldea está en una **orilla** (al oeste, mar abierto: de rel −58 a −38 todo
+  es agua; al este, la granja de animales). El leñador busca árboles **fuera de la valla** (radio 39-76) y los
+  **plantones** los saca del almacén (los recoge el recolector de lo que sueltan las hojas de los árboles que él mismo
+  tala). Sin árboles no hay **ni plantones ni troncos** → se caen los tablones, los palos, los arcos, las flechas y los
+  escudos, y el pueblo deja de ser autosuficiente (rompe el pilar de "no dependientes").
+- **Lo que NO se hace** (por lore y por las reglas del proyecto): inventar madera, volver al contador abstracto de "la
+  aldea produce 8", meter árboles sin tierra, o hacer que la madera dependa del jugador.
+- **La solución: la arboleda del pueblo** (`VillageGenerator.asegurarArboleda`), igual que la aldea ya tiene su
+  **huerta** en parcelas y su **granja anexa**: los fundadores traen **cuatro plantones** —como traen las semillas de la
+  remesa inicial de la despensa— y los plantan en la **suya** tierra; el **leñador los tala y los replanta** como
+  cualquier árbol. Madera real, de árboles que crecen de verdad.
+- **Dónde**: un hueco de **césped dentro de la valla**, en la diagonal noreste (rel `20..26, -24..-18`), libre del
+  anillo de caminos de 29, de los radiales (que van por los ejes), de los solares y de la valla. En una islita la tierra
+  segura está dentro, así que ahí es donde tiene sentido (y en cualquier bioma queda bien). **Verificado contra el
+  guardado del jugador**: la caja entera es césped libre, con tierra a la cota debajo.
+- **La especie es el árbol de la tierra** (`plantonDelBioma`): picea en taiga o tierra fría, jungla en jungla, acacia
+  en sabana y badlands, roble oscuro en bosque oscuro, cerezo en cerezal y **roble** cuando no hay uno claro (una
+  islita, una playa, mar abierto).
+- **La regla que se afina (la única excepción)**: "dentro de la valla no se tala, que el muro y las casas son de
+  troncos" pasa a *"…salvo en la **arboleda del pueblo**, que es suya"* (`enLaArboleda`): ahí el leñador puede talar y
+  replantar, y la excepción está acotada a una caja conocida.
+- **La primera cosecha, con harina de huesos**: mientras la arboleda **no tenga ni un árbol**, el leñador **abona los
+  plantones** con la harina del **compostero del granjero** (`Fase.ABONAR`), así una aldea sin bosque tiene madera en
+  minutos en vez de esperar. En cuanto crece el primer árbol deja de gastar harina: a partir de ahí la arboleda se
+  sostiene sola (se tala y se replanta).
+- **Detalle fino que había que respetar**: los plantones se ponen con **`setBlock` directo**, NO con `colocar`, así
+  **no entran en el plano**. Si entraran, el obrero vería "aquí debería haber un plantón" donde ya hay un **árbol** y lo
+  "repararía" devolviéndolo a plantón en cada latido: la arboleda no crecería nunca.
+- **Migración 35** (`CURRENT_LAYOUT`): las aldeas ya construidas reciben su arboleda al latido siguiente.
+
+### 3b.18 Lo que viene
 
 - **Milicia**: ✅ completa (barraca, oficio, combate, escudo que bloquea, modelo propio, marcha a la guarida).
 - **Leñador/reforestador**: ✅ (tala y replanta, y la cadena de la madera del herrero).
@@ -789,6 +828,7 @@ estén encerrados, y que los huevos también se recojan"*.
   la guardia).
 - **Cocinero, hambre por aldeano y cría por camas**: ✅ (ver 3b.15).
 - **Gallinero y portones de valla**: ✅ (ver 3b.16).
+- **Arboleda del pueblo (la madera de una aldea sin bosque)**: ✅ (ver 3b.17).
 - **Lo siguiente**: la **verificación en partida** de la cadena entera de la comida (huerta → despensa → cocina →
   raciones) y, de ahí, lo que pida el jugador.
 
