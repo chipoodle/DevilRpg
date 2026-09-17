@@ -993,6 +993,15 @@ no está generando carne"*. Cuatro cosas, todas medidas:
     ovejas pasaron de **5 a ninguna** entre dos sesiones). La cerca lleva ahora **faroles** en las cuatro esquinas y
     los cuatro medios lados (idempotente).
   - **El relevo tardaba**: la espera del rebaño y de la pareja pasa de **3 días de juego a 1**.
+- **Y el ganadero se quedaba sin faena** (lo reportó el jugador: *"aparece como que está trabajando pero no está yendo
+  a los establos"*): su etiqueta era la **genérica** ("Trabajando", la del cerebro vanilla) porque su goal **no estaba
+  corriendo**. La causa, medida en la aldea 1 (corral con 2 vacas, 2 ovejas, 2 puercos y **5 gallinas**): la **cría
+  elegía UNA sola especie** —la del hueco más grande, las vacas— y si a **esa** le faltaba su comida se rendía **sin
+  probar las demás**. En esa despensa había `wheat_seeds` **73**, zanahoria **3**, betabel **6** y patata asada **4**, y
+  **ningún trigo**: las vacas no podían criar (piden trigo) y el ganadero se quedaba plantado en la plaza aunque los
+  **puercos** (con zanahoria) y las **gallinas** (con semillas) sí podían. Ahora la cría **prueba todas las especies**
+  (de la que más hueco a la que menos) y, **sin faena, se va con el rebaño** (fase `RONDAR`, etiqueta "Con el rebaño"):
+  el corral es su casa y su puesto de trabajo, así que se queda con los animales en vez de en la plaza.
 
 ### 3b.23 LA MURALLA AL RADIO 62 (la granja, dentro)
 
