@@ -3088,6 +3088,11 @@ public final class VillageGenerator {
      * </ul>
      */
     private static void nivelar(ServerLevel level, BlockPos center, int radius, int baseY) {
+        // ¿Es una aldea DE MAR? Se pregunta ANTES de tocar nada: el relleno de abajo tapa el agua del anillo con
+        // tierra, así que preguntándolo después la respuesta sería "no" y los picos de las esquinas se rebajarían
+        // (dejando aire que tendría que entrar el agua) en vez de ahogarse como toca. Es el mismo criterio que la
+        // orilla seca.
+        boolean aldeaDeMar = hayAguaEnElAnillo(level, center, baseY, radius, radius + ORILLA_ANCHO);
         for (int x = -radius; x <= radius; x++) {
             for (int z = -radius; z <= radius; z++) {
                 BlockPos columna = new BlockPos(center.getX() + x, 0, center.getZ() + z);
@@ -3112,8 +3117,9 @@ public final class VillageGenerator {
             }
         }
         // Talud exterior: una pendiente escalonada en el borde para que la aldea parezca una MESETA natural
-        // (como el terreno vanilla) en vez de un cubo de paredes verticales.
-        addOuterSlope(level, center, radius, baseY);
+        // (como el terreno vanilla) en vez de un cubo de paredes verticales. Se le pasa si la aldea es de mar (ver
+        // arriba) para que los picos de las esquinas se ahoguen en vez de rebajarse.
+        addOuterSlope(level, center, radius, baseY, aldeaDeMar);
         // Y, por último, se TAPAN los huecos del suelo (ver sellarSuelo): con el terreno llano, un barranco o una
         // cueva justo debajo dejan agujeros en la plaza por los que se caen los aldeanos.
         sellarSuelo(level, center, radius, baseY);
@@ -3215,7 +3221,8 @@ public final class VillageGenerator {
      * borde, más baja el terreno, hasta encontrarse con el terreno natural. Así el borde no es un corte
      * vertical (cubo) sino una meseta con laderas, como las que genera el terreno vanilla.
      */
-    private static void addOuterSlope(ServerLevel level, BlockPos center, int innerRadius, int baseY) {
+    private static void addOuterSlope(ServerLevel level, BlockPos center, int innerRadius, int baseY,
+                                      boolean aldeaDeMar) {
         int outer = innerRadius + SLOPE_WIDTH;
         for (int x = -outer; x <= outer; x++) {
             for (int z = -outer; z <= outer; z++) {
@@ -3251,7 +3258,7 @@ public final class VillageGenerator {
         }
         // Y, por último, los PICOS DE LAS ESQUINAS (ver el método): la meseta es CUADRADA y el talud es REDONDO, así
         // que las cuatro esquinas se quedaban sobresaliendo del talud, como triángulos de tierra pegados a la isla.
-        quitarPicosDeLasEsquinas(level, center, innerRadius, baseY);
+        quitarPicosDeLasEsquinas(level, center, innerRadius, baseY, aldeaDeMar);
     }
 
     /**
@@ -3284,11 +3291,10 @@ public final class VillageGenerator {
      *       una pasada anterior): una <b>loma natural</b>, una duna o una playa de arena <b>no se tocan</b>.</li>
      * </ul>
      */
-    private static void quitarPicosDeLasEsquinas(ServerLevel level, BlockPos center, int radius, int baseY) {
+    private static void quitarPicosDeLasEsquinas(ServerLevel level, BlockPos center, int radius, int baseY,
+                                                 boolean aldeaDeMar) {
         int outer = radius + SLOPE_WIDTH;
         int sueloBajo = baseY - SLOPE_HEIGHT;
-        // ¿Es una aldea de mar? (el mismo criterio que la orilla seca: agua en el anillo del talud)
-        boolean aldeaDeMar = hayAguaEnElAnillo(level, center, baseY, radius, radius + ORILLA_ANCHO);
         int celdas = 0;
         int cubos = 0;
         for (int x = -radius; x <= radius; x++) {
@@ -3400,7 +3406,10 @@ public final class VillageGenerator {
         if (cota <= level.getMinBuildHeight() + 1) {
             return;
         }
-        quitarPicosDeLasEsquinas(level, center, LEVEL_RADIUS, cota);
+        // ¿Aldea de mar? Se pregunta aquí, con el terreno tal y como está (el anillo de la orilla): si hay agua, los
+        // picos se ahogan; si no, se rebajan a la base del talud.
+        boolean aldeaDeMar = hayAguaEnElAnillo(level, center, cota, LEVEL_RADIUS, LEVEL_RADIUS + ORILLA_ANCHO);
+        quitarPicosDeLasEsquinas(level, center, LEVEL_RADIUS, cota, aldeaDeMar);
     }
 
     /**
