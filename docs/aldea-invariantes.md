@@ -14,6 +14,23 @@ En cada cambio en `world/Village*` o en los goals de aldeano hay que:
 
 ## 1. Invariantes
 
+> **Ojo con los números**: el lint (`tools/lint_aldea.py`) numera sus reglas **por su cuenta** y no coinciden con las
+> de esta sección. La correspondencia, para que un aviso `I6 VillagerX.java:12` no se busque en la regla equivocada:
+>
+> | Lint | Qué vigila | Invariante |
+> |---|---|---|
+> | I1 | la Y del centro → `cotaDeLaPlaza` | I1 |
+> | I2 | distancias horizontales (`dx*dx + dz*dz`) | I2 |
+> | I3 | atascado = no acercarse (`stuckTicks++` sin progreso) | I3 |
+> | I4 | tamaño de parcela a mano (`9`, `5`) | I4 |
+> | I5 | medidas del kiosco a mano | I4 |
+> | I6 | `getNavigation().moveTo` | I5 |
+> | I7 | `parcelasDe(center)` sin la cota | I1 |
+> | I8 | `setBlock`/`destroyBlock`/`colocar` en el latido | I6 |
+> | I9 | construcción nueva sin subir `CURRENT_LAYOUT` | I7 |
+>
+> I8, I9 y I10 de esta sección (abajo) **no tienen regla en el lint**: se vigilan a mano.
+
 ### I1 · Toda altura se mide con `cotaDeLaPlaza`, nunca con la Y del centro
 El centro de una aldea viaja por todo el sistema (`ObjectiveTargets.targetOf`, `centroDe`) y **su Y no es la del
 pueblo**: llega la del *spawn del jugador* (101 en la partida, con las aldeas a 62-75) o directamente **0** (en el
@@ -73,6 +90,24 @@ El obrero repone lo que dice el plano. Lo que se construye **después** de captu
 de `colocar`) no está en el plano y no se repone nunca; y lo que es "terreno natural" tampoco entra. Esto ya dio
 dos bugs: el muro de troncos (no se reponía) y los minerales (flotando **y** en el plano).
 
+### I9 · Los marcadores de tiempo «0 = nunca» se resuelven YA la primera vez
+Las marcas de `VillageSavedData` que significan "nunca ha pasado esto" valen **0**, pero el reloj del mundo
+(`gameTime`) también empieza en 0: compararlas directamente (`gameTime - marca >= ESPERA`) hace que la **primera
+vez** se trate como si acabara de pasar. Medido en el guardado del jugador: el **rebaño del corral anexo** se soltaba
+solo si `gameTime - AnexoAnimales >= 3 días`, y con el mundo recién creado (reloj en 24200) la granja anexa se
+construía y **no soltaba ni un animal**.
+**Regla:** la marca se lee aparte (`boolean nunca = marca == 0L`) y el caso "nunca" se resuelve **ya**; la espera es
+solo para las **repeticiones**. Igual que se hace con `AnexoAnimales` y con `StarvingSince`.
+
+### I10 · El tope de población es para CRECER, no para cubrir un PUESTO FIJO
+`puestosDelPueblo()` limita cuánta gente **nace** en la aldea, no cuántos puestos se cubren. Si el reparto de
+"repón el oficio que falta" se mete dentro del tope, una aldea que ya está **llena** (y le sobra alguien: un
+guardia, un repetido) **nunca** recibe el puesto que se le añade por migración. Medido en el guardado del jugador:
+aldea con 7 aldeanos y tope 7 (etapa E), **sin carnicero**, la cocina construida, el ahumador sin dueño y la carne
+cruda de la despensa sin cocinar (2 puntos en vez de 4).
+**Regla:** el puesto vacío se repone **aunque el pueblo esté en el tope** (el que llega de más engrosa la milicia);
+el tope solo se aplica a la cría (`vivos < puestosDelPueblo()`).
+
 ---
 
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
@@ -96,6 +131,10 @@ Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento 
 9. **¿Cómo lo COMPRUEBO?** Guardado (bloques y entidades reales), log del juego, o lint. Si no puedo comprobarlo,
    **decirlo claramente** en vez de dar por hecho que funciona.
 10. **¿Afecta a lo que el jugador YA tiene?** Aldeas existentes, inventarios, cofres, granjas sembradas.
+11. **¿Alguien CUENTA aldeanos?** (salud de la aldea, qué oficios quedan vivos, raciones repartidas). El radio de
+    conteo tiene que **cubrir hasta donde llegan los goals**, no el muro: el leñador trabaja hasta `muro + 40` (76) y
+    con el radio viejo (`muro + 28` = 64) un leñador talando a 70 bloques **no contaba** y la aldea le reponía un
+    **duplicado** creyendo que se le había muerto el recolector. Es el mismo error que I1, pero en horizontal.
 
 ---
 
