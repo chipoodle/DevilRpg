@@ -298,6 +298,13 @@ public class VillagerCollectGoal extends Goal {
                 || s.is(Items.MANGROVE_PROPAGULE)
                 || s.getDescriptionId().contains("_log") || s.getDescriptionId().contains("_wool")
                 || s.getDescriptionId().contains("_seeds")
+                // LAS PIEZAS DEL PROPIO PUEBLO: cuando un asedio (o un aldeano con prisa) rompe una puerta, una
+                // valla, una losa o una cama, la pieza cae al suelo y se quedaba ahí para siempre: no es comida ni
+                // material de nadie, así que nadie la recogía. Son del pueblo y el pueblo las recupera (al almacén).
+                || s.is(Blocks.OAK_DOOR.asItem()) || s.is(Blocks.DARK_OAK_DOOR.asItem())
+                || s.is(Blocks.OAK_FENCE.asItem()) || s.is(Blocks.OAK_FENCE_GATE.asItem())
+                || s.is(Blocks.OAK_SLAB.asItem()) || s.is(Blocks.OAK_STAIRS.asItem())
+                || s.is(Blocks.RED_BED.asItem()) || s.is(Blocks.TORCH.asItem()) || s.is(Blocks.LANTERN.asItem())
                 // MATERIALES DEL TALLER (lo que forjan los herreros): chips de metal (pepitas) y carne de zombie
                 // podrida (de ahí sale el cuero).
                 || s.is(Items.IRON_NUGGET) || s.is(Items.ROTTEN_FLESH)

@@ -324,8 +324,14 @@ public class VillagerLumberjackGoal extends Goal {
             talados++;
             p = p.above();
         }
-        // Las HOJAS que quedan colgando se quitan solas (mecánica de vanilla) y, si no, el recolector recoge lo que
-        // caiga. Aquí solo se replanta: el pueblo no se queda sin árboles.
+        // LAS RAMAS: al árbol talado se le quitan también SUS hojas. No es capricho: las semillas y los palos que
+        // sueltan las hojas al caer se quedaban encima de las copas de los árboles de al lado, en el aire, fuera del
+        // alcance de cualquier aldeano (ni el recolector llega a un objeto que está a 5 bloques por encima de sus
+        // pies), y el suelo del pueblo se llenaba de plantones tirados: medido en el guardado del jugador, 53
+        // plantones de abedul y 19 palos colgados en las copas de su aldea de mar. Desramado, todo cae al suelo —los
+        // plantones van al zurrón del leñador, para replantar, y el resto al pie del árbol— y lo recoge el recolector.
+        int hojas = talados > 0 ? desramar(level, target, talados) : 0;
+        // Las HOJAS que queden colgando se van solas (mecánica de vanilla).
         if (eraBase && talados > 0) {
             BlockPos hueco = target;
             Item misma = semillaDeTronco(troncoBase);
@@ -335,8 +341,50 @@ public class VillagerLumberjackGoal extends Goal {
         }
         if (talados > 0) {
             VillageManager.ponerSuceso(villager, "Talo un arbol (" + talados + ")");
-            DevilRpg.LOGGER.info("[Village] El lenador: talo {} tronco(s)", talados);
+            DevilRpg.LOGGER.info("[Village] El lenador: talo {} tronco(s) y desramo {} hoja(s)", talados, hojas);
         }
+    }
+
+    /** Radio (en X/Z, desde el tronco) donde se buscan las hojas del árbol talado. */
+    private static final int RADIO_COPA = 3;
+    /** Tope de hojas por árbol (una copa de roble son ~40; el tope es por si el azar junta varias). */
+    private static final int HOJAS_MAX = 120;
+
+    /**
+     * <b>Desrama</b> el árbol talado: quita las hojas de su copa, las que están alrededor de su tronco. Los
+     * <b>plantones</b> van al zurrón del leñador (son los que necesita para replantar) y lo demás (palos, manzanas)
+     * <b>al pie del árbol</b>, al suelo, que es donde el recolector del pueblo lo encuentra; si cayeran desde la copa
+     * se quedarían encima de los árboles de al lado, en el aire, para siempre.
+     */
+    private int desramar(ServerLevel level, BlockPos base, int altura) {
+        int quitadas = 0;
+        for (int dy = 0; dy <= altura + 2 && quitadas < HOJAS_MAX; dy++) {
+            for (int dx = -RADIO_COPA; dx <= RADIO_COPA && quitadas < HOJAS_MAX; dx++) {
+                for (int dz = -RADIO_COPA; dz <= RADIO_COPA && quitadas < HOJAS_MAX; dz++) {
+                    if (dx * dx + dz * dz > RADIO_COPA * RADIO_COPA) {
+                        continue;
+                    }
+                    BlockPos p = base.offset(dx, dy, dz);
+                    BlockState hoja = level.getBlockState(p);
+                    if (!hoja.is(BlockTags.LEAVES)) {
+                        continue;
+                    }
+                    List<ItemStack> drops = Block.getDrops(hoja, level, p, null);
+                    level.destroyBlock(p, false);
+                    for (ItemStack drop : drops) {
+                        ItemStack resto = guardarEnInventario(drop);
+                        if (!resto.isEmpty()) {
+                            // lint:ok I1 porque aqui `base` es el TRONCO de un arbol que existe (una posicion real
+                            // del mundo con su Y buena), no el centro ni la base de la aldea.
+                            level.addFreshEntity(new ItemEntity(level, base.getX() + 0.5D, base.getY() + 0.5D,
+                                    base.getZ() + 0.5D, resto));
+                        }
+                    }
+                    quitadas++;
+                }
+            }
+        }
+        return quitadas;
     }
 
     /**

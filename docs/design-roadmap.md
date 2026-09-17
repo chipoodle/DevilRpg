@@ -1194,10 +1194,25 @@ desalineada"* y *"¿por qué los vegetales están como item por toda la parcela?
   llegar a esa comprobación. Ahora un bancal **ya hecho no se toca**: `bancalHecho` mira la tierra de cultivo y, si
   está, solo se aseguran el **compostero** y la **valla** (lo que no pisa los cultivos). La tierra de cultivo sí está
   en el plano, así que si alguien la pisotea la repone el obrero.
+- **La BASURA que nadie recogía** (lo pidió el jugador antes: *"nadie recoge los materiales del suelo"*). Medido en
+  su guardado: **53 plantones de abedul** y **19 palos** colgados en las copas de su aldea de mar, y puertas, vallas y
+  camas tiradas por el suelo del pueblo después de un asedio. Dos motivos, los dos arreglados:
+  - **Las copas**: el leñador talaba el tronco y las hojas caían solas, pero sus semillas y palos quedaban **encima de
+    las copas de los árboles de al lado**, en el aire, y ningún aldeano llega a un objeto que está cinco bloques por
+    encima de sus pies. Ahora el leñador **desrama** el árbol que tala (las hojas de su copa): los plantones van a su
+    zurrón, para replantar, y el resto cae **al pie del árbol**, al suelo, donde el recolector lo encuentra.
+  - **Las piezas del propio pueblo**: una puerta, una valla, una losa o una cama rota por un asedio caía al suelo y se
+    quedaba ahí para siempre, porque no era comida ni material de ningún oficio. Ahora entran en la lista del
+    **recolector** (que es el que barre lo que no es de nadie) y acaban en el almacén.
 - **Verificado** con el arnés temporal y el servidor headless: la huerta **madurada a mano** sobrevive a una llamada
   de `farm()` (72 cultivos antes y 72 después, con sus 72 maduros), los cinco escalones dobles con su meseta libre, el
   hogar tapado y el caño por fuera, el almacén nuevo con sus doce cofres, el corral de 19×19 con su cobertizo, su
-  gallinero y su bebedero, y sin la valla vieja de 15×15.
+  gallinero y su bebedero, y sin la valla vieja de 15×15. Y **la migración sobre una aldea YA construida** (que es el
+  camino que va a seguir su partida), simulada de punta a punta: con un almacén viejo con **7 diamantes y 5 de hierro**
+  dentro y **3 de oro** en el cofre de la taberna, tras la migración los tres montones están **enteros en el almacén
+  nuevo** (`7/7`, `5/5`, `3/3`), el cobertizo viejo no está, el corral queda alineado (valla y cobertizo nuevos, la
+  valla de 15×15 y el cobertizo viejo retirados), la taberna pasa de `testigo=false` a `testigo=true` y la huerta sigue
+  con sus 72 cultivos.
 - **Migración 45** (`CURRENT_LAYOUT`).
 
 ### 3b.28 Lo que viene
