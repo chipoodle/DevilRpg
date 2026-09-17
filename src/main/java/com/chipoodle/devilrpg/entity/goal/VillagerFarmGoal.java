@@ -82,6 +82,16 @@ public class VillagerFarmGoal extends Goal {
     private static final int ABONAR_MAX = 32;
     /** Cuánto puede traerse del almacén a la despensa en una visita (comida, semillas y abono del recolector). */
     private static final int TRAER_DEL_ALMACEN = 64;
+    /**
+     * Con la despensa por debajo de estos puntos de comida y comida esperando en el <b>almacén</b>, el granjero deja
+     * lo que esté haciendo y va a por ella.
+     * <p>
+     * Hace falta porque el <b>ganadero</b> (y el recolector) dejan la carne en el <b>almacén</b> y el contador de
+     * comida de la aldea —y las raciones— miran <b>la despensa</b>: sin este viaje, la carne del corral se quedaba
+     * muerta de risa en el almacén y la aldea <b>seguía pasando hambre con el almacén lleno</b>, que es justo lo que
+     * reportó el jugador ("el que cuida los animales no produce carne aún": la producía, pero no llegaba al pueblo).
+     */
+    private static final int DESPENSA_VACIA = 8;
 
     private enum Tarea { COSECHAR, PLANTAR, FERTILIZAR, COMPOSTAR, DESPENSA }
 
@@ -146,7 +156,17 @@ public class VillagerFarmGoal extends Goal {
             target = VillagePantry.puntoDeApoyo(level, center);
             return true;
         }
-        // 2) Cultivo maduro: a cosecharlo.
+        // 2) LA COMIDA ESTÁ EN EL ALMACÉN Y LA DESPENSA VACÍA: a por ella. El ganadero sube la carne del corral y el
+        //    recolector barre lo que cae por el pueblo, y todo eso va al ALMACÉN; pero el contador de comida (y las
+        //    raciones de los aldeanos) miran LA DESPENSA. Sin este viaje la carne se quedaba en el almacén y el
+        //    pueblo seguía hambriento con el almacén lleno (lo reportó el jugador: "no produce carne aún").
+        if (despensa != null && VillagePantry.comida(level, center) < DESPENSA_VACIA
+                && hayComidaEnElAlmacen(level)) {
+            tarea = Tarea.DESPENSA;
+            target = VillagePantry.puntoDeApoyo(level, center);
+            return true;
+        }
+        // 3) Cultivo maduro: a cosecharlo.
         target = buscarCultivo(level, true);
         if (target != null) {
             tarea = Tarea.COSECHAR;
@@ -670,6 +690,22 @@ public class VillagerFarmGoal extends Goal {
 
     private boolean tieneSemillas() {
         return semillasEnMano() > 0;
+    }
+
+    /**
+     * ¿Hay <b>comida esperando en el almacén</b>? Es la que dejan ahí el <b>ganadero</b> (la carne y la lana del
+     * corral) y el <b>recolector</b> (lo que se cae por el pueblo). Mientras el contador de comida de la aldea y las
+     * raciones miran <b>la despensa</b>, esta comida no cuenta: el granjero hace de puente en cada visita (ver el
+     * paso 3 de {@link #enLaDespensa}) y, si la despensa está vacía, va a por ella aunque no tenga nada que llevar
+     * (paso 2 de {@link #elegirFaena}).
+     */
+    private boolean hayComidaEnElAlmacen(ServerLevel level) {
+        Container almacen = VillageStorage.almacen(level, center);
+        if (almacen == null) {
+            return false;
+        }
+        return VillagePantry.contar(almacen, s -> s.is(Items.WHEAT) || s.is(Items.BREAD)
+                || VillagePantry.esVegetal(s) || VillagePantry.esCarneCruda(s) || VillagePantry.esCarneCocida(s)) > 0;
     }
 
     /** Cuántas semillas lleva encima (sumando todos los tipos). */

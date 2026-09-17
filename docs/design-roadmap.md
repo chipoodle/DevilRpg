@@ -941,9 +941,13 @@ log de su partida (23:47-23:53) y eran **tres cosas distintas**, las tres con da
   monte no están en él) — es la forma exacta de distinguir un árbol de un poste, sin heurísticas que una casa con un
   árbol pegado engañaría. Lo de dentro se tala pero **no se replanta** (la aldea se **despeja**); la madera nueva va
   al monte de fuera y a la arboleda, que sí se cuida.
+- **Y la carne no llegaba sola a la mesa**: el ganadero deja la carne en el **almacén**, pero el contador de comida
+  de la aldea y las **raciones** miran la **despensa**. El granjero hacía de puente en cada visita, pero solo iba a la
+  despensa cuando llevaba 4 cosechas encima: con la huerta reiniciada (punto 1) **no iba nunca**, así que la carne se
+  quedaba en el almacén y el pueblo seguía hambriento con el almacén lleno. Ahora, con la despensa por debajo de
+  **8 puntos** y comida esperando en el almacén, el granjero **va a por ella** aunque no lleve nada que entregar.
 
 ### 3b.22 Lo que viene
-
 - **Milicia**: ✅ completa (barraca, oficio, combate, escudo que bloquea, modelo propio, marcha a la guarida).
 - **Leñador/reforestador**: ✅ (tala y replanta, la cadena de la madera del herrero y ahora también **despeja los
   árboles que quedaron dentro de la muralla**).
