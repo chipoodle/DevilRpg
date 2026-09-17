@@ -855,6 +855,15 @@ public final class VillageGenerator {
     }
 
     /**
+     * El <b>centro de la arboleda</b> (el punto por el que pasa la ronda de la guardia): una casilla libre de césped,
+     * a dos bloques de cada plantón, así que nadie se queda plantado donde va a crecer un tronco.
+     */
+    public static BlockPos puntoDeApoyoDeLaArboleda(BlockPos center, int nivel) {
+        return new BlockPos(center.getX() + (ARBOLEDA_X0 + ARBOLEDA_X1) / 2, nivel,
+                center.getZ() + (ARBOLEDA_Z0 + ARBOLEDA_Z1) / 2);
+    }
+
+    /**
      * <b>La arboleda del pueblo.</b> Es la respuesta a la aldea que nace donde <b>no hay bosque</b> (una islita, un
      * desierto, una llanura pelada): sin árboles no hay troncos, y sin troncos se caen los tablones, los palos, los
      * arcos, las flechas y los escudos, así que el pueblo dejaría de ser autosuficiente. Los <b>fundadores traen los

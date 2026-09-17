@@ -818,6 +818,12 @@ no hay? … una solución orgánica que no rompa las reglas ni el lore"*.
 - **Detalle fino que había que respetar**: los plantones se ponen con **`setBlock` directo**, NO con `colocar`, así
   **no entran en el plano**. Si entraran, el obrero vería "aquí debería haber un plantón" donde ya hay un **árbol** y lo
   "repararía" devolviéndolo a plantón en cada latido: la arboleda no crecería nunca.
+- **La guardia también la patrulla** (lo pidió el jugador): cada **2 puntos** de la ronda de día el guardia pasa por la
+  arboleda y la etiqueta dice **"Patrullando la arboleda"** (si el paso coincide con el corral, manda el corral: está
+  fuera de la valla y es el que más lo necesita). Cada guardia tiene su **puesto** y todos van a **un bloque** del
+  centro de la arboleda: los cuatro plantones están a dos, así que ninguno se queda plantado donde va a crecer un
+  tronco. Es lo que hace que un bicho que entre a por los árboles lo vea la guardia **antes** de que haga daño, igual
+  que pasa con el corral.
 - **Migración 35** (`CURRENT_LAYOUT`): las aldeas ya construidas reciben su arboleda al latido siguiente.
 
 ### 3b.18 Lo que viene

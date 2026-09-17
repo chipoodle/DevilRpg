@@ -66,6 +66,16 @@ public class VillagerGuardGoal extends Goal {
     private static final int ESPERA_TICKS = 120;
     /** Cada cuántos puntos de la ronda el guardia baja al <b>corral anexo</b> (etapa D). */
     private static final int RONDA_CADA_ANEXO = 3;
+    /** Cada cuántos puntos de la ronda el guardia pasa por la <b>arboleda del pueblo</b> (etapa E). Si coincide con
+     *  el corral, manda el corral (está fuera de la valla y es el que más lo necesita). */
+    private static final int RONDA_CADA_ARBOLEDA = 2;
+    /**
+     * Puestos de la arboleda, relativos a su centro: un guardia distinto por cada uno y todos a <b>un bloque</b> del
+     * centro. Los cuatro plantones están a dos, así que ningún guardia se queda plantado donde va a crecer un tronco.
+     */
+    private static final int[][] PUNTOS_DE_LA_ARBOLEDA = {
+            {0, 0}, {-1, 0}, {1, 0}, {0, -1}, {0, 1}, {-1, -1}, {1, 1},
+    };
     /** Cada cuánto cambia el relevo de puertas (2 min): así rotan en la misma noche. */
     private static final int RELEVO_TICKS = 2 * 60 * 20;
     /** Si se queda atascado (no se acerca) deja el punto y prueba con el siguiente. */
@@ -660,8 +670,10 @@ public class VillagerGuardGoal extends Goal {
 
     /**
      * Dónde tiene que estar ahora: de <b>noche</b>, en una de las cuatro puertas del muro; de <b>día</b>, en el
-     * siguiente punto de la ronda. El relevo de puertas sale del reloj de juego y del número de guardia, así que
-     * rota solo y sin que dos guardias se turnen el mismo puesto.
+     * siguiente punto de la ronda —y cada pocos puntos, en el <b>corral anexo</b> o en la <b>arboleda del pueblo</b>
+     * (lo que hace que también los defienda: cualquier bicho que se acerque a los animales o a los árboles lo ve
+     * antes de que haga daño)—. El relevo de puertas sale del reloj de juego y del número de guardia, así que rota
+     * solo y sin que dos guardias se turnen el mismo puesto.
      */
     private BlockPos puntoDeGuardia(ServerLevel level) {
         int nivel = VillageGenerator.cotaDeLaPlaza(level, center);
@@ -684,12 +696,21 @@ public class VillagerGuardGoal extends Goal {
         // Ronda: un punto distinto por paso y por guardia (determinista, sin tiradas). Cada RONDA_CADA_ANEXO puntos
         // de la ronda, el guardia baja al CORRAL ANEXO (fuera de la valla): es lo que pidió el jugador ("la granja
         // anexa, dentro del patrullaje de la guardia").
-        if (paso % RONDA_CADA_ANEXO == 0 && VillageGenerator.anexoConstruido(level, center)) {
+        if (vaAlCorral(level)) {
             BlockPos corral = VillageGenerator.puntoDeApoyoAnexo(level, center);
             // Cada guardia se coloca en un sitio distinto del corral (si no, los cuatro se apilan en el mismo bloque).
             // La ronda va de `base-2` a `base+6` y no más al norte: el norte del corral es el GALLINERO (etapa E) y
             // un punto dentro de él dejaría al guardia dando vueltas contra la valla.
             return corral.offset(0, 0, (indice % 5) * 2 - 2);
+        }
+        // Y cada RONDA_CADA_ARBOLEDA puntos, a la ARBOLEDA DEL PUEBLO (dentro de la valla, en la diagonal noreste):
+        // es la madera de la aldea, y un guardia allí ve (y para) a cualquier bicho que entre a por los árboles.
+        if (vaALaArboleda()) {
+            BlockPos arboleda = VillageGenerator.puntoDeApoyoDeLaArboleda(center, nivel);
+            // Un puesto distinto por guardia, y todos a UN bloque del centro de la arboleda: los cuatro plantones
+            // están a dos, así que así ninguno se queda plantado justo donde va a crecer un tronco.
+            int[] puesto = PUNTOS_DE_LA_ARBOLEDA[indice % PUNTOS_DE_LA_ARBOLEDA.length];
+            return arboleda.offset(puesto[0], 0, puesto[1]);
         }
         double angulo = Math.toRadians((indice * 137.5D + paso * 47.0D) % 360.0D);
         int x = center.getX() + (int) Math.round(Math.cos(angulo) * RADIO_RONDA);
@@ -697,11 +718,23 @@ public class VillagerGuardGoal extends Goal {
         return new BlockPos(x, nivel, z);
     }
 
+    /** ¿Este paso de la ronda le toca al <b>corral anexo</b>? (lo miran el destino y la etiqueta: uno solo) */
+    private boolean vaAlCorral(ServerLevel level) {
+        return paso % RONDA_CADA_ANEXO == 0 && VillageGenerator.anexoConstruido(level, center);
+    }
+
+    /** ¿Este paso de la ronda le toca a la <b>arboleda del pueblo</b>? (el corral manda si coinciden) */
+    private boolean vaALaArboleda() {
+        return paso % RONDA_CADA_ARBOLEDA == 0;
+    }
+
     /** Texto de lo que está haciendo (lo que se ve en su etiqueta). */
     private String actividadDeGuardia(ServerLevel level) {
         if (!level.isNight()) {
-            return paso % RONDA_CADA_ANEXO == 0 && VillageGenerator.anexoConstruido(level, center)
-                    ? "Patrullando el corral" : "Patrullando la aldea";
+            if (vaAlCorral(level)) {
+                return "Patrullando el corral";
+            }
+            return vaALaArboleda() ? "Patrullando la arboleda" : "Patrullando la aldea";
         }
         int puerta = (int) ((level.getGameTime() / RELEVO_TICKS + indice) % 4L);
         String nombre = switch (puerta) {
