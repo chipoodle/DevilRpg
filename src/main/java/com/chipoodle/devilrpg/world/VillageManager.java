@@ -324,9 +324,13 @@ public final class VillageManager {
      *       encerrados y que los huevos se recojan") y los <b>PORTONES DE VALLA</b>: el corral y el gallinero llevan
      *       puerta de valla (que encaja con la valla) en vez de la puerta de madera, y las abre y cierra el pueblo con
      *       su goal, porque el juego no deja que un aldeano abra una puerta de valla.</li>
+     *   <li>34: el corral anexo <b>se repara solo</b> (lo pidió el jugador al ver la granja rota): el <b>suelo</b> del
+     *       corral se tapa (en su partida la franja oeste se quedó sin suelo, con el agua del mar por debajo, y sin
+     *       apoyo la puerta de madera se cayó sola) y la <b>cerca y el portón</b> se reponen en cada latido
+     *       ({@code asegurarCercaDelAnexo}), así que un hueco no deja escapar a los animales.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 33;
+    public static final int CURRENT_LAYOUT = 34;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -1148,12 +1152,12 @@ public final class VillageManager {
             // GRANJA ANEXA de animales (etapa D): FUERA de la valla, al este, con su corral y su cobertizo. Va aquí
             // por el mismo motivo: sus bloques tienen que entrar en el plano nuevo para que el obrero la reponga.
             VillageGenerator.asegurarGranjaAnexa(level, center);
-            // GALLINERO y PORTONES del anexo (etapa E): los pollos encerrados con su tejado y las puertas de VALLA
-            // (en vez de la puerta de madera). Van aparte de `asegurarGranjaAnexa` —que sale antes de tiempo si el
-            // corral ya está— para que lleguen también a las aldeas que ya tenían corral, y antes de tirar el plano
-            // para que entren en él.
-            VillageGenerator.asegurarPortones(level, center);
+            // GALLINERO y CERCA/PORTONES del anexo (etapa E): los pollos encerrados con su tejado, el suelo del
+            // corral tapado (un cráter deja la puerta sin apoyo) y las puertas de VALLA (en vez de la puerta de
+            // madera). Van aparte de `asegurarGranjaAnexa` —que sale antes de tiempo si el corral ya está— para que
+            // lleguen también a las aldeas que ya tenían corral, y antes de tirar el plano para que entren en él.
             VillageGenerator.asegurarGallinero(level, center);
+            VillageGenerator.asegurarCercaDelAnexo(level, center);
             // COCINA del pueblo (etapa E): el ahumador del cocinero, en el kiosco. Va antes de tirar el plano para
             // que entre en él y el obrero lo reponga.
             VillageGenerator.asegurarCocina(level, center);
@@ -1183,11 +1187,12 @@ public final class VillageManager {
         // GRANJA ANEXA de animales (etapa D): igual (idempotente). Si el jugador se llevó la valla, se vuelve a
         // levantar; si está, no se toca (reconstruirla borraría su cobertizo y lo que tenga dentro).
         VillageGenerator.asegurarGranjaAnexa(level, center);
-        // GALLINERO y PORTONES del anexo (etapa E): idempotentes. El portón sustituye a la puerta vieja de madera (y
-        // lo abre el pueblo con `VillagerGateGoal`, porque el juego no deja que un aldeano abra una puerta de valla)
-        // y el gallinero mete a los pollos en un corralillo con tejado, para que no se salgan y sus huevos queden
-        // dentro, a mano del ganadero.
-        VillageGenerator.asegurarPortones(level, center);
+        // CERCA, PORTONES, SUELO y GALLINERO del anexo (etapa E): idempotentes. El portón de valla sustituye a la
+        // puerta vieja de madera (y lo abre el pueblo con `VillagerGateGoal`, porque el juego no deja que un aldeano
+        // abra una puerta de valla), el suelo del corral se tapa (si no, la puerta se cae por falta de apoyo y los
+        // animales se caen por el agujero) y el gallinero mete a los pollos en un corralillo con tejado, para que no
+        // se salgan y sus huevos queden dentro, a mano del ganadero.
+        VillageGenerator.asegurarCercaDelAnexo(level, center);
         VillageGenerator.asegurarGallinero(level, center);
         // COCINA del pueblo (etapa E): el ahumador y la mesa del cocinero, en la plataforma del kiosco. Idempotente
         // (va aparte de `asegurarKiosco` porque aquél sale antes de tiempo cuando el kiosco ya está).

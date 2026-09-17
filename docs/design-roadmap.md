@@ -763,6 +763,20 @@ estén encerrados, y que los huevos también se recojan"*.
   tenido su punto **dentro** del gallinero y se habría pasado la ronda chocando con la valla.
 - **Migración 33** (`CURRENT_LAYOUT`): las aldeas ya construidas reciben el gallinero y los portones, y todo entra en
   el **plano** para que el obrero lo reponga (invariante I8).
+- **El corral se REPARA solo (migración 34, lo pidió el jugador al ver la granja rota)**: en su partida, la franja
+  **oeste** del corral se había quedado **sin suelo** (aire, con el **agua del mar** colándose por debajo) y el terreno
+  firme estaba **3-4 bloques por debajo de la cota**. Sin apoyo, la **puerta de madera se cayó sola** (una de valla no
+  necesita apoyo, pero entonces queda colgando) y la valla y el gallinero quedaron **en el aire**, sobre el agua.
+  Ahora `asegurarCercaDelAnexo` (idempotente, en cada latido) **tapa el suelo** del corral —aire y **agua suelta**— y
+  **repone la cerca y el portón**: solo toca el **aire** (nada de lo que ponga el jugador), respeta el **bebedero** y
+  el portón se repone aunque el hueco esté **vacío** —antes solo se sustituía una puerta *existente*, así que con la
+  puerta ya caída no ponía nada—. Medido en su guardado: **286 bloques de suelo**, el portón y **una valla**. El suelo
+  también se sella al construir el corral, para que no vuelva a nacer hueco.
+- **Y una trampa del nivelado que conviene tener fichada**: `nivelarHuella` **recorta** lo que sobra por encima de la
+  cota y **rellena** lo que falta… pero si encuentra algo **sólido por encima** de la cota (una plataforma, un tronco),
+  `groundY` devuelve esa altura y la columna **no se rellena por debajo**: en una orilla, la construcción puede quedar
+  **colgando sobre el agua** con el terreno a 3-4 bloques. Es la explicación más probable de por qué el corral anexo
+  nació al borde del mar con el suelo hueco.
 - **Pendiente** (decisión del jugador, para más adelante): si los huevos se **cocinan** (un alimento nuevo) o se
   **guardan** para que el cocinero haga **pasteles** con alguna mejora y materiales. De momento solo se **recogen** y
   van al almacén, como hasta ahora.

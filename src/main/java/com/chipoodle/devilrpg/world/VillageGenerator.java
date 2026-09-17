@@ -702,29 +702,117 @@ public final class VillageGenerator {
     }
 
     /**
-     * Asegura los <b>portones de valla</b> del anexo en las aldeas que ya tenían el corral con una <b>puerta de
-     * madera</b>: la puerta no encaja con la valla y, además, el juego <b>sí</b> deja que un aldeano la abra (el
-     * portón no: lo abre el pueblo con {@code VillagerGateGoal}). Es idempotente y va <b>aparte</b> de
-     * {@code asegurarGranjaAnexa} porque aquél sale antes de tiempo cuando el corral ya está.
+     * Asegura el <b>suelo y la cerca del corral anexo</b> (y con la cerca, su <b>portón de valla</b>). Es idempotente
+     * y va <b>aparte</b> de {@code asegurarGranjaAnexa} (que sale antes de tiempo cuando el corral ya está): así una
+     * explosión no deja el corral <b>agujereado y sin portón</b> para siempre.
+     * <p>
+     * Medido en el guardado del jugador: la franja <b>oeste</b> del corral se quedó <b>sin suelo</b> (aire, con el
+     * <b>agua del mar</b> colándose por debajo) y el terreno firme estaba <b>3-4 bloques por debajo de la cota</b>. Sin
+     * apoyo, la <b>puerta de madera se cayó sola</b> (una de valla no necesita apoyo, pero entonces queda colgando) y
+     * la valla y el gallinero se quedaron <b>en el aire</b>, sobre el agua. Con esto el pueblo lo repone solo al latido
+     * siguiente: en su aldea fueron <b>286 bloques de suelo</b>, el portón y una valla.
      */
-    public static void asegurarPortones(ServerLevel level, BlockPos center) {
+    public static void asegurarCercaDelAnexo(ServerLevel level, BlockPos center) {
         int nivel = cotaDeLaPlaza(level, center);
         if (nivel <= level.getMinBuildHeight() + 1 || !anexoConstruido(level, center)) {
-            return; // sin cota o sin corral no hay portón que poner
+            return; // sin cota o sin corral no hay nada que asegurar
         }
+        BlockPos base = baseDeAnexo(center);
+        // 1) EL SUELO: el portón necesita APOYO (una puerta de valla no, pero una de madera sí, y los animales no
+        //    tienen que caerse por el agujero).
+        sellarSueloDelCorral(level, base, nivel);
+        // 2) LA CERCA: cada celda del anillo que se haya quedado en AIRE se vuelve a poner. Solo el aire: lo que haya
+        //    puesto el jugador no se toca. El hueco del portón lleva su puerta de valla (o se cambia la puerta vieja).
         BlockPos porton = portonDelCorral(center, nivel);
-        BlockState actual = level.getBlockState(porton);
-        if (actual.is(Blocks.OAK_FENCE_GATE) || !actual.is(Blocks.OAK_DOOR)) {
-            return; // ya hay portón, o ahí no hay una puerta vieja que cambiar (no se toca lo del jugador)
+        int repuestos = 0;
+        for (int dx = -ANEXO_RADIO; dx <= ANEXO_RADIO; dx++) {
+            for (int dz = -ANEXO_RADIO; dz <= ANEXO_RADIO; dz++) {
+                if (Math.abs(dx) != ANEXO_RADIO && Math.abs(dz) != ANEXO_RADIO) {
+                    continue; // solo el anillo de la valla
+                }
+                BlockPos p = new BlockPos(base.getX() + dx, nivel, base.getZ() + dz);
+                if (p.equals(porton)) {
+                    if (asegurarPorton(level, p)) {
+                        repuestos++;
+                    }
+                    continue;
+                }
+                if (!level.getBlockState(p).isAir()) {
+                    continue;
+                }
+                colocar(level, p, Blocks.OAK_FENCE.defaultBlockState(), 3);
+                repuestos++;
+            }
         }
-        // Se va la puerta ENTERA (sus dos mitades: si no, queda media puerta flotando) y entra el portón.
-        colocar(level, porton.above(), Blocks.AIR.defaultBlockState(), 3);
+        if (repuestos > 0) {
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: repuestos {} bloques de la cerca del corral anexo (y su porton)",
+                    center, repuestos);
+        }
+    }
+
+    /**
+     * Pone el <b>portón de valla</b> en el hueco del corral: si hay una puerta de madera vieja se retira <b>entera</b>
+     * (sus dos mitades) y si el hueco está vacío (una explosión) se pone igual. No toca nada que no sea la puerta
+     * vieja o el aire.
+     *
+     * @return {@code true} si ha puesto el portón
+     */
+    private static boolean asegurarPorton(ServerLevel level, BlockPos porton) {
+        BlockState actual = level.getBlockState(porton);
+        if (actual.is(Blocks.OAK_FENCE_GATE)) {
+            return false; // ya está
+        }
+        if (actual.is(Blocks.OAK_DOOR)) {
+            colocar(level, porton.above(), Blocks.AIR.defaultBlockState(), 3); // la mitad de arriba de la puerta
+        } else if (!actual.isAir()) {
+            return false; // el jugador puso otra cosa ahí: no se toca
+        }
         colocar(level, porton, Blocks.OAK_FENCE_GATE.defaultBlockState()
                 .setValue(FenceGateBlock.FACING, Direction.WEST)
                 .setValue(FenceGateBlock.OPEN, false)
                 .setValue(FenceGateBlock.IN_WALL, false), 3);
-        DevilRpg.LOGGER.info("[Village] Aldea en {}: la puerta del corral anexo pasa a ser un porton de valla",
-                center);
+        return true;
+    }
+
+    /**
+     * <b>Tapa el suelo del corral anexo</b>: rellena de tierra (con césped en la capa que se pisa) las columnas del
+     * recinto que estén <b>huecas</b> —aire <b>o agua suelta</b>— hasta encontrar terreno firme, y <b>respeta el
+     * bebedero</b>, que es agua a propósito.
+     * <p>
+     * Es lo que evita el cráter de una explosión: sin suelo firme la <b>puerta del corral se cae sola</b> (necesita
+     * apoyo) y los animales se caen por el agujero. Y de paso retira el <b>agua que se cuela</b> desde el bebedero
+     * (medido en el guardado del jugador: el agua había invadido cinco columnas del corral), así que el corral no
+     * acaba encharcado. Es idempotente: donde el suelo ya está, no toca nada.
+     */
+    private static void sellarSueloDelCorral(ServerLevel level, BlockPos base, int nivel) {
+        int tapados = 0;
+        for (int dx = -ANEXO_RADIO; dx <= ANEXO_RADIO; dx++) {
+            for (int dz = -ANEXO_RADIO; dz <= ANEXO_RADIO; dz++) {
+                if (esBebedero(dx, dz)) {
+                    continue; // el bebedero es agua a propósito: no se tapa
+                }
+                int x = base.getX() + dx;
+                int z = base.getZ() + dz;
+                for (int y = nivel - 1; y > nivel - PROFUNDIDAD_TAPADO && y > level.getMinBuildHeight(); y--) {
+                    BlockPos p = new BlockPos(x, y, z);
+                    BlockState s = level.getBlockState(p);
+                    if (!s.isAir() && !s.is(Blocks.WATER)) {
+                        break; // ya se llegó a suelo firme
+                    }
+                    colocar(level, p, (y == nivel - 1 ? Blocks.GRASS_BLOCK : Blocks.DIRT).defaultBlockState(), 3);
+                    tapados++;
+                }
+            }
+        }
+        if (tapados > 0) {
+            DevilRpg.LOGGER.info("[Village] Corral anexo en {}: tapados {} bloques del suelo (aire o agua suelta)",
+                    base, tapados);
+        }
+    }
+
+    /** ¿Esa celda (relativa a la base del corral) es el <b>bebedero</b>? (agua a propósito: no se tapa) */
+    private static boolean esBebedero(int dx, int dz) {
+        return dz == 4 && dx >= -4 && dx <= -2;
     }
 
     /**
@@ -802,6 +890,11 @@ public final class VillageGenerator {
         int caminoHasta = bx - r - 1;                     // hasta la puerta del corral
         nivelarHuella(level, new BlockPos(caminoDesde, nivel, bz - ANEXO_CAMINO_ANCHO / 2),
                 caminoHasta - caminoDesde + 1, ANEXO_CAMINO_ANCHO, nivel);
+        // Y una red de seguridad bajo el corral: si justo debajo pasa una barranca (o el mar, que aquí está al lado),
+        // el nivelado deja el suelo HUECO y la puerta del corral —que necesita apoyo— se cae sola. Con el suelo
+        // tapado, la valla, el portón y el bebedero se apoyan en algo. (Esto mismo lo repite `asegurarCercaDelAnexo`
+        // en cada latido, así que una explosión tampoco deja el corral agujereado.)
+        sellarSueloDelCorral(level, base, nivel);
         // El camino, marcado en el suelo (la capa que se pisa es `nivel`, el suelo sólido `nivel-1`).
         for (int x = caminoDesde; x <= caminoHasta; x++) {
             for (int dz = -1; dz <= 1; dz++) {
