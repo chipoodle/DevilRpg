@@ -50,8 +50,12 @@ public class VillagerCollectGoal extends Goal {
      * para forjar. Ahora llega al <b>término del pueblo</b>, el mismo que usa el leñador para talar.
      */
     private static final double RADIO = VillageGenerator.FENCE_RADIUS + 28.0D;
-    /** Hasta dónde se le deja andar desde donde está a por un objeto (el término es ancho: no cruza el pueblo entero). */
-    private static final double RADIO_DE_BUSQUEDA = 40.0D;
+    /**
+     * Hasta dónde se le deja andar desde donde está a por un objeto (el término del pueblo es ancho: no cruza el
+     * pueblo entero, pero con el muro al radio 62 tiene que llegar al menos a media aldea desde donde esté, o el
+     * botín de las refriegas —que cae a 43-52 del centro— no lo vería nunca desde la plaza).
+     */
+    private static final double RADIO_DE_BUSQUEDA = VillageGenerator.FENCE_RADIUS + 8.0D;
     /** Solo se recogen objetos que lleven un rato en el suelo (5 s): así no le quita a nadie lo que acaba de soltar. */
     private static final int EDAD_MINIMA = 100;
 

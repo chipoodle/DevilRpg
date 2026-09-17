@@ -90,7 +90,7 @@ public class VillagerLumberjackGoal extends Goal {
      */
     private static final double DISTANCIA_ENTRE_ARBOLES = 5.0D;
     /** Radio de búsqueda de un claro donde repoblar (alrededor del leñador, como la tala). */
-    private static final int RADIO_CLARO = 40;
+    private static final int RADIO_CLARO = 48;
     /**
      * Clavos a los que se les comprueba la separación: esa comprobación mira un cubo de bloques y se hace con los
      * más cercanos, no con las 800 columnas del barrido.
@@ -101,7 +101,7 @@ public class VillagerLumberjackGoal extends Goal {
     /** Margen alrededor del corral anexo donde NO se planta: una rama no tiene que caerle al ganadero encima. */
     private static final int MARGEN_ANEXO = 3;
     /** Radio de búsqueda de árboles ALREDEDOR DEL LEÑADOR, y radio mínimo (fuera de la valla, que es de troncos). */
-    private static final int RADIO_BUSQUEDA = 32;
+    private static final int RADIO_BUSQUEDA = 40;
     private static final double RADIO_MINIMO = VillageGenerator.FENCE_RADIUS + 3.0D;
     /** Hasta dónde se le deja alejar del pueblo (si no, se pierde por el mundo talando). */
     private static final double RADIO_MAXIMO = VillageGenerator.FENCE_RADIUS + 40.0D;
