@@ -2061,7 +2061,15 @@ public final class VillageManager {
             if (actividadReciente(villager)) {
                 continue;
             }
-            if (villager.isSleeping() || estaDescansando(villager)) {
+            if (villager.isSleeping()) {
+                ponerActividad(villager, "Durmiendo");
+            } else if (VillagerGuardGoal.esGuardia(villager)) {
+                // Un guardia de SERVICIO no duerme aunque el cerebro esté en la franja de descanso (su goal no se corta
+                // a propósito): si le falta equipo va al almacén y, si no, está de ronda. La etiqueta genérica lo
+                // llamaba "Durmiendo" y el jugador veía a la guardia plantada en el almacén con la etiqueta de dormida
+                // (medido en su partida: la única guardia, sin espada, horas en el almacén y "Durmiendo").
+                ponerActividad(villager, "De guardia");
+            } else if (estaDescansando(villager)) {
                 ponerActividad(villager, "Durmiendo");
             } else if (villager.isBaby()) {
                 ponerActividad(villager, "Jugando");

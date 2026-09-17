@@ -114,6 +114,10 @@ public class VillagerGuardGoal extends Goal {
     private final int indice;
     /** true mientras la faena es ir al almacén a equiparse; false cuando ya toca la ronda/puerta. */
     private boolean equipando;
+    /** Le falta el equipo (arma/escudo o arco/flechas): sin él no marcha a la guarida, pero SÍ hace la ronda. */
+    private boolean sinEquipo;
+    /** ¿Hay en el almacén algo suyo que ponerse? Se refresca al ritmo del escaneo de enemigos (no por tick). */
+    private boolean hayEquipoEnAlmacen;
     @Nullable
     private BlockPos destino;
     @Nullable
@@ -164,14 +168,20 @@ public class VillagerGuardGoal extends Goal {
         double dx = villager.getX() - center.getX();
         double dz = villager.getZ() - center.getZ();
         double dist2 = dx * dx + dz * dz;
-        // PRIMERO el equipo: un guardia sin arma no tiene nada que hacer (ni ronda ni asalto).
-        equipando = !equipado(level);
+        // PRIMERO el equipo: si le falta, va a por él... pero SOLO si el almacén tiene algo suyo que ponerse. Sin esa
+        // comprobación, un guardia sin espada (y con el almacén sin hierro) se quedaba PLANTADO en el almacén para
+        // siempre: medido en el guardado del jugador, la única guardia de la aldea llevaba horas allí sin patrullar
+        // ni una vez (y con la etiqueta de "Durmiendo", que era el refresco genérico, no la realidad).
+        sinEquipo = !equipado(level);
+        equipando = sinEquipo && hayEquipoEnElAlmacen(level);
         // MARCHA A LA GUARIDA: si la milicia ha marchado, su sitio es el núcleo. Aquí la "correa" de la aldea no
         // cuenta: el núcleo está a 75-95 bloques del pueblo, así que marchar es salirse del término a propósito.
+        // Y a la guarida solo se va CON el equipo puesto: sin arma no se asalta nada (se queda de ronda).
         BlockPos marcha = VillageManager.marchaDe(level, objectiveIndex);
         marchando = marcha != null;
         if (marchando) {
-            destino = equipando ? VillageStorage.puntoDeApoyo(level, center) : marcha;
+            destino = sinEquipo ? (equipando ? VillageStorage.puntoDeApoyo(level, center) : puntoDeGuardia(level))
+                    : marcha;
             return destino != null;
         }
         if (dist2 > MAX_DISTANCE_FROM_CENTER * MAX_DISTANCE_FROM_CENTER) {
@@ -192,6 +202,9 @@ public class VillagerGuardGoal extends Goal {
         cadencia = 0;
         escanear = 0;
         enemigo = null;
+        equipando = false;
+        sinEquipo = false;
+        hayEquipoEnAlmacen = false;
         mejorDistancia = Double.MAX_VALUE;
         irAlDestino();
     }
@@ -216,6 +229,8 @@ public class VillagerGuardGoal extends Goal {
         if (--escanear <= 0) {
             escanear = ESCANEO_TICKS;
             enemigo = buscarEnemigo(level);
+            // Y de paso se mira si el almacén tiene ya algo suyo: mirar un cofre (54 huecos) NO se hace por tick.
+            hayEquipoEnAlmacen = hayEquipoEnElAlmacen(level);
         }
         if (enemigo != null) {
             if (enemigo.isAlive() && !enemigo.isRemoved()) {
@@ -229,19 +244,23 @@ public class VillagerGuardGoal extends Goal {
         //    aunque el goal ya esté en marcha (`canUse` solo se llama al arrancar, y este goal corre de seguido).
         bajarEscudo();
         if (!equipado(level)) {
+            sinEquipo = true;
+            // Solo se desvía al almacén si allí hay algo suyo (dato del último escaneo): si no, sigue la ronda.
+            equipando = hayEquipoEnAlmacen;
             BlockPos almacen = VillageStorage.puntoDeApoyo(level, center);
-            equipando = true;
-            if (almacen != null && !almacen.equals(destino)) {
+            if (equipando && almacen != null && !almacen.equals(destino)) {
                 destino = almacen;
                 mejorDistancia = Double.MAX_VALUE;
                 stuckTicks = 0;
             }
+        } else {
+            sinEquipo = false;
         }
         // 3) MARCHA: el destino se refresca cada tick (puede empezar o acabar mientras el goal corre). Si se acabó y
         //    el guardia está lejos del pueblo, el destino pasa a ser VOLVER.
         BlockPos marcha = VillageManager.marchaDe(level, objectiveIndex);
         marchando = marcha != null;
-        if (marchando && !equipando && !marcha.equals(destino)) {
+        if (marchando && !sinEquipo && !equipando && !marcha.equals(destino)) {
             destino = marcha;
             mejorDistancia = Double.MAX_VALUE;
             stuckTicks = 0;
@@ -558,6 +577,32 @@ public class VillagerGuardGoal extends Goal {
         VillageManager.ponerSuceso(villager, "Se puso la armadura del almacen");
         DevilRpg.LOGGER.info("[Village] {} se puso la armadura del hueco {} (aldea {})",
                 villager.getUUID(), pieza, objectiveIndex);
+    }
+
+    /**
+     * ¿Tiene el almacén algo <b>suyo</b> que ponerse? (su espada y su escudo, su arco y flechas, o cualquier pieza de
+     * armadura). Es lo que decide si merece la pena ir a por el equipo: sin esta comprobación, un guardia sin espada
+     * —y con el pueblo sin hierro— se quedaba <b>plantado en el almacén para siempre</b> esperando algo que no existía
+     * (medido en el guardado del jugador: la única guardia de la aldea, horas allí, sin patrullar ni una vez).
+     */
+    private boolean hayEquipoEnElAlmacen(ServerLevel level) {
+        Container almacen = VillageStorage.almacen(level, center);
+        if (almacen == null) {
+            return false;
+        }
+        for (int i = 0; i < almacen.getContainerSize(); i++) {
+            ItemStack s = almacen.getItem(i);
+            if (s.isEmpty()) {
+                continue;
+            }
+            boolean loSuyo = tipoDe(villager) == ARQUERO
+                    ? (s.is(Items.BOW) || s.is(Items.ARROW))
+                    : (s.is(Items.IRON_SWORD) || s.is(Items.SHIELD));
+            if (loSuyo || s.getItem() instanceof ArmorItem) {
+                return true; // la armadura también se la pone (pieza a pieza)
+            }
+        }
+        return false;
     }
 
     /** Cuántas flechas lleva encima el arquero (en su mochila de aldeano). */
