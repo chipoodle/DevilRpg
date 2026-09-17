@@ -1042,7 +1042,44 @@ variables que estén relacionadas con el radio del pueblo para que se ajuste"*.
   dentro de la muralla (la esquina más lejana es el corral, a **58,5** de 62) y los **7 puestos** de los aldeanos en
   patio libre (salvo el ganadero, que vive en el corral).
 
-### 3b.24 Lo que viene
+### 3b.24 La ETAPA F: el tercer bancal, el bosque, la TABERNA y el cuartel de dos pisos
+
+El jugador pidió la etapa siguiente de golpe: *"una 3ª parcela con su granjero porque hay poca comida; todas las
+parcelas rodeadas de vallas con varias fence gates y mucha iluminación para que los plantíos crezcan rápido; moved los
+árboles a un área más grande, un pequeño bosque donde el leñador tale y replante; una taberna donde trabaje el cocinero
+y todos vayan a comer ahí cuando lo necesiten, con dos pisos y el segundo con camas, como una posada; el almacén a
+lado de la taberna y los soldados pueden pasar cuando no estén de guardia a comer y reponer energía (más adelante se
+podrá implementar cerveza); las barracas más bonitas y con lore: área de entrenamiento y un segundo piso donde estén
+las camas"*.
+
+- **Tercer bancal y segundo granjero**: `FARM_PLOTS` pasa a **tres** (tercero en `-28,34`) y el pueblo tiene **dos
+  granjeros** (ocho puestos fijos). Ojo con el detalle que lo habría roto: `slotDeProfesionFaltante` miraba "está o no
+  está", así que con un granjero vivo el segundo puesto se daba por cubierto; ahora **cuenta por número**. Cada bancal
+  trae su **compostero**, así que cada granjero tiene su puesto de trabajo (vanilla pide uno por aldeano).
+- **Bancales cercados, con portones y con luz** (`cercaDelBancal`): anillo de valla alrededor de cada bancal con
+  **cuatro puertas de valla** (una por lado) y **faroles en las esquinas y los medios lados**. La luz **no es
+  decorativa**: un cultivo solo crece con **luz 9 o más**, así que con faroles la huerta sigue creciendo **de noche**.
+  `VillagerGateGoal` abre también esas puertas (son de valla y el juego no deja que un aldeano las abra).
+- **El bosque del pueblo**: la arboleda (7×11, 6 plantones) pasa a un **bosque de 22×18** en la esquina **noroeste**
+  con **doce plazas** de árbol en rejilla 4×3: ahí tala y replanta el leñador, y por ahí pasa la guardia en su ronda.
+- **La TABERNA** (dos pisos, en `24,16`, **pegada al almacén** —que no se mueve, para no dejar sus cofres tirados—):
+  abajo el **comedor** con barra, **cinco pipas de cerveza** detrás (los barriles, para la cerveza que vendrá), mesas
+  con sillas (poste de valla con plato y sillas de escalera), faroles colgados y porche con dos faroles en la puerta
+  norte; la **cocina** en la esquina sureste con el **ahumador** (puesto del cocinero, que se retira del kiosco), su
+  mesa de trabajo, el caldero y un barril; y arriba la **posada** con **seis camas** y dos arcas.
+- **Ir a comer a la taberna** (`VillagerTavernGoal`, prioridad **6**, por debajo de los oficios y del guardia): el
+  aldeano que **tiene hambre** y no tiene faena se va a su mesa, **come una ración de la despensa** (la saca de
+  verdad), se queda un rato y sale con **regeneración** ("reponer energía"). **No gasta comida de más**: marca al
+  aldeano como comido y el reparto del minuto salta a los que ya comieron; y si no puede ir (no hay taberna, hay
+  asedio o no hay comida), el reparto del minuto le da su ración como siempre — nadie se muere de hambre por no llegar
+  a la mesa. El cocinero camina a la casilla de delante del ahumador (antes iba al punto del kiosco).
+- **La barraca de dos pisos (con lore)**: abajo la **sala de armas** —suelo de piedra, dos **maniquíes** de paja con
+  calabaza para ensayar el golpe, tres **dianas** para los arqueros, el **hogar** con su fuego y la **mesa de mapas**
+  (ahí se planean las guaridas)—; arriba el **dormitorio** con las `BARRACA_CAMAS` camas, arca y faroles. El testigo de
+  "ya está construida" pasa a ser el hogar, así que las barracas de una planta se vuelven a levantar al migrar.
+- **Lo que queda para después**: la **cerveza** (las pipas y la barra ya están puestas) y el **arte** de la taberna.
+
+### 3b.25 Lo que viene
 - **Milicia**: ✅ completa (barraca, oficio, combate, escudo que bloquea, modelo propio, marcha a la guarida).
 - **Leñador/reforestador**: ✅ (tala y replanta, la cadena de la madera del herrero y ahora también **despeja los
   árboles que quedaron dentro de la muralla**).
@@ -1057,6 +1094,8 @@ variables que estén relacionadas con el radio del pueblo para que se ajuste"*.
 - **Recogida por oficio, despeje del recinto y corral iluminado**: ✅ (ver 3b.22).
 - **El árbol suelto se reconoce por su forma** (no por el plano, que en una aldea migrada miente): ✅ (ver 3b.22).
 - **La muralla al radio 62 (la granja, dentro)**: ✅ (ver 3b.23).
+- **Etapa F: tercer bancal, bancales cercados e iluminados, bosque, taberna con posada y cuartel de dos pisos**: ✅
+  (ver 3b.24).
 - **Lo siguiente**: la **verificación en partida** de la cadena entera de la comida (huerta → despensa → cocina →
   raciones) y, de ahí, lo que pida el jugador.
 
