@@ -1157,7 +1157,50 @@ no se puede subir"*.
   camino de la plaza.
 - **Migración 44** (`CURRENT_LAYOUT`).
 
-### 3b.27 Lo que viene
+### 3b.27 Los cuatro reparos de la taberna, el almacén y el corral (y la huerta que se reiniciaba)
+
+Después de ver la taberna en su partida, el jugador pidió cuatro arreglos de golpe (y uno más al ver la huerta):
+*"no se puede acceder a la escalera desde adentro, hazla doble"*, *"la chimenea está sin protección externa, se puede
+ver el fuego desde afuera"*, *"el almacén está demasiado pegado a la puerta principal de la taberna"*, *"la granja está
+desalineada"* y *"¿por qué los vegetales están como item por toda la parcela?"*.
+
+- **La ESCALERA no tenía acceso** (y era culpa de la migración 44, no del jugador): el primer escalón quedó metido en
+  la esquina suroeste del comedor, con el escalón de arriba delante, la pared al este y la pared al sur. Ahora es
+  **doble** (dos bloques de ancho), arranca a dos bloques de la pared sur —se entra **de lado**, desde el comedor, por
+  la casilla `(3, z)`— y desemboca en la galería de la posada, con su muro de caja al este para que nadie se caiga al
+  comedor. El cuarto pequeño del suroeste se recorta para dejarle sitio.
+- **La CHIMENEA, por fuera**: el hogar está en la boca del muro norte y su cara de la calle dejaba ver la llama. Ahora
+  el caño de ladrillo va **por delante del muro** (como en el arte conceptual), tapa esa cara y sube hasta por encima
+  del tejado con su remate de losa.
+- **El ALMACÉN se muda al lado de la taberna** (`(48, 21)`, a su espalda) en vez de estar delante de su puerta
+  principal (`(18, 18)`), y **crece**: cobertizo de **7×7** con **seis cofres dobles** (doce cofres) en vez de cinco
+  por cinco con tres. La migración **pasa lo que hubiera en los cofres viejos al nuevo antes** de retirar el
+  cobertizo viejo: tirar un cofre tira su contenido al suelo y el almacén guarda lo que el pueblo ha recogido.
+- **El CORRAL estaba desalineado**: medido en su guardado, el **cobertizo** era del trazado de **radio 5** (11×11) y
+  la **valla** del de radio 7 (15×15) —la valla creció y el cobertizo se quedó donde estaba, porque
+  `asegurarCercaDelAnexo` solo rellena lo que falta y `granjaAnexa` no se vuelve a llamar—. Ahora el corral pasa a
+  **19×19** y la migración **retira el corral viejo entero** (solo sus bloques: valla, portón, cobertizo, gallinero,
+  paja, bebedero, faroles y camino) y lo levanta de nuevo, así que sale **alineado**. El jugador creía que se le había
+  encogido la granja: **no se encogió nada** (15×15 antes y 19×19 ahora) y lo que veía fuera del corral eran animales
+  **salvajes** del mundo (ninguno llevaba la marca del rebaño del pueblo). De paso, la caja de búsqueda del **ganado
+  perdido** llegaba a 48 bloques del corral y había animales **del pueblo** (con su marca) a 51-57 que no volvían
+  nunca: ahora cubre el radio de reconocimiento entero.
+- **La HUERTA se reiniciaba en cada migración, y esta vez el culpable era el NIVELADO**: `plot()` nivelaba la huella
+  del bancal con `nivelarHuella`, que **recorta** el terreno que sobresale de la cota y, en una parcela en **cuesta**
+  (una aldea de montaña), ese recorte se llevaba por delante los **cultivos ya crecidos** de las celdas altas: salían
+  como **objetos tirados por toda la parcela** y luego se replantaban brotes. Medido en su aldea de montaña: las tres
+  parcelas con sus 71 cultivos pero casi todos de edad 0-1 y semillas de trigo y de remolacha por el suelo. El arreglo
+  anterior (no replantar lo que ya tiene cultivo) **no bastaba**, porque el nivelado rompía los cultivos *antes* de
+  llegar a esa comprobación. Ahora un bancal **ya hecho no se toca**: `bancalHecho` mira la tierra de cultivo y, si
+  está, solo se aseguran el **compostero** y la **valla** (lo que no pisa los cultivos). La tierra de cultivo sí está
+  en el plano, así que si alguien la pisotea la repone el obrero.
+- **Verificado** con el arnés temporal y el servidor headless: la huerta **madurada a mano** sobrevive a una llamada
+  de `farm()` (72 cultivos antes y 72 después, con sus 72 maduros), los cinco escalones dobles con su meseta libre, el
+  hogar tapado y el caño por fuera, el almacén nuevo con sus doce cofres, el corral de 19×19 con su cobertizo, su
+  gallinero y su bebedero, y sin la valla vieja de 15×15.
+- **Migración 45** (`CURRENT_LAYOUT`).
+
+### 3b.28 Lo que viene
 - **Milicia**: ✅ completa (barraca, oficio, combate, escudo que bloquea, modelo propio, marcha a la guarida).
 - **Leñador/reforestador**: ✅ (tala y replanta, la cadena de la madera del herrero y ahora también **despeja los
   árboles que quedaron dentro de la muralla**).
@@ -1176,6 +1219,8 @@ no se puede subir"*.
   (ver 3b.24).
 - **Los restos colgados de la aldea de montaña (nieve polvo flotando)**: ✅ (ver 3b.25).
 - **La taberna grande (plano del INN, vuelo, escalera que sí se sube)**: ✅ (ver 3b.26).
+- **Escalera accesible y doble, chimenea por fuera, almacén al lado, corral alineado y huerta que no se reinicia**: ✅
+  (ver 3b.27).
 - **Lo siguiente**: la **verificación en partida** de la cadena entera de la comida (huerta → despensa → cocina →
   raciones) y, de ahí, lo que pida el jugador (la **cerveza** de las pipas y el **pescador con su edificio y su lago**).
 

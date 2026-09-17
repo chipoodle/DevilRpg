@@ -529,9 +529,13 @@ public final class VillageGenerator {
     }
 
     /**
-     * Asegura el <b>almacén</b> de la aldea: un cobertizo de piedra con <b>cofre doble</b> donde el constructor (que
+     * Asegura el <b>almacén</b> de la aldea: un cobertizo de piedra con <b>cofres dobles</b> donde el constructor (que
      * también es recolector) deja lo que recoge por el pueblo. <b>Crece solo</b>: cuando sus cofres se llenan, se
      * añade otro cofre doble en el siguiente hueco (hasta {@code VillageStorage.MAX_COFRES} dobles).
+     * <p>
+     * Desde la migración 45 el cobertizo es de <b>7×7</b> y tiene <b>seis</b> cofres dobles (doce cofres) en vez de
+     * cinco por cinco con tres: va <b>al lado de la taberna</b>, a su espalda, y el jugador pidió sitio para que
+     * sigan entrando cofres conforme crece.
      */
     public static void asegurarAlmacen(ServerLevel level, BlockPos center) {
         int nivel = cotaDeLaPlaza(level, center);
@@ -540,23 +544,30 @@ public final class VillageGenerator {
         }
         BlockPos c = VillageStorage.centro(center);
         if (!(level.getBlockState(new BlockPos(c.getX(), nivel, c.getZ())).is(Blocks.STONE_BRICKS))) {
-            // Cobertizo: suelo 5x5, cuatro postes de tronco y tejado de tablones.
-            for (int dx = -2; dx <= 2; dx++) {
-                for (int dz = -2; dz <= 2; dz++) {
+            // Cobertizo 7x7: suelo de piedra, ocho postes de tronco y tejado de tablones.
+            for (int dx = -3; dx <= 3; dx++) {
+                for (int dz = -3; dz <= 3; dz++) {
                     colocar(level, new BlockPos(c.getX() + dx, nivel, c.getZ() + dz),
                             Blocks.STONE_BRICKS.defaultBlockState(), 3);
                 }
             }
-            for (int sx = -1; sx <= 1; sx += 2) {
-                for (int sz = -1; sz <= 1; sz += 2) {
+            for (int sx = -3; sx <= 3; sx += 3) {
+                for (int sz = -3; sz <= 3; sz += 3) {
                     for (int i = 1; i <= 3; i++) {
-                        colocar(level, new BlockPos(c.getX() + sx * 2, nivel + i, c.getZ() + sz * 2),
+                        colocar(level, new BlockPos(c.getX() + sx, nivel + i, c.getZ() + sz),
                                 Blocks.OAK_LOG.defaultBlockState(), 3);
                     }
                 }
             }
-            for (int dx = -2; dx <= 2; dx++) {
-                for (int dz = -2; dz <= 2; dz++) {
+            // Y los cuatro postes de en medio, para que el tejado de 7x7 no quede colgando de las esquinas solas.
+            for (int k = -3; k <= 3; k += 3) {
+                for (int i = 1; i <= 3; i++) {
+                    colocar(level, new BlockPos(c.getX() + k, nivel + i, c.getZ()), Blocks.OAK_LOG.defaultBlockState(), 3);
+                    colocar(level, new BlockPos(c.getX(), nivel + i, c.getZ() + k), Blocks.OAK_LOG.defaultBlockState(), 3);
+                }
+            }
+            for (int dx = -3; dx <= 3; dx++) {
+                for (int dz = -3; dz <= 3; dz++) {
                     colocar(level, new BlockPos(c.getX() + dx, nivel + 4, c.getZ() + dz),
                             Blocks.OAK_PLANKS.defaultBlockState(), 3);
                 }
@@ -574,6 +585,70 @@ public final class VillageGenerator {
                 DevilRpg.LOGGER.info("[Village] Aldea en {}: almacen ampliado ({} cofres)",
                         center, VillageStorage.cofresColocados(level, center));
             }
+        }
+    }
+
+    /**
+     * <b>Mueve el almacén</b> del pueblo a su sitio nuevo (al este de la taberna, lejos de su puerta principal) sin
+     * perder nada: primero <b>pasa lo que tengan los cofres viejos</b> al almacén nuevo, después <b>retira el
+     * cobertizo viejo</b> (solo sus bloques: lo que haya puesto el jugador no se toca) y por último levanta el nuevo.
+     * <p>
+     * Es idempotente: si el cobertizo nuevo ya está y no queda ningún cofre viejo, no hace nada. Lo pidió el jugador:
+     * <i>"el almacén está demasiado pegado a la puerta principal de la taberna; ponlo a lado o intégralo dentro de la
+     * taberna con suficiente espacio para que se vayan poniendo más cofres"</i>.
+     */
+    public static void moverAlmacen(ServerLevel level, BlockPos center) {
+        int nivel = cotaDeLaPlaza(level, center);
+        if (nivel <= level.getMinBuildHeight() + 1) {
+            return;
+        }
+        BlockPos nuevo = VillageStorage.centro(center);
+        BlockPos viejo = VillageStorage.centroViejo(center);
+        boolean nuevoHecho = level.getBlockState(new BlockPos(nuevo.getX(), nivel, nuevo.getZ()))
+                .is(Blocks.STONE_BRICKS);
+        // 1) LO QUE HUBIERA EN LOS COFRES VIEJOS, AL ALMACÉN NUEVO (y si no cupiera, al suelo del nuevo, donde el
+        //    recolector del pueblo lo recoge: tirar un cofre tira su contenido al suelo).
+        asegurarAlmacen(level, center);
+        int movidos = 0;
+        for (BlockPos p : VillageStorage.cofresViejos(level, center)) {
+            if (!(level.getBlockEntity(p) instanceof Container contenedor)) {
+                continue;
+            }
+            for (int i = 0; i < contenedor.getContainerSize(); i++) {
+                ItemStack pila = contenedor.getItem(i);
+                if (pila.isEmpty()) {
+                    continue;
+                }
+                ItemStack sobra = VillageStorage.guardar(level, center, pila.copy());
+                contenedor.setItem(i, ItemStack.EMPTY);
+                movidos++;
+                if (!sobra.isEmpty()) {
+                    Block.popResource(level, nuevo.above(), sobra);
+                }
+            }
+            contenedor.setChanged();
+        }
+        // 2) EL COBERTIZO VIEJO SE RETIRA (solo sus bloques: el suelo de piedra, los postes, el tejado, el farol y
+        //    los cofres ya vaciados).
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dz = -2; dz <= 2; dz++) {
+                BlockPos suelo = new BlockPos(viejo.getX() + dx, nivel, viejo.getZ() + dz);
+                if (level.getBlockState(suelo).is(Blocks.STONE_BRICKS)) {
+                    colocar(level, suelo, Blocks.AIR.defaultBlockState(), 3);
+                }
+                for (int y = nivel + 1; y <= nivel + 4; y++) {
+                    BlockPos q = new BlockPos(viejo.getX() + dx, y, viejo.getZ() + dz);
+                    BlockState estado = level.getBlockState(q);
+                    if (estado.is(Blocks.OAK_LOG) || estado.is(Blocks.OAK_PLANKS) || estado.is(Blocks.LANTERN)
+                            || estado.getBlock() instanceof ChestBlock) {
+                        colocar(level, q, Blocks.AIR.defaultBlockState(), 3);
+                    }
+                }
+            }
+        }
+        if (!nuevoHecho || movidos > 0) {
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: almacen movido de {} a {} ({} pila(s) de objeto pasadas"
+                    + " al nuevo)", center, viejo, nuevo, movidos);
         }
     }
 
@@ -749,10 +824,16 @@ public final class VillageGenerator {
 
     // --- GRANJA ANEXA DE ANIMALES (etapa D: fuera de la valla, con su aldeano y dentro del patrullaje) -----------
 
-    /** Distancia del centro de la aldea al centro del corral: el muro está a 36 y el talud de fuera baja hasta 48. */
+    /** Distancia del centro de la aldea al centro del corral. */
     private static final int ANEXO_DX = 50;
-    /** Radio del corral (huella de 15x15). */
-    public static final int ANEXO_RADIO = 7;
+    /**
+     * Radio del corral: <b>huella de 19x19</b> desde la migración 45 (antes 15x15). El jugador lo pidió al ver a los
+     * animales apretados y algunos fuera: el corral <b>no se encoge nunca</b>, se ensancha. Con 9 el corral sigue
+     * entero dentro de la muralla (la valla queda a 3 bloques del muro) y cabe el doble de rebaño sin amontonarse.
+     */
+    public static final int ANEXO_RADIO = 9;
+    /** Radio del corral <b>viejo</b> (15x15): lo usa la migración 45 para retirar su valla y su cobertizo. */
+    private static final int ANEXO_RADIO_VIEJO = 7;
     /** Ancho (en Z) del camino que baja de la puerta este del muro al corral. */
     private static final int ANEXO_CAMINO_ANCHO = 5;
     /**
@@ -814,12 +895,12 @@ public final class VillageGenerator {
      * <b>línea de patrulla de la guardia</b> ({@code x = base-4}, {@code z} de {@code base-2} a {@code base+6}) pasa
      * fuera de la caja a propósito: un guardia no tiene que acabar dentro de un corral de pollos.
      */
-    private static final int GALLINERO_X0 = -6;
-    private static final int GALLINERO_X1 = -2;
-    private static final int GALLINERO_Z0 = -6;
-    private static final int GALLINERO_Z1 = -5;
+    private static final int GALLINERO_X0 = -8;
+    private static final int GALLINERO_X1 = -4;
+    private static final int GALLINERO_Z0 = -8;
+    private static final int GALLINERO_Z1 = -7;
     /** X (relativa a la base) del <b>portón</b> del gallinero, en el centro de su pared sur. */
-    private static final int GALLINERO_PUERTA_X = -4;
+    private static final int GALLINERO_PUERTA_X = -6;
 
     /** El <b>portón del corral</b> (en su valla oeste, mirando al camino de la aldea). */
     public static BlockPos portonDelCorral(BlockPos center, int nivel) {
@@ -1216,7 +1297,7 @@ public final class VillageGenerator {
     }
 
     /**
-     * Asegura la <b>granja anexa de animales</b> (corral de 15x15 con cobertizo, bebedero y camino desde la puerta
+     * Asegura la <b>granja anexa de animales</b> (corral de 19x19 con cobertizo, bebedero y camino desde la puerta
      * este) en una aldea que todavía no la tiene. Es <b>idempotente</b> y, como el kiosco o la barraca, comprueba el
      * suelo a la cota: si ya está, no toca nada (reconstruirla borraría lo que el jugador tenga dentro).
      */
@@ -1231,6 +1312,77 @@ public final class VillageGenerator {
         granjaAnexa(level, baseDeAnexo(center), nivel);
         DevilRpg.LOGGER.info("[Village] Aldea en {}: granja anexa de animales construida en {} (corral de {}x{})",
                 center, baseDeAnexo(center), 2 * ANEXO_RADIO + 1, 2 * ANEXO_RADIO + 1);
+    }
+
+    /** ¿Ese bloque lo puso el <b>corral anexo</b>? Solo esos se retiran al rehacerlo: lo del jugador no se toca. */
+    private static boolean esDelCorral(BlockState s) {
+        return s.is(Blocks.OAK_FENCE) || s.is(Blocks.OAK_FENCE_GATE) || s.is(Blocks.OAK_LOG)
+                || s.is(Blocks.OAK_PLANKS) || s.is(Blocks.STONE_BRICKS) || s.is(Blocks.HAY_BLOCK)
+                || s.is(Blocks.LOOM) || s.is(Blocks.RED_BED) || s.is(Blocks.LANTERN)
+                || s.is(Blocks.WATER) || s.is(Blocks.DIRT_PATH);
+    }
+
+    /**
+     * <b>Ensancha el corral anexo</b> al tamaño nuevo (<b>19x19</b> en vez de 15x15) en una aldea que ya lo tenía:
+     * retira lo del corral <b>viejo</b> (su valla, su portón, el cobertizo, el gallinero, la paja, el bebedero y los
+     * faroles: solo esos bloques) y lo vuelve a levantar entero con {@link #granjaAnexa}.
+     * <p>
+     * Lo pidió el jugador: <i>"¿por qué hiciste la granja más pequeña? ... reubícala pero no la hagas más
+     * pequeña"</i>. Medido en su guardado antes de tocar nada: el corral estaba en <b>15x15</b> (radio 7), sin
+     * cambios —lo que él veía fuera eran animales <b>salvajes</b> del mundo, ninguno con la marca del rebaño del
+     * pueblo—, así que aquí no se encoge nada: se ensancha a 19x19, que es el doble de superficie para el rebaño.
+     */
+    public static void ensancharElCorral(ServerLevel level, BlockPos center) {
+        int nivel = cotaDeLaPlaza(level, center);
+        if (nivel <= level.getMinBuildHeight() + 1) {
+            return;
+        }
+        BlockPos base = baseDeAnexo(center);
+        if (level.getBlockState(new BlockPos(base.getX() - ANEXO_RADIO, nivel, base.getZ() - ANEXO_RADIO))
+                .is(Blocks.OAK_FENCE)) {
+            return; // ya es el corral grande
+        }
+        // OJO: aquí NO se puede preguntar `anexoConstruido` (mira la valla del corral NUEVO, así que diría que no hay
+        // corral). Se busca la valla del corral VIEJO (radio 7): si no está, es que no hay corral que ensanchar y lo
+        // construye `asegurarGranjaAnexa`, que va después en la migración.
+        boolean corralViejo = level.getBlockState(new BlockPos(base.getX() - ANEXO_RADIO_VIEJO, nivel,
+                        base.getZ() - ANEXO_RADIO_VIEJO)).is(Blocks.OAK_FENCE)
+                || level.getBlockState(new BlockPos(base.getX() + ANEXO_RADIO_VIEJO, nivel,
+                        base.getZ() - ANEXO_RADIO_VIEJO)).is(Blocks.OAK_FENCE);
+        if (!corralViejo) {
+            return;
+        }
+        int quitados = 0;
+        for (int dx = -ANEXO_RADIO_VIEJO - 1; dx <= ANEXO_RADIO_VIEJO + 1; dx++) {
+            for (int dz = -ANEXO_RADIO_VIEJO - 1; dz <= ANEXO_RADIO_VIEJO + 1; dz++) {
+                for (int y = nivel - 1; y <= nivel + 4; y++) {
+                    BlockPos p = new BlockPos(base.getX() + dx, y, base.getZ() + dz);
+                    if (esDelCorral(level.getBlockState(p))) {
+                        colocar(level, p, Blocks.AIR.defaultBlockState(), 3);
+                        quitados++;
+                    }
+                }
+            }
+        }
+        granjaAnexa(level, base, nivel);
+        // LAS GALLINAS, AL GALLINERO NUEVO: el corralillo se movió con el ensanche, así que las gallinas que andaban
+        // por el corral se quedarían fuera (y sus huevos por el suelo, que es justo lo que el jugador no quiere). Se
+        // meten dentro, que es donde viven.
+        BlockPos dentro = centroDelGallinero(center, nivel);
+        int metidas = 0;
+        for (net.minecraft.world.entity.animal.Animal animal : level.getEntitiesOfClass(
+                net.minecraft.world.entity.animal.Animal.class,
+                new AABB(base).inflate(ANEXO_RADIO + 2, 12.0D, ANEXO_RADIO + 2))) {
+            if (animal.getType() != EntityType.CHICKEN) {
+                continue;
+            }
+            animal.moveTo(dentro.getX() + 0.5D + (metidas % 3), dentro.getY(),
+                    dentro.getZ() + 0.5D + ((metidas / 3) % 2), animal.getYRot(), 0.0F);
+            metidas++;
+        }
+        DevilRpg.LOGGER.info("[Village] Aldea en {}: corral anexo ensanchado a {}x{} ({} bloque(s) del viejo"
+                + " retirados, {} gallina(s) al gallinero nuevo)", center, 2 * ANEXO_RADIO + 1, 2 * ANEXO_RADIO + 1,
+                quitados, metidas);
     }
 
     /**
@@ -1600,7 +1752,10 @@ public final class VillageGenerator {
             return 0;
         }
         BlockPos base = baseDeAnexo(center);
-        AABB caja = new AABB(base).inflate(REBANO_PERDIDO + 24, 24.0D, REBANO_PERDIDO + 24);
+        // La caja de búsqueda cubre TODO el radio en el que se reconoce al ganado del pueblo (REBANO_ADOPCION), no
+        // solo REBANO_PERDIDO + 24: medido en el guardado del jugador, había ovejas y gallinas del rebaño (con su
+        // marca) a 51-57 bloques del corral, FUERA de la caja vieja, así que no volvían nunca.
+        AABB caja = new AABB(base).inflate(REBANO_ADOPCION, 24.0D, REBANO_ADOPCION);
         int devueltos = 0;
         for (net.minecraft.world.entity.animal.Animal animal
                 : level.getEntitiesOfClass(net.minecraft.world.entity.animal.Animal.class, caja)) {
@@ -4188,7 +4343,41 @@ public final class VillageGenerator {
      * ({@code FarmBlock.isNearWater}), el trigo se <b>secaba</b> (visto en juego). Ahora el agua y la tierra de
      * cultivo van a la <b>misma altura</b> y las columnas bajas se rellenan de tierra hasta ese nivel.
      */
+    /**
+     * ¿Está ya hecho ese bancal? Se mira el <b>suelo</b>: con varias celdas de <b>tierra de cultivo</b> a la capa de
+     * abajo, el bancal está construido y <b>no hay que volver a nivelarlo</b>.
+     * <p>
+     * Existe por un fallo medido: el <b>nivelado de la huella</b> ({@link #nivelarHuella}) <b>recorta</b> el terreno
+     * que sobresale de la cota y, en una parcela en <b>cuesta</b> (una aldea de montaña), ese recorte se llevaba por
+     * delante los <b>cultivos ya crecidos</b> de las celdas altas: salían como <b>objetos tirados por toda la
+     * parcela</b> y luego se replantaban brotes nuevos (lo volvió a ver el jugador: <i>"¿por qué los vegetales están
+     * como item por toda la parcela?"</i>). Medido en su aldea de montaña, justo después de migrar: las tres parcelas
+     * con sus 71 cultivos puestos pero casi todos de edad 0-1 y semillas de trigo y de remolacha tiradas por el suelo.
+     * <p>
+     * La tierra de cultivo <b>sí</b> está en el plano, así que si alguien la pisotea la repone el obrero: no hace
+     * falta rehacer el bancal entero (y rehacerlo es lo que rompía la huerta).
+     */
+    private static boolean bancalHecho(ServerLevel level, BlockPos corner, int nivel) {
+        int tierra = 0;
+        for (int dx = 0; dx < PLOT_WIDTH; dx++) {
+            for (int dz = 0; dz < PLOT_DEPTH; dz++) {
+                if (level.getBlockState(new BlockPos(corner.getX() + dx, nivel - 1, corner.getZ() + dz))
+                        .is(Blocks.FARMLAND)) {
+                    tierra++;
+                }
+            }
+        }
+        return tierra >= 8;
+    }
+
     private static void plot(ServerLevel level, BlockPos corner, int nivel) {
+        // SI EL BANCAL YA ESTÁ, NO SE NIVELA NI SE REPLANTA: solo se asegura lo que NO toca los cultivos (el
+        // compostero del granjero y la valla con sus faroles). Ver `bancalHecho`.
+        if (bancalHecho(level, corner, nivel)) {
+            composteroDelBancal(level, corner, nivel);
+            cercaDelBancal(level, corner, nivel);
+            return;
+        }
         Block[] plants = {Blocks.WHEAT, Blocks.CARROTS, Blocks.POTATOES, Blocks.BEETROOTS};
         // 1) La parcela se nivela a LA COTA DE LA ALDEA (la que nos pasan): agua y tierra de cultivo a la misma
         // altura que el resto del pueblo, así ni se seca ni queda en un hoyo.
@@ -4246,7 +4435,21 @@ public final class VillageGenerator {
                 colocar(level, posCultivo, crop, Block.UPDATE_ALL);
             }
         }
-        // Compostero (puesto de trabajo del granjero). Tres cosas, en este orden (importa):
+        composteroDelBancal(level, corner, nivel);
+        // 4) LA VALLA DEL BANCAL, con sus PORTONES y sus FAROLES (lo pidió el jugador: "todas las parcelas deben
+        //    estar rodeadas de vallas con varias fence gates y que tengan mucha iluminación para que los plantíos
+        //    crezcan rápido"). La luz no es decorativa: un cultivo solo crece con luz 9 o más, así que con faroles
+        //    en los postes la huerta sigue creciendo DE NOCHE (sin luz, la mitad del día se pierde).
+        cercaDelBancal(level, corner, nivel);
+    }
+
+    /**
+     * El <b>compostero</b> del bancal (el puesto de trabajo del granjero), a dos bloques de su esquina y fuera de su
+     * valla. Se separa del resto del bancal porque es lo único que hay que <b>asegurar</b> en un bancal ya hecho: si
+     * se rehiciera el bancal entero, el nivelado se llevaría por delante los cultivos (ver {@link #bancalHecho}).
+     */
+    private static void composteroDelBancal(ServerLevel level, BlockPos corner, int nivel) {
+        // Tres cosas, en este orden (importa):
         //  1) Se quita el compostero VIEJO de la columna ANTES de medir el suelo. Si no, `groundY` cuenta el
         //     compostero como si fuera suelo y el nuevo sube un bloque en cada migración: medido en el guardado
         //     del jugador, el compostero estaba en la capa 64 con el suelo del pueblo en la 62 (flotando).
@@ -4254,6 +4457,7 @@ public final class VillageGenerator {
         //     arriba, tierra debajo). Antes el relleno se quedaba una capa corto (`y < nivelCompostero - 1`) y la
         //     limpieza se llevaba por delante el bloque de superficie -> el compostero quedaba FLOTANDO.
         //  3) Se coloca el compostero apoyado en esa capa.
+        int base = nivel;
         int compX = corner.getX() - 2; // fuera de la valla del bancal (ver `cercaDelBancal`)
         int compZ = corner.getZ();
         for (int y = nivel - PROFUNDIDAD_SOLAR - 2; y <= nivel + 6; y++) {
@@ -4274,11 +4478,6 @@ public final class VillageGenerator {
                     Block.UPDATE_ALL);
         }
         colocar(level, new BlockPos(compX, nivelCompostero, compZ), Blocks.COMPOSTER.defaultBlockState(), Block.UPDATE_ALL);
-        // 4) LA VALLA DEL BANCAL, con sus PORTONES y sus FAROLES (lo pidió el jugador: "todas las parcelas deben
-        //    estar rodeadas de vallas con varias fence gates y que tengan mucha iluminación para que los plantíos
-        //    crezcan rápido"). La luz no es decorativa: un cultivo solo crece con luz 9 o más, así que con faroles
-        //    en los postes la huerta sigue creciendo DE NOCHE (sin luz, la mitad del día se pierde).
-        cercaDelBancal(level, corner, nivel);
     }
 
     /**
@@ -4368,19 +4567,26 @@ public final class VillageGenerator {
     /** La puerta: una sola, en el centro del muro oeste, que es el que mira a la plaza. */
     private static final int TABERNA_PUERTA = 7;
     /**
-     * La <b>caja de la escalera</b> (sube pegada al muro oeste, de sur a norte) en la planta de la posada. Va
-     * cerrada por el este con un muro: el hueco del forjado es un pozo de un bloque de ancho, así que sin ese muro
-     * cualquiera que paseara por la galería se caería al comedor. El escalón de abajo arranca <b>pegado al muro
-     * sur</b>, para que el pozo no deje ningún rincón sin cerrar por el que caerse.
+     * La <b>caja de la escalera</b> en la planta de la posada. Sube pegada al muro oeste, de sur a norte, y es
+     * <b>doble</b> (dos bloques de ancho) y con su meseta de llegada, como pidió el jugador: <i>"hazla doble y con
+     * suficiente espacio para que se pueda subir al segundo piso"</i>.
+     * <p>
+     * El <b>primer escalón</b> está en {@code z = Z1}, dentro del comedor y a dos bloques de la pared sur: se entra a
+     * la escalera <b>de lado</b>, desde el comedor ({@code x = 3}, que es comedor a la capa que se pisa), y no de
+     * frente, que es lo que la dejaba <b>sin acceso</b>: el escalón de abajo quedaba metido en la esquina, con el
+     * escalón de arriba delante, la pared al este y la pared al sur (lo avisó el jugador: "no se puede acceder a la
+     * escalera desde adentro"). El pozo va cerrado por el este con un muro: es un hueco de un bloque de ancho, y sin
+     * ese muro el primero que paseara por la galería se caería al comedor.
      */
     private static final int TABERNA_ESCALERA_X = 1;
-    private static final int TABERNA_ESCALERA_Z0 = 10;
-    private static final int TABERNA_ESCALERA_Z1 = 14;
+    private static final int TABERNA_ESCALERA_ANCHO = 2;
+    private static final int TABERNA_ESCALERA_Z0 = 9;
+    private static final int TABERNA_ESCALERA_Z1 = 13;
     /** El hogar (con su chimenea), en el muro norte; y el ahumador del cocinero, en la cocina. */
     private static final int[] TABERNA_HOGAR = {9, 0};
     private static final int[] TABERNA_COCINA = {4, 2};
     /** Las seis mesas del comedor, relativas a la esquina de la taberna. */
-    private static final int[][] TABERNA_MESAS = {{10, 3}, {14, 4}, {16, 7}, {14, 10}, {10, 10}, {3, 11}};
+    private static final int[][] TABERNA_MESAS = {{10, 3}, {14, 4}, {16, 7}, {14, 10}, {10, 10}, {4, 11}};
 
     /**
      * Coordenada de la taberna, relativa al centro: al <b>sureste</b>, pegada al almacén (que está en 18,18) y en el
@@ -4416,10 +4622,14 @@ public final class VillageGenerator {
     }
 
     /**
-     * ¿Está la taberna construida? El testigo son sus <b>cuatro postes de esquina</b>, que en esta taberna son de
-     * <b>roble oscuro</b>: es lo que la distingue de la primera taberna (de roble claro), así que una aldea que
-     * todavía tenga la vieja <b>no</b> pasa esta prueba y se le levanta la nueva. Con cuatro testigos, hace falta que
-     * se caigan los cuatro para que el pueblo la reconstruya entera (y reconstruirla tira lo que haya dentro).
+     * ¿Está la taberna construida? Los testigos son sus <b>cuatro postes de esquina</b>, que en esta taberna son de
+     * <b>roble oscuro</b> (es lo que la distingue de la primera taberna, de roble claro), <b>y su escalera doble</b>.
+     * Con cuatro postes hace falta que se caigan los cuatro para que el pueblo la reconstruya entera (y reconstruirla
+     * tira lo que haya dentro).
+     * <p>
+     * La escalera entra en la prueba desde la migración 45: la taberna de la 44 tiene la escalera de <b>un</b> bloque
+     * de ancho (y sin acceso), así que esta prueba falla —a propósito— y se rehace entera con la escalera doble y la
+     * chimenea por fuera: el solar se despeja y lo que hubiera en sus cofres se guarda antes en el almacén.
      */
     public static boolean tabernaConstruida(ServerLevel level, BlockPos center) {
         int nivel = cotaDeLaPlaza(level, center);
@@ -4428,7 +4638,8 @@ public final class VillageGenerator {
         for (int[] e : esquinas) {
             if (level.getBlockState(new BlockPos(base.getX() + e[0], nivel + 1, base.getZ() + e[1]))
                     .is(Blocks.DARK_OAK_LOG)) {
-                return true;
+                return level.getBlockState(new BlockPos(base.getX() + TABERNA_ESCALERA_X + 1, nivel,
+                        base.getZ() + TABERNA_ESCALERA_Z1)).is(Blocks.DARK_OAK_STAIRS);
             }
         }
         return false;
@@ -4509,7 +4720,8 @@ public final class VillageGenerator {
 
     /** ¿Es esta celda (relativa a la esquina) el <b>hueco de la escalera</b> en el forjado de la posada? */
     private static boolean esHuecoDeLaEscalera(int dx, int dz) {
-        return dx == TABERNA_ESCALERA_X && dz >= TABERNA_ESCALERA_Z0 && dz <= TABERNA_ESCALERA_Z1;
+        return dx >= TABERNA_ESCALERA_X && dx < TABERNA_ESCALERA_X + TABERNA_ESCALERA_ANCHO
+                && dz >= TABERNA_ESCALERA_Z0 && dz <= TABERNA_ESCALERA_Z1;
     }
 
     /**
@@ -4551,16 +4763,19 @@ public final class VillageGenerator {
     private static void escaleraDeLaTaberna(ServerLevel level, int bx, int bz, int nivel, int y1) {
         int alto = TABERNA_PISO2;
         for (int i = 0; i < alto; i++) {
-            BlockPos escalon = new BlockPos(bx + TABERNA_ESCALERA_X, nivel + i, bz + TABERNA_ESCALERA_Z1 - i);
-            colocar(level, escalon, Blocks.DARK_OAK_STAIRS.defaultBlockState()
-                    .setValue(StairBlock.FACING, Direction.NORTH).setValue(StairBlock.HALF, Half.BOTTOM), 3);
-            colocar(level, escalon.above(), Blocks.AIR.defaultBlockState(), 3);
+            for (int k = 0; k < TABERNA_ESCALERA_ANCHO; k++) {
+                BlockPos escalon = new BlockPos(bx + TABERNA_ESCALERA_X + k, nivel + i,
+                        bz + TABERNA_ESCALERA_Z1 - i);
+                colocar(level, escalon, Blocks.DARK_OAK_STAIRS.defaultBlockState()
+                        .setValue(StairBlock.FACING, Direction.NORTH).setValue(StairBlock.HALF, Half.BOTTOM), 3);
+                colocar(level, escalon.above(), Blocks.AIR.defaultBlockState(), 3);
+            }
         }
-        // La caja: el muro del este, del suelo de la posada al techo (la boca de la escalera queda al norte, en la
-        // galería, que es donde se desemboca).
-        for (int dz = TABERNA_ESCALERA_Z0 - 1; dz <= TABERNA_ESCALERA_Z1; dz++) {
+        // La caja: el muro del este, del suelo de la posada al techo. Llega hasta la pared sur (z = Z1 + 1) para que
+        // el pozo no deje ningún rincón por detrás al que asomarse y caerse.
+        for (int dz = TABERNA_ESCALERA_Z0; dz <= TABERNA_ESCALERA_Z1 + 1; dz++) {
             for (int y = y1; y < y1 + TABERNA_ALERO; y++) {
-                colocar(level, new BlockPos(bx + TABERNA_ESCALERA_X + 1, y, bz + dz),
+                colocar(level, new BlockPos(bx + TABERNA_ESCALERA_X + TABERNA_ESCALERA_ANCHO, y, bz + dz),
                         Blocks.DARK_OAK_PLANKS.defaultBlockState(), 3);
             }
         }
@@ -4645,9 +4860,9 @@ public final class VillageGenerator {
 
     /**
      * El <b>hogar</b> de la taberna: un hogar de ladrillo en el muro norte, con el <b>fuego</b> metido dentro del
-     * muro (una casilla que no se pisa, así nadie se quema al pasar) y su repisa de madera. La <b>chimenea</b> que
-     * sale de aquí se pone al final ({@link #chimeneaDeLaTaberna}), cuando ya está el tejado: así la atraviesa en vez
-     * de quedar enterrada debajo.
+     * muro (una casilla que no se pisa, así nadie se quema al pasar) y su repisa de madera. La boca del hogar mira al
+     * comedor y su cara de la calle la tapa la <b>chimenea</b> ({@link #chimeneaDeLaTaberna}, que se pone al final,
+     * cuando ya está el tejado).
      */
     private static void hogarDeLaTaberna(ServerLevel level, int bx, int bz, int nivel) {
         int hx = TABERNA_HOGAR[0];
@@ -4669,14 +4884,18 @@ public final class VillageGenerator {
     }
 
     /**
-     * La <b>chimenea</b> del hogar: sube pegada al muro norte por dentro de la casa, atraviesa el forjado de la
-     * posada, el techo y el <b>tejado</b> (por eso se coloca la última: si no, el tejado la taparía), y sale por
-     * encima de la cumbrera con su remate de losa.
+     * La <b>chimenea</b> del hogar: un caño de ladrillo <b>por fuera</b> del muro norte (como en el arte conceptual),
+     * que sube pegado a la fachada, atraviesa el vuelo de la posada, su muro y el <b>tejado</b> (por eso se coloca la
+     * última: si no, el tejado la taparía) y sale por encima con su remate de losa.
+     * <p>
+     * Va por <b>fuera</b> a propósito, y no metida en el muro: el fuego del hogar está en la boca del muro y su cara
+     * norte daba a la calle, así que <b>se veía la llama desde fuera</b> (lo avisó el jugador: <i>"la chimenea está
+     * sin protección externa"</i>). Con el caño por delante, el hogar queda tapado por el ladrillo.
      */
     private static void chimeneaDeLaTaberna(ServerLevel level, int bx, int bz, int nivel, int yTecho) {
         int hx = TABERNA_HOGAR[0];
-        int hz = TABERNA_HOGAR[1];
-        for (int y = nivel + 3; y <= yTecho + 5; y++) {
+        int hz = TABERNA_HOGAR[1] - 1;   // un bloque por FUERA del muro: tapa la boca del hogar
+        for (int y = nivel; y <= yTecho + 5; y++) {
             colocar(level, new BlockPos(bx + hx, y, bz + hz), Blocks.BRICKS.defaultBlockState(), 3);
         }
         colocar(level, new BlockPos(bx + hx, yTecho + 6, bz + hz), Blocks.BRICK_SLAB.defaultBlockState(), 3);
@@ -4709,16 +4928,20 @@ public final class VillageGenerator {
     private static void posadaDeLaTaberna(ServerLevel level, int bx, int bz, int y1, int yTecho) {
         int alto = yTecho - y1;
         BlockState tablon = Blocks.DARK_OAK_PLANKS.defaultBlockState();
-        // Los dos muros de la galería (norte en lz=6 y sur en lz=9), con la puerta de cada cuarto.
-        int[] puertas = {2, 9, 15};
+        // Los dos muros de la galería (norte en lz=6 y sur en lz=9), con la puerta de cada cuarto. El muro sur
+        // empieza en lz=4 porque a su izquierda va la CAJA DE LA ESCALERA (x=3), que ocupa ese hueco.
+        int[] puertasNorte = {2, 9, 15};
+        int[] puertasSur = {4, 9, 15};
         for (int dx = 0; dx < TABERNA_ANCHO; dx++) {
             boolean puertaNorte = false;
             boolean puertaSur = false;
-            for (int p : puertas) {
+            for (int p : puertasNorte) {
                 puertaNorte |= dx == p;
-                puertaSur |= dx == p + 1;   // el cuarto pequeño del suroeste tiene la puerta corrida
             }
-            if (dx >= 2) {
+            for (int p : puertasSur) {
+                puertaSur |= dx == p;
+            }
+            if (dx >= 4) {
                 muroDeCuarto(level, bx + dx, bz + 9, y1, alto, tablon, puertaSur, Direction.NORTH);
             }
             muroDeCuarto(level, bx + dx, bz + 6, y1, alto, tablon, puertaNorte, Direction.SOUTH);
@@ -4901,7 +5124,8 @@ public final class VillageGenerator {
             colgar(level, new BlockPos(bx + l[0], nivel + TABERNA_PISO2 - 2, bz + l[1]));
         }
         int[][] posada = {{3, 3}, {9, 3}, {16, 3}, {4, 12}, {9, 12}, {16, 12}, {6, 7}, {12, 7},
-                {TABERNA_ESCALERA_X, TABERNA_ESCALERA_Z0 + 2}};
+                {TABERNA_ESCALERA_X, TABERNA_ESCALERA_Z0 + 2},
+                {TABERNA_ESCALERA_X + 1, TABERNA_ESCALERA_Z0 + 2}};
         for (int[] l : posada) {
             colgar(level, new BlockPos(bx + l[0], yTecho - 2, bz + l[1]));
         }
@@ -4917,10 +5141,14 @@ public final class VillageGenerator {
      * <p>
      * Lo que hubiera en <b>cofres</b> se guarda ANTES en el <b>almacén del pueblo</b>: tirar un cofre tira su
      * contenido al suelo (mecánica del juego) y el pueblo no puede perder lo que tenía guardado.
+     * <p>
+     * <b>OJO con el almacén NUEVO</b>, que desde la migración 45 está al lado (a 3 bloques de la esquina este): el
+     * despeje llega justo hasta el borde del tejado (un bloque por fuera del forjado), ni uno más, para no rozarle ni
+     * la columna oeste de su cobertizo.
      */
     private static void despejarSolarDeLaTaberna(ServerLevel level, BlockPos center, int bx, int bz, int nivel,
                                                  int hastaY) {
-        for (int dx = -TABERNA_VUELO - 2; dx <= TABERNA_ANCHO + TABERNA_VUELO + 1; dx++) {
+        for (int dx = -TABERNA_VUELO - 2; dx <= TABERNA_ANCHO + TABERNA_VUELO; dx++) {
             for (int dz = -TABERNA_VUELO - 2; dz <= TABERNA_FONDO + TABERNA_VUELO + 1; dz++) {
                 for (int y = nivel; y <= hastaY; y++) {
                     BlockPos p = new BlockPos(bx + dx, y, bz + dz);

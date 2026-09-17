@@ -420,9 +420,34 @@ public final class VillageManager {
      *         <li>El <b>solar se despeja entero</b> antes de levantarla (la taberna vieja cabía dentro) y lo que
      *             hubiera en sus cofres se guarda antes en el <b>almacén</b>, para no perder nada.</li>
      *       </ul></li>
+     *   <li>45: cuatro arreglos que pidió el jugador de una vez:
+     *       <ul>
+     *         <li><b>La ESCALERA de la taberna, accesible y doble.</b> La migración 44 la dejó <b>sin acceso</b>: el
+     *             primer escalón estaba metido en la esquina suroeste del comedor, con el escalón de arriba delante,
+     *             la pared al este y la pared al sur (no se podía ni llegar a él). Ahora es de <b>dos bloques de
+     *             ancho</b>, arranca a dos bloques de la pared sur (se entra <b>de lado</b>, desde el comedor) y
+     *             desemboca en la galería de la posada. El cuarto pequeño del suroeste se recorta para dejarle sitio a
+     *             la caja de la escalera.</li>
+     *         <li><b>La CHIMENEA, por fuera.</b> El hogar daba su cara norte a la calle y <b>se veía la llama desde
+     *             fuera</b>: el caño de ladrillo pasa a ir <b>por delante</b> del muro (como en el arte conceptual) y
+     *             tapa la boca del hogar.</li>
+     *         <li><b>El ALMACÉN, al lado de la taberna</b> (48, 21) en vez de delante de su puerta principal (18, 18),
+     *             y más grande: cobertizo de <b>7x7</b> con <b>seis</b> cofres dobles (doce cofres) para que siga
+     *             creciendo. Lo que hubiera en los cofres viejos se <b>pasa al nuevo antes</b> de retirar el viejo
+     *             (tirar un cofre tira su contenido al suelo).</li>
+     *         <li><b>El CORRAL, más grande</b> (19x19 en vez de 15x15) y el <b>rebaño que se había perdido</b>: la
+     *             caja de búsqueda del ganado del pueblo llegaba a 48 bloques del corral y había animales con la marca
+     *             a 51-57 que no volvían nunca. Solo se retiran los bloques del corral viejo (lo del jugador no se
+     *             toca).</li>
+     *         <li>Y la <b>HUERTA que se reiniciaba al migrar</b>: el <b>nivelado de la huella</b> de una parcela
+     *             <b>recortaba</b> el terreno que sobresalía y, en una parcela en cuesta (una aldea de montaña), ese
+     *             recorte se llevaba por delante los <b>cultivos crecidos</b> de las celdas altas: salían como
+     *             <i>"vegetales como item por toda la parcela"</i> (lo que vio el jugador) y se replantaban brotes.
+     *             Ahora una parcela ya hecha <b>no se toca</b>: solo se aseguran su compostero y su valla.</li>
+     *       </ul></li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 44;
+    public static final int CURRENT_LAYOUT = 45;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -1251,6 +1276,12 @@ public final class VillageManager {
             // casas: por eso la limpieza anterior no llegaba a ejecutarse en aldeas ya actualizadas).
             VillageGenerator.limpiarCaminosFlotantes(level, center, VillageGenerator.cotaDeLaPlaza(level, center));
             VillageGenerator.farm(level, center);
+            // EL CORRAL, ENSANCHADO (migración 45): el corral pasa de 15x15 a 19x19 y se retira el viejo (solo sus
+            // bloques). Va ANTES de `asegurarGranjaAnexa`, que si no saldría antes de tiempo al ver el corral viejo.
+            VillageGenerator.ensancharElCorral(level, center);
+            // EL ALMACÉN SE MUEVE (migración 45): delante de la puerta de la taberna (18,18) a su lado (48,21), y
+            // más grande. Lo que hubiera en los cofres viejos se pasa al nuevo antes de retirar el viejo.
+            VillageGenerator.moverAlmacen(level, center);
             // HERRERÍA: el taller de los herreros del juego, con su muelle y su mesa de herrería (sus puestos de
             // trabajo). Va AQUÍ, antes de tirar el plano, para que la herrería y su camino entren en el plano nuevo.
             VillageGenerator.asegurarHerreria(level, center);
