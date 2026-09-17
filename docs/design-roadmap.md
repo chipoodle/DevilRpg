@@ -501,6 +501,14 @@ cosas: **equiparse del almacén**, **patrullar** de día y **guardar las puertas
     comprueba `isDamageSourceBlocked` en **cualquier** entidad que esté bloqueando, así que basta con
     `startUsingItem(OFF_HAND)` para "levantarlo" (y `stopUsingItem` fuera de combate). El bloqueo de verdad (daño a
     cero, desgaste del escudo y empujón al atacante) lo hace el juego.
+  - **OJO con el espadazo y los atributos del aldeano** (crash arreglado al llegar la etapa F, porque con más puestos
+    hay más guardias y estos pelean antes): **no se puede usar `villager.doHurtTarget(...)`**, porque ese método pide
+    el atributo `ATTACK_DAMAGE` de quien golpea y **el aldeano no lo tiene** (vanilla solo le da vida y velocidad) — el
+    juego se caía con *"Can't find attribute minecraft:generic.attack_damage"* en cuanto un espadachín alcanzaba a un
+    monstruo. El daño se calcula a mano (`DANO_BASE_ESPADA` + los encantamientos del arma con
+    `EnchantmentHelper.modifyDamage`) y se aplica con el aldeano como **atacante**
+    (`damageSources().mobAttack(villager)`), más el empujón del golpe. El **arquero no tenía el problema**: la flecha
+    lleva su propio daño (`Arrow.setBaseDamage`).
   - **No huyen**: al aldeano de vanilla, cuando le pegan, su cerebro le manda **huir** (actividad PANIC). Al guardia
     se le apaga **borrándole los recuerdos de "me han pegado"** (`HURT_BY`/`HURT_BY_ENTITY`, en cada tick de combate)
     y **escribiéndole el rumbo al enemigo en cada tick** (también pegado a él, que es donde el pánico ganaría la
