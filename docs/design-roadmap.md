@@ -887,27 +887,66 @@ ganadero**, oficio `SHEPHERD`, goal `VillagerAnimalFarmGoal`— **los aparee par
 
 ### 3b.20 Los PICOS DE LAS ESQUINAS (los "triángulos de tierra")
 
-El jugador vio **triángulos de tierra en cada esquina** de la meseta y pidió quitarlos.
+El jugador vio **triángulos de tierra en cada esquina** de la meseta y pidió quitarlos; al primer arreglo (rebajarlos a
+la base del talud) respondió con una captura de su isla: *"esos triángulos de tierra que aparecen en cada esquina...
+**ahí debe haber agua**"*.
 
 - **La causa**: el suelo llano del pueblo es un **cuadrado** (`nivelar` allana de `-radio` a `+radio` en X y en Z) y el
   **talud** es un **círculo** (mide la distancia con raíz). En las diagonales el cuadrado llega a `38 * √2` = **53,7** y
   el talud solo baja hasta `38 + 10` = **48**: a cada esquina le sobraba un **triángulo allanado a la cota**, colgado
   sobre el mar y con las **caras del corte a la vista** (tierra).
 - **Medido en su guardado**: en la diagonal, el talud bajaba hasta **y=58** en los pasos 30-33 y en el 34 ya estaba
-  otra vez a la cota (y=62) hasta el borde del agua; el corte contra el mar era **vertical**. La simulación del
-  arreglo da **45 celdas por esquina** (180 en total) rebajadas de la cota a la base del talud.
-- **El arreglo** (`quitarPicosDeLasEsquinas`, y su pasada idempotente `asegurarTalud` para aldeas ya construidas): lo
-  que sobra se **rebaja hasta la base del talud** (una terraza baja que, en una aldea de mar, queda **por debajo del
-  agua** y desaparece de la vista). Solo se toca lo que está **dentro del cuadrado allanado**, **más allá del talud** y
-  **a la altura del relleno del pueblo** (`cota - 1`): una **loma natural** en esa esquina **no se toca**.
-- **Verificado con una simulación sobre su guardado** (solo lectura): las cuatro esquinas pasan de un triángulo de
-  césped **a la cota** a césped **en la base del talud** (`y=57`, sumergido), sin caras de tierra a la vista.
-- **Migración 37** (`CURRENT_LAYOUT`), en el mismo cambio que el rebaño.
+  otra vez a la cota (y=62) hasta el borde del agua; el corte contra el mar era **vertical**. Debajo del relleno del
+  pueblo seguía el **fondo marino natural** intacto (grava a y=51-52 y piedra debajo, el mismo que el mar de al lado).
+- **El arreglo, según dónde esté la aldea**:
+  - **Aldea de mar** (la suya): el pico **se quita y su sitio lo ocupa el agua**. Se baja hasta el **fondo natural**
+    (lo primero que no sea relleno del pueblo: la grava, la arena o la piedra del fondo marino) y se rellena de
+    **agua** hasta la superficie del mar, así que la isla queda **redonda** y el agua llega limpia hasta el talud. El
+    nivel del mar de una aldea de orilla **es** la capa que se pisa menos uno (`prepararTerreno` nivela a
+    `nivelDelAgua + 1`), así que el agua nueva queda a la misma altura que la de al lado.
+  - **Aldea de tierra adentro**: no hay mar que poner, así que el pico se **rebaja hasta la base del talud** (una
+    terraza baja, con césped) y la meseta queda con la misma pendiente por todos lados.
+- **Solo se toca** lo que está **dentro del cuadrado allanado**, **más allá del talud** y **con relleno del pueblo
+  encima** (césped o tierra a la altura del allanado, o ya rebajado en una pasada anterior): una **loma natural**, una
+  **duna** o una **playa de arena** no se tocan.
+- **Verificado con una simulación sobre su guardado** (solo lectura): **169 celdas** de pico se convierten en agua
+  (45 en tres esquinas y 34 en la del suroeste, donde el terreno natural está a ras del agua) y solo **11** se quedan
+  como están (fondo natural a y=61, o arena natural a la vista). Las tres esquinas de mar quedan con agua hasta el
+  borde del talud, sin una sola cara de tierra.
+- **Migración 38** (`CURRENT_LAYOUT`), en el mismo cambio que el rebaño (37).
 
-### 3b.21 Lo que viene
+### 3b.21 La COMIDA que no llegaba (y los tres motivos, medidos)
+
+El jugador avisó de que **"todavía no hay comida: el granjero no cosecha todavía y el que cuida los animales no produce
+carne aún"** y de que **"el leñador no está cortando los árboles de adentro de la villa"**. Se miró su guardado y el
+log de su partida (23:47-23:53) y eran **tres cosas distintas**, las tres con dato:
+
+- **La huerta se reiniciaba en cada migración** (`VillageGenerator.farm`). Esa pasada llamaba a `colocar` con tierra de
+  cultivo y un cultivo **joven** en **las 144 celdas** cada vez que corría (y la limpieza del solar se llevaba por
+  delante lo plantado), así que la migración 37 dejó la huerta entera de brotes. **Medido en su guardado**: 144
+  cultivos con las edades **0-2** (trigo: 24 de edad 0, 13 de 1, 6 de 2…) y solo **2 maduros**, con la despensa a **0
+  puntos** y 9 bocas (que se habían comido lo que había: en los bolsillos de los aldeanos quedaban **32 panes**). Ahora
+  si la celda **ya tiene un cultivo no se toca** (ni el cultivo ni su tierra de cultivo, que al reponerla se le
+  reiniciaba la humedad): la huerta sigue creciendo donde iba y la migración deja de tirar la cosecha.
+- **La aldea no tenía GANADERO**. **Medido**: sus 8 aldeanos adultos eran granjero, clérigo, herrero de armas, herrero
+  de herramientas, holgazán y carnicero — **sin pastor** —, con el corral construido y el rebaño dentro. El motivo es
+  un **círculo vicioso**: reponer un puesto fijo exigía `comida >= 8`, y la aldea tenía **0** (y sin ganadero no hay
+  carne, así que no podía salir del hambre nunca). Ahora un **puesto fijo vacío se repone aunque la aldea esté
+  hambrienta** (y, si no hay comida, **no cuesta comida**): es el puesto el que produce. El crecimiento por crías
+  sigue costando comida, que es lo que evita que el pueblo crezca sin comer.
+- **El leñador no tocaba los árboles de dentro**: la regla era "dentro de la valla no se tala" (el muro y las casas son
+  de troncos) con la única excepción de la arboleda. **Medido en su guardado**: **137 árboles de verdad dentro de la
+  muralla** (fuera de la arboleda, que tenía 3) que el pueblo no cortaba nunca. Ahora, dentro del recinto, se tala si
+  el árbol **no está en el PLANO de la aldea** (`VillageSavedData`: el censo de lo que puso el pueblo; los árboles del
+  monte no están en él) — es la forma exacta de distinguir un árbol de un poste, sin heurísticas que una casa con un
+  árbol pegado engañaría. Lo de dentro se tala pero **no se replanta** (la aldea se **despeja**); la madera nueva va
+  al monte de fuera y a la arboleda, que sí se cuida.
+
+### 3b.22 Lo que viene
 
 - **Milicia**: ✅ completa (barraca, oficio, combate, escudo que bloquea, modelo propio, marcha a la guarida).
-- **Leñador/reforestador**: ✅ (tala y replanta, y la cadena de la madera del herrero).
+- **Leñador/reforestador**: ✅ (tala y replanta, la cadena de la madera del herrero y ahora también **despeja los
+  árboles que quedaron dentro de la muralla**).
 - **Granja anexa de animales**: ✅ (corral fuera de la valla, ganadero, cría, sacrificio de exceso y patrullaje de
   la guardia).
 - **Cocinero, hambre por aldeano y cría por camas**: ✅ (ver 3b.15).
@@ -915,6 +954,7 @@ El jugador vio **triángulos de tierra en cada esquina** de la meseta y pidió q
 - **Arboleda del pueblo (la madera de una aldea sin bosque)**: ✅ (ver 3b.17).
 - **Orilla seca de la aldea de mar**: ✅ (ver 3b.18).
 - **Rebaño que vuelve a casa, pareja garantizada y esquinas del talud**: ✅ (ver 3b.19 y 3b.20).
+- **Huerta que no se reinicia, ganadero que llega aunque haya hambre y leñador que despeja la aldea**: ✅ (ver 3b.21).
 - **Lo siguiente**: la **verificación en partida** de la cadena entera de la comida (huerta → despensa → cocina →
   raciones) y, de ahí, lo que pida el jugador.
 

@@ -342,9 +342,15 @@ public final class VillageManager {
      *       resto repartido a 80-130 bloques. Un corral vacío no da carne. Ahora el rebaño va <b>marcado</b>, el que se
      *       pierde <b>vuelve</b> al corral, al que le falta <b>pareja</b> se la trae el pueblo, y el ganadero solo cría
      *       (nunca sacrifica) por debajo de dos adultos.</li>
+     *   <li>38: los <b>PICOS DE LAS ESQUINAS</b> del talud (lo pidió el jugador al verlos en su isla: "esos triángulos
+     *       de tierra de cada esquina... ahí debe haber agua"). El suelo llano del pueblo es un <b>cuadrado</b> y el
+     *       talud un <b>círculo</b>, así que a cada esquina le sobraba un triángulo allanado colgando sobre el mar,
+     *       con las caras del corte a la vista. Ahora el pico <b>se quita y su sitio lo ocupa el agua</b> (se baja al
+     *       fondo natural y se rellena hasta la superficie del mar), así que la isla queda redonda; en una aldea de
+     *       tierra adentro se rebaja a la base del talud.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 37;
+    public static final int CURRENT_LAYOUT = 38;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -499,7 +505,7 @@ public final class VillageManager {
                     VillageGenerator.spawnVillagers(level, target);
                     saved.markRepopulated(i, level.getGameTime());
                     DevilRpg.LOGGER.info("[Village] Aldea {} estaba vacia: aldeanos y golem repuestos", i);
-                } else if (vivos > 0 && saved.getFood(i) >= FOOD_TO_GROW) {
+                } else {
                     // Qué oficios quedan vivos y cuál falta (si mataron al recolector, vuelve un recolector; si al
                     // granjero, un granjero): no se repone "el sitio siguiente".
                     List<VillagerProfession> vivas = level
@@ -518,12 +524,21 @@ public final class VillageManager {
                         // de más y los sobrantes son la milicia. Medido en el guardado del jugador: aldea con 7
                         // aldeanos y tope 7, migrada a la etapa E, SIN carnicero y con el ahumador sin dueño — el
                         // puesto nuevo no llegaba NUNCA porque el tope ya estaba lleno.
+                        // TAMPOCO se limita por la COMIDA (lo pidió el jugador: "el que cuida los animales no produce
+                        // carne aún"). Un puesto fijo es el que PRODUCE: medido en su guardado, la aldea tenía 8
+                        // aldeanos, <b>0 de comida</b> y <b>sin ganadero</b> (el corral construido y vacío de dueño)
+                        // porque reponer un puesto exigía comida de sobra — y sin ganadero no hay carne, así que la
+                        // aldea no podía salir del hambre nunca. Con la aldea muerta de hambre el puesto no cuesta
+                        // nada; con comida de sobra, se le cobra como a cualquier boca nueva.
                         VillageGenerator.spawnOneVillager(level, target, slot, false);
-                        saved.setFood(i, saved.getFood(i) - FOOD_TO_GROW);
+                        if (saved.getFood(i) >= FOOD_TO_GROW) {
+                            saved.setFood(i, saved.getFood(i) - FOOD_TO_GROW);
+                        }
                         saved.markRepopulated(i, level.getGameTime());
                         DevilRpg.LOGGER.info("[Village] Aldea {}: repuesto el puesto de {} que se habia quedado vacio "
                                 + "(comida {})", i, VillageGenerator.profesionDeSlot(slot), saved.getFood(i));
-                    } else if (vivos < VillageGenerator.puestosDelPueblo()
+                    } else if (saved.getFood(i) >= FOOD_TO_GROW
+                            && vivos < VillageGenerator.puestosDelPueblo()
                             && level.getGameTime() - saved.getRepopulatedAt(i) >= REPOPULATE_INTERVAL_TICKS) {
                         // Crecer cuesta comida: una aldea hambrienta no se recupera hasta que la granja produzca.
                         // El que llega nace CRÍA (crece sola, mecánica vanilla): así se ve el relevo generacional.

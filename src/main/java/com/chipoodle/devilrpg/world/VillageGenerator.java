@@ -2957,8 +2957,8 @@ public final class VillageGenerator {
     }
 
     /**
-     * <b>Quita los picos de las cuatro esquinas</b> de la meseta: los vio el jugador y los llamó "triángulos de
-     * tierra de cada esquina".
+     * <b>Quita los picos de las cuatro esquinas</b> de la meseta: los vio el jugador en su isla y los llamó
+     * "triángulos de tierra de cada esquina". <b>Donde hay un pico, tiene que haber agua.</b>
      * <p>
      * El motivo es que el suelo llano de la aldea es un <b>cuadrado</b> ({@code nivelar} allana de {@code -radio} a
      * {@code +radio} en X y en Z) y el talud es un <b>círculo</b> (mide la distancia con raíz). En las diagonales el
@@ -2968,19 +2968,31 @@ public final class VillageGenerator {
      * hasta la Y 58 en los pasos 30-33 y en el 34 ya estaba otra vez a la cota, y de ahí al agua el borde era un
      * corte vertical.
      * <p>
-     * Lo que sobra se <b>rebaja hasta la base del talud</b> (una terraza baja, que en una aldea de mar queda por
-     * debajo del agua y desaparece de la vista) y solo se toca:
+     * Qué se hace con el pico depende de dónde esté la aldea:
+     * <ul>
+     *   <li><b>Aldea de mar</b> (la del jugador): el pico <b>se quita entero y su sitio lo ocupa el agua</b>. Se baja
+     *       hasta el <b>fondo natural</b> (lo primero que no sea relleno del pueblo: la grava, la arena o la piedra
+     *       del fondo marino, que sigue ahí debajo tal cual lo dejó el terreno) y se rellena de agua hasta la
+     *       superficie del mar, así que la isla queda <b>redonda</b> y el agua llega limpia hasta el talud. Lo pidió
+     *       el jugador: <i>"ahí debe haber agua"</i>.</li>
+     *   <li><b>Aldea de tierra adentro</b>: no hay mar que poner, así que el pico se <b>rebaja hasta la base del
+     *       talud</b> (una terraza baja, con césped) y la meseta queda con la misma pendiente por todos lados.</li>
+     * </ul>
+     * Solo se toca:
      * <ul>
      *   <li>lo que está <b>dentro del cuadrado</b> que allanó el pueblo ({@code |x|,|z| <= radio}), y</li>
      *   <li>lo que está <b>más allá del talud</b> ({@code dist > radio + SLOPE_WIDTH}), o sea el pico, y</li>
-     *   <li>solo si su capa de arriba está <b>a la altura del relleno del pueblo</b> ({@code baseY - 1}): una loma
-     *       natural (que también puede caer en esa esquina) <b>no se toca</b>.</li>
+     *   <li>lo que tiene <b>relleno del pueblo encima</b> (césped o tierra a la altura del allanado, o ya rebajado en
+     *       una pasada anterior): una <b>loma natural</b>, una duna o una playa de arena <b>no se tocan</b>.</li>
      * </ul>
      */
     private static void quitarPicosDeLasEsquinas(ServerLevel level, BlockPos center, int radius, int baseY) {
         int outer = radius + SLOPE_WIDTH;
         int sueloBajo = baseY - SLOPE_HEIGHT;
+        // ¿Es una aldea de mar? (el mismo criterio que la orilla seca: agua en el anillo del talud)
+        boolean aldeaDeMar = hayAguaEnElAnillo(level, center, baseY, radius, radius + ORILLA_ANCHO);
         int celdas = 0;
+        int cubos = 0;
         for (int x = -radius; x <= radius; x++) {
             for (int z = -radius; z <= radius; z++) {
                 double dist = Math.sqrt(x * x + z * z);
@@ -2990,27 +3002,90 @@ public final class VillageGenerator {
                 int px = center.getX() + x;
                 int pz = center.getZ() + z;
                 int g = groundY(level, px, pz);
-                if (g != baseY - 1) {
-                    continue; // terreno natural (una loma, una duna): no es un pico del allanado
+                if (g > baseY - 1 || g < sueloBajo - 1) {
+                    continue; // ni es el allanado del pueblo ni un pico ya rebajado
                 }
-                for (int y = sueloBajo; y <= g; y++) {
-                    BlockPos p = new BlockPos(px, y, pz);
-                    if (esTerrenoRecortable(level.getBlockState(p))) {
-                        colocar(level, p, Blocks.AIR.defaultBlockState(), 3);
+                BlockState arriba = level.getBlockState(new BlockPos(px, g, pz));
+                if (!arriba.is(Blocks.GRASS_BLOCK) && !arriba.is(Blocks.DIRT)) {
+                    continue; // arena, grava o piedra a la vista: terreno natural, no un pico del allanado
+                }
+                if (aldeaDeMar) {
+                    cubos += ahogarElPico(level, px, pz, g, baseY, sueloBajo);
+                } else {
+                    for (int y = sueloBajo; y <= g; y++) {
+                        BlockPos p = new BlockPos(px, y, pz);
+                        if (esTerrenoRecortable(level.getBlockState(p))) {
+                            colocar(level, p, Blocks.AIR.defaultBlockState(), 3);
+                            cubos++;
+                        }
                     }
-                }
-                BlockPos surface = new BlockPos(px, sueloBajo - 1, pz);
-                if (level.getBlockState(surface).is(Blocks.DIRT)) {
-                    colocar(level, surface, Blocks.GRASS_BLOCK.defaultBlockState(), 3);
+                    BlockPos surface = new BlockPos(px, sueloBajo - 1, pz);
+                    if (level.getBlockState(surface).is(Blocks.DIRT)) {
+                        colocar(level, surface, Blocks.GRASS_BLOCK.defaultBlockState(), 3);
+                    }
                 }
                 celdas++;
             }
         }
         if (celdas > 0) {
-            DevilRpg.LOGGER.info("[Village] Aldea en {}: {} bloques de los picos de las esquinas rebajados a la"
-                    + " base del talud (sobresalian del borde allanado)", center, celdas);
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: picos de las esquinas quitados ({} celdas, {} bloques)"
+                    + "{}", center, celdas, cubos,
+                    aldeaDeMar ? " — el hueco lo ocupa el agua" : " — rebajados a la base del talud");
         }
     }
+
+    /**
+     * Hunde una celda del pico de la esquina hasta el <b>fondo natural</b> y la llena de <b>agua</b> hasta la
+     * superficie del mar, para que en ese sitio haya agua como en el resto del mar de al lado.
+     * <p>
+     * Devuelve cuántos bloques de agua ha puesto (0 si no ha tocado nada). No toca la celda si debajo del relleno no
+     * hay fondo marino sino tierra firme a la misma altura: ahí no hay mar que poner, y una playa natural se queda.
+     */
+    private static int ahogarElPico(ServerLevel level, int px, int pz, int g, int baseY, int sueloBajo) {
+        int fondo = fondoBajoElRelleno(level, px, pz, Math.min(g, baseY - 1));
+        if (fondo > baseY - 3) {
+            return 0; // tierra firme a ras del agua (una playa): no es un pico colgado sobre el mar
+        }
+        int puestos = 0;
+        // La superficie del mar de una aldea de mar es la capa que se pisa menos uno: el pueblo se nivela a
+        // `nivelDelAgua + 1` (ver `prepararTerreno`). Se rellena de agua hasta ahí, como el mar de al lado.
+        for (int y = fondo + 1; y <= baseY - 1; y++) {
+            BlockPos p = new BlockPos(px, y, pz);
+            BlockState actual = level.getBlockState(p);
+            if (!esTerrenoRecortable(actual) && !actual.isAir() && !actual.is(Blocks.WATER)) {
+                break; // algo construido: hasta aquí
+            }
+            if (actual.is(Blocks.WATER)) {
+                continue;
+            }
+            colocar(level, p, Blocks.WATER.defaultBlockState(), 3);
+            puestos++;
+        }
+        return puestos;
+    }
+
+    /**
+     * La capa de <b>fondo natural</b> de una columna: se baja desde la superficie saltando el <b>relleno del
+     * pueblo</b> (césped y tierra) y se para en lo primero que no sea relleno (grava, arena, piedra...), que es como
+     * estaba el terreno antes de allanar. Se limita el rebaje a {@link #MAX_REBAJE_DE_ESQUINA} bloques por si la
+     * columna es todo relleno.
+     */
+    private static int fondoBajoElRelleno(ServerLevel level, int px, int pz, int arriba) {
+        int limite = arriba - MAX_REBAJE_DE_ESQUINA;
+        int y = arriba;
+        while (y > limite) {
+            BlockState s = level.getBlockState(new BlockPos(px, y, pz));
+            if (!s.is(Blocks.DIRT) && !s.is(Blocks.GRASS_BLOCK) && !s.is(Blocks.COARSE_DIRT)
+                    && !s.is(Blocks.PODZOL) && !s.is(Blocks.ROOTED_DIRT)) {
+                break; // fondo natural
+            }
+            y--;
+        }
+        return y;
+    }
+
+    /** Cuánto se rebaja como mucho el pico de una esquina al buscar el fondo natural (evita bajar sin fin). */
+    private static final int MAX_REBAJE_DE_ESQUINA = 24;
 
     /**
      * Repasa el <b>talud</b> de una aldea ya construida: le quita los picos de las esquinas (ver
@@ -3710,8 +3785,18 @@ public final class VillageGenerator {
             for (int dz = 0; dz < PLOT_DEPTH; dz++) {
                 int x = corner.getX() + dx;
                 int z = corner.getZ() + dz;
-                // 2) Solar LIMPIO: se quita lo que hubiera por encima del suelo (cultivos, restos de una versión
-                // anterior del trazado...). Sin esto quedaban capas viejas y dos composteadores apilados.
+                // NO SE PISA LA COSECHA (lo pidió el jugador: "todavía no hay comida, el granjero no cosecha").
+                // Antes esta pasada REPLANTABA las 144 celdas cada vez que corría —y la limpieza de aquí abajo se
+                // llevaba por delante los cultivos ya crecidos—, así que cada migración dejaba la huerta entera de
+                // brotes y el pueblo se quedaba ~20 minutos sin una sola cosecha, con la despensa vacía (los aldeanos
+                // hambrientos ya se la habían comido). Medido en su guardado: 144 cultivos y solo 2 maduros, justo
+                // después de una migración. Ahora, si la celda ya tiene un cultivo, se deja tal cual está.
+                BlockPos posCultivo = new BlockPos(x, base, z);
+                if (level.getBlockState(posCultivo).getBlock() instanceof CropBlock) {
+                    continue; // hay algo plantado y creciendo: lo cuida el granjero, no se reinicia
+                }
+                // 2) Solar LIMPIO: se quita lo que hubiera por encima del suelo (restos de una versión anterior del
+                // trazado...). Sin esto quedaban capas viejas y dos composteadores apilados.
                 for (int y = base; y <= base + 3; y++) {
                     BlockPos p = new BlockPos(x, y, z);
                     if (!level.getBlockState(p).isAir()) {
@@ -3732,7 +3817,11 @@ public final class VillageGenerator {
                             Block.UPDATE_ALL);
                     continue;
                 }
-                colocar(level, new BlockPos(x, base - 1, z), Blocks.FARMLAND.defaultBlockState(), Block.UPDATE_ALL);
+                BlockPos posTierra = new BlockPos(x, base - 1, z);
+                if (!level.getBlockState(posTierra).is(Blocks.FARMLAND)) {
+                    // La tierra de cultivo solo se pone (o se repone) si falta: volver a ponerla reinicia su humedad.
+                    colocar(level, posTierra, Blocks.FARMLAND.defaultBlockState(), Block.UPDATE_ALL);
+                }
                 BlockState crop = plants[dx % plants.length].defaultBlockState();
                 // Cada cultivo tiene SU propiedad de edad y su máximo (el trigo 0-7, el betabel 0-3): se pregunta.
                 // Se planta JOVEN (no maduro): una huerta madura de salida es una cosecha servida y cualquier
@@ -3742,7 +3831,7 @@ public final class VillageGenerator {
                 // cosecha la hace el granjero, que SÍ la lleva a la despensa (con la harina de huesos de la remesa
                 // crece enseguida).
                 crop = cultivoInicial(crop);
-                colocar(level, new BlockPos(x, base, z), crop, Block.UPDATE_ALL);
+                colocar(level, posCultivo, crop, Block.UPDATE_ALL);
             }
         }
         // Compostero (puesto de trabajo del granjero). Tres cosas, en este orden (importa):
