@@ -329,7 +329,7 @@ public final class VillageManager {
      *       apoyo la puerta de madera se cayó sola) y la <b>cerca y el portón</b> se reponen en cada latido
      *       ({@code asegurarCercaDelAnexo}), así que un hueco no deja escapar a los animales.</li>
      *   <li>35: la <b>ARBOLEDA DEL PUEBLO</b> (etapa E, lo pidió el jugador al pensar en la aldea que nace en medio del
-     *       mar): un hueco de césped en la diagonal noreste con <b>cuatro plantones</b> del árbol del bioma. Es la
+     *       mar): un rectángulo de césped en la diagonal noreste con <b>seis plantones</b> del árbol del bioma. Es la
      *       madera de una aldea <b>sin bosque</b>: los fundadores traen los plantones (como traen las semillas) y el
      *       leñador los tala y los replanta, con la excepción de "dentro de la valla no se tala" acotada a esa caja.</li>
      * </ul>

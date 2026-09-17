@@ -826,12 +826,13 @@ public final class VillageGenerator {
     /**
      * Caja de la <b>arboleda del pueblo</b> (relativa al centro): un hueco de <b>césped</b> en la diagonal noreste,
      * entre el solar de la casa grande y la valla. Está libre de todo lo demás: los caminos radiales van por los ejes,
-     * el anillo de 29 pasa por fuera de la caja y los solares empiezan más adentro.
+     * el anillo de 29 pasa por fuera de la caja y los solares empiezan más adentro. Es un <b>rectángulo de 7x11</b>
+     * (el jugador pidió alargarlo hacia el sur, que es donde sobra sitio: hasta la valla hay hueco de sobra).
      */
     private static final int ARBOLEDA_X0 = 20;
     private static final int ARBOLEDA_X1 = 26;
     private static final int ARBOLEDA_Z0 = -24;
-    private static final int ARBOLEDA_Z1 = -18;
+    private static final int ARBOLEDA_Z1 = -14;
 
     /**
      * ¿Ese punto (X/Z) cae dentro de la <b>arboleda del pueblo</b>? Es la <b>única excepción</b> a la regla de "dentro
@@ -844,14 +845,22 @@ public final class VillageGenerator {
         return dx >= ARBOLEDA_X0 && dx <= ARBOLEDA_X1 && dz >= ARBOLEDA_Z0 && dz <= ARBOLEDA_Z1;
     }
 
-    /** Las <b>cuatro esquinas</b> donde van los plantones (rejilla 2x2 a la cota del pueblo). */
+    /**
+     * Las <b>seis plazas</b> de la arboleda (rejilla de 2x3 con <b>cuatro bloques</b> entre árboles) a la cota del
+     * pueblo. Son seis y no cuatro porque el rectángulo da de sobra: cuanto más grande es la arboleda, más madera
+     * sostiene sin quedarse pelada.
+     */
     public static BlockPos[] plantonesDeLaArboleda(BlockPos center, int nivel) {
-        return new BlockPos[]{
-                new BlockPos(center.getX() + ARBOLEDA_X0 + 1, nivel, center.getZ() + ARBOLEDA_Z0 + 1),
-                new BlockPos(center.getX() + ARBOLEDA_X0 + 1, nivel, center.getZ() + ARBOLEDA_Z1 - 1),
-                new BlockPos(center.getX() + ARBOLEDA_X1 - 1, nivel, center.getZ() + ARBOLEDA_Z0 + 1),
-                new BlockPos(center.getX() + ARBOLEDA_X1 - 1, nivel, center.getZ() + ARBOLEDA_Z1 - 1),
-        };
+        int[] xs = {ARBOLEDA_X0 + 1, ARBOLEDA_X1 - 1};
+        int[] zs = {ARBOLEDA_Z0 + 1, (ARBOLEDA_Z0 + ARBOLEDA_Z1) / 2, ARBOLEDA_Z1 - 1};
+        BlockPos[] plazas = new BlockPos[xs.length * zs.length];
+        int i = 0;
+        for (int z : zs) {
+            for (int x : xs) {
+                plazas[i++] = new BlockPos(center.getX() + x, nivel, center.getZ() + z);
+            }
+        }
+        return plazas;
     }
 
     /**
@@ -869,7 +878,6 @@ public final class VillageGenerator {
      * arcos, las flechas y los escudos, así que el pueblo dejaría de ser autosuficiente. Los <b>fundadores traen los
      * plantones</b> —igual que traen las semillas de la remesa inicial de la despensa— y el <b>leñador</b> los tala y
      * los replanta como cualquier árbol: madera de verdad, de árboles que crecen de verdad, sin contadores ni magia.
-     * <p>
      * OJO: los plantones se ponen con {@code level.setBlock} <b>DIRECTO</b>, no con {@link #colocar}: así <b>no entran
      * en el plano</b>. Si entraran, el obrero vería "aquí debería haber un plantón" donde ya hay un <b>árbol</b> y lo
      * "repararía" devolviéndolo a plantón en cada latido (la arboleda nunca crecería).

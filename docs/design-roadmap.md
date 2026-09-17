@@ -798,13 +798,15 @@ no hay? … una solución orgánica que no rompa las reglas ni el lore"*.
 - **Lo que NO se hace** (por lore y por las reglas del proyecto): inventar madera, volver al contador abstracto de "la
   aldea produce 8", meter árboles sin tierra, o hacer que la madera dependa del jugador.
 - **La solución: la arboleda del pueblo** (`VillageGenerator.asegurarArboleda`), igual que la aldea ya tiene su
-  **huerta** en parcelas y su **granja anexa**: los fundadores traen **cuatro plantones** —como traen las semillas de la
+  **huerta** en parcelas y su **granja anexa**: los fundadores traen **seis plantones** —como traen las semillas de la
   remesa inicial de la despensa— y los plantan en la **suya** tierra; el **leñador los tala y los replanta** como
   cualquier árbol. Madera real, de árboles que crecen de verdad.
-- **Dónde**: un hueco de **césped dentro de la valla**, en la diagonal noreste (rel `20..26, -24..-18`), libre del
-  anillo de caminos de 29, de los radiales (que van por los ejes), de los solares y de la valla. En una islita la tierra
-  segura está dentro, así que ahí es donde tiene sentido (y en cualquier bioma queda bien). **Verificado contra el
-  guardado del jugador**: la caja entera es césped libre, con tierra a la cota debajo.
+- **Dónde**: un rectángulo de **césped dentro de la valla**, en la diagonal noreste (rel `20..26, -24..-14`, 7x11),
+  libre del anillo de caminos de 29, de los radiales (que van por los ejes), de los solares y de la valla. En una
+  islita la tierra segura está dentro, así que ahí es donde tiene sentido (y en cualquier bioma queda bien). El
+  jugador lo mandó **alargar hacia el sur** (que es donde sobra sitio hasta la valla): de 4 plantones pasó a 6, en una
+  rejilla de 2x3 con cuatro bloques entre árboles. **Verificado contra el guardado del jugador**: la caja entera es
+  césped libre, con tierra a la cota debajo, y los seis huecos están libres.
 - **La especie es el árbol de la tierra** (`plantonDelBioma`): picea en taiga o tierra fría, jungla en jungla, acacia
   en sabana y badlands, roble oscuro en bosque oscuro, cerezo en cerezal y **roble** cuando no hay uno claro (una
   islita, una playa, mar abierto).
