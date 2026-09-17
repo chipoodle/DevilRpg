@@ -4,6 +4,7 @@ import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
+import com.chipoodle.devilrpg.config.DevilRpgConfig;
 import com.chipoodle.devilrpg.spawnprofile.AggressiveZombieSpawnProfile;
 import com.chipoodle.devilrpg.spawnprofile.SpawnScaleProfile;
 import com.chipoodle.devilrpg.survival.LairManager;
@@ -351,11 +352,12 @@ public class SculkCultivatorEntity extends AbstractIllager implements RangedAtta
                     spawnDistance = Math.sqrt(this.blockPosition().distSqr(
                             new BlockPos((int) playerSpawn.x, (int) playerSpawn.y, (int) playerSpawn.z)));
                     spawnThreat = ThreatLevel.current(this.level());
-                    // A DEBUG y solo en el servidor, como el zombie agresivo: el cliente también pasa por aquí y el
-                    // primer `setPos` de la construcción es (0,0,0).
-                    if (!this.level().isClientSide
+                    // Detras del flag de la config (`devilrpg-server.toml`, [logs] logEscaladoDeSpawn) y solo en el
+                    // servidor, como el zombie agresivo: el cliente tambien pasa por aqui y el primer `setPos` de
+                    // la construccion es (0,0,0).
+                    if (DevilRpgConfig.LOG_ESCALADO_DE_SPAWN && !this.level().isClientSide
                             && (this.getX() != 0.0D || this.getY() != 0.0D || this.getZ() != 0.0D)) {
-                        DevilRpg.LOGGER.debug("SculkCultivator Spawned at: {} | Player Spawn Point: {} | Distance: {} | Threat: {}",
+                        DevilRpg.LOGGER.info("SculkCultivator Spawned at: {} | Player Spawn Point: {} | Distance: {} | Threat: {}",
                                 this.blockPosition(), playerSpawn, spawnDistance, String.format("%.2f", spawnThreat));
                     }
                 }

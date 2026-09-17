@@ -256,16 +256,23 @@ private void adjustAttributesBasedOnSpawnDistance() {
 | `baseSpeed` | 0.2 | Velocidad base. |
 | `baseDamage` | 3.25 | Daño base. |
 
-## 9) Los logs del escalado (a DEBUG y solo en el servidor)
+## 9) Los logs del escalado (detrás de un flag de la config)
 
 Las dos trazas del escalado (`"Zombie Spawned at: ..."` y `"Attributes Scaled => ..."`, y su equivalente del
-`SculkCultivator`) son **log de depuración**: van a **DEBUG** y **solo en el servidor**.
+`SculkCultivator`) están **detrás de un flag**, apagado por defecto, en `run/config/devilrpg-server.toml`:
 
-- **Por qué solo en el servidor**: `setPos` corre también en el cliente, así que cada zombie se registraba **dos
-  veces** y con **números distintos** (el cliente aplicaba otra distancia y sacaba hasta un ataque diferente).
-- **Por qué se salta la posición (0,0,0)**: el primer `setPos` de la construcción de la entidad es el origen, así
-  que la mitad de las líneas decían `BlockPos{x=0, y=0, z=0}` con una distancia que no era la del bicho. Entre eso y
-  el doble registro, una tanda de 3 zombis dejaba **~12 líneas INFO**.
-- **Para medirlo**: sube el nivel de log del mod a DEBUG (o pon un punto de ruptura); las trazas siguen ahí, con la
-  **ancla del jugador** (no su posición: es el punto con el que se escala) y la distancia.
+```toml
+[logs]
+    # Escribe en el log el escalado de cada enemigo que aparece...
+    logEscaladoDeSpawn = false
+```
+
+- **Para medir**: ponlo en `true` (o `/reloadconfig`, o reinicia) y tendrás **una línea por enemigo** con el sitio
+  donde salió, el **ancla del jugador** (no su posición: con ese punto se escala), la distancia y los atributos.
+- **Por qué no sale siempre**: una tanda de 3 zombis dejaba **~12 líneas INFO** por tres motivos, y los tres están
+  arreglados: (1) `setPos` corre también en el **cliente**, así que cada bicho se registraba dos veces y con números
+  distintos (el ataque salía hasta 5 puntos diferente); (2) el primer `setPos` de la construcción de la entidad es el
+  **origen**, así que la mitad de las líneas decían `BlockPos{x=0, y=0, z=0}`; y (3) iban a nivel INFO.
+- **Con el flag apagado no queda ni una línea**, y encendido solo las escribe el **servidor** y solo con la entidad
+  **ya colocada**.
 

@@ -35,5 +35,11 @@ public final class DevilRpgConfig {
      * {@code devilrpg-server.toml}, sección {@code [village]}, clave {@code mostrarActividadAldeanos}.
      */
     public static boolean MOSTRAR_ACTIVIDAD_ALDEANOS = true;
+    /**
+     * ¿Se escribe en el log el <b>escalado de cada enemigo</b> que aparece? Se configura en
+     * {@code devilrpg-server.toml}, sección {@code [logs]}, clave {@code logEscaladoDeSpawn}. Por defecto
+     * {@code false}: es una herramienta para <b>medir</b> el spawn-scale, no algo del día a día.
+     */
+    public static boolean LOG_ESCALADO_DE_SPAWN = false;
 
 }

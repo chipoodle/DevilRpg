@@ -33,6 +33,7 @@ public final class ConfigHelper {
         DevilRpgConfig.WISP_SPAWN_DISTANCE = ConfigHolder.SERVER.wispSpawnDistance.get();
 
         DevilRpgConfig.MOSTRAR_ACTIVIDAD_ALDEANOS = ConfigHolder.SERVER.mostrarActividadAldeanos.get();
+        DevilRpgConfig.LOG_ESCALADO_DE_SPAWN = ConfigHolder.SERVER.logEscaladoDeSpawn.get();
     }
 
 }

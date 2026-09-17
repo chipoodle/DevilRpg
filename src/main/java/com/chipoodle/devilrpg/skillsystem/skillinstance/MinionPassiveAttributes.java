@@ -33,7 +33,6 @@ public class MinionPassiveAttributes {
     private HashMap<SkillEnum, Integer> skills;
 
     public MinionPassiveAttributes(ITamableEntity entity) {
-        DevilRpg.LOGGER.info("||---->MinionPassiveAttributes entity {}", ((LivingEntity) entity).getUUID());
         levelIn = entity.level();
         LivingEntity owner = entity.getOwner();
 
@@ -42,7 +41,7 @@ public class MinionPassiveAttributes {
             // a un minion que acaba de aparecer o de cargarse) el jugador TODAVIA no esta registrado ahi, asi que
             // devuelve null y este constructor salia por donde vino SIN APLICAR NINGUN PASIVO (ni vitalidad, ni
             // hielo del lobo, ni regeneracion del wisp). El dueno SI esta ya en la lista del servidor: se busca
-            // ahi por su UUID. El log de arriba sale antes de esta comprobacion, por eso parecia que si aplicaba.
+            // ahi por su UUID.
             owner = buscarDuenoEnServidor(entity);
         }
 
@@ -94,8 +93,6 @@ public class MinionPassiveAttributes {
 
     @SuppressWarnings("unchecked")
     private void apply(ITamableEntity entity) {
-        DevilRpg.LOGGER.info("||---->MinionPassiveAttributes apply");
-
         if (!levelIn.isClientSide && playerIn != null) {
             HashMap<Holder<Attribute>, AttributeModifier> attributes = new HashMap<>();
             attributes.put(Attributes.MAX_HEALTH,
@@ -110,8 +107,13 @@ public class MinionPassiveAttributes {
     private void applyPassives(SoulBear entity) {
         int warBear = skillPoint(SkillEnum.WAR_BEAR);
         int mountBear = skillPoint(SkillEnum.MOUNT_BEAR);
-        DevilRpg.LOGGER.info("||---->MinionPassiveAttributes SoulBearEntity warbear:{} factor: {}", warBear, factor);
-        DevilRpg.LOGGER.info("||---->MinionPassiveAttributes SoulBearEntity mountBear:{} factor: {}", mountBear, factor);
+        // Los valores, a DEBUG y solo en el servidor: el constructor corre TAMBIEN en el cliente (el minion se carga
+        // en los dos lados) y los marcadores "||---->" que habia antes no decian nada que no diga la linea que ya
+        // escribe el gestor de minions ("nivel de invocacion y pasivos reaplicados").
+        if (!levelIn.isClientSide) {
+            DevilRpg.LOGGER.debug("||---->MinionPassiveAttributes SoulBearEntity warbear:{} factor: {}", warBear, factor);
+            DevilRpg.LOGGER.debug("||---->MinionPassiveAttributes SoulBearEntity mountBear:{} factor: {}", mountBear, factor);
+        }
 
         entity.setWarBear(warBear);
         entity.setMountBear(mountBear);
@@ -127,7 +129,6 @@ public class MinionPassiveAttributes {
     }
 
     private void applyPassives(SoulWolf entity) {
-        DevilRpg.LOGGER.info("||---->MinionPassiveAttributes SoulWolfEntity");
         Integer frostbite = skillPoint(SkillEnum.WOLF_FROSTBITE);
         Integer iceArmor = skillPoint(SkillEnum.WOLF_ICE_ARMOR);
 
@@ -136,7 +137,6 @@ public class MinionPassiveAttributes {
     }
 
     private void applyPassives(SoulWisp entity) {
-        DevilRpg.LOGGER.info("||---->MinionPassiveAttributes SoulWispEntity");
         if (entity instanceof SoulWispHealth soulWispHealth) {
             int points = skillPoint(SkillEnum.WISP_REGENERATION);
             if (points > 0)
@@ -153,8 +153,8 @@ public class MinionPassiveAttributes {
         }
     }
 
+    /** El shulker girasol no lleva pasivos propios (los suyos van por {@link #apply}); el marcador se fue con los demás. */
     private void applyPassives(SunflowerShulker entity) {
-        DevilRpg.LOGGER.info("||---->MinionPassiveAttributes SunflowerShulker");
     }
 
 }

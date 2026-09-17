@@ -33,6 +33,12 @@ final class ServerConfig {
     final ModConfigSpec.DoubleValue threatFullHours;
     /** ¿Se pone un texto flotante sobre la cabeza de cada aldeano con lo que está haciendo? */
     final ModConfigSpec.BooleanValue mostrarActividadAldeanos;
+    /**
+     * ¿Se escribe en el log el <b>escalado de cada enemigo</b> que aparece (dónde salió, el ancla del jugador, la
+     * distancia y los atributos que le tocaron)? Es la herramienta para <b>medir</b> el spawn-scale; apagada (por
+     * defecto) el log no se llena con una tanda de enemigos.
+     */
+    final ModConfigSpec.BooleanValue logEscaladoDeSpawn;
 
     ServerConfig(final ModConfigSpec.Builder builder) {
         builder.push("general");
@@ -93,6 +99,16 @@ final class ServerConfig {
                         "(Cosechando, Reparando, Recogiendo, Durmiendo...). Ponlo en false para apagarlo.")
                 .translation(DevilRpg.MODID + ".config.mostrarActividadAldeanos")
                 .define("mostrarActividadAldeanos", true);
+        builder.pop();
+
+        // --- Logs de diagnostico (apagados por defecto: el log se llena) ---
+        builder.push("logs");
+        logEscaladoDeSpawn = builder
+                .comment("Escribe en el log el escalado de cada enemigo que aparece: donde salio, el ancla del",
+                        "jugador, la distancia y los atributos que le tocaron. Es la herramienta para MEDIR el",
+                        "spawn-scale. Apagado (por defecto) una tanda de 3 zombis no deja ni una linea.")
+                .translation(DevilRpg.MODID + ".config.logEscaladoDeSpawn")
+                .define("logEscaladoDeSpawn", false);
         builder.pop();
     }
 

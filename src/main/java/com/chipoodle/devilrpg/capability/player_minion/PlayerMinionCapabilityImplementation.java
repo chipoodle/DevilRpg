@@ -633,7 +633,10 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
             return;
         }
         ListTag stored = storedMinionsTag();
-        DevilRpg.LOGGER.info("[Minion] {} entrada(s) guardadas para {} al entrar", stored.size(), player.getName().getString());
+        // Esto corre en CADA ciclo (no solo al entrar: el gestor guarda una copia periódica y la vuelve a adoptar),
+        // así que el detalle va a DEBUG. En INFO se quedan los sucesos de verdad: guardar al salir, olvidar una copia,
+        // un minion que ya no existe o uno que no se pudo recuperar.
+        DevilRpg.LOGGER.debug("[Minion] {} entrada(s) guardadas para {}", stored.size(), player.getName().getString());
         if (stored.isEmpty()) {
             enforceSoulWolfCap(player); // aunque no haya copias, el cupo se respeta (listas heredadas)
             return;
@@ -662,7 +665,7 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
                 bringToPlayer(minion, player, playerLevel);
                 stored.remove(i);
                 restored++;
-                DevilRpg.LOGGER.info("[Minion] devuelto ADOPTADO {} ({}), dim {} pos {}",
+                DevilRpg.LOGGER.debug("[Minion] devuelto ADOPTADO {} ({}), dim {} pos {}",
                         id, typeId.isEmpty() ? "sin tipo en la copia" : typeId, dimension, pos);
                 continue;
             }
@@ -705,11 +708,11 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
                         id, misses, (ahora - desde) / 1000L, forgotten ? "lo quito" : "no estaba en ninguna");
             } else {
                 entry.putInt("Misses", misses);
-                DevilRpg.LOGGER.info("[Minion] no encuentro a {} ({}), intento {}: se reintenta hasta {} s",
+                DevilRpg.LOGGER.debug("[Minion] no encuentro a {} ({}), intento {}: se reintenta hasta {} s",
                         id, typeId.isEmpty() ? "sin tipo" : typeId, misses, MISSES_WINDOW_MS / 1000L);
             }
         }
-        DevilRpg.LOGGER.info("[Minion] {} devuelto(s), {} limpiado(s) y {} copia(s) pendientes para {}",
+        DevilRpg.LOGGER.debug("[Minion] {} devuelto(s), {} limpiado(s) y {} copia(s) pendientes para {}",
                 restored, cleaned, stored.size(), player.getName().getString());
         enforceSoulWolfCap(player);
         limpiarMinionsHuerfanos(player);
@@ -735,13 +738,13 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
                 prepareAdoptedMinion(minion, player);
                 bringToPlayer(minion, player, playerLevel);
                 brought++;
-                DevilRpg.LOGGER.info("[Minion] traigo junto a {} el {} {} que seguia vivo en {}",
+                DevilRpg.LOGGER.debug("[Minion] traigo junto a {} el {} {} que seguia vivo en {}",
                         player.getName().getString(), EntityType.getKey(entity.getType()), id,
                         entity.level().dimension().location());
             }
         }
         if (brought > 0) {
-            DevilRpg.LOGGER.info("[Minion] {} minion(es) vivos traidos junto a {}", brought, player.getName().getString());
+            DevilRpg.LOGGER.debug("[Minion] {} minion(es) vivos traidos junto a {}", brought, player.getName().getString());
         }
     }
 
@@ -974,7 +977,7 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
                 pasivos.applyPassives(minion);
             }
             if (conocido) {
-                DevilRpg.LOGGER.info("[Minion] {} nivel de invocacion y pasivos reaplicados (aura y regeneracion del wisp)",
+                DevilRpg.LOGGER.debug("[Minion] {} nivel de invocacion y pasivos reaplicados (aura y regeneracion del wisp)",
                         minion.getEntity() != null ? minion.getEntity().getUUID() : "(minion)");
             }
         } catch (Exception e) {

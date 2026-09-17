@@ -359,8 +359,12 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
 
                 acquireAllLookTargetsByClass.forEach(
                         mob -> mob.hurt(this.damageSources().mobAttack(this), (float) (attackDamage * SPLASH_DAMAGE_FACTOR)));
-                DevilRpg.LOGGER.info("---------->doHurtTarget warBear: {} probability: {} Range of success: {}, enemies: {}, main damage: {} splash damage: {}, armor: {} owner: {} owneruuid: {}", warBear,
-                        probability, warBear * PROBABILITY_MULTIPLIER, acquireAllLookTargetsByClass.size(), attackDamage, attackDamage * SPLASH_DAMAGE_FACTOR, Objects.requireNonNull(this.getAttribute(Attributes.ARMOR)).getValue(), getOwner(), getOwnerUUID());
+                // El detalle del golpe, a DEBUG y solo en el servidor (esto corre también en el cliente: sin la
+                // guarda, cada zarpazo del oso dejaba la línea dos veces).
+                if (!this.level().isClientSide) {
+                    DevilRpg.LOGGER.debug("---------->doHurtTarget warBear: {} probability: {} Range of success: {}, enemies: {}, main damage: {} splash damage: {}, armor: {} owner: {} owneruuid: {}", warBear,
+                            probability, warBear * PROBABILITY_MULTIPLIER, acquireAllLookTargetsByClass.size(), attackDamage, attackDamage * SPLASH_DAMAGE_FACTOR, Objects.requireNonNull(this.getAttribute(Attributes.ARMOR)).getValue(), getOwner(), getOwnerUUID());
+                }
             }
             // doEnchantDamageEffects was removed in 1.21
         }
@@ -591,7 +595,8 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
 
     @Override
     public @NotNull InteractionResult mobInteract(@NotNull Player player, @NotNull InteractionHand interactionHand) {
-        DevilRpg.LOGGER.info("----------------------->mobInteract mountBear:{}. this.isVehicle(): {}", getMountBearLevel(), this.isVehicle());
+        // El detalle de la interacción, a DEBUG (antes salía en INFO cada vez que le dabas al oso).
+        DevilRpg.LOGGER.debug("----------------------->mobInteract mountBear:{}. this.isVehicle(): {}", getMountBearLevel(), this.isVehicle());
         if (getMountBearLevel() <= 0) {
             return InteractionResult.PASS;
         }
