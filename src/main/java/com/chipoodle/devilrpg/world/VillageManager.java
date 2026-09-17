@@ -2237,14 +2237,17 @@ public final class VillageManager {
             if (dy > REPAIR_MAX_UP || dy < -REPAIR_MAX_DOWN) {
                 continue;
             }
+            // La DISTANCIA antes de mirar el bloque: el plano de la aldea (radio 62) tiene miles de posiciones y
+            // preguntar el bloque de todas ellas en cada decisión era el trabajo más caro del obrero.
+            double dist = pos.distSqr(from);
+            if (dist >= mejorDist) {
+                continue;
+            }
             if (!necesitaReparacion(level.getBlockState(pos), plano.stateAt(i))) {
                 continue;
             }
-            double dist = pos.distSqr(from);
-            if (dist < mejorDist) {
-                mejorDist = dist;
-                mejor = pos;
-            }
+            mejorDist = dist;
+            mejor = pos;
         }
         return mejor;
     }
