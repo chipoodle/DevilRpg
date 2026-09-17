@@ -1666,9 +1666,13 @@ public final class VillageGenerator {
                     for (int y = nivel - 1; y <= nivel + 13; y++) {
                         BlockPos p = new BlockPos(c.getX() + dx, y, c.getZ() + dz);
                         BlockState state = level.getBlockState(p);
-                        if (state.isAir() || esTerrenoNatural(state) || state.is(BlockTags.LOGS)) {
-                            continue; // el terreno y el muro de la aldea no se tocan
+                        if (state.isAir() || esTerrenoNatural(state)) {
+                            continue; // el terreno no se toca
                         }
+                        // OJO con los TRONCOS: aquí SÍ se quitan. La casa vieja deja en pie sus postes de esquina (son
+                        // troncos) y al migrar quedaban cuatro palos sueltos donde estaba el edificio. El MURO de la
+                        // aldea no corre peligro: sus anillos viejos (29 y 36) se borran aparte en el paso 2, y estas
+                        // cajas (los solares) están a 16-25 del centro, lejos de la muralla actual (radio 62).
                         colocar(level, p, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
                         quitados++;
                     }
