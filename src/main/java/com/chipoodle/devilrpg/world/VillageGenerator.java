@@ -4336,7 +4336,10 @@ public final class VillageGenerator {
                 .setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING,
                         Direction.NORTH), 3);
         colocar(level, new BlockPos(bx + ancho - 3, nivel, bz + fondo - 2), Blocks.CRAFTING_TABLE.defaultBlockState(), 3);
-        colocar(level, new BlockPos(bx + ancho - 2, nivel, bz + fondo - 3), Blocks.CAULDRON.defaultBlockState(), 3);
+        // El caldero va DIAGONAL al ahumador (no delante): la casilla de delante es donde se pone el cocinero.
+        // lint:ok I9 porque la taberna entra con la migración 41 (ya subida en el cambio de la etapa F): esto es un
+        // ajuste del mismo edificio dentro de esa misma versión, no una construcción nueva.
+        colocar(level, new BlockPos(bx + ancho - 3, nivel, bz + fondo - 3), Blocks.CAULDRON.defaultBlockState(), 3);
         colocar(level, new BlockPos(bx + ancho - 4, nivel, bz + fondo - 2), Blocks.BARREL.defaultBlockState(), 3);
         // 5) LAS MESAS con sus sillas (poste de valla con plato y cuatro sillas de escalera alrededor).
         for (int[] mesa : new int[][]{{2, 3}, {6, 3}, {2, 8}, {6, 8}, {9, 9}}) {
