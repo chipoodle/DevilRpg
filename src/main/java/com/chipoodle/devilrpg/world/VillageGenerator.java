@@ -1168,10 +1168,15 @@ public final class VillageGenerator {
     }
 
     /**
-     * Construye el corral anexo: huella <b>nivelada a la cota del pueblo</b> (como las casas y la barraca: sin
-     * zanjas ni escalones), camino desde la puerta este del muro, valla de roble con <b>portón de valla</b> (que el
-     * pueblo abre con {@code VillagerGateGoal}: el juego no deja que un aldeano abra una puerta de valla),
-     * <b>gallinero</b> con tejado para los pollos, cobertizo con cama y telar del ganadero, bebedero de agua y heno.
+     * Construye el <b>corral de la granja</b>: huella <b>nivelada a la cota del pueblo</b> (como las casas y la
+     * barraca: sin zanjas ni escalones), camino desde la plaza hasta su portón, valla de roble con <b>portón de
+     * valla</b> (que el pueblo abre con {@code VillagerGateGoal}: el juego no deja que un aldeano abra una puerta de
+     * valla), <b>gallinero</b> con tejado para los pollos, cobertizo con cama y telar del ganadero, bebedero de agua
+     * y heno.
+     * <p>
+     * Desde que la muralla creció al <b>radio 62</b> la granja está <b>dentro</b> del pueblo (a 50 del centro, de 43
+     * a 57), que es lo que pidió el jugador: así los monstruos no aparecen dentro del corral de noche ni se comen al
+     * rebaño, y la guardia la defiende en su ronda.
      * <p>
      * Todo pasa por {@link #colocar}, así que <b>entra en el plano</b> (invariante I8) y el obrero lo repone.
      */
@@ -1180,11 +1185,15 @@ public final class VillageGenerator {
         int bx = base.getX();
         int bz = base.getZ();
         int cx = bx - ANEXO_DX; // X del centro de la aldea
-        // 1) HUELLA: el corral y el camino que baja del muro, a la cota del pueblo. `nivelarHuella` toma la ESQUINA
-        //    (y solo mira su X/Z, pero se le da una Y que ya es la cota: invariante I1).
+        // 1) HUELLA: el corral y el camino que llega a su portón, a la cota del pueblo. `nivelarHuella` toma la
+        //    ESQUINA (y solo mira su X/Z, pero se le da una Y que ya es la cota: invariante I1).
         nivelarHuella(level, new BlockPos(bx - r, nivel, bz - r), 2 * r + 1, 2 * r + 1, nivel);
-        int caminoDesde = cx + FENCE_RADIUS - 1;          // justo dentro de la puerta este
-        int caminoHasta = bx - r - 1;                     // hasta la puerta del corral
+        // EL CAMINO: desde el borde de la plaza hasta el portón del corral. OJO con la dirección: el portón está en
+        // el lado OESTE y mira al pueblo, así que el camino viene DEL PUEBLO. Cuando el corral estaba fuera de la
+        // muralla el camino bajaba del muro hacia fuera (de menor a mayor X, justo al revés); con la granja dentro
+        // (muro al radio 62) el tramo va del centro (X menor) al portón (X mayor) y hay que recorrerlo en orden.
+        int caminoDesde = Math.min(cx + 6, bx - r - 1);
+        int caminoHasta = Math.max(cx + 6, bx - r - 1);
         nivelarHuella(level, new BlockPos(caminoDesde, nivel, bz - ANEXO_CAMINO_ANCHO / 2),
                 caminoHasta - caminoDesde + 1, ANEXO_CAMINO_ANCHO, nivel);
         // Y una red de seguridad bajo el corral: si justo debajo pasa una barranca (o el mar, que aquí está al lado),
