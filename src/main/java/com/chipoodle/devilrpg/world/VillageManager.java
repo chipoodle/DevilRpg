@@ -348,9 +348,19 @@ public final class VillageManager {
      *       con las caras del corte a la vista. Ahora el pico <b>se quita y su sitio lo ocupa el agua</b> (se baja al
      *       fondo natural y se rellena hasta la superficie del mar), así que la isla queda redonda; en una aldea de
      *       tierra adentro se rebaja a la base del talud.</li>
+     *   <li>39: la aldea <b>se despeja por dentro</b> y cada oficio <b>recoge lo suyo del suelo</b> (lo pidió el
+     *       jugador: "nadie recoge los materiales del suelo y el recolector no se da abasto... que cada oficio recoja
+     *       los materiales propios de su oficio" y "el leñador no está cortando los árboles que están dentro de la
+     *       aldea"). Los <b>árboles que quedaron dentro del recinto</b> se quitan de una vez al migrar (137 medidos en
+     *       su guardado; el generador sí despejaba el volumen, pero las aldeas migradas se encontraron el bosque
+     *       dentro y encima quedó grabado en el plano, así que el leñador los daba por construidos). Y el pueblo
+     *       aprende a <b>barrer</b>: el <b>recolector</b> llega más lejos (hasta 64 del centro, donde caía el botín de
+     *       las refriegas) y cada oficio tiene su goal de <b>recogida por oficio</b> (el herrero el hierro y el equipo
+     *       de los enemigos, el granjero el grano, el ganadero la carne, el cocinero lo que cocina, el clérigo lo
+     *       suyo), que guarda la comida en la despensa y los materiales en el almacén.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 38;
+    public static final int CURRENT_LAYOUT = 39;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -1156,6 +1166,10 @@ public final class VillageManager {
         //       reconstruir las que ya son nuevas: rehacer una casa borra lo que haya dentro).
         if (saved.getLayout(objectiveIndex) < CURRENT_LAYOUT) {
             int casas = saved.getCasasVersion(objectiveIndex);
+            // DESPEJE DEL RECINTO: los árboles que quedaron DENTRO de la muralla se quitan (el pueblo se funda en un
+            // claro). Va lo PRIMERO, antes de rehacer nada, y con el plano VIEJO en la mano para no tocar los troncos
+            // del muro ni los postes de las casas. Medido en el guardado del jugador: 137 árboles dentro.
+            VillageGenerator.limpiarArbolesDeDentro(level, center, saved.getBlueprint(objectiveIndex));
             if (casas < CURRENT_HOUSES) {
                 // Se rehacen TODAS las construcciones con el nivelado nuevo (a la cota de la plaza, no a la mediana
                 // contaminada por los tejados) y se añaden las que falten (cuarta casa e iglesia). OJO: rehacer una
@@ -1331,6 +1345,19 @@ public final class VillageManager {
         for (Villager villager : aldeanos) {
             if (!villager.isBaby()) {
                 asegurarGoalDePortones(villager, center);
+            }
+        }
+        // RECOGIDA POR OFICIO (lo pidió el jugador: "nadie recoge los materiales del suelo y el recolector no se da
+        // abasto; que cada oficio recoja los materiales propios de su oficio"): cada aldeano con oficio barre del
+        // suelo SUS materiales (el herrero el hierro y el equipo de los enemigos, el granjero el grano y las
+        // semillas, el ganadero la carne y los huevos, el cocinero lo que cocina, el clérigo lo suyo) y los guarda
+        // donde le toca: la comida a la despensa y los materiales al almacén. Va por encima de su faena pero con un
+        // radio corto, así que no es un barrendero: recoge lo que se encuentra yendo a trabajar.
+        for (Villager villager : aldeanos) {
+            if (!villager.isBaby() && !VillagerGuardGoal.esGuardia(villager)
+                    && com.chipoodle.devilrpg.entity.goal.VillagerPickupGoal.tieneMateriales(
+                            villager.getVillagerData().getProfession())) {
+                asegurarGoalDeRecogidaPorOficio(villager, center, objectiveIndex);
             }
         }
         // GUARDIA (milicia): los aldeanos adultos que SOBRAN (cubiertos los puestos fijos: granjero, los dos
@@ -1779,7 +1806,24 @@ public final class VillageManager {
                 objectiveIndex));
     }
 
-    /** Le pone al <b>granjero</b> su goal de cultivar/cosechar/fertilizar y llevar el trigo a la despensa. */    private static void asegurarGoalDeGranjero(Villager villager, BlockPos center, int objectiveIndex) {
+    /**
+     * Le pone al aldeano su goal de <b>recogida por oficio</b>: barre del suelo SUS materiales (ver
+     * {@code VillagerPickupGoal.materialesDe}) y los guarda donde le toca. Va a prioridad
+     * {@code VillagerPickupGoal.PRIORIDAD} (por encima de la faena de su oficio) con un radio corto: recoge lo que
+     * se encuentra yendo a trabajar y, cuando el suelo está limpio, vuelve a lo suyo.
+     */
+    private static void asegurarGoalDeRecogidaPorOficio(Villager villager, BlockPos center, int objectiveIndex) {
+        for (WrappedGoal wrapped : villager.goalSelector.getAvailableGoals()) {
+            if (wrapped.getGoal() instanceof com.chipoodle.devilrpg.entity.goal.VillagerPickupGoal) {
+                return;
+            }
+        }
+        villager.goalSelector.addGoal(com.chipoodle.devilrpg.entity.goal.VillagerPickupGoal.PRIORIDAD,
+                new com.chipoodle.devilrpg.entity.goal.VillagerPickupGoal(villager, center, objectiveIndex));
+    }
+
+    /** Le pone al <b>granjero</b> su goal de cultivar/cosechar/fertilizar y llevar el trigo a la despensa. */
+    private static void asegurarGoalDeGranjero(Villager villager, BlockPos center, int objectiveIndex) {
         for (WrappedGoal wrapped : villager.goalSelector.getAvailableGoals()) {
             if (wrapped.getGoal() instanceof VillagerFarmGoal) {
                 return;

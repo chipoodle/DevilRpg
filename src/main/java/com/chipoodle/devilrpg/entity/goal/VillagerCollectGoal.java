@@ -43,8 +43,15 @@ public class VillagerCollectGoal extends Goal {
     /**
      * Radio alrededor del centro donde recoge (no se va por el mundo a por cosas). Derivado del radio de la valla:
      * con el recinto agrandado (36) un radio fijo de 40 dejaba los objetos del borde del pueblo sin recoger.
+     * <p>
+     * Y estaba <b>corto</b> (lo reportó el jugador: "nadie recoge los materiales del suelo"): medido en su guardado,
+     * el botín de las refriegas —<b>pepitas de hierro</b>, carne podrida, pan— caía a <b>43-52 bloques</b> del centro,
+     * justo por fuera de los 42 de antes, así que se quedaba ahí para siempre mientras el herrero esperaba hierro
+     * para forjar. Ahora llega al <b>término del pueblo</b>, el mismo que usa el leñador para talar.
      */
-    private static final double RADIO = VillageGenerator.FENCE_RADIUS + 6.0D;
+    private static final double RADIO = VillageGenerator.FENCE_RADIUS + 28.0D;
+    /** Hasta dónde se le deja andar desde donde está a por un objeto (el término es ancho: no cruza el pueblo entero). */
+    private static final double RADIO_DE_BUSQUEDA = 40.0D;
     /** Solo se recogen objetos que lleven un rato en el suelo (5 s): así no le quita a nadie lo que acaba de soltar. */
     private static final int EDAD_MINIMA = 100;
 
@@ -250,7 +257,10 @@ public class VillagerCollectGoal extends Goal {
     @Nullable
     private ItemEntity buscarObjeto(ServerLevel level) {
         ItemEntity mejor = null;
-        double mejorDist = 24.0D * 24.0D;
+        // Hasta dónde se le deja andar DESDE DONDE ESTÁ a por un objeto del término del pueblo (el AABB de arriba es
+        // alrededor del centro; sin este tope, con el radio nuevo se iría de una punta a otra del término por una
+        // pepita). Antes eran 24 fijos, que con el radio viejo de 42 dejaba fuera la mitad del pueblo.
+        double mejorDist = RADIO_DE_BUSQUEDA * RADIO_DE_BUSQUEDA;
         for (ItemEntity item : level.getEntitiesOfClass(ItemEntity.class,
                 new net.minecraft.world.phys.AABB(center).inflate(RADIO))) {
             if (!item.isAlive() || item.getItem().isEmpty()) {

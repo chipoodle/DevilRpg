@@ -639,10 +639,13 @@ public final class VillageGenerator {
     private static final int ANEXO_CAMINO_ANCHO = 5;
     /**
      * Cuánto se espera antes de volver a soltar el <b>rebaño inicial</b> si el corral se quedó <b>sin ningún
-     * animal</b> (los mató una horda, se los llevó el jugador...). Son 3 días de juego: la granja no se queda muerta
-     * para siempre, pero tampoco es un grifo de carne (si no, matar las vacas y esperar un rato daría comida gratis).
+     * animal</b> (los mató una horda, se los llevó el jugador...). Es <b>1 día de juego</b> (antes 3): la granja no se
+     * queda muerta para siempre, pero tampoco es un grifo de carne (si no, matar las vacas y esperar un rato daría
+     * comida gratis). Se bajó de 3 días a 1 porque con 3 el pueblo podía pasarse <b>una hora de juego</b> sin carne y
+     * sin poder criar (medido en el guardado del jugador: el rebaño se quedó en la pareja mínima —o por debajo— tras
+     * una temporada de hambre y el relevo tardaba demasiado).
      */
-    public static final long ANEXO_REBANO_ESPERA_TICKS = 3L * 24000L;
+    public static final long ANEXO_REBANO_ESPERA_TICKS = 24000L;
 
     /** Especies del corral anexo (las que cría y cuida el ganadero). */
     private static final List<EntityType<? extends net.minecraft.world.entity.animal.Animal>> ANEXO_ESPECIES =
@@ -765,6 +768,45 @@ public final class VillageGenerator {
             DevilRpg.LOGGER.info("[Village] Aldea en {}: repuestos {} bloques de la cerca del corral anexo (y su porton)",
                     center, repuestos);
         }
+        // 3) LA LUZ DEL CORRAL: el anexo está FUERA de la muralla, así que de noche los monstruos aparecían dentro
+        //    del corral y mataban al rebaño (medido en el guardado del jugador: las ovejas pasaron de 5 a NINGUNA
+        //    entre dos sesiones, y el jugador lo resumió en "el corral no está generando carne"). Con faroles en los
+        //    postes de la cerca (las cuatro esquinas y los cuatro medios lados) el corral queda iluminado y no
+        //    spawnean dentro. Es idempotente: donde ya hay luz, no se toca nada.
+        asegurarLucesDelCorral(level, base, nivel);
+    }
+
+    /**
+     * Enciende el <b>corral anexo</b>: un farol sobre cada poste de las cuatro esquinas y de los cuatro medios lados
+     * de la cerca. Es lo que impide que aparezcan monstruos dentro del corral de noche (el anexo está fuera de la
+     * muralla) y, con ellos, que se coman al rebaño. Solo se coloca donde <b>no hay nada</b>: lo del jugador no se toca.
+     */
+    private static void asegurarLucesDelCorral(ServerLevel level, BlockPos base, int nivel) {
+        int puestos = 0;
+        for (int dx = -ANEXO_RADIO; dx <= ANEXO_RADIO; dx += ANEXO_RADIO) {
+            for (int dz = -ANEXO_RADIO; dz <= ANEXO_RADIO; dz += ANEXO_RADIO) {
+                puestos += farolEnElPoste(level, new BlockPos(base.getX() + dx, nivel + 2, base.getZ() + dz));
+            }
+        }
+        for (int k = -ANEXO_RADIO + 2; k <= ANEXO_RADIO - 2; k += 2 * (ANEXO_RADIO - 2)) {
+            puestos += farolEnElPoste(level, new BlockPos(base.getX() + k, nivel + 2, base.getZ() - ANEXO_RADIO));
+            puestos += farolEnElPoste(level, new BlockPos(base.getX() + k, nivel + 2, base.getZ() + ANEXO_RADIO));
+            puestos += farolEnElPoste(level, new BlockPos(base.getX() - ANEXO_RADIO, nivel + 2, base.getZ() + k));
+            puestos += farolEnElPoste(level, new BlockPos(base.getX() + ANEXO_RADIO, nivel + 2, base.getZ() + k));
+        }
+        if (puestos > 0) {
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: {} faroles puestos en la cerca del corral anexo"
+                    + " (de noche no spawnean monstruos dentro)", base, puestos);
+        }
+    }
+
+    /** Un farol en lo alto de un poste de la cerca, si ese hueco está libre. Devuelve 1 si lo ha puesto. */
+    private static int farolEnElPoste(ServerLevel level, BlockPos alto) {
+        if (!level.getBlockState(alto).isAir()) {
+            return 0; // ya hay algo (el farol del pueblo o lo que puso el jugador)
+        }
+        colocar(level, alto, Blocks.LANTERN.defaultBlockState(), 3);
+        return 1;
     }
 
     /**
@@ -1655,8 +1697,7 @@ public final class VillageGenerator {
      * troncos), así que un árbol en un hoyo acaba con el hoyo rellenado a su alrededor y el árbol dentro. Se salta
      * la caja del <b>almacén</b>, cuyos postes también son troncos y caen justo en el borde de la banda.
      */
-    public static void limpiarVegetacionDelAnexo(ServerLevel level, BlockPos center) {
-        int rMin = RADIO_MURO_ANTIGUO - 3;
+    public static void limpiarVegetacionDelAnexo(ServerLevel level, BlockPos center) {        int rMin = RADIO_MURO_ANTIGUO - 3;
         int rMax = LEVEL_RADIUS + SLOPE_WIDTH;
         BlockPos almacen = VillageStorage.centro(center);
         int quitados = 0;
@@ -1691,6 +1732,75 @@ public final class VillageGenerator {
         if (quitados > 0) {
             DevilRpg.LOGGER.info("[Village] Aldea en {}: {} bloques de vegetacion quitados del anexo", center, quitados);
         }
+    }
+
+    /**
+     * <b>Despeja los árboles que quedaron DENTRO del recinto</b> (menos los de la <b>arboleda del pueblo</b>), que es
+     * lo que hace un pueblo al fundarse: se asienta en un claro, no dentro del bosque.
+     * <p>
+     * Hace falta porque el generador <b>sí</b> despeja el volumen al construir ({@code despejarVolumen}), pero las
+     * aldeas <b>migradas</b> se encontraron el bosque ya dentro: medido en el guardado del jugador había <b>137
+     * árboles</b> de verdad dentro de la muralla, y encima quedaron <b>grabados en el plano</b> (al capturarlo se
+     * escanea el mundo, y los troncos no se descartan a propósito porque el muro y las casas son de troncos), así que
+     * el leñador los daba por construidos y no los tocaba <b>nunca</b> (lo reportó el jugador: "el leñador no está
+     * cortando los árboles que están dentro de la aldea").
+     * <p>
+     * Solo se quitan <b>troncos y hojas</b> (nunca otra cosa), y se <b>salta</b> todo tronco que esté en el
+     * {@code plano} de la aldea: el muro, los postes de las casas y los del almacén se quedan donde están. La
+     * arboleda del pueblo ({@link #enLaArboleda}) tampoco se toca: es la madera del pueblo.
+     *
+     * @param plano el plano <b>viejo</b> de la aldea (el de antes de esta migración) para proteger lo construido, o
+     *              {@code null} si no hay (una aldea nueva, que se despeja antes de construir).
+     */
+    public static int limpiarArbolesDeDentro(ServerLevel level, BlockPos center, @Nullable VillageSavedData.Blueprint plano) {
+        int nivel = cotaDeLaPlaza(level, center);
+        if (nivel <= level.getMinBuildHeight() + 1) {
+            return 0;
+        }
+        java.util.Set<Long> construidos = new java.util.HashSet<>();
+        if (plano != null) {
+            for (long p : plano.positions()) {
+                construidos.add(p);
+            }
+        }
+        int quitados = 0;
+        int troncos = 0;
+        int techo = nivel + ALTURA_MAXIMA_DE_ARBOL;
+        for (int dx = -FENCE_RADIUS; dx <= FENCE_RADIUS; dx++) {
+            for (int dz = -FENCE_RADIUS; dz <= FENCE_RADIUS; dz++) {
+                if (dx * dx + dz * dz > FENCE_RADIUS * FENCE_RADIUS) {
+                    continue;
+                }
+                int x = center.getX() + dx;
+                int z = center.getZ() + dz;
+                if (enLaArboleda(center, new BlockPos(x, 0, z))) {
+                    continue; // la arboleda del pueblo es su madera: no se despeja
+                }
+                for (int y = nivel - 1; y <= techo; y++) {
+                    BlockPos p = new BlockPos(x, y, z);
+                    BlockState state = level.getBlockState(p);
+                    if (state.is(BlockTags.LEAVES)) {
+                        colocar(level, p, Blocks.AIR.defaultBlockState(), 3);
+                        quitados++;
+                        continue;
+                    }
+                    if (!state.is(BlockTags.LOGS)) {
+                        continue; // ni el terreno ni lo construido se tocan
+                    }
+                    if (construidos.contains(p.asLong())) {
+                        continue; // ese tronco lo puso el pueblo (el muro, una casa, el almacén)
+                    }
+                    colocar(level, p, Blocks.AIR.defaultBlockState(), 3);
+                    quitados++;
+                    troncos++;
+                }
+            }
+        }
+        if (quitados > 0) {
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: {} bloques de arboles quitados de DENTRO del recinto"
+                    + " ({} troncos; la arboleda y lo construido no se tocan)", center, quitados, troncos);
+        }
+        return quitados;
     }
 
     /**
@@ -3655,6 +3765,12 @@ public final class VillageGenerator {
      * alto que hay: {@code plains_temple_4} mide 12 de alto).
      */
     private static final int ALTURA_MAXIMA_DEL_PLANO = 12;
+
+    /**
+     * Hasta qué altura se buscan los árboles de dentro del recinto al despejarlo: una selva puede tener árboles
+     * altísimos, y las hojas de arriba también se quitan.
+     */
+    private static final int ALTURA_MAXIMA_DE_ARBOL = 32;
 
     /**
      * Captura el <b>plano</b> de la aldea: todos los bloques construidos dentro del radio de la valla, en una banda

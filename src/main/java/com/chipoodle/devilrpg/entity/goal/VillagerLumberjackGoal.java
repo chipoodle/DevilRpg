@@ -93,7 +93,7 @@ public class VillagerLumberjackGoal extends Goal {
      */
     private static final double DISTANCIA_ENTRE_ARBOLES = 5.0D;
     /** Radio de búsqueda de un claro donde repoblar (alrededor del leñador, como la tala). */
-    private static final int RADIO_CLARO = 28;
+    private static final int RADIO_CLARO = 40;
     /**
      * Clavos a los que se les comprueba la separación: esa comprobación mira un cubo de bloques y se hace con los
      * más cercanos, no con las 800 columnas del barrido.
@@ -195,6 +195,9 @@ public class VillagerLumberjackGoal extends Goal {
         int semillas = semillasEnMano();
         if (semillas >= SEMILLAS_PARA_PLANTAR || (tronco == null && semillas > 0)) {
             BlockPos hueco = primerPendiente(level);
+            if (hueco == null) {
+                hueco = huecoDeLaArboleda(level); // la arboleda del pueblo, primero (es su madera)
+            }
             if (hueco == null && barridoCooldown <= 0) {
                 hueco = buscarClaro(level);
                 barridoCooldown = BARRIDO_COOLDOWN;
@@ -453,6 +456,31 @@ public class VillagerLumberjackGoal extends Goal {
         for (BlockPos p : VillageGenerator.plantonesDeLaArboleda(center, nivelDeLaAldea(level))) {
             if (!level.getBlockState(p).is(BlockTags.SAPLINGS)) {
                 continue;
+            }
+            double d = villager.distanceToSqr(p.getX() + 0.5D, p.getY() + 0.5D, p.getZ() + 0.5D);
+            if (d < mejorDist) {
+                mejorDist = d;
+                mejor = p;
+            }
+        }
+        return mejor;
+    }
+
+    /**
+     * Un <b>hueco libre de la arboleda del pueblo</b> donde plantar, o {@code null} si ya están todos ocupados.
+     * <p>
+     * Va <b>antes</b> del barrido general a propósito: la arboleda es la madera del pueblo y sus seis celdas están
+     * <b>dentro del recinto</b>, donde el barrido general no planta (y una rejilla de 2 en 2 ni siquiera pasa por
+     * todas ellas). Sin esto, el leñador talaba la arboleda y el hueco se quedaba vacío, así que la arboleda se
+     * apagaba sola (lo reportó el jugador: "no está plantando").
+     */
+    @Nullable
+    private BlockPos huecoDeLaArboleda(ServerLevel level) {
+        BlockPos mejor = null;
+        double mejorDist = Double.MAX_VALUE;
+        for (BlockPos p : VillageGenerator.plantonesDeLaArboleda(center, nivelDeLaAldea(level))) {
+            if (!esHuecoDeTierra(level, p)) {
+                continue; // ya hay un plantón o un árbol: lo cuida el pueblo
             }
             double d = villager.distanceToSqr(p.getX() + 0.5D, p.getY() + 0.5D, p.getZ() + 0.5D);
             if (d < mejorDist) {
