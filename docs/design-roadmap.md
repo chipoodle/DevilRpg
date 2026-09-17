@@ -935,12 +935,11 @@ log de su partida (23:47-23:53) y eran **tres cosas distintas**, las tres con da
   hambrienta** (y, si no hay comida, **no cuesta comida**): es el puesto el que produce. El crecimiento por crías
   sigue costando comida, que es lo que evita que el pueblo crezca sin comer.
 - **El leñador no tocaba los árboles de dentro**: la regla era "dentro de la valla no se tala" (el muro y las casas son
-  de troncos) con la única excepción de la arboleda. **Medido en su guardado**: **137 árboles de verdad dentro de la
-  muralla** (fuera de la arboleda, que tenía 3) que el pueblo no cortaba nunca. Ahora, dentro del recinto, se tala si
-  el árbol **no está en el PLANO de la aldea** (`VillageSavedData`: el censo de lo que puso el pueblo; los árboles del
-  monte no están en él) — es la forma exacta de distinguir un árbol de un poste, sin heurísticas que una casa con un
-  árbol pegado engañaría. Lo de dentro se tala pero **no se replanta** (la aldea se **despeja**); la madera nueva va
-  al monte de fuera y a la arboleda, que sí se cuida.
+  de troncos) con la única excepción de la arboleda. El diagnóstico primero (contar troncos con tierra debajo y otro
+  tronco encima) exageraba —incluía los tramos del muro y los postes de las casas—, pero el problema era real: dentro
+  del recinto **no se talaba nada** que no fuera la arboleda. El arreglo definitivo está en la viñeta de los árboles de
+  dentro, más arriba: la prueba de **forma** (`esArbolSuelto`). Lo de dentro se tala pero **no se replanta** (la aldea
+  se **despeja**); la madera nueva va al monte de fuera y a la arboleda, que sí se cuida.
 - **Y la carne no llegaba sola a la mesa**: el ganadero deja la carne en el **almacén**, pero el contador de comida
   de la aldea y las **raciones** miran la **despensa**. El granjero hacía de puente en cada visita, pero solo iba a la
   despensa cuando llevaba 4 cosechas encima: con la huerta reiniciada (punto 1) **no iba nunca**, así que la carne se
@@ -970,12 +969,22 @@ no está generando carne"*. Cuatro cosas, todas medidas:
     **43-52** del centro, así que no lo cogía **nunca**. Ahora usa el **término del pueblo** (`+28` = **64**, el mismo
     del leñador) y se corrigió un tope de **24 bloques** que tenía la búsqueda del objeto más cercano.
 - **Los árboles de dentro**: la causa **no** era el leñador. El generador **sí** despeja el volumen al construir, pero
-  las aldeas **migradas** se encontraron el bosque ya dentro (**137 árboles** medidos) y al capturar el plano se
-  escanea el mundo entero: los troncos no se descartan a propósito (el muro y las casas son de troncos), así que esos
-  137 árboles quedaron **grabados en el plano** y el leñador los daba por construidos. Ahora, al migrar,
-  `limpiarArbolesDeDentro` quita **troncos y hojas** de dentro del recinto (nunca otra cosa), saltándose todo tronco
-  que esté en el **plano viejo** (muro, postes de casas y almacén) y la **arboleda del pueblo**: es el despeje que
-  hace un pueblo al fundarse.
+  las aldeas **migradas** se encontraron el bosque ya dentro, y además los árboles quedaron **grabados en el plano**
+  (al capturarlo se escanea el mundo y los troncos no se descartan a propósito, porque el muro y las casas son de
+  troncos), así que el leñador los daba por construidos. Lo correcto **no** es preguntarle al plano (que en una aldea
+  migrada miente) sino a la **forma**: `esArbolSuelto` dice que un tronco es un árbol del monte si está **de pie** (eje
+  Y: los tramos del muro son troncos **tumbados**), tiene **hojas cerca** por encima (un poste no) y **no tiene nada
+  construido pegado** (los postes de las casas van pegados a sus paredes). Con esa regla, `limpiarArbolesDeDentro`
+  (al migrar) quita hojas y troncos sueltos de dentro del recinto saltándose la **arboleda**, y el leñador sabe qué
+  puede talar dentro.
+  - **Controles sobre su guardado** (`build/control_arbol.py`, solo lectura): de la **arboleda** del pueblo, **22
+    troncos** y los **22** reconocidos como árbol suelto (se talan y se replantan, como toca); del **anillo del muro**,
+    **0** troncos marcados como árbol (no se toca ninguno); y dentro del recinto ya no quedaba ningún árbol suelto
+    fuera de la arboleda (los que el jugador veía los había talado el leñador; quedaban las hojas sueltas, que el
+    despeje barre).
+  - **Nota honesta**: la medida anterior —"137 árboles dentro de la muralla"— contaba como árbol **cualquier** tronco
+    con tierra debajo y otro tronco encima, así que incluía los tramos del muro y los postes de las casas. La cifra
+    real de árboles sueltos dentro era mucho menor; la regla nueva es la correcta.
 - **Y el leñador vuelve a plantar**: la **arboleda** (6 celdas, dentro del recinto) se busca **explícitamente** antes
   del barrido general (una rejilla de 2 en 2 ni siquiera pasa por todas ellas, y dentro del recinto no se planta), y el
   barrido de un claro pasa de **28 a 40** bloques para que, estando dentro del pueblo, alcance los claros de fuera.
@@ -998,6 +1007,7 @@ no está generando carne"*. Cuatro cosas, todas medidas:
 - **Rebaño que vuelve a casa, pareja garantizada y esquinas del talud**: ✅ (ver 3b.19 y 3b.20).
 - **Huerta que no se reinicia, ganadero que llega aunque haya hambre y leñador que despeja la aldea**: ✅ (ver 3b.21).
 - **Recogida por oficio, despeje del recinto y corral iluminado**: ✅ (ver 3b.22).
+- **El árbol suelto se reconoce por su forma** (no por el plano, que en una aldea migrada miente): ✅ (ver 3b.22).
 - **Lo siguiente**: la **verificación en partida** de la cadena entera de la comida (huerta → despensa → cocina →
   raciones) y, de ahí, lo que pida el jugador.
 
