@@ -947,7 +947,45 @@ log de su partida (23:47-23:53) y eran **tres cosas distintas**, las tres con da
   quedaba en el almacén y el pueblo seguía hambriento con el almacén lleno. Ahora, con la despensa por debajo de
   **8 puntos** y comida esperando en el almacén, el granjero **va a por ella** aunque no lleve nada que entregar.
 
-### 3b.22 Lo que viene
+### 3b.22 La RECOGIDA POR OFICIO, el despeje del recinto y la luz del corral
+
+El jugador avisó: *"nadie recoge los materiales del suelo y el recolector no se da abasto, sería mejor que cada oficio
+recoja del suelo los materiales propios de su oficio, además de obtenerlos de los cofres del almacén o del kiosco
+según su oficio. El leñador no está cortando los árboles que están dentro de la aldea y no está plantando y el corral
+no está generando carne"*. Cuatro cosas, todas medidas:
+
+- **El suelo estaba lleno y el recolector no llegaba**: en su guardado había **15 pepitas de hierro**, 5 de carne
+  podrida, una bota, pan, cuerdas y **4 plantones** tirados, mientras el **herrero de armas** esperaba hierro para
+  forjar (en el log: "Fundio 9 pepitas en un lingote", con las demás por el suelo). El **recolector es UN aldeano** (el
+  holgazán) y encima es también el **leñador**, así que no le daba la vida. Dos arreglos:
+  - **Recogida por oficio** (`VillagerPickupGoal`, prioridad **3**): cada oficio barre del suelo **sus** materiales y
+    los guarda donde le toca — el **granjero** el grano, las semillas, los vegetales, el abono y el pan (a la
+    despensa: así recoge también lo que el cerebro vanilla siega y deja caer, que era comida perdida), los
+    **herreros** los metales, el carbón, los palos y el **equipo de los enemigos** (al almacén), el **ganadero** la
+    carne y los huevos, el **cocinero** lo que cocina y el **clérigo** lo suyo. Radio corto (20 alrededor del
+    aldeano): recoge lo que se encuentra **yendo a trabajar** y, cuando el suelo está limpio, vuelve a su oficio. Los
+    materiales de los cofres los siguen sacando sus goals de oficio (la fragua del almacén, las semillas de la
+    despensa, la comida de cría del ganadero).
+  - **El recolector llega más lejos**: su radio era `FENCE_RADIUS + 6` = **42** y el botín de las refriegas cae a
+    **43-52** del centro, así que no lo cogía **nunca**. Ahora usa el **término del pueblo** (`+28` = **64**, el mismo
+    del leñador) y se corrigió un tope de **24 bloques** que tenía la búsqueda del objeto más cercano.
+- **Los árboles de dentro**: la causa **no** era el leñador. El generador **sí** despeja el volumen al construir, pero
+  las aldeas **migradas** se encontraron el bosque ya dentro (**137 árboles** medidos) y al capturar el plano se
+  escanea el mundo entero: los troncos no se descartan a propósito (el muro y las casas son de troncos), así que esos
+  137 árboles quedaron **grabados en el plano** y el leñador los daba por construidos. Ahora, al migrar,
+  `limpiarArbolesDeDentro` quita **troncos y hojas** de dentro del recinto (nunca otra cosa), saltándose todo tronco
+  que esté en el **plano viejo** (muro, postes de casas y almacén) y la **arboleda del pueblo**: es el despeje que
+  hace un pueblo al fundarse.
+- **Y el leñador vuelve a plantar**: la **arboleda** (6 celdas, dentro del recinto) se busca **explícitamente** antes
+  del barrido general (una rejilla de 2 en 2 ni siquiera pasa por todas ellas, y dentro del recinto no se planta), y el
+  barrido de un claro pasa de **28 a 40** bloques para que, estando dentro del pueblo, alcance los claros de fuera.
+- **El corral no generaba carne**, además del ganadero que faltaba, por dos motivos:
+  - **Los monstruos se comían al rebaño**: el anexo está **fuera de la muralla** y de noche spawneaban dentro (las
+    ovejas pasaron de **5 a ninguna** entre dos sesiones). La cerca lleva ahora **faroles** en las cuatro esquinas y
+    los cuatro medios lados (idempotente).
+  - **El relevo tardaba**: la espera del rebaño y de la pareja pasa de **3 días de juego a 1**.
+
+### 3b.23 Lo que viene
 - **Milicia**: ✅ completa (barraca, oficio, combate, escudo que bloquea, modelo propio, marcha a la guarida).
 - **Leñador/reforestador**: ✅ (tala y replanta, la cadena de la madera del herrero y ahora también **despeja los
   árboles que quedaron dentro de la muralla**).
@@ -959,6 +997,7 @@ log de su partida (23:47-23:53) y eran **tres cosas distintas**, las tres con da
 - **Orilla seca de la aldea de mar**: ✅ (ver 3b.18).
 - **Rebaño que vuelve a casa, pareja garantizada y esquinas del talud**: ✅ (ver 3b.19 y 3b.20).
 - **Huerta que no se reinicia, ganadero que llega aunque haya hambre y leñador que despeja la aldea**: ✅ (ver 3b.21).
+- **Recogida por oficio, despeje del recinto y corral iluminado**: ✅ (ver 3b.22).
 - **Lo siguiente**: la **verificación en partida** de la cadena entera de la comida (huerta → despensa → cocina →
   raciones) y, de ahí, lo que pida el jugador.
 
