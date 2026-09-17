@@ -395,9 +395,17 @@ public final class VillageManager {
      *       agua hasta la superficie del mar (lo que sí se respeta es una <b>playa natural</b>: si la capa de arriba es
      *       arena o grava, no es relleno del pueblo y no se toca). Verificado sobre su guardado: de las 180 celdas de
      *       pico, <b>174 pasan a agua</b> y las 6 restantes son arena natural.</li>
+     *   <li>43: la <b>nieve y la vegetación que quedaban colgando</b> en una aldea de <b>montaña</b> (lo pidió el
+     *       jugador: <i>"quita también la nieve que se quedó flotando cuando la aldea se genera en una montaña"</i>).
+     *       El recorte del terreno quita el suelo que sobresale de la cota, pero la <b>nieve polvo</b>
+     *       ({@code powder_snow}) no bloquea el movimiento y el mapa de alturas no la ve, así que el recorte paraba
+     *       debajo y la nieve se quedaba <b>en el aire</b>: medido en su aldea de montaña (cota 95), <b>469 bloques
+     *       de nieve polvo</b> flotando dentro del recinto, que es lo que se veía desde arriba. Ahora se retiran (solo
+     *       los que <b>no tienen nada debajo</b>) la nieve, el hielo y las plantas colgadas. La nieve apoyada en el
+     *       suelo del pueblo se queda.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 42;
+    public static final int CURRENT_LAYOUT = 43;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -1246,6 +1254,10 @@ public final class VillageManager {
             VillageGenerator.asegurarArboleda(level, center);
             // Y LA ORILLA de la aldea de mar (islita): seca y pareja, para que el agua no haga cuadros en el borde.
             VillageGenerator.asegurarOrilla(level, center);
+            // LOS RESTOS COLGADOS (etapa F, lo pidió el jugador): en una aldea de MONTAÑA el recorte del terreno deja
+            // nieve polvo (que no cuenta como suelo), capas de nieve y plantas colgando por encima del pueblo. Se
+            // retiran las que no tienen nada debajo.
+            VillageGenerator.limpiarRestosColgados(level, center);
             // LOS PICOS DE LAS ESQUINAS (etapa E, lo pidió el jugador): el suelo llano es un cuadrado y el talud un
             // círculo, así que a las cuatro esquinas les sobraba un triángulo allanado colgando sobre el mar, con el
             // corte a la vista. Se rebajan a la base del talud.

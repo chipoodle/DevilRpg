@@ -296,6 +296,9 @@ public final class VillageGenerator {
         asegurarArboleda(level, center);
         // Y LA ORILLA, seca y pareja, si la aldea nació al nivel del agua (si no, no se toca nada).
         asegurarOrilla(level, center);
+        // NIEVE Y VEGETACIÓN QUE QUEDÓ COLGANDO del recorte (aldea de montaña): se limpia antes de dar por hecha la
+        // aldea, que si no queda nieve polvo flotando por encima del pueblo (medido: 469 bloques en la suya).
+        limpiarRestosColgados(level, center);
 
         // Remesa inicial de la despensa (semillas, abono y un par de panes): el kiosco ya tiene el cofre doble.
         VillagePantry.remesaInicial(VillagePantry.despensa(level, center));
@@ -3410,6 +3413,64 @@ public final class VillageGenerator {
         // picos se ahogan; si no, se rebajan a la base del talud.
         boolean aldeaDeMar = hayAguaEnElAnillo(level, center, cota, LEVEL_RADIUS, LEVEL_RADIUS + ORILLA_ANCHO);
         quitarPicosDeLasEsquinas(level, center, LEVEL_RADIUS, cota, aldeaDeMar);
+    }
+
+    /** Hasta dónde se busca la nieve/vegetación colgada por encima de la cota (una montaña alta deja restos arriba). */
+    private static final int ALTURA_DE_RESTOS = 56;
+
+    /**
+     * Quita los <b>restos que quedan colgando</b> cuando la aldea se genera <b>en una montaña</b> (lo pidió el
+     * jugador: "quita también la nieve que se quedó flotando").
+     * <p>
+     * El nivelado recorta el terreno que sobresale de la cota, pero hay cosas que <b>no cuentan como suelo</b> y se
+     * quedan en el aire:
+     * <ul>
+     *   <li>la <b>nieve polvo</b> ({@code powder_snow}): no bloquea el movimiento, así que {@code groundY} (que usa el
+     *       mapa de alturas) <b>no la ve</b> y el recorte para en el bloque de debajo — medido en el guardado del
+     *       jugador: <b>469 bloques de nieve polvo</b> flotando dentro del recinto de su aldea de montaña, que es
+     *       justo lo que se veía desde arriba;</li>
+     *   <li>las <b>capas de nieve</b> y el <b>hielo</b> que quedan sin apoyo;</li>
+     *   <li>las <b>plantas</b> (matas, flores, hierba alta) que se quedan colgadas.</li>
+     * </ul>
+     * Solo se quita lo que está <b>por encima de la cota</b>, <b>dentro del término del pueblo</b> y <b>sin nada
+     * debajo</b> (aire): la nieve apoyada en el suelo del pueblo —que en un bioma nevado es lo normal— se queda, y
+     * todo lo construido (tejados, segundos pisos, faroles colgados, vallas) no es nieve ni planta, así que no se
+     * toca.
+     */
+    public static int limpiarRestosColgados(ServerLevel level, BlockPos center) {
+        int nivel = cotaDeLaPlaza(level, center);
+        if (nivel <= level.getMinBuildHeight() + 1) {
+            return 0;
+        }
+        int radio = LEVEL_RADIUS + SLOPE_WIDTH;
+        int quitados = 0;
+        for (int x = -radio; x <= radio; x++) {
+            for (int z = -radio; z <= radio; z++) {
+                if (x * x + z * z > radio * radio) {
+                    continue; // el término del pueblo, como el resto de las pasadas de terreno
+                }
+                for (int y = nivel; y <= nivel + ALTURA_DE_RESTOS; y++) {
+                    BlockPos p = new BlockPos(center.getX() + x, y, center.getZ() + z);
+                    BlockState s = level.getBlockState(p);
+                    boolean nieveOHielo = s.is(Blocks.SNOW) || s.is(Blocks.SNOW_BLOCK) || s.is(Blocks.POWDER_SNOW)
+                            || s.is(Blocks.ICE) || s.is(Blocks.PACKED_ICE) || s.is(Blocks.BLUE_ICE);
+                    boolean planta = s.getBlock() instanceof BushBlock || s.getBlock() instanceof GrowingPlantBlock;
+                    if (!nieveOHielo && !planta) {
+                        continue; // lo construido no es ni nieve ni planta: no se toca
+                    }
+                    if (!level.getBlockState(p.below()).isAir()) {
+                        continue; // apoyada: se queda (la nieve del suelo del pueblo, por ejemplo)
+                    }
+                    colocar(level, p, Blocks.AIR.defaultBlockState(), 3);
+                    quitados++;
+                }
+            }
+        }
+        if (quitados > 0) {
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: {} bloque(s) de nieve/vegetacion retirados de lo alto"
+                    + " (quedaban colgados del recorte del terreno)", center, quitados);
+        }
+        return quitados;
     }
 
     /**
