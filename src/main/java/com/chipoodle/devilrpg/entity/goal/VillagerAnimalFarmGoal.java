@@ -23,6 +23,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.AABB;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 
@@ -80,7 +81,7 @@ public class VillagerAnimalFarmGoal extends Goal {
     /** Radio en el que se recogen los drops de un sacrificio (y los huevos del corral). */
     private static final double RADIO_RECOGIDA = 6.0D;
 
-    private enum Fase { CRIAR, SACRIFICAR, RECOGER, ENTREGAR }
+    private enum Fase { CRIAR, SACRIFICAR, RECOGER, ENTREGAR, RONDAR }
 
     private final Villager villager;
     private final BlockPos center;
@@ -160,19 +161,61 @@ public class VillagerAnimalFarmGoal extends Goal {
         //       no vuelve nunca y el pueblo se queda sin carne, sin lana o sin huevos. Es el mismo criterio que la
         //       guarida, que mantiene su pareja pase lo que pase.
         //    b) CRECER: con comida de sobra en la despensa, se cría hasta el tope de la especie.
-        EntityType<? extends Animal> aCriar = elegirEspecieACriar(corral, comida < COMIDA_PARA_CRIAR);
-        if (aCriar != null && hayComidaParaCriar(level, aCriar)) {
-            Animal pareja = adultoSinEnamorar(level, aCriar);
-            if (pareja != null) {
-                fase = Fase.CRIAR;
-                especie = aCriar;
-                target = pareja.blockPosition();
-                return true;
+        // OJO: se prueban TODAS las especies, no solo una. Antes se elegía UNA (la del hueco más grande) y si a ESA
+        // le faltaba su comida, el ganadero se quedaba sin faena aunque hubiera con qué criar otra (las gallinas con
+        // semillas, por ejemplo). Medido en el guardado del jugador: el ganadero de la aldea 1 estaba plantado en la
+        // plaza con la etiqueta genérica "Trabajando" y el corral lleno (2 vacas, 2 ovejas, 2 puercos y 5 gallinas).
+        for (EntityType<? extends Animal> tipo : especiesParaCriar(corral, comida < COMIDA_PARA_CRIAR)) {
+            if (!hayComidaParaCriar(level, tipo)) {
+                continue; // esa no se puede: se prueba la siguiente
             }
+            Animal pareja = adultoSinEnamorar(level, tipo);
+            if (pareja == null) {
+                continue; // ya están todos enamorados (o criando): no se malgasta la comida
+            }
+            fase = Fase.CRIAR;
+            especie = tipo;
+            target = pareja.blockPosition();
+            return true;
+        }
+        // 4) SIN FAENA: se va <b>con el rebaño</b>. El corral es su casa y su puesto de trabajo (allí tiene la cama y
+        //    el telar), así que si no hay nada que criar, sacrificar ni recoger, se queda con los animales en vez de
+        //    plantarse en la plaza: eso era lo que veía el jugador ("aparece como que está trabajando pero no está
+        //    yendo a los establos"). Desde el corral, además, ve los huevos y la lana en cuanto caen.
+        if (VillageGenerator.anexoConstruido(level, center)) {
+            fase = Fase.RONDAR;
+            target = VillageGenerator.puntoDeApoyoAnexo(level, center);
+            return target != null;
         }
         // Nada que hacer: a esperar un poco (y no consumir CPU buscando animales cada tick).
         restTicks = IDLE_REST_TICKS;
         return false;
+    }
+
+    /**
+     * Las especies que <b>se pueden criar</b> ahora mismo, de la que más hueco tiene a la que menos: pareja hecha
+     * (dos adultos) y sitio hasta su tope. Con la aldea apretada de comida ({@code soloPareja}) solo salen las que
+     * están por debajo de la pareja.
+     */
+    private List<EntityType<? extends Animal>> especiesParaCriar(List<Animal> corral, boolean soloPareja) {
+        List<EntityType<? extends Animal>> candidatas = new ArrayList<>();
+        for (EntityType<? extends Animal> tipo : VillageGenerator.especiesDelCorral()) {
+            int adultos = contarAdultos(corral, tipo);
+            if (adultos < PAREJA_MINIMA) {
+                continue; // sin pareja no hay cría posible
+            }
+            if (soloPareja && adultos > PAREJA_MINIMA) {
+                continue; // con el pueblo apretado no se cría para crecer
+            }
+            if (topeDe(tipo) - contarEspecie(corral, tipo) <= 0) {
+                continue; // ya está en su tope
+            }
+            candidatas.add(tipo);
+        }
+        // De la que más hueco tiene a la que menos: así el rebaño se reparte en vez de crecer todo por un lado.
+        candidatas.sort((a, b) -> Integer.compare(topeDe(b) - contarEspecie(corral, b),
+                topeDe(a) - contarEspecie(corral, a)));
+        return candidatas;
     }
 
     @Override
@@ -222,6 +265,10 @@ public class VillagerAnimalFarmGoal extends Goal {
             case SACRIFICAR -> sacrificar(level);
             case RECOGER -> recoger(level);
             case ENTREGAR -> entregar(level);
+            case RONDAR -> {
+                // Estar con el rebaño no es una faena: no hay nada que hacer, solo quedarse ahí (y mirar).
+                VillageManager.ponerActividad(villager, actividad());
+            }
         }
         target = null;
         restTicks = REST_TICKS;
@@ -379,40 +426,7 @@ public class VillagerAnimalFarmGoal extends Goal {
     }
 
     /**
-     * La especie a la que le toca cría: la que esté más lejos de su tope (y por debajo de él).
-     * <p>
-     * <b>Siempre se cría con pareja</b>: hacen falta {@link #PAREJA_MINIMA} <b>adultos</b> en el corral. Si a una
-     * especie le queda uno solo, el ganadero no gasta comida en él (vanilla necesita dos enamorados para que salga la
-     * cría): de eso se encarga el pueblo, que le <b>trae la pareja</b> (ver
-     * {@code VillageGenerator.reponerParejasDelCorral}). Es lo mismo que hace el guardián con la pareja de la guarida.
-     *
-     * @param soloPareja {@code true} cuando al pueblo le queda <b>poca comida</b>: entonces solo se cría para
-     *                   <b>no perder la pareja</b> (una especie que esté por debajo del tope de seguridad), nunca para
-     *                   engordar el rebaño. Así la granja no se come el pan del pueblo.
-     */
-    @Nullable
-    private EntityType<? extends Animal> elegirEspecieACriar(List<Animal> corral, boolean soloPareja) {
-        EntityType<? extends Animal> elegida = null;
-        int mejorHueco = 0;
-        for (EntityType<? extends Animal> tipo : VillageGenerator.especiesDelCorral()) {
-            int adultos = contarAdultos(corral, tipo);
-            if (adultos < PAREJA_MINIMA) {
-                continue; // sin pareja no hay cría posible (y no se malgasta la comida)
-            }
-            int cuantos = contarEspecie(corral, tipo);
-            if (soloPareja && adultos > PAREJA_MINIMA) {
-                continue; // con el pueblo apretado no se cría para crecer
-            }
-            int hueco = topeDe(tipo) - cuantos;
-            if (hueco > mejorHueco) {
-                mejorHueco = hueco;
-                elegida = tipo;
-            }
-        }
-        return elegida;
-    }
-
-    /** ¿Hay en la despensa la comida de cría de esa especie (y de sobra para el pueblo)? */
+     * ¿Hay en la despensa la comida de cría de esa especie (y de sobra para el pueblo)? */
     private boolean hayComidaParaCriar(ServerLevel level, EntityType<? extends Animal> tipo) {
         Container despensa = VillagePantry.despensa(level, center);
         if (despensa == null) {
@@ -554,6 +568,7 @@ public class VillagerAnimalFarmGoal extends Goal {
             case SACRIFICAR -> "Sacrificando un animal";
             case RECOGER -> "Recogiendo el corral";
             case ENTREGAR -> "Bajando lo del corral";
+            case RONDAR -> "Con el rebano";
         };
     }
 
