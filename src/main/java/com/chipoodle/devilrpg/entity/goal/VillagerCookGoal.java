@@ -99,8 +99,9 @@ public class VillagerCookGoal extends Goal {
         if (dx * dx + dz * dz > (VillageGenerator.FENCE_RADIUS + 10.0D) * (VillageGenerator.FENCE_RADIUS + 10.0D)) {
             return false; // se ha ido lejos del pueblo
         }
-        // El puesto (el ahumador del kiosco), medido UNA vez por intento: `puestoDelCocinero` pregunta la cota de la
-        // plaza (un barrido del terreno) y eso no se hace en cada tick. Sin ahumador no hay cocina a la que ir.
+        // El puesto (el ahumador de la TABERNA desde la etapa F), medido UNA vez por intento: `puestoDelCocinero`
+        // pregunta la cota de la plaza (un barrido del terreno) y eso no se hace en cada tick. Sin ahumador no hay
+        // cocina a la que ir.
         puesto = VillageGenerator.puestoDelCocinero(level, center);
         if (!level.getBlockState(puesto).is(Blocks.SMOKER)) {
             restTicks = IDLE_REST_TICKS;
@@ -111,7 +112,8 @@ public class VillagerCookGoal extends Goal {
             restTicks = IDLE_REST_TICKS;
             return false;
         }
-        target = VillagePantry.puntoDeApoyo(level, center);
+        // Camina a la casilla de DELANTE del ahumador (la cocina de la taberna), que es donde puede estar de pie.
+        target = new BlockPos(puesto.getX(), puesto.getY(), puesto.getZ() - 1);
         return target != null;
     }
 

@@ -145,10 +145,15 @@ public class VillagerGateGoal extends Goal {
     @Nullable
     private BlockPos portonMasCercano(ServerLevel level) {
         if (portones == null) {
-            // La cota se pregunta UNA vez por goal (mira el terreno de la plaza): los portones no se mueven.
+            // La cota se pregunta UNA vez por goal (mira el terreno de la plaza): los portones no se mueven. Son el
+            // del corral, el del gallinero y las CUATRO puertas de valla de cada bancal de la granja (etapa F): todas
+            // son puertas de valla y el juego no deja que un aldeano las abra, así que las abre y las cierra el pueblo.
             int nivel = VillageGenerator.cotaDeLaPlaza(level, center);
-            portones = new BlockPos[]{VillageGenerator.portonDelCorral(center, nivel),
-                    VillageGenerator.portonDelGallinero(center, nivel)};
+            java.util.List<BlockPos> lista = new java.util.ArrayList<>();
+            lista.add(VillageGenerator.portonDelCorral(center, nivel));
+            lista.add(VillageGenerator.portonDelGallinero(center, nivel));
+            lista.addAll(VillageGenerator.portonesDeLosBancales(center, nivel));
+            portones = lista.toArray(new BlockPos[0]);
         }
         BlockPos mejor = null;
         double mejorDistancia = RADIO;

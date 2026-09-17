@@ -107,6 +107,7 @@ public final class VillageGenerator {
             {-45, 22},   // barraca de la milicia
             {-30, 14},   // parcela de la granja 1
             {10, 4},     // parcela de la granja 2
+            {-28, 34},   // parcela de la granja 3 (la del tercer bancal, con su granjero)
     };
 
     /** La posición del trazado {@code i} (ver {@link #TRAZADO}) relativa al centro. */
@@ -114,8 +115,8 @@ public final class VillageGenerator {
         return center.offset(TRAZADO[i][0], 0, TRAZADO[i][1]);
     }
 
-    /** Esquinas de las dos parcelas de la granja (relativas al centro) y tamaño de cada parcela. */
-    private static final int[][] FARM_PLOTS = {{-30, 14}, {10, 4}};
+    /** Esquinas de las <b>tres</b> parcelas de la granja (relativas al centro) y tamaño de cada parcela. */
+    private static final int[][] FARM_PLOTS = {{-30, 14}, {10, 4}, {-28, 34}};
     /** Ancho de la parcela (columnas de cultivo). */
     public static final int PLOT_WIDTH = 9;
     /**
@@ -280,6 +281,9 @@ public final class VillageGenerator {
 
         // Kiosco de la plaza: plataforma con 4 salidas, la campana ARRIBA y el cofre doble de la despensa dentro.
         kiosco(level, center, nivelVilla);
+
+        // LA TABERNA (etapa F): el comedor del pueblo, con la cocina del cocinero abajo y la posada (camas) arriba.
+        asegurarTaberna(level, center);
 
         // Granja: da trabajo al aldeano granjero y produce la comida que come la aldea (Iteración 3). Se le pasa
         // LA COTA YA CALCULADA: si la recalculara aquí, la muestra del terreno incluiría las casas y la iglesia
@@ -593,24 +597,31 @@ public final class VillageGenerator {
             return;
         }
         BlockPos base = baseDeBarraca(center);
-        if (level.getBlockState(new BlockPos(base.getX(), nivel - 1, base.getZ())).is(Blocks.STONE_BRICKS)) {
-            return; // la barraca ya está y con el tamaño actual
+        // Testigo del trazado NUEVO (etapa F: barraca de DOS PISOS con sala de armas): el hogar del patio de
+        // entrenamiento. Una barraca de una planta (sin hogar) se vuelve a levantar entera, que es lo que trae el
+        // segundo piso con las camas y el patio.
+        if (level.getBlockState(new BlockPos(base.getX(), nivel - 1, base.getZ() + BARRACA_RADIO - 1))
+                .is(Blocks.CAMPFIRE)) {
+            return; // la barraca ya está y con el trazado actual
         }
         BlockPos puerta = barraca(level, base, nivel);
         // Camino de la plaza a su puerta (si no, los guardias tienen que trepar por el césped).
         paths(level, center, doorApproach(level, puerta));
-        DevilRpg.LOGGER.info("[Village] Aldea en {}: barraca de la milicia construida en {} ({} camas)",
-                center, base, BARRACA_CAMAS);
+        DevilRpg.LOGGER.info("[Village] Aldea en {}: barraca de la milicia construida en {} (dos pisos: sala de"
+                + " armas abajo y {} camas arriba)", center, base, BARRACA_CAMAS);
     }
 
     /**
-     * Construye la <b>barraca</b> (suelo de piedra, paredes y tejado de tablones, puerta al norte y
-     * {@link #BARRACA_CAMAS} camas en dos filas con el pasillo en medio) y devuelve su puerta.
+     * Construye la <b>barraca</b> (etapa F: <b>dos pisos</b>) y devuelve su puerta.
+     * <p>
+     * Abajo, la <b>sala de armas</b>: el patio de entrenamiento de la milicia, con el suelo de piedra (los guardias
+     * entrenan ahí), <b>maniquíes</b> de paja con calabaza (para ensayar el golpe), <b>dianas</b> para los arqueros,
+     * un banco de armas (vallas con farol) y el fuego del hogar. Arriba, el <b>dormitorio</b>: {@link #BARRACA_CAMAS}
+     * camas en dos filas, con sus arcas y faroles.
      * <p>
      * <b>Alturas</b> (invariante I1): {@code nivel} es <b>la capa que se pisa</b> del pueblo, así que el suelo
-     * sólido va en {@code nivel - 1} y las paredes, la puerta y las camas en {@code nivel}. Poniendo el suelo en
-     * {@code nivel} (como el kiosco, que va a propósito un bloque alto con sus escaleras) la barraca salía
-     * <b>un bloque alta</b>, con escalón en la puerta: es el mismo bug que se corrigió en las casas.
+     * sólido va en {@code nivel - 1} y las paredes, la puerta y las camas de abajo en {@code nivel}; el forjado del
+     * piso de arriba en {@code nivel + 3} y sus camas en {@code nivel + 4}.
      * <p>
      * Todo pasa por {@link #colocar}, así que <b>entra en el plano</b> y el obrero la repone como cualquier otra
      * construcción (invariante I8): una barraca construida al margen del plano no se repararía nunca.
@@ -619,31 +630,48 @@ public final class VillageGenerator {
         int r = BARRACA_RADIO;
         int bx = base.getX();
         int bz = base.getZ();
+        int yPiso2 = nivel + 4;   // suelo del dormitorio (el forjado va en yPiso2 - 1)
+        int yTejado = yPiso2 + 3;
         // 1) Huella NIVELADA a la cota del pueblo, como las casas: recorta el terreno natural que sobra y
         //    RELLENA lo que falta. Hace falta de verdad: medido en el guardado, el cuadrante oeste de alguna aldea
         //    tiene un charco (23 columnas de agua en la capa de superficie) y en otra faltaba el bloque de suelo
         //    en 12 columnas: sin esto, el suelo de la barraca quedaría flotando. `nivelarHuella` toma la ESQUINA
         //    (y solo mira su X/Z, pero se le da una Y que ya es la cota: invariante I1).
         nivelarHuella(level, new BlockPos(bx - r, nivel, bz - r), 2 * r + 1, 2 * r + 1, nivel);
-        // 2) Solar: suelo de piedra en la capa de superficie (nivel-1) y el volumen de arriba al aire (así se va
-        //    la nieve/césped de la capa que se pisa, que si no queda dentro de la barraca).
+        // 2) SUELOS: piedra en la capa de superficie (nivel-1), el volumen de abajo al aire, el FORJADO del piso de
+        //    arriba (tablones) y el volumen del dormitorio también al aire.
         for (int dx = -r; dx <= r; dx++) {
             for (int dz = -r; dz <= r; dz++) {
                 colocar(level, new BlockPos(bx + dx, nivel - 1, bz + dz), Blocks.STONE_BRICKS.defaultBlockState(), 3);
-                for (int dy = 0; dy <= 4; dy++) {
+                for (int dy = 0; dy <= 2; dy++) {
                     colocar(level, new BlockPos(bx + dx, nivel + dy, bz + dz), Blocks.AIR.defaultBlockState(), 3);
+                }
+                colocar(level, new BlockPos(bx + dx, yPiso2 - 1, bz + dz), Blocks.OAK_PLANKS.defaultBlockState(), 3);
+                for (int dy = 0; dy <= 2; dy++) {
+                    colocar(level, new BlockPos(bx + dx, yPiso2 + dy, bz + dz), Blocks.AIR.defaultBlockState(), 3);
                 }
             }
         }
-        // 3) Paredes de tablones (3 de alto, de `nivel` a `nivel+2`) por el borde de la huella.
+        // 3) PAREDES de los dos pisos por el borde de la huella: piedra en la base, tablones, postes de tronco y
+        //    troneras (vallas) que son lo que le da su aire de cuartel.
         for (int dx = -r; dx <= r; dx++) {
             for (int dz = -r; dz <= r; dz++) {
                 if (Math.abs(dx) != r && Math.abs(dz) != r) {
                     continue; // interior
                 }
-                for (int dy = 0; dy <= 2; dy++) {
-                    colocar(level, new BlockPos(bx + dx, nivel + dy, bz + dz),
-                            Blocks.OAK_PLANKS.defaultBlockState(), 3);
+                boolean poste = (dx == -r || dx == r) && (dz == -r || dz == r);
+                for (int dy = 0; dy < (yTejado - nivel); dy++) {
+                    BlockPos p = new BlockPos(bx + dx, nivel + dy, bz + dz);
+                    int piso = dy < 3 ? nivel : yPiso2;
+                    if (dy == 0 || dy == (yPiso2 - nivel)) {
+                        colocar(level, p, Blocks.COBBLESTONE.defaultBlockState(), 3);
+                    } else if (poste) {
+                        colocar(level, p, Blocks.OAK_LOG.defaultBlockState(), 3);
+                    } else if (dy == piso - nivel + 2 && (dx + dz) % 3 == 0) {
+                        colocar(level, p, Blocks.OAK_FENCE.defaultBlockState(), 3); // tronera
+                    } else {
+                        colocar(level, p, Blocks.OAK_PLANKS.defaultBlockState(), 3);
+                    }
                 }
             }
         }
@@ -654,24 +682,55 @@ public final class VillageGenerator {
                 .setValue(DoorBlock.FACING, Direction.NORTH).setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER), 3);
         colocar(level, puerta.above(), Blocks.OAK_DOOR.defaultBlockState()
                 .setValue(DoorBlock.FACING, Direction.NORTH).setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER), 3);
-        // 5) Tejado (nivel+3) y dos faroles colgados del centro: de noche la barraca se ve desde lejos y no
-        //    spawnean monstruos dentro (que es lo que evitaría que la guardia durmiera).
-        for (int dx = -r; dx <= r; dx++) {
-            for (int dz = -r; dz <= r; dz++) {
-                colocar(level, new BlockPos(bx + dx, nivel + 3, bz + dz), Blocks.OAK_PLANKS.defaultBlockState(), 3);
+        // 5) LA SALA DE ARMAS (piso de abajo): maniquíes de paja (para ensayar el golpe), dianas de los arqueros, el
+        //    hogar con su fuego y una mesa con el mapa de las guaridas.
+        int[][] maniquies = {{-r + 2, -r + 2}, {r - 2, r - 2}};
+        for (int[] m : maniquies) {
+            colocar(level, new BlockPos(bx + m[0], nivel, bz + m[1]), Blocks.HAY_BLOCK.defaultBlockState(), 3);
+            colocar(level, new BlockPos(bx + m[0], nivel + 1, bz + m[1]), Blocks.CARVED_PUMPKIN.defaultBlockState(), 3);
+            colocar(level, new BlockPos(bx + m[0], nivel, bz + m[1] + 1), Blocks.OAK_FENCE.defaultBlockState(), 3);
+            colocar(level, new BlockPos(bx + m[0], nivel + 2, bz + m[1]), Blocks.OAK_FENCE.defaultBlockState(), 3);
+        }
+        colocar(level, new BlockPos(bx - r + 2, nivel, bz + r - 2), Blocks.TARGET.defaultBlockState(), 3);
+        colocar(level, new BlockPos(bx + r - 2, nivel, bz - r + 2), Blocks.TARGET.defaultBlockState(), 3);
+        colocar(level, new BlockPos(bx + r - 2, nivel + 1, bz - r + 2), Blocks.TARGET.defaultBlockState(), 3);
+        colocar(level, new BlockPos(bx, nivel - 1, bz + r - 1), Blocks.CAMPFIRE.defaultBlockState(), 3);
+        colocar(level, new BlockPos(bx + 2, nivel, bz + r - 2), Blocks.CARTOGRAPHY_TABLE.defaultBlockState(), 3);
+        colocar(level, new BlockPos(bx - 2, nivel, bz + r - 2), Blocks.BARREL.defaultBlockState(), 3);
+        // 6) LA ESCALERA al dormitorio, pegada a la pared sur, con el hueco en el forjado.
+        for (int i = 0; i < 4; i++) {
+            BlockPos escalon = new BlockPos(bx + r - 1, nivel + i, bz + r - 1 - i);
+            colocar(level, escalon, Blocks.OAK_STAIRS.defaultBlockState()
+                    .setValue(StairBlock.FACING, Direction.WEST).setValue(StairBlock.HALF, Half.BOTTOM), 3);
+            colocar(level, escalon.above(), Blocks.AIR.defaultBlockState(), 3);
+            colocar(level, new BlockPos(bx + r - 1, yPiso2 - 1, bz + r - 1 - i), Blocks.AIR.defaultBlockState(), 3);
+        }
+        // 7) EL DORMITORIO (piso de arriba): las camas en dos filas con el pasillo en medio, con su arca y sus
+        //    faroles. Son las que dan litera a los guardias y las que dejan crecer al pueblo (vanilla pide una cama
+        //    libre por cría).
+        for (int dx = -r + 1; dx <= r - 1; dx += 2) {
+            bed(level, new BlockPos(bx + dx, yPiso2, bz - r + 2), Direction.NORTH);
+            bed(level, new BlockPos(bx + dx, yPiso2, bz + r - 2), Direction.SOUTH);
+        }
+        colocar(level, new BlockPos(bx - r + 1, yPiso2, bz), Blocks.CHEST.defaultBlockState()
+                .setValue(ChestBlock.FACING, Direction.EAST), 3);
+        colocar(level, new BlockPos(bx + r - 1, yPiso2, bz), Blocks.CHEST.defaultBlockState()
+                .setValue(ChestBlock.FACING, Direction.WEST), 3);
+        for (int dz = -r + 2; dz <= r - 2; dz += 3) {
+            colocar(level, new BlockPos(bx, yPiso2 + 2, bz + dz), Blocks.LANTERN.defaultBlockState(), 3);
+        }
+        // 8) TEJADO (a la altura del segundo piso) con alero de un bloque de sobra y faroles colgados del centro: de
+        //    noche la barraca se ve desde lejos y no spawnean monstruos dentro (que es lo que evitaría que la
+        //    guardia durmiera).
+        for (int dx = -r - 1; dx <= r + 1; dx++) {
+            for (int dz = -r - 1; dz <= r + 1; dz++) {
+                colocar(level, new BlockPos(bx + dx, yTejado, bz + dz), Blocks.OAK_PLANKS.defaultBlockState(), 3);
             }
         }
         colocar(level, new BlockPos(bx, nivel + 2, bz - 1),
                 Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true), 3);
         colocar(level, new BlockPos(bx, nivel + 2, bz + 1),
                 Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true), 3);
-        // 6) Las camas: dos filas de 4 en la capa que se pisa, con la CABECERA contra la pared (norte y sur) y el
-        //    pasillo en medio. Son las que dan litera a los guardias y las que dejan crecer al pueblo (vanilla pide
-        //    una cama libre por cría).
-        for (int dx = -r + 1; dx <= r - 1; dx += 2) {
-            bed(level, new BlockPos(bx + dx, nivel, bz - r + 2), Direction.NORTH);
-            bed(level, new BlockPos(bx + dx, nivel, bz + r - 2), Direction.SOUTH);
-        }
         return puerta;
     }
 
@@ -923,16 +982,18 @@ public final class VillageGenerator {
     // --- LA ARBOLEDA DEL PUEBLO (la madera de una aldea sin bosque) ---------------------------------
 
     /**
-     * Caja de la <b>arboleda del pueblo</b> (relativa al centro): un hueco de <b>césped</b> en la diagonal noreste,
-     * entre el solar de la casa grande y la valla. Está libre de todo lo demás: los caminos radiales van por los ejes
-     * y los solares empiezan más adentro. Es un <b>rectángulo de 7x11</b> (el jugador pidió alargarlo hacia el sur,
-     * que es donde sobra sitio: hasta la valla hay hueco de sobra). Con la aldea al radio 62 la caja se ha llevado a
-     * la diagonal (34..40, -41..-31), donde está libre y a 50 del centro.
+     * Caja de la <b>arboleda del pueblo</b> (relativa al centro): desde la etapa F es un <b>bosquecillo</b> de
+     * <b>22×18</b> en la esquina <b>noroeste</b> (x -46..-25, z -32..-15), con <b>doce plazas</b> de árbol, que es lo
+     * que pidió el jugador: <i>"necesitamos que se mueva el lugar donde están los árboles a un área más grande, ya que
+     * tenemos más espacio, y podría ser un pequeño bosque donde el leñador pueda cortar y replantar"</i>.
+     * <p>
+     * Está libre de todo lo demás (los caminos radiales van por los ejes y hacia el norte, y los solares empiezan más
+     * adentro) y a 56 del centro como mucho, así que cabe entero dentro de la muralla (radio 62).
      */
-    private static final int ARBOLEDA_X0 = 34;
-    private static final int ARBOLEDA_X1 = 40;
-    private static final int ARBOLEDA_Z0 = -41;
-    private static final int ARBOLEDA_Z1 = -31;
+    private static final int ARBOLEDA_X0 = -46;
+    private static final int ARBOLEDA_X1 = -25;
+    private static final int ARBOLEDA_Z0 = -32;
+    private static final int ARBOLEDA_Z1 = -15;
 
     /**
      * ¿Ese punto (X/Z) cae dentro de la <b>arboleda del pueblo</b>? Es la <b>única excepción</b> a la regla de "dentro
@@ -946,13 +1007,13 @@ public final class VillageGenerator {
     }
 
     /**
-     * Las <b>seis plazas</b> de la arboleda (rejilla de 2x3 con <b>cuatro bloques</b> entre árboles) a la cota del
-     * pueblo. Son seis y no cuatro porque el rectángulo da de sobra: cuanto más grande es la arboleda, más madera
-     * sostiene sin quedarse pelada.
+     * Las <b>doce plazas</b> del bosquecillo (rejilla de 4×3, repartidas por la caja) a la cota del pueblo. Son doce
+     * porque el área da de sobra: cuanto más grande es la arboleda, más madera sostiene sin quedarse pelada, y el
+     * leñador tiene donde talar y replantar sin quedarse sin árboles.
      */
     public static BlockPos[] plantonesDeLaArboleda(BlockPos center, int nivel) {
-        int[] xs = {ARBOLEDA_X0 + 1, ARBOLEDA_X1 - 1};
-        int[] zs = {ARBOLEDA_Z0 + 1, (ARBOLEDA_Z0 + ARBOLEDA_Z1) / 2, ARBOLEDA_Z1 - 1};
+        int[] xs = repartir(ARBOLEDA_X0 + 2, ARBOLEDA_X1 - 2, 4);
+        int[] zs = repartir(ARBOLEDA_Z0 + 2, ARBOLEDA_Z1 - 2, 3);
         BlockPos[] plazas = new BlockPos[xs.length * zs.length];
         int i = 0;
         for (int z : zs) {
@@ -961,6 +1022,15 @@ public final class VillageGenerator {
             }
         }
         return plazas;
+    }
+
+    /** {@code cuantos} valores repartidos (redondeados) entre {@code desde} y {@code hasta}, ambos incluidos. */
+    private static int[] repartir(int desde, int hasta, int cuantos) {
+        int[] valores = new int[cuantos];
+        for (int i = 0; i < cuantos; i++) {
+            valores[i] = desde + (int) Math.round((hasta - desde) * (i / (double) (cuantos - 1)));
+        }
+        return valores;
     }
 
     /**
@@ -2379,48 +2449,46 @@ public final class VillageGenerator {
                 .setValue(ChestBlock.TYPE, tipo);
     }
 
-    // --- LA COCINA DEL PUEBLO (etapa E) -------------------------------------------------------------
+    // --- LA COCINA DEL PUEBLO (etapa E, en la taberna desde la etapa F) ------------------------------
 
     /**
-     * El <b>ahumador</b> de la cocina del pueblo, sobre la plataforma del kiosco (relativo al centro). Es el
-     * <b>puesto de trabajo del cocinero</b>: sin él, el juego le borraría el oficio al aldeano (misma trampa que la
-     * mesa de herrería o el telar del ganadero).
-     * <p>
-     * Va <b>al lado de la despensa</b> a propósito: la cocina y el almacén de comida son lo mismo, así el cocinero no
-     * tiene que ir y venir por el pueblo con la carne en la mano.
+     * El <b>puesto del cocinero</b>: el ahumador de la <b>taberna</b> (etapa F). Antes estaba en la plataforma del
+     * kiosco, al lado de la despensa; desde que hay taberna, el cocinero trabaja en su cocina (esquina sureste de la
+     * taberna) y el pueblo va allí a comer.
      */
     public static BlockPos puestoDelCocinero(ServerLevel level, BlockPos center) {
         int nivel = cotaDeLaPlaza(level, center);
-        return new BlockPos(center.getX() + 2, nivel + 1, center.getZ() + 1);
+        BlockPos base = baseDeLaTaberna(center);
+        return new BlockPos(base.getX() + TABERNA_ANCHO - 2, nivel, base.getZ() + TABERNA_FONDO - 2);
     }
 
     /**
-     * Asegura la <b>cocina del pueblo</b>: el ahumador (puesto del cocinero) y su mesa, sobre la plataforma del
-     * kiosco. Es <b>idempotente</b> y va aparte de {@link #asegurarKiosco} porque aquél sale antes de tiempo cuando el
-     * kiosco ya está: con la comprobación dentro, a las aldeas ya construidas <b>nunca</b> les habría llegado la
-     * cocina.
+     * Asegura la <b>cocina del pueblo</b>, que desde la etapa F está <b>en la taberna</b>: el ahumador (puesto de
+     * trabajo del cocinero), su mesa de trabajo, el caldero y los barriles. Es <b>idempotente</b>: si el ahumador ya
+     * está en su sitio, no toca nada.
+     * <p>
+     * Si la despensa del kiosco todavía tuviera el <b>ahumador viejo</b>, se retira (se convierte en su sitio de
+     * siempre: la plataforma del kiosco) para que no queden dos cocinas y el cocinero no se líe.
      */
     public static void asegurarCocina(ServerLevel level, BlockPos center) {
         int nivel = cotaDeLaPlaza(level, center);
         if (nivel <= level.getMinBuildHeight() + 1) {
             return;
         }
-        // Sin plataforma no hay dónde ponerla (quedaría flotando): primero el kiosco.
-        if (!level.getBlockState(new BlockPos(center.getX() + KIOSCO_RADIO, nivel, center.getZ()))
-                .is(Blocks.STONE_BRICKS)) {
+        // La cocina va dentro de la taberna: sin taberna no hay cocina.
+        asegurarTaberna(level, center);
+        if (!tabernaConstruida(level, center)) {
             return;
         }
-        BlockPos ahumador = puestoDelCocinero(level, center);
-        if (level.getBlockState(ahumador).is(Blocks.SMOKER)) {
-            return; // la cocina ya está
+        // El ahumador viejo del kiosco se retira (una sola vez: si ya no está, no se toca nada).
+        BlockPos viejo = new BlockPos(center.getX() + 2, nivel + 1, center.getZ() + 1);
+        if (level.getBlockState(viejo).is(Blocks.SMOKER)) {
+            colocar(level, viejo, Blocks.STONE_BRICKS.defaultBlockState(), 3);
+            colocar(level, new BlockPos(center.getX(), nivel + 1, center.getZ()),
+                    Blocks.CRAFTING_TABLE.defaultBlockState(), 3);
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: el ahumador viejo del kiosco se retiro (la cocina ya esta"
+                    + " en la taberna)", center);
         }
-        colocar(level, ahumador, Blocks.SMOKER.defaultBlockState()
-                .setValue(net.minecraft.world.level.block.SmokerBlock.FACING, Direction.SOUTH), 3);
-        // La mesa de la cocina, en el centro de la plataforma (donde no estorba al cofre ni a la campana).
-        colocar(level, new BlockPos(center.getX(), nivel + 1, center.getZ()),
-                Blocks.CRAFTING_TABLE.defaultBlockState(), 3);
-        DevilRpg.LOGGER.info("[Village] Aldea en {}: cocina del pueblo puesta en el kiosco (ahumador en {})",
-                center, ahumador);
     }
 
     private static BlockState escalera(Direction hacia) {
@@ -3759,14 +3827,17 @@ public final class VillageGenerator {
             // y fuera del cobertizo: si el punto cayera bajo su tejado, `groundY` devolvería la altura del TEJADO y
             // el aldeano aparecería encima de él).
             new BlockPos(47, 0, 0),
-            // El COCINERO (etapa E) en la plaza, junto al kiosco y su cocina. Tampoco puede caer bajo el tejado del
-            // kiosco: `groundY` devolvería el tejado y el aldeano nacería ENCIMA de él.
-            new BlockPos(6, 0, 6)
+            // El COCINERO (etapa E) junto a la plaza; desde la taberna (etapa F) vive en su cocina.
+            new BlockPos(6, 0, 6),
+            // El SEGUNDO GRANJERO (etapa F, lo pidió el jugador: "una 3ª parcela con su granjero porque hay poca
+            // comida"): entre los dos bancales del sur, en patio abierto.
+            new BlockPos(-22, 0, 30)
     };
     /**
      * Oficios de la aldea, en el orden en que se ocupan los sitios:
      * <ol>
-     *   <li><b>Granjero</b>: cultiva, cosecha, fertiliza y hornea el pan en la despensa.</li>
+     *   <li><b>Granjero</b>: cultiva, cosecha, fertiliza y hornea el pan en la despensa. Desde la etapa F hay
+     *       <b>dos</b> (uno por bancal de los tres, que con uno la huerta no daba para el pueblo).</li>
      *   <li><b>Herrero de armas</b> y <b>clérigo</b>: los oficios "de oficio" de la aldea.</li>
      *   <li><b>Herrero de herramientas</b>.</li>
      *   <li><b>Holgazán</b> (nitwit) = el <b>RECOLECTOR</b>: no tiene oficio propio a propósito, así no reclama
@@ -3774,14 +3845,15 @@ public final class VillageGenerator {
      *       Antes esto lo hacía el constructor y se pasaba el día recolectando en vez de reparar.</li>
      *   <li><b>Pastor</b> = el <b>GANADERO</b> de la granja anexa (etapa D): vive en el corral de fuera de la valla,
      *       cría a los animales y baja la carne y la lana al almacén.</li>
-     *   <li><b>Carnicero</b> = el <b>COCINERO</b> de la aldea (etapa E): cocina en el ahumador del kiosco la carne
-     *       cruda y las patatas que le llegan (crudo = 2 puntos de comida, cocinado = 4).</li>
+     *   <li><b>Carnicero</b> = el <b>COCINERO</b> de la aldea (etapa E): cocina en el ahumador la carne cruda y las
+     *       patatas que le llegan (crudo = 2 puntos de comida, cocinado = 4) y desde la etapa F lo hace en la
+     *       <b>taberna</b>, que es donde come el pueblo.</li>
      * </ol>
      */
     private static final VillagerProfession[] VILLAGER_SPECIALTIES = {
             VillagerProfession.FARMER, VillagerProfession.WEAPONSMITH, VillagerProfession.CLERIC,
             VillagerProfession.TOOLSMITH, VillagerProfession.NITWIT, VillagerProfession.SHEPHERD,
-            VillagerProfession.BUTCHER
+            VillagerProfession.BUTCHER, VillagerProfession.FARMER
     };
 
     /**
@@ -3794,18 +3866,24 @@ public final class VillageGenerator {
     }
 
     /**
-     * El sitio (slot) de la <b>primera profesión que le falta</b> a la aldea: si no hay ningún aldeano vivo con ese
+     * El sitio (slot) del <b>primer puesto que le falta</b> a la aldea: si no hay ningún aldeano vivo con ese
      * oficio, devuelve su sitio para reponerlo. Devuelve {@code -1} si están todas cubiertas.
      * <p>
      * Se usa al repoblar: antes se reponía "el sitio siguiente" (el número de aldeanos vivos), así que si mataban al
      * recolector (último sitio) y quedaban 4 aldeanos, el nuevo salía con el oficio del sitio 4… o podía repetir un
      * oficio y dejar la aldea sin el que de verdad faltaba.
+     * <p>
+     * OJO con los oficios REPETIDOS (hay <b>dos granjeros</b> desde la etapa F): se miran por <b>número</b>, no por
+     * "está o no está". Con la comprobación vieja, en cuanto había un granjero el segundo puesto se daba por cubierto
+     * y el pueblo se quedaba con un solo bancal trabajado para siempre.
      */
     public static int slotDeProfesionFaltante(java.util.Collection<VillagerProfession> vivas) {
+        List<VillagerProfession> restantes = new ArrayList<>(vivas);
         for (int i = 0; i < VILLAGER_SPECIALTIES.length; i++) {
-            if (!vivas.contains(VILLAGER_SPECIALTIES[i])) {
-                return i;
+            if (restantes.remove(VILLAGER_SPECIALTIES[i])) {
+                continue; // ese puesto ya está cubierto (se gasta uno de los vivos)
             }
+            return i;
         }
         return -1;
     }
@@ -4071,7 +4149,7 @@ public final class VillageGenerator {
         //     arriba, tierra debajo). Antes el relleno se quedaba una capa corto (`y < nivelCompostero - 1`) y la
         //     limpieza se llevaba por delante el bloque de superficie -> el compostero quedaba FLOTANDO.
         //  3) Se coloca el compostero apoyado en esa capa.
-        int compX = corner.getX() - 1;
+        int compX = corner.getX() - 2; // fuera de la valla del bancal (ver `cercaDelBancal`)
         int compZ = corner.getZ();
         for (int y = nivel - PROFUNDIDAD_SOLAR - 2; y <= nivel + 6; y++) {
             BlockPos p = new BlockPos(compX, y, compZ);
@@ -4091,6 +4169,301 @@ public final class VillageGenerator {
                     Block.UPDATE_ALL);
         }
         colocar(level, new BlockPos(compX, nivelCompostero, compZ), Blocks.COMPOSTER.defaultBlockState(), Block.UPDATE_ALL);
+        // 4) LA VALLA DEL BANCAL, con sus PORTONES y sus FAROLES (lo pidió el jugador: "todas las parcelas deben
+        //    estar rodeadas de vallas con varias fence gates y que tengan mucha iluminación para que los plantíos
+        //    crezcan rápido"). La luz no es decorativa: un cultivo solo crece con luz 9 o más, así que con faroles
+        //    en los postes la huerta sigue creciendo DE NOCHE (sin luz, la mitad del día se pierde).
+        cercaDelBancal(level, corner, nivel);
+    }
+
+    /**
+     * <b>La valla del bancal</b>: un anillo de valla de roble alrededor de la parcela (1 bloque por fuera de la
+     * tierra de cultivo), con <b>cuatro puertas de valla</b> —una en el centro de cada lado— y <b>faroles</b> en las
+     * cuatro esquinas y en los cuatro medios lados, que es lo que deja crecer los cultivos de noche.
+     * <p>
+     * Las puertas las abre el <b>pueblo</b> con {@code VillagerGateGoal} (el juego no deja que un aldeano abra una
+     * puerta de valla), así que el granjero entra y sale por ellas igual que por el portón del corral; y los faroles
+     * van <b>encima de los postes</b>, que es donde alumbran el bancal entero sin estorbar el paso.
+     */
+    private static void cercaDelBancal(ServerLevel level, BlockPos corner, int nivel) {
+        int x0 = corner.getX() - 1;
+        int x1 = corner.getX() + PLOT_WIDTH;
+        int z0 = corner.getZ() - 1;
+        int z1 = corner.getZ() + PLOT_DEPTH;
+        for (int x = x0; x <= x1; x++) {
+            for (int z = z0; z <= z1; z++) {
+                boolean borde = x == x0 || x == x1 || z == z0 || z == z1;
+                if (!borde) {
+                    continue;
+                }
+                boolean medio = (x == (x0 + x1) / 2) || (z == (z0 + z1) / 2);
+                boolean esquina = (x == x0 || x == x1) && (z == z0 || z == z1);
+                if (!esquina && medio) {
+                    // Puerta de valla en el centro de cada lado: el granjero entra por donde le pille mejor.
+                    boolean ejeX = (z == z0 || z == z1);
+                    colocar(level, new BlockPos(x, nivel, z), Blocks.OAK_FENCE_GATE.defaultBlockState()
+                            .setValue(FenceGateBlock.FACING, ejeX ? Direction.NORTH : Direction.EAST)
+                            .setValue(FenceGateBlock.OPEN, false)
+                            .setValue(FenceGateBlock.IN_WALL, false), Block.UPDATE_ALL);
+                    continue;
+                }
+                colocar(level, new BlockPos(x, nivel, z), Blocks.OAK_FENCE.defaultBlockState(), Block.UPDATE_ALL);
+                if (esquina || medio) {
+                    // Farol en lo alto del poste: alumbra el bancal y los cultivos crecen también de noche.
+                    BlockPos alto = new BlockPos(x, nivel + 1, z);
+                    if (level.getBlockState(alto).isAir()) {
+                        colocar(level, alto, Blocks.LANTERN.defaultBlockState(), Block.UPDATE_ALL);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Las <b>puertas de valla de los bancales</b> (cuatro por parcela), para que {@code VillagerGateGoal} se las abra
+     * al granjero igual que el portón del corral: el juego no deja que un aldeano abra una puerta de valla.
+     */
+    public static List<BlockPos> portonesDeLosBancales(BlockPos center, int nivel) {
+        List<BlockPos> portones = new ArrayList<>();
+        for (int[] plot : FARM_PLOTS) {
+            int x0 = center.getX() + plot[0] - 1;
+            int x1 = center.getX() + plot[0] + PLOT_WIDTH;
+            int z0 = center.getZ() + plot[1] - 1;
+            int z1 = center.getZ() + plot[1] + PLOT_DEPTH;
+            portones.add(new BlockPos((x0 + x1) / 2, nivel, z0));
+            portones.add(new BlockPos((x0 + x1) / 2, nivel, z1));
+            portones.add(new BlockPos(x0, nivel, (z0 + z1) / 2));
+            portones.add(new BlockPos(x1, nivel, (z0 + z1) / 2));
+        }
+        return portones;
+    }
+
+    // --- LA TABERNA (etapa F: la posada del pueblo) --------------------------------------------------------------
+
+    /** Ancho (X) y fondo (Z) de la taberna, y cuánto sube cada piso. */
+    public static final int TABERNA_ANCHO = 13;
+    public static final int TABERNA_FONDO = 12;
+    /** Altura libre del piso de abajo (el de la taberna) y del de arriba (el de las camas). */
+    private static final int TABERNA_ALTO_PISO = 4;
+
+    /**
+     * Coordenada de la taberna, relativa al centro: <b>pegada al almacén</b> (que está en 18,18), al este, en el
+     * hueco libre entre el almacén, la casa del este y el corral. Lo pidió el jugador: <i>"una taberna donde trabaje
+     * el cocinero y todos vayan a comer ahí... el almacén puede estar a lado de la taberna"</i>.
+     */
+    private static final int[] TABERNA = {24, 16};
+
+    /** La esquina (base) de la taberna, relativa al centro. */
+    public static BlockPos baseDeLaTaberna(BlockPos center) {
+        return center.offset(TABERNA[0], 0, TABERNA[1]);
+    }
+
+    /**
+     * Los <b>puntos de la taberna</b> donde se sienta el pueblo a comer (las cuatro mesas) a la cota del pueblo. Los
+     * usa el goal de la taberna: cada aldeano va al suyo (repartidos por su UUID) y así no se apilan todos en la misma
+     * silla.
+     */
+    public static BlockPos[] puntosDeLaTaberna(BlockPos center, int nivel) {
+        BlockPos base = baseDeLaTaberna(center);
+        int[][] sitios = {{3, 3}, {6, 3}, {3, 8}, {6, 8}, {9, 5}, {9, 9}};
+        BlockPos[] puntos = new BlockPos[sitios.length];
+        for (int i = 0; i < sitios.length; i++) {
+            puntos[i] = new BlockPos(base.getX() + sitios[i][0], nivel, base.getZ() + sitios[i][1]);
+        }
+        return puntos;
+    }
+
+    /** ¿Está la taberna construida? (valla testigo: la barra, que está en el piso de abajo) */
+    public static boolean tabernaConstruida(ServerLevel level, BlockPos center) {
+        BlockPos base = baseDeLaTaberna(center);
+        int nivel = cotaDeLaPlaza(level, center);
+        for (int x = 1; x <= 4; x++) {
+            if (level.getBlockState(new BlockPos(base.getX() + x, nivel, base.getZ() + 6)).is(Blocks.STRIPPED_OAK_LOG)) {
+                return true; // la barra
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Construye la <b>TABERNA</b> (etapa F): dos pisos. Abajo, el <b>comedor</b>: barra, pipas de cerveza (barrels, para
+     * la cerveza que vendrá más adelante), mesas con sus sillas, la <b>cocina</b> (ahumador del cocinero, mesa de
+     * trabajo y caldero) y faroles por todas partes. Arriba, la <b>posada</b>: seis camas para los viajeros (y para la
+     * milicia cuando no está de guardia), con sus arcas. La puerta da al norte, al pueblo, y tiene porche con faroles.
+     * <p>
+     * Todo pasa por {@link #colocar}, así que <b>entra en el plano</b> (invariante I8) y el obrero lo repone.
+     */
+    private static void taberna(ServerLevel level, BlockPos base, int nivel) {
+        int bx = base.getX();
+        int bz = base.getZ();
+        int ancho = TABERNA_ANCHO;
+        int fondo = TABERNA_FONDO;
+        int y1 = nivel + TABERNA_ALTO_PISO;              // suelo del piso de arriba
+        int techo = y1 + TABERNA_ALTO_PISO;              // base del tejado
+        BlockState tablon = Blocks.OAK_PLANKS.defaultBlockState();
+        // 1) SUELO Y FORJADO: piedra debajo, tablones en la capa que se pisa; el forjado del piso de arriba y los
+        //    dos huecos limpios (para que no queden bloques viejos dentro).
+        for (int dx = -1; dx <= ancho; dx++) {
+            for (int dz = -1; dz <= fondo; dz++) {
+                colocar(level, new BlockPos(bx + dx, nivel - 2, bz + dz), Blocks.COBBLESTONE.defaultBlockState(), 3);
+            }
+        }
+        for (int dx = 0; dx < ancho; dx++) {
+            for (int dz = 0; dz < fondo; dz++) {
+                colocar(level, new BlockPos(bx + dx, nivel - 1, bz + dz), tablon, 3);
+                for (int y = nivel; y < y1 - 1; y++) {
+                    colocar(level, new BlockPos(bx + dx, y, bz + dz), Blocks.AIR.defaultBlockState(), 3);
+                }
+                colocar(level, new BlockPos(bx + dx, y1 - 1, bz + dz), tablon, 3);
+                for (int y = y1; y < techo; y++) {
+                    colocar(level, new BlockPos(bx + dx, y, bz + dz), Blocks.AIR.defaultBlockState(), 3);
+                }
+            }
+        }
+        // 2) MUROS (dos pisos): piedra en la base, tablones, postes de tronco en esquinas y medios, ventanas de
+        //    cristal y la PUERTA en el centro de la pared norte (la que mira al pueblo).
+        muroDeLaTaberna(level, bx, bz, ancho, fondo, nivel, true);
+        muroDeLaTaberna(level, bx, bz, ancho, fondo, nivel, false);
+        // 3) LA BARRA (al norte, junto a la puerta), las PIPAS DE CERVEZA detrás y el mostrador de tablones.
+        for (int x = 1; x <= 5; x++) {
+            colocar(level, new BlockPos(bx + x, nivel, bz + 6), Blocks.STRIPPED_OAK_LOG.defaultBlockState(), 3);
+            colocar(level, new BlockPos(bx + x, nivel, bz + 5), Blocks.BARREL.defaultBlockState(), 3);
+        }
+        colocar(level, new BlockPos(bx + 3, nivel, bz + 4), Blocks.BARREL.defaultBlockState(), 3);
+        colocar(level, new BlockPos(bx + 4, nivel, bz + 4), Blocks.BARREL.defaultBlockState(), 3);
+        // 4) LA COCINA (esquina sureste): el AHUMADOR del cocinero, su mesa de trabajo, el caldero y dos barriles.
+        colocar(level, new BlockPos(bx + ancho - 2, nivel, bz + fondo - 2), Blocks.SMOKER.defaultBlockState()
+                .setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING,
+                        Direction.NORTH), 3);
+        colocar(level, new BlockPos(bx + ancho - 3, nivel, bz + fondo - 2), Blocks.CRAFTING_TABLE.defaultBlockState(), 3);
+        colocar(level, new BlockPos(bx + ancho - 2, nivel, bz + fondo - 3), Blocks.CAULDRON.defaultBlockState(), 3);
+        colocar(level, new BlockPos(bx + ancho - 4, nivel, bz + fondo - 2), Blocks.BARREL.defaultBlockState(), 3);
+        // 5) LAS MESAS con sus sillas (poste de valla con plato y cuatro sillas de escalera alrededor).
+        for (int[] mesa : new int[][]{{2, 3}, {6, 3}, {2, 8}, {6, 8}, {9, 9}}) {
+            mesaconSillas(level, new BlockPos(bx + mesa[0], nivel, bz + mesa[1]));
+        }
+        // 6) LA ESCALERA al piso de arriba: cuatro escalones pegados a la pared oeste, con el hueco en el forjado.
+        for (int i = 0; i < TABERNA_ALTO_PISO; i++) {
+            BlockPos escalon = new BlockPos(bx + 1, nivel + i, bz + fondo - 2 - i);
+            colocar(level, escalon, Blocks.OAK_STAIRS.defaultBlockState()
+                    .setValue(StairBlock.FACING, Direction.SOUTH).setValue(StairBlock.HALF, Half.BOTTOM), 3);
+            colocar(level, escalon.above(), Blocks.AIR.defaultBlockState(), 3);
+            colocar(level, new BlockPos(bx + 1, y1 - 1, bz + fondo - 2 - i), Blocks.AIR.defaultBlockState(), 3);
+        }
+        colocar(level, new BlockPos(bx + 1, y1 - 1, bz + fondo - 2 - TABERNA_ALTO_PISO),
+                tablon, 3); // el borde del hueco, para no caerse por él
+        // 7) EL PISO DE ARRIBA: la POSADA. Seis camas (dos filas de tres) con su farol y dos arcas para los viajeros.
+        for (int i = 0; i < 3; i++) {
+            bed(level, new BlockPos(bx + 2 + i * 3, y1, bz + 1), Direction.SOUTH);
+            bed(level, new BlockPos(bx + 2 + i * 3, y1, bz + fondo - 2), Direction.NORTH);
+        }
+        for (int i = 0; i < 3; i++) {
+            colocar(level, new BlockPos(bx + 2 + i * 3, y1 + 2, bz + 3), Blocks.LANTERN.defaultBlockState(), 3);
+            colocar(level, new BlockPos(bx + 2 + i * 3, y1 + 2, bz + fondo - 4), Blocks.LANTERN.defaultBlockState(), 3);
+        }
+        colocar(level, new BlockPos(bx + ancho - 2, y1, bz + fondo - 3), Blocks.CHEST.defaultBlockState()
+                .setValue(ChestBlock.FACING, Direction.WEST), 3);
+        colocar(level, new BlockPos(bx + ancho - 2, y1, bz + fondo - 5), Blocks.CHEST.defaultBlockState()
+                .setValue(ChestBlock.FACING, Direction.WEST), 3);
+        // 8) FAROLES del comedor (colgados del forjado) y del porche: la taberna tiene que verse de noche.
+        for (int[] luz : new int[][]{{2, 2}, {6, 2}, {2, 7}, {6, 7}, {ancho - 3, 5}, {ancho - 2, 9}}) {
+            colocar(level, new BlockPos(bx + luz[0], y1 - 1, bz + luz[1]),
+                    Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true), 3);
+        }
+        // 9) TEJADO: alero de tablones alrededor y una cumbrera a dos aguas.
+        for (int dx = -1; dx <= ancho; dx++) {
+            for (int dz = -1; dz <= fondo; dz++) {
+                boolean borde = dx == -1 || dx == ancho || dz == -1 || dz == fondo;
+                if (borde) {
+                    colocar(level, new BlockPos(bx + dx, techo, bz + dz), tablon, 3);
+                } else {
+                    colocar(level, new BlockPos(bx + dx, techo, bz + dz), tablon, 3);
+                }
+            }
+        }
+        for (int dx = 0; dx < ancho; dx++) {
+            colocar(level, new BlockPos(bx + dx, techo + 1, bz + 1), tablon, 3);
+            colocar(level, new BlockPos(bx + dx, techo + 1, bz + fondo - 2), tablon, 3);
+        }
+        // 10) PORCHE de la puerta (norte): dos postes, tejadillo y dos faroles.
+        colocar(level, new BlockPos(bx + ancho / 2 - 3, nivel, bz - 1), Blocks.OAK_FENCE.defaultBlockState(), 3);
+        colocar(level, new BlockPos(bx + ancho / 2 + 3, nivel, bz - 1), Blocks.OAK_FENCE.defaultBlockState(), 3);
+        for (int dx = -3; dx <= 3; dx++) {
+            colocar(level, new BlockPos(bx + ancho / 2 + dx, nivel + 3, bz - 1), tablon, 3);
+        }
+        colocar(level, new BlockPos(bx + ancho / 2 - 3, nivel + 2, bz - 1),
+                Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true), 3);
+        colocar(level, new BlockPos(bx + ancho / 2 + 3, nivel + 2, bz - 1),
+                Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true), 3);
+    }
+
+    /**
+     * Los <b>cuatro muros</b> de la taberna (los dos pisos a la vez): piedra en la base, tablones, postes de tronco en
+     * las esquinas y en los medios, ventanas de cristal a media altura y la <b>puerta</b> de dos bloques en el centro
+     * de la pared <b>norte</b> (la que mira al pueblo).
+     */
+    private static void muroDeLaTaberna(ServerLevel level, int bx, int bz, int ancho, int fondo, int nivel,
+                                        boolean esNorte) {
+        int[][] lados = esNorte
+                ? new int[][]{{0, 0, ancho, 1}, {0, fondo - 1, ancho, 1}}
+                : new int[][]{{0, 0, 1, fondo}, {ancho - 1, 0, 1, fondo}};
+        for (int[] lado : lados) {
+            int pasos = Math.max(lado[2], lado[3]);
+            for (int i = 0; i < pasos; i++) {
+                int x = bx + lado[0] + (lado[2] > 1 ? i : 0);
+                int z = bz + lado[1] + (lado[3] > 1 ? i : 0);
+                int indice = lado[2] > 1 ? i : i;
+                boolean poste = indice == 0 || indice == pasos - 1 || indice == pasos / 2;
+                boolean puerta = esNorte && lado[1] == 0 && indice == ancho / 2;
+                for (int dy = 0; dy < TABERNA_ALTO_PISO * 2 + 1; dy++) {
+                    BlockPos p = new BlockPos(x, nivel + dy, z);
+                    if (puerta && dy <= 1) {
+                        colocar(level, p, Blocks.OAK_DOOR.defaultBlockState()
+                                .setValue(DoorBlock.FACING, Direction.NORTH)
+                                .setValue(DoorBlock.HALF, dy == 0 ? DoubleBlockHalf.LOWER : DoubleBlockHalf.UPPER), 3);
+                    } else if (dy == 0) {
+                        colocar(level, p, Blocks.COBBLESTONE.defaultBlockState(), 3);
+                    } else if (poste) {
+                        colocar(level, p, Blocks.OAK_LOG.defaultBlockState(), 3);
+                    } else if ((dy == 2 || dy == TABERNA_ALTO_PISO + 2) && indice % 3 == 1) {
+                        colocar(level, p, Blocks.GLASS_PANE.defaultBlockState(), 3);
+                    } else {
+                        colocar(level, p, Blocks.OAK_PLANKS.defaultBlockState(), 3);
+                    }
+                }
+            }
+        }
+    }
+
+    /** Una <b>mesa</b> de la taberna: poste de valla con su plato (placa) y cuatro sillas de escalera alrededor. */
+    private static void mesaconSillas(ServerLevel level, BlockPos centro) {
+        colocar(level, centro, Blocks.OAK_FENCE.defaultBlockState(), 3);
+        colocar(level, centro.above(), Blocks.OAK_PRESSURE_PLATE.defaultBlockState(), 3);
+        // Las sillas miran a la mesa: la de arriba (norte) mira al sur, y así las cuatro.
+        Object[][] sillas = {{1, 0, Direction.WEST}, {-1, 0, Direction.EAST},
+                {0, 1, Direction.NORTH}, {0, -1, Direction.SOUTH}};
+        for (Object[] s : sillas) {
+            // lint:ok I1 porque la Y de `centro` es la COTA de la aldea que le pasa `taberna()` (no la del centro
+            // del objetivo): la mesa se coloca a la capa que se pisa.
+            BlockPos p = new BlockPos(centro.getX() + (int) s[0], centro.getY(), centro.getZ() + (int) s[1]);
+            colocar(level, p, Blocks.OAK_STAIRS.defaultBlockState()
+                    .setValue(StairBlock.FACING, (Direction) s[2])
+                    .setValue(StairBlock.HALF, Half.BOTTOM), 3);
+        }
+    }
+
+    /**
+     * Asegura la <b>taberna</b> en aldeas ya construidas (idempotente: se comprueba por su barra). Se llama al generar,
+     * en la migración y en el latido, como el resto de edificios del pueblo.
+     */
+    public static void asegurarTaberna(ServerLevel level, BlockPos center) {
+        int nivel = cotaDeLaPlaza(level, center);
+        if (nivel <= level.getMinBuildHeight() + 1 || tabernaConstruida(level, center)) {
+            return;
+        }
+        taberna(level, baseDeLaTaberna(center), nivel);
+        DevilRpg.LOGGER.info("[Village] Aldea en {}: taberna construida en {} (dos pisos, {}x{})",
+                center, baseDeLaTaberna(center), TABERNA_ANCHO, TABERNA_FONDO);
     }
 
     /**

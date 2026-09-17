@@ -368,9 +368,29 @@ public final class VillageManager {
      *       diagonal noreste y los sitios de los aldeanos al doble de distancia. Los muros viejos (29 y 36) y las
      *       construcciones del trazado de 36 se <b>derriban</b> al migrar: si no, el pueblo se queda con dos
      *       murallas y con los edificios viejos al lado de los nuevos.</li>
+     *   <li>41: <b>LA TABERNA, EL BOSQUE, EL TERCER BANCAL Y LA BARRACA DE DOS PISOS</b> (etapa F, lo pidió el
+     *       jugador: <i>"una 3ª parcela con su granjero porque hay poca comida; todas las parcelas rodeadas de vallas
+     *       con varias fence gates y mucha iluminación; moved los árboles a un área más grande, un pequeño bosque
+     *       donde el leñador tale y replante; una taberna donde trabaje el cocinero y todos vayan a comer, con dos
+     *       pisos y el segundo con camas; el almacén a lado de la taberna; las barracas más bonitas, con área de
+     *       entrenamiento y un segundo piso con las camas"</i>).
+     *       <ul>
+     *         <li><b>Tercer bancal</b> (-28,34) y <b>segundo granjero</b> (el oficio se repite: los puestos se miran
+     *             por número, no por "está o no está").</li>
+     *         <li>Los <b>tres bancales</b> van <b>cercados</b> con <b>cuatro puertas de valla</b> cada uno (las abre
+     *             el pueblo) y <b>faroles en los postes</b>, que es lo que deja crecer los cultivos también de
+     *             noche.</li>
+     *         <li>La <b>arboleda</b> pasa a ser un <b>bosque de 22×18</b> en la esquina noroeste, con <b>doce</b>
+     *             plazas de árbol: el leñador tala y replanta ahí.</li>
+     *         <li>La <b>TABERNA</b> (24,16), pegada al almacén: abajo el comedor con barra, pipas, mesas y sillas y la
+     *             <b>cocina del cocinero</b> (el ahumador del kiosco se retira); arriba la <b>posada</b> con seis
+     *             camas. El pueblo va allí a <b>comer</b> cuando tiene hambre (y sale con regeneración).</li>
+     *         <li>La <b>barraca</b> pasa a <b>dos pisos</b>: abajo la sala de armas (maniquíes, dianas, hogar y mesa
+     *             de mapas) y arriba las {@code BARRACA_CAMAS} camas.</li>
+     *       </ul></li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 40;
+    public static final int CURRENT_LAYOUT = 41;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -1226,6 +1246,9 @@ public final class VillageManager {
             // COCINA del pueblo (etapa E): el ahumador del cocinero, en el kiosco. Va antes de tirar el plano para
             // que entre en él y el obrero lo reponga.
             VillageGenerator.asegurarCocina(level, center);
+            // Y LA TABERNA (etapa F): el comedor del pueblo con la cocina dentro y la posada arriba. Va antes del
+            // plano, como todo lo demás (y antes de la cocina, que ahora vive en ella: la llama `asegurarCocina`).
+            VillageGenerator.asegurarTaberna(level, center);
             // REBAÑO ESCAPADO (una sola vez, al migrar): antes de que existiera la marca del rebaño, el ganado que se
             // colaba por el portón se perdía sin remedio y el corral se quedaba vacío (y sin carne). Aquí se reconoce
             // el que anda suelto FUERA de la muralla y cerca del corral; luego, en el latido, vuelve a casa.
@@ -1271,9 +1294,12 @@ public final class VillageManager {
         // "a cuadros" (agua a la cota pegada a césped a la cota). Se saca un anillo de playa seca y pareja; en una
         // aldea de tierra adentro no toca nada (lo decide mirando si hay agua a la capa que se pisa en el anillo).
         VillageGenerator.asegurarOrilla(level, center);
-        // COCINA del pueblo (etapa E): el ahumador y la mesa del cocinero, en la plataforma del kiosco. Idempotente
-        // (va aparte de `asegurarKiosco` porque aquél sale antes de tiempo cuando el kiosco ya está).
+        // COCINA del pueblo (etapa E): el ahumador y la mesa del cocinero. Idempotente (va aparte de `asegurarKiosco`
+        // porque aquél sale antes de tiempo cuando el kiosco ya está). Desde la etapa F la cocina vive en la taberna.
         VillageGenerator.asegurarCocina(level, center);
+        // TABERNA (etapa F): el comedor del pueblo (abajo) y la posada (arriba). Idempotente (se comprueba por su
+        // barra): si el jugador se lleva media taberna, el pueblo la vuelve a levantar.
+        VillageGenerator.asegurarTaberna(level, center);
         // REBAÑO: el corral se llena UNA vez (al construirlo o al migrar). Después se mantiene solo, con DOS reglas:
         //   1) RECOGER AL QUE SE ESCAPA. El corral solo tiene el portón, y el pueblo lo abre para pasar (el juego no
         //      deja que un aldeano abra una puerta de valla, de ahí `VillagerGateGoal`): con las horas, el ganado se
@@ -1371,6 +1397,15 @@ public final class VillageManager {
                     && com.chipoodle.devilrpg.entity.goal.VillagerPickupGoal.tieneMateriales(
                             villager.getVillagerData().getProfession())) {
                 asegurarGoalDeRecogidaPorOficio(villager, center, objectiveIndex);
+            }
+        }
+        // LA TABERNA (etapa F): el aldeano con hambre se va a la taberna a comer y a reponer energía (lo pidió el
+        // jugador: "una taberna donde trabaje el cocinero y todos vayan a comer ahí cuando lo necesiten... los
+        // soldados pueden pasar cuando no estén de guardia"). Va a prioridad 6, por debajo de todos los oficios y del
+        // guardia: primero se trabaja y, cuando no hay faena (o el guardia está entre rondas), se va a la mesa.
+        for (Villager villager : aldeanos) {
+            if (!villager.isBaby()) {
+                asegurarGoalDeLaTaberna(villager, center, objectiveIndex);
             }
         }
         // GUARDIA (milicia): los aldeanos adultos que SOBRAN (cubiertos los puestos fijos: granjero, los dos
@@ -1817,6 +1852,21 @@ public final class VillageManager {
         }
         villager.goalSelector.addGoal(4, new com.chipoodle.devilrpg.entity.goal.VillagerSmithGoal(villager, center,
                 objectiveIndex));
+    }
+
+    /**
+     * Le pone al aldeano su goal de <b>ir a comer a la taberna</b> (etapa F). Va a prioridad
+     * {@code VillagerTavernGoal.PRIORIDAD} (por debajo de su oficio y del guardia): el aldeano come cuando de verdad
+     * tiene hambre y no tiene faena que hacer.
+     */
+    private static void asegurarGoalDeLaTaberna(Villager villager, BlockPos center, int objectiveIndex) {
+        for (WrappedGoal wrapped : villager.goalSelector.getAvailableGoals()) {
+            if (wrapped.getGoal() instanceof com.chipoodle.devilrpg.entity.goal.VillagerTavernGoal) {
+                return;
+            }
+        }
+        villager.goalSelector.addGoal(com.chipoodle.devilrpg.entity.goal.VillagerTavernGoal.PRIORIDAD,
+                new com.chipoodle.devilrpg.entity.goal.VillagerTavernGoal(villager, center, objectiveIndex));
     }
 
     /**
@@ -2465,8 +2515,14 @@ public final class VillageManager {
         }
     }
 
-    /** Cuándo comió por última vez ese aldeano (gameTime). La primera vez que se le ve, come ahora. */
-    private static long ultimaComida(ServerLevel level, Villager villager) {
+    /**
+     * Cuándo comió por última vez ese aldeano (gameTime). La primera vez que se le ve, come ahora.
+     * <p>
+     * Público porque lo usa el goal de la <b>taberna</b> ({@code VillagerTavernGoal}): el aldeano que tiene hambre
+     * (lleva {@link #EAT_INTERVAL_TICKS} o más sin comer) se va a la taberna a comer, y allí se le marca con
+     * {@link #marcarComida} y se le quita la ración abstracta del minuto (nadie come dos veces).
+     */
+    public static long ultimaComida(ServerLevel level, Villager villager) {
         CompoundTag datos = villager.getPersistentData();
         if (!datos.contains(COMIDA_TAG)) {
             datos.putLong(COMIDA_TAG, level.getGameTime());
@@ -2475,7 +2531,13 @@ public final class VillageManager {
         return datos.getLong(COMIDA_TAG);
     }
 
-    private static void marcarComida(ServerLevel level, Villager villager) {
+    /** ¿Ese aldeano tiene <b>hambre</b>? (lleva una ración sin comer: el mismo criterio que las raciones del minuto) */
+    public static boolean tieneHambre(ServerLevel level, Villager villager) {
+        return level.getGameTime() - ultimaComida(level, villager) >= EAT_INTERVAL_TICKS;
+    }
+
+    /** Marca que ese aldeano acaba de comer (así el reparto abstracto del minuto no le da otra ración). */
+    public static void marcarComida(ServerLevel level, Villager villager) {
         villager.getPersistentData().putLong(COMIDA_TAG, level.getGameTime());
     }
 
