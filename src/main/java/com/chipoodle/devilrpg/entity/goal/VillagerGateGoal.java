@@ -26,10 +26,12 @@ import java.util.WeakHashMap;
  * {@code DoorBlock}, así que con un portón el ganadero se quedaría <b>fuera del gallinero</b> (sin poder recoger los
  * huevos) o <b>encerrado</b> en el corral. Este goal es el que se lo abre al acercarse y se lo cierra al pasar.
  * <p>
- * Dos reglas para que sea educado:
+ * Tres reglas para que sea educado:
  * <ul>
  *   <li><b>Solo abre</b> con un aldeano del pueblo pegado al portón: el ganado no se escapa por un portón abierto
  *       todo el día.</li>
+ *   <li><b>Con un animal en el hueco no se abre</b> (y si se abre, se cierra): el portón es el único sitio por donde
+ *       se escapa el rebaño. Se le da un margen corto de espera para que un aldeano no se quede encerrado.</li>
  *   <li><b>Solo cierra</b> el portón que abrió el propio pueblo ({@link #ABIERTOS}): si lo abre el jugador, se queda
  *       como él lo deje.</li>
  * </ul>
@@ -48,6 +50,18 @@ public class VillagerGateGoal extends Goal {
      * detrás.
      */
     private static final double RADIO = 16.0D;
+    /**
+     * Si hay un <b>animal del corral</b> pegado al portón, no se le abre: es por donde se escapa el ganado. El portón
+     * es el único hueco de la cerca del corral y el pueblo lo abre muchas veces al día (a por los huevos, a la pata
+     * del cobertizo, a dormir...), así que con las horas el rebaño se colaba y se perdía: medido en el guardado del
+     * jugador, quedaba <b>una vaca</b> dentro y el resto repartido a 80-130 bloques del pueblo.
+     */
+    private static final double ANIMAL_AL_PORTON = 2.5D;
+    /**
+     * Pero <b>no para siempre</b>: si el animal no se aparta en este tiempo, el portón se abre igual. Un aldeano
+     * encerrado en el corral por una vaca tercosa no puede hacer su faena (y el ganadero vive ahí dentro).
+     */
+    private static final int ESPERA_MAXIMA = 600;
 
     /**
      * Portones que ha abierto <b>el pueblo</b> (por nivel y posición comprimida): solo ésos se vuelven a cerrar. El
@@ -61,6 +75,8 @@ public class VillagerGateGoal extends Goal {
     private BlockPos[] portones;
     @Nullable
     private BlockPos porton;
+    /** Ticks que lleva esperando a que el animal pegado al portón se aparte (ver {@link #ESPERA_MAXIMA}). */
+    private int esperando;
 
     public VillagerGateGoal(Villager villager, BlockPos center) {
         this.villager = villager;
@@ -100,8 +116,18 @@ public class VillagerGateGoal extends Goal {
         if (!abierto) {
             olvidar(level, porton); // si el jugador lo cerró a mano, ya no es "nuestro"
             if (distancia <= ABRIR) {
+                // El ganado no cruza por un portón abierto: con un animal pegado se espera a que se aparte un poco
+                // (pero no para siempre, que el aldeano no se quede encerrado).
+                if (animalPegado(level, porton) && esperando++ < ESPERA_MAXIMA) {
+                    return;
+                }
+                esperando = 0;
                 abrir(level, porton, estado);
             }
+        } else if (animalPegado(level, porton) && distancia > ABRIR) {
+            // Abierto por el pueblo y con un animal en el hueco: se cierra YA (aunque el aldeano ande cerca), que es
+            // por donde se escapan. Si el aldeano está cruzando (pegado al portón), se le deja pasar.
+            cerrar(level, porton, estado);
         } else if (distancia > CERRAR && nadieCerca(level, porton)) {
             cerrar(level, porton, estado);
         }
@@ -110,6 +136,7 @@ public class VillagerGateGoal extends Goal {
     @Override
     public void stop() {
         porton = null;
+        esperando = 0;
     }
 
     // --- los portones -------------------------------------------------------------------------------
@@ -163,6 +190,17 @@ public class VillagerGateGoal extends Goal {
     /** ¿Está el portón despejado? (si hay un aldeano pegado, NO se cierra: podría estar cruzando). */
     private boolean nadieCerca(ServerLevel level, BlockPos porton) {
         return level.getEntitiesOfClass(Villager.class, new AABB(porton).inflate(CERRAR)).isEmpty();
+    }
+
+    /** ¿Hay un animal del corral en el hueco del portón? (entonces no se abre: se escaparía). */
+    private static boolean animalPegado(ServerLevel level, BlockPos porton) {
+        for (net.minecraft.world.entity.animal.Animal animal : level.getEntitiesOfClass(
+                net.minecraft.world.entity.animal.Animal.class, new AABB(porton).inflate(ANIMAL_AL_PORTON))) {
+            if (VillageGenerator.especiesDelCorral().contains(animal.getType())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private double distancia(BlockPos porton) {

@@ -852,7 +852,59 @@ eligió **alisar la línea de agua**.
   (253-259), o sea que la orilla queda **redonda**.
 - **Migración 36** (`CURRENT_LAYOUT`): entra en el plano y el obrero también mantiene la orilla.
 
-### 3b.19 Lo que viene
+### 3b.19 El rebaño VUELVE A CASA y la pareja no se pierde (la carne de la granja)
+
+El jugador avisó de que **"parece que no está generando carne"** y pidió que el que cuida a los animales —**el
+ganadero**, oficio `SHEPHERD`, goal `VillagerAnimalFarmGoal`— **los aparee para que siempre haya una pareja**,
+"similar a como se hace en la guarida".
+
+- **El diagnóstico, medido en su guardado** (solo lectura): dentro del corral quedaba **una vaca** (a 3,8 bloques de
+  su centro) y todo el rebaño andaba **suelto**, a **80-87 bloques** del corral (y el que más lejos, a 130): los que
+  estaban **apiñados** en un mismo bloque de y=64 (16 animales) y los demás repartidos por el sur. Un corral **vacío no
+  da carne**: el ganadero solo mira **dentro** del corral (cría, sacrifica y recoge ahí), así que sin animales no
+  cría, no sacrifica y no baja nada al almacén. Y el "rebaño inicial" solo se reponía si el corral estaba **vacío del
+  todo**, con 3 días de espera: con **una** vaca dentro, la granja se quedaba muerta para siempre.
+- **Por dónde se escapaban**: el corral tiene **un solo hueco**, el **portón de valla**, y el pueblo se lo abre muchas
+  veces al día (a por los huevos, al cobertizo, a dormir) porque el juego no deja que un aldeano abra una puerta de
+  valla (de ahí `VillagerGateGoal`). Con las horas, el ganado cruzaba por ese hueco.
+- **Los tres arreglos** (migración **37**, `CURRENT_LAYOUT`):
+  1. **El rebaño va marcado** (`DevilRpgDelCorral`, en los datos persistentes del animal) al soltarlo. El que se
+     pierde (a más de **24** bloques del corral) **vuelve** al corral, a un hueco libre calculado al vuelo (las
+     gallinas, a su gallinero). Los animales sueltos **sin marca no se tocan**: pueden ser del jugador.
+  2. **Al que le falta pareja se la trae el pueblo** (`reponerParejasDelCorral`): si a una especie le quedan menos de
+     **dos adultos** ya no puede criar **nunca** (ni carne de vaca, ni lana, ni huevos), así que se le repone la pareja
+     en su rincón. Misma espera larga (3 días) que el rebaño inicial, para que no sea un grifo de carne.
+  3. **El ganadero cría con pareja y nunca la sacrifica**: el sacrificio (por exceso o por hambre) exige **más de dos
+     adultos** de esa especie, y la cría exige **dos adultos** disponibles (vanilla necesita dos enamorados), así que
+     no se malgasta comida en un animal solo. Es el mismo criterio que la **pareja de la guarida**.
+- **Además, el portón no se les abre en las narices**: `VillagerGateGoal` no abre (y cierra) si hay un **animal del
+  corral a 2,5 bloques** del hueco, con **600 ticks** de margen para que un aldeano no se quede encerrado por una vaca
+  tercosa.
+- **Reconocimiento del rebaño viejo** (una sola vez, al migrar): los animales de las especies del corral que sean
+  **persistentes** (el juego solo marca así a los que alguien ha criado o tocado: un bicho salvaje no lo es) y estén
+  **fuera de la muralla** y a menos de **96** bloques del corral se dan por del pueblo y vuelven a casa. Lo de
+  **dentro de la muralla no se toca jamás**: si el jugador tiene allí su corral, son suyos.
+
+### 3b.20 Los PICOS DE LAS ESQUINAS (los "triángulos de tierra")
+
+El jugador vio **triángulos de tierra en cada esquina** de la meseta y pidió quitarlos.
+
+- **La causa**: el suelo llano del pueblo es un **cuadrado** (`nivelar` allana de `-radio` a `+radio` en X y en Z) y el
+  **talud** es un **círculo** (mide la distancia con raíz). En las diagonales el cuadrado llega a `38 * √2` = **53,7** y
+  el talud solo baja hasta `38 + 10` = **48**: a cada esquina le sobraba un **triángulo allanado a la cota**, colgado
+  sobre el mar y con las **caras del corte a la vista** (tierra).
+- **Medido en su guardado**: en la diagonal, el talud bajaba hasta **y=58** en los pasos 30-33 y en el 34 ya estaba
+  otra vez a la cota (y=62) hasta el borde del agua; el corte contra el mar era **vertical**. La simulación del
+  arreglo da **45 celdas por esquina** (180 en total) rebajadas de la cota a la base del talud.
+- **El arreglo** (`quitarPicosDeLasEsquinas`, y su pasada idempotente `asegurarTalud` para aldeas ya construidas): lo
+  que sobra se **rebaja hasta la base del talud** (una terraza baja que, en una aldea de mar, queda **por debajo del
+  agua** y desaparece de la vista). Solo se toca lo que está **dentro del cuadrado allanado**, **más allá del talud** y
+  **a la altura del relleno del pueblo** (`cota - 1`): una **loma natural** en esa esquina **no se toca**.
+- **Verificado con una simulación sobre su guardado** (solo lectura): las cuatro esquinas pasan de un triángulo de
+  césped **a la cota** a césped **en la base del talud** (`y=57`, sumergido), sin caras de tierra a la vista.
+- **Migración 37** (`CURRENT_LAYOUT`), en el mismo cambio que el rebaño.
+
+### 3b.21 Lo que viene
 
 - **Milicia**: ✅ completa (barraca, oficio, combate, escudo que bloquea, modelo propio, marcha a la guarida).
 - **Leñador/reforestador**: ✅ (tala y replanta, y la cadena de la madera del herrero).
@@ -862,6 +914,7 @@ eligió **alisar la línea de agua**.
 - **Gallinero y portones de valla**: ✅ (ver 3b.16).
 - **Arboleda del pueblo (la madera de una aldea sin bosque)**: ✅ (ver 3b.17).
 - **Orilla seca de la aldea de mar**: ✅ (ver 3b.18).
+- **Rebaño que vuelve a casa, pareja garantizada y esquinas del talud**: ✅ (ver 3b.19 y 3b.20).
 - **Lo siguiente**: la **verificación en partida** de la cadena entera de la comida (huerta → despensa → cocina →
   raciones) y, de ahí, lo que pida el jugador.
 

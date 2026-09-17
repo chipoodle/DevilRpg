@@ -648,6 +648,15 @@ public final class VillageGenerator {
     private static final List<EntityType<? extends net.minecraft.world.entity.animal.Animal>> ANEXO_ESPECIES =
             List.of(EntityType.COW, EntityType.SHEEP, EntityType.PIG, EntityType.CHICKEN);
 
+    /**
+     * Adultos que hacen falta para que una especie del corral pueda <b>criar</b>. Con <b>dos</b> el ganadero tiene
+     * pareja; con <b>uno solo</b> esa especie no se reproduce <b>nunca</b> más y el pueblo se queda sin su carne (o sin
+     * lana, o sin huevos). Lo pidió el jugador: "que los aparee para que siempre haya una pareja".
+     */
+    public static final int PAREJA_MINIMA = 2;
+    /** Gallinas que se consideran <b>bandada</b>: con menos, ni huevos ni pollos para la despensa. */
+    public static final int GALLINAS_MINIMAS = 4;
+
     /** Las especies del corral (para que el ganadero recorra exactamente las mismas que se sueltan aquí). */
     public static List<EntityType<? extends net.minecraft.world.entity.animal.Animal>> especiesDelCorral() {
         return ANEXO_ESPECIES;
@@ -1259,16 +1268,215 @@ public final class VillageGenerator {
      * {@link #ANEXO_REBANO_ESPERA_TICKS} (ver {@code VillageManager}).
      */
     public static void criarRebanoInicial(ServerLevel level, BlockPos center) {
-        BlockPos base = baseDeAnexo(center);
         int nivel = cotaDeLaPlaza(level, center);
-        criarAnimales(level, EntityType.COW, new BlockPos(base.getX() - 2, nivel, base.getZ() - 4), 2);
-        criarAnimales(level, EntityType.SHEEP, new BlockPos(base.getX() + 1, nivel, base.getZ() + 4), 2);
-        criarAnimales(level, EntityType.PIG, new BlockPos(base.getX() - 4, nivel, base.getZ() + 1), 2);
-        // Las GALLINAS, DENTRO del gallinero: encerradas desde el primer día (una valla sola no las para y el
-        // jugador las quiere dentro, con sus huevos a mano del ganadero).
-        criarAnimales(level, EntityType.CHICKEN, centroDelGallinero(center, nivel), 4);
+        for (EntityType<? extends net.minecraft.world.entity.animal.Animal> tipo : ANEXO_ESPECIES) {
+            criarAnimales(level, tipo, sitioDelRebano(tipo, center, nivel),
+                    tipo == EntityType.CHICKEN ? 4 : 2);
+        }
         DevilRpg.LOGGER.info("[Village] Aldea en {}: rebano inicial del corral anexo ({} animales)",
                 center, animalesDelCorral(level, center).size());
+    }
+
+    /**
+     * <b>Repone la pareja</b> de una especie (dos adultos) en su rincón del corral, marcados como del rebaño.
+     * <p>
+     * Es la red de seguridad de la <b>pareja</b> (lo pidió el jugador: "que siempre haya una pareja"): mientras a una
+     * especie le queden <b>dos</b> animales, el ganadero puede criarla; con <b>uno solo</b> ya no hay cría posible y
+     * esa especie no volvería <b>nunca</b> (ni carne de vaca, ni lana, ni huevos). Con la misma espera larga que el
+     * rebaño inicial, para que siga sin ser un grifo de carne.
+     */
+    public static void criarParejaDe(ServerLevel level, BlockPos center,
+                                     EntityType<? extends net.minecraft.world.entity.animal.Animal> tipo,
+                                     int cuantos) {
+        if (cuantos <= 0) {
+            return;
+        }
+        int nivel = cotaDeLaPlaza(level, center);
+        criarAnimales(level, tipo, sitioDelRebano(tipo, center, nivel), cuantos);
+        DevilRpg.LOGGER.info("[Village] Aldea en {}: {} {} repuestos en el corral (se habia quedado sin pareja)",
+                center, cuantos, tipo.getDescription().getString());
+    }
+
+    /**
+     * ¿A alguna especie del corral le falta la <b>pareja</b> (menos de dos adultos)? Entonces no hay cría posible y el
+     * pueblo tiene que traer animales. Devuelve {@code true} si ha repuesto alguna (y deja el log).
+     */
+    public static boolean reponerParejasDelCorral(ServerLevel level, BlockPos center) {
+        List<net.minecraft.world.entity.animal.Animal> corral = animalesDelCorral(level, center);
+        boolean repuesta = false;
+        for (EntityType<? extends net.minecraft.world.entity.animal.Animal> tipo : ANEXO_ESPECIES) {
+            int adultos = 0;
+            for (net.minecraft.world.entity.animal.Animal animal : corral) {
+                if (animal.getType() == tipo && !animal.isBaby()) {
+                    adultos++;
+                }
+            }
+            int faltan = tipo == EntityType.CHICKEN ? GALLINAS_MINIMAS - adultos : PAREJA_MINIMA - adultos;
+            if (faltan > 0) {
+                criarParejaDe(level, center, tipo, faltan);
+                repuesta = true;
+            }
+        }
+        return repuesta;
+    }
+
+    /** Dónde vive (y dónde se suelta) cada especie dentro del corral: su rincón de siempre. */
+    private static BlockPos sitioDelRebano(EntityType<?> tipo, BlockPos center, int nivel) {
+        BlockPos base = baseDeAnexo(center);
+        if (tipo == EntityType.SHEEP) {
+            return new BlockPos(base.getX() + 1, nivel, base.getZ() + 4);
+        }
+        if (tipo == EntityType.PIG) {
+            return new BlockPos(base.getX() - 4, nivel, base.getZ() + 1);
+        }
+        if (tipo == EntityType.CHICKEN) {
+            // Las GALLINAS, DENTRO del gallinero: encerradas desde el primer día (una valla sola no las para y el
+            // jugador las quiere dentro, con sus huevos a mano del ganadero).
+            return centroDelGallinero(center, nivel);
+        }
+        return new BlockPos(base.getX() - 2, nivel, base.getZ() - 4); // vacas
+    }
+
+    /** Marca (datos persistentes) que dice que ese animal es <b>del corral de la aldea</b> y viaja con él. */
+    private static final String REBANO_TAG = "DevilRpgDelCorral";
+    /** A qué distancia del corral se considera que un animal del rebaño se ha <b>perdido</b> (el corral tiene radio 7). */
+    private static final double REBANO_PERDIDO = ANEXO_RADIO + 17;
+    /**
+     * Radio (desde el corral) en el que se <b>reconoce</b> al ganado del pueblo en una partida vieja. Es ancho a
+     * propósito: medido en el guardado del jugador, el rebaño escapado se había ido a <b>80-87 bloques</b> del corral
+     * (y el que más lejos, a 130). Se usa <b>una sola vez</b>, al migrar, y nunca dentro de la muralla: allí manda el
+     * jugador (sus corrales y sus animales no se tocan).
+     */
+    private static final double REBANO_ADOPCION = ANEXO_RADIO + 89;
+
+    /**
+     * <b>Reconoce</b> (una sola vez, al migrar) al ganado del pueblo que se había escapado antes de que existiera la
+     * marca. Solo mira animales que:
+     * <ul>
+     *   <li>son de las especies del corral,</li>
+     *   <li>son <b>persistentes</b> (el juego solo los marca así cuando alguien los ha criado o tocado: un bicho
+     *       salvaje no lo es, y los del pueblo sí, que se sueltan con la marca puesta), y</li>
+     *   <li>están <b>fuera de la muralla</b> y a menos de {@link #REBANO_ADOPCION} del corral.</li>
+     * </ul>
+     * Lo de dentro de la muralla no se toca jamás: si el jugador tiene allí su corral, son suyos.
+     */
+    public static int adoptarGanadoPerdido(ServerLevel level, BlockPos center) {
+        int nivel = cotaDeLaPlaza(level, center);
+        if (nivel <= level.getMinBuildHeight() + 1 || !anexoConstruido(level, center)) {
+            return 0;
+        }
+        BlockPos base = baseDeAnexo(center);
+        AABB caja = new AABB(base).inflate(REBANO_ADOPCION + 8, 24.0D, REBANO_ADOPCION + 8);
+        int adoptados = 0;
+        for (net.minecraft.world.entity.animal.Animal animal
+                : level.getEntitiesOfClass(net.minecraft.world.entity.animal.Animal.class, caja)) {
+            if (!ANEXO_ESPECIES.contains(animal.getType())
+                    || animal.getPersistentData().getBoolean(REBANO_TAG)
+                    || !animal.isPersistenceRequired()) {
+                continue;
+            }
+            double alCorral = distanciaEnXZ(animal, base.getX() + 0.5D, base.getZ() + 0.5D);
+            double alPueblo = distanciaEnXZ(animal, center.getX() + 0.5D, center.getZ() + 0.5D);
+            if (alCorral > REBANO_ADOPCION || alPueblo <= LEVEL_RADIUS + 2) {
+                continue; // demasiado lejos, o dentro de la muralla (ahí manda el jugador)
+            }
+            animal.getPersistentData().putBoolean(REBANO_TAG, true);
+            adoptados++;
+        }
+        if (adoptados > 0) {
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: {} animal(es) sueltos reconocidos como ganado del pueblo"
+                    + " (estaban fuera de la muralla, a menos de {} bloques del corral)", center, adoptados,
+                    (int) REBANO_ADOPCION);
+        }
+        return adoptados;
+    }
+
+    /**
+     * Distancia <b>horizontal</b> (XZ) de una entidad a un punto: la aldea es un recinto en XZ y la Y de un animal
+     * que se ha escapado no dice nada de lo lejos que está (invariante I2).
+     */
+    private static double distanciaEnXZ(net.minecraft.world.entity.Entity entidad, double x, double z) {
+        double dx = entidad.getX() - x;
+        double dz = entidad.getZ() - z;
+        return Math.sqrt(dx * dx + dz * dz);
+    }
+
+    /**
+     * <b>Marca el rebaño y recoge a los que se han perdido.</b>
+     * <p>
+     * Hace falta porque el ganado se escapa por el <b>portón</b> cuando el pueblo se lo abre: medido en el guardado del
+     * jugador, su corral tenía <b>1 vaca</b> dentro y <b>8 vacas, 6 ovejas, 6 gallinas y 2 puercos</b> repartidos a
+     * 76-83 bloques del pueblo. Un corral vacío <b>no da carne</b>: el ganadero no ve animales, así que no puede criar
+     * ni sacrificar, y la granja entera se queda muerta.
+     * <p>
+     * Los que están <b>dentro</b> del corral se marcan (el rebaño inicial y sus crías ya son del pueblo); los que
+     * andan sueltos y lleven la marca <b>vuelven</b> al corral. Los que anden sueltos <b>sin</b> marca no se tocan:
+     * podrían ser del jugador. Es lo que hace un pastor de verdad: traer de vuelta a la res que se le fue.
+     */
+    public static int recogerGanadoPerdido(ServerLevel level, BlockPos center) {
+        int nivel = cotaDeLaPlaza(level, center);
+        if (nivel <= level.getMinBuildHeight() + 1 || !anexoConstruido(level, center)) {
+            return 0;
+        }
+        BlockPos base = baseDeAnexo(center);
+        AABB caja = new AABB(base).inflate(REBANO_PERDIDO + 24, 24.0D, REBANO_PERDIDO + 24);
+        int devueltos = 0;
+        for (net.minecraft.world.entity.animal.Animal animal
+                : level.getEntitiesOfClass(net.minecraft.world.entity.animal.Animal.class, caja)) {
+            if (!ANEXO_ESPECIES.contains(animal.getType())) {
+                continue;
+            }
+            double distancia = distanciaEnXZ(animal, base.getX() + 0.5D, base.getZ() + 0.5D);
+            if (distancia <= REBANO_PERDIDO) {
+                animal.getPersistentData().putBoolean(REBANO_TAG, true); // está en el corral: es del pueblo
+                continue;
+            }
+            if (!animal.getPersistentData().getBoolean(REBANO_TAG)) {
+                continue; // suelto y sin marca: no es nuestro
+            }
+            BlockPos dentro = destinoDelAnimal(level, center, nivel, animal, devueltos);
+            animal.moveTo(dentro.getX() + 0.5D, dentro.getY(), dentro.getZ() + 0.5D, animal.getYRot(), 0.0F);
+            animal.setDeltaMovement(0.0D, 0.0D, 0.0D);
+            devueltos++;
+        }
+        if (devueltos > 0) {
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: {} animal(es) del corral que se habian perdido, de vuelta",
+                    center, devueltos);
+        }
+        return devueltos;
+    }
+
+    /** Dónde se deja a un animal que vuelve: las gallinas a su gallinero y el resto a un hueco libre del corral. */
+    private static BlockPos destinoDelAnimal(ServerLevel level, BlockPos center, int nivel,
+                                             net.minecraft.world.entity.animal.Animal animal, int indice) {
+        if (animal instanceof net.minecraft.world.entity.animal.Chicken) {
+            BlockPos gallinero = centroDelGallinero(center, nivel);
+            return new BlockPos(gallinero.getX() + indice % 4, gallinero.getY(), gallinero.getZ() + indice % 2);
+        }
+        List<BlockPos> libres = huecosLibresDelCorral(center, nivel);
+        return libres.isEmpty() ? puntoDeApoyoAnexo(level, center) : libres.get(indice % libres.size());
+    }
+
+    /**
+     * Huecos del corral donde se puede soltar un animal sin meterlo en el bebedero ni en el gallinero (que es de las
+     * gallinas). Se calculan al vuelo: son pocos bloques y esto solo corre cuando hay ganado perdido que recoger.
+     */
+    private static List<BlockPos> huecosLibresDelCorral(BlockPos center, int nivel) {
+        BlockPos base = baseDeAnexo(center);
+        List<BlockPos> libres = new ArrayList<>();
+        for (int dx = -ANEXO_RADIO + 2; dx <= ANEXO_RADIO - 2; dx++) {
+            for (int dz = -ANEXO_RADIO + 2; dz <= ANEXO_RADIO - 2; dz++) {
+                if (esBebedero(dx, dz)) {
+                    continue; // el agua es para beber, no para pisarla
+                }
+                if (dx >= GALLINERO_X0 - 1 && dx <= GALLINERO_X1 + 1
+                        && dz >= GALLINERO_Z0 - 1 && dz <= GALLINERO_Z1 + 1) {
+                    continue; // dentro del gallinero no se mete una vaca
+                }
+                libres.add(new BlockPos(base.getX() + dx, nivel, base.getZ() + dz));
+            }
+        }
+        return libres;
     }
 
     /** Suelta {@code cuantos} animales de esa especie, separados un poco para que no se apilen. */
@@ -1284,6 +1492,9 @@ public final class VillageGenerator {
             // Persistentes: que el juego no se los lleve por lejanía (el corral está fuera del muro y a veces el
             // jugador está lejos). Se quedan donde viven.
             animal.setPersistenceRequired();
+            // Y MARCADOS como del rebaño del pueblo: es lo que permite reconocerlos si se escapan por el portón y
+            // traerlos de vuelta sin tocar a los animales sueltos del jugador (ver {@link #recogerGanadoPerdido}).
+            animal.getPersistentData().putBoolean(REBANO_TAG, true);
             level.addFreshEntity(animal);
         }
     }
@@ -2740,6 +2951,78 @@ public final class VillageGenerator {
                 }
             }
         }
+        // Y, por último, los PICOS DE LAS ESQUINAS (ver el método): la meseta es CUADRADA y el talud es REDONDO, así
+        // que las cuatro esquinas se quedaban sobresaliendo del talud, como triángulos de tierra pegados a la isla.
+        quitarPicosDeLasEsquinas(level, center, innerRadius, baseY);
+    }
+
+    /**
+     * <b>Quita los picos de las cuatro esquinas</b> de la meseta: los vio el jugador y los llamó "triángulos de
+     * tierra de cada esquina".
+     * <p>
+     * El motivo es que el suelo llano de la aldea es un <b>cuadrado</b> ({@code nivelar} allana de {@code -radio} a
+     * {@code +radio} en X y en Z) y el talud es un <b>círculo</b> (mide la distancia con raíz). En las diagonales el
+     * cuadrado llega a {@code radio * √2} = <b>53,7</b> y el talud solo baja hasta {@code radio + 10} = <b>48</b>, así
+     * que a cada esquina le sobraba un <b>triángulo</b> allanado a la cota del pueblo, colgado por encima del mar y con
+     * las paredes del corte a la vista (tierra). Medido en el guardado del jugador: en la diagonal, el talud bajaba
+     * hasta la Y 58 en los pasos 30-33 y en el 34 ya estaba otra vez a la cota, y de ahí al agua el borde era un
+     * corte vertical.
+     * <p>
+     * Lo que sobra se <b>rebaja hasta la base del talud</b> (una terraza baja, que en una aldea de mar queda por
+     * debajo del agua y desaparece de la vista) y solo se toca:
+     * <ul>
+     *   <li>lo que está <b>dentro del cuadrado</b> que allanó el pueblo ({@code |x|,|z| <= radio}), y</li>
+     *   <li>lo que está <b>más allá del talud</b> ({@code dist > radio + SLOPE_WIDTH}), o sea el pico, y</li>
+     *   <li>solo si su capa de arriba está <b>a la altura del relleno del pueblo</b> ({@code baseY - 1}): una loma
+     *       natural (que también puede caer en esa esquina) <b>no se toca</b>.</li>
+     * </ul>
+     */
+    private static void quitarPicosDeLasEsquinas(ServerLevel level, BlockPos center, int radius, int baseY) {
+        int outer = radius + SLOPE_WIDTH;
+        int sueloBajo = baseY - SLOPE_HEIGHT;
+        int celdas = 0;
+        for (int x = -radius; x <= radius; x++) {
+            for (int z = -radius; z <= radius; z++) {
+                double dist = Math.sqrt(x * x + z * z);
+                if (dist <= outer) {
+                    continue; // dentro del talud no hay pico: el talud ya bajó esa celda
+                }
+                int px = center.getX() + x;
+                int pz = center.getZ() + z;
+                int g = groundY(level, px, pz);
+                if (g != baseY - 1) {
+                    continue; // terreno natural (una loma, una duna): no es un pico del allanado
+                }
+                for (int y = sueloBajo; y <= g; y++) {
+                    BlockPos p = new BlockPos(px, y, pz);
+                    if (esTerrenoRecortable(level.getBlockState(p))) {
+                        colocar(level, p, Blocks.AIR.defaultBlockState(), 3);
+                    }
+                }
+                BlockPos surface = new BlockPos(px, sueloBajo - 1, pz);
+                if (level.getBlockState(surface).is(Blocks.DIRT)) {
+                    colocar(level, surface, Blocks.GRASS_BLOCK.defaultBlockState(), 3);
+                }
+                celdas++;
+            }
+        }
+        if (celdas > 0) {
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: {} bloques de los picos de las esquinas rebajados a la"
+                    + " base del talud (sobresalian del borde allanado)", center, celdas);
+        }
+    }
+
+    /**
+     * Repasa el <b>talud</b> de una aldea ya construida: le quita los picos de las esquinas (ver
+     * {@link #quitarPicosDeLasEsquinas}). Es idempotente y solo toca terreno allanado por el pueblo, así que se puede
+     * llamar en la migración sin miedo: en una aldea al día no hace nada.
+     */
+    public static void asegurarTalud(ServerLevel level, BlockPos center) {
+        int cota = cotaDeLaPlaza(level, center);
+        if (cota <= level.getMinBuildHeight() + 1) {
+            return;
+        }
+        quitarPicosDeLasEsquinas(level, center, LEVEL_RADIUS, cota);
     }
 
     /**

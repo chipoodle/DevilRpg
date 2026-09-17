@@ -69,8 +69,12 @@ public class VillagerAnimalFarmGoal extends Goal {
     private static final int COMIDA_PARA_CRIAR = 24;
     /** Por debajo de esto, la aldea está apretada y el ganadero sacrifica un adulto (si hay de sobra). */
     private static final int COMIDA_PARA_SACRIFICAR = 12;
-    /** Animales menos uno: nunca se baja de esta pareja (la granja tiene que poder seguir criando). */
-    private static final int PAREJA_MINIMA = 2;
+    /**
+     * Adultos que forman la <b>pareja</b> de una especie. La misma cifra que usa el pueblo para reponerla
+     * ({@link VillageGenerator#PAREJA_MINIMA}): por debajo de ella el ganadero no cría (vanilla pide dos adultos) y
+     * nunca sacrifica.
+     */
+    private static final int PAREJA_MINIMA = VillageGenerator.PAREJA_MINIMA;
     /** Productos que lleva encima antes de bajarlos al almacén. */
     private static final int LLEVAR_AL_ALMACEN = 4;
     /** Radio en el que se recogen los drops de un sacrificio (y los huevos del corral). */
@@ -150,17 +154,20 @@ public class VillagerAnimalFarmGoal extends Goal {
             target = presa.blockPosition();
             return true;
         }
-        // 3) CRÍA: solo si al pueblo le sobra comida y a esa especie le queda hueco.
-        if (comida >= COMIDA_PARA_CRIAR) {
-            EntityType<? extends Animal> aCriar = elegirEspecieACriar(corral);
-            if (aCriar != null && hayComidaParaCriar(level, aCriar)) {
-                Animal pareja = adultoSinEnamorar(level, aCriar);
-                if (pareja != null) {
-                    fase = Fase.CRIAR;
-                    especie = aCriar;
-                    target = pareja.blockPosition();
-                    return true;
-                }
+        // 3) CRÍA. Dos motivos, y el primero NO se salta nunca:
+        //    a) REPONER LA PAREJA (lo pidió el jugador): si una especie se ha quedado con menos de dos animales, se
+        //       cría aunque al pueblo le quede poca comida. La pareja es la SEMILLA de la granja: sin ella esa especie
+        //       no vuelve nunca y el pueblo se queda sin carne, sin lana o sin huevos. Es el mismo criterio que la
+        //       guarida, que mantiene su pareja pase lo que pase.
+        //    b) CRECER: con comida de sobra en la despensa, se cría hasta el tope de la especie.
+        EntityType<? extends Animal> aCriar = elegirEspecieACriar(corral, comida < COMIDA_PARA_CRIAR);
+        if (aCriar != null && hayComidaParaCriar(level, aCriar)) {
+            Animal pareja = adultoSinEnamorar(level, aCriar);
+            if (pareja != null) {
+                fase = Fase.CRIAR;
+                especie = aCriar;
+                target = pareja.blockPosition();
+                return true;
             }
         }
         // Nada que hacer: a esperar un poco (y no consumir CPU buscando animales cada tick).
@@ -345,8 +352,10 @@ public class VillagerAnimalFarmGoal extends Goal {
         EntityType<? extends Animal> elegida = null;
         int mejorSobra = 0;
         for (EntityType<? extends Animal> tipo : VillageGenerator.especiesDelCorral()) {
-            int cuantos = contarEspecie(corral, tipo);
-            int sobra = cuantos - topeDe(tipo);
+            if (contarAdultos(corral, tipo) <= PAREJA_MINIMA) {
+                continue; // la PAREJA no se toca nunca: sin dos adultos esa especie no vuelve a criar
+            }
+            int sobra = contarEspecie(corral, tipo) - topeDe(tipo);
             if (sobra > mejorSobra) {
                 mejorSobra = sobra;
                 elegida = tipo;
@@ -356,9 +365,9 @@ public class VillagerAnimalFarmGoal extends Goal {
             // La aldea está apretada: se sacrifica de la especie más numerosa, pero nunca por debajo de la pareja.
             int mas = 0;
             for (EntityType<? extends Animal> tipo : VillageGenerator.especiesDelCorral()) {
-                int cuantos = contarEspecie(corral, tipo);
-                if (cuantos > PAREJA_MINIMA && cuantos > mas) {
-                    mas = cuantos;
+                int adultos = contarAdultos(corral, tipo);
+                if (adultos > PAREJA_MINIMA && adultos > mas) {
+                    mas = adultos;
                     elegida = tipo;
                 }
             }
@@ -369,13 +378,32 @@ public class VillagerAnimalFarmGoal extends Goal {
         return adultoDe(level, elegida);
     }
 
-    /** La especie a la que le toca cría: la que esté más lejos de su tope (y por debajo de él). */
+    /**
+     * La especie a la que le toca cría: la que esté más lejos de su tope (y por debajo de él).
+     * <p>
+     * <b>Siempre se cría con pareja</b>: hacen falta {@link #PAREJA_MINIMA} <b>adultos</b> en el corral. Si a una
+     * especie le queda uno solo, el ganadero no gasta comida en él (vanilla necesita dos enamorados para que salga la
+     * cría): de eso se encarga el pueblo, que le <b>trae la pareja</b> (ver
+     * {@code VillageGenerator.reponerParejasDelCorral}). Es lo mismo que hace el guardián con la pareja de la guarida.
+     *
+     * @param soloPareja {@code true} cuando al pueblo le queda <b>poca comida</b>: entonces solo se cría para
+     *                   <b>no perder la pareja</b> (una especie que esté por debajo del tope de seguridad), nunca para
+     *                   engordar el rebaño. Así la granja no se come el pan del pueblo.
+     */
     @Nullable
-    private EntityType<? extends Animal> elegirEspecieACriar(List<Animal> corral) {
+    private EntityType<? extends Animal> elegirEspecieACriar(List<Animal> corral, boolean soloPareja) {
         EntityType<? extends Animal> elegida = null;
         int mejorHueco = 0;
         for (EntityType<? extends Animal> tipo : VillageGenerator.especiesDelCorral()) {
-            int hueco = topeDe(tipo) - contarEspecie(corral, tipo);
+            int adultos = contarAdultos(corral, tipo);
+            if (adultos < PAREJA_MINIMA) {
+                continue; // sin pareja no hay cría posible (y no se malgasta la comida)
+            }
+            int cuantos = contarEspecie(corral, tipo);
+            if (soloPareja && adultos > PAREJA_MINIMA) {
+                continue; // con el pueblo apretado no se cría para crecer
+            }
+            int hueco = topeDe(tipo) - cuantos;
             if (hueco > mejorHueco) {
                 mejorHueco = hueco;
                 elegida = tipo;
@@ -497,6 +525,17 @@ public class VillagerAnimalFarmGoal extends Goal {
         int n = 0;
         for (Animal animal : corral) {
             if (animal.getType() == tipo) {
+                n++;
+            }
+        }
+        return n;
+    }
+
+    /** Cuántos <b>adultos</b> de esa especie hay en el corral (solo ellos crían y solo ellos cuentan como pareja). */
+    private static int contarAdultos(List<Animal> corral, EntityType<? extends Animal> tipo) {
+        int n = 0;
+        for (Animal animal : corral) {
+            if (animal.getType() == tipo && !animal.isBaby()) {
                 n++;
             }
         }

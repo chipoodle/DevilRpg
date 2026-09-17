@@ -336,9 +336,15 @@ public final class VillageManager {
      *       pueblo nace <b>al nivel del agua</b>, su terreno llano queda a la misma altura que el mar y el primer
      *       escalón del talud asoma en unas casillas y en otras no. Se rellena el anillo de orilla con césped (solo
      *       donde hay agua o aire) y la isla queda con su <b>playa pareja</b> y el agua en un borde limpio.</li>
+     *   <li>37: el <b>GANADO VUELVE A CASA</b> (lo pidió el jugador: "que los aparee para que siempre haya una pareja"
+     *       y "revisa por qué no está generando carne"). El corral solo tenía el portón, que el pueblo abre para pasar,
+     *       así que con las horas el rebaño se colaba y se perdía: en su partida quedaba <b>una vaca</b> dentro y el
+     *       resto repartido a 80-130 bloques. Un corral vacío no da carne. Ahora el rebaño va <b>marcado</b>, el que se
+     *       pierde <b>vuelve</b> al corral, al que le falta <b>pareja</b> se la trae el pueblo, y el ganadero solo cría
+     *       (nunca sacrifica) por debajo de dos adultos.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 36;
+    public static final int CURRENT_LAYOUT = 37;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -1171,9 +1177,17 @@ public final class VillageManager {
             VillageGenerator.asegurarArboleda(level, center);
             // Y LA ORILLA de la aldea de mar (islita): seca y pareja, para que el agua no haga cuadros en el borde.
             VillageGenerator.asegurarOrilla(level, center);
+            // LOS PICOS DE LAS ESQUINAS (etapa E, lo pidió el jugador): el suelo llano es un cuadrado y el talud un
+            // círculo, así que a las cuatro esquinas les sobraba un triángulo allanado colgando sobre el mar, con el
+            // corte a la vista. Se rebajan a la base del talud.
+            VillageGenerator.asegurarTalud(level, center);
             // COCINA del pueblo (etapa E): el ahumador del cocinero, en el kiosco. Va antes de tirar el plano para
             // que entre en él y el obrero lo reponga.
             VillageGenerator.asegurarCocina(level, center);
+            // REBAÑO ESCAPADO (una sola vez, al migrar): antes de que existiera la marca del rebaño, el ganado que se
+            // colaba por el portón se perdía sin remedio y el corral se quedaba vacío (y sin carne). Aquí se reconoce
+            // el que anda suelto FUERA de la muralla y cerca del corral; luego, en el latido, vuelve a casa.
+            VillageGenerator.adoptarGanadoPerdido(level, center);
             // El plano se tira: hay que volver a capturarlo, ya con las casas nuevas, el muro y las reglas actuales.
             saved.clearBlueprint(objectiveIndex);
             saved.setLayout(objectiveIndex, CURRENT_LAYOUT);
@@ -1218,19 +1232,30 @@ public final class VillageManager {
         // COCINA del pueblo (etapa E): el ahumador y la mesa del cocinero, en la plataforma del kiosco. Idempotente
         // (va aparte de `asegurarKiosco` porque aquél sale antes de tiempo cuando el kiosco ya está).
         VillageGenerator.asegurarCocina(level, center);
-        // REBAÑO: el corral se llena UNA vez (al construirlo o al migrar). Después, si se queda VACÍO (una horda, el
-        // jugador...) se repone solo, pero con una espera larga (3 días de juego): ni la granja se queda muerta para
-        // siempre ni es un grifo de carne gratis. La marca se guarda con la partida.
-        // OJO: la espera es SOLO para REPONER un corral que se quedó vacío. La PRIMERA vez (marca 0 = nunca se ha
-        // soltado el rebaño) se suelta YA. Midiendo la espera desde 0, en un mundo con menos de 3 días de juego
-        // (gameTime < 72000) el corral se quedaba VACÍO PARA SIEMPRE: medido en el guardado del jugador, la granja
-        // anexa se construyó con el reloj del mundo en 24200 (un mundo joven) y no soltó ni un animal.
+        // REBAÑO: el corral se llena UNA vez (al construirlo o al migrar). Después se mantiene solo, con DOS reglas:
+        //   1) RECOGER AL QUE SE ESCAPA. El corral solo tiene el portón, y el pueblo lo abre para pasar (el juego no
+        //      deja que un aldeano abra una puerta de valla, de ahí `VillagerGateGoal`): con las horas, el ganado se
+        //      cuela por el hueco y se pierde. Medido en el guardado del jugador: quedaba UNA vaca dentro y 8 vacas,
+        //      6 ovejas, 6 gallinas y 2 puercos sueltos a 76-83 bloques del pueblo. Y un corral vacío NO DA CARNE: el
+        //      ganadero no ve animales, no cría ni sacrifica, y la granja entera se muere. Los del rebaño (marcados)
+        //      vuelven a casa; los animales sueltos SIN marca no se tocan (pueden ser del jugador).
+        //   2) REPONER LA PAREJA. Si a una especie le quedan menos de dos adultos ya no puede criar NUNCA (ni carne de
+        //      vaca, ni lana, ni huevos): el pueblo le trae la pareja. Lo pidió el jugador.
+        // Las dos van con la espera larga de 3 días de juego, para que esto no sea un grifo de carne gratis.
+        // OJO: la espera es SOLO para reponer. La PRIMERA vez (marca 0 = nunca se ha soltado el rebaño) es YA.
+        // Midiendo la espera desde 0, en un mundo con menos de 3 días de juego (gameTime < 72000) el corral se
+        // quedaba VACÍO PARA SIEMPRE: medido en el guardado del jugador, el anexo se construyó con el reloj del
+        // mundo en 24200 (un mundo joven) y no soltó ni un animal.
+        VillageGenerator.recogerGanadoPerdido(level, center);
         long marcaRebano = saved.getAnexoAnimales(objectiveIndex);
-        if (VillageGenerator.corralVacio(level, center)
-                && (marcaRebano == 0L
-                    || level.getGameTime() - marcaRebano >= VillageGenerator.ANEXO_REBANO_ESPERA_TICKS)) {
-            VillageGenerator.criarRebanoInicial(level, center);
-            saved.setAnexoAnimales(objectiveIndex, level.getGameTime());
+        if (marcaRebano == 0L
+                || level.getGameTime() - marcaRebano >= VillageGenerator.ANEXO_REBANO_ESPERA_TICKS) {
+            if (VillageGenerator.corralVacio(level, center)) {
+                VillageGenerator.criarRebanoInicial(level, center);
+                saved.setAnexoAnimales(objectiveIndex, level.getGameTime());
+            } else if (VillageGenerator.reponerParejasDelCorral(level, center)) {
+                saved.setAnexoAnimales(objectiveIndex, level.getGameTime());
+            }
         }
         // PROFESIONES PERDIDAS: a los aldeanos de una partida vieja el juego les BORRÓ el oficio (el cerebro
         // vanilla trae `ResetProfession`: sin puesto de trabajo en el cerebro, con XP 0 y nivel 1, devuelve al
