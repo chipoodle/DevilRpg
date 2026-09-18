@@ -1926,6 +1926,11 @@ public final class VillageManager {
         // cerebro, así que el tercer granjero (su titular) no podía reclamarlo: la estación quedaba muerta y el
         // oficio sin su puesto de trabajo (sin `JOB_SITE` vanilla no le registra la actividad de trabajar).
         soltarTicketsPerdidos(level, aldeanos, center, objectiveIndex);
+        // Y CADA TITULAR, CON SU ESTACIÓN (etapa H): el clérigo y el ganadero de la aldea 2 tenían su oficio pero NO
+        // su puesto de trabajo en el cerebro (el soporte de pociones estaba libre y el telar con el ticket cogido sin
+        // dueño), así que vanilla no les registraba la actividad de trabajar y se quedaban en IDLE: es el fallo de
+        // "el aldeano que da vueltas sobre su eje" y el rol huérfano que quedaba en el reparto.
+        reclamarEstacionesDelPueblo(level, aldeanos, center, objectiveIndex);
         // HERREROS: los DOS (armas y herramientas) trabajan en el taller del pueblo: cogen los materiales del almacén,
         // fabrican en su puesto (muelle de afilar / mesa de herrería) y dejan la pieza en el almacén, de donde se
         // equipará la futura guardia. Los goals no se guardan con la partida: se reponen al verlos.
@@ -2498,6 +2503,72 @@ public final class VillageManager {
                 DevilRpg.LOGGER.info("[Village] Aldea {}: el puesto de {} de {} estaba cogido SIN dueno: se suelta"
                         + " para que lo reclame su titular", objectiveIndex, entrada.getKey(), puesto);
             }
+        }
+    }
+
+    /**
+     * <b>Cada titular, con SU estación</b> (etapa H): un aldeano con un oficio del pueblo que <b>no tiene
+     * {@code JOB_SITE}</b> va y <b>reclama</b> el puesto de su oficio (el más cercano que esté libre y, si no hay
+     * ninguno libre, uno con el <b>ticket perdido</b>: cogido y sin dueño, que se suelta y se vuelve a coger).
+     * <p>
+     * Hace falta porque el oficio y el puesto de trabajo son dos cosas distintas y hay aldeanos con el oficio pero sin
+     * puesto: sin {@code JOB_SITE} vanilla <b>no le registra la actividad de trabajar</b> y el aldeano cae a IDLE (el
+     * fallo de "da vueltas sobre su eje" que el jugador vio con el herrero). Medido en su guardado (aldea 2): el
+     * <b>clérigo</b> tenía su soporte de pociones <b>libre</b> (nadie lo había reclamado) y el <b>ganadero</b> su
+     * telar con el ticket cogido sin dueño. Y no se le quita el puesto a nadie: si otro aldeano <b>cargado</b> lo
+     * tiene en el cerebro, ese puesto se respeta.
+     */
+    private static void reclamarEstacionesDelPueblo(ServerLevel level, List<Villager> aldeanos, BlockPos center,
+                                                    int objectiveIndex) {
+        PoiManager poi = level.getPoiManager();
+        for (Villager villager : aldeanos) {
+            if (villager.isBaby() || villager.getBrain().hasMemoryValue(MemoryModuleType.JOB_SITE)) {
+                continue;
+            }
+            VillagerProfession profesion = villager.getVillagerData().getProfession();
+            if (!VillageGenerator.esOficioDelPueblo(profesion)) {
+                continue;
+            }
+            java.util.function.Predicate<net.minecraft.core.Holder<net.minecraft.world.entity.ai.village.poi.PoiType>>
+                    vale = profesion.heldJobSite();
+            BlockPos puesto = poi.findClosest(vale, center, VillageGenerator.FENCE_RADIUS,
+                    PoiManager.Occupancy.HAS_SPACE).orElse(null);
+            boolean libre = puesto != null;
+            if (puesto == null) {
+                puesto = poi.findClosest(vale, center, VillageGenerator.FENCE_RADIUS,
+                        PoiManager.Occupancy.IS_OCCUPIED).orElse(null);
+            }
+            if (puesto == null) {
+                continue; // su oficio no tiene estación construida (todavía): no hay nada que reclamar
+            }
+            boolean deOtro = false;
+            for (Villager otro : aldeanos) {
+                if (otro == villager) {
+                    continue;
+                }
+                var suyo = otro.getBrain().getMemory(MemoryModuleType.JOB_SITE);
+                if (suyo.isPresent() && suyo.get().pos().equals(puesto)) {
+                    deOtro = true;
+                    break;
+                }
+            }
+            if (deOtro) {
+                continue; // es de otro aldeano que está aquí: no se le quita
+            }
+            if (!libre) {
+                poi.release(puesto); // ticket perdido: se suelta y se vuelve a coger (I23)
+            }
+            final BlockPos elegido = puesto;
+            java.util.function.BiPredicate<net.minecraft.core.Holder<
+                    net.minecraft.world.entity.ai.village.poi.PoiType>, BlockPos> cual =
+                    (tipo, pos) -> pos.equals(elegido);
+            if (poi.take(vale, cual, elegido, 1).isEmpty()) {
+                continue; // no se ha podido (el chunk no está cargado...): se reintenta en el latido siguiente
+            }
+            villager.getBrain().setMemory(MemoryModuleType.JOB_SITE, GlobalPos.of(level.dimension(), elegido));
+            villager.getBrain().eraseMemory(MemoryModuleType.POTENTIAL_JOB_SITE);
+            DevilRpg.LOGGER.info("[Village] Aldea {}: {} reclama su estacion de {} en {}", objectiveIndex,
+                    villager.getUUID(), profesion, elegido.toShortString());
         }
     }
 
