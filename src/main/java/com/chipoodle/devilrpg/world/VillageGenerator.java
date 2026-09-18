@@ -264,7 +264,9 @@ public final class VillageGenerator {
         }
 
         // --- A partir de aquí se GRABA el plano canónico (solo estructuras, no terreno) ---
-        iniciarGrabacion();
+        // La cota va con el centro: la grabadora la necesita para dejar el LAGO de la pesquera fuera del plano
+        // (ver `esCeldaDelLago`).
+        iniciarGrabacion(center, nivelVilla);
         // Posiciones de las casas (base). Desde la Iteración 3 refinada son CASAS DE VERDAD, plantillas del
         // propio juego (ver placeVanillaHouse), no cabañas procedurales. Los solares salen de basesDeCasas: una
         // sola lista, para que el generador y la migración no se puedan desincronizar (antes estaban escritos dos
@@ -348,6 +350,14 @@ public final class VillageGenerator {
      */
     private static final class GrabadoraDePlano {
         private final Map<Long, BlockState> bloques = new LinkedHashMap<>();
+        /** Centro y cota de la aldea que se está grabando: hacen falta para dejar el LAGO fuera del plano. */
+        private final BlockPos center;
+        private final int nivel;
+
+        GrabadoraDePlano(BlockPos center, int nivel) {
+            this.center = center;
+            this.nivel = nivel;
+        }
 
         void apunta(BlockPos pos, BlockState state) {
             bloques.put(pos.asLong(), state);
@@ -362,6 +372,10 @@ public final class VillageGenerator {
         /**
          * Convierte lo grabado en el plano: se descartan el aire (los despejes) y el terreno natural. El resultado
          * es la <b>paleta</b> más dos arrays paralelos (posiciones comprimidas e índices de paleta).
+         * <p>
+         * El <b>lago de la pesquera</b> se descarta aparte, aunque sea agua: lo mantiene
+         * {@link #repararLagoDeLaPesquera} (que también vale el hielo de un bioma frío), y en el plano el obrero se
+         * pasaría la vida descongelándolo — ver {@link #esCeldaDelLago}.
          */
         VillageSavedData.Blueprint aPlano() {
             List<BlockState> palette = new ArrayList<>();
@@ -369,6 +383,9 @@ public final class VillageGenerator {
             List<Long> posiciones = new ArrayList<>();
             List<Integer> estados = new ArrayList<>();
             for (Map.Entry<Long, BlockState> entrada : bloques.entrySet()) {
+                if (esCeldaDelLago(center, nivel, BlockPos.of(entrada.getKey()))) {
+                    continue;
+                }
                 // El estado BUENO (ver `estadoDelPlano`): una puerta de valla entra en el plano siempre cerrada.
                 BlockState state = estadoDelPlano(entrada.getValue());
                 if (seDescarta(state)) {
@@ -396,8 +413,8 @@ public final class VillageGenerator {
     /** Grabadora activa ({@code null} = no se está grabando: el terreno no entra en el plano). */
     private static GrabadoraDePlano grabadora = null;
 
-    private static void iniciarGrabacion() {
-        grabadora = new GrabadoraDePlano();
+    private static void iniciarGrabacion(BlockPos center, int nivel) {
+        grabadora = new GrabadoraDePlano(center, nivel);
     }
 
     private static VillageSavedData.Blueprint terminarGrabacion() {
@@ -438,6 +455,11 @@ public final class VillageGenerator {
                 }
                 for (int y = suelo; y < nivel; y++) {
                     BlockState actual = level.getBlockState(new BlockPos(x, y, z));
+                    // El AGUA (y su hielo) no es un hueco que se rellene, igual que en `nivelar`: una terraza que
+                    // solape con el lago de la pesquera no puede volver a taparlo (ver `esAguaOHielo`).
+                    if (esAguaOHielo(actual)) {
+                        continue;
+                    }
                     if (!actual.isAir() && !esTerrenoRecortable(actual)) {
                         continue; // no se tapa nada construido (ni un tronco del muro o de una casa)
                     }
@@ -1441,14 +1463,18 @@ public final class VillageGenerator {
     }
 
     /**
-     * ¿Está la pesquera hecha? Vale el <b>agua del lago</b> o el <b>barril</b> (el puesto): con cualquiera de los dos
-     * se da por hecha, así que hace falta perder los dos para que el pueblo la reconstruya (reconstruirla volvería a
-     * soltar peces y podría deshacer lo que el jugador haya puesto alrededor).
+     * ¿Está la pesquera hecha? Vale el <b>agua del lago</b> (o su <b>hielo</b>: es la misma agua) o el <b>barril</b>
+     * (el puesto): con cualquiera de los dos se da por hecha, así que hace falta perder los dos para que el pueblo la
+     * reconstruya (reconstruirla volvería a soltar peces y podría deshacer lo que el jugador haya puesto alrededor).
+     * <p>
+     * OJO: eso es solo el testigo de "está construida", <b>no</b> de "está entera". A una pesquera con el barril en
+     * pie pero el lago <b>seco</b> (el caso del guardado del jugador) la repone
+     * {@link #repararLagoDeLaPesquera}, que es quien mira el estanque entero.
      */
     public static boolean pesqueraConstruida(ServerLevel level, BlockPos center) {
         int nivel = cotaDeLaPlaza(level, center);
         BlockPos base = baseDeLaPesquera(center);
-        return level.getBlockState(new BlockPos(base.getX(), nivel - 1, base.getZ())).is(Blocks.WATER)
+        return esAguaOHielo(level.getBlockState(new BlockPos(base.getX(), nivel - 1, base.getZ())))
                 || level.getBlockState(puestoDelPescador(level, center)).is(Blocks.BARREL);
     }
 
@@ -1456,6 +1482,11 @@ public final class VillageGenerator {
      * Asegura la <b>pesquera</b> (etapa G): el lago con su bandada, la caseta del pescador, su <b>barril</b> (el
      * puesto), la pasarela y los faroles. Idempotente (ver {@link #pesqueraConstruida}); se llama al generar, en la
      * migración y en el latido, como el resto de edificios del pueblo.
+     * <p>
+     * OJO: {@link #pesqueraConstruida} se conforma con el <b>barril</b> (o el agua) como testigo, así que una
+     * pesquera a la que le falta <b>el agua</b> o el <b>barril</b> se da por hecha y no se rehace nunca. Por eso,
+     * cuando ya está construida, se le reponen las dos cosas sueltas: el agua del lago
+     * ({@link #repararLagoDeLaPesquera}) y el barril (su puesto). Las dos reparaciones son idempotentes y baratas.
      */
     public static void asegurarPesquera(ServerLevel level, BlockPos center) {
         int nivel = cotaDeLaPlaza(level, center);
@@ -1473,12 +1504,157 @@ public final class VillageGenerator {
             farolSobreElPoste(level, esquina);
         }
         if (pesqueraConstruida(level, center)) {
+            // El estanque, de vuelta si un nivelado lo tapó (y el barril, si se perdió con el agua en pie).
+            repararLagoDeLaPesquera(level, center, base, nivel);
+            asegurarElBarrilDelPescador(level, center, base, nivel);
             return;
         }
         pesquera(level, base, nivel);
         DevilRpg.LOGGER.info("[Village] Aldea en {}: pesquera construida en {} (lago de {}x{}, {} pez(ces) y su"
                 + " barril)", center, baseDeLaPesquera(center), 2 * LAGO_RADIO + 1, 2 * LAGO_RADIO + 1,
                 LAGO_PECES_INICIAL);
+    }
+
+    /**
+     * <b>¿Le queda agua al lago?</b> Vale el <b>hielo</b> de un bioma frío (es la misma agua, ver
+     * {@link #esAguaOHielo}) y da el lago por lleno cuando el agua es <b>la mitad o más</b> de la capa de arriba
+     * de su huella: así los tres postes de la <b>pasarela</b>, que ocupan tres celdas de esa capa, no dan el lago
+     * por seco, y un lago a medias (una orilla comida) también se repone.
+     */
+    private static boolean lagoConAgua(ServerLevel level, BlockPos base, int nivel) {
+        int agua = 0;
+        for (int dx = -LAGO_RADIO; dx <= LAGO_RADIO; dx++) {
+            for (int dz = -LAGO_RADIO; dz <= LAGO_RADIO; dz++) {
+                if (esAguaOHielo(level.getBlockState(new BlockPos(base.getX() + dx, nivel - 1, base.getZ() + dz)))) {
+                    agua++;
+                }
+            }
+        }
+        return agua * 2 >= (2 * LAGO_RADIO + 1) * (2 * LAGO_RADIO + 1);
+    }
+
+    /**
+     * <b>Devuelve el agua al lago de la pesquera</b> de una aldea ya construida (con su orilla de arena y su fondo),
+     * <b>solo</b> en las celdas del lago y <b>solo</b> donde no haya nada construido. Devuelve cuántas celdas ha
+     * llenado.
+     * <p>
+     * Hace falta de verdad, y está <b>medido en el guardado del jugador</b> (aldea 2, centro {@code 1414,1414},
+     * cota 120, base del lago {@code 1434,1458}): la pesquera se construyó en la <b>migración 46</b> y las
+     * migraciones siguientes volvieron a llamar a {@code farm(level, center)}, que <b>nivela la aldea entera</b>
+     * ({@code prepararTerreno} → {@code nivelar}). El nivelado trataba el agua como terreno que sobra, así que
+     * rellenó el hueco del lago con <b>tierra</b> en {@code cota-2} y <b>césped</b> en {@code cota-1}: en el
+     * guardado quedaban <b>3 celdas de agua</b> de 49 (las tres columnas de los postes de la pasarela, que el
+     * nivelado se saltó al toparse con la valla) y el resto era césped. El jugador lo vio como una plaza de césped
+     * con la pasarela y los dos faroles encima: <i>"¿por qué la choza para pesca no tiene su estanque para
+     * pescar?"</i>. Y no se reparaba solo porque el <b>barril</b> seguía en pie: con él, {@link #pesqueraConstruida}
+     * daba la pesquera por hecha.
+     * <p>
+     * El agua ya no se puede volver a tapar (en {@code nivelar} y {@code nivelarHuella} el agua y el hielo no son un
+     * hueco que se rellene), así que esto es lo que arregla las aldeas que ya se quedaron secas. La geometría es
+     * <b>la misma</b> que la de {@code pesquera()}: agua a dos capas con el fondo y la orilla de arena.
+     */
+    public static int repararLagoDeLaPesquera(ServerLevel level, BlockPos center) {
+        int nivel = cotaDeLaPlaza(level, center);
+        if (nivel <= level.getMinBuildHeight() + 2) {
+            return 0;
+        }
+        return repararLagoDeLaPesquera(level, center, baseDeLaPesquera(center), nivel);
+    }
+
+    /** El reparador del lago, con la base y la cota ya calculadas (ver {@link #repararLagoDeLaPesquera}). */
+    private static int repararLagoDeLaPesquera(ServerLevel level, BlockPos center, BlockPos base, int nivel) {
+        if (lagoConAgua(level, base, nivel)) {
+            return 0; // el lago ya está lleno: ni una celda (esto corre también en el latido)
+        }
+        int bx = base.getX();
+        int bz = base.getZ();
+        int puestas = 0;
+        for (int dx = -LAGO_RADIO - 1; dx <= LAGO_RADIO + 1; dx++) {
+            for (int dz = -LAGO_RADIO - 1; dz <= LAGO_RADIO + 1; dz++) {
+                boolean dentroDelLago = Math.abs(dx) <= LAGO_RADIO && Math.abs(dz) <= LAGO_RADIO;
+                // La capa que se pisa: agua dentro del lago y ARENA en la orilla (la orilla seca que evita que el
+                // agua haga cuadros con el césped).
+                puestas += anegar(level, new BlockPos(bx + dx, nivel - 1, bz + dz),
+                        dentroDelLago ? Blocks.WATER : Blocks.SAND);
+                if (dentroDelLago) {
+                    // La segunda capa de agua y el fondo de arena, como los pone `pesquera()`.
+                    puestas += anegar(level, new BlockPos(bx + dx, nivel - 2, bz + dz), Blocks.WATER);
+                    puestas += anegar(level, new BlockPos(bx + dx, nivel - 3, bz + dz), Blocks.SAND);
+                }
+            }
+        }
+        if (puestas > 0) {
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: lago de la pesquera en {} vuelto a llenar ({} celda(s):"
+                    + " un nivelado lo habia tapado)", center, base, puestas);
+        }
+        return puestas;
+    }
+
+    /**
+     * Pone {@code bloque} en esa celda del lago <b>solo</b> si ahí hay <b>aire, agua (o hielo) o terreno blando</b>
+     * ({@link #sePuedeAnegar}) y solo si no está ya. Devuelve 1 si ha colocado algo.
+     */
+    private static int anegar(ServerLevel level, BlockPos pos, Block bloque) {
+        BlockState actual = level.getBlockState(pos);
+        if (actual.is(bloque) || !sePuedeAnegar(actual)) {
+            return 0;
+        }
+        colocar(level, pos, bloque.defaultBlockState(), 3);
+        return 1;
+    }
+
+    /**
+     * ¿Esa celda del lago se puede volver a llenar? Sí para el <b>aire</b>, el <b>agua</b> (o su hielo) y el
+     * <b>terreno blando</b> con el que un nivelado tapa un hueco (tierra, césped, arena, nieve…); <b>no</b> para una
+     * obra (tablones de la pasarela, postes, el barril, ladrillo) ni para la <b>piedra</b> del terreno.
+     * <p>
+     * Es lo que garantiza que el reparador del lago no inunde ni rompa nada que no sea el relleno del nivelado: ni
+     * la pasarela del pescador ni lo que haya puesto el jugador.
+     */
+    private static boolean sePuedeAnegar(BlockState state) {
+        return state.isAir() || esAguaOHielo(state) || esTierraPisoteada(state)
+                || state.is(BlockTags.SAND) || state.is(Blocks.GRAVEL) || state.is(Blocks.CLAY)
+                || state.is(Blocks.SNOW) || state.is(Blocks.SNOW_BLOCK) || state.is(Blocks.MUD)
+                || state.is(Blocks.MOSS_BLOCK) || state.is(Blocks.FARMLAND);
+    }
+
+    /**
+     * El <b>barril</b> del pescador (su puesto de trabajo en vanilla) es uno de los dos testigos de la pesquera, así
+     * que si se pierde <b>con el agua en pie</b> nadie lo reponía: {@link #pesqueraConstruida} ya la daba por hecha y
+     * el pescador se quedaba sin oficio. Aquí se devuelve a su celda, y <b>solo si está vacía</b>: no se pisa nada de
+     * lo que haya ahí (ni un cofre que el jugador haya dejado en su sitio).
+     */
+    private static void asegurarElBarrilDelPescador(ServerLevel level, BlockPos center, BlockPos base, int nivel) {
+        BlockPos puesto = puestoDelPescador(base, nivel);
+        if (!level.getBlockState(puesto).isAir()) {
+            return;
+        }
+        colocar(level, puesto, Blocks.BARREL.defaultBlockState(), 3);
+        DevilRpg.LOGGER.info("[Village] Aldea en {}: barril del pescador repuesto en {}", center, puesto);
+    }
+
+    /**
+     * ¿Esa posición es una de las celdas del <b>lago de la pesquera</b> (su agua, su orilla de arena o su fondo)?
+     * <p>
+     * Sirve para <b>dejar el lago FUERA del plano</b> (ver {@code captureBlueprint}): su agua la mantiene
+     * {@link #repararLagoDeLaPesquera}, que da el lago por bueno también con <b>hielo</b> (que es lo que tiene que
+     * haber en un bioma frío). Si el plano la pidiera, el obrero se pasaría la vida <b>descongelando</b> el lago
+     * —{@code necesitaReparacion} repone el agua en cuanto la ve congelada, regla que hace falta para la
+     * <b>acequia</b>, que va tapada con una losa y por eso no se congela—: un tirón de agua cada pocos segundos
+     * para nada.
+     */
+    private static boolean esCeldaDelLago(BlockPos center, int nivel, BlockPos pos) {
+        BlockPos base = baseDeLaPesquera(center);
+        int dx = pos.getX() - base.getX();
+        int dz = pos.getZ() - base.getZ();
+        if (Math.abs(dx) > LAGO_RADIO + 1 || Math.abs(dz) > LAGO_RADIO + 1) {
+            return false;
+        }
+        if (pos.getY() == nivel - 1) {
+            return true; // el agua y la orilla (la arena que la rodea)
+        }
+        boolean dentroDelLago = Math.abs(dx) <= LAGO_RADIO && Math.abs(dz) <= LAGO_RADIO;
+        return dentroDelLago && (pos.getY() == nivel - 2 || pos.getY() == nivel - 3); // la 2ª capa y el fondo
     }
 
     /**
@@ -3717,6 +3893,21 @@ public final class VillageGenerator {
     }
 
     /**
+     * ¿Ese bloque es <b>agua</b>? Vale también el <b>hielo</b> (y el hielo escarchado o el azul de los témpanos,
+     * que van en la misma etiqueta): es la misma agua de un bioma frío, congelada en la superficie, y un lago
+     * congelado sigue siendo un lago.
+     * <p>
+     * Hace falta distinguirlo porque <b>el agua NO es un hueco que se rellene</b>: el nivelado tapa los huecos que
+     * quedan por debajo de la cota y, tratando el agua como "terreno que sobra" ({@link #esTerrenoRecortable}),
+     * rellenaba con tierra y césped el <b>lago de la pesquera</b> —que es agua construida a propósito, como la
+     * acequia de la granja—. Medido en el guardado del jugador: el estanque del pescador salía como una plaza de
+     * césped (ver {@link #repararLagoDeLaPesquera}).
+     */
+    private static boolean esAguaOHielo(BlockState state) {
+        return !state.getFluidState().isEmpty() || state.is(BlockTags.ICE);
+    }
+
+    /**
      * Con qué sustituir un bloque técnico de una plantilla una vez colocada a mano.
      * <p>
      * Lo <b>correcto</b> es lo que declara el propio juego: los {@code minecraft:jigsaw} son los "enchufes" con
@@ -3871,6 +4062,12 @@ public final class VillageGenerator {
                 // se pisa va con césped, para que un relleno no se vea como un parche de tierra.
                 for (int y = g; y < baseY; y++) {
                     BlockState actual = level.getBlockState(columna.atY(y));
+                    // EL AGUA NO ES UN HUECO QUE SE RELLENA (y el hielo de un bioma frío es la misma agua). Aquí es
+                    // donde se tapaba el lago de la pesquera: el agua del estanque, a `cota-1` y `cota-2`, salía
+                    // convertida en césped y tierra. Ver `esAguaOHielo` y `repararLagoDeLaPesquera`.
+                    if (esAguaOHielo(actual)) {
+                        continue;
+                    }
                     if (!actual.isAir() && !esTerrenoRecortable(actual)) {
                         continue; // ni lo construido ni los troncos (muro, casas) se tapan
                     }
@@ -4893,6 +5090,14 @@ public final class VillageGenerator {
                     // arboleda apuntados como huecos. Es el mismo motivo por el que `asegurarArboleda` pone sus
                     // plantones con `setBlock` directo, fuera del plano.
                     if (enLaArboleda(center, pos) && state.is(BlockTags.LOGS)) {
+                        continue;
+                    }
+                    // EL LAGO DE LA PESQUERA, FUERA DEL PLANO: su agua (y su orilla y su fondo) la mantiene
+                    // `repararLagoDeLaPesquera`, que también da el lago por bueno con HIELO. En el plano sería al
+                    // revés: `necesitaReparacion` repone el agua en cuanto la ve congelada (regla que hace falta
+                    // para la acequia, que va tapada con una losa y no se congela) y el obrero se pasaría la vida
+                    // descongelando el lago de un bioma frío, donde el hielo es justo lo que tiene que haber.
+                    if (esCeldaDelLago(center, nivel, pos)) {
                         continue;
                     }
                     Integer indice = indices.get(state);

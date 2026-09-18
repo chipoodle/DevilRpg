@@ -1244,6 +1244,8 @@ pueblo no tenía. Ahora el barril <b>tiene dueño</b>.
   y los peces están; el pescador existe con su goal; y **a los 73 s el lago tenía un pez menos (3 → 2) y la despensa
   un pescado más (0 → 1)**.
 - **Migración 46** (`CURRENT_LAYOUT`).
+- **Corrección (migración 57)**: el **estanque se quedaba sin agua** en las aldeas ya construidas (el nivelado de las
+  migraciones siguientes lo tapaba con tierra y césped, y con el barril en pie nada lo reparaba): ver **3b.41**.
 
 ### 3b.29 Los bugs de esta ronda (y lo que se hizo para que no vuelvan)
 
@@ -1634,6 +1636,77 @@ jugador midió a mano (el 1º escalón, con el techo a 3,0, sí se subía; los d
 > además con el `FACING` al **oeste** aunque sube al **norte** (como la escalera vieja de la taberna). No se toca
 > aquí: el informe era de la taberna y esto pide su propia migración —mover camas (son POI, el pueblo cuenta las
 > camas libres)— y decidir dónde van la escalera y las literas.
+
+### 3b.41 El estanque de la pesquera, que se quedó sin agua (migración 57)
+
+El jugador, mirando la caseta del pescador (etapa G): *"¿por qué la choza para pesca no tiene su estanque para
+pescar?"*. En su captura se veía la caseta con su base de piedra, una **plaza de césped cuadrada** con una **viga de
+madera** encima (la **pasarela**) y **dos faroles sobre poste** en las esquinas... y ni una gota de agua. La geometría
+salió **del guardado**, celda a celda (aldea 2, centro `1414,1414`, cota `120`, base del lago `1434,1458`, con
+`build/lago_pesquera.py` y `build/lago_repara.py`).
+
+**Lo que hay HOY en el hueco del lago** (radio 3 más la orilla de arena, 81 columnas, cota `120`):
+
+| Capa | Lo que el generador pone (`pesquera()`) | Lo que hay en su guardado |
+|---|---|---|
+| `y=119` (`cota-1`) | **49 de agua** dentro de la huella + **32 de arena** en la orilla | **46 de césped** + 32 de arena + los **3 postes** de la pasarela: **0 de agua** |
+| `y=118` (`cota-2`) | **49 de agua** | **46 de tierra** + 32 de piedra (la pared del pozo) + **3 de agua** |
+| `y=117` (`cota-3`) | **49 de arena** (el fondo) | 49 de arena + 32 de piedra ✔ |
+| `y=120` | aire (y la pasarela de tablones) | la pasarela (4 tablones) y los 2 postes de los faroles ✔ |
+
+Es decir: **3 celdas de agua de 49** en todo el estanque, y las tres son las **columnas de los postes de la
+pasarela**. El barril del pescador (`1435,120,1453`), su caseta, la pasarela y los dos faroles estaban enteros.
+
+**La causa (el orden).** La pesquera se construyó en la **migración 46** (`asegurarPesquera`), y **todas** las
+migraciones siguientes vuelven a llamar a `farm(level, center)` (la versión de **un solo argumento**), que **nivela la
+aldea entera**: `farm(level, center)` → `prepararTerreno` → `nivelar(level, center, LEVEL_RADIUS=64, cota)`. Y
+`nivelar` **rellena los huecos de debajo de la cota** tratando el **agua** como "terreno que sobra"
+(`esTerrenoRecortable` da el agua por terreno porque su `fluidState` no está vacío). La huella del lago (a 43-54 del
+centro) cae **dentro** del disco de 64, así que el nivelado la rellenó: `groundY` de esas columnas devuelve **118** (el
+techo del pozo: el agua no es sólida), y el bucle `for (y = 118; y < 120; y++)` puso **tierra en `cota-2`** y **césped
+en `cota-1`**. Las tres columnas de los postes se salvaron porque `groundY` ahí devuelve **120** (la valla sí es
+sólida) y el bucle de relleno quedaba vacío — que es exactamente el patrón de 3 celdas de agua que quedó en el
+guardado. Y no se reparaba **solo**: `pesqueraConstruida` se conforma con el **agua o el barril**, y el barril seguía
+en pie, así que `asegurarPesquera` salía por el early-return y el estanque no se volvía a llenar nunca.
+
+**El arreglo, de raíz y en el orden.** En `nivelar` **y** en `nivelarHuella` el relleno ahora se salta el **agua** y
+el **hielo** (`esAguaOHielo`, que mira el `fluidState` y la etiqueta `minecraft:ice`: el hielo de un bioma frío es la
+misma agua, y un lago congelado sigue siendo un lago): **el agua no es un hueco que se rellene**, igual que no lo es
+la acequia de la granja. Con eso, el lago ya no se puede volver a tapar se llame el paso como se llame y corra antes o
+después. Y, para que la pesquera **se repare sola** (el latido la llama cada 10 s), `asegurarPesquera` ahora repone
+sus dos piezas sueltas cuando ya está construida:
+
+- **El agua del lago** (`repararLagoDeLaPesquera`): vuelve a poner el agua a dos capas, la orilla de arena y el fondo,
+  con **la misma geometría** que `pesquera()`, **solo en las celdas del lago** y **solo donde no haya nada
+  construido** (`sePuedeAnegar`: aire, agua/hielo o terreno blando; ni la pasarela, ni los postes, ni el barril, ni la
+  piedra del pozo). Sale en cuanto el lago tiene agua (o hielo) en **la mitad o más** de su capa de arriba, así que
+  los tres postes de la pasarela no lo dan por seco y no hace ni una escritura cuando ya está lleno.
+- **El barril** (su puesto de trabajo): con el **agua** en pie, `pesqueraConstruida` daba la pesquera por hecha y un
+  barril perdido no lo reponía nadie. Se devuelve a su celda **solo si está vacía**.
+
+**La migración 57** (`VillageManager` → `repararLagoDeLaPesquera`, justo después de `asegurarPesquera` y de **todo** lo
+que nivela) devuelve el agua a las aldeas que ya se quedaron secas, en la misma pasada y **sin rehacer la aldea**: en
+el guardado del jugador son **92 celdas** (46 de `cota-1`, que eran césped, y 46 de `cota-2`, que eran tierra), y el
+estanque queda con sus 49 celdas de agua por capa, su orilla y su fondo, con la pasarela, los faroles y el barril
+intactos.
+
+**Y el lago se queda FUERA del plano** (`esCeldaDelLago`, en las dos vías: el plano canónico de una aldea nueva y el
+escaneo de una migrada). No es un descuido: `necesitaReparacion` repone el agua **en cuanto la ve congelada** —regla
+que hace falta para la **acequia**, que va tapada con una losa y por eso no se congela—, así que con el lago en el
+plano el obrero se pasaría la vida **descongelando** un lago que en un bioma frío **tiene que estar helado**. Su agua
+la mantiene `repararLagoDeLaPesquera`, que da el lago por bueno con agua **o con hielo**.
+
+**Efecto colateral, declarado y a propósito**: con esta regla el nivelado de una aldea **de tierra adentro** ya no
+rellena el agua que caiga dentro del recinto (un charco, un arroyo): antes la tapaba con tierra y césped y la aldea
+quedaba llana. Es exactamente la excepción que pidió el informe (*"el agua NO es un hueco que se rellena"*) y lo que
+la acequia ya tenía; y en el guardado del jugador **no cambia ni una celda de más**: el barrido del `nivelar` viejo
+contra el nuevo, en todo el recinto (radio 64) y sobre el lago ya reparado, da **92 celdas de diferencia, las 92
+dentro de la huella del lago** y **ninguna fuera** (`build/lago_repara.py`).
+
+**Lo que NO se ha podido comprobar**: pescar en el estanque **en el juego** (el pescador con su caña, que el agua no
+se congele ni se salga por la orilla en su bioma) ni la migración corriendo de verdad sobre su partida (el cliente
+estaba cerrado y esto no toca el guardado). Lo que sí está comprobado es el antes y el después **contra su guardado**,
+celda a celda, y que el relleno nuevo no toca ni la pasarela ni el barril.
 
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 

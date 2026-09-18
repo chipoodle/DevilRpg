@@ -542,9 +542,21 @@ public final class VillageManager {
      *       celdas del hueco</b> (dos en su partida). Hace falta aunque el jugador ya se hubiera roto los bloques: el
      *       <b>plano</b> los tiene sólidos y el obrero los <b>repone</b>; al abrirlos con {@code colocar} entran en el
      *       plano nuevo (I8) y ya no vuelven.</li>
+     *   <li>57: el <b>ESTANQUE DE LA PESQUERA, DE VUELTA</b> (lo reportó el jugador con captura: <i>"¿por qué la choza
+     *       para pesca no tiene su estanque para pescar?"</i>). La pesquera se construyó en la <b>migración 46</b> y
+     *       todas las migraciones siguientes vuelven a llamar a {@code farm(level, center)}, que <b>nivela la aldea
+     *       entera</b>: el nivelado daba el <b>agua</b> por "terreno que sobra" y rellenó el hueco del lago con
+     *       <b>tierra</b> en {@code cota-2} y <b>césped</b> en {@code cota-1}. Medido en su guardado (aldea 2, centro
+     *       {@code 1414,1414}, cota 120, base del lago {@code 1434,1458}): de las <b>49</b> celdas del lago solo
+     *       quedaban <b>3</b> de agua —las tres columnas de los postes de la pasarela, que el nivelado se saltó al
+     *       toparse con la valla— y el resto era césped, con la pasarela y los dos faroles encima. Y no se reparaba
+     *       solo porque el <b>barril</b> seguía en pie ({@code pesqueraConstruida} se conforma con él). Arreglado de
+     *       raíz (el agua y el hielo <b>no</b> son un hueco que se rellene: ver {@code nivelar} y {@code nivelarHuella})
+     *       y, para las aldeas que ya se quedaron secas, con este reparador (<b>solo las celdas del lago</b>, y solo
+     *       donde no haya nada construido: no inunda ni rompe nada más, e idempotente).</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 56;
+    public static final int CURRENT_LAYOUT = 57;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -1619,6 +1631,15 @@ public final class VillageManager {
             // tirar el plano, como todo lo demás, y con su camino desde la plaza (tampoco cruza ningún bancal).
             VillageGenerator.asegurarPesquera(level, center);
             VillageGenerator.caminoALaPesquera(level, center);
+            // MIGRACIÓN 57: EL AGUA DEL ESTANQUE, DE VUELTA. El `farm` de arriba niveló la aldea entera y, como el
+            // agua contaba como "terreno que sobra", tapó con tierra y césped el hueco del lago —la pesquera se
+            // quedaba sin estanque y sin poder pescar en él (lo vio el jugador: "¿por qué la choza para pesca no
+            // tiene su estanque para pescar?"), y no se reparaba sola porque el barril seguía en pie y con él
+            // `pesqueraConstruida` ya la daba por hecha—. Va AQUÍ, después de todo lo que nivela, para que esta
+            // migración devuelva el agua en la misma pasada. Solo toca las celdas del lago (agua, orilla y fondo) y
+            // solo donde no haya nada construido: no inunda nada más. Idempotente: si el lago ya tiene agua, no hace
+            // ni una escritura (y el latido la vuelve a llamar por si un día se seca otra vez).
+            VillageGenerator.repararLagoDeLaPesquera(level, center);
             // LA DESPENSA, DE LA PLAZA A LA TABERNA (migración 47, lo pidió el jugador): el cofre de la comida del
             // kiosco se retira, con lo que tuviera dentro pasado ANTES a la despensa nueva (la cocina de la taberna)
             // y lo que no quepa al almacén. Va después de la taberna —que ya está construida arriba, con su cofre
