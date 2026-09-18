@@ -1144,9 +1144,9 @@ no se puede subir"*.
 - **La escalera nueva**: sube pegada al muro oeste, con la cara alta al norte (hacia donde sube) y dentro de una
   **caja** cerrada por el este: el hueco del forjado es un pozo de un bloque, y sin ese muro el primero que paseara
   por la galería se caería al comedor.
-- **La fachada da al oeste** (a la plaza): puerta en el centro del muro oeste, **porche** con toldo y enseña, y
-  **camino** desde la plaza (torcido a propósito: en recta cruzaba la **parcela de la granja**, y un camino no debe
-  pisar los cultivos).
+- **La fachada da al oeste** (a la plaza): puerta en el centro del muro oeste, **porche** con toldo (la *enseña* que
+  decía esta línea **nunca se llegó a construir**: ver §3b.39) y **camino** desde la plaza (torcido a propósito: en
+  recta cruzaba la **parcela de la granja**, y un camino no debe pisar los cultivos).
 - **El solar se despeja entero** antes de levantarla —la taberna vieja **cabía dentro** de la nueva, así que sus
   muros, su forjado y su tejado se tiran de una vez— y **lo que hubiera en sus cofres se guarda antes en el almacén**:
   tirar un cofre tira su contenido al suelo (mecánica del juego) y el pueblo no puede perder lo que tenía guardado.
@@ -1521,6 +1521,59 @@ solo celdas de bancal, solo tierra o césped, solo con agua cerca y con el hueco
 plano al final, este ya sale con la huerta entera. En su guardado, la simulación del arreglo deja **exactamente las
 mismas 2 celdas** en la lista del obrero y del granjero (`build/huerta_simula.py`), y la auditoría de la aldea 2 sigue
 en **0** en sus cinco listas.
+
+### 3b.39 El toldo del pórtico, cortado con un espacio (migración 55)
+
+El jugador, mirando la fachada oeste de la taberna (la puerta con su pórtico): *"el pórtico está cortado con un
+espacio, ¿por qué? debería estar completo"*. La geometría salió **del guardado**, celda a celda (aldea 2, centro
+`1414,1414`, cota `120`, taberna en `1438,1428`), no de mirar la captura.
+
+| Lo que se midió en el guardado | Causa | Arreglo |
+|---|---|---|
+| El **alero** del toldo (`bx-3`, `y=123`) tiene **5 escalones** (`dz 5..9`) y **2 faroles** en las **puntas** (`dz 4` y `dz 10`): `(1435,123,1432)` y `(1435,123,1438)` son `lantern[hanging=true]` **con aire encima**. O sea: al alero le falta **un escalón en cada punta** —justo encima de cada poste— y los dos faroles **cuelgan del aire** | El constructor del porche (`porcheDeLaTaberna`) coloca los escalones del alero de `pz-3` a `pz+3` y **después** los faroles, y los dos faroles de las puntas iban **en la misma celda** que el escalón (`bx-3`, `nivel+PISO2-2`) y lo **sustituían**. No lo arreglaba nadie porque el **plano guarda el ÚLTIMO bloque de cada celda** (`GrabadoraDePlano`): en el plano de su aldea esas dos celdas dicen `lantern[hanging=true]`, así que el obrero reponía **el farol**, no el escalón. Y encima un farol **colgado** ahí no tenía bloque encima del que colgar (I14). **No fue ninguna migración**: el porche no ha cambiado una línea desde la 44 (`git log -S porcheDeLaTaberna`), así que el hueco está **en el plano** desde que se levantó la taberna grande | El toldo lleva un **soffito de tablones** (`bx-2`, una capa por debajo de la fila de dentro) **de punta a punta** (`pz-3..pz+3`), que antes solo estaba en el centro (`dz 6..8`): es un bloque **sólido** y de él **cuelgan** los tres faroles (`colgar`), uno en cada punta —sobre los postes— y el del centro, que es la vertical de la puerta. La **fila del alero queda entera** (7 escalones, de punta a punta): una celda de esa fila es un escalón y no se ocupa con nada |
+| **Y el mismo fallo, en la barraca** (barrido de la invariante I14, no lo había reportado nadie): los faroles del **dormitorio** son `lantern[hanging=false]` **con aire debajo** y el tejado de tablones justo encima — `(1369,126,1434)` y `(1369,126,1437)` en la aldea 2, y los mismos dos en la 0 (`(521,97,586)` y `(521,97,589)`) —, o sea faroles **posados** flotando en el aire, sin cadena, a un bloque del techo | El constructor de la barraca los colocaba **posados** (`Blocks.LANTERN` a secas) en la celda que va **pegada al tejado** (`nivel + BARRACA_PISO2 + 2`), donde no hay nada debajo que los sostenga: el dormitorio está al aire | La celda es **la buena** (la de debajo del tejado): lo que estaba mal era el **estado**. Ahora **cuelgan** (`colgar`), y el número que usan el constructor y el retrofit vive en una sola constante (`BARRACA_FAROL_DY`, invariante I4) |
+
+**La migración 55** arregla las tabernas ya construidas con `VillageGenerator.arreglarPorcheDeLaTaberna`: retira los
+dos faroles flotantes **solo si siguen siendo faroles** (`quitarSiEs`), cierra su celda con el escalón que le toca
+(solo si quedó vacía), completa el soffito (solo donde esté vacío) y **cuelga** los dos faroles de las puntas con la
+misma prueba que hace el juego (`Block.canSupportCenter`, I14). **Solo toca las celdas del porche**: no rehace la
+taberna, así que no se pierde ni la despensa ni las camas. Los faroles de la barraca van en el **retrofit en el sitio**
+que ya tenía esa construcción (`asegurarBarraca`, junto al del barril→cofre): mira las **tres** celdas de farol del
+dormitorio y, si alguna sigue **posada** con el tejado encima, la **cuelga**; es idempotente y barato (tres
+`getBlockState` por pueblo), así que se corrige solo aunque la aldea ya hubiera migrado.
+
+**Verificado** (leyendo su guardado, sin tocar la partida, con `build/porche_simula.py` y `build/faroles_hanging.py`):
+
+- El alero está **cortado exactamente en sus dos últimas celdas** (una por punta) y el soffito solo existe en las tres
+  centrales, que es lo que hacía que el toldo se viera con un hueco.
+- El **plano** de la aldea 2 dice `lantern[hanging=true]` en esas dos celdas y **no tiene nada** en las cuatro celdas
+  del soffito que faltan: el hueco estaba **en el plano**, no era daño de una migración.
+- La simulación del reparador cambia **10 celdas** (2 faroles fuera, 2 escalones, 4 tablones de soffito, 2 faroles
+  colgados), deja el alero **entero** (7 escalones), **0** faroles sin soffito encima y es **idempotente** (una
+  segunda pasada no cambia nada).
+- El **barrido** de la invariante (`build/faroles_hanging.py`: la prueba del juego, con la propiedad `hanging`
+  mandando) da, en la aldea 2, **4 faroles sin apoyo de 73**: los **2 del porche** y los **2 de la barraca** (los dos
+  casos de esta migración). En la aldea **0** salen **18**: los mismos 4 y **14 de la cerca del corral anexo**, que son
+  el retrofit **viejo** ya documentado (`posarFarolesFlotantes`, pendiente hasta que el jugador pase por esa aldea).
+  Los de la barraca son **2 celdas** por pueblo (`dz -2` y `dz +1` de su columna) y una segunda pasada no cambia nada.
+- Las dos auditorías del pueblo (`tools/audita_aldea.py` y `auditarFarolesFlotantes`) **no** habían cantado ninguno
+  de estos cuatro: las dos daban por bueno un farol que tuviera una **valla debajo** (que es la regla del farol
+  *posado*) o algo sólido **encima**, sin mirar la propiedad `hanging`. Por eso el fallo llegó hasta la captura del
+  jugador. Desde la 55 la **autocomprobación del juego** (`auditarFarolesFlotantes`) mira **el lado que dice el
+  `hanging`** del propio farol, así que estos dos casos ya salen en el log de la aldea (la de Python, que no lee
+  propiedades de bloque para los faroles, sigue sin verlos: para eso está `build/faroles_hanging.py`).
+
+**Lo que NO se ha podido comprobar**: el aspecto en el juego (que el toldo se vea completo desde la plaza) ni la
+migración corriendo de verdad sobre su partida: el cliente estaba cerrado y el `build` no toca el guardado. Tampoco
+hay nada que comprobar de jugabilidad: el porche es **decoración** (nadie camina por el alero) y su suelo no se toca;
+de la barraca solo cambia el **estado** de dos faroles (misma celda, misma luz).
+
+> **La "enseña" de la taberna nunca existió.** El javadoc del porche (y el de la migración 44) prometía *"la enseña
+> de la taberna colgada con su farol"*, pero en el código **no hay ningún cartel** en toda la aldea (`grep` de
+> `SIGN` en `VillageGenerator`: cero). Se han corregido esos dos javadocs para que no lo sigan prometiendo. Queda
+> **pendiente** (no lo pidió el jugador en este reporte y un cartel tiene una pega: su **texto** vive en el
+> `BlockEntity`, y el plano guarda **estados** de bloque, así que un obrero que repusiera la enseña la dejaría
+> **en blanco**).
 
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 

@@ -440,7 +440,7 @@ public final class VillageManager {
      *         <li>La <b>ESCALERA</b> iba al revés (subía al norte mirando al sur), así que se veía bien y no se podía
      *             subir: en las escaleras del juego la cara alta —por donde se sube— es la que marca {@code FACING}.
      *             Ahora sube dentro de su <b>caja</b> cerrada, pegada al muro oeste, y desemboca en la galería.</li>
-     *         <li>La <b>fachada da al oeste</b> (a la plaza), con <b>porche</b>, toldo, enseña y <b>camino</b> desde la
+     *         <li>La <b>fachada da al oeste</b> (a la plaza), con <b>porche</b>, toldo y <b>camino</b> desde la
      *             plaza (el camino va torcido a propósito: en recta cruzaba la parcela de la granja).</li>
      *         <li>El <b>solar se despeja entero</b> antes de levantarla (la taberna vieja cabía dentro) y lo que
      *             hubiera en sus cofres se guarda antes en el <b>almacén</b>, para no perder nada.</li>
@@ -516,9 +516,21 @@ public final class VillageManager {
      *       labra</b> en su faena antes de sembrar; este reparador, idempotente, vuelve a labrar las calvas de una
      *       aldea ya construida (solo celdas de bancal que ahora son tierra o césped, con agua cerca y el hueco de
      *       arriba libre: <b>no arranca ningún cultivo</b>, I11).</li>
+     *   <li>55: el <b>TOLDO DEL PORCHE, ENTERO</b> (lo vio el jugador: <i>"el pórtico está cortado con un espacio, ¿por
+     *       qué? debería estar completo"</i>). Los dos <b>faroles de las puntas</b> del alero se colocaban en la
+     *       <b>misma celda</b> que su <b>escalón</b> —encima del poste— y lo <b>sustituían</b> (el plano guarda el
+     *       último bloque de cada celda), así que al toldo le faltaba un escalón en cada punta y se veía cortado; y
+     *       además un farol <b>colgado</b> ahí no tenía <b>nada encima</b> de lo que colgar, así que estaba
+     *       <b>flotando</b> (I14). Ahora el toldo lleva un <b>soffito de tablones</b> de punta a punta y los tres
+     *       faroles <b>cuelgan</b> de él (uno en cada punta y el del centro). Este reparador arregla las tabernas ya
+     *       construidas <b>solo en las celdas del porche</b> (no rehace la taberna: no se pierde ni la despensa ni las
+     *       camas). Y, en la misma pasada, los <b>dos faroles del DORMITORIO de la barraca</b>: se colocaban
+     *       <b>posados</b> en la celda que va pegada al tejado, donde no hay nada debajo, así que quedaban flotando
+     *       (I14; medido: 2 por barraca en las aldeas 0 y 2). Eso es un retrofit <b>en el sitio</b> —la celda es la
+     *       buena, lo que estaba mal era el estado (<b>colgados</b> del tejado)—, sin rehacer nada.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 54;
+    public static final int CURRENT_LAYOUT = 55;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -1573,6 +1585,12 @@ public final class VillageManager {
             // desván, así que el pueblo no pierde ninguna cama. La escalera nueva (dentro del cuarto) y su hueco los
             // monta `desvanDeLaTaberna`, que este reparador vuelve a llamar. Es idempotente y no rehace la taberna.
             VillageGenerator.moverLaEscaleraDelDesvan(level, center);
+            // EL TOLDO DEL PORCHE, ENTERO (migración 55, lo vio el jugador: "el pórtico está cortado con un espacio,
+            // ¿por qué? debería estar completo"). Los dos faroles de las puntas del alero se colocaban en la celda de
+            // su ESCALÓN y lo sustituían (y el plano guarda el último bloque de cada celda), así que faltaba un
+            // escalón en cada punta del toldo y los dos faroles colgaban del aire (I14). Se repara SOLO el porche,
+            // celda por celda: no rehace la taberna, así que no se pierde ni la despensa ni las camas.
+            VillageGenerator.arreglarPorcheDeLaTaberna(level, center);
             // Y su CAMINO desde la plaza (torcido, para no cruzar la parcela de la granja).
             VillageGenerator.caminoALaTaberna(level, center);
             // LA PESQUERA (etapa G): el lago, la caseta del pescador, su BARRIL (el puesto) y sus peces. Va antes de

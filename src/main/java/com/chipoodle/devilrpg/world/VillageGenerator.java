@@ -826,6 +826,14 @@ public final class VillageGenerator {
 
     /** Radio de la barraca (huella de 9x9). */
     private static final int BARRACA_RADIO = 4;
+    /** Lo que sube el <b>suelo del dormitorio</b> sobre la cota de la aldea (el forjado va uno por debajo). */
+    private static final int BARRACA_PISO2 = 4;
+    /**
+     * Lo que sube el <b>farol del dormitorio</b> sobre la cota: va pegado al <b>tejado</b> (que está un bloque más
+     * arriba), así que <b>cuelga</b> de él. Colocado <b>posado</b> —como estaba— no tiene nada debajo y queda
+     * flotando (I14). El número vive aquí porque lo usan el constructor y el retrofit de las barracas ya construidas.
+     */
+    private static final int BARRACA_FAROL_DY = BARRACA_PISO2 + 2;
     /** Camas de la barraca: dos filas de 4, una contra cada pared larga. */
     public static final int BARRACA_CAMAS = 8;
 
@@ -846,6 +854,19 @@ public final class VillageGenerator {
         if (level.getBlockState(barril).is(Blocks.BARREL)) {
             // lint:ok I9 porque no se añade construcción: es un retrofit en el sitio de la pasada idempotente.
             colocar(level, barril, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.NORTH), 3);
+        }
+        // Y LOS FAROLES DEL DORMITORIO, COLGADOS DEL TEJADO (migración 55). Se colocaban POSADOS en la celda que va
+        // pegada al tejado, y ahí no hay nada debajo (el dormitorio está al aire): quedaban flotando, sin cadena
+        // (I14). Medido en el guardado del jugador: 2 en el dormitorio de cada barraca (aldeas 0 y 2). La celda es
+        // la BUENA —es la que está justo debajo del tejado de tablones—: lo que estaba mal era el ESTADO, así que
+        // esto es un retrofit en el sitio (idempotente y de tres celdas), como el del barril de arriba.
+        for (int dz = -BARRACA_RADIO + 2; dz <= BARRACA_RADIO - 2; dz += 3) {
+            BlockPos farol = new BlockPos(base.getX(), nivel + BARRACA_FAROL_DY, base.getZ() + dz);
+            BlockState estado = level.getBlockState(farol);
+            if (estado.is(Blocks.LANTERN) && !estado.getValue(LanternBlock.HANGING)
+                    && Block.canSupportCenter(level, farol.above(), Direction.DOWN)) {
+                colgar(level, farol);
+            }
         }
         // Testigo del trazado NUEVO (etapa F: barraca de DOS PISOS con sala de armas): el hogar del patio de
         // entrenamiento. Una barraca de una planta (sin hogar) se vuelve a levantar entera, que es lo que trae el
@@ -880,7 +901,7 @@ public final class VillageGenerator {
         int r = BARRACA_RADIO;
         int bx = base.getX();
         int bz = base.getZ();
-        int yPiso2 = nivel + 4;   // suelo del dormitorio (el forjado va en yPiso2 - 1)
+        int yPiso2 = nivel + BARRACA_PISO2;   // suelo del dormitorio (el forjado va en yPiso2 - 1)
         int yTejado = yPiso2 + 3;
         // 1) Huella NIVELADA a la cota del pueblo, como las casas: recorta el terreno natural que sobra y
         //    RELLENA lo que falta. Hace falta de verdad: medido en el guardado, el cuadrante oeste de alguna aldea
@@ -968,7 +989,10 @@ public final class VillageGenerator {
         colocar(level, new BlockPos(bx + r - 1, yPiso2, bz), Blocks.CHEST.defaultBlockState()
                 .setValue(ChestBlock.FACING, Direction.WEST), 3);
         for (int dz = -r + 2; dz <= r - 2; dz += 3) {
-            colocar(level, new BlockPos(bx, yPiso2 + 2, bz + dz), Blocks.LANTERN.defaultBlockState(), 3);
+            // COLGADOS del tejado (que va justo en la celda de arriba, BARRACA_FAROL_DY): un farol POSADO aquí no
+            // tiene NADA debajo —el dormitorio está al aire— y quedaba flotando, sin cadena (I14). Medido en el
+            // guardado: 2 faroles así en el dormitorio de cada barraca (aldeas 0 y 2).
+            colgar(level, new BlockPos(bx, nivel + BARRACA_FAROL_DY, bz + dz));
         }
         // 8) TEJADO (a la altura del segundo piso) con alero de un bloque de sobra y faroles colgados del centro: de
         //    noche la barraca se ve desde lejos y no spawnean monstruos dentro (que es lo que evitaría que la
@@ -1199,11 +1223,19 @@ public final class VillageGenerator {
     }
 
     /**
-     * <b>Auto-comprobación de faroles flotantes</b>: recorre el recinto de la aldea y cuenta los faroles que no
-     * cuelgan de nada ni están sobre un apoyo (la misma prueba que hace el juego para ponerlos). Se llama al
+     * <b>Auto-comprobación de faroles flotantes</b>: recorre el recinto de la aldea y cuenta los faroles <b>sin
+     * apoyo</b> (la misma prueba que hace el juego para ponerlos, {@code Block.canSupportCenter}). Se llama al
      * <b>terminar de generar</b> y al <b>terminar de migrar</b> (no en el latido: son ~80.000 bloques) y, si
      * encuentra alguno, lo <b>grita en el log</b> con sus posiciones: el bug de los 16 faroles colgados del aire
      * (14 en la cerca de la granja anexa y 2 en la pesquera) no puede volver en silencio.
+     * <p>
+     * <b>OJO: cada farol se sostiene por el lado que dice SU PROPIO estado</b> ({@code hanging}): uno <b>colgado</b>
+     * necesita un bloque sólido <b>encima</b> y uno <b>posado</b> lo necesita <b>debajo</b>. Mirando los dos lados a
+     * la vez —como se hacía antes— se colaban los dos casos que aparecieron en el guardado del jugador (migración
+     * 55): un {@code hanging=true} colgado del aire <b>sobre un poste</b> (los faroles de las puntas del porche de la
+     * taberna) y un {@code hanging=false} posado en el aire <b>bajo el tejado</b> (los del dormitorio de la barraca),
+     * porque en los dos había "algo" al otro lado. Medido: <b>4</b> faroles así en la aldea 2 (2 + 2) y los mismos 4
+     * más 14 de la cerca del corral en la 0.
      *
      * @return cuántos faroles sin apoyo ha encontrado
      */
@@ -1215,18 +1247,22 @@ public final class VillageGenerator {
             for (int dz = -radio; dz <= radio; dz++) {
                 for (int dy = -2; dy <= 18; dy++) {
                     BlockPos p = new BlockPos(center.getX() + dx, nivel + dy, center.getZ() + dz);
-                    if (!level.getBlockState(p).is(Blocks.LANTERN)) {
+                    BlockState estado = level.getBlockState(p);
+                    if (!estado.is(Blocks.LANTERN)) {
                         continue;
                     }
-                    boolean colgado = Block.canSupportCenter(level, p.above(), Direction.DOWN);
-                    boolean sobre = Block.canSupportCenter(level, p.below(), Direction.UP);
-                    if (colgado || sobre) {
+                    boolean colgado = estado.getValue(LanternBlock.HANGING);
+                    boolean bien = colgado
+                            ? Block.canSupportCenter(level, p.above(), Direction.DOWN)
+                            : Block.canSupportCenter(level, p.below(), Direction.UP);
+                    if (bien) {
                         continue;
                     }
                     flotantes++;
                     if (flotantes <= 10) {
-                        DevilRpg.LOGGER.warn("[Village] FAROL FLOTANTE en {} (aldea en {}): ni colgado ni con apoyo",
-                                p, center);
+                        DevilRpg.LOGGER.warn("[Village] FAROL SIN APOYO en {} (aldea en {}): {} y {}",
+                                p, center, colgado ? "colgado" : "posado",
+                                colgado ? "sin bloque encima" : "sin bloque debajo");
                     }
                 }
             }
@@ -5380,7 +5416,7 @@ public final class VillageGenerator {
      * cocinero, el <b>hogar</b> con su chimenea, la <b>barra</b> con las pipas, seis mesas con sus sillas, la
      * escalera y faroles por todas partes. Arriba, la <b>posada</b>: seis cuartos con sus camas alrededor de la
      * galería (para los viajeros y para la milicia cuando no está de guardia). La puerta da al <b>oeste</b>, a la
-     * plaza, con porche, toldo y enseña.
+     * plaza, con porche y toldo.
      * <p>
      * Todo pasa por {@link #colocar}, así que <b>entra en el plano</b> (invariante I8) y el obrero lo repone.
      */
@@ -6334,37 +6370,128 @@ public final class VillageGenerator {
     }
 
     /**
-     * El <b>porche</b> de la puerta (al oeste, dando a la plaza): dos postes, el <b>toldo</b> que baja hacia fuera, la
-     * <b>enseña</b> de la taberna colgada con su farol y un par de <b>pipas</b> al lado de la puerta. Es lo primero
-     * que se ve al llegar al pueblo.
+     * El <b>porche</b> de la puerta (al oeste, dando a la plaza): dos postes, el <b>toldo</b> que baja hacia fuera con
+     * sus faroles colgados y un par de <b>pipas</b> al lado de la puerta. Es lo primero que se ve al llegar al pueblo.
+     * <p>
+     * El <b>toldo</b> son <b>dos filas</b> de escalones: la de <b>dentro</b> (pegada al muro, {@code bx-2}) a la altura
+     * del forjado de la posada y la de <b>fuera</b> ({@code bx-3}, encima de los postes) un bloque más baja, así que
+     * baja hacia fuera. Las dos filas van <b>enteras</b>, de punta a punta ({@code pz-3..pz+3}).
+     * <p>
+     * <b>Los faroles van POR DEBAJO del toldo, nunca en la fila de los escalones.</b> No siempre fue así, y el jugador
+     * lo vio: <i>"el pórtico está cortado con un espacio, ¿por qué? debería estar completo"</i>. Los dos faroles de las
+     * puntas se colocaban <b>en la misma celda</b> que el escalón del alero (encima del poste) y lo
+     * <b>sustituían</b> —el plano guarda el ÚLTIMO bloque de cada celda ({@link GrabadoraDePlano}), así que quedaba
+     * apuntado el farol—, de modo que al alero le faltaba un escalón en cada punta y se veía cortado. Y encima un
+     * farol <b>colgado</b> ahí no tenía <b>nada encima</b> de lo que colgar: estaba <b>flotando</b> (invariante I14,
+     * la misma prueba que hace el juego, {@code Block.canSupportCenter}).
+     * <p>
+     * Por eso el toldo lleva un <b>soffito de tablones</b> ({@code bx-2}, una capa por debajo de la fila de dentro) que
+     * también va de punta a punta: es un bloque <b>sólido</b> y de él <b>cuelgan</b> los tres faroles (uno en cada
+     * punta, sobre los postes, y uno en el centro, que es la vertical de la puerta). Los pone {@code colgar}, que es
+     * el ayudante de los faroles que van colgados. La repara en las tabernas ya construidas
+     * {@link #arreglarPorcheDeLaTaberna(ServerLevel, BlockPos)} (migración 55), celda por celda.
      */
     private static void porcheDeLaTaberna(ServerLevel level, int bx, int bz, int nivel) {
         int pz = TABERNA_PUERTA;
+        // 1) LOS DOS POSTES, en las puntas del toldo.
         for (int dz : new int[]{pz - 3, pz + 3}) {
             for (int k = 0; k <= 2; k++) {
                 colocar(level, new BlockPos(bx - 3, nivel + k, bz + dz), Blocks.DARK_OAK_FENCE.defaultBlockState(), 3);
             }
         }
+        // 2) EL TOLDO: las dos filas de escalones, ENTERAS de punta a punta. Nada más se pone en esta fila: una celda
+        //    de aquí es un escalón del alero y, si se ocupa con otra cosa (un farol), el toldo se ve CORTADO.
         for (int dz = pz - 3; dz <= pz + 3; dz++) {
-            colocar(level, new BlockPos(bx - 2, nivel + TABERNA_PISO2 - 1, bz + dz),
-                    Blocks.DARK_OAK_STAIRS.defaultBlockState()
-                            .setValue(StairBlock.FACING, Direction.EAST).setValue(StairBlock.HALF, Half.BOTTOM), 3);
-            colocar(level, new BlockPos(bx - 3, nivel + TABERNA_PISO2 - 2, bz + dz),
-                    Blocks.DARK_OAK_STAIRS.defaultBlockState()
-                            .setValue(StairBlock.FACING, Direction.EAST).setValue(StairBlock.HALF, Half.BOTTOM), 3);
+            colocar(level, new BlockPos(bx - 2, nivel + TABERNA_PISO2 - 1, bz + dz), escalonDelToldo(), 3);
+            colocar(level, new BlockPos(bx - 3, nivel + TABERNA_PISO2 - 2, bz + dz), escalonDelToldo(), 3);
         }
-        for (int dz = pz - 1; dz <= pz + 1; dz++) {
+        // 3) EL SOFFITO: el tablón que cierra el toldo por debajo (una capa por debajo de la fila de dentro), entero.
+        //    Es el APOYO de los faroles (I14): un farol colgado necesita un bloque SÓLIDO encima.
+        for (int dz = pz - 3; dz <= pz + 3; dz++) {
             colocar(level, new BlockPos(bx - 2, nivel + TABERNA_PISO2 - 2, bz + dz),
                     Blocks.DARK_OAK_PLANKS.defaultBlockState(), 3);
         }
-        colocar(level, new BlockPos(bx - 2, nivel + TABERNA_PISO2 - 3, bz + pz),
-                Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true), 3);
-        colocar(level, new BlockPos(bx - 3, nivel + TABERNA_PISO2 - 2, bz + pz - 3),
-                Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true), 3);
-        colocar(level, new BlockPos(bx - 3, nivel + TABERNA_PISO2 - 2, bz + pz + 3),
-                Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true), 3);
+        // 4) LOS TRES FAROLES, COLGADOS del soffito: uno en cada punta (encima de los postes) y uno en el centro.
+        for (int dz : new int[]{pz - 3, pz, pz + 3}) {
+            colgar(level, new BlockPos(bx - 2, nivel + TABERNA_PISO2 - 3, bz + dz));
+        }
+        // 5) LAS PIPAS, a los dos lados de la puerta y pegadas al muro.
         colocar(level, new BlockPos(bx - 2, nivel, bz + pz - 2), Blocks.OAK_WOOD.defaultBlockState(), 3);
         colocar(level, new BlockPos(bx - 2, nivel, bz + pz + 2), Blocks.OAK_WOOD.defaultBlockState(), 3);
+    }
+
+    /**
+     * El <b>escalón del toldo</b> del porche: mira al <b>este</b> (la cara alta —por donde se sube— pegada al muro),
+     * que es lo que hace que el alero baje hacia fuera. Lo usan el constructor y su reparador, para que no se puedan
+     * quedar con dos formas distintas.
+     */
+    private static BlockState escalonDelToldo() {
+        return Blocks.DARK_OAK_STAIRS.defaultBlockState()
+                .setValue(StairBlock.FACING, Direction.EAST).setValue(StairBlock.HALF, Half.BOTTOM);
+    }
+
+    /**
+     * <b>Repara el porche</b> de una taberna ya construida (migración 55). Las tabernas de pie hasta ahora tienen el
+     * <b>alero del toldo cortado</b>: los dos faroles de las puntas se colocaban en la celda de su escalón y lo
+     * sustituían —y el plano guarda el último bloque de cada celda—, así que faltaba un escalón en cada punta y los
+     * dos faroles colgaban <b>del aire</b> (I14). Lo vio el jugador: <i>"el pórtico está cortado con un espacio"</i>.
+     * <p>
+     * Esto deja las <b>mismas celdas</b> que {@link #porcheDeLaTaberna}, una por una y <b>solo las del porche</b>:
+     * <ul>
+     *   <li>los dos faroles <b>flotantes</b> de las puntas se retiran, y <b>solo si siguen siendo faroles</b>
+     *       ({@code quitarSiEs}: lo que haya puesto el jugador se queda);</li>
+     *   <li>su celda se cierra con el <b>escalón</b> que le toca, si quedó vacía;</li>
+     *   <li>el <b>soffito de tablones</b> se completa de punta a punta (solo donde esté vacío);</li>
+     *   <li>y los dos faroles de las puntas se <b>cuelgan</b> del soffito, con la misma prueba que hace el juego para
+     *       aceptar un farol colgado ({@code Block.canSupportCenter}, I14), así que no puede volver a quedar uno en el
+     *       aire.</li>
+     * </ul>
+     * Es <b>idempotente</b> (en una taberna ya reparada —o construida con el constructor nuevo— no cambia nada) y
+     * <b>no rehace la taberna</b>: no toca ni la despensa, ni las camas, ni los cuartos.
+     */
+    public static void arreglarPorcheDeLaTaberna(ServerLevel level, BlockPos center) {
+        if (!tabernaConstruida(level, center)) {
+            return;
+        }
+        int nivel = cotaDeLaPlaza(level, center);
+        BlockPos base = baseDeLaTaberna(center);
+        int bx = base.getX();
+        int bz = base.getZ();
+        int pz = TABERNA_PUERTA;
+        int yToldo = nivel + TABERNA_PISO2 - 2;   // la fila de FUERA del toldo (y la del soffito de tablones)
+        int yFarol = nivel + TABERNA_PISO2 - 3;   // los faroles, una capa por debajo del soffito
+        int cambios = 0;
+        for (int dz : new int[]{pz - 3, pz + 3}) {
+            // 1) EL FAROL FLOTANTE de la punta, fuera (solo si es un farol: lo del jugador no se toca).
+            cambios += quitarSiEs(level, bx - 3, yToldo, bz + dz, Blocks.LANTERN);
+            // 2) Y EL ESCALÓN que se comía, en su sitio: la fila de fuera tiene que llegar a las dos puntas.
+            if (colocarSiEstaVacio(level, new BlockPos(bx - 3, yToldo, bz + dz), escalonDelToldo())) {
+                cambios++;
+            }
+        }
+        // 3) EL SOFFITO, de punta a punta (el apoyo de los faroles; en las tabernas viejas solo estaba en el centro).
+        for (int dz = pz - 3; dz <= pz + 3; dz++) {
+            if (colocarSiEstaVacio(level, new BlockPos(bx - 2, yToldo, bz + dz),
+                    Blocks.DARK_OAK_PLANKS.defaultBlockState())) {
+                cambios++;
+            }
+        }
+        // 4) Y LOS FAROLES DE LAS PUNTAS, COLGADOS del soffito (nunca en la fila de los escalones).
+        for (int dz : new int[]{pz - 3, pz + 3}) {
+            BlockPos farol = new BlockPos(bx - 2, yFarol, bz + dz);
+            if (!level.getBlockState(farol).isAir()) {
+                continue;   // ya está (o lo puso el jugador)
+            }
+            if (!Block.canSupportCenter(level, farol.above(), Direction.DOWN)) {
+                continue;   // sin soffito encima no se cuelga nada (I14)
+            }
+            colgar(level, farol);
+            cambios++;
+        }
+        if (cambios > 0) {
+            DevilRpg.LOGGER.info("[Village] Taberna de {}: porche reparado ({} cambio(s) en sus celdas: el alero del"
+                    + " toldo entero y los faroles de las puntas colgados del soffito)", center, cambios);
+        }
     }
 
     /** Un farol <b>colgado</b> (de un bloque sólido que tiene encima). */
@@ -6373,8 +6500,10 @@ public final class VillageGenerator {
     }
 
     /**
-     * Las <b>luces</b> de la taberna: faroles colgados del forjado en el comedor, del techo en la galería y en los
-     * cuartos, y un par bajo el toldo del porche. Una taberna a oscuras es una taberna con bichos dentro.
+     * Las <b>luces</b> de la taberna: faroles colgados del forjado en el comedor y del techo en la galería y en los
+     * cuartos. Los del <b>porche</b> no están aquí: los cuelga del soffito del toldo su constructor
+     * ({@link #porcheDeLaTaberna}), que es quien conoce esa geometría. Una taberna a oscuras es una taberna con
+     * bichos dentro.
      */
     private static void lucesDeLaTaberna(ServerLevel level, int bx, int bz, int nivel, int y1, int yTecho) {
         int[][] comedor = {{2, 3}, {5, 3}, {9, 3}, {13, 3}, {16, 3}, {4, 7}, {9, 7}, {13, 7}, {16, 8},

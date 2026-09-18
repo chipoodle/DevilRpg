@@ -185,6 +185,30 @@ regla **I12 del lint** (una Y con sumando en `farolSobreElPoste` falla la puerta
 log** cualquier farol sin apoyo, con su posición) y el **retrofit** `posarFarolesFlotantes` (baja el farol que quedó
 flotando en una aldea ya construida; el plano se recaptura después, así que el obrero repone la posición buena).
 
+> **Tercera vez, en el porche de la taberna y en la barraca (migración 55).** Dos faroles que se colocaban con la
+> celda o el **estado** equivocados, medidos los dos en el guardado del jugador:
+>
+> - **El porche de la taberna.** El jugador: *"el pórtico está cortado con un espacio, ¿por qué? debería estar
+>   completo"*. Aldea 2, cota 120, taberna en `1438,1428`: los **dos faroles de las puntas del alero**
+>   (`(1435,123,1432)` y `(1435,123,1438)`, `lantern[hanging=true]` **con aire encima**) estaban colocados **en la
+>   celda del escalón del toldo** y lo **sustituían** —y como el **plano guarda el último bloque de cada celda**, el
+>   obrero reponía el farol, no el escalón—: el alero quedaba **cortado** en sus dos últimas celdas y los faroles
+>   **colgando del aire**, las dos cosas a la vez.
+> - **El dormitorio de la barraca.** `lantern[hanging=false]` **con aire debajo** y el tejado de tablones justo
+>   encima (`(1369,126,1434)` y `(1369,126,1437)` en la aldea 2, y los mismos dos en la 0): faroles **posados**
+>   flotando, sin cadena, a un bloque del techo. La celda era la **buena** (la de debajo del tejado); lo que estaba
+>   mal era el **estado**.
+>
+> **Reglas que se añaden:** en una fila de geometría fija (el alero del toldo, como el hueco de la escalera en I16)
+> **no se coloca nada más**: si algo tiene que colgar, va en la celda de **debajo** y de un bloque **sólido** (el
+> **soffito** de tablones del porche). Y un farol **colgado** pasa siempre por `colgar`, con el apoyo garantizado
+> (`Block.canSupportCenter`, que es la prueba del propio juego). **Y la autocomprobación se aprieta** (migración 55):
+> `auditarFarolesFlotantes` mira **el lado que dice el `hanging` del propio farol** (colgado → bloque encima; posado →
+> bloque debajo) en vez de los dos lados a la vez, que era lo que dejaba pasar estos dos casos: un `hanging=true`
+> sobre un poste y un `hanging=false` bajo el tejado tenían "algo" al otro lado. **Ojo**: la auditoría de Python
+> (`tools/audita_aldea.py`) sigue aceptando la **valla de debajo** (la regla del farol *posado*) sin leer el
+> `hanging`, así que esos dos casos solo los canta el juego (o `build/faroles_hanging.py`).
+
 > La misma auditoría (`tools/audita_aldea.py`, **versionada**; antes estaba en `build/`, fuera de git) comprueba
 > además: faroles y **vallas** flotando, **cofres tapados** (un bloque encima: no se pueden abrir), **puertas
 > incompletas** (sin su mitad) y **camas sueltas** (sin cabecera). Saca las aldeas **del propio guardado**
@@ -404,6 +428,7 @@ Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento 
 | `build/huertadiag.py`, `build/huerta_simula.py` | **Bancales**: qué dice el plano y qué hay en el mundo celda por celda (qué calvas faltan en el plano) y qué celdas repondría el obrero / labraría el granjero (I25). |
 | `build/granjaestado.py`, `build/farmdiag.py`, `build/columnas.py`, `build/perfilcol.py` | Estado de la granja (cultivos, edades, cotas) y columnas crudas. |
 | `build/items.py`, `build/contenedores.py` | Objetos en el suelo por tipo y contenido de cofres/despensa/almacén. |
+| `build/faroles_hanging.py` | **Faroles sin apoyo de verdad** (I14): mira la propiedad `hanging` contra su dirección, que es lo que **no** mira la auditoría de Python (una valla debajo vale para un farol *posado*, no para uno *colgado*; la de Java sí lo mira desde la migración 55). Dice qué reparador arregla cada uno. |
 | `build/aldeanos.py`, `build/aldeanos.py` | Aldeanos: profesión, inventario, posición (carpeta `entities/`). |
 | `build/herreria.py`, `build/huecos_ore.py`, `build/solares*.py` | Herrería, huecos y minerales flotantes, solares libres. |
 | `build/plantillas*.py`, `build/paleta.py` | Plantillas del juego: tamaños, puertas y qué bloques traen. |
