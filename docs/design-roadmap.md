@@ -2189,6 +2189,40 @@ seguía clavado en **5** ("aldea sana") con once puestos: ahora **se pide** (`pu
 monte (el arnés lo vio trabajando y guardando madera, no sentado en la mesa). **Sin migración de aldeanos**: los dos
 puestos nuevos los repone el latido al ver sus plazas vacías; la migración 62 solo construye el taller.
 
+### 3b.49 El CLÉRIGO prepara pociones (su goal propio, con lo que el pueblo junta)
+
+Era el último rol **huérfano** del reparto: el clérigo tenía su plaza en el cupo, comía y pagaba su comida, pero **no
+tenía ningún goal del mod** — su faena era la actividad de trabajar de vanilla, que necesita `JOB_SITE`… y su
+**soporte de pociones de la iglesia estaba libre** (nadie lo había reclamado), así que el juego no le registraba la
+actividad y caía a **IDLE** (el mismo "da vueltas sobre su eje" que ya vimos con el herrero). Lo arregla el latido
+(`reclamarEstacionesDelPueblo`, I36) y, con el puesto reclamado, esto le da su oficio.
+
+**La cadena es la del pueblo, no magia** (`VillagerClericGoal`, prioridad 4 como el resto de oficios):
+
+1. Los guardias y el jugador matan bichos → el **recolector** barre el botín y lo deja en el **almacén** (pepitas de
+   oro, ojos de araña, pólvora); el **granjero** cría **zanahorias**.
+2. El clérigo va a **su soporte de pociones** y **lo carga** (`BrewingStandBlockEntity`: las botellas en sus tres
+   huecos, el ingrediente encima y el **polvo de blaze** de combustible): **agua + verruga del Nether = poción
+   extraña**; **extraña + zanahoria dorada = visión nocturna**; **extraña + ojo de araña = veneno**; y con **pólvora**,
+   la versión arrojadiza.
+3. **La poción la cuece el JUEGO** (el soporte de vanilla hace su trabajo): el mod no simula nada, solo carga el
+   soporte y recoge lo que sale.
+4. Y la **zanahoria dorada se fabrica** con la receta de vanilla (**8 pepitas de oro + 1 zanahoria**), que son cosas
+   que el pueblo **sí** junta: el clérigo no inventa ingredientes.
+5. Las pociones terminadas van **al almacén**, que es de donde las coge el jugador. Cuando no puede hacer nada, **su
+   etiqueta dice qué le falta** ("Falta verruga del Nether", "Falta polvo de blaze", "Faltan botellas de agua"), y es
+   que el pueblo **no puede fabricar** lo del Nether (verruga, polvo de blaze): eso lo trae el jugador al almacén.
+
+Y hereda lo de la etapa H: si no llega al soporte, **lo aparca** (I33) en vez de quedarse empujando la pared.
+
+**Verificado**: compila y lint OK. **NO verificado sin jugar** (el arnés diría si carga el soporte y si la poción
+sale; queda para la ronda siguiente junto con lo de abajo).
+
+**Pendiente (rondas siguientes)**: que se **llene las botellas** él mismo en el bebedero del corral o el lago (hoy
+las coge embotelladas del almacén), una **remesa inicial** en el almacén para que arranque sin que el jugador traiga
+nada, y que las pociones lleguen también a la **guardia** (una poción por espadachín/arquero, como el arma y el
+escudo).
+
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.

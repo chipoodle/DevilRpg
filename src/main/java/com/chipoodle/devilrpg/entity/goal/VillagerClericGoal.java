@@ -224,7 +224,25 @@ public class VillagerClericGoal extends Goal {
                 return;
             }
         }
-        restTicks = IDLE_REST_TICKS; // no hay nada que hacer: a esperar (y el latido le reclamará el puesto)
+        // Nada que hacer: la etiqueta dice QUÉ le falta. El pueblo no puede fabricar lo del Nether (verruga del
+        // Nether, polvo de blaze) ni las botellas de agua, así que el aviso es lo que le dice al jugador qué traer.
+        restTicks = IDLE_REST_TICKS;
+        VillageManager.ponerActividad(villager, queFalta(level, stand));
+    }
+
+    /** Lo que le falta a la cadena, dicho en la etiqueta del clérigo (para que el jugador sepa qué traer). */
+    private String queFalta(ServerLevel level, BrewingStandBlockEntity stand) {
+        if (VillageStorage.cuenta(level, center, s -> s.is(Items.NETHER_WART)) <= 0) {
+            return "Falta verruga del Nether";
+        }
+        if (stand.getItem(4).isEmpty()
+                && VillageStorage.cuenta(level, center, s -> s.is(Items.BLAZE_POWDER)) <= 0) {
+            return "Falta polvo de blaze";
+        }
+        if (VillageStorage.cuenta(level, center, this::esBotellaDeAgua) <= 0) {
+            return "Faltan botellas de agua";
+        }
+        return "Sin faena";
     }
 
     /** Las <b>pociones que lleva dentro</b> ese objeto (vacío si no es una poción). */
