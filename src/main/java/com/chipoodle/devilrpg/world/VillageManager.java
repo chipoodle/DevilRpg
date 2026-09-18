@@ -2364,7 +2364,11 @@ public final class VillageManager {
                 // (medido en su partida: la única guardia, sin espada, horas en el almacén y "Durmiendo").
                 ponerActividad(villager, "De guardia");
             } else if (estaDescansando(villager)) {
-                ponerActividad(villager, "Durmiendo");
+                // OJO: `estaDescansando` es la FRANJA de descanso del cerebro (toda la noche), NO que esté en la cama.
+                // Antes se le ponía "Durmiendo" a secas y el jugador veía al granjero **de pie en la calle**
+                // "durmiendo" (lo preguntó: "¿por qué el granjero está durmiendo parado?"). Ahora la etiqueta dice lo
+                // que pasa de verdad, y de paso avisa de lo que falta: si no tiene cama, lo dice.
+                ponerActividad(villager, tieneCama(villager) ? "Yendo a la cama" : "Sin cama");
             } else if (villager.isBaby()) {
                 ponerActividad(villager, "Jugando");
             } else if (villager.getBrain().isActive(net.minecraft.world.entity.schedule.Activity.WORK)) {
@@ -2375,6 +2379,15 @@ public final class VillageManager {
                 ponerActividad(villager, "Paseando");
             }
         }
+    }
+
+    /**
+     * ¿Ese aldeano tiene <b>cama propia</b>? Es la memoria {@code HOME} del cerebro (donde vanilla guarda la cama que
+     * ha reclamado). Sirve para que la etiqueta no mienta: un aldeano en la franja de descanso que <b>no</b> tiene
+     * cama está despierto y dando vueltas, y el pueblo debería saberlo (lleva su propia etiqueta: "Sin cama").
+     */
+    public static boolean tieneCama(Villager villager) {
+        return villager.getBrain().hasMemoryValue(net.minecraft.world.entity.ai.memory.MemoryModuleType.HOME);
     }
 
     /**
