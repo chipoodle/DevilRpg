@@ -1475,6 +1475,16 @@ subir la L y salir al desván) ni la migración corriendo de verdad sobre su par
 cerró para poder compilar (el `build` no toca el guardado).
 
 
+### 3b.36 Las ventanas, de cristal entero (migración 53)
+
+El jugador, mirando la fachada otra vez: *"la ventana sigue estando puesta de manera incorrecta. Mejor pon ventanas de
+cristal completo, de las de cubo"*. Tenía razón en zanjarlo: el **panel** (`glass_pane`) se dibuja según sus
+conexiones, **no conecta con los troncos** de los postes (medido en su guardado) y ni con un solo panel en la celda
+central y cal a los dos lados acababa de verse bien. Ahora las ventanas de los muros Tudor y de los frontones son
+**`Blocks.GLASS`** (cristal entero), de **dos de ancho** por hueco: un bloque de cristal no tiene conexiones, así que
+siempre se ve entero. Lo aplica la **migración 53** volviendo a pasar los muros y el tejado con el reparador que ya
+existía (`rehacerMurosDeLaTaberna`).
+
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.

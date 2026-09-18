@@ -5416,12 +5416,11 @@ public final class VillageGenerator {
             int x = x0 + dx * i;
             int z = z0 + dz * i;
             boolean poste = i % 4 == 0 || i == largo - 1;
-            // El cristal va SOLO en la celda de en medio del hueco (i%4==2), con cal a los dos lados. Los cristales
-            // NO conectan con los troncos de los postes (medido en el guardado del jugador: un `glass_pane` pegado al
-            // poste se queda con esa conexion en falso), asi que un cristal pegado al poste se ve CORTADO (media
-            // ventana) y uno solo entre dos postes se ve como una franja fina. Con cal a los dos lados, el cristal
-            // conecta por los dos y se ve entero.
-            boolean ventana = i % 4 == 2;
+            // La ventana son DOS bloques de CRISTAL ENTERO (no paneles). Un `glass_pane` se dibuja segun sus cuatro
+            // conexiones y NO conecta con los troncos de los postes, asi que se veia cortado (media ventana) o como
+            // una franja fina. Lo pidio el jugador: "mejor pon ventanas de cristal completo de las de cubo". Un
+            // bloque de cristal no tiene conexiones: siempre se ve entero y la ventana queda de dos de ancho.
+            boolean ventana = i % 4 == 1 || i % 4 == 2;
             for (int k = 0; k < alto; k++) {
                 BlockPos p = new BlockPos(x, yBase + k, z);
                 if (i == indicePuerta && k <= 1) {
@@ -5435,7 +5434,7 @@ public final class VillageGenerator {
                 } else if (k == alto - 1) {
                     colocar(level, p, Blocks.DARK_OAK_PLANKS.defaultBlockState(), 3);
                 } else if (ventana && k == kVentana) {
-                    colocar(level, p, Blocks.GLASS_PANE.defaultBlockState(), 3);
+                    colocar(level, p, Blocks.GLASS.defaultBlockState(), 3); // cristal ENTERO (ver arriba)
                 } else {
                     // El panel de CAL (antes terracota blanca): NO puede ser un bloque con etiqueta de terreno
                     // (terracota lo es, para las aldeas de meseta) o el recorte del nivelado se lo come.
@@ -5962,7 +5961,7 @@ public final class VillageGenerator {
                     if (y == yTecho || y == yTecho + arriba - 1 || (y - yTecho) % 3 == 0) {
                         estado = Blocks.DARK_OAK_PLANKS.defaultBlockState();
                     } else if (y == yTecho + 2 && Math.abs(dz - cumbrera) <= 1) {
-                        estado = Blocks.GLASS_PANE.defaultBlockState();
+                        estado = Blocks.GLASS.defaultBlockState(); // la ventana del fronton, de cristal entero
                     } else {
                         estado = Blocks.SMOOTH_QUARTZ.defaultBlockState(); // la cal de los frontones (ver `muroTudor`)
                     }

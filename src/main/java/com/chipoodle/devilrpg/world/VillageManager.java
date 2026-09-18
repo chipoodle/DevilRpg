@@ -503,7 +503,7 @@ public final class VillageManager {
      *       hueco en el techo, con tablones y tejas, así que el techo queda sólido como estaba.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 52;
+    public static final int CURRENT_LAYOUT = 53;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
