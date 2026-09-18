@@ -49,6 +49,26 @@ public class GuardHarness {
             pega = FakePlayerFactory.getMinecraft(level);
         }
         ticks++;
+        // A los 15 s (chunks ya cargados) se le deja al almacen lo que el pueblo NO puede fabricar, para medir la
+        // cadena del CLERIGO: verruga del Nether, polvo de blaze y botellas de agua; y el botin que ya barre el
+        // recolector (pepitas de oro, zanahorias, ojos de arana) para la zanahoria dorada.
+        if (ticks == 300) {
+            com.chipoodle.devilrpg.world.VillageStorage.guardar(level, CENTRO,
+                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.NETHER_WART, 4));
+            com.chipoodle.devilrpg.world.VillageStorage.guardar(level, CENTRO,
+                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_POWDER, 4));
+            var agua = net.minecraft.world.item.alchemy.PotionContents.createItemStack(
+                    net.minecraft.world.item.Items.POTION, net.minecraft.world.item.alchemy.Potions.WATER);
+            agua.setCount(3);
+            com.chipoodle.devilrpg.world.VillageStorage.guardar(level, CENTRO, agua);
+            com.chipoodle.devilrpg.world.VillageStorage.guardar(level, CENTRO,
+                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.GOLD_NUGGET, 16));
+            com.chipoodle.devilrpg.world.VillageStorage.guardar(level, CENTRO,
+                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.CARROT, 2));
+            com.chipoodle.devilrpg.world.VillageStorage.guardar(level, CENTRO,
+                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.SPIDER_EYE, 2));
+            DevilRpg.LOGGER.info("[Arnes] almacen sembrado para el clerigo");
+        }
         // Los bichos que YA venian en el guardado dentro del recinto BLOQUEAN el latido del pueblo
         // (`hayEnemigosDentro`): sin esto el reparto de oficios y la guardia ni se tocan. Se barren cada segundo.
         if (ticks % 20 == 0) {

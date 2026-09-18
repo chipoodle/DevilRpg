@@ -2215,13 +2215,17 @@ actividad y caía a **IDLE** (el mismo "da vueltas sobre su eje" que ya vimos co
 
 Y hereda lo de la etapa H: si no llega al soporte, **lo aparca** (I33) en vez de quedarse empujando la pared.
 
-**Verificado**: compila y lint OK. **NO verificado sin jugar** (el arnés diría si carga el soporte y si la poción
-sale; queda para la ronda siguiente junto con lo de abajo).
+**Verificado CON EL ARNÉS** (aldea 2 de su partida copiada, servidor headless): el clérigo **reclama su soporte de
+pociones** (`reclama su estacion de cleric en 1397,121,1371`), carga el soporte con lo que se le dejó en el almacén
+(verruga del Nether, polvo de blaze, botellas de agua, 8 pepitas de oro + zanahoria para la dorada, ojo de araña) y
+**el juego cuece la poción**: `El clerigo guardo una pocion en el almacen: Potion of Poison` ✓ (agua → extraña con la
+verruga → veneno con el ojo de araña, y a guardarla). En la misma pasada, el reparador de estaciones dejó a los demás
+titulares con la suya (`fisherman`, `fletcher` y `shepherd`, este último con el ticket perdido del telar).
 
 **Pendiente (rondas siguientes)**: que se **llene las botellas** él mismo en el bebedero del corral o el lago (hoy
 las coge embotelladas del almacén), una **remesa inicial** en el almacén para que arranque sin que el jugador traiga
-nada, y que las pociones lleguen también a la **guardia** (una poción por espadachín/arquero, como el arma y el
-escudo).
+nada (hoy lo suple con lo que dice su etiqueta) y que las pociones lleguen también a la **guardia** (una poción por
+espadachín/arquero, como el arma y el escudo).
 
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 
