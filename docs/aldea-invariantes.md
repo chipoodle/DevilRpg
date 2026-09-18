@@ -673,6 +673,23 @@ cambia sola (el jugador tala, construye, rompe...). **No tiene regla en el lint*
 `canContinueToUse` aparece en **nueve** goals y en los de faena el destino **se vuelve a elegir** en cada arranque
 (no hay bucle); una regla de texto daría nueve falsos positivos.
 
+**Y desde la etapa H vale para TODOS los goals del pueblo** (era el fallo en los nueve: el jugador lo vio después con
+Isidoro, un granjero "Guardando lo suyo" y **moviéndose errático**: se rendía a los 140 ticks y volvía a elegir el
+mismo objeto). El mecanismo vive en **un solo sitio**, `VillageManager`:
+
+- `marcarPuntoFallido(villager, punto)` — se llama **al rendirse** (en `canContinueToUse`, cuando
+  `stuckTicks >= STUCK_LIMIT`) y apunta el sitio en los **datos persistentes** del aldeano (no en el goal, que se
+  pierde al descargar el chunk). Deja en el log `"no consigue llegar a <pos>: lo deja por 5 min"`, que es lo que
+  permite ver **qué** sitio del pueblo es el inalcanzable.
+- `esPuntoFallido(villager, punto)` — lo **salta** la búsqueda del goal durante **5 min**: en los que eligen entre
+  varios candidatos (el granjero, el ganadero, el leñador, el recolector) dentro del bucle, y en los que navegan a un
+  único destino calculado (el pescador, el cocinero, el herrero, la taberna) **al elegirlo** (si está aparcado, el
+  goal **no arranca** y espera un rato).
+
+Cableado en los **nueve**: recoger, granjero (sus cinco búsquedas), recolector, leñador (árbol, claro y restos),
+ganadero (animal, pareja y objetos), pescador, cocinero, herrero (almacén y taller, también al cambiar de fase) y
+taberna (su mesa).
+
 ### I34 · Con un aldeano DENTRO del hueco de un portón NO se cierra (ni por el plazo)
 
 La red de seguridad de los portones del anexo cierra un portón abierto más de 5 s **aunque haya alguien delante**
