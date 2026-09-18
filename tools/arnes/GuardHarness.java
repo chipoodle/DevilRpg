@@ -105,19 +105,26 @@ public class GuardHarness {
     }
 
     private static void volcar(ServerLevel level) {
+        java.util.Map<String, Integer> censo = new java.util.TreeMap<>();
         for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(96))) {
-            if (!VillagerGuardGoal.esGuardia(v)) {
-                continue;
+            censo.merge(v.isBaby() ? "CRIA" : str(v.getVillagerData().getProfession()), 1, Integer::sum);
+            if (!v.isBaby() && !VillagerGuardGoal.esGuardia(v)) {
+                continue; // de los adultos solo se sigue a la guardia y a las crias (el censo lo dice todo)
             }
             WalkTarget wt = v.getBrain().getMemory(MemoryModuleType.WALK_TARGET).orElse(null);
-            DevilRpg.LOGGER.info("[Arnes] t={} {} pos=({},{},{}) yRot={} destino={} oficio={} trabajo={} puesto={} etiqueta={}",
+            DevilRpg.LOGGER.info("[Arnes] t={} {} pos=({},{},{}) destino={} oficio={} trabajo={} puesto={} etiqueta={}",
                     level.getGameTime(), v.getUUID().toString().substring(0, 8), fmt(v.getX()), fmt(v.getY()),
-                    fmt(v.getZ()), fmt(v.getYRot()),
+                    fmt(v.getZ()),
                     wt == null ? "SIN DESTINO" : wt.getTarget().currentBlockPosition().toShortString(),
-                    v.getVillagerData().getProfession(), v.getBrain().isActive(Activity.WORK),
+                    str(v.getVillagerData().getProfession()), v.getBrain().isActive(Activity.WORK),
                     v.getPersistentData().getInt(VillageManager.GUARD_INDEX_TAG),
                     v.getCustomName() == null ? "-" : v.getCustomName().getString().replace("\n", " | "));
         }
+        DevilRpg.LOGGER.info("[Arnes] t={} CENSO {}", level.getGameTime(), censo);
+    }
+
+    private static String str(Object o) {
+        return String.valueOf(o).replace("minecraft:", "");
     }
 
     private static String fmt(double d) {

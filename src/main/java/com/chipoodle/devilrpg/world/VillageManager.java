@@ -118,8 +118,14 @@ public final class VillageManager {
 
     // --- Salud del asentamiento (Iteración 3, paso 2) ----------------------------------------------
 
-    /** Aldeanos que tiene una aldea sana (los que pone el generador): es el tope de la "salud". */
-    public static final int VILLAGERS_FOR_FULL_HEALTH = 5;
+    /**
+     * Aldeanos que tiene una aldea <b>sana</b>: <b>una por puesto</b> del pueblo ({@link VillageGenerator#puestosDelPueblo}),
+     * que es lo que pone el generador. Es el tope de la "salud" para la presión de los asedios.
+     * <p>
+     * Estaba clavado en <b>5</b> (los puestos de la etapa A) y con once puestos eso dejaba "sana" a una aldea a la
+     * que le faltaba más de la mitad de la gente: se pide al pueblo, no se escribe a mano (I5).
+     */
+    public static final int VILLAGERS_FOR_FULL_HEALTH = VillageGenerator.puestosDelPueblo();
     /** Cada cuánto se repone UN aldeano en una aldea debilitada (5 min). */
     private static final int REPOPULATE_INTERVAL_TICKS = 5 * 60 * 20;
     /**
@@ -602,7 +608,7 @@ public final class VillageManager {
      *       rehacer la barraca (su testigo es el hogar, I15) y antes de tirar el plano (I8).</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 61;
+    public static final int CURRENT_LAYOUT = 62;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -792,15 +798,25 @@ public final class VillageManager {
                         DevilRpg.LOGGER.info("[Village] Aldea {}: repuesto el puesto de {} que se habia quedado vacio "
                                 + "(comida {})", i, VillageGenerator.profesionDeSlot(slot), saved.getFood(i));
                     } else if (saved.getFood(i) >= FOOD_TO_GROW
-                            && vivos < VillageGenerator.puestosDelPueblo()
+                            && vivos < VillageGenerator.puestosDelPueblo() + MILICIA_MAX
                             && level.getGameTime() - saved.getRepopulatedAt(i) >= REPOPULATE_INTERVAL_TICKS) {
                         // Crecer cuesta comida: una aldea hambrienta no se recupera hasta que la granja produzca.
                         // El que llega nace CRÍA (crece sola, mecánica vanilla): así se ve el relevo generacional.
-                        VillageGenerator.spawnOneVillager(level, target, vivos, true);
+                        //
+                        // DOS ARREGLOS (etapa H). 1) EL TOPE ERA INALCANZABLE: esta rama exige que TODAS las
+                        // especialidades estén vivas (o sea ≥ puestos adultos) y a la vez `vivos < puestosDelPueblo()`
+                        // ⇒ contradicción: el pueblo no podía parir NUNCA por aquí, y las crías que había eran las de
+                        // vanilla (el pan de `feedVillagers`). Ahora crece hasta cubrir sus PUESTOS Y LA MILICIA, que
+                        // es lo que pidió el jugador: *"la milicia se va a ir llenando conforme vayan naciendo y
+                        // alcanzando la adultez aldeanos"*. 2) NACÍA CON OFICIO: `spawnOneVillager(..., vivos, true)`
+                        // usaba el número de vivos como ÍNDICE DE PLAZA, así que el aldeano 10 nacía con el oficio de
+                        // la plaza 10 (un oficio DUPLICADO). Ahora la cría nace SIN OFICIO: al crecer, el reparto le
+                        // da una plaza si queda libre y, si no, engrosa la milicia.
+                        VillageGenerator.spawnBaby(level, target);
                         saved.setFood(i, saved.getFood(i) - FOOD_TO_GROW);
                         saved.markRepopulated(i, level.getGameTime());
-                        DevilRpg.LOGGER.info("[Village] Aldea {} se recupera: aldeano {}/{} (comida {})",
-                                i, vivos + 1, VillageGenerator.puestosDelPueblo(), saved.getFood(i));
+                        DevilRpg.LOGGER.info("[Village] Aldea {} crece: aldeano {}/{} (comida {})",
+                                i, vivos + 1, VillageGenerator.puestosDelPueblo() + MILICIA_MAX, saved.getFood(i));
                     }
                 }
             }
@@ -1719,6 +1735,13 @@ public final class VillageManager {
             // vacía: idempotente, de una celda, sin rehacer la barraca (su testigo es el hogar, I15) y antes de
             // tirar el plano, para que el plano nuevo se capture ya con las tres (I8).
             VillageGenerator.moverLaDianaDeLaBarraca(level, center);
+            // EL TALLER DEL LEÑADOR (etapa H, migración 62): el leñador deja de ser el recolector y pasa a ser un
+            // oficio propio, así que necesita SU estación: un cobertizo abierto junto a la arboleda con la MESA DE
+            // FLECHAS (el puesto del flechero) y su farol. Va aquí, con el resto de lo que construye el pueblo y antes
+            // de tirar el plano (I8), y es idempotente (su testigo es la propia mesa, I15): si ya está, no escribe ni
+            // una celda. Los dos puestos nuevos (el 3er granjero y el leñador) NO se siembran aquí: los repone el
+            // latido al ver que sus plazas están vacías (`slotDeProfesionFaltante`), y el 3er bancal ya existe.
+            VillageGenerator.asegurarElTallerDelLenador(level, center);
             // REBAÑO ESCAPADO (una sola vez, al migrar): antes de que existiera la marca del rebaño, el ganado que se
             // colaba por el portón se perdía sin remedio y el corral se quedaba vacío (y sin carne). Aquí se reconoce
             // el que anda suelto FUERA de la muralla y cerca del corral; luego, en el latido, vuelve a casa.
@@ -1764,11 +1787,13 @@ public final class VillageManager {
         // llanura pelada) planta aquí sus cuatro árboles y el leñador los tala y los replanta: sin esto no habría
         // troncos y se caerían los tablones, los palos, los arcos, las flechas y los escudos.
         VillageGenerator.asegurarArboleda(level, center);
+        // TALLER DEL LEÑADOR (etapa H): idempotente (su testigo es la mesa de flechas). Si el jugador se lleva la mesa
+        // o el tejado, el pueblo lo vuelve a levantar; así el leñador nunca se queda sin su puesto de trabajo.
+        VillageGenerator.asegurarElTallerDelLenador(level, center);
         // Y LA ORILLA de la aldea de mar (islita): el terreno llano queda a la altura del agua, así que su borde sale
         // "a cuadros" (agua a la cota pegada a césped a la cota). Se saca un anillo de playa seca y pareja; en una
         // aldea de tierra adentro no toca nada (lo decide mirando si hay agua a la capa que se pisa en el anillo).
-        VillageGenerator.asegurarOrilla(level, center);
-        // COCINA del pueblo (etapa E): desde la etapa F vive en la taberna, con su mesa y su ahumador. Aquí solo
+        VillageGenerator.asegurarOrilla(level, center);        // COCINA del pueblo (etapa E): desde la etapa F vive en la taberna, con su mesa y su ahumador. Aquí solo
         // queda retirar el ahumador VIEJO del kiosco (su celda vuelve a ser la piedra de la plataforma); en el kiosco
         // ya no se pone ninguna mesa: la celda central es de la campana (migración 58).
         VillageGenerator.asegurarCocina(level, center);
@@ -1822,6 +1847,13 @@ public final class VillageManager {
         // aldeano a SIN OFICIO). Sin granjero no hay huerta ni pan y la aldea pasa hambre con la despensa vacía,
         // así que aquí se le devuelve el oficio que falta a cada aldeano que se quedó sin ninguno.
         reponerProfesiones(level, aldeanos, objectiveIndex);
+        // UNA PROFESIÓN POR ESTACIÓN (etapa H): el pueblo ADMINISTRA sus oficios. Si un oficio tiene más titulares que
+        // plazas (pasa solo: una cría que crece y reclama un compuesto con el ticket libre, un aldeano que toma un
+        // puesto por el bloque, o `reponerProfesiones` dando una plaza cuando el titular no estaba cargado en ese
+        // latido), el que sobra PIERDE el oficio y su ticket, y vuelve al reparto como gente de sobra (la milicia o un
+        // obrero). Es lo que pidió el jugador: "eliminar que haya una duplicidad de profesiones (una profesión por
+        // estación permitida y administrada por el sistema de aldea)".
+        podarOficiosDuplicados(level, aldeanos, objectiveIndex);
         // HERREROS: los DOS (armas y herramientas) trabajan en el taller del pueblo: cogen los materiales del almacén,
         // fabrican en su puesto (muelle de afilar / mesa de herrería) y dejan la pieza en el almacén, de donde se
         // equipará la futura guardia. Los goals no se guardan con la partida: se reponen al verlos.
@@ -1844,12 +1876,23 @@ public final class VillageManager {
         // cada latido (ver más abajo), porque la marca de obrero no se le quitaba a NADIE: un granjero que fue
         // obrero cuando la aldea estaba débil (murió gente y era el único adulto) se quedaba reparando caminos para
         // siempre. El jugador lo vio: quitó un bloque del camino y fue el granjero a reponerlo en vez del obrero.
-        // RECOLECTOR: el aldeano sin oficio (holgazán) se dedica SOLO a recoger cosas y guardarlas en el almacén. El
-        // constructor, así, se dedica solo a reparar (antes llevaba los dos goals y se pasaba el día recolectando).
+        // RECOLECTOR: el aldeano sin oficio (holgazán) se dedica SOLO a recoger cosas y guardarlas en el almacén (y a
+        // mover las cadenas de suministro). El constructor, así, se dedica solo a reparar (antes llevaba los dos goals
+        // y se pasaba el día recolectando) y el LEÑADOR tampoco es él: desde la etapa H la madera es un oficio aparte
+        // (el flechero, ver abajo), que es lo que pidió el jugador —"dejar totalmente libre al recolector"—.
         for (Villager villager : aldeanos) {
             if (!villager.isBaby() && !VillagerGuardGoal.esGuardia(villager)
                     && villager.getVillagerData().getProfession() == VillagerProfession.NITWIT) {
                 asegurarGoalDeRecolector(villager, center, objectiveIndex);
+            }
+        }
+        // LEÑADOR (etapa H): el FLECHERO vive en el taller de la arboleda, tala árboles de verdad y los replanta, y
+        // baja la madera al almacén (de donde salen los tablones, los palos, los arcos y las flechas). Va a prioridad
+        // 4, como los demás oficios (antes era un segundo goal del recolector a prioridad 6, que empataba con la
+        // taberna y le quitaba la comida al aldeano con hambre).
+        for (Villager villager : aldeanos) {
+            if (!villager.isBaby() && !VillagerGuardGoal.esGuardia(villager)
+                    && villager.getVillagerData().getProfession() == VillagerProfession.FLETCHER) {
                 asegurarGoalDeLenador(villager, center, objectiveIndex);
             }
         }
@@ -2055,6 +2098,16 @@ public final class VillageManager {
         villager.getPersistentData().putInt(GUARD_INDEX_TAG, indice);
         // Un obrero que pasa a la guardia deja de ser obrero (tiene su puesto).
         desmarcarObrero(villager);
+        // Y TAMBIÉN LA RECOGIDA DE SU OFICIO: los dos goals piden MOVE y el de recoger se engancha ANTES que el de la
+        // guardia, así que con la misma prioridad (3) el empate lo ganaba el de recoger y el guardia se pasaba el
+        // rato barriendo el término del pueblo y llendo al almacén antes que patrullar (medido en el orden de
+        // inserción: el reparto de recogida va antes del alistamiento). "Un guardia tiene su puesto": recoger es de
+        // los demás, y son los que barren el suelo.
+        for (WrappedGoal wrapped : List.copyOf(villager.goalSelector.getAvailableGoals())) {
+            if (wrapped.getGoal() instanceof com.chipoodle.devilrpg.entity.goal.VillagerPickupGoal) {
+                villager.goalSelector.removeGoal(wrapped.getGoal());
+            }
+        }
         // OJO: el puesto de TRABAJO no se le toca. Se probó (medido con el arnés): quitarle el `JOB_SITE` y el oficio
         // para que el cerebro no mantuviera la actividad de trabajar sale CARO — `VillagerProfession.NONE` tiene por
         // predicado de puesto adquirible `ALL_ACQUIRABLE_JOBS`, así que el aldeano se pone a BUSCAR estación entre las
@@ -2278,24 +2331,74 @@ public final class VillageManager {
         }
     }
 
+    /**
+     * <b>Una profesión por estación</b>: quita el oficio a los titulares que <b>sobran</b> de cada oficio del pueblo.
+     * <p>
+     * Las plazas de cada oficio son las de {@link VillageGenerator#puestosPorOficio()} (tres granjeros, un pescador,
+     * un leñador...). Se cuentan los titulares <b>cargados</b> y, si hay más que plazas, los que sobran (en orden
+     * <b>estable</b> por UUID, para que no cambie quién se queda en cada latido) pierden el oficio:
+     * <ul>
+     *   <li>se les <b>suelta el ticket</b> de su estación ({@link #liberarPuesto}: si no, el puesto se queda cogido
+     *       para siempre y su titular legítimo no puede reclamarlo, el fallo medido en I23),</li>
+     *   <li>se quedan <b>SIN OFICIO</b> (su goal viejo queda inerte: todos los goals de oficio releen la profesión) y
+     *       vuelven al reparto: plaza libre si la hay y, si no, <b>gente de sobra</b> (la milicia o un obrero).</li>
+     * </ul>
+     * De dónde salen los duplicados (medido): (a) el oficio también lo da <b>el bloque</b> —cualquier aldeano sin
+     * oficio reclama una estación libre y el juego le pone ese oficio—, (b) <b>`reponerProfesiones`</b> puede dar una
+     * plaza cuando el titular está en un chunk descargado o fuera del radio de conteo, y (c) un aldeano <b>curado</b>
+     * vuelve con su profesión vieja. Es lo que el jugador vio con dos pescadores en la aldea 2 (una plaza).
+     */
+    private static void podarOficiosDuplicados(ServerLevel level, List<Villager> aldeanos, int objectiveIndex) {
+        Map<VillagerProfession, Integer> cupo = VillageGenerator.puestosPorOficio();
+        Map<VillagerProfession, List<Villager>> porOficio = new HashMap<>();
+        for (Villager villager : aldeanos) {
+            if (villager.isBaby()) {
+                continue; // las crías no tienen oficio (y no gastan plaza)
+            }
+            porOficio.computeIfAbsent(villager.getVillagerData().getProfession(), k -> new ArrayList<>()).add(villager);
+        }
+        for (Map.Entry<VillagerProfession, List<Villager>> entrada : porOficio.entrySet()) {
+            int plazas = cupo.getOrDefault(entrada.getKey(), 0);
+            List<Villager> titulares = entrada.getValue();
+            if (plazas <= 0 || titulares.size() <= plazas) {
+                continue; // oficio de fuera del pueblo: de eso se encarga `reponerProfesiones`
+            }
+            titulares.sort(Comparator.comparing(v -> v.getUUID().toString()));
+            for (int i = plazas; i < titulares.size(); i++) {
+                Villager sobrante = titulares.get(i);
+                liberarPuesto(sobrante);
+                sobrante.getBrain().eraseMemory(MemoryModuleType.SECONDARY_JOB_SITE);
+                sobrante.setVillagerData(sobrante.getVillagerData().setProfession(VillagerProfession.NONE));
+                sobrante.refreshBrain(level); // con el oficio nuevo se le rehacen los comportamientos por defecto
+                DevilRpg.LOGGER.info("[Village] Aldea {}: {} tenia el oficio de {} de mas (el pueblo tiene {} plaza(s)):"
+                        + " se queda sin oficio y pasa a gente de sobra (milicia u obrero)", objectiveIndex,
+                        sobrante.getUUID(), entrada.getKey(), plazas);
+            }
+        }
+    }
+
     /** Marca a un aldeano como obrero y le pone el goal de reparación. */
     private static void marcarObrero(Villager villager, BlockPos center, int objectiveIndex) {
         boolean yaEra = villager.getPersistentData().getBoolean(BUILDER_TAG);
         villager.getPersistentData().putBoolean(BUILDER_TAG, true);
-        // Un aldeano CON FAENA FIJA lleva la reparación POR DEBAJO de su goal de oficio (prioridad 5 contra 4):
-        // primero lo suyo y, cuando no tiene faena, repara. Vale para el GRANJERO (si no, repara caminos en vez de
-        // cuidar la huerta) y desde ahora también para los DOS HERREROS, que es lo que el jugador reportó como "el
-        // herrero de armas da vueltas sobre su eje como un tonto":
-        //   MEDIDO en su guardado (aldea 2, centro 1414,1414): los DOS herreros llevaban la marca de obrero
-        //   (`DevilRpgBuilder=1` en sus datos), así que su goal de reparación —prioridad 3— BLOQUEABA el del taller
-        //   —prioridad 4, y con la misma bandera MOVE, que es excluyente— y el herrero de armas se pasaba el día
-        //   caminando a los huecos del plano (los de la arboleda: 9 troncos de acacia que el leñador había talado,
-        //   medidos en el mismo guardado) en vez de forjar, con 18 pepitas de hierro sin fundir en el almacén. Su
-        //   etiqueta salía "Paseando" porque el goal de reparar tampoco dice nada mientras camina.
-        boolean esGranjero = villager.getVillagerData().getProfession() == VillagerProfession.FARMER;
-        boolean esHerrero = villager.getVillagerData().getProfession() == VillagerProfession.WEAPONSMITH
-                || villager.getVillagerData().getProfession() == VillagerProfession.TOOLSMITH;
-        asegurarGoalDeObrero(villager, center, objectiveIndex, esGranjero || esHerrero ? 5 : 3);
+        // Un obrero CON FAENA FIJA lleva la reparación POR DEBAJO de su goal de oficio (prioridad 5 contra 4):
+        // primero lo suyo y, cuando no tiene faena, repara. Vale para CUALQUIER oficio del pueblo, no solo para el
+        // granjero y los herreros: con la lista corta (los tres de la etapa E) el PESCADOR (etapa G) y los oficios
+        // nuevos reparaban en vez de trabajar, porque su Repair (3) quedaba por encima de su faena (4) con la misma
+        // bandera MOVE. Es el fallo de I23, que decía "un aldeano con faena fija" y el código solo cumplía a medias.
+        boolean tieneFaena = VillageGenerator.esOficioDelPueblo(villager.getVillagerData().getProfession());
+        asegurarGoalDeObrero(villager, center, objectiveIndex, tieneFaena ? 5 : 3);
+        // Y al que NO tiene faena (el holgazán, el clérigo, un aldeano sin oficio) se le quita la recogida: los dos
+        // goals quedarían a prioridad 3 y el de recoger se engancha antes, así que el "constructor" se pasaba el día
+        // barriendo el pueblo en vez de reparar (que es justo lo que se quiso evitar cuando se le dio el goal al
+        // recolector). El que no es obrero sigue recogiendo lo suyo normalmente.
+        if (!tieneFaena) {
+            for (WrappedGoal wrapped : List.copyOf(villager.goalSelector.getAvailableGoals())) {
+                if (wrapped.getGoal() instanceof com.chipoodle.devilrpg.entity.goal.VillagerPickupGoal) {
+                    villager.goalSelector.removeGoal(wrapped.getGoal());
+                }
+            }
+        }
         if (!yaEra) {
             DevilRpg.LOGGER.info("[Village] Aldea {}: {} es obrero de la aldea", objectiveIndex, villager.getUUID());
         }
@@ -2345,18 +2448,23 @@ public final class VillageManager {
     }
 
     /**
-     * Le pone al <b>recolector</b> su goal de <b>leñador/reforestador</b> (etapa B), a prioridad <b>6</b>: por debajo
-     * de recoger (5), así que primero barre el pueblo y, cuando no hay nada que recoger, se va al monte a talar y
-     * replantar. Es el mismo aldeano a propósito: el pueblo no gasta un puesto más (los fijos ya son granjero, los dos
-     * herreros, clérigo y recolector, y de los sobrantes sale la milicia).
+     * Le pone al <b>leñador</b> su goal de <b>talar y reforestar</b> (etapas B y H), a prioridad <b>4</b>: es su
+     * oficio, como el del granjero o el del herrero, así que va por delante de la taberna (6) y por detrás de recoger
+     * lo suyo del suelo (3).
+     * <p>
+     * Antes era un <b>segundo goal del recolector</b> (el holgazán) a prioridad 6: el pueblo no gastaba un puesto más
+     * —lo que se anotó como decisión—, pero el jugador pidió separarlos, y además esa prioridad <b>empataba con la
+     * taberna</b> (6), así que el aldeano con hambre y leña pendiente no iba a comer. El oficio del leñador es
+     * <b>FLETCHER</b> (flechero) y su estación la <b>mesa de flechas</b> de su taller, en la arboleda (una profesión
+     * por estación: ver {@code VillageGenerator.asegurarElTallerDelLenador}).
      */
     private static void asegurarGoalDeLenador(Villager villager, BlockPos center, int objectiveIndex) {
-        for (WrappedGoal wrapped : villager.goalSelector.getAvailableGoals()) {
+        for (WrappedGoal wrapped : List.copyOf(villager.goalSelector.getAvailableGoals())) {
             if (wrapped.getGoal() instanceof VillagerLumberjackGoal) {
                 return;
             }
         }
-        villager.goalSelector.addGoal(6, new VillagerLumberjackGoal(villager, center, objectiveIndex));
+        villager.goalSelector.addGoal(4, new VillagerLumberjackGoal(villager, center, objectiveIndex));
     }
 
     /**
@@ -2710,6 +2818,14 @@ public final class VillageManager {
         }
         if (profesion == VillagerProfession.BUTCHER) {
             return "Cocinero"; // el carnicero de la cocina del kiosco (etapa E)
+        }
+        if (profesion == VillagerProfession.FISHERMAN) {
+            // El pescador SIEMPRE estuvo fuera de esta tabla: su etiqueta salía de la traducción vanilla, y como el
+            // idioma del servidor es inglés el jugador leía "Isidoro (Fisherman)". Aquí va en español, como el resto.
+            return "Pescador"; // la pesquera y su lago (etapa G)
+        }
+        if (profesion == VillagerProfession.FLETCHER) {
+            return "Leñador"; // el flechero del taller de la arboleda (etapa H): tala, replanta y baja la madera
         }
         if (profesion == VillagerProfession.NONE) {
             return "Sin oficio";

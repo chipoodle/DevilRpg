@@ -709,6 +709,51 @@ reclama se vuelve pescador, aunque el pueblo ya tenga el suyo) y **un aldeano cu
 viejo y **sin** los datos del mod (medido: el segundo pescador de la aldea 2, `295c0896`, con la etiqueta *"Dionisio
 (Guardia espadachín)"*, **sin** `DevilRpgGuardia` ni memorias: es el cuerpo curado de un guardia anterior, y en el log
 está su `ZombieVillager`). Con plazas contadas, el que sobra es **uno** y el titular conserva su puesto.
+*(Desde la etapa H el cupo son **once** plazas y, además, la aldea **poda** los duplicados: ver **I36**.)*
+
+### I36 · Una profesión por estación, y la aldea la ADMINISTRA (poda de duplicados)
+
+De dónde salen los titulares de más (**medido y deducido del código**, no supuesto):
+
+1. **El bloque da el oficio**: el paquete `CORE` de vanilla trae `AcquirePoi` → `AssignProfessionFromJobSite`, y
+   `VillagerProfession.NONE` tiene por adquirible **`ALL_ACQUIRABLE_JOBS`**: cualquier aldeano **sin oficio** reclama
+   una estación **libre** y se vuelve de ese oficio. La aldea 2 tenía **un compostero libre** (el 3.er bancal) ⇒ el
+   primer aldeano sin oficio que pasara por ahí se volvía un **tercer granjero** (y ese sobrante se lo llevaba la
+   milicia ⇒ compostero cogido sin dueño trabajándolo: el daño de I35).
+2. **`reponerProfesiones` da una plaza cuando cree que falta**: cuenta solo los aldeanos **cargados** dentro de
+   `FALLEN_CHECK_RADIUS` (`muro + 44` = 106). Si el titular está en un chunk descargado o fuera del radio, el pueblo
+   le da su plaza a otro y quedan **dos**. (Es la consecuencia 11 de la lista de abajo, ahora con salida.)
+3. **Un aldeano curado** vuelve con su `VillagerData` (oficio) viejo y **sin** los datos del mod.
+
+**Regla:** el pueblo **administra** sus oficios: en cada latido (`VillageManager.podarOficiosDuplicados`, justo
+después de `reponerProfesiones`) se cuentan los titulares **por oficio** y, si hay más que plazas, los que sobran —en
+orden **estable** por UUID— pierden el oficio **y su ticket** (`liberarPuesto`, I23: si no, la estación se queda
+cogida para siempre) y vuelven al reparto: plaza libre si la hay y, si no, **gente de sobra** (la milicia o un
+obrero). Con eso **"una profesión por estación"** deja de depender de quién esté cargado.
+
+**Medido** (arnés, aldea 2, partida del jugador): censo de oficios estable
+`{CRIA=1, butcher=1, cleric=1, farmer=3, fisherman=1, fletcher=1, nitwit=1, shepherd=1, toolsmith=1, weaponsmith=1}`
+—**una** de cada, **tres** granjeros (sus tres plazas)— durante todo el rato que duró la medida.
+
+### I37 · La aldea CRECE por encima de sus puestos (y las crías nacen SIN oficio)
+
+La milicia se llena **con los hijos del pueblo**, que es como lo quiere el jugador: *"la milicia se va a ir llenando
+conforme vayan naciendo y alcanzando la adultez aldeanos"*. Para eso hacen falta las dos mitades, y las dos estaban
+rotas:
+
+- **El camino de cría era INALCANZABLE**: la rama que hace nacer una cría pedía a la vez `slotDeProfesionFaltante < 0`
+  (todas las especialidades vivas ⇒ ≥ tantos adultos como puestos) **y** `vivos < puestosDelPueblo()` ⇒
+  **contradicción**: el pueblo no paría nunca por ahí y las crías que había eran las de vanilla (`feedVillagers`
+  reparte pan para que críen). Ahora el tope es **`puestos + MILICIA_MAX`** (11 + 7 = 18): el pueblo cubre sus
+  puestos y sigue creciendo para llenar la milicia.
+- **Y nacía CON oficio**: `spawnOneVillager(..., vivos, true)` usaba el número de aldeanos vivos como **índice de
+  plaza**, así que el aldeano número 10 nacía con el oficio de la plaza 10 = un oficio **duplicado** por construcción.
+  Ahora la cría nace **SIN OFICIO** (`VillageGenerator.spawnBaby`): al crecer, el reparto le da una plaza si queda
+  libre y, si no, es **gente de sobra** (milicia u obrero). Así el pueblo puede tener más aldeanos que puestos sin
+  romper I36.
+
+**Medido** (arnés, aldea 2): `[Village] Aldea 2 crece: aldeano 12/18 (comida 56)` con `CRIA=1` en el censo — la cría
+nació por el camino del pueblo (no por vanilla) y sin oficio.
 
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:

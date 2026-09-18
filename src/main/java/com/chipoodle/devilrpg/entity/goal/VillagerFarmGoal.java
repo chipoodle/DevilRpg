@@ -57,8 +57,18 @@ public class VillagerFarmGoal extends Goal {
     private static final int STUCK_LIMIT = 120;
     /** Si se aleja más de esto del centro, deja de trabajar (derivado del radio de la aldea). */
     private static final double MAX_DISTANCE_FROM_CENTER = VillageGenerator.FENCE_RADIUS + 12.0D;
-    /** Trigo que lleva encima antes de ir a la despensa: cada 4 cosechas baja a guardarlo y hornear. */
-    private static final int LLEVAR_TRIGO = 4;
+    /**
+     * Unidades (trigo + vegetales) que lleva encima antes de ir a la despensa: cada 8 cosechas baja a guardarlo y
+     * hornear.
+     * <p>
+     * Eran <b>4</b>, y con la despensa en la taberna (a 40-55 bloques de los bancales) eso es un paseo de ida y vuelta
+     * por cada 4 puntos de comida: con 9-12 bocas comiendo 1 punto por minuto, la aldea vivía al filo (medido en el
+     * guardado del jugador: ratos de "comida 0 puntos, 0 raciones"). El jugador pidió subirlo ("los granjeros deben
+     * cosechar más rápido o mayor cantidad"): con 8 se entrega el doble por viaje y sigue bajando a menudo (la parcela
+     * tiene 72 celdas de cultivo). El límite no es el hueco —la mochila del aldeano aguanta 64 por hueco—, era solo
+     * una decisión de ritmo.
+     */
+    private static final int LLEVAR_TRIGO = 8;
     /** Semillas que se guarda como mucho: si lleva más, las suelta (si no, se le llena el inventario y no le cabe el trigo). */
     private static final int SEMILLAS_MAX = 8;
     /**
@@ -71,7 +81,10 @@ public class VillagerFarmGoal extends Goal {
     private static final int COMPOSTAR_MAX = 16;
     /** Si la despensa tiene MÁS semillas que esto, se lleva unas cuantas para el compostero. */
     private static final int SEMILLAS_SOBRANTES_EN_DESPENSA = 32;
-    /** Hogazas como mucho por visita (para que se le vea trabajar). */
+    /**
+     * Hogazas como mucho por visita (para que se le vea trabajar). Con el lote de 8 unidades que ahora se lleva,
+     * hornear 2 hogazas (6 de trigo) deja el viaje bien aprovechado: el pan vale 4 puntos y el trigo suelto 1.
+     */
     private static final int HORNEAR_MAX = 2;
     /**
      * Harina de huesos que se lleva encima como mucho. Antes 4: con eso abonaba UNA planta por visita (lo pidió el

@@ -315,6 +315,9 @@ public final class VillageGenerator {
         // LA ARBOLEDA DEL PUEBLO: cuatro plantones en un hueco de césped de la diagonal noreste. Es lo que da madera a
         // una aldea que nace sin bosque (una islita): el leñador los tala y los replanta como cualquier árbol.
         asegurarArboleda(level, center);
+        // EL TALLER DEL LEÑADOR (etapa H): junto a la arboleda, con la mesa de flechas (su puesto de trabajo). El
+        // leñador es un oficio propio desde la etapa H (antes talaba el recolector).
+        asegurarElTallerDelLenador(level, center);
         // Y LA ORILLA, seca y pareja, si la aldea nació al nivel del agua (si no, no se toca nada).
         asegurarOrilla(level, center);
         // NIEVE Y VEGETACIÓN QUE QUEDÓ COLGANDO del recorte (aldea de montaña): se limpia antes de dar por hecha la
@@ -2362,6 +2365,90 @@ public final class VillageGenerator {
             return Blocks.CHERRY_SAPLING;
         }
         return Blocks.OAK_SAPLING; // el de siempre (y el que traen los fundadores cuando no hay árbol claro)
+    }
+
+    // --- EL TALLER DEL LEÑADOR (etapa H) ------------------------------------------------------------
+
+    /**
+     * Esquina noroeste del <b>suelo del taller del leñador</b>, relativa al centro: al <b>oeste de la arboleda</b>
+     * (que empieza en {@code ARBOLEDA_X0} = -46), en hierba llana y a dos bloques de ella para no pisar los
+     * plantones. Ver {@link #asegurarElTallerDelLenador}.
+     */
+    private static final int TALLER_LENADOR_X = -52;
+    private static final int TALLER_LENADOR_Z = -26;
+    /** Lado del cobertizo (5x5, como el del corral anexo): suelo de piedra, postes, tejado y SIN paredes. */
+    private static final int TALLER_LENADOR_LADO = 5;
+
+    /**
+     * El <b>taller del leñador</b> (etapa H): un cobertizo <b>abierto</b> —suelo de piedra, cuatro postes, tejado de
+     * tablones y sin paredes— junto a la <b>arboleda del pueblo</b>, con su <b>mesa de flechas</b> (el puesto de
+     * trabajo del <b>flechero</b>, que es el oficio del <b>LEÑADOR</b>), su farol y una pila de troncos.
+     * <p>
+     * Antes el leñador <b>no era un oficio</b>: talaba el <b>recolector</b> (el holgazán) y el pueblo no gastaba un
+     * puesto más. El jugador pidió separarlos —*"es necesario que haya un aldeano que se especialice únicamente en
+     * cortar madera y plantar árboles, para dejar totalmente libre al recolector para que recoja y transporte"*—, y
+     * un oficio del pueblo necesita <b>su estación</b> (regla: una profesión por estación): la del leñador es la
+     * <b>mesa de flechas</b>, que además es el sitio del que salen las flechas de los arqueros de la milicia. Es
+     * idempotente (su testigo es la propia mesa: si ya está, no escribe ni una celda) y todo entra en el
+     * <b>plano</b> por {@code colocar} (I8), así que el obrero lo repone.
+     */
+    public static void asegurarElTallerDelLenador(ServerLevel level, BlockPos center) {
+        int nivel = cotaDeLaPlaza(level, center);
+        if (nivel <= level.getMinBuildHeight() + 1) {
+            return;
+        }
+        if (tallerDelLenadorHecho(level, center, nivel)) {
+            return;
+        }
+        int x0 = center.getX() + TALLER_LENADOR_X;
+        int z0 = center.getZ() + TALLER_LENADOR_Z;
+        int x1 = x0 + TALLER_LENADOR_LADO - 1;
+        int z1 = z0 + TALLER_LENADOR_LADO - 1;
+        // El SUELO (cota - 1: la capa que se pisa es la cota, I1), el hueco de dentro y el TEJADO.
+        for (int x = x0; x <= x1; x++) {
+            for (int z = z0; z <= z1; z++) {
+                colocar(level, new BlockPos(x, nivel - 1, z), Blocks.STONE_BRICKS.defaultBlockState(), 3);
+                for (int dy = 0; dy <= 2; dy++) {
+                    colocar(level, new BlockPos(x, nivel + dy, z), Blocks.AIR.defaultBlockState(), 3);
+                }
+                colocar(level, new BlockPos(x, nivel + 3, z), Blocks.OAK_PLANKS.defaultBlockState(), 3);
+            }
+        }
+        // Los cuatro POSTES de las esquinas (suben enteros hasta el tejado).
+        for (int[] esquina : new int[][]{{x0, z0}, {x0, z1}, {x1, z0}, {x1, z1}}) {
+            for (int dy = 0; dy <= 2; dy++) {
+                colocar(level, new BlockPos(esquina[0], nivel + dy, esquina[1]),
+                        Blocks.OAK_LOG.defaultBlockState(), 3);
+            }
+        }
+        // El FAROL cuelga del centro del tejado (I14: colgado, no posado en el aire).
+        colocar(level, new BlockPos((x0 + x1) / 2, nivel + 2, (z0 + z1) / 2),
+                Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true), 3);
+        // SU PUESTO DE TRABAJO: la mesa de flechas (lo que le da el oficio de flechero = LEÑADOR).
+        colocar(level, new BlockPos(x0 + 1, nivel, z0 + 1), Blocks.FLETCHING_TABLE.defaultBlockState(), 3);
+        // Y la madera a medio trabajar: una pila de troncos y un tocón, que es lo que hace un leñador.
+        colocar(level, new BlockPos(x1 - 1, nivel, z0 + 1), Blocks.OAK_LOG.defaultBlockState(), 3);
+        colocar(level, new BlockPos(x1 - 1, nivel + 1, z0 + 1), Blocks.OAK_LOG.defaultBlockState(), 3);
+        colocar(level, new BlockPos(x1 - 1, nivel, z1 - 1), Blocks.STRIPPED_OAK_LOG.defaultBlockState(), 3);
+        DevilRpg.LOGGER.info("[Village] Aldea en {}: taller del leñador levantado en {} (mesa de flechas en {}, {}, {})",
+                center, new BlockPos(x0, nivel - 1, z0), x0 + 1, nivel, z0 + 1);
+    }
+
+    /**
+     * ¿Está ya el taller del leñador? El <b>testigo</b> es su <b>mesa de flechas</b> (como el hogar en la barraca,
+     * I15): si el jugador se la llevó, el pueblo la repone; si está, no se toca nada de dentro.
+     */
+    private static boolean tallerDelLenadorHecho(ServerLevel level, BlockPos center, int nivel) {
+        int x0 = center.getX() + TALLER_LENADOR_X;
+        int z0 = center.getZ() + TALLER_LENADOR_Z;
+        return level.getBlockState(new BlockPos(x0 + 1, nivel, z0 + 1)).is(Blocks.FLETCHING_TABLE)
+                && level.getBlockState(new BlockPos(x0, nivel - 1, z0)).is(Blocks.STONE_BRICKS);
+    }
+
+    /** El <b>punto de apoyo</b> del taller: la casilla libre del suelo delante de la mesa (nunca la mesa: es sólida). */
+    public static BlockPos puntoDeApoyoDelTallerDelLenador(ServerLevel level, BlockPos center) {
+        int nivel = cotaDeLaPlaza(level, center);
+        return new BlockPos(center.getX() + TALLER_LENADOR_X + 2, nivel, center.getZ() + TALLER_LENADOR_Z + 1);
     }
 
     // --- LA ORILLA DE LA ALDEA DE MAR (la islita) ---------------------------------------------------
@@ -5272,7 +5359,8 @@ public final class VillageGenerator {
                 .setValue(DoorBlock.FACING, FRONT).setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER), 3);
     }
 
-    private static void spawnVillager(ServerLevel level, BlockPos pos, VillagerProfession profession, boolean baby) {
+    private static void spawnVillager(ServerLevel level, BlockPos pos, @Nullable VillagerProfession profession,
+                                      boolean baby) {
         // OJO: NO se usa la Y que nos pasan (la del centro de la aldea). El terreno nivelado puede quedar a otra
         // altura en esta columna (el centro es una columna suelta y las cabañas y caminos ya usan groundY por
         // columna), así que un aldeano colocado a la Y del centro quedaba ENTERRADO: se asfixiaba y moría en
@@ -5280,15 +5368,17 @@ public final class VillageGenerator {
         BlockPos posicion = huecoLibre(level, new BlockPos(pos.getX(), groundY(level, pos.getX(), pos.getZ()), pos.getZ()));
         Villager villager = EntityType.VILLAGER.create(level, null, posicion, MobSpawnType.MOB_SUMMONED, true, true);
         if (villager != null) {
-            villager.setVillagerData(villager.getVillagerData().setProfession(profession));
-            // SIN ESTO LA PROFESIÓN SE PIERDE: el cerebro vanilla trae el comportamiento `ResetProfession`, que
-            // devuelve al aldeano a SIN OFICIO cuando no tiene `JOB_SITE` en el cerebro, su XP es 0 y su nivel es 1.
-            // Nuestros aldeanos se nombran por código (no reclaman un puesto de trabajo del juego), así que a los
-            // pocos segundos TODOS volvían a `none`: la aldea se quedaba SIN GRANJERO (nadie cosechaba, nadie
-            // horneaba pan y la despensa nunca se llenaba: la aldea pasaba hambre con la huerta llena) y sin
-            // herreros. Con 1 de XP la condición `getVillagerXp() == 0` ya no se cumple y la profesión se mantiene.
-            // (Medido en el guardado del jugador: aldea 10 con 4 aldeanos `none` + 1 holgazán a los 38 s de nacer.)
-            villager.setVillagerXp(1);
+            if (profession != null) {
+                villager.setVillagerData(villager.getVillagerData().setProfession(profession));
+                // SIN ESTO LA PROFESIÓN SE PIERDE: el cerebro vanilla trae el comportamiento `ResetProfession`, que
+                // devuelve al aldeano a SIN OFICIO cuando no tiene `JOB_SITE` en el cerebro, su XP es 0 y su nivel es 1.
+                // Nuestros aldeanos se nombran por código (no reclaman un puesto de trabajo del juego), así que a los
+                // pocos segundos TODOS volvían a `none`: la aldea se quedaba SIN GRANJERO (nadie cosechaba, nadie
+                // horneaba pan y la despensa nunca se llenaba: la aldea pasaba hambre con la huerta llena) y sin
+                // herreros. Con 1 de XP la condición `getVillagerXp() == 0` ya no se cumple y la profesión se mantiene.
+                // (Medido en el guardado del jugador: aldea 10 con 4 aldeanos `none` + 1 holgazán a los 38 s de nacer.)
+                villager.setVillagerXp(1);
+            }
             if (baby) {
                 // Los que llegan para repoblar una aldea debilitada nacen CRÍAS y crecen solos (vanilla).
                 villager.setBaby(true);
@@ -5298,6 +5388,21 @@ public final class VillageGenerator {
             level.addFreshEntity(villager);
             DevilRpg.LOGGER.debug("[Village] aldeano {} en {} (bebe: {})", profession, posicion, baby);
         }
+    }
+
+    /**
+     * Una <b>cría nueva de la aldea</b> (etapa H), <b>sin oficio</b> a propósito.
+     * <p>
+     * Es la que hace crecer al pueblo por encima de sus puestos, que es de donde sale la <b>milicia</b>: el jugador lo
+     * pidió así —*"la milicia se va a ir llenando conforme vayan naciendo y alcanzando la adultez aldeanos"*—. Nace
+     * <b>SIN PROFESIÓN</b> (no con el oficio de una plaza, que sería un oficio DUPLICADO: la versión vieja usaba el
+     * número de aldeanos vivos como índice de plaza): al crecer, el latido le da una plaza <b>si queda alguna libre</b>
+     * (`reponerProfesiones`) y, si no, es gente de sobra: la milicia o un obrero. Nace en el sitio de una de las plazas
+     * (la que toque por el reloj, para no apilarlas todas en la misma esquina) y con el hueco libre garantizado.
+     */
+    public static void spawnBaby(ServerLevel level, BlockPos center) {
+        BlockPos spot = VILLAGER_SPOTS[(int) Math.floorMod(level.getGameTime(), VILLAGER_SPOTS.length)];
+        spawnVillager(level, center.offset(spot), null, true);
     }
 
     /**
@@ -5317,17 +5422,19 @@ public final class VillageGenerator {
     }
 
     /**
-     * Los sitios fijos de aldeano de la aldea (uno por profesión), relativos al centro. Son <b>7</b> puestos
-     * (granjero, dos herreros, clérigo, el holgazán recolector, el ganadero del corral y el cocinero de la cocina).
+     * Los sitios fijos de aldeano de la aldea (uno por plaza de {@link #VILLAGER_SPECIALTIES}: mismo orden y misma
+     * longitud, que {@code spawnOneVillager} cruza los dos arrays).
      * <p>
      * Van <b>repartidos en un anillo</b> a unos 24-27 bloques de la plaza, entre el kiosco (radio 3) y los solares
      * nuevos, que con el muro a 62 empiezan a 33-38: siempre en patio abierto y sin caer dentro de una casa, del
      * almacén ni de las parcelas de la granja. (Con el trazado de 36 el anillo estaba a 13-15; al crecer la aldea se
      * ha llevado al doble para que el centro no quede apelotonado.)
      * <p>
-     * Los dos últimos puestos <b>no</b> van en ese anillo: el ganadero vive en el corral y el cocinero en la plaza.
-     * Ninguno de los dos puede caer bajo un tejado (el del cobertizo del corral o el del kiosco): {@code groundY}
-     * devolvería la altura del TEJADO y el aldeano aparecería <b>encima</b> de él.
+     * Los últimos puestos <b>no</b> van en ese anillo, porque viven donde trabajan: el ganadero en el corral, el
+     * cocinero junto a la plaza (y desde la taberna, en su cocina), el segundo granjero entre los bancales del sur, el
+     * pescador junto a su pesquera, el TERCER granjero junto al tercer bancal y el LEÑADOR al lado de su taller (en la
+     * arboleda). Ninguno puede caer <b>bajo un tejado</b> (el del cobertizo del corral, el del kiosco o el del taller):
+     * {@code groundY} devolvería la altura del TEJADO y el aldeano aparecería <b>encima</b> de él.
      */
     private static final BlockPos[] VILLAGER_SPOTS = {
             new BlockPos(-22, 0, -14), new BlockPos(21, 0, -14), new BlockPos(-7, 0, 22),
@@ -5342,29 +5449,45 @@ public final class VillageGenerator {
             // comida"): entre los dos bancales del sur, en patio abierto.
             new BlockPos(-22, 0, 30),
             // El PESCADOR (etapa G): en patio abierto al norte de su pesquera (el lago está al sur, en (20,44)).
-            new BlockPos(20, 0, 30)
+            new BlockPos(20, 0, 30),
+            // El TERCER GRANJERO (etapa H, lo pidió el jugador: "necesitamos un 3er granjero que vaya a la granja que
+            // está vacía"): al oeste del TERCER bancal (el de (-28,34), que tenía su compostero sin dueño), en patio
+            // abierto y a la misma altura que el segundo.
+            new BlockPos(-34, 0, 30),
+            // El LEÑADOR (etapa H): al lado de su taller, en la arboleda (el taller está en (-52..-48, -26..-22)), y
+            // FUERA del cobertizo por lo mismo que el ganadero y el cocinero.
+            new BlockPos(-50, 0, -19)
     };
     /**
-     * Oficios de la aldea, en el orden en que se ocupan los sitios:
+     * Oficios de la aldea, en el orden en que se ocupan los sitios (<b>mismo orden y misma longitud</b> que
+     * {@link #VILLAGER_SPOTS}):
      * <ol>
      *   <li><b>Granjero</b>: cultiva, cosecha, fertiliza y hornea el pan en la despensa. Desde la etapa F hay
-     *       <b>dos</b> (uno por bancal de los tres, que con uno la huerta no daba para el pueblo).</li>
+     *       <b>dos</b> y desde la etapa H <b>tres</b> (uno por bancal de los tres: con dos, la comida no daba para el
+     *       pueblo y el tercer bancal se quedaba sin nadie).</li>
      *   <li><b>Herrero de armas</b> y <b>clérigo</b>: los oficios "de oficio" de la aldea.</li>
      *   <li><b>Herrero de herramientas</b>.</li>
      *   <li><b>Holgazán</b> (nitwit) = el <b>RECOLECTOR</b>: no tiene oficio propio a propósito, así no reclama
-     *       ningún puesto de trabajo y se dedica <b>solo</b> a recoger cosas del pueblo y guardarlas en el almacén.
-     *       Antes esto lo hacía el constructor y se pasaba el día recolectando en vez de reparar.</li>
+     *       ningún puesto de trabajo y se dedica <b>solo</b> a recoger cosas del pueblo, guardarlas en el almacén y
+     *       mover las cadenas de suministro. Antes esto lo hacía el constructor y se pasaba el día recolectando en vez
+     *       de reparar; y hasta la etapa H también talaba (ver el leñador, la última plaza).</li>
      *   <li><b>Pastor</b> = el <b>GANADERO</b> de la granja anexa (etapa D): vive en el corral de fuera de la valla,
      *       cría a los animales y baja la carne y la lana al almacén.</li>
      *   <li><b>Carnicero</b> = el <b>COCINERO</b> de la aldea (etapa E): cocina en el ahumador la carne cruda y las
      *       patatas que le llegan (crudo = 2 puntos de comida, cocinado = 4) y desde la etapa F lo hace en la
      *       <b>taberna</b>, que es donde come el pueblo.</li>
+     *   <li><b>Pescador</b> (etapa G): pesca en el lago de su pesquera y baja el pescado a la despensa.</li>
+     *   <li><b>Flechero</b> (etapa H) = el <b>LEÑADOR</b>: su estación es la <b>mesa de flechas</b> de su taller, en la
+     *       arboleda. Tala los árboles de verdad, los replanta, repuebla el monte y baja la madera al almacén. Antes
+     *       esto lo hacía el recolector "y no gastaba un puesto"; el jugador pidió separarlos para que el recolector
+     *       quede libre para recoger y transportar.</li>
      * </ol>
      */
     private static final VillagerProfession[] VILLAGER_SPECIALTIES = {
             VillagerProfession.FARMER, VillagerProfession.WEAPONSMITH, VillagerProfession.CLERIC,
             VillagerProfession.TOOLSMITH, VillagerProfession.NITWIT, VillagerProfession.SHEPHERD,
-            VillagerProfession.BUTCHER, VillagerProfession.FARMER, VillagerProfession.FISHERMAN
+            VillagerProfession.BUTCHER, VillagerProfession.FARMER, VillagerProfession.FISHERMAN,
+            VillagerProfession.FARMER, VillagerProfession.FLETCHER
     };
 
     /**
@@ -5408,9 +5531,10 @@ public final class VillageGenerator {
     }
 
     /**
-     * Cuántos <b>puestos fijos</b> tiene una aldea: uno por sitio de {@link #VILLAGER_SPOTS}. Lo usa el gestor como
-     * <b>tope de crecimiento</b>: la aldea crece hasta cubrir sus puestos (6 desde la etapa D, con el ganadero) y, a
-     * partir de ahí, los que nacen son gente de sobra (la milicia).
+     * Cuántos <b>puestos fijos</b> tiene una aldea: uno por sitio de {@link #VILLAGER_SPOTS} (once desde la etapa H:
+     * tres granjeros, los dos herreros, el clérigo, el recolector, el ganadero, el cocinero, el pescador y el
+     * leñador). Lo usa el gestor como <b>tope de crecimiento</b> de los puestos y como <b>aldea sana</b>: a partir de
+     * ahí, los que nacen son gente de sobra (la milicia).
      */
     public static int puestosDelPueblo() {
         return VILLAGER_SPOTS.length;

@@ -67,6 +67,13 @@ ALDEA = [
     os.path.join(GOALS, 'VillagerGuardGoal.java'),
     os.path.join(GOALS, 'VillagerLumberjackGoal.java'),
     os.path.join(GOALS, 'VillagerSmithGoal.java'),
+    # Y los de las etapas F/G, que seguian FUERA de la puerta (etapa H): son los que mas andan por el pueblo (el
+    # pescador va y viene del lago, el de recoger barre el termino, el de los portones abre y cierra) y los que
+    # llevan I3/I4/I6 sin vigilancia.
+    os.path.join(GOALS, 'VillagerFisherGoal.java'),
+    os.path.join(GOALS, 'VillagerTavernGoal.java'),
+    os.path.join(GOALS, 'VillagerPickupGoal.java'),
+    os.path.join(GOALS, 'VillagerGateGoal.java'),
 ]
 GOALS_JAVA = [r for r in ALDEA if os.path.basename(r).startswith('Villager')]
 

@@ -145,7 +145,21 @@ public class VillagerPickupGoal extends Goal {
             // La pesquera: el pescado crudo (el que se le cae al suelo y el que salta del lago a la orilla).
             return s -> s.is(Items.COD) || s.is(Items.SALMON);
         }
+        if (profesion == VillagerProfession.FLETCHER) {
+            // El taller del LEÑADOR (etapa H): lo que suelta el monte y lo que él mismo deja caer (plantones, troncos,
+            // palos, plumas y pedernal —que es de lo que se hacen las flechas—), más las flechas sueltas.
+            return s -> s.is(Items.STICK) || s.is(Items.FLINT) || s.is(Items.FEATHER) || s.is(Items.ARROW)
+                    || esDeMadera(s);
+        }
         return s -> false;
+    }
+
+    /** ¿Ese objeto es MADERA (lo que trabaja un leñador)? Plantones, troncos, tablones y leños. */
+    private static boolean esDeMadera(ItemStack s) {
+        return s.getItem() instanceof net.minecraft.world.item.BlockItem bloque
+                && (bloque.getBlock() instanceof net.minecraft.world.level.block.SaplingBlock
+                || s.is(net.minecraft.tags.ItemTags.LOGS)
+                || s.is(net.minecraft.tags.ItemTags.PLANKS));
     }
 
     /** Dónde guarda lo que recoge: la comida a la <b>despensa</b> (que es lo que come el pueblo) y lo demás al almacén. */
@@ -173,6 +187,9 @@ public class VillagerPickupGoal extends Goal {
         if (profesion == VillagerProfession.FISHERMAN) {
             return "el pescador";
         }
+        if (profesion == VillagerProfession.FLETCHER) {
+            return "el lenador";
+        }
         return "el herrero";
     }
 
@@ -181,7 +198,7 @@ public class VillagerPickupGoal extends Goal {
         return profesion == VillagerProfession.FARMER || profesion == VillagerProfession.SHEPHERD
                 || profesion == VillagerProfession.BUTCHER || profesion == VillagerProfession.CLERIC
                 || profesion == VillagerProfession.WEAPONSMITH || profesion == VillagerProfession.TOOLSMITH
-                || profesion == VillagerProfession.FISHERMAN;
+                || profesion == VillagerProfession.FISHERMAN || profesion == VillagerProfession.FLETCHER;
     }
 
     // --- el goal ------------------------------------------------------------------------------------

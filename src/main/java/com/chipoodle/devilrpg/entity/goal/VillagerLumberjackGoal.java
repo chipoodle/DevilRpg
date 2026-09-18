@@ -41,10 +41,12 @@ import java.util.Set;
  * replanta</b>, y lleva la madera al <b>almacén</b> (que es de donde salen los tablones, los palos, los arcos y las
  * flechas de los herreros).
  * <p>
- * Es el <b>recolector</b> (el aldeano sin oficio) el que hace también esto: así el pueblo no gasta un puesto más (los
- * puestos fijos ya son <b>siete</b>: granjero, los dos herreros, clérigo, recolector, ganadero y cocinero, y de los
- * sobrantes sale la milicia). Va a <b>prioridad 6</b>, por debajo de su goal de recoger (5): primero recoge lo que hay
- * por el suelo y, cuando no hay nada que recoger, se va al monte.
+ * Es el <b>LEÑADOR</b>, un oficio propio desde la etapa H: su profesión es <b>FLETCHER</b> (flechero, cuya estación
+ * es la <b>mesa de flechas</b> de su taller, en la arboleda) y va a <b>prioridad 4</b>, como los demás oficios. Antes
+ * esto lo hacía el <b>recolector</b> (el holgazán) como segundo goal y a prioridad 6, para no gastar un puesto; el
+ * jugador pidió separarlos: *"es necesario que haya un aldeano que se especialice únicamente en cortar madera y
+ * plantar árboles, para dejar totalmente libre al recolector para que recoja y transporte"*. Y aquella prioridad 6
+ * <b>empataba con la taberna</b> (6), así que el aldeano con hambre y leña pendiente no iba a comer.
  * <p>
  * <b>Repuebla el monte de verdad</b>: cada árbol que tala lo replanta <b>en su sitio</b> y con la <b>misma
  * especie</b>; y si se queda sin semilla en la mano, <b>se apunta el hueco</b> para volver con la primera que
@@ -160,7 +162,8 @@ public class VillagerLumberjackGoal extends Goal {
         }
         // El leñador es el RECOLECTOR (el aldeano sin oficio): es el que tiene menos faena fija. El gestor le da el
         // goal solo al holgazán que ya hace de recolector, así que basta con mirar el oficio.
-        if (villager.getVillagerData().getProfession() != VillagerProfession.NITWIT) {
+        // El oficio del LEÑADOR es flechero (su estación es la mesa de flechas del taller de la arboleda, etapa H).
+        if (villager.getVillagerData().getProfession() != VillagerProfession.FLETCHER) {
             return false;
         }
         if (VillageManager.isVillageUnderAttack(level, objectiveIndex) || VillageManager.estaDescansando(villager)) {

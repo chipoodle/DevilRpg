@@ -440,7 +440,7 @@ Los aldeanos **sobrantes** se alistan (`VillageManager.repartirGuardia`) y su go
 cosas: **equiparse del almacén**, **patrullar** de día y **guardar las puertas** de noche **rotando**.
 
 - **Quién sobra** (lo pidió el jugador: *"aldeanos adultos SOBRANTES"*): se reparten los **puestos fijos** del pueblo
-  —los **nueve** de `VillageGenerator.puestosPorOficio()`, que se **cuentan** de los sitios del pueblo: **dos
+  —los **once** de `VillageGenerator.puestosPorOficio()`, que se **cuentan** de los sitios del pueblo: **tres
   granjeros**, los dos herreros, el clérigo, el recolector, el ganadero, el cocinero y el pescador— en orden
   **estable** (por UUID) y **el
   resto** es gente de sobra. Así la milicia **no le quita el granjero ni los herreros** a la aldea (que es lo que la
@@ -588,6 +588,10 @@ El log de esa partida lo explica entero (01:50-02:00) y salieron **dos bugs de v
   barre el pueblo y, cuando no hay nada que recoger, se va al monte. Es el mismo aldeano a propósito: los puestos
   fijos ya son granjero, los dos herreros, clérigo y recolector, y de los **sobrantes** sale la milicia, así que el
   leñador no puede gastar un puesto nuevo.
+  > **CAMBIADO en 3b.48 (etapa H)**: el jugador pidió separarlos —*"un aldeano que se especialice únicamente en cortar
+  > madera y plantar árboles, para dejar totalmente libre al recolector"*—: el **leñador es un oficio propio**
+  > (**FLETCHER**, con su **mesa de flechas** en el taller de la arboleda) y va a **prioridad 4**. El recolector se
+  > queda solo con recoger y transportar. Lo de abajo sobre **cómo** tala y replanta sigue vigente tal cual.
 - **Qué hace** (`VillagerLumberjackGoal`): **tala** árboles (recorre la columna de troncos hacia arriba, hasta 16) y
   se lleva la madera encima; con 12 troncos, o cuando ya no ve árboles, va al **almacén** a descargar.
 - **Repoblación de verdad (lo pidió el jugador: *"que plante los saplings que encuentre de manera distribuida, puede
@@ -726,7 +730,8 @@ aldeano** y que la cría dependa de que haya **cama libre**.
   raciones del último minuto), que es lo que hace falta para ajustar el hambre con números.
 - **Migración 32** (`CURRENT_LAYOUT`): las aldeas ya construidas reciben la cocina al latido siguiente y sus bloques
   entran en el **plano** para que el obrero la reponga (invariante I8). El **tope de crecimiento** pasa a
-  `puestosDelPueblo()` (7), y el cocinero queda fuera del reparto de obreros y de la milicia (cupo propio, como el
+  `puestosDelPueblo()` (once desde la etapa H), y el cocinero queda fuera del reparto de obreros y de la milicia (cupo
+  propio, como el
   ganadero).
 - **El lint también vigila los goals nuevos**: `tools/lint_aldea.py` tenía en su lista solo los goals viejos, así que
   el leñador, el ganadero, el cocinero, el guardia y el herrero **no estaban pasando** por sus reglas de "atascado =
@@ -1067,7 +1072,8 @@ podrá implementar cerveza); las barracas más bonitas y con lore: área de entr
 las camas"*.
 
 - **Tercer bancal y segundo granjero**: `FARM_PLOTS` pasa a **tres** (tercero en `-28,34`) y el pueblo tiene **dos
-  granjeros** (ocho puestos fijos). Ojo con el detalle que lo habría roto: `slotDeProfesionFaltante` miraba "está o no
+  (once desde la etapa H, con el leñador y el tercer
+  granjero). Ojo con el detalle que lo habría roto: `slotDeProfesionFaltante` miraba "está o no
   está", así que con un granjero vivo el segundo puesto se daba por cubierto; ahora **cuenta por número**. Cada bancal
   trae su **compostero**, así que cada granjero tiene su puesto de trabajo (vanilla pide uno por aldeano).
 - **Bancales cercados, con portones y con luz** (`cercaDelBancal`): anillo de valla alrededor de cada bancal con
@@ -2105,6 +2111,83 @@ milicia queda **vacía** (que es el diseño: *"una aldea sana no tiene guardia: 
 *(Nota del arnés: los bichos que ya venían en el guardado **dentro del recinto** bloquean `hayEnemigosDentro` y con
 ello **todo** el latido —sin reparto de oficios ni milicia—; el arnés los barre cada segundo. Se nota porque en el
 log **no** sale ninguna línea `[Village] Aldea N: comida ...`.)*
+
+### 3b.48 Los oficios de la aldea, rediseñados: 3er granjero, LEÑADOR propio y una profesión por estación
+
+Lo pidió el jugador al revisar la ronda anterior, y traía cuatro encargos: *(1)* **"necesitamos un 3er granjero que vaya
+a la granja que está vacía porque la comida que se produce actualmente no es suficiente para alimentar a los
+pobladores"* y que los granjeros cosechen más; *(2)* **"es necesario que haya un aldeano que se especialice únicamente
+en cortar madera y plantar árboles, para dejar totalmente libre al recolector para que recoja y transporte"**;
+*(3)* **"esos aldeanos que nacen deben tener lo necesario para integrarse al sistema"** y **"la milicia se va a ir
+llenando conforme vayan naciendo y alcanzando la adultez aldeanos"**; y *(4)* **"eliminar que haya una duplicidad de
+profesiones (una profesión por estación permitida y administrada por el sistema de aldea)"**.
+
+**El mapa, antes de tocar nada** (auditoría de roles → goals, con el fuente vanilla delante): los `Goal`s del pueblo
+piden **MOVE+LOOK** (salvo el de los portones, que no pide banderas), así que **se excluyen entre sí**, y en un empate
+de prioridad gana **el que se engancha antes** (`GoalSelector`/`WrappedGoal`: una prioridad igual no desplaza al que
+está corriendo). De ahí salían **cinco conflictos reales**, todos arreglados aquí:
+
+| | Qué pasaba | Arreglo |
+|---|---|---|
+| **C1** | El leñador era un **segundo goal del recolector** (NITWIT) a prioridad **6**, la **misma que la taberna**: el aldeano con hambre y leña pendiente **no iba a comer** | El leñador es un **oficio propio** a prioridad **4** (su faena), y la taberna se queda sola en la 6 |
+| **C2** | La guardia **conservaba** el goal de recoger (prioridad 3, enganchado **antes**) ⇒ el guardia **barría el término del pueblo y bajaba al almacén antes que patrullar** | Al alistarse se le **quita** la recogida, como ya se le quitaba la reparación ("un guardia tiene su puesto") |
+| **C3** | `marcarObrero` ponía la reparación a prioridad 5 solo al **granjero y los dos herreros**: un **pescador obrero** (o cualquier oficio nuevo) **reparaba en vez de pescar** (I23 a medias) | Prioridad **5 para CUALQUIER oficio del pueblo** (`esOficioDelPueblo`), y **3** para el que no tiene faena |
+| **C4** | El **clérigo** (sin goal de oficio) como obrero: recoger (3) y reparar (3) empataban y **recogía antes de reparar** | Al obrero **sin faena se le quita la recogida**: repara, que es lo suyo mientras es obrero |
+| **C5/7** | El "**tercer granjero**" que aparecía solo (el compostero libre del 3.er bancal) se lo llevaba la milicia y **su bancal se quedaba sin nadie** (el daño de I35) | El 3.er bancal tiene **su plaza de granjero** (abajo): deja de ser un duplicado accidental y pasa a ser el titular |
+
+**Los once puestos** (`VILLAGER_SPOTS` + `VILLAGER_SPECIALTIES`, **mismo orden y misma longitud**: `spawnOneVillager`
+cruza los dos arrays): los nueve de antes + **un tercer granjero** (su sitio, al oeste del tercer bancal, que ya
+existía con su compostero: `x -34, z 30`) + el **LEÑADOR**, cuyo oficio es **FLETCHER** (flechero) y su estación la
+**mesa de flechas** de su **taller**, un cobertizo abierto junto a la **arboleda** (`-52..-48, -26..-22`, con farol y
+una pila de troncos). El taller entra en el **plano** (I8), es idempotente (su testigo es la propia mesa, I15), lo
+llaman la **migración 62** —antes de tirar el plano—, el latido (si el jugador se lo lleva) y el generador de aldeas
+nuevas. De paso, las **flechas** de los arqueros de la milicia ya tienen de dónde salir sin depender de los esqueletos.
+
+**Y la comida** (lo que de verdad pedía el jugador):
+- **3er granjero** ⇒ el tercer bancal (72 celdas de cultivo) vuelve a tener quien lo trabaje. Medido: el censo de la
+  aldea pasa de `farmer=2` a **`farmer=3`**.
+- **Lotes de 8** por viaje (antes **4**): el granjero baja a la despensa **cada 8 unidades entre trigo y vegetales** y
+  hornea 2 hogazas por visita. Con la despensa en la taberna (a 40-55 bloques de los bancales) cada viaje es un paseo
+  de ida y vuelta: entregar el doble por paseo **duplica el ritmo de comida sin tocar la mecánica del cultivo**.
+- Medido con el arnés, ya con **11 bocas**: `[Village] Aldea 2: comida 64 puntos, 11 aldeanos, 29 camas, 11 raciones`
+  (la despensa **llena**), frente a los ratos de `comida 0 puntos … 0 raciones` de antes.
+
+**Una profesión por estación, administrada** (invariante **I36**): `VillageManager.podarOficiosDuplicados`, en cada
+latido justo después del reparto de oficios. Cuenta los titulares por oficio y, si hay más que plazas, los que sobran
+(en orden estable por UUID) pierden el oficio **y su ticket** (`liberarPuesto`: si no, la estación se queda cogida
+para siempre, I23) y vuelven al reparto (plaza libre o **gente de sobra**). Cierra las tres puertas por las que
+entraban los duplicados: el **bloque** (`AcquirePoi` con `NONE` = *cualquier* estación libre), `reponerProfesiones`
+cuando el titular está en un chunk descargado (solo ve 106 bloques) y el **aldeano curado** que vuelve con su oficio
+viejo.
+
+**Y el pueblo CRECE** (invariante **I37**): la rama de cría del latido pedía a la vez "todas las especialidades vivas"
+y "menos aldeanos que puestos" ⇒ **contradicción**: el pueblo **no paría nunca** por ahí (las crías eran de vanilla,
+del pan de `feedVillagers`) y, además, nacía con el oficio de la plaza número `vivos` (**duplicado por construcción**).
+Ahora el tope es **`puestos + MILICIA_MAX` (18)** y la cría nace **SIN oficio** (`VillageGenerator.spawnBaby`): al
+crecer, el reparto le da una plaza libre o engrosa la **milicia**, que es exactamente lo que pidió el jugador.
+
+**Verificado con el arnés** (aldea 2 de su partida copiada, servidor headless, sin bichos):
+
+| Medida | Resultado |
+|---|---|
+| Taller del leñador | `taller del leñador levantado en (1362,119,1388) (mesa de flechas en 1363,120,1389)` |
+| Puestos repuestos en la aldea ya construida | `repuesto el puesto de toolsmith`, `repuesto el puesto de farmer` y el de `fletcher` |
+| Censo de oficios (estable) | `{CRIA=1, butcher=1, cleric=1, farmer=3, fisherman=1, fletcher=1, nitwit=1, shepherd=1, toolsmith=1, weaponsmith=1}` — **una** de cada y **tres** granjeros |
+| El leñador TRABAJA | `el lenador guardo 16 cosa(s) de su oficio en el almacen` (tala, replanta y baja la madera) |
+| Comida | `comida 64 puntos, 11 aldeanos, 29 camas, 11 raciones` |
+| Cría del pueblo | `Aldea 2 crece: aldeano 12/18 (comida 56)` + `CRIA=1` en el censo |
+| Duplicados | ninguno (la poda no tuvo que actuar en esa partida) |
+
+**También en este cambio** (inconsistencias del diseño, encontradas al revisar): la etiqueta del **pescador** salía en
+**inglés** ("Isidoro (Fisherman)") porque `nombreDeOficio` no tenía su rama (ahora también la tiene el leñador); la
+**lista del lint** no vigilaba los goals de las etapas F/G (`VillagerFisherGoal`, `VillagerTavernGoal`,
+`VillagerPickupGoal`, `VillagerGateGoal`: ya están dentro, I3/I4/I6) —y siguen pasando--; y `VILLAGERS_FOR_FULL_HEALTH`
+seguía clavado en **5** ("aldea sana") con once puestos: ahora **se pide** (`puestosDelPueblo()`), que es I5.
+
+**Lo que NO se ha podido comprobar (sin jugar)**: cómo se ve en su partida (hay que **reiniciar el cliente**), que la
+**cría** tarde lo suyo en crecer (mecánica vanilla: ~20 min de juego) y que el leñador use el **taller** además del
+monte (el arnés lo vio trabajando y guardando madera, no sentado en la mesa). **Sin migración de aldeanos**: los dos
+puestos nuevos los repone el latido al ver sus plazas vacías; la migración 62 solo construye el taller.
 
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 
