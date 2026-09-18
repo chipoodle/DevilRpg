@@ -755,8 +755,20 @@ public final class VillageManager {
             // y entonces la aldea se quedaba vacía para siempre: es el caso que reportó el jugador.
             // No se toca si la aldea ya cayó (isFallen: la derrota es definitiva) ni si hay asedio en curso
             // (si no, repoblaríamos mientras los monstruos la están matando).
-            if (level.getGameTime() % VILLAGE_POLL_TICKS == 0L && !saved.isFallen(i) && !isUnderAttack(level, i)
-                    && !hayEnemigosDentro(level, target)) {
+            //
+            // Y EL SELLO EXPULSA A LOS QUE YA ESTÁN DENTRO **antes** de mirar si hay enemigos (etapa H): el aura corta
+            // los spawns, pero no tocaba a los que entraron antes de vencer el asedio, a los que se colaron por un
+            // portón abierto o a los que se cargan del guardado — se quedaban dentro para siempre. Y peor: con un
+            // bicho dentro, `hayEnemigosDentro` cortaba el latido ENTERO (ni oficios, ni comida, ni reparaciones, ni
+            // milicia: la otra mitad del fallo de I11), así que el pueblo se quedaba congelado por un esqueleto en una
+            // cueva. Ahora, en una aldea protegida, primero se expulsa y después se mira.
+            if (level.getGameTime() % VILLAGE_POLL_TICKS == 0L && !saved.isFallen(i) && !isUnderAttack(level, i)) {
+                if (saved.isSiegeResolved(i)) {
+                    expulsarHostilesDeLaAldea(level, target, i);
+                }
+                if (hayEnemigosDentro(level, target)) {
+                    continue; // quedan bichos dentro (los de las cuevas de debajo, por ejemplo): no se toca el pueblo
+                }
                 int vivos = observeVillagers(level, saved, i, target);
                 if (vivos > 0) {
                     tickVillageLife(level, saved, i, target);
@@ -821,6 +833,58 @@ public final class VillageManager {
                 }
             }
         }
+    }
+
+    /**
+     * <b>El sello místico EXPULSA a los hostiles que ya están dentro</b> de una aldea protegida (etapa H).
+     * <p>
+     * El aura ({@code MobSpawnEvent.PositionCheck} + {@code EntityJoinLevelEvent}) corta los <b>spawns</b>, pero no
+     * toca a los que ya estaban: los que entraron <b>antes</b> de vencer el asedio, los que se colaron por un
+     * <b>portón abierto</b> (el pueblo los abre para pasar) o los que se <b>cargan del guardado</b>. Ésos se quedaban
+     * dentro para siempre —y con uno dentro, {@code hayEnemigosDentro} cortaba el latido entero (I11), así que el
+     * pueblo se congelaba—.
+     * <p>
+     * Se mira solo lo que está <b>a la altura del pueblo</b> (recinto en XZ + banda sobre la cota, como cualquier
+     * recuento de I11): un bicho en una cueva 20 bloques por debajo no está "dentro de la aldea" y no se toca. Se
+     * dejan en paz los <b>aldeanos-zombi</b> (una curación en marcha es cosa del jugador) y no se corre con un asedio
+     * activo (ésos son los asediadores, que están ahí a propósito). Se les echa <b>fuera del muro</b>, en su misma
+     * dirección y con el portal de la marca: no se les mata, así que no hay botín gratis y la horda puede volver
+     * andando, que es como está pensado.
+     *
+     * @return cuántos ha expulsado
+     */
+    private static int expulsarHostilesDeLaAldea(ServerLevel level, BlockPos center, int objectiveIndex) {
+        int cota = VillageGenerator.cotaDeLaPlaza(level, center);
+        double fueraDelMuro = VillageGenerator.FENCE_RADIUS + 6.0D;
+        int expulsados = 0;
+        for (Monster bicho : level.getEntitiesOfClass(Monster.class,
+                new AABB(center).inflate(VillageGenerator.FENCE_RADIUS + 8.0D, 24.0D,
+                        VillageGenerator.FENCE_RADIUS + 8.0D))) {
+            if (bicho.isRemoved() || bicho instanceof net.minecraft.world.entity.monster.ZombieVillager) {
+                continue; // un aldeano-zombi puede ser una curación en marcha: no se toca
+            }
+            if (!dentroDelRecinto(cota, center, bicho, VillageGenerator.FENCE_RADIUS)) {
+                continue; // en XZ sí, pero en una cueva de debajo: no está "dentro"
+            }
+            double dx = bicho.getX() - (center.getX() + 0.5D);
+            double dz = bicho.getZ() - (center.getZ() + 0.5D);
+            double distancia = Math.max(0.001D, Math.sqrt(dx * dx + dz * dz));
+            double x = center.getX() + 0.5D + dx / distancia * fueraDelMuro;
+            double z = center.getZ() + 0.5D + dz / distancia * fueraDelMuro;
+            // `randomTeleport` busca un sitio seguro alrededor (es el teletransporte del enderman); si no lo encuentra
+            // —o el destino no está cargado— el bicho se va del pueblo igual, pero sin dejar botín.
+            if (!bicho.randomTeleport(x, cota, z, false)) {
+                bicho.discard();
+            }
+            level.sendParticles(net.minecraft.core.particles.ParticleTypes.SCULK_SOUL,
+                    bicho.getX(), bicho.getY() + 1.0D, bicho.getZ(), 12, 0.3D, 0.5D, 0.3D, 0.02D);
+            expulsados++;
+        }
+        if (expulsados > 0) {
+            DevilRpg.LOGGER.info("[Village] Aldea {}: el sello ha expulsado a {} hostil(es) que estaban dentro",
+                    objectiveIndex, expulsados);
+        }
+        return expulsados;
     }
 
     /**
@@ -1854,6 +1918,9 @@ public final class VillageManager {
         // obrero). Es lo que pidió el jugador: "eliminar que haya una duplicidad de profesiones (una profesión por
         // estación permitida y administrada por el sistema de aldea)".
         podarOficiosDuplicados(level, aldeanos, objectiveIndex);
+        // NOMBRES SIN REPETIR (lo vio el jugador: dos "Bibiana" en el mismo pueblo). Con 48 nombres y 11-18 aldeanos,
+        // el nombre "al azar por UUID" se repite; aquí se le asigna a cada aldeano un nombre libre y se le guarda.
+        repartirNombres(aldeanos);
         // HERREROS: los DOS (armas y herramientas) trabajan en el taller del pueblo: cogen los materiales del almacén,
         // fabrican en su puesto (muelle de afilar / mesa de herrería) y dejan la pieza en el almacén, de donde se
         // equipará la futura guardia. Los goals no se guardan con la partida: se reponen al verlos.
@@ -2770,6 +2837,13 @@ public final class VillageManager {
     /**
      * Nombres de pila de los aldeanos. Se le asigna uno <b>al azar pero estable</b>: se saca de su UUID, así que el
      * mismo aldeano se llama siempre igual (y no hay que guardarlo en la partida).
+     * <p>
+     * OJO: con <b>48 nombres</b> y una aldea de 11-18 aldeanos, "al azar por UUID" <b>repite nombres</b> (con 11
+     * aldeanos hay ~70% de probabilidad de que al menos dos se llamen igual: es la paradoja del cumpleaños). El
+     * jugador lo vio: <b>dos "Bibiana"</b> en el mismo pueblo. Por eso existe {@link #NOMBRE_TAG}: el nombre que se
+     * le asigna a cada aldeano <b>se guarda</b> en sus datos y el reparto procura que <b>no se repita</b> dentro de la
+     * aldea ({@link #repartirNombres}). Lo de arriba sigue valiendo como nombre de arranque: el que no tenga nombre
+     * guardado (una partida vieja, un aldeano recién nacido) usa el de su UUID hasta el latido siguiente.
      */
     private static final String[] NOMBRES = {
             "Anselmo", "Bartolo", "Casimiro", "Dionisio", "Eustaquio", "Fabricio", "Gervasio", "Hipolito",
@@ -2780,10 +2854,47 @@ public final class VillageManager {
             "Segismunda", "Tomasa", "Ursula", "Vicenta", "Waldina", "Ximena", "Yolanda", "Zenobia",
     };
 
-    /** Nombre del aldeano: estable y sacado de su UUID (no hace falta guardarlo). */
+    /** Nombre asignado a ese aldeano (en sus datos persistentes). Vacío si aún no se le ha repartido uno. */
+    private static final String NOMBRE_TAG = "DevilRpgNombre";
+
+    /** Nombre del aldeano: el que tenga <b>asignado</b> y, si no, el de su UUID (estable, sin guardar nada). */
     public static String nombreDe(Villager villager) {
+        String asignado = villager.getPersistentData().getString(NOMBRE_TAG);
+        if (!asignado.isEmpty()) {
+            return asignado;
+        }
         long bits = villager.getUUID().getMostSignificantBits() ^ villager.getUUID().getLeastSignificantBits();
         return NOMBRES[Math.floorMod((int) (bits ^ (bits >>> 32)), NOMBRES.length)];
+    }
+
+    /**
+     * <b>Nombres sin repetir</b> dentro de la aldea (lo vio el jugador: dos "Bibiana"): a cada aldeano que aún no
+     * tenga nombre asignado se le da el primer nombre libre <b>empezando por el de su UUID</b> (así el que ya se
+     * llamaba de una manera la conserva casi siempre) y se le <b>guarda</b> en sus datos: el nombre viaja con él en la
+     * partida y no vuelve a cambiar. Los nombres ya asignados no se tocan.
+     */
+    private static void repartirNombres(List<Villager> aldeanos) {
+        Set<String> usados = new HashSet<>();
+        for (Villager villager : aldeanos) {
+            String nombre = villager.getPersistentData().getString(NOMBRE_TAG);
+            if (!nombre.isEmpty()) {
+                usados.add(nombre);
+            }
+        }
+        for (Villager villager : aldeanos) {
+            if (!villager.getPersistentData().getString(NOMBRE_TAG).isEmpty()) {
+                continue;
+            }
+            long bits = villager.getUUID().getMostSignificantBits() ^ villager.getUUID().getLeastSignificantBits();
+            int inicio = Math.floorMod((int) (bits ^ (bits >>> 32)), NOMBRES.length);
+            for (int salto = 0; salto < NOMBRES.length; salto++) {
+                String candidato = NOMBRES[(inicio + salto) % NOMBRES.length];
+                if (usados.add(candidato)) {
+                    villager.getPersistentData().putString(NOMBRE_TAG, candidato);
+                    break;
+                }
+            }
+        }
     }
 
     /**

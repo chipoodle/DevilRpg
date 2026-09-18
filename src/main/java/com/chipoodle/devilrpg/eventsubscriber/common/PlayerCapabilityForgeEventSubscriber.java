@@ -168,6 +168,10 @@ public class PlayerCapabilityForgeEventSubscriber {
      * <b>Sello místico de la aldea</b>: si una aldea ya venció su asedio y sigue viva, ninguna criatura <b>hostil</b>
      * puede aparecer dentro de su perímetro (vanilla o del mod). Fuera, en el campo, se spawnea con normalidad: la
      * horda sigue pudiendo llegar andando y atacar.
+     * <p>
+     * Esto cubre el camino de las <b>reglas de spawn</b> (natural y spawners). Los caminos que <b>no</b> pasan por
+     * ahí los corta {@link #onEntityJoinLevel}: el <b>asedio de zombis de vanilla</b> (que engancha con la campana del
+     * kiosco como punto de reunión del "pueblo"), los <b>refuerzos</b> de un zombi herido y las <b>estructuras</b>.
      */
     @SubscribeEvent
     public static void onMobSpawnPositionCheck(net.neoforged.neoforge.event.entity.living.MobSpawnEvent.PositionCheck event) {
@@ -178,6 +182,46 @@ public class PlayerCapabilityForgeEventSubscriber {
                 event.getEntity().blockPosition())) {
             event.setResult(net.neoforged.neoforge.event.entity.living.MobSpawnEvent.PositionCheck.Result.FAIL);
         }
+    }
+
+    /**
+     * <b>El sello, también en la puerta del mundo</b>: hay spawns que no pasan por
+     * {@code MobSpawnEvent.PositionCheck} —el <b>asedio de zombis de vanilla</b> ({@code VillageSiege}, que engancha
+     * con la <b>campana</b> de la aldea como punto de reunión del "pueblo" y los suelta <b>dentro</b>), los
+     * <b>refuerzos</b> de un zombi ({@code MobSpawnType.REINFORCEMENT}) y las <b>estructuras</b>— porque van por
+     * {@code EntityType.spawn} (que llama a {@code finalizeSpawn} pero no a las reglas de spawn). Aquí se cortan al
+     * <b>entrar en el mundo</b>, que sí se dispara siempre.
+     * <p>
+     * Solo se cortan los caminos que el aura debe cortar ({@link #esSpawnQueElSelloCorta}). Lo que elige el
+     * <b>jugador</b> (huevo de spawn, {@code /summon}) o el <b>mod</b> (los asediadores y el rebaño van con
+     * {@code MOB_SUMMONED}) pasa, y lo que se <b>carga del guardado</b> también: ésos ya estaban y de ellos se encarga
+     * la expulsión del latido (ver {@code VillageManager.expulsarHostilesDeLaAldea}).
+     */
+    @SubscribeEvent
+    public static void onEntityJoinLevel(net.neoforged.neoforge.event.entity.EntityJoinLevelEvent event) {
+        if (event.loadedFromDisk() || !(event.getLevel() instanceof net.minecraft.server.level.ServerLevel serverLevel)) {
+            return;
+        }
+        if (!(event.getEntity() instanceof net.minecraft.world.entity.Mob mob)) {
+            return;
+        }
+        if (mob.getType().getCategory() != net.minecraft.world.entity.MobCategory.MONSTER) {
+            return;
+        }
+        if (!VillageManager.estaProtegida(serverLevel, mob.blockPosition())) {
+            return;
+        }
+        if (esSpawnQueElSelloCorta(mob.getSpawnType())) {
+            event.setCanceled(true);
+        }
+    }
+
+    /** Los caminos de spawn que el <b>sello</b> corta dentro de una aldea protegida (los demás son del jugador o del mod). */
+    private static boolean esSpawnQueElSelloCorta(net.minecraft.world.entity.MobSpawnType tipo) {
+        return switch (tipo) {
+            case NATURAL, CHUNK_GENERATION, STRUCTURE, SPAWNER, EVENT, REINFORCEMENT, PATROL, TRIGGERED -> true;
+            default -> false;
+        };
     }
 
     @SubscribeEvent
