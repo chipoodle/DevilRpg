@@ -1362,6 +1362,33 @@ invariante **I13** ("un asedio nunca se pierde a ciegas") en `docs/aldea-invaria
 (un recuento de `Monster`/`MobCategory.MONSTER` en `VillageManager` sin `dentroDelRecinto` cerca **falla la puerta de
 commit**).
 
+### 3b.32 Los faroles que flotaban, la despensa a la taberna y la escalera en L
+
+Tres cosas que reportó el jugador de golpe (con capturas): *"en la cabaña del pescador hay faroles flotando"*, *"y lo
+mismo en la granja"*, *"el cofre de la comida ya no tiene sentido que esté en el kiosco central; sería mejor moverlo a
+la taberna, tomar un cuarto y convertirlo en almacén de comida"* y *"en la taberna aún no se puede acceder a la
+escalera: hay una mesa con sillas que la bloquea; quita esa mesa y dobla la escalera en la esquina"*.
+
+| Bug (lo que vio) | Causa medida | Arreglo | Guardia para que no vuelva |
+|---|---|---|---|
+| *"Hay faroles flotando"* (pesquera **y** granja anexa) | El ayudante `farolEnElPoste` colocaba el farol en la casilla que le dieran **dando por hecho** que debajo había un poste, y los llamantes le pasaban la casilla del **farol** contando un poste que no existía. Auditoría de la aldea 2 (cota 120): **16 faroles SIN APOYO** — 14 en la cerca de la **granja anexa** (1 bloque por encima del poste) y 2 en la **pesquera** (3 bloques por encima de la orilla) | `farolSobreElPoste(apoyo)`: recibe la casilla del **apoyo** y **garantiza el poste**; `posarFarolesFlotantes` **baja** el farol que quedó flotando en las aldeas ya construidas | **I14** en las invariantes, **regla I12 del lint** (una Y con sumando en `farolSobreElPoste` falla el commit), **autocomprobación** `auditarFarolesFlotantes` al generar y al migrar (grita en el log) y **auditoría de la aldea entera** (`build/audita_aldea2.py`) que además mira vallas flotando, cofres tapados, puertas incompletas y camas sueltas |
+| *"El cofre de la comida no tiene sentido en el kiosco central"* | La despensa del pueblo (el cofre con la comida de verdad) estaba en el kiosco de la plaza, lejos de la cocina y de las mesas | El cofre **doble** pasa a la **cocina de la taberna** (contra su muro norte): es el "almacén de comida", donde el cocinero cocina y donde el pueblo viene a comer. El kiosco se queda con su campana y su farol | **I15** en las invariantes: el testigo del kiosco es **su plataforma** (con el viejo —que exigía el cofre— el kiosco se reconstruía **cada latido** buscando un cofre que ya no está). La migración 47 retira el cofre viejo **después** de pasar lo suyo a la despensa nueva y al almacén (`retirarDespensaDelKiosco`, idempotente) |
+| *"Aún no se puede acceder a la escalera: hay una mesa con sillas que la bloquea"* | La escalera era un tramo recto pegado al muro oeste con el **primer escalón metido en la esquina**, y la **mesa de `(4,11)`** (con sus cuatro sillas) caía justo en el camino de acceso | La mesa `(4,11)` **ya no se pone** (quedan **cinco** mesas) y la escalera es una **L doble**: el pie mira **al comedor** (este→oeste), la **meseta** va en la esquina suroeste y el tramo de arriba sube (sur→norte) a la galería. El **hueco del forjado** es solo el del tramo de arriba | El **testigo** de `tabernaConstruida` exige la escalera nueva (los dos escalones que la identifican): una taberna vieja **se rehace entera** al migrar, y el hueco del forjado, la caja del pozo y la luz van con ella |
+
+**Verificado** con el arnés temporal (mundo aparte, borrado antes del commit):
+
+- **Faroles**: la auditoría de la aldea recién construida da **0 faroles flotantes** (con el ayudante viejo daba 16 en
+  la aldea del jugador).
+- **Despensa**: `VillagePantry.despensa` encuentra el cofre en la cocina y devuelve un contenedor de **54 casillas**
+  (cofre doble de verdad: mitades **RIGHT/LEFT**); en el **kiosco** hay **0 cofres**.
+- **Escalera**: el volcado de los bloques construidos es exactamente la L (dos escalones de bajada, la meseta 2×2, tres
+  de subida) y el **recorrido de un jugador con las cajas de colisión reales del juego** —a pasos de 0,25 bloques por la
+  línea de la escalera— **no encuentra ni un solo escalón de más de 0,50** (el jugador sube 0,6 por escalón, así que
+  todos se suben) y el pie queda abierto al comedor, sin la mesa ni las sillas que lo tapaban.
+  *(El camino de los bichos con la navegación del juego no sirvió para comprobarlo: en un bicho recién spawneado la
+  navegación no encuentra camino ni en la plaza llana —se comprobó con un control— y por eso la comprobación buena es
+  la de las alturas de los escalones.)*
+
 ## 3c) Iteración 2 — GUARIDAS ✅ (en curso)
 
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.

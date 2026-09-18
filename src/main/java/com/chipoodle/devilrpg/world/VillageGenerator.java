@@ -332,6 +332,9 @@ public final class VillageGenerator {
 
         fence(level, center);
 
+        // AUTOCOMPROBACIÓN (guardia del bug de los faroles flotantes): si algo quedó colgado del aire, sale en el log.
+        auditarFarolesFlotantes(level, center);
+
         return terminarGrabacion();
     }
 
@@ -534,14 +537,15 @@ public final class VillageGenerator {
         if (nivel <= level.getMinBuildHeight() + 1) {
             return;
         }
-        if (VillagePantry.despensa(level, center) != null
-                && level.getBlockState(new BlockPos(center.getX() + KIOSCO_RADIO, nivel, center.getZ()))
-                        .is(Blocks.STONE_BRICKS)) {
-            return; // el kiosco ya está (con su cofre) y con el tamaño actual
+        // El testigo es la PLATAFORMA (su poste), no la despensa: el cofre de la comida vive desde la migración 46
+        // en la cocina de la taberna (lo pidió el jugador). Con el testigo viejo —que exigía el cofre— el kiosco se
+        // reconstruía en cada latido buscando un cofre que ya no está en él (y reconstruirlo tira lo de dentro).
+        if (level.getBlockState(new BlockPos(center.getX() + KIOSCO_RADIO, nivel, center.getZ()))
+                .is(Blocks.STONE_BRICKS)) {
+            return; // el kiosco ya está y con el tamaño actual
         }
         kiosco(level, center, nivel);
-        VillagePantry.remesaInicial(VillagePantry.despensa(level, center));
-        DevilRpg.LOGGER.info("[Village] Aldea en {}: kiosco de la plaza y despensa colocados a la cota {}", center, nivel);
+        DevilRpg.LOGGER.info("[Village] Aldea en {}: kiosco de la plaza colocado a la cota {}", center, nivel);
     }
 
     /**
@@ -998,16 +1002,23 @@ public final class VillageGenerator {
      */
     private static void asegurarLucesDelCorral(ServerLevel level, BlockPos base, int nivel) {
         int puestos = 0;
+        java.util.List<BlockPos> apoyos = new java.util.ArrayList<>();
         for (int dx = -ANEXO_RADIO; dx <= ANEXO_RADIO; dx += ANEXO_RADIO) {
             for (int dz = -ANEXO_RADIO; dz <= ANEXO_RADIO; dz += ANEXO_RADIO) {
-                puestos += farolEnElPoste(level, new BlockPos(base.getX() + dx, nivel + 2, base.getZ() + dz));
+                apoyos.add(new BlockPos(base.getX() + dx, nivel, base.getZ() + dz));
             }
         }
         for (int k = -ANEXO_RADIO + 2; k <= ANEXO_RADIO - 2; k += 2 * (ANEXO_RADIO - 2)) {
-            puestos += farolEnElPoste(level, new BlockPos(base.getX() + k, nivel + 2, base.getZ() - ANEXO_RADIO));
-            puestos += farolEnElPoste(level, new BlockPos(base.getX() + k, nivel + 2, base.getZ() + ANEXO_RADIO));
-            puestos += farolEnElPoste(level, new BlockPos(base.getX() - ANEXO_RADIO, nivel + 2, base.getZ() + k));
-            puestos += farolEnElPoste(level, new BlockPos(base.getX() + ANEXO_RADIO, nivel + 2, base.getZ() + k));
+            apoyos.add(new BlockPos(base.getX() + k, nivel, base.getZ() - ANEXO_RADIO));
+            apoyos.add(new BlockPos(base.getX() + k, nivel, base.getZ() + ANEXO_RADIO));
+            apoyos.add(new BlockPos(base.getX() - ANEXO_RADIO, nivel, base.getZ() + k));
+            apoyos.add(new BlockPos(base.getX() + ANEXO_RADIO, nivel, base.getZ() + k));
+        }
+        // La casilla que se le pasa es la DEL POSTE (la cerca va a `nivel`): el farol queda justo encima. Antes se le
+        // pasaba `nivel + 2` —contando un poste que no existía— y los 8 faroles del corral quedaban FLOTANDO.
+        puestos += posarFarolesFlotantes(level, apoyos);
+        for (BlockPos apoyo : apoyos) {
+            puestos += farolSobreElPoste(level, apoyo);
         }
         if (puestos > 0) {
             DevilRpg.LOGGER.info("[Village] Aldea en {}: {} faroles puestos en la cerca del corral anexo"
@@ -1015,13 +1026,94 @@ public final class VillageGenerator {
         }
     }
 
-    /** Un farol en lo alto de un poste de la cerca, si ese hueco está libre. Devuelve 1 si lo ha puesto. */
-    private static int farolEnElPoste(ServerLevel level, BlockPos alto) {
+    /**
+     * Un <b>farol sobre un poste</b>: se le pasa la casilla del <b>apoyo</b> (el poste de la cerca, o el suelo) y el
+     * farol queda <b>encima</b>. Si el apoyo está vacío se pone el poste de valla.
+     * <p>
+     * Antes el ayudante colocaba el farol en la casilla que le dieran y <b>daba por hecho</b> que debajo había un
+     * poste. Los llamantes se equivocaron de altura (le pasaban la casilla del farol contando un poste que no
+     * existía), y el guardado del jugador tenía <b>16 faroles flotando</b>: 14 en la cerca del corral (a un bloque
+     * por encima del poste) y los 2 de la pesquera (a tres bloques del suelo, sobre la orilla del lago). Ahora el
+     * apoyo lo garantiza el propio ayudante: un farol sin apoyo no puede volver a construirse.
+     *
+     * @return 1 si ha puesto el farol (0 si ese hueco ya estaba ocupado por algo del jugador)
+     */
+    private static int farolSobreElPoste(ServerLevel level, BlockPos apoyo) {
+        BlockState abajo = level.getBlockState(apoyo);
+        if (abajo.isAir()) {
+            colocar(level, apoyo, Blocks.OAK_FENCE.defaultBlockState(), 3);   // el poste que falta
+        } else if (!Block.canSupportCenter(level, apoyo, Direction.UP)) {
+            // `canSupportCenter` es LA MISMA prueba que hace el juego para poner un farol (una valla vale: sostiene
+            // por el centro), así que si esto falla el juego tampoco lo aceptaría ahí.
+            return 0; // lo que hay ahí no sostiene un farol (o es del jugador): no se toca
+        }
+        BlockPos alto = apoyo.above();
         if (!level.getBlockState(alto).isAir()) {
-            return 0; // ya hay algo (el farol del pueblo o lo que puso el jugador)
+            return 0; // ya hay un farol (o lo que puso el jugador)
         }
         colocar(level, alto, Blocks.LANTERN.defaultBlockState(), 3);
         return 1;
+    }
+
+    /**
+     * <b>Auto-comprobación de faroles flotantes</b>: recorre el recinto de la aldea y cuenta los faroles que no
+     * cuelgan de nada ni están sobre un apoyo (la misma prueba que hace el juego para ponerlos). Se llama al
+     * <b>terminar de generar</b> y al <b>terminar de migrar</b> (no en el latido: son ~80.000 bloques) y, si
+     * encuentra alguno, lo <b>grita en el log</b> con sus posiciones: el bug de los 16 faroles colgados del aire
+     * (14 en la cerca de la granja anexa y 2 en la pesquera) no puede volver en silencio.
+     *
+     * @return cuántos faroles sin apoyo ha encontrado
+     */
+    public static int auditarFarolesFlotantes(ServerLevel level, BlockPos center) {
+        int nivel = cotaDeLaPlaza(level, center);
+        int radio = FENCE_RADIUS + 8;
+        int flotantes = 0;
+        for (int dx = -radio; dx <= radio; dx++) {
+            for (int dz = -radio; dz <= radio; dz++) {
+                for (int dy = -2; dy <= 18; dy++) {
+                    BlockPos p = new BlockPos(center.getX() + dx, nivel + dy, center.getZ() + dz);
+                    if (!level.getBlockState(p).is(Blocks.LANTERN)) {
+                        continue;
+                    }
+                    boolean colgado = Block.canSupportCenter(level, p.above(), Direction.DOWN);
+                    boolean sobre = Block.canSupportCenter(level, p.below(), Direction.UP);
+                    if (colgado || sobre) {
+                        continue;
+                    }
+                    flotantes++;
+                    if (flotantes <= 10) {
+                        DevilRpg.LOGGER.warn("[Village] FAROL FLOTANTE en {} (aldea en {}): ni colgado ni con apoyo",
+                                p, center);
+                    }
+                }
+            }
+        }
+        if (flotantes > 0) {
+            DevilRpg.LOGGER.warn("[Village] Aldea en {}: {} farol(es) SIN APOYO (fallo de construccion)",
+                    center, flotantes);
+        }
+        return flotantes;
+    }
+
+    /**
+     * <b>Baja los faroles que quedaron flotando</b> en las casillas indicadas: si hay un farol sin apoyo se retira y
+     * se vuelve a poner <b>sobre el apoyo</b> que le toca. Es la reparación de las aldeas ya construidas con el
+     * ayudante viejo (el plano se recaptura después, así que el obrero repone la posición buena).
+     */
+    private static int posarFarolesFlotantes(ServerLevel level, java.util.List<BlockPos> apoyos) {
+        int arreglados = 0;
+        for (BlockPos apoyo : apoyos) {
+            for (int dy = 1; dy <= 3; dy++) {
+                BlockPos alto = apoyo.above(dy);
+                if (!level.getBlockState(alto).is(Blocks.LANTERN)) {
+                    continue;
+                }
+                colocar(level, alto, Blocks.AIR.defaultBlockState(), 3);   // el farol flotante
+                arreglados += farolSobreElPoste(level, apoyo);
+                break;
+            }
+        }
+        return arreglados;
     }
 
     /**
@@ -1191,10 +1283,20 @@ public final class VillageGenerator {
         if (nivel <= level.getMinBuildHeight() + 1) {
             return;
         }
+        // Los faroles del lago, ANTES del early-return: en una pesquera ya construida hay que reparar los dos que
+        // quedaron flotando (ver `farolSobreElPoste`). Es idempotente: si ya están bien, no toca nada.
+        BlockPos base = baseDeLaPesquera(center);
+        java.util.List<BlockPos> esquinas = new java.util.ArrayList<>();
+        esquinas.add(new BlockPos(base.getX() - LAGO_RADIO - 1, nivel, base.getZ() - LAGO_RADIO - 1));
+        esquinas.add(new BlockPos(base.getX() + LAGO_RADIO + 1, nivel, base.getZ() + LAGO_RADIO + 1));
+        posarFarolesFlotantes(level, esquinas);
+        for (BlockPos esquina : esquinas) {
+            farolSobreElPoste(level, esquina);
+        }
         if (pesqueraConstruida(level, center)) {
             return;
         }
-        pesquera(level, baseDeLaPesquera(center), nivel);
+        pesquera(level, base, nivel);
         DevilRpg.LOGGER.info("[Village] Aldea en {}: pesquera construida en {} (lago de {}x{}, {} pez(ces) y su"
                 + " barril)", center, baseDeLaPesquera(center), 2 * LAGO_RADIO + 1, 2 * LAGO_RADIO + 1,
                 LAGO_PECES_INICIAL);
@@ -1285,9 +1387,11 @@ public final class VillageGenerator {
                 Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.NORTH), 3);
         // 4) EL PUESTO DEL PESCADOR: el BARRIL, en la orilla junto a la puerta. Es lo que le da el oficio.
         colocar(level, puestoDelPescador(base, nivel), Blocks.BARREL.defaultBlockState(), 3);
-        // 5) FAROLES en dos esquinas del lago: la pesquera se ve de noche y el agua no cría bichos.
-        farolEnElPoste(level, new BlockPos(bx - LAGO_RADIO - 1, nivel + 2, bz - LAGO_RADIO - 1));
-        farolEnElPoste(level, new BlockPos(bx + LAGO_RADIO + 1, nivel + 2, bz + LAGO_RADIO + 1));
+        // 5) FAROLES en dos esquinas del lago: la pesquera se ve de noche y el agua no cría bichos. La casilla que se
+        //    le pasa es la del POSTE (el suelo de la orilla está a `nivel - 1`), así que el farol queda justo encima.
+        //    Antes se le pasaba `nivel + 2` y estos dos faroles salían FLOTANDO a tres bloques del suelo.
+        farolSobreElPoste(level, new BlockPos(bx - LAGO_RADIO - 1, nivel, bz - LAGO_RADIO - 1));
+        farolSobreElPoste(level, new BlockPos(bx + LAGO_RADIO + 1, nivel, bz + LAGO_RADIO + 1));
         // 6) LOS PECES: el lago arranca con su bandada (y se repuebla solo: ver `reponerPecesDelLago`).
         sueltaPeces(level, base, nivel, LAGO_PECES_INICIAL);
     }
@@ -2865,23 +2969,32 @@ public final class VillageGenerator {
         // Un farol colgado del tejado, en el centro: el kiosco queda iluminado de noche.
         colocar(level, new BlockPos(cx, nivel + KIOSCO_POSTE, cz),
                 Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true), 3);
-        // El cofre DOBLE de la despensa, sobre la plataforma. Las dos mitades se marcan LEFT/RIGHT a mano: al
-        // colocarlas con setBlock no pasa por la colocación de vanilla y sin esto quedarían dos cofres sueltos.
-        // OJO: si el cofre YA está, no se vuelve a colocar (al agrandar el kiosco se vaciaría lo que tuviera dentro).
-        BlockPos cofreA = new BlockPos(cx, nivel + 1, cz + 1);
-        BlockPos cofreB = new BlockPos(cx + 1, nivel + 1, cz + 1);
-        if (!level.getBlockState(cofreA).is(Blocks.CHEST)) {
-            colocar(level, cofreA, cofre(ChestType.LEFT), 3);
-        }
-        if (!level.getBlockState(cofreB).is(Blocks.CHEST)) {
-            colocar(level, cofreB, cofre(ChestType.RIGHT), 3);
-        }
+        // OJO: aquí YA NO va el cofre de la despensa. Estuvo en el kiosco hasta la migración 46 y el jugador pidió
+        // moverlo a la taberna ("el cofre de la comida ya no tiene sentido que esté en el kiosco central... sería
+        // mejor moverlo a la taberna, tomar un cuarto y convertirlo en almacén de comida"): ahora la despensa es el
+        // cofre doble de la COCINA de la taberna (ver `TABERNA_DESPENSA` y `VillagePantry`). La migración rescata lo
+        // que hubiera en el cofre viejo (a la despensa nueva o al almacén) antes de retirarlo.
     }
 
-    /** Cofre mirando al sur; {@code tipo} marca la mitad (LEFT/RIGHT) para formar un cofre doble. */
-    private static BlockState cofre(ChestType tipo) {
+    /**
+     * Un <b>cofre doble</b> mirando a {@code mira}, con las dos mitades en {@code a} y {@code b} (adyacentes).
+     * <p>
+     * Las mitades hay que marcarlas <b>a mano</b> (LEFT/RIGHT): al colocar dos cofres con {@code setBlock} no pasa por
+     * la colocación de vanilla y sin la marca quedarían dos cofres <b>sueltos</b> (27 casillas cada uno en vez de un
+     * cofre doble de 54). La regla de vanilla ({@code ChestBlock.getConnectedDirection}) es: la mitad <b>LEFT</b> tiene
+     * a su pareja en {@code mira.getClockWise()} y la <b>RIGHT</b> en {@code mira.getCounterClockWise()}, así que el
+     * orden depende de hacia dónde mire el cofre.
+     */
+    private static void cofreDoble(ServerLevel level, BlockPos a, BlockPos b, Direction mira) {
+        boolean aEsIzquierda = b.subtract(a).equals(mira.getClockWise().getNormal());
+        colocar(level, a, cofre(aEsIzquierda ? ChestType.LEFT : ChestType.RIGHT, mira), 3);
+        colocar(level, b, cofre(aEsIzquierda ? ChestType.RIGHT : ChestType.LEFT, mira), 3);
+    }
+
+    /** Cofre mirando a {@code mira}; {@code tipo} marca la mitad (LEFT/RIGHT) para formar un cofre doble. */
+    private static BlockState cofre(ChestType tipo, Direction mira) {
         return Blocks.CHEST.defaultBlockState()
-                .setValue(ChestBlock.FACING, Direction.NORTH)
+                .setValue(ChestBlock.FACING, mira)
                 .setValue(ChestBlock.TYPE, tipo);
     }
 
@@ -4859,25 +4972,39 @@ public final class VillageGenerator {
     /** La puerta: una sola, en el centro del muro oeste, que es el que mira a la plaza. */
     private static final int TABERNA_PUERTA = 7;
     /**
-     * La <b>caja de la escalera</b> en la planta de la posada. Sube pegada al muro oeste, de sur a norte, y es
-     * <b>doble</b> (dos bloques de ancho) y con su meseta de llegada, como pidió el jugador: <i>"hazla doble y con
-     * suficiente espacio para que se pueda subir al segundo piso"</i>.
+     * La <b>escalera en L</b> de la taberna: <b>dobla en la esquina</b>. El primer tramo baja por el comedor de
+     * <b>este a oeste</b> (el pie mira al este, al comedor, con todo el espacio libre delante) y desemboca en una
+     * <b>meseta</b> en la esquina suroeste; de ahí el segundo tramo sube <b>de sur a norte</b> pegado al muro oeste
+     * hasta la galería de la posada. Es <b>doble</b> (dos bloques de ancho) en los dos tramos y en la meseta.
      * <p>
-     * El <b>primer escalón</b> está en {@code z = Z1}, con el comedor ABIERTO delante (el sur): se entra a la escalera
-     * <b>de frente</b>, caminando desde el comedor, y no de lado. Antes quedaba metida en la esquina, con el escalón
-     * de arriba delante y las paredes al este y al sur, así que no se podía ni llegar a ella (lo avisó el jugador:
-     * <i>"no se puede acceder a la escalera desde adentro"</i>). El pozo va cerrado por el este con un muro: es un
-     * hueco de un bloque de ancho, y sin ese muro el primero que paseara por la galería se caería al comedor.
+     * Antes era un tramo recto pegado al muro, con el <b>primer escalón metido en la esquina</b> al lado de una
+     * <b>mesa con sillas</b> que lo tapaba: el jugador lo reportó dos veces (<i>"no se puede acceder a la escalera,
+     * hay una mesa con sillas que la bloquea"</i>). Ahora el pie está en el comedor, la mesa que estorbaba
+     * ({@code 4,11}) ya no se pone, y la escalera se sube doblando en la esquina.
+     * <p>
+     * <b>OJO con la orientación</b>: en las escaleras del juego la cara alta (por donde se sube) es la que marca
+     * {@code FACING}, así que cada tramo mira hacia donde SUBE (el primero al oeste, el segundo al norte).
      */
     private static final int TABERNA_ESCALERA_X = 1;
     private static final int TABERNA_ESCALERA_ANCHO = 2;
-    private static final int TABERNA_ESCALERA_Z0 = 8;
-    private static final int TABERNA_ESCALERA_Z1 = 12;
+    /** La fila (Z) del escalón de arriba, ya en la galería de la posada. */
+    private static final int TABERNA_ESCALERA_TOPE_Z = 8;
+    /** La fila (Z) donde va la <b>meseta</b> de la esquina (2 de fondo: {@code MESETA_Z} y {@code MESETA_Z + 1}). */
+    private static final int TABERNA_ESCALERA_MESETA_Z = 11;
+    /** La columna (X) del <b>primer escalón</b> (el pie del tramo de abajo, mirando al comedor). */
+    private static final int TABERNA_ESCALERA_PIE_DX = 4;
     /** El hogar (con su chimenea), en el muro norte; y el ahumador del cocinero, en la cocina. */
     private static final int[] TABERNA_HOGAR = {9, 0};
     private static final int[] TABERNA_COCINA = {4, 2};
-    /** Las seis mesas del comedor, relativas a la esquina de la taberna. */
-    private static final int[][] TABERNA_MESAS = {{10, 3}, {14, 4}, {16, 7}, {14, 10}, {10, 10}, {4, 11}};
+    /**
+     * <b>El almacén de comida</b>: el cofre DOBLE de la despensa del pueblo, en la cocina de la taberna (contra su
+     * muro norte, las dos mitades en {@code (2,1)} y {@code (3,1)}). Lo pidió el jugador: <i>"el cofre de la comida
+     * ya no tiene sentido que esté en el kiosco central... sería mejor moverlo a la taberna, tomar un cuarto y
+     * convertirlo en almacén de comida"</i>. Va donde el cocinero cocina y donde el pueblo viene a comer.
+     */
+    public static final int[] TABERNA_DESPENSA = {2, 1};
+    /** Las <b>cinco</b> mesas del comedor, relativas a la esquina de la taberna (la del pie de la escalera se quitó). */
+    private static final int[][] TABERNA_MESAS = {{10, 3}, {14, 4}, {16, 7}, {14, 10}, {10, 10}};
 
     /**
      * Coordenada de la taberna, relativa al centro: al <b>sureste</b>, pegada al almacén (que está en 18,18) y en el
@@ -4934,9 +5061,14 @@ public final class VillageGenerator {
                 // bloque, con los pilares defasados y la escalera sin acceso) y el pueblo la rehace entera.
                 boolean aPlomo = level.getBlockState(new BlockPos(base.getX(), nivel + TABERNA_PISO2, base.getZ()))
                         .is(Blocks.DARK_OAK_LOG);
-                boolean escaleraDoble = level.getBlockState(new BlockPos(base.getX() + TABERNA_ESCALERA_X + 1, nivel,
-                        base.getZ() + TABERNA_ESCALERA_Z1)).is(Blocks.DARK_OAK_STAIRS);
-                return aPlomo && escaleraDoble;
+                // Y la ESCALERA EN L (la del pie en el comedor y la que dobla en la esquina): los dos escalones que
+                // la identifican. Una taberna con la escalera vieja (recta y tapada por la mesa) se rehace entera.
+                boolean escaleraEnL = level.getBlockState(new BlockPos(
+                        base.getX() + TABERNA_ESCALERA_PIE_DX, nivel,
+                        base.getZ() + TABERNA_ESCALERA_MESETA_Z)).is(Blocks.DARK_OAK_STAIRS)
+                        && level.getBlockState(new BlockPos(base.getX() + TABERNA_ESCALERA_X, nivel + 4,
+                        base.getZ() + TABERNA_ESCALERA_TOPE_Z)).is(Blocks.DARK_OAK_STAIRS);
+                return aPlomo && escaleraEnL;
             }
         }
         return false;
@@ -5017,8 +5149,10 @@ public final class VillageGenerator {
 
     /** ¿Es esta celda (relativa a la esquina) el <b>hueco de la escalera</b> en el forjado de la posada? */
     private static boolean esHuecoDeLaEscalera(int dx, int dz) {
+        // El hueco es el del TRAMO DE ARRIBA (el que sube pegado al muro oeste): tres filas. El tramo de abajo y la
+        // meseta van BAJO el forjado (se suben con dos bloques de altura libre, como cualquier escalera de casa).
         return dx >= TABERNA_ESCALERA_X && dx < TABERNA_ESCALERA_X + TABERNA_ESCALERA_ANCHO
-                && dz >= TABERNA_ESCALERA_Z0 && dz <= TABERNA_ESCALERA_Z1;
+                && dz >= TABERNA_ESCALERA_TOPE_Z && dz <= TABERNA_ESCALERA_TOPE_Z + 2;
     }
 
     /**
@@ -5049,31 +5183,51 @@ public final class VillageGenerator {
     }
 
     /**
-     * La <b>escalera</b> al piso de arriba: sube pegada al muro oeste, de sur a norte, y desemboca en la galería de
-     * la posada. Va dentro de una <b>caja</b> cerrada por el este, porque el hueco del forjado es un pozo de un
-     * bloque de ancho y sin ese muro se caería dentro quien paseara por la galería.
+     * La <b>escalera en L</b> al piso de arriba: el primer tramo sube del comedor (este→oeste) hasta la <b>meseta</b>
+     * de la esquina suroeste, y el segundo sube de ahí (sur→norte) pegado al muro oeste hasta la galería de la
+     * posada. Los dos tramos y la meseta son <b>dobles</b> (dos bloques de ancho).
      * <p>
      * <b>OJO con la orientación</b>: en las escaleras del juego la cara alta (por donde se sube) es la que marca
-     * {@code FACING}. La taberna vieja subía hacia el norte con las escaleras mirando al sur, así que se veían bien y
-     * <b>no se podía subir</b> (lo reportó el jugador): aquí van mirando al <b>norte</b>, que es hacia donde suben.
+     * {@code FACING}, así que cada tramo mira hacia donde <b>sube</b> (el de abajo al oeste, el de arriba al norte).
+     * La escalera vieja subía hacia el norte mirando al sur y no se podía subir (lo reportó el jugador).
      */
     private static void escaleraDeLaTaberna(ServerLevel level, int bx, int bz, int nivel, int y1) {
-        int alto = TABERNA_PISO2;
-        for (int i = 0; i < alto; i++) {
+        BlockState tablon = Blocks.DARK_OAK_PLANKS.defaultBlockState();
+        // 1) EL TRAMO DE ABAJO (el pie, mirando al comedor): dos escalones de este a oeste.
+        for (int k = 0; k < TABERNA_ESCALERA_ANCHO; k++) {
+            for (int dz = TABERNA_ESCALERA_MESETA_Z; dz <= TABERNA_ESCALERA_MESETA_Z + 1; dz++) {
+                BlockPos escalon = new BlockPos(bx + TABERNA_ESCALERA_PIE_DX - k, nivel + k, bz + dz);
+                colocar(level, escalon, Blocks.DARK_OAK_STAIRS.defaultBlockState()
+                        .setValue(StairBlock.FACING, Direction.WEST).setValue(StairBlock.HALF, Half.BOTTOM), 3);
+                colocar(level, escalon.above(), Blocks.AIR.defaultBlockState(), 3);
+            }
+        }
+        // 2) LA MESETA de la esquina (2x2, a la altura a la que llega el tramo de abajo): tablones y el aire libre
+        //    encima, para que se pueda estar de pie en ella.
+        for (int dx = TABERNA_ESCALERA_X; dx < TABERNA_ESCALERA_X + TABERNA_ESCALERA_ANCHO; dx++) {
+            for (int dz = TABERNA_ESCALERA_MESETA_Z; dz <= TABERNA_ESCALERA_MESETA_Z + 1; dz++) {
+                colocar(level, new BlockPos(bx + dx, nivel + 1, bz + dz), tablon, 3);
+                for (int dy = 2; dy <= 3; dy++) {
+                    colocar(level, new BlockPos(bx + dx, nivel + dy, bz + dz), Blocks.AIR.defaultBlockState(), 3);
+                }
+            }
+        }
+        // 3) EL TRAMO DE ARRIBA: tres escalones de sur a norte, pegados al muro oeste, hasta la galería.
+        for (int i = 0; i < 3; i++) {
             for (int k = 0; k < TABERNA_ESCALERA_ANCHO; k++) {
-                BlockPos escalon = new BlockPos(bx + TABERNA_ESCALERA_X + k, nivel + i,
-                        bz + TABERNA_ESCALERA_Z1 - i);
+                BlockPos escalon = new BlockPos(bx + TABERNA_ESCALERA_X + k, nivel + 2 + i,
+                        bz + TABERNA_ESCALERA_MESETA_Z - 1 - i);
                 colocar(level, escalon, Blocks.DARK_OAK_STAIRS.defaultBlockState()
                         .setValue(StairBlock.FACING, Direction.NORTH).setValue(StairBlock.HALF, Half.BOTTOM), 3);
                 colocar(level, escalon.above(), Blocks.AIR.defaultBlockState(), 3);
             }
         }
-        // La caja: el muro del este, del suelo de la posada al techo. Llega hasta la pared sur (z = Z1 + 1) para que
-        // el pozo no deje ningún rincón por detrás al que asomarse y caerse.
-        for (int dz = TABERNA_ESCALERA_Z0; dz <= TABERNA_ESCALERA_Z1 + 1; dz++) {
+        // 4) LA CAJA: el muro del ESTE del pozo (las tres filas del hueco), del suelo de la posada al techo. Sin él,
+        //    el hueco del forjado es un pozo abierto al lado de la galería y el primero que paseara se caería.
+        for (int dz = TABERNA_ESCALERA_TOPE_Z; dz <= TABERNA_ESCALERA_MESETA_Z; dz++) {
             for (int y = y1; y < y1 + TABERNA_ALERO; y++) {
                 colocar(level, new BlockPos(bx + TABERNA_ESCALERA_X + TABERNA_ESCALERA_ANCHO, y, bz + dz),
-                        Blocks.DARK_OAK_PLANKS.defaultBlockState(), 3);
+                        tablon, 3);
             }
         }
     }
@@ -5153,6 +5307,11 @@ public final class VillageGenerator {
         colocar(level, new BlockPos(bx + 5, nivel, bz + 4), Blocks.CHEST.defaultBlockState()
                 .setValue(ChestBlock.FACING, Direction.WEST), 3);
         colocar(level, new BlockPos(bx + 1, nivel, bz + 4), Blocks.POTTED_FERN.defaultBlockState(), 3);
+        // EL ALMACÉN DE COMIDA DEL PUEBLO (migración 47): el cofre DOBLE de la despensa, contra el muro norte de la
+        // cocina. Es la comida de la aldea y vive donde el cocinero cocina y donde el pueblo viene a comer; antes
+        // estaba en el kiosco de la plaza (lo pidió el jugador: "no tiene sentido que esté en el kiosco central").
+        BlockPos despensa = new BlockPos(bx + TABERNA_DESPENSA[0], nivel, bz + TABERNA_DESPENSA[1]);
+        cofreDoble(level, despensa, despensa.east(), Direction.SOUTH);
     }
 
     /**
@@ -5422,8 +5581,8 @@ public final class VillageGenerator {
             colgar(level, new BlockPos(bx + l[0], nivel + TABERNA_PISO2 - 2, bz + l[1]));
         }
         int[][] posada = {{3, 3}, {9, 3}, {16, 3}, {4, 12}, {9, 12}, {16, 12}, {6, 7}, {12, 7},
-                {TABERNA_ESCALERA_X, TABERNA_ESCALERA_Z0 + 2},
-                {TABERNA_ESCALERA_X + 1, TABERNA_ESCALERA_Z0 + 2}};
+                {TABERNA_ESCALERA_X, TABERNA_ESCALERA_TOPE_Z + 2},
+                {TABERNA_ESCALERA_X + 1, TABERNA_ESCALERA_TOPE_Z + 2}};
         for (int[] l : posada) {
             colgar(level, new BlockPos(bx + l[0], yTecho - 2, bz + l[1]));
         }
@@ -5482,6 +5641,61 @@ public final class VillageGenerator {
     }
 
     /**
+     * <b>Retira el cofre de la despensa del kiosco</b> (migración 47): la comida del pueblo vive desde aquí en el
+     * <b>almacén de comida de la taberna</b> (la cocina). Lo que hubiera en el cofre viejo <b>no se pierde</b>: se
+     * pasa primero a la despensa nueva y lo que no quepa (o si la taberna todavía no está) al <b>almacén</b> del
+     * pueblo; solo entonces se retiran las dos mitades del cofre.
+     * <p>
+     * Va <b>después</b> del almacén y <b>después</b> de la taberna, para que el destino exista. Es <b>idempotente</b>:
+     * si el cofre viejo ya no está, no toca nada. (Las dos mitades de un cofre doble comparten el mismo contenedor,
+     * así que los objetos se leen una sola vez.)
+     */
+    public static void retirarDespensaDelKiosco(ServerLevel level, BlockPos center) {
+        int nivel = cotaDeLaPlaza(level, center);
+        java.util.List<BlockPos> viejos = new java.util.ArrayList<>();
+        for (int dx = 0; dx <= 1; dx++) {
+            BlockPos p = new BlockPos(center.getX() + dx, nivel + 1, center.getZ() + 1);
+            if (level.getBlockState(p).getBlock() instanceof ChestBlock) {
+                viejos.add(p);
+            }
+        }
+        if (viejos.isEmpty()) {
+            return;   // ya se retiró (o esa aldea nunca tuvo el cofre en el kiosco)
+        }
+        Container nueva = VillagePantry.despensaDeLaTaberna(level, center);
+        Container viejo = ChestBlock.getContainer((ChestBlock) level.getBlockState(viejos.get(0)).getBlock(),
+                level.getBlockState(viejos.get(0)), level, viejos.get(0), true);
+        int movidos = 0;
+        if (viejo != null) {
+            for (int i = 0; i < viejo.getContainerSize(); i++) {
+                ItemStack pila = viejo.getItem(i);
+                if (pila.isEmpty()) {
+                    continue;
+                }
+                ItemStack resto = pila.copy();
+                if (nueva != null) {
+                    resto = VillagePantry.guardar(nueva, resto);   // primero la despensa nueva
+                }
+                if (!resto.isEmpty()) {
+                    resto = VillageStorage.guardar(level, center, resto);   // y lo que no quepa, al almacén
+                }
+                int puestos = pila.getCount() - resto.getCount();
+                movidos += puestos;
+                if (puestos > 0) {
+                    pila.shrink(puestos);
+                    viejo.setItem(i, pila.isEmpty() ? ItemStack.EMPTY : pila);
+                }
+            }
+            viejo.setChanged();
+        }
+        for (BlockPos p : viejos) {
+            colocar(level, p, Blocks.AIR.defaultBlockState(), 3);
+        }
+        DevilRpg.LOGGER.info("[Village] Aldea en {}: despensa retirada del kiosco ({} objeto(s) pasados a la despensa"
+                + " de la taberna o al almacen)", center, movidos);
+    }
+
+    /**
      * El <b>camino de la plaza a la taberna</b>: sale de la plaza hacia el sur y luego tuerce al este. No va en
      * recta porque la recta cruza la <b>parcela de la granja</b> (que está en medio), y un camino no debe pisar los
      * cultivos; muere en la puerta oeste, que es la que da a la plaza.
@@ -5507,13 +5721,16 @@ public final class VillageGenerator {
         if (nivel <= level.getMinBuildHeight() + 1) {
             return;
         }
-        if (tabernaConstruida(level, center)) {
-            return;
+        if (!tabernaConstruida(level, center)) {
+            BlockPos base = baseDeLaTaberna(center);
+            taberna(level, center, base, nivel);
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: taberna construida en {} (dos plantas de cal y entramado con"
+                    + " vuelo, {}x{})", center, base, TABERNA_ANCHO, TABERNA_FONDO);
         }
-        BlockPos base = baseDeLaTaberna(center);
-        taberna(level, center, base, nivel);
-        DevilRpg.LOGGER.info("[Village] Aldea en {}: taberna construida en {} (dos plantas de cal y entramado con"
-                + " vuelo, {}x{})", center, base, TABERNA_ANCHO, TABERNA_FONDO);
+        // La remesa inicial del ALMACÉN DE COMIDA (semillas para sembrar, abono y un par de panes) se asegura aquí:
+        // la despensa del pueblo vive en la cocina de la taberna desde la migración 46 (`VillagePantry`). Si ya tiene
+        // cosas dentro no se le añade nada (ver `remesaInicial`), así que llamarlo siempre es seguro.
+        VillagePantry.remesaInicial(VillagePantry.despensa(level, center));
     }
 
     /**

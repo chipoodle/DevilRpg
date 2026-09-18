@@ -13,19 +13,27 @@ import org.jetbrains.annotations.Nullable;
 import java.util.function.Predicate;
 
 /**
- * <b>La despensa de la aldea</b>: un barril de verdad (contenedor) en la plaza, junto a la campana.
+ * <b>La despensa de la aldea</b>: un cofre doble de verdad (contenedor) en el <b>almacén de comida de la taberna</b>
+ * (la cocina), junto al ahumador del cocinero.
  * <p>
  * Antes la comida de la aldea era un <b>contador abstracto</b>: cada latido "la granja producía 8" aunque no
  * hubiera ni un granjero ni un solo cultivo. Ahora la comida es <b>lo que hay guardado aquí dentro</b>: el granjero
  * cosecha el trigo de las parcelas, lo trae, lo convierte en pan y la aldea come de esa despensa. Si la despensa
  * está vacía, la aldea pasa hambre de verdad.
  * <p>
- * Se usa un barril (y no un cofre) porque se abre con la mano, se ve el pan dentro y encaja con la granja.
+ * <b>Estuvo en el kiosco de la plaza</b> hasta la migración 46. El jugador pidió moverlo: <i>"el cofre de la comida
+ * ya no tiene sentido que esté en el kiosco central... sería mejor moverlo a la taberna, tomar un cuarto y
+ * convertirlo en almacén de comida"</i>. Ahora vive en la cocina de la taberna: donde el cocinero cocina y donde el
+ * pueblo viene a comer. Se usa un cofre (y no un barril) porque el barril es el puesto de trabajo del
+ * <b>pescador</b>: un aldeano sin oficio lo reclamaría y la aldea acabaría con un pescador.
  */
 public final class VillagePantry {
 
-    /** Dónde está el cofre de la despensa, relativo al centro (dentro del kiosco de la plaza). */
-    private static final BlockPos OFFSET = new BlockPos(0, 1, 1);
+    /** Las dos mitades del cofre doble, relativas a la <b>esquina de la taberna</b> (ver TABERNA_DESPENSA). */
+    private static final BlockPos OFFSET = new BlockPos(
+            VillageGenerator.TABERNA_DESPENSA[0], 0, VillageGenerator.TABERNA_DESPENSA[1]);
+    /** Casilla de apoyo dentro de la cocina, relativa a la esquina de la taberna (el suelo libre delante del cofre). */
+    private static final BlockPos APOYO = new BlockPos(OFFSET.getX() + 1, 0, OFFSET.getZ() + 1);
     /** Cuánta comida aporta cada cosa guardada. El pan es la ración buena; el trigo, el doble de crudo. */
     public static final int FOOD_PER_BREAD = 4;
     public static final int FOOD_PER_COOKED_MEAT = 4;
@@ -38,24 +46,26 @@ public final class VillagePantry {
     private VillagePantry() {
     }
 
-    /** Posición (sin Y fija) de la despensa de esa aldea. */
+    /** Posición (sin Y fija) de la <b>primera mitad</b> del cofre de la despensa (en la cocina de la taberna). */
     public static BlockPos pos(BlockPos center) {
-        return center.offset(OFFSET.getX(), 0, OFFSET.getZ());
+        BlockPos base = VillageGenerator.baseDeLaTaberna(center);
+        return base.offset(OFFSET.getX(), 0, OFFSET.getZ());
     }
 
     /**
-     * Punto de apoyo para que un aldeano vaya a la despensa: una casilla del <b>suelo llano delante de la escalera
-     * sur del kiosco</b> (a la cota del pueblo y transitable).
+     * Punto de apoyo para que un aldeano vaya a la despensa: el <b>suelo libre de la cocina, delante del cofre</b>
+     * (a la cota del pueblo y transitable).
      * <p>
      * OJO: nunca se navega HACIA el cofre, porque es un bloque sólido y la navegación no puede "llegar" a esa
-     * casilla: el aldeano se quedaba dando vueltas alrededor del kiosco sin descargar nada (el bug que vio el
-     * jugador). Se camina a este punto y se comprueba la distancia AL COFRE. Y tiene que ser una casilla de SUELO: la
-     * escalera del kiosco está justo en el borde de la plataforma, así que el punto va DOS bloques más allá, en el
-     * patio, para que el aldeano no tenga que subirse a la escalera para descargar.
+     * casilla: el aldeano se quedaba dando vueltas sin descargar nada (el bug que vio el jugador). Se camina a este
+     * punto y se comprueba la distancia AL COFRE. Desde la migración 46 la despensa está en la <b>cocina de la
+     * taberna</b>, así que el punto es una casilla de esa cocina: el pueblo entra por su puerta (dx 3, dz 5) y se
+     * pone delante del cofre.
      */
     public static BlockPos puntoDeApoyo(ServerLevel level, BlockPos center) {
         int nivel = VillageGenerator.cotaDeLaPlaza(level, center);
-        return new BlockPos(center.getX(), nivel, center.getZ() + VillageGenerator.kioscoRadio() + 3);
+        BlockPos base = VillageGenerator.baseDeLaTaberna(center);
+        return new BlockPos(base.getX() + APOYO.getX(), nivel, base.getZ() + APOYO.getZ());
     }
 
     /** Distancia (en bloques) a la que un aldeano ya "alcanza" la despensa para dejar o coger cosas. */
@@ -68,11 +78,12 @@ public final class VillagePantry {
      */
     public static BlockPos posReal(ServerLevel level, BlockPos center) {
         int nivel = VillageGenerator.cotaDeLaPlaza(level, center);
-        BlockPos p = new BlockPos(center.getX() + OFFSET.getX(), nivel + 1, center.getZ() + OFFSET.getZ());
+        BlockPos exacto = pos(center);
+        BlockPos p = new BlockPos(exacto.getX(), nivel, exacto.getZ());
         if (level.getBlockState(p).is(Blocks.CHEST)) {
             return p;
         }
-        for (BlockPos q : BlockPos.betweenClosed(p.offset(-6, -4, -6), p.offset(6, 4, 6))) {
+        for (BlockPos q : BlockPos.betweenClosed(p.offset(-2, -2, -2), p.offset(4, 3, 4))) {
             if (level.getBlockState(q).is(Blocks.CHEST)) {
                 return q.immutable();
             }
@@ -100,35 +111,59 @@ public final class VillagePantry {
     }
 
     /**
-     * El cofre (simple o <b>doble</b>) de la despensa, o {@code null} si esa aldea aún no tiene kiosco.
+     * El cofre (simple o <b>doble</b>) de la despensa, o {@code null} si esa aldea aún no tiene taberna.
      * <p>
-     * Primero se mira <b>el sitio exacto</b> donde lo pone el kiosco (las dos mitades del cofre doble, a la cota del
-     * pueblo) y solo si ahí no hay nada se busca cerca. Antes se escaneaba una caja de ±6 bloques y se devolvía
+     * Primero se mira <b>el sitio exacto</b> donde lo pone la cocina de la taberna (las dos mitades del cofre doble,
+     * a la cota del pueblo) y solo si ahí no hay nada se busca cerca. Antes se escaneaba una caja y se devolvía
      * <b>el primer cofre que apareciera</b>: un cofre <b>del jugador</b> puesto en la plaza se lo quedaba la aldea
-     * como despensa (y ahora, con la limpieza de la despensa, la aldea le habría movido las cosas al almacén).
+     * como despensa (y con la limpieza de la despensa, la aldea le habría movido las cosas al almacén).
+     * <p>
+     * El <b>cofre viejo del kiosco</b> (aldeas de antes de la migración 46) sigue valiendo mientras la migración no
+     * pase: así una aldea vieja no se queda sin comida de un día para otro.
      */
     @Nullable
     public static Container despensa(ServerLevel level, BlockPos center) {
-        // OJO: la búsqueda se centra en LA COTA DEL PUEBLO, nunca en la Y del centro del objetivo: esa Y puede ser
-        // cualquier cosa (en la partida del jugador era 101 con la aldea en la 63), así que la caja de búsqueda caía
-        // en el aire, no encontraba el cofre y `asegurarKiosco` volvía a construir el kiosco EN CADA LATIDO: el log
-        // se llenaba de "kiosco colocados" cada 10 s y cada reconstrucción BORRABA el cofre con lo que tuviera
-        // dentro (por eso el granjero nunca dejaba comida: se la borraban).
         int nivel = VillageGenerator.cotaDeLaPlaza(level, center);
-        // 1) EL COFRE DEL KIOSCO, en su sitio exacto (ver `VillageGenerator.kiosco`: las dos mitades del cofre doble).
-        for (BlockPos exacto : new BlockPos[]{
-                new BlockPos(center.getX(), nivel + 1, center.getZ() + 1),
-                new BlockPos(center.getX() + 1, nivel + 1, center.getZ() + 1)}) {
-            Container c = cofreEn(level, exacto);
+        BlockPos base = VillageGenerator.baseDeLaTaberna(center);
+        // 1) EL COFRE DE LA COCINA, en su sitio exacto (las dos mitades del cofre doble).
+        for (int k = 0; k <= 1; k++) {
+            Container c = cofreEn(level, new BlockPos(base.getX() + OFFSET.getX() + k, nivel,
+                    base.getZ() + OFFSET.getZ()));
             if (c != null) {
                 return c;
             }
         }
-        // 2) Si no está (kiosco aún sin construir, o una aldea vieja con el cofre en otro lado), se busca SOLO dentro
-        //    del kiosco: su plataforma tiene radio 3, así que nada de la plaza del jugador entra aquí.
-        BlockPos p = new BlockPos(center.getX(), nivel + 1, center.getZ() + 1);
-        for (BlockPos q : BlockPos.betweenClosed(p.offset(-3, -3, -3), p.offset(3, 3, 3))) {
+        // 2) EL COFRE VIEJO DEL KIOSCO (aldea de antes de la migración 46), para no dejarla sin despensa.
+        for (BlockPos viejo : new BlockPos[]{
+                new BlockPos(center.getX(), nivel + 1, center.getZ() + 1),
+                new BlockPos(center.getX() + 1, nivel + 1, center.getZ() + 1)}) {
+            Container c = cofreEn(level, viejo);
+            if (c != null) {
+                return c;
+            }
+        }
+        // 3) Y si no, SOLO dentro de la cocina de la taberna (su radio es pequeño: nada de la plaza del jugador).
+        BlockPos p = new BlockPos(base.getX() + OFFSET.getX(), nivel, base.getZ() + OFFSET.getZ());
+        for (BlockPos q : BlockPos.betweenClosed(p.offset(-2, -2, -2), p.offset(4, 3, 4))) {
             Container c = cofreEn(level, q.immutable());
+            if (c != null) {
+                return c;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * <b>Solo</b> el cofre de la cocina de la taberna (o {@code null}). Lo usa la migración para no confundirlo con
+     * el cofre viejo del kiosco mientras lo retira.
+     */
+    @Nullable
+    public static Container despensaDeLaTaberna(ServerLevel level, BlockPos center) {
+        int nivel = VillageGenerator.cotaDeLaPlaza(level, center);
+        BlockPos base = VillageGenerator.baseDeLaTaberna(center);
+        for (int k = 0; k <= 1; k++) {
+            Container c = cofreEn(level, new BlockPos(base.getX() + OFFSET.getX() + k, nivel,
+                    base.getZ() + OFFSET.getZ()));
             if (c != null) {
                 return c;
             }

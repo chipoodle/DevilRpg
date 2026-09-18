@@ -478,7 +478,7 @@ public final class VillageManager {
      *       por lo que cría el lago y no por un contador.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 46;
+    public static final int CURRENT_LAYOUT = 47;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -1475,6 +1475,11 @@ public final class VillageManager {
             // tirar el plano, como todo lo demás, y con su camino desde la plaza (tampoco cruza ningún bancal).
             VillageGenerator.asegurarPesquera(level, center);
             VillageGenerator.caminoALaPesquera(level, center);
+            // LA DESPENSA, DE LA PLAZA A LA TABERNA (migración 47, lo pidió el jugador): el cofre de la comida del
+            // kiosco se retira, con lo que tuviera dentro pasado ANTES a la despensa nueva (la cocina de la taberna)
+            // y lo que no quepa al almacén. Va después de la taberna —que ya está construida arriba, con su cofre
+            // en la cocina— y antes de tirar el plano, para que el kiosco sin cofre entre en el plano nuevo.
+            VillageGenerator.retirarDespensaDelKiosco(level, center);
             // REBAÑO ESCAPADO (una sola vez, al migrar): antes de que existiera la marca del rebaño, el ganado que se
             // colaba por el portón se perdía sin remedio y el corral se quedaba vacío (y sin carne). Aquí se reconoce
             // el que anda suelto FUERA de la muralla y cerca del corral; luego, en el latido, vuelve a casa.
@@ -1482,6 +1487,9 @@ public final class VillageManager {
             // El plano se tira: hay que volver a capturarlo, ya con las casas nuevas, el muro y las reglas actuales.
             saved.clearBlueprint(objectiveIndex);
             saved.setLayout(objectiveIndex, CURRENT_LAYOUT);
+            // AUTOCOMPROBACIÓN de faroles flotantes (guardia del bug de los 16 faroles colgados del aire): se mira
+            // al terminar la migración, que es cuando ya está todo lo nuevo construido y reparado.
+            VillageGenerator.auditarFarolesFlotantes(level, center);
             DevilRpg.LOGGER.info("[Village] Aldea {}: trazado actualizado a la version {} (casas, muro, granja y plano)",
                     objectiveIndex, CURRENT_LAYOUT);
         }

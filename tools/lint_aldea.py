@@ -38,6 +38,9 @@ Invariantes (todas han petado al menos una vez):
       cueva bajo la plaza congelaba el latido del pueblo y un asediador en una cueva hacia CAER
       la aldea sin que el jugador pudiera verlo. Todo recuento pasa por `dentroDelRecinto`
       (recinto en XZ + banda de altura sobre la cota).
+  I12 Colgar un farol del aire: `farolSobreElPoste` recibe la casilla del APOYO (el poste) y el
+      farol queda encima; pasarle la casilla del farol con un sumando en la Y fue el bug de los
+      16 faroles flotando (14 en la cerca de la granja anexa y 2 en la pesquera).
 """
 import os
 import re
@@ -104,6 +107,14 @@ REGLAS = [
      r'getEntitiesOfClass\((\w+\.)*Monster\.class|MobCategory\.MONSTER',
      'Recuento de bichos "dentro de la aldea" sin la ALTURA: usa dentroDelRecinto(...) (un bicho en una cueva '
      'bajo la plaza no es un invasor, y hacia caer la aldea).', 12),
+    # I12 nace de un bug que el jugador vio DOS veces: 16 FAROLES COLGADOS DEL AIRE (14 en la cerca de la granja
+    # anexa y 2 en la pesquera), porque al ayudante se le pasaba la casilla del FAROL contando un poste que no
+    # existia. Ahora el ayudante recibe la casilla del APOYO y el poste lo garantiza el; pasarle una Y con sumando
+    # (nivel + 2) es volver al bug.
+    ('I12', [os.path.join(PAQUETE, 'world', 'VillageGenerator.java')],
+     r'farolSobreElPoste\([^;]*nivel\s*\+',
+     'farolSobreElPoste recibe la casilla del APOYO (el poste), no la del farol: el farol queda encima. Un farol '
+     'flotando no se ve sostenido.', 0),
 ]
 
 # Formas legitimas: si la linea las cita, no se avisa.

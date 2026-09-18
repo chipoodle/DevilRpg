@@ -30,6 +30,7 @@ En cada cambio en `world/Village*` o en los goals de aldeano hay que:
 > | I9 | construcción nueva sin subir `CURRENT_LAYOUT` | I7 |
 > | I10 | nivelar la huella de una **parcela** sin preguntar antes | I11 |
 > | I11 | contar bichos "dentro de la aldea" sin la **altura** | I12 |
+> | I12 | farol **colgado del aire** (Y del farol en vez del apoyo) | I14 |
 >
 > I8, I9 y I10 de esta sección (abajo) **no tienen regla en el lint**: se vigilan a mano.
 
@@ -168,10 +169,37 @@ queda**; cada baja se canta al momento; los asediadores van **marcados con brill
 resolverse el asedio y al cargarse sin asedio) y el mensaje de la caída dice el **motivo** ("los monstruos aguantaron
 dentro de los muros").
 
+### I14 · Nada queda **colgado del aire** (un farol va SOBRE su apoyo)
+El jugador lo vio dos veces y en dos sitios distintos: *"en la cabaña del pescador hay faroles flotando"* y *"y lo
+mismo en la granja"*. La auditoría de la aldea entera (aldea 2, cota 120) encontró **16 faroles sin apoyo**:
+**14** en la cerca de la **granja anexa** (1 bloque por encima del poste) y **2** en la **pesquera** (3 bloques por
+encima de la orilla del lago). Causa: el ayudante `farolEnElPoste` colocaba el farol en la casilla que le dieran y
+**daba por hecho** que debajo había un poste; los llamantes le pasaban la casilla del **farol** contando un poste que
+no existía (`nivel + 2`).
+**Regla:** el ayudante (**`farolSobreElPoste`**) recibe la casilla del **APOYO** (el poste, o el suelo) y **garantiza
+el poste** si falta; el farol va encima. Lo que cuelga (`colgar`) necesita un bloque sólido **encima**. Guardias:
+regla **I12 del lint** (una Y con sumando en `farolSobreElPoste` falla la puerta de commit), la
+**autocomprobación** `VillageGenerator.auditarFarolesFlotantes` (se ejecuta al generar y al migrar y **grita en el
+log** cualquier farol sin apoyo, con su posición) y el **retrofit** `posarFarolesFlotantes` (baja el farol que quedó
+flotando en una aldea ya construida; el plano se recaptura después, así que el obrero repone la posición buena).
+
+> La misma auditoría (`build/audita_aldea2.py`, en `build/`, fuera de git) comprueba además: faroles y **vallas**
+> flotando, **cofres tapados** (un bloque encima: no se pueden abrir), **puertas incompletas** (sin su mitad) y
+> **camas sueltas** (sin cabecera). Medido en la aldea 2 tras el arreglo: 0 en las cinco listas.
+
+### I15 · La despensa vive donde se cocina y se come (y el kiosco no sabe de ella)
+El jugador: *"el cofre de la comida ya no tiene sentido que esté en el kiosco central... sería mejor moverlo a la
+taberna, tomar un cuarto y convertirlo en almacén de comida"*. Desde la **migración 47** la despensa es el **cofre
+doble de la cocina de la taberna** (`VillagePantry` deriva su sitio de `TABERNA_DESPENSA`), y el kiosco se queda con
+su campana y su farol.
+**Regla:** el testigo del kiosco (`asegurarKiosco`) es **su plataforma**, nunca la despensa: con el testigo viejo
+—que exigía el cofre— el kiosco se reconstruía **en cada latido** buscando un cofre que ya no está en él, y
+reconstruirlo tira lo de dentro. El cofre viejo se retira en la migración **después** de pasar lo suyo a la despensa
+nueva y, lo que no quepa, al almacén (`retirarDespensaDelKiosco`, idempotente).
+
 ---
 
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
-
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
 1. **¿Quién más LEE lo que cambio?** Buscar todos los usos (`grep`) y revisarlos uno a uno. *(Fallo real: cambié el
@@ -202,13 +230,14 @@ Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento 
 
 | Herramienta | Para qué |
 |---|---|
-| `python tools/lint_aldea.py --strict` | Vigila I1-I11 en el código. Puerta antes de commitear. |
+| `python tools/lint_aldea.py --strict` | Vigila I1-I12 en el código. Puerta antes de commitear. |
 | `build/inventario.py` | Inventario de estructuras de una aldea en el guardado (qué edificios hay y dónde). |
 | `build/granjaestado.py`, `build/farmdiag.py`, `build/columnas.py`, `build/perfilcol.py` | Estado de la granja (cultivos, edades, cotas) y columnas crudas. |
 | `build/items.py`, `build/contenedores.py` | Objetos en el suelo por tipo y contenido de cofres/despensa/almacén. |
 | `build/aldeanos.py`, `build/aldeanos.py` | Aldeanos: profesión, inventario, posición (carpeta `entities/`). |
 | `build/herreria.py`, `build/huecos_ore.py`, `build/solares*.py` | Herrería, huecos y minerales flotantes, solares libres. |
 | `build/plantillas*.py`, `build/paleta.py` | Plantillas del juego: tamaños, puertas y qué bloques traen. |
+| `build/audita_aldea2.py` | **Auditoría de la aldea entera**: faroles y vallas flotando, cofres tapados, puertas incompletas y camas sueltas (lee las PROPIEDADES de los bloques). |
 
 Los scripts de `build/` no se versionan (está en `.gitignore`): son de lectura del guardado del jugador.
 
