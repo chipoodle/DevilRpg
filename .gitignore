@@ -33,3 +33,7 @@ mcmodsrepo
 /config/fml.toml
 /config/neoforge-client.toml
 /config/neoforge-common.toml
+
+# Caches de Python (se colaron al ejecutar las herramientas de tools/)
+__pycache__/
+*.pyc
