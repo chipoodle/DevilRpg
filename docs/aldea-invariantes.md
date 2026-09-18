@@ -34,7 +34,9 @@ En cada cambio en `world/Village*` o en los goals de aldeano hay que:
 >
 > I8, I9 y I10 de esta sección (abajo) **no tienen regla en el lint**: se vigilan a mano. **I22** (los portones del
 > anexo y el rebaño que vuelve) tampoco: nació después del lint y se comprueba con la **auditoría del guardado**
-> (`build/portones_todos_nw1.py`: el `FACING` de cada puerta de valla contra la valla que la rodea).
+> (`build/portones_todos_nw1.py`: el `FACING` de cada puerta de valla contra la valla que la rodea). **I26** (el
+> hueco de subida al desván se mide con el `maxUpStep` del juego) tampoco: la comprueba `build/taberna_subida.py`
+> contra el guardado, escalón por escalón.
 
 ### I1 · Toda altura se mide con `cotaDeLaPlaza`, nunca con la Y del centro
 El centro de una aldea viaja por todo el sistema (`ObjectiveTargets.targetOf`, `centroDe`) y **su Y no es la del
@@ -392,6 +394,40 @@ que es estado **transitorio**, igual que el `open` de un portón (I22): el plano
 lista de "tierra pisoteada" convertiría las **214** celdas de cultivo de la huerta en una cola de reparación eterna.
 **No tiene regla en el lint**: se comprueba con la auditoría del guardado (`build/huerta_simula.py`).
 
+### I26 · El hueco de una escalera se mide con el `maxUpStep` del juego: TRES celdas, no dos
+El jugador: *"las escaleras para el 3er piso están bloqueadas por 2 bloques, dejando solo un espacio de un bloque
+libre; se tienen que romper esos 2 bloques para que se pueda pasar"*. El hueco que abre el desván
+(`abrirElHuecoDelDesvan`) dejaba **dos** celdas libres encima de cada escalón —el cuerpo y la cabeza, que es lo que
+parecía bastar (I16)— y la escalera **no se subía**.
+
+**Por qué.** El juego no sube un escalón "andando": al chocar con la contrahuella **levanta al jugador de golpe**
+hasta `Entity.maxUpStep()` (0,6) y comprueba la **caja entera** en esa posición levantada (`Entity.collide`:
+`aabb.expandTowards(dx, maxUpStep, dz)` para juntar los choques que se miran, `collectCandidateStepUpHeights` para
+las alturas candidatas y `collideWithShapes`, que resuelve **la Y antes que la horizontal** y recorta la subida
+contra el techo: `subida = techo - cabeza`). Es decir: el primer bloque **sólido** que tenga encima la **huella**
+(la cara alta del escalón) tiene que estar a **1,8 + 0,6 = 2,4** bloques de ella; con bloques enteros, **tres**
+celdas libres. Con dos, el techo queda a **2,0** y el que sube se queda **empujado contra la contrahuella**, con la
+cabeza pegada al techo (parece que "no se puede pasar" aunque quepa de pie).
+
+**Medido en su guardado** (aldea 2, centro `1414,1414`, cota `120`, taberna en `1438,1428`, `y1=125`, `yTecho=130`,
+`build/taberna_subida.py`): los **dos** escalones atascados eran el **2º** (`dx=5`, `dz=11`: huella en `y=127`, con
+los tablones del techo de la posada a 2,0 — `(1443,129,1439)`) y el **3º** (`dx=5`, `dz=10`: huella en `y=128`, con
+la placa de tejas a 2,0 — `(1443,130,1438)`): **exactamente** los dos bloques que el jugador rompió a mano. Y el
+1º (`dx=5`, `dz=12`: huella en `y=126`, techo a **3,0**) **sí se subía**, que es lo que fija el umbral entre 2,0 y
+3,0.
+
+**Regla (migración 56):** el hueco de subida abre `DESVAN_HUECO_ALTO` = **3** celdas por encima de **cada** escalón
+(las dos capas del forjado: tablones del techo de la posada y placa de tejas), y el reparador
+(`arreglarElHuecoDelDesvan`) ensancha el hueco de las tabernas ya construidas **solo en esas celdas** (idempotente:
+solo quita `DARK_OAK_PLANKS`/`DEEPSLATE_TILES`, nunca un farol ni nada del jugador). El mismo método lo usan el
+constructor y el reparador, así que la geometría no se puede quedar desparejada (I4). **Y hace falta que corra
+aunque el jugador ya se hubiera roto los bloques a mano**: el **plano** los tiene sólidos y el **obrero los
+repone** (medido: la teja de `(1443,130,1438)` estaba repuesta). Al abrirlas con `colocar` entran en el plano nuevo
+(I8) y ya no vuelven. Ojo con el tope que ya avisaba I21: la tercera celda del 3º escalón es la **placa del tejado**
+(`yTecho`), así que el suelo del desván queda con **un agujero más** en la vertical de la escalera —los otros dos,
+`dx=3` y `dx=4`, ya estaban—: es la boca de la escalera (se cae de `131` a la huella de `128`, tres bloques, sin
+daño), no un descuido.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
@@ -425,6 +461,7 @@ Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento 
 |---|---|
 | `python tools/lint_aldea.py --strict` | Vigila I1-I12 en el código. Puerta antes de commitear. |
 | `build/inventario.py` | Inventario de estructuras de una aldea en el guardado (qué edificios hay y dónde). |
+| `build/taberna_subida.py` | **¿Se sube la escalera del desván?**: aplica la regla del `maxUpStep` del juego (I26) a cada escalón, contra el guardado, sin jugar; y compara la regla vieja (2 celdas) con la nueva (3). |
 | `build/huertadiag.py`, `build/huerta_simula.py` | **Bancales**: qué dice el plano y qué hay en el mundo celda por celda (qué calvas faltan en el plano) y qué celdas repondría el obrero / labraría el granjero (I25). |
 | `build/granjaestado.py`, `build/farmdiag.py`, `build/columnas.py`, `build/perfilcol.py` | Estado de la granja (cultivos, edades, cotas) y columnas crudas. |
 | `build/items.py`, `build/contenedores.py` | Objetos en el suelo por tipo y contenido de cofres/despensa/almacén. |

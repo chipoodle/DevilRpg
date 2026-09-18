@@ -528,9 +528,23 @@ public final class VillageManager {
      *       <b>posados</b> en la celda que va pegada al tejado, donde no hay nada debajo, así que quedaban flotando
      *       (I14; medido: 2 por barraca en las aldeas 0 y 2). Eso es un retrofit <b>en el sitio</b> —la celda es la
      *       buena, lo que estaba mal era el estado (<b>colgados</b> del tejado)—, sin rehacer nada.</li>
+     *   <li>56: la <b>ESCALERA DEL DESVÁN, QUE NO SE SUBÍA</b> (lo reportó el jugador: <i>"las escaleras para el 3er
+     *       piso están bloqueadas por 2 bloques, dejando solo un espacio de un bloque libre; se tienen que romper esos
+     *       2 bloques para que se pueda pasar"</i>). El <b>hueco de subida</b> abría <b>dos</b> celdas encima de cada
+     *       escalón (la cabeza y la de encima) y con eso el <b>techo queda a 2,0</b> de la huella: el juego, al ganar un
+     *       escalón, <b>levanta al jugador 0,6 de golpe</b> ({@code Entity.maxUpStep}) y comprueba la caja entera ahí
+     *       arriba, así que necesita <b>2,4</b> libres y el escalón <b>no se sube</b> (el que sube se queda empujado
+     *       contra la contrahuella). Medido en su guardado (aldea 2, taberna en {@code 1438,1428}, cota 120): los dos
+     *       escalones atascados eran el 2º y el 3º —su techo, los tablones del techo de la posada ({@code y=129}) y la
+     *       placa de tejas ({@code y=130}), a solo dos bloques de la huella—, que son <b>exactamente</b> los dos
+     *       bloques que él tuvo que romper a mano. Ahora el hueco es de <b>tres</b> celdas por escalón
+     *       ({@code DESVAN_HUECO_ALTO}) y este reparador lo ensancha en las tabernas ya construidas, <b>solo en las
+     *       celdas del hueco</b> (dos en su partida). Hace falta aunque el jugador ya se hubiera roto los bloques: el
+     *       <b>plano</b> los tiene sólidos y el obrero los <b>repone</b>; al abrirlos con {@code colocar} entran en el
+     *       plano nuevo (I8) y ya no vuelven.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 55;
+    public static final int CURRENT_LAYOUT = 56;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -1591,6 +1605,14 @@ public final class VillageManager {
             // escalón en cada punta del toldo y los dos faroles colgaban del aire (I14). Se repara SOLO el porche,
             // celda por celda: no rehace la taberna, así que no se pierde ni la despensa ni las camas.
             VillageGenerator.arreglarPorcheDeLaTaberna(level, center);
+            // LA ESCALERA DEL DESVÁN, QUE SE SUBE (migración 56, lo reportó el jugador: "las escaleras para el 3er
+            // piso están bloqueadas por 2 bloques... se tienen que romper esos 2 bloques para que se pueda pasar").
+            // El hueco de subida abría dos celdas por escalón y el techo quedaba a 2,0 de la huella: la subida de 0,6
+            // que da el juego al ganar un escalón ({@code maxUpStep}) no cabía (necesita 2,4), así que los escalones
+            // 2º y 3º del desván no se subían. Aquí se ensancha el hueco a tres celdas por escalón, celda por celda y
+            // SOLO en las celdas del hueco (idempotente: solo quita tablones y tejas de ahí). Va también cuando el
+            // jugador se hubiera roto los bloques a mano: el plano los tiene sólidos y el obrero los reponía.
+            VillageGenerator.arreglarElHuecoDelDesvan(level, center);
             // Y su CAMINO desde la plaza (torcido, para no cruzar la parcela de la granja).
             VillageGenerator.caminoALaTaberna(level, center);
             // LA PESQUERA (etapa G): el lago, la caseta del pescador, su BARRIL (el puesto) y sus peces. Va antes de

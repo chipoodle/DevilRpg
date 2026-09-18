@@ -1575,6 +1575,66 @@ de la barraca solo cambia el **estado** de dos faroles (misma celda, misma luz).
 > `BlockEntity`, y el plano guarda **estados** de bloque, así que un obrero que repusiera la enseña la dejaría
 > **en blanco**).
 
+### 3b.40 La escalera del desván, bloqueada por su propio techo (migración 56)
+
+El jugador, subiendo a la taberna: *"las escaleras para el 3er piso están bloqueadas por 2 bloques, dejando solo un
+espacio de un bloque libre; se tienen que romper esos 2 bloques para que se pueda pasar"*. La geometría salió **del
+guardado**, celda a celda (aldea 2, centro `1414,1414`, cota `120`, taberna en `1438,1428`, `y1=125`, `yTecho=130`),
+con `build/taberna_subida.py` (que aplica la regla del juego al guardado, sin jugar).
+
+| Lo que se midió en el guardado | Causa | Arreglo |
+|---|---|---|
+| La **L del desván** (migración 52) sube por `dx=5` de `dz=12` a `dz=10` y luego por `dz=10` de `dx=5` a `dx=2`. Con la **regla vieja** (hueco de **2** celdas encima de cada escalón, I16) **no se sube**: el **2º** escalón (`dx=5`, `dz=11`) tiene la huella en `y=127` y su techo —los **tablones del techo de la posada**— en `(1443,129,1439)`, a **2,0**; y el **3º** (`dx=5`, `dz=10`) tiene la huella en `y=128` y su techo —la **placa de tejas**— en `(1443,130,1438)`, también a **2,0**. El **1º** (`dx=5`, `dz=12`, huella `y=126`, techo a **3,0**) **sí se subía** | El juego **no sube un escalón andando**: al chocar con la contrahuella **levanta al jugador de golpe** hasta `Entity.maxUpStep()` (0,6) y comprueba la **caja entera** ahí arriba (`Entity.collide`: `aabb.expandTowards(dx, maxUpStep, dz)`, `collectCandidateStepUpHeights` y `collideWithShapes`, que resuelve **la Y antes que la horizontal** y recorta la subida contra el techo). Hace falta **1,8 + 0,6 = 2,4** libres sobre la huella, así que el techo tiene que estar a **3** bloques (enteros) de ella: con 2,0 el que sube se queda **empujado contra la contrahuella**, con la cabeza pegada al techo, y parece que "no se puede pasar" aunque quepa de pie. La regla de I16 ("el hueco cubre lo que se sube") se había medido con el **cuerpo**, no con la **subida** | El hueco abre **3** celdas por encima de cada escalón (`DESVAN_HUECO_ALTO`): el constructor y el reparador usan **el mismo** método (`abrirElHuecoDelDesvan`), así que la geometría no se puede quedar desparejada (I4). En el guardado del jugador eso son **2 celdas** (la teja de la placa y el tablón del techo); las terceras celdas de los otros cuatro escalones **ya eran aire** (por encima de las dos capas del forjado está el desván vaciado) |
+
+**El plano también estorbaba.** El jugador ya se había roto los dos bloques a mano, y **la teja de
+`(1443,130,1438)` estaba repuesta**: el **plano** de la aldea (capturado al construir, I8) la tiene **sólida**, así
+que el **obrero la repone** y la escalera se vuelve a atascar —es lo que explica que el jugador siga diciendo "se
+tienen que romper esos 2 bloques"—. Por eso el arreglo tiene que pasar por la **migración**: al abrir las celdas con
+`colocar` entran en el plano nuevo (el que se captura al final de la migración) y ya no vuelven.
+
+**La migración 56** (`VillageGenerator.arreglarElHuecoDelDesvan`) ensancha el hueco de las tabernas ya construidas
+**solo en sus celdas** (idempotente: solo quita `DARK_OAK_PLANKS` y `DEEPSLATE_TILES`, y solo si están ahí: ni un
+farol ni nada del jugador se toca) y **no rehace la taberna**: no toca ni la despensa, ni las camas, ni los cuartos,
+ni los escalones. Va después de `arreglarPorcheDeLaTaberna` (55) en la cadena de reparos.
+
+> **Por qué la comprobación de la 52 no lo vio.** La verificación estática que se escribió entonces
+> (`build/check_escalera_desvan.py`) comprobaba que *"la escalera nueva sube de `y1` a `yTecho+1` sin dejar celdas sin
+> aire encima"* — o sea, que las **dos** celdas del hueco estuvieran en aire, que es justo la regla equivocada: la
+> cuenta que faltaba es la del **juego** (la subida de 0,6 contra el techo). Comprobar la geometría contra la regla
+> que uno mismo se ha creído no comprueba nada.
+
+**Verificado** (leyendo su guardado, sin tocar la partida, con `build/taberna_subida.py` y `build/taberna_desvan.py`):
+
+- Con la **regla vieja** la L **no se sube en dos escalones** (2º y 3º): en los dos, la huella tiene el techo a 2,0 y
+  la subida de 0,5 no cabe (solo caben 0,20) — **exactamente los dos bloques** que el jugador rompió.
+- Con la **regla nueva (3)** los **seis** escalones se suben, con la Y resuelta primero contra el techo como en el
+  juego.
+- El guardado **tal cual está hoy** vuelve a estar atascado en el 3º escalón (la teja repuesta por el obrero desde el
+  plano), que es el síntoma que reporta el jugador.
+- Nada más del recorrido estorba: el **arca** del cuarto (`dx=5`, `dz=10`, `y=125`) está **debajo** del 3º escalón
+  —tres bloques por debajo de su huella— y se abre desde el oeste, así que **no se mueve**; el **muro del pozo**
+  (`dx 1..2`, `dz=12`) queda **al sur del pie** de la escalera, no en su recorrido; y la **caja del comedor**
+  (`dx=3`) tampoco: la L sube por `dx=5..2` en `dz=10` y su 5º escalón sustituye el bloque de **arriba del todo** de
+  esa caja (`dx=3`, `y=129`), que es justo lo que ya hacía la migración 52 —el pozo sigue **tapado**, como pide I21, y
+  el único agujero nuevo en el suelo del desván es el de la vertical de la escalera, que es su boca—.
+
+**Lo que NO se ha podido comprobar**: la subida **en el juego** (hacer el recorrido con el cliente abierto) y la
+migración corriendo de verdad sobre su partida: el cliente estaba cerrado y esto no toca el guardado. La regla está
+leída del código del juego (`Entity.collide` de 1.21.1, en las fuentes que descarga Gradle) y cuadra con lo que el
+jugador midió a mano (el 1º escalón, con el techo a 3,0, sí se subía; los dos de 2,0 no).
+
+> **Barrido de la invariante (sin arreglar, fuera del informe del jugador).** El mismo barrido
+> (`build/aldea_escaleras.py`) mira **todas** las escaleras de la aldea, y la **barraca** (`1369,1436`, la milicia)
+> tiene el mismo problema por otras dos causas, las dos **medidas en el guardado**: su escalera al dormitorio tiene
+> solo **3 escalones** (el 4º lo **borra** el propio constructor: para `i=3` la celda del escalón y la del hueco del
+> forjado son la **misma** —`yPiso2 - 1 = nivel + 3`— y el `colocar(AIR)` del hueco se lleva el escalón que se
+> acababa de poner), así que su escalón más alto tiene la huella en `123` y el suelo del dormitorio está en `124`
+> (un escalón de **1,0**: solo se sube **saltando**); y una **cama** (`red_bed` en `(1372,124,1438)`, la del
+> guardia) está justo encima del 2º escalón, con **2,0** de hueco sobre su huella → ese escalón **no se sube**. Va
+> además con el `FACING` al **oeste** aunque sube al **norte** (como la escalera vieja de la taberna). No se toca
+> aquí: el informe era de la taberna y esto pide su propia migración —mover camas (son POI, el pueblo cuenta las
+> camas libres)— y decidir dónde van la escalera y las literas.
+
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.

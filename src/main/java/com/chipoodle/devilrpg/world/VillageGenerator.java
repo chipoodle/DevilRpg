@@ -5323,6 +5323,27 @@ public final class VillageGenerator {
      */
     private static final int DESVAN_ESCALONES = TABERNA_PISO2 + 1;
     /**
+     * Las <b>tres</b> celdas que el <b>hueco de subida</b> tiene que dejar libres <b>encima de cada escalón</b> del
+     * desván (migración 56). Con <b>dos</b> —lo que pedía la regla vieja, I16— la escalera <b>no se sube</b>.
+     * <p>
+     * <b>Por qué tres y no dos.</b> El juego no sube un escalón "andando": al chocar con la contrahuella levanta al
+     * jugador de golpe hasta {@code Entity.maxUpStep()} (0,6) y comprueba la <b>caja entera</b> en esa posición
+     * levantada ({@code Entity.collide}: {@code aabb.expandTowards(dx, maxUpStep, dz)} y luego
+     * {@code collideWithShapes}, que resuelve la Y ANTES que la horizontal y recorta la subida contra el techo,
+     * {@code subida = techo - cabeza}). O sea: el primer bloque <b>sólido</b> que tenga encima la <b>huella</b> (la
+     * cara alta del escalón) tiene que estar a {@code 1,8 + 0,6 = 2,4} bloques de ella — y como los bloques van
+     * enteros, hacen falta <b>3</b> celdas libres (el techo queda a 3,0 de la huella). Con dos, el techo queda a
+     * <b>2,0</b> y el que sube se queda <b>empujado contra la contrahuella</b>, con la cabeza pegada al techo.
+     * <p>
+     * <b>Medido en el guardado del jugador</b> (aldea 2, centro {@code 1414,1414}, cota {@code 120}, taberna en
+     * {@code 1438,1428}, {@code y1=125}, {@code yTecho=130}) con {@code build/taberna_subida.py}: los <b>dos</b>
+     * escalones que no se subían eran el <b>2º</b> ({@code dx=5}, {@code dz=11}: su huella, {@code y=127}, tenía el
+     * techo de la posada a 2,0 — los tablones de {@code y=129}) y el <b>3º</b> ({@code dx=5}, {@code dz=10}: su
+     * huella, {@code y=128}, tenía la placa de tejas a 2,0 — {@code y=130}). Son <b>exactamente</b> los dos bloques
+     * que el jugador tuvo que romper a mano para poder pasar.
+     */
+    private static final int DESVAN_HUECO_ALTO = 3;
+    /**
      * La escalera del desván <b>vieja</b> (la de la migración 51), la que <b>tapaba la galería</b>:
      * {@code DESVAN_ESCALONES} escalones en recto por el carril norte ({@code dz=7}) desde {@code dx=3}. Solo la usan
      * los reparadores de la migración 52, que tienen que <b>deshacerla</b> y volver a cerrar el hueco que abrió en
@@ -6214,8 +6235,9 @@ public final class VillageGenerator {
      * medio bloque en <b>L</b> dentro del <b>cuarto suroeste</b> de la posada —el cuarto que se sacrifica para
      * meterlos ({@link #escaleraDelDesvan})— que atraviesan las <b>dos capas</b> del forjado (los tablones del techo
      * de la posada y la placa de tejas) por un hueco que cubre lo que se sube —la regla de I16: si el hueco no llega,
-     * el que sube se golpea la cabeza contra el borde—. La cara alta del último escalón queda a la cota del suelo del
-     * desván, así que al final del tramo se sale andando, sin saltar.
+     * el que sube se golpea la cabeza contra el borde, y desde la migración 56 el hueco tiene que ser de
+     * {@code DESVAN_HUECO_ALTO} celdas, que es lo que ocupa la subida de 0,6 que da el juego al ganar un escalón—. La
+     * cara alta del último escalón queda a la cota del suelo del desván, así que al final del tramo se sale andando.
      */
     private static void desvanDeLaTaberna(ServerLevel level, int bx, int bz, int nivel) {
         int y1 = nivel + TABERNA_PISO2;      // donde se anda en la posada
@@ -6240,6 +6262,8 @@ public final class VillageGenerator {
         escaleraDelDesvan(level, bx, bz, y1);
         // 3) EL HUECO DE SUBIDA, encima de los escalones, en LAS DOS capas del forjado. Va después de la escalera
         //    porque solo se abren los TABLONES del techo de la posada y las TEJAS de la placa: lo demás no se toca.
+        //    Son TRES celdas por escalón (migración 56), no dos: con dos el techo queda a 2,0 de la huella y el juego
+        //    no sube el escalón (levanta al jugador 0,6 y necesita 2,4 libres). Ver `DESVAN_HUECO_ALTO`.
         int abiertos = abrirElHuecoDelDesvan(level, bx, bz, y1);
         // 4) EL MOBILIARIO (una base para el jugador), con la cama que se recoloca del cuarto sacrificado.
         amueblarElDesvan(level, bx, bz, yTecho + 1);
@@ -6273,7 +6297,8 @@ public final class VillageGenerator {
      * Las celdas de la <b>escalera del desván</b>, en orden de subida: cada fila es {@code {dx, dz, escalón}} y la Y
      * de ese escalón es {@code y1 + escalón}. Se calculan en un solo sitio para que la escalera y su <b>hueco</b>
      * ({@link #abrirElHuecoDelDesvan}) no se puedan quedar desparejados (invariante I16: el hueco cubre lo que se
-     * sube). El segundo tramo empieza justo donde acaba el primero, con un escalón más de altura y doblando al oeste.
+     * sube, y {@code DESVAN_HUECO_ALTO} celdas de alto para que la subida de 0,6 del juego quepa). El segundo tramo
+     * empieza justo donde acaba el primero, con un escalón más de altura y doblando al oeste.
      */
     private static int[][] celdasDeLaEscaleraDelDesvan() {
         int tramoNorte = DESVAN_ESCALERA_PIE_Z - DESVAN_ESCALERA_Z_ALTO + 1;
@@ -6289,17 +6314,26 @@ public final class VillageGenerator {
     }
 
     /**
-     * El <b>hueco de subida</b> al desván (invariante I16): por encima de <b>cada</b> escalón se abren las dos celdas
-     * que ocupa el que sube —la de la cabeza y la de encima— en <b>las dos capas</b> del forjado, los tablones del
-     * techo de la posada ({@code yTecho - 1}) y la placa de tejas del suelo del desván ({@code yTecho}). Solo se
-     * quitan esas dos capas: el tejado de verdad, un tabique o el mobiliario <b>no</b> se tocan.
+     * El <b>hueco de subida</b> al desván (invariante I16): por encima de <b>cada</b> escalón se abren las
+     * {@code DESVAN_HUECO_ALTO} celdas que necesita el que sube —el cuerpo y lo que el juego levanta de golpe al
+     * ganar el escalón siguiente— en <b>las dos capas</b> del forjado, los tablones del techo de la posada
+     * ({@code yTecho - 1}) y la placa de tejas del suelo del desván ({@code yTecho}). Solo se quitan esas dos capas:
+     * el tejado de verdad, un tabique o el mobiliario <b>no</b> se tocan.
+     * <p>
+     * Son <b>tres</b> y no dos desde la migración 56, y ese número no es cuestión de gusto: ver
+     * {@link #DESVAN_HUECO_ALTO}. Las dos celdas de la regla vieja dejaban el techo a 2,0 de la huella, la subida de
+     * 0,5 del juego no cabía (necesita 2,4) y la escalera <b>no se subía</b>.
+     * <p>
+     * La tercera celda casi siempre <b>ya es aire</b> (por encima de las dos capas del forjado está el desván, que
+     * {@link #desvanDeLaTaberna(ServerLevel, int, int, int)} acaba de vaciar), así que en la taberna nueva esto abre
+     * solo las celdas que de verdad estorban: en el guardado del jugador, <b>dos</b>.
      *
      * @return cuántas celdas se abrieron (0 si el hueco ya estaba hecho: es idempotente)
      */
     private static int abrirElHuecoDelDesvan(ServerLevel level, int bx, int bz, int y1) {
         int abiertos = 0;
         for (int[] c : celdasDeLaEscaleraDelDesvan()) {
-            for (int dy = 1; dy <= 2; dy++) {
+            for (int dy = 1; dy <= DESVAN_HUECO_ALTO; dy++) {
                 BlockPos hueco = new BlockPos(bx + c[0], y1 + c[2] + dy, bz + c[1]);
                 BlockState actual = level.getBlockState(hueco);
                 if (actual.is(Blocks.DARK_OAK_PLANKS) || actual.is(Blocks.DEEPSLATE_TILES)) {
@@ -6309,6 +6343,39 @@ public final class VillageGenerator {
             }
         }
         return abiertos;
+    }
+
+    /**
+     * <b>Ensancha el hueco de subida al desván</b> de una taberna ya construida (migración 56). Las tabernas de pie
+     * hasta ahora tienen el hueco de <b>dos</b> celdas encima de cada escalón, y con eso la escalera <b>no se sube</b>:
+     * el jugador lo reportó (<i>"las escaleras para el 3er piso están bloqueadas por 2 bloques, dejando solo un
+     * espacio de un bloque libre; se tienen que romper esos 2 bloques para que se pueda pasar"</i>) y en su guardado
+     * (aldea 2, taberna en {@code 1438,1428}) los dos escalones que no se subían eran el 2º y el 3º, con el techo a
+     * solo 2,0 de la huella (ver {@link #DESVAN_HUECO_ALTO}).
+     * <p>
+     * Es el mismo trabajo que hace el constructor ({@link #abrirElHuecoDelDesvan}, el <b>mismo</b> método, para que la
+     * geometría no se pueda quedar desparejada), así que es <b>idempotente</b> (solo quita tablones y tejas de las
+     * celdas del hueco, y solo si están ahí: lo que haya puesto el jugador no se toca) y <b>no rehace la taberna</b>:
+     * no toca ni la despensa, ni las camas, ni los cuartos, ni los escalones.
+     * <p>
+     * <b>Y hace falta que corra</b> aunque el jugador ya se hubiera roto los bloques a mano: el <b>plano</b> de la
+     * aldea (capturado cuando la taberna se construyó, invariante I8) tiene esas celdas como sólidas, así que el
+     * <b>obrero las repone</b> y la escalera se vuelve a atascar. Al abrirlas con {@code colocar} entran en el plano
+     * nuevo —el de después de la migración— y ya no vuelven. Medido en su guardado: la teja de
+     * {@code (1443,130,1438)} está <b>repuesta</b> aunque el jugador la había roto.
+     */
+    public static void arreglarElHuecoDelDesvan(ServerLevel level, BlockPos center) {
+        if (!tabernaConstruida(level, center)) {
+            return;
+        }
+        int nivel = cotaDeLaPlaza(level, center);
+        BlockPos base = baseDeLaTaberna(center);
+        int abiertos = abrirElHuecoDelDesvan(level, base.getX(), base.getZ(), nivel + TABERNA_PISO2);
+        if (abiertos > 0) {
+            DevilRpg.LOGGER.info("[Village] Taberna de {}: hueco de subida al desvan ensanchado ({} celda(s) de las"
+                    + " dos capas del forjado; el techo tiene que quedar a 3 bloques de la huella de cada escalon)",
+                    center, abiertos);
+        }
     }
 
     /**
