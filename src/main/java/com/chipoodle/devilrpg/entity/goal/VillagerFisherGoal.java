@@ -110,6 +110,11 @@ public class VillagerFisherGoal extends Goal {
             return false;
         }
         target = VillageGenerator.trabajoDelPescador(level, center);
+        if (target != null && VillageManager.esPuntoFallido(villager, target)) {
+            // A esa punta de la pasarela no llegó hace poco (I33): no se queda plantado intentándolo, espera un rato.
+            restTicks = IDLE_REST_TICKS;
+            return false;
+        }
         return true;
     }
 

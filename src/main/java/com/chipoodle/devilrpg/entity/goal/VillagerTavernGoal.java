@@ -92,7 +92,12 @@ public class VillagerTavernGoal extends Goal {
             return false;
         }
         // Y tiene que haber comida en la despensa (si no, el reparto del minuto se encargará como siempre).
-        return VillagePantry.comida(level, center) >= COMIDA_MINIMA;
+        if (VillagePantry.comida(level, center) < COMIDA_MINIMA) {
+            return false;
+        }
+        // Y su mesa tiene que poder alcanzarse: si es la que se quedó aparcada al rendirse (I33), no se levanta a
+        // comer para quedarse empujando la silla: ya comerá del reparto del minuto, que es de donde come el pueblo.
+        return !VillageManager.esPuntoFallido(villager, mesaDeEsteAldeano(level));
     }
 
     @Override

@@ -114,6 +114,11 @@ public class VillagerCookGoal extends Goal {
         }
         // Camina a la casilla de DELANTE del ahumador (la cocina de la taberna), que es donde puede estar de pie.
         target = new BlockPos(puesto.getX(), puesto.getY(), puesto.getZ() - 1);
+        if (VillageManager.esPuntoFallido(villager, target)) {
+            // A esa casilla de la cocina no llegó hace poco (I33): no se queda plantado empujando, espera un rato.
+            restTicks = IDLE_REST_TICKS;
+            return false;
+        }
         return target != null;
     }
 

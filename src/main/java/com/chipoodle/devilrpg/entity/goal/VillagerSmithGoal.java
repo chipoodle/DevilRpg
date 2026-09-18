@@ -167,6 +167,13 @@ public class VillagerSmithGoal extends Goal {
         reclamarElPuesto(level, puesto);
         fase = Fase.RECOGER;
         destino = VillageStorage.puntoDeApoyo(level, center);
+        if (destino != null && VillageManager.esPuntoFallido(villager, destino)) {
+            // Al almacén no llegó hace poco (I33: el cofre está tapado, cerrado o rodeado): no se queda empujando
+            // la misma pared, espera un rato y vuelve a intentarlo.
+            destino = null;
+            restTicks = IDLE_REST_TICKS;
+            return false;
+        }
         return destino != null;
     }
 
