@@ -5017,20 +5017,39 @@ public final class VillageGenerator {
     /** La columna (X) del <b>primer escalón</b> (el pie del tramo de abajo, mirando al comedor). */
     private static final int TABERNA_ESCALERA_PIE_DX = 4;
     /**
-     * La <b>escalera del desván</b> (migración 51): un tramo recto de seis escalones que sube por el carril
-     * <b>norte</b> de la galería de la posada (dz=7) desde el rellano del pozo hasta el tercer piso. Va por ese
-     * carril a propósito: el carril <b>sur</b> (dz=8) es el pasillo por el que se entra a los seis cuartos y a la
-     * bajada, así que la escalera no puede taparlo.
+     * La <b>escalera del desván</b> (migración 52): una <b>L de dos tramos</b> dentro del <b>cuarto suroeste de la
+     * posada</b>, que es el cuarto que se sacrifica para meterla. Antes subía en recto por el carril <b>norte</b> de
+     * la galería ({@code dz=7}) y <b>tapaba el corredor</b> por el que se entra a los cuartos del segundo piso: el
+     * jugador lo reportó (<i>"al poner la escalera al tercer piso tapaste el corredor que permite que se entre a los
+     * diferentes cuartos del 2do piso; mejor sacrifica un cuarto del 2do piso para poner ahí una escalera y libera el
+     * corredor"</i>). Ahora la galería queda <b>entera</b> libre —los dos carriles, {@code dz=7} y {@code dz=8}— y se
+     * sube por dentro del cuarto.
+     * <p>
+     * El primer tramo sube <b>de sur a norte</b> por la columna {@code dx=5} (el pie mira al fondo del cuarto, que es
+     * por donde se llega a él) y el segundo <b>de este a oeste</b> por la fila {@code dz=10}, pegada al muro del pozo.
+     * El tope va en esa fila a propósito: con el último escalón en la fila del alero ({@code dz=13}) el que saliera se
+     * daría con el <b>tejado</b> —allí solo hay <b>un</b> bloque libre—, mientras que en {@code dz=10} hay
+     * <b>cuatro</b>.
      */
-    private static final int DESVAN_ESCALERA_Z = TABERNA_ESCALERA_TOPE_Z - 1;
-    /** La columna (X) del <b>pie</b> de la escalera del desván: justo delante del pozo de la escalera vieja. */
-    private static final int DESVAN_ESCALERA_PIE_DX = TABERNA_ESCALERA_X + TABERNA_ESCALERA_ANCHO;
+    private static final int DESVAN_ESCALERA_PIE_DX = 5;
+    /** La fila (Z) del <b>pie</b> de la escalera del desván, en el fondo del cuarto suroeste. */
+    private static final int DESVAN_ESCALERA_PIE_Z = 12;
+    /** La fila (Z) del <b>tramo de arriba</b> (el que dobla al oeste), pegada al muro que cierra el pozo. */
+    private static final int DESVAN_ESCALERA_Z_ALTO = 10;
     /**
      * Los <b>seis</b> escalones del desván: el desnivel que hay entre el suelo de la posada ({@code y1}) y el del
      * desván ({@code yTecho + 1}), que es {@code TABERNA_PISO2 + 1} bloques. Con escaleras del juego se sube de
      * medio en medio bloque (ver {@code escaleraDeLaTaberna}), así que hacen falta seis.
      */
     private static final int DESVAN_ESCALONES = TABERNA_PISO2 + 1;
+    /**
+     * La escalera del desván <b>vieja</b> (la de la migración 51), la que <b>tapaba la galería</b>:
+     * {@code DESVAN_ESCALONES} escalones en recto por el carril norte ({@code dz=7}) desde {@code dx=3}. Solo la usan
+     * los reparadores de la migración 52, que tienen que <b>deshacerla</b> y volver a cerrar el hueco que abrió en
+     * las dos capas del forjado (el techo de la posada y la placa del tejado).
+     */
+    private static final int DESVAN_ESCALERA_VIEJA_PIE_DX = TABERNA_ESCALERA_X + TABERNA_ESCALERA_ANCHO;
+    private static final int DESVAN_ESCALERA_VIEJA_Z = TABERNA_ESCALERA_TOPE_Z - 1;
     /** El hogar (con su chimenea), en el muro norte; y el ahumador del cocinero, en la cocina. */
     private static final int[] TABERNA_HOGAR = {9, 0};
     private static final int[] TABERNA_COCINA = {4, 2};
@@ -5580,6 +5599,10 @@ public final class VillageGenerator {
      * <p>
      * <b>OJO con el orden</b>: va DESPUÉS de {@link #rehacerMurosDeLaTaberna}, que vuelve a pasar el tejado entero
      * (con su relleno interior). Si fuera antes, el tejado repasado volvería a tapiar el desván.
+     * <p>
+     * Desde la migración 52 monta la escalera <b>en el cuarto suroeste</b> (la de la 51 subía por la galería y tapaba
+     * el corredor de los cuartos): a una taberna que todavía tenga aquélla hay que pasarle <b>también</b>
+     * {@link #moverLaEscaleraDelDesvan}, que la deshace y cierra el hueco que dejó en el techo.
      */
     public static void desvanDeLaTaberna(ServerLevel level, BlockPos center) {
         if (!tabernaConstruida(level, center)) {
@@ -5602,6 +5625,104 @@ public final class VillageGenerator {
         BlockPos base = baseDeLaTaberna(center);
         muroDelHuecoDeLaEscalera(level, base.getX(), base.getZ(), nivel + TABERNA_PISO2,
                 nivel + TABERNA_PISO2 + TABERNA_ALERO);
+    }
+
+    /**
+     * <b>Mueve la escalera del desván</b> de la galería al cuarto suroeste (migración 52). La escalera de la 51 subía
+     * en recto por el carril <b>norte</b> de la galería de la posada ({@code dz=7}) y <b>tapaba el corredor</b> por el
+     * que se entra a los cuartos del segundo piso: el jugador lo reportó (<i>"al poner la escalera al tercer piso
+     * tapaste el corredor que permite que se entre a los diferentes cuartos del 2do piso; mejor sacrifica un cuarto
+     * del 2do piso para poner ahí una escalera y libera el corredor"</i>). Aquí se <b>deshace</b> aquella escalera y se
+     * deja la galería <b>entera</b> libre; la escalera nueva (dentro del cuarto suroeste) y su hueco los pone
+     * {@link #desvanDeLaTaberna(ServerLevel, int, int, int)}, que se llama al final.
+     * <p>
+     * El deshacer es <b>celda por celda</b>:
+     * <ul>
+     *   <li>Los <b>{@code DESVAN_ESCALONES} escalones</b> de la galería: fuera (solo si siguen siendo escalones
+     *       nuestros, {@code quitarSiEs}).</li>
+     *   <li>El <b>hueco que abrieron en el techo</b>: se vuelve a cerrar. Por cada escalón se reponen las dos celdas
+     *       que tenía abiertas encima, con <b>tablones</b> en la capa del techo de la posada ({@code yTecho - 1}) y
+     *       <b>tejas de la placa</b> en la del suelo del desván ({@code yTecho}), que es lo que había antes: el techo
+     *       queda <b>sólido</b> como estaba.</li>
+     *   <li>El <b>farol de la galería</b> que se comió el cuarto escalón (en {@code dx=6}, {@code dz=7}): se cuelga
+     *       otra vez de su tablón, ya repuesto. Y el farol de <b>repuesto</b> que se colgó al lado (en el carril sur,
+     *       {@code dz=8}) se retira: la galería vuelve a tener los suyos y ningún otro.</li>
+     *   <li>La <b>cama del cuarto suroeste</b>: se retira de ahí (el cuarto pasa a ser la caja de la escalera). Su
+     *       sustituta la pone {@code amueblarElDesvan} arriba, así que el pueblo <b>no pierde ninguna cama</b>.</li>
+     * </ul>
+     * Es <b>idempotente</b> (solo quita el bloque <b>si es del tipo esperado</b>, {@code quitarSiEs}, y solo repone
+     * donde está <b>vacío</b>, {@code colocarSiEstaVacio}) y <b>no rehace la taberna</b>: no toca ni la despensa, ni
+     * las camas de los otros cuartos, ni lo que el jugador tenga puesto.
+     * <p>
+     * <b>OJO con el orden</b>: va DESPUÉS de {@link #rehacerMurosDeLaTaberna}, que vuelve a pasar el tejado entero
+     * (con su relleno interior), y después de {@link #desvanDeLaTaberna(ServerLevel, BlockPos)} —el vaciado del
+     * desván va después del tejado, invariante I20—; el cierre del hueco viejo no toca nada del desván (solo las dos
+     * capas del forjado del piso de abajo).
+     */
+    public static void moverLaEscaleraDelDesvan(ServerLevel level, BlockPos center) {
+        if (!tabernaConstruida(level, center)) {
+            return;
+        }
+        int nivel = cotaDeLaPlaza(level, center);
+        BlockPos base = baseDeLaTaberna(center);
+        int bx = base.getX();
+        int bz = base.getZ();
+        int y1 = nivel + TABERNA_PISO2;
+        int yTecho = y1 + TABERNA_ALERO;
+        // 1) LA ESCALERA VIEJA, FUERA DE LA GALERÍA: cada escalón y, en su celda, las dos que tenía abiertas encima
+        //    (por donde pasaba la cabeza). Reponiendo las capas del forjado, el techo vuelve a quedar sólido.
+        int quitados = 0;
+        for (int i = 0; i < DESVAN_ESCALONES; i++) {
+            int x = bx + DESVAN_ESCALERA_VIEJA_PIE_DX + i;
+            int y = y1 + i;
+            int z = bz + DESVAN_ESCALERA_VIEJA_Z;
+            quitados += quitarSiEs(level, x, y, z, Blocks.DARK_OAK_STAIRS);
+            reponerLaCapaDelForjado(level, x, y, z, yTecho);
+            for (int dy = 1; dy <= 2; dy++) {
+                reponerLaCapaDelForjado(level, x, y + dy, z, yTecho);
+            }
+        }
+        // 2) EL FAROL DE LA GALERÍA que se comió su cuarto escalón (dx=6, dz=7): vuelve a colgarse de su tablón, que
+        //    se acaba de reponer (invariante I14: un farol colgado necesita un bloque sólido ENCIMA). Y el de repuesto
+        //    que se puso en el carril sur (dz=8) sobra.
+        BlockPos farolSuyo = new BlockPos(bx + DESVAN_ESCALERA_VIEJA_PIE_DX + 3, y1 + 3,
+                bz + DESVAN_ESCALERA_VIEJA_Z);
+        if (level.getBlockState(farolSuyo).isAir() && level.getBlockState(farolSuyo.above()).is(Blocks.DARK_OAK_PLANKS)) {
+            colgar(level, farolSuyo);
+        }
+        BlockPos farolDeRepuesto = farolSuyo.offset(0, 0, 1);
+        if (level.getBlockState(farolDeRepuesto).is(Blocks.LANTERN)) {
+            colocar(level, farolDeRepuesto, Blocks.AIR.defaultBlockState(), 3);
+        }
+        // 3) LA CAMA DEL CUARTO SUROESTE, RETIRADA (el cuarto es ahora la caja de la escalera). Se retira la cama de
+        //    la aldea (la roja, que es la que pone `posadaDeLaTaberna`): lo que el jugador haya puesto ahí no se toca.
+        int camas = 0;
+        for (int dz : new int[]{12, 13}) {
+            BlockPos p = new BlockPos(bx + 4, y1, bz + dz);
+            if (level.getBlockState(p).is(Blocks.RED_BED)) {
+                colocar(level, p, Blocks.AIR.defaultBlockState(), 3);
+                camas++;
+            }
+        }
+        // 4) LA ESCALERA NUEVA (dentro del cuarto), EL HUECO NUEVO, el vaciado del desván y el mobiliario —con la
+        //    cama recolocada—: todo idempotente y en el mismo sitio que al construir la taberna.
+        desvanDeLaTaberna(level, bx, bz, nivel);
+        DevilRpg.LOGGER.info("[Village] Taberna de {}: escalera del desvan movida al cuarto suroeste (galeria libre;"
+                + " {} escalon(es) de la vieja fuera, {} mitad(es) de cama retirada(s))", center, quitados, camas);
+    }
+
+    /**
+     * Repone la <b>capa del forjado</b> que le toca a esa celda: los <b>tablones</b> del techo de la posada
+     * ({@code yTecho - 1}) o las <b>tejas</b> de la placa del tejado ({@code yTecho}), que es el suelo del desván. En
+     * cualquier otra altura no hace nada (esa celda no era del forjado). Solo se pone donde está <b>vacío</b>, para no
+     * pisar lo que haya puesto el jugador. La usa el reparador que vuelve a cerrar el hueco de la escalera vieja.
+     */
+    private static void reponerLaCapaDelForjado(ServerLevel level, int x, int y, int z, int yTecho) {
+        if (y == yTecho - 1) {
+            colocarSiEstaVacio(level, new BlockPos(x, y, z), Blocks.DARK_OAK_PLANKS.defaultBlockState());
+        } else if (y == yTecho) {
+            colocarSiEstaVacio(level, new BlockPos(x, y, z), Blocks.DEEPSLATE_TILES.defaultBlockState());
+        }
     }
 
     /** Quita ese bloque <b>si es del tipo esperado</b> (para que una reparación no toque lo que puso el jugador). */
@@ -5633,8 +5754,13 @@ public final class VillageGenerator {
     /**
      * La <b>posada</b> (el piso de arriba): una <b>galería</b> de dos bloques de ancho que cruza la casa de este a
      * oeste, con <b>seis cuartos</b> alrededor (tres al norte y tres al sur) y sus <b>camas</b>, sus arcas y sus
-     * faroles. Es el plano del <i>Building map: Inn</i> que trajo el jugador, con el cuarto pequeño del suroeste
-     * recortado por la caja de la escalera.
+     * faroles. Es el plano del <i>Building map: Inn</i> que trajo el jugador.
+     * <p>
+     * Los dos carriles de la galería ({@code dz=7} y {@code dz=8}) son el <b>corredor</b> del piso: en el muro norte
+     * ({@code dz=6}) están las puertas de los cuartos del norte y en el sur ({@code dz=9}) las de los del sur, así que
+     * <b>nada</b> puede ocuparlos (el jugador reportó que la escalera del desván, que subía por el carril norte, le
+     * tapaba el paso a los cuartos: ver {@link #escaleraDelDesvan}). El cuarto <b>suroeste</b> está recortado por la
+     * caja de la escalera de la taberna y desde la migración 52 es, además, la caja de la escalera del desván.
      */
     private static void posadaDeLaTaberna(ServerLevel level, int bx, int bz, int y1, int yTecho) {
         int alto = yTecho - y1;
@@ -5671,11 +5797,13 @@ public final class VillageGenerator {
                 }
             }
         }
-        // LAS CAMAS: dos por cuarto (una en el cuarto pequeño) con la cabecera contra el muro.
+        // LAS CAMAS: dos por cuarto con la cabecera contra el muro. El cuarto SUROESTE va sin cama desde la migración
+        // 52: es el cuarto que se sacrifica para meter la escalera del desván (`escaleraDelDesvan`), y su cama se
+        // recoloca en el desván (`amueblarElDesvan`) para que el pueblo no pierda ninguna (en vanilla cada cría
+        // necesita una cama libre).
         int[][] camas = {{1, 2, -1}, {4, 2, -1},                       // cuarto noroeste (cabeza al norte)
                 {8, 2, -1}, {10, 2, -1},                               // norte (centro)
                 {14, 2, -1}, {17, 2, -1},                              // noreste
-                {4, 12, 1},                                            // suroeste (el pequeño, junto a la escalera)
                 {8, 12, 1}, {10, 12, 1},                               // sur (centro)
                 {14, 12, 1}, {17, 12, 1}};                             // sureste
         for (int[] c : camas) {
@@ -5803,11 +5931,12 @@ public final class VillageGenerator {
      * techo de la posada justo debajo ({@link #techoDeLaPosada}, en {@code yTecho - 1}), así que el desván <b>se pisa
      * en {@code yTecho + 1}</b> y no hay que añadir suelo.
      * <p>
-     * <b>Se sube por dentro</b>: {@code DESVAN_ESCALONES} escalones de medio bloque en el carril norte de la galería
-     * de la posada que atraviesan las <b>dos capas</b> del forjado (los tablones del techo de la posada y la placa de
-     * tejas) por un hueco que cubre lo que se sube —la regla de I16: si el hueco no llega, el que sube se golpea la
-     * cabeza contra el borde—. La cara alta del último escalón queda a la cota del suelo del desván, así que al final
-     * del tramo se sale andando, sin saltar.
+     * <b>Se sube por dentro</b> y <b>sin tocar la galería</b> (migración 52): {@code DESVAN_ESCALONES} escalones de
+     * medio bloque en <b>L</b> dentro del <b>cuarto suroeste</b> de la posada —el cuarto que se sacrifica para
+     * meterlos ({@link #escaleraDelDesvan})— que atraviesan las <b>dos capas</b> del forjado (los tablones del techo
+     * de la posada y la placa de tejas) por un hueco que cubre lo que se sube —la regla de I16: si el hueco no llega,
+     * el que sube se golpea la cabeza contra el borde—. La cara alta del último escalón queda a la cota del suelo del
+     * desván, así que al final del tramo se sale andando, sin saltar.
      */
     private static void desvanDeLaTaberna(ServerLevel level, int bx, int bz, int nivel) {
         int y1 = nivel + TABERNA_PISO2;      // donde se anda en la posada
@@ -5827,61 +5956,113 @@ public final class VillageGenerator {
                 }
             }
         }
-        // 2) LA ESCALERA, LO PRIMERO de la subida: uno de sus escalones cae justo en la celda donde la galería tiene
-        //    colgado su farol (`lucesDeLaTaberna`, dz=7, dx=6). Se pone ANTES de abrir el hueco para que el farol se
-        //    sustituya por el escalón en el mismo sitio (reemplazar un bloque no lo tira al suelo); si el hueco se
-        //    abriera antes, el farol se quedaría sin apoyo y saltaría como objeto al suelo de la posada.
-        for (int i = 0; i < DESVAN_ESCALONES; i++) {
-            colocar(level, new BlockPos(bx + DESVAN_ESCALERA_PIE_DX + i, y1 + i, bz + DESVAN_ESCALERA_Z),
-                    Blocks.DARK_OAK_STAIRS.defaultBlockState()
-                            .setValue(StairBlock.FACING, Direction.EAST).setValue(StairBlock.HALF, Half.BOTTOM), 3);
-        }
-        // 3) EL HUECO DE SUBIDA: la celda de encima de cada escalón y la de dos encima (por donde pasa la cabeza),
-        //    en LAS DOS capas del forjado. Solo se abren los TABLONES del techo de la posada y las TEJAS de la placa;
-        //    lo demás (el tejado de verdad ya está vaciado, y en esa fila no hay ningún tabique ni cama) no se toca.
-        for (int i = 0; i < DESVAN_ESCALONES; i++) {
-            for (int dy = 1; dy <= 2; dy++) {
-                BlockPos hueco = new BlockPos(bx + DESVAN_ESCALERA_PIE_DX + i, y1 + i + dy, bz + DESVAN_ESCALERA_Z);
-                BlockState actual = level.getBlockState(hueco);
-                if (actual.is(Blocks.DARK_OAK_PLANKS) || actual.is(Blocks.DEEPSLATE_TILES)) {
-                    colocar(level, hueco, Blocks.AIR.defaultBlockState(), 3);
-                }
-            }
-        }
-        // 4) EL MOBILIARIO (una base para el jugador) y el farol de la galería que se comió el cuarto escalón.
+        // 2) LA ESCALERA, EN EL CUARTO SUROESTE (migración 52; la de la 51 subía por el carril norte de la galería y
+        //    tapaba el corredor de los cuartos). No ocupa ni una celda de la galería: se sube por dentro del cuarto.
+        escaleraDelDesvan(level, bx, bz, y1);
+        // 3) EL HUECO DE SUBIDA, encima de los escalones, en LAS DOS capas del forjado. Va después de la escalera
+        //    porque solo se abren los TABLONES del techo de la posada y las TEJAS de la placa: lo demás no se toca.
+        int abiertos = abrirElHuecoDelDesvan(level, bx, bz, y1);
+        // 4) EL MOBILIARIO (una base para el jugador), con la cama que se recoloca del cuarto sacrificado.
         amueblarElDesvan(level, bx, bz, yTecho + 1);
-        BlockPos luz = new BlockPos(bx + DESVAN_ESCALERA_PIE_DX + 3, y1 + 3, bz + DESVAN_ESCALERA_Z + 1);
-        if (level.getBlockState(luz).isAir() && level.getBlockState(luz.above()).is(Blocks.DARK_OAK_PLANKS)) {
-            // Al carril del pasillo (dz=8) y a la misma altura, colgado del tablón del techo (invariante I14: un
-            // farol colgado necesita un bloque sólido ENCIMA). Solo si la celda está libre: es idempotente.
-            colgar(level, luz);
-        }
-        if (vaciados > 0) {
-            DevilRpg.LOGGER.info("[Village] Taberna en {}: desvan vaciado ({} teja(s) de relleno) y amueblado como"
-                    + " tercer piso (se pisa en y={})", new BlockPos(bx, yTecho + 1, bz), vaciados, yTecho + 1);
+        if (vaciados > 0 || abiertos > 0) {
+            DevilRpg.LOGGER.info("[Village] Taberna en {}: desvan vaciado ({} teja(s) de relleno) y hueco de subida"
+                    + " abierto ({} celda(s)); se pisa en y={}", new BlockPos(bx, yTecho + 1, bz), vaciados, abiertos,
+                    yTecho + 1);
         }
     }
 
     /**
-     * El <b>mobiliario del desván</b>: lo justo para que sea una base del jugador (cama, mesa de trabajo, horno, dos
-     * cofres —pegados, que se juntan en uno doble—, yunque, un par de faroles y un par de alfombras). <b>Nada de
+     * La <b>escalera del desván</b>: una <b>L de dos tramos</b> dentro del cuarto suroeste de la posada (ver las
+     * constantes {@code DESVAN_ESCALERA_*}). El primer tramo sube <b>de sur a norte</b> por la columna {@code dx=5} y
+     * el segundo <b>de este a oeste</b> por la fila {@code dz=10}, pegada al muro que cierra el pozo.
+     * <p>
+     * <b>OJO con la orientación</b> (igual que en {@code escaleraDeLaTaberna}): en las escaleras del juego la cara
+     * alta —por donde se sube— es la que marca {@code FACING}, así que cada tramo mira hacia donde <b>sube</b> (el de
+     * abajo al norte, el de arriba al oeste).
+     */
+    private static void escaleraDelDesvan(ServerLevel level, int bx, int bz, int y1) {
+        int tramoNorte = DESVAN_ESCALERA_PIE_Z - DESVAN_ESCALERA_Z_ALTO + 1;   // el tramo de abajo
+        for (int[] c : celdasDeLaEscaleraDelDesvan()) {
+            Direction sube = c[2] < tramoNorte ? Direction.NORTH : Direction.WEST;
+            colocar(level, new BlockPos(bx + c[0], y1 + c[2], bz + c[1]),
+                    Blocks.DARK_OAK_STAIRS.defaultBlockState()
+                            .setValue(StairBlock.FACING, sube).setValue(StairBlock.HALF, Half.BOTTOM), 3);
+        }
+    }
+
+    /**
+     * Las celdas de la <b>escalera del desván</b>, en orden de subida: cada fila es {@code {dx, dz, escalón}} y la Y
+     * de ese escalón es {@code y1 + escalón}. Se calculan en un solo sitio para que la escalera y su <b>hueco</b>
+     * ({@link #abrirElHuecoDelDesvan}) no se puedan quedar desparejados (invariante I16: el hueco cubre lo que se
+     * sube). El segundo tramo empieza justo donde acaba el primero, con un escalón más de altura y doblando al oeste.
+     */
+    private static int[][] celdasDeLaEscaleraDelDesvan() {
+        int tramoNorte = DESVAN_ESCALERA_PIE_Z - DESVAN_ESCALERA_Z_ALTO + 1;
+        int[][] celdas = new int[DESVAN_ESCALONES][];
+        for (int k = 0; k < tramoNorte; k++) {                              // 1) de sur a norte por dx=5
+            celdas[k] = new int[]{DESVAN_ESCALERA_PIE_DX, DESVAN_ESCALERA_PIE_Z - k, k};
+        }
+        for (int k = 0; k < DESVAN_ESCALONES - tramoNorte; k++) {            // 2) de este a oeste por dz=10
+            celdas[tramoNorte + k] = new int[]{
+                    DESVAN_ESCALERA_PIE_DX - 1 - k, DESVAN_ESCALERA_Z_ALTO, tramoNorte + k};
+        }
+        return celdas;
+    }
+
+    /**
+     * El <b>hueco de subida</b> al desván (invariante I16): por encima de <b>cada</b> escalón se abren las dos celdas
+     * que ocupa el que sube —la de la cabeza y la de encima— en <b>las dos capas</b> del forjado, los tablones del
+     * techo de la posada ({@code yTecho - 1}) y la placa de tejas del suelo del desván ({@code yTecho}). Solo se
+     * quitan esas dos capas: el tejado de verdad, un tabique o el mobiliario <b>no</b> se tocan.
+     *
+     * @return cuántas celdas se abrieron (0 si el hueco ya estaba hecho: es idempotente)
+     */
+    private static int abrirElHuecoDelDesvan(ServerLevel level, int bx, int bz, int y1) {
+        int abiertos = 0;
+        for (int[] c : celdasDeLaEscaleraDelDesvan()) {
+            for (int dy = 1; dy <= 2; dy++) {
+                BlockPos hueco = new BlockPos(bx + c[0], y1 + c[2] + dy, bz + c[1]);
+                BlockState actual = level.getBlockState(hueco);
+                if (actual.is(Blocks.DARK_OAK_PLANKS) || actual.is(Blocks.DEEPSLATE_TILES)) {
+                    colocar(level, hueco, Blocks.AIR.defaultBlockState(), 3);
+                    abiertos++;
+                }
+            }
+        }
+        return abiertos;
+    }
+
+    /**
+     * El <b>mobiliario del desván</b>: lo justo para que sea una base del jugador (dos camas, mesa de trabajo, horno,
+     * dos cofres —pegados, que se juntan en uno doble—, yunque, un par de faroles y un par de alfombras). <b>Nada de
      * puestos de trabajo de aldeano</b> (barril, caldero, ahumador, alto horno, mesa de herrería, muela, telar, atril,
      * compostero, cortapiedras, soporte de pociones ni campana): un aldeano sin oficio los reclamaría. La cama, el
      * cofre, el <b>horno normal</b> (el del cocinero es el ahumador), la mesa de trabajo y el yunque <b>no</b> son
      * puestos de trabajo; la cama sí es POI, pero es justo lo que el jugador quiere en su base.
+     * <p>
+     * La <b>segunda cama</b> es la que se <b>recoloca</b> del cuarto suroeste (migración 52), el que se sacrifica para
+     * meter la escalera del desván: en vanilla cada cría necesita una <b>cama libre</b>, así que el pueblo no puede
+     * perder ninguna. Va pegada a la del desván, con la cabecera al mismo lado.
      * <p>
      * Todo se coloca <b>solo si la celda está vacía</b> ({@link #colocarSiEstaVacio}): así la reparación de la
      * migración es idempotente y no le tira al jugador lo que tenga dentro (reemplazar un cofre tira su contenido).
      * <p>
      * El reparto deja libre el pasillo central (dz=5..9, que es donde el tejado es más alto) y amontona lo demás en
      * la fila norte (dz=3), que tiene tres bloques de alto; los dos faroles van sobre postes de tronco pegados a los
-     * frontones (dx=1 y dx=17), que es donde el tejado ya baja.
+     * frontones (dx=1 y dx=17), en la fila de la <b>cumbrera</b> (dz=7), que es donde el tejado está más alto y el
+     * poste con su farol caben.
      */
     private static void amueblarElDesvan(ServerLevel level, int bx, int bz, int y) {
-        // LA CAMA, con la cabecera contra el muro norte (la almohada va al lado que marca FACING).
+        // LAS DOS CAMAS. La primera es la del desván; la segunda, la que se recoloca del cuarto suroeste (migración
+        // 52), para que el pueblo no pierda una cama. La almohada va al lado que marca FACING.
         BlockPos pie = new BlockPos(bx + 4, y, bz + 3);
         if (level.getBlockState(pie).isAir() && level.getBlockState(pie.relative(Direction.SOUTH)).isAir()) {
             bed(level, pie, Direction.SOUTH);
+        }
+        BlockPos pieRecolocada = new BlockPos(bx + 5, y, bz + 3);
+        if (level.getBlockState(pieRecolocada).isAir()
+                && level.getBlockState(pieRecolocada.relative(Direction.SOUTH)).isAir()) {
+            bed(level, pieRecolocada, Direction.SOUTH);
         }
         // LA MESA DE TRABAJO y EL HORNO.
         colocarSiEstaVacio(level, new BlockPos(bx + 6, y, bz + 3), Blocks.CRAFTING_TABLE.defaultBlockState());
@@ -5895,11 +6076,12 @@ public final class VillageGenerator {
         }
         // EL YUNQUE, aparte de la fila, para poder rodearlo.
         colocarSiEstaVacio(level, new BlockPos(bx + 12, y, bz + 3), Blocks.ANVIL.defaultBlockState());
-        // LOS DOS FAROLES sobre un poste de TRONCO de roble oscuro (como el entramado de abajo). El ayudante
+        // LOS DOS FAROLES sobre un poste de TRONCO de roble oscuro (como el entramado de abajo), en la fila de la
+        // cumbrera (dz=7: la que tiene el tejado más alto, así que el poste y su farol caben). El ayudante
         // `farolSobreElPoste` recibe la casilla del APOYO y garantiza el poste y el farol encima (invariante I14),
         // así que aquí no puede quedar un farol colgado del aire.
         for (int dx : new int[]{1, TABERNA_ANCHO - 2}) {
-            BlockPos poste = new BlockPos(bx + dx, y, bz + DESVAN_ESCALERA_Z);
+            BlockPos poste = new BlockPos(bx + dx, y, bz + TABERNA_CUMBRERA);
             colocarSiEstaVacio(level, poste, Blocks.DARK_OAK_LOG.defaultBlockState());
             farolSobreElPoste(level, poste);
         }

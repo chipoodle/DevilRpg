@@ -1424,8 +1424,12 @@ vez una ventana nada más y escaleras para llegar ahí (dentro de la taberna, no
 | Encargo | Cómo queda | Por qué así |
 |---|---|---|
 | **Puerta extra** | `DARK_OAK_DOOR` con `facing=SOUTH` en el **muro sur**, `dx=3`, `dz=TABERNA_FONDO-1`, a la cota, con cal encima y viga arriba | `dx=3` **no** es columna de poste (`i%4==0`) y por dentro está libre (la barra empieza en `dx=7`); fuera el patio está a la cota, así que se sale andando (sin escalón) |
-| **El pozo tapado** | Tablones en `dx 1..2`, `dz=12`, de `y1` a `yTecho-2` | Es la primera fila **con suelo** al sur del hueco (`esHuecoDeLaEscalera` = `dz 8..11`): cierra el cuarto suroeste sin estorbar la subida, que sale por `dz=8` |
-| **El desván (3er piso)** | Se vacía el **relleno** del tejado (`DEEPSLATE_TILES`) en `dx 1..17`, `dz 0..14`, de `yTecho+1` a `yTecho+8` (833 tejas), dejando la cáscara (vertientes, cumbrera y frontones) intacta; se sube por **6 escalones dentro** (`dz=7`, el carril norte de la galería, `facing=EAST`, de `(3,y1)` a `(8,y1+5)`), con el hueco del techo justo encima de ellos (regla de I16); y se amuebla como base del jugador: cama, mesa de trabajo, horno, dos cofres, yunque, dos faroles sobre poste y dos alfombras | `techoDeLaPosada` pone los tablones en `yTecho-1`, así que lo que se pisa es la **placa del tejado** (`yTecho`) y el desván se anda en `yTecho+1` (6 bloques sobre la posada). La ventana son los **cristales que ya llevaban los frontones**: no se añade ninguna, y desde fuera los bloques son idénticos. El mobiliario **evita a propósito los puestos de trabajo de aldeano** (nada de barriles, calderos ni mesas de oficio) |
+| **El pozo tapado** | Tablones en `dx 1..2`, `dz=12`, de `y1` a `yTecho-1` | Es la primera fila **con suelo** al sur del hueco (`esHuecoDeLaEscalera` = `dz 8..11`): cierra el cuarto suroeste sin estorbar la subida, que sale por `dz=8` |
+| **El desván (3er piso)** | Se vacía el **relleno** del tejado (`DEEPSLATE_TILES`) en `dx 1..17`, `dz 0..14`, de `yTecho+1` a `yTecho+8` (833 tejas), dejando la cáscara (vertientes, cumbrera y frontones) intacta; se amuebla como base del jugador: cama, mesa de trabajo, horno, dos cofres, yunque, dos faroles sobre poste y dos alfombras | `techoDeLaPosada` pone los tablones en `yTecho-1`, así que lo que se pisa es la **placa del tejado** (`yTecho`) y el desván se anda en `yTecho+1` (6 bloques sobre la posada). La ventana son los **cristales que ya llevaban los frontones**: no se añade ninguna, y desde fuera los bloques son idénticos. El mobiliario **evita a propósito los puestos de trabajo de aldeano** (nada de barriles, calderos ni mesas de oficio) |
+
+> **Corregido en la 52**: la escalera de la 51 subía por el carril **norte de la galería** (`dz=7`, `facing=EAST`, de
+> `(3,y1)` a `(8,y1+5)`) y **tapaba el corredor** de los cuartos. La migración **52** (§3b.35) la mueve al cuarto
+> suroeste y vuelve a cerrar su hueco: hoy **no** hay ninguna escalera del desván en la galería.
 
 **Notas y riesgos (dichos, no escondidos)**: el farol de la galería que caía en la celda del 4º escalón **se recuelga
 al lado** (`colgar` en el carril sur) —y por eso el desván se construye el último y abre el tablón *después* de poner el
@@ -1433,7 +1437,43 @@ escalón, para que el farol no salte al suelo como objeto—; la **cama del desv
 camas del pueblo (puede permitir una cría más; lo pidió el jugador); y la **migración 51** lo aplica a las tabernas ya
 construidas llamando a los reparadores **después** de `rehacerMurosDeLaTaberna` (que vuelve a rellenar el tejado, así
 que el vaciado tiene que ir después). **No se toca el testigo `tabernaConstruida`**: rehacer la taberna entera tiraría
-la despensa y las camas.
+la despensa y las camas. *(El reparto del farol y la escalera de esta migración quedó **corregido en la 52**: ver
+§3b.35.)*
+
+### 3b.35 La escalera del desván, fuera de la galería (migración 52)
+
+El jugador, con la taberna de la 51 ya de pie: *"La regaste, porque al poner la escalera al tercer piso tapaste el
+corredor que permite que se entre a los diferentes cuartos del 2do piso. Mejor sacrifica un cuarto del 2do piso para
+poner ahí una escalera y libera el corredor para que se pueda pasar."*
+
+| Encargo | Cómo queda | Por qué así |
+|---|---|---|
+| **La galería, ENTERA y libre** | Los **dos carriles** (`dz=7` y `dz=8`) quedan sin un solo bloque de la escalera. El reparador quita los **seis escalones** de la 51 (`facing=EAST`, de `(3,y1)` a `(8,y1+5)` en `dz=7`) y **vuelve a cerrar** el hueco que abrieron en las dos capas del forjado: **tablones** en `(dx 5..7, yTecho-1, dz=7)` y **tejas de la placa** en `(dx 6..8, yTecho, dz=7)` | El corredor del piso son esos dos carriles: en el muro norte (`dz=6`) están las puertas de los tres cuartos del norte y en el sur (`dz=9`) las de los tres del sur. Con la escalera en el carril norte, **no se podía entrar a los cuartos del norte** (y el que subía se quedaba en el hueco) |
+| **La escalera, en el cuarto suroeste** | Una **L de dos tramos** dentro del cuarto suroeste (`dx 1..5`, `dz 10..13`), el que se sacrifica. Tramo de abajo, **sube al NORTE** por `dx=5`: `(5,y1,12)`, `(5,y1+1,11)`, `(5,y1+2,10)`. Tramo de arriba, **dobla al OESTE** por `dz=10`: `(4,y1+3,10)`, `(3,y1+4,10)`, `(2,y1+5,10)`. Las **seis** celdas salen de una sola lista (`celdasDeLaEscaleraDelDesvan`), la misma que abre el hueco | El tope **no** puede ir en la fila del alero (`dz=13`): allí el tejado deja **un** bloque libre y el que saliera se golpearía con él; en `dz=10` hay **cuatro**. El tramo de arriba pasa por encima del **muro que cierra el pozo** (`dx=3`) y del **capuchón del pozo**: el pozo sigue **tapado** (nadie se cae) y el cuarto, que ya estaba recortado por la caja de la escalera de la taberna, es el único sitio donde la L cabe |
+| **El hueco del techo, encima** | Se abren las dos celdas que ocupa el que sube en **cada** escalón, en las dos capas: **tablones** en `(5,yTecho-1,10)` y `(4,yTecho-1,10)`, y **tejas de la placa** en `(4,yTecho,10)` y `(3,yTecho,10)`. La placa en `(2,yTecho,10)` la sustituye el **último escalón** (cara alta en `yTecho+1`, la cota del desván: se sale andando) | **I16**: el hueco cubre lo que se sube. Del tope se sale a `(2,yTecho,9)`, `(1,yTecho,10)` o `(2,yTecho,11)`, las tres con suelo y con **3-5 bloques** de alto libre |
+| **La cama del cuarto, recolocada** | La cama del cuarto suroeste (`(4,y1,12)` + `(4,y1,13)`) se retira y se vuelve a poner en el **desván**, pegada a la suya (en `(5,yTecho+1,3)` + `(5,yTecho+1,4)`) | En vanilla cada cría necesita una **cama libre**: el pueblo no puede perder ninguna. Es la 12ª cama de la posada y suma al POI como la que había |
+| **El farol de la galería** | El que se comió el 4º escalón (`(6,y1+3,7)`) vuelve a colgarse **de su tablón** (el que repone el cierre del hueco) y se retira el **de repuesto** que la 51 colgó en el carril sur (`(6,y1+3,8)`) | **I14**: un farol colgado necesita un bloque sólido encima. Con la escalera fuera de la galería no hace falta ningún repuesto: la galería vuelve a tener los suyos, en su sitio |
+
+**Verificado**:
+
+- **Contra el GUARDADO del jugador** (aldea 2, centro `(1414,1414)`, cota 120, taberna en `(1438,1428)`, `y1=125`,
+  `yTecho=130`), con una simulación **de solo lectura** (`build/verifica_escalera_desvan52.py`, no versionado): las
+  celdas que toca el reparador son **exactamente** las que esperaba el código. En su mundo están los **6 escalones de
+  la 51** en la galería (`facing=EAST`, de `(dx3,y1)` a `(dx8,y1+5)`), el **farol de la galería comido** por el 4º
+  escalón (`(dx6,y1+3,dz7)` es un escalón) y su **repuesto** en el carril sur, la **cama del cuarto** en
+  `(dx4,y1,dz12..13)`, el hueco de tablones en `(dx5..6,yTecho-1,dz7)` y el de tejas en `(dx6..7,yTecho,dz7)`. La
+  simulación da 28 cambios, deja la galería **libre**, cierra el hueco viejo, monta los 6 escalones nuevos con sus dos
+  celdas de cabeza libres, deja el pozo tapado y **es idempotente** (una segunda pasada no cambia nada).
+- **Comprobación estática** de la geometría (`build/check_escalera_desvan.py`, no versionado), celda por celda contra
+  las mismas constantes del código: 6 escalones que suben de uno en uno, galería libre, suelo del desván abierto solo
+  encima de la escalera y 4 bloques de alto libre sobre el tope.
+- El único pueblo del guardado con la escalera vieja es ése: las otras aldeas no tienen la taberna construida (el
+  testigo `tabernaConstruida` falla), así que la reciben **nueva** de una vez.
+
+**Lo que NO se ha podido comprobar**: el movimiento en el juego (llegar andando al pie desde la puerta del cuarto,
+subir la L y salir al desván) ni la migración corriendo de verdad sobre su partida: el cliente estaba abierto y se
+cerró para poder compilar (el `build` no toca el guardado).
+
 
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 

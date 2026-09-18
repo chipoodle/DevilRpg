@@ -489,13 +489,21 @@ public final class VillageManager {
      *             de bloques") y pasa a ser un <b>tercer piso</b> para el jugador, amueblado como base (cama, mesa de
      *             trabajo, horno, dos cofres, yunque, faroles y alfombra). Se vacía <b>solo el relleno interior</b>
      *             (las tejas de dx 1..17): la cáscara del tejado, los frontones y su ventana se quedan <b>celda por
-     *             celda</b> como estaban, así que desde fuera se ve igual. Se sube por dentro con una escalera de seis
-     *             escalones en el carril norte de la galería de la posada, por un hueco abierto en las dos capas del
-     *             forjado que cubre lo que se sube (la regla I16).</li>
+     *             celda</b> como estaban, así que desde fuera se ve igual. Se sube por dentro, por un hueco abierto en
+     *             las dos capas del forjado que cubre lo que se sube (la regla I16).</li>
      *       </ul></li>
+     *   <li>52: la <b>ESCALERA DEL DESVÁN, fuera de la galería</b> (lo pidió el jugador: <i>"al poner la escalera al
+     *       tercer piso tapaste el corredor que permite que se entre a los diferentes cuartos del 2do piso; mejor
+     *       sacrifica un cuarto del 2do piso para poner ahí una escalera y libera el corredor"</i>). La escalera de la
+     *       51 subía en recto por el carril <b>norte</b> de la galería de la posada y <b>tapaba el corredor</b> de los
+     *       cuartos (las puertas de los del norte están en ese carril): ahora sube en <b>L</b> dentro del <b>cuarto
+     *       suroeste</b> —el cuarto que se sacrifica para meterla— y la galería queda <b>entera</b> libre, los dos
+     *       carriles. La cama de ese cuarto se <b>recoloca en el desván</b> (en vanilla cada cría necesita una cama
+     *       libre: el pueblo no puede perder ninguna) y el reparador deshace la escalera vieja y vuelve a cerrar su
+     *       hueco en el techo, con tablones y tejas, así que el techo queda sólido como estaba.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 51;
+    public static final int CURRENT_LAYOUT = 52;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -1505,6 +1513,14 @@ public final class VillageManager {
             // que no se pierde ni la despensa ni las camas.
             VillageGenerator.desvanDeLaTaberna(level, center);
             VillageGenerator.cerrarElHuecoDeLaEscalera(level, center);
+            // LA ESCALERA DEL DESVÁN, FUERA DE LA GALERÍA (migración 52, lo pidió el jugador): la de la 51 subía por
+            // el carril norte de la galería y TAPABA EL CORREDOR por el que se entra a los cuartos del segundo piso.
+            // Aquí se deshace aquélla (sus seis escalones y el hueco que abrió en las dos capas del forjado, que se
+            // vuelve a cerrar con tablones y tejas), se recuelga el farol de la galería que se comió su cuarto escalón
+            // y se retira la cama del cuarto suroeste —que pasa a ser la caja de la escalera—: su sustituta la pone el
+            // desván, así que el pueblo no pierde ninguna cama. La escalera nueva (dentro del cuarto) y su hueco los
+            // monta `desvanDeLaTaberna`, que este reparador vuelve a llamar. Es idempotente y no rehace la taberna.
+            VillageGenerator.moverLaEscaleraDelDesvan(level, center);
             // Y su CAMINO desde la plaza (torcido, para no cruzar la parcela de la granja).
             VillageGenerator.caminoALaTaberna(level, center);
             // LA PESQUERA (etapa G): el lago, la caseta del pescador, su BARRIL (el puesto) y sus peces. Va antes de

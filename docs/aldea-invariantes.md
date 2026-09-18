@@ -249,6 +249,22 @@ El **desván** (el hueco bajo el tejado) es un tercer piso: su suelo es la **pla
 (`rehacerMurosDeLaTaberna` llama a `tejadoDeLaTaberna`), o lo rellenará otra vez; y solo se quitan las tejas del
 relleno (`DEEPSLATE_TILES`), nunca las escaleras de las vertientes, la cumbrera ni las columnas de los frontones.
 
+### I21 · La escalera del desván NO ocupa el corredor de la posada
+El corredor del segundo piso son los **dos carriles** de la galería (`dz=7` y `dz=8`): en el muro **norte** (`dz=6`)
+están las puertas de los tres cuartos del norte y en el **sur** (`dz=9`) las de los tres del sur. La escalera del
+desván de la migración 51 subía en recto por el carril norte y **tapaba el paso a los cuartos** —el jugador lo reportó:
+*"al poner la escalera al tercer piso tapaste el corredor que permite que se entre a los diferentes cuartos del 2do
+piso; mejor sacrifica un cuarto del 2do piso para poner ahí una escalera y libera el corredor"*—.
+**Regla:** la escalera del desván sube **dentro del cuarto suroeste** (`dx 1..5`, `dz 10..13`), en **L** (tramo de abajo
+al norte por `dx=5`, tramo de arriba al oeste por `dz=10`, con la **cara alta mirando hacia donde se SUBE**) y **sin
+pisar ni una celda de la galería**; el **hueco del techo** va encima de ella (I16) y **no** donde estaba antes; y el
+cuarto que se sacrifica **entrega su cama al desván** (en vanilla cada cría necesita una **cama libre**: el recuento no
+puede bajar), nunca se pierde. La geometría vive en las constantes `DESVAN_ESCALERA_*` y en **una sola lista de celdas**
+(`celdasDeLaEscaleraDelDesvan`) que usan la escalera y su hueco, para que no se puedan quedar desparejados.
+**Cuidado con el tope:** no puede ir en la fila del alero (`dz=13`, un solo bloque libre: el que sale se golpea con el
+tejado) ni meterse en la **caja de la escalera** (`dx=3`, `dz 8..11`) ni en el **pozo** (`dx 1..2`, `dz 8..11`): la L
+pasa **por encima** del muro del pozo y deja el pozo **tapado** (nadie se cae al comedor).
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
