@@ -34,6 +34,10 @@ Invariantes (todas han petado al menos una vez):
       sobresale de la cota y se lleva por delante los cultivos de las celdas altas: salen como
       OBJETOS tirados por toda la parcela (el fallo que el jugador vio DOS veces). El nivelado
       tiene que estar guardado antes con `bancalHecho()` o `hayCultivos()`.
+  I11 Contar bichos "dentro de la aldea" solo con la distancia HORIZONTAL: un esqueleto en una
+      cueva bajo la plaza congelaba el latido del pueblo y un asediador en una cueva hacia CAER
+      la aldea sin que el jugador pudiera verlo. Todo recuento pasa por `dentroDelRecinto`
+      (recinto en XZ + banda de altura sobre la cota).
 """
 import os
 import re
@@ -90,6 +94,16 @@ REGLAS = [
      r'nivelarHuella\([^;]*PLOT_',
      'Nivelar la huella de una PARCELA recorta el terreno y se lleva los cultivos (salen como items por la '
      'parcela): pregunta antes con bancalHecho() o hayCultivos().', 8),
+    # I11 nace de la CAIDA DE UNA ALDEA EN JUEGO (aldea 1, cota 95): un bicho "dentro de la aldea" se contaba
+    # solo con la distancia horizontal, asi que un esqueleto en una cueva bajo la plaza congelaba el latido del
+    # pueblo (ni cultivos, ni comida, ni reparaciones, ni repoblacion) y un asediador que se metia en una cueva
+    # hacia CAER la aldea sin que el jugador pudiera verlo. Medido en su guardado: 24 monstruos "dentro" con la
+    # regla vieja, 18 de ellos en cuevas (y=5..89); con la altura, 6. Todo recuento de bichos "dentro de la
+    # aldea" pasa por VillageManager.dentroDelRecinto (recinto en XZ + banda de altura sobre la cota).
+    ('I11', [os.path.join(PAQUETE, 'world', 'VillageManager.java')],
+     r'getEntitiesOfClass\((\w+\.)*Monster\.class|MobCategory\.MONSTER',
+     'Recuento de bichos "dentro de la aldea" sin la ALTURA: usa dentroDelRecinto(...) (un bicho en una cueva '
+     'bajo la plaza no es un invasor, y hacia caer la aldea).', 12),
 ]
 
 # Formas legitimas: si la linea las cita, no se avisa.
@@ -135,6 +149,11 @@ def revisar():
                 if clave == 'I10' and contexto:
                     ventana = ''.join(contenido[max(0, i - contexto):i])
                     if 'bancalHecho' in ventana or 'hayCultivos' in ventana:
+                        continue
+                # I11: se admite si el recuento usa el ayudante (recinto + altura), delante o detras.
+                if clave == 'I11' and contexto:
+                    ventana = ''.join(contenido[max(0, i - contexto):i + contexto + 1])
+                    if 'dentroDelRecinto' in ventana or 'cotaDeLaPlaza' in ventana:
                         continue
                 fallos.append((clave, os.path.basename(ruta), i + 1, linea.strip()[:110], aviso))
     return fallos

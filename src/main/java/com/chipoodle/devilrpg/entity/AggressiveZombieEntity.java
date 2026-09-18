@@ -525,9 +525,17 @@ public class AggressiveZombieEntity extends Zombie {
         // AUTO-CURACIÓN: si al cargar el asedio del que formaba parte YA no existe (los asedios no se persisten: se
         // resolvió mientras este zombie estaba descargado, o el mundo se guardó a mitad), se le quita la marca de
         // asediador. Si no, se quedaría para siempre sin poder descartarse por lejanía (ver `removeWhenFarAway`).
-        if (worldSiegeIndex >= 0 && !level().isClientSide && level() instanceof ServerLevel serverLevel
+        boolean eraAsediador = worldSiegeIndex >= 0;
+        if (eraAsediador && !level().isClientSide && level() instanceof ServerLevel serverLevel
                 && !VillageManager.hayAsedio(serverLevel, worldSiegeIndex)) {
             worldSiegeIndex = -1;
+        }
+        // El brillo de asediador es una marca de la CAMPAÑA en curso: si al cargar ya no hay asedio, se le quita
+        // (si no, un asediador que se quedó descargado al resolverse el asedio volvería al mundo brillando para
+        // siempre, como si siguiera en campaña). Solo se toca el brillo del que ERA asediador: así no se le
+        // apaga la marca a un bicho que brille por otra cosa.
+        if (eraAsediador && worldSiegeIndex < 0) {
+            setGlowingTag(false);
         }
         NbtUtils.readBlockPos(tag, "DevilRpgHomePos").ifPresent(pos -> homePos = pos);
         homeRadius = tag.getInt("DevilRpgHomeRadius");

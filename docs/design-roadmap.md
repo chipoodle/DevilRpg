@@ -1293,6 +1293,75 @@ intacta (72 cultivos antes y después).
 - **Lo siguiente**: la **verificación en partida** de la cadena entera de la comida (huerta → despensa → cocina →
   raciones) y, de ahí, lo que pida el jugador (la **cerveza** de las pipas y el **pescador con su edificio y su lago**).
 
+### 3b.31 La aldea que cayó "sola" (asedio a ciegas + bichos de las cuevas)
+
+El jugador preguntó *"¿por qué cayó la aldea? ¿qué pasó?"* con el log delante. **La aldea 1 cayó de verdad**, y la
+causa medida fue doble: el **asedio era mudo** (no se veía cómo iba) y el **perímetro no miraba la altura** (contaba
+como invasor a cualquier bicho que estuviera en las cuevas de debajo).
+
+**Qué pasó exactamente** (log + guardado `New World (1)`, que es el mundo que estaba jugando):
+
+| Hora | Qué |
+|---|---|
+| 18:46:25 | El jugador pasa por la plaza de la aldea 1 → `start()`: *"Llegaste a la aldea… los monstruos se acercan."* |
+| 18:48:09 | `GRACE_TICKS` (90 s) → la ola: *"¡Defiende la aldea de los monstruos!"* (8 + índice 1 × 2 = **10 zombies agresivos** a 65-73 bloques del centro) |
+| 18:48:09-18:50:09 | El jugador pelea **DENTRO del pueblo** contra los bichos de la noche (zombies, esqueletos, arañas, creepers, zombies agresivos: el log está lleno de `doHurtTarget`). Media hora después de la caída se midió con los **logs de depuración** (los minions se teleportan junto al dueño y el log imprime su posición cada 10 s): **32 de 32 posiciones registradas estaban dentro de las murallas**, entre **4,5 y 47,8** bloques de la plaza — y la muralla está a **62** |
+| 18:50:09 | `SIEGE_TIMEOUT_TICKS` (2 min) **justo** después de la ola → *"La aldea cayó…"* + `ruin()`: **1.483 bloques** al suelo (aire, telarañas, piedra mohosa) |
+
+**No fue "sin aldeanos"**: en el guardado había **11 aldeanos vivos** dentro del pueblo (granjero, herrero de armas,
+carnicero, herrero de herramientas, pescador, clérigo, pastor, holgazán, granjero… incluso dos **en el segundo piso de
+la taberna**). Fue la rama del **tiempo agotado**: "los monstruos entraron y sobrevivieron". Y la rama solo se toma si
+**todos** los atacantes vivos están *dentro*… con la regla de entonces, que era **solo horizontal**.
+
+> **Aviso de escala (el error que hay que no repetir):** la valla está en **62**, no en 36 — un pueblo grande ocupa
+> casi todo lo que rodea la plaza, así que "pelear en las afueras" y "estar dentro de las murallas" son lo mismo a
+> 40-60 bloques del centro. Medir con el radio viejo (o con el centro de otra partida, que es lo que pasó aquí al
+> analizar el log) hace leer una defensa entera al revés. Los comentarios que aún decían "radio 36" en
+> `VillageManager` (`spawnWave` y la zona de spawn de la ola) están corregidos.
+
+**Las dos causas, medidas:**
+
+1. **Un bicho en una cueva contaba como invasor.** El perímetro (`PERIMETER_RADIUS` = la valla = **62**) y el latido del
+   pueblo (`hayEnemigosDentro`) medían **solo** `dx*dx + dz*dz`. Medido en su guardado (centro real **(990,990)**, cota
+   **95**, sacado del plano: x/z 928..1052 = centro ± 62): **24 monstruos** contaban como "dentro de la aldea" y **18**
+   estaban en cuevas o repisas (de `y=5` a `y=89`); con la banda de altura quedan **6**, todos a la altura del pueblo.
+   - Si uno de los 10 asediadores se metía en una cueva bajo la plaza, la aldea **caía sin que el jugador pudiera
+     hacer nada**: no se le ve, y habría que cavar a ciegas en un disco de 62 bloques. La regla escrita del asedio dice
+     justo lo contrario (*"si no llegan a los muros, no asedian y no pueden ganar"*).
+   - Y el latido del pueblo (cultivar, comer, reparar, **repoblar**) se congelaba por un esqueleto en una cueva, sin
+     que hubiera **nadie** dentro.
+2. **El asedio era mudo.** Entre los dos avisos ("Llegaste a la aldea", "¡Defiende la aldea!") y el *"La aldea cayó…"*
+   final **no había ni un solo mensaje** de cómo iba: ni cuántos quedaban, ni cuántos estaban dentro, ni cuánto tiempo
+   quedaba, y los 10 asediadores **no se distinguían** de los bichos de la noche (el jugador mató decenas **dentro del
+   pueblo** sin saber que quedaba alguno de los marcados).
+
+**Arreglo:**
+
+- **`VillageManager.dentroDelRecinto`**: la **única** verdad de "dentro de la aldea" para un bicho = disco en XZ
+  (invariante I2) **+ banda de altura** sobre la cota (`RECINTO_DY_ABAJO` = 6, `RECINTO_DY_ARRIBA` = 16: cubre la
+  zanja y el segundo piso/tejado, deja fuera las cuevas). La usan el **latido** (`hayEnemigosDentro`), el **perímetro
+  del asedio** (`allZombiesInsidePerimeter`) y las **partículas de intrusión**.
+- **Estado del asedio visible**: barra de acción cada 15 s y cuenta atrás a 30 y 10 s —
+  *"Asedio a la aldea: quedan 4 y 2 DENTRO del muro · 0:45 · si aguantan dentro, la aldea cae"*—, cada baja se canta
+  al momento (*"Asediador abatido: quedan 3."*), los asediadores van **marcados con brillo** al spawnear
+  (`setGlowingTag`, se les quita al resolverse el asedio y al cargarse sin asedio) y el aviso de la ola lo dice.
+- **La caída dice el motivo**: *"La aldea cayó: los monstruos aguantaron dentro de los muros."*
+
+**Verificado** con el arnés temporal (mundo aparte, se borra antes de commitear):
+
+| Caso | `dentroDelRecinto` |
+|---|---|
+| en la plaza / segundo piso (cota+7) / lo más alto admitido (cota+16) | **sí** |
+| a 61 del centro (cota) | **sí** |
+| zanja (cota-5) / lo más bajo admitido (cota-6) | **sí** |
+| pozo (cota-7) / **cueva bajo la plaza (cota-30)** / repisa (cota+30) | **no** |
+| a 63 del centro (cota) / cueva a 50 del centro | **no** |
+
+**Guardias para que no vuelva**: invariante **I12** ("dentro de la aldea, para un bicho, es recinto **+ altura**") e
+invariante **I13** ("un asedio nunca se pierde a ciegas") en `docs/aldea-invariantes.md`, y **regla I11 del lint**
+(un recuento de `Monster`/`MobCategory.MONSTER` en `VillageManager` sin `dentroDelRecinto` cerca **falla la puerta de
+commit**).
+
 ## 3c) Iteración 2 — GUARIDAS ✅ (en curso)
 
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.

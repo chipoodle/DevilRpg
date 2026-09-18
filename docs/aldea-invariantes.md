@@ -29,6 +29,7 @@ En cada cambio en `world/Village*` o en los goals de aldeano hay que:
 > | I8 | `setBlock`/`destroyBlock`/`colocar` en el latido | I6 |
 > | I9 | construcción nueva sin subir `CURRENT_LAYOUT` | I7 |
 > | I10 | nivelar la huella de una **parcela** sin preguntar antes | I11 |
+> | I11 | contar bichos "dentro de la aldea" sin la **altura** | I12 |
 >
 > I8, I9 y I10 de esta sección (abajo) **no tienen regla en el lint**: se vigilan a mano.
 
@@ -52,6 +53,8 @@ La aldea es un **recinto en el plano XZ**. Midiendo en 3D, un aldeano a 30 bloqu
 "fuera de su pueblo" (el recolector se quedaba bloqueado en la puerta del goal) y un zombie dos bloques por encima
 del suelo contaba como "no ha entrado" en el asedio, salvando la aldea de rebote.
 **Regla:** `dx*dx + dz*dz` para "¿está dentro del radio?".
+**Ojo (I12):** para un **bicho** eso no basta: además tiene que estar **a la altura del pueblo**. La horizontal sola
+metía en el pueblo a los monstruos de las **cuevas** de debajo (ver I12).
 
 ### I3 · Atascado = NO ACERCARSE (un contador de paciencia no cuenta los ticks de camino)
 Los goals llevan `stuckTicks` y `canContinueToUse` se corta a `STUCK_LIMIT`. Contando **cada tick** mientras el
@@ -133,6 +136,38 @@ tiene tierra labrada o cultivos, no se toca (la tierra de cultivo está en el pl
 El lint (**I10**) lo comprueba: un `nivelarHuella` sobre `PLOT_*` sin `bancalHecho()`/`hayCultivos()` delante
 **falla la puerta de commit**.
 
+### I12 · "Dentro de la aldea", para un BICHO, es recinto **+ altura**
+Nació de una **aldea caída en juego**. Un bicho "dentro del pueblo" se contaba **solo** con la distancia horizontal
+(radio de la valla), y en una aldea de montaña eso mete en el pueblo a **todo lo que vive en las cuevas de debajo**.
+Medido en el guardado del jugador justo después de la caída (aldea 1, cota 95, centro `(990,990)`): **24** monstruos
+contaban como "dentro" y **18** estaban en cuevas o repisas (`y=5` … `y=89`); con la banda de altura quedan **6**,
+todos a la altura del pueblo. Dos consecuencias, las dos vistas:
+
+- **El latido del pueblo se congelaba.** `hayEnemigosDentro` es la puerta de cultivar, comer, reparar y **repoblar**:
+  con un esqueleto en una cueva a 60 bloques por debajo de la plaza, la aldea entera dejaba de trabajar (y no se
+  repoblaba) sin que hubiera **nadie** dentro.
+- **La aldea caía sin que el jugador pudiera hacer nada.** Al agotarse el tiempo del asedio, si **todos** los
+  atacantes vivos estaban dentro, la aldea caía y quedaba en **ruinas para siempre**. Un asediador que se metía en
+  una cueva bajo la plaza contaba como invasor: no se le ve, y habría que cavar a ciegas en 62 bloques de radio. La
+  regla escrita del asedio dice justo lo contrario (*"si no llegan a los muros, no asedian y no pueden ganar"*).
+
+**Regla:** todo recuento de bichos "dentro de la aldea" (latido, perímetro del asedio, partículas de intrusión) pasa
+por `VillageManager.dentroDelRecinto`: disco en **XZ** (I2) **y** una banda de altura sobre `cotaDeLaPlaza`
+(`RECINTO_DY_ABAJO` = 6 por debajo, `RECINTO_DY_ARRIBA` = 16 por encima: cubre la zanja y el segundo piso/tejado sin
+meter las cuevas). El lint (**I11**) vigila que no se vuelva a contar un `Monster`/`MobCategory.MONSTER` sin el
+ayudante cerca.
+
+### I13 · Un asedio NUNCA se pierde a ciegas (ni se gana en silencio)
+El jugador vio caer su aldea **peleando dentro de ella** (medido con los logs: **32 de 32 posiciones suyas dentro de
+las murallas**, entre 4,5 y 47,8 bloques de la plaza, con la valla a **62**): mató decenas de bichos y el chat solo le
+dijo *"La aldea cayó…"*, sin decir **por qué** ni cuántos atacantes quedaban dentro. Con la ola de 10 asediadores
+mezclada entre los bichos de la noche y sin ninguna marca, no había forma de saber a quién tenía que matar.
+**Regla:** mientras hay asedio, el jugador recibe (barra de acción, cada `SIEGE_STATUS_INTERVAL` = 15 s y en la cuenta
+atrás de `SIEGE_WARN_SECONDS` = 30 y 10 s) **cuántos atacantes quedan, cuántos están DENTRO del muro y cuánto tiempo
+queda**; cada baja se canta al momento; los asediadores van **marcados con brillo** (`setGlowingTag`, se les quita al
+resolverse el asedio y al cargarse sin asedio) y el mensaje de la caída dice el **motivo** ("los monstruos aguantaron
+dentro de los muros").
+
 ---
 
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
@@ -167,7 +202,7 @@ Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento 
 
 | Herramienta | Para qué |
 |---|---|
-| `python tools/lint_aldea.py --strict` | Vigila I1-I9 en el código. Puerta antes de commitear. |
+| `python tools/lint_aldea.py --strict` | Vigila I1-I11 en el código. Puerta antes de commitear. |
 | `build/inventario.py` | Inventario de estructuras de una aldea en el guardado (qué edificios hay y dónde). |
 | `build/granjaestado.py`, `build/farmdiag.py`, `build/columnas.py`, `build/perfilcol.py` | Estado de la granja (cultivos, edades, cotas) y columnas crudas. |
 | `build/items.py`, `build/contenedores.py` | Objetos en el suelo por tipo y contenido de cofres/despensa/almacén. |

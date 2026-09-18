@@ -81,7 +81,9 @@ public final class VillageManager {
     /**
      * Zona mínima/máxima (bloques) a la que spawnea la ola: <b>derivada del radio de la valla</b>, siempre FUERA.
      * <p>
-     * Antes eran 32/40 fijos: al agrandar la aldea (radio 36) los monstruos habrían aparecido <b>dentro</b> del muro.
+     * Antes eran 32/40 fijos: cuando la valla estaba en 36 los monstruos habrían aparecido <b>dentro</b> del muro.
+     * <b>Hoy la valla está en 62</b> ({@code VillageGenerator.FENCE_RADIUS}), así que la ola nace a 65-73 del
+     * centro: un pueblo grande NO se defiende "en las afueras" — casi todo lo que rodea la plaza está dentro.
      */
     private static final int WAVE_SPAWN_MIN = VillageGenerator.FENCE_RADIUS + 3;
     private static final int WAVE_SPAWN_MAX = VillageGenerator.FENCE_RADIUS + 11;
@@ -90,6 +92,26 @@ public final class VillageManager {
      * aquí se considera que un zombie del asedio <b>no ha entrado</b>.
      */
     private static final int PERIMETER_RADIUS = VillageGenerator.FENCE_RADIUS;
+    /**
+     * Banda <b>vertical</b> del recinto: por debajo de la cota se admiten {@code RECINTO_DY_ABAJO} bloques (una
+     * zanja, la acequia, el corral algo más bajo) y por encima {@code RECINTO_DY_ARRIBA} (el segundo piso de la
+     * taberna, un tejado, lo alto del muro). Un bicho <b>mucho</b> más abajo (una cueva bajo la plaza) o más
+     * arriba (una repisa del monte) NO está dentro del pueblo, aunque su distancia horizontal diga que sí.
+     * <p>
+     * Medido en el guardado del jugador (aldea 1, cota 95): con la regla vieja —solo horizontal— contaban como
+     * "dentro de la aldea" <b>24</b> monstruos, y <b>18</b> de ellos estaban en cuevas (de {@code y=5} a
+     * {@code y=89}); con la banda quedan <b>6</b>, todos a la altura del pueblo. Eso tenía dos consecuencias:
+     * el latido del pueblo se paraba (no cultivaban, ni comían, ni reparaban, ni se repoblaba) por un esqueleto
+     * en una cueva, y un asediador que se metiera en una cueva bajo la plaza hacía CAER la aldea sin que el
+     * jugador pudiera verlo ("si no llegan a los muros, no asedian y no pueden ganar", que es la regla que ya
+     * estaba escrita para el asedio).
+     */
+    private static final int RECINTO_DY_ABAJO = 6;
+    private static final int RECINTO_DY_ARRIBA = 16;
+    /** Cada cuánto se informa del asedio en curso (15 s): un asedio que se pierde a ciegas es una derrota injusta. */
+    private static final int SIEGE_STATUS_INTERVAL = 15 * 20;
+    /** Cuenta atrás (segundos que quedan) que se avisa aparte, para que el final no pille por sorpresa. */
+    private static final int[] SIEGE_WARN_SECONDS = {30, 10};
 
     // --- Salud del asentamiento (Iteración 3, paso 2) ----------------------------------------------
 
@@ -662,6 +684,33 @@ public final class VillageManager {
     }
 
     /**
+     * ¿Ese bicho está <b>dentro del recinto</b> de la aldea? La aldea es un recinto en <b>XZ</b> (invariante I2:
+     * un aldeano unos bloques por encima del suelo sigue estando en su pueblo), pero además hay que estar <b>a la
+     * altura del pueblo</b> ({@link #RECINTO_DY_ABAJO}/{@link #RECINTO_DY_ARRIBA} sobre la cota): un bicho en una
+     * cueva bajo la plaza no ha pasado los muros.
+     * <p>
+     * Es la <b>única</b> verdad de "dentro de la aldea" para bichos (la usan el latido del pueblo, el perímetro del
+     * asedio y las partículas de intrusión). Mide la cota, así que <b>no</b> se llama dentro de un bucle: para
+     * bucles está la variante con la cota ya medida.
+     */
+    public static boolean dentroDelRecinto(ServerLevel level, BlockPos center, net.minecraft.world.entity.Entity bicho,
+                                          double radio) {
+        return dentroDelRecinto(VillageGenerator.cotaDeLaPlaza(level, center), center, bicho, radio);
+    }
+
+    /** Igual, con la cota ya medida (para bucles: la cota se pide UNA vez, no por bicho). */
+    public static boolean dentroDelRecinto(int cota, BlockPos center, net.minecraft.world.entity.Entity bicho,
+                                          double radio) {
+        double dx = bicho.getX() - (center.getX() + 0.5D);
+        double dz = bicho.getZ() - (center.getZ() + 0.5D);
+        if (dx * dx + dz * dz > radio * radio) {
+            return false;
+        }
+        double dy = bicho.getY() - cota;
+        return dy >= -RECINTO_DY_ABAJO && dy <= RECINTO_DY_ARRIBA;
+    }
+
+    /**
      * ¿Hay <b>monstruos DENTRO de la aldea</b> ahora mismo? No es lo mismo que {@link #isUnderAttack} (que mira los
      * asedios declarados): en la partida del jugador hay zombies agresivos sueltos que entran al pueblo y matan
      * aldeanos <b>sin que haya asedio</b>, y con eso el gestor seguía repoblando.
@@ -671,14 +720,19 @@ public final class VillageManager {
      * <b>20 a 0</b> y la aldea pasó hambre <b>por repoblar en plena masacre</b>. Con monstruos dentro no se repuebla:
      * primero hay que limpiar el pueblo (o esperar a que se vayan).
      * <p>
-     * La distancia es <b>horizontal</b> (invariante I2) y el radio es el del muro.
+     * El radio es el del muro y la altura la del pueblo ({@link #dentroDelRecinto}): contando solo la horizontal, un
+     * esqueleto en una cueva a 60 bloques bajo la plaza <b>congelaba el pueblo entero</b> (ni cultivos, ni comida, ni
+     * reparaciones, ni repoblación) sin que hubiera nadie dentro.
      */
     private static boolean hayEnemigosDentro(ServerLevel level, BlockPos center) {
         double radio = VillageGenerator.FENCE_RADIUS;
-        for (Monster monstruo : level.getEntitiesOfClass(Monster.class, new AABB(center).inflate(radio))) {
-            double dx = monstruo.getX() - (center.getX() + 0.5D);
-            double dz = monstruo.getZ() - (center.getZ() + 0.5D);
-            if (dx * dx + dz * dz <= radio * radio) {
+        List<Monster> monstruos = level.getEntitiesOfClass(Monster.class, new AABB(center).inflate(radio));
+        if (monstruos.isEmpty()) {
+            return false;   // el caso normal (y el más barato): no se mide ni la cota
+        }
+        int cota = VillageGenerator.cotaDeLaPlaza(level, center);
+        for (Monster monstruo : monstruos) {
+            if (dentroDelRecinto(cota, center, monstruo, radio)) {
                 return true;
             }
         }
@@ -732,11 +786,17 @@ public final class VillageManager {
                 d.waveSpawned = true;
                 ServerPlayer p = level.getServer().getPlayerList().getPlayer(d.playerUUID);
                 if (p != null) {
-                    p.displayClientMessage(Component.literal("¡Defiende la aldea de los monstruos!"), false);
+                    p.displayClientMessage(Component.literal("¡Defiende la aldea de los monstruos! Los asediadores"
+                            + " van marcados con un brillo: si aguantan dentro del muro, la aldea cae."), false);
                 }
             }
 
             if (d.waveSpawned) {
+                // ESTADO DEL ASEDIO: un asedio que se pierde sin decir cómo iba es una derrota a ciegas (el
+                // jugador vio caer su aldea 1 DENTRO de las murallas, peleando, sin saber que quedaba un
+                // atacante de la ola dentro: la valla está a 62 del centro, así que el pueblo es casi todo
+                // lo que se ve alrededor de la plaza).
+                informarDelAsedio(level, d);
                 boolean waveCleared = isWaveCleared(level, d.wave);
                 boolean timeout = d.tickTicks > GRACE_TICKS + SIEGE_TIMEOUT_TICKS;
                 if (waveCleared || timeout) {
@@ -781,8 +841,8 @@ public final class VillageManager {
                             // aldea seguía "viva", así que el gestor la repoblaba más tarde como si nada.
                             fallVillage(level, VillageSavedData.get(level), d.objectiveIndex, d.center);
                             player.displayClientMessage(Component.literal(isCurrentObjective
-                                    ? "La aldea cayó... El objetivo avanza."
-                                    : "La aldea cayó..."), false);
+                                    ? "La aldea cayó: los monstruos aguantaron dentro de los muros. El objetivo avanza."
+                                    : "La aldea cayó: los monstruos aguantaron dentro de los muros."), false);
                         }
                         if (isCurrentObjective) {
                             aux.setObjectiveIndex(d.objectiveIndex + 1, player);
@@ -800,13 +860,86 @@ public final class VillageManager {
         }
     }
 
+    /**
+     * Informa del asedio en curso (barra de acción cada {@link #SIEGE_STATUS_INTERVAL} y cuenta atrás en
+     * {@link #SIEGE_WARN_SECONDS}): cuántos atacantes quedan, cuántos están <b>dentro del muro</b> (los únicos que
+     * pueden hacer caer la aldea) y cuánto tiempo queda. Además canta cada baja al momento: es el progreso real.
+     */
+    private static void informarDelAsedio(ServerLevel level, VillageDefense d) {
+        ServerPlayer p = level.getServer().getPlayerList().getPlayer(d.playerUUID);
+        if (p == null) {
+            return;
+        }
+        int vivos = contarAtacantesVivos(level, d);
+        long restante = GRACE_TICKS + SIEGE_TIMEOUT_TICKS - d.tickTicks;
+        if (d.ultimosVivos >= 0 && vivos < d.ultimosVivos) {
+            p.displayClientMessage(Component.literal(vivos == 0
+                    ? "¡El último asediador ha caído!"
+                    : "Asediador abatido: quedan " + vivos + "."), true);
+        }
+        d.ultimosVivos = vivos;
+        long segundos = Math.max(0L, restante / 20L);
+        boolean toca = d.tickTicks % SIEGE_STATUS_INTERVAL == 0;
+        for (int aviso : SIEGE_WARN_SECONDS) {
+            if (segundos == aviso) {
+                toca = true;
+            }
+        }
+        if (!toca) {
+            return;
+        }
+        int cota = VillageGenerator.cotaDeLaPlaza(level, d.center);
+        int dentro = contarAtacantesDentro(level, d, cota);
+        String tiempo = String.format("%d:%02d", segundos / 60L, segundos % 60L);
+        String estado = dentro > 0
+                ? "quedan " + vivos + " y " + dentro + " DENTRO del muro"
+                : "quedan " + vivos + " atacantes (ninguno ha pasado el muro)";
+        String desenlace = dentro > 0 ? " · si aguantan dentro, la aldea cae" : " · si no entran, no pueden ganar";
+        p.displayClientMessage(Component.literal("Asedio a la aldea: " + estado + " · " + tiempo + desenlace), true);
+    }
+
+    /** Atacantes de la ola que siguen <b>vivos</b> (los descargados no cuentan: el juego ya los da por idos). */
+    private static int contarAtacantesVivos(ServerLevel level, VillageDefense d) {
+        int vivos = 0;
+        for (UUID uuid : d.wave) {
+            net.minecraft.world.entity.Entity e = level.getEntity(uuid);
+            if (e != null && e.isAlive()) {
+                vivos++;
+            }
+        }
+        return vivos;
+    }
+
+    /** Atacantes vivos que están <b>dentro del recinto</b> (los únicos que pueden hacer caer la aldea). */
+    private static int contarAtacantesDentro(ServerLevel level, VillageDefense d, int cota) {
+        int dentro = 0;
+        for (UUID uuid : d.wave) {
+            net.minecraft.world.entity.Entity e = level.getEntity(uuid);
+            if (e != null && e.isAlive() && dentroDelRecinto(cota, d.center, e, PERIMETER_RADIUS)) {
+                dentro++;
+            }
+        }
+        return dentro;
+    }
+
+    /** Brillo de asediador: saber a QUIÉN hay que matar sin adivinarlo entre los bichos de la noche. */
+    private static void marcarAsediadores(ServerLevel level, List<UUID> wave, boolean brillo) {
+        for (UUID uuid : wave) {
+            net.minecraft.world.entity.Entity e = level.getEntity(uuid);
+            if (e != null) {
+                e.setGlowingTag(brillo);
+            }
+        }
+    }
+
     private static void spawnWave(ServerLevel level, VillageDefense d) {
         Random random = new Random();
         // La ola crece al alejarse del ancla, pero con un LÍMITE: no se extiende infinitamente.
         int count = DEFAULT_WAVE + Math.min(d.objectiveIndex * 2, MAX_WAVE_EXTRA);
         for (int i = 0; i < count; i++) {
             double angle = random.nextDouble() * Math.PI * 2.0D;
-            // FUERA de la valla (radio 36): spawnea entre WAVE_SPAWN_MIN y WAVE_SPAWN_MAX bloques del centro.
+            // FUERA de la valla (hoy FENCE_RADIUS = 62, no 36: el radio viejo de este comentario hizo medir mal
+            // una defensa entera): spawnea entre WAVE_SPAWN_MIN y WAVE_SPAWN_MAX bloques del centro.
             int dist = WAVE_SPAWN_MIN + random.nextInt(WAVE_SPAWN_MAX - WAVE_SPAWN_MIN);
             int x = (int) Math.round(d.center.getX() + Math.cos(angle) * dist);
             int z = (int) Math.round(d.center.getZ() + Math.sin(angle) * dist);
@@ -823,6 +956,9 @@ public final class VillageManager {
                 d.wave.add(zombie.getUUID());
             }
         }
+        // Los asediadores van marcados con brillo (ver `marcarAsediadores`): sin la marca, en una noche con
+        // decenas de bichos alrededor el jugador no puede saber a quién tiene que matar.
+        marcarAsediadores(level, d.wave, true);
     }
 
     private static boolean isWaveCleared(ServerLevel level, List<UUID> wave) {
@@ -838,20 +974,20 @@ public final class VillageManager {
     /**
      * ¿Están <b>todos</b> los zombies vivos de la ola dentro del perímetro de la aldea (pasados los muros)?
      * Se usa al agotarse el tiempo: si alguno se quedó fuera, el asedio fracasó y la aldea se salva.
+     * <p>
+     * "Dentro" es {@link #dentroDelRecinto}: el disco del pueblo (en XZ, invariante I2) <b>y</b> a la altura del
+     * pueblo. Midiendo solo la horizontal, un asediador que se caía a una cueva bajo la plaza contaba como
+     * invasor y la aldea <b>caía sin que el jugador pudiera hacer nada</b> (no se le ve, y hay que cavar a
+     * ciegas): la regla escrita es justo la contraria ("si no llegan a los muros, no asedian y no pueden ganar").
      */
     private static boolean allZombiesInsidePerimeter(ServerLevel level, VillageDefense d) {
-        double perimeterSqr = (double) PERIMETER_RADIUS * PERIMETER_RADIUS;
+        int cota = VillageGenerator.cotaDeLaPlaza(level, d.center);
         for (UUID uuid : d.wave) {
             net.minecraft.world.entity.Entity e = level.getEntity(uuid);
             if (e == null || !e.isAlive()) {
                 continue;
             }
-            // La distancia es HORIZONTAL: el perímetro es un disco del pueblo (en XZ). Midiendo en 3D, un zombie que
-            // estuviera un par de bloques por encima del suelo contaba como "no ha entrado" y la aldea se salvaba de
-            // rebote.
-            double dx = e.getX() - (d.center.getX() + 0.5D);
-            double dz = e.getZ() - (d.center.getZ() + 0.5D);
-            if (dx * dx + dz * dz > perimeterSqr) {
+            if (!dentroDelRecinto(cota, d.center, e, PERIMETER_RADIUS)) {
                 return false; // éste no llegó a entrar
             }
         }
@@ -869,6 +1005,8 @@ public final class VillageManager {
                 // `AggressiveZombieEntity.removeWhenFarAway`). Si no, los supervivientes de cada asedio se quedarían
                 // por el mundo para siempre.
                 zombie.setWorldSiegeIndex(-1);
+                // Y el brillo de asediador: si el asedio ya se resolvió, ese bicho es un zombie agresivo normal.
+                zombie.setGlowingTag(false);
             }
         }
     }
@@ -999,6 +1137,9 @@ public final class VillageManager {
         }
         WORLD_SIEGES.computeIfAbsent(level, l -> new ArrayList<>())
                 .add(new WorldSiege(settlement.objectiveIndex(), settlement.center(), wave));
+        // Los que marchan contra la aldea van marcados con brillo, igual que la ola del asedio clásico: es la
+        // única forma de saber a quién hay que parar cuando llegan de noche entre los bichos del campo.
+        marcarAsediadores(level, wave, true);
         DevilRpg.LOGGER.info("[Village] La aldea {} está siendo atacada: {} enemigos marchan a por ella",
                 settlement.objectiveIndex(), wave.size());
         announceNearby(level, settlement.center(),
@@ -2789,19 +2930,21 @@ public final class VillageManager {
                             1, 0.08D, 0.0D, 0.08D, 0.0D);
                 }
             }
-            // INTRUSIÓN: chispas oscuras sobre los enemigos que están dentro del perímetro de la aldea.
+            // INTRUSIÓN: chispas oscuras sobre los enemigos que están dentro del perímetro de la aldea. Se marcan
+            // los que de verdad están DENTRO (recinto + altura): un bicho en una cueva bajo la plaza no es un
+            // invasor, y marcarlo hacía creer al jugador que la aldea estaba tomada.
             if (distSqr < 160.0D * 160.0D) {
-                double limite = (double) VillageGenerator.FENCE_RADIUS * VillageGenerator.FENCE_RADIUS;
-                for (net.minecraft.world.entity.Mob mob : level.getEntitiesOfClass(net.minecraft.world.entity.Mob.class,
-                        new AABB(centro).inflate(VillageGenerator.FENCE_RADIUS + 8.0D))) {
-                    if (mob.getType().getCategory() != net.minecraft.world.entity.MobCategory.MONSTER) {
-                        continue;
-                    }
-                    double dx = mob.getX() - centro.getX();
-                    double dz = mob.getZ() - centro.getZ();
-                    if (dx * dx + dz * dz <= limite) {
-                        level.sendParticles(net.minecraft.core.particles.ParticleTypes.SCULK_SOUL,
-                                mob.getX(), mob.getY() + 1.9D, mob.getZ(), 2, 0.25D, 0.15D, 0.25D, 0.01D);
+                List<net.minecraft.world.entity.Mob> bichos = level.getEntitiesOfClass(
+                        net.minecraft.world.entity.Mob.class,
+                        new AABB(centro).inflate(VillageGenerator.FENCE_RADIUS + 8.0D),
+                        mob -> mob.getType().getCategory() == net.minecraft.world.entity.MobCategory.MONSTER);
+                if (!bichos.isEmpty()) {
+                    int cotaBichos = VillageGenerator.cotaDeLaPlaza(level, centro);
+                    for (net.minecraft.world.entity.Mob mob : bichos) {
+                        if (dentroDelRecinto(cotaBichos, centro, mob, VillageGenerator.FENCE_RADIUS)) {
+                            level.sendParticles(net.minecraft.core.particles.ParticleTypes.SCULK_SOUL,
+                                    mob.getX(), mob.getY() + 1.9D, mob.getZ(), 2, 0.25D, 0.15D, 0.25D, 0.01D);
+                        }
                     }
                 }
             }
@@ -2856,6 +2999,8 @@ public final class VillageManager {
         final List<UUID> wave = new ArrayList<>();
         long tickTicks;
         boolean waveSpawned;
+        /** Último recuento de atacantes vivos, para cantar cada baja (y no repetir el mensaje). */
+        int ultimosVivos = -1;
 
         VillageDefense(int objectiveIndex, UUID playerUUID, BlockPos center) {
             this.objectiveIndex = objectiveIndex;
