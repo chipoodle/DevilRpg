@@ -34,8 +34,13 @@ import java.util.EnumSet;
  */
 public class VillagerTavernGoal extends Goal {
 
-    /** Prioridad: por debajo de todos los oficios (4) y del guardia (3), para no quitarles la faena. */
-    public static final int PRIORIDAD = 6;
+    /**
+     * Prioridad: por debajo de todos los oficios (4), de la reparación del obrero (5) y de la recogida por oficio
+     * (6), para no quitarles la faena. Era <b>6</b> y la recogida por oficio pasó a 6 (etapa H): se sube a 7 para
+     * que no empaten (en un empate gana el que se engancha antes, y la recogida se le pone al aldeano antes que la
+     * taberna).
+     */
+    public static final int PRIORIDAD = 7;
     /** Puntos de comida que tiene que tener la despensa para que el pueblo vaya a la taberna a comer. */
     private static final int COMIDA_MINIMA = 4;
     /** Ticks que se queda comiendo en la mesa (y de charla) una vez llega. */

@@ -47,14 +47,20 @@ import java.util.function.Predicate;
  *   <li><b>Cocinero</b>: carne cruda y patatas → la <b>despensa</b> (su ahumador cocina desde ahí).</li>
  *   <li><b>Clérigo</b>: carne podrida, pepitas de oro y pólvora → el <b>almacén</b>.</li>
  * </ul>
- * Va a prioridad {@value #PRIORIDAD} —<b>por encima</b> de la faena del oficio (4)— pero con un radio corto
+ * Va a prioridad {@value #PRIORIDAD} —<b>por debajo</b> de la faena del oficio (4)— pero con un radio corto
  * ({@value #RADIO} bloques alrededor del aldeano): no es un barrendero, es "lo que me encuentro yendo a trabajar". En
  * cuanto el suelo está limpio, deja de haber objetivo y vuelve a su oficio: se limita solo.
  */
 public class VillagerPickupGoal extends Goal {
 
-    /** Prioridad con la que se engancha: por encima del goal de su oficio (4) y por debajo del portón (2, sin banderas). */
-    public static final int PRIORIDAD = 3;
+    /**
+     * Prioridad con la que se engancha: <b>por debajo de la faena del oficio (4)</b> y de la reparación del obrero
+     * con faena (5), y por encima de la taberna (7). Antes iba a <b>3</b> (por encima del oficio), y el jugador vio
+     * lo que eso significa: Isidoro, un granjero, dejaba la huerta para ir a por sus materiales ("Guardando lo suyo").
+     * Primero se trabaja y, cuando no hay faena, se barre lo suyo del suelo: la recogida sigue ahí (el suelo no se
+     * queda lleno) pero ya no le quita la faena a nadie.
+     */
+    public static final int PRIORIDAD = 6;
     /** Distancia a la que recoge el objeto del suelo. */
     private static final double REACH = 2.5D;
     /** Radio (alrededor del ALDEANO, no del pueblo) en el que mira si hay algo suyo por el suelo. */

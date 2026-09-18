@@ -193,7 +193,7 @@ public class VillagerSmithGoal extends Goal {
             VillageManager.marcarPuntoFallido(villager, destino);
             return false;
         }
-        return receta != null && !villager.isBaby() && stuckTicks < STUCK_LIMIT
+        return receta != null && destino != null && !villager.isBaby() && stuckTicks < STUCK_LIMIT
                 && !VillageManager.estaDescansando(villager);
     }
 
@@ -261,6 +261,13 @@ public class VillagerSmithGoal extends Goal {
         stuckTicks = 0;
         mejorDistancia = Double.MAX_VALUE;
         restTicks = REST_TICKS;
+        // I33: si el sitio de la fase nueva es el que se quedó APARCADO (no llegó a él hace poco —el aviso lo puso el
+        // goal al rendirse), se deja la faena: se suelta la receta y se corta el goal (ver `canContinueToUse`), así
+        // que al volver a arrancar elegirá otra cosa en vez de ir a empujar la misma pared (el taller o el almacén).
+        if (destino != null && VillageManager.esPuntoFallido(villager, destino)) {
+            receta = null;
+            destino = null;
+        }
     }
 
     /** Lo que hace AHORA (ya en el sitio): va en la etiqueta del aldeano y en el log. */

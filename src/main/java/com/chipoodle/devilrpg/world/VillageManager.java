@@ -2621,8 +2621,9 @@ public final class VillageManager {
     /**
      * Le pone al aldeano su goal de <b>recogida por oficio</b>: barre del suelo SUS materiales (ver
      * {@code VillagerPickupGoal.materialesDe}) y los guarda donde le toca. Va a prioridad
-     * {@code VillagerPickupGoal.PRIORIDAD} (por encima de la faena de su oficio) con un radio corto: recoge lo que
-     * se encuentra yendo a trabajar y, cuando el suelo está limpio, vuelve a lo suyo.
+     * {@code VillagerPickupGoal.PRIORIDAD} (<b>por debajo</b> de la faena de su oficio) con un radio corto: primero
+     * trabaja y, cuando no tiene faena, recoge lo suyo del suelo. Antes iba por ENCIMA del oficio (3 contra 4) y el
+     * jugador vio lo que eso significa: el granjero Isidoro dejaba la huerta para ir a por sus materiales.
      */
     private static void asegurarGoalDeRecogidaPorOficio(Villager villager, BlockPos center, int objectiveIndex) {
         for (WrappedGoal wrapped : villager.goalSelector.getAvailableGoals()) {
