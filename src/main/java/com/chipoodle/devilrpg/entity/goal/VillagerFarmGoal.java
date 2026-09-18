@@ -571,6 +571,9 @@ public class VillagerFarmGoal extends Goal {
                         if (s.getBlock() instanceof CropBlock crop) {
                             boolean esMaduro = VillageGenerator.edadDelCultivo(s) == crop.getMaxAge();
                             if (esMaduro == maduro) {
+                                if (VillageManager.esPuntoFallido(villager, r)) {
+                                    continue; // a esa mata no llegó hace poco: se prueba la siguiente (I33)
+                                }
                                 return r;
                             }
                         }
@@ -603,6 +606,9 @@ public class VillagerFarmGoal extends Goal {
                 BlockPos q = comp.offset(0, dy, 0);
                 BlockState s = level.getBlockState(q);
                 if (s.is(Blocks.COMPOSTER) && s.getValue(ComposterBlock.LEVEL) < ComposterBlock.MAX_LEVEL) {
+                    if (VillageManager.esPuntoFallido(villager, q)) {
+                        continue; // a ese compostero no llegó hace poco: se prueba el siguiente (I33)
+                    }
                     return q;
                 }
             }

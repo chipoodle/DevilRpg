@@ -283,6 +283,9 @@ public class VillagerCollectGoal extends Goal {
             if (!esDelPueblo(item.getItem())) {
                 continue;
             }
+            if (VillageManager.esPuntoFallido(villager, item.blockPosition())) {
+                continue; // a ese objeto no llegó hace poco: se prueba con el siguiente (I33)
+            }
             double d = item.distanceToSqr(villager);
             if (d < mejorDist) {
                 mejorDist = d;

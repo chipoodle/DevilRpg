@@ -717,6 +717,9 @@ public class VillagerLumberjackGoal extends Goal {
                 if (base == null) {
                     continue;
                 }
+                if (VillageManager.esPuntoFallido(villager, base)) {
+                    continue; // a ese árbol no llegó hace poco: se busca otro (I33)
+                }
                 // DENTRO DEL RECINTO: el muro y las casas son de TRONCOS, así que no se tala a lo loco: solo se tala un
                 // ÁRBOL SUELTO, y eso lo decide la FORMA (tronco de pie, con hojas cerca y sin nada construido pegado
                 // —ver `VillageGenerator.esArbolSuelto`—), no el plano: el plano de una aldea migrada también tiene
