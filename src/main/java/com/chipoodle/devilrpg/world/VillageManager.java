@@ -1921,6 +1921,11 @@ public final class VillageManager {
         // NOMBRES SIN REPETIR (lo vio el jugador: dos "Bibiana" en el mismo pueblo). Con 48 nombres y 11-18 aldeanos,
         // el nombre "al azar por UUID" se repite; aquí se le asigna a cada aldeano un nombre libre y se le guarda.
         repartirNombres(aldeanos);
+        // Y LOS TICKETS PERDIDOS: una estación de un oficio del pueblo con el ticket COGIDO pero sin dueño vivo. El
+        // caso medido (aldea 2): el compostero del TERCER bancal tenía `free_tickets=0` y ningún aldeano con él en el
+        // cerebro, así que el tercer granjero (su titular) no podía reclamarlo: la estación quedaba muerta y el
+        // oficio sin su puesto de trabajo (sin `JOB_SITE` vanilla no le registra la actividad de trabajar).
+        soltarTicketsPerdidos(level, aldeanos, center, objectiveIndex);
         // HERREROS: los DOS (armas y herramientas) trabajan en el taller del pueblo: cogen los materiales del almacén,
         // fabrican en su puesto (muelle de afilar / mesa de herrería) y dejan la pieza en el almacén, de donde se
         // equipará la futura guardia. Los goals no se guardan con la partida: se reponen al verlos.
@@ -2444,8 +2449,59 @@ public final class VillageManager {
         }
     }
 
-    /** Marca a un aldeano como obrero y le pone el goal de reparación. */
-    private static void marcarObrero(Villager villager, BlockPos center, int objectiveIndex) {
+    /**
+     * <b>Soltar los tickets PERDIDOS</b> de las estaciones del pueblo: un puesto de trabajo con el ticket cogido
+     * ({@code free_tickets = 0}) pero <b>sin ningún aldeano que lo tenga en el cerebro</b>. El juego solo suelta el
+     * ticket al morir el aldeano (I23), así que un ticket perdido deja la estación <b>muerta para siempre</b>: su
+     * titular legítimo no puede reclamarla y el oficio se queda sin puesto de trabajo (sin {@code JOB_SITE} vanilla
+     * no le registra la actividad de trabajar y el aldeano cae a IDLE).
+     * <p>
+     * Medido en el guardado del jugador (aldea 2): el <b>compostero del tercer bancal</b> tenía {@code free_tickets=0}
+     * y nadie con él en la memoria —ni {@code JOB_SITE} ni {@code POTENTIAL_JOB_SITE}—, así que el <b>tercer
+     * granjero</b> (su titular) no podía reclamarlo. La consulta es general (por el tipo de puesto del oficio, con
+     * {@code heldJobSite}), así que vale para cualquier oficio del pueblo, sin listas de coordenadas.
+     * <p>
+     * Y solo se sueltan los de los oficios a los que les <b>falta gente</b> (cupo contra titulares): si el oficio está
+     * cubierto, su estación se deja en paz —puede ser de un aldeano que ahora mismo está en un chunk descargado, y no
+     * se le quita el puesto a nadie por eso—.
+     */
+    private static void soltarTicketsPerdidos(ServerLevel level, List<Villager> aldeanos, BlockPos center,
+                                              int objectiveIndex) {
+        Map<VillagerProfession, Integer> cupo = VillageGenerator.puestosPorOficio();
+        Map<VillagerProfession, Integer> titulares = new HashMap<>();
+        Set<Long> reclamados = new HashSet<>();
+        for (Villager villager : aldeanos) {
+            if (villager.isBaby()) {
+                continue;
+            }
+            VillagerProfession profesion = villager.getVillagerData().getProfession();
+            if (VillageGenerator.esOficioDelPueblo(profesion)) {
+                titulares.merge(profesion, 1, Integer::sum);
+            }
+            for (MemoryModuleType<GlobalPos> tipo : List.of(MemoryModuleType.JOB_SITE,
+                    MemoryModuleType.POTENTIAL_JOB_SITE)) {
+                villager.getBrain().getMemory(tipo).ifPresent(sitio -> reclamados.add(sitio.pos().asLong()));
+            }
+        }
+        PoiManager poi = level.getPoiManager();
+        for (Map.Entry<VillagerProfession, Integer> entrada : cupo.entrySet()) {
+            if (titulares.getOrDefault(entrada.getKey(), 0) >= entrada.getValue()) {
+                continue; // ese oficio tiene toda su gente: su estación no se toca
+            }
+            for (var registro : poi.getInSquare(entrada.getKey().heldJobSite(), center,
+                    VillageGenerator.FENCE_RADIUS, PoiManager.Occupancy.IS_OCCUPIED).toList()) {
+                BlockPos puesto = registro.getPos();
+                if (reclamados.contains(puesto.asLong())) {
+                    continue; // alguien lo tiene de verdad en el cerebro
+                }
+                poi.release(puesto);
+                DevilRpg.LOGGER.info("[Village] Aldea {}: el puesto de {} de {} estaba cogido SIN dueno: se suelta"
+                        + " para que lo reclame su titular", objectiveIndex, entrada.getKey(), puesto);
+            }
+        }
+    }
+
+    /** Marca a un aldeano como obrero y le pone el goal de reparación. */    private static void marcarObrero(Villager villager, BlockPos center, int objectiveIndex) {
         boolean yaEra = villager.getPersistentData().getBoolean(BUILDER_TAG);
         villager.getPersistentData().putBoolean(BUILDER_TAG, true);
         // Un obrero CON FAENA FIJA lleva la reparación POR DEBAJO de su goal de oficio (prioridad 5 contra 4):
