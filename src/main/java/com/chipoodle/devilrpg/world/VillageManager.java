@@ -2055,6 +2055,13 @@ public final class VillageManager {
         villager.getPersistentData().putInt(GUARD_INDEX_TAG, indice);
         // Un obrero que pasa a la guardia deja de ser obrero (tiene su puesto).
         desmarcarObrero(villager);
+        // OJO: el puesto de TRABAJO no se le toca. Se probó (medido con el arnés): quitarle el `JOB_SITE` y el oficio
+        // para que el cerebro no mantuviera la actividad de trabajar sale CARO — `VillagerProfession.NONE` tiene por
+        // predicado de puesto adquirible `ALL_ACQUIRABLE_JOBS`, así que el aldeano se pone a BUSCAR estación entre las
+        // 48 casillas de alrededor, la reclama y vuelve a tener oficio (el guardia recuperaba su composter en cada
+        // latido, y de paso le podía quitar el puesto a un oficio del pueblo). El guardia conserva su composter (o el
+        // que tuviera) y el cerebro tira de él solo en los huecos entre rondas, que con el puesto de ronda arreglado
+        // son raros.
         // OJO: el pánico del aldeano (que le hace huir) NO se puede quitar desde aquí: `Brain.addActivity` solo AÑADE
         // comportamientos (no reemplaza) y `removeAllBehaviors` se lleva por delante el cerebro entero. Lo apaga el
         // propio goal del guardia en combate, borrando los recuerdos que lo disparan (ver `VillagerGuardGoal.calmar`).
@@ -2531,6 +2538,11 @@ public final class VillageManager {
     /** Deja de caminar: se quita el destino del cerebro para que no siga yendo a un sitio ya resuelto. */
     public static void parar(Villager villager) {
         villager.getBrain().eraseMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.WALK_TARGET);
+        // Y TAMBIÉN el LOOK_TARGET: el cerebro del aldeano tiene "andar hacia donde mira"
+        // (`SetWalkTargetFromLookTarget` en su paquete IDLE), así que con el destino borrado y la mirada puesta en el
+        // sitio al que iba, el paseo lo devolvía a esa misma casilla — que al llegar es SU PROPIA CASILLA, que es
+        // "dar vueltas sobre sí mismo". Parar es dejar de caminar Y de mirar a un sitio ya resuelto.
+        villager.getBrain().eraseMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.LOOK_TARGET);
         villager.getNavigation().stop();
     }
 

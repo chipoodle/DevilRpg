@@ -668,7 +668,9 @@ aldeano y **dentro del patrullaje de la guardia**"*.
      la aldea le queda **poca comida** (< 12 puntos), y **nunca baja de la pareja** (2): la granja no se mata sola.
      Los drops se recogen en el acto (carne, cuero, lana, plumas) y van al almacén.
 - **La guardia patrulla el corral (y lo defiende)**: cada **3 puntos** de la ronda de día, el guardia baja al corral
-  (con un punto distinto por guardia, para no apilarse) y la etiqueta dice "Patrullando el corral". Además el radio
+  (con un punto distinto por guardia, para no apilarse) y la etiqueta dice "Patrullando el corral". **Los puestos
+  están FUERA de la valla**, a los lados del portón (ver **3b.46**: dentro del cercado el guardia no llegaba nunca y
+  se quedaba empujando la valla). Además el radio
   de **persecución** sube de `FENCE_RADIUS + 8` (44) a `FENCE_RADIUS + 22` (58) y el de "término del pueblo" a
   `+26` (62): con el radio viejo, un zombi dentro del corral (a 43-57 del centro) se paseaba **a 5 bloques de la
   ronda sin que nadie fuera a por él** — el anexo quedaba fuera de la guardia, que es justo lo que el jugador pidió
@@ -1980,6 +1982,81 @@ el 44, arrastra además las 45 a 55—) ni **cómo se ve** la diana desde la pue
 calculados sobre las capas del guardado, pero eso se comprueba andando por la barraca). La aldea **1 está caída**
 (trazado 46) y la migración **no corre** en una aldea caída: ahí la diana se quedará donde está (como su escalera,
 migración 59, y su mesa, migración 60).
+
+### 3b.46 La guardia que giraba sobre sí misma (el puesto del corral, al otro lado de la valla)
+
+Era el **pendiente** con el que cerró la ronda anterior (commit `0c99788`): el jugador reportó *"Bibiana está dando
+vueltas sobre sí misma de manera errática y no está haciendo lo que debe"* (etiqueta **"Patrullando el corral"**) y
+aquel arreglo solo cubrió a la **arquera** (a la que se le mandaba caminar **a su propia celda**). La captura era de
+una **espadachín**, y su pelea (`pelearConEspada`) no tenía ese fallo: quedó apuntado *"su causa puede ser otra (el
+destino de patrulla o algún goal que la zarandea)"*, sin cerrar (el diagnóstico se quedó sin hacer).
+
+**Medido ahora, sin jugar**, con el **arnés** (`tools/arnes/GuardHarness.java`, ver `tools/arnes/LEEME.md`): servidor
+headless, una **copia** de la partida en `run/world`, chunks de la aldea forzados, un **jugador de pega** en la plaza
+(el latido del pueblo necesita jugador cerca: los goals **no** se guardan con la partida) y el latido **de verdad**
+(`VillageManager.manageNearby`). De día, sin ciclo y **sin spawn de bichos** (el combate va antes que la ronda y los
+guardias se morían peleando), la guardia espadachín del **puesto 0** (Bibiana, `9036d1d0`):
+
+- **El puesto del corral era DENTRO del cercado** (`puntoDeApoyoAnexo`, a **3,0** del portón) y **no llegaba**:
+  recorrido medido `(1474,1408) → (1469,1404) → (1462,1404) → (1454,1404) → (1454,1412)` y ahí se quedaba **clavada
+  empujando la valla oeste**, a **4,03** del puesto, con `mejor = 4,08` que **no bajaba** en **dos rondas seguidas de
+  200 ticks**. El portón solo se abre cuando el aldeano **va a cruzarlo** (y no con un animal en el hueco), así que la
+  navegación ni lo intentaba; y cuando el portón se abría de casualidad y **entraba**, se plantaba **en el hueco**.
+- **El goal se rendía y volvía a empezar con el MISMO puesto**: en el log, `STOP destino=(1458,120,1412) paso=3
+  stuck=200` → `START destino=(1458,120,1412) paso=3` → la misma valla → y otra vez, **en bucle**: la ronda **nunca**
+  avanzaba. Es lo que el jugador veía como "dando vueltas de manera errática" (el aldeano empujando, girando y
+  volviendo a empezar cada 10 s) con la etiqueta del puesto **clavada**, y por eso "no está haciendo lo que debe".
+- La otra espadachín del guardado (`e9c274fb`, la del 10:30) estaba **dentro del bloque del portón** con el portón
+  **cerrado** (`open:false`): la red de seguridad se lo había cerrado **encima**.
+
+**El barrido de la ronda** (mismo arnés, 3 rondas de río): el puesto de la **arboleda** funciona (llega, se planta
+120 ticks —`espera` subiendo— y sigue), y el de la **ronda general** también; el que fallaba era **solo el del
+corral**, porque es el único que caía **al otro lado de una reja**.
+
+**El arreglo** (tres piezas, y la cuarta de propina):
+
+1. **El puesto del corral, FUERA del cercado** (`VillagerGuardGoal.puestoDelCorral` + `PUNTOS_DEL_CORRAL`): dos
+   bloques al **oeste** de la valla (`base − ANEXO_RADIO − 2` = `1453,120,1408/1410/1412/1416/1418/1420`), repartido
+   por guardia y **sin pisar la fila del portón** (es la **única puerta del rebaño**: un guardia plantado en el hueco
+   lo deja abierto o se queda dentro). El guardia ve (y defiende) el corral igual desde fuera: `RADIO_COMBATE` = 16
+   cubre el cercado entero desde la valla oeste. Y **nada de navegar a un bloque sólido** (I32): el puesto se corre a
+   la primera celda libre de al lado (`puestoLibre`), **nunca** hacia el cercado.
+2. **Rendirse es SALTAR el puesto** (I33): `canContinueToUse` hace `paso++` y lo dice en el log
+   (`"no llego a ... me salto el puesto y sigo la ronda"`) en vez de volver a empezar con el mismo destino
+   determinista.
+3. **Con un aldeano DENTRO del hueco del portón no se cierra** (I34, `VillagerGateGoal.alguienEnElHuecoDeVerdad`, a
+   `HUECO` = 1,5 y no a `ABRIR` = 2,6): el plazo de 5 s sigue valiendo para el que solo trabaja **al lado**.
+4. **De propina, el número del pasillo de la ronda general**: cuando un punto de la ronda caía dentro del anexo se
+   corría a `FENCE_RADIUS − 3` = centro + **59**, que es **justo la valla ESTE del corral** (`base + ANEXO_RADIO`), o
+   sea otro bloque sólido al que navegar; el pasillo de dentro del muro son las celdas **60 y 61** (`FENCE_RADIUS −
+   2`).
+
+**Y una cosa que se probó y se dejó como estaba** (queda medido para no repetir el intento): quitarle al guardia el
+**puesto de trabajo** (`JOB_SITE`) y el oficio para que su cerebro no mantuviera la actividad de **trabajar** sale
+caro —`VillagerProfession.NONE` tiene por predicado de puesto adquirible **`ALL_ACQUIRABLE_JOBS`**, así que el aldeano
+se pone a **buscar estación** entre las 48 casillas de alrededor, la reclama y **vuelve a tener oficio** (medido: el
+guardia recuperaba su composter en cada latido, y de paso le podía quitar el puesto a un oficio del pueblo)—. El
+guardia conserva su compuesto (es un **segundo** granjero: el reparto de puestos ya cubrió al titular) y su cerebro
+tira de él solo en los huecos entre rondas, que con el puesto de ronda arreglado son raros: con el goal del guardia
+corriendo, el destino que manda es el **suyo** (el cerebro escribe *después* del goal pero `MoveToTargetSink` ya ha
+consumido el del goal, y al plantarse el goal **borra** `WALK_TARGET` **y** `LOOK_TARGET` en cada tick).
+
+**Verificado con el arnés** (aldea 2, de día, sin bichos, **31 minutos de juego**, 942 muestras de la guardia del
+puesto 0 y 896 de la del 1):
+
+| | Antes | Después |
+|---|---|---|
+| Puesto del corral | **dentro** del cercado, a 4,03 y sin llegar (`mejor` clavado en 4,08) | **fuera** (`1453,120,1408/1410`): **17 y 15 muestras plantada en él**, a 1,0 del puesto |
+| Ronda | **clavada** en `paso 3` (STOP/START con el mismo destino, en bucle) | **avanza**: etiquetas "Patrullando el corral" (305), "la aldea" (288) y "la arboleda" (303) |
+| Atascos | `stuck=200` cada 10 s | **ningún** `no llego a` y **ningún** `deja el puesto` en 31 min |
+| Dentro del cercado | entraba de casualidad y se quedaba encerrada | **0 muestras dentro** (ni un guardia cruza el portón) |
+
+**Lo que NO se ha podido comprobar (sin jugar)**: cómo se ve en la partida del jugador (hay que **reiniciar el
+cliente** para cargar el mod) —el arnés corre en un servidor headless con la partida **copiada**, así que mide
+decisiones, no pinta nada—, y el **reparto de la milicia** en su partida (en el arnés se alistaron **4** espadachines:
+los sobrantes de su aldea son **dos pescadores** —FISHERMAN **no** está en el cupo de puestos fijos del reparto—, un
+segundo granjero y un aldeano sin oficio). No hace falta **migración**: son reglas de goals (no se toca el mundo ni el
+guardado de los aldeanos).
 
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 

@@ -633,6 +633,59 @@ puesto el jugador no se toca—.
 con `build/barraca_mesa.py` (los puestos de la aldea con sus coordenadas, aldea por aldea) y
 `build/barraca_mesa_repara.py` (el reparador de la migración 60, celda a celda y con la idempotencia).
 
+### I32 · Un puesto de RONDA es una celda LIBRE y del MISMO lado de la reja
+
+Un destino de ronda tiene que ser una celda donde el aldeano **quepa de pie** (nada sólido en la celda ni a la altura
+de la cabeza, y suelo firme debajo) y que esté **del lado de la valla en el que está él**: si el puesto cae **dentro
+de un cercado con portón**, el guardia no llega (el portón solo se abre cuando el aldeano **va a cruzarlo** y no con
+un animal en el hueco, así que la navegación ni lo intenta) y se queda **empujando la valla**. Es el mismo fallo que
+el pueblo ya tenía documentado para el almacén y el ahumador (*"la navegación no puede llegar a un bloque sólido y el
+aldeano se queda dando vueltas alrededor"*, ver `VillageStorage.puntoDeApoyo`), pero con un **cercado** de por medio.
+
+**Medido** (arnés, aldea 2, centro `1414,1414`, cota `120`, de día, guardia espadachín del puesto 0): el puesto del
+corral era **dentro** del cercado (`puntoDeApoyoAnexo`, a **3,0** del portón) y el guardia se quedaba en
+`1454,3,120,1412,3` —pegado a la valla oeste, a **4,0** del puesto— con `mejor = 4,08` que **no bajaba**, en **dos
+rondas seguidas de 200 ticks**. Y cuando el portón se abría de casualidad y entraba, se plantaba **en el hueco del
+portón** y la red de seguridad se lo cerraba **encima** (en el guardado del jugador la otra espadachín estaba en
+`1455.62,120,1414.67`, que es el bloque del portón, con el portón `open:false`).
+
+**Regla:** los puestos de la guardia alrededor del **corral anexo** van **fuera** de la valla (`base − ANEXO_RADIO −
+2`), repartidos **a los lados del portón** (`PUNTOS_DEL_CORRAL`, la fila del portón **no se pisa**: es la única
+puerta del rebaño) y **corridos a la primera celda libre** si el jugador ha puesto algo ahí (`puestoLibre`, que
+**nunca** corre hacia el cercado). Y el puesto de la ronda general que caiga dentro del anexo se corre al **pasillo
+de dentro del muro** (`FENCE_RADIUS − 2` = centro + 60, las dos celdas entre la valla ESTE del corral y la muralla);
+`FENCE_RADIUS − 3` era **la propia valla** del corral (centro + 59).
+
+### I33 · Rendirse en un puesto es SALTARLO (extiende I3)
+
+I3 dice que un goal se rinde cuando **no se acerca**, no cuando pasa el tiempo. Falta la otra mitad: **qué hace al
+rendirse**. Si el destino se recalcula **determinista** (una ronda, un punto fijo), volver a empezar con el **mismo**
+destino es un **bucle infinito**: el aldeano empuja el mismo obstáculo cada 10 s para siempre y **nunca** avanza (el
+jugador lo ve "dando vueltas sobre sí misma de manera errática" y con la etiqueta del puesto **clavada**).
+
+**Medido** (arnés, aldea 2, de día): `STOP destino=(1458,120,1412) paso=3 stuck=200` → `START destino=(1458,120,1412)
+paso=3` → otra vez la valla → otra vez `stuck=200`… en bucle; y las **dos** espadachines del guardado aparecían a la
+vez en el **mismo paso** (el del corral) con la etiqueta "Patrullando el corral", o sea ninguna había avanzado.
+
+**Regla:** un goal de ronda que se rinde **salta el puesto** (`paso++` y `return false`), y lo dice en el log
+(`"no llego a ... me salto el puesto y sigo la ronda"`). El siguiente paso puede volver a intentarlo: la aldea
+cambia sola (el jugador tala, construye, rompe...). **No tiene regla en el lint**: `stuckTicks < LIMIT` en
+`canContinueToUse` aparece en **nueve** goals y en los de faena el destino **se vuelve a elegir** en cada arranque
+(no hay bucle); una regla de texto daría nueve falsos positivos.
+
+### I34 · Con un aldeano DENTRO del hueco de un portón NO se cierra (ni por el plazo)
+
+La red de seguridad de los portones del anexo cierra un portón abierto más de 5 s **aunque haya alguien delante**
+(esa regla existe para el aldeano que **trabaja al lado** del portón y no lo cruza nunca). Con un aldeano **dentro
+del hueco** (`HUECO` = 1,5, no `ABRIR` = 2,6), cerrarlo lo deja **atrapado en el bloque** del portón: empuja y gira
+sobre sí mismo y no puede salir hasta que alguien lo abra.
+
+**Medido** (guardado del jugador, aldea 2): la guardia espadachín del puesto 1 estaba en `1455.62,120,1414.67` —el
+bloque del portón del corral— con el portón **`open:false`**.
+
+**Regla:** si hay un aldeano a `HUECO` del portón, no se cierra **por plazo**; el plazo sigue valiendo para el que
+solo está **al lado** (`ABRIR`).
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
@@ -665,6 +718,7 @@ Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento 
 | Herramienta | Para qué |
 |---|---|
 | `python tools/lint_aldea.py --strict` | Vigila I1-I12 en el código. Puerta antes de commitear. |
+| `tools/arnes/GuardHarness.java` (**versionada**, ver `tools/arnes/LEEME.md`) | **Arnés de la aldea en un servidor headless**: copia la partida a `run/world`, fuerza los chunks, mete un jugador de pega y deja correr el **latido de verdad** (`VillageManager.manageNearby`), volcando en el log lo que hace la guardia cada segundo. Es lo que midió I32/I33 (la valla del corral) sin jugar. |
 | `build/inventario.py` | Inventario de estructuras de una aldea en el guardado (qué edificios hay y dónde). |
 | `build/taberna_subida.py` | **¿Se sube la escalera del desván?**: aplica la regla del `maxUpStep` del juego (I26) a cada escalón, contra el guardado, sin jugar; y compara la regla vieja (2 celdas) con la nueva (3). |
 | `build/barraca_subida.py` | **¿Se sube la escalera de la barraca?** (I30, la otra mitad de I26): aplica la regla del `maxUpStep` a cada escalón **y** comprueba la **entrada** (el lado bajo), la **salida** (a la altura del suelo del dormitorio) y las **8 camas**, antes y después de simular el reparador de la migración 59 **celda a celda**. `todas` = aldeas 0, 1 y 2 de una pasada. |

@@ -489,6 +489,14 @@ public class VillagerGateGoal extends Goal {
                 continue; // lo está usando el rebaño (un animal del pueblo vuelve a casa): lo cierra él
             }
             long marca = desde.computeIfAbsent(porton.asLong(), k -> level.getGameTime());
+            // CON UN ALDEANO METIDO EN EL HUECO no se cierra NUNCA (ni por el plazo): cerrarlo encima de él lo deja
+            // atrapado en el bloque del portón, empujando y girando sobre sí mismo (medido en el guardado del
+            // jugador: la guardia espadachín del puesto 1, en `1455.62,120,1414.67` con el portón del corral
+            // `open:false`, o sea con el portón cerrado y ella dentro). El plazo de 5 s sigue valiendo para el
+            // aldeano que solo está AL LADO (trabajando junto al portón), que es para lo que se puso.
+            if (alguienEnElHuecoDeVerdad(level, porton)) {
+                continue;
+            }
             boolean usado = alguienEnElHueco(level, porton);
             if (!usado || level.getGameTime() - marca >= VIGILANCIA) {
                 if (cerrarPorton(level, porton, estado)) {
@@ -526,5 +534,15 @@ public class VillagerGateGoal extends Goal {
             }
         }
         return false;
+    }
+
+    /**
+     * ¿Hay un aldeano <b>dentro del hueco</b> del portón (a {@link #HUECO}, no a {@link #ABRIR})? Con uno ahí no se
+     * cierra por plazo: cerrarlo encima lo deja <b>atrapado en el bloque</b> del portón (medido en el guardado del
+     * jugador: la guardia del puesto 1 estaba en el hueco con el portón ya cerrado). Un aldeano a {@code ABRIR} solo
+     * está <b>al lado</b> (trabajando junto al portón), y ése sí tiene que dejar que se cierre a los 5 s.
+     */
+    private static boolean alguienEnElHuecoDeVerdad(ServerLevel level, BlockPos porton) {
+        return !level.getEntitiesOfClass(Villager.class, new AABB(porton).inflate(HUECO)).isEmpty();
     }
 }

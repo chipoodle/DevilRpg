@@ -68,6 +68,13 @@ public class VillagerGuardGoal extends Goal {
     private static final int ESPERA_TICKS = 120;
     /** Cada cuántos puntos de la ronda el guardia baja al <b>corral anexo</b> (etapa D). */
     private static final int RONDA_CADA_ANEXO = 3;
+    /**
+     * Puestos de la guardia <b>alrededor del corral anexo</b> (relativos a su base): <b>fuera</b> de la valla, dos
+     * bloques al oeste, repartidos a los <b>lados del portón</b>. La fila del portón ({@code dz = 0}) no se pisa y el
+     * cercado no se cruza: el portón es la <b>única puerta del rebaño</b>.
+     */
+    private static final int[] PUNTOS_DEL_CORRAL = {-6, -4, -2, 2, 4, 6};
+
     /** Cada cuántos puntos de la ronda el guardia pasa por la <b>arboleda del pueblo</b> (etapa E). Si coincide con
      *  el corral, manda el corral (está fuera de la valla y es el que más lo necesita). */
     private static final int RONDA_CADA_ARBOLEDA = 2;
@@ -225,6 +232,8 @@ public class VillagerGuardGoal extends Goal {
         hayEquipoEnAlmacen = false;
         mejorDistancia = Double.MAX_VALUE;
         irAlDestino();
+        DevilRpg.LOGGER.info("[Village] Guardia {}: nuevo puesto {} (paso {}, aldea {}){}", villager.getUUID(), destino,
+                paso, objectiveIndex, equipando ? " yendo antes al almacen a equiparse" : "");
     }
 
     @Override
@@ -233,8 +242,21 @@ public class VillagerGuardGoal extends Goal {
         // aldeano acabara durmiendo (por ejemplo porque el cerebro lo tumbó en la cama), el goal se corta igual.
         // `destino == null` ocurre cuando el goal se acaba de quedar sin faena (por ejemplo, tras ir al almacén y no
         // encontrar equipo): se deja terminar para que el descanso haga efecto y no se quede dando vueltas.
-        return destino != null && esGuardia(villager) && !villager.isBaby() && stuckTicks < STUCK_LIMIT
-                && !villager.isSleeping();
+        //
+        // Y RENDIRSE ES **SALTAR EL PUESTO** (invariante I3: se rinde si NO SE ACERCA). Antes se rendía y volvía a
+        // empezar con el MISMO `paso`, o sea con el MISMO puesto: medido con el arnés en la partida del jugador
+        // (aldea 2, de día, guardia espadachín del puesto 0), la guardia empujaba la valla del corral 10 s
+        // (`stuck=200`), se rendía, volvía a empezar en el mismo sitio y así en bucle (`STOP paso=3` → `START
+        // paso=3` → la misma valla), sin patrullar NUNCA: el jugador lo veía "dando vueltas sobre sí misma de
+        // manera errática" y con la etiqueta "Patrullando el corral" clavada. Ahora el puesto que no se alcanza se
+        // salta y la ronda sigue (el siguiente paso puede volver a intentarlo: la aldea cambia sola).
+        if (destino != null && stuckTicks >= STUCK_LIMIT) {
+            DevilRpg.LOGGER.info("[Village] Guardia {}: no llego a {} (aldea {}): me salto el puesto y sigo la ronda",
+                    villager.getUUID(), destino, objectiveIndex);
+            paso++;
+            return false;
+        }
+        return destino != null && esGuardia(villager) && !villager.isBaby() && !villager.isSleeping();
     }
 
     @Override
@@ -336,6 +358,13 @@ public class VillagerGuardGoal extends Goal {
 
     @Override
     public void stop() {
+        // Se corta el servicio (se rindió en un puesto, se durmió, dejó de ser guardia...): queda dicho en el log,
+        // que es lo único que permite reconstruir después por dónde andaba (el goal no se guarda con la partida).
+        if (stuckTicks > 0 || espera > 0) {
+            DevilRpg.LOGGER.info("[Village] Guardia {}: deja el puesto {} (paso {}, atascado {} ticks, plantado {}"
+                            + " ticks, aldea {})", villager.getUUID(), destino, paso, stuckTicks, espera,
+                    objectiveIndex);
+        }
         destino = null;
         enemigo = null;
         espera = 0;
@@ -734,11 +763,7 @@ public class VillagerGuardGoal extends Goal {
         // de la ronda, el guardia baja al CORRAL ANEXO (fuera de la valla): es lo que pidió el jugador ("la granja
         // anexa, dentro del patrullaje de la guardia").
         if (vaAlCorral(level)) {
-            BlockPos corral = VillageGenerator.puntoDeApoyoAnexo(level, center);
-            // Cada guardia se coloca en un sitio distinto del corral (si no, los cuatro se apilan en el mismo bloque).
-            // La ronda va de `base-2` a `base+6` y no más al norte: el norte del corral es el GALLINERO (etapa E) y
-            // un punto dentro de él dejaría al guardia dando vueltas contra la valla.
-            return corral.offset(0, 0, (indice % 5) * 2 - 2);
+            return puestoDelCorral(level, nivel);
         }
         // Y cada RONDA_CADA_ARBOLEDA puntos, a la ARBOLEDA DEL PUEBLO (dentro de la valla, en la diagonal noreste):
         // es la madera de la aldea, y un guardia allí ve (y para) a cualquier bicho que entre a por los árboles.
@@ -747,7 +772,7 @@ public class VillagerGuardGoal extends Goal {
             // Un puesto distinto por guardia, y todos a UN bloque del centro de la arboleda: los cuatro plantones
             // están a dos, así que así ninguno se queda plantado justo donde va a crecer un tronco.
             int[] puesto = PUNTOS_DE_LA_ARBOLEDA[indice % PUNTOS_DE_LA_ARBOLEDA.length];
-            return arboleda.offset(puesto[0], 0, puesto[1]);
+            return puestoLibre(level, arboleda.offset(puesto[0], 0, puesto[1]), Integer.signum(puesto[0]));
         }
         double angulo = Math.toRadians((indice * 137.5D + paso * 47.0D) % 360.0D);
         int x = center.getX() + (int) Math.round(Math.cos(angulo) * RADIO_RONDA);
@@ -756,11 +781,67 @@ public class VillagerGuardGoal extends Goal {
         // EL CORRAL no se pisa en la ronda: desde que la muralla creció al radio 62 la granja está DENTRO y su valla
         // ocupa de 43 a 57 al este, así que un punto de la ronda de ese lado caería dentro del corral y el guardia se
         // pasaría el día empujando la valla. Si cae dentro, se corre hacia el muro: queda en el pasillo entre el
-        // corral y la valla, que es por donde de verdad se pasa (y desde ahí ve a los animales).
+        // corral y la valla, que es por donde de verdad se pasa (y desde ahí ve a los animales). OJO con el número:
+        // `FENCE_RADIUS - 3` es JUSTO la valla ESTE del corral (base + ANEXO_RADIO = centro + 59), o sea un bloque
+        // sólido, y el guardia se quedaba empujándolo; el pasillo son las dos casillas de dentro del muro (60 y 61).
         if (VillageGenerator.estaEnElAnexo(center, punto)) {
-            punto = new BlockPos(center.getX() + VillageGenerator.FENCE_RADIUS - 3, nivel, z);
+            punto = new BlockPos(center.getX() + VillageGenerator.FENCE_RADIUS - 2, nivel, z);
         }
-        return punto;
+        return puestoLibre(level, punto, -1);
+    }
+
+    /**
+     * Puesto del guardia <b>alrededor del corral</b>: en el suelo, <b>fuera</b> de la valla y a los lados del portón.
+     * <p>
+     * Antes el puesto era <b>dentro</b> del cercado (el punto de apoyo del ganadero, a solo 3 bloques del portón) y
+     * el guardia <b>no llegaba nunca</b>: medido con el arnés en la partida del jugador (aldea 2, de día, guardia del
+     * puesto 0), se quedaba <b>10 s empujando la valla oeste</b> a 4,0 del puesto (`mejor` no bajaba de 4,08), el goal
+     * se rendía (`stuck=200`), volvía a empezar con el mismo puesto y así en bucle, con la etiqueta "Patrullando el
+     * corral" clavada — lo que el jugador describió como *"dando vueltas sobre sí misma de manera errática"*. El
+     * portón solo se abre cuando el aldeano va a cruzarlo (y no con un animal en el hueco), así que el guardia se
+     * quedaba fuera; y cuando entraba de casualidad, se plantaba <b>en el hueco del portón</b>: la red de seguridad
+     * se lo cerraba encima. Un guardia no tiene por qué cruzar la única puerta del rebaño: desde fuera de la valla ve
+     * (y defiende) el corral igual.
+     */
+    private BlockPos puestoDelCorral(ServerLevel level, int nivel) {
+        BlockPos base = VillageGenerator.baseDeAnexo(center);
+        int dz = PUNTOS_DEL_CORRAL[Math.floorMod(indice, PUNTOS_DEL_CORRAL.length)];
+        BlockPos puesto = new BlockPos(base.getX() - VillageGenerator.ANEXO_RADIO - 2, nivel, base.getZ() + dz);
+        return puestoLibre(level, puesto, -1); // si está ocupado se corre hacia el pueblo, nunca hacia el cercado
+    }
+
+    /**
+     * Corre el puesto a una casilla donde el guardia <b>quepa de pie</b>, si la ideal está ocupada (una valla, un
+     * poste, lo que haya puesto el jugador). Navegar hacia un bloque sólido es el fallo que el pueblo ya tiene
+     * documentado (ver {@code VillageStorage.puntoDeApoyo}): el aldeano se queda empujándolo. Se mira primero a los
+     * lados y luego hacia {@code haciaDonde} (el pueblo), <b>nunca</b> hacia el cercado.
+     */
+    private BlockPos puestoLibre(ServerLevel level, BlockPos puesto, int haciaDonde) {
+        if (sePuedeEstar(level, puesto)) {
+            return puesto;
+        }
+        for (int salto = 1; salto <= 2; salto++) {
+            for (int dz : new int[]{salto, -salto}) {
+                BlockPos vecino = puesto.offset(0, 0, dz);
+                if (sePuedeEstar(level, vecino)) {
+                    return vecino;
+                }
+            }
+            if (haciaDonde != 0) {
+                BlockPos vecino = puesto.offset(haciaDonde * salto, 0, 0);
+                if (sePuedeEstar(level, vecino)) {
+                    return vecino;
+                }
+            }
+        }
+        return puesto; // sin hueco mejor: se devuelve el puesto pedido (no hay nada que inventar)
+    }
+
+    /** ¿Esa celda tiene sitio para pararse? (nada sólido en la celda ni encima, y suelo firme debajo) */
+    private boolean sePuedeEstar(ServerLevel level, BlockPos p) {
+        return level.getBlockState(p).getCollisionShape(level, p).isEmpty()
+                && level.getBlockState(p.above()).getCollisionShape(level, p.above()).isEmpty()
+                && !level.getBlockState(p.below()).getCollisionShape(level, p.below()).isEmpty();
     }
 
     /** ¿Este paso de la ronda le toca al <b>corral anexo</b>? (lo miran el destino y la etiqueta: uno solo) */

@@ -11,6 +11,7 @@ Aquí está lo que merece sobrevivir.
 | `nbtdump.py` | Lector mínimo de NBT (`load`, `R`+`payload`, `walk`). `build/nbtdump.py` es un **puente** a este, para que los scripts de `build/` sigan funcionando con **una sola copia** |
 | `finduuid.py` | Busca UUIDs en los `.mca` de entidades y dice en qué chunk está cada uno (para comprobar que un minion está muerto de verdad antes de olvidarlo) |
 | `recover/NbtTool.java` | Diagnóstico y reparación del NBT del jugador con las **clases reales de Minecraft**, sin arrancar el juego (volcar, `--find`, `--snbt`, `--restore-minions-from`, `--forget`, `--inject-into`). Las librerías de `build/recover/libs` **no** se versionan (pesan): ver `docs/design-roadmap.md` §6 |
+| `arnes/GuardHarness.java` | **Copia de referencia** del arnés de la aldea en un **servidor headless** (jugador de pega + chunks forzados + el latido de verdad): es con lo que se midió el bug de la **guardia del corral** sin jugar (I32/I33/I34). **No se compila desde `tools/`**: se copia a `src/main/java/com/chipoodle/devilrpg/debug/`, se usa y se **borra** (pasos exactos en `arnes/LEEME.md`) |
 
 Los que usan rutas relativas (`finduuid.py`) se corren **desde la raíz del proyecto**; `audita_aldea.py`
 funciona desde cualquier sitio porque resuelve las rutas desde su propio archivo.
