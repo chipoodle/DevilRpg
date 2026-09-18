@@ -295,7 +295,7 @@ public final class VillageGenerator {
         // Caminos DESPUÉS, del centro a la puerta de cada construcción (ya se sabe dónde está).
         paths(level, center, puertas);
 
-        // Kiosco de la plaza: plataforma con 4 salidas, la campana ARRIBA y el cofre doble de la despensa dentro.
+        // Kiosco de la plaza: plataforma con 4 salidas, la campana EN EL CENTRO y el farol colgado del tejado.
         kiosco(level, center, nivelVilla);
 
         // LA TABERNA (etapa F): el comedor del pueblo, con la cocina del cocinero abajo y la posada (camas) arriba.
@@ -321,7 +321,8 @@ public final class VillageGenerator {
         // aldea, que si no queda nieve polvo flotando por encima del pueblo (medido: 469 bloques en la suya).
         limpiarRestosColgados(level, center);
 
-        // Remesa inicial de la despensa (semillas, abono y un par de panes): el kiosco ya tiene el cofre doble.
+        // Remesa inicial de la despensa (semillas, abono y un par de panes): la despensa es el cofre de la cocina de
+        // la taberna desde la migración 47 (el kiosco ya no tiene cofre).
         VillagePantry.remesaInicial(VillagePantry.despensa(level, center));
 
         // Aldeanos frente a las casas, y el golem que protege la aldea.
@@ -689,11 +690,11 @@ public final class VillageGenerator {
     }
 
     /**
-     * Asegura el <b>kiosco de la plaza</b> (y con él la <b>despensa</b>: el cofre doble de dentro) en aldeas que
-     * todavía no lo tienen. Es idempotente: si el cofre ya está a la cota del pueblo, no toca nada.
+     * Asegura el <b>kiosco de la plaza</b> (con su campana) en aldeas que todavía no lo tienen. Es idempotente: si
+     * el <b>testigo</b> —la plataforma— ya está a la cota del pueblo, no toca nada.
      * <p>
-     * Ojo con la comprobación: se hace por la <b>ALTURA DE LA ALDEA</b> y buscando el <b>cofre</b>, no por la Y del
-     * centro. Con la comprobación vieja (barril + Y del centro) cada latido colocaba otro contenedor y, como
+     * Ojo con la comprobación: se hace por la <b>ALTURA DE LA ALDEA</b> y buscando la <b>plataforma</b>, no por la Y
+     * del centro. Con la comprobación vieja (la Y del centro) cada latido colocaba otro contenedor y, como
      * {@code groundY} cuenta el contenedor como suelo, la despensa subía un bloque por latido dejando una columna de
      * piedra debajo (bug que vio el jugador).
      */
@@ -711,6 +712,87 @@ public final class VillageGenerator {
         }
         kiosco(level, center, nivel);
         DevilRpg.LOGGER.info("[Village] Aldea en {}: kiosco de la plaza colocado a la cota {}", center, nivel);
+    }
+
+    /**
+     * <b>La campana, al CENTRO del kiosco, y el beacon del sello, FUERA</b> (migración 58). Lo pidió el jugador:
+     * <i>"sitúa la campana justo en el centro del kiosco y quita el beacon pues nunca se usa"</i>. Hace dos cosas en
+     * las aldeas <b>ya construidas</b>:
+     * <ul>
+     *   <li><b>La campana, al centro.</b> Medido en el guardado del jugador (aldea 2, centro {@code 1414,1414}, cota
+     *       120): la campana estaba en {@code (1413,121,1415)}, o sea <b>una celda al oeste y una al sur</b> de la
+     *       celda central {@code (1414,121,1414)}, que estaba en aire. Se retira la campana <b>solo si sigue siendo
+     *       una campana</b> y se coloca en el centro <b>solo si esa celda está libre</b> (aire): si el jugador ha
+     *       puesto algo ahí, no se toca <b>nada</b> (mover una campana no vale tirar lo que es suyo, I6) y queda
+     *       dicho en el log. La campana se repone <b>posada</b> ({@code attachment} = {@code floor}) porque su apoyo
+     *       —la plataforma de piedra— va justo debajo; se le conserva el {@code facing} que tenía.</li>
+     *   <li><b>El beacon, fuera.</b> El <b>sello místico</b> lo encendía en la <b>celda central del tejado</b>
+     *       ({@code cota+5}) y lo apagaba al caer la aldea (dejando <b>aire</b>, que además se llevaba por delante al
+     *       farol colgado de ahí, I14). Un beacon <b>sin pirámide no hace nada</b> y el sello no vive en el bloque
+     *       sino en los datos de la aldea ({@code VillageSavedData.isSiegeResolved}; el haz de partículas de
+     *       {@code VillageManager.efectosDeAldeas} sigue saliendo del kiosco igual). Se retira <b>solo si sigue
+     *       siendo un beacon</b> y su celda se repone con la <b>piedra del tejado</b>, <b>nunca con aire</b>: de esa
+     *       celda <b>cuelga</b> el farol del kiosco.</li>
+     * </ul>
+     * Es <b>idempotente</b> (si ya está todo bien no escribe ni una celda) y <b>no rehace el kiosco</b>: su testigo
+     * es la plataforma y rehacerlo tiraría lo de dentro (I15). Va <b>antes</b> de tirar el plano, para que el plano
+     * nuevo se capture con la campana en el centro y <b>sin</b> el beacon: si el beacon siguiera en el plano, el
+     * obrero lo repondría en cuanto alguien tocara ese hueco (I8).
+     */
+    public static void centrarLaCampanaYQuitarElBeacon(ServerLevel level, BlockPos center) {
+        int nivel = cotaDeLaPlaza(level, center);
+        if (nivel <= level.getMinBuildHeight() + 1) {
+            return;
+        }
+        int cambios = 0;
+        // 1) EL BEACON DEL SELLO (celda central del tejado), fuera: se repone la piedra del tejado, que es el
+        //    material de esa celda y el APOYO del farol colgado de debajo (I14).
+        BlockPos techo = new BlockPos(center.getX(), nivel + KIOSCO_POSTE + 1, center.getZ());
+        if (level.getBlockState(techo).is(Blocks.BEACON)) {
+            colocar(level, techo, Blocks.STONE_BRICKS.defaultBlockState(), 3);
+            cambios++;
+        }
+        // 2) LA CAMPANA, al centro de la plataforma. Se busca en TODA la huella del kiosco (no solo en la celda
+        //    vieja) porque el sitio de la campana ha cambiado de trazado más de una vez.
+        BlockPos centro = new BlockPos(center.getX(), nivel + 1, center.getZ());
+        java.util.List<BlockPos> viejas = new java.util.ArrayList<>();
+        for (int dy = 0; dy <= KIOSCO_POSTE + 1; dy++) {
+            for (int dx = -KIOSCO_RADIO; dx <= KIOSCO_RADIO; dx++) {
+                for (int dz = -KIOSCO_RADIO; dz <= KIOSCO_RADIO; dz++) {
+                    BlockPos p = new BlockPos(center.getX() + dx, nivel + dy, center.getZ() + dz);
+                    if (!p.equals(centro) && level.getBlockState(p).is(Blocks.BELL)) {
+                        viejas.add(p);
+                    }
+                }
+            }
+        }
+        boolean centrada = level.getBlockState(centro).is(Blocks.BELL);
+        if (!centrada && !viejas.isEmpty() && !level.getBlockState(centro).isAir()) {
+            // La celda central está OCUPADA por otra cosa (algo del jugador): no se mueve la campana. Nunca se
+            // quita una campana para dejar al pueblo sin su POI de reunión.
+            DevilRpg.LOGGER.warn("[Village] Aldea en {}: la celda central del kiosco ({}) no esta libre: la campana"
+                    + " se queda donde esta", center, centro);
+            viejas.clear();
+        }
+        if (!viejas.isEmpty()) {
+            Direction mira = level.getBlockState(viejas.get(0)).getValue(BellBlock.FACING);
+            for (BlockPos vieja : viejas) {
+                colocar(level, vieja, Blocks.AIR.defaultBlockState(), 3);
+                cambios++;
+            }
+            if (!centrada) {
+                // POSADA en la plataforma (`attachment` = floor): el apoyo va justo debajo. Se le conserva el
+                // `facing` que tenía, pero NO un `attachment` de techo: copiarlo dejaría la campana flotando.
+                colocar(level, centro, Blocks.BELL.defaultBlockState()
+                        .setValue(BellBlock.FACING, mira)
+                        .setValue(BellBlock.ATTACHMENT, BellAttachType.FLOOR), 3);
+                cambios++;
+            }
+        }
+        if (cambios > 0) {
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: kiosco al dia (campana al centro y beacon del sello fuera,"
+                    + " {} celda(s))", center, cambios);
+        }
     }
 
     /**
@@ -3321,26 +3403,41 @@ public final class VillageGenerator {
 
     /**
      * <b>Kiosco de la plaza</b>: plataforma de piedra con <b>4 salidas</b> (una escalera en el centro de cada lado),
-     * cuatro postes, tejado y la <b>campana arriba</b>. Dentro, sobre la plataforma, el <b>cofre doble de la
-     * despensa</b>: el centro de la cadena de suministro (allí el granjero guarda el trigo y hornea el pan, y de
-     * allí come la aldea).
+     * cuatro postes, tejado y la <b>campana en el CENTRO</b>, posada en la plataforma. La campana es el
+     * <b>POI de reunión</b> del pueblo y en el kiosco es a propósito: aquí se junta la aldea. Del tejado cuelga un
+     * <b>farol</b>, que la ilumina de noche. Dentro <b>no hay ningún cofre</b>: la despensa se movió a la cocina de
+     * la taberna en la migración 47 (ver {@code VillagePantry}).
      * <p>
-     * La despensa es un COFRE y no un barril <b>a propósito</b>: el barril es el puesto de trabajo del
-     * <b>pescador</b>, así que un aldeano sin oficio lo reclamaba y la aldea acababa con un pescador. El cofre no da
-     * oficio a nadie.
+     * La campana va en la <b>celda central</b> y <b>apoyada</b> ({@code attachment} = {@code floor}: el apoyo es la
+     * propia plataforma, que va justo debajo). Lo pidió el jugador: <i>"sitúa la campana justo en el centro del
+     * kiosco"</i> —antes estaba descentrada, una celda al oeste y al sur— y es además como la coloca el propio
+     * juego. <b>Esa celda es de la campana</b>: no se pone nada más ahí (el farol va <b>colgado</b> del tejado, en la
+     * misma vertical pero cuatro bloques más arriba). Y el <b>tejado no lleva beacon</b>: el <b>sello místico</b> ya
+     * no lo enciende (no hace nada sin pirámide y el sello vive en los datos de la aldea, migración 58); su celda es
+     * la <b>piedra del centro del tejado</b>, que es de donde <b>cuelga</b> el farol (I14: si quedara aire, el farol
+     * se caería).
      */
     private static void kiosco(ServerLevel level, BlockPos center, int nivel) {
         int r = KIOSCO_RADIO;
         int cx = center.getX();
         int cz = center.getZ();
-        // Si había una campana suelta en el centro (aldeas viejas), se quita: la campana va ahora arriba del kiosco.
-        for (int dy = -1; dy <= 1; dy++) {
-            BlockPos viejo = new BlockPos(cx, nivel + dy, cz);
-            if (level.getBlockState(viejo).is(Blocks.BELL)) {
-                colocar(level, viejo, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
+        // Campanas VIEJAS dentro del kiosco: la campana va en el centro (abajo), así que cualquier otra que quedara
+        // de un trazado anterior se retira ANTES de colocar la buena (el kiosco viejo la tenía una celda al oeste y
+        // al sur). Si no, el kiosco se quedaría con dos campanas y con dos POI de reunión.
+        for (int dx = -r; dx <= r; dx++) {
+            for (int dz = -r; dz <= r; dz++) {
+                if (dx == 0 && dz == 0) {
+                    continue; // la celda del centro es de la campana nueva
+                }
+                for (int dy = 0; dy <= KIOSCO_POSTE; dy++) {
+                    BlockPos vieja = new BlockPos(cx + dx, nivel + dy, cz + dz);
+                    if (level.getBlockState(vieja).is(Blocks.BELL)) {
+                        colocar(level, vieja, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
+                    }
+                }
             }
         }
-        // Plataforma 5x5 a la cota del pueblo: se anda un bloque por encima de la plaza.
+        // Plataforma 7x7 (radio 3) a la cota del pueblo: se anda un bloque por encima de la plaza.
         for (int dx = -r; dx <= r; dx++) {
             for (int dz = -r; dz <= r; dz++) {
                 colocar(level, new BlockPos(cx + dx, nivel, cz + dz), Blocks.STONE_BRICKS.defaultBlockState(), 3);
@@ -3366,11 +3463,14 @@ public final class VillageGenerator {
                         Blocks.STONE_BRICKS.defaultBlockState(), 3);
             }
         }
-        // La campana va DENTRO del kiosco, sobre la plataforma y al lado del cofre (a la izquierda según se entra).
-        colocar(level, new BlockPos(cx - 1, nivel + 1, cz + 1),
+        // LA CAMPANA, en la celda central y POSADA en la plataforma (`attachment` = floor: el apoyo va justo
+        // debajo). Es el POI de reunión del pueblo y el pueblo se junta aquí a propósito.
+        colocar(level, new BlockPos(cx, nivel + 1, cz),
                 Blocks.BELL.defaultBlockState().setValue(BellBlock.FACING, Direction.SOUTH)
                         .setValue(BellBlock.ATTACHMENT, BellAttachType.FLOOR), 3);
-        // Un farol colgado del tejado, en el centro: el kiosco queda iluminado de noche.
+        // Un farol colgado del tejado, en el centro: el kiosco queda iluminado de noche. Va en la misma vertical que
+        // la campana (cuatro bloques más arriba) y cuelga de la piedra del centro del tejado (I14): por eso esa
+        // celda nunca puede quedar en aire (ver el beacon del sello, migración 58).
         colocar(level, new BlockPos(cx, nivel + KIOSCO_POSTE, cz),
                 Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true), 3);
         // OJO: aquí YA NO va el cofre de la despensa. Estuvo en el kiosco hasta la migración 46 y el jugador pidió
@@ -3434,12 +3534,15 @@ public final class VillageGenerator {
         if (!tabernaConstruida(level, center)) {
             return;
         }
-        // El ahumador viejo del kiosco se retira (una sola vez: si ya no está, no se toca nada).
+        // El ahumador viejo del kiosco se retira (una sola vez: si ya no está, no se toca nada). Su celda vuelve a
+        // ser la plataforma de piedra del kiosco, que es lo que era.
         BlockPos viejo = new BlockPos(center.getX() + 2, nivel + 1, center.getZ() + 1);
         if (level.getBlockState(viejo).is(Blocks.SMOKER)) {
             colocar(level, viejo, Blocks.STONE_BRICKS.defaultBlockState(), 3);
-            colocar(level, new BlockPos(center.getX(), nivel + 1, center.getZ()),
-                    Blocks.CRAFTING_TABLE.defaultBlockState(), 3);
+            // OJO: aquí se ponía además una MESA DE TRABAJO en la CELDA CENTRAL del kiosco (era la mesa del
+            // cocinero cuando el kiosco era la cocina). Ya no: desde la etapa F el cocinero tiene su cocina —y su
+            // mesa— en la taberna (`cocinaDeLaTaberna`) y la celda central del kiosco es <b>de la campana</b>
+            // (migración 58): poner ahí la mesa dejaba al kiosco sin sitio para su campana en las aldeas viejas.
             DevilRpg.LOGGER.info("[Village] Aldea en {}: el ahumador viejo del kiosco se retiro (la cocina ya esta"
                     + " en la taberna)", center);
         }
@@ -3451,7 +3554,7 @@ public final class VillageGenerator {
                 .setValue(StairBlock.HALF, Half.BOTTOM);
     }
 
-    /** Quita el aire y bloques que queden en la columna por encima de {@code baseY+1} (deja la campana al aire). */
+    /** Quita el aire y bloques que queden en la columna por encima de {@code baseY+1}. */
     private static void clearColumnAbove(ServerLevel level, int x, int z, int baseY) {
         for (int yy = baseY + 1; yy <= baseY + 8 && yy < level.getMaxBuildHeight(); yy++) {
             BlockState bs = level.getBlockState(new BlockPos(x, yy, z));

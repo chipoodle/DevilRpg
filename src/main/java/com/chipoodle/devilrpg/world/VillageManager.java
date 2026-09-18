@@ -554,9 +554,22 @@ public final class VillageManager {
      *       raíz (el agua y el hielo <b>no</b> son un hueco que se rellene: ver {@code nivelar} y {@code nivelarHuella})
      *       y, para las aldeas que ya se quedaron secas, con este reparador (<b>solo las celdas del lago</b>, y solo
      *       donde no haya nada construido: no inunda ni rompe nada más, e idempotente).</li>
+     *   <li>58: la <b>CAMPANA, AL CENTRO DEL KIOSCO</b>, y el <b>BEACON DEL SELLO, FUERA</b> (lo pidió el jugador:
+     *       <i>"sitúa la campana justo en el centro del kiosco y quita el beacon pues nunca se usa"</i>). Medido en su
+     *       guardado (aldea 2, centro {@code 1414,1414}, cota 120): la campana estaba en {@code (1413,121,1415)},
+     *       <b>una celda al oeste y una al sur</b> del centro, y la celda central {@code (1414,121,1414)} estaba en
+     *       aire; el <b>beacon</b> estaba en la <b>celda central del tejado</b> ({@code 1414,125,1414}). Ahora la
+     *       campana se coloca <b>posada en la celda central</b> (su apoyo es la plataforma, que va justo debajo) y el
+     *       <b>sello místico</b> ya no enciende ningún beacon: no hacía nada sin pirámide y el sello vive en los
+     *       <b>datos de la aldea</b> ({@code isSiegeResolved}, que es lo que miran la protección y el haz de
+     *       partículas). Este reparador mueve la campana <b>solo si sigue siendo una campana</b> y <b>solo si la
+     *       celda central está libre</b>, y quita el beacon <b>solo si sigue siendo un beacon</b>, reponiendo la
+     *       <b>piedra del tejado</b> en su celda (de ahí <b>cuelga</b> el farol del kiosco, I14: dejarla en aire se
+     *       lo llevaba por delante). No rehace el kiosco (su testigo es la plataforma, I15) y va antes de tirar el
+     *       plano para que el plano nuevo lo capture ya centrado y <b>sin</b> el beacon (I8).</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 57;
+    public static final int CURRENT_LAYOUT = 58;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -893,7 +906,7 @@ public final class VillageManager {
                         if (waveCleared) {
                             if (d.wave.isEmpty()) {
                                 grantReward(player, d.objectiveIndex);
-                                marcarSelloMistico(level, d.center, player);
+                                marcarSelloMistico(d.center, player);
                                 player.displayClientMessage(Component.literal(isCurrentObjective
                                         ? "¡Has salvado la aldea! El objetivo avanza."
                                         : "¡Has salvado la aldea!"), false);
@@ -909,7 +922,7 @@ public final class VillageManager {
                             }
                         } else if (siegeFailed) {
                             grantReward(player, d.objectiveIndex);
-                            marcarSelloMistico(level, d.center, player);
+                            marcarSelloMistico(d.center, player);
                             player.displayClientMessage(Component.literal(isCurrentObjective
                                     ? "Los monstruos no lograron entrar: ¡la aldea está a salvo! El objetivo avanza."
                                     : "Los monstruos no lograron entrar: ¡la aldea está a salvo!"), false);
@@ -1645,6 +1658,14 @@ public final class VillageManager {
             // y lo que no quepa al almacén. Va después de la taberna —que ya está construida arriba, con su cofre
             // en la cocina— y antes de tirar el plano, para que el kiosco sin cofre entre en el plano nuevo.
             VillageGenerator.retirarDespensaDelKiosco(level, center);
+            // LA CAMPANA, AL CENTRO DEL KIOSCO, Y EL BEACON DEL SELLO, FUERA (migración 58, lo pidió el jugador:
+            // "sitúa la campana justo en el centro del kiosco y quita el beacon pues nunca se usa"). La campana
+            // estaba descentrada (una celda al oeste y al sur) y el beacon del sello ocupaba la celda central del
+            // tejado sin hacer nada (un beacon sin pirámide no da efecto ni luz). Va AQUÍ, después de todo lo que
+            // construye el kiosco y ANTES de tirar el plano: así el plano nuevo se captura con la campana centrada y
+            // sin el beacon (si el beacon siguiera en el plano, el obrero lo repondría). Es idempotente, no rehace el
+            // kiosco (su testigo es la plataforma, I15) y solo mueve/quita si el bloque sigue siendo el suyo.
+            VillageGenerator.centrarLaCampanaYQuitarElBeacon(level, center);
             // REBAÑO ESCAPADO (una sola vez, al migrar): antes de que existiera la marca del rebaño, el ganado que se
             // colaba por el portón se perdía sin remedio y el corral se quedaba vacío (y sin carne). Aquí se reconoce
             // el que anda suelto FUERA de la muralla y cerca del corral; luego, en el latido, vuelve a casa.
@@ -1669,8 +1690,9 @@ public final class VillageManager {
         // BARRACA de la milicia: lo mismo (idempotente). Si el jugador se llevó su suelo de piedra, se vuelve a
         // levantar entera; si está, no se toca (reconstruirla borraría las camas y lo que haya dentro).
         VillageGenerator.asegurarBarraca(level, center);
-        // KIOSCO + DESPENSA: la plataforma de la plaza con su campana arriba y el cofre doble (si falta en aldeas
-        // viejas). Es donde el granjero guarda el trigo, donde hornea el pan y de donde come la aldea.
+        // KIOSCO: la plataforma de la plaza con su CAMPANA en el centro (el POI de reunión del pueblo) y su farol
+        // colgado del tejado. Si falta —en una aldea vieja—, se levanta. Ya NO tiene cofre: la despensa vive en la
+        // cocina de la taberna desde la migración 47.
         VillageGenerator.asegurarKiosco(level, center);
         // ALMACÉN del pueblo: cobertizo con cofre doble (que crece) donde el constructor recolector va dejando lo que
         // recoge. Es una construcción aparte, al lado de la plaza.
@@ -1693,8 +1715,9 @@ public final class VillageManager {
         // "a cuadros" (agua a la cota pegada a césped a la cota). Se saca un anillo de playa seca y pareja; en una
         // aldea de tierra adentro no toca nada (lo decide mirando si hay agua a la capa que se pisa en el anillo).
         VillageGenerator.asegurarOrilla(level, center);
-        // COCINA del pueblo (etapa E): el ahumador y la mesa del cocinero. Idempotente (va aparte de `asegurarKiosco`
-        // porque aquél sale antes de tiempo cuando el kiosco ya está). Desde la etapa F la cocina vive en la taberna.
+        // COCINA del pueblo (etapa E): desde la etapa F vive en la taberna, con su mesa y su ahumador. Aquí solo
+        // queda retirar el ahumador VIEJO del kiosco (su celda vuelve a ser la piedra de la plataforma); en el kiosco
+        // ya no se pone ninguna mesa: la celda central es de la campana (migración 58).
         VillageGenerator.asegurarCocina(level, center);
         // TABERNA (etapa F): el comedor del pueblo (abajo) y la posada (arriba). Idempotente (se comprueba por su
         // barra): si el jugador se lleva media taberna, el pueblo la vuelve a levantar.
@@ -3142,11 +3165,13 @@ public final class VillageManager {
             return;
         }
         saved.markFallen(objectiveIndex);
-        // La aldea cae: se apaga el sello (queda abandonada y las criaturas vuelven a poder aparecer entre las ruinas).
+        // Si el beacon del sello VIEJO sigue en el tejado del kiosco, se apaga: su celda vuelve a ser la PIEDRA del
+        // tejado, nunca aire. De esa celda CUELGA el farol del kiosco (I14) y dejarla en aire —como se hacía— se
+        // llevaba el farol por delante. (Desde la migración 58 el sello no enciende ningún beacon.)
         int cota = VillageGenerator.cotaDeLaPlaza(level, center);
         BlockPos sello = new BlockPos(center.getX(), cota + 5, center.getZ());
         if (level.getBlockState(sello).is(Blocks.BEACON)) {
-            level.setBlockAndUpdate(sello, Blocks.AIR.defaultBlockState());
+            level.setBlockAndUpdate(sello, Blocks.STONE_BRICKS.defaultBlockState());
         }
         VillageGenerator.ruin(level, center, objectiveIndex);
         DevilRpg.LOGGER.info("[Village] La aldea {} ha CAÍDO y queda en ruinas", objectiveIndex);
@@ -3154,16 +3179,16 @@ public final class VillageManager {
 
     /**
      * <b>Sello místico de la aldea</b>: al vencer su asedio, la aldea queda protegida del poder de la oscuridad
-     * (ninguna criatura hostil puede <b>aparecer</b> entre sus muros; fuera, en el campo, sí) y se enciende un
-     * <b>faro</b> en lo alto del kiosco como señal. El sello dura mientras la aldea viva: si cae (todos los aldeanos
+     * (ninguna criatura hostil puede <b>aparecer</b> entre sus muros; fuera, en el campo, sí) y se levanta un
+     * <b>haz de luz</b> sobre el kiosco como señal. El sello dura mientras la aldea viva: si cae (todos los aldeanos
      * muertos) queda abandonada y el poder se apaga.
+     * <p>
+     * El sello vive en los <b>datos de la aldea</b> ({@code VillageSavedData.isSiegeResolved}, que es lo que miran la
+     * protección y el haz de partículas de {@link #efectosDeAldeas}), <b>no en un bloque</b>: hasta la migración 58
+     * se encendía además un <b>beacon</b> en el tejado del kiosco, que <b>no hacía nada</b> (un beacon sin pirámide
+     * no da efecto ni luz) y que el jugador mandó quitar: <i>"quita el beacon pues nunca se usa"</i>.
      */
-    private static void marcarSelloMistico(ServerLevel level, BlockPos center, ServerPlayer player) {
-        int cota = VillageGenerator.cotaDeLaPlaza(level, center);
-        BlockPos sello = new BlockPos(center.getX(), cota + 5, center.getZ());
-        if (!level.getBlockState(sello).is(Blocks.BEACON)) {
-            level.setBlockAndUpdate(sello, Blocks.BEACON.defaultBlockState());
-        }
+    private static void marcarSelloMistico(BlockPos center, ServerPlayer player) {
         player.displayClientMessage(Component.literal(
                 "La campana tañe una sola vez... y un zumbido antiguo recorre el empedrado: "
                         + "el poder místico sella la aldea. Ninguna criatura de la oscuridad podrá alzarse entre sus muros."), false);
@@ -3172,7 +3197,7 @@ public final class VillageManager {
 
     /**
      * Efectos visuales de las aldeas, cada pocos ticks: el <b>haz de luz</b> del sello místico (una columna de
-     * partículas sobre el faro del kiosco) y las <b>partículas oscuras</b> de los enemigos que entran en una aldea
+     * partículas sobre el kiosco de la plaza) y las <b>partículas oscuras</b> de los enemigos que entran en una aldea
      * asediada (así se ve la intrusión desde lejos).
      */
     public static void efectosDeAldeas(ServerLevel level, ServerPlayer player) {
@@ -3184,7 +3209,8 @@ public final class VillageManager {
             }
             double distSqr = player.blockPosition().distSqr(centro);
             boolean protegida = saved.isSiegeResolved(i) && !saved.isFallen(i);
-            // HAZ DE LUZ: columna de partículas brillantes sobre el faro del kiosco (se ve a lo lejos).
+            // HAZ DE LUZ: columna de partículas brillantes sobre el kiosco (se ve a lo lejos). Es la ÚNICA señal del
+            // sello desde la migración 58 (el beacon del tejado se quitó: no hacía nada).
             if (protegida && distSqr < 128.0D * 128.0D) {
                 int cota = VillageGenerator.cotaDeLaPlaza(level, centro);
                 for (int h = 0; h < 14; h++) {

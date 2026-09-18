@@ -37,7 +37,8 @@ En cada cambio en `world/Village*` o en los goals de aldeano hay que:
 > (`build/portones_todos_nw1.py`: el `FACING` de cada puerta de valla contra la valla que la rodea). **I26** (el
 > hueco de subida al desván se mide con el `maxUpStep` del juego) tampoco: la comprueba `build/taberna_subida.py`
 > contra el guardado, escalón por escalón. **I27** (el agua no se rellena) tampoco: se comprueba contra el guardado
-> con `build/lago_pesquera.py` y `build/lago_repara.py`.
+> con `build/lago_pesquera.py` y `build/lago_repara.py`. **I28** (la campana, en la celda central del kiosco) tampoco:
+> se comprueba con `build/kiosco_dump.py`, que vuelca la huella del kiosco capa a capa.
 
 ### I1 · Toda altura se mide con `cotaDeLaPlaza`, nunca con la Y del centro
 El centro de una aldea viaja por todo el sistema (`ObjectiveTargets.targetOf`, `centroDe`) y **su Y no es la del
@@ -471,6 +472,35 @@ el **agua O el barril**: con el barril en pie, `asegurarPesquera` salía por el 
 (`build/lago_pesquera.py` y `build/lago_repara.py`, que simulan el reparador celda a celda y dicen qué toca y qué
 **no** toca).
 
+### I28 · La celda central del kiosco es DE LA CAMPANA (y el sello no es un bloque)
+El jugador: *"sitúa la campana justo en el centro del kiosco y quita el beacon pues nunca se usa"*.
+
+**Medido en su guardado** (aldea 2, centro `1414,1414`, cota `120`, `build/kiosco_dump.py`): la campana estaba en
+`(1413,121,1415)` —**una celda al oeste y una al sur** del centro— y la celda central `(1414,121,1414)` estaba en
+**aire**; el **farol** colgaba en `(1414,124,1414)` (`hanging=true`, con bloque sólido encima: **I14 ✔**) y el
+**beacon** del sello ocupaba la **celda central del TEJADO** (`1414,125,1414`), que es de donde **cuelga** el farol.
+
+- **La campana va en la celda central del kiosco y POSADA.** Es el **POI de reunión** del pueblo (`MEETING`) y en el
+  kiosco es **a propósito**: el pueblo se junta ahí. Se coloca con `attachment = floor` porque su apoyo —la plataforma
+  de piedra— va **justo debajo**; una campana **colgada** solo vale con un bloque **sólido encima** (I14). **Esa celda
+  es suya**: no se pone nada más ahí (el farol va **colgado** del tejado, en la misma vertical y cuatro bloques más
+  arriba; y la **mesa de trabajo** que el retiro del ahumador viejo ponía en el centro ya no se pone: el cocinero tiene
+  su cocina y su mesa en la taberna).
+- **El beacon del sello, fuera** (migración 58). Un beacon **sin pirámide no hace nada** (ni efecto ni luz): era solo
+  la señal del **sello místico**, y el sello **no vive en el bloque** sino en los datos de la aldea
+  (`VillageSavedData.isSiegeResolved`, que es lo que miran la protección y el haz de partículas de `efectosDeAldeas`,
+  que sigue saliendo del kiosco igual). `marcarSelloMistico` ya **no** lo enciende y `fallVillage` ya **no** lo apaga:
+  y si el de una partida vieja sigue ahí, se cambia por la **piedra del tejado**, **nunca por aire** (I14: de esa celda
+  cuelga el farol).
+- **Los reparadores son idempotentes y no tocan lo ajeno**: la campana se retira **solo si sigue siendo una campana** y
+  se pone en el centro **solo si la celda está libre** (si el jugador puso algo ahí, no se mueve **nada**: nunca se deja
+  al pueblo sin su POI de reunión); el beacon se quita **solo si sigue siendo un beacon**. Y **nunca se rehace el
+  kiosco**: su testigo es la **plataforma** (I15). El reparador va **antes** de tirar el plano, para que el plano nuevo
+  se capture ya centrado y **sin** el beacon (I8: si el beacon siguiera en el plano, el obrero lo repondría).
+
+**No tiene regla en el lint** (es geometría de una celda, no un patrón de riesgo): se comprueba **contra el guardado**
+(`build/kiosco_dump.py`, que vuelca la huella entera del kiosco capa a capa y localiza campana, farol y beacon).
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
@@ -509,6 +539,7 @@ Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento 
 | `build/granjaestado.py`, `build/farmdiag.py`, `build/columnas.py`, `build/perfilcol.py` | Estado de la granja (cultivos, edades, cotas) y columnas crudas. |
 | `build/items.py`, `build/contenedores.py` | Objetos en el suelo por tipo y contenido de cofres/despensa/almacén. |
 | `build/faroles_hanging.py` | **Faroles sin apoyo de verdad** (I14): mira la propiedad `hanging` contra su dirección, que es lo que **no** mira la auditoría de Python (una valla debajo vale para un farol *posado*, no para uno *colgado*; la de Java sí lo mira desde la migración 55). Dice qué reparador arregla cada uno. |
+| `build/kiosco_dump.py` | **El kiosco entero, capa a capa** (I28): cuenta los bloques por capa, imprime la huella de `cota-2` a `cota+7` y localiza la **campana**, el **farol** y el **beacon** con sus propiedades (dónde están y en qué celda relativa al centro). |
 | `build/aldeanos.py`, `build/aldeanos.py` | Aldeanos: profesión, inventario, posición (carpeta `entities/`). |
 | `build/herreria.py`, `build/huecos_ore.py`, `build/solares*.py` | Herrería, huecos y minerales flotantes, solares libres. |
 | `build/plantillas*.py`, `build/paleta.py` | Plantillas del juego: tamaños, puertas y qué bloques traen. |

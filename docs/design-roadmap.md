@@ -1708,6 +1708,60 @@ se congele ni se salga por la orilla en su bioma) ni la migración corriendo de 
 estaba cerrado y esto no toca el guardado). Lo que sí está comprobado es el antes y el después **contra su guardado**,
 celda a celda, y que el relleno nuevo no toca ni la pasarela ni el barril.
 
+### 3b.42 La campana, al centro del kiosco, y el beacon del sello, fuera (migración 58)
+
+El jugador: *"sitúa la campana justo en el centro del kiosco y quita el beacon pues nunca se usa"*.
+
+**Lo que había HOY en el kiosco** (aldea 2, centro `1414,1414`, cota `120`, con `build/kiosco_dump.py`: radio 5 y de
+`cota-2` a `cota+7`, bloque a bloque):
+
+| Qué | Celda absoluta | Relativo al centro | Estado |
+|---|---|---|---|
+| **Campana** | `1413,121,1415` | `dx-1, dy+1, dz+1` | `bell[attachment=floor, facing=south]`: **descentrada** (una celda al oeste y una al sur), posada en la plataforma |
+| **Celda central** (donde se anda dentro del kiosco) | `1414,121,1414` | `dx0, dy+1, dz0` | **aire**: libre |
+| **Farol** | `1414,124,1414` | `dx0, dy+4, dz0` | `lantern[hanging=true]`, **colgado** de la celda de encima (I14 ✔) |
+| **Beacon** | `1414,125,1414` | `dx0, dy+5, dz0` | `beacon`: el **centro del TEJADO** (la capa del tejado tiene sus 48 piedras + este beacon = 7×7), y es de donde **cuelga** el farol |
+
+El kiosco tiene **0 cofres** (ni barril ni ahumador): la despensa se movió a la cocina de la taberna en la 47, como
+estaba previsto. El farol estaba **bien colgado** (bloque sólido encima) y la auditoría de la aldea 2 daba **0**.
+
+**El beacon no hacía nada**: un beacon **sin pirámide** no da efecto ni ilumina. Era solo la señal del **sello
+místico**, y el sello de verdad no vive en el bloque sino en los **datos de la aldea** (`VillageSavedData.isSiegeResolved`,
+que es lo que consultan la protección contra apariciones y el **haz de partículas** que sigue saliendo del kiosco). El
+jugador lo mandó quitar y se quita el bloque: `marcarSelloMistico` ya **no** lo enciende y `fallVillage` ya **no** lo
+apaga (y, si el de una partida vieja sigue ahí, lo cambia por la **piedra del tejado**, nunca por aire: dejarlo en aire
+—como se hacía— se llevaba por delante al farol que **cuelga** de esa celda, I14).
+
+**La campana, al centro y posada.** En el constructor (`VillageGenerator.kiosco`) la campana pasa de `(cx-1, +1, cz+1)` a
+la **celda central** `(cx, nivel+1, cz)`, **posada** en la plataforma (`attachment=floor`: el apoyo va justo debajo), que
+es como la coloca el propio juego. Es el **POI de reunión** del pueblo y ahí se queda **a propósito**: el pueblo se junta
+en el kiosco. El farol sigue **colgado** del tejado, en la misma vertical pero cuatro bloques más arriba, así que la
+celda central **es de la campana** y el barrido de campanas viejas del constructor retira cualquier otra que quedara
+dentro del kiosco (si no, habría dos campanas y dos POI de reunión). Y se quita la **mesa de trabajo** que el retiro del
+ahumador viejo (`asegurarCocina`) ponía **en la celda central**: era la mesa del cocinero de cuando el kiosco era la
+cocina, y desde la etapa F el cocinero tiene su cocina —y su mesa— en la taberna; con la campana en el centro, esa mesa
+la habría dejado sin sitio en las aldeas viejas.
+
+**La migración 58** (`VillageGenerator.centrarLaCampanaYQuitarElBeacon`, llamada desde `VillageManager` **antes** de
+tirar el plano) hace las dos cosas en las aldeas ya construidas, **celda por celda y sin rehacer el kiosco** (su testigo
+es la **plataforma**, I15: rehacerlo tiraría lo de dentro):
+
+- **La campana**: se busca en **toda la huella** del kiosco (el sitio de la campana ha cambiado de trazado más de una
+  vez), se retira **solo si sigue siendo una campana** y se coloca en el centro **solo si esa celda está libre** (aire).
+  Si el jugador ha puesto algo ahí, **no se toca nada** y queda en el log: mover una campana no vale tirar lo suyo.
+  Se le conserva el `facing` y se fuerza `attachment=floor` (copiar un `attachment` de techo la dejaría flotando).
+- **El beacon**: se retira **solo si sigue siendo un beacon** y su celda se repone con la **piedra del tejado**.
+
+Es **idempotente** (si ya está todo bien no escribe ni una celda) y va **antes** de tirar el plano, para que el plano
+nuevo se capture **con la campana centrada y sin el beacon** (I8: si el beacon siguiera en el plano, el obrero lo
+repondría en cuanto alguien tocara ese hueco). En el guardado del jugador son **2 celdas de escritura**: la campana
+(`1413,121,1415` → `1414,121,1414`, con su celda vieja a aire) y el beacon (`1414,125,1414` → piedra labrada).
+
+**Lo que NO se ha podido comprobar (sin jugar)**: que el juego acepte la campana en su celda nueva (el `canSurvive` del
+`BellBlock` con apoyo de piedra debajo es el de vanilla, pero no se ha visto tañer), ni la migración corriendo sobre la
+partida (el cliente estaba cerrado y esto **no toca el guardado**: lo arregla la migración al cargar). Lo comprobado es
+el antes **contra su guardado**, celda a celda, y que el código nuevo pasa el lint y la auditoría (aldea 2: 0).
+
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.
