@@ -252,6 +252,13 @@ public class VillagerLumberjackGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
+        if (target != null && stuckTicks >= STUCK_LIMIT) {
+            // RENDIRSE = DEJARLO POR UN RATO (I33): el sitio al que no llegó (el tronco, el hueco, el plantón o el
+            // almacén) se apunta para no volver a elegir EL MISMO en bucle, que es lo que dejaba al leñador
+            // empujando el mismo árbol para siempre.
+            VillageManager.marcarPuntoFallido(villager, target);
+            return false;
+        }
         return target != null && !villager.isBaby() && stuckTicks < STUCK_LIMIT
                 && !VillageManager.estaDescansando(villager);
     }

@@ -2710,8 +2710,52 @@ public final class VillageManager {
                 new net.minecraft.world.entity.ai.behavior.BlockPosTracker(objetivo));
     }
 
-    /** Deja de caminar: se quita el destino del cerebro para que no siga yendo a un sitio ya resuelto. */
-    public static void parar(Villager villager) {
+    // --- lo que no se alcanza, se deja por un rato (I33 para TODOS los goals del pueblo) ---------------
+
+    /** Sitio (empaquetado con `asLong`) al que ese aldeano no llegó, y hasta cuándo no lo reintenta. */
+    private static final String PUNTO_FALLIDO_TAG = "DevilRpgPuntoFallido";
+    private static final String PUNTO_FALLIDO_HASTA_TAG = "DevilRpgPuntoFallidoHasta";
+    /** Cuánto se aparca un sitio inalcanzable (5 min de juego): el mundo cambia y se vuelve a intentar. */
+    public static final int PUNTO_FALLIDO_TICKS = 5 * 60 * 20;
+
+    /**
+     * <b>Apuntar un sitio al que el aldeano no llegó</b> (invariante I33, para TODOS los goals del pueblo): un goal
+     * de faena que se rinde con {@code stuckTicks >= STUCK_LIMIT} y vuelve a elegir un destino <b>determinista</b> (la
+     * misma mata, el mismo tronco, la misma caja, el mismo punto de ronda) se queda en <b>bucle</b>: empuja el mismo
+     * obstáculo para siempre. El jugador lo vio con la guardia del corral y con Isidoro ("Guardando lo suyo ...
+     * moviéndose errático"); el patrón estaba en <b>todos</b> los goals.
+     * <p>
+     * El sitio se apunta en los <b>datos persistentes</b> del aldeano (no en el goal, que se pierde al descargar el
+     * chunk) y {@link #esPuntoFallido} lo salta hasta dentro de {@link #PUNTO_FALLIDO_TICKS}. Queda en el log, que es
+     * lo que permite ver <b>qué</b> sitio del pueblo es el inalcanzable (si es un cofre o una caja, hay algo real que
+     * arreglar en el mundo; si es una mata o un tronco, se deja hasta que el mundo cambie).
+     */
+    public static void marcarPuntoFallido(Villager villager, @Nullable BlockPos punto) {
+        if (punto == null) {
+            return;
+        }
+        BlockPos p = punto.immutable();
+        CompoundTag datos = villager.getPersistentData();
+        datos.putLong(PUNTO_FALLIDO_TAG, p.asLong());
+        datos.putLong(PUNTO_FALLIDO_HASTA_TAG, villager.level().getGameTime() + PUNTO_FALLIDO_TICKS);
+        DevilRpg.LOGGER.info("[Village] {} no consigue llegar a {}: lo deja por {} min y sigue con lo demas",
+                villager.getUUID(), p, PUNTO_FALLIDO_TICKS / (60 * 20));
+    }
+
+    /** ¿Ese sitio está <b>aparcado</b> para ese aldeano? (no llegó a él hace poco: ver {@link #marcarPuntoFallido}) */
+    public static boolean esPuntoFallido(Villager villager, @Nullable BlockPos punto) {
+        if (punto == null) {
+            return false;
+        }
+        CompoundTag datos = villager.getPersistentData();
+        if (!datos.contains(PUNTO_FALLIDO_TAG) || !datos.contains(PUNTO_FALLIDO_HASTA_TAG)) {
+            return false;
+        }
+        return villager.level().getGameTime() < datos.getLong(PUNTO_FALLIDO_HASTA_TAG)
+                && datos.getLong(PUNTO_FALLIDO_TAG) == punto.asLong();
+    }
+
+    /** Deja de caminar: se quita el destino del cerebro para que no siga yendo a un sitio ya resuelto. */    public static void parar(Villager villager) {
         villager.getBrain().eraseMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.WALK_TARGET);
         // Y TAMBIÉN el LOOK_TARGET: el cerebro del aldeano tiene "andar hacia donde mira"
         // (`SetWalkTargetFromLookTarget` en su paquete IDLE), así que con el destino borrado y la mirada puesta en el

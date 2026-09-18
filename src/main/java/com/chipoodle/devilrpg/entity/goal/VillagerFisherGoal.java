@@ -123,6 +123,12 @@ public class VillagerFisherGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
+        if (target != null && stuckTicks >= STUCK_LIMIT) {
+            // RENDIRSE = DEJARLO POR UN RATO (I33): la punta de la pasarela a la que no llegó se apunta para no
+            // volver a ella en bucle, que es lo que dejaba al pescador empujando la misma valla para siempre.
+            VillageManager.marcarPuntoFallido(villager, target);
+            return false;
+        }
         return target != null && !villager.isBaby() && stuckTicks < STUCK_LIMIT
                 && !VillageManager.estaDescansando(villager);
     }

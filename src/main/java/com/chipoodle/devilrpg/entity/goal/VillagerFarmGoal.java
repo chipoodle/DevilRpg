@@ -265,6 +265,13 @@ public class VillagerFarmGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
+        if (target != null && stuckTicks >= STUCK_LIMIT) {
+            // RENDIRSE = DEJARLO POR UN RATO (I33): el sitio al que no llegó (la mata, la calva, el compostero o la
+            // despensa) se apunta para no volver a elegir EL MISMO en bucle, que es lo que dejaba al granjero
+            // empujando el mismo obstáculo para siempre.
+            VillageManager.marcarPuntoFallido(villager, target);
+            return false;
+        }
         return target != null && !villager.isBaby() && stuckTicks < STUCK_LIMIT
                 && !VillageManager.estaDescansando(villager);
     }
@@ -700,6 +707,9 @@ public class VillagerFarmGoal extends Goal {
                         BlockPos tierra = q.offset(0, dy, 0);
                         BlockPos aire = tierra.above();
                         if (level.getBlockState(tierra).is(Blocks.FARMLAND) && level.getBlockState(aire).isAir()) {
+                            if (VillageManager.esPuntoFallido(villager, aire)) {
+                                continue; // a esa celda no llegó hace poco: se prueba la siguiente (I33)
+                            }
                             return aire;
                         }
                     }
@@ -730,6 +740,9 @@ public class VillagerFarmGoal extends Goal {
                         continue; // la acequia no se labra (y fuera del bancal no se toca nada)
                     }
                     if (VillageGenerator.esCalvaDeBancal(level, tierra)) {
+                        if (VillageManager.esPuntoFallido(villager, tierra.above())) {
+                            continue; // a esa calva no llegó hace poco: se prueba la siguiente (I33)
+                        }
                         return tierra.above();
                     }
                 }

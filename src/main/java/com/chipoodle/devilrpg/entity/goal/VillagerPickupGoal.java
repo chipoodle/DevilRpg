@@ -261,8 +261,7 @@ public class VillagerPickupGoal extends Goal {
             // valla empujando y girando para siempre — el jugador lo vio con Isidoro, un granjero con la etiqueta
             // "Guardando lo suyo" moviéndose errático. Ahora ese sitio se apunta como fallido y no se vuelve a
             // intentar hasta dentro de unos minutos (el mundo cambia: el jugador abre, rompe, coloca...).
-            marcarFallido(objetivo != null ? objetivo.blockPosition() : destino);
-            return false;
+            VillageManager.marcarPuntoFallido(villager, objetivo != null ? objetivo.blockPosition() : destino);            return false;
         }
         if (objetivo != null) {
             return objetivo.isAlive();
@@ -421,30 +420,11 @@ public class VillagerPickupGoal extends Goal {
         }
     }
 
-    // --- lo que no se alcanza, se deja por un rato --------------------------------------------------
+    // --- lo que no se alcanza, se deja por un rato (el mecanismo vive en el pueblo: I33) -------------
 
-    /** Cuánto se deja un sitio al que no se llegó (5 min de juego): el mundo cambia y se vuelve a intentar. */
-    private static final int FALLO_TICKS = 5 * 60 * 20;
-
-    /** Sitio (un objeto o el cofre) al que este aldeano no llegó, y hasta cuándo no se vuelve a intentar. */
-    @Nullable
-    private BlockPos fallido;
-    private long fallidoHasta;
-
-    /** ¿Ese sitio está <b>aparcado</b> porque no se llegó a él hace poco? (ver {@link #marcarFallido}) */
+    /** ¿Ese sitio está <b>aparcado</b> para este aldeano? (no llegó a él hace poco) */
     private boolean esFallido(@Nullable BlockPos p) {
-        return p != null && p.equals(fallido) && villager.level().getGameTime() < fallidoHasta;
-    }
-
-    /** Apunta un sitio inalcanzable: no se vuelve a intentar hasta dentro de {@link #FALLO_TICKS}. */
-    private void marcarFallido(@Nullable BlockPos p) {
-        if (p == null) {
-            return;
-        }
-        fallido = p.immutable();
-        fallidoHasta = villager.level().getGameTime() + FALLO_TICKS;
-        DevilRpg.LOGGER.info("[Village] {} no consigue llegar a {}: lo deja por {} min y sigue con lo demas",
-                oficio(), p, FALLO_TICKS / (60 * 20));
+        return VillageManager.esPuntoFallido(villager, p);
     }
 
     private int cuantosLleva() {

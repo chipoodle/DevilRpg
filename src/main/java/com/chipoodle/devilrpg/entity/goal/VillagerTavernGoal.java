@@ -110,7 +110,13 @@ public class VillagerTavernGoal extends Goal {
         if (!(villager.level() instanceof ServerLevel level)) {
             return false;
         }
-        if (VillageManager.estaDescansando(villager) || stuckTicks >= STUCK_LIMIT) {
+        if (VillageManager.estaDescansando(villager)) {
+            return false;
+        }
+        if (stuckTicks >= STUCK_LIMIT) {
+            // RENDIRSE = DEJARLO POR UN RATO (I33): la mesa a la que no llegó se apunta para no volver a ella en
+            // bucle, que es lo que dejaba al aldeano empujando la misma silla (o la valla) para siempre.
+            VillageManager.marcarPuntoFallido(villager, mesa);
             return false;
         }
         return VillageManager.tieneHambre(level, villager) || espera > 0;

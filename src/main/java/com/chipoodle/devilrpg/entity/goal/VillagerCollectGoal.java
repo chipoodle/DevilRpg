@@ -130,7 +130,14 @@ public class VillagerCollectGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
-        if (villager.isBaby() || stuckTicks >= STUCK_LIMIT || VillageManager.estaDescansando(villager)) {
+        if (villager.isBaby() || VillageManager.estaDescansando(villager)) {
+            return false;
+        }
+        if (stuckTicks >= STUCK_LIMIT) {
+            // RENDIRSE = DEJARLO POR UN RATO (I33): el sitio al que no llegó (lo que iba a recoger, o el almacén) se
+            // apunta para no volver a elegir EL MISMO en bucle, que es lo que dejaba al aldeano empujando el mismo
+            // obstáculo para siempre.
+            VillageManager.marcarPuntoFallido(villager, objetivo != null ? objetivo.blockPosition() : destino);
             return false;
         }
         if (objetivo != null) {

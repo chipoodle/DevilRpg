@@ -228,6 +228,13 @@ public class VillagerAnimalFarmGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
+        if (target != null && stuckTicks >= STUCK_LIMIT) {
+            // RENDIRSE = DEJARLO POR UN RATO (I33): el sitio al que no llegó (el animal, lo que iba a recoger, el
+            // almacén o el corral) se apunta para no volver a elegir EL MISMO en bucle, que es lo que dejaba al
+            // ganadero empujando el mismo obstáculo para siempre.
+            VillageManager.marcarPuntoFallido(villager, target);
+            return false;
+        }
         return target != null && !villager.isBaby() && stuckTicks < STUCK_LIMIT
                 && !VillageManager.estaDescansando(villager);
     }

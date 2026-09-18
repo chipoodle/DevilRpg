@@ -127,6 +127,12 @@ public class VillagerCookGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
+        if (target != null && stuckTicks >= STUCK_LIMIT) {
+            // RENDIRSE = DEJARLO POR UN RATO (I33): el punto de la cocina al que no llegó se apunta para no volver a
+            // él en bucle, que es lo que dejaba al cocinero empujando el mismo obstáculo para siempre.
+            VillageManager.marcarPuntoFallido(villager, target);
+            return false;
+        }
         return target != null && !villager.isBaby() && stuckTicks < STUCK_LIMIT
                 && !VillageManager.estaDescansando(villager);
     }

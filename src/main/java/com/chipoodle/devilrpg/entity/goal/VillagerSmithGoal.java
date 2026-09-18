@@ -180,6 +180,12 @@ public class VillagerSmithGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
+        if (receta != null && destino != null && stuckTicks >= STUCK_LIMIT) {
+            // RENDIRSE = DEJARLO POR UN RATO (I33): el sitio al que no llegó (el almacén o su taller) se apunta para
+            // no volver a por él en bucle, que es lo que dejaba al herrero empujando el mismo obstáculo para siempre.
+            VillageManager.marcarPuntoFallido(villager, destino);
+            return false;
+        }
         return receta != null && !villager.isBaby() && stuckTicks < STUCK_LIMIT
                 && !VillageManager.estaDescansando(villager);
     }
