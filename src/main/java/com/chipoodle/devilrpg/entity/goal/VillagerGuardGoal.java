@@ -444,9 +444,12 @@ public class VillagerGuardGoal extends Goal {
         if (flechas() <= 0) {
             return; // sin flechas no puede disparar: el tick lo lleva al almacén a por más
         }
-        // Aquí el que aguanta la posición es él (destino a su propio sitio): igual que el espadachín, necesita escribir
-        // el rumbo cada tick para que el pánico del aldeano no le mande a correr.
-        VillageManager.caminarHacia(villager, villager.blockPosition(), VELOCIDAD);
+        // Aquí el que aguanta la posición es él. OJO: se le PARA la navegación, no se le manda caminar a su propia
+        // celda: escribir un destino en el sitio donde ya está hacia el que el aldeano gira sin avanzar (y con el
+        // pánico del aldeano reescribiendo el rumbo) es lo que le hacía dar vueltas sobre sí mismo de manera errática
+        // (lo reportó el jugador: "Bibiana está dando vueltas sobre sí misma"). Parar también le gana al pánico,
+        // porque este goal tiene las banderas de movimiento.
+        VillageManager.parar(villager);
         if (distanciaHorizontal(objetivo) > RADIO_COMBATE - 1.0D) {
             VillageManager.caminarHacia(villager, objetivo.blockPosition(), VELOCIDAD);
             VillageManager.ponerActividad(villager, "Buscando distancia");
