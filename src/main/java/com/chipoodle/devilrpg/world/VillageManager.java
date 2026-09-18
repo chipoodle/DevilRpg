@@ -478,7 +478,7 @@ public final class VillageManager {
      *       por lo que cría el lago y no por un contador.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 49;
+    public static final int CURRENT_LAYOUT = 50;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),

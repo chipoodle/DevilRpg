@@ -233,6 +233,15 @@ la casa y borraba los paneles (el jugador lo vio como *"quedan incompletas las p
 taberna se quedaron con postes, solera, tablones y cristales, y **toda la cal era aire**). Lo repara la **migración
 49** (`rehacerMurosDeLaTaberna`), que vuelve a pasar solo los constructores de estructura.
 
+### I19 · Un cristal de ventana no toca un poste de tronco
+Un `glass_pane` se dibuja según sus cuatro conexiones, y **no conecta con los troncos** (medido en el guardado del
+jugador: los cristales pegados a los postes tenían esa conexión en `false`). Por eso el cristal pegado al poste se veía
+**cortado** (media ventana) y uno solo entre dos postes quedaba como una **franja fina**: el jugador lo reportó como
+*"en un espacio de dos, un cristal está completo pero el que le sigue no; y cuando el espacio es de uno, el cristal
+sólo parece una franja delgada"*. **Regla:** el cristal va **solo en la celda central del hueco** (`muroTudor`:
+`i % 4 == 2`), con **cal a los dos lados**, así conecta por ambos y se ve entero. Los huecos de una sola celda (los
+extremos de un muro) **no llevan cristal**: ahí no hay forma de que conecte.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
