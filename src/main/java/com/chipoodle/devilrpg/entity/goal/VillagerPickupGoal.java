@@ -224,6 +224,13 @@ public class VillagerPickupGoal extends Goal {
         if (cuantosLleva() >= LLEVAR_MAX) {
             objetivo = null;
             destino = puntoDeDestino(level);
+            if (destino != null && esFallido(destino)) {
+                // Ya se intentó y no se llega (el cofre está cerrado por lo que sea): no se queda dando vueltas
+                // contra la pared, espera un rato y lo vuelve a intentar. Ver `marcarFallido`.
+                destino = null;
+                restTicks = IDLE_REST_TICKS;
+                return false;
+            }
             return destino != null;
         }
         objetivo = buscarObjeto(level);
@@ -244,7 +251,17 @@ public class VillagerPickupGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
-        if (villager.isBaby() || stuckTicks >= STUCK_LIMIT || VillageManager.estaDescansando(villager)) {
+        if (villager.isBaby() || VillageManager.estaDescansando(villager)) {
+            return false;
+        }
+        if (stuckTicks >= STUCK_LIMIT) {
+            // RENDIRSE = DEJARLO POR UN RATO (I33: rendirse es saltar el punto, no reintentarlo igual). Antes se
+            // rendía a los 140 ticks y volvía a elegir EL MISMO destino determinista (el objeto más cercano, que
+            // seguía en el suelo, o el cofre, que seguía sin poderse alcanzar): el aldeano se quedaba pegado a la
+            // valla empujando y girando para siempre — el jugador lo vio con Isidoro, un granjero con la etiqueta
+            // "Guardando lo suyo" moviéndose errático. Ahora ese sitio se apunta como fallido y no se vuelve a
+            // intentar hasta dentro de unos minutos (el mundo cambia: el jugador abre, rompe, coloca...).
+            marcarFallido(objetivo != null ? objetivo.blockPosition() : destino);
             return false;
         }
         if (objetivo != null) {
@@ -340,6 +357,9 @@ public class VillagerPickupGoal extends Goal {
             if (!interes().test(item.getItem())) {
                 continue;
             }
+            if (esFallido(item.blockPosition())) {
+                continue; // ya se intentó y no se llegó: se deja por un rato (ver `marcarFallido`)
+            }
             double dx = item.getX() - center.getX();
             double dz = item.getZ() - center.getZ();
             if (dx * dx + dz * dz > RADIO_DEL_PUEBLO * RADIO_DEL_PUEBLO) {
@@ -399,6 +419,32 @@ public class VillagerPickupGoal extends Goal {
         if (destino != null) {
             VillageManager.caminarHacia(villager, destino, VELOCIDAD);
         }
+    }
+
+    // --- lo que no se alcanza, se deja por un rato --------------------------------------------------
+
+    /** Cuánto se deja un sitio al que no se llegó (5 min de juego): el mundo cambia y se vuelve a intentar. */
+    private static final int FALLO_TICKS = 5 * 60 * 20;
+
+    /** Sitio (un objeto o el cofre) al que este aldeano no llegó, y hasta cuándo no se vuelve a intentar. */
+    @Nullable
+    private BlockPos fallido;
+    private long fallidoHasta;
+
+    /** ¿Ese sitio está <b>aparcado</b> porque no se llegó a él hace poco? (ver {@link #marcarFallido}) */
+    private boolean esFallido(@Nullable BlockPos p) {
+        return p != null && p.equals(fallido) && villager.level().getGameTime() < fallidoHasta;
+    }
+
+    /** Apunta un sitio inalcanzable: no se vuelve a intentar hasta dentro de {@link #FALLO_TICKS}. */
+    private void marcarFallido(@Nullable BlockPos p) {
+        if (p == null) {
+            return;
+        }
+        fallido = p.immutable();
+        fallidoHasta = villager.level().getGameTime() + FALLO_TICKS;
+        DevilRpg.LOGGER.info("[Village] {} no consigue llegar a {}: lo deja por {} min y sigue con lo demas",
+                oficio(), p, FALLO_TICKS / (60 * 20));
     }
 
     private int cuantosLleva() {
