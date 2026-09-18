@@ -50,10 +50,12 @@ import net.minecraft.world.level.block.entity.SculkCatalystBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Predicate;
 
 /**
  * <b>Cultivador del sculk</b>: un illager (usa el modelo y la textura del Invocador, con tinte escarlata)
@@ -103,6 +105,13 @@ public class SculkCultivatorEntity extends AbstractIllager implements RangedAtta
      * poniendo huevos).
      */
     private static final int SPECIES_KEEP = 3;
+    /**
+     * Tope <b>duro</b> del rebaño: ni con el sacrificio bloqueado se cría por encima de esto (evita que un
+     * corral sin candidato a sacrificio se llene de crías sin fin). El tope normal sigue siendo
+     * {@link #MAX_LIVESTOCK}: este solo se usa cuando el rebaño <b>no puede sacrificar nada</b>, que es la
+     * única situación en la que criar más es la forma de desbloquear la granja (ver {@code BreedAnimalsGoal}).
+     */
+    private static final int HARD_LIVESTOCK_CAP = 12;
 
     /**
      * Cada cuántos ticks lanza una poción. La bruja vanilla usa 60 (3 s) con radio 10, así que el doble de
@@ -111,6 +120,29 @@ public class SculkCultivatorEntity extends AbstractIllager implements RangedAtta
     private static final int POTION_ATTACK_INTERVAL = 120;
     /** Radio desde el que lanza (el mismo que la bruja). Dentro de él se para y dispara. */
     private static final float POTION_ATTACK_RADIUS = 10.0F;
+    /**
+     * Radio de la <b>amenaza real</b>: dentro de esto el guardián deja la faena y planta cara; más lejos
+     * sigue trabajando. Es corto a propósito (el {@code FOLLOW_RANGE} es 32, la plataforma entera).
+     * <p>
+     * Con los 32 del atributo la granja se quedaba <b>parada para siempre</b>: el jugador mirando la guarida
+     * desde fuera ya entraba en el radio, y el goal de ataque (prioridad 1, banderas MOVE y LOOK) no tiene
+     * límite de distancia, así que las tres faenas (prioridad 2-4, las mismas banderas) no llegaban a correr
+     * nunca. Y como {@code isRealThreat()} solo descarta a quien no se puede alcanzar, el guardián planta
+     * cara igual a quien se le acerca de verdad: <b>no huye</b>.
+     */
+    private static final double THREAT_RADIUS = 12.0D;
+    /** Ticks intentando acercarse a un objetivo sin conseguirlo antes de darlo por inalcanzable (4 s). */
+    private static final int UNREACHABLE_GIVE_UP_TICKS = 80;
+    /**
+     * Ticks que el guardián recuerda que a ese objetivo no llega (30 s). Sin esta memoria volvería a
+     * fijarse en él cada 10 ticks (el selector de objetivos corre a intervalos) y la granja se quedaría
+     * otra vez a medias entre "planta cara" y "trabaja".
+     */
+    private static final int UNREACHABLE_MEMORY_TICKS = 600;
+    /** Ticks mínimos que dura una pausa de la faena para dejar constancia en el log (evita el ruido). */
+    private static final int MIN_PAUSE_TICKS_FOR_LOG = 20;
+    /** Ticks mínimos entre dos líneas de "planta cara" (un objetivo que va y viene no spamea el log). */
+    private static final int THREAT_LOG_THROTTLE_TICKS = 200;
 
     private double spawnDistance = 0;
     private double spawnThreat = 1.0;
@@ -119,6 +151,21 @@ public class SculkCultivatorEntity extends AbstractIllager implements RangedAtta
     /** "Hogar" (núcleo de su guarida): patrulla un radio alrededor. */
     private BlockPos homePos = null;
     private int homeRadius = 0;
+
+    /** Objetivo al que se ha renunciado por inalcanzable (ver {@link #setTarget}) y ticks que le quedan. */
+    @Nullable
+    private LivingEntity rejectedTarget = null;
+    private int rejectedTicks = 0;
+    /** Ticks seguidos sin poder acercarse al objetivo actual (ver {@link #isRealThreat()}). */
+    private int unreachableTicks = 0;
+    /** ¿Está la faena en pausa porque el guardián está plantando cara? */
+    private boolean farmPaused = false;
+    /** Ticks que lleva la pausa actual (para no escribir en el log por un objetivo que solo pasa de largo). */
+    private int pausedTicks = 0;
+    /** Último tick en el que se escribió "planta cara" (ver {@link #THREAT_LOG_THROTTLE_TICKS}). */
+    private long lastThreatLogTick = Long.MIN_VALUE;
+    /** Si la próxima faena que arranque tiene que dejar constancia en el log (se pone al reanudar). */
+    private boolean logNextFarmWork = false;
 
     public SculkCultivatorEntity(EntityType<? extends AbstractIllager> type, Level level) {
         super(type, level);
@@ -226,6 +273,13 @@ public class SculkCultivatorEntity extends AbstractIllager implements RangedAtta
      * Lanza una <b>poción salpicada</b> al objetivo, como la bruja, pero <b>más débil</b>: mismo radio, el
      * doble de recarga (ver {@link #POTION_ATTACK_INTERVAL}) y sin las variedades fuertes que usa la bruja
      * (nada de daño fuerte ni veneno), así que solo puede hacer daño 6 de vez en cuando.
+     * <p>
+     * <b>Con el rebaño cerca, no usa la poción de daño.</b> Una poción salpicada afecta a <b>todo</b> lo que
+     * pilla en 4 bloques (vanilla {@code ThrownPotion.applySplash}), ganado incluido, y el guardián pelea
+     * muchas veces desde su propio corral: una gallina tiene 4 de vida, así que <b>una sola poción le mataría
+     * el rebaño</b> que luego tiene que criar y sacrificar. Un sacrificio es a propósito y alimenta al
+     * catalizador; una salpicadura es un accidente. Sigue plantando cara: solo cambia la poción por una que
+     * frena o debilita.
      */
     @Override
     public void performRangedAttack(LivingEntity target, float distanceFactor) {
@@ -234,7 +288,7 @@ public class SculkCultivatorEntity extends AbstractIllager implements RangedAtta
         double dy = target.getEyeY() - 1.1D - getY();
         double dz = target.getZ() + velocity.z - getZ();
         double horizontal = Math.sqrt(dx * dx + dz * dz);
-        Holder<Potion> potion = Potions.HARMING;
+        Holder<Potion> potion = livestockNear(target) ? Potions.SLOWNESS : Potions.HARMING;
         if (horizontal >= 8.0D && !target.hasEffect(MobEffects.MOVEMENT_SLOWDOWN)) {
             potion = Potions.SLOWNESS; // de lejos frena, para poder seguir a distancia
         } else if (horizontal <= 3.0D && !target.hasEffect(MobEffects.WEAKNESS)) {
@@ -257,6 +311,22 @@ public class SculkCultivatorEntity extends AbstractIllager implements RangedAtta
             return tamable.getOwner() != null;
         }
         return entity instanceof TamableAnimal animal && animal.getOwner() != null;
+    }
+
+    /**
+     * Margen con el que se mira si el rebaño cae dentro de la salpicadura. El splash de una poción alcanza 4
+     * bloques alrededor del impacto (vanilla) y el impacto no tiene por qué ser exactamente el objetivo.
+     */
+    private static final double SPLASH_SAFETY_RADIUS = 6.0D;
+
+    /**
+     * ¿Hay <b>ganado de la granja</b> lo bastante cerca del objetivo como para comerse la salpicadura? Se usa
+     * para no lanzar pociones de daño cuando el guardián está peleando dentro (o al borde) de su propio
+     * corral: el splash no distingue y mataría al rebaño que luego tiene que criar y sacrificar.
+     */
+    private boolean livestockNear(LivingEntity target) {
+        return !level().getEntitiesOfClass(Animal.class, target.getBoundingBox().inflate(SPLASH_SAFETY_RADIUS),
+                LairGenerator::isLivestock).isEmpty();
     }
 
     /** Carga que un sacrificio mete a los catalizadores cercanos (ver {@link #feedNearbyCatalysts}). */
@@ -292,10 +362,11 @@ public class SculkCultivatorEntity extends AbstractIllager implements RangedAtta
                 level().scheduleTick(pos, state.getBlock(), 8);
             }
         }
-        if (fed > 0) {
-            DevilRpg.LOGGER.info("[Sculk] Sacrificio en {} alimentó {} catalizador(es) con carga {}",
-                    deathPos, fed, SACRIFICE_CHARGE);
-        }
+        // Se registra SIEMPRE, aunque no hubiera ningún catalizador cerca: si no, un sacrificio lejos del
+        // corral (cuando el ganado se escapa y el guardián lo caza por la plataforma) no dejaba ni una línea
+        // en el log y parecía que el guardián no estaba sacrificando nada.
+        DevilRpg.LOGGER.info("[Sculk] Sacrificio en {} alimentó {} catalizador(es) con carga {}",
+                deathPos, fed, SACRIFICE_CHARGE);
     }
 
     @Override
@@ -305,23 +376,93 @@ public class SculkCultivatorEntity extends AbstractIllager implements RangedAtta
         //
         // El guardián pelea como una BRUJA debilitada: se queda a distancia (10 bloques, como la bruja) y
         // lanza pociones salpicadas, con el DOBLE de recarga que ella. Ya no huye: antes se alejaba demasiado
-        // y el asalto se convertía en perseguirlo por medio mapa.
+        // y el asalto se convertía en perseguirlo por medio mapa. Eso sí: SOLO planta cara a una amenaza real
+        // (cerca y alcanzable); a un objetivo lejano o inalcanzable lo suelta y sigue con la granja.
         this.goalSelector.addGoal(0, new FloatGoal(this));
-        this.goalSelector.addGoal(1, new RangedAttackGoal(this, 1.0D, POTION_ATTACK_INTERVAL, POTION_ATTACK_RADIUS));
+        this.goalSelector.addGoal(1, new PotionAttackGoal(this));
         // Tareas de cultivador (su "trabajo", cuando no tiene a quién lanzar).
         this.goalSelector.addGoal(2, new SacrificeGoal(this));
         this.goalSelector.addGoal(3, new BreedAnimalsGoal(this));
         this.goalSelector.addGoal(4, new PlantCatalystGoal(this));
+        // Adoptar como ganado a lo que aparezca DENTRO del foso del corral (los recién nacidos no heredan la
+        // etiqueta). No declara banderas: solo etiqueta, no navega, así que convive con la faena en curso.
+        this.goalSelector.addGoal(5, new AdoptCorralLivestockGoal(this));
         // ...y la otra mitad: abrir de verdad la puerta del corral cuando se topa con ella yendo a trabajar.
         // (OpenDoorGoal no declara flags: solo abre puertas, no navega, así que convive con el goal de turno.)
-        this.goalSelector.addGoal(5, new OpenDoorGoal(this, true));
+        this.goalSelector.addGoal(6, new OpenDoorGoal(this, true));
         // Patrullar el radio de su guarida cuando no tiene nada que hacer.
         this.goalSelector.addGoal(8, new PatrolHomeGoal(this));
-        // Objetivos: jugadores e invocaciones con dueño. Los goals vanilla ya ignoran a los jugadores en
+        // Objetivos: jugadores e invocaciones con dueño, pero SOLO dentro del radio de amenaza (12), no los
+        // 32 de FOLLOW_RANGE: ver ThreatTargetGoal. Los goals vanilla ya ignoran a los jugadores en
         // creativo/espectador, así que se puede seguir observándolo trabajar.
-        this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, Player.class, true));
-        this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, LivingEntity.class, 10, true, false,
+        this.targetSelector.addGoal(1, new ThreatTargetGoal<>(this, Player.class, null));
+        this.targetSelector.addGoal(2, new ThreatTargetGoal<>(this, LivingEntity.class,
                 (target) -> isOwnedMinion(target)));
+    }
+
+    /**
+     * Como el {@code NearestAttackableTargetGoal} vanilla, pero con el <b>radio de amenaza</b> en vez del
+     * {@code FOLLOW_RANGE}: el vanilla construye sus condiciones con {@code getFollowDistance()} (32 aquí),
+     * así que fijaba como objetivo a un jugador que solo estaba <i>mirando</i> la guarida desde fuera y el
+     * goal de ataque le comía las banderas a la granja.
+     * <p>
+     * Se sobrescribe {@code getFollowDistance()} y no el atributo a propósito: el {@code FOLLOW_RANGE} sigue
+     * en 32 (es la medida documentada de la plataforma) y solo cambia <b>a quién considera objetivo</b>.
+     */
+    static class ThreatTargetGoal<T extends LivingEntity> extends NearestAttackableTargetGoal<T> {
+        ThreatTargetGoal(SculkCultivatorEntity cult, Class<T> type, @Nullable Predicate<LivingEntity> filter) {
+            super(cult, type, 10, true, false, filter);
+        }
+
+        @Override
+        protected double getFollowDistance() {
+            return THREAT_RADIUS;
+        }
+    }
+
+    /**
+     * El goal de ataque del guardián: el mismo {@code RangedAttackGoal} de la bruja (radio 10, doble de
+     * recarga), pero que <b>solo corre contra una amenaza real</b>.
+     * <p>
+     * Envolverlo es imprescindible porque el goal vanilla no mira la distancia en {@code canUse()} (le basta
+     * con que haya objetivo) y su {@code canContinueToUse()} sigue devolviendo {@code true} mientras la
+     * navegación no haya terminado, aunque el objetivo ya no exista: entre las dos cosas, un objetivo lejano
+     * o inalcanzable dejaba la granja parada indefinidamente.
+     */
+    static class PotionAttackGoal extends RangedAttackGoal {
+        private final SculkCultivatorEntity cult;
+
+        PotionAttackGoal(SculkCultivatorEntity cult) {
+            super(cult, 1.0D, POTION_ATTACK_INTERVAL, POTION_ATTACK_RADIUS);
+            this.cult = cult;
+        }
+
+        @Override
+        public boolean canUse() {
+            return cult.isRealThreat() && super.canUse();
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            // No se llama a super.canContinueToUse(): volvería a evaluar la amenaza (dos veces por tick) y
+            // además deja seguir al mob con la navegación empezada aunque el objetivo ya se haya soltado.
+            // Aquí el contrato es claro: mientras sea una amenaza real y siga siendo su objetivo, se planta
+            // cara; en cuanto deja de serlo, el goal se para y la granja recupera las banderas MOVE y LOOK.
+            LivingEntity target = cult.getTarget();
+            return target != null && target.isAlive() && cult.isRealThreat();
+        }
+
+        @Override
+        public void start() {
+            super.start();
+            cult.pauseFarmFor(cult.getTarget());
+        }
+
+        @Override
+        public void stop() {
+            super.stop();
+            cult.resumeFarm("el objetivo se fue, se acercó demasiado tarde o no había camino hacia él");
+        }
     }
 
     // ------------------------------------------------------------------
@@ -334,6 +475,15 @@ public class SculkCultivatorEntity extends AbstractIllager implements RangedAtta
         if (!attributesAdjusted) {
             adjustAttributesBasedOnSpawnDistance();
             attributesAdjusted = true;
+        }
+        if (!level().isClientSide) {
+            // Caducidad de la memoria de "a éste no llego" y duración de la pausa de la faena (ver isRealThreat).
+            if (rejectedTicks > 0 && --rejectedTicks == 0) {
+                rejectedTarget = null;
+            }
+            if (farmPaused) {
+                pausedTicks++;
+            }
         }
     }
 
@@ -465,6 +615,129 @@ public class SculkCultivatorEntity extends AbstractIllager implements RangedAtta
                 .count();
     }
 
+    /** ¿Hay <b>alguna</b> especie con {@link #SPECIES_KEEP} adultos? Es lo único que puede sacrificarse. */
+    private static boolean hasSacrificeCandidate(List<Animal> herd) {
+        return herd.stream().anyMatch(a -> !a.isBaby() && adultsOfSameSpecies(herd, a) >= SPECIES_KEEP);
+    }
+
+    // ------------------------------------------------------------------
+    // Amenaza real, pausa y reanudación de la faena
+    // ------------------------------------------------------------------
+
+    /**
+     * <b>Solo acepta como objetivo a quien no haya mandado a paseo.</b> Cuando el guardián suelta a un
+     * objetivo inalcanzable ({@link #giveUpThreat}), el selector de objetivos vanilla lo vuelve a fijar en
+     * cuanto pasa su intervalo (10 ticks) porque sigue estando dentro del radio: sin este veto, el guardián
+     * se pasaría la vida fijándolo y soltándolo, y la granja no arrancaría de forma estable.
+     */
+    @Override
+    public void setTarget(@Nullable LivingEntity target) {
+        if (target != null && target == rejectedTarget && rejectedTicks > 0) {
+            return; // ya se le soltó por inalcanzable: hasta que se le pase la memoria, no cuenta como amenaza
+        }
+        super.setTarget(target);
+    }
+
+    /**
+     * ¿El objetivo que tiene delante es una <b>amenaza real</b>: está cerca y se puede alcanzar? Solo
+     * entonces el guardián deja la faena. Si no lo es, lo suelta y vuelve a criar/sacrificar/sembrar.
+     * <p>
+     * Las dos condiciones son necesarias:
+     * <ul>
+     *   <li><b>cerca</b> ({@link #THREAT_RADIUS}): el guardián es el granjero de la guarida, no su
+     *       perseguidor; un jugador al otro lado de la plataforma no puede dejar la granja muerta.</li>
+     *   <li><b>alcanzable</b>: si lleva {@link #UNREACHABLE_GIVE_UP_TICKS} sin poder acortar distancia y no
+     *       está a tiro de poción, es que no hay camino (el foso, una pared, el otro lado del agua) y
+     *       quedarse mirándolo es exactamente el fallo que dejaba la granja parada.</li>
+     * </ul>
+     */
+    boolean isRealThreat() {
+        LivingEntity threat = getTarget();
+        if (threat == null || !threat.isAlive()) {
+            unreachableTicks = 0;
+            return false;
+        }
+        double distanceSqr = distanceToSqr(threat);
+        if (distanceSqr > THREAT_RADIUS * THREAT_RADIUS) {
+            // No debería pasar casi nunca (el selector ya no fija más lejos), pero el objetivo puede
+            // alejarse a mitad de pelea: se le suelta y el guardián vuelve al trabajo.
+            giveUpThreat(threat, "se alejó más de " + (int) THREAT_RADIUS + " bloques");
+            return false;
+        }
+        boolean dentroDelRadioDeTiro = distanceSqr <= (double) POTION_ATTACK_RADIUS * POTION_ATTACK_RADIUS;
+        if (!dentroDelRadioDeTiro && getNavigation().isDone()) {
+            // Hay que acercarse para tirar y la navegación no encuentra camino: paciencia limitada.
+            if (++unreachableTicks > UNREACHABLE_GIVE_UP_TICKS) {
+                giveUpThreat(threat, "no encuentra el camino hacia él");
+                return false;
+            }
+        } else {
+            unreachableTicks = 0;
+        }
+        return true;
+    }
+
+    /** Suelta al objetivo (y lo recuerda un rato) porque no es una amenaza a la que pueda hacer frente. */
+    private void giveUpThreat(LivingEntity threat, String motivo) {
+        rejectedTarget = threat;
+        rejectedTicks = UNREACHABLE_MEMORY_TICKS;
+        unreachableTicks = 0;
+        setTarget(null);
+        getNavigation().stop();
+        // Comparte el limitador con "planta cara": si el jugador se queda justo en el borde del radio (o
+        // detrás de una pared), el guardián reintenta cada 30 s y no queremos dos líneas por intento.
+        long now = level().getGameTime();
+        if (now - lastThreatLogTick >= THREAT_LOG_THROTTLE_TICKS) {
+            lastThreatLogTick = now;
+            DevilRpg.LOGGER.info("[Sculk] guardián {} suelta a {} ({}): vuelve a criar, sacrificar y sembrar",
+                    getUUID(), threat.getName().getString(), motivo);
+        }
+    }
+
+    /** El guardián deja la faena para <b>plantar cara</b> a una amenaza real (una línea de log por episodio). */
+    void pauseFarmFor(@Nullable LivingEntity threat) {
+        if (farmPaused) {
+            return;
+        }
+        farmPaused = true;
+        pausedTicks = 0;
+        long now = level().getGameTime();
+        if (threat != null && now - lastThreatLogTick >= THREAT_LOG_THROTTLE_TICKS) {
+            lastThreatLogTick = now;
+            DevilRpg.LOGGER.info("[Sculk] guardián {} planta cara a {} a {} bloques: pausa la granja",
+                    getUUID(), threat.getName().getString(), (int) Math.sqrt(distanceToSqr(threat)));
+        }
+    }
+
+    /**
+     * El guardián vuelve a la faena. Solo deja constancia si la pausa duró lo suficiente como para notarse:
+     * un objetivo que cruza el radio de amenaza de un lado a otro no tiene que llenar el log.
+     */
+    void resumeFarm(String motivo) {
+        if (!farmPaused) {
+            return;
+        }
+        farmPaused = false;
+        if (pausedTicks >= MIN_PAUSE_TICKS_FOR_LOG) {
+            DevilRpg.LOGGER.info("[Sculk] guardián {} retoma la faena tras {} ticks sin amenaza ({})",
+                    getUUID(), pausedTicks, motivo);
+            logNextFarmWork = true;
+        }
+        pausedTicks = 0;
+    }
+
+    /**
+     * Deja constancia de <b>qué</b> faena ha arrancado justo después de una pausa: es la prueba de que el
+     * guardián ha vuelto a criar/sacrificar/sembrar y no se ha quedado mirando al horizonte.
+     */
+    void logFarmWorkResumed(String work) {
+        if (!logNextFarmWork) {
+            return;
+        }
+        logNextFarmWork = false;
+        DevilRpg.LOGGER.info("[Sculk] guardián {} vuelve al trabajo: {}", getUUID(), work);
+    }
+
     // ------------------------------------------------------------------
     // Goals
     // ------------------------------------------------------------------
@@ -487,7 +760,8 @@ public class SculkCultivatorEntity extends AbstractIllager implements RangedAtta
             if (home == null || cult.getHomeRadius() <= 0) {
                 return false;
             }
-            // El cultivador nunca tiene objetivo, así que esto es siempre su "trabajo por defecto".
+            // Es el "trabajo por defecto": el más baja prioridad, así que solo corre cuando ni la faena ni
+            // el goal de ataque (que declaran MOVE y LOOK) lo están ocupando.
             return true;
         }
 
@@ -581,6 +855,11 @@ public class SculkCultivatorEntity extends AbstractIllager implements RangedAtta
         }
 
         @Override
+        public void start() {
+            cult.logFarmWorkResumed("sacrificio");
+        }
+
+        @Override
         public void tick() {
             if (victim == null) return;
             if (cult.distanceToSqr(victim) > 4.0D) {
@@ -619,6 +898,11 @@ public class SculkCultivatorEntity extends AbstractIllager implements RangedAtta
             this.setFlags(java.util.EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
         }
 
+        /** ¿Se puede poner en celo a este animal? (adulto y sin estar ya enamorado). */
+        private static boolean puedeEnamorarse(Animal animal) {
+            return !animal.isBaby() && !animal.isInLove() && animal.canFallInLove();
+        }
+
         @Override
         public boolean canUse() {
             if (cooldown > 0) {
@@ -626,27 +910,56 @@ public class SculkCultivatorEntity extends AbstractIllager implements RangedAtta
                 return false;
             }
             List<Animal> herd = cult.livestock();
-            if (herd.size() >= MAX_LIVESTOCK) {
+            // El tope normal (MAX_LIVESTOCK) es la banda con MIN_LIVESTOCK: por encima de ella no se cría...
+            // SALVO que con este rebaño no se pueda sacrificar nada (ninguna especie llega a SPECIES_KEEP
+            // adultos), porque entonces criar es la ÚNICA forma de desbloquear la granja. Sin esta excepción
+            // el rebaño se quedaba clavado en 2+2+2+2 = 8 (el tope) y, como los recién nacidos no se contaban
+            // como ganado, ninguna especie llegaba nunca a 3 adultos: NINGÚN sacrificio, jamás. Medido en el
+            // guardado del jugador: la guarida 1 tenía 7 cabezas (2 vacas, 2 ovejas, 2 cerdos, 1 gallina) y
+            // el cultivador no podía sacrificar nada. El tope duro evita que eso llene el corral de crías.
+            boolean sinSacrificio = !hasSacrificeCandidate(herd);
+            int tope = sinSacrificio ? HARD_LIVESTOCK_CAP : MAX_LIVESTOCK;
+            if (herd.size() >= tope) {
                 cooldown = RETRY_TICKS;
                 return false;
             }
-            target = herd.stream()
-                    .filter(a -> !a.isBaby() && !a.isInLove() && a.canFallInLove())
-                    .min(Comparator.comparingDouble(a -> a.distanceToSqr(cult)))
-                    .orElse(null);
-            if (target == null) {
+            // Solo sirve un animal que TENGA PAREJA, y la especie se elige por eso: poner en celo a uno solo
+            // no cría nada (Animal necesita dos) y elegir siempre al solitario (el cerdo que nace solo en la
+            // guarida) dejaba a las demás especies sin criar y quemaba el celo del que sí tenía pareja.
+            List<Animal> libres = herd.stream().filter(BreedAnimalsGoal::puedeEnamorarse).toList();
+            Animal elegido = null;
+            for (Animal candidato : libres) {
+                if (!tienePareja(libres, candidato)) {
+                    continue;
+                }
+                if (elegido == null || candidato.distanceToSqr(cult) < elegido.distanceToSqr(cult)) {
+                    elegido = candidato;
+                }
+            }
+            if (elegido == null) {
                 cooldown = RETRY_TICKS;
                 return false;
             }
-            // Pareja: otro adulto de la MISMA especie que también pueda enamorarse. Con uno solo en celo el
-            // apareamiento no ocurre (Animal necesita pareja), y por eso antes el rebaño solo menguaba.
-            Animal chosen = target;
-            partner = herd.stream()
-                    .filter(a -> a != chosen && !a.isBaby() && a.getType() == chosen.getType())
-                    .filter(a -> !a.isInLove() && a.canFallInLove())
-                    .min(Comparator.comparingDouble(a -> a.distanceToSqr(cult)))
-                    .orElse(null);
+            target = elegido;
+            partner = parejaDe(libres, elegido);
             return true;
+        }
+
+        private static boolean tienePareja(List<Animal> libres, Animal animal) {
+            return parejaDe(libres, animal) != null;
+        }
+
+        /** Otro adulto de la MISMA especie que también pueda enamorarse (el más cercano al cultivador). */
+        private static Animal parejaDe(List<Animal> libres, Animal animal) {
+            return libres.stream()
+                    .filter(otro -> otro != animal && otro.getType() == animal.getType())
+                    .min(Comparator.comparingDouble(otro -> otro.distanceToSqr(animal)))
+                    .orElse(null);
+        }
+
+        @Override
+        public void start() {
+            cult.logFarmWorkResumed("cría (pone en celo a una pareja)");
         }
 
         @Override
@@ -677,8 +990,7 @@ public class SculkCultivatorEntity extends AbstractIllager implements RangedAtta
     }
 
     /** Goal: extraer sculk del terreno y condensarlo en un catalizador nuevo en el borde de la infección. */
-    static class PlantCatalystGoal extends Goal {
-        /** Cada cuánto se permite volver a barrer el terreno (el barrido es caro). */
+    static class PlantCatalystGoal extends Goal {        /** Cada cuánto se permite volver a barrer el terreno (el barrido es caro). */
         private static final int RETRY_TICKS = 60;
         /** Tras plantar un catalizador, cuánto tarda en empezar otro. */
         private static final int PLANT_COOLDOWN_TICKS = 200;
@@ -731,6 +1043,11 @@ public class SculkCultivatorEntity extends AbstractIllager implements RangedAtta
         @Override
         public boolean canContinueToUse() {
             return spot != null && reachTicks <= REACH_TIMEOUT_TICKS;
+        }
+
+        @Override
+        public void start() {
+            cult.logFarmWorkResumed("siembra de catalizadores");
         }
 
         @Override
@@ -809,6 +1126,92 @@ public class SculkCultivatorEntity extends AbstractIllager implements RangedAtta
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Goal: <b>adoptar</b> como ganado de la granja a cualquier animal que esté <b>dentro del foso del
+     * corral</b> y todavía no lleve la marca ({@link LairGenerator#LIVESTOCK_TAG}).
+     * <p>
+     * Hace falta porque la etiqueta <b>no se hereda</b>: las crías que nacen de la cría macabra salen sin
+     * marca, así que no contaban como rebaño ni se les protegía de los zombies del resto de la guarida. Y
+     * eso, con las reglas de sacrificio, era una <b>trampa mortal</b>: el rebaño se quedaba congelado en la
+     * composición inicial (2 vacas, 2 ovejas, 1 cerdo y 2 gallinas), ninguna especie llegaba a
+     * {@link #SPECIES_KEEP} adultos contando solo lo etiquetado y el cultivador <b>no sacrificaba nunca</b>
+     * (comprobado en el guardado del jugador: 7 cabezas contadas, ninguna especie con 3 adultos).
+     * <p>
+     * Se adoptan solo los de <b>dentro del corral</b>, igual que hace el pueblo con los suyos (un animal sin
+     * marca dentro de un corral es de ese corral): los animales <b>salvajes</b> que andan por la guarida
+     * siguen siendo presa de los zombies, que es de donde sale la infección que crece sola. No declara
+     * banderas porque solo etiqueta: no navega ni le quita el turno a la faena.
+     */
+    static class AdoptCorralLivestockGoal extends Goal {
+        /** El corral cambia poco: con mirarlo cada 5 s sobra (y el barrido no es gratis). */
+        private static final int RETRY_TICKS = 100;
+
+        private final SculkCultivatorEntity cult;
+        private List<Animal> sinMarca = List.of();
+        private int cooldown = RETRY_TICKS;
+
+        AdoptCorralLivestockGoal(SculkCultivatorEntity cult) {
+            this.cult = cult;
+        }
+
+        @Override
+        public boolean canUse() {
+            if (cooldown > 0) {
+                cooldown--;
+                return false;
+            }
+            cooldown = RETRY_TICKS;
+            BlockPos home = cult.getHomePos();
+            if (home == null) {
+                return false;
+            }
+            sinMarca = cult.level().getEntitiesOfClass(Animal.class,
+                            new AABB(home).inflate(workRadius(cult) + 8.0D))
+                    .stream()
+                    .filter(Animal::isAlive)
+                    .filter(a -> !LairGenerator.isLivestock(a))
+                    .filter(a -> LairGenerator.isInsideCorralPit(home, a.getX(), a.getY(), a.getZ()))
+                    .toList();
+            return !sinMarca.isEmpty();
+        }
+
+        private static int workRadius(SculkCultivatorEntity cult) {
+            return cult.getHomeRadius() > 0 ? cult.getHomeRadius() : WORK_RADIUS;
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            return !sinMarca.isEmpty();
+        }
+
+        @Override
+        public void tick() {
+            if (sinMarca.isEmpty()) {
+                return;
+            }
+            StringBuilder especies = new StringBuilder();
+            int adoptados = 0;
+            for (Animal animal : sinMarca) {
+                if (!animal.isAlive()) {
+                    continue;
+                }
+                animal.addTag(LairGenerator.LIVESTOCK_TAG);
+                // Igual que el ganado inicial del generador: el rebaño del cultivador no se va del corral.
+                animal.setPersistenceRequired();
+                adoptados++;
+                if (especies.length() > 0) {
+                    especies.append(", ");
+                }
+                especies.append(animal.getType().getDescription().getString());
+            }
+            if (adoptados > 0) {
+                DevilRpg.LOGGER.info("[Sculk] El guardián {} adopta {} animal(es) nacidos en el corral como "
+                        + "ganado de la granja: {}", cult.getUUID(), adoptados, especies);
+            }
+            sinMarca = List.of();
         }
     }
 }

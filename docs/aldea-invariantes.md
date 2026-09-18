@@ -501,6 +501,37 @@ El jugador: *"sitúa la campana justo en el centro del kiosco y quita el beacon 
 **No tiene regla en el lint** (es geometría de una celda, no un patrón de riesgo): se comprueba **contra el guardado**
 (`build/kiosco_dump.py`, que vuelca la huella entera del kiosco capa a capa y localiza campana, farol y beacon).
 
+### I29 · El guardián de la guarida es un GRANJERO: su faena solo se pausa por una amenaza REAL (cerca y alcanzable)
+*(Aplica a la guarida (`SculkCultivatorEntity`), no a la aldea: se apunta aquí porque es la misma lección que I3/I5
+—un contador o un radio mal puesto deja a un bicho **ciclando** y su trabajo no se hace nunca.)*
+
+El jugador, mirando una guarida desde fuera: *"el guardián de la guarida ya no está sacrificando ningún animal"*, con
+el corral lleno de animales vivos y restos por el suelo.
+
+**Medido en su código y su guardado**:
+- Vanilla: `RangedAttackGoal.canUse()` **no mira la distancia** (le basta con que `getTarget() != null`) y su
+  `canContinueToUse()` sigue devolviendo `true` **mientras la navegación no haya terminado**. El goal tiene la
+  prioridad 1 y las banderas `MOVE`+`LOOK`, y las tres faenas (prioridad 2-4) declaran **las mismas banderas**, así
+  que `GoalSelector` las deja fuera mientras el de ataque corra: **el objetivo le bastaba para congelar la granja**, y
+  el `NearestAttackableTargetGoal` lo mantenía hasta los **32** de `FOLLOW_RANGE`.
+- El rebaño, además, no podía crecer: las **crías no heredan** `devilrpg_livestock`, así que no contaban como ganado;
+  con `SPECIES_KEEP` = 3 y el corral recién generado (**2 vacas, 2 ovejas, 1 cerdo y 2 gallinas** =
+  `build/lair_simula_cultivador.py`) **no había nunca una especie con 3 adultos** y no se sacrificaba nada.
+- Y `LairGenerator.generate` corre **otra vez** en cada sesión (la guarida se regenera al acercarse): volvía a sembrar
+  **7 animales por sesión**, todos con `spawn_type=MOB_SUMMONED` (19 en una guarida y **41** en otra del guardado).
+
+**La regla**: un bicho con un trabajo que depende de una bandera tiene que **medir él mismo** cuándo el objetivo es
+real, y **soltarlo** cuando no lo es. Concretamente: radio de amenaza **corto** (12, no los 32 del atributo que se
+documenta aparte), **soltar** lo inalcanzable (80 ticks sin acortar distancia) con **memoria** para no reelegirlo cada
+10 ticks (600), y **devolver la faena el mismo tick** en que se suelta. Y lo que **crece** tiene que **contarse**: si un
+recién nacido no lleva la marca, hay que ponérsela (dentro del corral), o el tope de cría y el mínimo de sacrificio se
+quedan en una trampa sin salida.
+
+**No tiene regla en el lint** (es comportamiento de goals, no un patrón de texto): se comprueba **contra el guardado y
+el log** (`build/lair_simula_cultivador.py` reproduce el rebaño que ve `livestock()` y dice si habría víctima y si
+habría cría, con las reglas viejas y las nuevas; `build/lair_historial_sacrificios.py` saca de los logs **cuándo
+sacrificó por última vez cada guarida**).
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 

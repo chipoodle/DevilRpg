@@ -1824,17 +1824,17 @@ Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el ju
   infección. Es un **`AbstractIllager`** (usa el **modelo y la textura reales del Invocador** con un tinte
   escarlata del mod), así que **no se une a los raids vanilla** y **replica a mano** el escalado por
   distancia+amenaza y la XP del zombie agresivo (mismo perfil).
-  - **No pelea. Es un cobarde.** No tiene **ningún** goal de ataque ni `targetSelector`: literalmente solo
-    trabaja y huye. Escala en fuerza y rapidez como el resto de enemigos, pero eso solo lo hace más duro de
-    matar, no más agresivo. Sus tres labores más la huida:
+  - **No huye: planta cara.** No tiene ningún goal de huida (antes tenía `FleeThreatGoal` y se alejaba
+    demasiado, así que el asalto se convertía en perseguirlo por medio mapa). Escala en fuerza y rapidez como
+    el resto de enemigos, pero eso solo lo hace más duro de matar, no más agresivo.
   - **Pelea como una bruja debilitada**: se queda **a distancia** (radio 10, como la bruja) y lanza
     **pociones salpicadas** (`RangedAttackGoal` + `performRangedAttack`), pero con el **doble de recarga**
     (120 ticks = 6 s, frente a los 60 de la bruja) y **sin las variedades fuertes** (nada de daño fuerte ni
     veneno): de lejos frena con Lentitud, de cerca debilita con Debilidad, y en medio solo puede hacer 6 de
     daño. Su `FOLLOW_RANGE` es **32** (no 64): es el guardián de su guarida y no debe perseguir al jugador por
-    medio mapa. **Antes huía** (`FleeThreatGoal`) y se alejaba demasiado, así que el asalto se convertía en
-    perseguirlo; ahora planta cara. Mientras tiene objetivo no atiende la granja (el goal de ataque tiene más
-    prioridad); al quedarse sin objetivo vuelve a criar, sacrificar y sembrar catalizadores.
+    medio mapa. **Mientras tiene una amenaza REAL delante no atiende la granja** (el goal de ataque tiene más
+    prioridad); en cuanto la suelta vuelve a criar, sacrificar y sembrar catalizadores (ver el punto del
+    arreglo, más abajo).
   - **Granja macabra**: `LairGenerator` construye el corral <b>como un foso</b> de **2 bloques de
     profundidad** en la plataforma, con **3 bloques de orla plana** alrededor (sin orla, el terreno empezaría
     a bajar en el borde del foso y la pared quedaría de 1 bloque por ese lado: los animales se escaparían).
@@ -1873,7 +1873,56 @@ Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el ju
     alcanzable, lo apunta para no volver a elegirlo y no quedarse en bucle.
   - **Nota técnica**: todos sus goals declaran `setFlags(MOVE, LOOK)`. Sin flags, `GoalSelector` los deja
     arrancar aunque otro de más prioridad esté corriendo (los flags son el *único* mecanismo de prioridad),
-    y acabarían peleándose por la navegación.
+    y acabarían peleándose por la navegación. (Sin banderas solo van dos: `OpenDoorGoal`, que únicamente abre
+    puertas, y el de **adoptar** ganado, que solo etiqueta.)
+  - **ARREGLO — la faena no se para por un objetivo que no es una amenaza real** (el jugador: *"el guardián de
+    la guarida ya no está sacrificando ningún animal"*, mirando la guarida desde fuera). Causa REAL, leída en
+    el código vanilla: el goal de ataque `RangedAttackGoal` **no mira la distancia** en `canUse()` (le basta
+    con tener objetivo) y su `canContinueToUse()` **sigue devolviendo `true` mientras la navegación no haya
+    terminado**, aunque el objetivo ya no exista. Como tiene la **prioridad 1** y las banderas `MOVE`+`LOOK`
+    —las mismas que las tres faenas (prioridad 2-4)—, cualquier objetivo dentro de los **32** del
+    `FOLLOW_RANGE` dejaba criar, sacrificar y sembrar parados **indefinidamente**: al jugador le bastaba con
+    mirar desde fuera. Medido en el guardado y el log: la guarida del objetivo 2 tenía **41 cabezas** de
+    ganado en el foso (todas del generador, ver abajo) y solo sacrificaba con el jugador lejos (última
+    sesión: 8 sacrificios en 45 s, el último **4 s** antes de que abriese el menú de pausa). Ahora:
+    - el objetivo se fija con `ThreatTargetGoal`, que sobrescribe `getFollowDistance()` para usar
+      `THREAT_RADIUS` (**12** = radio de tiro + margen) en vez de los 32 del atributo: el `FOLLOW_RANGE`
+      **sigue** en 32 (es la medida documentada de la plataforma) y solo cambia **a quién considera objetivo**;
+    - `isRealThreat()` manda: si el objetivo está **lejos** o lleva **80 ticks** sin poder acercarse y no está
+      a tiro de poción, se le **suelta** (`giveUpThreat`) y se le **recuerda 600 ticks** —`setTarget` veta
+      volver a fijarlo, porque si no el selector lo reelegiría cada 10 ticks y la granja quedaría a medias—;
+    - **no huye y planta cara** a quien se le acerca de verdad, y al soltar al objetivo la granja recupera las
+      banderas **el mismo tick**;
+    - **rastro en el log, una línea por transición** (`DevilRpg.LOGGER`): "planta cara a X a N bloques: pausa
+      la granja", "suelta a X (motivo): vuelve a criar, sacrificar y sembrar", "retoma la faena tras N ticks"
+      y "vuelve al trabajo: sacrificio/cría/siembra". El sacrificio se registra **siempre** (antes solo si
+      había un catalizador a ≤8 bloques, así que un sacrificio fuera del corral no dejaba ni rastro).
+  - **ARREGLO — el rebaño ya no se queda clavado** (la otra mitad del mismo fallo). Las **crías no heredan**
+    la etiqueta `devilrpg_livestock`, así que no contaban como ganado: con las reglas del sacrificio (≥3
+    adultos de la misma especie) y el tope de cría (`MAX_LIVESTOCK` = 8), un corral recién generado —**2 vacas,
+    2 ovejas, 1 cerdo y 2 gallinas**— se quedaba en 2+2+1+2 y **no sacrificaba nunca** (comprobado en el
+    guardado: 7 cabezas contadas, ninguna especie con 3 adultos `build/lair_simula_cultivador.py`). Ahora:
+    - `AdoptCorralLivestockGoal` marca como ganado a lo que aparece **dentro del foso del corral** sin marca
+      (`LairGenerator.isInsideCorralPit`: geometría determinista del corral, disco de radio 4 a `FARM_DISTANCE`
+      del núcleo y fondo `FARM_DEPTH`). Es la misma regla que el pueblo —"un animal sin marca dentro de un
+      corral es de ese corral"— y **no toca a los salvajes** que andan por la guarida, que siguen siendo presa
+      de los zombies (de ahí sale la infección que crece sola).
+    - `BreedAnimalsGoal` elige la **especie que tiene pareja** (con un solo adulto no se cría nada y se
+      quemaba su celo) y, si con el rebaño **no se puede sacrificar nada**, deja criar por encima de
+      `MAX_LIVESTOCK` hasta `HARD_LIVESTOCK_CAP` (**12** = 4 especies × 3): criar es la única forma de llegar
+      a los 3 adultos, y el tope duro evita que el corral se llene de crías.
+    - **El rebaño inicial no se vuelve a sembrar**: `LairGenerator.generate` corre **otra vez** en cada sesión
+      (la guarida se regenera al acercarse) y soltaba **7 animales más en el corral cada vez** (medido: 19 en
+      la guarida del objetivo 1 y **41** en la del 2, **todas** con `spawn_type=MOB_SUMMONED`, o sea todas del
+      generador y ninguna criada). `buildFarm` ahora siembra el rebaño **solo si el corral está vacío** (y lo
+      repone si el jugador lo dejó sin nada).
+    - Con el **rebaño cerca del objetivo no se lanza la poción de daño** (`livestockNear`): el splash alcanza a
+      todo lo que pilla en 4 bloques —también al ganado— y el guardián pelea muchas veces desde su propio
+      corral; una gallina tiene 4 de vida, así que una sola poción le mataría el rebaño. Sigue plantando cara,
+      pero con Lentitud/Debilidad.
+    <br>**No hace falta migración**: son reglas de goals y una guarda **idempotente** del generador. La guarida
+    ya construida se ve al reiniciar y volver al objetivo (documentado arriba), y lo único que cambia en el
+    mundo es que **deja de duplicar** el rebaño en la siguiente pasada.
 - **Núcleo asaltable** (`LairCoreBlock`, bloque `lair_core`): el bloque brillante en el centro del
   santuario, dentro de la caja de sellos. Mientras el núcleo exista, la guarida está **activa**.
 - **El estado de la aldea también PERSISTE** (`VillageSavedData`, otro `SavedData` por dimensión, con el mismo

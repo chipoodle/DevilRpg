@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.world;
 
+import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.init.ModBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -357,11 +358,47 @@ public final class LairGenerator {
         }
         level.setBlock(new BlockPos(gateX - 1, floor, gateZ), Blocks.COARSE_DIRT.defaultBlockState(), 3);
 
-        // Ganado inicial, en el fondo del foso.
+        // Ganado inicial, en el fondo del foso, SOLO si el corral está vacío.
+        //
+        // `generate` se vuelve a llamar cada sesión (la guarida se regenera al acercarse: el estado de
+        // LairSavedData solo recuerda "limpiada" y "sello roto", y GENERATED es en memoria), así que sin esta
+        // guarda el rebaño se sembraba OTRA VEZ en cada partida: medido en el guardado del jugador, la guarida
+        // del objetivo 2 tenía 41 cabezas (13 ovejas, 14 vacas, 7 cerdos y 7 gallinas) dentro de un foso de 9
+        // bloques y todas con spawn_type=MOB_SUMMONED (es decir, todas del generador, ninguna criada), con el
+        // corral lleno y el tope de cría (MAX_LIVESTOCK) siempre superado. El ganado de la granja tiene que
+        // crecer CRIANDO (BreedAnimalsGoal), no repitiendo la siembra inicial.
+        //
+        // Y sí: si el jugador había dejado el corral VACÍO, se repone (un corral sin ganado no da carne y la
+        // granja entera se queda muerta: misma lección que en el corral del pueblo).
+        if (hayGanadoEnLaGuarida(level, center, baseY)) {
+            DevilRpg.LOGGER.info("[Lair] La guarida de {} ya tiene ganado: no se vuelve a sembrar el rebaño", center);
+            return;
+        }
         spawnAnimal(level, center, floor, EntityType.COW, 2);
         spawnAnimal(level, center, floor, EntityType.SHEEP, 2);
         spawnAnimal(level, center, floor, EntityType.PIG, 1);
         spawnAnimal(level, center, floor, EntityType.CHICKEN, 2);
+    }
+
+    /**
+     * Radio con el que se comprueba si la guarida ya tiene su rebaño. Es el <b>mismo</b> que patrulla el
+     * guardián ({@code LairManager.PATROL_RADIUS}) y no solo el foso: el ganado se escapa por la puerta del
+     * corral y en el guardado del jugador se midió ganado pastando por toda la plataforma (y muriendo fuera,
+     * en `y=150` con el foso en `y=148`).
+     */
+    private static final int HERD_CHECK_RADIUS = 24;
+
+    /** ¿Queda ganado de la granja ya sembrado en la guarida? (para no volver a sembrar el rebaño al regenerar). */
+    private static boolean hayGanadoEnLaGuarida(ServerLevel level, BlockPos farmCenter, int baseY) {
+        int coreX = farmCenter.getX() - FARM_DISTANCE;
+        int coreZ = farmCenter.getZ();
+        // La banda de altura es ancha a propósito (el ganado se escapa, salta y cae al foso); la huella en XZ
+        // es lo que delimita la guarida, como en el resto del mod.
+        net.minecraft.world.phys.AABB caja = new net.minecraft.world.phys.AABB(
+                coreX - HERD_CHECK_RADIUS, baseY - HERD_CHECK_RADIUS, coreZ - HERD_CHECK_RADIUS,
+                coreX + HERD_CHECK_RADIUS + 1, baseY + HERD_CHECK_RADIUS, coreZ + HERD_CHECK_RADIUS + 1);
+        return !level.getEntitiesOfClass(net.minecraft.world.entity.animal.Animal.class, caja, LairGenerator::isLivestock)
+                .isEmpty();
     }
 
     /**
@@ -394,6 +431,33 @@ public final class LairGenerator {
     /** ¿Es ganado de una granja macabra? (ver {@link #LIVESTOCK_TAG}). */
     public static boolean isLivestock(net.minecraft.world.entity.Entity entity) {
         return entity.getTags().contains(LIVESTOCK_TAG);
+    }
+
+    /**
+     * ¿La posición cae <b>dentro del foso del corral</b> de la guarida cuyo núcleo es {@code core}?
+     * <p>
+     * El corral no tiene marcador en el mundo (se reconoce por su forma), así que la única forma de
+     * preguntarlo es por su <b>geometría</b>, que es determinista: un disco de {@link #FARM_RADIUS} de radio
+     * centrado en el núcleo desplazado {@link #FARM_DISTANCE} hacia el +X (ver {@link #insideFarm} y
+     * {@code generate}), con el fondo {@link #FARM_DEPTH} bloques por debajo del nivel de la plataforma.
+     * <p>
+     * Lo usa el cultivador para <b>adoptar</b> como ganado a los animales que aparecen ahí dentro (las crías
+     * de la cría macabra nacen sin la etiqueta {@link #LIVESTOCK_TAG}) sin tocar a los animales salvajes que
+     * andan sueltos por la guarida, que son la presa de los zombies. La banda de altura es ancha (±4) a
+     * propósito: los animales saltan, el sculk del fondo los puede dejar a otra altura y no queremos que un
+     * cambio de un bloque deje a una cría sin adoptar.
+     *
+     * @param core posición del núcleo de la guarida (el {@code home} del cultivador)
+     */
+    public static boolean isInsideCorralPit(BlockPos core, double x, double y, double z) {
+        double dx = x - (core.getX() + FARM_DISTANCE);
+        double dz = z - core.getZ();
+        // +1 de margen: los animales se arriman a la pared del foso y su centro puede quedar en el borde.
+        double radio = FARM_RADIUS + 1.0D;
+        if (dx * dx + dz * dz > radio * radio) {
+            return false;
+        }
+        return Math.abs(y - (core.getY() - FARM_DEPTH)) <= 4.0D;
     }
 
     /** Spawnea {@code count} animales del tipo dado dentro del corral, a la altura del suelo. */
