@@ -752,6 +752,20 @@ obrero). Con eso **"una profesión por estación"** deja de depender de quién e
 `{CRIA=1, butcher=1, cleric=1, farmer=3, fisherman=1, fletcher=1, nitwit=1, shepherd=1, toolsmith=1, weaponsmith=1}`
 —**una** de cada, **tres** granjeros (sus tres plazas)— durante todo el rato que duró la medida.
 
+**Y dos reparadores más en el mismo latido** (los otros dos lados del mismo problema, medidos en su guardado):
+
+- **Tickets PERDIDOS** (`soltarTicketsPerdidos`): una estación con el ticket cogido (`free_tickets = 0`) pero **sin
+  ningún aldeano que la tenga en el cerebro**. El juego solo suelta el ticket al morir el aldeano (I23), así que un
+  ticket perdido deja la estación **muerta para siempre**. Medido: el **compostero del tercer bancal**
+  (`1384,120,1448`) estaba así, y su titular (el tercer granjero) no lo habría podido reclamar nunca. Se sueltan los
+  de los oficios a los que les **falta gente** (cupo contra titulares cargados), consultando los puestos ocupados
+  **por el tipo del oficio** (`heldJobSite`): sin listas de coordenadas, vale para cualquier oficio.
+- **Cada titular, con su estación** (`reclamarEstacionesDelPueblo`): un aldeano **con oficio pero sin `JOB_SITE`** va
+  y reclama el puesto de su oficio (el libre más cercano; si no hay, uno con el ticket perdido, que se suelta y se
+  vuelve a coger). Sin `JOB_SITE` vanilla **no le registra la actividad de trabajar** y el aldeano cae a IDLE. Medido:
+  el **clérigo** tenía su soporte de pociones **libre** y el **ganadero** su telar con el ticket cogido sin dueño.
+  Nunca se le quita el puesto a otro aldeano **cargado** que lo tenga en el cerebro.
+
 ### I37 · La aldea CRECE por encima de sus puestos (y las crías nacen SIN oficio)
 
 La milicia se llena **con los hijos del pueblo**, que es como lo quiere el jugador: *"la milicia se va a ir llenando
