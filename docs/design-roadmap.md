@@ -1371,14 +1371,15 @@ escalera: hay una mesa con sillas que la bloquea; quita esa mesa y dobla la esca
 
 | Bug (lo que vio) | Causa medida | Arreglo | Guardia para que no vuelva |
 |---|---|---|---|
-| *"Hay faroles flotando"* (pesquera **y** granja anexa) | El ayudante `farolEnElPoste` colocaba el farol en la casilla que le dieran **dando por hecho** que debajo había un poste, y los llamantes le pasaban la casilla del **farol** contando un poste que no existía. Auditoría de la aldea 2 (cota 120): **16 faroles SIN APOYO** — 14 en la cerca de la **granja anexa** (1 bloque por encima del poste) y 2 en la **pesquera** (3 bloques por encima de la orilla) | `farolSobreElPoste(apoyo)`: recibe la casilla del **apoyo** y **garantiza el poste**; `posarFarolesFlotantes` **baja** el farol que quedó flotando en las aldeas ya construidas | **I14** en las invariantes, **regla I12 del lint** (una Y con sumando en `farolSobreElPoste` falla el commit), **autocomprobación** `auditarFarolesFlotantes` al generar y al migrar (grita en el log) y **auditoría de la aldea entera** (`build/audita_aldea2.py`) que además mira vallas flotando, cofres tapados, puertas incompletas y camas sueltas |
+| *"Hay faroles flotando"* (pesquera **y** granja anexa) | El ayudante `farolEnElPoste` colocaba el farol en la casilla que le dieran **dando por hecho** que debajo había un poste, y los llamantes le pasaban la casilla del **farol** contando un poste que no existía. Auditoría de la aldea 2 (cota 120): **16 faroles SIN APOYO** — 14 en la cerca de la **granja anexa** (1 bloque por encima del poste) y 2 en la **pesquera** (3 bloques por encima de la orilla) | `farolSobreElPoste(apoyo)`: recibe la casilla del **apoyo** y **garantiza el poste**; `posarFarolesFlotantes` **baja** el farol que quedó flotando en las aldeas ya construidas | **I14** en las invariantes, **regla I12 del lint** (una Y con sumando en `farolSobreElPoste` falla el commit), **autocomprobación** `auditarFarolesFlotantes` al generar y al migrar (grita en el log) y **auditoría de las aldeas** (`tools/audita_aldea.py`, versionada) que además mira vallas flotando, cofres tapados, puertas incompletas y camas sueltas |
 | *"El cofre de la comida no tiene sentido en el kiosco central"* | La despensa del pueblo (el cofre con la comida de verdad) estaba en el kiosco de la plaza, lejos de la cocina y de las mesas | El cofre **doble** pasa a la **cocina de la taberna** (contra su muro norte): es el "almacén de comida", donde el cocinero cocina y donde el pueblo viene a comer. El kiosco se queda con su campana y su farol | **I15** en las invariantes: el testigo del kiosco es **su plataforma** (con el viejo —que exigía el cofre— el kiosco se reconstruía **cada latido** buscando un cofre que ya no está). La migración 47 retira el cofre viejo **después** de pasar lo suyo a la despensa nueva y al almacén (`retirarDespensaDelKiosco`, idempotente) |
 | *"Aún no se puede acceder a la escalera: hay una mesa con sillas que la bloquea"* | La escalera era un tramo recto pegado al muro oeste con el **primer escalón metido en la esquina**, y la **mesa de `(4,11)`** (con sus cuatro sillas) caía justo en el camino de acceso | La mesa `(4,11)` **ya no se pone** (quedan **cinco** mesas) y la escalera es una **L doble**: el pie mira **al comedor** (este→oeste), la **meseta** va en la esquina suroeste y el tramo de arriba sube (sur→norte) a la galería. El **hueco del forjado** es solo el del tramo de arriba | El **testigo** de `tabernaConstruida` exige la escalera nueva (los dos escalones que la identifican): una taberna vieja **se rehace entera** al migrar, y el hueco del forjado, la caja del pozo y la luz van con ella |
 
 **Verificado** con el arnés temporal (mundo aparte, borrado antes del commit):
 
 - **Faroles**: la auditoría de la aldea recién construida da **0 faroles flotantes** (con el ayudante viejo daba 16 en
-  la aldea del jugador).
+  la aldea del jugador). En su guardado, la auditoría versionada da **aldea 2: 0 en las cinco listas** (la migración
+  47 ya corrió al jugarla) y **aldea 0: 14 faroles flotantes**, que se bajan solos cuando el jugador pase por ella.
 - **Despensa**: `VillagePantry.despensa` encuentra el cofre en la cocina y devuelve un contenedor de **54 casillas**
   (cofre doble de verdad: mitades **RIGHT/LEFT**); en el **kiosco** hay **0 cofres**.
 - **Escalera**: el volcado de los bloques construidos es exactamente la L (dos escalones de bajada, la meseta 2×2, tres
@@ -1389,7 +1390,7 @@ escalera: hay una mesa con sillas que la bloquea; quita esa mesa y dobla la esca
   navegación no encuentra camino ni en la plaza llana —se comprobó con un control— y por eso la comprobación buena es
   la de las alturas de los escalones.)*
 
-## 3c) Iteración 2 — GUARIDAS ✅ (en curso)
+## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.
 
@@ -2092,8 +2093,9 @@ la **guarida** (`LairManager.spawnWave`: 3 cada 25 s a 8–14 bloques del centro
   vida actual al nuevo máximo (`setHealth(getMaxHealth())`), igual que ya hacía el vex helado. Efecto de
   balance: un zombie lejano aguanta mucho más que antes (hasta ×8.1 de vida a máxima distancia + amenaza), y
   por eso el `maxScaleMultiplier` se bajó de 3.7 a 3.5.
-- El comentario de `VexSpawnProfile` dice "sin zona protegida" pero el valor real es **67** (heredado del
-  zombie): el vex también respeta zona protegida, solo que pequeña. Comentario desactualizado.
+- **Zona protegida del vex (`VexSpawnProfile`)**: el comentario decía antes "sin zona protegida", pero el valor real
+  es **67** (heredado del zombie) — el vex también respeta zona protegida, solo que pequeña. **Ya está corregido**:
+  el comentario dice "zona protegida pequeña (antes 0)", con el 67 al lado (`VexSpawnProfile.java:5,15`).
 
 - **UI del árbol de skills (`SkillScreen`)**: el **fondo** y el **skin de widget** de los nodos ya están
   elegidos, así que los dos selectores están **ocultos** (llamadas comentadas en `SkillScreen` con la nota de
@@ -2144,14 +2146,18 @@ la **guarida** (`LairManager.spawnWave`: 3 cada 25 s a 8–14 bloques del centro
   `$env:GRADLE_USER_HOME="C:\Users\Christian\Documents\DevilRpg\.gradle-home"; .\gradlew.bat compileJava --console=plain`
 - **Las guaridas se regeneran** al acercarse al objetivo (el estado de `LairManager` es en memoria), así que
   los cambios de `LairGenerator` se ven al reiniciar y volver al objetivo, no hacen falta mundos nuevos.
-- **Herramientas de NBT para recuperar partidas** (`build/recover/NbtTool.java` y `build/*.py`, **ignorados por
-  git** porque `build/` está en `.gitignore`: si se limpia `build/`, se pierden). Leen y escriben el NBT del
-  jugador con las **clases reales de Minecraft**, sin arrancar el juego:
-  `java -cp "build\classes\java\main;build\recover\libs\*" build\recover\NbtTool.java <archivo.dat> [--keys|--find|--snbt <i>]`
-  (`libs\` se armó copiando de las cachés de Gradle el jar `neoforge-*-merged.jar` + fastutil/log4j/logging/asm...).
+- **Herramientas de NBT para recuperar partidas** (`tools/recover/NbtTool.java`, `tools/finduuid.py` y
+  `tools/nbtdump.py`: **versionadas**, y explicadas en `tools/README.md`). Los ~130 scripts sueltos de diagnóstico
+  siguen en `build/`, **ignorados por git**: si se limpia `build/`, se pierden los sueltos, **no** estas. Leen y
+  escriben el NBT del jugador con las **clases reales de Minecraft**, sin arrancar el juego:
+  `java -cp "build\classes\java\main;build\recover\libs\*" tools\recover\NbtTool.java <archivo.dat> [--keys|--find|--snbt <i>]`
+  (`build\recover\libs\` se armó copiando de las cachés de Gradle el jar `neoforge-*-merged.jar` + fastutil/log4j/logging/asm...
+  y **no** se versiona por tamaño: si se limpia `build/`, hay que rehacerlo).
   El modo `--restore-minions-from <viejo.dat> <tipoWisp> <destino.dat>` copia `Stored_Minions` de un respaldo, y
-  `--forget <uuid>…` quita UUIDs concretos de las listas (solo tras comprobar con `build/finduuid.py` que **no
+  `--forget <uuid>…` quita UUIDs concretos de las listas (solo tras comprobar con `tools/finduuid.py` que **no
   existen en ningún archivo de región**, o sea que están muertos de verdad).
+  **`build/nbtdump.py` es un puente** a `tools/nbtdump.py` (el bueno): los scripts sueltos siguen haciendo
+  `from nbtdump import ...` y cargan el de `tools/`, así hay **una sola copia** del lector.
 - **⚠️ EN SINGLEPLAYER EL ANFITRIÓN SE GUARDA (Y SE LEE) EN `level.dat`, NO EN `playerdata/<uuid>.dat`.** El
   jugador está en `Data.Player.neoforge:attachments...` de `level.dat`; el juego **también** escribe
   `playerdata/<uuid>.dat` con lo mismo, pero **lo que lee al cargar el mundo es `level.dat`**. Esto costó una

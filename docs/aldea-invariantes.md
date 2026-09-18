@@ -183,9 +183,12 @@ regla **I12 del lint** (una Y con sumando en `farolSobreElPoste` falla la puerta
 log** cualquier farol sin apoyo, con su posición) y el **retrofit** `posarFarolesFlotantes` (baja el farol que quedó
 flotando en una aldea ya construida; el plano se recaptura después, así que el obrero repone la posición buena).
 
-> La misma auditoría (`build/audita_aldea2.py`, en `build/`, fuera de git) comprueba además: faroles y **vallas**
-> flotando, **cofres tapados** (un bloque encima: no se pueden abrir), **puertas incompletas** (sin su mitad) y
-> **camas sueltas** (sin cabecera). Medido en la aldea 2 tras el arreglo: 0 en las cinco listas.
+> La misma auditoría (`tools/audita_aldea.py`, **versionada**; antes estaba en `build/`, fuera de git) comprueba
+> además: faroles y **vallas** flotando, **cofres tapados** (un bloque encima: no se pueden abrir), **puertas
+> incompletas** (sin su mitad) y **camas sueltas** (sin cabecera). Saca las aldeas **del propio guardado**
+> (`data/devilrpg_villages.dat`: índice, centro y cota), así que las audita todas de una pasada. Medido tras el
+> arreglo: **aldea 2: 0 en las cinco listas** (la migración 47 corrió al jugarla) y **aldea 0: 14 faroles**
+> pendientes hasta que el jugador pase por ella (el retrofit los baja al migrar).
 
 ### I15 · La despensa vive donde se cocina y se come (y el kiosco no sabe de ella)
 El jugador: *"el cofre de la comida ya no tiene sentido que esté en el kiosco central... sería mejor moverlo a la
@@ -237,9 +240,12 @@ Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento 
 | `build/aldeanos.py`, `build/aldeanos.py` | Aldeanos: profesión, inventario, posición (carpeta `entities/`). |
 | `build/herreria.py`, `build/huecos_ore.py`, `build/solares*.py` | Herrería, huecos y minerales flotantes, solares libres. |
 | `build/plantillas*.py`, `build/paleta.py` | Plantillas del juego: tamaños, puertas y qué bloques traen. |
-| `build/audita_aldea2.py` | **Auditoría de la aldea entera**: faroles y vallas flotando, cofres tapados, puertas incompletas y camas sueltas (lee las PROPIEDADES de los bloques). |
+| `tools/audita_aldea.py` (**versionada**) | **Auditoría de las aldeas enteras**: faroles y vallas flotando, cofres tapados, puertas incompletas y camas sueltas (lee las PROPIEDADES de los bloques). Saca las aldeas del guardado (índice, centro y cota): `--aldea N`, `--caidas`, `--resumen`, `--centro X Z --cota N`. |
 
-Los scripts de `build/` no se versionan (está en `.gitignore`): son de lectura del guardado del jugador.
+Los scripts de `build/` no se versionan (está en `.gitignore`): son de lectura del guardado del jugador. Las
+herramientas que sí merecen sobrevivir están **versionadas en `tools/`** (ver `tools/README.md`): `lint_aldea.py`,
+`audita_aldea.py`, `nbtdump.py`, `finduuid.py` y `recover/NbtTool.java`. `build/nbtdump.py` es un **puente** al de
+`tools/`, para que los ~100 scripts sueltos de `build/` sigan funcionando con **una sola copia** del lector.
 
 Los goals de las etapas B-E (`VillagerAnimalFarmGoal`, `VillagerCookGoal`, `VillagerGuardGoal`,
 `VillagerLumberjackGoal`, `VillagerSmithGoal`) están **dentro** del lint desde la etapa E: antes solo se vigilaban
