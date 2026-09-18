@@ -85,14 +85,50 @@ public final class VillageStorage {
     }
 
     /**
-     * Punto de apoyo para que un aldeano vaya al almacén: una casilla <b>del suelo del cobertizo</b> que no tiene
-     * cofre encima (el pasillo del medio del cobertizo de 7x7). No se navega hacia el cofre (es sólido y el aldeano
-     * se quedaría dando vueltas alrededor).
+     * Punto de apoyo para que un aldeano vaya al almacén: una casilla <b>LIBRE del suelo</b> del cobertizo. No se
+     * navega hacia el cofre (es sólido y el aldeano se quedaría dando vueltas alrededor).
+     * <p>
+     * OJO CON EL CENTRO: el cobertizo lleva sus <b>postes</b> en una rejilla de 3 en 3 ({@code dx,dz = -3, 0, +3}), así
+     * que <b>el centro exacto es un POSTE de tronco</b>. Medido en el guardado del jugador (aldea 2): el punto de
+     * apoyo caía en el tronco de (1462,121,1435) y el herrero —que va y viene del almacén en cada pieza— navegaba
+     * hacia un bloque <b>sólido</b>, que es justo el fallo que el pueblo ya documentó con el ahumador del kiosco:
+     * <i>la navegación no puede llegar a un bloque sólido y el aldeano se queda dando vueltas alrededor</i>. Ahora se
+     * devuelve la primera casilla del suelo con <b>sitio para pararse</b> (nada sólido a la capa que se pisa ni
+     * encima, y suelo firme debajo), empezando por el centro y abriéndose en anillos.
      */
     public static BlockPos puntoDeApoyo(ServerLevel level, BlockPos villageCenter) {
         int nivel = VillageGenerator.cotaDeLaPlaza(level, villageCenter);
         BlockPos c = centro(villageCenter);
-        return new BlockPos(c.getX(), nivel + 1, c.getZ());
+        for (int r = 0; r <= RADIO_APOYO; r++) {
+            for (int dx = -r; dx <= r; dx++) {
+                for (int dz = -r; dz <= r; dz++) {
+                    if (Math.max(Math.abs(dx), Math.abs(dz)) != r) {
+                        continue; // el interior ya se miró en los anillos anteriores
+                    }
+                    BlockPos p = new BlockPos(c.getX() + dx, nivel + 1, c.getZ() + dz);
+                    if (casillaLibre(level, p)) {
+                        return p;
+                    }
+                }
+            }
+        }
+        return new BlockPos(c.getX(), nivel + 1, c.getZ()); // sin hueco libre: se devuelve el centro (no hay nada mejor)
+    }
+
+    /**
+     * Hasta dónde se buscan casillas libres alrededor del centro del cobertizo. Con 4 anillos se sale de la rejilla de
+     * postes y del doble cofre sin alejarse del almacén (el cobertizo mide 7x7).
+     */
+    private static final int RADIO_APOYO = 4;
+
+    /**
+     * ¿Esa casilla es suelo del cobertizo con <b>sitio para pararse</b>? Hace falta suelo firme debajo y nada sólido
+     * en la propia casilla ni encima: así valen el pasillo y las plantas, y quedan fuera los postes y los cofres.
+     */
+    private static boolean casillaLibre(ServerLevel level, BlockPos p) {
+        return level.getBlockState(p).getCollisionShape(level, p).isEmpty()
+                && level.getBlockState(p.above()).getCollisionShape(level, p.above()).isEmpty()
+                && !level.getBlockState(p.below()).getCollisionShape(level, p.below()).isEmpty();
     }
 
     /** Distancia a la que un aldeano ya alcanza el almacén para descargar. */

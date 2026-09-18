@@ -303,6 +303,43 @@ ya guardadas se arreglan **sin migración**: el estado abierto/cerrado de un por
 debe ser"). Los animales **del jugador** (sin la marca `DevilRpgDelCorral`) y los que van **montados o atados** no se
 tocan.
 
+### I23 · Un puesto de trabajo se reclama ENTERO: memoria **y** ticket
+Un punto de interés (POI) de vanilla da **un ticket** por puesto: el aldeano que trabaja ahí tiene la memoria
+`JOB_SITE` **y** el ticket cogido (`free_tickets` baja a 0). **Regla:** borrar la memoria **no** libera el ticket —
+`Brain.eraseMemory(JOB_SITE)` a secas deja el puesto **cogido sin dueño para siempre**, y nadie puede volver a
+reclamarlo (vanilla solo lo suelta al morir el aldeano, `Villager.releaseAllPois`): hay que **soltar el POI**
+(`PoiManager.release`, como hace `VillageManager.liberarPuesto`) **antes** de borrar la memoria.
+Y un goal de oficio **no puede dar por hecho** que su puesto está reclamado: si encuentra su estación y no la tiene en
+el cerebro, la reclama (`VillagerSmithGoal.reclamarElPuesto`), liberando antes el ticket si está cogido y **ningún**
+aldeano lo tiene.
+**Medido** en el guardado del jugador (`New World (1)`, aldea 2, centro `1414,1414`): el **muelle de afilar**
+(`1419,120,1368`) y la **mesa de herrería** (`1418,120,1368`) tenían `free_tickets=0` y **ningún** aldeano con ese
+sitio en la memoria —el único herrero de armas lo tenía solo como `POTENTIAL_JOB_SITE` y el de herramientas, ni eso—.
+Sin `JOB_SITE` vanilla **no registra la actividad WORK** (`addActivityWithConditions(WORK, …, JOB_SITE presente)`), el
+cerebro se cae a **IDLE** todo el día (guardado con `DayTime=8137`, franja de trabajo) y el aldeano se pasa el rato en
+las conductas de IDLE —paseo aleatorio y "andar hacia donde mira"— con la etiqueta genérica **"Paseando"**: es lo que
+el jugador describió como *"da vueltas sobre su eje como un tonto"*. El mismo día se vio la otra mitad: los **dos
+herreros** llevaban la marca de **obrero** y su goal de reparar (prioridad **3**) **bloqueaba** el de su oficio (**4**,
+misma bandera `MOVE`), así que **un aldeano con faena fija lleva la reparación por DEBAJO de su oficio** (prioridad 5,
+como el granjero).
+
+### I24 · Un árbol se tala ENTERO: el tronco no siempre es una columna recta
+El hachazo que sube en vertical (`p = p.above()`) deja **el árbol a medias**: la **acacia** sube recta y **tuerce en
+diagonal** (comprobado bloque a bloque en la arboleda del jugador: el árbol de `1370,120..124,1391` continúa en
+`1369,125,1391`, una casilla al lado y una arriba), y las ramas de un roble grande salen de lado. Lo que queda
+colgando, además, **pierde las hojas** al desramar, así que ya **no se reconoce como árbol** (`baseDeArbol` exige
+tierra debajo, `esArbolSuelto` hojas cerca) y se queda **flotando para siempre** (medido: **5 troncos huérfanos** en la
+arboleda del jugador a `y=125..126`).
+**Regla:** tras la columna, el leñador **remata** lo que cuelga con una búsqueda corta —troncos **pegados o en
+diagonal hacia arriba**, dentro de un radio pequeño y con un **tope** de troncos— y cada tronco tiene que pasar
+`VillageGenerator.esTroncoDeArbol` (**de pie**, eje Y, y **sin nada construido pegado**): eso deja fuera el **MURO**
+(troncos tumbados, eje X/Z) y los postes de las casas. Y un tronco que **no llega al suelo** por otros troncos
+(`tieneApoyo`) es un **resto** del hachazo viejo: se limpia, pero **solo en la arboleda del pueblo** (fuera, un poste
+del pueblo sin hojas es indistinguible de un resto).
+**Y el plano no apunta los troncos de la arboleda:** esa arboleda es la madera del leñador (se tala y se replanta a
+propósito), así que el obrero no los "repara" (ni al capturar el plano ni al leerlo, sin migración: el del jugador
+tenía **9 troncos de acacia** apuntados como huecos, y reponerlos era levantar troncos sin copa).
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 

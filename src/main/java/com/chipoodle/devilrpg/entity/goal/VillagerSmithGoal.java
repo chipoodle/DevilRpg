@@ -6,11 +6,16 @@ import com.chipoodle.devilrpg.world.VillageManager;
 import com.chipoodle.devilrpg.world.VillagePantry;
 import com.chipoodle.devilrpg.world.VillageStorage;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.GlobalPos;
+import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.entity.ai.memory.MemoryModuleType;
+import net.minecraft.world.entity.ai.village.poi.PoiManager;
+import net.minecraft.world.entity.ai.village.poi.PoiType;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.npc.VillagerProfession;
 import net.minecraft.world.item.ItemStack;
@@ -21,6 +26,9 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Optional;
+import java.util.function.BiPredicate;
+import java.util.function.Predicate;
 
 /**
  * <b>Herrero</b> de la aldea: coge los materiales del <b>almacén</b>, trabaja en <b>su puesto</b> de la herrería y deja
@@ -46,6 +54,8 @@ public class VillagerSmithGoal extends Goal {
     private static final int REST_TICKS = 10;
     private static final int IDLE_REST_TICKS = 100;
     private static final int STUCK_LIMIT = 140;
+    /** Radio en el que se mira si OTRO aldeano tiene el puesto (vanilla reclama los puestos a menos de 48). */
+    private static final double RADIO_PUESTO = 48.0D;
     /** Si se aleja más de esto del centro de la aldea, deja de trabajar. */
     private static final double MAX_DISTANCE_FROM_CENTER = VillageGenerator.FENCE_RADIUS + 16.0D;
 
@@ -84,7 +94,6 @@ public class VillagerSmithGoal extends Goal {
     private final Villager villager;
     private final BlockPos center;
     private final int objectiveIndex;
-    private final boolean armas;
     @Nullable
     private Receta receta;
     private Fase fase = Fase.RECOGER;
@@ -94,13 +103,27 @@ public class VillagerSmithGoal extends Goal {
     private int restTicks;
     private int stuckTicks;
     private double mejorDistancia = Double.MAX_VALUE;
+    /** Última transición anotada en el log: así se ve el ciclo entero sin escribir una línea por tick. */
+    private String ultimaAnotacion = "";
 
     public VillagerSmithGoal(Villager villager, BlockPos center, int objectiveIndex) {
         this.villager = villager;
         this.center = center;
         this.objectiveIndex = objectiveIndex;
-        this.armas = villager.getVillagerData().getProfession() == VillagerProfession.WEAPONSMITH;
         this.setFlags(EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
+    }
+
+    /**
+     * ¿Es el herrero de <b>ARMAS</b> (muelle de afilar) o el de <b>HERRAMIENTAS</b> (mesa de herrería)?
+     * <p>
+     * Se lee <b>EN VIVO</b> del oficio, no se cachea en el constructor, y es la misma trampa que ya costó un bug en
+     * {@code VillagerPickupGoal}: el pueblo <b>reparte oficios</b> (repone el puesto que se queda vacío, una cría
+     * crece y lo hereda) y este goal no se vuelve a construir para el mismo aldeano (ver
+     * {@code VillageManager.asegurarGoalDeHerrero}), así que un aldeano al que le cambian el oficio se quedaba
+     * yendo al puesto del oficio <b>viejo</b> —o al del compañero— para siempre.
+     */
+    private boolean armas() {
+        return villager.getVillagerData().getProfession() == VillagerProfession.WEAPONSMITH;
     }
 
     @Override
@@ -132,11 +155,16 @@ public class VillagerSmithGoal extends Goal {
             restTicks = IDLE_REST_TICKS; // no hay materiales (o ya está todo hecho): a esperar
             return false;
         }
-        if (VillageGenerator.puestoDeHerreria(level, center, armas) == null) {
+        BlockPos puesto = VillageGenerator.puestoDeHerreria(level, center, armas());
+        if (puesto == null) {
             receta = null;
             restTicks = IDLE_REST_TICKS;
             return false; // todavía no hay taller en esta aldea
         }
+        // El puesto es SUYO: se le pone en el cerebro y se toma su ticket del punto de interés (ver
+        // `reclamarElPuesto`: sin `JOB_SITE` el juego no le registra la actividad de trabajar y el aldeano se queda
+        // en IDLE, que es lo que el jugador veía como "da vueltas sobre su eje" con la etiqueta "Paseando").
+        reclamarElPuesto(level, puesto);
         fase = Fase.RECOGER;
         destino = VillageStorage.puntoDeApoyo(level, center);
         return destino != null;
@@ -158,7 +186,17 @@ public class VillagerSmithGoal extends Goal {
 
     @Override
     public void tick() {
-        if (receta == null || destino == null || !(villager.level() instanceof ServerLevel level)) {
+        if (receta == null || !(villager.level() instanceof ServerLevel level)) {
+            return;
+        }
+        if (destino == null) {
+            // SIN DESTINO: el sitio al que iba ya no está (el jugador se llevó la muela o la mesa, se rompió el
+            // almacén...). Antes este goal se quedaba VIVO sin hacer nada: ocupaba la bandera MOVE (así que el aldeano
+            // no podía ni pasear ni hacer otra cosa), no escribía etiqueta (salía "Paseando") y no terminaba NUNCA,
+            // porque `canContinueToUse` solo mira la receta. Ahora se suelta la faena y se vuelve a decidir en el
+            // siguiente `canUse`, que es donde se comprueba que el taller sigue existiendo.
+            anotar("sin destino: se deja la faena");
+            receta = null;
             return;
         }
         villager.getLookControl().setLookAt(destino.getX() + 0.5D, destino.getY() + 0.5D, destino.getZ() + 0.5D);
@@ -166,6 +204,12 @@ public class VillagerSmithGoal extends Goal {
                 destino.getZ() + 0.5D));
         if (distancia > REACH) {
             VillageManager.caminarHacia(villager, destino, 0.6F);
+            // LA ETIQUETA TAMBIÉN MIENTRAS SE CAMINA. Faltaba, y es lo que el jugador vio: el herrero se pasa la mayor
+            // parte del ciclo ANDANDO (del almacén al taller hay más de 80 bloques en su aldea), así que durante ese
+            // rato no decía nada y su etiqueta caía al texto genérico: "Paseando" (o "Trabajando") con el aldeano
+            // yendo a su faena. Los demás goals del pueblo (el leñador, el granjero, el ganadero) sí lo hacían.
+            VillageManager.ponerActividad(villager, verboDeCamino());
+            anotar("yendo: " + verboDeCamino());
             if (distancia < mejorDistancia - 0.5D) {
                 mejorDistancia = distancia;
                 stuckTicks = 0;
@@ -177,11 +221,8 @@ public class VillagerSmithGoal extends Goal {
         VillageManager.parar(villager);
         villager.swing(InteractionHand.MAIN_HAND);
         if (++workTicks < WORK_TICKS) {
-            VillageManager.ponerActividad(villager, switch (fase) {
-                case RECOGER -> "Buscando materiales";
-                case TRABAJAR -> "Fabricando";
-                case ENTREGAR -> "Llevando lo fabricado";
-            });
+            VillageManager.ponerActividad(villager, verboActual());
+            anotar("faena: " + verboActual());
             return;
         }
         workTicks = 0;
@@ -189,7 +230,7 @@ public class VillagerSmithGoal extends Goal {
             case RECOGER -> {
                 if (recoger(level)) {
                     fase = Fase.TRABAJAR;
-                    destino = VillageGenerator.puestoDeHerreria(level, center, armas);
+                    destino = VillageGenerator.puestoDeHerreria(level, center, armas());
                 } else {
                     receta = null; // se lo ha llevado otro: se elige otra cosa
                 }
@@ -209,12 +250,99 @@ public class VillagerSmithGoal extends Goal {
         restTicks = REST_TICKS;
     }
 
+    /** Lo que hace AHORA (ya en el sitio): va en la etiqueta del aldeano y en el log. */
+    private String verboActual() {
+        return switch (fase) {
+            case RECOGER -> "Buscando materiales";
+            case TRABAJAR -> "Fabricando";
+            case ENTREGAR -> "Llevando lo fabricado";
+        };
+    }
+
+    /** Lo que está haciendo <b>mientras va</b> de un sitio a otro (antes no decía nada y salía "Paseando"). */
+    private String verboDeCamino() {
+        return switch (fase) {
+            case RECOGER -> "Yendo al almacen";
+            case TRABAJAR -> armas() ? "Yendo al muelle" : "Yendo a la mesa";
+            case ENTREGAR -> "Volviendo al almacen";
+        };
+    }
+
+    /**
+     * Deja el ciclo del herrero en el log <b>una vez por transición</b> (no por tick: esto es un aldeano caminando
+     * 80 bloques, o sea cientos de ticks por viaje). Es lo que hace falta para poder seguirle el rastro en el log
+     * del jugador sin llenarlo.
+     */
+    private void anotar(String clave) {
+        if (clave.equals(ultimaAnotacion)) {
+            return;
+        }
+        ultimaAnotacion = clave;
+        DevilRpg.LOGGER.info("[Village] {}: {} ({} -> {})", armas() ? "El herrero de armas"
+                        : "El herrero de herramientas", clave, verboActual(),
+                destino == null ? "sin destino" : destino.toShortString());
+    }
+
     @Override
     public void stop() {
         receta = null;
         destino = null;
         restTicks = REST_TICKS;
         VillageManager.parar(villager);
+    }
+
+    // --- el puesto de trabajo (lo que el juego llama JOB_SITE) ---------------------------------------
+
+    /**
+     * Le pone al herrero <b>su puesto en el cerebro</b> ({@code JOB_SITE}) y le <b>toma el ticket</b> de punto de
+     * interés: es lo que hace que el juego lo tenga por un aldeano <b>con puesto de trabajo</b>.
+     * <p>
+     * Hace falta de verdad, y está <b>medido</b> en el guardado del jugador (aldea 2, centro 1414,1414):
+     * <ul>
+     *   <li>el <b>muelle de afilar</b> (1419,120,1368) y la <b>mesa de herrería</b> (1418,120,1368) tenían
+     *       {@code free_tickets=0} (el ticket cogido) y <b>ningún</b> aldeano con ese sitio en la memoria: el único
+     *       herrero de armas lo tenía solo como {@code POTENTIAL_JOB_SITE} y el de herramientas, ni eso;</li>
+     *   <li>y sin {@code JOB_SITE} el cerebro <b>no registra la actividad de trabajar</b> —vanilla la añade con
+     *       {@code addActivityWithConditions(WORK, ..., JOB_SITE presente)}, así que
+     *       {@code setActiveActivityIfPossible(WORK)} falla y se cae a {@code IDLE}—. Ese IDLE es lo que el jugador
+     *       veía: el aldeano con la etiqueta <b>"Paseando"</b> a pleno día de trabajo (guardado con
+     *       {@code DayTime=8137}, dentro de la franja WORK de 2000 a 9000) y "dando vueltas sobre su eje" (las
+     *       conductas de IDLE: paseo aleatorio y caminar hacia donde mira), en vez de estar en su taller.</li>
+     * </ul>
+     * Un ticket <b>cogido sin dueño</b> es un ticket <b>perdido</b>: nadie lo puede volver a reclamar nunca (vanilla
+     * solo lo suelta al morir el aldeano, {@code Villager.releaseAllPois}). Aquí se reconoce ese caso —el puesto está
+     * cogido y ningún aldeano lo tiene en el cerebro—, se libera y se toma. Y no se le quita el puesto a nadie: si
+     * otro aldeano lo tiene, no se toca.
+     */
+    private void reclamarElPuesto(ServerLevel level, BlockPos puesto) {
+        Optional<GlobalPos> mio = villager.getBrain().getMemory(MemoryModuleType.JOB_SITE);
+        if (mio.isPresent() && mio.get().pos().equals(puesto)) {
+            return; // ya es suyo
+        }
+        for (Villager otro : level.getEntitiesOfClass(Villager.class,
+                new net.minecraft.world.phys.AABB(puesto).inflate(RADIO_PUESTO))) {
+            if (otro == villager) {
+                continue;
+            }
+            Optional<GlobalPos> suyo = otro.getBrain().getMemory(MemoryModuleType.JOB_SITE);
+            if (suyo.isPresent() && suyo.get().pos().equals(puesto)) {
+                return; // el puesto es de otro: no se le quita a nadie
+            }
+        }
+        PoiManager poi = level.getPoiManager();
+        Predicate<Holder<PoiType>> vale = villager.getVillagerData().getProfession().heldJobSite();
+        BiPredicate<Holder<PoiType>, BlockPos> cual = (tipo, pos) -> pos.equals(puesto);
+        if (poi.take(vale, cual, puesto, 1).isEmpty()) {
+            poi.release(puesto); // ticket PERDIDO: se suelta y se vuelve a intentar
+            if (poi.take(vale, cual, puesto, 1).isEmpty()) {
+                return; // no hay manera (el chunk no está cargado...): se reintenta en el siguiente canUse
+            }
+            DevilRpg.LOGGER.info("[Village] {}: el puesto de trabajo en {} tenia el ticket PERDIDO (cogido y sin"
+                            + " dueno): liberado y reclamado", armas() ? "El herrero de armas"
+                    : "El herrero de herramientas", puesto.toShortString());
+        }
+        villager.getBrain().setMemory(MemoryModuleType.JOB_SITE, GlobalPos.of(level.dimension(), puesto));
+        anotar("puesto reclamado: " + puesto.toShortString());
     }
 
     // --- las faenas ---------------------------------------------------------------------------------
@@ -265,7 +393,7 @@ public class VillagerSmithGoal extends Goal {
         level.playSound(null, villager.blockPosition(), net.minecraft.sounds.SoundEvents.FIRE_AMBIENT,
                 SoundSource.BLOCKS, 0.5F, 1.0F);
         VillageManager.ponerSuceso(villager, receta.suceso());
-        DevilRpg.LOGGER.info("[Village] {}: {}", armas ? "El herrero de armas" : "El herrero de herramientas",
+        DevilRpg.LOGGER.info("[Village] {}: {}", armas() ? "El herrero de armas" : "El herrero de herramientas",
                 receta.suceso());
     }
 
@@ -330,13 +458,13 @@ public class VillagerSmithGoal extends Goal {
             }
         }
         // 3) Carne de zombie podrida -> cuero (lo hace el de herramientas, en su mesa).
-        if (!armas && contar(almacen, Items.ROTTEN_FLESH) >= CARNE_POR_CUERO) {
+        if (!armas() && contar(almacen, Items.ROTTEN_FLESH) >= CARNE_POR_CUERO) {
             return new Receta("Curtiendo cuero", "Curtio " + CARNE_POR_CUERO + " carne podrida en un cuero",
                     List.of(new ItemStack(Items.ROTTEN_FLESH, CARNE_POR_CUERO)), new ItemStack(Items.LEATHER));
         }
         // 4) MADERA: el leñador (etapa B) trae TRONCOS al almacén, y sin esto no había de dónde sacar tablones ni
         //    palos: el escudo pide 6 tablones y el arco y las flechas, palos. Los parte el de HERRAMIENTAS en su mesa.
-        if (!armas) {
+        if (!armas()) {
             // 1 tronco -> 4 tablones (se guardan para los escudos y para el propio pueblo).
             if (contar(almacen, Items.OAK_PLANKS) < OBJETIVO_TABLONES) {
                 for (ItemStack tronco : TRONCOS) {
@@ -353,7 +481,7 @@ public class VillagerSmithGoal extends Goal {
             }
         }
         // 5) Fabricar lo que falte, según el puesto.
-        return armas ? recetaDeArmas(almacen) : recetaDeArmadura(almacen);
+        return armas() ? recetaDeArmas(almacen) : recetaDeArmadura(almacen);
     }
 
     /** Herrero de ARMAS (muelle): espada, escudo, arco y flechas. */

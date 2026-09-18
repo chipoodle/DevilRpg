@@ -16,6 +16,7 @@ import com.chipoodle.devilrpg.init.ModEntities;
 import com.chipoodle.devilrpg.survival.ObjectiveTargets;
 import com.chipoodle.devilrpg.util.MissionRewards;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -31,6 +32,7 @@ import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.OwnableEntity;
 import net.minecraft.world.entity.ai.goal.WrappedGoal;
+import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.village.poi.PoiManager;
 import net.minecraft.world.entity.ai.village.poi.PoiTypes;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -52,6 +54,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
@@ -2056,7 +2059,13 @@ public final class VillageManager {
                 // jugador avisó de los barriles de la taberna) se convertía en pescador y el pueblo perdía un puesto.
                 // El pescador (y su edificio y su lago) llegarán más adelante, con su propia etapa.
                 sinOficio.add(villager);
-                villager.getBrain().eraseMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.JOB_SITE);
+                // OJO: ANTES de borrar la memoria hay que SOLTAR el ticket del punto de interés. Borrar la memoria a
+                // secas deja el puesto COGIDO PARA SIEMPRE (el juego solo lo suelta al morir el aldeano, en
+                // `Villager.releaseAllPois`), y entonces ningún aldeano puede volver a reclamarlo. Medido en el
+                // guardado del jugador (aldea 2): el muelle de afilar y la mesa de herrería tenían `free_tickets=0` y
+                // NINGÚN aldeano con ese sitio en la memoria, así que el herrero de armas tenía el puesto solo como
+                // `POTENTIAL_JOB_SITE` y el de herramientas, ni eso.
+                liberarPuesto(villager);
                 DevilRpg.LOGGER.info("[Village] Aldea {}: un aldeano habia tomado el oficio de {} (de fuera del"
                         + " pueblo): vuelve al reparto de puestos", objectiveIndex, profesion);
             } else if (!presentes.contains(profesion)) {
@@ -2078,15 +2087,52 @@ public final class VillageManager {
         }
     }
 
+    /**
+     * <b>Suelta el ticket</b> del puesto de trabajo (y de la cita pendiente) antes de quitarle la memoria al aldeano.
+     * <p>
+     * Es lo que hace el propio juego cuando un aldeano muere ({@code Villager.releaseAllPois}) y lo que
+     * {@code Brain.eraseMemory} <b>no</b> hace: la memoria se va, pero el punto de interés sigue <b>cogido</b>, así
+     * que <b>nadie</b> puede volver a reclamarlo nunca (vanilla solo da un ticket por puesto).
+     * <p>
+     * Medido en el guardado del jugador (aldea 2, centro 1414,1414): el <b>muelle de afilar</b> (1419,120,1368) y la
+     * <b>mesa de herrería</b> (1418,120,1368) tenían {@code free_tickets=0} y ningún aldeano con ese sitio en la
+     * memoria — el único herrero de armas lo tenía como {@code POTENTIAL_JOB_SITE} (encontrado, imposible de
+     * reclamar) y el de herramientas, ni eso. Sin {@code JOB_SITE} el cerebro <b>no registra la actividad de
+     * trabajar</b> (vanilla la condiciona a esa memoria), el aldeano se queda en IDLE todo el día y el jugador lo ve
+     * "dando vueltas" con la etiqueta "Paseando".
+     */
+    private static void liberarPuesto(Villager villager) {
+        if (!(villager.level() instanceof ServerLevel level)) {
+            return;
+        }
+        for (MemoryModuleType<GlobalPos> tipo : List.of(MemoryModuleType.JOB_SITE, MemoryModuleType.POTENTIAL_JOB_SITE)) {
+            Optional<GlobalPos> sitio = villager.getBrain().getMemory(tipo);
+            if (sitio.isEmpty()) {
+                continue;
+            }
+            level.getPoiManager().release(sitio.get().pos());
+            villager.getBrain().eraseMemory(tipo);
+        }
+    }
+
     /** Marca a un aldeano como obrero y le pone el goal de reparación. */
     private static void marcarObrero(Villager villager, BlockPos center, int objectiveIndex) {
         boolean yaEra = villager.getPersistentData().getBoolean(BUILDER_TAG);
         villager.getPersistentData().putBoolean(BUILDER_TAG, true);
-        // Un GRANJERO que tenga que hacer de obrero (no había más adultos) lleva la reparación POR DEBAJO de su goal
-        // de granja (prioridad 5 contra 4): primero la huerta y, cuando no tiene faena, repara. Si no, se pasaría el
-        // día reparando y la aldea pasaría hambre.
+        // Un aldeano CON FAENA FIJA lleva la reparación POR DEBAJO de su goal de oficio (prioridad 5 contra 4):
+        // primero lo suyo y, cuando no tiene faena, repara. Vale para el GRANJERO (si no, repara caminos en vez de
+        // cuidar la huerta) y desde ahora también para los DOS HERREROS, que es lo que el jugador reportó como "el
+        // herrero de armas da vueltas sobre su eje como un tonto":
+        //   MEDIDO en su guardado (aldea 2, centro 1414,1414): los DOS herreros llevaban la marca de obrero
+        //   (`DevilRpgBuilder=1` en sus datos), así que su goal de reparación —prioridad 3— BLOQUEABA el del taller
+        //   —prioridad 4, y con la misma bandera MOVE, que es excluyente— y el herrero de armas se pasaba el día
+        //   caminando a los huecos del plano (los de la arboleda: 9 troncos de acacia que el leñador había talado,
+        //   medidos en el mismo guardado) en vez de forjar, con 18 pepitas de hierro sin fundir en el almacén. Su
+        //   etiqueta salía "Paseando" porque el goal de reparar tampoco dice nada mientras camina.
         boolean esGranjero = villager.getVillagerData().getProfession() == VillagerProfession.FARMER;
-        asegurarGoalDeObrero(villager, center, objectiveIndex, esGranjero ? 5 : 3);
+        boolean esHerrero = villager.getVillagerData().getProfession() == VillagerProfession.WEAPONSMITH
+                || villager.getVillagerData().getProfession() == VillagerProfession.TOOLSMITH;
+        asegurarGoalDeObrero(villager, center, objectiveIndex, esGranjero || esHerrero ? 5 : 3);
         if (!yaEra) {
             DevilRpg.LOGGER.info("[Village] Aldea {}: {} es obrero de la aldea", objectiveIndex, villager.getUUID());
         }
@@ -2655,10 +2701,20 @@ public final class VillageManager {
         }
         BlockPos mejor = null;
         double mejorDist = REPAIR_SEARCH_RADIUS * REPAIR_SEARCH_RADIUS;
+        BlockPos centro = centroDe(level, objectiveIndex);
         for (int i = 0; i < plano.size(); i++) {
             BlockPos pos = plano.posAt(i);
             long comprimida = pos.asLong();
             if (excluir.contains(comprimida) || reclamadoPorOtro(level, comprimida, builder)) {
+                continue;
+            }
+            // LA ARBOLEDA DEL PUEBLO NO SE "REPARA": es la madera del leñador (tala y replanta a propósito), así que
+            // reponer sus TRONCOS sería levantar troncos flotando. Las aldeas ya guardadas los tienen apuntados en el
+            // plano (el de una aldea migrada es un ESCANEO del mundo y el árbol ya había crecido), así que se
+            // descartan AL LEER, sin migración —igual que `VillageGenerator.estadoDelPlano` con el portón—. Medido en
+            // el guardado del jugador (aldea 2): 9 troncos de acacia de la arboleda apuntados como huecos.
+            if (centro != null && VillageGenerator.enLaArboleda(centro, pos)
+                    && VillageGenerator.estadoDelPlano(plano.stateAt(i)).is(net.minecraft.tags.BlockTags.LOGS)) {
                 continue;
             }
             int dy = pos.getY() - from.getY();
@@ -2709,10 +2765,23 @@ public final class VillageManager {
         return eraHuerta && pisoteada;
     }
 
-    /** Lo mismo, mirando el plano: ¿ese hueco hay que reponerlo? (lo consulta el obrero en cada tick). */
+    /**
+     * Lo mismo, mirando el plano: ¿ese hueco hay que reponerlo? (lo consulta el obrero en cada tick).
+     * <p>
+     * Los <b>troncos de la arboleda del pueblo</b> nunca: esa arboleda es la madera del <b>leñador</b> (tala y
+     * replanta a propósito), así que reponerlos sería levantar troncos flotando (ver {@link #findRepairTarget}).
+     */
     public static boolean necesitaReparacion(ServerLevel level, int objectiveIndex, BlockPos pos) {
         BlockState esperado = blueprintState(level, objectiveIndex, pos);
-        return esperado != null && necesitaReparacion(level.getBlockState(pos), esperado);
+        if (esperado == null) {
+            return false;
+        }
+        BlockPos centro = centroDe(level, objectiveIndex);
+        if (centro != null && VillageGenerator.enLaArboleda(centro, pos)
+                && esperado.is(net.minecraft.tags.BlockTags.LOGS)) {
+            return false;
+        }
+        return necesitaReparacion(level.getBlockState(pos), esperado);
     }
 
     /**

@@ -27,10 +27,14 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Deque;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * <b>Leñador / reforestador</b> de la aldea (etapa B): <b>tala árboles de verdad</b> alrededor del pueblo y <b>los
@@ -200,6 +204,15 @@ public class VillagerLumberjackGoal extends Goal {
             target = tronco;
             return true;
         }
+        // RESTO COLGANDO (solo en la arboleda del pueblo): un tronco que ya no cuelga de ningún árbol —lo dejó a
+        // medias el hachazo viejo— se remata. Va DESPUÉS de los árboles (primero la madera buena) y es lo que
+        // limpia los que quedaron flotando en el guardado del jugador SIN tener que tocar el mundo guardado.
+        BlockPos resto = buscarRestoColgando(level);
+        if (resto != null) {
+            fase = Fase.TALAR;
+            target = resto;
+            return true;
+        }
         // ABONAR LA ARBOLEDA DEL PUEBLO: mientras no tenga NI UN árbol y el pueblo tenga harina de huesos (la del
         // compostero del granjero), el leñador la abona. Es lo que hace que una aldea sin bosque —una islita— tenga
         // madera en minutos en vez de esperar a que los plantones crezcan solos. En cuanto crece el primer árbol deja
@@ -298,9 +311,10 @@ public class VillagerLumberjackGoal extends Goal {
     // --- las faenas ---------------------------------------------------------------------------------
 
     /**
-     * Tala el árbol: recorre la columna de troncos hacia arriba (hasta {@link #ALTURA_MAX}) y se lleva la madera. Si la
-     * base está sobre tierra, <b>replanta</b> ahí mismo una semilla <b>de la misma especie</b>; y si no tiene ninguna a
-     * mano, <b>apunta el hueco</b> para volver con la primera que consiga (ver {@link #pendientes}).
+     * Tala el árbol <b>ENTERO</b>: primero la columna del tronco hacia arriba (hasta {@link #ALTURA_MAX}) y después
+     * <b>lo que cuelga de ella</b> (ver {@link #rematarElArbol}), que es lo que se quedaba flotando. Se lleva la
+     * madera. Si la base está sobre tierra, <b>replanta</b> ahí mismo una semilla <b>de la misma especie</b>; y si no
+     * tiene ninguna a mano, <b>apunta el hueco</b> para volver con la primera que consiga (ver {@link #pendientes}).
      */
     private void talar(ServerLevel level) {
         if (target == null) {
@@ -308,21 +322,21 @@ public class VillagerLumberjackGoal extends Goal {
         }
         BlockState troncoBase = level.getBlockState(target);
         boolean eraBase = esTierra(level.getBlockState(target.below()));
-        int talados = 0;
+        int topeColumna = target.getY() + ALTURA_MAX;
+        List<BlockPos> talados = new ArrayList<>();
         BlockPos p = target;
-        while (talados < ALTURA_MAX && level.getBlockState(p).is(BlockTags.LOGS)) {
-            BlockState tronco = level.getBlockState(p);
-            List<ItemStack> drops = Block.getDrops(tronco, level, p, null);
-            level.destroyBlock(p, false);
-            level.playSound(null, p, tronco.getSoundType().getBreakSound(), SoundSource.BLOCKS, 0.7F, 1.0F);
-            for (ItemStack drop : drops) {
-                ItemStack resto = guardarEnInventario(drop);
-                if (!resto.isEmpty()) {
-                    level.addFreshEntity(new ItemEntity(level, p.getX() + 0.5D, p.getY() + 0.5D, p.getZ() + 0.5D, resto));
-                }
-            }
-            talados++;
+        while (p.getY() <= topeColumna && level.getBlockState(p).is(BlockTags.LOGS)) {
+            picarTronco(level, p);
+            talados.add(p.immutable());
             p = p.above();
+        }
+        // EL RESTO DEL ÁRBOL: lo que cuelga de la columna (la parte torcida y las ramas). Sin esto el árbol se
+        // quedaba a medias —ver `rematarElArbol`— y esos troncos se quedaban FLOTANDO para siempre.
+        int ramas = talados.isEmpty() ? 0 : rematarElArbol(level, talados, target);
+        int troncos = talados.size() + ramas;
+        int altura = 0;
+        for (BlockPos t : talados) {
+            altura = Math.max(altura, t.getY() - target.getY());
         }
         // LAS RAMAS: al árbol talado se le quitan también SUS hojas. No es capricho: las semillas y los palos que
         // sueltan las hojas al caer se quedaban encima de las copas de los árboles de al lado, en el aire, fuera del
@@ -330,19 +344,110 @@ public class VillagerLumberjackGoal extends Goal {
         // pies), y el suelo del pueblo se llenaba de plantones tirados: medido en el guardado del jugador, 53
         // plantones de abedul y 19 palos colgados en las copas de su aldea de mar. Desramado, todo cae al suelo —los
         // plantones van al zurrón del leñador, para replantar, y el resto al pie del árbol— y lo recoge el recolector.
-        int hojas = talados > 0 ? desramar(level, target, talados) : 0;
+        int hojas = troncos > 0 ? desramar(level, target, altura) : 0;
         // Las HOJAS que queden colgando se van solas (mecánica de vanilla).
-        if (eraBase && talados > 0) {
+        if (eraBase && troncos > 0) {
             BlockPos hueco = target;
             Item misma = semillaDeTronco(troncoBase);
             if (!replantar(level, hueco, misma)) {
                 apuntarHueco(hueco, misma); // sin semilla a mano: el sitio queda pendiente, no se pierde
             }
         }
-        if (talados > 0) {
-            VillageManager.ponerSuceso(villager, "Talo un arbol (" + talados + ")");
-            DevilRpg.LOGGER.info("[Village] El lenador: talo {} tronco(s) y desramo {} hoja(s)", talados, hojas);
+        if (troncos > 0) {
+            VillageManager.ponerSuceso(villager, "Talo un arbol (" + troncos + ")");
+            DevilRpg.LOGGER.info("[Village] El lenador: talo {} tronco(s) ({} de la columna y {} que colgaban) y"
+                    + " desramo {} hoja(s)", troncos, talados.size(), ramas, hojas);
         }
+    }
+
+    /**
+     * Pica un tronco: se lleva la madera al zurrón, la suelta al suelo si no le cabe y toca su sonido.
+     */
+    private void picarTronco(ServerLevel level, BlockPos p) {
+        BlockState tronco = level.getBlockState(p);
+        List<ItemStack> drops = Block.getDrops(tronco, level, p, null);
+        level.destroyBlock(p, false);
+        level.playSound(null, p, tronco.getSoundType().getBreakSound(), SoundSource.BLOCKS, 0.7F, 1.0F);
+        for (ItemStack drop : drops) {
+            ItemStack resto = guardarEnInventario(drop);
+            if (!resto.isEmpty()) {
+                level.addFreshEntity(new ItemEntity(level, p.getX() + 0.5D, p.getY() + 0.5D, p.getZ() + 0.5D, resto));
+            }
+        }
+    }
+
+    /** Tope de troncos por árbol: la columna ({@link #ALTURA_MAX}) MÁS lo que cuelga de ella. */
+    private static final int TRONCOS_MAX_POR_ARBOL = 32;
+    /** Radio (en X/Z, desde el tronco que se está talando) por el que se siguen buscando SUS troncos. */
+    private static final int RADIO_RAMAS = 3;
+
+    /**
+     * <b>Remata el árbol</b>: pica los troncos que <b>cuelgan</b> de la columna que se acaba de talar.
+     * <p>
+     * Hace falta de verdad, y está <b>medido</b> en el guardado del jugador (aldea 2, la arboleda del pueblo): el
+     * tronco de un árbol <b>no siempre es una columna recta</b> —la <b>acacia</b> sube recta y luego <b>tuerce en
+     * diagonal</b>: comprobado bloque a bloque, el árbol entero de (1370,120..124,1391) sigue con un tronco en
+     * (1369,125,1391), una casilla al lado y una arriba— y el hachazo de antes solo subía en vertical, así que la
+     * parte torcida y sus ramas se quedaban <b>en el aire</b>. Encima el desramado les quita las hojas, de modo que
+     * el trozo que queda ya <b>no se parece a un árbol</b> ({@code baseDeArbol} exige tierra debajo y
+     * {@code esArbolSuelto}, hojas cerca) y se quedaba flotando <b>para siempre</b>: 9 troncos de acacia medidos a
+     * y=122..126 en la arboleda del pueblo, sin una hoja encima.
+     * <p>
+     * Se recorre con una <b>búsqueda corta</b> desde las casillas que se acaban de quedar en aire: solo troncos
+     * <b>pegados</b> (o en diagonal hacia arriba, que es como crecen las ramas: {@code dy 0..1}) a uno ya talado,
+     * dentro de {@link #RADIO_RAMAS} del tronco y con el tope de {@link #TRONCOS_MAX_POR_ARBOL}. Y cada tronco tiene
+     * que pasar {@link VillageGenerator#esTroncoDeArbol}: <b>de pie</b> (eje Y) y <b>sin nada construido pegado</b>,
+     * que es lo que deja fuera el <b>muro de la aldea</b> (troncos tumbados, eje X/Z) y los postes de las casas.
+     *
+     * @return cuántos troncos se han picado de los que colgaban
+     */
+    private int rematarElArbol(ServerLevel level, List<BlockPos> talados, BlockPos tronco) {
+        int presupuesto = TRONCOS_MAX_POR_ARBOL - talados.size();
+        if (presupuesto <= 0) {
+            DevilRpg.LOGGER.info("[Village] El lenador: el arbol de {} pasa del tope de {} troncos, se deja lo que"
+                    + " quede", tronco.toShortString(), TRONCOS_MAX_POR_ARBOL);
+            return 0;
+        }
+        // La FRONTERA son las casillas que se acaban de quedar en aire (el tronco talado): mirando a su alrededor
+        // aparecen los trozos que cuelgan del mismo árbol. OJO: se usan las casillas YA VACÍAS como frente, que es
+        // lo que permite seguir el rastro de un tronco torcido (su vecino de arriba está en diagonal).
+        Deque<BlockPos> frontera = new ArrayDeque<>(talados);
+        Set<Long> vistos = new HashSet<>();
+        for (BlockPos p : talados) {
+            vistos.add(p.asLong());
+        }
+        int topeY = tronco.getY() + ALTURA_MAX * 2;
+        int quitados = 0;
+        while (!frontera.isEmpty() && quitados < presupuesto) {
+            BlockPos desde = frontera.poll();
+            for (int dy = 0; dy <= 1; dy++) {
+                for (int dx = -1; dx <= 1; dx++) {
+                    for (int dz = -1; dz <= 1; dz++) {
+                        if (dy == 0 && dx == 0 && dz == 0) {
+                            continue; // él mismo
+                        }
+                        BlockPos p = desde.offset(dx, dy, dz);
+                        if (!vistos.add(p.asLong())) {
+                            continue;
+                        }
+                        if (p.getY() > topeY || Math.abs(p.getX() - tronco.getX()) > RADIO_RAMAS
+                                || Math.abs(p.getZ() - tronco.getZ()) > RADIO_RAMAS) {
+                            continue; // ni muy alto ni lejos del tronco: eso ya no es el mismo árbol
+                        }
+                        if (!level.getBlockState(p).is(BlockTags.LOGS)) {
+                            continue;
+                        }
+                        if (!VillageGenerator.esTroncoDeArbol(level, p)) {
+                            continue; // el muro (tumbado) o algo construido: no se toca
+                        }
+                        picarTronco(level, p);
+                        quitados++;
+                        frontera.add(p.immutable());
+                    }
+                }
+            }
+        }
+        return quitados;
     }
 
     /** Radio (en X/Z, desde el tronco) donde se buscan las hojas del árbol talado. */
@@ -707,9 +812,105 @@ public class VillagerLumberjackGoal extends Goal {
         return null;
     }
 
+    /**
+     * Un <b>resto colgando de la arboleda del pueblo</b>, o {@code null} si no hay: un tronco que <b>ya no cuelga de
+     * ningún árbol</b> porque el hachazo viejo lo dejó a medias (solo picaba la columna vertical: ver
+     * {@link #rematarElArbol}).
+     * <p>
+     * Se busca <b>solo en la arboleda</b>, y no en todo el monte, por dos motivos:
+     * <ul>
+     *   <li>es <b>el bosque del pueblo</b> (el del informe del jugador: <i>"en el bosque de la aldea deja logs
+     *       flotando"</i>), un hueco de césped con sus plazas donde <b>todo</b> árbol lo ha plantado la aldea, así que
+     *       un tronco que no llega al suelo ahí es, sin duda, un resto;</li>
+     *   <li>fuera solo se puede distinguir un resto de un árbol con la copa puesta (las hojas), y el hachazo ya se las
+     *       quitó; y cerca de la valla hay <b>postes del pueblo</b> de tronco de pie que tampoco tienen hojas, así que
+     *       buscarlo por todo el monte sería arriesgarse a desmontar algo construido.</li>
+     * </ul>
+     * La prueba es <b>llegar al suelo por troncos</b> ({@link #tieneApoyo}): un árbol de verdad siempre la pasa
+     * (todos sus troncos cuelgan de la base, que está en la tierra), y un resto del hachazo no. Además tiene que ser
+     * un tronco <b>de pie y sin nada construido pegado</b> ({@link VillageGenerator#esTroncoDeArbol}).
+     */
+    @Nullable
+    private BlockPos buscarRestoColgando(ServerLevel level) {
+        int cota = VillageGenerator.cotaDeLaPlaza(level, center);
+        BlockPos mejor = null;
+        double mejorDist = Double.MAX_VALUE;
+        for (int dx = -RADIO_BUSQUEDA; dx <= RADIO_BUSQUEDA; dx += 2) {
+            for (int dz = -RADIO_BUSQUEDA; dz <= RADIO_BUSQUEDA; dz += 2) {
+                int x = villager.blockPosition().getX() + dx;
+                int z = villager.blockPosition().getZ() + dz;
+                if (!VillageGenerator.enLaArboleda(center, new BlockPos(x, 0, z))) {
+                    continue; // fuera de la arboleda no se toca nada por esta vía
+                }
+                // De abajo arriba y se queda con el tronco huérfano MÁS BAJO de la columna: así el hachazo sube desde
+                // ahí (y `rematarElArbol` sigue con lo que cuelgue en diagonal).
+                BlockPos resto = null;
+                for (int y = cota - 4; y <= cota + ALTURA_MAX + 4 && resto == null; y++) {
+                    BlockPos p = new BlockPos(x, y, z);
+                    if (!level.getBlockState(p).is(BlockTags.LOGS)) {
+                        continue;
+                    }
+                    if (!VillageGenerator.esTroncoDeArbol(level, p)) {
+                        continue; // tumbado (el muro) o pegado a algo construido: no es un resto del monte
+                    }
+                    if (tieneApoyo(level, p)) {
+                        continue; // cuelga de un árbol de verdad: se tala por su base, pero puede haber un resto encima
+                    }
+                    resto = p.immutable();
+                }
+                if (resto == null) {
+                    continue;
+                }
+                double dist = villager.distanceToSqr(resto.getX() + 0.5D, resto.getY() + 0.5D, resto.getZ() + 0.5D);
+                if (dist < mejorDist) {
+                    mejorDist = dist;
+                    mejor = resto;
+                }
+            }
+        }
+        if (mejor != null) {
+            DevilRpg.LOGGER.info("[Village] El lenador: resto colgando en {} (no llega al suelo): lo remata",
+                    mejor.toShortString());
+        }
+        return mejor;
+    }
+
+    /**
+     * ¿Ese tronco <b>llega al suelo</b> por otros troncos? Se baja en diagonal (hacia abajo y hacia los lados, que es
+     * como bajan las ramas) hasta tocar tierra, con un tope de troncos mirados para no recorrer el mundo.
+     */
+    private static boolean tieneApoyo(ServerLevel level, BlockPos desde) {
+        Deque<BlockPos> cola = new ArrayDeque<>();
+        Set<Long> vistos = new HashSet<>();
+        cola.add(desde);
+        vistos.add(desde.asLong());
+        while (!cola.isEmpty() && vistos.size() < TRONCOS_MAX_POR_ARBOL * 2) {
+            BlockPos p = cola.poll();
+            if (esTierra(level.getBlockState(p.below()))) {
+                return true; // tocó el suelo
+            }
+            for (int dy = -1; dy <= 0; dy++) {
+                for (int dx = -1; dx <= 1; dx++) {
+                    for (int dz = -1; dz <= 1; dz++) {
+                        if (dy == 0 && dx == 0 && dz == 0) {
+                            continue;
+                        }
+                        BlockPos q = p.offset(dx, dy, dz);
+                        if (!vistos.add(q.asLong())) {
+                            continue;
+                        }
+                        if (level.getBlockState(q).is(BlockTags.LOGS)) {
+                            cola.add(q);
+                        }
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
     /** ¿Hay hojas alrededor de esa columna? Es lo que distingue un árbol de un poste de madera. */
-    private boolean tieneHojasCerca(ServerLevel level, BlockPos base) {
-        for (int dy = 1; dy <= 6; dy++) {
+    private boolean tieneHojasCerca(ServerLevel level, BlockPos base) {        for (int dy = 1; dy <= 6; dy++) {
             BlockPos arriba = base.above(dy);
             for (BlockPos q : BlockPos.betweenClosed(arriba.offset(-2, 0, -2), arriba.offset(2, 0, 2))) {
                 if (level.getBlockState(q).is(BlockTags.LEAVES)) {

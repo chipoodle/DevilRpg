@@ -147,6 +147,10 @@ public class VillagerRepairGoal extends Goal {
         // OJO: no basta con "está en aire": si era tierra de cultivo y alguien la pisoteó (queda tierra), también
         // hay que reponerla (ver VillageManager.necesitaReparacion).
         if (!VillageManager.necesitaReparacion(level, objectiveIndex, target)) {
+            // OJO: hay que SOLTAR el reclamo del hueco ANTES de pasar al siguiente. `stop()` solo lo suelta si
+            // `target != null`, así que dejándolo a null aquí el hueco se quedaba reservado para los demás obreros
+            // hasta que caducara el reclamo (y con varios obreros, eso es trabajo que nadie hace).
+            VillageManager.liberarHueco(level, target);
             target = null;
             return;
         }

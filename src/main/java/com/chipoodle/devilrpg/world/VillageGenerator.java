@@ -2470,27 +2470,40 @@ public final class VillageGenerator {
      * </ol>
      */
     public static boolean esArbolSuelto(ServerLevel level, BlockPos p) {
+        if (!esTroncoDeArbol(level, p)) {
+            return false;
+        }
+        // 1) hojas cerca, por encima: es lo que distingue un árbol de un poste. Se mira hasta 12 bloques arriba para
+        // que también cuente la base de un árbol alto (una selva los tiene de 20, pero con 12 sobra para los del
+        // pueblo y para no confundir un poste con las hojas de un árbol vecino).
+        for (int dy = 1; dy <= 12; dy++) {
+            for (BlockPos q : BlockPos.betweenClosed(p.offset(-2, dy, -2), p.offset(2, dy, 2))) {
+                if (level.getBlockState(q).is(BlockTags.LEAVES)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Las <b>dos primeras</b> reglas de {@link #esArbolSuelto}, sin la de las hojas: el tronco está <b>de pie</b>
+     * (eje Y: los tramos del muro son troncos <b>tumbados</b>, eje X o Z) y <b>no tiene nada construido pegado</b>
+     * (ni tablones, ni piedra, ni vallas, ni cristales: los postes de las casas van pegados a sus paredes).
+     * <p>
+     * Se pregunta aparte porque <b>un tronco a medio talar puede haberse quedado sin copa</b>: el leñador tala el
+     * tronco de abajo y desrama el árbol, así que lo que cuelga de la parte torcida ya no tiene hojas que lo
+     * delaten y, con la regla de las hojas, dejaría de reconocerse como parte del árbol (es justo el fallo que el
+     * jugador vio: <i>"deja logs flotando"</i>). Lo usa {@code VillagerLumberjackGoal.rematarElArbol} para seguir
+     * picando <b>lo que cuelga del árbol que está talando</b> sin tocar ni el muro ni los postes del pueblo.
+     */
+    public static boolean esTroncoDeArbol(ServerLevel level, BlockPos p) {
         BlockState state = level.getBlockState(p);
         if (!state.is(BlockTags.LOGS)) {
             return false;
         }
         if (state.hasProperty(RotatedPillarBlock.AXIS) && state.getValue(RotatedPillarBlock.AXIS) != Direction.Axis.Y) {
             return false; // tronco tumbado: es un tramo del muro
-        }
-        // 1) hojas cerca, por encima: es lo que distingue un árbol de un poste. Se mira hasta 12 bloques arriba para
-        // que también cuente la base de un árbol alto (una selva los tiene de 20, pero con 12 sobra para los del
-        // pueblo y para no confundir un poste con las hojas de un árbol vecino).
-        boolean hojas = false;
-        for (int dy = 1; dy <= 12 && !hojas; dy++) {
-            for (BlockPos q : BlockPos.betweenClosed(p.offset(-2, dy, -2), p.offset(2, dy, 2))) {
-                if (level.getBlockState(q).is(BlockTags.LEAVES)) {
-                    hojas = true;
-                    break;
-                }
-            }
-        }
-        if (!hojas) {
-            return false;
         }
         // 2) nada construido pegado (los postes de las casas van pegados a sus paredes).
         for (BlockPos q : BlockPos.betweenClosed(p.offset(-1, -1, -1), p.offset(1, 1, 1))) {
@@ -4682,6 +4695,16 @@ public final class VillageGenerator {
                     BlockPos pos = new BlockPos(x, y, z);
                     BlockState state = estadoDelPlano(level.getBlockState(pos));
                     if (seDescartaDelPlano(state)) {
+                        continue;
+                    }
+                    // LA ARBOLEDA DEL PUEBLO ES DEL LEÑADOR: sus TRONCOS no entran en el plano. El plano de una aldea
+                    // migrada es un ESCANEO del mundo, así que los árboles que ya habían crecido en la arboleda
+                    // quedaban apuntados; como el leñador los tala y los replanta a propósito (es la madera del
+                    // pueblo), el plano pedía reponerlos y el obrero los volvía a levantar, ya sin hojas, como
+                    // troncos FLOTANDO. Medido en el guardado del jugador (aldea 2): 9 troncos de acacia de la
+                    // arboleda apuntados como huecos. Es el mismo motivo por el que `asegurarArboleda` pone sus
+                    // plantones con `setBlock` directo, fuera del plano.
+                    if (enLaArboleda(center, pos) && state.is(BlockTags.LOGS)) {
                         continue;
                     }
                     Integer indice = indices.get(state);
