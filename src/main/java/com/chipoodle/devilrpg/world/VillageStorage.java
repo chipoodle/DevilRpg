@@ -188,7 +188,27 @@ public final class VillageStorage {
         return null;
     }
 
-    public static int cofresColocados(ServerLevel level, BlockPos villageCenter) {        int n = 0;
+    /**
+     * <b>Cuántas unidades</b> hay en el almacén que cumplan el filtro (para saber si el pueblo tiene para una receta:
+     * por ejemplo 8 pepitas de oro para la zanahoria dorada del clérigo).
+     */
+    public static int cuenta(ServerLevel level, BlockPos villageCenter, java.util.function.Predicate<ItemStack> filtro) {
+        Container caja = almacen(level, villageCenter);
+        if (caja == null) {
+            return 0;
+        }
+        int n = 0;
+        for (int i = 0; i < caja.getContainerSize(); i++) {
+            ItemStack stack = caja.getItem(i);
+            if (!stack.isEmpty() && filtro.test(stack)) {
+                n += stack.getCount();
+            }
+        }
+        return n;
+    }
+
+    public static int cofresColocados(ServerLevel level, BlockPos villageCenter) {
+        int n = 0;
         for (BlockPos rel : COFRES) {
             if (level.getBlockState(pos(level, villageCenter, rel)).getBlock() instanceof ChestBlock) {
                 n++;

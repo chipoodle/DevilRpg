@@ -275,9 +275,31 @@ public class VillagerClericGoal extends Goal {
             if (efecto != null) {
                 return efecto;
             }
+            // Y si no la hay, LA ZANAHORIA DORADA SE HACE AQUÍ: 8 pepitas de oro (del botín que barre el recolector) y
+            // una zanahoria (de la huerta). El pueblo no fabrica pociones "porque sí": las paga con lo que junta.
+            ItemStack dorada = hacerZanahoriaDorada(level);
+            if (dorada != null) {
+                return dorada;
+            }
             return sacarDelAlmacen(level, s -> s.is(Items.GUNPOWDER), 1); // arrojadiza
         }
         return null;
+    }
+
+    /**
+     * <b>Zanahoria dorada</b> con lo que hay en el almacén (8 pepitas de oro + 1 zanahoria), que es la receta de
+     * vanilla. Devuelve {@code null} si al pueblo le falta algo (entonces el clérigo no inventa nada).
+     */
+    @Nullable
+    private ItemStack hacerZanahoriaDorada(ServerLevel level) {
+        if (VillageStorage.cuenta(level, center, s -> s.is(Items.GOLD_NUGGET)) < 8
+                || VillageStorage.cuenta(level, center, s -> s.is(Items.CARROT)) < 1) {
+            return null;
+        }
+        VillageStorage.quitar(level, center, s -> s.is(Items.GOLD_NUGGET), 8);
+        VillageStorage.quitar(level, center, s -> s.is(Items.CARROT), 1);
+        DevilRpg.LOGGER.info("[Village] El clerigo preparo una zanahoria dorada (8 pepitas de oro + 1 zanahoria)");
+        return new ItemStack(Items.GOLDEN_CARROT);
     }
 
     /** Saca del almacén lo primero que cumpla el filtro (y devuelve <b>una</b> unidad). */
