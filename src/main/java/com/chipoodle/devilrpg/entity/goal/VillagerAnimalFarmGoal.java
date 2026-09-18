@@ -495,6 +495,9 @@ public class VillagerAnimalFarmGoal extends Goal {
             if (animal.getType() != tipo || animal.isBaby()) {
                 continue;
             }
+            if (VillageManager.esPuntoFallido(villager, animal.blockPosition())) {
+                continue; // a ese animal no llegó hace poco: se prueba con el siguiente (I33)
+            }
             double d = villager.distanceToSqr(animal);
             if (d < mejorDist) {
                 mejorDist = d;
@@ -512,6 +515,9 @@ public class VillagerAnimalFarmGoal extends Goal {
         for (Animal animal : VillageGenerator.animalesDelCorral(level, center)) {
             if (animal.getType() != tipo || !animal.canFallInLove() || animal.isInLove()) {
                 continue;
+            }
+            if (VillageManager.esPuntoFallido(villager, animal.blockPosition())) {
+                continue; // a ese animal no llegó hace poco: se prueba con el siguiente (I33)
             }
             double d = villager.distanceToSqr(animal);
             if (d < mejorDist) {
@@ -532,6 +538,9 @@ public class VillagerAnimalFarmGoal extends Goal {
         for (ItemEntity item : level.getEntitiesOfClass(ItemEntity.class, corral)) {
             if (!item.isAlive() || item.getItem().isEmpty()) {
                 continue;
+            }
+            if (VillageManager.esPuntoFallido(villager, item.blockPosition())) {
+                continue; // a ese objeto no llegó hace poco: se prueba con el siguiente (I33)
             }
             double d = villager.distanceToSqr(item);
             if (d < mejorDist) {
