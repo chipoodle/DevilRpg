@@ -3650,10 +3650,16 @@ public final class VillageGenerator {
                             (y == baseY - 1 ? Blocks.GRASS_BLOCK : Blocks.DIRT).defaultBlockState(), 3);
                 }
                 // Recortar lo que sobresalga del nivel base (solo terreno, nunca el muro ni un árbol).
+                // OJO: el bucle CORTA hasta el primer bloque que no sea terreno. `groundY` de una columna con una
+                // construcción devuelve SU ALTURA (el tejado), así que sin esta parada el recorte subía por dentro de
+                // la casa y se comía todo lo que fuera de un material "de terreno": los paneles de terracota de los
+                // muros Tudor desaparecían (lo reportó el jugador: "quedan incompletas las paredes").
                 for (int y = baseY; y < g; y++) {
-                    if (esTerrenoRecortable(level.getBlockState(columna.atY(y)))) {
-                        colocar(level, columna.atY(y), Blocks.AIR.defaultBlockState(), 3);
+                    BlockState actual = level.getBlockState(columna.atY(y));
+                    if (!esTerrenoRecortable(actual)) {
+                        break; // aquí empieza lo construido: esta columna ya no se recorta
                     }
+                    colocar(level, columna.atY(y), Blocks.AIR.defaultBlockState(), 3);
                 }
                 ponerCesped(level, columna.getX(), columna.getZ(), baseY);
             }
@@ -3785,11 +3791,13 @@ public final class VillageGenerator {
                     colocar(level, new BlockPos(px, y, pz),
                             (y == targetY - 1 ? Blocks.GRASS_BLOCK : Blocks.DIRT).defaultBlockState(), 3);
                 }
-                // Recortar si el terreno natural sobresale por encima del talud (nunca troncos ni construcciones).
+                // Recortar si el terreno natural sobresale por encima del talud (nunca troncos ni construcciones):
+                // se para en el primer bloque construido, igual que en `nivelar` (ver el porqué allí).
                 for (int y = targetY; y < g; y++) {
-                    if (esTerrenoRecortable(level.getBlockState(new BlockPos(px, y, pz)))) {
-                        colocar(level, new BlockPos(px, y, pz), Blocks.AIR.defaultBlockState(), 3);
+                    if (!esTerrenoRecortable(level.getBlockState(new BlockPos(px, y, pz)))) {
+                        break;
                     }
+                    colocar(level, new BlockPos(px, y, pz), Blocks.AIR.defaultBlockState(), 3);
                 }
                 // Capa superficial del talud (cesped), salvo que sea agua.
                 BlockPos surface = new BlockPos(px, targetY - 1, pz);
@@ -5265,7 +5273,9 @@ public final class VillageGenerator {
                 } else if (ventana && k == kVentana) {
                     colocar(level, p, Blocks.GLASS_PANE.defaultBlockState(), 3);
                 } else {
-                    colocar(level, p, Blocks.WHITE_TERRACOTTA.defaultBlockState(), 3);
+                    // El panel de CAL (antes terracota blanca): NO puede ser un bloque con etiqueta de terreno
+                    // (terracota lo es, para las aldeas de meseta) o el recorte del nivelado se lo come.
+                    colocar(level, p, Blocks.SMOOTH_QUARTZ.defaultBlockState(), 3);
                 }
             }
         }
@@ -5423,6 +5433,48 @@ public final class VillageGenerator {
         }
         DevilRpg.LOGGER.info("[Village] Taberna de {}: escalera reparada ({} tablon(es) del forjado fuera del hueco,"
                 + " {} bloque(s) de barra movidos al este)", center, quitados, movidos);
+    }
+
+    /**
+     * Vuelve a pasar los <b>muros Tudor y los frontones</b> de una taberna ya construida (migración 49). El recorte
+     * del nivelado se comía los paneles de cal (la terracota contaba como terreno) y las paredes quedaban con
+     * agujeros: los postes, la solera, los tablones y los cristales seguían ahí, pero <b>toda la cal</b> era aire.
+     * <p>
+     * Solo se vuelven a pasar constructores de <b>estructura</b> ({@code muroTudor} y {@code tejadoDeLaTaberna}): no
+     * se toca la posada (camas), ni la cocina, ni la despensa, así que es <b>idempotente</b> y no borra nada de dentro.
+     */
+    public static void rehacerMurosDeLaTaberna(ServerLevel level, BlockPos center) {
+        if (!tabernaConstruida(level, center)) {
+            return;
+        }
+        int nivel = cotaDeLaPlaza(level, center);
+        BlockPos base = baseDeLaTaberna(center);
+        int bx = base.getX();
+        int bz = base.getZ();
+        int ancho = TABERNA_ANCHO;
+        int fondo = TABERNA_FONDO;
+        int y1 = nivel + TABERNA_PISO2;
+        int yTecho = y1 + TABERNA_ALERO;
+        // 1) Los cuatro muros del comedor (la puerta va en el oeste, como al construirla).
+        muroTudor(level, bx, bz, 0, 1, fondo, nivel, TABERNA_PISO2 - 1, 2, TABERNA_PUERTA, Direction.WEST, true);
+        muroTudor(level, bx + ancho - 1, bz, 0, 1, fondo, nivel, TABERNA_PISO2 - 1, 2, -1, Direction.WEST, true);
+        muroTudor(level, bx, bz, 1, 0, ancho, nivel, TABERNA_PISO2 - 1, 2, -1, Direction.WEST, true);
+        muroTudor(level, bx, bz + fondo - 1, 1, 0, ancho, nivel, TABERNA_PISO2 - 1, 2, -1, Direction.WEST, true);
+        // 2) Los cuatro del vuelo de la posada (un bloque por fuera, como al construirla).
+        int largoTramo = fondo + 2 * TABERNA_VUELO;
+        int largoFrente = ancho + 2 * TABERNA_VUELO;
+        muroTudor(level, bx - TABERNA_VUELO, bz - TABERNA_VUELO, 0, 1, largoTramo, y1, TABERNA_ALERO, 2, -1,
+                Direction.WEST, false);
+        muroTudor(level, bx + ancho - 1 + TABERNA_VUELO, bz - TABERNA_VUELO, 0, 1, largoTramo, y1, TABERNA_ALERO, 2,
+                -1, Direction.WEST, false);
+        muroTudor(level, bx - TABERNA_VUELO, bz - TABERNA_VUELO, 1, 0, largoFrente, y1, TABERNA_ALERO, 2, -1,
+                Direction.WEST, false);
+        muroTudor(level, bx - TABERNA_VUELO, bz + fondo - 1 + TABERNA_VUELO, 1, 0, largoFrente, y1, TABERNA_ALERO, 2,
+                -1, Direction.WEST, false);
+        // 3) El tejado (y con él la cal de los frontones): solo tablones, escaleras, cristales y cal.
+        tejadoDeLaTaberna(level, bx, bz, fondo, yTecho);
+        DevilRpg.LOGGER.info("[Village] Taberna de {}: muros y frontones repasados (la cal que se comia el nivelado)",
+                center);
     }
 
     /** Quita ese bloque <b>si es del tipo esperado</b> (para que una reparación no toque lo que puso el jugador). */
@@ -5583,7 +5635,7 @@ public final class VillageGenerator {
                     } else if (y == yTecho + 2 && Math.abs(dz - cumbrera) <= 1) {
                         estado = Blocks.GLASS_PANE.defaultBlockState();
                     } else {
-                        estado = Blocks.WHITE_TERRACOTTA.defaultBlockState();
+                        estado = Blocks.SMOOTH_QUARTZ.defaultBlockState(); // la cal de los frontones (ver `muroTudor`)
                     }
                     colocar(level, new BlockPos(bx + dx, y, bz + dz), estado, 3);
                 }

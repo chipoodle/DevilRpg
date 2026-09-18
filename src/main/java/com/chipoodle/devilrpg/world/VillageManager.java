@@ -478,7 +478,7 @@ public final class VillageManager {
      *       por lo que cría el lago y no por un contador.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 48;
+    public static final int CURRENT_LAYOUT = 49;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -1474,6 +1474,12 @@ public final class VillageManager {
             // barra se corre al este (su extremo 2x2 quedaba justo delante del pie de la escalera). Solo toca esas
             // celdas: no rehace la taberna (eso borraría la despensa y las camas).
             VillageGenerator.arreglarEscaleraDeLaTaberna(level, center);
+            // LA CAL DE LOS MUROS (migración 49): el recorte del nivelado se comía los paneles de terracota de los
+            // muros Tudor (contaba como "terreno que sobra") y las paredes quedaban con agujeros. Ya está arreglado
+            // de raíz (el recorte para en el primer bloque construido) y aquí se REPASAN los muros y los frontones de
+            // la taberna que ya existe: `muroTudor` y `tejadoDeLaTaberna` solo ponen estructura, así que volver a
+            // pasarlos es idempotente y no toca ni la despensa ni las camas.
+            VillageGenerator.rehacerMurosDeLaTaberna(level, center);
             // Y su CAMINO desde la plaza (torcido, para no cruzar la parcela de la granja).
             VillageGenerator.caminoALaTaberna(level, center);
             // LA PESQUERA (etapa G): el lago, la caseta del pescador, su BARRIL (el puesto) y sus peces. Va antes de

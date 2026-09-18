@@ -223,6 +223,16 @@ bloques** de él; lo que está lejos lo barre el **recolector**.
 
 ---
 
+### I18 · La cal de los muros no puede ser de un material "de terreno"
+`esTerrenoNatural` incluye `BlockTags.TERRACOTTA` (hace falta: las aldeas de meseta recortan terracota de verdad),
+así que **un muro no puede usar terracota**: el recorte del nivelado se la come. **Regla:** la cal de los muros Tudor
+es **`SMOOTH_QUARTZ`** (blanco de cal y sin etiqueta de terreno) y **ningún recorte sube por dentro de una
+construcción**: `nivelar` (y el talud) cortan hasta el **primer bloque que no sea terreno** y paran, porque `groundY`
+de una columna con una construcción devuelve **su altura** (el tejado) — sin esa parada el recorte subía por dentro de
+la casa y borraba los paneles (el jugador lo vio como *"quedan incompletas las paredes"*: los cuatro muros de la
+taberna se quedaron con postes, solera, tablones y cristales, y **toda la cal era aire**). Lo repara la **migración
+49** (`rehacerMurosDeLaTaberna`), que vuelve a pasar solo los constructores de estructura.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
