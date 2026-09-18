@@ -504,9 +504,21 @@ public final class VillageManager {
      *       carriles. La cama de ese cuarto se <b>recoloca en el desván</b> (en vanilla cada cría necesita una cama
      *       libre: el pueblo no puede perder ninguna) y el reparador deshace la escalera vieja y vuelve a cerrar su
      *       hueco en el techo, con tablones y tejas, así que el techo queda sólido como estaba.</li>
+     *   <li>54: la <b>HUERTA QUE NADIE VOLVÍA A LABRAR</b> (lo vio el jugador con captura: <i>"de esta parcela veo que
+     *       hay dos espacios que no tienen cultivo y nadie los está reparando para hacerlos cultivables"</i>). Vanilla
+     *       convierte la <b>tierra de cultivo en tierra</b> cuando alguien salta encima ({@code FarmBlock.fallOn}) y en
+     *       la aldea conviven aldeanos, animales y el jugador: el bancal se pisa y se queda con <b>calvas</b>. Nadie
+     *       las reponía por <b>dos motivos medidos</b> en su guardado (aldea 2): el <b>plano</b> de una aldea migrada
+     *       es un <b>escaneo</b> del mundo y la tierra o el césped de esas celdas se descartaban como "terreno
+     *       natural" (no estaban en el plano, así que el obrero no tenía nada que reponer) y el <b>granjero</b> solo
+     *       sembraba en tierra de cultivo ya hecha, nunca la volvía a labrar. Ahora la huerta <b>entra siempre en el
+     *       plano</b> (su geometría es fija: ver {@code VillageGenerator.estadoDeLaHuerta}) y el <b>granjero la
+     *       labra</b> en su faena antes de sembrar; este reparador, idempotente, vuelve a labrar las calvas de una
+     *       aldea ya construida (solo celdas de bancal que ahora son tierra o césped, con agua cerca y el hueco de
+     *       arriba libre: <b>no arranca ningún cultivo</b>, I11).</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 53;
+    public static final int CURRENT_LAYOUT = 54;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -1484,6 +1496,13 @@ public final class VillageManager {
             // casas: por eso la limpieza anterior no llegaba a ejecutarse en aldeas ya actualizadas).
             VillageGenerator.limpiarCaminosFlotantes(level, center, VillageGenerator.cotaDeLaPlaza(level, center));
             VillageGenerator.farm(level, center);
+            // LA HUERTA, OTRA VEZ CULTIVABLE (migración 54, lo vio el jugador: "dos espacios que no tienen cultivo y
+            // nadie los está reparando"). `farm` sale antes de tiempo si el bancal ya está hecho (`bancalHecho`, la
+            // guardia I11 que impide que el nivelado se lleve los cultivos por delante), así que las CALVAS que deja
+            // el pisoteo no las toca nadie: aquí se vuelven a labrar, celda a celda y solo si de verdad son una
+            // calva. Va antes de recapturar el plano para que el plano nuevo las tenga (aunque ya las pide
+            // `estadoDeLaHuerta`) y es idempotente.
+            VillageGenerator.labrarCalvasDelBancal(level, center);
             // EL CORRAL, ENSANCHADO (migración 45): el corral pasa de 15x15 a 19x19 y se retira el viejo (solo sus
             // bloques). Va ANTES de `asegurarGranjaAnexa`, que si no saldría antes de tiempo al ver el corral viejo.
             VillageGenerator.ensancharElCorral(level, center);
@@ -2742,12 +2761,21 @@ public final class VillageManager {
      * el bloque que hay es el resultado de un destrozo concreto: la <b>tierra de cultivo se convierte en tierra</b>
      * cuando alguien salta encima, así que si el plano dice tierra de cultivo (o la acequia) y ahora hay tierra o
      * hierba, se vuelve a poner. Cualquier otra cosa (lo que haya puesto el jugador) no se toca.
+     * <p>
+     * La tierra de cultivo <b>con otra humedad NO está rota</b> (ver más abajo).
      */
     private static boolean necesitaReparacion(BlockState actual, BlockState esperado) {
         if (actual.isAir()) {
             return true;
         }
         if (actual.equals(esperado)) {
+            return false;
+        }
+        // Misma clase de bloque y el resto son PROPIEDADES que cambian solas: la HUMEDAD de la tierra de cultivo
+        // (`moisture` 0..7) la sube el juego con el agua de al lado, la baja en seco y la vuelve a subir con la
+        // lluvia. Comparando el estado ENTERO, la celda se daba por dañada cada pocos segundos y el obrero se
+        // pasaba la vida "reparando" la huerta (ver `VillageGenerator.estadoDelPlano`).
+        if (actual.is(Blocks.FARMLAND) && esperado.is(Blocks.FARMLAND)) {
             return false;
         }
         // HIELO (o nieve) donde el plano dice AGUA: en los biomas helados la acequia se congela, y el hielo no
@@ -2760,9 +2788,7 @@ public final class VillageManager {
             return true;
         }
         boolean eraHuerta = esperado.is(Blocks.FARMLAND) || esperado.is(Blocks.WATER);
-        boolean pisoteada = actual.is(Blocks.DIRT) || actual.is(Blocks.GRASS_BLOCK) || actual.is(Blocks.COARSE_DIRT)
-                || actual.is(Blocks.PODZOL) || actual.is(Blocks.ROOTED_DIRT);
-        return eraHuerta && pisoteada;
+        return eraHuerta && VillageGenerator.esTierraPisoteada(actual);
     }
 
     /**
@@ -2825,7 +2851,8 @@ public final class VillageManager {
      * Se pasa por {@link VillageGenerator#estadoDelPlano}: una <b>puerta de valla</b> se repone <b>siempre cerrada</b>
      * (el plano de una aldea vieja puede tenerla guardada abierta —medido en el guardado del jugador, aldea 2: el
      * portón del corral estaba {@code open:true} en el plano—, y el obrero la reconstruía abierta cada vez que un
-     * asedio se la llevaba).
+     * asedio se la llevaba) y la <b>tierra de cultivo</b> entra <b>sin humedad</b> (el plano no guarda un estado
+     * transitorio; el obrero la riega al reponerla, ver {@code VillagerRepairGoal}).
      */
     @Nullable
     public static BlockState blueprintState(ServerLevel level, int objectiveIndex, BlockPos pos) {

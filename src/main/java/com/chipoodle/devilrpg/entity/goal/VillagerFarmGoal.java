@@ -7,6 +7,7 @@ import com.chipoodle.devilrpg.world.VillagePantry;
 import com.chipoodle.devilrpg.world.VillageStorage;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
@@ -93,7 +94,7 @@ public class VillagerFarmGoal extends Goal {
      */
     private static final int DESPENSA_VACIA = 8;
 
-    private enum Tarea { COSECHAR, PLANTAR, FERTILIZAR, COMPOSTAR, DESPENSA }
+    private enum Tarea { COSECHAR, LABRAR, PLANTAR, FERTILIZAR, COMPOSTAR, DESPENSA }
 
     private final Villager villager;
     private final BlockPos center;
@@ -170,6 +171,17 @@ public class VillagerFarmGoal extends Goal {
         target = buscarCultivo(level, true);
         if (target != null) {
             tarea = Tarea.COSECHAR;
+            return true;
+        }
+        // 3b) CALVA EN EL BANCAL: una celda del bancal que debería ser tierra de cultivo y ahora es tierra o césped
+        //     porque alguien la pisó (vanilla convierte la tierra de cultivo en tierra al saltar encima y, pegada al
+        //     césped, la tierra vuelve a ser césped). El granjero la VUELVE A LABRAR antes de sembrar: el que siembra
+        //     es él, así que es él quien tiene que dejar la parcela cultivable. El obrero repone la tierra que pide el
+        //     plano, pero la huerta no puede depender de que el plano la apunte (el de una aldea migrada es un
+        //     escaneo y ahí las calvas se perdían). Va después de cosechar (lo maduro primero) y ANTES de sembrar.
+        target = buscarCalva(level);
+        if (target != null) {
+            tarea = Tarea.LABRAR;
             return true;
         }
         // 3) Tierra de cultivo vacía: a plantar. SOLO si lleva semillas EN LA MANO: `plantar()` las saca de su
@@ -273,6 +285,10 @@ public class VillagerFarmGoal extends Goal {
                 VillageManager.ponerActividad(villager, "Cosechando");
                 cosechar(level);
             }
+            case LABRAR -> {
+                VillageManager.ponerActividad(villager, "Labrando la huerta");
+                labrar(level);
+            }
             case PLANTAR -> {
                 VillageManager.ponerActividad(villager, "Sembrando");
                 plantar(level);
@@ -362,6 +378,25 @@ public class VillagerFarmGoal extends Goal {
         }
         level.setBlock(target, cultivo, Block.UPDATE_ALL);
         level.playSound(null, target, cultivo.getSoundType().getPlaceSound(), SoundSource.BLOCKS, 0.7F, 1.0F);
+    }
+
+    /**
+     * Vuelve a <b>labrar</b> la calva en la que está parado: la tierra (o el césped) de una celda del bancal pasa a
+     * ser <b>tierra de cultivo</b>. Se pone <b>regada</b> como la pondría el juego ({@code tierraDeCultivo} mira el
+     * agua de al lado), no seca.
+     * <p>
+     * El objetivo es la casilla de <b>aire</b> de encima (la capa por la que se anda, igual que al sembrar: navegar
+     * hacia un bloque del suelo no da camino), así que el bloque que se labra es el de <b>debajo</b>.
+     */
+    private void labrar(ServerLevel level) {
+        BlockPos tierra = target.below();
+        if (!VillageGenerator.esCalvaDeBancal(level, tierra)) {
+            return; // se adelantó otro aldeano, o el jugador ya puso algo: no se toca
+        }
+        level.setBlock(tierra, VillageGenerator.tierraDeCultivo(level, tierra), Block.UPDATE_ALL);
+        level.playSound(null, tierra, SoundEvents.HOE_TILL, SoundSource.BLOCKS, 0.7F, 1.0F);
+        VillageManager.ponerSuceso(villager, "Labro la huerta");
+        DevilRpg.LOGGER.info("[Village] El granjero: Labro la huerta en {}", tierra);
     }
 
     private void fertilizar(ServerLevel level) {
@@ -647,6 +682,35 @@ public class VillagerFarmGoal extends Goal {
                         if (level.getBlockState(tierra).is(Blocks.FARMLAND) && level.getBlockState(aire).isAir()) {
                             return aire;
                         }
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * La <b>calva</b> del bancal a la que ir a labrar, o {@code null} si no hay ninguna: una celda que debería ser
+     * <b>tierra de cultivo</b> y ahora es tierra o césped (alguien la pisó), con la <b>acequia a mano</b> y el hueco
+     * de arriba <b>libre</b>.
+     * <p>
+     * Devuelve la casilla de <b>aire</b> de encima (la capa por la que se anda), no la tierra: es la posición a la
+     * que se navega, igual que en {@link #buscarTierraVacia}.
+     * <p>
+     * El aire encima no es un detalle: es lo que garantiza que <b>no se arranca ningún cultivo</b> ni se toca nada de
+     * lo que crece dentro del bancal (I11).
+     */
+    @Nullable
+    private BlockPos buscarCalva(ServerLevel level) {
+        for (BlockPos parcela : VillageGenerator.parcelasDe(level, center)) {
+            for (int dx = 0; dx < VillageGenerator.PLOT_WIDTH; dx++) {
+                for (int dz = 0; dz < VillageGenerator.PLOT_DEPTH; dz++) {
+                    BlockPos tierra = parcela.offset(dx, -1, dz);
+                    if (!VillageGenerator.esCeldaDeCultivo(center, parcela.getY(), tierra)) {
+                        continue; // la acequia no se labra (y fuera del bancal no se toca nada)
+                    }
+                    if (VillageGenerator.esCalvaDeBancal(level, tierra)) {
+                        return tierra.above();
                     }
                 }
             }

@@ -10,6 +10,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
@@ -177,6 +178,13 @@ public class VillagerRepairGoal extends Goal {
         workTicks = 0;
         BlockState state = VillageManager.blueprintState(level, objectiveIndex, target);
         if (state != null) {
+            // La TIERRA DE CULTIVO se repone REGADA, como la pondría el juego (`FarmBlock.isNearWater`): el plano la
+            // guarda sin humedad (es estado transitorio, ver `VillageGenerator.estadoDelPlano`), así que reponerla tal
+            // cual la dejaría seca —y al cultivo de encima creciendo más despacio— hasta que el juego se acuerde de
+            // regarla sola. Aquí se pregunta por el agua de al lado UNA vez, al colocar (no en cada tick).
+            if (state.is(Blocks.FARMLAND)) {
+                state = VillageGenerator.tierraDeCultivo(level, target);
+            }
             VillageManager.ponerActividad(villager, "Reparando la aldea");
             BlockPos puesto = target;
             level.setBlock(puesto, state, Block.UPDATE_ALL);

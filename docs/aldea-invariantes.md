@@ -340,6 +340,34 @@ del pueblo sin hojas es indistinguible de un resto).
 propósito), así que el obrero no los "repara" (ni al capturar el plano ni al leerlo, sin migración: el del jugador
 tenía **9 troncos de acacia** apuntados como huecos, y reponerlos era levantar troncos sin copa).
 
+### I25 · La tierra de cultivo del bancal se vuelve a LABRAR (y su humedad no es daño)
+Vanilla convierte la **tierra de cultivo en tierra** en cuanto alguien salta encima (`FarmBlock.fallOn`) y la tierra,
+pegada al césped, vuelve a ser **césped**: en la aldea conviven aldeanos, animales y el jugador, así que los bancales
+se quedan con **calvas**. El jugador las vio y las reportó con captura: *"de esta parcela veo que hay dos espacios que
+no tienen cultivo y nadie los está reparando para hacerlos cultivables"*.
+**Medido en su guardado** (aldea 2, centro `1414,1414`, cota `120`): los tres bancales tienen **216** celdas de cultivo
+y al **plano** le faltaban exactamente **2**, `(1384,1430)` y `(1384,1434)` —las dos de la columna oeste del bancal de
+`(1384,1428)`—, que en el mundo eran **`grass_block`** a `y=119`. Dos reglas, entonces:
+
+- **La huerta entra SIEMPRE en el plano.** Sus celdas son **geometría fija** (las parcelas de `FARM_PLOTS`, a `cota-1`,
+  con la acequia en `PLOT_WATER_ROW`): al capturar, `VillageGenerator.estadoDeLaHuerta` pide **tierra de cultivo** (o
+  **agua**) aunque el mundo las tenga pisoteadas, vaciadas o con el agua congelada. Sin esto, el plano de una aldea
+  **migrada** —que es un **escaneo** del mundo— se queda **sin** las celdas que ya estaban pisoteadas al capturarlo
+  (el `seDescartaDelPlano` las da por "terreno natural") y el obrero **no tiene nada que reponer** ahí.
+- **El granjero vuelve a labrar.** Su cadena empezaba en "tierra de cultivo vacía" (`buscarTierraVacia` solo mira
+  celdas que **ya** son `farmland`), así que sembraba en lo labrado y **nunca** labraba una calva. Ahora tiene la tarea
+  `LABRAR` **antes de sembrar**: celdas de bancal que son tierra o césped, **con agua cerca** y con el hueco de arriba
+  **libre** (el aire encima es lo que garantiza que **no arranca ningún cultivo**, I11). La migración **54** las labra
+  en las aldeas ya construidas con `labrarCalvasDelBancal` (idempotente y con las mismas condiciones).
+
+**Y la humedad (`moisture` 0..7) NO es "daño".** La sube y la baja el propio juego (agua al lado, sequía, lluvia), así
+que es estado **transitorio**, igual que el `open` de un portón (I22): el plano la guarda **sin humedad**
+(`estadoDelPlano`), al **reponer** la tierra el obrero la pone **regada** como la pondría el juego
+(`tierraDeCultivo`, la misma cuenta que `FarmBlock.isNearWater`) y `necesitaReparacion` dice explícitamente que
+**`farmland` contra `farmland` no se repara**, pase lo que pase con la humedad. Sin esa frase, cualquier retoque de la
+lista de "tierra pisoteada" convertiría las **214** celdas de cultivo de la huerta en una cola de reparación eterna.
+**No tiene regla en el lint**: se comprueba con la auditoría del guardado (`build/huerta_simula.py`).
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
@@ -373,6 +401,7 @@ Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento 
 |---|---|
 | `python tools/lint_aldea.py --strict` | Vigila I1-I12 en el código. Puerta antes de commitear. |
 | `build/inventario.py` | Inventario de estructuras de una aldea en el guardado (qué edificios hay y dónde). |
+| `build/huertadiag.py`, `build/huerta_simula.py` | **Bancales**: qué dice el plano y qué hay en el mundo celda por celda (qué calvas faltan en el plano) y qué celdas repondría el obrero / labraría el granjero (I25). |
 | `build/granjaestado.py`, `build/farmdiag.py`, `build/columnas.py`, `build/perfilcol.py` | Estado de la granja (cultivos, edades, cotas) y columnas crudas. |
 | `build/items.py`, `build/contenedores.py` | Objetos en el suelo por tipo y contenido de cofres/despensa/almacén. |
 | `build/aldeanos.py`, `build/aldeanos.py` | Aldeanos: profesión, inventario, posición (carpeta `entities/`). |

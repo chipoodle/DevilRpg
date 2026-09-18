@@ -30,6 +30,7 @@ import net.minecraft.world.level.block.LanternBlock;
 import net.minecraft.world.level.block.BushBlock;
 import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.DoorBlock;
+import net.minecraft.world.level.block.FarmBlock;
 import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.GrowingPlantBlock;
 import net.minecraft.world.level.block.RotatedPillarBlock;
@@ -522,6 +523,147 @@ public final class VillageGenerator {
             parcelas[i] = new BlockPos(center.getX() + FARM_PLOTS[i][0], cota, center.getZ() + FARM_PLOTS[i][1]);
         }
         return parcelas;
+    }
+
+    /** Códigos de {@link #tipoDeCeldaDeLaHuerta}: fuera de los bancales, celda de cultivo o fila de la acequia. */
+    private static final int FUERA_DE_LA_HUERTA = 0;
+    private static final int CELDA_DE_CULTIVO = 1;
+    private static final int CELDA_DE_ACEQUIA = 2;
+
+    /**
+     * ¿Qué es esa casilla dentro de los <b>bancales</b> de la granja? La huerta es <b>geometría fija</b> —las tres
+     * parcelas de {@link #FARM_PLOTS}, de {@code PLOT_WIDTH}×{@code PLOT_DEPTH}, con la acequia en
+     * {@code PLOT_WATER_ROW}— y su capa de tierra va <b>una por debajo de la cota</b> (los cultivos van a la cota:
+     * ver {@link #plot}). Vive en <b>un solo sitio</b> para que el plano, el obrero y el granjero no tengan cada uno
+     * su copia del rectángulo (I4): con dos copias, mover una parcela deja a la otra buscando en el sitio viejo.
+     */
+    private static int tipoDeCeldaDeLaHuerta(BlockPos center, int cota, BlockPos pos) {
+        if (pos.getY() != cota - 1) {
+            return FUERA_DE_LA_HUERTA;
+        }
+        for (int[] plot : FARM_PLOTS) {
+            int dx = pos.getX() - (center.getX() + plot[0]);
+            int dz = pos.getZ() - (center.getZ() + plot[1]);
+            if (dx >= 0 && dx < PLOT_WIDTH && dz >= 0 && dz < PLOT_DEPTH) {
+                return dz == PLOT_WATER_ROW ? CELDA_DE_ACEQUIA : CELDA_DE_CULTIVO;
+            }
+        }
+        return FUERA_DE_LA_HUERTA;
+    }
+
+    /**
+     * ¿Esa casilla es una <b>celda de cultivo</b> de un bancal (la capa de tierra, sin contar la acequia)? Es la
+     * casilla que el pueblo tiene que mantener <b>labrada</b>: vanilla convierte la tierra de cultivo en <b>tierra</b>
+     * en cuanto alguien salta encima ({@code FarmBlock.fallOn}) y, sin reponerla, el bancal se queda con calvas que
+     * nadie vuelve a labrar (el jugador las describió como <i>"dos espacios que no tienen cultivo y nadie los está
+     * reparando"</i>).
+     */
+    public static boolean esCeldaDeCultivo(BlockPos center, int cota, BlockPos pos) {
+        return tipoDeCeldaDeLaHuerta(center, cota, pos) == CELDA_DE_CULTIVO;
+    }
+
+    /**
+     * El estado <b>bueno</b> de una casilla de bancal (su tierra de cultivo, o la acequia), o {@code null} si esa
+     * casilla no es de la huerta. Es lo que el <b>plano</b> tiene que pedir en esas celdas: la huerta la construyó
+     * el pueblo, así que entra en el plano <b>aunque el mundo la tenga pisoteada</b> (tierra o césped) en el momento
+     * de capturarlo. Hace falta de verdad, y está medido: el plano de una aldea migrada es un <b>escaneo</b> del
+     * mundo, y las celdas que ya estaban pisoteadas al capturarlo se descartaban como "terreno natural", así que el
+     * obrero <b>no tenía nada que reponer</b> en ellas (aldea 2 del jugador: 2 calvas de césped en el bancal oeste).
+     * <p>
+     * La <b>humedad</b> no va aquí: es estado transitorio, ver {@link #estadoDelPlano} y {@link #tierraDeCultivo}.
+     */
+    @Nullable
+    public static BlockState estadoDeLaHuerta(BlockPos center, int cota, BlockPos pos) {
+        return switch (tipoDeCeldaDeLaHuerta(center, cota, pos)) {
+            case CELDA_DE_CULTIVO -> Blocks.FARMLAND.defaultBlockState();
+            case CELDA_DE_ACEQUIA -> Blocks.WATER.defaultBlockState();
+            default -> null;
+        };
+    }
+
+    /**
+     * La <b>tierra de cultivo como la pondría el juego</b>: regada ({@code moisture} 7) si tiene agua a su nivel o
+     * uno por encima en un cuadrado de radio 4 —la misma cuenta que {@code FarmBlock.isNearWater}— y seca si no.
+     * Es lo que hay que poner al <b>labrar</b> una calva o al <b>reponer</b> la tierra pisoteada: ponerla seca a
+     * secas deja la celda sin regar hasta que el juego la riegue sola (y el cultivo crece más despacio mientras).
+     */
+    public static BlockState tierraDeCultivo(ServerLevel level, BlockPos pos) {
+        BlockState tierra = Blocks.FARMLAND.defaultBlockState();
+        for (BlockPos q : BlockPos.betweenClosed(pos.offset(-4, 0, -4), pos.offset(4, 1, 4))) {
+            if (tierra.canBeHydrated(level, pos, level.getFluidState(q), q)) {
+                return tierra.setValue(FarmBlock.MOISTURE, FarmBlock.MAX_MOISTURE);
+            }
+        }
+        return tierra;
+    }
+
+    /**
+     * ¿Ese bloque es el resultado de <b>pisar</b> la tierra de cultivo? Vanilla la convierte en <b>tierra</b> al
+     * saltar encima ({@code FarmBlock.fallOn}) y la tierra, pegada al césped, vuelve a ser <b>césped</b>; en una
+     * aldea de montaña aparecen además las otras tierras. Es lo que tienen en común las dos mitades del arreglo:
+     * el <b>obrero</b> repone la tierra de cultivo que pide el plano y el <b>granjero</b> vuelve a labrar la calva.
+     */
+    public static boolean esTierraPisoteada(BlockState state) {
+        return state.is(Blocks.DIRT) || state.is(Blocks.GRASS_BLOCK) || state.is(Blocks.COARSE_DIRT)
+                || state.is(Blocks.PODZOL) || state.is(Blocks.ROOTED_DIRT);
+    }
+
+    /**
+     * ¿Esa celda de bancal es una <b>calva</b>: debería ser tierra de cultivo y ahora es tierra o césped, con la
+     * acequia a mano y el hueco de arriba <b>libre</b>? Se exige agua cerca (labrar en seco no sirve de nada) y aire
+     * encima: así <b>no se toca nada de lo que crece dentro</b> (I11). Lo usan el granjero (que la labra en su
+     * faena) y el reparador de la migración.
+     */
+    public static boolean esCalvaDeBancal(ServerLevel level, BlockPos tierra) {
+        if (!esTierraPisoteada(level.getBlockState(tierra))) {
+            return false;
+        }
+        if (!level.getBlockState(tierra.above()).isAir()) {
+            return false;
+        }
+        return tieneAguaCerca(level, tierra);
+    }
+
+    /** ¿Hay agua que <b>riegue</b> esa celda? El agua tiene que estar a su nivel o uno por encima (como vanilla). */
+    public static boolean tieneAguaCerca(ServerLevel level, BlockPos pos) {
+        BlockState tierra = level.getBlockState(pos);
+        for (BlockPos q : BlockPos.betweenClosed(pos.offset(-4, 0, -4), pos.offset(4, 1, 4))) {
+            if (tierra.canBeHydrated(level, pos, level.getFluidState(q), q)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Vuelve a <b>labrar</b> las calvas de los bancales de esa aldea (la tierra de cultivo que alguien pisó y el
+     * juego convirtió en tierra o césped) y devuelve cuántas labró.
+     * <p>
+     * Es <b>idempotente</b> y conservador: solo toca celdas de bancal, solo si ahora son tierra o césped, solo si
+     * tienen agua cerca y solo si el hueco de arriba está <b>libre</b> —nunca arranca un cultivo ni toca el agua, el
+     * compostero, la valla ni lo que haya puesto el jugador (I11)—. Lo llama la <b>migración</b> para las aldeas ya
+     * guardadas, cuyo plano se capturó con las calvas dentro; después lo mantiene el <b>granjero</b>.
+     */
+    public static int labrarCalvasDelBancal(ServerLevel level, BlockPos center) {
+        int labradas = 0;
+        for (BlockPos parcela : parcelasDe(level, center)) {
+            for (int dx = 0; dx < PLOT_WIDTH; dx++) {
+                for (int dz = 0; dz < PLOT_DEPTH; dz++) {
+                    BlockPos tierra = parcela.offset(dx, -1, dz);
+                    if (!esCeldaDeCultivo(center, parcela.getY(), tierra) || !esCalvaDeBancal(level, tierra)) {
+                        continue;
+                    }
+                    // Se pone con `colocar`, igual que cuando el bancal se construye (ver `plot`).
+                    colocar(level, tierra, tierraDeCultivo(level, tierra), Block.UPDATE_ALL);
+                    labradas++;
+                }
+            }
+        }
+        if (labradas > 0) {
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: vueltas a labrar {} celda(s) pisoteada(s) de los bancales",
+                    center, labradas);
+        }
+        return labradas;
     }
 
     /**
@@ -4693,9 +4835,19 @@ public final class VillageGenerator {
                 // composteros y el tronco de abajo del muro) y se sube hasta cubrir la torre de la iglesia.
                 for (int y = nivel - 2; y <= nivel + ALTURA_MAXIMA_DEL_PLANO; y++) {
                     BlockPos pos = new BlockPos(x, y, z);
-                    BlockState state = estadoDelPlano(level.getBlockState(pos));
-                    if (seDescartaDelPlano(state)) {
-                        continue;
+                    // LA HUERTA ENTRA SIEMPRE, la tenga el mundo como la tenga: sus celdas (tierra de cultivo y
+                    // acequia) son geometría fija del pueblo y el plano tiene que pedirlas aunque en este momento
+                    // estén pisoteadas (tierra o césped), vaciadas o con el agua congelada. Sin esto el obrero no
+                    // tenía NADA que reponer en ellas, porque el plano de una aldea migrada es un ESCANEO del mundo
+                    // y la tierra o el césped se descartan como "terreno natural": medido en el guardado del jugador
+                    // (aldea 2, cota 120), el bancal oeste tenía 2 calvas de césped en (1384,1430) y (1384,1434) que
+                    // NO estaban en el plano — las "dos manchas de tierra" que el jugador veía sin reparar.
+                    BlockState state = estadoDeLaHuerta(center, nivel, pos);
+                    if (state == null) {
+                        state = estadoDelPlano(level.getBlockState(pos));
+                        if (seDescartaDelPlano(state)) {
+                            continue;
+                        }
                     }
                     // LA ARBOLEDA DEL PUEBLO ES DEL LEÑADOR: sus TRONCOS no entran en el plano. El plano de una aldea
                     // migrada es un ESCANEO del mundo, así que los árboles que ya habían crecido en la arboleda
@@ -4728,9 +4880,14 @@ public final class VillageGenerator {
     }
 
     /**
-     * Un bloque del plano <b>tal y como tiene que quedar</b>. Hoy solo cambia una cosa: en una <b>puerta de valla</b>
-     * el estado abierto/cerrado es <b>transitorio</b> (la abre el pueblo para pasar y la vuelve a cerrar), así que el
-     * plano la guarda y el obrero la repone <b>siempre cerrada</b>.
+     * Un bloque del plano <b>tal y como tiene que quedar</b>. Hoy cambia dos estados <b>transitorios</b>, que no son
+     * "lo que la aldea debe ser" y que, guardados tal cual, hacían que el obrero "reparase" celdas que estaban bien:
+     * <ul>
+     *   <li>la <b>puerta de valla</b>, que se guarda y se repone <b>siempre cerrada</b> (la abre el pueblo para pasar
+     *       y la vuelve a cerrar), y</li>
+     *   <li>la <b>humedad de la tierra de cultivo</b> ({@code moisture} 0..7), que la sube y la baja el propio juego
+     *       con el agua de al lado, la sequía y la lluvia.</li>
+     * </ul>
      * <p>
      * Hace falta de verdad, y está medido: el plano de la aldea 2 del jugador guardaba el portón del corral
      * <b>abierto</b> ({@code open:true}, capturado mientras el fallo lo dejaba así), de modo que cada vez que un asedio
@@ -4741,6 +4898,15 @@ public final class VillageGenerator {
     public static BlockState estadoDelPlano(BlockState state) {
         if (state.getBlock() instanceof FenceGateBlock && state.getValue(FenceGateBlock.OPEN)) {
             return state.setValue(FenceGateBlock.OPEN, false);
+        }
+        // La HUMEDAD de la tierra de cultivo (`moisture` 0..7) también es TRANSITORIA: el juego la sube a 7 en
+        // cuanto tiene agua al lado y la va bajando (hasta 0) en seco, y la lluvia la vuelve a subir. Guardando el
+        // estado entero, el plano de una aldea quedaba con `moisture=7` y el de otra con otro valor, y comparar el
+        // estado COMPLETO daba la celda por "dañada" cada vez que el juego la cambiaba: el obrero se habría pasado
+        // la vida "reparando" la huerta. El plano la apunta SECA y regarla es cosa del juego (o de
+        // `tierraDeCultivo`, que es lo que se pone al reponer). Ver `VillageManager.necesitaReparacion`.
+        if (state.is(Blocks.FARMLAND)) {
+            return Blocks.FARMLAND.defaultBlockState();
         }
         return state;
     }

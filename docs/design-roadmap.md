@@ -1504,6 +1504,24 @@ y `poi/`), no a ojo.
   `1419,120,1368`, con aire encima y piedra debajo), así que el problema **no** era el puesto: era su **ticket**.
 - El almacén tenía 18 pepitas, 16 lingotes y 16 de cuero: al herrero **no le faltaba trabajo**, le faltaba poder ir.
 
+### 3b.38 La huerta que nadie volvía a labrar: las calvas del bancal (migración 54)
+
+El jugador, con captura de un bancal delante: *"de esta parcela veo que hay dos espacios que no tienen cultivo y nadie
+los está reparando para hacerlos cultivables"*. **Dos** calvas, ni una más, y el arreglo salió de **leer su guardado**
+(aldea 2, centro `1414,1414`, cota `120`), no de mirar la captura.
+
+| Lo que se midió en el guardado | Causa | Arreglo |
+|---|---|---|
+| Los tres bancales tienen **216 celdas de cultivo** (3 × 9×9 sin la fila de la acequia) y **27** de acequia. El **plano** de la aldea tenía **214** de esas 216: le faltaban exactamente **`(1384,1430)` y `(1384,1434)`**, las dos de la columna **oeste** (`dx=0`, `dz=2` y `dz=6`) del bancal de `(1384,1428)`. En el mundo las dos eran **`grass_block`** a `y=119` (la capa de la tierra de cultivo), con el resto del bancal en `farmland[moisture=7]` y sus cultivos a `y=120` | El plano de una aldea migrada es un **escaneo del mundo**, y `seDescartaDelPlano` tira la **tierra** y el **césped** por "terreno natural". La tierra de cultivo **sí** entra (ya se arregló eso en su día), pero una celda **ya pisoteada en el momento de capturar** entra como tierra o césped y se descarta: **no está en el plano** y el obrero —que repone lo que dice el plano— no tiene nada que reponer ahí. Es el mismo caso que el portón guardado abierto (I22) y los troncos de la arboleda (I24), pero al revés: aquí lo que falta es una celda que el pueblo **sí** construyó | La **huerta entra siempre en el plano**: sus celdas son **geometría fija** (`VillageGenerator.estadoDeLaHuerta`: tres rectángulos de `PLOT_WIDTH`×`PLOT_DEPTH` a `cota-1`, con la acequia en `PLOT_WATER_ROW`) y al capturar se piden **tierra de cultivo** y **agua** aunque el mundo las tenga pisoteadas, vaciadas o con el agua congelada. Así el obrero **sí** las repone (2 celdas en su aldea) |
+| El **granjero** trabaja la huerta (cosecha, siembra, abona, composta), pero `buscarTierraVacia` solo mira celdas que **ya son** `farmland`: sembraba en lo que estaba labrado y **nunca volvía a labrar** una calva | Nadie tenía "labrar" en su lista de tareas: el obrero porque la celda no estaba en el plano, y el granjero porque su cadena empieza en "tierra de cultivo vacía". Vanilla convierte la tierra de cultivo en **tierra** al saltar encima (`FarmBlock.fallOn`) y, pegada al césped, la tierra vuelve a ser **césped**: en una aldea con aldeanos, animales y jugador las calvas son cuestión de tiempo | El granjero tiene la tarea **`LABRAR`** (antes de sembrar): busca celdas **de bancal** que ahora son tierra o césped, **con agua cerca** y con el hueco de arriba **libre**, va andando y las vuelve a labrar con `tierraDeCultivo` (regada como la pondría el juego). **No arranca ningún cultivo** (I11): el aire encima es requisito |
+| El plano de su aldea guardaba la tierra de cultivo con **`moisture=7`** (la paleta entera: `minecraft:farmland {moisture: 7}`) | La humedad (**0..7**) la sube y la baja el **propio juego** con el agua de al lado, la sequía y la lluvia: es estado **transitorio**, como el `open` de un portón, y no "lo que la aldea debe ser". La comparación del obrero solo repone **aire** o **tierra/cesped**, así que no llegó a ser un bucle, pero dejar el estado entero en el plano es una trampa para el siguiente que toque esa lista | `estadoDelPlano` guarda la **tierra de cultivo sin humedad** (y al **reponerla** el obrero la pone **regada**, `tierraDeCultivo`); y `necesitaReparacion` dice explícitamente que **`farmland` contra `farmland` no es daño**, pase lo que pase con la humedad |
+
+**La migración 54** vuelve a **labrar las calvas** de una aldea ya construida (`labrarCalvasDelBancal`: idempotente,
+solo celdas de bancal, solo tierra o césped, solo con agua cerca y con el hueco de arriba libre) y, al recapturar el
+plano al final, este ya sale con la huerta entera. En su guardado, la simulación del arreglo deja **exactamente las
+mismas 2 celdas** en la lista del obrero y del granjero (`build/huerta_simula.py`), y la auditoría de la aldea 2 sigue
+en **0** en sus cinco listas.
+
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.
