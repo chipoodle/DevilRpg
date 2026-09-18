@@ -67,6 +67,9 @@ public class VillagerClericGoal extends Goal {
     /** El soporte de pociones (su puesto de trabajo, en la iglesia): la celda a la que va a trabajar. */
     @Nullable
     private BlockPos soporte;
+    /** La celda de AGUA a la que va a llenar las botellas de cristal (se busca cuando le hacen falta). */
+    @Nullable
+    private BlockPos agua;
     private int workTicks;
     private int restTicks;
     private int stuckTicks;
@@ -140,6 +143,39 @@ public class VillagerClericGoal extends Goal {
         if (soporte == null || !(villager.level() instanceof ServerLevel level)) {
             return;
         }
+        // 0) SI LLEVA BOTELLAS DE CRISTAL, PRIMERO AL AGUA: el pueblo no fabrica vidrio, así que las botellas las trae
+        //    el jugador al almacén, pero LLENARLAS es cosa del clérigo (el bebedero del corral, el lago de la pesquera
+        //    o cualquier charca del término). Sin esto, las botellas de agua tendrían que venir ya embotelladas de fuera
+        //    y la cadena no se cerraría sola.
+        if (llevaCristal()) {
+            if (agua == null || !esAgua(level, agua)) {
+                agua = buscarAgua(level);
+            }
+            if (agua == null) {
+                restTicks = IDLE_REST_TICKS;
+                VillageManager.ponerActividad(villager, "No encuentro agua");
+                return;
+            }
+            double hastaElAgua = Math.sqrt(villager.distanceToSqr(agua.getX() + 0.5D, agua.getY() + 0.5D,
+                    agua.getZ() + 0.5D));
+            if (hastaElAgua > REACH) {
+                VillageManager.caminarHacia(villager, agua, VELOCIDAD);
+                VillageManager.ponerActividad(villager, "A por agua");
+                if (hastaElAgua < mejorDistancia - 0.5D) {
+                    mejorDistancia = hastaElAgua;
+                    stuckTicks = 0;
+                } else if (++stuckTicks >= STUCK_LIMIT) {
+                    // RENDIRSE = APARCAR EL SITIO (I33), también para el agua.
+                    VillageManager.marcarPuntoFallido(villager, agua);
+                    agua = null;
+                }
+                return;
+            }
+            VillageManager.parar(villager);
+            llenarBotellas(level);
+            agua = null;
+            return;
+        }
         double distancia = Math.sqrt(villager.distanceToSqr(soporte.getX() + 0.5D, soporte.getY() + 0.5D,
                 soporte.getZ() + 0.5D));
         if (distancia > REACH) {
@@ -169,6 +205,93 @@ public class VillagerClericGoal extends Goal {
     }
 
     // --- la faena ------------------------------------------------------------------------------------
+
+    /** Radio en el que el clérigo busca agua para llenar las botellas (el bebedero, el lago, una charca). */
+    private static final int RADIO_AGUA = 24;
+
+    /** ¿Lleva botellas de <b>cristal</b> (vacías) encima? Entonces va al agua antes que al soporte. */
+    private boolean llevaCristal() {
+        var mochila = villager.getInventory();
+        for (int i = 0; i < mochila.getContainerSize(); i++) {
+            if (mochila.getItem(i).is(Items.GLASS_BOTTLE)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** ¿Esa celda es agua (y se puede estar de pie al lado)? */
+    private boolean esAgua(ServerLevel level, BlockPos p) {
+        return level.getFluidState(p).is(net.minecraft.tags.FluidTags.WATER);
+    }
+
+    /**
+     * La <b>celda de agua</b> más cercana (el bebedero del corral, el lago de la pesquera, cualquier charca del
+     * término). Se mira en un cubo alrededor del aldeano con paso de 2 bloques: es barato y solo se hace cuando va a
+     * llenar botellas (no en cada tick).
+     */
+    @Nullable
+    private BlockPos buscarAgua(ServerLevel level) {
+        BlockPos base = villager.blockPosition();
+        BlockPos mejor = null;
+        double mejorDist = Double.MAX_VALUE;
+        for (int dx = -RADIO_AGUA; dx <= RADIO_AGUA; dx += 2) {
+            for (int dz = -RADIO_AGUA; dz <= RADIO_AGUA; dz += 2) {
+                for (int dy = -2; dy <= 2; dy++) {
+                    BlockPos p = base.offset(dx, dy, dz);
+                    if (!esAgua(level, p) || VillageManager.esPuntoFallido(villager, p)) {
+                        continue;
+                    }
+                    double d = p.distSqr(base);
+                    if (d < mejorDist) {
+                        mejorDist = d;
+                        mejor = p.immutable();
+                    }
+                }
+            }
+        }
+        return mejor;
+    }
+
+    /** Llena de agua las botellas de cristal que lleva (receta de vanilla: botella + agua = poción de agua). */
+    private void llenarBotellas(ServerLevel level) {
+        var mochila = villager.getInventory();
+        int llenas = 0;
+        for (int i = 0; i < mochila.getContainerSize() && llenas < BOTELLAS; i++) {
+            ItemStack s = mochila.getItem(i);
+            if (!s.is(Items.GLASS_BOTTLE)) {
+                continue;
+            }
+            ItemStack agua = PotionContents.createItemStack(Items.POTION, Potions.WATER).copyWithCount(s.getCount());
+            mochila.setItem(i, agua);
+            llenas += s.getCount();
+        }
+        if (llenas > 0) {
+            level.playSound(null, villager.blockPosition(), net.minecraft.sounds.SoundEvents.BOTTLE_FILL,
+                    net.minecraft.sounds.SoundSource.NEUTRAL, 0.6F, 1.0F);
+            VillageManager.ponerSuceso(villager, "Botellas llenas");
+            villager.swing(InteractionHand.MAIN_HAND);            DevilRpg.LOGGER.info("[Village] El clerigo lleno {} botella(s) de agua", llenas);
+        }
+    }
+
+    /** Saca <b>una</b> unidad de la mochila del clérigo que cumpla el filtro (o {@code null}). */
+    @Nullable
+    private ItemStack sacarDeLaMochila(java.util.function.Predicate<ItemStack> filtro) {
+        var mochila = villager.getInventory();
+        for (int i = 0; i < mochila.getContainerSize(); i++) {
+            ItemStack s = mochila.getItem(i);
+            if (s.isEmpty() || !filtro.test(s)) {
+                continue;
+            }
+            ItemStack sacado = s.copyWithCount(1);
+            s.shrink(1);
+            if (s.isEmpty()) {
+                mochila.setItem(i, ItemStack.EMPTY);
+            }
+            return sacado;
+        }
+        return null;
+    }
 
     /** Verbo de lo que está haciendo (lo que se ve en su etiqueta). */
     private String verboActual() {
@@ -213,19 +336,31 @@ public class VillagerClericGoal extends Goal {
                 return;
             }
         }
-        // 4) ¿FALTAN BOTELLAS? Se cargan botellas de AGUA del almacén (el jugador las trae embotelladas).
+        // 4) ¿FALTAN BOTELLAS? Primero las de AGUA que lleva en la mochila (las que acaba de llenar), después las del
+        //    almacén y, si no hay ninguna, BOTELLAS DE CRISTAL (el vidrio lo trae el jugador; llenarlas es cosa suya).
         for (int hueco = 0; hueco < 3; hueco++) {
             if (!stand.getItem(hueco).isEmpty()) {
                 continue;
             }
-            ItemStack agua = VillageStorage.quitar(level, center, this::esBotellaDeAgua, 1);
+            ItemStack agua = sacarDeLaMochila(this::esBotellaDeAgua);
+            if (agua == null) {
+                agua = VillageStorage.quitar(level, center, this::esBotellaDeAgua, 1);
+            }
             if (agua != null) {
                 stand.setItem(hueco, agua);
                 return;
             }
         }
+        ItemStack cristal = VillageStorage.quitar(level, center, s -> s.is(Items.GLASS_BOTTLE), BOTELLAS);
+        if (cristal != null) {
+            ItemStack sobra = villager.getInventory().addItem(cristal); // lo que no quepa vuelve al almacén
+            if (!sobra.isEmpty()) {
+                VillageStorage.guardar(level, center, sobra);
+            }
+            return; // y el tick lo llevará al agua (ver `llevaCristal`)
+        }
         // Nada que hacer: la etiqueta dice QUÉ le falta. El pueblo no puede fabricar lo del Nether (verruga del
-        // Nether, polvo de blaze) ni las botellas de agua, así que el aviso es lo que le dice al jugador qué traer.
+        // Nether, polvo de blaze) ni el vidrio, así que el aviso es lo que le dice al jugador qué traer.
         restTicks = IDLE_REST_TICKS;
         VillageManager.ponerActividad(villager, queFalta(level, stand));
     }
