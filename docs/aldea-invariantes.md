@@ -686,6 +686,30 @@ bloque del portón del corral— con el portón **`open:false`**.
 **Regla:** si hay un aldeano a `HUECO` del portón, no se cierra **por plazo**; el plazo sigue valiendo para el que
 solo está **al lado** (`ABRIR`).
 
+### I35 · El cupo de puestos de la MILICIA se CUENTA de los sitios del pueblo (no se escribe a mano)
+
+El reparto de la milicia (`VillageManager.repartirGuardia`) cubre **un cupo por oficio** y lo que sobra es milicia. Ese
+cupo era una **lista escrita a mano** en el gestor y se quedó con **SIETE** puestos (los de la etapa E): cuando
+llegaron el **segundo granjero** (etapa F) y el **pescador** (etapa G) nadie la subió, así que para el reparto esos
+dos oficios eran **siempre** "gente de sobra" y **la milicia se los llevaba** — y el daño no es cosmético: el
+**compostero** del segundo granjero seguía **cogido** (`free_tickets=0`) mientras su dueño patrullaba, así que **un
+bancal se quedaba sin nadie**, y dos pescadores dejaban la pesquera por la ronda.
+
+**Medido** (aldea 2 del guardado del jugador, `build/milicia_cupo.py`, que aplica el reparto tal cual): con el cupo
+viejo los sobrantes eran **3** (los dos pescadores y el segundo granjero, `9036d1d0`); con el nuevo, **1** (el
+pescador que sobra). Y en vivo con el arnés: `[Village] 9036d1d0 ... deja la guardia y vuelve a su oficio` (el 2º
+granjero **sale** de la milicia) y `Aldea 2: comida 64 puntos, 9 aldeanos` → con los 9 puestos cubiertos la milicia
+queda **vacía** (es el diseño: hacen falta **crías**).
+
+**Regla:** el cupo se **cuenta** de los sitios del pueblo (`VillageGenerator.puestosPorOficio()`, que cuenta
+`VILLAGER_SPECIALTIES`) y **nunca** se escribe una lista paralela en el gestor (es I5 otra vez: la medida vive en un
+sitio). Así no puede quedarse atrás cuando se añada un oficio. Y ojo con el detalle de por qué hay que contar
+**por plaza** y no "¿tiene ese oficio?": el oficio lo da también **el bloque** (el `barril` es del pescador: quien lo
+reclama se vuelve pescador, aunque el pueblo ya tenga el suyo) y **un aldeano curado** vuelve con su `VillagerData`
+viejo y **sin** los datos del mod (medido: el segundo pescador de la aldea 2, `295c0896`, con la etiqueta *"Dionisio
+(Guardia espadachín)"*, **sin** `DevilRpgGuardia` ni memorias: es el cuerpo curado de un guardia anterior, y en el log
+está su `ZombieVillager`). Con plazas contadas, el que sobra es **uno** y el titular conserva su puesto.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 

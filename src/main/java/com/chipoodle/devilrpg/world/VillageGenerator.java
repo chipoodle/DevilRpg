@@ -5368,14 +5368,35 @@ public final class VillageGenerator {
     };
 
     /**
-     * ¿Ese oficio es uno de los del <b>pueblo</b>? Los de fuera (pescador, bibliotecario, cartógrafo, albañil...) no
-     * se usan: el pueblo reparte <b>sus</b> puestos, y un aldeano que tome otro oficio vuelve al reparto (ver
-     * {@code VillageManager.reponerProfesiones}).
+     * Cuántos puestos de <b>cada oficio</b> tiene el pueblo: se <b>cuentan</b> los sitios de
+     * {@link #VILLAGER_SPECIALTIES} (dos granjeros, un pescador, un herrero de cada...). Lo usa el reparto de la
+     * <b>milicia</b> para saber quién <b>cubre un puesto</b> y quién es gente de sobra.
+     * <p>
+     * Es un <b>método</b> y no una lista escrita a mano en el gestor <b>a propósito</b>: la lista a mano se quedó con
+     * <b>siete</b> puestos (los de la etapa E) y cuando llegaron el <b>segundo granjero</b> (etapa F) y el
+     * <b>pescador</b> (etapa G) nadie la subió, así que para el reparto esos dos oficios eran "gente de sobra": la
+     * milicia se llevaba al pescador y al segundo granjero (medido en el guardado del jugador, aldea 2: los 4
+     * espadachines eran los dos pescadores, el segundo granjero y un aldeano sin oficio) y la pesquera y un bancal se
+     * quedaban sin nadie. Contándolos, la lista no puede volver a quedarse atrás.
+     */
+    public static Map<VillagerProfession, Integer> puestosPorOficio() {
+        Map<VillagerProfession, Integer> cupo = new HashMap<>();
+        for (VillagerProfession oficio : VILLAGER_SPECIALTIES) {
+            cupo.merge(oficio, 1, Integer::sum);
+        }
+        return cupo;
+    }
+
+    /**
+     * ¿Ese oficio es uno de los del <b>pueblo</b>? Los de fuera (bibliotecario, cartógrafo, albañil, flechero...)
+     * <b>no</b> se usan: el pueblo reparte <b>sus</b> puestos ({@link #VILLAGER_SPECIALTIES}), y un aldeano que tome
+     * otro oficio vuelve al reparto (ver {@code VillageManager.reponerProfesiones}).
      * <p>
      * Importa porque en vanilla cada <b>bloque de puesto de trabajo</b> da su oficio: el <b>barril</b> es del
-     * <b>pescador</b> y el atril del bibliotecario, así que una cría que creciera al lado de un barril suelto (los de
-     * la taberna, sin ir más lejos) se habría vuelto pescador. Hasta que el pescador tenga su edificio y su lago
-     * (etapa siguiente), el pueblo no usa barriles: las pipas de cerveza son de madera con corteza.
+     * <b>pescador</b> —que desde la etapa G es un oficio del pueblo, con su pesquera y su lago— y el atril del
+     * bibliotecario, así que una cría que creciera al lado de un atril se habría vuelto bibliotecaria. En la aldea no
+     * hay puestos de oficios de fuera: las pipas de cerveza de la taberna son de madera con corteza (un `BARREL`
+     * sería el puesto del pescador).
      */
     public static boolean esOficioDelPueblo(VillagerProfession profesion) {
         for (VillagerProfession oficio : VILLAGER_SPECIALTIES) {

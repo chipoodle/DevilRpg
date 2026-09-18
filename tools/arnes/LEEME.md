@@ -39,6 +39,7 @@ Remove-Item run\world -Recurse -Force; Move-Item run\world.antes run\world
 
 **Ajustes del arnés** (arriba del archivo): `CENTRO` e `INDICE` son la aldea que se mide (la 2 es
 `1414,120,1414`, índice 2) y el ancla del jugador se **calcula** con la misma cuenta que
-`ObjectiveTargets.targetOf` (para que el objetivo 2 caiga en ese centro). Deja el mundo **de día**, **sin ciclo** y
-**sin spawn de bichos** (el combate va antes que la ronda y los guardias se morían peleando: así solo se mide la
-ronda).
+`ObjectiveTargets.targetOf` (para que el objetivo 2 caiga en ese centro). Deja el mundo **de día**, **sin ciclo**,
+sin spawn de bichos y **barriendo cada segundo los bichos que ya venían en el guardado** (`hayEnemigosDentro`
+bloquea el latido del pueblo entero: sin barrerlos, no se reparten oficios ni se alista la guardia; se nota porque
+en el log **no** sale ninguna línea `[Village] Aldea N: comida ...` ni ningún `nuevo puesto`).

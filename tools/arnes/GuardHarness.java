@@ -49,6 +49,16 @@ public class GuardHarness {
             pega = FakePlayerFactory.getMinecraft(level);
         }
         ticks++;
+        // Los bichos que YA venian en el guardado dentro del recinto BLOQUEAN el latido del pueblo
+        // (`hayEnemigosDentro`): sin esto el reparto de oficios y la guardia ni se tocan. Se barren cada segundo.
+        if (ticks % 20 == 0) {
+            for (net.minecraft.world.entity.Mob m : level.getEntitiesOfClass(net.minecraft.world.entity.Mob.class,
+                    new AABB(CENTRO).inflate(140))) {
+                if (m instanceof net.minecraft.world.entity.monster.Monster) {
+                    m.discard();
+                }
+            }
+        }
         // El latido de la aldea, tal cual lo llama el tick del jugador (con el ancla del objetivo 2).
         if (pega != null) {
             pega.moveTo(CENTRO.getX() + 0.5D, CENTRO.getY(), CENTRO.getZ() + 0.5D);
@@ -100,11 +110,12 @@ public class GuardHarness {
                 continue;
             }
             WalkTarget wt = v.getBrain().getMemory(MemoryModuleType.WALK_TARGET).orElse(null);
-            DevilRpg.LOGGER.info("[Arnes] t={} {} pos=({},{},{}) yRot={} destino={} oficio={} trabajo={} etiqueta={}",
+            DevilRpg.LOGGER.info("[Arnes] t={} {} pos=({},{},{}) yRot={} destino={} oficio={} trabajo={} puesto={} etiqueta={}",
                     level.getGameTime(), v.getUUID().toString().substring(0, 8), fmt(v.getX()), fmt(v.getY()),
                     fmt(v.getZ()), fmt(v.getYRot()),
                     wt == null ? "SIN DESTINO" : wt.getTarget().currentBlockPosition().toShortString(),
                     v.getVillagerData().getProfession(), v.getBrain().isActive(Activity.WORK),
+                    v.getPersistentData().getInt(VillageManager.GUARD_INDEX_TAG),
                     v.getCustomName() == null ? "-" : v.getCustomName().getString().replace("\n", " | "));
         }
     }

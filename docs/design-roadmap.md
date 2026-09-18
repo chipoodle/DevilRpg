@@ -440,10 +440,14 @@ Los aldeanos **sobrantes** se alistan (`VillageManager.repartirGuardia`) y su go
 cosas: **equiparse del almacén**, **patrullar** de día y **guardar las puertas** de noche **rotando**.
 
 - **Quién sobra** (lo pidió el jugador: *"aldeanos adultos SOBRANTES"*): se reparten los **puestos fijos** del pueblo
-  (1 granjero, 1 herrero de armas, 1 de herramientas, 1 clérigo y 1 recolector) en orden **estable** (por UUID) y **el
+  —los **nueve** de `VillageGenerator.puestosPorOficio()`, que se **cuentan** de los sitios del pueblo: **dos
+  granjeros**, los dos herreros, el clérigo, el recolector, el ganadero, el cocinero y el pescador— en orden
+  **estable** (por UUID) y **el
   resto** es gente de sobra. Así la milicia **no le quita el granjero ni los herreros** a la aldea (que es lo que la
   dejaría sin comer y sin indumentaria) y una aldea sana de 5 aldeanos **no tiene guardia**: hacen falta **crías**.
   Si la aldea vuelve a necesitar ese oficio (muere gente), el guardia **deja la milicia** (`desalistarGuardia`).
+  *(La lista se **cuenta**, no se escribe a mano: ver **3b.47**, donde la lista a mano se quedó con siete puestos y
+  la milicia se llevaba al pescador y al segundo granjero.)*
 - **Tipo por número**: los 4 primeros son **espadachines** y los 3 siguientes **arqueros** (`MILICIA_MAX` = 7), que es
   la formación de la marcha a la guarida. Los guardias **no pueden ser obreros** (`puedeSerObrero` los excluye, y al
   alistarse se les quita la marca de obrero y su goal de reparación: si no, seguirían reparando caminos).
@@ -2053,10 +2057,54 @@ puesto 0 y 896 de la del 1):
 
 **Lo que NO se ha podido comprobar (sin jugar)**: cómo se ve en la partida del jugador (hay que **reiniciar el
 cliente** para cargar el mod) —el arnés corre en un servidor headless con la partida **copiada**, así que mide
-decisiones, no pinta nada—, y el **reparto de la milicia** en su partida (en el arnés se alistaron **4** espadachines:
-los sobrantes de su aldea son **dos pescadores** —FISHERMAN **no** está en el cupo de puestos fijos del reparto—, un
-segundo granjero y un aldeano sin oficio). No hace falta **migración**: son reglas de goals (no se toca el mundo ni el
-guardado de los aldeanos).
+decisiones, no pinta nada—. El **reparto de la milicia** que salió en el arnés (**4** espadachines) resultó ser OTRO
+fallo y se arregla en **3b.47**. No hace falta **migración**: son reglas de goals (no se toca el mundo ni el guardado
+de los aldeanos).
+
+### 3b.47 La milicia se llevaba al PESCADOR (y al segundo granjero): el cupo de puestos, contado
+
+Salió al revisar la ronda anterior: en el arnés se alistaban **4 espadachines** en la aldea 2 y el jugador preguntó
+*"¿no puede haber dos pescadores en la aldea? ¿por qué sucede esto?"*. Las dos cosas son ciertas y están
+relacionadas:
+
+- **El pueblo tiene NUEVE puestos** (`VillageGenerator.VILLAGER_SPECIALTIES`): **dos granjeros**, herrero de armas,
+  clérigo, herrero de herramientas, recolector, ganadero, cocinero y **pescador**. **Un** puesto de pescador: dos
+  pescadores **no** son diseño.
+- **El cupo del reparto de la milicia estaba escrito a mano** (`VillageManager.repartirGuardia`) y se quedó con
+  **SIETE** puestos: los de la etapa E, **sin el segundo granjero** (etapa F) **ni el pescador** (etapa G). Para ese
+  reparto, esos dos oficios eran *siempre* "gente de sobra" → **la milicia se los llevaba**. Medido en el guardado del
+  jugador (aldea 2, `build/milicia_cupo.py`, que aplica el reparto tal cual a los aldeanos del guardado): con el
+  cupo viejo los sobrantes eran **tres** —los **dos pescadores** y el **segundo granjero** (la guardia Bibiana,
+  `9036d1d0`)— y con el nuevo, **uno** (el pescador que sobra). Y el daño real: el **compostero** del segundo
+  granjero seguía **cogido** (`free_tickets=0` en `1422,120,1418`) mientras su dueña patrullaba, así que **un bancal
+  se quedaba sin quien lo trabajara**, y **dos pescadores** dejaban la pesquera por la ronda.
+- **Por qué hay dos pescadores en su aldea** (que es lo que preguntó): el oficio lo da (a) el reparto del pueblo, (b)
+  **el bloque** —el **barril** es el puesto del pescador: quien lo reclama se vuelve pescador, aunque el pueblo ya
+  tenga el suyo— y (c) **un aldeano curado**: en su guardado, el segundo pescador (`295c0896`, con la etiqueta
+  *"Dionisio (Guardia espadachín)"*) **no tiene ni un dato del mod** (ni `DevilRpgGuardia`, ni memorias: el arnés y
+  `build/pescadores.py` lo enseñan así) — es el **cuerpo curado de un guardia anterior**: al curar un aldeano zombi el
+  juego crea un aldeano **nuevo**, copia su `VillagerData` (→ el oficio viejo) y su nombre, pero **no** los datos del
+  mod. En su log está el `ZombieVillager['Dionisio (Guardia espadachín)']` correspondiente. La aldea, al quedarse sin
+  pescador vivo, le dio el puesto al aldeano sin oficio (`reponerProfesiones`), y al volver el curado **quedaron
+  dos**.
+
+**El arreglo**: el cupo **se cuenta** de los puestos del pueblo (`VillageGenerator.puestosPorOficio()`, nuevo) en vez
+de escribirse a mano en el gestor, así que **no puede volver a quedarse atrás** cuando se añada un oficio (es la
+misma regla de I5: la medida vive en un solo sitio). Efecto en su aldea, verificado:
+
+| | Cupo viejo (7) | Cupo nuevo (9) |
+|---|---|---|
+| Puestos sin cubrir | ninguno de los 7 (y el 8º y el 9º no existían para el reparto) | ninguno |
+| Gente de sobra (milicia) | **3**: los dos pescadores + el **2º granjero** | **1**: el pescador que sobra |
+
+**Verificado**: offline con `build/milicia_cupo.py` (el reparto tal cual, sobre los aldeanos del guardado) y **en
+vivo con el arnés**: en el log sale `[Village] 9036d1d0 ... deja la guardia y vuelve a su oficio` (el 2º granjero
+**sale** de la milicia) y `[Village] Aldea 2: comida 64 puntos, **9 aldeanos**` → con los 9 puestos cubiertos la
+milicia queda **vacía** (que es el diseño: *"una aldea sana no tiene guardia: hacen falta crías"*). Compila, lint OK.
+
+*(Nota del arnés: los bichos que ya venían en el guardado **dentro del recinto** bloquean `hayEnemigosDentro` y con
+ello **todo** el latido —sin reparto de oficios ni milicia—; el arnés los barre cada segundo. Se nota porque en el
+log **no** sale ninguna línea `[Village] Aldea N: comida ...`.)*
 
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 

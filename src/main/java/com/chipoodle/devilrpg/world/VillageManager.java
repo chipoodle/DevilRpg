@@ -1987,14 +1987,14 @@ public final class VillageManager {
                                         int objectiveIndex) {
         // Puestos fijos que NO pueden quedarse sin cubrir (cupo por oficio). Lo que sobre de cada oficio, o los
         // oficios que no estén en la lista, son candidatos.
-        Map<VillagerProfession, Integer> cupo = new HashMap<>();
-        cupo.put(VillagerProfession.FARMER, 1);
-        cupo.put(VillagerProfession.WEAPONSMITH, 1);
-        cupo.put(VillagerProfession.TOOLSMITH, 1);
-        cupo.put(VillagerProfession.CLERIC, 1);
-        cupo.put(VillagerProfession.NITWIT, 1); // el recolector
-        cupo.put(VillagerProfession.SHEPHERD, 1); // el ganadero de la granja anexa (etapa D)
-        cupo.put(VillagerProfession.BUTCHER, 1); // el cocinero del kiosco (etapa E)
+        //
+        // SE CUENTAN de los sitios del pueblo (`VillageGenerator.puestosPorOficio()`), NO de una lista escrita aquí:
+        // la lista a mano se quedó con SIETE puestos (los de la etapa E) y cuando llegaron el SEGUNDO GRANJERO
+        // (etapa F) y el PESCADOR (etapa G) nadie la subió, así que esos dos oficios eran "gente de sobra" para el
+        // reparto: la milicia se llevaba al pescador y al segundo granjero y la pesquera y un bancal se quedaban sin
+        // nadie. Medido en el guardado del jugador (aldea 2, 10 adultos): los 4 espadachines eran los DOS
+        // PESCADORES, el SEGUNDO GRANJERO (la guardia Bibiana, `9036d1d0`) y un aldeano sin oficio.
+        Map<VillagerProfession, Integer> cupo = VillageGenerator.puestosPorOficio();
 
         List<Villager> adultos = new ArrayList<>();
         for (Villager villager : aldeanos) {
