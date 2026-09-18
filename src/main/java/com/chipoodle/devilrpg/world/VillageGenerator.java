@@ -942,6 +942,49 @@ public final class VillageGenerator {
     public static final int BARRACA_CAMAS = 8;
 
     /**
+     * La columna ({@code dx} relativo a la base) por la que sube la <b>escalera del dormitorio</b>: la última celda
+     * del interior, pegada al muro <b>este</b>.
+     */
+    private static final int BARRACA_ESCALERA_DX = BARRACA_RADIO - 1;
+    /**
+     * La fila ({@code dz} relativo a la base) del <b>pie</b> de la escalera del dormitorio. Va <b>dos</b> celdas al
+     * norte del muro sur y no pegada a él por una razón medida: <b>a un escalón se entra por su lado BAJO</b> (el
+     * contrario a la cara alta que marca el {@code FACING}), y el que sube tiene que poder ponerse en la celda de al
+     * lado —suelo firme y las dos celdas de su cuerpo libres—. Con el pie pegado al muro sur, la celda de entrada cae
+     * <b>dentro de la pared</b> y a la escalera <b>no se puede ni entrar</b> (la vieja, además, miraba al oeste con la
+     * cara alta de través: ver {@code build/barraca_subida.py}, que comprueba la entrada, cada escalón y la salida).
+     */
+    private static final int BARRACA_ESCALERA_PIE_DZ = BARRACA_RADIO - 2;
+    /**
+     * Los <b>cuatro</b> escalones de la escalera del dormitorio: uno por cada bloque que sube el piso de arriba
+     * ({@link #BARRACA_PISO2}), porque con escaleras del juego se sube de <b>medio en medio bloque</b> (dos medios
+     * escalones por bloque). El <b>último</b> va en la capa del forjado y su cara alta queda a la altura del suelo del
+     * dormitorio, así que del último escalón se sale <b>andando</b>, sin saltar.
+     */
+    private static final int BARRACA_ESCALONES = BARRACA_PISO2;
+    /**
+     * La columna ({@code dx}) de la cama del rincón <b>sureste</b> del dormitorio, corrida <b>una celda al oeste</b>:
+     * su celda de los pies cae justo <b>encima del hueco del forjado</b> de la escalera, y con una cama ahí el que
+     * sube no pasa —medido en el guardado del jugador: el 2º escalón tenía <b>2,0</b> de hueco hasta la cama
+     * ({@code (1372,124,1438)}) en vez de los 2,4 = 3 celdas que pide {@code Entity.maxUpStep}, ver I26—.
+     */
+    private static final int BARRACA_CAMA_CORRIDA_DX = BARRACA_RADIO - 2;
+    /**
+     * Las columnas ({@code dx} relativas a la base) de las camas de cada fila del dormitorio, de norte a sur. Suman
+     * {@link #BARRACA_CAMAS} y <b>ninguna</b> queda en la columna de la escalera ({@link #BARRACA_ESCALERA_DX}) ni
+     * encima del hueco del forjado: la del rincón sureste se corre al oeste ({@link #BARRACA_CAMA_CORRIDA_DX}), que la
+     * cama es un <b>POI</b> y el pueblo no puede perder ninguna (en vanilla cada cría pide una <b>cama libre</b>).
+     */
+    private static final int[] BARRACA_CAMAS_NORTE = {-3, -1, 1, 3};
+    private static final int[] BARRACA_CAMAS_SUR = {-3, -1, 1, BARRACA_CAMA_CORRIDA_DX};
+    /**
+     * La fila ({@code dz}) de las dos <b>arcas</b> del dormitorio: van <b>juntas</b> contra el muro oeste (cofre
+     * doble). La del muro <b>este</b> estaba en la celda del <b>último escalón</b> —el que sube se la encontraba de
+     * frente, con el arca a la altura de los pies—, así que se pasa al lado de la otra.
+     */
+    private static final int BARRACA_ARCA_DZ = 0;
+
+    /**
      * Asegura la <b>BARRACA de la milicia</b> en una aldea que todavía no la tiene (migración y latido). Es
      * idempotente: comprueba el <b>suelo a la cota</b> (como el kiosco y el almacén) y, si ya está, no toca nada —
      * reconstruirla borraría las camas y lo que los guardias tengan dentro.
@@ -975,8 +1018,7 @@ public final class VillageGenerator {
         // Testigo del trazado NUEVO (etapa F: barraca de DOS PISOS con sala de armas): el hogar del patio de
         // entrenamiento. Una barraca de una planta (sin hogar) se vuelve a levantar entera, que es lo que trae el
         // segundo piso con las camas y el patio.
-        if (level.getBlockState(new BlockPos(base.getX(), nivel - 1, base.getZ() + BARRACA_RADIO - 1))
-                .is(Blocks.CAMPFIRE)) {
+        if (barracaConstruida(level, center)) {
             return; // la barraca ya está y con el trazado actual
         }
         BlockPos puerta = barraca(level, base, nivel);
@@ -984,6 +1026,170 @@ public final class VillageGenerator {
         paths(level, center, doorApproach(level, puerta));
         DevilRpg.LOGGER.info("[Village] Aldea en {}: barraca de la milicia construida en {} (dos pisos: sala de"
                 + " armas abajo y {} camas arriba)", center, base, BARRACA_CAMAS);
+    }
+
+    /**
+     * ¿Está la <b>barraca</b> construida y con el trazado actual? El testigo es el <b>hogar</b> del patio de
+     * entrenamiento, y va en el <b>suelo</b> ({@code nivel - 1}, la misma capa que el suelo de piedra: invariante I15,
+     * un testigo es plataforma o suelo, <b>no mobiliario</b> —el mobiliario se lo puede llevar el jugador—). Es el
+     * testigo del trazado de <b>dos pisos</b>: una barraca de una planta (sin hogar) se vuelve a levantar entera.
+     */
+    public static boolean barracaConstruida(ServerLevel level, BlockPos center) {
+        int nivel = cotaDeLaPlaza(level, center);
+        BlockPos base = baseDeBarraca(center);
+        return level.getBlockState(new BlockPos(base.getX(), nivel - 1, base.getZ() + BARRACA_RADIO - 1))
+                .is(Blocks.CAMPFIRE);
+    }
+
+    /**
+     * <b>Arregla la escalera del dormitorio de la barraca</b> en una barraca ya construida (<b>migración 59</b>).
+     * <p>
+     * <b>Lo que había</b> (medido en el guardado del jugador, aldea 2, barraca en {@code 1369,1436}, cota {@code 120},
+     * con {@code build/barraca_dump.py} y {@code build/barraca_subida.py}): la escalera tenía <b>tres</b> escalones de
+     * los cuatro —el <b>4º lo borraba el propio constructor</b>, porque para ese peldaño la celda del escalón y la del
+     * <b>hueco del forjado</b> eran la misma ({@code yPiso2 - 1 = nivel + 3})—, así que el último escalón quedaba a
+     * <b>1,0</b> del suelo del dormitorio (<b>solo se subía saltando</b>); el <b>2º</b> tenía una <b>cama</b> justo
+     * encima ({@code (1372,124,1438)}: <b>2,0</b> de hueco en vez de los 2,4 = 3 celdas que pide {@code maxUpStep},
+     * I26); el <b>arca</b> del este estaba en la celda del último escalón; y el {@code FACING} iba al <b>oeste</b>
+     * subiendo al <b>norte</b>, con la cara alta de través (y con el pie pegado al muro sur, por donde no se puede
+     * entrar: era imposible <b>entrar</b> a la escalera).
+     * <p>
+     * <b>Lo que hace</b>, celda por celda y <b>sin rehacer la barraca</b> (rehacerla tiraría las camas y lo de dentro
+     * de las arcas):
+     * <ol>
+     *   <li>los <b>escalones viejos</b>, fuera (solo si siguen siendo escalones, {@code quitarSiEs});</li>
+     *   <li>la <b>escalera nueva</b> (los {@code BARRACA_ESCALONES} escalones de medio bloque, cara alta al norte) y el
+     *       <b>hueco del forjado</b> abierto encima de los que van <b>por debajo</b> de él —la celda del último es del
+     *       escalón: abrirla fue justo el fallo—;</li>
+     *   <li>el forjado que <b>ya no hace falta abrir</b> (la celda del sur, la del cuarto escalón fantasma), cerrado;</li>
+     *   <li>la <b>cama del rincón sureste</b> (la que estaba encima del hueco), corrida una celda al oeste: es un
+     *       <b>POI</b> y el pueblo no puede perder ninguna (en vanilla cada cría pide una cama libre), así que la
+     *       nueva se pone <b>antes</b> y la vieja solo se retira si la nueva está puesta;</li>
+     *   <li>el <b>arca del este</b> (la que estaba sobre el último escalón), pasada al lado de la del oeste: se pone
+     *       la nueva, se le <b>pasa todo lo de dentro</b> —reemplazar un cofre tira su contenido, mecánica de vanilla,
+     *       I6— y solo entonces se retira la vieja.</li>
+     * </ol>
+     * Es <b>idempotente</b> (si ya está todo bien no escribe ni una celda) y <b>no toca lo que puso el jugador</b>:
+     * para quitar, solo el bloque esperado; para poner, solo en celda vacía. Y lo que no quepa en el arca nueva
+     * (o si el jugador ocupó su celda) va al <b>almacén del pueblo</b>, nunca al suelo.
+     */
+    public static void arreglarLaEscaleraDeLaBarraca(ServerLevel level, BlockPos center) {
+        if (!barracaConstruida(level, center)) {
+            return;
+        }
+        int nivel = cotaDeLaPlaza(level, center);
+        BlockPos base = baseDeBarraca(center);
+        int bx = base.getX();
+        int bz = base.getZ();
+        int yPiso2 = nivel + BARRACA_PISO2;
+        int yForjado = yPiso2 - 1;
+        // 1) LA ESCALERA VIEJA, FUERA. Subía por la MISMA columna pero una celda al sur (el pie pegado al muro sur,
+        //    por donde no se entra) y con la cara alta de través (facing=west). Se quitan solo los escalones.
+        int quitados = 0;
+        for (int i = 0; i < BARRACA_ESCALONES; i++) {
+            quitados += quitarSiEs(level, bx + BARRACA_ESCALERA_DX, nivel + i, bz + BARRACA_RADIO - 1 - i,
+                    Blocks.OAK_STAIRS);
+        }
+        // 2) LA ESCALERA NUEVA y su hueco. El hueco se abre con `quitarSiEs` (solo tablones del forjado) y en la
+        //    celda del último escalón NO se abre nada: el escalón va ahí (lleva su propio `colocar`).
+        for (int k = 0; k < BARRACA_ESCALONES; k++) {
+            colocar(level, new BlockPos(bx + BARRACA_ESCALERA_DX, nivel + k, bz + BARRACA_ESCALERA_PIE_DZ - k),
+                    Blocks.OAK_STAIRS.defaultBlockState()
+                            .setValue(StairBlock.FACING, Direction.NORTH).setValue(StairBlock.HALF, Half.BOTTOM), 3);
+            if (k < BARRACA_ESCALONES - 1) {
+                quitarSiEs(level, bx + BARRACA_ESCALERA_DX, yForjado, bz + BARRACA_ESCALERA_PIE_DZ - k,
+                        Blocks.OAK_PLANKS);
+            }
+        }
+        // 3) El tablón que el hueco viejo se había comido de más (la celda del sur, que era la del cuarto escalón
+        //    fantasma) vuelve: el suelo del dormitorio tiene que quedar entero. Solo donde esté vacío.
+        colocarSiEstaVacio(level, new BlockPos(bx + BARRACA_ESCALERA_DX, yForjado, bz + BARRACA_RADIO - 1),
+                Blocks.OAK_PLANKS.defaultBlockState());
+        // 4) LA CAMA QUE ESTORBA, RECOLOCADA. La nueva se pone ANTES (y solo si las dos celdas están vacías) y la
+        //    vieja solo se retira si la nueva está puesta: una cama es un POI y el pueblo no puede perder ninguna.
+        BlockPos pieNuevo = new BlockPos(bx + BARRACA_CAMA_CORRIDA_DX, yPiso2, bz + BARRACA_RADIO - 2);
+        BlockPos cabeceraNueva = pieNuevo.relative(Direction.SOUTH);
+        boolean camaNueva = level.getBlockState(pieNuevo).is(Blocks.RED_BED)
+                && level.getBlockState(cabeceraNueva).is(Blocks.RED_BED);
+        if (!camaNueva && level.getBlockState(pieNuevo).isAir() && level.getBlockState(cabeceraNueva).isAir()) {
+            bed(level, pieNuevo, Direction.SOUTH);
+            camaNueva = true;
+        }
+        int camas = 0;
+        if (camaNueva) {
+            for (int dz = BARRACA_RADIO - 2; dz <= BARRACA_RADIO - 1; dz++) {
+                BlockPos vieja = new BlockPos(bx + BARRACA_ESCALERA_DX, yPiso2, bz + dz);
+                if (level.getBlockState(vieja).is(Blocks.RED_BED)) {
+                    colocar(level, vieja, Blocks.AIR.defaultBlockState(), 3);
+                    camas++;
+                }
+            }
+        }
+        // 5) EL ARCA DEL ESTE, al lado de la del oeste. Primero se pasa TODO lo de dentro y, si no hay dónde
+        //    ponerla (el jugador ocupó la celda), al almacén del pueblo: lo suyo no se pierde nunca (I6).
+        BlockPos arcaVieja = new BlockPos(bx + BARRACA_ESCALERA_DX, yPiso2, bz + BARRACA_ARCA_DZ);
+        BlockPos arcaNueva = new BlockPos(bx - BARRACA_RADIO + 1, yPiso2, bz + BARRACA_ARCA_DZ + 1);
+        boolean arcaPuesta = level.getBlockState(arcaNueva).getBlock() instanceof ChestBlock;
+        if (!arcaPuesta && level.getBlockState(arcaNueva).isAir()) {
+            colocar(level, arcaNueva, Blocks.CHEST.defaultBlockState()
+                    .setValue(ChestBlock.FACING, Direction.EAST), 3);
+            arcaPuesta = true;
+        }
+        int arcas = 0;
+        if (level.getBlockState(arcaVieja).getBlock() instanceof ChestBlock) {
+            if (arcaPuesta) {
+                traspasarElArca(level, arcaVieja, arcaNueva);
+            } else if (level.getBlockEntity(arcaVieja) instanceof Container contenedor) {
+                guardarEnElAlmacen(level, center, contenedor);   // no hay dónde ponerla: al almacén, no al suelo
+            }
+            if (contenedorVacio(level, arcaVieja)) {
+                colocar(level, arcaVieja, Blocks.AIR.defaultBlockState(), 3);
+                arcas++;
+            }
+        }
+        if (quitados > 0 || camas > 0 || arcas > 0) {
+            DevilRpg.LOGGER.info("[Village] Barraca de {}: escalera del dormitorio arreglada ({} escalon(es) viejo(s)"
+                    + " fuera, {} mitad(es) de cama recolocada(s), {} arca(s) movida(s)); el ultimo escalon queda a la"
+                    + " altura del suelo del dormitorio (y={})", center, quitados, camas, arcas, yPiso2);
+        }
+    }
+
+    /**
+     * Pasa <b>todo</b> lo de un arca a otra (uniendo pilas primero y usando los huecos después). Hace falta porque
+     * reemplazar un cofre <b>tira su contenido</b> al suelo (mecánica de vanilla, I6): el arca vieja solo se retira
+     * cuando lo suyo ya está en la nueva. Lo que <b>no quepa</b> se queda donde estaba (y entonces el arca no se
+     * retira), así que no se pierde nada.
+     */
+    private static void traspasarElArca(ServerLevel level, BlockPos origen, BlockPos destino) {
+        if (!(level.getBlockEntity(origen) instanceof Container de)
+                || !(level.getBlockEntity(destino) instanceof Container a)) {
+            return;
+        }
+        for (int i = 0; i < de.getContainerSize(); i++) {
+            ItemStack pila = de.getItem(i);
+            if (pila.isEmpty()) {
+                continue;
+            }
+            de.setItem(i, VillagePantry.guardar(a, pila.copy()));
+        }
+        de.setChanged();
+        a.setChanged();
+    }
+
+    /**
+     * ¿Está <b>vacío</b> ese contenedor? Sirve para poder <b>retirar</b> un cofre sin perder nada (I6): si no es un
+     * contenedor (o no tiene BlockEntity) no hay nada que perder.
+     */
+    private static boolean contenedorVacio(ServerLevel level, BlockPos pos) {
+        if (!(level.getBlockEntity(pos) instanceof Container contenedor)) {
+            return true;
+        }
+        for (int i = 0; i < contenedor.getContainerSize(); i++) {
+            if (!contenedor.getItem(i).isEmpty()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -997,6 +1203,11 @@ public final class VillageGenerator {
      * <b>Alturas</b> (invariante I1): {@code nivel} es <b>la capa que se pisa</b> del pueblo, así que el suelo
      * sólido va en {@code nivel - 1} y las paredes, la puerta y las camas de abajo en {@code nivel}; el forjado del
      * piso de arriba en {@code nivel + 3} y sus camas en {@code nivel + 4}.
+     * <p>
+     * La <b>escalera</b> sube de medio en medio bloque ({@link #BARRACA_ESCALONES}) pegada al muro este, con la cara
+     * alta mirando <b>hacia donde se sube</b> (al norte) y con el <b>hueco del forjado</b> encima de los escalones que
+     * pasan por debajo de él —no en la celda del último, que es del escalón (ver
+     * {@link #arreglarLaEscaleraDeLaBarraca})—.
      * <p>
      * Todo pasa por {@link #colocar}, así que <b>entra en el plano</b> y el obrero la repone como cualquier otra
      * construcción (invariante I8): una barraca construida al margen del plano no se repararía nunca.
@@ -1073,25 +1284,42 @@ public final class VillageGenerator {
         colocar(level, new BlockPos(bx + 2, nivel, bz + r - 2), Blocks.CARTOGRAPHY_TABLE.defaultBlockState(), 3);
         colocar(level, new BlockPos(bx - 2, nivel, bz + r - 2), Blocks.CHEST.defaultBlockState()
                 .setValue(ChestBlock.FACING, Direction.NORTH), 3);
-        // 6) LA ESCALERA al dormitorio, pegada a la pared sur, con el hueco en el forjado.
-        for (int i = 0; i < 4; i++) {
-            BlockPos escalon = new BlockPos(bx + r - 1, nivel + i, bz + r - 1 - i);
+        // 6) LA ESCALERA al dormitorio: BARRACA_ESCALONES escalones de medio bloque (los del juego), pegados al muro
+        //    ESTE y subiendo al NORTE, con la CARA ALTA mirando hacia donde se sube (`FACING` = norte). Con el
+        //    `FACING` al oeste —como estaba— la cara alta quedaba de través y la escalera no se subía. El pie va dos
+        //    celdas al norte del muro sur (con sitio para ENTRAR por su lado bajo) y el último escalón queda EN LA
+        //    CAPA DEL FORJADO con su cara alta a la altura del suelo del dormitorio (se sale andando, sin saltar).
+        for (int k = 0; k < BARRACA_ESCALONES; k++) {
+            BlockPos escalon = new BlockPos(bx + BARRACA_ESCALERA_DX, nivel + k,
+                    bz + BARRACA_ESCALERA_PIE_DZ - k);
             colocar(level, escalon, Blocks.OAK_STAIRS.defaultBlockState()
-                    .setValue(StairBlock.FACING, Direction.WEST).setValue(StairBlock.HALF, Half.BOTTOM), 3);
+                    .setValue(StairBlock.FACING, Direction.NORTH).setValue(StairBlock.HALF, Half.BOTTOM), 3);
             colocar(level, escalon.above(), Blocks.AIR.defaultBlockState(), 3);
-            colocar(level, new BlockPos(bx + r - 1, yPiso2 - 1, bz + r - 1 - i), Blocks.AIR.defaultBlockState(), 3);
         }
-        // 7) EL DORMITORIO (piso de arriba): las camas en dos filas con el pasillo en medio, con su arca y sus
+        // 6b) EL HUECO DEL FORJADO, encima de los escalones que pasan POR DEBAJO de él (los tres primeros): son las
+        //     TRES celdas que necesita el que sube (I26: el juego levanta al jugador 0,6 al ganar un escalón y
+        //     comprueba la caja entera, 1,8 + 0,6 = 2,4). OJO: la celda del ÚLTIMO escalón NO es un hueco —el
+        //     escalón vive en esa misma capa—; abrirla lo BORRABA (era el fallo que reportó el jugador: la escalera
+        //     se quedaba a 1,0 del suelo del dormitorio y "solo se sube saltando").
+        for (int k = 0; k < BARRACA_ESCALONES - 1; k++) {
+            colocar(level, new BlockPos(bx + BARRACA_ESCALERA_DX, yPiso2 - 1, bz + BARRACA_ESCALERA_PIE_DZ - k),
+                    Blocks.AIR.defaultBlockState(), 3);
+        }
+        // 7) EL DORMITORIO (piso de arriba): las camas en dos filas con el pasillo en medio, con sus arcas y sus
         //    faroles. Son las que dan litera a los guardias y las que dejan crecer al pueblo (vanilla pide una cama
-        //    libre por cría).
-        for (int dx = -r + 1; dx <= r - 1; dx += 2) {
+        //    libre por cría). La fila del SUR no lleva cama en la columna de la escalera: ver BARRACA_CAMAS_SUR.
+        for (int dx : BARRACA_CAMAS_NORTE) {
             bed(level, new BlockPos(bx + dx, yPiso2, bz - r + 2), Direction.NORTH);
+        }
+        for (int dx : BARRACA_CAMAS_SUR) {
             bed(level, new BlockPos(bx + dx, yPiso2, bz + r - 2), Direction.SOUTH);
         }
-        colocar(level, new BlockPos(bx - r + 1, yPiso2, bz), Blocks.CHEST.defaultBlockState()
+        // Las DOS arcas, juntas contra el muro oeste (forman un cofre doble): la del muro este estaba en la celda
+        // del último escalón y el que subía se la encontraba de frente (BARRACA_ARCA_DZ).
+        colocar(level, new BlockPos(bx - r + 1, yPiso2, bz + BARRACA_ARCA_DZ), Blocks.CHEST.defaultBlockState()
                 .setValue(ChestBlock.FACING, Direction.EAST), 3);
-        colocar(level, new BlockPos(bx + r - 1, yPiso2, bz), Blocks.CHEST.defaultBlockState()
-                .setValue(ChestBlock.FACING, Direction.WEST), 3);
+        colocar(level, new BlockPos(bx - r + 1, yPiso2, bz + BARRACA_ARCA_DZ + 1), Blocks.CHEST.defaultBlockState()
+                .setValue(ChestBlock.FACING, Direction.EAST), 3);
         for (int dz = -r + 2; dz <= r - 2; dz += 3) {
             // COLGADOS del tejado (que va justo en la celda de arriba, BARRACA_FAROL_DY): un farol POSADO aquí no
             // tiene NADA debajo —el dormitorio está al aire— y quedaba flotando, sin cadena (I14). Medido en el

@@ -567,9 +567,23 @@ public final class VillageManager {
      *       <b>piedra del tejado</b> en su celda (de ahí <b>cuelga</b> el farol del kiosco, I14: dejarla en aire se
      *       lo llevaba por delante). No rehace el kiosco (su testigo es la plataforma, I15) y va antes de tirar el
      *       plano para que el plano nuevo lo capture ya centrado y <b>sin</b> el beacon (I8).</li>
+     *   <li>59: la <b>ESCALERA DEL DORMITORIO DE LA BARRACA</b>, que no se subía (lo reportó el jugador como <i>"las
+     *       escaleras para el 3er piso están bloqueadas"</i>, que era la taberna, y al medir la barraca salió esto).
+     *       Medido en su guardado (aldea 2, barraca en {@code 1369,1436}, cota 120): la escalera tenía <b>tres</b>
+     *       escalones de los cuatro —el <b>4º lo borraba el propio constructor</b>, porque para ese peldaño la celda
+     *       del escalón y la del <b>hueco del forjado</b> eran la misma ({@code yPiso2 - 1 = nivel + 3}), así que el
+     *       último quedaba a <b>1,0</b> del suelo del dormitorio y <b>solo se subía saltando</b>—, el <b>2º</b> llevaba
+     *       una <b>cama</b> justo encima ({@code (1372,124,1438)}: <b>2,0</b> de hueco en vez de 2,4, I26), el
+     *       <b>arca</b> del este estaba en la celda del último escalón y el {@code FACING} iba al <b>oeste</b> subiendo
+     *       al <b>norte</b> (cara alta de través; y con el pie pegado al muro sur <b>no se podía ni entrar</b>). Este
+     *       reparador recoloca la escalera (cuatro escalones de medio bloque, cara alta al norte), abre el hueco del
+     *       forjado <b>solo encima de los escalones que pasan por debajo</b> de él, cierra el tablón que el hueco viejo
+     *       se comía de más, corre <b>una celda al oeste</b> la cama del rincón sureste y pasa el arca del este al lado
+     *       de la del oeste (con lo de dentro: un cofre reemplazado pierde su contenido, I6). Solo toca esas celdas: no
+     *       rehace la barraca (rehacerla tiraría las camas y las arcas).</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 58;
+    public static final int CURRENT_LAYOUT = 59;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -1666,6 +1680,13 @@ public final class VillageManager {
             // sin el beacon (si el beacon siguiera en el plano, el obrero lo repondría). Es idempotente, no rehace el
             // kiosco (su testigo es la plataforma, I15) y solo mueve/quita si el bloque sigue siendo el suyo.
             VillageGenerator.centrarLaCampanaYQuitarElBeacon(level, center);
+            // LA ESCALERA DEL DORMITORIO DE LA BARRACA, QUE SE SUBE (migración 59, medida al mirar la barraca de la
+            // milicia): tenía tres escalones de cuatro (el 4º lo borraba su propio hueco del forjado), una cama
+            // encima del 2º, el arca sobre el último y el FACING de través. Este reparador recoloca la escalera, abre
+            // el hueco que falta, cierra el tablón que sobraba, corre la cama y pasa el arca: solo esas celdas, sin
+            // rehacer la barraca (rehacerla tiraría las camas y las arcas). Idempotente y antes de tirar el plano,
+            // para que el plano nuevo ya traiga la escalera buena (I8).
+            VillageGenerator.arreglarLaEscaleraDeLaBarraca(level, center);
             // REBAÑO ESCAPADO (una sola vez, al migrar): antes de que existiera la marca del rebaño, el ganado que se
             // colaba por el portón se perdía sin remedio y el corral se quedaba vacío (y sin carne). Aquí se reconoce
             // el que anda suelto FUERA de la muralla y cerca del corral; luego, en el latido, vuelve a casa.

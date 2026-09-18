@@ -36,7 +36,9 @@ En cada cambio en `world/Village*` o en los goals de aldeano hay que:
 > anexo y el rebaño que vuelve) tampoco: nació después del lint y se comprueba con la **auditoría del guardado**
 > (`build/portones_todos_nw1.py`: el `FACING` de cada puerta de valla contra la valla que la rodea). **I26** (el
 > hueco de subida al desván se mide con el `maxUpStep` del juego) tampoco: la comprueba `build/taberna_subida.py`
-> contra el guardado, escalón por escalón. **I27** (el agua no se rellena) tampoco: se comprueba contra el guardado
+> contra el guardado, escalón por escalón. **I30** (la escalera de la barraca: por dónde se entra, por dónde se sale
+> y en qué celda va el hueco del forjado) tampoco: la comprueba `build/barraca_subida.py`, que además simula el
+> reparador de la migración 59 celda a celda. **I27** (el agua no se rellena) tampoco: se comprueba contra el guardado
 > con `build/lago_pesquera.py` y `build/lago_repara.py`. **I28** (la campana, en la celda central del kiosco) tampoco:
 > se comprueba con `build/kiosco_dump.py`, que vuelca la huella del kiosco capa a capa.
 
@@ -532,6 +534,60 @@ el log** (`build/lair_simula_cultivador.py` reproduce el rebaño que ve `livesto
 habría cría, con las reglas viejas y las nuevas; `build/lair_historial_sacrificios.py` saca de los logs **cuándo
 sacrificó por última vez cada guarida**).
 
+### I30 · Una escalera se entra por su lado BAJO, y su ÚLTIMO escalón no comparte celda con el hueco del forjado
+*(La otra mitad de I26. I26 dice **cuánto hueco** hace falta encima de cada huella; esta dice **dónde va cada pieza**:
+el hueco, el pie y el tope.)*
+
+El jugador reportó *"las escaleras para el 3er piso están bloqueadas"* (era la taberna, I26) y, al ir a mirar la
+**barraca de la milicia** —el otro edificio con escalera y el que tiene las **8 camas** arriba—, la suya estaba peor.
+
+**Medido en su guardado** (aldea 2, base `1369,1436`, cota `120`: forjado `123`, dormitorio `124`, tejado `127`; con
+`build/barraca_dump.py` y `build/barraca_subida.py`, que aplica la regla del `maxUpStep` de I26 **escalón por
+escalón**):
+
+| Qué | Lo que había |
+|---|---|
+| **Escalones** | **TRES** (`1372,120,1439`, `1372,121,1438`, `1372,122,1437`), los tres con `facing=west` |
+| **El 4º escalón** | **no existía**: el constructor lo ponía en `(1372,123,1436)` y acto seguido abría el **hueco del forjado** en **la misma celda** (`yPiso2 - 1 = nivel + 3`) → quedaba en aire y la escalera **se acababa a 1,0** del suelo del dormitorio (`124 - 123`): **solo se subía saltando** |
+| **El 2º escalón** (`huella y=122`) | una **cama** encima (`1372,124,1438`, los pies del rincón sureste): **2,0** de hueco, y el juego pide **2,4** → **no se subía** (es el mismo umbral que midió I26 entre 2,0 y 3,0) |
+| **El arca del este** | `(1372,124,1436)`, justo **en la celda del último escalón**: el que subía se la encontraba de frente, a la altura de los pies |
+| **El `FACING`** | **al oeste subiendo al norte** (la cara alta tiene que mirar **hacia donde se SUBE**) |
+| **La entrada** | con el pie **pegado al muro sur** y mirando al oeste, la celda por la que hay que entrar al primer escalón caía **dentro de la pared**: a esa escalera **no se podía ni entrar** |
+| **El hueco del forjado** | **cuatro** celdas abiertas (`dx=+3`, `dz=+3,+2,+1,+0`), una de ellas la del escalón |
+
+**Las dos reglas que faltaban** (y que I26 no cubría):
+
+1. **A un escalón se entra por su lado BAJO**, que es el **contrario** a la cara alta que marca el `FACING`: el que
+   sube tiene que poder ponerse en la celda de al lado (suelo firme y las dos celdas de su cuerpo libres) y subir el
+   primer medio bloque (`0,5 ≤ maxUpStep 0,6`). Por eso el **pie** de la escalera va **una celda separado del muro**
+   (no pegado a él) y no se entra de lado: el lado bajo de un escalón mide **0,5** y el cuerpo del jugador **0,6**, así
+   que entrando por el costado la caja **siempre** toca la parte alta (`1,0`) y no sube.
+2. **La celda del ÚLTIMO escalón no puede ser la del hueco del forjado.** El hueco va **en la capa del forjado**
+   (`yPiso2 - 1`), encima de los escalones que pasan **por debajo** de él; el último escalón **vive** en esa capa, así
+   que su celda es suya. Y como el hueco son **tres celdas enteras** por escalón (I26), el hueco son
+   `ESCALONES - 1` celdas —no cuatro— y el constructor y el reparador usan **la misma lista de celdas** para la
+   escalera y para su hueco (I4/I16: no se pueden quedar desparejados).
+
+**Regla (migración 59):** la escalera de la barraca son **`BARRACA_ESCALONES` = 4** escalones de medio bloque (uno por
+bloque que sube el piso, `BARRACA_PISO2`) en la columna del muro este, subiendo **al norte** (`FACING` = norte) con el
+pie **dos** celdas al norte del muro sur, y con la **cara alta del último** a la altura del **suelo del dormitorio**
+(`124`), así que del último escalón **se sale andando**. El **hueco** se abre en las `ESCALONES - 1` celdas del
+forjado encima de los escalones que van por debajo. La **cama** que estaba encima del hueco se **recoloca** una celda
+al oeste (es un **POI**: el pueblo no puede perder ninguna, vanilla pide una **cama libre** por cría, y siguen siendo
+**8**), y el **arca** del este pasa al lado de la del oeste **con todo lo de dentro** (reemplazar un cofre tira su
+contenido, I6). El reparador es **idempotente**, **no rehace la barraca** (rehacerla tiraría las camas y las arcas) y
+va **antes** de tirar el plano, para que el plano nuevo traiga la escalera buena (I8).
+
+**Comprobado** con `build/barraca_subida.py` sobre su guardado, **aldea por aldea** (0, 1 y 2 tienen barraca): antes
+—la entrada no vale, el 2º escalón no se sube y no se sale andando— y después —se entra andando (`0,5`), **los cuatro**
+escalones se suben (6, 5, 4 y **3** celdas libres sobre su huella) y se sale andando (desnivel **0,00**)—, con las
+**8** camas en pie. La aldea **1 está caída**: su barraca tiene el mismo fallo medido, pero la migración **no corre**
+en una aldea caída (como ninguna otra).
+
+**No tiene regla en el lint** (es geometría de celdas, no un patrón de texto): se comprueba contra el guardado con
+`build/barraca_subida.py` (`python build\barraca_subida.py todas`), que simula la entrada, cada escalón, la salida y
+el paso del reparador **celda a celda**.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
@@ -566,6 +622,8 @@ Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento 
 | `python tools/lint_aldea.py --strict` | Vigila I1-I12 en el código. Puerta antes de commitear. |
 | `build/inventario.py` | Inventario de estructuras de una aldea en el guardado (qué edificios hay y dónde). |
 | `build/taberna_subida.py` | **¿Se sube la escalera del desván?**: aplica la regla del `maxUpStep` del juego (I26) a cada escalón, contra el guardado, sin jugar; y compara la regla vieja (2 celdas) con la nueva (3). |
+| `build/barraca_subida.py` | **¿Se sube la escalera de la barraca?** (I30, la otra mitad de I26): aplica la regla del `maxUpStep` a cada escalón **y** comprueba la **entrada** (el lado bajo), la **salida** (a la altura del suelo del dormitorio) y las **8 camas**, antes y después de simular el reparador de la migración 59 **celda a celda**. `todas` = aldeas 0, 1 y 2 de una pasada. |
+| `build/barraca_dump.py` | **La barraca entera, capa a capa**: cuenta escalones (con su Y y su `facing`), camas, mobiliario, el forjado (huecos) y la vertical de cada escalón. |
 | `build/huertadiag.py`, `build/huerta_simula.py` | **Bancales**: qué dice el plano y qué hay en el mundo celda por celda (qué calvas faltan en el plano) y qué celdas repondría el obrero / labraría el granjero (I25). |
 | `build/granjaestado.py`, `build/farmdiag.py`, `build/columnas.py`, `build/perfilcol.py` | Estado de la granja (cultivos, edades, cotas) y columnas crudas. |
 | `build/items.py`, `build/contenedores.py` | Objetos en el suelo por tipo y contenido de cofres/despensa/almacén. |

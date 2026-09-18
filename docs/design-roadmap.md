@@ -1762,6 +1762,70 @@ repondría en cuanto alguien tocara ese hueco). En el guardado del jugador son *
 partida (el cliente estaba cerrado y esto **no toca el guardado**: lo arregla la migración al cargar). Lo comprobado es
 el antes **contra su guardado**, celda a celda, y que el código nuevo pasa el lint y la auditoría (aldea 2: 0).
 
+### 3b.43 La escalera de la barraca, que no se subía (migración 59)
+
+El jugador reportó *"las escaleras para el 3er piso están bloqueadas"* (era la taberna: migración 56, I26). Al ir a
+mirar **el otro edificio con escalera** —la **barraca de la milicia**, la que tiene las **8 camas** del dormitorio
+arriba— resultó estar **peor**, y por tres motivos distintos a la vez.
+
+**Lo que había HOY en su barraca** (aldea 2, base `1369,1436`, cota `120`: forjado `123`, dormitorio `124`, tejado
+`127`; medido con `build/barraca_dump.py`, que vuelca la barraca entera capa a capa):
+
+| Qué | Celda | Estado |
+|---|---|---|
+| **Escalones** | `1372,120,1439` · `1372,121,1438` · `1372,122,1437` | **TRES** (de cuatro), los tres `oak_stairs[facing=west, half=bottom]` |
+| **El 4º escalón** | `1372,123,1436` | **aire**: el constructor lo colocaba y **acto seguido** abría ahí el **hueco del forjado** (la celda del escalón y la del hueco eran **la misma**: `yPiso2 - 1 = nivel + 3`) → la escalera se acababa a **1,0** del suelo del dormitorio (`124 - 123`) |
+| **El 2º escalón** (huella `y=122`) | cama en `1372,124,1438` | **2,0** de hueco: el juego pide **2,4** (I26) → **no se sube**; son los **pies de la cama del rincón sureste** |
+| **El arca del este** | `1372,124,1436` | en la celda **del último escalón**: el que subía se la encontraba **de frente**, a la altura de los pies |
+| **Los huecos del forjado** | `dx=+3`, `dz=+3,+2,+1,+0` | **cuatro**, una de ellas la del escalón |
+| **El `FACING`** | — | **oeste** subiendo al **norte** (la cara alta tiene que mirar **hacia donde se sube**) |
+| **La entrada** | `1372,120,1440` | el pie estaba **pegado al muro sur** y mirando al oeste: la celda por la que hay que entrar al primer escalón caía **dentro de la pared** → a la escalera **no se podía ni entrar** |
+
+**Lo que faltaba era una segunda regla, y no es de altura** (I26 dice *cuánto* hueco hace falta; esto dice *dónde va
+cada pieza*):
+
+1. **A un escalón se entra por su lado BAJO**, el **contrario** a la cara alta que marca el `FACING`. El que sube
+   necesita poder ponerse en la celda de al lado (suelo firme y las dos celdas de su cuerpo libres) y subir el primer
+   medio bloque (`0,5 ≤ maxUpStep 0,6`). El lado bajo de un escalón mide **0,5** y el cuerpo del jugador **0,6**: por
+   eso **no se puede entrar de lado** (la caja siempre toca la parte alta, de `1,0`, y no sube) y por eso el **pie** va
+   **una celda separado del muro**, no pegado a él.
+2. **La celda del ÚLTIMO escalón no puede ser la del hueco del forjado.** El hueco va **en la capa del forjado**,
+   encima de los escalones que pasan **por debajo** de él (los `ESCALONES - 1` primeros, que son las tres celdas de
+   I26); el último escalón **vive** en esa capa, así que su celda es suya. Y la **cara alta del último** queda a la
+   **altura del suelo del dormitorio**: de ahí **se sale andando**, sin saltar.
+
+**El arreglo** (`VillageGenerator`: constantes `BARRACA_ESCALERA_*`/`BARRACA_CAMAS_*` y `barraca(...)`): la escalera
+son **cuatro** escalones de medio bloque (uno por bloque que sube el piso) pegados al muro **este**, subiendo **al
+norte** (`FACING` = norte) y con el pie **dos** celdas al norte del muro sur (sitio para entrar). El **hueco** son las
+**tres** celdas del forjado encima de los escalones que van por debajo, y la **cama** del rincón sureste se corre
+**una celda al oeste** —su celda de los pies era justo la del hueco—: sigue habiendo **8 camas** (en vanilla cada cría
+pide una cama libre y la cama es un **POI**). El **arca del este** se pasa al lado de la del oeste (cofre doble):
+estaba sobre el último escalón.
+
+**La migración 59** (`VillageGenerator.arreglarLaEscaleraDeLaBarraca`, llamada desde `VillageManager` **antes** de
+tirar el plano) hace lo mismo en las barracas ya construidas, **celda por celda y sin rehacer la barraca** (rehacerla
+tiraría las camas y lo de dentro de las arcas). Es **idempotente** y **no toca lo que puso el jugador**: para quitar,
+solo el bloque esperado (`quitarSiEs`); para poner, solo en celda vacía (`colocarSiEstaVacio`). En su guardado son
+**14 celdas**: 3 escalones viejos fuera, 4 escalones nuevos, 3 huecos (ya estaban) + el tablón que sobraba repuesto, la
+cama vieja fuera y la nueva puesta, el arca vieja fuera y la nueva puesta (`1366,124,1437`, junto a la del oeste).
+**Lo de dentro del arca no se pierde**: se pasa a la nueva y, si no hubiera dónde (el jugador ocupó la celda), al
+**almacén del pueblo** —nunca al suelo—; la vieja solo se retira cuando está vacía (I6).
+
+**Comprobado con `build/barraca_subida.py`** (la regla real del `maxUpStep` de `Entity.collide`, escalón por escalón,
+**antes y después** de simular el reparador celda a celda) sobre las **tres** aldeas del guardado que tienen barraca
+(0, 1 y 2):
+
+| | Entrada | Escalones | Salida | Camas |
+|---|---|---|---|---|
+| **Antes** | **no** (la celda de entrada es la pared) | el **2º** no se sube (2,0 de hueco) y el 4º **no existe** | **no** (1,0 de desnivel) | 8 |
+| **Después** | **sí** (0,5) | **los 4** (6, 5, 4 y **3** celdas libres sobre su huella) | **sí** (desnivel **0,00**, saliendo al oeste) | **8** |
+
+**Lo que NO se ha podido comprobar (sin jugar)**: subirla **en el juego** (que el jugador entre andando por el lado
+bajo y salga al dormitorio, y que los **guardias** la usen para ir a dormir: los aldeanos suben escalones igual que
+el jugador, pero no se ha visto) ni la migración corriendo sobre la partida (el cliente estaba cerrado y esto **no
+toca el guardado**: lo arregla la migración al cargar). La aldea **1 está caída** y la migración no corre en una
+aldea caída (como ninguna otra migración): su barraca tiene el mismo fallo medido y se quedará como está.
+
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.
