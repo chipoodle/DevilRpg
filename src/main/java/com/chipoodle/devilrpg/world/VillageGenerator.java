@@ -368,7 +368,8 @@ public final class VillageGenerator {
             List<Long> posiciones = new ArrayList<>();
             List<Integer> estados = new ArrayList<>();
             for (Map.Entry<Long, BlockState> entrada : bloques.entrySet()) {
-                BlockState state = entrada.getValue();
+                // El estado BUENO (ver `estadoDelPlano`): una puerta de valla entra en el plano siempre cerrada.
+                BlockState state = estadoDelPlano(entrada.getValue());
                 if (seDescarta(state)) {
                     continue;
                 }
@@ -2044,8 +2045,6 @@ public final class VillageGenerator {
 
     /** Marca (datos persistentes) que dice que ese animal es <b>del corral de la aldea</b> y viaja con él. */
     private static final String REBANO_TAG = "DevilRpgDelCorral";
-    /** A qué distancia del corral se considera que un animal del rebaño se ha <b>perdido</b> (el corral tiene radio 7). */
-    private static final double REBANO_PERDIDO = ANEXO_RADIO + 17;
     /**
      * Radio (desde el corral) en el que se <b>reconoce</b> al ganado del pueblo en una partida vieja. Es ancho a
      * propósito: medido en el guardado del jugador, el rebaño escapado se había ido a <b>80-87 bloques</b> del corral
@@ -2054,16 +2053,57 @@ public final class VillageGenerator {
      */
     private static final double REBANO_ADOPCION = ANEXO_RADIO + 89;
 
+    /** ¿Ese animal lleva la <b>marca del pueblo</b>? (solo a ésos se les manda de vuelta al corral). */
+    public static boolean esDelRebano(net.minecraft.world.entity.animal.Animal animal) {
+        return animal.getPersistentData().getBoolean(REBANO_TAG);
+    }
+
+    /**
+     * ¿Ese animal está <b>dentro del corral</b>? Es el <b>rectángulo de la valla</b> (el mismo que mira la guardia),
+     * no un radio.
+     * <p>
+     * Y no es un detalle: el "ya está en casa" era un <b>radio de 26 bloques</b> desde el centro del corral (el
+     * corral tiene 9), así que un animal que se salía por el portón y se quedaba pastando <b>al lado de la valla</b>
+     * contaba como "dentro" y no volvía <b>nunca</b>. Medido en el guardado del jugador (aldea 2): la vaca del pueblo
+     * a <b>12,1</b> bloques del corral y la oveja a <b>13,5</b>, las dos fuera de la valla y con el portón abierto.
+     * Todo lo que esté fuera de la valla es "perdido".
+     */
+    public static boolean enElCorral(BlockPos center, net.minecraft.world.entity.Entity animal) {
+        return estaEnElAnexo(center, animal.blockPosition());
+    }
+
+    /**
+     * La caja donde se busca al <b>ganado del pueblo perdido</b>: el <b>recinto entero de la aldea</b> (su radio, con
+     * un margen) <b>y</b> el radio de reconocimiento alrededor del corral (el rebaño se iba a 80-130 bloques, fuera de
+     * la muralla). Antes era solo la caja del corral (±98 de su base), así que un animal marcado que se hubiera ido al
+     * <b>otro extremo</b> del pueblo (a 112 de la base del corral) no se veía nunca.
+     * <p>
+     * La Y se mide desde la <b>cota</b> (invariante I1), no desde la Y del centro, y con la banda de siempre (±24): no
+     * se trae a casa a un bicho de una cueva, pero sí a uno que esté en el tejado de al lado.
+     */
+    private static AABB cajaDelGanadoPerdido(BlockPos center, int nivel) {
+        BlockPos base = baseDeAnexo(center);
+        double radio = LEVEL_RADIUS + 8;
+        double x0 = Math.min(center.getX() - radio, base.getX() - REBANO_ADOPCION);
+        double x1 = Math.max(center.getX() + radio, base.getX() + REBANO_ADOPCION);
+        double z0 = Math.min(center.getZ() - radio, base.getZ() - REBANO_ADOPCION);
+        double z1 = Math.max(center.getZ() + radio, base.getZ() + REBANO_ADOPCION);
+        return new AABB(x0, nivel - 24.0D, z0, x1, nivel + 24.0D, z1);
+    }
+
     /**
      * <b>Reconoce</b> (una sola vez, al migrar) al ganado del pueblo que se había escapado antes de que existiera la
      * marca. Solo mira animales que:
      * <ul>
      *   <li>son de las especies del corral,</li>
      *   <li>son <b>persistentes</b> (el juego solo los marca así cuando alguien los ha criado o tocado: un bicho
-     *       salvaje no lo es, y los del pueblo sí, que se sueltan con la marca puesta), y</li>
+     *       salvaje no lo es, y los del pueblo sí, que se sueltan con la marca puesta),</li>
+     *   <li>no van montados ni atados con una cuerda (ésos son de alguien: el jugador), y</li>
      *   <li>están <b>fuera de la muralla</b> y a menos de {@link #REBANO_ADOPCION} del corral.</li>
      * </ul>
-     * Lo de dentro de la muralla no se toca jamás: si el jugador tiene allí su corral, son suyos.
+     * Lo de dentro de la muralla no se toca jamás: si el jugador tiene allí su corral, son suyos. (Un animal del
+     * pueblo que se cuele <b>dentro</b> de la muralla ya lleva la marca, así que no depende de esto para volver: ver
+     * {@link #ganadoPerdidoDelPueblo}.)
      */
     public static int adoptarGanadoPerdido(ServerLevel level, BlockPos center) {
         int nivel = cotaDeLaPlaza(level, center);
@@ -2076,8 +2116,9 @@ public final class VillageGenerator {
         for (net.minecraft.world.entity.animal.Animal animal
                 : level.getEntitiesOfClass(net.minecraft.world.entity.animal.Animal.class, caja)) {
             if (!ANEXO_ESPECIES.contains(animal.getType())
-                    || animal.getPersistentData().getBoolean(REBANO_TAG)
-                    || !animal.isPersistenceRequired()) {
+                    || esDelRebano(animal)
+                    || !animal.isPersistenceRequired()
+                    || animal.isPassenger() || animal.isVehicle() || animal.isLeashed()) {
                 continue;
             }
             double alCorral = distanciaEnXZ(animal, base.getX() + 0.5D, base.getZ() + 0.5D);
@@ -2107,7 +2148,9 @@ public final class VillageGenerator {
     }
 
     /**
-     * <b>Marca el rebaño y recoge a los que se han perdido.</b>
+     * <b>Marca el rebaño y devuelve los que se han perdido.</b> Los devueltos son los que tienen que <b>volver a
+     * casa</b>: el que llama (el latido) les pone el goal de volver andando ({@code VuelveAlCorralGoal}), y solo si
+     * no encuentran el camino se los mete a mano (último recurso).
      * <p>
      * Hace falta porque el ganado se escapa por el <b>portón</b> cuando el pueblo se lo abre: medido en el guardado del
      * jugador, su corral tenía <b>1 vaca</b> dentro y <b>8 vacas, 6 ovejas, 6 gallinas y 2 puercos</b> repartidos a
@@ -2115,48 +2158,42 @@ public final class VillageGenerator {
      * ni sacrificar, y la granja entera se queda muerta.
      * <p>
      * Los que están <b>dentro</b> del corral se marcan (el rebaño inicial y sus crías ya son del pueblo); los que
-     * andan sueltos y lleven la marca <b>vuelven</b> al corral. Los que anden sueltos <b>sin</b> marca no se tocan:
-     * podrían ser del jugador. Es lo que hace un pastor de verdad: traer de vuelta a la res que se le fue.
+     * andan fuera y lleven la marca se devuelven. Los que anden sueltos <b>sin</b> marca no se tocan: podrían ser del
+     * jugador (ni los marcados que van <b>montados</b> o <b>atados con una cuerda</b>: ésos son de alguien). Es lo que
+     * hace un pastor de verdad: traer de vuelta a la res que se le fue.
      */
-    public static int recogerGanadoPerdido(ServerLevel level, BlockPos center) {
+    public static List<net.minecraft.world.entity.animal.Animal> ganadoPerdidoDelPueblo(ServerLevel level,
+                                                                                       BlockPos center) {
         int nivel = cotaDeLaPlaza(level, center);
+        List<net.minecraft.world.entity.animal.Animal> perdidos = new ArrayList<>();
         if (nivel <= level.getMinBuildHeight() + 1 || !anexoConstruido(level, center)) {
-            return 0;
+            return perdidos; // sin cota o sin corral no hay rebaño que recoger
         }
-        BlockPos base = baseDeAnexo(center);
-        // La caja de búsqueda cubre TODO el radio en el que se reconoce al ganado del pueblo (REBANO_ADOPCION), no
-        // solo REBANO_PERDIDO + 24: medido en el guardado del jugador, había ovejas y gallinas del rebaño (con su
-        // marca) a 51-57 bloques del corral, FUERA de la caja vieja, así que no volvían nunca.
-        AABB caja = new AABB(base).inflate(REBANO_ADOPCION, 24.0D, REBANO_ADOPCION);
-        int devueltos = 0;
-        for (net.minecraft.world.entity.animal.Animal animal
-                : level.getEntitiesOfClass(net.minecraft.world.entity.animal.Animal.class, caja)) {
-            if (!ANEXO_ESPECIES.contains(animal.getType())) {
-                continue;
+        for (net.minecraft.world.entity.animal.Animal animal : level.getEntitiesOfClass(
+                net.minecraft.world.entity.animal.Animal.class, cajaDelGanadoPerdido(center, nivel))) {
+            if (!ANEXO_ESPECIES.contains(animal.getType()) || animal.isPassenger() || animal.isVehicle()
+                    || animal.isLeashed()) {
+                continue; // no es del corral, o va montado/atado: no se toca
             }
-            double distancia = distanciaEnXZ(animal, base.getX() + 0.5D, base.getZ() + 0.5D);
-            if (distancia <= REBANO_PERDIDO) {
+            if (enElCorral(center, animal)) {
                 animal.getPersistentData().putBoolean(REBANO_TAG, true); // está en el corral: es del pueblo
                 continue;
             }
-            if (!animal.getPersistentData().getBoolean(REBANO_TAG)) {
+            if (!esDelRebano(animal)) {
                 continue; // suelto y sin marca: no es nuestro
             }
-            BlockPos dentro = destinoDelAnimal(level, center, nivel, animal, devueltos);
-            animal.moveTo(dentro.getX() + 0.5D, dentro.getY(), dentro.getZ() + 0.5D, animal.getYRot(), 0.0F);
-            animal.setDeltaMovement(0.0D, 0.0D, 0.0D);
-            devueltos++;
+            perdidos.add(animal);
         }
-        if (devueltos > 0) {
-            DevilRpg.LOGGER.info("[Village] Aldea en {}: {} animal(es) del corral que se habian perdido, de vuelta",
-                    center, devueltos);
-        }
-        return devueltos;
+        return perdidos;
     }
 
-    /** Dónde se deja a un animal que vuelve: las gallinas a su gallinero y el resto a un hueco libre del corral. */
-    private static BlockPos destinoDelAnimal(ServerLevel level, BlockPos center, int nivel,
-                                             net.minecraft.world.entity.animal.Animal animal, int indice) {
+    /**
+     * Dónde se deja a un animal que vuelve <b>a la fuerza</b> (último recurso, cuando no encuentra el camino): las
+     * gallinas a su gallinero y el resto a un hueco libre del corral (nunca en el bebedero ni en el gallinero de las
+     * gallinas).
+     */
+    public static BlockPos destinoDelAnimal(ServerLevel level, BlockPos center, int nivel,
+                                            net.minecraft.world.entity.animal.Animal animal, int indice) {
         if (animal instanceof net.minecraft.world.entity.animal.Chicken) {
             BlockPos gallinero = centroDelGallinero(center, nivel);
             return new BlockPos(gallinero.getX() + indice % 4, gallinero.getY(), gallinero.getZ() + indice % 2);
@@ -2201,7 +2238,7 @@ public final class VillageGenerator {
             // jugador está lejos). Se quedan donde viven.
             animal.setPersistenceRequired();
             // Y MARCADOS como del rebaño del pueblo: es lo que permite reconocerlos si se escapan por el portón y
-            // traerlos de vuelta sin tocar a los animales sueltos del jugador (ver {@link #recogerGanadoPerdido}).
+            // traerlos de vuelta sin tocar a los animales sueltos del jugador (ver {@link #ganadoPerdidoDelPueblo}).
             animal.getPersistentData().putBoolean(REBANO_TAG, true);
             level.addFreshEntity(animal);
         }
@@ -4643,7 +4680,7 @@ public final class VillageGenerator {
                 // composteros y el tronco de abajo del muro) y se sube hasta cubrir la torre de la iglesia.
                 for (int y = nivel - 2; y <= nivel + ALTURA_MAXIMA_DEL_PLANO; y++) {
                     BlockPos pos = new BlockPos(x, y, z);
-                    BlockState state = level.getBlockState(pos);
+                    BlockState state = estadoDelPlano(level.getBlockState(pos));
                     if (seDescartaDelPlano(state)) {
                         continue;
                     }
@@ -4665,6 +4702,24 @@ public final class VillageGenerator {
             estadosArray[i] = estados.get(i);
         }
         return new VillageSavedData.Blueprint(palette, posicionesArray, estadosArray);
+    }
+
+    /**
+     * Un bloque del plano <b>tal y como tiene que quedar</b>. Hoy solo cambia una cosa: en una <b>puerta de valla</b>
+     * el estado abierto/cerrado es <b>transitorio</b> (la abre el pueblo para pasar y la vuelve a cerrar), así que el
+     * plano la guarda y el obrero la repone <b>siempre cerrada</b>.
+     * <p>
+     * Hace falta de verdad, y está medido: el plano de la aldea 2 del jugador guardaba el portón del corral
+     * <b>abierto</b> ({@code open:true}, capturado mientras el fallo lo dejaba así), de modo que cada vez que un asedio
+     * se llevaba el portón el obrero lo <b>reconstruía abierto</b> y el rebaño se volvía a salir. Se aplica también al
+     * <b>leer</b> el plano (ver {@code VillageManager.blueprintState}), así que las aldeas ya guardadas se arreglan
+     * sin migración.
+     */
+    public static BlockState estadoDelPlano(BlockState state) {
+        if (state.getBlock() instanceof FenceGateBlock && state.getValue(FenceGateBlock.OPEN)) {
+            return state.setValue(FenceGateBlock.OPEN, false);
+        }
+        return state;
     }
 
     /**

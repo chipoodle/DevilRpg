@@ -32,7 +32,9 @@ En cada cambio en `world/Village*` o en los goals de aldeano hay que:
 > | I11 | contar bichos "dentro de la aldea" sin la **altura** | I12 |
 > | I12 | farol **colgado del aire** (Y del farol en vez del apoyo) | I14 |
 >
-> I8, I9 y I10 de esta sección (abajo) **no tienen regla en el lint**: se vigilan a mano.
+> I8, I9 y I10 de esta sección (abajo) **no tienen regla en el lint**: se vigilan a mano. **I22** (los portones del
+> anexo y el rebaño que vuelve) tampoco: nació después del lint y se comprueba con la **auditoría del guardado**
+> (`build/portones_todos_nw1.py`: el `FACING` de cada puerta de valla contra la valla que la rodea).
 
 ### I1 · Toda altura se mide con `cotaDeLaPlaza`, nunca con la Y del centro
 El centro de una aldea viaja por todo el sistema (`ObjectiveTargets.targetOf`, `centroDe`) y **su Y no es la del
@@ -264,6 +266,39 @@ puede bajar), nunca se pierde. La geometría vive en las constantes `DESVAN_ESCA
 **Cuidado con el tope:** no puede ir en la fila del alero (`dz=13`, un solo bloque libre: el que sale se golpea con el
 tejado) ni meterse en la **caja de la escalera** (`dx=3`, `dz 8..11`) ni en el **pozo** (`dx 1..2`, `dz 8..11`): la L
 pasa **por encima** del muro del pozo y deja el pozo **tapado** (nadie se cae al comedor).
+
+### I22 · Un portón del anexo NO se queda abierto (y el rebaño vuelve ANDANDO)
+El jugador: *"cuando el ganadero entra al corral, deja la puerta abierta y los animales se salen; dale la capacidad
+para meterlos de vuelta"*. Medido en su guardado (`New World (1)`, aldea 2, corral a `(1464,1414)`): el **portón del
+corral estaba abierto** (`open:true`, sin redstone) y el pueblo tenía **3 animales marcados fuera de la valla** (la
+vaca a **12,1** bloques de la base del corral, la oveja a **13,5** —las dos **dentro** de la muralla— y un puerco a
+**24,0**). Cuatro causas, las cuatro arregladas:
+- **El portón se abría por estar cerca, no por cruzar.** El cierre era "a más de 3 bloques", pero el puesto del
+  ganadero (`.puntoDeApoyoAnexo`) está a **3,0** clavados del portón: la condición `distancia > 3.0` no se cumplía
+  **nunca** y el portón se quedaba abierto toda la faena.
+- **"Ya está en casa" era un radio de 26.** El corral tiene 9: el animal que se salía y se quedaba pastando al lado de
+  la valla contaba como dentro y **no volvía**.
+- **Un portón abierto sobrevive al guardado.** La lista de "portones que abrió el pueblo" vive en memoria, así que tras
+  cargar la partida **nadie** lo cerraba (y el portón guardado estaba abierto, justo el caso real).
+- **Y el PLANO lo guardaba abierto.** El plano guarda el `BlockState` entero: el de la aldea 2 tenía el portón del
+  corral con `open:true` (capturado mientras el fallo lo dejaba así), así que cada vez que un asedio se llevaba el
+  portón el **obrero lo reconstruía abierto**.
+
+**Regla:** (a) el portón **solo se abre si el aldeano va a cruzar** (su destino del cerebro, `WALK_TARGET`, está al
+otro lado del plano) y **se cierra en cuanto el lado cambia** —se apunta de qué lado estaba al abrirlo—, con un tope
+de **5 s** por si no lo cruza; el eje de cruce es el del `FACING` de la puerta (la valla va perpendicular: comprobado
+en su guardado, el del corral mira al oeste y se cruza en X, el del gallinero al sur y se cruza en Z, y los 12 de los
+bancales también). (b) El **latido** cierra cualquier portón del anexo que lleve abierto **más de 5 s sin ningún
+jugador a 7 bloques** (mira solo esas dos casillas: es idempotente y barato) — eso es lo que tapa el agujero del
+guardado y el caso de que no quede ningún aldeano con el portón a la vista. (c) El rebaño **vuelve andando**
+(`VuelveAlCorralGoal`, prioridad 4: por debajo de huir/criar/comida y por encima de pasear): va al portón **por
+fuera** con la puerta cerrada, se le abre al llegar y se le cierra detrás; **solo** si se atasca se le mete a mano.
+(d) "Dentro del corral" es el **rectángulo de la valla** (`enElCorral`), no un radio, y la búsqueda cubre el **recinto
+entero** más el radio de reconocimiento del corral. (e) El **plano** guarda y el obrero repone una puerta de valla
+**siempre cerrada** (`VillageGenerator.estadoDelPlano`, aplicado al capturar **y** al leer el plano, así que las aldeas
+ya guardadas se arreglan **sin migración**: el estado abierto/cerrado de un portón es transitorio, no "lo que la aldea
+debe ser"). Los animales **del jugador** (sin la marca `DevilRpgDelCorral`) y los que van **montados o atados** no se
+tocan.
 
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:

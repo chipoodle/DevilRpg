@@ -1416,6 +1416,36 @@ public final class VillageManager {
     }
 
     /**
+     * <b>El rebaño del pueblo que se ha escapado vuelve a casa</b> (lo pidió el jugador: "cuando el ganadero entra al
+     * corral, deja la puerta abierta y los animales se salen; dale la capacidad para meterlos de vuelta").
+     * <p>
+     * Antes esto era un <b>teleport</b> directo al corral y solo miraba a los que estaban a más de 26 bloques del
+     * centro del corral: un animal que se salía por el portón y se quedaba pastando al lado de la valla contaba como
+     * "dentro" y no volvía nunca (medido en el guardado del jugador, aldea 2: la vaca del pueblo a 12,1 bloques del
+     * corral y la oveja a 13,5). Ahora:
+     * <ul>
+     *   <li>se <b>andan</b> el camino (goal {@code VuelveAlCorralGoal}: va al portón por fuera, se le abre cuando
+     *       llega y entra; se le cierra detrás), que es como tiene que verse un rebaño, y</li>
+     *   <li>solo si el animal <b>no encuentra el camino</b> (atascado) se le mete a mano: último recurso.</li>
+     * </ul>
+     * Los animales del <b>jugador</b> no se tocan (no llevan la marca del pueblo), ni los que van montados o atados
+     * con una cuerda. Es idempotente: al animal que ya lleva el goal no se le pone otro.
+     */
+    private static void traerElRebanoALaCasa(ServerLevel level, BlockPos center, int objectiveIndex) {
+        int mandados = 0;
+        for (net.minecraft.world.entity.animal.Animal animal
+                : VillageGenerator.ganadoPerdidoDelPueblo(level, center)) {
+            if (com.chipoodle.devilrpg.entity.goal.VuelveAlCorralGoal.asegurar(animal, center)) {
+                mandados++;
+            }
+        }
+        if (mandados > 0) {
+            DevilRpg.LOGGER.info("[Village] Aldea {}: {} animal(es) del rebano vuelven al corral andando",
+                    objectiveIndex, mandados);
+        }
+    }
+
+    /**
      * Deja la aldea lista para repararse <b>sola y de verdad</b>: captura el <b>plano</b> la primera vez (qué
      * bloque debería haber en cada sitio) y nombra un <b>obrero</b> si no lo hay. Al de partidas viejas se le
      * pone antes la granja, para que el plano la incluya.
@@ -1589,13 +1619,21 @@ public final class VillageManager {
         // PESQUERA (etapa G): el lago del pescador, su caseta y su barril. Idempotente (vale el agua del lago o el
         // barril como testigo): si el jugador se lleva media pesquera, el pueblo la vuelve a levantar.
         VillageGenerator.asegurarPesquera(level, center);
+        // PORTONES DEL ANEXO, RED DE SEGURIDAD: si un portón del corral o del gallinero se queda abierto, el rebaño
+        // se sale (lo reportó el jugador: "cuando el ganadero entra al corral, deja la puerta abierta y los animales
+        // se salen"). El goal de los portones ya los cierra en cuanto el aldeano pasa, pero puede no haber ningún
+        // aldeano con el portón a la vista (se fue, murió, o el chunk se descargó) e incluso quedarse abierto en el
+        // guardado: medido en el suyo, el portón del corral de la aldea 2 estaba abierto (`open:true`) con la vaca y
+        // la oveja del pueblo fuera. Esto mira SOLO esas dos casillas: dos bloques por latido, idempotente.
+        com.chipoodle.devilrpg.entity.goal.VillagerGateGoal.vigilarPortonesDelAnexo(level, center);
         // REBAÑO: el corral se llena UNA vez (al construirlo o al migrar). Después se mantiene solo, con DOS reglas:
         //   1) RECOGER AL QUE SE ESCAPA. El corral solo tiene el portón, y el pueblo lo abre para pasar (el juego no
         //      deja que un aldeano abra una puerta de valla, de ahí `VillagerGateGoal`): con las horas, el ganado se
         //      cuela por el hueco y se pierde. Medido en el guardado del jugador: quedaba UNA vaca dentro y 8 vacas,
         //      6 ovejas, 6 gallinas y 2 puercos sueltos a 76-83 bloques del pueblo. Y un corral vacío NO DA CARNE: el
         //      ganadero no ve animales, no cría ni sacrifica, y la granja entera se muere. Los del rebaño (marcados)
-        //      vuelven a casa; los animales sueltos SIN marca no se tocan (pueden ser del jugador).
+        //      vuelven a casa ANDANDO, y solo si no encuentran el camino se los mete a mano (último recurso); los
+        //      animales sueltos SIN marca no se tocan (pueden ser del jugador), ni los que van montados o atados.
         //   2) REPONER LA PAREJA. Si a una especie le quedan menos de dos adultos ya no puede criar NUNCA (ni carne de
         //      vaca, ni lana, ni huevos): el pueblo le trae la pareja. Lo pidió el jugador.
         // Las dos van con la espera larga de 3 días de juego, para que esto no sea un grifo de carne gratis.
@@ -1603,7 +1641,7 @@ public final class VillageManager {
         // Midiendo la espera desde 0, en un mundo con menos de 3 días de juego (gameTime < 72000) el corral se
         // quedaba VACÍO PARA SIEMPRE: medido en el guardado del jugador, el anexo se construyó con el reloj del
         // mundo en 24200 (un mundo joven) y no soltó ni un animal.
-        VillageGenerator.recogerGanadoPerdido(level, center);
+        traerElRebanoALaCasa(level, center, objectiveIndex);
         long marcaRebano = saved.getAnexoAnimales(objectiveIndex);
         if (marcaRebano == 0L
                 || level.getGameTime() - marcaRebano >= VillageGenerator.ANEXO_REBANO_ESPERA_TICKS) {
@@ -2633,7 +2671,8 @@ public final class VillageManager {
             if (dist >= mejorDist) {
                 continue;
             }
-            if (!necesitaReparacion(level.getBlockState(pos), plano.stateAt(i))) {
+            // Se compara contra el estado BUENO (el plano pasado por `estadoDelPlano`: el portón, siempre cerrado).
+            if (!necesitaReparacion(level.getBlockState(pos), VillageGenerator.estadoDelPlano(plano.stateAt(i)))) {
                 continue;
             }
             mejorDist = dist;
@@ -2711,7 +2750,14 @@ public final class VillageManager {
                 && level.getGameTime() - reclamo.tick() < CLAIM_TIMEOUT_TICKS;
     }
 
-    /** El bloque que debería haber en esa posición según el plano de la aldea ({@code null} si no está en él). */
+    /**
+     * El bloque que debería haber en esa posición según el plano de la aldea ({@code null} si no está en él).
+     * <p>
+     * Se pasa por {@link VillageGenerator#estadoDelPlano}: una <b>puerta de valla</b> se repone <b>siempre cerrada</b>
+     * (el plano de una aldea vieja puede tenerla guardada abierta —medido en el guardado del jugador, aldea 2: el
+     * portón del corral estaba {@code open:true} en el plano—, y el obrero la reconstruía abierta cada vez que un
+     * asedio se la llevaba).
+     */
     @Nullable
     public static BlockState blueprintState(ServerLevel level, int objectiveIndex, BlockPos pos) {
         VillageSavedData.Blueprint plano = VillageSavedData.get(level).getBlueprint(objectiveIndex);
@@ -2721,7 +2767,7 @@ public final class VillageManager {
         long comprimida = pos.asLong();
         for (int i = 0; i < plano.size(); i++) {
             if (plano.positions()[i] == comprimida) {
-                return plano.stateAt(i);
+                return VillageGenerator.estadoDelPlano(plano.stateAt(i));
             }
         }
         return null;
