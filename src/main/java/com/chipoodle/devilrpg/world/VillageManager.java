@@ -1998,6 +1998,15 @@ public final class VillageManager {
                 asegurarGoalDelPescador(villager, center, objectiveIndex);
             }
         }
+        // CLÉRIGO (etapa H): prepara POCIONES de verdad en su soporte de pociones con lo que el pueblo junta (el
+        // recolector le deja el botín en el almacén). Era el ÚNICO rol sin goal propio del mod: su faena era la
+        // actividad de trabajar de vanilla, que necesita su `JOB_SITE` (que ahora reclama el latido).
+        for (Villager villager : aldeanos) {
+            if (!villager.isBaby() && !VillagerGuardGoal.esGuardia(villager)
+                    && villager.getVillagerData().getProfession() == VillagerProfession.CLERIC) {
+                asegurarGoalDelClerigo(villager, center, objectiveIndex);
+            }
+        }
         // PORTONES del anexo (etapa E): los abre y los cierra el PUEBLO, porque el juego no deja que un aldeano abra
         // una puerta de valla. Se le pone a TODOS los adultos (al ganadero, que vive ahí; a la guardia, que patrulla
         // el corral; y a cualquiera que baje al anexo), y no ocupa banderas: va a la vez que su faena.
@@ -2760,6 +2769,17 @@ public final class VillageManager {
         }
         villager.goalSelector.addGoal(com.chipoodle.devilrpg.entity.goal.VillagerPickupGoal.PRIORIDAD,
                 new com.chipoodle.devilrpg.entity.goal.VillagerPickupGoal(villager, center, objectiveIndex));
+    }
+
+    /** Le pone al <b>clérigo</b> su goal de <b>preparar pociones</b> en el soporte de la iglesia (etapa H). */
+    private static void asegurarGoalDelClerigo(Villager villager, BlockPos center, int objectiveIndex) {
+        for (WrappedGoal wrapped : List.copyOf(villager.goalSelector.getAvailableGoals())) {
+            if (wrapped.getGoal() instanceof com.chipoodle.devilrpg.entity.goal.VillagerClericGoal) {
+                return;
+            }
+        }
+        villager.goalSelector.addGoal(com.chipoodle.devilrpg.entity.goal.VillagerClericGoal.PRIORIDAD,
+                new com.chipoodle.devilrpg.entity.goal.VillagerClericGoal(villager, center, objectiveIndex));
     }
 
     /** Le pone al <b>granjero</b> su goal de cultivar/cosechar/fertilizar y llevar el trigo a la despensa. */

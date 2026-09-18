@@ -161,8 +161,34 @@ public final class VillageStorage {
     }
 
     /** ¿Cuántos cofres dobles hay ya colocados? */
-    public static int cofresColocados(ServerLevel level, BlockPos villageCenter) {
-        int n = 0;
+    /**
+     * <b>Saca</b> del almacén la primera cosa que cumpla el filtro (hasta {@code cuantas} unidades) y la devuelve, o
+     * {@code null} si no hay nada. Lo usa el <b>clérigo</b> para coger sus ingredientes de las pociones: el almacén es
+     * donde el recolector deja el botín del pueblo (pepitas de oro, ojos de araña, pólvora) y donde el jugador trae lo
+     * que no se puede conseguir aquí (verruga del Nether, polvo de blaze, botellas de agua).
+     */
+    @Nullable
+    public static ItemStack quitar(ServerLevel level, BlockPos villageCenter, java.util.function.Predicate<ItemStack> filtro,
+                                   int cuantas) {
+        Container caja = almacen(level, villageCenter);
+        if (caja == null) {
+            return null;
+        }
+        for (int i = 0; i < caja.getContainerSize(); i++) {
+            ItemStack stack = caja.getItem(i);
+            if (stack.isEmpty() || !filtro.test(stack)) {
+                continue;
+            }
+            int n = Math.min(Math.max(1, cuantas), stack.getCount());
+            ItemStack sacado = stack.copyWithCount(n);
+            stack.shrink(n);
+            caja.setChanged();
+            return sacado;
+        }
+        return null;
+    }
+
+    public static int cofresColocados(ServerLevel level, BlockPos villageCenter) {        int n = 0;
         for (BlockPos rel : COFRES) {
             if (level.getBlockState(pos(level, villageCenter, rel)).getBlock() instanceof ChestBlock) {
                 n++;
