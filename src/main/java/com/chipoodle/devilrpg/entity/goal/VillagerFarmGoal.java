@@ -126,6 +126,8 @@ public class VillagerFarmGoal extends Goal {
     private int stuckTicks;
     /** Distancia más corta lograda en este viaje: mientras baje, el granjero está avanzando. */
     private double mejorDistancia = Double.MAX_VALUE;
+    /** Turno del granjero cuando hay calva Y cultivo maduro: alterna una labrada y una cosecha (ver {@code canUse}). */
+    private boolean turnoDeLabrar;
 
     public VillagerFarmGoal(Villager villager, BlockPos center, int objectiveIndex) {
         this.villager = villager;
@@ -180,21 +182,26 @@ public class VillagerFarmGoal extends Goal {
             target = VillagePantry.puntoDeApoyo(level, center);
             return true;
         }
-        // 3) Cultivo maduro: a cosecharlo.
-        target = buscarCultivo(level, true);
-        if (target != null) {
-            tarea = Tarea.COSECHAR;
+        // 3) Cultivo maduro: a cosecharlo. Y 3b) la CALVA del bancal (una celda pisoteada que tiene que volver a ser
+        //    tierra de cultivo: vanilla convierte la tierra de cultivo en tierra al saltar encima y, pegada al césped,
+        //    la tierra vuelve a ser césped). El granjero la VUELVE A LABRAR antes de sembrar: el que siembra es él, así
+        //    que es él quien tiene que dejar la parcela cultivable.
+        //    OJO CON EL ORDEN (lo reportó el jugador: "los granjeros deberían poder reponer su tierra de cultivo
+        //    cuando esta se estropea"): labrar iba SIEMPRE detrás de cosechar, y con TRES bancales siempre hay algo
+        //    maduro en alguno, así que el paso de labrar no se alcanzaba NUNCA y las calvas se quedaban en tierra para
+        //    siempre. Ahora, cuando hay calva Y cultivo maduro, el granjero ALTERNA una cosecha y una labrada: la
+        //    parcela se repara al momento y la cosecha no se para.
+        BlockPos maduro = buscarCultivo(level, true);
+        BlockPos calva = buscarCalva(level);
+        turnoDeLabrar = !turnoDeLabrar;
+        if (calva != null && (turnoDeLabrar || maduro == null)) {
+            target = calva;
+            tarea = Tarea.LABRAR;
             return true;
         }
-        // 3b) CALVA EN EL BANCAL: una celda del bancal que debería ser tierra de cultivo y ahora es tierra o césped
-        //     porque alguien la pisó (vanilla convierte la tierra de cultivo en tierra al saltar encima y, pegada al
-        //     césped, la tierra vuelve a ser césped). El granjero la VUELVE A LABRAR antes de sembrar: el que siembra
-        //     es él, así que es él quien tiene que dejar la parcela cultivable. El obrero repone la tierra que pide el
-        //     plano, pero la huerta no puede depender de que el plano la apunte (el de una aldea migrada es un
-        //     escaneo y ahí las calvas se perdían). Va después de cosechar (lo maduro primero) y ANTES de sembrar.
-        target = buscarCalva(level);
-        if (target != null) {
-            tarea = Tarea.LABRAR;
+        if (maduro != null) {
+            target = maduro;
+            tarea = Tarea.COSECHAR;
             return true;
         }
         // 3) Tierra de cultivo vacía: a plantar. SOLO si lleva semillas EN LA MANO: `plantar()` las saca de su
