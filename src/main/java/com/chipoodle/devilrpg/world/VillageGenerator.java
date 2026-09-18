@@ -960,6 +960,35 @@ public final class VillageGenerator {
     private static final int[] BARRACA_MANIQUI_SURESTE = BARRACA_MANIQUIES[1];
 
     /**
+     * La celda ({@code dx},{@code dz} relativos a la base) de la <b>diana suelta</b> de los arqueros: el rincón
+     * <b>suroeste</b> de la sala de armas, <b>pegada a las dos paredes</b>.
+     * <p>
+     * <b>Antes estaba en la celda del maniquí suroeste</b> ({@code -r+2,+r-2}), que es también la del <b>arca</b> de
+     * la sala de armas (la que fue un barril y pasó a cofre, ver {@link #asegurarBarraca}): el arca se coloca
+     * <b>después</b>, así que <b>se comía la diana</b> —el constructor cree poner <b>tres</b> y en el mundo solo había
+     * <b>dos</b>: medido en el guardado del jugador, aldea 2, barraca en {@code 1369,1436}, cota {@code 120}, con
+     * {@code build/barraca_dump.py}: {@code 1371,120,1434} y {@code 1371,121,1434}, y de la tercera ni rastro—.
+     * <p>
+     * La celda nueva es <b>libre</b> en las tres aldeas del guardado (lo comprueba {@code build/barraca_diana.py},
+     * que además transcribe el constructor y canta <b>cualquier</b> celda que se escriba dos veces) y tiene sentido
+     * para una diana: <b>se ve al entrar</b> por la puerta norte (está en la diagonal delante-derecha), tiene las
+     * <b>dos paredes</b> de tope detrás, <b>no tapa el paso</b> ni a la <b>escalera</b> (que sube por la columna
+     * <b>este</b>) ni al <b>hogar</b> (que está en el centro del muro sur) y <b>no es puesto de trabajo</b> de nadie
+     * (una {@code TARGET} no es un POI de aldeano, invariante I31). La deja ahí el constructor y la devuelve a su
+     * sitio el reparador {@link #moverLaDianaDeLaBarraca} en las barracas ya construidas.
+     */
+    private static final int[] BARRACA_DIANA = {-BARRACA_RADIO + 1, BARRACA_RADIO - 1};
+    /**
+     * La celda ({@code dx},{@code dz}) de la <b>diana doble</b> del rincón <b>noreste</b>: dos bloques de
+     * {@code TARGET} <b>apilados</b> (el de abajo y el de encima), que es la que da las otras dos dianas del
+     * constructor. Vive aquí, con la de arriba ({@link #BARRACA_DIANA}), porque las <b>tres</b> dianas son geometría
+     * fija de la sala de armas (I4): son las <b>tres celdas distintas</b> que comprueba
+     * {@code build/barraca_diana.py} —la doble ocupa <b>una</b> celda con dos bloques, así que la suelta no puede
+     * caer ahí—.
+     */
+    private static final int[] BARRACA_DIANA_DOBLE = {BARRACA_RADIO - 2, -BARRACA_RADIO + 2};
+
+    /**
      * La columna ({@code dx} relativo a la base) por la que sube la <b>escalera del dormitorio</b>: la última celda
      * del interior, pegada al muro <b>este</b>.
      */
@@ -1210,6 +1239,37 @@ public final class VillageGenerator {
     }
 
     /**
+     * Devuelve la <b>tercera diana</b> a la barraca (<b>migración 61</b>).
+     * <p>
+     * <b>Lo que había</b> (medido en el guardado del jugador, aldea 2, barraca en {@code 1369,1436}, cota {@code 120},
+     * con {@code build/barraca_dump.py} y {@code build/barraca_diana.py}): la <b>primera diana</b> del constructor se
+     * colocaba en {@code (bx-r+2, nivel, bz+r-2)} = {@code 1367,120,1438}, que es <b>la misma celda</b> que el
+     * <b>arca</b> de la sala de armas ({@code (bx-2, nivel, bz+r-2)}, la que fue un barril y pasó a cofre). El arca se
+     * coloca <b>después</b> —y en el mismo método—, así que <b>se comía la diana</b>: de las <b>tres</b> que el
+     * constructor cree poner solo había <b>dos</b> en el mundo ({@code 1371,120,1434} y {@code 1371,121,1434}, la
+     * doble del rincón noreste), y el <b>plano</b> guardaba esa misma foto, así que el obrero tampoco la reponía.
+     * <p>
+     * <b>Lo que hace</b>: pone la diana que falta en su celda nueva ({@link #BARRACA_DIANA}: pegada a las dos paredes
+     * del rincón suroeste) <b>solo si esa celda está vacía</b> —si el jugador la ocupó, no se le toca nada—. La
+     * <b>celda vieja no se toca</b>: es la del <b>arca</b>, que es lo que le toca. Es <b>idempotente</b> (con la
+     * diana puesta no escribe ni una celda) y <b>no rehace la barraca</b>: su testigo es el <b>hogar</b> del patio de
+     * entrenamiento (I15) y rehacerla tiraría las camas y lo de dentro de las arcas. Va <b>antes</b> de tirar el
+     * plano, para que el plano nuevo se capture ya con las <b>tres</b> dianas (I8).
+     */
+    public static void moverLaDianaDeLaBarraca(ServerLevel level, BlockPos center) {
+        if (!barracaConstruida(level, center)) {
+            return; // sin barraca del trazado actual no hay sala de armas a la que devolverle la diana
+        }
+        int nivel = cotaDeLaPlaza(level, center);
+        BlockPos base = baseDeBarraca(center);
+        BlockPos diana = new BlockPos(base.getX() + BARRACA_DIANA[0], nivel, base.getZ() + BARRACA_DIANA[1]);
+        if (colocarSiEstaVacio(level, diana, Blocks.TARGET.defaultBlockState())) {
+            DevilRpg.LOGGER.info("[Village] Barraca de {}: la diana que se comia el arca vuelve a la sala de armas,"
+                    + " en {} (pegada a las paredes del rincon suroeste)", center, diana);
+        }
+    }
+
+    /**
      * Pasa <b>todo</b> lo de un arca a otra (uniendo pilas primero y usando los huecos después). Hace falta porque
      * reemplazar un cofre <b>tira su contenido</b> al suelo (mecánica de vanilla, I6): el arca vieja solo se retira
      * cuando lo suyo ya está en la nueva. Lo que <b>no quepa</b> se queda donde estaba (y entonces el arca no se
@@ -1334,9 +1394,16 @@ public final class VillageGenerator {
             colocar(level, new BlockPos(bx + m[0], nivel, bz + m[1] + 1), Blocks.OAK_FENCE.defaultBlockState(), 3);
             colocar(level, new BlockPos(bx + m[0], nivel + 2, bz + m[1]), Blocks.OAK_FENCE.defaultBlockState(), 3);
         }
-        colocar(level, new BlockPos(bx - r + 2, nivel, bz + r - 2), Blocks.TARGET.defaultBlockState(), 3);
-        colocar(level, new BlockPos(bx + r - 2, nivel, bz - r + 2), Blocks.TARGET.defaultBlockState(), 3);
-        colocar(level, new BlockPos(bx + r - 2, nivel + 1, bz - r + 2), Blocks.TARGET.defaultBlockState(), 3);
+        // LAS TRES DIANAS de los arqueros, y OJO CON EL ORDEN (lo que se coloca después gana): la suelta iba en la
+        // celda del maniquí suroeste, que es la del ARCA de la sala de armas (se coloca unas líneas más abajo), así
+        // que el arca se la comía y en el mundo quedaban DOS. Ahora va pegada a las paredes del rincón suroeste
+        // (BARRACA_DIANA), que es una celda libre y ninguna otra pieza la usa.
+        colocar(level, new BlockPos(bx + BARRACA_DIANA[0], nivel, bz + BARRACA_DIANA[1]),
+                Blocks.TARGET.defaultBlockState(), 3);
+        colocar(level, new BlockPos(bx + BARRACA_DIANA_DOBLE[0], nivel, bz + BARRACA_DIANA_DOBLE[1]),
+                Blocks.TARGET.defaultBlockState(), 3);
+        colocar(level, new BlockPos(bx + BARRACA_DIANA_DOBLE[0], nivel + 1, bz + BARRACA_DIANA_DOBLE[1]),
+                Blocks.TARGET.defaultBlockState(), 3);
         colocar(level, new BlockPos(bx, nivel - 1, bz + r - 1), Blocks.CAMPFIRE.defaultBlockState(), 3);
         colocar(level, new BlockPos(bx - 2, nivel, bz + r - 2), Blocks.CHEST.defaultBlockState()
                 .setValue(ChestBlock.FACING, Direction.NORTH), 3);

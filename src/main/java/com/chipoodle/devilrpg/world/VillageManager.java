@@ -591,9 +591,18 @@ public final class VillageManager {
      *       la mesa, así que el obrero la reponía. Este reparador la quita <b>solo si sigue siendo la mesa</b> y
      *       devuelve la celda a su <b>paca</b>: idempotente, de una sola celda y sin rehacer la barraca (su testigo
      *       es el hogar, I15). Va antes de tirar el plano para que el plano nuevo sea el bueno (I8).</li>
+     *   <li>61: la <b>TERCERA DIANA DE LA BARRACA</b>, de vuelta (quedó apuntado al cerrar la 60, misma barraca y mismo
+     *       patrón). Medido en su guardado (aldea 2, barraca en {@code 1369,1436}, cota {@code 120}): la primera diana
+     *       se colocaba en {@code 1367,120,1438}, que es <b>la misma celda</b> que el <b>arca</b> de la sala de armas
+     *       (la que fue un barril y pasó a cofre) y el arca se coloca <b>después</b>, así que <b>se la comía</b>: de
+     *       las <b>tres</b> dianas que el constructor cree poner solo había <b>dos</b> ({@code 1371,120,1434} y
+     *       {@code 1371,121,1434}) y el <b>plano</b> guardaba la misma foto. Ahora la diana suelta va <b>pegada a las
+     *       dos paredes del rincón suroeste</b> ({@code BARRACA_DIANA}) y este reparador la devuelve ahí <b>solo si la
+     *       celda está vacía</b>; la celda vieja <b>no se toca</b> (es la del arca). Idempotente, de una celda, sin
+     *       rehacer la barraca (su testigo es el hogar, I15) y antes de tirar el plano (I8).</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 60;
+    public static final int CURRENT_LAYOUT = 61;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -1703,6 +1712,13 @@ public final class VillageManager {
             // reparador la quita solo si sigue siendo la mesa y devuelve la celda a su paca: idempotente, de una
             // celda, sin rehacer la barraca (su testigo es el hogar, I15) y antes de tirar el plano (I8).
             VillageGenerator.quitarLaMesaDeLaBarraca(level, center);
+            // LA TERCERA DIANA DE LA BARRACA, DE VUELTA (migración 61): la diana suelta se colocaba en la MISMA celda
+            // que el arca de la sala de armas —que se coloca después y se la comía—, así que el constructor creía
+            // poner tres y en el mundo solo había dos (medido: `1371,120,1434` y `1371,121,1434`, y el plano igual).
+            // El reparador la pone en su celda nueva (el rincón suroeste, pegada a las dos paredes) SOLO si está
+            // vacía: idempotente, de una celda, sin rehacer la barraca (su testigo es el hogar, I15) y antes de
+            // tirar el plano, para que el plano nuevo se capture ya con las tres (I8).
+            VillageGenerator.moverLaDianaDeLaBarraca(level, center);
             // REBAÑO ESCAPADO (una sola vez, al migrar): antes de que existiera la marca del rebaño, el ganado que se
             // colaba por el portón se perdía sin remedio y el corral se quedaba vacío (y sin carne). Aquí se reconoce
             // el que anda suelto FUERA de la muralla y cerca del corral; luego, en el latido, vuelve a casa.

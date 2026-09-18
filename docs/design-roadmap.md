@@ -1904,6 +1904,83 @@ aldeano sin oficio reclamara la mesa de verdad (el razonamiento es el del juego 
 (trazado 46) y la migración **no corre** en una aldea caída: su barraca tiene la misma mesa medida y se quedará como
 está (como su escalera, migración 59).
 
+### 3b.45 La tercera diana de la barraca, que se comía el arca (migración 61)
+
+Quedó **apuntado** al cerrar la ronda anterior (3b.44, el mismo constructor y la misma barraca): *"la **primera diana**
+del constructor (`bx - r + 2`, `bz + r - 2` = `1367,120,1438`) cae en **la misma celda** que el **arca** de la pared
+oeste (que se coloca después), así que el arca **se come la diana**: en el plano de la aldea 2 solo hay **2** `target`,
+no tres. Se deja como está y se avisa al jugador."* Esta ronda lo arregla.
+
+**El mismo patrón que la mesa** (I31, migración 60): dos piezas del **mismo** constructor caen en **una celda** y gana
+la que se coloca **después**. La diana suelta iba en el **cuadrante suroeste** (`rel -2,+2`), que es la celda del
+**arca de la sala de armas** (`bx-2, nivel, bz+r-2`: la que fue un **barril** y pasó a **cofre**), y el arca se coloca
+**cuatro líneas más abajo**. Resultado medido en el guardado del jugador (**aldea 2**, barraca `1369,1436`, cota `120`,
+con `build/barraca_dump.py` y `build/barraca_diana.py`): **2** `target` en el mundo (`1371,120,1434` y
+`1371,121,1434`, la **doble** del rincón noreste) y **2** en el **plano** —el obrero reponía esa misma foto, así que
+tampoco se arreglaba solo—. Lo mismo en las **tres** aldeas del guardado (0, 1 y 2: **2** dianas en el mundo y **2** en
+el plano en cada una).
+
+| | Celda | Detalle |
+|---|---|---|
+| **La diana suelta, ANTES** | `rel -2,+2` = `1367,120,1438` | el constructor la colocaba y el **arca** (`chest[facing=north]`, que va después) la **sustituía**: celda del **maniquí suroeste** —el que se quedó **sin paca** por la mesa, migración 60— |
+| **La diana suelta, AHORA** | `rel -3,+3` = `1366,120,1439` | el **rincón suroeste**, **pegada a las dos paredes** |
+| **La diana doble** | `rel +2,-2` = `1371,120,1434` y `1371,121,1434` | **dos** bloques apilados, en el rincón **noreste**: no se tocan |
+
+**Por qué esa celda** (la elige el constructor y la comprueba `build/barraca_diana.py`): está **libre** (aire) en la
+capa que se pisa de las **tres** aldeas —en la sala de armas quedan **41** celdas libres de las 49 del interior y **21**
+de ellas pegadas a una pared, así que había donde elegir— y tiene lo que pide una diana: es una de las **cuatro
+esquinas** del cuarto, que son las **únicas** celdas que tocan **dos paredes** (tope detrás para la flecha) y las **más
+lejos de la puerta** (`7,62` bloques, frente a los `2,83` de la diana doble: más recorrido para el arco) —la esquina
+**este** está a la misma distancia pero es la **celda de entrada de la escalera**, así que queda la **oeste**—; **se ve
+al entrar** por la puerta norte (está en la diagonal delante-derecha, a **23,2°** del eje de la mirada desde la puerta,
+frente a los **45°** de la diana doble); **no** tiene
+ninguna **tronera** enfrente (las de la pared oeste están en `rel -4,-2` y `rel -4,+1`, y las del muro sur en
+`rel -1,+4` y `rel +2,+4`); **no tapa el paso** ni a la **escalera** (que sube por la columna **este**) ni al **hogar**
+(que está en el centro del muro sur, `rel 0,+3`: su celda de encima **no** se toca); ninguna de las **tres** dianas queda
+**tapada** (todas tienen libre la celda de encima); y **no es puesto de trabajo** de nadie (un `TARGET` **no** es un POI
+de aldeano: I31 no aplica, y el barrido de puestos de la barraca sigue dando **ninguno**). La **celda vieja no se
+toca**: es la del **arca**, que es lo que le toca.
+
+**El arreglo** (`VillageGenerator`): la diana suelta pasa a una **constante** (`BARRACA_DIANA`) y la doble a otra
+(`BARRACA_DIANA_DOBLE`) —I4: son geometría fija de la sala de armas, y las **tres** celdas las comprueba el
+diagnóstico contra el guardado—, y el constructor la coloca ahí. Siguen siendo **tres** dianas: **tres bloques** en
+**tres celdas distintas**.
+
+**La migración 61** (`VillageGenerator.moverLaDianaDeLaBarraca`, llamada desde `VillageManager` **antes** de tirar el
+plano): pone la diana que falta en su celda nueva **solo si esa celda está vacía** (`colocarSiEstaVacio`). Es
+**idempotente** (con la diana puesta no escribe ni una celda: la segunda pasada da **0**), **no rehace la barraca** (su
+testigo es el **hogar** del patio, I15: rehacerla tiraría las camas y lo de dentro de las arcas) y va antes de tirar el
+plano para que el plano nuevo se capture ya con las **tres** (I8).
+
+**Y el ORDEN, comprobado de verdad** (`build/barraca_diana.py`, sección 0): el script **transcribe el constructor**
+celda a celda y en orden y **canta cualquier celda escrita dos veces con bloques distintos** (el patrón "lo que va
+después gana"), que es lo que pedía el encargo: *¿hay alguna otra pieza de la barraca que se pise?*
+
+| | Celdas pisadas **sin justificar** | Dianas en pie |
+|---|---|---|
+| **Con la celda vieja** (como estaba) | **1**: `rel -2,0,+2` `target` → `chest` | **2** |
+| **Con la celda nueva** (esto) | **0** | **3** |
+
+Las **cuatro** celdas que se pisan y **no** son un fallo quedan documentadas en el propio script: la **puerta** sobre
+el muro norte (`rel 0,0,-4` y `rel 0,1,-4`), el **hogar** en la capa del suelo (`rel 0,-1,+3`, I15), el **último
+escalón** en la capa del forjado (`rel +3,+3,-1`, I30) y los **cuatro postes de las esquinas** en la capa del forjado
+(`rel ±4,+3,±4` `oak_planks` → `oak_log`): el poste sube **entero** de una pieza hasta el tejado y su celda es suya en
+todas las capas (es lo que hay medido en el guardado). **No hay más**: ninguna otra pieza de la barraca se come a otra.
+
+**Comprobado con `build/barraca_diana.py`** sobre las **tres** aldeas del guardado que tienen barraca (0, 1 y 2):
+
+| | Celda nueva libre | Celda vieja | Dianas después | Repetidas | Puestos de trabajo |
+|---|---|---|---|---|---|
+| Aldeas **0, 1 y 2** | **sí** (aire en la capa que se pisa) | `chest` (el arca) | **3** (las tres esperadas) | **no** | **ninguno** |
+
+**Lo que NO se ha podido comprobar (sin jugar)**: que la migración corra sobre la partida (el cliente estaba cerrado y
+esto **no toca el guardado**: lo arregla la migración al cargar; las tres aldeas del guardado están en los trazados
+**44**, **46** y **55**, así que al cargar la **2** corre **de una pasada** las migraciones **56 a 61** —y la **0**, en
+el 44, arrastra además las 45 a 55—) ni **cómo se ve** la diana desde la puerta (el ángulo y que no estorbe están
+calculados sobre las capas del guardado, pero eso se comprueba andando por la barraca). La aldea **1 está caída**
+(trazado 46) y la migración **no corre** en una aldea caída: ahí la diana se quedará donde está (como su escalera,
+migración 59, y su mesa, migración 60).
+
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.

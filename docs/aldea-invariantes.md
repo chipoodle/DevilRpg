@@ -590,6 +590,17 @@ en una aldea caída (como ninguna otra).
 `build/barraca_subida.py` (`python build\barraca_subida.py todas`), que simula la entrada, cada escalón, la salida y
 el paso del reparador **celda a celda**.
 
+> **La misma lección, con las dianas de la sala de armas (migración 61).** La **primera diana** se colocaba en la celda
+> del **maniquí suroeste**, que es también la del **arca** de la sala de armas, y el arca se coloca **después**: se la
+> comía (el constructor creía poner **tres** y en el mundo —y en el **plano**— solo había **dos**). Ahora la diana
+> suelta va **pegada a las dos paredes del rincón suroeste** (`BARRACA_DIANA`) y el reparador la devuelve ahí **solo si
+> la celda está vacía**; la celda vieja **no se toca** (es la del arca). Es el mismo patrón de I14 (tercera vez) e I28
+> —**una celda es de UNA pieza**—, con la particularidad de que aquí la pieza comida era **mobiliario**, no estructura.
+> Se comprueba con `build/barraca_diana.py`, que **transcribe el constructor** celda a celda y en orden y **canta
+> cualquier celda escrita dos veces** con bloques distintos (con la celda vieja salía **1** —diana→arca— y con la nueva
+> **0**, dejando fuera las cuatro que sí son a propósito: la puerta sobre el muro, el hogar en el suelo, el último
+> escalón en la capa del forjado y los postes de las esquinas).
+
 ### I31 · Ningún puesto de trabajo de aldeano que no sea de un oficio del pueblo
 
 Un **puesto de trabajo** de vanilla (`barrel`, `cauldron`, `smoker`, `blast_furnace`, `grindstone`, `loom`,
@@ -660,6 +671,7 @@ Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento 
 | `build/barraca_dump.py` | **La barraca entera, capa a capa**: cuenta escalones (con su Y y su `facing`), camas, mobiliario, el forjado (huecos) y la vertical de cada escalón. |
 | `build/barraca_mesa.py` | **Puestos de trabajo de aldeano** (I31): los barre **bloque a bloque** en las tres aldeas del guardado, con sus coordenadas, y dice qué hay en la celda de la mesa de cartografía de la barraca y qué dice el **plano** de ella. |
 | `build/barraca_mesa_repara.py` | **El reparador de la migración 60** (la mesa de cartografía → la paca del maniquí), **celda a celda** y con la idempotencia: antes/después de la celda, el maniquí completo y que no quede ningún puesto de trabajo en la barraca. |
+| `build/barraca_diana.py` | **Las tres dianas de la barraca y el ORDEN de colocación** (migración 61): **transcribe el constructor** celda a celda y **canta cualquier celda escrita dos veces con bloques distintos** ("lo que va después gana"), además de simular el reparador de la diana (celda nueva libre en las tres aldeas, idempotencia, la celda vieja del arca sin tocar) y contar las dianas del **mundo** y del **plano**. |
 | `build/huertadiag.py`, `build/huerta_simula.py` | **Bancales**: qué dice el plano y qué hay en el mundo celda por celda (qué calvas faltan en el plano) y qué celdas repondría el obrero / labraría el granjero (I25). |
 | `build/granjaestado.py`, `build/farmdiag.py`, `build/columnas.py`, `build/perfilcol.py` | Estado de la granja (cultivos, edades, cotas) y columnas crudas. |
 | `build/items.py`, `build/contenedores.py` | Objetos en el suelo por tipo y contenido de cofres/despensa/almacén. |
