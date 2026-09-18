@@ -30,6 +30,10 @@ Invariantes (todas han petado al menos una vez):
       un `setBlock`/`destroyBlock`/`colocar` en `VillageManager`, hay que justificarlo.
   I9  Cambiar lo que se CONSTRUYE obliga a subir `CURRENT_LAYOUT` (el mundo guardado tiene que
       rehacerse). Comprobacion con git sobre el diff pendiente.
+  I10 Nivelar la huella de una PARCELA (`nivelarHuella(...PLOT_...)`) recorta el terreno que
+      sobresale de la cota y se lleva por delante los cultivos de las celdas altas: salen como
+      OBJETOS tirados por toda la parcela (el fallo que el jugador vio DOS veces). El nivelado
+      tiene que estar guardado antes con `bancalHecho()` o `hayCultivos()`.
 """
 import os
 import re
@@ -78,6 +82,14 @@ REGLAS = [
     ('I8', [os.path.join(PAQUETE, 'world', 'VillageManager.java')],
      r'\.setBlock\(|destroyBlock\(|\bcolocar\(',
      'Mutar el mundo en el latido de la aldea: mira si es idempotente y si mide desde la cota.', 0),
+    # I10 nace de un fallo que volvio DOS veces: el nivelado de la huella de un bancal RECORTA el terreno que
+    # sobresale de la cota y, en una parcela en cuesta (una aldea de montana), se llevaba por delante los cultivos
+    # de las celdas altas: salian como OBJETOS tirados por toda la parcela. Cualquier nivelado de una PARCELA
+    # (el que cita PLOT_WIDTH/PLOT_DEPTH) tiene que estar guardado antes con bancalHecho() o hayCultivos().
+    ('I10', [os.path.join(PAQUETE, 'world', 'VillageGenerator.java')],
+     r'nivelarHuella\([^;]*PLOT_',
+     'Nivelar la huella de una PARCELA recorta el terreno y se lleva los cultivos (salen como items por la '
+     'parcela): pregunta antes con bancalHecho() o hayCultivos().', 8),
 ]
 
 # Formas legitimas: si la linea las cita, no se avisa.
@@ -118,6 +130,11 @@ def revisar():
                 if clave == 'I3' and contexto:
                     ventana = ''.join(contenido[max(0, i - contexto):i])
                     if 'mejorDistancia' in ventana:
+                        continue
+                # I10: se admite si el nivelado de la parcela esta guardado (bancalHecho / hayCultivos) justo antes.
+                if clave == 'I10' and contexto:
+                    ventana = ''.join(contenido[max(0, i - contexto):i])
+                    if 'bancalHecho' in ventana or 'hayCultivos' in ventana:
                         continue
                 fallos.append((clave, os.path.basename(ruta), i + 1, linea.strip()[:110], aviso))
     return fallos

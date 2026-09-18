@@ -230,6 +230,19 @@ public final class VillageGenerator {
      * forma parte del diseño que el obrero debe reponer.
      */
     public static VillageSavedData.Blueprint generate(ServerLevel level, BlockPos center) {
+        // IDEMPOTENCIA (lo pidió el jugador: "haz algo para que no se vuelvan a repetir"): si la aldea YA está
+        // construida, generar se sale SIN TOCAR NADA. Sin este guardia, una segunda pasada de generación (dos
+        // caminos que llamen a generate, una aldea que se dio por no generada...) despeja el volumen y vuelve a
+        // levantar todo ENCIMA: las casas pierden lo que tengan dentro y, sobre todo, la huerta se queda en brotes
+        // con los vegetales tirados por la parcela (medido en el banco de pruebas, que llamaba a generate dos veces:
+        // 90 cultivos de 216 y 207 pilas de vegetales por el suelo). El testigo es el BANCO DE CULTIVO: solo lo
+        // planta el generador y se planta al final, así que si hay bancal la aldea se construyó entera.
+        if (bancalHecho(level, center.offset(FARM_PLOTS[0][0], 0, FARM_PLOTS[0][1]),
+                cotaDeLaPlaza(level, center))) {
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: ya estaba construida (hay bancal): no se vuelve a generar",
+                    center);
+            return captureBlueprint(level, center);
+        }
         // Despejar hasta cubrir el talud exterior (que rodea el área nivelada): dentro del volumen de la aldea no
         // queda nada que no sea terreno (ni vegetación ni restos de estructuras del mundo).
         despejarVolumen(level, center, LEVEL_RADIUS + SLOPE_WIDTH);
@@ -4627,6 +4640,24 @@ public final class VillageGenerator {
         return tierra >= 8;
     }
 
+    /**
+     * ¿Queda algún <b>cultivo vivo</b> en ese bancal? Es la segunda capa de protección de la huerta: aunque el
+     * bancal no esté "hecho" (le falte tierra de cultivo en algunas celdas, por ejemplo porque alguien la pisoteó),
+     * si hay plantas dentro <b>no se nivela nada</b> —el nivelado recorta el terreno y se llevaría por delante los
+     * cultivos de las celdas altas, que acabarían tirados por la parcela como objetos—.
+     */
+    private static boolean hayCultivos(ServerLevel level, BlockPos corner, int nivel) {
+        for (int dx = 0; dx < PLOT_WIDTH; dx++) {
+            for (int dz = 0; dz < PLOT_DEPTH; dz++) {
+                if (level.getBlockState(new BlockPos(corner.getX() + dx, nivel, corner.getZ() + dz)).getBlock()
+                        instanceof CropBlock) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private static void plot(ServerLevel level, BlockPos corner, int nivel) {
         // SI EL BANCAL YA ESTÁ, NO SE NIVELA NI SE REPLANTA: solo se asegura lo que NO toca los cultivos (el
         // compostero del granjero y la valla con sus faroles). Ver `bancalHecho`.
@@ -4636,9 +4667,13 @@ public final class VillageGenerator {
             return;
         }
         Block[] plants = {Blocks.WHEAT, Blocks.CARROTS, Blocks.POTATOES, Blocks.BEETROOTS};
-        // 1) La parcela se nivela a LA COTA DE LA ALDEA (la que nos pasan): agua y tierra de cultivo a la misma
-        // altura que el resto del pueblo, así ni se seca ni queda en un hoyo.
-        int base = nivelarHuella(level, corner, PLOT_WIDTH, PLOT_DEPTH, nivel);
+        // SEGUNDA CAPA: si el bancal todavía tiene cultivos (le falta tierra en algunas celdas, pero hay plantas),
+        // NO SE NIVELA NADA. El nivelado de la huella RECORTA el terreno que sobresale de la cota y, en una parcela
+        // en cuesta (una aldea de montaña), ese recorte se lleva por delante los cultivos de las celdas altas: salen
+        // como OBJETOS tirados por toda la parcela (lo que el jugador vio dos veces: "las granjas todavía spawnnean
+        // con vegetales como items sobre ellos"). Sin nivelar, lo único que pasa es que se replanta lo que falte.
+        boolean conCultivos = hayCultivos(level, corner, nivel);
+        int base = conCultivos ? nivel : nivelarHuella(level, corner, PLOT_WIDTH, PLOT_DEPTH, nivel);
         for (int dx = 0; dx < PLOT_WIDTH; dx++) {
             for (int dz = 0; dz < PLOT_DEPTH; dz++) {
                 int x = corner.getX() + dx;
@@ -4820,7 +4855,7 @@ public final class VillageGenerator {
     private static final int TABERNA_PISO2 = 5;
     private static final int TABERNA_ALERO = 5;
     /** Cuánto vuela la planta alta sobre la baja: sus muros van un bloque por fuera. */
-    private static final int TABERNA_VUELO = 1;
+    private static final int TABERNA_VUELO = 0;   // los dos pisos, a plomo (el jugador vio los pilares defasados)
     /** La puerta: una sola, en el centro del muro oeste, que es el que mira a la plaza. */
     private static final int TABERNA_PUERTA = 7;
     /**
@@ -4828,17 +4863,16 @@ public final class VillageGenerator {
      * <b>doble</b> (dos bloques de ancho) y con su meseta de llegada, como pidió el jugador: <i>"hazla doble y con
      * suficiente espacio para que se pueda subir al segundo piso"</i>.
      * <p>
-     * El <b>primer escalón</b> está en {@code z = Z1}, dentro del comedor y a dos bloques de la pared sur: se entra a
-     * la escalera <b>de lado</b>, desde el comedor ({@code x = 3}, que es comedor a la capa que se pisa), y no de
-     * frente, que es lo que la dejaba <b>sin acceso</b>: el escalón de abajo quedaba metido en la esquina, con el
-     * escalón de arriba delante, la pared al este y la pared al sur (lo avisó el jugador: "no se puede acceder a la
-     * escalera desde adentro"). El pozo va cerrado por el este con un muro: es un hueco de un bloque de ancho, y sin
-     * ese muro el primero que paseara por la galería se caería al comedor.
+     * El <b>primer escalón</b> está en {@code z = Z1}, con el comedor ABIERTO delante (el sur): se entra a la escalera
+     * <b>de frente</b>, caminando desde el comedor, y no de lado. Antes quedaba metida en la esquina, con el escalón
+     * de arriba delante y las paredes al este y al sur, así que no se podía ni llegar a ella (lo avisó el jugador:
+     * <i>"no se puede acceder a la escalera desde adentro"</i>). El pozo va cerrado por el este con un muro: es un
+     * hueco de un bloque de ancho, y sin ese muro el primero que paseara por la galería se caería al comedor.
      */
     private static final int TABERNA_ESCALERA_X = 1;
     private static final int TABERNA_ESCALERA_ANCHO = 2;
-    private static final int TABERNA_ESCALERA_Z0 = 9;
-    private static final int TABERNA_ESCALERA_Z1 = 13;
+    private static final int TABERNA_ESCALERA_Z0 = 8;
+    private static final int TABERNA_ESCALERA_Z1 = 12;
     /** El hogar (con su chimenea), en el muro norte; y el ahumador del cocinero, en la cocina. */
     private static final int[] TABERNA_HOGAR = {9, 0};
     private static final int[] TABERNA_COCINA = {4, 2};
@@ -4895,8 +4929,14 @@ public final class VillageGenerator {
         for (int[] e : esquinas) {
             if (level.getBlockState(new BlockPos(base.getX() + e[0], nivel + 1, base.getZ() + e[1]))
                     .is(Blocks.DARK_OAK_LOG)) {
-                return level.getBlockState(new BlockPos(base.getX() + TABERNA_ESCALERA_X + 1, nivel,
+                // Y tiene que ser la taberna de los DOS PISOS A PLOMO —el pilar de la posada cayendo justo encima
+                // del de abajo— y con la ESCALERA DOBLE nueva: si no, es una taberna vieja (la del vuelo de un
+                // bloque, con los pilares defasados y la escalera sin acceso) y el pueblo la rehace entera.
+                boolean aPlomo = level.getBlockState(new BlockPos(base.getX(), nivel + TABERNA_PISO2, base.getZ()))
+                        .is(Blocks.DARK_OAK_LOG);
+                boolean escaleraDoble = level.getBlockState(new BlockPos(base.getX() + TABERNA_ESCALERA_X + 1, nivel,
                         base.getZ() + TABERNA_ESCALERA_Z1)).is(Blocks.DARK_OAK_STAIRS);
+                return aPlomo && escaleraDoble;
             }
         }
         return false;
@@ -4957,11 +4997,11 @@ public final class VillageGenerator {
         int largoFrente = ancho + 2 * TABERNA_VUELO;
         muroTudor(level, bx - TABERNA_VUELO, bz - TABERNA_VUELO, 0, 1, largoTramo, y1, TABERNA_ALERO, 2, -1,
                 Direction.WEST, false);
-        muroTudor(level, bx + ancho, bz - TABERNA_VUELO, 0, 1, largoTramo, y1, TABERNA_ALERO, 2, -1,
+        muroTudor(level, bx + ancho - 1 + TABERNA_VUELO, bz - TABERNA_VUELO, 0, 1, largoTramo, y1, TABERNA_ALERO, 2, -1,
                 Direction.WEST, false);
         muroTudor(level, bx - TABERNA_VUELO, bz - TABERNA_VUELO, 1, 0, largoFrente, y1, TABERNA_ALERO, 2, -1,
                 Direction.WEST, false);
-        muroTudor(level, bx - TABERNA_VUELO, bz + fondo, 1, 0, largoFrente, y1, TABERNA_ALERO, 2, -1,
+        muroTudor(level, bx - TABERNA_VUELO, bz + fondo - 1 + TABERNA_VUELO, 1, 0, largoFrente, y1, TABERNA_ALERO, 2, -1,
                 Direction.WEST, false);
         // 7) LA POSADA (los cuartos, las camas y la galería), su techo de tablones y el TEJADO a dos aguas.
         posadaDeLaTaberna(level, bx, bz, y1, yTecho);
@@ -5185,11 +5225,12 @@ public final class VillageGenerator {
     private static void posadaDeLaTaberna(ServerLevel level, int bx, int bz, int y1, int yTecho) {
         int alto = yTecho - y1;
         BlockState tablon = Blocks.DARK_OAK_PLANKS.defaultBlockState();
-        // Los dos muros de la galería (norte en lz=6 y sur en lz=9), con la puerta de cada cuarto. El muro sur
-        // empieza en lz=4 porque a su izquierda va la CAJA DE LA ESCALERA (x=3), que ocupa ese hueco.
+        // Los dos muros de la galería (norte en lz=6 y sur en lz=9), con la puerta de cada cuarto. Van de lz=1 a
+        // lz=17 (el INTERIOR: los dos pisos van a plomo, así que los cuartos empiezan un bloque más adentro que
+        // cuando la planta alta volaba). El muro sur empieza en lz=4 porque a su izquierda va la CAJA DE LA ESCALERA.
         int[] puertasNorte = {2, 9, 15};
         int[] puertasSur = {4, 9, 15};
-        for (int dx = 0; dx < TABERNA_ANCHO; dx++) {
+        for (int dx = 1; dx <= TABERNA_ANCHO - 2; dx++) {
             boolean puertaNorte = false;
             boolean puertaSur = false;
             for (int p : puertasNorte) {
@@ -5205,29 +5246,29 @@ public final class VillageGenerator {
         }
         // Los tabiques que separan los cuartos entre sí (a los dos lados de la galería).
         for (int dx : new int[]{6, 12}) {
-            for (int dz = 0; dz <= 5; dz++) {
+            for (int dz = 1; dz <= 5; dz++) {
                 for (int k = 0; k < alto; k++) {
                     colocar(level, new BlockPos(bx + dx, y1 + k, bz + dz), tablon, 3);
                 }
             }
-            for (int dz = 10; dz <= 14; dz++) {
+            for (int dz = 10; dz <= TABERNA_FONDO - 2; dz++) {
                 for (int k = 0; k < alto; k++) {
                     colocar(level, new BlockPos(bx + dx, y1 + k, bz + dz), tablon, 3);
                 }
             }
         }
         // LAS CAMAS: dos por cuarto (una en el cuarto pequeño) con la cabecera contra el muro.
-        int[][] camas = {{1, 1, -1}, {4, 1, -1},                       // cuarto noroeste (cabeza al norte)
-                {8, 1, -1}, {10, 1, -1},                               // norte (centro)
-                {14, 1, -1}, {17, 1, -1},                              // noreste
-                {4, 13, 1},                                            // suroeste (el pequeño, junto a la escalera)
-                {8, 13, 1}, {10, 13, 1},                               // sur (centro)
-                {14, 13, 1}, {17, 13, 1}};                             // sureste
+        int[][] camas = {{1, 2, -1}, {4, 2, -1},                       // cuarto noroeste (cabeza al norte)
+                {8, 2, -1}, {10, 2, -1},                               // norte (centro)
+                {14, 2, -1}, {17, 2, -1},                              // noreste
+                {4, 12, 1},                                            // suroeste (el pequeño, junto a la escalera)
+                {8, 12, 1}, {10, 12, 1},                               // sur (centro)
+                {14, 12, 1}, {17, 12, 1}};                             // sureste
         for (int[] c : camas) {
             bed(level, new BlockPos(bx + c[0], y1, bz + c[1]), c[2] < 0 ? Direction.NORTH : Direction.SOUTH);
         }
         // LAS ARCAS de cada cuarto (una por cuarto, en su esquina).
-        int[][] arcas = {{5, 0}, {7, 0}, {18, 0}, {5, 10}, {11, 10}, {18, 10}};
+        int[][] arcas = {{5, 1}, {7, 1}, {13, 1}, {5, 10}, {11, 10}, {17, 10}};
         for (int[] a : arcas) {
             Direction mira = a[1] < 7 ? Direction.NORTH : Direction.SOUTH;
             colocar(level, new BlockPos(bx + a[0], y1, bz + a[1]),
@@ -5405,7 +5446,7 @@ public final class VillageGenerator {
      */
     private static void despejarSolarDeLaTaberna(ServerLevel level, BlockPos center, int bx, int bz, int nivel,
                                                  int hastaY) {
-        for (int dx = -TABERNA_VUELO - 2; dx <= TABERNA_ANCHO + TABERNA_VUELO; dx++) {
+        for (int dx = -TABERNA_VUELO - 3; dx <= TABERNA_ANCHO + TABERNA_VUELO; dx++) {
             for (int dz = -TABERNA_VUELO - 2; dz <= TABERNA_FONDO + TABERNA_VUELO + 1; dz++) {
                 for (int y = nivel; y <= hastaY; y++) {
                     BlockPos p = new BlockPos(bx + dx, y, bz + dz);

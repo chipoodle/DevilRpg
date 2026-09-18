@@ -28,6 +28,7 @@ En cada cambio en `world/Village*` o en los goals de aldeano hay que:
 > | I7 | `parcelasDe(center)` sin la cota | I1 |
 > | I8 | `setBlock`/`destroyBlock`/`colocar` en el latido | I6 |
 > | I9 | construcción nueva sin subir `CURRENT_LAYOUT` | I7 |
+> | I10 | nivelar la huella de una **parcela** sin preguntar antes | I11 |
 >
 > I8, I9 y I10 de esta sección (abajo) **no tienen regla en el lint**: se vigilan a mano.
 
@@ -107,6 +108,30 @@ aldea con 7 aldeanos y tope 7 (etapa E), **sin carnicero**, la cocina construida
 cruda de la despensa sin cocinar (2 puntos en vez de 4).
 **Regla:** el puesto vacío se repone **aunque el pueblo esté en el tope** (el que llega de más engrosa la milicia);
 el tope solo se aplica a la cría (`vivos < puestosDelPueblo()`).
+
+### I11 · Una parcela ya hecha NO se toca (y lo que crece dentro, menos)
+Este fallo volvió **dos veces** y las dos con el mismo síntoma, que es lo que lo hace peligroso: *"la granja
+todavía spawnnea con vegetales como items sobre ellos"*.
+
+- **Capa 1 (`plot()` replantaba todo).** Cada vez que corría (generar, migrar) replantaba las 144 celdas: los
+  cultivos maduros se sustituían por brotes y lo que había se quedaba **tirado por la parcela**. Medido en el
+  guardado del jugador: 144 cultivos y **solo 2 maduros** justo después de una migración. Arreglo: si la celda ya
+  tiene un cultivo, se deja.
+- **Capa 2 (el NIVELADO se los llevaba antes).** El arreglo anterior **no bastaba**: `plot()` empieza nivelando la
+  huella con `nivelarHuella`, que **recorta** el terreno que sobresale de la cota y, en una parcela en **cuesta**
+  (una aldea de montaña), ese recorte se llevaba por delante los cultivos de las celdas altas **antes** de llegar a
+  la comprobación de "ya hay cultivo". Medido en su aldea de montaña: las tres parcelas con sus 71 cultivos pero
+  **casi todos de edad 0-1** y semillas de trigo y de remolacha por el suelo. Arreglo: `bancalHecho()` (si hay
+  tierra de cultivo, la parcela está hecha: solo se aseguran el compostero y la valla) **y**, como segunda capa,
+  `hayCultivos()` (aunque falte tierra, si hay plantas dentro **no se nivela nada**).
+- **Capa 3 (el mismo recorte, en otra parcela).** El nivelado de la huella de **cualquier** construcción con un
+  margen de terraza (`MARGEN_TERRAZA`) puede solaparse con una parcela vecina: por eso la regla del lint **I10**
+  vigila *cualquier* `nivelarHuella(...PLOT_...)` y exige el guardia por delante.
+
+**Regla:** el nivelado de la huella de una parcela **solo** se hace cuando la parcela **no existe todavía**; si
+tiene tierra labrada o cultivos, no se toca (la tierra de cultivo está en el plano y la repone el obrero).
+El lint (**I10**) lo comprueba: un `nivelarHuella` sobre `PLOT_*` sin `bancalHecho()`/`hayCultivos()` delante
+**falla la puerta de commit**.
 
 ---
 

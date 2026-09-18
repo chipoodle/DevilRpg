@@ -1245,7 +1245,26 @@ pueblo no tenía. Ahora el barril <b>tiene dueño</b>.
   un pescado más (0 → 1)**.
 - **Migración 46** (`CURRENT_LAYOUT`).
 
-### 3b.29 Lo que viene
+### 3b.29 Los bugs de esta ronda (y lo que se hizo para que no vuelvan)
+
+El jugador fue reportando fallos sobre lo ya construido, y pidió una cosa más: *"todos los bugs que encuentres
+documéntalos y haz algo para que no se vuelvan a repetir"*.
+
+| Bug (lo que vio) | Causa medida | Arreglo | Guardia para que no vuelva |
+|---|---|---|---|
+| *"Las granjas todavía spawnnean con vegetales como items sobre ellos"* (**dos veces**) | El **nivelado de la huella** del bancal (`nivelarHuella`) **recorta** el terreno que sobresale de la cota: en una parcela en **cuesta** (aldea de montaña) se llevaba los cultivos de las celdas altas antes de la comprobación de "ya hay cultivo" (el arreglo anterior solo cubría el replante) | `bancalHecho()` (parcela hecha = no se toca) **y** `hayCultivos()` (si hay plantas, **no se nivela**) | **Regla I11** en `docs/aldea-invariantes.md` **y regla I10 del lint** (`nivelarHuella(...PLOT_...)` sin guardia delante **falla la puerta de commit**) |
+| *"La escalera está inaccesible; hazla doble"* | La migración 44 la dejó de **un** bloque de ancho y con el primer escalón metido en la esquina (el escalón de arriba delante y las paredes al este y al sur) | La escalera es **doble**, arranca en `z=Z1` con el **comedor abierto delante** (se entra de frente, desde el sur) y su pozo va cerrado por el este | El **testigo** de `tabernaConstruida` exige la escalera doble: una taberna vieja se rehace entera |
+| *"Los pilares entre el 1er y 2do piso están defasados"* | La planta alta **volaba** un bloque (el *jetty* Tudor): los postes de arriba caían una columna al lado de los de abajo | Los dos pisos van **a plomo** (`TABERNA_VUELO = 0`): los pilares caen justo uno encima del otro | El testigo exige el pilar de la posada **sobre** el de abajo |
+| *"La chimenea del primer piso está descubierta y se ve desde afuera"* | El hogar está en la boca del muro y su cara norte daba a la calle: se veía la llama desde fuera | El caño de ladrillo va **por delante del muro** y tapa esa cara | Verificado con el arnés (`hogar_tapado=true`) |
+| *"Que mis minions no ataquen a las criaturas neutrales a menos que yo las golpee primero"* | Los minions (lobo, oso, wisps, shulker, esporas) atacaban a **todo** `Mob` salvo aldeanos, llamas, tortugas y golems: también al ganado y a los bichos que solo se defienden | `ITamableEntity.esCriaturaPacificaONeutral()`: no se ataca a animales, neutrales, peces, aldeanos ni golems; a los **hostiles** (`Enemy`) sí, como antes | La regla vive **en un solo sitio** (la interfaz de los minions) y la usan los cinco; y el "si me pegas/le pego yo primero" lo cubren `OwnerHurtTargetGoal`/`OwnerHurtByTargetGoal`, que van por encima |
+| *"La basura que nadie recogía"* (plantones en las copas, puertas y camas rotas) | Los drops de las hojas caían **encima de las copas** de los árboles vecinos (inalcanzables) y las piezas del propio pueblo no estaban en la lista de nadie | El leñador **desrama** el árbol que tala; las piezas del pueblo entran en la lista del **recolector** | Documentado en 3b.27 |
+
+Y de propina, verificaciones que evitan sustos: la **migración sobre una aldea ya construida** (el camino que
+sigue la partida del jugador) se probó de punta a punta **sin perder nada** —un almacén viejo con 7 diamantes y 5
+de hierro, y 3 de oro en el cofre de la taberna, acabaron **enteros** en el almacén nuevo— y la **huerta** sale
+intacta (72 cultivos antes y después).
+
+### 3b.30 Lo que viene
 - **Milicia**: ✅ completa (barraca, oficio, combate, escudo que bloquea, modelo propio, marcha a la guarida).
 - **Leñador/reforestador**: ✅ (tala y replanta, la cadena de la madera del herrero y ahora también **despeja los
   árboles que quedaron dentro de la muralla**).
