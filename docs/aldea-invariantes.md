@@ -242,6 +242,13 @@ sólo parece una franja delgada"*. **Regla:** el cristal va **solo en la celda c
 `i % 4 == 2`), con **cal a los dos lados**, así conecta por ambos y se ve entero. Los huecos de una sola celda (los
 extremos de un muro) **no llevan cristal**: ahí no hay forma de que conecte.
 
+### I20 · El desván se vacía DESPUÉS de reparar el tejado
+El **desván** (el hueco bajo el tejado) es un tercer piso: su suelo es la **placa del tejado** (`yTecho`) y se anda en
+`yTecho+1` —`techoDeLaPosada` pone los tablones en `yTecho-1`, **no** en `yTecho`—. **Regla:** el vaciado del relleno
+(`desvanDeLaTaberna`) tiene que correr **después** de cualquier cosa que vuelva a pasar el tejado
+(`rehacerMurosDeLaTaberna` llama a `tejadoDeLaTaberna`), o lo rellenará otra vez; y solo se quitan las tejas del
+relleno (`DEEPSLATE_TILES`), nunca las escaleras de las vertientes, la cumbrera ni las columnas de los frontones.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 

@@ -476,9 +476,26 @@ public final class VillageManager {
      *       (crudo = 2 puntos de comida, cocinado = 4, como la carne del corral: la segunda fuente de proteína). El
      *       lago <b>se repuebla solo y despacio</b> (un pez cada dos minutos, hasta 6), así que la pesca está limitada
      *       por lo que cría el lago y no por un contador.</li>
+     *   <li>51: tres cosas de la <b>taberna</b> que pidió el jugador:
+     *       <ul>
+     *         <li><b>Una SEGUNDA PUERTA</b>, en el muro <b>sur</b> (dx=3), mirando al patio de atrás: se sale del
+     *             comedor sin cruzar toda la casa. La repone {@code rehacerMurosDeLaTaberna} (es el mismo
+     *             constructor de muro con el índice de la puerta), así que las tabernas ya construidas la reciben.</li>
+     *         <li><b>El POZO DE LA ESCALERA, tapado.</b> El hueco del forjado (dx 1..2, dz 8..11) daba de lleno al
+     *             <b>cuarto suroeste</b> de la posada: se entraba andando desde el cuarto y se caía al comedor. Se
+     *             cierra con tablones en la fila dz=12, del suelo de la posada al techo, <b>sin tocar la subida</b>
+     *             (la salida de la escalera es dz=8).</li>
+     *         <li><b>El DESVÁN</b>: el hueco bajo el tejado a dos aguas estaba macizo ("el cobertizo está todo relleno
+     *             de bloques") y pasa a ser un <b>tercer piso</b> para el jugador, amueblado como base (cama, mesa de
+     *             trabajo, horno, dos cofres, yunque, faroles y alfombra). Se vacía <b>solo el relleno interior</b>
+     *             (las tejas de dx 1..17): la cáscara del tejado, los frontones y su ventana se quedan <b>celda por
+     *             celda</b> como estaban, así que desde fuera se ve igual. Se sube por dentro con una escalera de seis
+     *             escalones en el carril norte de la galería de la posada, por un hueco abierto en las dos capas del
+     *             forjado que cubre lo que se sube (la regla I16).</li>
+     *       </ul></li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 50;
+    public static final int CURRENT_LAYOUT = 51;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -1480,6 +1497,14 @@ public final class VillageManager {
             // la taberna que ya existe: `muroTudor` y `tejadoDeLaTaberna` solo ponen estructura, así que volver a
             // pasarlos es idempotente y no toca ni la despensa ni las camas.
             VillageGenerator.rehacerMurosDeLaTaberna(level, center);
+            // EL DESVÁN Y EL POZO DE LA ESCALERA (migración 51, lo pidió el jugador): el hueco bajo el tejado pasa a
+            // ser un tercer piso amueblado (se vacía SOLO el relleno interior: la cáscara del tejado, los frontones y
+            // su ventana quedan celda por celda igual, así que desde fuera se ve lo mismo) y el pozo de la escalera se
+            // cierra por el sur, que daba al cuarto suroeste de la posada. Van DESPUÉS de `rehacerMurosDeLaTaberna`
+            // (que vuelve a pasar el tejado entero, relleno incluido) y son idempotentes: no rehacen la taberna, así
+            // que no se pierde ni la despensa ni las camas.
+            VillageGenerator.desvanDeLaTaberna(level, center);
+            VillageGenerator.cerrarElHuecoDeLaEscalera(level, center);
             // Y su CAMINO desde la plaza (torcido, para no cruzar la parcela de la granja).
             VillageGenerator.caminoALaTaberna(level, center);
             // LA PESQUERA (etapa G): el lago, la caseta del pescador, su BARRIL (el puesto) y sus peces. Va antes de

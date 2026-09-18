@@ -1413,6 +1413,28 @@ taberna en `1438,1428`, y el jugador de pie en `1439,125,1439`).
 - El reparador es **idempotente** y solo quita el bloque **si es del tipo esperado** (`quitarSiEs`), así que no puede
   borrar algo que haya puesto el jugador.
 
+### 3b.34 La taberna, habitada: segunda puerta, el pozo tapado y el desván como base
+
+Tres encargos del jugador de una vez: *"pon una puerta extra en la taberna"*, *"arriba hay un cuarto que está abierto
+porque da precisamente al hueco de las escaleras: estaría bien que se tapara con una pared, para que nadie se cayera"*
+y *"el cobertizo (el techo de color negro) está todo relleno con bloques: estaría bien que sirviera como 3er piso donde
+el jugador pueda establecerse, que tenga todo lo necesario para ser una base, sin modificar la apariencia externa, tal
+vez una ventana nada más y escaleras para llegar ahí (dentro de la taberna, no fuera)"*.
+
+| Encargo | Cómo queda | Por qué así |
+|---|---|---|
+| **Puerta extra** | `DARK_OAK_DOOR` con `facing=SOUTH` en el **muro sur**, `dx=3`, `dz=TABERNA_FONDO-1`, a la cota, con cal encima y viga arriba | `dx=3` **no** es columna de poste (`i%4==0`) y por dentro está libre (la barra empieza en `dx=7`); fuera el patio está a la cota, así que se sale andando (sin escalón) |
+| **El pozo tapado** | Tablones en `dx 1..2`, `dz=12`, de `y1` a `yTecho-2` | Es la primera fila **con suelo** al sur del hueco (`esHuecoDeLaEscalera` = `dz 8..11`): cierra el cuarto suroeste sin estorbar la subida, que sale por `dz=8` |
+| **El desván (3er piso)** | Se vacía el **relleno** del tejado (`DEEPSLATE_TILES`) en `dx 1..17`, `dz 0..14`, de `yTecho+1` a `yTecho+8` (833 tejas), dejando la cáscara (vertientes, cumbrera y frontones) intacta; se sube por **6 escalones dentro** (`dz=7`, el carril norte de la galería, `facing=EAST`, de `(3,y1)` a `(8,y1+5)`), con el hueco del techo justo encima de ellos (regla de I16); y se amuebla como base del jugador: cama, mesa de trabajo, horno, dos cofres, yunque, dos faroles sobre poste y dos alfombras | `techoDeLaPosada` pone los tablones en `yTecho-1`, así que lo que se pisa es la **placa del tejado** (`yTecho`) y el desván se anda en `yTecho+1` (6 bloques sobre la posada). La ventana son los **cristales que ya llevaban los frontones**: no se añade ninguna, y desde fuera los bloques son idénticos. El mobiliario **evita a propósito los puestos de trabajo de aldeano** (nada de barriles, calderos ni mesas de oficio) |
+
+**Notas y riesgos (dichos, no escondidos)**: el farol de la galería que caía en la celda del 4º escalón **se recuelga
+al lado** (`colgar` en el carril sur) —y por eso el desván se construye el último y abre el tablón *después* de poner el
+escalón, para que el farol no salte al suelo como objeto—; la **cama del desván es un POI** y suma 1 al recuento de
+camas del pueblo (puede permitir una cría más; lo pidió el jugador); y la **migración 51** lo aplica a las tabernas ya
+construidas llamando a los reparadores **después** de `rehacerMurosDeLaTaberna` (que vuelve a rellenar el tejado, así
+que el vaciado tiene que ir después). **No se toca el testigo `tabernaConstruida`**: rehacer la taberna entera tiraría
+la despensa y las camas.
+
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.
