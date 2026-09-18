@@ -940,6 +940,24 @@ public final class VillageGenerator {
     private static final int BARRACA_FAROL_DY = BARRACA_PISO2 + 2;
     /** Camas de la barraca: dos filas de 4, una contra cada pared larga. */
     public static final int BARRACA_CAMAS = 8;
+    /**
+     * Los <b>maniquíes de entrenamiento</b> de la sala de armas, por su celda ({@code dx},{@code dz} relativos a la
+     * base): el de la esquina <b>noroeste</b> y el de la <b>sureste</b>. Cada uno es una <b>paca</b> de paja
+     * ({@code HAY_BLOCK}) con su <b>calabaza</b> tallada encima y <b>dos vallas</b> (el travesaño del costado y el
+     * palo de arriba). Las celdas viven aquí porque las usan el <b>constructor</b> y el reparador de la mesa de
+     * cartografía (<b>migración 60</b>), que tiene que saber cuál es la celda de una paca (invariante I4).
+     */
+    private static final int[][] BARRACA_MANIQUIES = {
+            {-BARRACA_RADIO + 2, -BARRACA_RADIO + 2},
+            {BARRACA_RADIO - 2, BARRACA_RADIO - 2}};
+    /**
+     * El maniquí de la esquina <b>sureste</b>: su <b>paca</b> es la celda en la que el constructor ponía la
+     * <b>mesa de cartografía</b>. La mesa se coloca <b>después</b> del maniquí y en la <b>misma celda</b>, así que se
+     * comía la paca y el maniquí se quedaba sin base (medido en el guardado del jugador: la paca desaparecida, con
+     * la calabaza y las dos vallas todavía en pie y el suelo de piedra debajo). Es lo que devuelve a su sitio el
+     * reparador {@link #quitarLaMesaDeLaBarraca}.
+     */
+    private static final int[] BARRACA_MANIQUI_SURESTE = BARRACA_MANIQUIES[1];
 
     /**
      * La columna ({@code dx} relativo a la base) por la que sube la <b>escalera del dormitorio</b>: la última celda
@@ -1155,6 +1173,43 @@ public final class VillageGenerator {
     }
 
     /**
+     * Quita de la barraca la <b>mesa de cartografía</b> y devuelve su celda a la <b>paca del maniquí</b> sureste
+     * (<b>migración 60</b>).
+     * <p>
+     * <b>Lo que había</b> (medido en el guardado del jugador, aldea 2, barraca en {@code 1369,1436}, cota {@code 120}):
+     * la celda {@code 1371,120,1438} tenía una {@code cartography_table}, que es el <b>puesto de trabajo del
+     * CARTÓGRAFO</b> —un oficio que este pueblo <b>no</b> tiene, así que un aldeano <b>sin oficio</b> (una cría que
+     * crece) lo reclamaría y se volvería cartógrafo—. Y esa celda no era suya: es la <b>paca del maniquí de
+     * entrenamiento</b> de la esquina sureste ({@link #BARRACA_MANIQUI_SURESTE}), que el constructor coloca
+     * <b>antes</b> y la mesa <b>sustituía</b>, así que el maniquí se quedaba <b>sin base</b> (lo medido: la paca
+     * desaparecida, la calabaza y las dos vallas todavía en pie y, debajo de la mesa, el <b>suelo de piedra</b> de la
+     * barraca, la capa de {@code cota - 1}). El <b>plano</b> guardaba la mesa, así que el obrero la reponía y no se
+     * arreglaba sola.
+     * <p>
+     * <b>Lo que hace</b>: si en esa celda sigue habiendo una <b>mesa de cartografía</b>, la cambia por la
+     * <b>paca</b> ({@code HAY_BLOCK}) del maniquí, que es lo que le toca a esa celda —y <b>en la misma escritura</b>:
+     * quitar la mesa y dejar la celda en aire pondría la <b>calabaza a flotar</b> (I14), que es justo el hueco que no
+     * se puede dejar—. Es <b>idempotente</b> (si ya es la paca, o si el jugador puso ahí cualquier otra cosa, no
+     * escribe ni una celda) y <b>no rehace la barraca</b>: su testigo es el <b>hogar</b> del patio de entrenamiento
+     * (I15) y rehacerla tiraría las camas y lo de dentro de las arcas. Va <b>antes</b> de tirar el plano, para que el
+     * plano nuevo se capture ya con la paca y sin la mesa (I8: con la mesa en el plano, el obrero la repondría).
+     */
+    public static void quitarLaMesaDeLaBarraca(ServerLevel level, BlockPos center) {
+        if (!barracaConstruida(level, center)) {
+            return; // sin barraca del trazado actual no hay ninguna mesa que quitar
+        }
+        int nivel = cotaDeLaPlaza(level, center);
+        BlockPos base = baseDeBarraca(center);
+        BlockPos celda = new BlockPos(base.getX() + BARRACA_MANIQUI_SURESTE[0], nivel,
+                base.getZ() + BARRACA_MANIQUI_SURESTE[1]);
+        if (sustituirSiEs(level, celda, Blocks.CARTOGRAPHY_TABLE, Blocks.HAY_BLOCK.defaultBlockState())) {
+            DevilRpg.LOGGER.info("[Village] Barraca de {}: mesa de cartografia fuera de {} (es el puesto del"
+                    + " cartografo, un oficio que el pueblo no tiene); su celda vuelve a ser la paca del maniqui",
+                    center, celda);
+        }
+    }
+
+    /**
      * Pasa <b>todo</b> lo de un arca a otra (uniendo pilas primero y usando los huecos después). Hace falta porque
      * reemplazar un cofre <b>tira su contenido</b> al suelo (mecánica de vanilla, I6): el arca vieja solo se retira
      * cuando lo suyo ya está en la nueva. Lo que <b>no quepa</b> se queda donde estaba (y entonces el arca no se
@@ -1268,10 +1323,12 @@ public final class VillageGenerator {
                 .setValue(DoorBlock.FACING, Direction.NORTH).setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER), 3);
         colocar(level, puerta.above(), Blocks.OAK_DOOR.defaultBlockState()
                 .setValue(DoorBlock.FACING, Direction.NORTH).setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER), 3);
-        // 5) LA SALA DE ARMAS (piso de abajo): maniquíes de paja (para ensayar el golpe), dianas de los arqueros, el
-        //    hogar con su fuego y una mesa con el mapa de las guaridas.
-        int[][] maniquies = {{-r + 2, -r + 2}, {r - 2, r - 2}};
-        for (int[] m : maniquies) {
+        // 5) LA SALA DE ARMAS (piso de abajo): maniquíes de paja (para ensayar el golpe), dianas de los arqueros y el
+        //    hogar con su fuego. SIN puestos de trabajo de aldeano: la mesa de CARTOGRAFÍA que había aquí era el
+        //    puesto del cartógrafo —un oficio que este pueblo no tiene, así que un aldeano sin oficio lo reclamaría—
+        //    y, además, caía en la celda de la PACA del maniquí sureste (se coloca después y se la comía). Se quitó
+        //    en la migración 60: ver `quitarLaMesaDeLaBarraca`.
+        for (int[] m : BARRACA_MANIQUIES) {
             colocar(level, new BlockPos(bx + m[0], nivel, bz + m[1]), Blocks.HAY_BLOCK.defaultBlockState(), 3);
             colocar(level, new BlockPos(bx + m[0], nivel + 1, bz + m[1]), Blocks.CARVED_PUMPKIN.defaultBlockState(), 3);
             colocar(level, new BlockPos(bx + m[0], nivel, bz + m[1] + 1), Blocks.OAK_FENCE.defaultBlockState(), 3);
@@ -1281,7 +1338,6 @@ public final class VillageGenerator {
         colocar(level, new BlockPos(bx + r - 2, nivel, bz - r + 2), Blocks.TARGET.defaultBlockState(), 3);
         colocar(level, new BlockPos(bx + r - 2, nivel + 1, bz - r + 2), Blocks.TARGET.defaultBlockState(), 3);
         colocar(level, new BlockPos(bx, nivel - 1, bz + r - 1), Blocks.CAMPFIRE.defaultBlockState(), 3);
-        colocar(level, new BlockPos(bx + 2, nivel, bz + r - 2), Blocks.CARTOGRAPHY_TABLE.defaultBlockState(), 3);
         colocar(level, new BlockPos(bx - 2, nivel, bz + r - 2), Blocks.CHEST.defaultBlockState()
                 .setValue(ChestBlock.FACING, Direction.NORTH), 3);
         // 6) LA ESCALERA al dormitorio: BARRACA_ESCALONES escalones de medio bloque (los del juego), pegados al muro
@@ -6320,7 +6376,8 @@ public final class VillageGenerator {
      * <p>
      * <b>OJO con el bloque de las pipas</b>: NO se usa {@code BARREL}, porque en vanilla el <b>barril es el puesto de
      * trabajo del PESCADOR</b> y un aldeano sin oficio (una cría que crece, por ejemplo) lo reclamaría y se volvería
-     * pescador — un oficio que este pueblo <b>todavía no tiene</b> (tendrá su edificio y su lago más adelante). Las
+     * pescador — un oficio que este pueblo <b>todavía no tiene</b> (tendrá su edificio y su lago más adelante, y
+     * entonces su barril va en la <b>pesquera</b>: es un puesto deliberado, I31). Las
      * pipas son de madera con corteza ({@code OAK_WOOD}), que se ve como un tonel y no es puesto de nadie; el
      * mostrador va de tronco descortezado, así que se distinguen.
      */
@@ -6569,6 +6626,22 @@ public final class VillageGenerator {
             return 1;
         }
         return 0;
+    }
+
+    /**
+     * Cambia ese bloque por otro <b>solo si sigue siendo el esperado</b> —la misma guardia que {@link #quitarSiEs},
+     * para que una reparación no toque lo que puso el jugador— y lo deja en <b>una sola escritura</b>: sin el aire de
+     * en medio que dejaría quitar y volver a poner. La usa el reparador de la <b>mesa de cartografía</b> de la
+     * barraca (migración 60), que devuelve esa celda a la <b>paca del maniquí</b>.
+     *
+     * @return {@code true} si ha cambiado el bloque
+     */
+    private static boolean sustituirSiEs(ServerLevel level, BlockPos pos, Block esperado, BlockState nuevo) {
+        if (!level.getBlockState(pos).is(esperado)) {
+            return false;
+        }
+        colocar(level, pos, nuevo, 3);
+        return true;
     }
 
     /**
@@ -6918,7 +6991,7 @@ public final class VillageGenerator {
      * El <b>mobiliario del desván</b>: lo justo para que sea una base del jugador (dos camas, mesa de trabajo, horno,
      * dos cofres —pegados, que se juntan en uno doble—, yunque, un par de faroles y un par de alfombras). <b>Nada de
      * puestos de trabajo de aldeano</b> (barril, caldero, ahumador, alto horno, mesa de herrería, muela, telar, atril,
-     * compostero, cortapiedras, soporte de pociones ni campana): un aldeano sin oficio los reclamaría. La cama, el
+     * compostero, cortapiedras, soporte de pociones ni campana): un aldeano sin oficio los reclamaría (I31). La cama, el
      * cofre, el <b>horno normal</b> (el del cocinero es el ahumador), la mesa de trabajo y el yunque <b>no</b> son
      * puestos de trabajo; la cama sí es POI, pero es justo lo que el jugador quiere en su base.
      * <p>

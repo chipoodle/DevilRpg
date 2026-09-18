@@ -1826,6 +1826,84 @@ el jugador, pero no se ha visto) ni la migración corriendo sobre la partida (el
 toca el guardado**: lo arregla la migración al cargar). La aldea **1 está caída** y la migración no corre en una
 aldea caída (como ninguna otra migración): su barraca tiene el mismo fallo medido y se quedará como está.
 
+### 3b.44 La mesa de cartografía de la barraca, fuera (migración 60)
+
+El constructor de la barraca ponía una **mesa de cartografía** (`cartography_table`) en `(bx+2, nivel, bz+2)`, y esa
+celda **no era suya**: es la **paca** (`hay_block`) del **segundo maniquí** de entrenamiento, que el constructor
+coloca **antes** —la mesa se la **comía**—, así que el maniquí se quedaba **sin base** (con la calabaza y las dos
+vallas en pie y el suelo de piedra debajo). Y encima es el **puesto de trabajo del CARTOGRAFO**, un oficio que este
+pueblo **no** tiene: un aldeano **sin oficio** (una cría que crece) la reclamaría y se volvería cartógrafo. El
+jugador, al verlo: *"sí, quítalo"*.
+
+**Lo que había HOY** (aldea 2, barraca en `1369,1436`, cota `120`; `build/barraca_dump.py`):
+
+| Celda | Qué había |
+|---|---|
+| **`1371,120,1438`** | **`cartography_table`** (el puesto del cartógrafo) — debajo, el **suelo de piedra** de la barraca (`1371,119,1438`), que es la capa `cota-1` |
+| **`1371,121,1438`** | `carved_pumpkin` (la cabeza del maniquí), **en pie** sobre la mesa |
+| **`1371,122,1438`** | `oak_fence` (el palo de arriba del maniquí) |
+| **`1371,120,1439`** | `oak_fence` (el travesaño del costado), **en pie** |
+| La **paca** | **no estaba**: era la celda de la mesa (el otro maniquí, `1367,120,1434`, la tiene) |
+
+El **plano** guardaba la mesa (`1371,120,1438` → `cartography_table`), así que el obrero la reponía y el maniquí no
+se arreglaba solo.
+
+**El arreglo** (`VillageGenerator`): se **quita** la mesa del constructor y la celda se queda con lo que le toca, la
+**paca del maniquí**, que ahora ya no la sustituye nadie. Las celdas de los dos maniquíes pasan a ser constantes
+(`BARRACA_MANIQUIES` / `BARRACA_MANIQUI_SURESTE`, I4) porque las usan el constructor **y** la migración.
+
+**La migración 60** (`VillageGenerator.quitarLaMesaDeLaBarraca`, llamada desde `VillageManager` **antes** de tirar el
+plano) hace lo mismo en las barracas ya construidas: **si en esa celda sigue habiendo una mesa de cartografía**, la
+cambia por la **paca** (`sustituirSiEs`, una sola escritura: la misma guardia que `quitarSiEs`, sin el aire de en
+medio). Es **idempotente** (si ya es la paca, o si el jugador puso otra cosa, no escribe ni una celda) y **no rehace
+la barraca** (su testigo es el **hogar** del patio, I15: rehacerla tiraría las camas y lo de dentro de las arcas).
+Va antes de tirar el plano para que el plano nuevo se capture con la paca y **sin** la mesa (I8).
+
+**Barrido de puestos de trabajo de aldeano de la aldea entera** (bloque a bloque en las tres aldeas del guardado:
+`build/barraca_mesa.py`). El **único** que no correspondía a un oficio del pueblo era esa mesa; los demás son
+**deliberados** y **no** se han tocado:
+
+| Puesto | Aldea 2 (centro `1414,1414`) | De quién es |
+|---|---|---|
+| **Mesa de cartografía** | `1371,120,1438` (barraca) | **CARTÓGRAFO: no existe en el pueblo → QUITADO** (migración 60) |
+| Campana | `1413,121,1415` (kiosco) | POI de **reunión** del pueblo, a propósito (I28; la migración 58 la centra) |
+| Soporte de pociones | `1397,121,1371` (iglesia) | **CLERIGO** (oficio del pueblo; viene en la plantilla `plains_temple_4`) |
+| Composteros ×3 | `1382,120,1428` · `1384,120,1448` · `1422,120,1418` | **GRANJERO** (uno por bancal) |
+| Muela + mesa de herrería | `1419,120,1368` · `1418,120,1368` (herrería) | **HERRERO DE ARMAS** y **DE HERRAMIENTAS** |
+| Telar | `1471,120,1415` (corral anexo) | **PASTOR** (el ganadero) |
+| **Ahumador** | `1442,120,1430` (cocina de la taberna) | **CARNICERO** (el cocinero) |
+| Barril | `1435,120,1453` (pesquera) | **PESCADOR** |
+
+Las **otras dos** aldeas del guardado tienen los mismos, cada uno en la suya y con la **misma mesa de cartografía**
+en su barraca: aldea 0 (centro `566,566`, cota `91`) campana `565,92,567`, soporte de pociones `549,92,523`,
+composteros `574,91,570` · `534,91,580` · `536,91,600`, muela `571,91,520`, mesa de herrería `570,91,520`, telar
+`621,91,567`, ahumador `594,91,582` y **la mesa** en `523,91,590` (y todavía **sin** pesquera: su trazado es el 44);
+aldea 1 (caída, centro `990,990`, cota `96`) los mismos, con barril `1011,96,1029` y **sin** telar, y **la mesa** en
+`947,96,1014`. El barrido es de ±110 bloques y de `cota-25` a `cota+35`, así que cubre la aldea entera (la valla
+está a **62**) y sus anexos. **No** hay ni un caldero, atril, cortapiedras, alto horno ni mesa de flechas en ninguna.
+
+**Y un defecto que se ha visto de paso, SIN tocar** (no era el encargo y arreglarlo es una decisión de trazado): la
+**primera diana** del constructor (`bx - r + 2`, `bz + r - 2` = `1367,120,1438`) cae en **la misma celda** que el
+**arca** de la pared oeste (que se coloca después), así que el arca **se come la diana**: en el plano de la aldea 2
+solo hay **2** `target` (`1371,120,1434` y `1371,121,1434`), no tres. Se deja como está y se avisa al jugador.
+
+**Comprobado con `build/barraca_mesa_repara.py`** (antes/después celda a celda, y la idempotencia) sobre las **tres**
+aldeas del guardado que tienen barraca:
+
+| | Celda `+2,+2` (hoy) | Lo que deja el reparador | Maniquí sureste | 2ª pasada | Puestos de trabajo en la barraca |
+|---|---|---|---|---|---|
+| Aldeas **0, 1 y 2** | `cartography_table` | `hay_block` | **completo** (paca + calabaza + 2 vallas) | **0 celdas** | **ninguno** |
+
+(Ojo: en la **aldea 1** la simulación da el mismo resultado, pero **no correrá**: está caída.)
+
+**Lo que NO se ha podido comprobar (sin jugar)**: que la migración corra sobre la partida (el cliente estaba cerrado
+y esto **no toca el guardado**: lo arregla la migración al cargar; la aldea 2 del guardado está en el trazado **55**,
+así que al cargar corren **de una pasada** las migraciones **56 a 60**, la escalera de la barraca incluida) ni que un
+aldeano sin oficio reclamara la mesa de verdad (el razonamiento es el del juego —`cartography_table` es POI de
+`CARTOGRAPHER`— y el mismo que ya llevó a no usar `BARREL` en las pipas de la taberna). La aldea **1 está caída**
+(trazado 46) y la migración **no corre** en una aldea caída: su barraca tiene la misma mesa medida y se quedará como
+está (como su escalera, migración 59).
+
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.

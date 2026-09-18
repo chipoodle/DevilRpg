@@ -581,9 +581,19 @@ public final class VillageManager {
      *       se comía de más, corre <b>una celda al oeste</b> la cama del rincón sureste y pasa el arca del este al lado
      *       de la del oeste (con lo de dentro: un cofre reemplazado pierde su contenido, I6). Solo toca esas celdas: no
      *       rehace la barraca (rehacerla tiraría las camas y las arcas).</li>
+     *   <li>60: la <b>MESA DE CARTOGRAFÍA DE LA BARRACA</b>, fuera (la pidió quitar el jugador al verla: <i>"sí,
+     *       quítalo"</i>). Medido en su guardado (aldea 2, barraca en {@code 1369,1436}, cota {@code 120}): la celda
+     *       {@code 1371,120,1438} tenía una {@code cartography_table}, que es el <b>puesto de trabajo del
+     *       CARTÓGRAFO</b> —un oficio que este pueblo no tiene, así que un aldeano <b>sin oficio</b> lo reclamaría— y
+     *       que además caía en la celda de la <b>paca del maniquí</b> de entrenamiento sureste: el constructor la
+     *       coloca <b>después</b> del maniquí y en la <b>misma celda</b>, así que el maniquí se quedaba <b>sin
+     *       base</b> (con la calabaza y las dos vallas en pie y el suelo de piedra debajo). Y el <b>plano</b> guardaba
+     *       la mesa, así que el obrero la reponía. Este reparador la quita <b>solo si sigue siendo la mesa</b> y
+     *       devuelve la celda a su <b>paca</b>: idempotente, de una sola celda y sin rehacer la barraca (su testigo
+     *       es el hogar, I15). Va antes de tirar el plano para que el plano nuevo sea el bueno (I8).</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 59;
+    public static final int CURRENT_LAYOUT = 60;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -1687,6 +1697,12 @@ public final class VillageManager {
             // rehacer la barraca (rehacerla tiraría las camas y las arcas). Idempotente y antes de tirar el plano,
             // para que el plano nuevo ya traiga la escalera buena (I8).
             VillageGenerator.arreglarLaEscaleraDeLaBarraca(level, center);
+            // LA MESA DE CARTOGRAFÍA DE LA BARRACA, FUERA (migración 60, la pidió quitar el jugador): es el puesto del
+            // cartógrafo (un oficio que este pueblo no tiene, así que un aldeano sin oficio lo reclamaría) y caía en
+            // la celda de la paca del maniquí sureste, que el constructor coloca antes y la mesa se comía. Este
+            // reparador la quita solo si sigue siendo la mesa y devuelve la celda a su paca: idempotente, de una
+            // celda, sin rehacer la barraca (su testigo es el hogar, I15) y antes de tirar el plano (I8).
+            VillageGenerator.quitarLaMesaDeLaBarraca(level, center);
             // REBAÑO ESCAPADO (una sola vez, al migrar): antes de que existiera la marca del rebaño, el ganado que se
             // colaba por el portón se perdía sin remedio y el corral se quedaba vacío (y sin carne). Aquí se reconoce
             // el que anda suelto FUERA de la muralla y cerca del corral; luego, en el latido, vuelve a casa.

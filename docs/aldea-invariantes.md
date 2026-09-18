@@ -40,7 +40,9 @@ En cada cambio en `world/Village*` o en los goals de aldeano hay que:
 > y en qué celda va el hueco del forjado) tampoco: la comprueba `build/barraca_subida.py`, que además simula el
 > reparador de la migración 59 celda a celda. **I27** (el agua no se rellena) tampoco: se comprueba contra el guardado
 > con `build/lago_pesquera.py` y `build/lago_repara.py`. **I28** (la campana, en la celda central del kiosco) tampoco:
-> se comprueba con `build/kiosco_dump.py`, que vuelca la huella del kiosco capa a capa.
+> se comprueba con `build/kiosco_dump.py`, que vuelca la huella del kiosco capa a capa. **I31** (ningún puesto de
+> trabajo de aldeano que no sea de un oficio del pueblo) tampoco: es un barrido de bloques, y se comprueba contra el
+> guardado con `build/barraca_mesa.py` y `build/barraca_mesa_repara.py`.
 
 ### I1 · Toda altura se mide con `cotaDeLaPlaza`, nunca con la Y del centro
 El centro de una aldea viaja por todo el sistema (`ObjectiveTargets.targetOf`, `centroDe`) y **su Y no es la del
@@ -588,6 +590,38 @@ en una aldea caída (como ninguna otra).
 `build/barraca_subida.py` (`python build\barraca_subida.py todas`), que simula la entrada, cada escalón, la salida y
 el paso del reparador **celda a celda**.
 
+### I31 · Ningún puesto de trabajo de aldeano que no sea de un oficio del pueblo
+
+Un **puesto de trabajo** de vanilla (`barrel`, `cauldron`, `smoker`, `blast_furnace`, `grindstone`, `loom`,
+`smithing_table`, `lectern`, `composter`, `stonecutter`, `brewing_stand`, `cartography_table`, `fletching_table`) es
+un **POI**: el aldeano **sin oficio** que lo encuentre lo **reclama** y se vuelve de ese oficio (una cría que crece,
+por ejemplo). Y el pueblo **reparte SUS oficios** (`VillageManager.slotDeProfesionFaltante`): un oficio de fuera no
+es un extra, es un aldeano que **deja de hacer lo suyo** —y el pueblo se queda sin el suyo—, y encima el puesto se
+queda **cogido sin dueño** para siempre (I23: vanilla solo suelta el ticket al morir el aldeano).
+
+**Regla:** en la aldea solo hay puestos de trabajo de los oficios **del pueblo**, cada uno en el sitio que le toca:
+
+- **compostero** en cada bancal (FARMER), **muela** y **mesa de herrería** en la herrería (WEAPONSMITH/TOOLSMITH),
+  **telar** en el corral anexo (SHEPHERD, el ganadero), **ahumador** en la cocina de la taberna (BUTCHER, el
+  cocinero), **barril** en la pesquera (FISHERMAN), **soporte de pociones** en la iglesia (CLERIC, viene en la
+  plantilla `plains_temple_4`) y la **campana** del kiosco, que es el POI de **reunión** y va ahí a propósito (I28).
+- **Nada más**: ni mesa de cartografía, ni atril, ni cortapiedras, ni alto horno, ni caldero, ni mesa de flechas. El
+  mobiliario que se les parezca se hace con bloques que **no** son POI: las **pipas** de la taberna son `OAK_WOOD`
+  **a propósito** (un `BARREL` sería el puesto del pescador) y el **horno normal** del desván no es puesto de nadie
+  (el del cocinero es el **ahumador**).
+
+**Medido** (aldea 2, centro `1414,1414`, cota `120`; `build/barraca_mesa.py`, que barre los bloques de las **tres**
+aldeas del guardado): el único puesto que **no** era de un oficio del pueblo era la **mesa de cartografía de la
+barraca** (`1371,120,1438`), y además caía en la celda de la **paca** del maniquí de entrenamiento sureste (el
+constructor coloca el maniquí **antes** y la mesa se lo comía: el maniquí se quedaba **sin base**, con la calabaza y
+las dos vallas en pie). La quita la **migración 60** (`quitarLaMesaDeLaBarraca`): idempotente, de **una celda** y sin
+rehacer la barraca (su testigo es el hogar, I15) —si esa celda sigue siendo la mesa, pasa a ser la paca; lo que haya
+puesto el jugador no se toca—.
+
+**No tiene regla en el lint** (es un barrido de bloques, no un patrón de texto): se comprueba **contra el guardado**
+con `build/barraca_mesa.py` (los puestos de la aldea con sus coordenadas, aldea por aldea) y
+`build/barraca_mesa_repara.py` (el reparador de la migración 60, celda a celda y con la idempotencia).
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
@@ -624,6 +658,8 @@ Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento 
 | `build/taberna_subida.py` | **¿Se sube la escalera del desván?**: aplica la regla del `maxUpStep` del juego (I26) a cada escalón, contra el guardado, sin jugar; y compara la regla vieja (2 celdas) con la nueva (3). |
 | `build/barraca_subida.py` | **¿Se sube la escalera de la barraca?** (I30, la otra mitad de I26): aplica la regla del `maxUpStep` a cada escalón **y** comprueba la **entrada** (el lado bajo), la **salida** (a la altura del suelo del dormitorio) y las **8 camas**, antes y después de simular el reparador de la migración 59 **celda a celda**. `todas` = aldeas 0, 1 y 2 de una pasada. |
 | `build/barraca_dump.py` | **La barraca entera, capa a capa**: cuenta escalones (con su Y y su `facing`), camas, mobiliario, el forjado (huecos) y la vertical de cada escalón. |
+| `build/barraca_mesa.py` | **Puestos de trabajo de aldeano** (I31): los barre **bloque a bloque** en las tres aldeas del guardado, con sus coordenadas, y dice qué hay en la celda de la mesa de cartografía de la barraca y qué dice el **plano** de ella. |
+| `build/barraca_mesa_repara.py` | **El reparador de la migración 60** (la mesa de cartografía → la paca del maniquí), **celda a celda** y con la idempotencia: antes/después de la celda, el maniquí completo y que no quede ningún puesto de trabajo en la barraca. |
 | `build/huertadiag.py`, `build/huerta_simula.py` | **Bancales**: qué dice el plano y qué hay en el mundo celda por celda (qué calvas faltan en el plano) y qué celdas repondría el obrero / labraría el granjero (I25). |
 | `build/granjaestado.py`, `build/farmdiag.py`, `build/columnas.py`, `build/perfilcol.py` | Estado de la granja (cultivos, edades, cotas) y columnas crudas. |
 | `build/items.py`, `build/contenedores.py` | Objetos en el suelo por tipo y contenido de cofres/despensa/almacén. |
