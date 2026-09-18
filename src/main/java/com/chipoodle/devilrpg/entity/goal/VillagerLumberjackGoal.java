@@ -789,6 +789,9 @@ public class VillagerLumberjackGoal extends Goal {
         candidatos.sort(Comparator.comparingDouble(p -> villager.distanceToSqr(p.getX() + 0.5D, p.getY() + 0.5D,
                 p.getZ() + 0.5D)));
         for (int i = 0; i < Math.min(candidatos.size(), CANDIDATOS_A_COMPROBAR); i++) {
+            if (VillageManager.esPuntoFallido(villager, candidatos.get(i))) {
+                continue; // a ese claro no llegó hace poco: se prueba con el siguiente (I33)
+            }
             if (estaDespejado(level, candidatos.get(i))) {
                 return candidatos.get(i);
             }
@@ -873,6 +876,9 @@ public class VillagerLumberjackGoal extends Goal {
                 }
                 if (resto == null) {
                     continue;
+                }
+                if (VillageManager.esPuntoFallido(villager, resto)) {
+                    continue; // a ese resto colgando no llegó hace poco: se prueba con el siguiente (I33)
                 }
                 double dist = villager.distanceToSqr(resto.getX() + 0.5D, resto.getY() + 0.5D, resto.getZ() + 0.5D);
                 if (dist < mejorDist) {
