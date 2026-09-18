@@ -119,7 +119,7 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
         this.targetSelector.addGoal(3, (new HurtByTargetGoal(this)).setAlertOthers());
         this.targetSelector.addGoal(4,
                 new NearestAttackableTargetGoal<>(this, Mob.class, 10, false, false,
-                        (entity) -> esObjetivoDeLasEsporas(this, entity)));
+                        (entity) -> !ITamableEntity.esCriaturaPacificaONeutral(entity) && esObjetivoDeLasEsporas(this, entity)));
         //this.targetSelector.addGoal(3, new ResetUniversalAngerTargetGoal<>(this, true));
         this.targetSelector.addGoal(8, new ResetUniversalAngerTargetGoal<>(this, true));
     }

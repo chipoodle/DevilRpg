@@ -110,6 +110,30 @@ public interface ITamableEntity extends IAttachmentHolder, OwnableEntity, Leasha
 
     boolean canAttack(LivingEntity p_213336_1_);
 
+    /**
+     * ¿Esa criatura es <b>pacífica o neutral</b> (o sea: <b>no</b> hostil)? Es a lo que un <b>minion</b> no ataca por
+     * su cuenta: el ganado y los animales del mundo, los bichos que solo se defienden (lobos, osos polares, abejas,
+     * llamas, cabras, delfines...), los peces, los murciélagos, los aldeanos y los guardianes del pueblo (golems).
+     * <p>
+     * Lo pidió el jugador: <i>"haz que todos mis minions no ataquen a las criaturas neutrales a menos que yo los
+     * golpee primero; los mobs hostiles sí los atacan tal como está ahora"</i>. Los <b>hostiles</b> (los que
+     * implementan {@code Enemy}: zombis, esqueletos, creepers, arácnidos, hoglins, piglins...) devuelven {@code false}
+     * y se siguen atacando igual; y si el <b>dueño</b> pega primero a un neutral, el minion va a por él de todas
+     * formas, porque {@code OwnerHurtTargetGoal} (lo que ataca mi dueño) y {@code OwnerHurtByTargetGoal} (quien ataca
+     * a mi dueño) van <b>por encima</b> de esta regla.
+     */
+    static boolean esCriaturaPacificaONeutral(Entity entity) {
+        if (entity instanceof net.minecraft.world.entity.monster.Enemy) {
+            return false; // hostil: a esos SÍ se les ataca, como hasta ahora
+        }
+        return entity instanceof net.minecraft.world.entity.NeutralMob
+                || entity instanceof net.minecraft.world.entity.animal.Animal
+                || entity instanceof net.minecraft.world.entity.animal.WaterAnimal
+                || entity instanceof net.minecraft.world.entity.npc.AbstractVillager
+                || entity instanceof net.minecraft.world.entity.animal.IronGolem
+                || entity instanceof net.minecraft.world.entity.animal.SnowGolem;
+    }
+
     default boolean isOwnedBy(LivingEntity p_152114_1_) {
         return p_152114_1_ == this.getOwner();
     }

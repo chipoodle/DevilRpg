@@ -149,7 +149,7 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
         this.targetSelector.addGoal(2, new TamablePetOwnerHurtTargetGoal(this));
         this.targetSelector.addGoal(3, (new HurtByTargetGoal(this)).setAlertOthers());
         this.targetSelector.addGoal(5,
-                new NearestAttackableTargetGoal<>(this, Mob.class, 10, false, false, (entity) ->
+                new NearestAttackableTargetGoal<>(this, Mob.class, 10, false, false, (entity) -> !ITamableEntity.esCriaturaPacificaONeutral(entity) &&
                         !(entity instanceof Villager)
                                 && !(entity instanceof Llama)
                                 && !(entity instanceof Turtle)

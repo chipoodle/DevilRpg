@@ -167,7 +167,7 @@ public class SunflowerShulker extends TamableAnimal implements ITamableEntity, I
         //this.targetSelector.addGoal(3, new SunflowerShulker.ShulkerDefenseAttackGoal(this));
 
         /*this.targetSelector.addGoal(5,
-                new NearestAttackableTargetGoal<>(this, Mob.class, 10, false, false, (entity) ->
+                new NearestAttackableTargetGoal<>(this, Mob.class, 10, false, false, (entity) -> !ITamableEntity.esCriaturaPacificaONeutral(entity) &&
                         !(entity instanceof Villager)
                                 && !(entity instanceof Llama)
                                 && !(entity instanceof Turtle)
@@ -714,7 +714,7 @@ public class SunflowerShulker extends TamableAnimal implements ITamableEntity, I
 
     static class ShulkerDefenseAttackGoal extends NearestAttackableTargetGoal<LivingEntity> {
         public ShulkerDefenseAttackGoal(SunflowerShulker p_33496_) {
-            super(p_33496_, LivingEntity.class, 10, true, false, (entity) ->
+            super(p_33496_, LivingEntity.class, 10, true, false, (entity) -> !ITamableEntity.esCriaturaPacificaONeutral(entity) &&
                     !(entity instanceof Villager)
                             && !(entity instanceof Llama)
                             && !(entity instanceof Turtle)
