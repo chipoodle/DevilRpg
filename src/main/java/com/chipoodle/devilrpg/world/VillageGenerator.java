@@ -5149,10 +5149,12 @@ public final class VillageGenerator {
 
     /** ¿Es esta celda (relativa a la esquina) el <b>hueco de la escalera</b> en el forjado de la posada? */
     private static boolean esHuecoDeLaEscalera(int dx, int dz) {
-        // El hueco es el del TRAMO DE ARRIBA (el que sube pegado al muro oeste): tres filas. El tramo de abajo y la
-        // meseta van BAJO el forjado (se suben con dos bloques de altura libre, como cualquier escalera de casa).
+        // El hueco llega hasta la MESETA (cuatro filas, de TOPE_Z a TOPE_Z+3): con tres filas, el que sube desde la
+        // meseta al primer escalón de arriba golpeaba con la cabeza en el borde del forjado (lo reportó el jugador:
+        // "los 2 bloques de madera que están justo debajo de los pies míos estorban a todo el que quiere subir, su
+        // cabeza topa con ellos"). El tramo de ABAJO sí va bajo el forjado: se sube con dos bloques de altura libre.
         return dx >= TABERNA_ESCALERA_X && dx < TABERNA_ESCALERA_X + TABERNA_ESCALERA_ANCHO
-                && dz >= TABERNA_ESCALERA_TOPE_Z && dz <= TABERNA_ESCALERA_TOPE_Z + 2;
+                && dz >= TABERNA_ESCALERA_TOPE_Z && dz <= TABERNA_ESCALERA_TOPE_Z + 3;
     }
 
     /**
@@ -5368,11 +5370,69 @@ public final class VillageGenerator {
      * mostrador va de tronco descortezado, así que se distinguen.
      */
     private static void barraDeLaTaberna(ServerLevel level, int bx, int bz, int nivel) {
-        for (int dx = 5; dx <= 11; dx++) {
+        // La barra va de dx=7 a dx=13: el pie de la escalera está en dx=4 y su carril de entrada es dx=5..6, así que
+        // empezando en dx=5 su extremo (2x2) quedaba JUSTO delante de las escaleras (lo reportó el jugador: "hay 4
+        // bloques que estorban, 2 de madera pelada y 2 de madera normal, justo enfrente de las escaleras").
+        for (int dx = 7; dx <= 13; dx++) {
             colocar(level, new BlockPos(bx + dx, nivel, bz + 12), Blocks.STRIPPED_OAK_LOG.defaultBlockState(), 3);
             colocar(level, new BlockPos(bx + dx, nivel, bz + 13), Blocks.OAK_WOOD.defaultBlockState(), 3);
         }
         colocar(level, new BlockPos(bx + 8, nivel, bz + 11), Blocks.POTTED_DANDELION.defaultBlockState(), 3);
+    }
+
+    /**
+     * Repara la <b>escalera de una taberna ya construida</b> (migración 48). Dos cosas que solo se notan subiendo:
+     * <ul>
+     *   <li>El <b>hueco del forjado</b> tiene que llegar hasta la meseta. Con el hueco corto (tres filas), el que sube
+     *       desde la meseta al primer escalón de arriba da con la cabeza en el borde del piso de arriba.</li>
+     *   <li>La <b>barra</b> no puede empezar antes de dx=7: su extremo (2x2) quedaba justo delante del pie de la
+     *       escalera. La barra se corre al este (dx=12..13) para dejarla igual de larga.</li>
+     * </ul>
+     * Es <b>idempotente</b> y solo toca las celdas de la barra y del forjado: nunca reconstruye la taberna (eso
+     * borraría la despensa, las camas y lo que el jugador tenga dentro).
+     */
+    public static void arreglarEscaleraDeLaTaberna(ServerLevel level, BlockPos center) {
+        if (!tabernaConstruida(level, center)) {
+            return; // no hay taberna nueva que reparar (una vieja la rehace `asegurarTaberna` entera)
+        }
+        int nivel = cotaDeLaPlaza(level, center);
+        BlockPos base = baseDeLaTaberna(center);
+        int yForjado = nivel + TABERNA_PISO2 - 1;
+        // 1) El forjado que tapa la subida: fuera (el hueco llega hasta la meseta).
+        int quitados = 0;
+        for (int dx = TABERNA_ESCALERA_X; dx < TABERNA_ESCALERA_X + TABERNA_ESCALERA_ANCHO; dx++) {
+            for (int dz = TABERNA_ESCALERA_TOPE_Z; dz <= TABERNA_ESCALERA_TOPE_Z + 3; dz++) {
+                if (!esHuecoDeLaEscalera(dx, dz)) {
+                    continue;
+                }
+                quitados += quitarSiEs(level, base.getX() + dx, yForjado, base.getZ() + dz,
+                        Blocks.DARK_OAK_PLANKS);
+            }
+        }
+        // 2) La barra: fuera su extremo oeste (el que tapaba la entrada) y sus dos bloques nuevos al este.
+        int movidos = 0;
+        for (int dx = 5; dx <= 6; dx++) {
+            movidos += quitarSiEs(level, base.getX() + dx, nivel, base.getZ() + 12, Blocks.STRIPPED_OAK_LOG);
+            movidos += quitarSiEs(level, base.getX() + dx, nivel, base.getZ() + 13, Blocks.OAK_WOOD);
+        }
+        for (int dx = 12; dx <= 13; dx++) {
+            colocar(level, new BlockPos(base.getX() + dx, nivel, base.getZ() + 12),
+                    Blocks.STRIPPED_OAK_LOG.defaultBlockState(), 3);
+            colocar(level, new BlockPos(base.getX() + dx, nivel, base.getZ() + 13),
+                    Blocks.OAK_WOOD.defaultBlockState(), 3);
+        }
+        DevilRpg.LOGGER.info("[Village] Taberna de {}: escalera reparada ({} tablon(es) del forjado fuera del hueco,"
+                + " {} bloque(s) de barra movidos al este)", center, quitados, movidos);
+    }
+
+    /** Quita ese bloque <b>si es del tipo esperado</b> (para que una reparación no toque lo que puso el jugador). */
+    private static int quitarSiEs(ServerLevel level, int x, int y, int z, Block bloque) {
+        BlockPos pos = new BlockPos(x, y, z);
+        if (level.getBlockState(pos).is(bloque)) {
+            level.removeBlock(pos, false);
+            return 1;
+        }
+        return 0;
     }
 
     /**

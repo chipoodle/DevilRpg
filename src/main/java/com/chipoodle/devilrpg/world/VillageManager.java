@@ -478,7 +478,7 @@ public final class VillageManager {
      *       por lo que cría el lago y no por un contador.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 47;
+    public static final int CURRENT_LAYOUT = 48;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -1469,6 +1469,11 @@ public final class VillageManager {
             // prueba de `tabernaConstruida` falla, `asegurarTaberna` despeja su solar entero (la vieja cabía dentro)
             // y levanta la nueva; lo que hubiera en sus cofres se guarda antes en el almacén.
             VillageGenerator.asegurarTaberna(level, center);
+            // LA ESCALERA DE LA TABERNA (migración 48, lo pidió el jugador): el hueco del forjado tiene que llegar
+            // hasta la meseta (con el hueco corto, quien sube da con la cabeza en el borde del piso de arriba) y la
+            // barra se corre al este (su extremo 2x2 quedaba justo delante del pie de la escalera). Solo toca esas
+            // celdas: no rehace la taberna (eso borraría la despensa y las camas).
+            VillageGenerator.arreglarEscaleraDeLaTaberna(level, center);
             // Y su CAMINO desde la plaza (torcido, para no cruzar la parcela de la granja).
             VillageGenerator.caminoALaTaberna(level, center);
             // LA PESQUERA (etapa G): el lago, la caseta del pescador, su BARRIL (el puesto) y sus peces. Va antes de

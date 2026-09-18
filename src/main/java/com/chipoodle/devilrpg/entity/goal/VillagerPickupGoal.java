@@ -76,11 +76,26 @@ public class VillagerPickupGoal extends Goal {
     private final Villager villager;
     private final BlockPos center;
     private final int objectiveIndex;
-    /** Los materiales de SU oficio (lo único que recoge del suelo). */
-    private final Predicate<ItemStack> interes;
-    private final Destino destinoTipo;
-    /** Nombre corto del oficio, para el log. */
-    private final String oficio;
+    /**
+     * Los materiales de SU oficio (lo único que recoge del suelo).
+     * <p>
+     * <b>Se lee EN VIVO</b>, no se cachea: el pueblo reparte oficios (una cría que crece, un puesto que se queda
+     * vacío) y un goal que guardara la lista del oficio viejo seguiría recogiendo <b>lo del oficio anterior</b>: el
+     * herrero nuevo no cogería ni un lingote porque su lista era la del granjero (o ninguna).
+     */
+    private Predicate<ItemStack> interes() {
+        return materialesDe(villager.getVillagerData().getProfession());
+    }
+
+    /** Dónde guarda (el almacén o la despensa), también EN VIVO por el mismo motivo que {@link #interes()}. */
+    private Destino destinoTipo() {
+        return destinoDe(villager.getVillagerData().getProfession());
+    }
+
+    /** Nombre corto del oficio actual, para el log. */
+    private String oficio() {
+        return nombreDe(villager.getVillagerData().getProfession());
+    }
     @Nullable
     private ItemEntity objetivo;
     @Nullable
@@ -93,10 +108,6 @@ public class VillagerPickupGoal extends Goal {
         this.villager = villager;
         this.center = center;
         this.objectiveIndex = objectiveIndex;
-        VillagerProfession profesion = villager.getVillagerData().getProfession();
-        this.interes = materialesDe(profesion);
-        this.destinoTipo = destinoDe(profesion);
-        this.oficio = nombreDe(profesion);
         this.setFlags(EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
     }
 
@@ -309,7 +320,7 @@ public class VillagerPickupGoal extends Goal {
             if (!item.isAlive() || item.getItem().isEmpty() || item.tickCount < EDAD_MINIMA) {
                 continue;
             }
-            if (!interes.test(item.getItem())) {
+            if (!interes().test(item.getItem())) {
                 continue;
             }
             double dx = item.getX() - center.getX();
@@ -329,17 +340,17 @@ public class VillagerPickupGoal extends Goal {
     /** El punto de apoyo del cofre donde guarda (el almacén o la despensa del kiosco, según su oficio). */
     @Nullable
     private BlockPos puntoDeDestino(ServerLevel level) {
-        return destinoTipo == Destino.DESPENSA ? VillagePantry.puntoDeApoyo(level, center)
+        return destinoTipo() == Destino.DESPENSA ? VillagePantry.puntoDeApoyo(level, center)
                 : VillageStorage.puntoDeApoyo(level, center);
     }
 
     private double alcanceDeGuardado() {
-        return destinoTipo == Destino.DESPENSA ? VillagePantry.ALCANCE_DESPENSA : VillageStorage.ALCANCE_ALMACEN;
+        return destinoTipo() == Destino.DESPENSA ? VillagePantry.ALCANCE_DESPENSA : VillageStorage.ALCANCE_ALMACEN;
     }
 
     /** Deja donde le toca todo lo que lleve de SU oficio. */
     private void guardar(ServerLevel level) {
-        Container caja = destinoTipo == Destino.DESPENSA ? VillagePantry.despensa(level, center)
+        Container caja = destinoTipo() == Destino.DESPENSA ? VillagePantry.despensa(level, center)
                 : VillageStorage.almacen(level, center);
         if (caja == null) {
             return;
@@ -347,11 +358,11 @@ public class VillagerPickupGoal extends Goal {
         int guardados = 0;
         for (int i = 0; i < villager.getInventory().getContainerSize(); i++) {
             ItemStack s = villager.getInventory().getItem(i);
-            if (s.isEmpty() || !interes.test(s)) {
+            if (s.isEmpty() || !interes().test(s)) {
                 continue;
             }
             int antes = s.getCount();
-            ItemStack resto = destinoTipo == Destino.DESPENSA ? VillagePantry.guardar(caja, s.copy())
+            ItemStack resto = destinoTipo() == Destino.DESPENSA ? VillagePantry.guardar(caja, s.copy())
                     : VillageStorage.guardar(level, center, s.copy());
             guardados += antes - resto.getCount();
             villager.getInventory().setItem(i, resto);
@@ -359,7 +370,7 @@ public class VillagerPickupGoal extends Goal {
         if (guardados > 0) {
             VillageManager.ponerSuceso(villager, "Guardo " + guardados + " de lo suyo");
             DevilRpg.LOGGER.info("[Village] {} guardo {} cosa(s) de su oficio en {}",
-                    oficio, guardados, destinoTipo == Destino.DESPENSA ? "la despensa" : "el almacen");
+                    oficio(), guardados, destinoTipo() == Destino.DESPENSA ? "la despensa" : "el almacen");
         }
     }
 
@@ -377,7 +388,7 @@ public class VillagerPickupGoal extends Goal {
         int n = 0;
         for (int i = 0; i < villager.getInventory().getContainerSize(); i++) {
             ItemStack s = villager.getInventory().getItem(i);
-            if (!s.isEmpty() && interes.test(s)) {
+            if (!s.isEmpty() && interes().test(s)) {
                 n += s.getCount();
             }
         }

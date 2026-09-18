@@ -100,7 +100,10 @@ def aldeas_del_guardado(save):
             zs.append(z)
         centro_x = (min(xs) + max(xs)) // 2
         centro_z = (min(zs) + max(zs)) // 2
-        cota = Counter(ys).most_common(1)[0][0]     # la Y que mas se repite es la capa que se pisa
+        # La COTA (la capa que se pisa) es UNA MAS que la Y que mas se repite: el bloque que mas se coloca en una
+        # aldea es el SUELO, que va en `cota - 1` (invariante I1). Comprobado en el guardado del jugador: la aldea 2
+        # da modo 119 y su taberna esta a cota 120 (forjado en 124, escalones en 122..124).
+        cota = Counter(ys).most_common(1)[0][0] + 1
         indice = b.get('Index')
         aldeas.append(Aldea(indice, centro_x, centro_z, cota, indice in caidas))
     return sorted(aldeas, key=lambda a: (a.indice is None, a.indice))

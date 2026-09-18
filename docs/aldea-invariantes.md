@@ -200,6 +200,27 @@ su campana y su farol.
 reconstruirlo tira lo de dentro. El cofre viejo se retira en la migración **después** de pasar lo suyo a la despensa
 nueva y, lo que no quepa, al almacén (`retirarDespensaDelKiosco`, idempotente).
 
+### I16 · El hueco del forjado llega hasta la meseta (y la barra no tapa la entrada)
+La escalera de la taberna sube en L: un tramo bajo el forjado, una **meseta** y un tramo que sale al piso de arriba.
+**Regla:** el **hueco del forjado** (`esHuecoDeLaEscalera`) cubre el tramo que se sube **y la meseta** (`dz` del tope
+a `tope + 3`): quien sube cruza el borde del forjado con la cabeza ya por encima de su altura, así que un hueco corto
+—tres filas— le hacía **golpearse con el borde** (lo reportó el jugador: *"los 2 bloques que están justo debajo de los
+pies míos estorban a todo el que quiere subir, su cabeza topa con ellos"*, y esos 2 bloques eran el propio forjado
+sobre el que estaba de pie). Y la **barra** del comedor no puede empezar antes de `dx=7`: su extremo 2×2 quedaba justo
+en el carril de entrada del pie de la escalera (`dx=5..6`), *"4 bloques que están estorbando, 2 de madera pelada y 2
+de madera normal"*. Las dos cosas las repara la **migración 48** (`arreglarEscaleraDeLaTaberna`) **solo en esas
+celdas** —nunca rehaciendo la taberna, que borraría la despensa y las camas— y solo quita el bloque si es del tipo
+esperado (`quitarSiEs`).
+
+### I17 · Las listas por oficio se leen EN VIVO (el pueblo cambia oficios)
+El pueblo **reparte oficios**: repone el puesto que se queda vacío y una cría crece y hereda. **Regla:** ningún goal
+puede **cachear** la profesión del aldeano en su constructor. `VillagerPickupGoal` sí lo hacía, así que a un aldeano
+al que le cambiaban el oficio le quedaba la **lista vieja** y seguía recogiendo lo del oficio anterior (un **herrero**
+nuevo recogiendo trigo e **ignorando el hierro**: el bug que reportó el jugador como *"los herreros no recogen
+materiales del suelo"*). La lista, el destino y el nombre del oficio se leen **en vivo** de
+`getVillagerData().getProfession()`. Recordatorio del alcance: el herrero solo barre **lo que se encuentra a ≤20
+bloques** de él; lo que está lejos lo barre el **recolector**.
+
 ---
 
 ## 2. Lista de consecuencias (obligatoria en cada cambio)

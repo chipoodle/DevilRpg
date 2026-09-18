@@ -1390,6 +1390,25 @@ escalera: hay una mesa con sillas que la bloquea; quita esa mesa y dobla la esca
   navegación no encuentra camino ni en la plaza llana —se comprobó con un control— y por eso la comprobación buena es
   la de las alturas de los escalones.)*
 
+### 3b.33 La escalera que se sube de verdad y el herrero que no recogía
+
+Dos reportes del jugador en la misma sesión, los dos **con la partida delante y las coordenadas del F3** (aldea 2,
+taberna en `1438,1428`, y el jugador de pie en `1439,125,1439`).
+
+| Bug (lo que vio) | Causa medida | Arreglo | Guardia para que no vuelva |
+|---|---|---|---|
+| *"Hay 4 bloques que están estorbando: 2 de madera pelada y otros 2 de madera normal, justo enfrente de las escaleras"* | La **barra** del comedor empezaba en `dx=5` y el pie de la escalera está en `dx=4` (`TABERNA_ESCALERA_PIE_DX`): su extremo 2×2 (`stripped_oak_log` en `dz=12` y `oak_wood` en `dz=13`) caía **justo en el carril de entrada**. Medido en el guardado: barra en `dx=5..11`, escalones en `dx=4` | La barra pasa a **`dx=7..13`** (la misma longitud, corrida dos bloques al este): la entrada de la escalera queda con dos bloques libres | Se ve en el volcado de la taberna (arriba) y lo aplica la **migración 48** a las tabernas ya construidas |
+| *"Los 2 bloques de madera que están justo debajo de los pies míos están estorbando a todo el que quiere subir: su cabeza topa con ellos"* | El **hueco del forjado** tenía **tres filas** (`dz=8..10`) y la **meseta** está en `dz=11..12`: al subir de la meseta al primer escalón de arriba, el caminante (caja de 0,6) cruza el borde del forjado con la cabeza ya por encima de 124 y choca con el tablón de `dz=11` — **que es justo el bloque sobre el que estaba de pie**, de ahí el *"debajo de los pies míos"* | El hueco llega a **cuatro filas** (`dz=8..11`): la meseta queda abierta por el lado por el que se sube. El tramo de abajo sigue BAJO el forjado (dos bloques de altura libre, como cualquier escalera de casa) | El hueco y la barra se calculan de las constantes de la escalera (`esHuecoDeLaEscalera` y `TABERNA_ESCALERA_*`), así que el **volcado de la taberna** los canta |
+| *"El herrero de herramientas ni el herrero de armas están recogiendo materiales del suelo (lingotes, pepitas de hierro, armaduras...)"* | `VillagerPickupGoal` **cacheaba la lista de materiales en el constructor**. El pueblo **reparte oficios** (repone el puesto que se queda vacío, una cría crece y hereda), así que a un aldeano al que le cambian el oficio le queda la lista **vieja**: seguiría recogiendo trigo y semillas e **ignoraría el hierro**. *(En sus registros hay un herrero guardando 8–12 cosas cada pocos minutos: el que tiene la lista buena funciona; el que no, ni las ve.)* Y lo que está a más de **20 bloques** del herrero no es suyo: eso lo barre el **recolector** | La lista, el destino y el nombre del oficio se leen **EN VIVO** de `getVillagerData().getProfession()` | **Invariante I17**: ninguna lista por oficio se cachea |
+
+**Verificado** (mundo aparte y guardado del jugador, sin tocar su partida):
+
+- Las celdas exactas de los dos arreglos están comprobadas **contra su guardado**: el forjado de `(dx1..2, 124, dz11)`
+  es `dark_oak_planks` (el que le tapaba la cabeza) y la barra ocupa `(dx5..11, 120, dz12..13)`, con `dx=12..13` libre
+  para correrla.
+- El reparador es **idempotente** y solo quita el bloque **si es del tipo esperado** (`quitarSiEs`), así que no puede
+  borrar algo que haya puesto el jugador.
+
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.
