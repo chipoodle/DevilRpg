@@ -7261,9 +7261,14 @@ public final class VillageGenerator {
      * El <b>porche</b> de la puerta (al oeste, dando a la plaza): dos postes, el <b>toldo</b> que baja hacia fuera con
      * sus faroles colgados y un par de <b>pipas</b> al lado de la puerta. Es lo primero que se ve al llegar al pueblo.
      * <p>
-     * El <b>toldo</b> son <b>dos filas</b> de escalones: la de <b>dentro</b> (pegada al muro, {@code bx-2}) a la altura
-     * del forjado de la posada y la de <b>fuera</b> ({@code bx-3}, encima de los postes) un bloque más baja, así que
-     * baja hacia fuera. Las dos filas van <b>enteras</b>, de punta a punta ({@code pz-3..pz+3}).
+     * El <b>toldo</b> son <b>dos alturas</b> de escalones que bajan hacia fuera: la de <b>dentro</b> (a la altura del
+     * forjado de la posada) y la de <b>fuera</b> ({@code bx-3}, encima de los postes) un bloque más baja. Va
+     * <b>entero</b>, de punta a punta ({@code pz-3..pz+3}) y <b>hasta la pared</b>: la fila de dentro llega a
+     * {@code bx-1}, que es la celda <b>pegada</b> al muro de la taberna ({@code bx}). No siempre fue así —el porche
+     * salía solo hasta {@code bx-2} y quedaba una columna de <b>aire</b> entre el toldo y la pared, o sea un techito
+     * <b>suelto</b> que no conectaba con la casa (lo reportó el jugador: <i>"el techito que está en la entrada de la
+     * taberna está incompleto porque no conecta con la pared"</i>; medido en su guardado: las <b>7 de 7</b> celdas de
+     * {@code bx-1} vacías, con la pared sólida detrás)—.
      * <p>
      * <b>Los faroles van POR DEBAJO del toldo, nunca en la fila de los escalones.</b> No siempre fue así, y el jugador
      * lo vio: <i>"el pórtico está cortado con un espacio, ¿por qué? debería estar completo"</i>. Los dos faroles de las
@@ -7287,15 +7292,25 @@ public final class VillageGenerator {
                 colocar(level, new BlockPos(bx - 3, nivel + k, bz + dz), Blocks.DARK_OAK_FENCE.defaultBlockState(), 3);
             }
         }
-        // 2) EL TOLDO: las dos filas de escalones, ENTERAS de punta a punta. Nada más se pone en esta fila: una celda
-        //    de aquí es un escalón del alero y, si se ocupa con otra cosa (un farol), el toldo se ve CORTADO.
+        // 2) EL TOLDO: las filas de escalones, ENTERAS de punta a punta y LLEGANDO A LA PARED. Nada más se pone en
+        //    esta fila: una celda de aquí es un escalón del alero y, si se ocupa con otra cosa (un farol), el toldo
+        //    se ve CORTADO.
+        //    OJO CON LA CELDA DE LA PARED (`bx - 1`): el porche salía a `bx - 2` y la pared está en `bx`, así que
+        //    quedaba una columna de AIRE entre el toldo y la taberna y el techito se veía SUELTO, sin conectar (lo
+        //    reportó el jugador: *"el techito que está en la entrada de la taberna está incompleto porque no conecta
+        //    con la pared"*; medido en su guardado: 7 de 7 celdas de `bx-1` vacías, con la pared sólida detrás).
+        //    El alero llega hasta `bx - 1`, que es la celda PEGADA al muro.
         for (int dz = pz - 3; dz <= pz + 3; dz++) {
+            colocar(level, new BlockPos(bx - 1, nivel + TABERNA_PISO2 - 1, bz + dz), escalonDelToldo(), 3);
             colocar(level, new BlockPos(bx - 2, nivel + TABERNA_PISO2 - 1, bz + dz), escalonDelToldo(), 3);
             colocar(level, new BlockPos(bx - 3, nivel + TABERNA_PISO2 - 2, bz + dz), escalonDelToldo(), 3);
         }
-        // 3) EL SOFFITO: el tablón que cierra el toldo por debajo (una capa por debajo de la fila de dentro), entero.
-        //    Es el APOYO de los faroles (I14): un farol colgado necesita un bloque SÓLIDO encima.
+        // 3) EL SOFFITO: el tablón que cierra el toldo por debajo (una capa por debajo de la fila de dentro), entero
+        //    y también hasta la pared: es el TECHO del porche (y el APOYO de los faroles, I14: un farol colgado
+        //    necesita un bloque SÓLIDO encima).
         for (int dz = pz - 3; dz <= pz + 3; dz++) {
+            colocar(level, new BlockPos(bx - 1, nivel + TABERNA_PISO2 - 2, bz + dz),
+                    Blocks.DARK_OAK_PLANKS.defaultBlockState(), 3);
             colocar(level, new BlockPos(bx - 2, nivel + TABERNA_PISO2 - 2, bz + dz),
                     Blocks.DARK_OAK_PLANKS.defaultBlockState(), 3);
         }
@@ -7330,6 +7345,9 @@ public final class VillageGenerator {
      *       ({@code quitarSiEs}: lo que haya puesto el jugador se queda);</li>
      *   <li>su celda se cierra con el <b>escalón</b> que le toca, si quedó vacía;</li>
      *   <li>el <b>soffito de tablones</b> se completa de punta a punta (solo donde esté vacío);</li>
+     *   <li>el alero <b>llega hasta la PARED</b> (migración 63): se añade la fila de {@code bx-1} —el escalón a la
+     *       altura de la de dentro y su tablón de soffito debajo—, que es lo que cierra el hueco de aire que dejaba al
+     *       techito <b>suelto</b> del edificio (solo donde esté vacío: es aditivo);</li>
      *   <li>y los dos faroles de las puntas se <b>cuelgan</b> del soffito, con la misma prueba que hace el juego para
      *       aceptar un farol colgado ({@code Block.canSupportCenter}, I14), así que no puede volver a quedar uno en el
      *       aire.</li>
@@ -7347,6 +7365,7 @@ public final class VillageGenerator {
         int bz = base.getZ();
         int pz = TABERNA_PUERTA;
         int yToldo = nivel + TABERNA_PISO2 - 2;   // la fila de FUERA del toldo (y la del soffito de tablones)
+        int yDentro = nivel + TABERNA_PISO2 - 1;  // la fila de DENTRO del toldo (y la celda pegada a la pared)
         int yFarol = nivel + TABERNA_PISO2 - 3;   // los faroles, una capa por debajo del soffito
         int cambios = 0;
         for (int dz : new int[]{pz - 3, pz + 3}) {
@@ -7357,14 +7376,29 @@ public final class VillageGenerator {
                 cambios++;
             }
         }
-        // 3) EL SOFFITO, de punta a punta (el apoyo de los faroles; en las tabernas viejas solo estaba en el centro).
+        // 3) EL TOLDO HASTA LA PARED (migración 63, lo reportó el jugador: *"el techito que está en la entrada de la
+        //    taberna está incompleto porque no conecta con la pared"*). El alero salía solo hasta `bx-2` y la pared
+        //    está en `bx`: quedaba una columna de aire de 1 bloque entre el toldo y la casa, así que el techito se
+        //    veía SUELTO. Se añade la fila que falta (`bx-1`, pegada al muro) a la altura de la fila de dentro, con
+        //    su tablón de soffito debajo (el techo del porche llega también al muro). Es ADITIVO: solo rellena aire,
+        //    así que no puede comerse nada del jugador (y en su guardado eran las 7 de 7 celdas vacías).
+        for (int dz = pz - 3; dz <= pz + 3; dz++) {
+            if (colocarSiEstaVacio(level, new BlockPos(bx - 1, yDentro, bz + dz), escalonDelToldo())) {
+                cambios++;
+            }
+            if (colocarSiEstaVacio(level, new BlockPos(bx - 1, yToldo, bz + dz),
+                    Blocks.DARK_OAK_PLANKS.defaultBlockState())) {
+                cambios++;
+            }
+        }
+        // 4) EL SOFFITO, de punta a punta (el apoyo de los faroles; en las tabernas viejas solo estaba en el centro).
         for (int dz = pz - 3; dz <= pz + 3; dz++) {
             if (colocarSiEstaVacio(level, new BlockPos(bx - 2, yToldo, bz + dz),
                     Blocks.DARK_OAK_PLANKS.defaultBlockState())) {
                 cambios++;
             }
         }
-        // 4) Y LOS FAROLES DE LAS PUNTAS, COLGADOS del soffito (nunca en la fila de los escalones).
+        // 5) Y LOS FAROLES DE LAS PUNTAS, COLGADOS del soffito (nunca en la fila de los escalones).
         for (int dz : new int[]{pz - 3, pz + 3}) {
             BlockPos farol = new BlockPos(bx - 2, yFarol, bz + dz);
             if (!level.getBlockState(farol).isAir()) {
@@ -7378,7 +7412,8 @@ public final class VillageGenerator {
         }
         if (cambios > 0) {
             DevilRpg.LOGGER.info("[Village] Taberna de {}: porche reparado ({} cambio(s) en sus celdas: el alero del"
-                    + " toldo entero y los faroles de las puntas colgados del soffito)", center, cambios);
+                    + " toldo entero, hasta la pared, y los faroles de las puntas colgados del soffito)",
+                    center, cambios);
         }
     }
 

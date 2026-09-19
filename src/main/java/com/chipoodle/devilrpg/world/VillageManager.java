@@ -606,9 +606,19 @@ public final class VillageManager {
      *       dos paredes del rincón suroeste</b> ({@code BARRACA_DIANA}) y este reparador la devuelve ahí <b>solo si la
      *       celda está vacía</b>; la celda vieja <b>no se toca</b> (es la del arca). Idempotente, de una celda, sin
      *       rehacer la barraca (su testigo es el hogar, I15) y antes de tirar el plano (I8).</li>
+     *   <li>63: el <b>TOLDO DEL PORCHE, HASTA LA PARED</b> (lo reportó el jugador: <i>"el techito que está en la
+     *       entrada de la taberna está incompleto porque no conecta con la pared"</i>). Medido en su guardado (aldea 2,
+     *       taberna en {@code 1438,1428}, cota {@code 120}): la pared de la taberna está en {@code bx} y el toldo salía
+     *       solo hasta {@code bx-2}, así que las <b>7 de 7</b> celdas de {@code bx-1} (la columna entre el alero y el
+     *       muro, a las dos alturas del toldo) estaban <b>vacías</b> y el techito se veía <b>suelto</b>: un alero
+     *       apoyado en sus postes y a un bloque de la casa. Este reparador <b>añade la fila que falta</b> —el escalón
+     *       a la altura de la fila de dentro y su tablón de soffito debajo, de punta a punta— <b>solo donde la celda
+     *       esté vacía</b>: es <b>aditivo</b> (no quita nada, así que no puede comerse lo que haya puesto el jugador)
+     *       y su celda de al lado, en el muro, ya es sólida (medida: {@code dark_oak_planks}). Idempotente y solo en
+     *       las celdas del porche: no rehace la taberna (ni la despensa ni las camas).</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 62;
+    public static final int CURRENT_LAYOUT = 63;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),

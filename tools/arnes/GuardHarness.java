@@ -108,6 +108,11 @@ public class GuardHarness {
         if (ticks % 20 == 0) {
             volcar(level);
         }
+        // EL PORCHE DE LA TABERNA (migracion 63): se mide la columna `bx-1`, la que queda ENTRE el toldo (bx-2) y la
+        // pared de la taberna (bx). A los 10 s el latido ya migro la aldea, asi que esto es "despues".
+        if (ticks == 200) {
+            volcarPorche(level, "DESPUES");
+        }
     }
 
     private static FakePlayer preparar(ServerLevel level, net.minecraft.server.MinecraftServer server) {
@@ -148,6 +153,43 @@ public class GuardHarness {
     /** Cuántas cosas de ese tipo hay en el almacén (para confirmar el sembrado). */
     private static int cuenta(ServerLevel level, net.minecraft.world.item.Item item) {
         return com.chipoodle.devilrpg.world.VillageStorage.cuenta(level, CENTRO, s -> s.is(item));
+    }
+
+    /**
+     * El <b>porche de la taberna</b>: la columna {@code bx-1}, que es la que queda <b>entre</b> el toldo
+     * ({@code bx-2}) y la <b>pared</b> de la taberna ({@code bx}). Si esas celdas estan vacias, el techito no
+     * conecta con el edificio (el bug que reporto el jugador). Se mira, por celda: el escalon del alero pegado al
+     * muro, su tablon de soffito debajo y que la pared de al lado sea solida.
+     */
+    private static void volcarPorche(ServerLevel level, String etiqueta) {
+        if (!com.chipoodle.devilrpg.world.VillageGenerator.tabernaConstruida(level, CENTRO)) {
+            DevilRpg.LOGGER.info("[Arnes] PORCHE {}: no hay taberna construida en {}", etiqueta, CENTRO);
+            return;
+        }
+        int nivel = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+        BlockPos base = com.chipoodle.devilrpg.world.VillageGenerator.baseDeLaTaberna(CENTRO);
+        int bx = base.getX();
+        int bz = base.getZ();
+        int pz = 7;          // TABERNA_PUERTA (privada en el generador: se copia aqui para la medida)
+        int yToldo = nivel + 5 - 2;    // TABERNA_PISO2 = 5
+        int yDentro = nivel + 5 - 1;
+        int pegadas = 0;
+        for (int dz = pz - 3; dz <= pz + 3; dz++) {
+            var escalon = level.getBlockState(new BlockPos(bx - 1, yDentro, bz + dz));
+            var tablon = level.getBlockState(new BlockPos(bx - 1, yToldo, bz + dz));
+            var pared = level.getBlockState(new BlockPos(bx, yDentro, bz + dz));
+            boolean pegado = escalon.getBlock() instanceof net.minecraft.world.level.block.StairBlock
+                    && tablon.is(net.minecraft.world.level.block.Blocks.DARK_OAK_PLANKS)
+                    && !pared.isAir();
+            if (pegado) {
+                pegadas++;
+            }
+            DevilRpg.LOGGER.info("[Arnes] PORCHE {} dz{}: dx-1 escalon={} tablon={} pared={} -> {}",
+                    etiqueta, dz, escalon.getBlock(), tablon.getBlock(), pared.getBlock(),
+                    pegado ? "PEGADO A LA PARED" : "HUECO");
+        }
+        DevilRpg.LOGGER.info("[Arnes] PORCHE {}: celdas del toldo PEGADAS a la pared: {}/7 (base {}, cota {})",
+                etiqueta, pegadas, base, nivel);
     }
 
     private static void volcar(ServerLevel level) {

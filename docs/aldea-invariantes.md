@@ -808,6 +808,25 @@ pierna** (llegar a una, aparcarla o darse la vuelta) los dos se ponen a cero. Va
 vuelta (el clérigo: puesto ↔ agua) y para los que cambian de fase con destinos que no se parecen (el herrero ya lo
 hacía al cambiar de fase).
 
+### I39 · Un añadido (porche, alero, cobertizo) LLEGA al muro que lo cobija
+
+El error de esta familia es **un bloque de más hacia fuera**: se construye el añadido creyendo que su fila de dentro
+es "la del muro" cuando la del muro es **otra** celda, y queda una **columna de aire** entre los dos. No se ve como un
+agujero: se ve como un techito **suelto**, apoyado en sus postes y **sin tocar** la casa.
+
+**Medido** (guardado del jugador, aldea 2, taberna en `1438,1428`, cota `120`; lo reportó él: *"el techito que está en
+la entrada de la taberna está incompleto porque no conecta con la pared"*): la **pared** está en `x = bx` y el porche
+salía hasta `bx-2` y `bx-3`, así que **`bx-1` estaba de aire en todas sus alturas: 7 de 7 celdas**. Con la fila que
+faltaba —escalón en `bx-1` a la altura de la de dentro y su tablón de soffito debajo, de punta a punta— el arnés
+headless midió `celdas del toldo PEGADAS a la pared: **7/7**` (escalón + soffito + **pared sólida** al lado), y el
+reparador cambió **14 celdas** (migración 63), las mismas que había predicho la simulación sobre el guardado.
+
+**Regla:** cuando algo se apoya en una construcción, la celda **pegada** es `base-1` (no `base-2`) y se **comprueba en
+el guardado** que no quede **aire** entre los dos; la prueba barata es que la celda del **muro** que va al lado sea
+**sólida** (medida: `dark_oak_planks`). Si el añadido está mal en aldeas ya construidas, el arreglo es **aditivo**
+(`colocarSiEstaVacio`) siempre que se pueda: rellenar la fila que falta no puede comerse lo que haya puesto el
+jugador, mientras que **mover** el añadido obliga a borrar el viejo.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 

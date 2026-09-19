@@ -1,0 +1,84 @@
+MEDIDAS DEL TECHITO DEL PORCHE DE LA TABERNA (que no conectaba con la pared)
+===========================================================================
+Lo reportó el jugador: "el techito que está en la entrada de la taberna está incompleto porque no conecta con la
+pared". Partida: run/saves/New World (1) copiada a run/world (aldea 2, centro 1414,1414, cota 120, taberna en
+1438,1428). Líneas literales del log del servidor y de las herramientas que solo LEEN el guardado.
+
+
+--- 1) MEDIDA EN EL GUARDADO (antes): la columna bx-1 está VACÍA --------------------------------
+Herramienta: build/porche_grid.py (celda a celda) y build/porche_une.py (barrido de todas las tabernas).
+
+PORCHE TABERNA aldea 2 · pared en x=1438 · puerta en z=1435
+--- y = 123 (cota+3) ---        dx-4     dx-3     dx-2     dx-1     dx+0     dx+1
+  z 1432                           .       EE   TABLON        .    POSTE        .
+  z 1433                           .       EE   TABLON        .   TABLON   TABLON
+  z 1435                           .       EE   TABLON        .   TABLON        .   <- puerta
+  z 1438                           .       EE   TABLON        .   TABLON        .
+--- y = 124 (cota+4) ---
+  z 1432                           .        .       EE        .   TABLON   TABLON
+  z 1435                           .        .       EE        .   TABLON   TABLON   <- puerta
+  z 1438                           .        .       EE        .   TABLON        .
+
+Lectura: la PARED de la taberna está en dx0 (TABLON = tablones, el borde del forjado) y el toldo sale a dx-2
+(el escalón de dentro, EE) y dx-3 (el de fuera). La columna dx-1 —la que queda ENTRE el toldo y la pared— es
+AIRE a todas las alturas: el techito lo sostienen solo sus dos postes, a un bloque de la casa.
+
+Barrido de todas las tabernas del guardado (build/porche_une.py):
+  aldea 2  centro ( 1414, 1414) cota 120  celdas dx-1 vacias: 7/7   (pared en dx0: dark_oak_planks)
+  (las aldeas 0 y 1 no tienen taberna construida en este guardado)
+  -> 7 de 7 columnas vacías, con la pared SÓLIDA detrás (hay dónde apoyar el alero).
+
+
+--- 2) SIMULACIÓN DEL ARREGLO (sobre el guardado, sin tocar la partida) --------------------------
+  aldea 2  cota 120: 14 celda(s) · pasada 2: 0 (idempotente) · celdas del toldo PEGADAS a la pared
+           (escalon + soffito + pared solida): 7/7
+Son 7 escalones (bx-1, cota+4) + 7 tablones de soffito (bx-1, cota+3), de punta a punta (dz+4..dz+10).
+
+
+--- 3) EL JUEGO DE VERDAD (arnés headless: el latido migra la aldea) -----------------------------
+[00:04:29] [Village] Taberna de BlockPos{x=1414, y=120, z=1414}: porche reparado (14 cambio(s) en sus celdas: el
+           alero del toldo entero, hasta la pared, y los faroles de las puntas colgados del soffito)
+[00:04:38] [Arnes] PORCHE DESPUES dz4:  dx-1 escalon=Block{minecraft:dark_oak_stairs} tablon=Block{minecraft:dark_oak_planks} pared=Block{minecraft:dark_oak_planks} -> PEGADO A LA PARED
+[00:04:38] [Arnes] PORCHE DESPUES dz5:  ... -> PEGADO A LA PARED
+[00:04:38] [Arnes] PORCHE DESPUES dz6:  ... -> PEGADO A LA PARED
+[00:04:38] [Arnes] PORCHE DESPUES dz7:  ... -> PEGADO A LA PARED
+[00:04:38] [Arnes] PORCHE DESPUES dz8:  ... -> PEGADO A LA PARED
+[00:04:38] [Arnes] PORCHE DESPUES dz9:  ... -> PEGADO A LA PARED
+[00:04:38] [Arnes] PORCHE DESPUES dz10: ... -> PEGADO A LA PARED
+[00:04:38] [Arnes] PORCHE DESPUES: celdas del toldo PEGADAS a la pared: 7/7 (base BlockPos{x=1438, y=120, z=1428}, cota 120)
+
+Los 14 cambios del juego son EXACTAMENTE los 14 que predijo la simulación, y la sonda (celda a celda) da 7/7
+columnas con escalón + soffito y la pared sólida al lado. En la misma migración, la única otra línea fue la
+reparación de la escalera del desván con 0 cambios: el resto de la migración no tocó nada (es idempotente).
+
+
+--- 4) EL PERFIL, ANTES Y DESPUES (corte por la puerta, z=1435) ------------------------------------
+S=escalon del toldo  #=tablon  F=poste  *=farol  D=puerta  P=pipa  q=cal  h=cesped  c=camino
+La PARED de la taberna es la columna dx+0. Lo dibuja build/perfil_porche.py (solo lee el guardado).
+
+ANTES (el techito se queda a un bloque de la pared)
+        dx-4 dx-3 dx-2 dx-1 dx+0 dx+1 dx+2
+  y +5     .    .    .    .    #    .    .
+  y +4     .    .    S    .    #    #    #      <- el alero acaba en dx-2: dx-1 es AIRE
+  y +3     .    S    #    .    #    .    .      <- y el soffito tambien
+  y +2     .    .    *    .    q    .    .
+  y +1     .    .    .    .    D    .    .
+  y +0     .    .    .    .    D    .    .
+
+DESPUES (el alero llega al muro y el soffito es el techo del porche)
+        dx-4 dx-3 dx-2 dx-1 dx+0 dx+1 dx+2
+  y +5     .    .    .    .    #    .    .
+  y +4     .    .    S    S    #    #    #      <- el escalon de dentro llega a la celda pegada al muro
+  y +3     .    S    #    #    #    .    .      <- y el soffito tambien: techo continuo del porche
+  y +2     .    .    *    .    q    .    .
+  y +1     .    .    .    .    D    .    .
+  y +0     .    .    .    .    D    .    .
+
+
+--- CÓMO REPETIRLO -----------------------------------------------------------------------------------
+1) Copy-Item tools\arnes\GuardHarness.java src\main\java\com\chipoodle\devilrpg\debug\GuardHarness.java
+2) Move-Item run\world run\world.antes ; Copy-Item "run\saves\New World (1)" run\world -Recurse
+3) $env:GRADLE_USER_HOME="C:\Users\Christian\Documents\DevilRpg\.gradle-home" ; .\gradlew.bat runServer --console=plain
+4) Select-String run\logs\latest.log -Pattern 'porche|PORCHE'
+5) DESHACER: borrar src\...\debug y el mundo del arnés (ver tools\arnes\LEEME.md)
+Lo que se ve en el guardado, sin arrancar el juego: python build\porche_grid.py  y  python build\porche_une.py

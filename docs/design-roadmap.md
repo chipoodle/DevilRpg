@@ -1582,6 +1582,11 @@ migración corriendo de verdad sobre su partida: el cliente estaba cerrado y el 
 hay nada que comprobar de jugabilidad: el porche es **decoración** (nadie camina por el alero) y su suelo no se toca;
 de la barraca solo cambia el **estado** de dos faroles (misma celda, misma luz).
 
+> **OJO — este porche tuvo un TERCER fallo (ver 3b.51)**: el alero, ya entero, seguía sin **llegar a la pared** (salía
+> solo hasta `bx-2`, con una columna de aire en `bx-1` entre el toldo y el muro). Lo cerró la **migración 63**: una
+> fila más de toldo pegada al muro y el soffito hasta la pared. Lo de esta sección (el alero entero y los faroles
+> colgados del soffito) sigue siendo verdad, pero el soffito ya no es solo `bx-2`: cubre **`bx-2` y `bx-1`**.
+
 > **La "enseña" de la taberna nunca existió.** El javadoc del porche (y el de la migración 44) prometía *"la enseña
 > de la taberna colgada con su farol"*, pero en el código **no hay ningún cartel** en toda la aldea (`grep` de
 > `SIGN` en `VillageGenerator`: cero). Se han corregido esos dos javadocs para que no lo sigan prometiendo. Queda
@@ -2262,6 +2267,38 @@ la primera tirada, así que la ronda valió por dos.
   nada**) → `El clerigo guardo una pocion en el almacen: Potion of Poison`, **96 s** de cadena completa. Es la
   cadena del pueblo entera: coge el cristal del almacén → lo llena en la orilla → carga el soporte (agua + verruga)
   → **el juego cuece** la poción extraña → ojo de araña → **el juego cuece el veneno** → al almacén.
+
+### 3b.51 El techito del porche, SUELTO de la pared (migración 63)
+
+Lo reportó el jugador mirando la fachada oeste de la taberna: *"el techito que está en la entrada de la taberna está
+incompleto porque no conecta con la pared"*. Es el **tercer** fallo del mismo porche (ver 3b.39) y, como los otros dos,
+salió del guardado celda a celda (aldea 2, taberna en `1438,1428`, cota `120`).
+
+- **Lo que se midió**: la **pared** de la taberna está en `x = bx` (1438) y el porche salía hacia el oeste con sus dos
+  filas en **`bx-2`** (la de dentro, `nivel+PISO2-1`) y **`bx-3`** (la de fuera, encima de los postes). La columna
+  **`bx-1`** —la que queda **entre** el alero y el muro— estaba **de aire en todas sus alturas**: **7 de 7** celdas
+  vacías. O sea: el toldo lo sostenían **solo sus dos postes**, a **un bloque** de la casa, y por el hueco se veía el
+  cielo entre el techito y la pared. La pared, eso sí, era **sólida** detrás (`dark_oak_planks` a la altura de la fila
+  de dentro), así que había dónde apoyarlo.
+- **El arreglo**: el alero **llega hasta la pared**. Se añade **una fila más** al toldo —el **escalón** en `bx-1` a la
+  altura de la fila de dentro y su **tablón de soffito** una capa por debajo— **de punta a punta** (`pz-3..pz+3`), en el
+  constructor y en el reparador. El porche queda con **tres columnas** (`bx-3` la de fuera, `bx-2` y `bx-1` a la altura
+  de dentro) y su **techo** (el soffito) llega también al muro, así que los **tres faroles** siguen colgando de él.
+- **El reparador es ADITIVO**: solo escribe donde la celda está **vacía** (`colocarSiEstaVacio`), así que **no puede
+  comerse nada del jugador**; lo único que quita —como en la 55— es un farol flotante de las puntas. **Migración 63**
+  (`CURRENT_LAYOUT` 62 → 63), idempotente y **solo en las celdas del porche**: no rehace la taberna (ni la despensa ni
+  las camas).
+- **Verificado de dos maneras**:
+  - **Simulación sobre el guardado** (`build/porche_une.py`, solo lee): las 7 columnas están vacías antes, el arreglo
+    cambia **14 celdas** (7 escalones + 7 tablones), la **segunda pasada no cambia nada** y las **7/7** columnas quedan
+    con escalón + soffito y **pared sólida** al lado.
+  - **El juego de verdad** (arnés headless, partida del jugador copiada): el latido migró la aldea y dejó en el log
+    `Taberna de BlockPos{x=1414, y=120, z=1414}: porche reparado (14 cambio(s) en sus celdas: el alero del toldo
+    entero, hasta la pared, y los faroles de las puntas colgados del soffito)` —los **mismos 14** que predijo la
+    simulación— y la sonda del arnés, celda a celda, `celdas del toldo PEGADAS a la pared: 7/7`.
+- **Lo que NO se ha comprobado**: cómo se ve desde la plaza en su partida (hay que **reiniciar el cliente** para cargar
+  el mod nuevo); el porche es **decoración** (nadie camina por el alero) y su suelo no se toca, así que no hay nada de
+  jugabilidad que medir.
 
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 
