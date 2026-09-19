@@ -1,0 +1,33 @@
+MEDIDAS DE LA DESPEDIDA DE INVOCACIONES CON UN PALO
+===================================================
+Lo pidio el jugador: "podrias hacer que todas mis invocaciones pueda despawnearlas cuando haga click izquierdo con un
+palo sobre ella? solo cuando tengo un palo nada mas".
+
+Donde vive: `CommonForgeInteractionEventSubscriber.onAttackWithStick` (evento `AttackEntityEvent`).
+Arnés: tools/arnes/MinionHarness.java (temporal: invoca un lobo de alma DE VERDAD, lo mete en la lista del jugador,
+le da el palo al jugador y le pega). Se para el servidor solo al terminar la medida.
+
+
+--- MEDIDA (servidor headless, lobo de alma de verdad) ---------------------------------------------
+
+[Minion] [Minecraft] despide a su devilrpg:soul_wolf con un palo (54b41b4b-ffc5-41d6-9f6a-16b5f9438986)
+[ArnesPalo] CASO 1 palo + mia: se espera QUE SE VAYA -> enElMundo=NO enLaLista=NO => OK
+[ArnesPalo] CASO 2 espada + mia: se espera QUE SE QUEDE -> enElMundo=SI enLaLista=NO => OK
+[ArnesPalo] CASO 3 palo + ajena: se espera QUE SE QUEDE -> enElMundo=SI enLaLista=NO => OK
+[ArnesPalo] CASO 4 palo solo en la secundaria + mia: se espera QUE SE QUEDE -> enElMundo=SI enLaLista=SI => OK
+[ArnesPalo] fin de la medida
+
+Que significa cada caso:
+  1) PALO en la mano principal + invocacion TUYA  -> se va del mundo Y de la lista (el camino de siempre:
+     `PlayerMinionCapability.removeSoulWolf/removeSoulBear/removeWisp`, que ademas poda la copia guardada).
+  2) ESPADA + invocacion tuya                     -> no se despide: se pelea como siempre.
+  3) PALO + invocacion DE OTRO jugador            -> no se toca.
+  4) PALO solo en la MANO SECUNDARIA              -> no se despide (manda la mano principal).
+
+
+--- COMO REPETIRLO -----------------------------------------------------------------------------------
+1) Copy-Item tools\arnes\MinionHarness.java src\main\java\com\chipoodle\devilrpg\debug\MinionHarness.java
+2) Move-Item run\world run\world.antes ; Copy-Item "run\saves\New World (1)" run\world -Recurse
+3) $env:GRADLE_USER_HOME="C:\Users\Christian\Documents\DevilRpg\.gradle-home" ; .\gradlew.bat runServer --console=plain
+4) Select-String run\logs\latest.log -Pattern 'ArnesPalo|despide a su'
+5) DESHACER: borrar src\...\debug y el mundo del arnés (ver tools\arnes\LEEME.md)

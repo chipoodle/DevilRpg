@@ -2365,6 +2365,30 @@ al otro lado de la valla **se perdió, se subió a la valla y acabó vagando**; 
 comportamiento de aldeanos, así que no cambian el mundo salvo las migraciones 64 y 65 (el compostero y los extremos de
 la acequia), que van en el latido al pasar por la aldea.
 
+### 3b.53 Despedir una invocación con un PALO (control del jugador)
+
+Lo pidió el jugador: *"podrías hacer que todas mis invocaciones pueda despawnearlas cuando haga click izquierdo con un
+palo sobre ella? solo cuando tengo un palo nada más"*. Va en `CommonForgeInteractionEventSubscriber.onAttackWithStick`
+(evento `AttackEntityEvent` del golpe del jugador; con click izquierdo el juego **no** dispara la interacción con la
+entidad, así que el sitio es el golpe).
+
+- **Solo con un palo en la mano principal** (`Items.STICK`): con cualquier otra cosa —espada, hacha, mano vacía— se
+  pelea o se golpea como siempre, y un palo **solo en la mano secundaria** tampoco despide.
+- **Solo las tuyas**: el dueño de la invocación tiene que ser tú. Las de otro jugador y los bichos salvajes no se
+  tocan.
+- El palo **no golpea**: el evento se **cancela** (ni daño, ni empujón, ni desgaste) y el que despide es el
+  **servidor** (el cliente solo se queda sin golpear, así no se ve un golpe que en el mundo no ha pasado).
+- Se van por el **camino de siempre** de cada invocación: los lobos, osos y wisps por
+  `PlayerMinionCapability.remove*` (que quitan la lista, matan al minion con su muerte de minion y con eso se **poda
+  también la copia guardada**, así que no vuelven al entrar); el shulker del girasol, que no vive en ninguna lista, se
+  saca del mundo sin más. El jugador ve un aviso corto en la barra de acción (*"Invocación despedida."*).
+
+**Medido** con el arnés (servidor headless, un **lobo de alma de verdad** invocado y metido en la lista del jugador):
+`[ArnesPalo] CASO 1 palo + mia: enElMundo=NO enLaLista=NO => OK` · `CASO 2 espada + mia: enElMundo=SI => OK` ·
+`CASO 3 palo + ajena: enElMundo=SI => OK` · `CASO 4 palo solo en la secundaria: enElMundo=SI => OK`. Las líneas
+literales están en `tools/arnes/medidas-minions.txt`, y el arnés (`tools/arnes/MinionHarness.java`) se queda como
+referencia.
+
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.

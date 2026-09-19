@@ -14,8 +14,13 @@ import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.capability.stamina.PlayerStaminaCapability;
 import com.chipoodle.devilrpg.capability.stamina.PlayerStaminaCapabilityInterface;
+import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapability;
+import com.chipoodle.devilrpg.capability.player_minion.PlayerMinionCapabilityInterface;
 import com.chipoodle.devilrpg.entity.ISoulEntity;
 import com.chipoodle.devilrpg.entity.ITamableEntity;
+import com.chipoodle.devilrpg.entity.SoulBear;
+import com.chipoodle.devilrpg.entity.SoulWisp;
+import com.chipoodle.devilrpg.entity.SoulWolf;
 import com.chipoodle.devilrpg.network.payload.PotionPayload;
 import com.chipoodle.devilrpg.util.EventUtils;
 import com.chipoodle.devilrpg.util.SkillEnum;
@@ -23,13 +28,16 @@ import com.chipoodle.devilrpg.world.RitualCircleGenerator;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.entity.living.LivingChangeTargetEvent;
@@ -157,6 +165,56 @@ public class CommonForgeInteractionEventSubscriber {
             staminaCap.addStamina(1.f, event.getEntity());
         };
         EventUtils.onWerewolfTransformation(event.getEntity(), c, event);
+    }
+
+    /**
+     * <b>DESPEDIR UNA INVOCACIÓN CON UN PALO</b>: click izquierdo sobre una invocación <b>tuya</b> llevando un
+     * <b>palo</b> en la mano principal la saca del mundo, sin daño y sin golpe (el evento se cancela).
+     * <p>
+     * Es el <b>único</b> caso en que un palo despide: con cualquier otra cosa en la mano (una espada, la mano vacía)
+     * se pelea o se golpea como siempre. Solo se tocan <b>las tuyas</b> (el dueño del minion tiene que ser tú): las de
+     * otro jugador y los bichos salvajes se quedan como están.
+     * <p>
+     * Va por {@code AttackEntityEvent} (el golpe del jugador) y no por la interacción, porque con click izquierdo el
+     * juego no dispara la interacción con la entidad. El que despide es el <b>servidor</b>: el cliente solo se queda
+     * sin golpear (si no, se vería el golpe y el daño en el cliente y no en el mundo). Las invocaciones que el
+     * jugador tiene en sus listas (lobos, osos y wisps) se van por su camino de siempre
+     * ({@code PlayerMinionCapability.remove*}: quitan la lista, matan al minion y con eso se poda también la copia
+     * guardada); las que no están en ninguna lista (el shulker del girasol) se sacan del mundo sin más.
+     */
+    @SubscribeEvent
+    public static void onAttackWithStick(AttackEntityEvent event) {
+        Player player = event.getEntity();
+        if (!player.getMainHandItem().is(Items.STICK)) {
+            return; // SOLO con un palo en la mano principal
+        }
+        if (!(event.getTarget() instanceof ITamableEntity minion)) {
+            return; // no es una invocación: el palo no hace nada raro
+        }
+        if (!player.getUUID().equals(minion.getOwnerUUID())) {
+            return; // no es tuya (de otro jugador o salvaje): no se toca
+        }
+        // El palo NO golpea: ni daño, ni empujón, ni desgaste.
+        player.swinging = false;
+        event.setCanceled(true);
+        if (player.level().isClientSide) {
+            return; // despide el servidor
+        }
+        Entity entidad = (Entity) minion;
+        PlayerMinionCapabilityInterface minionCap =
+                IGenericCapability.getUnwrappedPlayerCapability(player, PlayerMinionCapability.INSTANCE);
+        if (minionCap != null && minion instanceof SoulWolf wolf) {
+            minionCap.removeSoulWolf(player, wolf);
+        } else if (minionCap != null && minion instanceof SoulBear bear) {
+            minionCap.removeSoulBear(player, bear);
+        } else if (minionCap != null && minion instanceof SoulWisp wisp) {
+            minionCap.removeWisp(player, wisp);
+        } else {
+            entidad.discard(); // otras invocaciones (el shulker del girasol) no viven en las listas del jugador
+        }
+        DevilRpg.LOGGER.info("[Minion] {} despide a su {} con un palo ({})", player.getName().getString(),
+                EntityType.getKey(entidad.getType()), entidad.getUUID());
+        player.displayClientMessage(Component.literal("Invocación despedida."), true);
     }
 
 
