@@ -244,6 +244,14 @@ public class VillagerAnimalFarmGoal extends Goal {
         if (target == null || !(villager.level() instanceof ServerLevel level)) {
             return;
         }
+        // I33 TAMBIÉN PARA LOS DESTINOS FIJOS (el almacén, el punto de apoyo del corral): ésos se calculan fuera de
+        // las búsquedas —que son las que saltan lo aparcado—, así que sin esto el ganadero volvía a por el MISMO punto
+        // del almacén en bucle (medido con el arnés: 12 veces el mismo `1461,121,1434`). Se suelta y el goal arranca
+        // otra vez, que es lo que ya hace con los objetivos de sus búsquedas.
+        if (VillageManager.esPuntoFallido(villager, target)) {
+            target = null;
+            return;
+        }
         villager.getLookControl().setLookAt(target.getX() + 0.5D, target.getY() + 0.5D, target.getZ() + 0.5D);
         double alcance = fase == Fase.ENTREGAR ? VillageStorage.ALCANCE_ALMACEN
                 : (fase == Fase.RECOGER ? 1.8D : REACH);

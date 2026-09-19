@@ -58,6 +58,11 @@ public class VillagerClericGoal extends Goal {
     private static final int IDLE_REST_TICKS = 80;
     /** Si no logra acercarse en este tiempo, abandona (y se apunta el sitio: I33). */
     private static final int STUCK_LIMIT = 120;
+    /**
+     * Paciencia para el <b>viaje al agua</b> (30 s): el agua del pueblo está a 65-95 bloques y con la paciencia del
+     * puesto (6 s) se rendía a mitad de camino (medido con el arnés).
+     */
+    private static final int STUCK_AGUA = 600;
     /** Botellas que carga de una vez (los tres huecos del soporte). */
     private static final int BOTELLAS = 3;
 
@@ -73,6 +78,8 @@ public class VillagerClericGoal extends Goal {
     private int workTicks;
     private int restTicks;
     private int stuckTicks;
+    /** Contador aparte para el viaje al agua (su paciencia es mucho mayor: ver {@link #STUCK_AGUA}). */
+    private int stuckAgua;
     private double mejorDistancia = Double.MAX_VALUE;
 
     public VillagerClericGoal(Villager villager, BlockPos center, int objectiveIndex) {
@@ -167,16 +174,23 @@ public class VillagerClericGoal extends Goal {
                 if (hastaElAgua < mejorDistancia - 0.5D) {
                     mejorDistancia = hastaElAgua;
                     stuckTicks = 0;
-                } else if (++stuckTicks >= STUCK_LIMIT) {
-                    // RENDIRSE = APARCAR EL SITIO (I33), también para el agua.
+                    stuckAgua = 0;
+                } else if (++stuckAgua >= STUCK_AGUA) {
+                    // RENDIRSE = APARCAR ESA ORILLA (I33), pero con MUCHA más paciencia que en el puesto: el agua del
+                    // pueblo está a 65-95 bloques (el bebedero, el lago) y en 6 s (el STUCK_LIMIT normal) no se llega
+                    // ni a la esquina. Medido con el arnés: se rendía a mitad de camino y volvía al soporte.
+                    DevilRpg.LOGGER.info("[Village] El clerigo se atasca yendo al agua en {} (orilla {}): la deja por"
+                            + " un rato", villager.blockPosition().toShortString(), agua.toShortString());
                     VillageManager.marcarPuntoFallido(villager, agua);
                     agua = null;
+                    stuckAgua = 0;
                 }
                 return;
             }
             VillageManager.parar(villager);
             llenarBotellas(level);
             agua = null;
+            stuckAgua = 0;
             return;
         }
         double distancia = Math.sqrt(villager.distanceToSqr(soporte.getX() + 0.5D, soporte.getY() + 0.5D,
