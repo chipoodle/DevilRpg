@@ -52,7 +52,7 @@ public class GuardHarness {
         // A los 15 s (chunks ya cargados) se le deja al almacen lo que el pueblo NO puede fabricar, para medir la
         // cadena del CLERIGO: verruga del Nether, polvo de blaze y botellas de agua; y el botin que ya barre el
         // recolector (pepitas de oro, zanahorias, ojos de arana) para la zanahoria dorada.
-        if (ticks == 300) {
+        if (ticks == 600) {
             com.chipoodle.devilrpg.world.VillageStorage.guardar(level, CENTRO,
                     new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.NETHER_WART, 4));
             com.chipoodle.devilrpg.world.VillageStorage.guardar(level, CENTRO,
@@ -69,7 +69,15 @@ public class GuardHarness {
                     new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.GLASS_BOTTLE, 3));
             com.chipoodle.devilrpg.world.VillageStorage.guardar(level, CENTRO,
                     new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.SPIDER_EYE, 2));
-            DevilRpg.LOGGER.info("[Arnes] almacen sembrado para el clerigo");
+            // Se CONFIRMA lo que hay de verdad en el cofre (si el chunk no estaba listo, `guardar` no pone nada).
+            DevilRpg.LOGGER.info("[Arnes] almacen sembrado: verruga={} blaze={} agua={} cristal={} pepitas={} zanahorias={} ojos={}",
+                    cuenta(level, net.minecraft.world.item.Items.NETHER_WART),
+                    cuenta(level, net.minecraft.world.item.Items.BLAZE_POWDER),
+                    cuenta(level, net.minecraft.world.item.Items.POTION),
+                    cuenta(level, net.minecraft.world.item.Items.GLASS_BOTTLE),
+                    cuenta(level, net.minecraft.world.item.Items.GOLD_NUGGET),
+                    cuenta(level, net.minecraft.world.item.Items.CARROT),
+                    cuenta(level, net.minecraft.world.item.Items.SPIDER_EYE));
         }
         // Los bichos que YA venian en el guardado dentro del recinto BLOQUEAN el latido del pueblo
         // (`hayEnemigosDentro`): sin esto el reparto de oficios y la guardia ni se tocan. Se barren cada segundo.
@@ -126,12 +134,19 @@ public class GuardHarness {
                 CENTRO.getZ() - Math.sin(rad) * distancia);
     }
 
+    /** Cuántas cosas de ese tipo hay en el almacén (para confirmar el sembrado). */
+    private static int cuenta(ServerLevel level, net.minecraft.world.item.Item item) {
+        return com.chipoodle.devilrpg.world.VillageStorage.cuenta(level, CENTRO, s -> s.is(item));
+    }
+
     private static void volcar(ServerLevel level) {
         java.util.Map<String, Integer> censo = new java.util.TreeMap<>();
         for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(96))) {
             censo.merge(v.isBaby() ? "CRIA" : str(v.getVillagerData().getProfession()), 1, Integer::sum);
-            if (!v.isBaby() && !VillagerGuardGoal.esGuardia(v)) {
-                continue; // de los adultos solo se sigue a la guardia y a las crias (el censo lo dice todo)
+            boolean esClerigo = !v.isBaby()
+                    && v.getVillagerData().getProfession() == net.minecraft.world.entity.npc.VillagerProfession.CLERIC;
+            if (!v.isBaby() && !VillagerGuardGoal.esGuardia(v) && !esClerigo) {
+                continue; // de los adultos solo se sigue a la guardia y al CLERIGO (que es lo que se mide ahora)
             }
             WalkTarget wt = v.getBrain().getMemory(MemoryModuleType.WALK_TARGET).orElse(null);
             DevilRpg.LOGGER.info("[Arnes] t={} {} pos=({},{},{}) destino={} oficio={} trabajo={} puesto={} etiqueta={}",

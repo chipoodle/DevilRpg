@@ -206,8 +206,14 @@ public class VillagerClericGoal extends Goal {
 
     // --- la faena ------------------------------------------------------------------------------------
 
-    /** Radio en el que el clérigo busca agua para llenar las botellas (el bebedero, el lago, una charca). */
-    private static final int RADIO_AGUA = 24;
+    /**
+     * Radio en el que el clérigo busca agua para llenar las botellas. Tiene que dar para llegar al <b>bebedero del
+     * corral</b> (~65 bloques de la iglesia) y al <b>lago de la pesquera</b> (~95), que es donde está el agua del
+     * pueblo: con 24 —lo primero que se probó— se quedaba en el soporte diciendo "No encuentro agua" (medido).
+     */
+    private static final int RADIO_AGUA = 104;
+    /** Paso del barrido (bloques): 4 no se salta una charca y no recorre el mundo columna a columna. */
+    private static final int PASO_AGUA = 4;
 
     /** ¿Lleva botellas de <b>cristal</b> (vacías) encima? Entonces va al agua antes que al soporte. */
     private boolean llevaCristal() {
@@ -227,18 +233,22 @@ public class VillagerClericGoal extends Goal {
 
     /**
      * La <b>celda de agua</b> más cercana (el bebedero del corral, el lago de la pesquera, cualquier charca del
-     * término). Se mira en un cubo alrededor del aldeano con paso de 2 bloques: es barato y solo se hace cuando va a
-     * llenar botellas (no en cada tick).
+     * término). Se barre en la <b>altura del terreno</b> ({@code WORLD_SURFACE}) y con un paso de {@link #PASO_AGUA}:
+     * mirando un cubo pequeño —lo primero que se probó: radio 24 y paso 2— el clérigo se quedaba en su soporte con la
+     * etiqueta "No encuentro agua", porque el agua del pueblo está a 65 (el bebedero) y 95 (el lago) bloques de la
+     * iglesia y una charca de 3×1 se cuela entre las columnas pares. Solo se hace cuando va a llenar (no cada tick).
      */
     @Nullable
     private BlockPos buscarAgua(ServerLevel level) {
         BlockPos base = villager.blockPosition();
         BlockPos mejor = null;
         double mejorDist = Double.MAX_VALUE;
-        for (int dx = -RADIO_AGUA; dx <= RADIO_AGUA; dx += 2) {
-            for (int dz = -RADIO_AGUA; dz <= RADIO_AGUA; dz += 2) {
-                for (int dy = -2; dy <= 2; dy++) {
-                    BlockPos p = base.offset(dx, dy, dz);
+        for (int dx = -RADIO_AGUA; dx <= RADIO_AGUA; dx += PASO_AGUA) {
+            for (int dz = -RADIO_AGUA; dz <= RADIO_AGUA; dz += PASO_AGUA) {
+                BlockPos alto = level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE,
+                        new BlockPos(base.getX() + dx, 0, base.getZ() + dz));
+                for (int dy = 0; dy >= -2; dy--) { // el agua puede estar un bloque por debajo (la orilla)
+                    BlockPos p = alto.offset(0, dy, 0);
                     if (!esAgua(level, p) || VillageManager.esPuntoFallido(villager, p)) {
                         continue;
                     }
