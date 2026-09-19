@@ -6,14 +6,17 @@ import com.chipoodle.devilrpg.world.VillageManager;
 import com.chipoodle.devilrpg.world.VillagePantry;
 import com.chipoodle.devilrpg.world.VillageStorage;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.npc.Villager;
+import net.minecraft.world.entity.npc.VillagerProfession;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
@@ -21,11 +24,15 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ComposterBlock;
 import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -128,6 +135,11 @@ public class VillagerFarmGoal extends Goal {
     private double mejorDistancia = Double.MAX_VALUE;
     /** Turno del granjero cuando hay calva Y cultivo maduro: alterna una labrada y una cosecha (ver {@code canUse}). */
     private boolean turnoDeLabrar;
+    /**
+     * <b>El bancal de ESTE granjero</b> (índice en {@code FARM_PLOTS}), o {@code -1} si todavía no se ha calculado en
+     * esta salida. Sale de su <b>puesto de trabajo</b> (el compostero de su bancal: ver {@link #miParcela}).
+     */
+    private int miParcela = -1;
 
     public VillagerFarmGoal(Villager villager, BlockPos center, int objectiveIndex) {
         this.villager = villager;
@@ -260,6 +272,7 @@ public class VillagerFarmGoal extends Goal {
         stuckTicks = 0;
         mejorDistancia = Double.MAX_VALUE;
         abonadas.clear();
+        miParcela = -1; // se vuelve a mirar cuál es su bancal (su puesto puede haber cambiado)
         irAlObjetivo();
     }
 
@@ -446,8 +459,13 @@ public class VillagerFarmGoal extends Goal {
         }
         int guardados = 0;
         // 1) Compostero lleno -> harina de huesos para la despensa (el abono de la aldea lo produce ella misma).
-        for (BlockPos p : VillageGenerator.parcelasDe(level, center)) {
-            BlockPos comp = p.offset(-1, 0, 0);
+        //    OJO con la celda (el mismo desvío que en `buscarCompostero`): el compostero va a
+        //    `composteroDeLaParcela` (una celda MÁS AFUERA que la valla desde la migración 64); aquí se buscaba en
+        //    `p.offset(-1, 0, 0)`, que es la columna de la valla, así que el compostero lleno NO SE VACIABA NUNCA y
+        //    la harina de huesos no llegaba a la despensa.
+        int cota = VillageGenerator.cotaDeLaPlaza(level, center);
+        for (int i = 0; i < VillageGenerator.parcelasDeGranja(); i++) {
+            BlockPos comp = VillageGenerator.composteroDeLaParcela(center, i, cota);
             for (int dy = -2; dy <= 2; dy++) {
                 BlockPos q = comp.offset(0, dy, 0);
                 BlockState s = level.getBlockState(q);
@@ -555,33 +573,158 @@ public class VillagerFarmGoal extends Goal {
         return buscarCultivo(level, maduro, Set.of());
     }
 
-    /** Igual, pero saltando las posiciones de {@code saltar} (las plantas que ya abonó en esta salida). */
-    @Nullable
-    private BlockPos buscarCultivo(ServerLevel level, boolean maduro, Set<Long> saltar) {
-        for (BlockPos parcela : VillageGenerator.parcelasDe(level, center)) {
-            for (int dx = 0; dx < VillageGenerator.PLOT_WIDTH; dx++) {
-                for (int dz = 0; dz < VillageGenerator.PLOT_DEPTH; dz++) {
-                    BlockPos q = parcela.offset(dx, 0, dz);
-                    for (int dy = -1; dy <= 1; dy++) {
-                        BlockPos r = q.offset(0, dy, 0);
-                        if (!saltar.isEmpty() && saltar.contains(r.asLong())) {
-                            continue;
-                        }
-                        BlockState s = level.getBlockState(r);
-                        if (s.getBlock() instanceof CropBlock crop) {
-                            boolean esMaduro = VillageGenerator.edadDelCultivo(s) == crop.getMaxAge();
-                            if (esMaduro == maduro) {
-                                if (VillageManager.esPuntoFallido(villager, r)) {
-                                    continue; // a esa mata no llegó hace poco: se prueba la siguiente (I33)
-                                }
-                                return r;
-                            }
-                        }
-                    }
+    /**
+     * <b>El bancal de ESTE granjero.</b> Su <b>puesto de trabajo</b> es el compostero de un bancal (vanilla: la
+     * estación del granjero es el compostero, y la aldea pone <b>uno por bancal</b>: ver
+     * {@code VillageGenerator.composteroDeLaParcela} e I36), así que el puesto <b>dice cuál es su bancal</b>.
+     * <p>
+     * Es lo que hace que los tres granjeros <b>no se amontonen en el mismo huerto</b> (lo reportó el jugador: *"los
+     * granjeros cosechan los 3 en un solo huerto, cuando lo ideal es que cosechen cada uno en el suyo"*). Antes nadie
+     * miraba el puesto: los tres barrían la lista de bancales <b>en el mismo orden</b> y el primero con algo maduro se
+     * llevaba a los tres.
+     * <p>
+     * Si no se le reconoce el puesto (una aldea a medio migrar, un granjero recién ascendido), se reparte por
+     * <b>UUID</b>: es estable y reparte, que es lo que hace falta.
+     */
+    private int miParcela(ServerLevel level) {
+        if (miParcela >= 0) {
+            return miParcela;
+        }
+        int cota = VillageGenerator.cotaDeLaPlaza(level, center);
+        Optional<GlobalPos> puesto = villager.getBrain().getMemory(MemoryModuleType.JOB_SITE);
+        if (puesto.isPresent()) {
+            BlockPos p = puesto.get().pos();
+            for (int i = 0; i < VillageGenerator.parcelasDeGranja(); i++) {
+                BlockPos comp = VillageGenerator.composteroDeLaParcela(center, i, cota);
+                // Su compostero, esté ya en su sitio o todavía donde estaba antes de la migración 64 (una celda al
+                // lado, mismo z): las dos cosas valen para saber de qué bancal es.
+                if (p.getZ() == comp.getZ() && Math.abs(p.getX() - comp.getX()) <= 1
+                        && Math.abs(p.getY() - cota) <= 2) {
+                    miParcela = i;
+                    return i;
                 }
             }
         }
+        miParcela = Math.floorMod(villager.getUUID().hashCode(), VillageGenerator.parcelasDeGranja());
+        return miParcela;
+    }
+
+    /**
+     * Los bancales <b>en el orden en que ESTE granjero los trabaja</b>: <b>el suyo primero</b> y después los demás
+     * <b>por cercanía</b>, dejando para el final los que ya está trabajando <b>otro</b> granjero (así, si el suyo no
+     * tiene nada que hacer, ayuda en otro en vez de pisarse con el compañero).
+     */
+    private List<Integer> parcelasEnOrden(ServerLevel level) {
+        int mia = miParcela(level);
+        List<Integer> libres = new ArrayList<>();
+        List<Integer> ocupadas = new ArrayList<>();
+        int cota = VillageGenerator.cotaDeLaPlaza(level, center);
+        for (int i = 0; i < VillageGenerator.parcelasDeGranja(); i++) {
+            if (i == mia) {
+                continue;
+            }
+            if (otroGranjeroTrabajandoEn(level, i, cota)) {
+                ocupadas.add(i);
+            } else {
+                libres.add(i);
+            }
+        }
+        Comparator<Integer> porCercania = Comparator.comparingDouble(i -> {
+            BlockPos e = VillageGenerator.esquinaDeLaParcela(center, i, cota);
+            return villager.distanceToSqr(e.getX() + 0.5D, e.getY() + 0.5D, e.getZ() + 0.5D);
+        });
+        libres.sort(porCercania);
+        ocupadas.sort(porCercania);
+        List<Integer> orden = new ArrayList<>();
+        orden.add(mia);
+        orden.addAll(libres);
+        orden.addAll(ocupadas);
+        return orden;
+    }
+
+    /** ¿Hay <b>otro</b> granjero trabajando en ese bancal? (se mira si está dentro de su valla, o encima de ella) */
+    private boolean otroGranjeroTrabajandoEn(ServerLevel level, int parcela, int cota) {
+        BlockPos e = VillageGenerator.esquinaDeLaParcela(center, parcela, cota);
+        AABB caja = new AABB(e.getX() - 2, e.getY() - 3, e.getZ() - 2,
+                e.getX() + VillageGenerator.PLOT_WIDTH + 2, e.getY() + 4,
+                e.getZ() + VillageGenerator.PLOT_DEPTH + 2);
+        for (Villager otro : level.getEntitiesOfClass(Villager.class, caja)) {
+            if (otro == villager || otro.isBaby()) {
+                continue;
+            }
+            if (otro.getVillagerData().getProfession() == VillagerProfession.FARMER) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Lo que se busca en cada columna de un bancal: la celda a la que ir, o {@code null} si ahí no hay nada. */
+    @FunctionalInterface
+    private interface Candidata {
+        @Nullable
+        BlockPos en(BlockPos parcela, int dx, int dz);
+    }
+
+    /**
+     * <b>Busca en los bancales en el orden de este granjero</b> ({@link #parcelasEnOrden}) y, dentro de cada bancal,
+     * <b>la celda MÁS CERCANA</b> que cumpla lo pedido.
+     * <p>
+     * Dos cosas que antes no se hacían y que son la mitad del arreglo:
+     * <ul>
+     *   <li><b>El bancal suyo manda</b>: si en el suyo hay faena, no se va a otro. Y solo mira los demás si el suyo no
+     *       tiene nada (entonces ayuda, que es lo que pidió el jugador).</li>
+     *   <li><b>La más cercana, no la primera de la lista</b>: la búsqueda recorría el bancal en orden fijo (dx, dz) y
+     *       devolvía la primera mata, así que el granjero cruzaba el huerto entero para coger una del rincón y dejaba
+     *       sin cosechar las de al lado (el jugador: *"para cosechar está poco optimizado... dejan sin cosechar unos y
+     *       dejan otros cosechando"*). Yendo a la de al lado, el bancal se limpia de dentro hacia fuera.</li>
+     * </ul>
+     * Las celdas <b>aparcadas</b> (I33) se siguen saltando.
+     */
+    @Nullable
+    private BlockPos buscarEnLasParcelas(ServerLevel level, Candidata candidata) {
+        int cota = VillageGenerator.cotaDeLaPlaza(level, center);
+        for (int i : parcelasEnOrden(level)) {
+            BlockPos parcela = VillageGenerator.esquinaDeLaParcela(center, i, cota);
+            BlockPos mejor = null;
+            double mejorDistancia = Double.MAX_VALUE;
+            for (int dx = 0; dx < VillageGenerator.PLOT_WIDTH; dx++) {
+                for (int dz = 0; dz < VillageGenerator.PLOT_DEPTH; dz++) {
+                    BlockPos r = candidata.en(parcela, dx, dz);
+                    if (r == null || VillageManager.esPuntoFallido(villager, r)) {
+                        continue; // a esa celda no llegó hace poco: se prueba la siguiente (I33)
+                    }
+                    double d = villager.distanceToSqr(r.getX() + 0.5D, r.getY() + 0.5D, r.getZ() + 0.5D);
+                    if (d < mejorDistancia) {
+                        mejorDistancia = d;
+                        mejor = r;
+                    }
+                }
+            }
+            if (mejor != null) {
+                return mejor;
+            }
+        }
         return null;
+    }
+
+    /** Igual, pero saltando las posiciones de {@code saltar} (las plantas que ya abonó en esta salida). */
+    @Nullable
+    private BlockPos buscarCultivo(ServerLevel level, boolean maduro, Set<Long> saltar) {
+        return buscarEnLasParcelas(level, (parcela, dx, dz) -> {
+            for (int dy = -1; dy <= 1; dy++) {
+                BlockPos r = parcela.offset(dx, dy, dz);
+                if (!saltar.isEmpty() && saltar.contains(r.asLong())) {
+                    continue;
+                }
+                BlockState s = level.getBlockState(r);
+                if (s.getBlock() instanceof CropBlock crop
+                        && (VillageGenerator.edadDelCultivo(s) == crop.getMaxAge()) == maduro) {
+                    return r;
+                }
+            }
+            return null;
+        });
     }
 
     /**
@@ -600,16 +743,23 @@ public class VillagerFarmGoal extends Goal {
      */
     @Nullable
     private BlockPos buscarCompostero(ServerLevel level) {
-        for (BlockPos parcela : VillageGenerator.parcelasDe(level, center)) {
-            BlockPos comp = parcela.offset(-1, 0, 0);
+        int cota = VillageGenerator.cotaDeLaPlaza(level, center);
+        // OJO con la celda: el compostero va a `composteroDeLaParcela` (una celda MÁS AFUERA que la valla, desde la
+        // migración 64). Aquí se buscaba en `parcela.offset(-1, 0, 0)`, que es la columna de la VALLA, así que el
+        // granjero NO ENCONTRABA NUNCA su compostero: no compostaba, no había harina de huesos y no abonaba (medido
+        // con el arnés: `Lleno el compostero` no salía ni una vez). La celda sale de un solo sitio (I4).
+        for (int i : parcelasEnOrden(level)) {
+            BlockPos comp = VillageGenerator.composteroDeLaParcela(center, i, cota);
             for (int dy = -2; dy <= 2; dy++) {
                 BlockPos q = comp.offset(0, dy, 0);
                 BlockState s = level.getBlockState(q);
                 if (s.is(Blocks.COMPOSTER) && s.getValue(ComposterBlock.LEVEL) < ComposterBlock.MAX_LEVEL) {
-                    if (VillageManager.esPuntoFallido(villager, q)) {
+                    // Se camina a la celda de AL LADO (el compostero es sólido: ver `puntoDeApoyoDelCompostero`).
+                    BlockPos apoyo = VillageGenerator.puntoDeApoyoDelCompostero(level, q);
+                    if (VillageManager.esPuntoFallido(villager, apoyo)) {
                         continue; // a ese compostero no llegó hace poco: se prueba el siguiente (I33)
                     }
-                    return q;
+                    return apoyo;
                 }
             }
         }
@@ -628,7 +778,15 @@ public class VillagerFarmGoal extends Goal {
         if (target == null) {
             return;
         }
-        BlockState state = level.getBlockState(target);
+        // El `target` es la celda de AL LADO a la que se camina, no el compostero: el compostero es un bloque SÓLIDO
+        // y navegar hacia un bloque sólido deja al aldeano dando vueltas (ver
+        // `VillageGenerator.puntoDeApoyoDelCompostero`; medido con el arnés: la granjera se perdió y acabó subiéndose a
+        // la valla). Así que el compostero se busca en la celda a la que fue y a sus cuatro vecinas.
+        BlockPos comp = elComposteroDe(level, target);
+        if (comp == null) {
+            return;
+        }
+        BlockState state = level.getBlockState(comp);
         if (!state.is(Blocks.COMPOSTER)) {
             return;
         }
@@ -641,7 +799,7 @@ public class VillagerFarmGoal extends Goal {
             if (una.isEmpty()) {
                 break; // no le quedan semillas de sobra
             }
-            state = ComposterBlock.insertItem(villager, state, level, una, target);
+            state = ComposterBlock.insertItem(villager, state, level, una, comp);
             if (!una.isEmpty()) {
                 guardarEnInventario(una); // no era compostable (no debería pasar): se le devuelve
                 break;
@@ -649,12 +807,24 @@ public class VillagerFarmGoal extends Goal {
             echadas++;
         }
         if (echadas > 0) {
-            level.levelEvent(1500, target, 1); // el humo del compostero, como cuando lo llena el jugador
-            level.playSound(null, target, net.minecraft.sounds.SoundEvents.COMPOSTER_FILL_SUCCESS,
+            level.levelEvent(1500, comp, 1); // el humo del compostero, como cuando lo llena el jugador
+            level.playSound(null, comp, net.minecraft.sounds.SoundEvents.COMPOSTER_FILL_SUCCESS,
                     SoundSource.BLOCKS, 0.7F, 1.0F);
             VillageManager.ponerSuceso(villager, "Lleno el compostero (" + echadas + ")");
             DevilRpg.LOGGER.info("[Village] El granjero: Lleno el compostero con {} semilla(s)", echadas);
         }
+    }
+
+    /** El compostero que hay en esa celda o pegada a ella (la celda a la que se camina, o el bloque mismo). */
+    @Nullable
+    private BlockPos elComposteroDe(ServerLevel level, BlockPos celda) {
+        for (BlockPos p : new BlockPos[]{celda, celda.north(), celda.south(), celda.east(), celda.west(),
+                celda.below(), celda.above()}) {
+            if (level.getBlockState(p).is(Blocks.COMPOSTER)) {
+                return p;
+            }
+        }
+        return null;
     }
 
     /** Cuántas semillas lleva encima que le <b>sobran</b> (más de las que necesita para sembrar). */
@@ -705,24 +875,15 @@ public class VillagerFarmGoal extends Goal {
     /** Busca tierra de cultivo con el hueco de arriba libre (para plantar). */
     @Nullable
     private BlockPos buscarTierraVacia(ServerLevel level) {
-        for (BlockPos parcela : VillageGenerator.parcelasDe(level, center)) {
-            for (int dx = 0; dx < VillageGenerator.PLOT_WIDTH; dx++) {
-                for (int dz = 0; dz < VillageGenerator.PLOT_DEPTH; dz++) {
-                    BlockPos q = parcela.offset(dx, 0, dz);
-                    for (int dy = -1; dy <= 0; dy++) {
-                        BlockPos tierra = q.offset(0, dy, 0);
-                        BlockPos aire = tierra.above();
-                        if (level.getBlockState(tierra).is(Blocks.FARMLAND) && level.getBlockState(aire).isAir()) {
-                            if (VillageManager.esPuntoFallido(villager, aire)) {
-                                continue; // a esa celda no llegó hace poco: se prueba la siguiente (I33)
-                            }
-                            return aire;
-                        }
-                    }
+        return buscarEnLasParcelas(level, (parcela, dx, dz) -> {
+            for (int dy = -1; dy <= 0; dy++) {
+                BlockPos tierra = parcela.offset(dx, dy, dz);
+                if (level.getBlockState(tierra).is(Blocks.FARMLAND) && level.getBlockState(tierra.above()).isAir()) {
+                    return tierra.above();
                 }
             }
-        }
-        return null;
+            return null;
+        });
     }
 
     /**
@@ -738,23 +899,13 @@ public class VillagerFarmGoal extends Goal {
      */
     @Nullable
     private BlockPos buscarCalva(ServerLevel level) {
-        for (BlockPos parcela : VillageGenerator.parcelasDe(level, center)) {
-            for (int dx = 0; dx < VillageGenerator.PLOT_WIDTH; dx++) {
-                for (int dz = 0; dz < VillageGenerator.PLOT_DEPTH; dz++) {
-                    BlockPos tierra = parcela.offset(dx, -1, dz);
-                    if (!VillageGenerator.esCeldaDeCultivo(center, parcela.getY(), tierra)) {
-                        continue; // la acequia no se labra (y fuera del bancal no se toca nada)
-                    }
-                    if (VillageGenerator.esCalvaDeBancal(level, tierra)) {
-                        if (VillageManager.esPuntoFallido(villager, tierra.above())) {
-                            continue; // a esa calva no llegó hace poco: se prueba la siguiente (I33)
-                        }
-                        return tierra.above();
-                    }
-                }
+        return buscarEnLasParcelas(level, (parcela, dx, dz) -> {
+            BlockPos tierra = parcela.offset(dx, -1, dz);
+            if (!VillageGenerator.esCeldaDeCultivo(center, parcela.getY(), tierra)) {
+                return null; // la acequia no se labra (y fuera del bancal no se toca nada)
             }
-        }
-        return null;
+            return VillageGenerator.esCalvaDeBancal(level, tierra) ? tierra.above() : null;
+        });
     }
 
     private int trigoEnMano() {

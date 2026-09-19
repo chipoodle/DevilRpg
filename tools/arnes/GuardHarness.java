@@ -44,6 +44,8 @@ public class GuardHarness {
     private static final boolean SEMBRAR_AGUA_EMBOTELLADA = false;
     private static boolean listo = false;
     private static int ticks = 0;
+    /** Cuantas veces se ha visto a un granjero SUBIDO a la valla de su bancal (el bug que se mide). */
+    private static int subidasALaValla = 0;
 
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post event) {
@@ -155,6 +157,41 @@ public class GuardHarness {
         return com.chipoodle.devilrpg.world.VillageStorage.cuenta(level, CENTRO, s -> s.is(item));
     }
 
+    // --- LA GRANJA: que bancal trabaja cada granjero y si se sube a la valla ----------------------------------
+    // FARM_PLOTS y PLOT_WIDTH son privados en el generador: se copian aqui para la medida (el arnes es temporal).
+    private static final int[][] PARCELAS = {{-30, 14}, {10, 4}, {-28, 34}};
+    private static final int ANCHO_PARCELA = 9;
+
+    /** El indice del bancal en el que esta ese aldeano (mirando el rectangulo de su valla), o -1 si esta fuera. */
+    private static int bancalDe(ServerLevel level, Villager v) {
+        int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+        if (Math.abs(v.getY() - cota) > 4) {
+            return -1;
+        }
+        for (int i = 0; i < PARCELAS.length; i++) {
+            int x0 = CENTRO.getX() + PARCELAS[i][0];
+            int z0 = CENTRO.getZ() + PARCELAS[i][1];
+            if (v.getX() >= x0 - 1 && v.getX() <= x0 + ANCHO_PARCELA
+                    && v.getZ() >= z0 - 1 && v.getZ() <= z0 + ANCHO_PARCELA) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /** ¿Esta SUBIDO a la valla del bancal? (de pie sobre una valla o una compuerta: el bloque de debajo es eso) */
+    private static boolean subidoALaValla(ServerLevel level, Villager v) {
+        var debajo = level.getBlockState(v.blockPosition().below());
+        return debajo.is(net.minecraft.world.level.block.Blocks.OAK_FENCE)
+                || debajo.is(net.minecraft.world.level.block.Blocks.OAK_FENCE_GATE);
+    }
+
+    /** El compostero del bancal `i` de la aldea medida (misma cuenta que el generador: ver la migracion 64). */
+    private static BlockPos composteroDelBancal(ServerLevel level, int i) {
+        int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+        return new BlockPos(CENTRO.getX() + PARCELAS[i][0] - 3, cota, CENTRO.getZ() + PARCELAS[i][1]);
+    }
+
     /**
      * El <b>porche de la taberna</b>: la columna {@code bx-1}, que es la que queda <b>entre</b> el toldo
      * ({@code bx-2}) y la <b>pared</b> de la taberna ({@code bx}). Si esas celdas estan vacias, el techito no
@@ -198,8 +235,29 @@ public class GuardHarness {
             censo.merge(v.isBaby() ? "CRIA" : str(v.getVillagerData().getProfession()), 1, Integer::sum);
             boolean esClerigo = !v.isBaby()
                     && v.getVillagerData().getProfession() == net.minecraft.world.entity.npc.VillagerProfession.CLERIC;
+            // LA GRANJA (lo que se mide en esta ronda): se sigue a los GRANJEROS, con su bancal y si van subidos a la
+            // valla (el bug: trepaban por el compostero pegado a ella).
+            boolean esGranjero = !v.isBaby()
+                    && v.getVillagerData().getProfession() == net.minecraft.world.entity.npc.VillagerProfession.FARMER;
+            if (esGranjero) {
+                int bancal = bancalDe(level, v);
+                boolean valla = subidoALaValla(level, v);
+                if (valla) {
+                    subidasALaValla++;
+                }
+                WalkTarget wtg = v.getBrain().getMemory(MemoryModuleType.WALK_TARGET).orElse(null);
+                var puesto = v.getBrain().getMemory(MemoryModuleType.JOB_SITE).orElse(null);
+                DevilRpg.LOGGER.info("[Arnes] t={} {} GRANJERO bancal={} valla={} puesto={} pos=({},{},{}) destino={}"
+                                + " etiqueta={}",
+                        level.getGameTime(), v.getUUID().toString().substring(0, 8), bancal, valla ? "SI" : "no",
+                        puesto == null ? "SIN PUESTO" : puesto.pos().toShortString(),
+                        fmt(v.getX()), fmt(v.getY()), fmt(v.getZ()),
+                        wtg == null ? "SIN DESTINO" : wtg.getTarget().currentBlockPosition().toShortString(),
+                        v.getCustomName() == null ? "-" : v.getCustomName().getString().replace("\n", " | "));
+                continue;
+            }
             if (!v.isBaby() && !VillagerGuardGoal.esGuardia(v) && !esClerigo) {
-                continue; // de los adultos solo se sigue a la guardia y al CLERIGO (que es lo que se mide ahora)
+                continue; // de los adultos solo se sigue a la guardia, al CLERIGO y a los GRANJEROS
             }
             WalkTarget wt = v.getBrain().getMemory(MemoryModuleType.WALK_TARGET).orElse(null);
             DevilRpg.LOGGER.info("[Arnes] t={} {} pos=({},{},{}) destino={} oficio={} trabajo={} puesto={} etiqueta={}",
@@ -210,6 +268,24 @@ public class GuardHarness {
                     v.getPersistentData().getInt(VillageManager.GUARD_INDEX_TAG),
                     v.getCustomName() == null ? "-" : v.getCustomName().getString().replace("\n", " | "));
         }
+        // EL RESUMEN DE LA GRANJA: cuantos granjeros hay en cada bancal (el reparto) y cuantas veces se les ha visto
+        // subidos a la valla desde que arranco el arnes.
+        StringBuilder bancales = new StringBuilder();
+        for (int i = 0; i < PARCELAS.length; i++) {
+            int enEl = 0;
+            for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(96))) {
+                if (!v.isBaby() && v.getVillagerData().getProfession()
+                        == net.minecraft.world.entity.npc.VillagerProfession.FARMER && bancalDe(level, v) == i) {
+                    enEl++;
+                }
+            }
+            BlockPos comp = composteroDelBancal(level, i);
+            boolean hayCompostero = level.getBlockState(comp).is(net.minecraft.world.level.block.Blocks.COMPOSTER);
+            bancales.append(" bancal").append(i).append("=granjeros:").append(enEl)
+                    .append("/compostero:").append(hayCompostero ? "SI" : "NO");
+        }
+        DevilRpg.LOGGER.info("[Arnes] t={} GRANJA {} · subidas a la valla (acumulado): {}",
+                level.getGameTime(), bancales, subidasALaValla);
         DevilRpg.LOGGER.info("[Arnes] t={} CENSO {}", level.getGameTime(), censo);
     }
 

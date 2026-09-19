@@ -616,9 +616,21 @@ public final class VillageManager {
      *       esté vacía</b>: es <b>aditivo</b> (no quita nada, así que no puede comerse lo que haya puesto el jugador)
      *       y su celda de al lado, en el muro, ya es sólida (medida: {@code dark_oak_planks}). Idempotente y solo en
      *       las celdas del porche: no rehace la taberna (ni la despensa ni las camas).</li>
+     *   <li>64: el <b>COMPOSTERO DEL BANCAL, UNA CELDA MÁS AFUERA</b> (lo reportó el jugador: <i>"siguen subiendo a la
+     *       valla para poder entrar en vez de usar las compuertas"</i>, y de paso el granjero no lo encontraba). El
+     *       compostero —el <b>puesto de trabajo del granjero</b>— estaba pegado a la valla del bancal
+     *       ({@code corner.x-2}, con la valla en {@code corner.x-1}): su tapa queda a {@code cota+1} y desde ahí subir
+     *       al lomo de la valla (1,5) es un paso de <b>0,5</b>, por debajo del {@code maxUpStep} (0,6), así que el
+     *       granjero <b>trepaba la valla</b>. Medido en su guardado: los <b>tres</b> bancales tenían ese escalón y era
+     *       el compostero. Se mueve a {@code corner.x-3} ({@code COMPOSTERO_DX}, I40), que deja una celda de aire entre
+     *       el compostero y la valla. Es <b>conservador</b> (solo si el viejo sigue siendo un compostero y la celda
+     *       nueva está libre con suelo firme) e <b>idempotente</b>. Y al granjero cuyo {@code JOB_SITE} apuntaba al
+     *       compostero viejo se le <b>suelta el puesto</b> ({@code liberarPuesto}, I23) para que el latido le dé el
+     *       nuevo: así vuelve a compostar (su búsqueda miraba la columna de la <b>valla</b> y no lo veía nunca, por eso
+     *       no había harina de huesos ni abono).</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 63;
+    public static final int CURRENT_LAYOUT = 65;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -1677,6 +1689,35 @@ public final class VillageManager {
             // calva. Va antes de recapturar el plano para que el plano nuevo las tenga (aunque ya las pide
             // `estadoDeLaHuerta`) y es idempotente.
             VillageGenerator.labrarCalvasDelBancal(level, center);
+            // EL COMPOSTERO DEL BANCAL, UNA CELDA MÁS AFUERA (migración 64, lo reportó el jugador: *"siguen subiendo a
+            // la valla para poder entrar en vez de usar las compuertas"*). El compostero del granjero —su puesto de
+            // trabajo— estaba PEGADO a la valla del bancal (`corner.x-2`, con la valla en `corner.x-1`) y su tapa
+            // queda a `cota+1`: subir al lomo de la valla (1,5) desde ahí es un paso de 0,5, por debajo del
+            // `maxUpStep` del juego (0,6), así que el granjero la TREPABA en vez de entrar por la compuerta. Medido
+            // en su guardado: los TRES bancales tenían ese escalón, y era el compostero. Se mueve una celda afuera
+            // (`COMPOSTERO_DX`, I40) y, de paso, el granjero ya lo ENCUENTRA: su búsqueda miraba en la columna de la
+            // valla y no lo veía nunca (por eso no compostaba ni abonaba).
+            List<BlockPos[]> composterosMovidos = VillageGenerator.moverComposterosDelBancal(level, center);
+            for (BlockPos[] par : composterosMovidos) {
+                BlockPos viejo = par[0];
+                BlockPos nuevo = par[1];
+                for (Villager granjero : aldeanos) {
+                    // El PUESTO de ese granjero se MUDA con su compostero (la estación es suya, I36): así no cambia
+                    // de bancal. Un puesto que ya no está tampoco se queda cogido (I23).
+                    Optional<GlobalPos> suyo = granjero.getBrain().getMemory(MemoryModuleType.JOB_SITE);
+                    if (suyo.isPresent() && suyo.get().pos().equals(viejo)) {
+                        moverPuestoDeTrabajo(level, granjero, viejo, nuevo);
+                    }
+                }
+            }
+            // Y LOS EXTREMOS DE LA ACEQUIA, DE VUELTA A CELDA DE CULTIVO (migración 65, la SEGUNDA causa del mismo
+            // reporte: "siguen subiendo a la valla para poder entrar"). La acequia va tapada con una losa (para que
+            // no se congele y para que nadie se caiga dentro), la losa se pisa a `cota+0,5` y las compuertas del
+            // bancal caen justo en la fila del medio: desde la losa del EXTREMO, el aldeano saltaba la valla (de
+            // 120,5 a 121,5 hay 1,0 y un mob salta 1,25). Medido con el arnés: la granjera Cesarea venía por la
+            // acequia y saltó por encima de la compuerta este. Los dos extremos vuelven a ser celdas de cultivo (la
+            // capa que se pisa queda a la altura de la tierra) y el bancal gana dos celdas plantables.
+            VillageGenerator.rehacerLosExtremosDeLaAcequia(level, center);
             // EL CORRAL, ENSANCHADO (migración 45): el corral pasa de 15x15 a 19x19 y se retira el viejo (solo sus
             // bloques). Va ANTES de `asegurarGranjaAnexa`, que si no saldría antes de tiempo al ver el corral viejo.
             VillageGenerator.ensancharElCorral(level, center);
@@ -2417,14 +2458,51 @@ public final class VillageManager {
         if (!(villager.level() instanceof ServerLevel level)) {
             return;
         }
+        PoiManager poi = level.getPoiManager();
         for (MemoryModuleType<GlobalPos> tipo : List.of(MemoryModuleType.JOB_SITE, MemoryModuleType.POTENTIAL_JOB_SITE)) {
             Optional<GlobalPos> sitio = villager.getBrain().getMemory(tipo);
             if (sitio.isEmpty()) {
                 continue;
             }
-            level.getPoiManager().release(sitio.get().pos());
+            // OJO: `release` **revienta** si en esa celda ya no hay punto de interés —`IllegalStateException: POI never
+            // registered at ...`, medido al mover el compostero del bancal (migración 64): la memoria apuntaba al
+            // compostero viejo, que ya no existe—. Un puesto que ya no está no hay que soltarlo: basta con borrar la
+            // memoria, y así el reparto le da otro.
+            if (poi.getType(sitio.get().pos()).isPresent()) {
+                poi.release(sitio.get().pos());
+            }
             villager.getBrain().eraseMemory(tipo);
         }
+    }
+
+    /**
+     * Le da a ese aldeano su <b>puesto NUEVO</b> cuando la estación se ha <b>movido</b> (migración 64: el compostero
+     * del bancal pasa una celda más afuera).
+     * <p>
+     * Es mejor que soltarle el puesto y esperar a que el latido se lo vuelva a dar: la estación es <b>suya</b> (I36),
+     * así que no tiene por qué cambiar de bancal, y no se queda sin ella si el POI nuevo tarda en registrarse.
+     * <b>Medido con el arnés</b>: soltando el puesto, de los tres granjeros <b>dos</b> lo recuperaron y la tercera se
+     * quedó {@code SIN PUESTO} (con su faena y su etiqueta, pero sin estación: el cerebro no le registra la actividad
+     * de trabajar, I23).
+     */
+    private static void moverPuestoDeTrabajo(ServerLevel level, Villager villager, BlockPos viejo, BlockPos nuevo) {
+        PoiManager poi = level.getPoiManager();
+        if (poi.getType(viejo).isPresent()) {
+            poi.release(viejo); // (si en la celda vieja ya no hay POI, `release` reventaría: ver `liberarPuesto`)
+        }
+        java.util.function.Predicate<net.minecraft.core.Holder<
+                net.minecraft.world.entity.ai.village.poi.PoiType>> vale =
+                villager.getVillagerData().getProfession().heldJobSite();
+        java.util.function.BiPredicate<net.minecraft.core.Holder<
+                net.minecraft.world.entity.ai.village.poi.PoiType>, BlockPos> cual = (tipo, pos) -> pos.equals(nuevo);
+        if (poi.take(vale, cual, nuevo, 1).isEmpty()) {
+            liberarPuesto(villager); // no se ha podido coger el nuevo: se suelta y el latido lo reintenta
+            return;
+        }
+        villager.getBrain().setMemory(MemoryModuleType.JOB_SITE, GlobalPos.of(level.dimension(), nuevo));
+        villager.getBrain().eraseMemory(MemoryModuleType.POTENTIAL_JOB_SITE);
+        DevilRpg.LOGGER.info("[Village] {}: su estacion se muda con el compostero ({} -> {})", villager.getUUID(),
+                viejo.toShortString(), nuevo.toShortString());
     }
 
     /**
@@ -2541,8 +2619,21 @@ public final class VillageManager {
                                                     int objectiveIndex) {
         PoiManager poi = level.getPoiManager();
         for (Villager villager : aldeanos) {
-            if (villager.isBaby() || villager.getBrain().hasMemoryValue(MemoryModuleType.JOB_SITE)) {
+            if (villager.isBaby()) {
                 continue;
+            }
+            if (villager.getBrain().hasMemoryValue(MemoryModuleType.JOB_SITE)) {
+                // UN PUESTO QUE YA NO ESTÁ NO SE QUEDA COGIDO (I23): si la estación que tiene en la memoria ya no es
+                // un punto de interés (se la movieron —el compostero del bancal, migración 64— o se la quitó el
+                // jugador), se le suelta aquí mismo y este mismo latido le da otra. Sin esto el aldeano se queda con
+                // una memoria que apunta al aire y **no vuelve a reclamar nunca** (porque el reparto solo mira a los
+                // que NO tienen puesto). Medido con el arnés: al mover el compostero, una de las tres granjeras se
+                // quedó `SIN PUESTO` para siempre.
+                Optional<GlobalPos> suyo = villager.getBrain().getMemory(MemoryModuleType.JOB_SITE);
+                if (suyo.isEmpty() || poi.getType(suyo.get().pos()).isPresent()) {
+                    continue; // su puesto sigue ahí: no se le toca
+                }
+                liberarPuesto(villager);
             }
             VillagerProfession profesion = villager.getVillagerData().getProfession();
             if (!VillageGenerator.esOficioDelPueblo(profesion)) {

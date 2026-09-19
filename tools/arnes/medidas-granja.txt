@@ -1,0 +1,73 @@
+MEDIDAS DE LOS GRANJEROS: reparto de bancales, la valla y la cosecha
+====================================================================
+Lo reportado por el jugador: "los granjeros cosechan los 3 en un solo huerto, cuando lo ideal es que cosechen cada uno
+en el suyo... si no hay mucho que cosechar pues deberían ir a los otros, para distribuirse. También siguen subiendo a
+la valla para poder entrar en vez de usar las compuertas y para cosechar está poco optimizado su método porque dejan
+sin cosechar unos y dejan otros cosechando".
+
+Partida: run/saves/New World (1) copiada a run/world (aldea 2, centro 1414,1414, cota 120).
+Tres bancales (FARM_PLOTS, relativos al centro): 0 = (-30,14) -> esquina 1384,1428 · 1 = (10,4) -> 1424,1418 ·
+2 = (-28,34) -> 1386,1448. Nueve por nueve, con la acequia en la fila del medio (dz=4).
+
+
+--- 1) LO QUE HABÍA EN EL GUARDADO (solo lectura) ------------------------------------------------
+Herramientas: build/granja_mide.py (matas y compuertas) y build/granja_valla.py (escalones a la valla).
+
+  BANCAL 0 esquina (1384,1428): matas 65 (maduras 0, creciendo 65)  {wheat 19, carrots 16, potatoes 16, beetroots 14}
+  BANCAL 1 esquina (1424,1418): matas 68 (maduras 35, creciendo 33) {wheat 17, carrots 19, potatoes 18, beetroots 14}
+  BANCAL 2 esquina (1386,1448): matas 71 (maduras 66, creciendo 5)  {wheat 23, carrots 16, potatoes 16, beetroots 16}
+
+  Compuertas: 4 por bancal, TODAS cerradas (open=false) en los cuatro puntos cardinales.
+
+  ESCALONES PARA SUBIR A LA VALLA (una valla mide 1,5; se anda 0,6 y se salta ~1,25):
+    BANCAL 0: 3 celdas -> valla (1383,1427)/(1383,1428)/(1383,1429) desde la TAPA DEL COMPOSTERO (1382,1428) (cota+1)
+    BANCAL 1: 3 celdas -> valla (1423,1417)/(1423,1418)/(1423,1419) desde el compostero (1422,1418)
+    BANCAL 2: 3 celdas -> valla (1385,1447)/(1385,1448)/(1385,1449) desde el compostero (1384,1448)
+  O sea: el único escalón del pueblo era el COMPOSTERO del propio granjero, pegado a la valla (x-2, con la valla en x-1).
+
+  LA ACEQUIA (fila dz=4), medida celda a celda en el bancal 0 (z=1432):
+    x=1383 -> COMPUERTA oeste (cerrada)   |  x=1384..1392 -> losa (OAK_SLAB) a la capa que se pisa, agua debajo (y=119)
+    x=1393 -> COMPUERTA este (cerrada)
+  La losa SE PISA a cota+0,5 y las compuertas caen justo en esa fila: de la losa del extremo al lomo de la valla hay
+  1,0, y un mob salta 1,25 => se sube SALTANDO. Es la segunda causa.
+
+
+--- 2) EL ARNÉS, ANTES Y DESPUÉS -------------------------------------------------------------------
+
+A) Con el compostero YA movido, pero SIN los otros dos arreglos (corrida de 4 min):
+   - `subidas a la valla (acumulado): 42`  -> 42 lecturas de un granjero de pie sobre la valla (y = cota+1,5).
+     TODAS en la fila de la acequia y en los extremos del anillo:
+       bancal 0: (1393.18,121.50,1431.22) y (1383.36,121.50,1433.57)   [compuertas este y oeste de la fila del agua]
+       bancal 1: (1423.32,121.50,1423.62)
+       bancal 2: (1395.4..1395.9,121.50,1450.98..1452.70)
+   - `Lleno el compostero con N semilla(s)`: 18 veces (con el desvío de una celda arreglado, el granjero YA encuentra
+     su compostero; antes NO salía ni una vez).
+   - 173 lineas `no consigue llegar a ...: lo deja por 5 min` (navegacion errada: el compostero se usaba como destino
+     y es un bloque SOLIDO).
+   - Una granjera (Cesarea) salio de su bancal, se subio a la compuerta este y acabo vagando lejos.
+
+B) Con los dos arreglos de la valla (extremos de la acequia como celdas de cultivo) y el punto de apoyo del compostero:
+   - `subidas a la valla (acumulado): 0` durante toda la corrida.
+   - Cada granjero con SU bancal por su puesto (que es lo que reparte): `Bibiana` con destino dentro del bancal 1
+     (puesto 1421,120,1418 = compostero del bancal 1) y `Isidoro` con el del bancal 2 (1383,120,1448).
+   - `Cesarea` se quedaba `SIN PUESTO`: el latido quitaba y reponia el compostero cada 10 s (eso tira el punto de
+     interes y deja el puesto cogido y sin dueno, I23). Arreglado: si el compostero ya esta en su sitio, no se toca.
+
+C) Corrida final (compostero sin churn + puesto caducado + `release` blindado): **la buena**
+   - **Los tres granjeros con TRES estaciones distintas, una por bancal** (el reparto, medido):
+       Cesarea   puesto=1381, 120, 1428   -> compostero del BANCAL 0   (la que antes se quedaba SIN PUESTO)
+       Isidoro   puesto=1421, 120, 1418   -> compostero del BANCAL 1
+       Bibiana   puesto=1383, 120, 1448   -> compostero del BANCAL 2
+   - `subidas a la valla (acumulado): 0` en las 133 lecturas de la corrida.
+   - `no consigue llegar ...` (navegacion errada): 24 (en la corrida A eran 173).
+   - Y trabajando: `Cosechando`, `Guardando lo suyo`, `Guardo N en la despensa`, `Guardo N y horne N pan(es)`.
+   - Sin `POI never registered` ni crash (esa excepcion salio una vez y esta arreglada: `PoiManager.release` revienta
+     si en la celda ya no hay punto de interes).
+
+--- CÓMO REPETIRLO -----------------------------------------------------------------------------------
+1) Copy-Item tools\arnes\GuardHarness.java src\main\java\com\chipoodle\devilrpg\debug\GuardHarness.java
+2) Move-Item run\world run\world.antes ; Copy-Item "run\saves\New World (1)" run\world -Recurse
+3) $env:GRADLE_USER_HOME="C:\Users\Christian\Documents\DevilRpg\.gradle-home" ; .\gradlew.bat runServer --console=plain
+4) Select-String run\logs\latest.log -Pattern 'GRANJA |GRANJERO |compostero'
+5) DESHACER: borrar src\...\debug y el mundo del arnés (ver tools\arnes\LEEME.md)
+Y sin arrancar el juego: python build\granja_mide.py  ·  python build\granja_valla.py  ·  python build\granja_compostero.py

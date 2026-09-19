@@ -127,6 +127,19 @@ public final class VillageGenerator {
     public static final int PLOT_DEPTH = 9;
     /** Fila de la acequia dentro de la parcela (la del medio). */
     private static final int PLOT_WATER_ROW = PLOT_DEPTH / 2;
+    /**
+     * A cuántos bloques de la <b>esquina oeste</b> de la parcela va el <b>compostero</b> (el puesto de trabajo del
+     * granjero), <b>fuera</b> de la valla del bancal.
+     * <p>
+     * Eran <b>2</b> y es un error de <b>una celda</b> con consecuencias: la valla está en {@code corner.x-1}, así que
+     * el compostero quedaba <b>pegado</b> a ella y su tapa (un bloque entero) queda a {@code cota+1}: desde ahí, subir
+     * al lomo de la valla (1,5) es un paso de <b>0,5</b>, por debajo del {@code maxUpStep} del juego (0,6), así que el
+     * granjero <b>trepaba la valla</b> en vez de entrar por la compuerta (lo reportó el jugador: *"siguen subiendo a
+     * la valla para poder entrar en vez de usar las compuertas"*; medido en su guardado: los <b>tres</b> bancales
+     * tenían ese escalón, y era el compostero). Con <b>3</b>, entre el compostero y la valla queda una celda de aire y
+     * el escalón desaparece (I40).
+     */
+    private static final int COMPOSTERO_DX = 3;
     /** Bloques de <b>terraza</b> (patio llano) que se allanan alrededor de una construcción. */
     private static final int MARGEN_TERRAZA = 2;
     /**
@@ -551,6 +564,38 @@ public final class VillageGenerator {
         return parcelas;
     }
 
+    /** Cuántas parcelas de granja tiene una aldea ({@link #FARM_PLOTS}). */
+    public static int parcelasDeGranja() {
+        return FARM_PLOTS.length;
+    }
+
+    /**
+     * La esquina de la parcela {@code i} de esa aldea (a la capa que se pisa). Es la MISMA cuenta que
+     * {@link #parcelasDe}, para el que necesite una sola parcela (el granjero, al repartirse los bancales).
+     */
+    public static BlockPos esquinaDeLaParcela(BlockPos center, int i, int cota) {
+        return new BlockPos(center.getX() + FARM_PLOTS[i][0], cota, center.getZ() + FARM_PLOTS[i][1]);
+    }
+
+    /**
+     * Dónde va el <b>compostero</b> de la parcela {@code i} (el puesto de trabajo del granjero): fuera de su valla,
+     * {@link #COMPOSTERO_DX} bloques al oeste de su esquina, a la capa que se pisa.
+     * <p>
+     * Vive en <b>un solo sitio</b> (I4): lo usan el constructor del bancal, la migración que lo mueve y el granjero
+     * para encontrar su compostero y para saber <b>cuál es su bancal</b> (su puesto de trabajo es su compostero, I36).
+     */
+    public static BlockPos composteroDeLaParcela(BlockPos center, int i, int cota) {
+        return new BlockPos(center.getX() + FARM_PLOTS[i][0] - COMPOSTERO_DX, cota, center.getZ() + FARM_PLOTS[i][1]);
+    }
+
+    /**
+     * Dónde estaba el compostero <b>antes</b> de la migración 64 (a {@code corner.x-2}, <b>pegado a la valla</b>, que
+     * es lo que le servía de escalón al granjero para saltarla). Solo lo usa esa migración.
+     */
+    public static BlockPos composteroViejoDeLaParcela(BlockPos center, int i, int cota) {
+        return new BlockPos(center.getX() + FARM_PLOTS[i][0] - 2, cota, center.getZ() + FARM_PLOTS[i][1]);
+    }
+
     /** Códigos de {@link #tipoDeCeldaDeLaHuerta}: fuera de los bancales, celda de cultivo o fila de la acequia. */
     private static final int FUERA_DE_LA_HUERTA = 0;
     private static final int CELDA_DE_CULTIVO = 1;
@@ -571,10 +616,26 @@ public final class VillageGenerator {
             int dx = pos.getX() - (center.getX() + plot[0]);
             int dz = pos.getZ() - (center.getZ() + plot[1]);
             if (dx >= 0 && dx < PLOT_WIDTH && dz >= 0 && dz < PLOT_DEPTH) {
-                return dz == PLOT_WATER_ROW ? CELDA_DE_ACEQUIA : CELDA_DE_CULTIVO;
+                return esFilaDeAcequia(dx, dz) ? CELDA_DE_ACEQUIA : CELDA_DE_CULTIVO;
             }
         }
         return FUERA_DE_LA_HUERTA;
+    }
+
+    /**
+     * ¿Esa casilla de la parcela es de la <b>acequia</b>? Es la fila del medio, pero <b>sin sus dos extremos</b>
+     * ({@code dx = 0} y {@code dx = PLOT_WIDTH-1}): esos dos son <b>celdas de cultivo</b>.
+     * <p>
+     * El motivo está <b>medido con el arnés</b>: la acequia va <b>tapada con una losa</b> (para que el agua no se
+     * congele y para que los aldeanos no se caigan dentro), la losa <b>se pisa</b> a {@code cota+0,5} y las compuertas
+     * del bancal caen justo en la fila del medio, así que desde la losa del extremo el aldeano <b>saltaba la valla</b>
+     * (de 120,5 a 121,5 hay 1,0, y un mob salta 1,25) en vez de entrar por la compuerta: es la segunda causa del
+     * <i>"siguen subiendo a la valla para poder entrar"</i> —medida en el arnés con la granjera Cesarea, que venía por
+     * la acequia y saltó por encima de la compuerta este—. Con los extremos como celdas de cultivo (tapa a 119,94) el
+     * salto ya no llega (I40). De paso el bancal gana <b>dos celdas plantables</b> por parcela.
+     */
+    private static boolean esFilaDeAcequia(int dx, int dz) {
+        return dz == PLOT_WATER_ROW && dx > 0 && dx < PLOT_WIDTH - 1;
     }
 
     /**
@@ -5901,7 +5962,7 @@ public final class VillageGenerator {
                         colocar(level, p, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
                     }
                 }
-                if (dz == PLOT_WATER_ROW) {
+                if (esFilaDeAcequia(dx, dz)) {
                     // Acequia central: el agua va a ras de la tierra de cultivo y riega las cuatro filas. Se CUBRE
                     // con una losa (que se pisa) por dos motivos medidos en la partida del jugador:
                     //  1) el agua expuesta se CONGELA en biomas helados (habia parcelas con `ice` en el canal): el
@@ -5955,12 +6016,27 @@ public final class VillageGenerator {
         //     limpieza se llevaba por delante el bloque de superficie -> el compostero quedaba FLOTANDO.
         //  3) Se coloca el compostero apoyado en esa capa.
         int base = nivel;
-        int compX = corner.getX() - 2; // fuera de la valla del bancal (ver `cercaDelBancal`)
+        int compX = corner.getX() - COMPOSTERO_DX; // FUERA de la valla y sin pegarse a ella (ver COMPOSTERO_DX, I40)
         int compZ = corner.getZ();
-        for (int y = nivel - PROFUNDIDAD_SOLAR - 2; y <= nivel + 6; y++) {
-            BlockPos p = new BlockPos(compX, y, compZ);
-            if (level.getBlockState(p).is(Blocks.COMPOSTER)) {
-                colocar(level, p, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+        // SI EL COMPOSTERO YA ESTÁ DONDE TIENE QUE ESTAR, NO SE TOCA NADA. Esto corre en el latido (10 s) para cada
+        // bancal ya hecho, y quitar el compostero para volverlo a poner **tira su punto de interés** cada vez: el
+        // puesto se queda con el ticket cogido y sin dueño (`free_tickets=0`, I23) y **nadie puede reclamarlo**.
+        // Medido con el arnés: de los tres granjeros, dos reclamaron su compostero y la tercera se quedó
+        // `SIN PUESTO` (su etiqueta y su faena sí, pero sin estación: el cerebro no le registra el trabajo).
+        for (int y = nivel - 2; y <= nivel + 2; y++) {
+            if (level.getBlockState(new BlockPos(compX, y, compZ)).is(Blocks.COMPOSTER)) {
+                return; // ya está: no se quita ni se vuelve a poner (y el suelo de debajo se deja como está)
+            }
+        }
+        // Se quita el compostero de la columna nueva Y el de la VIEJA (`corner.x-2`, pegada a la valla: la colocación
+        // vieja, que es lo que le servía de escalón al granjero para saltarla). Solo composteros: lo del jugador se
+        // queda. Así el bancal de una aldea ya construida se corrige aunque `farm` no vuelva a pasar (migración 64).
+        for (int cx : new int[]{compX, corner.getX() - 2}) {
+            for (int y = nivel - PROFUNDIDAD_SOLAR - 2; y <= nivel + 6; y++) {
+                BlockPos p = new BlockPos(cx, y, compZ);
+                if (level.getBlockState(p).is(Blocks.COMPOSTER)) {
+                    colocar(level, p, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+                }
             }
         }
         int sueloCompostero = groundY(level, compX, compZ);
@@ -5975,6 +6051,123 @@ public final class VillageGenerator {
                     Block.UPDATE_ALL);
         }
         colocar(level, new BlockPos(compX, nivelCompostero, compZ), Blocks.COMPOSTER.defaultBlockState(), Block.UPDATE_ALL);
+    }
+
+    /**
+     * <b>Mueve el compostero de cada bancal UNA celda más afuera</b> (migración 64): de {@code corner.x-2} —pegado a
+     * la valla— a {@code corner.x-3} ({@link #COMPOSTERO_DX}).
+     * <p>
+     * Por qué: pegado a la valla, la tapa del compostero ({@code cota+1}) queda a un paso de <b>0,5</b> del lomo de la
+     * valla (1,5), por debajo del {@code maxUpStep} (0,6), así que el granjero <b>subía a la valla</b> para entrar al
+     * bancal en vez de usar las compuertas (lo reportó el jugador; medido: los <b>tres</b> bancales de la aldea 2
+     * tenían ese escalón, y era el compostero). Una celda más afuera ya no hay desde dónde subir.
+     * <p>
+     * Es <b>conservador</b>: solo actúa si el compostero viejo <b>sigue siendo un compostero</b> (lo que haya puesto el
+     * jugador se queda) y si la celda nueva <b>está libre</b> con suelo firme debajo; si no, lo dice en el log y no
+     * toca nada. Y es <b>idempotente</b>: si el compostero ya está en su sitio nuevo, no hace nada.
+     *
+     * @return los pares {@code {viejo, nuevo}} de los composteros movidos, para que el latido arregle el
+     *         {@code JOB_SITE} de los granjeros que apuntaban al viejo (ver {@code VillageManager}).
+     */
+    public static List<BlockPos[]> moverComposterosDelBancal(ServerLevel level, BlockPos center) {
+        List<BlockPos[]> movidos = new ArrayList<>();
+        int cota = cotaDeLaPlaza(level, center);
+        for (int i = 0; i < FARM_PLOTS.length; i++) {
+            BlockPos nuevo = composteroDeLaParcela(center, i, cota);
+            if (level.getBlockState(nuevo).is(Blocks.COMPOSTER)) {
+                continue; // ya está en su sitio (aldea nueva o ya migrada)
+            }
+            BlockPos viejo = buscarComposteroEnLaColumna(level, composteroViejoDeLaParcela(center, i, cota));
+            if (viejo == null) {
+                continue; // no hay compostero viejo que mover
+            }
+            boolean libre = level.getBlockState(nuevo).isAir() && level.getBlockState(nuevo.above()).isAir()
+                    && !level.getBlockState(nuevo.below()).getCollisionShape(level, nuevo.below()).isEmpty();
+            if (!libre) {
+                DevilRpg.LOGGER.info("[Village] Bancal {} de {}: no se mueve su compostero (la celda nueva {} no está"
+                        + " libre): el granjero podrá seguir subiendo a la valla por ahí", i, center.toShortString(),
+                        nuevo.toShortString());
+                continue;
+            }
+            colocar(level, nuevo, Blocks.COMPOSTER.defaultBlockState(), Block.UPDATE_ALL);
+            colocar(level, viejo, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+            movidos.add(new BlockPos[]{viejo, nuevo});
+        }
+        if (!movidos.isEmpty()) {
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: {} compostero(s) de bancal movidos una celda fuera de la valla"
+                    + " (pegados a ella eran el escalón para saltarla, I40)", center.toShortString(), movidos.size());
+        }
+        return movidos;
+    }
+
+    /** El compostero que haya en esa columna (un bloque por encima o por debajo de esa Y), o {@code null}. */
+    @Nullable
+    private static BlockPos buscarComposteroEnLaColumna(ServerLevel level, BlockPos pos) {
+        for (int dy = -2; dy <= 2; dy++) {
+            BlockPos q = pos.offset(0, dy, 0);
+            if (level.getBlockState(q).is(Blocks.COMPOSTER)) {
+                return q;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * El <b>punto al que se camina</b> para usar ese compostero: una celda de al lado con <b>sitio para pararse</b>.
+     * <p>
+     * El compostero es un bloque <b>sólido</b> y navegar hacia un bloque sólido no lleva a ninguna parte: el aldeano
+     * se queda dando vueltas alrededor (es el mismo fallo que documenta {@code VillageStorage.puntoDeApoyo} con el
+     * cenador del almacén y el ahumador del kiosco). <b>Medido con el arnés</b>: con el compostero como destino, la
+     * granjera Cesarea —que lo tenía a 10 bloques, al otro lado de la valla— se perdió, <b>se subió a la valla</b> y
+     * acabó vagando lejos de su bancal.
+     */
+    public static BlockPos puntoDeApoyoDelCompostero(ServerLevel level, BlockPos compostero) {
+        for (BlockPos p : new BlockPos[]{compostero.north(), compostero.south(), compostero.west(), compostero.east()}) {
+            if (level.getBlockState(p).getCollisionShape(level, p).isEmpty()
+                    && level.getBlockState(p.above()).getCollisionShape(level, p.above()).isEmpty()
+                    && !level.getBlockState(p.below()).getCollisionShape(level, p.below()).isEmpty()) {
+                return p.immutable();
+            }
+        }
+        return compostero; // sin hueco al lado: se devuelve el propio compostero (no hay nada mejor)
+    }
+
+    /**
+     * <b>Los dos extremos de la acequia, de vuelta a celdas de cultivo</b> (migración 65). La losa que tapa el canal
+     * en sus dos últimas celdas se pisa a {@code cota+0,5} y las compuertas del bancal caen justo en la fila del
+     * medio: desde ahí el aldeano <b>saltaba la valla</b> (ver {@link #esFilaDeAcequia}). Se quita la losa y el agua
+     * se convierte en <b>tierra de cultivo</b> (regada), así que la capa que se pisa vuelve a estar a la altura de la
+     * tierra y desde ahí no se llega al lomo de la valla. Es <b>conservador</b> (solo si siguen siendo el agua y su
+     * losa: lo que haya puesto el jugador se queda) e <b>idempotente</b>.
+     */
+    public static int rehacerLosExtremosDeLaAcequia(ServerLevel level, BlockPos center) {
+        int cota = cotaDeLaPlaza(level, center);
+        int cambios = 0;
+        for (int[] plot : FARM_PLOTS) {
+            for (int dx : new int[]{0, PLOT_WIDTH - 1}) {
+                BlockPos tierra = new BlockPos(center.getX() + plot[0] + dx, cota - 1,
+                        center.getZ() + plot[1] + PLOT_WATER_ROW);
+                BlockPos losa = tierra.above();
+                boolean esAgua = level.getFluidState(tierra).is(net.minecraft.tags.FluidTags.WATER);
+                boolean esLosa = level.getBlockState(losa).is(Blocks.OAK_SLAB);
+                if (!esAgua && !esLosa) {
+                    continue; // ya está hecho (o esa celda la tocó el jugador): no se toca
+                }
+                if (esLosa) {
+                    colocar(level, losa, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+                    cambios++;
+                }
+                if (esAgua) {
+                    colocar(level, tierra, tierraDeCultivo(level, tierra), Block.UPDATE_ALL);
+                    cambios++;
+                }
+            }
+        }
+        if (cambios > 0) {
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: los extremos de la acequia vuelven a ser celdas de cultivo ({}"
+                    + " celdas): desde su losa se saltaba la valla del bancal (I40)", center.toShortString(), cambios);
+        }
+        return cambios;
     }
 
     /**

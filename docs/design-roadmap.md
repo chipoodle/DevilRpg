@@ -2300,6 +2300,71 @@ salió del guardado celda a celda (aldea 2, taberna en `1438,1428`, cota `120`).
   el mod nuevo); el porche es **decoración** (nadie camina por el alero) y su suelo no se toca, así que no hay nada de
   jugabilidad que medir.
 
+### 3b.52 Los GRANJEROS: reparto de bancales, la valla que trepaban y la cosecha a salto de mata
+
+Tres cosas del mismo oficio, reportadas de una vez por el jugador: *"los granjeros cosechan los 3 en un solo huerto,
+cuando lo ideal es que cosechen cada uno en el suyo... deberían ser conscientes de que ya hay uno cosechando... y si no
+hay mucho que cosechar pues deberían ir a los otros, para distribuirse. También siguen subiendo a la valla para poder
+entrar en vez de usar las compuertas y para cosechar está poco optimizado su método porque dejan sin cosechar unos y
+dejan otros cosechando"*. Las tres salieron del guardado y del **arnés** (aldea 2, partida copiada), y las tres tenían
+causa medida.
+
+#### a) Los tres, al mismo bancal
+
+`VillagerFarmGoal.buscarCultivo` barría `parcelasDe(...)` **en el mismo orden** para los tres granjeros y devolvía la
+**primera** mata madura: los tres acababan en el bancal 0 (el primero de la lista) y, dentro, en la misma esquina.
+
+- **Cada granjero tiene SU bancal, y lo dice su puesto**: la estación del granjero es el **compostero**, y la aldea
+  pone **uno por bancal** (`VillageGenerator.composteroDeLaParcela`), así que `miParcela()` lo saca de su `JOB_SITE`
+  (con la caída a **UUID** si no se le reconoce el puesto, para no quedarse sin bancal).
+- **Orden de trabajo** (`parcelasEnOrden`): **el suyo primero**; si en el suyo no hay faena, los demás **por
+  cercanía**, y los que ya está trabajando **otro** granjero al final (se mira si hay otro granjero dentro del
+  rectángulo del bancal). Así se reparten y no se pisan, y siguen ayudándose cuando uno no tiene nada que hacer.
+- **Medido con el arnés**: cada granjero con su estación y su bancal —`Bibiana: puesto=1421,120,1418` (bancal 1) con
+  destino dentro del bancal 1 y etiqueta *Cosechando*; `Isidoro: puesto=1383,120,1448` (bancal 2)—, en vez de los tres
+  en el bancal 0.
+
+#### b) La valla que trepaban (dos causas, las dos del pueblo)
+
+Está contado entero en **I40** (`docs/aldea-invariantes.md`): un aldeano **anda** 0,6 hacia arriba y **salta** 1,25,
+así que cualquier cosa que se pise junto a la valla (1,5) es un escalón. Las dos que había:
+
+- **El compostero, pegado a la valla** (su tapa a `cota+1` → 0,5 al lomo → se sube andando): **migración 64**, el
+  compostero pasa a `corner.x-3` (`COMPOSTERO_DX`). Mover la estación dejó **tres flecos**, los tres medidos con el
+  arnés y arreglados en la misma ronda: (1) al aldeano cuyo puesto apuntaba al compostero viejo hay que **darle el
+  nuevo** (`moverPuestoDeTrabajo`); (2) el latido **quitaba y reponía el compostero cada 10 s** (en el camino de
+  "bancal ya hecho"), y eso **tira su punto de interés** y deja el puesto cogido y sin dueño (I23): ahora, si el
+  compostero ya está en su sitio, **no se toca**; y (3) el reparto de estaciones solo miraba a los que **no tienen**
+  puesto, así que quien se quedaba con la memoria apuntando a una estación que **ya no existe** no volvía a reclamar
+  nunca: ahora `reclamarEstacionesDelPueblo` **suelta el puesto caducado** y le da otro en el mismo latido. Y ojo con
+  `PoiManager.release`: **revienta** (`POI never registered`) si en esa celda ya no hay punto de interés, así que se
+  suelta **solo si sigue habiendo POI** (`liberarPuesto`).
+- **Las losas de la acequia en sus dos extremos** (a `cota+0,5` → 1,0 al lomo → se sube **saltando**): las compuertas
+  del bancal caen justo en la fila del medio, o sea al final del canal. **Migración 65**: los dos extremos de la
+  acequia vuelven a ser **celdas de cultivo**. Medido: las **42** lecturas de un granjero de pie sobre la valla
+  (`y = cota+1,5`) de una corrida estaban **todas** en esa fila; con los dos arreglos, **0**.
+
+#### c) La cosecha, a salto de mata
+
+`buscarEnLasParcelas` devolvía **la primera celda de la lista**, no la más cercana: el granjero cruzaba el bancal para
+coger una mata del rincón y dejaba sin tocar las de al lado (el *"dejan sin cosechar unos y dejan otros cosechando"*).
+Ahora la búsqueda devuelve **la celda MÁS CERCANA** del bancal, así que el bancal se limpia **de dentro hacia fuera**.
+Va en las cuatro búsquedas del oficio (cosechar, plantar, labrar la calva y el compostero).
+
+#### Y de propina, dos desvíos de UNA celda que tenían el compostero muerto
+
+Las dos búsquedas del compostero miraban en `parcela.offset(-1, 0, 0)`, que es **la columna de la valla**, y el
+compostero está una celda más afuera: **nunca lo encontraban**. Medido con el arnés: `Lleno el compostero` **no salía
+ni una vez** (sin compostar no hay harina de huesos y no se abona nunca). Con la celda sacada de un solo sitio
+(`composteroDeLaParcela`, I4), la misma corrida lo llena **18 veces**. Y ya que el granjero va a por él: se **camina a
+la celda de al lado** y no al compostero (es un bloque **sólido**, y navegar a un bloque sólido deja al aldeano dando
+vueltas — el mismo fallo documentado en `VillageStorage.puntoDeApoyo`): medido con el arnés, la granjera que lo tenía
+al otro lado de la valla **se perdió, se subió a la valla y acabó vagando**; ahora va, lo usa y sigue.
+
+**Lo que NO se ha comprobado**: verlo en su partida (hay que **reiniciar el cliente**). Las tres cosas son de
+comportamiento de aldeanos, así que no cambian el mundo salvo las migraciones 64 y 65 (el compostero y los extremos de
+la acequia), que van en el latido al pasar por la aldea.
+
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.

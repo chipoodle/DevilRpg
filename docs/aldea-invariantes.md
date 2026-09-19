@@ -827,6 +827,36 @@ el guardado** que no quede **aire** entre los dos; la prueba barata es que la ce
 (`colocarSiEstaVacio`) siempre que se pueda: rellenar la fila que falta no puede comerse lo que haya puesto el
 jugador, mientras que **mover** el añadido obliga a borrar el viejo.
 
+### I40 · La valla de un bancal NO tiene escalones (ni para andar ni para saltar)
+
+La valla de roble mide **1,5**, y un aldeano **anda** hacia arriba **0,6** (`maxUpStep`) pero **salta** ~**1,25**. De
+ahí salen los dos escalones que el jugador vio: *"siguen subiendo a la valla para poder entrar en vez de usar las
+compuertas"*.
+
+- **Lo que se PISA a `cota`** (un bloque sólido pegado por fuera) da una tapa a **`cota+1`**: de ahí al lomo de la
+  valla hay **0,5** y se **sube andando**.
+- **Lo que se pisa a `cota+0,5`** (una **losa** a ras del suelo) está a **1,0** del lomo: se **sube saltando**.
+
+**Medido** (arnés, aldea 2, partida del jugador copiada) — las **dos** causas, y las dos eran construcción del pueblo:
+
+1. **El COMPOSTERO del granjero** (su puesto de trabajo) estaba a `corner.x-2`, **pegado** a la valla
+   (`corner.x-1`), con la tapa a `cota+1`: el granjero se subía por su propio compostero. Se veía en el guardado en
+   los **tres** bancales (3 celdas de valla por bancal desde las que se podía subir, todas desde el compostero).
+   **Migración 64**: el compostero pasa a `corner.x-3` (`COMPOSTERO_DX`), con una celda de aire entre él y la valla.
+2. **Las LOSAS que tapan la ACEQUIA**, en sus **dos extremos**: la acequia va tapada con una losa (para que el agua
+   no se congele y para que nadie se caiga dentro), la losa se pisa a `cota+0,5` y las **compuertas del bancal caen
+   justo en la fila del medio** (el centro de los lados), así que el aldeano **saltaba la compuerta** desde la losa
+   del extremo. Medido: **42** lecturas de un granjero de pie sobre la valla (`y = cota+1,5`) en una corrida de 4 min,
+   **todas** en la fila de la acequia y en los extremos del anillo. **Migración 65**: los dos extremos de la acequia
+   vuelven a ser **celdas de cultivo** (se quita la losa y el agua se vuelve tierra de cultivo regada), así que la
+   capa que se pisa queda a la altura de la tierra (119,94) y desde ahí **no se llega** al lomo de la valla. De paso
+   cada bancal gana **dos celdas plantables**.
+
+**Regla:** alrededor de la valla de un bancal **nada que se pueda pisar** salvo el suelo del bancal. En concreto:
+nada sólido pegado por fuera a la capa que se pisa (ni compostero, ni cofre, ni un poste), y la fila del agua va
+tapada pero **no llega a la valla** (sus extremos son celdas de cultivo). Y el mismo patrón vale para cualquier
+cerca del pueblo que quiera ser un cierre (el corral): si al lado hay una tapa, el cierre no cierra.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
