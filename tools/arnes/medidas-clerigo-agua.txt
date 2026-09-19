@@ -1,0 +1,49 @@
+MEDIDAS DEL VIAJE AL AGUA DEL CLÉRIGO (arnés headless, aldea 2, servidor sin jugadores)
+=========================================================================================
+Partida: run/saves/New World (1) copiada a run/world (aldea 2, centro 1414,120,1414 · índice 2).
+Arnés: tools/arnes/GuardHarness.java (SEMBRAR_AGUA_EMBOTELLADA = false: deja BOTELLAS DE CRISTAL en el almacén,
+no pociones de agua, para que el clérigo tenga que ir a la orilla).
+Cada línea es literal del log del servidor (`run/logs/latest.log`).
+
+
+--- MEDIDA 1 (FALLO): antes del arreglo, 18-sep 23:16 ------------------------------------------------
+El almacén sembrado con cristal=3 (agua=0) y el clérigo hace el viaje... y APARCA SU PROPIO SOPORTE
+a mitad de la vuelta (6 s después de llenar), estando aún a ~57 bloques de la iglesia:
+
+[23:16:00] [Village] El clerigo va a llenar las botellas a la orilla de BlockPos{x=1432, y=118, z=1455}
+[23:16:27] [Arnes] t=70008 49f0d355 pos=(1429.70,120.00,1451.71) destino=1397, 121, 1371 ... | Botellas llenas
+[23:16:38] [Village] 49f0d355-75db-4bd5-9411-ccae30b3b440 no consigue llegar a BlockPos{x=1397, y=121, z=1371}:
+           lo deja por 5 min y sigue con lo demas
+[23:16:39] [Arnes] t=70248 49f0d355 pos=(1410.50,121.00,1415.05) destino=1397, 121, 1371 ... | Yendo a la iglesia
+           (sigue andando hacia el soporte por inercia del cerebro, pero el goal YA se rindió: se queda 5 min sin
+            poder trabajar, y la poción no llega a hacerse)
+
+CAUSA (código): `VillageManager.marcarPuntoFallido(villager, soporte)` desde `canContinueToUse`, con
+`stuckTicks >= STUCK_LIMIT` (120 ticks = 6 s). El contador de "no acercarse" (`mejorDistancia`) era **compartido**
+entre las dos piernas del goal: al llenar las botellas valía lo que el clérigo se había acercado a la ORILLA
+(~3 bloques), así que la caminata de vuelta al soporte (~90 bloques) nunca "mejoraba" ese 3 y los 120 ticks se
+consumían enteros en 6 s de vuelta.
+
+
+--- MEDIDA 2 (ARREGLO): 18-sep 23:25-23:27 -----------------------------------------------------------
+`mejorDistanciaAgua` (contador propio de la orilla) + la vuelta al soporte medida DE CERO al terminar de llenar.
+La cadena entera, en 96 s, sin aparcar nada (no hay ninguna línea `no consigue llegar a BlockPos{x=1397...`):
+
+[23:25:38] [Arnes] almacen sembrado (agua embotellada=false): verruga=4 blaze=4 agua=0 cristal=3 pepitas=16
+           zanahorias=2 ojos=2
+[23:25:42] [Village] El clerigo va a llenar las botellas a la orilla de BlockPos{x=1431, y=118, z=1455}
+[23:26:08] [Village] El clerigo lleno 3 botella(s) de agua
+[23:27:18] [Village] El clerigo guardo una pocion en el almacen: Potion of Poison
+
+Es decir: coge las BOTELLAS DE CRISTAL del almacén -> va a la orilla (85 bloques) -> las llena -> vuelve al
+soporte -> carga el soporte (agua + verruga del Nether) -> el JUEGO cuece la poción extraña -> le echa el ojo de
+araña -> el juego cuece el VENENO -> y lo deja en el almacén. Toda la cadena del pueblo, sin que el jugador toque
+nada más que la verruga y el polvo de blaze (que el pueblo no puede fabricar).
+
+
+--- CÓMO REPETIRLO -----------------------------------------------------------------------------------
+1) Copy-Item tools\arnes\GuardHarness.java src\main\java\com\chipoodle\devilrpg\debug\GuardHarness.java
+2) Move-Item run\world run\world.antes ; Copy-Item "run\saves\New World (1)" run\world -Recurse
+3) $env:GRADLE_USER_HOME="C:\Users\Christian\Documents\DevilRpg\.gradle-home" ; .\gradlew.bat runServer --console=plain
+4) Select-String run\logs\latest.log -Pattern 'almacen sembrado|va a llenar|lleno [0-9]|guardo una pocion|no consigue llegar'
+5) DESHACER: borrar src\...\debug y el mundo del arnés (ver tools\arnes\LEEME.md)

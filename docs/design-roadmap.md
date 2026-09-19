@@ -2222,10 +2222,46 @@ pociones** (`reclama su estacion de cleric en 1397,121,1371`), carga el soporte 
 verruga → veneno con el ojo de araña, y a guardarla). En la misma pasada, el reparador de estaciones dejó a los demás
 titulares con la suya (`fisherman`, `fletcher` y `shepherd`, este último con el ticket perdido del telar).
 
-**Pendiente (rondas siguientes)**: que se **llene las botellas** él mismo en el bebedero del corral o el lago (hoy
-las coge embotelladas del almacén), una **remesa inicial** en el almacén para que arranque sin que el jugador traiga
-nada (hoy lo suple con lo que dice su etiqueta) y que las pociones lleguen también a la **guardia** (una poción por
-espadachín/arquero, como el arma y el escudo).
+**El viaje al agua, HECHO y verificado con el arnés** (ver 3b.50): el clérigo coge las **botellas de cristal** del
+almacén, va a la **orilla** más cercana del término (el bebedero del corral, el lago de la pesquera o cualquier
+charca), las **llena** y vuelve al soporte. Lo que **queda pendiente** (rondas siguientes): una **remesa inicial** en
+el almacén para que arranque sin que el jugador traiga nada (hoy lo suple con lo que dice su etiqueta) y que las
+pociones lleguen también a la **guardia** (una poción por espadachín/arquero, como el arma y el escudo).
+
+### 3b.50 El VIAJE AL AGUA del clérigo (y el contador de atasco que se compartía)
+
+Cierra la mitad que quedaba del clérigo (3b.49): **llenar las botellas él mismo** en vez de esperar a que el jugador
+las traiga embotelladas. La verificación con el arnés (aldea 2, servidor headless) encontró **un bug de verdad** en
+la primera tirada, así que la ronda valió por dos.
+
+- **Cómo busca el agua** (`VillagerClericGoal.buscarAgua`): barrido por la **superficie** (`WORLD_SURFACE`) en un
+  radio de **104** bloques y paso de **4** (el agua del pueblo está a 65-95 bloques de la iglesia: el bebedero del
+  corral y el lago de la pesquera; con radio 24 se quedaba diciendo "No encuentro agua" y con paso 2 una charca de
+  3×1 se colaba entre las columnas pares). Navega a la **orilla** (una casilla seca al lado del agua **con sitio
+  para pararse**), **nunca a la celda de agua**: a un bloque de agua la navegación no llega y el goal se rendía —
+  eso era el baile alrededor de la iglesia. Solo se busca **cuando va a llenar** (no cada tick).
+- **Botellas y agua**: si lleva **cristal** encima va al agua **antes** que al soporte; al llegar llena **las tres**
+  (`llenarBotellas`, receta de vanilla: botella + agua = poción de agua), con sonido de llenado y el suceso
+  "Botellas llenas" en su etiqueta. El agua del pueblo es **suya**: el vidrio (lo único del Nether son la verruga y
+  el polvo de blaze) sí lo trae el jugador al almacén.
+- **EL BUG QUE SALIÓ (y que por eso valía la pena medir)**: con el viaje ya funcionando, el clérigo **aparcaba su
+  propio soporte a los 6 segundos de llenar las botellas**, aún a **57 bloques** de la iglesia
+  (`no consigue llegar a BlockPos{x=1397, y=121, z=1371}: lo deja por 5 min`), así que la poción **no llegaba a
+  hacerse nunca**. Causa: el contador de "no acercarse" (`stuckTicks`/`mejorDistancia`, I3) era **el mismo** para
+  las dos piernas del goal; al llenar las botellas valía lo que se había acercado a la **orilla** (~3 bloques), así
+  que la caminata de vuelta de **~90** bloques **nunca mejoraba ese 3** y los 120 ticks de paciencia se gastaban
+  enteros en 6 s de vuelta → I33 lo aparcaba 5 min. Arreglado con `mejorDistanciaAgua` (contador propio de la
+  orilla) y midiendo la vuelta al soporte **de cero** (ver **I38** en `docs/aldea-invariantes.md`).
+- **Y el arnés se ajustó para poder medirlo**: `SEMBRAR_AGUA_EMBOTELLADA` (`false` de serie) — con **pociones de
+  agua** ya en el almacén el clérigo las usa y **nunca** coge el cristal, así que el viaje no se mide; ahora deja
+  **botellas de cristal** y el arnés lo dice en su propia línea
+  (`almacen sembrado (agua embotellada=false): ... cristal=3`). Las **dos** tiradas (la del fallo y la del arreglo)
+  quedan literales en `tools/arnes/medidas-clerigo-agua.txt`, y el `LEEME` explica qué buscar en el log.
+- **Medido (arnés, 18-sep-2026, aldea 2)**: `El clerigo va a llenar las botellas a la orilla de
+  BlockPos{x=1431, y=118, z=1455}` → `El clerigo lleno 3 botella(s) de agua` → (vuelta al soporte, **sin aparcar
+  nada**) → `El clerigo guardo una pocion en el almacen: Potion of Poison`, **96 s** de cadena completa. Es la
+  cadena del pueblo entera: coge el cristal del almacén → lo llena en la orilla → carga el soporte (agua + verruga)
+  → **el juego cuece** la poción extraña → ojo de araña → **el juego cuece el veneno** → al almacén.
 
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 

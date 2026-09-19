@@ -35,6 +35,13 @@ public class GuardHarness {
 
     private static final BlockPos CENTRO = new BlockPos(1414, 120, 1414);
     private static final int INDICE = 2;
+    /**
+     * ¿Se siembra el almacén con <b>pociones de agua ya embotelladas</b>? Para medir el <b>VIAJE AL AGUA</b> del
+     * clérigo tiene que estar en {@code false}: si el almacén ya tiene botellas de agua, las usa y <b>nunca</b> coge
+     * las de cristal (ver {@code VillagerClericGoal.trabajar}, paso 4), así que el viaje a la orilla no se mide.
+     * En {@code true} se mide la cadena de la poción sin el paseo (era como estaba antes de esta ronda).
+     */
+    private static final boolean SEMBRAR_AGUA_EMBOTELLADA = false;
     private static boolean listo = false;
     private static int ticks = 0;
 
@@ -50,17 +57,20 @@ public class GuardHarness {
         }
         ticks++;
         // A los 15 s (chunks ya cargados) se le deja al almacen lo que el pueblo NO puede fabricar, para medir la
-        // cadena del CLERIGO: verruga del Nether, polvo de blaze y botellas de agua; y el botin que ya barre el
-        // recolector (pepitas de oro, zanahorias, ojos de arana) para la zanahoria dorada.
+        // cadena del CLERIGO: verruga del Nether, polvo de blaze y BOTELLAS DE CRISTAL (para que tenga que ir al agua
+        // a llenarlas: ver SEMBRAR_AGUA_EMBOTELLADA); y el botin que ya barre el recolector (pepitas de oro,
+        // zanahorias, ojos de arana) para la zanahoria dorada.
         if (ticks == 600) {
             com.chipoodle.devilrpg.world.VillageStorage.guardar(level, CENTRO,
                     new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.NETHER_WART, 4));
             com.chipoodle.devilrpg.world.VillageStorage.guardar(level, CENTRO,
                     new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_POWDER, 4));
-            var agua = net.minecraft.world.item.alchemy.PotionContents.createItemStack(
-                    net.minecraft.world.item.Items.POTION, net.minecraft.world.item.alchemy.Potions.WATER);
-            agua.setCount(3);
-            com.chipoodle.devilrpg.world.VillageStorage.guardar(level, CENTRO, agua);
+            if (SEMBRAR_AGUA_EMBOTELLADA) {
+                var agua = net.minecraft.world.item.alchemy.PotionContents.createItemStack(
+                        net.minecraft.world.item.Items.POTION, net.minecraft.world.item.alchemy.Potions.WATER);
+                agua.setCount(3);
+                com.chipoodle.devilrpg.world.VillageStorage.guardar(level, CENTRO, agua);
+            }
             com.chipoodle.devilrpg.world.VillageStorage.guardar(level, CENTRO,
                     new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.GOLD_NUGGET, 16));
             com.chipoodle.devilrpg.world.VillageStorage.guardar(level, CENTRO,
@@ -70,7 +80,8 @@ public class GuardHarness {
             com.chipoodle.devilrpg.world.VillageStorage.guardar(level, CENTRO,
                     new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.SPIDER_EYE, 2));
             // Se CONFIRMA lo que hay de verdad en el cofre (si el chunk no estaba listo, `guardar` no pone nada).
-            DevilRpg.LOGGER.info("[Arnes] almacen sembrado: verruga={} blaze={} agua={} cristal={} pepitas={} zanahorias={} ojos={}",
+            DevilRpg.LOGGER.info("[Arnes] almacen sembrado (agua embotellada={}): verruga={} blaze={} agua={} cristal={}"
+                            + " pepitas={} zanahorias={} ojos={}", SEMBRAR_AGUA_EMBOTELLADA,
                     cuenta(level, net.minecraft.world.item.Items.NETHER_WART),
                     cuenta(level, net.minecraft.world.item.Items.BLAZE_POWDER),
                     cuenta(level, net.minecraft.world.item.Items.POTION),

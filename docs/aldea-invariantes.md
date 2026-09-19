@@ -786,6 +786,28 @@ rotas:
 **Medido** (arnés, aldea 2): `[Village] Aldea 2 crece: aldeano 12/18 (comida 56)` con `CRIA=1` en el censo — la cría
 nació por el camino del pueblo (no por vanilla) y sin oficio.
 
+### I38 · Un contador de atasco NO se comparte entre dos destinos (extiende I3)
+
+I3 dice que el contador de paciencia solo sube cuando el aldeano **no se acerca**, y para eso guarda la distancia
+más corta del viaje (`mejorDistancia`). Lo que faltaba: **de qué viaje**. Si un mismo goal navega a **dos destinos
+distintos** (dos "piernas") y las dos usan el mismo `mejorDistancia`, la segunda pierna se mide contra la distancia
+que se alcanzó en la **primera** — y si la primera terminó cerca (a 2-3 bloques) y la segunda empieza lejos (a 90),
+**cada paso de la segunda cuenta como no acercarse**: en 6 s (`STUCK_LIMIT`) el goal se rinde y aparca el destino
+**estando aún a mitad de camino** (I33 convierte eso en 5 min tirados).
+
+**Medido** (arnés, aldea 2, con el clérigo): el clérigo llena las botellas en la orilla (`lleno 3 botella(s) de
+agua`, a ~3 bloques del agua y a **~90** del soporte) y **6 s después aparca su propio soporte** con
+`no consigue llegar a BlockPos{x=1397, y=121, z=1371}: lo deja por 5 min`, estando todavía en `1410,121,1415`
+(a **57 bloques**): la poción no llegaba a hacerse nunca. Con `mejorDistanciaAgua` (contador propio de la orilla) y
+la vuelta al soporte **medida de cero** al terminar de llenar, la misma partida hace la cadena entera en 96 s
+(`va a llenar ... orilla` → `lleno 3 botella(s) de agua` → `guardo una pocion en el almacen: Potion of Poison`) y
+**no** aparca nada. Las líneas literales de las dos medidas están en `tools/arnes/medidas-clerigo-agua.txt`.
+
+**Regla:** cada pierna (cada destino distinto) tiene **su** `mejorDistancia` y **su** contador, y al **cambiar de
+pierna** (llegar a una, aparcarla o darse la vuelta) los dos se ponen a cero. Vale para cualquier goal con ida y
+vuelta (el clérigo: puesto ↔ agua) y para los que cambian de fase con destinos que no se parecen (el herrero ya lo
+hacía al cambiar de fase).
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 

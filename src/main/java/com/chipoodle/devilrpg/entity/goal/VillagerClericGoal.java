@@ -80,7 +80,19 @@ public class VillagerClericGoal extends Goal {
     private int stuckTicks;
     /** Contador aparte para el viaje al agua (su paciencia es mucho mayor: ver {@link #STUCK_AGUA}). */
     private int stuckAgua;
+    /** Lo más cerca que ha estado del <b>puesto</b> (soporte) desde que empezó esa ida. */
     private double mejorDistancia = Double.MAX_VALUE;
+    /**
+     * Lo más cerca que ha estado de la <b>orilla</b> en el viaje al agua, <b>aparte</b> de {@link #mejorDistancia}.
+     * <p>
+     * Compartir el contador entre las dos piernas es un bug medido con el arnés: al llenar las botellas el clérigo
+     * está a ~3 bloques de la orilla, así que {@code mejorDistancia} se queda en 3; a la vuelta, los ~90 bloques
+     * hasta el soporte <b>nunca</b> mejoran ese 3, {@code stuckTicks} sube a 120 en 6 s y el clérigo
+     * <b>aparca su propio soporte</b> a mitad de camino (`no consigue llegar a 1397,121,1371` en el log, a los 6 s
+     * de llenar las botellas y estando aún a 57 bloques). Con la vuelta medida de cero, cada paso que da hacia el
+     * soporte cuenta como acercarse.
+     */
+    private double mejorDistanciaAgua = Double.MAX_VALUE;
 
     public VillagerClericGoal(Villager villager, BlockPos center, int objectiveIndex) {
         this.villager = villager;
@@ -122,6 +134,8 @@ public class VillagerClericGoal extends Goal {
         workTicks = 0;
         stuckTicks = 0;
         mejorDistancia = Double.MAX_VALUE;
+        stuckAgua = 0;
+        mejorDistanciaAgua = Double.MAX_VALUE;
         irAlSoporte();
     }
 
@@ -158,6 +172,9 @@ public class VillagerClericGoal extends Goal {
             if (agua == null || !hayAguaAlLado(level, agua)) {
                 agua = buscarAgua(level);
                 if (agua != null) {
+                    // La ida al agua se mide de cero (y con SU contador: ver `mejorDistanciaAgua`).
+                    mejorDistanciaAgua = Double.MAX_VALUE;
+                    stuckAgua = 0;
                     DevilRpg.LOGGER.info("[Village] El clerigo va a llenar las botellas a la orilla de {}", agua);
                 }
             }
@@ -171,9 +188,8 @@ public class VillagerClericGoal extends Goal {
             if (hastaElAgua > REACH) {
                 VillageManager.caminarHacia(villager, agua, VELOCIDAD);
                 VillageManager.ponerActividad(villager, "A por agua");
-                if (hastaElAgua < mejorDistancia - 0.5D) {
-                    mejorDistancia = hastaElAgua;
-                    stuckTicks = 0;
+                if (hastaElAgua < mejorDistanciaAgua - 0.5D) {
+                    mejorDistanciaAgua = hastaElAgua;
                     stuckAgua = 0;
                 } else if (++stuckAgua >= STUCK_AGUA) {
                     // RENDIRSE = APARCAR ESA ORILLA (I33), pero con MUCHA más paciencia que en el puesto: el agua del
@@ -184,6 +200,7 @@ public class VillagerClericGoal extends Goal {
                     VillageManager.marcarPuntoFallido(villager, agua);
                     agua = null;
                     stuckAgua = 0;
+                    mejorDistanciaAgua = Double.MAX_VALUE;
                 }
                 return;
             }
@@ -191,6 +208,13 @@ public class VillagerClericGoal extends Goal {
             llenarBotellas(level);
             agua = null;
             stuckAgua = 0;
+            mejorDistanciaAgua = Double.MAX_VALUE;
+            // Y LA VUELTA AL SOPORTE SE MIDE DE CERO: si no, `mejorDistancia` sigue valiendo lo que se acercó a la
+            // ORILLA (~3 bloques) y la caminata de vuelta de ~90 bloques parece "no acercarse" al soporte, así que a
+            // los 6 s (STUCK_LIMIT) el clérigo APARCABA SU PROPIO SOPORTE a mitad de camino (medido con el arnés:
+            // `no consigue llegar a 1397,121,1371`, a los 6 s de llenar las botellas y estando aún a 57 bloques).
+            mejorDistancia = Double.MAX_VALUE;
+            stuckTicks = 0;
             return;
         }
         double distancia = Math.sqrt(villager.distanceToSqr(soporte.getX() + 0.5D, soporte.getY() + 0.5D,
@@ -336,7 +360,8 @@ public class VillagerClericGoal extends Goal {
             level.playSound(null, villager.blockPosition(), net.minecraft.sounds.SoundEvents.BOTTLE_FILL,
                     net.minecraft.sounds.SoundSource.NEUTRAL, 0.6F, 1.0F);
             VillageManager.ponerSuceso(villager, "Botellas llenas");
-            villager.swing(InteractionHand.MAIN_HAND);            DevilRpg.LOGGER.info("[Village] El clerigo lleno {} botella(s) de agua", llenas);
+            villager.swing(InteractionHand.MAIN_HAND);
+            DevilRpg.LOGGER.info("[Village] El clerigo lleno {} botella(s) de agua", llenas);
         }
     }
 
