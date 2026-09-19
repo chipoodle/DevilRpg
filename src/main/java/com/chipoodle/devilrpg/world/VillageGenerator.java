@@ -6219,17 +6219,60 @@ public final class VillageGenerator {
      */
     public static List<BlockPos> portonesDeLosBancales(BlockPos center, int nivel) {
         List<BlockPos> portones = new ArrayList<>();
-        for (int[] plot : FARM_PLOTS) {
-            int x0 = center.getX() + plot[0] - 1;
-            int x1 = center.getX() + plot[0] + PLOT_WIDTH;
-            int z0 = center.getZ() + plot[1] - 1;
-            int z1 = center.getZ() + plot[1] + PLOT_DEPTH;
-            portones.add(new BlockPos((x0 + x1) / 2, nivel, z0));
-            portones.add(new BlockPos((x0 + x1) / 2, nivel, z1));
-            portones.add(new BlockPos(x0, nivel, (z0 + z1) / 2));
-            portones.add(new BlockPos(x1, nivel, (z0 + z1) / 2));
+        for (int i = 0; i < FARM_PLOTS.length; i++) {
+            portones.addAll(portonesDeLaParcela(center, i, nivel));
         }
         return portones;
+    }
+
+    /** Las cuatro puertas de valla de <b>una</b> parcela (centro de cada lado del anillo). */
+    public static List<BlockPos> portonesDeLaParcela(BlockPos center, int i, int nivel) {
+        int[] plot = FARM_PLOTS[i];
+        int x0 = center.getX() + plot[0] - 1;
+        int x1 = center.getX() + plot[0] + PLOT_WIDTH;
+        int z0 = center.getZ() + plot[1] - 1;
+        int z1 = center.getZ() + plot[1] + PLOT_DEPTH;
+        List<BlockPos> portones = new ArrayList<>();
+        portones.add(new BlockPos((x0 + x1) / 2, nivel, z0));
+        portones.add(new BlockPos((x0 + x1) / 2, nivel, z1));
+        portones.add(new BlockPos(x0, nivel, (z0 + z1) / 2));
+        portones.add(new BlockPos(x1, nivel, (z0 + z1) / 2));
+        return portones;
+    }
+
+    /**
+     * La celda por la que ese aldeano <b>ENTRA</b> al bancal {@code i}: la de <b>dentro</b> del portón más cercano a
+     * él (un paso del portón hacia el centro del bancal).
+     * <p>
+     * Hace falta porque las faenas de la huerta se hacen <b>dentro</b>: el alcance de la faena son 3 bloques, así que
+     * un granjero parado <b>fuera</b> de la valla alcanzaba las matas de la primera fila y las cosechaba <b>a través de
+     * la reja</b> —no le hacía falta entrar y las del centro se quedaban sin cosechar (lo reportó el jugador: *"los
+     * granjeros no están entrando a la granja"*)—. Yendo a esa celda, el aldeano se pone al lado del portón,
+     * {@code VillagerGateGoal} se lo abre (a 2,6) y entra.
+     */
+    public static BlockPos entradaDeLaParcela(BlockPos center, int i, int cota, BlockPos desde) {
+        BlockPos esquina = esquinaDeLaParcela(center, i, cota);
+        BlockPos centro = esquina.offset(PLOT_WIDTH / 2, 0, PLOT_DEPTH / 2);
+        BlockPos mejor = null;
+        double mejorDist = Double.MAX_VALUE;
+        for (BlockPos porton : portonesDeLaParcela(center, i, cota)) {
+            BlockPos dentro = porton.offset(Integer.signum(centro.getX() - porton.getX()), 0,
+                    Integer.signum(centro.getZ() - porton.getZ()));
+            double d = dentro.distSqr(desde);
+            if (d < mejorDist) {
+                mejorDist = d;
+                mejor = dentro;
+            }
+        }
+        return mejor != null ? mejor : esquina;
+    }
+
+    /** ¿Ese aldeano está <b>dentro</b> del bancal {@code i}? (en su tierra de cultivo, no en la valla ni fuera) */
+    public static boolean estaDentroDeLaParcela(BlockPos center, int i, int cota, BlockPos pos) {
+        BlockPos esquina = esquinaDeLaParcela(center, i, cota);
+        int dx = pos.getX() - esquina.getX();
+        int dz = pos.getZ() - esquina.getZ();
+        return dx >= 0 && dx < PLOT_WIDTH && dz >= 0 && dz < PLOT_DEPTH && Math.abs(pos.getY() - cota) <= 2;
     }
 
     // --- LA TABERNA (etapa F: la posada del pueblo) --------------------------------------------------------------

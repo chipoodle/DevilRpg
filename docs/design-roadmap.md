@@ -2365,29 +2365,63 @@ al otro lado de la valla **se perdió, se subió a la valla y acabó vagando**; 
 comportamiento de aldeanos, así que no cambian el mundo salvo las migraciones 64 y 65 (el compostero y los extremos de
 la acequia), que van en el latido al pasar por la aldea.
 
-### 3b.53 Despedir una invocación con un PALO (control del jugador)
+### 3b.53 Despedir una invocación con un PALO (botón SECUNDARIO)
 
-Lo pidió el jugador: *"podrías hacer que todas mis invocaciones pueda despawnearlas cuando haga click izquierdo con un
-palo sobre ella? solo cuando tengo un palo nada más"*. Va en `CommonForgeInteractionEventSubscriber.onAttackWithStick`
-(evento `AttackEntityEvent` del golpe del jugador; con click izquierdo el juego **no** dispara la interacción con la
-entidad, así que el sitio es el golpe).
+Lo pidió el jugador: *"que todas mis invocaciones pueda despawnearlas cuando haga click con un palo sobre ella, solo
+cuando tengo un palo nada más"*, **con el botón secundario** y dejando el golpe como estaba (el primer intento lo puso
+en el botón izquierdo y lo corrigió el jugador: *"antes cuando golpeaba no le hacía nada a mis minions y ahora sí;
+déjalo como estaba"*). Va en `CommonForgeInteractionEventSubscriber.onInteractWithStick`
+({@code PlayerInteractEvent.EntityInteract}: la interacción con la entidad, que es el botón secundario).
 
-- **Solo con un palo en la mano principal** (`Items.STICK`): con cualquier otra cosa —espada, hacha, mano vacía— se
-  pelea o se golpea como siempre, y un palo **solo en la mano secundaria** tampoco despide.
-- **Solo las tuyas**: el dueño de la invocación tiene que ser tú. Las de otro jugador y los bichos salvajes no se
-  tocan.
-- El palo **no golpea**: el evento se **cancela** (ni daño, ni empujón, ni desgaste) y el que despide es el
-  **servidor** (el cliente solo se queda sin golpear, así no se ve un golpe que en el mundo no ha pasado).
-- Se van por el **camino de siempre** de cada invocación: los lobos, osos y wisps por
-  `PlayerMinionCapability.remove*` (que quitan la lista, matan al minion con su muerte de minion y con eso se **poda
-  también la copia guardada**, así que no vuelven al entrar); el shulker del girasol, que no vive en ninguna lista, se
-  saca del mundo sin más. El jugador ve un aviso corto en la barra de acción (*"Invocación despedida."*).
+- **Botón secundario** (click derecho) con un **palo** sobre una invocación **tuya** → se va. El palo vale en
+  **cualquiera de las dos manos** (principal o secundaria).
+- **El botón izquierdo se queda COMO ESTABA**: pegarle a una invocación tuya no le hace nada, como siempre. Por eso el
+  manejador no está en `AttackEntityEvent`.
+- **Solo las tuyas**: se comprueba el dueño, así que las de otro jugador y los bichos salvajes no se tocan.
+- Sin palo, la interacción es la de siempre (montar, comerciar, dar de comer): con la espada en la mano el palo no
+  despide.
+- El que despide es el **servidor** y la interacción se **cancela** (el palo no hace nada más). Se van por el camino de
+  siempre de cada invocación: lobos, osos y wisps por `PlayerMinionCapability.remove*` (quitan la lista, matan al
+  minion y con eso se **poda también la copia guardada**, así que no vuelven al entrar); el shulker del girasol, que no
+  vive en ninguna lista, se saca del mundo. El jugador ve un aviso corto (*"Invocación despedida."*).
 
 **Medido** con el arnés (servidor headless, un **lobo de alma de verdad** invocado y metido en la lista del jugador):
-`[ArnesPalo] CASO 1 palo + mia: enElMundo=NO enLaLista=NO => OK` · `CASO 2 espada + mia: enElMundo=SI => OK` ·
-`CASO 3 palo + ajena: enElMundo=SI => OK` · `CASO 4 palo solo en la secundaria: enElMundo=SI => OK`. Las líneas
-literales están en `tools/arnes/medidas-minions.txt`, y el arnés (`tools/arnes/MinionHarness.java`) se queda como
-referencia.
+
+```
+[ArnesPalo] CASO 1 secundario + palo en la principal + mia:   se espera QUE SE VAYA  -> enElMundo=NO enLaLista=NO => OK
+[ArnesPalo] CASO 2 secundario + palo en la secundaria + mia:  se espera QUE SE VAYA  -> enElMundo=NO enLaLista=NO => OK
+[ArnesPalo] CASO 3 secundario + espada + mia:                 se espera QUE SE QUEDE -> enElMundo=SI => OK
+[ArnesPalo] CASO 4 secundario + palo + ajena:                 se espera QUE SE QUEDE -> enElMundo=SI => OK
+[ArnesPalo] CASO 5 izquierdo (golpe) + palo + mia:            se espera QUE SE QUEDE -> enElMundo=SI enLaLista=SI => OK
+```
+
+Las líneas literales están en `tools/arnes/medidas-minions.txt`, y el arnés (`tools/arnes/MinionHarness.java`) se queda
+como referencia.
+
+### 3b.54 Los granjeros cosechaban A TRAVÉS de la valla (no entraban al bancal)
+
+Lo reportó el jugador, con captura: *"los granjeros no están entrando a la granja, ¡corrígelo!"*. El arnés lo dejó
+claro: **sí trabajaban, pero desde fuera**. El alcance de la faena son **3 bloques** (`REACH`), así que un granjero
+parado **fuera** de la valla alcanzaba las matas de la primera fila y las **cosechaba a través de la reja**: no le
+hacía falta entrar. El arreglo del barrido "más cercana" (3b.52c) lo empeoró, porque ahora el objetivo más cercano es
+justo el del borde.
+
+- **La faena de la huerta se hace DENTRO del bancal** (`VillageGenerator.estaDentroDeLaParcela`): si el objetivo está
+  en un bancal y el granjero está fuera, no trabaja.
+- **Y si está fuera, se le manda a la PUERTA** más cercana de ese bancal
+  (`VillageGenerator.entradaDeLaParcela`: la celda de dentro del portón más próximo): al ponerse a su lado,
+  `VillageGateGoal` se la abre (a 2,6) y entra. La etiqueta lo dice: **"Entrando a la huerta"**.
+- La pierna de la **puerta** se mide con **su propio** contador (`mejorDistanciaEntrada`/`stuckEntrada`, I38): son dos
+  piernas distintas (la puerta y la mata) y con un contador compartido la segunda se mediría contra la primera. Si no
+  consigue entrar en 6 s lo dice en el log y suelta el objetivo (I33).
+
+**Medido** con el arnés sobre la partida del jugador (antes y después):
+
+| | antes | después |
+|---|---|---|
+| Granjeros **dentro** de su bancal | solo en el borde (el objetivo era la mata pegada a la valla) | `bancal0=granjeros:1`, `bancal1=granjeros:1`, `bancal2=granjeros:1` (cada uno en el suyo) |
+| Etiquetas | `Trabajando` (genérica, fuera) | `Cosechando` (135 lecturas), `Guardando lo suyo`, `Guardo 8 en la despensa` |
+| Subidas a la valla | 0 | 0 |
 
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 

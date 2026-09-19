@@ -140,6 +140,12 @@ public class VillagerFarmGoal extends Goal {
      * esta salida. Sale de su <b>puesto de trabajo</b> (el compostero de su bancal: ver {@link #miParcela}).
      */
     private int miParcela = -1;
+    /** En qué bancal está <b>lo que va a hacer ahora</b> (lo pone {@link #buscarEnLasParcelas}), o {@code -1}. */
+    private int parcelaDelObjetivo = -1;
+    /** Lo más cerca que ha estado de la <b>puerta</b> por la que entra al bancal, aparte del objetivo (I38). */
+    private double mejorDistanciaEntrada = Double.MAX_VALUE;
+    /** Ticks sin acercarse a esa puerta. */
+    private int stuckEntrada;
 
     public VillagerFarmGoal(Villager villager, BlockPos center, int objectiveIndex) {
         this.villager = villager;
@@ -273,6 +279,9 @@ public class VillagerFarmGoal extends Goal {
         mejorDistancia = Double.MAX_VALUE;
         abonadas.clear();
         miParcela = -1; // se vuelve a mirar cuál es su bancal (su puesto puede haber cambiado)
+        parcelaDelObjetivo = -1;
+        mejorDistanciaEntrada = Double.MAX_VALUE;
+        stuckEntrada = 0;
         irAlObjetivo();
     }
 
@@ -295,6 +304,35 @@ public class VillagerFarmGoal extends Goal {
             return;
         }
         villager.getLookControl().setLookAt(target.getX() + 0.5D, target.getY() + 0.5D, target.getZ() + 0.5D);
+        // LAS FAENAS DE LA HUERTA SE HACEN DENTRO DEL BANCAL. El alcance de la faena son 3 bloques, así que un
+        // granjero parado FUERA de la valla alcanzaba las matas de la primera fila y las cosechaba A TRAVÉS de la reja:
+        // no le hacía falta entrar (lo reportó el jugador: "los granjeros no están entrando a la granja") y las matas
+        // del centro se quedaban sin cosechar. Si el objetivo está en un bancal y él está fuera, se le manda a la
+        // PUERTA más cercana: al ponerse a su lado, `VillagerGateGoal` se la abre (a 2,6) y entra.
+        boolean faenaDeHuerta = tarea == Tarea.COSECHAR || tarea == Tarea.LABRAR
+                || tarea == Tarea.PLANTAR || tarea == Tarea.FERTILIZAR;
+        if (faenaDeHuerta && parcelaDelObjetivo >= 0
+                && !VillageGenerator.estaDentroDeLaParcela(center, parcelaDelObjetivo, target.getY(),
+                villager.blockPosition())) {
+            BlockPos entrada = VillageGenerator.entradaDeLaParcela(center, parcelaDelObjetivo, target.getY(),
+                    villager.blockPosition());
+            VillageManager.caminarHacia(villager, entrada, 0.6F);
+            VillageManager.ponerActividad(villager, "Entrando a la huerta");
+            // La pierna de la PUERTA se mide aparte de la del objetivo (I38: dos piernas, dos contadores).
+            double hastaLaPuerta = Math.sqrt(villager.distanceToSqr(entrada.getX() + 0.5D, entrada.getY() + 0.5D,
+                    entrada.getZ() + 0.5D));
+            if (hastaLaPuerta < mejorDistanciaEntrada - 0.5D) {
+                mejorDistanciaEntrada = hastaLaPuerta;
+                stuckEntrada = 0;
+            } else if (++stuckEntrada >= STUCK_LIMIT) {
+                // No consigue entrar (una puerta tapada, la valla rota...): se rinde con este objetivo (I33) y el
+                // latido/la próxima salida lo volverá a intentar cuando el mundo cambie.
+                DevilRpg.LOGGER.info("[Village] El granjero no consigue entrar al bancal {} (puerta {}): lo deja por"
+                        + " un rato", parcelaDelObjetivo, entrada.toShortString());
+                stuckTicks = STUCK_LIMIT;
+            }
+            return;
+        }
         // Para la despensa vale un alcance mayor (el cofre está dentro del kiosco y no se navega hacia él).
         double alcance = tarea == Tarea.DESPENSA ? VillagePantry.ALCANCE_DESPENSA : REACH;
         double distancia = Math.sqrt(villager.distanceToSqr(target.getX() + 0.5D, target.getY() + 0.5D, target.getZ() + 0.5D));
@@ -702,9 +740,14 @@ public class VillagerFarmGoal extends Goal {
                 }
             }
             if (mejor != null) {
+                parcelaDelObjetivo = i;
+                // Objetivo nuevo: las dos piernas (la puerta y la mata) se miden de cero (I38).
+                mejorDistanciaEntrada = Double.MAX_VALUE;
+                stuckEntrada = 0;
                 return mejor;
             }
         }
+        parcelaDelObjetivo = -1;
         return null;
     }
 

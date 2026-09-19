@@ -64,6 +64,24 @@ C) Corrida final (compostero sin churn + puesto caducado + `release` blindado): 
    - Sin `POI never registered` ni crash (esa excepcion salio una vez y esta arreglada: `PoiManager.release` revienta
      si en la celda ya no hay punto de interes).
 
+--- 3) LA ENTRADA AL BANCAL (lo ultimo que reporto el jugador) -------------------------------------
+Lo reporto con captura: "los granjeros no estan entrando a la granja, corrigelo!". En el guardado ACTUAL del jugador
+(19-sep 15:36) las cuatro compuertas de cada bancal estan despejadas (nada encima, dentro farmland+cultivo, fuera
+cesped: no hay nada que los bloquee), los composteros ya estan en x-3 y hay matas maduras (3 / 18 / 56 por bancal).
+
+  ASI QUE ERA DE COMPORTAMIENTO: el alcance de la faena son 3 bloques, asi que el granjero parado FUERA de la valla
+  alcanzaba las matas de la primera fila y las cosechaba A TRAVES de la reja: no le hacia falta entrar. Medido con el
+  arnes (antes del arreglo): los granjeros aparecian en el borde del bancal y con la etiqueta generica "Trabajando".
+
+  ARREGLO: la faena de huerta se hace DENTRO del bancal, y si esta fuera se le manda a la PUERTA mas cercana (al
+  ponerse a su lado, `VillageGateGoal` se la abre a 2,6) con la etiqueta "Entrando a la huerta".
+
+  MEDIDO despues (arnes, misma partida): los TRES dentro de sus bancales y a la vez
+    bancal0=granjeros:1/compostero:SI bancal1=granjeros:1/compostero:SI bancal2=granjeros:1/compostero:SI
+    subidas a la valla (acumulado): 0
+  y las etiquetas de la corrida: `Cosechando` 135 lecturas, `Guardando lo suyo` 91+50, `Guardo 8 en la despensa` 75.
+  Sin ninguna linea `no consigue entrar al bancal`.
+
 --- CÓMO REPETIRLO -----------------------------------------------------------------------------------
 1) Copy-Item tools\arnes\GuardHarness.java src\main\java\com\chipoodle\devilrpg\debug\GuardHarness.java
 2) Move-Item run\world run\world.antes ; Copy-Item "run\saves\New World (1)" run\world -Recurse

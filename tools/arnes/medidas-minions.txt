@@ -1,28 +1,34 @@
 MEDIDAS DE LA DESPEDIDA DE INVOCACIONES CON UN PALO
 ===================================================
-Lo pidio el jugador: "podrias hacer que todas mis invocaciones pueda despawnearlas cuando haga click izquierdo con un
-palo sobre ella? solo cuando tengo un palo nada mas".
+Lo pidio el jugador: "que todas mis invocaciones pueda despawnearlas cuando haga click con un palo sobre ella, solo
+cuando tengo un palo nada mas", CON EL BOTON SECUNDARIO y dejando el golpe como estaba (el primer intento lo puso en
+el boton izquierdo y el jugador lo corrigio: "antes cuando golpeaba no le hacia nada a mis minions y ahora si; dejalo
+como estaba").
 
-Donde vive: `CommonForgeInteractionEventSubscriber.onAttackWithStick` (evento `AttackEntityEvent`).
-Arnés: tools/arnes/MinionHarness.java (temporal: invoca un lobo de alma DE VERDAD, lo mete en la lista del jugador,
-le da el palo al jugador y le pega). Se para el servidor solo al terminar la medida.
+Donde vive: `CommonForgeInteractionEventSubscriber.onInteractWithStick` (evento
+`PlayerInteractEvent.EntityInteract` = la interaccion con la entidad, el BOTON SECUNDARIO).
+Arnés: tools/arnes/MinionHarness.java (temporal: invoca un lobo de alma DE VERDAD, lo mete en la lista del jugador y
+prueba los cinco casos). Se para el servidor solo al terminar la medida.
 
 
 --- MEDIDA (servidor headless, lobo de alma de verdad) ---------------------------------------------
 
-[Minion] [Minecraft] despide a su devilrpg:soul_wolf con un palo (54b41b4b-ffc5-41d6-9f6a-16b5f9438986)
-[ArnesPalo] CASO 1 palo + mia: se espera QUE SE VAYA -> enElMundo=NO enLaLista=NO => OK
-[ArnesPalo] CASO 2 espada + mia: se espera QUE SE QUEDE -> enElMundo=SI enLaLista=NO => OK
-[ArnesPalo] CASO 3 palo + ajena: se espera QUE SE QUEDE -> enElMundo=SI enLaLista=NO => OK
-[ArnesPalo] CASO 4 palo solo en la secundaria + mia: se espera QUE SE QUEDE -> enElMundo=SI enLaLista=SI => OK
+[Minion] [Minecraft] despide a su devilrpg:soul_wolf con un palo (fec6b3cd-...), boton secundario
+[ArnesPalo] CASO 1 secundario + palo en la principal + mia: se espera QUE SE VAYA -> enElMundo=NO enLaLista=NO => OK
+[Minion] [Minecraft] despide a su devilrpg:soul_wolf con un palo (dd0bd9ca-...), boton secundario
+[ArnesPalo] CASO 2 secundario + palo en la secundaria + mia: se espera QUE SE VAYA -> enElMundo=NO enLaLista=NO => OK
+[ArnesPalo] CASO 3 secundario + espada + mia: se espera QUE SE QUEDE -> enElMundo=SI enLaLista=NO => OK
+[ArnesPalo] CASO 4 secundario + palo + ajena: se espera QUE SE QUEDE -> enElMundo=SI enLaLista=NO => OK
+[ArnesPalo] CASO 5 izquierdo (golpe) + palo + mia: se espera QUE SE QUEDE -> enElMundo=SI enLaLista=SI => OK
 [ArnesPalo] fin de la medida
 
 Que significa cada caso:
-  1) PALO en la mano principal + invocacion TUYA  -> se va del mundo Y de la lista (el camino de siempre:
-     `PlayerMinionCapability.removeSoulWolf/removeSoulBear/removeWisp`, que ademas poda la copia guardada).
-  2) ESPADA + invocacion tuya                     -> no se despide: se pelea como siempre.
-  3) PALO + invocacion DE OTRO jugador            -> no se toca.
-  4) PALO solo en la MANO SECUNDARIA              -> no se despide (manda la mano principal).
+  1) BOTON SECUNDARIO + palo en la MANO PRINCIPAL + invocacion TUYA  -> se va del mundo Y de la lista.
+  2) BOTON SECUNDARIO + palo en la MANO SECUNDARIA + invocacion tuya -> tambien se va (vale cualquier mano).
+  3) BOTON SECUNDARIO sin palo (espada) + invocacion tuya            -> no se despide: la interaccion es la de siempre.
+  4) BOTON SECUNDARIO con palo + invocacion DE OTRO jugador          -> no se toca.
+  5) BOTON IZQUIERDO (golpe) con palo + invocacion tuya              -> NO se despide: el golpe queda COMO ESTABA.
+
 
 
 --- COMO REPETIRLO -----------------------------------------------------------------------------------

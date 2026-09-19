@@ -25,11 +25,12 @@ import java.util.UUID;
 /**
  * ARNES TEMPORAL DE DIAGNOSTICO (no se queda en el mod).
  * <p>
- * Mide la <b>despedida de invocaciones con un palo</b> (click izquierdo con palo sobre una invocacion TUYA): se
- * invoca un lobo de alma de verdad, se le mete en la lista del jugador, se le da un palo al jugador y se le pega; y se
- * comprueban los tres casos que NO tienen que despedir nada (espada, invocacion de otro, mano vacia).
+ * Mide la <b>despedida de invocaciones con un palo</b>: tiene que irse con el <b>BOTON SECUNDARIO</b> (click derecho
+ * sobre ella, el palo en cualquier mano) y el <b>golpe (boton izquierdo) tiene que quedarse COMO ESTABA</b> (pegarle a
+ * una invocacion tuya no le hace nada).
  * <p>
- * Al terminar, para el servidor solo (la medida queda en el log).
+ * Invoca un lobo de alma DE VERDAD, lo mete en la lista del jugador y prueba los cinco casos. Al terminar, para el
+ * servidor solo (la medida queda en el log).
  */
 @EventBusSubscriber(modid = DevilRpg.MODID, bus = EventBusSubscriber.Bus.GAME)
 public class MinionHarness {
@@ -54,35 +55,40 @@ public class MinionHarness {
         PlayerMinionCapabilityInterface cap =
                 IGenericCapability.getUnwrappedPlayerCapability(jugador, PlayerMinionCapability.INSTANCE);
 
-        // 1) PALO + INVOCACION TUYA: tiene que irse del mundo Y de la lista.
-        SoulWolf mia = invocar(level, jugador, true);
-        anotar(cap, jugador, mia);
-        conLaMano(jugador, new ItemStack(Items.STICK));
-        jugador.attack(mia);
-        informe("CASO 1 palo + mia", mia, cap, true);
+        // 1) BOTON SECUNDARIO con el palo en la MANO PRINCIPAL + invocacion TUYA: se va.
+        SoulWolf conPalo = invocar(level, jugador, true);
+        anotar(cap, jugador, conPalo);
+        conLasManos(jugador, new ItemStack(Items.STICK), ItemStack.EMPTY);
+        jugador.interactOn(conPalo, InteractionHand.MAIN_HAND);
+        informe("CASO 1 secundario + palo en la principal + mia", conPalo, cap, true);
 
-        // 2) ESPADA + INVOCACION TUYA: NO se despide (se pelea como siempre).
+        // 2) BOTON SECUNDARIO con el palo en la MANO SECUNDARIA + invocacion TUYA: tambien se va.
+        SoulWolf conPaloManoMala = invocar(level, jugador, true);
+        anotar(cap, jugador, conPaloManoMala);
+        conLasManos(jugador, ItemStack.EMPTY, new ItemStack(Items.STICK));
+        jugador.interactOn(conPaloManoMala, InteractionHand.OFF_HAND);
+        informe("CASO 2 secundario + palo en la secundaria + mia", conPaloManoMala, cap, true);
+
+        // 3) BOTON SECUNDARIO SIN palo (espada) + invocacion TUYA: NO se despide.
         SoulWolf conEspada = invocar(level, jugador, true);
-        conLaMano(jugador, new ItemStack(Items.IRON_SWORD));
-        jugador.attack(conEspada);
-        informe("CASO 2 espada + mia", conEspada, cap, false);
+        conLasManos(jugador, new ItemStack(Items.IRON_SWORD), ItemStack.EMPTY);
+        jugador.interactOn(conEspada, InteractionHand.MAIN_HAND);
+        informe("CASO 3 secundario + espada + mia", conEspada, cap, false);
 
-        // 3) PALO + INVOCACION DE OTRO: NO se toca.
+        // 4) BOTON SECUNDARIO con palo + invocacion DE OTRO: NO se toca.
         SoulWolf ajena = invocar(level, jugador, false);
-        conLaMano(jugador, new ItemStack(Items.STICK));
-        jugador.attack(ajena);
-        informe("CASO 3 palo + ajena", ajena, cap, false);
+        conLasManos(jugador, new ItemStack(Items.STICK), ItemStack.EMPTY);
+        jugador.interactOn(ajena, InteractionHand.MAIN_HAND);
+        informe("CASO 4 secundario + palo + ajena", ajena, cap, false);
 
-        // 4) PALO EN LA MANO SECUNDARIA (mano principal vacia) + INVOCACION TUYA: NO se despide (solo la principal).
-        SoulWolf secundaria = invocar(level, jugador, true);
-        anotar(cap, jugador, secundaria);
-        conLaMano(jugador, ItemStack.EMPTY);
-        jugador.setItemInHand(InteractionHand.OFF_HAND, new ItemStack(Items.STICK));
-        jugador.attack(secundaria);
-        informe("CASO 4 palo solo en la secundaria + mia", secundaria, cap, false);
+        // 5) BOTON IZQUIERDO (golpe) con palo + invocacion TUYA: tiene que quedarse COMO ESTABA (no se despide).
+        SoulWolf golpeada = invocar(level, jugador, true);
+        anotar(cap, jugador, golpeada);
+        conLasManos(jugador, new ItemStack(Items.STICK), ItemStack.EMPTY);
+        jugador.attack(golpeada);
+        informe("CASO 5 izquierdo (golpe) + palo + mia", golpeada, cap, false);
 
-        // Limpieza de la prueba (no se queda nada por el mundo).
-        for (SoulWolf lobo : new SoulWolf[]{conEspada, ajena, secundaria, mia}) {
+        for (SoulWolf lobo : new SoulWolf[]{conPalo, conPaloManoMala, conEspada, ajena, golpeada}) {
             if (lobo != null && lobo.isAlive()) {
                 lobo.discard();
             }
@@ -99,9 +105,9 @@ public class MinionHarness {
                 correcto ? "OK" : "FALLO");
     }
 
-    private static void conLaMano(FakePlayer jugador, ItemStack mano) {
-        jugador.setItemInHand(InteractionHand.MAIN_HAND, mano);
-        jugador.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
+    private static void conLasManos(FakePlayer jugador, ItemStack principal, ItemStack secundaria) {
+        jugador.setItemInHand(InteractionHand.MAIN_HAND, principal);
+        jugador.setItemInHand(InteractionHand.OFF_HAND, secundaria);
     }
 
     private static void anotar(PlayerMinionCapabilityInterface cap, FakePlayer dueno, SoulWolf lobo) {
@@ -116,7 +122,7 @@ public class MinionHarness {
         if (mio) {
             lobo.tame(dueno); // como la invocacion de verdad: dueño y tameado
         } else {
-            lobo.setOwnerUUID(UUID.randomUUID()); // de otro jugador (para el caso 3)
+            lobo.setOwnerUUID(UUID.randomUUID()); // de otro jugador (para el caso 4)
         }
         lobo.moveTo(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D, 0.0F, 0.0F);
         level.addFreshEntity(lobo);

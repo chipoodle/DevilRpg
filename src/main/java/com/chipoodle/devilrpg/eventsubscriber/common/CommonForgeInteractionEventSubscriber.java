@@ -168,25 +168,26 @@ public class CommonForgeInteractionEventSubscriber {
     }
 
     /**
-     * <b>DESPEDIR UNA INVOCACIÓN CON UN PALO</b>: click izquierdo sobre una invocación <b>tuya</b> llevando un
-     * <b>palo</b> en la mano principal la saca del mundo, sin daño y sin golpe (el evento se cancela).
+     * <b>DESPEDIR UNA INVOCACIÓN CON UN PALO (botón SECUNDARIO)</b>: click derecho sobre una invocación <b>tuya</b>
+     * llevando un <b>palo</b> la saca del mundo. Da igual en qué mano esté el palo (principal o secundaria).
      * <p>
-     * Es el <b>único</b> caso en que un palo despide: con cualquier otra cosa en la mano (una espada, la mano vacía)
-     * se pelea o se golpea como siempre. Solo se tocan <b>las tuyas</b> (el dueño del minion tiene que ser tú): las de
-     * otro jugador y los bichos salvajes se quedan como están.
+     * Va por la <b>interacción</b> ({@code PlayerInteractEvent.EntityInteract}) y no por el golpe: el <b>botón
+     * izquierdo</b> se queda <b>como estaba</b> (pegar a una invocación tuya no le hace nada, como siempre). Es el
+     * <b>único</b> caso en que un palo despide: con cualquier otra cosa en la mano la interacción es la de siempre.
+     * Solo se tocan <b>las tuyas</b> (el dueño tiene que ser tú): las de otro jugador y los bichos salvajes no se
+     * tocan.
      * <p>
-     * Va por {@code AttackEntityEvent} (el golpe del jugador) y no por la interacción, porque con click izquierdo el
-     * juego no dispara la interacción con la entidad. El que despide es el <b>servidor</b>: el cliente solo se queda
-     * sin golpear (si no, se vería el golpe y el daño en el cliente y no en el mundo). Las invocaciones que el
-     * jugador tiene en sus listas (lobos, osos y wisps) se van por su camino de siempre
+     * El que despide es el <b>servidor</b> (el cliente solo se queda sin interacción). Las invocaciones que el jugador
+     * tiene en sus listas (lobos, osos y wisps) se van por su camino de siempre
      * ({@code PlayerMinionCapability.remove*}: quitan la lista, matan al minion y con eso se poda también la copia
      * guardada); las que no están en ninguna lista (el shulker del girasol) se sacan del mundo sin más.
      */
-    @SubscribeEvent
-    public static void onAttackWithStick(AttackEntityEvent event) {
+    @SubscribeEvent(receiveCanceled = true)
+    public static void onInteractWithStick(PlayerInteractEvent.EntityInteract event) {
         Player player = event.getEntity();
-        if (!player.getMainHandItem().is(Items.STICK)) {
-            return; // SOLO con un palo en la mano principal
+        boolean paloEnLaMano = player.getMainHandItem().is(Items.STICK) || player.getOffhandItem().is(Items.STICK);
+        if (!paloEnLaMano) {
+            return; // sin palo, la interacción es la de siempre
         }
         if (!(event.getTarget() instanceof ITamableEntity minion)) {
             return; // no es una invocación: el palo no hace nada raro
@@ -194,9 +195,7 @@ public class CommonForgeInteractionEventSubscriber {
         if (!player.getUUID().equals(minion.getOwnerUUID())) {
             return; // no es tuya (de otro jugador o salvaje): no se toca
         }
-        // El palo NO golpea: ni daño, ni empujón, ni desgaste.
-        player.swinging = false;
-        event.setCanceled(true);
+        event.setCanceled(true); // el palo no hace nada más (ni montar, ni comerciar, ni dar de comer)
         if (player.level().isClientSide) {
             return; // despide el servidor
         }
@@ -212,8 +211,8 @@ public class CommonForgeInteractionEventSubscriber {
         } else {
             entidad.discard(); // otras invocaciones (el shulker del girasol) no viven en las listas del jugador
         }
-        DevilRpg.LOGGER.info("[Minion] {} despide a su {} con un palo ({})", player.getName().getString(),
-                EntityType.getKey(entidad.getType()), entidad.getUUID());
+        DevilRpg.LOGGER.info("[Minion] {} despide a su {} con un palo ({}), boton secundario",
+                player.getName().getString(), EntityType.getKey(entidad.getType()), entidad.getUUID());
         player.displayClientMessage(Component.literal("Invocación despedida."), true);
     }
 
