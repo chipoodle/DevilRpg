@@ -66,6 +66,8 @@ public class GuardHarness {
             com.chipoodle.devilrpg.world.VillageStorage.guardar(level, CENTRO,
                     new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.CARROT, 2));
             com.chipoodle.devilrpg.world.VillageStorage.guardar(level, CENTRO,
+                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.GLASS_BOTTLE, 3));
+            com.chipoodle.devilrpg.world.VillageStorage.guardar(level, CENTRO,
                     new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.SPIDER_EYE, 2));
             DevilRpg.LOGGER.info("[Arnes] almacen sembrado para el clerigo");
         }
