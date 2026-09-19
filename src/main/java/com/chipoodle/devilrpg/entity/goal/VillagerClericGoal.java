@@ -148,8 +148,11 @@ public class VillagerClericGoal extends Goal {
         //    o cualquier charca del término). Sin esto, las botellas de agua tendrían que venir ya embotelladas de fuera
         //    y la cadena no se cerraría sola.
         if (llevaCristal()) {
-            if (agua == null || !esAgua(level, agua)) {
+            if (agua == null || !hayAguaAlLado(level, agua)) {
                 agua = buscarAgua(level);
+                if (agua != null) {
+                    DevilRpg.LOGGER.info("[Village] El clerigo va a llenar las botellas a la orilla de {}", agua);
+                }
             }
             if (agua == null) {
                 restTicks = IDLE_REST_TICKS;
@@ -232,11 +235,17 @@ public class VillagerClericGoal extends Goal {
     }
 
     /**
-     * La <b>celda de agua</b> más cercana (el bebedero del corral, el lago de la pesquera, cualquier charca del
-     * término). Se barre en la <b>altura del terreno</b> ({@code WORLD_SURFACE}) y con un paso de {@link #PASO_AGUA}:
-     * mirando un cubo pequeño —lo primero que se probó: radio 24 y paso 2— el clérigo se quedaba en su soporte con la
-     * etiqueta "No encuentro agua", porque el agua del pueblo está a 65 (el bebedero) y 95 (el lago) bloques de la
-     * iglesia y una charca de 3×1 se cuela entre las columnas pares. Solo se hace cuando va a llenar (no cada tick).
+     * La <b>orilla</b> más cercana (una casilla seca al lado del agua, con sitio para pararse) a la que va a llenar
+     * las botellas: el bebedero del corral, el lago de la pesquera o cualquier charca del término.
+     * <p>
+     * OJO CON EL DESTINO: se navega a la <b>orilla</b>, no a la celda de agua. Mandarlo al agua (lo primero que se
+     * probó) es mandarlo a un bloque al que la navegación <b>no puede llegar</b>: el goal se rendía, se aparcaba el
+     * sitio y volvía al soporte — el baile alrededor de la iglesia que se midió con el arnés.
+     * <p>
+     * Se barre en la <b>altura del terreno</b> ({@code WORLD_SURFACE}) y con un paso de {@link #PASO_AGUA}: mirando un
+     * cubo pequeño —radio 24 y paso 2— el clérigo se quedaba con la etiqueta "No encuentro agua", porque el agua del
+     * pueblo está a 65 (el bebedero) y 95 (el lago) bloques de la iglesia y una charca de 3×1 se cuela entre las
+     * columnas pares. Solo se hace cuando va a llenar (no cada tick).
      */
     @Nullable
     private BlockPos buscarAgua(ServerLevel level) {
@@ -248,19 +257,52 @@ public class VillagerClericGoal extends Goal {
                 BlockPos alto = level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE,
                         new BlockPos(base.getX() + dx, 0, base.getZ() + dz));
                 for (int dy = 0; dy >= -2; dy--) { // el agua puede estar un bloque por debajo (la orilla)
-                    BlockPos p = alto.offset(0, dy, 0);
-                    if (!esAgua(level, p) || VillageManager.esPuntoFallido(villager, p)) {
+                    BlockPos agua = alto.offset(0, dy, 0);
+                    if (!esAgua(level, agua)) {
                         continue;
                     }
-                    double d = p.distSqr(base);
+                    BlockPos orilla = orillaDe(level, agua);
+                    if (orilla == null || VillageManager.esPuntoFallido(villager, orilla)) {
+                        continue; // sin sitio para pararse al lado (o ya se intentó y no se llegó): no vale
+                    }
+                    double d = orilla.distSqr(base);
                     if (d < mejorDist) {
                         mejorDist = d;
-                        mejor = p.immutable();
+                        mejor = orilla;
+                        break;
                     }
                 }
             }
         }
         return mejor;
+    }
+
+    /** Una casilla <b>seca y con sitio para pararse</b> al lado de esa agua (o {@code null} si el agua está encajonada). */
+    @Nullable
+    private BlockPos orillaDe(ServerLevel level, BlockPos agua) {
+        for (BlockPos p : new BlockPos[]{agua.north(), agua.south(), agua.east(), agua.west(), agua.above()}) {
+            if (sePuedeEstar(level, p)) {
+                return p.immutable();
+            }
+        }
+        return null;
+    }
+
+    /** ¿Esa casilla tiene sitio para pararse? (nada sólido en la casilla ni encima, y suelo firme debajo) */
+    private boolean sePuedeEstar(ServerLevel level, BlockPos p) {
+        return level.getBlockState(p).getCollisionShape(level, p).isEmpty()
+                && level.getBlockState(p.above()).getCollisionShape(level, p.above()).isEmpty()
+                && !level.getBlockState(p.below()).getCollisionShape(level, p.below()).isEmpty();
+    }
+
+    /** ¿Sigue habiendo agua al lado de esa orilla? (por si el jugador la tapó mientras iba) */
+    private boolean hayAguaAlLado(ServerLevel level, BlockPos orilla) {
+        for (BlockPos p : new BlockPos[]{orilla.north(), orilla.south(), orilla.east(), orilla.west(), orilla.below()}) {
+            if (esAgua(level, p)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Llena de agua las botellas de cristal que lleva (receta de vanilla: botella + agua = poción de agua). */
