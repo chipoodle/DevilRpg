@@ -7497,14 +7497,20 @@ public final class VillageGenerator {
      * El <b>porche</b> de la puerta (al oeste, dando a la plaza): dos postes, el <b>toldo</b> que baja hacia fuera con
      * sus faroles colgados y un par de <b>pipas</b> al lado de la puerta. Es lo primero que se ve al llegar al pueblo.
      * <p>
-     * El <b>toldo</b> son <b>dos alturas</b> de escalones que bajan hacia fuera: la de <b>dentro</b> (a la altura del
-     * forjado de la posada) y la de <b>fuera</b> ({@code bx-3}, encima de los postes) un bloque más baja. Va
+     * El <b>toldo</b> son <b>dos alturas</b> que bajan hacia fuera: la de <b>dentro</b> (a la altura del forjado de la
+     * posada) y la de <b>fuera</b> ({@code bx-3}, encima de los postes) un bloque más baja. Va
      * <b>entero</b>, de punta a punta ({@code pz-3..pz+3}) y <b>hasta la pared</b>: la fila de dentro llega a
      * {@code bx-1}, que es la celda <b>pegada</b> al muro de la taberna ({@code bx}). No siempre fue así —el porche
      * salía solo hasta {@code bx-2} y quedaba una columna de <b>aire</b> entre el toldo y la pared, o sea un techito
      * <b>suelto</b> que no conectaba con la casa (lo reportó el jugador: <i>"el techito que está en la entrada de la
      * taberna está incompleto porque no conecta con la pared"</i>; medido en su guardado: las <b>7 de 7</b> celdas de
      * {@code bx-1} vacías, con la pared sólida detrás)—.
+     * <p>
+     * Y la celda pegada al muro va con un <b>BLOQUE NORMAL</b> (tablón), no con otro escalón: dos escalones seguidos a
+     * la misma altura se ven como un doble peldaño raro contra la pared (lo corrigió el jugador: <i>"se necesita poner
+     * un bloque normal y luego ahora sí el bloque de escalera bien alineado"</i>). Así el escalón de al lado apoya su
+     * cara alta contra el tablón del muro y el alero se lee como un alero: <b>sube hacia la casa y baja hacia fuera</b>
+     * (perfil: tablón en {@code bx-1}, escalón en {@code bx-2}, escalón un bloque más bajo en {@code bx-3}).
      * <p>
      * <b>Los faroles van POR DEBAJO del toldo, nunca en la fila de los escalones.</b> No siempre fue así, y el jugador
      * lo vio: <i>"el pórtico está cortado con un espacio, ¿por qué? debería estar completo"</i>. Los dos faroles de las
@@ -7537,7 +7543,14 @@ public final class VillageGenerator {
         //    con la pared"*; medido en su guardado: 7 de 7 celdas de `bx-1` vacías, con la pared sólida detrás).
         //    El alero llega hasta `bx - 1`, que es la celda PEGADA al muro.
         for (int dz = pz - 3; dz <= pz + 3; dz++) {
-            colocar(level, new BlockPos(bx - 1, nivel + TABERNA_PISO2 - 1, bz + dz), escalonDelToldo(), 3);
+            // LA CELDA PEGADA AL MURO VA CON UN BLOQUE NORMAL, no con otro escalón: dos escalones seguidos a la misma
+            // altura se veían como un doble peldaño raro contra la pared (lo reportó el jugador: *"se necesita poner un
+            // bloque normal y luego ahora sí el bloque de escalera bien alineado para que quede bien"*). Con el tablón
+            // sólido pegado al muro, el escalón de al lado apoya su cara alta contra él y el alero se lee como un
+            // alero: sube hacia la casa y baja hacia fuera.
+            colocar(level, new BlockPos(bx - 1, nivel + TABERNA_PISO2 - 1, bz + dz),
+                    Blocks.DARK_OAK_PLANKS.defaultBlockState(), 3);
+            // Y EL ESCALÓN, ALINEADO contra ese bloque (cara alta hacia la casa).
             colocar(level, new BlockPos(bx - 2, nivel + TABERNA_PISO2 - 1, bz + dz), escalonDelToldo(), 3);
             colocar(level, new BlockPos(bx - 3, nivel + TABERNA_PISO2 - 2, bz + dz), escalonDelToldo(), 3);
         }
@@ -7612,14 +7625,18 @@ public final class VillageGenerator {
                 cambios++;
             }
         }
-        // 3) EL TOLDO HASTA LA PARED (migración 63, lo reportó el jugador: *"el techito que está en la entrada de la
-        //    taberna está incompleto porque no conecta con la pared"*). El alero salía solo hasta `bx-2` y la pared
-        //    está en `bx`: quedaba una columna de aire de 1 bloque entre el toldo y la casa, así que el techito se
-        //    veía SUELTO. Se añade la fila que falta (`bx-1`, pegada al muro) a la altura de la fila de dentro, con
-        //    su tablón de soffito debajo (el techo del porche llega también al muro). Es ADITIVO: solo rellena aire,
-        //    así que no puede comerse nada del jugador (y en su guardado eran las 7 de 7 celdas vacías).
+        // 3) EL TOLDO HASTA LA PARED Y CON BLOQUE NORMAL EN LA CELDA DEL MURO (migraciones 63 y 66). La 63 (lo
+        //    reportó el jugador: *"el techito... no conecta con la pared"*) añadió la fila que falta (`bx-1`, pegada al
+        //    muro) a la altura de la fila de dentro, con su tablón de soffito debajo. La 66 corrige CÓMO se veía: allí
+        //    había puesto un ESCALÓN y dos escalones seguidos a la misma altura quedan como un doble peldaño raro
+        //    (*"se necesita poner un bloque normal y luego ahora sí el bloque de escalera bien alineado"*), así que esa
+        //    celda pasa a ser un TABLÓN sólido (y solo si sigue siendo el escalón del toldo: lo del jugador se queda).
         for (int dz = pz - 3; dz <= pz + 3; dz++) {
-            if (colocarSiEstaVacio(level, new BlockPos(bx - 1, yDentro, bz + dz), escalonDelToldo())) {
+            BlockPos pegado = new BlockPos(bx - 1, yDentro, bz + dz);
+            if (level.getBlockState(pegado).equals(escalonDelToldo())) {
+                colocar(level, pegado, Blocks.DARK_OAK_PLANKS.defaultBlockState(), Block.UPDATE_ALL);
+                cambios++;
+            } else if (colocarSiEstaVacio(level, pegado, Blocks.DARK_OAK_PLANKS.defaultBlockState())) {
                 cambios++;
             }
             if (colocarSiEstaVacio(level, new BlockPos(bx - 1, yToldo, bz + dz),

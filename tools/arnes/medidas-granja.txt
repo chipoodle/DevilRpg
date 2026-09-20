@@ -82,6 +82,36 @@ cesped: no hay nada que los bloquee), los composteros ya estan en x-3 y hay mata
   y las etiquetas de la corrida: `Cosechando` 135 lecturas, `Guardando lo suyo` 91+50, `Guardo 8 en la despensa` 75.
   Sin ninguna linea `no consigue entrar al bancal`.
 
+--- 4) EL RECOLECTOR CLAVADO EN EL DESVAN (y el techito con bloque normal) ---------------------------
+Lo pregunto el jugador con captura de la etiqueta: "porque el recolector esta de charla en el 3er piso sin hacer nada?"
+
+MEDIDO (arnes, su partida). Fabricio (Recolector) en el desvan de la taberna, y=131:
+  t=79169 RECOLECTOR pos=(1455.15,131.00,1434.57) activos=[] destino=SIN DESTINO
+          rutas[almacen=SI(1) plaza=SI(17) huecoDesvan=SI(14)] etiqueta=Fabricio (Recolector) | De charla
+  t=79229 RECOLECTOR ... activos=[VillagerCollectGoal] destino=SIN DESTINO etiqueta=... | Yendo al almacen
+  (y asi 30 s sin moverse de (1455.15,131.00,1434.57))
+La clave esta en la ruta: al ALMACEN le sale una ruta DEGENERADA de 1 nodo (inalcanzable desde el desvan), mientras
+que a la plaza (17 nodos) y al hueco del desvan (14) si llega. Con las manos llenas (8 cosas) el goal se rendia cada
+6 s, aparcaba el almacen (I33), descansaba y volvia a empezar: en bucle arriba.
+Y habia subido a por 3 CAMAS TIRADAS en el suelo del desvan (las camas estan en su lista blanca):
+  OBJETO arriba en la taberna: Red Bed x1 en 1443,131,1434 / 1441,131,1432 / 1444,131,1432
+
+ARREGLO (`VillagerCollectGoal`): si no alcanza el almacen (6 s sin acercarse) apunta el sitio (I33) y se vuelve a la
+PLAZA, que es su sitio y desde donde el almacen SI se alcanza; y si no hay nada que recoger y esta metido en un piso
+(mas de 4 bloques de la cota) o lejos (>24 del centro), tambien se vuelve a la plaza.
+
+MEDIDO despues (misma partida):
+  t=81969 RECOLECTOR pos=(1447.71,131.00,1430.75) activos=[VillagerCollectGoal] destino=1414, 120, 1414
+          rutas[almacen=SI(24) plaza=SI(9) huecoDesvan=SI(10)] etiqueta=Fabricio (Recolector) | Volviendo a la plaza
+  (128 lecturas de "Volviendo a la plaza" y ANDANDO hacia el hueco del desvan: de 1455,1434 a 1447,1430)
+  Y la ruta al almacen pasa de SI(1) (degenerada) a SI(24): ya se puede entregar.
+
+Y LA MIGRACION 66 DEL PORCHE (el bloque normal pegado al muro), en la misma corrida:
+  [Village] Taberna de BlockPos{x=1414, y=120, z=1414}: porche reparado (7 cambio(s) en sus celdas: el alero del
+            toldo entero, hasta la pared, y los faroles de las puntas colgados del soffito)
+  [Village] Aldea 2: trazado actualizado a la version 66 (casas, muro, granja y plano)
+  (7 cambios = los 7 escalones de bx-1 que pasan a tablon solido)
+
 --- CÓMO REPETIRLO -----------------------------------------------------------------------------------
 1) Copy-Item tools\arnes\GuardHarness.java src\main\java\com\chipoodle\devilrpg\debug\GuardHarness.java
 2) Move-Item run\world run\world.antes ; Copy-Item "run\saves\New World (1)" run\world -Recurse

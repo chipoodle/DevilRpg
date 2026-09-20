@@ -107,6 +107,9 @@ public class GuardHarness {
             pega.moveTo(CENTRO.getX() + 0.5D, CENTRO.getY(), CENTRO.getZ() + 0.5D);
             VillageManager.manageNearby(level, pega, ancla(), INDICE);
         }
+        if (ticks == 400 || ticks == 1400) {
+            volcarObjetos(level);
+        }
         if (ticks % 20 == 0) {
             volcar(level);
         }
@@ -229,6 +232,43 @@ public class GuardHarness {
                 etiqueta, pegadas, base, nivel);
     }
 
+    /** ¿Encuentra el aldeano camino hasta esa celda? ("SI"/"NO"/"?"): es `PathNavigation.createPath`. */
+    private static String ruta(ServerLevel level, Villager v, BlockPos destino) {
+        try {
+            var camino = v.getNavigation().createPath(destino, 1);
+            if (camino == null) {
+                return "NO(nulo)";
+            }
+            return camino.getNodeCount() > 0 ? "SI(" + camino.getNodeCount() + ")" : "NO(vacio)";
+        } catch (RuntimeException e) {
+            return "ERROR:" + e.getClass().getSimpleName();
+        }
+    }
+
+    /** Los objetos tirados por el pueblo (a eso va el recolector) y los que estén en la taberna, sobre todo arriba. */
+    private static void volcarObjetos(ServerLevel level) {
+        BlockPos taberna = com.chipoodle.devilrpg.world.VillageGenerator.baseDeLaTaberna(CENTRO);
+        int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+        int total = 0;
+        int enLaTaberna = 0;
+        int arriba = 0;
+        for (net.minecraft.world.entity.item.ItemEntity it : level.getEntitiesOfClass(
+                net.minecraft.world.entity.item.ItemEntity.class, new AABB(CENTRO).inflate(140))) {
+            total++;
+            BlockPos p = it.blockPosition();
+            if (Math.abs(p.getX() - taberna.getX()) <= 20 && Math.abs(p.getZ() - taberna.getZ()) <= 16) {
+                enLaTaberna++;
+                if (p.getY() > cota + 6) {
+                    arriba++;
+                    DevilRpg.LOGGER.info("[Arnes] OBJETO arriba en la taberna: {} x{} en {}", 
+                            it.getItem().getHoverName().getString(), it.getItem().getCount(), p.toShortString());
+                }
+            }
+        }
+        DevilRpg.LOGGER.info("[Arnes] OBJETOS en el pueblo: {} (en la taberna: {}, de esos por encima del forjado: {})",
+                total, enLaTaberna, arriba);
+    }
+
     private static void volcar(ServerLevel level) {
         java.util.Map<String, Integer> censo = new java.util.TreeMap<>();
         for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(96))) {
@@ -239,6 +279,33 @@ public class GuardHarness {
             // valla (el bug: trepaban por el compostero pegado a ella).
             boolean esGranjero = !v.isBaby()
                     && v.getVillagerData().getProfession() == net.minecraft.world.entity.npc.VillagerProfession.FARMER;
+            // EL RECOLECTOR (holgazan): que goal tiene ACTIVO y a donde va, que es lo que hay que medir ahora (el
+            // jugador lo vio "de charla en el 3er piso sin hacer nada").
+            boolean esRecolector = !v.isBaby()
+                    && v.getVillagerData().getProfession() == net.minecraft.world.entity.npc.VillagerProfession.NITWIT;
+            if (esRecolector) {
+                StringBuilder activos = new StringBuilder();
+                for (net.minecraft.world.entity.ai.goal.WrappedGoal w : v.goalSelector.getAvailableGoals()) {
+                    if (w.isRunning()) {
+                        activos.append(w.getGoal().getClass().getSimpleName()).append(' ');
+                    }
+                }
+                WalkTarget wtr = v.getBrain().getMemory(MemoryModuleType.WALK_TARGET).orElse(null);
+                // ¿ENCUENTRA CAMINO? Es la pregunta de esta ronda: se queda clavado en el desvan con el almacen como
+                // destino, asi que se prueban las rutas al almacen, a la plaza y al hueco del desvan.
+                int cotaRec = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+                String rutaAlmacen = ruta(level, v, new BlockPos(1461, 121, 1434));
+                String rutaPlaza = ruta(level, v, new BlockPos(CENTRO.getX(), cotaRec, CENTRO.getZ()));
+                String rutaHueco = ruta(level, v, new BlockPos(1442, 131, 1438));
+                DevilRpg.LOGGER.info("[Arnes] t={} {} RECOLECTOR pos=({},{},{}) activos=[{}] destino={} rutas[almacen={}"
+                                + " plaza={} huecoDesvan={}] etiqueta={}",
+                        level.getGameTime(), v.getUUID().toString().substring(0, 8), fmt(v.getX()), fmt(v.getY()),
+                        fmt(v.getZ()), activos.toString().trim(),
+                        wtr == null ? "SIN DESTINO" : wtr.getTarget().currentBlockPosition().toShortString(),
+                        rutaAlmacen, rutaPlaza, rutaHueco,
+                        v.getCustomName() == null ? "-" : v.getCustomName().getString().replace("\n", " | "));
+                continue;
+            }
             if (esGranjero) {
                 int bancal = bancalDe(level, v);
                 boolean valla = subidoALaValla(level, v);

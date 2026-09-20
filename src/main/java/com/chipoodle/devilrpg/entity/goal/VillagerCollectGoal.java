@@ -58,6 +58,17 @@ public class VillagerCollectGoal extends Goal {
     private static final double RADIO_DE_BUSQUEDA = VillageGenerator.FENCE_RADIUS + 8.0D;
     /** Solo se recogen objetos que lleven un rato en el suelo (5 s): así no le quita a nadie lo que acaba de soltar. */
     private static final int EDAD_MINIMA = 100;
+    /**
+     * Si <b>no hay nada que recoger</b> y el recolector está <b>lejos de la plaza</b> (más de estos bloques del
+     * centro), se vuelve a ella en vez de quedarse donde esté.
+     * <p>
+     * Lo reportó el jugador: <i>"¿por qué el recolector está de charla en el 3er piso sin hacer nada?"</i> — se había
+     * subido al <b>desván de la taberna</b> a por unas <b>camas tiradas</b> en el suelo (las camas están en su lista),
+     * se rindió con ellas (I33: 6 s sin acercarse y las aparca) y, como no le quedaba nada a su alcance, se quedó
+     * plantado <b>arriba</b> alternando "recoger" y "descansar" para siempre (medido con el arnés: su goal
+     * {@code VillagerCollectGoal} arrancando y parando en el desván, con tres {@code Red Bed} tiradas a 12 bloques).
+     */
+    private static final double RADIO_VUELTA = 24.0D;
 
     private final Villager villager;
     private final BlockPos center;
@@ -71,6 +82,8 @@ public class VillagerCollectGoal extends Goal {
     private int stuckTicks;
     /** Distancia más corta lograda en este viaje. */
     private double mejorDistancia = Double.MAX_VALUE;
+    /** ¿Va de vuelta a la plaza porque no había nada que recoger? (entonces al llegar NO descarga nada) */
+    private boolean volviendoALaPlaza;
 
     public VillagerCollectGoal(Villager villager, BlockPos center, int objectiveIndex) {
         this.villager = villager;
@@ -110,15 +123,35 @@ public class VillagerCollectGoal extends Goal {
         if (cuantosLleva() >= LLEVAR_MAX) {
             destino = VillageStorage.puntoDeApoyo(level, center);
             objetivo = null;
+            volviendoALaPlaza = false;
             return true;
         }
         objetivo = buscarObjeto(level);
         if (objetivo == null) {
             restTicks = IDLE_REST_TICKS;
+            // NADA QUE RECOGER: si está metido en una casa (el desván de la taberna) o lejos del pueblo, se VUELVE A
+            // LA PLAZA en vez de quedarse plantado donde esté (ver {@link #RADIO_VUELTA}).
+            if (fueraDeSuSitio(level)) {
+                destino = new BlockPos(center.getX(), VillageGenerator.cotaDeLaPlaza(level, center), center.getZ());
+                volviendoALaPlaza = true;
+                return true;
+            }
             return false;
         }
         destino = null;
+        volviendoALaPlaza = false;
         return true;
+    }
+
+    /**
+     * ¿Está <b>donde no toca</b>: metido en un piso que no es la calle (por encima del forjado de una casa) o lejos de
+     * la plaza? Es lo que decide si, al no tener nada que recoger, se le manda de vuelta al pueblo.
+     */
+    private boolean fueraDeSuSitio(ServerLevel level) {
+        if (Math.abs(villager.getY() - VillageGenerator.cotaDeLaPlaza(level, center)) > 4.0D) {
+            return true; // el desván de la taberna (o el sótano de cualquier casa)
+        }
+        return distanciaHorizontalAlCentro() > RADIO_VUELTA * RADIO_VUELTA;
     }
 
     @Override
@@ -198,19 +231,37 @@ public class VillagerCollectGoal extends Goal {
                     destino.getZ() + 0.5D));
             if (distancia > VillageStorage.ALCANCE_ALMACEN) {
                 VillageManager.caminarHacia(villager, destino, 0.6F);
+                VillageManager.ponerActividad(villager, volviendoALaPlaza ? "Volviendo a la plaza"
+                        : "Yendo al almacen");
                 if (distancia < mejorDistancia - 0.5D) {
                     mejorDistancia = distancia;
                     stuckTicks = 0;
-                } else {
-                    stuckTicks++;
+                } else if (++stuckTicks >= STUCK_LIMIT) {
+                    // NO LLEGA AL ALMACÉN: se apunta el sitio (I33) y se VUELVE A LA PLAZA. Medido con el arnés: desde
+                    // el desván de la taberna el aldeano calcula ruta a la plaza (17 nodos) y al hueco del desván (14),
+                    // pero al almacén le sale una ruta DEGENERADA de 1 nodo, o sea INALCANZABLE: con las manos llenas
+                    // (lleva 8 cosas) se quedaba clavado arriba alternando "yendo al almacén" y descansar para siempre
+                    // —el jugador lo vio "de charla en el 3er piso sin hacer nada"—. A la plaza sí llega, y desde la
+                    // plaza el almacén sí se alcanza, así que al siguiente intento (pasados los 5 min del aparcado)
+                    // entrega lo que lleva.
+                    VillageManager.marcarPuntoFallido(villager, destino);
+                    destino = new BlockPos(center.getX(),
+                            VillageGenerator.cotaDeLaPlaza(level, center), center.getZ());
+                    volviendoALaPlaza = true;
+                    mejorDistancia = Double.MAX_VALUE;
+                    stuckTicks = 0;
                 }
                 return;
             }
             VillageManager.parar(villager);
-            VillageManager.ponerActividad(villager, "Guardando en el almacen");
-            descargar(level);
             destino = null;
             restTicks = REST_TICKS;
+            if (volviendoALaPlaza) {
+                volviendoALaPlaza = false; // a la plaza solo se va a eso: a estar donde tiene que estar
+                return;                    // (no lleva nada que descargar)
+            }
+            VillageManager.ponerActividad(villager, "Guardando en el almacen");
+            descargar(level);
         }
     }
 
@@ -218,6 +269,7 @@ public class VillagerCollectGoal extends Goal {
     public void stop() {
         objetivo = null;
         destino = null;
+        volviendoALaPlaza = false;
         restTicks = REST_TICKS;
         VillageManager.parar(villager);
     }

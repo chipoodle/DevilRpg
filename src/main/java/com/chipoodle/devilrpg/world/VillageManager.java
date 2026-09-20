@@ -628,9 +628,17 @@ public final class VillageManager {
      *       compostero viejo se le <b>suelta el puesto</b> ({@code liberarPuesto}, I23) para que el latido le dé el
      *       nuevo: así vuelve a compostar (su búsqueda miraba la columna de la <b>valla</b> y no lo veía nunca, por eso
      *       no había harina de huesos ni abono).</li>
+     *   <li>66: el <b>TOLDO DEL PORCHE, CON BLOQUE NORMAL EN LA CELDA DEL MURO</b> (lo corrigió el jugador al verlo:
+     *       <i>"el techito que pusiste quedó bastante extraño; se necesita poner un bloque normal y luego ahora sí el
+     *       bloque de escalera bien alineado para que quede bien"</i>). La 63 había cerrado el hueco entre el toldo y
+     *       la pared añadiendo la fila de {@code bx-1} con un <b>escalón</b> más: dos escalones seguidos a la misma
+     *       altura se ven como un <b>doble peldaño</b> raro contra el muro. Ahora esa celda es un <b>tablón sólido</b> y
+     *       el escalón de {@code bx-2} apoya su cara alta contra él (el alero sube hacia la casa y baja hacia fuera).
+     *       Solo cambia el escalón del toldo si sigue siéndolo (lo que ponga el jugador se queda), es idempotente y va
+     *       en el mismo reparador del porche ({@code arreglarPorcheDeLaTaberna}).</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 65;
+    public static final int CURRENT_LAYOUT = 66;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),

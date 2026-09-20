@@ -2423,6 +2423,40 @@ justo el del borde.
 | Etiquetas | `Trabajando` (genérica, fuera) | `Cosechando` (135 lecturas), `Guardando lo suyo`, `Guardo 8 en la despensa` |
 | Subidas a la valla | 0 | 0 |
 
+### 3b.55 El RECOLECTOR, de charla en el desván: el almacén no se alcanza desde ahí
+
+Lo preguntó el jugador, con captura de la etiqueta: *"¿por qué el recolector está de charla en el 3er piso sin hacer
+nada?"* (Fabricio, `Recolector`, en el desván de la taberna). No era que no tuviera faena: el arnés lo dejó claro.
+
+- Tenía su goal **activo** (`VillagerCollectGoal`) y estaba **con las manos llenas** (8 cosas) intentando **ir al
+  almacén** (`destino=1461,121,1434`, etiqueta *"Yendo al almacen"*), pero **no se movía** de `(1455,131,1434)`.
+- La sonda de rutas lo explica: desde el desván el aldeano calcula ruta a la **plaza** (17 nodos) y al **hueco del
+  desván** (14), pero al **almacén** le sale una ruta **degenerada de 1 nodo**: **inalcanzable** desde ahí. Se quedaba
+  clavado arriba, el goal se rendía a los 6 s, aparcaba el almacén (I33), descansaba… y en bucle.
+- Y de dónde venía: había subido al desván a por **tres camas tiradas** en el suelo (las camas están en la lista blanca
+  del recolector: son del pueblo). Medido: 3 `Red Bed` en `(1441,131,1432)`, `(1443,131,1434)` y `(1444,131,1432)`.
+
+**Arreglo** (`VillagerCollectGoal`): dos salidas para que **no se quede dentro de una casa** —
+
+1. **Si no hay nada que recoger** y está **fuera de su sitio** (a más de `RADIO_VUELTA` = 24 del centro, o a más de 4
+   bloques de la cota, o sea metido en un piso), se **vuelve a la plaza** (*"Volviendo a la plaza"*).
+2. **Si no alcanza el almacén** (6 s sin acercarse), se **apunta el sitio** (I33) y **se vuelve a la plaza**: desde
+   ahí el almacén **sí** se alcanza, así que al siguiente intento (pasados los 5 min del aparcado) entrega lo que lleva.
+
+Así el recolector está donde se le ve trabajar (la plaza y el pueblo) y no de charla en el desván de nadie.
+
+### 3b.56 El techito, con BLOQUE NORMAL en la celda del muro (migración 66)
+
+El jugador lo corrigió al verlo: *"el techito que pusiste quedó bastante extraño; se necesita poner un bloque normal y
+luego ahora sí el bloque de escalera bien alineado para que quede bien"*. La **63** había cerrado el hueco entre el
+toldo y la pared añadiendo la fila de `bx-1` con **otro escalón**: dos escalones seguidos a la misma altura se ven como
+un **doble peldaño** raro contra el muro.
+
+Ahora el perfil del alero es: **tablón sólido** en `bx-1` (pegado al muro), **escalón** en `bx-2` apoyando su cara alta
+contra él y **escalón** un bloque más bajo en `bx-3` (sobre los postes) — sube hacia la casa y baja hacia fuera. La
+**migración 66** cambia ese escalón por el tablón en las tabernas ya construidas (solo si sigue siendo el escalón del
+toldo, con su `facing` y su `half`: lo que ponga el jugador se queda), y es idempotente.
+
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.
