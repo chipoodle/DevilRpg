@@ -2477,6 +2477,60 @@ contra él y **escalón** un bloque más bajo en `bx-3` (sobre los postes) — s
 **migración 66** cambia ese escalón por el tablón en las tabernas ya construidas (solo si sigue siendo el escalón del
 toldo, con su `facing` y su `half`: lo que ponga el jugador se queda), y es idempotente.
 
+### 3b.57 El FUEGO se paga con LEÑA del almacén (y la aldea arranca con 128 troncos)
+
+El jugador lo recordó: *"el smoker, el furnance y todos los aparatos donde se tenga que quemar necesitan ir por logs al
+almacén para que se use de combustible y funcionen. ¿Ya se hace esto?"*. Y después: *"considera entonces que
+inicialmente tenga la aldea suficiente madera en el almacén, unos 128 logs"*.
+
+**Lo que había** (auditoría, `tools/arnes/medidas-combustible.txt`): quemaba **un solo** aparato, el **soporte de
+pociones** del clérigo (gastaba `blaze_powder` del almacén, y sigue igual). El **ahumador** del cocinero
+transformaba el crudo en cocido **sin combustible** —su propia clase lo decía: *"no hay tiempo de cocción ni
+carbón"*—, los **cuatro hornos** del pueblo (cocina de la taberna, desván de la posada y los dos de la herrería) son
+**decorativos** y no son estación de nadie (I31), el **hogar** es un campfire de vanilla y el **herrero** fundía en su
+mesa por transformación. Barrido de la partida: 1 ahumador, 4 hornos, 1 hogar, 1 soporte; y en el almacén **157
+troncos de acacia, 16 tablones y 0 carbón**.
+
+**El arreglo**, tres piezas:
+
+1. **El ahumador se paga con leña** (`VillagerCookGoal`): si no lleva troncos, el cocinero **va al almacén**
+   (`VillageStorage.puntoDeApoyo`, etiqueta *"A por lena al almacen"*), coge hasta **4** y vuelve a la cocina; cada
+   tanda de hasta 8 piezas quema **1**. Si se le acaba, vuelve a por más.
+2. **La fragua también** (`VillagerSmithGoal`): las **fundiciones** (pepitas → lingote, chatarra → lingote, chatarra
+   de oro → lingote) llevan un `quema = true` en su `Receta`; el herrero se lleva **1 tronco** en la fase `RECOGER`
+   (la que ya hacía al almacén) y lo gasta al fundir. Las faenas de mesa y muelle (aserrar, palos, forjar, encorar,
+   flechar, curtir) **no** queman.
+3. **Nada de grifos ni de ahumadores fantasma: la RESERVA de 32 troncos** (`VillageStorage.RESERVA_LENA`). La madera
+   es **también** la materia prima del herrero, así que `quitarLena` solo entrega el **excedente** por encima de la
+   reserva; con el almacén en la reserva el ahumador se **apaga** (etiqueta *"Sin lena para el ahumador"* + una línea
+   de log) y el herrero **no elige** recetas que quemen (se pone a aserrar). Y la **remesa inicial de madera**:
+   **128 troncos de roble** al almacén **vacío** (aldea recién fundada), con la misma regla que la remesa de la
+   despensa, llamada en el latido **justo después** de `asegurarAlmacen` (en la misma pasada en que nace el cofre).
+   Sin migración: el bloque corre en aldeas nuevas y viejas (I6), y una aldea en marcha no recibe nada.
+
+**Medido** con el arnés sobre su partida (log literal, tres corridas):
+
+```
+[Village] El cocinero: cogio 4 tronco(s) del almacen para el ahumador (aldea 2; quedan 192 en el almacen)
+[Village] El cocinero: 8 pieza(s) cocinadas con un tronco del almacen (aldea 2)              (x8 tandas)
+[Village] El herrero de herramientas: Fundio 9 pepitas en un lingote (quemo un tronco del almacen)
+--- con el almacén en la reserva (34 troncos) ---
+[Village] El cocinero: cogio 2 tronco(s) del almacen para el ahumador (aldea 2; quedan 32 en el almacen)
+[Village] El cocinero no cocina: el almacen no tiene lena por encima de la reserva de 32 (aldea 2), asi que el
+          ahumador se queda apagado
+[Arnes] COMBUSTIBLE: lenaEnAlmacen=32 (reserva=32) carneCrudaEnDespensa=26     (clavado en 32)
+[Village] El herrero de herramientas: Aserro un tronco en 4 tablones             (sin leña NO funde)
+--- con el almacén VACÍO (aldea recién fundada) ---
+[Village] almacen: remesa inicial de madera (128 troncos de roble para el fuego del cocinero, la fragua del
+          herrero y su sierra)
+[Arnes] COMBUSTIBLE: lenaEnAlmacen=0 ... -> 128 -> 124 (los 4 que se llevó el cocinero) y ya no sube
+```
+
+**Reglas nuevas**: **I41** (el fuego se paga con leña del almacén y nunca toca la reserva) e **I42** (la aldea arranca
+con 128 troncos, una sola vez). Y una consecuencia que conviene tener presente: la **cadena de la madera** del pueblo
+es ahora la que sostiene la cocina —el **leñador** (FLETCHER) sube los troncos, el **herrero de herramientas**
+(TOOLSMITH) los asierra—, y el **recolector** (NITWIT) sigue sin tocar la madera: son **tres aldeanos distintos**.
+
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.

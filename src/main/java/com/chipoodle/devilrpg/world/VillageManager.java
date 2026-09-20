@@ -1896,6 +1896,12 @@ public final class VillageManager {
         // ALMACÉN del pueblo: cobertizo con cofre doble (que crece) donde el constructor recolector va dejando lo que
         // recoge. Es una construcción aparte, al lado de la plaza.
         VillageGenerator.asegurarAlmacen(level, center);
+        // Y SU REMESA INICIAL DE MADERA (128 troncos, lo pidió el jugador): el fuego del pueblo —el ahumador del
+        // cocinero y la fragua del herrero— y la sierra del herrero se pagan con troncos del almacén, y una aldea
+        // recién fundada no tiene ni uno hasta que el leñador tale los primeros árboles. Va AQUÍ, en la misma pasada
+        // en que `asegurarAlmacen` coloca el primer cofre (el almacén todavía está vacío), y solo se le pone al
+        // almacén vacío: a una aldea en marcha no se le añade nada (misma regla que la remesa de la despensa).
+        VillageStorage.remesaInicialDeMadera(level, center);
         // GRANJA ANEXA de animales (etapa D): igual (idempotente). Si el jugador se llevó la valla, se vuelve a
         // levantar; si está, no se toca (reconstruirla borraría su cobertizo y lo que tenga dentro).
         VillageGenerator.asegurarGranjaAnexa(level, center);
@@ -1990,6 +1996,9 @@ public final class VillageManager {
         // dueño), así que vanilla no les registraba la actividad de trabajar y se quedaban en IDLE: es el fallo de
         // "el aldeano que da vueltas sobre su eje" y el rol huérfano que quedaba en el reparto.
         reclamarEstacionesDelPueblo(level, aldeanos, center, objectiveIndex);
+        // Y CADA ALDEANO, CON SU CAMA (lo vio el jugador: dos granjeros con la etiqueta "Sin cama" y de pie en la
+        // huerta toda la noche, con la aldea llena de camas libres).
+        reclamarCamasDelPueblo(level, aldeanos, center);
         // Y EL QUE SE QUEDA DENTRO DE UNA CASA: si lleva 30 s sin moverse de celda en un piso (o un sótano), se le baja
         // a la plaza (ver `rescatarAldeanosAtrapados`).
         rescatarAldeanosAtrapados(level, aldeanos, center);
@@ -2690,6 +2699,71 @@ public final class VillageManager {
             villager.getBrain().eraseMemory(MemoryModuleType.POTENTIAL_JOB_SITE);
             DevilRpg.LOGGER.info("[Village] Aldea {}: {} reclama su estacion de {} en {}", objectiveIndex,
                     villager.getUUID(), profesion, elegido.toShortString());
+        }
+    }
+
+    // --- LAS CAMAS DEL PUEBLO: cada aldeano con la suya (como las estaciones de trabajo) ---------------------
+
+    /**
+     * <b>Cada aldeano, con SU CAMA</b>: al que no tiene {@code HOME} se le reclama una cama del pueblo (la más cercana
+     * a la plaza que esté libre, y si no hay ninguna libre, una con el <b>ticket perdido</b>: cogido y sin dueño).
+     * <p>
+     * Hace falta porque la aldea <b>no administraba las camas</b> y el juego solo se las da a quien pilla un rato
+     * ocioso en la franja en que vanilla las reclama: el jugador lo vio con dos granjeros (etiqueta <b>"Sin cama"</b>
+     * encima, de pie en la huerta toda la noche) y lo medimos en su guardado: <b>29 camas</b> (19 libres y 10 con
+     * ticket) para <b>12 aldeanos</b>, y <b>3 sin cama reclamada</b>. Sin cama, en la franja de descanso el aldeano no
+     * tiene a dónde ir: se queda <b>plantado donde le pilló la noche</b> (y el mod le pone "Sin cama", que es lo que
+     * avisa de que falta algo).
+     * <p>
+     * Es el mismo mecanismo que {@link #reclamarEstacionesDelPueblo} para los puestos (I23): se respeta la cama que
+     * <b>otro aldeano tenga en la memoria</b>, y si el POI está cogido sin dueño se <b>suelta y se vuelve a coger</b>
+     * (una cama con el ticket perdido no la puede reclamar nadie nunca).
+     */
+    private static void reclamarCamasDelPueblo(ServerLevel level, List<Villager> aldeanos, BlockPos center) {
+        PoiManager poi = level.getPoiManager();
+        java.util.function.Predicate<net.minecraft.core.Holder<
+                net.minecraft.world.entity.ai.village.poi.PoiType>> esCama = h -> h.is(PoiTypes.HOME);
+        for (Villager villager : aldeanos) {
+            if (villager.isBaby() || villager.getBrain().hasMemoryValue(MemoryModuleType.HOME)) {
+                continue; // ya tiene cama (o es una cría, que duerme con el pueblo)
+            }
+            BlockPos cama = poi.findClosest(esCama, center, VillageGenerator.FENCE_RADIUS,
+                    PoiManager.Occupancy.HAS_SPACE).orElse(null);
+            boolean libre = cama != null;
+            if (cama == null) {
+                cama = poi.findClosest(esCama, center, VillageGenerator.FENCE_RADIUS,
+                        PoiManager.Occupancy.IS_OCCUPIED).orElse(null);
+            }
+            if (cama == null) {
+                continue; // el pueblo no tiene camas (todavía): no hay nada que reclamar
+            }
+            boolean deOtro = false;
+            for (Villager otro : aldeanos) {
+                if (otro == villager) {
+                    continue;
+                }
+                var suya = otro.getBrain().getMemory(MemoryModuleType.HOME);
+                if (suya.isPresent() && suya.get().pos().equals(cama)) {
+                    deOtro = true;
+                    break;
+                }
+            }
+            if (deOtro) {
+                continue; // es de otro aldeano que está aquí: no se le quita
+            }
+            if (!libre) {
+                poi.release(cama); // ticket perdido: se suelta y se vuelve a coger (I23)
+            }
+            final BlockPos elegida = cama;
+            java.util.function.BiPredicate<net.minecraft.core.Holder<
+                    net.minecraft.world.entity.ai.village.poi.PoiType>, BlockPos> cual =
+                    (tipo, pos) -> pos.equals(elegida);
+            if (poi.take(esCama, cual, elegida, 1).isEmpty()) {
+                continue; // no se ha podido (el chunk no está cargado...): se reintenta en el latido siguiente
+            }
+            villager.getBrain().setMemory(MemoryModuleType.HOME, GlobalPos.of(level.dimension(), elegida));
+            DevilRpg.LOGGER.info("[Village] {} no tenia cama: reclama la de {} (aldea en {})",
+                    villager.getUUID(), elegida.toShortString(), center.toShortString());
         }
     }
 

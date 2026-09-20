@@ -6,6 +6,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.state.BlockState;
@@ -133,6 +134,86 @@ public final class VillageStorage {
 
     /** Distancia a la que un aldeano ya alcanza el almacén para descargar. */
     public static final double ALCANCE_ALMACEN = 5.0D;
+
+    /**
+     * <b>Reserva de LEÑA del almacén</b>: el fuego del pueblo —el <b>ahumador</b> del cocinero y la
+     * <b>fundición</b> del herrero— <b>nunca</b> baja de aquí.
+     * <p>
+     * Hace falta porque la madera es <b>dos cosas a la vez</b> en esta aldea: la <b>materia prima</b> del herrero
+     * (1 tronco → 4 tablones, y de ahí el escudo de la milicia, el arco y las flechas) y el <b>combustible</b> de
+     * todo lo que quema. Sin reserva, el fuego se come la madera que el leñador trajo y el pueblo se queda sin
+     * escudos, arcos ni flechas; medido en el guardado del jugador (aldea 2), el almacén tenía <b>157 troncos de
+     * acacia</b>, así que con 32 de reserva sobra margen y el fuego solo gasta el excedente.
+     */
+    public static final int RESERVA_LENA = 32;
+
+    /** ¿Ese objeto es <b>LEÑA</b>? Cualquier tronco vale de combustible (es lo que el leñador sube al almacén). */
+    public static boolean esLena(ItemStack s) {
+        return !s.isEmpty() && s.is(net.minecraft.tags.ItemTags.LOGS);
+    }
+
+    /** Cuánta leña hay en el almacén (reserva incluida). */
+    public static int cuentaLena(ServerLevel level, BlockPos villageCenter) {
+        return cuenta(level, villageCenter, VillageStorage::esLena);
+    }
+
+    /** ¿Queda leña <b>por encima de la reserva</b> para quemar? (si no, el fuego no se enciende). */
+    public static boolean hayLenaParaQuemar(ServerLevel level, BlockPos villageCenter) {
+        return cuentaLena(level, villageCenter) > RESERVA_LENA;
+    }
+
+    /**
+     * Saca del almacén leña <b>para quemarla</b>, respetando la {@link #RESERVA_LENA reserva}: devuelve {@code null}
+     * si no hay excedente (y entonces el aparato no funciona: es lo que pidió el jugador —*"los aparatos donde se
+     * tenga que quemar necesitan ir por logs al almacén para que se use de combustible y funcionen"*—).
+     */
+    @Nullable
+    public static ItemStack quitarLena(ServerLevel level, BlockPos villageCenter, int cuantas) {
+        int excedente = cuentaLena(level, villageCenter) - RESERVA_LENA;
+        if (excedente <= 0) {
+            return null;
+        }
+        return quitar(level, villageCenter, VillageStorage::esLena, Math.min(Math.max(1, cuantas), excedente));
+    }
+
+    /**
+     * Troncos con los que <b>arranca</b> el almacén de una aldea (la <b>remesa inicial de madera</b>): dos pilas
+     * completas. Lo pidió el jugador: *"considera entonces que inicialmente tenga la aldea suficiente madera en el
+     * almacén, unos 128 logs"*.
+     */
+    public static final int REMESA_INICIAL_TRONCOS = 128;
+
+    /**
+     * <b>Remesa inicial de madera</b>: deja {@link #REMESA_INICIAL_TRONCOS} troncos en el almacén de una aldea que
+     * acaba de nacer.
+     * <p>
+     * Hace falta porque la madera es <b>tres cosas</b> en este pueblo y ninguna se puede improvisar: el
+     * <b>combustible</b> del ahumador del cocinero y de la fragua del herrero, la <b>materia prima</b> de la sierra
+     * (tablones y palos → escudos, arcos y flechas) y la <b>obra</b> del propio pueblo. Una aldea recién fundada no
+     * tiene ni un tronco hasta que el <b>leñador</b> tale los primeros árboles y los baje, así que el ahumador y la
+     * fragua nacerían apagados (y con la {@link #RESERVA_LENA reserva de 32} no habría nada que quemar sin comerse
+     * la madera del herrero).
+     * <p>
+     * <b>Solo se le pone al almacén VACÍO</b>, con la misma regla que la remesa de la despensa
+     * ({@link VillagePantry#remesaInicial}): así una aldea ya en marcha —con lo que ha juntado el recolector— no
+     * recibe nada, y esto no es un grifo de troncos. Se llama desde el bloque de "asegurar" del latido, justo
+     * después de {@link VillageGenerator#asegurarAlmacen} (que es quien coloca el primer cofre doble), así que en la
+     * misma pasada en que el almacén nace ya tiene su madera dentro.
+     */
+    public static void remesaInicialDeMadera(ServerLevel level, BlockPos villageCenter) {
+        Container caja = almacen(level, villageCenter);
+        if (caja == null || VillagePantry.contar(caja, s -> true) > 0) {
+            return; // sin almacén, o con cosas dentro (aldea en marcha): no se toca
+        }
+        for (int pila = 0; pila < REMESA_INICIAL_TRONCOS / 64; pila++) {
+            ItemStack resto = VillagePantry.guardar(caja, new ItemStack(Items.OAK_LOG, 64));
+            if (!resto.isEmpty()) {
+                break; // no cupo (raro: el almacén está recién hecho): se deja lo que entró
+            }
+        }
+        DevilRpg.LOGGER.info("[Village] almacen: remesa inicial de madera ({} troncos de roble para el fuego del"
+                + " cocinero, la fragua del herrero y su sierra)", cuentaLena(level, villageCenter));
+    }
 
     /**
      * Posición REAL de uno de los cofres del almacén: X/Z del hueco y <b>Y = cota del pueblo + 1</b> (encima del

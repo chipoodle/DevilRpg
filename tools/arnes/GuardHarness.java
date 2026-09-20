@@ -63,34 +63,23 @@ public class GuardHarness {
         // a llenarlas: ver SEMBRAR_AGUA_EMBOTELLADA); y el botin que ya barre el recolector (pepitas de oro,
         // zanahorias, ojos de arana) para la zanahoria dorada.
         if (ticks == 600) {
-            com.chipoodle.devilrpg.world.VillageStorage.guardar(level, CENTRO,
-                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.NETHER_WART, 4));
-            com.chipoodle.devilrpg.world.VillageStorage.guardar(level, CENTRO,
-                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_POWDER, 4));
-            if (SEMBRAR_AGUA_EMBOTELLADA) {
-                var agua = net.minecraft.world.item.alchemy.PotionContents.createItemStack(
-                        net.minecraft.world.item.Items.POTION, net.minecraft.world.item.alchemy.Potions.WATER);
-                agua.setCount(3);
-                com.chipoodle.devilrpg.world.VillageStorage.guardar(level, CENTRO, agua);
+            // --- TERCERA MEDIDA: LA REMESA INICIAL DE MADERA ---------------------------------------------------
+            // Se VACIA el almacen entero (como el de una aldea recien fundada, que nace sin nada dentro): en la
+            // siguiente pasada del latido el pueblo tiene que meter su remesa inicial de 128 troncos, UNA vez.
+            var caja = com.chipoodle.devilrpg.world.VillageStorage.almacen(level, CENTRO);
+            int sacados = 0;
+            if (caja != null) {
+                for (int i = 0; i < caja.getContainerSize(); i++) {
+                    if (!caja.getItem(i).isEmpty()) {
+                        sacados++;
+                    }
+                    caja.setItem(i, net.minecraft.world.item.ItemStack.EMPTY);
+                }
+                caja.setChanged();
             }
-            com.chipoodle.devilrpg.world.VillageStorage.guardar(level, CENTRO,
-                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.GOLD_NUGGET, 16));
-            com.chipoodle.devilrpg.world.VillageStorage.guardar(level, CENTRO,
-                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.CARROT, 2));
-            com.chipoodle.devilrpg.world.VillageStorage.guardar(level, CENTRO,
-                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.GLASS_BOTTLE, 3));
-            com.chipoodle.devilrpg.world.VillageStorage.guardar(level, CENTRO,
-                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.SPIDER_EYE, 2));
-            // Se CONFIRMA lo que hay de verdad en el cofre (si el chunk no estaba listo, `guardar` no pone nada).
-            DevilRpg.LOGGER.info("[Arnes] almacen sembrado (agua embotellada={}): verruga={} blaze={} agua={} cristal={}"
-                            + " pepitas={} zanahorias={} ojos={}", SEMBRAR_AGUA_EMBOTELLADA,
-                    cuenta(level, net.minecraft.world.item.Items.NETHER_WART),
-                    cuenta(level, net.minecraft.world.item.Items.BLAZE_POWDER),
-                    cuenta(level, net.minecraft.world.item.Items.POTION),
-                    cuenta(level, net.minecraft.world.item.Items.GLASS_BOTTLE),
-                    cuenta(level, net.minecraft.world.item.Items.GOLD_NUGGET),
-                    cuenta(level, net.minecraft.world.item.Items.CARROT),
-                    cuenta(level, net.minecraft.world.item.Items.SPIDER_EYE));
+            DevilRpg.LOGGER.info("[Arnes] REMESA: almacen vaciado ({} pila(s) fuera, {} troncos antes): en la"
+                    + " siguiente pasada del latido tiene que entrar la remesa inicial",
+                    sacados, com.chipoodle.devilrpg.world.VillageStorage.cuentaLena(level, CENTRO));
         }
         // Los bichos que YA venian en el guardado dentro del recinto BLOQUEAN el latido del pueblo
         // (`hayEnemigosDentro`): sin esto el reparto de oficios y la guardia ni se tocan. Se barren cada segundo.
@@ -109,9 +98,13 @@ public class GuardHarness {
         }
         if (ticks == 400 || ticks == 1400) {
             volcarObjetos(level);
+            volcarCamas(level);
         }
         if (ticks % 20 == 0) {
             volcar(level);
+        }
+        if (ticks % 40 == 0) {
+            volcarCombustible(level);
         }
         // EL PORCHE DE LA TABERNA (migracion 63): se mide la columna `bx-1`, la que queda ENTRE el toldo (bx-2) y la
         // pared de la taberna (bx). A los 10 s el latido ya migro la aldea, asi que esto es "despues".
@@ -129,9 +122,11 @@ public class GuardHarness {
             }
         }
         level.getGameRules().getRule(GameRules.RULE_DAYLIGHT).set(false, server);
+        // DIA FIJO (6000 = mediodia): es cuando el pueblo trabaja (la cocina y la fragua son faenas de dia). La
+        // medida de las CAMAS (noche, "Sin cama") ya se hizo: ver `medidas-camas.txt`.
+        level.setDayTime(6000L);
         // Sin bichos: la ronda se mide sola (el combate va antes que la ronda y los guardias se morian peleando).
         level.getGameRules().getRule(GameRules.RULE_DOMOBSPAWNING).set(false, server);
-        level.setDayTime(6000L);
         for (net.minecraft.world.entity.Mob m : level.getEntitiesOfClass(net.minecraft.world.entity.Mob.class,
                 new AABB(CENTRO).inflate(160))) {
             if (m instanceof net.minecraft.world.entity.monster.Monster) {
@@ -232,6 +227,49 @@ public class GuardHarness {
                 etiqueta, pegadas, base, nivel);
     }
 
+    /**
+     * EL COMBUSTIBLE (lo que se mide en esta ronda): cuanta <b>lena</b> queda en el almacen (y si se queda clavada en
+     * la reserva), cuanta <b>carne cruda</b> queda en la despensa, y que hacen el <b>cocinero</b> (ahumador) y los
+     * <b>herreros</b> (fundicion): su posicion, cuanta lena llevan encima, su destino y su etiqueta.
+     */
+    private static void volcarCombustible(ServerLevel level) {
+        int lena = com.chipoodle.devilrpg.world.VillageStorage.cuentaLena(level, CENTRO);
+        var despensa = com.chipoodle.devilrpg.world.VillagePantry.despensa(level, CENTRO);
+        int crudo = com.chipoodle.devilrpg.world.VillagePantry.contar(despensa,
+                com.chipoodle.devilrpg.world.VillagePantry::sePuedeCocinar);
+        StringBuilder linea = new StringBuilder();
+        for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(64))) {
+            if (v.isBaby()) {
+                continue;
+            }
+            var prof = v.getVillagerData().getProfession();
+            boolean cocinero = prof == net.minecraft.world.entity.npc.VillagerProfession.BUTCHER;
+            boolean herrero = prof == net.minecraft.world.entity.npc.VillagerProfession.WEAPONSMITH
+                    || prof == net.minecraft.world.entity.npc.VillagerProfession.TOOLSMITH;
+            if (!cocinero && !herrero) {
+                continue;
+            }
+            int encima = 0;
+            for (int i = 0; i < v.getInventory().getContainerSize(); i++) {
+                var s = v.getInventory().getItem(i);
+                if (com.chipoodle.devilrpg.world.VillageStorage.esLena(s)) {
+                    encima += s.getCount();
+                }
+            }
+            var wt = v.getBrain().getMemory(MemoryModuleType.WALK_TARGET).orElse(null);
+            linea.append("\n    ").append(cocinero ? "COCINERO" : "HERRERO").append(' ')
+                    .append(v.getUUID().toString().substring(0, 8))
+                    .append(" pos=").append(v.blockPosition().toShortString())
+                    .append(" lenaEncima=").append(encima)
+                    .append(" destino=").append(wt == null ? "SIN DESTINO"
+                            : wt.getTarget().currentBlockPosition().toShortString())
+                    .append(" etiqueta=").append(v.getCustomName() == null ? "-"
+                            : v.getCustomName().getString().replace("\n", " | "));
+        }
+        DevilRpg.LOGGER.info("[Arnes] t={} COMBUSTIBLE: lenaEnAlmacen={} (reserva={}) carneCrudaEnDespensa={}{}",
+                level.getGameTime(), lena, com.chipoodle.devilrpg.world.VillageStorage.RESERVA_LENA, crudo, linea);
+    }
+
     /** ¿Encuentra el aldeano camino hasta esa celda? ("SI"/"NO"/"?"): es `PathNavigation.createPath`. */
     private static String ruta(ServerLevel level, Villager v, BlockPos destino) {
         try {
@@ -242,6 +280,35 @@ public class GuardHarness {
             return camino.getNodeCount() > 0 ? "SI(" + camino.getNodeCount() + ")" : "NO(vacio)";
         } catch (RuntimeException e) {
             return "ERROR:" + e.getClass().getSimpleName();
+        }
+    }
+
+    /**
+     * LAS CAMAS: aldeano por aldeano, si tiene cama en la memoria del cerebro, si esta durmiendo y que actividad tiene
+     * activa (REST/WORK/MEET), con la hora del mundo. Es lo que mide "por que dice Sin cama si sobran camas".
+     */
+    private static void volcarCamas(ServerLevel level) {
+        DevilRpg.LOGGER.info("[Arnes] CAMAS: dayTime={} (franja {})", level.getDayTime() % 24000,
+                level.getDayTime() % 24000 >= 12000 ? "DESCANSO" : "dia");
+        for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(64))) {
+            if (v.isBaby()) {
+                continue;
+            }
+            var home = v.getBrain().getMemory(MemoryModuleType.HOME);
+            String cama = home.map(g -> g.pos().toShortString()).orElse("NINGUNA");
+            String existe = "";
+            if (home.isPresent()) {
+                BlockPos p = home.get().pos();
+                boolean poi = level.getPoiManager().getType(p).isPresent();
+                String bloque = level.getBlockState(p).getBlock().toString()
+                        .replace("Block{minecraft:", "").replace("}", "");
+                existe = " poi=" + (poi ? "SI" : "NO") + " bloque=" + bloque;
+            }
+            DevilRpg.LOGGER.info("[Arnes] CAMA {} prof={} home={}{} durmiendo={} REST={} WORK={} MEET={} pos={}",
+                    v.getUUID().toString().substring(0, 8), str(v.getVillagerData().getProfession()),
+                    cama, existe, v.isSleeping(),
+                    v.getBrain().isActive(Activity.REST), v.getBrain().isActive(Activity.WORK),
+                    v.getBrain().isActive(Activity.MEET), v.blockPosition().toShortString());
         }
     }
 

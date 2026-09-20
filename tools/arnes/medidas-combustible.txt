@@ -1,0 +1,93 @@
+MEDIDAS DEL COMBUSTIBLE DE LA ALDEA (el ahumador, la fragua y la leña del almacén)
+==================================================================================
+Lo preguntó el jugador: "recuerda que el smoker, el furnance y todos los aparatos donde se tenga que quemar necesitan
+ir por logs al almacén para que se use de combustible y funcionen. ¿ya se hace esto?" — y después: "considera entonces
+que inicialmente tenga la aldea suficiente madera en el almacén, unos 128 logs".
+Partida: run/saves/New World (1) copiada a run/world (aldea 2, centro 1414,1414, cota 120). Líneas literales del log
+del servidor (arnés headless) y de las herramientas que solo LEEN el guardado.
+
+
+--- 1) QUÉ QUEMABA ANTES (auditoría del código) -------------------------------------------------
+  · SOPORTE DE POCIONES del clérigo  -> SÍ gastaba combustible: `VillagerClericGoal.trabajar` saca `blaze_powder`
+    del almacén (`VillageStorage.quitar`) y lo pone en la ranura 4 del `BrewingStandBlockEntity`. Es el único.
+  · AHUMADOR del cocinero            -> NO: `VillagerCookGoal` sacaba el crudo de la despensa y guardaba la versión
+    cocida. Lo decía su propia clase: "No hay tiempo de cocción ni carbón".
+  · HORNOS del pueblo                -> NO: decorativos, ningún goal los usa (el pan lo "hornea" el granjero por
+    transformación y el herrero funde en su mesa/muelle).
+  · HOGAR (campfire) de la taberna   -> NO: campfire de vanilla, encendido para siempre.
+  · El leñador (FLETCHER, oficio propio desde la etapa H) es quien SUBE los troncos al almacén; el herrero de
+    herramientas los asierra (1 tronco -> 4 tablones). El recolector (NITWIT) no toca la madera.
+
+
+--- 2) LOS APARATOS QUE QUEMAN EN SU ALDEA (barrido de bloques del guardado) --------------------
+Herramienta: build/combustible_aldea.py (lee region/*.mca y los block entities del guardado).
+
+  smoker          rel (  28,  16) y=120     <- el ahumador del cocinero (cocina de la taberna)
+  furnace         rel (  25,  15) y=120     <- el horno de la cocina (decorativo)
+  furnace         rel (  31,  17) y=131     <- el horno del desván de la posada (decorativo)
+  furnace         rel (   7, -44) y=121 y=122   <- los dos hornos de la herrería (decorativos)
+  campfire        rel ( -45,  25) y=119     <- el hogar
+  brewing_stand   rel ( -17, -43) y=121     <- el soporte del clérigo (el único que ya gastaba combustible)
+  (más 70 faroles + 30 antorchas, que solo son luz)
+
+  Y la madera que había en el almacén (cofre en rel 47,19 y=121), medida el 20-sep-2026:
+     acacia_log 157 · oak_planks 16 · acacia_sapling 19 · carbón/charcoal 0
+     -> hay de dónde sacar leña (157), y NO hay carbón en toda la aldea.
+
+
+--- 3) LA CORRIDA CON LEÑA (el fuego se paga y se ve) --------------------------------------------
+Arnés: GuardHarness, día fijo (6000), sin bichos, con el latido de verdad. Sembrado a los 30 s: 40 troncos de roble
+(con los 157 del guardado: 197), 64 carnes crudas en la despensa y 9 pepitas de hierro.
+
+[Arnes] COMBUSTIBLE sembrado: lena=196 (reserva=32) crudoEnDespensa=65 pepitas=10
+[Arnes] COMBUSTIBLE: lenaEnAlmacen=196 ... COCINERO ba55f360 ... | A por lena al almacen
+[Village] El cocinero: cogio 4 tronco(s) del almacen para el ahumador (aldea 2; quedan 192 en el almacen)
+[Arnes] COMBUSTIBLE: lenaEnAlmacen=192 ... COCINERO ba55f360 pos=1458, 120, 1428 lenaEncima=4
+        destino=1442, 120, 1429 etiqueta=Teodoro (Cocinero) | Cogi 4 tronco(s) para el ahumador
+[Village] El cocinero: 8 pieza(s) cocinadas con un tronco del almacen (aldea 2)      (x8 tandas seguidas)
+[Village] El herrero de herramientas: Fundio 9 pepitas en un lingote (quemo un tronco del almacen)
+[Arnes] COMBUSTIBLE: lenaEnAlmacen=156 ... HERRERO 9e0ed6e3 pos=1461, 120, 1431 lenaEncima=1
+        destino=SIN DESTINO etiqueta=Josefa (Herrero de herramientas) | Buscando materiales
+
+Lectura: el cocinero va al almacén (etiqueta "A por lena al almacen"), coge 4 troncos, vuelve a la cocina y cada
+tanda de 8 piezas quema 1 (8 tandas = 8 troncos); el herrero se lleva su tronco en la FASE DE RECOGER (la que ya
+hacía al almacén) y lo quema al fundir.
+
+
+--- 4) LA CORRIDA DE LA RESERVA (el fuego NO toca los últimos 32) --------------------------------
+Arnés: se vacía el almacén hasta dejar 34 troncos (2 por encima de la reserva), se le dan 32 tablones y 64 palos al
+herrero (para que no tenga que aserrar) y 40 carnes crudas al cocinero.
+
+[Arnes] RESERVA sembrada: lena=34 (reserva=32) crudoEnDespensa=41 pepitas=10
+[Village] El cocinero: cogio 2 tronco(s) del almacen para el ahumador (aldea 2; quedan 32 en el almacen)
+[Arnes] COMBUSTIBLE: lenaEnAlmacen=32 (reserva=32) carneCrudaEnDespensa=26
+        COCINERO ba55f360 pos=1437, 120, 1427 ... etiqueta=Teodoro (Cocinero) | Cocino 8 piezas
+[Village] El cocinero no cocina: el almacen no tiene lena por encima de la reserva de 32 (aldea 2), asi que el
+        ahumador se queda apagado
+[Arnes] COMBUSTIBLE: lenaEnAlmacen=32 (reserva=32) carneCrudaEnDespensa=26
+        COCINERO ba55f360 pos=1437, 120, 1435 ... etiqueta=Teodoro (Cocinero) | Sin lena para el ahumador
+[Arnes] COMBUSTIBLE: lenaEnAlmacen=32 (reserva=32) carneCrudaEnDespensa=26    (se queda clavado en 32)
+[Village] El herrero de herramientas: Aserro un tronco en 4 tablones    (sin leña NO funde: elige lo que no quema)
+
+Lectura: pidió 4 troncos y solo se llevó 2 (el excedente); con el almacén en la reserva el ahumador se APAGA (la
+carne cruda se queda en 26, no baja), el contador no baja de 32 ni una vez y el herrero, sin leña, se pone a aserrar
+en vez de fundir. La reserva protege los troncos que el herrero necesita para tablones, palos, escudos y flechas.
+
+
+--- 5) LA REMESA INICIAL DE MADERA (aldea recién fundada: 128 troncos) ---------------------------
+Arnés: se VACÍA el almacén entero (17 pilas), que es el caso de un almacén recién hecho por el pueblo. En la
+siguiente pasada del bloque de "asegurar" del latido (cada ~10 s) tiene que entrar la remesa, UNA vez.
+
+[Arnes] REMESA: almacen vaciado (17 pila(s) fuera, 0 troncos antes): en la siguiente pasada del latido tiene que
+        entrar la remesa inicial
+[Arnes] COMBUSTIBLE: lenaEnAlmacen=0 (reserva=32) carneCrudaEnDespensa=1     (x5 lecturas, 10 s)
+[Village] almacen: remesa inicial de madera (128 troncos de roble para el fuego del cocinero, la fragua del herrero
+        y su sierra)
+[Village] El cocinero: cogio 4 tronco(s) del almacen para el ahumador (aldea 2; quedan 124 en el almacen)
+[Arnes] COMBUSTIBLE: lenaEnAlmacen=124 (reserva=32) carneCrudaEnDespensa=1   (y NO vuelve a subir)
+[Village] El cocinero: 1 pieza(s) cocinadas con un tronco del almacen (aldea 2)
+
+Lectura: del almacén vacío salen los 128 troncos de la remesa; el cocinero se lleva sus 4 y con ellos enciende el
+ahumador (la única pieza cruda que había en la despensa). El contador NO salta a 256: la remesa es una vez y la
+regla que la protege es "solo si el almacén está VACÍO", la misma que la remesa de la despensa.
+

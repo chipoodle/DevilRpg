@@ -4,6 +4,7 @@ import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.world.VillageGenerator;
 import com.chipoodle.devilrpg.world.VillageManager;
 import com.chipoodle.devilrpg.world.VillagePantry;
+import com.chipoodle.devilrpg.world.VillageStorage;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
@@ -33,8 +34,15 @@ import java.util.List;
  * come cruda y vale la mitad.
  * <p>
  * Cómo cocina: igual que el granjero hornea el pan, <b>en su puesto y con los objetos de verdad</b> (saca la carne de
- * la despensa, la convierte y la vuelve a guardar), con su sonido y su humo. No hay tiempo de cocción ni carbón: la
- * aldea es de verdad en lo que se ve y en lo que cuesta (los ingredientes salen del barril), no en los temporizadores.
+ * la despensa, la convierte y la vuelve a guardar), con su sonido y su humo.
+ * <p>
+ * <b>Y EL FUEGO SE PAGA CON LEÑA DEL ALMACÉN</b> (lo pidió el jugador: *"el smoker, el furnance y todos los aparatos
+ * donde se tenga que quemar necesitan ir por logs al almacén para que se use de combustible y funcionen"*). Antes el
+ * humo salía de la nada. Ahora cada tanda de cocina <b>quema un tronco</b>: el cocinero <b>va al almacén</b> a por
+ * leña ({@link #LENA_POR_VIAJE} troncos de una vez, que cunden para varias tandas), la lleva encima y la gasta al
+ * cocinar. Y si el almacén no tiene leña <b>por encima de la {@link VillageStorage#RESERVA_LENA reserva}</b> (la
+ * madera es también la materia prima del herrero), no cocina y lo dice en su etiqueta: un aparato sin combustible no
+ * funciona, no se inventa el humo.
  */
 public class VillagerCookGoal extends Goal {
 
@@ -47,6 +55,7 @@ public class VillagerCookGoal extends Goal {
     private static final int IDLE_REST_TICKS = 200;
     /** Si no logra acercarse en este tiempo, abandona (invariante I3: atascado = no acercarse). */
     private static final int STUCK_LIMIT = 200;
+    /** Velocidad de paseo del cocinero (igual que los demás goals del pueblo). */
     private static final float VELOCIDAD = 0.6F;
     /** Alcance al <b>punto del patio</b> desde el que se trabaja (el de la despensa, delante de la escalera sur). */
     private static final double REACH = 6.5D;
@@ -57,6 +66,14 @@ public class VillagerCookGoal extends Goal {
      * se quedó corto por el camino.
      */
     private static final double ALCANCE_AHUMADOR = 8.0D;
+    /** Troncos que el cocinero se trae del almacén de una vez: cuatro tandas de cocina sin volver a cruzar el pueblo. */
+    private static final int LENA_POR_VIAJE = 4;
+    /**
+     * Paciencia yendo al almacén por leña: es el mismo caso que el agua del clérigo —el almacén está al otro lado del
+     * pueblo, a ~20-25 bloques de la taberna—, así que con los 200 ticks (10 s) del puesto se rendiría a mitad de
+     * camino y aparcaría el almacén para siempre. Veinte segundos dan de sobra y siguen cortando el bucle.
+     */
+    private static final int STUCK_LENA = 20 * 20;
 
     private final Villager villager;
     private final BlockPos center;
@@ -70,6 +87,13 @@ public class VillagerCookGoal extends Goal {
     private int restTicks;
     private int stuckTicks;
     private double mejorDistancia = Double.MAX_VALUE;
+    /** ¿La vuelta que está haciendo AHORA es la del almacén (a por leña) y no la de la cocina? */
+    private boolean yendoPorLena;
+    /** Contador y mejor distancia <b>de la pierna de la leña</b>: medidos aparte, como en el clérigo (ver {@link #STUCK_LENA}). */
+    private int stuckLena;
+    private double mejorDistanciaLena = Double.MAX_VALUE;
+    /** Ya se avisó de que no hay leña: no se repite la línea del log en cada intento. */
+    private boolean avisadoSinLena;
 
     public VillagerCookGoal(Villager villager, BlockPos center, int objectiveIndex) {
         this.villager = villager;
@@ -112,13 +136,23 @@ public class VillagerCookGoal extends Goal {
             restTicks = IDLE_REST_TICKS;
             return false;
         }
-        // Camina a la casilla de DELANTE del ahumador (la cocina de la taberna), que es donde puede estar de pie.
-        target = new BlockPos(puesto.getX(), puesto.getY(), puesto.getZ() - 1);
+        // SIN LEÑA ENCIMA, LO PRIMERO ES IR A POR ELLA al almacén: el ahumador no funciona sin combustible. Si ya
+        // lleva, se va derecho a la cocina.
+        if (!llevaLena()) {
+            if (!irPorLena(level)) {
+                restTicks = IDLE_REST_TICKS;
+                return false;
+            }
+            return true;
+        }
+        // Con leña: camina a la casilla de DELANTE del ahumador (la cocina de la taberna), donde puede estar de pie.
+        target = vistaDeLaCocina();
         if (VillageManager.esPuntoFallido(villager, target)) {
             // A esa casilla de la cocina no llegó hace poco (I33): no se queda plantado empujando, espera un rato.
             restTicks = IDLE_REST_TICKS;
             return false;
         }
+        yendoPorLena = false;
         return target != null;
     }
 
@@ -127,14 +161,17 @@ public class VillagerCookGoal extends Goal {
         workTicks = 0;
         stuckTicks = 0;
         mejorDistancia = Double.MAX_VALUE;
+        stuckLena = 0;
+        mejorDistanciaLena = Double.MAX_VALUE;
         irAlDestino();
     }
 
     @Override
     public boolean canContinueToUse() {
-        if (target != null && stuckTicks >= STUCK_LIMIT) {
+        if (target != null && !yendoPorLena && stuckTicks >= STUCK_LIMIT) {
             // RENDIRSE = DEJARLO POR UN RATO (I33): el punto de la cocina al que no llegó se apunta para no volver a
-            // él en bucle, que es lo que dejaba al cocinero empujando el mismo obstáculo para siempre.
+            // él en bucle, que es lo que dejaba al cocinero empujando el mismo obstáculo para siempre. (La pierna de
+            // la leña tiene su propio contador y su propio aparcado: ver `tickDeLaLena`.)
             VillageManager.marcarPuntoFallido(villager, target);
             return false;
         }
@@ -145,6 +182,10 @@ public class VillagerCookGoal extends Goal {
     @Override
     public void tick() {
         if (target == null || puesto == null || !(villager.level() instanceof ServerLevel level)) {
+            return;
+        }
+        if (yendoPorLena) {
+            tickDeLaLena(level);
             return;
         }
         // Camina al punto del patio (nunca HACIA el ahumador: está dentro del kiosco, sobre la plataforma, y la
@@ -172,6 +213,14 @@ public class VillagerCookGoal extends Goal {
             return;
         }
         workTicks = 0;
+        // LA TANDA SE PAGA CON UN TRONCO. Si se le acabó la leña por el camino (o se la quitó alguien), vuelve al
+        // almacén a por más en vez de cocinar de la nada.
+        if (!quemarLena()) {
+            if (!irPorLena(level)) {
+                restTicks = IDLE_REST_TICKS;
+            }
+            return;
+        }
         cocinar(level);
         target = null;
         restTicks = REST_TICKS;
@@ -181,8 +230,154 @@ public class VillagerCookGoal extends Goal {
     public void stop() {
         target = null;
         puesto = null;
+        yendoPorLena = false;
         restTicks = REST_TICKS;
         villager.getNavigation().stop();
+    }
+
+    // --- el fuego: la leña del almacén ------------------------------------------------------------------
+
+    /** La casilla de DELANTE del ahumador (la cocina de la taberna): donde el cocinero puede estar de pie. */
+    private BlockPos vistaDeLaCocina() {
+        return new BlockPos(puesto.getX(), puesto.getY(), puesto.getZ() - 1);
+    }
+
+    /**
+     * Manda al cocinero al <b>almacén</b> a por leña ({@code true} si hay a dónde ir). El punto es el de apoyo del
+     * cobertizo (una casilla libre del suelo: al cofre no se navega, es sólido), el mismo que usa el herrero.
+     * <p>
+     * Lo <b>primero</b> que se mira es si queda leña <b>por encima de la reserva</b>
+     * ({@link VillageStorage#hayLenaParaQuemar}): si no, el ahumador se queda apagado y el cocinero no cruza el
+     * pueblo para nada (medido con el arnés: con el almacén en la reserva, el viaje era un paseo en balde).
+     */
+    private boolean irPorLena(ServerLevel level) {
+        if (!VillageStorage.hayLenaParaQuemar(level, center)) {
+            if (!avisadoSinLena) {
+                avisadoSinLena = true;
+                DevilRpg.LOGGER.info("[Village] El cocinero no cocina: el almacen no tiene lena por encima de la"
+                                + " reserva de {} (aldea {}), asi que el ahumador se queda apagado",
+                        VillageStorage.RESERVA_LENA, objectiveIndex);
+            }
+            VillageManager.ponerActividad(villager, "Sin lena para el ahumador");
+            return false;
+        }
+        BlockPos almacen = VillageStorage.puntoDeApoyo(level, center);
+        if (almacen == null || VillageManager.esPuntoFallido(villager, almacen)) {
+            // Al almacén no llegó hace poco (I33: el cofre está tapado o rodeado): a esperar, no a empujar la pared.
+            restTicks = IDLE_REST_TICKS;
+            return false;
+        }
+        target = almacen;
+        yendoPorLena = true;
+        stuckLena = 0;
+        mejorDistanciaLena = Double.MAX_VALUE;
+        VillageManager.ponerActividad(villager, "A por lena al almacen");
+        return true;
+    }
+
+    /**
+     * La pierna de la leña: camina al almacén y coge {@link #LENA_POR_VIAJE} troncos del excedente
+     * ({@link VillageStorage#quitarLena}: nunca toca la reserva). Al cogerlos, la vuelta a la cocina se mide
+     * <b>de cero</b> —el mismo bug que se midió en el clérigo: con el contador compartido, la caminata de vuelta
+     * parecía "no acercarse" y el aldeano aparcaba su propio puesto a mitad de camino—.
+     */
+    private void tickDeLaLena(ServerLevel level) {
+        double distancia = Math.sqrt(villager.distanceToSqr(target.getX() + 0.5D, target.getY() + 0.5D,
+                target.getZ() + 0.5D));
+        villager.getLookControl().setLookAt(target.getX() + 0.5D, target.getY() + 0.5D, target.getZ() + 0.5D);
+        if (distancia > VillageStorage.ALCANCE_ALMACEN) {
+            VillageManager.caminarHacia(villager, target, VELOCIDAD);
+            VillageManager.ponerActividad(villager, "A por lena al almacen");
+            if (distancia < mejorDistanciaLena - 0.5D) {
+                mejorDistanciaLena = distancia;
+                stuckLena = 0;
+            } else if (++stuckLena >= STUCK_LENA) {
+                DevilRpg.LOGGER.info("[Village] El cocinero se atasca yendo por lena al almacen ({}): lo deja por un"
+                        + " rato", villager.blockPosition().toShortString());
+                VillageManager.marcarPuntoFallido(villager, target);
+                target = null;
+                puesto = null;
+                yendoPorLena = false;
+                restTicks = IDLE_REST_TICKS;
+            }
+            return;
+        }
+        VillageManager.parar(villager);
+        ItemStack lena = VillageStorage.quitarLena(level, center, LENA_POR_VIAJE);
+        if (lena == null || lena.isEmpty()) {
+            // Se la han llevado por delante (u otro aparato se comió el excedente): a esperar, sin cocinar de la nada.
+            target = null;
+            puesto = null;
+            yendoPorLena = false;
+            restTicks = IDLE_REST_TICKS;
+            return;
+        }
+        ItemStack resto = guardarEnInventario(lena);
+        if (!resto.isEmpty()) {
+            VillageStorage.guardar(level, center, resto); // no le cupo (raro): de vuelta al almacén
+        }
+        DevilRpg.LOGGER.info("[Village] El cocinero: cogio {} tronco(s) del almacen para el ahumador (aldea {};"
+                + " quedan {} en el almacen)", lena.getCount(), objectiveIndex,
+                VillageStorage.cuentaLena(level, center));
+        VillageManager.ponerSuceso(villager, "Cogi " + lena.getCount() + " tronco(s) para el ahumador");
+        avisadoSinLena = false;
+        yendoPorLena = false;
+        target = vistaDeLaCocina();
+        // La vuelta se mide de cero (el contador de la ida valía para el almacén, no para la cocina).
+        mejorDistancia = Double.MAX_VALUE;
+        stuckTicks = 0;
+        mejorDistanciaLena = Double.MAX_VALUE;
+        stuckLena = 0;
+    }
+
+    /** ¿Lleva leña encima (troncos en el zurrón)? */
+    private boolean llevaLena() {
+        var mochila = villager.getInventory();
+        for (int i = 0; i < mochila.getContainerSize(); i++) {
+            if (VillageStorage.esLena(mochila.getItem(i))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Quema <b>un tronco</b> de los que lleva encima (la tanda de cocina). {@code false} si no le queda ninguno. */
+    private boolean quemarLena() {
+        var mochila = villager.getInventory();
+        for (int i = 0; i < mochila.getContainerSize(); i++) {
+            ItemStack s = mochila.getItem(i);
+            if (!VillageStorage.esLena(s)) {
+                continue;
+            }
+            s.shrink(1);
+            if (s.isEmpty()) {
+                mochila.setItem(i, ItemStack.EMPTY);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    /** Guarda en el zurrón del cocinero (lo que no quepa se devuelve). */
+    private ItemStack guardarEnInventario(ItemStack stack) {
+        ItemStack resto = stack.copy();
+        var mochila = villager.getInventory();
+        for (int i = 0; i < mochila.getContainerSize() && !resto.isEmpty(); i++) {
+            ItemStack dentro = mochila.getItem(i);
+            if (!dentro.isEmpty() && ItemStack.isSameItemSameComponents(dentro, resto)) {
+                int espacio = dentro.getMaxStackSize() - dentro.getCount();
+                int mete = Math.min(espacio, resto.getCount());
+                dentro.grow(mete);
+                resto.shrink(mete);
+            }
+        }
+        for (int i = 0; i < mochila.getContainerSize() && !resto.isEmpty(); i++) {
+            if (mochila.getItem(i).isEmpty()) {
+                mochila.setItem(i, resto.copy());
+                resto = ItemStack.EMPTY;
+            }
+        }
+        return resto;
     }
 
     // --- la faena -----------------------------------------------------------------------------------
@@ -190,7 +385,8 @@ public class VillagerCookGoal extends Goal {
     /**
      * Cocina: saca de la despensa lo que se puede cocinar ({@link VillagePantry#sePuedeCocinar}) y devuelve el
      * equivalente cocinado ({@link VillagePantry#cocinar}). Una pieza por una: no se inventa comida, solo se
-     * <b>transforma</b> la que ya había (y por eso el contador de la aldea sube al doble con la carne).
+     * <b>transforma</b> la que ya había (y por eso el contador de la aldea sube al doble con la carne). El
+     * <b>combustible</b> lo gasta antes {@link #quemarLena()} (un tronco por tanda).
      */
     private void cocinar(ServerLevel level) {
         Container despensa = VillagePantry.despensa(level, center);
@@ -217,7 +413,8 @@ public class VillagerCookGoal extends Goal {
             level.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, puesto.getX() + 0.5D, puesto.getY() + 1.0D,
                     puesto.getZ() + 0.5D, 6, 0.15D, 0.15D, 0.15D, 0.01D);
             VillageManager.ponerSuceso(villager, "Cocino " + cocinadas + " piezas");
-            DevilRpg.LOGGER.info("[Village] El cocinero: {} pieza(s) cocinadas (aldea {})", cocinadas, objectiveIndex);
+            DevilRpg.LOGGER.info("[Village] El cocinero: {} pieza(s) cocinadas con un tronco del almacen (aldea {})",
+                    cocinadas, objectiveIndex);
         }
     }
 

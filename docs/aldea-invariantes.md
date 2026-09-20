@@ -857,6 +857,79 @@ nada sólido pegado por fuera a la capa que se pisa (ni compostero, ni cofre, ni
 tapada pero **no llega a la valla** (sus extremos son celdas de cultivo). Y el mismo patrón vale para cualquier
 cerca del pueblo que quiera ser un cierre (el corral): si al lado hay una tapa, el cierre no cierra.
 
+### I41 · El fuego se paga con LEÑA del almacén, y la RESERVA no se toca
+
+Lo pidió el jugador: *"el smoker, el furnance y todos los aparatos donde se tenga que quemar necesitan ir por logs al
+almacén para que se use de combustible y funcionen"*. Los dos aparatos que **queman** de verdad en el pueblo son el
+**ahumador** del cocinero y la **fragua** del herrero (sus fundiciones); los hornos del mundo (cocina de la taberna,
+desván de la posada y los dos de la herrería) son **decorativos** y no son estación de nadie (I31), así que no hay
+nada que alimentar en ellos, y el **hogar** es un campfire de vanilla.
+
+- **Un tronco por faena**: una tanda de cocina (hasta 8 piezas) y cada fundición (pepitas → lingote, chatarra →
+  lingote, chatarra de oro → lingote) queman **un** tronco de los que el aldeano se ha traído del almacén.
+- **La leña la trae el propio aparato**: el **cocinero** cruza el pueblo al almacén (`VillageStorage.puntoDeApoyo`) y
+  se lleva hasta **4** troncos (`LENA_POR_VIAJE`); el **herrero** ya iba al almacén en su fase `RECOGER`, así que se
+  lleva su tronco en el mismo viaje. Nada de combustible «de la nada».
+- **La reserva de 32 (`RESERVA_LENA`) es un suelo duro para el fuego**: la madera es **también** la materia prima del
+  herrero (1 tronco → 4 tablones → escudo, arco y flechas), así que `quitarLena` **solo** entrega el excedente por
+  encima de la reserva. Con el almacén en la reserva el ahumador **se apaga** y lo dice en su etiqueta
+  (*"Sin lena para el ahumador"*, con una línea de log una vez), y el herrero **no elige** las recetas que queman
+  (se pone a lo que no gasta fuego: aserrar, palos, forjar). Ni el fuego ni el herrero **bajan de 32**.
+- **La pierna de la leña tiene su propio contador de atasco** (extiende I38): son ~20-25 bloques de ida, así que con
+  los 200 ticks (10 s) del puesto se rendiría a mitad de camino (el mismo fallo que se midió en el agua del clérigo).
+  Su contador es `stuckLena` con `STUCK_LENA` = 20 s, y al volver a la cocina `mejorDistancia`/`stuckTicks` se
+  **ponen a cero**: con el contador compartido, la vuelta parece «no acercarse».
+
+**Medido** (arnés headless, partida del jugador copiada, día fijo) — las tres cosas:
+
+```
+[Village] El cocinero: cogio 4 tronco(s) del almacen para el ahumador (aldea 2; quedan 192 en el almacen)
+[Village] El cocinero: 8 pieza(s) cocinadas con un tronco del almacen (aldea 2)      (x8 tandas)
+[Village] El herrero de herramientas: Fundio 9 pepitas en un lingote (quemo un tronco del almacen)
+--- y con el almacén en la reserva (34 troncos: solo 2 que quemar) ---
+[Village] El cocinero: cogio 2 tronco(s) del almacen para el ahumador (aldea 2; quedan 32 en el almacen)
+[Village] El cocinero no cocina: el almacen no tiene lena por encima de la reserva de 32 (aldea 2), asi que el
+          ahumador se queda apagado
+[Arnes] COMBUSTIBLE: lenaEnAlmacen=32 (reserva=32) carneCrudaEnDespensa=26    (clavado en 32, 20 lecturas)
+[Village] El herrero de herramientas: Aserro un tronco en 4 tablones            (sin leña NO funde)
+```
+
+**Regla:** ningún aparato que queme funciona sin su tronco del almacén, y el fuego **nunca** toca la reserva. Todo lo
+que se mide está en `tools/arnes/medidas-combustible.txt` y el barrido de la partida (aparatos + madera) en
+`build/combustible_aldea.py`.
+
+### I42 · La aldea ARRANCA con madera en el almacén (la remesa inicial de 128 troncos)
+
+Lo pidió el jugador después de la regla del fuego: *"considera entonces que inicialmente tenga la aldea suficiente
+madera en el almacén, unos 128 logs"*. Sin ella, una aldea **recién fundada** nace con el **ahumador apagado** y la
+**fragua fría** (y sin tablones ni palos) hasta que el **leñador** tale los primeros árboles y los baje al almacén.
+
+- **128 troncos de roble** (dos pilas completas, `REMESA_INICIAL_TRONCOS`), puestos **de una vez** en el almacén.
+- **Solo al almacén VACÍO**: la misma regla que la remesa de la despensa (`VillagePantry.remesaInicial` → «si tiene
+  cosas dentro, no se le añade nada»). Así una aldea **en marcha** —donde el recolector ya ha dejado algo— no recibe
+  nada, y esto **no es un grifo de troncos** (habría que vaciar el almacén entero, y el pueblo lo mantiene con
+  material).
+- **Dónde se llama**: en el bloque de «asegurar» del **latido**, **justo después** de
+  `VillageGenerator.asegurarAlmacen` (que es quien coloca el primer cofre doble). En la **misma pasada** en que el
+  almacén nace ya tiene su madera, así que no hay ventana en la que el cocinero lo encuentre vacío. No hace falta
+  migración: el bloque corre para aldeas nuevas y viejas (I6).
+
+**Medido** (arnés: se vacía el almacén entero de la aldea 2, que es el caso de la aldea recién fundada):
+
+```
+[Arnes] REMESA: almacen vaciado (17 pila(s) fuera, 0 troncos antes): en la siguiente pasada del latido tiene que
+        entrar la remesa inicial
+[Arnes] COMBUSTIBLE: lenaEnAlmacen=0 (reserva=32) ...
+[Village] almacen: remesa inicial de madera (128 troncos de roble para el fuego del cocinero, la fragua del herrero
+          y su sierra)
+[Village] El cocinero: cogio 4 tronco(s) del almacen para el ahumador (aldea 2; quedan 124 en el almacen)
+[Arnes] COMBUSTIBLE: lenaEnAlmacen=124 ... (y no vuelve a subir: la remesa es UNA vez, no un grifo)
+```
+
+**Regla:** un almacén **vacío** es un almacén **sin madera**: se le pone la remesa inicial (128), una sola vez. Con
+la reserva de 32, esa remesa deja **96** troncos para quemar y aserrar y **32** intocables para la madera del
+herrero.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
@@ -900,6 +973,7 @@ Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento 
 | `build/huertadiag.py`, `build/huerta_simula.py` | **Bancales**: qué dice el plano y qué hay en el mundo celda por celda (qué calvas faltan en el plano) y qué celdas repondría el obrero / labraría el granjero (I25). |
 | `build/granjaestado.py`, `build/farmdiag.py`, `build/columnas.py`, `build/perfilcol.py` | Estado de la granja (cultivos, edades, cotas) y columnas crudas. |
 | `build/items.py`, `build/contenedores.py` | Objetos en el suelo por tipo y contenido de cofres/despensa/almacén. |
+| `build/combustible_aldea.py` | **Los aparatos que queman y la madera del almacén** (I41/I42): barre el guardado y lista ahumador, hornos, hogar y soporte de pociones con sus coordenadas, más el contenido de los cofres con la madera separada (`COMBUSTIBLE`). |
 | `build/faroles_hanging.py` | **Faroles sin apoyo de verdad** (I14): mira la propiedad `hanging` contra su dirección, que es lo que **no** mira la auditoría de Python (una valla debajo vale para un farol *posado*, no para uno *colgado*; la de Java sí lo mira desde la migración 55). Dice qué reparador arregla cada uno. |
 | `build/kiosco_dump.py` | **El kiosco entero, capa a capa** (I28): cuenta los bloques por capa, imprime la huella de `cota-2` a `cota+7` y localiza la **campana**, el **farol** y el **beacon** con sus propiedades (dónde están y en qué celda relativa al centro). |
 | `build/aldeanos.py`, `build/aldeanos.py` | Aldeanos: profesión, inventario, posición (carpeta `entities/`). |

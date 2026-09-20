@@ -87,8 +87,17 @@ public class VillagerSmithGoal extends Goal {
 
     /**
      * Una faena del herrero: qué se lleva del almacén, qué se deja y cómo se llama (para el log y la etiqueta).
+     * <p>
+     * {@code quema} = la faena es una <b>fundición</b> y gasta <b>un tronco</b> del almacén (ver
+     * {@link VillageStorage#quitarLena}). El fuego se paga: la <b>fragua no funciona sin leña</b> (lo pidió el
+     * jugador). Las faenas que <b>no</b> queman son las de la mesa y el muelle: aserrar, hacer palos, forjar,
+     * encorar, flechar, curtir cuero y fabricar armas.
      */
-    private record Receta(String verbo, String suceso, List<ItemStack> ingredientes, ItemStack producto) {
+    private record Receta(String verbo, String suceso, List<ItemStack> ingredientes, ItemStack producto,
+                          boolean quema) {
+        Receta(String verbo, String suceso, List<ItemStack> ingredientes, ItemStack producto) {
+            this(verbo, suceso, ingredientes, producto, false);
+        }
     }
 
     private final Villager villager;
@@ -150,7 +159,9 @@ public class VillagerSmithGoal extends Goal {
         // PRIMERO la receta (son cuentas sobre el contenedor, barato) y solo si hay faena se busca el taller (esa
         // búsqueda recorre la herrería bloque a bloque, así que no se hace cuando no hay nada que hacer).
         Container almacen = VillageStorage.almacen(level, center);
-        receta = elegirReceta(almacen);
+        // Lo que QUEMA (las fundiciones) solo se elige si el almacén tiene leña por encima de la reserva: así el
+        // herrero no se lleva pepitas que no puede fundir y, si no hay leña, se pone a lo que no gasta fuego.
+        receta = elegirReceta(almacen, VillageStorage.hayLenaParaQuemar(level, center));
         if (receta == null) {
             restTicks = IDLE_REST_TICKS; // no hay materiales (o ya está todo hecho): a esperar
             return false;
@@ -367,11 +378,25 @@ public class VillagerSmithGoal extends Goal {
 
     // --- las faenas ---------------------------------------------------------------------------------
 
-    /** Se lleva del almacén los ingredientes de la receta (si siguen estando). */
+    /** Se lleva del almacén los ingredientes de la receta (si siguen estando) y, si la faena quema, su tronco. */
     private boolean recoger(ServerLevel level) {
         Container almacen = VillageStorage.almacen(level, center);
         if (almacen == null || receta == null || !hay(almacen, receta.ingredientes())) {
             return false;
+        }
+        // LA LEÑA PRIMERO: si la faena es una fundición y el almacén no tiene excedente por encima de la reserva, no
+        // se lleva los ingredientes para nada — la fragua no funciona sin combustible (lo pidió el jugador).
+        if (receta.quema()) {
+            ItemStack lena = VillageStorage.quitarLena(level, center, 1);
+            if (lena == null || lena.isEmpty()) {
+                DevilRpg.LOGGER.info("[Village] {}: no funde, el almacen no tiene lena por encima de la reserva de {}",
+                        armas() ? "El herrero de armas" : "El herrero de herramientas", VillageStorage.RESERVA_LENA);
+                return false;
+            }
+            ItemStack resto = guardarEnInventario(lena);
+            if (!resto.isEmpty()) {
+                VillageStorage.guardar(level, center, resto); // sin sitio: de vuelta al almacén
+            }
         }
         for (ItemStack necesario : receta.ingredientes()) {
             int sacadas = VillagePantry.sacar(almacen, s -> ItemStack.isSameItem(s, necesario), necesario.getCount());
@@ -401,6 +426,15 @@ public class VillagerSmithGoal extends Goal {
                 return;
             }
         }
+        // LA LEÑA DE LA FRAGUA: una fundición gasta el tronco que se trajo del almacén (ver `recoger`). Si no lo
+        // lleva (se le perdió por el camino), NO fabrica: no sale un lingote de una fragua apagada.
+        if (receta.quema()) {
+            if (cuantosEnInventario(VillageStorage::esLena) < 1) {
+                DevilRpg.LOGGER.debug("[Village] al herrero le falta la lena para {}: no funde", receta.producto());
+                return;
+            }
+            gastarDelInventario(VillageStorage::esLena, 1);
+        }
         for (ItemStack necesario : receta.ingredientes()) {
             gastarDelInventario(necesario.getItem(), necesario.getCount());
         }
@@ -413,8 +447,8 @@ public class VillagerSmithGoal extends Goal {
         level.playSound(null, villager.blockPosition(), net.minecraft.sounds.SoundEvents.FIRE_AMBIENT,
                 SoundSource.BLOCKS, 0.5F, 1.0F);
         VillageManager.ponerSuceso(villager, receta.suceso());
-        DevilRpg.LOGGER.info("[Village] {}: {}", armas() ? "El herrero de armas" : "El herrero de herramientas",
-                receta.suceso());
+        DevilRpg.LOGGER.info("[Village] {}: {}{}", armas() ? "El herrero de armas" : "El herrero de herramientas",
+                receta.suceso(), receta.quema() ? " (quemo un tronco del almacen)" : "");
     }
 
     /** Deja en el almacén lo que ha fabricado. */
@@ -435,40 +469,44 @@ public class VillagerSmithGoal extends Goal {
      * ¿Qué toca hacer ahora? Primero la <b>transformación de materiales</b> (pepitas y chatarra en lingotes, y carne
      * podrida en cuero: eso lo hace el de HERRAMIENTAS en su mesa) y después <b>fabricar</b> lo que falte, cada uno lo
      * suyo. Devuelve {@code null} si no hay nada que hacer.
+     * <p>
+     * {@code hayLena}: las <b>fundiciones</b> ({@code quema}) solo valen si el almacén tiene leña que quemar por
+     * encima de la reserva. Sin leña se saltan y el herrero sigue con lo que no gasta fuego (aserrar, palos,
+     * forjar…): un pueblo sin madera no funde, pero no se queda quieto.
      */
     @Nullable
-    private Receta elegirReceta(@Nullable Container almacen) {
+    private Receta elegirReceta(@Nullable Container almacen, boolean hayLena) {
         if (almacen == null) {
             return null;
         }
         // 1) Pepitas de metal -> lingotes (la forja). Lo hacen los dos.
-        if (contar(almacen, Items.IRON_NUGGET) >= PEPITAS_POR_LINGOTE) {
+        if (hayLena && contar(almacen, Items.IRON_NUGGET) >= PEPITAS_POR_LINGOTE) {
             return new Receta("Fundiendo", "Fundio " + PEPITAS_POR_LINGOTE + " pepitas en un lingote",
                     List.of(new ItemStack(Items.IRON_NUGGET, PEPITAS_POR_LINGOTE)),
-                    new ItemStack(Items.IRON_INGOT));
+                    new ItemStack(Items.IRON_INGOT), true);
         }
         // 2) Chatarra PURA (hierro que no se pone nadie) -> lingotes.
         for (ItemStack chatarra : CHATARRA_SIEMPRE) {
-            if (contar(almacen, chatarra.getItem()) > 0) {
+            if (hayLena && contar(almacen, chatarra.getItem()) > 0) {
                 return new Receta("Fundiendo chatarra", "Fundio chatarra en un lingote",
-                        List.of(new ItemStack(chatarra.getItem(), 1)), new ItemStack(Items.IRON_INGOT));
+                        List.of(new ItemStack(chatarra.getItem(), 1)), new ItemStack(Items.IRON_INGOT), true);
             }
         }
         // 2b) Equipo de hierro/malla que SÍ se pone la milicia (espada, escudo, armadura): se funde solo lo que
         //     SOBRA de la reserva. Si no, el herrero fundía la única espada del almacén y el espadachín no tenía con
         //     qué armarse nunca (ni armadura que ponerse, que es justo lo que el jugador quiere VER puesta).
         for (ItemStack chatarra : CHATARRA_CON_RESERVA) {
-            if (haySobrante(almacen, chatarra.getItem())) {
+            if (hayLena && haySobrante(almacen, chatarra.getItem())) {
                 return new Receta("Fundiendo chatarra", "Fundio chatarra en un lingote",
-                        List.of(new ItemStack(chatarra.getItem(), 1)), new ItemStack(Items.IRON_INGOT));
+                        List.of(new ItemStack(chatarra.getItem(), 1)), new ItemStack(Items.IRON_INGOT), true);
             }
         }
         // 2c) Chatarra de ORO -> lingote de oro (el oro no lo quiere nadie para pelear: se funde entero y queda
         //     como tesoro del almacén), y armadura de CUERO vieja -> cuero, también con reserva.
         for (ItemStack chatarra : CHATARRA_DE_ORO) {
-            if (contar(almacen, chatarra.getItem()) > 0) {
+            if (hayLena && contar(almacen, chatarra.getItem()) > 0) {
                 return new Receta("Fundiendo oro", "Fundio chatarra de oro en un lingote",
-                        List.of(new ItemStack(chatarra.getItem(), 1)), new ItemStack(Items.GOLD_INGOT));
+                        List.of(new ItemStack(chatarra.getItem(), 1)), new ItemStack(Items.GOLD_INGOT), true);
             }
         }
         for (ItemStack viejo : CUERO_VIEJO) {
@@ -633,10 +671,15 @@ public class VillagerSmithGoal extends Goal {
 
     /** Gasta del inventario del aldeano esa cantidad de ese item (lo que trajo del almacén). */
     private void gastarDelInventario(net.minecraft.world.item.Item item, int cuantas) {
+        gastarDelInventario(s -> s.is(item), cuantas);
+    }
+
+    /** Gasta del inventario del aldeano esa cantidad de lo que cumpla el filtro (por ejemplo, <b>cualquier tronco</b>). */
+    private void gastarDelInventario(Predicate<ItemStack> filtro, int cuantas) {
         int faltan = cuantas;
         for (int i = 0; i < villager.getInventory().getContainerSize() && faltan > 0; i++) {
             ItemStack s = villager.getInventory().getItem(i);
-            if (!s.is(item)) {
+            if (!filtro.test(s)) {
                 continue;
             }
             int quita = Math.min(faltan, s.getCount());
@@ -650,10 +693,15 @@ public class VillagerSmithGoal extends Goal {
 
     /** Cuántas unidades de ese item lleva encima el herrero. */
     private int cuantosEnInventario(net.minecraft.world.item.Item item) {
+        return cuantosEnInventario(s -> s.is(item));
+    }
+
+    /** Cuántas unidades de lo que cumpla el filtro lleva encima el herrero. */
+    private int cuantosEnInventario(Predicate<ItemStack> filtro) {
         int n = 0;
         for (int i = 0; i < villager.getInventory().getContainerSize(); i++) {
             ItemStack s = villager.getInventory().getItem(i);
-            if (s.is(item)) {
+            if (filtro.test(s)) {
                 n += s.getCount();
             }
         }
