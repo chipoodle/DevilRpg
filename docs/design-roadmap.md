@@ -2436,14 +2436,34 @@ nada?"* (Fabricio, `Recolector`, en el desván de la taberna). No era que no tuv
 - Y de dónde venía: había subido al desván a por **tres camas tiradas** en el suelo (las camas están en la lista blanca
   del recolector: son del pueblo). Medido: 3 `Red Bed` en `(1441,131,1432)`, `(1443,131,1434)` y `(1444,131,1432)`.
 
-**Arreglo** (`VillagerCollectGoal`): dos salidas para que **no se quede dentro de una casa** —
+**Arreglo**, cuatro piezas (las tres primeras para que **no se quede dentro de una casa**, la cuarta para el que ya
+está dentro):
 
 1. **Si no hay nada que recoger** y está **fuera de su sitio** (a más de `RADIO_VUELTA` = 24 del centro, o a más de 4
    bloques de la cota, o sea metido en un piso), se **vuelve a la plaza** (*"Volviendo a la plaza"*).
 2. **Si no alcanza el almacén** (6 s sin acercarse), se **apunta el sitio** (I33) y **se vuelve a la plaza**: desde
    ahí el almacén **sí** se alcanza, así que al siguiente intento (pasados los 5 min del aparcado) entrega lo que lleva.
+   Y si el almacén ya está **aparcado**, **no se le vuelve a mandar** allí (era lo que le hacía **oscilar** entre el
+   almacén y la plaza en la escalera de la taberna: medido, 20 s subiendo y bajando sin bajar nunca).
+3. **No sube a los PISOS a por cosas** (`ALTURA_MAXIMA` = 4 sobre la cota, y ni a los sótanos): el recolector barre el
+   pueblo **a la altura de la calle**. Los pisos son de quien vive ahí —el jugador se está haciendo su base en ese
+   desván— y, además, desde ahí arriba no se puede entregar. Eso corta el problema **de raíz**: las tres camas tiradas
+   del desván se quedan donde están (son de quien las tiró).
+4. **Y AL QUE YA SE HA QUEDADO DENTRO, SE LE BAJA** (`VillageManager.rescatarAldeanosAtrapados`, en el latido): un
+   aldeano que lleva **30 s sin moverse de celda** en un piso (o un sótano) se **baja a la plaza**, con su línea en el
+   log. No se toca a quien está durmiendo (dormir en la posada es legítimo) ni al que anda por la calle. Hace falta de
+   verdad: el recolector, al intentar salir del desván, se quedaba **encajado contra los cofres** —la ruta a la plaza se
+   calculaba (9 nodos) y el aldeano **no se movía**— y en una de las corridas **se murió de hambre ahí arriba**.
 
-Así el recolector está donde se le ve trabajar (la plaza y el pueblo) y no de charla en el desván de nadie.
+**Medido** con el arnés sobre su partida, al final:
+
+```
+[Village] b7073e55-... estaba atascado dentro de una casa en 1447, 131, 1430: lo bajo a la plaza (1410, 120, 1410)
+[Arnes] t=82449 ... RECOLECTOR pos=(1460.19,120.00,1404.20) ... rutas[almacen=SI(37)] etiqueta=... | Recogiendo
+```
+
+O sea: **baja a la calle** (120 lecturas en `y=120`, antes 0), con el almacén alcanzable (`SI(37)` frente a la ruta
+degenerada de 1 nodo) y **trabajando** (`Recogiendo`) en el término del pueblo.
 
 ### 3b.56 El techito, con BLOQUE NORMAL en la celda del muro (migración 66)
 

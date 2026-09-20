@@ -69,6 +69,16 @@ public class VillagerCollectGoal extends Goal {
      * {@code VillagerCollectGoal} arrancando y parando en el desván, con tres {@code Red Bed} tiradas a 12 bloques).
      */
     private static final double RADIO_VUELTA = 24.0D;
+    /**
+     * A qué altura, como mucho, se sube a por una cosa: el recolector barre el pueblo <b>a la altura de la calle</b> y
+     * no entra en los <b>pisos</b> (ni en los sótanos) a por nada.
+     * <p>
+     * Medido con el arnés: subió al <b>desván de la taberna</b> a por tres <b>camas tiradas</b> en el suelo
+     * ({@code 1441/1443/1444, 131, 1432-1434}; las camas están en su lista blanca) y desde ahí <b>no alcanzaba el
+     * almacén</b> (ruta degenerada de 1 nodo) ni conseguía salir: se quedaba arriba en bucle —lo que el jugador vio
+     * como *"de chala en el 3er piso sin hacer nada"*—. Los pisos son de quien vive ahí: lo que se tire arriba, suyo.
+     */
+    private static final int ALTURA_MAXIMA = 4;
 
     private final Villager villager;
     private final BlockPos center;
@@ -121,7 +131,21 @@ public class VillagerCollectGoal extends Goal {
         }
         // Con las manos llenas, al almacén (a su punto de apoyo: el cofre es sólido y no se navega hacia él).
         if (cuantosLleva() >= LLEVAR_MAX) {
-            destino = VillageStorage.puntoDeApoyo(level, center);
+            BlockPos almacen = VillageStorage.puntoDeApoyo(level, center);
+            if (VillageManager.esPuntoFallido(villager, almacen)) {
+                // EL ALMACÉN ESTÁ APARCADO (no llegó hace poco: ver `tick`): no se vuelve a mandar allí, que era lo que
+                // le hacía OSCILAR entre el almacén y la plaza en la escalera de la taberna sin bajar nunca. Se queda
+                // por el pueblo (y si está metido en un piso, se vuelve a la plaza).
+                if (fueraDeSuSitio(level)) {
+                    destino = new BlockPos(center.getX(),
+                            VillageGenerator.cotaDeLaPlaza(level, center), center.getZ());
+                    volviendoALaPlaza = true;
+                    return true;
+                }
+                restTicks = IDLE_REST_TICKS;
+                return false;
+            }
+            destino = almacen;
             objetivo = null;
             volviendoALaPlaza = false;
             return true;
@@ -324,6 +348,7 @@ public class VillagerCollectGoal extends Goal {
         // alrededor del centro; sin este tope, con el radio nuevo se iría de una punta a otra del término por una
         // pepita). Antes eran 24 fijos, que con el radio viejo de 42 dejaba fuera la mitad del pueblo.
         double mejorDist = RADIO_DE_BUSQUEDA * RADIO_DE_BUSQUEDA;
+        int cota = VillageGenerator.cotaDeLaPlaza(level, center);
         for (ItemEntity item : level.getEntitiesOfClass(ItemEntity.class,
                 new net.minecraft.world.phys.AABB(center).inflate(RADIO))) {
             if (!item.isAlive() || item.getItem().isEmpty()) {
@@ -333,6 +358,12 @@ public class VillagerCollectGoal extends Goal {
                 continue; // recién soltado: se le deja un margen a quien lo soltó
             }
             if (!esDelPueblo(item.getItem())) {
+                continue;
+            }
+            // NO SUBE A LOS PISOS (ni baja a los sótanos): el recolector barre el pueblo a la altura de la calle. Los
+            // pisos son de quien vive ahí —el jugador se está haciendo su base en el desván de la taberna— y, además,
+            // de ahí arriba no se puede entregar (ver `ALTURA_MAXIMA`).
+            if (item.getY() > cota + ALTURA_MAXIMA || item.getY() < cota - 6) {
                 continue;
             }
             if (VillageManager.esPuntoFallido(villager, item.blockPosition())) {

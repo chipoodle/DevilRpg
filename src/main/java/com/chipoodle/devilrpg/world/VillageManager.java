@@ -1990,6 +1990,9 @@ public final class VillageManager {
         // dueño), así que vanilla no les registraba la actividad de trabajar y se quedaban en IDLE: es el fallo de
         // "el aldeano que da vueltas sobre su eje" y el rol huérfano que quedaba en el reparto.
         reclamarEstacionesDelPueblo(level, aldeanos, center, objectiveIndex);
+        // Y EL QUE SE QUEDA DENTRO DE UNA CASA: si lleva 30 s sin moverse de celda en un piso (o un sótano), se le baja
+        // a la plaza (ver `rescatarAldeanosAtrapados`).
+        rescatarAldeanosAtrapados(level, aldeanos, center);
         // HERREROS: los DOS (armas y herramientas) trabajan en el taller del pueblo: cogen los materiales del almacén,
         // fabrican en su puesto (muelle de afilar / mesa de herrería) y dejan la pieza en el almacén, de donde se
         // equipará la futura guardia. Los goals no se guardan con la partida: se reponen al verlos.
@@ -2688,6 +2691,76 @@ public final class VillageManager {
             DevilRpg.LOGGER.info("[Village] Aldea {}: {} reclama su estacion de {} en {}", objectiveIndex,
                     villager.getUUID(), profesion, elegido.toShortString());
         }
+    }
+
+    // --- EL ALDEANO QUE SE QUEDA DENTRO DE UNA CASA: se le baja a la plaza -----------------------------------
+
+    /** Dónde y desde cuándo lleva quieto cada aldeano que está metido en un piso (para el rescate). */
+    private static final java.util.Map<UUID, long[]> ATRAPADOS = new java.util.concurrent.ConcurrentHashMap<>();
+    /** Sin moverse de celda este tiempo, dentro de un piso, se le baja a la plaza (30 s). */
+    private static final int ATRAPADO_TICKS = 30 * 20;
+
+    /**
+     * <b>Rescata al aldeano que se ha quedado atascado dentro de una casa</b> (en un piso, por encima de la capa de la
+     * calle, o en un sótano): si lleva {@link #ATRAPADO_TICKS} <b>sin moverse de celda</b>, se le baja a la plaza.
+     * <p>
+     * Hace falta de verdad, y está medido con el arnés: el <b>recolector</b> subió al desván de la taberna a por unas
+     * <b>camas tiradas</b> en el suelo, desde ahí <b>no alcanzaba el almacén</b> (ruta degenerada de 1 nodo) y, al
+     * intentar salir hacia la plaza, se quedó <b>encajado</b> contra los cofres del desván: la ruta a la plaza se
+     * calculaba (9 nodos) pero el aldeano <b>no se movía</b> — 30 s clavado en la misma celda, y así para siempre (o
+     * hasta morirse de hambre ahí arriba, que es lo que pasó en una de las corridas).
+     * <p>
+     * No se toca a quien está <b>durmiendo</b> ni en la franja de descanso (dormir en la posada es legítimo), ni al que
+     * anda a la altura de la calle. Solo se rescata al que está <b>fuera de esa altura y quieto</b>.
+     */
+    private static void rescatarAldeanosAtrapados(ServerLevel level, List<Villager> aldeanos, BlockPos center) {
+        int cota = VillageGenerator.cotaDeLaPlaza(level, center);
+        for (Villager villager : aldeanos) {
+            if (villager.isBaby() || villager.isSleeping()
+                    || villager.getBrain().isActive(net.minecraft.world.entity.schedule.Activity.REST)
+                    || Math.abs(villager.getY() - cota) <= 4.0D) {
+                ATRAPADOS.remove(villager.getUUID()); // en la calle (o descansando): no hay nada que rescatar
+                continue;
+            }
+            long celda = villager.blockPosition().asLong();
+            long ahora = level.getGameTime();
+            long[] antes = ATRAPADOS.get(villager.getUUID());
+            if (antes == null || antes[0] != celda) {
+                ATRAPADOS.put(villager.getUUID(), new long[]{celda, ahora});
+                continue; // se acaba de mover (o es la primera vez que se le ve ahí): se le da tiempo
+            }
+            if (ahora - antes[1] < ATRAPADO_TICKS) {
+                continue;
+            }
+            ATRAPADOS.remove(villager.getUUID());
+            BlockPos estaba = villager.blockPosition();
+            BlockPos destino = casillaLibreDeLaPlaza(level, center, cota);
+            villager.getNavigation().stop();
+            villager.teleportTo(destino.getX() + 0.5D, destino.getY(), destino.getZ() + 0.5D);
+            villager.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
+            DevilRpg.LOGGER.info("[Village] {} estaba atascado dentro de una casa en {}: lo bajo a la plaza ({})",
+                    villager.getUUID(), estaba.toShortString(), destino.toShortString());
+        }
+    }
+
+    /** Una celda con <b>sitio para pararse</b> a la altura de la calle, cerca de la plaza (anillos desde el centro). */
+    private static BlockPos casillaLibreDeLaPlaza(ServerLevel level, BlockPos center, int cota) {
+        for (int r = 2; r <= 12; r++) {
+            for (int dx = -r; dx <= r; dx++) {
+                for (int dz = -r; dz <= r; dz++) {
+                    if (Math.max(Math.abs(dx), Math.abs(dz)) != r) {
+                        continue; // el interior ya se miró en los anillos anteriores
+                    }
+                    BlockPos p = new BlockPos(center.getX() + dx, cota, center.getZ() + dz);
+                    if (level.getBlockState(p).getCollisionShape(level, p).isEmpty()
+                            && level.getBlockState(p.above()).getCollisionShape(level, p.above()).isEmpty()
+                            && !level.getBlockState(p.below()).getCollisionShape(level, p.below()).isEmpty()) {
+                        return p;
+                    }
+                }
+            }
+        }
+        return new BlockPos(center.getX(), cota, center.getZ());
     }
 
     /** Marca a un aldeano como obrero y le pone el goal de reparación. */    private static void marcarObrero(Villager villager, BlockPos center, int objectiveIndex) {

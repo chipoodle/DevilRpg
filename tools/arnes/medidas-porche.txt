@@ -75,6 +75,32 @@ DESPUES (el alero llega al muro y el soffito es el techo del porche)
   y +0     .    .    .    .    D    .    .
 
 
+--- 5) LA CORRECCION DEL JUGADOR: BLOQUE NORMAL EN LA CELDA DEL M URO (migracion 66) -----------------
+Lo dijo al verlo: "el techito que pusiste quedo bastante extraño; se necesita poner un bloque normal y luego ahora
+si el bloque de escalera bien alineado para que quede bien". La migracion 63 habia puesto un ESCALON en bx-1 y dos
+escalones seguidos a la misma altura se ven como un doble peldaño contra el muro.
+
+COMO ESTABA (migracion 63: OTRO ESCALON pegado al muro)
+        dx-4 dx-3 dx-2 dx-1 dx+0 dx+1 dx+2
+  y +5     .    .    .    .    #    .    .
+  y +4     .    .    S    S    #    #    #      <- dx-1 tambien escalon: "doble peldaño"
+  y +3     .    S    #    #    #    .    .
+
+COMO QUEDA (migracion 66: BLOQUE NORMAL pegado al muro y el escalon alineado contra el)
+        dx-4 dx-3 dx-2 dx-1 dx+0 dx+1 dx+2
+  y +5     .    .    .    .    #    .    .
+  y +4     .    .    S    #    #    #    #      <- dx-1 es TABLON solido y el escalon de dx-2 apoya contra el
+  y +3     .    S    #    #    #    .    .
+
+Perfil del alero, de fuera hacia dentro: escalon en dx-3 (encima de los postes) -> escalon en dx-2 -> TABLON en
+dx-1 (pegado al muro): sube hacia la casa y baja hacia fuera. Lo dibuja build/perfil_porche.py (solo lee).
+
+MEDIDO en el arnes (su partida, tras el arreglo):
+  [Village] Taberna de BlockPos{x=1414, y=120, z=1414}: porche reparado (7 cambio(s) ...)
+  [Village] Aldea 2: trazado actualizado a la version 66 (casas, muro, granja y plano)
+  (7 cambios = los 7 escalones de bx-1 que pasan a tablon solido)
+
+
 --- CÓMO REPETIRLO -----------------------------------------------------------------------------------
 1) Copy-Item tools\arnes\GuardHarness.java src\main\java\com\chipoodle\devilrpg\debug\GuardHarness.java
 2) Move-Item run\world run\world.antes ; Copy-Item "run\saves\New World (1)" run\world -Recurse

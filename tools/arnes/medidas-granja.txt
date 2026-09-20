@@ -112,6 +112,27 @@ Y LA MIGRACION 66 DEL PORCHE (el bloque normal pegado al muro), en la misma corr
   [Village] Aldea 2: trazado actualizado a la version 66 (casas, muro, granja y plano)
   (7 cambios = los 7 escalones de bx-1 que pasan a tablon solido)
 
+
+--- 5) EL RECOLECTOR, SEGUNDA VUELTA: LA PREVENCION Y EL RESCATE ------------------------------------
+Con las dos salidas de arriba (volver a la plaza) el aldeano YA no se queda en el desvan, pero se descubrio que
+tampoco conseguia salir: bajaba al 2o piso y se quedaba OSCILANDO en la escalera (medido: 20 s subiendo y bajando
+entre y=125 y y=126 en (1442.5, 1438.9-1440.6)), porque el goal volvia a mandarlo al ALMACEN en cada arranque (el
+aparcado de I33 no se consultaba para el almacen) y luego a la plaza, y asi en bucle.
+
+ARREGLO 1: si el almacen esta APARCADO no se le vuelve a mandar alli (se queda por el pueblo / se vuelve a la plaza).
+ARREGLO 2: el recolector NO SUBE A LOS PISOS a por cosas (ALTURA_MAXIMA = 4 sobre la cota, y ni a los sotanos): barre
+           el pueblo a la altura de la calle (las 3 camas del desvan se quedan donde estan).
+ARREGLO 3: RESCATE (VillageManager.rescatarAldeanosAtrapados, en el latido): un aldeano que lleva 30 s SIN MOVERSE DE
+           CELDA en un piso (o un sotano) se BAJA A LA PLAZA. No se toca a quien duerme (la posada es para dormir) ni
+           al que anda por la calle. Hacia falta: encajado contra los cofres del desvan, la ruta a la plaza se
+           calculaba (9 nodos) y el aldeano NO se movia (y en una corrida se murio de hambre ahi arriba).
+
+MEDIDO despues (misma partida):
+  [Village] b7073e55-... estaba atascado dentro de una casa en 1447, 131, 1430: lo bajo a la plaza (1410, 120, 1410)
+  t=82449 RECOLECTOR pos=(1460.19,120.00,1404.20) activos=[VillagerGateGoal] destino=SIN DESTINO
+          rutas[almacen=SI(37) plaza=SI(45) huecoDesvan=SI(34)] etiqueta=Fabricio (Recolector) | Recogiendo
+  (120 lecturas en y=120, antes 0: esta en la calle y trabajando)
+
 --- CÓMO REPETIRLO -----------------------------------------------------------------------------------
 1) Copy-Item tools\arnes\GuardHarness.java src\main\java\com\chipoodle\devilrpg\debug\GuardHarness.java
 2) Move-Item run\world run\world.antes ; Copy-Item "run\saves\New World (1)" run\world -Recurse
