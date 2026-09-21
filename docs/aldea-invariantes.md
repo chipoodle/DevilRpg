@@ -1651,6 +1651,23 @@ Sin cría no hay exceso → sin exceso no hay sacrificio → sin sacrificio no h
 siempre encuentra con qué criar. Las raciones no lo tocan: el pan, la carne y las verduras van **antes** que el trigo
 (`VillagePantry.repartirRaciones`, el trigo es el último recurso).
 
+### I69 · El rebaño se queda en DOS por raza (la pareja), y lo que sobra al sacrificio
+
+Lo pidió el jugador con captura del corral lleno de puercos: *"hay demasiados puercos, el ganadero tiene que
+sacrificar, que queden 2 por raza"*.
+
+**Medido en su guardado**: el corral tenía **7 puercos**, 3 vacas, 3 ovejas y 8 gallinas, y el almacén **sin cuero**.
+El tope era **6** (y las gallinas 8), así que el corral se llenaba de animales que no daban nada.
+
+**Regla**: el tope de **vacas, ovejas y puercos es 2 (la pareja)**: lo que sobra va al sacrificio
+(`elegirSacrificio` ya elige la especie con más sobra y **nunca baja de la pareja**). Y la cría es **hasta el tope**,
+no por debajo: con 2 animales, exigir "estar por debajo del tope" dejaría al rebaño clavado en 2 y sin crías que
+sacrificar —ni carne, ni cuero, ni lana—. El ciclo queda **2 → 3 (cría) → sacrificio → 2**, así que la pareja se
+queda siempre y cada cría acaba en carne.
+
+**Las gallinas siguen con tope 8**: no se crían para carne, sino por los **huevos**. Si el jugador las quiere
+también a dos, es cambiar `MAX_GALLINAS`.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 

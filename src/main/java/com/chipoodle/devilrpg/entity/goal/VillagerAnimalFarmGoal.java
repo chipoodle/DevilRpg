@@ -62,9 +62,19 @@ public class VillagerAnimalFarmGoal extends Goal {
     /** Hasta dónde se le deja alejar del pueblo (el corral está a 50 + 7 del centro). */
     private static final double RADIO_MAXIMO = VillageGenerator.FENCE_RADIUS + 30.0D;
 
-    /** Tope de animales por especie (vacas, ovejas, puercos). Lo que sobra, al sacrificio. */
-    private static final int MAX_POR_ESPECIE = 6;
-    /** Tope de gallinas (son más pequeñas y se crían solas). */
+    /**
+     * <b>Tope de animales por especie: DOS, la pareja.</b> Lo que sobra va al sacrificio (lo pidió el jugador, viendo
+     * el corral lleno de puercos: *"hay demasiados puercos, el ganadero tiene que sacrificar, que queden 2 por raza"*).
+     * <p>
+     * Eran <b>6</b>, y con 6 el corral se llenaba de animales que no daban nada: medido en su guardado, <b>7 puercos</b>
+     * (más que el tope) y el almacén sin cuero. Con 2, el ciclo es <b>2 → 3 (cría) → sacrificio → 2</b>: la pareja se
+     * queda siempre (nunca baja de {@link #PAREJA_MINIMA}) y cada cría acaba en carne, cuero o lana.
+     */
+    private static final int MAX_POR_ESPECIE = 2;
+    /**
+     * Y las <b>gallinas</b> siguen con tope alto (8): no se crían para carne, sino por los <b>huevos</b>, y con dos
+     * gallinas no habría huevos para el pueblo. Si el jugador las quiere también a dos, es cambiar este número.
+     */
     private static final int MAX_GALLINAS = 8;
     /** Puntos de comida que tiene que tener la despensa para que el ganadero se lleve comida a los animales. */
     private static final int COMIDA_PARA_CRIAR = 24;
@@ -207,8 +217,11 @@ public class VillagerAnimalFarmGoal extends Goal {
             if (soloPareja && adultos > PAREJA_MINIMA) {
                 continue; // con el pueblo apretado no se cría para crecer
             }
-            if (topeDe(tipo) - contarEspecie(corral, tipo) <= 0) {
-                continue; // ya está en su tope
+            // SE CRÍA HASTA EL TOPE (no "por debajo"): con el tope en la PAREJA (2), exigir estar por debajo dejaría al
+            // rebaño clavado en 2 y sin crías que sacrificar —ni carne, ni cuero, ni lana—. Criando hasta el tope, el
+            // ciclo es 2 → 3 → sacrificio → 2, que es lo que el jugador pidió ("que queden 2 por raza").
+            if (contarEspecie(corral, tipo) > topeDe(tipo)) {
+                continue; // por encima de su tope: eso ya va al sacrificio
             }
             candidatas.add(tipo);
         }
