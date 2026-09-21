@@ -231,7 +231,7 @@ public class VillagerGuardGoal extends Goal {
         }
         // EL TURNO DE DESCANSO, TAMBIÉN AQUÍ: sin esta comprobación el goal se reiniciaría al tick siguiente de
         // cortarse por el turno y el guardia no llegaría a descansar nunca (ver `canContinueToUse`).
-        if (!aldeaEnAsalto() && leTocaElTurnoDeDescanso()) {
+        if (!aldeaEnAsalto() && leTocaElTurnoDeDescanso() && !leTocaEntrenar()) {
             return false;
         }
         // OJO: aquí NO se comprueba `estaDescansando` (cosa que sí hacen los demás goals del pueblo): el guardia está
@@ -296,7 +296,7 @@ public class VillagerGuardGoal extends Goal {
         // la barraca, y se van turnando para no dejar la aldea sola. Cuando le toca, el goal se corta y mandan los
         // demás (el de la taberna, el de la cama): el guardia vuelve solo cuando le toca el servicio otra vez. Con un
         // enemigo a la vista o la aldea en asalto NO hay descanso: primero se pelea.
-        if (enemigo == null && !aldeaEnAsalto() && leTocaElTurnoDeDescanso()) {
+        if (enemigo == null && !aldeaEnAsalto() && leTocaElTurnoDeDescanso() && !leTocaEntrenar()) {
             return false;
         }
         // Tampoco se corta por la hora de descanso: la guardia de noche es parte del servicio (ver `canUse`). Si el
@@ -329,6 +329,15 @@ public class VillagerGuardGoal extends Goal {
     public void tick() {
         if (destino == null || !(villager.level() instanceof ServerLevel level)) {
             return;
+        }
+        // 0) EL TURNO DE ENTRENAMIENTO, LO PRIMERO (lo pidió el jugador: "o entrenando en la sala de entrenamiento de
+        //    sus barracas"): en sus turnos de descanso impares, el guardia se va a la DIANA de la barraca, le pega
+        //    (golpe cada 2 s, con su sonido y sus partículas) y suda la fuerza: cada 5 min de diana cuenta como una
+        //    matanza (I62), así que entrena de verdad pero despacio.
+        if (!aldeaEnAsalto() && enemigo == null && leTocaEntrenar()) {
+            if (entrenar(level)) {
+                return;
+            }
         }
         // 1) COMBATE, lo primero: si hay un monstruo cerca, el guardia va a por él (si no, nunca defienden). El
         //    escaneo va cada ESCANEO_TICKS porque buscar entidades no se puede hacer en cada tick.
@@ -897,10 +906,56 @@ public class VillagerGuardGoal extends Goal {
     }
 
     /**
+     * <b>¿Le toca ENTRENAR (y no solo descansar) en este turno?</b> Se alterna: en un turno entrena en la barraca y en
+     * el siguiente descansa (el goal se corta y come en la taberna o duerme), que es lo que pidió el jugador: comer,
+     * descansar <b>o</b> entrenar, todo con turnos para no dejar la aldea sola.
+     */
+    private boolean leTocaEntrenar() {
+        if (!(villager.level() instanceof ServerLevel level)) {
+            return false;
+        }
+        return (level.getGameTime() / TICKS_DE_SERVICIO) % 2L == 0L;
+    }
+
+    /**
+     * <b>La sesión de entrenamiento</b>: va a la diana de la barraca, se pone delante y le pega (cada 2 s, con su
+     * sonido y sus partículas). Devuelve {@code false} si no hay a dónde ir (barraca sin diana en el plano), para que el
+     * guardia siga con la ronda en vez de quedarse parado.
+     */
+    private boolean entrenar(ServerLevel level) {
+        BlockPos diana = VillageGenerator.puestoDeEntrenamiento(center, VillageGenerator.cotaDeLaPlaza(level, center));
+        if (!diana.closerThan(center, VillageGenerator.FENCE_RADIUS)) {
+            return false;
+        }
+        double distancia = Math.sqrt(villager.distanceToSqr(diana.getX() + 0.5D, diana.getY() + 0.5D,
+                diana.getZ() + 0.5D));
+        if (distancia > REACH) {
+            VillageManager.caminarHacia(villager, diana, VELOCIDAD);
+            VillageManager.ponerActividad(villager, "Yendo a entrenar");
+            return true;
+        }
+        VillageManager.parar(villager);
+        bajarEscudo();
+        villager.getLookControl().setLookAt(diana.getX() + 0.5D, diana.getY() + 0.5D, diana.getZ() + 0.5D);
+        entrenoTicks++;
+        if (entrenoTicks % 40 == 0) {
+            villager.swing(InteractionHand.MAIN_HAND);
+            level.playSound(null, diana, net.minecraft.sounds.SoundEvents.PLAYER_ATTACK_STRONG,
+                    SoundSource.NEUTRAL, 0.5F, 1.2F);
+        }
+        VillageManager.ponerActividad(villager, "Entrenando en la barraca");
+        // Y LO QUE HA ENTRENADO CUENTA (despacio): 5 min de diana = una matanza (ver `sumarEntrenamiento`).
+        VillageManager.sumarEntrenamiento(villager, 1);
+        return true;
+    }
+
+    /**
      * Ticks de <b>servicio</b> de cada guardia antes de que le toque su turno de descanso (90 s): con varios guardias
      * se van relevando (ver {@link #leTocaElTurnoDeDescanso}).
      */
     private static final int TICKS_DE_SERVICIO = 20 * 90;
+    /** Ticks que lleva el guardia en la sesión de entrenamiento de ahora (para el golpe cada 2 s). */
+    private int entrenoTicks;
 
     private BlockPos puntoDeGuardia(ServerLevel level) {
         int nivel = VillageGenerator.cotaDeLaPlaza(level, center);

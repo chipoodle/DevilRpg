@@ -1007,6 +1007,18 @@ public final class VillageGenerator {
         return trazado(center, 6);
     }
 
+    /**
+     * <b>El puesto de ENTRENAMIENTO de la barraca</b>: la celda de delante de la <b>diana</b> suelta de los arqueros
+     * (el bloque `TARGET` del rincón suroeste, ver {@code BARRACA_DIANA}), que es donde se pone el guardia a entrenar
+     * en su turno (lo pidió el jugador: *"o entrenando en la sala de entrenamiento de sus barracas"*). Se devuelve la
+     * celda de al lado, no la diana, para que el guardia se coloque <b>frente</b> a ella y no dentro.
+     */
+    public static BlockPos puestoDeEntrenamiento(BlockPos center, int nivel) {
+        BlockPos base = baseDeBarraca(center);
+        // La Y va con la COTA de la aldea que pasa quien llama (`cotaDeLaPlaza`), no con la del centro (I1/I12).
+        return new BlockPos(base.getX() + BARRACA_DIANA[0] + 1, nivel, base.getZ() + BARRACA_DIANA[1]);
+    }
+
     /** Radio de la barraca (huella de 9x9). */
     private static final int BARRACA_RADIO = 4;
     /** Lo que sube el <b>suelo del dormitorio</b> sobre la cota de la aldea (el forjado va uno por debajo). */

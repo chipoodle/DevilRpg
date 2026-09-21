@@ -243,6 +243,15 @@ public final class VillageManager {
     /** Cada cuántas matanzas se cuenta un <b>nivel</b> (el que se ve en su etiqueta y se avisa en el log). */
     private static final int GUARD_MATANZAS_POR_NIVEL = 3;
     /**
+     * <b>Ticks de entrenamiento en la barraca que valen como UNA matanza</b> (5 minutos). Entrenar también fortalece
+     * (lo pidió el jugador: *"o entrenando en la sala de entrenamiento de sus barracas"*, y le pareció bien que diera
+     * "un progreso lento de fuerza"), pero <b>despacio</b>: 24 matanzas para el tope = <b>dos horas</b> de diana, así
+     * que la milicia se hace de verdad en las peleas.
+     */
+    private static final int GUARD_TICKS_DE_ENTRENO_POR_MATANZA = 20 * 60 * 5;
+    /** Marca (en los datos persistentes del aldeano) de los ticks que ese guardia lleva entrenando. */
+    public static final String GUARD_TRAINING_TAG = "DevilRpgGuardiaEntreno";
+    /**
      * Versión del trazado de la aldea. Se sube cuando cambia el diseño y hay que <b>arreglar las ya construidas</b>:
      * <ul>
      *   <li>1: granja con cultivos, acequia y compostador.</li>
@@ -2542,7 +2551,42 @@ public final class VillageManager {
 
     /** Su <b>nivel</b> (1..): lo que se ve en su etiqueta y lo que se avisa en el log al subir. */
     public static int nivelDeGuardia(Villager villager) {
-        return 1 + matanzasDeGuardia(villager) / GUARD_MATANZAS_POR_NIVEL;
+        return 1 + (int) (progresoDeGuardia(villager) / GUARD_MATANZAS_POR_NIVEL);
+    }
+
+    /**
+     * <b>Lo que ha aprendido</b> ese guardia, en "matanzas equivalentes": sus enemigos muertos MÁS lo que ha entrenado
+     * en la barraca (1 matanza por cada {@link #GUARD_TICKS_DE_ENTRENO_POR_MATANZA} ticks de diana). Es lo que usan el
+     * nivel y los atributos, así que entrenar también se nota —despacio—.
+     */
+    public static double progresoDeGuardia(Villager villager) {
+        int entreno = villager.getPersistentData().getInt(GUARD_TRAINING_TAG);
+        return matanzasDeGuardia(villager)
+                + entreno / (double) GUARD_TICKS_DE_ENTRENO_POR_MATANZA;
+    }
+
+    /**
+     * <b>El guardia ha entrenado</b> esos ticks en la diana de la barraca (una sesión de faena): se le apunta y se le
+     * recalculan los atributos, igual que al matar. Se llama desde su goal.
+     */
+    public static void sumarEntrenamiento(Villager guardia, int ticks) {
+        if (ticks <= 0 || !VillagerGuardGoal.esGuardia(guardia)) {
+            return;
+        }
+        int antes = (int) progresoDeGuardia(guardia);
+        var datos = guardia.getPersistentData();
+        datos.putInt(GUARD_TRAINING_TAG, datos.getInt(GUARD_TRAINING_TAG) + ticks);
+        aplicarLoAprendido(guardia);
+        int ahora = (int) progresoDeGuardia(guardia);
+        if (ahora != antes) {
+            DevilRpg.LOGGER.info("[Village] {} (guardia) sube al nivel {} entrenando en la barraca: {} de {} matanzas"
+                            + " equivalentes (vida {} y dano {})", guardia.getName().getString(),
+                    nivelDeGuardia(guardia), redondear(progresoDeGuardia(guardia)), GUARD_MATANZAS_PARA_EL_TOPE,
+                    redondear(guardia.getAttribute(Attributes.MAX_HEALTH) == null ? 0.0D
+                            : guardia.getAttribute(Attributes.MAX_HEALTH).getValue()),
+                    redondear(guardia.getAttribute(Attributes.ATTACK_DAMAGE) == null ? 0.0D
+                            : guardia.getAttribute(Attributes.ATTACK_DAMAGE).getValue()));
+        }
     }
 
     /**
@@ -2584,7 +2628,7 @@ public final class VillageManager {
         if (!VillagerGuardGoal.esGuardia(guardia)) {
             return;
         }
-        double avance = Math.min(1.0D, matanzasDeGuardia(guardia) / (double) GUARD_MATANZAS_PARA_EL_TOPE);
+        double avance = Math.min(1.0D, progresoDeGuardia(guardia) / (double) GUARD_MATANZAS_PARA_EL_TOPE);
         double vidaAldeano = 20.0D;
         double danoAldeano = 2.0D;
         double vida = vidaAldeano + (topeDeVidaDelZombiAgresivo() - vidaAldeano) * avance;

@@ -1742,6 +1742,21 @@ goal mandan los demás (come en la taberna, duerme en su cama, entrena en la bar
 **solo** guardia el turno también le toca (el jugador lo acepta: *"ni modo"*). **Con un enemigo a la vista o la aldea
 en asalto no hay descanso**: primero se pelea.
 
+### I74 · El guardia ENTRENA en la barraca (y eso también le hace más fuerte, despacio)
+
+Lo pidió el jugador tras I73: *"o entrenando en la sala de entrenamiento de sus barracas… si impleméntalo"*.
+
+**Cómo funciona**: en sus turnos de descanso (I73), los **pares** entrena y los **impares** descansa de verdad (come en la
+taberna o duerme), así que sigue habiendo relevos y la aldea no se queda sola. Entrenando: se va a la **diana** de la
+barraca (`VillageGenerator.puestoDeEntrenamiento`, la celda de delante del `TARGET` del rincón suroeste), se pone
+frente a ella, pega **cada 2 s** (con sonido y su etiqueta `Entrenando en la barraca`) y **suma progreso**:
+`VillageManager.sumarEntrenamiento` apunta los ticks y **cada 5 minutos de diana cuentan como una matanza** para el
+nivel y los atributos (I62). O sea: 24 matanzas para el tope = **dos horas de entrenamiento**, así que la milicia se
+hace de verdad en las peleas y entrenar es un extra, no un atajo.
+
+**Con asalto o con un enemigo a la vista no se entrena**: primero se pelea. Y si el guardia no encuentra la diana, sigue
+con la ronda en vez de quedarse parado.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
