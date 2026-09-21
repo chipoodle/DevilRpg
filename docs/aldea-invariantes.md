@@ -1614,6 +1614,21 @@ de nada).
 `nuevo puesto` **solo se canta cuando el puesto CAMBIA** (con el aviso en cada `start()` salían diez líneas por
 segundo repitiendo el mismo sitio: medido con el arnés en modo noche).
 
+### I67 · A la guardia no se le quita la cama por no ir a dormir
+
+Tercera cosa del log del jugador: `SIN CAMA Genoveva de 16 aldeanos (camas del pueblo: 29)` y, acto seguido,
+`los 16 aldeanos (crias incluidas) tienen cama` — un latido sí y otro no. Y los nombres eran **guardias**
+(Genoveva, Prudencio).
+
+**La causa**: `acostarAlQueNoLlega` da la cama por perdida si el aldeano no se **acerca** a ella en 6 latidos (I57),
+y de noche el guardia está **de servicio** (ronda o puerta, I28): no se acerca a su cama porque no le toca, así que
+se le quitaba y el reparto se la volvía a dar.
+
+**Regla:** a un aldeano **de la guardia** no se le aplica el «renuncio a la cama» — conserva la suya para cuando le
+toque descansar de verdad. **Medido con el arnés** (modo noche, 4 min sobre su partida): `no consigue llegar a su
+cama` = **0**, el WARN `Aldea 2: SIN CAMA` = **0**, y el resumen acaba en
+`aldeanos=14 conCama=14 COMPARTIDAS=0 SIN CAMA=0 DURMIENDO=13`.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 

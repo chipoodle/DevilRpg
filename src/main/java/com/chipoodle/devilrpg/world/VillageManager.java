@@ -3445,6 +3445,14 @@ public final class VillageManager {
             if (villager.isSleeping() || !estaDescansando(villager)) {
                 continue;
             }
+            // LA GUARDIA NO DUERME DE SERVICIO, ASÍ QUE NO SE LE QUITA LA CAMA. Su goal la tiene de ronda o en la
+            // puerta toda la noche (I28: "la guardia de noche es parte del servicio"), así que no se acerca a su cama
+            // —y aquí se le acababa quitando por "no acercarse en 6 latidos": medido en el log del jugador, los
+            // `SIN CAMA` eran guardias (Genoveva, Prudencio) y la cama volvía al reparto un latido sí y otro no—.
+            // Un guardia conserva su cama: la usa cuando le toca descansar de verdad.
+            if (com.chipoodle.devilrpg.entity.goal.VillagerGuardGoal.esGuardia(villager)) {
+                continue;
+            }
             Optional<GlobalPos> suya = villager.getBrain().getMemory(MemoryModuleType.HOME);
             if (suya.isEmpty()) {
                 continue;
