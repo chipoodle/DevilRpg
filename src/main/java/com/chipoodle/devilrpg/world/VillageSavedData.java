@@ -316,6 +316,11 @@ public final class VillageSavedData extends SavedData {
         return generated.contains(objectiveIndex);
     }
 
+    /** Las aldeas generadas (para quien tenga que mirarlas todas sin saber hasta dónde llega el índice). */
+    public Set<Integer> generatedIndices() {
+        return Set.copyOf(generated);
+    }
+
     public void markGenerated(int objectiveIndex) {
         if (generated.add(objectiveIndex)) {
             setDirty();

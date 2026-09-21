@@ -3075,6 +3075,24 @@ leñador, pescador), que reparan a prioridad **5** —la última—, y el **reco
 - **Límite conocido**: el obrero trabaja a **+5/−6** de la cota, así que los **tejados** quedan fuera (aldea 0: 27
   losas de la placa del tejado a **+11**, pendientes).
 
+### 3b.73 El golem de hierro dentro de la casa (el 3.er piso)
+
+El jugador: *"los golems no deben spawnear en el 3er piso"*.
+
+**MEDIDO en su guardado**: de los **5** golems de hierro de las tres aldeas, **uno** estaba en
+`(1446.8,131,1430.4)` de la aldea 2 → **+11** sobre la cota (el **desván de la taberna**), a **4** bloques del
+aldeano que lo había sumado (Onofre, el cocinero, dormía en `(1442,131,1432)`).
+
+**Por qué**: el golem de vanilla lo **suma un aldeano** al dar el aviso de alarma y lo hace **donde está él** → si
+el aldeano está en la posada o en el desván, el golem sale **dentro de la casa** (no defiende y se queda arriba). Y
+el golem del **mod** se colocaba con `spawnY` → `groundY`, que en una columna con una construcción devuelve **el
+tejado**.
+
+**ARREGLO** (I61): al **entrar al mundo**, un golem que aparezca **dentro de una aldea y por encima del suelo** se
+**baja a una casilla libre a la cota** (suelo firme y seco, dos celdas libres) al lado de la plaza —vale para las dos
+vías, la de vanilla y la del mod—, y el **latido** lo repite para los que **ya** estaban en alto (el del guardado se
+baja en la primera pasada). Idempotente: a un golem a nivel del suelo no se le toca.
+
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.

@@ -1442,6 +1442,28 @@ planta.
 qué bloque, a qué distancia y a qué altura sobre la cota) y en el log (el tira y afloja del farol de la escalera
 **desaparece**, y el obrero firma sus bloques con `Repuso …`).
 
+### I61 · Un golem no aparece (ni se queda) en un piso de arriba
+
+El jugador: *"los golems no deben spawnear en el 3er piso"*.
+
+**Medido** en su guardado: de los **5** golems de hierro de las tres aldeas, **uno** estaba en
+`(1446.8,131,1430.4)` de la aldea 2 → **+11** sobre la cota (`120`) = **el desván de la taberna** (el 3.er piso), y
+al lado del aldeano que lo había sumado (Onofre, el cocinero, dormía en `(1442,131,1432)`, a **4** bloques).
+
+**Por qué.** El golem de hierro de vanilla lo **suma un aldeano** cuando da el aviso de alarma, y lo hace **donde
+está él**: si el aldeano está en la **posada** o en el **desván**, el golem sale **dentro de la casa** —no defiende
+el pueblo y se queda atrapado arriba—. Y el golem del **mod** (`VillageGenerator.spawnIronGolem`) se coloca con
+`spawnY` → `groundY`, que en una columna con una construcción devuelve **su tejado**.
+
+**Regla:** un golem que entra al mundo **dentro de una aldea y por encima del suelo** se **baja a una casilla libre
+a la cota**, al lado de la plaza (suelo firme y **seco**, dos celdas libres: nunca al agua ni dentro de un bloque).
+Se hace en la **entrada al mundo** —el mismo sitio donde el sello corta los spawns, así que vale para las **dos**
+vías (vanilla y mod)— y el **latido** lo repite para los golems que **ya** estaban en alto (el del guardado se baja
+en la primera pasada, sin esperar a que se muera). Es **idempotente**: a un golem a nivel del suelo no se le toca.
+
+**Se comprueba contra el guardado** (el `dy` de cada golem sobre la cota de su aldea: tiene que ser **0**) y en el
+log (`un golem aparecio N bloque(s) por encima del suelo (dentro de un edificio): se le baja a ...`).
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 

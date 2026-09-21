@@ -992,6 +992,94 @@ public final class VillageManager {
     }
 
     /**
+     * <b>UN GOLEM NO APARECE EN UN PISO DE ARRIBA.</b> El golem de hierro lo <b>suma un aldeano</b> cuando da el aviso
+     * de alarma, y lo hace <b>donde está él</b>: si el aldeano está en la <b>posada</b>, en el <b>desván</b> de la
+     * taberna o en el dormitorio de la barraca, el golem sale <b>dentro de la casa</b> —no defiende el pueblo y se
+     * queda atrapado arriba—. Lo reportó el jugador: *"los golems no deben spawnear en el 3er piso"*, y medido en su
+     * guardado había uno en `(1446.8,131,1430.4)`: **+11** sobre la cota, o sea el desván de la taberna, al lado del
+     * aldeano que lo había sumado.
+     * <p>
+     * Se llama al <b>entrar al mundo</b> (el mismo sitio donde el sello corta los spawns), así que vale para las dos
+     * vías: la de vanilla (el aldeano que lo suma) y la del mod ({@code VillageGenerator.spawnIronGolem}, que usa
+     * {@code groundY} y por eso puede dar con los pies en un <b>tejado</b>). Si el golem aparece dentro de una aldea y
+     * por encima del suelo, se le <b>baja a una casilla libre a la cota</b>, al lado de la plaza.
+     */
+    public static void bajarElGolemAlSuelo(ServerLevel level, net.minecraft.world.entity.animal.IronGolem golem) {
+        VillageSavedData saved = VillageSavedData.get(level);
+        if (golem.isRemoved()) {
+            return;
+        }
+        for (int i : saved.generatedIndices()) {
+            BlockPos centro = centroDe(level, i);
+            if (centro == null || saved.isFallen(i)) {
+                continue;
+            }
+            int cota = VillageGenerator.cotaDeLaPlaza(level, centro);
+            if (golem.getY() <= cota + 1.0D) {
+                continue; // ya está a nivel del suelo: no se toca
+            }
+            if (!dentroDelRecinto(cota, centro, golem, VillageGenerator.FENCE_RADIUS)) {
+                continue; // no es de esta aldea
+            }
+            BlockPos destino = casillaAlSueloDeLaPlaza(level, centro, cota);
+            if (destino == null) {
+                return; // no hay sitio libre a la cota: mejor dejarlo donde está que meterlo en un bloque
+            }
+            golem.moveTo(destino.getX() + 0.5D, destino.getY(), destino.getZ() + 0.5D,
+                    golem.getYRot(), golem.getXRot());
+            golem.getNavigation().stop();
+            DevilRpg.LOGGER.info("[Village] Aldea {}: un golem aparecio {} bloque(s) por encima del suelo (dentro de"
+                    + " un edificio): se le baja a {}", i, Math.round(golem.getY() - cota), destino.toShortString());
+            return;
+        }
+    }
+
+    /**
+     * Una casilla <b>libre a la cota</b> cerca de la plaza (fuera del kiosco): suelo firme y seco debajo y dos celdas
+     * libres (pies y cabeza). Es donde se posa a un golem que apareció en un piso de arriba.
+     */
+    @Nullable
+    private static BlockPos casillaAlSueloDeLaPlaza(ServerLevel level, BlockPos centro, int cota) {
+        int desde = VillageGenerator.kioscoRadio() + 1;
+        for (int r = desde; r <= 24; r++) {
+            for (BlockPos p : BlockPos.betweenClosed(centro.offset(-r, 0, -r), centro.offset(r, 0, r))) {
+                if (Math.max(Math.abs(p.getX() - centro.getX()), Math.abs(p.getZ() - centro.getZ())) != r) {
+                    continue; // el interior ya se miró en los anillos anteriores
+                }
+                BlockPos q = new BlockPos(p.getX(), cota, p.getZ());
+                if (!level.getBlockState(q).getCollisionShape(level, q).isEmpty()
+                        || !level.getBlockState(q.above()).getCollisionShape(level, q.above()).isEmpty()) {
+                    continue;
+                }
+                BlockState suelo = level.getBlockState(q.below());
+                if (suelo.getCollisionShape(level, q.below()).isEmpty() || !suelo.getFluidState().isEmpty()) {
+                    continue; // sin suelo firme, o sobre agua: ahí no se le posa
+                }
+                return q;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * <b>Los golems de la aldea, a la CALLE.</b> El latido los mira y baja a los que estén dentro del recinto y por
+     * encima del suelo (ver {@link #bajarElGolemAlSuelo}): así se corrige también el que <b>ya</b> estaba en un piso
+     * de arriba antes de este arreglo, sin esperar a que se muera. Son uno o dos por aldea, y solo se les toca si
+     * están por encima de la cota.
+     */
+    private static void bajarGolemsDeLosPisos(ServerLevel level, BlockPos center) {
+        int cota = VillageGenerator.cotaDeLaPlaza(level, center);
+        for (net.minecraft.world.entity.animal.IronGolem golem : level.getEntitiesOfClass(
+                net.minecraft.world.entity.animal.IronGolem.class, new AABB(center)
+                        .inflate(VillageGenerator.FENCE_RADIUS + 8.0D, 24.0D, VillageGenerator.FENCE_RADIUS + 8.0D))) {
+            if (!golem.isRemoved() && golem.getY() > cota + 1.0D
+                    && dentroDelRecinto(cota, center, golem, VillageGenerator.FENCE_RADIUS)) {
+                bajarElGolemAlSuelo(level, golem);
+            }
+        }
+    }
+
+    /**
      * ¿Ese bicho está <b>dentro del recinto</b> de la aldea? La aldea es un recinto en <b>XZ</b> (invariante I2:
      * un aldeano unos bloques por encima del suelo sigue estando en su pueblo), pero además hay que estar <b>a la
      * altura del pueblo</b> ({@link #RECINTO_DY_ABAJO}/{@link #RECINTO_DY_ARRIBA} sobre la cota): un bicho en una
@@ -1694,6 +1782,11 @@ public final class VillageManager {
         // OBRERO: se asegura de que exista el PLANO de la aldea y de que haya un aldeano que repare. El trabajo
         // lo hace su goal, andando y bloque a bloque (ver VillagerRepairGoal): aquí solo se prepara.
         prepareRepairs(level, saved, objectiveIndex, center, aldeanos);
+
+        // Y LOS GOLEMS, A LA CALLE (I61): el aldeano que da el aviso de alarma suma el golem donde está él, así que
+        // uno que esté en un piso de arriba (la posada, el desván de la taberna) lo saca dentro de la casa. Aquí se
+        // baja a los que estén en alto, incluido el que ya estaba antes de este arreglo.
+        bajarGolemsDeLosPisos(level, center);
 
         ageVillagers(level, aldeanos);
     }

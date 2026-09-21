@@ -202,6 +202,15 @@ public class PlayerCapabilityForgeEventSubscriber {
         if (event.loadedFromDisk() || !(event.getLevel() instanceof net.minecraft.server.level.ServerLevel serverLevel)) {
             return;
         }
+        // LOS GOLEMS, AL SUELO (I61): el golem lo SUMA un aldeano cuando da el aviso de alarma y lo hace donde está
+        // él, así que uno que esté en la posada o en el desván de la taberna lo saca DENTRO de la casa, en un piso de
+        // arriba, donde no defiende nada (lo reportó el jugador: "los golems no deben spawnear en el 3er piso"). Se le
+        // baja a una casilla libre a la cota, al lado de la plaza. Vale también para el golem del mod, que se coloca
+        // con `groundY` (y `groundY` de una columna con una casa devuelve su TEJADO).
+        if (event.getEntity() instanceof net.minecraft.world.entity.animal.IronGolem golem) {
+            VillageManager.bajarElGolemAlSuelo(serverLevel, golem);
+            return;
+        }
         if (!(event.getEntity() instanceof net.minecraft.world.entity.Mob mob)) {
             return;
         }
