@@ -1025,11 +1025,12 @@ public final class VillageManager {
             if (destino == null) {
                 return; // no hay sitio libre a la cota: mejor dejarlo donde está que meterlo en un bloque
             }
+            long altura = Math.round(golem.getY() - cota); // medido ANTES de moverlo (si no, el aviso dice 0)
             golem.moveTo(destino.getX() + 0.5D, destino.getY(), destino.getZ() + 0.5D,
                     golem.getYRot(), golem.getXRot());
             golem.getNavigation().stop();
             DevilRpg.LOGGER.info("[Village] Aldea {}: un golem aparecio {} bloque(s) por encima del suelo (dentro de"
-                    + " un edificio): se le baja a {}", i, Math.round(golem.getY() - cota), destino.toShortString());
+                    + " un edificio): se le baja a {}", i, altura, destino.toShortString());
             return;
         }
     }
@@ -2963,13 +2964,6 @@ public final class VillageManager {
     /** Cuántas camas se prueban antes de rendirse (las más cercanas <b>al aldeano</b>): con 8 sobra en una aldea. */
     private static final int CAMAS_A_PROBAR = 8;
     /**
-     * <b>A qué distancia de la celda de espera tiene que estar el aldeano para que valga como "los dos últimos
-     * pasos"</b> (bloques). Ver {@code celdaParaAcostarse}: una celda de espera a la que el aldeano no llega andando
-     * solo vale si puede llegarse a ella de un paso; una <b>de otra planta</b> no es un paso, es otra casa —y ahí
-     * estaba Zacarías, plantado en la calle debajo de su cama de la posada con la etiqueta "Yendo a dormir"—.
-     */
-    private static final double PASO_A_LA_ESPERA = 3.0D;
-    /**
      * Latidos seguidos ({@code VILLAGE_POLL_TICKS} cada uno) en los que un aldeano, en su hora de descanso, no
      * consigue ni acercarse a su cama, antes de <b>darle otra</b>: se le suelta la cama (con su ticket, I23) y se le
      * apunta como punto fallido (I33) para que el reparto no se la vuelva a dar y le busque una que sí alcance.
@@ -3226,18 +3220,15 @@ public final class VillageManager {
         // Y SI NINGUNA (el planificador no le lleva ni a la celda de al lado de su cama), la más cercana que VEA: el
         // latido le lleva y, si no puede andando, le mueve esos últimos bloques. Una cama que se ve y está a un paso
         // no se descarta: con camas de sobra, el que no duerme es el aldeano, no la cama.
-        // PERO TIENE QUE SER DE VERDAD "UN PASO": la celda de espera a la que el aldeano NO puede llegar andando solo
-        // vale si está a menos de PASO_A_LA_ESPERA bloques y en su MISMA PLANTA (o pegada). Antes valía cualquiera que
-        // el aldeano viera, y con una cama de la POSADA (planta de arriba) eso elegía una celda de espera cinco
-        // bloques por encima de él: el aldeano se quedaba plantado DEBAJO, en la calle, con la etiqueta "Yendo a
-        // dormir" y sin acostarse nunca (lo reportó el jugador con Zacarías: *"según va a dormir pero está afuera y no
-        // toma cama"*, medido en su guardado: cama (1446,125,1429) y él en (1446,120,1427), la misma X/Z una planta
-        // abajo). Sin celda de espera válida, esta cama no es para él y el reparto le busca otra que sí alcance.
+        //
+        // OJO CON LO QUE **NO** SE EXIGE AQUÍ (medido con el arnés, aldea 2): la celda de espera **puede estar en
+        // otra planta**. Se probó a exigir "misma planta y a ≤3 bloques" para no mover a nadie a través del techo, y
+        // el resultado fue el contrario: los aldeanos de abajo **se quedaban SIN CAMA** (`CAMAS RESUMEN: … SIN CAMA=4`)
+        // porque todas las camas que quedaban libres eran las de la posada y ninguna pasaba el filtro. Lo que hace
+        // falta es que la celda sea **de verdad** una celda (donde se pueda estar de pie, `celdaLibreParaAcostarse`) y
+        // que **vea la cama de verdad** (sin muros en medio, ver `hayVistaLibre`): con esas dos cosas, llevarle a la
+        // celda de al lado de su cama y acostarle es lo que ya hacía I43, y el aldeano duerme.
         for (BlockPos celda : candidatas) {
-            if (Math.abs(celda.getY() - villager.getY()) > 1.0D
-                    || celda.distSqr(villager.blockPosition()) > PASO_A_LA_ESPERA * PASO_A_LA_ESPERA) {
-                continue; // otra planta (o demasiado lejos): eso no son "los dos últimos pasos"
-            }
             if (celdaLibreParaAcostarse(level, celda) && hayVistaLibre(level, celda, cama, villager)) {
                 return celda;
             }
@@ -3423,6 +3414,14 @@ public final class VillageManager {
             }
             if (laTieneOtro(level, villager, pareja)) {
                 return false; // COMPARTIDA: esa mitad es de otro aldeano (vanilla le borraría el HOME)
+            }
+            // Y ADEMÁS: si el TICKET de la otra mitad está COGIDO, esa mitad es de alguien aunque a su dueño no se le
+            // vea alrededor de la cama (va andando hacia ella, está en su bancal...). Medido con el arnés (aldea 2):
+            // dos aldeanos acabaron con **media cama cada uno** (`1452,125,1429` y su mitad `1452,125,1430`), que es
+            // el bucle que I43 describe —vanilla le borra el HOME al que comparte y no duerme—.
+            if (level.getPoiManager().getCountInRange(h -> h.is(PoiTypes.HOME), pareja, 1,
+                    PoiManager.Occupancy.IS_OCCUPIED) > 0) {
+                return false;
             }
         }
         return !laTieneOtro(level, villager, cama);

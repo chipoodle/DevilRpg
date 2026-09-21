@@ -1365,6 +1365,24 @@ otra`).
 > ("Yendo al almacén") mientras el juego lo manda a una cama que no alcanza. Con la cama bien repartida (y la de
 > espera bien elegida) el aldeano duerme; y si no hay ninguna cama alcanzable, el reparto lo deja **sin `HOME`**, que
 > es mejor que dejarlo clavado: sin cama el cerebro no lo manda a ninguna parte y puede seguir con su faena.
+>
+> **MEDIDO CON EL ARNÉS, y con dos correcciones que salieron de ahí** (aldea 2, noche fija, `MEDIR_NOCHE`):
+>
+> - **No se le puede exigir a la celda de espera que esté en SU PLANTA.** Se probó a pedir "misma planta y a ≤3
+>   bloques" para no mover a nadie a través del techo, y el resultado fue el contrario: `CAMAS RESUMEN: … conCama=11
+>   … **SIN CAMA=4**` — los aldeanos de abajo se quedaban **sin cama** porque todas las que quedaban libres eran las de
+>   la posada y ninguna pasaba el filtro. Lo que hace falta es que la celda sea **una celda de verdad**
+>   (`celdaLibreParaAcostarse`) y que **vea la cama de verdad**; con eso, el aldeano duerme. *(El jugador confirmó que
+>   **él sí sube y baja** las escaleras de la torre andando, así que la geometría no era el problema: era el cerebro
+>   tirando de una cama que el aldeano no alcanzaba.)*
+> - **El aspecto que quedaba: la cama compartida.** `…COMPARTIDAS=1 [1452,125,1429+1452,125,1430: 9474201f+ffb99daa]`
+>   — dos aldeanos con **media cama cada uno**—, porque `laTieneOtro` busca al dueño **alrededor de la cama** y el que
+>   va andando hacia ella no está ahí. Ahora, además, se mira el **ticket de la otra mitad**
+>   (`PoiManager.getCountInRange(…, Occupancy.IS_OCCUPIED)`): si esa mitad está cogida, es de alguien aunque no se le
+>   vea.
+> - Y con las dos cosas, la corrida del arnés acaba en `conCama=15 … COMPARTIDAS=0 SIN CAMA=0 **DURMIENDO=13**`
+>   (de 15: los otros dos son crías que aún no se acuestan). Las celdas de espera que se ven en el log son ya
+>   **de dentro del edificio**, al lado de la cama (`se le mandara a 1367,124,…`, `1453,125,…`).
 
 ### I59 · El SELLO no es lo primero: primero DEFIENDE el pueblo (y el rechazo se VE)
 
