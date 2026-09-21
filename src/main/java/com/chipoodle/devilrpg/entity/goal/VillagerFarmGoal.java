@@ -114,7 +114,7 @@ public class VillagerFarmGoal extends Goal {
      */
     private static final int DESPENSA_VACIA = 8;
 
-    private enum Tarea { COSECHAR, LABRAR, PLANTAR, FERTILIZAR, COMPOSTAR, DESPENSA }
+    private enum Tarea { COSECHAR, LABRAR, PLANTAR, FERTILIZAR, COMPOSTAR, DESPENSA, SALIR }
 
     private final Villager villager;
     private final BlockPos center;
@@ -169,6 +169,30 @@ public class VillagerFarmGoal extends Goal {
         // En plena refriega nadie se pone a sembrar.
         if (VillageManager.isVillageUnderAttack(level, objectiveIndex)) {
             return false;
+        }
+        // EL QUE SE QUEDA ENCERRADO AL ANOCHECER CON SU CAMA (O SU NOCHE) FUERA DEL BANCAL: se le manda a la
+        // COMPUERTA. El juego NO deja que un aldeano abra una puerta de valla —por eso el pueblo tiene su
+        // `VillageGateGoal`, que se la abre al tenerlo al lado—, así que desde dentro del bancal el aldeano no puede
+        // PLANIFICAR la salida: su ruta a la cama se corta en la valla. Medido con el arnés: la ruta de Isidoro
+        // (bancal 2) a su cama acababa en la propia compuerta, `alcance=NO`, y con TODAS las camas libres de la
+        // aldea igual. Se quedaba de pie en la huerta toda la noche (lo que vio el jugador: "Sin cama" con la aldea
+        // llena de camas). Y hay algo peor, medido a resolución de tick: vanilla, cuando un aldeano lleva 1200 ticks
+        // (60 s) sin poder llegar a su cama, se la BORRA (`SetWalkTargetFromBlockMemory`: `releasePoi` + `erase`
+        // cuando `CANT_REACH_WALK_TARGET_SINCE` pasa del minuto), así que el latido se la daba, él no llegaba y a los
+        // 60 s se la volvían a borrar: un bucle sin salida. Sacándolo a la compuerta se rompe, porque al pisarla el
+        // portón se abre y su cama vuelve a estar a su alcance.
+        int donde = parcelaDondeEsta(level);
+        if (donde >= 0 && VillageManager.estaDescansando(villager)) {
+            var cama = villager.getBrain().getMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.HOME);
+            boolean camaFuera = cama.isEmpty() || !VillageGenerator.estaDentroDeLaParcela(center, donde,
+                    cama.get().pos().getY(), cama.get().pos());
+            if (camaFuera) {
+                tarea = Tarea.SALIR;
+                parcelaDelObjetivo = donde;
+                target = VillageGenerator.salidaDeLaParcela(center, donde,
+                        VillageGenerator.cotaDeLaPlaza(level, center), villager.blockPosition());
+                return target != null;
+            }
         }
         // Ni en su hora de descanso: el granjero también se va a la cama.
         if (VillageManager.estaDescansando(villager)) {
@@ -287,6 +311,15 @@ public class VillagerFarmGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
+        if (tarea == Tarea.SALIR) {
+            // La pierna de SALIR dura hasta que PISA FUERA del bancal, y a propósito NO se corta por descansar: es
+            // justo lo que está haciendo, irse a dormir. Si se atasca en la compuerta, el tope de siempre (I33).
+            if (!(villager.level() instanceof ServerLevel level)) {
+                return false;
+            }
+            return target != null && !villager.isBaby() && stuckTicks < STUCK_LIMIT
+                    && parcelaDondeEsta(level) == parcelaDelObjetivo;
+        }
         if (target != null && stuckTicks >= STUCK_LIMIT) {
             // RENDIRSE = DEJARLO POR UN RATO (I33): el sitio al que no llegó (la mata, la calva, el compostero o la
             // despensa) se apunta para no volver a elegir EL MISMO en bucle, que es lo que dejaba al granjero
@@ -298,12 +331,43 @@ public class VillagerFarmGoal extends Goal {
                 && !VillageManager.estaDescansando(villager);
     }
 
+    /** El índice del bancal en el que está <b>metido</b> el granjero ahora mismo, o {@code -1} si está fuera de todos. */
+    private int parcelaDondeEsta(ServerLevel level) {
+        int cota = VillageGenerator.cotaDeLaPlaza(level, center);
+        for (int i = 0; i < VillageGenerator.parcelasDeGranja(); i++) {
+            if (VillageGenerator.estaDentroDeLaParcela(center, i, cota, villager.blockPosition())) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     @Override
     public void tick() {
         if (target == null || !(villager.level() instanceof ServerLevel level)) {
             return;
         }
         villager.getLookControl().setLookAt(target.getX() + 0.5D, target.getY() + 0.5D, target.getZ() + 0.5D);
+        // LA SALIDA DEL BANCAL (la pierna espejo de la de entrar): a la compuerta, y en cuanto la pisa el portón se
+        // abre (`VillageGateGoal`, a 2,6). Cuando está fuera, el goal se corta (`canContinueToUse`) y el cerebro de
+        // vanilla —con su cama ya alcanzable— se encarga de llevarlo a dormir.
+        if (tarea == Tarea.SALIR) {
+            if (parcelaDondeEsta(level) != parcelaDelObjetivo) {
+                return; // ya está fuera del bancal: a dormir (lo lleva el cerebro)
+            }
+            VillageManager.caminarHacia(villager, target, 0.6F);
+            VillageManager.ponerActividad(villager, "Saliendo de la huerta");
+            // La pierna de la compuerta se mide aparte de la del objetivo (I38: dos piernas, dos contadores).
+            double hastaLaPuerta = Math.sqrt(villager.distanceToSqr(target.getX() + 0.5D, target.getY() + 0.5D,
+                    target.getZ() + 0.5D));
+            if (hastaLaPuerta < mejorDistanciaEntrada - 0.5D) {
+                mejorDistanciaEntrada = hastaLaPuerta;
+                stuckTicks = 0;
+            } else {
+                stuckTicks++;
+            }
+            return;
+        }
         // LAS FAENAS DE LA HUERTA SE HACEN DENTRO DEL BANCAL. El alcance de la faena son 3 bloques, así que un
         // granjero parado FUERA de la valla alcanzaba las matas de la primera fila y las cosechaba A TRAVÉS de la reja:
         // no le hacía falta entrar (lo reportó el jugador: "los granjeros no están entrando a la granja") y las matas

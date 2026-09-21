@@ -930,6 +930,67 @@ madera en el almacén, unos 128 logs"*. Sin ella, una aldea **recién fundada** 
 la reserva de 32, esa remesa deja **96** troncos para quemar y aserrar y **32** intocables para la madera del
 herrero.
 
+### I43 · Una cama son DOS POIs `HOME`: no se comparte, y el que no llega en 60 s la pierde
+
+Lo vio el jugador en una captura: dos granjeros con la etiqueta **"Sin cama"** de pie en la huerta toda la noche, *"si
+la aldea está repleta de ellas"*. Son **dos reglas de vanilla** las que se la quitaban, y las dos hay que respetarlas al
+repartir camas:
+
+- **Una cama son DOS puntos de interés `HOME`** (el bloque de la cabeza y el del pie), así que dos aldeanos pueden
+  acabar con **una mitad cada uno**. El que se duerme pone `OCCUPIED` en las **dos** mitades y al otro —que está a ≤16
+  bloques y **no** está durmiendo— el comportamiento `ValidateNearbyPoi` del cerebro le **borra el `HOME`**:
+  `if (!poiManager.exists(pos, HOME)) erase(); else if (bedIsOccupied(level, pos, entity)) { erase(); release(pos); }`.
+  Medido: Isidoro tenía la mitad de la cama del herrero (`1442/1443,131,1432`), el herrero se durmió y a Isidoro le
+  borraron la cama; el latido se la volvía a dar (**la misma**) en bucle.
+- **`SetWalkTargetFromBlockMemory`** (paquete `REST`, registrado para `HOME`): si el aldeano lleva **1200 ticks (60 s)**
+  con `CANT_REACH_WALK_TARGET_SINCE` puesto —o sea, sin conseguir ruta a su cama—, hace `releasePoi(HOME)` +
+  `erase()`. Es decir: **una cama a la que el aldeano no puede llegar se pierde sola en un minuto**, y el latido se la
+  vuelve a dar… en bucle. Medido a resolución de tick: pérdida cada 60 s exactos, con la cama **libre, con POI y sin
+  nadie durmiendo** (ni la rama (a) ni la (b) de `ValidateNearbyPoi`: el culpable era el minuto).
+
+**Regla:** al aldeano sin cama solo se le da una cama que sea **suya y alcanzable**:
+
+1. **No compartida**: ni la cama ni su **otra mitad** pueden estar en el cerebro de otro aldeano. El dueño se busca
+   **alrededor de la cama** (`laTieneOtro`), no solo en la lista del censo (que se arma alrededor de la plaza): un
+   granjero en su bancal o un leñador en la arboleda no están en esa lista y la cama parecía libre.
+2. **No ocupada** (`BedBlock.OCCUPIED`, en cualquiera de las dos mitades) y **entera** (las dos mitades son camas).
+3. **Alcanzable**: fuera de un bancal, solo si `villager.getNavigation().createPath(cama, 1).canReach()`. **Encerrado
+   en un bancal** (cercado con valla y compuertas cerradas) sí vale la que más se acerca —es el rescate, y el goal del
+   granjero lo saca por la compuerta (I44)—, pero **solo** en ese caso: una cama a la que no llega le cuesta el `HOME`
+   a los 60 s. Medido: el herrero recibía una cama del dormitorio con **un muro de adoquín** de por medio (su ruta
+   acababa a 2,00 bloques, y para acostarse hace falta ≤2,0) y no se dormía nunca.
+
+**Medido después** (misma partida, misma noche): los dos granjeros **duermen en su cama**
+(`durmiendo=true durmiendoEnElla=[EL MISMO]`, `pos == home`), **cero** pérdidas de cama en toda la corrida y
+`COMPARTIDAS=0`. Todo en `tools/arnes/medidas-camas.txt`.
+
+**Pendiente (dicho claramente)**: una **cama sin acceso** —con un muro o mobiliario que impide ponerse a ≤2,0— no se le
+da a nadie y ese aldeano se queda sin cama. Es construcción/mobiliario del pueblo, no del reparto.
+
+### I44 · El goal de portones RE-ELIGE, VALIDA su lista y hace REHACER el camino
+
+Tres reglas que salieron del mismo encierro (el granjero que no podía salir del bancal a dormir):
+
+1. **Re-elegir el portón si el que tiene no es el de al lado.** `portonMasCercano` solo se llama desde `canUse`, y
+   `canUse` **no se vuelve a llamar mientras el goal está corriendo** (sigue mientras tenga un portón a menos de
+   `RADIO`): un portón elegido a mala hora —la aldea a medio migrar, la casilla sin cargar— **se quedaba pegado para
+   siempre**. Medido: el granjero tenía elegida la compuerta **norte** (a 7,09 bloques) en vez de la **este** (a
+   **0,87**), así que «vigilaba» una puerta lejana y no abría la suya; por eso se pasaba la noche dentro del bancal con
+   la cama al otro lado. Ahora, en `tick`, si `distancia > ABRIR` se vuelve a elegir la más cercana de verdad.
+2. **Validar la lista guardada.** La lista de portones se cachea **una vez por goal** con la cota del momento: si el
+   goal se creó con la aldea a medio migrar, sus posiciones caen al aire y el aldeano se queda **sin poder abrir
+   ninguna puerta**. Ahora, si ninguna puerta de la lista está **cerca y es una puerta de verdad** (`FenceGateBlock`),
+   se recalcula (como mucho una vez cada 5 s: la cota mira el terreno).
+3. **Hacer REHACER el camino al abrir** (`abrir`): la ruta que traía el aldeano se calculó con la compuerta **cerrada**
+   —el juego no le deja planificar a través de una puerta de valla cerrada—, así que acaba en su propia casilla y el
+   aldeano **no se mueve**; la compuerta se cierra a los 5 s sin que nadie la cruce y vuelta a empezar. Al abrir se le
+   borran `WALK_TARGET` y `PATH` (y se para la navegación) para que el cerebro vuelva a pedir el destino **con la
+   compuerta ya abierta**.
+
+**Y la celda de salida de un bancal es la de FUERA**, no la de dentro (`VillageGenerator.salidaDeLaParcela`): el goal
+de portones solo abre si el destino del aldeano está **al otro lado** (`vaACruzar`); mandándolo a la celda de dentro
+—la de entrar— la compuerta **no se abre** (medido: el granjero se quedaba en `1394,119,1452`, pegado a la valla).
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
@@ -974,6 +1035,7 @@ Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento 
 | `build/granjaestado.py`, `build/farmdiag.py`, `build/columnas.py`, `build/perfilcol.py` | Estado de la granja (cultivos, edades, cotas) y columnas crudas. |
 | `build/items.py`, `build/contenedores.py` | Objetos en el suelo por tipo y contenido de cofres/despensa/almacén. |
 | `build/combustible_aldea.py` | **Los aparatos que queman y la madera del almacén** (I41/I42): barre el guardado y lista ahumador, hornos, hogar y soporte de pociones con sus coordenadas, más el contenido de los cofres con la madera separada (`COMBUSTIBLE`). |
+| `build/cama_toolsmith.py` | **¿Por qué una cama no se puede usar?** (I43): imprime la rejilla de bloques alrededor de una cama en las capas que se pisan, que es lo que delata el muro o el mobiliario que impide ponerse a ≤2,0 para acostarse. |
 | `build/faroles_hanging.py` | **Faroles sin apoyo de verdad** (I14): mira la propiedad `hanging` contra su dirección, que es lo que **no** mira la auditoría de Python (una valla debajo vale para un farol *posado*, no para uno *colgado*; la de Java sí lo mira desde la migración 55). Dice qué reparador arregla cada uno. |
 | `build/kiosco_dump.py` | **El kiosco entero, capa a capa** (I28): cuenta los bloques por capa, imprime la huella de `cota-2` a `cota+7` y localiza la **campana**, el **farol** y el **beacon** con sus propiedades (dónde están y en qué celda relativa al centro). |
 | `build/aldeanos.py`, `build/aldeanos.py` | Aldeanos: profesión, inventario, posición (carpeta `entities/`). |

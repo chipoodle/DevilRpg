@@ -1,0 +1,127 @@
+MEDIDAS DE LA CAMA DEL GRANJERO ("Sin cama" y de pie en la huerta toda la noche)
+=================================================================================
+Lo reportó el jugador con una captura: dos granjeros (Cesarea e Isidoro) con la etiqueta **"Sin cama"** encima, de
+pie en la huerta, con la aldea llena de camas ("¿cómo que el granjero no tiene cama? si la aldea está repleta de
+ellas"). Partida: run/saves/New World (1) copiada a run/world (aldea 2, centro 1414,1414, cota 120); servidor headless
+con el latido de verdad (arnés `GuardHarness`, `MEDIR_NOCHE = true`, día congelado en 18000). Líneas literales del log.
+
+
+--- 0) EL SÍNTOMA, MEDIDO ----------------------------------------------------------------------
+[Arnes] CAMAS RESUMEN: adultos=11 conCama=8 (camas distintas ocupadas=8) COMPARTIDAS=0 SIN CAMA=3
+        5701c0e4(farmer) 0a578750(farmer) 9e0ed6e3(toolsmith)
+
+Los tres queja del jugador (los dos granjeros y, de propina, el herrero de herramientas).
+
+
+--- 1) PRIMERA CAUSA: DOS ALDEANOS CON LA MISMA CAMA (cada cama son DOS POIs `HOME`) --------------
+Vanilla registra el punto de interés `HOME` para **los dos bloques** de la cama (cabeza y pie), así que dos aldeanos
+pueden acabar con **una mitad cada uno**; el que se duerme pone `OCCUPIED` en las dos mitades y al otro, que está
+cerca y no duerme, `ValidateNearbyPoi` (comportamiento del cerebro, registrado para `HOME`) le **borra la cama**:
+
+    if (!poiManager.exists(pos, HOME))          memory.erase();   // (a) la cama ya no está
+    else if (bedIsOccupied(level, pos, entity))  memory.erase();   // (b) OCCUPIED y él no está durmiendo
+
+[Village] 5701c0e4 no tenia cama: reclama la de 1442, 131, 1432 ...
+[Arnes] CAMA RECLAMADA 5701c0e4 prof=farmer SIN CAMA -> 1442, 131, 1432 · ... duennos=[EL [otra mitad: 9e0ed6e3]]
+[Arnes] CAMA PERDIDA   5701c0e4 prof=farmer tenia=1442, 131, 1432 -> SIN CAMA · ... durmiendoEnElla=[villager]
+        dist=52.07 · pos=1394, 119, 1448
+[Arnes] CAMA RECLAMADA 5701c0e4 prof=farmer SIN CAMA -> 1442, 131, 1432 ...      (¡la MISMA, en bucle!)
+
+Isidoro tenía la mitad de la cama del **herrero de herramientas** (1443,131,1432), el herrero se durmió en ella y a
+Isidoro le borraron el `HOME`; el latido se la volvía a dar (la misma, porque se pedía «la libre más cercana a la
+plaza»), y así en bucle.
+
+
+--- 2) SEGUNDA CAUSA: VANILLA BORRA LA CAMA DEL QUE NO LLEGA EN 60 S ------------------------------
+Ya sin camas compartidas, seguía perdiéndola. El vigilante **a resolución de tick** (el estado de la cama en el tick
+ANTERIOR al borrado) descartó las dos ramas de arriba:
+
+[Arnes] PERDIDA-TICK 5701c0e4 farmer tenia=1409, 120, 1452 · EN EL TICK ANTERIOR: poi=SI OCCUPIED=false
+        durmiendoEnElla=[] · pos=1394, 119, 1452 durmiendo=false REST=true dist=15.02
+        · MEMORIAS QUE LE QUEDAN=cant_reach_walk_target_since=84603 | last_slept=... | job_site=...
+
+POI presente, cama libre, nadie durmiendo… pero **`cant_reach_walk_target_since`** puesto (y `job_site` intacto: no es
+un reinicio del cerebro). El culpable está en el paquete `REST` del cerebro de vanilla, `SetWalkTargetFromBlockMemory`
+(registrado para `HOME` con `…, 1, 150, 1200`):
+
+    if (dimension ok && (no hay CANT_REACH || gameTime - cantReach <= 1200)) { ...camina a la cama... }
+    else { villager.releasePoi(HOME); home.erase(); cantReach.set(gameTime); }
+
+O sea: **si el aldeano lleva 1200 ticks (60 s) sin poder llegar a su cama, vanilla se la borra** (`MoveToTargetSink`
+marca el `CANT_REACH` cuando no consigue ruta). Medido: exactamente 60 s entre la reclamación y el borrado, en bucle.
+
+
+--- 3) TERCERA CAUSA: ESTABA ENCERRADO EN EL BANCAL (y no podía planificar la salida) --------------
+¿Por qué no llegaba? La sonda de rutas del arnés (`rutaDetallada`: nodos, `canReach` y dónde ACABA la ruta) lo dijo:
+
+[Arnes] SIN CAMA 5701c0e4 farmer pos=1394, 119, 1448
+[Arnes]   CAMA CANDIDATA 1409, 120, 1452 ... a1=5n alcance=NO fin=1394, 120, 1452 dFin=15.00 dist=15.68
+[Arnes]   CAMA CANDIDATA 1371, 124, 1439 ... a1=9n alcance=NO fin=1386, 120, 1448 dFin=17.94
+          (y las otras seis libres, igual: `alcance=NO` en TODAS)
+
+La ruta a su cama **acaba en la propia compuerta del bancal** (1394,120,1452), a 15 bloques del destino: **el juego no
+deja que un aldeano abra una puerta de valla cerrada**, así que el planificador no puede cruzar. Y vanilla tampoco le
+daba cama porque su adquisición (`AcquirePoi`) exige `path.canReach()`. **Abrazo mortal**: sin cama no sale del
+bancal, y desde el bancal no alcanza ninguna cama.
+
+
+--- 4) CUARTA CAUSA (la de verdad): EL GOAL DE PORTONES TENÍA ELEGIDA OTRA PUERTA -----------------
+Con la pierna de salir (que lo manda a la celda de FUERA de la compuerta) la compuerta seguía **cerrada**:
+
+[Arnes] EN-BANCAL 5701c0e4 farmer dentro=2 pos=(1394.50,119.94,1452.45) REST=true home=1409, 120, 1452
+        destino=1396, 120, 1452 goals=[VillagerFarmGoal VillagerGateGoal]
+        compuertas: 1390,120,1447=cerrada 1390,120,1457=cerrada 1385,120,1452=cerrada 1395,120,1452=cerrada
+
+Y el diagnóstico dentro del propio goal de portones dio la respuesta:
+
+[Village] GATE-DIAG canUse: porton=1390, 120, 1447 -> true
+
+¡Tenía elegida la compuerta **NORTE**, a 7,09 bloques, en vez de la **ESTE**, que le quedaba a **0,87**! Porque
+`portonMasCercano` solo se llama desde `canUse` y **`canUse` no se vuelve a llamar mientras el goal está corriendo**
+(sigue corriendo mientras tenga un portón a menos de `RADIO` = 16): el portón elegido a mala hora (la aldea a medio
+migrar, la casilla sin cargar) **se quedaba pegado para siempre**. El aldeano «vigilaba» una puerta a 7 bloques y no
+abría la que tenía al lado.
+
+
+--- 5) EL ARREGLO, VERIFICADO -------------------------------------------------------------------
+Cuatro cosas, todas medidas:
+  1. **La cama es del aldeano**: no se le da una cama **compartida** (la otra mitad de otro aldeano), ni **ocupada**,
+     ni al que ya la tiene otro aldeano de **alrededor de la cama** (no solo de la lista del censo; así la rama del
+     «ticket perdido» no le roba la cama a nadie).
+  2. **La cama tiene que ser ALCANZABLE**: fuera de un bancal solo se le da una cama a la que su ruta **llega**
+     (`canReach`); si está **encerrado en un bancal**, la que más se acerca (y el goal del granjero lo saca).
+  3. **El granjero SALE del bancal al anochecer** (`VillagerFarmGoal`, `Tarea.SALIR`): se le manda a la celda de
+     **FUERA** de la compuerta (`VillageGenerator.salidaDeLaParcela`; la de *dentro* no vale: `VillagerGateGoal` solo
+     abre si el destino está al otro lado, `vaACruzar`).
+  4. **El goal de portones vuelve a elegir** el portón si el que tiene no es el de al lado, y al abrir una compuerta
+     le hace **rehacer el camino** (la ruta que traía se calculó con ella cerrada).
+
+Resultado en la misma noche de la misma partida:
+
+[Arnes] EN-BANCAL 5701c0e4 farmer ... compuertas: ... 1395, 120, 1452=ABIERTA
+[Arnes] EN-BANCAL 0a578750 farmer ... compuertas: ... 1428, 120, 1427=ABIERTA
+[Arnes] CAMA 5701c0e4 prof=farmer home=1409, 120, 1452 ... durmiendo=true durmiendoEnElla=[EL MISMO] pos=1409, 120, 1452
+[Arnes] CAMA 0a578750 prof=farmer home=1446, 125, 1429 ... durmiendo=true durmiendoEnElla=[EL MISMO] pos=1446, 125, 1429
+[Arnes] CAMAS RESUMEN: adultos=11 conCama=10 COMPARTIDAS=0 SIN CAMA=1 9e0ed6e3(toolsmith)
+[Arnes] PERDIDA-TICK: 0 en toda la corrida        (antes: una cada 60 s)
+
+Los DOS granjeros de la captura **salen del bancal por la compuerta y duermen en su cama**, y ya no hay ni una
+pérdida de cama en toda la noche (antes, una cada 60 s).
+
+
+--- 6) LO QUE QUEDA (dicho claramente): el HERRERO, y es OTRA cosa --------------------------------
+El que sigue sin cama es el **herrero de herramientas**, y no por el bucle: sus camas libres cercanas están
+**tapiadas**. Sonda de rutas y mapa de bloques del guardado:
+
+[Arnes] SIN CAMA 9e0ed6e3 toolsmith pos=1455, 120, 1404
+[Arnes]   CAMA CANDIDATA 1452, 120, 1405 ... a1=3n alcance=NO fin=1454, 120, 1405 dFin=2.00 dist=2.98
+          (y las demás libres, a 5-12 bloques del final de su ruta)
+
+  y=120 alrededor de la cama:  ... | cobblestone(x=1453) | . (x=1454, donde está él) | oak_fence | ...
+  la cama está en (1451-1452), con un MURO de adoquín en x=1453 y el único hueco al lado tapado por vallas.
+
+Su ruta acaba a **2,00** bloques de la cama y `SleepInBed` exige **menos de 2,0** para acostarse: no se dormiría ni
+llegando. Con el arreglo **no se le da esa cama** (no es alcanzable) y no entra en el bucle de los 60 s, pero se queda
+sin cama: es una **cama sin acceso** —un problema de construcción/mobiliario del pueblo, no del reparto— y queda
+**pendiente** como tal (candidato: que el reparador del pueblo garantice el acceso a cada cama, o que el latido no
+cuente como cama una que no tiene hueco para acostarse).

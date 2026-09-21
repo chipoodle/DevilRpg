@@ -6267,9 +6267,35 @@ public final class VillageGenerator {
         return mejor != null ? mejor : esquina;
     }
 
-    /** ¿Ese aldeano está <b>dentro</b> del bancal {@code i}? (en su tierra de cultivo, no en la valla ni fuera) */
-    public static boolean estaDentroDeLaParcela(BlockPos center, int i, int cota, BlockPos pos) {
+    /**
+     * La celda por la que ese aldeano <b>SALE</b> del bancal {@code i}: la de <b>FUERA</b> del portón más cercano a
+     * él (un paso del portón hacia fuera, al revés que {@link #entradaDeLaParcela}).
+     * <p>
+     * Tiene que ser la de <b>fuera</b> y no la de dentro: {@code VillagerGateGoal} abre el portón solo si el destino
+     * del aldeano está <b>al otro lado</b> ({@code vaACruzar}: el que solo pasa por delante no lo abre). Mandándolo a
+     * la celda de dentro —la de entrar— el portón <b>no se abría</b> y el granjero se quedaba pegado a la valla toda
+     * la noche (medido con el arnés: Isidoro, con su cama ya reclamada, seguía dentro del bancal en `1394,119,1452`,
+     * la celda de dentro del portón este).
+     */
+    public static BlockPos salidaDeLaParcela(BlockPos center, int i, int cota, BlockPos desde) {
         BlockPos esquina = esquinaDeLaParcela(center, i, cota);
+        BlockPos centro = esquina.offset(PLOT_WIDTH / 2, 0, PLOT_DEPTH / 2);
+        BlockPos mejor = null;
+        double mejorDist = Double.MAX_VALUE;
+        for (BlockPos porton : portonesDeLaParcela(center, i, cota)) {
+            BlockPos fuera = porton.offset(-Integer.signum(centro.getX() - porton.getX()), 0,
+                    -Integer.signum(centro.getZ() - porton.getZ()));
+            double d = fuera.distSqr(desde);
+            if (d < mejorDist) {
+                mejorDist = d;
+                mejor = fuera;
+            }
+        }
+        return mejor != null ? mejor : esquina;
+    }
+
+    /** ¿Ese aldeano está <b>dentro</b> del bancal {@code i}? (en su tierra de cultivo, no en la valla ni fuera) */
+    public static boolean estaDentroDeLaParcela(BlockPos center, int i, int cota, BlockPos pos) {        BlockPos esquina = esquinaDeLaParcela(center, i, cota);
         int dx = pos.getX() - esquina.getX();
         int dz = pos.getZ() - esquina.getZ();
         return dx >= 0 && dx < PLOT_WIDTH && dz >= 0 && dz < PLOT_DEPTH && Math.abs(pos.getY() - cota) <= 2;

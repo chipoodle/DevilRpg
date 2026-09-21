@@ -138,6 +138,11 @@ public class VillagerGateGoal extends Goal {
     private boolean loAbriYo;
     /** De qué lado del portón estaba el aldeano al abrirlo (0 = estaba en el hueco, o no lo abrió él). */
     private int ladoAlAbrir;
+    /**
+     * Tick a partir del cual se puede <b>recalcular</b> la lista de portones guardada (ver {@link #portonMasCercano}):
+     * como mucho una vez cada 5 s, porque la cota mira el terreno de la plaza.
+     */
+    private long proximoRecalculo;
 
     public VillagerGateGoal(Villager villager, BlockPos center) {
         this.villager = villager;
@@ -177,6 +182,19 @@ public class VillagerGateGoal extends Goal {
         }
         boolean abiertoAhora = estado.getValue(FenceGateBlock.OPEN);
         double distancia = distancia(porton);
+        // SI EL PORTÓN QUE TIENE NO ES EL DE AL LADO, SE VUELVE A ELEGIR. `portonMasCercano` solo se llama desde
+        // `canUse`, y `canUse` NO se vuelve a llamar mientras el goal está corriendo (sigue corriendo mientras tenga
+        // un portón a menos de `RADIO`): un portón elegido a mala hora —la aldea a medio construir, la casilla sin
+        // cargar— se quedaba pegado PARA SIEMPRE y el aldeano «vigilaba» una puerta lejana sin abrir la que tenía al
+        // lado. Medido con el arnés: Isidoro, con su compuerta a 0,87 bloques, tenía elegida la del norte (a 7,09),
+        // así que no abría ninguna y se pasaba la noche encerrado en el bancal con su cama al otro lado.
+        if (distancia > ABRIR) {
+            BlockPos laDeAlLado = portonMasCercano(level);
+            if (laDeAlLado != null && distancia(laDeAlLado) < distancia) {
+                porton = laDeAlLado;
+                return; // con el portón bueno, en el tick siguiente
+            }
+        }
         if (!abiertoAhora) {
             abierto = 0;
             loAbriYo = false;
@@ -244,14 +262,33 @@ public class VillagerGateGoal extends Goal {
     @Nullable
     private BlockPos portonMasCercano(ServerLevel level) {
         if (portones == null) {
-            // La cota se pregunta UNA vez por goal (mira el terreno de la plaza): los portones no se mueven. Son el
-            // del corral, el del gallinero y las CUATRO puertas de valla de cada bancal de la granja (etapa F): todas
-            // son puertas de valla y el juego no deja que un aldeano las abra, así que las abre y las cierra el pueblo.
             portones = portonesDelAnexo(center, VillageGenerator.cotaDeLaPlaza(level, center)).toArray(new BlockPos[0]);
         }
+        BlockPos mejor = puertaValidaMasCercana(level);
+        if (mejor == null && level.getGameTime() >= proximoRecalculo) {
+            // NINGUNA puerta de la lista guardada está cerca Y NO ES UNA PUERTA DE VERDAD: la lista está RANCIA. Y
+            // pasa de verdad: el goal se crea UNA sola vez por aldeano, así que si se creó con la aldea a medio migrar
+            // —cuando `cotaDeLaPlaza` todavía no devolvía la cota definitiva— sus posiciones caen al aire y el aldeano
+            // se queda SIN PODER ABRIR NINGUNA PUERTA para siempre (las del anexo, que sí caían bien, le quedaban a
+            // más de 16 bloques). Medido con el arnés: Isidoro, con su compuerta a 1,15 bloques, no la abría nunca y
+            // se pasaba la noche encerrado en el bancal. Se recalcula (como mucho, una vez cada 5 s: la cota mira el
+            // terreno).
+            proximoRecalculo = level.getGameTime() + 100;
+            portones = portonesDelAnexo(center, VillageGenerator.cotaDeLaPlaza(level, center)).toArray(new BlockPos[0]);
+            mejor = puertaValidaMasCercana(level);
+        }
+        return mejor;
+    }
+
+    /** La puerta de valla <b>de verdad</b> (existe en el mundo) más cercana de la lista, o {@code null}. */
+    @Nullable
+    private BlockPos puertaValidaMasCercana(ServerLevel level) {
         BlockPos mejor = null;
         double mejorDistancia = RADIO;
         for (BlockPos p : portones) {
+            if (!(level.getBlockState(p).getBlock() instanceof FenceGateBlock)) {
+                continue; // esa ya no es una puerta (o la lista está rancia): no cuenta
+            }
             double d = distancia(p);
             if (d <= mejorDistancia) {
                 mejorDistancia = d;
@@ -283,6 +320,15 @@ public class VillagerGateGoal extends Goal {
         loAbriYo = true;
         ladoAlAbrir = lado(estado, porton, villager.getX(), villager.getZ());
         abierto = 0;
+        // Y SE LE HACE REHACER EL CAMINO CON LA COMPUERTA YA ABIERTA. La ruta que traía el aldeano se calculó con ella
+        // CERRADA —el juego no le deja planificar a través de una puerta de valla cerrada—, así que acaba en su propia
+        // casilla: el aldeano se queda pegado a la valla, la compuerta se cierra a los 5 s sin que nadie la cruce y
+        // vuelta a empezar. Borrándole el destino, el cerebro lo vuelve a pedir (y el goal del granjero también) y la
+        // ruta nueva SÍ cruza. Medido con el arnés: Isidoro (bancal 2) se quedaba toda la noche en `1394,119,1452`,
+        // la celda de dentro de su compuerta, con la cama reclamada al otro lado y las cuatro compuertas cerradas.
+        villager.getNavigation().stop();
+        villager.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
+        villager.getBrain().eraseMemory(MemoryModuleType.PATH);
     }
 
     /** Abre el portón y lo registra. Devuelve {@code false} si el bloque ya no es un portón de valla. */

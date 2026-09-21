@@ -42,6 +42,12 @@ public class GuardHarness {
      * En {@code true} se mide la cadena de la poción sin el paseo (era como estaba antes de esta ronda).
      */
     private static final boolean SEMBRAR_AGUA_EMBOTELLADA = false;
+    /**
+     * ¿Se mide el <b>SUEÑO Y LAS CAMAS</b> (noche fija) o el <b>TRABAJO Y EL COMBUSTIBLE</b> (día fijo)? En noche, el
+     * arnés pasa el VIGILANTE DE CAMAS cada segundo y se salta las siembras de trabajo (que ensucian el log y mueven
+     * al pueblo de sitio). Ver `volcarCamas`.
+     */
+    private static final boolean MEDIR_NOCHE = true;
     private static boolean listo = false;
     private static int ticks = 0;
     /** Cuantas veces se ha visto a un granjero SUBIDO a la valla de su bancal (el bug que se mide). */
@@ -62,7 +68,7 @@ public class GuardHarness {
         // cadena del CLERIGO: verruga del Nether, polvo de blaze y BOTELLAS DE CRISTAL (para que tenga que ir al agua
         // a llenarlas: ver SEMBRAR_AGUA_EMBOTELLADA); y el botin que ya barre el recolector (pepitas de oro,
         // zanahorias, ojos de arana) para la zanahoria dorada.
-        if (ticks == 600) {
+        if (!MEDIR_NOCHE && ticks == 600) {
             // --- TERCERA MEDIDA: LA REMESA INICIAL DE MADERA ---------------------------------------------------
             // Se VACIA el almacen entero (como el de una aldea recien fundada, que nace sin nada dentro): en la
             // siguiente pasada del latido el pueblo tiene que meter su remesa inicial de 128 troncos, UNA vez.
@@ -91,20 +97,43 @@ public class GuardHarness {
                 }
             }
         }
+        // SIN MUERTES POR VEJEZ EN LA MEDIDA: el mod le pone a cada aldeano su fecha de nacimiento
+        // (`DevilRpgVillagerBorn`) y a los 3 dias de juego (una hora de servidor) muere de viejo. En una corrida
+        // larga eso repuebla la aldea a mitad de la medida (UUID nuevos y aldeanos sin cama recien llegados), asi
+        // que aqui se les REJUVENECE: la medida del sueno no se ensucia con el relevo generacional.
+        if (ticks % 200 == 0) {
+            for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(140))) {
+                v.getPersistentData().putLong("DevilRpgVillagerBorn", level.getGameTime());
+            }
+        }
         // El latido de la aldea, tal cual lo llama el tick del jugador (con el ancla del objetivo 2).
         if (pega != null) {
             pega.moveTo(CENTRO.getX() + 0.5D, CENTRO.getY(), CENTRO.getZ() + 0.5D);
             VillageManager.manageNearby(level, pega, ancla(), INDICE);
         }
-        if (ticks == 400 || ticks == 1400) {
-            volcarObjetos(level);
-            volcarCamas(level);
-        }
-        if (ticks % 20 == 0) {
-            volcar(level);
-        }
-        if (ticks % 40 == 0) {
-            volcarCombustible(level);
+        if (MEDIR_NOCHE) {
+            // EL VIGILANTE DE CAMAS, cada segundo (la transicion se canta sola cuando el HOME desaparece o se reclama).
+            if (ticks % 20 == 0) {
+                volcarCamas(level);
+            }
+            // Y A RESOLUCION DE TICK: al perderse la cama se imprime como estaba EN EL TICK ANTERIOR, que es lo que
+            // dice quien la borro (ver `vigilarCamasCadaTick`).
+            vigilarCamasCadaTick(level);
+            // Y EL QUE ESTA DENTRO DE UN BANCAL: su destino, sus goals activos y el estado de las compuertas.
+            if (ticks % 40 == 0) {
+                vigilarGranjerosEnElBancal(level);
+            }
+        } else {
+            if (ticks == 400 || ticks == 1400) {
+                volcarObjetos(level);
+                volcarCamas(level);
+            }
+            if (ticks % 20 == 0) {
+                volcar(level);
+            }
+            if (ticks % 40 == 0) {
+                volcarCombustible(level);
+            }
         }
         // EL PORCHE DE LA TABERNA (migracion 63): se mide la columna `bx-1`, la que queda ENTRE el toldo (bx-2) y la
         // pared de la taberna (bx). A los 10 s el latido ya migro la aldea, asi que esto es "despues".
@@ -122,9 +151,9 @@ public class GuardHarness {
             }
         }
         level.getGameRules().getRule(GameRules.RULE_DAYLIGHT).set(false, server);
-        // DIA FIJO (6000 = mediodia): es cuando el pueblo trabaja (la cocina y la fragua son faenas de dia). La
-        // medida de las CAMAS (noche, "Sin cama") ya se hizo: ver `medidas-camas.txt`.
-        level.setDayTime(6000L);
+        // LA HORA SE FIJA SEGUN LO QUE SE MIDA: NOCHE (18000 = medianoche) para el sueño y las camas, DIA (6000 =
+        // mediodia) para el trabajo y el combustible (la cocina y la fragua son faenas de dia).
+        level.setDayTime(MEDIR_NOCHE ? 18000L : 6000L);
         // Sin bichos: la ronda se mide sola (el combate va antes que la ronda y los guardias se morian peleando).
         level.getGameRules().getRule(GameRules.RULE_DOMOBSPAWNING).set(false, server);
         for (net.minecraft.world.entity.Mob m : level.getEntitiesOfClass(net.minecraft.world.entity.Mob.class,
@@ -270,8 +299,35 @@ public class GuardHarness {
                 level.getGameTime(), lena, com.chipoodle.devilrpg.world.VillageStorage.RESERVA_LENA, crudo, linea);
     }
 
-    /** ¿Encuentra el aldeano camino hasta esa celda? ("SI"/"NO"/"?"): es `PathNavigation.createPath`. */
-    private static String ruta(ServerLevel level, Villager v, BlockPos destino) {
+    /**
+     * La ruta <b>con detalle</b>: con `accuracy` 1 y 2, cuantos nodos tiene, si de verdad <b>ALCANZA</b>
+     * (`canReach`, que es lo que exige vanilla en `AcquirePoi`) y <b>donde acaba</b> (y a que distancia del destino).
+     * Es lo que distingue "hay ruta" de "la ruta llega": una cama es un bloque al que no se puede subir, asi que la
+     * ruta termina AL LADO y `canReach` puede decir que no.
+     */
+    private static String rutaDetallada(Villager v, BlockPos destino) {
+        StringBuilder sb = new StringBuilder();
+        for (int acc : new int[]{1, 2}) {
+            try {
+                var camino = v.getNavigation().createPath(destino, acc);
+                if (camino == null) {
+                    sb.append(" a").append(acc).append("=NO(nula)");
+                    continue;
+                }
+                var fin = camino.getEndNode();
+                double d = fin == null ? -1.0D : Math.sqrt(fin.asBlockPos().distSqr(destino));
+                sb.append(" a").append(acc).append('=').append(camino.getNodeCount()).append("n alcance=")
+                        .append(camino.canReach() ? "SI" : "NO").append(" fin=")
+                        .append(fin == null ? "?" : fin.asBlockPos().toShortString())
+                        .append(" dFin=").append(fmt(d));
+            } catch (RuntimeException e) {
+                sb.append(" a").append(acc).append("=ERROR:").append(e.getClass().getSimpleName());
+            }
+        }
+        return sb.toString().trim();
+    }
+
+    /** ¿Encuentra el aldeano camino hasta esa celda? ("SI"/"NO"/"?"): es `PathNavigation.createPath`. */    private static String ruta(ServerLevel level, Villager v, BlockPos destino) {
         try {
             var camino = v.getNavigation().createPath(destino, 1);
             if (camino == null) {
@@ -286,14 +342,33 @@ public class GuardHarness {
     /**
      * LAS CAMAS: aldeano por aldeano, si tiene cama en la memoria del cerebro, si esta durmiendo y que actividad tiene
      * activa (REST/WORK/MEET), con la hora del mundo. Es lo que mide "por que dice Sin cama si sobran camas".
+     * <p>
+     * Y EL VIGILANTE: se guarda la cama de cada aldeano de la pasada anterior, y cuando CAMBIA se canta la transicion
+     * con el estado de la cama vieja, que es lo que dice QUIEN la borra. La sospecha (codigo de vanilla,
+     * {@code ValidateNearbyPoi}, que el aldeano lleva registrado para {@code HOME}):
+     * <pre>
+     *   if (!poiManager.exists(pos, HOME))            memory.erase();   // (a) la cama ya no esta
+     *   else if (bedIsOccupied(level, pos, entity))    memory.erase();   // (b) OCCUPIED y el no duerme
+     * </pre>
+     * Asi que al perderla se imprime: el bloque que hay, si el POI existe, la propiedad OCCUPIED de la cama, quien
+     * duerme en ella (aldeano o jugador), quien mas la tiene en el cerebro y a que distancia estaba el aldeano.
      */
+    private static final java.util.Map<String, String> camaAnterior = new java.util.HashMap<>();
+
     private static void volcarCamas(ServerLevel level) {
         DevilRpg.LOGGER.info("[Arnes] CAMAS: dayTime={} (franja {})", level.getDayTime() % 24000,
                 level.getDayTime() % 24000 >= 12000 ? "DESCANSO" : "dia");
+        // EL RESUMEN (el criterio de "arreglado"): cuantos adultos tienen cama, cuantos COMPARTEN cama (dos aldeanos
+        // con la misma cama: la mitad de la misma cama o la misma casilla) y quien se queda SIN cama.
+        int adultos = 0;
+        int conCama = 0;
+        java.util.Map<String, java.util.List<String>> porCama = new java.util.TreeMap<>();
+        java.util.List<String> sinCama = new java.util.ArrayList<>();
         for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(64))) {
             if (v.isBaby()) {
                 continue;
             }
+            String uuid = v.getUUID().toString().substring(0, 8);
             var home = v.getBrain().getMemory(MemoryModuleType.HOME);
             String cama = home.map(g -> g.pos().toShortString()).orElse("NINGUNA");
             String existe = "";
@@ -302,14 +377,282 @@ public class GuardHarness {
                 boolean poi = level.getPoiManager().getType(p).isPresent();
                 String bloque = level.getBlockState(p).getBlock().toString()
                         .replace("Block{minecraft:", "").replace("}", "");
-                existe = " poi=" + (poi ? "SI" : "NO") + " bloque=" + bloque;
+                existe = " poi=" + (poi ? "SI" : "NO") + " bloque=" + bloque + " " + estadoDeLaCama(level, p, v);
+            }
+            String anterior = camaAnterior.put(uuid, cama);
+            adultos++;
+            if (home.isPresent()) {
+                conCama++;
+                porCama.computeIfAbsent(claveDeLaCama(level, home.get().pos()), k -> new java.util.ArrayList<>())
+                        .add(uuid);
+            } else {
+                sinCama.add(uuid + "(" + str(v.getVillagerData().getProfession()) + ")");
+            }
+            if (anterior != null && !anterior.equals(cama)) {
+                if ("NINGUNA".equals(cama)) {
+                    DevilRpg.LOGGER.info("[Arnes] CAMA PERDIDA {} prof={} tenia={} -> SIN CAMA · {} · pos={}",
+                            uuid, str(v.getVillagerData().getProfession()), anterior,
+                            diagnosticoDeLaCama(level, anterior, v), v.blockPosition().toShortString());
+                } else {
+                    DevilRpg.LOGGER.info("[Arnes] CAMA RECLAMADA {} prof={} {} -> {} · {}",
+                            uuid, str(v.getVillagerData().getProfession()),
+                            "NINGUNA".equals(anterior) ? "SIN CAMA" : anterior, cama,
+                            diagnosticoDeLaCama(level, cama, v));
+                }
             }
             DevilRpg.LOGGER.info("[Arnes] CAMA {} prof={} home={}{} durmiendo={} REST={} WORK={} MEET={} pos={}",
-                    v.getUUID().toString().substring(0, 8), str(v.getVillagerData().getProfession()),
+                    uuid, str(v.getVillagerData().getProfession()),
                     cama, existe, v.isSleeping(),
                     v.getBrain().isActive(Activity.REST), v.getBrain().isActive(Activity.WORK),
                     v.getBrain().isActive(Activity.MEET), v.blockPosition().toShortString());
         }
+        if (ticks % 200 == 0) {
+            StringBuilder compartidas = new StringBuilder();
+            int ok = 0;
+            for (var entrada : porCama.entrySet()) {
+                if (entrada.getValue().size() > 1) {
+                    compartidas.append(" [").append(entrada.getKey()).append(": ")
+                            .append(String.join("+", entrada.getValue())).append(']');
+                } else {
+                    ok++;
+                }
+            }
+            DevilRpg.LOGGER.info("[Arnes] CAMAS RESUMEN: adultos={} conCama={} (camas distintas ocupadas={})"
+                            + " COMPARTIDAS={}{} SIN CAMA={}{}",
+                    adultos, conCama, ok, porCama.size() - ok, compartidas, sinCama.size(),
+                    sinCama.isEmpty() ? "" : " " + String.join(" ", sinCama));
+            // Y POR QUE NO LE DAN CAMA: para el primer aldeano sin cama, las 8 camas libres mas cercanas con el
+            // motivo por el que la reclamacion las descarta (o la acepta).
+            for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(64))) {
+                if (v.isBaby() || v.getBrain().hasMemoryValue(MemoryModuleType.HOME)) {
+                    continue;
+                }
+                DevilRpg.LOGGER.info("[Arnes] SIN CAMA {} {} pos={} (dist a la plaza {})", uuid8(v),
+                        str(v.getVillagerData().getProfession()), v.blockPosition().toShortString(),
+                        fmt(Math.sqrt(v.position().distanceToSqr(net.minecraft.world.phys.Vec3.atCenterOf(CENTRO)))));
+                var poi = level.getPoiManager();
+                poi.findAllClosestFirstWithType(h -> h.is(net.minecraft.world.entity.ai.village.poi.PoiTypes.HOME),
+                                p -> true, v.blockPosition(), 48,
+                                net.minecraft.world.entity.ai.village.poi.PoiManager.Occupancy.HAS_SPACE)
+                        .limit(8)
+                        .forEach(par -> {
+                            BlockPos p = par.getSecond();
+                            var est = level.getBlockState(p);
+                            String bloque = est.getBlock().toString().replace("Block{minecraft:", "")
+                                    .replace("}", "");
+                            boolean ocupada = est.hasProperty(net.minecraft.world.level.block.BedBlock.OCCUPIED)
+                                    && est.getValue(net.minecraft.world.level.block.BedBlock.OCCUPIED);
+                            String pareja = "?";
+                            if (est.hasProperty(net.minecraft.world.level.block.BedBlock.PART)
+                                    && est.hasProperty(net.minecraft.world.level.block.BedBlock.FACING)) {
+                                var hacia = est.getValue(net.minecraft.world.level.block.BedBlock.PART)
+                                        == net.minecraft.world.level.block.state.properties.BedPart.FOOT
+                                        ? est.getValue(net.minecraft.world.level.block.BedBlock.FACING)
+                                        : est.getValue(net.minecraft.world.level.block.BedBlock.FACING).getOpposite();
+                                var pe = level.getBlockState(p.relative(hacia));
+                                boolean peOcupada = pe.hasProperty(net.minecraft.world.level.block.BedBlock.OCCUPIED)
+                                        && pe.getValue(net.minecraft.world.level.block.BedBlock.OCCUPIED);
+                                pareja = pe.getBlock().toString().replace("Block{minecraft:", "").replace("}", "")
+                                        + " ocupada=" + peOcupada;
+                            }
+                            DevilRpg.LOGGER.info("[Arnes]   CAMA CANDIDATA {} bloque={} ocupada={} pareja=[{}] {}"
+                                            + " dist={}", p.toShortString(), bloque, ocupada, pareja,
+                                    rutaDetallada(v, p),
+                                    fmt(Math.sqrt(v.position().distanceToSqr(net.minecraft.world.phys.Vec3.atCenterOf(p)))));
+                        });
+                break; // con uno basta para ver el motivo
+            }
+        }
+    }
+
+    private static String uuid8(Villager v) {
+        return v.getUUID().toString().substring(0, 8);
+    }
+
+    /**
+     * EL QUE ESTA DENTRO DE UN BANCAL (de noche): se imprime su posicion exacta, su cama, el destino de su cerebro
+     * ({@code WALK_TARGET}), los <b>goals que tiene corriendo</b> (es lo que dice si la pierna de salir del bancal del
+     * goal del granjero esta activa) y el <b>estado de las cuatro compuertas</b> de su bancal (abierta/cerrada), que
+     * es lo que decide si puede salir.
+     */
+    private static void vigilarGranjerosEnElBancal(ServerLevel level) {
+        int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+        for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(96))) {
+            if (v.isBaby()) {
+                continue;
+            }
+            int dentro = -1;
+            for (int i = 0; i < com.chipoodle.devilrpg.world.VillageGenerator.parcelasDeGranja(); i++) {
+                if (com.chipoodle.devilrpg.world.VillageGenerator.estaDentroDeLaParcela(CENTRO, i, cota,
+                        v.blockPosition())) {
+                    dentro = i;
+                }
+            }
+            if (dentro < 0) {
+                continue;
+            }
+            StringBuilder goals = new StringBuilder();
+            for (net.minecraft.world.entity.ai.goal.WrappedGoal w : v.goalSelector.getAvailableGoals()) {
+                if (w.isRunning()) {
+                    goals.append(w.getGoal().getClass().getSimpleName()).append(' ');
+                }
+            }
+            var wt = v.getBrain().getMemory(MemoryModuleType.WALK_TARGET).orElse(null);
+            var home = v.getBrain().getMemory(MemoryModuleType.HOME);
+            StringBuilder portones = new StringBuilder();
+            for (BlockPos p : com.chipoodle.devilrpg.world.VillageGenerator.portonesDeLaParcela(CENTRO, dentro, cota)) {
+                var est = level.getBlockState(p);
+                boolean abierta = est.hasProperty(net.minecraft.world.level.block.FenceGateBlock.OPEN)
+                        && est.getValue(net.minecraft.world.level.block.FenceGateBlock.OPEN);
+                portones.append(' ').append(p.toShortString()).append(abierta ? "=ABIERTA" : "=cerrada");
+            }
+            DevilRpg.LOGGER.info("[Arnes] EN-BANCAL {} {} dentro={} pos=({},{},{}) durmiendo={} REST={} home={}"
+                            + " destino={} goals=[{}] compuertas:{}", uuid8(v),
+                    str(v.getVillagerData().getProfession()), dentro, fmt(v.getX()), fmt(v.getY()), fmt(v.getZ()),
+                    v.isSleeping(), v.getBrain().isActive(Activity.REST),
+                    home.map(g -> g.pos().toShortString()).orElse("NINGUNA"),
+                    wt == null ? "SIN DESTINO" : wt.getTarget().currentBlockPosition().toShortString(),
+                    goals.toString().trim(), portones);
+        }
+    }
+
+    /** La cama que tenia cada aldeano en el tick ANTERIOR, y como estaba (para el vigilante de cada tick). */
+    private static final java.util.Map<String, String> camaTickAnterior = new java.util.HashMap<>();
+    private static final java.util.Map<String, String> estadoTickAnterior = new java.util.HashMap<>();
+
+    /**
+     * <b>VIGILANTE A RESOLUCIÓN DE TICK</b>: se llama cada tick de servidor y solo escribe cuando la cama de un
+     * aldeano <b>cambia</b>. Al <b>PERDERLA</b> imprime cómo estaba la cama <b>en el tick anterior</b>, que es lo que
+     * identifica al culpable: vanilla ({@code ValidateNearbyPoi}) borra el {@code HOME} si el <b>POI ya no está</b> o
+     * si la cama está <b>{@code OCCUPIED}</b> y el aldeano <b>no</b> está durmiendo (y solo mira a ≤16 bloques).
+     */
+    private static void vigilarCamasCadaTick(ServerLevel level) {
+        for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(64))) {
+            if (v.isBaby()) {
+                continue;
+            }
+            String uuid = uuid8(v);
+            var home = v.getBrain().getMemory(MemoryModuleType.HOME);
+            String cama = home.map(g -> g.pos().toShortString()).orElse("NINGUNA");
+            String estado = home.map(g -> "poi=" + (level.getPoiManager().getType(g.pos()).isPresent() ? "SI" : "NO")
+                    + " " + estadoDeLaCama(level, g.pos(), v)).orElse("-");
+            String antes = camaTickAnterior.put(uuid, cama);
+            String estadoAntes = estadoTickAnterior.put(uuid, estado);
+            if (antes == null || antes.equals(cama)) {
+                continue;
+            }
+            if ("NINGUNA".equals(cama)) {
+                DevilRpg.LOGGER.info("[Arnes] PERDIDA-TICK {} {} tenia={} · EN EL TICK ANTERIOR: {} · pos={}"
+                                + " durmiendo={} REST={} dist={} · MEMORIAS QUE LE QUEDAN={} · ACTIVIDADES={}", uuid,
+                        str(v.getVillagerData().getProfession()), antes, estadoAntes,
+                        v.blockPosition().toShortString(), v.isSleeping(), v.getBrain().isActive(Activity.REST),
+                        fmt(Math.sqrt(v.position().distanceToSqr(net.minecraft.world.phys.Vec3.atCenterOf(
+                                posDe(antes))))),
+                        memoriasPresentes(v), v.getBrain().getActiveActivities());
+            } else {
+                DevilRpg.LOGGER.info("[Arnes] RECLAMADA-TICK {} {} {} -> {} · {}", uuid,
+                        str(v.getVillagerData().getProfession()),
+                        "NINGUNA".equals(antes) ? "SIN CAMA" : antes, cama, estado);
+            }
+        }
+    }
+
+    /** Las memorias que le QUEDAN al aldeano (solo las que tienen valor): dice si el borrado es de HOME o de todo. */
+    private static String memoriasPresentes(Villager v) {
+        StringBuilder sb = new StringBuilder();
+        for (var entrada : v.getBrain().getMemories().entrySet()) {
+            if (entrada.getValue().isPresent()) {
+                String nombre = String.valueOf(entrada.getKey()).replace("minecraft:", "");
+                String valor = String.valueOf(entrada.getValue().get());
+                if (valor.length() > 40) {
+                    valor = valor.substring(0, 40) + "...";
+                }
+                sb.append(nombre).append('=').append(valor).append(" | ");
+            }
+        }
+        return sb.length() == 0 ? "(ninguna)" : sb.toString().trim();
+    }
+
+    /** La posición de un texto "x, y, z" (el que imprime `BlockPos.toShortString`). */
+    private static BlockPos posDe(String texto) {
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("(-?\\d+), ?(-?\\d+), ?(-?\\d+)").matcher(texto);
+        if (!m.find()) {
+            return CENTRO;
+        }
+        return new BlockPos(Integer.parseInt(m.group(1)), Integer.parseInt(m.group(2)), Integer.parseInt(m.group(3)));
+    }
+
+    /**
+     * La clave de la <b>cama entera</b> (las dos mitades son dos POIs distintos): así dos aldeanos que tienen una
+     * mitad cada uno cuentan como cama COMPARTIDA, que es justo el caso que vanilla castiga borrándole el HOME al que
+     * no duerme.
+     */
+    private static String claveDeLaCama(ServerLevel level, BlockPos p) {
+        var estado = level.getBlockState(p);
+        BlockPos pareja = null;
+        if (estado.hasProperty(net.minecraft.world.level.block.BedBlock.PART)
+                && estado.hasProperty(net.minecraft.world.level.block.BedBlock.FACING)) {
+            var hacia = estado.getValue(net.minecraft.world.level.block.BedBlock.PART)
+                    == net.minecraft.world.level.block.state.properties.BedPart.FOOT
+                    ? estado.getValue(net.minecraft.world.level.block.BedBlock.FACING)
+                    : estado.getValue(net.minecraft.world.level.block.BedBlock.FACING).getOpposite();
+            pareja = p.relative(hacia);
+        }
+        if (pareja == null) {
+            return p.toShortString();
+        }
+        String a = p.toShortString();
+        String b = pareja.toShortString();
+        return a.compareTo(b) <= 0 ? a + "+" + b : b + "+" + a;
+    }
+
+    /** Lo que se puede leer de una cama: OCCUPIED, quien duerme en ella y quien mas la tiene reclamada. */
+    private static String estadoDeLaCama(ServerLevel level, BlockPos p, Villager dueno) {
+        var estado = level.getBlockState(p);
+        String ocupada = estado.hasProperty(net.minecraft.world.level.block.BedBlock.OCCUPIED)
+                ? String.valueOf(estado.getValue(net.minecraft.world.level.block.BedBlock.OCCUPIED)) : "?";
+        StringBuilder quien = new StringBuilder();
+        for (net.minecraft.world.entity.LivingEntity e : level.getEntitiesOfClass(
+                net.minecraft.world.entity.LivingEntity.class, new AABB(p).inflate(3.0))) {
+            if (e.isSleeping() && e.blockPosition().closerToCenterThan(net.minecraft.world.phys.Vec3.atCenterOf(p), 3.0)) {
+                quien.append(e == dueno ? " EL MISMO" : " " + e.getType().toShortString());
+            }
+        }
+        return "OCCUPIED=" + ocupada + " durmiendoEnElla=[" + quien.toString().trim() + "]";
+    }
+
+    /** El parte de la cama que se acaba de perder (o de la que se acaba de reclamar): bloque, POI, dueno y distancia. */
+    private static String diagnosticoDeLaCama(ServerLevel level, String posTexto, Villager v) {
+        BlockPos p = null;
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("(-?\\d+), ?(-?\\d+), ?(-?\\d+)").matcher(posTexto);
+        if (m.find()) {
+            p = new BlockPos(Integer.parseInt(m.group(1)), Integer.parseInt(m.group(2)), Integer.parseInt(m.group(3)));
+        }
+        if (p == null) {
+            return "no se pudo leer la posicion '" + posTexto + "'";
+        }
+        boolean poi = level.getPoiManager().getType(p).isPresent();
+        String bloque = level.getBlockState(p).getBlock().toString().replace("Block{minecraft:", "").replace("}", "");
+        StringBuilder duenos = new StringBuilder();
+        for (Villager otro : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(64))) {
+            var suya = otro.getBrain().getMemory(MemoryModuleType.HOME);
+            if (suya.isPresent() && suya.get().pos().equals(p)) {
+                duenos.append(otro == v ? " EL" : " " + otro.getUUID().toString().substring(0, 8));
+            }
+            // ¿La OTRA MITAD de la cama (la pareja de bloques) es de alguien? Vanilla cuenta cada mitad como un POI
+            // HOME, asi que dos aldeanos pueden acabar "compartiendo" cama y al que no duerme le borra el HOME.
+            for (net.minecraft.core.Direction d : net.minecraft.core.Direction.Plane.HORIZONTAL) {
+                BlockPos mitad = p.relative(d);
+                if (level.getBlockState(mitad).is(net.minecraft.tags.BlockTags.BEDS)
+                        && suya.isPresent() && suya.get().pos().equals(mitad)) {
+                    duenos.append(" [otra mitad: ").append(otro.getUUID().toString().substring(0, 8)).append(']');
+                }
+            }
+        }
+        double dist = Math.sqrt(v.position().distanceToSqr(net.minecraft.world.phys.Vec3.atCenterOf(p)));
+        return "poi=" + (poi ? "SI" : "NO") + " bloque=" + bloque + " " + estadoDeLaCama(level, p, v)
+                + " duennos=[" + duenos.toString().trim() + "] dist=" + fmt(dist) + " (vanilla borra si dist<=16 y"
+                + " la cama esta ocupada o el POI no existe)";
     }
 
     /** Los objetos tirados por el pueblo (a eso va el recolector) y los que estén en la taberna, sobre todo arriba. */

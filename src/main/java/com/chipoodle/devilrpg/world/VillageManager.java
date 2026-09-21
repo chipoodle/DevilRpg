@@ -16,7 +16,9 @@ import com.chipoodle.devilrpg.init.ModEntities;
 import com.chipoodle.devilrpg.survival.ObjectiveTargets;
 import com.chipoodle.devilrpg.util.MissionRewards;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.GlobalPos;
+import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -25,6 +27,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.world.Container;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -34,6 +37,7 @@ import net.minecraft.world.entity.OwnableEntity;
 import net.minecraft.world.entity.ai.goal.WrappedGoal;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.village.poi.PoiManager;
+import net.minecraft.world.entity.ai.village.poi.PoiType;
 import net.minecraft.world.entity.ai.village.poi.PoiTypes;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Monster;
@@ -42,8 +46,10 @@ import net.minecraft.world.entity.npc.VillagerProfession;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BedPart;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
@@ -58,6 +64,8 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.BiPredicate;
+import java.util.function.Predicate;
 
 /**
  * Gestor del asedio a la primera aldea. La aldea se pre-genera antes de que el jugador llegue; al llegar,
@@ -2704,16 +2712,40 @@ public final class VillageManager {
 
     // --- LAS CAMAS DEL PUEBLO: cada aldeano con la suya (como las estaciones de trabajo) ---------------------
 
+    /** Radio en el que se busca cama para un aldeano sin cama (el mismo que usa vanilla para adquirir POIs). */
+    private static final int RADIO_CAMA = 48;
+    /** Cuántas camas se prueban antes de rendirse (las más cercanas <b>al aldeano</b>): con 8 sobra en una aldea. */
+    private static final int CAMAS_A_PROBAR = 8;
+
     /**
-     * <b>Cada aldeano, con SU CAMA</b>: al que no tiene {@code HOME} se le reclama una cama del pueblo (la más cercana
-     * a la plaza que esté libre, y si no hay ninguna libre, una con el <b>ticket perdido</b>: cogido y sin dueño).
+     * <b>Cada aldeano, con SU CAMA</b>: al que no tiene {@code HOME} se le reclama una cama del pueblo.
      * <p>
      * Hace falta porque la aldea <b>no administraba las camas</b> y el juego solo se las da a quien pilla un rato
      * ocioso en la franja en que vanilla las reclama: el jugador lo vio con dos granjeros (etiqueta <b>"Sin cama"</b>
-     * encima, de pie en la huerta toda la noche) y lo medimos en su guardado: <b>29 camas</b> (19 libres y 10 con
-     * ticket) para <b>12 aldeanos</b>, y <b>3 sin cama reclamada</b>. Sin cama, en la franja de descanso el aldeano no
+     * encima, de pie en la huerta toda la noche) y lo medimos en su guardado: <b>29 POIs de cama</b> alrededor de la
+     * plaza para <b>12 aldeanos</b>, y <b>3 sin cama reclamada</b>. Sin cama, en la franja de descanso el aldeano no
      * tiene a dónde ir: se queda <b>plantado donde le pilló la noche</b> (y el mod le pone "Sin cama", que es lo que
      * avisa de que falta algo).
+     * <p>
+     * <b>POR QUÉ NO BASTABA CON RECLAMAR CUALQUIER CAMA LIBRE</b> (medido con el arnés, vigilante de camas en
+     * `GuardHarness`): vanilla le <b>borra el HOME</b> al aldeano desde el comportamiento {@code ValidateNearbyPoi}
+     * del cerebro, que el aldeano lleva registrado para {@code HOME}:
+     * <pre>
+     *   if (!poiManager.exists(pos, HOME))            memory.erase();   // (a) la cama ya no está
+     *   else if (bedIsOccupied(level, pos, entity))    memory.erase();   // (b) OCCUPIED y él no está durmiendo
+     * </pre>
+     * y solo mira a <b>16 bloques o menos</b>. Y una cama son <b>DOS POIs {@code HOME}</b> (uno por mitad), así que
+     * dos aldeanos pueden acabar con <b>una mitad cada uno</b>: el que se duerme pone {@code OCCUPIED} en las dos
+     * mitades y al otro —que está cerca y no duerme— le cae la rama (b) y se queda sin cama. Medido en su partida:
+     * Isidoro (granjero) tenía la cama de {@code 1442,131,1432} <b>cuya otra mitad era del herrero de herramientas</b>
+     * ({@code 1443,131,1432}), el herrero se durmió en ella y a Isidoro le borraron el HOME; el latido se la volvía a
+     * dar (<b>la misma</b>, porque se pedía «la libre más cercana a la plaza»), y así en bucle.
+     * <p>
+     * Por eso la cama que se le da tiene que ser <b>suya de verdad</b>: entera (las dos mitades), <b>sin nadie
+     * durmiendo</b>, <b>sin compañero de cama</b> (que la otra mitad no sea de otro aldeano) y <b>a la que puede
+     * llegar</b> —se comprueba con la ruta de la navegación, como hace la adquisición de vanilla, que exige
+     * {@code path.canReach()}: así un granjero del bancal no se queda con una cama del desván de la posada a 52
+     * bloques—. Y se busca <b>desde el aldeano</b>, no desde la plaza.
      * <p>
      * Es el mismo mecanismo que {@link #reclamarEstacionesDelPueblo} para los puestos (I23): se respeta la cama que
      * <b>otro aldeano tenga en la memoria</b>, y si el POI está cogido sin dueño se <b>suelta y se vuelve a coger</b>
@@ -2721,50 +2753,176 @@ public final class VillageManager {
      */
     private static void reclamarCamasDelPueblo(ServerLevel level, List<Villager> aldeanos, BlockPos center) {
         PoiManager poi = level.getPoiManager();
-        java.util.function.Predicate<net.minecraft.core.Holder<
-                net.minecraft.world.entity.ai.village.poi.PoiType>> esCama = h -> h.is(PoiTypes.HOME);
+        Predicate<Holder<PoiType>> esCama = h -> h.is(PoiTypes.HOME);
         for (Villager villager : aldeanos) {
             if (villager.isBaby() || villager.getBrain().hasMemoryValue(MemoryModuleType.HOME)) {
                 continue; // ya tiene cama (o es una cría, que duerme con el pueblo)
             }
-            BlockPos cama = poi.findClosest(esCama, center, VillageGenerator.FENCE_RADIUS,
-                    PoiManager.Occupancy.HAS_SPACE).orElse(null);
+            BlockPos cama = buscarCamaPara(level, poi, esCama, villager, center, PoiManager.Occupancy.HAS_SPACE);
             boolean libre = cama != null;
             if (cama == null) {
-                cama = poi.findClosest(esCama, center, VillageGenerator.FENCE_RADIUS,
-                        PoiManager.Occupancy.IS_OCCUPIED).orElse(null);
+                // ÚLTIMO RECURSO: una cama con el ticket COGIDO sin dueño (un ticket perdido no lo puede reclamar
+                // nadie nunca): se suelta y se vuelve a coger, como en las estaciones (I23). OJO: solo si de verdad no
+                // es de nadie (`camaUtilizable` mira a los aldeanos de ALREDEDOR DE LA CAMA), porque soltar y coger el
+                // ticket de una cama que SÍ es de otro es quitársela: medido, dos aldeanos con la misma cama.
+                cama = buscarCamaPara(level, poi, esCama, villager, center, PoiManager.Occupancy.IS_OCCUPIED);
             }
             if (cama == null) {
-                continue; // el pueblo no tiene camas (todavía): no hay nada que reclamar
-            }
-            boolean deOtro = false;
-            for (Villager otro : aldeanos) {
-                if (otro == villager) {
-                    continue;
-                }
-                var suya = otro.getBrain().getMemory(MemoryModuleType.HOME);
-                if (suya.isPresent() && suya.get().pos().equals(cama)) {
-                    deOtro = true;
-                    break;
-                }
-            }
-            if (deOtro) {
-                continue; // es de otro aldeano que está aquí: no se le quita
+                continue; // el pueblo no tiene camas que le sirvan (todavía): se reintenta en el latido siguiente
             }
             if (!libre) {
-                poi.release(cama); // ticket perdido: se suelta y se vuelve a coger (I23)
+                poi.release(cama);
             }
             final BlockPos elegida = cama;
-            java.util.function.BiPredicate<net.minecraft.core.Holder<
-                    net.minecraft.world.entity.ai.village.poi.PoiType>, BlockPos> cual =
-                    (tipo, pos) -> pos.equals(elegida);
+            BiPredicate<Holder<PoiType>, BlockPos> cual = (tipo, pos) -> pos.equals(elegida);
             if (poi.take(esCama, cual, elegida, 1).isEmpty()) {
                 continue; // no se ha podido (el chunk no está cargado...): se reintenta en el latido siguiente
             }
             villager.getBrain().setMemory(MemoryModuleType.HOME, GlobalPos.of(level.dimension(), elegida));
-            DevilRpg.LOGGER.info("[Village] {} no tenia cama: reclama la de {} (aldea en {})",
-                    villager.getUUID(), elegida.toShortString(), center.toShortString());
+            DevilRpg.LOGGER.info("[Village] {} no tenia cama: reclama la de {} (aldea en {}; {}; {})",
+                    villager.getUUID(), elegida.toShortString(), center.toShortString(),
+                    libre ? "libre y sin companero de cama" : "ticket perdido", estadoDeLaCama(level, elegida));
         }
+    }
+
+    /**
+     * La primera cama <b>que le sirve</b> a ese aldeano, de las más cercanas <b>a él</b>: {@link #camaUtilizable
+     * entera, sin nadie durmiendo y sin compañero de cama} y <b>alcanzable</b> (ruta de verdad).
+     * <p>
+     * <b>Y SI NINGUNA RUTA LLEGA, SE LE DA LA QUE MÁS SE ACERCA</b> ({@code mejorSinLlegar}). Hace falta de verdad y
+     * es el caso del jugador: un <b>granjero dentro de su bancal</b> —cercado con valla y con las <b>compuertas
+     * cerradas</b>— no puede planificar la salida, porque <b>el juego no deja que un aldeano abra una puerta de
+     * valla</b> (por eso el pueblo tiene su propio {@code VillagerGateGoal}). Medido con el arnés: la ruta de Isidoro
+     * (bancal 2) a su cama acababa en {@code 1394,120,1452}, <b>la propia compuerta</b>, a 15 bloques del destino
+     * ({@code alcance=NO}), y lo mismo con TODAS las camas libres de la aldea: sin llegar a ninguna, el aldeano se
+     * quedaba sin cama —y vanilla tampoco se la daba, que exige {@code path.canReach()}—. Es un <b>abrazo mortal</b>:
+     * sin cama no sale del bancal, y desde el bancal no alcanza ninguna cama. Dándole la cama a la que más se acerca,
+     * en cuanto pisa la compuerta el portón se abre y la ruta se completa.
+     */
+    @Nullable
+    private static BlockPos buscarCamaPara(ServerLevel level, PoiManager poi, Predicate<Holder<PoiType>> esCama,
+                                           Villager villager, BlockPos center, PoiManager.Occupancy ocupacion) {
+        List<BlockPos> candidatas = poi
+                .findAllClosestFirstWithType(esCama, p -> true, villager.blockPosition(), RADIO_CAMA, ocupacion)
+                .map(par -> par.getSecond())
+                .limit(CAMAS_A_PROBAR)
+                .toList();
+        // ¿Está METIDO en un bancal (cercado con valla y compuertas cerradas)? Entonces vale la cama a la que su ruta
+        // más se acerque: el goal del granjero lo saca por la compuerta al anochecer (`Tarea.SALIR`) y la alcanza.
+        // FUERA de un bancal no: una cama a la que NO llega no le sirve de nada y además le cuesta el HOME, porque
+        // vanilla se lo borra a los 60 s de no poder llegar (`SetWalkTargetFromBlockMemory`). Medido con el arnés: el
+        // herrero de herramientas recibía una cama del dormitorio de la barraca que está AL OTRO LADO de un muro de
+        // adoquín (su ruta acababa a 2,11 bloques de ella, y para dormir hay que estar a ≤2,0): no se dormía nunca,
+        // perdía la cama cada 60 s y el latido se la volvía a dar, en bucle.
+        boolean encerrado = estaEnUnBancal(level, villager, center);
+        BlockPos mejorSinLlegar = null;
+        double mejorDistanciaAlFinal = Double.MAX_VALUE;
+        for (BlockPos cama : candidatas) {
+            if (!camaUtilizable(level, cama, villager)) {
+                continue;
+            }
+            var camino = villager.getNavigation().createPath(cama, 1);
+            if (camino == null) {
+                continue;
+            }
+            if (camino.canReach()) {
+                return cama; // la buena: llega de verdad
+            }
+            if (!encerrado) {
+                continue; // no llega y no está encerrado: esa cama no es para él
+            }
+            // Encerrado en un bancal: se guarda la que MÁS se acerca, medida por dónde acaba su ruta.
+            double distanciaAlFinal = camino.getEndNode() == null ? Double.MAX_VALUE
+                    : camino.getEndNode().asBlockPos().distSqr(cama);
+            if (distanciaAlFinal < mejorDistanciaAlFinal) {
+                mejorDistanciaAlFinal = distanciaAlFinal;
+                mejorSinLlegar = cama;
+            }
+        }
+        if (mejorSinLlegar != null) {
+            DevilRpg.LOGGER.info("[Village] {} esta encerrado en un bancal: ninguna cama libre esta a su alcance, se le"
+                            + " da la que MAS se acerca, {} (a {} bloque(s) del final de su ruta): el goal del granjero"
+                            + " lo saca por la compuerta al anochecer",
+                    villager.getUUID(), mejorSinLlegar.toShortString(),
+                    Math.round(Math.sqrt(mejorDistanciaAlFinal)));
+        }
+        return mejorSinLlegar;
+    }
+
+    /** ¿Ese aldeano está <b>metido en un bancal</b> (cercado con valla y con las compuertas cerradas)? */
+    private static boolean estaEnUnBancal(ServerLevel level, Villager villager, BlockPos center) {
+        int cota = VillageGenerator.cotaDeLaPlaza(level, center);
+        for (int i = 0; i < VillageGenerator.parcelasDeGranja(); i++) {
+            if (VillageGenerator.estaDentroDeLaParcela(center, i, cota, villager.blockPosition())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * ¿Esa cama está <b>entera</b>, <b>sin nadie durmiendo</b> y <b>sin compañero de cama</b>? Es lo que evita el
+     * bucle de vanilla (ver {@link #reclamarCamasDelPueblo}): una cama son <b>dos POIs</b> {@code HOME} —una por
+     * mitad— y al aldeano que comparte cama y no duerme le borran el HOME.
+     * <p>
+     * El dueño se busca <b>alrededor de la cama</b> ({@link #laTieneOtro}), tanto en la propia cama como en su
+     * <b>otra mitad</b>: es lo que impide que la rama del «ticket perdido» le <b>robe</b> la cama a un aldeano que la
+     * tiene en memoria (medido: dos aldeanos con la misma cama en el cerebro).
+     */
+    private static boolean camaUtilizable(ServerLevel level, BlockPos cama, Villager villager) {
+        BlockState estado = level.getBlockState(cama);
+        if (!estado.is(BlockTags.BEDS) || estado.getValue(BedBlock.OCCUPIED)) {
+            return false; // ni es una cama (POI viejo) o hay alguien durmiendo en ella
+        }
+        BlockPos pareja = parejaDeLaCama(estado, cama);
+        if (pareja != null) {
+            BlockState laOtra = level.getBlockState(pareja);
+            if (!laOtra.is(BlockTags.BEDS) || laOtra.getValue(BedBlock.OCCUPIED)) {
+                return false; // media cama (rota) o alguien durmiendo en la otra mitad
+            }
+            if (laTieneOtro(level, villager, pareja)) {
+                return false; // COMPARTIDA: esa mitad es de otro aldeano (vanilla le borraría el HOME)
+            }
+        }
+        return !laTieneOtro(level, villager, cama);
+    }
+
+    /** La otra mitad del bloque de la cama (la pareja HEAD/FOOT), o {@code null} si no es una cama de dos bloques. */
+    @Nullable
+    private static BlockPos parejaDeLaCama(BlockState cama, BlockPos pos) {
+        if (!cama.hasProperty(BedBlock.PART) || !cama.hasProperty(BedBlock.FACING)) {
+            return null;
+        }
+        Direction haciaLaPareja = cama.getValue(BedBlock.PART) == BedPart.FOOT
+                ? cama.getValue(BedBlock.FACING) : cama.getValue(BedBlock.FACING).getOpposite();
+        return pos.relative(haciaLaPareja);
+    }
+
+    /**
+     * ¿Esa cama la tiene en el cerebro <b>otro</b> aldeano? Se mira a los aldeanos que hay <b>alrededor de la CAMA</b>
+     * (no a la lista del censo, que se arma alrededor de la plaza): el dueño de una cama puede estar lejos del centro
+     * —un granjero en su bancal, un leñador en la arboleda— y entonces la lista no lo ve, la cama parece «libre» y se
+     * le acaba dando a otro. Medido: dos aldeanos con la misma cama en memoria y el ticket en uno solo, con el
+     * consiguiente borrado del HOME de vanilla.
+     */
+    private static boolean laTieneOtro(ServerLevel level, Villager villager, BlockPos cama) {
+        for (Villager otro : level.getEntitiesOfClass(Villager.class, new AABB(cama).inflate(RADIO_CAMA))) {
+            if (otro == villager) {
+                continue;
+            }
+            Optional<GlobalPos> suya = otro.getBrain().getMemory(MemoryModuleType.HOME);
+            if (suya.isPresent() && suya.get().pos().equals(cama)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Para el log: cómo está la cama que se acaba de reclamar (bloque y si alguien duerme en ella). */
+    private static String estadoDeLaCama(ServerLevel level, BlockPos cama) {
+        BlockState estado = level.getBlockState(cama);
+        String bloque = estado.getBlock().toString().replace("Block{minecraft:", "").replace("}", "");
+        return bloque + " ocupada=" + (estado.hasProperty(BedBlock.OCCUPIED) && estado.getValue(BedBlock.OCCUPIED));
     }
 
     // --- EL ALDEANO QUE SE QUEDA DENTRO DE UNA CASA: se le baja a la plaza -----------------------------------

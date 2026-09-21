@@ -2531,6 +2531,55 @@ con 128 troncos, una sola vez). Y una consecuencia que conviene tener presente: 
 es ahora la que sostiene la cocina —el **leñador** (FLETCHER) sube los troncos, el **herrero de herramientas**
 (TOOLSMITH) los asierra—, y el **recolector** (NITWIT) sigue sin tocar la madera: son **tres aldeanos distintos**.
 
+### 3b.58 El GRANJERO que no podía dormir: la cama que vanilla le borra, el bancal que lo encierra y la compuerta que nadie abría
+
+El jugador lo vio en una captura: **dos granjeros con la etiqueta "Sin cama"** encima, de pie en la huerta toda la
+noche, *"si la aldea está repleta de ellas"*. Medido con el arnés sobre su partida (noche congelada), el bug eran
+**cuatro causas encadenadas**, y tres son de vanilla:
+
+1. **Dos aldeanos con la misma cama.** Una cama son **DOS POIs `HOME`** (cabeza y pie), así que dos aldeanos pueden
+   quedarse con **una mitad cada uno**; el que se duerme pone `OCCUPIED` en las dos mitades y al otro,
+   `ValidateNearbyPoi` (cerebro) le **borra la cama**. Medido: Isidoro tenía la mitad de la cama del herrero
+   (`1442/1443,131,1432`), el herrero se durmió en ella y a Isidoro le borraron el `HOME` — y el latido se la volvía a
+   dar (la misma) en bucle.
+2. **Vanilla borra la cama del que no llega en 60 s.** `SetWalkTargetFromBlockMemory` (paquete `REST`, registrado para
+   `HOME`): si el aldeano lleva **1200 ticks** con `CANT_REACH_WALK_TARGET_SINCE` puesto (no consigue ruta a su cama),
+   hace `releasePoi(HOME)` + `erase()`. Medido: exactamente **60 s** entre reclamación y borrado, en bucle, con la
+   cama **libre, con POI y sin nadie durmiendo** (lo cazó el vigilante a resolución de tick).
+3. **Estaba encerrado en el bancal.** La ruta del granjero a su cama **acaba en su propia compuerta** (`alcance=NO`):
+   el juego **no deja que un aldeano abra una puerta de valla cerrada**, así que no puede planificar la salida; y el
+   `AcquirePoi` de vanilla tampoco le da cama porque exige `path.canReach()`. **Abrazo mortal**: sin cama no sale del
+   bancal, y desde el bancal no alcanza ninguna cama.
+4. **El goal de portones tenía elegida OTRA puerta.** `portonMasCercano` solo se llama desde `canUse`, y `canUse` no
+   se vuelve a llamar mientras el goal está corriendo (sigue mientras tenga un portón a menos de 16): el portón
+   elegido a mala hora (aldea a medio migrar, casilla sin cargar) **se quedaba pegado para siempre**. Medido con el
+   diagnóstico dentro del goal: **`porton=1390,120,1447`** (a 7,09 bloques) en vez de la compuerta de al lado
+   (**1395,120,1452**, a 0,87) — el aldeano «vigilaba» una puerta lejana y no abría la suya.
+
+**Arreglo** (cuatro piezas, todas medidas):
+1. **La cama es suya**: `reclamarCamasDelPueblo` no le da una cama **compartida** (la otra mitad de otro aldeano), ni
+   **ocupada**, ni la que ya tiene otro aldeano de **alrededor de la cama** (no solo de la lista del censo: así la rama
+   del «ticket perdido» no se la roba a nadie).
+2. **La cama tiene que ser alcanzable**: fuera de un bancal, solo una cama a la que su ruta **llega** (`canReach`);
+   **encerrado** en un bancal, la que más se acerca (y el goal lo saca). Así no se le dan camas que le cuestan el
+   `HOME` a los 60 s.
+3. **El granjero SALE del bancal al anochecer** (`VillagerFarmGoal`, `Tarea.SALIR`): a la celda de **FUERA** de la
+   compuerta (`VillageGenerator.salidaDeLaParcela`; la de *dentro* no vale, porque `VillagerGateGoal` solo abre si el
+   destino está al otro lado, `vaACruzar`), con la etiqueta *"Saliendo de la huerta"*.
+4. **El goal de portones vuelve a elegir** si el portón que tiene no es el de al lado (y valida su lista guardada,
+   recalculándola si cayó rancia), y al abrir una compuerta le hace **rehacer el camino** (la ruta que traía se calculó
+   con ella cerrada, así que acababa en su propia casilla y la compuerta se cerraba a los 5 s sin que nadie la
+   cruzara).
+
+**Medido** (misma noche, misma partida): las compuertas **ABIERTAS** (`1395,120,1452=ABIERTA`,
+`1428,120,1427=ABIERTA`), los dos granjeros **durmiendo en su cama** (`durmiendo=true durmiendoEnElla=[EL MISMO]`) y
+**cero** pérdidas de cama en toda la corrida (antes, una cada 60 s).
+
+**Lo que queda, dicho claramente**: el **herrero de herramientas** sigue sin cama, y es **otra cosa**: sus camas libres
+cercanas están **tapiadas** (la de `1452,120,1405` tiene un muro de adoquín al lado y su ruta acaba a 2,00 bloques,
+cuando para acostarse hay que estar a menos de 2,0). Es una **cama sin acceso** —construcción/mobiliario del pueblo— y
+queda pendiente como tal.
+
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.
