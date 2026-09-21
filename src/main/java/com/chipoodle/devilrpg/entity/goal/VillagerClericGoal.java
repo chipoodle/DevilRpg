@@ -5,9 +5,13 @@ import com.chipoodle.devilrpg.world.VillageManager;
 import com.chipoodle.devilrpg.world.VillageStorage;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.npc.Villager;
@@ -22,6 +26,7 @@ import net.minecraft.world.level.block.entity.BrewingStandBlockEntity;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -40,7 +45,13 @@ import java.util.Optional;
  * las botellas en sus tres huecos, el ingrediente encima y el polvo de blaze de combustible) y el soporte cuece solo
  * (agua + verruga = <b>poción extraña</b>; extraña + zanahoria dorada = <b>visión nocturna</b>; extraña + ojo de araña
  * = <b>veneno</b>; y con pólvora, la versión <b>arrojadiza</b>). Cuando la poción está lista, la saca y la deja en el
- * almacén, que es de donde la coge el jugador (y, cuando se pueda, se la dará a la guardia).
+ * almacén, que es de donde la coge el jugador.
+ * <p>
+ * <b>Y ADEMÁS ES EL SANADOR DE LA ALDEA</b> (lo pidió el jugador: *"el clérigo podría tener como task el curar a los
+ * soldados; que sea una especie de sanador"*): si hay un <b>soldado herido</b> (y, si no, un vecino), va a por él, se
+ * planta a su lado y le devuelve vida con sus corazones. Manda sobre el soporte y sobre el viaje al agua, y de noche
+ * también sale <b>si la aldea está en asalto</b>, que es cuando de verdad hace falta. Ver {@code buscarHerido} y
+ * {@code atenderAlHerido}.
  */
 public class VillagerClericGoal extends Goal {
 
@@ -66,6 +77,25 @@ public class VillagerClericGoal extends Goal {
     /** Botellas que carga de una vez (los tres huecos del soporte). */
     private static final int BOTELLAS = 3;
 
+    // --- SANAR: el clérigo también es el SANADOR de la aldea (lo pidió el jugador: "el clérigo podría tener como
+    //     task el curar a los soldados; que sea una especie de sanador") ------------------------------------------
+
+    /** Radio en el que atiende heridos: el término del pueblo, sin salirse de él. */
+    private static final double RADIO_SANAR = 32.0D;
+    /**
+     * Por debajo de esta fracción de vida se considera <b>herido</b> (75 %). Un arañazo no lo despierta: solo va a por
+     * los que de verdad lo necesitan.
+     */
+    private static final double VIDA_PARA_SANAR = 0.75D;
+    /** Vida que devuelve cada curación. */
+    private static final float VIDA_POR_CURACION = 8.0F;
+    /** Distancia a la que ya le pone las manos encima. */
+    private static final double REACH_SANAR = 2.5D;
+    /** Descanso entre curación y curación (8 s): es un sanador, no una máquina de curar. */
+    private static final int TICKS_ENTRE_CURACIONES = 160;
+    /** Paciencia para llegar al herido antes de dejarlo (la misma que la del puesto: 6 s). */
+    private static final int STUCK_SANAR = STUCK_LIMIT;
+
     private final Villager villager;
     private final BlockPos center;
     private final int objectiveIndex;
@@ -75,6 +105,14 @@ public class VillagerClericGoal extends Goal {
     /** La celda de AGUA a la que va a llenar las botellas de cristal (se busca cuando le hacen falta). */
     @Nullable
     private BlockPos agua;
+    /** El <b>herido</b> al que está atendiendo ahora mismo (o {@code null} si está con las pociones). */
+    @Nullable
+    private LivingEntity paciente;
+    /** Ticks que faltan para poder volver a curar (el descanso del sanador). */
+    private int curacionEspera;
+    /** Lo más cerca que ha estado del herido en esta ida (y su paciencia, aparte de la del puesto). */
+    private double mejorPaciente = Double.MAX_VALUE;
+    private int stuckPaciente;
     private int workTicks;
     private int restTicks;
     private int stuckTicks;
@@ -103,6 +141,9 @@ public class VillagerClericGoal extends Goal {
 
     @Override
     public boolean canUse() {
+        if (curacionEspera > 0) {
+            curacionEspera--;
+        }
         if (restTicks > 0) {
             restTicks--;
             return false;
@@ -112,6 +153,18 @@ public class VillagerClericGoal extends Goal {
         }
         if (villager.getVillagerData().getProfession() != VillagerProfession.CLERIC) {
             return false;
+        }
+        // 1) SANAR MANDA, y VALE TAMBIÉN DE NOCHE SI LA ALDEA ESTÁ EN ASALTO (que es cuando de verdad hace falta): si
+        //    hay un soldado herido, el clérigo va a por él aunque le toque dormir o esté en su soporte. Lo que NO hace
+        //    es quedarse despierto por gusto: si no hay asalto, de noche duerme como los demás (I28/I46).
+        boolean horaDeTrabajar = !VillageManager.estaDescansando(villager)
+                || VillageManager.isVillageUnderAttack(level, objectiveIndex);
+        paciente = curacionEspera > 0 || !horaDeTrabajar ? null : buscarHerido(level);
+        if (paciente != null) {
+            soporte = null; // con un herido en las manos el puesto no hace falta (el `tick` mira primero al paciente)
+            stuckPaciente = 0;
+            mejorPaciente = Double.MAX_VALUE;
+            return true;
         }
         if (VillageManager.isVillageUnderAttack(level, objectiveIndex) || VillageManager.estaDescansando(villager)) {
             return false;
@@ -136,12 +189,32 @@ public class VillagerClericGoal extends Goal {
         mejorDistancia = Double.MAX_VALUE;
         stuckAgua = 0;
         mejorDistanciaAgua = Double.MAX_VALUE;
+        if (paciente != null) {
+            DevilRpg.LOGGER.info("[Village] El clerigo va a curar a {} ({}/{} de vida)",
+                    paciente.getName().getString(), redondo(paciente.getHealth()), redondo(paciente.getMaxHealth()));
+            return; // va a por el herido: no se le manda al soporte
+        }
         irAlSoporte();
     }
 
     @Override
     public boolean canContinueToUse() {
-        if (villager.isBaby() || soporte == null || VillageManager.estaDescansando(villager)) {
+        if (villager.isBaby()) {
+            return false;
+        }
+        boolean enAsalto = villager.level() instanceof ServerLevel sl
+                && VillageManager.isVillageUnderAttack(sl, objectiveIndex);
+        // De noche solo sigue con un herido en las manos y la aldea en asalto: si no, se va a dormir como los demás.
+        boolean conUnHeridoEnAsalto = paciente != null && enAsalto;
+        if (VillageManager.estaDescansando(villager) && !conUnHeridoEnAsalto) {
+            return false;
+        }
+        if (paciente != null) {
+            // Se sigue mientras el herido siga herido, siga cerca y no se haya atascado yendo a por él.
+            return estaHerido(paciente) && stuckPaciente < STUCK_SANAR
+                    && villager.distanceToSqr(paciente) <= RADIO_SANAR * RADIO_SANAR;
+        }
+        if (soporte == null) {
             return false;
         }
         if (stuckTicks >= STUCK_LIMIT) {
@@ -155,13 +228,25 @@ public class VillagerClericGoal extends Goal {
     @Override
     public void stop() {
         soporte = null;
+        paciente = null;
         restTicks = REST_TICKS;
         VillageManager.parar(villager);
     }
 
     @Override
     public void tick() {
-        if (soporte == null || !(villager.level() instanceof ServerLevel level)) {
+        if (curacionEspera > 0) {
+            curacionEspera--;
+        }
+        if (!(villager.level() instanceof ServerLevel level)) {
+            return;
+        }
+        // LA RONDA DEL SANADOR VA PRIMERO: un herido manda sobre el soporte y sobre el viaje al agua.
+        if (paciente != null) {
+            atenderAlHerido(level);
+            return;
+        }
+        if (soporte == null) {
             return;
         }
         // 0) SI LLEVA BOTELLAS DE CRISTAL, PRIMERO AL AGUA: el pueblo no fabrica vidrio, así que las botellas las trae
@@ -246,6 +331,105 @@ public class VillagerClericGoal extends Goal {
     }
 
     // --- la faena ------------------------------------------------------------------------------------
+
+    // --- SANAR: el clérigo, de sanador de la aldea ----------------------------------------------------
+
+    /**
+     * <b>El herido al que va a atender</b>: primero un <b>soldado</b> (es el que se pelea con los bichos), y si no hay
+     * ninguno herido, un <b>vecino</b>. Solo cuenta quien esté de verdad tocado (por debajo del 75 % de su vida) y
+     * dentro de {@link #RADIO_SANAR}.
+     */
+    @Nullable
+    private LivingEntity buscarHerido(ServerLevel level) {
+        List<Villager> cerca = level.getEntitiesOfClass(Villager.class, villager.getBoundingBox().inflate(RADIO_SANAR));
+        LivingEntity mejor = null;
+        boolean mejorEsGuardia = false;
+        double mejorDistancia = Double.MAX_VALUE;
+        for (Villager otro : cerca) {
+            if (otro == villager || !estaHerido(otro)) {
+                continue;
+            }
+            boolean esGuardia = VillagerGuardGoal.esGuardia(otro);
+            double distancia = villager.distanceToSqr(otro);
+            if (mejor == null) {
+                mejor = otro;
+                mejorEsGuardia = esGuardia;
+                mejorDistancia = distancia;
+                continue;
+            }
+            // LA GUARDIA MANDA: un soldado herido gana a cualquier vecino, y entre soldados, el más cercano.
+            if (mejorEsGuardia && !esGuardia) {
+                continue;
+            }
+            if (esGuardia && !mejorEsGuardia || distancia < mejorDistancia) {
+                mejor = otro;
+                mejorEsGuardia = esGuardia;
+                mejorDistancia = distancia;
+            }
+        }
+        return mejor;
+    }
+
+    /** ¿Ese vecino está herido de verdad (por debajo del 75 % de su vida máxima)? */
+    private boolean estaHerido(LivingEntity quien) {
+        return quien.isAlive() && quien.getHealth() < quien.getMaxHealth() * VIDA_PARA_SANAR;
+    }
+
+    /**
+     * <b>LA CURACIÓN, paso a paso</b>: se acerca al herido (por el cerebro, I5), se planta a su lado, hace su faena
+     * (medio segundo) y le devuelve {@link #VIDA_POR_CURACION} de vida con sus <b>corazones</b> y su sonido. Después
+     * descansa {@link #TICKS_ENTRE_CURACIONES} y, si el herido sigue tocado, volverá a por él.
+     */
+    private void atenderAlHerido(ServerLevel level) {
+        if (!estaHerido(paciente)) {
+            paciente = null;
+            return;
+        }
+        double distancia = Math.sqrt(villager.distanceToSqr(paciente));
+        if (distancia > REACH_SANAR) {
+            if (distancia < mejorPaciente - 0.5D) {
+                mejorPaciente = distancia;
+                stuckPaciente = 0;
+            } else {
+                stuckPaciente++;
+            }
+            VillageManager.caminarHacia(villager, paciente.blockPosition(), VELOCIDAD);
+            VillageManager.ponerActividad(villager, "A curar a " + nombreCorto(paciente));
+            return;
+        }
+        VillageManager.parar(villager);
+        villager.getLookControl().setLookAt(paciente, 30.0F, 30.0F);
+        if (workTicks < WORK_TICKS) {
+            workTicks++;
+            VillageManager.ponerActividad(villager, "Curando a " + nombreCorto(paciente));
+            return;
+        }
+        workTicks = 0;
+        villager.swing(InteractionHand.MAIN_HAND);
+        float antes = paciente.getHealth();
+        paciente.heal(VIDA_POR_CURACION);
+        level.sendParticles(ParticleTypes.HEART, paciente.getX(), paciente.getY() + 2.0D, paciente.getZ(),
+                6, 0.4D, 0.4D, 0.4D, 0.01D);
+        level.playSound(null, paciente.blockPosition(), SoundEvents.VILLAGER_WORK_CLERIC, SoundSource.NEUTRAL,
+                0.8F, 1.4F);
+        DevilRpg.LOGGER.info("[Village] El clerigo cura a {} ({} -> {} de {} de vida)",
+                paciente.getName().getString(), redondo(antes), redondo(paciente.getHealth()),
+                redondo(paciente.getMaxHealth()));
+        curacionEspera = TICKS_ENTRE_CURACIONES;
+        paciente = null;
+        restTicks = REST_TICKS;
+    }
+
+    /** El nombre del herido sin el oficio detrás ("Quintin (Guardia espadachín · nv 3)" -> "Quintin"). */
+    private String nombreCorto(LivingEntity quien) {
+        String nombre = quien.getName().getString();
+        int parentesis = nombre.indexOf(" (");
+        return parentesis > 0 ? nombre.substring(0, parentesis) : nombre;
+    }
+
+    private static double redondo(float valor) {
+        return Math.round(valor * 10.0F) / 10.0D;
+    }
 
     /**
      * Radio en el que el clérigo busca agua para llenar las botellas. Tiene que dar para llegar al <b>bebedero del

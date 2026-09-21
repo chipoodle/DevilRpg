@@ -3205,6 +3205,24 @@ desde ese contador (idempotente, en el latido y al matar). El **tope sale del pe
 nivel se ve en su etiqueta: **`Guardia espadachín · nv 3`**. Con la espada de hierro del pueblo, un guardia de tope
 pega **9,04**: puede con el zombie más fuerte. Tabla completa en I62.
 
+### 3b.78 El clérigo, sanador de la aldea
+
+Lo pidió el jugador: *"el clérigo podría tener como task el curar a los soldados; que sea una especie de sanador"*.
+
+El clérigo ya tenía su oficio en el mod (hace pociones de verdad en su soporte con lo que junta el pueblo, I23-ish)
+pero **no curaba a nadie**: la clase prometía en su comentario "y, cuando se pueda, se la dará a la guardia", y eso
+**no** es lo que hay que hacer (un aldeano no bebe pociones). Ahora **sana él**.
+
+**HECHO** (I64): con un **soldado herido** en el término (y si no, un vecino; herido = **por debajo del 75 %** y a
+menos de **32** bloques), el clérigo va a por él, se planta a su lado y le devuelve **8 de vida** con **corazones** y
+el sonido de su oficio, con su aviso en el log y en su etiqueta (`Curando a Quintin`), y descansa **8 s** antes de
+volver a curar. La ronda del sanador **manda sobre el soporte y sobre el viaje al agua**, y de noche también sale
+**si la aldea está en asalto** —que es cuando los guardias se hieren—; sin asalto duerme como los demás.
+*(Encaja con lo de la noche de 3b.77: la milicia aguanta y el clérigo la mantiene en pie.)*
+
+**Pendiente de ver en juego** (el jugador tenía el juego abierto y no se pudo correr el arnés): al reiniciar, con un
+guardia herido tiene que salir `El clerigo cura a … (a -> b de N de vida)` en el log y verse los corazones.
+
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.

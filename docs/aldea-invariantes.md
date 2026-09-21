@@ -1543,6 +1543,27 @@ la aldea y no distinguía bien el suelo del pueblo).
 > **entran andando** por donde pueden y, si dentro no hay quien los pare, matan. La barrera impide que **aparezcan**
 > dentro; de **defender** se encarga la **milicia** (I62) y el muro con sus portones.
 
+### I64 · El clérigo es el SANADOR de la aldea
+
+Lo pidió el jugador: *"el clérigo podría tener como task el curar a los soldados; que sea una especie de sanador"*.
+
+**Regla:** el clérigo (además de hacer pociones en su soporte) **busca heridos y los cura**. En orden:
+1. **un soldado herido** (la guardia es la que se pelea con los bichos) y, si no hay ninguno, **un vecino**;
+2. se considera herido el que está **por debajo del 75 %** de su vida máxima (un arañazo no lo levanta de la silla),
+   y siempre dentro de **32 bloques** (el término del pueblo);
+3. va a por él **por el cerebro** (I5: `caminarHacia`), se planta a **2,5 bloques**, hace su faena (medio segundo) y
+   le devuelve **8 de vida** con **corazones** (`ParticleTypes.HEART`) y el sonido de su oficio; deja el aviso en el
+   log (`El clerigo cura a X (a -> b de N de vida)`) y en su etiqueta (`Curando a Quintin`);
+4. después descansa **8 s** (`TICKS_ENTRE_CURACIONES`) antes de volver a curar: es un sanador, no una máquina.
+
+**Cuándo**: la ronda del sanador **manda sobre el soporte y sobre el viaje al agua**, y de noche también sale **si la
+aldea está en asalto** (que es cuando los guardias se hieren): lo que **no** hace es quedarse despierto por gusto —sin
+asalto, de noche duerme como los demás (I28/I46)—. Su paciencia para llegar al herido es la del puesto (6 s, I33) y
+si no llega lo deja y sigue con lo suyo.
+
+**Lo que NO hace**: no le da pociones a la guardia (un aldeano no bebe). El clérigo **sana él**; las pociones que
+prepara siguen siendo para el jugador y para el almacén (visión nocturna, veneno, arrojadizas).
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
