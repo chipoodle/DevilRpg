@@ -674,9 +674,17 @@ public final class VillageManager {
      *       para volver a capturarlo con la muralla <b>entera</b>: a partir de ahí el obrero sí mantiene lo que se
      *       rompa. Es la misma lección de I50 (una construcción con un hueco que el plano no recuerda) aplicada al
      *       muro.</li>
+     *   <li>68: la <b>BANDA DE SEPARACIÓN ENTRE PLANTAS DE LA TABERNA</b> (lo pidió el jugador, que se la había puesto a
+     *       mano en un lado: *"estaría bien que la taberna tenga logs de separación entre un piso y otro… el log es más
+     *       claro que el log de cada pilar para que lo distingas… estaría bien que estuviera desde el diseño en todos
+     *       los lados"*). La <b>vuelta del forjado</b> de la posada (la línea de los muros, lo que se ve desde fuera)
+     *       va en <b>troncos de roble CLARO</b> en vez de tablones oscuros, en los <b>cuatro</b> lados: separa las dos
+     *       plantas de un vistazo y no se confunde con los postes de roble oscuro del entramado. Lo construye
+     *       {@code forjadoDeLaPosada} en la taberna nueva y lo repone {@code ponerLaBandaDeLaTaberna} (idempotente: solo
+     *       cambia los tablones del diseño, así que lo que el jugador tenga puesto ahí se queda).</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 67;
+    public static final int CURRENT_LAYOUT = 68;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -2116,6 +2124,12 @@ public final class VillageManager {
         // TABERNA (etapa F): el comedor del pueblo (abajo) y la posada (arriba). Idempotente (se comprueba por su
         // barra): si el jugador se lleva media taberna, el pueblo la vuelve a levantar.
         VillageGenerator.asegurarTaberna(level, center);
+        // Y LA BANDA DE SEPARACIÓN ENTRE PLANTAS DE LA TABERNA (migración 68, lo pidió el jugador: *"estaría bien que
+        // la taberna tenga logs de separación entre un piso y otro… que estuviera desde el diseño en todos los lados"*):
+        // la vuelta del forjado de la posada se remata con troncos de roble CLARO en los cuatro lados. La pone el
+        // diseño en la taberna nueva y aquí se repone en las ya construidas (idempotente: solo cambia los tablones del
+        // diseño, así que lo que el jugador ya hubiera puesto —en su partida, la banda del muro sur— se queda).
+        VillageGenerator.ponerLaBandaDeLaTaberna(level, center);
         // Y EL FAROL QUE COLGABA ENCIMA DEL PRIMER ESCALON, FUERA (lo pidió el jugador: "hay que quitar esta lámpara
         // que está justo arriba de las primeras escaleras de la planta baja porque estorba al querer subir por ahí").
         // Idempotente y solo toca ese farol: vale también para las tabernas ya construidas.

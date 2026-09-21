@@ -3114,6 +3114,30 @@ el siguiente lector**.
   vive cada sitio que no está en ella**: `FARM_PLOTS` (huerta), `VillageStorage.OFFSET` (almacén), `ANEXO_DX`
   (corral), `baseDeLaTaberna` (taberna), `PUNTOS_DE_LA_ARBOLEDA` (arboleda).
 
+### 3b.75 La banda de troncos que separa las dos plantas de la taberna (de diseño, en los cuatro lados)
+
+Lo pidió el jugador con captura, y **se la había puesto él a mano en un lado**: *"estaría bien que la taberna tenga
+logs de separación entre un piso y otro tal como se muestra en la imagen… el log es más claro que el log de cada
+pilar para que lo distingas. Estaría bien que estuviera desde el diseño en todos los lados"*.
+
+**MEDIDO en su guardado**: su banda estaba en la **vuelta del forjado** —`oak_log` a `y=124` (la cota del forjado de
+la posada) en el muro sur, `1438..1449`— y el resto de la vuelta seguía en los **tablones oscuros** del diseño
+(`dark_oak_planks`). O sea: la celda correcta era la del forjado, y el material que eligió, **roble claro**
+(`oak_log`) contra los postes de **roble oscuro** del entramado.
+
+**ARREGLO** (migración **68**):
+- **La construye el diseño**: en `forjadoDeLaPosada`, la **vuelta** del forjado (la línea de los muros,
+  `enLaVueltaDelForjado`) va en **`oak_log`** y el resto del forjado sigue en tablones oscuros. Como el forjado se
+  coloca en **todos** los lados, la banda sale **en los cuatro** y de una pieza.
+- **Y se repone en las tabernas ya construidas**: `ponerLaBandaDeLaTaberna` (idempotente, en el latido) cambia
+  **solo** los tablones del diseño de esa vuelta —lo que el jugador tenga puesto se queda: en su partida, su banda
+  del muro sur— y canta en el log cuántos troncos ha puesto.
+- La chimenea (pegada al muro norte) no se toca: su celda no es un tablón del diseño.
+
+*No se pudo medir con el arnés (el jugador tenía el juego abierto y tiene cogidos el jar de NeoForge y el guardado);
+se comprueba en el log al reiniciar (`banda de separacion entre plantas puesta (N tronco(s) de roble en la vuelta del
+forjado)`) y a ojo en los cuatro lados.*
+
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.

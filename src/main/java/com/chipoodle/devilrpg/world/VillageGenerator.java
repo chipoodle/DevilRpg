@@ -6878,8 +6878,17 @@ public final class VillageGenerator {
 
     /**
      * El <b>forjado de la posada</b>: el suelo del piso de arriba (y el techo del comedor) en tablones de roble
-     * oscuro. Cubre TODO el vuelo (un bloque por fuera de los muros de abajo) menos el <b>hueco de la escalera</b>, y
-     * remata el borde con las <b>cabezas de viga</b> del vuelo (los troncos que se ven bajo el alero).
+     * oscuro, con la <b>banda de separación entre plantas</b> en su vuelta. Cubre TODO el vuelo menos el <b>hueco de
+     * la escalera</b>, y remata el borde con las <b>cabezas de viga</b> del vuelo (los troncos que se ven bajo el
+     * alero).
+     * <p>
+     * <b>LA BANDA</b> (lo pidió el jugador, que se la puso a mano en un lado y la quería de diseño en los cuatro):
+     * <i>"estaría bien que la taberna tenga logs de separación entre un piso y otro… el log es más claro que el log de
+     * cada pilar para que lo distingas… estaría bien que estuviera desde el diseño en todos los lados"</i>. En la
+     * <b>vuelta del forjado</b> —la línea de los muros, que es lo que se ve desde fuera— va un tronco de <b>ROBLE
+     * CLARO</b> en vez del tablón oscuro: una franja de una pieza que separa las dos plantas de un vistazo, y que no
+     * se confunde con los <b>postes de roble oscuro</b> del entramado. Medido en su guardado: había puesto
+     * {@code oak_log} a {@code y=124} en el muro sur (la vuelta del forjado) y el resto seguía en tablones.
      */
     private static void forjadoDeLaPosada(ServerLevel level, int bx, int bz, int nivel) {
         int y = nivel + TABERNA_PISO2 - 1;
@@ -6888,7 +6897,9 @@ public final class VillageGenerator {
                 if (esHuecoDeLaEscalera(dx, dz)) {
                     continue;
                 }
-                colocar(level, new BlockPos(bx + dx, y, bz + dz), Blocks.DARK_OAK_PLANKS.defaultBlockState(), 3);
+                colocar(level, new BlockPos(bx + dx, y, bz + dz),
+                        enLaVueltaDelForjado(dx, dz) ? Blocks.OAK_LOG.defaultBlockState()
+                                : Blocks.DARK_OAK_PLANKS.defaultBlockState(), 3);
             }
         }
         // Las cabezas de viga: en el anillo que vuela (fuera de los muros de abajo), un tronco cada cuatro bloques,
@@ -6901,6 +6912,16 @@ public final class VillageGenerator {
                 }
             }
         }
+    }
+
+    /**
+     * ¿Esa celda (relativa a la esquina de la taberna) está en la <b>vuelta del forjado</b>: la línea de los muros, que
+     * es donde va la <b>banda de separación entre plantas</b> (troncos de roble claro)? Ver
+     * {@code forjadoDeLaPosada} y {@code ponerLaBandaDeLaTaberna} (la migración 68).
+     */
+    private static boolean enLaVueltaDelForjado(int dx, int dz) {
+        return dx >= 0 && dx < TABERNA_ANCHO && dz >= 0 && dz < TABERNA_FONDO
+                && (dx == 0 || dx == TABERNA_ANCHO - 1 || dz == 0 || dz == TABERNA_FONDO - 1);
     }
 
     /**
@@ -7977,6 +7998,47 @@ public final class VillageGenerator {
     /** Un farol <b>colgado</b> (de un bloque sólido que tiene encima). */
     private static void colgar(ServerLevel level, BlockPos pos) {
         colocar(level, pos, Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true), 3);
+    }
+
+    /**
+     * <b>La banda de separación entre plantas de la taberna</b> (lo pidió el jugador): la <b>vuelta del forjado</b> de
+     * la posada, que es la línea de los muros, se remata con <b>troncos de roble CLARO</b> en vez de los tablones
+     * oscuros. Se ve de un vistazo dónde acaba el comedor y empieza la posada, y el tronco claro no se confunde con los
+     * <b>postes de roble oscuro</b> del entramado: *"el log es más claro que el log de cada pilar para que lo
+     * distingas"*.
+     * <p>
+     * La construye {@code forjadoDeLaPosada} en la taberna nueva; esto es el <b>reparador de la migración 68</b> para
+     * las ya construidas: cambia <b>solo</b> los tablones del diseño ({@code DARK_OAK_PLANKS}) de esa vuelta, así que
+     * es <b>idempotente</b> y lo que el jugador haya puesto ahí (en su partida ya había puesto él la banda del muro
+     * sur, en {@code oak_log}) se queda como está. Va en el latido, como los demás reparadores de la taberna.
+     */
+    public static void ponerLaBandaDeLaTaberna(ServerLevel level, BlockPos center) {
+        if (!tabernaConstruida(level, center)) {
+            return;
+        }
+        int nivel = cotaDeLaPlaza(level, center);
+        BlockPos base = baseDeLaTaberna(center);
+        int y = nivel + TABERNA_PISO2 - 1;
+        int puestas = 0;
+        for (int dx = 0; dx < TABERNA_ANCHO; dx++) {
+            for (int dz = 0; dz < TABERNA_FONDO; dz++) {
+                if (!enLaVueltaDelForjado(dx, dz)) {
+                    continue;
+                }
+                BlockPos p = new BlockPos(base.getX() + dx, y, base.getZ() + dz);
+                if (!level.getBlockState(p).is(Blocks.DARK_OAK_PLANKS)) {
+                    continue; // ya es la banda (o es del jugador, o es el hueco de la escalera): no se toca
+                }
+                // lint:ok I9 porque es una REPARACION idempotente de una vuelta de celdas (la banda de separacion) y se
+                // llama desde el latido: no rehace nada, asi que no necesita migracion propia.
+                colocar(level, p, Blocks.OAK_LOG.defaultBlockState(), 3);
+                puestas++;
+            }
+        }
+        if (puestas > 0) {
+            DevilRpg.LOGGER.info("[Village] Taberna de {}: banda de separacion entre plantas puesta ({} tronco(s) de"
+                    + " roble en la vuelta del forjado)", center, puestas);
+        }
     }
 
     /**
