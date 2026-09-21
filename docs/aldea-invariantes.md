@@ -80,6 +80,15 @@ acerca.
 mano, así que al agrandar la parcela a 9x9 el granjero seguía mirando solo un trozo). El radio del kiosco se pide
 con `kioscoRadio()`.
 **Regla:** un número que usan dos sitios vive en un solo sitio y se expone.
+> **Y LOS SITIOS TAMBIÉN** (el jugador lo preguntó al revisar el código: *"la constante `TRAZADO` no tiene la choza
+> del pescador, ¿por qué?"*). `TRAZADO` es **la tabla de sitios que lee `trazado(center, i)`**, no un censo de la
+> aldea: la **pesquera** (etapa G) se hizo con su **propia copia** de las coordenadas (`PESQUERA = {20, 44}`) y
+> nunca entró en la tabla —y las **tres parcelas** estaban en las **dos** (`TRAZADO` *y* `FARM_PLOTS`), con las filas
+> de la tabla sin que las leyera nadie—. Ahora el sitio de la pesquera vive **solo** en `TRAZADO[7]` (y `PESQUERA`
+> lo lee), las filas muertas de las parcelas se quitaron, y el comentario de la tabla dice **dónde vive cada sitio
+> que no está en ella** (`FARM_PLOTS`, `VillageStorage.OFFSET`, `ANEXO_DX`, `baseDeLaTaberna`, `PUNTOS_DE_LA_ARBOLEDA`),
+> que es lo que evita que el siguiente lector caiga en la misma trampa. **No cambia ni un bloque del mundo**: los
+> valores son los mismos.
 
 ### I5 · El aldeano camina POR EL CEREBRO
 Los aldeanos son mobs de cerebro: en cada tick el cerebro escribe su propio destino (su puesto, la plaza, la cama,

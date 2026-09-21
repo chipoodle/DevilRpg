@@ -86,33 +86,44 @@ public final class VillageGenerator {
     public static final int FENCE_RADIUS = 62;
 
     /**
-     * Coordenadas del trazado, <b>relativas al centro</b> del pueblo. Antes eran las del trazado de radio 36 y todas
-     * cabían apretadas en el centro; con el muro a 62 se han <b>repartido</b> por el recinto (cada cuadrante a su
-     * aire, sin solaparse con el almacén, que sigue pegado a la plaza) para que el pueblo <b>llene</b> la muralla:
+     * <b>El sitio de cada edificio de planta</b>, relativo al centro del pueblo: es lo que lee {@link #trazado} por
+     * <b>índice</b> (los índices son los que usa el código, no un censo de todo lo que hay en la aldea).
+     * <p>
+     * Antes eran las coordenadas del trazado de radio 36 y todas cabían apretadas en el centro; con el muro a 62 se
+     * han <b>repartido</b> por el recinto (cada cuadrante a su aire, sin solaparse con el almacén, que sigue pegado a
+     * la plaza) para que el pueblo <b>llene</b> la muralla. Reparto actual:
      * <ul>
-     *   <li><b>Casas</b>: (-36,-7) oeste, (28,-16) este-norte, (-9,36) sur, (12,-32) norte (la grande).</li>
-     *   <li><b>Iglesia</b> (-21,-45) y <b>taller de los herreros</b> (3,-47), al norte, cada uno en su hueco.</li>
-     *   <li><b>Barraca de la milicia</b> (-45,22), al suroeste.</li>
-     *   <li><b>Parcelas de la granja</b> (-30,14) y (10,4): la primera al oeste (lejos de la barraca) y la segunda
-     *       pegada a la plaza, que es donde el granjero trabaja y deja el trigo.</li>
-     *   <li><b>Arboleda</b>: (34..40, -41..-31), en la diagonal noreste, con sitio de sobra.</li>
-     *   <li><b>Corral anexo</b>: a 50 del centro (de 43 a 57), ahora <b>dentro</b> de la muralla a 4 bloques de ella.</li>
+     *   <li><b>Casas</b> (0..3): (-36,-7) oeste, (28,-16) este-norte, (-9,36) sur, (12,-32) norte (la grande).</li>
+     *   <li><b>Iglesia</b> (4) (-21,-45) y <b>taller de los herreros</b> (5) (3,-47), al norte.</li>
+     *   <li><b>Barraca de la milicia</b> (6) (-45,22), al suroeste.</li>
+     *   <li><b>Pesquera</b> (7) (20,44), en el campo del sureste: su lago y, diez al norte, la caseta del pescador.</li>
      * </ul>
-     * El <b>almacén</b> no se mueve (va con {@code VillageStorage}, pegado a la plaza): moverlo dejaría los cofres
-     * del pueblo —y todo lo que tiene dentro— tirados por el recinto viejo.
+     * <p>
+     * <b>Y AQUÍ SOLO ESTÁN LOS QUE SE COLOCAN POR ESTA TABLA.</b> Los demás sitios del pueblo tienen <b>su propia
+     * constante</b>, que es donde hay que mirarlos (un número en dos sitios se desincroniza, I4):
+     * <ul>
+     *   <li><b>Parcelas de la granja</b> ({@link #FARM_PLOTS}, que además lleva el tamaño y la acequia): sus tres
+     *       esquinas estuvieron <b>también</b> aquí (tres filas que nadie leía) y se quitaron para que el sitio de la
+     *       huerta viva en un solo sitio.</li>
+     *   <li><b>Almacén</b>: {@code VillageStorage.OFFSET} (y no se mueve: moverlo dejaría sus cofres —y lo que hay
+     *       dentro— tirados por el recinto viejo).</li>
+     *   <li><b>Corral anexo</b>: {@link #ANEXO_DX} (va con {@link #baseDeAnexo}). <b>Taberna</b>:
+     *       {@code baseDeLaTaberna}. <b>Arboleda</b>: {@link #PUNTOS_DE_LA_ARBOLEDA}.</li>
+     * </ul>
+     * OJO con esto: el jugador lo preguntó al revisar el código —*"la constante TRAZADO no tiene la choza del
+     * pescador, ¿por qué?"*— y la respuesta era que la pesquera (etapa G) se hizo con su propia copia de las
+     * coordenadas; ahora su sitio vive <b>solo aquí</b> ({@link #PESQUERA} lee esta fila).
      */
     private static final int[][] TRAZADO = {
-            // x, z  y qué es (para leerlo de un vistazo)
-            {-36, -7},   // casa 1 (oeste)
-            {28, -16},   // casa 2 (este)
-            {-9, 36},    // casa 3 (sur)
-            {12, -32},   // casa 4 (norte, la grande)
-            {-21, -45},  // iglesia
-            {3, -47},    // taller de los herreros
-            {-45, 22},   // barraca de la milicia
-            {-30, 14},   // parcela de la granja 1
-            {10, 4},     // parcela de la granja 2
-            {-28, 34},   // parcela de la granja 3 (la del tercer bancal, con su granjero)
+            // x, z  y qué es (para leerlo de un vistazo). Los índices los usa `trazado(center, i)`.
+            {-36, -7},   // 0: casa 1 (oeste)
+            {28, -16},   // 1: casa 2 (este)
+            {-9, 36},    // 2: casa 3 (sur)
+            {12, -32},   // 3: casa 4 (norte, la grande)
+            {-21, -45},  // 4: iglesia
+            {3, -47},    // 5: taller de los herreros
+            {-45, 22},   // 6: barraca de la milicia
+            {20, 44},    // 7: pesquera (el lago; la caseta va diez celdas al norte)
     };
 
     /** La posición del trazado {@code i} (ver {@link #TRAZADO}) relativa al centro. */
@@ -1903,11 +1914,16 @@ public final class VillageGenerator {
     // --- LA PESQUERA (etapa G: el pescador, su edificio y su lago) -----------------------------------
 
     /**
-     * Dónde está la <b>pesquera</b>, relativa al centro: en el campo del <b>sureste</b>, que es el cuadrante que
-     * queda libre (la taberna está al este-norte, el almacén y el corral al este, los bancales al oeste y al
-     * suroeste). Es lo que pidió el jugador: <i>"el pescador tendrá su edificio y su lago más adelante"</i>.
+     * Dónde está la <b>pesquera</b> (el centro de su lago), relativa al centro: en el campo del <b>sureste</b>, que es
+     * el cuadrante que queda libre (la taberna está al este-norte, el almacén y el corral al este, los bancales al
+     * oeste y al suroeste). Es lo que pidió el jugador: <i>"el pescador tendrá su edificio y su lago más adelante"</i>.
+     * <p>
+     * El sitio <b>vive en {@link #TRAZADO}</b> (índice 7) como el de cualquier otro edificio de planta: antes tenía
+     * aquí su propia copia de las coordenadas y el jugador lo notó al revisar el código —*"la constante TRAZADO no
+     * tiene la choza del pescador, ¿por qué?"*—, que es el patrón que I4 prohíbe (un número en dos sitios que se
+     * pueden desincronizar).
      */
-    private static final int[] PESQUERA = {20, 44};
+    private static final int[] PESQUERA = TRAZADO[7];
     /** Radio del <b>lago</b> (huella de 7x7) y peces que caben dentro. */
     public static final int LAGO_RADIO = 3;
     public static final int LAGO_PECES_MAX = 6;

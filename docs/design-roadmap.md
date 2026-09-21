@@ -3093,6 +3093,27 @@ tejado**.
 vías, la de vanilla y la del mod—, y el **latido** lo repite para los que **ya** estaban en alto (el del guardado se
 baja en la primera pasada). Idempotente: a un golem a nivel del suelo no se le toca.
 
+### 3b.74 «La constante TRAZADO no tiene la choza del pescador» (los sitios, en un solo sitio)
+
+Lo preguntó el jugador **revisando el código**: *"estoy viendo que la constante `TRAZADO` en `VillageGenerator` no
+tiene la choza del pescador, ¿por qué?"*.
+
+**La respuesta**: `TRAZADO` no es "el trazado de la aldea" (aunque el nombre y su comentario lo parecían): es **la
+tabla de sitios que lee `trazado(center, i)`**, y el código solo usa los índices **0..6** (casas, iglesia, taller,
+barraca). La **pesquera** llegó después, en la **etapa G** (*"el pescador tendrá su edificio y su lago más
+adelante"*, que fue petición suya) y se hizo con **su propia copia** de las coordenadas: `PESQUERA = {20, 44}`. Y al
+revés, las **tres parcelas de la granja** estaban en las **dos** tablas —`TRAZADO` (filas 7-9, que **nadie leía**) y
+`FARM_PLOTS` (la de verdad)—. Sin consecuencia en el mundo (el derribo del trazado viejo usa sus propias constantes,
+y nada recorre `TRAZADO` para reservar sitios), pero es exactamente el patrón que **I4** prohíbe y una **trampa para
+el siguiente lector**.
+
+**ARREGLO** (solo código, **ni un bloque del mundo cambia**):
+- El sitio de la pesquera vive **solo** en `TRAZADO[7]` (con su lago y su caseta) y `PESQUERA = TRAZADO[7]` lo lee.
+- Se quitaron las **tres filas muertas** de las parcelas (su sitio es `FARM_PLOTS`).
+- El comentario de la tabla dice **qué es** (los índices que usa `trazado()`), **qué hay en cada índice** y **dónde
+  vive cada sitio que no está en ella**: `FARM_PLOTS` (huerta), `VillageStorage.OFFSET` (almacén), `ANEXO_DX`
+  (corral), `baseDeLaTaberna` (taberna), `PUNTOS_DE_LA_ARBOLEDA` (arboleda).
+
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.
