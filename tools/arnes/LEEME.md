@@ -30,12 +30,23 @@ Remove-Item run\world -Recurse -Force; Move-Item run\world.antes run\world
 
 ## Qué mide
 
-- `[Arnes]` cada segundo: **posición**, `yRot`, **destino del cerebro** (`WALK_TARGET`), oficio y la **etiqueta**
-  (lo que el jugador ve sobre la cabeza).
-- `[Village] Guardia ...: nuevo puesto ... (paso N)`: cada vez que el guardia cambia de puesto de la ronda → sirve
-  para ver **si la ronda avanza** (el bug era que se quedaba en el mismo `paso` **para siempre**).
-- `[Village] Guardia ...: no llego a ... me salto el puesto`: el guardia se rindió en un puesto (I33).
-- `[Village] Guardia ...: deja el puesto ... (atascado N ticks)`: el goal se cortó.
+### `MEDIR_MILICIA = true` — la milicia que aprende (I62) y el clérigo que sana (I64)
+
+Pone el mundo de **día** (a diferencia de `MEDIR_NOCHE`), **no barre los bichos** (los que hay dentro son los que se
+siembran, ¡ojo: con el barrido desaparecían en el mismo segundo y la medida no valía!) y a los **150 s** —cuando la
+guardia ya está alistada: a los 30-60 s **todavía no hay guardias** y la siembra se quedaba sin heridos— hace esto:
+
+- **hiere a tres guardias** al 35 % de su vida (para que el clérigo tenga a quién curar) y suelta **cuatro zombis
+  flojos** (4 de vida, `NoAI`) **junto al primer guardia**;
+- 2 s después les da un **golpe mortal atribuido a la guardia** (`mobAttack(guardia)`): es la prueba directa del
+  enganche de `LivingDeathEvent`, **sin depender de la IA** (que se mide sola: la etiqueta pasa por *"Atacando"*);
+- cada segundo vuelca **cada guardia** (`nv`, `matanzas`, vida/máxima, posición y etiqueta) y **el clérigo** (su
+  etiqueta y el herido más cercano con su vida y a cuántos bloques está).
+
+Lo que se busca en el log: `[Arnes] GUARDIA … nv=N matanzas=M vida=…/… | etiqueta: … / Atacando`,
+`[Village] … sube al nivel N: … enemigo(s) y sus atributos son vida … y dano …` (el **daño tiene que ser > 0**:
+un aldeano **no** trae el atributo de daño de fábrica, ver I62) y `[Village] El clerigo cura a X (a -> b de N de vida)`
+con la etiqueta `Curando a X`.
 
 **Ajustes del arnés** (arriba del archivo): `CENTRO` e `INDICE` son la aldea que se mide (la 2 es
 `1414,120,1414`, índice 2) y el ancla del jugador se **calcula** con la misma cuenta que
@@ -44,8 +55,7 @@ sin spawn de bichos y **barriendo cada segundo los bichos que ya venían en el g
 bloquea el latido del pueblo entero: sin barrerlos, no se reparten oficios ni se alista la guardia; se nota porque
 en el log **no** sale ninguna línea `[Village] Aldea N: comida ...` ni ningún `nuevo puesto`).
 
-- `BICHO_DENTRO = true` → **lo contrario, a propósito**: en vez de barrer los bichos se planta **UNO** dentro de la
-  aldea y se mantiene ahí. Es un **aldeano-zombi** (`NoAI`, invulnerable, persistente) porque es un `Monster` —cuenta
+- `BICHO_DENTRO = true` → **lo contrario, a propósito**: en vez de barrer los bichos se planta **UNO** dentro de la  aldea y se mantiene ahí. Es un **aldeano-zombi** (`NoAI`, invulnerable, persistente) porque es un `Monster` —cuenta
   para `hayEnemigosDentro`— y el sello **no lo expulsa** (`expulsarHostilesDeLaAldea` deja en paz a los aldeanos-zombi:
   puede ser una curación en marcha), así que el latido se queda **cortado** toda la corrida. Es lo que reproduce la
   partida del jugador (de noche y con bichos dentro) y lo que se midió en 3b.61. El arnés lo canta cada segundo:

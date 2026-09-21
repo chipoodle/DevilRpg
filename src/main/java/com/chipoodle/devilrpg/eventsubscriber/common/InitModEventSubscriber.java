@@ -64,6 +64,18 @@ public final class InitModEventSubscriber {
     @SubscribeEvent
     public static void updateEntityAttributes(EntityAttributeModificationEvent event) {
         DevilRpg.LOGGER.info("----------------------->InitModEventSubscriber.updateEntityAttributes()");
+        // LOS ALDEANOS PEGAN (I62). La milicia del pueblo pelea a espada, pero `Villager` NO tiene el atributo de
+        // daño —vanilla no lo necesita, porque los aldeanos no atacan—, así que `getAttribute(ATTACK_DAMAGE)`
+        // devolvía null, mi código no le ponía nada y **cada golpe de un guardia hacía CERO de daño**: la milicia era
+        // decorativa. Medido con el arnés (aldea 2, modo MILICIA): la guardia peleaba ("Atacando") y el zombi **no se
+        // moría**, y al subir de nivel su daño salía `0.0` en el log (`sube al nivel 2: … dano 0.0`).
+        // Se le añade el atributo con su valor de SIEMPRE (2,0, como el puño de un jugador): el arma que le da el
+        // pueblo (espada de hierro, +4) se suma encima, y `VillageManager.aplicarLoAprendido` crece desde ese 2,0.
+        if (!event.has(net.minecraft.world.entity.EntityType.VILLAGER,
+                net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE)) {
+            event.add(net.minecraft.world.entity.EntityType.VILLAGER,
+                    net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE, 2.0D);
+        }
         /*if (!event.has(EntityType.CREEPER, EXAMPLE_ATTRIBUTE.get())) {
             event.add(EntityType.CREEPER,
                     EXAMPLE_ATTRIBUTE.get() // Applies new attribute to creeper

@@ -74,7 +74,14 @@ public class GuardHarness {
      */
     private static final boolean MEDIR_COCINA = false;
     /** ¿Se mide LA HUERTA (lo que hay tirado en los bancales y el zurron de cada granjero)? Ver igilarLaHuerta. */
-    private static final boolean MEDIR_HUERTA = true;
+    private static final boolean MEDIR_HUERTA = false;
+    /**
+     * ¿Se mide <b>LA MILICIA Y EL SANADOR</b> (I62/I64)? Deja el mundo de DÍA, suelta <b>dos zombis flojos</b> dentro
+     * de la aldea (para que la guardia pelee, mate y suba de nivel) y <b>hiere</b> a tres guardias al 35 % de su vida
+     * (para que el clérigo tenga a quién curar). Cada segundo vuelca la vida, el NIVEL y las MATANZAS de cada guardia
+     * y lo que está haciendo el clérigo.
+     */
+    private static final boolean MEDIR_MILICIA = false;
     /** ¿Se mide LA CASA DEL HUECO (la pared a la que le faltaba un bloque y el cofre de al lado)? Ver olcarLaParedYElCofre. */
     private static final boolean MEDIR_HUECO_CASA = false;
     /** Dónde se planta el bicho (relativo a la plaza): dentro del recinto (radio 62) y a la altura del pueblo. */
@@ -120,7 +127,10 @@ public class GuardHarness {
         }
         // Los bichos que YA venian en el guardado dentro del recinto BLOQUEAN el latido del pueblo
         // (`hayEnemigosDentro`): sin esto el reparto de oficios y la guardia ni se tocan. Se barren cada segundo.
-        if (ticks % 20 == 0) {
+        // OJO: en la medida de LA MILICIA **no se barre**, porque los bichos que hay dentro son los que se acaban de
+        // sembrar para que la guardia pelee (medido: con el barrido, el zombi desaparecia en el mismo segundo, la
+        // guardia se quedaba con la etiqueta "Atacando" un instante y volvia a su ronda, y no habia ni una muerte).
+        if (ticks % 20 == 0 && !MEDIR_MILICIA) {
             if (BICHO_DENTRO) {
                 // ...pero para medir EL BUG DEL LATIDO CORTADO hay que dejar UNO dentro a proposito.
                 mantenerBichoDentro(level);
@@ -176,6 +186,19 @@ public class GuardHarness {
             // Y EL QUE NO TIENE CAMA: sondeo de rutas a las celdas que importan (donde se corta el camino).
             if (ticks % 100 == 0) {
                 sondarRutasDelSinCama(level);
+            }
+        } else if (MEDIR_MILICIA) {
+            // LA MILICIA Y EL SANADOR (I62/I64): a los 60 s (chunks cargados, oficios repartidos y guardia alistada:
+            // a los 30 s TODAVIA no hay guardias y la siembra se quedaba sin heridos, medido) se siembra la pelea, y a
+            // partir de ahí se vuelca cada segundo quién pelea, quién sube de nivel y a quién cura el clérigo.
+            if (ticks == 3000) {
+                sembrarLaMilicia(level);
+            }
+            if (ticks == 3040) {
+                golpearConLaGuardia(level); // 2 s despues: las entidades recien anadidas ya estan en el nivel
+            }
+            if (ticks % 20 == 0) {
+                volcarLaMilicia(level);
             }
         } else {
             if (ticks == 400 || ticks == 1400) {
@@ -253,9 +276,146 @@ public class GuardHarness {
         return dentro == 0 ? "NO (el latido corre entero)" : "SI (" + dentro + " monstruo(s): latido cortado)";
     }
 
+    /**
+     * <b>LA PELEA Y EL SANADOR, SEMBRADOS A MANO</b> (I62/I64): dos zombis <b>flojos</b> dentro de la aldea —para que
+     * la guardia pelee y mate— y tres guardias <b>heridos</b> al 35 % de su vida, para que el clérigo tenga pacientes
+     * sin depender de que un zombi acierte. Los zombis pegan poco a propósito (1 de daño): la medida es de la
+     * guardia, no de una masacre de aldeanos.
+     */
+    private static void sembrarLaMilicia(ServerLevel level) {
+        int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+        // Primero los guardias: se hiere a tres y se apunta dónde está el primero, que es donde se sueltan los
+        // zombis (a 3 bloques y SIN IA: la guardia los ve, los mata y sube de nivel sin que ellos maten a nadie).
+        Villager primero = null;
+        int heridos = 0;
+        int guardias = 0;
+        for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(140))) {
+            if (!com.chipoodle.devilrpg.entity.goal.VillagerGuardGoal.esGuardia(v)) {
+                continue;
+            }
+            guardias++;
+            if (primero == null) {
+                primero = v;
+            }
+            if (heridos < 3) {
+                v.setHealth(Math.max(1.0F, v.getMaxHealth() * 0.35F));
+                heridos++;
+            }
+        }
+        BlockPos junto = primero == null ? CENTRO.offset(14, 0, 6) : primero.blockPosition().offset(3, 0, 0);
+        int zombis = 0;
+        for (int i = 0; i < 4; i++) {
+            BlockPos donde = junto.offset(i % 2, 0, i / 2);
+            net.minecraft.world.entity.monster.Zombie z = net.minecraft.world.entity.EntityType.ZOMBIE.create(level);
+            if (z == null) {
+                continue;
+            }
+            z.moveTo(donde.getX() + 0.5D, donde.getY(), donde.getZ() + 0.5D, 0.0F, 0.0F);
+            z.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH).setBaseValue(4.0D);
+            z.setHealth(4.0F);
+            z.setNoAi(true); // no pelean: la medida es de la guardia (un zombi con IA podia matar a un aldeano)
+            z.setPersistenceRequired();
+            level.addFreshEntity(z);
+            zombis++;
+        }
+        DevilRpg.LOGGER.info("[Arnes] MILICIA: {} zombi(s) flojo(s) junto a {} y {} de {} guardia(s) herido(s) al 35 %"
+                + " (el clerigo tiene que ir a curarlos)", zombis,
+                primero == null ? "la plaza" : nombreCorto(primero), heridos, guardias);
+    }
+
+    /**
+     * <b>LOS GOLPES, ATRIBUIDOS A LA GUARDIA</b> (I62): la pelea de verdad —que el goal de la guardia ataque a un
+     * monstruo— ya está medida aparte; lo que aquí se mide es el <b>enganche de la muerte</b>: el daño va con
+     * {@code mobAttack(guardia)}, que es exactamente lo que produce el juego cuando el aldeano pega, así que la muerte
+     * pasa por {@code LivingDeathEvent} con el aldeano como dueño del daño.
+     * <p>
+     * Va <b>en un tick posterior</b> al sembrado a propósito: una entidad recién añadida al nivel no aparece todavía
+     * en las consultas (`getEntitiesOfClass`) hasta que el mundo da un tick, así que haciéndolo en el mismo tick el
+     * barrido no encontraba a los zombis y no había ni un golpe (medido: la línea de la siembra salía y la de los
+     * golpes no).
+     */
+    private static void golpearConLaGuardia(ServerLevel level) {
+        Villager guardia = null;
+        for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(140))) {
+            if (com.chipoodle.devilrpg.entity.goal.VillagerGuardGoal.esGuardia(v)) {
+                guardia = v;
+                break;
+            }
+        }
+        int golpes = 0;
+        if (guardia != null) {
+            for (net.minecraft.world.entity.Mob m : level.getEntitiesOfClass(net.minecraft.world.entity.Mob.class,
+                    new AABB(CENTRO).inflate(48))) {
+                if (m instanceof net.minecraft.world.entity.monster.Monster) {
+                    m.hurt(level.damageSources().mobAttack(guardia), 100.0F);
+                    golpes++;
+                }
+            }
+        }
+        DevilRpg.LOGGER.info("[Arnes] MILICIA: {} golpe(s) mortal(es) de {} (matanzas={}, nv={})",
+                golpes, guardia == null ? "nadie" : nombreCorto(guardia),
+                guardia == null ? 0 : VillageManager.matanzasDeGuardia(guardia),
+                guardia == null ? 0 : VillageManager.nivelDeGuardia(guardia));
+    }
+
+    /**
+     * Cada segundo: <b>cada guardia</b> (vida, NIVEL, matanzas y etiqueta) y <b>el clérigo</b> (su etiqueta y el
+     * herido más cercano, con su vida y a cuántos bloques está). Es la medida de I62 (la milicia aprende) y de I64
+     * (el clérigo sana).
+     */
+    private static void volcarLaMilicia(ServerLevel level) {
+        for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(140))) {
+            if (!com.chipoodle.devilrpg.entity.goal.VillagerGuardGoal.esGuardia(v)) {
+                continue;
+            }
+            // OJO: la ETIQUETA (que lleva la actividad) va la ULTIMA y sin saltos de linea: el nombre del aldeano es
+            // "Nombre (Oficio)\nActividad" y con el `\n` en medio el log partia la linea y no se veia la medida.
+            DevilRpg.LOGGER.info("[Arnes] GUARDIA {} nv={} matanzas={} vida={}/{} pos={} | etiqueta: {}",
+                    nombreCorto(v), VillageManager.nivelDeGuardia(v), VillageManager.matanzasDeGuardia(v),
+                    redondo(v.getHealth()), v.getMaxHealth(), v.blockPosition().toShortString(), etiquetaDe(v));
+        }
+        for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(140))) {
+            if (v.isBaby() || v.getVillagerData().getProfession()
+                    != net.minecraft.world.entity.npc.VillagerProfession.CLERIC) {
+                continue;
+            }
+            double mejor = Double.MAX_VALUE;
+            String quien = "ninguno";
+            for (Villager otro : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(140))) {
+                if (otro == v || !otro.isAlive() || otro.getHealth() >= otro.getMaxHealth() * 0.75D) {
+                    continue;
+                }
+                double d = v.distanceToSqr(otro);
+                if (d < mejor) {
+                    mejor = d;
+                    quien = nombreCorto(otro) + " (" + redondo(otro.getHealth()) + "/" + otro.getMaxHealth()
+                            + " a " + redondo((float) Math.sqrt(d)) + " bloques)";
+                }
+            }
+            DevilRpg.LOGGER.info("[Arnes] CLERIGO {} vida={}/{} pos={} | herido mas cercano: {} | etiqueta: {}",
+                    nombreCorto(v), redondo(v.getHealth()), v.getMaxHealth(),
+                    v.blockPosition().toShortString(), quien, etiquetaDe(v));
+        }
+    }
+
+    /** El nombre del aldeano sin el oficio detrás (lo que va antes del paréntesis). */
+    private static String nombreCorto(Villager v) {
+        String nombre = v.getName().getString();
+        int parentesis = nombre.indexOf(" (");
+        return parentesis > 0 ? nombre.substring(0, parentesis) : nombre;
+    }
+
+    private static double redondo(float valor) {
+        return Math.round(valor * 10.0F) / 10.0D;
+    }
+
+    /** La etiqueta que el jugador ve sobre la cabeza del aldeano (nombre y, debajo, lo que está haciendo). */
+    private static String etiquetaDe(Villager v) {
+        return v.getCustomName() == null ? "(sin etiqueta)" : v.getCustomName().getString().replace("\n", " / ");
+    }
+
     /** Leña al almacén y carne cruda a la despensa: sin eso el cocinero no tiene nada que cocinar (ni con qué quemar). */
-    private static void sembrarLaCocina(ServerLevel level) {
-        var resto = com.chipoodle.devilrpg.world.VillageStorage.guardar(level, CENTRO,
+    private static void sembrarLaCocina(ServerLevel level) {        var resto = com.chipoodle.devilrpg.world.VillageStorage.guardar(level, CENTRO,
                 new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_LOG, 40));
         var despensa = com.chipoodle.devilrpg.world.VillagePantry.despensa(level, CENTRO);
         int carnes = 0;

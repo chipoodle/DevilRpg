@@ -1524,6 +1524,20 @@ del guardado recupere lo suyo. Cuando la vida máxima sube, se le suma a la **ac
 cuando el **dueño del daño** es un aldeano de la guardia ({@code LivingDeathEvent} + {@code getSource().getEntity()},
 así que también valen los **arqueros** con la flecha).
 
+> **MEDIDO CON EL ARNÉS (modo `MEDIR_MILICIA`), y de ahí salió UN BUG GORDO**: la guardia subía de nivel pero su
+> log salía con **`dano 0.0`** ✗ — y **`Villager` NO tiene el atributo de daño** (vanilla no lo necesita: los
+> aldeanos no atacan), así que `getAttribute(ATTACK_DAMAGE)` era **null**, mi código no le ponía nada y **cada golpe
+> de un guardia hacía CERO de daño**: la milicia era **decorativa** (medido: la guardia con la etiqueta *"Atacando"*
+> y el zombi **sin morirse**). Arreglado en `InitModEventSubscriber.updateEntityAttributes`
+> (`event.add(EntityType.VILLAGER, ATTACK_DAMAGE, 2.0)`), que es el evento de NeoForge para **añadir** atributos a
+> un tipo existente sin pisarle los suyos.
+>
+> Con el arreglo, la corrida del arnés (aldea 2, guardia herida al 35 % y cuatro zombis flojos a su lado) da:
+> `sube al nivel 2: 3 enemigo(s) → vida 26.5 y dano 2.38` · `sube al nivel 3: 6 enemigo(s) → vida 33.0 y dano 2.76`
+> · `GUARDIA Genoveva nv=3 matanzas=6 vida=20.0/33.0 | etiqueta: … · nv 3 / Atacando` — es decir, **pelea con su IA,
+> mata, sube de nivel y su etiqueta lo dice**, y la vida cuadra con la tabla de arriba (20,0 al acabar = los 7,0 de
+> la herida + lo que le subió la máxima en 6 matanzas: **se fortalece sin curarse del todo**, que es la regla).
+
 ### I63 · El sello, para CADA bicho (no solo para el primero del grupo)
 
 Medido en la partida del jugador (aldea 2): en el log, el sello **rechazó 9 de 9 anclas** de spawn
