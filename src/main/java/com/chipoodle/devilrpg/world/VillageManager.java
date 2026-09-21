@@ -800,6 +800,12 @@ public final class VillageManager {
             // bicho dentro, `hayEnemigosDentro` cortaba el latido ENTERO (ni oficios, ni comida, ni reparaciones, ni
             // milicia: la otra mitad del fallo de I11), así que el pueblo se quedaba congelado por un esqueleto en una
             // cueva. Ahora, en una aldea protegida, primero se expulsa y después se mira.
+            // Y LAS CAMAS, SIEMPRE (ni asedio ni bicho dentro lo impiden): es lo primero que se atiende y va FUERA del
+            // bloque de abajo, que está detrás de `!isUnderAttack` y de `hayEnemigosDentro`. Un aldeano sin cama tiene
+            // que recibirla también —y sobre todo— la noche del asedio (ver `atenderCamasDelPueblo`).
+            if (level.getGameTime() % VILLAGE_POLL_TICKS == 0L && !saved.isFallen(i)) {
+                atenderCamasDelPueblo(level, target, i);
+            }
             if (level.getGameTime() % VILLAGE_POLL_TICKS == 0L && !saved.isFallen(i) && !isUnderAttack(level, i)) {
                 if (saved.isSiegeResolved(i)) {
                     expulsarHostilesDeLaAldea(level, target, i);
@@ -2008,12 +2014,11 @@ public final class VillageManager {
         // dueño), así que vanilla no les registraba la actividad de trabajar y se quedaban en IDLE: es el fallo de
         // "el aldeano que da vueltas sobre su eje" y el rol huérfano que quedaba en el reparto.
         reclamarEstacionesDelPueblo(level, aldeanos, center, objectiveIndex);
-        // Y CADA ALDEANO, CON SU CAMA (lo vio el jugador: dos granjeros con la etiqueta "Sin cama" y de pie en la
-        // huerta toda la noche, con la aldea llena de camas libres).
-        reclamarCamasDelPueblo(level, aldeanos, center);
-        // Y AL QUE NO CONSIGUE DAR EL ÚLTIMO PASO A SU CAMA (el planificador no le acerca a los 2,0 que pide el
-        // juego para acostarse), SE LE ACOSTA: ver `acostarAlQueNoLlega`.
-        acostarAlQueNoLlega(level, aldeanos);
+        // OJO: LAS CAMAS NO SE REPARTEN AQUÍ. Este método (y todo `tickVillageLife`) solo corre en la aldea EN PAZ:
+        // `manageNearby` lo salta entero mientras hay un asedio o un bicho dentro del recinto. Con las camas aquí
+        // dentro, el aldeano al que le faltaba cama se quedaba sin ella justo la noche en que más falta hace (la del
+        // asedio, con monstruos dentro) y el jugador lo veía plantado con "Sin cama" para siempre. Ahora van en
+        // `atenderCamasDelPueblo`, que se llama pase lo que pase (ver `manageNearby`).
         // Y EL QUE SE QUEDA DENTRO DE UNA CASA: si lleva 30 s sin moverse de celda en un piso (o un sótano), se le baja
         // a la plaza (ver `rescatarAldeanosAtrapados`).
         rescatarAldeanosAtrapados(level, aldeanos, center);
@@ -2741,6 +2746,53 @@ public final class VillageManager {
     private static final int CAMAS_A_PROBAR = 8;
 
     /**
+     * <b>El reparto de camas del pueblo, pase lo que pase</b>: se le da cama al aldeano que no tiene y se acuesta al
+     * que no consigue dar el último paso. La llama {@code manageNearby} en su latido <b>sin</b> las guardas de
+     * "aldea en paz".
+     * <p>
+     * <b>POR QUÉ NO PUEDE IR CON EL RESTO DEL LATIDO</b> (lo reportó el jugador: *"Mauricio sigue sin ir a buscar cama
+     * y hay varias en la taberna"*, con la etiqueta <b>"Sin cama"</b> y de noche con los bichos dentro). El latido
+     * entero —{@code tickVillageLife}, y con él {@code prepareRepairs}, donde vivía el reparto de camas— está detrás
+     * de dos guardas: {@code !isUnderAttack(...)} y {@code hayEnemigosDentro(...) -> continue}. Las dos tienen sentido
+     * para lo que repuebla y para lo que administra oficios (no se repone gente mientras los monstruos la están
+     * matando), pero <b>la cama no</b>: la noche del asedio es justo cuando hace falta. Un aldeano al que le faltaba
+     * cama se quedaba sin ella durante todo el asedio y, como el hambre y la edad tampoco corrían, el estado se
+     * quedaba congelado con él de pie y sin cama a la vista del jugador.
+     */
+    private static void atenderCamasDelPueblo(ServerLevel level, BlockPos center, int objectiveIndex) {
+        List<Villager> aldeanos = level.getEntitiesOfClass(Villager.class, new AABB(center).inflate(FALLEN_CHECK_RADIUS));
+        reclamarCamasDelPueblo(level, aldeanos, center);
+        acostarAlQueNoLlega(level, aldeanos);
+        // Y SI ALGUIEN SE QUEDA SIN CAMA, SE DICE EN EL LOG CON NOMBRE Y MOTIVO (una vez por cambio, no cada latido):
+        // es la queja del jugador y así se ve de un vistazo si es que no hay camas, si están todas cogidas o si la que
+        // le toca no le sirve.
+        StringBuilder sinCama = new StringBuilder();
+        int censados = 0;
+        for (Villager villager : aldeanos) {
+            censados++;
+            if (!villager.getBrain().hasMemoryValue(MemoryModuleType.HOME)) {
+                sinCama.append(sinCama.isEmpty() ? "" : ", ").append(nombreDe(villager))
+                        .append(villager.isBaby() ? " (cria)" : "");
+            }
+        }
+        String clave = sinCama.toString();
+        String recordado = SIN_CAMA_LOGGED.getOrDefault(level, "");
+        if (!clave.equals(recordado)) {
+            SIN_CAMA_LOGGED.put(level, clave);
+            if (clave.isEmpty()) {
+                DevilRpg.LOGGER.info("[Village] Aldea {}: los {} aldeanos (crias incluidas) tienen cama",
+                        objectiveIndex, censados);
+            } else {
+                DevilRpg.LOGGER.warn("[Village] Aldea {}: SIN CAMA {} de {} aldeanos (camas del pueblo: {})",
+                        objectiveIndex, clave, censados, contarCamas(level, center));
+            }
+        }
+    }
+
+    /** Último aviso de "sin cama" de cada mundo, para no repetir el mismo WARN en cada latido. */
+    private static final Map<ServerLevel, String> SIN_CAMA_LOGGED = new HashMap<>();
+
+    /**
      * <b>Cada aldeano, con SU CAMA</b>: al que no tiene {@code HOME} se le reclama una cama del pueblo.
      * <p>
      * Hace falta porque la aldea <b>no administraba las camas</b> y el juego solo se las da a quien pilla un rato
@@ -2749,6 +2801,14 @@ public final class VillageManager {
      * plaza para <b>12 aldeanos</b>, y <b>3 sin cama reclamada</b>. Sin cama, en la franja de descanso el aldeano no
      * tiene a dónde ir: se queda <b>plantado donde le pilló la noche</b> (y el mod le pone "Sin cama", que es lo que
      * avisa de que falta algo).
+     * <p>
+     * <b>TAMBIÉN LAS CRÍAS</b> (lo preguntó el jugador: *"Mauricio sigue sin ir a buscar cama y hay varias en la
+     * taberna"*). Mauricio es una <b>cría</b> —de día su etiqueta dice «Mauricio (Sin oficio) · Jugando»— y el reparto
+     * las <b>saltaba a propósito</b> («una cría duerme con el pueblo»), pero eso no se sostiene: vanilla sí permite que
+     * una cría reclame cama (Ubaldo y Nicasio, también crías de esa misma aldea, la tienen) y la etiqueta de la
+     * <b>noche</b> le decía al jugador <b>"Sin cama"</b>, porque la rama de descanso se mira <b>antes</b> que la de
+     * cría. Dos crías de la aldea se quedaban, pues, de pie toda la noche con un cartel que pedía una cama. Ahora
+     * entran en el reparto como cualquier aldeano.
      * <p>
      * <b>POR QUÉ NO BASTABA CON RECLAMAR CUALQUIER CAMA LIBRE</b> (medido con el arnés, vigilante de camas en
      * `GuardHarness`): vanilla le <b>borra el HOME</b> al aldeano desde el comportamiento {@code ValidateNearbyPoi}
@@ -2778,8 +2838,8 @@ public final class VillageManager {
         PoiManager poi = level.getPoiManager();
         Predicate<Holder<PoiType>> esCama = h -> h.is(PoiTypes.HOME);
         for (Villager villager : aldeanos) {
-            if (villager.isBaby() || villager.getBrain().hasMemoryValue(MemoryModuleType.HOME)) {
-                continue; // ya tiene cama (o es una cría, que duerme con el pueblo)
+            if (villager.getBrain().hasMemoryValue(MemoryModuleType.HOME)) {
+                continue; // ya tiene cama
             }
             BlockPos cama = buscarCamaPara(level, poi, esCama, villager, center, PoiManager.Occupancy.HAS_SPACE);
             boolean libre = cama != null;
@@ -2909,7 +2969,7 @@ public final class VillageManager {
         candidatas.sort(Comparator.comparingDouble(p -> p.distSqr(cama)));
         // PRIMERO las que el aldeano alcanza ANDANDO (lo normal).
         for (BlockPos celda : candidatas) {
-            if (!tieneVistaLibre(level, celda, cama, villager)) {
+            if (!hayVistaLibre(level, celda, cama, villager)) {
                 continue; // hay un muro en medio: desde ahí no se le puede acostar
             }
             var camino = villager.getNavigation().createPath(celda, 1);
@@ -2921,28 +2981,33 @@ public final class VillageManager {
         // latido le lleva y, si no puede andando, le mueve esos últimos bloques. Una cama que se ve y está a un paso
         // no se descarta: con camas de sobra, el que no duerme es el aldeano, no la cama.
         for (BlockPos celda : candidatas) {
-            if (tieneVistaLibre(level, celda, cama, villager)) {
+            if (hayVistaLibre(level, celda, cama, villager)) {
                 return celda;
             }
         }
         return null;
     }
 
-    /** ¿Se ve la cama desde esa celda <b>sin nada sólido en medio</b>? (no se acuesta a nadie a través de un muro) */
-    private static boolean tieneVistaLibre(ServerLevel level, BlockPos desde, BlockPos cama, Villager villager) {
+    /**
+     * ¿Se ve ese bloque desde esa celda <b>sin nada sólido en medio</b>? Es el rayo de colisión del juego: {@code MISS}
+     * = vía libre, y el golpe contra el <b>propio objetivo</b> —o contra el bloque de al lado, que es la otra mitad del
+     * mismo mueble: la cama tiene dos— tampoco cuenta: la mirada acaba <b>dentro</b> del objetivo. Lo que bloquea de
+     * verdad es otra cosa (un muro), y eso se ve porque el bloque golpeado no es el objetivo.
+     * <p>
+     * Lo usan el <b>sueño</b> (no se acuesta a nadie a través de un muro: {@link #celdaParaAcostarse}) y la
+     * <b>cocina</b> (no se cocina desde la plaza: ver {@code VillagerCookGoal}).
+     */
+    public static boolean hayVistaLibre(ServerLevel level, BlockPos desde, BlockPos objetivo, Villager villager) {
         Vec3 ojo = new Vec3(desde.getX() + 0.5D, desde.getY() + 1.0D, desde.getZ() + 0.5D);
-        Vec3 objetivo = new Vec3(cama.getX() + 0.5D, cama.getY() + 0.5D, cama.getZ() + 0.5D);
-        var choque = level.clip(new net.minecraft.world.level.ClipContext(ojo, objetivo,
+        Vec3 meta = new Vec3(objetivo.getX() + 0.5D, objetivo.getY() + 0.5D, objetivo.getZ() + 0.5D);
+        var choque = level.clip(new net.minecraft.world.level.ClipContext(ojo, meta,
                 net.minecraft.world.level.ClipContext.Block.COLLIDER,
                 net.minecraft.world.level.ClipContext.Fluid.NONE, villager));
         if (choque.getType() == net.minecraft.world.phys.HitResult.Type.MISS) {
             return true; // sin nada en medio
         }
-        // OJO: la mirada acaba DENTRO del bloque de la cama, así que el rayo choca con ella misma. La cama no cuenta
-        // como obstáculo (si contara, no habría ni una celda con vista y el aldeano se quedaría sin cama: medido); lo
-        // que bloquea de verdad es un muro, y eso se ve porque el bloque golpeado no es una cama.
         return choque instanceof net.minecraft.world.phys.BlockHitResult golpe
-                && level.getBlockState(golpe.getBlockPos()).is(BlockTags.BEDS);
+                && golpe.getBlockPos().distManhattan(objetivo) <= 1;
     }
 
     /**
@@ -2958,7 +3023,7 @@ public final class VillageManager {
      */
     private static void acostarAlQueNoLlega(ServerLevel level, List<Villager> aldeanos) {
         for (Villager villager : aldeanos) {
-            if (villager.isBaby() || villager.isSleeping() || !estaDescansando(villager)) {
+            if (villager.isSleeping() || !estaDescansando(villager)) {
                 continue;
             }
             Optional<GlobalPos> suya = villager.getBrain().getMemory(MemoryModuleType.HOME);
@@ -2971,7 +3036,7 @@ public final class VillageManager {
                 continue; // la cama ya no está (o la ocupa otro): que lo arregle el reparto
             }
             if (villager.blockPosition().distSqr(cama) > (double) (RADIO_ACOSTARSE * RADIO_ACOSTARSE)
-                    || !tieneVistaLibre(level, villager.blockPosition(), cama, villager)) {
+                    || !hayVistaLibre(level, villager.blockPosition(), cama, villager)) {
                 // Todavía no está donde se le puede acostar: se le manda a su CELDA DE ESPERA (la de al lado de la
                 // cama). El planificador no le lleva a la cama, pero a esa celda casi siempre sí.
                 BlockPos espera = ESPERA_PARA_DORMIR.get(villager.getUUID());

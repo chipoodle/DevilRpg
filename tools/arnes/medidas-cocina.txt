@@ -1,0 +1,61 @@
+MEDIDAS DEL COCINERO ("el cocinero está cocinando FUERA de la taberna: debe estar adentro")
+==========================================================================================
+Lo reportó el jugador con captura: Onofre (Cocinero), etiqueta "Cocino 2 piezas", de pie EN LA CALLE delante de la
+pared de la taberna. La causa era el alcance con el que `VillagerCookGoal` daba por llegado al cocinero: medía SOLO
+distancias (`REACH = 6,5` a la casilla de la cocina y `ALCANCE_AHUMADOR = 8,0` al ahumador) y nada del camino, así que
+valía cocinar desde la plaza (al otro lado de la pared) y desde el comedor a través del tabique de la cocina.
+
+Partida: `run/saves/New World (1)` copiada a `run/world` (aldea 2, centro 1414,120,1414); servidor headless con el
+latido de verdad (`GuardHarness`, `MEDIR_COCINA = true`, día fijo 6000) y sembrado a los 20 s: 40 troncos al almacén y
+32 carnes crudas a la despensa. Geometría medida: ahumador `1442,120,1430`, casilla de la cocina (la de delante)
+`1442,120,1429`; la taberna ocupa de `bx=1438, bz=1428` en adelante.
+
+
+--- 0) EL SÍNTOMA, MEDIDO (ANTES del arreglo) ---------------------------------------------------
+Muestras cada 2 s. La primera es la posición EXACTA de la captura del jugador (en la calle, sin ver el ahumador):
+
+    [Arnes] COCINERO pos=1446, 120, 1425 dentroDeLaTaberna=NO VEelAhumador=NO dCasilla=5.76 dAhumador=6.44
+    [Arnes] COCINERO pos=1437, 120, 1429 dentroDeLaTaberna=NO VEelAhumador=NO dCasilla=5.01 dAhumador=5.16
+
+Las dos cumplen el test viejo (`dCasilla <= 6,5` y `dAhumador <= 8,0`): el goal paraba al aldeano AHÍ y "cocinaba".
+
+Y la prueba está en el momento exacto de una tanda (`build/cocina_medida.py`: se coge la muestra
+`COCINERO pos=...` inmediatamente anterior a cada `N pieza(s) cocinadas`), con la etiqueta "Cocinando" puesta por el
+propio goal:
+
+    COCINA pos=1442, 120, 1435  dentro=SI VEelAhumador=NO dCasilla=6.19 dAhumador=5.19  etiqueta=Onofre (Cocinero) | Cocinando
+    [Village] El cocinero: 8 pieza(s) cocinadas con un tronco del almacen (aldea 2)
+
+O sea: cocinando desde el **comedor**, a 6,19 bloques de su casilla, con el **tabique de la cocina en medio**
+(`VEelAhumador=NO`). Las muestras de la corrida: **196**, de las que **37** con el aldeano **fuera de la taberna** y
+**51** sin ver el ahumador.
+
+
+--- 1) EL ARREGLO -------------------------------------------------------------------------------
+Se exige **estar en la casilla de la cocina** (`REACH = 2,0`) y **ver el ahumador**:
+`VillageManager.hayVistaLibre(level, villager.blockPosition(), puesto, villager)` — rayo de colisión: vía libre, o
+choque contra el propio objetivo (antes era `tieneVistaLibre`, privada y con el nombre de la cama; ahora es genérica y
+pública porque la usan el sueño y la cocina).
+
+Antes de apretar el alcance se comprobó que la ruta LLEGA (si no, el goal se rendiría con el aparcado de I33 y la aldea
+se quedaría sin cocina):
+
+    ruta: a1=19n alcance=SI fin=1442, 120, 1429 dFin=0.00     ← la casilla de la cocina, alcanzable
+
+
+--- 2) LA MISMA MEDIDA, DESPUÉS ----------------------------------------------------------------
+En el momento de cada tanda (misma herramienta):
+
+    COCINA pos=1442, 120, 1431  dentro=SI VEelAhumador=SI dCasilla=1.91 dAhumador=1.02  etiqueta=Onofre (Cocinero) | Cocinando
+    [Village] El cocinero: 8 pieza(s) cocinadas con un tronco del almacen (aldea 2)      (×2 tandas en la corrida)
+
+Y las posiciones de trabajo a lo largo de la corrida: `pos=1442,120,1429 dentroDeLaTaberna=SI VEelAhumador=SI
+dCasilla=0,52 dAhumador=1,23` — **en la cocina, pegado al ahumador y viéndolo**. Los **cero** casos de cocina con el
+ahumador tapado: la condición es la misma que la del trabajo, así que no puede volver a pasar.
+
+
+--- 3) LO QUE NO SE TOCA ------------------------------------------------------------------------
+`REACH` y `hayVistaLibre` son del **goal**, no del mundo: no cambian bloques, ni el plano, ni la despensa. El viaje a
+por leña (I41/I42) y el gasto de un tronco por tanda siguen igual (`El cocinero: cogio N tronco(s) del almacen`), y la
+casilla de la cocina sigue siendo la de delante del ahumador (`1442,120,1429`), que se deja libre a propósito en
+`cocinaDeLaTaberna`.

@@ -10,6 +10,7 @@ import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
+import net.minecraft.world.phys.AABB;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.EnumSet;
@@ -105,6 +106,10 @@ public class VillagerDoorGoal extends Goal {
             fuera = 0; // hay un jugador en la puerta: no se le cierra
             return;
         }
+        if (hayAlguienEnElHueco(level)) {
+            fuera = 0; // sigue habiendo gente cruzando (el que va DETRÁS): la puerta espera a que el hueco esté vacío
+            return;
+        }
         cerrar(level, estado);
         puerta = null;
     }
@@ -141,6 +146,25 @@ public class VillagerDoorGoal extends Goal {
             }
         }
         return mejor;
+    }
+
+    /**
+     * <b>¿Hay alguien metido en el hueco de la puerta ahora mismo?</b> Se mira la puerta <b>entera</b> (sus dos
+     * mitades) y a <b>cualquier</b> entidad, no solo al jugador.
+     * <p>
+     * Hace falta porque una puerta <b>cerrada con alguien dentro</b> lo deja atrapado contra su caja de colisión: el
+     * aldeano empieza a vibrar y a andar a tirones —y empuja al de al lado—, que es justo lo que reportó el jugador:
+     * *"estaba en el estado «cerrando la puerta» pero un aldeano lo movió y empezó a caminar erráticamente"*. El que va
+     * <b>detrás</b> del que cruza está en el hueco cuando al primero ya le toca cerrar (dos aldeanos seguidos cruzando
+     * la misma puerta es lo normal al ir a dormir). El que solo pasa <b>por delante</b> no se ve afectado: esta puerta
+     * solo se cierra si el aldeano la ha cruzado ({@code laUse}).
+     */
+    private boolean hayAlguienEnElHueco(ServerLevel level) {
+        if (puerta == null) {
+            return false;
+        }
+        AABB hueco = new AABB(puerta).inflate(0.1D, 0.0D, 0.1D).expandTowards(0.0D, 1.0D, 0.0D);
+        return !level.getEntitiesOfClass(net.minecraft.world.entity.Entity.class, hueco).isEmpty();
     }
 
     /** Cierra la puerta entera (las dos mitades, con su sonido) y lo apunta en la etiqueta del aldeano. */

@@ -44,6 +44,13 @@ sin spawn de bichos y **barriendo cada segundo los bichos que ya venían en el g
 bloquea el latido del pueblo entero: sin barrerlos, no se reparten oficios ni se alista la guardia; se nota porque
 en el log **no** sale ninguna línea `[Village] Aldea N: comida ...` ni ningún `nuevo puesto`).
 
+- `BICHO_DENTRO = true` → **lo contrario, a propósito**: en vez de barrer los bichos se planta **UNO** dentro de la
+  aldea y se mantiene ahí. Es un **aldeano-zombi** (`NoAI`, invulnerable, persistente) porque es un `Monster` —cuenta
+  para `hayEnemigosDentro`— y el sello **no lo expulsa** (`expulsarHostilesDeLaAldea` deja en paz a los aldeanos-zombi:
+  puede ser una curación en marcha), así que el latido se queda **cortado** toda la corrida. Es lo que reproduce la
+  partida del jugador (de noche y con bichos dentro) y lo que se midió en 3b.61. El arnés lo canta cada segundo:
+  `CAMAS: … UN BICHO DENTRO: SI (1 monstruo(s): latido cortado)`.
+
 - `SEMBRAR_AGUA_EMBOTELLADA = false` → para medir el **VIAJE AL AGUA** del clérigo (deja en el almacén
   **botellas de cristal**, no pociones de agua: con agua ya embotellada las usaría y **nunca** iría a la orilla).
   En `true` se mide la cadena de la poción sin el paseo.
@@ -62,12 +69,15 @@ en el log **no** sale ninguna línea `[Village] Aldea N: comida ...` ni ningún 
   `[Arnes] PUERTAS DE MADERA ABIERTAS en el pueblo: N <celdas>` y, cuando una pasa de abierta a cerrada,
   `[Arnes] PUERTA CERRADA en <celda> (aldeano(s) al lado: <uuid>)` — es la prueba de que las cierra el pueblo
   (`VillagerDoorGoal`). Lo que se busca es que el contador **baje** mientras el pueblo anda.
-- **EL SUEÑO Y LAS CAMAS** (I43/I44, ver `medidas-camas.txt`): con `MEDIR_NOCHE = true` el arnés fija la **noche**
+- **EL SUEÑO Y LAS CAMAS** (I43/I44/I46, ver `medidas-camas.txt`): con `MEDIR_NOCHE = true` el arnés fija la **noche**
   (18000), **rejuvenece** a los aldeanos cada 10 s (el mod les da fecha de nacimiento y a los 3 días de juego mueren de
   viejos: en una corrida larga eso repuebla la aldea a mitad de la medida) y saca:
-  `[Arnes] CAMAS RESUMEN: adultos=N conCama=N COMPARTIDAS=N SIN CAMA=… DURMIENDO=N` (el **criterio de "arreglado"**:
-  nadie sin cama, ninguna cama compartida por dos aldeanos y **todos durmiendo**) y, por aldeano,
-  `CAMA <uuid> … home=… durmiendo=…`;
+  `[Arnes] CAMAS RESUMEN: aldeanos=N (adultos=A crias=C) conCama=N COMPARTIDAS=N SIN CAMA=… DURMIENDO=N` (el **criterio
+  de "arreglado"**: nadie sin cama —**crías incluidas**—, ninguna cama compartida por dos aldeanos y todos durmiendo)
+  y, por aldeano, `CAMA <uuid> nombre=… home=… durmiendo=…`;
+  **OJO CON EL CENSO**: el mod reparte camas hasta `FENCE_RADIUS + 44` (**106**) y **también a las crías**, así que el
+  arnés mide ese mismo radio y cuenta crías (con 64 y solo adultos decía `SIN CAMA=0` mientras el jugador veía "Sin
+  cama" encima de una cría: es el error que se corrigió en 3b.61);
   `[Arnes] PERDIDA-TICK / RECLAMADA-TICK`, el **vigilante a resolución de tick**: al perder la cama imprime cómo estaba
   **en el tick anterior** (POI, `OCCUPIED`, quién dormía en ella) y qué memorias le quedan —es lo que identifica al
   culpable—; `[Arnes] EN-BANCAL`, para el que está metido en un bancal (su `WALK_TARGET`, sus goals corriendo y el
@@ -75,4 +85,16 @@ en el log **no** sale ninguna línea `[Village] Aldea N: comida ...` ni ningún 
   `canReach` y **dónde acaba** la ruta: distingue «no hay ruta» de «la ruta se queda corta»); y `[Arnes] SONDA` +
   `RUTA a <celda>`, la **sonda de rutas celda a celda** de un aldeano sin cama (prueba el camino a las celdas que
   importan y dice dónde se corta).
+- **LA COCINA** (I48, ver `medidas-cocina.txt`): con `MEDIR_COCINA = true` el arnés pone el mundo de **día**, siembra a
+  los 20 s **40 troncos** en el almacén y **32 carnes crudas** en la despensa (sin eso el cocinero no tiene nada que
+  hacer) y volca cada 2 s `[Arnes] COCINERO pos=… dentroDeLaTaberna=SI/NO VEelAhumador=SI/NO dCasilla=… dAhumador=…
+  destino=… goals=[…] etiqueta=…` con la **ruta** a la casilla de la cocina. Es lo que distingue "cocina dentro" de
+  "cocina a través de la pared" (el bug de 3b.63: el cocinero cocinaba desde la plaza con `VEelAhumador=NO`).
+
+**La puerta cerrada con alguien dentro** (I47, ver `medidas-puertas.txt`): además del contador de puertas abiertas, cada
+barrido cuenta `PUERTAS DE MADERA ABIERTAS … (cerradas CON alguien dentro: M)` y canta cada caso con la **posición de la
+entidad** (`PUERTA CERRADA CON ALGUIEN DENTRO en <celda>: villager pos=(…) velocidad=…`). El criterio es el **centro de
+la entidad dentro de la celda** de la puerta (con la caja de colisión rozando la celda salen falsos positivos: un aldeano
+en la celda de al lado toca la puerta con el hombro). Y cada `PUERTA CERRADA` dice **quién** la cerró, con su etiqueta:
+`PUERTA CERRADA en 1438,120,1435 (aldeano(s) al lado: 9036d1d0(Bibiana (Granjero) | Cerrando la puerta))`.
 

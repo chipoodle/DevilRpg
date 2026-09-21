@@ -64,3 +64,39 @@ duerme, y los "Sin oficio" entran en el reparto como cualquier adulto (la lista 
 `level.getEntitiesOfClass(Villager.class, …)`, sin filtrar por oficio). Medido, misma noche:
 
 [Arnes] CAMAS RESUMEN: adultos=11 conCama=11 (camas distintas ocupadas=11) COMPARTIDAS=0 SIN CAMA=0 DURMIENDO=11
+
+
+=================================================================================================
+SEGUNDA PARTE: LA PUERTA QUE SE CERRABA ENCIMA DE UN ALDEANO (3b.62 / I47)
+=================================================================================================
+Lo reportó el jugador con captura: *"Anselmo empezó a caminar erráticamente. Antes de ponerse como paseando, estaba en
+el estado «cerrando la puerta» pero un aldeano lo movió y empezó a caminar así"*. El goal del pueblo (I45) cerraba
+**5 ticks después** de que el que la cruzó saliera del hueco, **sin mirar quién más había dentro**: dos aldeanos
+cruzando la misma puerta seguidos (lo normal al irse a dormir) y la puerta se cerraba **encima del segundo**, que queda
+atrapado contra su caja de colisión.
+
+Como esto pasa ENTRE dos barridos (el arnés barre cada 2 s), lo que se cuenta no es "quién la cerró" sino el ESTADO
+resultante: en cada barrido, para cada puerta de madera CERRADA, ¿hay alguna entidad con el **centro dentro de la
+celda**? (El criterio de "la caja de la entidad toca la celda" da falsos positivos: un aldeano en la celda de al lado
+roza la puerta con el hombro.)
+
+Para medir el ANTES se devolvió el goal a su estado anterior (sin la guarda) y se corrió el MISMO mundo:
+
+    ANTES (sin `hayAlguienEnElHueco`)
+    [Arnes] PUERTA CERRADA CON ALGUIEN DENTRO en 1443, 120, 1401: villager pos=(1443.34,120.00,1401.52) velocidad=0.00
+    [Arnes] PUERTAS DE MADERA ABIERTAS en el pueblo: 4 … (cerradas CON alguien dentro: 1)
+
+    → un aldeano DENTRO de la puerta cerrada y **parado** (velocidad 0,00): es exactamente el estado del que se queja
+      el jugador (el aldeano vibrando contra la puerta y empujando al de al lado).
+
+    DESPUÉS (con la guarda)
+    [Arnes] PUERTA CERRADA en 1441, 120, 1442 (aldeano(s) al lado: 0f41e91b(Nicasio (Sin oficio) | Jugando))
+    [Arnes] PUERTA CERRADA en 1438, 120, 1435 (… 9036d1d0(Bibiana (Granjero) | Cerrando la puerta))
+    [Arnes] PUERTAS DE MADERA ABIERTAS en el pueblo: 4 … (cerradas CON alguien dentro: 0)   ← en TODOS los barridos
+
+    → **8 cierres** en la corrida (la etiqueta "Cerrando la puerta" la lleva el que la cierra: es la prueba de que las
+      cierra el goal del pueblo), el contador de abiertas **baja de 6 a 4** y **cero** casos de puerta cerrada con
+      alguien dentro. La guarda no impide cerrar: solo espera a que el hueco esté vacío.
+
+(La primera medida de I45, con el mundo de entonces, dio 36 cierres y el contador de 8-9 a 4; hoy el guardado tiene
+menos puertas abiertas al empezar, de ahí el 6 → 4.)

@@ -2644,12 +2644,128 @@ Ahora el pueblo las cierra por su cuenta (`VillagerDoorGoal`, **sin banderas**, 
 puertas abiertas del pueblo **baja de 8-9 a 4** (las que quedan son de la posada, que nadie cruza de día: no se tocan a
 propósito).
 
-**Y de propina, Mauricio**: el jugador preguntó por qué Mauricio (Sin oficio) no tenía cama. En su guardado salían **2
-de 13** aldeanos sin cama y eran justo los dos **"Sin oficio"** (Mauricio y Leoncio), de pie en la huerta. No era un
-caso aparte: **es el mismo fallo de la cama inalcanzable** (el reparto solo daba camas a las que el planificador
-llegaba, y a ellos no les llegaba ninguna). Los "Sin oficio" entran en el reparto como cualquier adulto —la lista del
-latido es `getEntitiesOfClass(Villager.class, …)`, sin filtrar por oficio— y con el arreglo del latido (celda de espera
-+ acostar) el pueblo entero duerme: `CAMAS RESUMEN: adultos=11 conCama=11 … SIN CAMA=0 DURMIENDO=11`.
+**Y de propina, Mauricio**: el jugador preguntó por qué Mauricio (Sin oficio) no tenía cama. Aquí se escribió que era
+"el mismo fallo de la cama inalcanzable" y que el pueblo entero dormía (`adultos=11 … SIN CAMA=0`). **Era falso, y se
+corrigió en 3b.61**: Mauricio y Leoncio no eran adultos sin cama, eran **crías** (su etiqueta de día dice "Jugando"),
+el censo del arnés medía **64 bloques y solo adultos** (así que no los veía) y el reparto de camas las **saltaba**. Su
+etiqueta de noche —"Sin cama"— sí las nombraba, que es lo que el jugador veía. Ver 3b.61.
+
+### 3b.61 Mauricio (una CRÍA) sin cama, y el reparto de camas con bichos dentro de la aldea
+
+El jugador insistió con captura: *"Mauricio sigue sin ir a buscar cama y hay varias en la taberna"*. La etiqueta del
+aldeano decía **`Mauricio (Sin oficio) · Sin cama`**. Dos causas, las dos medidas en su guardado y con el arnés:
+
+**1) MAURICIO ES UNA CRÍA, y el reparto saltaba a las crías.** Su guardado tiene **15 aldeanos** cerca de la plaza, y
+los cuatro "Sin oficio" —Leoncio (`2a04aa3e`, -32,-3), **Mauricio** (`2b322f2d`, -31,20), Ubaldo (`bd81570c`, con cama)
+y Nicasio (`0f41e91b`, con cama)— son **crías**: su etiqueta de **día** dice `Jugando`. `reclamarCamasDelPueblo` las
+**saltaba a propósito** ("una cría duerme con el pueblo"), pero eso no se sostiene: vanilla **sí** deja que una cría
+reclame cama (Ubaldo y Nicasio la tienen) y, peor, en la etiqueta de la **noche** la rama de descanso se mira **antes**
+que la de cría, así que a una cría sin cama se le pone **"Sin cama"** —justo el cartel que vio el jugador—. Ahora entran
+en el reparto y en el acostado como cualquier aldeano. Medido (noche fija, arnés):
+
+    [Village] 2a04aa3e-… no tenia cama: reclama la de 1372, 124, 1433 (…; libre y sin companero de cama; red_bed ocupada=false)
+    [Village] 2b322f2d-… no tenia cama: reclama la de 1370, 124, 1433 (…)
+    [Arnes] CAMAS RESUMEN: aldeanos=15 (adultos=11 crias=4) conCama=15 (camas distintas ocupadas=15) COMPARTIDAS=0 SIN CAMA=0 DURMIENDO=12
+
+**2) EL REPARTO DE CAMAS VIVÍA DENTRO DEL "LATIDO EN PAZ"**, y por eso en su partida no se arreglaba nunca. El reparto
+estaba en `prepareRepairs` (dentro de `tickVillageLife`), detrás de dos guardas de `manageNearby`:
+`!isUnderAttack(...)` y `hayEnemigosDentro(...) -> continue`. Las dos tienen sentido para lo que **repuebla** (no se
+reponen aldeanos mientras los monstruos los están matando), pero **no para las camas**: la noche del asedio es justo
+cuando hacen falta. Con un bicho dentro, el aldeano sin cama se quedaba sin ella, y como el hambre y la edad tampoco
+corrían, el estado se quedaba **congelado** con él de pie y "Sin cama" delante del jugador. Ahora va en
+`atenderCamasDelPueblo`, que se llama **fuera** de las dos guardas (y sigue sin tocar una aldea caída).
+
+**Medido con el arnés**, plantando a propósito un **aldeano-zombi** dentro de la plaza (`1420,120,1420`; es un
+`Monster` que cuenta para `hayEnemigosDentro` pero el sello no expulsa) → `UN BICHO DENTRO: SI (1 monstruo(s): latido
+cortado)` durante toda la corrida:
+
+    ANTES  (devolviendo la guarda vieja al bloque: `&& !hayEnemigosDentro(...)`)
+    [Arnes] CAMAS RESUMEN: aldeanos=15 (adultos=11 crias=4) conCama=13 … SIN CAMA=2 2a04aa3e(none,cria) 2b322f2d(none,cria) DURMIENDO=6 · UN BICHO DENTRO: SI
+
+    DESPUÉS (atenderCamasDelPueblo, sin guardas)
+    [Village] 2a04aa3e-… no tenia cama: reclama la de 1372, 124, 1433 …
+    [Village] 2b322f2d-… no tenia cama: reclama la de 1370, 124, 1433 …
+    [Village] Aldea 2: los 15 aldeanos (crias incluidas) tienen cama
+    [Arnes] CAMAS RESUMEN: aldeanos=15 (adultos=11 crias=4) conCama=15 (camas distintas ocupadas=15) COMPARTIDAS=0 SIN CAMA=0 DURMIENDO=12 · UN BICHO DENTRO: SI
+
+**Y EL CENSO DEL ARNÉS ESTABA MAL**: medía un radio de **64** y **solo adultos** (dos recortes que se sumaban al
+mismo error: el mod reparte camas hasta `FENCE_RADIUS + 44` = **106** y ahora también a las crías). Con eso el resumen
+decía `SIN CAMA=0` con el jugador viendo lo contrario. Ahora el censo usa **106** y cuenta **crías** —y las marca—, y
+el mod deja en el log un aviso con **nombres** cuando alguien se queda sin cama (`SIN CAMA Mauricio (cria), … de 15
+aldeanos (camas del pueblo: 20)`), una vez por cambio y no en cada latido.
+
+### 3b.62 La puerta NO se cierra con alguien dentro del hueco (el aldeano que andaba "erráticamente")
+
+Lo reportó el jugador con captura: *"Anselmo empezó a caminar erráticamente. Antes de ponerse como paseando, estaba en
+el estado «cerrando la puerta» pero un aldeano lo movió y empezó a caminar así"*.
+
+`VillagerDoorGoal` (3b.60) cerraba la puerta **5 ticks después** de que el que la cruzó saliera del hueco (a más de
+1,5), **sin mirar quién más había dentro**. Dos aldeanos cruzando la misma puerta seguidos es lo normal al irse a
+dormir: la puerta se cerraba **encima del segundo**, que quedaba atrapado contra su caja de colisión —vibrando y
+andando a tirones— y empujaba al primero. Ahora, antes de cerrar, se comprueba que **no haya nadie en el hueco**:
+`hayAlguienEnElHueco` mira las **dos mitades** de la puerta y a **cualquier entidad** (no solo al jugador, que ya tenía
+su guarda). El arnés cuenta este caso en su barrido —el **centro de la entidad dentro de la celda** de la puerta, que la
+caja de colisión rozando la celda da falsos positivos—: `PUERTAS DE MADERA ABIERTAS … (cerradas CON alguien dentro: M)`.
+
+**Medido, mismo mundo, con y sin la guarda** (`medidas-puertas.txt`):
+
+    ANTES (sin la guarda)
+    [Arnes] PUERTA CERRADA CON ALGUIEN DENTRO en 1443, 120, 1401: villager pos=(1443.34,120.00,1401.52) velocidad=0.00
+    [Arnes] PUERTAS DE MADERA ABIERTAS en el pueblo: 4 … (cerradas CON alguien dentro: 1)
+
+    DESPUÉS (con la guarda)
+    [Arnes] PUERTA CERRADA en 1438, 120, 1435 (… 9036d1d0(Bibiana (Granjero) | Cerrando la puerta))
+    [Arnes] PUERTAS DE MADERA ABIERTAS en el pueblo: 4 … (cerradas CON alguien dentro: 0)   ← en TODOS los barridos
+
+O sea: el aldeano atrapado y **parado** dentro de la puerta (velocidad 0,00) desaparece, y las puertas se siguen
+cerrando (**8 cierres** en la corrida, con la etiqueta "Cerrando la puerta" puesta por el goal en el que la cierra: el
+contador de abiertas baja de 6 a 4).
+
+### 3b.63 El COCINERO cocinaba fuera de la taberna
+
+Lo reportó el jugador con captura: *"El cocinero está cocinando FUERA de la taberna. Esto no debe ser así, debe estar
+adentro"*. Y era verdad: cocinaba **en la calle, a través de la pared**.
+
+La causa es el alcance con el que se daba por llegado: `REACH = 6.5` medía **solo la distancia** a la casilla de la
+cocina (la de delante del ahumador, `1442,120,1429`) y `ALCANCE_AHUMADOR = 8.0` la distancia al ahumador, **sin
+comprobar nada del camino**. Medido con el arnés en una corrida de día (`MEDIR_COCINA`): posiciones que el test viejo
+aceptaba como "estoy en la cocina", con el ahumador **tapado por la pared**:
+
+    pos=1446, 120, 1425  dentroDeLaTaberna=NO VEelAhumador=NO dCasilla=5.76 dAhumador=6.44   ← en la calle
+    pos=1437, 120, 1429  dentroDeLaTaberna=NO VEelAhumador=NO dCasilla=5.01 dAhumador=5.16   ← en la calle
+
+y el estado del cocinero **en el momento exacto de una tanda** (la muestra anterior a cada `N pieza(s) cocinadas`, con
+la etiqueta "Cocinando" que pone el propio goal):
+
+    [Arnes] COCINERO pos=1442, 120, 1435 dentroDeLaTaberna=SI VEelAhumador=NO dCasilla=6.19 dAhumador=5.19 | Cocinando
+    [Village] El cocinero: 8 pieza(s) cocinadas con un tronco del almacen (aldea 2)
+
+O sea: cocinando desde el **comedor**, con el **tabique de la cocina en medio**. Ahora se exige **estar en la casilla de
+la cocina** (`REACH = 2.0`) y **ver el ahumador**: el rayo de colisión (`VillageManager.hayVistaLibre`, la misma
+comprobación que usa el sueño para no acostar a nadie a través de un muro, ahora genérica y pública) tiene que dar vía
+libre o chocar con el propio objetivo. Después, en el momento de la tanda:
+
+    [Arnes] COCINERO pos=1442, 120, 1431 dentroDeLaTaberna=SI VEelAhumador=SI dCasilla=1.91 dAhumador=1.02 | Cocinando
+    [Village] El cocinero: 8 pieza(s) cocinadas con un tronco del almacen (aldea 2)      (×2 tandas en la corrida)
+
+Y no se queda fuera: la ruta a esa casilla **llega** (`ruta: a1=19n alcance=SI fin=1442,120,1429 dFin=0.00`), que era
+la duda antes de apretar el alcance (si el planificador no llegara, el goal se rendiría con el aparcado de I33 y el
+pueblo se quedaría sin cocina).
+
+### 3b.64 El SELLO tumbaba el servidor (NPE con un spawn sin tipo) — hallado midiendo
+
+Midiendo lo de arriba, el arnés plantó su aldeano-zombi con `level.addFreshEntity(...)` dentro de una aldea protegida y
+el **servidor se cayó**:
+
+    java.lang.NullPointerException: Cannot invoke "net.minecraft.world.entity.MobSpawnType.ordinal()" because "tipo" is null
+        at PlayerCapabilityForgeEventSubscriber.esSpawnQueElSelloCorta(PlayerCapabilityForgeEventSubscriber.java:221)
+        at PlayerCapabilityForgeEventSubscriber.onEntityJoinLevel(PlayerCapabilityForgeEventSubscriber.java:214)
+
+`getSpawnType()` es **`null`** en todo lo que entra al mundo con `addFreshEntity` (lo que sueltan las mecánicas del
+mod, otros mods o un `/summon` de código) y el método hacía `switch (tipo)` sobre él. O sea: **cualquier cosa que
+añada un monstruo así dentro de una aldea protegida tumbaba el servidor entero** (no un error del arnés: el arnés solo
+lo destapó). Sin tipo no se puede saber de dónde viene y el sello solo corta lo que **sabe** que es natural, así que un
+spawn sin tipo **pasa** (`if (tipo == null) return false;`).
 
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 

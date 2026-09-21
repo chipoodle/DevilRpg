@@ -1025,6 +1025,73 @@ demás: las puertas que el jugador deja abiertas a propósito se quedan como est
 de día, cada uno con su aldeano al lado (`PUERTA CERRADA en 1443,120,1401 (aldeano(s) al lado: 9e0ed6e3)`), y el
 contador de abiertas **baja de 8-9 a 4** (las que quedan son de la posada, que nadie cruza de día).
 
+### I46 · Las CAMAS se reparten también a las CRÍAS y aunque haya bichos dentro de la aldea
+
+Dos causas del mismo cartel, *"Mauricio sigue sin ir a buscar cama y hay varias en la taberna"* (con captura:
+`Mauricio (Sin oficio) · Sin cama`):
+
+1. **Las crías cuentan.** `reclamarCamasDelPueblo` las **saltaba** ("una cría duerme con el pueblo"), pero vanilla **sí**
+   deja que una cría reclame `HOME` —en su propia aldea, Ubaldo y Nicasio (crías) la tienen— y la etiqueta de la
+   **noche** mira la rama de descanso **antes** que la de cría, así que a una cría sin cama se le pone **"Sin cama"**:
+   el jugador veía un cartel pidiendo una cama sobre un aldeano al que el reparto **ignoraba a propósito**. Mauricio
+   (`2b322f2d`) y Leoncio (`2a04aa3e`) eran crías y se quedaban de pie.
+2. **El reparto de camas NO depende del "latido en paz".** Vivía en `prepareRepairs` (dentro de `tickVillageLife`),
+   detrás de `!isUnderAttack(...)` y de `hayEnemigosDentro(...) -> continue`: con un monstruo dentro del recinto —y la
+   noche del asedio es cuando más falta hace una cama— **nadie** recibía cama (y, de paso, el estado del pueblo se
+   quedaba congelado). Ahora va en `atenderCamasDelPueblo`, llamado desde `manageNearby` **fuera** de las dos guardas
+   (solo se salta una aldea **caída**).
+
+**Regla:** todo aldeano **adulto o cría** con `FENCE_RADIUS + 44` de la plaza acaba con **cama propia**, y la recibe
+**también** con la aldea bajo asedio o con bichos dentro. **Quien mide tiene que contar lo mismo que el mod**: el censo
+del arnés medía **64 bloques y solo adultos**, y con esos dos recortes decía `SIN CAMA=0` mientras el jugador veía lo
+contrario (ahora: 106 y con crías). Medido (noche fija, un aldeano-zombi plantado dentro → `UN BICHO DENTRO: SI … latido
+cortado`): **antes** `aldeanos=15 (adultos=11 crias=4) conCama=13 … SIN CAMA=2 2a04aa3e(none,cria) 2b322f2d(none,cria)
+DURMIENDO=6`; **después** los dos reclaman cama (`1372,124,1433` y `1370,124,1433`) y `conCama=15 … SIN CAMA=0
+DURMIENDO=12`. Y el mod avisa con **nombres** cuando alguien se queda sin cama (una vez por cambio, no cada latido).
+
+### I47 · Una puerta NO se cierra con alguien dentro del hueco
+
+El jugador lo vio: *"estaba en el estado «cerrando la puerta» pero un aldeano lo movió y empezó a caminar
+erráticamente"*. El goal del pueblo (I45) cerraba **5 ticks después** de que el que la cruzó saliera del hueco, **sin
+mirar quién más había dentro**: dos aldeanos cruzando seguidos (lo normal al irse a dormir) y la puerta se cerraba
+**encima del segundo**, que queda atrapado contra su caja de colisión —vibra, anda a tirones y empuja al primero—.
+
+**Regla:** antes de cerrar se comprueba que **no haya nadie en el hueco**: las **dos mitades** de la puerta y
+**cualquier entidad** (no solo un jugador, que ya tenía su guarda de 2,5). Si hay alguien, no se cierra y se vuelve a
+esperar. El arnés lo cuenta en su barrido —**centro de la entidad dentro de la celda** de la puerta: con la caja de
+colisión rozando la celda salen falsos positivos—: `PUERTAS DE MADERA ABIERTAS … (cerradas CON alguien dentro: M)`.
+Medido en el mismo mundo, con y sin la guarda: **sin** ella,
+`PUERTA CERRADA CON ALGUIEN DENTRO en 1443,120,1401: villager pos=(1443.34,120.00,1401.52) velocidad=0.00` (atrapado y
+parado: el estado del que se quejó el jugador) y el contador en **1**; **con** ella, ese caso es **0 en todos los
+barridos** y las puertas se siguen cerrando (**8 cierres**, con la etiqueta "Cerrando la puerta" del goal puesta en el
+que la cierra; el contador de abiertas baja de 6 a 4).
+
+### I48 · El cocinero cocina EN la cocina, viendo el ahumador
+
+Lo reportó el jugador con captura: *"El cocinero está cocinando FUERA de la taberna. Esto no debe ser así, debe estar
+adentro"*. El goal daba por llegado al cocinero mirando **solo distancias** (`REACH = 6,5` a la casilla de la cocina y
+8,0 al ahumador) y **nada del camino**, así que cocinaba desde la plaza (a 5,76 de la casilla, `VEelAhumador=NO`) y
+desde el comedor a través del tabique (a 6,19, `VEelAhumador=NO`).
+
+**Regla:** el cocinero trabaja **solo** desde la casilla de delante del ahumador (`REACH = 2,0`) y **viendo** el
+ahumador: `VillageManager.hayVistaLibre` (rayo de colisión: vía libre o choque contra el propio objetivo; es la misma
+comprobación que usa el sueño para no acostar a nadie a través de un muro). Y antes de apretar el alcance hay que
+**comprobar que la ruta llega** (`ruta: a1=19n alcance=SI fin=1442,120,1429 dFin=0.00`): si no llegara, el goal se
+rendiría con el aparcado de I33 y la aldea se quedaría **sin cocina**. Medido después: `dentroDeLaTaberna=SI
+VEelAhumador=SI dCasilla=0,52` y `El cocinero: 8 pieza(s) cocinadas con un tronco del almacen`.
+
+### I49 · El SELLO no puede tumbar el servidor (un spawn sin tipo no es un spawn)
+
+`EntityJoinLevelEvent` entrega también lo que entra al mundo con `addFreshEntity` —mecánicas del mod, otros mods,
+`/summon` de código—, y ahí `mob.getSpawnType()` es **`null`**. `esSpawnQueElSelloCorta` hacía `switch (tipo)` sobre él:
+`NullPointerException` y **el servidor entero al suelo** (medido: al plantar el arnés un aldeano-zombi dentro de una
+aldea protegida, `Cannot invoke "MobSpawnType.ordinal()" because "tipo" is null`). El sello solo corta lo que **sabe**
+que es un spawn natural.
+
+**Regla:** ningún camino del sello (ni del aura) puede **desreferenciar** el tipo de spawn: sin tipo, **pasa** (lo que
+carga del guardado y lo que sueltan el jugador o el mod ya tenían su trato aparte). Un evento de entrada al mundo
+**nunca** puede tirar el servidor.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
@@ -1077,6 +1144,8 @@ Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento 
 | `build/herreria.py`, `build/huecos_ore.py`, `build/solares*.py` | Herrería, huecos y minerales flotantes, solares libres. |
 | `build/plantillas*.py`, `build/paleta.py` | Plantillas del juego: tamaños, puertas y qué bloques traen. |
 | `tools/audita_aldea.py` (**versionada**) | **Auditoría de las aldeas enteras**: faroles y vallas flotando, cofres tapados, puertas incompletas y camas sueltas (lee las PROPIEDADES de los bloques). Saca las aldeas del guardado (índice, centro y cota): `--aldea N`, `--caidas`, `--resumen`, `--centro X Z --cota N`. |
+| `build/aldeanos_todos.py` (ignorado) | **TODAS las entidades "villager" de un radio del guardado**, con su id real (`villager` **y** `zombie_villager`), sus `CustomName` (la etiqueta de dos líneas), su oficio, su cama y su **UUID formateado**. Es lo que distinguió "aldeano sin cama" de "cría sin cama" y de "aldeano-zombi dentro del recinto" (3b.61). |
+| `build/cocina_medida.py` (ignorado) | **¿Desde DÓNDE cocinaba el cocinero?**: del log del arnés coge, para cada `N pieza(s) cocinadas`, la muestra `COCINERO pos=…` **inmediatamente anterior** (con `dentroDeLaTaberna`, `VEelAhumador`, `dCasilla`, `dAhumador` y la etiqueta). Es la medida de 3b.63/I48. |
 
 Los scripts de `build/` no se versionan (está en `.gitignore`): son de lectura del guardado del jugador. Las
 herramientas que sí merecen sobrevivir están **versionadas en `tools/`** (ver `tools/README.md`): `lint_aldea.py`,

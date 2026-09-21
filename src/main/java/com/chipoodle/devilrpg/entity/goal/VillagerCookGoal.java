@@ -57,8 +57,13 @@ public class VillagerCookGoal extends Goal {
     private static final int STUCK_LIMIT = 200;
     /** Velocidad de paseo del cocinero (igual que los demás goals del pueblo). */
     private static final float VELOCIDAD = 0.6F;
-    /** Alcance al <b>punto del patio</b> desde el que se trabaja (el de la despensa, delante de la escalera sur). */
-    private static final double REACH = 6.5D;
+    /**
+     * Alcance a la <b>casilla de la cocina</b> (la de delante del ahumador): el cocinero tiene que estar <b>en ella</b>
+     * para cocinar. Antes eran 6,5 —«que llegue de sobra»— y por eso el cocinero cocinaba <b>desde fuera de la
+     * taberna</b>: el jugador lo vio con captura, plantado en la plaza cocinando a través de la pared (y medido con el
+     * arnés: {@code pos=1446,120,1425 … dCasilla=5,76 VEelAhumador=NO}). Con 2,0 está en la casilla o pegada a ella.
+     */
+    private static final double REACH = 2.0D;
     /**
      * Alcance al <b>ahumador</b>, que está <b>dentro del kiosco</b> (sobre la plataforma, un bloque más arriba). Es
      * el que de verdad decide si trabaja: sin él, el cocinero "cocinaría" desde la otra punta de la plaza. Con 8
@@ -188,14 +193,20 @@ public class VillagerCookGoal extends Goal {
             tickDeLaLena(level);
             return;
         }
-        // Camina al punto del patio (nunca HACIA el ahumador: está dentro del kiosco, sobre la plataforma, y la
-        // navegación no puede "llegar" a un bloque sólido), pero mira y mide contra el AHUMADOR: es su puesto.
+        // Camina a la CASILLA DE LA COCINA (la de delante del ahumador) y trabaja SOLO desde ahí: nunca HACIA el
+        // ahumador, que es un bloque sólido al que la navegación no puede llegar.
         double distancia = Math.sqrt(villager.distanceToSqr(target.getX() + 0.5D, target.getY() + 0.5D,
                 target.getZ() + 0.5D));
         double alAhumador = Math.sqrt(villager.distanceToSqr(puesto.getX() + 0.5D, puesto.getY() + 0.5D,
                 puesto.getZ() + 0.5D));
         villager.getLookControl().setLookAt(puesto.getX() + 0.5D, puesto.getY() + 0.5D, puesto.getZ() + 0.5D);
-        if (distancia > REACH || alAhumador > ALCANCE_AHUMADOR) {
+        // ¿ESTÁ DE VERDAD EN LA COCINA? No basta con estar cerca: hay que <b>ver el ahumador</b>, sin nada sólido en
+        // medio. Sin esto cocinaba también desde la plaza (al otro lado de la pared de la taberna: lo reportó el
+        // jugador) y desde el comedor a través del tabique de la cocina; medido con el arnés, a 5,19 bloques del
+        // puesto con el tabique en medio y desde fuera a 6,44.
+        boolean enLaCocina = distancia <= REACH && alAhumador <= ALCANCE_AHUMADOR
+                && VillageManager.hayVistaLibre(level, villager.blockPosition(), puesto, villager);
+        if (!enLaCocina) {
             VillageManager.caminarHacia(villager, target, VELOCIDAD);
             if (distancia < mejorDistancia - 0.5D) {
                 mejorDistancia = distancia;

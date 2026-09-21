@@ -216,8 +216,22 @@ public class PlayerCapabilityForgeEventSubscriber {
         }
     }
 
-    /** Los caminos de spawn que el <b>sello</b> corta dentro de una aldea protegida (los demás son del jugador o del mod). */
+    /**
+     * Los caminos de spawn que el <b>sello</b> corta dentro de una aldea protegida (los demás son del jugador o del mod).
+     * <p>
+     * <b>Y EL SPAWN SIN TIPO NO ES UN SPAWN</b> (crash medido): {@code getSpawnType()} es {@code null} en todo lo que
+     * entra al mundo con {@code addFreshEntity} —lo que sueltan las mecánicas del mod, otros mods o un
+     * {@code /summon} de código—, y este método hacía {@code switch (tipo)} sobre él: <b>NullPointerException en el
+     * tick del servidor</b>, o sea el servidor entero al suelo. Medido con el arnés: al plantar un aldeano-zombi de
+     * prueba (sin tipo de spawn) dentro de una aldea protegida, el servidor murió con
+     * {@code Cannot invoke "MobSpawnType.ordinal()" because "tipo" is null} en
+     * {@code PlayerCapabilityForgeEventSubscriber.esSpawnQueElSelloCorta:221}. Sin tipo no se puede saber de dónde
+     * viene, y el sello solo corta lo que sí sabe que es natural: se deja pasar.
+     */
     private static boolean esSpawnQueElSelloCorta(net.minecraft.world.entity.MobSpawnType tipo) {
+        if (tipo == null) {
+            return false; // entró con `addFreshEntity` (mod, mecánica o código): no es un spawn natural que cortar
+        }
         return switch (tipo) {
             case NATURAL, CHUNK_GENERATION, STRUCTURE, SPAWNER, EVENT, REINFORCEMENT, PATROL, TRIGGERED -> true;
             default -> false;

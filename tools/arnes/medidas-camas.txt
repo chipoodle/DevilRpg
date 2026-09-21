@@ -152,3 +152,58 @@ que no duerme es el aldeano, no la cama. Resumen del arnés, tras el cambio, en 
 CAMA=0 COMPARTIDAS=0 DURMIENDO=11`**.
 
 
+
+
+=================================================================================================
+SEGUNDA PARTE: MAURICIO (una CRÍA) SIN CAMA, Y EL REPARTO CON UN BICHO DENTRO
+=================================================================================================
+El jugador insistió con captura: *"Mauricio sigue sin ir a buscar cama y hay varias en la taberna"*, con la etiqueta
+`Mauricio (Sin oficio) · Sin cama`. Se midió su guardado entero (`build/aldeanos_todos.py`: TODAS las entidades
+"villager" —no solo las de dentro del muro— con su nombre, su `IsBaby`/etiqueta, su cama y su UUID):
+
+    [Arnes] CAMAS: dayTime=18000 (franja DESCANSO) · UN BICHO DENTRO: ...
+
+--- 1) LOS 15 ALDEANOS DE LA ALDEA (guardado del jugador) ---------------------------------------
+Leoncio (Sin oficio) | Jugando  **SIN CAMA**  rel(-32,  -3)  uuid=2a04aa3e-1b05-44cd-a766-0b094d667a63
+Mauricio (Sin oficio) | Jugando  **SIN CAMA**  rel(-31,  20)  uuid=2b322f2d-0abb-4ea3-ae47-07ff0b69db9b
+Ubaldo (Sin oficio) | Jugando   CAMA           rel( 15, -13)  uuid=bd81570c-7da5-41ee-8f21-cbed487dbecc
+Nicasio (Sin oficio) | Jugando  CAMA           rel( 27,  26)  uuid=0f41e91b-d9b0-4e9b-8ad7-66dcf1d0f330
+(+ 11 adultos, todos con cama)
+
+La etiqueta "Jugando" es la de las CRÍAS (la pone `refrescarEtiquetas` para `isBaby()`). O sea: los dos "Sin cama" del
+jugador eran **crías**, el reparto de camas las **saltaba a propósito** y su etiqueta de NOCHE —la rama de descanso se
+mira antes que la de cría— les ponía "Sin cama". Vanilla sí deja que una cría reclame cama: Ubaldo y Nicasio la tienen.
+
+--- 2) EL CENSO DEL ARNÉS MENTÍA (y por eso la ronda anterior dio "SIN CAMA=0") -----------------
+Medía **64 bloques** (el mod reparte hasta 106) y **solo adultos**:
+
+    [Arnes] CAMAS RESUMEN: adultos=11 conCama=11 … SIN CAMA=0 DURMIENDO=4      ← lo que decía antes
+    [Arnes] CAMAS RESUMEN: aldeanos=15 (adultos=11 crias=4) conCama=13 … SIN CAMA=2 2a04aa3e(none,cria)
+            2b322f2d(none,cria) DURMIENDO=6                                    ← lo que dice ahora (mismo mundo)
+
+--- 3) CON UN BICHO DENTRO DE LA ALDEA: ANTES / DESPUÉS ------------------------------------------
+Para reproducir la partida del jugador (de noche y con enemigos dentro) el arnés planta un **aldeano-zombi** `NoAI`
+invulnerable en la plaza (`1420,120,1420`): cuenta para `hayEnemigosDentro` (es un `Monster`) pero el sello **no lo
+expulsa** (a un aldeano-zombi no se le toca: puede ser una curación en marcha), así que el latido del pueblo se queda
+**cortado** toda la corrida:
+
+    [Arnes] BICHO DENTRO: plantado un aldeano-zombi en BlockPos{x=1420, y=120, z=1420} (cota 120)
+    [Arnes] CAMAS: dayTime=18000 (franja DESCANSO) · UN BICHO DENTRO: SI (1 monstruo(s): latido cortado)
+
+ANTES (devolviendo la guarda vieja al bloque: `&& !hayEnemigosDentro(level, target)`) — **nadie recibe cama**:
+
+    [Arnes] CAMAS RESUMEN: aldeanos=15 (adultos=11 crias=4) conCama=13 (camas distintas ocupadas=13)
+            COMPARTIDAS=0 SIN CAMA=2 2a04aa3e(none,cria) 2b322f2d(none,cria) DURMIENDO=6 · UN BICHO DENTRO: SI
+
+DESPUÉS (`atenderCamasDelPueblo`, llamado fuera de las dos guardas) — **las dos crías reciben cama**:
+
+    [Village] 2a04aa3e-1b05-44cd-a766-0b094d667a63 no tenia cama: reclama la de 1372, 124, 1433
+              (aldea en 1414, 120, 1414; libre y sin companero de cama; red_bed ocupada=false)
+    [Village] 2b322f2d-0abb-4ea3-ae47-07ff0b69db9b no tenia cama: reclama la de 1370, 124, 1433 (…)
+    [Village] Aldea 2: los 15 aldeanos (crias incluidas) tienen cama
+    [Arnes] CAMAS RESUMEN: aldeanos=15 (adultos=11 crias=4) conCama=15 (camas distintas ocupadas=15)
+            COMPARTIDAS=0 SIN CAMA=0 DURMIENDO=12 · UN BICHO DENTRO: SI (1 monstruo(s): latido cortado)
+
+Los dos UUID son, exactamente, **Leoncio** y **Mauricio** (los dos "Sin cama" del jugador). El reparto de camas ya no
+depende de que la aldea esté en paz; lo que sí sigue esperando a la paz es lo que **repuebla** y administra oficios (no
+se repone gente mientras los monstruos la están matando).

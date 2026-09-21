@@ -47,7 +47,7 @@ public class GuardHarness {
      * arnés pasa el VIGILANTE DE CAMAS cada segundo y se salta las siembras de trabajo (que ensucian el log y mueven
      * al pueblo de sitio). Ver `volcarCamas`.
      */
-    private static final boolean MEDIR_NOCHE = true;
+    private static final boolean MEDIR_NOCHE = false;
     /**
      * ¿Se mide el <b>CIERRE DE PUERTAS</b>? Pone el mundo de <b>día</b> (los aldeanos se levantan y salen: cruzan
      * puertas), se salta las siembras y volca cada 2 s las <b>puertas de madera abiertas</b> del pueblo. Es lo que
@@ -55,6 +55,26 @@ public class GuardHarness {
      * abierta"*.
      */
     private static final boolean MEDIR_PUERTAS = true;
+    /**
+     * <b>¿Se mete un bicho DENTRO de la aldea y se deja ahí?</b> Es la reproducción de la queja del jugador
+     * (*"Mauricio sigue sin ir a buscar cama y hay varias en la taberna"*): con un monstruo dentro del recinto,
+     * `manageNearby` corta el latido entero (`hayEnemigosDentro`), y con él se quedaba sin hacer TODO lo que va
+     * detrás, camas incluidas. Se usa un <b>aldeano-zombi</b> a propósito: es un {@code Monster} (cuenta para
+     * `hayEnemigosDentro`) pero el sello lo deja en paz —`expulsarHostilesDeLaAldea` no lo toca, para no cortar una
+     * curación en marcha—, así que el "bicho dentro" se mantiene toda la corrida sin que lo expulsen en el primer
+     * latido. Va con `NoAI` (no pelea ni anda) e invulnerable.
+     */
+    private static final boolean BICHO_DENTRO = false;
+    /**
+     * ¿Se mide la <b>COCINA</b> (lo reportó el jugador: *"el cocinero está cocinando FUERA de la taberna, esto no
+     * debe ser así, debe estar adentro"*)? Pone el mundo de <b>día</b> (de noche el cocinero se acuesta), viste el
+     * almacén con <b>leña</b> y la despensa con <b>carne cruda</b> —que es lo que hace que el cocinero trabaje— y
+     * volca cada 2 s dónde está, a qué distancia del ahumador, si lo <b>VE</b> (rayo de colisión) y qué ruta tiene a su
+     * casilla de la cocina. Es lo que distingue "cocina dentro" de "cocina a través de la pared".
+     */
+    private static final boolean MEDIR_COCINA = false;
+    /** Dónde se planta el bicho (relativo a la plaza): dentro del recinto (radio 62) y a la altura del pueblo. */
+    private static final BlockPos BICHO_EN = new BlockPos(6, 0, 6);
     private static boolean listo = false;
     private static int ticks = 0;
     /** Cuantas veces se ha visto a un granjero SUBIDO a la valla de su bancal (el bug que se mide). */
@@ -75,7 +95,7 @@ public class GuardHarness {
         // cadena del CLERIGO: verruga del Nether, polvo de blaze y BOTELLAS DE CRISTAL (para que tenga que ir al agua
         // a llenarlas: ver SEMBRAR_AGUA_EMBOTELLADA); y el botin que ya barre el recolector (pepitas de oro,
         // zanahorias, ojos de arana) para la zanahoria dorada.
-        if (!MEDIR_NOCHE && !MEDIR_PUERTAS && ticks == 600) {
+        if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && ticks == 600) {
             // --- TERCERA MEDIDA: LA REMESA INICIAL DE MADERA ---------------------------------------------------
             // Se VACIA el almacen entero (como el de una aldea recien fundada, que nace sin nada dentro): en la
             // siguiente pasada del latido el pueblo tiene que meter su remesa inicial de 128 troncos, UNA vez.
@@ -97,10 +117,15 @@ public class GuardHarness {
         // Los bichos que YA venian en el guardado dentro del recinto BLOQUEAN el latido del pueblo
         // (`hayEnemigosDentro`): sin esto el reparto de oficios y la guardia ni se tocan. Se barren cada segundo.
         if (ticks % 20 == 0) {
-            for (net.minecraft.world.entity.Mob m : level.getEntitiesOfClass(net.minecraft.world.entity.Mob.class,
-                    new AABB(CENTRO).inflate(140))) {
-                if (m instanceof net.minecraft.world.entity.monster.Monster) {
-                    m.discard();
+            if (BICHO_DENTRO) {
+                // ...pero para medir EL BUG DEL LATIDO CORTADO hay que dejar UNO dentro a proposito.
+                mantenerBichoDentro(level);
+            } else {
+                for (net.minecraft.world.entity.Mob m : level.getEntitiesOfClass(net.minecraft.world.entity.Mob.class,
+                        new AABB(CENTRO).inflate(140))) {
+                    if (m instanceof net.minecraft.world.entity.monster.Monster) {
+                        m.discard();
+                    }
                 }
             }
         }
@@ -123,6 +148,14 @@ public class GuardHarness {
             // cuantas de madera quedan ABIERTAS en el pueblo. Lo que se busca es que BAJE (las cierran al pasar).
             if (ticks % 40 == 0) {
                 volcarPuertas(level);
+            }
+        } else if (MEDIR_COCINA) {
+            // LA COCINA, cada 2 s: donde esta el cocinero, si VE el ahumador y si tiene ruta a su casilla.
+            if (ticks == 400) {
+                sembrarLaCocina(level);
+            }
+            if (ticks % 40 == 0) {
+                vigilarCocinero(level);
             }
         } else if (MEDIR_NOCHE) {
             // EL VIGILANTE DE CAMAS, cada segundo (la transicion se canta sola cuando el HOME desaparece o se reclama).
@@ -156,6 +189,113 @@ public class GuardHarness {
         // pared de la taberna (bx). A los 10 s el latido ya migro la aldea, asi que esto es "despues".
         if (ticks == 200) {
             volcarPorche(level, "DESPUES");
+        }
+    }
+
+    /** El bicho de la medida (el aldeano-zombi que se deja dentro de la aldea): se reutiliza, no se duplica. */
+    private static net.minecraft.world.entity.monster.ZombieVillager bicho = null;
+
+    /**
+     * <b>Mantiene UN bicho dentro de la aldea</b> para medir el latido cortado: si no está (lo barrió otra cosa, se
+     * descargó el chunk...), se vuelve a plantar; y si está, se le deja clavado en su celda (sin IA no se mueve, pero
+     * un empujón lo saca del recinto y entonces la medida dejaría de ser "con un bicho dentro").
+     */
+    private static void mantenerBichoDentro(ServerLevel level) {
+        int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+        BlockPos donde = CENTRO.offset(BICHO_EN.getX(), cota - CENTRO.getY(), BICHO_EN.getZ());
+        if (bicho == null || bicho.isRemoved() || !bicho.isAlive()) {
+            bicho = net.minecraft.world.entity.EntityType.ZOMBIE_VILLAGER.create(level);
+            if (bicho == null) {
+                return;
+            }
+            bicho.moveTo(donde.getX() + 0.5D, donde.getY(), donde.getZ() + 0.5D, 0.0F, 0.0F);
+            bicho.setNoAi(true);
+            bicho.setInvulnerable(true);
+            bicho.setPersistenceRequired();
+            level.addFreshEntity(bicho);
+            DevilRpg.LOGGER.info("[Arnes] BICHO DENTRO: plantado un aldeano-zombi en {} (cota {})", donde, cota);
+            return;
+        }
+        bicho.moveTo(donde.getX() + 0.5D, donde.getY(), donde.getZ() + 0.5D, bicho.getYRot(), bicho.getXRot());
+    }
+
+    /**
+     * <b>¿Está el latido del pueblo cortado?</b> Se cuenta lo mismo que mira el mod
+     * (`hayEnemigosDentro`: monstruos dentro del recinto en XZ y a la altura del pueblo) y se imprime junto al
+     * censo de camas, para poder decir en la misma línea "hay bicho dentro" y "a este no le han dado cama".
+     */
+    private static String estadoDelRecinto(ServerLevel level) {
+        int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+        int dentro = 0;
+        for (net.minecraft.world.entity.monster.Monster m : level.getEntitiesOfClass(
+                net.minecraft.world.entity.monster.Monster.class,
+                new AABB(CENTRO).inflate(com.chipoodle.devilrpg.world.VillageGenerator.FENCE_RADIUS))) {
+            if (VillageManager.dentroDelRecinto(cota, CENTRO, m,
+                    com.chipoodle.devilrpg.world.VillageGenerator.FENCE_RADIUS)) {
+                dentro++;
+            }
+        }
+        return dentro == 0 ? "NO (el latido corre entero)" : "SI (" + dentro + " monstruo(s): latido cortado)";
+    }
+
+    /** Leña al almacén y carne cruda a la despensa: sin eso el cocinero no tiene nada que cocinar (ni con qué quemar). */
+    private static void sembrarLaCocina(ServerLevel level) {
+        var resto = com.chipoodle.devilrpg.world.VillageStorage.guardar(level, CENTRO,
+                new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_LOG, 40));
+        var despensa = com.chipoodle.devilrpg.world.VillagePantry.despensa(level, CENTRO);
+        int carnes = 0;
+        for (int i = 0; i < 32; i++) {
+            if (com.chipoodle.devilrpg.world.VillagePantry.guardar(despensa,
+                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BEEF, 1)).isEmpty()) {
+                carnes++;
+            }
+        }
+        DevilRpg.LOGGER.info("[Arnes] COCINA: sembrados 40 troncos (sobraron {}) y {} carnes crudas en la despensa",
+                resto.isEmpty() ? 0 : resto.getCount(), carnes);
+    }
+
+    /**
+     * <b>¿DÓNDE COCINA EL COCINERO?</b> Se imprime su posición, la distancia a la <b>casilla de la cocina</b> y al
+     * <b>ahumador</b>, si <b>VE</b> el ahumador (rayo de colisión: si está fuera del comedor, el rayo choca con la
+     * pared) y su <b>ruta</b> a la casilla de la cocina (nodos, si alcanza y dónde acaba). Es la diferencia entre
+     * "cocina dentro de la taberna" y "cocina a través de la pared" (el bug que reportó el jugador).
+     */
+    private static void vigilarCocinero(ServerLevel level) {
+        int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+        BlockPos ahumador = com.chipoodle.devilrpg.world.VillageGenerator.puestoDelCocinero(level, CENTRO);
+        BlockPos casilla = new BlockPos(ahumador.getX(), ahumador.getY(), ahumador.getZ() - 1);
+        BlockPos base = com.chipoodle.devilrpg.world.VillageGenerator.baseDeLaTaberna(CENTRO);
+        for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(RADIO_CENSO))) {
+            if (v.isBaby()
+                    || v.getVillagerData().getProfession() != net.minecraft.world.entity.npc.VillagerProfession.BUTCHER) {
+                continue;
+            }
+            Vec3 ojo = new Vec3(v.getX(), v.getY() + 1.0D, v.getZ());
+            Vec3 meta = Vec3.atCenterOf(ahumador);
+            var choque = level.clip(new net.minecraft.world.level.ClipContext(ojo, meta,
+                    net.minecraft.world.level.ClipContext.Block.COLLIDER,
+                    net.minecraft.world.level.ClipContext.Fluid.NONE, v));
+            boolean ve = choque.getType() == net.minecraft.world.phys.HitResult.Type.MISS
+                    || level.getBlockState(choque.getBlockPos()).is(net.minecraft.world.level.block.Blocks.SMOKER);
+            boolean dentro = v.getX() >= base.getX() + 1 && v.getX() <= base.getX() + 7
+                    && v.getZ() >= base.getZ() + 1 && v.getZ() <= base.getZ() + 12
+                    && Math.abs(v.getY() - cota) < 2.0D;
+            StringBuilder goals = new StringBuilder();
+            for (net.minecraft.world.entity.ai.goal.WrappedGoal w : v.goalSelector.getAvailableGoals()) {
+                if (w.isRunning()) {
+                    goals.append(w.getGoal().getClass().getSimpleName()).append(' ');
+                }
+            }
+            var wt = v.getBrain().getMemory(MemoryModuleType.WALK_TARGET).orElse(null);
+            DevilRpg.LOGGER.info("[Arnes] COCINERO pos={} dentroDeLaTaberna={} VEelAhumador={} dCasilla={} dAhumador={}"
+                            + " destino={} goals=[{}] etiqueta={} · casilla={} ruta: {}",
+                    v.blockPosition().toShortString(), dentro ? "SI" : "NO", ve ? "SI" : "NO",
+                    fmt(Math.sqrt(v.distanceToSqr(casilla.getX() + 0.5D, casilla.getY() + 0.5D, casilla.getZ() + 0.5D))),
+                    fmt(Math.sqrt(v.distanceToSqr(meta.x, meta.y, meta.z))),
+                    wt == null ? "SIN DESTINO" : wt.getTarget().currentBlockPosition().toShortString(),
+                    goals.toString().trim(),
+                    v.getCustomName() == null ? "-" : v.getCustomName().getString().replace("\n", " | "),
+                    casilla.toShortString(), rutaDetallada(v, casilla));
         }
     }
 
@@ -371,21 +511,29 @@ public class GuardHarness {
      * duerme en ella (aldeano o jugador), quien mas la tiene en el cerebro y a que distancia estaba el aldeano.
      */
     private static final java.util.Map<String, String> camaAnterior = new java.util.HashMap<>();
+    /**
+     * Radio del censo de camas: el MOD reparte camas a los aldeanos dentro de {@code FALLEN_CHECK_RADIUS}
+     * ({@code FENCE_RADIUS + 44} = 106), así que el arnés tiene que censar lo mismo. Con 64 (lo que medía antes) los
+     * aldeanos que están más lejos de la plaza —justo los que se quedan sin cama— no salían en el recuento y el
+     * resumen decía "SIN CAMA=0" con el jugador viendo "Sin cama" encima de Mauricio.
+     */
+    private static final double RADIO_CENSO = com.chipoodle.devilrpg.world.VillageGenerator.FENCE_RADIUS + 44.0;
 
     private static void volcarCamas(ServerLevel level) {
-        DevilRpg.LOGGER.info("[Arnes] CAMAS: dayTime={} (franja {})", level.getDayTime() % 24000,
-                level.getDayTime() % 24000 >= 12000 ? "DESCANSO" : "dia");
-        // EL RESUMEN (el criterio de "arreglado"): cuantos adultos tienen cama, cuantos COMPARTEN cama (dos aldeanos
-        // con la misma cama: la mitad de la misma cama o la misma casilla) y quien se queda SIN cama.
+        DevilRpg.LOGGER.info("[Arnes] CAMAS: dayTime={} (franja {}) · UN BICHO DENTRO: {}",
+                level.getDayTime() % 24000, level.getDayTime() % 24000 >= 12000 ? "DESCANSO" : "dia",
+                estadoDelRecinto(level));
+        // EL RESUMEN (el criterio de "arreglado"): cuantos aldeanos tienen cama, cuantos COMPARTEN cama (dos aldeanos
+        // con la misma cama: la mitad de la misma cama o la misma casilla) y quien se queda SIN cama. SE CENSAN
+        // TAMBIEN LAS CRIAS: el reparto las incluia en el debe (Mauricio y Leoncio eran crias con "Sin cama" encima) y
+        // con el censo solo de adultos el resumen decia "SIN CAMA=0" con el jugador viendo lo contrario.
         int adultos = 0;
+        int crias = 0;
         int conCama = 0;
         int durmiendo = 0;
         java.util.Map<String, java.util.List<String>> porCama = new java.util.TreeMap<>();
         java.util.List<String> sinCama = new java.util.ArrayList<>();
-        for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(64))) {
-            if (v.isBaby()) {
-                continue;
-            }
+        for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(RADIO_CENSO))) {
             String uuid = v.getUUID().toString().substring(0, 8);
             var home = v.getBrain().getMemory(MemoryModuleType.HOME);
             String cama = home.map(g -> g.pos().toShortString()).orElse("NINGUNA");
@@ -398,7 +546,11 @@ public class GuardHarness {
                 existe = " poi=" + (poi ? "SI" : "NO") + " bloque=" + bloque + " " + estadoDeLaCama(level, p, v);
             }
             String anterior = camaAnterior.put(uuid, cama);
-            adultos++;
+            if (v.isBaby()) {
+                crias++;
+            } else {
+                adultos++;
+            }
             if (v.isSleeping()) {
                 durmiendo++;
             }
@@ -407,7 +559,8 @@ public class GuardHarness {
                 porCama.computeIfAbsent(claveDeLaCama(level, home.get().pos()), k -> new java.util.ArrayList<>())
                         .add(uuid);
             } else {
-                sinCama.add(uuid + "(" + str(v.getVillagerData().getProfession()) + ")");
+                sinCama.add(uuid + "(" + str(v.getVillagerData().getProfession())
+                        + (v.isBaby() ? ",cria" : "") + ")");
             }
             if (anterior != null && !anterior.equals(cama)) {
                 if ("NINGUNA".equals(cama)) {
@@ -421,8 +574,9 @@ public class GuardHarness {
                             diagnosticoDeLaCama(level, cama, v));
                 }
             }
-            DevilRpg.LOGGER.info("[Arnes] CAMA {} prof={} home={}{} durmiendo={} REST={} WORK={} MEET={} pos={}",
-                    uuid, str(v.getVillagerData().getProfession()),
+            DevilRpg.LOGGER.info("[Arnes] CAMA {} nombre={} prof={} home={}{} durmiendo={} REST={} WORK={} MEET={} pos={}",
+                    uuid, v.getCustomName() == null ? "-" : v.getCustomName().getString().replace("\n", " | "),
+                    str(v.getVillagerData().getProfession()),
                     cama, existe, v.isSleeping(),
                     v.getBrain().isActive(Activity.REST), v.getBrain().isActive(Activity.WORK),
                     v.getBrain().isActive(Activity.MEET), v.blockPosition().toShortString());
@@ -438,14 +592,14 @@ public class GuardHarness {
                     ok++;
                 }
             }
-            DevilRpg.LOGGER.info("[Arnes] CAMAS RESUMEN: adultos={} conCama={} (camas distintas ocupadas={})"
-                            + " COMPARTIDAS={}{} SIN CAMA={}{} DURMIENDO={}",
-                    adultos, conCama, ok, porCama.size() - ok, compartidas, sinCama.size(),
-                    sinCama.isEmpty() ? "" : " " + String.join(" ", sinCama), durmiendo);
+            DevilRpg.LOGGER.info("[Arnes] CAMAS RESUMEN: aldeanos={} (adultos={} crias={}) conCama={} (camas distintas"
+                            + " ocupadas={}) COMPARTIDAS={}{} SIN CAMA={}{} DURMIENDO={} · UN BICHO DENTRO: {}",
+                    adultos + crias, adultos, crias, conCama, ok, porCama.size() - ok, compartidas, sinCama.size(),
+                    sinCama.isEmpty() ? "" : " " + String.join(" ", sinCama), durmiendo, estadoDelRecinto(level));
             // Y POR QUE NO LE DAN CAMA: para el primer aldeano sin cama, las 8 camas libres mas cercanas con el
             // motivo por el que la reclamacion las descarta (o la acepta).
-            for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(64))) {
-                if (v.isBaby() || v.getBrain().hasMemoryValue(MemoryModuleType.HOME)) {
+            for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(RADIO_CENSO))) {
+                if (v.getBrain().hasMemoryValue(MemoryModuleType.HOME)) {
                     continue;
                 }
                 DevilRpg.LOGGER.info("[Arnes] SIN CAMA {} {} nombre={} pos={} (dist a la plaza {})", uuid8(v),
@@ -503,13 +657,40 @@ public class GuardHarness {
     private static void volcarPuertas(ServerLevel level) {
         StringBuilder abiertas = new StringBuilder();
         int cuantas = 0;
+        int atrapados = 0;
         java.util.Set<Long> ahora = new java.util.HashSet<>();
         for (BlockPos q : BlockPos.betweenClosed(CENTRO.offset(-56, -8, -56), CENTRO.offset(56, 12, 56))) {
             var est = level.getBlockState(q);
-            if (est.is(net.minecraft.tags.BlockTags.WOODEN_DOORS)
-                    && est.getValue(net.minecraft.world.level.block.DoorBlock.OPEN)
-                    && est.getValue(net.minecraft.world.level.block.DoorBlock.HALF)
-                    == net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER) {
+            if (!est.is(net.minecraft.tags.BlockTags.WOODEN_DOORS)) {
+                continue;
+            }
+            boolean abajo = est.getValue(net.minecraft.world.level.block.DoorBlock.HALF)
+                    == net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER;
+            if (!est.getValue(net.minecraft.world.level.block.DoorBlock.OPEN)) {
+                // PUERTA CERRADA CON ALGUIEN DENTRO: es el bug que reportó el jugador ("un aldeano lo movió y empezó a
+                // caminar erráticamente"): el aldeano queda atrapado contra la caja de colisión de la puerta cerrada.
+                // OJO con el criterio: NO vale "la caja de la entidad TOCA la celda" (un aldeano en la celda de al
+                // lado roza la puerta con el hombro y daría un falso positivo): se cuenta el CENTRO de la entidad
+                // DENTRO de la celda de la puerta, que es estar de verdad en el hueco.
+                if (abajo) {
+                    for (net.minecraft.world.entity.Entity e : level.getEntitiesOfClass(
+                            net.minecraft.world.entity.Entity.class, new AABB(q).inflate(1.0D, 0.5D, 1.0D))) {
+                        var p = e.position();
+                        boolean dentro = p.x >= q.getX() && p.x < q.getX() + 1.0D
+                                && p.z >= q.getZ() && p.z < q.getZ() + 1.0D
+                                && p.y >= q.getY() - 0.2D && p.y <= q.getY() + 2.0D;
+                        if (dentro) {
+                            atrapados++;
+                            DevilRpg.LOGGER.info("[Arnes] PUERTA CERRADA CON ALGUIEN DENTRO en {}: {} pos=({},{},{})"
+                                            + " velocidad={}",
+                                    q.toShortString(), e.getType().toShortString(), fmt(p.x), fmt(p.y), fmt(p.z),
+                                    fmt(e.getDeltaMovement().horizontalDistance()));
+                        }
+                    }
+                }
+                continue;
+            }
+            if (abajo) {
                 cuantas++;
                 ahora.add(q.asLong());
                 if (cuantas <= 8) {
@@ -527,11 +708,17 @@ public class GuardHarness {
             StringBuilder quien = new StringBuilder();
             for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(p).inflate(4.0))) {
                 quien.append(' ').append(uuid8(v));
+                // Y SU ETIQUETA: el que la ha cerrado la tiene puesta ("Cerrando la puerta": la escribe el goal), asi
+                // que esto dice QUIEN la cerro y no solo quien andaba cerca.
+                if (v.getCustomName() != null) {
+                    quien.append('(').append(v.getCustomName().getString().replace("\n", " | ")).append(')');
+                }
             }
             DevilRpg.LOGGER.info("[Arnes] PUERTA CERRADA en {} (aldeano(s) al lado:{})", p.toShortString(), quien);
         }
         puertasAbiertasAnteriores = ahora;
-        DevilRpg.LOGGER.info("[Arnes] PUERTAS DE MADERA ABIERTAS en el pueblo: {}{}", cuantas, abiertas);
+        DevilRpg.LOGGER.info("[Arnes] PUERTAS DE MADERA ABIERTAS en el pueblo: {}{} (cerradas CON alguien dentro: {})",
+                cuantas, abiertas, atrapados);
     }
 
     /** Las puertas abiertas del barrido anterior (para cantar las que se cierran). */
@@ -595,7 +782,7 @@ public class GuardHarness {
      * si la cama está <b>{@code OCCUPIED}</b> y el aldeano <b>no</b> está durmiendo (y solo mira a ≤16 bloques).
      */
     private static void vigilarCamasCadaTick(ServerLevel level) {
-        for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(64))) {
+        for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(RADIO_CENSO))) {
             if (v.isBaby()) {
                 continue;
             }
