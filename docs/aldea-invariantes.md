@@ -1770,6 +1770,21 @@ bucle, y con la casilla aparcada (`esPuntoFallido`) o sin aparcar, el resultado 
 guardia **vuelve a la ronda** (sin la pieza que le falte) en vez de encadenar viajes: la aldea no se queda sin
 guardia y el escudo llega cuando el herrero lo forja.
 
+### I76 · El herrero forja LO QUE MÁS FALTA (reparto uniforme de armas y armaduras)
+
+Lo pidió el jugador: *"lo que quiero es que siempre haya una distribución uniforme de armas y armaduras disponibles,
+es decir que los herreros evalúen viendo el almacén qué es lo que falta más y lo construyan, y así siempre estén
+evaluando"*.
+
+**Antes**: las recetas se elegían por **orden fijo** (espada → escudo → arco → flechas; casco → peto → grebas → botas)
+con un tope por pieza. Con las espadas ya al tope, el herrero **no miraba el escudo**: MEDIDO en su guardado, el
+almacén tenía **3 espadas y 0 escudos** mientras los guardias esperaban el escudo para completar su equipo (I75).
+
+**Ahora**: cada vez que va a fabricar, el herrero **evalúa el almacén** y calcula el **hueco de cada pieza**
+(`OBJETIVO - lo que hay`, contando hierro **y** cuero juntos en la armadura) y forja **la que más falta** de las que
+puede hacer con el material que hay (`elQueMasFalta`). A igualdad de hueco gana la primera, así que el reparto es
+**estable** entre latidos y no baila. Sigue evaluando en cada pieza, así que la distribución se mantiene sola.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 

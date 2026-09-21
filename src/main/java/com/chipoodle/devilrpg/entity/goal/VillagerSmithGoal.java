@@ -577,28 +577,40 @@ public class VillagerSmithGoal extends Goal {
     /** Herrero de ARMAS (muelle): espada, escudo, arco y flechas. */
     @Nullable
     private Receta recetaDeArmas(Container almacen) {
-        if (contar(almacen, Items.IRON_SWORD) < OBJETIVO_ESPADAS && contar(almacen, Items.IRON_INGOT) >= 2) {
-            return new Receta("Forjando", "Forjo una espada de hierro",
-                    List.of(new ItemStack(Items.IRON_INGOT, 2)), new ItemStack(Items.IRON_SWORD));
+        // SE FABRICA LO QUE MÁS FALTA, no lo primero de una lista. Lo pidió el jugador: *"lo que quiero es que siempre
+        // haya una distribución uniforme de armas y armaduras disponibles, es decir que los herreros evalúen viendo el
+        // almacén qué es lo que falta más y lo construyan, y así siempre estén evaluando"*. Antes el orden era fijo
+        // (espada → escudo → arco → flechas), así que con las espadas al tope el herrero se quedaba sin nada que hacer
+        // aunque faltaran escudos: MEDIDO en su guardado, el almacén tenía **3 espadas y 0 escudos** y los guardias
+        // esperando el escudo en la puerta (I75). Ahora se mira el hueco de CADA pieza y se forja la mayor.
+        List<Candidato> candidatos = new ArrayList<>();
+        int lingotes = contar(almacen, Items.IRON_INGOT);
+        if (lingotes >= 2) {
+            candidatos.add(new Candidato(OBJETIVO_ESPADAS - contar(almacen, Items.IRON_SWORD),
+                    new Receta("Forjando", "Forjo una espada de hierro",
+                            List.of(new ItemStack(Items.IRON_INGOT, 2)), new ItemStack(Items.IRON_SWORD))));
         }
-        if (contar(almacen, Items.SHIELD) < OBJETIVO_ESCUDOS && contar(almacen, Items.IRON_INGOT) >= 1
-                && contar(almacen, Items.OAK_PLANKS) >= 6) {
-            return new Receta("Forjando", "Forjo un escudo",
-                    List.of(new ItemStack(Items.IRON_INGOT), new ItemStack(Items.OAK_PLANKS, 6)),
-                    new ItemStack(Items.SHIELD));
+        if (lingotes >= 1 && contar(almacen, Items.OAK_PLANKS) >= 6) {
+            candidatos.add(new Candidato(OBJETIVO_ESCUDOS - contar(almacen, Items.SHIELD),
+                    new Receta("Forjando", "Forjo un escudo",
+                            List.of(new ItemStack(Items.IRON_INGOT), new ItemStack(Items.OAK_PLANKS, 6)),
+                            new ItemStack(Items.SHIELD))));
         }
-        if (contar(almacen, Items.BOW) < OBJETIVO_ARCOS && contar(almacen, Items.STRING) >= 3
-                && contar(almacen, Items.STICK) >= 3) {
-            return new Receta("Encorando", "Armo un arco",
-                    List.of(new ItemStack(Items.STRING, 3), new ItemStack(Items.STICK, 3)), new ItemStack(Items.BOW));
+        if (contar(almacen, Items.STRING) >= 3 && contar(almacen, Items.STICK) >= 3) {
+            candidatos.add(new Candidato(OBJETIVO_ARCOS - contar(almacen, Items.BOW),
+                    new Receta("Encorando", "Armo un arco",
+                            List.of(new ItemStack(Items.STRING, 3), new ItemStack(Items.STICK, 3)),
+                            new ItemStack(Items.BOW))));
         }
-        if (contar(almacen, Items.ARROW) < OBJETIVO_FLECHAS && contar(almacen, Items.STICK) >= 1
-                && contar(almacen, Items.FEATHER) >= 1 && contar(almacen, Items.IRON_NUGGET) >= 1) {
-            return new Receta("Flechando", "Hizo 4 flechas",
-                    List.of(new ItemStack(Items.STICK), new ItemStack(Items.FEATHER), new ItemStack(Items.IRON_NUGGET)),
-                    new ItemStack(Items.ARROW, 4));
+        if (contar(almacen, Items.STICK) >= 1 && contar(almacen, Items.FEATHER) >= 1
+                && contar(almacen, Items.IRON_NUGGET) >= 1) {
+            candidatos.add(new Candidato(OBJETIVO_FLECHAS - contar(almacen, Items.ARROW),
+                    new Receta("Flechando", "Hizo 4 flechas",
+                            List.of(new ItemStack(Items.STICK), new ItemStack(Items.FEATHER),
+                                    new ItemStack(Items.IRON_NUGGET)),
+                            new ItemStack(Items.ARROW, 4))));
         }
-        return null;
+        return elQueMasFalta(candidatos);
     }
 
     /**
@@ -609,19 +621,45 @@ public class VillagerSmithGoal extends Goal {
     private Receta recetaDeArmadura(Container almacen) {
         int lingotes = contar(almacen, Items.IRON_INGOT);
         boolean hierro = lingotes >= 12;
-        if (contar(almacen, Items.IRON_HELMET) + contar(almacen, Items.LEATHER_HELMET) < OBJETIVO_ARMADURA) {
-            return pieza(almacen, hierro, "un casco", Items.IRON_HELMET, Items.LEATHER_HELMET, 5);
+        // Y AQUÍ IGUAL: la armadura que MÁS falta (por piezas, sin importar de hierro o de cuero), para que el juego
+        // de armaduras esté repartido y no se acumulen cascos mientras faltan botas.
+        List<Candidato> candidatos = new ArrayList<>();
+        candidatos.add(new Candidato(OBJETIVO_ARMADURA - contar(almacen, Items.IRON_HELMET)
+                - contar(almacen, Items.LEATHER_HELMET),
+                pieza(almacen, hierro, "un casco", Items.IRON_HELMET, Items.LEATHER_HELMET, 5)));
+        candidatos.add(new Candidato(OBJETIVO_ARMADURA - contar(almacen, Items.IRON_CHESTPLATE)
+                - contar(almacen, Items.LEATHER_CHESTPLATE),
+                pieza(almacen, hierro, "un peto", Items.IRON_CHESTPLATE, Items.LEATHER_CHESTPLATE, 8)));
+        candidatos.add(new Candidato(OBJETIVO_ARMADURA - contar(almacen, Items.IRON_LEGGINGS)
+                - contar(almacen, Items.LEATHER_LEGGINGS),
+                pieza(almacen, hierro, "unas grebas", Items.IRON_LEGGINGS, Items.LEATHER_LEGGINGS, 7)));
+        candidatos.add(new Candidato(OBJETIVO_ARMADURA - contar(almacen, Items.IRON_BOOTS)
+                - contar(almacen, Items.LEATHER_BOOTS),
+                pieza(almacen, hierro, "unas botas", Items.IRON_BOOTS, Items.LEATHER_BOOTS, 4)));
+        return elQueMasFalta(candidatos);
+    }
+
+    /** Un candidato a fabricar: <b>cuánto falta</b> de esa pieza y la receta que la haría (o {@code null} sin material). */
+    private record Candidato(int falta, @Nullable Receta receta) {
+    }
+
+    /**
+     * <b>De los candidatos, la pieza que MÁS falta</b> (y que se pueda hacer: las recetas sin material llegan a
+     * {@code null}). A igualdad de falta gana la primera, así que el reparto es <b>estable</b> entre latidos: es el
+     * "evalúa el almacén y construye lo que falta" que pidió el jugador.
+     */
+    @Nullable
+    private static Receta elQueMasFalta(List<Candidato> candidatos) {
+        Candidato mejor = null;
+        for (Candidato c : candidatos) {
+            if (c.receta() == null || c.falta() <= 0) {
+                continue; // ni se puede hacer, o ya está cubierta
+            }
+            if (mejor == null || c.falta() > mejor.falta()) {
+                mejor = c;
+            }
         }
-        if (contar(almacen, Items.IRON_CHESTPLATE) + contar(almacen, Items.LEATHER_CHESTPLATE) < OBJETIVO_ARMADURA) {
-            return pieza(almacen, hierro, "un peto", Items.IRON_CHESTPLATE, Items.LEATHER_CHESTPLATE, 8);
-        }
-        if (contar(almacen, Items.IRON_LEGGINGS) + contar(almacen, Items.LEATHER_LEGGINGS) < OBJETIVO_ARMADURA) {
-            return pieza(almacen, hierro, "unas grebas", Items.IRON_LEGGINGS, Items.LEATHER_LEGGINGS, 7);
-        }
-        if (contar(almacen, Items.IRON_BOOTS) + contar(almacen, Items.LEATHER_BOOTS) < OBJETIVO_ARMADURA) {
-            return pieza(almacen, hierro, "unas botas", Items.IRON_BOOTS, Items.LEATHER_BOOTS, 4);
-        }
-        return null;
+        return mejor == null ? null : mejor.receta();
     }
 
     @Nullable
