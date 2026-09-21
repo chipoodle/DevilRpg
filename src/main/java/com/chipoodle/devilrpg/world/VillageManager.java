@@ -35,6 +35,7 @@ import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.OwnableEntity;
 import net.minecraft.world.entity.ai.goal.WrappedGoal;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.village.poi.PoiManager;
 import net.minecraft.world.entity.ai.village.poi.PoiType;
@@ -231,6 +232,16 @@ public final class VillageManager {
      */
     public static final int MILICIA_MAX = 7;
     private static final int MILICIA_ESPADACHINES = 4;
+    /** Marca (en los datos persistentes del aldeano) de <b>cuántos enemigos ha matado</b> ese guardia (I62). */
+    public static final String GUARD_KILLS_TAG = "DevilRpgGuardiaMatanzas";
+    /**
+     * Matanzas que necesita un guardia para llegar <b>al tope</b> de la milicia. La progresión es <b>lineal y
+     * gradual</b> a propósito (lo pidió el jugador: *"la progresión es gradual, no tiene que ser tan rápida"*): con
+     * 24, un guardia que se pelee con una horda por noche sube un escalón cada pocas noches, no de golpe.
+     */
+    private static final int GUARD_MATANZAS_PARA_EL_TOPE = 24;
+    /** Cada cuántas matanzas se cuenta un <b>nivel</b> (el que se ve en su etiqueta y se avisa en el log). */
+    private static final int GUARD_MATANZAS_POR_NIVEL = 3;
     /**
      * Versión del trazado de la aldea. Se sube cuando cambia el diseño y hay que <b>arreglar las ya construidas</b>:
      * <ul>
@@ -2497,6 +2508,103 @@ public final class VillageManager {
         return !villager.isBaby();
     }
 
+    // --- LA MILICIA APRENDE: más vida y más daño conforme mata (I62) --------------------------------
+
+    /**
+     * <b>La vida y el daño del zombie agresivo MÁS FUERTE que puede salir</b>, con la misma cuenta que usa su
+     * escalado ({@code AggressiveZombieEntity.adjustAttributesBasedOnSpawnDistance}): el factor de la distancia
+     * máxima ({@code 1 + maxScaleMultiplier}) por el de la amenaza máxima
+     * ({@code 1 + ThreatLevel.maxExtraDifficulty()}). Con los valores de hoy (10 de vida, 0,7 de daño, +300 % de
+     * escala y +80 % de amenaza) sale <b>72 de vida y 5,04 de daño</b> (y si le toca espada de hierro, más daño).
+     * <p>
+     * Se calcula <b>del perfil</b> a propósito, no de números escritos aquí: es el tope que pidió el jugador
+     * (*"el tope es prácticamente tan fuerte como el zombie agresivo más fuerte que puede generarse después de
+     * aplicarse todas las reglas"*), y así, si un día se cambia el perfil, el tope de la milicia se mueve con él.
+     */
+    private static double topeDeVidaDelZombiAgresivo() {
+        return com.chipoodle.devilrpg.spawnprofile.AggressiveZombieSpawnProfile.INSTANCE.baseHealth() * topeDeEscala();
+    }
+
+    private static double topeDeDanoDelZombiAgresivo() {
+        return com.chipoodle.devilrpg.spawnprofile.AggressiveZombieSpawnProfile.INSTANCE.baseDamage() * topeDeEscala();
+    }
+
+    private static double topeDeEscala() {
+        var perfil = com.chipoodle.devilrpg.spawnprofile.AggressiveZombieSpawnProfile.INSTANCE;
+        return (1.0D + perfil.maxScaleMultiplier())
+                * (1.0D + com.chipoodle.devilrpg.survival.ThreatLevel.maxExtraDifficulty());
+    }
+
+    /** Cuántos enemigos ha matado ese guardia (0 si nunca ha matado o no es guardia). */
+    public static int matanzasDeGuardia(Villager villager) {
+        return villager.getPersistentData().getInt(GUARD_KILLS_TAG);
+    }
+
+    /** Su <b>nivel</b> (1..): lo que se ve en su etiqueta y lo que se avisa en el log al subir. */
+    public static int nivelDeGuardia(Villager villager) {
+        return 1 + matanzasDeGuardia(villager) / GUARD_MATANZAS_POR_NIVEL;
+    }
+
+    /**
+     * <b>Un guardia ha matado a un enemigo</b>: se le apunta y se le aplica lo aprendido. El aviso de subida de
+     * nivel sale en el log (y en su etiqueta, que lleva el nivel), que es como el jugador lo ve.
+     */
+    public static void sumarMatanzaDeGuardia(Villager guardia) {
+        var datos = guardia.getPersistentData();
+        int antes = datos.getInt(GUARD_KILLS_TAG);
+        int ahora = antes + 1;
+        datos.putInt(GUARD_KILLS_TAG, ahora);
+        aplicarLoAprendido(guardia);
+        if (antes / GUARD_MATANZAS_POR_NIVEL != ahora / GUARD_MATANZAS_POR_NIVEL) {
+            DevilRpg.LOGGER.info("[Village] {} (guardia) sube al nivel {}: {} enemigo(s) y sus atributos son vida {}"
+                            + " y dano {} (tope de la milicia: vida {} y dano {})",
+                    guardia.getName().getString(), nivelDeGuardia(guardia), ahora,
+                    redondear(guardia.getAttribute(Attributes.MAX_HEALTH) == null ? 0.0D
+                            : guardia.getAttribute(Attributes.MAX_HEALTH).getValue()),
+                    redondear(guardia.getAttribute(Attributes.ATTACK_DAMAGE) == null ? 0.0D
+                            : guardia.getAttribute(Attributes.ATTACK_DAMAGE).getValue()),
+                    redondear(topeDeVidaDelZombiAgresivo()), redondear(topeDeDanoDelZombiAgresivo()));
+        }
+    }
+
+    private static double redondear(double valor) {
+        return Math.round(valor * 100.0D) / 100.0D;
+    }
+
+    /**
+     * <b>LO QUE HA APRENDIDO ESE GUARDIA, EN SUS ATRIBUTOS.</b> Idempotente: se <b>recalcula</b> desde su contador de
+     * matanzas (nunca se acumula sobre el valor anterior, que es lo que convertiría el latido en una máquina de
+     * subirle la vida para siempre). La vida va de la de un aldeano (20) al tope del zombie más fuerte (72) y el daño
+     * de 2 a su daño (5,04, que <b>sin contar</b> la espada: con la de hierro el guardia pega ~9).
+     * <p>
+     * Cuando la vida máxima sube, se le suma a la <b>actual</b> lo mismo que ha subido la máxima: el guardia se
+     * fortalece sin curarse del todo (sigue con las heridas de la pelea).
+     */
+    public static void aplicarLoAprendido(Villager guardia) {
+        if (!VillagerGuardGoal.esGuardia(guardia)) {
+            return;
+        }
+        double avance = Math.min(1.0D, matanzasDeGuardia(guardia) / (double) GUARD_MATANZAS_PARA_EL_TOPE);
+        double vidaAldeano = 20.0D;
+        double danoAldeano = 2.0D;
+        double vida = vidaAldeano + (topeDeVidaDelZombiAgresivo() - vidaAldeano) * avance;
+        double dano = danoAldeano + (topeDeDanoDelZombiAgresivo() - danoAldeano) * avance;
+        var attrVida = guardia.getAttribute(Attributes.MAX_HEALTH);
+        if (attrVida != null && Math.abs(attrVida.getBaseValue() - vida) > 0.01D) {
+            double ganado = vida - attrVida.getBaseValue();
+            attrVida.setBaseValue(vida);
+            if (ganado > 0.0D) {
+                guardia.setHealth(Math.min((float) vida, guardia.getHealth() + (float) ganado));
+            } else if (guardia.getHealth() > vida) {
+                guardia.setHealth((float) vida);
+            }
+        }
+        var attrDano = guardia.getAttribute(Attributes.ATTACK_DAMAGE);
+        if (attrDano != null && Math.abs(attrDano.getBaseValue() - dano) > 0.01D) {
+            attrDano.setBaseValue(dano);
+        }
+    }
+
     /** Alista a un aldeano (si no lo estaba) con su tipo y su número, y le pone su goal de guardia. */
     private static void alistarGuardia(ServerLevel level, Villager villager, @Nullable BlockPos center,
                                        int objectiveIndex, int indice, int tipo) {
@@ -2511,6 +2619,10 @@ public final class VillageManager {
         // Sin esto, `esGuardia` daba false en el cliente (los datos persistentes no viajan) y los guardias se veían
         // como aldeanos normales, sin equipo (lo pidió el jugador).
         VillagerGuardGoal.sincronizarMarcaDeGuardia(villager);
+        // Y LO QUE HA APRENDIDO ESE GUARDIA (I62): sus atributos se recalculan desde su contador de matanzas. Es
+        // idempotente (no acumula) y va aquí, en el latido, para que un guardia recargado del guardado —o uno al que
+        // le cambiara el tope— vuelva a tener lo suyo.
+        aplicarLoAprendido(villager);
         // Un obrero que pasa a la guardia deja de ser obrero (tiene su puesto).
         desmarcarObrero(villager);
         // Y TAMBIÉN LA RECOGIDA DE SU OFICIO: los dos goals piden MOVE y el de recoger se engancha ANTES que el de la
@@ -3922,7 +4034,15 @@ public final class VillageManager {
             }
             double dx = pos.getX() - centro.getX();
             double dz = pos.getZ() - centro.getZ();
-            if (dx * dx + dz * dz <= limite && Math.abs(pos.getY() - level.getSeaLevel()) < 96) {
+            if (dx * dx + dz * dz > limite) {
+                continue;
+            }
+            // LA ALTURA, CON LA COTA DE LA ALDEA (I12), no con el nivel del mar: la banda es la MISMA que usa
+            // `dentroDelRecinto`. Antes se medía contra `level.getSeaLevel()` con un margen de 96, así que una cueva
+            // veinte bloques por debajo de la plaza y una loma treinta por encima contaban como "dentro de la aldea"
+            // (y el sello cortaba spawns que no eran de la aldea, mientras no distinguía bien el suelo del pueblo).
+            double dy = pos.getY() - VillageGenerator.cotaDeLaPlaza(level, centro);
+            if (dy >= -RECINTO_DY_ABAJO && dy <= RECINTO_DY_ARRIBA) {
                 return true;
             }
         }
@@ -4079,8 +4199,11 @@ public final class VillageManager {
         // La guardia manda sobre el oficio: un guardia puede ser (por ejemplo) un segundo granjero, pero lo que el
         // jugador tiene que ver en su etiqueta es que está de guardia y con qué.
         if (VillagerGuardGoal.esGuardia(villager)) {
-            return VillagerGuardGoal.tipoDe(villager) == VillagerGuardGoal.ARQUERO
+            // Y SU NIVEL (I62): el guardia se hace más fuerte matando, así que su etiqueta lo dice ("Guardia
+            // espadachín · nv 3"): es como el jugador ve la progresión sin abrir nada.
+            String arma = VillagerGuardGoal.tipoDe(villager) == VillagerGuardGoal.ARQUERO
                     ? "Guardia arquero" : "Guardia espadachín";
+            return arma + " · nv " + nivelDeGuardia(villager);
         }
         VillagerProfession profesion = villager.getVillagerData().getProfession();
         if (profesion == VillagerProfession.FARMER) {

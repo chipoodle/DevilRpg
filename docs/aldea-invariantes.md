@@ -1493,6 +1493,56 @@ en la primera pasada, sin esperar a que se muera). Es **idempotente**: a un gole
 **Se comprueba contra el guardado** (el `dy` de cada golem sobre la cota de su aldea: tiene que ser **0**) y en el
 log (`un golem aparecio N bloque(s) por encima del suelo (dentro de un edificio): se le baja a ...`).
 
+### I62 · La milicia aprende matando (y su tope es el del zombie más fuerte)
+
+Lo pidió el jugador, después de una noche en la que *"aparecieron así de la nada zombies agresivos que mataron a
+media aldea"*: *"los guardias se van haciendo más fuertes y con más salud conforme van matando enemigos, el tope es
+prácticamente tan fuerte como el zombie agresivo más fuerte que puede generarse después de aplicarse todas las
+reglas (máxima distancia desde el centro, tiempo en el mundo, etc.). La progresión es gradual, no tiene que ser tan
+rápida"*.
+
+**El tope no se escribe a mano: se calcula del perfil del zombie** (`AggressiveZombieSpawnProfile`), con la misma
+cuenta que usa su escalado: `baseHealth * (1 + maxScaleMultiplier) * (1 + ThreatLevel.maxExtraDifficulty())`. Con
+los valores de hoy (10 de vida, 0,7 de daño, +300 % de escala y +80 % de amenaza) sale **72 de vida y 5,04 de daño**
+—por eso, si un día se toca el perfil, el tope de la milicia se mueve con él—.
+
+**La progresión** (medida con `build/diag/tope_guardia.py`): 24 matanzas para el tope, un **nivel cada 3** (el nivel
+se ve en su etiqueta: `Guardia espadachín · nv 3`):
+
+| matanzas | nivel | vida | daño (atributo) | con la espada de hierro del pueblo |
+|---|---|---|---|---|
+| 0 | 1 | 20,0 | 2,00 | 6,00 |
+| 3 | 2 | 26,5 | 2,38 | 6,38 |
+| 6 | 3 | 33,0 | 2,76 | 6,76 |
+| 12 | 5 | 46,0 | 3,52 | 7,52 |
+| **24** | **9** | **72,0** | **5,04** | **9,04** |
+
+**Regla:** los atributos se **recalculan** desde el contador de matanzas (`aplicarLoAprendido`), nunca se acumulan:
+es lo que hace que el latido —que lo llama para cada guardia alistado— sea idempotente y que un guardia recargado
+del guardado recupere lo suyo. Cuando la vida máxima sube, se le suma a la **actual** lo mismo que subió la máxima
+(se fortalece sin curarse del todo: sigue con las heridas de la pelea). Cuenta la muerte de un {@code Monster}
+cuando el **dueño del daño** es un aldeano de la guardia ({@code LivingDeathEvent} + {@code getSource().getEntity()},
+así que también valen los **arqueros** con la flecha).
+
+### I63 · El sello, para CADA bicho (no solo para el primero del grupo)
+
+Medido en la partida del jugador (aldea 2): en el log, el sello **rechazó 9 de 9 anclas** de spawn
+(`posicion … dentro de aldea protegida: no se spawnea`)… y en el guardado del jugador **no hay ni un monstruo dentro
+del recinto**: los de alrededor están **todos fuera**, a 62-74 bloques del centro. O sea que la barrera **sí** corta
+los spawns de dentro. Pero había un agujero real: `CustomSpawner` miraba el sello **solo para el ancla** y las demás
+posiciones del grupo **se sorteaban otra vez** (`findSpawnPosition`) sin comprobación, así que un bicho del grupo
+podía aparecer dentro aunque el ancla estuviera fuera.
+
+**Regla:** el sello se comprueba para **cada** posición de spawn. Y la altura se mide con la **cota de la aldea**
+(I12), no con `level.getSeaLevel()` con un margen de 96: con el nivel del mar, una cueva veinte bloques por debajo
+de la plaza y una loma treinta por encima contaban como "dentro de la aldea" (el sello cortaba spawns que no eran de
+la aldea y no distinguía bien el suelo del pueblo).
+
+> **OJO, y esto es lo que de verdad pasó esa noche**: el sello **no levanta un muro**. Los bichos que se acumulan
+> fuera (el guardado del jugador tiene una docena de esqueletos y zombis a 63-73 bloques, pegados a la muralla)
+> **entran andando** por donde pueden y, si dentro no hay quien los pare, matan. La barrera impide que **aparezcan**
+> dentro; de **defender** se encarga la **milicia** (I62) y el muro con sus portones.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 

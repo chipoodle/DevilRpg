@@ -3172,6 +3172,39 @@ texturas originales quedan respaldadas en `build/diag/*.antes`.
 Si en vez de una cara fija se quiere que cada guardia lleve **la de su propia variante** (cada aldeano tiene la suya
 en el guardado), eso ya pide una **capa de render** con el modelo del aldeano y la textura de su tipo.
 
+### 3b.77 La noche que mataron a media aldea: el sello por bicho, y la milicia que aprende
+
+El jugador, tres cosas de una: *(1)* *"cuando llegó la noche aparecieron así de la nada zombies agresivos que
+mataron a media aldea; una vez que está la barrera no puede spawnear NADA dentro de la villa, inclusive los zombies
+que aparecen alrededor del jugador"*, *(2)* *"los zombies que hacen un asalto spawnean alrededor de la villa y buscan
+ir al centro arrasando todo a su paso (así está ahorita, confírmame por favor)"* y *(3)* *"los guardias se van
+haciendo más fuertes y con más salud conforme van matando enemigos, el tope es prácticamente tan fuerte como el
+zombie agresivo más fuerte… la progresión es gradual"*.
+
+**MEDIDO (su guardado y su log)**:
+- El sello **rechazó 9 de 9 anclas** (`posicion … dentro de aldea protegida: no se spawnea`) y en el guardado **no
+  hay ni un monstruo dentro del recinto**: los de alrededor están **todos fuera**, a **62-74** bloques del centro
+  (una docena de esqueletos y zombis pegados a la muralla). La barrera **sí** corta los spawns de dentro.
+- **Pero había un agujero real**: `CustomSpawner` comprobaba el sello **solo para el ancla** y las demás posiciones
+  del grupo se **sorteaban otra vez** (`findSpawnPosition`) sin comprobación → un bicho del grupo podía aparecer
+  dentro. **Tapado** (y la altura del sello, con la cota, I63).
+- Y las muertes (`Onofre` en el desván, `Quintin` el guardia en la posada) dicen lo otro: **entraron andando**. El
+  sello no levanta un muro: impide que **aparezcan** dentro; de **defender** se encarga la milicia.
+
+**(2) CONFIRMADO, así está**: `spawnWave` siembra la ola **alrededor** de la aldea (entre `FENCE_RADIUS+3` y
+`FENCE_RADIUS+11` = 65..73 bloques del centro) y cada asediador lleva `setVillageCenter(centro)`: el goal
+`MarzoAlCentroGoal` los hace **marchar al centro** y, cuando el camino se cierra, **rompen hacia él** (túnel lento
+con presupuesto de 40 bloques y puentes), **arrasando el terreno a su paso pero nunca dentro de la aldea**:
+`NO_TOCAR_LA_ALDEA = FENCE_RADIUS + 2` es el radio dentro del cual no rompen ni construyen (solo tienen que llegar
+al perímetro).
+
+**(3) HECHO** (I62): la milicia **aprende matando**. Cada `Monster` que muere a manos de un aldeano de la guardia
+(cuenta el **dueño del disparo**, así que también los arqueros) le suma una matanza; sus atributos se **recalculan**
+desde ese contador (idempotente, en el latido y al matar). El **tope sale del perfil del zombie** (`10 * (1+3,0) *
+(1+0,8)` = **72 de vida y 5,04 de daño**), la progresión es **gradual** (24 matanzas al tope, un nivel cada 3) y el
+nivel se ve en su etiqueta: **`Guardia espadachín · nv 3`**. Con la espada de hierro del pueblo, un guardia de tope
+pega **9,04**: puede con el zombie más fuerte. Tabla completa en I62.
+
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.

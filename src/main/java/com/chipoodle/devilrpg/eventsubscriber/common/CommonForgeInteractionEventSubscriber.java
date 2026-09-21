@@ -40,6 +40,11 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import com.chipoodle.devilrpg.world.VillageManager;
+import com.chipoodle.devilrpg.entity.goal.VillagerGuardGoal;
+import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.npc.Villager;
 import net.neoforged.neoforge.event.entity.living.LivingChangeTargetEvent;
 import net.neoforged.neoforge.event.entity.living.LivingEvent.LivingJumpEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -401,6 +406,25 @@ public class CommonForgeInteractionEventSubscriber {
                 event.setCanceled(true); // Reemplazar el Zombie normal
             }
         }*/
+    }
+
+    /**
+     * <b>LA MILICIA APRENDE MATANDO</b> (I62, lo pidió el jugador: *"los guardias se van haciendo más fuertes y con
+     * más salud conforme van matando enemigos… la progresión es gradual"*). Cada vez que muere un <b>bicho</b> a
+     * manos de un aldeano que está <b>de guardia</b>, se le apunta la muerte y se le recalculan sus atributos.
+     * <p>
+     * {@code getSource().getEntity()} es el <b>dueño del disparo</b>, así que también cuenta lo que matan los
+     * <b>arqueros</b> con la flecha (que es el caso más común). Solo cuentan los {@code Monster}: un guardia que mate
+     * una vaca o (Dios no quiera) a otro aldeano no sube.
+     */
+    @SubscribeEvent
+    public static void onGuardiaMata(LivingDeathEvent event) {
+        if (event.getEntity().level().isClientSide() || !(event.getEntity() instanceof Monster)) {
+            return;
+        }
+        if (event.getSource().getEntity() instanceof Villager guardia && VillagerGuardGoal.esGuardia(guardia)) {
+            VillageManager.sumarMatanzaDeGuardia(guardia);
+        }
     }
 
 }

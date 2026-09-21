@@ -137,10 +137,21 @@ public class CustomSpawner {
             int spawned = 0;
             for (int i = 0; i < toSpawn; i++) {
                 BlockPos pos = i == 0 ? anchor : rule.findSpawnPosition(level, player);
-                if (pos != null) {
-                    spawn(rule, player, pos);
-                    spawned++;
+                // EL SELLO SE MIRA PARA CADA BICHO, NO SOLO PARA EL PRIMERO (el agujero que mató a media aldea): las
+                // otras posiciones del grupo se SORTEAN otra vez (`findSpawnPosition`) y podían caer DENTRO de la
+                // aldea aunque el ancla estuviera fuera. Medido en la partida del jugador: el log del sello rechaza
+                // 9 de 9 anclas (`posicion ... dentro de aldea protegida: no se spawnea`) y esa misma noche
+                // aparecieron agresivos DENTRO de la villa y mataron a media aldea.
+                if (pos == null) {
+                    continue;
                 }
+                if (VillageManager.estaProtegida(level, pos)) {
+                    DevilRpg.LOGGER.debug("[CustomSpawner] {} - posicion {} de un miembro del grupo dentro de aldea"
+                            + " protegida: no se spawnea", rule.getEntityType().getDescriptionId(), pos);
+                    continue;
+                }
+                spawn(rule, player, pos);
+                spawned++;
             }
             DevilRpg.LOGGER.debug("[CustomSpawner] {} en {} - se intentaron {} de {}",
                     rule.getEntityType().getDescriptionId(), level.dimension().location(), spawned, toSpawn);
