@@ -3043,8 +3043,8 @@ public final class VillageManager {
         candidatas.sort(Comparator.comparingDouble(p -> p.distSqr(cama)));
         // PRIMERO las que el aldeano alcanza ANDANDO (lo normal).
         for (BlockPos celda : candidatas) {
-            if (!hayVistaLibre(level, celda, cama, villager)) {
-                continue; // hay un muro en medio: desde ahí no se le puede acostar
+            if (!celdaLibreParaAcostarse(level, celda) || !hayVistaLibre(level, celda, cama, villager)) {
+                continue; // hay un muro en medio, o ahi no se puede ni estar de pie
             }
             var camino = villager.getNavigation().createPath(celda, 1);
             if (camino != null && camino.canReach()) {
@@ -3066,11 +3066,28 @@ public final class VillageManager {
                     || celda.distSqr(villager.blockPosition()) > PASO_A_LA_ESPERA * PASO_A_LA_ESPERA) {
                 continue; // otra planta (o demasiado lejos): eso no son "los dos últimos pasos"
             }
-            if (hayVistaLibre(level, celda, cama, villager)) {
+            if (celdaLibreParaAcostarse(level, celda) && hayVistaLibre(level, celda, cama, villager)) {
                 return celda;
             }
         }
         return null;
+    }
+
+    /**
+     * <b>¿Se puede ESTAR de pie en esa celda?</b> Nada sólido dentro, nada sólido a la altura de la cabeza y suelo
+     * firme debajo. Es lo que tiene que cumplir la <b>celda de espera</b> de una cama: no basta con que desde ella
+     * <i>se vea</i> la cama (eso solo mira la línea de visión), porque el latido <b>mueve al aldeano a esa celda</b>
+     * cuando no llega andando ({@code acostarAlQueNoLlega}). Sin esta comprobación, la celda de espera podía caer
+     * <b>dentro de un muro</b> o <b>en el aire al otro lado de la pared</b> —medido en el guardado del jugador: la
+     * celda de espera de la cama {@code 1446,125,1429} (posada) salía en {@code 1446,125,1427}, dos bloques al norte
+     * y FUERA del edificio, porque el rayo de visión golpeaba el muro de la posada y ese muro está a un bloque de la
+     * cama (ver {@link #hayVistaLibre})— y al aldeano se le movía allí: caía a la calle desde la altura de la posada
+     * (medido: los aldeanos aparecían en {@code 1446,120,1427}, justo debajo) y no se acostaba nunca.
+     */
+    private static boolean celdaLibreParaAcostarse(ServerLevel level, BlockPos celda) {
+        return level.getBlockState(celda).getCollisionShape(level, celda).isEmpty()
+                && level.getBlockState(celda.above()).getCollisionShape(level, celda.above()).isEmpty()
+                && !level.getBlockState(celda.below()).getCollisionShape(level, celda.below()).isEmpty();
     }
 
     /**
@@ -3092,7 +3109,28 @@ public final class VillageManager {
             return true; // sin nada en medio
         }
         return choque instanceof net.minecraft.world.phys.BlockHitResult golpe
-                && golpe.getBlockPos().distManhattan(objetivo) <= 1;
+                && esElObjetivoOSuOtraMitad(level, golpe.getBlockPos(), objetivo);
+    }
+
+    /**
+     * ¿El bloque que corta el rayo es el <b>propio objetivo</b> o su <b>otra mitad</b>? La mirada acaba <b>dentro</b>
+     * del objetivo, así que el rayo choca con él y eso <b>no</b> es un muro; y la <b>cama</b> son dos bloques, así que
+     * chocar con su otra mitad tampoco.
+     * <p>
+     * OJO: antes valía <b>cualquier</b> bloque a un bloque de distancia del objetivo ({@code distManhattan <= 1}) y eso
+     * metía un <b>MURO</b> en la cuenta: medido en el guardado del jugador, la celda de espera de una cama de la
+     * posada salía <b>fuera del edificio</b>, al otro lado de su muro (el muro está a un bloque de la cama) y al
+     * aldeano se le movía allí, cayéndose a la calle (ver {@code celdaLibreParaAcostarse}).
+     */
+    private static boolean esElObjetivoOSuOtraMitad(ServerLevel level, BlockPos golpeado, BlockPos objetivo) {
+        if (golpeado.equals(objetivo)) {
+            return true;
+        }
+        if (golpeado.distManhattan(objetivo) != 1) {
+            return false;
+        }
+        return level.getBlockState(objetivo).is(net.minecraft.tags.BlockTags.BEDS)
+                && level.getBlockState(golpeado).is(net.minecraft.tags.BlockTags.BEDS);
     }
 
     /**

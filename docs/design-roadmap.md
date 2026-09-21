@@ -3015,6 +3015,16 @@ Los tres son fallos distintos:
 **Pendiente de ver en juego** (hace falta reiniciar): que el guardia se vea con su armadura y su espada/escudo, y
 que Zacarías acabe durmiendo en una cama de la planta baja.
 
+> **Y el mismo día, con el arreglo ya cargado** (el jugador: *"el guardia se quedó bloqueado… dice que va rumbo al
+> almacén pero no se mueve"*, con la captura dentro de la posada): **Mauricio** (guardia) en `(1455,125,1435)` —la
+> **segunda planta** de la taberna— sin moverse, su cama en `(1452,125,1441)` (arriba) y la celda de espera de otra
+> cama de la posada (`1446,125,1429`) calculada en **`1446,125,1427`**: **fuera del edificio**, al otro lado del muro
+> (y los aldeanos apareciendo en `1446,120,1427`, la calle de abajo). Las dos causas de la celda de espera —**un muro
+> cuenta como "se ve la cama"** y **no se comprobaba que en esa celda se pueda estar de pie**— arregladas (ver la
+> ampliación de I57): `hayVistaLibre` solo acepta el objetivo o **su otra mitad** (una cama), y la celda de espera
+> pasa por `celdaLibreParaAcostarse` (aire, hueco de cabeza y suelo firme). Y el *síntoma* (quieto con la etiqueta
+> del mod puesta) es **I5**: de noche el cerebro le escribe el destino a su `HOME` y pisa el del goal.
+
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.

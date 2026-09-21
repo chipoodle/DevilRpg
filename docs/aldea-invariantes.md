@@ -1342,6 +1342,30 @@ solo sube cuando no se acerca.
 posición: la cama y él tienen que estar en la misma planta) y en el log (`no consigue llegar a su cama … se le da
 otra`).
 
+> **Ampliación (el guardia bloqueado en la posada).** El jugador: *"el guardia se quedó bloqueado… dice que va rumbo
+> al almacén pero no se mueve"*. Medido en su guardado (aldea 2): **Mauricio** (guardia espadachín) en
+> `(1455,125,1435)` — la **posada** (segunda planta de la taberna) — con la etiqueta *"Yendo al almacén"* y sin
+> moverse, y su cama en `(1452,125,1441)` (arriba también); y la celda de espera de otra cama de la posada
+> (`1446,125,1429`) salía en **`1446,125,1427`**, que está **dos bloques al norte, FUERA del edificio** (los aldeanos
+> aparecían en `1446,120,1427`: la calle, justo debajo). Dos causas, las dos de la *celda de espera*:
+>
+> 1. **`hayVistaLibre` daba por bueno un MURO.** El rayo de visión se acepta si el bloque golpeado está a
+>    `distManhattan <= 1` del objetivo (la tolerancia que hace falta porque una **cama son dos bloques**), y el **muro
+>    de la posada está a un bloque de las camas** que van pegadas a él: así que la celda de espera podía caer **al otro
+>    lado de la pared**. **Regla:** solo valen el **propio objetivo** o **su otra mitad** (una cama y la cama de al
+>    lado); un muro pegado **no** cuenta.
+> 2. **La celda de espera no tenía que ser una celda donde se pueda ESTAR.** El latido **mueve al aldeano a ella**
+>    (`acostarAlQueNoLlega`) cuando no llega andando, así que tiene que cumplir lo de siempre: nada sólido dentro,
+>    nada sólido a la altura de la cabeza y **suelo firme debajo** (`celdaLibreParaAcostarse`). Sin eso, la celda
+>    podía ser el **aire de fuera** (el aldeano se movía allí y **caía a la calle**) o el interior de un muro.
+>
+> Y el *síntoma* del guardia quieto es de **I5**: de noche el **cerebro** (actividad REST,
+> `SetWalkTargetFromBlockMemory(HOME)`) le escribe el destino a **su cama** —sin comprobar si llega— y **pisa** el
+> destino que le da el goal de la guardia, así que el aldeano se queda quieto con la etiqueta del mod puesta
+> ("Yendo al almacén") mientras el juego lo manda a una cama que no alcanza. Con la cama bien repartida (y la de
+> espera bien elegida) el aldeano duerme; y si no hay ninguna cama alcanzable, el reparto lo deja **sin `HOME`**, que
+> es mejor que dejarlo clavado: sin cama el cerebro no lo manda a ninguna parte y puede seguir con su faena.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
