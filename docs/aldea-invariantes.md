@@ -959,10 +959,22 @@ repartir camas:
    granjero lo saca por la compuerta (I44)—, pero **solo** en ese caso: una cama a la que no llega le cuesta el `HOME`
    a los 60 s. Medido: el herrero recibía una cama del dormitorio con **un muro de adoquín** de por medio (su ruta
    acababa a 2,00 bloques, y para acostarse hace falta ≤2,0) y no se dormía nunca.
+4. **Y si el planificador no le deja dar los dos últimos pasos, el pueblo le lleva y le acuesta.** Hay camas a las que
+   el juego **no le acerca a los 2,0** que pide `SleepInBed` aunque las tenga a la vista y pueda entrar en la
+   habitación: **medido** con el herrero de herramientas (ruta de 25 nodos hasta `1447,120,1404`, dentro del
+   dormitorio, y desde ahí las rutas a las celdas de al lado de su cama acababan a **2,00** y **3,00** bloques). En ese
+   caso el reparto guarda una **celda de espera** (`celdaParaAcostarse`: la más cercana **alcanzable** desde la que
+   **vea** la cama) y el latido hace dos cosas: le **manda** a ella (*"Yendo a dormir"*) y, cuando la tiene a la vista y
+   a menos de 6 bloques, le **acuesta** (`acostarAlQueNoLlega` → `startSleeping`, la misma llamada que usa el juego).
+   OJO con la línea de visión: **la propia cama no cuenta como obstáculo** (la mirada acaba dentro de su bloque, así que
+   el raycast choca con ella y —si contara— no habría ninguna celda con vista: medido), solo bloquea un muro.
+   No es un teletransporte: el aldeano **llega andando** a esa celda.
 
 **Medido después** (misma partida, misma noche): los dos granjeros **duermen en su cama**
 (`durmiendo=true durmiendoEnElla=[EL MISMO]`, `pos == home`), **cero** pérdidas de cama en toda la corrida y
-`COMPARTIDAS=0`. Todo en `tools/arnes/medidas-camas.txt`.
+`COMPARTIDAS=0`. Y con el herrero: *"`9e0ed6e3` no llega a su cama por el camino del juego: se le da `1452,120,1405` y
+se le mandará a `1449,120,1405` para acostarle"* → **`CAMAS RESUMEN: adultos=11 conCama=11 COMPARTIDAS=0 SIN CAMA=0`**
+(el pueblo entero con cama). Todo en `tools/arnes/medidas-camas.txt`.
 
 **Pendiente (dicho claramente)**: una **cama sin acceso** —con un muro o mobiliario que impide ponerse a ≤2,0— no se le
 da a nadie y ese aldeano se queda sin cama. Es construcción/mobiliario del pueblo, no del reparto.

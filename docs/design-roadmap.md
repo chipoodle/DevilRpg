@@ -2575,10 +2575,40 @@ noche, *"si la aldea está repleta de ellas"*. Medido con el arnés sobre su par
 `1428,120,1427=ABIERTA`), los dos granjeros **durmiendo en su cama** (`durmiendo=true durmiendoEnElla=[EL MISMO]`) y
 **cero** pérdidas de cama en toda la corrida (antes, una cada 60 s).
 
-**Lo que queda, dicho claramente**: el **herrero de herramientas** sigue sin cama, y es **otra cosa**: sus camas libres
-cercanas están **tapiadas** (la de `1452,120,1405` tiene un muro de adoquín al lado y su ruta acaba a 2,00 bloques,
-cuando para acostarse hay que estar a menos de 2,0). Es una **cama sin acceso** —construcción/mobiliario del pueblo— y
-queda pendiente como tal.
+**Lo que quedaba, y se cerró en 3b.59**: el **herrero de herramientas** se quedaba sin cama porque las suyas libres
+cercanas no le servían (el planificador no le dejaba dar los dos últimos pasos).
+
+### 3b.59 El HERRERO sin cama: el planificador no le dejaba dar los dos últimos pasos (y el pueblo le acuesta)
+
+El jugador lo pidió después: *"corrige esto: el herrero de herramientas sigue sin cama"*. Con la regla de I43 (solo
+camas **alcanzables**) el herrero se quedaba **sin ninguna**. La sonda de rutas del arnés, **celda a celda**, encontró
+por qué:
+
+- Su cama libre (`1452,120,1405`, en el dormitorio de una **casa del juego**) está a **0,87** bloques de donde trabaja.
+- **El planificador SÍ le lleva dentro de la casa**: ruta de **25 nodos** hasta `1447,120,1404`, ya en el dormitorio
+  (entra por la puerta de la fachada oeste, dando la vuelta al edificio).
+- Pero desde ahí **no hay manera de que le acerque a los 2,0 bloques** que exige el juego para acostarse
+  (`SleepInBed` pide `closerToCenterThan(pos, 2.0)`): las rutas a las celdas de al lado de la cama acababan a **2,00**
+  y **3,00** bloques (`a1=3n alcance=NO fin=1454,120,1405 dFin=2.00`, `a1=10n alcance=NO fin=1450,120,1408 dFin=3.00`).
+  Y como no llega, vanilla le borra la cama a los 60 s (I43) → bucle.
+- El diagnóstico dentro del reparto lo confirmó: *"`1452,120,1405` no llega (fin `1454,120,1405`) y **sin celda de
+  espera**"* — y ahí estaba el fallo de mi propia comprobación: la línea de visión apuntaba **al centro de la cama**, así
+  que el raycast chocaba con **la cama misma** y daba por bloqueadas todas las celdas.
+
+**Arreglo**, tres piezas (todas en `VillageManager`):
+1. **Celda de espera** (`celdaParaAcostarse`): al darle una cama a la que no llega, se busca —de la más cercana a la
+   más lejana— una celda a la que **sí llegue** y desde la que **vea la cama** (línea de visión que **no cuenta la
+   propia cama** como obstáculo, solo un muro de verdad). Se guarda por aldeano.
+2. **Se le lleva**: en el latido, si está en su hora de descanso y aún no está cerca, se le manda a esa celda
+   (*"Yendo a dormir"*). El planificador no le lleva a la cama, pero a esa celda sí.
+3. **Se le acuesta** (`acostarAlQueNoLlega`): cuando la tiene **a la vista** y a menos de 6 bloques y la cama está
+   **libre**, se le acuesta con la misma llamada que usa el juego (`LivingEntity.startSleeping`, que además marca la
+   cama como ocupada). No es un teletransporte: el aldeano ha llegado **andando** hasta ahí.
+
+**Medido** (misma partida, noche congelada): *"`9e0ed6e3` no llega a su cama por el camino del juego: se le da
+`1452,120,1405` y se le mandará a `1449,120,1405` para acostarle"* → el herrero **duerme en su cama**
+(`durmiendo=true durmiendoEnElla=[EL MISMO]`, `pos == home`) → **`CAMAS RESUMEN: adultos=11 conCama=11 COMPARTIDAS=0
+SIN CAMA=0`** (el pueblo entero con cama) y **0** pérdidas de cama en toda la corrida.
 
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 

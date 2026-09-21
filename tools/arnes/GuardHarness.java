@@ -123,6 +123,10 @@ public class GuardHarness {
             if (ticks % 40 == 0) {
                 vigilarGranjerosEnElBancal(level);
             }
+            // Y EL QUE NO TIENE CAMA: sondeo de rutas a las celdas que importan (donde se corta el camino).
+            if (ticks % 100 == 0) {
+                sondarRutasDelSinCama(level);
+            }
         } else {
             if (ticks == 400 || ticks == 1400) {
                 volcarObjetos(level);
@@ -573,8 +577,48 @@ public class GuardHarness {
         return sb.length() == 0 ? "(ninguna)" : sb.toString().trim();
     }
 
-    /** La posición de un texto "x, y, z" (el que imprime `BlockPos.toShortString`). */
-    private static BlockPos posDe(String texto) {
+    /**
+     * SONDA DE RUTAS DEL ALDEANO SIN CAMA (temporal): desde su posicion, prueba la ruta a las celdas que importan
+     * (su cama, la compuerta de la habitacion, el pasillo, el interior) para ver DONDE se corta el camino. Imprime
+     * tambien el bloque que tiene debajo y a los lados, que es lo que suele explicar el corte.
+     */
+    private static void sondarRutasDelSinCama(ServerLevel level) {
+        for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(96))) {
+            if (v.isBaby() || v.getBrain().hasMemoryValue(MemoryModuleType.HOME)) {
+                continue;
+            }
+            BlockPos p = v.blockPosition();
+            DevilRpg.LOGGER.info("[Arnes] SONDA {} {} pos={} debajo={} suelo={} norte={} sur={} este={} oeste={}",
+                    uuid8(v), str(v.getVillagerData().getProfession()), p.toShortString(),
+                    level.getBlockState(p.below()).getBlock(), level.getBlockState(p).getBlock(),
+                    level.getBlockState(p.north()).getBlock(), level.getBlockState(p.south()).getBlock(),
+                    level.getBlockState(p.east()).getBlock(), level.getBlockState(p.west()).getBlock());
+            for (BlockPos destino : new BlockPos[]{
+                    new BlockPos(1442, 120, 1401),   // fuera, al oeste de la compuerta
+                    new BlockPos(1443, 120, 1401),   // la compuerta (abierta)
+                    new BlockPos(1444, 120, 1401),   // justo dentro
+                    new BlockPos(1445, 120, 1401),   // dentro, 2
+                    new BlockPos(1446, 120, 1401),   // dentro, 3
+                    new BlockPos(1447, 120, 1401),   // dentro, 4 (la pared norte esta al este de aqui)
+                    new BlockPos(1447, 120, 1403),   // dentro, bajando
+                    new BlockPos(1447, 120, 1405),   // dentro, abajo
+                    new BlockPos(1450, 120, 1405),   // junto a la cama
+                    new BlockPos(1452, 120, 1404)} ) { // al lado de la cabecera
+                DevilRpg.LOGGER.info("[Arnes]   RUTA a {} -> {}", destino.toShortString(),
+                        rutaDetallada(v, destino));
+            }
+            BlockPos compuerta = new BlockPos(1443, 120, 1401);
+            var est = level.getBlockState(compuerta);
+            DevilRpg.LOGGER.info("[Arnes]   COMPUERTA {}: bloque={} colision={} arriba={} abajo={}",
+                    compuerta.toShortString(), est.getBlock(),
+                    est.getCollisionShape(level, compuerta).isEmpty() ? "vacia" : "NO vacia",
+                    level.getBlockState(compuerta.above()).getBlock(),
+                    level.getBlockState(compuerta.below()).getBlock());
+            break;
+        }
+    }
+
+    /** La posición de un texto "x, y, z" (el que imprime `BlockPos.toShortString`). */    private static BlockPos posDe(String texto) {
         java.util.regex.Matcher m = java.util.regex.Pattern.compile("(-?\\d+), ?(-?\\d+), ?(-?\\d+)").matcher(texto);
         if (!m.find()) {
             return CENTRO;

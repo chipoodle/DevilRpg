@@ -109,19 +109,39 @@ Los DOS granjeros de la captura **salen del bancal por la compuerta y duermen en
 pérdida de cama en toda la noche (antes, una cada 60 s).
 
 
---- 6) LO QUE QUEDA (dicho claramente): el HERRERO, y es OTRA cosa --------------------------------
-El que sigue sin cama es el **herrero de herramientas**, y no por el bucle: sus camas libres cercanas están
-**tapiadas**. Sonda de rutas y mapa de bloques del guardado:
+--- 6) EL HERRERO: EL PLANIFICADOR NO LE DEJABA DAR LOS DOS ÚLTIMOS PASOS (y se le acuesta) ------
+Lo pidió el jugador después: "corrige esto: el herrero de herramientas sigue sin cama". Con la regla de (5) —solo camas
+alcanzables— el herrero se quedaba SIN NINGUNA. La sonda de rutas del arnés, celda a celda, encontró por qué:
 
-[Arnes] SIN CAMA 9e0ed6e3 toolsmith pos=1455, 120, 1404
-[Arnes]   CAMA CANDIDATA 1452, 120, 1405 ... a1=3n alcance=NO fin=1454, 120, 1405 dFin=2.00 dist=2.98
-          (y las demás libres, a 5-12 bloques del final de su ruta)
+[Arnes] SONDA 9e0ed6e3 toolsmith pos=1455, 120, 1404 debajo=grass_block suelo=air norte=air sur=oak_fence ...
+[Arnes]   RUTA a 1442, 120, 1401 -> a1=19n alcance=SI fin=1442, 120, 1400 dFin=1.00     (llega a la puerta de la casa)
+[Arnes]   RUTA a 1445, 120, 1401 -> a1=22n alcance=SI fin=1444, 120, 1401 dFin=1.00     (y ENTRA)
+[Arnes]   RUTA a 1447, 120, 1405 -> a1=25n alcance=SI fin=1447, 120, 1404 dFin=1.00     (llega al dormitorio)
+[Arnes]   RUTA a 1450, 120, 1405 -> a1=10n alcance=NO fin=1450, 120, 1408 dFin=3.00     (¡no llega a la cama!)
+[Arnes]   RUTA a 1452, 120, 1404 -> a1=2n alcance=NO fin=1454, 120, 1404 dFin=2.00
+[Arnes]   COMPUERTA 1443, 120, 1401: bloque=oak_door colision=NO vacia arriba=oak_door abajo=cobblestone
+          (es una PUERTA de madera: el aldeano la abre solo; el mapita anterior la pintaba "O" de Oak door)
 
-  y=120 alrededor de la cama:  ... | cobblestone(x=1453) | . (x=1454, donde está él) | oak_fence | ...
-  la cama está en (1451-1452), con un MURO de adoquín en x=1453 y el único hueco al lado tapado por vallas.
+O sea: entra en la casa (25 nodos, hasta `1447,120,1404`, ya en el dormitorio) pero el planificador NO le acerca a los
+**2,0** bloques que pide `SleepInBed` para acostarse: las rutas a las celdas de al lado de su cama (que está a **0,87**
+de donde trabaja) acaban a **2,00** y **3,00** bloques. Y como no llega, vanilla le borra la cama a los 60 s (I43).
 
-Su ruta acaba a **2,00** bloques de la cama y `SleepInBed` exige **menos de 2,0** para acostarse: no se dormiría ni
-llegando. Con el arreglo **no se le da esa cama** (no es alcanzable) y no entra en el bucle de los 60 s, pero se queda
-sin cama: es una **cama sin acceso** —un problema de construcción/mobiliario del pueblo, no del reparto— y queda
-**pendiente** como tal (candidato: que el reparador del pueblo garantice el acceso a cada cama, o que el latido no
-cuente como cama una que no tiene hueco para acostarse).
+El diagnóstico dentro del reparto lo confirmó, y de paso enseñó un fallo de MI comprobación:
+
+[Village] DIAG 9e0ed6e3: 1452, 120, 1405 no llega (fin 1454, 120, 1405) y SIN celda de espera
+
+...porque la línea de visión apuntaba **al centro de la cama**, así que el raycast chocaba con **la cama misma** y daba
+por bloqueadas todas las celdas. Con la cama excluida del raycast (solo bloquea un muro de verdad), el arreglo entero:
+
+[Village] 9e0ed6e3 no llega a su cama por el camino del juego: se le da 1452, 120, 1405 y se le mandara a
+          1449, 120, 1405 para acostarle
+[Arnes] CAMA 9e0ed6e3 prof=toolsmith home=1452, 120, 1405 poi=SI bloque=white_bed OCCUPIED=true
+        durmiendoEnElla=[EL MISMO] durmiendo=true REST=true pos=1452, 120, 1405
+[Arnes] CAMAS RESUMEN: adultos=11 conCama=11 (camas distintas ocupadas=11) COMPARTIDAS=0 SIN CAMA=0
+[Arnes] PERDIDA-TICK: 0 en toda la corrida
+
+El pueblo ENTERO con cama (los 11 adultos) y el herrero durmiendo en la suya. Las tres piezas: **celda de espera**
+(`celdaParaAcostarse`), **llevarle** a ella en el latido, y **acostarle** (`acostarAlQueNoLlega` →
+`LivingEntity.startSleeping`, la misma llamada que usa el juego) cuando la tiene a la vista y a menos de 6 bloques. No
+hay teletransporte: el aldeano llega **andando** a esa celda.
+

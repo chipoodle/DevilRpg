@@ -2007,6 +2007,9 @@ public final class VillageManager {
         // Y CADA ALDEANO, CON SU CAMA (lo vio el jugador: dos granjeros con la etiqueta "Sin cama" y de pie en la
         // huerta toda la noche, con la aldea llena de camas libres).
         reclamarCamasDelPueblo(level, aldeanos, center);
+        // Y AL QUE NO CONSIGUE DAR EL ÚLTIMO PASO A SU CAMA (el planificador no le acerca a los 2,0 que pide el
+        // juego para acostarse), SE LE ACOSTA: ver `acostarAlQueNoLlega`.
+        acostarAlQueNoLlega(level, aldeanos);
         // Y EL QUE SE QUEDA DENTRO DE UNA CASA: si lleva 30 s sin moverse de celda en un piso (o un sótano), se le baja
         // a la plaza (ver `rescatarAldeanosAtrapados`).
         rescatarAldeanosAtrapados(level, aldeanos, center);
@@ -2714,6 +2717,14 @@ public final class VillageManager {
 
     /** Radio en el que se busca cama para un aldeano sin cama (el mismo que usa vanilla para adquirir POIs). */
     private static final int RADIO_CAMA = 48;
+    /** Hasta dónde se le deja quedarse de su cama para acostarle desde el latido (bloques): ver `acostarAlQueNoLlega`. */
+    private static final int RADIO_ACOSTARSE = 6;
+    /**
+     * <b>Celda de espera</b> de cada aldeano al que se le ha dado una cama a la que el planificador no llega: la celda
+     * (a la que SÍ llega y desde la que ve la cama) a la que se le manda para acostarle. Se calcula al darle la cama y
+     * se usa en {@link #acostarAlQueNoLlega}.
+     */
+    private static final Map<UUID, BlockPos> ESPERA_PARA_DORMIR = new java.util.concurrent.ConcurrentHashMap<>();
     /** Cuántas camas se prueban antes de rendirse (las más cercanas <b>al aldeano</b>): con 8 sobra en una aldea. */
     private static final int CAMAS_A_PROBAR = 8;
 
@@ -2826,10 +2837,22 @@ public final class VillageManager {
                 continue;
             }
             if (camino.canReach()) {
+                ESPERA_PARA_DORMIR.remove(villager.getUUID()); // llega solo: no hace falta celda de espera
                 return cama; // la buena: llega de verdad
             }
             if (!encerrado) {
-                continue; // no llega y no está encerrado: esa cama no es para él
+                // No llega por el camino del juego: ¿puede al menos ACERCARSE a una celda desde la que se le pueda
+                // acostar (I43)? Si sí, se le da la cama y el latido lo lleva y lo acuesta; si no, esta cama no es
+                // para él (le costaría el HOME a los 60 s).
+                BlockPos espera = celdaParaAcostarse(level, villager, cama);
+                if (espera == null) {
+                    continue;
+                }
+                ESPERA_PARA_DORMIR.put(villager.getUUID(), espera);
+                DevilRpg.LOGGER.info("[Village] {} no llega a su cama por el camino del juego: se le da {} y se le"
+                                + " mandara a {} para acostarle", villager.getUUID(), cama.toShortString(),
+                        espera.toShortString());
+                return cama;
             }
             // Encerrado en un bancal: se guarda la que MÁS se acerca, medida por dónde acaba su ruta.
             double distanciaAlFinal = camino.getEndNode() == null ? Double.MAX_VALUE
@@ -2849,9 +2872,106 @@ public final class VillageManager {
         return mejorSinLlegar;
     }
 
+    /**
+     * <b>La celda de espera</b>: la más cercana a la cama a la que el aldeano <b>sí llega</b> y desde la que
+     * <b>ve la cama</b> (para poder acostarle desde ahí). {@code null} si no hay ninguna.
+     * <p>
+     * Hace falta porque el <b>planificador del juego</b> a veces no le deja dar los <b>últimos pasos</b> a una cama que
+     * tiene a la vista: <b>medido con el arnés</b> (sonda de rutas celda a celda) en la partida del jugador, con el
+     * herrero de herramientas, su cama libre estaba a <b>0,87</b> bloques, entraba en la casa (25 nodos hasta
+     * `1447,120,1404`, dentro del dormitorio) y desde ahí las rutas a las celdas de al lado de la cama acababan a
+     * <b>2,00</b> y <b>3,00</b> bloques ({@code SleepInBed} exige <b>menos de 2,0</b> para acostarse). Se prueba de la
+     * más cercana a la más lejana y se para en la primera que valga (que suele estar a 2-3 celdas de la cama).
+     */
+    @Nullable
+    private static BlockPos celdaParaAcostarse(ServerLevel level, Villager villager, BlockPos cama) {
+        List<BlockPos> candidatas = new ArrayList<>();
+        for (BlockPos q : BlockPos.betweenClosed(cama.offset(-RADIO_ACOSTARSE, -1, -RADIO_ACOSTARSE),
+                cama.offset(RADIO_ACOSTARSE, 1, RADIO_ACOSTARSE))) {
+            double d = q.distSqr(cama);
+            if (d < 1.0D || d > (double) (RADIO_ACOSTARSE * RADIO_ACOSTARSE)) {
+                continue; // la propia cama no vale (es a la que no llega), ni nada más lejos del radio
+            }
+            candidatas.add(q.immutable());
+        }
+        candidatas.sort(Comparator.comparingDouble(p -> p.distSqr(cama)));
+        for (BlockPos celda : candidatas) {
+            if (!tieneVistaLibre(level, celda, cama, villager)) {
+                continue; // hay un muro en medio: desde ahí no se le puede acostar
+            }
+            var camino = villager.getNavigation().createPath(celda, 1);
+            if (camino != null && camino.canReach()) {
+                return celda;
+            }
+        }
+        return null;
+    }
+
+    /** ¿Se ve la cama desde esa celda <b>sin nada sólido en medio</b>? (no se acuesta a nadie a través de un muro) */
+    private static boolean tieneVistaLibre(ServerLevel level, BlockPos desde, BlockPos cama, Villager villager) {
+        Vec3 ojo = new Vec3(desde.getX() + 0.5D, desde.getY() + 1.0D, desde.getZ() + 0.5D);
+        Vec3 objetivo = new Vec3(cama.getX() + 0.5D, cama.getY() + 0.5D, cama.getZ() + 0.5D);
+        var choque = level.clip(new net.minecraft.world.level.ClipContext(ojo, objetivo,
+                net.minecraft.world.level.ClipContext.Block.COLLIDER,
+                net.minecraft.world.level.ClipContext.Fluid.NONE, villager));
+        if (choque.getType() == net.minecraft.world.phys.HitResult.Type.MISS) {
+            return true; // sin nada en medio
+        }
+        // OJO: la mirada acaba DENTRO del bloque de la cama, así que el rayo choca con ella misma. La cama no cuenta
+        // como obstáculo (si contara, no habría ni una celda con vista y el aldeano se quedaría sin cama: medido); lo
+        // que bloquea de verdad es un muro, y eso se ve porque el bloque golpeado no es una cama.
+        return choque instanceof net.minecraft.world.phys.BlockHitResult golpe
+                && level.getBlockState(golpe.getBlockPos()).is(BlockTags.BEDS);
+    }
+
+    /**
+     * <b>EL QUE NO CONSIGUE DAR EL ÚLTIMO PASO A SU CAMA: EL PUEBLO LE LLEVA Y LE ACOSTA.</b>
+     * <p>
+     * Si el aldeano está en su hora de descanso, tiene cama, la cama está <b>libre</b>, la tiene <b>a la vista</b> y a
+     * menos de {@link #RADIO_ACOSTARSE} bloques, se le acuesta con la misma llamada que usa el juego
+     * ({@code LivingEntity.startSleeping}, que además marca la cama como ocupada). Y si aún no está cerca, se le manda
+     * a la <b>celda de espera</b> ({@link #ESPERA_PARA_DORMIR}) desde la que sí se puede —el planificador no le lleva
+     * a la cama, pero sí a esa celda—. Es el remate del caso medido del <b>herrero de herramientas</b>: entraba en el
+     * dormitorio y se quedaba de pie toda la noche a 2 bloques de su cama, y —peor— vanilla se la borraba a los 60 s
+     * por no llegar (I43).
+     */
+    private static void acostarAlQueNoLlega(ServerLevel level, List<Villager> aldeanos) {
+        for (Villager villager : aldeanos) {
+            if (villager.isBaby() || villager.isSleeping() || !estaDescansando(villager)) {
+                continue;
+            }
+            Optional<GlobalPos> suya = villager.getBrain().getMemory(MemoryModuleType.HOME);
+            if (suya.isEmpty()) {
+                continue;
+            }
+            BlockPos cama = suya.get().pos();
+            BlockState estado = level.getBlockState(cama);
+            if (!estado.is(BlockTags.BEDS) || estado.getValue(BedBlock.OCCUPIED)) {
+                continue; // la cama ya no está (o la ocupa otro): que lo arregle el reparto
+            }
+            if (villager.blockPosition().distSqr(cama) > (double) (RADIO_ACOSTARSE * RADIO_ACOSTARSE)
+                    || !tieneVistaLibre(level, villager.blockPosition(), cama, villager)) {
+                // Todavía no está donde se le puede acostar: se le manda a su CELDA DE ESPERA. El planificador no le
+                // lleva a la cama (por eso está sin dormir), pero a esa celda SÍ.
+                BlockPos espera = ESPERA_PARA_DORMIR.get(villager.getUUID());
+                if (espera != null) {
+                    caminarHacia(villager, espera, 0.6F);
+                    ponerActividad(villager, "Yendo a dormir");
+                }
+                continue;
+            }
+            ESPERA_PARA_DORMIR.remove(villager.getUUID());
+            villager.startSleeping(cama);
+            DevilRpg.LOGGER.info("[Village] {} no llegaba a su cama por el camino del juego (esta a {} bloque(s) y la"
+                            + " tiene a la vista): el pueblo le acuesta en {}",
+                    villager.getUUID(),
+                    Math.round(Math.sqrt(villager.distanceToSqr(cama.getX() + 0.5D, cama.getY() + 0.5D,
+                            cama.getZ() + 0.5D))), cama.toShortString());
+        }
+    }
+
     /** ¿Ese aldeano está <b>metido en un bancal</b> (cercado con valla y con las compuertas cerradas)? */
-    private static boolean estaEnUnBancal(ServerLevel level, Villager villager, BlockPos center) {
-        int cota = VillageGenerator.cotaDeLaPlaza(level, center);
+    private static boolean estaEnUnBancal(ServerLevel level, Villager villager, BlockPos center) {        int cota = VillageGenerator.cotaDeLaPlaza(level, center);
         for (int i = 0; i < VillageGenerator.parcelasDeGranja(); i++) {
             if (VillageGenerator.estaDentroDeLaParcela(center, i, cota, villager.blockPosition())) {
                 return true;
