@@ -189,6 +189,26 @@ public final class VillageManager {
     /** Tiempo de hambre continua (ticks) antes de que se muera un aldeano: 10 min. */
     private static final long STARVATION_DEATH_TICKS = 10L * 60L * 20L;
 
+    /**
+     * <b>Cuánto aguanta el sello a un intruso antes de rechazarlo</b> (2 min). En ese rato el que defiende es el
+     * <b>pueblo</b> (la milicia): el sello solo actúa si el bicho <b>sigue dentro</b>, que es la red de seguridad que
+     * impide que uno solo deje la aldea congelada para siempre (ver {@code expulsarHostilesDeLaAldea}). Es lo que
+     * hace que la defensa se <b>vea</b>: antes el sello lo echaba en el primer latido (10 s) y un agresivo que entraba
+     * andando desaparecía sin pelea.
+     */
+    private static final long SELLO_ANTES_DE_EXPULSAR_TICKS = 2L * 60L * 20L;
+    /**
+     * Desde cuándo lleva <b>cada intruso dentro</b> de una aldea protegida (el {@code gameTime} de la primera vez que
+     * se le vio dentro). Se olvida en cuanto sale (o muere): el reloj del sello no corre si el bicho sale y vuelve.
+     * <p>
+     * La clave lleva <b>la aldea</b>: el latido de una aldea solo puede limpiar (y mirar) lo <b>suyo</b>; si no, el
+     * latido de la aldea de al lado borraría el reloj de un intruso de ésta y éste no se rechazaría nunca.
+     */
+    private record Intruso(int aldea, UUID uuid) {
+    }
+
+    private static final Map<Intruso, Long> INTRUSOS_DENTRO = new java.util.concurrent.ConcurrentHashMap<>();
+
     // --- Obrero de la aldea (Iteración 3, A1) ------------------------------------------------------
 
     /** Marca (en los datos persistentes del aldeano) del que es el <b>obrero</b> de la aldea. */
@@ -888,18 +908,32 @@ public final class VillageManager {
      * dentro para siempre —y con uno dentro, {@code hayEnemigosDentro} cortaba el latido entero (I11), así que el
      * pueblo se congelaba—.
      * <p>
+     * <b>PERO EL SELLO NO ES LO PRIMERO: PRIMERO DEFIENDE EL PUEBLO.</b> Antes esto expulsaba <b>en el acto</b> (el
+     * latido es cada 10 s), así que un agresivo que <b>entraba andando</b> de día desaparecía de la aldea antes de que
+     * nadie lo tocara: el jugador lo vio y lo cantó como lo que es —*"llegaron unos zombies agresivos durante el día
+     * a la aldea, pero no pasó mucho tiempo y fueron teletransportados a fuera; esto se ve antinatural"*—. Ahora el
+     * sello <b>espera</b> {@link #SELLO_ANTES_DE_EXPULSAR_TICKS} (2 min) con el intruso dentro: en ese rato la
+     * <b>milicia</b> lo ve y va a por él (los guardias persiguen a cualquier monstruo que esté <b>dentro del
+     * recinto</b>, aunque esté lejos: ver {@code VillagerGuardGoal.buscarEnemigo}) y el bicho se muere como cualquier
+     * otro. Solo si <b>sigue dentro</b> pasado ese tiempo —nadie ha podido con él: está en un tejado, dentro de una
+     * casa, en un hueco— el sello lo <b>rechaza</b>, que es la red de seguridad que impide que un solo bicho deje el
+     * pueblo congelado para siempre.
+     * <p>
      * Se mira solo lo que está <b>a la altura del pueblo</b> (recinto en XZ + banda sobre la cota, como cualquier
      * recuento de I11): un bicho en una cueva 20 bloques por debajo no está "dentro de la aldea" y no se toca. Se
-     * dejan en paz los <b>aldeanos-zombi</b> (una curación en marcha es cosa del jugador) y no se corre con un asedio
-     * activo (ésos son los asediadores, que están ahí a propósito). Se les echa <b>fuera del muro</b>, en su misma
-     * dirección y con el portal de la marca: no se les mata, así que no hay botín gratis y la horda puede volver
-     * andando, que es como está pensado.
+     * dejan en paz los <b>aldeanos-zombi</b> (una curación en marcha es cosa del jugador), no se corre con un asedio
+     * activo (ésos son los asediadores, que están ahí a propósito) ni con una <b>horda del mundo</b> en curso
+     * ({@code isUnderAttack} cubre las dos: mientras la aldea está siendo atacada, el sello no toca a nadie). Se les
+     * echa <b>fuera del muro</b>, en su misma dirección y con el portal de la marca: no se les mata, así que no hay
+     * botín gratis y la horda puede volver andando, que es como está pensado.
      *
      * @return cuántos ha expulsado
      */
     private static int expulsarHostilesDeLaAldea(ServerLevel level, BlockPos center, int objectiveIndex) {
         int cota = VillageGenerator.cotaDeLaPlaza(level, center);
         double fueraDelMuro = VillageGenerator.FENCE_RADIUS + 6.0D;
+        long ahora = level.getGameTime();
+        java.util.Set<Intruso> vistosDentro = new HashSet<>();
         int expulsados = 0;
         for (Monster bicho : level.getEntitiesOfClass(Monster.class,
                 new AABB(center).inflate(VillageGenerator.FENCE_RADIUS + 8.0D, 24.0D,
@@ -909,6 +943,13 @@ public final class VillageManager {
             }
             if (!dentroDelRecinto(cota, center, bicho, VillageGenerator.FENCE_RADIUS)) {
                 continue; // en XZ sí, pero en una cueva de debajo: no está "dentro"
+            }
+            vistosDentro.add(new Intruso(objectiveIndex, bicho.getUUID()));
+            // ¿DESDE CUÁNDO ESTÁ DENTRO? Mientras no lleve aquí SELLO_ANTES_DE_EXPULSAR_TICKS, el que trabaja es el
+            // pueblo (la milicia), no el sello: es lo que hace que la defensa se VEA.
+            long desde = INTRUSOS_DENTRO.computeIfAbsent(new Intruso(objectiveIndex, bicho.getUUID()), k -> ahora);
+            if (ahora - desde < SELLO_ANTES_DE_EXPULSAR_TICKS) {
+                continue;
             }
             double dx = bicho.getX() - (center.getX() + 0.5D);
             double dz = bicho.getZ() - (center.getZ() + 0.5D);
@@ -922,11 +963,20 @@ public final class VillageManager {
             }
             level.sendParticles(net.minecraft.core.particles.ParticleTypes.SCULK_SOUL,
                     bicho.getX(), bicho.getY() + 1.0D, bicho.getZ(), 12, 0.3D, 0.5D, 0.3D, 0.02D);
+            level.playSound(null, bicho.blockPosition(), net.minecraft.sounds.SoundEvents.SCULK_SHRIEKER_SHRIEK,
+                    net.minecraft.sounds.SoundSource.BLOCKS, 0.7F, 1.2F);
             expulsados++;
         }
+        // Se olvida SOLO lo de ESTA aldea (el latido de una aldea no puede tocar el reloj de las demás) que ya no
+        // está dentro: el bicho que salió (o murió) vuelve a empezar de cero si vuelve a entrar.
+        INTRUSOS_DENTRO.keySet().removeIf(k -> k.aldea() == objectiveIndex && !vistosDentro.contains(k));
         if (expulsados > 0) {
-            DevilRpg.LOGGER.info("[Village] Aldea {}: el sello ha expulsado a {} hostil(es) que estaban dentro",
-                    objectiveIndex, expulsados);
+            DevilRpg.LOGGER.info("[Village] Aldea {}: el sello ha expulsado a {} hostil(es) que llevaban {} s dentro"
+                            + " (la milicia no pudo con ellos)", objectiveIndex, expulsados,
+                    SELLO_ANTES_DE_EXPULSAR_TICKS / 20);
+            // Y SE DICE, que es lo que hace que no parezca un teletransporte raro: el jugador tiene que saber que fue
+            // el sello (y por qué) y no un bicho que desaparece solo.
+            announceNearby(level, center, "El sello de la aldea ha rechazado a los intrusos.");
         }
         return expulsados;
     }

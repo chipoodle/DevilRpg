@@ -1366,6 +1366,42 @@ otra`).
 > espera bien elegida) el aldeano duerme; y si no hay ninguna cama alcanzable, el reparto lo deja **sin `HOME`**, que
 > es mejor que dejarlo clavado: sin cama el cerebro no lo manda a ninguna parte y puede seguir con su faena.
 
+### I59 · El SELLO no es lo primero: primero DEFIENDE el pueblo (y el rechazo se VE)
+
+El jugador: *"llegaron unos zombies agresivos durante el día a la aldea, pero no pasó mucho tiempo y fueron
+teletransportados a fuera. Esto se ve antinatural"*.
+
+**Medido en su log** (aldea 2, protegida): el sello expulsaba **en cada latido** —`el sello ha expulsado a 1
+hostil(es) que estaban dentro` a las 12:08:06, 12:08:16, 12:08:26, 12:08:36… toda la sesión, y también `7` y `2` de
+una vez—, o sea que un bicho que **entraba andando** desaparecía **antes del latido siguiente** (10 s), sin que
+**nadie** de la aldea lo tocara.
+
+**Por qué existía (y hay que conservarlo).** El aura del sello corta los **spawns**, pero no a los que **ya están
+dentro** (los que entraron antes de vencer el asedio, los que se cuelan por un portón abierto, los que se cargan del
+guardado) y con uno dentro `hayEnemigosDentro` **corta el latido entero** (I12/I46) → el pueblo se queda congelado.
+La expulsión era la **red de seguridad** de eso.
+
+**Regla (lo que cambia, sin tocar lo demás):**
+1. **Primero la milicia.** El sello **espera** `SELLO_ANTES_DE_EXPULSAR_TICKS` (2 min) con el intruso dentro. En ese
+   rato el que trabaja es el pueblo: los guardias **persiguen a cualquier monstruo que esté dentro del recinto
+   aunque esté lejos** (`VillagerGuardGoal.buscarEnemigo`: si no hay nadie en sus 16 bloques, se mira **todo el
+   recinto**; el **aldeano-zombi** se queda fuera de esa búsqueda larga a propósito, que puede ser una curación en
+   marcha del jugador). Así la defensa **se ve**, que es lo que el jugador pedía.
+2. **Solo si sigue dentro** pasado ese tiempo, el sello lo **rechaza**: fuera del muro, en su misma dirección y **sin
+   matarlo** (no hay botín gratis y la horda puede volver andando), con sus partículas, un **chillido** de sculk y un
+   aviso al jugador (*"El sello de la aldea ha rechazado a los intrusos."*). El rechazo tiene que **leerse** como lo
+   que es: un bicho que se esfuma sin explicación es lo que parecía un bug.
+3. **Nada más se toca.** Los **asedios** (el del jugador y las **hordas del mundo**) siguen igual: mientras
+   `isUnderAttack` es cierto **no se expulsa a nadie** (ésos están ahí a propósito, y la aldea tiene que pelear); y
+   los zombis agresivos, sus reglas de spawn, su escalado y su botín **no cambian**.
+4. El reloj del sello es **por aldea y por bicho** (`Intruso(aldea, uuid)`) y se olvida en cuanto el bicho **sale o
+   muere**: si vuelve a entrar, cuenta de cero. Ojo con limpiarlo **solo** de la aldea que está mirando: el latido de
+   una aldea no puede borrar el reloj de un intruso de la vecina (si no, ésa nunca lo rechazaría).
+
+**No tiene regla en el lint** (es un temporizador y dos búsquedas, no un patrón de texto): se comprueba en el log
+(`el sello ha expulsado a N hostil(es) que llevaban 120 s dentro (la milicia no pudo con ellos)`, que ya **no**
+aparece en cada latido) y en juego (el bicho se queda y lo mata la guardia).
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 

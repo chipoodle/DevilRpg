@@ -22,6 +22,7 @@ import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.attachment.AttachmentType;
 import org.jetbrains.annotations.Nullable;
 
@@ -440,6 +441,35 @@ public class VillagerGuardGoal extends Goal {
             double dist = villager.distanceToSqr(monstruo);
             if (dist < mejorDist) {
                 mejorDist = dist;
+                mejor = monstruo;
+            }
+        }
+        if (mejor != null) {
+            return mejor;
+        }
+        // NADIE CERCA, PERO HAY UN INTRUSO DENTRO DE LA ALDEA: va a por él aunque esté lejos. Sin esto, un agresivo
+        // que entra al pueblo por la esquina contraria a la ronda no lo veía ningún guardia (el escaneo son 16
+        // bloques alrededor de cada uno) y el único que "defendía" era el SELLO, que lo teletransportaba fuera en el
+        // primer latido: el jugador lo vio y lo reportó como antinatural (ver `expulsarHostilesDeLaAldea`, I59). Ahora
+        // la milicia cruza el pueblo a por él, que es lo que se espera de una guardia.
+        //
+        // El aldeano-zombi se queda FUERA de esta búsqueda larga a propósito: puede ser una curación en marcha del
+        // jugador y no se le va a mandar la milicia encima desde el otro extremo del pueblo (de cerca, como siempre,
+        // sí entra en la lista de arriba).
+        int cota = VillageGenerator.cotaDeLaPlaza(level, center);
+        double mejorLejos = RADIO_PERSEGUIR * RADIO_PERSEGUIR;
+        for (Monster monstruo : level.getEntitiesOfClass(Monster.class, new AABB(center)
+                .inflate(VillageGenerator.FENCE_RADIUS + 8.0D, 24.0D, VillageGenerator.FENCE_RADIUS + 8.0D))) {
+            if (!monstruo.isAlive() || monstruo.isRemoved()
+                    || monstruo instanceof net.minecraft.world.entity.monster.ZombieVillager) {
+                continue;
+            }
+            if (!VillageManager.dentroDelRecinto(cota, center, monstruo, VillageGenerator.FENCE_RADIUS)) {
+                continue; // fuera del recinto no es asunto de la guardia (dejaría la puerta sola)
+            }
+            double dist = villager.distanceToSqr(monstruo);
+            if (dist < mejorLejos) {
+                mejorLejos = dist;
                 mejor = monstruo;
             }
         }

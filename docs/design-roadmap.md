@@ -3025,6 +3025,31 @@ que Zacarías acabe durmiendo en una cama de la planta baja.
 > pasa por `celdaLibreParaAcostarse` (aire, hueco de cabeza y suelo firme). Y el *síntoma* (quieto con la etiqueta
 > del mod puesta) es **I5**: de noche el cerebro le escribe el destino a su `HOME` y pisa el del goal.
 
+### 3b.71 El sello teletransportaba a los intrusos en el acto (y la defensa no se veía)
+
+El jugador: *"llegaron unos zombies agresivos durante el día a la aldea, pero no pasó mucho tiempo y fueron
+teletransportados a fuera. Esto se ve antinatural. ¿Por qué sucede? Corrígelo pero que no rompa otras mecánicas
+relacionadas con las hordas o zombies agresivos"*.
+
+**MEDIDO en su log** (aldea 2, protegida): el sello expulsaba **en cada latido** (`el sello ha expulsado a 1
+hostil(es) que estaban dentro`, 12:08:06 → 12:22:56, cada 10 s; también 7 y 2 de una vez) → un agresivo que entraba
+andando desaparecía **antes del latido siguiente**, sin que la milicia lo tocara.
+
+**Por qué pasaba**: la expulsión se añadió (etapa H) porque con un hostil dentro `hayEnemigosDentro` **corta el
+latido entero** (I12) y el pueblo se quedaba congelado, y el aura del sello solo corta los **spawns**, no a los que ya
+están dentro. El problema no era la red de seguridad, era que **actuaba primero**: a los 10 s el bicho ya no estaba.
+
+**ARREGLO** (I59):
+- **Espera de 2 min** (`SELLO_ANTES_DE_EXPULSAR_TICKS`) antes de rechazar a nadie: en ese rato defiende el **pueblo**.
+- **La milicia persigue a cualquier monstruo dentro del recinto aunque esté lejos** (`VillagerGuardGoal.buscarEnemigo`
+  mira todo el recinto si no hay nadie en sus 16 bloques; el aldeano-zombi queda fuera de esa búsqueda larga para no
+  mandar la guardia sobre una curación en marcha).
+- **El rechazo se lee**: partículas, chillido de sculk y aviso al jugador (*"El sello de la aldea ha rechazado a los
+  intrusos."*), en vez de un bicho que se esfuma.
+- **Lo demás, intacto**: con `isUnderAttack` (asedio del jugador **o horda del mundo**) **no se expulsa a nadie**, y
+  no se toca ni el spawn, ni el escalado, ni el botín de los zombis agresivos.
+- El reloj es **por aldea y por bicho** y se olvida cuando el bicho sale o muere.
+
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.
