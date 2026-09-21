@@ -83,10 +83,21 @@ public class VillagerFarmGoal extends Goal {
      * tiraba al suelo en cuanto pasaba de {@link #SEMILLAS_MAX}: el compostero NUNCA se llenaba (nadie le echaba
      * nada), así que no había harina de huesos y el abono se quedaba sin hacer.
      */
-    private static final int SEMILLAS_PARA_COMPOSTAR = 16;
-    /** Semillas que echa al compostero por visita (no se queda plantado allí). */
-    private static final int COMPOSTAR_MAX = 16;
-    /** Si la despensa tiene MÁS semillas que esto, se lleva unas cuantas para el compostero. */
+    private static final int SEMILLAS_PARA_COMPOSTAR = 64;
+    /**
+     * Semillas que echa al compostero por visita (no se queda plantado allí). <b>Eran 16 y no daban abasto</b>: el
+     * jugador vio la despensa llena de semillas (*"se están acumulando demasiadas semillas; lo ideal es que 2/3 partes
+     * las ocupen los mismos granjeros para hacer composta y acelerar el proceso de cosecha"*) y, medido en su
+     * guardado, había <b>261 semillas de trigo y 425 de betabel</b> (686) con los granjeros echando 16 por viaje: el
+     * grifo del recolector abierto y el desagüe del compostero tapado. Con 64 por viaje y tres granjeros, el montón
+     * baja de verdad (cada visita saca varias harinas de hueso).
+     */
+    private static final int COMPOSTAR_MAX = 64;
+    /**
+     * Si la despensa tiene MÁS semillas que esto, se lleva unas cuantas para el compostero: es la <b>reserva de
+     * siembra</b> (los tres bancales necesitan ~27 semillas), así que todo lo que pase de aquí acaba en <b>composta</b>
+     * —que es justo lo que pidió el jugador: que la mayor parte de las semillas las gasten los granjeros—.
+     */
     private static final int SEMILLAS_SOBRANTES_EN_DESPENSA = 32;
     /**
      * Hogazas como mucho por visita (para que se le vea trabajar). Con el lote de 8 unidades que ahora se lleva,

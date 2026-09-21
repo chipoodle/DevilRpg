@@ -1688,6 +1688,21 @@ reducirla a 16x16 con nearest).
 **De dónde salen los huevos**: de las **gallinas del corral** (el recolector barre los huevos y los sube al almacén, y
 de ahí pasan a la despensa). Con el tope de las gallinas en 8 (I69) el pueblo tiene huevos de sobra.
 
+### I71 · Las semillas de sobra van a la COMPOSTA (no se apilan en la despensa)
+
+Lo vio el jugador: *"en la despensa se están acumulando demasiadas semillas; lo ideal es que 2/3 partes las ocupen los
+mismos granjeros para hacer composta y acelerar el proceso de cosecha"* (y dejó para después la idea de una sopa de
+semillas con cuenco del cocinero).
+
+**MEDIDO en su guardado**: la despensa tenía **261 semillas de trigo y 425 de betabel** (686) y los granjeros echaban
+al compostero **16 por viaje** (`COMPOSTAR_MAX`). El grifo (el **recolector**, que barre cada semilla que sueltan las
+cosechas) estaba abierto y el desagüe tapado: el montón solo podía crecer.
+
+**Regla**: cada granjero se lleva **64 semillas** por viaje al compostero (`COMPOSTAR_MAX`) en vez de 16, y la despensa
+solo guarda **`SEMILLAS_SOBRANTES_EN_DESPENSA` (32)** como **reserva de siembra** (los tres bancales necesitan ~27):
+todo lo que pase de ahí acaba en **harina de huesos**, que es lo que abona el plantío y acelera la cosecha. Con tres
+granjeros y 64 por viaje, el montón baja de verdad (cada visita saca varias harinas de hueso).
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
