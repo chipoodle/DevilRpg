@@ -140,8 +140,13 @@ public class VillagerFarmGoal extends Goal {
     private int stuckTicks;
     /** Distancia más corta lograda en este viaje: mientras baje, el granjero está avanzando. */
     private double mejorDistancia = Double.MAX_VALUE;
-    /** Turno del granjero cuando hay calva Y cultivo maduro: alterna una labrada y una cosecha (ver {@code canUse}). */
-    private boolean turnoDeLabrar;
+    /**
+     * Las <b>tres faenas de la tierra</b> que el granjero <b>rota</b> cuando hay varias a la vez: cosechar lo maduro,
+     * labrar la calva y <b>sembrar la celda vacía</b>. La rotación es lo que reparte el turno; ver {@code canUse}.
+     */
+    private static final Tarea[] FAENAS_DE_LA_TIERRA = {Tarea.COSECHAR, Tarea.LABRAR, Tarea.PLANTAR};
+    /** Turno del granjero entre las tres faenas de la tierra (ver {@code canUse}). */
+    private int turnoDeFaena;
     /**
      * <b>El bancal de ESTE granjero</b> (índice en {@code FARM_PLOTS}), o {@code -1} si todavía no se ha calculado en
      * esta salida. Sale de su <b>puesto de trabajo</b> (el compostero de su bancal: ver {@link #miParcela}).
@@ -257,36 +262,53 @@ public class VillagerFarmGoal extends Goal {
             target = VillagePantry.puntoDeApoyo(level, center);
             return true;
         }
-        // 3) Cultivo maduro: a cosecharlo. Y 3b) la CALVA del bancal (una celda pisoteada que tiene que volver a ser
-        //    tierra de cultivo: vanilla convierte la tierra de cultivo en tierra al saltar encima y, pegada al césped,
-        //    la tierra vuelve a ser césped). El granjero la VUELVE A LABRAR antes de sembrar: el que siembra es él, así
-        //    que es él quien tiene que dejar la parcela cultivable.
-        //    OJO CON EL ORDEN (lo reportó el jugador: "los granjeros deberían poder reponer su tierra de cultivo
-        //    cuando esta se estropea"): labrar iba SIEMPRE detrás de cosechar, y con TRES bancales siempre hay algo
-        //    maduro en alguno, así que el paso de labrar no se alcanzaba NUNCA y las calvas se quedaban en tierra para
-        //    siempre. Ahora, cuando hay calva Y cultivo maduro, el granjero ALTERNA una cosecha y una labrada: la
-        //    parcela se repara al momento y la cosecha no se para.
+        // 3) LAS TRES FAENAS DE LA TIERRA ROTAN: cosechar lo maduro, labrar la calva y SEMBRAR LA CELDA VACÍA.
+        //    La calva (una celda pisoteada que tiene que volver a ser tierra de cultivo) y el cultivo maduro ya
+        //    alternaban desde la etapa anterior, pero la SIEMBRA iba DETRÁS de las dos y no se alcanzaba NUNCA: con
+        //    los tres bancales (216 celdas) siempre hay algo maduro, así que el paso de sembrar no llegaba a correr
+        //    ni una vez, y las celdas que se quedan vacías —las que el propio juego cosecha sin sembrar (su faena
+        //    `HarvestFarmland` solo replanta si el aldeano lleva semillas) y las que alguien pisa— se quedaban
+        //    vacías PARA SIEMPRE. El jugador lo vio en su bancal: *"hay partes de la parcela que no tienen plantado
+        //    nada, se supone que los granjeros deben tener todas ocupadas"*. Medido en su guardado (aldea 2, cota
+        //    120): 16 celdas vacías entre los tres bancales (bancal 0: 8, bancal 1: 5, bancal 2: 3), todas
+        //    `farmland` con el hueco de arriba libre y casi todas en los carriles por los que se entra y se sale
+        //    del bancal; y en la aldea 0 (que lleva más tiempo sin verse) 147 de 216, o sea bancales enteros
+        //    vaciándose poco a poco.
         BlockPos maduro = buscarCultivo(level, true);
         BlockPos calva = buscarCalva(level);
-        turnoDeLabrar = !turnoDeLabrar;
-        if (calva != null && (turnoDeLabrar || maduro == null)) {
-            target = calva;
-            tarea = Tarea.LABRAR;
-            return true;
-        }
-        if (maduro != null) {
-            target = maduro;
-            tarea = Tarea.COSECHAR;
-            return true;
-        }
-        // 3) Tierra de cultivo vacía: a plantar. SOLO si lleva semillas EN LA MANO: `plantar()` las saca de su
-        // inventario, así que mandarlo a sembrar "porque en la despensa hay semillas" no hacía nada y lo dejaba en
-        // bucle igual que el paso 5 (si le faltan, el paso 5 lo manda a la despensa a por ellas).
-        if (tieneSemillas()) {
-            target = buscarTierraVacia(level);
-            if (target != null) {
-                tarea = Tarea.PLANTAR;
-                return true;
+        turnoDeFaena = (turnoDeFaena + 1) % FAENAS_DE_LA_TIERRA.length;
+        for (int intento = 0; intento < FAENAS_DE_LA_TIERRA.length; intento++) {
+            switch (FAENAS_DE_LA_TIERRA[(turnoDeFaena + intento) % FAENAS_DE_LA_TIERRA.length]) {
+                case COSECHAR -> {
+                    if (maduro != null) {
+                        target = maduro;
+                        tarea = Tarea.COSECHAR;
+                        return true;
+                    }
+                }
+                case LABRAR -> {
+                    if (calva != null) {
+                        target = calva;
+                        tarea = Tarea.LABRAR;
+                        return true;
+                    }
+                }
+                case PLANTAR -> {
+                    // SOLO si lleva semillas EN LA MANO: `plantar()` las saca de su inventario, así que mandarlo a
+                    // sembrar "porque en la despensa hay semillas" no hacía nada y lo dejaba en bucle igual que el
+                    // paso 6 (si le faltan, el paso 6 lo manda a la despensa a por ellas).
+                    if (tieneSemillas()) {
+                        BlockPos vacia = buscarTierraVacia(level);
+                        if (vacia != null) {
+                            target = vacia;
+                            tarea = Tarea.PLANTAR;
+                            return true;
+                        }
+                    }
+                }
+                default -> {
+                    // Las otras faenas (fertilizar, compostar...) no son de este turno.
+                }
             }
         }
         // 4) Cultivo creciendo: a fertilizar. SOLO si lleva harina de huesos encima, por el mismo motivo (si no la

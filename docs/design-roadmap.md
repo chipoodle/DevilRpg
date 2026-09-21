@@ -2858,6 +2858,80 @@ O sea: el juego **sigue** soltando lo suyo —su faena de granjero (`HarvestFarm
 54 s a 6 s) en vez de pudrirse. Lo único que se ve caer a propósito son las **semillas** que le sobran (el abono del
 compostero), y de ésas se encarga él al compostar o el recolector.
 
+### 3b.67 «La aldea pasa hambre» con la despensa LLENA: la cría que crece muere de hambre (y el aviso mentía)
+
+Lo reportó el jugador con **dos capturas**: la del cofre de la cocina **lleno de comida** (pan, trigo, zanahorias,
+patatas, betabel, pescado) y el cartel del chat *"La aldea pasa hambre: la despensa esta vacia."*: *"me dice que la
+aldea pasa hambre y que la despensa está vacía, sin embargo hay bastante comida"*.
+
+**MEDIDO en el guardado del jugador y su log** (`New World (1)`, aldea 2, centro `1414,1414`, cota 120; con
+`build/hambre_medida.py`, que vuelca la comida de cada aldea y la marca `DevilRpgUltimaComida` de cada aldeano):
+
+    log  04:01:17  [Village] Un aldeano de la aldea 2 ha muerto de hambre (19 min sin comer)
+                   Villager['Ubaldo (Sin oficio) Paseando'] en 1442.41,121,1439.93   <- el hueco de la escalera de la taberna
+                   [CHAT] La aldea pasa hambre: la despensa esta vacia.
+    log  03:54:42  [Village] Aldea 2: comida 64 puntos, 14 aldeanos, 29 camas, 11 raciones en el ultimo minuto
+    log  04:01:00  [Village] El pescador: minecraft:cod (comida de la aldea 986)     <- la despensa, de verdad, tiene ~1000 puntos
+    save         - Settlement aldea 2: Food 64 (el tope del contador), gameTime 104794
+                 - los ONCE adultos de la aldea con la MISMA marca: DevilRpgUltimaComida = 104400 (o sea comidos)
+                 - las dos crías con la marca del día que nacieron: Mauricio 86400, Nicasio 92400
+                 - Ubaldo no está: murió
+
+Los tres datos encajan en una sola cosa: **Ubaldo era una CRÍA**. Una cría **no gasta ración** (mama de la aldea) y
+`pasarHambre` la **saltaba**, así que su marca de comida se estrenaba el día que nacía (la estrena `ultimaComida` la
+primera vez que el latido la ve) y **no se volvía a tocar en toda su infancia**. El día que **creció** —vanilla, 20
+min = 24000 ticks— dejó de ser cría, y en el **primer latido** ya llevaba 20 min "sin comer": pasó el umbral de
+muerte (`STARVATION_DEATH_TICKS`, 10 min) y **murió en el acto**, con la despensa llena. Los 19 min del log son
+exactamente eso (la marca se estrena hasta 10 s después de nacer).
+
+Y encima el aviso **no miraba la despensa**: se cantaba con `algunaBocaSinComer` y decía *"la despensa esta vacia"*
+siempre, también con 986 puntos dentro. Con razón el jugador dejó de creérselo.
+
+**ARREGLO** (`VillageManager`):
+- **A la cría se le da cuerda al reloj, no se la salta**: en `pasarHambre`, la cría pasa por `marcarComida` (su reloj
+  **no corre** hasta que es adulta). Así, el día que crece empieza con la marca fresca (≤10 s) y come como
+  cualquier adulto.
+- **La comida no cuelga de un tick del mundo**: `repartirRaciones` salía de vacío si
+  `gameTime % EAT_INTERVAL_TICKS != 0` ("las raciones se reparten en el latido del minuto"), así que **un solo tick
+  perdido** —el jugador lejos, o el latido cortado con bichos dentro (I12/I46)— se llevaba por delante la comida de
+  **todo** el pueblo. Ahora la pide **el aldeano que hace más tiempo que no come**: cuando ese cumple su intervalo,
+  come el pueblo que esté esperando (el grupo sigue sincronizado porque una comida los marca a todos a la vez, así
+  que se sigue pagando de una sola vez y sin regalar una hogaza por boca).
+- **El aviso dice lo que se ha medido**: cuántas bocas se han quedado sin su ración y cuántos puntos quedan en la
+  despensa; *"la despensa está vacía"* solo se dice si de verdad no hay ni un punto.
+
+### 3b.68 Las partes del bancal «sin plantar»: el granjero no SEMBRABA nunca (y lo que se veía eran brotes)
+
+Lo reportó el jugador con captura: *"¿por qué hay partes de la parcela que no tienen plantado nada? se supone que los
+granjeros deben tener todas ocupadas"*.
+
+**MEDIDO en su guardado** (`build/huerta_vacias.py`, celda a celda, aldea 2 cota 120):
+
+    bancal 0 (1384,1428)  66/72 sembradas ·  8 celdas vacías: (0,1) (0,2) (0,6) (7,1) (8,2) (8,4) (8,5) (8,6)
+    bancal 1 (1424,1418)  69/72 sembradas ·  5 celdas vacías: (0,0) (0,4) (0,6) (8,4) (8,6)
+    bancal 2 (1386,1448)  71/72 sembradas ·  3 celdas vacías: (0,4) (0,6) (8,4)
+    aldea 0 (que lleva más tiempo sin verse): 147 de 216 vacías (bancal 0: 70 de 72; bancal 1: 14 —13 vacías y una
+    calva—; bancal 2: 63)
+
+Las 16 celdas que faltan son `farmland` **con el hueco de arriba libre** (sembrables y sin nada), y **casi todas
+caen en los carriles por los que se entra y se sale del bancal** (los dos extremos de la acequia y las columnas de
+los lados). Y el resto de lo que se ve "vacío" en la captura son **cultivos de edad 0-1**: en el bancal 1 había
+**30 de 69** en edad 0 o 1 (el 43%), que desde arriba son dos píxeles verdes y parecen tierra. Eso es lo normal (el
+granjero **replanta cada celda que cosecha**) y no es un fallo.
+
+**La causa del hueco de verdad es de ORDEN (otra vez).** El granjero tenía **dos** faenas de la tierra —cosechar lo
+maduro y labrar la calva, que alternaban desde el arreglo de I25— y **sembrar iba DETRÁS de las dos**. Con tres
+bancales (216 celdas) **siempre** hay algo maduro en alguno, así que el paso de `PLANTAR` no se alcanzaba **nunca**
+(un bancal lleno nunca deja de tener algo maduro). Y las celdas se vacían solas: el **cerebro del aldeano** tiene su
+propia faena de granjero (`HarvestFarmland`, ver 3b.66) y **solo replanta si lleva semillas**, y lo que se **pisa**
+(I25) se vuelve a labrar pero **nadie lo siembra**. La parcela, entonces, **solo perdía celdas**: de ahí las 147
+vacías de la aldea 0.
+
+**ARREGLO** (`VillagerFarmGoal`): las **tres** faenas de la tierra **rotan** (`FAENAS_DE_LA_TIERRA` = cosechar,
+labrar, **sembrar**), así que una celda vacía se recupera en la siguiente vuelta en vez de esperar a que no quede
+nada maduro (que no pasa nunca). La siembra sigue exigiendo lo de siempre: semillas **en la mano** (si no las tiene,
+el paso de recambios lo manda a la despensa) y el hueco de arriba **libre** (I11: no se arranca ningún cultivo).
+
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.

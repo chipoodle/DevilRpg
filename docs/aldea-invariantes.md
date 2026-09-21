@@ -1146,6 +1146,76 @@ compostero**, que se caen a propósito. Y el granjero no pierde su faena: en la 
 (`HarvestFarmland`) no se quita** —la API de `Brain` no permite quitar una sola faena—, así que sigue soltando lo suyo;
 lo que ya no pasa es que eso se quede ahí.
 
+### I52 · El reloj de la comida de una CRÍA no corre (y un aviso dice lo que se ha MEDIDO)
+
+El jugador, con la captura del cofre lleno de comida delante: *"me dice que la aldea pasa hambre y que la despensa
+está vacía, sin embargo hay bastante comida"*.
+
+**Medido** en su guardado y su log (aldea 2, centro `1414,1414`, cota `120`; `build/hambre_medida.py` vuelca la comida
+de cada aldea y la marca `DevilRpgUltimaComida` de cada aldeano):
+
+| Qué | Lo que decía |
+|---|---|
+| El chat (04:01:17) | `La aldea pasa hambre: la despensa esta vacia.` |
+| El mismo latido | murió `Ubaldo (Sin oficio)`, *"de hambre (19 min sin comer)"*, en `1442,121,1439` (el hueco de la escalera de la taberna) |
+| La despensa | `comida 64 puntos` en el latido (es `MAX_FOOD`, el tope del contador) y **986** en el canto del pescador; `Food: 64` en el guardado |
+| Los adultos | los **once** con la **misma** marca `DevilRpgUltimaComida = 104400` (el `gameTime` del guardado es `104794`): el reparto les llegaba a todos |
+| Las crías | con la marca del día que nacieron: Mauricio `86400`, Nicasio `92400` |
+
+**La causa (dos capas).** Ubaldo era una **cría**:
+1. **A su reloj nadie le daba cuerda.** `repartirRaciones` la salta a propósito (una cría mama de la aldea y no gasta
+   ración) y `pasarHambre` también, así que su marca se estrenaba el día que nacía (la estrena `ultimaComida` la
+   primera vez que el latido la ve) y **no se volvía a tocar en toda su infancia**. El día que **creció** —vanilla,
+   **24000 ticks (20 min)**— dejó de ser cría y en el **primer latido** llevaba 20 min "sin comer": pasó el umbral de
+   muerte (`STARVATION_DEATH_TICKS` = 10 min) y **murió en el acto**, con la despensa llena. Los **19 min** del log
+   son exactamente la infancia de la cría (la marca se estrena hasta 10 s después de nacer).
+2. **El aviso no miraba la despensa.** Se cantaba con `algunaBocaSinComer` y decía *"la despensa esta vacia"* sin
+   leerla.
+
+**Regla:** (a) a la cría **se le refresca la marca** mientras es cría (no basta con saltársela): su reloj de comida
+**no corre** hasta que es adulta, y así el día que crece come como cualquier adulto; (b) el aviso **dice lo que se ha
+contado** (cuántas bocas sin ración y cuántos puntos quedan): *"la despensa está vacía"* solo si de verdad no hay ni
+un punto; y (c) la comida **no cuelga de un tick del mundo**: `repartirRaciones` salía de vacío si
+`gameTime % EAT_INTERVAL_TICKS != 0` ("las raciones se reparten en el latido del minuto"), así que **un solo tick
+perdido** —el jugador lejos, o el latido cortado con bichos dentro (I12/I46)— se llevaba por delante la comida de
+**todo** el pueblo (y la siguiente no llegaba hasta el minuto siguiente). Ahora **la pide el aldeano que hace más
+tiempo que no come** (`laMasVieja`): cuando ese cumple su intervalo, come el pueblo que esté esperando —el grupo
+sigue sincronizado porque una comida los marca a todos a la vez, así que se sigue pagando **de una sola vez** y sin
+regalar una hogaza por boca (ver el aviso del método)—.
+
+**No tiene regla en el lint** (es el orden y el reloj de un bucle, no un patrón de texto): se comprueba **contra el
+guardado** con `build/hambre_medida.py` (la comida de cada aldea y la marca de comida de cada aldeano, con el
+`gameTime` del guardado para saber **quién** lleva sin comer).
+
+### I53 · Un bancal sembrado se mantiene sembrado (el granjero también SIEMBRA la celda vacía)
+
+El jugador, mirando su bancal: *"¿por qué hay partes de la parcela que no tienen plantado nada? se supone que los
+granjeros deben tener todas ocupadas"*.
+
+**Medido** en su guardado (`build/huerta_vacias.py`, celda a celda, aldea 2 cota `120`): los tres bancales tienen
+**66, 69 y 71** de sus **72** celdas plantables ocupadas, y las **16** que faltan son `farmland` **con el hueco de
+arriba libre** (sembrables y vacías), **casi todas en los carriles por los que se entra y se sale del bancal** (los
+dos extremos de la acequia y las columnas de los lados). En la **aldea 0**, que lleva más tiempo sin verse, faltan
+**147 de 216** (bancal 0: 70 de 72; bancal 1: 14 —13 vacías y una calva—; bancal 2: 63). *(Y ojo con lo que **no** es
+un hueco: los cultivos de **edad 0-1** son dos píxeles verdes y desde arriba parecen tierra —en el bancal 1 eran
+**30 de 69**, el 43%—; eso es lo normal, porque el granjero replanta cada celda que cosecha.)*
+
+**Causa (y es de ORDEN, como I25 y I51).** El granjero tenía **dos** faenas de la tierra —cosechar lo maduro y labrar
+la calva, que alternaban desde el arreglo de I25— y **sembrar iba DETRÁS de las dos**. Con tres bancales (216 celdas)
+**siempre** hay algo maduro en alguno, así que el paso `PLANTAR` no se alcanzaba **nunca**. Y las celdas se vacían
+solas: el **cerebro del aldeano** tiene su propia faena de granjero (`HarvestFarmland`, I51) y **solo replanta si
+lleva semillas**, y lo que se **pisa** (I25) se vuelve a labrar pero **nadie lo siembra**. La parcela, entonces,
+**solo perdía celdas**.
+
+**Regla:** las **tres** faenas de la tierra **rotan** (`FAENAS_DE_LA_TIERRA` en `VillagerFarmGoal`: cosechar, labrar
+y **sembrar**), así que una celda vacía se recupera en la siguiente vuelta en vez de esperar a que no quede nada
+maduro (que no pasa nunca). La siembra sigue exigiendo lo de siempre: semillas **en la mano** (si no las tiene, el
+paso de recambios lo manda a la despensa) y el hueco de arriba **libre** (I11: no se arranca ningún cultivo).
+
+**No tiene regla en el lint** (es un orden de faenas, no un patrón de texto): se comprueba **contra el guardado** con
+`build/huerta_vacias.py`, que vuelca los tres bancales celda a celda (cultivo con su **edad**, tierra vacía y calva)
+y cuenta las celdas que no tienen nada.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
@@ -1204,6 +1274,8 @@ Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento 
 | `build/casa_hueco.py` (ignorado) | **Vista de planta de una zona del guardado** (x/y/z por capas, con códigos por bloque) alrededor de la casa que señaló el jugador: así se ven el hueco de la pared, la puerta, la ventana y el cofre de al lado. |
 | `build/huerta_items.py` (ignorado) | **Lo que hay tirado y cómo están los bancales**: cuenta las entidades de objeto del recinto por tipo (con edad y posición y si están dentro de un bancal) y vuelca los tres bancales capa a capa. Es la medida de partida de 3b.66/I51. |
 | `build/cocina_medida.py` (ignorado) | **¿Desde DÓNDE cocinaba el cocinero?**: del log del arnés coge, para cada `N pieza(s) cocinadas`, la muestra `COCINERO pos=…` **inmediatamente anterior** (con `dentroDeLaTaberna`, `VEelAhumador`, `dCasilla`, `dAhumador` y la etiqueta). Es la medida de 3b.63/I48. |
+| `build/hambre_medida.py` (ignorado) | **La comida de la aldea y el reloj de cada aldeano** (I52): la `Food` y el `StarvingSince` de cada asentamiento, el `gameTime` del guardado y la marca `DevilRpgUltimaComida` de **cada** aldeano con su oficio, su posición y los minutos que lleva sin comer. Es lo que distingue "la despensa está vacía" de "este aldeano no ha comido" —y lo que enseñó que las **crías** viven con la marca del día que nacieron hasta que crecen. |
+| `build/huerta_vacias.py` (ignorado) | **Las celdas del bancal que no tienen nada** (I53): vuelca los tres bancales **celda a celda** (cultivo con su edad, tierra vacía, calva, acequia) con un mapa de una letra por celda y cuenta las que están `farmland` con el hueco de arriba libre. |
 
 Los scripts de `build/` no se versionan (está en `.gitignore`): son de lectura del guardado del jugador. Las
 herramientas que sí merecen sobrevivir están **versionadas en `tools/`** (ver `tools/README.md`): `lint_aldea.py`,

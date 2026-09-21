@@ -4149,10 +4149,13 @@ public final class VillageManager {
     }
 
     /**
-     * <b>Reparte las raciones</b> de este minuto: <b>una ración = un punto de comida</b> (lo mismo que comía la
+     * <b>Reparte las raciones</b>: <b>una ración = un punto de comida</b> (lo mismo que comía la
      * aldea antes, ahora repartido boca por boca) por cada aldeano que lleve sin comer {@link #EAT_INTERVAL_TICKS} o
      * más, y <b>primero al que hace más tiempo que no come</b> (si la comida no llega para todos, el hambre se
      * reparte en vez de cebar siempre a los mismos). Cada ración sale <b>de verdad</b> de la despensa.
+     * <p>
+     * El reloj que manda es <b>el de cada aldeano</b> ({@link #ultimaComida}), no el del mundo: ver el comentario
+     * de abajo. Las <b>crías no gastan ración</b> (maman de la aldea) y su reloj no corre (ver {@link #pasarHambre}).
      * <p>
      * OJO con cómo se saca: se pide el total <b>por valor y de una sola vez</b>. Sacando un punto por boca, uno a
      * uno, cada aldeano se llevaría una <b>hogaza entera</b> (4 puntos: {@code sacarComida} redondea a piezas
@@ -4162,22 +4165,36 @@ public final class VillageManager {
      * @return cuántas raciones se han repartido (0 = el pueblo no tiene nada que dar)
      */
     private static int repartirRaciones(ServerLevel level, BlockPos center, List<Villager> aldeanos) {
-        if (level.getGameTime() % EAT_INTERVAL_TICKS != 0L) {
-            return 0; // las raciones se reparten en el latido del minuto
-        }
+        // LA COMIDA LA MANDA EL RELOJ DE LOS ALDEANOS, NO UN TICK DEL MUNDO. Aquí había una puerta
+        // `gameTime % EAT_INTERVAL_TICKS != 0 -> return 0` ("las raciones se reparten en el latido del minuto") que
+        // ataba la comida de TODO el pueblo a UN tick exacto de cada minuto: si en ese tick el latido no corría —el
+        // jugador lejos, o el latido cortado porque hay bichos dentro (I12/I46)— el pueblo entero se saltaba esa
+        // comida aunque los aldeanos llevaran su minuto esperando, y la siguiente no llegaba hasta el minuto
+        // siguiente. Ahora la comida la pide **el aldeano que hace más tiempo que no come**: cuando ese cumple su
+        // intervalo, come el pueblo que esté esperando (el grupo sigue sincronizado porque una comida los marca a
+        // todos a la vez, así que en la práctica es la misma comida de antes, solo que ya no se pierde por un latido
+        // que no corrió).
         Container despensa = VillagePantry.despensa(level, center);
         if (despensa == null || aldeanos.isEmpty()) {
             return 0;
         }
         // El hambre de cada uno, leída UNA vez por aldeano (y de paso se le estrena la marca al que llega nuevo).
         Map<Villager, Long> ultima = new HashMap<>();
+        long laMasVieja = Long.MAX_VALUE; // la marca del que hace MÁS tiempo que no come (las crías no cuentan)
         for (Villager villager : aldeanos) {
-            ultima.put(villager, ultimaComida(level, villager));
+            long suya = ultimaComida(level, villager);
+            ultima.put(villager, suya);
+            if (!villager.isBaby() && suya < laMasVieja) {
+                laMasVieja = suya;
+            }
+        }
+        if (laMasVieja == Long.MAX_VALUE || level.getGameTime() - laMasVieja < EAT_INTERVAL_TICKS) {
+            return 0; // todavía no le toca a nadie
         }
         List<Villager> bocas = new ArrayList<>();
         for (Villager villager : aldeanos) {
             if (!villager.isBaby() && level.getGameTime() - ultima.get(villager) >= EAT_INTERVAL_TICKS) {
-                bocas.add(villager); // las crías maman de la aldea: no gastan ración
+                bocas.add(villager); // las crías maman de la aldea: no gastan ración (y su reloj no corre, I52)
             }
         }
         if (bocas.isEmpty()) {
@@ -4196,8 +4213,19 @@ public final class VillageManager {
     private static void pasarHambre(ServerLevel level, VillageSavedData saved, int objectiveIndex,
                                     List<Villager> aldeanos) {
         boolean algunaBocaSinComer = false;
+        int bocasSinRacion = 0;
         for (Villager villager : aldeanos) {
             if (villager.isBaby()) {
+                // UNA CRÍA MAMA DE LA ALDEA: no gasta ración (ver `repartirRaciones`) y SU RELOJ DE COMIDA NO CORRE.
+                // Hay que REFRESCARLE la marca, no solo saltárselo: su `DevilRpgUltimaComida` se estrena el día que
+                // nace (lo estrena `ultimaComida` la primera vez que el latido la ve) y ya no se toca más, así que
+                // el día que CREZCA —vanilla, 20 min— aparece con 20 min "sin comer", pasa el umbral de muerte
+                // (`STARVATION_DEATH_TICKS`, 10 min) y muere en el primer latido, con la despensa llena.
+                // Medido en el guardado del jugador (aldea 2, centro 1414,1414, cota 120): Ubaldo, cría "Sin
+                // oficio", murió "de hambre (19 min sin comer)" y el chat dijo *"la despensa esta vacia"* con el
+                // contador en 64 puntos (y 986 en la despensa de verdad); sus dos compañeras de cría (Mauricio,
+                // marca 86400, y Nicasio, 92400) seguían con la marca del día en que nacieron.
+                marcarComida(level, villager);
                 continue;
             }
             long sinComer = level.getGameTime() - ultimaComida(level, villager);
@@ -4205,6 +4233,7 @@ public final class VillageManager {
                 continue;
             }
             algunaBocaSinComer = true;
+            bocasSinRacion++;
             if (!villager.hasEffect(MobEffects.WEAKNESS)) {
                 villager.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 20 * 60, 0, false, false));
             }
@@ -4221,10 +4250,19 @@ public final class VillageManager {
         if (algunaBocaSinComer) {
             if (saved.getStarvingSince(objectiveIndex) == 0L) {
                 saved.setStarvingSince(objectiveIndex, level.getGameTime());
-                DevilRpg.LOGGER.info("[Village] La aldea {} pasa hambre: hay bocas sin su racion", objectiveIndex);
                 BlockPos centro = centroDe(level, objectiveIndex); // el aviso es para el jugador que esté cerca
+                // LO QUE SE DICE ES LO QUE SE HA MEDIDO. El aviso cantaba *"la despensa esta vacia"* SIEMPRE que
+                // hubiera una boca sin su ración, sin mirar la despensa: el jugador lo vio con el cofre de comida
+                // delante (aldea 2: `comida 64 puntos`, y 986 en la despensa de verdad) y con razón dejó de
+                // creerse el cartel. Ahora el aviso lleva delante lo que se ha contado.
+                int enLaDespensa = centro == null ? 0 : VillagePantry.comida(level, centro);
+                DevilRpg.LOGGER.info("[Village] La aldea {} pasa hambre: {} boca(s) sin su racion y {} punto(s) en"
+                        + " la despensa", objectiveIndex, bocasSinRacion, enLaDespensa);
                 if (centro != null) {
-                    announceNearby(level, centro, "La aldea pasa hambre: la despensa esta vacia.");
+                    announceNearby(level, centro, enLaDespensa <= 0
+                            ? "La aldea pasa hambre: la despensa esta vacia."
+                            : "La aldea pasa hambre: " + bocasSinRacion + " boca(s) sin su racion (quedan "
+                                    + enLaDespensa + " puntos en la despensa).");
                 }
             }
         } else if (saved.getStarvingSince(objectiveIndex) != 0L) {
