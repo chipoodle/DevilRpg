@@ -3138,6 +3138,40 @@ la posada) en el muro sur, `1438..1449`— y el resto de la vuelta seguía en lo
 se comprueba en el log al reiniciar (`banda de separacion entre plantas puesta (N tronco(s) de roble en la vuelta del
 forjado)`) y a ojo en los cuatro lados.*
 
+### 3b.76 La cara de los guardias, la del aldeano
+
+Lo pidió el jugador: *"para el rostro de los guardias podrías poner la textura de los aldeanos para que se vea
+coherente?"*.
+
+**Cómo está hecho el aldeano de vanilla** (leído en sus texturas): el modelo lleva la textura **base**
+(`textures/entity/villager/villager.png`) y **encima** la de su **tipo** (`type/<bioma>.png`), que trae la piel y la
+**banda/gorro** del bioma. La aldea del jugador es de **sabana** (lo dice su pantalla de depuración: `Biome:
+minecraft:savanna`), así que se compone **base + `type/savanna.png`**.
+
+**El problema de encajarlo**: el modelo del guardia es el del **jugador** (`PlayerModel` + nariz, para poder
+enseñarle la armadura con las capas de vanilla), y su cabeza mide **8** de alto; la del aldeano mide **10**
+(`8x10x8` en `texOffs(0,0)`, con la nariz `2x4x2` en `(24,0)`). Las caras de un mapa de texturas dependen del
+tamaño de la caja, así que no vale copiar el bloque: hay que copiar **cara por cara**.
+
+**Alineación** (lo que decide si la cara "cae bien"): la cabeza del aldeano va de `y=-10` a `0` y la del jugador de
+`-8` a `0`; como las dos acaban abajo en el mismo sitio, de las caras del aldeano se coge la franja de **abajo**
+(filas **9..17** de su cara de 10, que deja los ojos a la misma **proporción** de la cabeza: los ojos del aldeano
+están en la fila 14 y los del guardia en la 13 —medido con `build/diag/ojos.py`, que busca los píxeles verdes—).
+El **gorro** (caja de 12 de alto, de `-10` a `+2`, en `texOffs(32,0)`) se coge de las filas **9..17** de cada cara, y
+la **nariz** de las filas 2..5 de la del aldeano. El gorro **ya existía** en el modelo del jugador (`PlayerModel`
+crea la caja `hat` en `(32,0)`) y en las texturas del guardia estaba **transparente**: pintándola, se ve (y queda
+tapada por el casco cuando el guardia lleva armadura).
+
+**Lo que se toca**: solo las texturas `village_guard_swordsman.png` y `village_guard_archer.png` (la cabeza, el
+gorro y la nariz). El **cuerpo y los brazos siguen siendo el uniforme** del guardia (las regiones del mapa del
+jugador no se tocan), así que las capas de **armadura** y de **objeto en mano** siguen funcionando igual. El script
+que lo hace (y el compuesto del aldeano para comparar) está en `build/diag/cara_guardia.ps1` (ignorado), y las
+texturas originales quedan respaldadas en `build/diag/*.antes`.
+
+**Pendiente de ver en juego** (hace falta recompilar y reiniciar): el guardia con la cara de aldeano de sabana.
+Si en vez de una cara fija se quiere que cada guardia lleve **la de su propia variante** (cada aldeano tiene la suya
+en el guardado), eso ya pide una **capa de render** con el modelo del aldeano y la textura de su tipo.
+
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.
