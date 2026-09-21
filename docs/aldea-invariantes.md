@@ -968,13 +968,14 @@ repartir camas:
    a menos de 6 bloques, le **acuesta** (`acostarAlQueNoLlega` → `startSleeping`, la misma llamada que usa el juego).
    OJO con la línea de visión: **la propia cama no cuenta como obstáculo** (la mirada acaba dentro de su bloque, así que
    el raycast choca con ella y —si contara— no habría ninguna celda con vista: medido), solo bloquea un muro.
-   No es un teletransporte: el aldeano **llega andando** a esa celda.
+   Y la celda de espera **no exige que el planificador llegue**: vale la más cercana que el aldeano **vea** (a menos de
+   6 bloques) y, si el planificador tampoco le lleva ahí, **se le mueve a ella** y se le acuesta. Una cama que se ve y
+   está a un paso **no se descarta**: con camas de sobra, el que no duerme es el aldeano, no la cama.
+   No es un teletransporte a ciegas: el aldeano **llega andando** (o se le acerca esos últimos bloques a la vista).
 
-**Medido después** (misma partida, misma noche): los dos granjeros **duermen en su cama**
-(`durmiendo=true durmiendoEnElla=[EL MISMO]`, `pos == home`), **cero** pérdidas de cama en toda la corrida y
-`COMPARTIDAS=0`. Y con el herrero: *"`9e0ed6e3` no llega a su cama por el camino del juego: se le da `1452,120,1405` y
-se le mandará a `1449,120,1405` para acostarle"* → **`CAMAS RESUMEN: adultos=11 conCama=11 COMPARTIDAS=0 SIN CAMA=0`**
-(el pueblo entero con cama). Todo en `tools/arnes/medidas-camas.txt`.
+**Medido después** (misma partida, misma noche): **`CAMAS RESUMEN: adultos=11 conCama=11 COMPARTIDAS=0 SIN CAMA=0
+DURMIENDO=11`** — el pueblo entero con cama **y durmiendo** — y **cero** pérdidas de cama en toda la corrida. Todo en
+`tools/arnes/medidas-camas.txt`.
 
 **Pendiente (dicho claramente)**: una **cama sin acceso** —con un muro o mobiliario que impide ponerse a ≤2,0— no se le
 da a nadie y ese aldeano se queda sin cama. Es construcción/mobiliario del pueblo, no del reparto.

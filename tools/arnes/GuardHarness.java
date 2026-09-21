@@ -366,6 +366,7 @@ public class GuardHarness {
         // con la misma cama: la mitad de la misma cama o la misma casilla) y quien se queda SIN cama.
         int adultos = 0;
         int conCama = 0;
+        int durmiendo = 0;
         java.util.Map<String, java.util.List<String>> porCama = new java.util.TreeMap<>();
         java.util.List<String> sinCama = new java.util.ArrayList<>();
         for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(64))) {
@@ -385,6 +386,9 @@ public class GuardHarness {
             }
             String anterior = camaAnterior.put(uuid, cama);
             adultos++;
+            if (v.isSleeping()) {
+                durmiendo++;
+            }
             if (home.isPresent()) {
                 conCama++;
                 porCama.computeIfAbsent(claveDeLaCama(level, home.get().pos()), k -> new java.util.ArrayList<>())
@@ -422,9 +426,9 @@ public class GuardHarness {
                 }
             }
             DevilRpg.LOGGER.info("[Arnes] CAMAS RESUMEN: adultos={} conCama={} (camas distintas ocupadas={})"
-                            + " COMPARTIDAS={}{} SIN CAMA={}{}",
+                            + " COMPARTIDAS={}{} SIN CAMA={}{} DURMIENDO={}",
                     adultos, conCama, ok, porCama.size() - ok, compartidas, sinCama.size(),
-                    sinCama.isEmpty() ? "" : " " + String.join(" ", sinCama));
+                    sinCama.isEmpty() ? "" : " " + String.join(" ", sinCama), durmiendo);
             // Y POR QUE NO LE DAN CAMA: para el primer aldeano sin cama, las 8 camas libres mas cercanas con el
             // motivo por el que la reclamacion las descarta (o la acepta).
             for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(64))) {

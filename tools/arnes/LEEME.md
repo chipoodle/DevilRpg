@@ -60,11 +60,14 @@ en el log **no** sale ninguna línea `[Village] Aldea N: comida ...` ni ningún 
 - **EL SUEÑO Y LAS CAMAS** (I43/I44, ver `medidas-camas.txt`): con `MEDIR_NOCHE = true` el arnés fija la **noche**
   (18000), **rejuvenece** a los aldeanos cada 10 s (el mod les da fecha de nacimiento y a los 3 días de juego mueren de
   viejos: en una corrida larga eso repuebla la aldea a mitad de la medida) y saca:
-  `[Arnes] CAMAS RESUMEN: adultos=N conCama=N COMPARTIDAS=N SIN CAMA=…` (el **criterio de "arreglado"**: nadie sin cama
-  y ninguna cama compartida por dos aldeanos) y, por aldeano, `CAMA <uuid> … home=… durmiendo=…`;
+  `[Arnes] CAMAS RESUMEN: adultos=N conCama=N COMPARTIDAS=N SIN CAMA=… DURMIENDO=N` (el **criterio de "arreglado"**:
+  nadie sin cama, ninguna cama compartida por dos aldeanos y **todos durmiendo**) y, por aldeano,
+  `CAMA <uuid> … home=… durmiendo=…`;
   `[Arnes] PERDIDA-TICK / RECLAMADA-TICK`, el **vigilante a resolución de tick**: al perder la cama imprime cómo estaba
   **en el tick anterior** (POI, `OCCUPIED`, quién dormía en ella) y qué memorias le quedan —es lo que identifica al
   culpable—; `[Arnes] EN-BANCAL`, para el que está metido en un bancal (su `WALK_TARGET`, sus goals corriendo y el
-  estado de las **cuatro compuertas**); y `[Arnes] CAMA CANDIDATA` con `rutaDetallada` (nodos, **si ALCANZA**
-  `canReach` y **dónde acaba** la ruta: distingue «no hay ruta» de «la ruta se queda corta»).
+  estado de las **cuatro compuertas**); `[Arnes] CAMA CANDIDATA` con `rutaDetallada` (nodos, **si ALCANZA**
+  `canReach` y **dónde acaba** la ruta: distingue «no hay ruta» de «la ruta se queda corta»); y `[Arnes] SONDA` +
+  `RUTA a <celda>`, la **sonda de rutas celda a celda** de un aldeano sin cama (prueba el camino a las celdas que
+  importan y dice dónde se corta).
 

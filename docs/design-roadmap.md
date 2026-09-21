@@ -2604,11 +2604,18 @@ por qué:
 3. **Se le acuesta** (`acostarAlQueNoLlega`): cuando la tiene **a la vista** y a menos de 6 bloques y la cama está
    **libre**, se le acuesta con la misma llamada que usa el juego (`LivingEntity.startSleeping`, que además marca la
    cama como ocupada). No es un teletransporte: el aldeano ha llegado **andando** hasta ahí.
+4. **Y si no llega ni a la celda de al lado, el pueblo le lleva** (lo pidió el jugador: *"si es necesario hacer tareas
+   personalizadas para hacer cosas que vanilla aparentemente hace (por mal) pues que se haga"*). La celda de espera ya
+   no exige que el planificador llegue: vale **la más cercana que el aldeano VEA** (a menos de 6 bloques); si el
+   planificador tampoco le lleva ahí, se le **mueve a esa celda** —que está a la vista y a un paso, no es un salto a
+   ciegas— y en la pasada siguiente se le acuesta. Así **una cama que se ve y está al lado no se descarta nunca**: con
+   camas de sobra, el que no duerme es el aldeano, no la cama.
 
 **Medido** (misma partida, noche congelada): *"`9e0ed6e3` no llega a su cama por el camino del juego: se le da
 `1452,120,1405` y se le mandará a `1449,120,1405` para acostarle"* → el herrero **duerme en su cama**
-(`durmiendo=true durmiendoEnElla=[EL MISMO]`, `pos == home`) → **`CAMAS RESUMEN: adultos=11 conCama=11 COMPARTIDAS=0
-SIN CAMA=0`** (el pueblo entero con cama) y **0** pérdidas de cama en toda la corrida.
+(`durmiendo=true durmiendoEnElla=[EL MISMO]`, `pos == home`) → **`CAMAS RESUMEN: adultos=11 conCama=11
+COMPARTIDAS=0 SIN CAMA=0 DURMIENDO=11`** (el pueblo entero con cama **y durmiendo**) y **0** pérdidas de cama en toda
+la corrida.
 
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 

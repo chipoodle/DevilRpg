@@ -2895,12 +2895,21 @@ public final class VillageManager {
             candidatas.add(q.immutable());
         }
         candidatas.sort(Comparator.comparingDouble(p -> p.distSqr(cama)));
+        // PRIMERO las que el aldeano alcanza ANDANDO (lo normal).
         for (BlockPos celda : candidatas) {
             if (!tieneVistaLibre(level, celda, cama, villager)) {
                 continue; // hay un muro en medio: desde ahí no se le puede acostar
             }
             var camino = villager.getNavigation().createPath(celda, 1);
             if (camino != null && camino.canReach()) {
+                return celda;
+            }
+        }
+        // Y SI NINGUNA (el planificador no le lleva ni a la celda de al lado de su cama), la más cercana que VEA: el
+        // latido le lleva y, si no puede andando, le mueve esos últimos bloques. Una cama que se ve y está a un paso
+        // no se descarta: con camas de sobra, el que no duerme es el aldeano, no la cama.
+        for (BlockPos celda : candidatas) {
+            if (tieneVistaLibre(level, celda, cama, villager)) {
                 return celda;
             }
         }
@@ -2951,10 +2960,24 @@ public final class VillageManager {
             }
             if (villager.blockPosition().distSqr(cama) > (double) (RADIO_ACOSTARSE * RADIO_ACOSTARSE)
                     || !tieneVistaLibre(level, villager.blockPosition(), cama, villager)) {
-                // Todavía no está donde se le puede acostar: se le manda a su CELDA DE ESPERA. El planificador no le
-                // lleva a la cama (por eso está sin dormir), pero a esa celda SÍ.
+                // Todavía no está donde se le puede acostar: se le manda a su CELDA DE ESPERA (la de al lado de la
+                // cama). El planificador no le lleva a la cama, pero a esa celda casi siempre sí.
                 BlockPos espera = ESPERA_PARA_DORMIR.get(villager.getUUID());
                 if (espera != null) {
+                    var camino = villager.getNavigation().createPath(espera, 1);
+                    if (camino == null || !camino.canReach()) {
+                        // Y SI NO LE LLEVA NI A ESA (medido: el herrero se quedaba a 2,00 bloques de su cama, y para
+                        // acostarse hacen falta menos de 2,0), EL PUEBLO LE LLEVA: se le mueve a la celda —que está a
+                        // la vista y a menos de RADIO_ACOSTARSE bloques, no es un salto a ciegas— y en la pasada
+                        // siguiente se le acuesta. Es la tarea propia que sustituye a lo que el juego hace mal.
+                        villager.getNavigation().stop();
+                        villager.moveTo(espera.getX() + 0.5D, espera.getY(), espera.getZ() + 0.5D,
+                                villager.getYRot(), villager.getXRot());
+                        DevilRpg.LOGGER.info("[Village] {} no llega ni andando a la celda de al lado de su cama: el"
+                                        + " pueblo le lleva a {} (la cama {} la tiene a la vista)",
+                                villager.getUUID(), espera.toShortString(), cama.toShortString());
+                        continue;
+                    }
                     caminarHacia(villager, espera, 0.6F);
                     ponerActividad(villager, "Yendo a dormir");
                 }
@@ -2971,7 +2994,8 @@ public final class VillageManager {
     }
 
     /** ¿Ese aldeano está <b>metido en un bancal</b> (cercado con valla y con las compuertas cerradas)? */
-    private static boolean estaEnUnBancal(ServerLevel level, Villager villager, BlockPos center) {        int cota = VillageGenerator.cotaDeLaPlaza(level, center);
+    private static boolean estaEnUnBancal(ServerLevel level, Villager villager, BlockPos center) {
+        int cota = VillageGenerator.cotaDeLaPlaza(level, center);
         for (int i = 0; i < VillageGenerator.parcelasDeGranja(); i++) {
             if (VillageGenerator.estaDentroDeLaParcela(center, i, cota, villager.blockPosition())) {
                 return true;

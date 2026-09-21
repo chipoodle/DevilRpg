@@ -137,11 +137,18 @@ por bloqueadas todas las celdas. Con la cama excluida del raycast (solo bloquea 
           1449, 120, 1405 para acostarle
 [Arnes] CAMA 9e0ed6e3 prof=toolsmith home=1452, 120, 1405 poi=SI bloque=white_bed OCCUPIED=true
         durmiendoEnElla=[EL MISMO] durmiendo=true REST=true pos=1452, 120, 1405
-[Arnes] CAMAS RESUMEN: adultos=11 conCama=11 (camas distintas ocupadas=11) COMPARTIDAS=0 SIN CAMA=0
+[Arnes] CAMAS RESUMEN: adultos=11 conCama=11 (camas distintas ocupadas=11) COMPARTIDAS=0 SIN CAMA=0 DURMIENDO=11
 [Arnes] PERDIDA-TICK: 0 en toda la corrida
 
-El pueblo ENTERO con cama (los 11 adultos) y el herrero durmiendo en la suya. Las tres piezas: **celda de espera**
-(`celdaParaAcostarse`), **llevarle** a ella en el latido, y **acostarle** (`acostarAlQueNoLlega` →
-`LivingEntity.startSleeping`, la misma llamada que usa el juego) cuando la tiene a la vista y a menos de 6 bloques. No
-hay teletransporte: el aldeano llega **andando** a esa celda.
+El pueblo ENTERO con cama **y durmiendo** (los 11 adultos) y el herrero en la suya. Las tres piezas: **celda de
+espera** (`celdaParaAcostarse`), **llevarle** a ella en el latido, y **acostarle** (`acostarAlQueNoLlega` →
+`LivingEntity.startSleeping`, la misma llamada que usa el juego) cuando la tiene a la vista y a menos de 6 bloques.
+
+Y LA CUARTA, que cierra el caso general (lo pidió el jugador: *"si es necesario hacer tareas personalizadas para hacer
+cosas que vanilla aparentemente hace (por mal) pues que se haga"*): la celda de espera **ya no exige que el planificador
+llegue** —vale la más cercana que el aldeano **vea**— y, si tampoco le lleva ahí, **se le mueve a ella** (a la vista y a
+menos de 6 bloques) y se le acuesta. Así una cama que se ve y está a un paso no se descarta nunca: con camas de sobra, el
+que no duerme es el aldeano, no la cama. Resumen del arnés, tras el cambio, en la misma noche: **`conCama=11 SIN
+CAMA=0 COMPARTIDAS=0 DURMIENDO=11`**.
+
 
