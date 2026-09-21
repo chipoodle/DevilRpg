@@ -1402,6 +1402,46 @@ La expulsión era la **red de seguridad** de eso.
 (`el sello ha expulsado a N hostil(es) que llevaban 120 s dentro (la milicia no pudo con ellos)`, que ya **no**
 aparece en cada latido) y en juego (el bicho se queda y lo mata la guardia).
 
+### I60 · El obrero repone lo que el PLANO recuerda (y el constructor es el aldeano SIN FAENA)
+
+El jugador: *"la aldea ha tenido daños en su muralla y nadie ha ido a repararlo. El recolector está de flojo y así
+ha estado durante todo el día"*.
+
+**Medido** en su guardado (`build/obras_pendientes.py`, nuevo): de las **7.296** celdas del plano de la aldea 2
+**una** estaba pendiente —un farol de la taberna que el propio pueblo retira en cada latido—, o sea que **ningún**
+agujero de la muralla estaba apuntado. El obrero recorre **el plano** (`findRepairTarget`): **lo que no está en el
+plano no existe para el pueblo** (I8, la misma lección de I50 con el hueco de la pared de una casa). Y el plano de
+una aldea **migrada** es un **escaneo** del mundo: si la muralla ya estaba dañada cuando se capturó, esos agujeros
+quedan fuera **para siempre**.
+
+**Y el constructor no existía como tal**: `puedeSerObrero` **excluía al holgazán** (`NITWIT`, el **recolector**),
+que es justo el aldeano **sin faena** al que se le pone la reparación a prioridad **3** (por delante de todo); con él
+fuera, los tres obreros eran aldeanos **con oficio**, que reparan a prioridad **5** —la última—. El propio mod dice lo
+contrario en `VillageStorage`: *"el constructor —que también es recolector—"*.
+
+**Regla:**
+1. **La muralla entra en el plano; si no está, se rehace.** La **migración 67** reconstruye el muro
+   (`rehacerMuro`, que ya corría en el bloque de migración) y **tira el plano** para volver a capturarlo con la
+   muralla **entera**: a partir de ahí el obrero mantiene lo que se rompa. Es lo mismo que ya se hacía con las casas
+   (I50) y con la granja.
+2. **El constructor del pueblo es el aldeano SIN FAENA** (el recolector/holgazán): puede ser obrero y se le elige **el
+   primero** (su reparación va a prioridad 3, por delante de todo). Barre el suelo cuando **no hay obra**; mientras la
+   haya, repara. (Al marcarlo como obrero se le quita la recogida, como a cualquier constructor sin faena.)
+3. **Lo que el pueblo RETIRA sale del plano.** El farol de encima del primer escalón de la taberna (que el latido
+   quita para poder subir) era **la única celda pendiente** de la aldea 2: el plano lo pedía, el obrero lo reponía y
+   el reparador lo volvía a quitar, **cada 10 s** —el log lo cantaba toda la sesión con
+   `quitado el farol de encima del primer escalon (1442, 123, 1439)`—. Ahora esa celda sale del plano (la misma regla
+   que el farol del portón, I54): `quitarElFarolDeLaEscalera` **devuelve la celda** y el latido la borra del plano.
+
+**Límite conocido (dicho a propósito)**: el obrero trabaja en la banda `REPAIR_MAX_UP`/`REPAIR_MAX_DOWN` (**+5/−6**
+sobre la cota), así que **los tejados quedan fuera**: medido en la aldea 0, **27** losas de la placa del tejado de la
+taberna (a **+11**) pendientes y sin nadie que las reponga. Subir a un tejado es otra obra, no una reparación de
+planta.
+
+**Se comprueba contra el guardado** con `build/obras_pendientes.py` (cuántas celdas del plano están pendientes, de
+qué bloque, a qué distancia y a qué altura sobre la cota) y en el log (el tira y afloja del farol de la escalera
+**desaparece**, y el obrero firma sus bloques con `Repuso …`).
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
@@ -1464,6 +1504,7 @@ Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento 
 | `build/huerta_vacias.py` (ignorado) | **Las celdas del bancal que no tienen nada** (I53): vuelca los tres bancales **celda a celda** (cultivo con su edad, tierra vacía, calva, acequia) con un mapa de una letra por celda y cuenta las que están `farmland` con el hueco de arriba libre. |
 | `build/portones_farol.py`, `build/anexo_porton.py` (ignorados) | **El hueco de los portones y el farol que lo tapa** (I54): volcan los 14 portones de las tres aldeas (los 12 de los bancales, el del corral y el del gallinero), miran las **seis celdas** por las que se cruza cada uno (la hoja y las dos de al lado, en las dos capas) y dicen qué hay en ellas **y qué pide el PLANO**; `anexo_porton.py` pinta además el corral y sus dos portones capa a capa. |
 | `build/aldeanos_equipo.py` (ignorado) | **Cada aldeano con su equipo**: su etiqueta (nombre + actividad), oficio, posición, **si está durmiendo**, su **cama** (`HOME`), su destino, **todo su inventario** y las marcas del mod; y el **contenido de los cofres** de la zona (donde el herrero deja lo que forja). Es la medida de I55/I56/I57 (la cama de otra planta, la armadura que no se fabrica, la espada que se queda en el cofre). |
+| `build/obras_pendientes.py` (ignorado) | **Las obras pendientes de una aldea** (I60): recorre el **plano** celda a celda y lo compara con el mundo (con la regla de `necesitaReparacion`), dice cuántas celdas están pendientes, de qué bloque, a qué distancia del centro y a qué **altura sobre la cota** (para ver lo que se sale de la banda del obrero), y lista los aldeanos marcados como **obrero**. Es lo que demostró que la muralla dañada **no estaba en el plano**. |
 
 Los scripts de `build/` no se versionan (está en `.gitignore`): son de lectura del guardado del jugador. Las
 herramientas que sí merecen sobrevivir están **versionadas en `tools/`** (ver `tools/README.md`): `lint_aldea.py`,

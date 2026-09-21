@@ -664,9 +664,19 @@ public final class VillageManager {
      *       el escalón de {@code bx-2} apoya su cara alta contra él (el alero sube hacia la casa y baja hacia fuera).
      *       Solo cambia el escalón del toldo si sigue siéndolo (lo que ponga el jugador se queda), es idempotente y va
      *       en el mismo reparador del porche ({@code arreglarPorcheDeLaTaberna}).</li>
+     *   <li>67: <b>LA MURALLA SE REPONE Y EL PLANO SE VUELVE A CAPTURAR</b> (lo reportó el jugador: *"la aldea ha tenido
+     *       daños en su muralla y nadie ha ido a repararlo"*). El <b>obrero no puede reponer lo que no está en el
+     *       plano</b> (I8) y una muralla dañada <b>antes</b> de capturarlo —o una aldea migrada, cuyo plano es un
+     *       <b>escaneo</b> del mundo— deja esos agujeros <b>fuera</b> del plano para siempre: medido en su guardado
+     *       (aldea 2, cota 120) con {@code build/obras_pendientes.py}, de las <b>7.296</b> celdas del plano solo
+     *       <b>una</b> estaba pendiente (un farol), o sea que <b>ningún</b> agujero de la muralla estaba apuntado. La
+     *       migración reconstruye el muro entero ({@code rehacerMuro}, que ya corría en este bloque) y tira el plano
+     *       para volver a capturarlo con la muralla <b>entera</b>: a partir de ahí el obrero sí mantiene lo que se
+     *       rompa. Es la misma lección de I50 (una construcción con un hueco que el plano no recuerda) aplicada al
+     *       muro.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 66;
+    public static final int CURRENT_LAYOUT = 67;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -2015,25 +2025,30 @@ public final class VillageManager {
         // Y EL FAROL QUE COLGABA ENCIMA DEL PRIMER ESCALON, FUERA (lo pidió el jugador: "hay que quitar esta lámpara
         // que está justo arriba de las primeras escaleras de la planta baja porque estorba al querer subir por ahí").
         // Idempotente y solo toca ese farol: vale también para las tabernas ya construidas.
-        VillageGenerator.quitarElFarolDeLaEscalera(level, center);
+        BlockPos farolDeLaEscalera = VillageGenerator.quitarElFarolDeLaEscalera(level, center);
         // Y EL FAROL QUE TAPABA UN PORTÓN, MUDADO A UN POSTE (I54). El layout viejo de las luces de la cerca del
         // corral ponía un farol en el MEDIO de cada lado de la valla, y el medio del lado oeste ES el portón: la hoja
         // lo llevaba encima y con él NADIE podía cruzar (el jugador: *"el ganadero quiere ir a la taberna y no puede,
         // la única salida está obstruida por una lámpara"*; su ganadera tenía el almacén aparcado de no poder llegar).
-        // Idempotente, y las celdas despejadas salen TAMBIÉN del PLANO: si el plano sigue pidiendo el farol, el
-        // obrero lo repone en la siguiente pasada (el plano de una aldea migrada es un escaneo del mundo y lo grabó
-        // mientras el farol estaba ahí).
-        List<BlockPos> huecosDespejados = VillageGenerator.despejarElHuecoDeLosPortones(level, center);
-        if (!huecosDespejados.isEmpty()) {
+        List<BlockPos> fueraDelPlano = new ArrayList<>(VillageGenerator.despejarElHuecoDeLosPortones(level, center));
+        // Y LAS CELDAS DE LOS DOS FAROLES QUE EL PUEBLO **QUITA** SALEN TAMBIÉN DEL PLANO (I8/I6): si el plano sigue
+        // pidiendo un farol que el latido retira, el OBRERO lo repone en la pasada siguiente y el reparador lo vuelve
+        // a quitar —un tira y afloja cada 10 s—. Medido en el log del jugador: *"Taberna de ...: quitado el farol de
+        // encima del primer escalon (1442, 123, 1439)"* repetido toda la sesión, y `build/obras_pendientes.py` lo
+        // delataba como la **única** celda pendiente de la aldea 2 (el plano la pedía y el mundo la tenía en aire).
+        if (farolDeLaEscalera != null) {
+            fueraDelPlano.add(farolDeLaEscalera);
+        }
+        if (!fueraDelPlano.isEmpty()) {
             VillageSavedData.Blueprint plano = saved.getBlueprint(objectiveIndex);
             if (plano != null) {
-                for (BlockPos celda : huecosDespejados) {
+                for (BlockPos celda : fueraDelPlano) {
                     plano = plano.sinCelda(celda.asLong());
                 }
                 saved.setBlueprint(objectiveIndex, plano);
             }
-            DevilRpg.LOGGER.info("[Village] Aldea {}: {} farol(es) fuera del hueco de un porton (y fuera del plano)",
-                    objectiveIndex, huecosDespejados.size());
+            DevilRpg.LOGGER.info("[Village] Aldea {}: {} celda(s) de faroles que el pueblo retira, fuera del plano",
+                    objectiveIndex, fueraDelPlano.size());
         }
         // PESQUERA (etapa G): el lago del pescador, su caseta y su barril. Idempotente (vale el agua del lago o el
         // barril como testigo): si el jugador se lleva media pesquera, el pueblo la vuelve a levantar.
@@ -2239,23 +2254,32 @@ public final class VillageManager {
                 adultos++;
             }
         }
-        // Se reserva al menos un aldeano para lo suyo (huerta, comercio...) si hay gente de sobra.
+        // EL ORDEN MANDA: primero el aldeano <b>SIN FAENA</b> (el holgazán/recolector: es EL constructor del pueblo, y
+        // es el único al que se le pone la reparación a prioridad 3, por delante de todo), después los que YA eran
+        // obreros y NO son granjeros (para no cambiarlos cada latido), después los demás adultos con otro oficio, y
+        // SOLO al final los granjeros (mejor una huerta más lenta que una aldea en ruinas). A los que SOBRAN se les
+        // quita la marca: el aldeano vuelve a su oficio.
+        //
+        // OJO: el holgazán (NITWIT, el recolector) estaba EXCLUIDO de ser obrero —y con él fuera, los tres obreros
+        // eran siempre aldeanos CON oficio, que llevan la reparación a prioridad 5, o sea la última—, así que la obra
+        // la hacía el que menos tiempo tenía. El propio mod dice lo contrario en `VillageStorage`: "el constructor
+        // —que también es recolector—". El jugador lo notó: *"la aldea ha tenido daños en su muralla y nadie ha ido a
+        // repararlo; el recolector está de flojo"*.
         int deseados = Math.max(1, Math.min(MAX_BUILDERS, adultos - 1));
-        // EL ORDEN MANDA: primero los que YA eran obreros y NO son granjeros (para no cambiarlos cada latido),
-        // después los demás adultos que no son granjero ni holgazán, y SOLO al final los granjeros (mejor una huerta
-        // más lenta que una aldea en ruinas). A los que SOBRAN se les quita la marca: el aldeano vuelve a su oficio.
         List<Villager> orden = new ArrayList<>();
-        for (int pasada = 0; pasada < 4; pasada++) {
+        for (int pasada = 0; pasada < 5; pasada++) {
             for (Villager villager : aldeanos) {
                 if (!puedeSerObrero(villager) || orden.contains(villager)) {
                     continue;
                 }
                 boolean yaEra = villager.getPersistentData().getBoolean(BUILDER_TAG);
                 boolean esGranjero = villager.getVillagerData().getProfession() == VillagerProfession.FARMER;
+                boolean sinFaena = !VillageGenerator.esOficioDelPueblo(villager.getVillagerData().getProfession());
                 boolean toca = switch (pasada) {
-                    case 0 -> yaEra && !esGranjero;   // los obreros de siempre que no son granjeros
-                    case 1 -> !yaEra && !esGranjero;  // los demás adultos con otro oficio
-                    case 2 -> yaEra;                  // un granjero que ya hacía de obrero
+                    case 0 -> sinFaena;               // el holgazán/recolector: el constructor del pueblo
+                    case 1 -> yaEra && !esGranjero;   // los obreros de siempre que no son granjeros
+                    case 2 -> !yaEra && !esGranjero;  // los demás adultos con otro oficio
+                    case 3 -> yaEra;                  // un granjero que ya hacía de obrero
                     default -> true;                  // y, si no llega nadie, cualquier granjero
                 };
                 if (toca) {
@@ -2273,14 +2297,19 @@ public final class VillageManager {
     }
 
     /**
-     * ¿Ese aldeano puede ser obrero? (ni crías, ni el recolector, ni el ganadero ni un guardia, que tienen su propio
-     * puesto). El ganadero entra aquí desde la etapa D: si no, el reparto de obreros se lo llevaba a reparar caminos
-     * y el rebaño se quedaba sin nadie que lo cuidara.
+     * ¿Ese aldeano puede ser obrero? Ni crías, ni el ganadero ni el cocinero —tienen su propio puesto y el rebaño o
+     * la cocina se quedan sin nadie—, ni un guardia.
+     * <p>
+     * El <b>holgazán</b> ({@code NITWIT}, el <b>recolector</b>) <b>SÍ</b> puede: es el aldeano <b>sin faena</b> del
+     * pueblo y su reparación va a prioridad <b>3</b>, por delante de todo (ver {@code marcarObrero}), que es lo que el
+     * pueblo necesita de él cuando hay obra. Estuvo excluido y el resultado fue el contrario del diseño: los obreros
+     * eran aldeanos <b>con oficio</b> —que reparan a prioridad <b>5</b>, la última— y la muralla dañada se quedaba sin
+     * tocar (lo reportó el jugador: *"la aldea ha tenido daños en su muralla y nadie ha ido a repararlo; el recolector
+     * está de flojo"*). Con el holgazán dentro, él barre el suelo cuando <b>no hay obra</b>; mientras la haya, repara.
      */
     private static boolean puedeSerObrero(Villager villager) {
         VillagerProfession profesion = villager.getVillagerData().getProfession();
-        return !villager.isBaby() && profesion != VillagerProfession.NITWIT
-                && profesion != VillagerProfession.SHEPHERD
+        return !villager.isBaby() && profesion != VillagerProfession.SHEPHERD
                 && profesion != VillagerProfession.BUTCHER
                 && !VillagerGuardGoal.esGuardia(villager);
     }

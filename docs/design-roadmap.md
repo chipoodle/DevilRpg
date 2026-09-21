@@ -3050,6 +3050,31 @@ están dentro. El problema no era la red de seguridad, era que **actuaba primero
   no se toca ni el spawn, ni el escalado, ni el botín de los zombis agresivos.
 - El reloj es **por aldea y por bicho** y se olvida cuando el bicho sale o muere.
 
+### 3b.72 La muralla dañada que nadie reparaba (el panorama no la tenía) y el recolector de flojo
+
+El jugador: *"la aldea ha tenido daños en su muralla y nadie ha ido a repararlo. El recolector está de flojo y así ha
+estado durante todo el día"*.
+
+**MEDIDO en su guardado** (`build/obras_pendientes.py`, nuevo): de las **7.296** celdas del plano de la aldea 2
+**una** estaba pendiente (un farol de la taberna que el propio pueblo retira en cada latido) → **ningún** agujero de
+la muralla estaba en el plano, así que el obrero **no tenía nada que reponer** allí: `findRepairTarget` recorre el
+plano y **lo que no está en el plano no existe para el pueblo** (I8/I50). El plano de una aldea migrada es un
+**escaneo** del mundo: si la muralla ya estaba dañada al capturarlo, los agujeros quedan fuera **para siempre**. Y la
+lista de aldeanos marcados como obrero lo confirmaba: los tres eran aldeanos **con oficio** (herrero de armas,
+leñador, pescador), que reparan a prioridad **5** —la última—, y el **recolector** (Anselmo, holgazán) estaba
+**Paseando** y **sin** la marca.
+
+**ARREGLO** (I60):
+- **Migración 67**: el muro se reconstruye (`rehacerMuro`, que ya corría en el bloque de migración) y el plano se
+  **tira para volver a capturarlo** con la muralla entera; a partir de ahí el obrero mantiene lo que se rompa.
+- **El constructor es el aldeano SIN FAENA** (el recolector): `puedeSerObrero` ya no excluye al holgazán y el reparto
+  lo elige **el primero** (su reparación va a prioridad 3, por delante de todo).
+- **Lo que el pueblo retira, fuera del plano**: el farol de encima del primer escalón de la taberna era la única
+  celda pendiente de la aldea 2 (tira y afloja cada 10 s con el obrero); `quitarElFarolDeLaEscalera` devuelve la celda
+  y el latido la borra del plano.
+- **Límite conocido**: el obrero trabaja a **+5/−6** de la cota, así que los **tejados** quedan fuera (aldea 0: 27
+  losas de la placa del tejado a **+11**, pendientes).
+
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.

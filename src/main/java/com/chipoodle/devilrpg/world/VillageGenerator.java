@@ -8002,10 +8002,15 @@ public final class VillageGenerator {
      * <p>
      * Es <b>idempotente</b> y <b>solo toca ese farol</b> (si en esa celda hay otra cosa —lo que haya puesto el
      * jugador— no se toca). Se llama desde el latido, así que vale también para las aldeas ya construidas.
+     *
+     * @return la celda del farol que ha quitado (o {@code null} si no había nada que quitar), para que el latido la
+     *         saque también del <b>plano</b>: si el plano la sigue pidiendo, el obrero lo repone y esto lo vuelve a
+     *         quitar, en un tira y afloja cada 10 s (I8/I6).
      */
-    public static void quitarElFarolDeLaEscalera(ServerLevel level, BlockPos center) {
+    @Nullable
+    public static BlockPos quitarElFarolDeLaEscalera(ServerLevel level, BlockPos center) {
         if (!tabernaConstruida(level, center)) {
-            return;
+            return null;
         }
         int nivel = cotaDeLaPlaza(level, center);
         BlockPos base = baseDeLaTaberna(center);
@@ -8017,7 +8022,9 @@ public final class VillageGenerator {
             colocar(level, farol, Blocks.AIR.defaultBlockState(), 3);
             DevilRpg.LOGGER.info("[Village] Taberna de {}: quitado el farol de encima del primer escalon ({})",
                     center, farol.toShortString());
+            return farol;
         }
+        return null;
     }
 
     /**
