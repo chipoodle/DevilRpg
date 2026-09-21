@@ -1380,9 +1380,11 @@ otra`).
 >   va andando hacia ella no está ahí. Ahora, además, se mira el **ticket de la otra mitad**
 >   (`PoiManager.getCountInRange(…, Occupancy.IS_OCCUPIED)`): si esa mitad está cogida, es de alguien aunque no se le
 >   vea.
-> - Y con las dos cosas, la corrida del arnés acaba en `conCama=15 … COMPARTIDAS=0 SIN CAMA=0 **DURMIENDO=13**`
->   (de 15: los otros dos son crías que aún no se acuestan). Las celdas de espera que se ven en el log son ya
->   **de dentro del edificio**, al lado de la cama (`se le mandara a 1367,124,…`, `1453,125,…`).
+> - Y con las dos cosas, la corrida del arnés acaba en **`conCama=15 (camas distintas ocupadas=15) COMPARTIDAS=0
+>   SIN CAMA=0 DURMIENDO=15`** — los **15** aldeanos (crías incluidas) con su cama propia y **durmiendo**—, y en toda
+>   la corrida `COMPARTIDAS` **no se pone a 1 ni una vez** (con la comprobación vieja salía `COMPARTIDAS=1
+>   [1452,125,1429+1452,125,1430]`). Las celdas de espera que se ven en el log son ya **de dentro del edificio**, al
+>   lado de la cama (`se le mandara a 1367,124,…`, `1453,125,…`).
 
 ### I59 · El SELLO no es lo primero: primero DEFIENDE el pueblo (y el rechazo se VE)
 
