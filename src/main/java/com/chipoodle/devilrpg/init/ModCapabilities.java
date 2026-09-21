@@ -64,4 +64,23 @@ public final class ModCapabilities {
     public static final Supplier<AttachmentType<TamableMinionCapabilityInterface>> TAMABLE_MINION =
             ATTACHMENT_TYPES.register("tamable_minion",
                     () -> AttachmentType.<CompoundTag, TamableMinionCapabilityInterface>serializable(() -> new TamableMinionCapabilityImplementation()).build());
+
+    /**
+     * <b>La marca de la MILICIA de un aldeano, SINCRONIZADA al cliente</b>: {@code 0} = no es guardia,
+     * {@code 1} = espadachín, {@code 2} = arquero.
+     * <p>
+     * La marca de verdad vive en los <b>datos persistentes</b> del aldeano ({@code getPersistentData}), que son
+     * <b>solo del servidor</b>: el cliente nunca los recibe. Y el <b>render</b> necesita saber quién es guardia para
+     * dibujarle la armadura y el arma ({@code GuardVillagerRenderer}); leyendo los datos persistentes el cliente veía
+     * {@code false} en todos y TODOS los aldeanos salían con el modelo de vanilla, <b>sin armadura y sin arma</b>
+     * aunque el guardia las llevara puestas (lo pidió el jugador: *"cambia el render de los guardias para que se vea
+     * que están usando armadura y las armas que llevan"*). Una attachment con {@code .sync(...)} sí viaja al cliente,
+     * y se manda sola cuando cambia ({@code setData}).
+     */
+    public static final Supplier<AttachmentType<Integer>> VILLAGER_GUARD =
+            ATTACHMENT_TYPES.register("villager_guard",
+                    () -> AttachmentType.<Integer>builder(() -> 0)
+                            .serialize(com.mojang.serialization.Codec.INT)
+                            .sync(net.minecraft.network.codec.ByteBufCodecs.VAR_INT)
+                            .build());
 }

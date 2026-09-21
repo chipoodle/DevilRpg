@@ -2319,6 +2319,11 @@ public final class VillageManager {
         villager.getPersistentData().putBoolean(GUARD_TAG, true);
         villager.getPersistentData().putInt(GUARD_TYPE_TAG, tipo);
         villager.getPersistentData().putInt(GUARD_INDEX_TAG, indice);
+        // Y SE ESPEJA EN LA MARCA SINCRONIZADA (ver `VillagerGuardGoal.sincronizarMarcaDeGuardia`): es lo que hace que
+        // el CLIENTE sepa que este aldeano es de la milicia y el render le ponga el modelo con su armadura y su arma.
+        // Sin esto, `esGuardia` daba false en el cliente (los datos persistentes no viajan) y los guardias se veían
+        // como aldeanos normales, sin equipo (lo pidió el jugador).
+        VillagerGuardGoal.sincronizarMarcaDeGuardia(villager);
         // Un obrero que pasa a la guardia deja de ser obrero (tiene su puesto).
         desmarcarObrero(villager);
         // Y TAMBIÉN LA RECOGIDA DE SU OFICIO: los dos goals piden MOVE y el de recoger se engancha ANTES que el de la
@@ -2360,6 +2365,9 @@ public final class VillageManager {
             return;
         }
         villager.getPersistentData().putBoolean(GUARD_TAG, false);
+        // La marca SINCRONIZADA también se pone a cero: el cliente deja de verlo como guardia y el render vuelve a
+        // dibujarlo como aldeano normal (con su ropa de oficio) en el acto.
+        VillagerGuardGoal.sincronizarMarcaDeGuardia(villager);
         for (WrappedGoal wrapped : List.copyOf(villager.goalSelector.getAvailableGoals())) {
             if (wrapped.getGoal() instanceof VillagerGuardGoal) {
                 villager.goalSelector.removeGoal(wrapped.getGoal());
@@ -2782,6 +2790,29 @@ public final class VillageManager {
     private static final Map<UUID, BlockPos> ESPERA_PARA_DORMIR = new java.util.concurrent.ConcurrentHashMap<>();
     /** Cuántas camas se prueban antes de rendirse (las más cercanas <b>al aldeano</b>): con 8 sobra en una aldea. */
     private static final int CAMAS_A_PROBAR = 8;
+    /**
+     * <b>A qué distancia de la celda de espera tiene que estar el aldeano para que valga como "los dos últimos
+     * pasos"</b> (bloques). Ver {@code celdaParaAcostarse}: una celda de espera a la que el aldeano no llega andando
+     * solo vale si puede llegarse a ella de un paso; una <b>de otra planta</b> no es un paso, es otra casa —y ahí
+     * estaba Zacarías, plantado en la calle debajo de su cama de la posada con la etiqueta "Yendo a dormir"—.
+     */
+    private static final double PASO_A_LA_ESPERA = 3.0D;
+    /**
+     * Latidos seguidos ({@code VILLAGE_POLL_TICKS} cada uno) en los que un aldeano, en su hora de descanso, no
+     * consigue ni acercarse a su cama, antes de <b>darle otra</b>: se le suelta la cama (con su ticket, I23) y se le
+     * apunta como punto fallido (I33) para que el reparto no se la vuelva a dar y le busque una que sí alcance.
+     */
+    private static final int LATIDOS_PARA_RENUNCIAR_A_LA_CAMA = 6;
+    /**
+     * Seguimiento de un aldeano que <b>no consigue llegar a su cama</b>: la cama que persigue, lo más cerca que ha
+     * estado de ella y los latidos seguidos <b>sin acercarse</b> (la misma regla que I3: atascado es no acercarse).
+     * Se olvida al acostarse, al cambiar de cama y al renunciar a ella (ver {@link #acostarAlQueNoLlega}).
+     */
+    private record SinLlegar(BlockPos cama, double mejor, int fallos) {
+    }
+
+    /** Latidos seguidos sin acercarse a la cama, por aldeano (ver {@link #acostarAlQueNoLlega}). */
+    private static final Map<UUID, SinLlegar> SIN_LLEGAR_A_LA_CAMA = new java.util.concurrent.ConcurrentHashMap<>();
 
     /**
      * <b>El reparto de camas del pueblo, pase lo que pase</b>: se le da cama al aldeano que no tiene y se acuesta al
@@ -2942,6 +2973,11 @@ public final class VillageManager {
             if (!camaUtilizable(level, cama, villager)) {
                 continue;
             }
+            // UNA CAMA A LA QUE YA NO LLEGÓ (aparcada, I33) NO SE LE VUELVE A DAR: si no, el reparto se la da otra vez
+            // y el aldeano entra en el bucle de siempre (reclamar → no llegar → perderla a los 60 s → reclamarla).
+            if (esPuntoFallido(villager, cama)) {
+                continue;
+            }
             var camino = villager.getNavigation().createPath(cama, 1);
             if (camino == null) {
                 continue;
@@ -3018,7 +3054,18 @@ public final class VillageManager {
         // Y SI NINGUNA (el planificador no le lleva ni a la celda de al lado de su cama), la más cercana que VEA: el
         // latido le lleva y, si no puede andando, le mueve esos últimos bloques. Una cama que se ve y está a un paso
         // no se descarta: con camas de sobra, el que no duerme es el aldeano, no la cama.
+        // PERO TIENE QUE SER DE VERDAD "UN PASO": la celda de espera a la que el aldeano NO puede llegar andando solo
+        // vale si está a menos de PASO_A_LA_ESPERA bloques y en su MISMA PLANTA (o pegada). Antes valía cualquiera que
+        // el aldeano viera, y con una cama de la POSADA (planta de arriba) eso elegía una celda de espera cinco
+        // bloques por encima de él: el aldeano se quedaba plantado DEBAJO, en la calle, con la etiqueta "Yendo a
+        // dormir" y sin acostarse nunca (lo reportó el jugador con Zacarías: *"según va a dormir pero está afuera y no
+        // toma cama"*, medido en su guardado: cama (1446,125,1429) y él en (1446,120,1427), la misma X/Z una planta
+        // abajo). Sin celda de espera válida, esta cama no es para él y el reparto le busca otra que sí alcance.
         for (BlockPos celda : candidatas) {
+            if (Math.abs(celda.getY() - villager.getY()) > 1.0D
+                    || celda.distSqr(villager.blockPosition()) > PASO_A_LA_ESPERA * PASO_A_LA_ESPERA) {
+                continue; // otra planta (o demasiado lejos): eso no son "los dos últimos pasos"
+            }
             if (hayVistaLibre(level, celda, cama, villager)) {
                 return celda;
             }
@@ -3096,9 +3143,34 @@ public final class VillageManager {
                     caminarHacia(villager, espera, 0.6F);
                     ponerActividad(villager, "Yendo a dormir");
                 }
+                // Y SI NI ASÍ (ni se acerca, ni su celda de espera le sirve), SE LE DA OTRA CAMA: se le suelta la suya
+                // —con su ticket, I23: dejarlo cogido la dejaría muerta para nadie— y se apunta como punto fallido
+                // (I33) para que el reparto no se la vuelva a dar y le busque una que SÍ alcance. El contador solo
+                // sube cuando NO se acerca (I3), así que a un aldeano que va andando a su cama desde lejos no se le
+                // quita nada. Sin esto el bucle era eterno: vanilla le borra el HOME a los 60 s por no llegar, el
+                // reparto se lo vuelve a dar (el mismo) y vuelta a empezar — medido en el log del jugador: el mismo
+                // aldeano reclamando la misma cama de la posada (1446,125,1429) una y otra vez sin acostarse nunca.
+                SinLlegar antes = SIN_LLEGAR_A_LA_CAMA.get(villager.getUUID());
+                double distancia = Math.sqrt(villager.blockPosition().distSqr(cama));
+                boolean mismaCama = antes != null && antes.cama().equals(cama);
+                boolean acercandose = mismaCama && distancia < antes.mejor() - 0.5D;
+                int fallos = mismaCama && !acercandose ? antes.fallos() + 1 : 0;
+                double mejor = mismaCama && !acercandose ? Math.min(antes.mejor(), distancia) : distancia;
+                SIN_LLEGAR_A_LA_CAMA.put(villager.getUUID(), new SinLlegar(cama, mejor, fallos));
+                if (fallos >= LATIDOS_PARA_RENUNCIAR_A_LA_CAMA) {
+                    SIN_LLEGAR_A_LA_CAMA.remove(villager.getUUID());
+                    ESPERA_PARA_DORMIR.remove(villager.getUUID());
+                    level.getPoiManager().release(cama); // el ticket vuelve a estar libre (I23)
+                    villager.getBrain().eraseMemory(MemoryModuleType.HOME);
+                    marcarPuntoFallido(villager, cama);
+                    DevilRpg.LOGGER.info("[Village] {} no consigue llegar a su cama {} en {} latidos sin acercarse:"
+                                    + " se le da otra (la suya queda libre y aparcada)",
+                            villager.getUUID(), cama.toShortString(), fallos);
+                }
                 continue;
             }
             ESPERA_PARA_DORMIR.remove(villager.getUUID());
+            SIN_LLEGAR_A_LA_CAMA.remove(villager.getUUID());
             villager.startSleeping(cama);
             DevilRpg.LOGGER.info("[Village] {} no llegaba a su cama por el camino del juego (esta a {} bloque(s) y la"
                             + " tiene a la vista): el pueblo le acuesta en {}",

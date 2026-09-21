@@ -1,6 +1,7 @@
 package com.chipoodle.devilrpg.entity.goal;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.init.ModCapabilities;
 import com.chipoodle.devilrpg.world.VillageGenerator;
 import com.chipoodle.devilrpg.world.VillageManager;
 import com.chipoodle.devilrpg.world.VillagePantry;
@@ -21,10 +22,12 @@ import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.neoforged.neoforge.attachment.AttachmentType;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.EnumSet;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 /**
  * <b>Guardia de la aldea</b>: el aldeano adulto <b>sobrante</b> que se alista en la milicia (lo decide
@@ -47,9 +50,12 @@ import java.util.function.Predicate;
  * </ol>
  * Se mueve <b>por el cerebro</b> ({@link VillageManager#caminarHacia}), como el resto de goals de la aldea.
  * <p>
- * <b>Ojo con verlo</b>: el modelo del aldeano de vanilla <b>no</b> tiene capa de armadura ni de objeto en mano
- * ({@code VillagerRenderer} solo pone cabeza, profesión y brazos cruzados), así que lo que lleva puesto <b>no se
- * ve</b> todavía: es el paso siguiente (modelo propio tipo jugador con cabeza de aldeano).
+ * <b>Y SE LE VE EL EQUIPO</b>: el aldeano de vanilla no puede enseñar armadura ni lo que lleva en la mano
+ * ({@code VillagerRenderer} solo pone cabeza, profesión y brazos cruzados), así que los guardias se dibujan con
+ * {@code GuardVillagerModel} (cuerpo de jugador + cabeza de aldeano) y las capas de vanilla de armadura y de objeto
+ * en mano. Para eso el <b>cliente</b> tiene que saber quién es guardia: la marca de verdad son los datos
+ * persistentes (solo del servidor), así que se <b>espeja</b> en una attachment <b>sincronizada</b>
+ * ({@link ModCapabilities#VILLAGER_GUARD}, ver {@link #sincronizarMarcaDeGuardia}).
  */
 public class VillagerGuardGoal extends Goal {
 
@@ -57,6 +63,11 @@ public class VillagerGuardGoal extends Goal {
     public static final int ESPADACHIN = 0;
     /** Arquero: arco y flechas. */
     public static final int ARQUERO = 1;
+    /**
+     * El arquero <b>tal como viaja al cliente</b> en la marca sincronizada (1 = espadachín, 2 = arquero). El 0 está
+     * reservado a "no es guardia", que es lo que necesita el render para decidir.
+     */
+    private static final int ARQUERO_SINCRONIZADO = 2;
 
     /** Radio de la ronda: por DENTRO del muro (el muro está a FENCE_RADIUS). */
     private static final double RADIO_RONDA = VillageGenerator.FENCE_RADIUS - 7.0D;
@@ -169,12 +180,40 @@ public class VillagerGuardGoal extends Goal {
 
     /** ¿Este aldeano está alistado en la guardia? */
     public static boolean esGuardia(Villager villager) {
-        return villager.getPersistentData().getBoolean(VillageManager.GUARD_TAG);
+        // SERVIDOR: manda la marca de verdad (los datos persistentes). CLIENTE: esos datos no llegan, así que se lee
+        // la copia SINCRONIZADA (si no, el render no veía a ningún guardia y no enseñaba armadura ni arma).
+        return villager.getPersistentData().getBoolean(VillageManager.GUARD_TAG) || guardaSincronizada(villager) > 0;
     }
 
     /** Tipo de guardia de un aldeano alistado ({@link #ESPADACHIN} o {@link #ARQUERO}). */
     public static int tipoDe(Villager villager) {
+        int sincronizada = guardaSincronizada(villager);
+        if (sincronizada > 0) {
+            return sincronizada == ARQUERO_SINCRONIZADO ? ARQUERO : ESPADACHIN;
+        }
         return villager.getPersistentData().getInt(VillageManager.GUARD_TYPE_TAG);
+    }
+
+    /** Lo que dice la copia <b>sincronizada</b> (0 = no es guardia, 1 = espadachín, 2 = arquero). */
+    private static int guardaSincronizada(Villager villager) {
+        Integer dato = villager.getExistingDataOrNull(ModCapabilities.VILLAGER_GUARD);
+        return dato == null ? 0 : dato;
+    }
+
+    /**
+     * <b>Espeja en la copia SINCRONIZADA la marca de la milicia</b> (la llama quien alista o da de baja al aldeano, y
+     * el latido la repite: solo escribe cuando el valor CAMBIA, para no mandar un paquete por aldeano cada 10 s).
+     * <p>
+     * Es lo que hace que el <b>cliente</b> sepa quién es guardia y el renderer le ponga el modelo con armadura y arma.
+     */
+    public static void sincronizarMarcaDeGuardia(Villager villager) {
+        int nuevo = villager.getPersistentData().getBoolean(VillageManager.GUARD_TAG)
+                ? (villager.getPersistentData().getInt(VillageManager.GUARD_TYPE_TAG) == ARQUERO
+                        ? ARQUERO_SINCRONIZADO : 1)
+                : 0;
+        if (guardaSincronizada(villager) != nuevo) {
+            villager.setData(ModCapabilities.VILLAGER_GUARD, nuevo); // las attachments sincronizadas viajan al cambiar
+        }
     }
 
     @Override

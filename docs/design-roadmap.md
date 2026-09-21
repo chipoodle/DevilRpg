@@ -2970,6 +2970,51 @@ problema es que el apoyo es la puerta).
 portón). El del **gallinero** no se audita: es un hueco de **un bloque** a propósito (los pollos pasan, los aldeanos
 no).
 
+### 3b.70 Zacarías sin cama, la milicia sin armadura y el equipo que no se veía
+
+Tres reportes del jugador en la misma sesión: *"Zacarías según va a dormir pero está afuera y no toma cama"*, *"un
+guardia luego luego fue asesinado por un zombie y en el cofre había espada"* + *"revisa que el herrero
+correspondiente esté haciendo armaduras y armas y que los guardias se estén equipando"* y *"cambia el render de los
+guardias para que se vea que están usando armadura y las armas que llevan"*.
+
+**MEDIDO en su guardado y su log** (aldea 2, cota 120; `build/aldeanos_equipo.py`, que vuelca cada aldeano con su
+cama, su posición, si duerme y **todo su inventario**):
+
+```
+Zacarias (Sin oficio) | "Yendo a dormir"  pos (1446,120,1427)  NO duerme  cama(HOME)=(1446,125,1429)
+                                          -> su cama es de la POSADA: la misma X/Z, CINCO bloques más arriba
+log: 9474201f… no llega a su cama por el camino del juego: se le da 1446,125,1429
+                 y se le mandara a 1446,125,1427 para acostarle       (el mismo aldeano, en bucle)
+log: El herrero de herramientas (Josefa): "Hizo 4 palos" / "Aserro un tronco en 4 tablones"  (toda la sesión)
+almacén (1461,121,1433): 19 leather, 8 iron_ingot, iron_sword x1, arrow x2 … y NINGUNA pieza de armadura
+log: 10:54:36 muere Bibiana (Guardia espadachín) · 10:54:41 Isidoro (Guardia) cae con el ZombieVillager de Bibiana
+```
+
+Los tres son fallos distintos:
+
+1. **La cama (I57)**: su cama estaba en **otra planta** y la *celda de espera* que le calculó el reparto también
+   (`1446,125,1427`), así que se le mandaba arriba, el planificador lo dejaba **debajo** y se quedaba plantado en la
+   calle con la etiqueta "Yendo a dormir". Y nadie le cambiaba la cama: el reparto solo da cama al que **no tiene**
+   `HOME`, así que el bucle *reclamar → no llegar → vanilla le borra el HOME a los 60 s → reclamar la misma* era
+   eterno. **Arreglo**: la celda de espera del último recurso tiene que estar a **≤3 bloques y en su misma planta**
+   (si no, esa cama no es para él) y el aldeano que **no se acerca** a su cama en **6 latidos** la **suelta** (con su
+   ticket) y se le **aparca** para que el reparto le dé otra que sí alcance.
+2. **La armadura (I56)**: el herrero de **herramientas** era el único que sabía hacer armadura, y su
+   `elegirReceta` era una cascada con la fabricación **al final** — detrás de aserrar troncos y hacer palos, cuyos
+   objetivos (32 tablones, 64 palos) **se los come el otro herrero**, así que **nunca** llegaba a la armadura. Con 19
+   de cuero y 8 lingotes en el almacén, la milicia salió a pelear **sin nada puesto** y cayó al primer zombi.
+   **Arreglo**: el herrero **alterna** transformación y fabricación (`turnoDeFabricar`); la armadura sale al mismo
+   ritmo (y el log ya dice *"Hizo un casco de cuero"*, etc.).
+3. **El render (I55)**: el modelo del guardia (cuerpo de jugador + cabeza de aldeano, con las capas de vanilla de
+   **armadura** y de **objeto en mano**) ya estaba hecho… y **no se veía**: `esGuardia` leía los **datos
+   persistentes**, que son **solo del servidor**, así que en el cliente daba `false` para todos y todos los guardias
+   se dibujaban con el modelo de vanilla, **sin armadura y sin arma** (el equipo sí viajaba: lo manda `ServerEntity`
+   para cualquier `LivingEntity`). **Arreglo**: la marca se **espeja** en una attachment **sincronizada**
+   (`ModCapabilities.VILLAGER_GUARD`) que se escribe **solo cuando cambia**.
+
+**Pendiente de ver en juego** (hace falta reiniciar): que el guardia se vea con su armadura y su espada/escudo, y
+que Zacarías acabe durmiendo en una cama de la planta baja.
+
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.

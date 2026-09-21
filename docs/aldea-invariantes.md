@@ -1267,6 +1267,81 @@ y sus portones celda a celda.
 > farol **a un bloque del apoyo y posado** es *su* farol y no se toca: solo se muda el que **cuelga** de un poste
 > (I14) o el que quedó a 2-3 bloques.
 
+### I55 · Lo que el CLIENTE necesita para dibujar va SINCRONIZADO (los datos persistentes no viajan)
+
+El jugador: *"cambia el render de los guardias para que se vea que están usando armadura y las armas que llevan"*.
+
+**Medido en el código**: el modelo y el renderer del guardia ya existían (`GuardVillagerModel` = cuerpo de jugador +
+cabeza de aldeano, con las capas de vanilla `HumanoidArmorLayer` e `ItemInHandLayer`, y `GuardVillagerRenderer`
+registrado **en lugar** del de vanilla, que delega en él para los aldeanos normales)… y **no se veía nada**:
+`VillagerGuardGoal.esGuardia` leía la marca de los **datos persistentes** del aldeano
+(`villager.getPersistentData()`), que son **solo del servidor**. En el cliente esa marca está **siempre vacía**, así
+que `esGuardia` devolvía `false` para todos, el renderer se iba por la rama del aldeano normal y **ningún guardia
+enseñaba su armadura ni su arma** (que sí llevaba puestas: el equipo de un mob lo manda el servidor en
+`ClientboundSetEquipmentPacket`, `ServerEntity` lo hace para **cualquier** `LivingEntity`).
+
+**Regla:** la marca de verdad sigue en los datos persistentes (servidor), y se **espeja** en una attachment
+**sincronizada** (`ModCapabilities.VILLAGER_GUARD`: 0 = no es guardia, 1 = espadachín, 2 = arquero) con
+`VillagerGuardGoal.sincronizarMarcaDeGuardia`, que **solo escribe cuando el valor cambia** (nada de un paquete por
+aldeano cada latido) y la llaman el alistamiento, la baja y el reparto de la milicia (que pasa cada latido). Y las
+lecturas (`esGuardia`/`tipoDe`) miran **las dos**: en el servidor manda la marca, en el cliente la copia.
+
+**Ojo, la lección es general**: cualquier dato que el **render** necesite (o el HUD, o el nombre) **tiene que viajar
+al cliente** — datos persistentes, `SavedData` o campos del servidor no llegan. Lo que ya viaja solo: el **equipo**
+del mob (manos y armadura) y los atributos sincronizados. Se comprueba en juego (ver el modelo y el equipo puestos);
+en el guardado, la copia sincronizada queda escrita en el aldeano, así que `build/aldeanos_equipo.py` puede
+comprobar que el guardia la tiene.
+
+### I56 · El herrero ROTA entre transformar materiales y fabricar (si no, la armadura no se hace NUNCA)
+
+Lo pidió el jugador tras perder la milicia: *"revisa que el herrero correspondiente esté haciendo armaduras y armas
+y que los guardias se estén equipando"*.
+
+**Medido en su log** (aldea 2): la herrera de **herramientas** (Josefa, la que hace la armadura) se pasó la sesión
+entre `Hizo 4 palos` y `Aserro un tronco en 4 tablones`, y en el **almacén no había ni una pieza de armadura**
+(tenía **19 de cuero** y **8 lingotes de hierro**: material de sobra para cascos, petos, grebas y botas). Su
+`elegirReceta` era una **cascada**: primero la transformación de materiales (pepitas y chatarra → lingotes, cuero
+viejo y carne → cuero, troncos → tablones, tablones → palos) y **al final** la fabricación; y la transformación
+**no se acaba nunca**, porque sus objetivos (32 tablones, 64 palos) se los come **el otro herrero** (el de armas
+gasta palos en arcos y flechas y tablones en escudos). La fabricación de armadura no se alcanzaba **jamás**.
+
+**Regla:** el herrero **alterna** una faena de **transformación** y una de **fabricación** (`turnoDeFabricar`, ver
+`elegirReceta`): con las dos colas vivas, la armadura sale al mismo ritmo que el resto. Es la lección de **I53** otra
+vez: *un paso que va detrás de otro que no termina nunca no se alcanza jamás*.
+
+### I57 · La cama de un aldeano está en SU planta (y una cama que no alcanza se le CAMBIA)
+
+El jugador: *"Zacarías según va a dormir pero está afuera y no toma cama"*.
+
+**Medido en su guardado** (aldea 2, cota 120): Zacarías (`Sin oficio`) tenía por cama la de la **posada**
+(`1446,125,1429`, segunda planta de la taberna) y estaba en la calle, en `(1446,120,1427)` — **la misma X/Z, una
+planta más abajo**— con la etiqueta *"Yendo a dormir"* y sin acostarse. La celda de espera que le calculó el reparto
+era `(1446,125,1427)`, también **arriba**. Y el log lo cantaba en bucle para varios aldeanos
+(`no llega a su cama por el camino del juego: se le da 1446,125,1429 y se le mandará a 1446,125,1427`).
+
+**Causa (dos capas).**
+1. **La celda de espera podía estar en otra planta.** `celdaParaAcostarse` tiene dos pasadas: la primera exige que el
+   aldeano **llegue andando** (`canReach`), y la segunda —el último recurso de I43— aceptaba **cualquier celda que
+   viera**, pensada para *"los dos últimos pasos"* (el herrero que se quedaba a 2,00 bloques de su cama). Con una cama
+   de la posada, esa segunda pasada elegía una celda **cinco bloques por encima** del aldeano: se le mandaba a ella,
+   el planificador le dejaba abajo (o el cerebro le devolvía el destino a la cama, que no alcanza) y el aldeano se
+   quedaba plantado **debajo** de su cama para siempre.
+2. **Y nadie le cambiaba la cama.** `reclamarCamasDelPueblo` solo da cama al que **no tiene** `HOME`: un aldeano con
+   una cama inalcanzable se quedaba en el bucle *reclamar → no llegar → vanilla le borra el HOME a los 60 s →
+   reclamar la misma*.
+
+**Regla:** (a) la celda de espera del último recurso tiene que estar a **menos de `PASO_A_LA_ESPERA` (3) bloques** y
+en la **misma planta** (o pegada) que el aldeano: si no, esa cama **no es para él** y el reparto prueba la siguiente;
+(b) el aldeano que **no se acerca** a su cama en `LATIDOS_PARA_RENUNCIAR_A_LA_CAMA` (6 latidos = 1 min, la regla de
+I3: atascado = no acercarse) **la suelta** (con su **ticket**, I23: si no, la cama queda muerta para todos), se le
+**aparca el punto** (I33) para que el reparto no se la vuelva a dar y se le busca otra; y (c) el reparto **salta las
+camas aparcadas** de ese aldeano. Un aldeano que va andando a su cama desde lejos **no** pierde nada: el contador
+solo sube cuando no se acerca.
+
+**Se comprueba contra el guardado** con `build/aldeanos_equipo.py` (la cama de cada aldeano, si está durmiendo y su
+posición: la cama y él tienen que estar en la misma planta) y en el log (`no consigue llegar a su cama … se le da
+otra`).
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
@@ -1328,6 +1403,7 @@ Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento 
 | `build/hambre_medida.py` (ignorado) | **La comida de la aldea y el reloj de cada aldeano** (I52): la `Food` y el `StarvingSince` de cada asentamiento, el `gameTime` del guardado y la marca `DevilRpgUltimaComida` de **cada** aldeano con su oficio, su posición y los minutos que lleva sin comer. Es lo que distingue "la despensa está vacía" de "este aldeano no ha comido" —y lo que enseñó que las **crías** viven con la marca del día que nacieron hasta que crecen. |
 | `build/huerta_vacias.py` (ignorado) | **Las celdas del bancal que no tienen nada** (I53): vuelca los tres bancales **celda a celda** (cultivo con su edad, tierra vacía, calva, acequia) con un mapa de una letra por celda y cuenta las que están `farmland` con el hueco de arriba libre. |
 | `build/portones_farol.py`, `build/anexo_porton.py` (ignorados) | **El hueco de los portones y el farol que lo tapa** (I54): volcan los 14 portones de las tres aldeas (los 12 de los bancales, el del corral y el del gallinero), miran las **seis celdas** por las que se cruza cada uno (la hoja y las dos de al lado, en las dos capas) y dicen qué hay en ellas **y qué pide el PLANO**; `anexo_porton.py` pinta además el corral y sus dos portones capa a capa. |
+| `build/aldeanos_equipo.py` (ignorado) | **Cada aldeano con su equipo**: su etiqueta (nombre + actividad), oficio, posición, **si está durmiendo**, su **cama** (`HOME`), su destino, **todo su inventario** y las marcas del mod; y el **contenido de los cofres** de la zona (donde el herrero deja lo que forja). Es la medida de I55/I56/I57 (la cama de otra planta, la armadura que no se fabrica, la espada que se queda en el cofre). |
 
 Los scripts de `build/` no se versionan (está en `.gitignore`): son de lectura del guardado del jugador. Las
 herramientas que sí merecen sobrevivir están **versionadas en `tools/`** (ver `tools/README.md`): `lint_aldea.py`,

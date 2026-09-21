@@ -114,6 +114,11 @@ public class VillagerSmithGoal extends Goal {
     private double mejorDistancia = Double.MAX_VALUE;
     /** Última transición anotada en el log: así se ve el ciclo entero sin escribir una línea por tick. */
     private String ultimaAnotacion = "";
+    /**
+     * Turno del herrero entre <b>transformar materiales</b> y <b>fabricar lo que falta</b> (espada, escudo, arco y
+     * armadura). Sin la rotación, la fabricación no se alcanzaba nunca: ver {@code elegirReceta} (I55).
+     */
+    private boolean turnoDeFabricar;
 
     public VillagerSmithGoal(Villager villager, BlockPos center, int objectiveIndex) {
         this.villager = villager;
@@ -479,6 +484,34 @@ public class VillagerSmithGoal extends Goal {
         if (almacen == null) {
             return null;
         }
+        Receta transformar = recetaDeTransformacion(almacen, hayLena);
+        Receta fabricar = armas() ? recetaDeArmas(almacen) : recetaDeArmadura(almacen);
+        // LAS DOS FAENAS ROTAN (I55). La fabricación —la espada, el escudo, el arco y, sobre todo, la ARMADURA— iba
+        // SIEMPRE detrás de la transformación de materiales (fundir pepitas y chatarra, curtir cuero, aserrar troncos
+        // y hacer palos) y esa transformación NO SE ACABA NUNCA: sus objetivos (32 tablones, 64 palos) se los come el
+        // otro herrero —el de armas gasta palos en arcos y flechas y tablones en escudos—, así que el de HERRAMIENTAS
+        // se pasaba la vida haciendo palos y tablones y NO HACÍA NI UNA PIEZA DE ARMADURA. Medido en el log del
+        // jugador (aldea 2): Josefa, "Hizo 4 palos" / "Aserro un tronco en 4 tablones" toda la sesión y NINGUNA
+        // armadura en el almacén (que tenía 19 de cuero y 8 lingotes de hierro: material de sobra), y la milicia cayó
+        // al primer asalto de un zombi con una espada en el cofre. Es la misma lección de I53 —un paso detrás de otro
+        // que nunca termina no se alcanza—: ahora el herrero ALTERNA una faena de cada.
+        turnoDeFabricar = !turnoDeFabricar;
+        if (turnoDeFabricar && fabricar != null) {
+            return fabricar;
+        }
+        if (transformar != null) {
+            return transformar;
+        }
+        return fabricar;
+    }
+
+    /**
+     * La <b>transformación de materiales</b> (los pasos caros de contar): pepitas de metal y chatarra en lingotes,
+     * cuero viejo y carne podrida en cuero, troncos en tablones y tablones en palos. {@code null} si no hay nada que
+     * transformar.
+     */
+    @Nullable
+    private Receta recetaDeTransformacion(Container almacen, boolean hayLena) {
         // 1) Pepitas de metal -> lingotes (la forja). Lo hacen los dos.
         if (hayLena && contar(almacen, Items.IRON_NUGGET) >= PEPITAS_POR_LINGOTE) {
             return new Receta("Fundiendo", "Fundio " + PEPITAS_POR_LINGOTE + " pepitas en un lingote",
@@ -538,8 +571,7 @@ public class VillagerSmithGoal extends Goal {
                         List.of(new ItemStack(Items.OAK_PLANKS, 2)), new ItemStack(Items.STICK, 4));
             }
         }
-        // 5) Fabricar lo que falte, según el puesto.
-        return armas() ? recetaDeArmas(almacen) : recetaDeArmadura(almacen);
+        return null;
     }
 
     /** Herrero de ARMAS (muelle): espada, escudo, arco y flechas. */
@@ -578,16 +610,16 @@ public class VillagerSmithGoal extends Goal {
         int lingotes = contar(almacen, Items.IRON_INGOT);
         boolean hierro = lingotes >= 12;
         if (contar(almacen, Items.IRON_HELMET) + contar(almacen, Items.LEATHER_HELMET) < OBJETIVO_ARMADURA) {
-            return pieza(almacen, hierro, "casco", Items.IRON_HELMET, Items.LEATHER_HELMET, 5);
+            return pieza(almacen, hierro, "un casco", Items.IRON_HELMET, Items.LEATHER_HELMET, 5);
         }
         if (contar(almacen, Items.IRON_CHESTPLATE) + contar(almacen, Items.LEATHER_CHESTPLATE) < OBJETIVO_ARMADURA) {
-            return pieza(almacen, hierro, "peto", Items.IRON_CHESTPLATE, Items.LEATHER_CHESTPLATE, 8);
+            return pieza(almacen, hierro, "un peto", Items.IRON_CHESTPLATE, Items.LEATHER_CHESTPLATE, 8);
         }
         if (contar(almacen, Items.IRON_LEGGINGS) + contar(almacen, Items.LEATHER_LEGGINGS) < OBJETIVO_ARMADURA) {
-            return pieza(almacen, hierro, "grebas", Items.IRON_LEGGINGS, Items.LEATHER_LEGGINGS, 7);
+            return pieza(almacen, hierro, "unas grebas", Items.IRON_LEGGINGS, Items.LEATHER_LEGGINGS, 7);
         }
         if (contar(almacen, Items.IRON_BOOTS) + contar(almacen, Items.LEATHER_BOOTS) < OBJETIVO_ARMADURA) {
-            return pieza(almacen, hierro, "botas", Items.IRON_BOOTS, Items.LEATHER_BOOTS, 4);
+            return pieza(almacen, hierro, "unas botas", Items.IRON_BOOTS, Items.LEATHER_BOOTS, 4);
         }
         return null;
     }
@@ -600,7 +632,7 @@ public class VillagerSmithGoal extends Goal {
         if (contar(almacen, material) < cuantas) {
             return null;
         }
-        return new Receta("Fabricando", "Hizo unas " + nombre + " de " + (hierro ? "hierro" : "cuero"),
+        return new Receta("Fabricando", "Hizo " + nombre + " de " + (hierro ? "hierro" : "cuero"),
                 List.of(new ItemStack(material, cuantas)), new ItemStack(producto));
     }
 
