@@ -1757,6 +1757,19 @@ hace de verdad en las peleas y entrenar es un extra, no un atajo.
 **Con asalto o con un enemigo a la vista no se entrena**: primero se pelea. Y si el guardia no encuentra la diana, sigue
 con la ronda en vez de quedarse parado.
 
+### I75 · El guardia no encadena viajes al almacén (el escudo que falta)
+
+Con captura: *"Segismunda, se ve ciclada tratando de ir al almacén"*.
+
+**MEDIDO en su guardado**: el almacén tenía **3 espadas de hierro, 3 arcos, 30 flechas… y 0 ESCUDOS**. Y un espadachín
+solo está "equipado" con **espada de hierro + ESCUDO** (`VillagerGuardGoal.equipado`), así que iba, no lo encontraba
+(el herrero forja el escudo en su turno, I55) y **volvía a intentarlo**: la etiqueta "Yendo al almacén" puesta en
+bucle, y con la casilla aparcada (`esPuntoFallido`) o sin aparcar, el resultado era el mismo.
+
+**Regla**: entre viaje y viaje al almacén hay **`TICKS_ENTRE_VIAJES` (2 min)**. Si el viaje no completa el equipo, el
+guardia **vuelve a la ronda** (sin la pieza que le falte) en vez de encadenar viajes: la aldea no se queda sin
+guardia y el escudo llega cuando el herrero lo forja.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 

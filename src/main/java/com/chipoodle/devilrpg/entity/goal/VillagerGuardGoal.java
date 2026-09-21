@@ -360,18 +360,25 @@ public class VillagerGuardGoal extends Goal {
         bajarEscudo();
         if (!equipado(level)) {
             sinEquipo = true;
-            // SOLO SE VA AL ALMACÉN SI SE PUEDE LLEGAR. Lo reportó el jugador: *"los guardias están yendo al almacén,
-            // se equipan y se quedan ahí parados sin hacer nada; deberían estar patrullando"*. La casilla de apoyo del
-            // almacén se aparca cuando no se alcanza (`marcarPuntoFallido`, I33), pero el guardia seguía con
-            // `equipando = true` y el destino puesto en ella: se quedaba plantado al lado. Si está aparcada, se queda
-            // de RONDA (sin la pieza que le falte) y lo reintenta cuando el aparcamiento caduque.
+            // SOLO SE VA AL ALMACÉN SI SE PUEDE LLEGAR Y NO ACABA DE IR. Lo reportó el jugador: *"los guardias están
+            // yendo al almacén, se equipan y se quedan ahí parados sin hacer nada"* y, con captura, *"Segismunda, se ve
+            // ciclada tratando de ir al almacén"*. MEDIDO en su guardado: el almacén tenía **3 espadas de hierro y 0
+            // ESCUDOS**, y un espadachín solo está equipado con **espada + escudo** → iba, no lo encontraba (el herrero
+            // forja el escudo en su turno) y volvía a intentarlo… en bucle, con la etiqueta "Yendo al almacén" siempre
+            // puesta. Y la casilla de apoyo también se aparca cuando no se alcanza (I33). Ahora, tras un viaje que no
+            // completa el equipo, se queda de RONDA un rato ({@link #TICKS_ENTRE_VIAJES}) en vez de encadenar viajes:
+            // la aldea no se queda sin guardia y el escudo llega cuando llega.
             BlockPos almacen = VillageStorage.puntoDeApoyo(level, center);
-            equipando = hayEquipoEnAlmacen && almacen != null
+            boolean viajeReciente = level.getGameTime() - ultimoViajeAlAlmacen < TICKS_ENTRE_VIAJES;
+            equipando = hayEquipoEnAlmacen && !viajeReciente && almacen != null
                     && !VillageManager.esPuntoFallido(villager, almacen);
-            if (equipando && !almacen.equals(destino)) {
-                destino = almacen;
-                mejorDistancia = Double.MAX_VALUE;
-                stuckTicks = 0;
+            if (equipando) {
+                ultimoViajeAlAlmacen = level.getGameTime();
+                if (!almacen.equals(destino)) {
+                    destino = almacen;
+                    mejorDistancia = Double.MAX_VALUE;
+                    stuckTicks = 0;
+                }
             }
         } else {
             sinEquipo = false;
@@ -955,6 +962,10 @@ public class VillagerGuardGoal extends Goal {
      */
     private static final int TICKS_DE_SERVICIO = 20 * 90;
     /** Ticks que lleva el guardia en la sesión de entrenamiento de ahora (para el golpe cada 2 s). */
+    /** Ticks entre dos viajes al almacén a equiparse (2 min): sin esto el guardia encadenaba viajes en bucle. */
+    private static final int TICKS_ENTRE_VIAJES = 20 * 120;
+    /** Tick del último viaje al almacén (para {@link #TICKS_ENTRE_VIAJES}). */
+    private long ultimoViajeAlAlmacen = Long.MIN_VALUE;
     private int entrenoTicks;
 
     private BlockPos puntoDeGuardia(ServerLevel level) {
