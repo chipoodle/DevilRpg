@@ -165,6 +165,9 @@ public class VillagerGuardGoal extends Goal {
     private int restTicks;
     /** Contador de puntos de ronda (para que no repita el mismo). */
     private int paso;
+    /** El último puesto que se cantó en el log, para no repetir el aviso con el mismo sitio (ver {@code start}). */
+    @Nullable
+    private BlockPos ultimoPuesto;
     /** Ticks que faltan para volver a buscar enemigo / para el siguiente golpe o flecha. */
     private int escanear;
     private int cadencia;
@@ -272,8 +275,14 @@ public class VillagerGuardGoal extends Goal {
         hayEquipoEnAlmacen = false;
         mejorDistancia = Double.MAX_VALUE;
         irAlDestino();
-        DevilRpg.LOGGER.info("[Village] Guardia {}: nuevo puesto {} (paso {}, aldea {}){}", villager.getUUID(), destino,
-                paso, objectiveIndex, equipando ? " yendo antes al almacen a equiparse" : "");
+        // SOLO SE CANTA CUANDO EL PUESTO CAMBIA. Con el aviso en cada `start()` el log se llenaba de "nuevo puesto"
+        // repitiendo el MISMO sitio: de noche el relevo no depende de `paso`, y si el goal se reinicia (el cerebro
+        // empujando a dormir) salían diez líneas por segundo con el mismo BlockPos (medido con el arnés, modo noche).
+        if (destino != null && !destino.equals(ultimoPuesto)) {
+            ultimoPuesto = destino;
+            DevilRpg.LOGGER.info("[Village] Guardia {}: nuevo puesto {} (paso {}, aldea {}){}", villager.getUUID(),
+                    destino, paso, objectiveIndex, equipando ? " yendo antes al almacen a equiparse" : "");
+        }
     }
 
     @Override
@@ -293,6 +302,11 @@ public class VillagerGuardGoal extends Goal {
         if (destino != null && stuckTicks >= STUCK_LIMIT) {
             DevilRpg.LOGGER.info("[Village] Guardia {}: no llego a {} (aldea {}): me salto el puesto y sigo la ronda",
                     villager.getUUID(), destino, objectiveIndex);
+            // Y SE APUNTA COMO FALLIDO (I33): sin esto, el puesto al que no llega se le vuelve a dar y el guardia
+            // se queda en bucle. Medido en el log del jugador (aldea 2, de noche): pasos 12, 13, 14, 15 y 16 seguidos
+            // con el MISMO `BlockPos{x=1354, y=120, z=1414}` y "atascado 200 ticks" por vuelta — de noche el puesto
+            // sale del RELOJ (el relevo de puertas) y no de `paso`, así que saltárselo no cambiaba nada.
+            VillageManager.marcarPuntoFallido(villager, destino);
             paso++;
             return false;
         }
@@ -810,23 +824,43 @@ public class VillagerGuardGoal extends Goal {
      * antes de que haga daño)—. El relevo de puertas sale del reloj de juego y del número de guardia, así que rota
      * solo y sin que dos guardias se turnen el mismo puesto.
      */
+    /**
+     * El puesto de la <b>puerta</b> {@code 0..3} (norte, este, sur, oeste) del <b>relevo nocturno</b>: a
+     * {@link #RADIO_PUERTA} del centro, dentro del muro. Lo usa {@link #puntoDeGuardia} para el relevo y para poder
+     * <b>pasar a la siguiente</b> cuando la suya no se alcanza.
+     */
+    private BlockPos puestoDeLaPuerta(int nivel, int puerta) {
+        int dx = switch (puerta) {
+            case 0 -> 0;   // norte (el muro está en -Z)
+            case 1 -> (int) RADIO_PUERTA;
+            case 2 -> 0;
+            default -> -(int) RADIO_PUERTA;
+        };
+        int dz = switch (puerta) {
+            case 0 -> -(int) RADIO_PUERTA;
+            case 1 -> 0;
+            case 2 -> (int) RADIO_PUERTA;
+            default -> 0;
+        };
+        return new BlockPos(center.getX() + dx, nivel, center.getZ() + dz);
+    }
+
     private BlockPos puntoDeGuardia(ServerLevel level) {
         int nivel = VillageGenerator.cotaDeLaPlaza(level, center);
         if (level.isNight()) {
-            int puerta = (int) ((level.getGameTime() / RELEVO_TICKS + indice) % 4L);
-            int dx = switch (puerta) {
-                case 0 -> 0;   // norte (el muro está en -Z)
-                case 1 -> (int) RADIO_PUERTA;
-                case 2 -> 0;
-                default -> -(int) RADIO_PUERTA;
-            };
-            int dz = switch (puerta) {
-                case 0 -> -(int) RADIO_PUERTA;
-                case 1 -> 0;
-                case 2 -> (int) RADIO_PUERTA;
-                default -> 0;
-            };
-            return new BlockPos(center.getX() + dx, nivel, center.getZ() + dz);
+            int base = (int) ((level.getGameTime() / RELEVO_TICKS + indice) % 4L);
+            // SI ESA PUERTA NO SE ALCANZA, SE PASA A LA SIGUIENTE. El puesto del relevo nocturno sale del RELOJ (y
+            // de su número de guardia), no de `paso`: saltarse el puesto no lo cambiaba y el guardia se quedaba
+            // repitiendo el mismo sitio para siempre (pasos 12..16 con el mismo BlockPos en el log del jugador).
+            // Se recorren las cuatro puertas y se devuelve la primera que no esté apuntada como fallida.
+            for (int k = 0; k < 4; k++) {
+                int puerta = (base + k) % 4;
+                BlockPos punto = puestoDeLaPuerta(nivel, puerta);
+                if (k == 3 || !VillageManager.esPuntoFallido(villager, punto)) {
+                    return punto; // la última se devuelve aunque esté fallida: mejor eso que ningún puesto
+                }
+            }
+            return puestoDeLaPuerta(nivel, base);
         }
         // Ronda: un punto distinto por paso y por guardia (determinista, sin tiradas). Cada RONDA_CADA_ANEXO puntos
         // de la ronda, el guardia baja al CORRAL ANEXO (fuera de la valla): es lo que pidió el jugador ("la granja

@@ -1578,6 +1578,42 @@ si no llega lo deja y sigue con lo suyo.
 **Lo que NO hace**: no le da pociones a la guardia (un aldeano no bebe). El clérigo **sana él**; las pociones que
 prepara siguen siendo para el jugador y para el almacén (visión nocturna, veneno, arrojadizas).
 
+### I65 · Un oficio se cuenta por TITULAR, no por tipo
+
+Lo cazó el jugador en su log: **cada 10 s**, sin parar,
+
+```
+[Village] Aldea 2: aldeano sin oficio recupera el puesto de farmer
+[Village] Aldea 2: f033ee63-… tenia el oficio de farmer de mas (el pueblo tiene 3 plaza(s)): se queda sin oficio…
+```
+
+y el mismo aldeano bailando entre el bancal y la milicia (`se alista en la guardia como espadachín` / `deja la
+guardia y vuelve a su oficio`).
+
+**La causa, de una línea**: `reponerProfesiones` apuntaba **un oficio por TIPO** (`!presentes.contains(profesion)`)
+pero `slotDeProfesionFaltante` **gasta una plaza por cada VIVO** con ese oficio (el pueblo tiene **tres** granjeros):
+con la lista de tipos, el primer bancal cubría "farmer" y los otros dos parecían **libres** → daba de alta un
+granjero **de más** en cada latido → y `podarOficiosDuplicados`, que **sí** cuenta titulares, se lo quitaba acto
+seguido. El pueblo se pasaba el día contratando y despidiendo al mismo granjero.
+
+**Regla:** la lista que se le pasa a `slotDeProfesionFaltante` lleva **una entrada por aldeano con ese oficio** (es un
+recuento, no un conjunto). **Medido con el arnés** (modo noche, 4 min sobre su partida): `recupera el puesto de` =
+**0** y `tenia el oficio de … de mas` = **0** (antes salían ~24 de cada uno).
+
+### I66 · El puesto del relevo nocturno se puede SALTAR
+
+En el mismo log, el guardia `f033ee63` se quedaba en bucle: pasos **12, 13, 14, 15 y 16** seguidos con **el mismo**
+`BlockPos{x=1354, y=120, z=1414}` y `atascado 200 ticks` por vuelta (y `no llego a … me salto el puesto` sin servir
+de nada).
+
+**La causa**: de noche el puesto sale del **reloj** (`(gameTime / RELEVO_TICKS + indice) % 4`, las cuatro puertas) y
+**no** de `paso`, así que «saltarse el puesto» (`paso++`) no cambiaba el destino.
+
+**Regla**: el puesto al que un guardia **no llega** se apunta con `marcarPuntoFallido` (I33) y, de noche, el relevo
+**pasa a la siguiente puerta** (`puestoDeLaPuerta`, recorriendo las cuatro y saltándose las fallidas). Y el aviso
+`nuevo puesto` **solo se canta cuando el puesto CAMBIA** (con el aviso en cada `start()` salían diez líneas por
+segundo repitiendo el mismo sitio: medido con el arnés en modo noche).
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 

@@ -2814,7 +2814,14 @@ public final class VillageManager {
                 liberarPuesto(villager);
                 DevilRpg.LOGGER.info("[Village] Aldea {}: un aldeano habia tomado el oficio de {} (de fuera del"
                         + " pueblo): vuelve al reparto de puestos", objectiveIndex, profesion);
-            } else if (!presentes.contains(profesion)) {
+            } else {
+                // Y SE CUENTA UNO POR TITULAR, NO UNO POR OFICIO. `slotDeProfesionFaltante` **gasta una plaza por cada
+                // vivo** con ese oficio (el pueblo tiene TRES granjeros), así que la lista tiene que llevar una entrada
+                // por aldeano. Con el `add` de antes (solo la primera vez, `!presentes.contains`) el pueblo veía
+                // cubierto el primer bancal y creía libres los otros dos: daba de alta un granjero de MÁS en cada
+                // latido y `podarOficiosDuplicados` —que sí cuenta titulares— se lo quitaba acto seguido. Es el bucle
+                // de 10 s que el jugador vio en su log: "aldeano sin oficio recupera el puesto de farmer" +
+                // "f033ee63 tenia el oficio de farmer de mas (el pueblo tiene 3 plaza(s))".
                 presentes.add(profesion);
             }
         }
