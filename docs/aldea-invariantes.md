@@ -1721,6 +1721,27 @@ los bancales llenos solo se cosechaba **uno de cada tres turnos**: el trigo se p
 "lleno". Ahora **cosechar manda**: si hay cultivo maduro se cosecha ya; la rotación queda para labrar y sembrar, que
 es cuando el bancal no tiene nada maduro (la mitad del ciclo de un campo sano).
 
+### I73 · Los guardias no se quedan plantados en el almacén, y tienen TURNO
+
+Lo reportó el jugador: *"¿por qué los guardias están yendo al almacén, se equipan y se quedan ahí parados sin hacer
+nada? deberían estar patrullando, o turnándose para comer, o descanso, porque también necesitan descansar, o
+entrenando en la sala de entrenamiento de sus barracas, pero turnados para que no dejen desprotegida la aldea. Si es
+uno nada más pues sí puede tomarse sus tiempos, ni modo"*.
+
+**1) El plantón en el almacén.** La casilla de apoyo del almacén se **aparca** cuando no se alcanza
+(`marcarPuntoFallido`, I33)… pero el guardia seguía con `equipando = true` y el destino puesto en ella: se quedaba
+**parado al lado** esperando una pieza que no podía recoger (en su log: `no consigue llegar a 1461,121,1434: lo deja
+por 5 min` y el guardia clavado). **Arreglado**: si la casilla está aparcada, no va — se queda de **ronda** sin la
+pieza que le falte y lo reintenta cuando el aparcamiento caduque (5 min).
+
+**2) El turno de descanso.** El goal de la guardia corre **de seguido** (también de noche, I28), así que ningún otro
+goal —taberna (comer), cama (dormir), barraca— llegaba a correr: el guardia no comía ni descansaba nunca. Ahora hay
+**turnos**: de cada `TICKS_DE_SERVICIO` (90 s) de servicio, cada guardia se toma **uno**
+(`(gameTime / TICKS_DE_SERVICIO) % guardias == su número`), así que **nunca se ausentan dos a la vez**; al cortarse el
+goal mandan los demás (come en la taberna, duerme en su cama, entrena en la barraca) y vuelve solo al servicio. Con un
+**solo** guardia el turno también le toca (el jugador lo acepta: *"ni modo"*). **Con un enemigo a la vista o la aldea
+en asalto no hay descanso**: primero se pelea.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 

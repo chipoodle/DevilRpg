@@ -229,6 +229,11 @@ public class VillagerGuardGoal extends Goal {
         if (villager.isBaby() || !esGuardia(villager) || !(villager.level() instanceof ServerLevel level)) {
             return false;
         }
+        // EL TURNO DE DESCANSO, TAMBIÉN AQUÍ: sin esta comprobación el goal se reiniciaría al tick siguiente de
+        // cortarse por el turno y el guardia no llegaría a descansar nunca (ver `canContinueToUse`).
+        if (!aldeaEnAsalto() && leTocaElTurnoDeDescanso()) {
+            return false;
+        }
         // OJO: aquí NO se comprueba `estaDescansando` (cosa que sí hacen los demás goals del pueblo): el guardia está
         // de servicio también de NOCHE, que es cuando le toca la puerta. El cerebro vanilla lo manda a la cama en la
         // franja de descanso y, cediendo el goal, el guardia se acostaba: medido en el log del jugador, el guardia
@@ -287,6 +292,13 @@ public class VillagerGuardGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
+        // EL TURNO DE DESCANSO (lo pidió el jugador): cada guardia tiene su turno para comer, descansar o entrenar en
+        // la barraca, y se van turnando para no dejar la aldea sola. Cuando le toca, el goal se corta y mandan los
+        // demás (el de la taberna, el de la cama): el guardia vuelve solo cuando le toca el servicio otra vez. Con un
+        // enemigo a la vista o la aldea en asalto NO hay descanso: primero se pelea.
+        if (enemigo == null && !aldeaEnAsalto() && leTocaElTurnoDeDescanso()) {
+            return false;
+        }
         // Tampoco se corta por la hora de descanso: la guardia de noche es parte del servicio (ver `canUse`). Si el
         // aldeano acabara durmiendo (por ejemplo porque el cerebro lo tumbó en la cama), el goal se corta igual.
         // `destino == null` ocurre cuando el goal se acaba de quedar sin faena (por ejemplo, tras ir al almacén y no
@@ -339,10 +351,15 @@ public class VillagerGuardGoal extends Goal {
         bajarEscudo();
         if (!equipado(level)) {
             sinEquipo = true;
-            // Solo se desvía al almacén si allí hay algo suyo (dato del último escaneo): si no, sigue la ronda.
-            equipando = hayEquipoEnAlmacen;
+            // SOLO SE VA AL ALMACÉN SI SE PUEDE LLEGAR. Lo reportó el jugador: *"los guardias están yendo al almacén,
+            // se equipan y se quedan ahí parados sin hacer nada; deberían estar patrullando"*. La casilla de apoyo del
+            // almacén se aparca cuando no se alcanza (`marcarPuntoFallido`, I33), pero el guardia seguía con
+            // `equipando = true` y el destino puesto en ella: se quedaba plantado al lado. Si está aparcada, se queda
+            // de RONDA (sin la pieza que le falte) y lo reintenta cuando el aparcamiento caduque.
             BlockPos almacen = VillageStorage.puntoDeApoyo(level, center);
-            if (equipando && almacen != null && !almacen.equals(destino)) {
+            equipando = hayEquipoEnAlmacen && almacen != null
+                    && !VillageManager.esPuntoFallido(villager, almacen);
+            if (equipando && !almacen.equals(destino)) {
                 destino = almacen;
                 mejorDistancia = Double.MAX_VALUE;
                 stuckTicks = 0;
@@ -844,6 +861,46 @@ public class VillagerGuardGoal extends Goal {
         };
         return new BlockPos(center.getX() + dx, nivel, center.getZ() + dz);
     }
+
+    /**
+     * <b>¿Le toca su turno de descanso?</b> (lo pidió el jugador: *"deberían estar patrullando o turnándose para comer,
+     * o descanso, porque también necesitan descansar, o entrenando en la sala de entrenamiento de sus barracas, pero
+     * turnados para que no dejen desprotegida la aldea; si es uno nada más pues sí puede tomarse sus tiempos, ni modo"*).
+     * <p>
+     * El turno se reparte por el <b>reloj</b> y el <b>número de guardia</b>: de cada {@link #TICKS_DE_SERVICIO} de
+     * servicio, cada guardia se toma <b>uno</b> ({@code (gameTime / TICKS_DE_SERVICIO) % guardias == su número}), así
+     * que <b>nunca se ausentan dos a la vez</b>. Con un solo guardia el turno también le toca (el jugador lo acepta:
+     * la aldea se queda un rato con menos vigilancia) y con varios se van relevando.
+     */
+    private boolean leTocaElTurnoDeDescanso() {
+        if (!(villager.level() instanceof ServerLevel level)) {
+            return false;
+        }
+        int guardias = 0;
+        for (Villager otro : level.getEntitiesOfClass(Villager.class,
+                villager.getBoundingBox().inflate(VillageGenerator.FENCE_RADIUS + 8.0D))) {
+            if (esGuardia(otro)) {
+                guardias++;
+            }
+        }
+        if (guardias <= 0) {
+            return false;
+        }
+        long turno = (level.getGameTime() / TICKS_DE_SERVICIO) % guardias;
+        return turno == Math.floorMod(indice, guardias);
+    }
+
+    /** ¿La aldea está en asalto? (con asalto no hay turnos de descanso: primero se pelea). */
+    private boolean aldeaEnAsalto() {
+        return villager.level() instanceof ServerLevel level
+                && VillageManager.isVillageUnderAttack(level, objectiveIndex);
+    }
+
+    /**
+     * Ticks de <b>servicio</b> de cada guardia antes de que le toque su turno de descanso (90 s): con varios guardias
+     * se van relevando (ver {@link #leTocaElTurnoDeDescanso}).
+     */
+    private static final int TICKS_DE_SERVICIO = 20 * 90;
 
     private BlockPos puntoDeGuardia(ServerLevel level) {
         int nivel = VillageGenerator.cotaDeLaPlaza(level, center);
