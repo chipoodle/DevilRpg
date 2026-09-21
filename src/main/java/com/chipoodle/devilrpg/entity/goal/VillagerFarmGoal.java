@@ -297,6 +297,16 @@ public class VillagerFarmGoal extends Goal {
         //    vaciándose poco a poco.
         BlockPos maduro = buscarCultivo(level, true);
         BlockPos calva = buscarCalva(level);
+        // COSECHAR MANDA, y la rotación es solo para lo demás (labrar y sembrar). Lo pidió el jugador: *"también están
+        // tardando mucho en cosechar; hay campos llenos"*. Antes el turno rotaba SIEMPRE, así que con los tres
+        // bancales llenos solo se cosechaba uno de cada tres turnos: la cosecha se quedaba atrás y el trigo se pasaba
+        // de maduro. Lo que la rotación protegía (que se sembraran las celdas vacías) no se pierde: cuando el bancal
+        // no tiene nada maduro —que es la mitad del ciclo de un campo sano— siguen labrando y sembrando.
+        if (maduro != null) {
+            target = maduro;
+            tarea = Tarea.COSECHAR;
+            return true;
+        }
         turnoDeFaena = (turnoDeFaena + 1) % FAENAS_DE_LA_TIERRA.length;
         for (int intento = 0; intento < FAENAS_DE_LA_TIERRA.length; intento++) {
             switch (FAENAS_DE_LA_TIERRA[(turnoDeFaena + intento) % FAENAS_DE_LA_TIERRA.length]) {

@@ -1703,6 +1703,24 @@ solo guarda **`SEMILLAS_SOBRANTES_EN_DESPENSA` (32)** como **reserva de siembra*
 todo lo que pase de ahí acaba en **harina de huesos**, que es lo que abona el plantío y acelera la cosecha. Con tres
 granjeros y 64 por viaje, el montón baja de verdad (cada visita saca varias harinas de hueso).
 
+### I72 · El granjero manda sobre el militar, y cosechar manda sobre la rotación
+
+Dos cosas del jugador con captura (3 parcelas, campos llenos de trigo maduro y solo 2 granjeros): *"hay 3 parcelas y
+solo dos granjeros, ¿porque todavía no se ha designado un granjero? recuerda que tiene prioridad el granjero que el
+militar a la hora de asignar. Y también están tardando mucho en cosechar, hay campos llenos"*.
+
+**1) El guardia ocupaba una plaza de oficio.** `alistarGuardia` conservaba su oficio (y con él el **ticket de su
+estación**), así que una plaza de granjero quedaba "cubierta" por un guardia que **no pisaba el bancal**: el reparto
+veía 3 granjeros, el **tercer bancal se quedaba sin nadie** y el aldeano nuevo no podía reclamar la estación (el
+ticket era del guardia). Arreglado: al alistarse, si su oficio es del pueblo se le **suelta la estación** y se queda
+**sin oficio** (su plaza es para un granjero de verdad; si deja la guardia, el reparto le da otra), y
+`reponerProfesiones` **no cuenta a los guardias** como titulares.
+
+**2) La cosecha esperaba su turno.** Las tres faenas (cosechar / labrar / sembrar) **rotaban siempre**, así que con
+los bancales llenos solo se cosechaba **uno de cada tres turnos**: el trigo se pasaba de maduro y el campo se veía
+"lleno". Ahora **cosechar manda**: si hay cultivo maduro se cosecha ya; la rotación queda para labrar y sembrar, que
+es cuando el bancal no tiene nada maduro (la mitad del ciclo de un campo sano).
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 

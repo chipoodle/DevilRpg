@@ -2619,6 +2619,18 @@ public final class VillageManager {
         // Sin esto, `esGuardia` daba false en el cliente (los datos persistentes no viajan) y los guardias se veían
         // como aldeanos normales, sin equipo (lo pidió el jugador).
         VillagerGuardGoal.sincronizarMarcaDeGuardia(villager);
+        // Y EL GRANJERO MANDA SOBRE EL MILITAR (lo pidió el jugador: *"recuerda que tiene prioridad el granjero que el
+        // militar a la hora de asignar"*, viendo 3 parcelas con solo 2 granjeros): un guardia NO ocupa una plaza de
+        // oficio del pueblo. Antes conservaba su oficio —y con él el ticket de su estación—, así que una plaza de
+        // granjero quedaba "cubierta" por un guardia que no pisaba el bancal: el reparto veía 3 granjeros, el tercer
+        // bancal se quedaba sin nadie y un aldeano nuevo no podía reclamar la estación (el ticket era del guardia).
+        // Ahora se le suelta la estación y se queda SIN OFICIO: su plaza queda libre para un granjero de verdad, y si
+        // un día deja la guardia, el reparto le da otra (o la misma).
+        if (VillageGenerator.esOficioDelPueblo(villager.getVillagerData().getProfession())) {
+            liberarPuesto(villager);
+            villager.setVillagerData(villager.getVillagerData().setProfession(VillagerProfession.NONE));
+            villager.refreshBrain(level);
+        }
         // Y LO QUE HA APRENDIDO ESE GUARDIA (I62): sus atributos se recalculan desde su contador de matanzas. Es
         // idempotente (no acumula) y va aquí, en el latido, para que un guardia recargado del guardado —o uno al que
         // le cambiara el tope— vuelva a tener lo suyo.
@@ -2793,6 +2805,11 @@ public final class VillageManager {
         List<Villager> sinOficio = new ArrayList<>();
         for (Villager villager : aldeanos) {
             if (villager.isBaby()) {
+                continue;
+            }
+            // LA GUARDIA NO CUENTA COMO TITULAR DE UN OFICIO (ver `alistarGuardia`): su plaza está libre para un
+            // trabajador de verdad, así que no se apunta en la lista de "oficios cubiertos".
+            if (VillagerGuardGoal.esGuardia(villager)) {
                 continue;
             }
             VillagerProfession profesion = villager.getVillagerData().getProfession();
