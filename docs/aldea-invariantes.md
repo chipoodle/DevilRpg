@@ -1216,6 +1216,57 @@ paso de recambios lo manda a la despensa) y el hueco de arriba **libre** (I11: n
 `build/huerta_vacias.py`, que vuelca los tres bancales celda a celda (cultivo con su **edad**, tierra vacía y calva)
 y cuenta las celdas que no tienen nada.
 
+### I54 · El HUECO de un portón es SAGRADO (ni un farol: deja la puerta INSERVIBLE)
+
+El jugador: *"el ganadero quiere ir a la taberna y no puede, la única salida está obstruida por una lámpara"*.
+
+**Medido** en su guardado (aldea 2, centro `1414,1414`, cota `120`; `build/anexo_porton.py` y, ya versionada, la
+auditoría):
+
+- El **portón del corral** (`1455,120,1414`, `oak_fence_gate[facing=west]`) tenía un farol **en la celda de la
+  cabeza del cruce**: `(1455,121,1414)` = `lantern` **posado sobre la propia hoja** (`debajo=oak_fence_gate`); las
+  dos celdas de al lado y las otras dos capas estaban libres.
+- El **plano también pedía ese farol** (`palette[51] = lantern`, con sus vecinas fuera del plano), así que el
+  obrero lo habría repuesto.
+- La ganadera **Obdulia** estaba **dentro** del corral (`1460.9,120,1418.9`) y con el **almacén aparcado** de no
+  poder llegar (`DevilRpgPuntoFallido` = `1461,121,1434`, el punto de apoyo del almacén).
+- Auditados **los 14 portones** de las tres aldeas del guardado (12 de los bancales, el del corral y el del
+  gallinero), el **único** tapado era ése.
+
+**Por qué deja la puerta inservible.** El aldeano mide **1,95**: al cruzar ocupa la celda de la hoja **y la de
+encima**, y un farol **tiene caja de colisión**. Con el farol ahí su caja no cabe, la **navegación no encuentra
+camino** por el portón —así que el `VillageGateGoal` no llega ni a abrirlo, porque el aldeano no se acerca— y el que
+está dentro **se queda encerrado**: no puede ir a la despensa, ni al almacén, ni a la taberna.
+
+**De dónde salió.** El layout **viejo** de las luces de la cerca del corral ponía un farol en el **medio de cada
+lado** de la valla (y otro en el centro), y el medio del lado **oeste es el portón**: quedó en el mundo y en el
+plano. El código de hoy reparte los faroles por las **cuatro esquinas y los cuatro medios lados**
+(`k = ±(ANEXO_RADIO − 2)`), que **no** pasa por el portón… pero tampoco lo quitaba. Y la autocomprobación
+(`auditarFarolesFlotantes`) **no lo canta**: ese farol *sí* tiene apoyo; el problema es que el apoyo es la puerta.
+
+**Regla:**
+- **Nada sólido en el carril de un portón**: la hoja y las dos celdas de al lado, en la capa que se pisa **y en la de
+  la cabeza**. En particular, `farolSobreElPoste` **no pone un farol sobre una puerta de valla** (`FenceGateBlock`):
+  devuelve 0.
+- Al que **ya** está, se le **muda el farol a un poste de al lado** (`despejarElHuecoDeLosPortones`, idempotente, en
+  el latido): se quita del carril y se posa en el primer poste de la valla con el hueco libre (nunca se tira: la luz
+  del pueblo se queda donde hacía falta); si no hay poste libre, se quita y ya.
+- **Y la celda sale del PLANO** (`Blueprint.sinCelda`): si el plano sigue pidiendo el farol, el obrero lo repone en la
+  siguiente pasada.
+- Los portones salen de **una sola lista** (`VillageGenerator.todosLosPortones`, I4): la usan el goal que los abre
+  (`VillageGateGoal`), el despeje del hueco y la auditoría.
+
+**Se comprueba con `tools/audita_aldea.py`** (apartado **F**, *portones con el hueco tapado*: mira la capa de la
+cabeza de las tres celdas de cada portón y **salta el del gallinero**, que es un hueco de un bloque a propósito —
+los pollos pasan, los aldeanos no—) y con `build/portones_farol.py` y `build/anexo_porton.py`, que vuelcan el corral
+y sus portones celda a celda.
+
+> **De propina, I6: lo que ya está bien no se reconstruye.** `posarFarolesFlotantes` quitaba y volvía a poner **los
+> doce faroles del corral en cada latido** —el log lo cantaba cada 10 s (*"14 faroles puestos en la cerca del corral
+> anexo"*, para siempre)— porque daba por *flotante* cualquier farol que estuviera a 1-3 bloques del apoyo. Ahora un
+> farol **a un bloque del apoyo y posado** es *su* farol y no se toca: solo se muda el que **cuelga** de un poste
+> (I14) o el que quedó a 2-3 bloques.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
@@ -1267,7 +1318,7 @@ Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento 
 | `build/aldeanos.py`, `build/aldeanos.py` | Aldeanos: profesión, inventario, posición (carpeta `entities/`). |
 | `build/herreria.py`, `build/huecos_ore.py`, `build/solares*.py` | Herrería, huecos y minerales flotantes, solares libres. |
 | `build/plantillas*.py`, `build/paleta.py` | Plantillas del juego: tamaños, puertas y qué bloques traen. |
-| `tools/audita_aldea.py` (**versionada**) | **Auditoría de las aldeas enteras**: faroles y vallas flotando, cofres tapados, puertas incompletas y camas sueltas (lee las PROPIEDADES de los bloques). Saca las aldeas del guardado (índice, centro y cota): `--aldea N`, `--caidas`, `--resumen`, `--centro X Z --cota N`. |
+| `tools/audita_aldea.py` (**versionada**) | **Auditoría de las aldeas enteras**: faroles y vallas flotando, cofres tapados, puertas incompletas, camas sueltas y **portones con el hueco tapado** (I54). Lee las PROPIEDADES de los bloques y saca las aldeas del guardado (índice, centro y cota): `--aldea N`, `--caidas`, `--resumen`, `--centro X Z --cota N`. |
 | `build/aldeanos_todos.py` (ignorado) | **TODAS las entidades "villager" de un radio del guardado**, con su id real (`villager` **y** `zombie_villager`), sus `CustomName` (la etiqueta de dos líneas), su oficio, su cama y su **UUID formateado**. Es lo que distinguió "aldeano sin cama" de "cría sin cama" y de "aldeano-zombi dentro del recinto" (3b.61). |
 | `build/plantilla_casa.py` (ignorado) | **La plantilla del juego, capa a capa**: lee los `.nbt` de `village/plains/houses/*` del jar del cliente (van comprimidos con gzip) y vuelca tamaño y vista de planta. Es lo que dice si un hueco de una casa "viene del juego" o lo perdió el mundo (3b.65/I50). |
 | `build/plano_celda.py` (ignorado) | **El PLANO de la aldea del `devilrpg_villages.dat`**: saca `Blueprints -> [Index, Palette, Pos(long[]), State(int[])]` y contesta si una celda está en el plano (y con qué bloque) y qué dicen sus vecinas. Es lo que demostró que el hueco de la pared **no estaba en el plano** y por eso el obrero no lo reponía (3b.65/I50). |
@@ -1276,6 +1327,7 @@ Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento 
 | `build/cocina_medida.py` (ignorado) | **¿Desde DÓNDE cocinaba el cocinero?**: del log del arnés coge, para cada `N pieza(s) cocinadas`, la muestra `COCINERO pos=…` **inmediatamente anterior** (con `dentroDeLaTaberna`, `VEelAhumador`, `dCasilla`, `dAhumador` y la etiqueta). Es la medida de 3b.63/I48. |
 | `build/hambre_medida.py` (ignorado) | **La comida de la aldea y el reloj de cada aldeano** (I52): la `Food` y el `StarvingSince` de cada asentamiento, el `gameTime` del guardado y la marca `DevilRpgUltimaComida` de **cada** aldeano con su oficio, su posición y los minutos que lleva sin comer. Es lo que distingue "la despensa está vacía" de "este aldeano no ha comido" —y lo que enseñó que las **crías** viven con la marca del día que nacieron hasta que crecen. |
 | `build/huerta_vacias.py` (ignorado) | **Las celdas del bancal que no tienen nada** (I53): vuelca los tres bancales **celda a celda** (cultivo con su edad, tierra vacía, calva, acequia) con un mapa de una letra por celda y cuenta las que están `farmland` con el hueco de arriba libre. |
+| `build/portones_farol.py`, `build/anexo_porton.py` (ignorados) | **El hueco de los portones y el farol que lo tapa** (I54): volcan los 14 portones de las tres aldeas (los 12 de los bancales, el del corral y el del gallinero), miran las **seis celdas** por las que se cruza cada uno (la hoja y las dos de al lado, en las dos capas) y dicen qué hay en ellas **y qué pide el PLANO**; `anexo_porton.py` pinta además el corral y sus dos portones capa a capa. |
 
 Los scripts de `build/` no se versionan (está en `.gitignore`): son de lectura del guardado del jugador. Las
 herramientas que sí merecen sobrevivir están **versionadas en `tools/`** (ver `tools/README.md`): `lint_aldea.py`,

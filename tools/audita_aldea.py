@@ -10,6 +10,8 @@ Comprueba, bloque a bloque y con sus PROPIEDADES:
   C) cofres TAPADOS (un bloque solido encima: no se pueden abrir)
   D) puertas INCOMPLETAS (sin su mitad de arriba o de abajo)
   E) camas INCOMPLETAS (sin cabecera o sin pie)
+  F) PORTONES con el hueco TAPADO en la capa de la cabeza (I54: con algo solido ahi, el que cruza no pasa y se
+     queda encerrado; el porton del gallinero no se mira: es un hueco de un bloque a proposito)
 
 Uso (desde la raiz del proyecto; tambien vale desde cualquier sitio):
   python tools\\audita_aldea.py                        -> TODAS las aldeas vivas del guardado por defecto
@@ -49,6 +51,17 @@ NO_SOLIDO = VACIO | {'oak_fence', 'oak_fence_gate', 'spruce_fence', 'spruce_fenc
 APOYO = ('oak_fence', 'spruce_fence', 'oak_fence_gate', 'spruce_fence_gate')
 VALLA = ('oak_fence', 'spruce_fence', 'oak_fence_gate', 'spruce_fence_gate')
 PUERTAS = ('oak_door', 'dark_oak_door', 'spruce_door')
+# Lo que NO bloquea la capa de la CABEZA del carril de un portón (I54): sin caja de colisión, o una planta que se
+# pisa. Un farol NO está aquí a propósito (tiene caja y es lo que tapaba el portón del corral del jugador).
+NO_COLISIONA = VACIO | {'wheat', 'carrots', 'potatoes', 'beetroots', 'rail', 'redstone_wire', 'ladder',
+                        'oak_sapling', 'spruce_sapling', 'tripwire', 'string', 'snow'}
+# Geometría de los portones, la del código (VillageGenerator): los 12 de los bancales (4 por parcela: FARM_PLOTS,
+# PLOT_WIDTH/DEPTH, en el centro de cada lado del anillo) y el del corral anexo (base - ANEXO_RADIO, lado oeste,
+# mirando al camino). El del GALLINERO no se audita: es un hueco de UN bloque (los pollos pasan, los aldeanos no)
+# y su valla de encima es a propósito.
+FARM_PLOTS = [(-30, 14), (10, 4), (-28, 34)]
+PLOT_W = PLOT_D = 9
+ANEXO_DX, ANEXO_RADIO = 50, 9
 # Un pilote metido en el agua NO flota: el muelle de la pesquera es una valla con agua debajo a proposito.
 AGUA = {'water', 'seagrass', 'tall_seagrass', 'kelp', 'kelp_plant', 'bubble_column'}
 
@@ -63,6 +76,25 @@ class Aldea:
     def __str__(self):
         return 'aldea %-3s centro (%d,%d) cota %d%s' % (self.indice, self.cx, self.cz, self.cota,
                                                         ' [CAIDA]' if self.caida else '')
+
+
+def portones_de_la_aldea(cx, cz, nivel):
+    """(x, y, z, eje) de cada portón de valla a auditar: los 12 de los bancales y el del corral anexo.
+
+    El eje es el de CRUCE (la valla va perpendicular): en los bancales los portones del norte y del sur se cruzan
+    en Z y los del este y el oeste en X; el del corral mira al oeste y se cruza en X.
+    """
+    portones = []
+    for plot in FARM_PLOTS:
+        x0, x1 = cx + plot[0] - 1, cx + plot[0] + PLOT_W
+        z0, z1 = cz + plot[1] - 1, cz + plot[1] + PLOT_D
+        mx, mz = (x0 + x1) // 2, (z0 + z1) // 2
+        portones.append((mx, nivel, z0, 'Z'))
+        portones.append((mx, nivel, z1, 'Z'))
+        portones.append((x0, nivel, mz, 'X'))
+        portones.append((x1, nivel, mz, 'X'))
+    portones.append((cx + ANEXO_DX - ANEXO_RADIO, nivel, cz, 'X'))   # el portón del corral
+    return portones
 
 
 def bloque_de_pos(p):
@@ -300,6 +332,30 @@ def auditar(mundo, aldea, radio, callar_detalle=False):
     if not callar_detalle:
         print('  camas sueltas: %d (de %d mitades)' % (sueltas, len(camas)))
 
+    # --- F) PORTONES CON EL HUECO TAPADO (I54) -----------------------------------------------------
+    # El hueco de un portón de valla son TRES celdas (la hoja y las dos de al lado) y el aldeano mide 1,95: si en la
+    # capa de la CABEZA hay algo con caja de colisión, no se puede cruzar y se queda encerrado (el jugador: "el
+    # ganadero quiere ir a la taberna y no puede, la única salida está obstruida por una lámpara"). La geometría de
+    # los portones es la del código (VillageGenerator: los 12 de los bancales, el del corral y el del gallinero);
+    # el del GALLINERO se salta: es un hueco de UN bloque (los pollos pasan, los aldeanos no) y su valla de encima
+    # es a propósito.
+    tapados = []
+    for (x, y, z, eje) in portones_de_la_aldea(cx, cz, nivel):
+        if nombre(x, y, z) != 'oak_fence_gate':
+            continue
+        for d in (-1, 0, 1):
+            px = x + (d if eje == 'X' else 0)
+            pz = z + (0 if eje == 'Z' else d)
+            encima = nombre(px, y + 1, pz)
+            if encima is not None and encima not in NO_COLISIONA:
+                tapados.append((x, y, z, px, y + 1, pz, encima))
+    hallazgos['portones'] = tapados
+    if not callar_detalle:
+        print('=== F) PORTONES CON EL HUECO TAPADO: %d ===' % len(tapados))
+        for x, y, z, px, py, pz, n in tapados:
+            print('    portón en (%d,%d,%d) rel plaza (%+d,%+d,%+d): la cabeza del carril (%d,%d,%d) la tapa %s'
+                  % ((x, y, z) + rel(x, y, z) + (px, py, pz, n)))
+
     return celdas, hallazgos
 
 
@@ -357,15 +413,16 @@ def main(argv=None):
         no_aire = sum(1 for v in celdas.values() if v)
         if not args.resumen:
             print('  (%d bloques no-aire en el recuadro)' % no_aire)
-        fila = (str(aldea), len(h['faroles']), len(h['vallas']), len(h['cofres']), h['puertas'], h['camas'])
+        fila = (str(aldea), len(h['faroles']), len(h['vallas']), len(h['cofres']), h['puertas'], h['camas'],
+                len(h['portones']))
         filas.append(fila)
-        problemas += fila[1] + fila[2] + fila[3] + fila[4] + fila[5]
+        problemas += sum(fila[1:])
 
     print()
     print('=' * 100)
-    print('RESUMEN   aldea | faroles | vallas | cofres tapados | puertas incompletas | camas sueltas')
+    print('RESUMEN   aldea | faroles | vallas | cofres tapados | puertas incompletas | camas sueltas | portones tapados')
     for f in filas:
-        print('  %-46s %5d %7d %8d %8d %8d' % f)
+        print('  %-46s %5d %7d %8d %8d %8d %8d' % f)
     print('  TOTAL de cosas mal: %d' % problemas)
     return 1 if problemas else 0
 

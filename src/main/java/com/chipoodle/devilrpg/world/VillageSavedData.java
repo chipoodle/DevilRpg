@@ -114,6 +114,36 @@ public final class VillageSavedData extends SavedData {
             estados[states.length] = indice;
             return new Blueprint(nuevaPaleta, posiciones, estados);
         }
+
+        /**
+         * El plano <b>sin</b> esa celda. Es lo contrario de {@link #conCelda} y hace falta para lo que el plano
+         * <b>no puede pedir nunca</b>: un farol en el hueco de un portón (I54) deja la puerta inservible, así que si
+         * el plano lo tiene (el de una aldea migrada se captura <b>escaneando el mundo</b>, y el escaneo lo grabó
+         * mientras el farol estaba ahí) el obrero lo <b>repondría en cada pasada</b>.
+         */
+        public Blueprint sinCelda(long posComprimida) {
+            int sobran = 0;
+            for (long p : positions) {
+                if (p == posComprimida) {
+                    sobran++;
+                }
+            }
+            if (sobran == 0) {
+                return this;
+            }
+            long[] posiciones = new long[positions.length - sobran];
+            int[] estados = new int[states.length - sobran];
+            int j = 0;
+            for (int i = 0; i < positions.length; i++) {
+                if (positions[i] == posComprimida) {
+                    continue;
+                }
+                posiciones[j] = positions[i];
+                estados[j] = states[i];
+                j++;
+            }
+            return new Blueprint(palette, posiciones, estados);
+        }
     }
 
     private final Map<Integer, Blueprint> blueprints = new HashMap<>();

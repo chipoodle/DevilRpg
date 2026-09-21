@@ -2932,6 +2932,44 @@ labrar, **sembrar**), así que una celda vacía se recupera en la siguiente vuel
 nada maduro (que no pasa nunca). La siembra sigue exigiendo lo de siempre: semillas **en la mano** (si no las tiene,
 el paso de recambios lo manda a la despensa) y el hueco de arriba **libre** (I11: no se arranca ningún cultivo).
 
+### 3b.69 El portón del corral tapado por un FAROL: el ganadero encerrado (no llegaba ni a la taberna ni al almacén)
+
+Lo reportó el jugador con captura: *"el ganadero quiere ir a la taberna y no puede, la única salida está obstruida
+por una lámpara"*.
+
+**MEDIDO en su guardado** (aldea 2, cota 120; `build/anexo_porton.py` y el apartado **F** que se añadió a
+`tools/audita_aldea.py`):
+
+    portón del corral     (1455,120,1414)  oak_fence_gate[facing=west, open=false]
+    la cabeza del carril  (1455,121,1414) = lantern   (debajo: la propia hoja del portón)
+    las otras cinco celdas del cruce (la hoja y las dos de al lado, dos capas): aire
+    el PLANO también la pedía: palette[51] = lantern[hanging=false]
+    la ganadera Obdulia, DENTRO del corral en (1460.9,120,1418.9), con el ALMACÉN aparcado
+    (DevilRpgPuntoFallido = 1461,121,1434, que es el punto de apoyo del almacén)
+    auditados los 14 portones de las tres aldeas: el ÚNICO tapado era ése
+
+El aldeano mide **1,95** y un farol tiene **caja de colisión**, así que al cruzar no le cabía el cuerpo en la celda
+de la hoja + la de encima: la **navegación no le encontraba camino** (y sin acercarse, el `VillageGateGoal` tampoco
+se lo abría) y se quedaba **encerrada en el corral**. El farol venía del layout **viejo** de las luces de la cerca,
+que ponía uno en el **medio de cada lado** de la valla —y el medio del lado oeste ES el portón—; el código de hoy no
+lo pone, pero tampoco lo quitaba, y la autocomprobación de faroles no lo canta (ese farol *sí* tiene apoyo: el
+problema es que el apoyo es la puerta).
+
+**ARREGLO** (I54):
+- `farolSobreElPoste` **no pone un farol sobre una puerta de valla** (`FenceGateBlock`).
+- `despejarElHuecoDeLosPortones` (idempotente, en el latido) **muda el farol del carril a un poste de al lado** —no
+  lo tira: la luz del pueblo se queda donde hacía falta— y devuelve las celdas despejadas.
+- Esas celdas **salen del PLANO** (`Blueprint.sinCelda`), porque si no el obrero repondría el farol en la pasada
+  siguiente.
+- Los portones salen de **una sola lista** (`VillageGenerator.todosLosPortones`): la usan el goal que los abre, el
+  despeje y la auditoría.
+- Y de propina, **I6**: `posarFarolesFlotantes` quitaba y volvía a poner los **doce faroles del corral en cada
+  latido** (el log lo cantaba cada 10 s, para siempre); ahora un farol **a un bloque del apoyo y posado** no se toca.
+
+**Comprobado con la auditoría versionada**: `python tools\audita_aldea.py` canta el portón tapado (aldea 2: 1
+portón). El del **gallinero** no se audita: es un hueco de **un bloque** a propósito (los pollos pasan, los aldeanos
+no).
+
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.

@@ -1730,6 +1730,13 @@ public final class VillageGenerator {
      */
     private static int farolSobreElPoste(ServerLevel level, BlockPos apoyo) {
         BlockState abajo = level.getBlockState(apoyo);
+        // EL HUECO DE UN PORTÓN ES SAGRADO (I54): un farol posado en la HOJA de una puerta de valla deja la puerta
+        // INSERVIBLE —el que cruza ocupa con el cuerpo la celda del farol— y el juego deja de encontrar el camino,
+        // así que el aldeano se queda encerrado. El layout viejo del corral ponía un farol en el MEDIO de cada lado
+        // de la valla, y el medio del lado oeste ES el portón. Aquí no se pone, pase lo que pase.
+        if (abajo.getBlock() instanceof FenceGateBlock) {
+            return 0;
+        }
         if (abajo.isAir()) {
             colocar(level, apoyo, Blocks.OAK_FENCE.defaultBlockState(), 3);   // el poste que falta
         } else if (!Block.canSupportCenter(level, apoyo, Direction.UP)) {
@@ -1807,10 +1814,20 @@ public final class VillageGenerator {
         for (BlockPos apoyo : apoyos) {
             for (int dy = 1; dy <= 3; dy++) {
                 BlockPos alto = apoyo.above(dy);
-                if (!level.getBlockState(alto).is(Blocks.LANTERN)) {
+                BlockState estado = level.getBlockState(alto);
+                if (!estado.is(Blocks.LANTERN)) {
                     continue;
                 }
-                colocar(level, alto, Blocks.AIR.defaultBlockState(), 3);   // el farol flotante
+                // ¿ES SU FAROL, ya en su sitio? (a un bloque del apoyo y POSADO, no colgado): entonces no se toca.
+                // Esto corre en cada latido y antes quitaba y volvía a poner los doce faroles del corral cada 10 s
+                // (lo delataba el log: "14 faroles puestos en la cerca del corral anexo" una y otra vez, para
+                // siempre) — reconstruir lo que ya está bien es justo lo que prohíbe I6, y encima borraba el farol
+                // del jugador que estuviera en esa vertical. Solo se muda lo que de verdad está fuera de su sitio:
+                // lo que cuelga de un poste (I14, migración 55) o lo que quedó a 2-3 bloques del apoyo.
+                if (dy == 1 && !estado.getValue(LanternBlock.HANGING)) {
+                    break;
+                }
+                colocar(level, alto, Blocks.AIR.defaultBlockState(), 3);   // el farol flotante (o el colgado de un poste)
                 arreglados += farolSobreElPoste(level, apoyo);
                 break;
             }
@@ -6383,6 +6400,91 @@ public final class VillageGenerator {
             portones.addAll(portonesDeLaParcela(center, i, nivel));
         }
         return portones;
+    }
+
+    /**
+     * <b>TODOS los portones de valla de la aldea</b>: los doce de los bancales (el granjero los cruza para entrar y
+     * salir de su huerta) y los dos del anexo (el del corral y el del gallinero). Vive en <b>un solo sitio</b> (I4):
+     * lo usan el goal que los abre ({@code VillagerGateGoal}), el despeje de su hueco y el filtro del plano (I54).
+     */
+    public static List<BlockPos> todosLosPortones(BlockPos center, int nivel) {
+        List<BlockPos> portones = new ArrayList<>(portonesDeLosBancales(center, nivel));
+        portones.add(portonDelCorral(center, nivel));
+        portones.add(portonDelGallinero(center, nivel));
+        return portones;
+    }
+
+    /**
+     * <b>EL HUECO DE UN PORTÓN ES SAGRADO</b> (I54): ni un farol dentro. El del <b>corral anexo</b> lo tenía: el
+     * layout viejo de las luces de la cerca ponía un farol en el <b>medio de cada lado</b> de la valla, y el medio del
+     * lado <b>oeste es el portón</b>, así que la hoja llevaba un farol encima. Medido en el guardado del jugador
+     * (aldea 2, cota 120): `(1455,121,1414)` = `lantern` con la puerta justo debajo, y el <b>plano pidiendo ese
+     * farol</b>. Un farol tiene caja de colisión, así que el aldeano que cruzaba ocupaba esa celda con el cuerpo y el
+     * juego <b>no le encontraba camino</b>: se quedaba <b>encerrado en el corral</b> (el jugador: *"el ganadero quiere
+     * ir a la taberna y no puede, la única salida está obstruida por una lámpara"*; su ganadera tenía el almacén
+     * aparcado de no poder llegar).
+     * <p>
+     * El farol se <b>muda a un poste de al lado</b> (no se tira: la luz del pueblo se queda donde hacía falta) y
+     * devuelve las celdas que ha despejado, para que el <b>plano</b> no las siga pidiendo (si no, el obrero lo
+     * repondría). Es <b>idempotente</b> y solo mira <b>faroles</b>: si en el carril hay otra cosa (lo que puso el
+     * jugador), no se toca. Se llama desde el latido, así que vale también para las aldeas ya construidas.
+     */
+    public static List<BlockPos> despejarElHuecoDeLosPortones(ServerLevel level, BlockPos center) {
+        int nivel = cotaDeLaPlaza(level, center);
+        if (nivel <= level.getMinBuildHeight() + 1) {
+            return List.of();
+        }
+        List<BlockPos> despejadas = new ArrayList<>();
+        for (BlockPos porton : todosLosPortones(center, nivel)) {
+            BlockState estado = level.getBlockState(porton);
+            if (!(estado.getBlock() instanceof FenceGateBlock)) {
+                continue; // ahí no hay portón (una aldea vieja, un bancal movido): no hay hueco que despejar
+            }
+            boolean enX = estado.getValue(FenceGateBlock.FACING).getAxis() == Direction.Axis.X;
+            for (int d = -1; d <= 1; d++) {
+                // Las tres celdas por las que se cruza (la hoja y las dos de al lado) y, de cada una, su CABEZA: el
+                // aldeano mide 1,95, así que ocupa la capa que se pisa y la de encima. Un farol en la de encima lo
+                // deja fuera.
+                BlockPos carril = enX ? porton.offset(d, 0, 0) : porton.offset(0, 0, d);
+                BlockPos cabeza = carril.above();
+                if (!level.getBlockState(cabeza).is(Blocks.LANTERN)) {
+                    continue;
+                }
+                BlockPos poste = posteLibreJuntoAlPorton(level, porton, enX);
+                // lint:ok I9 porque es una REPARACION idempotente de unas celdas (muda el farol que tapa un porton) y
+                // se llama desde el latido: no rehace nada, asi que no necesita migracion.
+                colocar(level, cabeza, Blocks.AIR.defaultBlockState(), 3);
+                if (poste != null) {
+                    farolSobreElPoste(level, poste);
+                }
+                despejadas.add(cabeza);
+                DevilRpg.LOGGER.info("[Village] Aldea en {}: farol mudado del hueco del porton {} a {}",
+                        center, porton.toShortString(), poste == null ? "(sin poste libre: se quito)" : poste.toShortString());
+            }
+        }
+        return despejadas;
+    }
+
+    /**
+     * Un <b>poste de la valla</b> junto al portón al que mudar el farol que lo tapaba: el primero (a lo largo de la
+     * valla, que va <b>perpendicular</b> al eje de cruce) que sea valla y tenga el hueco de encima libre. {@code null}
+     * si no hay ninguno (entonces el farol se quita y ya: la luz de al lado lo cubre).
+     */
+    @Nullable
+    private static BlockPos posteLibreJuntoAlPorton(ServerLevel level, BlockPos porton, boolean enX) {
+        for (int d = 1; d <= 4; d++) {
+            for (int signo : new int[]{-1, 1}) {
+                BlockPos p = enX ? porton.offset(0, 0, signo * d) : porton.offset(signo * d, 0, 0);
+                BlockState estado = level.getBlockState(p);
+                if (!estado.is(Blocks.OAK_FENCE) && !estado.is(Blocks.SPRUCE_FENCE)) {
+                    continue;
+                }
+                if (level.getBlockState(p.above()).isAir()) {
+                    return p;
+                }
+            }
+        }
+        return null;
     }
 
     /** Las cuatro puertas de valla de <b>una</b> parcela (centro de cada lado del anillo). */

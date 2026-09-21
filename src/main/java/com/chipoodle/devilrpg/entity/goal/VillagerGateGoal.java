@@ -19,7 +19,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -302,14 +301,11 @@ public class VillagerGateGoal extends Goal {
      * Los portones que abre y cierra el pueblo cerca de este aldeano: los dos del <b>anexo</b> (el corral y el
      * gallinero), que son los que guardan animales, y las <b>cuatro puertas de valla de cada bancal</b> de la granja
      * (etapa F). El jugador no puede abrirlas con un aldeano (el juego solo le deja abrir puertas de madera), así que
-     * las abre el pueblo.
+     * las abre el pueblo. La lista vive en <b>un solo sitio</b> ({@link VillageGenerator#todosLosPortones}, I4): la
+     * usan también el despeje del hueco y el filtro del plano (I54).
      */
     private static List<BlockPos> portonesDelAnexo(BlockPos center, int nivel) {
-        List<BlockPos> lista = new ArrayList<>();
-        lista.add(VillageGenerator.portonDelCorral(center, nivel));
-        lista.add(VillageGenerator.portonDelGallinero(center, nivel));
-        lista.addAll(VillageGenerator.portonesDeLosBancales(center, nivel));
-        return lista;
+        return VillageGenerator.todosLosPortones(center, nivel);
     }
 
     /** Abre el portón (con su chirrido) y lo apunta como "abierto por el pueblo". */

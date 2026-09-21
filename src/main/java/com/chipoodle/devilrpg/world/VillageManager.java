@@ -1966,6 +1966,25 @@ public final class VillageManager {
         // que está justo arriba de las primeras escaleras de la planta baja porque estorba al querer subir por ahí").
         // Idempotente y solo toca ese farol: vale también para las tabernas ya construidas.
         VillageGenerator.quitarElFarolDeLaEscalera(level, center);
+        // Y EL FAROL QUE TAPABA UN PORTÓN, MUDADO A UN POSTE (I54). El layout viejo de las luces de la cerca del
+        // corral ponía un farol en el MEDIO de cada lado de la valla, y el medio del lado oeste ES el portón: la hoja
+        // lo llevaba encima y con él NADIE podía cruzar (el jugador: *"el ganadero quiere ir a la taberna y no puede,
+        // la única salida está obstruida por una lámpara"*; su ganadera tenía el almacén aparcado de no poder llegar).
+        // Idempotente, y las celdas despejadas salen TAMBIÉN del PLANO: si el plano sigue pidiendo el farol, el
+        // obrero lo repone en la siguiente pasada (el plano de una aldea migrada es un escaneo del mundo y lo grabó
+        // mientras el farol estaba ahí).
+        List<BlockPos> huecosDespejados = VillageGenerator.despejarElHuecoDeLosPortones(level, center);
+        if (!huecosDespejados.isEmpty()) {
+            VillageSavedData.Blueprint plano = saved.getBlueprint(objectiveIndex);
+            if (plano != null) {
+                for (BlockPos celda : huecosDespejados) {
+                    plano = plano.sinCelda(celda.asLong());
+                }
+                saved.setBlueprint(objectiveIndex, plano);
+            }
+            DevilRpg.LOGGER.info("[Village] Aldea {}: {} farol(es) fuera del hueco de un porton (y fuera del plano)",
+                    objectiveIndex, huecosDespejados.size());
+        }
         // PESQUERA (etapa G): el lago del pescador, su caseta y su barril. Idempotente (vale el agua del lago o el
         // barril como testigo): si el jugador se lleva media pesquera, el pueblo la vuelve a levantar.
         VillageGenerator.asegurarPesquera(level, center);

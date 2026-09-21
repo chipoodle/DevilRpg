@@ -7,7 +7,7 @@ Aquí está lo que merece sobrevivir.
 | Herramienta | Qué hace |
 |---|---|
 | `lint_aldea.py` | Lint de las reglas de aldea (invariantes I*). **Se pasa antes de cada commit de aldea**: `python tools\lint_aldea.py --strict`. Sale con código 1 si algo falla |
-| `audita_aldea.py` | **Auditoría de las aldeas del guardado**: faroles y vallas flotando, cofres tapados, puertas incompletas y camas sueltas. Saca las aldeas de `data/devilrpg_villages.dat` (índice, centro y cota), así que **no hay nada clavado a una aldea concreta**. Sale con código 1 si encuentra algo |
+| `audita_aldea.py` | **Auditoría de las aldeas del guardado**: faroles y vallas flotando, cofres tapados, puertas incompletas, camas sueltas y **portones con el hueco tapado** (I54: en la capa de la cabeza del carril de un portón no puede haber nada sólido, o el que cruza se queda encerrado). Saca las aldeas de `data/devilrpg_villages.dat` (índice, centro y cota), así que **no hay nada clavado a una aldea concreta**. Sale con código 1 si encuentra algo |
 | `nbtdump.py` | Lector mínimo de NBT (`load`, `R`+`payload`, `walk`). `build/nbtdump.py` es un **puente** a este, para que los scripts de `build/` sigan funcionando con **una sola copia** |
 | `finduuid.py` | Busca UUIDs en los `.mca` de entidades y dice en qué chunk está cada uno (para comprobar que un minion está muerto de verdad antes de olvidarlo) |
 | `recover/NbtTool.java` | Diagnóstico y reparación del NBT del jugador con las **clases reales de Minecraft**, sin arrancar el juego (volcar, `--find`, `--snbt`, `--restore-minions-from`, `--forget`, `--inject-into`). Las librerías de `build/recover/libs` **no** se versionan (pesan): ver `docs/design-roadmap.md` §6 |
