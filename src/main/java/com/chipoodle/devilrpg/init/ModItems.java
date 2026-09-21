@@ -26,6 +26,18 @@ public class ModItems {
     public static final DeferredHolder<Item, Item> MANA_BERRY = ITEMS.register("mana_berry",
             () -> new ManaBerryItem(new Item.Properties().food(new FoodProperties.Builder().nutrition(4).saturationModifier(0.3f).build())));
 
+    /**
+     * <b>HUEVO ESTRELLADO</b> (lo pidió el jugador: *"implementa que el cocinero cocine los huevos para hacer huevos
+     * estrellados, y puedan consumir todos"*). Lo hace el <b>cocinero</b> en su ahumador a partir de los <b>huevos</b>
+     * de las gallinas del corral (ver {@code VillagePantry.cocinar}: huevo → huevo estrellado, como la carne). Es
+     * <b>comida del pueblo</b>: vale puntos en la despensa y entra en el reparto de raciones, así que lo comen los
+     * aldeanos; y el jugador también (o se lo cocina él en un ahumador: tiene receta).
+     * <p>
+     * {@code nutrition(6)} y {@code saturationModifier(0.6f)}: lo mismo que un pollo asado.
+     */
+    public static final DeferredHolder<Item, Item> HUEVO_ESTRELLADO = ITEMS.register("huevo_estrellado",
+            () -> new Item(new Item.Properties().food(new FoodProperties.Builder().nutrition(6).saturationModifier(0.6f).build())));
+
     public static final DeferredHolder<Item, DeferredSpawnEggItem> SOULWOLF_SPAWN_EGG = ITEMS.register("soulwolf_spawn_egg",
             () -> new DeferredSpawnEggItem(ModEntities.SOUL_WOLF, 0x944a7f, 0x3b3636,
                     new Item.Properties().stacksTo(16)));

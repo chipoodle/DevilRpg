@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:smoking",
+  "category": "food",
+  "ingredient": { "item": "minecraft:egg" },
+  "result": { "id": "devilrpg:huevo_estrellado", "count": 1 },
+  "experience": 0.35,
+  "cookingtime": 100
+}

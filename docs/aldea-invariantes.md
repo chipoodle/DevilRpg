@@ -1668,6 +1668,26 @@ queda siempre y cada cría acaba en carne.
 **Las gallinas siguen con tope 8**: no se crían para carne, sino por los **huevos**. Si el jugador las quiere
 también a dos, es cambiar `MAX_GALLINAS`.
 
+### I70 · El huevo estrellado (lo cocina el cocinero, y lo come el pueblo)
+
+Lo pidió el jugador: *"implementa que el cocinero cocine los huevos para hacer huevos estrellados, y puedan consumir
+todos"*, con el icono que trajo (una imagen 16x16 ampliada; el fondo ya venía **transparente**, así que solo hubo que
+reducirla a 16x16 con nearest).
+
+**Cómo queda**:
+- <b>Item</b> `devilrpg:huevo_estrellado` (comida: 6 de nutrición, 0,6 de saturación — como un pollo asado), con su
+  <b>textura</b>, su <b>modelo</b>, sus <b>nombres</b> (inglés y español) y su hueco en la pestaña creativa.
+- <b>Lo cocina el cocinero</b> en su ahumador: `Items.EGG` entra en su lista de crudos (`VillagerCookGoal.CRUDAS`) y
+  `VillagePantry.cocinar` lo convierte en huevo estrellado, con su humo, su sonido y su "Cocino N piezas" —
+  exactamente igual que la carne.
+- <b>Y lo come el pueblo</b>: es comida **de la despensa** (`perteneceALaDespensa`) y cuenta como **cocinada**
+  (4 puntos, `FOOD_PER_COOKED_MEAT`), así que entra en el contador de comida y en el reparto de raciones.
+- <b>Y el jugador también</b>: se lo puede comer, y cocinarlo él en un ahumador (receta
+  `data/devilrpg/recipe/huevo_estrellado.json`: huevo → huevo estrellado, 5 s).
+
+**De dónde salen los huevos**: de las **gallinas del corral** (el recolector barre los huevos y los sube al almacén, y
+de ahí pasan a la despensa). Con el tope de las gallinas en 8 (I69) el pueblo tiene huevos de sobra.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 

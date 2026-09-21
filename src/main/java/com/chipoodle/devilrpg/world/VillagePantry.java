@@ -241,6 +241,8 @@ public final class VillagePantry {
                 + contar(c, VillagePantry::esCarneCocida) * FOOD_PER_COOKED_MEAT
                 + contar(c, VillagePantry::esCarneCruda) * FOOD_PER_RAW_MEAT
                 + contar(c, s -> s.is(Items.BAKED_POTATO)) * FOOD_PER_COOKED_MEAT
+                // Y los huevos estrellados, que son comida cocinada del pueblo (ración completa).
+                + contar(c, VillagePantry::esHuevoEstrellado) * FOOD_PER_COOKED_MEAT
                 + contar(c, VillagePantry::esVegetal) * FOOD_PER_VEGETABLE
                 + contar(c, s -> s.is(Items.WHEAT)) * FOOD_PER_WHEAT;
     }
@@ -271,12 +273,15 @@ public final class VillagePantry {
         if (cruda.is(Items.COD)) return new ItemStack(Items.COOKED_COD);
         if (cruda.is(Items.SALMON)) return new ItemStack(Items.COOKED_SALMON);
         if (cruda.is(Items.POTATO)) return new ItemStack(Items.BAKED_POTATO); // patata asada
+        // EL HUEVO, ESTRELLADO (lo pidió el jugador): sale de los huevos de las gallinas del corral y lo cocina el
+        // cocinero en su ahumador igual que la carne.
+        if (cruda.is(Items.EGG)) return new ItemStack(com.chipoodle.devilrpg.init.ModItems.HUEVO_ESTRELLADO.get());
         return ItemStack.EMPTY;
     }
 
-    /** ¿Se puede cocinar esto? (carne cruda o patata) */
+    /** ¿Se puede cocinar esto? (carne cruda, patata o huevo) */
     public static boolean sePuedeCocinar(ItemStack s) {
-        return esCarneCruda(s) || s.is(Items.POTATO);
+        return esCarneCruda(s) || s.is(Items.POTATO) || s.is(Items.EGG);
     }
 
     /**
@@ -287,7 +292,16 @@ public final class VillagePantry {
     public static boolean perteneceALaDespensa(ItemStack s) {
         return s.is(Items.BREAD) || s.is(Items.WHEAT) || s.is(Items.BAKED_POTATO) || esVegetal(s)
                 || esCarneCruda(s) || esCarneCocida(s) || s.is(Items.APPLE)
-                || esSemilla(s) || s.is(Items.BONE_MEAL);
+                || esSemilla(s) || s.is(Items.BONE_MEAL)
+                // Y EL HUEVO ESTRELLADO: es comida del pueblo (lo pidió el jugador: "y puedan consumir todos"), así que
+                // entra en la despensa y en el reparto de raciones como una pieza cocinada más. El huevo CRUDO no: ese
+                // es de las gallinas (y del cocinero).
+                || esHuevoEstrellado(s);
+    }
+
+    /** ¿Es un <b>huevo estrellado</b> (la comida que cocina el cocinero con los huevos del corral)? */
+    public static boolean esHuevoEstrellado(ItemStack s) {
+        return s.is(com.chipoodle.devilrpg.init.ModItems.HUEVO_ESTRELLADO.get());
     }
 
     /**

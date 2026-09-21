@@ -433,7 +433,10 @@ public class VillagerCookGoal extends Goal {
     private static final List<ItemStack> CRUDAS = List.of(
             new ItemStack(Items.BEEF), new ItemStack(Items.PORKCHOP), new ItemStack(Items.CHICKEN),
             new ItemStack(Items.MUTTON), new ItemStack(Items.RABBIT), new ItemStack(Items.COD),
-            new ItemStack(Items.SALMON), new ItemStack(Items.POTATO));
+            new ItemStack(Items.SALMON), new ItemStack(Items.POTATO),
+            // Y LOS HUEVOS de las gallinas del corral: el cocinero los hace estrellados (lo pidió el jugador) y, como
+            // valen ración completa en la despensa, el pueblo entero come mejor con ellos.
+            new ItemStack(Items.EGG));
 
     private int contarCrudoEnLaDespensa(ServerLevel level) {
         return VillagePantry.contar(VillagePantry.despensa(level, center), VillagePantry::sePuedeCocinar);
