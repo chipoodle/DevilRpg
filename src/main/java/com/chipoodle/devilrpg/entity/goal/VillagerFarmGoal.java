@@ -94,6 +94,16 @@ public class VillagerFarmGoal extends Goal {
      */
     private static final int HORNEAR_MAX = 2;
     /**
+     * <b>TRIGO QUE NO SE HORNEA NUNCA: es la comida de cría del ganadero.</b> Las <b>vacas</b> y las <b>ovejas</b> se
+     * crían con <b>trigo</b> y el ganadero lo saca de la despensa ({@code VillagerAnimalFarmGoal.hayComidaParaCriar}
+     * pide 2 y gasta 1 por animal). Como aquí se horneaba todo el trigo según llegaba, la despensa nunca tenía 2 y el
+     * ganadero <b>no podía criar NUNCA</b>. Medido en el guardado del jugador: el corral tenía <b>3 vacas</b> (tope 6),
+     * la despensa <b>0 de trigo</b> (y 432 zanahorias, 155 patatas...) y el almacén <b>0 de cuero</b> — sin cría no hay
+     * exceso, sin exceso no hay sacrificio y sin sacrificio no hay cuero (el jugador: *"casi no se ha fabricado
+     * armaduras de cuero"*). Con la reserva, el ganadero siempre encuentra con qué criar.
+     */
+    private static final int RESERVA_DE_TRIGO_PARA_CRIAR = 4;
+    /**
      * Harina de huesos que se lleva encima como mucho. Antes 4: con eso abonaba UNA planta por visita (lo pidió el
      * jugador: "que abone todo el plantío, no nada más una planta"), así que ahora carga una tanda de 16 y las gasta
      * seguidas por toda la parcela.
@@ -823,9 +833,13 @@ public class VillagerFarmGoal extends Goal {
                         || s.is(Items.BONE_MEAL) || VillagePantry.esVegetal(s)
                         || VillagePantry.esCarneCruda(s) || VillagePantry.esCarneCocida(s),
                 TRAER_DEL_ALMACEN);
-        // 4) Hornear: 3 de trigo por hogaza (la receta de vanilla), como mucho HORNEAR_MAX por visita.
+        // 4) Hornear: 3 de trigo por hogaza (la receta de vanilla), como mucho HORNEAR_MAX por visita. Y **SE DEJA LA
+        //    RESERVA DE TRIGO PARA CRIAR** (ver `RESERVA_DE_TRIGO_PARA_CRIAR`): sin ella el ganadero no puede criar
+        //    vacas ni ovejas y el pueblo se queda sin cuero y sin lana.
         int horneadas = 0;
         while (horneadas < HORNEAR_MAX
+                && VillagePantry.contar(despensa, s -> s.is(Items.WHEAT))
+                    >= VillagePantry.WHEAT_PER_BREAD + RESERVA_DE_TRIGO_PARA_CRIAR
                 && VillagePantry.sacar(despensa, s -> s.is(Items.WHEAT), VillagePantry.WHEAT_PER_BREAD)
                     == VillagePantry.WHEAT_PER_BREAD) {
             VillagePantry.guardar(despensa, new ItemStack(Items.BREAD));

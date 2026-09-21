@@ -1629,6 +1629,28 @@ toque descansar de verdad. **Medido con el arnés** (modo noche, 4 min sobre su 
 cama` = **0**, el WARN `Aldea 2: SIN CAMA` = **0**, y el resumen acaba en
 `aldeanos=14 conCama=14 COMPARTIDAS=0 SIN CAMA=0 DURMIENDO=13`.
 
+### I68 · El trigo de criar NO se hornea (el ganadero tiene que poder criar)
+
+Pregunta del jugador: *"en el establo, cuando sacrifican una vaca, ¿sí sale cuero también? porque veo que casi no se
+ha fabricado armaduras de cuero"*.
+
+**El cuero SÍ sale**: el sacrificio es un `hurt` de verdad con el aldeano como atacante
+(`VillagerAnimalFarmGoal.sacrificar` → `presa.hurt(damageSources().mobAttack(villager), MAX)`), o sea el **loot normal
+de vanilla**, y el ganadero **recoge los drops** y los baja al almacén.
+
+**Lo que pasaba es que no había nada que sacrificar**, y está medido en su guardado:
+- el corral tiene **3 vacas** (el tope es **6**), así que **no hay exceso** y el ganadero **no sacrifica**;
+- y la cría de vacas/ovejas se hace con **trigo** (`hayComidaParaCriar` pide **2** en la despensa y gasta 1 por
+  animal)… y la despensa tenía **0 de trigo** (sí 432 zanahorias, 155 patatas, 261 semillas).
+- **El pan se comía el trigo**: el granjero hornea todo el trigo según llega (`Guardo 8 y horneo 2 pan(es)` en su
+  log), así que nunca quedaban 2.
+
+Sin cría no hay exceso → sin exceso no hay sacrificio → sin sacrificio no hay cuero → sin cuero no hay armaduras.
+
+**Regla:** el horneado **deja siempre `RESERVA_DE_TRIGO_PARA_CRIAR` (4) de trigo** en la despensa; el ganadero
+siempre encuentra con qué criar. Las raciones no lo tocan: el pan, la carne y las verduras van **antes** que el trigo
+(`VillagePantry.repartirRaciones`, el trigo es el último recurso).
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
