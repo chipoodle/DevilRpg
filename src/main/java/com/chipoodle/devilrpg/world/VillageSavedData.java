@@ -15,6 +15,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.saveddata.SavedData;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -91,6 +92,27 @@ public final class VillageSavedData extends SavedData {
 
         public BlockState stateAt(int index) {
             return palette.get(states[index]);
+        }
+
+        /**
+         * El plano <b>con una celda más</b>: la que el latido acaba de reponer (un hueco de una casa que faltaba en el
+         * plano porque se capturó cuando el hueco ya estaba). Sin esto, el obrero no sabría que esa celda es del pueblo
+         * y el siguiente asedio que la rompiera dejaría el agujero para siempre (I8: <b>todo</b> lo que construye el
+         * pueblo está en el plano).
+         */
+        public Blueprint conCelda(BlockPos pos, BlockState state) {
+            int indice = palette.indexOf(state);
+            List<BlockState> nuevaPaleta = palette;
+            if (indice < 0) {
+                nuevaPaleta = new ArrayList<>(palette);
+                nuevaPaleta.add(state);
+                indice = nuevaPaleta.size() - 1;
+            }
+            long[] posiciones = Arrays.copyOf(positions, positions.length + 1);
+            posiciones[positions.length] = pos.asLong();
+            int[] estados = Arrays.copyOf(states, states.length + 1);
+            estados[states.length] = indice;
+            return new Blueprint(nuevaPaleta, posiciones, estados);
         }
     }
 

@@ -114,7 +114,7 @@ public class VillagerFarmGoal extends Goal {
      */
     private static final int DESPENSA_VACIA = 8;
 
-    private enum Tarea { COSECHAR, LABRAR, PLANTAR, FERTILIZAR, COMPOSTAR, DESPENSA, SALIR }
+    private enum Tarea { COSECHAR, LABRAR, PLANTAR, FERTILIZAR, COMPOSTAR, DESPENSA, SALIR, RECOGER }
 
     private final Villager villager;
     private final BlockPos center;
@@ -122,6 +122,13 @@ public class VillagerFarmGoal extends Goal {
     @Nullable
     private BlockPos target;
     private Tarea tarea = Tarea.COSECHAR;
+    /**
+     * ¿La última visita a la despensa <b>no le dejó hueco</b> (no le cupo nada de lo que llevaba)? Entonces no se le
+     * manda otra vez por lo mismo: cosecha y lo que no le quepa se cae al suelo, que el mismo granjero barre luego
+     * ({@link #Tarea.RECOGER}). Sin esto, con la despensa llena el granjero se quedaría en un bucle de viajes sin
+     * cosechar nada.
+     */
+    private boolean despensaNoTraga;
     /**
      * Plantas que YA ha abonado en esta salida: así la harina de huesos se reparte por TODA la parcela en vez de
      * gastarse entera en la primera planta que encuentra (que es lo que pasaba al no recordar por dónde iba).
@@ -213,6 +220,32 @@ public class VillagerFarmGoal extends Goal {
             tarea = Tarea.DESPENSA;
             target = VillagePantry.puntoDeApoyo(level, center);
             return true;
+        }
+        // 1b) SIN HUECO EN EL ZURRÓN, A LA DESPENSA: si no le cabe nada más de lo que cosecha (ni un hueco libre ni una
+        //     pila a medias de trigo o verdura), seguir cosechando es TIRAR la cosecha al suelo, que es justo lo que el
+        //     jugador veía ("los granjeros están dejando muchos vegetales en el suelo cuando cosechan"). Va a
+        //     descargar (y de paso trae recambios) antes de seguir con la huerta.
+        if (despensa != null && !hayHuecoParaLaCosecha() && trigoEnMano() + vegetalesEnMano() > 0) {
+            tarea = Tarea.DESPENSA;
+            target = VillagePantry.puntoDeApoyo(level, center);
+            return true;
+        }
+        // 1c) LO QUE SE HA CAÍDO EN SU BANCAL, AL ZURRÓN. Hace falta porque no todo lo que cae al suelo lo tira este
+        //     goal: el propio CEREBRO del aldeano también tiene su faena de granjero (`HarvestFarmland`) y recoge el
+        //     cultivo con el `destroyBlock(..., true)` del juego, que suelta los vegetales al suelo para que él los
+        //     pise y los recoja. Con el pueblo llevando al aldeano a lo suyo (o a la despensa), esos vegetales se
+        //     quedaban ahí hasta pudrirse: medido con el arnés, con el zurrón a MEDIO llenar (2 huecos libres de 8) y
+        //     sin que este goal hubiera tirado nada —así que no eran suyos— había 8 objetos en el bancal 2 (patatas y
+        //     zanahorias de 5 a 50 s). Y el RECOLECTOR no puede entrar: las parcelas están cercadas y las compuertas
+        //     de valla no las abre un aldeano (por eso el granjero tiene su propia tarea de salir, `Tarea.SALIR`). El
+        //     granjero es el único que puede barrer su bancal, así que lo barre él.
+        if (parcelaDondeEsta(level) >= 0 && hayHuecoParaLaCosecha()) {
+            BlockPos caido = buscarCaidoEnElBancal(level);
+            if (caido != null) {
+                target = caido;
+                tarea = Tarea.RECOGER;
+                return true;
+            }
         }
         // 2) LA COMIDA ESTÁ EN EL ALMACÉN Y LA DESPENSA VACÍA: a por ella. El ganadero sube la carne del corral y el
         //    recolector barre lo que cae por el pueblo, y todo eso va al ALMACÉN; pero el contador de comida (y las
@@ -424,6 +457,17 @@ public class VillagerFarmGoal extends Goal {
         workTicks = 0;
         switch (tarea) {
             case COSECHAR -> {
+                if (!despensaNoTraga && !leCabeLaCosecha(level, target)) {
+                    // NO SE COSECHA LO QUE NO LE CABE: lo que no entra en el zurrón se cae al suelo, y eso es justo lo
+                    // que el jugador veía ("los granjeros están dejando muchos vegetales en el suelo cuando cosechan").
+                    // Primero va a la despensa a descargar —viaje que además le trae recambios— y la cosecha se queda
+                    // en la planta, que no se pierde.
+                    tarea = Tarea.DESPENSA;
+                    target = VillagePantry.puntoDeApoyo(level, center);
+                    VillageManager.ponerActividad(villager, "Zurron lleno: a la despensa");
+                    return; // el goal sigue vivo con el viaje
+                }
+                despensaNoTraga = false;
                 VillageManager.ponerActividad(villager, "Cosechando");
                 cosechar(level);
             }
@@ -464,6 +508,22 @@ public class VillagerFarmGoal extends Goal {
                 VillageManager.ponerActividad(villager,
                         trigoEnMano() + vegetalesEnMano() > 0 ? "Llevando la cosecha" : "Buscando recambios");
                 enLaDespensa(level);
+            }
+            case RECOGER -> {
+                VillageManager.ponerActividad(villager, "Recogiendo lo que se cayo");
+                recoger(level);
+                // Y SIGUE CON EL SIGUIENTE: si en su bancal queda otro objeto caído y le cabe, no se va a otra faena
+                // entre medias. Barriendo de una pasada el bancal se queda limpio de verdad (midiendo, con el barrido
+                // de uno en uno los objetos vivían hasta 54 s; el que se cae lo recoge él enseguida).
+                if (hayHuecoParaLaCosecha()) {
+                    BlockPos siguiente = buscarCaidoEnElBancal(level);
+                    if (siguiente != null) {
+                        target = siguiente;
+                        mejorDistancia = Double.MAX_VALUE;
+                        stuckTicks = 0;
+                        return; // el goal sigue vivo con el siguiente objeto
+                    }
+                }
             }
         }
         target = null;
@@ -507,6 +567,144 @@ public class VillagerFarmGoal extends Goal {
             }
         }
         level.playSound(null, target, state.getSoundType().getBreakSound(), SoundSource.BLOCKS, 0.7F, 1.0F);
+    }
+
+    /**
+     * <b>Recoge UN objeto del suelo del bancal</b> (lo que se cayó al cosechar: lo que el juego suelta con su propia
+     * faena de granjero, lo que no le cupo a él, o las semillas que sobran) y lo mete en el zurrón.
+     * <p>
+     * Se coge solo el de la <b>celda a la que ha ido</b> (el objetivo), no todo lo que haya alrededor: así el granjero
+     * no se queda pegado a un montón y va eligiendo el más cercano en cada pasada. Lo que no le quepa <b>se queda en el
+     * suelo</b> (nunca se borra un objeto del pueblo).
+     */
+    private void recoger(ServerLevel level) {
+        if (target == null) {
+            return;
+        }
+        for (ItemEntity item : level.getEntitiesOfClass(ItemEntity.class, new AABB(target).inflate(1.0D))) {
+            if (!item.isAlive() || item.getItem().isEmpty()
+                    || !item.blockPosition().equals(target)) {
+                continue;
+            }
+            int antes = item.getItem().getCount();
+            ItemStack resto = guardarEnInventario(item.getItem().copy());
+            if (resto.getCount() == antes) {
+                return; // no le cabía nada: se queda donde está
+            }
+            if (resto.isEmpty()) {
+                item.discard();
+            } else {
+                item.setItem(resto);
+            }
+            level.playSound(null, target, net.minecraft.sounds.SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 0.5F, 1.4F);
+        }
+    }
+
+    /**
+     * El objeto que se ha caído <b>en el bancal en el que está el granjero</b> y que le vale (trigo, zanahoria, patata,
+     * betabel, y las semillas si no lleva ya de sobra —las de más son del compostero—), el más cercano.
+     * <p>
+     * No se sale de su bancal a propósito: barrer el pueblo es del <b>recolector</b>; aquí solo se recoge lo que el
+     * granjero mismo dejó atrás al cosechar, que es lo que nadie más puede alcanzar (la parcela está cercada).
+     */
+    @Nullable
+    private BlockPos buscarCaidoEnElBancal(ServerLevel level) {
+        int donde = parcelaDondeEsta(level);
+        if (donde < 0) {
+            return null;
+        }
+        int cota = VillageGenerator.cotaDeLaPlaza(level, center);
+        ItemEntity mejor = null;
+        double mejorDist = Double.MAX_VALUE;
+        for (ItemEntity item : level.getEntitiesOfClass(ItemEntity.class,
+                new AABB(center).inflate(MAX_DISTANCE_FROM_CENTER))) {
+            if (!item.isAlive() || item.getItem().isEmpty()) {
+                continue;
+            }
+            if (!VillageGenerator.estaDentroDeLaParcela(center, donde, cota, item.blockPosition())) {
+                continue;
+            }
+            if (!leValeLoCaido(item.getItem())) {
+                continue;
+            }
+            if (VillageManager.esPuntoFallido(villager, item.blockPosition())) {
+                continue; // a ese no llegó hace poco (I33): se prueba con el siguiente
+            }
+            double d = item.distanceToSqr(villager);
+            if (d < mejorDist) {
+                mejorDist = d;
+                mejor = item;
+            }
+        }
+        return mejor == null ? null : mejor.blockPosition();
+    }
+
+    /**
+     * ¿Ese objeto del suelo es de los que el granjero se lleva? Trigo y verduras siempre (son la cosecha y la comida
+     * del pueblo); las <b>semillas</b> solo si no lleva ya de sobra, porque las que sobran son del <b>compostero</b>
+     * (para eso se caen: ver {@code cosechar}).
+     */
+    private boolean leValeLoCaido(ItemStack s) {
+        if (s.is(Items.WHEAT) || VillagePantry.esVegetal(s)) {
+            return true;
+        }
+        if (s.is(Items.WHEAT_SEEDS) || s.is(Items.BEETROOT_SEEDS)) {
+            return semillasCompostablesSobrantes() <= 0;
+        }
+        return false;
+    }
+
+    /** ¿Le cabe algo más de cosecha en el zurrón? (un hueco libre, o una pila a medias de trigo o verdura) */
+    private boolean hayHuecoParaLaCosecha() {
+        for (int i = 0; i < villager.getInventory().getContainerSize(); i++) {
+            ItemStack s = villager.getInventory().getItem(i);
+            if (s.isEmpty()) {
+                return true;
+            }
+            if ((s.is(Items.WHEAT) || VillagePantry.esVegetal(s)) && s.getCount() < s.getMaxStackSize()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * ¿Le cabe en el zurrón <b>todo</b> lo que va a soltar ese cultivo al cosecharlo? Se mira lo que el cultivo suelta
+     * ({@code Block.getDrops}) <b>antes</b> de romperlo: si algo no cabe, no se cosecha todavía y el granjero se va
+     * antes a la despensa a descargar.
+     * <p>
+     * Las <b>semillas de más</b> no cuentan: las que pasan del tope ({@link #SEMILLAS_MAX} +
+     * {@link #SEMILLAS_PARA_COMPOSTAR}) se caen <b>a propósito</b> (son el abono del compostero), así que no bloquean
+     * la cosecha.
+     */
+    private boolean leCabeLaCosecha(ServerLevel level, BlockPos cultivo) {
+        BlockState state = level.getBlockState(cultivo);
+        for (ItemStack drop : Block.getDrops(state, level, cultivo, null)) {
+            boolean semillaDeCompostero = drop.is(Items.WHEAT_SEEDS) || drop.is(Items.BEETROOT_SEEDS);
+            if (semillaDeCompostero
+                    && semillasCompostablesEnMano() + drop.getCount() > SEMILLAS_MAX + SEMILLAS_PARA_COMPOSTAR) {
+                continue; // ésas son del compostero: se caen y las recoge (o las composta) el pueblo
+            }
+            if (!leCabe(drop)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** ¿Ese objeto cabe en el zurrón tal como está (en una pila igual a medias o en un hueco libre)? */
+    private boolean leCabe(ItemStack stack) {
+        int restante = stack.getCount();
+        for (int i = 0; i < villager.getInventory().getContainerSize() && restante > 0; i++) {
+            ItemStack dentro = villager.getInventory().getItem(i);
+            if (dentro.isEmpty()) {
+                return true; // una pila nueva cabe entera en un hueco libre
+            }
+            if (ItemStack.isSameItemSameComponents(dentro, stack)) {
+                restante -= dentro.getMaxStackSize() - dentro.getCount();
+            }
+        }
+        return restante <= 0;
     }
 
     private void plantar(ServerLevel level) {
@@ -590,6 +788,9 @@ public class VillagerFarmGoal extends Goal {
                 villager.getInventory().setItem(i, resto);
             }
         }
+        // ¿Le ha dejado hueco la visita? Si no le cupo NADA de lo que llevaba (despensa llena), se apunta para no
+        // mandarlo otra vez por lo mismo (ver `despensaNoTraga`).
+        despensaNoTraga = guardados == 0 && trigoEnMano() + vegetalesEnMano() > 0;
         // 3) LO DEL ALMACÉN, A LA DESPENSA: el recolector (holgazán) recoge del suelo lo que se cae por el pueblo
         // —incluido lo que deja caer el propio juego cuando SU aldeano granjero cosecha, que tira el grano al
         // suelo— y lo guarda en el almacén. Como el contador de comida de la aldea mira LA DESPENSA, esa comida se

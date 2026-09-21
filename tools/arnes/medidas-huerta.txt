@@ -1,0 +1,83 @@
+LOS VEGETALES QUE LOS GRANJEROS DEJABAN EN EL SUELO AL COSECHAR
+===============================================================
+Lo reportó el jugador con captura de la huerta llena de vegetales tirados: *"los granjeros están dejando muchos
+vegetales en el suelo cuando cosechan"*.
+
+Partida: `run/saves/New World (1)` copiada a `run/world` (aldea 2, centro 1414,120,1414); servidor headless con el
+latido de verdad y el arnés en **día fijo** (`GuardHarness`, `MEDIR_HUERTA = true`), que cada 2 s apunta, **por bancal**,
+cada objeto del suelo (qué es, cuántos, su **edad en ticks** y su celda) y, **por granjero**, su posición, el bancal en
+el que está y su **zurrón** hueco a hueco (con los huecos libres).
+
+
+--- 0) EL SÍNTOMA, MEDIDO (ANTES) -----------------------------------------------------------------
+Lecturas de objeto vegetal (Carrot/Potato/Beetroot) en el suelo de los tres bancales:
+
+    [Arnes] HUERTA bancal 0: 1 objeto(s) en el suelo: Potatox3@1385, 119, 1436(edad 997)
+    [Arnes] HUERTA bancal 1: 1 objeto(s) en el suelo: Wheat Seedsx5@1432, 119, 1422(edad 996)
+    [Arnes] HUERTA bancal 2: 8 objeto(s) en el suelo: Potatox2@1388, 119, 1449(edad 997)
+            Potatox2@1387, 119, 1451(edad 997) Carrotx1@1386, 119, 1451(edad 997)
+            Carrotx3@1388, 119, 1449(edad 238) Carrotx1@1388, 119, 1451(edad 172)
+            Carrotx2@1386, 119, 1450(edad 172) Carrotx1@1386, 119, 1454(edad 100)
+            Carrotx3@1387, 119, 1453(edad 100)
+
+    [Arnes] GRANJERO 0d01f388 nombre=Dorotea (Granjero) | Cosechando pos=1393, 119, 1454 bancal=2
+            huecosLibres=2/8 zurron: 0:8xBone Meal 1:8xBeetroot Seeds 2:16xWheat Seeds 3:2xBeetroot
+            4:3xWheat 5:2xCarrot
+
+Dos cosas que dice esta medida:
+
+1. **Los vegetales se acumulan y se quedan**: en la corrida de antes, **502 lecturas de vegetal en el suelo** sobre 345
+   barridos, con **edad mediana 1077 ticks (54 s)** y máxima **4597 ticks (230 s)**; 434 lecturas por encima de 10 s y
+   **340 por encima de 30 s**. Al final de la corrida seguía habiendo **3 zanahorias** (de 3516 a 4597 ticks), a punto
+   de desaparecer a los 5 minutos.
+2. **No es sólo "no me cabe"**: la granjera tenía **2 huecos libres de 8** en el zurrón. O sea que buena parte de lo que
+   hay en el suelo **no lo tiró ella**: lo suelta el **propio juego** con su faena de granjero (`HarvestFarmland`
+   cosecha con `destroyBlock(..., true)`), que espera que el aldeano **pise** el objeto para recogerlo; con el pueblo
+   llevándolo a lo suyo, nadie los pisaba.
+3. Y el **recolector no puede entrar** en las parcelas: están cercadas y las compuertas de valla no las abre un aldeano
+   (por eso el granjero tiene su propia tarea de salir), así que el único que puede barrer un bancal es el granjero.
+4. De propina, **el betabel no estaba en la lista blanca del recolector** (el juego sólo deja que un aldeano recoja
+   BETABEL_SEMILLAS, no el betabel): un betabel caído no lo cogía nadie.
+
+
+--- 1) EL ARREGLO ---------------------------------------------------------------------------------
+`VillagerFarmGoal`:
+
+- **`Tarea.RECOGER` — el granjero barre SU bancal**: busca el objeto caído más cercano **dentro del bancal en el que
+  está** (trigo, zanahoria, patata, betabel, y las semillas si no lleva ya de sobra: las de más son del compostero), va
+  a por él y se lo guarda; y **sigue con el siguiente** mientras le quepa (barrido de una pasada). Lo que no le quepa se
+  queda en el suelo: nunca se borra un objeto del pueblo.
+- **No se cosecha lo que no le cabe** (`leCabeLaCosecha`, con `Block.getDrops` **antes** de romper la planta): si el
+  fruto no entra en el zurrón, el granjero se va **antes** a la despensa a descargar (viaje que además le trae
+  recambios) y la cosecha se queda en la planta. Si la despensa está llena y no le deja hueco, se apunta
+  (`despensaNoTraga`) para no quedarse en un bucle de viajes sin cosechar: entonces cosecha y lo que sobre lo barre él.
+
+`VillagerCollectGoal`: **el betabel entra en la lista blanca** (`esDelPueblo`), para que lo que caiga fuera de los
+bancales también lo recoja el pueblo.
+
+
+--- 2) LA MISMA MEDIDA, DESPUÉS ---------------------------------------------------------------
+    [Arnes] HUERTA bancal 0: 0 objeto(s) en el suelo:
+    [Arnes] HUERTA bancal 1: 1 objeto(s) en el suelo: Wheat Seedsx3@1425, 119, 1423(edad 1882)
+    [Arnes] HUERTA bancal 2: 2 objeto(s) en el suelo: Wheat Seedsx2@1386, 120, 1453(edad 1)
+            Beetroot Seedsx3@1389, 119, 1456(edad 652)
+
+y, contando todas las lecturas de la corrida:
+
+    ANTES:   502 lecturas de vegetal en el suelo (345 barridos) · mediana 54 s · máxima 230 s · 434 por encima de 10 s
+             · 340 por encima de 30 s · 3 zanahorias todavía al final
+    DESPUÉS:  63 lecturas (165 barridos = 0,38 items por barrido) · mediana 6 s · máxima 36 s · 19 por encima de 10 s
+             · 3 por encima de 30 s · y al final SÓLO SEMILLAS del compostero
+
+Los granjeros siguen trabajando igual (etiquetas de la corrida: **143** "Recogiendo lo que se cayo", **115**
+"Cosechando", **108** "Guardando lo suyo", y los viajes a la despensa con "Guardo N en la despensa"), así que el
+barrido no les come la faena.
+
+
+--- 3) LO QUE NO SE TOCA (y por qué) -----------------------------------------------------------
+La faena de granjero del **juego** (`HarvestFarmland`) sigue ahí y sigue soltando lo suyo: **no se puede quitar una
+sola faena del cerebro** —la API de `Brain` solo tiene `removeAllBehaviors()`— y desmontarlo entero sería mucho peor
+que el problema. Lo que se ha hecho es que **el pueblo no deje nada tirado**: lo que cae lo barre el granjero en
+segundos (la mediana pasa de 54 s a 6 s). Lo único que se cae **a propósito** son las **semillas que le sobran** (el
+abono del compostero): ésas se quedan hasta que el granjero composte (o las barra el recolector, que sí las tiene en su
+lista).

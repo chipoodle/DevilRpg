@@ -2767,6 +2767,97 @@ añada un monstruo así dentro de una aldea protegida tumbaba el servidor entero
 lo destapó). Sin tipo no se puede saber de dónde viene y el sello solo corta lo que **sabe** que es natural, así que un
 spawn sin tipo **pasa** (`if (tipo == null) return false;`).
 
+### 3b.65 La pared de la casa a la que le faltaba un bloque (y el cofre de al lado)
+
+Lo reportó el jugador con captura: *"¿qué ves de extraño en esta casa? ¡si le falta completarse a la pared! corrígelo
+y checa que el cofre no estorbe"*. En el F3 de su captura: el jugador en `1423.6, 120, 1391.97`, mirando al este, con
+un hueco a su izquierda por el que se ve el interior y el bloque señalado en `1431,120,1391` (adoquín).
+
+**Lo que faltaba, medido en su guardado**: la casa es la plantilla `plains_medium_house_2` (7x6x13) colocada con su
+puerta a la cota (`origen = 1426, 119, 1382`) y su pared oeste tenía **aire en dos celdas** —`1427,120,1392` y
+`1427,121,1392`—: un boquete de 1x2 pegado a la puerta (con la ventana a un lado y el poste de la esquina al otro). Y
+**la plantilla del juego pide adoquín** justo ahí (`dx=1, y=1..2, dz=10`), así que el hueco **no venía del juego**: lo
+perdió el mundo. El cofre del aviso del jugador está dentro, a una celda del hueco (`1428,120,1392`, y la plantilla
+también lo trae ahí).
+
+**Y NADIE PODÍA REPONERLO**, que es la otra mitad del fallo: el **plano** de la aldea (lo que el obrero usa para
+reparar, I8) se capturó por **escaneo** del mundo —una aldea migrada— y el escaneo **descarta el aire**, así que esas
+dos celdas no están en el plano:
+
+    --- la celda del hueco: (1427,120,1392) ---   NO ESTA EN EL PLANO (el obrero no tiene nada que reponer ahí)
+    --- vecinas (plano) ---  z-1: cobblestone · z+0: chest[facing=north] · z+1: oak_log[axis=y]
+
+O sea: el plano conocía el adoquín de al lado, el cofre y el poste, pero no la celda del medio. El agujero era
+invisible para el pueblo y se quedaba para siempre.
+
+**ARREGLO**: `VillageGenerator.cerrarHuecosDeLasCasas(level, center)` compara cada construcción de plantilla (las 4
+casas, la iglesia y la herrería, con los **mismos sorteos deterministas** que `generate`) con **su plantilla**
+(`template.save` → paleta + bloques, cacheado por id, porque la API pública solo sabe filtrar por un tipo de bloque) y
+**rellena las celdas que la plantilla pide y el mundo tiene en aire**. Dos guardas: (a) si menos de la mitad de las
+celdas de la plantilla coinciden con el mundo, esa construcción no es la de esa plantilla y **no se toca nada**; (b)
+**lo que ya hay no se toca** —solo se rellena el aire—, que es lo que pedía el jugador con el cofre. Lo repuesto se
+devuelve y `VillageManager` lo **apunta en el plano** (`Blueprint.conCelda`), para que el obrero lo mantenga.
+
+**MEDIDO** con el arnés, en la misma corrida (antes → después):
+
+    [Arnes] CASA hueco: 1427,120,1392=air 1427,121,1392=air … 1428,120,1392=chest · cofre[27 huecos] 2:2xapple
+            7:1xapple 8:1xapple 13:1xbread 20:1xapple 21:2xgold_nugget 22:1xbread 23:1xgold_nugget 25:1xapple
+    [Village] Casa …plains_medium_house_2 en 1426, 120, 1382: 2 hueco(s) de la plantilla tapados:
+              1427,120,1392(cobblestone) 1427,121,1392(cobblestone)
+    [Village] Casa …plains_weaponsmith_1 en 1417, 120, 1367: 2 hueco(s) de la plantilla tapados:
+              1423,120,1368(lava) 1423,120,1369(lava)
+    [Village] Aldea 2: 4 hueco(s) de las casas del juego tapados desde su plantilla
+    [Arnes] CASA hueco: 1427,120,1392=cobblestone 1427,121,1392=cobblestone … 1428,120,1392=chest
+            · cofre[27 huecos] 2:2xapple 7:1xapple 8:1xapple 13:1xbread 20:1xapple 21:2xgold_nugget
+              22:1xbread 23:1xgold_nugget 25:1xapple
+
+1. La pared se cierra con **adoquín** (lo que pide la plantilla).
+2. **El cofre no se toca**: mismo sitio, mismos 27 huecos y **los mismos objetos** (el bloque nuevo va a la celda del
+   hueco, al lado del cofre).
+3. **De propina**: la misma comprobación encontró **2 huecos en la fragua de la herrería** (`plains_weaponsmith_1`):
+   la **lava** del juego (`1423,120,1368` y `1423,120,1369`) que el guardado también había perdido.
+4. **Idempotente**: cada casa canta sus huecos **una sola vez** en toda la corrida.
+
+### 3b.66 Los vegetales que los granjeros dejaban en el suelo al cosechar
+
+Lo reportó el jugador con captura de la huerta llena de vegetales tirados: *"los granjeros están dejando muchos
+vegetales en el suelo cuando cosechan"*.
+
+**MEDIDO con el arnés** (`MEDIR_HUERTA`, día fijo; 345 lecturas de los tres bancales en la corrida de antes): había
+**patatas y zanahorias tiradas en los bancales en 502 lecturas**, con edades de hasta **4597 ticks (230 s)** y **3
+zanahorias todavía en el suelo al final de la corrida** (a punto de desaparecer a los 5 min). Y con el zurrón de la
+granjera **a medio llenar** (2 huecos libres de 8), es decir que no eran sólo "no me cabe": el propio **juego** deja
+caer vegetales al suelo —su faena de granjero, `HarvestFarmland`, cosecha con `destroyBlock(..., true)`— y, como el
+pueblo lleva al aldeano a lo suyo, nadie los pisaba para recogerlos. Y el **recolector no puede entrar** en las
+parcelas: están cercadas y las compuertas de valla no las abre un aldeano (por eso el granjero tiene su propia tarea de
+salir). De propina, el **betabel** no estaba en la lista blanca del recolector (el juego solo deja recoger
+BETABEL_SEMILLAS, no el betabel), así que un betabel caído no lo cogía **nadie**.
+
+**ARREGLO** (`VillagerFarmGoal` + `VillagerCollectGoal`):
+- **El granjero barre su bancal** (`Tarea.RECOGER`): busca el objeto caído más cercano **dentro del bancal en el que
+  está** —trigo, zanahoria, patata, betabel y las semillas que no le sobren—, va a por él y se lo guarda; y **sigue con
+  el siguiente** mientras le quepa (barrido de una pasada). Lo que no le quepa se queda en el suelo (nunca se borra
+  nada del pueblo).
+- **No se cosecha lo que no le cabe** (`leCabeLaCosecha`, mirando `Block.getDrops` **antes** de romper la planta): si
+  el fruto no cabe en el zurrón, el granjero se va **antes** a la despensa a descargar y la cosecha se queda en la
+  planta. Si la despensa está llena y no le deja hueco, se apunta (`despensaNoTraga`) para no quedarse en un bucle de
+  viajes: entonces cosecha y lo que sobra se cae, y lo barre él mismo.
+- **El betabel entra en la lista blanca del recolector** (`esDelPueblo`): así lo que caiga fuera de los bancales también
+  lo recoge el pueblo.
+
+**MEDIDO, antes / después** (el arnés mira los tres bancales cada 2 s y apunta cada objeto del suelo con su **edad**):
+
+    ANTES:   502 lecturas de vegetal en el suelo (345 barridos) · edad mediana 1077 ticks (54 s), máxima 4597 (230 s)
+             · 434 lecturas por encima de 10 s y 340 por encima de 30 s · 3 zanahorias todavía ahí al final
+    DESPUÉS:  63 lecturas (165 barridos: 0,38 items por barrido) · edad mediana 116 ticks (6 s), máxima 716 (36 s)
+             · sólo 19 por encima de 10 s y 3 por encima de 30 s · y al final sólo SEMILLAS del compostero
+
+O sea: el juego **sigue** soltando lo suyo —su faena de granjero (`HarvestFarmland`) cosecha con el
+`destroyBlock(..., true)` de vanilla y no se puede quitar sin desmontar el cerebro entero: la `Brain` API solo tiene
+`removeAllBehaviors`—, pero **ya no se queda nada**: lo que cae lo barre el granjero en segundos (la mediana pasa de
+54 s a 6 s) en vez de pudrirse. Lo único que se ve caer a propósito son las **semillas** que le sobran (el abono del
+compostero), y de ésas se encarga él al compostar o el recolector.
+
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.

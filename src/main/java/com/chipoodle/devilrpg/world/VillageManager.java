@@ -1900,6 +1900,24 @@ public final class VillageManager {
         // HERRERÍA: en las aldeas que ya estaban al día (o en las nuevas) se asegura igualmente: es idempotente y así
         // también se le repone la mesa de herrería si alguien se la llevó.
         VillageGenerator.asegurarHerreria(level, center);
+        // Y LOS HUECOS DE LAS CASAS DEL JUEGO (lo vio el jugador: "¿qué ves de extraño en esta casa? ¡si le falta
+        // completarse a la pared! corrígelo y checa que el cofre no estorbe"): una pared con un boquete de 1x2 al lado
+        // de la puerta que NADIE reponía, porque el plano de la aldea se capturó por escaneo del mundo y el escaneo
+        // descarta el aire: el hueco no existía para el obrero. Aquí se compara cada construcción de plantilla con su
+        // plantilla y se rellena lo que falte en aire (sin tocar cofres, camas ni nada que ya esté puesto), y lo
+        // repuesto se apunta en el PLANO para que el obrero lo mantenga (I8).
+        Map<BlockPos, BlockState> huecosTapados = VillageGenerator.cerrarHuecosDeLasCasas(level, center);
+        if (!huecosTapados.isEmpty()) {
+            VillageSavedData.Blueprint plano = saved.getBlueprint(objectiveIndex);
+            if (plano != null) {
+                for (Map.Entry<BlockPos, BlockState> celda : huecosTapados.entrySet()) {
+                    plano = plano.conCelda(celda.getKey(), celda.getValue());
+                }
+                saved.setBlueprint(objectiveIndex, plano);
+            }
+            DevilRpg.LOGGER.info("[Village] Aldea {}: {} hueco(s) de las casas del juego tapados desde su plantilla",
+                    objectiveIndex, huecosTapados.size());
+        }
         // BARRACA de la milicia: lo mismo (idempotente). Si el jugador se llevó su suelo de piedra, se vuelve a
         // levantar entera; si está, no se toca (reconstruirla borraría las camas y lo que haya dentro).
         VillageGenerator.asegurarBarraca(level, center);
@@ -1936,7 +1954,8 @@ public final class VillageManager {
         // Y LA ORILLA de la aldea de mar (islita): el terreno llano queda a la altura del agua, así que su borde sale
         // "a cuadros" (agua a la cota pegada a césped a la cota). Se saca un anillo de playa seca y pareja; en una
         // aldea de tierra adentro no toca nada (lo decide mirando si hay agua a la capa que se pisa en el anillo).
-        VillageGenerator.asegurarOrilla(level, center);        // COCINA del pueblo (etapa E): desde la etapa F vive en la taberna, con su mesa y su ahumador. Aquí solo
+        VillageGenerator.asegurarOrilla(level, center);
+        // COCINA del pueblo (etapa E): desde la etapa F vive en la taberna, con su mesa y su ahumador. Aquí solo
         // queda retirar el ahumador VIEJO del kiosco (su celda vuelve a ser la piedra de la plataforma); en el kiosco
         // ya no se pone ninguna mesa: la celda central es de la campana (migración 58).
         VillageGenerator.asegurarCocina(level, center);

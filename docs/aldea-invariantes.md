@@ -1092,6 +1092,60 @@ que es un spawn natural.
 carga del guardado y lo que sueltan el jugador o el mod ya tenían su trato aparte). Un evento de entrada al mundo
 **nunca** puede tirar el servidor.
 
+### I50 · Una construcción de PLANTILLA no puede quedarse con un hueco que el PLANO no recuerde
+
+Lo vio el jugador con captura: *"¿qué ves de extraño en esta casa? ¡si le falta completarse a la pared! corrígelo y
+checa que el cofre no estorbe"*. Medido en su guardado: la casa `plains_medium_house_2` tenía **aire** en dos celdas de
+su pared oeste (`1427,120,1392` y `1427,121,1392`, un boquete de 1x2 junto a la puerta) **donde su plantilla pide
+adoquín**; y el **plano de la aldea tampoco tenía esas celdas**, porque el plano de una aldea **migrada** se captura
+**escaneando el mundo** y el escaneo **descarta el aire**: el hueco ya estaba cuando se capturó y se volvió "lo
+correcto". Con el hueco fuera del plano, el **obrero no tenía nada que reponer**: el agujero era invisible para el
+pueblo.
+
+**Regla:** cada construcción de plantilla (las 4 casas, la iglesia y la herrería) se compara con **su plantilla**
+—`VillageGenerator.cerrarHuecosDeLasCasas`, con los mismos sorteos deterministas que `generate`— y se rellena **sólo lo
+que la plantilla pide y el mundo tiene en AIRE**:
+
+1. **Lo que ya hay no se toca** (cofres, camas, puestos de trabajo, lo del jugador): sólo se rellena el aire. Medido:
+   el cofre de `1428,120,1392` —pegado al hueco— queda con sus 27 huecos y **los mismos objetos** antes y después, y el
+   bloque nuevo se pone en la celda del hueco, a su lado.
+2. **Si la plantilla no encaja con el mundo** (menos de la mitad de sus celdas coinciden), esa construcción no es la
+   de esa plantilla y **no se toca nada**: un error de cálculo no puede llenar de bloques una casa ajena.
+3. **Lo repuesto entra en el plano** (`Blueprint.conCelda`): si no, el obrero no lo mantendría (I8).
+4. **Es idempotente** y lo llama el latido (aldea en paz): cada casa canta sus huecos **una sola vez**.
+
+Medido: `2 hueco(s) … 1427,120,1392(cobblestone) 1427,121,1392(cobblestone)` en la casa del jugador y, de propina, **2
+huecos en la fragua de la herrería** (`1423,120,1368/1369`, la **lava** de la plantilla de herrero, que el guardado
+también había perdido) → `Aldea 2: 4 hueco(s) de las casas del juego tapados desde su plantilla`.
+
+### I51 · La cosecha del granjero NO se queda en el suelo (la barre él)
+
+Lo reportó el jugador: *"los granjeros están dejando muchos vegetales en el suelo cuando cosechan"*. Medido con el
+arnés: **502 lecturas de vegetal tirado** en los bancales sobre 345 barridos, con **edad mediana 1077 ticks (54 s)**,
+máxima **4597 (230 s)** y **3 zanahorias todavía al final** de la corrida (a punto de desaparecer a los 5 min). Y no era
+sólo "no me cabe": la granjera tenía **2 huecos libres de 8**. Parte de lo que cae lo suelta el **propio juego** (su
+faena `HarvestFarmland` cosecha con `destroyBlock(..., true)` y espera que el aldeano **pise** el objeto), y el
+**recolector no puede entrar** en las parcelas (están cercadas y las compuertas de valla no las abre un aldeano).
+
+**Regla:** en la huerta, **el que ensucia barre**: el granjero es el único que puede entrar en su bancal, así que
+(`VillagerFarmGoal`):
+
+1. **Barre su bancal** (`Tarea.RECOGER`): el objeto caído más cercano **dentro del bancal en el que está** —trigo,
+   zanahoria, patata, betabel y las semillas que no le sobren—, y **sigue con el siguiente** mientras le quepa. Lo que
+   no le quepa se queda en el suelo (nunca se borra nada del pueblo).
+2. **No cosecha lo que no le cabe** (`leCabeLaCosecha` con `Block.getDrops` **antes** de romper la planta): se va antes
+   a la despensa y la cosecha se queda en la planta. Si la despensa está llena y no le deja hueco, se apunta
+   (`despensaNoTraga`) para no quedarse en un bucle de viajes: entonces cosecha y lo que sobre **lo barre él**.
+3. **El betabel entra en la lista blanca del recolector** (`esDelPueblo`): el juego sólo deja recoger
+   BETABEL_SEMILLAS, así que un betabel caído **no lo cogía nadie**.
+
+Medido, mismo mundo y mismos barridos: de **502 lecturas (mediana 54 s; 340 por encima de 30 s)** a **63 lecturas
+(0,38 por barrido; mediana 6 s; sólo 3 por encima de 30 s)**, y lo único que se ve caer son las **semillas del
+compostero**, que se caen a propósito. Y el granjero no pierde su faena: en la corrida salen 143 etiquetas
+"Recogiendo lo que se cayo", 115 "Cosechando" y sus viajes con "Guardo N en la despensa". **La faena del juego
+(`HarvestFarmland`) no se quita** —la API de `Brain` no permite quitar una sola faena—, así que sigue soltando lo suyo;
+lo que ya no pasa es que eso se quede ahí.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
@@ -1145,6 +1199,10 @@ Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento 
 | `build/plantillas*.py`, `build/paleta.py` | Plantillas del juego: tamaños, puertas y qué bloques traen. |
 | `tools/audita_aldea.py` (**versionada**) | **Auditoría de las aldeas enteras**: faroles y vallas flotando, cofres tapados, puertas incompletas y camas sueltas (lee las PROPIEDADES de los bloques). Saca las aldeas del guardado (índice, centro y cota): `--aldea N`, `--caidas`, `--resumen`, `--centro X Z --cota N`. |
 | `build/aldeanos_todos.py` (ignorado) | **TODAS las entidades "villager" de un radio del guardado**, con su id real (`villager` **y** `zombie_villager`), sus `CustomName` (la etiqueta de dos líneas), su oficio, su cama y su **UUID formateado**. Es lo que distinguió "aldeano sin cama" de "cría sin cama" y de "aldeano-zombi dentro del recinto" (3b.61). |
+| `build/plantilla_casa.py` (ignorado) | **La plantilla del juego, capa a capa**: lee los `.nbt` de `village/plains/houses/*` del jar del cliente (van comprimidos con gzip) y vuelca tamaño y vista de planta. Es lo que dice si un hueco de una casa "viene del juego" o lo perdió el mundo (3b.65/I50). |
+| `build/plano_celda.py` (ignorado) | **El PLANO de la aldea del `devilrpg_villages.dat`**: saca `Blueprints -> [Index, Palette, Pos(long[]), State(int[])]` y contesta si una celda está en el plano (y con qué bloque) y qué dicen sus vecinas. Es lo que demostró que el hueco de la pared **no estaba en el plano** y por eso el obrero no lo reponía (3b.65/I50). |
+| `build/casa_hueco.py` (ignorado) | **Vista de planta de una zona del guardado** (x/y/z por capas, con códigos por bloque) alrededor de la casa que señaló el jugador: así se ven el hueco de la pared, la puerta, la ventana y el cofre de al lado. |
+| `build/huerta_items.py` (ignorado) | **Lo que hay tirado y cómo están los bancales**: cuenta las entidades de objeto del recinto por tipo (con edad y posición y si están dentro de un bancal) y vuelca los tres bancales capa a capa. Es la medida de partida de 3b.66/I51. |
 | `build/cocina_medida.py` (ignorado) | **¿Desde DÓNDE cocinaba el cocinero?**: del log del arnés coge, para cada `N pieza(s) cocinadas`, la muestra `COCINERO pos=…` **inmediatamente anterior** (con `dentroDeLaTaberna`, `VEelAhumador`, `dCasilla`, `dAhumador` y la etiqueta). Es la medida de 3b.63/I48. |
 
 Los scripts de `build/` no se versionan (está en `.gitignore`): son de lectura del guardado del jugador. Las

@@ -54,7 +54,7 @@ public class GuardHarness {
      * pide el jugador: *"los aldeanos cuando vayan a dormir tienen que cerrar la puerta porque todas la dejan
      * abierta"*.
      */
-    private static final boolean MEDIR_PUERTAS = true;
+    private static final boolean MEDIR_PUERTAS = false;
     /**
      * <b>¿Se mete un bicho DENTRO de la aldea y se deja ahí?</b> Es la reproducción de la queja del jugador
      * (*"Mauricio sigue sin ir a buscar cama y hay varias en la taberna"*): con un monstruo dentro del recinto,
@@ -73,6 +73,10 @@ public class GuardHarness {
      * casilla de la cocina. Es lo que distingue "cocina dentro" de "cocina a través de la pared".
      */
     private static final boolean MEDIR_COCINA = false;
+    /** ¿Se mide LA HUERTA (lo que hay tirado en los bancales y el zurron de cada granjero)? Ver igilarLaHuerta. */
+    private static final boolean MEDIR_HUERTA = true;
+    /** ¿Se mide LA CASA DEL HUECO (la pared a la que le faltaba un bloque y el cofre de al lado)? Ver olcarLaParedYElCofre. */
+    private static final boolean MEDIR_HUECO_CASA = false;
     /** Dónde se planta el bicho (relativo a la plaza): dentro del recinto (radio 62) y a la altura del pueblo. */
     private static final BlockPos BICHO_EN = new BlockPos(6, 0, 6);
     private static boolean listo = false;
@@ -184,6 +188,17 @@ public class GuardHarness {
             if (ticks % 40 == 0) {
                 volcarCombustible(level);
             }
+            // LA HUERTA (lo reporto el jugador: "los granjeros estan dejando muchos vegetales en el suelo cuando
+            // cosechan"): lo que hay TIRADO en cada bancal y el zurron de cada granjero (con sus huecos libres).
+            if (MEDIR_HUERTA && ticks % 40 == 0) {
+                vigilarLaHuerta(level);
+            }
+        }
+        // LA CASA DEL HUECO (el reporte del jugador con captura): las dos celdas de la pared que le faltaban, sus
+        // vecinas y el COFRE de al lado con lo que tiene dentro. Cada 2 s, para ver el antes (aire) y el después
+        // (adoquín) en la MISMA corrida y comprobar que el cofre no se toca.
+        if (MEDIR_HUECO_CASA && ticks % 40 == 0) {
+            volcarLaParedYElCofre(level);
         }
         // EL PORCHE DE LA TABERNA (migracion 63): se mide la columna `bx-1`, la que queda ENTRE el toldo (bx-2) y la
         // pared de la taberna (bx). A los 10 s el latido ya migro la aldea, asi que esto es "despues".
@@ -296,6 +311,93 @@ public class GuardHarness {
                     goals.toString().trim(),
                     v.getCustomName() == null ? "-" : v.getCustomName().getString().replace("\n", " | "),
                     casilla.toShortString(), rutaDetallada(v, casilla));
+        }
+    }
+
+    /**
+     * <b>LA PARED QUE LE FALTABA A LA CASA Y EL COFRE DE AL LADO</b> (reporte del jugador: *"¿qué ves de extraño en
+     * esta casa? ¡si le falta completarse a la pared! corrígelo y checa que el cofre no estorbe"*). Imprime el bloque
+     * de las DOS celdas del hueco (`1427,120,1392` y `1427,121,1392`), el de sus vecinas (la ventana de al lado y el
+     * poste de la esquina) y el <b>cofre</b> de `1428,120,1392` con sus objetos: así se ve en el log el antes (aire)
+     * y el después (adoquín) y que el cofre sigue donde estaba y con lo suyo.
+     */
+    private static void volcarLaParedYElCofre(ServerLevel level) {
+        StringBuilder sb = new StringBuilder();
+        for (BlockPos p : new BlockPos[]{new BlockPos(1427, 120, 1392), new BlockPos(1427, 121, 1392),
+                new BlockPos(1427, 120, 1391), new BlockPos(1427, 121, 1391), new BlockPos(1427, 120, 1393),
+                new BlockPos(1428, 120, 1392)}) {
+            String nombre = level.getBlockState(p).getBlock().toString()
+                    .replace("Block{minecraft:", "").replace("}", "");
+            sb.append(' ').append(p.toShortString()).append('=').append(nombre);
+        }
+        StringBuilder cofre = new StringBuilder();
+        if (level.getBlockEntity(new BlockPos(1428, 120, 1392)) instanceof net.minecraft.world.Container c) {
+            cofre.append("cofre[").append(c.getContainerSize()).append(" huecos]");
+            for (int i = 0; i < c.getContainerSize(); i++) {
+                var s = c.getItem(i);
+                if (!s.isEmpty()) {
+                    cofre.append(' ').append(i).append(':').append(s.getCount()).append('x')
+                            .append(s.getItem().toString().replace("Item{minecraft:", "").replace("}", ""));
+                }
+            }
+        } else {
+            cofre.append("SIN COFRE (o no es un contenedor)");
+        }
+        DevilRpg.LOGGER.info("[Arnes] CASA hueco:{} · {}", sb, cofre);
+    }
+
+    /**
+     * <b>¿QUÉ HAY TIRADO EN LA HUERTA Y QUÉ LLEVA EL GRANJERO ENCIMA?</b> (lo reportó el jugador: *"los granjeros están
+     * dejando muchos vegetales en el suelo cuando cosechan"*). Por bancal, imprime cada objeto del suelo (qué es,
+     * cuántos, su edad en ticks y la celda) y, por granjero, su posición, el bancal en el que está, su etiqueta y su
+     * <b>zurrón</b> (hueco a hueco, con los huecos libres): es lo que dice si lo que se cae es por el TOPE de semillas,
+     * por no caberle o porque nadie lo recoge.
+     */
+    private static void vigilarLaHuerta(ServerLevel level) {
+        int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+        for (int i = 0; i < com.chipoodle.devilrpg.world.VillageGenerator.parcelasDeGranja(); i++) {
+            StringBuilder dentro = new StringBuilder();
+            int cuantos = 0;
+            for (net.minecraft.world.entity.item.ItemEntity it : level.getEntitiesOfClass(
+                    net.minecraft.world.entity.item.ItemEntity.class, new AABB(CENTRO).inflate(140))) {
+                if (!com.chipoodle.devilrpg.world.VillageGenerator.estaDentroDeLaParcela(CENTRO, i, cota,
+                        it.blockPosition())) {
+                    continue;
+                }
+                cuantos++;
+                dentro.append(' ').append(it.getItem().getHoverName().getString()).append('x')
+                        .append(it.getItem().getCount()).append("@").append(it.blockPosition().toShortString())
+                        .append("(edad ").append(it.tickCount).append(')');
+            }
+            DevilRpg.LOGGER.info("[Arnes] HUERTA bancal {}: {} objeto(s) en el suelo:{}", i, cuantos, dentro);
+        }
+        for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(RADIO_CENSO))) {
+            if (v.isBaby()
+                    || v.getVillagerData().getProfession() != net.minecraft.world.entity.npc.VillagerProfession.FARMER) {
+                continue;
+            }
+            StringBuilder zurron = new StringBuilder();
+            int libres = 0;
+            for (int i = 0; i < v.getInventory().getContainerSize(); i++) {
+                var s = v.getInventory().getItem(i);
+                if (s.isEmpty()) {
+                    libres++;
+                } else {
+                    zurron.append(' ').append(i).append(':').append(s.getCount()).append('x')
+                            .append(s.getHoverName().getString());
+                }
+            }
+            int bancal = -1;
+            for (int i = 0; i < com.chipoodle.devilrpg.world.VillageGenerator.parcelasDeGranja(); i++) {
+                if (com.chipoodle.devilrpg.world.VillageGenerator.estaDentroDeLaParcela(CENTRO, i, cota,
+                        v.blockPosition())) {
+                    bancal = i;
+                }
+            }
+            DevilRpg.LOGGER.info("[Arnes] GRANJERO {} nombre={} pos={} bancal={} huecosLibres={}/{} zurron:{} etiqueta={}",
+                    uuid8(v), v.getCustomName() == null ? "-" : v.getCustomName().getString().replace("\n", " | "),
+                    v.blockPosition().toShortString(), bancal, libres, v.getInventory().getContainerSize(),
+                    zurron, v.getCustomName() == null ? "-" : "");
         }
     }
 

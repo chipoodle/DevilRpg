@@ -7,6 +7,10 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtUtils;
+import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BiomeTags;
@@ -3640,6 +3644,162 @@ public final class VillageGenerator {
             }
         }
         return puestas;
+    }
+
+    /**
+     * <b>CIERRA LOS HUECOS DE LAS CASAS DEL JUEGO</b> comparándolas con la <b>plantilla</b> con la que se construyeron.
+     * <p>
+     * Lo reportó el jugador con captura: *"¿qué ves de extraño en esta casa? ¡si le falta completarse a la pared!
+     * corrígelo y checa que el cofre no estorbe"*. Medido en su guardado: la casa de {@code 1427..1431, 1383..1393}
+     * (la plantilla {@code plains_medium_house_2}, que pide <b>adoquín</b> en su pared oeste a la altura de la ventana
+     * y del poste) tenía <b>aire</b> en DOS celdas —{@code 1427,120,1392} y {@code 1427,121,1392}—, un boquete de
+     * 1x2 justo al lado de la puerta. Y el <b>plano</b> de la aldea tampoco tenía esas celdas (se capturó por
+     * <b>escaneo</b> del mundo, y el escaneo descarta el aire), así que el <b>obrero no tenía nada que reponer</b>: el
+     * agujero era invisible para el pueblo y se quedaba para siempre.
+     * <p>
+     * Cómo se cierra: la plantilla del juego guarda <b>solo los bloques que tiene</b> ({@code template.blocks()}), así
+     * que la comprobación es directa —celda de la plantilla con bloque, mundo con <b>aire</b> ⇒ se repone el bloque de
+     * la plantilla—. Dos guardas:
+     * <ul>
+     *   <li><b>La casa tiene que estar ahí</b>: si menos de la mitad de las celdas de la plantilla coinciden con el
+     *       mundo, esa casa no es la de esa plantilla (o el plano no encaja) y <b>no se toca nada</b>. Así un fallo de
+     *       cálculo no llena de bloques una casa ajena.</li>
+     *   <li><b>Lo que YA hay no se toca</b> (ni un cofre, ni una cama, ni un puesto de trabajo, ni lo que puso el
+     *       jugador): solo se rellena el <b>aire</b>. Es lo que pidió el jugador con lo del cofre: el arca de
+     *       {@code 1428,120,1392} está pegada al hueco y se queda exactamente donde está (y el bloque del hueco se pone
+     *       en la celda de al lado, no encima de ella).</li>
+     * </ul>
+     * Lo repuesto se devuelve para que el gestor lo apunte en el <b>plano</b> (I8): si no, el obrero no lo mantendría.
+     *
+     * @return las celdas repuestas (posición → bloque), vacío si no había nada que cerrar
+     */
+    public static Map<BlockPos, BlockState> cerrarHuecosDeLasCasas(ServerLevel level, BlockPos center) {
+        Map<BlockPos, BlockState> repuestas = new LinkedHashMap<>();
+        int nivel = cotaDeLaPlaza(level, center);
+        if (nivel <= level.getMinBuildHeight() + 1) {
+            return repuestas;
+        }
+        // Las MISMAS construcciones de plantilla y en el MISMO orden que `generate` (los sorteos son deterministas
+        // por la posición de la aldea: `RandomSource.create(center.asLong())`), para que la plantilla que se compara
+        // sea la que de verdad se colocó.
+        RandomSource casas = RandomSource.create(center.asLong());
+        List<BlockPos> bases = new ArrayList<>();
+        List<String> ids = new ArrayList<>();
+        BlockPos[] solares = basesDeCasas(center);
+        for (int i = 0; i < solares.length; i++) {
+            bases.add(solares[i]);
+            ids.add(i == solares.length - 1 ? casaGrandeAleatoria(casas) : casaAleatoria(casas));
+        }
+        bases.add(baseDeIglesia(center));
+        ids.add(iglesiaAleatoria(casas));
+        bases.add(baseDeHerreria(center));
+        ids.add(HERRERIAS[0]);
+        for (int i = 0; i < bases.size(); i++) {
+            StructureTemplate template = level.getStructureManager()
+                    .getOrCreate(ResourceLocation.withDefaultNamespace(ids.get(i)));
+            if (template == null) {
+                continue;
+            }
+            Vec3i tam = template.getSize();
+            BlockPos origen = new BlockPos(bases.get(i).getX(), nivel - alturaDeLaPuerta(template), bases.get(i).getZ());
+            // PRIMERA PASADA: ¿está la casa ahí? (si la plantilla no encaja con el mundo, no se toca nada)
+            List<StructureTemplate.StructureBlockInfo> celdas = celdasDeLaPlantilla(level, ids.get(i), template);
+            int encajan = 0;
+            int esperadas = 0;
+            for (StructureTemplate.StructureBlockInfo info : celdas) {
+                if (esBloqueTecnico(info.state())) {
+                    continue;
+                }
+                esperadas++;
+                BlockPos p = origen.offset(info.pos());
+                BlockState actual = level.getBlockState(p);
+                if (!actual.isAir() && actual.getBlock() == info.state().getBlock()) {
+                    encajan++;
+                }
+            }
+            if (esperadas == 0 || encajan * 2 < esperadas) {
+                DevilRpg.LOGGER.debug("[Village] La casa {} de {} no encaja con su plantilla ({}/{}): no se repara",
+                        ids.get(i), bases.get(i).toShortString(), encajan, esperadas);
+                continue;
+            }
+            // SEGUNDA PASADA: lo que la plantilla pide y el mundo tiene en AIRE.
+            int cerradas = 0;
+            StringBuilder donde = new StringBuilder();
+            for (StructureTemplate.StructureBlockInfo info : celdas) {
+                if (esBloqueTecnico(info.state())) {
+                    continue;
+                }
+                BlockPos p = origen.offset(info.pos());
+                if (!level.getBlockState(p).isAir()) {
+                    continue; // ahí ya hay algo (cofre, cama, puesto, o lo que puso el jugador): NO se toca
+                }
+                // lint:ok I9 porque es una REPARACION idempotente celda a celda (tapa el hueco de una casa con lo que
+                // pide SU PLANTILLA) y la llama el latido: no rehace ninguna construccion ni cambia el trazado, asi
+                // que no necesita migracion (y las aldeas ya construidas se arreglan solas en la primera pasada).
+                colocar(level, p, info.state(), Block.UPDATE_CLIENTS); // si se está grabando, entra en el plano (I8)
+                repuestas.put(p.immutable(), info.state());
+                cerradas++;
+                if (cerradas <= 8) {
+                    donde.append(' ').append(p.toShortString()).append('(')
+                            .append(info.state().getBlock().toString()
+                                    .replace("Block{minecraft:", "").replace("}", ""))
+                            .append(')');
+                }
+            }
+            if (cerradas > 0) {
+                DevilRpg.LOGGER.info("[Village] Casa {} en {}: {} hueco(s) de la plantilla tapados:{}", ids.get(i),
+                        bases.get(i).toShortString(), cerradas, donde);
+            }
+        }
+        return repuestas;
+    }
+
+    /** ¿Ese bloque de una plantilla es <b>técnico</b> (no se repone nunca)? Los resuelve `placeVanillaHouse`. */
+    private static boolean esBloqueTecnico(BlockState state) {
+        return state.isAir() || state.is(Blocks.JIGSAW) || state.is(Blocks.STRUCTURE_VOID);
+    }
+
+    /**
+     * Las <b>celdas</b> de una plantilla del juego (posición relativa → bloque). La plantilla guarda <b>solo los
+     * bloques que tiene</b> (el aire no está en ella), así que esta lista es exactamente "lo que la construcción debe
+     * tener" y sirve de verdad para comparar con el mundo.
+     * <p>
+     * Se lee del NBT de la plantilla ({@code save}) porque la API pública no expone la lista entera: {@code
+     * filterBlocks} solo sabe filtrar por <b>un</b> tipo de bloque. Se cachea por id: las plantillas del juego no
+     * cambian en una partida.
+     */
+    private static final Map<String, List<StructureTemplate.StructureBlockInfo>> CELDAS_DE_PLANTILLA = new HashMap<>();
+
+    private static List<StructureTemplate.StructureBlockInfo> celdasDeLaPlantilla(ServerLevel level, String id,
+                                                                                 StructureTemplate template) {
+        List<StructureTemplate.StructureBlockInfo> cacheada = CELDAS_DE_PLANTILLA.get(id);
+        if (cacheada != null) {
+            return cacheada;
+        }
+        List<StructureTemplate.StructureBlockInfo> celdas = new ArrayList<>();
+        CompoundTag nbt = template.save(new CompoundTag());
+        ListTag paleta = nbt.getList("palette", Tag.TAG_COMPOUND);
+        ListTag bloques = nbt.getList("blocks", Tag.TAG_COMPOUND);
+        var bloquesDelJuego = level.holderLookup(Registries.BLOCK);
+        for (int i = 0; i < bloques.size(); i++) {
+            CompoundTag uno = bloques.getCompound(i);
+            ListTag pos = uno.getList("pos", Tag.TAG_INT);
+            if (pos.size() < 3) {
+                continue;
+            }
+            int indice = uno.getInt("state");
+            if (indice < 0 || indice >= paleta.size()) {
+                continue;
+            }
+            BlockState estado = NbtUtils.readBlockState(bloquesDelJuego, paleta.getCompound(indice));
+            if (estado.isAir()) {
+                continue;
+            }
+            celdas.add(new StructureTemplate.StructureBlockInfo(
+                    new BlockPos(pos.getInt(0), pos.getInt(1), pos.getInt(2)), estado, null));
+        }
+        CELDAS_DE_PLANTILLA.put(id, celdas);
+        return celdas;
     }
 
     /**

@@ -384,6 +384,11 @@ public class VillagerCollectGoal extends Goal {
                 || s.is(Items.STICK) || s.is(Items.STRING) || s.is(Items.LEATHER) || s.is(Items.FEATHER)
                 || s.is(Items.COAL) || s.is(Items.CHARCOAL) || s.is(Items.IRON_INGOT) || s.is(Items.COPPER_INGOT)
                 || s.is(Items.GOLD_INGOT) || s.is(Items.CARROT) || s.is(Items.POTATO)
+                // EL BETABEL TAMBIÉN: faltaba, y no es un descuido menor —el juego solo deja que un aldeano recoja
+                // BETABEL_SEMILLAS, no el betabel—, así que un betabel que caía al suelo no lo cogía NADIE: ni el
+                // granjero (vanilla no lo tiene en su lista de recogida) ni el recolector. Se quedaba ahí hasta
+                // pudrirse. Medido en el guardado del jugador: betabeles tirados en el bancal con 3 minutos de edad.
+                || s.is(Items.BEETROOT)
                 || s.is(Blocks.OAK_LOG.asItem()) || s.is(Blocks.OAK_PLANKS.asItem())
                 || s.is(Blocks.OAK_SAPLING.asItem()) || s.getDescriptionId().contains("sapling")
                 // El PROPÁGULO del mangle se llama así (no "sapling"), pero es la semilla de un árbol y el leñador

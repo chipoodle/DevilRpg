@@ -1,0 +1,96 @@
+LA PARED DE LA CASA A LA QUE LE FALTABA UN BLOQUE (y el cofre de al lado)
+=========================================================================
+Lo reportó el jugador con captura: *"¿qué ves de extraño en esta casa? ¡si le falta completarse a la pared!
+corrígelo y checa que el cofre no estorbe"*. La casa es la de adoquín con dos torres, puerta de roble con dos faroles
+(alrededor de `1423..1431, z=1391`): en el F3 se ve que el jugador está en `1423.6, 120, 1391.97` mirando al este y
+que el bloque señalado es `1431, 120, 1391` (adoquín), con un hueco a su izquierda por el que se ve el interior.
+
+Partida: `run/saves/New World (1)` (aldea 2, centro 1414,120,1414). Herramientas de lectura (scripts de `build/`,
+ignorados): `casa_hueco.py` (vista de planta del guardado), `plantilla_casa.py` (la plantilla del juego, del jar del
+cliente), `plano_celda.py` (el PLANO de la aldea del `devilrpg_villages.dat`), `aldeanos_todos.py`.
+
+
+--- 0) EL HUECO, CELDA A CELDA (guardado) --------------------------------------------------------
+Vista de planta de la pared OESTE de la casa (`x=1427`), que es la que se ve en la captura (`dx=1` de la plantilla):
+
+    z=1383 OL   (esquina)      z=1389 OL
+    z=1384 CO                  z=1390 CO
+    z=1385 CO   (ventana y121) z=1391 CO   <- al lado del hueco
+    z=1386 CO                  z=1392 **AIRE**  <- EL HUECO (y en y=121, también AIRE)
+    z=1387 OL                  z=1393 OL   (esquina)
+    z=1388 OD   (la puerta)
+
+O sea: **dos celdas** de aire (`1427,120,1392` y `1427,121,1392`), un boquete de 1x2 pegado a la puerta, con la
+ventana a un lado y el poste de la esquina al otro. Dentro, a una celda del hueco, está el **cofre** de
+`1428,120,1392` (27 huecos) —el que el jugador avisaba de no estorbar—.
+
+
+--- 1) LA PLANTILLA DEL JUEGO DICE QUE AHÍ VA ADOQUÍN -------------------------------------------------
+La casa es la plantilla `village/plains/houses/plains_medium_house_2` (7x6x13), colocada con su puerta a la cota:
+`origen = 1426, 119, 1382` (la puerta está en el y=1 de la plantilla y se ve en `1427,120,1388`). Sus celdas de la
+pared oeste (`dx=1`):
+
+    y=1 (mundo y=120):  z=1383 OL  z=1384 CO  z=1385 CO  z=1386 CO  z=1387 OL  z=1388 OD  z=1389 OL
+                        z=1390 CO  z=1391 CO  **z=1392 CO**  z=1393 OL
+    y=2 (mundo y=121):  z=1391 GP (ventana)   **z=1392 CO**
+
+Así que el hueco **no viene del juego**: la plantilla pide adoquín en esas dos celdas y el mundo tiene aire. La
+comparación completa (las 1000 y pico celdas de la plantilla) sólo encuentra esas dos que falten: el resto de la casa
+está como la plantilla manda (incluido el cofre, que la plantilla también trae en `dx=2, y=1, dz=10`).
+
+
+--- 2) EL PLANO DE LA ALDEA NO TENÍA ESAS CELDAS (por eso el obrero no las reponía) ------------------
+El plano del pueblo (el que usa el obrero para reparar, I8) salió de un **escaneo** del mundo, y un escaneo **descarta
+el aire** (ver `seDescartaDelPlano`): el hueco ya estaba cuando se capturó, así que no está en el plano. Medido con
+`plano_celda.py` sobre el guardado (aldea 2: 7294 celdas en el plano, paleta de 153 bloques):
+
+    --- la celda del hueco: (1427,120,1392) ---
+      NO ESTA EN EL PLANO (el obrero no tiene nada que reponer ahí)
+
+    --- vecinas (plano) ---
+      z-1: (fuera)                  cobblestone                  (fuera)
+      z+0: (fuera)                  (fuera)                      chest[facing=north,...]
+      z+1: (fuera)                  oak_log[axis=y]              cobblestone
+
+Es decir: el plano conoce el adoquín de al lado (`1427,120,1391`), el cofre (`1428,120,1392`) y el poste de la esquina
+(`1427,120,1393`), pero **no** la celda del medio. Por eso el agujero era invisible para el pueblo: no había nada que
+reponer. Los planos de las aldeas nuevas ahora se graban al construir (`GrabadoraDePlano`), pero una aldea **migrada**
+se escanea, y ahí el daño de antes se convierte en "lo correcto".
+
+
+--- 3) EL ARREGLO: SE COMPARA CON LA PLANTILLA Y SE TAPA LO QUE FALTE --------------------------------
+`VillageGenerator.cerrarHuecosDeLasCasas(level, center)` compara cada construcción de plantilla (las 4 casas, la
+iglesia y la herrería, con los MISMOS sorteos deterministas que `generate`) con su plantilla
+(`template.save` → paleta + bloques, cacheado) y **rellena las celdas que la plantilla pide y el mundo tiene en aire**.
+Dos guardas: (a) si menos de la mitad de las celdas de la plantilla coinciden con el mundo, esa construcción no es la
+de esa plantilla y **no se toca nada**; (b) **lo que ya hay no se toca** —sólo se rellena el aire—, que es lo que pidió
+el jugador con el cofre. Lo repuesto se devuelve para apuntarlo en el **plano** (`Blueprint.conCelda`), así el obrero lo
+mantiene.
+
+MEDIDO con el arnés (`MEDIR_HUECO_CASA = true`), en la misma corrida, antes y después:
+
+    [Arnes] CASA hueco: 1427, 120, 1392=air 1427, 121, 1392=air 1427, 120, 1391=cobblestone
+            1427, 121, 1391=glass_pane 1427, 120, 1393=oak_log 1428, 120, 1392=chest
+            · cofre[27 huecos] 2:2xminecraft:apple 7:1xminecraft:apple 8:1xminecraft:apple 13:1xminecraft:bread
+              20:1xminecraft:apple 21:2xminecraft:gold_nugget 22:1xminecraft:bread 23:1xminecraft:gold_nugget
+              25:1xminecraft:apple
+    [Village] Casa village/plains/houses/plains_medium_house_2 en 1426, 120, 1382: 2 hueco(s) de la plantilla
+              tapados: 1427, 120, 1392(cobblestone) 1427, 121, 1392(cobblestone)
+    [Village] Casa village/plains/houses/plains_weaponsmith_1 en 1417, 120, 1367: 2 hueco(s) de la plantilla
+              tapados: 1423, 120, 1368(lava) 1423, 120, 1369(lava)
+    [Village] Aldea 2: 4 hueco(s) de las casas del juego tapados desde su plantilla
+    [Arnes] CASA hueco: 1427, 120, 1392=cobblestone 1427, 121, 1392=cobblestone 1427, 120, 1391=cobblestone
+            1427, 121, 1391=glass_pane 1427, 120, 1393=oak_log 1428, 120, 1392=chest
+            · cofre[27 huecos] 2:2xminecraft:apple 7:1xminecraft:apple 8:1xminecraft:apple 13:1xminecraft:bread
+              20:1xminecraft:apple 21:2xminecraft:gold_nugget 22:1xminecraft:bread 23:1xminecraft:gold_nugget
+              25:1xminecraft:apple
+
+1. La pared se cierra con **adoquín** (lo que pide la plantilla) en las dos celdas.
+2. **El cofre no se toca**: sigue en `1428,120,1392`, con sus 27 huecos y **los mismos objetos** antes y después
+   (2 manzanas, manzana, manzana, pan, manzana, 2 pepitas, pan, pepita, manzana) — el bloque nuevo se pone **al lado**,
+   en la celda del hueco, porque a la del cofre no se le toca ni un pelo (sólo se rellena AIRE).
+3. De propina, la misma comprobación encontró **2 huecos en la herrería** (`plains_weaponsmith_1`): la **lava de la
+   fragua** (`1423,120,1368` y `1423,120,1369`), que el guardado también había perdido, vuelve a su sitio (la fragua
+   con lava es parte de la casa de herrero del juego: ver la Iteración 2 en el roadmap).
+4. Y es **idempotente**: en toda la corrida cada casa canta sus huecos **una sola vez** (la segunda pasada del latido
+   ya no tiene aire que rellenar).

@@ -98,3 +98,15 @@ la entidad dentro de la celda** de la puerta (con la caja de colisión rozando l
 en la celda de al lado toca la puerta con el hombro). Y cada `PUERTA CERRADA` dice **quién** la cerró, con su etiqueta:
 `PUERTA CERRADA en 1438,120,1435 (aldeano(s) al lado: 9036d1d0(Bibiana (Granjero) | Cerrando la puerta))`.
 
+- **LA CASA DEL HUECO** (I50, ver `medidas-casa-hueco.txt`): con `MEDIR_HUECO_CASA = true` el arnés imprime cada 2 s el
+  bloque de las **dos celdas de la pared** que le faltaban a la casa del jugador (`1427,120..121,1392`), el de sus
+  vecinas (la ventana y el poste) y el **cofre** de al lado **con sus objetos** (`CASA hueco: … 1428,120,1392=chest ·
+  cofre[27 huecos] 2:2xminecraft:apple …`): es lo que enseña, en la misma corrida, el antes (aire) y el después
+  (adoquín) y que el cofre no se toca.
+- **LA HUERTA** (I51, ver `medidas-huerta.txt`): con `MEDIR_HUERTA = true` (modo de día) el arnés volca cada 2 s, **por
+  bancal**, cada objeto del suelo (`HUERTA bancal N: M objeto(s) en el suelo: <objeto>x<n>@<celda>(edad <ticks>)`) y,
+  **por granjero**, su posición, el bancal en el que está y su **zurrón** hueco a hueco con los **huecos libres**
+  (`GRANJERO <uuid> … huecosLibres=N/8 zurron: 0:8xBone Meal 1:8xBeetroot Seeds …`). La edad del objeto es la medida que
+  dice si algo "se queda" en el suelo (mediana de 54 s antes del arreglo y de 6 s después).
+
+
