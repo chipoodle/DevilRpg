@@ -7706,10 +7706,17 @@ public final class VillageGenerator {
      * cuartos. Los del <b>porche</b> no están aquí: los cuelga del soffito del toldo su constructor
      * ({@link #porcheDeLaTaberna}), que es quien conoce esa geometría. Una taberna a oscuras es una taberna con
      * bichos dentro.
+     * <p>
+     * <b>OJO CON LA ESCALERA</b>: el farol de {@code {4, 11}} colgaba <b>justo encima del primer escalón</b> (el pie de
+     * la escalera está en {@code bx + TABERNA_ESCALERA_PIE_DX, nivel, bz + TABERNA_ESCALERA_MESETA_Z}) y estorbaba
+     * para subir: lo vio el jugador —*"hay que quitar esta lámpara que está justo arriba de las primeras escaleras de
+     * la planta baja porque estorba al querer subir por ahí"*—. Un farol tiene caja de colisión, así que el que sube
+     * se da con él. Se quita de la lista (el comedor sigue iluminado: el de {@code {4, 7}} está cuatro bloques al
+     * lado) y {@link #quitarElFarolDeLaEscalera} lo retira en las tabernas ya construidas.
      */
     private static void lucesDeLaTaberna(ServerLevel level, int bx, int bz, int nivel, int y1, int yTecho) {
         int[][] comedor = {{2, 3}, {5, 3}, {9, 3}, {13, 3}, {16, 3}, {4, 7}, {9, 7}, {13, 7}, {16, 8},
-                {4, 11}, {9, 12}, {14, 12}, {16, 12}};
+                {9, 12}, {14, 12}, {16, 12}};
         for (int[] l : comedor) {
             colgar(level, new BlockPos(bx + l[0], nivel + TABERNA_PISO2 - 2, bz + l[1]));
         }
@@ -7722,6 +7729,32 @@ public final class VillageGenerator {
         // La galería va a media altura entre los dos pisos: su farol cuelga del techo de la posada.
         for (int dx : new int[]{3, 9, 15}) {
             colgar(level, new BlockPos(bx + dx, yTecho - 2, bz + 7));
+        }
+    }
+
+    /**
+     * <b>Quita el farol que colgaba encima del primer escalón de la taberna</b> (el del comedor en {@code {4, 11}}), en
+     * las tabernas ya construidas. Lo pidió el jugador: *"hay que quitar esta lámpara que está justo arriba de las
+     * primeras escaleras de la planta baja porque estorba al querer subir por ahí"*. Un farol tiene caja de colisión,
+     * así que el que sube se daba con él.
+     * <p>
+     * Es <b>idempotente</b> y <b>solo toca ese farol</b> (si en esa celda hay otra cosa —lo que haya puesto el
+     * jugador— no se toca). Se llama desde el latido, así que vale también para las aldeas ya construidas.
+     */
+    public static void quitarElFarolDeLaEscalera(ServerLevel level, BlockPos center) {
+        if (!tabernaConstruida(level, center)) {
+            return;
+        }
+        int nivel = cotaDeLaPlaza(level, center);
+        BlockPos base = baseDeLaTaberna(center);
+        BlockPos farol = new BlockPos(base.getX() + TABERNA_ESCALERA_PIE_DX, nivel + TABERNA_PISO2 - 2,
+                base.getZ() + TABERNA_ESCALERA_MESETA_Z);
+        if (level.getBlockState(farol).is(Blocks.LANTERN)) {
+            // lint:ok I9 porque es una REPARACION idempotente de una celda (quita un farol que estorba para subir la
+            // escalera) y se llama desde el latido: no rehace nada, asi que no necesita migracion.
+            colocar(level, farol, Blocks.AIR.defaultBlockState(), 3);
+            DevilRpg.LOGGER.info("[Village] Taberna de {}: quitado el farol de encima del primer escalon ({})",
+                    center, farol.toShortString());
         }
     }
 

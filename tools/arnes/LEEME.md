@@ -57,6 +57,11 @@ en el log **no** sale ninguna línea `[Village] Aldea N: comida ...` ni ningún 
   en bucle hasta dejar 34 troncos (`VillageStorage.quitar` saca de UN stack), dar 32 tablones y 64 palos para que el
   herrero no asierre, y 40 carnes—; (3) **la remesa inicial** —vaciar el almacén entero (todas las pilas a `EMPTY`) y
   ver entrar los 128 troncos en la siguiente pasada del latido—.
+- **LAS PUERTAS** (I45, ver `medidas-puertas.txt`): con `MEDIR_PUERTAS = true` el arnés fija el **día** (para que los
+  aldeanos salgan y crucen puertas), se salta las siembras y volca cada 2 s
+  `[Arnes] PUERTAS DE MADERA ABIERTAS en el pueblo: N <celdas>` y, cuando una pasa de abierta a cerrada,
+  `[Arnes] PUERTA CERRADA en <celda> (aldeano(s) al lado: <uuid>)` — es la prueba de que las cierra el pueblo
+  (`VillagerDoorGoal`). Lo que se busca es que el contador **baje** mientras el pueblo anda.
 - **EL SUEÑO Y LAS CAMAS** (I43/I44, ver `medidas-camas.txt`): con `MEDIR_NOCHE = true` el arnés fija la **noche**
   (18000), **rejuvenece** a los aldeanos cada 10 s (el mod les da fecha de nacimiento y a los 3 días de juego mueren de
   viejos: en una corrida larga eso repuebla la aldea a mitad de la medida) y saca:

@@ -1004,6 +1004,27 @@ Tres reglas que salieron del mismo encierro (el granjero que no podía salir del
 de portones solo abre si el destino del aldeano está **al otro lado** (`vaACruzar`); mandándolo a la celda de dentro
 —la de entrar— la compuerta **no se abre** (medido: el granjero se quedaba en `1394,119,1452`, pegado a la valla).
 
+### I45 · El aldeano CIERRA la puerta que cruza (y no toca las que no son suyas)
+
+Lo pidió el jugador: *"los aldeanos cuando vayan a dormir tienen que cerrar la puerta porque todas la dejan abierta"*.
+El juego tiene su comportamiento para cerrarlas (`InteractWithDoor` + la memoria `DOORS_TO_CLOSE`), pero **con los
+aldeanos del pueblo no cierra nada**: medido con el arnés al empezar la noche, **8-9 puertas de madera abiertas** en el
+recinto y ninguna se cerraba sola. Como con las puertas de valla ({@code VillagerGateGoal}, que el juego no deja abrir
+a un aldeano), **el pueblo lo hace por su cuenta** (`VillagerDoorGoal`, sin banderas):
+
+- Solo mira puertas **de madera** (`DoorBlock.isWoodenDoor`; las de hierro no las puede abrir un aldeano) **abiertas**
+  y **pegadas al aldeano** (en su casilla o al lado: la que está cruzando).
+- Se apunta que la ha **usado** cuando está **en el hueco** (a menos de 1,5). Una puerta que solo tiene al lado —o la
+  que **el jugador** dejó abierta y el aldeano pasa por delante— **no se toca**: no es suya.
+- Cuando ya ha pasado al otro lado, la cierra (`DoorBlock.setOpen(villager, level, estado, pos, false)`: cierra las dos
+  mitades y suena) tras unos ticks de cortesía.
+- Y **no se le cierra a un jugador al lado** (a menos de 2,5).
+
+**Regla:** el pueblo cierra lo que **usa** (la puerta que cruza, y el portón de valla que abre, I44) y **no toca** lo
+demás: las puertas que el jugador deja abiertas a propósito se quedan como están. Medido: **36 cierres** en una corrida
+de día, cada uno con su aldeano al lado (`PUERTA CERRADA en 1443,120,1401 (aldeano(s) al lado: 9e0ed6e3)`), y el
+contador de abiertas **baja de 8-9 a 4** (las que quedan son de la posada, que nadie cruza de día).
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
@@ -1049,6 +1070,7 @@ Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento 
 | `build/items.py`, `build/contenedores.py` | Objetos en el suelo por tipo y contenido de cofres/despensa/almacén. |
 | `build/combustible_aldea.py` | **Los aparatos que queman y la madera del almacén** (I41/I42): barre el guardado y lista ahumador, hornos, hogar y soporte de pociones con sus coordenadas, más el contenido de los cofres con la madera separada (`COMBUSTIBLE`). |
 | `build/cama_toolsmith.py` | **¿Por qué una cama no se puede usar?** (I43): imprime la rejilla de bloques alrededor de una cama en las capas que se pisan, que es lo que delata el muro o el mobiliario que impide ponerse a ≤2,0 para acostarse. |
+| `build/mapa_cama.py` | **Mapa compacto de una zona del guardado** (una letra por bloque, con camas, vallas, compuertas, muros y suelos): es lo que enseñó la habitación tapiada del herrero. Ojo: los símbolos son de una letra (`O` = oak door **no** "abierta": para el estado, leer las propiedades). |
 | `build/faroles_hanging.py` | **Faroles sin apoyo de verdad** (I14): mira la propiedad `hanging` contra su dirección, que es lo que **no** mira la auditoría de Python (una valla debajo vale para un farol *posado*, no para uno *colgado*; la de Java sí lo mira desde la migración 55). Dice qué reparador arregla cada uno. |
 | `build/kiosco_dump.py` | **El kiosco entero, capa a capa** (I28): cuenta los bloques por capa, imprime la huella de `cota-2` a `cota+7` y localiza la **campana**, el **farol** y el **beacon** con sus propiedades (dónde están y en qué celda relativa al centro). |
 | `build/aldeanos.py`, `build/aldeanos.py` | Aldeanos: profesión, inventario, posición (carpeta `entities/`). |

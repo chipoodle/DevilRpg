@@ -2617,6 +2617,40 @@ por qué:
 COMPARTIDAS=0 SIN CAMA=0 DURMIENDO=11`** (el pueblo entero con cama **y durmiendo**) y **0** pérdidas de cama en toda
 la corrida.
 
+### 3b.60 El FAROL de encima del primer escalón y las PUERTAS que los aldeanos dejaban abiertas
+
+Dos cosas que reportó el jugador con captura:
+
+**1) "hay que quitar esta lámpara que está justo arriba de las primeras escaleras de la planta baja porque estorba al
+querer subir por ahí".** El pie de la escalera del comedor está en `bx + TABERNA_ESCALERA_PIE_DX (=4), nivel,
+bz + TABERNA_ESCALERA_MESETA_Z (=11)` y `lucesDeLaTaberna` colgaba un farol del comedor **en la misma vertical**
+(`{dx=4, dz=11}`, a `nivel+3`): un farol tiene caja de colisión, así que el que subía se daba con él. Se quita de la
+lista (el de `{4, 7}` queda al lado: el comedor sigue iluminado) y `VillageGenerator.quitarElFarolDeLaEscalera` lo
+retira en las tabernas ya construidas, **idempotente** y solo si esa celda sigue siendo un farol. Medido:
+`Taberna de …: quitado el farol de encima del primer escalon (1442, 123, 1439)`.
+
+**2) "los aldeanos cuando vayan a dormir tienen que cerrar la puerta porque todas la dejan abierta".** El juego tiene
+su comportamiento (`InteractWithDoor` + `DOORS_TO_CLOSE`) pero **con los aldeanos del pueblo no cierra nada**: medido
+con el arnés, al empezar la noche había **8-9 puertas de madera abiertas** en el recinto y ninguna se cerraba sola.
+Ahora el pueblo las cierra por su cuenta (`VillagerDoorGoal`, **sin banderas**, como el de los portones):
+- solo mira puertas **de madera** (las de hierro no las abre un aldeano) **abiertas y pegadas al aldeano**;
+- se apunta que la ha **usado** cuando está **en el hueco** (a menos de 1,5): la que solo tiene al lado —o la que el
+  jugador dejó abierta y él pasa por delante— **no se toca**;
+- cuando ya ha pasado, la cierra (`DoorBlock.setOpen(..., false)`: las dos mitades, con su sonido);
+- y **no se le cierra a un jugador al lado** (a menos de 2,5).
+
+**Medido** (día fijo, para que los aldeanos salgan y crucen): **36 cierres** en la corrida, cada uno con su aldeano
+—`PUERTA CERRADA en 1443,120,1401 (aldeano(s) al lado: 9e0ed6e3)`, `… 1438,120,1435 (5701c0e4)`…— y el contador de
+puertas abiertas del pueblo **baja de 8-9 a 4** (las que quedan son de la posada, que nadie cruza de día: no se tocan a
+propósito).
+
+**Y de propina, Mauricio**: el jugador preguntó por qué Mauricio (Sin oficio) no tenía cama. En su guardado salían **2
+de 13** aldeanos sin cama y eran justo los dos **"Sin oficio"** (Mauricio y Leoncio), de pie en la huerta. No era un
+caso aparte: **es el mismo fallo de la cama inalcanzable** (el reparto solo daba camas a las que el planificador
+llegaba, y a ellos no les llegaba ninguna). Los "Sin oficio" entran en el reparto como cualquier adulto —la lista del
+latido es `getEntitiesOfClass(Villager.class, …)`, sin filtrar por oficio— y con el arreglo del latido (celda de espera
++ acostar) el pueblo entero duerme: `CAMAS RESUMEN: adultos=11 conCama=11 … SIN CAMA=0 DURMIENDO=11`.
+
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.

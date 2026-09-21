@@ -48,6 +48,13 @@ public class GuardHarness {
      * al pueblo de sitio). Ver `volcarCamas`.
      */
     private static final boolean MEDIR_NOCHE = true;
+    /**
+     * ¿Se mide el <b>CIERRE DE PUERTAS</b>? Pone el mundo de <b>día</b> (los aldeanos se levantan y salen: cruzan
+     * puertas), se salta las siembras y volca cada 2 s las <b>puertas de madera abiertas</b> del pueblo. Es lo que
+     * pide el jugador: *"los aldeanos cuando vayan a dormir tienen que cerrar la puerta porque todas la dejan
+     * abierta"*.
+     */
+    private static final boolean MEDIR_PUERTAS = true;
     private static boolean listo = false;
     private static int ticks = 0;
     /** Cuantas veces se ha visto a un granjero SUBIDO a la valla de su bancal (el bug que se mide). */
@@ -68,7 +75,7 @@ public class GuardHarness {
         // cadena del CLERIGO: verruga del Nether, polvo de blaze y BOTELLAS DE CRISTAL (para que tenga que ir al agua
         // a llenarlas: ver SEMBRAR_AGUA_EMBOTELLADA); y el botin que ya barre el recolector (pepitas de oro,
         // zanahorias, ojos de arana) para la zanahoria dorada.
-        if (!MEDIR_NOCHE && ticks == 600) {
+        if (!MEDIR_NOCHE && !MEDIR_PUERTAS && ticks == 600) {
             // --- TERCERA MEDIDA: LA REMESA INICIAL DE MADERA ---------------------------------------------------
             // Se VACIA el almacen entero (como el de una aldea recien fundada, que nace sin nada dentro): en la
             // siguiente pasada del latido el pueblo tiene que meter su remesa inicial de 128 troncos, UNA vez.
@@ -111,7 +118,13 @@ public class GuardHarness {
             pega.moveTo(CENTRO.getX() + 0.5D, CENTRO.getY(), CENTRO.getZ() + 0.5D);
             VillageManager.manageNearby(level, pega, ancla(), INDICE);
         }
-        if (MEDIR_NOCHE) {
+        if (MEDIR_PUERTAS) {
+            // LAS PUERTAS, cada 2 s: los aldeanos estan de dia (se levantan y salen) y cruzan puertas: se cuenta
+            // cuantas de madera quedan ABIERTAS en el pueblo. Lo que se busca es que BAJE (las cierran al pasar).
+            if (ticks % 40 == 0) {
+                volcarPuertas(level);
+            }
+        } else if (MEDIR_NOCHE) {
             // EL VIGILANTE DE CAMAS, cada segundo (la transicion se canta sola cuando el HOME desaparece o se reclama).
             if (ticks % 20 == 0) {
                 volcarCamas(level);
@@ -156,8 +169,8 @@ public class GuardHarness {
         }
         level.getGameRules().getRule(GameRules.RULE_DAYLIGHT).set(false, server);
         // LA HORA SE FIJA SEGUN LO QUE SE MIDA: NOCHE (18000 = medianoche) para el sueño y las camas, DIA (6000 =
-        // mediodia) para el trabajo y el combustible (la cocina y la fragua son faenas de dia).
-        level.setDayTime(MEDIR_NOCHE ? 18000L : 6000L);
+        // mediodia) para el trabajo, el combustible y el CIERRE DE PUERTAS (los aldeanos tienen que salir y cruzar).
+        level.setDayTime(MEDIR_NOCHE && !MEDIR_PUERTAS ? 18000L : 6000L);
         // Sin bichos: la ronda se mide sola (el combate va antes que la ronda y los guardias se morian peleando).
         level.getGameRules().getRule(GameRules.RULE_DOMOBSPAWNING).set(false, server);
         for (net.minecraft.world.entity.Mob m : level.getEntitiesOfClass(net.minecraft.world.entity.Mob.class,
@@ -435,8 +448,10 @@ public class GuardHarness {
                 if (v.isBaby() || v.getBrain().hasMemoryValue(MemoryModuleType.HOME)) {
                     continue;
                 }
-                DevilRpg.LOGGER.info("[Arnes] SIN CAMA {} {} pos={} (dist a la plaza {})", uuid8(v),
-                        str(v.getVillagerData().getProfession()), v.blockPosition().toShortString(),
+                DevilRpg.LOGGER.info("[Arnes] SIN CAMA {} {} nombre={} pos={} (dist a la plaza {})", uuid8(v),
+                        str(v.getVillagerData().getProfession()),
+                        v.getCustomName() == null ? "-" : v.getCustomName().getString().replace("\n", " | "),
+                        v.blockPosition().toShortString(),
                         fmt(Math.sqrt(v.position().distanceToSqr(net.minecraft.world.phys.Vec3.atCenterOf(CENTRO)))));
                 var poi = level.getPoiManager();
                 poi.findAllClosestFirstWithType(h -> h.is(net.minecraft.world.entity.ai.village.poi.PoiTypes.HOME),
@@ -470,12 +485,57 @@ public class GuardHarness {
                         });
                 break; // con uno basta para ver el motivo
             }
+            // LAS PUERTAS ABIERTAS DEL PUEBLO (lo pidio el jugador: "los aldeanos cuando vayan a dormir tienen que
+            // cerrar la puerta porque todas la dejan abierta").
+            volcarPuertas(level);
         }
     }
 
     private static String uuid8(Villager v) {
         return v.getUUID().toString().substring(0, 8);
     }
+
+    /**
+     * LAS PUERTAS DE MADERA ABIERTAS del pueblo (la mitad de abajo de cada una). Lo que se busca con el arreglo es que
+     * el numero <b>BAJE</b>: los aldeanos cierran la que cruzan (`VillagerDoorGoal`). Las que estan abiertas y nadie
+     * cruza no se tocan (pueden ser del jugador), asi que el numero no tiene por que llegar a cero.
+     */
+    private static void volcarPuertas(ServerLevel level) {
+        StringBuilder abiertas = new StringBuilder();
+        int cuantas = 0;
+        java.util.Set<Long> ahora = new java.util.HashSet<>();
+        for (BlockPos q : BlockPos.betweenClosed(CENTRO.offset(-56, -8, -56), CENTRO.offset(56, 12, 56))) {
+            var est = level.getBlockState(q);
+            if (est.is(net.minecraft.tags.BlockTags.WOODEN_DOORS)
+                    && est.getValue(net.minecraft.world.level.block.DoorBlock.OPEN)
+                    && est.getValue(net.minecraft.world.level.block.DoorBlock.HALF)
+                    == net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER) {
+                cuantas++;
+                ahora.add(q.asLong());
+                if (cuantas <= 8) {
+                    abiertas.append(' ').append(q.toShortString());
+                }
+            }
+        }
+        // Y LAS QUE SE HAN CERRADO desde el barrido anterior, con el aldeano que tenia al lado: es la prueba de que
+        // las cierra el pueblo (`VillagerDoorGoal`).
+        for (long antes : puertasAbiertasAnteriores) {
+            if (ahora.contains(antes)) {
+                continue;
+            }
+            BlockPos p = BlockPos.of(antes);
+            StringBuilder quien = new StringBuilder();
+            for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(p).inflate(4.0))) {
+                quien.append(' ').append(uuid8(v));
+            }
+            DevilRpg.LOGGER.info("[Arnes] PUERTA CERRADA en {} (aldeano(s) al lado:{})", p.toShortString(), quien);
+        }
+        puertasAbiertasAnteriores = ahora;
+        DevilRpg.LOGGER.info("[Arnes] PUERTAS DE MADERA ABIERTAS en el pueblo: {}{}", cuantas, abiertas);
+    }
+
+    /** Las puertas abiertas del barrido anterior (para cantar las que se cierran). */
+    private static java.util.Set<Long> puertasAbiertasAnteriores = new java.util.HashSet<>();
 
     /**
      * EL QUE ESTA DENTRO DE UN BANCAL (de noche): se imprime su posicion exacta, su cama, el destino de su cerebro
@@ -822,3 +882,4 @@ public class GuardHarness {
         return String.format(Locale.ROOT, "%.2f", d);
     }
 }
+

@@ -1,0 +1,66 @@
+MEDIDAS DEL FAROL DE LA ESCALERA Y DE LAS PUERTAS QUE LOS ALDEANOS DEJABAN ABIERTAS
+=====================================================================================
+Dos cosas que reportó el jugador con captura:
+  1) "hay que quitar esta lámpara que está justo arriba de las primeras escaleras de la planta baja porque estorba al
+     querer subir por ahí" (el farol colgado del forjado del comedor en la celda del primer escalón).
+  2) "los aldeanos cuando vayan a dormir tienen que cerrar la puerta porque todas la dejan abierta".
+Partida: run/saves/New World (1) copiada a run/world (aldea 2, centro 1414,1414, cota 120); arnés headless
+(`GuardHarness`): `MEDIR_NOCHE` para el sueño y `MEDIR_PUERTAS` (día fijo) para las puertas.
+
+
+--- 1) EL FAROL DE ENCIMA DEL PRIMER ESCALÓN ----------------------------------------------------
+La geometría, en el propio constructor: el pie de la escalera del comedor está en
+`bx + TABERNA_ESCALERA_PIE_DX (=4), nivel, bz + TABERNA_ESCALERA_MESETA_Z (=11)` y `lucesDeLaTaberna` colgaba un farol
+del comedor justo en `{dx=4, dz=11}`, a `nivel + TABERNA_PISO2 - 2 (= nivel+3)`: **la misma vertical**. Un farol tiene
+caja de colisión, así que el que sube se daba con él.
+
+Arreglo: se quita de la lista del comedor (el comedor sigue iluminado: el de `{4, 7}` queda cuatro bloques al lado) y
+`VillageGenerator.quitarElFarolDeLaEscalera(center)` lo retira en las tabernas ya construidas (idempotente y solo toca
+ese farol: si en esa celda hay otra cosa, no se toca). Medido con el arnés:
+
+[Village] Taberna de BlockPos{x=1414, y=120, z=1414}: quitado el farol de encima del primer escalon (1442, 123, 1439)
+
+(1442 = base 1438 + 4; 123 = cota 120 + 3; 1439 = 1428 + 11 ✓ la celda exacta de la captura).
+
+
+--- 2) LAS PUERTAS: LOS ALDEANOS LAS DEJABAN ABIERTAS -------------------------------------------
+El juego tiene su comportamiento para cerrarlas (`InteractWithDoor`, con la memoria `DOORS_TO_CLOSE`), pero con los
+aldeanos del pueblo **no cierra nada**: se abre la puerta al pasar y se queda abierta. Medido con el arnés al empezar
+(de noche, con el pueblo acostándose): **8-9 puertas de madera abiertas** en el recinto, y ninguna se cerraba sola.
+
+Arreglo: el pueblo las cierra por su cuenta (`VillagerDoorGoal`, sin banderas, como el de los portones):
+  - solo mira las puertas **de madera** (las de hierro no las abre un aldeano) y solo si están **abiertas y pegadas a
+    él** (en su casilla o al lado: la que está cruzando);
+  - se apunta que la ha **usado** cuando está **en el hueco** (a menos de 1,5): una puerta que solo tiene al lado —o la
+    que el jugador dejó abierta y el aldeano pasa por delante— **no se toca**;
+  - cuando ya ha pasado, la cierra con `DoorBlock.setOpen(..., false)` (las dos mitades, con su sonido) tras 5 ticks;
+  - y **no se le cierra a un jugador al lado** (a menos de 2,5).
+
+Medido con el arnés (`MEDIR_PUERTAS = true`, día fijo para que los aldeanos salgan y crucen), **36 cierres** en la
+corrida, cada uno con el aldeano al lado:
+
+[Arnes] PUERTA CERRADA en 1447, 125, 1434 (aldeano(s) al lado: 0a578750)
+[Arnes] PUERTA CERRADA en 1440, 125, 1434 (aldeano(s) al lado: b7073e55 49f0d355 0a578750)
+[Arnes] PUERTA CERRADA en 1441, 120, 1442 (aldeano(s) al lado: b7073e55)
+[Arnes] PUERTA CERRADA en 1443, 120, 1401 (aldeano(s) al lado: 9e0ed6e3)      <- el herrero, la de su casa
+[Arnes] PUERTA CERRADA en 1438, 120, 1435 (aldeano(s) al lado: 5701c0e4)      <- el granjero
+[Arnes] PUERTA CERRADA en 1427, 120, 1388 (aldeano(s) al lado:)
+...
+
+Y el contador de puertas abiertas del pueblo, en la misma corrida: **empieza en 8-9 y baja a 4** mientras los aldeanos
+salen a trabajar (las que quedan abiertas son de la posada, que nadie cruza durante el día: no se tocan a propósito,
+porque pueden ser del jugador).
+
+
+--- 3) Y DE PROPINA: MAURICIO (SIN OFICIO) SIN CAMA ---------------------------------------------
+El jugador preguntó también por qué **Mauricio** no tenía cama. En su guardado salían **2 de 13** aldeanos sin cama, y
+eran justo los dos **"Sin oficio"** (Mauricio y Leoncio), de pie en la huerta:
+
+  "Mauricio (Sin oficio)  none  y=120.0  rel( -33,  30)  **SIN CAMA** sin puesto
+
+No era un caso aparte: es el mismo fallo de la cama inalcanzable (el reparto solo daba camas a las que el planificador
+llegaba, y a ellos no le llegaba ninguna). Con el arreglo del latido (celda de espera + acostar) el pueblo entero
+duerme, y los "Sin oficio" entran en el reparto como cualquier adulto (la lista del latido los incluye: es
+`level.getEntitiesOfClass(Villager.class, …)`, sin filtrar por oficio). Medido, misma noche:
+
+[Arnes] CAMAS RESUMEN: adultos=11 conCama=11 (camas distintas ocupadas=11) COMPARTIDAS=0 SIN CAMA=0 DURMIENDO=11

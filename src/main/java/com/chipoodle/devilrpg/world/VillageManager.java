@@ -1937,6 +1937,10 @@ public final class VillageManager {
         // TABERNA (etapa F): el comedor del pueblo (abajo) y la posada (arriba). Idempotente (se comprueba por su
         // barra): si el jugador se lleva media taberna, el pueblo la vuelve a levantar.
         VillageGenerator.asegurarTaberna(level, center);
+        // Y EL FAROL QUE COLGABA ENCIMA DEL PRIMER ESCALON, FUERA (lo pidió el jugador: "hay que quitar esta lámpara
+        // que está justo arriba de las primeras escaleras de la planta baja porque estorba al querer subir por ahí").
+        // Idempotente y solo toca ese farol: vale también para las tabernas ya construidas.
+        VillageGenerator.quitarElFarolDeLaEscalera(level, center);
         // PESQUERA (etapa G): el lago del pescador, su caseta y su barril. Idempotente (vale el agua del lago o el
         // barril como testigo): si el jugador se lleva media pesquera, el pueblo la vuelve a levantar.
         VillageGenerator.asegurarPesquera(level, center);
@@ -2095,6 +2099,14 @@ public final class VillageManager {
         for (Villager villager : aldeanos) {
             if (!villager.isBaby()) {
                 asegurarGoalDePortones(villager, center);
+            }
+        }
+        // Y LAS PUERTAS DE MADERA: las van dejando abiertas al pasar (el juego tiene su comportamiento para cerrarlas
+        // —`InteractWithDoor`— pero con los aldeanos del pueblo no cierra nada: el jugador las encuentra todas
+        // abiertas, sobre todo al irse a dormir). El pueblo las cierra por su cuenta: ver `VillagerDoorGoal`.
+        for (Villager villager : aldeanos) {
+            if (!villager.isBaby()) {
+                asegurarGoalDePuertas(villager);
             }
         }
         // RECOGIDA POR OFICIO (lo pidió el jugador: "nadie recoge los materiales del suelo y el recolector no se da
@@ -3284,6 +3296,20 @@ public final class VillageManager {
             }
         }
         villager.goalSelector.addGoal(2, new com.chipoodle.devilrpg.entity.goal.VillagerGateGoal(villager, center));
+    }
+
+    /**
+     * Le pone a un aldeano el goal de las <b>puertas de madera</b> (cierra la que cruza). Prioridad <b>2</b> y
+     * <b>sin banderas</b>, como el de los portones: no mueve al aldeano, así que va a la vez que su faena. Lo pidió el
+     * jugador: *"los aldeanos cuando vayan a dormir tienen que cerrar la puerta porque todas la dejan abierta"*.
+     */
+    private static void asegurarGoalDePuertas(Villager villager) {
+        for (WrappedGoal wrapped : villager.goalSelector.getAvailableGoals()) {
+            if (wrapped.getGoal() instanceof com.chipoodle.devilrpg.entity.goal.VillagerDoorGoal) {
+                return;
+            }
+        }
+        villager.goalSelector.addGoal(2, new com.chipoodle.devilrpg.entity.goal.VillagerDoorGoal(villager));
     }
 
     /** Le pone al <b>herrero</b> su goal de taller (coger material, fabricar en su puesto y dejarlo en el almacén). */
