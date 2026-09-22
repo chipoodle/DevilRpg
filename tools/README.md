@@ -9,6 +9,7 @@ Aquí está lo que merece sobrevivir.
 | `lint_aldea.py` | Lint de las reglas de aldea (invariantes I*). **Se pasa antes de cada commit de aldea**: `python tools\lint_aldea.py --strict`. Sale con código 1 si algo falla |
 | `audita_aldea.py` | **Auditoría de las aldeas del guardado**: faroles y vallas flotando, cofres tapados, puertas incompletas, camas sueltas y **portones con el hueco tapado** (I54: en la capa de la cabeza del carril de un portón no puede haber nada sólido, o el que cruza se queda encerrado). Saca las aldeas de `data/devilrpg_villages.dat` (índice, centro y cota), así que **no hay nada clavado a una aldea concreta**. Sale con código 1 si encuentra algo |
 | `nbtdump.py` | Lector mínimo de NBT (`load`, `R`+`payload`, `walk`). `build/nbtdump.py` es un **puente** a este, para que los scripts de `build/` sigan funcionando con **una sola copia** |
+| `nbtedit.py` | **Editor** de NBT mínimo y **tipo-consciente** (`cargar`, `buscar`, `guardar`): guarda el TIPO de cada etiqueta al leerla y lo vuelve a escribir igual, y trae **prueba de ida y vuelta** — si parsear+serializar un archivo no devuelve los **mismos bytes**, se niega a escribir. Es para **cirugía en el guardado** (p. ej. poner la partida del jugador en un momento concreto: quitar una aldea de `aldeasReveladas` para dejar la barra sin revelar). `guardar` deja **`.bak`** antes de pisar. Uso: `python tools\nbtedit.py <archivo>` solo comprueba la ida y vuelta |
 | `finduuid.py` | Busca UUIDs en los `.mca` de entidades y dice en qué chunk está cada uno (para comprobar que un minion está muerto de verdad antes de olvidarlo) |
 | `recover/NbtTool.java` | Diagnóstico y reparación del NBT del jugador con las **clases reales de Minecraft**, sin arrancar el juego (volcar, `--find`, `--snbt`, `--restore-minions-from`, `--forget`, `--inject-into`). Las librerías de `build/recover/libs` **no** se versionan (pesan): ver `docs/design-roadmap.md` §6 |
 | `arnes/GuardHarness.java` | **Copia de referencia** del arnés de la aldea en un **servidor headless** (jugador de pega + chunks forzados + el latido de verdad): es con lo que se midió el bug de la **guardia del corral** sin jugar (I32/I33/I34). **No se compila desde `tools/`**: se copia a `src/main/java/com/chipoodle/devilrpg/debug/`, se usa y se **borra** (pasos exactos en `arnes/LEEME.md`) |
@@ -38,4 +39,7 @@ java -cp "build\classes\java\main;build\recover\libs\*" tools\recover\NbtTool.ja
 
 # ¿Sigue vivo ese minion?
 python tools\finduuid.py a1b2c3d4-....=lobo
+
+# ¿Puedo tocar ese archivo NBT sin destrozarlo? (prueba de ida y vuelta: no escribe nada)
+python tools\nbtedit.py "run\saves\New World (2)\level.dat"
 ```
