@@ -1968,6 +1968,39 @@ haya en cualquiera de ellos y guarda donde quepa — y las raciones y el granjer
 **De paso**: los huevos estrellados vuelven a guardarse en la **despensa** (I84 consideró lleno un cofre que no lo
 estaba; con la unión, el sitio deja de ser un problema).
 
+### I86 · Una aldea NO cae con el jugador lejos: el asedio se PAUSA (no se pierde)
+
+El jugador, con una aldea entera perdida: *"Me alejé de la aldea unos cientos de cubos, volando y regresé antes de que
+nocheciera y cuando regresé ya estaba abandonada. Eso es un bug enorme!!"*, y precisó el mecanismo: *"cuando la aldea
+está marcada como que fue invadida por zombis la primera vez que se llega, cambia a abandonada: todos los aldeanos
+mueren y las construcciones quedan destruidas con telarañas. El bug aquí es que yo me alejé de la aldea y cuando
+regresé se disparó esta función de aldea abandonada cuando no tendría que haber pasado"*.
+
+**Medido en su guardado** (21-sep-2026, 21:02): `Fallen = [1]`, y la aldea **1** (990,990, cota 96) cayó el
+**17-sep a las 18:50:09** —`Aldea 1 queda en ruinas: 1483 bloques cambiados` + `La aldea 1 ha CAÍDO y queda en
+ruinas`—, con el chat del asedio **clásico** (*"La aldea cayó… El objetivo avanza."*). La última posición del jugador
+al cerrar el juego es **(975, 110, 997)**: dentro de esa aldea en ruinas. Su aldea viva (la 2) está entera:
+`health=18`, `food=64`, **18 aldeanos contados uno a uno en el guardado** (el mismo número que su `Health`), y esa
+sesión **no** tiene ni una caída ni una muerte. La aldea caída (la 1) conserva **9 aldeanos vivos**: `ruin()` no
+mata a nadie —el pueblo quedó escrito como caído **con su gente dentro**, y esos aldeanos se quedan sin pueblo que
+los gestione—.
+
+**Causa**: `VillageManager.tick` hacía `d.tickTicks++` **siempre**, sin mirar dónde estaba el jugador. Al irse con los
+asediadores **dentro** del muro, el reloj (`GRACE_TICKS + SIEGE_TIMEOUT_TICKS` = 3 min 30 s) seguía corriendo; los
+zombis, descargados, no morían; y **en el mismo tick de volver** se cargaban otra vez, volvían a contar como "dentro
+del perímetro" (`allZombiesInsidePerimeter`) y el asedio se resolvía como **perdido**: `fallVillage` → `ruin()`
+(aire, telarañas, piedra mohosa y ladrillo agrietado: exactamente las tres cosas que describe el jugador).
+
+**Regla**: el reloj del asedio **solo corre con el jugador en la aldea** (`RADIO_ASEDIO_CON_JUGADOR` = 128 bloques del
+centro). Si se va —o se desconecta— el asedio queda **EN PAUSA** (se dice en el log, con la distancia) y **al volver
+se le da el tiempo entero otra vez**: ni el margen ya gastado ni el minuto final que corrió sin él. Las **hordas del
+mundo** tampoco pueden tumbar una aldea sin nadie delante (`hayJugadorEnLaAldea`): la horda se queda donde está y, si
+el jugador vuelve, la pelea sigue. **Un asedio es una pelea: sin el jugador delante no puede perderse.**
+
+**Sin verificar en vivo** (el jugador tenía el juego abierto y lo cerró al enviar el informe): la prueba que falta es
+dejarse asediar, irse a más de 128 bloques con los zombis dentro y volver — tiene que salir `EN PAUSA` y `el jugador
+ha vuelto al asedio` en el log, y la aldea seguir en pie.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
@@ -1984,7 +2017,8 @@ Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento 
 7. **¿Rendimiento?** ¿Escaneos por tick? ¿Cuántas columnas/bloques por pasada? ¿Se puede cachear?
 8. **Casos raros** (mirar los que ya nos han mordido): aldea **sobre agua** (islita), bioma **frío** (agua que se
    congela), **montaña** (recorte y minerales), **cueva/barranca** debajo (agujeros), aldea **vieja** (layout
-   antiguo), aldea **caída** (ruinas), **chunk descargado**, **jugador ausente**, aldeas a **200 bloques** entre sí.
+   antiguo), aldea **caída** (ruinas), **chunk descargado**, **jugador ausente** (¡un reloj que corre sin él puede
+   perder una aldea entera: ver **I86**!), aldeas a **200 bloques** entre sí.
 9. **¿Cómo lo COMPRUEBO?** Guardado (bloques y entidades reales), log del juego, o lint. Si no puedo comprobarlo,
    **decirlo claramente** en vez de dar por hecho que funciona.
 10. **¿Afecta a lo que el jugador YA tiene?** Aldeas existentes, inventarios, cofres, granjas sembradas.

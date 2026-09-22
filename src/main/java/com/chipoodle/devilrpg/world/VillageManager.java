@@ -86,6 +86,19 @@ public final class VillageManager {
     private static final int GRACE_TICKS = 90 * 20;
     /** Ticks extra para limpiar la ola tras el asedio (2 min). */
     private static final int SIEGE_TIMEOUT_TICKS = 2 * 60 * 20;
+    /**
+     * Radio (horizontal, desde el CENTRO de la aldea) dentro del cual se considera que el jugador <b>está en la
+     * aldea</b> y por tanto el asedio <b>corre</b>. Fuera de ahí —o con el jugador desconectado— el reloj se
+     * <b>PAUSA</b>.
+     * <p>
+     * Lo pidió el jugador, con una aldea entera perdida: <i>"me alejé de la aldea unos cientos de cubos, volando y
+     * regresé antes de que nocheciera y cuando regresé ya estaba abandonada"</i>. El fallo era que {@code tickTicks}
+     * corría <b>siempre</b>: al irse con los asediadores dentro de los muros, el tiempo expiraba durante su ausencia
+     * y, <b>en el mismo tick de volver</b> —cuando los zombis se cargan otra vez y vuelven a contar como "dentro"—,
+     * la aldea caía: aldeanos muertos, casas derruidas y telarañas. Un asedio es una pelea: sin el jugador delante
+     * no puede perderse, y al volver se le da el tiempo entero otra vez (ver {@code tick}).
+     */
+    private static final double RADIO_ASEDIO_CON_JUGADOR = 128.0D;
     /** Número base de monstruos agresivos en la ola (escala con el índice del objetivo). */
     private static final int DEFAULT_WAVE = 8;
     /** Incremento máximo de la ola por alejarse (límite: no crece infinitamente). */
@@ -1207,6 +1220,29 @@ public final class VillageManager {
         }
         for (int i = list.size() - 1; i >= 0; i--) {
             VillageDefense d = list.get(i);
+            // EL RELOJ NO CORRE SIN EL JUGADOR (ver RADIO_ASEDIO_CON_JUGADOR): si se va, el asedio se PAUSA —no se da
+            // por perdido— y las aldeas no caen a sus espaldas. Un asedio que se resuelve sin nadie delante es una
+            // derrota a ciegas, y es exactamente lo que le pasó al jugador: se fue con los zombis dentro del muro y
+            // al volver la aldea ya estaba en ruinas.
+            if (!jugadorEnLaAldea(level, d)) {
+                if (!d.enPausa) {
+                    d.enPausa = true;
+                    DevilRpg.LOGGER.info("[Village] Asedio de la aldea {} EN PAUSA: el jugador no esta en la aldea"
+                                    + " (a {} bloques del centro): el reloj se para y la aldea NO puede caer",
+                            d.objectiveIndex, Math.round(distanciaAlCentro(level, d)));
+                }
+                continue;
+            }
+            if (d.enPausa) {
+                d.enPausa = false;
+                // Al volver se le da el tiempo ENTERO otra vez: ni el margen ya gastado ni el tiempo que corrió
+                // durante su ausencia. Si la ola ya estaba fuera, el minuto y medio de margen para limpiarla; si
+                // todavía no había salido, el margen de exploración de nuevo.
+                d.tickTicks = d.waveSpawned ? GRACE_TICKS : 0L;
+                DevilRpg.LOGGER.info("[Village] Aldea {}: el jugador ha vuelto al asedio; se le da el tiempo entero"
+                                + " otra vez ({} s de margen)",
+                        d.objectiveIndex, (d.waveSpawned ? SIEGE_TIMEOUT_TICKS : GRACE_TICKS) / 20);
+            }
             d.tickTicks++;
 
             // Tras el margen de exploración, lanza la ola desde FUERA de la valla.
@@ -1595,7 +1631,17 @@ public final class VillageManager {
                 continue;
             }
             int vivos = observeVillagers(level, saved, siege.objectiveIndex, siege.center);
-            if (vivos == 0) {
+            if (vivos == 0 && !hayJugadorEnLaAldea(level, siege.center)) {
+                // SIN NADIE DELANTE LA ALDEA NO CAE (ver RADIO_ASEDIO_CON_JUGADOR). El mundo puede mandar hordas
+                // cuando quiera, pero una aldea no se pierde por estar el jugador lejos: se le estaría diciendo que
+                // ha perdido algo que no pudo defender. La horda se queda donde está y, si el jugador vuelve, la
+                // pelea sigue (y con él delante, esta misma comprobación ya decide de verdad).
+                if (!siege.avisadoSinDefensor) {
+                    siege.avisadoSinDefensor = true;
+                    DevilRpg.LOGGER.info("[Village] La aldea {} se ha quedado sin aldeanos, pero NO cae: no hay"
+                            + " ningun jugador alli que pueda defenderla", siege.objectiveIndex);
+                }
+            } else if (vivos == 0) {
                 fallVillage(level, saved, siege.objectiveIndex, siege.center);
                 announceNearby(level, siege.center, "La aldea ha caído: no queda nadie con vida entre sus muros.");
                 // El objetivo avanza para quien lo tuviera pendiente: esa aldea ya no se puede salvar. Se
@@ -1723,6 +1769,38 @@ public final class VillageManager {
             DevilRpg.LOGGER.info("[Village] Aldea {} resistió: {} y {} para {}", siege.objectiveIndex, premio,
                     botin, player.getGameProfile().getName());
         }
+    }
+
+    /**
+     * Distancia <b>horizontal</b> (bloques) del jugador que defiende esta aldea a su centro. Devuelve
+     * {@link Double#MAX_VALUE} si ese jugador no está conectado.
+     */
+    private static double distanciaAlCentro(ServerLevel level, VillageDefense d) {
+        ServerPlayer p = level.getServer().getPlayerList().getPlayer(d.playerUUID);
+        if (p == null) {
+            return Double.MAX_VALUE;
+        }
+        double dx = p.getX() - (d.center.getX() + 0.5D);
+        double dz = p.getZ() - (d.center.getZ() + 0.5D);
+        return Math.sqrt(dx * dx + dz * dz);
+    }
+
+    /** ¿El jugador que defiende esta aldea sigue en ella (ver {@link #RADIO_ASEDIO_CON_JUGADOR})? */
+    private static boolean jugadorEnLaAldea(ServerLevel level, VillageDefense d) {
+        return distanciaAlCentro(level, d) <= RADIO_ASEDIO_CON_JUGADOR;
+    }
+
+    /** ¿Hay ALGÚN jugador en la aldea, o sea alguien que pueda defenderla (hordas del mundo)? */
+    private static boolean hayJugadorEnLaAldea(ServerLevel level, BlockPos center) {
+        double limite = RADIO_ASEDIO_CON_JUGADOR * RADIO_ASEDIO_CON_JUGADOR;
+        for (ServerPlayer p : level.players()) {
+            double dx = p.getX() - (center.getX() + 0.5D);
+            double dz = p.getZ() - (center.getZ() + 0.5D);
+            if (dx * dx + dz * dz <= limite) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static boolean isUnderWorldSiege(ServerLevel level, int objectiveIndex) {
@@ -4989,6 +5067,8 @@ public final class VillageManager {
          * que separa una defensa de verdad de un asedio que se resolvió porque el jugador se alejó.
          */
         final Set<UUID> defenders = new HashSet<>();
+        /** Si ya se avisó (una sola vez) de que esta aldea no cae porque no hay nadie que la defienda. */
+        boolean avisadoSinDefensor;
 
         WorldSiege(int objectiveIndex, BlockPos center, List<UUID> wave) {
             this.objectiveIndex = objectiveIndex;
@@ -5007,6 +5087,8 @@ public final class VillageManager {
         boolean waveSpawned;
         /** Último recuento de atacantes vivos, para cantar cada baja (y no repetir el mensaje). */
         int ultimosVivos = -1;
+        /** El reloj está parado porque el jugador no está en la aldea (ver {@link #RADIO_ASEDIO_CON_JUGADOR}). */
+        boolean enPausa;
 
         VillageDefense(int objectiveIndex, UUID playerUUID, BlockPos center) {
             this.objectiveIndex = objectiveIndex;

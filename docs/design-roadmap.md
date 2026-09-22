@@ -3248,6 +3248,29 @@ todos los `esCriaturaPacificaONeutral(` encontró **dos sitios más** en `Sunflo
 lambda pasado a `super(…)` de una clase **estática**, donde `this` no existe: ahí va el parámetro del constructor).
 **El oso sí estaba** desde el primer día. La regla del barrido y la lista de aciertos, en I81.
 
+### 3b.80 La aldea que cayó a espaldas del jugador (el asedio se PAUSA, no se pierde)
+
+El jugador, con una aldea entera perdida: *"Me alejé de la aldea unos cientos de cubos, volando y regresé antes de
+que nocheciera y cuando regresé ya estaba abandonada. Eso es un bug enorme!!"* — y luego precisó el mecanismo:
+*"cuando la aldea está marcada como que fue invadida por zombis la primera vez que se llega, cambia a abandonada:
+todos los aldeanos mueren y las construcciones quedan destruidas con telarañas. El bug aquí es que yo me alejé de la
+aldea y cuando regresé se disparó esta función de aldea abandonada cuando no tendría que haber pasado"*.
+
+**Medido en su guardado**: `Fallen = [1]`, y la **aldea 1** (990,990) cayó el **17-sep-2026 a las 18:50:09**
+(`Aldea 1 queda en ruinas: 1483 bloques cambiados`), con el chat del asedio **clásico**. Su última posición al cerrar
+el juego (21-sep, 21:02) es **(975, 110, 997)**: dentro de esas ruinas. Su aldea viva (la 2) sigue entera
+(`health=18`, `food=64`, 18 aldeanos contados en el guardado) y esa sesión no tiene ni una caída ni una muerte. La
+aldea caída conserva **9 aldeanos vivos** (`ruin()` no mata a nadie: quedó escrita como caída con su gente dentro).
+
+**Causa**: `VillageManager.tick` sumaba al reloj del asedio (`d.tickTicks++`) **siempre**, sin mirar dónde estaba el
+jugador. Al irse con los asediadores **dentro** del muro el tiempo seguía corriendo, los zombis descargados no
+morían, y **en el mismo tick de volver** se cargaban otra vez, contaban como "dentro del perímetro" y el asedio se
+resolvía como perdido: `fallVillage` → `ruin()` (aire, telarañas y piedra mohosa).
+
+**HECHO** (I86): el reloj **solo corre con el jugador en la aldea** (128 bloques) —si se va, el asedio queda `EN
+PAUSA` y se dice en el log—, al volver se le da **el tiempo entero otra vez**, y las **hordas del mundo** tampoco
+pueden tumbar una aldea sin nadie delante. Pendiente de ver en juego (el jugador cerró el juego al informar).
+
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.
