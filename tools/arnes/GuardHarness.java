@@ -872,8 +872,8 @@ public class GuardHarness {
                 }
             }
             rumboDelAsalto = mejorRumbo * Math.PI / 4.0D;
-            int x = CENTRO.getX() + (int) Math.round(Math.cos(rumboDelAsalto) * 66);
-            int z = CENTRO.getZ() + (int) Math.round(Math.sin(rumboDelAsalto) * 66);
+            int x = CENTRO.getX() + (int) Math.round(Math.cos(rumboDelAsalto) * 14);
+            int z = CENTRO.getZ() + (int) Math.round(Math.sin(rumboDelAsalto) * 14);
             int y = com.chipoodle.devilrpg.world.VillageGenerator.spawnY(level, x, z);
             asaltante = com.chipoodle.devilrpg.init.ModEntities.AGGRESSIVE_ZOMBIE.get().create(level);
             if (asaltante != null) {
@@ -894,12 +894,22 @@ public class GuardHarness {
                 //   - el asaltante SIN aldea (worldSiegeIndex < 0) es el ASEDIO INICIAL: tiene que picarlo (la aldea
                 //     todavía no tiene campo de fuerza);
                 //   - el de la aldea 0 (GANADA, con campo de fuerza): no puede picar NADA de dentro.
-                muroInterior(level, 0.0D, y, 12);
-                muroInterior(level, ANGULO_DEL_SEGUNDO, y, 12);
+                cercoDeLaPlaza(level, y);
+                // SIN TESTIGOS: se quitan los aldeanos y los golems del pueblo (es una COPIA) para que el único objetivo
+                // posible sea el jugador de pega. Medido: con los aldeanos dentro, el asaltante se iba detrás de uno de
+                // ellos (llegó a r=67 del centro, FUERA del pueblo) y no llegaba ni a acercarse al cerco de la plaza.
+                for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(120))) {
+                    v.discard();
+                }
+                for (net.minecraft.world.entity.animal.IronGolem golem : level.getEntitiesOfClass(
+                        net.minecraft.world.entity.animal.IronGolem.class, new AABB(CENTRO).inflate(120))) {
+                    golem.discard();
+                }
+
                 asaltanteDos = com.chipoodle.devilrpg.init.ModEntities.AGGRESSIVE_ZOMBIE.get().create(level);
                 if (asaltanteDos != null) {
-                    int x2 = CENTRO.getX() + (int) Math.round(Math.cos(ANGULO_DEL_SEGUNDO) * 66);
-                    int z2 = CENTRO.getZ() + (int) Math.round(Math.sin(ANGULO_DEL_SEGUNDO) * 66);
+                    int x2 = CENTRO.getX() + (int) Math.round(Math.cos(ANGULO_DEL_SEGUNDO) * 14);
+                    int z2 = CENTRO.getZ() + (int) Math.round(Math.sin(ANGULO_DEL_SEGUNDO) * 14);
                     int y2 = com.chipoodle.devilrpg.world.VillageGenerator.spawnY(level, x2, z2);
                     asaltanteDos.moveTo(x2 + 0.5D, y2, z2 + 0.5D, 0.0F, 0.0F);
                     asaltanteDos.setVillageCenter(new BlockPos(CENTRO.getX(), y2, CENTRO.getZ()));
@@ -1008,6 +1018,29 @@ public class GuardHarness {
         }
         DevilRpg.LOGGER.info("[Arnes] MURO: muro interior de prueba en el rumbo {} grados ({} bloque(s) nuevos)",
                 (int) Math.toDegrees(ang), puestos);
+    }
+
+    /**
+     * Cierra un ANILLO de piedra (radio 7, 3 de alto) alrededor de la plaza, con el jugador de pega DENTRO: así el
+     * asaltante TIENE que picar para llegar a él. Un muro corto no mide nada —se rodea andando—, que es lo que pasó en
+     * la corrida anterior: con 12 bloques de ancho, el asaltante entró por el lado sin picar.
+     */
+    private static void cercoDeLaPlaza(ServerLevel level, int cota) {
+        int puestos = 0;
+        for (int ang = 0; ang < 360; ang += 3) {
+            double a = Math.toRadians(ang);
+            for (int dy = 0; dy <= 2; dy++) {
+                int mx = CENTRO.getX() + (int) Math.round(Math.cos(a) * 7.0D);
+                int mz = CENTRO.getZ() + (int) Math.round(Math.sin(a) * 7.0D);
+                BlockPos p = new BlockPos(mx, cota + dy, mz);
+                if (level.getBlockState(p).isAir()) {
+                    level.setBlock(p, net.minecraft.world.level.block.Blocks.STONE_BRICKS.defaultBlockState(), 3);
+                    puestos++;
+                }
+            }
+        }
+        DevilRpg.LOGGER.info("[Arnes] MURO: cerco de la PLAZA cerrado (r=7, 3 de alto, {} bloque(s) nuevos) con el"
+                + " jugador de pega dentro: hay que picarlo para llegar a el", puestos);
     }
 
     /**

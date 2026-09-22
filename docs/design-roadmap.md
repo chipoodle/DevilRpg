@@ -3459,8 +3459,12 @@ candidato se pregunta por la forma de colisión. Y se añadió **una línea de l
 picó **solo fuera de la aldea** (3 bloques a r=66,7) y **nada de dentro** ✓; con un **cerco de piedra cerrado** (r=62,
 3 de alto) el asaltante del asedio inicial se quedó **fuera** (r=61) y picó **2 bloques en 3 minutos** —el fallo
 corregido—, y de paso se midió que el anillo de su aldea tiene **huecos** (7 bloques en todo el rumbo este a la altura
-del suelo): sin cerco entra **andando** (r=48, dentro) y lo mata la milicia. **Pendiente**: la mitad del asedio inicial
-con el cerco puesto (no llegó a picar en la ventana de la corrida) y el comportamiento en juego.
+del suelo): sin cerco entra **andando** (r=48, dentro) y lo mata la milicia. Y el **A/B definitivo**, con el jugador
+de pega cercado en un anillo de piedra y el pueblo sin aldeanos (medido: con aldeanos dentro el asaltante se iba
+detrás de uno y llegaba a r=67, fuera del pueblo): el asaltante del **asedio inicial** (sin aldea) picó **21
+bloques** —el anillo y **la obra del pueblo por dentro** (`smooth_quartz`, `dark_oak_log`, `bricks`, una puerta)— y
+el de la aldea **ganada** picó **0** ✓. **Pendiente**: solo el comportamiento en juego (el arnés pone asaltantes a
+mano: la oleada de verdad necesita un jugador real, ver I86).
 
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 

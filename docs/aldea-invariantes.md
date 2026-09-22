@@ -2241,9 +2241,23 @@ tampoco tiene campo ✓.
 **Y una línea de log nueva** —`[Siege] un asaltante de la aldea N pica X en Y`—: sin ella no se podía distinguir "no
 pica" de "pica y el pueblo lo repone", y es lo que ha hecho medible todo esto.
 
-**Pendiente de medir**: la mitad del **asedio inicial** con el cerco puesto (que el asaltante *sin* aldea pique el muro
-**interior** de prueba) no llegó a verse en la ventana de la última corrida —los dos asaltantes estaban vivos y con
-objetivo, pero no llegaron a picar—, y el comportamiento **en juego**, que lo verá el jugador.
+**Y la otra mitad, ya medida** (segunda corrida del arnés, con el pueblo **sin aldeanos ni golems** —es una copia— para
+que el asaltante no se fuera detrás de un vecino: medido, con aldeanos dentro se iba detrás de uno y llegaba a r=67 del
+centro, **fuera** del pueblo, sin acercarse siquiera al cerco). Se le cierra al jugador de pega un **anillo de piedra**
+(radio 7, 3 de alto) con él **dentro**, y se ponen dos asaltantes, uno de cada clase:
+
+| asaltante | aldea | bloques picados |
+|---|---|---|
+| **asedio inicial** | `worldSiegeIndex = -1` (sin aldea → **sin** campo de fuerza) | **21** |
+| **asalto posterior** | `worldSiegeIndex = 0` (aldea del jugador, **GANADA**) | **0** |
+
+Los 21 del primero fueron: **8 `stone_bricks`** (el anillo de prueba), **4 `smooth_quartz`**, **4 `dark_oak_log`**,
+**2 `bricks`**, **2 `oak_log`** y **1 `dark_oak_door`** — o sea, además del cerco, **la obra del pueblo por dentro**
+(una casa, con su puerta): es exactamente el *"pueden romper todo lo necesario"* del asedio inicial. El de la aldea
+ganada **no picó ni uno** ✓. Y la línea de log los distingue: `un asaltante de la aldea -1 pica …`.
+
+**Pendiente**: el comportamiento **en juego** (el arnés mide asaltantes puestos a mano, no una oleada de verdad: el
+reloj del asedio necesita un jugador real, ver I86), que lo verá el jugador.
 
 ### I90 · El cráter de un creeper también se tapa: el AGUJERO DEL SUELO
 
