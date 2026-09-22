@@ -119,9 +119,9 @@ public class VillagerFarmGoal extends Goal {
      * jugador: "que abone todo el plantío, no nada más una planta"), así que ahora carga una tanda de 16 y las gasta
      * seguidas por toda la parcela.
      */
-    private static final int HARINA_MAX = 16;
+    private static final int HARINA_MAX = 64;
     /** Plantas que abona como mucho en una misma salida (para no echar la tarde abonando sin llevar nada al cofre). */
-    private static final int ABONAR_MAX = 32;
+    private static final int ABONAR_MAX = 64;
     /** Cuánto puede traerse del almacén a la despensa en una visita (comida, semillas y abono del recolector). */
     private static final int TRAER_DEL_ALMACEN = 64;
     /**
@@ -168,6 +168,10 @@ public class VillagerFarmGoal extends Goal {
     private static final Tarea[] FAENAS_DE_LA_TIERRA = {Tarea.COSECHAR, Tarea.LABRAR, Tarea.PLANTAR};
     /** Turno del granjero entre las tres faenas de la tierra (ver {@code canUse}). */
     private int turnoDeFaena;
+    /** Cosechas seguidas antes de atender la tierra (sembrar/labrar): ver {@link #COSECHAS_POR_TIERRA}. */
+    private int cosechasSeguidas;
+    /** Cuántas cosechas seguidas antes de una faena de tierra. */
+    private static final int COSECHAS_POR_TIERRA = 2;
     /**
      * <b>El bancal de ESTE granjero</b> (índice en {@code FARM_PLOTS}), o {@code -1} si todavía no se ha calculado en
      * esta salida. Sale de su <b>puesto de trabajo</b> (el compostero de su bancal: ver {@link #miParcela}).

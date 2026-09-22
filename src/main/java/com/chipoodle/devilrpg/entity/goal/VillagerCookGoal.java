@@ -431,7 +431,9 @@ public class VillagerCookGoal extends Goal {
                 while (cocinadas < COCINAR_MAX
                         && VillagePantry.sacar(almacen, s -> s.is(Items.EGG), 1) == 1) {
                     ItemStack hecha = VillagePantry.cocinar(new ItemStack(Items.EGG, 1));
-                    if (hecha.isEmpty() || !VillageStorage.guardar(level, center, hecha).isEmpty()) {
+                    // LAS TORTILLAS VAN A LA DESPENSA (lo aclaró el jugador: *"los huevos fritos se pueden quedar en la
+                    // despensa, pues es su lugar para guardar"*): del almacén solo sale el huevo CRUDO.
+                    if (hecha.isEmpty() || !VillagePantry.guardar(despensa, hecha).isEmpty()) {
                         VillageStorage.guardar(level, center, new ItemStack(Items.EGG, 1)); // no cabe: se devuelve crudo
                         break;
                     }

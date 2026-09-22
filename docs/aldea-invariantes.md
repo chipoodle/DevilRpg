@@ -1903,6 +1903,25 @@ así que además de lo de la despensa llena hay que darle tiempo al **cocinero n
 el herrero por hueco (`Hizo 4 flechas`), la milicia alternando (`se alista… espadachin` + `cambia de puesto… arquero`)
 y el sello rechazando spawns.
 
+### I84 · Los huevos fritos a la DESPENSA, más abono, y la tierra se atiende cada dos cosechas
+
+Tres cosas del jugador: *"no, los huevos fritos se pueden quedar en la despensa, pues es su lugar para guardar. Más
+bien haz que los granjeros saquen las semillas para que usen como composta y que fertilicen más, y que recojan más
+cosecha porque todavía hay campos que no se ocupan al 100%"*.
+
+**1) LAS TORTILLAS, A LA DESPENSA.** En I83 el cocinero dejaba los huevos estrellados en el **almacén**; el jugador
+lo corrigió: la despensa es **su sitio**. Ahora del almacén solo sale el huevo **crudo** (que es donde lo deja el
+ganadero) y el huevo estrellado se guarda **en la despensa**, con la comida del pueblo.
+
+**2) MÁS ABONO.** La harina de huesos que se lleva por viaje sube de **16 a 64** (`HARINA_MAX`) y las plantas que
+abona por salida, de **32 a 64** (`ABONAR_MAX`): el compostero (que ya se llena con 64 semillas por viaje, I71) se
+convierte en abono de verdad y el plantío se abona a fondo, que es lo que acelera la cosecha.
+
+**3) LA TIERRA, CADA DOS COSECHAS.** El jugador ve **celdas sin sembrar**. La causa era I72: al mandar la cosecha
+siempre, el paso de **sembrar/labrar** no llegaba a correr y las celdas que se quedan vacías (alguien las pisa, o las
+cosecha el juego sin replantar) seguían vacías. Ahora el granjero cosecha **dos veces** y a la tercera atiende la
+tierra (`COSECHAS_POR_TIERRA = 2`): se cosecha rápido **y** se siembra lo que falta.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
