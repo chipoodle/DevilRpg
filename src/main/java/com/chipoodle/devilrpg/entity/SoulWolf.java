@@ -84,7 +84,7 @@ public class SoulWolf extends Wolf implements ITamableEntity, ISoulEntity, Power
         this.targetSelector.addGoal(2, new OwnerHurtTargetGoal(this));
         this.targetSelector.addGoal(3, (new HurtByTargetGoal(this)).setAlertOthers());
         //this.targetSelector.addGoal(5, new NearestAttackableTargetGoal<>(this, MobEntity.class, false));
-        this.targetSelector.addGoal(5, new NearestAttackableTargetGoal<>(this, Mob.class, 10, false, true, (entity) -> !ITamableEntity.esCriaturaPacificaONeutral(entity) &&
+        this.targetSelector.addGoal(5, new NearestAttackableTargetGoal<>(this, Mob.class, 10, false, true, (entity) -> (!ITamableEntity.esCriaturaPacificaONeutral(entity) || ITamableEntity.elDuenoLeEstaAtacando(this.getOwner(), entity)) &&
                 !(entity instanceof Villager) &&
                         !(entity instanceof Llama) &&
                         !(entity instanceof Turtle) &&
