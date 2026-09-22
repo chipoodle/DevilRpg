@@ -122,6 +122,50 @@ public class CommonForgeInteractionEventSubscriber {
     }
 
 
+    /**
+     * <b>EL DIARIO DEL INVOCADO SE ABRE COMO UN LIBRO.</b> Es un libro escrito de los del juego, así que la interfaz
+     * de libro la abre vanilla solo; lo que se hace aquí, <b>antes</b> de que la abra, es <b>reescribir sus páginas</b>
+     * con lo que el jugador sabe <b>ahora</b> (aldeas descubiertas, estado, distancia y rumbo) y mandar el hueco al
+     * cliente, para que lea lo de este momento y no lo de la última vez.
+     * <p>
+     * Lo pidió el jugador: *"El libro del invocado debe ser un libro que pueda leer, es decir que abra la interfaz de
+     * libro que tiene el juego, no que cuando le dé click aparezca en el chat lo que dice; eso no se ve natural"*.
+     */
+    @SubscribeEvent
+    public static void onAbrirElDiario(PlayerInteractEvent.RightClickItem event) {
+        if (!(event.getEntity() instanceof net.minecraft.server.level.ServerPlayer player)) {
+            return;
+        }
+        net.minecraft.world.item.ItemStack stack = event.getItemStack();
+        if (!com.chipoodle.devilrpg.item.DiarioDelInvocado.esElDiario(stack)) {
+            return;
+        }
+        com.chipoodle.devilrpg.item.DiarioDelInvocado.actualizar(stack, player);
+        com.chipoodle.devilrpg.item.DiarioDelInvocado.sincronizarLaMano(player);
+        com.chipoodle.devilrpg.item.DiarioDelInvocado.registrarLaConsulta(player);
+    }
+
+    /**
+     * <b>HABLAR CON EL CLÉRIGO</b>: al hacer clic derecho en un clérigo de un pueblo del mod, le señala hacia dónde
+     * cae la aldea que le toca y le <b>enciende la barra de aldea</b> con su distancia.
+     * <p>
+     * Es el <b>único</b> camino que revela la siguiente desde que se ganó el asedio (lo pidió el jugador: *"SOLO cuando
+     * se hable con el clérigo es cuando ya aparezca en los objetivos hacia dónde está la aldea y su distancia"*). El
+     * comercio del aldeano sigue funcionando igual: esto solo añade la charla.
+     */
+    @SubscribeEvent
+    public static void onHablarConElClerigo(PlayerInteractEvent.EntityInteract event) {
+        if (!(event.getTarget() instanceof net.minecraft.world.entity.npc.Villager clerigo)
+                || !(event.getEntity() instanceof net.minecraft.server.level.ServerPlayer player)) {
+            return;
+        }
+        if (clerigo.getVillagerData().getProfession() != net.minecraft.world.entity.npc.VillagerProfession.CLERIC
+                || !com.chipoodle.devilrpg.world.VillageManager.esDelPueblo(clerigo)) {
+            return; // solo los clérigos de NUESTROS pueblos saben de las aldeas del mod
+        }
+        com.chipoodle.devilrpg.world.VillageManager.elClerigoSenalaLaAldeaActual(player.serverLevel(), clerigo, player);
+    }
+
     @SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
     public static void onLeftClickBlock(PlayerInteractEvent.LeftClickBlock event) {
         BiConsumer<PlayerInteractEvent.LeftClickBlock, PlayerAuxiliaryCapabilityInterface> c = (eve, aux) -> {

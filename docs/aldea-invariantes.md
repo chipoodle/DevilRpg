@@ -2059,18 +2059,24 @@ regresar"*):
 3. **Descubrir = ENTRAR** (radio de llegada, {@code ARRIVE_RADIUS} = 24), no verla de lejos: al entrar se apunta en la
    capability (`aldeasVisitadas`, por jugador y sincronizada), sale el aviso *"Has llegado a …"* y queda con nombre en
    la barra y en el Diario.
-4. **Quién revela la dirección** (`aldeasReveladas`): la **piedra de invocación** (objetivo actual; es el "inicio de la
-   misión" y además el **seguro contra perderse**, porque hay que volver al círculo ritual — a cientos de bloques) y,
-   como camino normal, **el clérigo** de la aldea que **vence su asedio**: lo dice **con su nombre** (*"El clérigo
-   Dorotea: los clérigos sentimos otra aldea hacia el noreste…"*) y a partir de ahí la barra ya guía.
+4. **Quién revela la dirección** (`aldeasReveladas`): **hablar con el clérigo** de un pueblo del mod (clic derecho;
+   dice *"El clérigo Dorotea: los clérigos sentimos una aldea hacia el noreste, a unos 1.234 pasos"*) y la **piedra de
+   invocación** (objetivo actual; es el "inicio de la misión" y el **seguro contra perderse**, porque hay que volver al
+   círculo ritual). **Ganar el asedio NO revela nada**: al vencer solo se anuncia el **nombre** de la aldea salvada y se
+   pone al día el libro. Lo pidió el jugador: *"cuando se gane el asedio aparezca el nombre de la aldea y se actualice
+   el libro del invocado, pero SOLO cuando se hable con el clérigo es cuando ya aparezca en los objetivos hacia dónde
+   está la aldea y su distancia como actualmente está"*. (Antes lo revelaba el clérigo **solo**, al ganar; se cambió.)
 5. **Si la aldea CAE no se revela nada**: ni barra ni distancia, solo el aviso en el chat con el **rumbo**
    (*"…hay otra aldea hacia el noreste… y no sabe cuánto queda"*), y el Diario se actualiza solo cuando la encuentre y
    entre. Es literalmente lo que pidió el jugador.
-6. **Diario del Invocado** (`DiarioDelInvocadoItem`): lo entrega la piedra (y lo vuelve a dar si se pierde; si no cabe,
-   lo suelta a los pies). Al usarlo escribe en el chat, por aldea descubierta: **nombre, coordenadas, estado** (viva sin
-   socorrer / a salvo con el sello / EN RUINAS) y **a cuántos metros y hacia dónde** cae desde donde estás. No se gasta
-   y **no se queda desfasado**: la lista se arma al usarlo (descubrimiento en la capability, estado en
-   {@code VillageSavedData}).
+6. **Diario del Invocado, un LIBRO de verdad** (`DiarioDelInvocado`): lo entrega la piedra (y lo vuelve a dar/actualizar
+   si lo tiene). **No es un objeto del mod: es un libro escrito de los del juego**, así que al abrirlo se abre la
+   **interfaz de libro** normal, con su título (*Diario del Invocado*), su autor (*Los clérigos*) y sus páginas. Lo
+   pidió el jugador: *"debe ser un libro que pueda leer… no que cuando le dé click aparezca en el chat lo que dice; eso
+   no se ve natural"*. Las páginas se **reescriben** al abrirlo (y al salvar una aldea) con lo que el jugador sabe
+   **ahora**: por aldea descubierta, **nombre, coordenadas, estado** (viva / en asedio / a salvo con el sello / EN
+   RUINAS) y **a cuántos metros y hacia dónde** cae. Se reconoce por una **marca en sus datos**, no por el nombre (así
+   renombrarlo no rompe nada), y el contenido sale de un solo sitio: `VillageManager.estadoDeLaAldea`.
 7. **Siembra en partidas ya empezadas**: una aldea que el mundo ya dio por resuelta es una aldea en la que el jugador
    estuvo, así que se le apunta como visitada y revelada **una sola vez** (en cuanto tiene una apuntada, no se vuelve a
    mirar). Sin esto, su partida de siempre nacería con el Diario vacío y la barra sin saber hacia dónde ir.
@@ -2166,6 +2172,32 @@ quien les reparte nombre propio). Sin la marca:
 **Consecuencia a tener en cuenta**: la marca la pone el latido, que corre cada 10 s para las aldeas a menos de 140
 bloques, así que un aldeano recién llegado a un pueblo del mod puede estar unos segundos **sin** etiqueta. Es
 preferible eso a etiquetar a quien no es del pueblo.
+
+### I89 · La MURALLA sí se rompe; lo de dentro de la aldea no
+
+El jugador, viendo un asedio parado en la puerta: *"no entiendo por qué los zombies del asedio inicial no entran a la
+aldea, ¿no tratan de llegar al centro? ¿no rompen la barda para entrar?"*. **Tenían razón: no podían.** Dos reglas se
+sumaban:
+
+- `MoveToVillageCenterGoal` (la marcha al centro) **se apaga en cuanto el asediador tiene un objetivo** al que atacar
+  (`getTarget() != null → false`), y dentro de una aldea siempre hay algo a la vista (guardias, aldeanos, el golem), así
+  que se quedaban plantados fuera.
+- Y romper, no rompían **nada**: `dentroDeLaAldea` vetaba picar en todo el disco de `FENCE_RADIUS + 2` (64) y **la
+  muralla está en el radio de la valla (62)**. El comentario del código lo decía: *"El muro, las casas, la huerta y el
+  kiosco están todos dentro de ese disco"*.
+
+**Regla**: el veto protege **la obra del pueblo** (casas, plaza, huerta, kiosco), pero hay una **banda** —el anillo de
+la valla, `MURALLA_ANCHO` = 5 bloques hacia dentro y hacia fuera, y de la cota hacia arriba (`MURALLA_ALTO` = 6), nunca
+hacia abajo— donde **sí se pica**: es la **brecha** por la que entra un asedio. La usan los **dos** caminos que rompen
+bloques (`breakBlockTowards` de la marcha y `BreakBlockGoal`, el que se abre paso hacia un objetivo), con un solo
+ayudante (`protegidoPorLaAldea`), porque **el veto estaba al revés**: de más en la marcha (la muralla) y **de menos** en
+`BreakBlockGoal`, que **no comprobaba nada** y podía picar dentro del pueblo.
+
+Lo que cierra el círculo: la muralla rota **la repara el obrero** (está en el plano, I50/3b.72), así que un asedio
+deja huella y el pueblo la levanta otra vez.
+
+**Pendiente de medir**: el intento con el arnés (`MEDIR_MURO`) no llegó a arrancar —el jugador tenía la partida abierta
+y bloqueados los artefactos del build—, así que la brecha está escrita y compilada, pero **no vista en juego**.
 
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:

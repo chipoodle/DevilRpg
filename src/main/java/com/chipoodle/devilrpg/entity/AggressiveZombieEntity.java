@@ -101,6 +101,23 @@ public class AggressiveZombieEntity extends Zombie {
     /** Radio (a partir del centro) dentro del cual el zombie NO rompe ni construye: solo tiene que LLEGAR al
      *  perímetro. Así no se cava un túnel por debajo de la aldea ni se le destroza nada al pueblo al llegar. */
     private static final double NO_TOCAR_LA_ALDEA = VillageGenerator.FENCE_RADIUS + 2.0D;
+    /**
+     * <b>LA MURALLA SÍ SE ROMPE; LO DE DENTRO NO.</b> Ancho (bloques, hacia dentro y hacia fuera) del <b>anillo de la
+     * valla</b> que los asediadores <b>sí</b> pueden picar, y alto del mismo (de la cota hacia arriba).
+     * <p>
+     * Antes no se podía picar <b>nada</b> dentro de {@link #NO_TOCAR_LA_ALDEA} (el radio de la valla + 2), y la muralla
+     * está justo en el radio de la valla: resultado, un asedio <b>no tenía forma de entrar</b>. Los asediadores veían
+     * a los guardias y a los aldeanos dentro, no podían alcanzarlos y no podían picar, así que se quedaban plantados
+     * fuera y la aldea se salvaba sola. Lo preguntó el jugador: *"no entiendo por qué los zombies del asedio inicial
+     * no entran a la aldea, ¿no tratan de llegar al centro? ¿no rompen la barda para entrar?"*.
+     * <p>
+     * Con esta banda, el asedio <b>abre brecha en la muralla</b> (y el obrero la repara después, I50/3b.72), pero las
+     * casas, la plaza, la huerta y el kiosco —que están bien dentro— siguen intocables, y por debajo de la muralla
+     * tampoco se cava (la banda tiene altura, no profundidad).
+     */
+    private static final int MURALLA_ANCHO = 5;
+    /** Hasta dónde llega la muralla hacia arriba (desde la cota del pueblo): es lo que se puede picar de ella. */
+    private static final int MURALLA_ALTO = 6;
 
     /** Bloques de túnel/puente que le quedan a este zombie en la marcha actual. */
     private int tunelRestante = TUNEL_PRESUPUESTO;
@@ -284,8 +301,8 @@ public class AggressiveZombieEntity extends Zombie {
                 for (int dz = -1; dz <= 1; dz++) {
                     if (dx == 0 && dz == 0) continue;
                     BlockPos candidate = new BlockPos(zPos.getX() + dx, zPos.getY() + dy, zPos.getZ() + dz);
-                    if (dentroDeLaAldea(candidate)) {
-                        continue; // a la aldea no se le cava: solo hay que llegar al perímetro
+                    if (protegidoPorLaAldea(candidate)) {
+                        continue; // a la aldea no se le cava (la MURALLA sí: es la brecha del asedio)
                     }
                     BlockState bs = level().getBlockState(candidate);
                     if (!bs.isAir() && bs.isSolid() && canBreakBlock(bs)) {
@@ -318,7 +335,7 @@ public class AggressiveZombieEntity extends Zombie {
         // Si el objetivo está arriba, destruir también el bloque +2 (arriba del principal) para poder saltar.
         if (targetAbove) {
             BlockPos above = best.above();
-            if (canBreakBlock(level().getBlockState(above)) && !dentroDeLaAldea(above)) {
+            if (canBreakBlock(level().getBlockState(above)) && !protegidoPorLaAldea(above)) {
                 breakBlockAt(above);
             }
         }
@@ -333,13 +350,13 @@ public class AggressiveZombieEntity extends Zombie {
             } else {
                 adjacent = new BlockPos(best.getX() + side, best.getY(), best.getZ());
             }
-            if (canBreakBlock(level().getBlockState(adjacent)) && !dentroDeLaAldea(adjacent)) {
+            if (canBreakBlock(level().getBlockState(adjacent)) && !protegidoPorLaAldea(adjacent)) {
                 breakBlockAt(adjacent);
             }
             // Si objetivo arriba, también el +2 del contiguo.
             if (targetAbove) {
                 BlockPos adjacentAbove = adjacent.above();
-                if (canBreakBlock(level().getBlockState(adjacentAbove)) && !dentroDeLaAldea(adjacentAbove)) {
+                if (canBreakBlock(level().getBlockState(adjacentAbove)) && !protegidoPorLaAldea(adjacentAbove)) {
                     breakBlockAt(adjacentAbove);
                 }
             }
@@ -364,6 +381,35 @@ public class AggressiveZombieEntity extends Zombie {
         double dx = pos.getX() - villageCenter.getX();
         double dz = pos.getZ() - villageCenter.getZ();
         return dx * dx + dz * dz <= NO_TOCAR_LA_ALDEA * NO_TOCAR_LA_ALDEA;
+    }
+
+    /**
+     * ¿Esa posición es de la <b>muralla</b> (el anillo de la valla, a la altura del pueblo)? Ahí <b>sí</b> se pica:
+     * es la brecha por la que entra un asedio. Ver {@link #MURALLA_ANCHO}.
+     */
+    private boolean esLaMuralla(BlockPos pos) {
+        if (villageCenter == null) {
+            return false;
+        }
+        double dx = pos.getX() - villageCenter.getX();
+        double dz = pos.getZ() - villageCenter.getZ();
+        double distSqr = dx * dx + dz * dz;
+        double dentro = VillageGenerator.FENCE_RADIUS - MURALLA_ANCHO;
+        double fuera = VillageGenerator.FENCE_RADIUS + MURALLA_ANCHO;
+        if (distSqr < dentro * dentro || distSqr > fuera * fuera) {
+            return false;
+        }
+        int dy = pos.getY() - villageCenter.getY();
+        return dy >= -1 && dy <= MURALLA_ALTO; // hacia arriba sí; por debajo no se cava
+    }
+
+    /**
+     * ¿Esa posición está <b>protegida</b> por la aldea (no se pica)? Todo lo de dentro menos la muralla. Es la única
+     * regla que usan los dos caminos que rompen bloques (la marcha al centro y el que se abre paso hacia un
+     * objetivo), para que no se pueda colar por un lado lo que se veta por el otro.
+     */
+    private boolean protegidoPorLaAldea(BlockPos pos) {
+        return dentroDeLaAldea(pos) && !esLaMuralla(pos);
     }
 
     /**
@@ -964,6 +1010,9 @@ public class AggressiveZombieEntity extends Zombie {
                 boolean broke = false;
                 for (int dy = 1; dy <= 2; dy++) { // altura de la cabeza y uno más arriba
                     BlockPos p = new BlockPos(px, zPos.getY() + dy, pz);
+                    if (zombie.protegidoPorLaAldea(p)) {
+                        continue; // dentro de la aldea no se pica (salvo la muralla, que es la brecha)
+                    }
                     if (canBreak(zombie.level().getBlockState(p))) {
                         zombie.breakBlockAt(p);
                         broke = true;
@@ -997,6 +1046,9 @@ public class AggressiveZombieEntity extends Zombie {
                     for (int dz = -1; dz <= 1; dz++) {
                         if (dx == 0 && dz == 0) continue;
                         BlockPos candidate = new BlockPos(zPos.getX() + dx, zPos.getY() + dy, zPos.getZ() + dz);
+                        if (zombie.protegidoPorLaAldea(candidate)) {
+                            continue; // la obra del pueblo no se toca (la muralla sí: es la brecha del asedio)
+                        }
                         BlockState bs = zombie.level().getBlockState(candidate);
                         if (!bs.isAir() && bs.isSolid() && canBreak(bs)) {
                             double score = Math.abs(dx - sx) + Math.abs(dz - sz) + dy * 0.5D;

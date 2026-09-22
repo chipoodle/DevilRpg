@@ -68,17 +68,25 @@ public class LoreStoneBlock extends Block {
      * le cabe en el inventario, lo suelta a sus pies: nunca se pierde la herramienta).
      */
     private void entregarElDiario(Player player) {
-        net.minecraft.world.item.ItemStack diario =
-                new net.minecraft.world.item.ItemStack(com.chipoodle.devilrpg.init.ModItems.DIARIO_DEL_INVOCADO.get());
-        if (player.getInventory().contains(diario)) {
+        if (!(player instanceof net.minecraft.server.level.ServerPlayer serverPlayer)) {
             return;
         }
+        // Un LIBRO escrito de los del juego (se abre con la interfaz de libro). Se busca por su marca, no por el
+        // nombre, para que renombrarlo no haga que la piedra te dé otro.
+        for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+            if (com.chipoodle.devilrpg.item.DiarioDelInvocado.esElDiario(player.getInventory().getItem(i))) {
+                com.chipoodle.devilrpg.item.DiarioDelInvocado.actualizar(player.getInventory().getItem(i), serverPlayer);
+                player.inventoryMenu.broadcastChanges();
+                return;
+            }
+        }
+        net.minecraft.world.item.ItemStack diario = com.chipoodle.devilrpg.item.DiarioDelInvocado.crear(serverPlayer);
         if (!player.getInventory().add(diario)) {
             player.drop(diario, false);
         }
         player.displayClientMessage(Component.literal(
-                "La piedra te entrega un cuaderno ajado: el Diario del Invocado. Úsalo para ver las aldeas que"
-                        + " descubras, con sus coordenadas y su suerte."), false);
+                "La piedra te entrega un cuaderno ajado: el Diario del Invocado. Ábrelo como un libro para ver las"
+                        + " aldeas que descubras, con sus coordenadas y su suerte."), false);
     }
 
     /**

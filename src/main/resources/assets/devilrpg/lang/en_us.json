@@ -1,7 +1,5 @@
 {
     "item.devilrpg.huevo_estrellado": "Fried Egg",
-    "item.devilrpg.diario_del_invocado": "Diary of the Summoned",
-    "tooltip.item.devilrpg.diario_del_invocado": "The villages you have entered, with their name, their coordinates and their fate.",
     "itemGroup.devilrpg": "Devil RPG",
     "key.categories.devilrpg": "Devil RPG power buttons",
     "entity.devilrpg.soul_wolf": "Soul Wolf",

@@ -124,6 +124,15 @@ public class GuardHarness {
      * arrancar el asedio y con eso los 11 aldeanos se mantienen.
      */
     private static final boolean MEDIR_ASEDIO_VIVO = false;
+    /**
+     * ¿Se mide EL ASALTO A LA MURALLA (I89)? Pone <b>un asaltante de verdad</b> fuera de la muralla (radio 66, con el
+     * centro de la aldea y SIN objetivo: así corre la <b>marcha</b>, que es la que taladra) y va volcando la línea de
+     * bloques entre él y la muralla (radios 66..56) para ver si <b>abre brecha</b>.
+     * <p>
+     * Lo que se busca en el log: `[Siege] un zombie empieza a TALADRAR hacia la aldea en … (presupuesto 40 bloques)`
+     * y que en la línea aparezca <b>aire</b> donde había muralla. Y de paso que <b>no</b> toque nada de dentro.
+     */
+    private static final boolean MEDIR_MURO = false;
     /** Dónde se planta el bicho (relativo a la plaza): dentro del recinto (radio 62) y a la altura del pueblo. */
     private static final BlockPos BICHO_EN = new BlockPos(6, 0, 6);
     private static boolean listo = false;
@@ -170,7 +179,7 @@ public class GuardHarness {
         // OJO: en la medida de LA MILICIA **no se barre**, porque los bichos que hay dentro son los que se acaban de
         // sembrar para que la guardia pelee (medido: con el barrido, el zombi desaparecia en el mismo segundo, la
         // guardia se quedaba con la etiqueta "Atacando" un instante y volvia a su ronda, y no habia ni una muerte).
-        if (ticks % 20 == 0 && !MEDIR_MILICIA) {
+        if (ticks % 20 == 0 && !MEDIR_MILICIA && !MEDIR_MURO) {
             if (BICHO_DENTRO) {
                 // ...pero para medir EL BUG DEL LATIDO CORTADO hay que dejar UNO dentro a proposito.
                 mantenerBichoDentro(level);
@@ -211,6 +220,8 @@ public class GuardHarness {
             }
         } else if (MEDIR_ASEDIO_VIVO) {
             medirElAsedioVivo(level, pega);
+        } else if (MEDIR_MURO) {
+            medirElAsaltoAlMuro(level, pega);
         } else if (MEDIR_COCINA) {
             // LA COCINA, cada 2 s: donde esta el cocinero, si VE el ahumador y si tiene ruta a su casilla.
             if (ticks == 400) {
@@ -685,23 +696,11 @@ public class GuardHarness {
                     com.chipoodle.devilrpg.survival.VillageNames.nombre(i));
         }
 
-        // 1) EL CLERIGO AL VENCER EL ASEDIO de la aldea 2: tiene que revelar la 3 y hablar con nombre propio.
+        // 1) EL CLERIGO YA NO REVELA AL VENCER: ahora eso es al HABLAR con él (ver `probarElLibroYElClerigo`, que lo
+        // mide con el método nuevo `VillageManager.elClerigoSenalaLaAldeaActual`). Aquí solo se deja constancia.
         aux.setObjectiveIndex(3, pega);
-        DevilRpg.LOGGER.info("[Arnes] CLERIGO antes: revelada(3)={}", aux.isAldeaRevelada(3));
-        try {
-            VillageManager.elClerigoSenalaLaSiguiente(level, INDICE, CENTRO, pega);
-        } catch (Exception e) {
-            DevilRpg.LOGGER.warn("[Arnes] CLERIGO: el aviso al jugador de pega fallo ({})", e.toString());
-        }
-        DevilRpg.LOGGER.info("[Arnes] CLERIGO despues: revelada(3)={} barra=\"{}\"", aux.isAldeaRevelada(3),
-                com.chipoodle.devilrpg.survival.VillageBarText.texto(3, aux.isAldeaVisitada(3),
-                        aux.isAldeaRevelada(3), 1234, "->"));
-        try {
-            VillageManager.elClerigoSenalaLaSiguiente(level, INDICE, CENTRO, pega);
-        } catch (Exception e) {
-            DevilRpg.LOGGER.warn("[Arnes] CLERIGO (2a vez): {}", e.toString());
-        }
-        DevilRpg.LOGGER.info("[Arnes] CLERIGO otra vez: revelada(3)={} (idempotente)", aux.isAldeaRevelada(3));
+        DevilRpg.LOGGER.info("[Arnes] CLERIGO: al vencer un asedio ya NO se revela nada (revelada(3)={}); la"
+                + " direccion la da HABLAR con el clerigo", aux.isAldeaRevelada(3));
 
         // 2) LA PIEDRA DE INVOCACION, con un objetivo que no venga revelado (el 5).
         aux.setObjectiveIndex(5, pega);
@@ -803,6 +802,99 @@ public class GuardHarness {
         }
     }
 
+    /** El asaltante de la medida del muro y la última línea que se ha volcado (para no repetir). */
+    private static com.chipoodle.devilrpg.entity.AggressiveZombieEntity asaltante = null;
+    private static String ultimaLineaDelMuro = "";
+
+    /** EL ASALTO A LA MURALLA (I89): ver {@link #MEDIR_MURO}. */
+    private static void medirElAsaltoAlMuro(ServerLevel level, FakePlayer pega) {
+        if (ticks == 300) {
+            int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+            asaltante = com.chipoodle.devilrpg.init.ModEntities.AGGRESSIVE_ZOMBIE.get().create(level);
+            if (asaltante != null) {
+                asaltante.moveTo(CENTRO.getX() + 66.5D, cota, CENTRO.getZ() + 0.5D, 0.0F, 0.0F);
+                asaltante.setVillageCenter(new BlockPos(CENTRO.getX(), cota, CENTRO.getZ()));
+                asaltante.setGoToCenterActive(true);
+                asaltante.recargarTunel();
+                level.addFreshEntity(asaltante);
+                DevilRpg.LOGGER.info("[Arnes] MURO: asaltante puesto en {} (cota {}), SIN objetivo, marchando al"
+                                + " centro de la aldea {}", asaltante.blockPosition(), cota, CENTRO);
+            }
+        }
+        if (asaltante == null || !asaltante.isAlive()) {
+            return;
+        }
+        // El asaltante no debe quedarse a matar: solo tiene que marchar (sin objetivo).
+        asaltante.setTarget(null);
+        if (ticks % 60 == 0) {
+            StringBuilder sb = new StringBuilder();
+            for (int r = 68; r >= 54; r--) {
+                BlockPos p = new BlockPos(CENTRO.getX() + r, asaltante.blockPosition().getY(), CENTRO.getZ());
+                var bs = level.getBlockState(p);
+                String nombre = net.minecraft.core.registries.BuiltInRegistries.BLOCK
+                        .getKey(bs.getBlock()).getPath();
+                sb.append(r).append(':').append(nombre.equals("air") ? "." : nombre).append(' ');
+            }
+            String linea = sb.toString();
+            if (!linea.equals(ultimaLineaDelMuro)) {
+                ultimaLineaDelMuro = linea;
+                DevilRpg.LOGGER.info("[Arnes] MURO t={} asaltante={} linea(r=68..54): {}", ticks,
+                        asaltante.blockPosition(), linea);
+            }
+        }
+    }
+
+    /**
+     * EL DIARIO COMO LIBRO y LA CHARLA CON EL CLÉRIGO (ronda del 22-sep-2026): monta el libro tal cual se le entrega
+     * al jugador (título, autor y páginas) y comprueba que <b>hablar con un clérigo del pueblo</b> le enciende la
+     * aldea que le toca — que es lo que pidió el jugador: *"SOLO cuando se hable con el clérigo es cuando ya aparezca
+     * en los objetivos hacia dónde está la aldea y su distancia"*.
+     */
+    private static void probarElLibroYElClerigo(ServerLevel level, FakePlayer pega,
+            com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface aux) {
+        var libro = com.chipoodle.devilrpg.item.DiarioDelInvocado.crear(pega);
+        var contenido = libro.get(net.minecraft.core.component.DataComponents.WRITTEN_BOOK_CONTENT);
+        DevilRpg.LOGGER.info("[Arnes] LIBRO: esElDiario={} titulo=\"{}\" autor=\"{}\" paginas={}",
+                com.chipoodle.devilrpg.item.DiarioDelInvocado.esElDiario(libro),
+                contenido == null ? "-" : contenido.title().get(false),
+                contenido == null ? "-" : contenido.author(),
+                contenido == null ? 0 : contenido.pages().size());
+        if (contenido != null) {
+            var paginas = contenido.getPages(false);
+            for (int p = 0; p < paginas.size(); p++) {
+                DevilRpg.LOGGER.info("[Arnes] LIBRO pagina {}: {}", p + 1,
+                        paginas.get(p).getString().replace("\n", " | "));
+            }
+        }
+        var clerigos = level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(96.0D),
+                v -> v.isAlive()
+                        && v.getVillagerData().getProfession()
+                                == net.minecraft.world.entity.npc.VillagerProfession.CLERIC
+                        && VillageManager.esDelPueblo(v));
+        DevilRpg.LOGGER.info("[Arnes] CLERIGO-CHARLA: {} clerigo(s) del pueblo encontrados", clerigos.size());
+        if (clerigos.isEmpty() || aux == null) {
+            return;
+        }
+        aux.setObjectiveIndex(7, pega); // un objetivo que no venga revelado por la siembra
+        DevilRpg.LOGGER.info("[Arnes] CLERIGO-CHARLA antes: indice={} revelada(7)={}", aux.getObjectiveIndex(),
+                aux.isAldeaRevelada(7));
+        try {
+            VillageManager.elClerigoSenalaLaAldeaActual(level, clerigos.get(0), pega);
+        } catch (Exception e) {
+            DevilRpg.LOGGER.warn("[Arnes] CLERIGO-CHARLA fallo: {}", e.toString());
+        }
+        DevilRpg.LOGGER.info("[Arnes] CLERIGO-CHARLA despues: revelada(7)={} (tiene que ser true)",
+                aux.isAldeaRevelada(7));
+        try {
+            VillageManager.elClerigoSenalaLaAldeaActual(level, clerigos.get(0), pega);
+        } catch (Exception e) {
+            DevilRpg.LOGGER.warn("[Arnes] CLERIGO-CHARLA (2a vez): {}", e.toString());
+        }
+        DevilRpg.LOGGER.info("[Arnes] CLERIGO-CHARLA otra vez: revelada(7)={} (sigue true, no se repite el aviso)",
+                aux.isAldeaRevelada(7));
+        aux.setObjectiveIndex(0, pega);
+    }
+
     /** Ticks que lleva la ola a la vista (para limpiarla a los 10 s) y dónde está la aldea del asedio. */
     private static int ticksDeOlaVista = 0;
     private static BlockPos centroDelAsedio = null;
@@ -890,6 +982,7 @@ public class GuardHarness {
             escenarioDeReveladosHecho = true;
             probarLosRevelados(level, pega, aux);
             probarLasEtiquetas(level, pega);
+            probarElLibroYElClerigo(level, pega, aux);
         }
         for (int i = 0; i <= indice; i++) {
             DevilRpg.LOGGER.info("[Arnes] ALDEA {} nombre=\"{}\" visitada={} revelada={} centro={} estado=\"{}\"",
@@ -913,7 +1006,7 @@ public class GuardHarness {
         DevilRpg.LOGGER.info("[Arnes] RUMBO a la aldea {}: {}", indice + 1,
                 com.chipoodle.devilrpg.survival.ObjectiveTargets.direccionHacia(CENTRO, siguiente));
         for (net.minecraft.network.chat.Component linea
-                : com.chipoodle.devilrpg.item.DiarioDelInvocadoItem.lineasDelDiario(level, pega)) {
+                : com.chipoodle.devilrpg.item.DiarioDelInvocado.lineas(pega)) {
             DevilRpg.LOGGER.info("[Arnes] DIARIO: {}", linea.getString());
         }
     }

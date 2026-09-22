@@ -1340,10 +1340,12 @@ public final class VillageManager {
                         }
                         if (isCurrentObjective) {
                             if (!cayo) {
-                                // LA ALDEA SE SALVÓ: el clérigo señala la siguiente (lo pidió el jugador: *"si una
-                                // aldea vence el asedio inicial, el clérigo puede activar la dirección del siguiente
-                                // objetivo"*). Hasta este momento la barra de aldea no enseñaba dirección ninguna.
-                                elClerigoSenalaLaSiguiente(level, d.objectiveIndex, d.center, player);
+                                // LA ALDEA SE SALVÓ: se anuncia su NOMBRE y se pone al día el Diario del Invocado. La
+                                // DIRECCIÓN de la siguiente NO se revela aquí: eso es al HABLAR con el clérigo, que es
+                                // lo que pidió el jugador —*"cuando se gane el asedio aparezca el nombre de la aldea y
+                                // se actualice el libro del invocado, pero SOLO cuando se hable con el clérigo es
+                                // cuando ya aparezca en los objetivos hacia dónde está la aldea y su distancia"*—.
+                                anunciarLaAldeaSalvada(player, d.objectiveIndex);
                             }
                             aux.setObjectiveIndex(d.objectiveIndex + 1, player);
                         }
@@ -5085,38 +5087,60 @@ public final class VillageManager {
     }
 
     /**
-     * <b>El clérigo señala la aldea siguiente</b>: cuando una aldea <b>vence su asedio</b>, uno de sus clérigos le
-     * revela al jugador hacia dónde cae la próxima — y a partir de ahí la barra de aldea ya le enseña la dirección
-     * (primero sin nombre; el nombre llega al entrar en ella).
-     * <p>
-     * Lo pidió el jugador: *"si una aldea vence el asedio inicial, el clérigo puede activar la dirección del siguiente
-     * objetivo"*. Lo dice un clérigo <b>de verdad</b> del pueblo (con su nombre: "El clérigo Dorotea: …") si queda
-     * alguno vivo; si no, habla "Los clérigos" en general, que la noticia tiene que llegar igual.
+     * <b>Al salvarse una aldea se anuncia su NOMBRE</b> (y el Diario del Invocado se pone al día). La <b>dirección</b>
+     * de la siguiente <b>NO</b> se revela aquí: eso es al <b>hablar con el clérigo</b>
+     * ({@link #elClerigoSenalaLaAldeaActual}). Lo pidió el jugador: *"cuando se gane el asedio aparezca el nombre de
+     * la aldea y se actualice el libro del invocado, pero SOLO cuando se hable con el clérigo es cuando ya aparezca en
+     * los objetivos hacia dónde está la aldea y su distancia como actualmente está"*.
      */
-    public static void elClerigoSenalaLaSiguiente(ServerLevel level, int objectiveIndex, BlockPos center,
-                                                  ServerPlayer player) {
+    private static void anunciarLaAldeaSalvada(ServerPlayer player, int objectiveIndex) {
+        String nombre = VillageNames.nombre(objectiveIndex);
+        player.displayClientMessage(Component.literal("Has salvado " + nombre + ". Los clérigos hablan de otra aldea:"
+                + " háblale al clérigo del pueblo y te encenderá el camino."), false);
+        com.chipoodle.devilrpg.item.DiarioDelInvocado.actualizarSiLoTiene(player);
+        DevilRpg.LOGGER.info("[Village] Aldea {} ({}) salvada: se anuncia su nombre y se pone al dia el Diario; la"
+                + " direccion de la siguiente, solo al hablar con el clerigo", objectiveIndex, nombre);
+    }
+
+    /**
+     * <b>Hablar con el clérigo</b>: le señala al jugador hacia dónde cae <b>la aldea que le toca</b> (la actual) y le
+     * <b>enciende la barra de aldea</b> con su distancia. Es el <b>único</b> camino que revela la siguiente, y vale
+     * cualquier clérigo de cualquier pueblo del mod (los clérigos son la orden que invocó al jugador, así que todos
+     * saben lo mismo).
+     * <p>
+     * Si ya se la habían señalado, lo dice con otras palabras y no repite el aviso.
+     */
+    public static void elClerigoSenalaLaAldeaActual(ServerLevel level, Villager clerigo, ServerPlayer player) {
         PlayerAuxiliaryCapabilityInterface aux =
                 IGenericCapability.getUnwrappedPlayerCapability(player, PlayerAuxiliaryCapability.INSTANCE);
         if (aux == null) {
             return;
         }
-        int siguiente = objectiveIndex + 1;
-        if (aux.isAldeaRevelada(siguiente)) {
-            return; // ya la sabía (o ya la había visitado): no se repite
+        Vec3 ancla = aux.getAnchorPoint();
+        if (ancla == null) {
+            ancla = aux.getSpawnPoint();
         }
-        aux.revelarAldea(siguiente, player);
-        String hacia = rumboALaSiguiente(objectiveIndex, center, aux);
-        String quien = "Los clérigos";
-        List<Villager> clerigos = level.getEntitiesOfClass(Villager.class,
-                new AABB(center).inflate(VillageGenerator.FENCE_RADIUS),
-                v -> v.isAlive() && v.getVillagerData().getProfession() == VillagerProfession.CLERIC);
-        if (!clerigos.isEmpty()) {
-            quien = "El clérigo " + nombreDe(clerigos.get(0));
+        if (ancla == null) {
+            return;
         }
-        player.displayClientMessage(Component.literal(quien + ": \"Los clérigos sentimos otra aldea hacia el "
-                + hacia + ". La barra de aldea ya te guía hasta ella; camina con la runa encendida.\""), false);
-        DevilRpg.LOGGER.info("[Village] Aldea {} salvada: revelada la aldea {} a {} (hacia el {})",
-                objectiveIndex, siguiente, player.getName().getString(), hacia);
+        int objetivo = aux.getObjectiveIndex();
+        BlockPos destino = ObjectiveTargets.targetOf(ancla, objetivo);
+        String hacia = ObjectiveTargets.direccionHacia(player.blockPosition(), destino);
+        double dx = destino.getX() + 0.5D - player.getX();
+        double dz = destino.getZ() + 0.5D - player.getZ();
+        int metros = (int) Math.sqrt(dx * dx + dz * dz);
+        String quien = "El clérigo " + nombreDe(clerigo);
+        if (aux.isAldeaRevelada(objetivo) || aux.isAldeaVisitada(objetivo)) {
+            player.displayClientMessage(Component.literal(quien + ": \"Ya te lo dije: la aldea cae hacia el " + hacia
+                    + ", a unos " + metros + " pasos. La barra de aldea te guía.\""), false);
+            return;
+        }
+        aux.revelarAldea(objetivo, player);
+        player.displayClientMessage(Component.literal(quien + ": \"Los clérigos sentimos una aldea hacia el " + hacia
+                + ", a unos " + metros + " pasos de aquí. Mira arriba: la barra de aldea ya te guía; camina con la runa"
+                + " encendida.\""), false);
+        DevilRpg.LOGGER.info("[Village] El clerigo {} señala la aldea {} a {} (hacia el {}, {} m)", nombreDe(clerigo),
+                objetivo, player.getName().getString(), hacia, metros);
     }
 
     /**

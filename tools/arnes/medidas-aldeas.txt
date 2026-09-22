@@ -180,6 +180,25 @@ Corridas: 3 (22-sep-2026 00:09, 00:33 y 00:44). La 3a anade el escenario de los 
   (Sin forzarlos, la conclusion "no hay ola" habria sido falsa: la causa era el reloj en pausa, no los
   chunks — se comprobo repitiendo con los chunks forzados.)
 
+--- 1d) EL DIARIO COMO LIBRO Y LA CHARLA CON EL CLERIGO (ronda del 22-sep) -------------
+
+[Arnes] CLERIGO: al vencer un asedio ya NO se revela nada (revelada(3)=false); la direccion la da HABLAR con el clerigo
+[Arnes] LIBRO: esElDiario=true titulo="Diario del Invocado" autor="Los clerigos" paginas=1
+[Arnes] LIBRO pagina 1: Aldeas que has descubierto: | Aldea de Valleverde | (566, 566) - a salvo, con el sello puesto - a 1199 m hacia el noreste | Aldea de Raiz Profunda | (990, 990) - EN RUINAS - a 599 m hacia el noreste | Aldea de Robledal | (1414, 1414) - a salvo, con el sello puesto - a 0 m hacia el sur | (3 aldea(s); la barra de aldea te guia a la que toca) |
+[Arnes] CLERIGO-CHARLA: 1 clerigo(s) del pueblo encontrados
+[Arnes] CLERIGO-CHARLA antes:    indice=7 revelada(7)=false
+[Arnes] CLERIGO-CHARLA despues:  revelada(7)=true (tiene que ser true)
+[Arnes] CLERIGO-CHARLA otra vez: revelada(7)=true (sigue true, no se repite el aviso)
+
+  Lo que dice: el Diario se monta como LIBRO ESCRITO (titulo, autor y paginas) con las aldeas dentro, y la
+  direccion de la siguiente SOLO se revela al HABLAR con el clerigo (hablar = el mismo metodo que corre el
+  clic derecho: `VillageManager.elClerigoSenalaLaAldeaActual`). El camino del asedio ya no revela nada.
+  NO se puede medir headless lo unico que queda: la PANTALLA del libro (es del cliente).
+
+  Y LA MURALLA (I89), PENDIENTE: el modo `MEDIR_MURO` esta escrito en el arnes (pone un asaltante fuera, sin
+  objetivo, y vuelca la linea de bloques 68..54 para ver la brecha) pero NO se llego a medir: la partida del
+  jugador estaba abierta y `createMinecraftArtifacts` fallo por los artefactos bloqueados. Queda por ver.
+
 --- 9) ERRORES ------------------------------------------------------------------------
 
 Ninguno: cero `Exception` / `ERROR` en las tres corridas.

@@ -3336,6 +3336,40 @@ jugador — `runServer` compila por su cuenta, así que si el arnés no compila 
 arnés) la tarea falla pero el servidor arranca **con las clases a medias** y revienta con
 `ClassNotFoundException: VillageManager$VillageDefense`. Queda avisado en `tools/arnes/LEEME.md`.
 
+### 3b.83 El asedio que no sabía entrar: la muralla se rompe, lo de dentro no
+
+El jugador, viendo el asedio parado en la puerta: *"no entiendo por qué los zombies del asedio inicial no entran a la
+aldea, ¿no tratan de llegar al centro? ¿no rompen la barda para entrar?"*. **Tenían razón: no podían.**
+
+**Causa** (dos reglas que se suman): la marcha al centro se apaga en cuanto el asediador ve un objetivo al que atacar
+(y dentro siempre hay algo), y el veto de `dentroDeLaAldea` —todo el disco de la valla + 2— **incluía la muralla**, así
+que no había nada que picar. Resultado: los asediadores plantados fuera y la aldea salvada por el reloj.
+
+**HECHO** (I89): hay una **banda de muralla** (el anillo de la valla, ±5 bloques, de la cota hacia arriba) donde **sí**
+se pica, aplicada a los **dos** caminos que rompen bloques con un solo ayudante. De paso se corrigió un fallo latente:
+`BreakBlockGoal` (el que se abre paso hacia un objetivo) **no comprobaba nada** de la aldea.
+
+**Pendiente de medir** (el arnés no llegó a arrancar: artefactos bloqueados por la partida abierta del jugador).
+
+### 3b.84 El Diario, un libro de verdad, y la dirección solo al hablar con el clérigo
+
+Las dos cosas que pidió el jugador en la misma ronda:
+
+- *"El libro del invocado debe ser un libro que pueda leer, es decir que abra la interfaz de libro que tiene el juego,
+  no que cuando le dé click aparezca en el chat lo que dice; eso no se ve natural"* → el Diario **ya no es un objeto del
+  mod**: es un **libro escrito** de los del juego (título *Diario del Invocado*, autor *Los clérigos*) y se abre con la
+  interfaz de libro normal. Sus páginas se **reescriben** al abrirlo (y al salvar una aldea) con lo que el jugador sabe
+  en ese momento; se reconoce por una marca en sus datos, no por el nombre.
+- *"cuando se gane el asedio aparezca el nombre de la aldea y se actualice el libro… pero SOLO cuando se hable con el
+  clérigo es cuando ya aparezca en los objetivos hacia dónde está la aldea y su distancia"* → al vencer se anuncia el
+  **nombre** de la aldea salvada y se pone al día el libro, pero la **dirección no se revela**; la barra de aldea se
+  enciende al **hablar con el clérigo** (clic derecho en un clérigo del pueblo), que dice el rumbo y la distancia.
+
+**Medido con el arnés**: `esElDiario=true titulo="Diario del Invocado" autor="Los clérigos" paginas=1` con las tres
+aldeas del jugador dentro (nombre, coordenadas, estado y rumbo), y `CLERIGO-CHARLA antes: revelada(7)=false` →
+`despues: revelada(7)=true` → `otra vez: true` (no repite el aviso). Y el camino del asedio ya **no** revela
+(`al vencer un asedio ya NO se revela nada`).
+
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.
