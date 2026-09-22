@@ -2422,9 +2422,26 @@ sin nada. Y el equipo que llega **no se reaprovecha**: el guardia armado no vuel
 - Y el herrero **ya no funde lo encantado** (`contarChatarra`/`haySobranteChatarra`): lo encantado es de la guardia.
 - El espadachín vale con **cualquier arma** (espada o hacha), no solo con la de hierro.
 
-**NO MEDIDO**: nada de esto se ha medido todavía con el arnés (está escrito y compilado, y el lint pasa); queda la
-corrida del arnés (poner en el almacén una espada normal y una encantada, una armadura peor y otra mejor, y ver quién
-coge qué y que el viejo vuelve al almacén) y verlo en juego. El **modelo** del guardia con su equipo es del CLIENTE.
+**MEDIDO (1ª corrida del arnés, `MEDIR_EQUIPO`, sobre una copia de su partida) — INCONCLUSA, y hay que decirlo**:
+con el almacén sembrado a mano (espada de hierro normal, **espada de oro Filo V**, casco de diamante normal, **casco
+de cuero Protección IV**, arco Potencia III, escudo y 32 flechas) y la revisión diaria marcada como pendiente en los
+**5 guardias** de su aldea:
+
+- Los 5 guardias estaban **sin nada** (`mano=[-] escudo=[-] casco=[-] peto=[-] grebas=[-] botas=[-] revisado=0`) ✓ el
+  "antes" de la queja del jugador, medido.
+- A los 30 s (t=600) el **almacén se había vaciado entero** (los 4+1 espadas, los cascos, el arco, el escudo: todo a 0)
+  **pero los guardias seguían con todo vacío y su marca de revisión en 0** → o el arnés lee el equipo en el sitio
+  equivocado, o lo que se llevó el material **no fueron los guardias**. No se puede afirmar ninguna de las dos cosas.
+
+**Fallo REAL que destapó esa corrida (en mi propio cambio)**: el herrero decide **qué** fundir con
+`contarChatarra`/`haySobranteChatarra` (que ya no cuentan lo encantado ✓) pero al **coger** el ingrediente usa
+`ItemStack.isSameItem`, que **ignora los encantamientos** → puede llevarse justo la pieza encantada que la regla quería
+proteger. La decisión y el saque tienen que usar **el mismo filtro**. (Es el candidato número uno a explicar el almacén
+vacío: el herrero se lleva espadas, escudos y cascos de cuero como "chatarra".)
+
+**Siguiente**: arreglar ese filtro, volcar el equipo del guardia por **los dos caminos** (manos/armadura y su
+`Inventory`, que es donde puede acabar lo que coge) y repetir la corrida. El **modelo** del guardia con su equipo es
+del CLIENTE.
 
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:

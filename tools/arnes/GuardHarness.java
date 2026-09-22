@@ -251,6 +251,8 @@ public class GuardHarness {
             medirElAgujeroDelSuelo(level, pega);
         } else if (MEDIR_LENADOR) {
             medirElLenador(level, pega);
+        } else if (MEDIR_EQUIPO) {
+            medirElEquipoDeLaGuardia(level, pega);
         } else if (MEDIR_COCINA) {
             // LA COCINA, cada 2 s: donde esta el cocinero, si VE el ahumador y si tiene ruta a su casilla.
             if (ticks == 400) {
@@ -829,6 +831,85 @@ public class GuardHarness {
                     + "\"{}\" (tiene que quedar vacia)", VillageManager.esDelPueblo(fuera), etiquetaDe(fuera));
             pega.moveTo(CENTRO.getX() + 0.5D, CENTRO.getY(), CENTRO.getZ() + 0.5D);
         }
+    }
+
+    /** ¿Se mide EL EQUIPO DE LA GUARDIA (I94)? Ver {@link #medirElEquipoDeLaGuardia}. */
+    private static final boolean MEDIR_EQUIPO = false;
+
+    /**
+     * EL EQUIPO DE LA GUARDIA (I94): siembra el <b>almacén</b> con piezas de prueba —una espada de hierro <b>normal</b> y
+     * una de oro <b>encantada</b> (Filo V), un casco de diamante <b>normal</b> y uno de cuero <b>encantado</b>
+     * (Protección IV), un arco encantado (Potencia III), un escudo y flechas— y marca la <b>revisión diaria</b> como
+     * pendiente en todos los guardias (la marca es el día de juego y en una corrida corta no cambia). Lo que se mide:
+     * quién coge qué (<b>los encantados tienen prioridad</b>), que el que se cambia <b>deja lo viejo en el almacén</b> y
+     * que el que no tenía arma se arma.
+     */
+    private static void medirElEquipoDeLaGuardia(ServerLevel level, FakePlayer pega) {
+        if (ticks == 200) {
+            var almacen = com.chipoodle.devilrpg.world.VillageStorage.almacen(level, CENTRO);
+            if (almacen == null) {
+                DevilRpg.LOGGER.warn("[Arnes] EQUIPO: no hay almacen en {}", CENTRO);
+                return;
+            }
+            int guardias = 0;
+            for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(120))) {
+                if (com.chipoodle.devilrpg.entity.goal.VillagerGuardGoal.esGuardia(v)) {
+                    v.getPersistentData().putLong("DevilRpgEquipoRevisado", 0L);
+                    guardias++;
+                }
+            }
+            com.chipoodle.devilrpg.world.VillagePantry.guardar(almacen, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_SWORD));
+            net.minecraft.world.item.ItemStack espadaEncantada = new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.GOLDEN_SWORD);
+            espadaEncantada.enchant(level.registryAccess().holderOrThrow(net.minecraft.world.item.enchantment.Enchantments.SHARPNESS), 5);
+            com.chipoodle.devilrpg.world.VillagePantry.guardar(almacen, espadaEncantada);
+            com.chipoodle.devilrpg.world.VillagePantry.guardar(almacen, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIAMOND_HELMET));
+            net.minecraft.world.item.ItemStack cascoEncantado = new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.LEATHER_HELMET);
+            cascoEncantado.enchant(level.registryAccess().holderOrThrow(net.minecraft.world.item.enchantment.Enchantments.PROTECTION), 4);
+            com.chipoodle.devilrpg.world.VillagePantry.guardar(almacen, cascoEncantado);
+            net.minecraft.world.item.ItemStack arcoEncantado = new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BOW);
+            arcoEncantado.enchant(level.registryAccess().holderOrThrow(net.minecraft.world.item.enchantment.Enchantments.POWER), 3);
+            com.chipoodle.devilrpg.world.VillagePantry.guardar(almacen, arcoEncantado);
+            com.chipoodle.devilrpg.world.VillagePantry.guardar(almacen, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.ARROW, 32));
+            com.chipoodle.devilrpg.world.VillagePantry.guardar(almacen, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.SHIELD));
+            DevilRpg.LOGGER.info("[Arnes] EQUIPO: almacen sembrado (espada hierro NORMAL, espada oro FILO V, casco"
+                    + " diamante NORMAL, casco cuero PROTECCION IV, arco POTENCIA III, escudo, 32 flechas) con {}"
+                    + " guardia(s) y la revision diaria PENDIENTE", guardias);
+        }
+        if (ticks % 200 != 0 || ticks < 200) {
+            return;
+        }
+        for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(120))) {
+            if (!com.chipoodle.devilrpg.entity.goal.VillagerGuardGoal.esGuardia(v)) {
+                continue;
+            }
+            DevilRpg.LOGGER.info("[Arnes] EQUIPO t={} GUARDIA {} mano=[{}] escudo=[{}] casco=[{}] peto=[{}] grebas=[{}]"
+                            + " botas=[{}] revisado={}", ticks, v.getUUID().toString().substring(0, 8),
+                    comoSeVe(v.getMainHandItem()), comoSeVe(v.getOffhandItem()),
+                    comoSeVe(v.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD)),
+                    comoSeVe(v.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.CHEST)),
+                    comoSeVe(v.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.LEGS)),
+                    comoSeVe(v.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.FEET)),
+                    v.getPersistentData().getLong("DevilRpgEquipoRevisado"));
+        }
+        var almacen = com.chipoodle.devilrpg.world.VillageStorage.almacen(level, CENTRO);
+        if (almacen != null) {
+            DevilRpg.LOGGER.info("[Arnes] EQUIPO t={} ALMACEN: espadaHierro={} espadaOroEncantada={} cascoDiamante={}"
+                            + " cascoCueroEncantado={} arcoEncantado={} escudo={} cuero={} hierro={}", ticks,
+                    cuenta(almacen, net.minecraft.world.item.Items.IRON_SWORD, false), cuenta(almacen, net.minecraft.world.item.Items.GOLDEN_SWORD, true),
+                    cuenta(almacen, net.minecraft.world.item.Items.DIAMOND_HELMET, false), cuenta(almacen, net.minecraft.world.item.Items.LEATHER_HELMET, true),
+                    cuenta(almacen, net.minecraft.world.item.Items.BOW, true), cuenta(almacen, net.minecraft.world.item.Items.SHIELD, false),
+                    cuenta(almacen, net.minecraft.world.item.Items.LEATHER_HELMET, false), cuenta(almacen, net.minecraft.world.item.Items.IRON_SWORD, false));
+        }
+    }
+
+    /** Un objeto, con su nombre y una "(E)" si va encantado (o "-" si está vacío). */
+    private static String comoSeVe(net.minecraft.world.item.ItemStack s) {
+        return s.isEmpty() ? "-" : s.getHoverName().getString() + (s.isEnchanted() ? "(E)" : "");
+    }
+
+    /** Cuántas unidades de ese objeto hay en el contenedor, contando solo lo encantado ({@code true}) o solo lo normal. */
+    private static int cuenta(net.minecraft.world.Container c, net.minecraft.world.item.Item item, boolean encantado) {
+        return com.chipoodle.devilrpg.world.VillagePantry.contar(c, s -> s.is(item) && s.isEnchanted() == encantado);
     }
 
     /** El asaltante de la medida del muro y la última línea que se ha volcado (para no repetir). */
