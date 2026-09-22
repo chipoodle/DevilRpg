@@ -14,6 +14,23 @@ Corridas: 3 (22-sep-2026 00:09, 00:33 y 00:44). La 3a anade el escenario de los 
   por resueltas (0 y 2 salvadas, 1 caida) se apuntan UNA vez como descubiertas y reveladas.
   Sin esto, el Diario del jugador naceria vacio y no tendria las coordenadas para volver.
 
+--- 1b) LA TABLA DE NOMBRES (la del jugador: 30 nombres, con su lore) -----------------
+
+  El arnes vuelca la tabla entera y se comprueba el ORDEN y la CODIFICACION (los nombres llevan
+  acentos: Raíz, Rocío, Florumbría, Páramo, Lúgubria…). La comprobacion se hace A NIVEL DE BYTES
+  sobre el log en UTF-8, porque la consola de Windows enseña esos acentos como `?` y no se puede
+  uno fiar de lo que se ve.
+
+  Orden medido (0..31): Valleverde, Raíz Profunda, Robledal, Hojaverde, Bosquealto, Brumavalle,
+  Lunaverde, Florumbría, Rocío Viejo, Verdeniebla, Colmillo Gris, Lobomonte, Aullaluna, Garra de
+  Roble, Piedra del Oso, Manada Gris, Valle del Aullido, Bosque del Espíritu, Hongo Negro, Raíz
+  Sombría, Umbraverde, Valle Marchito, Espinavieja, Morterra, Brumagrís, Raíz de Luna, Cenizal,
+  Sombra del Roble, Páramo Verde, Lúgubria, y despues **Valleverde II** y **Raíz Profunda II**
+  (numeral: la partida paso de la tabla).
+
+  Bytes: OK en los 11 nombres comprobados (los 7 con acento incluidos) -> el build compila en UTF-8
+  (`options.encoding = 'UTF-8'`) y el juego escribe el log en UTF-8.
+
 --- 2) EL ESTADO DEL JUGADOR ----------------------------------------------------------
 
 [Arnes] ALDEAS indice=0 visitadas=[0, 1, 2] reveladas=[0, 1, 2]

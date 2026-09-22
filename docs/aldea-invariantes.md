@@ -2048,9 +2048,11 @@ regresar"*):
 
 1. **NOMBRE determinista** ({@code VillageNames.nombre(i)}): la aldea 0 es el primer nombre de la tabla, la 1 el
    segundo… Igual en servidor y cliente **sin sincronizar nada** (misma idea que las coordenadas de
-   {@code ObjectiveTargets}). Si la partida pasa de la tabla, se repiten con numeral (*Valdehierro II*), nunca dos
-   iguales. La tabla es de nombres rústicos, en la cuerda de los nombres de aldeanos; **el jugador va a dar la suya**
-   y se pega ahí sin tocar nada más.
+   {@code ObjectiveTargets}). La tabla **la escribió el jugador**: 30 nombres con su lore, agrupados en tres bloques
+   (aldeas del bosque → espíritus y animales → misteriosas y oscuras) y **en ese mismo orden**, que encaja con la
+   escalada del mod (cuanto más lejos del círculo ritual, más podrida está la tierra): las primeras son verdes y las
+   últimas son ceniza y niebla. Si la partida pasa de la tabla, se repiten con numeral (*Valleverde II*), nunca dos
+   iguales.
 2. **La barra de ALDEA** (antes "de objetivos", {@code VillageHudOverlay} + {@code "aldea"} como capa) tiene **tres
    estados**: <b>sin revelar → no hay barra</b>; <b>revelada y no visitada → {@code Aldea  (1.234 m) →}</b> (dirección
    sí, nombre no); <b>visitada → {@code Aldea de Valdehierro  (12 m) ↑}</b>.

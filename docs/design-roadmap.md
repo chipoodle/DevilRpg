@@ -3279,7 +3279,8 @@ regresar"*. Su encargo, entero, en I87.
 **HECHO**:
 
 - **Nombre por aldea**, determinista por índice (`VillageNames`): la misma aldea se llama igual en servidor y cliente
-  sin sincronizar nada. Tabla de nombres rústicos (**pendiente**: el jugador va a dar la suya y se pega tal cual).
+  sin sincronizar nada. Tabla **del jugador**: 30 nombres con su lore en tres bloques (bosque → espíritus y animales →
+  oscuras), en ese orden, que encaja con la escalada del mod; a partir de la 30 se repiten con numeral.
 - **La barra de ALDEA** (`VillageHudOverlay`, antes `ObjectiveHudOverlay`): sin revelar **no hay barra**; revelada y sin
   visitar, `Aldea (1.234 m) →`; visitada, `Aldea de Valdehierro (12 m) ↑`.
 - **Descubrir es ENTRAR** (radio 24): al entrar se apunta por jugador en la capability (`aldeasVisitadas`), sale *"Has

@@ -126,8 +126,9 @@ pega y vuelca cada 10 s lo que sabe ese jugador y lo que **dibujaría la barra d
 
 ```
 [Village] Diario del Invocado sembrado para <jugador>: N aldea(s) que ya resolvio esta partida
+[Arnes] NOMBRE aldea N = "Aldea de …"        <- la tabla entera (orden y CODIFICACION: comprobar en bytes)
 [Arnes] ALDEAS indice=N visitadas=[…] reveladas=[…]
-[Arnes] ALDEA N nombre="…" visitada=true/false revelada=true/false centro=…
+[Arnes] ALDEA N nombre="…" visitada=true/false revelada=true/false centro=… estado="…"
 [Arnes] BARRA DE ALDEA (aldea N): con NOMBRE: "…" | sin nombre: "Aldea" | OCULTA (ni direccion ni nombre…)
 [Arnes] RUMBO a la aldea N: <rumbo>
 [Arnes] DIARIO: <una linea por aldea descubierta, tal cual las lee el jugador>

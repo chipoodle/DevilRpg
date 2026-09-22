@@ -677,6 +677,14 @@ public class GuardHarness {
         DevilRpg.LOGGER.info("[Arnes] BARRA descubierta -> {}",
                 com.chipoodle.devilrpg.survival.VillageBarText.texto(3, true, true, 12, "arriba"));
 
+        // LA TABLA DE NOMBRES ENTERA (la del jugador, con su lore): verifica de una vez el ORDEN y, sobre todo, la
+        // CODIFICACION — estas lineas llevan los acentos (Raíz, Rocío, Florumbría, Páramo, Lúgubria…) y se comprueban
+        // luego a nivel de bytes en el log, que es lo unico que distingue un acento bien puesto de un destrozo.
+        for (int i = 0; i < com.chipoodle.devilrpg.survival.VillageNames.cuantos() + 2; i++) {
+            DevilRpg.LOGGER.info("[Arnes] NOMBRE aldea {} = \"{}\"", i,
+                    com.chipoodle.devilrpg.survival.VillageNames.nombre(i));
+        }
+
         // 1) EL CLERIGO AL VENCER EL ASEDIO de la aldea 2: tiene que revelar la 3 y hablar con nombre propio.
         aux.setObjectiveIndex(3, pega);
         DevilRpg.LOGGER.info("[Arnes] CLERIGO antes: revelada(3)={}", aux.isAldeaRevelada(3));
