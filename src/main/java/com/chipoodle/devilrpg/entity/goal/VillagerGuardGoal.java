@@ -937,6 +937,24 @@ public class VillagerGuardGoal extends Goal {
         double distancia = Math.sqrt(villager.distanceToSqr(diana.getX() + 0.5D, diana.getY() + 0.5D,
                 diana.getZ() + 0.5D));
         if (distancia > REACH) {
+            // SI NO LLEGA A LA DIANA, SE RINDE Y SIGUE CON LA RONDA (I3/I33). Lo reportó el jugador: *"se quedó ciclado
+            // un guardia al ir a entrenar"* — caminaba contra la pared de la barraca con la etiqueta "Yendo a
+            // entrenar" para siempre. Ahora, si no se acerca en STUCK_LIMIT, se aparca la diana (no se reintenta en
+            // bucle) y el guardia vuelve a su ronda: entrenará cuando la diana sea alcanzable.
+            if (entrenoTicks == 0) {
+                mejorEntreno = Double.MAX_VALUE; // medida nueva en cada sesión
+            }
+            if (distancia < mejorEntreno - 0.5D) {
+                mejorEntreno = distancia;
+                stuckEntreno = 0;
+            } else if (++stuckEntreno >= STUCK_LIMIT) {
+                entrenoTicks = 0;
+                stuckEntreno = 0;
+                VillageManager.marcarPuntoFallido(villager, diana);
+                DevilRpg.LOGGER.info("[Village] Guardia {}: no llego a la diana {} (aldea {}): me vuelvo a la ronda",
+                        villager.getUUID(), diana.toShortString(), objectiveIndex);
+                return false;
+            }
             VillageManager.caminarHacia(villager, diana, VELOCIDAD);
             VillageManager.ponerActividad(villager, "Yendo a entrenar");
             return true;
@@ -966,6 +984,9 @@ public class VillagerGuardGoal extends Goal {
     private static final int TICKS_ENTRE_VIAJES = 20 * 120;
     /** Tick del último viaje al almacén (para {@link #TICKS_ENTRE_VIAJES}). */
     private long ultimoViajeAlAlmacen = Long.MIN_VALUE;
+    /** Lo más cerca que ha estado de la diana en la sesión (y su paciencia), aparte de la del puesto. */
+    private double mejorEntreno = Double.MAX_VALUE;
+    private int stuckEntreno;
     private int entrenoTicks;
 
     private BlockPos puntoDeGuardia(ServerLevel level) {

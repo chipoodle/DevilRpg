@@ -1806,6 +1806,22 @@ excluidos **aparte**, en el propio predicado del objetivo (`SoulWispArcher.regis
 (20 min). Ahora, mientras son crías, se les envejece un extra por latido
 (`BABY_GROWTH_SPEEDUP = 3`), así que son adultas en **unos 7 minutos** y una noche mala se repone en un par de días.
 
+### I78 · La milicia alterna espadachines y arqueros, y el entrenamiento se rinde si no llega
+
+Dos cosas del jugador: *"se quedó ciclado un guardia al ir a entrenar"* y *"tampoco he visto ningún arquero; al crearse
+deberían alternarse"*.
+
+**1) EL ARQUERO.** `repartirGuardia` daba los **cuatro primeros** puestos a espadachines (`i < MILICIA_ESPADACHINES`)
+y el resto a arqueros, así que con una milicia de dos o tres **no había ni un arquero** (y el jugador, con captura, no
+veía ninguno). Ahora **se alternan** (`i % 2`): con la milicia llena salen los **4 espadachines y 3 arqueros** de
+siempre —la formación de la marcha a la guarida— y con **dos** guardias ya hay **uno de cada**.
+
+**2) EL CICLO AL ENTRENAR.** El viaje a la diana no tenía la disciplina de I3/I33 que sí tiene el resto de goals: si
+la diana no era alcanzable (el guardia se quedaba empujando la pared de la barraca), seguía intentándolo con la
+etiqueta "Yendo a entrenar" **para siempre**. Ahora, si no se acerca en `STUCK_LIMIT`, **se rinde**, **aparca la
+diana** (`marcarPuntoFallido`) y vuelve a la ronda: entrenará cuando la diana sea alcanzable (log:
+`no llego a la diana …: me vuelvo a la ronda`).
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 

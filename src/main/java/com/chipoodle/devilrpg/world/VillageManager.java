@@ -2501,7 +2501,11 @@ public final class VillageManager {
                 continue;
             }
             alistarGuardia(level, villager, center, objectiveIndex, i,
-                    i < MILICIA_ESPADACHINES ? VillagerGuardGoal.ESPADACHIN : VillagerGuardGoal.ARQUERO);
+                    // SE ALTERNAN (lo pidió el jugador: "tampoco he visto ningún arquero; al crearse deberían alternarse"): con el
+                    // corte por número, los cuatro primeros eran espadachines y en milicias pequeñas NO HABÍA NI UN
+                    // ARQUERO. Alternando salen 4 espadachines y 3 arqueros con la milicia llena (la formación de
+                    // siempre) y con dos guardias ya hay uno de cada.
+                    i % 2 == 0 ? VillagerGuardGoal.ESPADACHIN : VillagerGuardGoal.ARQUERO);
         }
         // Y los que YA no sobran (murió gente, la aldea necesita su oficio) dejan la guardia: si no, la aldea se
         // quedaría sin granjero o sin herreros por tener milicia.
