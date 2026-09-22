@@ -857,7 +857,7 @@ public class VillagerFarmGoal extends Goal {
                         // la DESPENSA para hacer huevos estrellados. Sin esta línea el huevo se quedaba en el almacén
                         // y el cocinero no lo veía nunca (lo reportó el jugador: "todavía no veo cocinado ningún huevo
                         // estrellado y los huevos están en el almacén").
-                        || s.is(Items.EGG),
+                        || s.is(Items.EGG) || VillagePantry.esHuevoEstrellado(s),
                 TRAER_DEL_ALMACEN);
         // 4) Hornear: 3 de trigo por hogaza (la receta de vanilla), como mucho HORNEAR_MAX por visita. Y **SE DEJA LA
         //    RESERVA DE TRIGO PARA CRIAR** (ver `RESERVA_DE_TRIGO_PARA_CRIAR`): sin ella el ganadero no puede criar

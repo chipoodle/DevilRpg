@@ -1885,6 +1885,24 @@ minion de otro jugador). **Regla**: sin dueño, el liquen **no hace nada** —no
 no—: una guarda al principio (`if (owner == null) return;`), mejor eso que tirar el servidor. Revisado el resto de
 usos de `owner` de esa zona: los demás van dentro de un `instanceof Player owner` o ya comprobaban null.
 
+### I83 · El cocinero fríe los huevos aunque la despensa esté llena
+
+El jugador: *"no veo que el cocinero haga huevos estrellados"*. Y en su log se ve **por qué**: el granjero es el
+**puente** que lleva la comida del almacén a la despensa, y cuando la despensa va **llena de verdura y semillas**
+(medido antes: 432 zanahorias, 155 patatas, 261 semillas) los huevos **no le caben** (`despensaNoTraga`), así que el
+cocinero nunca los veía.
+
+**Regla**: si en la despensa no había nada que cocinar, el cocinero **fríe los huevos del ALMACÉN** (que es de donde
+salen: los deja ahí el ganadero) y deja las tortillas **en el almacén**, de donde el granjero las sube a la despensa
+como cualquier comida (y por eso su lista de acarreo incluye ya `esHuevoEstrellado`). Así el huevo estrellado sale
+aunque la despensa esté a rebosar.
+
+**Nota del log del jugador** (19:19–19:48, ya con todo dentro): el cocinero **Hipolito murió de viejo** a los 3 días
+justo en esa sesión (`Un aldeano murio de viejo… Hipolito (Cocinero) died` y después `repuesto el puesto de butcher`),
+así que además de lo de la despensa llena hay que darle tiempo al **cocinero nuevo**. Y se ve funcionando lo demás:
+el herrero por hueco (`Hizo 4 flechas`), la milicia alternando (`se alista… espadachin` + `cambia de puesto… arquero`)
+y el sello rechazando spawns.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 

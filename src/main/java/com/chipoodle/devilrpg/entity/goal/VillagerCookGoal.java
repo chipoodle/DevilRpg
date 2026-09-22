@@ -419,6 +419,26 @@ public class VillagerCookGoal extends Goal {
                 cocinadas++;
             }
         }
+        // Y SI EN LA DESPENSA NO HABÍA NADA, SE COCINAN LOS HUEVOS DEL ALMACÉN. El jugador: *"no veo que el cocinero
+        // haga huevos estrellados"*, y la causa es el PUENTE granjero→despensa: el ganadero deja los huevos en el
+        // almacén, el granjero los trae… pero cuando la despensa va llena de verdura y semillas (medido: 432
+        // zanahorias, 155 patatas, 261 semillas) **no le caben** (`despensaNoTraga`) y el cocinero nunca los ve. Los
+        // huevos son la materia prima del cocinero y el almacén es de donde salen, así que se fríen de allí y las
+        // tortillas se dejan en el almacén, de donde el granjero las sube a la despensa como cualquier comida.
+        if (cocinadas == 0) {
+            Container almacen = VillageStorage.almacen(level, center);
+            if (almacen != null) {
+                while (cocinadas < COCINAR_MAX
+                        && VillagePantry.sacar(almacen, s -> s.is(Items.EGG), 1) == 1) {
+                    ItemStack hecha = VillagePantry.cocinar(new ItemStack(Items.EGG, 1));
+                    if (hecha.isEmpty() || !VillageStorage.guardar(level, center, hecha).isEmpty()) {
+                        VillageStorage.guardar(level, center, new ItemStack(Items.EGG, 1)); // no cabe: se devuelve crudo
+                        break;
+                    }
+                    cocinadas++;
+                }
+            }
+        }
         if (cocinadas > 0) {
             level.playSound(null, puesto, SoundEvents.SMOKER_SMOKE, SoundSource.BLOCKS, 0.7F, 1.0F);
             level.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, puesto.getX() + 0.5D, puesto.getY() + 1.0D,
