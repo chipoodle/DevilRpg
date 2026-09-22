@@ -308,6 +308,47 @@ LO QUE ESTA MEDIDA NO CUBRE:
     esa regla no llego a dispararse. Escrita y compilada, **sin ver**.
   - La partida del jugador: el mundo medido es una COPIA (`run/world`). Su partida no se ha tocado.
 
+--- 12) EL CAMPO DE FUERZA DE LA ALDEA GANADA (ronda del 22-sep, MEDIR_MURO) -----------
+
+Frase del jugador, aclarando el diseño:
+  "Los zombies en el asedio inicial, cuando se llega a la aldea, SI pueden romper todo lo
+   necesario; pero cuando se gana el asedio la aldea genera un campo de fuerza que no permite
+   spawneo de ningun enemigo dentro y tampoco les permite ROMPER NADA. Posteriores asaltos: se
+   spawnean fuera de la aldea y van a intentar entrar buscando el centro, pueden romper bloques
+   y crear escaleras de bloques para llegar, pero una vez entrando ya no pueden romper nada".
+
+ESTADO DE PARTIDA (su mundo, solo lectura): aldea 0 GANADA -> `Resolved = [0]`, `Generated = [0]`,
+`Noticed` con su UUID, `Fallen` vacio. El asaltante lleva su indice de aldea (`setWorldSiegeIndex`,
+VillageManager:1460) o -1 si no es de asedio (1515).
+
+REGLA CORREGIDA: `protegidoPorLaAldea` = fuera -> no protegido; muralla (anillo 57..67) -> no
+protegido; dentro y sin muralla -> protegido SOLO si `isSiegeResolved(indice)` (aldea ya ganada).
+Antes estaba siempre activo.
+
+MEDIDO (arnes, copia de su partida):
+  (a) Asaltante de la aldea 0 (GANADA), con objetivo (jugador de pega) y muros interiores de
+      prueba (r=30, 12x3): pica SOLO fuera de la aldea -> 3 bloques a r=66,7 (2 grass_block y
+      1 oak_log) y NINGUNO de dentro.
+  (b) Asaltante del asedio inicial (sin aldea) contra un CERCO de piedra cerrado (r=62, 3 de
+      alto, 186 bloques nuevos): se queda FUERA (r=61) y pica 2 bloques en 3 minutos -> la
+      proteccion lo paraba (el fallo corregido).
+  (c) El anillo de su aldea tiene HUECOS: 7 bloques en todo el rumbo este (0 grados) a la altura
+      del suelo (cota 63). Sin cerco, el asaltante entra ANDANDO: de r=66 a r=48 (dentro) y lo
+      mata la milicia.
+  (d) Linea de log nueva, por bloque: "[Siege] un asaltante de la aldea N pica X en Y (le quedan
+      M de tunel)". Con ella: 2 oak_log en 532/63/653 y 532/64/653 (el cerco) en la corrida (b).
+
+LOS OTROS DOS FALLOS QUE DEJABAN EL ASEDIO PARADO (medidos y arreglados):
+  - El atasco de `BreakBlockGoal` se medía por la DISTANCIA AL OBJETIVO: rodeando el muro esa
+    distancia sigue bajando, asi que no se disparaba nunca (rodea un muro de 15 bloques y no pica
+    nada en 3 min). Ahora por POSICION (0,5 bloques), en el goal del objetivo y en la marcha.
+  - El candidato a picar exigia `isSolid()` y la valla no es un cubo: el asaltante se queda de
+    bruces contra la valla de roble del bancal sin picarla. Ahora por FORMA DE COLISION.
+
+NO MEDIDO: la mitad del asedio inicial con el cerco puesto (los dos asaltantes quedaron vivos y
+con objetivo, pero no llegaron a picar el muro interior en la ventana de la corrida) ni el
+comportamiento en juego.
+
 ================================================================================
 LO QUE ESTA MEDIDA **NO** CUBRE (pendiente, y hay que decirlo)
 ================================================================================

@@ -275,6 +275,10 @@ public class AggressiveZombieEntity extends Zombie {
         if ((b == Blocks.OBSIDIAN || b == Blocks.CRYING_OBSIDIAN) && !canBreakObsidian()) {
             return;
         }
+        // Queda en el log (INFO, una línea por bloque): es lo que permite comprobar que la horda se abre paso DE
+        // VERDAD. Medido con el arnés, sin esta línea no se podía distinguir "no pica" de "pica y el pueblo lo repone".
+        DevilRpg.LOGGER.info("[Siege] un asaltante de la aldea {} pica {} en {} (le quedan {} de tunel)", worldSiegeIndex,
+                b, pos.toShortString(), tunelRestante);
         level().destroyBlock(pos, true);
     }
 
@@ -305,7 +309,9 @@ public class AggressiveZombieEntity extends Zombie {
                         continue; // a la aldea no se le cava (la MURALLA sí: es la brecha del asedio)
                     }
                     BlockState bs = level().getBlockState(candidate);
-                    if (!bs.isAir() && bs.isSolid() && canBreakBlock(bs)) {
+                    // ¿ESTORBA? Por la FORMA DE COLISIÓN, no por `isSolid()`: la valla no es un cubo y quedaba fuera,
+                    // y es justo lo que cierra la aldea (ver `blockingBlockAhead`, con la medida del arnés).
+                    if (!bs.isAir() && !bs.getCollisionShape(level(), candidate).isEmpty() && canBreakBlock(bs)) {
                         double score = Math.abs(dx - sx) + Math.abs(dz - sz) + dy * 0.5D;
                         if (score < bestScore) {
                             bestScore = score;
@@ -404,12 +410,43 @@ public class AggressiveZombieEntity extends Zombie {
     }
 
     /**
-     * ¿Esa posición está <b>protegida</b> por la aldea (no se pica)? Todo lo de dentro menos la muralla. Es la única
-     * regla que usan los dos caminos que rompen bloques (la marcha al centro y el que se abre paso hacia un
-     * objetivo), para que no se pueda colar por un lado lo que se veta por el otro.
+     * ¿Esa posición está <b>protegida</b> por el <b>campo de fuerza</b> de la aldea (no se pica)? Es la única regla que
+     * usan los dos caminos que rompen bloques (la marcha al centro y el que se abre paso hacia un objetivo), para que no
+     * se pueda colar por un lado lo que se veta por el otro.
+     * <p>
+     * <b>EL CAMPO DE FUERZA ES DE LA ALDEA YA GANADA</b> (lo corrigió el jugador: *"los zombies en el asedio inicial,
+     * cuando se llega a la aldea, SÍ pueden romper todo lo necesario; pero cuando se gana el asedio la aldea genera un
+     * campo de fuerza que no permite spawneo de ningún enemigo dentro y tampoco les permite romper nada"*). Estaba
+     * <b>siempre</b> activo, así que en el asedio inicial —el que el jugador tiene que ganar— los asaltantes no podían
+     * romper nada de dentro y se quedaban fuera (medido con el arnés: un asaltante contra un cerco de piedra cerrado
+     * picó 2 bloques en 3 minutos y no entró).
+     * <ul>
+     *   <li>Asedio <b>sin resolver</b> (el inicial): la aldea no está protegida — se rompe <b>lo que haga falta</b>, por
+     *       dentro y por fuera, para llegar al centro.</li>
+     *   <li>Asedio <b>ya ganado</b>: dentro no se rompe <b>nada</b>; la <b>muralla</b> (el anillo de la valla) sigue
+     *       rompible, y fuera de la aldea también, para que los asaltos posteriores puedan entrar y hacerse escaleras,
+     *       pero una vez dentro no tocan nada.</li>
+     * </ul>
      */
     private boolean protegidoPorLaAldea(BlockPos pos) {
-        return dentroDeLaAldea(pos) && !esLaMuralla(pos);
+        if (!dentroDeLaAldea(pos)) {
+            return false; // fuera: campo abierto (aquí se hacen las escaleras de bloques para entrar)
+        }
+        if (esLaMuralla(pos)) {
+            return false; // la muralla: es la brecha por la que entra un asedio
+        }
+        return elAsedioYaSeGano();
+    }
+
+    /**
+     * ¿La aldea de este asaltante es de las que <b>ya se ganaron</b> (tiene su campo de fuerza)? Un asaltante sin aldea
+     * asignada ({@code worldSiegeIndex < 0}) no tiene campo de fuerza: es el caso del asedio inicial.
+     */
+    private boolean elAsedioYaSeGano() {
+        if (worldSiegeIndex < 0 || !(level() instanceof ServerLevel serverLevel)) {
+            return false;
+        }
+        return com.chipoodle.devilrpg.world.VillageSavedData.get(serverLevel).isSiegeResolved(worldSiegeIndex);
     }
 
     /**
@@ -928,10 +965,12 @@ public class AggressiveZombieEntity extends Zombie {
      */
     static class BreakBlockGoal extends Goal {
         private static final int BREAK_EVERY_TICKS = 60;      // evaluar romper cada 3 s
-        private static final double IMPROVEMENT_THRESHOLD = 1.5D; // avance mínimo que cuenta como progreso
+        /** Cuánto tiene que moverse (en bloques, al cuadrado) para contar como que AVANZA: 0,5 bloques. */
+        private static final double MOVIMIENTO_QUE_CUENTA = 0.25D;
         private final AggressiveZombieEntity zombie;
         private BlockPos blockToBreak = null;
-        private double anchorDist = Double.MAX_VALUE;   // distancia al inicio de medir
+        /** Dónde estaba el zombie en el tick anterior: es lo que dice si avanza (ver {@link #tick()}). */
+        private net.minecraft.world.phys.Vec3 ultimaPos = null;
         private int evalTicks = 0;
 
         public BreakBlockGoal(AggressiveZombieEntity zombie) {
@@ -954,25 +993,41 @@ public class AggressiveZombieEntity extends Zombie {
 
         @Override
         public void start() {
-            anchorDist = distToTarget();
+            ultimaPos = zombie.position();
             evalTicks = 0;
             blockToBreak = null;
         }
 
+        /**
+         * Abrirse paso cuando el zombie <b>no avanza</b>.
+         * <p>
+         * <b>El progreso se mide por dónde está el ZOMBIE</b> (¿se ha movido 0,5 bloques desde el tick anterior?), no
+         * por su distancia al objetivo. Estaba medido con la distancia y era el fallo que dejaba el asedio fuera: con
+         * un muro de piedra de 15 bloques delante y el objetivo al otro lado, el asaltante lo <b>RODEA</b>, y mientras
+         * rodea la distancia al objetivo sigue bajando poco a poco, así que el detector de atasco <b>no se disparaba
+         * nunca</b> (medido con el arnés: 3 minutos sin romper un solo bloque y el muro intacto).
+         */
         @Override
         public void tick() {
-            evalTicks++;
-            double dist = distToTarget();
-            // Si el zombie se acercó de verdad (mejoró >= threshold desde el ancla), re-anclar: hay progreso.
-            if (dist < anchorDist - IMPROVEMENT_THRESHOLD) {
-                anchorDist = dist;
+            Entity target = zombie.getTarget();
+            if (target == null) {
+                return;
+            }
+            boolean seMueve = ultimaPos != null && zombie.position().distanceToSqr(ultimaPos) > MOVIMIENTO_QUE_CUENTA;
+            ultimaPos = zombie.position();
+            if (seMueve) {
                 evalTicks = 0;
                 return;
             }
-            // Si ya pasó el periodo sin mejorar lo suficiente, está orbitando o chocando: hay que abrirse paso.
-            if (evalTicks >= BREAK_EVERY_TICKS) {
-                Entity target = zombie.getTarget();
-                boolean targetAbove = target != null && target.getY() > zombie.getY() + 1.0D;
+            // Pegado al objetivo no se rompe NADA: ahí lo que toca es pelear (y lo de dentro de la aldea está vetado,
+            // así que picar alrededor del jugador solo levantaría el pueblo).
+            if (zombie.distanceToSqr(target) < 9.0D) {
+                evalTicks = 0;
+                return;
+            }
+            // Sin moverse durante el periodo: está chocando u orbitando. A abrirse paso.
+            if (++evalTicks >= BREAK_EVERY_TICKS) {
+                boolean targetAbove = target.getY() > zombie.getY() + 1.0D;
                 if (targetAbove) {
                     // El objetivo está ARRIBA: un túnel a su propia altura no le sirve para subir. Rompe un
                     // ESCALÓN: la columna de delante a la altura de la cabeza (y una más arriba), de modo que
@@ -984,8 +1039,6 @@ public class AggressiveZombieEntity extends Zombie {
                         breakBlock(blockToBreak);
                     }
                 }
-                // Re-anclar tras intentar romper.
-                anchorDist = distToTarget();
                 evalTicks = 0;
             }
         }
@@ -1024,11 +1077,6 @@ public class AggressiveZombieEntity extends Zombie {
             }
         }
 
-        private double distToTarget() {
-            Entity target = zombie.getTarget();
-            return target == null ? Double.MAX_VALUE : zombie.distanceToSqr(target.position());
-        }
-
         /**
          * Busca el bloque sólido rompible que más probablemente estorba el paso: mira posiciones alrededor
          * (a la altura del cuerpo y uno arriba, en las 4 direcciones) priorizando la ruta hacia el objetivo.
@@ -1050,7 +1098,11 @@ public class AggressiveZombieEntity extends Zombie {
                             continue; // la obra del pueblo no se toca (la muralla sí: es la brecha del asedio)
                         }
                         BlockState bs = zombie.level().getBlockState(candidate);
-                        if (!bs.isAir() && bs.isSolid() && canBreak(bs)) {
+                        // ¿ESTORBA? Se pregunta por la FORMA DE COLISIÓN, no por `isSolid()`: `isSolid()` deja fuera la
+                        // valla —su forma no es un cubo— y la valla es justo lo que cierra los bancales y la aldea.
+                        // Medido con el arnés: el asaltante se quedó de bruces contra una valla de roble, sin picarla,
+                        // con el objetivo (el jugador de pega) al otro lado.
+                        if (!bs.isAir() && !bs.getCollisionShape(zombie.level(), candidate).isEmpty() && canBreak(bs)) {
                             double score = Math.abs(dx - sx) + Math.abs(dz - sz) + dy * 0.5D;
                             if (score < bestScore) {
                                 bestScore = score;
@@ -1108,6 +1160,8 @@ public class AggressiveZombieEntity extends Zombie {
         private double anchorDist = Double.MAX_VALUE;
         private int evalTicks = 0;
         private int repathTicks = 0;
+        /** Dónde estaba el zombie en el tick anterior: lo que dice si AVANZA (ver {@link #tick()}). */
+        private net.minecraft.world.phys.Vec3 ultimaPos = null;
 
         public MoveToVillageCenterGoal(AggressiveZombieEntity zombie) {
             this.zombie = zombie;
@@ -1141,6 +1195,7 @@ public class AggressiveZombieEntity extends Zombie {
             anchorDist = centerDistSqr();
             evalTicks = 0;
             repathTicks = 0;
+            ultimaPos = zombie.position();
             // RODEO: más presupuesto de búsqueda para que encuentre la vuelta a la montaña.
             zombie.getNavigation().setMaxVisitedNodesMultiplier(RODEO_MULTIPLIER);
         }
@@ -1159,18 +1214,23 @@ public class AggressiveZombieEntity extends Zombie {
                 repathTicks = REPATH_TICKS;
             }
 
-            evalTicks++;
-            double dist = centerDistSqr();
-            if (dist < anchorDist - IMPROVEMENT_THRESHOLD) {
-                anchorDist = dist;
-                evalTicks = 0;
-                return;
-            }
             // ABRIRSE PASO, en este orden: (1) el RODEO ya lo intenta el buscador de caminos (con más presupuesto);
             // si AÚN tiene ruta, se le deja caminar (puede estar dando la vuelta a la montaña, y taladrar ahí sería
             // un destrozo tonto). (2) Si NO hay ruta y lleva un rato sin avanzar, primero PUENTE (si lo que hay
             // delante es un abismo) y, si no, TÚNEL lento.
-            if (zombie.getNavigation().isDone() && evalTicks >= BREAK_EVERY_TICKS) {
+            // OJO: el "sin avanzar" se mide por DÓNDE ESTÁ EL ZOMBIE, no por la distancia al centro (que baja aunque
+            // esté rodeando) ni por lo que diga el buscador de caminos (que puede tener una ruta viva y no llevar a
+            // ninguna parte). Medido con el arnés: con un muro de piedra de 15 bloques delante, el asaltante lo rodeó
+            // y no picó ni un bloque en tres minutos: el asedio se quedaba fuera para siempre.
+            boolean seMueve = ultimaPos != null && zombie.position().distanceToSqr(ultimaPos) > 0.25D;
+            ultimaPos = zombie.position();
+            double dist = centerDistSqr();
+            if (seMueve) {
+                anchorDist = dist;
+                evalTicks = 0;
+                return;
+            }
+            if (++evalTicks >= BREAK_EVERY_TICKS) {
                 if (!zombie.puentearHacia(center)) {
                     zombie.breakBlockTowards(center);
                 }

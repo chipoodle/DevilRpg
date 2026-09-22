@@ -834,43 +834,180 @@ public class GuardHarness {
     /** El asaltante de la medida del muro y la última línea que se ha volcado (para no repetir). */
     private static com.chipoodle.devilrpg.entity.AggressiveZombieEntity asaltante = null;
     private static String ultimaLineaDelMuro = "";
+    /** El rumbo por el que se asalta (radianes, 0 = +X = este): el que TENGA muralla de verdad. */
+    private static double rumboDelAsalto = 0.0D;
 
-    /** EL ASALTO A LA MURALLA (I89): ver {@link #MEDIR_MURO}. */
+    /**
+     * EL ASALTO A LA MURALLA (I89): ver {@link #MEDIR_MURO}.
+     * <p>
+     * La primera corrida de esta medida (aldea del jugador) no midió nada, y por dos motivos que están arreglados aquí:
+     * el asaltante se ponía <b>siempre al este</b> y en el este, a la altura del suelo, <b>no hay muralla</b> (solo una
+     * valla de bancal en r=59); y aparecía a la Y de la cota, que en ese punto es <b>dentro del terreno</b>, así que se
+     * asfixiaba en los primeros segundos (una sola línea volcada y el asaltante quieto los 200 s). Ahora se busca el
+     * rumbo con mampostería, se aparece en el suelo con {@code VillageGenerator.spawnY} y se volca su IA (vivo, sin IA,
+     * marcha activa, ruta, objetivo y goals) junto a la columna de la muralla capa a capa.
+     */
     private static void medirElAsaltoAlMuro(ServerLevel level, FakePlayer pega) {
-        if (ticks == 300) {
-            int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+        int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+        if (ticks == 300 && asaltante == null) {
+            int mejorRumbo = 0;
+            int mejorSolidos = -1;
+            for (int k = 0; k < 8; k++) {
+                double ang = k * Math.PI / 4.0D;
+                int solidos = 0;
+                for (int r = 56; r <= 66; r++) {
+                    int x = CENTRO.getX() + (int) Math.round(Math.cos(ang) * r);
+                    int z = CENTRO.getZ() + (int) Math.round(Math.sin(ang) * r);
+                    for (int y = cota; y <= cota + 5; y++) {
+                        if (!level.getBlockState(new BlockPos(x, y, z)).isAir()) {
+                            solidos++;
+                        }
+                    }
+                }
+                DevilRpg.LOGGER.info("[Arnes] MURO rumbo {} ({} grados): {} bloque(s) en el anillo r=56..66,"
+                        + " y=cota..cota+5", k, k * 45, solidos);
+                if (solidos > mejorSolidos) {
+                    mejorSolidos = solidos;
+                    mejorRumbo = k;
+                }
+            }
+            rumboDelAsalto = mejorRumbo * Math.PI / 4.0D;
+            int x = CENTRO.getX() + (int) Math.round(Math.cos(rumboDelAsalto) * 66);
+            int z = CENTRO.getZ() + (int) Math.round(Math.sin(rumboDelAsalto) * 66);
+            int y = com.chipoodle.devilrpg.world.VillageGenerator.spawnY(level, x, z);
             asaltante = com.chipoodle.devilrpg.init.ModEntities.AGGRESSIVE_ZOMBIE.get().create(level);
             if (asaltante != null) {
-                asaltante.moveTo(CENTRO.getX() + 66.5D, cota, CENTRO.getZ() + 0.5D, 0.0F, 0.0F);
-                asaltante.setVillageCenter(new BlockPos(CENTRO.getX(), cota, CENTRO.getZ()));
+                asaltante.moveTo(x + 0.5D, y, z + 0.5D, 0.0F, 0.0F);
+                asaltante.setVillageCenter(new BlockPos(CENTRO.getX(), y, CENTRO.getZ()));
                 asaltante.setGoToCenterActive(true);
                 asaltante.recargarTunel();
+                asaltante.setPersistenceRequired();
                 level.addFreshEntity(asaltante);
-                DevilRpg.LOGGER.info("[Arnes] MURO: asaltante puesto en {} (cota {}), SIN objetivo, marchando al"
-                                + " centro de la aldea {}", asaltante.blockPosition(), cota, CENTRO);
+                // CON OBJETIVO: es lo que hace que `BreakBlockGoal` entre en juego (su `canUse` pide objetivo). Sin
+                // objetivo, el asaltante solo puede taladrar por la marcha (`MoveToVillageCenterGoal`), y solo cuando
+                // su navegación se declara "hecha": medido, anduvo del radio 66 al 58 y se quedó ahí los 135 s sin
+                // romper un bloque. El jugador de pega es el objetivo y va invulnerable (la medida no es el combate).
+                pega.setInvulnerable(true);
+                asaltante.setTarget(pega);
+                // MURO INTERIOR DE PRUEBA (r=30, DENTRO de la aldea): es lo que separa las dos mitades de la regla. Se
+                // levanta un muro de piedra delante de cada asaltante y se ve QUIÉN lo pica:
+                //   - el asaltante SIN aldea (worldSiegeIndex < 0) es el ASEDIO INICIAL: tiene que picarlo (la aldea
+                //     todavía no tiene campo de fuerza);
+                //   - el de la aldea 0 (GANADA, con campo de fuerza): no puede picar NADA de dentro.
+                muroInterior(level, 0.0D, y, 12);
+                muroInterior(level, ANGULO_DEL_SEGUNDO, y, 12);
+                asaltanteDos = com.chipoodle.devilrpg.init.ModEntities.AGGRESSIVE_ZOMBIE.get().create(level);
+                if (asaltanteDos != null) {
+                    int x2 = CENTRO.getX() + (int) Math.round(Math.cos(ANGULO_DEL_SEGUNDO) * 66);
+                    int z2 = CENTRO.getZ() + (int) Math.round(Math.sin(ANGULO_DEL_SEGUNDO) * 66);
+                    int y2 = com.chipoodle.devilrpg.world.VillageGenerator.spawnY(level, x2, z2);
+                    asaltanteDos.moveTo(x2 + 0.5D, y2, z2 + 0.5D, 0.0F, 0.0F);
+                    asaltanteDos.setVillageCenter(new BlockPos(CENTRO.getX(), y2, CENTRO.getZ()));
+                    asaltanteDos.setGoToCenterActive(true);
+                    asaltanteDos.recargarTunel();
+                    asaltanteDos.setPersistenceRequired();
+                    asaltanteDos.setWorldSiegeIndex(0); // la aldea 0 del jugador: YA GANADA -> con campo de fuerza
+                    level.addFreshEntity(asaltanteDos);
+                    asaltanteDos.setTarget(pega);
+                    DevilRpg.LOGGER.info("[Arnes] MURO: 2º asaltante (aldea 0 = GANADA, con campo de fuerza) en {} con"
+                            + " muro interior delante: NO deberia poder picarlo", asaltanteDos.blockPosition());
+                }
+                DevilRpg.LOGGER.info("[Arnes] MURO: los dos muros interiores de prueba (r=30, 12x3) levantados");
+                DevilRpg.LOGGER.info("[Arnes] MURO: asaltante puesto en {} (cota {}, rumbo {} con {} bloque(s)),"
+                                + " CON objetivo (el jugador de pega) y marchando al centro {}", asaltante.blockPosition(),
+                        cota, mejorRumbo, mejorSolidos, CENTRO);
             }
         }
-        if (asaltante == null || !asaltante.isAlive()) {
+        if (asaltante == null) {
             return;
         }
-        // El asaltante no debe quedarse a matar: solo tiene que marchar (sin objetivo).
-        asaltante.setTarget(null);
-        if (ticks % 60 == 0) {
-            StringBuilder sb = new StringBuilder();
-            for (int r = 68; r >= 54; r--) {
-                BlockPos p = new BlockPos(CENTRO.getX() + r, asaltante.blockPosition().getY(), CENTRO.getZ());
-                var bs = level.getBlockState(p);
-                String nombre = net.minecraft.core.registries.BuiltInRegistries.BLOCK
-                        .getKey(bs.getBlock()).getPath();
-                sb.append(r).append(':').append(nombre.equals("air") ? "." : nombre).append(' ');
+        // El asaltante va a por el jugador de pega (que está en la plaza, dentro): lo que se mide es si ABRE BRECHA.
+        asaltante.setTarget(pega);
+        if (ticks % 60 != 0) {
+            return;
+        }
+        StringBuilder goals = new StringBuilder();
+        for (net.minecraft.world.entity.ai.goal.WrappedGoal w : asaltante.goalSelector.getAvailableGoals()) {
+            goals.append(w.getPriority()).append(':').append(w.getGoal().getClass().getSimpleName());
+            goals.append(w.isRunning() ? "* " : " ");
+        }
+        DevilRpg.LOGGER.info("[Arnes] MURO t={} vivo={} noAi={} pos={} dCentro={} dObjetivo={} nav={} navHecha={}"
+                        + " goals=[{}]", ticks, asaltante.isAlive(), asaltante.isNoAi(), asaltante.blockPosition(),
+                (int) Math.sqrt(asaltante.distanceToSqr(CENTRO.getX(), asaltante.getY(), CENTRO.getZ())),
+                (int) Math.sqrt(asaltante.distanceToSqr(pega.getX(), pega.getY(), pega.getZ())),
+                asaltante.getNavigation().getTargetPos(), asaltante.getNavigation().isDone(),
+                goals.toString().trim());
+        // LO QUE TIENE ALREDEDOR: la rejilla de 3x3 a la altura de los pies y de la cabeza, con el nombre del bloque.
+        // Es lo que dice CONTRA QUÉ se está dando de bruces (una casa del pueblo, la valla del bancal o el muro).
+        StringBuilder rededor = new StringBuilder();
+        BlockPos zp = asaltante.blockPosition();
+        for (int dy = 0; dy <= 1; dy++) {
+            rededor.append("y").append(zp.getY() + dy).append(':');
+            for (int dz = -1; dz <= 1; dz++) {
+                for (int dx = -1; dx <= 1; dx++) {
+                    var bs = level.getBlockState(new BlockPos(zp.getX() + dx, zp.getY() + dy, zp.getZ() + dz));
+                    String nombre = net.minecraft.core.registries.BuiltInRegistries.BLOCK
+                            .getKey(bs.getBlock()).getPath().replace("minecraft:", "");
+                    rededor.append(bs.isAir() ? "." : nombre).append(' ');
+                }
             }
-            String linea = sb.toString();
-            if (!linea.equals(ultimaLineaDelMuro)) {
-                ultimaLineaDelMuro = linea;
-                DevilRpg.LOGGER.info("[Arnes] MURO t={} asaltante={} linea(r=68..54): {}", ticks,
-                        asaltante.blockPosition(), linea);
+            rededor.append('|');
+        }
+        DevilRpg.LOGGER.info("[Arnes] MURO t={} al lado del asaltante: {}", ticks, rededor.toString());
+        // LA BANDA DE LA MURALLA (r 57..67, las seis capas de cota a cota+5): cuántos bloques hay en cada capa. Si la
+        // cuenta BAJA, hay BRECHA. Se cuenta toda la banda (no una línea) porque el asaltante se desvía del rumbo:
+        // medido, acabó 10 bloques al sur de la línea que se estaba mirando.
+        StringBuilder capas = new StringBuilder();
+        for (int dy = 0; dy <= 5; dy++) {
+            capas.append("y").append(cota + dy).append(':').append(bloquesEnLaBanda(level, cota + dy)).append(' ');
+        }
+        String linea = capas.toString();
+        if (!linea.equals(ultimaLineaDelMuro)) {
+            ultimaLineaDelMuro = linea;
+            DevilRpg.LOGGER.info("[Arnes] MURO t={} banda r=57..67 por capas: {}", ticks, linea);
+        }
+    }
+
+    /** Bloques (no aire) en la banda de la muralla (r = 57..67) a esa altura. */
+    private static int bloquesEnLaBanda(ServerLevel level, int y) {        int n = 0;
+        for (int dx = -67; dx <= 67; dx++) {
+            for (int dz = -67; dz <= 67; dz++) {
+                int d2 = dx * dx + dz * dz;
+                if (d2 < 57 * 57 || d2 > 67 * 67) {
+                    continue;
+                }
+                if (!level.getBlockState(new BlockPos(CENTRO.getX() + dx, y, CENTRO.getZ() + dz)).isAir()) {
+                    n++;
+                }
             }
         }
+        return n;
+    }
+
+    /** El 2º asaltante de la medida: el de la aldea YA GANADA (con campo de fuerza). */
+    private static com.chipoodle.devilrpg.entity.AggressiveZombieEntity asaltanteDos = null;
+    /** Rumbo del 2º asaltante (25°), para que no se pise con el primero (0° = este). */
+    private static final double ANGULO_DEL_SEGUNDO = Math.toRadians(25.0D);
+
+    /**
+     * Levanta un <b>muro interior de prueba</b> (piedra, 12 de ancho y 3 de alto) a 30 bloques del centro, en el rumbo
+     * {@code ang}: está DENTRO de la aldea, así que solo lo puede picar quien <b>no</b> tenga campo de fuerza.
+     */
+    private static void muroInterior(ServerLevel level, double ang, int cota, int ancho) {
+        int puestos = 0;
+        for (int t = -(ancho / 2); t <= ancho / 2; t++) {
+            for (int dy = 0; dy <= 2; dy++) {
+                int mx = CENTRO.getX() + (int) Math.round(Math.cos(ang) * 30.0D - Math.sin(ang) * t);
+                int mz = CENTRO.getZ() + (int) Math.round(Math.sin(ang) * 30.0D + Math.cos(ang) * t);
+                BlockPos p = new BlockPos(mx, cota + dy, mz);
+                if (level.getBlockState(p).isAir()) {
+                    level.setBlock(p, net.minecraft.world.level.block.Blocks.STONE_BRICKS.defaultBlockState(), 3);
+                    puestos++;
+                }
+            }
+        }
+        DevilRpg.LOGGER.info("[Arnes] MURO: muro interior de prueba en el rumbo {} grados ({} bloque(s) nuevos)",
+                (int) Math.toDegrees(ang), puestos);
     }
 
     /**

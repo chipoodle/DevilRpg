@@ -2177,7 +2177,7 @@ quien les reparte nombre propio). Sin la marca:
 bloques, así que un aldeano recién llegado a un pueblo del mod puede estar unos segundos **sin** etiqueta. Es
 preferible eso a etiquetar a quien no es del pueblo.
 
-### I89 · La MURALLA sí se rompe; lo de dentro de la aldea no
+### I89 · La MURALLA sí se rompe; lo de dentro de la aldea no (y el campo de fuerza es de la aldea YA GANADA)
 
 El jugador, viendo un asedio parado en la puerta: *"no entiendo por qué los zombies del asedio inicial no entran a la
 aldea, ¿no tratan de llegar al centro? ¿no rompen la barda para entrar?"*. **Tenían razón: no podían.** Dos reglas se
@@ -2200,8 +2200,50 @@ ayudante (`protegidoPorLaAldea`), porque **el veto estaba al revés**: de más e
 Lo que cierra el círculo: la muralla rota **la repara el obrero** (está en el plano, I50/3b.72), así que un asedio
 deja huella y el pueblo la levanta otra vez.
 
-**Pendiente de medir**: el intento con el arnés (`MEDIR_MURO`) no llegó a arrancar —el jugador tenía la partida abierta
-y bloqueados los artefactos del build—, así que la brecha está escrita y compilada, pero **no vista en juego**.
+**CORREGIDO (22-sep-2026, lo aclaró el jugador)**: *"Los zombies en el asedio inicial, cuando se llega a la aldea, SÍ
+pueden romper todo lo necesario; pero cuando se gana el asedio la aldea genera un campo de fuerza que no permite spawneo
+de ningún enemigo dentro, y tampoco les permite ROMPER NADA. Posteriores asaltos: se spawnean fuera de la aldea y van a
+intentar entrar buscando el centro, pueden romper bloques y crear escaleras de bloques para llegar, pero una vez
+entrando ya no pueden romper nada"*.
+
+**La regla queda así** (`AggressiveZombieEntity.protegidoPorLaAldea`, con el nuevo `elAsedioYaSeGano`):
+
+- **Asedio sin resolver** (el **inicial**, el que el jugador tiene que ganar): la aldea **no** tiene campo de fuerza →
+  se rompe **lo que haga falta**, por dentro y por fuera, para llegar al centro y a los aldeanos.
+- **Aldea ya ganada** (`VillageSavedData.isSiegeResolved`, que es lo que enciende el campo): dentro **no se rompe nada**;
+  la **muralla** (el anillo de la valla) y todo lo de **fuera** siguen rompibles, para que los asaltos posteriores
+  puedan entrar y hacerse escaleras — pero una vez dentro no tocan nada.
+
+La otra mitad del campo (`expulsarHostilesDeLaAldea`, que vacía la aldea de bichos) **ya** estaba atada a
+`isSiegeResolved` desde la etapa H; **la de romper no lo estaba**: la protección de dentro estaba activa **siempre**, y
+por eso el asedio inicial se quedaba fuera sin poder picar. Un asaltante sin aldea asignada (`worldSiegeIndex < 0`)
+tampoco tiene campo ✓.
+
+**Medido con el arnés** (aldea 0 del jugador, que está **ganada**: `Resolved = [0]`; todo sobre una copia):
+
+- El asaltante de la aldea **0** (ganada) picó **solo fuera de la aldea**: 3 bloques (2 de hierba y 1 tronco), todos a
+  r = 66,7 (> 64) **y nada de dentro** ✓.
+- Con un **cerco de piedra cerrado** (r=62, 3 de alto) el asaltante del asedio inicial se quedó **fuera** (r=61) y picó
+  **2 bloques en 3 minutos**: la protección lo paraba, que es justo el fallo corregido. El cerco también enseñó que el
+  anillo de su aldea tiene **huecos** (solo 7 bloques en todo el rumbo este, a la altura del suelo): sin cerco el
+  asaltante entra **andando** (llegó a r=48, dentro) y lo mata la milicia.
+
+**Dos fallos más, medidos y arreglados en la misma vuelta** (los dos dejaban el asedio parado aunque pudiera picar):
+
+- El detector de atasco de `BreakBlockGoal` medía **la distancia al objetivo**: mientras el zombie **rodea** el muro esa
+  distancia sigue bajando poco a poco, así que **no se disparaba nunca** (medido: rodeó un muro de piedra de 15 bloques
+  y no picó nada en 3 minutos). Ahora se mide **por dónde está el zombie** (¿se ha movido 0,5 bloques?), en el goal que
+  se abre paso hacia el objetivo **y** en el de la marcha al centro (que además exigía `getNavigation().isDone()`, y con
+  una ruta viva que no lleva a ninguna parte tampoco picaba).
+- El candidato a picar exigía `isSolid()` y **la valla no es un cubo**: el asaltante se quedaba de bruces contra la
+  **valla de roble del bancal** sin picarla. Ahora se pregunta por la **forma de colisión** (no aire y con colisión).
+
+**Y una línea de log nueva** —`[Siege] un asaltante de la aldea N pica X en Y`—: sin ella no se podía distinguir "no
+pica" de "pica y el pueblo lo repone", y es lo que ha hecho medible todo esto.
+
+**Pendiente de medir**: la mitad del **asedio inicial** con el cerco puesto (que el asaltante *sin* aldea pique el muro
+**interior** de prueba) no llegó a verse en la ventana de la última corrida —los dos asaltantes estaban vivos y con
+objetivo, pero no llegaron a picar—, y el comportamiento **en juego**, que lo verá el jugador.
 
 ### I90 · El cráter de un creeper también se tapa: el AGUJERO DEL SUELO
 

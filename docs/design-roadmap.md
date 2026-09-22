@@ -3433,6 +3433,35 @@ de 10 a 9). Con el código de antes, el mismo montaje daba `destinoDentro=false`
 **No medido**: el empujón del compostero (`HARINA_MINIMA`) —en la corrida el pueblo tenía harina de sobra todo el rato,
 así que esa regla no llegó a dispararse— y el efecto en la partida del jugador, que lo verá al abrir el mundo.
 
+### 3b.87 El campo de fuerza es de la aldea YA GANADA (el asedio inicial sí puede romper)
+
+El jugador, aclarando el diseño: *"Los zombies en el asedio inicial, cuando se llega a la aldea, SÍ pueden romper todo
+lo necesario; pero cuando se gana el asedio la aldea genera un campo de fuerza que no permite spawneo de ningún enemigo
+dentro y tampoco les permite romper nada. Posteriores asaltos: se spawnean fuera de la aldea y van a intentar entrar
+buscando el centro, pueden romper bloques y crear escaleras de bloques para llegar, pero una vez entrando ya no pueden
+romper nada"* (I89, corregido).
+
+**El fallo**: el campo tiene dos mitades y solo una estaba atada a haber ganado. `expulsarHostilesDeLaAldea` (vaciar la
+aldea de bichos) ya iba con `isSiegeResolved` desde la etapa H; la **protección de romper** (`protegidoPorLaAldea`)
+estaba activa **siempre**, así que el asedio inicial —el que el jugador tiene que ganar— se quedaba fuera sin poder
+picar. Ahora las dos van con lo mismo (`elAsedioYaSeGano`): asedio sin resolver → no hay campo (se rompe lo que haga
+falta); aldea ganada → dentro no se rompe nada, muralla y exterior sí (para que los asaltos posteriores entren).
+
+**Dos fallos más, medidos y arreglados en la misma vuelta** (dejaban el asedio parado aunque pudiera picar): el detector
+de atasco de `BreakBlockGoal` medía **la distancia al objetivo**, y rodeando el muro esa distancia sigue bajando → **no
+se disparaba nunca** (medido: rodeó un muro de piedra de 15 bloques y no picó nada); y el candidato a picar exigía
+`isSolid()`, que **deja fuera la valla** (el asaltante se quedaba de bruces contra la valla del bancal). Ahora el atasco
+se mide por la posición del zombie (también en la marcha al centro, que además exigía `getNavigation().isDone()`) y el
+candidato se pregunta por la forma de colisión. Y se añadió **una línea de log por bloque picado**
+(`[Siege] un asaltante de la aldea N pica X en Y`), que es lo que ha hecho medible todo esto.
+
+**Medido con el arnés** (copia de su partida; su aldea 0 está **ganada**, `Resolved = [0]`): el asaltante de la aldea 0
+picó **solo fuera de la aldea** (3 bloques a r=66,7) y **nada de dentro** ✓; con un **cerco de piedra cerrado** (r=62,
+3 de alto) el asaltante del asedio inicial se quedó **fuera** (r=61) y picó **2 bloques en 3 minutos** —el fallo
+corregido—, y de paso se midió que el anillo de su aldea tiene **huecos** (7 bloques en todo el rumbo este a la altura
+del suelo): sin cerco entra **andando** (r=48, dentro) y lo mata la milicia. **Pendiente**: la mitad del asedio inicial
+con el cerco puesto (no llegó a picar en la ventana de la corrida) y el comportamiento en juego.
+
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.
