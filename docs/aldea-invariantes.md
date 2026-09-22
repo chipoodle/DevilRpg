@@ -1785,6 +1785,27 @@ almacén tenía **3 espadas y 0 escudos** mientras los guardias esperaban el esc
 puede hacer con el material que hay (`elQueMasFalta`). A igualdad de hueco gana la primera, así que el reparto es
 **estable** entre latidos y no baila. Sigue evaluando en cada pieza, así que la distribución se mantiene sola.
 
+### I77 · Los huevos llegan a la despensa, el wisp deja en paz a los gatos, y las crías crecen al triple
+
+Tres cosas del jugador de una: *"todavía no veo cocinado ningún huevo estrellado y los huevos están en el almacén. El
+wisp de distancia ataca a los gatos y no debería. Los niños deben crecer más rápido para suplir a los aldeanos
+muertos en la noche"*.
+
+**1) EL HUEVO NO LLEGABA A LA DESPENSA.** El ganadero deja los huevos del corral en el **almacén**, y el **cocinero**
+saca lo crudo de la **despensa**: el puente es el **granjero**, y su lista de lo que se trae del almacén
+(`VillagerFarmGoal`, junto a `perteneceALaDespensa`) **no tenía el huevo**, así que se quedaba en el almacén y el
+cocinero no lo veía nunca (el huevo estrellado de I70 era, de hecho, imposible de cocinar). Añadido el huevo crudo a
+las dos listas: el granjero lo trae y se queda en la despensa (no se reparte como ración: no es comida, es la materia
+prima del cocinero, como el trigo).
+
+**2) EL WISP Y LOS GATOS.** Su objetivo excluía a los "animales" con una lista (`esAnimal`) en la que el **gato** no
+entra —es un `TamableAnimal`—, así que el wisp de distancia los perseguía. Ahora el `Cat` y el `Ocelot` están
+excluidos **aparte**, en el propio predicado del objetivo (`SoulWispArcher.registerGoals`).
+
+**3) LAS CRÍAS CRECEN AL TRIPLE.** `ageVillagers` solo miraba la **vejez**; las crías crecían a velocidad vanilla
+(20 min). Ahora, mientras son crías, se les envejece un extra por latido
+(`BABY_GROWTH_SPEEDUP = 3`), así que son adultas en **unos 7 minutos** y una noche mala se repone en un par de días.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 

@@ -90,6 +90,11 @@ public class SoulWispArcher extends SoulWisp implements RangedAttackMob {
                 !(entity instanceof Llama) &&
                 !(entity instanceof Turtle) &&
                 !(entity instanceof IronGolem) &&
+                // Y LOS GATOS (lo reportó el jugador: "el wisp de distancia ataca a los gatos y no debería"): son
+                // mascotas del pueblo y del jugador. Van aparte de `esAnimal` a propósito, porque el gato es un
+                // `TamableAnimal` y no entraba en aquella lista.
+                !(entity instanceof net.minecraft.world.entity.animal.Cat) &&
+                !(entity instanceof net.minecraft.world.entity.animal.Ocelot) &&
                 // ANIMALES: el wisp NO va a por animales (vacas, cerdos, ovejas, gallinas, lobos, caballos...) por su
                 // cuenta: son del jugador (granjas, mascotas, monturas) y el wisp los masacraba al pasar. Solo los
                 // ataca si SU DUEÑO los está atacando (o el animal se ha enfadado con el dueño porque él le pegó).

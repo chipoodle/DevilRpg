@@ -751,7 +751,11 @@ public final class VillageManager {
     private static final String BORN_TAG = "DevilRpgVillagerBorn";
     /** A partir de esta edad (2 días de juego) el aldeano es viejo y va más lento. */
     private static final long VILLAGER_OLD_AGE_TICKS = 2L * 24000L;
-    /** Al llegar aquí (3 días de juego) el aldeano muere de viejo y deja el relevo a los jóvenes. */
+    /**
+     * Cuántas veces más rápido crecen las <b>crías</b> que en vanilla (vanilla tarda 20 min: con 3, unos 7). Lo pidió
+     * el jugador: *"los niños deben crecer más rápido para suplir a los aldeanos muertos en la noche"*.
+     */
+    private static final int BABY_GROWTH_SPEEDUP = 3;    /** Al llegar aquí (3 días de juego) el aldeano muere de viejo y deja el relevo a los jóvenes. */
     private static final long VILLAGER_LIFESPAN_TICKS = 3L * 24000L;
 
     private static final Map<ServerLevel, List<VillageDefense>> DEFENSES = new HashMap<>();
@@ -4842,6 +4846,12 @@ public final class VillageManager {
      */
     private static void ageVillagers(ServerLevel level, List<Villager> aldeanos) {
         for (Villager villager : aldeanos) {
+            // LOS CRIOS CRECEN MÁS RÁPIDO (lo pidió el jugador: *"los niños deben crecer más rápido para suplir a los
+            // aldeanos muertos en la noche"*). Vanilla tarda 20 minutos; aquí se les envejece un extra por latido, así
+            // que crecen al triple (~7 min) y una noche mala se repone en un par de días. Al llegar a 0 son adultos.
+            if (villager.isBaby()) {
+                villager.setAge(Math.min(0, villager.getAge() + VILLAGE_POLL_TICKS * (BABY_GROWTH_SPEEDUP - 1)));
+            }
             long edad = ageOf(level, villager);
             if (edad >= VILLAGER_LIFESPAN_TICKS) {
                 DevilRpg.LOGGER.info("[Village] Un aldeano murio de viejo a los {} dias de juego",

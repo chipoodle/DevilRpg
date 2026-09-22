@@ -852,7 +852,12 @@ public class VillagerFarmGoal extends Goal {
         int traidos = VillagePantry.traspasar(VillageStorage.almacen(level, center), despensa,
                 s -> s.is(Items.WHEAT) || s.is(Items.BREAD) || s.is(Items.WHEAT_SEEDS) || s.is(Items.BEETROOT_SEEDS)
                         || s.is(Items.BONE_MEAL) || VillagePantry.esVegetal(s)
-                        || VillagePantry.esCarneCruda(s) || VillagePantry.esCarneCocida(s),
+                        || VillagePantry.esCarneCruda(s) || VillagePantry.esCarneCocida(s)
+                        // Y LOS HUEVOS: el ganadero los sube al ALMACÉN (son del corral) y el cocinero los necesita en
+                        // la DESPENSA para hacer huevos estrellados. Sin esta línea el huevo se quedaba en el almacén
+                        // y el cocinero no lo veía nunca (lo reportó el jugador: "todavía no veo cocinado ningún huevo
+                        // estrellado y los huevos están en el almacén").
+                        || s.is(Items.EGG),
                 TRAER_DEL_ALMACEN);
         // 4) Hornear: 3 de trigo por hogaza (la receta de vanilla), como mucho HORNEAR_MAX por visita. Y **SE DEJA LA
         //    RESERVA DE TRIGO PARA CRIAR** (ver `RESERVA_DE_TRIGO_PARA_CRIAR`): sin ella el ganadero no puede criar

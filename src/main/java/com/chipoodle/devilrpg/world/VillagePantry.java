@@ -294,9 +294,13 @@ public final class VillagePantry {
                 || esCarneCruda(s) || esCarneCocida(s) || s.is(Items.APPLE)
                 || esSemilla(s) || s.is(Items.BONE_MEAL)
                 // Y EL HUEVO ESTRELLADO: es comida del pueblo (lo pidió el jugador: "y puedan consumir todos"), así que
-                // entra en la despensa y en el reparto de raciones como una pieza cocinada más. El huevo CRUDO no: ese
-                // es de las gallinas (y del cocinero).
-                || esHuevoEstrellado(s);
+                // entra en la despensa y en el reparto de raciones como una pieza cocinada más.
+                || esHuevoEstrellado(s)
+                // Y EL HUEVO **CRUDO**: no es comida (no se reparte como ración), pero es la MATERIA PRIMA del
+                // cocinero, así que vive en la despensa como el trigo. El jugador lo vio claro: *"todavía no veo
+                // cocinado ningún huevo estrellado y los huevos están en el almacén"* — el ganadero los deja en el
+                // almacén, el granjero los trae a la despensa y el cocinero los fríe.
+                || s.is(Items.EGG);
     }
 
     /** ¿Es un <b>huevo estrellado</b> (la comida que cocina el cocinero con los huevos del corral)? */
