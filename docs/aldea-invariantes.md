@@ -1922,6 +1922,28 @@ siempre, el paso de **sembrar/labrar** no llegaba a correr y las celdas que se q
 cosecha el juego sin replantar) seguían vacías. Ahora el granjero cosecha **dos veces** y a la tercera atiende la
 tierra (`COSECHAS_POR_TIERRA = 2`): se cosecha rápido **y** se siembra lo que falta.
 
+### I85 · La despensa son TODOS los cofres de la cocina (no solo el suyo)
+
+El jugador corrigió mi diagnóstico: *"¿por qué dices que la despensa está llena si no está llena? Está a la mitad, es
+un cofre doble, lo debería reconocer el cocinero. Además dentro de la cocina hay otro cofre que no se ocupa y también
+debería poder ocuparlo, así como todos los demás"*. **Tiene razón en las dos cosas**:
+
+- El cofre doble **sí** se leía entero (`ChestBlock.getContainer(…, true)` une las dos mitades): el problema no era
+  capacidad, era que `despensa()` **devolvía el PRIMER contenedor que encontraba y ya** (`return c`), así que **el
+  otro cofre de la cocina** —el del jugador— quedaba **invisible** para el pueblo: ni el cocinero sacaba de él, ni el
+  granjero guardaba ahí.
+- Y mi "la despensa está llena" era una **suposición** mal fundada: lo correcto era medirlo, y el jugador lo ha
+  desmentido.
+
+**Regla**: `VillagePantry.despensa` **une todos los contenedores de la cocina** (`CompoundContainer`, encadenado): el
+cofre de la casa (sus dos mitades), el cofre viejo del kiosco si toca migrar, y **todo lo demás que haya en el radio
+de la cocina**. Se recorren por posiciones y **se apunta también la otra mitad** de cada cofre doble
+(`ChestBlock.getConnectedDirection`) para no contar el mismo contenedor dos veces. Así el cocinero cocina con lo que
+haya en cualquiera de ellos y guarda donde quepa — y las raciones y el granjero ven la despensa completa.
+
+**De paso**: los huevos estrellados vuelven a guardarse en la **despensa** (I84 consideró lleno un cofre que no lo
+estaba; con la unión, el sitio deja de ser un problema).
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 

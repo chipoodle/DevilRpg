@@ -125,32 +125,50 @@ public final class VillagePantry {
     public static Container despensa(ServerLevel level, BlockPos center) {
         int nivel = VillageGenerator.cotaDeLaPlaza(level, center);
         BlockPos base = VillageGenerator.baseDeLaTaberna(center);
+        // TODOS LOS CONTENEDORES DE LA COCINA, UNIDOS. Lo pidió el jugador: *"es un cofre doble, lo debería reconocer
+        // el cocinero; además dentro de la cocina hay otro cofre que no se ocupa y también debería poder ocuparlo, así
+        // como todos los demás"*. Antes esto **devolvía el PRIMER cofre que encontraba y ya** (`return c`), así que el
+        // resto de la cocina —incluido el cofre del jugador— quedaba invisible para el pueblo. Ahora se juntan todos
+        // con `CompoundContainer`: el cocinero cocina con lo que haya en cualquiera de ellos y guarda donde quepa.
+        java.util.List<Container> todos = new java.util.ArrayList<>();
+        java.util.Set<BlockPos> puestos = new java.util.HashSet<>();
+        java.util.function.Consumer<BlockPos> suma = q -> {
+            if (puestos.contains(q)) {
+                return;
+            }
+            BlockState estado = level.getBlockState(q);
+            Container c = cofreEn(level, q);
+            if (c == null) {
+                return;
+            }
+            // Se apunta también su OTRA MITAD (un cofre doble devuelve el mismo contenedor unido por las dos
+            // posiciones: sin esto se contaría dos veces).
+            puestos.add(q);
+            if (estado.getBlock() instanceof ChestBlock cofre) {
+                puestos.add(q.relative(ChestBlock.getConnectedDirection(estado)));
+            }
+            todos.add(c);
+        };
         // 1) EL COFRE DE LA COCINA, en su sitio exacto (las dos mitades del cofre doble).
         for (int k = 0; k <= 1; k++) {
-            Container c = cofreEn(level, new BlockPos(base.getX() + OFFSET.getX() + k, nivel,
-                    base.getZ() + OFFSET.getZ()));
-            if (c != null) {
-                return c;
-            }
+            suma.accept(new BlockPos(base.getX() + OFFSET.getX() + k, nivel, base.getZ() + OFFSET.getZ()));
         }
         // 2) EL COFRE VIEJO DEL KIOSCO (aldea de antes de la migración 46), para no dejarla sin despensa.
-        for (BlockPos viejo : new BlockPos[]{
-                new BlockPos(center.getX(), nivel + 1, center.getZ() + 1),
-                new BlockPos(center.getX() + 1, nivel + 1, center.getZ() + 1)}) {
-            Container c = cofreEn(level, viejo);
-            if (c != null) {
-                return c;
-            }
-        }
-        // 3) Y si no, SOLO dentro de la cocina de la taberna (su radio es pequeño: nada de la plaza del jugador).
+        suma.accept(new BlockPos(center.getX(), nivel + 1, center.getZ() + 1));
+        suma.accept(new BlockPos(center.getX() + 1, nivel + 1, center.getZ() + 1));
+        // 3) Y TODO LO DEMÁS DE LA COCINA (su radio es pequeño: nada de la plaza del jugador).
         BlockPos p = new BlockPos(base.getX() + OFFSET.getX(), nivel, base.getZ() + OFFSET.getZ());
         for (BlockPos q : BlockPos.betweenClosed(p.offset(-2, -2, -2), p.offset(4, 3, 4))) {
-            Container c = cofreEn(level, q.immutable());
-            if (c != null) {
-                return c;
-            }
+            suma.accept(q.immutable());
         }
-        return null;
+        if (todos.isEmpty()) {
+            return null;
+        }
+        Container unido = todos.get(0);
+        for (int i = 1; i < todos.size(); i++) {
+            unido = new net.minecraft.world.CompoundContainer(unido, todos.get(i));
+        }
+        return unido;
     }
 
     /**
