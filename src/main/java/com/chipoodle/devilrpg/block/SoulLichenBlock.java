@@ -87,7 +87,16 @@ public class SoulLichenBlock extends MultifaceBlock implements SimpleWaterlogged
 
     public static void applySoulLichenEffects(@NotNull Level level, @NotNull Entity entity, Player owner) {
 
-        if(!(entity instanceof ITamableEntity iSoulEntity && Objects.requireNonNull(iSoulEntity.getOwner()).getUUID().equals(owner.getUUID()))) {
+        // SOLO A LOS ENEMIGOS (lo pidió el jugador: *"que no dañe a las entidades neutrales ni al jugador, solo a los
+        // enemigos o aquellos que ataquen"*). Antes hería a CUALQUIER cosa que no fuera un minion del dueño: los
+        // animales de la granja, las mascotas de otros… y el propio jugador. Ahora solo entra si es un ENEMIGO (un
+        // `Enemy`: los hostiles, incluidos los del mod) o alguien que esté ATACANDO (un `Mob` con objetivo), y nunca
+        // el jugador ni los minions del dueño.
+        boolean esMinionDelDueno = entity instanceof ITamableEntity iSoulEntity && iSoulEntity.getOwner() != null
+                && iSoulEntity.getOwner().getUUID().equals(owner.getUUID());
+        boolean esEnemigo = entity instanceof net.minecraft.world.entity.monster.Enemy
+                || (entity instanceof net.minecraft.world.entity.Mob mob && mob.getTarget() != null);
+        if (!esMinionDelDueno && esEnemigo && !(entity instanceof Player)) {
             entity.hurt(level.damageSources().playerAttack(owner), 1.0F);
             // Aplicar aceleración al movimiento
             double speedBoost = -0.4; // Ajusta este valor según lo rápido que quieras que sea el impulso

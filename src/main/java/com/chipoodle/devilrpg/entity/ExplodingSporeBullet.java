@@ -473,7 +473,24 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
         if (!this.level().isClientSide) {
             float explosionRadius = 1;
             this.dead = true;
-            this.level().explode(this, this.getX(), this.getY(), this.getZ(), explosionRadius, false, Level.ExplosionInteraction.MOB);
+            // LA EXPLOSIÓN ES SOLO EL RUIDO Y LAS PARTÍCULAS (`NONE`): el daño se reparte A MANO y SOLO A LOS ENEMIGOS.
+            // Lo pidió el jugador: *"que no dañe a las entidades neutrales ni al jugador, solo a los enemigos o
+            // aquellos que ataquen"*. Con `ExplosionInteraction.MOB` (lo que había) el hongo hería a todo lo que
+            // hubiera cerca: los animales de la granja, las mascotas… y el propio dueño.
+            this.level().explode(this, this.getX(), this.getY(), this.getZ(), explosionRadius, false,
+                    Level.ExplosionInteraction.NONE);
+            float dano = (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE);
+            for (net.minecraft.world.entity.LivingEntity cerca : this.level().getEntitiesOfClass(
+                    net.minecraft.world.entity.LivingEntity.class,
+                    this.getBoundingBox().inflate(explosionRadius + 1.0D))) {
+                if (cerca == this || cerca instanceof Player) {
+                    continue; // ni él mismo ni el jugador
+                }
+                if (cerca instanceof Enemy
+                        || (cerca instanceof net.minecraft.world.entity.Mob mob && mob.getTarget() != null)) {
+                    cerca.hurt(this.damageSources().explosion(this, this.getOwner()), dano);
+                }
+            }
             this.discard();
             this.spawnLingeringCloud();
         }

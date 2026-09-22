@@ -1822,6 +1822,21 @@ etiqueta "Yendo a entrenar" **para siempre**. Ahora, si no se acerca en `STUCK_L
 diana** (`marcarPuntoFallido`) y vuelve a la ronda: entrenará cuando la diana sea alcanzable (log:
 `no llego a la diana …: me vuelvo a la ronda`).
 
+### I79 · El hongo y el liquen solo dañan a los ENEMIGOS (o a quien ataca)
+
+Lo pidió el jugador: *"modifica el poder del hongo y el liquen para que no dañe a las entidades neutrales ni al
+jugador, solo a los enemigos o aquellos que ataquen"*.
+
+**El LIQUEN** (`SoulLichenBlock.applySoulLichenEffects`) hería a **cualquier** cosa que no fuera un minion del dueño
+(la condición era `!(entity instanceof ITamableEntity && suDueño == owner)`): los animales de la granja, las mascotas
+de otros… **y el propio jugador**. Ahora solo entra si es un **enemigo** (`Enemy`, los hostiles —incluidos los del
+mod—) o alguien **atacando** (un `Mob` con `getTarget() != null`), y nunca el jugador ni los minions del dueño.
+
+**El HONGO** (`ExplodingSporeBullet.explodeCreeper`) explotaba con `ExplosionInteraction.MOB`, que daña a **todo** lo
+que pille el radio: los animales del corral, las mascotas y el dueño. Ahora la explosión va con `NONE` (**solo ruido y
+partículas**) y el daño se reparte **a mano** por el radio, **solo a los enemigos** (mismo criterio) y sin tocar al
+jugador.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
