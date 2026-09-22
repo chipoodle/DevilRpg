@@ -87,6 +87,14 @@ public class SoulLichenBlock extends MultifaceBlock implements SimpleWaterlogged
 
     public static void applySoulLichenEffects(@NotNull Level level, @NotNull Entity entity, Player owner) {
 
+        // SIN DUEÑO NO SE HACE NADA: `owner` puede llegar **null** (el liquen sin dueño, o el que pisa un minion de
+        // otro), y aquí se usaba su UUID sin comprobarlo: **NullPointerException en el tick del servidor** (crash
+        // medido: `Cannot invoke "Player.getUUID()" because "owner" is null`, en `SoulLichenBlock.java:96`, al meterse
+        // un Sunflower Shulker en un liquen). Sin dueño no se puede saber quién es minion y quién no, así que el liquen
+        // no toca a nadie: mejor eso que tirar el servidor.
+        if (owner == null) {
+            return;
+        }
         // SOLO A LOS ENEMIGOS (lo pidió el jugador: *"que no dañe a las entidades neutrales ni al jugador, solo a los
         // enemigos o aquellos que ataquen"*). Antes hería a CUALQUIER cosa que no fuera un minion del dueño: los
         // animales de la granja, las mascotas de otros… y el propio jugador. Ahora solo entra si es un ENEMIGO (un

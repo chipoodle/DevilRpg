@@ -1868,6 +1868,23 @@ decir, un neutral **sí** cuenta si el dueño ya le ha pegado. El ayudante es **
 del liquen va con el jugador como atacante (`playerAttack(owner)` / `explosion(…, owner)`, ver I79), así que el bicho
 queda marcado igual y los minions van a por él.
 
+### I82 · El liquen sin dueño no hace nada (crash de NullPointerException, arreglado)
+
+**Crash medido** (con el guardado del jugador, al meterse un `Sunflower Shulker` en un liquen):
+
+```
+java.lang.NullPointerException: Cannot invoke "net.minecraft.world.entity.player.Player.getUUID()"
+        because "owner" is null
+    at SoulLichenBlock.applySoulLichenEffects(SoulLichenBlock.java:96)
+    at SoulLichenBlock.entityInside(SoulLichenBlock.java:321)
+```
+
+**Causa**: lo introdujo el arreglo de I79 al comprobar "¿es un minion del dueño?" con `owner.getUUID()` **sin
+comprobar `owner`**, y `applySoulLichenEffects` se llama con `owner` **null** (el liquen sin dueño, o el que pisa un
+minion de otro jugador). **Regla**: sin dueño, el liquen **no hace nada** —no se puede saber quién es minion y quién
+no—: una guarda al principio (`if (owner == null) return;`), mejor eso que tirar el servidor. Revisado el resto de
+usos de `owner` de esa zona: los demás van dentro de un `instanceof Player owner` o ya comprobaban null.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
