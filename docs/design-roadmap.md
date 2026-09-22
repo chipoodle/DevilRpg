@@ -3466,6 +3466,24 @@ bloques** —el anillo y **la obra del pueblo por dentro** (`smooth_quartz`, `da
 el de la aldea **ganada** picó **0** ✓. **Pendiente**: solo el comportamiento en juego (el arnés pone asaltantes a
 mano: la oleada de verdad necesita un jugador real, ver I86).
 
+### 3b.88 Los guardias revisan el almacén cada día y se ponen lo mejor (I94)
+
+El jugador: *"¿Por qué hay guardias que no tienen arma aun cuando en el almacén hay? ... Todos los días deben revisar una
+vez por lo menos el almacén y verificar si hay equipo para ellos, y si hay uno mejor que lo cambien. Los equipos con
+encantamientos tienen prioridad. Los equipos viejos pueden ser reciclados por los herreros"*.
+
+Medido en su guardado: el almacén tenía **1 espada, 1 escudo, 1 casco y 1 botas de cuero** para una milicia de 4-7, y el
+guardia armado no volvía a mirar. Y el código pedía **`IRON_SWORD` literal** (una espada encantada o de diamante no
+valía), cogía la **primera** pieza de armadura en vez de la mejor y la copiaba **sin sus encantamientos**.
+
+Ahora cada pieza vale por su material **y los encantados tienen prioridad** (cualquier pieza encantada gana a una sin
+encantar), el guardia **revisa el almacén una vez al día** aunque ya vaya equipado (marca con el día de juego), se cambia
+solo si hay algo mejor y **deja la vieja en el almacén** para que el herrero la recicle — y el herrero **ya no funde lo
+encantado**. El reciclaje (hierro/malla → lingote, oro → lingote, cuero viejo → cuero) ya existía.
+
+**Pendiente**: la corrida del arnés (espada normal y encantada en el almacén: quién coge qué y que la vieja vuelve) y
+verlo en juego.
+
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.

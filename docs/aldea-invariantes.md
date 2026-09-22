@@ -2387,6 +2387,45 @@ huerta`) y por el del leñador.
 (el arnés se la repone para poder medir al leñador), así que esa regla no llegó a dispararse: está escrita y compilada,
 pero **sin ver**.
 
+### I94 · Los guardias revisan el almacén CADA DÍA y se ponen lo MEJOR (encantados primero)
+
+El jugador: *"¿Por qué hay guardias que no tienen arma aun cuando en el almacén hay? Es de noche y están patrullando sin
+equipo. Todos los días deben revisar una vez por lo menos el almacén y verificar si hay equipo para ellos, y si hay uno
+mejor que lo cambien. Los equipos con encantamientos tienen prioridad. Los equipos viejos pueden ser reciclados por los
+herreros para hacer equipo"*.
+
+**Medido en su partida** (lectura del guardado): el **almacén** (cofre doble en rel (47,19)) tenía **1 espada de hierro,
+1 escudo, 1 casco de cuero y 1 botas de cuero** para una milicia de 4-7: **solo uno** puede armarse y el resto patrulla
+sin nada. Y el equipo que llega **no se reaprovecha**: el guardia armado no vuelve a mirar nunca.
+
+**Lo que estaba mal** (`VillagerGuardGoal`):
+
+- `equipado()` y `equipar()` pedían **`Items.IRON_SWORD` literal**: una espada de diamante, de oro, de piedra o
+  **encantada** en el almacén no valía — el guardia se quedaba de brazos cruzados con el arma al lado.
+- La armadura cogía **la primera** pieza del hueco, no la mejor (y el filtro del hueco se perdió al reescribirlo: un
+  casco no vale de peto — corregido).
+- **No había revisión diaria**: solo iba al almacén si le FALTABA equipo, así que un guardia con cuero no se cambiaba
+  nunca a la de hierro.
+- Y al coger la pieza se hacía `new ItemStack(s.getItem(), 1)`: **se perdían los encantamientos** (y el desgaste).
+
+**Regla nueva**:
+
+- **Puntuación por pieza** (`valorDeArma`, `valorDeArmadura`, `valorDeArco`, `valorDeEscudo`): material (cuero, oro,
+  malla, hierro, diamante, netherita / madera, oro, piedra, hierro, diamante, netherita) **más `PRIORIDAD_ENCANTADO` =
+  100 si está encantada** → *cualquier* pieza encantada gana a una sin encantar (lo pidió el jugador), y entre
+  encantadas gana el material mejor.
+- **Revisión diaria**: marca `DevilRpgEquipoRevisado` en el aldeano con el **día de juego** (`gameTime / 24000`); si el
+  día ha cambiado, va al almacén aunque ya vaya equipado, y se apunta la revisión al llegar.
+- **Se cambia solo si hay algo mejor**, se lleva la pieza **entera** (encantamientos y desgaste incluidos) y **deja la
+  vieja en el almacén**, que es de donde el herrero la recicla (el reciclaje ya existía: hierro/malla → lingote, oro →
+  lingote de oro, cuero viejo → cuero, con una reserva para no fundir el equipo de la milicia).
+- Y el herrero **ya no funde lo encantado** (`contarChatarra`/`haySobranteChatarra`): lo encantado es de la guardia.
+- El espadachín vale con **cualquier arma** (espada o hacha), no solo con la de hierro.
+
+**NO MEDIDO**: nada de esto se ha medido todavía con el arnés (está escrito y compilado, y el lint pasa); queda la
+corrida del arnés (poner en el almacén una espada normal y una encantada, una armadura peor y otra mejor, y ver quién
+coge qué y que el viejo vuelve al almacén) y verlo en juego. El **modelo** del guardia con su equipo es del CLIENTE.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 

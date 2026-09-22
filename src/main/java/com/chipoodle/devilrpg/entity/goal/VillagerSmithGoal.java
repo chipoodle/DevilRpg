@@ -520,7 +520,7 @@ public class VillagerSmithGoal extends Goal {
         }
         // 2) Chatarra PURA (hierro que no se pone nadie) -> lingotes.
         for (ItemStack chatarra : CHATARRA_SIEMPRE) {
-            if (hayLena && contar(almacen, chatarra.getItem()) > 0) {
+            if (hayLena && contarChatarra(almacen, chatarra.getItem()) > 0) {
                 return new Receta("Fundiendo chatarra", "Fundio chatarra en un lingote",
                         List.of(new ItemStack(chatarra.getItem(), 1)), new ItemStack(Items.IRON_INGOT), true);
             }
@@ -529,7 +529,7 @@ public class VillagerSmithGoal extends Goal {
         //     SOBRA de la reserva. Si no, el herrero fundía la única espada del almacén y el espadachín no tenía con
         //     qué armarse nunca (ni armadura que ponerse, que es justo lo que el jugador quiere VER puesta).
         for (ItemStack chatarra : CHATARRA_CON_RESERVA) {
-            if (hayLena && haySobrante(almacen, chatarra.getItem())) {
+            if (hayLena && haySobranteChatarra(almacen, chatarra.getItem())) {
                 return new Receta("Fundiendo chatarra", "Fundio chatarra en un lingote",
                         List.of(new ItemStack(chatarra.getItem(), 1)), new ItemStack(Items.IRON_INGOT), true);
             }
@@ -537,13 +537,13 @@ public class VillagerSmithGoal extends Goal {
         // 2c) Chatarra de ORO -> lingote de oro (el oro no lo quiere nadie para pelear: se funde entero y queda
         //     como tesoro del almacén), y armadura de CUERO vieja -> cuero, también con reserva.
         for (ItemStack chatarra : CHATARRA_DE_ORO) {
-            if (hayLena && contar(almacen, chatarra.getItem()) > 0) {
+            if (hayLena && contarChatarra(almacen, chatarra.getItem()) > 0) {
                 return new Receta("Fundiendo oro", "Fundio chatarra de oro en un lingote",
                         List.of(new ItemStack(chatarra.getItem(), 1)), new ItemStack(Items.GOLD_INGOT), true);
             }
         }
         for (ItemStack viejo : CUERO_VIEJO) {
-            if (haySobrante(almacen, viejo.getItem())) {
+            if (haySobranteChatarra(almacen, viejo.getItem())) {
                 return new Receta("Reciclando cuero", "Reciclo una armadura de cuero",
                         List.of(new ItemStack(viejo.getItem(), 1)), new ItemStack(Items.LEATHER));
             }
@@ -721,6 +721,21 @@ public class VillagerSmithGoal extends Goal {
     /** ¿Hay más piezas de las que la milicia necesita en reserva? (entonces sí se puede fundir una). */
     private static boolean haySobrante(Container almacen, net.minecraft.world.item.Item item) {
         return contar(almacen, item) > RESERVA_DE_MILICIA;
+    }
+
+    /**
+     * Como {@link #contar}, pero <b>sin contar el equipo encantado</b>: lo encantado es de la <b>guardia</b> (tiene
+     * prioridad para ellos, ver {@code VillagerGuardGoal.valorDeArma}), así que el herrero <b>no puede fundirlo</b> como
+     * chatarra. Lo pidió el jugador: *"los equipos con encantamientos tienen prioridad"*. Sin esto, una espada
+     * encantada que hubiera en el almacén podía acabar en lingotes antes de que un guardia llegara a verla.
+     */
+    private static int contarChatarra(Container almacen, net.minecraft.world.item.Item item) {
+        return VillagePantry.contar(almacen, s -> s.is(item) && !s.isEnchanted());
+    }
+
+    /** ¿Hay chatarra de sobra (sin contar la encantada, que es de la guardia) por encima de la reserva? */
+    private static boolean haySobranteChatarra(Container almacen, net.minecraft.world.item.Item item) {
+        return contarChatarra(almacen, item) > RESERVA_DE_MILICIA;
     }
 
     // --- utilidades ---------------------------------------------------------------------------------

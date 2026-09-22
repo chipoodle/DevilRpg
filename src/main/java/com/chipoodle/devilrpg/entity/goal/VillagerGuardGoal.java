@@ -246,7 +246,17 @@ public class VillagerGuardGoal extends Goal {
         // siempre: medido en el guardado del jugador, la única guardia de la aldea llevaba horas allí sin patrullar
         // ni una vez (y con la etiqueta de "Durmiendo", que era el refresco genérico, no la realidad).
         sinEquipo = !equipado(level);
-        equipando = sinEquipo && hayEquipoEnElAlmacen(level);
+        // REVISIÓN DIARIA DEL ALMACÉN (lo pidió el jugador: *"todos los días deben revisar una vez por lo menos el
+        // almacén y verificar si hay equipo para ellos, y si hay uno mejor que lo cambien. Los equipos con encantamientos
+        // tienen prioridad"*): aunque ya vaya equipado, una vez al día va a mirar si hay algo MEJOR y, si lo hay, se
+        // cambia y DEJA EL VIEJO en el almacén (de ahí lo recicla el herrero). Antes solo iba si le FALTABA equipo: un
+        // guardia con armadura de cuero no se cambiaba a la de hierro nunca, y el que ya llevaba espada no volvía a
+        // mirar. Medido en su partida: el almacén tenía 1 espada de hierro, 1 escudo y 1 casco y 1 botas de cuero para
+        // una milicia de 4-7, y los guardias patrullaban de noche sin equipo.
+        boolean tocaRevision = revisionPendiente(level);
+        // La pregunta es la MISMA para los dos casos ("¿hay algo mejor que lo que llevo?"): al que le falta el arma,
+        // cualquier arma del almacén le vale (su hueco vale 0), así que no hacen falta dos filtros.
+        equipando = (sinEquipo || tocaRevision) && hayMejoraEnElAlmacen(level);
         // MARCHA A LA GUARIDA: si la milicia ha marchado, su sitio es el núcleo. Aquí la "correa" de la aldea no
         // cuenta: el núcleo está a 75-95 bloques del pueblo, así que marchar es salirse del término a propósito.
         // Y a la guarida solo se va CON el equipo puesto: sin arma no se asalta nada (se queda de ronda).
@@ -345,7 +355,7 @@ public class VillagerGuardGoal extends Goal {
             escanear = ESCANEO_TICKS;
             enemigo = buscarEnemigo(level);
             // Y de paso se mira si el almacén tiene ya algo suyo: mirar un cofre (54 huecos) NO se hace por tick.
-            hayEquipoEnAlmacen = hayEquipoEnElAlmacen(level);
+            hayEquipoEnAlmacen = hayMejoraEnElAlmacen(level);
         }
         if (enemigo != null) {
             if (enemigo.isAlive() && !enemigo.isRemoved()) {
@@ -680,7 +690,10 @@ public class VillagerGuardGoal extends Goal {
         if (tipoDe(villager) == ARQUERO) {
             return villager.getMainHandItem().is(Items.BOW) && flechas() > 0;
         }
-        return villager.getMainHandItem().is(Items.IRON_SWORD)
+        // El ESPADACHÍN vale con cualquier arma (espada o hacha), no solo con la de hierro: los encantados y las de
+        // mejor material cuentan (ver `valorDeArma`). Exigir `IRON_SWORD` era lo que dejaba al guardia de brazos
+        // cruzados con una espada de diamante o encantada en el almacén.
+        return valorDeArma(villager.getMainHandItem()) > 0
                 && villager.getOffhandItem().is(Items.SHIELD);
     }
 
@@ -694,12 +707,18 @@ public class VillagerGuardGoal extends Goal {
         if (almacen == null) {
             return false;
         }
-        // ARMADURA primero (lo pidió el jugador: que se les vea con armadura): pieza a pieza, la que haya.
+        // ARMADURA primero: pieza a pieza, la MEJOR que haya (los encantados primero; si no hay nada mejor que lo que
+        // ya lleva, se queda con lo suyo y el del almacén sigue ahí para otro).
         for (EquipmentSlot pieza : ARMADURAS) {
-            cogerArmadura(almacen, pieza);
+            // OJO con el hueco: un casco NO vale de peto. Antes esto lo miraba `cogerArmadura` y al reescribirlo hay que
+            // seguir mirándolo.
+            mejorar(level, almacen, pieza,
+                    s -> s.getItem() instanceof ArmorItem armadura && armadura.getEquipmentSlot() == pieza,
+                    VillagerGuardGoal::valorDeArmadura, "la armadura");
         }
         if (tipoDe(villager) == ARQUERO) {
-            cogerYEquipar(almacen, EquipmentSlot.MAINHAND, s -> s.is(Items.BOW), "el arco");
+            mejorar(level, almacen, EquipmentSlot.MAINHAND, s -> s.is(Items.BOW),
+                    VillagerGuardGoal::valorDeArco, "el arco");
             if (flechas() < FLECHAS_POR_VIAJE) {
                 int flechas = VillagePantry.sacar(almacen, s -> s.is(Items.ARROW), FLECHAS_POR_VIAJE);
                 if (flechas > 0) {
@@ -710,11 +729,159 @@ public class VillagerGuardGoal extends Goal {
                     VillageManager.ponerSuceso(villager, "Cogio " + flechas + " flechas del almacen");
                 }
             }
+            marcarRevisionHecha(level);
             return equipado(level);
         }
-        cogerYEquipar(almacen, EquipmentSlot.MAINHAND, s -> s.is(Items.IRON_SWORD), "la espada");
-        cogerYEquipar(almacen, EquipmentSlot.OFFHAND, s -> s.is(Items.SHIELD), "el escudo");
+        mejorar(level, almacen, EquipmentSlot.MAINHAND, VillagerGuardGoal::esUnArma,
+                VillagerGuardGoal::valorDeArma, "el arma");
+        mejorar(level, almacen, EquipmentSlot.OFFHAND, s -> s.is(Items.SHIELD),
+                VillagerGuardGoal::valorDeEscudo, "el escudo");
+        marcarRevisionHecha(level);
         return equipado(level);
+    }
+
+    /**
+     * <b>Se pone lo mejor</b> que haya en el almacén en ese hueco, si es mejor que lo que ya lleva, y <b>deja lo viejo
+     * en el almacén</b> (de ahí lo recicla el herrero: 1 hierro viejo = 1 lingote). Los <b>encantados tienen
+     * prioridad</b> (lo pidió el jugador): cualquier pieza encantada gana a una sin encantar, y entre encantadas gana
+     * la del material mejor.
+     * <p>
+     * Se copia el objeto <b>ENTERO</b> (con sus encantamientos y su desgaste), no un modelo por tipo: antes se cogía
+     * `new ItemStack(s.getItem(), 1)`, que se llevaba la espada <b>sin</b> sus encantamientos.
+     */
+    private void mejorar(ServerLevel level, Container almacen, EquipmentSlot hueco, Predicate<ItemStack> filtro,
+            java.util.function.ToIntFunction<ItemStack> valor, String nombre) {
+        ItemStack puesto = villager.getItemBySlot(hueco);
+        int actual = valor.applyAsInt(puesto);
+        ItemStack elegido = null;
+        int mejorValor = Math.max(actual, 0);
+        for (int i = 0; i < almacen.getContainerSize(); i++) {
+            ItemStack s = almacen.getItem(i);
+            if (s.isEmpty() || !filtro.test(s)) {
+                continue;
+            }
+            int v = valor.applyAsInt(s);
+            if (v > mejorValor) {
+                mejorValor = v;
+                elegido = s;
+            }
+        }
+        if (elegido == null) {
+            return;
+        }
+        ItemStack nuevo = elegido.copyWithCount(1);
+        elegido.shrink(1);
+        almacen.setChanged();
+        if (!puesto.isEmpty()) {
+            // LO VIEJO, DE VUELTA AL ALMACÉN (para el herrero). Si no cupiera, se lo queda en la mochila: nunca se tira.
+            ItemStack resto = VillageStorage.guardar(level, center, puesto.copy());
+            if (!resto.isEmpty()) {
+                guardarEnInventario(resto);
+            }
+        }
+        villager.setItemSlot(hueco, nuevo);
+        VillageManager.ponerSuceso(villager, "Se equipo con " + nombre + " del almacen");
+        DevilRpg.LOGGER.info("[Village] {} se equipo con {} ({}): {} (aldea {})", villager.getUUID(), nombre,
+                nuevo.getHoverName().getString(), nuevo.isEnchanted() ? "ENCANTADO" : "normal", objectiveIndex);
+    }
+
+    // --- lo que vale cada pieza (los encantados, primero) ---------------------------------------------
+
+    /** Lo que suma una pieza <b>encantada</b>: gana a cualquier pieza sin encantar (lo pidió el jugador). */
+    private static final int PRIORIDAD_ENCANTADO = 100;
+
+    private static boolean esUnArma(ItemStack s) {
+        return s.getItem() instanceof net.minecraft.world.item.SwordItem
+                || s.getItem() instanceof net.minecraft.world.item.AxeItem;
+    }
+
+    /** Cuánto vale un arma: por material y, sobre todo, si está <b>encantada</b>. {@code 0} = no es un arma. */
+    private static int valorDeArma(ItemStack s) {
+        if (s.isEmpty() || !esUnArma(s)) {
+            return 0;
+        }
+        net.minecraft.world.item.Item i = s.getItem();
+        int base = i == Items.NETHERITE_SWORD ? 6
+                : i == Items.DIAMOND_SWORD ? 5
+                : i == Items.IRON_SWORD ? 4
+                : i == Items.STONE_SWORD ? 3
+                : i == Items.GOLDEN_SWORD ? 2
+                : i == Items.WOODEN_SWORD ? 1
+                : 2; // los hachas: por debajo de la espada de su material, pero valen de arma
+        return base + (s.isEnchanted() ? PRIORIDAD_ENCANTADO : 0);
+    }
+
+    /** Cuánto vale un arco: encantado primero. {@code 0} = no es un arco. */
+    private static int valorDeArco(ItemStack s) {
+        return s.is(Items.BOW) ? 1 + (s.isEnchanted() ? PRIORIDAD_ENCANTADO : 0) : 0;
+    }
+
+    /** Cuánto vale un escudo: encantado primero. */
+    private static int valorDeEscudo(ItemStack s) {
+        return s.is(Items.SHIELD) ? 1 + (s.isEnchanted() ? PRIORIDAD_ENCANTADO : 0) : 0;
+    }
+
+    /** Cuánto vale una pieza de armadura: por material (cuero, oro, malla, hierro, diamante, netherita) y encantada. */
+    private static int valorDeArmadura(ItemStack s) {
+        if (!(s.getItem() instanceof ArmorItem armadura)) {
+            return 0;
+        }
+        net.minecraft.core.Holder<net.minecraft.world.item.ArmorMaterial> mat = armadura.getMaterial();
+        int base = mat == net.minecraft.world.item.ArmorMaterials.NETHERITE ? 6
+                : mat == net.minecraft.world.item.ArmorMaterials.DIAMOND ? 5
+                : mat == net.minecraft.world.item.ArmorMaterials.IRON ? 4
+                : mat == net.minecraft.world.item.ArmorMaterials.CHAIN ? 3
+                : mat == net.minecraft.world.item.ArmorMaterials.GOLD ? 2
+                : mat == net.minecraft.world.item.ArmorMaterials.LEATHER ? 1 : 0;
+        return base <= 0 ? 0 : base + (s.isEnchanted() ? PRIORIDAD_ENCANTADO : 0);
+    }
+
+    // --- la revisión diaria del almacén ---------------------------------------------------------------
+
+    /** Día de juego de la última revisión del almacén (marca del aldeano). */
+    private static final String MARCA_REVISION = "DevilRpgEquipoRevisado";
+
+    /** ¿Toca revisar el almacén hoy? Cada guardia, como mucho una vez al día (lo pidió el jugador). */
+    private boolean revisionPendiente(ServerLevel level) {
+        long dia = level.getGameTime() / 24000L;
+        return villager.getPersistentData().getLong(MARCA_REVISION) < dia;
+    }
+
+    private void marcarRevisionHecha(ServerLevel level) {
+        villager.getPersistentData().putLong(MARCA_REVISION, level.getGameTime() / 24000L);
+    }
+
+    /** ¿Hay en el almacén algo <b>mejor</b> que lo que ya lleva puesto (o algo suyo que le falte)? */
+    private boolean hayMejoraEnElAlmacen(ServerLevel level) {
+        Container almacen = VillageStorage.almacen(level, center);
+        if (almacen == null) {
+            return false;
+        }
+        for (EquipmentSlot pieza : ARMADURAS) {
+            if (hayMejor(almacen, pieza,
+                    s -> s.getItem() instanceof ArmorItem armadura && armadura.getEquipmentSlot() == pieza,
+                    VillagerGuardGoal::valorDeArmadura)) {
+                return true;
+            }
+        }
+        if (tipoDe(villager) == ARQUERO) {
+            return hayMejor(almacen, EquipmentSlot.MAINHAND, s -> s.is(Items.BOW), VillagerGuardGoal::valorDeArco);
+        }
+        return hayMejor(almacen, EquipmentSlot.MAINHAND, VillagerGuardGoal::esUnArma, VillagerGuardGoal::valorDeArma)
+                || hayMejor(almacen, EquipmentSlot.OFFHAND, s -> s.is(Items.SHIELD),
+                        VillagerGuardGoal::valorDeEscudo);
+    }
+
+    private boolean hayMejor(Container almacen, EquipmentSlot hueco, Predicate<ItemStack> filtro,
+            java.util.function.ToIntFunction<ItemStack> valor) {
+        int actual = Math.max(valor.applyAsInt(villager.getItemBySlot(hueco)), 0);
+        for (int i = 0; i < almacen.getContainerSize(); i++) {
+            ItemStack s = almacen.getItem(i);
+            if (!s.isEmpty() && filtro.test(s) && valor.applyAsInt(s) > actual) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Saca del almacén una unidad de lo que pida el filtro y se la pone en la mano indicada. */
