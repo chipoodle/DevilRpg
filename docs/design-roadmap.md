@@ -3305,6 +3305,10 @@ a 599 m hacia el noreste`), sin cambiar al revelar (solo lista lo **visitado**).
 La medida **cazó un fallo de rastreo**: la piedra no revelaba nada (y en silencio) con un jugador sin ancla —el de pega
 del arnés—; ahora deja un `WARN` con el motivo.
 
+Y el **estado de la aldea** pasa a tener **una sola definición** (`VillageManager.estadoDeLaAldea`: EN RUINAS / en
+asedio / a salvo con el sello / viva sin socorrer), que usan el Diario y el arnés: en la última corrida las líneas del
+Diario dan `EN RUINAS` para la aldea 1 y `a salvo, con el sello puesto` para la 0 y la 2.
+
 Queda **pendiente**: la **tabla de nombres** definitiva (la pasa el jugador) y, en el juego abierto, la barra dibujada
 (es del cliente) y el clic en la piedra (se mide el método que corre el clic).
 

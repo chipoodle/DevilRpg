@@ -46,6 +46,12 @@ Viaja con el jugador (en un solo jugador: `level.dat`) y **se sincroniza al clie
 | Hordas del mundo en curso (`WORLD_SIEGES`) | idem | igual: se pierden |
 | Puntos fallidos de los aldeanos | **en la entidad** (`DevilRpgPuntoFallido`, 5 min) | estos **sí** persisten con el aldeano |
 
+**El estado en una línea.** Para leerlo sin repetir reglas está
+`VillageManager.estadoDeLaAldea(level, indice)`, que devuelve `EN RUINAS` / `en asedio` / `a salvo, con el sello
+puesto` / `viva, sin socorrer` (en ese orden de prioridad). Lo usan el **Diario del Invocado** y el **arnés**, así que
+"el estado de la aldea" tiene una sola definición en todo el mod. Medido: las líneas del Diario del jugador dan
+`EN RUINAS` para la aldea 1 y `a salvo, con el sello puesto` para la 0 y la 2.
+
 ## 2. La máquina de estados (quién la mueve y qué deja en el log)
 
 ```

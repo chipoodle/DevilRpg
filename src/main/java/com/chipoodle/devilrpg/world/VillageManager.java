@@ -1710,6 +1710,28 @@ public final class VillageManager {
     }
 
     /**
+     * <b>El estado de una aldea, dicho en una línea</b>: es lo que enseña el <b>Diario del Invocado</b> (I87) y lo que
+     * vuelca el arnés, así que la regla vive <b>aquí y en un solo sitio</b> (no copiada dentro del objeto).
+     * <p>
+     * El orden importa: una aldea caída está caída aunque haya bichos dentro; y el asedio se mira <b>antes</b> que el
+     * sello, porque una aldea con el sello puesto puede estar siendo atacada otra vez (el sello corta los spawns de
+     * dentro, no las hordas que ya vienen de fuera).
+     */
+    public static String estadoDeLaAldea(ServerLevel level, int objectiveIndex) {
+        VillageSavedData saved = VillageSavedData.get(level);
+        if (saved.isFallen(objectiveIndex)) {
+            return "EN RUINAS";
+        }
+        if (isUnderAttack(level, objectiveIndex)) {
+            return "en asedio";
+        }
+        if (saved.isSiegeResolved(objectiveIndex)) {
+            return "a salvo, con el sello puesto";
+        }
+        return "viva, sin socorrer";
+    }
+
+    /**
      * Apunta a un <b>defensor</b> de la aldea: lo llama {@code AggressiveZombieEntity.hurt} cada vez que
      * alguien le pega a un enemigo de una horda del mundo. Vale el jugador y también sus <b>minions</b> (el
      * mérito es del dueño), que es como pelea medio mod. Si esa aldea no tiene horda en curso, no hace nada.

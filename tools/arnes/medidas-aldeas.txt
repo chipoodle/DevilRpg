@@ -92,6 +92,21 @@ Corridas: 3 (22-sep-2026 00:09, 00:33 y 00:44). La 3a anade el escenario de los 
   para poder regresar"*). Y despues de revelar la 3 y la 5, el Diario NO cambia: solo lista lo
   VISITADO ([0, 1, 2]), que es lo que pidio ("solo las que uno ya haya entrado").
 
+--- 8b) EL ESTADO DE CADA ALDEA (VillageManager.estadoDeLaAldea) ---------------------
+
+  Mismo volcado, por aldea (el estado va en la linea del Diario, que es lo que lee el jugador):
+
+[Arnes] DIARIO: Aldea de Valdehierro  (566, 566) — a salvo, con el sello puesto · a 1199 m hacia el noreste
+[Arnes] DIARIO: Aldea de Fuenteclara  (990, 990) — EN RUINAS · a 599 m hacia el noreste
+[Arnes] DIARIO: Aldea de Robledal  (1414, 1414) — a salvo, con el sello puesto · a 0 m hacia el sur
+[Arnes] ALDEA 0 nombre="Aldea de Valdehierro" ... estado="a salvo, con el sello puesto"
+
+  La regla vive en `VillageManager.estadoDeLaAldea(level, indice)` (EN RUINAS / en asedio / a salvo con
+  el sello / viva sin socorrer) y la usan el Diario y el arnes: asi no hay dos copias que se
+  desincronicen. En esta partida se han visto DOS de los cuatro estados (`EN RUINAS` y `a salvo, con el
+  sello puesto`); `en asedio` necesita un asedio vivo y `viva, sin socorrer` una aldea sin resolver, y
+  en esta copia las tres estan resueltas o caidas.
+
 --- 9) ERRORES ------------------------------------------------------------------------
 
 Ninguno: cero `Exception` / `ERROR` en las tres corridas.

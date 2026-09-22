@@ -86,14 +86,8 @@ public class DiarioDelInvocadoItem extends Item {
             String coords = centro != null
                     ? "(" + centro.getX() + ", " + centro.getZ() + ")"
                     : "(sin plano guardado)";
-            String estado;
-            if (saved.isFallen(i)) {
-                estado = "EN RUINAS";
-            } else if (saved.isSiegeResolved(i)) {
-                estado = "a salvo, con el sello puesto";
-            } else {
-                estado = "viva, sin socorrer";
-            }
+            // El estado lo dice VillageManager.estadoDeLaAldea: la regla en un solo sitio (Diario y arnés).
+            String estado = VillageManager.estadoDeLaAldea(level, i);
             String rumbo = "";
             if (centro != null) {
                 double dx = centro.getX() + 0.5D - player.getX();

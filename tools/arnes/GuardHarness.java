@@ -708,9 +708,10 @@ public class GuardHarness {
             probarLosRevelados(level, pega, aux);
         }
         for (int i = 0; i <= indice; i++) {
-            DevilRpg.LOGGER.info("[Arnes] ALDEA {} nombre=\"{}\" visitada={} revelada={} centro={}",
+            DevilRpg.LOGGER.info("[Arnes] ALDEA {} nombre=\"{}\" visitada={} revelada={} centro={} estado=\"{}\"",
                     i, com.chipoodle.devilrpg.survival.VillageNames.nombre(i),
-                    aux.isAldeaVisitada(i), aux.isAldeaRevelada(i), VillageManager.centroDe(level, i));
+                    aux.isAldeaVisitada(i), aux.isAldeaRevelada(i), VillageManager.centroDe(level, i),
+                    VillageManager.estadoDeLaAldea(level, i));
         }
         // LO QUE DIBUJARIA LA BARRA DE ALDEA: la aldea ACTUAL, la siguiente y una que NO esté en el guardado (el caso
         // que importa de verdad: la que viene DESPUÉS de una que cayó tiene que salir OCULTA hasta que la piedra o un

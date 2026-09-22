@@ -2072,6 +2072,11 @@ regresar"*):
 7. **Siembra en partidas ya empezadas**: una aldea que el mundo ya dio por resuelta es una aldea en la que el jugador
    estuvo, así que se le apunta como visitada y revelada **una sola vez** (en cuanto tiene una apuntada, no se vuelve a
    mirar). Sin esto, su partida de siempre nacería con el Diario vacío y la barra sin saber hacia dónde ir.
+8. **El estado de la aldea, en un solo sitio**: `VillageManager.estadoDeLaAldea(level, índice)` devuelve
+   `EN RUINAS` / `en asedio` / `a salvo, con el sello puesto` / `viva, sin socorrer` (ese orden: una caída manda, y el
+   asedio se mira antes que el sello). Lo usan el **Diario** y el **arnés**, así que no hay dos copias de la regla que
+   se desincronicen. Y la **barra** dibuja lo que decide `VillageBarText` (compartido, para que el arnés mida el mismo
+   texto que se ve), no una copia dentro del HUD.
 
 **Lo que hay que recordar al tocar esto**: el descubrimiento y el revelado son **por jugador** y van en la capability
 auxiliar (se sincronizan al cliente, que es quien dibuja la barra); el **estado** de la aldea sigue siendo del mundo
