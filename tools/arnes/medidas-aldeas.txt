@@ -260,6 +260,54 @@ LO QUE ESTA MEDIDA NO CUBRE:
     sella el suelo al construir (`sellarSuelo`), asi que una aldea sana no deberia tener nada que
     tapar; si el jugador ve a los obreros "tapando baches", es esta regla.
 
+--- 11) EL LENADOR Y EL POLVO DE HUESO (ronda del 22-sep, MEDIR_LENADOR) --------------
+
+Peticion del jugador (con captura de Hortensia "Yendo al arbol"):
+  "todavia el leñador quiere ir afuera de la aldea. Si el bosque dentro de la aldea no tiene
+   todavia arboles que vaya al almacen por polvo de hueso a fertilizar el arbol. El ir afuera
+   es el ultimo de los recursos. Los granjeros tampoco nunca deben olvidar de hacer polvo de
+   hueso ademas de cultivar, cosechar y entregar vegetales".
+
+ESTADO DE PARTIDA (su aldea 0, solo lectura, con `build/estado_lenador.py`):
+  - ARBOLEDA del pueblo: 2 arboles, 10 plantones, 0 huecos (de sus 12 plazas)
+  - ARBOLES con base dentro de la valla (62): 487 (con el muro y las casas, que son de troncos)
+  - ARBOLES con base FUERA, hasta 102 bloques: 243
+  - DESPENSA/ALMACEN: 0 de polvo de hueso y 1 hueso; composteros a nivel 1, 1 y 5 de 8
+  - los HUESOS no estaban en la lista del recolector (`VillagerCollectGoal.esDelPueblo`)
+
+CORRIDA 1 (primer arreglo, sin los dos retoques):
+  - Hortensia: etiqueta "Yendo al arbol", destino 548/74/694 -> destinoDentro=FALSE (~110 bloques
+    del centro), zurron harina=0, y la arboleda QUIETA (2 arboles, 10 plantones) en las 8 muestras
+    (t=200..1600)
+  - el granjero SI molio: "El granjero: Hizo 27 polvo de hueso (de 9 hueso(s))"
+  - por que: (a) la arboleda esta a 105 bloques de ella y el barrido es de 40 a su alrededor;
+    (b) el abonado iba con el cooldown del barrido de claros: 40 descansos de 120 ticks = 4 minutos
+
+CORRIDA 2 (con los tres arreglos):
+  [Arnes] LENADOR t=200  ARBOLEDA: 2 arbol(es), 10 planton(es), 0 hueco(s) | DESPENSA: 8 hueso(s), 16 harina
+  [Arnes] LENADOR t=800  ARBOLEDA: 1 arbol(es), 11 planton(es), 0 hueco(s) | DESPENSA: 0 hueso(s), 16 harina
+  [Arnes] LENADOR t=1600 ARBOLEDA: 2 arbol(es), 10 planton(es), 0 hueco(s) | DESPENSA: 0 hueso(s), 56 harina
+  [Arnes] LENADOR t=1800 ARBOLEDA: 3 arbol(es),  9 planton(es), 0 hueco(s) | DESPENSA: 0 hueso(s), 72 harina
+  Y el leñador, TODAS las muestras con el destino DENTRO de la valla:
+    LENADOR 61f5fb7b pos=435/63/631 dCentro=38 destino=419/64/621 destinoDentro=true
+        zurron=[madera=0 semillas=16 harina=0] etiqueta="Hortensia (Lenador) / Talando"
+    LENADOR 61f5fb7b pos=457/63/651 dCentro=14 destino=497/63/662 destinoDentro=true
+        zurron=[madera=5 semillas=17 harina=0] etiqueta="... / Yendo por polvo de hueso"
+    LENADOR 61f5fb7b pos=490/63/665 dCentro=27 destino=443/63/629 destinoDentro=true
+        zurron=[madera=5 semillas=17 harina=8] etiqueta="... / Cogio polvo de hueso (8)"
+    LENADOR 61f5fb7b pos=460/63/644 dCentro=10 destino=443/63/629 destinoDentro=true
+        zurron=[madera=5 semillas=17 harina=8] etiqueta="... / Yendo a la arboleda"
+    LENADOR 61f5fb7b pos=440/63/630 dCentro=34 destino=419/64/621 destinoDentro=true
+        zurron=[madera=5 semillas=17 harina=7] etiqueta="... / Abono la arboleda"
+    LENADOR 61f5fb7b pos=436/63/626 dCentro=39 ... harina=2  etiqueta="... / Abono la arboleda"
+    GRANJERO da6a431a ... harina=43 etiqueta="Ximeno (Granjero) / Hizo 27 polvo de hueso (de 9 hueso(s))"
+
+LO QUE ESTA MEDIDA NO CUBRE:
+  - El empujon del COMPOSTERO (`HARINA_MINIMA` = 8, el paso 3b del granjero): en la corrida el pueblo
+    tenia harina de sobra todo el rato (el arnes se la repone para poder medir al leñador), asi que
+    esa regla no llego a dispararse. Escrita y compilada, **sin ver**.
+  - La partida del jugador: el mundo medido es una COPIA (`run/world`). Su partida no se ha tocado.
+
 ================================================================================
 LO QUE ESTA MEDIDA **NO** CUBRE (pendiente, y hay que decirlo)
 ================================================================================

@@ -2270,6 +2270,67 @@ preguntas de faena la usan. `esOficioDelPueblo` se queda como está en los otros
 reposición de profesiones), donde el recolector **sí** es un puesto del pueblo. Medido después: `3:VillagerRepairGoal`
 entre sus goals, y **él** es quien tapa el cráter (I90).
 
+### I92 · El leñador no sale de la aldea mientras su arboleda no esté poblada
+
+El jugador, con la captura de **Hortensia (Leñador) "Yendo al arbol"**: *"todavía el leñador quiere ir afuera de la
+aldea. Si el bosque dentro de la aldea no tiene todavía árboles que vaya al almacén por polvo de hueso a fertilizar el
+árbol. El ir afuera es el último de los recursos"*.
+
+**Medido en su partida** (aldea 0, `build/estado_lenador.py`, solo lectura): la **arboleda del pueblo** tenía **2 árboles
+y 10 plantones** de sus doce plazas, y **fuera** había **243 árboles con la base a menos de 102 bloques**. La búsqueda
+del leñador era **una sola, por distancia**, así que el árbol de fuera (a 25 bloques de él) le ganaba a los de su
+arboleda (a **105**): de ahí que se fuera al monte con el bosque del pueblo a medias.
+
+**Regla**:
+
+- La búsqueda de árbol va <b>partida en dos</b> ({@code buscarArbol(level, dentro)}): primero <b>dentro</b> del recinto
+  (la arboleda del pueblo y los árboles sueltos) y el monte de <b>fuera</b> solo <b>al final</b>, cuando dentro no queda
+  nada que hacer (ni árbol, ni hueco que replantar, ni plantón que abonar, ni resto colgando, ni semillas que traer del
+  almacén).
+- La **arboleda del pueblo se mira siempre**, esté donde esté el aldeano: sus doce plazas se saben
+  (`VillageGenerator.plantonesDeLaArboleda`), y el barrido normal es de 40 bloques **alrededor del aldeano**, así que
+  una arboleda al otro lado del pueblo no se veía.
+- Mientras la arboleda **no esté poblada** (menos de `ARBOLES_DE_LA_ARBOLEDA_ESTABLECIDA` = 6 de sus 12 plazas con
+  árbol), el leñador **abona sus plantones**: va **andando** al **almacén** o a la **despensa** a por la harina de huesos
+  (`RECOGER_HARINA`), se la lleva **en la mano** (`HARINA_POR_VIAJE` = 8) y la gasta en el plantón. Antes la cogía del
+  cofre **a distancia** y solo mientras la arboleda no tuviera **ni un** árbol.
+
+**Medido con el arnés** (`MEDIR_LENADOR`, su aldea): en **todas** las muestras el destino del leñador cae **dentro** de
+la valla (`destinoDentro=true`) y la ronda es `Yendo por polvo de hueso` → `Cogio polvo de hueso (8)` → `Yendo a la
+arboleda` → `Abono la arboleda` (harina del zurrón 8 → 2), con la arboleda subiendo de **2 a 3 árboles** y los plantones
+bajando de 10 a 9. Con el código de antes, el **mismo** montaje daba `destinoDentro=false` (a ~110 bloques del centro).
+
+**Dos fallos del primer intento, los dos medidos** (y por eso están escritos aquí): el abonado de la arboleda iba con el
+**cooldown del barrido de claros**, que solo baja cuando `canUse` llega hasta él —y con el descanso de 120 ticks tardaba
+~40 descansos (4 minutos) en volver a mirar la arboleda—; y la arboleda **no se veía** desde lejos (ver arriba).
+
+### I93 · El polvo de hueso: lo recoge el recolector, lo muele el granjero y lo usa el leñador
+
+El jugador: *"los granjeros tampoco nunca deben olvidar de hacer polvo de hueso además de cultivar, cosechar y entregar
+vegetales"*.
+
+**Medido en su partida**: **0 de polvo de hueso en toda la aldea** con **1 hueso** guardado y los **tres composteros a
+nivel 1, 1 y 5** de 8 (ninguno había producido ni una harina). Y los **huesos no estaban** en la lista de lo que recoge
+el recolector (`VillagerCollectGoal.esDelPueblo`), así que se quedaban en el suelo.
+
+**Regla**:
+
+- El **recolector** recoge los **huesos** (los sueltan los esqueletos que mata la milicia) y los guarda en el almacén.
+- El **granjero** los **muele** en cada visita al kiosco: `VillagePantry.molerHuesos` los saca de la despensa y del
+  almacén y deja el polvo de hueso en la despensa con la **receta de vanilla** (1 hueso = 3,
+  `POLVO_DE_HUESO_POR_HUESO`).
+- Y **no se olvida del compostero**: si la despensa está por debajo de `HARINA_MINIMA` (8) y lleva semillas de sobra, el
+  compostero va **antes** que las faenas de la tierra. Era el paso que **no se alcanzaba nunca** —con los tres bancales
+  (216 celdas) siempre hay algo maduro—, el mismo fallo que tuvo la siembra (ver el paso 3 de `canUse`).
+
+**Medido con el arnés** (`MEDIR_LENADOR`): `El granjero: Hizo 27 polvo de hueso (de 9 hueso(s))` (los 8 sembrados más el
+que ya tenía la aldea), con el anuncio en su etiqueta, y la harina pasando por el zurrón de los granjeros (`Abono la
+huerta`) y por el del leñador.
+
+**No medido**: el empujón del compostero (`HARINA_MINIMA`). En la corrida el pueblo tenía harina de sobra todo el rato
+(el arnés se la repone para poder medir al leñador), así que esa regla no llegó a dispararse: está escrita y compilada,
+pero **sin ver**.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 

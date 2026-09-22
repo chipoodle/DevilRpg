@@ -205,4 +205,39 @@ jugador de verdad el reloj no corre**: el reloj solo avanza con el jugador del a
 La 1.ª corrida destapó además que el jugador de pega **no carga chunks**: la aldea 3 se descargaba
 (`aldeanos3=11` → `0`). El modo fuerza sus chunks al arrancar y con eso se mantienen los 11 aldeanos.
 
+### `MEDIR_AGUJERO = true` — el cráter de un creeper (I90)
+
+Abre un **cráter de 3×3×2** en el suelo de la aldea y vuelca sus dos capas con letras (`.` = aire, `G` = hierba,
+`D` = tierra, `P` = camino) cada 10 s, además de lo que ve el buscador del obrero y **qué está haciendo cada
+constructor** (sus goals, con su prioridad y si están corriendo). **Lo que mide**: que el agujero se tapa **de abajo
+arriba** (la capa del suelo queda de **hierba** y la capa de tránsito se queda en **aire**, sin escalón), **quién** lo
+tapa y **por qué** antes no lo tapaba nadie (medido: los tres obreros devolvían como destino **su propia posición**, y
+el recolector tenía la reparación a prioridad 5 y no llegaba a ejecutarla nunca).
+
+### `MEDIR_MURO = true` — la brecha en la muralla (I89)
+
+Pone un asaltante **sin objetivo** fuera de la muralla (radio 66) para que corra la **marcha** (la que taladra) y va
+volcando la línea de bloques entre él y la valla (radios 66..56). **Pendiente**: la brecha está escrita y compilada,
+pero no se ha llegado a ver en juego.
+
+### `MEDIR_LENADOR = true` — el leñador, su arboleda y el polvo de hueso (I92/I93)
+
+Corre sobre la **aldea del jugador** (aldea 0) y vuelca cada 10 s: el estado de la **arboleda del pueblo** (árboles,
+plantones y huecos de sus doce plazas), los **huesos y el polvo de hueso** de la despensa, y dónde está y **a dónde
+camina** el leñador (flechero) y los granjeros, diciendo si su destino cae **dentro** de la valla (62) o **fuera**.
+
+A los 10 s le siembra al pueblo **8 huesos y 16 de polvo de hueso**, y le va **reponiendo** el polvo de hueso cada
+10 s (el granjero se lo lleva para abonar la huerta en cuanto lo ve, así que sin reponerlo solo se mediría el caso "no
+hay"). **Lo que mide**:
+
+- que el **granjero muele** los huesos (la receta de vanilla, 1 hueso = 3 de polvo): `El granjero: Hizo 27 polvo de
+  hueso (de 9 hueso(s))`;
+- que el **leñador no sale** de la aldea mientras su arboleda no esté poblada: `destinoDentro=true` en **todas** las
+  muestras y la ronda `Yendo por polvo de hueso` → `Cogio polvo de hueso (8)` → `Yendo a la arboleda` → `Abono la
+  arboleda` (con la harina del zurrón bajando 8 → 2);
+- y que la arboleda **crece** con eso: en la corrida, 2 árboles → **3** y los plantones de 10 → 9.
+
+Con el código de antes, el **mismo** montaje daba `destinoDentro=false` (Hortensia se iba al monte a ~110 bloques del
+centro con su arboleda a 105 y 16 de harina esperando en la despensa).
+
 

@@ -142,6 +142,22 @@ public class GuardHarness {
      * está Leoncio el recolector, él debería de ser también constructor"*.
      */
     private static final boolean MEDIR_AGUJERO = false;
+    /**
+     * ¿Se mide <b>EL LEÑADOR</b> (lo pidió el jugador: *"todavía el leñador quiere ir afuera de la aldea. Si el bosque
+     * dentro de la aldea no tiene todavía árboles que vaya al almacén por polvo de hueso a fertilizar el árbol. El ir
+     * afuera es el último de los recursos"*)?
+     * <p>
+     * Se corre sobre <b>su aldea de verdad</b> (aldea 0, centro 470/646, cota 63, con su arboleda: 2 árboles y 10
+     * plantones) y volca cada 10 s: el estado de la arboleda, los huesos y la harina de la despensa, y dónde está y a
+     * dónde camina <b>el leñador</b> (flechero) y los granjeros, diciendo si el destino cae <b>dentro</b> de la valla o
+     * fuera.
+     * <p>
+     * A los 10 s se le siembra al pueblo lo que en su partida <b>no</b> hay (8 huesos y 16 de harina de huesos): así se
+     * mide (1) que los primeros volcados, <b>sin</b> harina, el leñador se queda <b>dentro</b>, y (2) que con harina va
+     * a por ella ("Yendo por polvo de hueso") y abona los plantones, y (3) que el <b>granjero muele</b> los huesos
+     * ("Hizo N polvo de hueso").
+     */
+    private static final boolean MEDIR_LENADOR = false;
     /** Dónde se planta el bicho (relativo a la plaza): dentro del recinto (radio 62) y a la altura del pueblo. */
     private static final BlockPos BICHO_EN = new BlockPos(6, 0, 6);
     private static boolean listo = false;
@@ -233,6 +249,8 @@ public class GuardHarness {
             medirElAsaltoAlMuro(level, pega);
         } else if (MEDIR_AGUJERO) {
             medirElAgujeroDelSuelo(level, pega);
+        } else if (MEDIR_LENADOR) {
+            medirElLenador(level, pega);
         } else if (MEDIR_COCINA) {
             // LA COCINA, cada 2 s: donde esta el cocinero, si VE el ahumador y si tiene ruta a su casilla.
             if (ticks == 400) {
@@ -923,6 +941,105 @@ public class GuardHarness {
                 com.chipoodle.devilrpg.survival.VillageBarText.texto(3, aux.isAldeaVisitada(3),
                         aux.isAldeaRevelada(3), 1234, "->"));
         aux.setObjectiveIndex(0, pega);
+    }
+
+    /** ¿Ya se le ha sembrado al pueblo la harina y los huesos de la medida del leñador? */
+    private static boolean sembradoElLenador = false;
+
+    /**
+     * EL LEÑADOR Y EL POLVO DE HUESO: ver {@link #MEDIR_LENADOR}. Todo lo que se volca es <b>estado real del mundo</b>
+     * (bloques de la arboleda, contenedores y zurrones), y el destino al que camina cada aldeano sale de su propia
+     * navegación, así que dice si va <b>dentro</b> de la valla (62) o fuera.
+     */
+    private static void medirElLenador(ServerLevel level, FakePlayer pega) {
+        int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+        var despensa = com.chipoodle.devilrpg.world.VillagePantry.despensa(level, CENTRO);
+        // A los 10 s (chunks cargados y el latido ya repartido): huesos y harina de huesos, que es justo lo que en la
+        // partida del jugador NO hay (medido: 0 de harina en toda la aldea y 1 hueso guardado, con los tres
+        // composteros a nivel 1, 1 y 5 de 8).
+        if (!sembradoElLenador && ticks == 200 && despensa != null) {
+            sembradoElLenador = true;
+            int huesosAntes = com.chipoodle.devilrpg.world.VillagePantry.contar(despensa,
+                    s -> s.is(net.minecraft.world.item.Items.BONE));
+            int harinaAntes = com.chipoodle.devilrpg.world.VillagePantry.contar(despensa,
+                    s -> s.is(net.minecraft.world.item.Items.BONE_MEAL));
+            com.chipoodle.devilrpg.world.VillagePantry.guardar(despensa,
+                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BONE, 8));
+            com.chipoodle.devilrpg.world.VillagePantry.guardar(despensa,
+                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BONE_MEAL, 16));
+            DevilRpg.LOGGER.info("[Arnes] LENADOR: despensa sembrada con 8 huesos y 16 de harina de hueso (antes: {}"
+                    + " hueso(s) y {} de harina)", huesosAntes, harinaAntes);
+        }
+        // Y la harina se le va REPONIENDO: el granjero se la lleva para abonar la huerta en cuanto la ve, así que sin
+        // reponerla solo se mediría el caso "no hay harina". Con esto se mide el que pidió el jugador: que el leñador
+        // vaya a por ella y abone la arboleda en vez de irse al monte.
+        if (ticks >= 400 && ticks % 200 == 0 && despensa != null) {
+            com.chipoodle.devilrpg.world.VillagePantry.guardar(despensa,
+                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BONE_MEAL, 16));
+        }
+        if (ticks % 200 != 0 || despensa == null) {
+            return;
+        }
+        int arboles = 0;
+        int plantones = 0;
+        int huecos = 0;
+        for (BlockPos p : com.chipoodle.devilrpg.world.VillageGenerator.plantonesDeLaArboleda(CENTRO, cota)) {
+            boolean arbol = false;
+            boolean planton = false;
+            for (int dy = 0; dy <= 18; dy++) {
+                var st = level.getBlockState(p.above(dy));
+                if (st.is(net.minecraft.tags.BlockTags.LOGS)) {
+                    arbol = true;
+                    break;
+                }
+                if (st.is(net.minecraft.tags.BlockTags.SAPLINGS)) {
+                    planton = true;
+                }
+            }
+            if (arbol) {
+                arboles++;
+            } else if (planton) {
+                plantones++;
+            } else {
+                huecos++;
+            }
+        }
+        DevilRpg.LOGGER.info("[Arnes] LENADOR t={} ARBOLEDA: {} arbol(es), {} planton(es), {} hueco(s) | DESPENSA: {}"
+                        + " hueso(s), {} harina de hueso", ticks, arboles, plantones, huecos,
+                com.chipoodle.devilrpg.world.VillagePantry.contar(despensa,
+                        s -> s.is(net.minecraft.world.item.Items.BONE)),
+                com.chipoodle.devilrpg.world.VillagePantry.contar(despensa,
+                        s -> s.is(net.minecraft.world.item.Items.BONE_MEAL)));
+        for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(140))) {
+            var prof = v.getVillagerData().getProfession();
+            boolean lenador = prof == net.minecraft.world.entity.npc.VillagerProfession.FLETCHER;
+            if (!lenador && prof != net.minecraft.world.entity.npc.VillagerProfession.FARMER) {
+                continue;
+            }
+            BlockPos nav = v.getNavigation().getTargetPos();
+            double dCentro = Math.sqrt(v.distanceToSqr(CENTRO.getX() + 0.5D, v.getY(), CENTRO.getZ() + 0.5D));
+            double dNav = nav == null ? -1.0D
+                    : Math.sqrt(nav.distSqr(new BlockPos(CENTRO.getX(), nav.getY(), CENTRO.getZ())));
+            int madera = 0;
+            int semillas = 0;
+            int harina = 0;
+            for (int i = 0; i < v.getInventory().getContainerSize(); i++) {
+                var s = v.getInventory().getItem(i);
+                if (s.is(net.minecraft.tags.ItemTags.LOGS)) {
+                    madera += s.getCount();
+                }
+                if (s.getDescriptionId().contains("sapling")) {
+                    semillas += s.getCount();
+                }
+                if (s.is(net.minecraft.world.item.Items.BONE_MEAL)) {
+                    harina += s.getCount();
+                }
+            }
+            DevilRpg.LOGGER.info("[Arnes] LENADOR {} {} pos={} dCentro={} destino={} destinoDentro={} zurron=[madera={}"
+                            + " semillas={} harina={}] etiqueta=\"{}\"", lenador ? "LENADOR" : "GRANJERO",
+                    v.getUUID().toString().substring(0, 8), v.blockPosition(), (int) dCentro, nav,
+                    dNav < 0 ? "?" : (dNav < 62.0D), madera, semillas, harina, etiquetaDe(v));
+        }
     }
 
     /** El cráter de la medida: centro y si ya se ha abierto. */

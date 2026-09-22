@@ -3396,6 +3396,43 @@ estaban mal, las tres medidas con el arnés (`MEDIR_AGUJERO`, copia de su partid
    3**: medido, `3:VillagerRepairGoal` y **él** es quien tapa el cráter (*"Reparando la aldea"* → *"Repuso tierra"* →
    *"Recogiendo"*).
 
+### 3b.86 El leñador que se iba al monte (y el polvo de hueso que nadie hacía)
+
+El jugador, con una captura de **Hortensia (Leñador) "Yendo al arbol"**: *"todavía el leñador quiere ir afuera de la
+aldea. Si el bosque dentro de la aldea no tiene todavía árboles que vaya al almacén por polvo de hueso a fertilizar el
+árbol. El ir afuera es el último de los recursos. Los granjeros tampoco nunca deben olvidar de hacer polvo de hueso
+además de cultivar, cosechar y entregar vegetales"* (I92/I93).
+
+**Medido en su partida** (`build/estado_lenador.py`, solo lectura): la **arboleda del pueblo** tenía **2 árboles y 10
+plantones** de sus doce plazas; fuera había **243 árboles con la base a menos de 102 bloques**; y en toda la aldea
+**0 de polvo de hueso** con **1 hueso** guardado, los tres composteros a nivel **1, 1 y 5** de 8 y los **huesos fuera
+de la lista** de lo que recoge el recolector.
+
+Tres arreglos, y el del medio era un fallo del primer intento:
+
+1. **El leñador mira DENTRO antes que fuera**: la búsqueda de árbol se partió en dos (dentro de la valla y fuera) y la
+   de fuera se hace **al final**, cuando dentro no queda nada (ni árbol, ni hueco, ni plantón que abonar, ni resto
+   colgando). Y la **arboleda del pueblo se mira siempre**, esté donde esté el aldeano: el barrido era de 40 bloques a
+   su alrededor, así que una arboleda al otro lado del pueblo no se veía (medido: Hortensia estaba a **105** bloques de
+   la suya).
+2. **La harina de huesos se va a buscar andando** (`RECOGER_HARINA`): al almacén o a la despensa, y se gasta **en la
+   mano** (antes la cogía del cofre a distancia). Y el abonado de la arboleda va **antes de talar** y **sin el
+   cooldown** del barrido de claros: con el cooldown tardaba ~40 descansos (4 minutos) en volver a mirarla, y en la
+   primera corrida del arnés se pasó la medida yéndose al monte con 16 de harina esperando en la despensa.
+   La arboleda se abona hasta que tiene **6 de sus 12 plazas** con árbol (`ARBOLES_DE_LA_ARBOLEDA_ESTABLECIDA`).
+3. **El polvo de hueso ahora se hace**: el **recolector** recoge los huesos (`esDelPueblo`), el **granjero** los muele
+   en el kiosco (la receta de vanilla, 1 hueso = 3 de polvo, `VillagePantry.molerHuesos`) y el **leñador** lo usa. Y el
+   granjero **no se olvida del compostero**: si la despensa está por debajo de `HARINA_MINIMA` (8) y lleva semillas de
+   sobra, el compostero va **antes** que la tierra (era el paso que no se alcanzaba nunca, como le pasó a la siembra).
+
+**Medido con el arnés** (`MEDIR_LENADOR`, sobre su aldea): `El granjero: Hizo 27 polvo de hueso (de 9 hueso(s))`; y el
+leñador, en **todas** las muestras, con el destino **dentro** de la valla: `Yendo por polvo de hueso` → `Cogio polvo de
+hueso (8)` → `Yendo a la arboleda` → `Abono la arboleda`, con la arboleda subiendo de **2 a 3 árboles** (y los plantones
+de 10 a 9). Con el código de antes, el mismo montaje daba `destinoDentro=false` (a ~110 bloques del centro).
+
+**No medido**: el empujón del compostero (`HARINA_MINIMA`) —en la corrida el pueblo tenía harina de sobra todo el rato,
+así que esa regla no llegó a dispararse— y el efecto en la partida del jugador, que lo verá al abrir el mundo.
+
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.

@@ -124,6 +124,21 @@ public class VillagerFarmGoal extends Goal {
     private static final int ABONAR_MAX = 64;
     /** Cuánto puede traerse del almacén a la despensa en una visita (comida, semillas y abono del recolector). */
     private static final int TRAER_DEL_ALMACEN = 64;
+
+    /**
+     * Harina de huesos por debajo de la cual el granjero <b>va al compostero ANTES que a la tierra</b>. Es lo que
+     * pidió el jugador: *"los granjeros tampoco nunca deben olvidar de hacer polvo de hueso además de cultivar,
+     * cosechar y entregar vegetales"*.
+     * <p>
+     * Hace falta una regla así porque el compostero era el paso que <b>no se alcanzaba nunca</b>: con los tres bancales
+     * (216 celdas) siempre hay algo maduro, así que el turno no llegaba al paso 5 (el mismo fallo que tuvo la siembra,
+     * que iba detrás de las dos faenas de la tierra). Medido en la partida del jugador (aldea 0, cota 63): <b>0 de
+     * polvo de hueso en toda la aldea</b> y los tres composteros a nivel <b>1, 1 y 5</b> de 8 —sin haber producido ni
+     * una harina—, con la arboleda del pueblo esperando abono para sus 10 plantones y un hueso guardado sin moler.
+     */
+    private static final int HARINA_MINIMA = 8;
+    /** Huesos que muele de una vez en el kiosco (la receta de vanilla: 1 hueso = 3 de polvo de hueso). */
+    private static final int MOLER_MAX = 16;
     /**
      * Con la despensa por debajo de estos puntos de comida y comida esperando en el <b>almacén</b>, el granjero deja
      * lo que esté haciendo y va a por ella.
@@ -286,6 +301,22 @@ public class VillagerFarmGoal extends Goal {
             tarea = Tarea.DESPENSA;
             target = VillagePantry.puntoDeApoyo(level, center);
             return true;
+        }
+        // 3b) EL POLVO DE HUESO NO SE OLVIDA (lo pidió el jugador: *"los granjeros tampoco nunca deben olvidar de hacer
+        //     polvo de hueso además de cultivar, cosechar y entregar vegetales"*). Si la despensa no tiene harina de
+        //     huesos —ni para abonar el plantío ni para la ARBOLEDA DEL PUEBLO que cuida el leñador— y él lleva semillas
+        //     de sobra, el compostero va ANTES que la tierra: sin esta regla el paso 5 no se alcanzaba nunca, porque con
+        //     los tres bancales llenos siempre hay algo maduro que cosechar (ver HARINA_MINIMA, con la medida de su
+        //     partida: 0 de polvo de hueso y los composteros a 1, 1 y 5). Es un desvío corto y se apaga solo: en cuanto
+        //     la despensa tiene harina, el orden vuelve a ser el de siempre.
+        if (despensa != null && VillagePantry.contar(despensa, s -> s.is(Items.BONE_MEAL)) < HARINA_MINIMA
+                && semillasCompostablesSobrantes() > 0) {
+            BlockPos comp = buscarCompostero(level);
+            if (comp != null) {
+                target = comp;
+                tarea = Tarea.COMPOSTAR;
+                return true;
+            }
         }
         // 3) LAS TRES FAENAS DE LA TIERRA ROTAN: cosechar lo maduro, labrar la calva y SEMBRAR LA CELDA VACÍA.
         //    La calva (una celda pisoteada que tiene que volver a ser tierra de cultivo) y el cultivo maduro ya
@@ -832,6 +863,12 @@ public class VillagerFarmGoal extends Goal {
                 }
             }
         }
+        // 1b) LOS HUESOS, A POLVO DE HUESO: la receta de vanilla (1 hueso = 3 de polvo, ver
+        //     `VillagePantry.molerHuesos`), con los huesos que el RECOLECTOR ha guardado —los sueltan los esqueletos
+        //     que mata la milicia— y los que haya en la despensa. Es el abono de la aldea, y el que abona la ARBOLEDA
+        //     DEL PUEBLO del leñador: hasta ahora nadie los molía y se quedaban guardados (medido en su partida: 0 de
+        //     polvo de hueso en toda la aldea con un hueso en el almacén).
+        int molidos = VillagePantry.molerHuesos(despensa, VillageStorage.almacen(level, center), MOLER_MAX);
         // 2) TODO lo comestible que lleve encima, a la despensa: el trigo (para el pan) y los VEGETALES (zanahoria,
         // patata y betabel). Antes solo se guardaba el TRIGO, así que lo demás se quedaba en su inventario o se caía al
         // suelo: el contador de comida de la aldea mira LO QUE HAY EN LA DESPENSA, no lo plantado, así que la aldea
@@ -909,7 +946,11 @@ public class VillagerFarmGoal extends Goal {
         // LO QUE ACABA DE HACER, a la cabeza (y al log): es más informativo que el verbo de lo que está haciendo, y
         // es lo que el jugador necesita para saber si la cadena de comida funciona sin abrir el log.
         String suceso;
-        if (horneadas > 0 && guardados > 0) {
+        if (molidos > 0) {
+            // El polvo de hueso manda en el anuncio: es lo que el jugador quiere ver ("que no se olviden de hacerlo").
+            suceso = "Hizo " + (molidos * VillagePantry.POLVO_DE_HUESO_POR_HUESO) + " polvo de hueso (de " + molidos
+                    + " hueso(s))";
+        } else if (horneadas > 0 && guardados > 0) {
             suceso = "Guardo " + guardados + " y horneo " + horneadas + " pan(es)";
         } else if (horneadas > 0) {
             suceso = "Horneo " + horneadas + " pan(es) en la despensa";

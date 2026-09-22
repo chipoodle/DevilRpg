@@ -381,6 +381,11 @@ public class VillagerCollectGoal extends Goal {
     /** Lista blanca: cosas del pueblo. Lo demás (tu equipo, tus minerales) no se toca. */
     public static boolean esDelPueblo(ItemStack s) {
         return s.is(Items.WHEAT) || s.is(Items.WHEAT_SEEDS) || s.is(Items.BEETROOT_SEEDS) || s.is(Items.BONE_MEAL)
+                // LOS HUESOS TAMBIÉN: los sueltan los esqueletos que mata la milicia y hasta ahora no los cogía NADIE
+                // (no estaban en esta lista), así que se quedaban en el suelo y el pueblo no tenía de dónde sacar
+                // polvo de hueso: el granjero lo muele (1 hueso = 3 de polvo, ver `VillagePantry.molerHuesos`) y el
+                // leñador lo usa para abonar los plantones de la arboleda del pueblo.
+                || s.is(Items.BONE)
                 || s.is(Items.STICK) || s.is(Items.STRING) || s.is(Items.LEATHER) || s.is(Items.FEATHER)
                 || s.is(Items.COAL) || s.is(Items.CHARCOAL) || s.is(Items.IRON_INGOT) || s.is(Items.COPPER_INGOT)
                 || s.is(Items.GOLD_INGOT) || s.is(Items.CARROT) || s.is(Items.POTATO)

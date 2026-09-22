@@ -65,8 +65,19 @@ import java.util.Set;
  * <b>sus</b> árboles: es la madera de una aldea que nace <b>sin bosque</b>) y repuebla el monte <b>de fuera</b>. Lo
  * de dentro se tala pero <b>no</b> se replanta: la aldea se despeja.
  * <p>
- * Mientras la arboleda no tenga ni un árbol, el leñador <b>abona sus plantones</b> con la harina de huesos del
- * compostero del granjero, que es lo que hace que una islita tenga madera en minutos.
+ * <b>LA ARBOLEDA DEL PUEBLO ES LO PRIMERO, Y SALIR FUERA ES LO ÚLTIMO</b> (lo pidió el jugador: *"todavía el leñador
+ * quiere ir afuera de la aldea. Si el bosque dentro de la aldea no tiene todavía árboles que vaya al almacén por polvo
+ * de hueso a fertilizar el árbol. El ir afuera es el último de los recursos"*). Mientras la arboleda <b>no esté
+ * poblada</b> (menos de {@link #ARBOLES_DE_LA_ARBOLEDA_ESTABLECIDA} de sus doce plazas con árbol), el leñador
+ * <b>abona sus plantones</b> con la harina de huesos del pueblo —la que saca el granjero del compostero— y la va a
+ * buscar <b>andando</b> al <b>almacén</b> o a la <b>despensa</b>, con la harina <b>en la mano</b> (no a distancia):
+ * un plantón abonado es un árbol en minutos.
+ * <p>
+ * Y el monte de <b>fuera</b> se mira <b>al final</b>: primero la arboleda (sus árboles, sus huecos, sus plantones y sus
+ * restos), después los árboles sueltos de dentro, y solo cuando dentro no queda nada que hacer se sale. Antes era una
+ * sola búsqueda <b>por distancia</b> y, con el bosque pegado a la valla (medido en su partida: 243 árboles con la base
+ * a menos de 102 bloques), el árbol de fuera ganaba casi siempre y su arboleda —2 árboles y 10 plantones— se quedaba
+ * sin leñador.
  */
 public class VillagerLumberjackGoal extends Goal {
 
@@ -115,8 +126,20 @@ public class VillagerLumberjackGoal extends Goal {
     private static final int ALTURA_MAX = 16;
     /** Velocidad al ir al árbol (y al almacén). */
     private static final float VELOCIDAD = 0.6F;
+    /**
+     * Harina de huesos que se trae del almacén (o de la despensa) para abonar la arboleda. Una tanda, como las
+     * semillas: no es un vivero andante.
+     */
+    private static final int HARINA_POR_VIAJE = 8;
+    /**
+     * Árboles que tiene que tener la arboleda del pueblo (de sus doce plazas) para darla por <b>poblada</b> y dejar de
+     * gastar harina de huesos en ella. Es la mitad: con menos, la arboleda no sostiene la madera del pueblo (se tala y
+     * se replanta y se queda pelada) y el leñador se iba al monte de fuera; con la mitad o más, la arboleda se
+     * mantiene sola (tala y replanta) y el que sobra lo busca fuera.
+     */
+    private static final int ARBOLES_DE_LA_ARBOLEDA_ESTABLECIDA = 6;
 
-    private enum Fase { TALAR, PLANTAR, ABONAR, ENTREGAR }
+    private enum Fase { TALAR, PLANTAR, ABONAR, RECOGER_HARINA, ENTREGAR }
 
     /**
      * Un <b>hueco que se quedó sin replantar</b>: dónde estaba el árbol que se taló y de qué <b>especie</b> era (para
@@ -140,6 +163,8 @@ public class VillagerLumberjackGoal extends Goal {
     private int barridoCooldown;
     /** Cota de la aldea (para los plantones de la arboleda): se pregunta UNA vez, no en cada tick. */
     private int nivelAldea = Integer.MIN_VALUE;
+    /** ¿La harina que va a buscar está en el ALMACÉN (y no en la despensa)? Decide a dónde camina y su alcance. */
+    private boolean harinaEnElAlmacen;
 
     public VillagerLumberjackGoal(Villager villager, BlockPos center, int objectiveIndex) {
         this.villager = villager;
@@ -174,7 +199,12 @@ public class VillagerLumberjackGoal extends Goal {
         if (dx * dx + dz * dz > RADIO_MAXIMO * RADIO_MAXIMO) {
             return false; // se ha ido demasiado lejos del pueblo
         }
-        BlockPos tronco = buscarArbol(level);
+        // DENTRO PRIMERO Y FUERA DESPUÉS (el monte de fuera es el ÚLTIMO de los recursos): se busca árbol DENTRO del
+        // recinto —la arboleda del pueblo y los árboles sueltos— y solo si ahí no hay nada se mira el bosque de fuera.
+        // Ver la cabecera de la clase: antes era una sola búsqueda por distancia y ganaba casi siempre el de fuera.
+        BlockPos troncoDentro = buscarArbol(level, true);
+        BlockPos troncoFuera = troncoDentro == null ? buscarArbol(level, false) : null;
+        BlockPos tronco = troncoDentro != null ? troncoDentro : troncoFuera;
         int troncos = troncosEnMano();
         // Con la mochila llena (o con madera y sin árboles a la vista) se va a descargar al almacén.
         if (troncos >= LLEVAR_TRONCOS || (tronco == null && troncos > 0)) {
@@ -182,17 +212,46 @@ public class VillagerLumberjackGoal extends Goal {
             target = VillageStorage.puntoDeApoyo(level, center);
             return target != null;
         }
+        // LA ARBOLEDA DEL PUEBLO MANDA MIENTRAS NO ESTÉ POBLADA: sus plantones se abonan con la harina de huesos del
+        // pueblo y, si no la tiene en la mano, va a por ella al ALMACÉN (o a la despensa) ANDANDO. Es lo que pidió el
+        // jugador: *"si el bosque dentro de la aldea no tiene todavía árboles que vaya al almacén por polvo de hueso a
+        // fertilizar el árbol; el ir afuera es el último de los recursos"*. Va ANTES de talar (incluso antes de talar la
+        // propia arboleda): un plantón abonado es un árbol en minutos, y con la arboleda a medias (medido en su
+        // partida: 2 árboles y 10 plantones de 12 plazas) el pueblo no tiene la madera que necesita.
+        // OJO: esta comprobación NO va con el cooldown del barrido de claros. Lo llevaba y era un fallo medido: el
+        // cooldown solo baja cuando `canUse` llega a la altura del barrido, y como cuando no hay nada que hacer el goal
+        // descansa 120 ticks de golpe, tardaba ~40 descansos (¡4 minutos!) en volver a mirar la arboleda; en la medida
+        // del arnés Hortensia se pasó la corrida yendo al monte de fuera con 16 de harina esperando en la despensa.
+        // Mirar la arboleda son 12 plazas (barato): se mira en cada decisión.
+        if (faltaPoblarLaArboleda(level)) {
+            BlockPos planton = plantonDeLaArboledaMasCercano(level);
+            if (planton != null) {
+                if (harinaEnMano() > 0) {
+                    fase = Fase.ABONAR;
+                    target = planton;
+                    return true;
+                }
+                BlockPos irPorHarina = puntoConHarina(level);
+                if (irPorHarina != null) {
+                    fase = Fase.RECOGER_HARINA;
+                    target = irPorHarina;
+                    return true;
+                }
+            }
+        }
         // PLANTAR: repartir las semillas que lleva encima. Dos motivos para ir a plantar: que lleve una PILA (no es un
         // vivero andante) o que no haya árboles a la vista (entonces el monte se queda pelado y hay que reponerlo).
         // Primero los huecos que ya conoce —los troncos que taló y se quedaron sin replantar, que es el mismo sitio
-        // donde estaba el árbol— porque mirarlos es barato; el barrido de un claro del monte se hace de vez en cuando.
+        // donde estaba el árbol— porque mirarlos es barato; después la arboleda del pueblo (su madera) y solo al final
+        // el barrido de un claro, que es lo único que planta FUERA.
         int semillas = semillasEnMano();
         if (semillas >= SEMILLAS_PARA_PLANTAR || (tronco == null && semillas > 0)) {
             BlockPos hueco = primerPendiente(level);
             if (hueco == null) {
                 hueco = huecoDeLaArboleda(level); // la arboleda del pueblo, primero (es su madera)
             }
-            if (hueco == null && barridoCooldown <= 0) {
+            // El claro del monte se busca solo si DENTRO no queda nada por hacer: irse del pueblo es lo último.
+            if (hueco == null && troncoDentro == null && barridoCooldown <= 0) {
                 hueco = buscarClaro(level);
                 barridoCooldown = BARRIDO_COOLDOWN;
             }
@@ -202,9 +261,9 @@ public class VillagerLumberjackGoal extends Goal {
                 return true;
             }
         }
-        if (tronco != null) {
+        if (troncoDentro != null) {
             fase = Fase.TALAR;
-            target = tronco;
+            target = troncoDentro;
             return true;
         }
         // RESTO COLGANDO (solo en la arboleda del pueblo): un tronco que ya no cuelga de ningún árbol —lo dejó a
@@ -216,27 +275,19 @@ public class VillagerLumberjackGoal extends Goal {
             target = resto;
             return true;
         }
-        // ABONAR LA ARBOLEDA DEL PUEBLO: mientras no tenga NI UN árbol y el pueblo tenga harina de huesos (la del
-        // compostero del granjero), el leñador la abona. Es lo que hace que una aldea sin bosque —una islita— tenga
-        // madera en minutos en vez de esperar a que los plantones crezcan solos. En cuanto crece el primer árbol deja
-        // de gastar harina: a partir de ahí la arboleda se sostiene sola (se tala y se replanta). El barrido es caro
-        // (mira la arboleda entera), así que va con el mismo cooldown que la búsqueda de claro.
-        if (barridoCooldown <= 0) {
-            barridoCooldown = BARRIDO_COOLDOWN;
-            if (necesitaAbonoLaArboleda(level)) {
-                BlockPos planton = plantonDeLaArboledaMasCercano(level);
-                if (planton != null && contenedorConHarina(level) != null) {
-                    fase = Fase.ABONAR;
-                    target = planton;
-                    return true;
-                }
-            }
-        }
         // Sin árboles ni semillas en la mano: si el almacén tiene semillas, va a por ellas (para replantar).
         if (semillas == 0 && haySemillasEnElAlmacen(level)) {
             fase = Fase.ENTREGAR;
             target = VillageStorage.puntoDeApoyo(level, center);
             return target != null;
+        }
+        // Y, POR ÚLTIMO, EL MONTE DE FUERA: dentro ya no queda nada que hacer (ni árbol que talar, ni hueco, ni
+        // plantón que abonar, ni resto colgando), que es cuando el jugador quiere que salga: *"el ir afuera es el
+        // último de los recursos"*.
+        if (troncoFuera != null) {
+            fase = Fase.TALAR;
+            target = troncoFuera;
+            return true;
         }
         restTicks = IDLE_REST_TICKS;
         return false;
@@ -269,7 +320,13 @@ public class VillagerLumberjackGoal extends Goal {
             return;
         }
         villager.getLookControl().setLookAt(target.getX() + 0.5D, target.getY() + 0.5D, target.getZ() + 0.5D);
-        double alcance = fase == Fase.ENTREGAR ? VillageStorage.ALCANCE_ALMACEN : REACH;
+        double alcance = switch (fase) {
+            case ENTREGAR -> VillageStorage.ALCANCE_ALMACEN;
+            // La harina se coge en el almacén o en la despensa: el almacén es una construcción grande y su punto de
+            // apoyo pide el alcance de siempre; a la despensa (el kiosco) se llega de cerca, como el granjero.
+            case RECOGER_HARINA -> harinaEnElAlmacen ? VillageStorage.ALCANCE_ALMACEN : REACH;
+            default -> REACH;
+        };
         double distancia = Math.sqrt(villager.distanceToSqr(target.getX() + 0.5D, target.getY() + 0.5D,
                 target.getZ() + 0.5D));
         if (distancia > alcance) {
@@ -285,6 +342,7 @@ public class VillagerLumberjackGoal extends Goal {
                 case TALAR -> "Yendo al arbol";
                 case PLANTAR -> "Yendo a plantar";
                 case ABONAR -> "Yendo a la arboleda";
+                case RECOGER_HARINA -> "Yendo por polvo de hueso";
                 case ENTREGAR -> "Llevando la madera";
             });
             return;
@@ -296,6 +354,7 @@ public class VillagerLumberjackGoal extends Goal {
                 case TALAR -> "Talando";
                 case PLANTAR -> "Plantando";
                 case ABONAR -> "Abonando la arboleda";
+                case RECOGER_HARINA -> "Cogiendo polvo de hueso";
                 case ENTREGAR -> "Guardando la madera";
             });
             return;
@@ -305,6 +364,7 @@ public class VillagerLumberjackGoal extends Goal {
             case TALAR -> talar(level);
             case PLANTAR -> plantar(level);
             case ABONAR -> abonar(level);
+            case RECOGER_HARINA -> recogerHarina(level);
             case ENTREGAR -> entregar(level);
         }
         target = null;
@@ -553,49 +613,67 @@ public class VillagerLumberjackGoal extends Goal {
     }
 
     /**
-     * <b>Abona la arboleda del pueblo</b>: echa una <b>harina de huesos</b> del almacén (la que el granjero saca del
-     * compostero) al plantón al que fue, para que el árbol crezca ya. Es lo que hace que una aldea <b>sin bosque</b>
-     * —una islita— tenga madera en minutos en vez de esperar a que los plantones crezcan solos: no se inventa madera,
-     * se cuida la que el pueblo plantó. El leñador deja de hacerlo en cuanto crece el primer árbol (ver
-     * {@link #necesitaAbonoLaArboleda}).
+     * <b>Abona la arboleda del pueblo</b>: echa una <b>harina de huesos</b> —que lleva <b>en la mano</b>, traída del
+     * almacén o de la despensa (ver {@link #recogerHarina})— al plantón al que fue, para que el árbol crezca ya. Es lo
+     * que hace que una aldea <b>sin bosque</b> —una islita— tenga madera en minutos en vez de esperar a que los
+     * plantones crezcan solos: no se inventa madera, se cuida la que el pueblo plantó. El leñador deja de hacerlo en
+     * cuanto la arboleda está poblada (ver {@link #faltaPoblarLaArboleda}).
      */
     private void abonar(ServerLevel level) {
         if (target == null || !level.getBlockState(target).is(BlockTags.SAPLINGS)) {
             return; // ya no hay plantón (creció, o alguien lo quitó)
         }
-        Container almacen = contenedorConHarina(level);
-        if (almacen == null) {
-            return; // el pueblo no tiene harina (todavía no ha llenado el compostero)
-        }
-        ItemStack harina = new ItemStack(Items.BONE_MEAL, 1);
-        if (VillagePantry.sacar(almacen, s -> s.is(Items.BONE_MEAL), 1) <= 0) {
-            return;
+        ItemStack harina = sacarHarina();
+        if (harina.isEmpty()) {
+            return; // se le acabó la harina por el camino: el siguiente `canUse` lo manda a por más
         }
         if (net.minecraft.world.item.BoneMealItem.growCrop(harina, level, target)) {
             level.playSound(null, target, SoundEvents.BONE_MEAL_USE, SoundSource.BLOCKS, 0.8F, 1.0F);
             VillageManager.ponerSuceso(villager, "Abono la arboleda");
-            DevilRpg.LOGGER.info("[Village] El lenador: abona la arboleda del pueblo en {}", target);
+            DevilRpg.LOGGER.info("[Village] El lenador: abona la arboleda del pueblo en {} (le quedan {} de harina)",
+                    target, harinaEnMano());
         }
     }
 
     /**
-     * ¿Toca abonar la arboleda? Sí mientras tenga <b>algún plantón</b> y <b>ningún árbol</b>: en cuanto crece el
-     * primero, la arboleda se sostiene sola (el leñador la tala y la replanta) y no hay que gastar más harina.
+     * <b>Va a por la harina de huesos</b> al almacén (o a la despensa, según dónde la haya) y se trae una tanda. Es el
+     * viaje que pidió el jugador (*"que vaya al almacén por polvo de hueso"*): antes la cogía del cofre <b>a
+     * distancia</b>, sin ir, y eso no se veía por ningún lado (y el pueblo podía quedarse sin harina sin que el
+     * leñador se enterara).
      */
-    private boolean necesitaAbonoLaArboleda(ServerLevel level) {
-        boolean hayPlanton = false;
+    private void recogerHarina(ServerLevel level) {
+        Container origen = harinaEnElAlmacen ? VillageStorage.almacen(level, center)
+                : VillagePantry.despensa(level, center);
+        if (origen == null) {
+            return;
+        }
+        int cogidas = VillagePantry.sacar(origen, s -> s.is(Items.BONE_MEAL), HARINA_POR_VIAJE);
+        if (cogidas > 0) {
+            guardarEnInventario(new ItemStack(Items.BONE_MEAL, cogidas));
+            VillageManager.ponerSuceso(villager, "Cogio polvo de hueso (" + cogidas + ")");
+            DevilRpg.LOGGER.info("[Village] El lenador: se lleva {} de harina de huesos del {} para la arboleda",
+                    cogidas, harinaEnElAlmacen ? "almacen" : "despensa");
+        }
+    }
+
+    /**
+     * ¿Todavía hay que <b>poblar la arboleda</b>? Sí mientras tenga menos de
+     * {@link #ARBOLES_DE_LA_ARBOLEDA_ESTABLECIDA} árboles (de sus doce plazas): entonces sus plantones se abonan para
+     * que crezcan ya. Antes bastaba con que hubiera <b>un</b> árbol para dejar de abonar, y con la arboleda a medias
+     * (2 árboles y 10 plantones, medido en la partida del jugador) el pueblo no tenía madera y el leñador se iba al
+     * monte de fuera.
+     */
+    private boolean faltaPoblarLaArboleda(ServerLevel level) {
+        int arboles = 0;
         for (BlockPos p : VillageGenerator.plantonesDeLaArboleda(center, nivelDeLaAldea(level))) {
             for (int dy = 0; dy <= ALTURA_MAX; dy++) {
-                BlockState s = level.getBlockState(p.above(dy));
-                if (s.is(BlockTags.LOGS)) {
-                    return false; // ya hay un árbol: la arboleda está en marcha
-                }
-                if (s.is(BlockTags.SAPLINGS)) {
-                    hayPlanton = true;
+                if (level.getBlockState(p.above(dy)).is(BlockTags.LOGS)) {
+                    arboles++;
+                    break;
                 }
             }
         }
-        return hayPlanton;
+        return arboles < ARBOLES_DE_LA_ARBOLEDA_ESTABLECIDA;
     }
 
     /** El plantón de la arboleda más cercano (el que se abona), o {@code null} si no queda ninguno. */
@@ -642,22 +720,54 @@ public class VillagerLumberjackGoal extends Goal {
     }
 
     /**
-     * Dónde está la <b>harina de huesos</b> del pueblo, o {@code null} si no hay. OJO: la hace el granjero en su
-     * compostero y la guarda en la <b>despensa</b> (ahí vive, junto a las semillas y el abono, porque es un recambio
-     * suyo); en el almacén solo aparece si la trajo el recolector de lo que cayó al suelo antes de que el granjero la
-     * pasara. Se mira en los dos sitios: quedarse solo con el almacén dejaba la arboleda sin abonar nunca.
+     * <b>A dónde va a por la harina de huesos</b>: al punto de apoyo del contenedor que la tenga, o {@code null} si el
+     * pueblo no tiene ninguna. OJO: la hace el granjero en su compostero y la guarda en la <b>despensa</b> (ahí vive,
+     * junto a las semillas y el abono, porque es un recambio suyo); en el almacén aparece lo que el recolector barre del
+     * suelo o lo que el granjero muele de los huesos. Se miran <b>los dos</b> sitios: quedarse solo con el almacén dejaba
+     * la arboleda sin abonar nunca. Deja en {@link #harinaEnElAlmacen} de cuál de los dos se trata (para caminar al
+     * sitio bueno y con el alcance bueno).
      */
     @Nullable
-    private Container contenedorConHarina(ServerLevel level) {
+    private BlockPos puntoConHarina(ServerLevel level) {
         Container despensa = VillagePantry.despensa(level, center);
         if (VillagePantry.contar(despensa, s -> s.is(Items.BONE_MEAL)) > 0) {
-            return despensa;
+            harinaEnElAlmacen = false;
+            return VillagePantry.puntoDeApoyo(level, center);
         }
         Container almacen = VillageStorage.almacen(level, center);
         if (VillagePantry.contar(almacen, s -> s.is(Items.BONE_MEAL)) > 0) {
-            return almacen;
+            harinaEnElAlmacen = true;
+            return VillageStorage.puntoDeApoyo(level, center);
         }
         return null;
+    }
+
+    /** Cuánta harina de huesos lleva <b>en la mano</b> (es la que puede echar: el pueblo no le abastece a distancia). */
+    private int harinaEnMano() {
+        int n = 0;
+        for (int i = 0; i < villager.getInventory().getContainerSize(); i++) {
+            ItemStack s = villager.getInventory().getItem(i);
+            if (s.is(Items.BONE_MEAL)) {
+                n += s.getCount();
+            }
+        }
+        return n;
+    }
+
+    /** Saca UNA harina de huesos del zurrón (vacío si no le queda). */
+    private ItemStack sacarHarina() {
+        for (int i = 0; i < villager.getInventory().getContainerSize(); i++) {
+            ItemStack s = villager.getInventory().getItem(i);
+            if (s.is(Items.BONE_MEAL)) {
+                ItemStack una = s.copyWithCount(1);
+                s.shrink(1);
+                if (s.isEmpty()) {
+                    villager.getInventory().setItem(i, ItemStack.EMPTY);
+                }
+                return una;
+            }
+        }
+        return ItemStack.EMPTY;
     }
 
     /** La cota de la aldea (para los plantones de la arboleda): se pregunta UNA vez, no en cada tick. */
@@ -695,14 +805,37 @@ public class VillagerLumberjackGoal extends Goal {
     // --- buscar árboles y claros --------------------------------------------------------------------
 
     /**
-     * El <b>árbol de verdad</b> más cercano al leñador, o {@code null}. Se recorre una rejilla de 2 en 2 alrededor
-     * suyo (no por tick: el goal descansa cuando no encuentra nada) y solo se miran las columnas que caen
-     * <b>fuera de la valla</b>, que es donde están los árboles del monte.
+     * El <b>árbol de verdad</b> más cercano al leñador <b>de los de dentro</b> ({@code dentro = true}: la arboleda del
+     * pueblo y los árboles sueltos que quedaron dentro de la valla) <b>o de los de fuera</b> ({@code dentro = false}:
+     * el monte), o {@code null} si en esa mitad no hay ninguno.
+     * <p>
+     * Se recorre una rejilla de 2 en 2 alrededor suyo (no por tick: el goal descansa cuando no encuentra nada) y se
+     * busca <b>una mitad cada vez</b> para que el de dentro gane siempre: el monte de fuera es el <b>último</b> recurso
+     * (lo pidió el jugador). Ver la cabecera de la clase.
      */
     @Nullable
-    private BlockPos buscarArbol(ServerLevel level) {
+    private BlockPos buscarArbol(ServerLevel level, boolean dentro) {
         BlockPos mejor = null;
         double mejorDist = Double.MAX_VALUE;
+        // LA ARBOLEDA DEL PUEBLO SE MIRA SIEMPRE, esté donde esté el leñador: es SU bosque y sus doce plazas se saben
+        // (`plantonesDeLaArboleda`). El barrido de abajo es de 40 bloques alrededor del aldeano, así que una arboleda al
+        // otro lado del pueblo no se veía: medido con el arnés en la aldea del jugador, Hortensia estaba a 105 bloques
+        // de su arboleda (con 2 árboles y 10 plantones), no los veía y se iba al monte de fuera.
+        if (dentro) {
+            for (BlockPos plaza : VillageGenerator.plantonesDeLaArboleda(center, nivelDeLaAldea(level))) {
+                BlockPos base = baseDeArbol(level, plaza.getX(), plaza.getZ());
+                if (base == null || VillageManager.esPuntoFallido(villager, base)) {
+                    continue;
+                }
+                // lint:ok I1 porque aqui `base` es el TRONCO de un arbol que existe (una posicion real del mundo, con
+                // su Y buena), no el centro ni la base de la aldea: la distancia al arbol SI es en 3D.
+                double dist = villager.distanceToSqr(base.getX() + 0.5D, base.getY() + 0.5D, base.getZ() + 0.5D);
+                if (dist < mejorDist) {
+                    mejorDist = dist;
+                    mejor = base;
+                }
+            }
+        }
         for (int dx = -RADIO_BUSQUEDA; dx <= RADIO_BUSQUEDA; dx += 2) {
             for (int dz = -RADIO_BUSQUEDA; dz <= RADIO_BUSQUEDA; dz += 2) {
                 int x = villager.blockPosition().getX() + dx;
@@ -712,6 +845,9 @@ public class VillagerLumberjackGoal extends Goal {
                 double dCentro = Math.sqrt(dCentroX * dCentroX + dCentroZ * dCentroZ);
                 if (dCentro > RADIO_MAXIMO) {
                     continue;
+                }
+                if (dentro != (dCentro < RADIO_MINIMO)) {
+                    continue; // esta pasada es de la otra mitad (dentro o fuera), no de ésta
                 }
                 BlockPos base = baseDeArbol(level, x, z);
                 if (base == null) {

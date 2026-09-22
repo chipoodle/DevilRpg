@@ -419,6 +419,37 @@ public final class VillagePantry {
         return sacadas;
     }
 
+    /** La receta de vanilla: un <b>hueso</b> da <b>tres</b> de polvo de hueso (ver {@code BoneMealItem}). */
+    public static final int POLVO_DE_HUESO_POR_HUESO = 3;
+
+    /**
+     * <b>Muele huesos</b>: los saca de la despensa y, si hace falta, del almacén, y deja el <b>polvo de hueso</b> en la
+     * despensa (la receta de vanilla, {@link #POLVO_DE_HUESO_POR_HUESO} por hueso). Lo llama el <b>granjero</b> en cada
+     * visita al kiosco.
+     * <p>
+     * Los huesos los sueltan los esqueletos que mata la milicia y los recoge el <b>recolector</b> (ver
+     * {@code VillagerCollectGoal.esDelPueblo}), y hasta ahora se quedaban guardados sin que nadie los usara: medido en
+     * la partida del jugador (aldea 0), <b>0 de polvo de hueso en toda la aldea</b> —con los tres composteros a nivel
+     * 1, 1 y 5 de 8, o sea sin haber producido ni uno— y la arboleda del pueblo con 10 plantones sin abonar. Es lo que
+     * pidió: *"los granjeros tampoco nunca deben olvidar de hacer polvo de hueso además de cultivar, cosechar y
+     * entregar vegetales"*.
+     *
+     * @return cuántos huesos se han molido
+     */
+    public static int molerHuesos(@Nullable Container despensa, @Nullable Container almacen, int max) {
+        if (despensa == null || max <= 0) {
+            return 0;
+        }
+        int huesos = sacar(despensa, s -> s.is(Items.BONE), max);
+        if (huesos < max) {
+            huesos += sacar(almacen, s -> s.is(Items.BONE), max - huesos);
+        }
+        if (huesos > 0) {
+            guardar(despensa, new ItemStack(Items.BONE_MEAL, huesos * POLVO_DE_HUESO_POR_HUESO));
+        }
+        return huesos;
+    }
+
     /** Saca comida de la despensa por valor (para que coma la aldea): pan, carne, vegetales y trigo crudo. */
     public static int sacarComida(@Nullable Container c, int puntos) {
         int faltan = puntos;
