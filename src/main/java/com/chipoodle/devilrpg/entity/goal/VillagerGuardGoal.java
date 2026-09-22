@@ -1010,7 +1010,16 @@ public class VillagerGuardGoal extends Goal {
         // de la ronda, el guardia baja al CORRAL ANEXO (fuera de la valla): es lo que pidió el jugador ("la granja
         // anexa, dentro del patrullaje de la guardia").
         if (vaAlCorral(level)) {
-            return puestoDelCorral(level, nivel);
+            BlockPos corral = puestoDelCorral(level, nivel);
+            // SI EL PUESTO DEL CORRAL ESTÁ APARCADO (porque no llegó), SE SIGUE CON LA RONDA. Era el ÚNICO punto que
+            // no miraba `esPuntoFallido`, así que tras rendirse en él (`me salto el puesto`, I33) el guardia volvía a
+            // intentarlo en cada vuelta: lo reportó el jugador con captura —*"el espadachín se quedó como ciclado
+            // patrullando el corral"*—. Ahora, si está aparcado, se prueba el punto siguiente de la ronda; cuando el
+            // aparcamiento caduque (5 min) volverá a probar el corral.
+            if (!VillageManager.esPuntoFallido(villager, corral)) {
+                return corral;
+            }
+            paso++;
         }
         // Y cada RONDA_CADA_ARBOLEDA puntos, a la ARBOLEDA DEL PUEBLO (dentro de la valla, en la diagonal noreste):
         // es la madera de la aldea, y un guardia allí ve (y para) a cualquier bicho que entre a por los árboles.

@@ -1837,6 +1837,19 @@ que pille el radio: los animales del corral, las mascotas y el dueño. Ahora la 
 partículas**) y el daño se reparte **a mano** por el radio, **solo a los enemigos** (mismo criterio) y sin tocar al
 jugador.
 
+### I80 · El puesto del corral también respeta el aparcamiento (el guardia ciclado patrullando)
+
+Con captura: *"el espadachín se quedó como ciclado patrullando el corral"*.
+
+`puestoDelCorral` era el **único** punto de la ronda que **no** miraba `esPuntoFallido`: cuando el guardia se rendía en
+él (`no llego a …: me salto el puesto`, I33) el aparcamiento se apuntaba… y la vuelta siguiente **volvía a dárselo**,
+así que se pasaba el día yendo, atascándose 10 s y volviendo a empezar, con la etiqueta "Patrullando el corral"
+clavada.
+
+**Regla**: si el puesto del corral está aparcado, el guardia **pasa al punto siguiente de la ronda** (`paso++`); el
+aparcamiento caduca a los 5 minutos, así que volverá a probar el corral —y si sigue sin poder, lo aparcará otra vez,
+sin bucle de 10 s—. Es el mismo remedio que ya llevaban el relevo nocturno (I66) y el viaje al almacén (I73/I75).
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
