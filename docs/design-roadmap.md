@@ -3295,13 +3295,18 @@ regresar"*. Su encargo, entero, en I87.
   reveladas, para que su Diario no nazca vacío.
 
 Sin migración (el descubrimiento es estado del jugador, no del mundo). Compila y pasa el lint, y **medido con el
-arnés** (`MEDIR_ALDEAS`, dos corridas sobre una copia de su partida; ver `tools/arnes/medidas-aldeas.txt`): el guardado
-viejo carga sin excepciones, la siembra apunta las 3 aldeas ya resueltas (`Diario del Invocado sembrado para …: 3
-aldea(s)`), la aldea que **no** está en el guardado sale **OCULTA** en la barra, y el Diario lista nombre, coordenadas,
-estado y rumbo (`Aldea de Fuenteclara (990, 990) — EN RUINAS · a 599 m hacia el noreste`).
+arnés** (`MEDIR_ALDEAS`, **tres** corridas sobre una copia de su partida; ver `tools/arnes/medidas-aldeas.txt`): el
+guardado viejo carga sin excepciones, la siembra apunta las 3 aldeas ya resueltas (`Diario del Invocado sembrado para
+…: 3 aldea(s)`), la aldea que **no** está en el guardado sale **OCULTA** en la barra y pasa a `Aldea  (1.234 m) →` en
+cuanto un revelado se la señala, el **clérigo** revela la siguiente al vencer (idempotente), la **piedra** revela el
+objetivo actual, y el Diario lista nombre, coordenadas, estado y rumbo (`Aldea de Fuenteclara (990, 990) — EN RUINAS ·
+a 599 m hacia el noreste`), sin cambiar al revelar (solo lista lo **visitado**).
+
+La medida **cazó un fallo de rastreo**: la piedra no revelaba nada (y en silencio) con un jugador sin ancla —el de pega
+del arnés—; ahora deja un `WARN` con el motivo.
 
 Queda **pendiente**: la **tabla de nombres** definitiva (la pasa el jugador) y, en el juego abierto, la barra dibujada
-(es del cliente) y los dos avisos que revelan (el clic en la piedra y el clérigo al ganar el asedio).
+(es del cliente) y el clic en la piedra (se mide el método que corre el clic).
 
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 

@@ -137,7 +137,14 @@ Lo que se busca: que un guardado **viejo** cargue sin reventar; que la **siembra
 resolvió; que una aldea **que no está en el guardado** salga `OCULTA` en la barra (es el caso de la que viene después
 de una que cayó: lo pidió el jugador); y que el Diario liste **nombre, coordenadas, estado y rumbo**.
 
-Medida guardada en `medidas-aldeas.txt` (2 corridas, 22-sep-2026). **No cubre** la barra dibujada (es del cliente) ni
-los dos avisos que revelan (el clic en la piedra y el clérigo al vencer el asedio), que necesitan el juego abierto.
+Medida guardada en `medidas-aldeas.txt` (**3 corridas**, 22-sep-2026). La 3.ª añade el **escenario de los revelados**,
+que llama a los **mismos métodos** que corren en juego (`VillageManager.elClerigoSenalaLaSiguiente` y
+`LoreStoneBlock.revelarLaAldeaDeLaPiedra`), comprueba los **tres textos** de la barra (`VillageBarText`) y que los dos
+revelados son idempotentes. **No cubre** la barra dibujada (es del cliente: lo medido es el texto, no el píxel) ni el
+**clic** en la piedra (se mide el método que el clic ejecuta).
+
+**OJO con el jugador de pega**: no trae **ancla** en la capability (el arnés se la pasa por parámetro al latido), así
+que el escenario se la pone antes de medir. Sin ella, la piedra **no revela nada** — y así se descubrió que lo hacía
+en silencio: ahora deja un `WARN` con el motivo.
 
 

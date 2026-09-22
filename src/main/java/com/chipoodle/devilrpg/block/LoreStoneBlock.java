@@ -56,7 +56,7 @@ public class LoreStoneBlock extends Block {
             player.displayClientMessage(LORE, false);
             level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.BLOCKS, 1.0F, 1.0F);
             grantFirstReadLevelUp(player);
-            revelarLaAldea(player);
+            revelarLaAldeaDeLaPiedra(player);
             entregarElDiario(player);
         }
     }
@@ -91,8 +91,11 @@ public class LoreStoneBlock extends Block {
      * sitio, gratis); la piedra es el <b>seguro contra perderse</b>: hay que volver al círculo ritual, que está a
      * cientos de bloques, así que no es un atajo cómodo — pero nunca deja al jugador sin dirección (una aldea que cae
      * no revela nada y sin esta salida se quedaría sin saber hacia dónde ir).
+     * <p>
+     * Es {@code public static} (y sin nada del bloque dentro) para que el <b>arnés</b> pueda medirlo tal cual, sin
+     * abrir el juego: lo que se mide es exactamente el camino que corre al hacer clic en la piedra.
      */
-    private void revelarLaAldea(Player player) {
+    public static void revelarLaAldeaDeLaPiedra(Player player) {
         PlayerAuxiliaryCapabilityInterface aux =
                 IGenericCapability.getUnwrappedPlayerCapability(player, PlayerAuxiliaryCapability.INSTANCE);
         if (aux == null) {
@@ -104,6 +107,12 @@ public class LoreStoneBlock extends Block {
             ancla = aux.getSpawnPoint();
         }
         if (ancla == null) {
+            // RASTRO PARA EL FUTURO (lo pidió el jugador: "documenta todo para que cuando falle algo, sepas cuál es su
+            // origen"): sin ancla no se puede calcular dónde cae la aldea, así que la piedra no revela NADA. Antes
+            // esto se iba en silencio y parecía "la piedra no hace nada" (lo cazó el arnés con un jugador de pega sin
+            // ancla). En una partida de verdad el ancla se pone al entrar al mundo; si esto sale en un log, ahí está.
+            DevilRpg.LOGGER.warn("[LoreStone] {} leyo la piedra pero NO tiene ancla ni spawn: no se puede calcular la"
+                    + " aldea del objetivo {} y no se revela nada", player.getName().getString(), index);
             return;
         }
         BlockPos objetivo = ObjectiveTargets.targetOf(ancla, index);

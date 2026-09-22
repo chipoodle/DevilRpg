@@ -89,6 +89,12 @@ Viaja con el jugador (en un solo jugador: `level.dat`) y **se sincroniza al clie
 | **Un aldeano no llega** | `marcarPuntoFallido` (`:4172`) | no se acerca en N latidos (I3/I33) | `[Village] <uuid> no consigue llegar a <pos>: lo deja por 5 min y sigue con lo demas` |
 | **Muertes** | `pasarHambre` (`:4878`) / `ageVillagers` (`:4974`) | sin ración / 3 días de juego | `[Village] Un aldeano de la aldea N ha muerto de hambre (N min sin comer)` / `[Village] Un aldeano murio de viejo a los N dias de juego` |
 | **Siembra del Diario** | `sembrarElDiarioSiHaceFalta` (`:5008`) | una vez, en partidas ya empezadas | `[Village] Diario del Invocado sembrado para <jugador>: N aldea(s) que ya resolvio esta partida` |
+| → **Revelada** (la dirección) | `LoreStoneBlock.revelarLaAldeaDeLaPiedra` (al leer la piedra) **y** `VillageManager.elClerigoSenalaLaSiguiente` (al **salvar** una aldea) | — | `[LoreStone] <jugador>: revelada la aldea N (hacia el <rumbo>)` / `[Village] Aldea N salvada: revelada la aldea N+1 a <jugador> (hacia el <rumbo>)` |
+| **La piedra NO revela nada** | `LoreStoneBlock.revelarLaAldeaDeLaPiedra`, salida temprana | el jugador no tiene **ancla ni spawn** (sin ellos no se puede calcular dónde cae la aldea) | `[LoreStone] <jugador> leyo la piedra pero NO tiene ancla ni spawn: no se puede calcular la aldea del objetivo N y no se revela nada` — **WARN** (lo cazó el arnés: con un jugador sin ancla la piedra callaba y parecía "no hacer nada") |
+| **Se consulta el Diario** | `DiarioDelInvocadoItem.use` | al usar el objeto | `[Diario] <jugador> ha consultado el Diario del Invocado` (y las líneas en sí van al chat) |
+
+> **Nota sobre las líneas**: los números (`:1234`) son del momento de escribir esto. Si no cuadran, **busca por el
+> nombre del método** (la columna de la izquierda): el nombre es el que manda.
 
 ## 3. Los relojes, en un solo sitio
 
@@ -136,6 +142,12 @@ Si algo "no cuadra" con el tiempo, casi siempre es una de estas:
 6. **¿Y si no está caída?** Entonces "abandonada" era otra cosa: puede ser una aldea **caída
    antigua** que el jugador no recordaba (con nieve y telarañas del `ruin()`), o que estaba de
    noche con los aldeanos dentro. Se distingue mirando `Fallen` y la hora del mundo.
+
+**Síntoma: "la piedra de invocación no hace nada".** Busca `[LoreStone]` en el log: si sale
+`NO tiene ancla ni spawn`, el jugador no tiene ancla (sin ella no se puede calcular dónde cae la
+aldea y no se revela nada). Si sale `revelada la aldea N (hacia el …)`, reveló bien y lo que falla
+es la barra (cliente) o el Diario. Ojo: la barra **no dibuja nada** si esa aldea no está revelada
+ni visitada — es a propósito (I87), no un fallo.
 
 **Síntoma: "un aldeano no llega / se queda ciclado".** Busca `no consigue llegar a <pos>` y
 `me salto el puesto`: es el **punto fallido** (I3/I33/I66/I73/I80), y el sitio concreto que falla

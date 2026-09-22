@@ -1333,7 +1333,7 @@ public final class VillageManager {
                             // que no aparezca en la barra de objetivos, y que solo salga un mensaje en el chat
                             // indicando su dirección sin decir cuántos bloques está"*—. Al encontrarla y entrar en
                             // ella, su nombre y sus coordenadas se apuntan solos en el Diario del Invocado.
-                            String hacia = rumboALaSiguiente(d, aux);
+                            String hacia = rumboALaSiguiente(d.objectiveIndex, d.center, aux);
                             player.displayClientMessage(Component.literal("La aldea cayó: los monstruos aguantaron"
                                     + " dentro de los muros. Un superviviente alcanza a decirte que hay otra aldea"
                                     + " hacia el " + hacia + "... y no sabe cuánto queda."), false);
@@ -1343,7 +1343,7 @@ public final class VillageManager {
                                 // LA ALDEA SE SALVÓ: el clérigo señala la siguiente (lo pidió el jugador: *"si una
                                 // aldea vence el asedio inicial, el clérigo puede activar la dirección del siguiente
                                 // objetivo"*). Hasta este momento la barra de aldea no enseñaba dirección ninguna.
-                                elClerigoSenalaLaSiguiente(level, d, player);
+                                elClerigoSenalaLaSiguiente(level, d.objectiveIndex, d.center, player);
                             }
                             aux.setObjectiveIndex(d.objectiveIndex + 1, player);
                         }
@@ -5010,7 +5010,8 @@ public final class VillageManager {
         }
     }
 
-    /** Hacia dónde cae la aldea SIGUIENTE, para los avisos que no pueden enseñar la distancia (ver I87). */    private static String rumboALaSiguiente(VillageDefense d, PlayerAuxiliaryCapabilityInterface aux) {
+    /** Hacia dónde cae la aldea SIGUIENTE, para los avisos que no pueden enseñar la distancia (ver I87). */
+    private static String rumboALaSiguiente(int objectiveIndex, BlockPos center, PlayerAuxiliaryCapabilityInterface aux) {
         Vec3 ancla = aux.getAnchorPoint();
         if (ancla == null) {
             ancla = aux.getSpawnPoint();
@@ -5018,8 +5019,8 @@ public final class VillageManager {
         if (ancla == null) {
             return "noreste";
         }
-        BlockPos objetivo = ObjectiveTargets.targetOf(ancla, d.objectiveIndex + 1);
-        return ObjectiveTargets.direccionHacia(d.center, objetivo);
+        BlockPos objetivo = ObjectiveTargets.targetOf(ancla, objectiveIndex + 1);
+        return ObjectiveTargets.direccionHacia(center, objetivo);
     }
 
     /**
@@ -5031,21 +5032,22 @@ public final class VillageManager {
      * objetivo"*. Lo dice un clérigo <b>de verdad</b> del pueblo (con su nombre: "El clérigo Dorotea: …") si queda
      * alguno vivo; si no, habla "Los clérigos" en general, que la noticia tiene que llegar igual.
      */
-    private static void elClerigoSenalaLaSiguiente(ServerLevel level, VillageDefense d, ServerPlayer player) {
+    public static void elClerigoSenalaLaSiguiente(ServerLevel level, int objectiveIndex, BlockPos center,
+                                                  ServerPlayer player) {
         PlayerAuxiliaryCapabilityInterface aux =
                 IGenericCapability.getUnwrappedPlayerCapability(player, PlayerAuxiliaryCapability.INSTANCE);
         if (aux == null) {
             return;
         }
-        int siguiente = d.objectiveIndex + 1;
+        int siguiente = objectiveIndex + 1;
         if (aux.isAldeaRevelada(siguiente)) {
             return; // ya la sabía (o ya la había visitado): no se repite
         }
         aux.revelarAldea(siguiente, player);
-        String hacia = rumboALaSiguiente(d, aux);
+        String hacia = rumboALaSiguiente(objectiveIndex, center, aux);
         String quien = "Los clérigos";
         List<Villager> clerigos = level.getEntitiesOfClass(Villager.class,
-                new AABB(d.center).inflate(VillageGenerator.FENCE_RADIUS),
+                new AABB(center).inflate(VillageGenerator.FENCE_RADIUS),
                 v -> v.isAlive() && v.getVillagerData().getProfession() == VillagerProfession.CLERIC);
         if (!clerigos.isEmpty()) {
             quien = "El clérigo " + nombreDe(clerigos.get(0));
@@ -5053,7 +5055,7 @@ public final class VillageManager {
         player.displayClientMessage(Component.literal(quien + ": \"Los clérigos sentimos otra aldea hacia el "
                 + hacia + ". La barra de aldea ya te guía hasta ella; camina con la runa encendida.\""), false);
         DevilRpg.LOGGER.info("[Village] Aldea {} salvada: revelada la aldea {} a {} (hacia el {})",
-                d.objectiveIndex, siguiente, player.getName().getString(), hacia);
+                objectiveIndex, siguiente, player.getName().getString(), hacia);
     }
 
     /**

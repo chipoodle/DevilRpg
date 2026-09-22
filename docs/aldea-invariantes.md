@@ -2096,11 +2096,30 @@ Es decir: el guardado viejo **carga sin una sola excepción**, la **siembra** ap
 resolvió, la **aldea que no está en el guardado sale OCULTA** en la barra (el caso que pidió el jugador: la que viene
 después de una que cayó) y el **Diario** lista nombre, coordenadas, estado (la caída, EN RUINAS) y rumbo.
 
+**Los dos revelados y los tres textos de la barra, TAMBIÉN medidos** (3.ª corrida del arnés, llamando a los **mismos
+métodos** que corren en juego):
+
+```
+[Arnes] BARRA oculta      -> null
+[Arnes] BARRA revelada    -> Aldea  (1234 m) ->
+[Arnes] BARRA descubierta -> Aldea de Peñasalbas  (12 m) arriba
+[Arnes] CLERIGO antes:   revelada(3)=false
+[Arnes] CLERIGO despues: revelada(3)=true barra="Aldea  (1234 m) ->"
+[Arnes] CLERIGO otra vez: revelada(3)=true (idempotente)
+[Arnes] PIEDRA antes:    revelada(5)=false
+[LoreStone] [Minecraft]: revelada la aldea 5 (hacia el suroeste)
+[Arnes] PIEDRA despues:  revelada(5)=true barra="Aldea  (1234 m) ->"
+```
+
+Y esa medida **cazó un fallo de rastreo**: la piedra **no revelaba nada** con un jugador sin ancla (el de pega del
+arnés) y se iba **en silencio**; ahora deja un `WARN` (`[LoreStone] <jugador> leyo la piedra pero NO tiene ancla ni
+spawn: …`). En una partida de verdad el ancla la pone el mod al entrar al mundo.
+
 **Pendiente**: la **tabla de nombres** definitiva (la pasa el jugador) y, en el juego abierto, la **barra dibujada**
-(es del cliente: el arnés es headless) y los **dos avisos que revelan** (el clic en la piedra de invocación y el
-clérigo al vencer un asedio). El camino "NBT del jugador anfitrión de una partida vieja" tampoco se ha medido en
-caliente: en un servidor dedicado no hay jugador de verdad (queda cubierto por construcción: `getIntArray` de una
-clave ausente devuelve vacío y los conjuntos se vacían antes de llenarse).
+(es del cliente: lo medido es el texto que decide `VillageBarText`, no el píxel) y el **clic** en la piedra (se mide el
+método que corre el clic). El camino "NBT del jugador anfitrión de una partida vieja" tampoco se ha medido en caliente:
+en un servidor dedicado no hay jugador de verdad (queda cubierto por construcción: `getIntArray` de una clave ausente
+devuelve vacío y los conjuntos se vacían antes de llenarse).
 
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:

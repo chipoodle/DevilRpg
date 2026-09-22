@@ -3,7 +3,7 @@ MEDIDA: las aldeas con NOMBRE, el revelado y el DIARIO DEL INVOCADO (I87 / 3b.81
 Arnes: GuardHarness con MEDIR_ALDEAS = true (solo lectura: no siembra, no barre, no cambia la hora)
 Mundo: COPIA de la partida del jugador en run/world (aldeas 0, 1 y 2; la 1 esta caida)
 Jugador: el de pega del arnes, en la plaza de la aldea 2 (1414, 120, 1414)
-Corridas: 2 (22-sep-2026 00:09 y 00:33), resultado identico
+Corridas: 3 (22-sep-2026 00:09, 00:33 y 00:44). La 3a anade el escenario de los revelados.
 ================================================================================
 
 --- 1) LA SIEMBRA DEL DIARIO (partida ya empezada, sin los campos nuevos) --------------
@@ -23,20 +23,63 @@ Corridas: 2 (22-sep-2026 00:09 y 00:33), resultado identico
    la pone la cota del mundo y sin chunk cargado no se toca — ver `VillageManager.centroDe`.
    El Diario solo enseña X y Z, asi que lo que lee el jugador es correcto.)
 
---- 3) LA BARRA DE ALDEA (los tres estados) -------------------------------------------
+--- 3) LOS TRES TEXTOS DE LA BARRA DE ALDEA (los decide VillageBarText, que es lo que dibuja
+       el cliente) ---------------------------------------------------------------------
+
+[Arnes] BARRA oculta      -> null
+[Arnes] BARRA revelada    -> Aldea  (1234 m) ->
+[Arnes] BARRA descubierta -> Aldea de Peñasalbas  (12 m) arriba
+
+  Estado 1: SIN REVELAR -> `null`: no se dibuja NADA (ni direccion ni nombre).
+  Estado 2: revelada y sin visitar -> "Aldea" y la distancia: direccion si, nombre no.
+  Estado 3: visitada -> con su NOMBRE, en dorado (VillageBarText.color).
+
+--- 4) LA BARRA, ALDEA POR ALDEA, EN LA PARTIDA DEL JUGADOR ---------------------------
 
 [Arnes] BARRA DE ALDEA (aldea 0): con NOMBRE: "Aldea de Valdehierro"
 [Arnes] BARRA DE ALDEA (aldea 1): con NOMBRE: "Aldea de Fuenteclara"
 [Arnes] BARRA DE ALDEA (aldea 3): OCULTA (ni direccion ni nombre: hay que leer la piedra o ganar un asedio)
+  ...y despues del clerigo, esa misma aldea 3:
+[Arnes] BARRA DE ALDEA (aldea 3): sin nombre: "Aldea"
 
   La aldea 3 es la que NO esta en el guardado: es EXACTAMENTE el caso que pidio el jugador
-  (la que viene despues de una que cayo no puede aparecer en la barra). Sale OCULTA.
+  (la que viene despues de una que cayo no puede aparecer en la barra). Sale OCULTA, y pasa a
+  "sin nombre" en cuanto un revelado se la señala.
 
---- 4) EL RUMBO (lo que dira el clerigo / el aviso de la aldea que cae) ---------------
+--- 5) EL CLERIGO AL VENCER EL ASEDIO (revela la SIGUIENTE) ---------------------------
+
+[Arnes] CLERIGO antes: revelada(3)=false
+[Arnes] CLERIGO despues: revelada(3)=true barra="Aldea  (1234 m) ->"
+[Arnes] CLERIGO otra vez: revelada(3)=true (idempotente)
+
+  Es el MISMO metodo que corre al salvarse una aldea (`VillageManager.elClerigoSenalaLaSiguiente`),
+  asi que lo medido es lo que pasa en juego. El mensaje al chat no sale en el log (va al cliente),
+  pero el nombre del clerigo que habla lo pone `nombreDe(<clerigo del pueblo>)`: el censo del arnes
+  tiene 1 clerigo vivo en la aldea 2 (Eustaquio), asi que hablaria el.
+
+--- 6) LA PIEDRA DE INVOCACION (revela el objetivo actual) ----------------------------
+
+[Arnes] PIEDRA antes: revelada(5)=false
+[LoreStone] [Minecraft]: revelada la aldea 5 (hacia el suroeste)
+[Arnes] PIEDRA despues: revelada(5)=true barra="Aldea  (1234 m) ->"
+
+--- 6b) EL FALLO QUE CAZO ESTA MEDIDA (y su arreglo) ---------------------------------
+
+  En la 2a corrida salio:  [Arnes] PIEDRA despues: revelada(5)=false   <- NO revelaba nada
+
+  Causa: el jugador de pega NO traia ancla en la capability (el arnes se la pasa por parametro al
+  latido) y `revelarLaAldeaDeLaPiedra` sale en silencio cuando no hay ancla ni spawn (sin ancla no
+  se puede calcular donde cae la aldea). En una partida de verdad el ancla la pone el mod al entrar
+  al mundo, asi que al jugador no le pasaba — pero el SILENCIO si era un fallo de rastreo.
+  Arreglado por dos vias: (1) la piedra ahora deja un WARN cuando le pasa
+  (`[LoreStone] <jugador> leyo la piedra pero NO tiene ancla ni spawn: ...`), y (2) el arnes le pone
+  el ancla al jugador de pega antes de medir. Con eso: revelada(5)=true (la linea de arriba).
+
+--- 7) EL RUMBO (lo que dira el clerigo / el aviso de la aldea que cae) ---------------
 
 [Arnes] RUMBO a la aldea 1: noreste
 
---- 5) EL DIARIO, tal cual lo leeria el jugador ----------------------------------------
+--- 8) EL DIARIO, tal cual lo leeria el jugador ----------------------------------------
 
 [Arnes] DIARIO: — Diario del Invocado —
 [Arnes] DIARIO: Aldea de Valdehierro  (566, 566) — a salvo, con el sello puesto · a 1199 m hacia el noreste
@@ -46,20 +89,20 @@ Corridas: 2 (22-sep-2026 00:09 y 00:33), resultado identico
 
   Nombre, coordenadas, estado (la caida sale EN RUINAS) y a cuantos metros y hacia donde cae
   cada una desde donde esta el jugador: es justo lo que pedia (*"no tengo las coordenadas
-  para poder regresar"*).
+  para poder regresar"*). Y despues de revelar la 3 y la 5, el Diario NO cambia: solo lista lo
+  VISITADO ([0, 1, 2]), que es lo que pidio ("solo las que uno ya haya entrado").
 
---- 6) ERRORES ------------------------------------------------------------------------
+--- 9) ERRORES ------------------------------------------------------------------------
 
-Ninguno: cero `Exception` / `ERROR` en las dos corridas.
+Ninguno: cero `Exception` / `ERROR` en las tres corridas.
 
 ================================================================================
 LO QUE ESTA MEDIDA **NO** CUBRE (pendiente, y hay que decirlo)
 ================================================================================
-- **La barra dibujada**: es del CLIENTE; el arnes es headless. Lo medido es el ESTADO del que
-  la barra decide (visitada/revelada/nombre), no el pixel.
-- **Los dos avisos que revelan**: el de la piedra de invocacion (necesita un clic en el bloque,
-  y `showLore` es privado) y el del CLERIGO al vencer un asedio (necesita un asedio entero).
-  Lo medido es que el estado revelado ya produce barra con nombre/sin nombre.
+- **La barra DIBUJADA**: es del CLIENTE; el arnes es headless. Lo medido es el TEXTO y el ESTADO
+  de los que decide la barra (`VillageBarText.texto/color`), no el pixel ni la flecha.
+- **El clic en la piedra**: se ha medido el metodo que corre el clic
+  (`LoreStoneBlock.revelarLaAldeaDeLaPiedra`), no el clic en si (hace falta el juego abierto).
 - **El jugador ANFITRION**: en un servidor dedicado no hay jugador de verdad, asi que el camino
   "capability de una partida vieja" lo hace el jugador de pega desde cero. Que el NBT viejo SIN
   los campos nuevos se lea bien es seguro por construccion (`CompoundTag.getIntArray` de una

@@ -4,7 +4,7 @@ import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
 import com.chipoodle.devilrpg.survival.ObjectiveTargets;
-import com.chipoodle.devilrpg.survival.VillageNames;
+import com.chipoodle.devilrpg.survival.VillageBarText;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -56,18 +56,19 @@ public class VillageHudOverlay {
         int index = aux.getObjectiveIndex();
         boolean visitada = aux.isAldeaVisitada(index);
         boolean revelada = aux.isAldeaRevelada(index);
-        if (!visitada && !revelada) {
-            return; // todavía no sabe ni hacia dónde: sin barra (la dirección la revela la piedra o el clérigo)
-        }
         BlockPos target = ObjectiveTargets.targetOf(spawn, index);
 
         double dx = target.getX() - player.getX();
         double dz = target.getZ() - player.getZ();
         double distance = Math.sqrt(dx * dx + dz * dz);
 
-        // El nombre SOLO cuando la ha descubierto (ha entrado); antes, "Aldea" a secas.
-        String nombre = visitada ? VillageNames.nombre(index) : "Aldea";
-        String text = nombre + "  (" + (int) distance + " m) " + directionArrow(dx, dz, player.getYRot());
+        // El TEXTO lo decide VillageBarText, que es compartido a propósito: así el arnés (servidor headless) mide
+        // exactamente las mismas palabras que se dibujan aquí (los tres estados de I87).
+        String text = VillageBarText.texto(index, visitada, revelada, (int) distance,
+                directionArrow(dx, dz, player.getYRot()));
+        if (text == null) {
+            return; // todavía no sabe ni hacia dónde: sin barra (la dirección la revela la piedra o el clérigo)
+        }
         int screenW = guiGraphics.guiWidth();
         int x = screenW / 2;
         int y = 12;
@@ -76,7 +77,7 @@ public class VillageHudOverlay {
         int bgX = x - w / 2 - 4;
         guiGraphics.fill(bgX, y, bgX + w + 8, y + font.lineHeight + 6, 0x66000000);
         // La aldea descubierta se pinta con nombre (dorado); la que solo está revelada, más apagada.
-        guiGraphics.drawString(font, text, bgX + 4, y + 2, visitada ? 0xFFFFDD88 : 0xFFCFC6AE, true);
+        guiGraphics.drawString(font, text, bgX + 4, y + 2, VillageBarText.color(visitada), true);
     };
 
     /**

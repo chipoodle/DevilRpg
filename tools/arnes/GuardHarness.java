@@ -617,6 +617,77 @@ public class GuardHarness {
                 CENTRO.getZ() - Math.sin(rad) * distancia);
     }
 
+    /** Se hace UNA vez (el escenario de los revelados), no en cada volcado. */
+    private static boolean escenarioDeReveladosHecho = false;
+
+    /**
+     * LOS TRES TEXTOS DE LA BARRA y LOS DOS REVELADOS, medidos de verdad (I87):
+     * <ol>
+     *   <li>los tres textos que decide {@code VillageBarText} (oculta / sin nombre / con nombre);</li>
+     *   <li>el <b>clérigo</b> al vencer el asedio: revela la SIGUIENTE y dice quién habla (nombre de un clérigo real
+     *       del pueblo, de los que el arnés tiene censados);</li>
+     *   <li>la <b>piedra de invocación</b>: revela el objetivo actual;</li>
+     *   <li>y que los dos son <b>idempotentes</b> (repetirlos no cambia nada).</li>
+     * </ol>
+     * Se llama al objetivo 3 (que NO está en el guardado) y al 5, para que ninguno venga ya revelado por la siembra.
+     */
+    private static void probarLosRevelados(ServerLevel level, FakePlayer pega,
+                                           com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface aux) {
+        // EL JUGADOR DE PEGA NO TRAE ANCLA (el arnés se la pasa por parámetro al latido, no vive en su capability):
+        // se la ponemos, que es lo que hace el mod al entrar al mundo. Sin ancla, la PIEDRA no puede calcular dónde
+        // cae la aldea y no revela nada — lo cazó la primera corrida de esta medida ("PIEDRA despues:
+        // revelada(5)=false"), y por eso la piedra ahora deja un WARN en el log cuando le pasa.
+        aux.setAnchorPoint(ancla(), pega);
+        aux.setSpawnPoint(ancla(), pega);
+        DevilRpg.LOGGER.info("[Arnes] ancla del jugador de pega puesta en la capability: {}", ancla());
+
+        DevilRpg.LOGGER.info("[Arnes] BARRA oculta      -> {}",
+                String.valueOf(com.chipoodle.devilrpg.survival.VillageBarText.texto(3, false, false, 1234, "->")));
+        DevilRpg.LOGGER.info("[Arnes] BARRA revelada    -> {}",
+                com.chipoodle.devilrpg.survival.VillageBarText.texto(3, false, true, 1234, "->"));
+        DevilRpg.LOGGER.info("[Arnes] BARRA descubierta -> {}",
+                com.chipoodle.devilrpg.survival.VillageBarText.texto(3, true, true, 12, "arriba"));
+
+        // 1) EL CLERIGO AL VENCER EL ASEDIO de la aldea 2: tiene que revelar la 3 y hablar con nombre propio.
+        aux.setObjectiveIndex(3, pega);
+        DevilRpg.LOGGER.info("[Arnes] CLERIGO antes: revelada(3)={}", aux.isAldeaRevelada(3));
+        try {
+            VillageManager.elClerigoSenalaLaSiguiente(level, INDICE, CENTRO, pega);
+        } catch (Exception e) {
+            DevilRpg.LOGGER.warn("[Arnes] CLERIGO: el aviso al jugador de pega fallo ({})", e.toString());
+        }
+        DevilRpg.LOGGER.info("[Arnes] CLERIGO despues: revelada(3)={} barra=\"{}\"", aux.isAldeaRevelada(3),
+                com.chipoodle.devilrpg.survival.VillageBarText.texto(3, aux.isAldeaVisitada(3),
+                        aux.isAldeaRevelada(3), 1234, "->"));
+        try {
+            VillageManager.elClerigoSenalaLaSiguiente(level, INDICE, CENTRO, pega);
+        } catch (Exception e) {
+            DevilRpg.LOGGER.warn("[Arnes] CLERIGO (2a vez): {}", e.toString());
+        }
+        DevilRpg.LOGGER.info("[Arnes] CLERIGO otra vez: revelada(3)={} (idempotente)", aux.isAldeaRevelada(3));
+
+        // 2) LA PIEDRA DE INVOCACION, con un objetivo que no venga revelado (el 5).
+        aux.setObjectiveIndex(5, pega);
+        DevilRpg.LOGGER.info("[Arnes] PIEDRA antes: revelada(5)={}", aux.isAldeaRevelada(5));
+        try {
+            com.chipoodle.devilrpg.block.LoreStoneBlock.revelarLaAldeaDeLaPiedra(pega);
+        } catch (Exception e) {
+            DevilRpg.LOGGER.warn("[Arnes] PIEDRA: el mensaje al jugador de pega fallo ({})", e.toString());
+        }
+        DevilRpg.LOGGER.info("[Arnes] PIEDRA despues: revelada(5)={} barra=\"{}\"", aux.isAldeaRevelada(5),
+                com.chipoodle.devilrpg.survival.VillageBarText.texto(5, aux.isAldeaVisitada(5),
+                        aux.isAldeaRevelada(5), 1234, "->"));
+        // Y EL CASO CONTRARIO: la piedra con un objetivo que YA está revelado solo confirma (no cambia nada).
+        try {
+            com.chipoodle.devilrpg.block.LoreStoneBlock.revelarLaAldeaDeLaPiedra(pega);
+        } catch (Exception e) {
+            DevilRpg.LOGGER.warn("[Arnes] PIEDRA (2a vez): {}", e.toString());
+        }
+        aux.setObjectiveIndex(0, pega);
+        DevilRpg.LOGGER.info("[Arnes] el escenario de revelados termina; el Diario NO cambia (solo lo visitado): {}",
+                aux.getAldeasVisitadas());
+    }
+
     /**
      * Vuelca el estado del descubrimiento y el revelado (I87), lo que dibujaría la barra de aldea, el rumbo a la
      * siguiente y las LÍNEAS DEL DIARIO tal cual las manda el objeto al usarlo.
@@ -632,6 +703,10 @@ public class GuardHarness {
         int indice = aux.getObjectiveIndex();
         DevilRpg.LOGGER.info("[Arnes] ALDEAS indice={} visitadas={} reveladas={}",
                 indice, aux.getAldeasVisitadas(), aux.getAldeasReveladas());
+        if (!escenarioDeReveladosHecho) {
+            escenarioDeReveladosHecho = true;
+            probarLosRevelados(level, pega, aux);
+        }
         for (int i = 0; i <= indice; i++) {
             DevilRpg.LOGGER.info("[Arnes] ALDEA {} nombre=\"{}\" visitada={} revelada={} centro={}",
                     i, com.chipoodle.devilrpg.survival.VillageNames.nombre(i),
