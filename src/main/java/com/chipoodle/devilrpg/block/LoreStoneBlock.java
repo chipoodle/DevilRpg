@@ -4,6 +4,7 @@ import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
+import com.chipoodle.devilrpg.survival.ObjectiveTargets;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
@@ -17,6 +18,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * Roca de los clérigos: la piedra central del círculo ritual de invocación del druida. Al darle clic
@@ -54,7 +56,70 @@ public class LoreStoneBlock extends Block {
             player.displayClientMessage(LORE, false);
             level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.BLOCKS, 1.0F, 1.0F);
             grantFirstReadLevelUp(player);
+            revelarLaAldea(player);
+            entregarElDiario(player);
         }
+    }
+
+    /**
+     * Le entrega el <b>Diario del Invocado</b> si no lo tiene ya: es donde va apuntando las aldeas que descubre, con
+     * sus coordenadas y su estado (lo pidió el jugador: *"un libro o algo que vaya guardando las aldeas
+     * descubiertas… junto con su estatus y sus coordenadas"*). Si lo perdió, la piedra se lo vuelve a dar (y si no
+     * le cabe en el inventario, lo suelta a sus pies: nunca se pierde la herramienta).
+     */
+    private void entregarElDiario(Player player) {
+        net.minecraft.world.item.ItemStack diario =
+                new net.minecraft.world.item.ItemStack(com.chipoodle.devilrpg.init.ModItems.DIARIO_DEL_INVOCADO.get());
+        if (player.getInventory().contains(diario)) {
+            return;
+        }
+        if (!player.getInventory().add(diario)) {
+            player.drop(diario, false);
+        }
+        player.displayClientMessage(Component.literal(
+                "La piedra te entrega un cuaderno ajado: el Diario del Invocado. Úsalo para ver las aldeas que"
+                        + " descubras, con sus coordenadas y su suerte."), false);
+    }
+
+    /**
+     * <b>La piedra revela la dirección de la aldea del objetivo actual</b>: es el "inicio de la misión" —*"la runa
+     * ardiente marca el camino hacia la primera aldea"*— y hasta que no se lee (o el clérigo habla), la barra de aldea
+     * no enseña ni la dirección (lo pidió el jugador: *"la siguiente aldea no va a aparecer su dirección hasta que
+     * uno obtenga algo del mundo o alguien de la primera aldea o piedra de invocación al inicio de esa misión"*).
+     * <p>
+     * El camino <b>normal</b> para las siguientes es el <b>clérigo</b> de la aldea que se salve (te lo dice en el
+     * sitio, gratis); la piedra es el <b>seguro contra perderse</b>: hay que volver al círculo ritual, que está a
+     * cientos de bloques, así que no es un atajo cómodo — pero nunca deja al jugador sin dirección (una aldea que cae
+     * no revela nada y sin esta salida se quedaría sin saber hacia dónde ir).
+     */
+    private void revelarLaAldea(Player player) {
+        PlayerAuxiliaryCapabilityInterface aux =
+                IGenericCapability.getUnwrappedPlayerCapability(player, PlayerAuxiliaryCapability.INSTANCE);
+        if (aux == null) {
+            return;
+        }
+        int index = aux.getObjectiveIndex();
+        Vec3 ancla = aux.getAnchorPoint();
+        if (ancla == null) {
+            ancla = aux.getSpawnPoint();
+        }
+        if (ancla == null) {
+            return;
+        }
+        BlockPos objetivo = ObjectiveTargets.targetOf(ancla, index);
+        String hacia = ObjectiveTargets.direccionHacia(player.blockPosition(), objetivo);
+        boolean yaLaSabia = aux.isAldeaRevelada(index) || aux.isAldeaVisitada(index);
+        if (yaLaSabia) {
+            player.displayClientMessage(Component.literal(
+                    "La runa sigue encendida: la aldea queda hacia el " + hacia + "."), false);
+            return;
+        }
+        aux.revelarAldea(index, player);
+        player.displayClientMessage(Component.literal(index == 0
+                ? "La runa se enciende en tu cabeza: la primera aldea queda hacia el " + hacia + "."
+                : "La runa vuelve a encenderse: la aldea que buscas queda hacia el " + hacia + "."), false);
+        DevilRpg.LOGGER.info("[LoreStone] {}: revelada la aldea {} (hacia el {})",
+                player.getName().getString(), index, hacia);
     }
 
     /**

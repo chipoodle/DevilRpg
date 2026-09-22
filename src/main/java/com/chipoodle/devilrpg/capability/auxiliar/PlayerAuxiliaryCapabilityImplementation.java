@@ -23,6 +23,10 @@ public class PlayerAuxiliaryCapabilityImplementation implements PlayerAuxiliaryC
     protected int objectiveIndex = 0;
     /** Si ya leyó la piedra de lore del círculo ritual (la primera lectura da la XP de un nivel). */
     protected boolean loreStoneRead = false;
+    /** Aldeas en las que el jugador ya ha ENTRADO (índice de objetivo): su "descubrimiento" (ver la interfaz). */
+    protected final java.util.Set<Integer> aldeasVisitadas = new java.util.HashSet<>();
+    /** Aldeas cuya DIRECCIÓN ya le han revelado (la piedra, o el clérigo al vencer el asedio). */
+    protected final java.util.Set<Integer> aldeasReveladas = new java.util.HashSet<>();
 
     @Override
     public boolean isWerewolfAttack() {
@@ -117,6 +121,44 @@ public class PlayerAuxiliaryCapabilityImplementation implements PlayerAuxiliaryC
     }
 
     @Override
+    public boolean isAldeaVisitada(int objectiveIndex) {
+        return aldeasVisitadas.contains(objectiveIndex);
+    }
+
+    @Override
+    public void visitarAldea(int objectiveIndex, Player player) {
+        if (!aldeasVisitadas.add(objectiveIndex)) {
+            return; // ya estaba: idempotente (esto se llama en cada latido mientras el jugador está en la aldea)
+        }
+        if (!player.level().isClientSide) sendAuxiliaryChangesToClient((ServerPlayer) player);
+        else sendAuxiliaryChangesToServer();
+    }
+
+    @Override
+    public boolean isAldeaRevelada(int objectiveIndex) {
+        return aldeasReveladas.contains(objectiveIndex);
+    }
+
+    @Override
+    public void revelarAldea(int objectiveIndex, Player player) {
+        if (!aldeasReveladas.add(objectiveIndex)) {
+            return; // ya se la habían revelado: idempotente
+        }
+        if (!player.level().isClientSide) sendAuxiliaryChangesToClient((ServerPlayer) player);
+        else sendAuxiliaryChangesToServer();
+    }
+
+    @Override
+    public java.util.Set<Integer> getAldeasVisitadas() {
+        return java.util.Collections.unmodifiableSet(aldeasVisitadas);
+    }
+
+    @Override
+    public java.util.Set<Integer> getAldeasReveladas() {
+        return java.util.Collections.unmodifiableSet(aldeasReveladas);
+    }
+
+    @Override
     public void setAnchorPoint(Vec3 anchorPoint, Player player) {
         this.anchorPoint = anchorPoint;
         if (!player.level().isClientSide) sendAuxiliaryChangesToClient((ServerPlayer) player);
@@ -138,7 +180,19 @@ public class PlayerAuxiliaryCapabilityImplementation implements PlayerAuxiliaryC
         }
         nbt.putInt("objectiveIndex", objectiveIndex);
         nbt.putBoolean("loreStoneRead", loreStoneRead);
+        nbt.putIntArray("aldeasVisitadas", aIntArray(aldeasVisitadas));
+        nbt.putIntArray("aldeasReveladas", aIntArray(aldeasReveladas));
         return nbt;
+    }
+
+    /** Los índices de un conjunto, como arreglo de enteros para el NBT (y para el paquete de sincronización). */
+    private static int[] aIntArray(java.util.Set<Integer> conjunto) {
+        int[] out = new int[conjunto.size()];
+        int i = 0;
+        for (int v : conjunto) {
+            out[i++] = v;
+        }
+        return out;
     }
 
     @Override
@@ -159,6 +213,16 @@ public class PlayerAuxiliaryCapabilityImplementation implements PlayerAuxiliaryC
         }
         // Partidas viejas (sin el campo): false = todavía no la ha leído, así que la primera lectura sí da XP.
         loreStoneRead = nbt.getBoolean("loreStoneRead");
+        // Las aldeas descubiertas y reveladas (partidas viejas: sin los campos -> vacío = no conoce ninguna, que es
+        // justo la verdad: la barra de aldea no enseñará dirección hasta que la piedra o un clérigo se la den).
+        aldeasVisitadas.clear();
+        for (int v : nbt.getIntArray("aldeasVisitadas")) {
+            aldeasVisitadas.add(v);
+        }
+        aldeasReveladas.clear();
+        for (int v : nbt.getIntArray("aldeasReveladas")) {
+            aldeasReveladas.add(v);
+        }
     }
 
     private void sendAuxiliaryChangesToServer() {

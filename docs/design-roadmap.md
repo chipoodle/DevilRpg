@@ -3271,6 +3271,32 @@ resolvía como perdido: `fallVillage` → `ruin()` (aire, telarañas y piedra mo
 PAUSA` y se dice en el log—, al volver se le da **el tiempo entero otra vez**, y las **hordas del mundo** tampoco
 pueden tumbar una aldea sin nadie delante. Pendiente de ver en juego (el jugador cerró el juego al informar).
 
+### 3b.81 Las aldeas con NOMBRE, el Diario del Invocado y la dirección que no se regala
+
+Lo pidió el jugador, y venía de un problema real suyo: *"el problema es que no tengo las coordenadas para poder
+regresar"*. Su encargo, entero, en I87.
+
+**HECHO**:
+
+- **Nombre por aldea**, determinista por índice (`VillageNames`): la misma aldea se llama igual en servidor y cliente
+  sin sincronizar nada. Tabla de nombres rústicos (**pendiente**: el jugador va a dar la suya y se pega tal cual).
+- **La barra de ALDEA** (`VillageHudOverlay`, antes `ObjectiveHudOverlay`): sin revelar **no hay barra**; revelada y sin
+  visitar, `Aldea (1.234 m) →`; visitada, `Aldea de Valdehierro (12 m) ↑`.
+- **Descubrir es ENTRAR** (radio 24): al entrar se apunta por jugador en la capability (`aldeasVisitadas`), sale *"Has
+  llegado a …"* y el nombre aparece en la barra y en el Diario.
+- **Quién revela la dirección** (`aldeasReveladas`): la **piedra de invocación** (el "inicio de la misión", y el seguro
+  contra perderse: hay que volver al círculo ritual) y, como camino normal, **el clérigo** de la aldea que vence su
+  asedio, que lo dice **con su nombre**.
+- **Si la aldea cae**: ni barra ni distancia — solo el aviso con el **rumbo** en el chat, tal como lo pidió. La siguiente
+  se revela al encontrarla y entrar.
+- **Diario del Invocado** (`DiarioDelInvocadoItem`, lo entrega la piedra): lista las aldeas descubiertas con **nombre,
+  coordenadas, estado** y **distancia y rumbo** desde donde estás. No se gasta y no se queda desfasado.
+- **Siembra en partidas ya empezadas**: las aldeas que el mundo ya resolvió se apuntan una vez como visitadas y
+  reveladas, para que su Diario no nazca vacío.
+
+Sin migración (el descubrimiento es estado del jugador, no del mundo). Compila y pasa el lint; **pendiente de verlo en
+juego**.
+
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.

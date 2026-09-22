@@ -38,6 +38,17 @@ public class ModItems {
     public static final DeferredHolder<Item, Item> HUEVO_ESTRELLADO = ITEMS.register("huevo_estrellado",
             () -> new Item(new Item.Properties().food(new FoodProperties.Builder().nutrition(6).saturationModifier(0.6f).build())));
 
+    /**
+     * <b>DIARIO DEL INVOCADO</b> (lo pidió el jugador: *"un libro o algo que vaya guardando las aldeas descubiertas
+     * (sólo las que uno ya haya entrado) junto con su estatus y sus coordenadas"*). Se obtiene de la <b>piedra de
+     * invocación</b> y al usarlo (clic derecho) escribe en el chat la lista: nombre de la aldea, coordenadas, estado
+     * (viva / sellada / en ruinas) y a cuántos metros y hacia dónde cae desde donde estás.
+     * <p>
+     * {@code stacksTo(1)}: es un cuaderno personal, no una pila de cuadernos.
+     */
+    public static final DeferredHolder<Item, Item> DIARIO_DEL_INVOCADO = ITEMS.register("diario_del_invocado",
+            () -> new DiarioDelInvocadoItem(new Item.Properties().stacksTo(1)));
+
     public static final DeferredHolder<Item, DeferredSpawnEggItem> SOULWOLF_SPAWN_EGG = ITEMS.register("soulwolf_spawn_egg",
             () -> new DeferredSpawnEggItem(ModEntities.SOUL_WOLF, 0x944a7f, 0x3b3636,
                     new Item.Properties().stacksTo(16)));

@@ -39,4 +39,31 @@ public interface PlayerAuxiliaryCapabilityInterface extends IGenericCapability {
     boolean isLoreStoneRead();
     void setLoreStoneRead(boolean read, Player player);
 
+    /**
+     * ¿Ha <b>entrado</b> ya en la aldea de ese objetivo? Ese es el <b>descubrimiento</b>: la barra de aldea le pone
+     * su nombre (antes solo dice "Aldea") y la aldea queda apuntada en el <b>Diario del Invocado</b> con sus
+     * coordenadas. Lo pidió el jugador: *"un libro o algo que vaya guardando las aldeas descubiertas (sólo las que
+     * uno ya haya entrado) junto con su estatus y sus coordenadas"*.
+     */
+    boolean isAldeaVisitada(int objectiveIndex);
+
+    /** Apunta que el jugador ha entrado en esa aldea (idempotente). */
+    void visitarAldea(int objectiveIndex, Player player);
+
+    /**
+     * ¿Le han <b>revelado la dirección</b> de esa aldea? La primera la revela la <b>piedra de invocación</b> y las
+     * siguientes el <b>clérigo</b> al vencer el asedio: hasta entonces la barra de aldea no enseña ni la dirección
+     * (*"la siguiente aldea no va a aparecer su dirección hasta que uno obtenga algo…"*).
+     */
+    boolean isAldeaRevelada(int objectiveIndex);
+
+    /** Revela la dirección de esa aldea para este jugador (idempotente). */
+    void revelarAldea(int objectiveIndex, Player player);
+
+    /** Aldeas que el jugador ya ha entrado (para el Diario del Invocado). */
+    java.util.Set<Integer> getAldeasVisitadas();
+
+    /** Aldeas cuya dirección ya le han revelado (visitadas o no). */
+    java.util.Set<Integer> getAldeasReveladas();
+
 }

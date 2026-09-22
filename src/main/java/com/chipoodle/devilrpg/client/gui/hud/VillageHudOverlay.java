@@ -4,6 +4,7 @@ import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
 import com.chipoodle.devilrpg.survival.ObjectiveTargets;
+import com.chipoodle.devilrpg.survival.VillageNames;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -13,15 +14,27 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * HUD del objetivo de progresión. Muestra en la parte superior central el objetivo actual (índice), la
- * distancia horizontal que falta y una flecha que indica hacia dónde ir (relativa al giro del jugador).
+ * <b>La barra de ALDEA</b> (antes "barra de objetivos"): arriba en el centro, el nombre de la aldea a la que va el
+ * jugador, la distancia que falta y una flecha hacia dónde queda (relativa a su giro).
  * <p>
- * Todo se calcula en el cliente a partir de la capability auxiliar sincronizada (spawn + índice del
- * objetivo) y de la posición determinista del objetivo.
+ * Lo pidió el jugador: *"arriba donde está la barra de objetivos, que no diga objetivo 1, 2 etc, sino aldea, y cuando
+ * se descubra que diga su nombre"*, y con el revelado progresivo: *"la siguiente aldea no va a aparecer su dirección
+ * hasta que uno obtenga algo del mundo o alguien de la primera aldea o piedra de invocación… y ya así pueda aparecer
+ * arriba, pero primero sin nombre y ya después con nombre cuando se descubra"*.
+ * <p>
+ * Los tres estados (todo lo sabe el cliente sin sincronizar aldeas, ver {@link VillageNames}):
+ * <ul>
+ *   <li><b>Sin revelar</b>: no hay barra. La dirección no se conoce hasta que la piedra de invocación (la primera) o
+ *       el clérigo al vencer un asedio (las siguientes) se la digan.</li>
+ *   <li><b>Revelada, no visitada</b>: {@code Aldea  (1.234 m) →} — la dirección sí, el nombre todavía no.</li>
+ *   <li><b>Visitada</b> (el jugador ha entrado en ella): {@code Aldea de Valdehierro  (12 m) ↑}.</li>
+ * </ul>
+ * Todo se calcula en el cliente a partir de la capability auxiliar sincronizada (ancla + índice del objetivo + lo que
+ * el jugador ha visitado y lo que le han revelado) y de la posición determinista del objetivo.
  */
-public class ObjectiveHudOverlay {
+public class VillageHudOverlay {
 
-    public static final LayeredDraw.Layer HUD_OBJECTIVE = (guiGraphics, deltaTracker) -> {
+    public static final LayeredDraw.Layer HUD_ALDEA = (guiGraphics, deltaTracker) -> {
         Minecraft mc = Minecraft.getInstance();
         Player player = mc.player;
         Font font = mc.font;
@@ -38,25 +51,32 @@ public class ObjectiveHudOverlay {
             spawn = aux.getSpawnPoint();
         }
         if (spawn == null) {
-            return; // sin ancla -> sin objetivo
+            return; // sin ancla -> sin aldea
         }
         int index = aux.getObjectiveIndex();
+        boolean visitada = aux.isAldeaVisitada(index);
+        boolean revelada = aux.isAldeaRevelada(index);
+        if (!visitada && !revelada) {
+            return; // todavía no sabe ni hacia dónde: sin barra (la dirección la revela la piedra o el clérigo)
+        }
         BlockPos target = ObjectiveTargets.targetOf(spawn, index);
 
         double dx = target.getX() - player.getX();
         double dz = target.getZ() - player.getZ();
         double distance = Math.sqrt(dx * dx + dz * dz);
 
-        String text = "Objetivo " + (index + 1) + "  (" + (int) distance + " m) " + directionArrow(dx, dz, player.getYRot());
+        // El nombre SOLO cuando la ha descubierto (ha entrado); antes, "Aldea" a secas.
+        String nombre = visitada ? VillageNames.nombre(index) : "Aldea";
+        String text = nombre + "  (" + (int) distance + " m) " + directionArrow(dx, dz, player.getYRot());
         int screenW = guiGraphics.guiWidth();
         int x = screenW / 2;
         int y = 12;
 
-        String line = text;
-        int w = font.width(line);
+        int w = font.width(text);
         int bgX = x - w / 2 - 4;
         guiGraphics.fill(bgX, y, bgX + w + 8, y + font.lineHeight + 6, 0x66000000);
-        guiGraphics.drawString(font, line, bgX + 4, y + 2, 0xFFFFDD88, true);
+        // La aldea descubierta se pinta con nombre (dorado); la que solo está revelada, más apagada.
+        guiGraphics.drawString(font, text, bgX + 4, y + 2, visitada ? 0xFFFFDD88 : 0xFFCFC6AE, true);
     };
 
     /**

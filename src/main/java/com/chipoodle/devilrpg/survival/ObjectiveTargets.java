@@ -67,4 +67,24 @@ public final class ObjectiveTargets {
         double dz = target.getZ() - from.getZ();
         return dx * dx + dz * dz;
     }
+
+    /** Los ocho rumbos, empezando por el SUR (que es el 0 de la convención de ángulos de abajo). */
+    private static final String[] RUMBOS = {
+            "sur", "suroeste", "oeste", "noroeste", "norte", "noreste", "este", "sureste",
+    };
+
+    /**
+     * La dirección hacia {@code hasta} dicha <b>en palabras</b> ("noreste", "oeste"…), para los avisos que no pueden
+     * enseñar la distancia ni la barra de aldea: el clérigo al vencer un asedio (*"los clérigos saben de otra aldea…"*)
+     * y el mensaje de una aldea que cae (el jugador: *"que solo salga un mensaje en el chat indicando su dirección sin
+     * decir cuántos bloques está"*).
+     */
+    public static String direccionHacia(BlockPos desde, BlockPos hasta) {
+        double dx = hasta.getX() - desde.getX();
+        double dz = hasta.getZ() - desde.getZ();
+        // Ángulo en la convención de MC: 0 = sur (+z), 90 = este (+x), 180 = norte (-z).
+        double ang = Math.toDegrees(Math.atan2(dx, dz));
+        int i = (int) Math.round(ang / 45.0);
+        return RUMBOS[Math.floorMod(i, RUMBOS.length)];
+    }
 }

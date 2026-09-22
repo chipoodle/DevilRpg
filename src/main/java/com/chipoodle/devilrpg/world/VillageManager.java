@@ -14,6 +14,7 @@ import com.chipoodle.devilrpg.entity.goal.VillagerLumberjackGoal;
 import com.chipoodle.devilrpg.entity.goal.VillagerRepairGoal;
 import com.chipoodle.devilrpg.init.ModEntities;
 import com.chipoodle.devilrpg.survival.ObjectiveTargets;
+import com.chipoodle.devilrpg.survival.VillageNames;
 import com.chipoodle.devilrpg.util.MissionRewards;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -835,6 +836,12 @@ public final class VillageManager {
      */
     public static void manageNearby(ServerLevel level, ServerPlayer player, Vec3 anchor, int currentIndex) {
         VillageSavedData saved = VillageSavedData.get(level);
+        // SIEMBRA DEL DIARIO (una sola vez, y solo en partidas ya empezadas): una aldea que este mundo ya dio por
+        // resuelta (salvada o caída) es una aldea en la que el jugador estuvo, así que se le apunta como descubierta y
+        // revelada. Sin esto, en la partida de siempre el Diario nacería vacío y la barra de aldea no sabría ni hacia
+        // dónde ir: justo el problema que el jugador quería resolver (*"no tengo las coordenadas para poder
+        // regresar"*). Se hace una vez porque en cuanto haya UNA aldea apuntada ya no se vuelve a mirar.
+        sembrarElDiarioSiHaceFalta(saved, player);
         BlockPos playerPos = player.blockPosition();
         for (int i = 0; i <= currentIndex; i++) {
             BlockPos target = ObjectiveTargets.targetOf(anchor, i);
@@ -858,6 +865,19 @@ public final class VillageManager {
             }
             noticeIfNear(level, player, i, target);
             if (distSqr <= (double) ARRIVE_RADIUS * ARRIVE_RADIUS) {
+                // DESCUBRIMIENTO (lo pidió el jugador): al ENTRAR en la aldea queda apuntada como descubierta, y eso
+                // le pone su NOMBRE en la barra de aldea y la guarda en el Diario del Invocado con sus coordenadas.
+                // Solo cuenta si ha entrado de verdad (no vale verla de lejos, que para eso está el aviso de
+                // `noticeIfNear`).
+                PlayerAuxiliaryCapabilityInterface aux =
+                        IGenericCapability.getUnwrappedPlayerCapability(player, PlayerAuxiliaryCapability.INSTANCE);
+                if (aux != null && !aux.isAldeaVisitada(i)) {
+                    aux.visitarAldea(i, player);
+                    player.displayClientMessage(Component.literal(
+                            "Has llegado a " + VillageNames.nombre(i) + "."), false);
+                    DevilRpg.LOGGER.info("[Village] {} ha descubierto la aldea {} ({})",
+                            player.getName().getString(), i, VillageNames.nombre(i));
+                }
                 start(level, player, i, target);
             }
             // SALUD DE LA ALDEA (Iteración 3): se cuenta a los aldeanos vivos y la aldea se recupera DE A POCO.
@@ -1277,6 +1297,8 @@ public final class VillageManager {
                         // pueden asediar aldeas de objetivos ya superados (siguen vivas y gestionadas), y
                         // avanzar el índice con uno viejo haría RETROCEDER al jugador.
                         boolean isCurrentObjective = aux != null && aux.getObjectiveIndex() == d.objectiveIndex;
+                        /** Si la aldea acabó CAYENDO (para no revelar la siguiente: ver más abajo). */
+                        boolean cayo = false;
                         if (waveCleared) {
                             if (d.wave.isEmpty()) {
                                 grantReward(player, d.objectiveIndex);
@@ -1305,11 +1327,24 @@ public final class VillageManager {
                             // se marca caída (definitiva) y queda en ruinas. Antes solo se avisaba por chat y la
                             // aldea seguía "viva", así que el gestor la repoblaba más tarde como si nada.
                             fallVillage(level, VillageSavedData.get(level), d.objectiveIndex, d.center);
-                            player.displayClientMessage(Component.literal(isCurrentObjective
-                                    ? "La aldea cayó: los monstruos aguantaron dentro de los muros. El objetivo avanza."
-                                    : "La aldea cayó: los monstruos aguantaron dentro de los muros."), false);
+                            cayo = true;
+                            // Y AQUÍ **NO** SE REVELA LA SIGUIENTE (lo pidió el jugador): de una aldea que cae no
+                            // queda ni barra de aldea ni distancia, solo el aviso con el RUMBO —*"si cae la aldea,
+                            // que no aparezca en la barra de objetivos, y que solo salga un mensaje en el chat
+                            // indicando su dirección sin decir cuántos bloques está"*—. Al encontrarla y entrar en
+                            // ella, su nombre y sus coordenadas se apuntan solos en el Diario del Invocado.
+                            String hacia = rumboALaSiguiente(d, aux);
+                            player.displayClientMessage(Component.literal("La aldea cayó: los monstruos aguantaron"
+                                    + " dentro de los muros. Un superviviente alcanza a decirte que hay otra aldea"
+                                    + " hacia el " + hacia + "... y no sabe cuánto queda."), false);
                         }
                         if (isCurrentObjective) {
+                            if (!cayo) {
+                                // LA ALDEA SE SALVÓ: el clérigo señala la siguiente (lo pidió el jugador: *"si una
+                                // aldea vence el asedio inicial, el clérigo puede activar la dirección del siguiente
+                                // objetivo"*). Hasta este momento la barra de aldea no enseñaba dirección ninguna.
+                                elClerigoSenalaLaSiguiente(level, d, player);
+                            }
                             aux.setObjectiveIndex(d.objectiveIndex + 1, player);
                         }
                     }
@@ -4948,6 +4983,77 @@ public final class VillageManager {
                 }
             }
         }
+    }
+
+    /**
+     * <b>Siembra el Diario del Invocado</b> en una partida ya empezada: marca como descubiertas (y reveladas) las
+     * aldeas que el mundo ya dio por resueltas, porque son aldeas en las que el jugador estuvo. Es <b>idempotente por
+     * construcción</b>: en cuanto tiene una apuntada, sale sin recorrer nada.
+     */
+    private static void sembrarElDiarioSiHaceFalta(VillageSavedData saved, ServerPlayer player) {
+        PlayerAuxiliaryCapabilityInterface aux =
+                IGenericCapability.getUnwrappedPlayerCapability(player, PlayerAuxiliaryCapability.INSTANCE);
+        if (aux == null || !aux.getAldeasVisitadas().isEmpty()) {
+            return; // no hay capability, o ya tiene aldeas apuntadas: nada que sembrar
+        }
+        int sembradas = 0;
+        for (int i = 0; i <= MAX_OBJECTIVES; i++) {
+            if (saved.isGenerated(i) && saved.isSiegeResolved(i)) {
+                aux.visitarAldea(i, player);
+                aux.revelarAldea(i, player);
+                sembradas++;
+            }
+        }
+        if (sembradas > 0) {
+            DevilRpg.LOGGER.info("[Village] Diario del Invocado sembrado para {}: {} aldea(s) que ya resolvio esta"
+                    + " partida", player.getName().getString(), sembradas);
+        }
+    }
+
+    /** Hacia dónde cae la aldea SIGUIENTE, para los avisos que no pueden enseñar la distancia (ver I87). */    private static String rumboALaSiguiente(VillageDefense d, PlayerAuxiliaryCapabilityInterface aux) {
+        Vec3 ancla = aux.getAnchorPoint();
+        if (ancla == null) {
+            ancla = aux.getSpawnPoint();
+        }
+        if (ancla == null) {
+            return "noreste";
+        }
+        BlockPos objetivo = ObjectiveTargets.targetOf(ancla, d.objectiveIndex + 1);
+        return ObjectiveTargets.direccionHacia(d.center, objetivo);
+    }
+
+    /**
+     * <b>El clérigo señala la aldea siguiente</b>: cuando una aldea <b>vence su asedio</b>, uno de sus clérigos le
+     * revela al jugador hacia dónde cae la próxima — y a partir de ahí la barra de aldea ya le enseña la dirección
+     * (primero sin nombre; el nombre llega al entrar en ella).
+     * <p>
+     * Lo pidió el jugador: *"si una aldea vence el asedio inicial, el clérigo puede activar la dirección del siguiente
+     * objetivo"*. Lo dice un clérigo <b>de verdad</b> del pueblo (con su nombre: "El clérigo Dorotea: …") si queda
+     * alguno vivo; si no, habla "Los clérigos" en general, que la noticia tiene que llegar igual.
+     */
+    private static void elClerigoSenalaLaSiguiente(ServerLevel level, VillageDefense d, ServerPlayer player) {
+        PlayerAuxiliaryCapabilityInterface aux =
+                IGenericCapability.getUnwrappedPlayerCapability(player, PlayerAuxiliaryCapability.INSTANCE);
+        if (aux == null) {
+            return;
+        }
+        int siguiente = d.objectiveIndex + 1;
+        if (aux.isAldeaRevelada(siguiente)) {
+            return; // ya la sabía (o ya la había visitado): no se repite
+        }
+        aux.revelarAldea(siguiente, player);
+        String hacia = rumboALaSiguiente(d, aux);
+        String quien = "Los clérigos";
+        List<Villager> clerigos = level.getEntitiesOfClass(Villager.class,
+                new AABB(d.center).inflate(VillageGenerator.FENCE_RADIUS),
+                v -> v.isAlive() && v.getVillagerData().getProfession() == VillagerProfession.CLERIC);
+        if (!clerigos.isEmpty()) {
+            quien = "El clérigo " + nombreDe(clerigos.get(0));
+        }
+        player.displayClientMessage(Component.literal(quien + ": \"Los clérigos sentimos otra aldea hacia el "
+                + hacia + ". La barra de aldea ya te guía hasta ella; camina con la runa encendida.\""), false);
+        DevilRpg.LOGGER.info("[Village] Aldea {} salvada: revelada la aldea {} a {} (hacia el {})",
+                d.objectiveIndex, siguiente, player.getName().getString(), hacia);
     }
 
     /**

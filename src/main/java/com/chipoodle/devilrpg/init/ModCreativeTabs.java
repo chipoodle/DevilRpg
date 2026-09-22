@@ -34,6 +34,7 @@ public class ModCreativeTabs {
                 populator.accept(ModItems.SCULK_CULTIVATOR_SPAWN_EGG.get());
                 // La comida que cocina el cocinero de la aldea con los huevos del corral.
                 populator.accept(ModItems.HUEVO_ESTRELLADO.get());
+                populator.accept(ModItems.DIARIO_DEL_INVOCADO.get());
             })
             .build());
 }

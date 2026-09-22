@@ -2023,6 +2023,60 @@ mundo `world`) escriben los dos en `run/logs/latest.log`, así que un archivo pu
 procesos** (`New World (1)` y `world`) con las líneas desordenadas. Hay que fiarse de las **marcas de tiempo** y del
 **nombre del almacén** (`ThreadedAnvilChunkStorage (…)`), nunca del orden ni de la sesión aparente.
 
+### I87 · Las aldeas tienen NOMBRE, y su dirección no se regala
+
+Lo pidió el jugador, y con un motivo muy práctico detrás (*"el problema es que no tengo las coordenadas para poder
+regresar"*):
+
+> *"Estaría bien que la piedra de invocación [dé] un libro o algo que vaya guardando las aldeas descubiertas (sólo las
+> que uno ya haya entrado) junto con su estatus y sus coordenadas. También ya es necesario que cada aldea tenga su
+> nombre (respetando el lore) y que arriba donde está la barra de objetivos, que no diga objetivo 1, 2 etc, sino aldea,
+> y cuando se descubra que diga su nombre. Ahora hay una mecánica que hay que desarrollar y es que la siguiente aldea
+> no va a aparecer su dirección hasta que uno obtenga algo del mundo o alguien de la primera aldea o piedra de
+> invocación al inicio de esa misión… pero primero sin nombre y ya después con nombre cuando se descubra. Si una aldea
+> vence el asedio inicial, el clérigo puede activar la dirección del siguiente objetivo. Si cae la aldea, tal vez que
+> no aparezca en la barra de objetivos, y que solo salga un mensaje en el chat indicando su dirección sin decir cuántos
+> bloques está y ya. Si la encuentra pues ya se actualiza su libro y la barra de objetivos (que ahora se llamará la
+> barra de aldea)."*
+
+**Reglas** (lo que quedó implementado):
+
+1. **NOMBRE determinista** ({@code VillageNames.nombre(i)}): la aldea 0 es el primer nombre de la tabla, la 1 el
+   segundo… Igual en servidor y cliente **sin sincronizar nada** (misma idea que las coordenadas de
+   {@code ObjectiveTargets}). Si la partida pasa de la tabla, se repiten con numeral (*Valdehierro II*), nunca dos
+   iguales. La tabla es de nombres rústicos, en la cuerda de los nombres de aldeanos; **el jugador va a dar la suya**
+   y se pega ahí sin tocar nada más.
+2. **La barra de ALDEA** (antes "de objetivos", {@code VillageHudOverlay} + {@code "aldea"} como capa) tiene **tres
+   estados**: <b>sin revelar → no hay barra</b>; <b>revelada y no visitada → {@code Aldea  (1.234 m) →}</b> (dirección
+   sí, nombre no); <b>visitada → {@code Aldea de Valdehierro  (12 m) ↑}</b>.
+3. **Descubrir = ENTRAR** (radio de llegada, {@code ARRIVE_RADIUS} = 24), no verla de lejos: al entrar se apunta en la
+   capability (`aldeasVisitadas`, por jugador y sincronizada), sale el aviso *"Has llegado a …"* y queda con nombre en
+   la barra y en el Diario.
+4. **Quién revela la dirección** (`aldeasReveladas`): la **piedra de invocación** (objetivo actual; es el "inicio de la
+   misión" y además el **seguro contra perderse**, porque hay que volver al círculo ritual — a cientos de bloques) y,
+   como camino normal, **el clérigo** de la aldea que **vence su asedio**: lo dice **con su nombre** (*"El clérigo
+   Dorotea: los clérigos sentimos otra aldea hacia el noreste…"*) y a partir de ahí la barra ya guía.
+5. **Si la aldea CAE no se revela nada**: ni barra ni distancia, solo el aviso en el chat con el **rumbo**
+   (*"…hay otra aldea hacia el noreste… y no sabe cuánto queda"*), y el Diario se actualiza solo cuando la encuentre y
+   entre. Es literalmente lo que pidió el jugador.
+6. **Diario del Invocado** (`DiarioDelInvocadoItem`): lo entrega la piedra (y lo vuelve a dar si se pierde; si no cabe,
+   lo suelta a los pies). Al usarlo escribe en el chat, por aldea descubierta: **nombre, coordenadas, estado** (viva sin
+   socorrer / a salvo con el sello / EN RUINAS) y **a cuántos metros y hacia dónde** cae desde donde estás. No se gasta
+   y **no se queda desfasado**: la lista se arma al usarlo (descubrimiento en la capability, estado en
+   {@code VillageSavedData}).
+7. **Siembra en partidas ya empezadas**: una aldea que el mundo ya dio por resuelta es una aldea en la que el jugador
+   estuvo, así que se le apunta como visitada y revelada **una sola vez** (en cuanto tiene una apuntada, no se vuelve a
+   mirar). Sin esto, su partida de siempre nacería con el Diario vacío y la barra sin saber hacia dónde ir.
+
+**Lo que hay que recordar al tocar esto**: el descubrimiento y el revelado son **por jugador** y van en la capability
+auxiliar (se sincronizan al cliente, que es quien dibuja la barra); el **estado** de la aldea sigue siendo del mundo
+({@code VillageSavedData}), así que el Diario lo lee en el servidor al usarse. Y una aldea caída **no** revela la
+siguiente a propósito: el camino de salida es la piedra (el viaje al círculo ritual), que nunca deja al jugador sin
+dirección.
+
+**Pendiente**: la tabla de nombres definitiva (la pasa el jugador) y verlo en juego (la barra con nombre, el clérigo
+revelando al ganar, el Diario con coordenadas).
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
