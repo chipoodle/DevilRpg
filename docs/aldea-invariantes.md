@@ -2001,6 +2001,28 @@ el jugador vuelve, la pelea sigue. **Un asedio es una pelea: sin el jugador dela
 dejarse asediar, irse a más de 128 bloques con los zombis dentro y volver — tiene que salir `EN PAUSA` y `el jugador
 ha vuelto al asedio` en el log, y la aldea seguir en pie.
 
+**La línea de tiempo, del log de ese día** (17-sep-2026), que es lo que cierra el caso:
+
+```
+18:46:25  [CHAT] Llegaste a la aldea... los monstruos se acercan.    <- arranca el asedio (start)
+18:48:09  [CHAT] ¡Defiende la aldea de los monstruos!                <- sale la ola (GRACE_TICKS = 90 s)
+18:50:09  [Village] La aldea 1 ha CAÍDO y queda en ruinas            <- 210 s despues de las 18:46:25
+```
+
+Los 210 s son **exactos**: `GRACE_TICKS` (90 s) + `SIEGE_TIMEOUT_TICKS` (120 s) contados desde que el jugador llegó;
+los 14 s de más sobre el minuto teórico los explica el propio log (`Can't keep up! ... 229 ticks behind`). O sea:
+llegó, arrancó el asedio, **se fue volando**, y el reloj le cobró la aldea a la espalda. El jugador lo contó como
+*"cuando salí de la aldea no había ningún tipo de asedio"* y tiene razón **en lo que veía**: la ola sale **fuera de
+la valla** (a 60-100 bloques del centro), así que yéndose nada más llegar no se ve un solo zombi, y la barra de
+acción que informa del asedio (`informarDelAsedio`: *"quedan N y M DENTRO del muro · 1:23"*) no pudo avisarle porque
+la caída se resolvió **en el mismo tick de volver**. Con el reloj en pausa, al volver se le da el tiempo entero y esa
+barra sí puede avisarle.
+
+**OJO al leer estos logs** (me costó un diagnóstico): el log del jugador y el del **arnés** (`gradlew runServer`,
+mundo `world`) escriben los dos en `run/logs/latest.log`, así que un archivo puede **mezclar dos mundos y dos
+procesos** (`New World (1)` y `world`) con las líneas desordenadas. Hay que fiarse de las **marcas de tiempo** y del
+**nombre del almacén** (`ThreadedAnvilChunkStorage (…)`), nunca del orden ni de la sesión aparente.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
