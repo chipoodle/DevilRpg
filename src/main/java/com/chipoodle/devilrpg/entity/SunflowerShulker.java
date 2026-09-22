@@ -714,7 +714,7 @@ public class SunflowerShulker extends TamableAnimal implements ITamableEntity, I
 
     static class ShulkerDefenseAttackGoal extends NearestAttackableTargetGoal<LivingEntity> {
         public ShulkerDefenseAttackGoal(SunflowerShulker p_33496_) {
-            super(p_33496_, LivingEntity.class, 10, true, false, (entity) -> !ITamableEntity.esCriaturaPacificaONeutral(entity) &&
+            super(p_33496_, LivingEntity.class, 10, true, false, (entity) -> (!ITamableEntity.esCriaturaPacificaONeutral(entity) || ITamableEntity.elDuenoLeEstaAtacando(p_33496_.getOwner(), entity)) &&
                     !(entity instanceof Villager)
                             && !(entity instanceof Llama)
                             && !(entity instanceof Turtle)

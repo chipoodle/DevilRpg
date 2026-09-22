@@ -1868,6 +1868,30 @@ decir, un neutral **sí** cuenta si el dueño ya le ha pegado. El ayudante es **
 del liquen va con el jugador como atacante (`playerAttack(owner)` / `explosion(…, owner)`, ver I79), así que el bicho
 queda marcado igual y los minions van a por él.
 
+**Barrido — esto falló DOS veces, y las dos por listas a mano.** La primera versión se aplicó a una lista escrita a
+mano de tres minions (hongo, oso, wisp) y dejó **fuera al LOBO**; lo cazó el jugador: *"disparo un soul lichen a una
+oveja fuera de la aldea, y empieza a recibir daño por la maldición, pero mis lobos no la atacan"*. El lobo entró en el
+commit siguiente, junto con la pieza que faltaba: el liquen daña **por efecto, no por golpe**, así que
+`LichenSeedBall.onHitEntity` tiene que marcar a mano `dueno.setLastHurtMob(livingEntity)` — sin eso el dueño "nunca le
+pegó" y el predicado no tenía nada que ver. Y al preguntar el jugador *"el oso también, ¿lo checaste?"*, el barrido
+**con `grep`** (no a mano) encontró **dos sitios más** con el predicado crudo en `SunflowerShulker`.
+
+**Regla**: esta regla **no se aplica con listas a mano**. Se barre el mod entero:
+
+```
+grep -rn 'esCriaturaPacificaONeutral(' src/main/java
+```
+
+y cada acierto que sea un **predicado** (no la definición del ayudante en `ITamableEntity`, ni un bloque comentado)
+tiene que llevar la coletilla del dueño. Barrido del 12-sep-2026: `ExplodingSporeBullet:122`, `SoulBear:152`,
+`SoulWispArcher:88`, `SoulWolf:87`, `SunflowerShulker:717` — **todos con el permiso**; los dos "sin permiso" que
+quedan son la **definición** (`ITamableEntity:142`) y un bloque **comentado** (`SunflowerShulker:169`).
+
+**Ojo con `this` dentro de un `super(…)`**: en `ShulkerDefenseAttackGoal` (clase **estática** anidada) el lambda va
+como argumento del `super`, así que ahí **no existe `this`** —el compilador suelta *"cannot reference this before
+supertype constructor has been called"*— y hay que usar el parámetro del constructor (`p_33496_.getOwner()`), igual
+que ya hacía la línea del `getOwnerUUID`.
+
 ### I82 · El liquen sin dueño no hace nada (crash de NullPointerException, arreglado)
 
 **Crash medido** (con el guardado del jugador, al meterse un `Sunflower Shulker` en un liquen):

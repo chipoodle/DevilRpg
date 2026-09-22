@@ -139,7 +139,8 @@ public interface ITamableEntity extends IAttachmentHolder, OwnableEntity, Leasha
         return owner.getLastHurtMob() == vivo || vivo.getLastHurtByMob() == owner;
     }
 
-    static boolean esCriaturaPacificaONeutral(Entity entity) {        if (entity instanceof net.minecraft.world.entity.monster.Enemy) {
+    static boolean esCriaturaPacificaONeutral(Entity entity) {
+        if (entity instanceof net.minecraft.world.entity.monster.Enemy) {
             return false; // hostil: a esos SÍ se les ataca, como hasta ahora
         }
         return entity instanceof net.minecraft.world.entity.NeutralMob

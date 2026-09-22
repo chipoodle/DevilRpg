@@ -3223,6 +3223,31 @@ volver a curar. La ronda del sanador **manda sobre el soporte y sobre el viaje a
 **Pendiente de ver en juego** (el jugador tenía el juego abierto y no se pudo correr el arnés): al reiniciar, con un
 guardia herido tiene que salir `El clerigo cura a … (a -> b de N de vida)` en el log y verse los corazones.
 
+### 3b.79 Los minions van a por lo que el jugador marca (y el barrido que faltaba)
+
+Lo pidió el jugador: *"si yo, jugador, llego a atacar alguno, o si alguno de los poderes atacan (como la enfermedad
+que genera el hongo y el liquen cuando se avienta a alguna entidad), esta se vuelve enemigo y se debe atacar por los
+minions"*.
+
+Dos mitades (I79 e I81):
+
+- **Los poderes suyos solo dañan a enemigos** (I79): el hongo que explota y el liquen maldito tocaban a cualquiera que
+  pasara —incluido el propio jugador y sus bichos—. Ahora el daño va **solo** a un `Enemy` o a un `Mob` que ya esté
+  peleando (`getTarget() != null`), y la explosión del hongo es `ExplosionInteraction.NONE` con un reparto de daño a
+  mano, para que no reviente la aldea ni a los vecinos.
+- **Los minions rematan** (I81): el neutral que el jugador (o un poder suyo) haya tocado pasa a ser objetivo de los
+  bichos del jugador. El predicado de los que tienen objetivo propio llevaba `!esCriaturaPacificaONeutral(entity)` **a
+  secas**: el neutral se descartaba antes de mirar la pelea. Ahora lleva la coletilla
+  `|| ITamableEntity.elDuenoLeEstaAtacando(this.getOwner(), entity)` (ayudante compartido: mira `owner.getLastHurtMob()`
+  y `entity.getLastHurtByMob()`, así que valen manos **y** poderes).
+
+**Los dos fallos de esta ronda salieron de escribir a mano la lista de minions**: primero quedó fuera el **lobo**
+(*"mis lobos no la atacan"*; y el liquen, que daña por **efecto**, necesitaba marcar él mismo a la víctima con
+`setLastHurtMob`), y después, al preguntar el jugador *"el oso también, ¿lo checaste?"*, el **barrido con `grep`** de
+todos los `esCriaturaPacificaONeutral(` encontró **dos sitios más** en `SunflowerShulker` (uno de ellos, dentro de un
+lambda pasado a `super(…)` de una clase **estática**, donde `this` no existe: ahí va el parámetro del constructor).
+**El oso sí estaba** desde el primer día. La regla del barrido y la lista de aciertos, en I81.
+
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.
