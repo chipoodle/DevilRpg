@@ -3294,8 +3294,14 @@ regresar"*. Su encargo, entero, en I87.
 - **Siembra en partidas ya empezadas**: las aldeas que el mundo ya resolvió se apuntan una vez como visitadas y
   reveladas, para que su Diario no nazca vacío.
 
-Sin migración (el descubrimiento es estado del jugador, no del mundo). Compila y pasa el lint; **pendiente de verlo en
-juego**.
+Sin migración (el descubrimiento es estado del jugador, no del mundo). Compila y pasa el lint, y **medido con el
+arnés** (`MEDIR_ALDEAS`, dos corridas sobre una copia de su partida; ver `tools/arnes/medidas-aldeas.txt`): el guardado
+viejo carga sin excepciones, la siembra apunta las 3 aldeas ya resueltas (`Diario del Invocado sembrado para …: 3
+aldea(s)`), la aldea que **no** está en el guardado sale **OCULTA** en la barra, y el Diario lista nombre, coordenadas,
+estado y rumbo (`Aldea de Fuenteclara (990, 990) — EN RUINAS · a 599 m hacia el noreste`).
+
+Queda **pendiente**: la **tabla de nombres** definitiva (la pasa el jugador) y, en el juego abierto, la barra dibujada
+(es del cliente) y los dos avisos que revelan (el clic en la piedra y el clérigo al ganar el asedio).
 
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 

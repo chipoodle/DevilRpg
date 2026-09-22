@@ -14,6 +14,11 @@ En cada cambio en `world/Village*` o en los goals de aldeano hay que:
 
 ## 1. Invariantes
 
+> **Antes de tocar nada de la aldea, lee `docs/aldea-estados.md`**: ahí está la **máquina de estados** de una aldea
+> (generada → avisada → descubierta → asediada → sellada / caída), **quién** cambia cada estado, **en qué línea del
+> código** vive y **qué línea deja en el log**. Existe por el caso de la aldea "abandonada" (I86): costó una tarde
+> reconstruir por qué había caído, cuando tenía que haber sido un minuto de búsqueda en el log.
+
 > **Ojo con los números**: el lint (`tools/lint_aldea.py`) numera sus reglas **por su cuenta** y no coinciden con las
 > de esta sección. La correspondencia, para que un aviso `I6 VillagerX.java:12` no se busque en la regla equivocada:
 >
@@ -2074,8 +2079,28 @@ auxiliar (se sincronizan al cliente, que es quien dibuja la barra); el **estado*
 siguiente a propósito: el camino de salida es la piedra (el viaje al círculo ritual), que nunca deja al jugador sin
 dirección.
 
-**Pendiente**: la tabla de nombres definitiva (la pasa el jugador) y verlo en juego (la barra con nombre, el clérigo
-revelando al ganar, el Diario con coordenadas).
+**Medido con el arnés** (`MEDIR_ALDEAS`, dos corridas el 22-sep-2026 sobre una **copia** de su partida; las líneas
+crudas están en `tools/arnes/medidas-aldeas.txt`):
+
+```
+[Village] Diario del Invocado sembrado para [Minecraft]: 3 aldea(s) que ya resolvio esta partida
+[Arnes] ALDEAS indice=0 visitadas=[0, 1, 2] reveladas=[0, 1, 2]
+[Arnes] BARRA DE ALDEA (aldea 0): con NOMBRE: "Aldea de Valdehierro"
+[Arnes] BARRA DE ALDEA (aldea 1): con NOMBRE: "Aldea de Fuenteclara"
+[Arnes] BARRA DE ALDEA (aldea 3): OCULTA (ni direccion ni nombre: hay que leer la piedra o ganar un asedio)
+[Arnes] DIARIO: Aldea de Fuenteclara  (990, 990) — EN RUINAS · a 599 m hacia el noreste
+[Arnes] DIARIO: Aldea de Robledal  (1414, 1414) — a salvo, con el sello puesto · a 0 m hacia el sur
+```
+
+Es decir: el guardado viejo **carga sin una sola excepción**, la **siembra** apunta las tres aldeas que esa partida ya
+resolvió, la **aldea que no está en el guardado sale OCULTA** en la barra (el caso que pidió el jugador: la que viene
+después de una que cayó) y el **Diario** lista nombre, coordenadas, estado (la caída, EN RUINAS) y rumbo.
+
+**Pendiente**: la **tabla de nombres** definitiva (la pasa el jugador) y, en el juego abierto, la **barra dibujada**
+(es del cliente: el arnés es headless) y los **dos avisos que revelan** (el clic en la piedra de invocación y el
+clérigo al vencer un asedio). El camino "NBT del jugador anfitrión de una partida vieja" tampoco se ha medido en
+caliente: en un servidor dedicado no hay jugador de verdad (queda cubierto por construcción: `getIntArray` de una
+clave ausente devuelve vacío y los conjuntos se vacían antes de llenarse).
 
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:

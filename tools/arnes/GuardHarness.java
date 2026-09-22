@@ -84,6 +84,19 @@ public class GuardHarness {
     private static final boolean MEDIR_MILICIA = false;
     /** ¿Se mide LA CASA DEL HUECO (la pared a la que le faltaba un bloque y el cofre de al lado)? Ver olcarLaParedYElCofre. */
     private static final boolean MEDIR_HUECO_CASA = false;
+    /**
+     * ¿Se miden LAS ALDEAS CON NOMBRE, EL REVELADO Y EL DIARIO DEL INVOCADO (I87)? Es un modo de <b>solo
+     * lectura</b> (no siembra, no barre, no cambia la hora): deja correr el latido con el jugador de pega y vuelca
+     * cada 10 s qué aldeas tiene <b>descubiertas</b> (`aldeasVisitadas`) y <b>reveladas</b> (`aldeasReveladas`), el
+     * nombre y el estado de cada una, qué dibujaría la <b>barra de aldea</b>, el <b>rumbo</b> a la siguiente y las
+     * <b>líneas del Diario</b> tal cual las leería el jugador.
+     * <p>
+     * Lo que se busca: (1) que un guardado <b>viejo</b> (sin los campos nuevos en la capability) cargue sin
+     * reventar; (2) que la <b>siembra</b> apunte las aldeas que esa partida ya resolvió (`[Village] Diario del
+     * Invocado sembrado para …`); (3) que la barra quede <b>OCULTA</b> mientras no haya revelado ni visitado nada; y
+     * (4) que el Diario liste esas aldeas con nombre, coordenadas, estado y rumbo.
+     */
+    private static final boolean MEDIR_ALDEAS = false;
     /** Dónde se planta el bicho (relativo a la plaza): dentro del recinto (radio 62) y a la altura del pueblo. */
     private static final BlockPos BICHO_EN = new BlockPos(6, 0, 6);
     private static boolean listo = false;
@@ -106,7 +119,7 @@ public class GuardHarness {
         // cadena del CLERIGO: verruga del Nether, polvo de blaze y BOTELLAS DE CRISTAL (para que tenga que ir al agua
         // a llenarlas: ver SEMBRAR_AGUA_EMBOTELLADA); y el botin que ya barre el recolector (pepitas de oro,
         // zanahorias, ojos de arana) para la zanahoria dorada.
-        if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && ticks == 600) {
+        if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && ticks == 600) {
             // --- TERCERA MEDIDA: LA REMESA INICIAL DE MADERA ---------------------------------------------------
             // Se VACIA el almacen entero (como el de una aldea recien fundada, que nace sin nada dentro): en la
             // siguiente pasada del latido el pueblo tiene que meter su remesa inicial de 128 troncos, UNA vez.
@@ -156,6 +169,12 @@ public class GuardHarness {
         if (pega != null) {
             pega.moveTo(CENTRO.getX() + 0.5D, CENTRO.getY(), CENTRO.getZ() + 0.5D);
             VillageManager.manageNearby(level, pega, ancla(), INDICE);
+        }
+        if (MEDIR_ALDEAS) {
+            // LAS ALDEAS CON NOMBRE Y EL DIARIO (I87): solo lectura, cada 10 s.
+            if (ticks % 200 == 0) {
+                volcarAldeas(level, pega);
+            }
         }
         if (MEDIR_PUERTAS) {
             // LAS PUERTAS, cada 2 s: los aldeanos estan de dia (se levantan y salen) y cruzan puertas: se cuenta
@@ -596,6 +615,47 @@ public class GuardHarness {
         double rad = Math.toRadians(45.0D);
         return new Vec3(CENTRO.getX() - Math.cos(rad) * distancia, CENTRO.getY(),
                 CENTRO.getZ() - Math.sin(rad) * distancia);
+    }
+
+    /**
+     * Vuelca el estado del descubrimiento y el revelado (I87), lo que dibujaría la barra de aldea, el rumbo a la
+     * siguiente y las LÍNEAS DEL DIARIO tal cual las manda el objeto al usarlo.
+     */
+    private static void volcarAldeas(ServerLevel level, FakePlayer pega) {
+        com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface aux =
+                com.chipoodle.devilrpg.capability.IGenericCapability.getUnwrappedPlayerCapability(
+                        pega, com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability.INSTANCE);
+        if (aux == null) {
+            DevilRpg.LOGGER.info("[Arnes] ALDEAS: el jugador de pega no tiene capability (no se puede medir)");
+            return;
+        }
+        int indice = aux.getObjectiveIndex();
+        DevilRpg.LOGGER.info("[Arnes] ALDEAS indice={} visitadas={} reveladas={}",
+                indice, aux.getAldeasVisitadas(), aux.getAldeasReveladas());
+        for (int i = 0; i <= indice; i++) {
+            DevilRpg.LOGGER.info("[Arnes] ALDEA {} nombre=\"{}\" visitada={} revelada={} centro={}",
+                    i, com.chipoodle.devilrpg.survival.VillageNames.nombre(i),
+                    aux.isAldeaVisitada(i), aux.isAldeaRevelada(i), VillageManager.centroDe(level, i));
+        }
+        // LO QUE DIBUJARIA LA BARRA DE ALDEA: la aldea ACTUAL, la siguiente y una que NO esté en el guardado (el caso
+        // que importa de verdad: la que viene DESPUÉS de una que cayó tiene que salir OCULTA hasta que la piedra o un
+        // clérigo la revelen — es lo que pidió el jugador).
+        for (int i : new int[]{indice, indice + 1, indice + 3}) {
+            boolean vis = aux.isAldeaVisitada(i);
+            boolean rev = aux.isAldeaRevelada(i);
+            DevilRpg.LOGGER.info("[Arnes] BARRA DE ALDEA (aldea {}): {}", i, !vis && !rev
+                    ? "OCULTA (ni direccion ni nombre: hay que leer la piedra o ganar un asedio)"
+                    : (vis
+                            ? "con NOMBRE: \"" + com.chipoodle.devilrpg.survival.VillageNames.nombre(i) + "\""
+                            : "sin nombre: \"Aldea\""));
+        }
+        BlockPos siguiente = com.chipoodle.devilrpg.survival.ObjectiveTargets.targetOf(ancla(), indice + 1);
+        DevilRpg.LOGGER.info("[Arnes] RUMBO a la aldea {}: {}", indice + 1,
+                com.chipoodle.devilrpg.survival.ObjectiveTargets.direccionHacia(CENTRO, siguiente));
+        for (net.minecraft.network.chat.Component linea
+                : com.chipoodle.devilrpg.item.DiarioDelInvocadoItem.lineasDelDiario(level, pega)) {
+            DevilRpg.LOGGER.info("[Arnes] DIARIO: {}", linea.getString());
+        }
     }
 
     /** Cuántas cosas de ese tipo hay en el almacén (para confirmar el sembrado). */

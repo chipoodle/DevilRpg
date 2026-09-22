@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.item;
 
+import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
@@ -50,26 +51,34 @@ public class DiarioDelInvocadoItem extends Item {
             return InteractionResultHolder.sidedSuccess(stack, true);
         }
         if (level instanceof ServerLevel serverLevel && player instanceof ServerPlayer serverPlayer) {
-            mostrarElDiario(serverLevel, serverPlayer);
+            for (Component linea : lineasDelDiario(serverLevel, serverPlayer)) {
+                serverPlayer.displayClientMessage(linea, false);
+            }
+            DevilRpg.LOGGER.info("[Diario] {} ha consultado el Diario del Invocado",
+                    serverPlayer.getName().getString());
         }
         return InteractionResultHolder.sidedSuccess(stack, false);
     }
 
-    /** Escribe en el chat lo que el jugador lleva apuntado, aldea por aldea. */
-    private void mostrarElDiario(ServerLevel level, ServerPlayer player) {
+    /**
+     * Las líneas del diario, ya montadas (nombre, coordenadas, estado, distancia y rumbo de cada aldea descubierta).
+     * Es {@code public static} a propósito: el <b>arnés</b> las mide tal cual salen —sin abrir el juego— y el uso del
+     * objeto manda exactamente estas mismas, así que lo que se mide es lo que el jugador lee.
+     */
+    public static List<Component> lineasDelDiario(ServerLevel level, ServerPlayer player) {
+        List<Component> lineas = new ArrayList<>();
         PlayerAuxiliaryCapabilityInterface aux =
                 IGenericCapability.getUnwrappedPlayerCapability(player, PlayerAuxiliaryCapability.INSTANCE);
         if (aux == null) {
-            return;
+            return lineas;
         }
         List<Integer> visitadas = new ArrayList<>(aux.getAldeasVisitadas());
         Collections.sort(visitadas);
-        player.displayClientMessage(Component.literal("— Diario del Invocado —").withStyle(ChatFormatting.GOLD), false);
+        lineas.add(Component.literal("— Diario del Invocado —").withStyle(ChatFormatting.GOLD));
         if (visitadas.isEmpty()) {
-            player.displayClientMessage(Component.literal(
-                    "Todavía no has entrado en ninguna aldea. La runa de la piedra de invocación marca la primera."),
-                    false);
-            return;
+            lineas.add(Component.literal(
+                    "Todavía no has entrado en ninguna aldea. La runa de la piedra de invocación marca la primera."));
+            return lineas;
         }
         VillageSavedData saved = VillageSavedData.get(level);
         for (int i : visitadas) {
@@ -93,11 +102,11 @@ public class DiarioDelInvocadoItem extends Item {
                 rumbo = " · a " + metros + " m hacia el " + ObjectiveTargets.direccionHacia(player.blockPosition(), centro);
             }
             ChatFormatting color = saved.isFallen(i) ? ChatFormatting.DARK_RED : ChatFormatting.YELLOW;
-            player.displayClientMessage(Component.literal(VillageNames.nombre(i) + "  " + coords + " — " + estado + rumbo)
-                    .withStyle(color), false);
+            lineas.add(Component.literal(VillageNames.nombre(i) + "  " + coords + " — " + estado + rumbo)
+                    .withStyle(color));
         }
-        player.displayClientMessage(Component.literal(
-                "(" + visitadas.size() + " aldea(s) apuntada(s); la barra de aldea te guía a la que toca ahora)"),
-                false);
+        lineas.add(Component.literal(
+                "(" + visitadas.size() + " aldea(s) apuntada(s); la barra de aldea te guía a la que toca ahora)"));
+        return lineas;
     }
 }

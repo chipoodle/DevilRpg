@@ -1,0 +1,68 @@
+================================================================================
+MEDIDA: las aldeas con NOMBRE, el revelado y el DIARIO DEL INVOCADO (I87 / 3b.81)
+Arnes: GuardHarness con MEDIR_ALDEAS = true (solo lectura: no siembra, no barre, no cambia la hora)
+Mundo: COPIA de la partida del jugador en run/world (aldeas 0, 1 y 2; la 1 esta caida)
+Jugador: el de pega del arnes, en la plaza de la aldea 2 (1414, 120, 1414)
+Corridas: 2 (22-sep-2026 00:09 y 00:33), resultado identico
+================================================================================
+
+--- 1) LA SIEMBRA DEL DIARIO (partida ya empezada, sin los campos nuevos) --------------
+
+[Village] Diario del Invocado sembrado para [Minecraft]: 3 aldea(s) que ya resolvio esta partida
+
+  Lo que dice: el guardado viejo NO revienta al cargar, y las aldeas que esa partida ya dio
+  por resueltas (0 y 2 salvadas, 1 caida) se apuntan UNA vez como descubiertas y reveladas.
+  Sin esto, el Diario del jugador naceria vacio y no tendria las coordenadas para volver.
+
+--- 2) EL ESTADO DEL JUGADOR ----------------------------------------------------------
+
+[Arnes] ALDEAS indice=0 visitadas=[0, 1, 2] reveladas=[0, 1, 2]
+[Arnes] ALDEA 0 nombre="Aldea de Valdehierro" visitada=true revelada=true centro=BlockPos{x=566, y=0, z=566}
+
+  (El centro sale con y=0 porque las chunks de la aldea 0 no estan forzadas en el arnes: la Y
+   la pone la cota del mundo y sin chunk cargado no se toca — ver `VillageManager.centroDe`.
+   El Diario solo enseña X y Z, asi que lo que lee el jugador es correcto.)
+
+--- 3) LA BARRA DE ALDEA (los tres estados) -------------------------------------------
+
+[Arnes] BARRA DE ALDEA (aldea 0): con NOMBRE: "Aldea de Valdehierro"
+[Arnes] BARRA DE ALDEA (aldea 1): con NOMBRE: "Aldea de Fuenteclara"
+[Arnes] BARRA DE ALDEA (aldea 3): OCULTA (ni direccion ni nombre: hay que leer la piedra o ganar un asedio)
+
+  La aldea 3 es la que NO esta en el guardado: es EXACTAMENTE el caso que pidio el jugador
+  (la que viene despues de una que cayo no puede aparecer en la barra). Sale OCULTA.
+
+--- 4) EL RUMBO (lo que dira el clerigo / el aviso de la aldea que cae) ---------------
+
+[Arnes] RUMBO a la aldea 1: noreste
+
+--- 5) EL DIARIO, tal cual lo leeria el jugador ----------------------------------------
+
+[Arnes] DIARIO: — Diario del Invocado —
+[Arnes] DIARIO: Aldea de Valdehierro  (566, 566) — a salvo, con el sello puesto · a 1199 m hacia el noreste
+[Arnes] DIARIO: Aldea de Fuenteclara  (990, 990) — EN RUINAS · a 599 m hacia el noreste
+[Arnes] DIARIO: Aldea de Robledal  (1414, 1414) — a salvo, con el sello puesto · a 0 m hacia el sur
+[Arnes] DIARIO: (3 aldea(s) apuntada(s); la barra de aldea te guía a la que toca ahora)
+
+  Nombre, coordenadas, estado (la caida sale EN RUINAS) y a cuantos metros y hacia donde cae
+  cada una desde donde esta el jugador: es justo lo que pedia (*"no tengo las coordenadas
+  para poder regresar"*).
+
+--- 6) ERRORES ------------------------------------------------------------------------
+
+Ninguno: cero `Exception` / `ERROR` en las dos corridas.
+
+================================================================================
+LO QUE ESTA MEDIDA **NO** CUBRE (pendiente, y hay que decirlo)
+================================================================================
+- **La barra dibujada**: es del CLIENTE; el arnes es headless. Lo medido es el ESTADO del que
+  la barra decide (visitada/revelada/nombre), no el pixel.
+- **Los dos avisos que revelan**: el de la piedra de invocacion (necesita un clic en el bloque,
+  y `showLore` es privado) y el del CLERIGO al vencer un asedio (necesita un asedio entero).
+  Lo medido es que el estado revelado ya produce barra con nombre/sin nombre.
+- **El jugador ANFITRION**: en un servidor dedicado no hay jugador de verdad, asi que el camino
+  "capability de una partida vieja" lo hace el jugador de pega desde cero. Que el NBT viejo SIN
+  los campos nuevos se lea bien es seguro por construccion (`CompoundTag.getIntArray` de una
+  clave que no existe devuelve un arreglo vacio y los conjuntos se vacian antes de llenarse),
+  pero NO se ha medido con el jugador real: eso lo dira la primera partida que abra.
+================================================================================

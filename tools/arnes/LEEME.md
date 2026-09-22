@@ -119,4 +119,25 @@ en la celda de al lado toca la puerta con el hombro). Y cada `PUERTA CERRADA` di
   (`GRANJERO <uuid> … huecosLibres=N/8 zurron: 0:8xBone Meal 1:8xBeetroot Seeds …`). La edad del objeto es la medida que
   dice si algo "se queda" en el suelo (mediana de 54 s antes del arreglo y de 6 s después).
 
+### `MEDIR_ALDEAS = true` — las aldeas con NOMBRE, el revelado y el DIARIO DEL INVOCADO (I87)
+
+Modo de **solo lectura** (no siembra, no barre bichos, no cambia la hora): deja correr el latido con el jugador de
+pega y vuelca cada 10 s lo que sabe ese jugador y lo que **dibujaría la barra de aldea**:
+
+```
+[Village] Diario del Invocado sembrado para <jugador>: N aldea(s) que ya resolvio esta partida
+[Arnes] ALDEAS indice=N visitadas=[…] reveladas=[…]
+[Arnes] ALDEA N nombre="…" visitada=true/false revelada=true/false centro=…
+[Arnes] BARRA DE ALDEA (aldea N): con NOMBRE: "…" | sin nombre: "Aldea" | OCULTA (ni direccion ni nombre…)
+[Arnes] RUMBO a la aldea N: <rumbo>
+[Arnes] DIARIO: <una linea por aldea descubierta, tal cual las lee el jugador>
+```
+
+Lo que se busca: que un guardado **viejo** cargue sin reventar; que la **siembra** apunte las aldeas que esa partida ya
+resolvió; que una aldea **que no está en el guardado** salga `OCULTA` en la barra (es el caso de la que viene después
+de una que cayó: lo pidió el jugador); y que el Diario liste **nombre, coordenadas, estado y rumbo**.
+
+Medida guardada en `medidas-aldeas.txt` (2 corridas, 22-sep-2026). **No cubre** la barra dibujada (es del cliente) ni
+los dos avisos que revelan (el clic en la piedra y el clérigo al vencer el asedio), que necesitan el juego abierto.
+
 
