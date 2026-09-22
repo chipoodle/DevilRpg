@@ -1,5 +1,35 @@
 # Arnés de la aldea (servidor headless)
 
+## ¿Qué es esto, en cristiano?
+
+Un **arnés** (*harness*, en inglés) es un **banco de pruebas**: un programa que se escribe **solo para medir**, no para
+el juego. Este, en concreto, **levanta el mod sin abrir Minecraft**: arranca un servidor sin ventana (`gradlew
+runServer`), pone un **jugador de pega** en la plaza de una aldea y deja correr el **latido de verdad** del pueblo,
+volcando al log lo que hace cada aldeano, cada guardia, cada zombie y cada cofre. Luego yo **leo el log** y te digo qué
+pasó con números, en vez de "creo que ya está".
+
+Para qué sirve, con casos de verdad:
+
+- **La despensa "llena"**: medí el cofre de verdad y resultó que era un cofre doble a medio llenar (I85).
+- **La aldea que cayó "sola"**: la línea de tiempo del asedio salió del log (`18:46:25` llegada → `18:50:09` caída) y
+  con ella la regla de la pausa (I86).
+- **La piedra de invocación que "no hacía nada"**: el arnés lo destapó — con un jugador **sin ancla** la piedra se iba
+  **en silencio**; ahora deja un aviso en el log (I87).
+- **Los 1085 aldeanos** que aparecieron una vez eran **9**: el fallo estaba en mi script, no en el juego. De ahí la
+  regla de oro: **si un número sorprende, sospecha primero del instrumento**.
+
+**Lo que NO se puede medir con él** (y por eso a veces te digo "esto lo verás tú"): todo lo que se **dibuja** —la barra
+de aldea, la pantalla del libro, el HUD— porque eso es del **cliente**, y el arnés no tiene ventana. Tampoco lo que
+necesita un **jugador de verdad conectado** (por ejemplo, el reloj del asedio: solo corre con un jugador en la lista
+del servidor, y el de pega no está en ella).
+
+**Es temporal y no viaja en el mod**: se copia a `src/.../debug/`, se usa y **se borra** (el arnés fuerza chunks y
+cambia reglas del mundo, así que no puede quedarse). Si algún día ves `src/main/java/com/chipoodle/devilrpg/debug/`, es
+un resto mío que hay que borrar. Y **corre sobre una COPIA de la partida** (`run/world`), nunca sobre la tuya.
+
+**Tú no tienes que hacer nada con esto**: juegas y me cuentas lo que ves; el arnés es mi forma de comprobar que lo que
+arreglo funciona antes de dártelo.
+
 > **COMPILA ANTES DE LANZARLO, y mira que el build diga `BUILD SUCCESSFUL`.** `runServer` compila por su cuenta, así
 > que si el arnés (o el mod) **no compila**, la tarea falla pero el servidor **arranca igual con las clases a medias**
 > y revienta al primer tick con `ClassNotFoundException` de una clase interna (`VillageManager$VillageDefense` fue la
