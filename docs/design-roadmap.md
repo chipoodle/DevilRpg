@@ -3316,6 +3316,26 @@ puede medir headless: el reloj solo corre con el jugador en la lista del servido
 ella → EN PAUSA y la ola no sale (medido: `hayAsedio(3)=true`, `agresivos=0`). Ese intento dejó medido el cuarto
 estado, **`en asedio`**, y que el Diario lo enseña.
 
+### 3b.82 Las etiquetas se iban de ronda a las aldeas de vanilla
+
+El jugador: *"Estoy viendo que las villas normales (vanilla) tienen a sus aldeanos con las mismas etiquetas que la
+villa de mi mod. No deberían de tener etiqueta de nombre y profesión. Eso sólo es para los aldeanos del mod"*.
+
+**Causa**: el refresco genérico de etiquetas (`VillageManager.refrescarEtiquetas`, cada segundo) etiquetaba a
+**cualquier** aldeano a menos de 64 bloques del jugador, y `nombreDe` **cae al nombre del UUID** cuando el aldeano no
+tiene uno asignado (para que ninguno salga sin nombre): bastaba con pasar cerca de una aldea de vanilla para
+bautizarla con nombres del mod. Se etiquetaba por **cercanía**, no por **pertenencia**.
+
+**HECHO** (I88): la etiqueta exige la marca `DevilRpgDelPueblo`, que pone el latido al adoptar a los aldeanos de un
+pueblo; sin ella no se pone etiqueta **y se le quita la que el mod le hubiera puesto** (solo si la puso el mod, para no
+borrar un nombre del jugador). Medido con el arnés quitando y devolviendo la marca: `17/17` aldeanos del pueblo
+marcados y etiquetados; sin la marca, `(sin etiqueta)` y no se le vuelve a poner.
+
+**De paso**: la medida de esta ronda destapó un fallo del **montaje** que es el mismo mecanismo de un crash del
+jugador — `runServer` compila por su cuenta, así que si el arnés no compila (aquí, un método duplicado en el propio
+arnés) la tarea falla pero el servidor arranca **con las clases a medias** y revienta con
+`ClassNotFoundException: VillageManager$VillageDefense`. Queda avisado en `tools/arnes/LEEME.md`.
+
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.

@@ -1,5 +1,12 @@
 # Arnés de la aldea (servidor headless)
 
+> **COMPILA ANTES DE LANZARLO, y mira que el build diga `BUILD SUCCESSFUL`.** `runServer` compila por su cuenta, así
+> que si el arnés (o el mod) **no compila**, la tarea falla pero el servidor **arranca igual con las clases a medias**
+> y revienta al primer tick con `ClassNotFoundException` de una clase interna (`VillageManager$VillageDefense` fue la
+> que nos lo enseñó; la causa era un método duplicado en el propio arnés). Es **el mismo mecanismo** del crash que
+> sufrió el jugador: no es un fallo del mod, es un build roto. Si pasa: mata el servidor, borra
+> `build/classes/java/main` y recompila.
+
 `GuardHarness.java` **no se compila desde aquí** (está fuera de `src/`): es la **copia de referencia** del arnés con
 el que se midió el bug de la **guardia del corral** (invariantes I32/I33/I34 de `docs/aldea-invariantes.md`) **sin
 abrir el juego**. Los goals del pueblo **no se guardan con la partida** (los repone el latido, que necesita un

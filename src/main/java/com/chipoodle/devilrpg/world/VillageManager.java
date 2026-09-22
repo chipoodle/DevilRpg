@@ -4273,6 +4273,16 @@ public final class VillageManager {
 
     /** Marca (en los datos del aldeano) de que el nombre flotante lo puso el mod, y cuándo. */
     public static final String ACTIVIDAD_TAG = "DevilRpgActividad";
+    /**
+     * Marca (en los datos persistentes del aldeano) de que <b>es gente de una aldea del MOD</b>. La pone el latido al
+     * adoptar a los aldeanos de un pueblo ({@link #repartirNombres}) y es lo que decide si lleva la <b>etiqueta</b> con
+     * su nombre y su oficio.
+     * <p>
+     * Lo pidió el jugador: *"las villas normales (vanilla) tienen a sus aldeanos con las mismas etiquetas que la villa
+     * de mi mod. No deberían de tener etiqueta de nombre y profesión: eso sólo es para los aldeanos del mod"*. Los
+     * aldeanos de las aldeas de vanilla (y los que andan sueltos) <b>no</b> la llevan y se quedan como siempre.
+     */
+    public static final String DEL_PUEBLO_TAG = "DevilRpgDelPueblo";
     private static final String ACTIVIDAD_HORA_TAG = "DevilRpgActividadTick";
     /** Cuándo fue lo último que <b>hizo</b> el aldeano (un suceso), para dejar verlo unos segundos. */
     private static final String SUCESO_HORA_TAG = "DevilRpgSucesoTick";
@@ -4381,12 +4391,26 @@ public final class VillageManager {
     }
 
     /**
+     * ¿Ese aldeano es <b>gente de una aldea del mod</b>? (ver {@link #DEL_PUEBLO_TAG}). Solo a esos se les pone la
+     * etiqueta con el nombre y el oficio: los de las aldeas de vanilla se quedan sin etiqueta.
+     */
+    public static boolean esDelPueblo(Villager villager) {
+        return villager.getPersistentData().getBoolean(DEL_PUEBLO_TAG);
+    }
+
+    /**
      * <b>Nombres sin repetir</b> dentro de la aldea (lo vio el jugador: dos "Bibiana"): a cada aldeano que aún no
      * tenga nombre asignado se le da el primer nombre libre <b>empezando por el de su UUID</b> (así el que ya se
      * llamaba de una manera la conserva casi siempre) y se le <b>guarda</b> en sus datos: el nombre viaja con él en la
      * partida y no vuelve a cambiar. Los nombres ya asignados no se tocan.
      */
     private static void repartirNombres(List<Villager> aldeanos) {
+        // ADOPCIÓN: los aldeanos que el latido ve en un pueblo del mod quedan MARCADOS como gente del pueblo, y esa
+        // marca es la que les da derecho a la etiqueta (nombre y oficio). Un aldeano de una aldea de vanilla no pasa
+        // por aquí, así que no se le pone ninguna etiqueta (lo pidió el jugador).
+        for (Villager villager : aldeanos) {
+            villager.getPersistentData().putBoolean(DEL_PUEBLO_TAG, true);
+        }
         Set<String> usados = new HashSet<>();
         for (Villager villager : aldeanos) {
             String nombre = villager.getPersistentData().getString(NOMBRE_TAG);
@@ -4521,6 +4545,9 @@ public final class VillageManager {
      * ver {@code reponerProfesiones}) la etiqueta se actualiza sola.
      */
     private static void etiqueta(Villager villager, String texto) {
+        if (!esDelPueblo(villager)) {
+            return; // no es gente de una aldea del mod: sin etiqueta (ni nombre ni oficio)
+        }
         String etiqueta = nombreDe(villager) + " (" + nombreDeOficio(villager) + ")\n" + texto;
         villager.getPersistentData().putLong(ACTIVIDAD_HORA_TAG, villager.level().getGameTime());
         String actual = villager.getCustomName() == null ? "" : villager.getCustomName().getString();
@@ -4548,6 +4575,18 @@ public final class VillageManager {
         }
         for (Villager villager : level.getEntitiesOfClass(Villager.class,
                 new AABB(player.blockPosition()).inflate(64.0D))) {
+            if (!esDelPueblo(villager)) {
+                // NO es gente de una aldea del mod (aldea de vanilla, aldeano suelto): no se le pone etiqueta NINGUNA.
+                // Y si el mod se la había puesto antes (partidas viejas, cuando se etiquetaba a todo el que pasara
+                // cerca), se le QUITA — pero solo si la puso el mod (`ACTIVIDAD_TAG`), para no borrar un nombre que le
+                // hayas puesto tú con una etiqueta de nombre.
+                if (villager.getPersistentData().getBoolean(ACTIVIDAD_TAG)) {
+                    villager.setCustomName(null);
+                    villager.setCustomNameVisible(false);
+                    villager.getPersistentData().putBoolean(ACTIVIDAD_TAG, false);
+                }
+                continue;
+            }
             if (actividadReciente(villager)) {
                 continue;
             }

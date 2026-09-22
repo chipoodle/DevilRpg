@@ -31,6 +31,31 @@ Corridas: 3 (22-sep-2026 00:09, 00:33 y 00:44). La 3a anade el escenario de los 
   Bytes: OK en los 11 nombres comprobados (los 7 con acento incluidos) -> el build compila en UTF-8
   (`options.encoding = 'UTF-8'`) y el juego escribe el log en UTF-8.
 
+--- 1c) LA ETIQUETA ES SOLO DE LOS ALDEANOS DEL MOD (I88) ------------------------------
+
+  Lo reporto el jugador: las aldeas de vanilla tenian a sus aldeanos con las etiquetas del mod. Se mide
+  quitando y devolviendo la MARCA de pertenencia (`DevilRpgDelPueblo`) a un aldeano de la aldea 2:
+
+[Arnes] ETIQUETAS aldea 2: 17 aldeano(s), 17 del pueblo (marcados), 17 con etiqueta
+[Arnes] ETIQUETAS ejemplo ANTES:        delPueblo=true  etiqueta="Bibiana (Guardia arquero / nv 1) / Patrullando el corral"
+[Arnes] ETIQUETAS ejemplo SIN la marca: delPueblo=false etiqueta="(sin etiqueta)"
+[Arnes] ETIQUETAS ejemplo CON la marca: delPueblo=true  etiqueta="Bibiana (Guardia arquero / nv 1) / De guardia"
+[Arnes] ETIQUETAS FUERA de las aldeas del mod: 0 aldeano(s), 0 con etiqueta del mod
+
+  Los 17 del pueblo: marcados y etiquetados. Sin la marca (como un aldeano de vanilla): se le QUITA la
+  etiqueta (y no se le vuelve a poner). Con la marca otra vez: la recupera.
+
+  OJO CON LA ULTIMA LINEA: el "0 aldeano(s) fuera" NO significa que no haya aldeanos de vanilla en el
+  mundo (el guardado tiene unos cuantos, contados en otra ronda): significa que el arnes solo ve los
+  chunks CARGADOS, y solo estan forzados los de la aldea del mod. Es una limitacion del montaje, no una
+  medida de que no existan.
+
+  Y EL FALLO QUE COSTO UN SUSTO EN ESTA RONDA (mismo mecanismo que un crash del jugador): `runServer`
+  compila por su cuenta, asi que si el arnes NO compila (aqui, un metodo `etiquetaDe` duplicado), la
+  tarea falla pero el servidor ARRANCA con las clases a medias y revienta al primer tick con
+  `ClassNotFoundException: VillageManager$VillageDefense`. Se arreglo quitando el duplicado, borrando
+  `build/classes/java/main` y recompilando. Queda avisado en el LEEME del arnes.
+
 --- 2) EL ESTADO DEL JUGADOR ----------------------------------------------------------
 
 [Arnes] ALDEAS indice=0 visitadas=[0, 1, 2] reveladas=[0, 1, 2]

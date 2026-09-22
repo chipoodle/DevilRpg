@@ -725,6 +725,84 @@ public class GuardHarness {
                 aux.getAldeasVisitadas());
     }
 
+    /**
+     * LA ETIQUETA ES SOLO DE LOS ALDEANOS DEL MOD (lo pidió el jugador: *"las villas normales (vanilla) tienen a sus
+     * aldeanos con las mismas etiquetas que la villa de mi mod… eso sólo es para los aldeanos del mod"*). Se mide:
+     * <ol>
+     *   <li>cuántos aldeanos de la aldea 2 están marcados como del pueblo y cuántos llevan etiqueta;</li>
+     *   <li>que a uno al que se le QUITA la marca (como un aldeano de vanilla) se le borre la etiqueta y no se le
+     *       vuelva a poner, y que al devolvérsela la recupere;</li>
+     *   <li>el estado de los aldeanos que andan LEJOS de las aldeas del mod (aldeas de vanilla) y qué pasa cuando el
+     *       jugador pasa a su lado: la etiqueta que el mod les hubiera puesto tiene que desaparecer.</li>
+     * </ol>
+     */
+    private static void probarLasEtiquetas(ServerLevel level, FakePlayer pega) {
+        var cerca = level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(96.0D));
+        int marcados = 0;
+        int etiquetados = 0;
+        for (Villager v : cerca) {
+            if (VillageManager.esDelPueblo(v)) {
+                marcados++;
+            }
+            if (v.getCustomName() != null) {
+                etiquetados++;
+            }
+        }
+        DevilRpg.LOGGER.info("[Arnes] ETIQUETAS aldea 2: {} aldeano(s), {} del pueblo (marcados), {} con etiqueta",
+                cerca.size(), marcados, etiquetados);
+        if (!cerca.isEmpty()) {
+            Villager uno = cerca.get(0);
+            DevilRpg.LOGGER.info("[Arnes] ETIQUETAS ejemplo ANTES: delPueblo={} etiqueta=\"{}\"",
+                    VillageManager.esDelPueblo(uno), etiquetaDe(uno));
+            uno.getPersistentData().putBoolean(VillageManager.DEL_PUEBLO_TAG, false);
+            VillageManager.refrescarEtiquetas(level, pega);
+            DevilRpg.LOGGER.info("[Arnes] ETIQUETAS ejemplo SIN la marca: delPueblo={} etiqueta=\"{}\" (tiene que"
+                    + " quedar vacia)", VillageManager.esDelPueblo(uno), etiquetaDe(uno));
+            uno.getPersistentData().putBoolean(VillageManager.DEL_PUEBLO_TAG, true);
+            uno.getPersistentData().putLong("DevilRpgActividadTick", 0L);
+            uno.getPersistentData().putBoolean(VillageManager.ACTIVIDAD_TAG, false);
+            VillageManager.refrescarEtiquetas(level, pega);
+            DevilRpg.LOGGER.info("[Arnes] ETIQUETAS ejemplo CON la marca: delPueblo={} etiqueta=\"{}\"",
+                    VillageManager.esDelPueblo(uno), etiquetaDe(uno));
+        }
+        // Y LOS DE FUERA (aldeas de vanilla): cuántos hay, cuántos llevan etiqueta del mod (de antes del arreglo) y
+        // qué pasa cuando el jugador se pone a su lado y se refrescan las etiquetas.
+        Villager fuera = null;
+        int cuantos = 0;
+        int fueraEtiquetados = 0;
+        for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(4000.0D))) {
+            boolean deAlguna = false;
+            for (int i = 0; i <= 3; i++) {
+                BlockPos c = VillageManager.centroDe(level, i);
+                if (c != null && c.distSqr(v.blockPosition()) < 200.0D * 200.0D) {
+                    deAlguna = true;
+                    break;
+                }
+            }
+            if (deAlguna) {
+                continue;
+            }
+            cuantos++;
+            if (v.getCustomName() != null) {
+                fueraEtiquetados++;
+                if (fuera == null) {
+                    fuera = v;
+                }
+            }
+        }
+        DevilRpg.LOGGER.info("[Arnes] ETIQUETAS FUERA de las aldeas del mod: {} aldeano(s), {} con etiqueta del mod"
+                + " (de antes del arreglo)", cuantos, fueraEtiquetados);
+        if (fuera != null) {
+            DevilRpg.LOGGER.info("[Arnes] ETIQUETAS uno de fuera ANTES: pos={} delPueblo={} etiqueta=\"{}\"",
+                    fuera.blockPosition(), VillageManager.esDelPueblo(fuera), etiquetaDe(fuera));
+            pega.moveTo(fuera.getX(), fuera.getY(), fuera.getZ());
+            VillageManager.refrescarEtiquetas(level, pega);
+            DevilRpg.LOGGER.info("[Arnes] ETIQUETAS uno de fuera DESPUES de pasar el jugador: delPueblo={} etiqueta="
+                    + "\"{}\" (tiene que quedar vacia)", VillageManager.esDelPueblo(fuera), etiquetaDe(fuera));
+            pega.moveTo(CENTRO.getX() + 0.5D, CENTRO.getY(), CENTRO.getZ() + 0.5D);
+        }
+    }
+
     /** Ticks que lleva la ola a la vista (para limpiarla a los 10 s) y dónde está la aldea del asedio. */
     private static int ticksDeOlaVista = 0;
     private static BlockPos centroDelAsedio = null;
@@ -811,6 +889,7 @@ public class GuardHarness {
         if (!escenarioDeReveladosHecho) {
             escenarioDeReveladosHecho = true;
             probarLosRevelados(level, pega, aux);
+            probarLasEtiquetas(level, pega);
         }
         for (int i = 0; i <= indice; i++) {
             DevilRpg.LOGGER.info("[Arnes] ALDEA {} nombre=\"{}\" visitada={} revelada={} centro={} estado=\"{}\"",

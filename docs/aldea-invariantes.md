@@ -2134,6 +2134,39 @@ nunca sale (`hayAsedio(3)=true`, `agresivos=0`, `revelada(4)=false` en toda la c
 intento: el cuarto estado, **`en asedio`**, y que el **Diario lo enseña** (`Aldea de Peñasalbas (1838, 1838) — en
 asedio · a 599 m hacia el suroeste`). Ver al clérigo revelar **en el momento de la victoria** hay que jugarlo.
 
+### I88 · La etiqueta (nombre y oficio) es SOLO de los aldeanos del MOD
+
+El jugador: *"Estoy viendo que las villas normales (vanilla) tienen a sus aldeanos con las mismas etiquetas que la
+villa de mi mod. No deberían de tener etiqueta de nombre y profesión. Eso sólo es para los aldeanos del mod"*.
+
+**Causa**: `VillageManager.refrescarEtiquetas` —el refresco genérico, cada segundo desde el tick del jugador— recorría
+**todos** los aldeanos a menos de 64 bloques y les ponía la etiqueta del mod con `nombreDe` + `nombreDeOficio`. Y
+`nombreDe` **cae al nombre del UUID** cuando el aldeano no tiene uno asignado (para que ningún aldeano, ni una cría
+recién nacida, salga sin nombre), así que a un aldeano de vanilla no le faltaba nada: bastaba con pasar cerca para que
+el mod lo bautizara y le pusiera "Nombre (Oficio)" encima. Se etiquetaba por **cercanía**, no por **pertenencia**.
+
+**Regla**: la etiqueta es un distintivo del **pueblo del mod**, y para eso hay una marca: `DEL_PUEBLO_TAG`
+(`DevilRpgDelPueblo`), que pone **el latido** al adoptar a los aldeanos de la aldea (`repartirNombres`, que es a la vez
+quien les reparte nombre propio). Sin la marca:
+
+- **no** se les pone etiqueta —`etiqueta()` y `refrescarEtiquetas` la saltan, así que ni nombre, ni oficio, ni
+  actividad—, y
+- si el mod se la había puesto **antes** (partidas viejas, con la regla de cercanía), **se le quita**… pero **solo si la
+  puso el mod** (`ACTIVIDAD_TAG`): un nombre puesto por el jugador con una etiqueta de nombre **no se toca**.
+
+**Medido con el arnés** (22-sep-2026), quitando y devolviendo la marca a un aldeano de la aldea 2:
+
+```
+[Arnes] ETIQUETAS aldea 2: 17 aldeano(s), 17 del pueblo (marcados), 17 con etiqueta
+[Arnes] ETIQUETAS ejemplo ANTES:        delPueblo=true  etiqueta="Bibiana (Guardia arquero / nv 1) / Patrullando el corral"
+[Arnes] ETIQUETAS ejemplo SIN la marca: delPueblo=false etiqueta="(sin etiqueta)"
+[Arnes] ETIQUETAS ejemplo CON la marca: delPueblo=true  etiqueta="Bibiana (Guardia arquero / nv 1) / De guardia"
+```
+
+**Consecuencia a tener en cuenta**: la marca la pone el latido, que corre cada 10 s para las aldeas a menos de 140
+bloques, así que un aldeano recién llegado a un pueblo del mod puede estar unos segundos **sin** etiqueta. Es
+preferible eso a etiquetar a quien no es del pueblo.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
