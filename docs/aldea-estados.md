@@ -150,6 +150,14 @@ Si algo "no cuadra" con el tiempo, casi siempre es una de estas:
    antigua** que el jugador no recordaba (con nieve y telarañas del `ruin()`), o que estaba de
    noche con los aldeanos dentro. Se distingue mirando `Fallen` y la hora del mundo.
 
+**Síntoma: el juego se cae con `NoClassDefFoundError` / `ClassNotFoundException` de una clase interna.**
+No es el mod: alguien ha **borrado o recompilado `build/classes/java/main` con el juego abierto**, y su JVM
+intentó cargar una clase que en ese instante no estaba. Pasó el **22-sep-2026**: el cliente del jugador se
+cayó a las **10:31:24** (`VillageManager.start` → `new VillageDefense`) mientras el build se rehacía entre
+las 10:30 y las 10:35. Se arregla recompilando entero **con el juego cerrado** (y el mundo no sufre daño:
+el log enseña la partida guardada entera). **Regla: antes de tocar `build/classes`, comprobar que no hay
+ningún JVM del juego vivo** (`--launchTarget forgeclientdev` es su cliente).
+
 **Síntoma: "la piedra de invocación no hace nada".** Busca `[LoreStone]` en el log: si sale
 `NO tiene ancla ni spawn`, el jugador no tiene ancla (sin ella no se puede calcular dónde cae la
 aldea y no se revela nada). Si sale `revelada la aldea N (hacia el …)`, reveló bien y lo que falla

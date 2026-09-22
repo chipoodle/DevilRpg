@@ -3,9 +3,16 @@
 > **COMPILA ANTES DE LANZARLO, y mira que el build diga `BUILD SUCCESSFUL`.** `runServer` compila por su cuenta, así
 > que si el arnés (o el mod) **no compila**, la tarea falla pero el servidor **arranca igual con las clases a medias**
 > y revienta al primer tick con `ClassNotFoundException` de una clase interna (`VillageManager$VillageDefense` fue la
-> que nos lo enseñó; la causa era un método duplicado en el propio arnés). Es **el mismo mecanismo** del crash que
-> sufrió el jugador: no es un fallo del mod, es un build roto. Si pasa: mata el servidor, borra
+> que nos lo enseñó; la causa era un método duplicado en el propio arnés). Si pasa: mata el servidor, borra
 > `build/classes/java/main` y recompila.
+>
+> **Y NUNCA TOQUES EL BUILD CON EL JUEGO DEL JUGADOR ABIERTO.** Borrar o recompilar `build/classes/java/main` mientras
+> su partida corre **le revienta el juego a él**: su JVM intenta cargar una clase que en ese instante no está y muere
+> con `NoClassDefFoundError` de una clase interna. Pasó el **22-sep-2026**: su cliente se cayó a las **10:31:24**
+> (`VillageManager.start` → `new VillageDefense`), justo mientras yo borraba y recompilaba entre las 10:30 y las
+> 10:35. **Antes de tocar las clases**, comprueba que no hay ningún JVM del juego:
+> `Get-CimInstance Win32_Process -Filter "Name='java.exe'"` y mira la línea de comandos — `--launchTarget
+> forgeclientdev` es su cliente, `forgeserverdev` es el arnés.
 
 `GuardHarness.java` **no se compila desde aquí** (está fuera de `src/`): es la **copia de referencia** del arnés con
 el que se midió el bug de la **guardia del corral** (invariantes I32/I33/I34 de `docs/aldea-invariantes.md`) **sin
