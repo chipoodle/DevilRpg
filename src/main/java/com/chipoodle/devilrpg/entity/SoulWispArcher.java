@@ -85,7 +85,7 @@ public class SoulWispArcher extends SoulWisp implements RangedAttackMob {
         this.goalSelector.addGoal(9, new SoulWisp.WanderGoal());
         this.goalSelector.addGoal(10, new LookAtPlayerGoal(this, Mob.class, 8.0F));
         this.goalSelector.addGoal(2, new RandomLookAroundGoal(this));
-        this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, Mob.class, 10, true, false, (entity) -> !ITamableEntity.esCriaturaPacificaONeutral(entity) && Math.abs(entity.getY() - this.getY()) <= 4.0D &&
+        this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, Mob.class, 10, true, false, (entity) -> (!ITamableEntity.esCriaturaPacificaONeutral(entity) || ITamableEntity.elDuenoLeEstaAtacando(this.getOwner(), entity)) && Math.abs(entity.getY() - this.getY()) <= 4.0D &&
                 !(entity instanceof Villager) &&
                 !(entity instanceof Llama) &&
                 !(entity instanceof Turtle) &&

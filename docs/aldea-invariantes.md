@@ -1850,6 +1850,24 @@ clavada.
 aparcamiento caduca a los 5 minutos, así que volverá a probar el corral —y si sigue sin poder, lo aparcará otra vez,
 sin bucle de 10 s—. Es el mismo remedio que ya llevaban el relevo nocturno (I66) y el viaje al almacén (I73/I75).
 
+### I81 · Lo que el jugador (o un poder suyo) ataca, lo atacan sus MINIONS
+
+Lo pidió el jugador: *"si bien ninguno de los minions ni plantas atacan a los neutrales, si yo, jugador, llego a
+atacar alguno, o si alguno de los poderes atacan (como la enfermedad que genera el hongo y el liquen cuando se avienta
+a alguna entidad), esta se vuelve enemigo y se debe atacar por los minions"*.
+
+Los minions con objetivo propio (el <b>hongo</b> `ExplodingSporeBullet`, el <b>oso</b> `SoulBear` y el <b>wisp
+arquero</b> `SoulWispArcher`) filtraban con `!esCriaturaPacificaONeutral(entity)` **a secas**: el neutral quedaba
+descartado antes de mirar si el dueño estaba en la pelea (el arquero lo tenía a medias, con su propia lista de
+animales).
+
+**Regla**: el predicado pasa a ser
+`(!esCriaturaPacificaONeutral(entity) || ITamableEntity.elDuenoLeEstaAtacando(this.getOwner(), entity)) && …` — es
+decir, un neutral **sí** cuenta si el dueño ya le ha pegado. El ayudante es **compartido** (`ITamableEntity`) y mira
+`owner.getLastHurtMob()` y `entity.getLastHurtByMob()`, así que valen **las manos y los poderes**: el daño del hongo y
+del liquen va con el jugador como atacante (`playerAttack(owner)` / `explosion(…, owner)`, ver I79), así que el bicho
+queda marcado igual y los minions van a por él.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 

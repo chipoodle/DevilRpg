@@ -122,8 +122,24 @@ public interface ITamableEntity extends IAttachmentHolder, OwnableEntity, Leasha
      * formas, porque {@code OwnerHurtTargetGoal} (lo que ataca mi dueño) y {@code OwnerHurtByTargetGoal} (quien ataca
      * a mi dueño) van <b>por encima</b> de esta regla.
      */
-    static boolean esCriaturaPacificaONeutral(Entity entity) {
-        if (entity instanceof net.minecraft.world.entity.monster.Enemy) {
+    /**
+     * <b>¿El dueño está metido en la pelea con ese bicho?</b> Lo pidió el jugador: *"si yo, jugador, llego a atacar
+     * alguno, o si alguno de los poderes atacan (como la enfermedad que genera el hongo y el liquen cuando se avienta
+     * a alguna entidad), esta se vuelve enemigo y se debe atacar por los minions"*.
+     * <p>
+     * Se mira el <b>último al que atacó el dueño</b> ({@code getLastHurtMob}) y también si el bicho le tiene a él como
+     * su agresor ({@code getLastHurtByMob}: es lo que pasa al pegarle a un lobo o a un oso polar). Vale para las
+     * <b>manos</b> y para los <b>poderes</b>: el daño del hongo y del liquen va con el jugador como atacante
+     * ({@code playerAttack(owner)} / {@code explosion(…, owner)}), así que el bicho queda marcado igual.
+     */
+    static boolean elDuenoLeEstaAtacando(@Nullable Entity dueno, Entity quien) {
+        if (!(dueno instanceof net.minecraft.world.entity.player.Player owner) || !(quien instanceof LivingEntity vivo)) {
+            return false;
+        }
+        return owner.getLastHurtMob() == vivo || vivo.getLastHurtByMob() == owner;
+    }
+
+    static boolean esCriaturaPacificaONeutral(Entity entity) {        if (entity instanceof net.minecraft.world.entity.monster.Enemy) {
             return false; // hostil: a esos SÍ se les ataca, como hasta ahora
         }
         return entity instanceof net.minecraft.world.entity.NeutralMob
