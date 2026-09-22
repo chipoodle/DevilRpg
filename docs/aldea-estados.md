@@ -50,7 +50,8 @@ Viaja con el jugador (en un solo jugador: `level.dat`) y **se sincroniza al clie
 `VillageManager.estadoDeLaAldea(level, indice)`, que devuelve `EN RUINAS` / `en asedio` / `a salvo, con el sello
 puesto` / `viva, sin socorrer` (en ese orden de prioridad). Lo usan el **Diario del Invocado** y el **arnés**, así que
 "el estado de la aldea" tiene una sola definición en todo el mod. Medido: las líneas del Diario del jugador dan
-`EN RUINAS` para la aldea 1 y `a salvo, con el sello puesto` para la 0 y la 2.
+`EN RUINAS` para la aldea 1 y `a salvo, con el sello puesto` para la 0 y la 2, y en un **asedio provocado a propósito**
+sale `en asedio` (`Aldea de Peñasalbas (1838, 1838) — en asedio · a 599 m hacia el suroeste`).
 
 ## 2. La máquina de estados (quién la mueve y qué deja en el log)
 
@@ -170,7 +171,8 @@ líneas del asedio; el censo cada 5 min (`comida N puntos, N aldeanos`) dice có
 - **Asedios en curso** (clásico y del mundo): viven en memoria. Cerrar el juego **cancela** el
   asedio; al volver, la aldea sigue **sin resolver** y el asedio se relanza al llegar. (Con el
   reloj en pausa de I86 no se pierde nada por irse, pero cerrar el juego sí borra el progreso del
-  asedio.)
+  asedio.) Y el reloj solo corre si el jugador del asedio está **en la lista del servidor**
+  (conectado) **y** a menos de 128 bloques: un asedio no avanza para alguien que no está.
 - **Los goals de los aldeanos**: los repone el latido (necesita un jugador cerca).
 - **Los contadores de atasco** de los goals: vuelven a empezar.
 

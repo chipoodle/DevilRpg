@@ -2126,6 +2126,12 @@ método que corre el clic). El camino "NBT del jugador anfitrión de una partida
 en un servidor dedicado no hay jugador de verdad (queda cubierto por construcción: `getIntArray` de una clave ausente
 devuelve vacío y los conjuntos se vacían antes de llenarse).
 
+**El asedio de principio a fin NO se puede medir headless** (intentado, 22-sep-2026): el reloj del asedio solo corre
+con el jugador **en la lista del servidor** (I86) y un `FakePlayer` **no está en ella**, así que queda EN PAUSA y la ola
+nunca sale (`hayAsedio(3)=true`, `agresivos=0`, `revelada(4)=false` en toda la corrida). Lo que **sí** dejó medido ese
+intento: el cuarto estado, **`en asedio`**, y que el **Diario lo enseña** (`Aldea de Peñasalbas (1838, 1838) — en
+asedio · a 599 m hacia el suroeste`). Ver al clérigo revelar **en el momento de la victoria** hay que jugarlo.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 

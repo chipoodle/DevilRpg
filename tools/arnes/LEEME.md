@@ -147,4 +147,17 @@ revelados son idempotentes. **No cubre** la barra dibujada (es del cliente: lo m
 que el escenario se la pone antes de medir. Sin ella, la piedra **no revela nada** — y así se descubrió que lo hacía
 en silencio: ahora deja un `WARN` con el motivo.
 
+### `MEDIR_ASEDIO_VIVO = true` — el asedio de verdad (y por qué NO se puede terminar headless)
+
+Arranca el asedio del objetivo **3** (una aldea que no existe: se genera ahí, así que su asedio está sin resolver),
+fuerza sus chunks y deja al jugador de pega dentro. **Lo que mide de verdad**: que el asedio existe
+(`hayAsedio(3)=true`), que el estado de la aldea es `en asedio` y que **el Diario lo enseña así**, y que **sin un
+jugador de verdad el reloj no corre**: el reloj solo avanza con el jugador del asedio **en la lista del servidor**
+(I86) y un `FakePlayer` **no está en ella** → `distanciaAlCentro` = `MAX_VALUE` → EN PAUSA → la ola nunca sale
+(medido: `agresivos=0` toda la corrida y `revelada(4)=false`). Para ver al **clérigo revelar al vencer** hay que
+**jugar el asedio** con un cliente conectado.
+
+La 1.ª corrida destapó además que el jugador de pega **no carga chunks**: la aldea 3 se descargaba
+(`aldeanos3=11` → `0`). El modo fuerza sus chunks al arrancar y con eso se mantienen los 11 aldeanos.
+
 

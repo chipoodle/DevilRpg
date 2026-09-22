@@ -97,6 +97,33 @@ public class GuardHarness {
      * (4) que el Diario liste esas aldeas con nombre, coordenadas, estado y rumbo.
      */
     private static final boolean MEDIR_ALDEAS = false;
+    /**
+     * ¿Se mide EL ASEDIO CLÁSICO DE PRINCIPIO A FIN, para ver al <b>clérigo revelando la siguiente al vencer</b>
+     * (I87)? Es la única parte del revelado que no se puede medir por método suelto: hace falta un asedio de verdad.
+     * <p>
+     * Cómo lo monta: a los 15 s arranca el asedio del objetivo <b>3</b> (una aldea que NO existe todavía: se genera
+     * ahí mismo, así que su asedio está sin resolver — las otras tres de esa partida ya lo están) y deja al jugador
+     * de pega <b>dentro</b> de esa aldea (si no, el reloj se queda EN PAUSA, I86). Cuando la ola sale (90 s de
+     * margen), se la deja pelear 10 s y <b>se limpia desde el arnés</b>: la milicia recién nacida de una aldea a
+     * ~2.000 bloques no puede con una ola escalada, y lo que se mide aquí es la <b>resolución</b> (salvada), no el
+     * combate.
+     * <p>
+     * Lo que se busca en el log: `[Village] Aldea 3 salvada: revelada la aldea 4 a … (hacia el …)` y, en el volcado
+     * del arnés, `revelada(4)=true` con la barra en `Aldea  (… m)`.
+     * <p>
+     * <b>MEDIDO (22-sep-2026): con un jugador de pega esto NO llega a la resolución, y se sabe por qué.</b> El reloj
+     * del asedio solo corre con el jugador del asedio <b>en la lista del servidor</b> (I86), y un {@code FakePlayer}
+     * <b>no está en ella</b>: `distanciaAlCentro` devuelve {@code MAX_VALUE}, el asedio queda EN PAUSA y la ola nunca
+     * sale. Las dos corridas lo enseñan: `hayAsedio(3)=true` toda la corrida, `agresivos=0` siempre y
+     * `revelada(4)=false`. O sea: este modo <b>sí</b> mide que el asedio existe, que el estado de la aldea es
+     * `en asedio` (y que el Diario lo enseña así) y que <b>sin jugador de verdad el reloj no corre</b>; para ver al
+     * clérigo revelar al vencer hace falta <b>jugar el asedio</b> (o un cliente conectado).
+     * <p>
+     * De paso, la primera corrida destapó un problema del <b>montaje</b>: el jugador de pega tampoco carga chunks, así
+     * que la aldea 3 se descargaba (`aldeanos3=11` y diez segundos después `0`). Se fuerzan los chunks de esa aldea al
+     * arrancar el asedio y con eso los 11 aldeanos se mantienen.
+     */
+    private static final boolean MEDIR_ASEDIO_VIVO = false;
     /** Dónde se planta el bicho (relativo a la plaza): dentro del recinto (radio 62) y a la altura del pueblo. */
     private static final BlockPos BICHO_EN = new BlockPos(6, 0, 6);
     private static boolean listo = false;
@@ -182,6 +209,8 @@ public class GuardHarness {
             if (ticks % 40 == 0) {
                 volcarPuertas(level);
             }
+        } else if (MEDIR_ASEDIO_VIVO) {
+            medirElAsedioVivo(level, pega);
         } else if (MEDIR_COCINA) {
             // LA COCINA, cada 2 s: donde esta el cocinero, si VE el ahumador y si tiene ruta a su casilla.
             if (ticks == 400) {
@@ -686,6 +715,74 @@ public class GuardHarness {
         aux.setObjectiveIndex(0, pega);
         DevilRpg.LOGGER.info("[Arnes] el escenario de revelados termina; el Diario NO cambia (solo lo visitado): {}",
                 aux.getAldeasVisitadas());
+    }
+
+    /** Ticks que lleva la ola a la vista (para limpiarla a los 10 s) y dónde está la aldea del asedio. */
+    private static int ticksDeOlaVista = 0;
+    private static BlockPos centroDelAsedio = null;
+
+    /** EL ASEDIO DE VERDAD (I87): ver {@link #MEDIR_ASEDIO_VIVO}. */
+    private static void medirElAsedioVivo(ServerLevel level, FakePlayer pega) {
+        if (ticks == 300) {
+            centroDelAsedio = com.chipoodle.devilrpg.survival.ObjectiveTargets.targetOf(ancla(), 3);
+            // FORZAR LOS CHUNKS DE LA ALDEA 3: el jugador de pega NO carga chunks (no es un jugador de verdad) y sin
+            // ellos la aldea se descarga a los pocos segundos. Medido en la primera corrida de este modo:
+            // `aldeanos3=11` al generarse y `0` diez segundos después, con `agresivos=0` — la ola no llegaba a
+            // spawnear porque su trozo de mundo no estaba cargado. Se fuerzan los mismos 13x13 que ya se fuerzan en
+            // la aldea 2 en `preparar`.
+            int cx3 = centroDelAsedio.getX() >> 4;
+            int cz3 = centroDelAsedio.getZ() >> 4;
+            for (int dx = -6; dx <= 6; dx++) {
+                for (int dz = -6; dz <= 6; dz++) {
+                    level.setChunkForced(cx3 + dx, cz3 + dz, true);
+                }
+            }
+            com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface aux =
+                    com.chipoodle.devilrpg.capability.IGenericCapability.getUnwrappedPlayerCapability(
+                            pega, com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability.INSTANCE);
+            if (aux != null) {
+                aux.setAnchorPoint(ancla(), pega);
+                aux.setSpawnPoint(ancla(), pega);
+                // El asedio de la 3 tiene que ser "el actual", o el clérigo no revela: el aviso es para el jugador
+                // que lo está viviendo.
+                aux.setObjectiveIndex(3, pega);
+            }
+            DevilRpg.LOGGER.info("[Arnes] ASEDIO: arrancando el asedio de la aldea 3 en {} (se genera ahora; las"
+                    + " otras tres de esa partida ya estan resueltas)", centroDelAsedio);
+            VillageManager.start(level, pega, 3, centroDelAsedio);
+            DevilRpg.LOGGER.info("[Arnes] ASEDIO: arrancado, hayAsedio(3)={}", VillageManager.hayAsedio(level, 3));
+        }
+        if (centroDelAsedio == null) {
+            return;
+        }
+        // El jugador de pega, DENTRO de la aldea 3: si no, el reloj del asedio se queda EN PAUSA (I86) y no se
+        // resolveria nunca. Y se gestiona hasta el objetivo 3, que es el que se esta asediando.
+        pega.moveTo(centroDelAsedio.getX() + 0.5D, centroDelAsedio.getY() + 1.0D, centroDelAsedio.getZ() + 0.5D);
+        VillageManager.manageNearby(level, pega, ancla(), 3);
+        int bichos = level.getEntitiesOfClass(com.chipoodle.devilrpg.entity.AggressiveZombieEntity.class,
+                new AABB(centroDelAsedio).inflate(150.0D)).size();
+        if (bichos > 0) {
+            ticksDeOlaVista++;
+        }
+        if (ticks % 100 == 0) {
+            com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface aux =
+                    com.chipoodle.devilrpg.capability.IGenericCapability.getUnwrappedPlayerCapability(
+                            pega, com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability.INSTANCE);
+            DevilRpg.LOGGER.info("[Arnes] ASEDIO t={} agresivos={} hayAsedio(3)={} revelada(4)={} aldeanos3={}",
+                    ticks, bichos, VillageManager.hayAsedio(level, 3),
+                    aux != null && aux.isAldeaRevelada(4),
+                    level.getEntitiesOfClass(Villager.class, new AABB(centroDelAsedio).inflate(96.0D)).size());
+        }
+        // A LOS 10 s DE VER LA OLA, SE LIMPIA DESDE EL ARNES (ver el javadoc de MEDIR_ASEDIO_VIVO).
+        if (bichos > 0 && ticksDeOlaVista == 200) {
+            DevilRpg.LOGGER.info("[Arnes] ASEDIO: limpiando la ola ({} agresivo(s)) desde el arnes: el asedio tiene"
+                    + " que resolverse SALVADO y el clerigo revelar la aldea 4", bichos);
+            for (com.chipoodle.devilrpg.entity.AggressiveZombieEntity z
+                    : level.getEntitiesOfClass(com.chipoodle.devilrpg.entity.AggressiveZombieEntity.class,
+                    new AABB(centroDelAsedio).inflate(150.0D))) {
+                z.hurt(level.damageSources().generic(), Float.MAX_VALUE);
+            }
+        }
     }
 
     /**

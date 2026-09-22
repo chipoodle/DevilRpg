@@ -3310,7 +3310,10 @@ asedio / a salvo con el sello / viva sin socorrer), que usan el Diario y el arn�
 Diario dan `EN RUINAS` para la aldea 1 y `a salvo, con el sello puesto` para la 0 y la 2.
 
 Queda **pendiente**: la **tabla de nombres** definitiva (la pasa el jugador) y, en el juego abierto, la barra dibujada
-(es del cliente) y el clic en la piedra (se mide el método que corre el clic).
+(es del cliente) y el clic en la piedra (se mide el método que corre el clic). El **asedio de principio a fin** no se
+puede medir headless: el reloj solo corre con el jugador en la lista del servidor (I86) y un `FakePlayer` no está en
+ella → EN PAUSA y la ola no sale (medido: `hayAsedio(3)=true`, `agresivos=0`). Ese intento dejó medido el cuarto
+estado, **`en asedio`**, y que el Diario lo enseña.
 
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 

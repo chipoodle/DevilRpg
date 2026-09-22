@@ -107,6 +107,37 @@ Corridas: 3 (22-sep-2026 00:09, 00:33 y 00:44). La 3a anade el escenario de los 
   sello puesto`); `en asedio` necesita un asedio vivo y `viva, sin socorrer` una aldea sin resolver, y
   en esta copia las tres estan resueltas o caidas.
 
+--- 8c) EL INTENTO DE ASEDIO DE PRINCIPIO A FIN (MEDIR_ASEDIO_VIVO) -------------------
+
+  Se arranca el asedio de la aldea 3 (aldea nueva: se genera en 1838,1838, asi que su asedio esta
+  sin resolver) y se deja al jugador de pega DENTRO, con los chunks de esa aldea forzados.
+  Corridas: 2 (con y sin chunks forzados).
+
+[Arnes] ASEDIO: arrancando el asedio de la aldea 3 en BlockPos{x=1838, y=120, z=1838}
+[Arnes] ASEDIO: arrancado, hayAsedio(3)=true
+[Arnes] ASEDIO t=3100 agresivos=0 hayAsedio(3)=true revelada(4)=false aldeanos3=11
+[Arnes] ALDEA 3 nombre="Aldea de Peñasalbas" visitada=true revelada=true centro=BlockPos{x=1838, y=72, z=1838} estado="en asedio"
+[Arnes] DIARIO: Aldea de Peñasalbas  (1838, 1838) — en asedio · a 599 m hacia el suroeste
+
+  LO QUE ESTA MEDIDA **SI** DICE:
+  - El cuarto estado, `en asedio`, es real y el **Diario lo enseña**: era el unico de los cuatro que
+    no se habia visto (los otros: EN RUINAS, a salvo con el sello, viva sin socorrer).
+  - El asedio **existe** (`hayAsedio(3)=true`) y **NO avanza sin un jugador de verdad**: el reloj solo
+    corre con el jugador del asedio en la **lista del servidor** (I86) y un `FakePlayer` **no esta en
+    ella** -> `distanciaAlCentro` = MAX_VALUE -> EN PAUSA -> la ola nunca sale (`agresivos=0` toda la
+    corrida). Es decir: esta corrida tambien **verifica la pausa de I86** por el lado raro.
+
+  LO QUE **NO** PUEDE MEDIR (y por que): la **resolucion** (aldea salvada) y el **aviso del clerigo al
+  vencer**. Eso necesita un jugador de verdad (un cliente conectado) o jugarlo a mano: queda para el
+  jugador. El camino del clerigo SI esta medido por metodo suelto (seccion 5): revela la siguiente e
+  es idempotente; lo que no se ha visto es el momento exacto de la victoria llamandolo.
+
+  DE PASO, UN PROBLEMA DEL **MONTAJE** (1a corrida, y valio la pena): el jugador de pega tampoco carga
+  chunks, asi que la aldea 3 se descargaba (`aldeanos3=11` y diez segundos despues `0`, con
+  `agresivos=0`). Se fuerzan sus chunks al arrancar el asedio y con eso los 11 aldeanos se mantienen.
+  (Sin forzarlos, la conclusion "no hay ola" habria sido falsa: la causa era el reloj en pausa, no los
+  chunks — se comprobo repitiendo con los chunks forzados.)
+
 --- 9) ERRORES ------------------------------------------------------------------------
 
 Ninguno: cero `Exception` / `ERROR` en las tres corridas.
