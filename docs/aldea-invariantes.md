@@ -2059,16 +2059,20 @@ regresar"*):
 3. **Descubrir = ENTRAR** (radio de llegada, {@code ARRIVE_RADIUS} = 24), no verla de lejos: al entrar se apunta en la
    capability (`aldeasVisitadas`, por jugador y sincronizada), sale el aviso *"Has llegado a …"* y queda con nombre en
    la barra y en el Diario.
-4. **Quién revela la dirección** (`aldeasReveladas`): **hablar con el clérigo** de un pueblo del mod (clic derecho;
-   dice *"El clérigo Dorotea: los clérigos sentimos una aldea hacia el noreste, a unos 1.234 pasos"*) y la **piedra de
-   invocación** (objetivo actual; es el "inicio de la misión" y el **seguro contra perderse**, porque hay que volver al
-   círculo ritual). **Ganar el asedio NO revela nada**: al vencer solo se anuncia el **nombre** de la aldea salvada y se
-   pone al día el libro. Lo pidió el jugador: *"cuando se gane el asedio aparezca el nombre de la aldea y se actualice
-   el libro del invocado, pero SOLO cuando se hable con el clérigo es cuando ya aparezca en los objetivos hacia dónde
-   está la aldea y su distancia como actualmente está"*. (Antes lo revelaba el clérigo **solo**, al ganar; se cambió.)
-5. **Si la aldea CAE no se revela nada**: ni barra ni distancia, solo el aviso en el chat con el **rumbo**
-   (*"…hay otra aldea hacia el noreste… y no sabe cuánto queda"*), y el Diario se actualiza solo cuando la encuentre y
-   entre. Es literalmente lo que pidió el jugador.
+4. **Ganar un asedio NO cambia de objetivo: la barra se queda en la aldea salvada, con su nombre.** Al vencer se
+   anuncia el nombre (*"Has salvado Aldea de Valleverde…"*) y se pone al día el Diario, pero el objetivo **no avanza**,
+   así que arriba se sigue leyendo **la aldea que acabas de salvar con su nombre** (`Aldea de Valleverde  (0 m) ↑`).
+5. **El que pasa a la siguiente es el CLÉRIGO**: al **hablarle** (clic derecho) *después* de salvar el pueblo, el
+   objetivo **avanza** a la siguiente aldea y el clérigo **revela su dirección y su distancia** — y la barra la enseña
+   **sin nombre** (`Aldea  (1.234 m) →`), porque el nombre solo llega al **entrar** en ella. Vale cualquier clérigo de
+   cualquier pueblo del mod. Lo pidió el jugador, palabra por palabra: *"una vez ganado el asedio APAREZCA en la barra
+   de aldea el nombre de la aldea actual recién ganada y sólo cuando vaya con el clérigo cambie al siguiente objetivo
+   que es la siguiente aldea y su distancia sin revelar aún el nombre"*.
+   *(La **piedra de invocación** sigue revelando el objetivo actual: es el "inicio de la misión" y el seguro contra
+   perderse. Antes, el clérigo revelaba solo al ganar y el objetivo avanzaba solo; las dos cosas se cambiaron.)*
+6. **Si la aldea CAE no se revela nada y el objetivo sí avanza** (esa aldea ya no se puede salvar): ni barra ni
+   distancia, solo el aviso en el chat con el **rumbo** (*"…hay otra aldea hacia el noreste… y no sabe cuánto queda"*),
+   y el Diario se actualiza solo cuando la encuentre y entre. Es literalmente lo que pidió el jugador.
 6. **Diario del Invocado, un LIBRO de verdad** (`DiarioDelInvocado`): lo entrega la piedra (y lo vuelve a dar/actualizar
    si lo tiene). **No es un objeto del mod: es un libro escrito de los del juego**, así que al abrirlo se abre la
    **interfaz de libro** normal, con su título (*Diario del Invocado*), su autor (*Los clérigos*) y sus páginas. Lo

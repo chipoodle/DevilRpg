@@ -892,6 +892,25 @@ public class GuardHarness {
         }
         DevilRpg.LOGGER.info("[Arnes] CLERIGO-CHARLA otra vez: revelada(7)={} (sigue true, no se repite el aviso)",
                 aux.isAldeaRevelada(7));
+
+        // LA CHARLA CUANDO LA ALDEA ACTUAL YA ESTÁ SALVADA (el caso del jugador): el clérigo AVANZA el objetivo a la
+        // siguiente y le revela la dirección SIN NOMBRE (el nombre llega al entrar en ella). En esta partida la aldea
+        // INDICE (2) está Resolved, o sea ganada.
+        aux.setObjectiveIndex(INDICE, pega);
+        DevilRpg.LOGGER.info("[Arnes] CHARLA-TRAS-GANAR antes: indice={} barra(2)=\"{}\" revelada(3)={}",
+                aux.getObjectiveIndex(),
+                com.chipoodle.devilrpg.survival.VillageBarText.texto(INDICE, aux.isAldeaVisitada(INDICE),
+                        aux.isAldeaRevelada(INDICE), 0, "arriba"),
+                aux.isAldeaRevelada(3));
+        try {
+            VillageManager.elClerigoSenalaLaAldeaActual(level, clerigos.get(0), pega);
+        } catch (Exception e) {
+            DevilRpg.LOGGER.warn("[Arnes] CHARLA-TRAS-GANAR fallo: {}", e.toString());
+        }
+        DevilRpg.LOGGER.info("[Arnes] CHARLA-TRAS-GANAR despues: indice={} revelada(3)={} barra(3)=\"{}\" (tiene que"
+                        + " ser la 3, revelada y SIN NOMBRE)", aux.getObjectiveIndex(), aux.isAldeaRevelada(3),
+                com.chipoodle.devilrpg.survival.VillageBarText.texto(3, aux.isAldeaVisitada(3),
+                        aux.isAldeaRevelada(3), 1234, "->"));
         aux.setObjectiveIndex(0, pega);
     }
 

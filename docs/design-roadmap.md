@@ -3361,14 +3361,18 @@ Las dos cosas que pidió el jugador en la misma ronda:
   interfaz de libro normal. Sus páginas se **reescriben** al abrirlo (y al salvar una aldea) con lo que el jugador sabe
   en ese momento; se reconoce por una marca en sus datos, no por el nombre.
 - *"cuando se gane el asedio aparezca el nombre de la aldea y se actualice el libro… pero SOLO cuando se hable con el
-  clérigo es cuando ya aparezca en los objetivos hacia dónde está la aldea y su distancia"* → al vencer se anuncia el
-  **nombre** de la aldea salvada y se pone al día el libro, pero la **dirección no se revela**; la barra de aldea se
-  enciende al **hablar con el clérigo** (clic derecho en un clérigo del pueblo), que dice el rumbo y la distancia.
+  clérigo es cuando ya aparezca en los objetivos hacia dónde está la aldea y su distancia"* — y luego, más preciso:
+  *"una vez ganado el asedio APAREZCA en la barra de aldea el nombre de la aldea actual recién ganada y sólo cuando vaya
+  con el clérigo cambie al siguiente objetivo que es la siguiente aldea y su distancia sin revelar aún el nombre"* → al
+  vencer se anuncia el **nombre** y **el objetivo NO avanza** (la barra se queda en la aldea salvada, con su nombre); el
+  **clérigo**, al hablarle, **avanza a la siguiente y revela dirección y distancia sin nombre** (el nombre llega al
+  entrar). Si la aldea **cae**, el objetivo sí avanza (esa ya no se salva) y sin revelar nada, solo con el rumbo.
 
 **Medido con el arnés**: `esElDiario=true titulo="Diario del Invocado" autor="Los clérigos" paginas=1` con las tres
-aldeas del jugador dentro (nombre, coordenadas, estado y rumbo), y `CLERIGO-CHARLA antes: revelada(7)=false` →
-`despues: revelada(7)=true` → `otra vez: true` (no repite el aviso). Y el camino del asedio ya **no** revela
-(`al vencer un asedio ya NO se revela nada`).
+aldeas del jugador dentro (nombre, coordenadas, estado y rumbo); `CLERIGO-CHARLA antes: revelada(7)=false` →
+`despues: true` → `otra vez: true`; y el caso del jugador, **`CHARLA-TRAS-GANAR antes: indice=2 barra(2)="Aldea de
+Robledal (0 m)"`** (la ganada, con nombre) → **`despues: indice=3 revelada(3)=true barra(3)="Aldea (1234 m) →"`** (la
+siguiente, revelada y **sin nombre**).
 
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 

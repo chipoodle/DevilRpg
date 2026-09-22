@@ -1340,14 +1340,18 @@ public final class VillageManager {
                         }
                         if (isCurrentObjective) {
                             if (!cayo) {
-                                // LA ALDEA SE SALVÓ: se anuncia su NOMBRE y se pone al día el Diario del Invocado. La
-                                // DIRECCIÓN de la siguiente NO se revela aquí: eso es al HABLAR con el clérigo, que es
-                                // lo que pidió el jugador —*"cuando se gane el asedio aparezca el nombre de la aldea y
-                                // se actualice el libro del invocado, pero SOLO cuando se hable con el clérigo es
-                                // cuando ya aparezca en los objetivos hacia dónde está la aldea y su distancia"*—.
+                                // LA ALDEA SE SALVÓ: se anuncia su NOMBRE y se pone al día el Diario, y **el objetivo
+                                // NO avanza**: la barra de aldea se queda enseñando ESTA aldea (con su nombre, que ya
+                                // la has descubierto) hasta que le hables al CLÉRIGO, que es quien te pasa a la
+                                // siguiente. Lo pidió el jugador: *"una vez ganado el asedio APAREZCA en la barra de
+                                // aldea el nombre de la aldea actual recién ganada y sólo cuando vaya con el clérigo
+                                // cambie al siguiente objetivo… sin revelar aún el nombre"*.
                                 anunciarLaAldeaSalvada(player, d.objectiveIndex);
+                            } else {
+                                // CAYÓ: esa aldea ya no se puede salvar, así que el objetivo SÍ avanza (y sin revelar
+                                // nada: solo queda el aviso con el rumbo, ver arriba).
+                                aux.setObjectiveIndex(d.objectiveIndex + 1, player);
                             }
-                            aux.setObjectiveIndex(d.objectiveIndex + 1, player);
                         }
                     }
                     // Los que queden vivos dejan de asediar (no convergen al centro): los que no llegaron a
@@ -5103,12 +5107,15 @@ public final class VillageManager {
     }
 
     /**
-     * <b>Hablar con el clérigo</b>: le señala al jugador hacia dónde cae <b>la aldea que le toca</b> (la actual) y le
-     * <b>enciende la barra de aldea</b> con su distancia. Es el <b>único</b> camino que revela la siguiente, y vale
-     * cualquier clérigo de cualquier pueblo del mod (los clérigos son la orden que invocó al jugador, así que todos
-     * saben lo mismo).
+     * <b>Hablar con el clérigo</b>: es el que <b>pasa a la aldea siguiente</b>. Mientras la aldea actual no se haya
+     * salvado, la barra se queda en ella (con su nombre); cuando el jugador le habla al clérigo <b>después de
+     * salvarla</b>, el objetivo <b>avanza</b> a la siguiente y el clérigo le <b>revela la dirección y la distancia</b>
+     * —sin nombre todavía: el nombre llega al entrar en ella—. Lo pidió el jugador: *"una vez ganado el asedio
+     * APAREZCA en la barra de aldea el nombre de la aldea actual recién ganada y sólo cuando vaya con el clérigo
+     * cambie al siguiente objetivo que es la siguiente aldea y su distancia sin revelar aún el nombre"*.
      * <p>
-     * Si ya se la habían señalado, lo dice con otras palabras y no repite el aviso.
+     * Vale cualquier clérigo de cualquier pueblo del mod (los clérigos son la orden que invocó al jugador, así que
+     * todos saben lo mismo). Si ya se la habían señalado, lo dice con otras palabras y no repite el aviso.
      */
     public static void elClerigoSenalaLaAldeaActual(ServerLevel level, Villager clerigo, ServerPlayer player) {
         PlayerAuxiliaryCapabilityInterface aux =
@@ -5123,7 +5130,15 @@ public final class VillageManager {
         if (ancla == null) {
             return;
         }
-        int objetivo = aux.getObjectiveIndex();
+        VillageSavedData saved = VillageSavedData.get(level);
+        int actual = aux.getObjectiveIndex();
+        // ¿LA ACTUAL YA SE SALVÓ? Entonces el clérigo le pasa a la SIGUIENTE (avanza el objetivo). Si no (te están
+        // asediando, o la anterior cayó y esta es la que te toca), le señala la que le toca ahora mismo.
+        boolean salvada = saved.isSiegeResolved(actual) && !saved.isFallen(actual);
+        int objetivo = salvada ? actual + 1 : actual;
+        if (salvada) {
+            aux.setObjectiveIndex(objetivo, player);
+        }
         BlockPos destino = ObjectiveTargets.targetOf(ancla, objetivo);
         String hacia = ObjectiveTargets.direccionHacia(player.blockPosition(), destino);
         double dx = destino.getX() + 0.5D - player.getX();
@@ -5136,11 +5151,13 @@ public final class VillageManager {
             return;
         }
         aux.revelarAldea(objetivo, player);
-        player.displayClientMessage(Component.literal(quien + ": \"Los clérigos sentimos una aldea hacia el " + hacia
-                + ", a unos " + metros + " pasos de aquí. Mira arriba: la barra de aldea ya te guía; camina con la runa"
-                + " encendida.\""), false);
-        DevilRpg.LOGGER.info("[Village] El clerigo {} señala la aldea {} a {} (hacia el {}, {} m)", nombreDe(clerigo),
-                objetivo, player.getName().getString(), hacia, metros);
+        player.displayClientMessage(Component.literal(quien + ": \"" + (salvada
+                ? "Habéis salvado este pueblo. Los clérigos sentimos otra aldea hacia el "
+                : "Los clérigos sentimos una aldea hacia el ")
+                + hacia + ", a unos " + metros + " pasos de aquí. Mira arriba: la barra de aldea ya te guía; camina con"
+                + " la runa encendida.\""), false);
+        DevilRpg.LOGGER.info("[Village] El clerigo {} señala la aldea {} a {} (hacia el {}, {} m{})", nombreDe(clerigo),
+                objetivo, player.getName().getString(), hacia, metros, salvada ? ", tras salvar la " + actual : "");
     }
 
     /**
