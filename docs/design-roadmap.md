@@ -3374,6 +3374,28 @@ aldeas del jugador dentro (nombre, coordenadas, estado y rumbo); `CLERIGO-CHARLA
 Robledal (0 m)"`** (la ganada, con nombre) → **`despues: indice=3 revelada(3)=true barra(3)="Aldea (1234 m) →"`** (la
 siguiente, revelada y **sin nombre**).
 
+### 3b.85 El cráter del creeper que nadie tapaba (y el recolector que no era constructor)
+
+El jugador, con la captura de un hoyo dentro de la aldea: *"hay un hoyo que dejó un creeper durante el asedio, ¿por qué
+nadie lo está reparando? Ahí está Leoncio el recolector, él debería de ser también constructor"* (I90/I91). Tres cosas
+estaban mal, las tres medidas con el arnés (`MEDIR_AGUJERO`, copia de su partida, aldea 2, cota 120):
+
+1. **El cráter no estaba en el plano** y la reparación va por el plano: medido en su mundo, `OBRAS PENDIENTES: 0` con el
+   hoyo ahí. Ahora hay una **segunda pasada** que busca **agujeros del suelo** (aire por debajo de la capa de tránsito,
+   con suelo de aldea debajo, dentro del recinto de la valla, hasta 4 de profundidad) y los tapa de abajo arriba: la capa
+   de arriba (`cota - 1`) con **hierba** y lo de debajo con **tierra**.
+2. **La regla reconocía como agujero el aire donde está de pie el aldeano** (la cota es la Y del aire sobre el suelo, y
+   la banda vieja llegaba a `cota + 1`): los tres obreros devolvían `veObjetivo` = **su propia posición**, o sea que iban
+   a poner un bloque donde estaban de pie. Medido, corregido y vuelto a medir: el cráter pasa de `... ... ...` a
+   **`GGG GGG GGG`** en `cota - 1` (t=400 → t=800), con la capa de tránsito intacta y `veObjetivo=null` al terminar.
+3. **El recolector tenía la marca de obrero pero nunca reparaba**: `NITWIT` está en `VILLAGER_SPECIALTIES` (es una plaza
+   del pueblo), así que `esOficioDelPueblo` devolvía `true` y las dos preguntas de *"¿tiene faena?"* le ponían la
+   reparación a **prioridad 5**, por detrás de su propio goal de recoger (5) —lo contrario de lo que decían los
+   comentarios de `marcarObrero` y `vigilarObreros`—. Medido: `goals=[5:VillagerCollectGoal* …]` sin
+   `VillagerRepairGoal` en tres muestras. Con la nueva pregunta (`tieneFaenaPropia`), el recolector repara a **prioridad
+   3**: medido, `3:VillagerRepairGoal` y **él** es quien tapa el cráter (*"Reparando la aldea"* → *"Repuso tierra"* →
+   *"Recogiendo"*).
+
 ## 3c) Iteración 2 — GUARIDAS — CERRADA ✅
 
 Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el jugador puede **asaltar**.

@@ -5797,6 +5797,27 @@ public final class VillageGenerator {
     }
 
     /**
+     * ¿Ese oficio es una <b>faena propia</b>, es decir un goal de oficio que le disputa el turno al de
+     * <b>reparar</b>? Es todo oficio del pueblo <b>menos el del recolector</b> ({@code NITWIT}).
+     * <p>
+     * Hace falta separarlo de {@link #esOficioDelPueblo} porque el <b>recolector ocupa una plaza del reparto</b>
+     * (está en {@link #VILLAGER_SPECIALTIES}: es un puesto del pueblo y hay que reponerlo si falta) pero <b>no tiene
+     * oficio</b>: sin faena suya, es <b>EL constructor</b> de la aldea y lleva la reparación a prioridad <b>3</b>, por
+     * delante de todo (ver {@code VillageManager.marcarObrero} y el orden de {@code VillageManager.vigilarObreros}).
+     * <p>
+     * Esto era un <b>fallo silencioso</b>: el recolector entró en {@code VILLAGER_SPECIALTIES} al darle el puesto, y
+     * las dos preguntas de "¿tiene faena?" se hacían con {@code esOficioDelPueblo}, así que a partir de ahí el
+     * constructor del pueblo pasó a reparar a <b>prioridad 5</b> —la última, por detrás de su propio goal de recoger
+     * (5) y del de oficio de los demás— mientras los comentarios seguían diciendo que iba a la 3. Medido en el arnés
+     * ({@code MEDIR_AGUJERO}, aldea 2 de la copia): el recolector <b>Anselmo</b> tenía marcada la reparación pero
+     * <b>nunca</b> aparecía entre sus goals activos ({@code activos=[VillagerCollectGoal VillagerGateGoal]} en las tres
+     * medidas, cada 10 s), y el cráter de creeper del jugador se quedaba abierto con él al lado.
+     */
+    public static boolean tieneFaenaPropia(VillagerProfession profesion) {
+        return esOficioDelPueblo(profesion) && profesion != VillagerProfession.NITWIT;
+    }
+
+    /**
      * Cuántos <b>puestos fijos</b> tiene una aldea: uno por sitio de {@link #VILLAGER_SPOTS} (once desde la etapa H:
      * tres granjeros, los dos herreros, el clérigo, el recolector, el ganadero, el cocinero, el pescador y el
      * leñador). Lo usa el gestor como <b>tope de crecimiento</b> de los puestos y como <b>aldea sana</b>: a partir de

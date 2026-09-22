@@ -176,7 +176,10 @@ public class VillagerRepairGoal extends Goal {
             return;
         }
         workTicks = 0;
-        BlockState state = VillageManager.blueprintState(level, objectiveIndex, target);
+        // El bloque lo dice VillageManager.bloqueParaReparar: el del PLANO si la celda está en el plano, y si no el del
+        // SUELO (hierba arriba, tierra abajo) cuando es un agujero del suelo — el cráter de un creeper, que en el
+        // plano no está y antes no lo tapaba nadie.
+        BlockState state = VillageManager.bloqueParaReparar(level, objectiveIndex, target);
         if (state != null) {
             // La TIERRA DE CULTIVO se repone REGADA, como la pondría el juego (`FarmBlock.isNearWater`): el plano la
             // guarda sin humedad (es estado transitorio, ver `VillageGenerator.estadoDelPlano`), así que reponerla tal

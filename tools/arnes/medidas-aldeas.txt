@@ -203,6 +203,63 @@ Corridas: 3 (22-sep-2026 00:09, 00:33 y 00:44). La 3a anade el escenario de los 
 
 Ninguno: cero `Exception` / `ERROR` en las tres corridas.
 
+--- 10) EL AGUJERO DEL CREEPER (ronda del 22-sep, MEDIR_AGUJERO) -----------------------
+
+Pregunta del jugador, con captura de un crater dentro de la aldea:
+  "hay un hoyo que dejo un creeper durante el asedio, ¿por que nadie lo esta reparando?
+   Ahi esta Leoncio el recolector, el deberia de ser tambien constructor".
+
+Mundo: copia de `New World (1)` en `run/world`; aldea 2 de la copia, cota 120.
+Crater abierto por el arnes: 3x3x2 en (1421, 120..119, 1421).
+
+ANTES DEL ARREGLO (tres fallos, los tres medidos):
+  a) La REGLA se equivocaba de capa: `esAgujeroDelSuelo` aceptaba dy hasta +1 y la cota es la Y
+     del AIRE sobre el suelo (`groundY` = suelo+1), asi que el aire donde el aldeano tiene los
+     PIES contaba como agujero. Los TRES obreros devolvian `veObjetivo` = su propia
+     `blockPosition` (su meta era poner un bloque DONDE ESTABAN DE PIE):
+       CONSTRUCTOR Eustaquio pos=x=1396, y=121, z=1372  veObjetivo=x=1396, y=121, z=1372
+       CONSTRUCTOR Nicolasa  pos=x=1427, y=120, z=1395  veObjetivo=x=1427, y=120, z=1395
+       CONSTRUCTOR Anselmo   pos=x=1434, y=120, z=1416  veObjetivo=x=1434, y=120, z=1416
+  b) El bloque de la capa de arriba estaba mal: el crater pedia `minecraft:dirt` en la celda de
+     `cota-1`, que es justo la capa de HIERBA del suelo de la aldea.
+  c) Ademas NADIE lo reparaba: el recolector tenia la marca de obrero pero su goal de reparar
+     estaba a prioridad 5, por detras de su propio goal de recoger (5) y del oficio (4):
+       CONSTRUCTOR Anselmo ... goals=[5:VillagerCollectGoal* 2:VillagerGateGoal* ...]
+     (tres medidas, cada 10 s: `VillagerRepairGoal` NUNCA en ejecucion)
+
+DESPUES DEL ARREGLO (misma corrida, los tres arreglos juntos):
+  1) La regla, celda a celda (t=300):
+       AGUJERO celda x=1421, y=120, z=1421  esAgujero=false  bloqueParaReparar=null
+       AGUJERO celda x=1421, y=119, z=1421  esAgujero=true   bloqueParaReparar=Block{minecraft:grass_block}
+       AGUJERO: 9 de 18 celdas reconocidas como agujero del suelo
+       AGUJERO: findRepairTarget dice x=1421, y=119, z=1421
+       AGUJERO: 3 constructor(es) marcados en la aldea
+  2) El crater, capa a capa con el tiempo (`.`=aire, `G`=hierba; capa cota | capa cota-1):
+       t=400   ... ... ...  |  ... ... ...
+       t=600   ... ... ...  |  GGG ..G ...
+       t=800   ... ... ...  |  GGG GGG GGG
+       t=1600  ... ... ...  |  GGG GGG GGG
+     -> las 9 celdas del suelo (cota-1) quedan de HIERBA y la capa de transito (cota) sigue
+        siendo aire: el crater queda relleno AL NIVEL DEL SUELO, sin escalon.
+  3) QUIEN lo hizo: el RECOLECTOR, y a prioridad 3:
+       CONSTRUCTOR Anselmo ... goals=[5:VillagerCollectGoal 2:VillagerGateGoal 2:VillagerDoorGoal
+                                      7:VillagerTavernGoal 3:VillagerRepairGoal]  etiqueta="Anselmo (Recolector)"
+       ... etiqueta="Anselmo (Recolector) / Reparando la aldea"
+       ... etiqueta="Anselmo (Recolector) / Repuso tierra"    (una capa mas abajo que la hierba)
+       ... veObjetivo=null  etiqueta="Anselmo (Recolector) / Recogiendo"  -> ya no hay nada roto
+  4) Cero `Exception` en la corrida.
+
+LO QUE ESTA MEDIDA NO CUBRE:
+  - El crater de la PARTIDA DEL JUGADOR, celda a celda: no medido. Su mundo tiene
+    `OBRAS PENDIENTES: 0` (el plano completo) y el crater esta en terreno natural que el plano no
+    apunta. La regla es la misma y su aldea tiene obrero marcado (Leoncio, Recolector), pero **el
+    hoyo de su captura no lo he medido**: lo vera el en cuanto abra el mundo.
+  - Cuantos agujeros del suelo tiene una aldea del jugador: no medido. La regla tapa CUALQUIER
+    celda de aire por debajo de la capa de transito con suelo de aldea debajo, dentro del recinto
+    (radio 62). El talud empieza en el radio 64 (`LEVEL_RADIUS = FENCE_RADIUS + 2`) y el generador
+    sella el suelo al construir (`sellarSuelo`), asi que una aldea sana no deberia tener nada que
+    tapar; si el jugador ve a los obreros "tapando baches", es esta regla.
+
 ================================================================================
 LO QUE ESTA MEDIDA **NO** CUBRE (pendiente, y hay que decirlo)
 ================================================================================

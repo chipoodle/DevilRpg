@@ -2203,6 +2203,73 @@ deja huella y el pueblo la levanta otra vez.
 **Pendiente de medir**: el intento con el arnés (`MEDIR_MURO`) no llegó a arrancar —el jugador tenía la partida abierta
 y bloqueados los artefactos del build—, así que la brecha está escrita y compilada, pero **no vista en juego**.
 
+### I90 · El cráter de un creeper también se tapa: el AGUJERO DEL SUELO
+
+El jugador, con una captura de un hoyo **dentro** de la aldea y el recolector al lado: *"hay un hoyo que dejó un creeper
+durante el asedio, ¿por qué nadie lo está reparando? Ahí está Leoncio el recolector, él debería de ser también
+constructor"*.
+
+**Por qué nadie lo reparaba**: la reparación va **por el plano** (`VillageGenerator.captureBlueprint`) y el cráter está en
+**terreno natural**, que el generador no apunta. Medido en su partida: `OBRAS PENDIENTES: 0` —el plano **completo**— con
+el hoyo abierto a la vista. El obrero daba la aldea por terminada.
+
+**Regla**: el obrero repone, además del plano, las **celdas del suelo que faltan** dentro del recinto (radio de la valla,
+62): una celda de **aire** por debajo de **la capa de tránsito**, con **suelo de aldea justo debajo** (`dirt`, `grass`,
+`coarse_dirt`, `podzol`, `rooted_dirt`, `mud`, `gravel`, `sand`, `stone`, andesita, diorita, granito, `dirt_path`,
+`farmland`) y hasta `AGUJERO_MAX_PROFUNDIDAD` = 4 hacia abajo. Se tapa **de abajo arriba** (cada celda tapada deja suelo
+debajo de la de encima) con **hierba en la capa de arriba** (`cota - 1`) y **tierra** por debajo. Nunca se pisa una celda
+que ya tenga bloque: si el jugador puso algo ahí, se queda.
+
+Dos fallos medidos en el primer intento (los dos en el **mismo** sitio: la cota es la Y del **aire** sobre el suelo,
+`VillageGenerator.groundY` devuelve `suelo + 1`):
+
+- **El agujero era el propio aldeano.** La banda admitía `dy` hasta **+1**, así que el aire donde el aldeano tiene los
+  **pies** —que tiene suelo debajo, la hierba— contaba como agujero. Medido con el arnés (`MEDIR_AGUJERO`, aldea 2 de la
+  copia): los **tres** obreros devolvían `veObjetivo` = **su propia `blockPosition`**, o sea que su meta era poner un
+  bloque **donde estaban de pie**. Ahora la banda es `cota - 1` hacia abajo, nunca la capa de arriba.
+- **La hierba iba a la capa de abajo.** El bloque de la capa de arriba es `cota - 1`, no la cota: el cráter pedía
+  `minecraft:dirt` en la celda del **césped** del suelo de la aldea. Ahora `cota - 1` es `grass_block` y por debajo,
+  `dirt`.
+
+**Medido de punta a punta** (misma corrida, cráter de 3x3x2 abierto por el arnés en `(1421, 120..119, 1421)` de la copia,
+cota 120): `findRepairTarget` → `BlockPos{x=1421, y=119, z=1421}`; el cráter queda `... ... ...` en la capa de tránsito
+y **`GGG GGG GGG` en `cota - 1`** (hierba, sin escalón) entre t=600 y t=800; y al final `veObjetivo=null` (la aldea vuelve
+a estar completa). Lo tapó **Anselmo (Recolector)** con la etiqueta *"Reparando la aldea"* → *"Repuso tierra"* → otra vez
+*"Recogiendo"*. Ver I91: el que lo tapó es el recolector **porque** su reparación va a prioridad 3.
+
+**Alcance y límites (lo que esto NO distingue)**: por bloques, un cráter de creeper y un agujero **cavado por el
+jugador** (o un hoyo natural) son lo mismo, así que la regla los tapa **todos**. No es un desastre de tapizado: el
+terreno llano de la aldea es de radio 64 (`LEVEL_RADIUS = FENCE_RADIUS + 2`), el **talud** empieza en 64 (fuera del 62 que
+mira la regla) y el generador **sella el suelo** al construir (`sellarSuelo`), así que una aldea sana no tiene casi nada
+que la regla encuentre; y la búsqueda solo se paga cuando el plano **no** tiene nada pendiente.
+
+**No medido**: el cráter concreto de la captura del jugador (celda a celda) y cuántos agujeros del suelo tiene una aldea
+suya. Se mide con el arnés en modo `MEDIR_AGUJERO` (ver `tools/arnes/LEEME.md`).
+
+### I91 · El RECOLECTOR es el constructor: su reparación va a prioridad 3
+
+El jugador, en la misma captura: *"Ahí está Leoncio el recolector, él debería de ser también constructor"*. **Ya estaba
+marcado como obrero** (medido: `Leoncio (Recolector)`, `Remigio (Clérigo)` y `Hortensia (Leñador)` marcados en su aldea)
+y aun así **no reparaba**. El motivo era una **contradicción entre el comentario y el código**:
+
+- `NITWIT` (el holgazán = el **recolector**) **sí** está en `VILLAGER_SPECIALTIES`: ocupa una **plaza del pueblo** y hay que
+  reponerlo si falta. Por eso `VillageGenerator.esOficioDelPueblo(NITWIT)` devuelve **`true`**.
+- Pero las dos preguntas de *"¿tiene faena?"* —la de `marcarObrero` (la prioridad) y la del orden de `vigilarObreros`
+  (quién es obrero primero)— se hacían con `esOficioDelPueblo`. Resultado: al recolector **no** se le trataba como al
+  aldeano sin faena, sino como a un oficio más → reparación a **prioridad 5** (la última, por detrás de su propio goal de
+  recoger, 5, y del oficio de los demás, 4) y **nunca** entraba en la pasada 0 del reparto. Los comentarios de las dos
+  funciones decían justo lo contrario (*"el holgazán/recolector… su reparación va a prioridad 3, por delante de todo"*).
+
+**Medido (arnés, `MEDIR_AGUJERO`)**: el recolector tenía la marca de obrero y `veObjetivo` apuntando al cráter, pero en
+las **tres** muestras (cada 10 s) sus goals activos eran `[5:VillagerCollectGoal* 2:VillagerGateGoal* …]`:
+`VillagerRepairGoal` **no aparecía**. Es el goal selector de siempre: un goal de prioridad 5 no se evalúa mientras uno de
+prioridad 4 tiene la bandera `MOVE`.
+
+**Arreglo**: `VillageGenerator.tieneFaenaPropia(oficio)` = `esOficioDelPueblo(oficio) && oficio != NITWIT`, y las **dos**
+preguntas de faena la usan. `esOficioDelPueblo` se queda como está en los otros cuatro usos (el reparto de puestos, la
+reposición de profesiones), donde el recolector **sí** es un puesto del pueblo. Medido después: `3:VillagerRepairGoal`
+entre sus goals, y **él** es quien tapa el cráter (I90).
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 

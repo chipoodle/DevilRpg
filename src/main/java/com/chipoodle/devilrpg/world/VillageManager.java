@@ -2547,7 +2547,7 @@ public final class VillageManager {
                 }
                 boolean yaEra = villager.getPersistentData().getBoolean(BUILDER_TAG);
                 boolean esGranjero = villager.getVillagerData().getProfession() == VillagerProfession.FARMER;
-                boolean sinFaena = !VillageGenerator.esOficioDelPueblo(villager.getVillagerData().getProfession());
+                boolean sinFaena = !VillageGenerator.tieneFaenaPropia(villager.getVillagerData().getProfession());
                 boolean toca = switch (pasada) {
                     case 0 -> sinFaena;               // el holgazán/recolector: el constructor del pueblo
                     case 1 -> yaEra && !esGranjero;   // los obreros de siempre que no son granjeros
@@ -3894,7 +3894,10 @@ public final class VillageManager {
         // granjero y los herreros: con la lista corta (los tres de la etapa E) el PESCADOR (etapa G) y los oficios
         // nuevos reparaban en vez de trabajar, porque su Repair (3) quedaba por encima de su faena (4) con la misma
         // bandera MOVE. Es el fallo de I23, que decía "un aldeano con faena fija" y el código solo cumplía a medias.
-        boolean tieneFaena = VillageGenerator.esOficioDelPueblo(villager.getVillagerData().getProfession());
+        // OJO: la pregunta NO es "¿es oficio del pueblo?" sino "¿tiene una faena que compita con reparar?": el
+        // RECOLECTOR ocupa plaza del pueblo (está en VILLAGER_SPECIALTIES) pero no tiene oficio, y es EL constructor.
+        // Ver `VillageGenerator.tieneFaenaPropia`.
+        boolean tieneFaena = VillageGenerator.tieneFaenaPropia(villager.getVillagerData().getProfession());
         asegurarGoalDeObrero(villager, center, objectiveIndex, tieneFaena ? 5 : 3);
         // Y al que NO tiene faena (el holgazán, el clérigo, un aldeano sin oficio) se le quita la recogida: los dos
         // goals quedarían a prioridad 3 y el de recoger se engancha antes, así que el "constructor" se pasaba el día
@@ -4690,6 +4693,57 @@ public final class VillageManager {
             mejorDist = dist;
             mejor = pos;
         }
+        if (mejor != null) {
+            return mejor;
+        }
+        // SEGUNDA PASADA: LOS AGUJEROS DEL SUELO. El plano no los tiene (un cráter de creeper está en terreno natural,
+        // que el generador no apuntó), así que sin esto nadie los tapaba: el obrero daba la aldea por completa con el
+        // hoyo abierto (medido en la partida del jugador: 0 pendientes en el plano y el cráter ahí).
+        return buscarAgujeroEnElSuelo(level, objectiveIndex, centro, from, excluir, builder);
+    }
+
+    /**
+     * Busca el <b>agujero del suelo</b> más cercano dentro del recinto (ver {@link #esAgujeroDelSuelo}). Recorre una
+     * vez el disco de la aldea —la columna entera de arriba abajo en la banda de la cota— y solo se llama cuando el
+     * plano <b>no</b> tiene nada pendiente, así que el coste se paga únicamente en aldeas sanas.
+     */
+    @Nullable
+    private static BlockPos buscarAgujeroEnElSuelo(ServerLevel level, int objectiveIndex, @Nullable BlockPos centro,
+            BlockPos from, Set<Long> excluir, UUID builder) {
+        if (centro == null) {
+            return null;
+        }
+        int cota = VillageGenerator.cotaDeLaPlaza(level, centro);
+        int radio = VillageGenerator.FENCE_RADIUS;
+        BlockPos mejor = null;
+        double mejorDist = REPAIR_SEARCH_RADIUS * REPAIR_SEARCH_RADIUS;
+        for (int dx = -radio; dx <= radio; dx++) {
+            for (int dz = -radio; dz <= radio; dz++) {
+                if (dx * dx + dz * dz > radio * radio) {
+                    continue;
+                }
+                int x = centro.getX() + dx;
+                int z = centro.getZ() + dz;
+                double dist = from.distSqr(new BlockPos(x, cota, z));
+                if (dist >= mejorDist) {
+                    continue; // más lejos que el mejor agujero que ya tengo: ni se miran los bloques
+                }
+                // De ARRIBA abajo: el primer agujero de la columna (el más alto con suelo debajo) es el que toca.
+                for (int dy = 1; dy >= -AGUJERO_MAX_PROFUNDIDAD; dy--) {
+                    BlockPos pos = new BlockPos(x, cota + dy, z);
+                    long comprimida = pos.asLong();
+                    if (excluir.contains(comprimida) || reclamadoPorOtro(level, comprimida, builder)) {
+                        continue;
+                    }
+                    if (!esAgujeroDelSuelo(level, objectiveIndex, pos)) {
+                        continue;
+                    }
+                    mejorDist = dist;
+                    mejor = pos;
+                    break;
+                }
+            }
+        }
         return mejor;
     }
 
@@ -4737,7 +4791,9 @@ public final class VillageManager {
     public static boolean necesitaReparacion(ServerLevel level, int objectiveIndex, BlockPos pos) {
         BlockState esperado = blueprintState(level, objectiveIndex, pos);
         if (esperado == null) {
-            return false;
+            // NO ESTÁ EN EL PLANO: todavía puede ser un AGUJERO DEL SUELO (el cráter que deja un creeper), que es lo
+            // que nadie tapaba. Ver `esAgujeroDelSuelo`.
+            return esAgujeroDelSuelo(level, objectiveIndex, pos);
         }
         BlockPos centro = centroDe(level, objectiveIndex);
         if (centro != null && VillageGenerator.enLaArboleda(centro, pos)
@@ -4745,6 +4801,89 @@ public final class VillageManager {
             return false;
         }
         return necesitaReparacion(level.getBlockState(pos), esperado);
+    }
+
+    /** Materiales del <b>suelo</b> de la aldea: lo que el generador pone al nivelar y al tapar barrancas y cuevas. */
+    private static final Set<net.minecraft.world.level.block.Block> SUELO_DE_LA_ALDEA = Set.of(Blocks.DIRT,
+            Blocks.GRASS_BLOCK, Blocks.COARSE_DIRT,
+            Blocks.PODZOL, Blocks.ROOTED_DIRT, Blocks.MUD, Blocks.GRAVEL, Blocks.SAND, Blocks.STONE,
+            Blocks.ANDESITE, Blocks.DIORITE, Blocks.GRANITE, Blocks.DIRT_PATH, Blocks.FARMLAND);
+
+    /** Hasta qué profundidad se considera "agujero del suelo" (un cráter de creeper no pasa de 3-4 bloques). */
+    private static final int AGUJERO_MAX_PROFUNDIDAD = 4;
+
+    /**
+     * <b>¿Es un AGUJERO DEL SUELO de la aldea?</b> (lo que deja un creeper al estallar, o lo que cave un bicho): una
+     * celda de <b>aire</b> dentro del recinto, en la banda de la cota, con <b>suelo justo debajo</b>.
+     * <p>
+     * Hace falta porque la reparación de siempre va <b>por el plano</b>, y un cráter en terreno natural <b>no está en
+     * el plano</b>: el jugador lo vio tal cual —*"hay un hoyo que dejó un creeper durante el asedio, ¿por qué nadie lo
+     * está reparando? Ahí está Leoncio el recolector, él debería de ser también constructor"*— y medido en su partida
+     * (`build/obras_pendientes2.py`): **0 celdas pendientes en el plano** y el hoyo ahí, sin que nadie lo tocara.
+     * <p>
+     * Se tapa <b>de abajo arriba</b>: cada celda tapada deja suelo debajo de la de encima, así que la siguiente
+     * pasada la ve y la tapa también; el cráter se rellena solo, capa a capa, igual que lo haría el jugador.
+     * <p>
+     * <b>La capa de aire donde se anda NO es un agujero</b> ({@code dy >= 0} se descarta). Esto no es un detalle: la
+     * cota es la <b>Y del aire sobre el suelo</b> ({@code VillageGenerator.groundY} devuelve {@code suelo + 1}), así
+     * que con la banda vieja ({@code dy <= +1}) el aire en el que el aldeano tiene los <b>pies</b> contaba como
+     * agujero —tiene suelo debajo, que es la hierba— y el obrero se declaraba <b>agujero a sí mismo</b>: medido en el
+     * arnés ({@code MEDIR_AGUJERO}, aldea 2 de la copia), los tres obreros devolvían {@code veObjetivo} = su propia
+     * {@code blockPosition} y su meta era <b>poner un bloque de hierba donde estaban de pie</b>. El cráter de verdad,
+     * en cambio, está <b>por debajo</b> de la capa de aire: el suelo de la aldea llega hasta {@code cota - 1}. Por eso
+     * el agujero es {@code cota - 1} hacia abajo y nunca la capa de arriba.
+     */
+    public static boolean esAgujeroDelSuelo(ServerLevel level, int objectiveIndex, BlockPos pos) {
+        if (!level.getBlockState(pos).isAir()) {
+            return false;
+        }
+        BlockPos centro = centroDe(level, objectiveIndex);
+        if (centro == null) {
+            return false;
+        }
+        double dx = pos.getX() - centro.getX();
+        double dz = pos.getZ() - centro.getZ();
+        if (dx * dx + dz * dz > (double) VillageGenerator.FENCE_RADIUS * VillageGenerator.FENCE_RADIUS) {
+            return false; // fuera del recinto: el campo se deja como está (la naturaleza hace lo suyo)
+        }
+        int cota = VillageGenerator.cotaDeLaPlaza(level, centro);
+        int dy = pos.getY() - cota;
+        // La capa de la cota es AIRE DE TRANSITO (ahí se anda, ver groundY): un agujero empieza justo debajo. Y hacia
+        // abajo, hasta donde llega un cráter; más allá es una cueva y no se tapa.
+        if (dy > -1 || dy < -AGUJERO_MAX_PROFUNDIDAD) {
+            return false;
+        }
+        return esSueloDeLaAldea(level.getBlockState(pos.below()));
+    }
+
+    private static boolean esSueloDeLaAldea(BlockState state) {
+        return SUELO_DE_LA_ALDEA.contains(state.getBlock());
+    }
+
+    /**
+     * El bloque con el que se tapa un hueco: <b>el del plano</b> si esa celda está en el plano (así se repone
+     * exactamente lo que había: el camino, la huerta, la hierba) y, si no está, el del <b>suelo</b>: <b>hierba</b> en
+     * la capa de arriba y <b>tierra</b> por debajo, que es como está hecho el suelo de la aldea (el generador nivela
+     * con tierra y pone hierba encima).
+     * <p>
+     * La capa de arriba es {@code cota - 1}, <b>no</b> la cota: la cota es la Y del <b>aire</b> sobre el suelo
+     * ({@code VillageGenerator.groundY} devuelve {@code suelo + 1}), así que el último bloque sólido del suelo está
+     * justo debajo. Poniendo la hierba en {@code y >= cota} el cráter se tapaba con <b>tierra</b> (y encima se
+     * levantaba un escalón de hierba en la capa de aire): medido en el arnés, el agujero abierto en
+     * {@code cota - 1} pedía {@code minecraft:dirt} en vez de {@code minecraft:grass_block}.
+     */
+    @Nullable
+    public static BlockState bloqueParaReparar(ServerLevel level, int objectiveIndex, BlockPos pos) {
+        BlockState delPlano = blueprintState(level, objectiveIndex, pos);
+        if (delPlano != null) {
+            return delPlano;
+        }
+        if (!esAgujeroDelSuelo(level, objectiveIndex, pos)) {
+            return null;
+        }
+        BlockPos centro = centroDe(level, objectiveIndex);
+        int cota = centro == null ? pos.getY() : VillageGenerator.cotaDeLaPlaza(level, centro);
+        return (pos.getY() >= cota - 1 ? Blocks.GRASS_BLOCK : Blocks.DIRT).defaultBlockState();
     }
 
     /**

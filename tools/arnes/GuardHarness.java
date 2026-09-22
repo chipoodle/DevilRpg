@@ -133,6 +133,15 @@ public class GuardHarness {
      * y que en la línea aparezca <b>aire</b> donde había muralla. Y de paso que <b>no</b> toque nada de dentro.
      */
     private static final boolean MEDIR_MURO = false;
+    /**
+     * ¿Se mide LA REPARACIÓN DE UN AGUJERO DEL SUELO (el cráter de un creeper, que NO está en el plano)? Abre un
+     * cráter de 3x3x2 en el suelo de la aldea y vuelca sus dos capas con letras ('.'=aire, 'G'=hierba, 'D'=tierra,
+     * 'P'=camino) para ver si el CONSTRUCTOR lo va tapando capa a capa.
+     * <p>
+     * Lo pidió el jugador: *"hay un hoyo que dejó un creeper durante el asedio, ¿por qué nadie lo está reparando? Ahí
+     * está Leoncio el recolector, él debería de ser también constructor"*.
+     */
+    private static final boolean MEDIR_AGUJERO = false;
     /** Dónde se planta el bicho (relativo a la plaza): dentro del recinto (radio 62) y a la altura del pueblo. */
     private static final BlockPos BICHO_EN = new BlockPos(6, 0, 6);
     private static boolean listo = false;
@@ -222,6 +231,8 @@ public class GuardHarness {
             medirElAsedioVivo(level, pega);
         } else if (MEDIR_MURO) {
             medirElAsaltoAlMuro(level, pega);
+        } else if (MEDIR_AGUJERO) {
+            medirElAgujeroDelSuelo(level, pega);
         } else if (MEDIR_COCINA) {
             // LA COCINA, cada 2 s: donde esta el cocinero, si VE el ahumador y si tiene ruta a su casilla.
             if (ticks == 400) {
@@ -912,6 +923,92 @@ public class GuardHarness {
                 com.chipoodle.devilrpg.survival.VillageBarText.texto(3, aux.isAldeaVisitada(3),
                         aux.isAldeaRevelada(3), 1234, "->"));
         aux.setObjectiveIndex(0, pega);
+    }
+
+    /** El cráter de la medida: centro y si ya se ha abierto. */
+    private static BlockPos centroDelAgujero = null;
+
+    /** LA REPARACIÓN DE UN AGUJERO DEL SUELO: ver {@link #MEDIR_AGUJERO}. */
+    private static void medirElAgujeroDelSuelo(ServerLevel level, FakePlayer pega) {
+        int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+        if (ticks == 300) {
+            centroDelAgujero = new BlockPos(CENTRO.getX() + 7, cota, CENTRO.getZ() + 7);
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    for (int dy = 0; dy >= -1; dy--) {
+                        level.setBlock(centroDelAgujero.offset(dx, dy, dz),
+                                net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(),
+                                net.minecraft.world.level.block.Block.UPDATE_ALL);
+                    }
+                }
+            }
+            DevilRpg.LOGGER.info("[Arnes] AGUJERO: crater de 3x3x2 abierto en {} (cota {}) — lo tiene que tapar un"
+                    + " CONSTRUCTOR", centroDelAgujero, cota);
+            // DIAGNOSTICO: ¿reconoce la REGLA el crater? ¿que bloque pondria? ¿lo ve el buscador del constructor?
+            int reconocidas = 0;
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    for (int dy = 0; dy >= -1; dy--) {
+                        BlockPos p = centroDelAgujero.offset(dx, dy, dz);
+                        boolean es = VillageManager.esAgujeroDelSuelo(level, INDICE, p);
+                        var bloque = VillageManager.bloqueParaReparar(level, INDICE, p);
+                        if (es) {
+                            reconocidas++;
+                        }
+                        if (dy == 0 || (dx == 0 && dz == 0)) {
+                            DevilRpg.LOGGER.info("[Arnes] AGUJERO celda {} esAgujero={} bloqueParaReparar={}", p, es,
+                                    bloque == null ? "null" : bloque.getBlock());
+                        }
+                    }
+                }
+            }
+            DevilRpg.LOGGER.info("[Arnes] AGUJERO: {} de 18 celdas reconocidas como agujero del suelo", reconocidas);
+            BlockPos objetivo = VillageManager.findRepairTarget(level, INDICE, centroDelAgujero, new java.util.HashSet<>(),
+                    java.util.UUID.randomUUID());
+            DevilRpg.LOGGER.info("[Arnes] AGUJERO: findRepairTarget dice {} (el constructor deberia ir ahi)", objetivo);
+            var constructores = level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(96.0D),
+                    v -> v.getPersistentData().getBoolean("DevilRpgBuilder"));
+            DevilRpg.LOGGER.info("[Arnes] AGUJERO: {} constructor(es) marcados en la aldea", constructores.size());
+        }
+        if (centroDelAgujero == null || ticks % 200 != 0) {
+            return;
+        }
+        DevilRpg.LOGGER.info("[Arnes] AGUJERO t={} capa cota: {} | capa cota-1: {}", ticks,
+                capaDelAgujero(level, centroDelAgujero, 0), capaDelAgujero(level, centroDelAgujero, -1));
+        // Y QUE ESTA HACIENDO CADA CONSTRUCTOR: su objetivo de reparacion, si descansa, si hay asedio, sus goals.
+        for (Villager b : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(96.0D),
+                v -> v.getPersistentData().getBoolean("DevilRpgBuilder"))) {
+            BlockPos suObjetivo = VillageManager.findRepairTarget(level, INDICE, b.blockPosition(),
+                    new java.util.HashSet<>(), b.getUUID());
+            StringBuilder goals = new StringBuilder();
+            for (net.minecraft.world.entity.ai.goal.WrappedGoal w : b.goalSelector.getAvailableGoals()) {
+                goals.append(w.getPriority()).append(':').append(w.getGoal().getClass().getSimpleName());
+                goals.append(w.isRunning() ? "* " : " ");
+            }
+            DevilRpg.LOGGER.info("[Arnes] CONSTRUCTOR {} pos={} destino={} descansando={} asedio={} veObjetivo={}"
+                            + " goals=[{}] etiqueta=\"{}\"", VillageManager.nombreDe(b), b.blockPosition(),
+                    b.getNavigation().getTargetPos(), VillageManager.estaDescansando(b),
+                    VillageManager.isVillageUnderAttack(level, INDICE), suObjetivo, goals.toString().trim(),
+                    etiquetaDe(b));
+        }
+    }
+
+    /** Una capa del cráter en 3 líneas de 3 letras: '.'=aire, 'G'=hierba, 'D'=tierra, 'P'=camino, '?'=otro. */
+    private static String capaDelAgujero(ServerLevel level, BlockPos centro, int dy) {
+        StringBuilder sb = new StringBuilder();
+        for (int dz = -1; dz <= 1; dz++) {
+            for (int dx = -1; dx <= 1; dx++) {
+                var bs = level.getBlockState(centro.offset(dx, dy, dz));
+                String letra = bs.isAir() ? "."
+                        : bs.is(net.minecraft.world.level.block.Blocks.GRASS_BLOCK) ? "G"
+                        : bs.is(net.minecraft.world.level.block.Blocks.DIRT) ? "D"
+                        : bs.is(net.minecraft.world.level.block.Blocks.DIRT_PATH) ? "P"
+                        : "?";
+                sb.append(letra);
+            }
+            sb.append(' ');
+        }
+        return sb.toString().trim();
     }
 
     /** Ticks que lleva la ola a la vista (para limpiarla a los 10 s) y dónde está la aldea del asedio. */
