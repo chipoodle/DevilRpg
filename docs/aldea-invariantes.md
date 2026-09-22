@@ -2433,15 +2433,24 @@ de cuero Protección IV**, arco Potencia III, escudo y 32 flechas) y la revisió
   **pero los guardias seguían con todo vacío y su marca de revisión en 0** → o el arnés lee el equipo en el sitio
   equivocado, o lo que se llevó el material **no fueron los guardias**. No se puede afirmar ninguna de las dos cosas.
 
-**Fallo REAL que destapó esa corrida (en mi propio cambio)**: el herrero decide **qué** fundir con
-`contarChatarra`/`haySobranteChatarra` (que ya no cuentan lo encantado ✓) pero al **coger** el ingrediente usa
-`ItemStack.isSameItem`, que **ignora los encantamientos** → puede llevarse justo la pieza encantada que la regla quería
-proteger. La decisión y el saque tienen que usar **el mismo filtro**. (Es el candidato número uno a explicar el almacén
-vacío: el herrero se lleva espadas, escudos y cascos de cuero como "chatarra".)
+**CORRECCIÓN de lo anterior (importante, y era mi error)**: el almacén **no lo vació el mod, lo vació el ARNÉS**.
+En `ticks == 600` el arnés vacía el almacén para su medida de la *remesa inicial de madera*, y `MEDIR_EQUIPO` no estaba
+en la lista de modos excluidos: sembró el almacén a los 10 s y a los 30 s el propio montaje lo tiró. Arreglado (el modo
+ya está excluido), y con eso la 2ª corrida es la buena.
 
-**Siguiente**: arreglar ese filtro, volcar el equipo del guardia por **los dos caminos** (manos/armadura y su
-`Inventory`, que es donde puede acabar lo que coge) y repetir la corrida. El **modelo** del guardia con su equipo es
-del CLIENTE.
+**2ª corrida (almacén a salvo) — el fallo del guardia queda AL AIRE, sin diagnosticar**: el almacén mantiene el equipo
+(espada de hierro ×4, espada de oro **Filo V**, casco de diamante, casco de cuero **Protección IV**, arco **Potencia
+III**, escudo ×3) y los **5 guardias siguen sin nada y con su marca de revisión en 0** durante los 3800 ticks: no llegan
+a `equipar` (que es quien marca y quien registra en el log). Y sin embargo el almacén **sí pierde** 2 espadas de hierro
+(t=1400) y 1 escudo (t=2400) **sin una sola línea de "se equipo con"** → esos dos los coge **otro** camino, no el goal
+del guardia (¿el alistamiento de la milicia?).
+
+**Siguiente (concreto)**: (1) averiguar por qué el guardia no llega a `equipar` (¿no le corre el goal? ¿se queda
+atorado en el camino al almacén? — ya pasó una vez: *"la única guardia, horas en el almacén"*); (2) quién coge esas 2
+espadas y ese escudo; (3) arreglar la **incoherencia** que sí existe en el herrero, aunque no sea la causa de nada
+medido: decide **qué** fundir con `contarChatarra` (que ya no cuenta lo encantado ✓) pero al **coger** el ingrediente usa
+`ItemStack.isSameItem`, que **ignora los encantamientos** → puede llevarse justo la pieza que la regla quería proteger
+(la decisión y el saque tienen que usar **el mismo filtro**). El **modelo** del guardia con su equipo es del CLIENTE.
 
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:

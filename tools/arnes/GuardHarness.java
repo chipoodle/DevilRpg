@@ -180,7 +180,11 @@ public class GuardHarness {
         // cadena del CLERIGO: verruga del Nether, polvo de blaze y BOTELLAS DE CRISTAL (para que tenga que ir al agua
         // a llenarlas: ver SEMBRAR_AGUA_EMBOTELLADA); y el botin que ya barre el recolector (pepitas de oro,
         // zanahorias, ojos de arana) para la zanahoria dorada.
-        if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && ticks == 600) {
+        // OJO: en esta pasada se VACIA EL ALMACEN entero, asi que los modos que SIEMBRAN el almacen tienen que quedar
+// fuera. MEDIR_EQUIPO no estaba y su medida salio inconclusa por esto: sembro el almacen a los 10 s y a los 30 s
+// (t=600) este bloque lo vacio, asi que el equipo desaparecio antes de que ningun guardia llegara a verlo.
+if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_EQUIPO && !MEDIR_LENADOR
+                && ticks == 600) {
             // --- TERCERA MEDIDA: LA REMESA INICIAL DE MADERA ---------------------------------------------------
             // Se VACIA el almacen entero (como el de una aldea recien fundada, que nace sin nada dentro): en la
             // siguiente pasada del latido el pueblo tiene que meter su remesa inicial de 128 troncos, UNA vez.
