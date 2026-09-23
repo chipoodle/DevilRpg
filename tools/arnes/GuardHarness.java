@@ -831,6 +831,116 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
      */
     private static void vigilarLaHuerta(ServerLevel level) {
         int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+        // LA TIERRA, CULTIVO A CULTIVO (reporte del jugador: "otra vez los granjeros están dejando demasiadas
+        // parcelas sin cosechar... ya no hay verduras para comer"): cuántas plantas están MADURAS (edad al máximo de
+        // su cultivo), cuántas creciendo, cuántas celdas VACÍAS y cuántas PISOTEADAS. Es lo que distingue "el granjero
+        // va lento" de "el granjero no está".
+        for (int i = 0; i < com.chipoodle.devilrpg.world.VillageGenerator.parcelasDeGranja(); i++) {
+            BlockPos esq = com.chipoodle.devilrpg.world.VillageGenerator.esquinaDeLaParcela(CENTRO, i, cota);
+            int maduras = 0;
+            int creciendo = 0;
+            int vacias = 0;
+            int pisoteadas = 0;
+            int sinTierra = 0;
+            int ancho = com.chipoodle.devilrpg.world.VillageGenerator.PLOT_WIDTH;
+            int fondo = com.chipoodle.devilrpg.world.VillageGenerator.PLOT_DEPTH;
+            for (int dx = 0; dx < ancho; dx++) {
+                for (int dz = 0; dz < fondo; dz++) {
+                    BlockPos suelo = new BlockPos(esq.getX() + dx, cota - 1, esq.getZ() + dz);
+                    BlockPos planta = new BlockPos(esq.getX() + dx, cota, esq.getZ() + dz);
+                    var abajo = level.getBlockState(suelo);
+                    var arriba = level.getBlockState(planta);
+                    if (!abajo.is(net.minecraft.world.level.block.Blocks.FARMLAND)) {
+                        if (abajo.is(net.minecraft.world.level.block.Blocks.WATER)) {
+                            continue; // la acequia del centro no es celda de cultivo
+                        }
+                        sinTierra++;
+                        continue;
+                    }
+                    if (arriba.getBlock() instanceof net.minecraft.world.level.block.CropBlock cultivo) {
+                        if (com.chipoodle.devilrpg.world.VillageGenerator.edadDelCultivo(arriba)
+                                >= cultivo.getMaxAge()) {
+                            maduras++;
+                        } else {
+                            creciendo++;
+                        }
+                    } else if (arriba.isAir()) {
+                        vacias++;
+                    } else {
+                        pisoteadas++;
+                    }
+                }
+            }
+            DevilRpg.LOGGER.info("[Arnes] TIERRA bancal {}: MADURAS {} | creciendo {} | VACIAS {} | pisoteadas {}"
+                    + " | sin tierra de cultivo {}", i, maduras, creciendo, vacias, pisoteadas, sinTierra);
+        }
+        // Y LA COMIDA DE VERDAD: los puntos de la despensa, lo que hay dentro (trigo, semillas, harina, pan,
+        // vegetales) y lo que hay en el almacén. Es lo que responde a "ya no hay verduras para comer".
+        var despensa = com.chipoodle.devilrpg.world.VillagePantry.despensa(level, CENTRO);
+        int trigo = 0;
+        int semillas = 0;
+        int pan = 0;
+        int harina = 0;
+        int vegetales = 0;
+        if (despensa != null) {
+            for (int i = 0; i < despensa.getContainerSize(); i++) {
+                var s = despensa.getItem(i);
+                if (s.isEmpty()) {
+                    continue;
+                }
+                if (s.is(net.minecraft.world.item.Items.WHEAT)) {
+                    trigo += s.getCount();
+                } else if (s.is(net.minecraft.world.item.Items.BREAD)) {
+                    pan += s.getCount();
+                } else if (s.is(net.minecraft.world.item.Items.BONE_MEAL)) {
+                    harina += s.getCount();
+                } else if (com.chipoodle.devilrpg.world.VillagePantry.esVegetal(s)) {
+                    vegetales += s.getCount();
+                } else if (s.is(net.minecraft.world.item.Items.WHEAT_SEEDS)
+                        || s.is(net.minecraft.world.item.Items.BEETROOT_SEEDS)
+                        || s.is(net.minecraft.world.item.Items.CARROT)
+                        || s.is(net.minecraft.world.item.Items.POTATO)) {
+                    semillas += s.getCount();
+                }
+            }
+        }
+        DevilRpg.LOGGER.info("[Arnes] COMIDA: despensa {} punto(s) [trigo {} semillas {} pan {} harina {} vegetales {}]",
+                com.chipoodle.devilrpg.world.VillagePantry.comida(level, CENTRO), trigo, semillas, pan, harina,
+                vegetales);
+        var caja = com.chipoodle.devilrpg.world.VillageStorage.almacen(level, CENTRO);
+        int comidaAlmacen = 0;
+        if (caja != null) {
+            for (int i = 0; i < caja.getContainerSize(); i++) {
+                var s = caja.getItem(i);
+                if (!s.isEmpty() && (com.chipoodle.devilrpg.world.VillagePantry.esCarneCruda(s)
+                        || com.chipoodle.devilrpg.world.VillagePantry.esCarneCocida(s)
+                        || com.chipoodle.devilrpg.world.VillagePantry.esVegetal(s)
+                        || s.is(net.minecraft.world.item.Items.WHEAT_SEEDS)
+                        || s.is(net.minecraft.world.item.Items.BEETROOT_SEEDS))) {
+                    comidaAlmacen += s.getCount();
+                }
+            }
+        }
+        DevilRpg.LOGGER.info("[Arnes] COMIDA EN EL ALMACEN (carne y semillas): {}", comidaAlmacen);
+        // ¿HAY BICHOS DENTRO? Es lo que decide si el LATIDO DEL PUEBLO corre o no (`hayEnemigosDentro`): con uno
+        // dentro, `tickVillageLife` se salta ENTERO (no reparte oficios, no da estaciones, no engancha goals) y los
+        // goals que ya estuvieran puestos siguen — es la diferencia entre "el granjero no cosecha porque no tiene
+        // goal" y "cosecha poco".
+        StringBuilder bichos = new StringBuilder();
+        int bichosDentro = 0;
+        for (net.minecraft.world.entity.Mob m : level.getEntitiesOfClass(net.minecraft.world.entity.Mob.class,
+                new AABB(CENTRO).inflate(80))) {
+            if (!(m instanceof net.minecraft.world.entity.monster.Monster)) {
+                continue;
+            }
+            if (Math.sqrt(m.distanceToSqr(CENTRO.getX() + 0.5D, CENTRO.getY() + 0.5D, CENTRO.getZ() + 0.5D))
+                    <= com.chipoodle.devilrpg.world.VillageGenerator.FENCE_RADIUS) {
+                bichosDentro++;
+                bichos.append(' ').append(m.getType().toString().replace("entity.minecraft.", ""))
+                        .append('@').append(m.blockPosition().toShortString());
+            }
+        }
+        DevilRpg.LOGGER.info("[Arnes] BICHOS DENTRO DEL RECINTO: {}{}", bichosDentro, bichos);
         for (int i = 0; i < com.chipoodle.devilrpg.world.VillageGenerator.parcelasDeGranja(); i++) {
             StringBuilder dentro = new StringBuilder();
             int cuantos = 0;
@@ -870,10 +980,41 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
                     bancal = i;
                 }
             }
-            DevilRpg.LOGGER.info("[Arnes] GRANJERO {} nombre={} pos={} bancal={} huecosLibres={}/{} zurron:{} etiqueta={}",
-                    uuid8(v), v.getCustomName() == null ? "-" : v.getCustomName().getString().replace("\n", " | "),
-                    v.blockPosition().toShortString(), bancal, libres, v.getInventory().getContainerSize(),
-                    zurron, v.getCustomName() == null ? "-" : "");
+            StringBuilder goals = new StringBuilder();
+            for (net.minecraft.world.entity.ai.goal.WrappedGoal w : v.goalSelector.getAvailableGoals()) {
+                if (w.isRunning()) {
+                    goals.append(w.getGoal().getClass().getSimpleName()).append(' ');
+                }
+            }
+            var wt = v.getBrain().getMemory(MemoryModuleType.WALK_TARGET).orElse(null);
+            var sitio = v.getBrain().getMemory(MemoryModuleType.JOB_SITE).orElse(null);
+            var posible = v.getBrain().getMemory(MemoryModuleType.POTENTIAL_JOB_SITE).orElse(null);
+            DevilRpg.LOGGER.info("[Arnes] GRANJERO {} nombre={} pos={} bancal={} huecosLibres={}/{} destino={}"
+                            + " goals=[{}] job={} potencial={} guardia={}/{} zurron:{} etiqueta={}",
+                    uuid8(v), nombreCorto(v), v.blockPosition().toShortString(), bancal, libres,
+                    v.getInventory().getContainerSize(),
+                    wt == null ? "SIN DESTINO" : wt.getTarget().currentBlockPosition().toShortString(),
+                    goals.toString().trim(),
+                    sitio == null ? "SIN PUESTO" : sitio.pos().toShortString(),
+                    posible == null ? "-" : posible.pos().toShortString(),
+                    v.getPersistentData().getBoolean(VillageManager.GUARD_TAG) ? "SI" : "no",
+                    com.chipoodle.devilrpg.entity.goal.VillagerGuardGoal.esGuardia(v) ? "SI" : "no",
+                    zurron, etiquetaDe(v));
+        }
+        // LOS COMPOSTEROS (el puesto del granjero): la celda, si es un punto de interes registrado y quien lo tiene.
+        var poi = level.getPoiManager();
+        for (int i = 0; i < com.chipoodle.devilrpg.world.VillageGenerator.parcelasDeGranja(); i++) {
+            BlockPos comp = com.chipoodle.devilrpg.world.VillageGenerator.composteroDeLaParcela(CENTRO, i, cota);
+            StringBuilder quien = new StringBuilder();
+            for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(RADIO_CENSO))) {
+                var s = v.getBrain().getMemory(MemoryModuleType.JOB_SITE).orElse(null);
+                if (s != null && s.pos().equals(comp)) {
+                    quien.append(' ').append(nombreCorto(v));
+                }
+            }
+            DevilRpg.LOGGER.info("[Arnes] COMPOSTERO bancal {} en {} bloque={} poi={} dueno(s):{}", i,
+                    comp.toShortString(), nombre(level, comp.getX(), comp.getY(), comp.getZ()),
+                    poi.getType(comp).isPresent() ? "SI" : "NO", quien.length() == 0 ? " NADIE" : quien.toString());
         }
     }
 

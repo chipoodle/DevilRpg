@@ -3369,12 +3369,47 @@ public final class VillageManager {
             }
             java.util.function.Predicate<net.minecraft.core.Holder<net.minecraft.world.entity.ai.village.poi.PoiType>>
                     vale = profesion.heldJobSite();
-            BlockPos puesto = poi.findClosest(vale, center, VillageGenerator.FENCE_RADIUS,
-                    PoiManager.Occupancy.HAS_SPACE).orElse(null);
+            // SE MIRAN TODAS LAS ESTACIONES DE SU OFICIO, ORDENADAS POR CERCANÍA AL ALDEANO, Y SE ELIGE ASÍ:
+            //   1) una LIBRE,
+            //   2) si no hay, una OCUPADA **SIN DUEÑO** (el ticket perdido: alguien lo cogió y ya no está),
+            //   3) y solo si no hay otra cosa, la ocupada más cercana (y el `deOtro` de abajo decide).
+            // OJO CON EL PASO 2, que es el que estaba mal: antes se cogía **la ocupada más cercana** y, si era de
+            // otro aldeano, se abandonaba. Con el compostero del BANCAL 0 con el ticket perdido y el del bancal 1
+            // (más cerca del centro, de donde salía la búsqueda) en manos de otro granjero, el TERCER granjero se
+            // quedaba **SIN PUESTO PARA SIEMPRE** y su bancal sin cosechar: medido con el arnés, el bancal 0 se
+            // quedaba con **37 plantas maduras** que no bajaban ni una en cuatro minutos, con el compostero libre
+            // (`poi=SI`, `dueño: NADIE`) y la granjera con `job=SIN PUESTO`. Es el reporte del jugador: *"otra vez
+            // los granjeros están dejando demasiadas parcelas sin cosechar... ya no hay verduras para comer"*.
+            List<BlockPos> estaciones = new ArrayList<>();
+            Set<Long> conEspacio = new HashSet<>();
+            for (var registro : poi.getInSquare(vale, center, VillageGenerator.FENCE_RADIUS,
+                    PoiManager.Occupancy.HAS_SPACE).toList()) {
+                conEspacio.add(registro.getPos().asLong());
+            }
+            for (var registro : poi.getInSquare(vale, center, VillageGenerator.FENCE_RADIUS,
+                    PoiManager.Occupancy.ANY).toList()) {
+                estaciones.add(registro.getPos());
+            }
+            estaciones.sort(Comparator.comparingDouble(p ->
+                    villager.distanceToSqr(p.getX() + 0.5D, p.getY() + 0.5D, p.getZ() + 0.5D)));
+            BlockPos puesto = null;
+            for (BlockPos p : estaciones) {
+                if (conEspacio.contains(p.asLong())) {
+                    puesto = p; // libre
+                    break;
+                }
+            }
             boolean libre = puesto != null;
             if (puesto == null) {
-                puesto = poi.findClosest(vale, center, VillageGenerator.FENCE_RADIUS,
-                        PoiManager.Occupancy.IS_OCCUPIED).orElse(null);
+                for (BlockPos p : estaciones) {
+                    if (!reclamadoPorAlguien(aldeanos, p)) {
+                        puesto = p; // ocupada SIN dueño (ticket perdido): se suelta y se coge
+                        break;
+                    }
+                }
+            }
+            if (puesto == null && !estaciones.isEmpty()) {
+                puesto = estaciones.get(0); // no hay otra: la más cercana
             }
             if (puesto == null) {
                 continue; // su oficio no tiene estación construida (todavía): no hay nada que reclamar
@@ -3408,6 +3443,20 @@ public final class VillageManager {
             DevilRpg.LOGGER.info("[Village] Aldea {}: {} reclama su estacion de {} en {}", objectiveIndex,
                     villager.getUUID(), profesion, elegido.toShortString());
         }
+    }
+
+    /** ¿Ese puesto lo tiene alguien <b>en el cerebro</b> (de puesto o solo como posible)? Es el "ticket perdido". */
+    private static boolean reclamadoPorAlguien(List<Villager> aldeanos, BlockPos puesto) {
+        for (Villager v : aldeanos) {
+            for (MemoryModuleType<GlobalPos> tipo : List.of(MemoryModuleType.JOB_SITE,
+                    MemoryModuleType.POTENTIAL_JOB_SITE)) {
+                var suyo = v.getBrain().getMemory(tipo);
+                if (suyo.isPresent() && suyo.get().pos().equals(puesto)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     // --- LAS CAMAS DEL PUEBLO: cada aldeano con la suya (como las estaciones de trabajo) ---------------------

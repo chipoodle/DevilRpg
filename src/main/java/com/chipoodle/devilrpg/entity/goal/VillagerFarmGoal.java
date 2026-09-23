@@ -137,6 +137,12 @@ public class VillagerFarmGoal extends Goal {
      * una harina—, con la arboleda del pueblo esperando abono para sus 10 plantones y un hueso guardado sin moler.
      */
     private static final int HARINA_MINIMA = 8;
+    /**
+     * Semillas <b>compostables de sobra</b> que junta antes de ir al compostero: con una o dos no vale la pena el
+     * viaje (y era lo que le hacía ir y volver con UNA semilla por paseo, medido en su log). Si falta harina de
+     * huesos de verdad se va con lo que tenga.
+     */
+    private static final int SEMILLAS_MINIMAS_PARA_COMPOSTAR = 4;
     /** Huesos que muele de una vez en el kiosco (la receta de vanilla: 1 hueso = 3 de polvo de hueso). */
     private static final int MOLER_MAX = 16;
     /**
@@ -303,33 +309,11 @@ public class VillagerFarmGoal extends Goal {
             return true;
         }
         // 3b) EL POLVO DE HUESO NO SE OLVIDA (lo pidió el jugador: *"los granjeros tampoco nunca deben olvidar de hacer
-        //     polvo de hueso además de cultivar, cosechar y entregar vegetales"*). Si la despensa no tiene harina de
-        //     huesos —ni para abonar el plantío ni para la ARBOLEDA DEL PUEBLO que cuida el leñador— y él lleva semillas
-        //     de sobra, el compostero va ANTES que la tierra: sin esta regla el paso 5 no se alcanzaba nunca, porque con
-        //     los tres bancales llenos siempre hay algo maduro que cosechar (ver HARINA_MINIMA, con la medida de su
-        //     partida: 0 de polvo de hueso y los composteros a 1, 1 y 5). Es un desvío corto y se apaga solo: en cuanto
-        //     la despensa tiene harina, el orden vuelve a ser el de siempre.
-        if (despensa != null && VillagePantry.contar(despensa, s -> s.is(Items.BONE_MEAL)) < HARINA_MINIMA
-                && semillasCompostablesSobrantes() > 0) {
-            BlockPos comp = buscarCompostero(level);
-            if (comp != null) {
-                target = comp;
-                tarea = Tarea.COMPOSTAR;
-                return true;
-            }
-        }
-        // 3) LAS TRES FAENAS DE LA TIERRA ROTAN: cosechar lo maduro, labrar la calva y SEMBRAR LA CELDA VACÍA.
-        //    La calva (una celda pisoteada que tiene que volver a ser tierra de cultivo) y el cultivo maduro ya
-        //    alternaban desde la etapa anterior, pero la SIEMBRA iba DETRÁS de las dos y no se alcanzaba NUNCA: con
-        //    los tres bancales (216 celdas) siempre hay algo maduro, así que el paso de sembrar no llegaba a correr
-        //    ni una vez, y las celdas que se quedan vacías —las que el propio juego cosecha sin sembrar (su faena
-        //    `HarvestFarmland` solo replanta si el aldeano lleva semillas) y las que alguien pisa— se quedaban
-        //    vacías PARA SIEMPRE. El jugador lo vio en su bancal: *"hay partes de la parcela que no tienen plantado
-        //    nada, se supone que los granjeros deben tener todas ocupadas"*. Medido en su guardado (aldea 2, cota
-        //    120): 16 celdas vacías entre los tres bancales (bancal 0: 8, bancal 1: 5, bancal 2: 3), todas
-        //    `farmland` con el hueco de arriba libre y casi todas en los carriles por los que se entra y se sale
-        //    del bancal; y en la aldea 0 (que lleva más tiempo sin verse) 147 de 216, o sea bancales enteros
-        //    vaciándose poco a poco.
+        //     polvo de hueso además de cultivar, cosechar y entregar vegetales"*) — pero VA DESPUÉS DE LA TIERRA (ver
+        //     el paso 3 de abajo). Estaba antes y era el tapón de la cosecha: con la despensa con poca harina de huesos
+        //     (< HARINA_MINIMA, lo normal, porque el leñador también la gasta en la arboleda) y **una** semilla de
+        //     sobra, el granjero se iba al compostero con esa semilla —y volvía— una y otra vez, mientras el bancal se
+        //     llenaba de plantas maduras.
         BlockPos maduro = buscarCultivo(level, true);
         BlockPos calva = buscarCalva(level);
         // COSECHAR MANDA, y la rotación es solo para lo demás (labrar y sembrar). Lo pidió el jugador: *"también están
@@ -388,11 +372,18 @@ public class VillagerFarmGoal extends Goal {
             }
         }
         // 5) COMPOSTERO: las semillas que le SOBRAN (más de las que necesita para sembrar) van al compostero, que es
-        // lo que produce la harina de huesos con la que abona. Va DESPUÉS de sembrar y abonar (primero lo urgente) y
-        // sin él la harina se acababa y el abono se quedaba sin hacer, porque nadie llenaba nunca el compostero.
+        // lo que produce la harina de huesos con la que abona. Va DESPUÉS de la tierra (cosechar, labrar y sembrar
+        // mandan) y sin él la harina se acababa y el abono se quedaba sin hacer, porque nadie llenaba nunca el
+        // compostero. OJO: AQUÍ YA NO HAY NADA MADURO (el paso 3 habría mandado a cosechar), así que este viaje no le
+        // quita el turno a la cosecha — que es justo lo que pasaba cuando este paso iba ANTES.
+        // Y SE VA CON UN PUÑADO, NO CON UNA SEMILLA: si solo le sobra una o dos, no vale la pena el paseo (su log
+        // cantaba "Lleno el compostero con 1 semilla(s)" una y otra vez). La excepción es que falte harina de verdad.
         // OJO: se cuentan solo las COMPOSTABLES (trigo y betabel). Contando también la zanahoria y la patata, un
         // granjero cargado de vegetales se pasaría el día yendo al compostero a no echar nada (bucle).
-        if (semillasCompostablesSobrantes() > 0) {
+        int sobrantes = semillasCompostablesSobrantes();
+        boolean faltaHarina = despensa != null
+                && VillagePantry.contar(despensa, s -> s.is(Items.BONE_MEAL)) < HARINA_MINIMA;
+        if (sobrantes >= SEMILLAS_MINIMAS_PARA_COMPOSTAR || (faltaHarina && sobrantes > 0)) {
             target = buscarCompostero(level);
             if (target != null) {
                 tarea = Tarea.COMPOSTAR;
@@ -1015,8 +1006,52 @@ public class VillagerFarmGoal extends Goal {
                 }
             }
         }
-        miParcela = Math.floorMod(villager.getUUID().hashCode(), VillageGenerator.parcelasDeGranja());
+        // SIN PUESTO RECONOCIDO: primero el bancal que NO tenga dueño (para no pisarse con un compañero y dejar otro
+        // sin nadie) y, si están todos cogidos, el reparto por UUID (estable, y reparte igual).
+        int libre = bancalSinDueno(level);
+        miParcela = libre >= 0 ? libre
+                : Math.floorMod(villager.getUUID().hashCode(), VillageGenerator.parcelasDeGranja());
         return miParcela;
+    }
+
+    /**
+     * <b>El bancal que NO tiene dueño</b> (ninguno de los otros granjeros lo tiene como puesto de trabajo), o
+     * {@code -1} si están todos cogidos.
+     * <p>
+     * Es la red de seguridad de {@link #miParcela}: si a un granjero se le perdió la estación (o nunca llegó a
+     * reclamarla), el reparto por <b>UUID</b> puede mandarlo al bancal de <b>otro</b> compañero —los dos al mismo— y
+     * dejar <b>otro bancal sin nadie</b>, que es exactamente lo que el jugador vio: *"otra vez los granjeros están
+     * dejando demasiadas parcelas sin cosechar"*. Medido con el arnés: la tercera granjera, con `job=SIN PUESTO` y el
+     * compostero del bancal 0 libre (`poi=SI`, dueño NADIE), trabajaba el bancal de una compañera y el bancal 0 se
+     * quedaba con <b>37 plantas maduras</b> que no bajaban ni una en cuatro minutos.
+     */
+    private int bancalSinDueno(ServerLevel level) {
+        int cota = VillageGenerator.cotaDeLaPlaza(level, center);
+        Set<Integer> cogidos = new HashSet<>();
+        for (Villager otro : level.getEntitiesOfClass(Villager.class,
+                new AABB(center).inflate(MAX_DISTANCE_FROM_CENTER))) {
+            if (otro == villager || otro.isBaby()
+                    || otro.getVillagerData().getProfession() != VillagerProfession.FARMER) {
+                continue;
+            }
+            Optional<GlobalPos> suyo = otro.getBrain().getMemory(MemoryModuleType.JOB_SITE);
+            if (suyo.isEmpty()) {
+                continue;
+            }
+            for (int i = 0; i < VillageGenerator.parcelasDeGranja(); i++) {
+                BlockPos comp = VillageGenerator.composteroDeLaParcela(center, i, cota);
+                if (suyo.get().pos().getZ() == comp.getZ()
+                        && Math.abs(suyo.get().pos().getX() - comp.getX()) <= 1) {
+                    cogidos.add(i);
+                }
+            }
+        }
+        for (int i = 0; i < VillageGenerator.parcelasDeGranja(); i++) {
+            if (!cogidos.contains(i)) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     /**

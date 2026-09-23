@@ -2812,8 +2812,52 @@ haya utilizado aún"*.
   agujero en el suelo del pueblo que el tapagujeros iría rellenando a medias. La migración **tira el plano** y el
   nuevo se captura ya con la caseta nueva dentro (I8).
 
-## 2. Lista de consecuencias (obligatoria en cada cambio)
-Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
+### I103 · La huerta se cosecha ANTES de compostar, y un bancal SIN DUEÑO se coge aunque su ticket esté perdido
+
+El jugador, otra vez: *"otra vez los granjeros están dejando demasiadas parcelas sin cosechar. Ya no hay verduras para
+comer pero las parcelas no están siendo cosechadas. ¿qué pasa?"*.
+
+**Medido en su guardado** (`build/huerta_edades.py`, `build/granjeros_estado.py`, `build/cofres_aldea.py`): las tres
+parcelas **llenas y sanas** (0 vacías, 0 pisoteadas) con **34 / 25 / 35 plantas maduras** sin cosechar, y la
+**despensa con comida de sobra** (21 de ternera, 22 patatas, 16 zanahorias, 24 huevos, 15 huevos estrellados…): el
+atraso era de la **huerta**, no de la comida. Y **medido con el arnés** (`MEDIR_HUERTA`, ampliado para volcar la tierra
+cultivo a cultivo, los composteros con su dueño y los bichos dentro del recinto):
+
+```
+[Arnes] GRANJERO c38cb784 nombre=Ursula ... job=SIN PUESTO   <- la tercera granjera, sin estación
+[Arnes] COMPOSTERO bancal 0 en 437,63,660 bloque=composter poi=SI dueno(s): NADIE   <- libre y sin dueño
+[Arnes] TIERRA bancal 0: MADURAS 37 | creciendo 37 | VACIAS 0     <- y ahí se quedó CUATRO minutos
+[Arnes] BICHOS DENTRO DEL RECINTO: 0                              <- el latido del pueblo sí corría
+```
+
+**Dos causas, las dos en el reparto del trabajo:**
+
+1. **La estación se buscaba MAL cuando su ticket estaba perdido.** `reclamarEstacionesDelPueblo` pedía al gestor de
+   puntos de interés **la estación ocupada MÁS CERCANA** (al centro de la aldea) y, si era de otro aldeano,
+   **abandonaba**. Con el compostero del **bancal 0** con el ticket perdido y el del **bancal 1** (más cerca del
+   centro) en manos de otro granjero, la tercera granjera se quedaba **sin puesto para siempre**: su bancal se quedaba
+   sin nadie y con 37 plantas maduras que no bajaban ni una. **Regla:** de las estaciones de su oficio se elige
+   **una LIBRE** y, si no hay, **una OCUPADA SIN DUEÑO** (el ticket perdido, que se suelta y se coge); la "más
+   cercana" es el último recurso.
+2. **El compostero iba ANTES que la cosecha, y con UNA semilla por viaje.** El paso del polvo de huesos (que existe
+   desde I93, porque el leñador también lo gasta en la arboleda) estaba **por delante** de cosechar, y como el
+   granjero va con las semillas justo por encima del tope (`SEMILLAS_MAX`), cada paseo echaba **una** semilla: su log
+   lo cantaba (`Lleno el compostero con 1 semilla(s)`, una y otra vez). **Regla:** la faena que **produce** (cosechar,
+   labrar, sembrar) va **antes** que la que **transforma** (compostar, abonar) — cuando se llega al compostero ya no
+   queda nada maduro, así que el viaje no le quita el turno a nadie— y al compostero se va con un **puñado**
+   (`SEMILLAS_MINIMAS_PARA_COMPOSTAR = 4`), salvo que falte harina de verdad.
+3. **Y una red de seguridad**: un granjero **sin estación** ya no se reparte el bancal por UUID a secas (podía caer en
+   el de un compañero y dejar otro sin nadie): se le da **el bancal que no tenga dueño**.
+
+**Medido después** (misma corrida, ~9 min): `Ursula` **reclama su estación de farmer en 437,63,660** y los tres
+composteros quedan con dueño; las maduras bajan **37 → 10 → 0**, **4 → 1 → 0** y **20 → 10 → 0**, las parcelas siguen
+llenas (`VACIAS 0`) y la despensa sube de **267 a 466 puntos** con las verduras de **58 a 154**. Líneas literales en
+`tools/arnes/medidas-huerta.txt` (segunda vuelta).
+
+> **La lección, en una línea:** una estación **libre** no se coge por cercanía al centro sino **buscando la que no
+> tiene dueño**, y la faena que **produce comida** va antes que la que **la transforma**.
+
+## 2. Lista de consecuencias (obligatoria en cada cambio)Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
 1. **¿Quién más LEE lo que cambio?** Buscar todos los usos (`grep`) y revisarlos uno a uno. *(Fallo real: cambié el
    sentido de `stuckTicks` y no miré los tres `canContinueToUse` que lo leen → granjero, recolector y obrero

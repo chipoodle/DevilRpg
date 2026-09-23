@@ -81,3 +81,52 @@ que el problema. Lo que se ha hecho es que **el pueblo no deje nada tirado**: lo
 segundos (la mediana pasa de 54 s a 6 s). Lo único que se cae **a propósito** son las **semillas que le sobran** (el
 abono del compostero): ésas se quedan hasta que el granjero composte (o las barra el recolector, que sí las tiene en su
 lista).
+
+
+================================================================================
+SEGUNDA VUELTA (23-sep-2026): LA HUERTA QUE **NO** SE COSECHABA (invariante I103)
+================================================================================
+El jugador, otra vez: *"otra vez los granjeros están dejando demasiadas parcelas sin cosechar. Ya no hay
+verduras para comer pero las parcelas no están siendo cosechadas. ¿qué pasa?"*
+
+Arnes: GuardHarness con MEDIR_HUERTA = true, ampliado para volcar la TIERRA cultivo a cultivo (maduras /
+creciendo / vacías / pisoteadas), la COMIDA de la despensa y del almacén, los BICHOS DENTRO del recinto, cada
+GRANJERO con su puesto de trabajo + destino + goals + zurrón, y los tres COMPOSTEROS con su dueño.
+Mundo: COPIAS de la partida del jugador (aldea 0, centro 470,646, cota 63). Corridas: 3.
+
+--- 1) LO QUE HABIA EN SU GUARDADO (las parcelas, llenas y sanas) -------------------------------
+    bancal (440,660) rel (-30,+14): MADURAS 34 | creciendo 40 | VACIAS 0 | pisoteadas 0
+    bancal (480,650) rel (+10,+4):  MADURAS 25 | creciendo 49 | VACIAS 0 | pisoteadas 0
+    bancal (442,680) rel (-28,+34): MADURAS 35 | creciendo 39 | VACIAS 0 | pisoteadas 0
+y la DESPENSA con comida de sobra (21 beef, 22 potato, 16 carrot, 10 chicken, 8 porkchop, 6 wheat, 15
+huevo_estrellado, 24 egg...): el atraso era de la HUERTA, no de la comida.
+
+--- 2) ANTES DEL ARREGLO: EL BANCAL 0 CONGELADO Y SU GRANJERA SIN PUESTO -------------------------
+    [Arnes] GRANJERO c38cb784 nombre=Ursula ... job=SIN PUESTO potencial=- guardia=no/no
+    [Arnes] COMPOSTERO bancal 0 en 437, 63, 660 bloque=composter poi=SI dueno(s): NADIE
+    [Arnes] COMPOSTERO bancal 1 en 477, 63, 650 bloque=composter poi=SI dueno(s): Valeriano
+    [Arnes] COMPOSTERO bancal 2 en 439, 63, 680 bloque=composter poi=SI dueno(s): Saturnino
+    [Arnes] TIERRA bancal 0: MADURAS 37 | creciendo 37 | VACIAS 0
+    [Arnes] TIERRA bancal 1: MADURAS 14 | creciendo 60 | VACIAS 0
+    [Arnes] TIERRA bancal 2: MADURAS 25 | creciendo 49 | VACIAS 0
+    [Arnes] BICHOS DENTRO DEL RECINTO: 0            (<- el latido del pueblo SÍ corría)
+(cuatro minutos después el bancal 0 seguía con 37 maduras, ni una menos: no lo trabajaba nadie)
+
+Y en su log de juego, el granjero al compostero con UNA semilla por viaje:
+    [Village] El granjero: Lleno el compostero con 1 semilla(s)      (x10 en una sesión corta)
+    [Village] El granjero: Lleno el compostero con 2 semilla(s)
+    [Village] El granjero: Guardo 9 en la despensa
+
+--- 3) DESPUES DEL ARREGLO: CADA GRANJERO CON SU BANCAL Y LA HUERTA AL DIA ------------------------
+    [Village] Aldea 0: c38cb784-... reclama su estacion de farmer en 437, 63, 660
+    [Arnes] GRANJERO c38cb784 nombre=Ursula ... job=437, 63, 660 ... / Guardando lo suyo
+    [Arnes] COMPOSTERO bancal 0 en 437, 63, 660 bloque=composter poi=SI dueno(s): Ursula
+    [Arnes] COMPOSTERO bancal 1 en 477, 63, 650 bloque=composter poi=SI dueno(s): Valeriano
+    [Arnes] COMPOSTERO bancal 2 en 439, 63, 680 bloque=composter poi=SI dueno(s): Saturnino
+    [Arnes] TIERRA bancal 0: MADURAS 31 -> 10 -> (0) | creciendo 43 -> 64 | VACIAS 0
+    [Arnes] TIERRA bancal 1: MADURAS 4 -> 1 -> 0 | creciendo 70 -> 74 | VACIAS 0
+    [Arnes] TIERRA bancal 2: MADURAS 20 -> 10 -> 0 | creciendo 54 -> 74 | VACIAS 0
+    [Arnes] COMIDA: despensa 267 -> 372 -> 466 punto(s) [vegetales 58 -> 111 -> 154]
+
+(37 -> 0 maduras en los tres bancales en unos 9 minutos de corrida, cada uno con su granjero, y la despensa
+ con 154 verduras: la huerta se cosecha y la comida entra)

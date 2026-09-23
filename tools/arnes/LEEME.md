@@ -162,6 +162,14 @@ en la celda de al lado toca la puerta con el hombro). Y cada `PUERTA CERRADA` di
   **por granjero**, su posición, el bancal en el que está y su **zurrón** hueco a hueco con los **huecos libres**
   (`GRANJERO <uuid> … huecosLibres=N/8 zurron: 0:8xBone Meal 1:8xBeetroot Seeds …`). La edad del objeto es la medida que
   dice si algo "se queda" en el suelo (mediana de 54 s antes del arreglo y de 6 s después).
+  **AMPLIADO EN I103** (la huerta que NO se cosechaba): además vuelca, por bancal, la **tierra cultivo a cultivo**
+  (`TIERRA bancal N: MADURAS … | creciendo … | VACIAS … | pisoteadas …`), la **comida de la despensa y del almacén**
+  (`COMIDA: despensa N punto(s) [trigo … semillas … harina … vegetales …]`), los **bichos dentro del recinto**
+  (`BICHOS DENTRO DEL RECINTO: N`) —que es lo que decide si el latido del pueblo corre— y, por granjero, su **puesto
+  de trabajo** (`job=`/`potencial=`), si es guardia (`guardia=`) y su **destino**, más los **tres composteros con su
+  dueño** (`COMPOSTERO bancal N en <celda> bloque=composter poi=SI dueno(s): …`). Fue lo que destapó que la tercera
+  granjera estaba `job=SIN PUESTO` con el compostero del bancal 0 **libre y sin dueño**, y que su bancal se quedaba
+  con 37 plantas maduras que no bajaban ni una en cuatro minutos.
 
 ### `MEDIR_ALDEAS = true` — las aldeas con NOMBRE, el revelado y el DIARIO DEL INVOCADO (I87)
 
