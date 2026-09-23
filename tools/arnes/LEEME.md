@@ -249,6 +249,13 @@ antes el destino salía `aparcado=517, 64, 666`, el ganadero parpadeaba entre go
 llegaban a **2.000 ticks** de edad; con los arreglos la ruta da `alcance=SI fin=517,63,666`, el portón del gallinero
 se abre (`open=true`), el zurrón se llena y se **entrega** (ocho líneas de `N cosa(s) del corral al almacen`).
 
+> **Y OJO AL TERMINAR: COMPRUEBA QUE EL JVM DEL JUEGO SE HA MUERTO.** Con `.\gradlew.bat runServer | Out-Null` el
+> *wrapper* de Gradle termina (y el job se da por acabado) **pero el JVM del servidor sigue vivo** y deja
+> **bloqueado** `build/moddev/artifacts/neoforge-21.1.249.jar`: el siguiente `runClient` (el del jugador) revienta con
+> `AccessDeniedException ... is locked by: <pid>`. Pasó el **22-sep-2026 a las 12:28 a. m.** Antes de dar por cerrada
+> una corrida: `Get-CimInstance Win32_Process -Filter "Name='java.exe'"` y mata lo que lleve `fml.modFolders`
+> (o `forgeserverdev`), y comprueba que el `.jar` se puede abrir en escritura.
+
 ### `MEDIR_LENADOR = true` — el leñador, su arboleda y el polvo de hueso (I92/I93)
 
 Corre sobre la **aldea del jugador** (aldea 0) y vuelca cada 10 s: el estado de la **arboleda del pueblo** (árboles,

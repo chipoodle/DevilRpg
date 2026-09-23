@@ -67,13 +67,16 @@ public class VillagerAnimalFarmGoal extends Goal {
      * fuera (y a <b>3,35</b> si el huevo está encima de la paja, que está a `cota + 1`). Con 3,5 el corralillo entero
      * se recoge <b>desde el pasillo</b>, sin tener que entrar: y entrar es lo que <b>no</b> puede hacer con
      * fiabilidad (el juego no planifica a través de una puerta de valla cerrada, I96) ni conviene (por el portón se
-     * escapan las gallinas). Medido con el arnés: con 1,8 los huevos del corralillo llegaban a <b>2.000 ticks (100
-     * s)</b> de edad sin recoger; con este alcance se los lleva (y el portón del gallinero ya solo se abre para
-     * cruzar, no para trabajar al lado).
+     * escapan las gallinas). Lo medido: <b>en vivo con el arnés</b> (con el alcance en 2,5) los huevos de encima de la
+     * paja —los que con 1,8 <b>no</b> se alcanzaban nunca— ya se los lleva (se ve desaparecer el huevo viejo y subir
+     * el zurrón), y con 1,8 los del corralillo llegaban a <b>2.000 ticks (100 s)</b> de edad sin recoger; y
+     * <b>celda a celda</b> (`build/gallinero_medida.py`, con la misma distancia que el goal) el corralillo
+     * <b>entero</b> solo lo cubre 3,5.
      */
     private static final double ALCANCE_RECOGIDA = REACH;
     /** Ticks de faena (dar de comer / sacrificar) antes de que el efecto ocurra. */
-    private static final int WORK_TICKS = 25;    private static final int REST_TICKS = 10;
+    private static final int WORK_TICKS = 25;
+    private static final int REST_TICKS = 10;
     /** Sin nada que hacer: a esperar (buscar animales no se hace por tick). */
     private static final int IDLE_REST_TICKS = 120;
     /** Si no logra acercarse en este tiempo, abandona ese animal (invariante I3: atascado = no acercarse). */

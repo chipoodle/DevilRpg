@@ -2556,7 +2556,12 @@ partida (aldea 0, centro `470,646`, cota 63):
   antes **no** salían porque el punto del almacén era inalcanzable).
 - **El alcance con el que recoge del suelo es el SUYO** (ver arriba): el corral es su puesto de trabajo y tiene
   **valla de por medio**, así que lo que alcanza ahí lo mide su propio `REACH` (3,5), no el del recolector por oficio
-  (2,5) ni el 1,8 que tenía. La cuenta está en `build/gallinero_medida.py`, celda a celda contra el guardado.
+  (2,5) ni el 1,8 que tenía. Lo medido, con el instrumento que toca en cada caso: **en vivo con el arnés** (con el
+  alcance en 2,5) los huevos que están **encima de la paja** —los que con 1,8 no se alcanzaban **nunca**— ya se los
+  lleva (se ve desaparecer el huevo viejo y subir el zurrón); y **celda a celda contra el guardado**
+  (`build/gallinero_medida.py`, que aplica la misma distancia que el goal) el corralillo **entero** —la fila norte a
+  **3,04** del pasillo y los de la paja a **3,35**— solo lo cubre **3,5**. Lo que no se ha visto en vivo es la corrida
+  con el valor final (3,5): lo que hay medido de él es la cuenta celda a celda.
 
 **Lo que queda pendiente (dicho claro):** las celdas del corralillo se recogen **desde el pasillo**, pero un huevo
 que caiga **dentro de la valla** (en la celda de la propia valla, cosa que pasa cuando la gallina se queda pegada a
