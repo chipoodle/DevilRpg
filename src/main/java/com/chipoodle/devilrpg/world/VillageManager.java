@@ -4173,6 +4173,100 @@ public final class VillageManager {
         return casillaLibreDeLaPlaza(level, center, VillageGenerator.cotaDeLaPlaza(level, center));
     }
 
+    // --- los viajes largos: el planificador no da ruta a más de ~56 bloques --------------------------
+
+    /**
+     * Hasta aquí (bloques) se le pide la ruta <b>directa</b> a un destino. El planificador del juego construye su
+     * región de búsqueda <b>alrededor del ALDEANO</b> con radio {@code FOLLOW_RANGE + 8} = <b>56</b> (medido en el
+     * bytecode de {@code PathNavigation.createPath}: {@code FOLLOW_RANGE} del aldeano son 48 y el {@code regionOffset}
+     * es 8), así que a un destino más lejos <b>no le da ruta NINGUNA</b>. Se deja margen (40) porque la ruta tiene que
+     * <b>rodear</b> obstáculos y todos sus nodos han de caer dentro de esa región.
+     */
+    public static final double ALCANCE_DE_LA_RUTA = 40.0D;
+
+    /** Los tiros que se prueban, de mayor a menor: un paso largo avanza más, uno corto cabe en más sitios. */
+    private static final int[] PASOS_DEL_TIRON = {28, 16, 34};
+
+    /** Distancia (bloques) del aldeano a una casilla. */
+    public static double distanciaA(Villager villager, BlockPos pos) {
+        return Math.sqrt(villager.distanceToSqr(pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D));
+    }
+
+    /**
+     * <b>UN TIRÓN HACIA UN DESTINO LEJANO.</b> Devuelve a dónde tiene que <b>caminar ahora</b> ese aldeano para acabar
+     * llegando a {@code destino}: el propio destino si está dentro del {@link #ALCANCE_DE_LA_RUTA alcance del
+     * planificador}, y si no un <b>punto intermedio de camino que sí tenga ruta</b> (se prueban tiros de 28, 16 y 34
+     * bloques en la dirección del destino, buscando una casilla de pie libre; y si ninguno tiene ruta, la plaza del
+     * pueblo, que está al alcance desde cualquier parte de la aldea).
+     * <p>
+     * <b>Por qué hace falta</b> (medido, 23-sep-2026): el jugador vio al <b>minero atorado en el segundo piso de la
+     * taberna</b> con la etiqueta "Yendo al almacen" — desde su mina el almacén queda a <b>51 bloques</b>, el
+     * planificador le devolvía ruta nula y el aldeano, sin camino, empujaba en línea recta hacia el objetivo:
+     * entró en la taberna, subió la escalera del comedor y se quedó contra la pared este de la galería
+     * ({@code 512,68,667}, el mismo sitio del que hubo que rescatar al guardia). Lo mismo se midió en el
+     * <b>recolector</b> ({@code rutas[almacen=NO(nulo) plaza=SI]} desde {@code 463,652}) y en las <b>matas lejanas</b>
+     * del leñador (a 100+ bloques).
+     * <p>
+     * <b>El que llama sigue midiendo su llegada contra {@code destino}</b>, no contra el tirón: la faena no se
+     * adelanta (importante para el almacén, cuyas cajas se abren por distancia).
+     */
+    public static BlockPos tironHacia(ServerLevel level, Villager villager, BlockPos destino,
+            @Nullable BlockPos plaza) {
+        if (distanciaA(villager, destino) <= ALCANCE_DE_LA_RUTA) {
+            return destino; // cabe en una ruta: directo
+        }
+        for (int paso : PASOS_DEL_TIRON) {
+            BlockPos p = celdaDePieHacia(level, villager, destino, paso);
+            if (p == null) {
+                continue;
+            }
+            if (villager.getNavigation().createPath(p, 1) != null) {
+                return p; // hay ruta hasta el tirón: por ahí se acerca
+            }
+        }
+        return plaza != null ? plaza : destino; // el hub del pueblo (o el destino, como antes)
+    }
+
+    /**
+     * Una <b>casilla de pie</b> (libre a la altura de los pies y de la cabeza, con suelo firme) a unos {@code paso}
+     * bloques del aldeano <b>en dirección al destino</b>; se abre en anillos de 3 por si el punto exacto cae en una
+     * pared, un árbol o un banco.
+     */
+    @Nullable
+    private static BlockPos celdaDePieHacia(ServerLevel level, Villager villager, BlockPos destino, int paso) {
+        double dx = destino.getX() + 0.5D - villager.getX();
+        double dz = destino.getZ() + 0.5D - villager.getZ();
+        double d = Math.sqrt(dx * dx + dz * dz);
+        if (d < 0.5D) {
+            return null;
+        }
+        BlockPos desde = villager.blockPosition();
+        int px = desde.getX() + (int) Math.round(dx / d * paso);
+        int pz = desde.getZ() + (int) Math.round(dz / d * paso);
+        for (int r = 0; r <= 3; r++) {
+            for (int ax = -r; ax <= r; ax++) {
+                for (int az = -r; az <= r; az++) {
+                    if (Math.max(Math.abs(ax), Math.abs(az)) != r) {
+                        continue; // el interior ya se miró
+                    }
+                    for (int dy : new int[]{0, 1, -1, 2, -2}) {
+                        BlockPos p = new BlockPos(px + ax, desde.getY() + dy, pz + az);
+                        if (esCeldaDePie(level, p)) {
+                            return p;
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    /** ¿Se puede estar de pie ahí? Libre a los pies y a la cabeza, y con suelo firme debajo. */
+    private static boolean esCeldaDePie(ServerLevel level, BlockPos p) {
+        return level.getBlockState(p).isAir() && level.getBlockState(p.above()).isAir()
+                && level.getBlockState(p.below()).isSolid();
+    }
+
     /**
      * <b>LA HUERTA NO ES DE LOS GOLEMS</b> (lo pidió el jugador: *"hay un golem dentro de una de las parcelas, quítalo
      * de ahí y que ningún golem pueda spawnear dentro de parcelas"*).

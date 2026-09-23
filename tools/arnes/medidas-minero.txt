@@ -71,3 +71,44 @@ muro y donde haya mucho espacio que no se haya utilizado aun".
 (la caseta vieja devuelve el solar al pueblo -cesped y aire-, el PLANO se muda con ella -0 celdas en el solar
  viejo, 181 en el nuevo-, la cama queda DENTRO (pie y cabecera red_bed en 505,63,616 y 505,63,617) y el caracol
  arranca desde la boca nueva: 18 pasos en los primeros 2,5 minutos)
+
+--- 2) EL MINERO ATORADO EN EL SEGUNDO PISO: los viajes largos y el "tiron" ---------------------
+Lo reporto el jugador con dos capturas: *"el minero no baja al almacen, se queda atorado en el segundo
+piso"*, con su etiqueta en **"Yendo al almacen"** y la F3 diciendo `512,68,667` (la galeria de la posada de
+la taberna, planta de arriba).
+
+**La causa** (medida): el planificador del juego construye su region de busqueda **alrededor del ALDEANO**
+con radio `FOLLOW_RANGE + 8` = **56** bloques (comprobado con `javap` sobre `PathNavigation.createPath`:
+`FOLLOW_RANGE` del aldeano son 48 y el `regionOffset` es 8). Desde su mina (`503,617`) el almacen
+(`517,63,666`) queda a **51** bloques, pero rodeando la taberna, asi que **no le da ruta NINGUNA**: el
+aldeano se queda sin camino y acaba **empujando en linea recta** hacia el objetivo — entro en la taberna,
+subio la escalera del comedor y se quedo contra la pared este de la galeria (`512,68,667`, el mismo sitio
+del que hubo que **rescatar al guardia Ubaldo** en la corrida anterior). El mismo limite explica al
+**recolector** (`rutas[almacen=NO(nulo) plaza=SI(9)]` desde `463,652`) y las **matas lejanas** que el
+lenador aparca (a 100+ bloques: `no consigue llegar a 546-548,65-67,684-703`).
+
+**El arreglo** (`VillageManager.tironHacia` + `VillagerMinerGoal.irHaciaElDestino`): cuando el destino queda
+a mas de `ALCANCE_DE_LA_RUTA` (40, con margen sobre los 56), se le da un **tiron intermedio**: un punto a 28
+(o 16, o 34) bloques **en direccion al destino** que **tenga ruta** desde donde esta (se prueba con
+`createPath`), y si ninguno la tiene, la **plaza del pueblo** (que esta al alcance desde cualquier parte).
+El aldeano mide su llegada **contra el destino de verdad**, no contra el tiron: la faena no se adelanta
+(importante en el almacen, cuyas cajas se abren por distancia).
+
+MEDIDO (copia de su partida, MEDIR_MINERO, ~7 min):
+
+    ANTES:  el minero se quedaba en 512,68,667 (galeria) empujando la pared, "Yendo al almacen"
+    AHORA:  [Arnes] MINERO t=3400 pos=515, 63, 662 destino=517, 63, 666 | Yendo al almacen
+            [Arnes] MINERO t=3440 pos=516, 63, 663 destino=SIN DESTINO  | Cargando material
+            o sea: BAJA a la calle (y=63, la cota) y LLEGA al almacen (a 3 bloques del punto de apoyo);
+            y el "no consigue llegar a BlockPos{x=517, y=63, z=666}" pasa a 1 solo aviso en toda la
+            corrida (el primero, antes de arrancar el tiron)
+
+**Y LO QUE APARECIO DEBAJO, que es OTRA cosa** (y se dice claro): una vez en el almacen, el minero
+**espera** porque **no hay pico**: `El minero: no hay pico en el almacen (lo forja el herrero de
+herramientas: 3 lingotes de hierro y 2 palos): espera` (x7), su mano va `pico=SIN PICO(0/0)` y el almacen
+solo tiene **3 pepitas de hierro** (no llega ni a un lingote): el herrero de herramientas trabaja pero solo
+saca **palos** (`Hizo 4 palos` x2). Es el **cebo del pico** roto: sin pico no hay mineral, sin mineral no
+hay lingotes, sin lingotes no hay pico. La aldea nace con su remesa (1 pico de hierro + 6 lingotes) para
+arrancar esa cadena, pero en esta partida ya se gasto: es **del jugador** (como el pedernal de I101) — con
+un pico, o 3 lingotes de hierro, en el almacen, el minero vuelve a la mina.
+

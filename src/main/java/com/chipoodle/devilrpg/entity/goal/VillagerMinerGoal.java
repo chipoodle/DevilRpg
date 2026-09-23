@@ -385,7 +385,10 @@ public class VillagerMinerGoal extends Goal {
         double distancia = Math.sqrt(villager.distanceToSqr(referencia.getX() + 0.5D, referencia.getY() + 0.5D,
                 referencia.getZ() + 0.5D));
         if (distancia > REACH) {
-            VillageManager.caminarHacia(villager, destino, VELOCIDAD);
+            // EL TIRÓN INTERMEDIO: desde la mina el almacén queda a más de lo que alcanza el planificador (medido: 56
+            // bloques de radio alrededor del aldeano), y sin ruta el aldeano empujaba en línea recta — el jugador lo
+            // vio atorado en el segundo piso de la taberna con la etiqueta "Yendo al almacen".
+            irHaciaElDestino(level);
             VillageManager.ponerActividad(villager, verboDeCamino());
             anotar("yendo: " + verboDeCamino());
             if (distancia < mejorDistancia - 0.5D) {
@@ -1163,9 +1166,39 @@ public class VillagerMinerGoal extends Goal {
         return resto;
     }
 
-    private void irAlDestino() {
-        if (destino != null) {
+    /**
+     * A dónde se le manda <b>caminar</b> ahora mismo: el {@link #destino} o un <b>tirón intermedio</b> si el destino
+     * queda fuera del alcance del planificador (ver {@link VillageManager#tironHacia}). Se recalcula solo cuando se
+     * llega al tirón que tenía (y la plaza del pueblo se busca una vez por corrida, que es un barrido del terreno).
+     */
+    private void irHaciaElDestino(ServerLevel level) {
+        if (destino == null) {
+            return;
+        }
+        if (VillageManager.distanciaA(villager, destino) <= VillageManager.ALCANCE_DE_LA_RUTA) {
+            pasoDelViaje = null;
             VillageManager.caminarHacia(villager, destino, VELOCIDAD);
+            return;
+        }
+        if (pasoDelViaje == null || VillageManager.distanciaA(villager, pasoDelViaje) <= 2.0D) {
+            if (plazaDelPueblo == null) {
+                plazaDelPueblo = VillageManager.casillaDeLaCalle(level, center);
+            }
+            pasoDelViaje = VillageManager.tironHacia(level, villager, destino, plazaDelPueblo);
+        }
+        VillageManager.caminarHacia(villager, pasoDelViaje, VELOCIDAD);
+    }
+
+    /** El trozo del viaje al que se le manda ahora (ver {@link #irHaciaElDestino}); {@code null} = va al destino. */
+    @Nullable
+    private BlockPos pasoDelViaje;
+    /** La plaza del pueblo, buscada una vez por corrida: es el último recurso del tirón. */
+    @Nullable
+    private BlockPos plazaDelPueblo;
+
+    private void irAlDestino() {
+        if (destino != null && villager.level() instanceof ServerLevel level) {
+            irHaciaElDestino(level);
         }
     }
 }
