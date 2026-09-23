@@ -735,9 +735,19 @@ public final class VillageManager {
      *       la <b>caseta</b> —que es del pueblo— entre en él: sin esto el obrero no tendría nada que reponer de la
      *       caseta, y es justo lo que pasó con la muralla en la 67 (I8). El <b>pozo</b> y las <b>galerías</b> que cava
      *       el minero <b>no</b> entran (I102): son suyos y los mantiene él.</li>
+     *   <li>71: la <b>MINA, AL DESCAMPADO DEL NORESTE Y CON LA CAMA DENTRO</b> (lo pidió el jugador nada más verla:
+     *       *"mete más la cama del minero porque quedó fuera y bloquea la puerta. También mueve la cabaña del minero
+     *       porque está muy cerca del centro, ponlo más bien en un lugar cercano al muro y donde haya mucho espacio que
+     *       no se haya utilizado aún"*). El solar pasa de {@code rel (-9,+12)} (a <b>15</b> de la plaza) a
+     *       {@code rel (+33,-29)} (a <b>44</b> del centro y a <b>18</b> del muro), elegido con {@code
+     *       build/solar_mina2.py} sobre su guardado: <b>625 de 625</b> celdas libres en un entorno de 25×25 y el
+     *       subsuelo macizo. La <b>cama</b> pasa al lado este, dentro (su cabecera caía en la celda de la <b>pared
+     *       sur</b>, justo al lado de la puerta, y asomaba por el hueco). La mina <b>vieja</b> la retira
+     *       {@code deshacerLaMinaVieja} (caseta y pozo, devolviendo el terreno) y el plano se vuelve a capturar, o
+     *       quedarían las dos casetas.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 70;
+    public static final int CURRENT_LAYOUT = 71;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -2277,6 +2287,10 @@ public final class VillageManager {
             // LA MINA DEL PUEBLO (etapa I, migración 70): la caseta del minero y la boca del caracol. Va ANTES de
             // tirar el plano (I8), o sea que el plano nuevo se captura ya con la caseta dentro y el obrero la
             // mantiene; el pozo y las galerías quedan fuera por `esCeldaDeLaMina`/`estaSobreElPozo` (I102).
+            // Y EN LA 71 SE RETIRA LA MINA VIEJA (la del solar pegado al centro, que el jugador mandó mover al
+            // descampado del noreste): se deshace ANTES de volver a construirla, o quedarían las dos casetas —la
+            // vieja está en el plano y el obrero la repondría— y el pozo viejo abierto en el suelo del pueblo.
+            VillageGenerator.deshacerLaMinaVieja(level, center);
             VillageGenerator.asegurarLaMinaDelPueblo(level, center);
             // REBAÑO ESCAPADO (una sola vez, al migrar): antes de que existiera la marca del rebaño, el ganado que se
             // colaba por el portón se perdía sin remedio y el corral se quedaba vacío (y sin carne). Aquí se reconoce

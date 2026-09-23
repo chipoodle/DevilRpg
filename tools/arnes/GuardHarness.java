@@ -511,6 +511,39 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
                         + " {} pedernal, {} pico(s) | leña={}",
                 ticks, adoquin, carbon, lingotes, crudos, pedernal, picos,
                 com.chipoodle.devilrpg.world.VillageStorage.cuentaLena(level, CENTRO));
+        // LAS DOS CASETAS: la VIEJA (rel -9,+12 = 461,658) tiene que haber vuelto a ser terreno del pueblo y la NUEVA
+        // (rel +33,-29 = 503,617) tiene que tener su caseta con la CAMA DENTRO (pegada a la pared este). Y el PLANO
+        // tiene que haberse movido con ella: se cuentan sus celdas en los dos solares.
+        DevilRpg.LOGGER.info("[Arnes] CASETA VIEJA (461,658): suelo={} dentro={} cortapiedras={} cama={} boca={}",
+                nombre(level, 461, 62, 658), nombre(level, 461, 63, 658), nombre(level, 459, 63, 656),
+                nombre(level, 462, 63, 661), nombre(level, 465, 62, 654));
+        DevilRpg.LOGGER.info("[Arnes] CASETA NUEVA (503,617): suelo={} dentro={} cortapiedras={} horno={} camaPie={}"
+                        + " camaCabecera={} boca={}",
+                nombre(level, 503, 62, 617), nombre(level, 503, 63, 617), nombre(level, 501, 63, 615),
+                nombre(level, 501, 63, 619), nombre(level, 505, 63, 616), nombre(level, 505, 63, 617),
+                nombre(level, 507, 62, 613));
+        var plano = com.chipoodle.devilrpg.world.VillageSavedData.get(level).getBlueprint(INDICE);
+        int enViejo = 0;
+        int enNuevo = 0;
+        if (plano != null) {
+            for (int i = 0; i < plano.size(); i++) {
+                BlockPos p = plano.posAt(i);
+                if (Math.abs(p.getX() - 461) <= 5 && Math.abs(p.getZ() - 658) <= 5) {
+                    enViejo++;
+                }
+                if (Math.abs(p.getX() - 503) <= 5 && Math.abs(p.getZ() - 617) <= 5) {
+                    enNuevo++;
+                }
+            }
+        }
+        DevilRpg.LOGGER.info("[Arnes] PLANO: {} celda(s) en el solar VIEJO (461,658) y {} en el NUEVO (503,617)",
+                enViejo, enNuevo);
+    }
+
+    /** El nombre del bloque de una celda (para las comprobaciones de la caseta). */
+    private static String nombre(ServerLevel level, int x, int y, int z) {
+        return level.getBlockState(new BlockPos(x, y, z)).getBlock().toString()
+                .replace("Block{minecraft:", "").replace("}", "");
     }
 
     /** El bicho de la medida (el aldeano-zombi que se deja dentro de la aldea): se reutiliza, no se duplica. */

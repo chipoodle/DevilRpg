@@ -2792,6 +2792,26 @@ corrida larga, ~15 TPS y no 20), así que los tiempos de reloj son **del arnés*
 puede haber **dos albañiles** (el que planta el arnés y el que repone el latido), así que una muestra de "el minero"
 puede ser de uno u otro. Lo que se ve **en el cliente** (la mina dibujada) no se mide aquí.
 
+**SEGUNDA VUELTA: LA MINA SE MUDA AL DESCAMPADO (migración 71).** Nada más verla construida, el jugador pidió dos
+cosas: *"mete más la cama del minero porque quedó fuera y bloquea la puerta. También mueve la cabaña del minero
+porque está muy cerca del centro, ponlo más bien en un lugar cercano al muro y donde haya mucho espacio que no se
+haya utilizado aún"*.
+
+- **La cama estaba EN LA PARED**: el pie iba en `(c+1, c+2)` con la cabecera al sur, o sea que la cabecera caía en la
+  celda de la **pared sur** —justo al lado de la puerta— y asomaba por el hueco (era la cama que se ve en su captura).
+  Ahora va **dentro**, pegada a la pared **este**: pie en `(c+2, c-1)` y cabecera en `(c+2, c)`.
+- **El solar se muda** de `rel (-9,+12)` (a **15** de la plaza) a `rel (+33,-29)` → eje `(503,617)`, base `(498,612)`,
+  a **44** del centro y a **18** del muro. Lo eligió `build/solar_mina2.py` sobre su guardado: **625 de 625** celdas
+  libres en un entorno de **25×25** (el descampado del noreste; también el sitio con más hueco de toda la aldea) y las
+  columnas del caracol son las más **macizas** y secas de las candidatas junto al muro (la peor racha de agua es de
+  **5** celdas, muy por debajo del tope de sellado del minero), o sea que la mina no se va a parar a los diez bloques.
+- **La mina vieja se RETIRA** (`VillageGenerator.deshacerLaMinaVieja`, migración **71**): la caseta (su suelo de
+  piedra labrada, las paredes, el tejado, el cortapiedras, el horno y la balsa) vuelve a ser **césped y aire**, y el
+  **pozo** que el minero hubiera cavado se rellena (**césped** en la capa que se pisa, **piedra** por debajo). Sin
+  esto quedarían **las dos casetas** —la vieja está en el plano y el obrero la repondría— y el pozo viejo sería un
+  agujero en el suelo del pueblo que el tapagujeros iría rellenando a medias. La migración **tira el plano** y el
+  nuevo se captura ya con la caseta nueva dentro (I8).
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 

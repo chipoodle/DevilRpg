@@ -54,3 +54,20 @@ Corridas: 6 (23-sep-2026, 03:44 a 10:45). Lineas literales del log.
     [Village] El minero: el puesto de trabajo en 459, 63, 656 tenia el ticket PERDIDO (cogido y sin dueno): liberado y reclamado
     [Village] El minero: el puesto de trabajo en 459, 63, 656 tenia el ticket PERDIDO (cogido y sin dueno): liberado y reclamado
 (e) Con hambre y con la comida justa, plantado en la taberna sin cavar y sin comer (medido: 4 minutos).
+
+--- 7) LA MINA SE MUDA AL DESCAMPADO (migracion 71) Y LA CAMA ENTRA DENTRO -------------------------
+El jugador, al verla construida: "mete mas la cama del minero porque quedo afuera y bloquea la puerta.
+Tambien mueve la cabana del minero porque esta muy cerca del centro, ponlo mas bien en un lugar cercano al
+muro y donde haya mucho espacio que no se haya utilizado aun".
+
+[Village] Aldea en BlockPos{x=470, y=63, z=646}: retirada la mina vieja de BlockPos{x=461, y=63, z=658} (caseta y 1 celda(s) de pozo): el solar vuelve al pueblo
+[Village] Aldea en BlockPos{x=470, y=63, z=646}: caseta del minero y boca de la mina en BlockPos{x=503, y=63, z=617} (caracol de radio 4, fondo y=-58)
+[Arnes] CASETA VIEJA (461,658): suelo=grass_block dentro=air cortapiedras=air cama=air boca=grass_block
+[Arnes] CASETA NUEVA (503,617): suelo=stone_bricks dentro=air cortapiedras=stonecutter horno=furnace camaPie=red_bed camaCabecera=red_bed boca=cobblestone_slab
+[Arnes] PLANO: 0 celda(s) en el solar VIEJO (461,658) y 181 en el NUEVO (503,617)
+[Village] El minero: caracol paso 1 en 507, 61, 614 (y=61)
+[Arnes] MINA t=3000 pasos=18/240 cara=499, 53, 619 (y=53 - 9 bloques por debajo del suelo) bloqueDeLaCara=stone TOPE=NO caseta=503, 63, 617 puesto=BlockPos{x=501, y=63, z=615} balsa=BlockPos{x=505, y=62, z=615} horno=BlockPos{x=501, y=63, z=619}
+
+(la caseta vieja devuelve el solar al pueblo -cesped y aire-, el PLANO se muda con ella -0 celdas en el solar
+ viejo, 181 en el nuevo-, la cama queda DENTRO (pie y cabecera red_bed en 505,63,616 y 505,63,617) y el caracol
+ arranca desde la boca nueva: 18 pasos en los primeros 2,5 minutos)

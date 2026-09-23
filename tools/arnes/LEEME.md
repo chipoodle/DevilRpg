@@ -307,6 +307,10 @@ Cada 2 s vuelca:
 - **`TOPE=SI`** = la mina está terminada (el fondo `-58` o un mar de agua/lava sellado con su piedra labrada).
 - El **zurrón** dice qué se está llevando (tablones de los marcos, carbón y palos de las antorchas, adoquín que luego
   cuela) y el **pico con su desgaste** dice si de verdad está picando.
+- Y cada 10 s se vuelcan **las dos casetas** (la **vieja** de `461,658` y la **nueva** de `503,617`, después de la
+  migración 71 que la mueve al descampado del noreste) y **cuántas celdas del plano** hay en cada solar: es lo que
+  comprueba que la mina se ha **mudado** de verdad (la vieja vuelve a ser césped y aire, la nueva tiene su
+  cortapiedras, su horno y su **cama dentro**, y el plano pasa de 0 a 181 celdas en el solar nuevo).
 
 **Lo que se busca**: que `pasos` **suba**, que en el log salgan `El minero: caracol paso N en …` y
 `El minero: galeria … (paso N, celda M de 24)`, y que en el **almacén** aparezcan **pedernal** (4 adoquines → 1, en la
@@ -317,7 +321,8 @@ es del cliente) ni cuánto tarda en juego real (el servidor headless corre a los
 **césped** —el eje de la mina se estaba pasando a un ayudante que espera el **centro de la aldea**— y, arreglado eso,
 el progreso **oscilaba 16 → 15 → 16** porque la galería salía **hacia dentro** y el minero se comía su propio
 escalón; después, con el zurrón llenándose de **tierra y grava**, subía a vaciarlo **cada tres celdas** (dos celdas de
-galería en once minutos).
+galería en once minutos). Y en la segunda vuelta midió **la mudanza**: la caseta vieja retirada (césped y aire, 0
+celdas en el plano) y la nueva en `503,617` con la cama **dentro** (181 celdas en el plano).
 
 ### `MEDIR_LENADOR = true` — el leñador, su arboleda y el polvo de hueso (I92/I93)
 

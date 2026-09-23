@@ -2625,12 +2625,24 @@ public final class VillageGenerator {
     // --- LA MINA DEL PUEBLO (etapa I: el MINERO) ----------------------------------------------------
 
     /**
-     * <b>Centro de la mina</b> (el eje del caracol), relativo al centro de la aldea: el <b>solar libre de 11×11</b> que
-     * se midió en su partida con {@code build/solar_mina.py} (base {@code (456,653)}, centro {@code (461,658)}, a 15
-     * bloques de la plaza y 58 del almacén). El jugador pidió que la mina fuera <b>dentro de la muralla</b>, bajando
-     * desde el pueblo.
+     * <b>Centro de la mina</b> (el eje del caracol), relativo al centro de la aldea.
+     * <p>
+     * El jugador pidió primero que la mina fuera dentro de la muralla, y después —al ver la caseta construida— que se
+     * <b>apartara del centro</b>: *"mueve la cabaña del minero porque está muy cerca del centro, ponlo más bien en un
+     * lugar cercano al muro y donde haya mucho espacio que no se haya utilizado aún"*. El solar nuevo
+     * ({@code rel (+33,-29)}, base {@code (498,612)}, eje {@code (503,617)}) lo buscó {@code build/solar_mina2.py} en
+     * su guardado: <b>625 de 625</b> celdas libres en un entorno de 25×25 (el descampado del noreste), a <b>44</b> del
+     * centro (a 18 del muro) y con el subsuelo macizo (la peor racha de agua de las columnas del caracol es de
+     * <b>5</b> celdas, muy por debajo del tope con el que el minero da la mina por terminada).
      */
-    private static final BlockPos MINA_OFFSET = new BlockPos(-9, 0, 12);
+    private static final BlockPos MINA_OFFSET = new BlockPos(33, 0, -29);
+
+    /**
+     * El solar de la mina <b>de antes</b> ({@code rel (-9,+12)}): la caseta se construyó ahí (el jugador la vio
+     * pegada al centro y con la cama asomando por la puerta) y {@link #deshacerLaMinaVieja} la retira devolviendo el
+     * terreno del pueblo. Es geometría <b>heredada</b>: no se usa para construir nada.
+     */
+    private static final BlockPos MINA_OFFSET_VIEJO = new BlockPos(-9, 0, 12);
     /** Radio del caracol: sus escalones van a 4 del eje (un anillo de 9×9 dentro del solar). */
     public static final int MINA_RADIO = 4;
     /**
@@ -2937,6 +2949,71 @@ public final class VillageGenerator {
     }
 
     /**
+     * <b>Deshace la mina VIEJA</b> (migración 71): la caseta que se construyó en el solar de antes
+     * ({@link #MINA_OFFSET_VIEJO}) y el pozo que el minero hubiera cavado desde su boca, devolviendo el terreno del
+     * pueblo (césped en la capa que se pisa, aire por encima y piedra en el pozo).
+     * <p>
+     * Hace falta porque el jugador pidió <b>mover</b> la mina (*"mueve la cabaña del minero porque está muy cerca del
+     * centro"*): sin esto quedarían las dos casetas (la vieja ya está <b>en el plano</b>, así que el obrero la
+     * repondría) y el pozo viejo sería un agujero en el suelo del pueblo que el tapagujeros iría rellenando a
+     * medias. Es <b>conservador</b>: solo toca las celdas del solar viejo y las que llevan una pieza de la mina.
+     */
+    public static void deshacerLaMinaVieja(ServerLevel level, BlockPos center) {
+        int nivel = cotaDeLaPlaza(level, center);
+        BlockPos viejo = center.offset(MINA_OFFSET_VIEJO);
+        // 1) EL POZO VIEJO: de la boca hacia abajo, mientras las celdas del caracol lleven su pieza.
+        int pasos = 0;
+        for (int paso = 0; paso < pasosHastaElFondo(nivel); paso++) {
+            BlockPos pieza = celdaDelCaracolDesdeElEje(viejo, nivel, paso);
+            if (!esPiezaDeLaMina(level.getBlockState(pieza))) {
+                break; // aquí ya no hay mina
+            }
+            for (int dy = -1; dy <= 3; dy++) {
+                BlockPos p = pieza.above(dy);
+                BlockState actual = level.getBlockState(p);
+                if (!actual.isAir() && !esPiezaDeLaMina(actual) && !actual.is(Blocks.STONE_BRICKS)) {
+                    continue; // algo que no es de la mina (terreno o del pueblo): no se toca
+                }
+                BlockState nuevo = p.getY() >= nivel ? Blocks.AIR.defaultBlockState()
+                        : (p.getY() == nivel - 1 ? Blocks.GRASS_BLOCK.defaultBlockState()
+                                : Blocks.STONE.defaultBlockState());
+                level.setBlock(p, nuevo, Block.UPDATE_ALL);
+            }
+            // Y el relleno que el minero hubiera puesto bajo la pieza (adoquín) vuelve a ser piedra.
+            if (level.getBlockState(pieza.below()).is(Blocks.COBBLESTONE)) {
+                level.setBlock(pieza.below(), Blocks.STONE.defaultBlockState(), Block.UPDATE_ALL);
+            }
+            pasos++;
+        }
+        // 2) LA CASETA VIEJA (y su marco de la boca): el suelo vuelve a ser césped y lo de encima, aire. El solar es
+        //    el de 11x11 alrededor del eje (radio 5), que se midió libre antes de construirla.
+        for (int dx = -5; dx <= 5; dx++) {
+            for (int dz = -5; dz <= 5; dz++) {
+                for (int dy = 0; dy <= 4; dy++) {
+                    BlockPos p = new BlockPos(viejo.getX() + dx, nivel - 1 + dy, viejo.getZ() + dz);
+                    BlockState actual = level.getBlockState(p);
+                    if (actual.isAir()) {
+                        continue;
+                    }
+                    BlockState nuevo = p.getY() == nivel - 1 ? Blocks.GRASS_BLOCK.defaultBlockState()
+                            : (p.getY() > nivel - 1 ? Blocks.AIR.defaultBlockState()
+                                    : Blocks.STONE.defaultBlockState());
+                    level.setBlock(p, nuevo, Block.UPDATE_ALL);
+                }
+            }
+        }
+        DevilRpg.LOGGER.info("[Village] Aldea en {}: retirada la mina vieja de {} (caseta y {} celda(s) de pozo):"
+                + " el solar vuelve al pueblo", center, viejo, pasos);
+    }
+
+    /** ¿Ese bloque es una <b>pieza de la mina</b> (lo que pone el minero en su caracol)? */
+    private static boolean esPiezaDeLaMina(BlockState estado) {
+        return estado.is(Blocks.COBBLESTONE) || estado.is(Blocks.COBBLESTONE_SLAB)
+                || estado.is(Blocks.COBBLESTONE_STAIRS) || estado.is(Blocks.TORCH)
+                || estado.is(Blocks.WALL_TORCH) || estado.is(Blocks.STONE_BRICKS);
+    }
+
+    /**
      * <b>¿Esa celda es de la MINA?</b> (o sea: del <b>minero</b>, no del pueblo). Es la <b>zona</b> de la mina (el
      * cilindro de {@link #MINA_EXCLUSION_RADIO} por debajo de la capa del suelo), y la usa el <b>nivelado</b> (que
      * rellenaría el pozo con tierra si no) para <b>no</b> reponer el terreno que el minero ha cavado. Para las
@@ -2983,7 +3060,9 @@ public final class VillageGenerator {
      * <p>
      * Es <b>idempotente</b> (su testigo es el suelo de piedra de la caseta) y la llama el latido, así que llega a las
      * aldeas ya construidas sin migración —igual que la herrería, la barraca o el taller del leñador—. La <b>mina</b>
-     * que cava el minero queda <b>fuera del plano</b> (I102): el obrero no la toca.
+     * que cava el minero queda <b>fuera del plano</b> (I102): el obrero no la toca. El <b>solar</b> es
+     * {@link #MINA_OFFSET} (el descampado del noreste, junto al muro) y la mina <b>vieja</b> (la que se construyó
+     * pegada al centro) la retira {@link #deshacerLaMinaVieja} en la migración 71.
      */
     public static void asegurarLaMinaDelPueblo(ServerLevel level, BlockPos center) {
         int nivel = cotaDeLaPlaza(level, center);
@@ -3060,8 +3139,11 @@ public final class VillageGenerator {
         colocar(level, new BlockPos(c.getX() - 2, nivel, c.getZ() + 2),
                 Blocks.FURNACE.defaultBlockState().setValue(FurnaceBlock.FACING, Direction.NORTH), 3);
         // 6) Su CAMA (una cama son DOS POIs `HOME` y la necesita: duerme aquí, en su sitio de trabajo, como el
-        //    ganadero en su cobertizo).
-        bed(level, new BlockPos(c.getX() + 1, nivel, c.getZ() + 2), Direction.SOUTH);
+        //    ganadero en su cobertizo). VA DENTRO, pegada a la pared ESTE y sin tocar la puerta: con el pie en
+        //    `(c+1, c+2)` y la cabecera al sur, la cabecera caía en la celda de la PARED sur —justo al lado de la
+        //    puerta— y la cama asomaba por el hueco (lo vio el jugador: *"mete más la cama del minero porque quedó
+        //    fuera y bloquea la puerta"*).
+        bed(level, new BlockPos(c.getX() + 2, nivel, c.getZ() - 1), Direction.SOUTH);
         // 7) LA BOCA DEL CARACOL, al lado de la caseta (en la esquina noreste del anillo), con su marco de entrada.
         //    La boca es la celda 0 del caracol y la construye el pueblo (con `colocar`, o sea que ENTRA EN EL PLANO:
         //    el obrero la mantiene). Lo que cava el minero de ahí para abajo es suyo (I102).
@@ -6429,9 +6511,10 @@ public final class VillageGenerator {
             // El LEÑADOR (etapa H): al lado de su taller, en la arboleda (el taller está en (-52..-48, -26..-22)), y
             // FUERA del cobertizo por lo mismo que el ganadero y el cocinero.
             new BlockPos(-50, 0, -19),
-            // El MINERO (etapa I): al lado de su caseta y de la boca de la mina (el solar de 11x11 va en rel
-            // (-9,+12), centro (461,658)), en el patio de fuera y sin caer bajo el tejado de la caseta.
-            new BlockPos(-9, 0, 17)
+            // El MINERO (etapa I): al lado de su caseta y de la boca de la mina. El solar de 11x11 va en rel
+            // (+28,-34) (eje (503,617)), en el descampado del noreste y a 18 del muro: el sitio está al sur de la
+            // caseta (3 celdas más allá del anillo), en patio abierto y sin caer bajo su tejado.
+            new BlockPos(33, 0, -22)
     };
     /**
      * Oficios de la aldea, en el orden en que se ocupan los sitios (<b>mismo orden y misma longitud</b> que
