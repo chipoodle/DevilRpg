@@ -4008,7 +4008,14 @@ public final class VillageManager {
         for (Villager villager : aldeanos) {
             if (villager.isBaby() || villager.isSleeping()
                     || villager.getBrain().isActive(net.minecraft.world.entity.schedule.Activity.REST)
-                    || Math.abs(villager.getY() - cota) <= 4.0D) {
+                    // EN LA CALLE = con los PIES a la altura de la calle (o medio escalón por encima, que es lo que
+                    // sube andando: I26/I95). OJO: antes esto era "a menos de 4 bloques de la cota", y con una casa
+                    // cuyo suelo queda a 2 o 3 bloques de la calle el aldeano atrapado DENTRO de ella —en la
+                    // escalera, con la cama en el piso de arriba— quedaba EXENTO y no lo rescataba nadie. Medido con
+                    // el arnés: la granjera Ursula congelada en 428,65,669 (cota 63), su bancal sin cosechar y sin
+                    // poder llegar a su puesto (`no consigue llegar a 440,63,668` cada 5 min), con 36 plantas
+                    // maduras esperando. Con el criterio de la altura de los pies, a los 30 s se le baja a la plaza.
+                    || villager.getY() <= cota + 0.6D) {
                 ATRAPADOS.remove(villager.getUUID()); // en la calle (o descansando): no hay nada que rescatar
                 continue;
             }

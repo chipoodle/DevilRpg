@@ -130,3 +130,29 @@ Y en su log de juego, el granjero al compostero con UNA semilla por viaje:
 
 (37 -> 0 maduras en los tres bancales en unos 9 minutos de corrida, cada uno con su granjero, y la despensa
  con 154 verduras: la huerta se cosecha y la comida entra)
+
+--- 4) SEGUNDA PARTE: LA BARRIDA DEL BANCAL (lo pidió el jugador) --------------------------------
+El jugador: "lo que quiero es que una vez que un granjero está en una parcela, revise TODA y coseche
+TODAS las que ya están maduras. Si llegan a sobrar, que pare cuando llegue a su límite de capacidad y
+deje sin cosechar las que sobran, entonces es cuando ya puede ir a la despensa a dejar todo".
+
+Cambios (VillagerFarmGoal):
+  - BARRIDA: al cosechar, el granjero busca la siguiente MADURA **de su bancal** y sigue con ella sin
+    soltar la faena (como ya hacía al abonar y al recoger del suelo). Solo para cuando no queda ninguna
+    madura, cuando la siguiente YA NO LE CABE (entonces el zurrón está lleno: a la despensa) o cuando se
+    le acaba el tiempo. Antes hacía UNA celda por salida y volvía a decidir, así que se iba a la despensa
+    cada 8 unidades y dejaba el resto de la parcela a medias.
+  - TOPE DE SEMILLAS: guardaba hasta 72 semillas (SEMILLAS_MAX 8 + SEMILLAS_PARA_COMPOSTAR 64 = 1-2
+    huecos del zurrón), y con los huecos llenos de semillas `leCabeLaCosecha` decía que no: la barrida se
+    cortaba a las 8-11 unidades y el bancal se quedaba en 12-15 maduras para siempre. Ahora
+    SEMILLAS_PARA_COMPOSTAR = 8 (tope 16): el compostero se atiende en cuanto hay 4 de sobra.
+  - RESCATE: el "aldeano atascado dentro de una casa" solo miraba a los que estaban a MÁS DE 4 bloques de
+    la cota, así que la granjera Ursula —congelada en su casa en 428,65,669 con la cota en 63 y su cama en
+    el piso de arriba— quedaba EXENTA y no la rescataba nadie: su bancal se quedaba con 36 maduras. Ahora
+    se exime al que está "en la calle" por la ALTURA DE LOS PIES (cota + 0,6: lo que se sube andando),
+    así que a los 30 s sin moverse se le baja a la plaza. Medido: el bancal 0 empezó a bajar en cuanto
+    pisó la calle.
+
+MEDIDO (misma corrida, ~9 min): bancal 0: 36 -> 21 -> 0 maduras; bancal 2: 15 -> 9 -> 6 -> 0; bancal 1:
+1 -> 0. Los tres con 74/74 celdas sembradas (VACIAS 0) y la despensa de 267 a 525 punto(s) con las
+verduras de 58 a 193.

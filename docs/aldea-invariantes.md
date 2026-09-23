@@ -2857,6 +2857,32 @@ llenas (`VACIAS 0`) y la despensa sube de **267 a 466 puntos** con las verduras 
 > **La lección, en una línea:** una estación **libre** no se coge por cercanía al centro sino **buscando la que no
 > tiene dueño**, y la faena que **produce comida** va antes que la que **la transforma**.
 
+**TERCERA VUELTA: LA BARRIDA DEL BANCAL (y el aldeano atrapado en su casa).** El jugador afinó lo que quería: *"lo
+que quiero es que una vez que un granjero está en una parcela, revise TODA y coseche TODAS las que ya están maduras.
+Si llegan a sobrar, que pare cuando llegue a su límite de capacidad y deje sin cosechar las que sobran, entonces es
+cuando ya puede ir a la despensa a dejar todo"*. Tres cosas, las tres medidas con el arnés:
+
+1. **La barrida** (`VillagerFarmGoal`, tarea `COSECHAR`): al cosechar una mata, el granjero busca **la siguiente
+   madura de SU bancal** y sigue con ella **sin soltar la faena** (el mismo patrón que ya usaban abonar y recoger del
+   suelo). Solo para cuando **no queda ninguna madura**, cuando la siguiente **ya no le cabe** (entonces el zurrón
+   está lleno: a la despensa, que es justo lo que pidió) o cuando se le acaba el tiempo. Antes hacía **una celda por
+   salida** y volvía a decidir, así que entre cosecha y cosecha se iba a la despensa cada 8 unidades y dejaba el resto
+   de la parcela a medias.
+2. **El tope de semillas era el tapón**: guardaba hasta **72** (`SEMILLAS_MAX` 8 + `SEMILLAS_PARA_COMPOSTAR` 64) —
+   **1-2 huecos del zurrón**— y con los huecos llenos de semillas `leCabeLaCosecha` decía que no: la barrida se
+   cortaba a las **8-11 unidades** y el bancal se quedaba en **12-15 maduras para siempre** (medido). Ahora
+   `SEMILLAS_PARA_COMPOSTAR = 8` (tope 16) y el compostero se atiende en cuanto hay 4 de sobra.
+3. **El rescate no la veía**: `rescatarAldeanosAtrapados` solo miraba a los aldeanos a **más de 4 bloques** de la
+   cota; la granjera **Ursula**, congelada **dentro de su casa** en `428,65,669` (cota 63, su cama en el piso de
+   arriba y la escalera debajo de los pies), quedaba **exenta** y no la rescataba nadie: su bancal se quedaba con
+   **36 plantas maduras** y en el log salía `no consigue llegar a 440,63,668` cada 5 min. Ahora se exime al que está
+   **en la calle por la altura de los pies** (`cota + 0,6`: lo que se sube andando, I26/I95), así que a los 30 s sin
+   moverse se le baja a la plaza.
+
+**Medido después**: bancal 0 **36 → 21 → 0** maduras (en cuanto pisó la calle), bancal 2 **15 → 9 → 6 → 0**, bancal 1
+**1 → 0**, los tres con **74/74 celdas sembradas** (`VACIAS 0`) y la despensa de **267 a 525 puntos** con las
+verduras de **58 a 193**. Líneas literales en `tools/arnes/medidas-huerta.txt` (apartados 3 y 4).
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
 1. **¿Quién más LEE lo que cambio?** Buscar todos los usos (`grep`) y revisarlos uno a uno. *(Fallo real: cambié el

@@ -79,11 +79,19 @@ public class VillagerFarmGoal extends Goal {
     /** Semillas que se guarda como mucho: si lleva más, las suelta (si no, se le llena el inventario y no le cabe el trigo). */
     private static final int SEMILLAS_MAX = 8;
     /**
-     * Semillas de SOBRA que guarda para el <b>compostero</b> (además de las que necesita para sembrar). Antes las
-     * tiraba al suelo en cuanto pasaba de {@link #SEMILLAS_MAX}: el compostero NUNCA se llenaba (nadie le echaba
-     * nada), así que no había harina de huesos y el abono se quedaba sin hacer.
+     * Semillas de SOBRA que guarda para el <b>compostero</b> (además de las que necesita para sembrar). Antes eran
+     * <b>64</b> —y por eso se guardaba hasta 72 semillas, o sea <b>dos huecos del zurrón</b>—, que es lo que le
+     * <b>cortaba la barrida del bancal</b>: con los huecos llenos de semillas, `leCabeLaCosecha` decía que no y el
+     * granjero se iba a la despensa a media parcela (medido con el arnés: entregas de 8-11 unidades y el bancal
+     * quedándose en 12-15 plantas maduras para siempre).
+     * <p>
+     * Con <b>8</b> le basta: al compostero se va en cuanto tiene {@link #SEMILLAS_MINIMAS_PARA_COMPOSTAR} de sobra
+     * (el paso 5 de {@code canUse}) y el tope sigue siendo {@link #SEMILLAS_MAX} para sembrar, así que las que pasan
+     * de 16 se caen al suelo (son el abono) y el zurrón queda libre para la cosecha, que es lo que pidió el jugador:
+     * *"revisa TODA la parcela y cosecha TODAS las que ya están maduras; si llegan a sobrar, que pare cuando llegue a
+     * su límite de capacidad"*.
      */
-    private static final int SEMILLAS_PARA_COMPOSTAR = 64;
+    private static final int SEMILLAS_PARA_COMPOSTAR = 8;
     /**
      * Semillas que echa al compostero por visita (no se queda plantado allí). <b>Eran 16 y no daban abasto</b>: el
      * jugador vio la despensa llena de semillas (*"se están acumulando demasiadas semillas; lo ideal es que 2/3 partes
@@ -548,7 +556,24 @@ public class VillagerFarmGoal extends Goal {
                 }
                 despensaNoTraga = false;
                 VillageManager.ponerActividad(villager, "Cosechando");
-                cosechar(level);
+                boolean segada = cosechar(level);
+                // LA BARRIDA DEL BANCAL (lo pidió el jugador: *"una vez que un granjero está en una parcela, revise
+                // TODA y coseche TODAS las que ya están maduras; si llegan a sobrar, que pare cuando llegue a su
+                // límite de capacidad y deje sin cosechar las que sobran, entonces es cuando ya puede ir a la despensa
+                // a dejar todo"*). Mientras esté DENTRO del bancal y le quepa otra madura, SIGUE con ella sin soltar
+                // la faena: así el bancal se limpia de una pasada y no se va a la despensa cada 8 unidades —que era
+                // lo que dejaba el resto a medias—. Solo para cuando no queda ninguna madura, cuando la siguiente ya
+                // no le cabe (entonces el zurrón está lleno: a la despensa) o cuando se le acaba el tiempo.
+                if (segada) {
+                    cosechasSeguidas++;
+                    BlockPos siguiente = buscarCultivoEnLaParcela(level, parcelaDelObjetivo);
+                    if (siguiente != null && leCabeLaCosecha(level, siguiente)) {
+                        target = siguiente;
+                        mejorDistancia = Double.MAX_VALUE;
+                        stuckTicks = 0;
+                        return; // el goal sigue vivo con la siguiente mata
+                    }
+                }
             }
             case LABRAR -> {
                 VillageManager.ponerActividad(villager, "Labrando la huerta");
@@ -619,12 +644,17 @@ public class VillagerFarmGoal extends Goal {
 
     // --- las faenas -------------------------------------------------------------------------------
 
-    private void cosechar(ServerLevel level) {
+    /**
+     * Cosecha la mata del objetivo (y la deja sembrada en el sitio). Devuelve {@code true} si de verdad la ha
+     * cosechado: es lo que deja seguir con la <b>barrida del bancal</b> (ver {@code tick}) sin riesgo de quedarse
+     * dando vueltas sobre la misma celda si el cultivo no estaba maduro.
+     */
+    private boolean cosechar(ServerLevel level) {
         BlockState state = level.getBlockState(target);
         // OJO: la edad se lee con la propiedad del PROPIO cultivo (el betabel es 0-3 y el trigo 0-7).
         if (!(state.getBlock() instanceof CropBlock crop)
                 || VillageGenerator.edadDelCultivo(state) != crop.getMaxAge()) {
-            return;
+            return false;
         }
         List<ItemStack> drops = Block.getDrops(state, level, target, null);
         level.destroyBlock(target, false);
@@ -646,6 +676,45 @@ public class VillagerFarmGoal extends Goal {
             }
         }
         level.playSound(null, target, state.getSoundType().getBreakSound(), SoundSource.BLOCKS, 0.7F, 1.0F);
+        return true;
+    }
+
+    /**
+     * La mata <b>MADURA más cercana dentro de ese bancal</b> (y solo en ese), o {@code null}. Es la <b>barrida del
+     * bancal</b>: una vez dentro, el granjero no sale hasta acabar con lo maduro —o hasta que no le quepa más—, que
+     * es lo que pidió el jugador (*"una vez que un granjero está en una parcela, revise TODA y coseche TODAS las que
+     * ya están maduras"*).
+     */
+    @Nullable
+    private BlockPos buscarCultivoEnLaParcela(ServerLevel level, int parcela) {
+        if (parcela < 0 || parcela >= VillageGenerator.parcelasDeGranja()) {
+            return null;
+        }
+        int cota = VillageGenerator.cotaDeLaPlaza(level, center);
+        BlockPos esquina = VillageGenerator.esquinaDeLaParcela(center, parcela, cota);
+        BlockPos mejor = null;
+        double mejorDistancia = Double.MAX_VALUE;
+        for (int dx = 0; dx < VillageGenerator.PLOT_WIDTH; dx++) {
+            for (int dz = 0; dz < VillageGenerator.PLOT_DEPTH; dz++) {
+                for (int dy = 0; dy <= 1; dy++) {
+                    BlockPos r = esquina.offset(dx, dy, dz);
+                    BlockState s = level.getBlockState(r);
+                    if (!(s.getBlock() instanceof CropBlock crop)
+                            || VillageGenerator.edadDelCultivo(s) != crop.getMaxAge()) {
+                        continue;
+                    }
+                    if (VillageManager.esPuntoFallido(villager, r)) {
+                        continue; // a esa no llegó hace poco (I33): se prueba con la siguiente
+                    }
+                    double d = villager.distanceToSqr(r.getX() + 0.5D, r.getY() + 0.5D, r.getZ() + 0.5D);
+                    if (d < mejorDistancia) {
+                        mejorDistancia = d;
+                        mejor = r;
+                    }
+                }
+            }
+        }
+        return mejor;
     }
 
     /**
