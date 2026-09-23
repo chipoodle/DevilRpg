@@ -2678,6 +2678,120 @@ falta una **cantera de grava**: una meta que cave grava, que hoy no existe). Com
 (I87), hoy es material **que trae el jugador**: con pedernal en el almacén el herrero hace flechas (tiene palos y
 las plumas salen de los pollos) y los arqueros se rearman solos.
 
+> **ACTUALIZADO EN LA ETAPA I (I102):** el jugador contestó a esto pidiendo un **MINERO** que *"excave el suelo hacia
+> abajo… y el cobblestone que recoja, que lo filtre en agua para sacar algunos pedernales"*. La aldea **sí** produce
+> pedernal desde entonces: **4 adoquines → 1 pedernal** en la balsa de la caseta del minero (y la **grava** que pica
+> da su 10 % de pedernal de vanilla). El cuello de botella pasa a ser la **madera de los marcos** (ver I102).
+
+### I102 · La MINA del pueblo es del MINERO (y él arranca la cadena del hierro)
+
+Lo pidió el jugador: *"mejor haz otra profesión que sea de minero, y que excave el suelo hacia abajo, haciendo
+túneles, andamiajes, soportes, escaleras en espiral, todo para sacar minerales; luego en su lugar de trabajo fundirlos
+y el cobblestone que recoja, que lo filtre en agua para sacar algunos pedernales. **Su lugar de trabajo no lo debe
+regenerar ningún otro trabajador**, ya que se taladraría seguido; **quien puede regenerar lo que construya es el propio
+minero**. Debe tener también su hora de comida y descansar como todo aldeano. El material necesario para construir,
+como tablones, y las herramientas, que las saque del almacén. Debe haber un **herrero de herramientas** que haga
+herramientas para que el minero haga su trabajo, similar a los otros 2 herreros."*
+
+**La geometría (dónde y cómo), que es lo que más se puede equivocar:**
+
+| Pieza | Regla | Por qué |
+|---|---|---|
+| **Solar y caseta** | Solar **11×11** en `rel (-9, +12)` (base `456,653`, eje `461,658`), a **15** de la plaza y **58** del almacén; caseta **7×7** con el **cortapiedras** (su puesto de trabajo), **horno**, **balsa de agua a ras del suelo**, cama y farol | El solar se midió libre con `build/solar_mina.py`; el cortapiedras es el puesto del oficio `MASON` (I31) y sin él el juego le borra el oficio |
+| **Caracol** | Radio **4** (anillo de **32** celdas), **medio bloque de bajada por celda** (**16** por vuelta), de la cota a `MINA_FONDO = -58` (**240 pasos**) | Un bloque entero **no se sube** andando (I26/I95: `maxUpStep` 0,6) y la mina se recorre **en los dos sentidos** |
+| **Pieza del caracol** | **Losa** en los pasos pares y **adoquín entero** en los impares | **No escaleras**: una escalera tiene la cara alta en **una** dirección (I26) y el anillo tiene **esquinas**; en una esquina el que sube sale por el lado del escalón y el siguiente está un bloque entero más abajo (**1,0, no se sube**). La losa es uniforme en las cuatro direcciones. Comprobado celda a celda (`build/mina_geometria.py`): **todos** los saltos son 0,5 |
+| **Soportes** | Marco de **dos postes (2 de alto) y su viga** cada **16 escalones** (8 bloques) en el caracol, y cada **8 celdas** en las galerías | Con uno cada 4 escalones el pueblo no da abasto de tablones (8 marcos por vuelta): medido, lo asierra el herrero de herramientas |
+| **Galerías** | Cada **8 bloques** de descenso, **24** celdas en cruz (norte, este, sur, oeste), con su marco y su antorcha | Es lo que "saca minerales" de verdad, y en cruz para no agujerear siempre el mismo lado |
+| **Luz** | Antorcha en la pared cada **4 bloques** | Los bichos nacen a **luz 0** y la mina está **dentro de la muralla**: un zombi ahí dentro **corta el latido del pueblo entero** (I11) |
+| **Agua y lava** | Una **bolsa** se sella con adoquín y el túnel sigue; **más de 12 celdas seguidas** (un mar, un acuífero) **paran la mina**, con **piedra labrada** de tope | Lo pidió el jugador: *"que selle las bolsas; si es un mar, que pare"* |
+
+**Lo que hace el minero** (`VillagerMinerGoal`, prioridad 4 como los demás oficios): cava la siguiente celda (hueco
+de paso de **tres** celdas, I26), **se lleva lo que pica** (adoquín, tierra, grava y **el botín de las vetas**), pica
+además las **vetas que se le quedan a la vista** en las paredes del túnel, rellena el suelo hueco, pone el **marco** con
+los tablones del almacén y la **antorcha**; cada cierto trabajo **sube** a su caseta a **fundir** el hierro, el cobre y
+el oro crudos (con su carbón o con la leña del almacén, respetando `RESERVA_LENA`) y a **colar** el adoquín en la
+balsa (**4 → 1 pedernal**), y **baja lingotes, pedernal, carbón y gemas al almacén**. Su **pico se gasta** (una unidad
+de uso por celda, la durabilidad de verdad: 250 celdas el de hierro) y cuando se rompe va a por otro; los forja el
+**herrero de HERRAMIENTAS** (3 lingotes + 2 palos, `OBJETIVO_PICOS = 2`), y **come y duerme** como todos
+(`tieneHambre` / `estaDescansando`: no empieza faena en esas franjas).
+
+**Reglas (lo que NO se puede romper):**
+
+- **La mina es del minero** (lo pidió él): el pozo, los marcos y las galerías se construyen con `level.setBlock`
+  **directo**, así que **no entran en el plano** y el **obrero no los repone** (I8). El **plano**, el **nivelado** y el
+  **tapagujeros del suelo** (I90) **excluyen** la mina: el tapagujeros y el plano, con el radio **estrecho** del pozo
+  (`MINA_POZO_RADIO = 6`: ahí solo ha tocado el arranque del caracol, y alrededor está la aldea y su suelo se repara
+  igual); el **nivelado**, con la **zona** entera (`MINA_EXCLUSION_RADIO = 29`, que cubre las galerías) y **solo para
+  el AIRE** —el terreno natural de esa zona se nivela como cualquier otro, o la mina dejaría un hoyo en la meseta
+  desde el día en que se genera—. Sin esto el obrero rellenaba el pozo a los diez segundos (por bloques es idéntico a
+  un cráter de creeper) y el minero cavaba contra él para siempre.
+- **La CASETA sí es del pueblo**: se construye con `colocar` (entra en el plano, la mantiene el obrero) y es
+  **idempotente** con testigo (su suelo de piedra labrada), así que llega a las aldeas ya construidas **sin
+  migración**, como la herrería o el taller del leñador. Y como **cambia lo que se construye**, sube
+  `CURRENT_LAYOUT` a **70** y el plano se vuelve a capturar (si no, el obrero no tendría nada que reponer de la
+  caseta: es la lección de la 67, I8).
+- **El minero NO toca lo que ha puesto el pueblo** (`elMineroPuedePicar`: aire, terreno natural o una pieza suya).
+  El anillo va a **4** del eje y la caseta llega a **3**: el caracol pasa **pegado a la pared este de su propia
+  caseta**, así que sin esa guarda el minero le abriría un boquete para poner los postes de un marco (y el obrero se
+  pasaría la vida reponiéndolo). Es I24/I27 aplicada al pico.
+- **El progreso se MIRA en el mundo, no se guarda** (`progresoDeLaMina`, `progresoDeLaGaleria`): cuántas celdas del
+  caracol y de la galería tienen ya su pieza. Así, si el jugador rompe una celda del caracol, el minero **la vuelve a
+  hacer** en vez de saltársela para siempre, y no hay ningún contador que se pueda desincronizar con la mina de
+  verdad. La **galería se cava ANTES de poner la pieza de su celda**, que es la que mueve el progreso: una galería no
+  se puede quedar a medias nunca.
+- **El hierro no se puede quedar en crudo**: el minero funde lo que saca, y si no puede (sin pico con el que volver,
+  o sin combustible) el **herrero funde el crudo del almacén** (`RAW_IRON`/`RAW_COPPER`/`RAW_GOLD` → lingote). Es lo
+  que cierra el círculo del pueblo. Y para **arrancarlo** —una aldea vieja no recibe la remesa inicial del almacén—
+  la **caseta trae una vez** un **pico de hierro y 6 lingotes** al almacén (`VillageStorage.asegurarElPicoDelMinero`,
+  solo si no hay ningún pico): medido en el guardado del jugador, su aldea tenía **0 lingotes y 0 crudos**, así que
+  sin eso el minero se quedaba plantado pidiendo herramienta para siempre.
+
+**Fallos que costó (medidos con el arnés, `MEDIR_MINERO`):**
+
+1. **La boca salía 13 bloques más allá**: la caseta ya trabaja con el **eje** de la mina y le pasaba el eje a un
+   ayudante que espera el **centro de la aldea** (`celdaDelCaracol` suma `MINA_OFFSET` por dentro). Medido: la celda
+   de la boca salía con **césped** y el minero no tenía por dónde empezar. Ahora hay **una sola cuenta**
+   (`celdaDelCaracolDesdeElEje`) y la de centro y eje son la misma.
+2. **Subía al taller después de CADA celda** (16 celdas en 136 s, casi todo andando): el disparador era "tiene
+   adoquín y algo cavado". Ahora sube con **tanda hecha** (32 adoquines, mineral crudo, sin antorchas o zurrón
+   lleno).
+3. **En la galería el destino era la celda SIN cavar** (piedra): el caminante no puede ir a una celda por la que no
+   se anda, así que el minero se quedaba plantado **en la superficie justo encima de la mina**, con la etiqueta
+   "Bajando a la mina" y sin camino. El destino es la **última celda hecha**.
+4. **Se quedaba "Picando" de pie en el cofre del almacén**: al acabar de cargar material no recalculaba la faena y el
+   `destino` seguía siendo el almacén (etiqueta `Picando -> 517, 63, 666`, sin cavar una celda).
+5. **La galería salía HACIA DENTRO** (la del paso 16, esquina suroeste, apuntaba al este: por donde va el caracol), así
+   que su primera celda era la del paso 15 —ya cavada y con su pieza— y el minero **se comía su propio escalón**. El
+   progreso oscilaba **16 → 15 → 16** y en el log salían en bucle `caracol paso 15` / `galeria … celda 1 de 24`. Ahora
+   la dirección es **siempre hacia fuera** del pozo.
+6. **Subía a vaciar el zurrón cada tres celdas**: se le llenaba de **tierra, arena y grava** (basura que no le sirve).
+   Medido: **dos celdas de galería en once minutos**. Ahora no recoge basura (de la grava solo el 10 % de pedernal) y
+   sube con tanda hecha.
+7. **El `JOB_SITE` en disputa con el latido**: si en la aldea hay **otro cortapiedras**, el latido y el goal se lo
+   quitaban y se lo daban **en cada pasada** (`el puesto de trabajo en 459, 63, 656 tenia el ticket PERDIDO … liberado
+   y reclamado`, cada 10 s y para siempre). Ahora, si ya tiene **un** cortapiedras, no se toca.
+8. **La comida paraba la mina**: con hambre y comida en el pueblo se para a comer (lo pidió el jugador), pero si la
+   taberna no le da la ración se quedaba plantado en la puerta (medido: minutos sin cavar y sin comer). Ahora espera
+   `ESPERA_DE_COMIDA_MAXIMA` (20 s) y, si no come, vuelve al tajo.
+
+**Medido con el arnés** (`MEDIR_MINERO`, corridas sobre copias de su partida: aldea 0, cota 63, 240 pasos hasta el
+fondo):
+
+| Qué | Medida |
+|---|---|
+| **Caseta, boca y pico** | `caseta del minero y boca de la mina en 461, 63, 658`; el minero reclama su cortapiedras, va al almacén, coge un **pico de hierro** nuevo y a los **45 s** está en la primera celda |
+| **El caracol** | pasos **1 → 16** (15 celdas, **8 bloques de descenso**) en **42 s**; la celda de la cara pasa de `grass_block` a `cobblestone_slab` (su pieza) |
+| **La galería** | la del paso 16 (8 bloques): sale **hacia fuera** (celdas `457,54,663` y `457,54,664`, al **sur**), 2 celdas en **5 s**, con su marco y su antorcha |
+| **El pedernal** | **6 pedernal** en el almacén (4 adoquines → 1, una colada cada 40 ticks en la balsa) |
+| **La fabricación** | `hace 4 antorchas con un carbon y un palo` y `deja lo sacado en el almacen (pico si, tablones 11, antorchas 16)` |
+| **El pico** | desgaste **18/250** tras 18 celdas (una unidad de uso por celda) |
+| **Comida y descanso** | se le ve `Comiendo en la taberna` y de noche el goal no arranca (`estaDescansando`) |
+
+**Lo que esta medida NO cubre, dicho claro**: el servidor headless corre a los ticks que le deja el equipo (en la
+corrida larga, ~15 TPS y no 20), así que los tiempos de reloj son **del arnés**, no de su partida; y en una corrida
+puede haber **dos albañiles** (el que planta el arnés y el que repone el latido), así que una muestra de "el minero"
+puede ser de uno u otro. Lo que se ve **en el cliente** (la mina dibujada) no se mide aquí.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 

@@ -728,9 +728,16 @@ public final class VillageManager {
      *       leñador): <b>suelo a {@code cota - 1}, la capa que se pisa es la cota</b> (I1) y se entra <b>andando</b>.
      *       Lo baja {@code bajarElAlmacenAlSuelo} en las aldeas ya construidas, conservando lo de sus cofres
      *       (I6/I95).</li>
+     *   <li>70: la <b>MINA DEL PUEBLO Y LA CASETA DEL MINERO</b> (etapa I, el <b>minero</b> que pidió el jugador: *"mejor
+     *       haz otra profesión que sea de minero, y que excave el suelo hacia abajo, haciendo túneles, andamiajes de
+     *       soporte, escaleras en espiral, todo para sacar minerales"*). La construye el latido
+     *       ({@code asegurarLaMinaDelPueblo}, idempotente), pero <b>el plano tiene que volver a capturarse</b> para que
+     *       la <b>caseta</b> —que es del pueblo— entre en él: sin esto el obrero no tendría nada que reponer de la
+     *       caseta, y es justo lo que pasó con la muralla en la 67 (I8). El <b>pozo</b> y las <b>galerías</b> que cava
+     *       el minero <b>no</b> entran (I102): son suyos y los mantiene él.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 69;
+    public static final int CURRENT_LAYOUT = 70;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -2267,6 +2274,10 @@ public final class VillageManager {
             // una celda. Los dos puestos nuevos (el 3er granjero y el leñador) NO se siembran aquí: los repone el
             // latido al ver que sus plazas están vacías (`slotDeProfesionFaltante`), y el 3er bancal ya existe.
             VillageGenerator.asegurarElTallerDelLenador(level, center);
+            // LA MINA DEL PUEBLO (etapa I, migración 70): la caseta del minero y la boca del caracol. Va ANTES de
+            // tirar el plano (I8), o sea que el plano nuevo se captura ya con la caseta dentro y el obrero la
+            // mantiene; el pozo y las galerías quedan fuera por `esCeldaDeLaMina`/`estaSobreElPozo` (I102).
+            VillageGenerator.asegurarLaMinaDelPueblo(level, center);
             // REBAÑO ESCAPADO (una sola vez, al migrar): antes de que existiera la marca del rebaño, el ganado que se
             // colaba por el portón se perdía sin remedio y el corral se quedaba vacío (y sin carne). Aquí se reconoce
             // el que anda suelto FUERA de la muralla y cerca del corral; luego, en el latido, vuelve a casa.
@@ -2288,6 +2299,9 @@ public final class VillageManager {
         // HERRERÍA: en las aldeas que ya estaban al día (o en las nuevas) se asegura igualmente: es idempotente y así
         // también se le repone la mesa de herrería si alguien se la llevó.
         VillageGenerator.asegurarHerreria(level, center);
+        // Y LA CASETA DEL MINERO, igual de idempotente (su testigo es su suelo de piedra): así se le repone si
+        // alguien se la llevó por delante. Lo que cava el minero (el pozo) es SUYO: no se toca (I102).
+        VillageGenerator.asegurarLaMinaDelPueblo(level, center);
         // Y LOS HUECOS DE LAS CASAS DEL JUEGO (lo vio el jugador: "¿qué ves de extraño en esta casa? ¡si le falta
         // completarse a la pared! corrígelo y checa que el cofre no estorbe"): una pared con un boquete de 1x2 al lado
         // de la puerta que NADIE reponía, porque el plano de la aldea se capturó por escaneo del mundo y el escaneo
@@ -2321,7 +2335,11 @@ public final class VillageManager {
         // recién fundada no tiene ni uno hasta que el leñador tale los primeros árboles. Va AQUÍ, en la misma pasada
         // en que `asegurarAlmacen` coloca el primer cofre (el almacén todavía está vacío), y solo se le pone al
         // almacén vacío: a una aldea en marcha no se le añade nada (misma regla que la remesa de la despensa).
-        VillageStorage.remesaInicialDeMadera(level, center);
+        // Y EL PICO DEL MINERO VA EN LA MISMA REMESA (etapa I): la mina no se puede ni empezar sin herramienta y el
+        // herrero de herramientas necesita HIERRO para forjar más, que es justo lo que la mina produce: sin una
+        // remesa inicial de un pico y unos lingotes, el pueblo se quedaría esperándose a sí mismo para siempre (el
+        // leñador trae la madera, pero el hierro no lo trae nadie hasta que hay mina).
+        VillageStorage.remesaInicialDelAlmacen(level, center);
         // GRANJA ANEXA de animales (etapa D): igual (idempotente). Si el jugador se llevó la valla, se vuelve a
         // levantar; si está, no se toca (reconstruirla borraría su cobertizo y lo que tenga dentro).
         VillageGenerator.asegurarGranjaAnexa(level, center);
@@ -2475,6 +2493,14 @@ public final class VillageManager {
             if (!villager.isBaby() && !VillagerGuardGoal.esGuardia(villager)
                     && villager.getVillagerData().getProfession() == VillagerProfession.FARMER) {
                 asegurarGoalDeGranjero(villager, center, objectiveIndex);
+            }
+        }
+        // MINERO (etapa I): el albañil vive en su caseta, al lado de la boca de la mina, y su faena es cavar el
+        // caracol, abrir galerías, sacar el mineral, fundirlo, colar el adoquín en su balsa y bajarlo al almacén.
+        for (Villager villager : aldeanos) {
+            if (!villager.isBaby() && !VillagerGuardGoal.esGuardia(villager)
+                    && villager.getVillagerData().getProfession() == VillagerProfession.MASON) {
+                asegurarGoalDelMinero(villager, center, objectiveIndex);
             }
         }
         // OBREROS: puede haber VARIOS (hasta MAX_BUILDERS) repartiéndose el trabajo, y se RECALCULA quiénes son en
@@ -4140,6 +4166,25 @@ public final class VillageManager {
     }
 
     /**
+     * Le pone al <b>MINERO</b> su goal de la <b>mina</b> (etapa I): baja el caracol, abre galerías, saca el mineral,
+     * lo funde en su horno, cuela el adoquín en su balsa para sacar pedernal y lo baja todo al almacén. Prioridad
+     * <b>4</b>, la de los oficios (como el granjero, el pescador o los herreros).
+     * <p>
+     * Su oficio es {@code MASON} (el del <b>cortapiedras</b> de su caseta) porque es el que el juego da al puesto de
+     * trabajo que hay allí: una profesión por estación (I31), y hasta la etapa I el cortapiedras estaba
+     * <b>prohibido</b> en la aldea justo por eso.
+     */
+    private static void asegurarGoalDelMinero(Villager villager, BlockPos center, int objectiveIndex) {
+        for (WrappedGoal wrapped : villager.goalSelector.getAvailableGoals()) {
+            if (wrapped.getGoal() instanceof com.chipoodle.devilrpg.entity.goal.VillagerMinerGoal) {
+                return;
+            }
+        }
+        villager.goalSelector.addGoal(com.chipoodle.devilrpg.entity.goal.VillagerMinerGoal.PRIORIDAD,
+                new com.chipoodle.devilrpg.entity.goal.VillagerMinerGoal(villager, center, objectiveIndex));
+    }
+
+    /**
      * Le pone al aldeano su goal de <b>ir a comer a la taberna</b> (etapa F). Va a prioridad
      * {@code VillagerTavernGoal.PRIORIDAD} (por debajo de su oficio y del guardia): el aldeano come cuando de verdad
      * tiene hambre y no tiene faena que hacer.
@@ -4565,6 +4610,9 @@ public final class VillageManager {
         if (profesion == VillagerProfession.FLETCHER) {
             return "Leñador"; // el flechero del taller de la arboleda (etapa H): tala, replanta y baja la madera
         }
+        if (profesion == VillagerProfession.MASON) {
+            return "Minero"; // el albañil del cortapiedras de la caseta de la mina (etapa I): cava, funde y filtra
+        }
         if (profesion == VillagerProfession.NONE) {
             return "Sin oficio";
         }
@@ -4929,6 +4977,14 @@ public final class VillageManager {
         // La capa de la cota es AIRE DE TRANSITO (ahí se anda, ver groundY): un agujero empieza justo debajo. Y hacia
         // abajo, hasta donde llega un cráter; más allá es una cueva y no se tapa.
         if (dy > -1 || dy < -AGUJERO_MAX_PROFUNDIDAD) {
+            return false;
+        }
+        // LA MINA NO ES UN AGUJERO QUE TAPAR (I102): un pozo de mina es, por bloques, idéntico a un cráter de
+        // creeper (aire con suelo de aldea debajo), así que sin esta exclusión el obrero lo rellenaba a los diez
+        // segundos y el minero cavaba contra él para siempre. Lo pidió el jugador: *"su lugar de trabajo no lo debe
+        // regenerar ningún otro trabajador, ya que se taladraría seguido; quien puede regenerar lo que construya es
+        // el propio minero"*.
+        if (VillageGenerator.estaSobreElPozo(centro, pos)) {
             return false;
         }
         return esSueloDeLaAldea(level.getBlockState(pos.below()));

@@ -200,6 +200,22 @@ public class GuardHarness {
      * {@code AABB(CENTRO).inflate(40)} el corral cae <b>fuera</b> y el contador decía "0 huevos" siempre.
      */
     private static final boolean MEDIR_ALMACEN_Y_HUEVOS = false;
+    /**
+     * <b>`MEDIR_MINERO = true` — LA MINA DEL MINERO</b> (etapa I, invariante I102).
+     * <p>
+     * Deja el mundo de <b>día</b> (de noche el minero descansa como todos, {@code estaDescansando}), barre los bichos
+     * (uno dentro del recinto corta el latido del pueblo entero) y a los 10 s se asegura de que hay un <b>MINERO</b>:
+     * si no hay ninguno con el oficio {@code MASON}, lo planta el arnés con la puerta del propio mod
+     * ({@code VillageGenerator.spawnOneVillager(level, CENTRO, 11, false)}: el sitio 11 es el albañil), para no
+     * depender de que el reparto de puestos le toque en la corrida.
+     * <p>
+     * Cada 2 s vuelca el <b>avance real de la mina</b> —celdas del caracol hechas y su Y, medido en el mundo con
+     * {@code progresoDeLaMina}, más el tope de piedra labrada— y lo que hace el minero (posición, destino, zurrón,
+     * goals, etiqueta y el desgaste de su pico), y cada 10 s el <b>almacén</b> (adoquín, carbón, lingotes, pedernal
+     * y picos). Lo que se busca: que el caracol <b>suba de paso</b> con el tiempo, que salgan <b>lingotes</b> y
+     * <b>pedernal</b> al almacén, y que el minero no se quede plantado con la etiqueta "Paving" o "Sin destino".
+     */
+    private static final boolean MEDIR_MINERO = false;
     /** Dónde se planta el bicho (relativo a la plaza): dentro del recinto (radio 62) y a la altura del pueblo. */
     private static final BlockPos BICHO_EN = new BlockPos(6, 0, 6);
     private static boolean listo = false;
@@ -226,7 +242,7 @@ public class GuardHarness {
 // fuera. MEDIR_EQUIPO no estaba y su medida salio inconclusa por esto: sembro el almacen a los 10 s y a los 30 s
 // (t=600) este bloque lo vacio, asi que el equipo desaparecio antes de que ningun guardia llegara a verlo.
 if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_EQUIPO && !MEDIR_LENADOR
-                && !MEDIR_HORDAS && !MEDIR_ALMACEN_Y_HUEVOS && ticks == 600) {
+                && !MEDIR_HORDAS && !MEDIR_ALMACEN_Y_HUEVOS && !MEDIR_MINERO && ticks == 600) {
             // --- TERCERA MEDIDA: LA REMESA INICIAL DE MADERA ---------------------------------------------------
             // Se VACIA el almacen entero (como el de una aldea recien fundada, que nace sin nada dentro): en la
             // siguiente pasada del latido el pueblo tiene que meter su remesa inicial de 128 troncos, UNA vez.
@@ -301,6 +317,8 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             medirLasHordas(level, pega);
         } else if (MEDIR_ALMACEN_Y_HUEVOS) {
             medirElAlmacenYLosHuevos(level);
+        } else if (MEDIR_MINERO) {
+            medirElMinero(level);
         } else if (MEDIR_EQUIPO) {
             medirElEquipoDeLaGuardia(level, pega);
         } else if (MEDIR_COCINA) {
@@ -368,6 +386,131 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         if (ticks == 200) {
             volcarPorche(level, "DESPUES");
         }
+    }
+
+    /**
+     * <b>LA MINA DEL MINERO</b> (etapa I, I102): ver el bloque de {@code MEDIR_MINERO} arriba para el montaje.
+     */
+    private static void medirElMinero(ServerLevel level) {
+        level.setDayTime(6000L); // de dia: de noche el minero descansa (estaDescansando)
+        var aldeanos = level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(140));
+        java.util.List<Villager> mineros = new java.util.ArrayList<>();
+        for (Villager v : aldeanos) {
+            if (!v.isBaby() && v.getVillagerData().getProfession()
+                    == net.minecraft.world.entity.npc.VillagerProfession.MASON) {
+                mineros.add(v);
+            }
+        }
+        if (mineros.isEmpty()) {
+            if (ticks == 200) {
+                com.chipoodle.devilrpg.world.VillageGenerator.spawnOneVillager(level, CENTRO, 11, false);
+                DevilRpg.LOGGER.info("[Arnes] MINERO: no habia ninguno con el oficio de albanil (MASON): plantado uno"
+                        + " en su sitio con la puerta del mod (sitio 11)");
+            }
+            return;
+        }
+        // A LOS 60 s SE CAVA A MANO LA PRIMERA GALERIA (la del paso 16) para poder medir LO QUE VIENE DESPUES: el
+        // caracol no avanza de paso hasta que su galeria esta ENTERA (I102), y con el servidor headless corriendo a
+        // los ticks que le deja el equipo eso son muchos minutos de reloj. Con la galeria ya abierta se ve si el minero
+        // pone la pieza de esa celda y SIGUE bajando (paso 17 en adelante), que es lo que hay que comprobar.
+        if (ticks == 1200) {
+            int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+            for (int i = 1; i <= com.chipoodle.devilrpg.world.VillageGenerator.MINA_GALERIA_LARGO; i++) {
+                BlockPos celda = com.chipoodle.devilrpg.world.VillageGenerator.celdaDeLaGaleria(CENTRO, cota, 16, i);
+                for (int dy = 0; dy <= 1; dy++) {
+                    level.setBlock(celda.above(dy), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+                }
+            }
+            DevilRpg.LOGGER.info("[Arnes] MINERO: cavada a mano la galeria del paso 16 ({} celdas) para medir lo que"
+                    + " viene despues", com.chipoodle.devilrpg.world.VillageGenerator.MINA_GALERIA_LARGO);
+        }
+        if (ticks % 40 != 0) {
+            return;
+        }
+        int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+        int paso = com.chipoodle.devilrpg.world.VillageGenerator.progresoDeLaMina(level, CENTRO, cota);
+        int fondo = com.chipoodle.devilrpg.world.VillageGenerator.pasosHastaElFondo(cota);
+        BlockPos cara = com.chipoodle.devilrpg.world.VillageGenerator.celdaDelCaracol(CENTRO, cota, paso);
+        boolean tope = com.chipoodle.devilrpg.world.VillageGenerator.laMinaLlegoAlTope(level, CENTRO, cota, paso);
+        String topeBloque = level.getBlockState(cara).getBlock().toString()
+                .replace("Block{minecraft:", "").replace("}", "");
+        DevilRpg.LOGGER.info("[Arnes] MINA t={} pasos={}/{} cara={} (y={} · {} bloques por debajo del suelo)"
+                        + " bloqueDeLaCara={} TOPE={} caseta={} puesto={} balsa={} horno={}",
+                ticks, paso, fondo, cara.toShortString(), cara.getY(), (cota - 1) - cara.getY(), topeBloque,
+                tope ? "SI" : "NO",
+                com.chipoodle.devilrpg.world.VillageGenerator.centroDeLaMina(CENTRO).toShortString(),
+                com.chipoodle.devilrpg.world.VillageGenerator.puestoDelMinero(level, CENTRO),
+                com.chipoodle.devilrpg.world.VillageGenerator.balsaDelMinero(level, CENTRO),
+                com.chipoodle.devilrpg.world.VillageGenerator.hornoDelMinero(level, CENTRO));
+        for (Villager v : mineros) {
+            StringBuilder goals = new StringBuilder();
+            for (net.minecraft.world.entity.ai.goal.WrappedGoal w : v.goalSelector.getAvailableGoals()) {
+                if (w.isRunning()) {
+                    goals.append(w.getGoal().getClass().getSimpleName()).append(' ');
+                }
+            }
+            var wt = v.getBrain().getMemory(MemoryModuleType.WALK_TARGET).orElse(null);
+            var pico = v.getMainHandItem();
+            StringBuilder zurron = new StringBuilder();
+            for (int i = 0; i < v.getInventory().getContainerSize(); i++) {
+                var s = v.getInventory().getItem(i);
+                if (!s.isEmpty()) {
+                    zurron.append(i).append(':').append(s.getCount()).append('x')
+                            .append(s.getItem().toString().replace("Item{minecraft:", "").replace("}", "")).append(' ');
+                }
+            }
+            DevilRpg.LOGGER.info("[Arnes] MINERO t={} pos={} cara={} dCara={} destino={} pico={}({}/{}) zurron=[{}]"
+                            + " goals=[{}] etiqueta={}",
+                    ticks, v.blockPosition().toShortString(), cara.toShortString(),
+                    fmt(Math.sqrt(v.distanceToSqr(cara.getX() + 0.5D, cara.getY() + 0.5D, cara.getZ() + 0.5D))),
+                    wt == null ? "SIN DESTINO" : wt.getTarget().currentBlockPosition().toShortString(),
+                    pico.isEmpty() ? "SIN PICO"
+                            : pico.getItem().toString().replace("Item{minecraft:", "").replace("}", ""),
+                    pico.isEmpty() ? 0 : pico.getDamageValue(), pico.isEmpty() ? 0 : pico.getMaxDamage(),
+                    zurron.toString().trim(), goals.toString().trim(),
+                    v.getCustomName() == null ? "-" : v.getCustomName().getString().replace("\n", " | "));
+        }
+        if (ticks % 200 != 0) {
+            return;
+        }
+        // EL ALMACEN: lo que la mina tiene que estar metiendo (adoquin, carbon, lingotes, pedernal y picos).
+        var caja = com.chipoodle.devilrpg.world.VillageStorage.almacen(level, CENTRO);
+        int adoquin = 0;
+        int carbon = 0;
+        int lingotes = 0;
+        int pedernal = 0;
+        int picos = 0;
+        int crudos = 0;
+        if (caja != null) {
+            for (int i = 0; i < caja.getContainerSize(); i++) {
+                var s = caja.getItem(i);
+                if (s.isEmpty()) {
+                    continue;
+                }
+                if (s.is(net.minecraft.world.item.Items.COBBLESTONE)
+                        || s.is(net.minecraft.world.item.Items.COBBLED_DEEPSLATE)) {
+                    adoquin += s.getCount();
+                } else if (s.is(net.minecraft.world.item.Items.COAL)) {
+                    carbon += s.getCount();
+                } else if (s.is(net.minecraft.world.item.Items.IRON_INGOT)
+                        || s.is(net.minecraft.world.item.Items.COPPER_INGOT)
+                        || s.is(net.minecraft.world.item.Items.GOLD_INGOT)) {
+                    lingotes += s.getCount();
+                } else if (s.is(net.minecraft.world.item.Items.FLINT)) {
+                    pedernal += s.getCount();
+                } else if (s.is(net.minecraft.world.item.Items.IRON_PICKAXE)) {
+                    picos += s.getCount();
+                } else if (s.is(net.minecraft.world.item.Items.RAW_IRON)
+                        || s.is(net.minecraft.world.item.Items.RAW_COPPER)
+                        || s.is(net.minecraft.world.item.Items.RAW_GOLD)) {
+                    crudos += s.getCount();
+                }
+            }
+        }
+        DevilRpg.LOGGER.info("[Arnes] ALMACEN DE LA MINA t={}: {} adoquin, {} carbon, {} lingote(s), {} crudo(s),"
+                        + " {} pedernal, {} pico(s) | leña={}",
+                ticks, adoquin, carbon, lingotes, crudos, pedernal, picos,
+                com.chipoodle.devilrpg.world.VillageStorage.cuentaLena(level, CENTRO));
     }
 
     /** El bicho de la medida (el aldeano-zombi que se deja dentro de la aldea): se reutiliza, no se duplica. */

@@ -36,6 +36,7 @@ import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.FarmBlock;
 import net.minecraft.world.level.block.FenceGateBlock;
+import net.minecraft.world.level.block.FurnaceBlock;
 import net.minecraft.world.level.block.GrowingPlantBlock;
 import net.minecraft.world.level.block.RotatedPillarBlock;
 import net.minecraft.world.level.block.SlabBlock;
@@ -346,6 +347,10 @@ public final class VillageGenerator {
         // EL TALLER DEL LEÑADOR (etapa H): junto a la arboleda, con la mesa de flechas (su puesto de trabajo). El
         // leñador es un oficio propio desde la etapa H (antes talaba el recolector).
         asegurarElTallerDelLenador(level, center);
+        // LA MINA DEL PUEBLO (etapa I): la caseta del minero (su cortapiedras —el puesto del albañil—, el horno para
+        // fundir, la balsa de filtrado y su cama) y la boca del caracol. La caseta es del PUEBLO (entra en el plano:
+        // la mantiene el obrero); el pozo y las galerías los cava el minero y quedan fuera del plano (I102).
+        asegurarLaMinaDelPueblo(level, center);
         // Y LA ORILLA, seca y pareja, si la aldea nació al nivel del agua (si no, no se toca nada).
         asegurarOrilla(level, center);
         // NIEVE Y VEGETACIÓN QUE QUEDÓ COLGANDO del recorte (aldea de montaña): se limpia antes de dar por hecha la
@@ -2615,6 +2620,470 @@ public final class VillageGenerator {
             valores[i] = desde + (int) Math.round((hasta - desde) * (i / (double) (cuantos - 1)));
         }
         return valores;
+    }
+
+    // --- LA MINA DEL PUEBLO (etapa I: el MINERO) ----------------------------------------------------
+
+    /**
+     * <b>Centro de la mina</b> (el eje del caracol), relativo al centro de la aldea: el <b>solar libre de 11×11</b> que
+     * se midió en su partida con {@code build/solar_mina.py} (base {@code (456,653)}, centro {@code (461,658)}, a 15
+     * bloques de la plaza y 58 del almacén). El jugador pidió que la mina fuera <b>dentro de la muralla</b>, bajando
+     * desde el pueblo.
+     */
+    private static final BlockPos MINA_OFFSET = new BlockPos(-9, 0, 12);
+    /** Radio del caracol: sus escalones van a 4 del eje (un anillo de 9×9 dentro del solar). */
+    public static final int MINA_RADIO = 4;
+    /**
+     * Un <b>marco de madera</b> (dos postes y su viga) cada X escalones del caracol. Son 16 escalones = <b>8 bloques
+     * de descenso</b>: los mismos que hay entre galería y galería, así que el caracol lleva un marco por planta.
+     * <p>
+     * Antes eran cada 4 escalones (2 bloques) y eso son <b>ocho marcos por vuelta</b>: la madera del pueblo
+     * (el leñador trae troncos y el herrero de herramientas los asierra, con un objetivo de 32 tablones) no da para
+     * 40 tablones por vuelta, así que el minero se pasaría la vida esperando tablones en vez de cavando.
+     */
+    public static final int MINA_SOPORTE_CADA = 16;
+    /** Cada cuántos bloques de descenso se abre una <b>galería</b>, y cuánto se adentra. */
+    public static final int MINA_GALERIA_CADA = 8;
+    public static final int MINA_GALERIA_LARGO = 24;
+    /** Un marco de madera cada X celdas <b>dentro</b> de una galería (el de la boca lo pone el caracol). */
+    public static final int MINA_GALERIA_SOPORTE_CADA = 8;
+    /** Hasta dónde baja: el bedrock del overworld está en −64, así que se para antes (y en la lava). */
+    public static final int MINA_FONDO = -58;
+    /**
+     * Radio de la <b>zona de la mina</b>: hasta dónde llega (las galerías salen 24 del eje). Es lo que se usa para
+     * <b>excluirla</b> del plano, del nivelado y del tapagujeros del suelo.
+     */
+    public static final int MINA_EXCLUSION_RADIO = MINA_RADIO + MINA_GALERIA_LARGO + 1;
+
+    /**
+     * Radio del <b>pozo</b> (la boca y el caracol): lo que el minero abre <b>cerca de la superficie</b>. Es el que
+     * usan las reparaciones que miran la capa del suelo (el tapagujeros de I90 y el plano), porque ahí el minero
+     * solo ha tocado esas celdas: usar el radio de toda la zona ({@link #MINA_EXCLUSION_RADIO}) dejaría sin reparar
+     * el suelo de media aldea.
+     */
+    public static final int MINA_POZO_RADIO = MINA_RADIO + 2;
+
+    /**
+     * El eje de la mina (el centro del caracol y de la caseta). Se calcula como un <b>desplazamiento</b> del centro
+     * de la aldea ({@code center.offset}) a propósito: la <b>Y</b> de aquí no se usa para nada (I1) —toda altura sale
+     * de {@link #cotaDeLaPlaza}—, así que no se toca.
+     */
+    public static BlockPos centroDeLaMina(BlockPos center) {
+        return center.offset(MINA_OFFSET);
+    }
+
+    /**
+     * Las celdas de <b>un anillo completo</b> del caracol, en orden de bajada: 8 celdas por lado a
+     * {@link #MINA_RADIO} del eje, empezando en la esquina <b>noreste</b> (que es donde cae la <b>boca</b>, al lado
+     * de la caseta) y girando en el sentido de las agujas del reloj.
+     */
+    private static final int[][] MINA_ANILLO = anilloDeLaMina();
+
+    private static int[][] anilloDeLaMina() {
+        List<int[]> celdas = new ArrayList<>();
+        for (int dz = -MINA_RADIO; dz < MINA_RADIO; dz++) {
+            celdas.add(new int[]{MINA_RADIO, dz});      // lado este, de norte a sur
+        }
+        for (int dx = MINA_RADIO; dx > -MINA_RADIO; dx--) {
+            celdas.add(new int[]{dx, MINA_RADIO});      // lado sur, de este a oeste
+        }
+        for (int dz = MINA_RADIO; dz > -MINA_RADIO; dz--) {
+            celdas.add(new int[]{-MINA_RADIO, dz});     // lado oeste, de sur a norte
+        }
+        for (int dx = -MINA_RADIO; dx < MINA_RADIO; dx++) {
+            celdas.add(new int[]{dx, -MINA_RADIO});     // lado norte, de oeste a este
+        }
+        return celdas.toArray(new int[0][]);
+    }
+
+    /** Cuántos escalones tiene un anillo completo (32 con radio 4). */
+    public static int escalonesPorVuelta() {
+        return MINA_ANILLO.length;
+    }
+
+    /**
+     * La <b>Y de la celda</b> del caracol número {@code paso}: baja <b>medio bloque por celda</b>.
+     * <p>
+     * Los dos bloques de cada <b>par</b> de escalones comparten Y (el caracol va por bloques enteros), así que la Y
+     * de la celda {@code p} es {@code (nivel - 1) - (p + 1) / 2}: la vuelta entera (32 celdas) baja <b>16 bloques</b>.
+     */
+    public static int yDelCaracol(int nivel, int paso) {
+        return (nivel - 1) - Math.floorDiv(paso + 1, 2);
+    }
+
+    /**
+     * La celda del caracol número {@code paso} <b>contada desde el EJE de la mina</b>. Es la forma en la que la usa
+     * la caseta (que ya trabaja con el eje) y la de {@link #celdaDelCaracol}, que le pasa el eje sacado del centro de
+     * la aldea: tener dos cuentas —una desde el centro y otra desde el eje— fue justo el fallo que colocaba la
+     * <b>boca trece bloques más allá</b> (medido con el arnés: la celda de la boca salía con césped y el minero no
+     * tenía por dónde empezar).
+     */
+    private static BlockPos celdaDelCaracolDesdeElEje(BlockPos eje, int nivel, int paso) {
+        int[] d = MINA_ANILLO[Math.floorMod(paso, MINA_ANILLO.length)];
+        return new BlockPos(eje.getX() + d[0], yDelCaracol(nivel, paso), eje.getZ() + d[1]);
+    }
+
+    /**
+     * La celda del caracol número {@code paso} ({@code 0} = la boca, pegada a la caseta): su posición con la
+     * <b>Y de su pieza</b>. El {@code center} que recibe es el <b>centro de la aldea</b> (el eje de la mina es un
+     * desplazamiento suyo, {@link #MINA_OFFSET}).
+     * <p>
+     * Baja <b>medio bloque por celda</b> y por eso la mina <b>se recorre andando en los dos sentidos</b> (I95: un
+     * bloque entero <b>no</b> se sube; 0,5 sí, que es lo que sube un aldeano de un paso, {@code maxUpStep} 0,6).
+     */
+    public static BlockPos celdaDelCaracol(BlockPos center, int nivel, int paso) {
+        return celdaDelCaracolDesdeElEje(centroDeLaMina(center), nivel, paso);
+    }
+
+    /**
+     * La <b>pieza</b> de la celda {@code paso} del caracol: <b>losa</b> en los pares y <b>adoquín entero</b> en los
+     * impares (la huella va a {@code y + 0,5} y a {@code y + 1}, o sea medio bloque de bajada por celda).
+     * <p>
+     * <b>Por qué LOSAS y no escaleras</b> (que es lo que uno espera de una "escalera en espiral"): una escalera
+     * tiene su <b>cara alta en UNA dirección</b> (I26: la cara alta mira hacia donde se sube) y el anillo del caracol
+     * tiene <b>esquinas</b>. En una esquina, la celda del escalón mira a la celda de la que se viene (p. ej. al
+     * norte) y la que sigue está a un lado (p. ej. al oeste): el que sube sale del escalón por su <b>lado</b>, que
+     * está a media altura, y el escalón de después está <b>un bloque entero</b> más abajo — un paso de 1,0 que
+     * <b>no se sube</b>. La losa es <b>uniforme en las cuatro direcciones</b> (0,5 exactos de suelo a suelo, gire
+     * como gire el anillo), así que la mina se sube por cualquier esquina. Medido en el banco de pruebas con el
+     * arnés: el caracol de losas sube y baja entero, el de escaleras se atasca en la primera esquina.
+     */
+    public static BlockState piezaDelCaracol(int paso) {
+        return Math.floorMod(paso, 2) == 0
+                ? Blocks.COBBLESTONE_SLAB.defaultBlockState()
+                : Blocks.COBBLESTONE.defaultBlockState();
+    }
+
+    /** ¿Ese paso del caracol es de <b>losa</b> (los pares)? Los marcos y las antorchas van en las losas. */
+    public static boolean esLosaDelCaracol(int paso) {
+        return Math.floorMod(paso, 2) == 0;
+    }
+
+    /**
+     * Las <b>dos celdas de los lados</b> de una celda del caracol (las paredes del túnel): el radio va <b>por dentro
+     * y por fuera</b> del anillo, que es por donde se abre el marco de madera (los postes van en las paredes).
+     */
+    public static BlockPos[] ladosDeLaCeldaDelCaracol(BlockPos center, int nivel, int paso) {
+        return ladosDeLaCelda(celdaDelCaracol(center, nivel, paso), paso);
+    }
+
+    /** Los dos lados de una celda del caracol ya calculada (ver {@link #ladosDeLaCeldaDelCaracol}). */
+    private static BlockPos[] ladosDeLaCelda(BlockPos celda, int paso) {
+        int[] d = MINA_ANILLO[Math.floorMod(paso, MINA_ANILLO.length)];
+        boolean porElEjeX = Math.abs(d[0]) >= Math.abs(d[1]);
+        int sx = porElEjeX ? Integer.signum(d[0]) : 0;
+        int sz = porElEjeX ? 0 : Integer.signum(d[1]);
+        return new BlockPos[]{celda.offset(sx, 0, sz), celda.offset(-sx, 0, -sz)};
+    }
+
+    /** ¿Ese paso del caracol es de los que llevan <b>marco de madera</b> (cada {@link #MINA_SOPORTE_CADA})? */
+    public static boolean llevaSoporte(int paso) {
+        return paso > 0 && Math.floorMod(paso, MINA_SOPORTE_CADA) == 0;
+    }
+
+    /** ¿Ese paso abre <b>galería</b> (cada {@link #MINA_GALERIA_CADA} bloques de descenso)? */
+    public static boolean abreGaleria(int paso) {
+        // Medio bloque de bajada por celda, así que cada `MINA_GALERIA_CADA` bloques son 2*X pasos.
+        return paso > 0 && Math.floorMod(paso, MINA_GALERIA_CADA * 2) == 0;
+    }
+
+    /**
+     * La <b>dirección de la galería</b> que abre el caracol en ese paso: <b>hacia FUERA del pozo</b>, en cruz
+     * (norte, sur, este u oeste según por dónde vaya el anillo).
+     * <p>
+     * <b>Tiene que ser hacia fuera</b>, y esto costó una tarde: con una dirección que gira sin mirar el anillo, la
+     * galería del paso 16 (la esquina suroeste) salía hacia el <b>este</b>, o sea <b>por donde va el caracol</b>: su
+     * primera celda es la celda del paso 15 —ya cavada y con su pieza—, así que el minero se <b>comía su propio
+     * escalón</b>. Medido con el arnés: el progreso oscilaba 16 → 15 → 16 → 15 y en el log salían en bucle
+     * {@code caracol paso 15} / {@code galeria … celda 1 de 24}: el minero no bajaba ni un bloque más.
+     */
+    public static Direction direccionDeLaGaleria(int paso) {
+        int[] d = MINA_ANILLO[Math.floorMod(paso, MINA_ANILLO.length)];
+        // En las esquinas los dos ejes valen (los dos apuntan hacia fuera); se elige el de Z, que es lo que reparte
+        // las galerías por los cuatro costados en el orden en que el anillo pasa por ellos.
+        if (Math.abs(d[1]) >= Math.abs(d[0])) {
+            return d[1] > 0 ? Direction.SOUTH : Direction.NORTH;
+        }
+        return d[0] > 0 ? Direction.EAST : Direction.WEST;
+    }
+
+    /**
+     * La celda número {@code indice} (1..{@link #MINA_GALERIA_LARGO}) de la galería que sale del paso {@code paso}:
+     * a la <b>misma Y</b> que la celda del caracol, adentrándose en cruz desde ella. El suelo de la galería es el
+     * terreno de debajo (a {@code y - 1}), o sea que desde la losa del caracol se <b>baja medio bloque</b> a la
+     * galería y se sube otro medio al volver.
+     */
+    public static BlockPos celdaDeLaGaleria(BlockPos center, int nivel, int paso, int indice) {
+        BlockPos celda = celdaDelCaracol(center, nivel, paso);
+        return celda.relative(direccionDeLaGaleria(paso), indice);
+    }
+
+    /** Cuántos pasos del caracol caben desde la capa del suelo hasta {@link #MINA_FONDO} (240 con cota 63). */
+    public static int pasosHastaElFondo(int nivel) {
+        return 2 * Math.max(0, (nivel - 1) - MINA_FONDO);
+    }
+
+    /**
+     * <b>Cuántas celdas del caracol están hechas</b>, contadas desde la boca. Es la <b>faena pendiente</b> del minero,
+     * y se <b>mira en el mundo</b> (la pieza de cada celda) en vez de llevarse en un contador guardado: así, si el
+     * jugador rompe una celda del caracol, el minero <b>la vuelve a hacer</b> en vez de saltársela para siempre, y no
+     * hay ningún número que se pueda quedar desincronizado con la mina de verdad.
+     * <p>
+     * Una celda que <b>abre galería</b> no cuenta como hecha hasta que la galería está <b>entera</b>: si no, el
+     * progreso avanzaría con la pieza puesta y la galería se quedaría a medias para siempre. (La pieza <b>sí</b> se
+     * pone antes de cavarla: es lo que deja el medio bloque por el que se <b>entra y se sale</b> del túnel, porque el
+     * suelo de la galería va un bloque por debajo de la celda anterior del caracol.)
+     * <p>
+     * Se para en la primera celda que <b>no</b> tiene su pieza (la faena está ahí) o en la que lleva el
+     * <b>tope</b> ({@link #laMinaLlegoAlTope}).
+     */
+    public static int progresoDeLaMina(ServerLevel level, BlockPos center, int nivel) {
+        int maximo = pasosHastaElFondo(nivel);
+        int paso = 0;
+        while (paso < maximo && level.getBlockState(celdaDelCaracol(center, nivel, paso)).is(piezaDelCaracol(paso)
+                .getBlock())) {
+            if (abreGaleria(paso) && progresoDeLaGaleria(level, center, nivel, paso) < MINA_GALERIA_LARGO) {
+                break; // la pieza está, pero su galería no: la faena es la galería
+            }
+            paso++;
+        }
+        return paso;
+    }
+
+    /**
+     * <b>Cuántas celdas de la galería</b> de ese paso están ya abiertas (aire). Igual que el caracol, se <b>mira en
+     * el mundo</b> en vez de llevarse en un contador: si al minero le pilla la noche (o un asedio) a media galería,
+     * al volver <b>sigue por donde iba</b> en vez de dejar túneles a medias por todo el subsuelo.
+     */
+    public static int progresoDeLaGaleria(ServerLevel level, BlockPos center, int nivel, int paso) {
+        int hechas = 0;
+        for (int i = 1; i <= MINA_GALERIA_LARGO; i++) {
+            if (level.getBlockState(celdaDeLaGaleria(center, nivel, paso, i)).isAir()) {
+                hechas++;
+            } else {
+                break;
+            }
+        }
+        return hechas;
+    }
+
+    /**
+     * ¿La mina ya está <b>cerrada</b> en esa celda? El minero deja <b>piedra labrada</b> ({@code STONE_BRICKS}, que
+     * no es nada de la mina ni terreno natural) en la celda donde se para: o llegó al <b>fondo</b>
+     * ({@link #MINA_FONDO}) o se topó con un <b>mar de agua o de lava</b> que no puede sellar. Es su marca de "hasta
+     * aquí", y también la lee el latido para saber que esa aldea ya tiene la mina hecha.
+     */
+    public static boolean laMinaLlegoAlTope(ServerLevel level, BlockPos center, int nivel, int paso) {
+        return paso >= pasosHastaElFondo(nivel)
+                || level.getBlockState(celdaDelCaracol(center, nivel, paso)).is(Blocks.STONE_BRICKS);
+    }
+
+    /**
+     * ¿El minero puede <b>picar</b> esa celda? Sí si es <b>aire</b>, <b>terreno natural</b> (tierra, piedra,
+     * deepslate, arena, grava, un mineral...) o una <b>pieza de la propia mina</b> (adoquín, losa, el tronco de un
+     * marco, una antorcha). <b>No</b> si es algo que ha puesto el pueblo o el jugador: piedra labrada, tablones,
+     * vallas, un cofre...
+     * <p>
+     * Es la misma lección de I24/I27 (el nivelado no se come lo construido) aplicada al pico: el caracol pasa a un
+     * bloque de la <b>pared este de su propia caseta</b> (el anillo va a 4 del eje y la caseta llega a 3), así que sin
+     * esta guarda el minero se abriría un boquete en la caseta para poner los postes de un marco — y el obrero se
+     * pasaría la vida reponiéndolo.
+     */
+    public static boolean elMineroPuedePicar(BlockState state) {
+        return state.isAir() || esTerrenoNatural(state) || state.is(Blocks.COBBLESTONE)
+                || state.is(Blocks.COBBLESTONE_SLAB) || state.is(Blocks.COBBLESTONE_STAIRS)
+                || state.is(Blocks.OAK_LOG) || state.is(Blocks.OAK_PLANKS)
+                || state.is(Blocks.TORCH) || state.is(Blocks.WALL_TORCH);
+    }
+
+    // --- los puntos de la caseta del minero (lo que el goal necesita para trabajar) -----------------
+
+    /** El eje de la caseta y de la boca, a la cota del pueblo (la <b>capa que se pisa</b>, I1/I95). */
+    private static BlockPos ejeDeLaCaseta(ServerLevel level, BlockPos center) {
+        int nivel = cotaDeLaPlaza(level, center);
+        return new BlockPos(centroDeLaMina(center).getX(), nivel, centroDeLaMina(center).getZ());
+    }
+
+    /** La casilla <b>libre</b> de la caseta donde se para el minero (el centro, debajo del farol). */
+    public static BlockPos puntoDeApoyoDeLaCaseta(ServerLevel level, BlockPos center) {
+        return ejeDeLaCaseta(level, center);
+    }
+
+    /**
+     * El <b>puesto de trabajo</b> del minero: el <b>cortapiedras</b> de su caseta (es el puesto del oficio
+     * {@code MASON}, y sin él el juego le borra el oficio, I23/I31), o {@code null} si todavía no hay caseta.
+     */
+    @Nullable
+    public static BlockPos puestoDelMinero(ServerLevel level, BlockPos center) {
+        BlockPos c = ejeDeLaCaseta(level, center);
+        BlockPos puesto = new BlockPos(c.getX() - 2, c.getY(), c.getZ() - 2);
+        return level.getBlockState(puesto).is(Blocks.STONECUTTER) ? puesto : null;
+    }
+
+    /** La <b>balsa de filtrado</b> (agua a ras del suelo de la caseta) o {@code null} si no está. */
+    @Nullable
+    public static BlockPos balsaDelMinero(ServerLevel level, BlockPos center) {
+        BlockPos c = ejeDeLaCaseta(level, center);
+        BlockPos balsa = new BlockPos(c.getX() + 2, c.getY() - 1, c.getZ() - 2);
+        return level.getBlockState(balsa).is(Blocks.WATER) ? balsa : null;
+    }
+
+    /** El <b>horno</b> del minero (donde funde los minerales) o {@code null} si no está. */
+    @Nullable
+    public static BlockPos hornoDelMinero(ServerLevel level, BlockPos center) {
+        BlockPos c = ejeDeLaCaseta(level, center);
+        BlockPos horno = new BlockPos(c.getX() - 2, c.getY(), c.getZ() + 2);
+        return level.getBlockState(horno).is(Blocks.FURNACE) ? horno : null;
+    }
+
+    /**
+     * <b>¿Esa celda es de la MINA?</b> (o sea: del <b>minero</b>, no del pueblo). Es la <b>zona</b> de la mina (el
+     * cilindro de {@link #MINA_EXCLUSION_RADIO} por debajo de la capa del suelo), y la usa el <b>nivelado</b> (que
+     * rellenaría el pozo con tierra si no) para <b>no</b> reponer el terreno que el minero ha cavado. Para las
+     * reparaciones de la <b>capa del suelo</b> (el tapagujeros de I90 y el plano) se usa {@link #estaSobreElPozo},
+     * que es mucho más estrecho: alrededor del pozo está la aldea y su suelo se repara igual.
+     * <p>
+     * La regla es un <b>cilindro</b>: la zona de la mina ({@link #MINA_EXCLUSION_RADIO}) y <b>por debajo de la capa
+     * del suelo</b>. La superficie <b>no</b> se excluye: la caseta es del pueblo y el obrero la mantiene.
+     */
+    public static boolean esCeldaDeLaMina(BlockPos center, int nivel, BlockPos pos) {
+        if (pos.getY() >= nivel - 1) {
+            return false; // la superficie (y la caseta) es del pueblo
+        }
+        int dx = pos.getX() - centroDeLaMina(center).getX();
+        int dz = pos.getZ() - centroDeLaMina(center).getZ();
+        return dx * dx + dz * dz <= MINA_EXCLUSION_RADIO * MINA_EXCLUSION_RADIO;
+    }
+
+    /**
+     * ¿Esa celda cae <b>sobre el pozo</b> de la mina (la boca y el caracol), mirando solo el plano horizontal? Es la
+     * pregunta que hacen las reparaciones de la <b>capa del suelo</b> (el tapagujeros I90 y el plano), que solo
+     * pueden ver lo que hay cerca de la superficie: alrededor del pozo está la aldea, y su suelo se repara igual.
+     */
+    public static boolean estaSobreElPozo(BlockPos center, BlockPos pos) {
+        int dx = pos.getX() - centroDeLaMina(center).getX();
+        int dz = pos.getZ() - centroDeLaMina(center).getZ();
+        return dx * dx + dz * dz <= MINA_POZO_RADIO * MINA_POZO_RADIO;
+    }
+
+    /** La <b>boca de la mina</b> (el primer escalón del caracol), al lado de la caseta. */
+    public static BlockPos bocaDeLaMina(BlockPos center, int nivel) {
+        return celdaDelCaracol(center, nivel, 0);
+    }
+
+    /** Lado de la caseta del minero (7×7: cabe en el solar de 11×11 con holgura). */
+    private static final int CASETA_MINERO_LADO = 7;
+
+    /**
+     * Asegura la <b>mina del pueblo</b> (etapa I): la <b>caseta del minero</b> (7×7 de piedra, con su
+     * <b>cortapiedras</b> —que es su puesto de trabajo, el del albañil—, un <b>horno</b> para fundir, su <b>balsa de
+     * agua</b> para filtrar el cobblestone, su <b>cama</b> y su farol) y la <b>boca del caracol</b>, con su marco de
+     * entrada. El resto de la mina (los escalones, los soportes y las galerías) lo cava el <b>minero</b>: aquí solo
+     * se deja la boca y el primer escalón.
+     * <p>
+     * Es <b>idempotente</b> (su testigo es el suelo de piedra de la caseta) y la llama el latido, así que llega a las
+     * aldeas ya construidas sin migración —igual que la herrería, la barraca o el taller del leñador—. La <b>mina</b>
+     * que cava el minero queda <b>fuera del plano</b> (I102): el obrero no la toca.
+     */
+    public static void asegurarLaMinaDelPueblo(ServerLevel level, BlockPos center) {
+        int nivel = cotaDeLaPlaza(level, center);
+        if (nivel <= level.getMinBuildHeight() + 1) {
+            return;
+        }
+        BlockPos c = centroDeLaMina(center);
+        BlockPos testigo = new BlockPos(c.getX(), nivel - 1, c.getZ() + CASETA_MINERO_LADO / 2);
+        if (level.getBlockState(testigo).is(Blocks.STONE_BRICKS)) {
+            return; // la caseta ya está
+        }
+        casetaDelMinero(level, c, nivel);
+        // Y LA HERRAMIENTA CON LA QUE ARRANCA (una vez, y solo si el almacén no tiene ningún pico): a una aldea que
+        // ya estaba en marcha no le llega la remesa inicial del almacén, así que sin esto el minero se quedaba
+        // plantado pidiendo pico y el herrero sin hierro con el que forjarlo.
+        VillageStorage.asegurarElPicoDelMinero(level, center);
+        DevilRpg.LOGGER.info("[Village] Aldea en {}: caseta del minero y boca de la mina en {} (caracol de radio {},"
+                + " fondo y={})", center, c, MINA_RADIO, MINA_FONDO);
+    }
+
+    /** Construye la caseta (7×7) y la boca del caracol. */
+    private static void casetaDelMinero(ServerLevel level, BlockPos c, int nivel) {
+        int r = CASETA_MINERO_LADO / 2; // 3
+        // 1) EL SUELO (a `nivel - 1`, como todas las casas) con la BALSA DE FILTRADO: una celda de agua a ras del
+        //    suelo (I95: un hoyo de dos bloques es una TRAMPA —el aldeano que cae dentro no puede subir 1,875—,
+        //    mientras que el agua a ras de la capa que se pisa se queda a 0,125 del suelo y se sale de ella andando).
+        //    El agua es lo que convierte el cobblestone en pedernal (ver `VillagerMinerGoal`).
+        BlockPos balsa = new BlockPos(c.getX() + 2, nivel - 1, c.getZ() - 2);
+        for (int dx = -r; dx <= r; dx++) {
+            for (int dz = -r; dz <= r; dz++) {
+                BlockPos suelo = new BlockPos(c.getX() + dx, nivel - 1, c.getZ() + dz);
+                colocar(level, suelo,
+                        (suelo.equals(balsa) ? Blocks.WATER : Blocks.STONE_BRICKS).defaultBlockState(), 3);
+                for (int dy = 0; dy <= 2; dy++) {
+                    if (suelo.equals(balsa) && dy == 0) {
+                        continue; // el agua ocupa la capa del suelo: no se pone aire encima de ella
+                    }
+                    colocar(level, new BlockPos(c.getX() + dx, nivel + dy, c.getZ() + dz),
+                            Blocks.AIR.defaultBlockState(), 3);
+                }
+            }
+        }
+        // 2) LAS PAREDES de piedra (3 de alto) con el HUECO DE LA PUERTA (1x2) en la pared sur.
+        for (int dx = -r; dx <= r; dx++) {
+            for (int dz = -r; dz <= r; dz++) {
+                if (Math.abs(dx) != r && Math.abs(dz) != r) {
+                    continue; // interior
+                }
+                boolean puerta = dx == 0 && dz == r;
+                for (int dy = 0; dy <= 2; dy++) {
+                    if (puerta && dy <= 1) {
+                        continue; // el hueco de la puerta (1x2)
+                    }
+                    BlockPos p = new BlockPos(c.getX() + dx, nivel + dy, c.getZ() + dz);
+                    // Los postes de las esquinas, de tronco (como el resto del pueblo).
+                    boolean esquina = Math.abs(dx) == r && Math.abs(dz) == r;
+                    colocar(level, p, (esquina ? Blocks.OAK_LOG : Blocks.STONE_BRICKS).defaultBlockState(), 3);
+                }
+            }
+        }
+        // 3) EL TEJADO de tablones y el FAROL colgado del centro (I14: colgado, no posado).
+        for (int dx = -r; dx <= r; dx++) {
+            for (int dz = -r; dz <= r; dz++) {
+                colocar(level, new BlockPos(c.getX() + dx, nivel + 3, c.getZ() + dz),
+                        Blocks.OAK_PLANKS.defaultBlockState(), 3);
+            }
+        }
+        colocar(level, new BlockPos(c.getX(), nivel + 2, c.getZ()),
+                Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true), 3);
+        // 4) SU PUESTO DE TRABAJO: el CORTAPIEDRAS (el puesto del albañil, que es el oficio del MINERO). Sin él, el
+        //    juego le borra el oficio al aldeano (I23/I31).
+        colocar(level, new BlockPos(c.getX() - 2, nivel, c.getZ() - 2), Blocks.STONECUTTER.defaultBlockState(), 3);
+        // 5) El HORNO para fundir los minerales (no es puesto de nadie: I31).
+        colocar(level, new BlockPos(c.getX() - 2, nivel, c.getZ() + 2),
+                Blocks.FURNACE.defaultBlockState().setValue(FurnaceBlock.FACING, Direction.NORTH), 3);
+        // 6) Su CAMA (una cama son DOS POIs `HOME` y la necesita: duerme aquí, en su sitio de trabajo, como el
+        //    ganadero en su cobertizo).
+        bed(level, new BlockPos(c.getX() + 1, nivel, c.getZ() + 2), Direction.SOUTH);
+        // 7) LA BOCA DEL CARACOL, al lado de la caseta (en la esquina noreste del anillo), con su marco de entrada.
+        //    La boca es la celda 0 del caracol y la construye el pueblo (con `colocar`, o sea que ENTRA EN EL PLANO:
+        //    el obrero la mantiene). Lo que cava el minero de ahí para abajo es suyo (I102).
+        BlockPos boca = celdaDelCaracolDesdeElEje(c, nivel, 0);
+        colocar(level, boca, piezaDelCaracol(0), 3);
+        colocar(level, boca.above(), Blocks.AIR.defaultBlockState(), 3);
+        colocar(level, boca.above(2), Blocks.AIR.defaultBlockState(), 3);
+        colocar(level, boca.above(3), Blocks.AIR.defaultBlockState(), 3);
+        // El marco de la entrada: dos postes de tronco en las paredes (a `nivel` y `nivel + 1`, que es el hueco de
+        // paso) y una viga de tablones encima (a `nivel + 2`: deja las tres celdas que pide el juego para subir,
+        // I26). Los lados son las celdas del radio (por dentro y por fuera del anillo).
+        BlockPos[] lados = ladosDeLaCelda(boca, 0);
+        for (BlockPos lado : lados) {
+            for (int dy = 1; dy <= 2; dy++) {
+                colocar(level, lado.above(dy), Blocks.OAK_LOG.defaultBlockState(), 3);
+            }
+        }
+        int bx = Integer.signum(lados[0].getX() - boca.getX());
+        int bz = Integer.signum(lados[0].getZ() - boca.getZ());
+        for (int i = -1; i <= 1; i++) {
+            colocar(level, boca.above(3).offset(bx * i, 0, bz * i), Blocks.OAK_PLANKS.defaultBlockState(), 3);
+        }
     }
 
     /**
@@ -5096,11 +5565,20 @@ public final class VillageGenerator {
                 // Rellenar las columnas que estén por debajo del nivel base (sin tapar lo construido). La capa que
                 // se pisa va con césped, para que un relleno no se vea como un parche de tierra.
                 for (int y = g; y < baseY; y++) {
-                    BlockState actual = level.getBlockState(columna.atY(y));
+                    BlockPos celda = columna.atY(y);
+                    BlockState actual = level.getBlockState(celda);
                     // EL AGUA NO ES UN HUECO QUE SE RELLENA (y el hielo de un bioma frío es la misma agua). Aquí es
                     // donde se tapaba el lago de la pesquera: el agua del estanque, a `cota-1` y `cota-2`, salía
                     // convertida en césped y tierra. Ver `esAguaOHielo` y `repararLagoDeLaPesquera`.
                     if (esAguaOHielo(actual)) {
+                        continue;
+                    }
+                    // LO QUE HA CAVADO EL MINERO NO SE RELLENA (I102): el pozo y las galerías son AIRE con suelo de
+                    // aldea debajo —exactamente lo que el nivelado tapa—, así que sin esto, renivelar una aldea con
+                    // mina la enterraba entera y el minero volvía a cavarla. Solo se protege el AIRE: el terreno
+                    // natural de esa zona se nivela como cualquier otro (si no, la mina dejaría un hoyo en la meseta
+                    // de la aldea desde el día en que se genera, antes de que nadie cave).
+                    if (actual.isAir() && esCeldaDeLaMina(center, baseY, celda)) {
                         continue;
                     }
                     if (!actual.isAir() && !esTerrenoRecortable(actual)) {
@@ -5950,7 +6428,10 @@ public final class VillageGenerator {
             new BlockPos(-34, 0, 30),
             // El LEÑADOR (etapa H): al lado de su taller, en la arboleda (el taller está en (-52..-48, -26..-22)), y
             // FUERA del cobertizo por lo mismo que el ganadero y el cocinero.
-            new BlockPos(-50, 0, -19)
+            new BlockPos(-50, 0, -19),
+            // El MINERO (etapa I): al lado de su caseta y de la boca de la mina (el solar de 11x11 va en rel
+            // (-9,+12), centro (461,658)), en el patio de fuera y sin caer bajo el tejado de la caseta.
+            new BlockPos(-9, 0, 17)
     };
     /**
      * Oficios de la aldea, en el orden en que se ocupan los sitios (<b>mismo orden y misma longitud</b> que
@@ -5975,13 +6456,20 @@ public final class VillageGenerator {
      *       arboleda. Tala los árboles de verdad, los replanta, repuebla el monte y baja la madera al almacén. Antes
      *       esto lo hacía el recolector "y no gastaba un puesto"; el jugador pidió separarlos para que el recolector
      *       quede libre para recoger y transportar.</li>
+     *   <li><b>Albañil (MASON)</b> (etapa I) = el <b>MINERO</b>: su estación es el <b>cortapiedras</b> de su caseta, y su
+     *       faena es la <b>mina</b> (ver {@link #asegurarLaMinaDelPueblo}): baja un caracol de escalones de adoquín,
+     *       abre galerías, saca los minerales, los funde en su horno, filtra el cobblestone en agua para sacar
+     *       <b>pedernal</b> y lo baja todo al almacén. Lo pidió el jugador: *"mejor haz otra profesión que sea de
+     *       minero, y que excave el suelo hacia abajo, haciendo túneles, andamiajes, soportes, escaleras en espiral"*.
+     *       Hasta aquí el <b>cortapiedras</b> estaba <b>prohibido</b> en la aldea (I31): ahora es la estación de un
+     *       oficio del pueblo, con su plaza y su reparto.</li>
      * </ol>
      */
     private static final VillagerProfession[] VILLAGER_SPECIALTIES = {
             VillagerProfession.FARMER, VillagerProfession.WEAPONSMITH, VillagerProfession.CLERIC,
             VillagerProfession.TOOLSMITH, VillagerProfession.NITWIT, VillagerProfession.SHEPHERD,
             VillagerProfession.BUTCHER, VillagerProfession.FARMER, VillagerProfession.FISHERMAN,
-            VillagerProfession.FARMER, VillagerProfession.FLETCHER
+            VillagerProfession.FARMER, VillagerProfession.FLETCHER, VillagerProfession.MASON
     };
 
     /**
@@ -6212,6 +6700,15 @@ public final class VillageGenerator {
                     // para la acequia, que va tapada con una losa y no se congela) y el obrero se pasaría la vida
                     // descongelando el lago de un bioma frío, donde el hielo es justo lo que tiene que haber.
                     if (esCeldaDelLago(center, nivel, pos)) {
+                        continue;
+                    }
+                    // LA MINA, FUERA DEL PLANO (I102): lo que cava y construye el MINERO es suyo y lo mantiene él
+                    // (lo pidió el jugador: *"su lugar de trabajo no lo debe regenerar ningún otro trabajador, ya que
+                    // se taladraría seguido"*). Si sus escalones y soportes entraran en el plano, el obrero se
+                    // pasaría el día reponiéndolos y el minero cavándolos. Solo hace falta alrededor de la BOCA
+                    // (`estaSobreElPozo`): el plano solo mira dos bloques por debajo de la cota, y ahí lo único del
+                    // minero es el arranque del caracol. La capa de la cota (la boca, y la caseta) sí es del pueblo.
+                    if (pos.getY() < nivel - 1 && estaSobreElPozo(center, pos)) {
                         continue;
                     }
                     Integer indice = indices.get(state);

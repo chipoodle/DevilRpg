@@ -76,6 +76,26 @@ sale `en asedio` (`Aldea de Peñasalbas (1838, 1838) — en asedio · a 599 m ha
                                                        └──► solo un aviso con el RUMBO
 ```
 
+**Y el ciclo del MINERO** (etapa I, `VillagerMinerGoal`), que es el único goal del pueblo que **muta el mundo** a
+propósito (cava su mina):
+
+```
+        (no tiene pico)                 (tanda hecha: 64 adoquines, mineral crudo,
+              │                          sin antorchas o zurrón lleno)
+              ▼                                     │
+   ┌──► RECOGER ────(carga: pico, tablones, ──► CAVAR ──(una celda: hueco de paso, pieza,
+   │    almacén      carbón, palos, leña)      mina    suelo, veta de al lado, marco, antorcha)
+   │        ▲                                     │
+   │        │                                     ▼
+   └──── ENTREGAR ◄──── TALLER ◄──────────────────┘
+        (almacén)      (caseta: funde, cuela el adoquín en la balsa, hace antorchas)
+```
+
+- La **mina está tapada** por algo del pueblo (una casa, la pared de su caseta) o **cerrada** (el fondo, o un mar de
+  agua/lava con su **piedra labrada** de tope): no hay faena y el goal se queda esperando.
+- **De noche** (`estaDescansando`) y **con hambre** (`tieneHambre`) no empieza faena: come en la taberna y duerme en
+  su cama de la caseta como cualquier aldeano.
+
 | Transición | Quién la dispara (código) | Condición | Rastro en el log |
 |---|---|---|---|
 | → **Generada** | `preGenerate` (`VillageManager.java:804`) desde `ObjectiveManager.tick` | a menos de `PRE_GENERATE_RADIUS` (140) | `[Village] Aldea N pre-generada en … (plano de N bloques)` |
@@ -96,6 +116,15 @@ sale `en asedio` (`Aldea de Peñasalbas (1838, 1838) — en asedio · a 599 m ha
 | **Un aldeano no llega** | `marcarPuntoFallido` (`:4172`) | no se acerca en N latidos (I3/I33) | `[Village] <uuid> no consigue llegar a <pos>: lo deja por 5 min y sigue con lo demas` |
 | **Muertes** | `pasarHambre` (`:4878`) / `ageVillagers` (`:4974`) | sin ración / 3 días de juego | `[Village] Un aldeano de la aldea N ha muerto de hambre (N min sin comer)` / `[Village] Un aldeano murio de viejo a los N dias de juego` |
 | **Siembra del Diario** | `sembrarElDiarioSiHaceFalta` (`:5008`) | una vez, en partidas ya empezadas | `[Village] Diario del Invocado sembrado para <jugador>: N aldea(s) que ya resolvio esta partida` |
+| **La MINA (etapa I)** | el latido: `VillageGenerator.asegurarLaMinaDelPueblo` | **idempotente** (testigo: el suelo de piedra labrada de la caseta); sube `CURRENT_LAYOUT` a **70** y el plano se vuelve a capturar | `[Village] Aldea en <pos>: caseta del minero y boca de la mina en <pos> (caracol de radio 4, fondo y=-58)` + `[Village] almacen: el pico del minero y 6 lingotes (la mina arranca: …)` |
+| **El minero, celda a celda** | `VillagerMinerGoal` (`PRIORIDAD` 4) | mira **el mundo**, no un contador: `progresoDeLaMina` / `progresoDeLaGaleria` (una celda que abre galería no cuenta hasta que la galería está entera) | `[Village] El minero: caracol paso N en <pos> (y=Y)` · `[Village] El minero: galeria <pos> (paso N, celda M de 24)` · `[Village] El minero: marco de la galeria <pos> (celda M)` |
+| **Sube a su taller** | el mismo goal (fases `RECOGER` → `CAVAR` → `TALLER` → `ENTREGAR`) | **tanda hecha**: mineral crudo, 64 adoquines, sin antorchas o zurrón lleno (y siempre al acabarse la mina) | `[Village] El minero: cuela 4 adoquines en la balsa y saca un pedernal` · `[Village] El minero: funde N en <lingote>` · `[Village] El minero: deja lo sacado en el almacen (pico …, tablones …, antorchas …)` |
+| **La mina se topa con un mar** | `VillagerMinerGoal.cerrarLaMina` | más de `SELLOS_MAXIMOS` (**12**) celdas **seguidas** de agua o lava (una bolsa se sella y el túnel sigue) | `[Village] El minero: sella agua/lava en <pos> (N seguidas)` y `[Village] El minero: la mina se PARA en <pos> (N celdas de agua/lava seguidas): piedra labrada de tope` |
+| **El pico se rompe** | `VillagerMinerGoal.gastarElPico` | una unidad de uso por celda; 250 el de hierro | `[Village] El minero: se le ha roto el pico (N usos): va a por otro al almacen` |
+| **La mina está tapada** | `VillagerMinerGoal.prepararElPicado` | la celda que le toca tiene algo del **pueblo** (el minero no lo cava: I24/I27 y I102) | `[Village] El minero: la mina esta tapada en <pos>` |
+| **Le falta el pico** | `VillagerMinerGoal.recoger` | no hay pico en el almacén | `[Village] El minero: no hay pico en el almacen (lo forja el herrero de herramientas: 3 lingotes de hierro y 2 palos): espera` |
+| **El herrero forja el pico** | `VillagerSmithGoal.recetaDeArmadura` (el de HERRAMIENTAS, y **antes** que la armadura) | `OBJETIVO_PICOS` (2) y 3 lingotes + 2 palos | `[Village] El herrero de herramientas: Forjo un pico de hierro` |
+| **El herrero funde el crudo** | `VillagerSmithGoal.recetaDeTransformacion` | `RAW_IRON`/`RAW_COPPER`/`RAW_GOLD` en el almacén y leña por encima de la reserva | `[Village] El herrero de herramientas: Fundio mineral de hierro en un lingote` |
 | → **Revelada** (la dirección) | `LoreStoneBlock.revelarLaAldeaDeLaPiedra` (al leer la piedra) **y** `VillageManager.elClerigoSenalaLaSiguiente` (al **salvar** una aldea) | — | `[LoreStone] <jugador>: revelada la aldea N (hacia el <rumbo>)` / `[Village] Aldea N salvada: revelada la aldea N+1 a <jugador> (hacia el <rumbo>)` |
 | **La piedra NO revela nada** | `LoreStoneBlock.revelarLaAldeaDeLaPiedra`, salida temprana | el jugador no tiene **ancla ni spawn** (sin ellos no se puede calcular dónde cae la aldea) | `[LoreStone] <jugador> leyo la piedra pero NO tiene ancla ni spawn: no se puede calcular la aldea del objetivo N y no se revela nada` — **WARN** (lo cazó el arnés: con un jugador sin ancla la piedra callaba y parecía "no hacer nada") |
 | **Se consulta el Diario** | `DiarioDelInvocadoItem.use` | al usar el objeto | `[Diario] <jugador> ha consultado el Diario del Invocado` (y las líneas en sí van al chat) |
@@ -127,6 +156,13 @@ Si algo "no cuadra" con el tiempo, casi siempre es una de estas:
 | `VILLAGER_LIFESPAN_TICKS` | 3 días | a partir de aquí **muere de viejo** | `:773` |
 | `BABY_GROWTH_SPEEDUP` | 3 | las crías crecen al triple (vanilla: 20 min) | `:772` |
 | `PUNTO_FALLIDO_TICKS` | 5 min | lo que se "aparca" un sitio al que un aldeano no llega | `:4158` |
+| `VillagerMinerGoal.TICKS_POR_CELDA` | 25 (1,25 s) | lo que tarda el minero en picar y dejar hecha **una celda** del túnel | `VillagerMinerGoal.java` |
+| `VillagerMinerGoal.CELDAS_POR_VIAJE` | 32 | celdas como mucho antes de subir a su taller y al almacén (además de los disparadores de `hayQueSubir`) | `:98` |
+| `VillagerMinerGoal.ADOQUIN_PARA_SUBIR` | 64 (una pila) | adoquín que junta antes de subir a colarlo (16 pedernales) | `VillagerMinerGoal.java` |
+| `VillageGenerator.MINA_SOPORTE_CADA` | 16 escalones | un **marco de madera** cada 8 bloques de descenso (y cada 8 celdas en las galerías) | `VillageGenerator.java` |
+| `VillageGenerator.MINA_GALERIA_CADA` / `_LARGO` | 8 bloques / 24 celdas | cada cuánto se abre una galería y cuánto se adentra (**hacia fuera** del pozo) | `VillageGenerator.java` |
+| `VillageGenerator.MINA_FONDO` | −58 | hasta dónde baja el caracol (240 pasos desde la cota 63) | `VillageGenerator.java` |
+| `VillagerMinerGoal.SELLOS_MAXIMOS` | 12 | celdas **seguidas** de agua/lava que sella antes de dar la mina por terminada | `VillagerMinerGoal.java` |
 
 ## 4. Receta de diagnóstico (lo que se hizo para el caso de la aldea abandonada)
 

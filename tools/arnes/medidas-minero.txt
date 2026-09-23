@@ -1,0 +1,56 @@
+================================================================================
+MEDIDA: LA MINA DEL MINERO (etapa I, invariante I102)
+Arnes: GuardHarness con MEDIR_MINERO = true (dia congelado, bichos barridos; a los 10 s planta un
+       albanil si no hay ninguno, y a los 60 s cava A MANO la galeria del paso 16 para poder medir lo
+       que viene despues: el caracol no avanza de paso hasta que su galeria esta entera).
+Mundo: COPIAS de la partida del jugador en run/world (aldea 0, centro 470,646, cota 63)
+Jugador: el de pega del arnes, en la plaza (470, 63, 646)
+Corridas: 6 (23-sep-2026, 03:44 a 10:45). Lineas literales del log.
+================================================================================
+
+--- 1) LA CASETA, LA BOCA Y EL PICO --------------------------------------------------
+[Village] Aldea en BlockPos{x=470, y=63, z=646}: caseta del minero y boca de la mina en BlockPos{x=461, y=63, z=658} (caracol de radio 4, fondo y=-58)
+[Village] almacen: el pico del minero y 6 lingotes (la mina arranca: de aqui sale el hierro con el que el herrero de herramientas forja los siguientes)
+[Village] El minero: puesto reclamado: 459, 63, 656 (Cargando material -> sin destino)
+[Village] El minero: pico nuevo: minecraft:iron_pickaxe (Cargando material -> 517, 63, 666)
+
+--- 2) EL CARACOL (el progreso SUBE, medido en el mundo con `progresoDeLaMina`) ------
+[Village] El minero: caracol paso 1 en 465, 61, 655 (y=61)
+[Village] El minero: caracol paso 8 en 465, 58, 662 (y=58)
+[Village] El minero: caracol paso 15 en 458, 54, 662 (y=54)
+[Village] El minero: caracol paso 16 en 457, 54, 662 (y=54)
+(pasos 1 -> 16 = 15 celdas = 8 bloques de descenso en 42 s de reloj del arnes)
+
+--- 3) LA GALERIA, HACIA FUERA DEL POZO, Y EL CARACOL QUE SIGUE ----------------------
+[Village] El minero: galeria 457, 54, 663 (paso 16, celda 1 de 24)
+[Village] El minero: galeria 457, 54, 664 (paso 16, celda 2 de 24)
+(la galeria del paso 16 sale al SUR: hacia FUERA del pozo; la del bug apuntaba al este, por donde va el caracol)
+
+[Arnes] MINERO: cavada a mano la galeria del paso 16 (24 celdas) para medir lo que viene despues
+[Arnes] MINA t=4000 pasos=17/240 cara=457, 53, 661 (y=53 - 9 bloques por debajo del suelo) bloqueDeLaCara=stone TOPE=NO caseta=461, 63, 658 puesto=BlockPos{x=459, y=63, z=656} balsa=BlockPos{x=463, y=62, z=656} horno=BlockPos{x=459, y=63, z=660}
+(el caracol AVANZA de paso cuando su galeria esta entera: 16 -> 17, ya 9 bloques por debajo de la cota)
+
+--- 4) EL PEDERNAL Y EL TALLER (4 adoquines -> 1 pedernal, en la balsa) ---------------
+[Arnes] ALMACEN DE LA MINA t=9600: 0 adoquin, 2 carbon, 0 lingote(s), 0 crudo(s), 6 pedernal, 0 pico(s) | leña=379
+[Arnes] ALMACEN DE LA MINA t=9800: 0 adoquin, 2 carbon, 0 lingote(s), 0 crudo(s), 6 pedernal, 0 pico(s) | leña=379
+[Village] El minero: hace 4 antorchas con un carbon y un palo
+[Village] El minero: deja lo sacado en el almacen (pico si, tablones 11, antorchas 16)
+
+--- 5) EL MINERO, EN VIVO (zurron, pico con su desgaste y etiqueta) ------------------
+[Arnes] MINERO t=960 pos=475, 62, 657 cara=465, 61, 655 dCara=10.72 destino=465, 62, 654 pico=minecraft:iron_pickaxe(0/250) zurron=[0:16xminecraft:oak_planks 1:4xminecraft:coal 2:4xminecraft:stick] goals=[VillagerMinerGoal VillagerGateGoal] etiqueta=Wenceslao (Minero) | Bajando a la mina
+[Arnes] MINERO t=2560 pos=459, 56, 662 cara=457, 54, 662 dCara=2.78 destino=457, 54, 664 pico=minecraft:iron_pickaxe(18/250) zurron=[0:11xminecraft:oak_planks 1:4xminecraft:coal 2:4xminecraft:stick 3:24xminecraft:cobblestone] goals=[VillagerMinerGoal VillagerGateGoal] etiqueta=Wenceslao (Minero) | Bajando a la mina
+[Arnes] MINERO t=4960 pos=453, 63, 662 cara=457, 54, 662 dCara=9.28 destino=SIN DESTINO pico=minecraft:iron_pickaxe(18/250) zurron=[] goals=[VillagerGateGoal] etiqueta=Wenceslao (Minero) | Guardo 27 de lo suyo
+
+--- 6) LOS FALLOS QUE SE VIERON EN ESTAS CORRIDAS (y que ya estan arreglados) ---------
+(a) La boca salia 13 bloques mas alla (el EJE de la mina pasado a un ayudante que espera el CENTRO de la aldea).
+    El arnes lo canto asi, con la celda de la boca en CESPED y el minero sin por donde empezar:
+    [Arnes] MINA t=160 pasos=0/240 cara=465, 62, 654 (y=62 - 0 bloques por debajo del suelo) bloqueDeLaCara=grass_block TOPE=NO ...
+(b) La galeria salia hacia DENTRO y el progreso oscilaba 16 -> 15 -> 16 (el minero se comia su propio escalon):
+    [Village] El minero: galeria 458, 54, 662 (paso 16, celda 1 de 24)   <- esa celda es la del paso 15
+    [Village] El minero: caracol paso 15 en 458, 54, 662 (y=54)          <- y la volvia a poner, y otra vez...
+(c) Subia a vaciar el zurron cada tres celdas (se le llenaba de tierra, arena y grava): dos celdas de galeria en
+    once minutos, con el minero subiendo y bajando el caracol.
+(d) El JOB_SITE en disputa con el latido, cada 10 s y para siempre:
+    [Village] El minero: el puesto de trabajo en 459, 63, 656 tenia el ticket PERDIDO (cogido y sin dueno): liberado y reclamado
+    [Village] El minero: el puesto de trabajo en 459, 63, 656 tenia el ticket PERDIDO (cogido y sin dueno): liberado y reclamado
+(e) Con hambre y con la comida justa, plantado en la taberna sin cavar y sin comer (medido: 4 minutos).

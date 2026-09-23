@@ -157,6 +157,17 @@ public class VillagerPickupGoal extends Goal {
             return s -> s.is(Items.STICK) || s.is(Items.FLINT) || s.is(Items.FEATHER) || s.is(Items.ARROW)
                     || esDeMadera(s);
         }
+        if (profesion == VillagerProfession.MASON) {
+            // La MINA (etapa I): lo que se le cae al suelo al minero (adoquín, piedra, minerales crudos, carbón,
+            // pedernal y el material de las vetas). El minero ya se lo guarda en el zurrón al picarlo; esto es para
+            // lo que se queda por el suelo del túnel (porque no le cupo) y para el pedernal de la grava.
+            return s -> s.is(Items.COBBLESTONE) || s.is(Items.COBBLED_DEEPSLATE) || s.is(Items.COBBLESTONE_SLAB)
+                    || s.is(Items.RAW_IRON) || s.is(Items.RAW_COPPER) || s.is(Items.RAW_GOLD)
+                    || s.is(Items.IRON_INGOT) || s.is(Items.COPPER_INGOT) || s.is(Items.GOLD_INGOT)
+                    || s.is(Items.COAL) || s.is(Items.CHARCOAL) || s.is(Items.FLINT)
+                    || s.is(Items.REDSTONE) || s.is(Items.LAPIS_LAZULI) || s.is(Items.DIAMOND)
+                    || s.is(Items.EMERALD) || s.is(Items.TORCH) || esDeMadera(s);
+        }
         return s -> false;
     }
 
@@ -196,6 +207,9 @@ public class VillagerPickupGoal extends Goal {
         if (profesion == VillagerProfession.FLETCHER) {
             return "el lenador";
         }
+        if (profesion == VillagerProfession.MASON) {
+            return "el minero";
+        }
         return "el herrero";
     }
 
@@ -204,7 +218,8 @@ public class VillagerPickupGoal extends Goal {
         return profesion == VillagerProfession.FARMER || profesion == VillagerProfession.SHEPHERD
                 || profesion == VillagerProfession.BUTCHER || profesion == VillagerProfession.CLERIC
                 || profesion == VillagerProfession.WEAPONSMITH || profesion == VillagerProfession.TOOLSMITH
-                || profesion == VillagerProfession.FISHERMAN || profesion == VillagerProfession.FLETCHER;
+                || profesion == VillagerProfession.FISHERMAN || profesion == VillagerProfession.FLETCHER
+                || profesion == VillagerProfession.MASON;
     }
 
     // --- el goal ------------------------------------------------------------------------------------

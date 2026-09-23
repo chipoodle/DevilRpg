@@ -282,6 +282,43 @@ Lo que se busca en el log:
 `level.players()` y el jugador de pega **no está en esa lista** (la misma limitación que el reloj del asedio, I86):
 lo que se mide es la **presión** y la **elección**; la marcha la ve el jugador en juego.
 
+### `MEDIR_MINERO = true` — la mina del minero (I102)
+
+Corre sobre la **aldea del jugador** (aldea 0, centro `470,646`, cota 63), deja el mundo **de día** (de noche el
+minero descansa) y barre los bichos (uno dentro del recinto corta el latido del pueblo entero). A los **10 s** se
+asegura de que hay **minero**: si no hay ninguno con el oficio `MASON`, lo planta con la puerta del propio mod
+(`VillageGenerator.spawnOneVillager(level, CENTRO, 11, false)`: el sitio 11 es el albañil).
+
+Cada 2 s vuelca:
+
+```
+[Arnes] MINA t=… pasos=N/240 cara=457, 54, 662 (y=54 · 8 bloques por debajo del suelo)
+        bloqueDeLaCara=cobblestone_slab TOPE=NO caseta=461, 63, 658 puesto=459, 63, 656 balsa=… horno=…
+[Arnes] MINERO t=… pos=… cara=… dCara=… destino=… pico=minecraft:iron_pickaxe(18/250)
+        zurron=[0:16xminecraft:oak_planks 1:4xminecraft:coal …] goals=[VillagerMinerGoal VillagerGateGoal]
+        etiqueta=Yolanda (Minero) | Bajando a la mina
+[Arnes] ALMACEN DE LA MINA t=…: 0 adoquin, 2 carbon, 0 lingote(s), 0 crudo(s), 6 pedernal, 0 pico(s) | leña=370
+```
+
+- **`pasos=N/240`** es `VillageGenerator.progresoDeLaMina`, o sea el avance **real medido en el mundo** (no un
+  contador): el número tiene que **subir** con el tiempo (cada paso baja 0,5 y una vuelta son 32 pasos = 16 bloques).
+- **`bloqueDeLaCara`** es lo que hay en la celda que le toca: `grass_block`/`stone` (faena pendiente),
+  `cobblestone_slab`/`cobblestone` (esa ya está hecha) o `stone_bricks` (**tope**: la mina se cerró).
+- **`TOPE=SI`** = la mina está terminada (el fondo `-58` o un mar de agua/lava sellado con su piedra labrada).
+- El **zurrón** dice qué se está llevando (tablones de los marcos, carbón y palos de las antorchas, adoquín que luego
+  cuela) y el **pico con su desgaste** dice si de verdad está picando.
+
+**Lo que se busca**: que `pasos` **suba**, que en el log salgan `El minero: caracol paso N en …` y
+`El minero: galeria … (paso N, celda M de 24)`, y que en el **almacén** aparezcan **pedernal** (4 adoquines → 1, en la
+balsa) y **lingotes** (los funde él en su horno). Lo que **no** se puede medir aquí: si el jugador ve bien la mina (eso
+es del cliente) ni cuánto tarda en juego real (el servidor headless corre a los ticks que le deja el equipo).
+
+**Y los fallos que cazó este modo** (por eso existe): la primera corrida dio `pasos=16` con la celda de la boca en
+**césped** —el eje de la mina se estaba pasando a un ayudante que espera el **centro de la aldea**— y, arreglado eso,
+el progreso **oscilaba 16 → 15 → 16** porque la galería salía **hacia dentro** y el minero se comía su propio
+escalón; después, con el zurrón llenándose de **tierra y grava**, subía a vaciarlo **cada tres celdas** (dos celdas de
+galería en once minutos).
+
 ### `MEDIR_LENADOR = true` — el leñador, su arboleda y el polvo de hueso (I92/I93)
 
 Corre sobre la **aldea del jugador** (aldea 0) y vuelca cada 10 s: el estado de la **arboleda del pueblo** (árboles,

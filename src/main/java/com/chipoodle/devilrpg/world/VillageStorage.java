@@ -202,8 +202,8 @@ public final class VillageStorage {
     public static final int REMESA_INICIAL_TRONCOS = 128;
 
     /**
-     * <b>Remesa inicial de madera</b>: deja {@link #REMESA_INICIAL_TRONCOS} troncos en el almacén de una aldea que
-     * acaba de nacer.
+     * <b>Remesa inicial del almacén</b>: deja {@link #REMESA_INICIAL_TRONCOS} troncos, <b>un pico de hierro</b> y
+     * {@link #REMESA_INICIAL_LINGOTES} lingotes en el almacén de una aldea que acaba de nacer.
      * <p>
      * Hace falta porque la madera es <b>tres cosas</b> en este pueblo y ninguna se puede improvisar: el
      * <b>combustible</b> del ahumador del cocinero y de la fragua del herrero, la <b>materia prima</b> de la sierra
@@ -212,13 +212,19 @@ public final class VillageStorage {
      * fragua nacerían apagados (y con la {@link #RESERVA_LENA reserva de 32} no habría nada que quemar sin comerse
      * la madera del herrero).
      * <p>
+     * Y el <b>pico con sus lingotes</b> (etapa I) porque detrás hay un <b>círculo vicioso</b>: la mina no se puede
+     * empezar sin pico (es lo único que saca piedra y mineral), el pico lo forja el <b>herrero de herramientas</b> con
+     * <b>hierro</b>, y el hierro sale <b>de la mina</b>. Sin esta remesa el pueblo se queda esperándose a sí mismo:
+     * el minero sin herramienta y el herrero sin lingotes. Con ella arranca solo: el minero pica, funde el hierro que
+     * saca y el herrero le forja los picos que va gastando.
+     * <p>
      * <b>Solo se le pone al almacén VACÍO</b>, con la misma regla que la remesa de la despensa
      * ({@link VillagePantry#remesaInicial}): así una aldea ya en marcha —con lo que ha juntado el recolector— no
-     * recibe nada, y esto no es un grifo de troncos. Se llama desde el bloque de "asegurar" del latido, justo
-     * después de {@link VillageGenerator#asegurarAlmacen} (que es quien coloca el primer cofre doble), así que en la
-     * misma pasada en que el almacén nace ya tiene su madera dentro.
+     * recibe nada, y esto no es un grifo de troncos ni de hierro. Se llama desde el bloque de "asegurar" del latido,
+     * justo después de {@link VillageGenerator#asegurarAlmacen} (que es quien coloca el primer cofre doble), así que
+     * en la misma pasada en que el almacén nace ya tiene su remesa dentro.
      */
-    public static void remesaInicialDeMadera(ServerLevel level, BlockPos villageCenter) {
+    public static void remesaInicialDelAlmacen(ServerLevel level, BlockPos villageCenter) {
         Container caja = almacen(level, villageCenter);
         if (caja == null || VillagePantry.contar(caja, s -> true) > 0) {
             return; // sin almacén, o con cosas dentro (aldea en marcha): no se toca
@@ -229,8 +235,40 @@ public final class VillageStorage {
                 break; // no cupo (raro: el almacén está recién hecho): se deja lo que entró
             }
         }
-        DevilRpg.LOGGER.info("[Village] almacen: remesa inicial de madera ({} troncos de roble para el fuego del"
-                + " cocinero, la fragua del herrero y su sierra)", cuentaLena(level, villageCenter));
+        VillagePantry.guardar(caja, new ItemStack(Items.IRON_PICKAXE));
+        VillagePantry.guardar(caja, new ItemStack(Items.IRON_INGOT, REMESA_INICIAL_LINGOTES));
+        DevilRpg.LOGGER.info("[Village] almacen: remesa inicial ({} troncos de roble para el fuego del cocinero, la"
+                + " fragua del herrero y su sierra; y 1 pico de hierro con {} lingotes para el minero)",
+                cuentaLena(level, villageCenter), REMESA_INICIAL_LINGOTES);
+    }
+
+    /** Lingotes de hierro de la remesa inicial: dos picos más para el herrero de herramientas (3 cada uno). */
+    public static final int REMESA_INICIAL_LINGOTES = 6;
+
+    /**
+     * <b>El pico del minero</b>, para una aldea que <b>ya estaba en marcha</b> cuando se construyó su mina (etapa I).
+     * <p>
+     * Es el mismo círculo vicioso de {@link #remesaInicialDelAlmacen}, pero al revés: a una aldea vieja no se le pone
+     * la remesa (su almacén no está vacío), así que si el pueblo <b>no tiene ni un pico ni hierro</b> —medido en el
+     * guardado del jugador: <b>0 lingotes y 0 crudos</b> y ninguna mina de la que sacarlos— el minero se queda
+     * plantado en el almacén para siempre pidiendo herramienta y el herrero no puede forjarla. Aquí se le deja
+     * <b>una vez</b>: se llama al construir la <b>caseta</b> (que es única, con su testigo) y <b>solo si el almacén
+     * no tiene ningún pico</b>, así que no es un grifo: es la herramienta con la que arranca la mina, y a partir de
+     * ahí el hierro sale de la mina y los picos los forja el herrero.
+     */
+    public static void asegurarElPicoDelMinero(ServerLevel level, BlockPos villageCenter) {
+        Container caja = almacen(level, villageCenter);
+        if (caja == null) {
+            return; // la aldea todavía no tiene almacén: ya se lo dará la remesa inicial cuando nazca
+        }
+        if (VillagePantry.contar(caja, s -> s.is(Items.IRON_PICKAXE)
+                || s.is(Items.DIAMOND_PICKAXE) || s.is(Items.NETHERITE_PICKAXE)) > 0) {
+            return; // ya hay herramienta en el almacén (o la remesa inicial ya la puso): no se toca
+        }
+        VillagePantry.guardar(caja, new ItemStack(Items.IRON_PICKAXE));
+        VillagePantry.guardar(caja, new ItemStack(Items.IRON_INGOT, REMESA_INICIAL_LINGOTES));
+        DevilRpg.LOGGER.info("[Village] almacen: el pico del minero y {} lingotes (la mina arranca: de aqui sale el"
+                + " hierro con el que el herrero de herramientas forja los siguientes)", REMESA_INICIAL_LINGOTES);
     }
 
     /**

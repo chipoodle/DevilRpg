@@ -74,6 +74,9 @@ ALDEA = [
     os.path.join(GOALS, 'VillagerTavernGoal.java'),
     os.path.join(GOALS, 'VillagerPickupGoal.java'),
     os.path.join(GOALS, 'VillagerGateGoal.java'),
+    # Y el de la etapa I (el MINERO): es el goal que mas mundo MUTA de todo el pueblo (cava la mina), asi que
+    # tiene que estar dentro de la puerta (I3/I4/I6 y todo lo demas).
+    os.path.join(GOALS, 'VillagerMinerGoal.java'),
 ]
 GOALS_JAVA = [r for r in ALDEA if os.path.basename(r).startswith('Villager')]
 

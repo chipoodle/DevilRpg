@@ -67,6 +67,14 @@ public class VillagerSmithGoal extends Goal {
     private static final int OBJETIVO_FLECHAS = 64;
     /** Una pieza de armadura por militar (4 espadachines + 3 arqueros). */
     private static final int OBJETIVO_ARMADURA = 7;
+    /**
+     * Picos que quiere tener el pueblo en el almacén (etapa I): uno para el <b>minero</b> y otro de repuesto. El
+     * pico <b>se gasta</b> picando (lo pidió el jugador), así que el de herramientas los va reponiendo.
+     */
+    private static final int OBJETIVO_PICOS = 2;
+    /** El pico de hierro cuesta lo de vanilla: 3 lingotes y 2 palos. */
+    private static final int LINGOTES_POR_PICO = 3;
+    private static final int PALOS_POR_PICO = 2;
     /** Pepitas que hacen falta para un lingote (la receta de vanilla) y carne podrida para un cuero. */
     private static final int PEPITAS_POR_LINGOTE = 9;
     private static final int CARNE_POR_CUERO = 9;
@@ -518,6 +526,23 @@ public class VillagerSmithGoal extends Goal {
                     List.of(new ItemStack(Items.IRON_NUGGET, PEPITAS_POR_LINGOTE)),
                     new ItemStack(Items.IRON_INGOT), true);
         }
+        // 1b) MINERAL CRUDO -> LINGOTE (etapa I). Lo funde el propio MINERO en el horno de su caseta, pero si no
+        //     puede (se le rompió el pico y no tiene con qué volver a la mina, o no tiene combustible) el crudo se
+        //     queda en el almacén. Aquí lo funde el herrero, y con ese hierro forja el pico que devuelve al minero a
+        //     la mina: es lo que cierra el círculo del pueblo sin depender de que el jugador le traiga hierro. Sin
+        //     esto, un pueblo con el mineral ya sacado y <b>crudo</b> se quedaba esperándose para siempre.
+        if (hayLena && contar(almacen, Items.RAW_IRON) > 0) {
+            return new Receta("Fundiendo mineral", "Fundio mineral de hierro en un lingote",
+                    List.of(new ItemStack(Items.RAW_IRON)), new ItemStack(Items.IRON_INGOT), true);
+        }
+        if (hayLena && contar(almacen, Items.RAW_COPPER) > 0) {
+            return new Receta("Fundiendo mineral", "Fundio mineral de cobre en un lingote",
+                    List.of(new ItemStack(Items.RAW_COPPER)), new ItemStack(Items.COPPER_INGOT), true);
+        }
+        if (hayLena && contar(almacen, Items.RAW_GOLD) > 0) {
+            return new Receta("Fundiendo mineral", "Fundio mineral de oro en un lingote",
+                    List.of(new ItemStack(Items.RAW_GOLD)), new ItemStack(Items.GOLD_INGOT), true);
+        }
         // 2) Chatarra PURA (hierro que no se pone nadie) -> lingotes.
         for (ItemStack chatarra : CHATARRA_SIEMPRE) {
             if (hayLena && contarChatarra(almacen, chatarra.getItem()) > 0) {
@@ -621,6 +646,18 @@ public class VillagerSmithGoal extends Goal {
     private Receta recetaDeArmadura(Container almacen) {
         int lingotes = contar(almacen, Items.IRON_INGOT);
         boolean hierro = lingotes >= 12;
+        // EL PICO DEL MINERO (etapa I) VA PRIMERO, y NO entra en el reparto de `elQueMasFalta`: la armadura tiene
+        // objetivos de 7 piezas por tipo, así que con el reparto el pico no saldría NUNCA (su "falta" máxima es 2) y
+        // el minero se quedaría sin herramienta con la mina a medias. Es una <b>herramienta de trabajo</b>, no una
+        // pieza del equipo de la milicia: lo pidió el jugador (*"debe haber un herrero de herramientas que haga
+        // herramientas para que el minero haga su trabajo, similar a los otros 2 herreros"*).
+        if (contar(almacen, Items.IRON_PICKAXE) < OBJETIVO_PICOS && lingotes >= LINGOTES_POR_PICO
+                && contar(almacen, Items.STICK) >= PALOS_POR_PICO) {
+            return new Receta("Forjando", "Forjo un pico de hierro",
+                    List.of(new ItemStack(Items.IRON_INGOT, LINGOTES_POR_PICO),
+                            new ItemStack(Items.STICK, PALOS_POR_PICO)),
+                    new ItemStack(Items.IRON_PICKAXE));
+        }
         // Y AQUÍ IGUAL: la armadura que MÁS falta (por piezas, sin importar de hierro o de cuero), para que el juego
         // de armaduras esté repartido y no se acumulen cascos mientras faltan botas.
         List<Candidato> candidatos = new ArrayList<>();
