@@ -244,11 +244,17 @@ public final class VillageSavedData extends SavedData {
         tag.put("Noticed", noticedTag);
         tag.putIntArray("Fallen", toArray(fallen));
         ListTag pressureTag = new ListTag();
-        for (Map.Entry<Integer, Integer> entry : pressureTicks.entrySet()) {
+        // SE GUARDA LA UNIÓN, no solo las que ya tienen presión (I98): una aldea que acaba de empezar a contar
+        // tiene `Since` (su punto de partida) y `Ticks` todavía en 0, y con el recorrido viejo —solo `pressureTicks`—
+        // ese punto de partida NO se escribía: al cargar, el contador se reiniciaba desde cero y el abandono de la
+        // aldea no llegaba a contar nunca (medido: `Pressure` vacío en el guardado del jugador).
+        Set<Integer> conPresion = new HashSet<>(pressureTicks.keySet());
+        conPresion.addAll(pressureSince.keySet());
+        for (int index : conPresion) {
             CompoundTag one = new CompoundTag();
-            one.putInt("Index", entry.getKey());
-            one.putInt("Ticks", entry.getValue());
-            one.putLong("Since", pressureSince.getOrDefault(entry.getKey(), 0L));
+            one.putInt("Index", index);
+            one.putInt("Ticks", pressureTicks.getOrDefault(index, 0));
+            one.putLong("Since", pressureSince.getOrDefault(index, 0L));
             pressureTag.add(one);
         }
         tag.put("Pressure", pressureTag);

@@ -89,6 +89,34 @@ public final class DiarioDelInvocado {
     }
 
     /**
+     * Le <b>entrega el Diario si no lo tiene</b> y, si ya lo tiene, se lo <b>pone al día</b>. Devuelve {@code true}
+     * si se lo ha dado ahora (para que cada llamante diga lo suyo). Si no le cabe en el inventario, lo <b>suelta a
+     * sus pies</b>: el Diario no se pierde.
+     * <p>
+     * Lo llaman la <b>piedra de invocación</b> (al leerla) y la <b>recompensa de salvar una aldea</b>: antes la
+     * recompensa daba un {@code Items.WRITTEN_BOOK} <b>en blanco</b> —sin contenido y sin la marca del mod— y el
+     * jugador se quedaba con un libro que <b>no era el Diario</b>. Medido en su guardado (23-sep-2026): un
+     * {@code written_book} con el NBT {@code {count, Slot, id}} a secas, o sea <b>sin un solo componente</b>; con
+     * eso {@link #esElDiario} era {@code false}, el Diario no se reescribía y las aldeas descubiertas no aparecían
+     * por ningún lado (y el jugador creía que ese libro suyo era el Diario).
+     */
+    public static boolean entregarSiNoLoTiene(ServerPlayer player) {
+        for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+            ItemStack stack = player.getInventory().getItem(i);
+            if (esElDiario(stack)) {
+                actualizar(stack, player);
+                player.inventoryMenu.broadcastChanges();
+                return false;
+            }
+        }
+        ItemStack diario = crear(player);
+        if (!player.getInventory().add(diario)) {
+            player.drop(diario, false);
+        }
+        return true;
+    }
+
+    /**
      * Pone al día el diario si el jugador lo lleva encima (si no lo lleva, no se hace nada). Lo llama el pueblo al
      * <b>salvarse una aldea</b>: el jugador pidió que eso se refleje en el libro.
      */

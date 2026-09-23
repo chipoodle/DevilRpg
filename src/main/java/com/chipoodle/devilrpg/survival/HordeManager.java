@@ -50,12 +50,18 @@ public final class HordeManager {
 
     /**
      * Distancia (desde el CENTRO de la aldea) a la que spawnean las hordas que van a por un asentamiento:
-     * justo fuera de la valla ({@link VillageGenerator#FENCE_RADIUS} = 29), nunca dentro.
+     * justo fuera de la valla ({@link VillageGenerator#FENCE_RADIUS} = 62), nunca dentro. Con los valores de
+     * verdad (<b>65 y 81</b>: el comentario decía 32-48 porque se quedó con el `FENCE_RADIUS` viejo, que era 29).
      */
-    private static final int VILLAGE_SPAWN_MIN = VillageGenerator.FENCE_RADIUS + 3;   // 32
-    private static final int VILLAGE_SPAWN_MAX = VillageGenerator.FENCE_RADIUS + 19;  // 48
+    private static final int VILLAGE_SPAWN_MIN = VillageGenerator.FENCE_RADIUS + 3;   // 65
+    private static final int VILLAGE_SPAWN_MAX = VillageGenerator.FENCE_RADIUS + 19;  // 81
 
-    private static final Map<ServerLevel, Integer> TICKS = new HashMap<>();
+    /**
+     * El <b>turno</b> del último roll que se disparó (nivel → {@code gameTime / intervalo}). Es lo único que se
+     * guarda en memoria, y <b>no es una cuenta</b>: al cargar se apunta el turno en el que se está y se dispara
+     * cuando cambia, así que el reloj sigue siendo el del mundo (ver {@link #tick}).
+     */
+    private static final Map<ServerLevel, Long> ULTIMO_TURNO = new HashMap<>();
 
     private HordeManager() {
     }
@@ -64,33 +70,52 @@ public final class HordeManager {
     public static void tick(ServerLevel level) {
         double threat = ThreatLevel.current(level);
         int interval = (int) (MIN_INTERVAL_TICKS + (BASE_INTERVAL_TICKS - MIN_INTERVAL_TICKS) * (1.0 - threat));
-        int elapsed = TICKS.getOrDefault(level, 0) + 1;
-        if (elapsed >= interval) {
-            TICKS.put(level, 0);
-            spawnHorde(level, threat);
-        } else {
-            TICKS.put(level, elapsed);
+        if (interval <= 0) {
+            return;
         }
+        // EL RELOJ ES EL DEL MUNDO, no un contador de "ticks desde que se abrió el juego" (I98). Con el contador en
+        // memoria, CERRAR EL JUEGO ponía la cuenta a cero: el roll solo llegaba en sesiones más largas que el
+        // intervalo (13-20 min) y, como además la aldea necesitaba un SEGUNDO roll para tener presión, en la
+        // práctica no llegaba ninguna horda a ningún pueblo (medido en la partida del jugador: UNA sola línea de
+        // horda en dos días de logs y `Pressure` vacío en el guardado).
+        // Ahora el turno es `gameTime / intervalo`, o sea del reloj del mundo: sobrevive al cierre y no depende de
+        // cuánto lleve abierto el juego. Se dispara cuando CAMBIA el turno (no con un módulo exacto: el intervalo
+        // se mueve con la amenaza y un módulo exacto se puede quedar sin dar nunca). Lo que se pierde es el turno
+        // que caiga con el mundo cerrado: no se acumulan turnos atrasados.
+        long turno = level.getGameTime() / interval;
+        if (ULTIMO_TURNO.getOrDefault(level, turno) == turno) {
+            return; // todavía no ha cambiado el turno (la primera vez solo se apunta de dónde venimos)
+        }
+        ULTIMO_TURNO.put(level, turno);
+        spawnHorde(level, threat);
     }
 
     private static void spawnHorde(ServerLevel level, double threat) {
+        // El más "aventurero" (el que está más lejos de su ancla) manda para la horda que va A POR ÉL.
         ServerPlayer target = pickPlayer(level, threat);
-        if (target == null) {
-            return; // nadie está fuera de la zona protegida -> sin horda
+        // PERO LA HORDA QUE VA A POR UNA ALDEA NO NECESITA QUE NADIE ESTÉ DE AVENTURA (I98): va contra el pueblo,
+        // que acumula abandono, no contra el jugador. Antes, con todos los jugadores dentro de la zona protegida
+        // (`pickPlayer` = null) el mundo no mandaba NADA, ni siquiera a la aldea que llevaba horas sin socorro:
+        // por eso "no llegaba ningún raid al pueblo". Para elegir la aldea basta con un jugador cualquiera (de él
+        // salen el ancla y el índice de objetivo).
+        ServerPlayer paraLaAldea = target != null ? target : pickAnyPlayer(level);
+        if (paraLaAldea == null) {
+            return; // sin jugadores conectados no hay a quién contarle una horda
         }
-        double distance = distanceToSpawn(target);
-        if (distance < 0.0) {
-            return; // sin spawn point registrado
-        }
-        double probability = AggressiveZombieSpawnProfile.INSTANCE.probability(distance, threat);
-
-        // Iteración 3: ¿hay alguna aldea DESCUIDADA cerca? Entonces la horda va A POR ELLA (el mundo también
-        // juega: la aldea que nadie atiende acumula presión y acaba recibiendo el ataque). Si no hay ninguna,
-        // se comporta como siempre y va a por el jugador.
-        int currentIndex = objectiveIndexOf(target);
+        int currentIndex = objectiveIndexOf(paraLaAldea);
         VillageManager.Settlement settlement = currentIndex < 0
                 ? null
-                : VillageManager.pickHordeTarget(level, target, currentIndex);
+                : VillageManager.pickHordeTarget(level, paraLaAldea, currentIndex);
+        if (settlement == null && target == null) {
+            return; // ni aldea a la que ir, ni jugador fuera de la zona protegida: no hay horda
+        }
+        double distance = target != null ? distanceToSpawn(target) : -1.0;
+        // A UNA ALDEA LE LLEGA LA HORDA ENTERA (lo que escala con el tiempo es su TAMAÑO, ver `plannedCount`): si
+        // se le aplicara la probabilidad por distancia al jugador, un jugador dentro de su zona protegida dejaría
+        // la horda en cero y el pueblo no recibiría nada — que es justo lo que se está arreglando. Al jugador, en
+        // cambio, se le sigue midiendo con la curva de siempre (cerca de su base, nada).
+        double probability = settlement != null ? 1.0
+                : AggressiveZombieSpawnProfile.INSTANCE.probability(distance, threat);
 
         Random random = new Random();
         int plannedCount = BASE_HORDE_SIZE + (int) Math.round(threat * MAX_EXTRA_MEMBERS);
@@ -129,13 +154,16 @@ public final class HordeManager {
                 spawned++;
             }
         }
+        // UNA SOLA ETIQUETA PARA LAS HORDAS DEL MUNDO (I98): antes eran `[Horda]` (a la aldea) y `[Horde]` (al
+        // jugador), dos nombres casi iguales para dos cosas distintas, y buscar "qué ha pasado con las hordas" en
+        // el log era una trampa. Ahora `[Horda]` y se dice a por quién va.
         if (settlement != null) {
-            DevilRpg.LOGGER.info("[Horda] {} de {} enemigos hacia la aldea {} (centro {})",
+            DevilRpg.LOGGER.info("[Horda] {} de {} enemigos van a por la aldea {} (centro {})",
                     spawned, plannedCount, settlement.objectiveIndex(), settlement.center());
             VillageManager.startWorldSiege(level, settlement, wave);
         } else {
-            DevilRpg.LOGGER.info("[Horde] {} spawneados de {} cerca de {} (distancia {} prob {})",
-                    spawned, plannedCount, target.getGameProfile().getName(),
+            DevilRpg.LOGGER.info("[Horda] {} de {} enemigos van a por el jugador {} (a {} bloques de su ancla,"
+                            + " probabilidad {})", spawned, plannedCount, target.getGameProfile().getName(),
                     Math.round(distance), String.format("%.2f", probability));
         }
     }
@@ -144,6 +172,15 @@ public final class HordeManager {
     private static int objectiveIndexOf(ServerPlayer player) {
         PlayerAuxiliaryCapabilityInterface aux = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerAuxiliaryCapability.INSTANCE);
         return aux == null ? -1 : aux.getObjectiveIndex();
+    }
+
+    /**
+     * Cualquier jugador conectado (para la horda que va <b>a por una aldea</b>: de él salen el ancla y el índice de
+     * objetivo, pero <b>no</b> se le exige estar fuera de la zona protegida, porque esa horda no va a por él).
+     */
+    private static ServerPlayer pickAnyPlayer(ServerLevel level) {
+        List<? extends ServerPlayer> players = level.players();
+        return players.isEmpty() ? null : players.get(0);
     }
 
     /**

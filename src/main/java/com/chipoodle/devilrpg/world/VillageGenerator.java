@@ -782,6 +782,14 @@ public final class VillageGenerator {
         if (nivel <= level.getMinBuildHeight() + 1) {
             return;
         }
+        // LAS CUATRO ESCALERAS DE LAS ENTRADAS, ASEGURADAS SIEMPRE (23-sep-2026): van ANTES del testigo de la
+        // plataforma, porque una escalera se puede perder sin que la plataforma se entere. Medido en el guardado del
+        // jugador (aldea 0, centro 470,646, cota 63): la escalera SUR —`(470,63,650)`, la que el constructor pone con
+        // `escalera(Direction.NORTH)`— estaba convertida en `dirt_path`, comida por el camino de la plaza (que se
+        // dibuja DESPUÉS del kiosco y pintaba sobre el bloque de superficie, que ya era la escalera). El jugador lo
+        // preguntó tal cual: *"¿por qué el kiosco tiene un bloque de tierra en vez de escaleras?"*. El testigo de la
+        // plataforma (el poste) seguía en pie, así que el latido daba el kiosco por bueno y la escalera no volvía.
+        asegurarLasEscalerasDelKiosco(level, center, nivel);
         // El testigo es la PLATAFORMA (su poste), no la despensa: el cofre de la comida vive desde la migración 46
         // en la cocina de la taberna (lo pidió el jugador). Con el testigo viejo —que exigía el cofre— el kiosco se
         // reconstruía en cada latido buscando un cofre que ya no está en él (y reconstruirlo tira lo de dentro).
@@ -791,6 +799,53 @@ public final class VillageGenerator {
         }
         kiosco(level, center, nivel);
         DevilRpg.LOGGER.info("[Village] Aldea en {}: kiosco de la plaza colocado a la cota {}", center, nivel);
+    }
+
+    /**
+     * Las <b>cuatro escaleras de las entradas del kiosco</b>, en pie: es <b>idempotente</b> (solo escribe la celda
+     * que no tiene su escalera) y <b>no toca lo que no es suyo</b>: si en esa celda hay algo que no es terreno ni un
+     * camino (lo que haya puesto el jugador), se deja como está y se dice en el log.
+     * <p>
+     * La geometría (qué celda y con qué {@code FACING}) es <b>la misma</b> que la del constructor (I4): las cuatro
+     * celdas a {@code KIOSCO_RADIO + 1} del centro, mirando hacia la plataforma.
+     */
+    private static void asegurarLasEscalerasDelKiosco(ServerLevel level, BlockPos center, int nivel) {
+        int r = KIOSCO_RADIO;
+        Direction[] hacia = {Direction.EAST, Direction.WEST, Direction.SOUTH, Direction.NORTH};
+        BlockPos[] celdas = {
+                new BlockPos(center.getX() - r - 1, nivel, center.getZ()),
+                new BlockPos(center.getX() + r + 1, nivel, center.getZ()),
+                new BlockPos(center.getX(), nivel, center.getZ() - r - 1),
+                new BlockPos(center.getX(), nivel, center.getZ() + r + 1),
+        };
+        int repuestas = 0;
+        int ocupadas = 0;
+        for (int i = 0; i < celdas.length; i++) {
+            BlockState estado = level.getBlockState(celdas[i]);
+            if (estado.equals(escalera(hacia[i]))) {
+                continue; // ya está la suya
+            }
+            // Solo se repone donde el camino (o el nivelado) pudo comerse la escalera: tierra, camino o aire. Lo que
+            // haya puesto el jugador NO se toca (I6).
+            if (!esTerrenoNatural(estado) && !estado.isAir()) {
+                ocupadas++;
+                continue;
+            }
+            // lint:ok I9 porque esto NO es una construcción nueva que tenga que rehacerse al migrar: es un
+            // REPARADOR idempotente de una celda que corre en el latido (`asegurarKiosco` se llama desde
+            // `manageNearby`, fuera del bloque de migración), así que llega a las aldeas ya construidas sin subir el
+            // trazado — igual que `asegurarHerreria`, `asegurarBarraca` y el propio `asegurarKiosco`.
+            colocar(level, celdas[i], escalera(hacia[i]), 3);
+            repuestas++;
+        }
+        if (repuestas > 0) {
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: {} escalera(s) de las entradas del kiosco repuestas"
+                    + " (el camino se las habia comido)", center, repuestas);
+        }
+        if (ocupadas > 0) {
+            DevilRpg.LOGGER.warn("[Village] Aldea en {}: {} entrada(s) del kiosco sin su escalera porque hay algo"
+                    + " puesto ahi (no se toca)", center, ocupadas);
+        }
     }
 
     /**
@@ -4973,6 +5028,17 @@ public final class VillageGenerator {
                 int y = groundY(level, px, pz) - 1;
                 if (Math.abs(y - nivelCamino) > 1) {
                     continue; // ahí hay una construcción (o un desnivel fuerte): el camino no sube por encima
+                }
+                // Y NO SE PISA LO QUE NO ES TERRENO (23-sep-2026): la superficie de esa columna puede ser una
+                // ESCALERA (la de una entrada del kiosco), una losa, tierra labrada o un bloque del jugador, y el
+                // camino la SUSTITUÍA. Medido en su guardado (aldea 0): la escalera sur del kiosco —la celda
+                // `(470,63,650)`, que el constructor pone con `escalera(Direction.NORTH)`— estaba convertida en
+                // `dirt_path` (un bloque de tierra apisonada SOBRESALIENDO un bloque, porque `groundY` ya veía la
+                // escalera y el camino se pintó encima), y como el plano de la aldea se captura escaneando el mundo,
+                // el obrero lo daba por bueno y la escalera no volvía nunca. El jugador lo vio como *"¿por qué el
+                // kiosco tiene un bloque de tierra en vez de escaleras?"*.
+                if (!esTerrenoNatural(level.getBlockState(new BlockPos(px, y, pz)))) {
+                    continue; // ahí hay algo construido: el camino pasa de largo
                 }
                 colocar(level, new BlockPos(px, y, pz), Blocks.DIRT_PATH.defaultBlockState(), 3);
             }

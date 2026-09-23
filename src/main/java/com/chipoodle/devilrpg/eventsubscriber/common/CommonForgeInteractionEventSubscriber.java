@@ -113,6 +113,15 @@ public class CommonForgeInteractionEventSubscriber {
     @SubscribeEvent(priority = EventPriority.NORMAL, receiveCanceled = true)
     public static void onRightClickItem(PlayerInteractEvent.RightClickItem event) {
         BiConsumer<PlayerInteractEvent.RightClickItem, PlayerAuxiliaryCapabilityInterface> c = (eve, aux) -> {
+            // UN LIBRO ESCRITO SE PUEDE LEER TAMBIÉN TRANSFORMADO (23-sep-2026): lo que se bloquea con la
+            // transformación es USAR objetos (comer, beber, lanzar), pero el Diario del Invocado es un libro y el
+            // jugador lo tiene que poder abrir cuando quiera —lo pidió así (*"debe ser un libro que pueda leer"*) y
+            // su estado normal de juego es el hombre lobo—. Sin esta excepción, el clic derecho se cancelaba y el
+            // libro **no abría nada** (el servidor nunca llegaba a `WrittenBookItem.use`, que es el que manda el
+            // paquete que abre la pantalla del libro).
+            if (eve.getItemStack().is(Items.WRITTEN_BOOK)) {
+                return;
+            }
             eve.getEntity().swinging = false;
             eve.setCanceled(true);
 

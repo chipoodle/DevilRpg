@@ -33,8 +33,8 @@ import java.util.Random;
 @EventBusSubscriber(modid = DevilRpg.MODID, bus = EventBusSubscriber.Bus.GAME)
 public class GuardHarness {
 
-    private static final BlockPos CENTRO = new BlockPos(1414, 120, 1414);
-    private static final int INDICE = 2;
+    private static final BlockPos CENTRO = new BlockPos(470, 63, 646);
+    private static final int INDICE = 0;
     /**
      * ¿Se siembra el almacén con <b>pociones de agua ya embotelladas</b>? Para medir el <b>VIAJE AL AGUA</b> del
      * clérigo tiene que estar en {@code false}: si el almacén ya tiene botellas de agua, las usa y <b>nunca</b> coge
@@ -158,6 +158,48 @@ public class GuardHarness {
      * ("Hizo N polvo de hueso").
      */
     private static final boolean MEDIR_LENADOR = false;
+    /**
+     * <b>LAS HORDAS DEL MUNDO</b> (I98): mide que la <b>presión del abandono</b> de una aldea se acumule <b>sola</b>
+     * (en el reloj del mundo, cada 10 s, desde el latido) y que el mundo mande una horda <b>a la aldea</b> en el
+     * <b>PRIMER</b> turno del roll: antes hacía falta un <b>segundo</b> roll (20-40 min después, porque el primero
+     * solo fijaba la base de la presión) y el contador del roll vivía en memoria, así que cerrar el juego lo ponía a
+     * cero. Medido en la partida del jugador: **ni una** línea de horda hacia una aldea en dos días de logs y
+     * {@code Pressure} vacío en el guardado.
+     * <p>
+     * <b>El montaje</b> (corre en la <b>aldea 0</b>, centro {@code 470,646}, cota 63): hay que copiar el mundo con
+     * {@code level.dat -> Data.Time} puesto a un valor que haga que el <b>turno</b> del roll
+     * ({@code gameTime / intervalo}) cambie unos <b>16 s</b> después de arrancar — con el reloj a <b>21629</b> y el
+     * intervalo de ~21957 ticks cambia en ~330 ticks — y el modo siembra la presión de la aldea 0 a <b>8 min
+     * exactos</b> a los 20 ticks ({@code accruePressure(0, gameTime - 9600)}), así que la aldea ya pasa el umbral y
+     * además se ve cómo la presión <b>sigue subiendo</b> con los latidos.
+     * <p>
+     * <b>Lo que se busca</b>: la presión subiendo sola (9600 → 9800 → 10000…), `[Horda] la aldea 0 lleva 8 min sin
+     * socorro: elegida como objetivo`, `[Horda] N de M enemigos van a por la aldea 0` y `[Horda] la aldea 0 esta
+     * siendo atacada`, con los asediadores contados en el volcado y el estado de la aldea en `en asedio`.
+     */
+    private static final boolean MEDIR_HORDAS = false;
+    /** Ticks de presión que hacen falta para que el mundo mande una horda ({@code PRESSURE_MIN_TICKS} = 8 min). */
+    private static final long PRESION_MINIMA = 8L * 60L * 20L;
+    /**
+     * <b>EL ALMACÉN Y LOS HUEVOS DEL GALLINERO</b> (I95/I96/I97): mide las dos cosas que reportó el jugador —
+     * *"el punto de apoyo del almacén (517,64,666) es inalcanzable"* y *"el ganadero no coge los huevos del
+     * gallinero"*— sobre su aldea (aldea 0, centro {@code 470,646}, cota 63).
+     * <p>
+     * Cada 2 s vuelca: el punto de apoyo que devuelve el mod y <b>la capa del suelo del cobertizo</b> (¿está en
+     * {@code cota - 1}?); <b>la ruta de un aldeano</b> hasta ese punto (con {@code canReach} y dónde acaba, que es la
+     * prueba del caminante del juego); lo que tienen dentro los cofres del almacén (para ver que la migración 69
+     * <b>no pierde nada</b>); el <b>ganadero</b> (posición, distancia al almacén, etiqueta, goals activos, zurrón y
+     * su punto aparcado); los <b>huevos</b> que hay en el suelo del corral con su edad; y el <b>portón del
+     * gallinero</b> con cuántas gallinas tiene pegadas.
+     * <p>
+     * Y a los 10 s (y luego cada 20 s) siembra <b>dos huevos</b> en el gallinero: uno en el SUELO del corralillo
+     * ({@code 513,638}, al que solo se llega ENTRANDO) y otro <b>encima de la paja</b> ({@code 516,639}, cuya celda
+     * está a {@code cota + 1}).
+     * <p>
+     * <b>OJO con el instrumento</b>: el recuento de huevos va con la caja <b>alrededor de la base del corral</b>; con
+     * {@code AABB(CENTRO).inflate(40)} el corral cae <b>fuera</b> y el contador decía "0 huevos" siempre.
+     */
+    private static final boolean MEDIR_ALMACEN_Y_HUEVOS = false;
     /** Dónde se planta el bicho (relativo a la plaza): dentro del recinto (radio 62) y a la altura del pueblo. */
     private static final BlockPos BICHO_EN = new BlockPos(6, 0, 6);
     private static boolean listo = false;
@@ -184,7 +226,7 @@ public class GuardHarness {
 // fuera. MEDIR_EQUIPO no estaba y su medida salio inconclusa por esto: sembro el almacen a los 10 s y a los 30 s
 // (t=600) este bloque lo vacio, asi que el equipo desaparecio antes de que ningun guardia llegara a verlo.
 if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_EQUIPO && !MEDIR_LENADOR
-                && ticks == 600) {
+                && !MEDIR_HORDAS && !MEDIR_ALMACEN_Y_HUEVOS && ticks == 600) {
             // --- TERCERA MEDIDA: LA REMESA INICIAL DE MADERA ---------------------------------------------------
             // Se VACIA el almacen entero (como el de una aldea recien fundada, que nace sin nada dentro): en la
             // siguiente pasada del latido el pueblo tiene que meter su remesa inicial de 128 troncos, UNA vez.
@@ -208,7 +250,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         // OJO: en la medida de LA MILICIA **no se barre**, porque los bichos que hay dentro son los que se acaban de
         // sembrar para que la guardia pelee (medido: con el barrido, el zombi desaparecia en el mismo segundo, la
         // guardia se quedaba con la etiqueta "Atacando" un instante y volvia a su ronda, y no habia ni una muerte).
-        if (ticks % 20 == 0 && !MEDIR_MILICIA && !MEDIR_MURO) {
+        if (ticks % 20 == 0 && !MEDIR_MILICIA && !MEDIR_MURO && !MEDIR_HORDAS) {
             if (BICHO_DENTRO) {
                 // ...pero para medir EL BUG DEL LATIDO CORTADO hay que dejar UNO dentro a proposito.
                 mantenerBichoDentro(level);
@@ -255,6 +297,10 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             medirElAgujeroDelSuelo(level, pega);
         } else if (MEDIR_LENADOR) {
             medirElLenador(level, pega);
+        } else if (MEDIR_HORDAS) {
+            medirLasHordas(level, pega);
+        } else if (MEDIR_ALMACEN_Y_HUEVOS) {
+            medirElAlmacenYLosHuevos(level);
         } else if (MEDIR_EQUIPO) {
             medirElEquipoDeLaGuardia(level, pega);
         } else if (MEDIR_COCINA) {
@@ -1206,6 +1252,176 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
      * (bloques de la arboleda, contenedores y zurrones), y el destino al que camina cada aldeano sale de su propia
      * navegación, así que dice si va <b>dentro</b> de la valla (62) o fuera.
      */
+    /**
+     * EL ALMACÉN Y LOS HUEVOS DEL GALLINERO (I95/I96/I97). Ver la ayuda de {@link #MEDIR_ALMACEN_Y_HUEVOS}.
+     */
+    private static void medirElAlmacenYLosHuevos(ServerLevel level) {
+        int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+        BlockPos apoyo = com.chipoodle.devilrpg.world.VillageStorage.puntoDeApoyo(level, CENTRO);
+        // SIEMBRA DE HUEVOS: uno en el SUELO del corralillo (el rincon oeste: solo se llega ENTRANDO por el porton) y
+        // otro ENCIMA de la paja (su celda esta a cota + 1, que es el caso que se quedaba a 1,803 del alcance viejo).
+        if (ticks == 200 || (ticks > 200 && ticks % 400 == 0)) {
+            BlockPos base = com.chipoodle.devilrpg.world.VillageGenerator.baseDeAnexo(CENTRO);
+            BlockPos suelo = new BlockPos(base.getX() - 7, cota, base.getZ() - 8);
+            BlockPos paja = new BlockPos(base.getX() - 4, cota + 1, base.getZ() - 7);
+            for (BlockPos p : new BlockPos[]{suelo, paja}) {
+                net.minecraft.world.entity.item.ItemEntity huevo = new net.minecraft.world.entity.item.ItemEntity(
+                        level, p.getX() + 0.5D, p.getY(), p.getZ() + 0.5D,
+                        new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.EGG, 1));
+                huevo.setPickUpDelay(0);
+                level.addFreshEntity(huevo);
+            }
+            DevilRpg.LOGGER.info("[Arnes] HUEVOS: sembrados 2 huevos (suelo {} y paja {})", suelo, paja);
+        }
+        if (ticks % 40 != 0) {
+            return;
+        }
+        // 1) EL ALMACEN: la capa del suelo (tiene que ser `cota - 1`) y la ruta de un aldeano hasta el punto de apoyo.
+        var caja = com.chipoodle.devilrpg.world.VillageStorage.almacen(level, CENTRO);
+        int cosas = 0;
+        StringBuilder cofre = new StringBuilder();
+        if (caja != null) {
+            for (int i = 0; i < caja.getContainerSize(); i++) {
+                if (!caja.getItem(i).isEmpty()) {
+                    cosas += caja.getItem(i).getCount();
+                    if (cofre.length() < 80) {
+                        cofre.append(cofre.length() > 0 ? ", " : "").append(caja.getItem(i).getCount()).append('x')
+                                .append(caja.getItem(i).getItem());
+                    }
+                }
+            }
+        }
+        Villager referencia = null;
+        for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(140))) {
+            if (v.getVillagerData().getProfession() == net.minecraft.world.entity.npc.VillagerProfession.SHEPHERD) {
+                referencia = v;
+                break;
+            }
+        }
+        DevilRpg.LOGGER.info("[Arnes] ALMACEN t={} apoyo={} (cota={}; suelo debajo={} | dos debajo={}) ruta={}"
+                        + " | COFRE: {} objeto(s) [{}]",
+                ticks, apoyo.toShortString(), cota,
+                level.getBlockState(apoyo.below()).getBlock().getName().getString(),
+                level.getBlockState(apoyo.below(2)).getBlock().getName().getString(),
+                referencia == null ? "sin ganadero" : rutaDetallada(referencia, apoyo), cosas, cofre);
+        // 2) EL GANADERO: donde esta, que hace, que lleva y que tiene aparcado.
+        for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(140))) {
+            var prof = v.getVillagerData().getProfession();
+            if (prof != net.minecraft.world.entity.npc.VillagerProfession.SHEPHERD) {
+                continue;
+            }
+            StringBuilder goals = new StringBuilder();
+            for (var w : v.goalSelector.getAvailableGoals()) {
+                if (w.isRunning()) {
+                    goals.append(goals.length() > 0 ? "+" : "").append(w.getPriority()).append(':')
+                            .append(w.getGoal().getClass().getSimpleName());
+                }
+            }
+            StringBuilder zurron = new StringBuilder();
+            for (int i = 0; i < v.getInventory().getContainerSize(); i++) {
+                if (!v.getInventory().getItem(i).isEmpty()) {
+                    zurron.append(zurron.length() > 0 ? ", " : "").append(v.getInventory().getItem(i).getCount())
+                            .append('x').append(v.getInventory().getItem(i).getItem());
+                }
+            }
+            long aparcado = v.getPersistentData().getLong("DevilRpgPuntoFallido");
+            long hasta = v.getPersistentData().getLong("DevilRpgPuntoFallidoHasta");
+            double dApoyo = Math.sqrt(v.distanceToSqr(apoyo.getX() + 0.5D, apoyo.getY(), apoyo.getZ() + 0.5D));
+            var cerebro = v.getBrain().getMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.WALK_TARGET)
+                    .orElse(null);
+            BlockPos destino = cerebro == null ? null : cerebro.getTarget().currentBlockPosition();
+            DevilRpg.LOGGER.info("[Arnes] GANADERO t={} pos={} dApoyo={} zurron=[{}] goals=[{}] destino={}"
+                            + " etiqueta=\"{}\" aparcado={} (hasta {}, gameTime {})",
+                    ticks, v.blockPosition().toShortString(), fmt(dApoyo), zurron, goals,
+                    destino == null ? "-" : destino.toShortString(), etiquetaDe(v),
+                    aparcado == 0L ? "-" : BlockPos.of(aparcado).toShortString(), hasta, level.getGameTime());
+        }
+        // 3) LOS HUEVOS del corral (si el ganadero los coge, desaparecen) y EL PORTON del gallinero con sus gallinas.
+        //    OJO CON EL INSTRUMENTO: la caja va alrededor de la BASE DEL CORRAL, no del centro de la aldea.
+        int huevos = 0;
+        StringBuilder donde = new StringBuilder();
+        AABB corral = new AABB(com.chipoodle.devilrpg.world.VillageGenerator.baseDeAnexo(CENTRO)).inflate(20.0D);
+        for (net.minecraft.world.entity.item.ItemEntity it : level.getEntitiesOfClass(
+                net.minecraft.world.entity.item.ItemEntity.class, corral)) {
+            if (!it.getItem().is(net.minecraft.world.item.Items.EGG)) {
+                continue;
+            }
+            huevos++;
+            donde.append(donde.length() > 0 ? ", " : "").append(it.blockPosition().toShortString())
+                    .append("(edad ").append(it.tickCount).append(')');
+        }
+        BlockPos porton = com.chipoodle.devilrpg.world.VillageGenerator.portonDelGallinero(CENTRO, cota);
+        var estado = level.getBlockState(porton);
+        int enElHueco = level.getEntitiesOfClass(net.minecraft.world.entity.animal.Chicken.class,
+                new AABB(porton).inflate(1.5D)).size();
+        int pegadas = level.getEntitiesOfClass(net.minecraft.world.entity.animal.Chicken.class,
+                new AABB(porton).inflate(2.5D)).size();
+        DevilRpg.LOGGER.info("[Arnes] HUEVOS t={}: {} en el suelo [{}] | PORTON {} open={} gallinas: {} en el hueco,"
+                        + " {} a 2.5 | gallinas en el corral={}",
+                ticks, huevos, donde, porton.toShortString(),
+                estado.hasProperty(net.minecraft.world.level.block.FenceGateBlock.OPEN)
+                        && estado.getValue(net.minecraft.world.level.block.FenceGateBlock.OPEN),
+                enElHueco, pegadas, com.chipoodle.devilrpg.world.VillageGenerator.animalesDelCorral(level, CENTRO)
+                        .stream().filter(a -> a.getType() == net.minecraft.world.entity.EntityType.CHICKEN).count());
+    }
+
+    /**
+     * LAS HORDAS DEL MUNDO (I98): la presión del abandono y el turno del roll. Ver {@link #MEDIR_HORDAS}.
+     */
+    private static void medirLasHordas(ServerLevel level, FakePlayer pega) {
+        var saved = com.chipoodle.devilrpg.world.VillageSavedData.get(level);
+        double threat = com.chipoodle.devilrpg.survival.ThreatLevel.current(level);
+        int intervalo = (int) (3 * 60 * 20 + (20 * 60 * 20 - 3 * 60 * 20) * (1.0 - threat));
+        if (ticks == 20) {
+            // EL JUGADOR DE PEGA NECESITA ANCLA (como en la partida de verdad): sin ella, `pickHordeTarget` no puede
+            // calcular dónde cae ninguna aldea y devuelve null sin mirar nada.
+            var aux = com.chipoodle.devilrpg.capability.IGenericCapability.getUnwrappedPlayerCapability(pega,
+                    com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability.INSTANCE);
+            aux.setAnchorPoint(ancla(), pega);
+            aux.setSpawnPoint(ancla(), pega);
+            DevilRpg.LOGGER.info("[Arnes] HORDAS t=20 ANTES: presion(aldea 0)={} ticks ({} min) | gameTime={}"
+                            + " intervalo={} turno={} | estado=\"{}\" | ancla del jugador puesta en {}",
+                    saved.getPressureTicks(0), Math.round(saved.getPressureTicks(0) / 1200.0D), level.getGameTime(),
+                    intervalo, level.getGameTime() / intervalo,
+                    com.chipoodle.devilrpg.world.VillageManager.estadoDeLaAldea(level, 0), ancla());
+            // Y SE SIEMBRA a 8 min EXACTOS: la aldea ya pasa el umbral, y lo que se mide después es que la presión
+            // SIGUE subiendo sola (latido a latido) y que la aldea es ELEGIDA como objetivo.
+            int sembrada = saved.accruePressure(0, level.getGameTime() - PRESION_MINIMA, 1.0D);
+            DevilRpg.LOGGER.info("[Arnes] HORDAS: presion de la aldea 0 sembrada a {} ticks ({} min de {} necesarios)"
+                            + "; el turno del roll cambia en ~{} ticks",
+                    sembrada, Math.round(sembrada / 1200.0D), Math.round(PRESION_MINIMA / 1200.0D),
+                    intervalo - (level.getGameTime() % intervalo));
+        }
+        // LA ELECCION DE OBJETIVO, que es el nucleo del arreglo: con la presion ya acumulada, `pickHordeTarget` tiene
+        // que devolver la aldea 0. OJO: el SPAWNEO de la oleada NO se puede medir headless —`HordeManager` usa
+        // `level.players()` y el jugador de pega NO esta en esa lista (es la misma limitacion que el reloj del asedio,
+        // I86)—, asi que lo que se mide aqui es la eleccion; la marcha la ve el jugador en juego.
+        if (ticks >= 60 && ticks % 100 == 0) {
+            var elegida = com.chipoodle.devilrpg.world.VillageManager.pickHordeTarget(level, pega, INDICE);
+            DevilRpg.LOGGER.info("[Arnes] HORDAS t={} OBJETIVO ELEGIDO = {}", ticks,
+                    elegida == null ? "NINGUNO" : ("aldea " + elegida.objectiveIndex() + " centro " + elegida.center()));
+        }
+        if (ticks % 40 != 0) {
+            return;
+        }
+        int asediadores = 0;
+        double masCerca = Double.MAX_VALUE;
+        for (net.minecraft.world.entity.Mob m : level.getEntitiesOfClass(net.minecraft.world.entity.Mob.class,
+                new AABB(CENTRO).inflate(220))) {
+            if (m instanceof com.chipoodle.devilrpg.entity.AggressiveZombieEntity z && z.getWorldSiegeIndex() == 0) {
+                asediadores++;
+                masCerca = Math.min(masCerca, Math.sqrt(m.distanceToSqr(CENTRO.getX() + 0.5D, CENTRO.getY(),
+                        CENTRO.getZ() + 0.5D)));
+            }
+        }
+        DevilRpg.LOGGER.info("[Arnes] HORDAS t={} gameTime={} turno={} presion(aldea 0)={} ticks ({} min) |"
+                        + " estado=\"{}\" | asediadores de la aldea 0: {} (el mas cerca a {})",
+                ticks, level.getGameTime(), level.getGameTime() / intervalo, saved.getPressureTicks(0),
+                Math.round(saved.getPressureTicks(0) / 1200.0D),
+                com.chipoodle.devilrpg.world.VillageManager.estadoDeLaAldea(level, 0), asediadores,
+                asediadores == 0 ? "-" : Math.round(masCerca));
+    }
+
     private static void medirElLenador(ServerLevel level, FakePlayer pega) {
         int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
         var despensa = com.chipoodle.devilrpg.world.VillagePantry.despensa(level, CENTRO);

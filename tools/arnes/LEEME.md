@@ -256,6 +256,32 @@ se abre (`open=true`), el zurrón se llena y se **entrega** (ocho líneas de `N 
 > una corrida: `Get-CimInstance Win32_Process -Filter "Name='java.exe'"` y mata lo que lleve `fml.modFolders`
 > (o `forgeserverdev`), y comprueba que el `.jar` se puede abrir en escritura.
 
+### `MEDIR_HORDAS = true` — las hordas del mundo (I98)
+
+Corre en la **aldea 0** (centro `470,646`, cota 63) y mide que la **presión del abandono** se acumule **sola** (en el
+latido, cada 10 s, con el reloj del mundo) y que la aldea sea **elegida como objetivo** de una horda.
+
+**El montaje** (importante, o no mide nada): hay que copiar el mundo con `level.dat -> Data.Time` puesto a un valor
+que haga que el **turno** del roll (`gameTime / intervalo`) cambie unos **16 s** después de arrancar — con el reloj a
+**21629** y el intervalo de ~21957 ticks cambia en ~330 ticks (con `tools/nbtedit.py`, que hace la prueba de ida y
+vuelta) — y el modo **siembra la presión** de la aldea 0 a **8 min exactos** a los 20 ticks
+(`accruePressure(0, gameTime - 9600)`), así que la aldea ya pasa el umbral y encima se ve cómo la presión **sigue
+subiendo**.
+
+Lo que se busca en el log:
+
+```
+[Arnes] HORDAS t=20 ANTES: presion(aldea 0)=0 ticks (0 min) | gameTime=21649 intervalo=21955 turno=0 …
+[Arnes] HORDAS t=160 gameTime=21789 turno=0 presion(aldea 0)=9680 ticks (8 min) …
+[Arnes] HORDAS t=360 gameTime=21989 turno=1 presion(aldea 0)=9880 ticks (8 min) …
+[Horda] la aldea 0 lleva 8 min sin socorro: elegida como objetivo
+[Arnes] HORDAS t=100 OBJETIVO ELEGIDO = aldea 0 centro BlockPos{x=470, y=63, z=646}
+```
+
+**Y su límite, dicho claro**: el **spawneo** de la oleada **no se puede medir headless** — `HordeManager` usa
+`level.players()` y el jugador de pega **no está en esa lista** (la misma limitación que el reloj del asedio, I86):
+lo que se mide es la **presión** y la **elección**; la marcha la ve el jugador en juego.
+
 ### `MEDIR_LENADOR = true` — el leñador, su arboleda y el polvo de hueso (I92/I93)
 
 Corre sobre la **aldea del jugador** (aldea 0) y vuelca cada 10 s: el estado de la **arboleda del pueblo** (árboles,

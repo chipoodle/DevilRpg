@@ -387,6 +387,12 @@ public class VillagerCollectGoal extends Goal {
                 // leñador lo usa para abonar los plantones de la arboleda del pueblo.
                 || s.is(Items.BONE)
                 || s.is(Items.STICK) || s.is(Items.STRING) || s.is(Items.LEATHER) || s.is(Items.FEATHER)
+                // EL PEDERNAL Y LAS FLECHAS TAMBIÉN (23-sep-2026): el herrero hace flechas (1 palo + 1 pluma + 1
+                // pedernal = 4), pero el pedernal y las flechas que caen al suelo solo los barría un herrero a 20
+                // bloques de él (`VillagerPickupGoal`), así que fuera de ese radio se quedaban ahí. Medido en el
+                // guardado del jugador (aldea 0): el almacén con 355 troncos y 30 palos, **ni un pedernal, ni una
+                // pluma, ni una flecha**, y los tres arqueros de la milicia con **2, 0 y 0 flechas** en el zurrón.
+                || s.is(Items.FLINT) || s.is(Items.ARROW)
                 || s.is(Items.COAL) || s.is(Items.CHARCOAL) || s.is(Items.IRON_INGOT) || s.is(Items.COPPER_INGOT)
                 || s.is(Items.GOLD_INGOT) || s.is(Items.CARROT) || s.is(Items.POTATO)
                 // EL BETABEL TAMBIÉN: faltaba, y no es un descuido menor —el juego solo deja que un aldeano recoja

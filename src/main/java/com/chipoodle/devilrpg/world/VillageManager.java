@@ -1242,6 +1242,14 @@ public final class VillageManager {
 
     /** Se llama en el tick del servidor: gestiona el margen, la ola y la resolución del asedio. */
     public static void tick(ServerLevel level) {
+        // LA PRESIÓN DEL ABANDONO SE ACUMULA AQUÍ, EN EL RELOJ DEL MUNDO (I98): son los minutos que una aldea
+        // lleva sin que nadie la socorra, y es lo que hace que el mundo le mande una horda. Antes se acumulaba
+        // SOLO dentro de `pickHordeTarget`, y esa función solo corre cuando ya ha tocado un roll de horda: el
+        // primer roll solo fijaba la base (presión 0) y la aldea no podía ser elegida hasta el SEGUNDO, 20-40 min
+        // después. Medido en la partida del jugador: `Pressure` vacío en el guardado y **ni una** línea de horda
+        // hacia una aldea en dos días de logs. Va en un latido de 10 s (no por tick): es una suma y no hace falta
+        // más resolución.
+        acumularPresionDelAbandono(level);
         // Hordas que el MUNDO manda contra una aldea (Iteración 3): se resuelven aparte de los asedios que
         // arranca el jugador al llegar.
         tickWorldSieges(level);
@@ -1545,7 +1553,13 @@ public final class VillageManager {
     private static void grantReward(ServerPlayer player, int objectiveIndex) {
         player.addItem(new ItemStack(Items.IRON_INGOT, 8));
         player.addItem(new ItemStack(Items.LEATHER, 6));
-        player.addItem(new ItemStack(Items.WRITTEN_BOOK)); // receta (por ahora un libro genérico)
+        // Y EL DIARIO, NO UN LIBRO EN BLANCO (23-sep-2026): aquí se daba un `Items.WRITTEN_BOOK` a secas —sin
+        // contenido y sin la marca del mod (`"receta (por ahora un libro genérico)"`)—, y el jugador se quedaba con
+        // un libro que NO era el Diario: `esElDiario` era false, el Diario no se reescribía y las aldeas
+        // descubiertas no aparecían por ningún lado (medido en su guardado: un `written_book` con el NBT
+        // `{count, Slot, id}` a secas). Ahora se le da el de verdad si no lo tiene (y si lo tiene, se pone al día:
+        // de eso ya se encarga `actualizarSiLoTiene` al salvarse la aldea).
+        com.chipoodle.devilrpg.item.DiarioDelInvocado.entregarSiNoLoTiene(player);
 
         int puntosGanados = MissionRewards.giveExperienceLevels(player, REWARD_EXPERIENCE_LEVELS);
         String premio = MissionRewards.describe(REWARD_EXPERIENCE_LEVELS, puntosGanados);
@@ -1639,7 +1653,7 @@ public final class VillageManager {
             best = new Settlement(i, target);
         }
         if (best != null) {
-            DevilRpg.LOGGER.info("[Village] Horda dirigida a la aldea {} (presión {} min sin atención)",
+            DevilRpg.LOGGER.info("[Horda] la aldea {} lleva {} min sin socorro: elegida como objetivo",
                     best.objectiveIndex(), Math.round(bestPressure / 1200.0D));
         }
         return best;
@@ -1658,7 +1672,7 @@ public final class VillageManager {
         // Los que marchan contra la aldea van marcados con brillo, igual que la ola del asedio clásico: es la
         // única forma de saber a quién hay que parar cuando llegan de noche entre los bichos del campo.
         marcarAsediadores(level, wave, true);
-        DevilRpg.LOGGER.info("[Village] La aldea {} está siendo atacada: {} enemigos marchan a por ella",
+        DevilRpg.LOGGER.info("[Horda] la aldea {} esta siendo atacada: {} enemigos marchan a por ella",
                 settlement.objectiveIndex(), wave.size());
         announceNearby(level, settlement.center(),
                 "Los tambores suenan: los monstruos marchan contra una aldea cercana.");
@@ -1675,7 +1689,7 @@ public final class VillageManager {
             WorldSiege siege = list.get(i);
             if (isWaveCleared(level, siege.wave)) {
                 saved.resetPressure(siege.objectiveIndex);
-                DevilRpg.LOGGER.info("[Village] La aldea {} resistió el ataque (presión reiniciada)",
+                DevilRpg.LOGGER.info("[Horda] la aldea {} resistio el ataque (presion reiniciada)",
                         siege.objectiveIndex);
                 announceNearby(level, siege.center, "La aldea ha resistido: los monstruos han sido rechazados.");
                 // Recompensa para quien la defendió (ver registerDefender).
@@ -1691,7 +1705,7 @@ public final class VillageManager {
                 // pelea sigue (y con él delante, esta misma comprobación ya decide de verdad).
                 if (!siege.avisadoSinDefensor) {
                     siege.avisadoSinDefensor = true;
-                    DevilRpg.LOGGER.info("[Village] La aldea {} se ha quedado sin aldeanos, pero NO cae: no hay"
+                    DevilRpg.LOGGER.info("[Horda] la aldea {} se ha quedado sin aldeanos, pero NO cae: no hay"
                             + " ningun jugador alli que pueda defenderla", siege.objectiveIndex);
                 }
             } else if (vivos == 0) {
@@ -1921,6 +1935,31 @@ public final class VillageManager {
             return 1.0D;
         }
         return 1.0D + (VILLAGERS_FOR_FULL_HEALTH - Math.max(0, health)) * PRESSURE_PER_MISSING_VILLAGER;
+    }
+
+    /**
+     * <b>El abandono de las aldeas, contado por el RELOJ DEL MUNDO</b> (I98): cada
+     * {@link #VILLAGE_POLL_TICKS} se le suma a la presión de cada aldea <b>generada</b>, <b>no caída</b> y que
+     * <b>no esté ya bajo ataque</b> el tiempo que ha pasado (multiplicado por {@link #pressureMultiplier}, que es
+     * como se premia a las aldeas débiles).
+     * <p>
+     * Los tres requisitos son los mismos que usa {@link #pickHordeTarget} para elegir objetivo, así que lo que se
+     * acumula aquí es exactamente lo que allí se lee. Y como se acumula por <b>tiempo del mundo</b> (ticks), avanza
+     * aunque el chunk esté descargado y <b>no se reinicia al cerrar el juego</b>: lo que se pierde al cerrar es el
+     * turno del roll de la horda (ver {@code HordeManager}), no el abandono de la aldea.
+     */
+    private static void acumularPresionDelAbandono(ServerLevel level) {
+        long gameTime = level.getGameTime();
+        if (gameTime % VILLAGE_POLL_TICKS != 0L) {
+            return;
+        }
+        VillageSavedData saved = VillageSavedData.get(level);
+        for (int i = 0; i <= MAX_OBJECTIVES; i++) {
+            if (!saved.isGenerated(i) || saved.isFallen(i) || isUnderAttack(level, i)) {
+                continue; // ya está resuelta, caída o siendo atacada: no acumula abandono
+            }
+            saved.accruePressure(i, gameTime, pressureMultiplier(saved.getHealth(i)));
+        }
     }
 
     /**

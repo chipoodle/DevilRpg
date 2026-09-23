@@ -72,21 +72,13 @@ public class LoreStoneBlock extends Block {
             return;
         }
         // Un LIBRO escrito de los del juego (se abre con la interfaz de libro). Se busca por su marca, no por el
-        // nombre, para que renombrarlo no haga que la piedra te dé otro.
-        for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
-            if (com.chipoodle.devilrpg.item.DiarioDelInvocado.esElDiario(player.getInventory().getItem(i))) {
-                com.chipoodle.devilrpg.item.DiarioDelInvocado.actualizar(player.getInventory().getItem(i), serverPlayer);
-                player.inventoryMenu.broadcastChanges();
-                return;
-            }
+        // nombre, para que renombrarlo no haga que la piedra te dé otro. La lógica vive en el propio Diario (I4),
+        // que es la que comparten la piedra y la recompensa de salvar una aldea.
+        if (com.chipoodle.devilrpg.item.DiarioDelInvocado.entregarSiNoLoTiene(serverPlayer)) {
+            player.displayClientMessage(Component.literal(
+                    "La piedra te entrega un cuaderno ajado: el Diario del Invocado. Ábrelo como un libro para ver"
+                            + " las aldeas que descubras, con sus coordenadas y su suerte."), false);
         }
-        net.minecraft.world.item.ItemStack diario = com.chipoodle.devilrpg.item.DiarioDelInvocado.crear(serverPlayer);
-        if (!player.getInventory().add(diario)) {
-            player.drop(diario, false);
-        }
-        player.displayClientMessage(Component.literal(
-                "La piedra te entrega un cuaderno ajado: el Diario del Invocado. Ábrelo como un libro para ver las"
-                        + " aldeas que descubras, con sus coordenadas y su suerte."), false);
     }
 
     /**

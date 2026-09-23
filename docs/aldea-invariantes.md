@@ -2570,6 +2570,114 @@ ella) sigue necesitando entrar. Y entrar al corralillo es poco fiable por constr
 cierra sola a los 5 s (I22). Lo que sí se midió es que, con el portón abierto, el ganadero **entra y trabaja dentro**
 (`PORTON … open=true` en los volcados, con los huevos del corralillo desapareciendo y el zurrón subiendo).
 
+### I98 · Una horda del mundo va por el RELOJ del mundo (y la presión se acumula en el latido)
+
+El jugador: *"¿y qué pasó con los raids del mundo? ¿por qué no llega ninguno al pueblo?"*.
+
+**Medido** en su partida y sus logs (22-23 sept): en **todos** los logs hay **una sola** línea de horda
+(`[Horde] 2 spawneados de 8 cerca de Dev (distancia 946 prob 0.30)`, o sea **a por él**), **ni una** de
+`[Horda] … a por la aldea`, y en el guardado **`Pressure = []`** (la presión de la aldea nunca pasó de 0). Tres
+cosas, las tres arregladas:
+
+1. **La presión solo se acumulaba DENTRO de la elección de objetivo** (`pickHordeTarget`), y esa función solo corre
+   cuando ya ha tocado un **roll** de horda. Y el **primer** roll no cuenta: `accruePressure` arranca la base con
+   `elapsed = 0` (presión 0) → la aldea solo podía ser elegida en el **segundo** roll, 20-40 min después.
+2. **El reloj del roll vivía en memoria** (`HordeManager.TICKS`): **cerrar el juego lo ponía a cero**, así que el
+   roll solo llegaba en sesiones más largas que el intervalo (13-20 min según la amenaza). Es la misma familia que
+   I86 (*"un reloj que corre sin el jugador"*), pero al revés: aquí el reloj **se perdía** al cerrar.
+3. **El guardado solo escribía las entradas de `Pressure` con ticks > 0** (`for entry : pressureTicks`): una aldea
+   que acababa de empezar a contar tenía `Since` y `Ticks = 0`, o sea que **perdía su punto de partida** en cada
+   carga y el abandono no llegaba a contar nunca.
+
+**Regla:** la presión del abandono se acumula **con el reloj del mundo**, en el latido
+(`VillageManager.acumularPresionDelAbandono`, cada `VILLAGE_POLL_TICKS` = 10 s, para las aldeas **generadas**, **no
+caídas** y que **no estén ya bajo ataque**: los mismos requisitos que usa `pickHordeTarget` para elegirlas), y se
+**persiste la unión** de `pressureTicks` y `pressureSince`. El roll de la horda es un **TURNO**
+(`gameTime / intervalo`): se dispara cuando **cambia el turno**, así que va con el reloj del mundo y sobrevive al
+cierre (lo único en memoria es el último turno, para detectar el cambio). Y la horda que va **a por una aldea** no
+exige que el jugador esté fuera de la zona protegida —va contra el pueblo, no contra él—: la que mide la distancia
+del jugador es la que va **a por él**.
+
+**Medido con el arnés** (`MEDIR_HORDAS`, aldea 0, reloj puesto para que el turno cambie ~16 s después de arrancar;
+`tools/arnes/LEEME.md`): la presión **sube sola** con los latidos (`9600 → 9800 → 10000 → 10200…`, o sea 8 min → 9),
+el turno cambia de **0 a 1** justo en el borde del intervalo (`gameTime 21989`) y `pickHordeTarget` devuelve
+**`aldea 0`** con la línea `[Horda] la aldea 0 lleva 8 min sin socorro: elegida como objetivo`. **Lo que NO se puede
+medir headless** es el **spawneo** de la oleada: `HordeManager` usa `level.players()` y un jugador de pega **no está
+en esa lista** (la misma limitación que el reloj del asedio, I86) — esa parte la ve el jugador en juego.
+
+### I99 · El camino NO pisa lo que no es terreno (una celda es de UNA pieza)
+
+El jugador, con captura: *"¿y por qué el kiosco tiene un bloque de tierra en vez de escaleras?"*.
+
+**Medido** en su guardado (aldea 0, kiosco en `470,646`, cota 63; `build/kiosco_tierra.py`): de las cuatro
+escaleras de las entradas, **tres están bien** (norte, este y oeste) y la del **sur** —la celda `(470,63,650)`, que
+el constructor pone con `escalera(Direction.NORTH)`— era un **`dirt_path`**, y lo era **en el mundo y en el plano**.
+Ese `dirt_path` **sobresale un bloque** (va en la cota, no a ras de suelo), que es exactamente lo que se ve en la
+captura.
+
+**Causa (de ORDEN):** los caminos se dibujan **después** del kiosco y `VillageGenerator.line()` pone el camino en
+`groundY(px,pz) - 1`, o sea **sobre el bloque de superficie que encuentre**. En esa celda `groundY` ya veía la
+**escalera** (sólida en la cota) → el camino se pintó **en su celda**, se la comió, y como el **plano se captura
+escaneando el mundo**, el plano se quedó con el camino y el obrero lo daba por bueno: la escalera no volvía nunca.
+
+**Regla:** `line()` **solo sustituye terreno natural** (`esTerrenoNatural`): una escalera, una losa, tierra labrada o
+un bloque del jugador **paran el camino** (pasa de largo). Y `asegurarKiosco` **reafirma las cuatro escaleras de sus
+entradas** (`asegurarLasEscalerasDelKiosco`, idempotente, una celda por entrada): corre en el latido, así que
+**arregla las aldeas ya construidas sin migración** —igual que `asegurarHerreria`, `asegurarBarraca` y el propio
+`asegurarKiosco`— y **no toca** lo que el jugador haya puesto ahí (lo deja y lo dice en el log).
+
+### I100 · Lo que el pueblo entrega es el objeto DE VERDAD (no un equivalente vacío)
+
+El jugador: *"al hacer clic con el botón secundario en el libro del invocado no me abre nada, ¿por qué no puedo ver
+los pueblos descubiertos?"*.
+
+**Medido** en su `playerdata` (`build/libro_jugador.py`): el libro de su inventario es un `minecraft:written_book`
+con el NBT **`{count, Slot, id}` a secas**, o sea **sin un solo componente**: ni `written_book_content` (no tiene
+contenido) ni la marca del mod. Con eso `DiarioDelInvocado.esElDiario` era **false** (el mod no lo reescribía) y
+**no era el Diario** (así que no había aldeas que leer por ningún lado). Venía de la **recompensa por salvar una
+aldea**: `VillageManager.grantReward` daba `new ItemStack(Items.WRITTEN_BOOK)` —con el comentario literal
+`// receta (por ahora un libro genérico)`—.
+
+**Regla:**
+- La recompensa entrega **el Diario de verdad**, por la **misma puerta** que la piedra de invocación
+  (`DiarioDelInvocado.entregarSiNoLoTiene`: se lo da si no lo tiene, lo pone al día si lo tiene, y si no le cabe lo
+  suelta a sus pies). Un solo sitio para las dos (I4).
+- **Un libro escrito se puede leer transformado**: el mod cancela el clic derecho **entero** mientras el jugador es
+  hombre lobo (`onRightClickItem`: *no usar objetos*), y eso incluye los libros — que es lo que hacía que "no
+  abriera nada" (el servidor nunca llegaba a `WrittenBookItem.use`, que es quien manda el paquete que abre la
+  pantalla; comprobado en el bytecode de `ServerPlayer.openItemGui`). Los libros escritos quedan **exentos**: el
+  estado normal del jugador es el hombre lobo y el Diario se tiene que poder leer cuando quiera (lo pidió así:
+  *"debe ser un libro que pueda leer"*).
+
+**Para una partida ya empezada** (la suya): el Diario se consigue **volviendo a leer la piedra de invocación** —
+`entregarElDiario` no tiene guarda de "ya leída", así que si no lo tiene se lo da (y `loreStoneRead` ya estaba a 1,
+o sea que no vuelve a dar experiencia).
+
+### I101 · La aldea NO produce pedernal: las flechas dependen de lo que traiga el jugador
+
+Lo preguntó el jugador: *"los herreros también hacen flechas y el arquero las usa y las dispara? … que en el almacén
+haya flechas. ¿Qué otra cosa se necesitaría?"*.
+
+**Medido en su guardado y sus logs** (aldea 0, cota 63; `build/flechas_medida.py`):
+
+| Eslabón | Estado |
+|---|---|
+| El ganadero **sacrifica pollos** | ✅ **36** en dos días de logs (`El ganadero: sacrifica un Chicken`) → **plumas** |
+| El herrero **hace flechas** | ✅ **56** tandas de `Hizo 4 flechas` (224 flechas) — receta `Flechando`: 1 palo + 1 pluma + 1 pedernal = 4, con objetivo `OBJETIVO_FLECHAS` = **64 en el almacén** |
+| El **arquero** las usa | ✅ `VillagerGuardGoal`: saca `FLECHAS_POR_VIAJE` del **almacén** y dispara flechas de verdad (gasta una por disparo) |
+| El **almacén**, hoy | ❌ **355 troncos, 32 tablones, 2 cuerdas, 30 palos** y **ni una pluma, ni un pedernal, ni una flecha** |
+| Los **arqueros**, hoy | ❌ **2, 0 y 0 flechas** en el zurrón (Josefa, Dorotea, Aurelia) |
+| El **pedernal** | ❌ **nadie lo produce**: no hay ninguna meta que cave grava y el recolector no lo barría |
+
+**Regla (lo que se ha hecho):** el **recolector** barre también **pedernal y flechas** (`VillagerCollectGoal
+.esDelPueblo`): antes solo los barría un herrero **a 20 bloques** de él, así que lo que caía fuera de ese radio
+(también las flechas que sueltan los esqueletos que mata la milicia) se quedaba en el suelo.
+
+**Lo que queda, dicho claro:** el **pedernal es el cuello de botella** y la aldea **no puede producirlo** (haría
+falta una **cantera de grava**: una meta que cave grava, que hoy no existe). Como el agua embotellada del clérigo
+(I87), hoy es material **que trae el jugador**: con pedernal en el almacén el herrero hace flechas (tiene palos y
+las plumas salen de los pollos) y los arqueros se rearman solos.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
