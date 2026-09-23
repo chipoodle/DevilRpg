@@ -2491,6 +2491,10 @@ public final class VillageManager {
         // Y EL QUE SE QUEDA DENTRO DE UNA CASA: si lleva 30 s sin moverse de celda en un piso (o un sótano), se le baja
         // a la plaza (ver `rescatarAldeanosAtrapados`).
         rescatarAldeanosAtrapados(level, aldeanos, center);
+        // Y EL GOLEM QUE SE METE EN LA HUERTA, A LA CALLE: la tierra de cultivo pisada se vuelve tierra y el bancal
+        // se pierde (lo pidió el jugador al ver uno dentro de una parcela). Es la red de seguridad del corte del
+        // reparto de spawn, que lo hace `CommonForgeGolemEventSubscriber` en el momento de nacer.
+        sacarLosGolemsDeLaHuerta(level, center);
         // HERREROS: los DOS (armas y herramientas) trabajan en el taller del pueblo: cogen los materiales del almacén,
         // fabrican en su puesto (muelle de afilar / mesa de herrería) y dejan la pieza en el almacén, de donde se
         // equipará la futura guardia. Los goals no se guardan con la partida: se reponen al verlos.
@@ -4002,6 +4006,9 @@ public final class VillageManager {
      * <p>
      * No se toca a quien está <b>durmiendo</b> ni en la franja de descanso (dormir en la posada es legítimo), ni al que
      * anda a la altura de la calle. Solo se rescata al que está <b>fuera de esa altura y quieto</b>.
+     * <p>
+     * Y <b>"quieto" se mide en horizontal (x,z)</b>: ver el comentario largo de más abajo — contar la Y dejaba sin
+     * rescatar al que bota (que es justo el caso medido).
      */
     private static void rescatarAldeanosAtrapados(ServerLevel level, List<Villager> aldeanos, BlockPos center) {
         int cota = VillageGenerator.cotaDeLaPlaza(level, center);
@@ -4019,7 +4026,16 @@ public final class VillageManager {
                 ATRAPADOS.remove(villager.getUUID()); // en la calle (o descansando): no hay nada que rescatar
                 continue;
             }
-            long celda = villager.blockPosition().asLong();
+            // LA CELDA SE MIDE EN HORIZONTAL (x,z), **NO** CON LA Y. Un aldeano atrapado que da BOTES —sube y baja un
+            // escalón, salta contra un obstáculo o rebota dentro de un hueco de una casa— cambia de
+            // `blockPosition()` en cada bote, así que el contador se le reiniciaba en cada salto y **no lo rescataba
+            // nunca**. Medido con el arnés (MEDIR_HUERTA, 23-sep-2026): la granjera **Ursula** llevaba **40 barridos**
+            // (más de 80 s, y así toda la corrida) en la misma columna (428,669) botando entre **y=65 y y=67** en la
+            // escalera de su casa —su bancal 0 con **29 plantas maduras** que no bajaban—, con la etiqueta puesta y sin
+            // un solo `estaba atascado dentro de una casa` en el log: el rescate no disparaba por los botes. Con la
+            // celda horizontal se le rescata a los 30 s (ATRAPADO_TICKS) y el bancal se cosecha.
+            BlockPos celdaAhora = villager.blockPosition();
+            long celda = BlockPos.asLong(celdaAhora.getX(), 0, celdaAhora.getZ());
             long ahora = level.getGameTime();
             long[] antes = ATRAPADOS.get(villager.getUUID());
             if (antes == null || antes[0] != celda) {
@@ -4032,6 +4048,17 @@ public final class VillageManager {
             ATRAPADOS.remove(villager.getUUID());
             BlockPos estaba = villager.blockPosition();
             BlockPos destino = casillaLibreDeLaPlaza(level, center, cota);
+            // Y NO SE LE BAJA SI SABE IRSE SOLO: llevar 30 s en la misma columna **no** es estar atrapado si el aldeano
+            // TIENE CAMINO hasta la plaza (está esperando, trabajando o mirando el paisaje). Sin este filtro se baja a
+            // la plaza a quien se vale por sí mismo, y en el **kiosco** —que va un bloque por encima de la calle, con
+            // la despensa y el ahumador dentro— eso incluye al **cocinero** en plena faena: medido con el arnés,
+            // Teodoro llegó a **24 s** quieto en `498,664` (y=64, cota 63) antes de moverse por su cuenta.
+            // Y a Ursula NO le quita el rescate: medido, su ruta a la plaza acababa **en su propia casilla**
+            // (`rutaAPlaza=a1=3n alcance=NO fin=428,68,665`), o sea que no tenía ninguna.
+            var camino = villager.getNavigation().createPath(destino, 1);
+            if (camino != null && camino.canReach()) {
+                continue; // sabe ir solo: no se le toca
+            }
             villager.getNavigation().stop();
             villager.teleportTo(destino.getX() + 0.5D, destino.getY(), destino.getZ() + 0.5D);
             villager.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
@@ -4060,7 +4087,43 @@ public final class VillageManager {
         return new BlockPos(center.getX(), cota, center.getZ());
     }
 
-    /** Marca a un aldeano como obrero y le pone el goal de reparación. */    private static void marcarObrero(Villager villager, BlockPos center, int objectiveIndex) {
+    /**
+     * Una casilla <b>libre de la calle</b> cerca de la plaza, a la altura del pueblo: la usan el rescate del aldeano
+     * atrapado y el destierro del golem que se mete en la huerta.
+     */
+    public static BlockPos casillaDeLaCalle(ServerLevel level, BlockPos center) {
+        return casillaLibreDeLaPlaza(level, center, VillageGenerator.cotaDeLaPlaza(level, center));
+    }
+
+    /**
+     * <b>LA HUERTA NO ES DE LOS GOLEMS</b> (lo pidió el jugador: *"hay un golem dentro de una de las parcelas, quítalo
+     * de ahí y que ningún golem pueda spawnear dentro de parcelas"*).
+     * <p>
+     * El golem de hierro de la aldea lo pone el <b>juego</b>, no el mod: el aldeano que junta suficientes quejas
+     * <b>convoca</b> uno y lo crea <b>a su lado</b> ({@code Villager.spawnGolemIfNeeded}), así que si el que lo convoca
+     * es un granjero dentro de su bancal, <b>el golem nace en la huerta</b> — y ahí la tierra de cultivo pisada se
+     * vuelve tierra y el bancal se pierde. El reparto de spawn lo corta en el acto
+     * ({@code CommonForgeGolemEventSubscriber}); esto es la <b>red de seguridad</b>: al golem que ya estaba dentro, o
+     * al que se cuele por una compuerta abierta, se le saca a la calle en el siguiente latido.
+     */
+    private static void sacarLosGolemsDeLaHuerta(ServerLevel level, BlockPos center) {
+        int cota = VillageGenerator.cotaDeLaPlaza(level, center);
+        for (net.minecraft.world.entity.animal.IronGolem golem : level.getEntitiesOfClass(
+                net.minecraft.world.entity.animal.IronGolem.class,
+                new AABB(center).inflate(VillageGenerator.FENCE_RADIUS))) {
+            if (!VillageGenerator.sobreLaHuellaDeUnBancal(center, golem.blockPosition())) {
+                continue;
+            }
+            BlockPos fuera = casillaLibreDeLaPlaza(level, center, cota);
+            golem.getNavigation().stop();
+            golem.teleportTo(fuera.getX() + 0.5D, fuera.getY(), fuera.getZ() + 0.5D);
+            DevilRpg.LOGGER.info("[Village] Habia un golem dentro de la huerta ({}): se le saca a la calle ({})",
+                    golem.blockPosition().toShortString(), fuera.toShortString());
+        }
+    }
+
+    /** Marca a un aldeano como obrero y le pone el goal de reparación. */
+    private static void marcarObrero(Villager villager, BlockPos center, int objectiveIndex) {
         boolean yaEra = villager.getPersistentData().getBoolean(BUILDER_TAG);
         villager.getPersistentData().putBoolean(BUILDER_TAG, true);
         // Un obrero CON FAENA FIJA lleva la reparación POR DEBAJO de su goal de oficio (prioridad 5 contra 4):

@@ -7420,6 +7420,24 @@ public final class VillageGenerator {
         return dx >= 0 && dx < PLOT_WIDTH && dz >= 0 && dz < PLOT_DEPTH && Math.abs(pos.getY() - cota) <= 2;
     }
 
+    /**
+     * <b>¿Esa casilla cae sobre la huella de un bancal?</b> (su cuadrado de 9×9 <b>y su valla</b>). Mira solo X/Z y
+     * <b>no necesita la cota</b>, así que es lo bastante barato para preguntarlo en un suceso de spawn: es la guarda
+     * que impide que <b>nazca un golem dentro de la huerta</b> (lo pidió el jugador: *"hay un golem dentro de una de
+     * las parcelas, quítalo de ahí y que ningún golem pueda spawnear dentro de parcelas"*).
+     */
+    public static boolean sobreLaHuellaDeUnBancal(BlockPos center, BlockPos pos) {
+        for (int i = 0; i < FARM_PLOTS.length; i++) {
+            int bx = center.getX() + FARM_PLOTS[i][0];
+            int bz = center.getZ() + FARM_PLOTS[i][1];
+            if (pos.getX() >= bx - 1 && pos.getX() <= bx + PLOT_WIDTH
+                    && pos.getZ() >= bz - 1 && pos.getZ() <= bz + PLOT_DEPTH) {
+                return true; // la huella (con la valla) de ese bancal
+            }
+        }
+        return false;
+    }
+
     // --- LA TABERNA (etapa F: la posada del pueblo) --------------------------------------------------------------
 
     /**

@@ -42,6 +42,20 @@ public final class VillagePantry {
     public static final int FOOD_PER_WHEAT = 1;
     /** Trigo que hace falta para una hogaza (la receta de vanilla son 3). */
     public static final int WHEAT_PER_BREAD = 3;
+    /**
+     * <b>TRIGO QUE NO SE HORNEA NUNCA: es la comida de cría del ganadero.</b> Las <b>vacas</b> y las <b>ovejas</b> se
+     * crían con <b>trigo</b> y el ganadero lo saca de la despensa ({@code VillagerAnimalFarmGoal.hayComidaParaCriar}
+     * pide 2 y gasta 1 por animal). Mientras el granjero horneaba, se comía todo el trigo según llegaba, la despensa
+     * nunca tenía 2 y el ganadero <b>no podía criar NUNCA</b>: medido en el guardado del jugador, el corral tenía
+     * <b>3 vacas</b> (tope 6), la despensa <b>0 de trigo</b> (y 432 zanahorias, 155 patatas...) y el almacén <b>0 de
+     * cuero</b> — sin cría no hay exceso, sin exceso no hay sacrificio y sin sacrificio no hay cuero (el jugador:
+     * *"casi no se ha fabricado armaduras de cuero"*). Con la reserva, el ganadero siempre encuentra con qué criar.
+     * <p>
+     * Vive aquí, y no en el granjero, porque desde que el pan lo hace el <b>cocinero</b> ({@code
+     * VillagerCookGoal.hornear}) la reserva tiene que estar donde está el horno: quien hornea es quien respeta el
+     * tope. El granjero solo deja el trigo en la despensa.
+     */
+    public static final int RESERVA_DE_TRIGO_PARA_CRIAR = 4;
 
     private VillagePantry() {
     }

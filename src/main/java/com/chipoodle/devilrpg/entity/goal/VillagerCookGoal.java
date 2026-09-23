@@ -33,8 +33,15 @@ import java.util.List;
  * y por eso el cocinero es un puesto fijo y no un adorno. Sin él, toda la carne que sube el ganadero del corral se
  * come cruda y vale la mitad.
  * <p>
- * Cómo cocina: igual que el granjero hornea el pan, <b>en su puesto y con los objetos de verdad</b> (saca la carne de
- * la despensa, la convierte y la vuelve a guardar), con su sonido y su humo.
+ * Cómo cocina: <b>en su puesto y con los objetos de verdad</b> (saca la carne de la despensa, la convierte y la
+ * vuelve a guardar), con su sonido y su humo.
+ * <p>
+ * <b>Y HORNEA EL PAN</b>, que es lo que pidió el jugador: *"el cocimiento de los panes no lo debería hacer el granjero
+ * sino el COCINERO"*. Antes el granjero horneaba al llegar a la despensa (3 de trigo por hogaza); ahora el granjero
+ * solo <b>deja el trigo</b> y es el cocinero el que lo mete en el ahumador ({@link #hornear}). Así cada oficio hace lo
+ * suyo —el granjero cultiva y cosecha, el cocinero cocina— y la <b>reserva de trigo para criar</b>
+ * ({@link VillagePantry#RESERVA_DE_TRIGO_PARA_CRIAR}) vive donde vive el horno: sin ella, quien hornea se come el
+ * trigo del ganadero y el pueblo se queda sin cría, sin cuero y sin lana.
  * <p>
  * <b>Y EL FUEGO SE PAGA CON LEÑA DEL ALMACÉN</b> (lo pidió el jugador: *"el smoker, el furnance y todos los aparatos
  * donde se tenga que quemar necesitan ir por logs al almacén para que se use de combustible y funcionen"*). Antes el
@@ -48,6 +55,16 @@ public class VillagerCookGoal extends Goal {
 
     /** Cuántas piezas cocina por visita a la despensa (ni una más: el resto sigue crudo hasta la próxima vuelta). */
     private static final int COCINAR_MAX = 8;
+    /**
+     * Hogazas como mucho por visita (para que se le vea trabajar). La receta de vanilla son
+     * {@link VillagePantry#WHEAT_PER_BREAD} de trigo por hogaza, y el pan vale
+     * {@link VillagePantry#FOOD_PER_BREAD} puntos de comida: hornear 2 deja el viaje bien aprovechado. Se sigue
+     * dejando la {@link VillagePantry#RESERVA_DE_TRIGO_PARA_CRIAR reserva de trigo para criar}, que no es para comer.
+     * <p>
+     * Era del <b>granjero</b> (lo horneaba al llegar a la despensa) hasta que el jugador lo mandó cambiar: *"el
+     * cocimiento de los panes no lo debería hacer el granjero sino el COCINERO"*.
+     */
+    private static final int HORNEAR_MAX = 2;
     /** Ticks de faena antes de que la cocción ocurra (se le ve trabajar en el ahumador). */
     private static final int WORK_TICKS = 30;
     private static final int REST_TICKS = 20;
@@ -136,8 +153,9 @@ public class VillagerCookGoal extends Goal {
             restTicks = IDLE_REST_TICKS;
             return false;
         }
-        // Solo va si de verdad hay algo que cocinar (si no, no se queda plantado en el ahumador).
-        if (contarCrudoEnLaDespensa(level) <= 0) {
+        // Solo va si de verdad hay algo que hacer: cocinar carne/patatas/huevos O hornear el trigo que el granjero
+        // acaba de dejar. Si no, no se queda plantado en el ahumador.
+        if (contarCrudoEnLaDespensa(level) <= 0 && !hayTrigoQueHornear(level)) {
             restTicks = IDLE_REST_TICKS;
             return false;
         }
@@ -232,7 +250,16 @@ public class VillagerCookGoal extends Goal {
             }
             return;
         }
-        cocinar(level);
+        // LA TANDA: cocina lo crudo Y hornea el pan (las dos cosas salen del mismo ahumador y del mismo tronco). El
+        // anuncio es uno solo, para que la etiqueta del aldeano diga lo que de verdad ha hecho en la visita.
+        int cocinadas = cocinar(level);
+        int horneadas = hornear(level);
+        if (cocinadas > 0 || horneadas > 0) {
+            level.playSound(null, puesto, SoundEvents.SMOKER_SMOKE, SoundSource.BLOCKS, 0.7F, 1.0F);
+            level.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, puesto.getX() + 0.5D, puesto.getY() + 1.0D,
+                    puesto.getZ() + 0.5D, 6, 0.15D, 0.15D, 0.15D, 0.01D);
+            VillageManager.ponerSuceso(villager, sucesoDeLaTanda(cocinadas, horneadas));
+        }
         target = null;
         restTicks = REST_TICKS;
     }
@@ -398,11 +425,13 @@ public class VillagerCookGoal extends Goal {
      * equivalente cocinado ({@link VillagePantry#cocinar}). Una pieza por una: no se inventa comida, solo se
      * <b>transforma</b> la que ya había (y por eso el contador de la aldea sube al doble con la carne). El
      * <b>combustible</b> lo gasta antes {@link #quemarLena()} (un tronco por tanda).
+     *
+     * @return las piezas que ha cocinado (0 si no había nada crudo)
      */
-    private void cocinar(ServerLevel level) {
+    private int cocinar(ServerLevel level) {
         Container despensa = VillagePantry.despensa(level, center);
         if (despensa == null || puesto == null || !level.getBlockState(puesto).is(Blocks.SMOKER)) {
-            return;
+            return 0;
         }
         int cocinadas = 0;
         // Se busca una pieza cruda, se saca del barril y se guarda su versión cocinada.
@@ -442,13 +471,69 @@ public class VillagerCookGoal extends Goal {
             }
         }
         if (cocinadas > 0) {
-            level.playSound(null, puesto, SoundEvents.SMOKER_SMOKE, SoundSource.BLOCKS, 0.7F, 1.0F);
-            level.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, puesto.getX() + 0.5D, puesto.getY() + 1.0D,
-                    puesto.getZ() + 0.5D, 6, 0.15D, 0.15D, 0.15D, 0.01D);
-            VillageManager.ponerSuceso(villager, "Cocino " + cocinadas + " piezas");
             DevilRpg.LOGGER.info("[Village] El cocinero: {} pieza(s) cocinadas con un tronco del almacen (aldea {})",
                     cocinadas, objectiveIndex);
         }
+        return cocinadas;
+    }
+
+    /**
+     * <b>HORNEA EL PAN</b> con el trigo que el granjero ha dejado en la despensa: la receta de vanilla
+     * ({@link VillagePantry#WHEAT_PER_BREAD} de trigo por hogaza), hasta {@link #HORNEAR_MAX} hogazas por visita, y
+     * <b>sin tocar la {@link VillagePantry#RESERVA_DE_TRIGO_PARA_CRIAR reserva de trigo para criar}</b> (el ganadero
+     * necesita 2 para criar vacas y ovejas; sin cría no hay cuero ni lana).
+     * <p>
+     * Antes lo hacía el granjero en la despensa; el jugador lo mandó cambiar: *"el cocimiento de los panes no lo
+     * debería hacer el granjero sino el COCINERO"*. El pan es la mejor ración de la aldea
+     * ({@link VillagePantry#FOOD_PER_BREAD} puntos) y sale del mismo ahumador, así que se hornea en la misma tanda que
+     * la cocina (un solo tronco para las dos cosas).
+     * <p>
+     * Si el pan no cabe en la despensa (llena de verdura y semillas) <b>se devuelve el trigo</b>: igual que en
+     * {@link #cocinar}, no se destruye materia prima por hornear de más.
+     *
+     * @return las hogazas que ha horneado (0 si no había trigo de sobra)
+     */
+    private int hornear(ServerLevel level) {
+        Container despensa = VillagePantry.despensa(level, center);
+        if (despensa == null || puesto == null || !level.getBlockState(puesto).is(Blocks.SMOKER)) {
+            return 0;
+        }
+        int horneadas = 0;
+        while (horneadas < HORNEAR_MAX
+                && VillagePantry.contar(despensa, s -> s.is(Items.WHEAT))
+                    >= VillagePantry.WHEAT_PER_BREAD + VillagePantry.RESERVA_DE_TRIGO_PARA_CRIAR
+                && VillagePantry.sacar(despensa, s -> s.is(Items.WHEAT), VillagePantry.WHEAT_PER_BREAD)
+                    == VillagePantry.WHEAT_PER_BREAD) {
+            if (!VillagePantry.guardar(despensa, new ItemStack(Items.BREAD)).isEmpty()) {
+                VillagePantry.guardar(despensa, new ItemStack(Items.WHEAT, VillagePantry.WHEAT_PER_BREAD));
+                break; // despensa llena: el trigo vuelve al barril y se hornea cuando haya hueco
+            }
+            horneadas++;
+        }
+        if (horneadas > 0) {
+            DevilRpg.LOGGER.info("[Village] El cocinero: horneo {} pan(es) con el trigo de la despensa (aldea {};"
+                    + " quedan {} de trigo, reserva para criar {})", horneadas, objectiveIndex,
+                    VillagePantry.contar(despensa, s -> s.is(Items.WHEAT)),
+                    VillagePantry.RESERVA_DE_TRIGO_PARA_CRIAR);
+        }
+        return horneadas;
+    }
+
+    /** El rótulo de la visita: lo que ha cocinado y lo que ha horneado, en una sola línea. */
+    private static String sucesoDeLaTanda(int cocinadas, int horneadas) {
+        if (cocinadas > 0 && horneadas > 0) {
+            return "Cocino " + cocinadas + " pieza(s) y horneo " + horneadas + " pan(es)";
+        }
+        if (horneadas > 0) {
+            return "Horneo " + horneadas + " pan(es)";
+        }
+        return "Cocino " + cocinadas + " piezas";
+    }
+
+    /** ¿Hay trigo en la despensa <b>por encima de la reserva de cría</b>, o sea al menos una hogaza que hornear? */
+    private boolean hayTrigoQueHornear(ServerLevel level) {
+        return VillagePantry.contar(VillagePantry.despensa(level, center), s -> s.is(Items.WHEAT))
+                >= VillagePantry.WHEAT_PER_BREAD + VillagePantry.RESERVA_DE_TRIGO_PARA_CRIAR;
     }
 
     /** Lo que se puede cocinar, en el orden en que el cocinero lo va sacando del barril. */

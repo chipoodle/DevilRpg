@@ -226,8 +226,9 @@ siguiente está implementado y probado.
   (`"Anselmo (Granjero)\nCosechando"`). El nombre sale del **UUID** (al azar pero estable, sin guardar nada) y el
   oficio se pone con los nombres del mod en español ("Granjero", "Herrero de armas", "Herrero de herramientas",
   "Clérigo", "Recolector"), con el nombre traducido del juego como reserva para oficios de vanilla.
-  - **Y cuando hace algo, lo cuenta** (`ponerSuceso`): "Guardo 12 y horneo 2 pan(es)", "Trajo 6 del almacén",
-    "Repuso tronco de roble", "Guardo 5 cosa(s) en el almacén", "Abonó la huerta". El suceso se queda
+  - **Y cuando hace algo, lo cuenta** (`ponerSuceso`): "Guardo 16 en la despensa", "Trajo 6 del almacén",
+    "Repuso tronco de roble", "Guardo 5 cosa(s) en el almacén", "Abonó la huerta", "Horneo 2 pan(es)" (este último,
+    del **cocinero**: el pan dejó de ser cosa del granjero, ver la quinta vuelta de **I103**). El suceso se queda
     `SUCESO_TICKS` (5 s) en la cabeza y después vuelve sola la actividad de fondo; mientras es reciente,
     `ponerActividad` no lo pisa (ni los goals ni el refresco genérico de cada segundo). Los mismos sucesos van al log
     (INFO), así que lo que se ve en la cabeza se puede comprobar. El texto va **corto** (una etiqueta de nombre no se
@@ -2154,6 +2155,8 @@ nuevas. De paso, las **flechas** de los arqueros de la milicia ya tienen de dón
 - **Lotes de 8** por viaje (antes **4**): el granjero baja a la despensa **cada 8 unidades entre trigo y vegetales** y
   hornea 2 hogazas por visita. Con la despensa en la taberna (a 40-55 bloques de los bancales) cada viaje es un paseo
   de ida y vuelta: entregar el doble por paseo **duplica el ritmo de comida sin tocar la mecánica del cultivo**.
+  (Después, a petición del jugador, el lote subió a **16** y **el pan pasó al cocinero**: ver la *quinta vuelta* de
+  **I103** en `docs/aldea-invariantes.md`.)
 - Medido con el arnés, ya con **11 bocas**: `[Village] Aldea 2: comida 64 puntos, 11 aldeanos, 29 camas, 11 raciones`
   (la despensa **llena**), frente a los ratos de `comida 0 puntos … 0 raciones` de antes.
 

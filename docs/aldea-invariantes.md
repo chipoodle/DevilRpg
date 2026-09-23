@@ -1647,14 +1647,17 @@ de vanilla**, y el ganadero **recoge los drops** y los baja al almacén.
 - el corral tiene **3 vacas** (el tope es **6**), así que **no hay exceso** y el ganadero **no sacrifica**;
 - y la cría de vacas/ovejas se hace con **trigo** (`hayComidaParaCriar` pide **2** en la despensa y gasta 1 por
   animal)… y la despensa tenía **0 de trigo** (sí 432 zanahorias, 155 patatas, 261 semillas).
-- **El pan se comía el trigo**: el granjero hornea todo el trigo según llega (`Guardo 8 y horneo 2 pan(es)` en su
-  log), así que nunca quedaban 2.
+- **El pan se comía el trigo**: el granjero horneaba todo el trigo según llegaba (`Guardo 8 y horneo 2 pan(es)` en su
+  log), así que nunca quedaban 2. (Desde el cambio que pidió el jugador —*"el cocimiento de los panes no lo debería
+  hacer el granjero sino el COCINERO"*— quien hornea es el **cocinero**, en el ahumador de la taberna, y el granjero
+  **solo deja el trigo** en la despensa; ver **I103**.)
 
 Sin cría no hay exceso → sin exceso no hay sacrificio → sin sacrificio no hay cuero → sin cuero no hay armaduras.
 
 **Regla:** el horneado **deja siempre `RESERVA_DE_TRIGO_PARA_CRIAR` (4) de trigo** en la despensa; el ganadero
-siempre encuentra con qué criar. Las raciones no lo tocan: el pan, la carne y las verduras van **antes** que el trigo
-(`VillagePantry.repartirRaciones`, el trigo es el último recurso).
+siempre encuentra con qué criar. La constante vive en `VillagePantry` (donde está el horno, o sea el cocinero) y la
+respeta `VillagerCookGoal.hornear`, que es quien hornea. Las raciones no lo tocan: el pan, la carne y las verduras van
+**antes** que el trigo (`VillagePantry.repartirRaciones`, el trigo es el último recurso).
 
 ### I69 · El rebaño se queda en DOS por raza (la pareja), y lo que sobra al sacrificio
 
@@ -2883,7 +2886,89 @@ cuando ya puede ir a la despensa a dejar todo"*. Tres cosas, las tres medidas co
 **1 → 0**, los tres con **74/74 celdas sembradas** (`VACIAS 0`) y la despensa de **267 a 525 puntos** con las
 verduras de **58 a 193**. Líneas literales en `tools/arnes/medidas-huerta.txt` (apartados 3 y 4).
 
-## 2. Lista de consecuencias (obligatoria en cada cambio)Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
+**CUARTA VUELTA: LA COMPUERTA SE ABRE Y SE CRUZA (y la huerta no es de los golems).** En su partida el jugador vio
+*"cosechan y ponen guardando lo suyo… van y vienen unos cuantos bloques sin ir a la despensa pero perdiendo tiempo sin
+terminar de cosechar todo"*, y su log lo canta:
+
+```
+[13:29:52] El granjero: Guardo 8 en la despensa
+[13:29:52] c38cb784-... no consigue llegar a BlockPos{x=440, y=63, z=668}: lo deja por 5 min
+[13:29:53] el granjero guardo 13 cosa(s) de su oficio en la despensa      <- el goal de "guardar lo suyo"
+[13:30:06] c38cb784-... no consigue llegar a BlockPos{x=440, y=63, z=667}: lo deja por 5 min
+```
+
+**Lo que pasaba**: el granjero no conseguía cruzar la compuerta de su bancal y, al rendirse, el goal aparcaba **la
+mata que iba a cosechar** (`stuckTicks = STUCK_LIMIT` en la pierna de la entrada → `canContinueToUse` aparcaba el
+**objetivo**): cada intento fallido se llevaba por delante **una planta del borde** (440,668 → 440,667 → …) y, como el
+goal de la huerta se rendía, entraba el de recoger, se iba a la despensa con la cosecha y volvía **a fallar en la
+misma compuerta** — con **cuatro compuertas** por bancal, tres de ellas sin usar.
+
+**Reglas (el jugador lo dijo claro: *"es una puerta!!! debe poder abrirla y cruzar sí o sí"*):**
+
+- **Aparcar la ENTRADA, no la mata** (I33): cuando no puede cruzar, se marca la **entrada** como fallida y se
+  **prueba otra compuerta** (`mejorEntradaLibre` ordena las cuatro por cercanía y salta las aparcadas). La mata sigue
+  disponible: no se pierde ni una planta del borde por culpa de una compuerta.
+- **Abrirla él mismo y rehacer el camino**: si ya está al lado (3 bloques), el granjero la abre por
+  `VillagerGateGoal.abrirParaUnAldeano` (el juego no deja que un aldeano abra una puerta de valla: la abre el pueblo)
+  y, **con la compuerta ya abierta, se le borran `WALK_TARGET` y `PATH`** para que la ruta nueva cruce — la que traía
+  se calculó con ella cerrada y acababa en su propia casilla, pegado a la valla. Es el mismo remedio que ya usaba
+  `VillagerGateGoal.abrir` (medido allí con Isidoro).
+- **La huerta no es de los golems**: el golem de hierro lo pone el **juego** (`Villager.spawnGolemIfNeeded` lo crea
+  **al lado del aldeano que lo convoca**), así que un granjero dentro de su bancal lo hacía **nacer en la huerta** — y
+  la tierra de cultivo pisada se vuelve tierra y el bancal se pierde. `CommonForgeGolemEventSubscriber` corta el
+  suceso: si el golem acaba de nacer sobre la huella de un bancal **no entra** (y queda en el log), y si viene del
+  guardado **se le saca a la calle**. La red de seguridad para el que se cuele andando está en el latido
+  (`VillageManager.sacarLosGolemsDeLaHuerta`, que también saca al que ya estaba dentro en el guardado del jugador).
+  La prueba de "sobre la huerta" es solo X/Z (`VillageGenerator.sobreLaHuellaDeUnBancal`), que es lo bastante barata
+  para un suceso de spawn.
+
+**QUINTA VUELTA: EL PAN ES DEL COCINERO (y el viaje a la despensa vuelve con 16).** El jugador lo remató en la misma
+tacada: *"el cocimiento de los panes no lo debería hacer el granjero sino el COCINERO"* y *"que los granjeros lleven de
+una vez `LLEVAR_TRIGO = 16`"*.
+
+- **Quien hornea es el cocinero**: el granjero ya **no** hornea nada (su log ya no dice `Guardo 8 y horneo 2 pan(es)`,
+  solo `Guardo N en la despensa`); deja el trigo y se va. El pan lo hace `VillagerCookGoal.hornear` en el **ahumador
+  de la taberna**, en la misma tanda que la cocina —un solo tronco paga las dos cosas— y con la misma receta de
+  vanilla (`VillagePantry.WHEAT_PER_BREAD` = 3 de trigo por hogaza) y el mismo tope por visita
+  (`HORNEAR_MAX` = 2 hogazas). El `canUse` del cocinero se enciende también cuando **no hay carne pero sí trigo de
+  sobra** (`hayTrigoQueHornear`): antes, con la despensa llena de trigo y el corral sin exceso, el cocinero se quedaba
+  de brazos cruzados.
+- **La reserva de cría viaja con el horno**: `RESERVA_DE_TRIGO_PARA_CRIAR` (4) sale del granjero y se muda a
+  `VillagePantry`, que es donde está el horno (regla de I68: el horneado **nunca** deja al ganadero sin trigo para
+  criar → sin cría no hay cuero ni lana). Quien hornea es quien respeta el tope; por eso el tope vive con el horno.
+- **Si el pan no cabe, el trigo vuelve al barril**: igual que en `cocinar`, la materia prima no se destruye porque la
+  despensa esté llena de verdura (se devuelve el trigo y se hornea cuando haya hueco).
+- **Cada viaje lleva 16**: `LLEVAR_TRIGO = 16` (eran 8) — el doble de comida por paseo a la taberna, que está a 40-55
+  bloques. El hueco del zurrón aguanta 64, así que 16 no compromete la barrida del bancal (lo que la cortaba eran las
+  semillas: ver `SEMILLAS_PARA_COMPOSTAR`).
+- **Y EL RESCATE DEL ATRAPADO CUENTA LA CELDA EN HORIZONTAL (x,z)**: el arreglo de la vuelta anterior (eximir al que
+  está "en la calle" por la altura de los pies) **no bastaba**, y lo cazó el arnés: la granjera **Ursula** se quedaba
+  **botando** en la escalera de su casa (misma columna `428,669`, la Y oscilando entre **65 y 67** con la cota en 63)
+  más de **80 s** con su bancal 0 en **29 matas maduras** que no bajaban, y en el log **no salía ni un solo**
+  `estaba atascado dentro de una casa`. La causa: `rescatarAldeanosAtrapados` guardaba la celda con
+  `blockPosition().asLong()`, que **incluye la Y**, así que **cada bote reiniciaba el contador** de "lleva 30 s
+  quieto" (`ATRAPADO_TICKS`) y el rescate no disparaba **nunca**. Ahora la celda se mide con
+  `BlockPos.asLong(x, 0, z)`: quieto = "no cambia de columna", que es lo que de verdad significa estar atrapado.
+- **Y solo se baja al que NO sabe irse solo**: junto a "quieto 30 s y por encima de la calle" se exige ahora que **no
+  tenga ruta** a la plaza (`createPath(...).canReach()`), porque estar 30 s en la misma columna **no** es estar
+  atrapado si el aldeano puede caminar (está esperando o trabajando). En el **kiosco**, que va un bloque por encima de
+  la calle y tiene dentro la despensa y el ahumador, sin este filtro se bajaba a la plaza al **cocinero** en plena
+  faena (medido con el arnés: Teodoro llegó a **24 s** quieto en `498,664` antes de moverse por su cuenta). A Ursula
+  **no** le quita el rescate: su ruta a la plaza acababa en su propia casilla (`a1=3n alcance=NO fin=428,68,665`).
+
+**PENDIENTE (medido en esta vuelta, SIN arreglar todavía): al almacén no se llega desde la taberna.** El arnés lo
+canta con la sonda nueva del cocinero: `rutaAlmacen=a1=14n alcance=NO fin=511,63,666 dFin=6.00` — la ruta al punto de
+apoyo (`517,63,666`) **acaba 6 bloques antes**, contra la pared este de la taberna — y los cinco accesos del cobertizo
+dan lo mismo (`accesosDelAlmacen=517,63,666 / 517,63,664 / 517,63,668 / 515,63,666 / 519,63,666`). Los **herreros y el
+minero SÍ llegan** porque vienen del norte (`Zacarias (Herrero de armas) pos=517,63,663`): el cobertizo tiene entrada
+por el norte y la taberna queda **sellada por el este** por la casa que se le pega. Consecuencia: el **cocinero no
+puede ir por leña** (se queda 40 s en `511,63,666` y aparca el almacén 5 min), así que en esa aldea **no cocina ni
+hornea** salvo que ya lleve troncos. El pan se pudo medir sembrándole 4 troncos en el zurrón (ver
+`tools/arnes/medidas-huerta.txt`, apartado 5). El arreglo es de **geometría/migración** (abrir el paso entre la
+taberna y el cobertizo), no de goals, y queda para la vuelta siguiente.
+
+## 2. Lista de consecuencias (obligatoria en cada cambio)
+Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
 1. **¿Quién más LEE lo que cambio?** Buscar todos los usos (`grep`) y revisarlos uno a uno. *(Fallo real: cambié el
    sentido de `stuckTicks` y no miré los tres `canContinueToUse` que lo leen → granjero, recolector y obrero

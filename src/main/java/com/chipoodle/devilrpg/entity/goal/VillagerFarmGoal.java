@@ -23,6 +23,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ComposterBlock;
 import net.minecraft.world.level.block.CropBlock;
+import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import org.jetbrains.annotations.Nullable;
@@ -65,8 +66,7 @@ public class VillagerFarmGoal extends Goal {
     /** Si se aleja más de esto del centro, deja de trabajar (derivado del radio de la aldea). */
     private static final double MAX_DISTANCE_FROM_CENTER = VillageGenerator.FENCE_RADIUS + 12.0D;
     /**
-     * Unidades (trigo + vegetales) que lleva encima antes de ir a la despensa: cada 8 cosechas baja a guardarlo y
-     * hornear.
+     * Unidades (trigo + vegetales) que lleva encima antes de ir a la despensa: cada 16 cosechas baja a guardarlas.
      * <p>
      * Eran <b>4</b>, y con la despensa en la taberna (a 40-55 bloques de los bancales) eso es un paseo de ida y vuelta
      * por cada 4 puntos de comida: con 9-12 bocas comiendo 1 punto por minuto, la aldea vivía al filo (medido en el
@@ -74,8 +74,13 @@ public class VillagerFarmGoal extends Goal {
      * cosechar más rápido o mayor cantidad"): con 8 se entrega el doble por viaje y sigue bajando a menudo (la parcela
      * tiene 72 celdas de cultivo). El límite no es el hueco —la mochila del aldeano aguanta 64 por hueco—, era solo
      * una decisión de ritmo.
+     * <p>
+     * Y el jugador lo volvió a pedir, ya con el pan en manos del cocinero: *"que los granjeros lleven de una vez
+     * {@code LLEVAR_TRIGO = 16}"*. Con 16 el viaje a la taberna rinde el doble (16 puntos de comida por paseo en vez
+     * de 8) y el bancal se queda menos veces a medias: el hueco de trigo aguanta 64, así que 16 no compromete la
+     * barrida de la parcela (ver {@code SEMILLAS_PARA_COMPOSTAR}, que es lo que se la cortaba).
      */
-    private static final int LLEVAR_TRIGO = 8;
+    private static final int LLEVAR_TRIGO = 16;
     /** Semillas que se guarda como mucho: si lleva más, las suelta (si no, se le llena el inventario y no le cabe el trigo). */
     private static final int SEMILLAS_MAX = 8;
     /**
@@ -107,21 +112,12 @@ public class VillagerFarmGoal extends Goal {
      * —que es justo lo que pidió el jugador: que la mayor parte de las semillas las gasten los granjeros—.
      */
     private static final int SEMILLAS_SOBRANTES_EN_DESPENSA = 32;
-    /**
-     * Hogazas como mucho por visita (para que se le vea trabajar). Con el lote de 8 unidades que ahora se lleva,
-     * hornear 2 hogazas (6 de trigo) deja el viaje bien aprovechado: el pan vale 4 puntos y el trigo suelto 1.
-     */
-    private static final int HORNEAR_MAX = 2;
-    /**
-     * <b>TRIGO QUE NO SE HORNEA NUNCA: es la comida de cría del ganadero.</b> Las <b>vacas</b> y las <b>ovejas</b> se
-     * crían con <b>trigo</b> y el ganadero lo saca de la despensa ({@code VillagerAnimalFarmGoal.hayComidaParaCriar}
-     * pide 2 y gasta 1 por animal). Como aquí se horneaba todo el trigo según llegaba, la despensa nunca tenía 2 y el
-     * ganadero <b>no podía criar NUNCA</b>. Medido en el guardado del jugador: el corral tenía <b>3 vacas</b> (tope 6),
-     * la despensa <b>0 de trigo</b> (y 432 zanahorias, 155 patatas...) y el almacén <b>0 de cuero</b> — sin cría no hay
-     * exceso, sin exceso no hay sacrificio y sin sacrificio no hay cuero (el jugador: *"casi no se ha fabricado
-     * armaduras de cuero"*). Con la reserva, el ganadero siempre encuentra con qué criar.
-     */
-    private static final int RESERVA_DE_TRIGO_PARA_CRIAR = 4;
+    // OJO, NO VOLVER A PONER EL HORNO AQUÍ: este goal horneaba el pan (3 de trigo por hogaza) y aquí vivía el tope
+    // `RESERVA_DE_TRIGO_PARA_CRIAR`. Ya no: el pan lo hace el COCINERO en el ahumador de su cocina
+    // (`VillagerCookGoal.hornear`) y la reserva de trigo para criar —la que necesita el ganadero para vacas y ovejas—
+    // se mudó con él a `VillagePantry.RESERVA_DE_TRIGO_PARA_CRIAR`. El granjero solo deja el trigo en la despensa. Si
+    // el granjero vuelve a hornear, el ganadero se queda sin cría y sin ella no hay cuero ni lana (medido en el
+    // guardado del jugador: el corral con 3 vacas de 6, la despensa con 0 de trigo y el almacén con 0 de cuero).
     /**
      * Harina de huesos que se lleva encima como mucho. Antes 4: con eso abonaba UNA planta por visita (lo pidió el
      * jugador: "que abone todo el plantío, no nada más una planta"), así que ahora carga una tanda de 16 y las gasta
@@ -151,6 +147,12 @@ public class VillagerFarmGoal extends Goal {
      * huesos de verdad se va con lo que tenga.
      */
     private static final int SEMILLAS_MINIMAS_PARA_COMPOSTAR = 4;
+    /**
+     * A qué distancia de la compuerta de su bancal el granjero <b>se la abre él mismo</b> (el juego no deja que un
+     * aldeano abra una puerta de valla). Un poco más que el 2,6 con el que la abre {@code VillagerGateGoal}, para que
+     * esté abierta <b>antes</b> de llegar y la ruta nueva cruce de verdad.
+     */
+    private static final double ABRIR_DESDE = 3.0D;
     /** Huesos que muele de una vez en el kiosco (la receta de vanilla: 1 hueso = 3 de polvo de hueso). */
     private static final int MOLER_MAX = 16;
     /**
@@ -498,8 +500,18 @@ public class VillagerFarmGoal extends Goal {
         if (faenaDeHuerta && parcelaDelObjetivo >= 0
                 && !VillageGenerator.estaDentroDeLaParcela(center, parcelaDelObjetivo, target.getY(),
                 villager.blockPosition())) {
-            BlockPos entrada = VillageGenerator.entradaDeLaParcela(center, parcelaDelObjetivo, target.getY(),
-                    villager.blockPosition());
+            BlockPos entrada = mejorEntradaLibre(level, parcelaDelObjetivo, target.getY());
+            if (entrada == null) {
+                // LAS CUATRO COMPUERTAS APARCADAS (I33): no se puede entrar por ninguna. Se deja la mata por un rato
+                // y a otra cosa; volverá a intentarlo cuando se le pase el aparcado.
+                target = null;
+                restTicks = IDLE_REST_TICKS;
+                return;
+            }
+            // Y SI LA TIENE AL LADO, SE LA ABRE ÉL (el juego no deja que un aldeano abra una puerta de valla: ver
+            // `VillagerGateGoal.abrirParaUnAldeano`). Sin esto la entrada depende del ciclo del goal de los portones,
+            // y cuando el servidor va justo el granjero se queda pegado a la valla.
+            abrirLaCompuertaDeAlLado(level, entrada);
             VillageManager.caminarHacia(villager, entrada, 0.6F);
             VillageManager.ponerActividad(villager, "Entrando a la huerta");
             // La pierna de la PUERTA se mide aparte de la del objetivo (I38: dos piernas, dos contadores).
@@ -509,11 +521,17 @@ public class VillagerFarmGoal extends Goal {
                 mejorDistanciaEntrada = hastaLaPuerta;
                 stuckEntrada = 0;
             } else if (++stuckEntrada >= STUCK_LIMIT) {
-                // No consigue entrar (una puerta tapada, la valla rota...): se rinde con este objetivo (I33) y el
-                // latido/la próxima salida lo volverá a intentar cuando el mundo cambie.
-                DevilRpg.LOGGER.info("[Village] El granjero no consigue entrar al bancal {} (puerta {}): lo deja por"
-                        + " un rato", parcelaDelObjetivo, entrada.toShortString());
-                stuckTicks = STUCK_LIMIT;
+                // NO SE PUEDE ENTRAR POR AQUÍ: SE APARCA LA ENTRADA, NO LA MATA. Antes se aparcaba la mata que quería
+                // cosechar (con `stuckTicks = STUCK_LIMIT` el `canContinueToUse` aparcaba el OBJETIVO), así que cada
+                // intento fallido se llevaba por delante una planta del borde y el bancal se quedaba sin cosechar
+                // "sin que se supiera por qué". Medido en su partida: `no consigue llegar a 440,63,668` cada 14 s con
+                // las matas del borde aparcadas una detrás de otra — y el bancal tiene CUATRO compuertas.
+                DevilRpg.LOGGER.info("[Village] El granjero no consigue entrar al bancal {} por {}: lo deja por un"
+                        + " rato y probara otra compuerta", parcelaDelObjetivo, entrada.toShortString());
+                VillageManager.marcarPuntoFallido(villager, entrada);
+                mejorDistanciaEntrada = Double.MAX_VALUE;
+                stuckEntrada = 0;
+                return; // el goal sigue vivo: la próxima pasada elegirá otra entrada
             }
             return;
         }
@@ -715,6 +733,63 @@ public class VillagerFarmGoal extends Goal {
             }
         }
         return mejor;
+    }
+
+    /**
+     * La casilla de <b>ENTRADA</b> al bancal (la de dentro, un paso del portón hacia el centro: ver
+     * {@code VillageGenerator.entradaDeLaParcela}) más cercana que <b>no esté aparcada</b> (I33), o {@code null} si lo
+     * están las cuatro.
+     * <p>
+     * El bancal tiene <b>cuatro compuertas</b>: si una no se puede cruzar (un animal pegado, el jugador delante, un
+     * escalón, un bloque puesto ahí...), lo que hay que hacer es <b>probar otra</b>, no rendirse con la mata. Medido en
+     * su partida: el granjero se quedaba en una sola compuerta, aparcaba la mata del borde que quería cosechar y el
+     * bancal se quedaba sin cosechar con las otras tres compuertas libres.
+     */
+    @Nullable
+    private BlockPos mejorEntradaLibre(ServerLevel level, int parcela, int cota) {
+        BlockPos esquina = VillageGenerator.esquinaDeLaParcela(center, parcela, cota);
+        BlockPos centro = esquina.offset(VillageGenerator.PLOT_WIDTH / 2, 0, VillageGenerator.PLOT_DEPTH / 2);
+        BlockPos mejor = null;
+        double mejorDist = Double.MAX_VALUE;
+        for (BlockPos porton : VillageGenerator.portonesDeLaParcela(center, parcela, cota)) {
+            BlockPos dentro = porton.offset(Integer.signum(centro.getX() - porton.getX()), 0,
+                    Integer.signum(centro.getZ() - porton.getZ()));
+            if (VillageManager.esPuntoFallido(villager, dentro)) {
+                continue; // por ahí ya no pudo entrar hace poco (I33)
+            }
+            double d = villager.distanceToSqr(dentro.getX() + 0.5D, dentro.getY() + 0.5D, dentro.getZ() + 0.5D);
+            if (d < mejorDist) {
+                mejorDist = d;
+                mejor = dentro;
+            }
+        }
+        return mejor;
+    }
+
+    /** Si ya está al lado de la compuerta de esa entrada, <b>se la abre él</b> (ver {@code VillagerGateGoal}). */
+    private void abrirLaCompuertaDeAlLado(ServerLevel level, BlockPos entrada) {
+        if (villager.distanceToSqr(entrada.getX() + 0.5D, entrada.getY() + 0.5D, entrada.getZ() + 0.5D)
+                > ABRIR_DESDE * ABRIR_DESDE) {
+            return;
+        }
+        for (BlockPos p : new BlockPos[]{entrada, entrada.north(), entrada.south(), entrada.east(),
+                entrada.west(), entrada.below()}) {
+            if (!(level.getBlockState(p).getBlock() instanceof FenceGateBlock)) {
+                continue;
+            }
+            if (!VillagerGateGoal.abrirParaUnAldeano(level, p)) {
+                return; // ya estaba abierta (o ya no es un portón): no hay nada que rehacer
+            }
+            // Y SE LE HACE REHACER EL CAMINO CON LA COMPUERTA YA ABIERTA: la ruta que traía se calculó con ella
+            // CERRADA —el juego no deja planificar a través de una puerta de valla cerrada—, así que acaba en su
+            // propia casilla, pegado a la valla, y se queda ahí. Borrándole el destino, el `caminarHacia` de este
+            // mismo goal pide una ruta nueva que SÍ cruza (es el mismo remedio que usa `VillagerGateGoal.abrir`,
+            // medido allí con Isidoro: sin esto el aldeano se pasaba la noche en la celda de dentro del portón).
+            villager.getNavigation().stop();
+            villager.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
+            villager.getBrain().eraseMemory(MemoryModuleType.PATH);
+            return;
+        }
     }
 
     /**
@@ -960,19 +1035,12 @@ public class VillagerFarmGoal extends Goal {
                         // estrellado y los huevos están en el almacén").
                         || s.is(Items.EGG) || VillagePantry.esHuevoEstrellado(s),
                 TRAER_DEL_ALMACEN);
-        // 4) Hornear: 3 de trigo por hogaza (la receta de vanilla), como mucho HORNEAR_MAX por visita. Y **SE DEJA LA
-        //    RESERVA DE TRIGO PARA CRIAR** (ver `RESERVA_DE_TRIGO_PARA_CRIAR`): sin ella el ganadero no puede criar
-        //    vacas ni ovejas y el pueblo se queda sin cuero y sin lana.
-        int horneadas = 0;
-        while (horneadas < HORNEAR_MAX
-                && VillagePantry.contar(despensa, s -> s.is(Items.WHEAT))
-                    >= VillagePantry.WHEAT_PER_BREAD + RESERVA_DE_TRIGO_PARA_CRIAR
-                && VillagePantry.sacar(despensa, s -> s.is(Items.WHEAT), VillagePantry.WHEAT_PER_BREAD)
-                    == VillagePantry.WHEAT_PER_BREAD) {
-            VillagePantry.guardar(despensa, new ItemStack(Items.BREAD));
-            horneadas++;
-            level.playSound(null, target, net.minecraft.sounds.SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.6F, 1.2F);
-        }
+        // 4) EL PAN NO SE HORNEA AQUÍ: LO HACE EL COCINERO. Lo pidió el jugador: *"el cocimiento de los panes no lo
+        //    debería hacer el granjero sino el COCINERO"*. El granjero deja el TRIGO en la despensa (paso 2) y el
+        //    cocinero lo hornea en el ahumador de su cocina, con la misma reserva de trigo para criar que se dejaba
+        //    aquí (`VillagePantry.RESERVA_DE_TRIGO_PARA_CRIAR`): sin ella el ganadero no puede criar vacas ni ovejas y
+        //    el pueblo se queda sin cuero y sin lana. Así cada oficio hace lo suyo: el granjero cultiva y cosecha, y
+        //    el cocinero cocina (carne, patatas, huevos y pan).
         // 5) Recambios: semillas y harina de huesos, si le faltan.
         if (!tieneSemillas()) {
             for (ItemStack plantable : List.of(new ItemStack(Items.WHEAT_SEEDS, 4), new ItemStack(Items.CARROT, 3),
@@ -1010,10 +1078,6 @@ public class VillagerFarmGoal extends Goal {
             // El polvo de hueso manda en el anuncio: es lo que el jugador quiere ver ("que no se olviden de hacerlo").
             suceso = "Hizo " + (molidos * VillagePantry.POLVO_DE_HUESO_POR_HUESO) + " polvo de hueso (de " + molidos
                     + " hueso(s))";
-        } else if (horneadas > 0 && guardados > 0) {
-            suceso = "Guardo " + guardados + " y horneo " + horneadas + " pan(es)";
-        } else if (horneadas > 0) {
-            suceso = "Horneo " + horneadas + " pan(es) en la despensa";
         } else if (guardados > 0) {
             suceso = "Guardo " + guardados + " en la despensa";
         } else if (traidos > 0) {

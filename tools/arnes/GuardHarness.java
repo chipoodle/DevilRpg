@@ -373,6 +373,19 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             // cosechan"): lo que hay TIRADO en cada bancal y el zurron de cada granjero (con sus huecos libres).
             if (MEDIR_HUERTA && ticks % 40 == 0) {
                 vigilarLaHuerta(level);
+                // Y EL QUE NO SE MUEVE DE SU COLUMNA: el "atrapado en casa" que mide `rescatarAldeanosAtrapados`.
+                vigilarAtrapados(level);
+            }
+            // Y AL COCINERO, LENA EN EL ZURRON (cada 30 s si se ha quedado sin ella): la pierna de la lena esta rota
+            // EN ESTA ALDEA —medido, ver la 5.a corrida de `medidas-huerta.txt`: el punto de apoyo del almacen no
+            // tiene ruta desde la taberna (`rutaAlmacen=a1=15n alcance=NO fin=511,63,666 dFin=6.00`)— y sin esta
+            // siembra no se puede medir LO QUE SE QUIERE MEDIR AQUI: **que el pan lo hornea el cocinero**.
+            if (MEDIR_HUERTA && ticks >= 600 && ticks % 600 == 0) {
+                sembrarLenaAlCocinero(level);
+                // Y TRIGO EN LA DESPENSA, por lo mismo: con la reserva de cria por delante (3 de trigo por hogaza + 4
+                // de reserva = 7), en una corrida de minutos el trigo de la huerta no llega al umbral y el horno no se
+                // llega a medir NUNCA. Se repone para medir **el horno del pan**, no el ritmo de la huerta.
+                sembrarTrigoEnLaDespensa(level);
             }
         }
         // LA CASA DEL HUECO (el reporte del jugador con captura): las dos celdas de la pared que le faltaban, sus
@@ -941,6 +954,59 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             }
         }
         DevilRpg.LOGGER.info("[Arnes] BICHOS DENTRO DEL RECINTO: {}{}", bichosDentro, bichos);
+        // Y LOS GOLEMS: el jugador vio *"un golem dentro de una de las parcelas"* y pidio que no pueda spawnear
+        // ninguno ahi. Aqui se cuentan los que estan SOBRE LA HUELLA de un bancal (la misma prueba X/Z que usa el
+        // mod en `CommonForgeGolemEventSubscriber` y en el latido): lo que se busca es que el contador sea 0 en
+        // TODAS las muestras, con el que venia en el guardado ya sacado a la calle.
+        StringBuilder golems = new StringBuilder();
+        int golemsDentro = 0;
+        for (net.minecraft.world.entity.animal.IronGolem g : level.getEntitiesOfClass(
+                net.minecraft.world.entity.animal.IronGolem.class, new AABB(CENTRO).inflate(140))) {
+            if (!com.chipoodle.devilrpg.world.VillageGenerator.sobreLaHuellaDeUnBancal(
+                    CENTRO, g.blockPosition())) {
+                continue;
+            }
+            golemsDentro++;
+            golems.append(' ').append(g.blockPosition().toShortString()).append("(vida=")
+                    .append((int) g.getHealth()).append(')');
+        }
+        DevilRpg.LOGGER.info("[Arnes] GOLEMS DENTRO DE LA HUERTA: {}{}", golemsDentro, golems);
+        // Y EL COCINERO, que es quien HORNEA el pan desde la quinta vuelta (el granjero solo deja el trigo): su
+        // etiqueta dice lo que esta haciendo y el `COMIDA:` de arriba, cuanto trigo y cuanto pan hay en la despensa.
+        for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(RADIO_CENSO))) {
+            if (v.getVillagerData().getProfession()
+                    != net.minecraft.world.entity.npc.VillagerProfession.BUTCHER) {
+                continue;
+            }
+            var puntoDeApoyo = com.chipoodle.devilrpg.world.VillageStorage.puntoDeApoyo(level, CENTRO);
+            // Y SI EL PUNTO DE APOYO NO TIENE RUTA, ¿TIENE RUTA ALGUNO DE LOS OTROS ACCESOS DEL COBERTIZO? Es lo que
+            // decide si el arreglo es "varios accesos del almacen" (como las cuatro compuertas del bancal) o si el
+            // problema es que la zona entera esta sellada desde donde esta el aldeano.
+            StringBuilder rutasAlAlmacen = new StringBuilder();
+            if (puntoDeApoyo != null) {
+                for (BlockPos celda : new BlockPos[]{puntoDeApoyo, puntoDeApoyo.offset(0, 0, -2),
+                        puntoDeApoyo.offset(0, 0, 2), puntoDeApoyo.offset(-2, 0, 0), puntoDeApoyo.offset(2, 0, 0)}) {
+                    rutasAlAlmacen.append(' ').append(celda.toShortString()).append('=')
+                            .append(ruta(level, v, celda));
+                }
+            }
+            var destino = v.getBrain().getMemory(MemoryModuleType.WALK_TARGET).orElse(null);
+            StringBuilder susGoals = new StringBuilder();
+            for (net.minecraft.world.entity.ai.goal.WrappedGoal w : v.goalSelector.getAvailableGoals()) {
+                if (w.isRunning()) {
+                    susGoals.append(w.getGoal().getClass().getSimpleName()).append(' ');
+                }
+            }
+            DevilRpg.LOGGER.info("[Arnes] COCINERO {} nombre={} pos={} destino={} goals=[{}] rutaAlmacen={}"
+                            + " accesosDelAlmacen={} etiqueta={}", uuid8(v),
+                    nombreCorto(v), v.blockPosition().toShortString(),
+                    destino == null ? "SIN DESTINO" : destino.getTarget().currentBlockPosition().toShortString(),
+                    susGoals.toString().trim(),
+                    // LA RUTA AL PUNTO DE APOYO DEL ALMACEN: es la pierna de la lena (medida: el cocinero se quedaba
+                    // 40 s en 511,63,666 contra la pared de una casa con destino 517,63,666, y acababa aparcandolo).
+                    puntoDeApoyo == null ? "-" : rutaDetallada(v, puntoDeApoyo),
+                    rutasAlAlmacen.toString().trim(), etiquetaDe(v));
+        }
         for (int i = 0; i < com.chipoodle.devilrpg.world.VillageGenerator.parcelasDeGranja(); i++) {
             StringBuilder dentro = new StringBuilder();
             int cuantos = 0;
@@ -1016,6 +1082,122 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
                     comp.toShortString(), nombre(level, comp.getX(), comp.getY(), comp.getZ()),
                     poi.getType(comp).isPresent() ? "SI" : "NO", quien.length() == 0 ? " NADIE" : quien.toString());
         }
+    }
+
+    /** La columna (x,z) de cada aldeano en el barrido anterior, y cuantos barridos lleva sin cambiarla. */
+    private static final java.util.Map<String, String> columnaAnterior = new java.util.HashMap<>();
+    private static final java.util.Map<String, Integer> quietoBarridos = new java.util.HashMap<>();
+
+    /**
+     * <b>EL QUE NO SE MUEVE DE SU COLUMNA</b> (el "atrapado en casa" que mide
+     * {@code VillageManager.rescatarAldeanosAtrapados}): cada 2 s, por cada aldeano adulto que <b>no</b> esté en un
+     * bancal y tenga los pies <b>por encima de la cota</b> (o sea, fuera de la altura de la calle), imprime su celda
+     * <b>horizontal</b>, la Y exacta, los bloques de sus pies y de su cabeza, si está <b>durmiendo</b>, las
+     * <b>actividades</b> de su cerebro, su {@code WALK_TARGET}, sus goals corriendo y su etiqueta; y si lleva
+     * {@code QUIETO=n} barridos en la misma columna, con la ruta a la plaza.
+     * <p>
+     * Es la sonda que dice si el rescate va a dispararse: el rescate cuenta <b>celdas X/Z</b> (a propósito: contando la
+     * Y, un aldeano que <b>bota</b> en una escalera reinicia el contador y no se le rescata nunca — es lo que se midió
+     * con Ursula en 428,669 botando entre y=65 y y=67 con su bancal lleno de matas maduras).
+     */
+    private static void vigilarAtrapados(ServerLevel level) {
+        int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+        BlockPos plaza = com.chipoodle.devilrpg.world.VillageManager.casillaDeLaCalle(level, CENTRO);
+        for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(RADIO_CENSO))) {
+            if (v.isBaby() || v.isSleeping()
+                    || v.getBrain().isActive(Activity.REST) || v.getY() <= cota + 0.6D) {
+                continue;
+            }
+            boolean enBancal = false;
+            for (int i = 0; i < com.chipoodle.devilrpg.world.VillageGenerator.parcelasDeGranja(); i++) {
+                if (com.chipoodle.devilrpg.world.VillageGenerator.estaDentroDeLaParcela(CENTRO, i, cota,
+                        v.blockPosition())) {
+                    enBancal = true;
+                }
+            }
+            if (enBancal) {
+                continue; // dentro de su bancal: eso no es estar atrapado (y su rescate no debe sacarlo de ahi)
+            }
+            String uuid = uuid8(v);
+            String columna = v.blockPosition().getX() + "," + v.blockPosition().getZ();
+            String antes = columnaAnterior.put(uuid, columna);
+            // OJO: nada de `merge`/`put` dentro de un ternario: `put` devuelve el valor ANTERIOR (null la primera vez)
+            // y al desencajarlo revienta el servidor entero (medido: NPE en la primera pasada y crash del arnes).
+            int quieto;
+            if (antes != null && antes.equals(columna)) {
+                quieto = quietoBarridos.getOrDefault(uuid, 0) + 1;
+            } else {
+                quieto = 0;
+            }
+            quietoBarridos.put(uuid, quieto);
+            BlockPos pies = v.blockPosition();
+            StringBuilder goals = new StringBuilder();
+            for (net.minecraft.world.entity.ai.goal.WrappedGoal w : v.goalSelector.getAvailableGoals()) {
+                if (w.isRunning()) {
+                    goals.append(w.getGoal().getClass().getSimpleName()).append(' ');
+                }
+            }
+            StringBuilder acts = new StringBuilder();
+            for (Activity a : v.getBrain().getActiveActivities()) {
+                acts.append(a.getName()).append(' ');
+            }
+            var wt = v.getBrain().getMemory(MemoryModuleType.WALK_TARGET).orElse(null);
+            var home = v.getBrain().getMemory(MemoryModuleType.HOME);
+            DevilRpg.LOGGER.info("[Arnes] ATRAPADO {} {} columna={} y={} QUIETO={} pies={} cabeza={} durmiendo={}"
+                            + " home={} actividades=[{}] destino={} goals=[{}] plaza={} rutaAPlaza={} etiqueta={}",
+                    uuid, str(v.getVillagerData().getProfession()), columna, fmt(v.getY()), quieto,
+                    nombre(level, pies.getX(), pies.getY(), pies.getZ()),
+                    nombre(level, pies.getX(), pies.getY() + 1, pies.getZ()), v.isSleeping(),
+                    home.map(g -> g.pos().toShortString()).orElse("NINGUNA"), acts.toString().trim(),
+                    wt == null ? "SIN DESTINO" : wt.getTarget().currentBlockPosition().toShortString(),
+                    goals.toString().trim(), plaza.toShortString(), rutaDetallada(v, plaza), etiquetaDe(v));
+        }
+    }
+
+    /**
+     * Le pone <b>4 troncos en el zurron al cocinero</b> (solo si no le queda ninguno: la siembra se repite cada 30 s,
+     * así que no se acumulan). El porqué está en la llamada: en esta aldea la <b>ida al almacén está cortada</b> por la
+     * geometría (medido: `rutaAlmacen=a1=15n alcance=NO fin=511,63,666 dFin=6.00`), así que sin esta siembra el
+     * cocinero no llega nunca a encender el ahumador y <b>no se puede medir lo que se quiere medir</b>: que el pan lo
+     * hornea él. Lo que se mide es el horno (el ahumador, la receta y el tope de la reserva), no la pierna de la leña.
+     */
+    private static void sembrarLenaAlCocinero(ServerLevel level) {
+        for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(RADIO_CENSO))) {
+            if (v.isBaby() || v.getVillagerData().getProfession()
+                    != net.minecraft.world.entity.npc.VillagerProfession.BUTCHER) {
+                continue;
+            }
+            boolean yaTiene = false;
+            int hueco = -1;
+            for (int i = 0; i < v.getInventory().getContainerSize(); i++) {
+                var s = v.getInventory().getItem(i);
+                if (com.chipoodle.devilrpg.world.VillageStorage.esLena(s)) {
+                    yaTiene = true;
+                } else if (s.isEmpty() && hueco < 0) {
+                    hueco = i;
+                }
+            }
+            if (yaTiene || hueco < 0) {
+                continue;
+            }
+            v.getInventory().setItem(hueco,
+                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_LOG, 4));
+            DevilRpg.LOGGER.info("[Arnes] SEMBRADO: 4 troncos en el zurron del cocinero {} ({}) para poder medir el"
+                    + " horno del pan", uuid8(v), v.blockPosition().toShortString());
+        }
+    }
+
+    /** Le repone <b>16 de trigo</b> a la despensa (el porqué está en la llamada: medir el horno, no el ritmo de la huerta). */
+    private static void sembrarTrigoEnLaDespensa(ServerLevel level) {
+        var despensa = com.chipoodle.devilrpg.world.VillagePantry.despensa(level, CENTRO);
+        if (despensa == null) {
+            return;
+        }
+        com.chipoodle.devilrpg.world.VillagePantry.guardar(despensa,
+                new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.WHEAT, 16));
+        DevilRpg.LOGGER.info("[Arnes] SEMBRADO: 16 de trigo en la despensa (para poder medir el HORNO del pan:"
+                + " quedan {} de trigo)", com.chipoodle.devilrpg.world.VillagePantry.contar(despensa,
+                s -> s.is(net.minecraft.world.item.Items.WHEAT)));
     }
 
     private static FakePlayer preparar(ServerLevel level, net.minecraft.server.MinecraftServer server) {

@@ -156,3 +156,69 @@ Cambios (VillagerFarmGoal):
 MEDIDO (misma corrida, ~9 min): bancal 0: 36 -> 21 -> 0 maduras; bancal 2: 15 -> 9 -> 6 -> 0; bancal 1:
 1 -> 0. Los tres con 74/74 celdas sembradas (VACIAS 0) y la despensa de 267 a 525 punto(s) con las
 verduras de 58 a 193.
+
+--- 5) QUINTA VUELTA: LA COMPUERTA, LOS GOLEMS, EL PAN Y EL RESCATE QUE NO DISPARABA --------------
+Lo que pidió el jugador, todo junto:
+  - "es una puerta!!! debe poder abrirla y cruzar sí o sí" (seguía viendo granjeros que "van y vienen unos
+    cuantos bloques sin ir a la despensa ... sin terminar de cosechar todo");
+  - "hay un golem dentro de una de las parcelas, quítalo de ahí y que ningún golem pueda spawnear dentro de
+    parcelas";
+  - "el cocimiento de los panes no lo debería hacer el granjero sino el COCINERO";
+  - "que los granjeros lleven de una vez LLEVAR_TRIGO = 16".
+
+Cambios (código): aparcar la ENTRADA y no la mata + probar otra compuerta; el granjero abre su compuerta
+(`VillagerGateGoal.abrirParaUnAldeano`) y se le borran WALK_TARGET/PATH para que la ruta nueva cruce;
+`CommonForgeGolemEventSubscriber` (el golem no nace en la huerta) + `sacarLosGolemsDeLaHuerta` en el latido;
+el pan al `VillagerCookGoal.hornear` (3 de trigo por hogaza, 2 por visita, reserva de cría de 4 en
+`VillagePantry`); LLEVAR_TRIGO = 16; y el rescate del atrapado cuenta la CELDA EN HORIZONTAL (x,z) y exige
+que NO tenga ruta a la plaza (para no teletransportar a quien trabaja en el kiosco, que va un bloque por
+encima de la calle).
+
+MEDIDO (4 corridas sobre una COPIA de su partida, 23-sep-2026, ~10-12 min cada una, MEDIR_HUERTA):
+
+1) LA PRIMERA CORRIDA (antes del arreglo de la celda horizontal) enseñó lo que faltaba:
+   - el viaje de 16 FUNCIONA: `El granjero: Guardo 16 / 17 / 19 en la despensa` (antes se iba a las 8);
+   - NINGÚN GOLEM EN LA HUERTA: `GOLEMS DENTRO DE LA HUERTA: 0` en TODAS las muestras (la sonda es nueva);
+   - bancales 1 y 2 casi al día (1 y 5 maduras) pero el bancal 0 clavado en 29-31;
+   - y la culpable salió en la sonda nueva `ATRAPADO`: **Ursula, 40 barridos (más de 80 s) en la misma
+     columna `428,669` botando entre y=65 y y=67** dentro de su casa, con su bancal lleno y SIN un solo
+     `estaba atascado dentro de una casa` en el log: `rescatarAldeanosAtrapados` guardaba la celda con
+     `blockPosition().asLong()` (que incluye la Y), así que cada bote reiniciaba el contador de 30 s;
+   - `pan 0` toda la corrida: el trigo de la despensa se quedó en 4-5 (el umbral del horno es 3 + 4 de
+     reserva = 7), así que el horno ni se rozó.
+
+2) LA TERCERA CORRIDA (ya con la celda horizontal): el rescate dispara —
+   `[Village] c38cb784-... estaba atascado dentro de una casa en 428, 65, 669: lo bajo a la plaza (466, 63, 642)`
+   — y en cuanto pisa la calle el bancal 0 empieza a bajar (31 -> 22) mientras los otros dos están a 1.
+   El cocinero (con 4 troncos SEMBRADOS en el zurrón) cocinó 4 tandas de 8 piezas… y no horneó pan: el
+   trigo seguía en 4-5.
+
+3) LA CUARTA CORRIDA (con trigo repuesto cada 30 s para poder medir EL HORNO, no el ritmo de la huerta):
+   - `Cocino 8 pieza(s) y horneo 2 pan(es)` — el PAN ES DEL COCINERO, en la misma tanda y con el mismo
+     tronco, y el contador de la despensa pasó de `pan 0` a `pan 7` y a `pan 9`;
+   - LOS TRES BANCALES A 0 MADURAS con 74/74 celdas sembradas (VACIAS 0): la huerta al día;
+   - `GOLEMS DENTRO DE LA HUERTA: 0` en todas las muestras;
+   - viajes de `Guardo 16 / 17 / 18 / 19 / 30` (el tope del zurrón manda cuando el aldeano ya llevaba algo
+     encima).
+
+LO QUE **NO** SE PUDO MEDIR, Y SE DICE CLARO:
+  - **La pierna de la leña del cocinero está ROTA EN ESTA ALDEA** (no es de este cambio: es geometría del
+    guardado). El punto de apoyo del almacén **no tiene ruta desde la taberna** y la sonda nueva lo canta:
+    `rutaAlmacen=a1=14n alcance=NO fin=511,63,666 dFin=6.00` (la ruta acaba 6 bloques antes, contra la
+    pared este de la taberna) y `accesosDelAlmacen=517,63,666 / 517,63,664 / 517,63,668 / 515,63,666 /
+    519,63,666`: los cinco dan ruta que NO alcanza. Los herreros y el minero SÍ llegan (vienen del norte:
+    medido `Zacarias (Herrero de armas) pos=517,63,663`), o sea que el cobertizo solo tiene entrada por el
+    norte y la taberna queda sellada por el este. Por eso el pan se midió con **4 troncos sembrados en el
+    zurrón del cocinero** (`[Arnes] SEMBRADO`): lo que se mide así es EL HORNO (el ahumador, la receta y el
+    tope de la reserva), no la ida a por leña — que es lo que hay que arreglar en la siguiente vuelta.
+  - El **golem que el jugador tenía dentro** no llegó a aparecer en la copia (la sonda da 0 desde la primera
+    muestra): lo medido es que no hay ninguno dentro en ninguna pasada y que el corte del suceso de spawn
+    está puesto; el `loadedFromDisk` (sacar al que ya venía en el guardado) solo se ve si el guardado lo
+    trae.
+  - El servidor headless va más lento que 20 TPS (un `Can't keep up!` en 12 min), así que en juego real los
+    tiempos serán más cortos.
+  - La sonda `ATRAPADO` mide "quieto en la misma columna y por encima de la cota": en la última corrida
+    enseñó a **Tomasa (Leñador)** de pie SOBRE SU CAMA en `426,665` (y=67,56) y al **cocinero** en el
+    kiosco (y=64, 24 s quieto). El filtro de "y además sin ruta a la plaza" está puesto justo por eso: al
+    que sabe irse solo no se le toca.
+

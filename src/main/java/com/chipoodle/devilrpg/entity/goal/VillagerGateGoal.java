@@ -508,6 +508,29 @@ public class VillagerGateGoal extends Goal {
     // --- lo que usa el rebaño y el latido ------------------------------------------------------------
 
     /**
+     * <b>Abre el portón porque lo necesita un aldeano</b> (lo llama el goal del GRANJERO cuando va a entrar en su
+     * bancal y ya está al lado de la compuerta).
+     * <p>
+     * El juego <b>no deja</b> que un aldeano abra una puerta de valla, así que las abre el pueblo por
+     * {@link VillagerGateGoal} —que va a prioridad 2, sin banderas, y abre la compuerta cuyo <b>destino</b> está al
+     * otro lado—. Eso funciona, pero depende de que ESE goal esté corriendo y de que su ciclo coincida con el del
+     * granjero: cuando el servidor va justo (medido en su partida: *"Can't keep up! ... 48 ticks behind"*) el granjero
+     * se quedaba <b>pegado a la valla</b> y, peor, aparcaba la <b>mata</b> que quería cosechar en vez de la entrada
+     * (`no consigue llegar a 440,63,668` cada 14 s, con las matas del borde aparcadas una detrás de otra). Abrirla
+     * aquí, cuando ya la tiene al lado, quita esa dependencia.
+     * <p>
+     * Queda apuntado como <b>abierto por el pueblo</b> ({@code ABIERTOS}), así que lo cierra el goal de los portones
+     * en cuanto el aldeano se aleja (y la red de seguridad del latido).
+     */
+    public static boolean abrirParaUnAldeano(ServerLevel level, BlockPos porton) {
+        BlockState estado = level.getBlockState(porton);
+        if (!(estado.getBlock() instanceof FenceGateBlock) || estado.getValue(FenceGateBlock.OPEN)) {
+            return false;
+        }
+        return abrirPorton(level, porton, estado);
+    }
+
+    /**
      * Abre el portón para que <b>entre el rebaño</b> que vuelve a casa (lo llama {@code VuelveAlCorralGoal}, que lo
      * pide en cada tick mientras el animal está cerca). Queda apuntado como abierto por el pueblo y como
      * <b>usado por el rebaño</b> ({@link #REBANO_USANDO}), así que mientras el animal venga a casa nadie más se lo
