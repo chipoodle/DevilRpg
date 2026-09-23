@@ -2445,12 +2445,24 @@ a `equipar` (que es quien marca y quien registra en el log). Y sin embargo el al
 (t=1400) y 1 escudo (t=2400) **sin una sola línea de "se equipo con"** → esos dos los coge **otro** camino, no el goal
 del guardia (¿el alistamiento de la milicia?).
 
-**Siguiente (concreto)**: (1) averiguar por qué el guardia no llega a `equipar` (¿no le corre el goal? ¿se queda
-atorado en el camino al almacén? — ya pasó una vez: *"la única guardia, horas en el almacén"*); (2) quién coge esas 2
-espadas y ese escudo; (3) arreglar la **incoherencia** que sí existe en el herrero, aunque no sea la causa de nada
-medido: decide **qué** fundir con `contarChatarra` (que ya no cuenta lo encantado ✓) pero al **coger** el ingrediente usa
-`ItemStack.isSameItem`, que **ignora los encantamientos** → puede llevarse justo la pieza que la regla quería proteger
-(la decisión y el saque tienen que usar **el mismo filtro**). El **modelo** del guardia con su equipo es del CLIENTE.
+**ARREGLADO Y MEDIDO (3ª corrida del arnés)**: el equipo se revisa ahora **por CERCANÍA, desde el latido del pueblo**
+(`VillagerGuardGoal.equiparSiEstaCercaDelAlmacen`, a 6 bloques o menos del almacén) y, si a un guardia le falta equipo,
+el latido **le manda andando** al almacén (`caminarHacia`, sin teletransportes): así no depende de que el goal del
+guardia consiga navegar, que era lo que fallaba.
+<p>
+Medido en su aldea (almacén sembrado a mano: espada de hierro, **espada de oro Filo V**, casco de diamante, **casco de
+cuero Protección IV**, arco **Potencia III** y escudo): **los guardias se arman** —
+`mano=[Iron Sword] escudo=[Shield] casco=[Iron Helmet]`, `mano=[Golden Sword(E)] escudo=[Shield] casco=[Leather
+Cap(E)] botas=[Leather Boots]`, `mano=[Bow(E)]`, `casco=[Diamond Helmet]` — con la **marca de revisión en el día 2**
+(`revisado=2`) y las líneas `se equipo con … : ENCANTADO/normal` en el log. Y lo importante: la **espada de oro
+ENCANTADA** se la llevó un guardia **antes** que las de hierro (aunque el hierro es mejor material), que es exactamente
+la prioridad que pidió el jugador ✓. El almacén se vació de equipo, que es lo que tiene que pasar: el pueblo se arma.
+
+**Pendiente**: **1 de los 6 guardias** se quedó sin nada y sin revisar (no llegó a acercarse al almacén en la corrida:
+el latido solo le manda si le falta equipo, así que con más tiempo debería armarse — hay que verlo en la corrida
+larga); los **objetivos de armas y armadura del HERRERO** ("no están haciendo suficientes armaduras") siguen **sin
+tocar**, que es la otra mitad de lo que pidió el jugador; y quién cogía 2 espadas y 1 escudo sin log en la corrida
+anterior. El **modelo** del guardia con su equipo es del CLIENTE.
 
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
