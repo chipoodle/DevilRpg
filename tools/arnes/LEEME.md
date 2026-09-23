@@ -220,6 +220,35 @@ Pone un asaltante **sin objetivo** fuera de la muralla (radio 66) para que corra
 volcando la línea de bloques entre él y la valla (radios 66..56). **Pendiente**: la brecha está escrita y compilada,
 pero no se ha llegado a ver en juego.
 
+### `MEDIR_ALMACEN_Y_HUEVOS = true` — el almacén y los huevos del gallinero (I95/I96/I97)
+
+Corre sobre la **aldea del jugador** (aldea 0, centro `470,646`, cota 63) y mide las dos cosas que reportó:
+*"el punto de apoyo del almacén (517,64,666) es inalcanzable"* y *"el ganadero no coge los huevos del gallinero"*.
+
+Cada 2 s vuelca:
+
+```
+[Arnes] ALMACEN t=… apoyo=517, 63, 666 (cota=63; suelo debajo=Stone Bricks | dos debajo=Dirt)
+        ruta=a1=17n alcance=SI fin=517, 63, 666 dFin=0.00 | COFRE: 127 objeto(s) […]
+[Arnes] GANADERO t=… pos=… dApoyo=… zurron=[…] goals=[…] destino=… nav=… etiqueta="…" aparcado=…
+[Arnes] HUEVOS t=…: N en el suelo [celda(edad N)…] | PORTON … open=… gallinas: N en el hueco, N a 2.5
+```
+
+- **`ruta=…`** es `rutaDetallada` del aldeano al punto de apoyo: **la prueba del caminante del juego**
+  (`createPath` + `canReach` + dónde acaba), que es lo que distingue "el punto existe" de "se llega a él".
+- **`aparcado=`** es `DevilRpgPuntoFallido` del aldeano: el sitio que dejó por 5 min (I33).
+- **`PORTON … open=`** y las **gallinas del hueco** son el estado del portón del gallinero.
+- A los 10 s (y luego cada 20 s) **siembra 2 huevos**: uno en el **suelo** del corralillo (`513,63,638`) y otro
+  **encima de la paja** (`516,64,639`), que es el caso que se quedaba a 1,803 del alcance viejo.
+
+**OJO con el instrumento** (nos mordió en la primera corrida): el recuento de huevos va con la caja **alrededor de la
+base del corral**; con `AABB(CENTRO).inflate(40)` el corral cae **fuera** y el contador decía "0 huevos" siempre.
+
+**Medido** (3 corridas sobre una copia de su partida, ver `docs/aldea-invariantes.md` I95/I96/I97): con el código de
+antes el destino salía `aparcado=517, 64, 666`, el ganadero parpadeaba entre goals y los huevos del corralillo
+llegaban a **2.000 ticks** de edad; con los arreglos la ruta da `alcance=SI fin=517,63,666`, el portón del gallinero
+se abre (`open=true`), el zurrón se llena y se **entrega** (ocho líneas de `N cosa(s) del corral al almacen`).
+
 ### `MEDIR_LENADOR = true` — el leñador, su arboleda y el polvo de hueso (I92/I93)
 
 Corre sobre la **aldea del jugador** (aldea 0) y vuelca cada 10 s: el estado de la **arboleda del pueblo** (árboles,

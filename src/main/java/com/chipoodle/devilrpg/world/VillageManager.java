@@ -716,9 +716,21 @@ public final class VillageManager {
      *       plantas de un vistazo y no se confunde con los postes de roble oscuro del entramado. Lo construye
      *       {@code forjadoDeLaPosada} en la taberna nueva y lo repone {@code ponerLaBandaDeLaTaberna} (idempotente: solo
      *       cambia los tablones del diseño, así que lo que el jugador tenga puesto ahí se queda).</li>
+     *   <li>69: <b>EL COBERTIZO DEL ALMACÉN, AL SUELO</b> (lo reportó el jugador: *"el punto de apoyo del almacén
+     *       (517,64,666) es inalcanzable"*). El suelo se ponía <b>en la cota</b> —una plataforma de un bloque entero,
+     *       como la del kiosco— pero <b>sin el escalón</b> que sí tienen las cuatro entradas del kiosco, así que
+     *       ningún aldeano podía subir (el juego sube <b>0,6</b> andando) y el punto de apoyo de
+     *       {@code VillageStorage.puntoDeApoyo} —que caía <b>encima</b> de la plataforma, en {@code cota + 1}— se
+     *       quedaba <b>inalcanzable</b>: medido en su guardado (aldea 0, centro {@code 470,646}, cota 63), <b>siete
+     *       aldeanos</b> distintos (los dos herreros, el cocinero, el ganadero, el leñador...) y los <b>seis
+     *       guardias</b> lo aparcaban con {@code "no consigue llegar a BlockPos{x=517, y=64, z=666}: lo deja por 5
+     *       min"}. Ahora el cobertizo se construye como los otros dos del pueblo (el del corral anexo y el taller del
+     *       leñador): <b>suelo a {@code cota - 1}, la capa que se pisa es la cota</b> (I1) y se entra <b>andando</b>.
+     *       Lo baja {@code bajarElAlmacenAlSuelo} en las aldeas ya construidas, conservando lo de sus cofres
+     *       (I6/I95).</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 68;
+    public static final int CURRENT_LAYOUT = 69;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -2073,6 +2085,16 @@ public final class VillageManager {
             // EL ALMACÉN SE MUEVE (migración 45): delante de la puerta de la taberna (18,18) a su lado (48,21), y
             // más grande. Lo que hubiera en los cofres viejos se pasa al nuevo antes de retirar el viejo.
             VillageGenerator.moverAlmacen(level, center);
+            // Y EL COBERTIZO DEL ALMACÉN, AL SUELO (migración 69, I95): se levantaba con el suelo EN la cota (una
+            // plataforma de un bloque entero) y SIN escalón, así que el punto de apoyo que devuelve
+            // `VillageStorage.puntoDeApoyo` caía encima de ella (a `cota + 1`) y NINGÚN aldeano podía subir: el
+            // juego sube 0,6 andando y esa plataforma es de 1,0. Medido en el guardado del jugador (aldea 0, cota 63):
+            // el punto era `(517,64,666)` y lo aparcaban 5 min siete aldeanos distintos y los seis guardias
+            // ("no consigue llegar a BlockPos{x=517, y=64, z=666}"). El kiosco también es una plataforma a la cota,
+            // pero tiene escaleras en sus cuatro entradas; aquí se elige la convención de los otros dos cobertizos
+            // (el del corral y el taller del leñador): suelo a `cota - 1` y se entra andando. Va antes de tirar el
+            // plano (I8) y conserva lo de los cofres (I6).
+            VillageGenerator.bajarElAlmacenAlSuelo(level, center);
             // HERRERÍA: el taller de los herreros del juego, con su muelle y su mesa de herrería (sus puestos de
             // trabajo). Va AQUÍ, antes de tirar el plano, para que la herrería y su camino entren en el plano nuevo.
             VillageGenerator.asegurarHerreria(level, center);

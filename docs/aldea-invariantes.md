@@ -2464,6 +2464,107 @@ larga); los **objetivos de armas y armadura del HERRERO** ("no están haciendo s
 tocar**, que es la otra mitad de lo que pidió el jugador; y quién cogía 2 espadas y 1 escudo sin log en la corrida
 anterior. El **modelo** del guardia con su equipo es del CLIENTE.
 
+### I95 · Un suelo a la COTA es una plataforma de un bloque: o lleva ESCALÓN, o se construye a `cota - 1`
+
+El jugador: *"el punto de apoyo del almacén (517,64,666) es inalcanzable"*.
+
+**Medido** en su guardado (aldea 0, centro `470,646`, cota **63**; `build/almacen_mapa.py`, solo lectura): el
+cobertizo del almacén tenía su suelo de **`stone_bricks` en `y=63`** —la **cota**, o sea la capa que se pisa— con el
+**césped del pueblo en `y=62`**, así que la capa de tránsito del cobertizo era **64** y
+`VillageStorage.puntoDeApoyo` devolvía exactamente `(517,64,666)`. Subir ahí es un escalón de **1,0** y el juego sube
+**0,6 andando**: **ningún aldeano podía subir**. Lo dejaban aparcado 5 min (I33) **siete aldeanos distintos** —los dos
+herreros, el cocinero, el ganadero, el leñador...— y los **seis guardias**, con la línea literal
+`no consigue llegar a BlockPos{x=517, y=64, z=666}: lo deja por 5 min`. Y quedaba escrito en el propio aldeano: medido
+en el ganadero **Zacarias**, `DevilRpgPuntoFallido = (517,64,666)` con `DevilRpgPuntoFallidoHasta = 80965` y el reloj
+del mundo en `75127` —o sea, **aparcado en ese mismo momento**—.
+
+**El kiosco es la otra plataforma a la cota y NO falla**, y esa diferencia es la regla: el kiosco tiene **escaleras en
+sus cuatro entradas** (medido: `E` en las cuatro celdas centrales de sus lados, `y=63`), o sea que el escalón **se
+sube**. Los otros dos cobertizos del pueblo —el del **corral anexo** y el **taller del leñador**— no tienen el
+problema porque ponen el suelo a **`cota - 1`** y se entra **andando** (su código lo dice: *"El SUELO (cota - 1: la
+capa que se pisa es la cota, I1)"*).
+
+**Regla:** un suelo **a la cota** es una **plataforma de un bloque entero** y, si el pueblo tiene que subirse a ella,
+**lleva su escalón** (como el kiosco) **o va a `cota - 1`** (como los dos cobertizos). El almacén se pasa a la segunda
+convención (**migración 69**, `VillageGenerator.bajarElAlmacenAlSuelo`): el cobertizo se construye con el suelo a
+`cota - 1`, el interior despejado de la cota hacia arriba, y `VillageStorage` lee **sus cofres y su punto de apoyo en
+la COTA** (`pos`, `puntoDeApoyo`), no en `cota + 1`.
+
+En las aldeas ya construidas lo **baja** un reparador, y es **idempotente** (su guardia es la capa de piedra del
+cobertizo **viejo**, en la cota: si ahí no hay `stone_bricks`, no hay nada que bajar), **solo toca los bloques del
+cobertizo** (piedra del suelo, troncos de los postes, tablones del tejado, el farol y sus cofres) y **saca lo de sus
+cofres a la mano** antes de tirarlos (I6) para devolverlo al almacén nuevo; lo que no quepa se deja en el suelo del
+cobertizo, donde lo recoge el recolector. Va **antes** de tirar el plano (I8).
+
+### I96 · Un destino al otro lado de un PORTÓN de valla: el primer tramo es el PORTÓN
+
+El juego **no le deja planificar el camino a un aldeano a través de una puerta de valla cerrada** (lo dice I44 y lo
+mide el arnés: `createPath` devuelve `alcance=NO` con el destino al otro lado). De ahí salen dos fallos que se
+sumaban, y los dos **medidos con el arnés** sobre su aldea (aldea 0, corral en `520,646`, gallinero en `512..516,
+638..639`):
+
+- **El aldeano no camina hacia el portón: se queda pegado a la valla.** El ganadero **Zacarias**, con el almacén al
+  otro lado de la cerca del corral, se quedó **16 s clavado en `516,63,636`** —el rincón noroeste, **por fuera** de la
+  valla— con el destino aparcado en `516,64,639`; y yendo a por un huevo del corralillo desde fuera del corral, lo
+  mismo. El objetivo de su goal **sí** estaba al otro lado (por eso `vaACruzar` y el goal del portón no bastaban: el
+  aldeano **nunca llegaba al portón**).
+- **Y un portón que es un RODEO tampoco se abría.** El almacén está al **este** de la puerta **oeste** del corral: al
+  ir del corral al almacén el aldeano **sale por el oeste y vuelve a rodear la cerca por el sur**, así que el destino
+  final cae del **mismo lado del plano** de la puerta y `vaACruzar` decía que no iba a cruzar. Medido: el ganadero
+  **oscilando** en `512,63,647` con `destino=511,63,646` / `destino=517,63,666` alternándose y el almacén a **19**
+  bloques, sin cruzar nunca.
+
+**Regla (dos piezas, las dos en un solo sitio):**
+
+1. **`VillageGenerator.primerTramoDelPorton(level, center, nivel, desde, destino)`** devuelve **a qué portón hay que
+   ir primero** (o `null` si no hay ninguno de por medio). Mira las cajas del anexo, **de fuera adentro**: para
+   entrar en el **corralillo** desde fuera del corral, primero la **cerca grande**; para salir del corralillo,
+   primero **su** portón; y solo cuenta si está **cerrado** (abierto, el camino se planifica solo). Los goals con un
+   destino puede estar detrás de una cerca lo usan para **partir el viaje en piernas**, con **su propio contador de
+   atasco cada una** (I38) y con el tramo del portón medido a `ALCANCE_PORTON` = 2,0 (< `ABRIR` = 2,6: al llegar ahí
+   se le manda otra vez al destino real, que es lo que hace que el goal del portón se lo abra).
+2. **`VillagerGateGoal.vaACruzar` también dice que sí cuando su destino ES la celda del portón**: a una puerta de
+   valla solo se va para cruzarla, así que eso cubre el caso del **rodeo** (el destino final del mismo lado del
+   plano). Con el portón abierto, el planificador ya traza el camino que pasa por él (y `abrir` le borra
+   `WALK_TARGET`/`PATH` para que lo vuelva a pedir, I44).
+
+**Y el portón del GALLINERO no lo bloquea el rebaño que vive dentro.** La guardia de "un animal pegado al portón" se
+escribió para el portón **del corral** (el que sale fuera del recinto, I22) y se aplicaba **también** al del
+gallinero, que va **de la caseta al corral** (de dentro adentro) y donde las gallinas **viven**: medido en su
+guardado, **5 de las 8 gallinas** estaban a menos de 2,5 del portón del gallinero, así que no se abría. Para el
+gallinero la guardia es el **hueco** (1,5: el animal tiene que estar **en la puerta**). Y la espera de "no para
+siempre" pasa de **600** (30 s) a **120** (6 s) porque **tiene que ser más corta que la paciencia del aldeano que la
+necesita** (160 ticks en el ganadero, 140 en el recolector y en la recogida): una espera más larga que la paciencia
+es una espera **infinita**.
+
+### I97 · Un destino FIJO aparcado no se vuelve a elegir (y lo que recoge el ganadero se mide con SU alcance)
+
+Dos cosas del mismo reporte del jugador (*"el ganadero no coge los huevos del gallinero"*), las dos medido en su
+partida (aldea 0, centro `470,646`, cota 63):
+
+- **El ganadero tenía 4 huevos en el zurrón y su destino fijo aparcado.** `DevilRpgPuntoFallido = (517,64,666)` (I95)
+  y la etiqueta de **otro** goal (*"Recogiendo lo suyo"*). El goal de su oficio elegía el destino fijo
+  (`ENTREGAR` → `VillageStorage.puntoDeApoyo`) **sin mirar si estaba aparcado**: arrancaba, `tick` veía el
+  aparcamiento, soltaba el destino y `canContinueToUse` lo paraba — y **al arrancar había CANCELADO al goal de
+  recogida** (`VillagerPickupGoal`, prioridad 6, las **mismas banderas** `MOVE`/`LOOK`). Con el punto inalcanzable eso
+  pasaba **cada tres ticks**: no podía entregar los huevos ni recoger más.
+  **Regla:** un destino **fijo** (el almacén, el punto de apoyo del corral) que está **aparcado** hace que el goal
+  **no arranque** y espere un rato, igual que ya hacía `VillagerPickupGoal.canUse` con su destino: no se arranca para
+  abortar en el tick siguiente. Medido con el arnés tras el arreglo: el ganadero deja de parpadear, se le ve con el
+  goal de recogida (`goals=[6:VillagerPickupGoal]`), llena el zurrón (4 → 8 huevos) y **entrega** (medido:
+  `el ganadero guardo 8 cosa(s) de su oficio en la despensa` y **8** líneas de `N cosa(s) del corral al almacen`, que
+  antes **no** salían porque el punto del almacén era inalcanzable).
+- **El alcance con el que recoge del suelo es el SUYO** (ver arriba): el corral es su puesto de trabajo y tiene
+  **valla de por medio**, así que lo que alcanza ahí lo mide su propio `REACH` (3,5), no el del recolector por oficio
+  (2,5) ni el 1,8 que tenía. La cuenta está en `build/gallinero_medida.py`, celda a celda contra el guardado.
+
+**Lo que queda pendiente (dicho claro):** las celdas del corralillo se recogen **desde el pasillo**, pero un huevo
+que caiga **dentro de la valla** (en la celda de la propia valla, cosa que pasa cuando la gallina se queda pegada a
+ella) sigue necesitando entrar. Y entrar al corralillo es poco fiable por construcción: su único portón es una
+**puerta de valla** (el juego no planifica a través de ella cerrada, I96), las gallinas **viven** en él y la puerta se
+cierra sola a los 5 s (I22). Lo que sí se midió es que, con el portón abierto, el ganadero **entra y trabaja dentro**
+(`PORTON … open=true` en los volcados, con los huevos del corralillo desapareciendo y el zurrón subiendo).
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
@@ -2528,6 +2629,9 @@ Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento 
 | `build/portones_farol.py`, `build/anexo_porton.py` (ignorados) | **El hueco de los portones y el farol que lo tapa** (I54): volcan los 14 portones de las tres aldeas (los 12 de los bancales, el del corral y el del gallinero), miran las **seis celdas** por las que se cruza cada uno (la hoja y las dos de al lado, en las dos capas) y dicen qué hay en ellas **y qué pide el PLANO**; `anexo_porton.py` pinta además el corral y sus dos portones capa a capa. |
 | `build/aldeanos_equipo.py` (ignorado) | **Cada aldeano con su equipo**: su etiqueta (nombre + actividad), oficio, posición, **si está durmiendo**, su **cama** (`HOME`), su destino, **todo su inventario** y las marcas del mod; y el **contenido de los cofres** de la zona (donde el herrero deja lo que forja). Es la medida de I55/I56/I57 (la cama de otra planta, la armadura que no se fabrica, la espada que se queda en el cofre). |
 | `build/obras_pendientes.py` (ignorado) | **Las obras pendientes de una aldea** (I60): recorre el **plano** celda a celda y lo compara con el mundo (con la regla de `necesitaReparacion`), dice cuántas celdas están pendientes, de qué bloque, a qué distancia del centro y a qué **altura sobre la cota** (para ver lo que se sale de la banda del obrero), y lista los aldeanos marcados como **obrero**. Es lo que demostró que la muralla dañada **no estaba en el plano**. |
+| `build/almacen_mapa.py` (ignorado) | **El almacén, capa a capa** (I95): vuelca los bloques de su recuadro a las capas de la cota, encima y debajo, y enseña los bloques clave (el punto de apoyo, los cofres, los postes). Es lo que midió que el suelo estaba **en la cota** (un escalón de 1,0) con el césped del pueblo en `cota - 1`. |
+| `build/gallinero_medida.py` (ignorado) | **¿Se alcanza lo que cae en el corralillo sin entrar en él?** (I96/I97): aplica **la misma cuenta que el goal** (distancia 3D de los pies del aldeano al centro de la celda del objeto) a **cada** celda del gallinero, con los dos alcances (el viejo y el nuevo), y cuenta las gallinas que tiene el portón pegadas. Es lo que midió que con 1,8 **no se alcanzaba ninguna** celda desde fuera y que con 3,5 se alcanzan **todas**. |
+| `build/diag_ganadero.py`, `build/marcas_aldeano.py` (ignorados) | **El ganadero y sus marcas**: los animales y los objetos del corral con su edad, y el NBT **crudo** de un aldeano (dónde vive `DevilRpgPuntoFallido` y qué vale). Es lo que enseñó que el ganadero tenía **4 huevos** en el zurrón y el punto del almacén **aparcado**. |
 
 Los scripts de `build/` no se versionan (está en `.gitignore`): son de lectura del guardado del jugador. Las
 herramientas que sí merecen sobrevivir están **versionadas en `tools/`** (ver `tools/README.md`): `lint_aldea.py`,

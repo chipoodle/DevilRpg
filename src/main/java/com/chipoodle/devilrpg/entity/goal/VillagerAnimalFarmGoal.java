@@ -51,9 +51,29 @@ public class VillagerAnimalFarmGoal extends Goal {
 
     /** Distancia a la que ya alcanza al animal para darle de comer (o para el sacrificio). */
     private static final double REACH = 3.5D;
+    /**
+     * Distancia a la que se da por <b>llegado al portón</b> de por medio (el tramo de la puerta). Tiene que ser
+     * <b>menor</b> que {@code VillagerGateGoal.ABRIR} (2,6): al llegar aquí se le manda otra vez al destino real y el
+     * goal del portón, con el aldeano ya dentro de su radio y su destino al otro lado, se lo abre.
+     */
+    private static final double ALCANCE_PORTON = 2.0D;
+    /**
+     * Distancia a la que se da por <b>llegado</b> al objeto que se recoge del suelo (los huevos y lo que suelta un
+     * sacrificio). Es <b>su propio {@link #REACH}</b> —el mismo con el que da de comer y sacrifica—, y no por
+     * comodidad: en el corral <b>hay valla de por medio</b>. Medido en su partida (aldea 0, corral en `520,646`,
+     * corralillo en `512..516, 638..639`, cota 63; `build/gallinero_medida.py`, que aplica esta misma cuenta celda a
+     * celda): <b>ninguna</b> de las 10 celdas del corralillo se alcanza desde fuera con 1,8 (ni con los 2,5 del
+     * recolector por oficio) y la <b>fila norte</b> —pegada a la valla del corral— queda a <b>3,04</b> del pasillo de
+     * fuera (y a <b>3,35</b> si el huevo está encima de la paja, que está a `cota + 1`). Con 3,5 el corralillo entero
+     * se recoge <b>desde el pasillo</b>, sin tener que entrar: y entrar es lo que <b>no</b> puede hacer con
+     * fiabilidad (el juego no planifica a través de una puerta de valla cerrada, I96) ni conviene (por el portón se
+     * escapan las gallinas). Medido con el arnés: con 1,8 los huevos del corralillo llegaban a <b>2.000 ticks (100
+     * s)</b> de edad sin recoger; con este alcance se los lleva (y el portón del gallinero ya solo se abre para
+     * cruzar, no para trabajar al lado).
+     */
+    private static final double ALCANCE_RECOGIDA = REACH;
     /** Ticks de faena (dar de comer / sacrificar) antes de que el efecto ocurra. */
-    private static final int WORK_TICKS = 25;
-    private static final int REST_TICKS = 10;
+    private static final int WORK_TICKS = 25;    private static final int REST_TICKS = 10;
     /** Sin nada que hacer: a esperar (buscar animales no se hace por tick). */
     private static final int IDLE_REST_TICKS = 120;
     /** Si no logra acercarse en este tiempo, abandona ese animal (invariante I3: atascado = no acercarse). */
@@ -106,6 +126,17 @@ public class VillagerAnimalFarmGoal extends Goal {
     private int restTicks;
     private int stuckTicks;
     private double mejorDistancia = Double.MAX_VALUE;
+    /**
+     * El destino del <b>tramo</b> que está andando ahora (el objetivo, o el portón que tiene de por medio).
+     */
+    @Nullable
+    private BlockPos tramo;
+    /**
+     * ¿Está ya <b>en el portón</b> pidiendo el destino real (enganche del tramo)? Ver {@link #destinoDelTramo}.
+     */
+    private boolean enElPorton;
+    /** La cota del pueblo, calculada UNA vez por goal (la mira el terreno: no se pide en cada tick). */
+    private int nivel = Integer.MIN_VALUE;
 
     public VillagerAnimalFarmGoal(Villager villager, BlockPos center, int objectiveIndex) {
         this.villager = villager;
@@ -146,9 +177,7 @@ public class VillagerAnimalFarmGoal extends Goal {
         List<Animal> corral = VillageGenerator.animalesDelCorral(level, center);
         // 1) Lo que sueltan los animales (huevos, lana, carne de un sacrificio): al almacén.
         if (cuantosLleva() >= LLEVAR_AL_ALMACEN) {
-            fase = Fase.ENTREGAR;
-            target = VillageStorage.puntoDeApoyo(level, center);
-            return target != null;
+            return irAUnDestinoFijo(level, Fase.ENTREGAR, VillageStorage.puntoDeApoyo(level, center));
         }
         ItemEntity suelto = buscarDropEnElCorral(level);
         if (suelto != null) {
@@ -193,13 +222,36 @@ public class VillagerAnimalFarmGoal extends Goal {
         //    plantarse en la plaza: eso era lo que veía el jugador ("aparece como que está trabajando pero no está
         //    yendo a los establos"). Desde el corral, además, ve los huevos y la lana en cuanto caen.
         if (VillageGenerator.anexoConstruido(level, center)) {
-            fase = Fase.RONDAR;
-            target = VillageGenerator.puntoDeApoyoAnexo(level, center);
-            return target != null;
+            return irAUnDestinoFijo(level, Fase.RONDAR, VillageGenerator.puntoDeApoyoAnexo(level, center));
         }
         // Nada que hacer: a esperar un poco (y no consumir CPU buscando animales cada tick).
         restTicks = IDLE_REST_TICKS;
         return false;
+    }
+
+    /**
+     * <b>Los destinos FIJOS del ganadero</b> (el almacén y el punto de apoyo del corral) pasan por aquí, y por un
+     * motivo medido: un destino fijo que está <b>aparcado</b> (I33: no se llegó a él hace menos de 5 min) <b>no puede
+     * volver a elegirse</b>. Si se elige, el goal arranca, {@code tick} ve el aparcamiento, suelta el destino y
+     * {@code canContinueToUse} lo para — y <b>al arrancar había CANCELADO al goal de recogida</b> del aldeano
+     * ({@code VillagerPickupGoal}, prioridad 6, las mismas banderas MOVE/LOOK). Con el punto de apoyo del almacén
+     * inalcanzable (I95) eso pasaba <b>cada tres ticks</b>: medido en el guardado del jugador (aldea 0), el ganadero
+     * <b>Zacarias</b> tenía <b>4 huevos</b> en el zurrón, su {@code DevilRpgPuntoFallido} apuntaba justo a
+     * {@code (517,64,666)} con {@code DevilRpgPuntoFallidoHasta=80965} (el reloj del mundo en {@code 75127}) y su
+     * etiqueta era la del <b>otro</b> goal ("Recogiendo lo suyo"): no podía entregar los huevos ni, con el goal de
+     * recogida cancelándose cada pocos ticks, recoger más.
+     * <p>
+     * Es la misma regla que ya usaba {@code VillagerPickupGoal.canUse} con su destino: si está aparcado, el goal
+     * <b>no arranca</b> y espera un rato (no se queda dando vueltas contra la pared).
+     */
+    private boolean irAUnDestinoFijo(ServerLevel level, Fase destino, @Nullable BlockPos punto) {
+        if (punto == null || VillageManager.esPuntoFallido(villager, punto)) {
+            restTicks = IDLE_REST_TICKS; // aparcado: se espera, no se arranca para abortar en el tick siguiente
+            return false;
+        }
+        fase = destino;
+        target = punto;
+        return true;
     }
 
     /**
@@ -236,6 +288,8 @@ public class VillagerAnimalFarmGoal extends Goal {
         workTicks = 0;
         stuckTicks = 0;
         mejorDistancia = Double.MAX_VALUE;
+        tramo = null;
+        enElPorton = false;
         irAlObjetivo();
     }
 
@@ -266,12 +320,27 @@ public class VillagerAnimalFarmGoal extends Goal {
             return;
         }
         villager.getLookControl().setLookAt(target.getX() + 0.5D, target.getY() + 0.5D, target.getZ() + 0.5D);
-        double alcance = fase == Fase.ENTREGAR ? VillageStorage.ALCANCE_ALMACEN
-                : (fase == Fase.RECOGER ? 1.8D : REACH);
-        double distancia = Math.sqrt(villager.distanceToSqr(target.getX() + 0.5D, target.getY() + 0.5D,
-                target.getZ() + 0.5D));
+        // EL TRAMO DE AHORA: normalmente el objetivo, pero si hay un PORTÓN DE VALLA CERRADO de por medio (la cerca
+        // del corral o el corralillo de las gallinas), el primer tramo es el PORTÓN: el juego no planifica el camino a
+        // través de una puerta de valla cerrada, así que yendo directo al objetivo el aldeano se queda pegado a la
+        // valla y acaba aparcando el destino (medido con el arnés: el ganadero 16 s en `516,63,636`, pegado a la valla
+        // norte del corral, con el huevo de la paja al otro lado). Ver `VillageGenerator.primerTramoDelPorton`.
+        BlockPos destino = destinoDelTramo(level);
+        // I38: CADA PIERNA TIENE SU CONTADOR. El contador de paciencia y la distancia más corta son DEL TRAMO: si se
+        // midieran contra el objetivo final, el tramo del portón (que acaba lejos de él) parecería "no acercarse" y el
+        // goal se rendiría a mitad de camino.
+        if (tramo == null || !tramo.equals(destino)) {
+            tramo = destino;
+            mejorDistancia = Double.MAX_VALUE;
+            stuckTicks = 0;
+        }
+        double alcance = !destino.equals(target) ? ALCANCE_PORTON
+                : (fase == Fase.ENTREGAR ? VillageStorage.ALCANCE_ALMACEN
+                : (fase == Fase.RECOGER ? ALCANCE_RECOGIDA : REACH));
+        double distancia = Math.sqrt(villager.distanceToSqr(destino.getX() + 0.5D, destino.getY() + 0.5D,
+                destino.getZ() + 0.5D));
         if (distancia > alcance) {
-            VillageManager.caminarHacia(villager, target, VELOCIDAD);
+            VillageManager.caminarHacia(villager, destino, VELOCIDAD);
             if (distancia < mejorDistancia - 0.5D) {
                 mejorDistancia = distancia;
                 stuckTicks = 0;
@@ -621,9 +690,44 @@ public class VillagerAnimalFarmGoal extends Goal {
     }
 
     private void irAlObjetivo() {
-        if (target != null) {
+        if (target != null && villager.level() instanceof ServerLevel level) {
+            VillageManager.caminarHacia(villager, destinoDelTramo(level), VELOCIDAD);
+        } else if (target != null) {
             VillageManager.caminarHacia(villager, target, VELOCIDAD);
         }
+    }
+
+    /**
+     * <b>El destino del tramo de ahora.</b> Si el objetivo está al otro lado de un <b>portón de valla cerrado</b> del
+     * anexo (la cerca del corral o el corralillo de las gallinas), el primer tramo es <b>el portón</b>; y cuando ya
+     * está <b>en</b> él (a {@link #ALCANCE_PORTON}, dentro del radio con el que el goal del portón lo abre), el tramo
+     * vuelve a ser el <b>objetivo</b>: con su destino al otro lado, el goal del portón se lo abre y le hace rehacer el
+     * camino con la puerta ya abierta (I44/I96).
+     * <p>
+     * <b>Y NO VUELVE A OSCILAR</b> (el enganche, {@link #enElPorton}): en cuanto llega al portón se queda pidiendo el
+     * destino <b>real</b> hasta que la puerta se abra (o ya no haya que cruzar). Sin el enganche, en cuanto se
+     * alejaba dos bloques volvía al tramo del portón, y el vaivén tenía dos consecuencias medidas con el arnés:
+     * (1) el aldeano se quedaba <b>oscilando</b> en la puerta sin cruzarla nunca y (2) la <b>espera del portón</b>
+     * ("con un animal en el hueco no se abre... pero no para siempre", {@code ESPERA_MAXIMA}) se <b>reiniciaba</b> al
+     * salirse del radio antes de cumplirse, así que la puerta <b>no se abría jamás</b> (medido: el ganadero 30 s
+     * yendo y viniendo en `514,63,642` / `516,63,641` con el portón del gallinero en `open=false` y **2 gallinas en
+     * el hueco**, y los huevos del corralillo con 2.000 ticks de edad sin recoger).
+     */
+    private BlockPos destinoDelTramo(ServerLevel level) {
+        if (nivel == Integer.MIN_VALUE) {
+            nivel = VillageGenerator.cotaDeLaPlaza(level, center);
+        }
+        BlockPos porton = VillageGenerator.primerTramoDelPorton(level, center, nivel,
+                villager.blockPosition(), target);
+        if (porton == null) {
+            enElPorton = false; // no hay puerta de por medio (o ya está abierta): se va al destino, y a cruzar
+            return target;
+        }
+        double d = Math.sqrt(villager.distanceToSqr(porton.getX() + 0.5D, porton.getY() + 0.5D, porton.getZ() + 0.5D));
+        if (d <= ALCANCE_PORTON) {
+            enElPorton = true;
+        }
+        return enElPorton ? target : porton;
     }
 
     private ItemStack guardarEnInventario(ItemStack stack) {

@@ -7,6 +7,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.state.BlockState;
@@ -75,7 +76,14 @@ public final class VillageStorage {
         return villageCenter.offset(OFFSET_VIEJO.getX(), 0, OFFSET_VIEJO.getZ());
     }
 
-    /** Las posiciones (reales, a la cota del pueblo) de los cofres del almacén <b>viejo</b>. */
+    /**
+     * Las posiciones (reales, a la cota del pueblo) de los cofres del almacén <b>viejo</b>.
+     * <p>
+     * OJO con la Y: el cobertizo viejo (18,18) se levantó con el suelo <b>en la cota</b> (la plataforma de un bloque
+     * de antes de la migración 69), así que sus cofres están en {@code cota + 1}. Es geometría <b>heredada</b>: no se
+     * iguala a la de {@link #pos} porque esta lista sirve para <b>vaciar</b> lo que hay en el cobertizo viejo de una
+     * partida sin migrar, no para saber dónde van los cofres nuevos.
+     */
     public static List<BlockPos> cofresViejos(ServerLevel level, BlockPos villageCenter) {
         int nivel = VillageGenerator.cotaDeLaPlaza(level, villageCenter);
         List<BlockPos> fuera = new ArrayList<>();
@@ -96,6 +104,16 @@ public final class VillageStorage {
      * <i>la navegación no puede llegar a un bloque sólido y el aldeano se queda dando vueltas alrededor</i>. Ahora se
      * devuelve la primera casilla del suelo con <b>sitio para pararse</b> (nada sólido a la capa que se pisa ni
      * encima, y suelo firme debajo), empezando por el centro y abriéndose en anillos.
+     * <p>
+     * <b>Y LA CASILLA ES LA COTA, no {@code cota + 1}</b> (I1/I95): la capa que se pisa es la cota y el suelo del
+     * cobertizo va en {@code cota - 1}, así que la casilla de pie está en {@code nivel}. Antes se devolvía
+     * {@code nivel + 1} porque el cobertizo se construía con el suelo EN la cota (una plataforma de un bloque entero,
+     * como la del kiosco) pero <b>sin el escalón</b> que sí tiene el kiosco en sus cuatro entradas: ningún aldeano
+     * podía subir (el juego solo sube 0,6 andando), así que el punto era <b>inalcanzable</b> y lo dejaban aparcado 5
+     * min una y otra vez. Medido en el guardado del jugador (aldea 0, centro {@code 470,646}, cota 63): el suelo del
+     * cobertizo era {@code stone_bricks} en {@code y=63} con el suelo del pueblo (césped) en {@code y=62}, y el punto
+     * de apoyo devuelto era {@code BlockPos{x=517, y=64, z=666}}. Ver {@link VillageGenerator#bajarElAlmacenAlSuelo}
+     * para las aldeas ya construidas.
      */
     public static BlockPos puntoDeApoyo(ServerLevel level, BlockPos villageCenter) {
         int nivel = VillageGenerator.cotaDeLaPlaza(level, villageCenter);
@@ -106,14 +124,14 @@ public final class VillageStorage {
                     if (Math.max(Math.abs(dx), Math.abs(dz)) != r) {
                         continue; // el interior ya se miró en los anillos anteriores
                     }
-                    BlockPos p = new BlockPos(c.getX() + dx, nivel + 1, c.getZ() + dz);
+                    BlockPos p = new BlockPos(c.getX() + dx, nivel, c.getZ() + dz);
                     if (casillaLibre(level, p)) {
                         return p;
                     }
                 }
             }
         }
-        return new BlockPos(c.getX(), nivel + 1, c.getZ()); // sin hueco libre: se devuelve el centro (no hay nada mejor)
+        return new BlockPos(c.getX(), nivel, c.getZ()); // sin hueco libre: se devuelve el centro (no hay nada mejor)
     }
 
     /**
@@ -216,13 +234,13 @@ public final class VillageStorage {
     }
 
     /**
-     * Posición REAL de uno de los cofres del almacén: X/Z del hueco y <b>Y = cota del pueblo + 1</b> (encima del
-     * suelo del cobertizo). OJO: nunca la Y del centro del objetivo, que puede caer en otra capa y dejar el cofre
-     * FLOTANDO por encima del almacén (el bug que vio el jugador).
+     * Posición REAL de uno de los cofres del almacén: X/Z del hueco y <b>Y = la cota del pueblo</b> (encima del suelo
+     * del cobertizo, que va en {@code cota - 1}: I1/I95). OJO: nunca la Y del centro del objetivo, que puede caer en
+     * otra capa y dejar el cofre FLOTANDO por encima del almacén (el bug que vio el jugador).
      */
     private static BlockPos pos(ServerLevel level, BlockPos villageCenter, BlockPos rel) {
         int nivel = VillageGenerator.cotaDeLaPlaza(level, villageCenter);
-        return new BlockPos(villageCenter.getX() + rel.getX(), nivel + 1, villageCenter.getZ() + rel.getZ());
+        return new BlockPos(villageCenter.getX() + rel.getX(), nivel, villageCenter.getZ() + rel.getZ());
     }
 
     /** El primer cofre del almacén (el contenedor combinado si es doble), o {@code null} si no hay. */
@@ -341,6 +359,11 @@ public final class VillageStorage {
     /**
      * <b>Reparación</b>: quita los cofres que hayan quedado flotando por encima del almacén (bug de la Y del centro)
      * conservando lo que tuvieran dentro y los vuelve a poner en el suelo del cobertizo.
+     * <p>
+     * La capa buena es <b>la cota</b> (el suelo del cobertizo va en {@code cota - 1}: I1/I95). El recuadro sigue
+     * mirando de {@code cota - 2} hacia arriba para que también recoja los cofres del cobertizo <b>viejo</b> (los que
+     * están en {@code cota + 1}, la plataforma de antes de la migración 69): así, si {@link
+     * VillageGenerator#bajarElAlmacenAlSuelo} no llegara a correr, el latido acaba bajándolos igual.
      */
     public static void repararCofresFlotantes(ServerLevel level, BlockPos villageCenter) {
         int nivel = VillageGenerator.cotaDeLaPlaza(level, villageCenter);
@@ -355,7 +378,7 @@ public final class VillageStorage {
                 continue;
             }
             BlockPos p = q.immutable();
-            if (p.getY() == nivel + 1) {
+            if (p.getY() == nivel) {
                 continue; // está donde debe
             }
             if (level.getBlockEntity(p) instanceof Container contenedor) {
@@ -373,13 +396,21 @@ public final class VillageStorage {
         }
         colocarSiguientePar(level, villageCenter);
         Container nuevo = almacen(level, villageCenter);
+        int alSuelo = 0;
         if (nuevo != null) {
             for (ItemStack stack : dentro) {
-                VillagePantry.guardar(nuevo, stack);
+                // LO QUE NO QUEPA, AL SUELO (nunca se borra nada del pueblo): aquí se juntan los cofres de un
+                // cobertizo entero y el almacén puede haber vuelto a nacer con UN solo par, así que lo que sobre se
+                // deja en el suelo del cobertizo, donde lo recoge el recolector. Antes se descartaba en silencio.
+                ItemStack sobra = VillagePantry.guardar(nuevo, stack);
+                if (!sobra.isEmpty()) {
+                    Block.popResource(level, puntoDeApoyo(level, villageCenter), sobra);
+                    alSuelo += sobra.getCount();
+                }
             }
         }
-        DevilRpg.LOGGER.info("[Village] almacen: cofres flotantes recolocados al suelo ({} objeto(s) conservados)",
-                dentro.size());
+        DevilRpg.LOGGER.info("[Village] almacen: cofres flotantes recolocados al suelo ({} objeto(s) conservados{})",
+                dentro.size(), alSuelo > 0 ? ", " + alSuelo + " al suelo del cobertizo" : "");
     }
 
     /** Cofre mirando al norte; {@code tipo} marca la mitad (LEFT al oeste, RIGHT al este) para el cofre doble. */

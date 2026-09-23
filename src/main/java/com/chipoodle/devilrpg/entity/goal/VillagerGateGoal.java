@@ -73,13 +73,38 @@ public class VillagerGateGoal extends Goal {
      * es el único hueco de la cerca del corral y el pueblo lo abre muchas veces al día (a por los huevos, a la pata
      * del cobertizo, a dormir...), así que con las horas el rebaño se colaba y se perdía: medido en el guardado del
      * jugador, quedaba <b>una vaca</b> dentro y el resto repartido a 80-130 bloques del pueblo.
+     * <p>
+     * <b>Y es SOLO para el portón del CORRAL</b> (el que sale fuera del recinto), no para el del <b>gallinero</b>: ése
+     * va de la caseta de las gallinas al corral, o sea <b>de dentro adentro</b>, y las gallinas <b>viven</b> ahí. Con
+     * el mismo radio para los dos, el portón del gallinero <b>no se abría nunca</b>: medido en el guardado del jugador
+     * (aldea 0, corral en {@code 520,646}), <b>5 de las 8 gallinas</b> estaban a menos de 2,5 del portón —es su casa—
+     * y con la puerta cerrada el ganadero se quedaba fuera con el trabajo dentro (y con el arnés: <b>2 gallinas en el
+     * hueco</b> en los volcados y los huevos del corralillo con <b>2.000 ticks</b> de edad sin recoger). Para el
+     * gallinero la guardia es el <b>hueco</b> ({@link #HUECO}: el animal tiene que estar <b>en la puerta</b>), no los
+     * que andan por su corralillo.
      */
     private static final double ANIMAL_AL_PORTON = 2.5D;
     /**
      * Pero <b>no para siempre</b>: si el animal no se aparta en este tiempo, el portón se abre igual. Un aldeano
      * encerrado en el corral por una vaca tercosa no puede hacer su faena (y el ganadero vive ahí dentro).
+     * <p>
+     * <b>Y TIENE QUE SER MÁS CORTO QUE LA PACIENCIA DEL ALDEANO QUE LO NECESITA.</b> Estaba en <b>600</b> (30 s) y los
+     * goals que tienen que cruzar se rinden antes: {@code VillagerAnimalFarmGoal.STUCK_LIMIT} = 160 (8 s),
+     * {@code VillagerPickupGoal.STUCK_LIMIT} = 140 (7 s) y {@code VillagerCollectGoal} = 140 (7 s). Una espera más
+     * larga que la paciencia es una espera <b>infinita</b>: el portón nunca se abre para el que lo pide. Con 120 (6 s)
+     * el portón se abre <b>siempre</b> antes de que el aldeano se rinda.
      */
-    private static final int ESPERA_MAXIMA = 600;
+    private static final int ESPERA_MAXIMA = 120;
+    /**
+     * <b>La espera del portón del GALLINERO</b> (2 s, mucho más corta): ahí el animal <b>vive</b> — medido con el
+     * arnés, <b>2 gallinas dentro del hueco</b> y 5 a 2,5 casi todo el rato—, así que con la espera larga el portón no
+     * se abría <b>nunca</b> y el ganadero se quedaba fuera con los huevos del corralillo dentro (medido: huevos con
+     * <b>2.000 ticks</b> de edad sin recoger y el aldeano yendo y viniendo en la puerta). Las gallinas que se cuelan
+     * al corral no se pierden para el pueblo (siguen contando como rebaño y el ganadero las <b>cría dentro del
+     * corralillo</b>: sus crías nacen en {@code centroDelGallinero}), pero con la puerta cerrada los huevos no los
+     * cogía nadie.
+     */
+    private static final int ESPERA_PEN = 40;
     /**
      * Y un portón abierto no puede quedarse abierto <b>sin que nadie lo cruce</b> más de esto (5 s): el aldeano que
      * lo abrió puede plantarse al lado (su puesto, un hueco que reparar, un objeto que recoger) y entonces la regla
@@ -202,7 +227,7 @@ public class VillagerGateGoal extends Goal {
             if (distancia <= ABRIR && enfriamiento <= 0 && vaACruzar(porton, estado)) {
                 // El ganado no cruza por un portón abierto: con un animal pegado se espera a que se aparte un poco
                 // (pero no para siempre, que el aldeano no se quede encerrado).
-                if (animalEnElHueco(level, porton) && esperando++ < ESPERA_MAXIMA) {
+                if (animalEnElHueco(level, porton) && esperando++ < esperaMaxima(porton)) {
                     return;
                 }
                 esperando = 0;
@@ -389,6 +414,14 @@ public class VillagerGateGoal extends Goal {
      * el que manda: invariante I5) y se compara el lado del portón en el que está él con el del destino. Si su
      * destino está del mismo lado que él, solo está <b>pasando por delante</b> (o trabajando al lado) y no hay nada
      * que abrir: un portón abierto "por si acaso" es por donde se escapa el rebaño.
+     * <p>
+     * <b>Y VA AL PORTÓN MISMO cuando su destino ES la celda del portón</b> (I96): a una puerta de valla solo se va
+     * para cruzarla (la celda no es un sitio donde pararse), y hay caminos en los que el destino <b>final</b> cae del
+     * <b>mismo lado del plano</b> de la puerta y el portón es un <b>rodeo obligado</b>: el almacén está al <b>este</b>
+     * de la puerta <b>oeste</b> del corral, así que yendo del corral al almacén el aldeano sale por el oeste y vuelve
+     * a rodear la cerca por el sur. Sin esta regla el portón <b>no se abría</b> y el aldeano se quedaba oscilando
+     * pegado a la valla (medido con el arnés: `destino=511,63,646` / `destino=517,63,666` alternándose en
+     * `512,63,647`, con el almacén a 19 bloques y sin cruzar nunca).
      */
     private boolean vaACruzar(BlockPos porton, BlockState estado) {
         WalkTarget objetivo = villager.getBrain().getMemory(MemoryModuleType.WALK_TARGET).orElse(null);
@@ -396,6 +429,9 @@ public class VillagerGateGoal extends Goal {
             return false; // sin destino no va a ningún sitio
         }
         BlockPos destino = objetivo.getTarget().currentBlockPosition();
+        if (destino.equals(porton)) {
+            return true; // va a la puerta: solo se va a una puerta para cruzarla
+        }
         int mio = lado(estado, porton, villager.getX(), villager.getZ());
         int suyo = lado(estado, porton, destino.getX() + 0.5D, destino.getZ() + 0.5D);
         return suyo != 0 && suyo != mio;
@@ -425,9 +461,23 @@ public class VillagerGateGoal extends Goal {
         return distancia > 0.5D ? 1 : (distancia < -0.5D ? -1 : 0);
     }
 
+    /** ¿Ese portón es <b>el del corralillo de las gallinas</b>? (su guardia y su espera son las suyas: ver I96). */
+    private boolean esElDelGallinero(BlockPos porton) {
+        return porton.equals(VillageGenerator.portonDelGallinero(center, porton.getY()));
+    }
+
+    /** La espera de "hay un animal en el hueco": corta en el gallinero (ahí vive el rebaño), larga en el corral. */
+    private int esperaMaxima(BlockPos porton) {
+        return esElDelGallinero(porton) ? ESPERA_PEN : ESPERA_MAXIMA;
+    }
+
     /** ¿Hay un animal del <b>corral</b> (y de dentro, no uno que esté volviendo) en el hueco del portón? */
     private boolean animalEnElHueco(ServerLevel level, BlockPos porton) {
-        for (Animal animal : level.getEntitiesOfClass(Animal.class, new AABB(porton).inflate(ANIMAL_AL_PORTON))) {
+        // El portón del GALLINERO no es una salida del corral (va de la caseta al corral, de dentro adentro) y las
+        // gallinas viven pegadas a él: ahí solo bloquea el que está EN LA PUERTA. En el del CORRAL sí se mira el
+        // radio largo, que es el que impide que el rebaño se cuele fuera del recinto (ver ANIMAL_AL_PORTON).
+        double radio = esElDelGallinero(porton) ? HUECO : ANIMAL_AL_PORTON;
+        for (Animal animal : level.getEntitiesOfClass(Animal.class, new AABB(porton).inflate(radio))) {
             if (!VillageGenerator.especiesDelCorral().contains(animal.getType())) {
                 continue;
             }

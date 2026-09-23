@@ -882,6 +882,16 @@ public final class VillageGenerator {
      * Desde la migración 45 el cobertizo es de <b>7×7</b> y tiene <b>seis</b> cofres dobles (doce cofres) en vez de
      * cinco por cinco con tres: va <b>al lado de la taberna</b>, a su espalda, y el jugador pidió sitio para que
      * sigan entrando cofres conforme crece.
+     * <p>
+     * <b>EL SUELO VA EN {@code cota - 1}</b> (migración 69, I95): la capa que se pisa es la cota (I1), igual que en el
+     * cobertizo del corral anexo y en el taller del leñador. Antes se levantaba el suelo <b>en la cota</b> —una
+     * plataforma de un bloque entero, como la del kiosco— pero <b>sin escalón</b>: el kiosco tiene sus cuatro escaleras
+     * para subir y el almacén no tenía ninguna, así que los aldeanos se quedaban abajo. Medido en el guardado del
+     * jugador (aldea 0, centro {@code 470,646}, cota 63): el suelo era {@code stone_bricks} en {@code y=63} con el
+     * césped del pueblo en {@code y=62}, y el punto de apoyo que devolvía el mod era {@code (517,64,666)}: <b>siete
+     * aldeanos distintos</b> (los dos herreros, el cocinero, el ganadero, el leñador...) y los <b>seis guardias</b> lo
+     * aparcaban con {@code "no consigue llegar a BlockPos{x=517, y=64, z=666}: lo deja por 5 min"}. Ver
+     * {@link #bajarElAlmacenAlSuelo} (las aldeas ya construidas).
      */
     public static void asegurarAlmacen(ServerLevel level, BlockPos center) {
         int nivel = cotaDeLaPlaza(level, center);
@@ -889,17 +899,23 @@ public final class VillageGenerator {
             return;
         }
         BlockPos c = VillageStorage.centro(center);
-        if (!(level.getBlockState(new BlockPos(c.getX(), nivel, c.getZ())).is(Blocks.STONE_BRICKS))) {
-            // Cobertizo 7x7: suelo de piedra, ocho postes de tronco y tejado de tablones.
+        if (!(level.getBlockState(new BlockPos(c.getX(), nivel - 1, c.getZ())).is(Blocks.STONE_BRICKS))) {
+            // Cobertizo 7x7: suelo de piedra (a `cota - 1`: el suelo del pueblo, I1), ocho postes de tronco y tejado
+            // de tablones. El interior se despeja, como en el cobertizo del corral: el aldeano tiene que poder andar
+            // por dentro (y el suelo no se sube: se ANDA desde el pueblo).
             for (int dx = -3; dx <= 3; dx++) {
                 for (int dz = -3; dz <= 3; dz++) {
-                    colocar(level, new BlockPos(c.getX() + dx, nivel, c.getZ() + dz),
+                    colocar(level, new BlockPos(c.getX() + dx, nivel - 1, c.getZ() + dz),
                             Blocks.STONE_BRICKS.defaultBlockState(), 3);
+                    for (int dy = 0; dy <= 2; dy++) {
+                        colocar(level, new BlockPos(c.getX() + dx, nivel + dy, c.getZ() + dz),
+                                Blocks.AIR.defaultBlockState(), 3);
+                    }
                 }
             }
             for (int sx = -3; sx <= 3; sx += 3) {
                 for (int sz = -3; sz <= 3; sz += 3) {
-                    for (int i = 1; i <= 3; i++) {
+                    for (int i = 0; i <= 2; i++) {
                         colocar(level, new BlockPos(c.getX() + sx, nivel + i, c.getZ() + sz),
                                 Blocks.OAK_LOG.defaultBlockState(), 3);
                     }
@@ -907,19 +923,19 @@ public final class VillageGenerator {
             }
             // Y los cuatro postes de en medio, para que el tejado de 7x7 no quede colgando de las esquinas solas.
             for (int k = -3; k <= 3; k += 3) {
-                for (int i = 1; i <= 3; i++) {
+                for (int i = 0; i <= 2; i++) {
                     colocar(level, new BlockPos(c.getX() + k, nivel + i, c.getZ()), Blocks.OAK_LOG.defaultBlockState(), 3);
                     colocar(level, new BlockPos(c.getX(), nivel + i, c.getZ() + k), Blocks.OAK_LOG.defaultBlockState(), 3);
                 }
             }
             for (int dx = -3; dx <= 3; dx++) {
                 for (int dz = -3; dz <= 3; dz++) {
-                    colocar(level, new BlockPos(c.getX() + dx, nivel + 4, c.getZ() + dz),
+                    colocar(level, new BlockPos(c.getX() + dx, nivel + 3, c.getZ() + dz),
                             Blocks.OAK_PLANKS.defaultBlockState(), 3);
                 }
             }
             // Farol colgado del tejado: el almacén se ve (y se ilumina) de noche.
-            colocar(level, new BlockPos(c.getX(), nivel + 3, c.getZ()),
+            colocar(level, new BlockPos(c.getX(), nivel + 2, c.getZ()),
                     Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true), 3);
             DevilRpg.LOGGER.info("[Village] Aldea en {}: almacen construido en {}", center, c);
         }
@@ -932,6 +948,96 @@ public final class VillageGenerator {
                         center, VillageStorage.cofresColocados(level, center));
             }
         }
+    }
+
+    /**
+     * <b>EL COBERTIZO DEL ALMACÉN, AL SUELO</b> (migración 69, I95): lo baja un bloque en las aldeas que ya lo
+     * tenían levantado con el suelo EN la cota, que es como lo construía {@link #asegurarAlmacen} antes.
+     * <p>
+     * <b>Qué estaba mal.</b> El suelo del cobertizo se ponía en la cota (una plataforma de un bloque entero) y el
+     * punto de apoyo que devuelve {@link VillageStorage#puntoDeApoyo} caía encima de ella, en {@code cota + 1}. El
+     * juego sube <b>0,6 andando</b> y esa plataforma es de <b>1,0</b>, así que <b>ningún aldeano podía subir</b>: el
+     * punto era inalcanzable y lo aparcaban 5 min una y otra vez (I33). Medido en el guardado del jugador (aldea 0,
+     * centro {@code 470,646}, cota 63): suelo {@code stone_bricks} en {@code y=63}, césped del pueblo en {@code y=62},
+     * punto {@code (517,64,666)} y <b>siete aldeanos</b> distintos más los <b>seis guardias</b> con
+     * {@code "no consigue llegar a BlockPos{x=517, y=64, z=666}"} en el log. El kiosco es la <b>otra</b> plataforma a
+     * la cota y no falla porque tiene <b>escaleras en sus cuatro entradas</b>; el almacén no tenía ninguna, así que
+     * aquí se elige la otra convención, la de los otros dos cobertizos del pueblo (el del corral y el taller del
+     * leñador): <b>suelo a {@code cota - 1} y se entra andando</b>.
+     * <p>
+     * <b>Cómo lo baja sin perder nada.</b> Es <b>idempotente</b> (la guardia es la capa de piedra del cobertizo
+     * <b>viejo</b>: si en {@code (centro, cota)} no hay {@code stone_bricks}, no hay nada que bajar) y solo toca
+     * <b>los bloques del cobertizo</b> (piedra del suelo, troncos de los postes, tablones del tejado, el farol y sus
+     * cofres): lo que haya puesto el jugador dentro no se toca. Lo de los cofres se saca <b>a la mano</b> antes de
+     * tirarlos —tirar un cofre tira su contenido al suelo (I6)— y se devuelve al almacén nuevo al final, y lo que no
+     * quepa se deja en el suelo del cobertizo, donde lo recoge el recolector (nunca se borra nada del pueblo). Va
+     * <b>antes</b> de tirar el plano, para que el plano nuevo se capture con el cobertizo a la altura buena (I8).
+     */
+    public static void bajarElAlmacenAlSuelo(ServerLevel level, BlockPos center) {
+        int nivel = cotaDeLaPlaza(level, center);
+        if (nivel <= level.getMinBuildHeight() + 1) {
+            return;
+        }
+        BlockPos c = VillageStorage.centro(center);
+        if (!level.getBlockState(new BlockPos(c.getX(), nivel, c.getZ())).is(Blocks.STONE_BRICKS)) {
+            return; // el cobertizo ya está a la altura buena (o no hay cobertizo): no se toca nada
+        }
+        // 1) LO DE LOS COFRES, A LA MANO (I6: tirar un cofre tira su contenido al suelo).
+        List<ItemStack> dentro = new ArrayList<>();
+        for (BlockPos q : BlockPos.betweenClosed(new BlockPos(c.getX() - 3, nivel, c.getZ() - 3),
+                new BlockPos(c.getX() + 3, nivel + 4, c.getZ() + 3))) {
+            if (!(level.getBlockState(q).getBlock() instanceof ChestBlock)
+                    || !(level.getBlockEntity(q) instanceof Container cofre)) {
+                continue;
+            }
+            for (int i = 0; i < cofre.getContainerSize(); i++) {
+                if (!cofre.getItem(i).isEmpty()) {
+                    dentro.add(cofre.getItem(i).copy());
+                }
+            }
+        }
+        // 2) EL COBERTIZO VIEJO, CELDA A CELDA (solo sus bloques: el suelo, los postes, el tejado, el farol y sus
+        //    cofres ya vaciados). Lo del jugador no se toca.
+        int quitados = 0;
+        for (int dx = -3; dx <= 3; dx++) {
+            for (int dz = -3; dz <= 3; dz++) {
+                BlockPos suelo = new BlockPos(c.getX() + dx, nivel, c.getZ() + dz);
+                if (level.getBlockState(suelo).is(Blocks.STONE_BRICKS)) {
+                    colocar(level, suelo, Blocks.AIR.defaultBlockState(), 3);
+                    quitados++;
+                }
+                for (int dy = 1; dy <= 3; dy++) {
+                    BlockPos q = new BlockPos(c.getX() + dx, nivel + dy, c.getZ() + dz);
+                    BlockState estado = level.getBlockState(q);
+                    if (estado.is(Blocks.OAK_LOG) || estado.is(Blocks.LANTERN)
+                            || estado.getBlock() instanceof ChestBlock) {
+                        colocar(level, q, Blocks.AIR.defaultBlockState(), 3);
+                        quitados++;
+                    }
+                }
+                BlockPos techo = new BlockPos(c.getX() + dx, nivel + 4, c.getZ() + dz);
+                if (level.getBlockState(techo).is(Blocks.OAK_PLANKS)) {
+                    colocar(level, techo, Blocks.AIR.defaultBlockState(), 3);
+                    quitados++;
+                }
+            }
+        }
+        // 3) EL COBERTIZO NUEVO (suelo a `cota - 1`, se entra andando) y 4) LO DE LOS COFRES, DE VUELTA.
+        asegurarAlmacen(level, center);
+        BlockPos apoyo = VillageStorage.puntoDeApoyo(level, center);
+        int devueltos = 0;
+        int alSuelo = 0;
+        for (ItemStack pila : dentro) {
+            ItemStack sobra = VillageStorage.guardar(level, center, pila.copy());
+            devueltos += pila.getCount() - sobra.getCount();
+            if (!sobra.isEmpty()) {
+                Block.popResource(level, apoyo, sobra);
+                alSuelo += sobra.getCount();
+            }
+        }
+        DevilRpg.LOGGER.info("[Village] Aldea en {}: almacen bajado al suelo ({} celda(s) del cobertizo viejo;"
+                        + " {} objeto(s) de los cofres conservados{})", center, quitados, devueltos,
+                alSuelo > 0 ? ", " + alSuelo + " al suelo del cobertizo" : "");
     }
 
     /**
@@ -1608,6 +1714,62 @@ public final class VillageGenerator {
         int dx = p.getX() - base.getX();
         int dz = p.getZ() - base.getZ();
         return Math.abs(dx) <= ANEXO_RADIO && Math.abs(dz) <= ANEXO_RADIO;
+    }
+
+    /** ¿Ese punto (X/Z) está <b>dentro del corralillo de las gallinas</b>? (su caja vive aquí, I4/I96). */
+    public static boolean estaEnElGallinero(BlockPos center, BlockPos p) {
+        BlockPos base = baseDeAnexo(center);
+        int dx = p.getX() - base.getX();
+        int dz = p.getZ() - base.getZ();
+        return dx >= GALLINERO_X0 && dx <= GALLINERO_X1 && dz >= GALLINERO_Z0 && dz <= GALLINERO_Z1;
+    }
+
+    /**
+     * <b>EL PRIMER TRAMO CUANDO HAY UN PORTÓN DE VALLA DE POR MEDIO: el portón.</b>
+     * <p>
+     * El juego <b>no le deja planificar el camino a un aldeano a través de una puerta de valla cerrada</b> (lo dice
+     * I44 y es lo que mide el arnés: {@code createPath} devuelve {@code alcance=NO} con el destino al otro lado), así
+     * que un aldeano que se queda <b>fuera</b> del recinto con su faena <b>dentro</b> (o al revés) no camina hacia el
+     * portón: se queda pegado a la valla dando vueltas y acaba <b>aparcando el destino 5 min</b> (I33). Medido con el
+     * arnés, aldea 0: el ganadero Zacarias, <b>16 s</b> clavado en {@code 516,63,636} —pegado a la valla NORTE del
+     * corral— con un huevo de la paja <b>al otro lado</b>, y el destino aparcado en {@code 516,64,639}; y antes, con
+     * el almacén al otro lado de la valla, el mismo aldeano aparcó el punto de apoyo del almacén estando dentro.
+     * <p>
+     * Esto devuelve a qué <b>portón</b> hay que ir <b>primero</b> (o {@code null} si no hay ninguno de por medio y se
+     * va directo al destino). El portón solo cuenta si está <b>cerrado</b>: abierto, el camino se planifica solo.
+     * Y el orden es el de las cajas, de fuera adentro: para entrar en el <b>corralillo</b> desde fuera del corral,
+     * primero la <b>cerca grande</b>; para salir del corralillo, primero <b>su</b> portón.
+     */
+    @Nullable
+    public static BlockPos primerTramoDelPorton(ServerLevel level, BlockPos center, int nivel, BlockPos desde,
+                                                BlockPos destino) {
+        if (nivel <= level.getMinBuildHeight() + 1) {
+            return null;
+        }
+        boolean yoCorral = estaEnElAnexo(center, desde);
+        boolean suCorral = estaEnElAnexo(center, destino);
+        boolean yoGallinero = estaEnElGallinero(center, desde);
+        boolean suGallinero = estaEnElGallinero(center, destino);
+        if (yoGallinero != suGallinero) {
+            // Del corralillo al corral (o al revés). Para ENTRAR desde fuera del corral, primero la cerca grande.
+            if (!yoGallinero && !yoCorral) {
+                BlockPos porton = portonDelCorral(center, nivel);
+                return estaCerrado(level, porton) ? porton : null;
+            }
+            BlockPos porton = portonDelGallinero(center, nivel);
+            return estaCerrado(level, porton) ? porton : null;
+        }
+        if (yoCorral != suCorral) {
+            BlockPos porton = portonDelCorral(center, nivel);
+            return estaCerrado(level, porton) ? porton : null;
+        }
+        return null;
+    }
+
+    /** ¿Ese portón de valla está ahí y <b>cerrado</b>? (abierto, el aldeano planifica el camino solo). */
+    private static boolean estaCerrado(ServerLevel level, BlockPos porton) {
+        BlockState estado = level.getBlockState(porton);
+        return estado.getBlock() instanceof FenceGateBlock && !estado.getValue(FenceGateBlock.OPEN);
     }
 
     /**
