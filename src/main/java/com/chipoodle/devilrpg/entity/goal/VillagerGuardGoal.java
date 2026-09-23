@@ -971,8 +971,17 @@ public class VillagerGuardGoal extends Goal {
         return false;
     }
 
-    /** Radio (bloques) alrededor del almacén en el que un guardia cuenta como "estar en el almacén". */
-    private static final double RADIO_DE_LA_REVISION = 6.0D;
+    /**
+     * Radio (bloques) alrededor del almacén en el que un guardia cuenta como "estar en el almacén".
+     * <p>
+     * <b>12 y no 6</b>, y está medido: el punto de apoyo del almacén (el sitio al que los aldeanos intentan ir) es
+     * <b>INALCANZABLE</b> en la partida del jugador — su log lo enseña con <b>siete aldeanos distintos</b>
+     * (*"no consigue llegar a BlockPos{x=517, y=64, z=666}: lo deja por 5 min"*: el herrero de armas, el de
+     * herramientas, el cocinero, el ganadero...). Con 6 bloques, un guardia que se queda a 7 del cofre **no se arma**;
+     * con 12, el guardia se arma al pasar cerca aunque no consiga entrar al cobertizo. Y no hace falta entrar: el
+     * contenedor se lee del mundo (`VillageStorage.almacen`), así que la distancia solo decide si la revisión ocurre.
+     */
+    private static final double RADIO_DE_LA_REVISION = 12.0D;
 
     /**
      * <b>REVISIÓN POR CERCANÍA</b> (lo pidió el jugador: *"¡DEBEN DE ARMARSE! diario tienen que checarlo, cada que se
