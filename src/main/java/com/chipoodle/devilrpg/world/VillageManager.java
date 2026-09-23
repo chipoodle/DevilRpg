@@ -2510,6 +2510,9 @@ public final class VillageManager {
         // Y EL QUE SE QUEDA DENTRO DE UNA CASA: si lleva 30 s sin moverse de celda en un piso (o un sótano), se le baja
         // a la plaza (ver `rescatarAldeanosAtrapados`).
         rescatarAldeanosAtrapados(level, aldeanos, center);
+        // Y EL QUE AMANECE DE PIE ENCIMA DE UNA CAMA, A LA CALLE (medido con el arnés: la leñadora Tomasa se pasaba el
+        // día encima de su cama, y desde ahí NO hay ruta a ninguna parte).
+        bajarDeLasCamas(level, aldeanos, center);
         // Y EL GOLEM QUE SE METE EN LA HUERTA, A LA CALLE: la tierra de cultivo pisada se vuelve tierra y el bancal
         // se pierde (lo pidió el jugador al ver uno dentro de una parcela). Es la red de seguridad del corte del
         // reparto de spawn, que lo hace `CommonForgeGolemEventSubscriber` en el momento de nacer.
@@ -4085,6 +4088,62 @@ public final class VillageManager {
                     villager.getUUID(), estaba.toShortString(), destino.toShortString());
         }
     }
+
+    /**
+     * <b>AL QUE AMANECE DE PIE ENCIMA DE UNA CAMA, SE LE BAJA A LA CALLE.</b>
+     * <p>
+     * Medido con el arnés (23-sep-2026, aldea 0): la <b>leñadora Tomasa</b> amanecía <b>de pie sobre su cama</b>
+     * ({@code pos=(428, 67.56, 665)}, {@code pies=red_bed}, su {@code home} en {@code 428,67,665}) y desde ahí
+     * <b>no tenía ruta a ninguna parte</b>: {@code rutaAPlaza=a1=1n alcance=NO fin=428,68,665 dFin=44.70} —el
+     * planificador le devolvía <b>su propia casilla</b>—, así que se pasaba el día dando pasitos por encima de la fila
+     * de camas (columnas 424/426/427/428, todas a {@code y=67.56}) con su goal diciendo "Yendo al arbol" y el log
+     * llenándose cada 5 min de {@code no consigue llegar a BlockPos{x=426, y=63, z=629}} (su arboleda). Y el rescate de
+     * I103 <b>no lo veía</b>: ése pide <b>30 s en la misma columna</b>, y ella va cambiando de columna al caminar por
+     * las camas.
+     * <p>
+     * La causa es que <b>una cama no es una casilla de pie</b> para el planificador: el aldeano se despierta encima
+     * —las camas de esa casa están pegadas unas a otras y el piso de arriba está lleno— y desde ahí no encuentra ni un
+     * nodo válido. Probado primero lo fino —bajarle a la casilla libre de al lado— y <b>no vale</b>: se le teleporta al
+     * hueco entre camas, no tiene ruta tampoco (el piso está desconectado), el cerebro lo empuja otra vez hacia su
+     * objetivo andando en línea recta, se sube a la cama y vuelta a empezar (medido: 20 avisos en 4 min sin moverse
+     * del sitio). Así que se le baja a <b>la calle</b>, que es donde el pueblo sí sabe andar: desde la plaza va a su
+     * arboleda por su cuenta. Al que <b>duerme</b> no se le toca (dormir en la cama es legítimo) y el que ya está en el
+     * suelo tampoco.
+     */
+    private static void bajarDeLasCamas(ServerLevel level, List<Villager> aldeanos, BlockPos center) {
+        int cota = VillageGenerator.cotaDeLaPlaza(level, center);
+        long ahora = level.getGameTime();
+        for (Villager villager : aldeanos) {
+            UUID id = villager.getUUID();
+            boolean dePieEnLaCama = !villager.isBaby() && !villager.isSleeping()
+                    && !villager.getBrain().isActive(net.minecraft.world.entity.schedule.Activity.REST)
+                    && level.getBlockState(villager.blockPosition()).getBlock() instanceof BedBlock;
+            if (!dePieEnLaCama) {
+                DE_PIE_EN_UNA_CAMA.remove(id);
+                continue;
+            }
+            Long desde = DE_PIE_EN_UNA_CAMA.get(id);
+            if (desde == null) {
+                DE_PIE_EN_UNA_CAMA.put(id, ahora);
+                continue; // se acaba de despertar: se le da un poco de tiempo a bajarse solo
+            }
+            if (ahora - desde < ATRAPADO_TICKS) {
+                continue;
+            }
+            DE_PIE_EN_UNA_CAMA.remove(id);
+            BlockPos estaba = villager.blockPosition();
+            BlockPos destino = casillaLibreDeLaPlaza(level, center, cota);
+            villager.getNavigation().stop();
+            villager.teleportTo(destino.getX() + 0.5D, destino.getY(), destino.getZ() + 0.5D);
+            villager.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
+            DevilRpg.LOGGER.info("[Village] {} estaba DE PIE encima de una cama en {} (y desde ahi no hay ruta a"
+                            + " ninguna parte): lo bajo a la calle ({})", id, estaba.toShortString(),
+                    destino.toShortString());
+        }
+    }
+
+    /** Desde cuándo (tick) está cada aldeano <b>de pie encima de una cama</b>: ver {@link #bajarDeLasCamas}. */
+    private static final Map<UUID, Long> DE_PIE_EN_UNA_CAMA = new HashMap<>();
 
     /** Una celda con <b>sitio para pararse</b> a la altura de la calle, cerca de la plaza (anillos desde el centro). */
     private static BlockPos casillaLibreDeLaPlaza(ServerLevel level, BlockPos center, int cota) {

@@ -2972,6 +2972,41 @@ hogazas** (`horneo 2 pan(es)` ×8) sin que se le sembrara nada. Ver `tools/arnes
 recolectora en la plaza) sacan `almacen=NO(nulo)` simplemente porque el planificador no da ruta desde tan lejos; los
 herreros y el minero, que vienen del norte, siguen llegando.
 
+### I104 · Nadie trabaja de pie encima de una CAMA (el leñador que no salía de casa)
+
+Lo pidió el jugador al ver el hallazgo de la vuelta anterior: *"corrige al leñador"*.
+
+**Medido con el arnés (23-sep-2026, aldea 0)**: la leñadora **Tomasa** amanecía **de pie sobre su cama**
+(`columna=428,665 y=67.56 pies=red_bed home=428,67,665`) y desde ahí **no tenía ruta a ninguna parte**:
+`rutaAPlaza=a1=1n alcance=NO fin=428,68,665 dFin=44.70` — el planificador le devolvía **su propia casilla**. Se
+pasaba el día dando pasitos por encima de la fila de camas (columnas 424/426/427/428, todas a `y=67.56`) con su
+etiqueta en "Yendo al arbol" y el log llenándose cada 5 min de `no consigue llegar a BlockPos{x=426, y=63, z=629}`
+(los huecos de su arboleda): **17 avisos y 0 troncos talados** en una corrida. Y el rescate de I103 **no lo veía**,
+porque ése pide **30 s en la misma columna** y ella cambia de columna al caminar por las camas.
+
+**La causa** es que **una cama no es una casilla de pie** para el planificador: el aldeano se despierta encima —las
+camas de esa casa están pegadas unas a otras y el piso de arriba está lleno— y desde ahí no encuentra ni un nodo
+válido. Probado primero **lo fino —bajarle a la casilla libre de al lado— y NO vale** (medido: se le teleporta al
+hueco entre camas, tampoco tiene ruta porque el piso está desconectado, el cerebro lo empuja hacia su objetivo
+andando en línea recta, se sube a la cama y vuelta a empezar: **20 avisos en 4 min** sin moverse del sitio).
+
+**Regla:** `VillageManager.bajarDeLasCamas` — al aldeano adulto **de pie encima de una cama** que **no está durmiendo
+ni en su franja de descanso** se le baja a **la calle** (la misma casilla de la plaza que usa el rescate) tras el
+mismo margen de 30 s (`ATRAPADO_TICKS`); desde la calle va a trabajar por su cuenta. **Al que duerme no se le toca**
+(dormir en la cama es legítimo).
+**Medido después del arreglo** (misma copia, ~12 min): **una sola** bajada de la cama en toda la corrida, **6 árboles
+talados**, **6 entregas al almacén** (`el lenador guardo 16 cosa(s) de su oficio`), y sus avisos de "no consigue
+llegar a la arboleda" quedan en los **2 primeros** (antes de bajarle); el resto son árboles del monte a 100+ bloques
+que aparca y sigue. Sin regresiones: tres bancales a 0 maduras, golems 0 y el cocinero con 7 viajes por leña y 160
+horneadas. Ver `tools/arnes/medidas-huerta.txt`, apartado 7.
+
+**Y QUEDA APUNTADO (la causa de fondo, sin arreglar)**: el **piso de arriba de esa casa está desconectado** del bajo
+para el planificador (desde el hueco entre camas tampoco hay ruta), así que cada mañana hay que bajarle (una vez, no
+en bucle). El origen es el **apiñamiento de camas** de esa casa (migración 14: "hasta 4 por casa"): el juego no
+encuentra casilla libre al despertar y deja al aldeano **encima** de la cama. Arreglarlo del todo es de
+plantilla/migración de casas, no de goals. El mismo patrón apareció en la **posada de la taberna** (`6fceef7a`
+rescatado de `511,68,667`), así que mientras tanto la red de seguridad es este arreglo más el rescate de I103.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 

@@ -264,5 +264,50 @@ apagada, da lo mismo: la puerta en `512,63,666`, la ruta `alcance=SI fin=516,63,
 al almacén**, **13 tandas de cocina y 13 horneadas (26 panes)**, los tres bancales a **0 maduras**, los
 golems a 0, **2 rescates** (Ursula y el clérigo, los dos buenos) y **0 atascos** del cocinero.
 
+--- 7) EL LEÑADOR QUE SE QUEDABA DE PIE ENCIMA DE SU CAMA --------------------------------------
+El jugador lo pidió al ver el hallazgo de la vuelta anterior: *"corrige al leñador"*. Lo medido (sonda
+`ATRAPADO`): la leñadora **Tomasa** (`3209085d`, oficio `fletcher`) amanecía **de pie sobre su cama** —
+`columna=428,665 y=67.56 pies=red_bed home=428,67,665`— y desde ahí **no tenía ruta a ninguna parte**:
+`rutaAPlaza=a1=1n alcance=NO fin=428,68,665 dFin=44.70` (¡el planificador le devolvía su propia casilla!).
+Se pasaba el día dando pasitos por encima de la fila de camas (columnas 424/426/427/428, todas a `y=67.56`)
+con su etiqueta en "Yendo al arbol" y el log llenándose cada 5 min de `no consigue llegar a
+BlockPos{x=426, y=63, z=629}` (los huecos de su arboleda). **17 veces** en una corrida, **0 troncos
+talados**. Y el rescate de I103 no lo veía, porque ése pide **30 s en la misma columna** y ella cambia de
+columna al caminar por las camas.
+
+**La causa** es que **una cama no es una casilla de pie**: el aldeano se despierta encima (las camas de esa
+casa están pegadas unas a otras y el piso de arriba está lleno) y el planificador no encuentra ni un nodo
+válido desde ahí. Probado primero **lo fino —bajarle a la casilla libre de al lado— y NO vale** (medido: se
+le teleporta al hueco entre camas, tampoco tiene ruta porque el piso está desconectado, el cerebro lo empuja
+hacia su objetivo andando en línea recta, se sube a la cama y vuelta a empezar: **20 avisos en 4 min** sin
+moverse del sitio).
+
+**El arreglo** (`VillageManager.bajarDeLasCamas`): al aldeano adulto que está **de pie encima de una cama**
+—con los pies en el bloque de la cama— y que **no está durmiendo ni en su franja de descanso**, se le baja a
+**la calle** (la misma casilla de la plaza que usa el rescate), tras el mismo margen de 30 s. Desde la calle
+va a trabajar por su cuenta. Al que duerme no se le toca.
+
+MEDIDO (copia de su partida, ~12 min, MEDIR_HUERTA):
+
+    [Village] 3209085d-... estaba DE PIE encima de una cama en 428, 67, 665 (y desde ahi no hay ruta a
+              ninguna parte): lo bajo a la calle (466, 63, 642)          <- UNA sola vez en 12 min
+    [Village] El lenador: talo 4 tronco(s) (4 de la columna y 0 que colgaban) y desramo 54 hoja(s)   x6
+    [Village] el lenador guardo 13 / 16 / 16 / 19 / 16 / 16 cosa(s) de su oficio en el almacen       x6
+
+O sea: **6 árboles talados y 6 entregas al almacén** por el leñador, y sus fallos de "no consigue llegar a
+la arboleda" se quedan en los **2 primeros** (16:02:54 y 16:03:11, *antes* de bajarle de la cama a las
+16:03:17); los demás avisos de la corrida son **árboles del monte** (`546-548,65-67,684-703`, a 100+ bloques)
+que aparca y sigue con otro, que es su comportamiento normal. Y sin regresiones: los tres bancales a **0
+maduras**, `GOLEMS DENTRO DE LA HUERTA: 0`, y el cocinero con **7 viajes por leña y 160 horneadas**.
+
+**Y QUEDA APUNTADO** (el porqué de fondo, sin arreglar): el **piso de arriba de esa casa está desconectado**
+del bajo para el planificador —desde el hueco entre camas tampoco hay ruta—, así que cada mañana hay que
+bajarle (una vez, no en bucle). La causa de fondo es el **apiñamiento de camas** de esa casa (migración 14:
+"hasta 4 por casa"): el juego no encuentra casilla libre al despertar y deja al aldeano **encima** de la
+cama. Arreglarlo del todo es de plantilla/migración de casas, no de goals. El mismo patrón se vio en la
+posada de la taberna (`6fceef7a` rescatado de `511,68,667`), así que la red de seguridad —este arreglo más
+el rescate de I103— es la que mantiene el pueblo en pie mientras tanto.
+
+
 
 
