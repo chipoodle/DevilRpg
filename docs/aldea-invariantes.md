@@ -2956,16 +2956,21 @@ una vez `LLEVAR_TRIGO = 16`"*.
   faena (medido con el arnés: Teodoro llegó a **24 s** quieto en `498,664` antes de moverse por su cuenta). A Ursula
   **no** le quita el rescate: su ruta a la plaza acababa en su propia casilla (`a1=3n alcance=NO fin=428,68,665`).
 
-**PENDIENTE (medido en esta vuelta, SIN arreglar todavía): al almacén no se llega desde la taberna.** El arnés lo
-canta con la sonda nueva del cocinero: `rutaAlmacen=a1=14n alcance=NO fin=511,63,666 dFin=6.00` — la ruta al punto de
-apoyo (`517,63,666`) **acaba 6 bloques antes**, contra la pared este de la taberna — y los cinco accesos del cobertizo
-dan lo mismo (`accesosDelAlmacen=517,63,666 / 517,63,664 / 517,63,668 / 515,63,666 / 519,63,666`). Los **herreros y el
-minero SÍ llegan** porque vienen del norte (`Zacarias (Herrero de armas) pos=517,63,663`): el cobertizo tiene entrada
-por el norte y la taberna queda **sellada por el este** por la casa que se le pega. Consecuencia: el **cocinero no
-puede ir por leña** (se queda 40 s en `511,63,666` y aparca el almacén 5 min), así que en esa aldea **no cocina ni
-hornea** salvo que ya lleve troncos. El pan se pudo medir sembrándole 4 troncos en el zurrón (ver
-`tools/arnes/medidas-huerta.txt`, apartado 5). El arreglo es de **geometría/migración** (abrir el paso entre la
-taberna y el cobertizo), no de goals, y queda para la vuelta siguiente.
+**RESUELTO EN LA MISMA VUELTA (migración 72): la puerta de la taberna al almacén.** El jugador dijo que sí a abrir el
+paso, y se abrió con una **puerta de servicio en el muro ESTE de la taberna** (`abrirElPasoDeLaTabernaAlAlmacen`), a la
+cota, **una celda al sur del centro del cobertizo** (la columna despejada de la rejilla de postes de 3 en 3, que es
+donde enfrente está el punto de apoyo) y con dos celdas de suelo llano al otro lado, así que **no hay escalón**. Es
+idempotente (si ya hay puerta no escribe; si el paso ya está en aire no le pone una puerta a un boquete) y va **antes
+de tirar el plano** (I8), o sea que la puerta entra en el plano y el obrero la mantiene.
+Medido con el arnés, con la siembra de leña **apagada** para medir la cadena entera: la ruta al almacén pasa de
+`a1=14n alcance=NO fin=511,63,666 dFin=6.00` a **`a1=24n alcance=SI fin=516,63,666 dFin=1.00`**, y el cocinero
+**va él por la leña** (`cogio 4 tronco(s) del almacen` ×3), **cocina** (`8 pieza(s) cocinadas` ×8) y **hornea 16
+hogazas** (`horneo 2 pan(es)` ×8) sin que se le sembrara nada. Ver `tools/arnes/medidas-huerta.txt`, apartado 6.
+
+**Y QUEDA APUNTADO** (medido en esa misma corrida, no es de esta migración): el **leñador** falla al ir a su arboleda
+(`426/432,63,629`, 17 veces) y los aldeanos **lejanos** (a 50-60 bloques, p. ej. el guardia en la barraca o la
+recolectora en la plaza) sacan `almacen=NO(nulo)` simplemente porque el planificador no da ruta desde tan lejos; los
+herreros y el minero, que vienen del norte, siguen llegando.
 
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:

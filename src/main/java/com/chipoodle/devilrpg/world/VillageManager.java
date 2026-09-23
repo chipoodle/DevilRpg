@@ -745,9 +745,18 @@ public final class VillageManager {
      *       sur</b>, justo al lado de la puerta, y asomaba por el hueco). La mina <b>vieja</b> la retira
      *       {@code deshacerLaMinaVieja} (caseta y pozo, devolviendo el terreno) y el plano se vuelve a capturar, o
      *       quedarían las dos casetas.</li>
+     *   <li>72: la <b>PUERTA DE LA TABERNA AL ALMACÉN</b> (lo pidió el jugador al aceptar el hallazgo del arnés: el
+     *       cocinero <b>no podía ir por leña</b>). El muro este de la taberna dejaba el cobertizo del almacén
+     *       <b>sellado</b> por ese lado y el planificador de rutas acababa <b>6 bloques antes</b> del punto de apoyo
+     *       ({@code rutaAlmacen=a1=14n alcance=NO fin=511,63,666 dFin=6.00}), así que el cocinero se quedaba plantado
+     *       a 6,00 —uno más que el alcance de 5,0 con el que se coge la leña— y sin leña no enciende el ahumador: no
+     *       cocina ni hornea el pan. Los herreros y el minero sí llegaban (vienen del norte). La abre
+     *       {@code abrirElPasoDeLaTabernaAlAlmacen}: una puerta de servicio en el muro este, una celda al sur del
+     *       centro del cobertizo (la columna despejada de postes), a la cota y sin escalón. Idempotente, y va antes de
+     *       tirar el plano (I8) para que el obrero la mantenga.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 71;
+    public static final int CURRENT_LAYOUT = 72;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -2292,6 +2301,12 @@ public final class VillageManager {
             // vieja está en el plano y el obrero la repondría— y el pozo viejo abierto en el suelo del pueblo.
             VillageGenerator.deshacerLaMinaVieja(level, center);
             VillageGenerator.asegurarLaMinaDelPueblo(level, center);
+            // LA PUERTA DE LA TABERNA AL ALMACÉN (migración 72, lo pidió el jugador): el muro este de la taberna
+            // sellaba el cobertizo por ese lado, así que el COCINERO no tenía ruta al punto de apoyo (medido con el
+            // arnés: la ruta acababa 6 bloques antes, a 6,00 del punto, y el alcance para coger la leña es 5,0) y sin
+            // leña no enciende el ahumador: no cocina ni hornea el pan. Va ANTES de tirar el plano (I8) para que la
+            // puerta entre en él y el obrero la mantenga, y es idempotente (I6).
+            VillageGenerator.abrirElPasoDeLaTabernaAlAlmacen(level, center);
             // REBAÑO ESCAPADO (una sola vez, al migrar): antes de que existiera la marca del rebaño, el ganado que se
             // colaba por el portón se perdía sin remedio y el corral se quedaba vacío (y sin carne). Aquí se reconoce
             // el que anda suelto FUERA de la muralla y cerca del corral; luego, en el latido, vuelve a casa.
@@ -2316,6 +2331,10 @@ public final class VillageManager {
         // Y LA CASETA DEL MINERO, igual de idempotente (su testigo es su suelo de piedra): así se le repone si
         // alguien se la llevó por delante. Lo que cava el minero (el pozo) es SUYO: no se toca (I102).
         VillageGenerator.asegurarLaMinaDelPueblo(level, center);
+        // Y LA PUERTA DE LA TABERNA AL ALMACÉN (migración 72), por el mismo motivo: es idempotente y así la tienen
+        // también las aldeas NUEVAS (que no migran) y se le repone a la que se quede sin ella. Sin ese paso el
+        // cocinero no puede ir por leña desde su casa y se queda sin cocinar ni hornear (medido con el arnés).
+        VillageGenerator.abrirElPasoDeLaTabernaAlAlmacen(level, center);
         // Y LOS HUECOS DE LAS CASAS DEL JUEGO (lo vio el jugador: "¿qué ves de extraño en esta casa? ¡si le falta
         // completarse a la pared! corrígelo y checa que el cofre no estorbe"): una pared con un boquete de 1x2 al lado
         // de la puerta que NADIE reponía, porque el plano de la aldea se capturó por escaneo del mundo y el escaneo

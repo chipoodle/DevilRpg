@@ -222,3 +222,47 @@ LO QUE **NO** SE PUDO MEDIR, Y SE DICE CLARO:
     kiosco (y=64, 24 s quieto). El filtro de "y además sin ruta a la plaza" está puesto justo por eso: al
     que sabe irse solo no se le toca.
 
+--- 6) LA PUERTA DE LA TABERNA AL ALMACÉN (migración 72): el cocinero va él por la leña ----------
+La 5ª corrida dejó medido que el cocinero **no podía ir por leña** (el punto de apoyo del almacén no tenía
+ruta desde la taberna: `rutaAlmacen=a1=14n alcance=NO fin=511,63,666 dFin=6.00`, y los cinco accesos del
+cobertizo igual), así que el jugador dijo "sí" a abrir el paso. Lo que se hizo: una **puerta de servicio en
+el muro ESTE de la taberna**, a la cota, una celda al sur del centro del cobertizo (la columna despejada de
+postes de su rejilla de 3 en 3) y con dos celdas de suelo llano al otro lado (sin escalón). Es idempotente
+y va antes de tirar el plano, así que entra en él y el obrero la mantiene.
+
+MEDIDO (misma copia de su partida, MEDIR_HUERTA, ~11 min, y con la siembra de leña APAGADA a propósito
+—`SEMBRAR_LENA_AL_COCINERO = false`— para medir la CADENA ENTERA: ir por leña -> cocinar -> hornear):
+
+    [Village] Aldea en 470,63,646: abierta la puerta de la taberna al almacen (512, 63, 666), que es por
+              donde va el cocinero a por lena
+    [Village] Aldea 0: trazado actualizado a la version 72 (casas, muro, granja y plano)
+
+    [Arnes] COCINERO Teodoro pos=498,64,663 ... rutaAlmacen=a1=24n alcance=SI fin=516,63,666 dFin=1.00
+            (antes: a1=14n alcance=NO fin=511,63,666 dFin=6.00)
+            accesosDelAlmacen= 517,63,666=SI(24) 517,63,664=SI(25) 517,63,668=SI(25) 515,63,666=SI(22)
+                                519,63,666=SI(26)
+
+    [Village] El cocinero: cogio 4 tronco(s) del almacen para el ahumador (aldea 0; quedan 124)     x3
+    [Village] El cocinero: 8 pieza(s) cocinadas con un tronco del almacen (aldea 0)                 x8
+    [Village] El cocinero: horneo 2 pan(es) con el trigo de la despensa (aldea 0; quedan 32 de trigo,
+              reserva para criar 4)                                                                 x8
+
+O sea: **16 hogazas horneadas por el cocinero sin sembrarle nada**, con el zurrón de leña llenándose en el
+almacén por su propio pie. Y sin regresiones en lo demás de la ronda: los tres bancales a **0 maduras**
+(74/74 sembradas, VACIAS 0), `GOLEMS DENTRO DE LA HUERTA: 0` en todas las muestras, `lo bajo a la plaza`
+**una sola vez** (Ursula, el caso bueno) y **0** atascos del cocinero.
+
+Dos cosas que la sonda deja apuntadas y NO son de este cambio (quedan para mirar): el **leñador**
+(`3209085d`, Tomasa) falla 17 veces al ir a `426/432,63,629` ("Yendo al arbol"), y otros dos aldeanos
+lejanos (`6fceef7a` Ubaldo en la barraca, `463,652` Filomena la recolectora) tienen `almacen=NO(nulo)`:
+sencillamente están a 50-60 bloques y el planificador les da ruta nula desde ahí; los herreros y el minero,
+que vienen del norte, siguen llegando bien.
+
+**Y UNA SEGUNDA CORRIDA DE COMPROBACIÓN** (con el guardián nuevo de "que de verdad sea un muro": si a los
+lados norte/sur de la celda no hay nada sólido, no se pone puerta), ~8 min y también con la siembra de leña
+apagada, da lo mismo: la puerta en `512,63,666`, la ruta `alcance=SI fin=516,63,666 dFin=1.00`, **4 viajes
+al almacén**, **13 tandas de cocina y 13 horneadas (26 panes)**, los tres bancales a **0 maduras**, los
+golems a 0, **2 rescates** (Ursula y el clérigo, los dos buenos) y **0 atascos** del cocinero.
+
+
+

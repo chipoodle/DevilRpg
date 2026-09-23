@@ -73,6 +73,14 @@ public class GuardHarness {
      * casilla de la cocina. Es lo que distingue "cocina dentro" de "cocina a través de la pared".
      */
     private static final boolean MEDIR_COCINA = false;
+    /**
+     * <b>¿Se le siembran 4 troncos en el zurrón al cocinero?</b> Estaba en `true` para poder medir el horno del pan
+     * cuando la ida al almacén estaba cortada (ver {@code sembrarLenaAlCocinero}). Desde la <b>migración 72</b> —la
+     * puerta de la taberna al almacén— el cocinero <b>tiene que ir él</b>, así que esto va en {@code false}: lo que se
+     * mide es la cadena entera (va por leña → cocina → hornea).
+     */
+    private static final boolean SEMBRAR_LENA_AL_COCINERO = false;
+
     /** ¿Se mide LA HUERTA (lo que hay tirado en los bancales y el zurron de cada granjero)? Ver igilarLaHuerta. */
     private static final boolean MEDIR_HUERTA = false;
     /**
@@ -381,7 +389,9 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             // tiene ruta desde la taberna (`rutaAlmacen=a1=15n alcance=NO fin=511,63,666 dFin=6.00`)— y sin esta
             // siembra no se puede medir LO QUE SE QUIERE MEDIR AQUI: **que el pan lo hornea el cocinero**.
             if (MEDIR_HUERTA && ticks >= 600 && ticks % 600 == 0) {
-                sembrarLenaAlCocinero(level);
+                if (SEMBRAR_LENA_AL_COCINERO) {
+                    sembrarLenaAlCocinero(level);
+                }
                 // Y TRIGO EN LA DESPENSA, por lo mismo: con la reserva de cria por delante (3 de trigo por hogaza + 4
                 // de reserva = 7), en una corrida de minutos el trigo de la huerta no llega al umbral y el horno no se
                 // llega a medir NUNCA. Se repone para medir **el horno del pan**, no el ritmo de la huerta.

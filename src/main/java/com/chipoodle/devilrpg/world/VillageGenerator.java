@@ -7587,6 +7587,74 @@ public final class VillageGenerator {
     }
 
     /**
+     * <b>ABRE EL PASO DE LA TABERNA AL ALMACÉN</b> (migración 72): una <b>puerta de servicio en el muro ESTE de la
+     * taberna</b>, a la altura del cobertizo del almacén, para que el <b>cocinero</b> pueda ir a por leña.
+     * <p>
+     * <b>Por qué hace falta</b> (medido con el arnés, 23-sep-2026): el punto de apoyo del almacén
+     * <b>no tenía ruta desde la taberna</b> —el planificador acababa <b>6 bloques antes, contra este mismo muro</b>
+     * ({@code rutaAlmacen=a1=14n alcance=NO fin=511,63,666 dFin=6.00}), y los cinco accesos del cobertizo daban lo
+     * mismo—, así que el cocinero se quedaba plantado en {@code 511,63,666} (a <b>6,00</b> del punto de apoyo, uno más
+     * que el alcance de 5,0 con el que se coge la leña), aparcaba el almacén 5 min y <b>no podía ir por leña</b>: sin
+     * leña no enciende el ahumador, o sea que <b>no cocina ni hornea el pan</b>. Los herreros y el minero <b>sí</b>
+     * llegaban porque vienen del norte; la taberna, que es donde vive y trabaja el cocinero, quedaba <b>sellada por el
+     * este</b> por su propio muro.
+     * <p>
+     * <b>Y la celda no es caprichosa</b>: el cobertizo lleva los <b>postes en una rejilla de 3 en 3</b>, así que la
+     * puerta se abre <b>una celda al sur del centro</b> del almacén, que es la columna despejada de postes (y ahí
+     * enfrente está su punto de apoyo, 5 bloques al este). Al otro lado del muro quedan <b>dos celdas de suelo llano a
+     * la cota</b> (césped y adoquín) antes del suelo del cobertizo, así que <b>no hay escalón</b>: se entra andando.
+     * <p>
+     * Es <b>idempotente</b> (I6): si ya hay una puerta no escribe nada, y solo actúa si al otro lado está de verdad el
+     * almacén y las celdas del paso están libres y con suelo firme (si hay algo puesto —un cofre, un mueble— mejor no
+     * meter una puerta ahí). Va <b>antes de tirar el plano</b> (I8) en las aldeas que migran, y el latido la vuelve a
+     * llamar como a {@code asegurarHerreria} para que <b>también la tengan las aldeas nuevas</b> y para reponerla si
+     * alguien se la lleva (el paso es del pueblo: sin él, el cocinero no come).
+     */
+    public static void abrirElPasoDeLaTabernaAlAlmacen(ServerLevel level, BlockPos center) {
+        int cota = cotaDeLaPlaza(level, center);
+        BlockPos base = baseDeLaTaberna(center);
+        BlockPos almacen = VillageStorage.centro(center);
+        BlockPos puerta = new BlockPos(base.getX() + TABERNA_ANCHO - 1, cota, almacen.getZ() - 1);
+        // 1) SOLO SI EL ALMACÉN ESTÁ A LA ESPALDA DEL MURO ESTE (a 4-8 bloques): si no, esta aldea no es este caso y
+        //    lo que hubiera en esa celda no se toca. (El cobertizo mide 7x7: su centro queda a 6 de la pared.)
+        int dx = almacen.getX() - puerta.getX();
+        if (dx < 4 || dx > 8) {
+            return;
+        }
+        // 2) YA ESTÁ HECHO (idempotente): la puerta ya está puesta.
+        if (level.getBlockState(puerta).getBlock() instanceof DoorBlock) {
+            return;
+        }
+        // 3) Y EL PASO, LIBRE Y CON SUELO A LOS DOS LADOS: dentro (la taberna) y fuera (el camino al cobertizo). Si
+        //    hay algo puesto (un cofre, un mueble, una barricada) mejor no meter una puerta ahí. La celda del muro da
+        //    igual que sea el muro o aire: si el jugador se llevó la pared, la puerta va igual (el paso es del pueblo
+        //    y el que la rompa se la encuentra repuesta, como cualquier otra celda del plano).
+        for (BlockPos p : new BlockPos[]{puerta.west(), puerta.west().above(), puerta.east(), puerta.east().above()}) {
+            if (level.getBlockState(p).isSolid()) {
+                return;
+            }
+        }
+        for (BlockPos suelo : new BlockPos[]{puerta.west().below(), puerta.east().below()}) {
+            if (!level.getBlockState(suelo).isSolid()) {
+                return;
+            }
+        }
+        // 4) Y QUE DE VERDAD SEA UN MURO: a los lados (norte y sur) tiene que haber algo sólido pegado. Sin esto, en
+        //    una aldea con otra geometría la puerta podría aparecer suelta en el campo abierto.
+        if (!level.getBlockState(puerta.north()).isSolid() && !level.getBlockState(puerta.south()).isSolid()) {
+            return;
+        }
+        colocar(level, puerta, Blocks.DARK_OAK_DOOR.defaultBlockState()
+                .setValue(DoorBlock.FACING, Direction.EAST)
+                .setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER), 3);
+        colocar(level, puerta.above(), Blocks.DARK_OAK_DOOR.defaultBlockState()
+                .setValue(DoorBlock.FACING, Direction.EAST)
+                .setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER), 3);
+        DevilRpg.LOGGER.info("[Village] Aldea en {}: abierta la puerta de la taberna al almacen ({}), que es por"
+                + " donde va el cocinero a por lena", center, puerta.toShortString());
+    }
+
+    /**
      * Los <b>puntos de la taberna</b> donde come el pueblo: el centro de cada una de las seis mesas, a la cota del
      * pueblo. Los usa el goal de la taberna: cada aldeano va al suyo (repartidos por su UUID) y así no se apilan
      * todos en la misma mesa.
