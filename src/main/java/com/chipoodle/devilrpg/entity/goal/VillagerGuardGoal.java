@@ -964,6 +964,37 @@ public class VillagerGuardGoal extends Goal {
         return false;
     }
 
+    /** Radio (bloques) alrededor del almacén en el que un guardia cuenta como "estar en el almacén". */
+    private static final double RADIO_DE_LA_REVISION = 6.0D;
+
+    /**
+     * <b>REVISIÓN POR CERCANÍA</b> (lo pidió el jugador: *"¡DEBEN DE ARMARSE! diario tienen que checarlo, cada que se
+     * acerquen al almacén"*): si ese guardia está <b>junto al almacén</b>, se le revisa el equipo y se le pone lo mejor.
+     * <p>
+     * Va por <b>DISTANCIA</b>, no por haber llegado a un destino, para que no dependa de que su goal consiga navegar
+     * hasta el punto de apoyo del almacén: medido con el arnés (I94), los 5 guardias de la aldea del jugador se quedaban
+     * <b>sin nada</b> y con su marca de revisión en <b>0</b> durante toda la corrida — nunca llegaban a {@code equipar}.
+     * Lo llama el latido del pueblo ({@code VillageManager}), así que pasa <b>en cada pasada</b>: un guardia al que le
+     * falta el arma la coge en cuanto pase por delante del almacén, y el que ya va equipado revisa <b>una vez al día</b>
+     * si hay algo mejor.
+     * <p>
+     * Se reutiliza el propio goal como objeto temporal: así el equipo se coge con las MISMAS reglas de siempre (lo
+     * mejor, los encantados primero, y lo viejo de vuelta al almacén para que el herrero lo recicle).
+     */
+    public static boolean equiparSiEstaCercaDelAlmacen(ServerLevel level, Villager guardia, BlockPos center,
+            int objectiveIndex) {
+        BlockPos punto = VillageStorage.puntoDeApoyo(level, center);
+        if (guardia.distanceToSqr(punto.getX() + 0.5D, punto.getY() + 0.5D, punto.getZ() + 0.5D)
+                > RADIO_DE_LA_REVISION * RADIO_DE_LA_REVISION) {
+            return false; // no está en el almacén: ya irá (o ya lo mandará el latido)
+        }
+        VillagerGuardGoal revision = new VillagerGuardGoal(guardia, center, objectiveIndex);
+        if (revision.equipado(level) && !revision.revisionPendiente(level)) {
+            return true; // ya va equipado y ya revisó hoy: no se toca
+        }
+        return revision.equipar(level);
+    }
+
     /** Cuántas flechas lleva encima el arquero (en su mochila de aldeano). */
     private int flechas() {
         int total = 0;

@@ -2516,6 +2516,23 @@ public final class VillageManager {
         // herreros, clérigo y recolector) se alistan. Se calcula ANTES del reparto de obreros, porque un guardia
         // tiene su puesto y no puede acabar de constructor.
         repartirGuardia(level, aldeanos, center, objectiveIndex);
+        // Y EL EQUIPO, POR CERCANÍA Y EN CADA LATIDO (lo pidió el jugador: *"¡DEBEN DE ARMARSE! diario tienen que
+        // checarlo, cada que se acerquen al almacén"*): al guardia que esté JUNTO al almacén se le revisa el equipo
+        // AQUÍ, sin depender de que su goal consiga llevarle a un destino navegando — que es lo que estaba fallando:
+        // medido con el arnés, los 5 guardias de su aldea seguían sin nada y con la marca de revisión en 0 toda la
+        // corrida (nunca llegaban a `equipar`). El que pase por delante del almacén se arma; el que no, a la próxima.
+        for (Villager guardia : aldeanos) {
+            if (VillagerGuardGoal.esGuardia(guardia)) {
+                if (!VillagerGuardGoal.equiparSiEstaCercaDelAlmacen(level, guardia, center, objectiveIndex)
+                        && !guardia.getMainHandItem().is(net.minecraft.world.item.Items.BOW)) {
+                    // SI LE FALTA EL EQUIPO, EL PUEBLO LE MANDA AL ALMACÉN. Hace falta porque el goal del guardia puede
+                    // no estar corriendo (o quedarse atascado): medido con el arnés, los 5 guardias de su aldea se
+                    // quedaban sin nada toda la corrida con el equipo esperando en el almacén. Se le manda andando, como
+                    // hacen el obrero y el recolector: sin teletransportes.
+                    caminarHacia(guardia, VillageStorage.puntoDeApoyo(level, center), 0.6F);
+                }
+            }
+        }
         // MARCHA A LA GUARIDA: con la formación completa (4 espadachines y 3 arqueros) la milicia se va a atacar el
         // núcleo de la guarida de la aldea. Se decide aquí, que es donde ya está la lista de aldeanos.
         comprobarMarcha(level, aldeanos, center, objectiveIndex);
