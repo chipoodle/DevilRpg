@@ -457,14 +457,21 @@ public class VillagerGuardGoal extends Goal {
     public void stop() {
         // Se corta el servicio (se rindió en un puesto, se durmió, dejó de ser guardia...): queda dicho en el log,
         // que es lo único que permite reconstruir después por dónde andaba (el goal no se guarda con la partida).
-        if (stuckTicks > 0 || espera > 0) {
-            DevilRpg.LOGGER.info("[Village] Guardia {}: deja el puesto {} (paso {}, atascado {} ticks, plantado {}"
+        // SOLO SE AVISA CUANDO SE RINDE DE VERDAD (I94). Antes se logueaba con CUALQUIER `stuckTicks`/`espera` > 0, y
+        // como a este goal le cortan el servicio cada pocos ticks, el log del jugador se llenaba de
+        // "deja el puesto ... atascado 1-4 ticks" VARIAS VECES POR SEGUNDO (medido en su log, 22:16:34-22:16:59) y no
+        // se veía nada más. Un aviso por rendición real (`STUCK_LIMIT`), que es lo que sirve para diagnosticar.
+        if (stuckTicks >= STUCK_LIMIT) {
+            DevilRpg.LOGGER.info("[Village] Guardia {}: se rinde en el puesto {} (paso {}, atascado {} ticks, plantado {}"
                             + " ticks, aldea {})", villager.getUUID(), destino, paso, stuckTicks, espera,
                     objectiveIndex);
         }
         destino = null;
         enemigo = null;
-        espera = 0;
+        // OJO: **NO** se pone `espera` (el rato plantado en el puesto) a cero. Se ponía, y con el servicio cortándose
+        // cada pocos ticks el contador NUNCA llegaba a `ESPERA_TICKS`: el guardia se quedaba en el **paso 1** para
+        // siempre y no completaba una sola ronda (los `paso 1` del log del jugador). Al volver al mismo puesto el rato
+        // cuenta igual; si el puesto cambia, `puntoDeGuardia` reajusta el destino y el contador sigue su curso.
         restTicks = REST_TICKS;
         bajarEscudo();
         VillageManager.parar(villager);
