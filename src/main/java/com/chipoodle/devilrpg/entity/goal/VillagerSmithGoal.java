@@ -72,8 +72,7 @@ public class VillagerSmithGoal extends Goal {
      * pico <b>se gasta</b> picando (lo pidió el jugador), así que el de herramientas los va reponiendo.
      */
     private static final int OBJETIVO_PICOS = 2;
-    /** El pico de hierro cuesta lo de vanilla: 3 lingotes y 2 palos. */
-    private static final int LINGOTES_POR_PICO = 3;
+    /** Palos que cuesta un pico (el material cambia con el nivel: ver {@code recetaDePico}). */
     private static final int PALOS_POR_PICO = 2;
     /** Pepitas que hacen falta para un lingote (la receta de vanilla) y carne podrida para un cuero. */
     private static final int PEPITAS_POR_LINGOTE = 9;
@@ -651,12 +650,9 @@ public class VillagerSmithGoal extends Goal {
         // el minero se quedaría sin herramienta con la mina a medias. Es una <b>herramienta de trabajo</b>, no una
         // pieza del equipo de la milicia: lo pidió el jugador (*"debe haber un herrero de herramientas que haga
         // herramientas para que el minero haga su trabajo, similar a los otros 2 herreros"*).
-        if (contar(almacen, Items.IRON_PICKAXE) < OBJETIVO_PICOS && lingotes >= LINGOTES_POR_PICO
-                && contar(almacen, Items.STICK) >= PALOS_POR_PICO) {
-            return new Receta("Forjando", "Forjo un pico de hierro",
-                    List.of(new ItemStack(Items.IRON_INGOT, LINGOTES_POR_PICO),
-                            new ItemStack(Items.STICK, PALOS_POR_PICO)),
-                    new ItemStack(Items.IRON_PICKAXE));
+        Receta pico = recetaDePico(almacen);
+        if (pico != null) {
+            return pico;
         }
         // Y AQUÍ IGUAL: la armadura que MÁS falta (por piezas, sin importar de hierro o de cuero), para que el juego
         // de armaduras esté repartido y no se acumulen cascos mientras faltan botas.
@@ -678,6 +674,58 @@ public class VillagerSmithGoal extends Goal {
 
     /** Un candidato a fabricar: <b>cuánto falta</b> de esa pieza y la receta que la haría (o {@code null} sin material). */
     private record Candidato(int falta, @Nullable Receta receta) {
+    }
+
+    /**
+     * <b>EL PICO DEL MINERO, DEL MEJOR MATERIAL QUE EL ALMACÉN PUEDA PAGAR.</b> Lo pidió el jugador: *"que haga un
+     * pico de madera, y luego que piedra y luego hierro y así sucesivamente"*.
+     * <p>
+     * Se prueban de <b>mejor a peor</b> —<b>diamante</b> (3 diamantes), <b>hierro</b> (3 lingotes), <b>piedra</b> (3
+     * adoquines) y <b>madera</b> (3 tablones), todos con 2 palos— y se forja <b>el primero que se pueda pagar</b> y del
+     * que no haya ya {@link #OBJETIVO_PICOS} picos de ese nivel <b>o mejor</b>. Así:
+     * <ul>
+     *   <li>el pueblo <b>arranca con lo que tenga a mano</b> (madera del leñador: tablones y palos siempre hay) y
+     *       <b>sube solo</b> en cuanto aparecen la piedra, el hierro o el diamante: con un pico de madera el minero ya
+     *       saca adoquín, con el de piedra saca hierro y con el de hierro, diamante;</li>
+     *   <li>no se forja un pico mejor si ya hay dos de ese nivel o superior (que es el objetivo de siempre), y sí se
+     *       <b>mejora</b> el que hay: con dos picos de madera y hierro en el almacén, forja el de hierro.</li>
+     * </ul>
+     * <b>Por qué importa</b> (medido con el arnés, 23-sep-2026): en su partida el almacén se había quedado <b>sin
+     * picos y sin lingotes</b> (3 pepitas de hierro, ni uno) y el minero llevaba la etiqueta "Cargando material"
+     * esperando con `pico=SIN PICO(0/0)` (`no hay pico en el almacen ... espera` ×7): el <b>cebo del pico</b> roto —
+     * sin pico no hay mineral, sin mineral no hay lingotes, sin lingotes no hay pico—. El de madera lo rompe: 3
+     * tablones y 2 palos hay siempre.
+     * <p>
+     * <b>OJO con el oro</b>: no está en la lista a propósito. Un pico de oro <b>no sube de nivel, baja</b> (no puede
+     * con el hierro) y el minero no lo acepta (`VillagerMinerGoal.recoger` pide madera, piedra, hierro, diamante o
+     * netherite), así que forjarlo sería dejar el almacén con un pico que nadie usa.
+     */
+    @Nullable
+    private Receta recetaDePico(Container almacen) {
+        // De MEJOR a PEOR. Se construye aquí (y no en un campo estático) porque los `Items` son del registro y este
+        // goal se puede cargar antes de que estén puestos.
+        net.minecraft.world.item.Item[] herramientas = {Items.DIAMOND_PICKAXE, Items.IRON_PICKAXE,
+                Items.STONE_PICKAXE, Items.WOODEN_PICKAXE};
+        net.minecraft.world.item.Item[] materiales = {Items.DIAMOND, Items.IRON_INGOT, Items.COBBLESTONE,
+                Items.OAK_PLANKS};
+        String[] nombres = {"un pico de diamante", "un pico de hierro", "un pico de piedra", "un pico de madera"};
+        int palos = contar(almacen, Items.STICK);
+        for (int i = 0; i < herramientas.length; i++) {
+            int deEseNivelOMejor = 0;
+            for (int mejor = 0; mejor <= i; mejor++) {
+                deEseNivelOMejor += contar(almacen, herramientas[mejor]);
+            }
+            if (deEseNivelOMejor >= OBJETIVO_PICOS) {
+                continue; // ya hay picos de ese nivel (o mejores): no hace falta forjar más
+            }
+            if (palos < PALOS_POR_PICO || contar(almacen, materiales[i]) < 3) {
+                continue; // sin material para éste: se prueba el siguiente (más barato)
+            }
+            return new Receta("Forjando", "Forjo " + nombres[i],
+                    List.of(new ItemStack(materiales[i], 3), new ItemStack(Items.STICK, PALOS_POR_PICO)),
+                    new ItemStack(herramientas[i]));
+        }
+        return null;
     }
 
     /**

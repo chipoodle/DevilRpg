@@ -112,3 +112,28 @@ hay lingotes, sin lingotes no hay pico. La aldea nace con su remesa (1 pico de h
 arrancar esa cadena, pero en esta partida ya se gasto: es **del jugador** (como el pedernal de I101) — con
 un pico, o 3 lingotes de hierro, en el almacen, el minero vuelve a la mina.
 
+--- 3) EL PICO, DEL MEJOR MATERIAL QUE SE PUEDA PAGAR (madera -> piedra -> hierro -> diamante) -------
+El jugador lo pidio al ver lo de arriba: *"Que haga un pico de madera, y luego que piedra y luego hierro y
+asi sucesivamente"*. Se cambio la receta del herrero de herramientas (`VillagerSmithGoal.recetaDePico`): se
+prueban de MEJOR a PEOR —diamante (3 diamantes), hierro (3 lingotes), piedra (3 adoquines) y madera (3
+tablones), todos con 2 palos— y forja EL PRIMERO que pueda pagar y del que no haya ya 2 (`OBJETIVO_PICOS`)
+de ese nivel **o mejor**. El oro queda fuera a proposito (no sube de nivel, BAJA: no puede con el hierro, y
+el minero no lo acepta).
+
+MEDIDO (copia de su partida, MEDIR_MINERO, ~13 min, con el almacen SIN picos ni lingotes como en su
+partida):
+
+    [Village] El herrero de herramientas: Forjo un pico de madera     x3
+    [Arnes] MINERO t=3400 pos=508,63,639 dCara=23.56 pico=minecraft:wooden_pickaxe(1/59)
+    [Arnes] MINERO t=3560 pos=503,63,619 dCara=10.31 pico=minecraft:wooden_pickaxe(1/59)
+    [Arnes] MINA   t=…    pasos=16/240  ->  pasos=19/240
+    [Arnes] MINERO t=9480 pos=516,63,663 pico=minecraft:wooden_pickaxe(2/59) zurron=[0:4xminecraft:cobblestone]
+
+O sea: el herrero se forja el de **madera** (3 tablones y 2 palos: el leñador los trae), el minero **lo
+coge** (`wooden_pickaxe(1/59)`), **vuelve a la mina** (`dCara` 23,56 -> 10,31, su caseta en 503,617) y
+**vuelve a cavar** (16 -> 19 pasos, con adoquin en el zurron: con el de madera ya saca piedra). Y la cadena
+sigue sola: al gastarse el pico (59 usos) el herrero forja otro (3 en la corrida), y en cuanto haya **3
+adoquines** en el almacen forjara el de **piedra**, con **3 lingotes** el de **hierro** y con **3
+diamantes** el de **diamante** — porque con cada nivel el minero saca el mineral del siguiente.
+
+

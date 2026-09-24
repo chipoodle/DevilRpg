@@ -3039,7 +3039,29 @@ espera` (×7), su mano va `pico=SIN PICO(0/0)` y el almacén solo tiene **3 pepi
 el herrero solo saca palos. Es el **cebo del pico** roto (sin pico no hay mineral → sin mineral no hay lingotes → sin
 lingotes no hay pico): la aldea nace con su remesa (1 pico de hierro + 6 lingotes), pero en esta partida ya se gastó.
 Como el pedernal de I101, eso es **del jugador**: con un pico (o 3 lingotes de hierro) en el almacén, el minero vuelve
-a la mina.
+a la mina. **Y desde I106 ya no hace falta que sea de hierro** (el herrero se forja el de madera solo).
+
+### I106 · El pico del minero se forja del MEJOR material que el almacén pueda pagar
+
+Lo pidió el jugador al ver el cebo del pico (I105): *"Que haga un pico de madera, y luego que piedra y luego hierro y
+así sucesivamente"*.
+
+**Regla** (`VillagerSmithGoal.recetaDePico`, que es lo primero en la lista del herrero de herramientas): se prueban de
+**mejor a peor** —<b>diamante</b> (3 diamantes), <b>hierro</b> (3 lingotes), <b>piedra</b> (3 adoquines) y <b>madera</b>
+(3 tablones), todos con 2 palos— y se forja **el primero que se pueda pagar** y del que no haya ya `OBJETIVO_PICOS`
+(2) picos de ese nivel **o mejor**. Eso da las dos cosas que pidió:
+- **arranca con lo que haya** (tablones y palos hay siempre: los trae el leñador) y **sube solo**: con el de madera el
+  minero saca adoquín, con el de piedra saca hierro, con el de hierro saca diamante y con el de diamante, todo;
+- **mejora** lo que hay: con dos picos de madera y hierro en el almacén, forja el de hierro.
+
+**El oro queda fuera a propósito**: no sube de nivel sino que **baja** (un pico de oro no puede con el hierro) y el
+minero no lo acepta (`VillagerMinerGoal.recoger` pide madera, piedra, hierro, diamante o netherite), así que forjarlo
+sería dejar en el almacén un pico que nadie usa.
+
+**Medido** (MEDIR_MINERO, copia de su partida, ~13 min, con el almacén sin picos ni lingotes como el suyo):
+`El herrero de herramientas: Forjo un pico de madera` **×3**; el minero pasa a `pico=minecraft:wooden_pickaxe(1/59)`,
+**vuelve a la mina** (`dCara` 23,56 → 10,31) y **vuelve a cavar** (`pasos=16` → `19`, con adoquín en el zurrón); al
+gastarse el pico (59 usos) el herrero forja otro. Ver `tools/arnes/medidas-minero.txt`, apartado 3.
 
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
