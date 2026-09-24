@@ -3063,6 +3063,56 @@ sería dejar en el almacén un pico que nadie usa.
 **vuelve a la mina** (`dCara` 23,56 → 10,31) y **vuelve a cavar** (`pasos=16` → `19`, con adoquín en el zurrón); al
 gastarse el pico (59 usos) el herrero forja otro. Ver `tools/arnes/medidas-minero.txt`, apartado 3.
 
+### I107 · La despensa se come VARIADA: no hay comida que no se coma
+
+Lo pidió el jugador: *"revisa que todos los aldeanos coman toda la comida que se produce (zanahorias, betabel,
+etc.)"*.
+
+**Auditoría** (leída en el código, no supuesta): `VillagePantry.comida()` **cuenta bien** todo lo que produce el
+pueblo (pan, carne cruda y cocinada, patata asada, huevo estrellado, vegetales y trigo) y el censo del latido llega a
+`FENCE_RADIUS + 44` = **106** bloques, así que el que trabaja fuera del muro (el ganadero del anexo, a 43-57, el
+leñador, el minero) **también come**. En la corrida de medida: **0 avisos de hambre** con 19 aldeanos.
+
+**Pero había comida que no se comía nunca** (tres agujeros de verdad):
+1. **Los HUEVOS ESTRELLADOS**: `comida()` los cuenta, pero `sacarComida` no los tenía en ninguna lista → se quedaban
+   en la despensa para siempre (en su partida había **52**). Ahora entran en el grupo de lo cocinado.
+2. **LOS VEGETALES**: el orden era fijo (pan → cocinado → vegetales → crudo → trigo) y, como el cocinero repone el pan
+   tan rápido como se come, las zanahorias/patatas/betabeles **no se tocaban**: medido, en doce minutos subieron de
+   **103 a 225** con la despensa entre 500 y 1140 puntos y el pan siempre a cero.
+3. **LA PATATA ASADA** no cruzaba del almacén a la despensa (faltaba en el filtro del granjero, `VillageFarmGoal`):
+   se contaba como comida pero se quedaba en el almacén.
+
+**Regla:** `sacarComida` come **de lo que MÁS SOBRA** — el grupo con más puntos por encima de su reserva
+(`RESERVA_PAN` 4, `RESERVA_COCIDA` 4, `RESERVA_VEGETAL` 16, `RESERVA_CRUDA` 8, y el trigo con
+`RESERVA_DE_TRIGO_PARA_CRIAR` 4) — y, si ningún grupo tiene exceso, del orden de siempre: **la reserva es una
+preferencia, no un candado** (la aldea no se queda sin comer teniendo comida). Así la despensa se mantiene **variada
+y sin montones**: lo que se produce se come y lo que queda es la reserva del cocinero y del ganadero.
+**Medido** (MEDIR_HUERTA, ~9 min): las verduras **bajan** (`207 → 191`; antes solo subían), el pan ya no se come al
+instante (`0 → 36` en el cofre) y el trigo se acumula menos (300 semillas → 0, al compostero). Ver
+`tools/arnes/medidas-huerta.txt`, apartado 8.
+
+### I108 · La arboleda del pueblo se planta UNA vez (el que replanta es el leñador)
+
+Lo pidió el jugador dentro de la misma auditoría: buscar **redundancias** entre los goals y el latido.
+
+**Regla:** `VillageGenerator.asegurarArboleda` (que se llama **en cada latido**) solo planta si la arboleda está **a
+cero**: es el **arranque** de una aldea que nace sin bosque (una islita, un desierto, una llanura pelada) y la red de
+seguridad si algún día se queda sin nada. Antes rellenaba **gratis** cualquier hueco vacío en cada pasada, así que al
+**leñador** le reponían el plantón en cuanto talaba un árbol del pueblo: su ciclo (semilla → plantón del almacén →
+árbol → troncos) quedaba de adorno y **la madera salía de la nada**.
+**Medido:** `arboleda del pueblo plantada` **0 veces** en la corrida (antes salía en cada pasada), y el leñador siguió
+talando y **entregando al almacén** (`el lenador guardo 15/16 cosa(s) de su oficio`).
+**Y lo que NO es redundancia** (comprobado con grep, para que quede escrito): las **antorchas** las hace y las coloca
+**solo el minero** (el recolector solo las recoge del suelo y el latido no toca antorchas: las farolas del pueblo son
+*lanterns* de la construcción); el **pan** lo hornea solo el cocinero (el granjero lo transporta y `feedVillagers` deja
+un pan para la cría); los **tablones y palos** los hace solo el herrero de herramientas; y **fundir mineral** lo hacen
+el minero (su horno) y el herrero (su fragua) **a propósito** (cada uno con lo que tiene a mano; el herrero es la red
+de seguridad de lo que quede en el almacén).
+**Queda apuntado (redundancia real, sin tocar):** el **`JOB_SITE`** lo escriben **dos sitios** — el latido
+(`reclamarEstacionesDelPueblo`) y los propios goals (`reclamarElPuesto` del minero y del herrero, que además cogen el
+ticket del POI). Hoy conviven porque los goals aceptan el puesto que ya tienen, pero lo suyo es que el latido reparta y
+los goals solo lean.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 

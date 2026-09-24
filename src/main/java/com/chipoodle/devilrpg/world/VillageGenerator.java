@@ -3204,6 +3204,17 @@ public final class VillageGenerator {
             }
         }
         Block planton = plantonDelBioma(level, center);
+        // SI LA ARBOLEDA YA TIENE ALGO (un plantón o un árbol), NO SE TOCA: de replantarla se encarga el LEÑADOR con
+        // plantones de verdad sacados del almacén. Antes se rellenaba cada hueco vacío en CADA latido, así que al
+        // leñador le reponían el plantón GRATIS en cuanto talaba un árbol del pueblo: su ciclo (semilla -> plantón ->
+        // árbol -> troncos, ver `VillageStorage`/`VillagerLumberjackGoal`) quedaba de adorno y la madera salía de la
+        // nada. Esto es solo el ARRANQUE de una aldea que nace sin bosque (una islita, un desierto, una llanura
+        // pelada); si algún día la arboleda se queda a cero (se murió el leñador y nadie replantó), vuelve a arrancar.
+        for (BlockPos p : plantonesDeLaArboleda(center, nivel)) {
+            if (!level.getBlockState(p).isAir()) {
+                return;
+            }
+        }
         int puestos = 0;
         for (BlockPos p : plantonesDeLaArboleda(center, nivel)) {
             if (!level.getBlockState(p).isAir()) {

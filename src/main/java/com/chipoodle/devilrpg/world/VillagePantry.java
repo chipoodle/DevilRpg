@@ -10,6 +10,7 @@ import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
 import java.util.function.Predicate;
 
 /**
@@ -56,6 +57,23 @@ public final class VillagePantry {
      * tope. El granjero solo deja el trigo en la despensa.
      */
     public static final int RESERVA_DE_TRIGO_PARA_CRIAR = 4;
+    /**
+     * <b>RESERVAS DE LA DESPENSA: lo que la aldea NO se come de cada cosa.</b> Son <b>preferencias</b>, no candados
+     * (si nadie tiene exceso, se come de la reserva: la aldea no se queda sin comer teniendo comida), y sirven para que
+     * la comida se reparta <b>variada</b> en vez de comerse siempre lo mismo:
+     * <ul>
+     *   <li>{@link #RESERVA_PAN}: 4 hogazas (16 puntos). Son <b>3 las que pide vanilla para criar</b> (12 puntos de
+     *       comida en el inventario), así que con 4 el pan de la cría está a salvo.</li>
+     *   <li>{@link #RESERVA_COCIDA}: 4 piezas cocinadas (carne, patata asada, huevo estrellado).</li>
+     *   <li>{@link #RESERVA_VEGETAL}: 16 vegetales (32 puntos), que es el granero del pueblo (la huerta da mucho).</li>
+     *   <li>{@link #RESERVA_CRUDA}: 8 piezas crudas, para que el <b>cocinero</b> tenga qué cocinar (crudo = 2 puntos,
+     *       cocinado = 4: comerlo crudo sería tirar la mitad).</li>
+     * </ul>
+     */
+    public static final int RESERVA_PAN = 4;
+    public static final int RESERVA_COCIDA = 4;
+    public static final int RESERVA_VEGETAL = 16;
+    public static final int RESERVA_CRUDA = 8;
 
     private VillagePantry() {
     }
@@ -464,32 +482,80 @@ public final class VillagePantry {
         return huesos;
     }
 
-    /** Saca comida de la despensa por valor (para que coma la aldea): pan, carne, vegetales y trigo crudo. */
+    /**
+     * <b>Saca comida de la despensa por valor</b> (para que coma la aldea): pan, carne cocinada, vegetales, carne cruda
+     * y trigo — y, esto es lo que pidió el jugador, <b>de lo que MÁS SOBRA</b>, no siempre del pan.
+     * <p>
+     * <b>Por qué</b>: antes se comía en un orden fijo (pan → cocinado → vegetales → crudo → trigo), así que mientras
+     * hubiera pan horneado <b>los vegetales no se tocaban nunca</b> y se apilaban en la despensa (medido con el arnés,
+     * 23-sep-2026: en doce minutos las verduras subieron de 103 a 225 con la despensa entre 500 y 1140 puntos y el pan
+     * siempre a cero, porque el cocinero lo reponía tan rápido como se comía). Y había <b>comida que no se comía
+     * jamás</b>: los <b>huevos estrellados</b> se contaban como comida ({@link #comida}) pero no estaban en ninguna de
+     * las listas de aquí. Lo pidió el jugador: *"revisa que todos los aldeanos coman toda la comida que se produce
+     * (zanahorias, betabel, etc.)"*.
+     * <p>
+     * <b>La regla</b>: se come <b>un punto de la comida que más puntos tiene por encima de su reserva</b> (ver
+     * {@link #RESERVA_PAN} y compañía) y, si no hay exceso en ninguna, del orden de siempre: la reserva es una
+     * <b>preferencia</b>, no un candado. Así la despensa se mantiene <b>variada y sin montones</b> — lo que se produce
+     * se come y lo que queda es la reserva del cocinero y del ganadero.
+     */
     public static int sacarComida(@Nullable Container c, int puntos) {
+        if (c == null || puntos <= 0) {
+            return 0;
+        }
+        int sacados = 0;
         int faltan = puntos;
-        faltan -= sacar(c, s -> s.is(Items.BREAD), (faltan + FOOD_PER_BREAD - 1) / FOOD_PER_BREAD) * FOOD_PER_BREAD;
-        if (faltan <= 0) {
-            return puntos;
+        while (faltan > 0) {
+            Grupo grupo = elQueMasSobra(c);
+            if (grupo == null) {
+                break; // no hay nada que comer (ni exceso ni reserva)
+            }
+            if (sacar(c, grupo.filtro(), 1) != 1) {
+                break; // no debería pasar (se acaba de contar), pero no se insiste
+            }
+            faltan -= grupo.puntos();
+            sacados += grupo.puntos();
         }
-        // Carne cocinada y patata asada (lo que cocina el cocinero).
-        faltan -= sacar(c, s -> esCarneCocida(s) || s.is(Items.BAKED_POTATO),
-                (faltan + FOOD_PER_COOKED_MEAT - 1) / FOOD_PER_COOKED_MEAT) * FOOD_PER_COOKED_MEAT;
-        if (faltan <= 0) {
-            return puntos;
+        return Math.min(sacados, puntos);
+    }
+
+    /** Un grupo de comida de la despensa: qué es, cuántos puntos vale cada pieza y cuánto se le reserva. */
+    private record Grupo(Predicate<ItemStack> filtro, int puntos, int reserva) {
+    }
+
+    /** Los grupos de comida <b>en el orden de siempre</b> (el que se usa cuando no hay exceso de nada). */
+    private static List<Grupo> gruposDeComida() {
+        return List.of(
+                new Grupo(s -> s.is(Items.BREAD), FOOD_PER_BREAD, RESERVA_PAN),
+                // Carne cocinada, patata asada y HUEVO ESTRELLADO: lo que cocina el cocinero (el huevo estrellado
+                // faltaba aquí: se contaba como comida y no se comía nunca).
+                new Grupo(s -> esCarneCocida(s) || s.is(Items.BAKED_POTATO) || esHuevoEstrellado(s),
+                        FOOD_PER_COOKED_MEAT, RESERVA_COCIDA),
+                new Grupo(VillagePantry::esVegetal, FOOD_PER_VEGETABLE, RESERVA_VEGETAL),
+                new Grupo(VillagePantry::esCarneCruda, FOOD_PER_RAW_MEAT, RESERVA_CRUDA),
+                new Grupo(s -> s.is(Items.WHEAT), FOOD_PER_WHEAT, RESERVA_DE_TRIGO_PARA_CRIAR));
+    }
+
+    /** El grupo con <b>más exceso</b> (puntos por encima de su reserva) y, si ninguno tiene exceso, el primero con algo. */
+    @Nullable
+    private static Grupo elQueMasSobra(@Nullable Container c) {
+        Grupo mejor = null;
+        int mejorSobra = 0;
+        for (Grupo g : gruposDeComida()) {
+            int sobra = contar(c, g.filtro()) * g.puntos() - g.reserva();
+            if (sobra > mejorSobra) {
+                mejorSobra = sobra;
+                mejor = g;
+            }
         }
-        // Vegetales: zanahoria, patata y betabel.
-        faltan -= sacar(c, VillagePantry::esVegetal,
-                (faltan + FOOD_PER_VEGETABLE - 1) / FOOD_PER_VEGETABLE) * FOOD_PER_VEGETABLE;
-        if (faltan <= 0) {
-            return puntos;
+        if (mejor != null) {
+            return mejor;
         }
-        // Carne cruda y, como último recurso, trigo.
-        faltan -= sacar(c, VillagePantry::esCarneCruda, (faltan + FOOD_PER_RAW_MEAT - 1) / FOOD_PER_RAW_MEAT)
-                * FOOD_PER_RAW_MEAT;
-        if (faltan <= 0) {
-            return puntos;
+        for (Grupo g : gruposDeComida()) {
+            if (contar(c, g.filtro()) > 0) {
+                return g; // nadie tiene exceso: se come de la reserva (la aldea no se queda sin comer teniendo comida)
+            }
         }
-        faltan -= sacar(c, s -> s.is(Items.WHEAT), faltan) * FOOD_PER_WHEAT;
-        return puntos - Math.max(0, faltan);
+        return null;
     }
 }

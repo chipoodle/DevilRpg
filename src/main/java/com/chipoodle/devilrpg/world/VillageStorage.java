@@ -71,6 +71,17 @@ public final class VillageStorage {
         return villageCenter.offset(OFFSET.getX(), 0, OFFSET.getZ());
     }
 
+    /**
+     * <b>¿ES CARBÓN? Vale el carbón Y el CARBÓN VEGETAL.</b> La receta de la antorcha de vanilla acepta los dos (1 de
+     * carbón + 1 palo = 4 antorchas) y el carbón vegetal es lo que sale de <b>quemar un tronco en el horno</b> (1 a 1,
+     * la receta de vanilla): es la <b>única fuente de carbón que tiene el pueblo</b> cuando no hay veta de carbón a
+     * mano, y la leña la trae el leñador al almacén. Lo pidió el jugador: *"el carbón para hacer antorchas se puede
+     * hacer quemando logs en el furnace, ¿no?"*.
+     */
+    public static boolean esCarbon(ItemStack s) {
+        return s.is(Items.COAL) || s.is(Items.CHARCOAL);
+    }
+
     /** Centro del almacén <b>viejo</b> (el de antes de la migración 45), para poder vaciarlo y retirarlo. */
     public static BlockPos centroViejo(BlockPos villageCenter) {
         return villageCenter.offset(OFFSET_VIEJO.getX(), 0, OFFSET_VIEJO.getZ());

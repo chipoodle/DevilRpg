@@ -264,6 +264,68 @@ apagada, da lo mismo: la puerta en `512,63,666`, la ruta `alcance=SI fin=516,63,
 al almacén**, **13 tandas de cocina y 13 horneadas (26 panes)**, los tres bancales a **0 maduras**, los
 golems a 0, **2 rescates** (Ursula y el clérigo, los dos buenos) y **0 atascos** del cocinero.
 
+--- 8) LA COMIDA: QUE SE COMA TODO LO QUE SE PRODUCE (y la arboleda que se replantaba sola) ----------
+Lo pidió el jugador: *"revisa que todos los aldeanos coman toda la comida que se produce (zanahorias,
+betabel, etc.)"*, y de paso que buscara **redundancias** (su ejemplo: *"que el minero haga antorchas pero a
+la vez el manejador de la villa también las haga"*).
+
+AUDITORÍA de quién come y quién produce (leído en el código, no supuesto):
+  - `VillagePantry.comida()` cuenta BIEN todo lo que produce el pueblo: pan, carne cocinada, carne cruda,
+    patata asada, **huevo estrellado**, vegetales (zanahoria, patata, betabel) y trigo.
+  - El que come es el latido: `repartirRaciones` da **1 punto por aldeano y minuto** (las crías no gastan) y
+    `feedVillagers` deja un **pan** en el suelo al que aún no puede criar (para la cría de vanilla).
+  - Los aldeanos que trabajan FUERA del muro también comen: el censo del latido va a
+    `FENCE_RADIUS + 44` = **106** bloques, y el corral anexo está a 43-57.
+  - En la corrida: **0 avisos de hambre** (`pasarHambre` no cantó ni una vez) con 19 aldeanos.
+
+LO QUE ESTABA MAL (tres agujeros de verdad, y el jugador tenía razón):
+  1. **LOS HUEVOS ESTRELLADOS NO SE COMÍAN NUNCA.** `comida()` los cuenta como comida, pero `sacarComida`
+     no los tenía en NINGUNA de sus listas: se quedaban en la despensa para siempre (en su partida había
+     **52** en el cofre). Arreglado: entran en el grupo de lo cocinado.
+  2. **LAS VERDURAS CASI NUNCA SE COMÍAN.** El orden era fijo (pan -> cocinado -> verduras -> crudo ->
+     trigo), así que mientras hubiera pan horneado —y el cocinero lo repone tan rápido como se come— las
+     zanahorias, patatas y betabeles **no se tocaban**: medido, en doce minutos subieron de **103 a 225**
+     con la despensa entre 500 y 1140 puntos y el pan siempre a cero.
+  3. **LA PATATA ASADA no cruzaba del almacén a la despensa** (faltaba en el filtro del granjero): el
+     contador la cuenta como comida, así que si acababa en el almacén se quedaba allí muerta de risa.
+
+EL ARREGLO (VillagePantry): `sacarComida` ahora come **de lo que MÁS SOBRA** —el grupo con más puntos por
+encima de su reserva (`RESERVA_PAN` 4, `RESERVA_COCIDA` 4, `RESERVA_VEGETAL` 16, `RESERVA_CRUDA` 8, trigo
+`RESERVA_DE_TRIGO_PARA_CRIAR` 4)— y, si nadie tiene exceso, del orden de siempre: **la reserva es una
+preferencia, no un candado**, así que la aldea no se queda sin comer teniendo comida. Con eso la despensa se
+mantiene **variada y sin montones**.
+
+MEDIDO (copia de su partida, MEDIR_HUERTA, ~9 min):
+    COMIDA: despensa 1216 punto(s) [trigo 10 semillas 300 pan 0 harina 0 vegetales 207]
+    ...
+    COMIDA: despensa 1350 punto(s) [trigo 82 semillas 0 pan 36 harina 0 vegetales 191]
+O sea: **las verduras BAJAN** (207 -> 191, antes solo subían), **el pan ya no se come al instante** (0 -> 36
+en el cofre) y el trigo se acumula menos (300 semillas -> 0: se compostan). Y 0 avisos de hambre.
+
+REDUNDANCIAS (lo que pidió comprobar):
+  - **Las antorchas NO están duplicadas** (su ejemplo): solo el **minero** las fabrica (1 carbón + 1 palo =
+    4) y las coloca en el túnel; el **recolector** solo las recoge del suelo como botín, y el latido **no
+    toca antorchas** (las farolas del pueblo son *lanterns* de la construcción). Comprobado con un grep de
+    `Items.TORCH` en todo el mod.
+  - **LA ARBOLEDA SÍ estaba duplicada (arreglado)**: `VillageGenerator.asegurarArboleda` se llama en CADA
+    latido y rellenaba **gratis** cualquier hueco vacío de la arboleda, así que al leñador le reponían el
+    plantón en cuanto talaba un árbol del pueblo: su ciclo (plantón del almacén -> árbol -> troncos) era de
+    adorno y la madera salía de la nada. Ahora solo planta si la arboleda está **a cero** (el arranque de
+    una aldea sin bosque); de replantarla se encarga el leñador. Medido: `arboleda del pueblo plantada`
+    **0 veces** en la corrida (antes salía en cada pasada).
+  - **El PUESTO DE TRABAJO (`JOB_SITE`) lo escriben DOS sitios**: el latido
+    (`VillageManager.reclamarEstacionesDelPueblo`) y los propios goals (`reclamarElPuesto` del minero y del
+    herrero, que además cogen el ticket del POI). Hoy conviven (los goals aceptan el puesto que ya tienen),
+    pero es una redundancia real: lo suyo es que el latido sea el único que reparte y los goals solo lean.
+    Queda apuntado, no tocado.
+  - **Fundir mineral**: el minero (horno de su caseta) y el herrero (fragua) convierten crudo -> lingote.
+    NO es un duplicado dañino: cada uno funde lo que tiene a mano y el herrero es la red de seguridad de lo
+    que se quede en el almacén.
+  - **Animales, peces y el golem del pueblo**: el generador *siembra* el rebaño hasta el mínimo (2 por
+    especie, 4 gallinas), los peces del lago y un golem al fundar la aldea. Es a propósito (solo repone
+    hasta el mínimo; la cría la hace el ganadero) y NO se dispara en cada latido.
+
+
 --- 7) EL LEÑADOR QUE SE QUEDABA DE PIE ENCIMA DE SU CAMA --------------------------------------
 El jugador lo pidió al ver el hallazgo de la vuelta anterior: *"corrige al leñador"*. Lo medido (sonda
 `ATRAPADO`): la leñadora **Tomasa** (`3209085d`, oficio `fletcher`) amanecía **de pie sobre su cama** —

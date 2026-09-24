@@ -284,11 +284,12 @@ public class VillagerMinerGoal extends Goal {
         if (cuantosEnInventario(Items.OAK_PLANKS) < TABLONES_POR_MARCO) {
             return true; // sin madera no hay marcos
         }
-        if (cuantosEnInventario(Items.TORCH) <= 0 && !(cuantosEnInventario(Items.COAL) > 0
+        // Vale el carbón Y el carbón vegetal (VillageStorage.esCarbon): el vegetal lo saca él de un tronco.
+        if (cuantosEnInventario(Items.TORCH) <= 0 && !(cuantosEnInventario(VillageStorage::esCarbon) > 0
                 && cuantosEnInventario(Items.STICK) > 0)) {
             return true; // sin antorchas ni con qué hacerlas: la mina se queda a oscuras
         }
-        return hayMineralCrudo() && cuantosEnInventario(Items.COAL) <= 0
+        return hayMineralCrudo() && cuantosEnInventario(VillageStorage::esCarbon) <= 0
                 && cuantosEnInventario(VillageStorage::esLena) <= 0;
     }
 
@@ -566,14 +567,19 @@ public class VillagerMinerGoal extends Goal {
             algo |= sacarDelAlmacen(level, almacen, s -> s.is(Items.OAK_PLANKS),
                     Math.min(TABLONES_POR_VIAJE - tablones, libres));
         }
-        // 3) CARBÓN y PALOS para las antorchas (el carbón lo saca él mismo de la mina; esto es para arrancar).
+        // 3) CARBÓN y PALOS para las antorchas (el carbón lo saca él mismo de la mina; esto es para arrancar). Vale el
+        //    carbón y el CARBÓN VEGETAL (`VillageStorage.esCarbon`).
         if (cuantosEnInventario(Items.TORCH) < ANTORCHAS_POR_VIAJE) {
-            algo |= sacarDelAlmacen(level, almacen, s -> s.is(Items.COAL), CARBON_POR_VIAJE / 2);
+            algo |= sacarDelAlmacen(level, almacen, VillageStorage::esCarbon, CARBON_POR_VIAJE / 2);
             algo |= sacarDelAlmacen(level, almacen, s -> s.is(Items.STICK), PALOS_POR_VIAJE / 2);
         }
-        // 4) LEÑA para el horno, solo si no lleva carbón con el que fundir (y sin comerse la reserva de leña, que es
-        //    la misma regla que la fragua del herrero: `quitarLena` respeta `RESERVA_LENA`).
-        if (cuantosEnInventario(Items.COAL) <= 0 && cuantosEnInventario(VillageStorage::esLena) <= 0 && hayMineralCrudo()) {
+        // 4) LEÑA para el horno: para fundir y para hacer CARBÓN VEGETAL (1 tronco -> 1 carbón vegetal, la receta de
+        //    vanilla, que es con lo que se hacen las antorchas cuando no hay carbón de veta). Sin comerse la reserva
+        //    de leña, que es la misma regla que la fragua del herrero (`quitarLena` respeta `RESERVA_LENA`).
+        boolean necesitaCarbon = cuantosEnInventario(VillageStorage::esCarbon) <= 0
+                && cuantosEnInventario(Items.TORCH) < ANTORCHAS_POR_VIAJE;
+        if (cuantosEnInventario(VillageStorage::esCarbon) <= 0 && cuantosEnInventario(VillageStorage::esLena) <= 0
+                && (hayMineralCrudo() || necesitaCarbon)) {
             ItemStack lena = VillageStorage.quitarLena(level, center, 2);
             if (lena != null && !lena.isEmpty()) {
                 ItemStack resto = guardarEnInventario(lena);
@@ -934,18 +940,20 @@ public class VillagerMinerGoal extends Goal {
 
     /**
      * <b>El taller</b> de la caseta, una faena por vuelta: fundir un mineral crudo en el horno, colar
-     * {@value #ADOQUIN_POR_PEDERNAL} adoquines en la balsa por un pedernal, o hacer antorchas con el carbón y los
-     * palos. Devuelve {@code false} cuando ya no hay nada que hacer y toca bajar lo sacado al almacén.
+     * {@value #ADOQUIN_POR_PEDERNAL} adoquines en la balsa por un pedernal, <b>hacer carbón vegetal</b> quemando un
+     * tronco, o hacer antorchas con el carbón (o el carbón vegetal) y los palos. Devuelve {@code false} cuando ya no
+     * hay nada que hacer y toca bajar lo sacado al almacén.
      */
     private boolean trabajarEnElTaller(ServerLevel level) {
         // 1) FUNDIR: hierro, cobre y oro crudos -> lingotes. Combustible: su carbón (que saca él) o la leña del
         //    almacén (que respeta la reserva de I-combustible, como la fragua del herrero).
-        if (hayMineralCrudo() && (cuantosEnInventario(Items.COAL) > 0 || cuantosEnInventario(VillageStorage::esLena) > 0)) {
+        if (hayMineralCrudo() && (cuantosEnInventario(VillageStorage::esCarbon) > 0
+                || cuantosEnInventario(VillageStorage::esLena) > 0)) {
             ItemStack crudo = quitarDelInventario(VillagerMinerGoal::esMineralCrudo, 1);
             if (crudo != null) {
-                boolean conCarbon = cuantosEnInventario(Items.COAL) > 0;
+                boolean conCarbon = cuantosEnInventario(VillageStorage::esCarbon) > 0;
                 if (conCarbon) {
-                    gastarDelInventario(Items.COAL, 1);
+                    gastarDelInventario(VillageStorage::esCarbon, 1);
                 } else {
                     gastarDelInventario(VillageStorage::esLena, 1);
                 }
@@ -976,11 +984,29 @@ public class VillagerMinerGoal extends Goal {
                     ADOQUIN_POR_PEDERNAL);
             return true;
         }
-        // 3) ANTORCHAS: carbón + palo (la receta de vanilla), que son la luz de la mina.
+        // 3) CARBÓN VEGETAL: un tronco al horno (la receta de vanilla) cuando no le queda carbón y va justo de
+        //    antorchas. Es la única fuente de carbón del pueblo cuando no hay veta a mano, y la leña la trae el
+        //    leñador. Lo pidió el jugador: *"el carbón para hacer antorchas se puede hacer quemando logs en el
+        //    furnace, ¿no?"*.
+        if (cuantosEnInventario(VillageStorage::esCarbon) <= 0 && cuantosEnInventario(Items.TORCH) < ANTORCHAS_POR_VIAJE
+                && cuantosEnInventario(VillageStorage::esLena) > 0) {
+            gastarDelInventario(VillageStorage::esLena, 1);
+            ItemStack resto = guardarEnInventario(new ItemStack(Items.CHARCOAL, CARBON_POR_ANTORCHA));
+            if (!resto.isEmpty()) {
+                VillageStorage.guardar(level, center, resto);
+            }
+            level.playSound(null, villager.blockPosition(), SoundEvents.FURNACE_FIRE_CRACKLE, SoundSource.BLOCKS,
+                    0.6F, 0.8F);
+            VillageManager.ponerSuceso(villager, "Quema un tronco en carbon");
+            DevilRpg.LOGGER.info("[Village] El minero: quema un tronco en el horno y saca {} de carbon vegetal"
+                    + " (para las antorchas)", CARBON_POR_ANTORCHA);
+            return true;
+        }
+        // 4) ANTORCHAS: carbón (o carbón vegetal) + palo (la receta de vanilla), que son la luz de la mina.
         if (cuantosEnInventario(Items.TORCH) < ANTORCHAS_POR_VIAJE
-                && cuantosEnInventario(Items.COAL) >= CARBON_POR_ANTORCHA
+                && cuantosEnInventario(VillageStorage::esCarbon) >= CARBON_POR_ANTORCHA
                 && cuantosEnInventario(Items.STICK) >= 1) {
-            gastarDelInventario(Items.COAL, CARBON_POR_ANTORCHA);
+            gastarDelInventario(VillageStorage::esCarbon, CARBON_POR_ANTORCHA);
             gastarDelInventario(Items.STICK, 1);
             ItemStack resto = guardarEnInventario(new ItemStack(Items.TORCH, ANTORCHAS_POR_CARBON));
             if (!resto.isEmpty()) {
@@ -1019,7 +1045,7 @@ public class VillagerMinerGoal extends Goal {
             return true;
         }
         return s.is(Items.OAK_PLANKS) || s.is(Items.TORCH) || s.is(Items.STICK)
-                || s.is(Items.COAL) || VillageStorage.esLena(s);
+                || VillageStorage.esCarbon(s) || VillageStorage.esLena(s);
     }
 
     // --- el pico (la herramienta, que gasta y le forja el herrero de herramientas) -------------------

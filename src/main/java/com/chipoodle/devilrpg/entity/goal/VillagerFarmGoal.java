@@ -1028,6 +1028,10 @@ public class VillagerFarmGoal extends Goal {
         int traidos = VillagePantry.traspasar(VillageStorage.almacen(level, center), despensa,
                 s -> s.is(Items.WHEAT) || s.is(Items.BREAD) || s.is(Items.WHEAT_SEEDS) || s.is(Items.BEETROOT_SEEDS)
                         || s.is(Items.BONE_MEAL) || VillagePantry.esVegetal(s)
+                        // LA PATATA ASADA también es comida del pueblo (`VillagePantry.comida` la cuenta) y faltaba
+                        // aquí: si acababa en el almacén (el recolector la recoge del suelo, o la trae el jugador) se
+                        // quedaba allí para siempre y no se comía nunca.
+                        || s.is(Items.BAKED_POTATO)
                         || VillagePantry.esCarneCruda(s) || VillagePantry.esCarneCocida(s)
                         // Y LOS HUEVOS: el ganadero los sube al ALMACÉN (son del corral) y el cocinero los necesita en
                         // la DESPENSA para hacer huevos estrellados. Sin esta línea el huevo se quedaba en el almacén
