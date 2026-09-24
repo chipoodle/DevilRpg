@@ -3113,6 +3113,28 @@ de seguridad de lo que quede en el almacén).
 ticket del POI). Hoy conviven porque los goals aceptan el puesto que ya tienen, pero lo suyo es que el latido reparta y
 los goals solo lean.
 
+### I109 · El CARBÓN VEGETAL vale como carbón (y sin carbón el minero no se queda en bucle)
+
+Lo preguntó el jugador: *"el carbón para hacer antorchas se puede hacer quemando logs en el furnace, ¿no?"*. **Sí** (1
+tronco → 1 carbón vegetal, la receta de vanilla) y hacía falta, porque el pueblo **no producía carbón**: las antorchas
+se hacían **solo con `Items.COAL`** y el único carbón era el de una veta (o el que trajera el jugador).
+
+**Regla:** `VillageStorage.esCarbon` vale para **carbón y carbón vegetal** (la antorcha de vanilla acepta los dos) y
+el **minero**, en el taller de su caseta, **quema un tronco en el horno** cuando no le queda carbón y va justo de
+antorchas; la leña la trae el leñador al almacén y él se la lleva cuando la necesita (el `recoger` la pide también
+para esto).
+
+**Y EL ARNÉS CAZÓ UN BUCLE** (con una siembra nueva, `vaciarElCarbonDelAlmacen`): sin carbón en el cofre,
+`leFaltaDelAlmacen()` pedía carbón y palos para las antorchas, no los encontraba **nunca** y el minero se quedaba
+**yendo y viniendo del almacén** — **59 líneas** `yendo: Yendo al almacen (Cargando material -> 517,63,666)` y la mina
+**parada en el paso 19** (no llegaba al taller, así que tampoco podía fabricarse el carbón). Arreglado: **la leña
+también cuenta** como material de antorchas (con un tronco se fabrica el carbón vegetal), así que una ida al almacén le
+deja completo y se va a trabajar.
+**Medido** (MEDIR_MINERO con el carbón del almacén vaciado, ~6 min): `quema un tronco en el horno y saca 1 de carbon
+vegetal (para las antorchas)` **×2**, `hace 4 antorchas con un carbon y un palo` **×2**, su zurrón pasa por
+`1x charcoal` → `8x torch`, y **vuelve a cavar** (`caracol paso 17` y `paso 18`). Ver
+`tools/arnes/medidas-minero.txt`, apartado 4.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 

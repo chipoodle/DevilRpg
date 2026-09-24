@@ -136,4 +136,34 @@ sigue sola: al gastarse el pico (59 usos) el herrero forja otro (3 en la corrida
 adoquines** en el almacen forjara el de **piedra**, con **3 lingotes** el de **hierro** y con **3
 diamantes** el de **diamante** — porque con cada nivel el minero saca el mineral del siguiente.
 
+--- 4) EL CARBON VEGETAL: quemar un tronco para las antorchas (y un BUCLE que cazo el arnes) -----------
+El jugador pregunto: *"el carbon para hacer antorchas se puede hacer quemando logs en el furnace no? como
+ves?"* — Si (1 tronco -> 1 carbon vegetal, la receta de vanilla), y hacia falta: el pueblo **no producia
+carbon**, las antorchas se hacian SOLO con `Items.COAL` y el unico carbon era el de una veta (o el que trajera
+el jugador). Ahora `VillageStorage.esCarbon` vale para **carbon y carbon vegetal** (la antorcha de vanilla los
+acepta igual) y el minero, en el taller de su caseta, **quema un tronco en el horno** cuando no le queda
+carbon y va justo de antorchas; la lena la trae el lenador al almacen y el se la lleva cuando la necesita.
+
+**Y EL ARNES CAZO UN BUCLE** (con una siembra nueva que vacia el carbon del almacen, `vaciarElCarbonDelAlmacen`):
+sin carbon en el cofre, `leFaltaDelAlmacen()` pedia carbon y palos para las antorchas, no los encontraba
+NUNCA y el minero se quedaba **yendo y viniendo del almacen**: 59 lineas `yendo: Yendo al almacen (Cargando
+material -> 517,63,666)` y la mina **parada en el paso 19** (no llegaba al taller, asi que tampoco podia
+fabricarse el carbon). Arreglado: la **lena tambien cuenta** como material de antorchas (con un tronco se
+fabrica el carbon vegetal), asi que una ida al almacen le deja completo y se va a trabajar.
+
+MEDIDO (copia de su partida, MEDIR_MINERO con el carbon del almacen vaciado, ~6 min):
+
+    [Arnes] CARBON: 0 unidad(es) fuera del almacen (para medir el carbon vegetal del minero)
+    [Village] El minero: quema un tronco en el horno y saca 1 de carbon vegetal (para las antorchas)   x2
+    [Village] El minero: hace 4 antorchas con un carbon y un palo                                       x2
+    [Arnes] MINERO ... zurron=[0:6xstick 1:1xcharcoal 2:16xoak_planks 3:1xoak_log 4:2xflint]
+    [Arnes] MINERO ... zurron=[0:5xstick 1:8xtorch 2:16xoak_planks 4:2xflint]
+    [Village] El minero: caracol paso 17 en 499, 53, 620 / caracol paso 18 en 499, 53, 619
+    [Arnes] MINA ... pasos=19/240
+
+O sea: sin un solo carbon en el almacen, el minero **se fabrica el carbon vegetal con un tronco**, hace
+**antorchas** con el y **vuelve a bajar a cavar** (paso 17 y 18 en la corrida). El bucle de los 59 viajes
+desaparecio.
+
+
 

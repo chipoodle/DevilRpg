@@ -284,10 +284,13 @@ public class VillagerMinerGoal extends Goal {
         if (cuantosEnInventario(Items.OAK_PLANKS) < TABLONES_POR_MARCO) {
             return true; // sin madera no hay marcos
         }
-        // Vale el carbón Y el carbón vegetal (VillageStorage.esCarbon): el vegetal lo saca él de un tronco.
-        if (cuantosEnInventario(Items.TORCH) <= 0 && !(cuantosEnInventario(VillageStorage::esCarbon) > 0
-                && cuantosEnInventario(Items.STICK) > 0)) {
-            return true; // sin antorchas ni con qué hacerlas: la mina se queda a oscuras
+        // Vale el carbón Y el carbón vegetal (VillageStorage.esCarbon), y también la LEÑA: con un tronco se fabrica él
+        // el carbón vegetal en el horno de la caseta (ver `trabajarEnElTaller`). Sin contar la leña, un pueblo sin
+        // carbón dejaba al minero en BUCLE yendo y viniendo del almacén a por un carbón que no existe (medido con el
+        // arnés: 59 viajes "Cargando material" y la mina parada en el paso 19).
+        if (cuantosEnInventario(Items.TORCH) <= 0 && !((cuantosEnInventario(VillageStorage::esCarbon) > 0
+                || cuantosEnInventario(VillageStorage::esLena) > 0) && cuantosEnInventario(Items.STICK) > 0)) {
+            return true; // sin antorchas ni con qué hacerlas (carbón, un tronco para el carbón vegetal, o palos): la mina se queda a oscuras
         }
         return hayMineralCrudo() && cuantosEnInventario(VillageStorage::esCarbon) <= 0
                 && cuantosEnInventario(VillageStorage::esLena) <= 0;

@@ -414,8 +414,29 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
     /**
      * <b>LA MINA DEL MINERO</b> (etapa I, I102): ver el bloque de {@code MEDIR_MINERO} arriba para el montaje.
      */
-    private static void medirElMinero(ServerLevel level) {
-        level.setDayTime(6000L); // de dia: de noche el minero descansa (estaDescansando)
+    /**
+     * <b>Vacia el carbon (y el carbon vegetal) del almacen</b>: asi el minero TIENE que fabricarselo quemando un
+     * tronco en el horno (1 tronco -> 1 carbon vegetal, la receta de vanilla) para poder hacer antorchas. Es lo que se
+     * mide con esta siembra (ver {@code medirElMinero}).
+     */
+    private static void vaciarElCarbonDelAlmacen(ServerLevel level) {
+        net.minecraft.world.Container almacen = com.chipoodle.devilrpg.world.VillageStorage.almacen(level, CENTRO);
+        if (almacen == null) {
+            return;
+        }
+        int fuera = 0;
+        for (int i = 0; i < almacen.getContainerSize(); i++) {
+            net.minecraft.world.item.ItemStack s = almacen.getItem(i);
+            if (s.is(net.minecraft.world.item.Items.COAL) || s.is(net.minecraft.world.item.Items.CHARCOAL)) {
+                fuera += s.getCount();
+                almacen.setItem(i, net.minecraft.world.item.ItemStack.EMPTY);
+            }
+        }
+        DevilRpg.LOGGER.info("[Arnes] CARBON: {} unidad(es) fuera del almacen (para medir el carbon vegetal del"
+                + " minero)", fuera);
+    }
+
+    private static void medirElMinero(ServerLevel level) {        level.setDayTime(6000L); // de dia: de noche el minero descansa (estaDescansando)
         var aldeanos = level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(140));
         java.util.List<Villager> mineros = new java.util.ArrayList<>();
         for (Villager v : aldeanos) {
@@ -436,6 +457,11 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         // caracol no avanza de paso hasta que su galeria esta ENTERA (I102), y con el servidor headless corriendo a
         // los ticks que le deja el equipo eso son muchos minutos de reloj. Con la galeria ya abierta se ve si el minero
         // pone la pieza de esa celda y SIGUE bajando (paso 17 en adelante), que es lo que hay que comprobar.
+        // Y A LOS 10 s SE LE VACIA EL CARBON AL ALMACEN: es para poder medir que el minero se fabrica el CARBON
+        // VEGETAL quemando un tronco (sin carbon en el cofre, o lo saca de un tronco o no hace antorchas).
+        if (ticks == 200) {
+            vaciarElCarbonDelAlmacen(level);
+        }
         if (ticks == 1200) {
             int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
             for (int i = 1; i <= com.chipoodle.devilrpg.world.VillageGenerator.MINA_GALERIA_LARGO; i++) {
