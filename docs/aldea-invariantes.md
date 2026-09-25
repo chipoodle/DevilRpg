@@ -3426,6 +3426,33 @@ Tercera vuelta de I114/I115, y **ésta sí está medida como arreglo**:
 fuera y no se llega", no el de esta invariante), y **una** de guardia en `423,63,671` (el día que ningún candidato del
 abanico pasa las pruebas y se cae al puesto pedido). Apuntadas, no arregladas.
 
+### I117 · Al que REPARA también se le camina a una casilla de pie (y el portón vale para CUALQUIER faena)
+
+Cuarta vuelta, sobre el **obrero** (`21e951c8` = Filomena, recolector con `DevilRpgBuilder`), que salió en el resumen de
+I116: se rendía en `560,64,587` y `552,63,585` **sin moverse** de `521,63,612` y `519,63,609` (46 bloques), con
+`destino=air` y `ruta=1 nodos ... alcanza=NO`.
+
+- **`VillagerRepairGoal`**: se camina a la **casilla de pie** desde la que el hueco entra en el alcance
+  (`sitioDeCamino`, cacheada por hueco: son 7×7×6 celdas). El **alcance se sigue midiendo al hueco** (es donde hay que
+  poner el bloque) y el **atasco contra la casilla** a la que se va. **Medido: 2 rendiciones → 1**, y la que queda ya no
+  es a 46 bloques: es un **vallado a 3 bloques** de ella (`517,63,639`, `oak_fence`) donde no hay casilla de pie cerca.
+- **El portón vale para CUALQUIER faena** (extiende I112): el leñador se rendía **8 veces** en los árboles de **selva de
+  fuera** (`547,65,703`, `546,65,684`, `548,67,694`...) estando él **dentro** del muro (él a 61 del centro, el árbol a
+  96): la casilla de pie existe y se alcanza, **pero solo desde fuera**. Ahora `pasoDeCamino` cruza por el portón
+  también en la fase de TALAR. **Medido: 8 → 0.**
+- **La prueba del plano, a TODOS los candidatos** (no solo al punto ideal): el abanico de ±6 bloques alrededor del
+  punto también cae dentro del edificio y por ahí se colaba.
+- **Si no hay ningún candidato válido, el guardia se queda donde está** (antes se caía al puesto pedido, que es el de
+  dentro del edificio).
+
+**Y UN HALLAZGO QUE CAMBIA LA LECTURA**: las **6 rendiciones de guardias en `423,63,671`** que quedan **no son de la
+ronda**. Cuando se rinde la ronda el guardia deja OTRA línea (`me salto el puesto y sigo la ronda`) y en estas corridas
+no aparece; además la mayoría de esas 6 tienen `alcanza=SI` (hay ruta) y vienen de sitios distintos. Son de **otro goal
+del mismo aldeano** —lo más probable, el de recoger cosas (`VillagerPickupGoal`), persiguiendo un objeto que cayó
+**dentro** del edificio—. El log de `marcarPuntoFallido` **no dice qué goal se rindió**: eso es lo primero de la vuelta
+siguiente (una línea: la etiqueta del aldeano, que cada goal ya escribe con `ponerActividad`), y luego decidir si el de
+recoger debe perseguir objetos de dentro de las casas.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 

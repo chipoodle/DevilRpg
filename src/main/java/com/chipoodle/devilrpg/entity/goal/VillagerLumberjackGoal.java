@@ -1446,10 +1446,13 @@ public class VillagerLumberjackGoal extends Goal {
                 sitioDelResto = level.getBlockState(target).is(BlockTags.LOGS)
                         ? celdaDePieParaAlcanzar(level, target) : null;
             }
-            if (sitioDelResto != null) {
-                return sitioDelResto;
-            }
-            return target;
+            BlockPos paso = sitioDelResto != null ? sitioDelResto : target;
+            // Y SI HAY QUE CRUZAR LA MURALLA, PRIMERO EL PORTÓN (I112/I117): medido, el leñador se rendía 8 veces en
+            // los árboles de SELVA DE FUERA (`547,65,703`, `546,65,684`, `548,67,694`...) estando él DENTRO del muro
+            // (él a 61 bloques del centro y el árbol a 96): la casilla de pie existe y se alcanza, pero solo desde
+            // fuera, y sin el portón empujaba la pared.
+            BlockPos porton = VillageManager.pasoParaCruzarElMuro(level, center, villager, paso);
+            return porton != null ? porton : paso;
         }
         if (plazaDelPueblo == null) {
             plazaDelPueblo = VillageManager.casillaDeLaCalle(level, center);

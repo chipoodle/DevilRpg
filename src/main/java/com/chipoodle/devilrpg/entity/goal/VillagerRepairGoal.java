@@ -160,6 +160,29 @@ public class VillagerRepairGoal extends Goal {
         if (distancia > alcanceDe(target)) {
             // Al hueco se va POR EL CEREBRO en cada tick (ver VillageManager.caminarHacia): navegando a mano, el
             // cerebro del aldeano le da otro destino y se va a otra parte.
+            // PERO NO SE CAMINA AL HUECO: se camina a UNA CASILLA DE PIE desde la que se alcance (I114/I117). Al hueco
+            // —que es una casilla de aire que hay que rellenar— el planificador del juego devuelve una ruta de 1 nodo
+            // (`alcanza=NO`) y el obrero NO DA UN PASO: medido, Filomena se rindió en `560,64,587` y `552,63,585` sin
+            // moverse de `521,63,612` y `519,63,609`.
+            BlockPos sitio = sitioDeCamino(level, target);
+            if (sitio != null) {
+                // El atasco se mide contra la CASILLA a la que se va, no contra el hueco: el rodeo hasta ella puede
+                // empezar alejándose del hueco (la lección de I112). Y el progreso se reinicia cuando cambia el paso.
+                double hastaElSitio = Math.sqrt(villager.distanceToSqr(sitio.getX() + 0.5D, sitio.getY() + 0.5D,
+                        sitio.getZ() + 0.5D));
+                if (!sitio.equals(sitioDeCaminoDe)) {
+                    mejorDistancia = Double.MAX_VALUE;
+                    stuckTicks = 0;
+                }
+                VillageManager.caminarHacia(villager, sitio, 0.6F);
+                if (hastaElSitio < mejorDistancia - 0.5D) {
+                    mejorDistancia = hastaElSitio;
+                    stuckTicks = 0;
+                } else {
+                    stuckTicks++;
+                }
+                return;
+            }
             VillageManager.caminarHacia(villager, target, 0.6F);
             // Solo cuenta como atasco NO ACERCARSE (contar cada tick lo mandaba a empezar de cero a los 5 s).
             if (distancia < mejorDistancia - 0.5D) {
@@ -215,9 +238,59 @@ public class VillagerRepairGoal extends Goal {
     }
 
     private void irAlHueco() {
-        if (target != null) {
-            VillageManager.caminarHacia(villager, target, 0.6F);
+        if (target != null && villager.level() instanceof ServerLevel level) {
+            BlockPos sitio = sitioDeCamino(level, target);
+            VillageManager.caminarHacia(villager, sitio != null ? sitio : target, 0.6F);
         }
+    }
+
+    /** La casilla del hueco que se está reparando AHORA ({@link #sitioDeCamino}); sirve para no recalcularla por tick. */
+    @Nullable
+    private BlockPos sitioDeCaminoDe;
+
+    /** La casilla de pie desde la que se alcanza: a dónde se camina de verdad. */
+    @Nullable
+    private BlockPos sitioDeCamino;
+
+    /**
+     * <b>¿DESDE DÓNDE SE REPARA ESE HUECO?</b> La casilla de pie (aire a los pies y a la cabeza, suelo firme) desde la
+     * que el hueco queda dentro del alcance ({@link #alcanceDe}), o {@code null} si no hay ninguna cerca.
+     * <p>
+     * Se busca <b>una vez por hueco</b> (son 7×7×6 celdas): el resultado se guarda en {@link #sitioDeCamino} mientras el
+     * hueco no cambie.
+     * <p>
+     * <b>Por qué</b> (medido, 25-sep-2026): al obrero se le mandaba a <b>caminar al hueco</b> —una casilla de AIRE que
+     * hay que rellenar— y el planificador del juego le devolvía una ruta de <b>1 nodo</b> (`ruta=1 nodos hasta
+     * 521,63,612 alcanza=NO`): se quedaba plantado en `521,63,612` con el hueco a 46 bloques y se rendía (Filomena,
+     * `560,64,587` y `552,63,585`). Es el mismo patrón de I114 (a un bloque no se camina), aquí en el goal de reparar.
+     */
+    @Nullable
+    private BlockPos sitioDeCamino(ServerLevel level, BlockPos hueco) {
+        if (hueco.equals(sitioDeCaminoDe)) {
+            return sitioDeCamino;
+        }
+        BlockPos mejor = null;
+        double mejorDist = Double.MAX_VALUE;
+        double alcance = alcanceDe(hueco);
+        for (int dx = -3; dx <= 3; dx++) {
+            for (int dz = -3; dz <= 3; dz++) {
+                for (int dy = -3; dy <= 2; dy++) {
+                    BlockPos p = hueco.offset(dx, dy, dz);
+                    if (!VillageManager.esCeldaDePie(level, p)) {
+                        continue;
+                    }
+                    // Medio bloque de margen: el aldeano no se para justo en el centro de la casilla.
+                    double d = Math.sqrt(p.distSqr(hueco));
+                    if (d <= alcance - 0.5D && d < mejorDist) {
+                        mejorDist = d;
+                        mejor = p.immutable();
+                    }
+                }
+            }
+        }
+        sitioDeCaminoDe = hueco;
+        sitioDeCamino = mejor;
+        return mejor;
     }
 
     private boolean isBuilder() {

@@ -1362,7 +1362,8 @@ public class VillagerGuardGoal extends Goal {
             }
             for (int dz : new int[]{salto, -salto}) {
                 BlockPos vecino = puesto.offset(0, 0, dz);
-                if (!sePuedeEstar(level, vecino) || esPuntoMalo(level, vecino)) {
+                if (!sePuedeEstar(level, vecino) || esPuntoMalo(level, vecino)
+                        || dentroDeUnaConstruccion(level, vecino)) {
                     continue;
                 }
                 if (primeroDePie == null) {
@@ -1377,7 +1378,8 @@ public class VillagerGuardGoal extends Goal {
             }
             if (haciaDonde != 0) {
                 BlockPos vecino = puesto.offset(haciaDonde * salto, 0, 0);
-                if (sePuedeEstar(level, vecino) && !esPuntoMalo(level, vecino)) {
+                if (sePuedeEstar(level, vecino) && !esPuntoMalo(level, vecino)
+                        && !dentroDeUnaConstruccion(level, vecino)) {
                     if (primeroDePie == null) {
                         primeroDePie = vecino;
                     }
@@ -1399,7 +1401,12 @@ public class VillagerGuardGoal extends Goal {
                 return calle2;
             }
         }
-        return primeroDePie != null ? primeroDePie : puesto;
+        if (primeroDePie != null && seLlega(level, primeroDePie) && !dentroDeUnaConstruccion(level, primeroDePie)) {
+            return primeroDePie;
+        }
+        // NI ESO: el guardia se QUEDA DONDE ESTÁ —que es lo único de lo que consta que se llega— en vez de ir a
+        // empujar la pared de dentro. Medido (25-sep): por este respaldo se colaban todavía 6 rendiciones de golpe.
+        return villager.blockPosition();
     }
 
     /**
