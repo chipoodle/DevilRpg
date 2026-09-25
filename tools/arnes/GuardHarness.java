@@ -491,6 +491,20 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
                 com.chipoodle.devilrpg.world.VillageGenerator.puestoDelMinero(level, CENTRO),
                 com.chipoodle.devilrpg.world.VillageGenerator.balsaDelMinero(level, CENTRO),
                 com.chipoodle.devilrpg.world.VillageGenerator.hornoDelMinero(level, CENTRO));
+        // LA BOCA DE LA MINA Y LO QUE TIENE ENCIMA (I125): el jugador la vio SELLADA. Se vuelca la casilla de la boca,
+        // las de encima y **qué quiere el PLANO** en cada una: si el plano pide ahí un bloque, el obrero lo repone y
+        // tapa el pozo — que es la sospecha (el plano guardó la caseta con su suelo sólido sobre la bajada).
+        BlockPos boca = com.chipoodle.devilrpg.world.VillageGenerator.bocaDeLaMina(CENTRO, cota);
+        StringBuilder bocas = new StringBuilder();
+        for (int dy = -1; dy <= 3; dy++) {
+            BlockPos q = boca.above(dy);
+            var delPlano = com.chipoodle.devilrpg.world.VillageManager.blueprintState(level, INDICE, q);
+            String aqui = level.getBlockState(q).getBlock().toString().replace("Block{minecraft:", "").replace("}", "");
+            String plano = delPlano == null ? "-"
+                    : delPlano.getBlock().toString().replace("Block{minecraft:", "").replace("}", "");
+            bocas.append(q.toShortString()).append('=').append(aqui).append("(plano:").append(plano).append(") ");
+        }
+        DevilRpg.LOGGER.info("[Arnes] BOCA DE LA MINA t={} {} -> {}", ticks, boca.toShortString(), bocas.toString().trim());
         for (Villager v : mineros) {
             // DIAGNOSTICO (por que el minero se queda SIN GOAL CORRIENDO): se vuelca TODO lo que mira su `canUse`
             // —el turno y la comida, el sitio aparcado (I33) con su hora, y la lista COMPLETA de goals con cual

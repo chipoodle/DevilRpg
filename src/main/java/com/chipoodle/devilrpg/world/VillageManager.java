@@ -4838,7 +4838,24 @@ public final class VillageManager {
     }
 
     /**
-     * <b>¿El planificador del juego da una ruta que ALCANZA ese destino?</b> (no una que se queda corta).
+     * <b>¿El CEREBRO de ese aldeano va a donde le mandó su goal?</b> El `WALK_TARGET` de un aldeano lo escribe
+     * <b>también su cerebro</b> (sus paseos, su "andar hacia donde mira"), y `caminarHacia` se lo pone cada tick pero
+     * <b>no siempre gana</b>: medido, un guardia "Yendo a entrenar" con el cerebro apuntando al almacén, y una
+     * recolectora con su goal corriendo y la etiqueta `Paseando` — el jugador lo describió como *"caminando
+     * erráticamente, como balanceándose… como si hubiese dos tareas en su cerebro en conflicto"* (I119/I122/I125).
+     * <p>
+     * Sirve para que un goal <b>no cuente como atasco</b> mientras el aldeano va a otra parte por culpa del cerebro:
+     * reafirma su destino y sigue, en vez de rendirse y aparcar el sitio.
+     */
+    public static boolean elCerebroVaA(Villager villager, BlockPos destino) {
+        return villager.getBrain()
+                .getMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.WALK_TARGET)
+                .map(t -> t.getTarget().currentBlockPosition().equals(destino))
+                .orElse(false);
+    }
+
+    /**
+     * <b>¿El caminante del juego da una ruta que ALCANZA ese destino?</b> (no una que se queda corta).
      * <p>
      * Es la prueba que distingue "no hay camino" de "el camino es largo y da un rodeo": medido (24-sep-2026) los
      * guardias se rendían en mitad de un rodeo de <b>32 nodos</b> y en el momento de rendirse el propio log decía

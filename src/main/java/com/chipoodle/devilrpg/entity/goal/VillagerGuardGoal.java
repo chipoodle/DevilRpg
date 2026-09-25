@@ -112,6 +112,15 @@ public class VillagerGuardGoal extends Goal {
      */
     private static final int TICKS_PARA_PREGUNTAR_SI_HAY_RUTA = 60;
     /**
+     * Cuántas veces, como mucho, se le <b>reafirma el destino</b> al guardia cuando su <b>cerebro va a otra parte</b>
+     * (su paseo le pisa el `WALK_TARGET`: ver {@link VillageManager#elCerebroVaA}). El tope es lo que separa "el
+     * cerebro le está peleando el destino" de "este mundo de verdad no deja llegar": en el segundo caso se agota y el
+     * guardia se rinde y vuelve a su ronda, como siempre.
+     */
+    private static final int REAFIRMACIONES_DE_RONDA = 3;
+    /** Reafirmaciones gastadas en el destino actual (ver {@link #REAFIRMACIONES_DE_RONDA}). */
+    private int reafirmaciones;
+    /**
      * Ticks de "no me acerco" al puesto de entrenamiento antes de comprobar **si el guardia va de verdad hacia él**
      * (ruta viva que alcance + cerebro apuntando al puesto). Medido (I119): se rendía 12 s con el destino pisado por
      * otra faena o con la ruta viva quedándose corta. Es una comprobación cara (una consulta de ruta), de ahí que se
@@ -433,6 +442,7 @@ public class VillagerGuardGoal extends Goal {
             if (distancia < mejorDistancia - 0.5D) {
                 mejorDistancia = distancia;
                 stuckTicks = 0;
+                reafirmaciones = 0;
             } else {
                 stuckTicks++;
                 // PERO NO ES ATASCO SI HAY RUTA QUE LLEGA. La ronda es un círculo alrededor del pueblo y sus caminos
@@ -442,6 +452,17 @@ public class VillagerGuardGoal extends Goal {
                 if (stuckTicks == TICKS_PARA_PREGUNTAR_SI_HAY_RUTA
                         && VillageManager.hayRutaQueAlcanza(villager, destino)) {
                     stuckTicks = 0;
+                }
+                // Y TAMPOCO ES ATASCO SI EL CEREBRO VA A OTRA PARTE (I125): eso no es "no puedo llegar", es que **le
+                // están mandando a otro sitio** —el paseo del cerebro le pisa el `WALK_TARGET`, medido: un guardia
+                // "Yendo a entrenar" con el cerebro apuntando al almacén, y el jugador lo describió como *"caminando
+                // erráticamente, como balanceándose… dos tareas en su cerebro en conflicto"*. Se reafirma el destino y
+                // se sigue, con un TOPE de reafirmaciones para que un mundo que de verdad no deja acabe rindiéndose.
+                if (!VillageManager.elCerebroVaA(villager, destino) && reafirmaciones < REAFIRMACIONES_DE_RONDA) {
+                    reafirmaciones++;
+                    mejorDistancia = Double.MAX_VALUE;
+                    stuckTicks = 0;
+                    VillageManager.caminarHacia(villager, destino, VELOCIDAD);
                 }
             }
             VillageManager.ponerActividad(villager, equipando ? "Yendo al almacén"
