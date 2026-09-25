@@ -1410,6 +1410,19 @@ public class VillagerGuardGoal extends Goal {
     }
 
     /**
+     * <b>¿Esa casilla es de LA CALLE del pueblo?</b> Para el recorrido en anchura de {@link #calleDeLaPlaza}.
+     * <p>
+     * Es más estricta que {@link #sePuedeEstar} a propósito: exige <b>AIRE</b> a los pies y a la cabeza, no solo "sin
+     * colisión". Una <b>puerta abierta</b> tiene la forma de colisión vacía, así que con la prueba floja el recorrido
+     * <b>entraba por la puerta</b> y decía que el interior de un recinto amurallado era calle — que es exactamente el
+     * fallo medido (`423,63,671`, adonde los guardias iban a rendirse). <b>La ronda va por la calle, no abre puertas.</b>
+     */
+    private boolean esAireDeLaCalle(ServerLevel level, BlockPos p) {
+        return level.getBlockState(p).isAir() && level.getBlockState(p.above()).isAir()
+                && !level.getBlockState(p.below()).getCollisionShape(level, p.below()).isEmpty();
+    }
+
+    /**
      * <b>LA CALLE DEL PUEBLO</b>: las casillas de pie que están <b>conectadas andando con la plaza</b>, por un recorrido
      * en anchura desde ella (la plaza es lo único de lo que consta que se llega desde cualquier parte).
      * <p>
@@ -1444,7 +1457,7 @@ public class VillagerGuardGoal extends Goal {
                         if (Math.abs(q.getX() - plaza.getX()) > radio || Math.abs(q.getZ() - plaza.getZ()) > radio) {
                             continue;
                         }
-                        if (calle.contains(q.asLong()) || !sePuedeEstar(level, q)) {
+                        if (calle.contains(q.asLong()) || !esAireDeLaCalle(level, q)) {
                             continue;
                         }
                         calle.add(q.asLong());
