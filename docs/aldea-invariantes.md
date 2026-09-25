@@ -3551,6 +3551,31 @@ si no, **se vuelve a la ronda** (en vez de seguir 12 s empujando y aparcar la di
 `Yendo a entrenar` bajan de 7 a 2** (y el total de la corrida, de 13 a 9). Las 2 que quedan son del otro caso: ruta viva
 que **sí** alcanza y el guardia, aun así, no avanza hasta el límite; queda apuntado.
 
+### I122 · Las 2-3 rendiciones que quedan del entrenamiento: la ruta viva FLUCTÚA (intento medido y retirado)
+
+Con el aviso ya detallado (`cerebro=` y `nav=[…]`) se volvieron a medir las que quedan (2-3 por corrida), y son **tres
+sabores distintos**, todos con el destino en el patio y bien puesto:
+
+```
+… desde 498,63,656  cerebro=424, 63, 675  nav=[43 nodos hasta 461, 63, 664 NO alcanza]   <- la ruta viva se queda 40 corta
+… desde 458,63,654  cerebro=460, 63, 654  nav=[sin ruta]                                 <- el cerebro apunta A OTRA PARTE
+… desde 430,63,669  cerebro=424, 63, 675  nav=[16 nodos hasta 424, 63, 675 alcanza]      <- todo bien… y no avanza
+```
+
+O sea: **(1) la ruta viva fluctúa** —iba bien y el aviso la pilla corta—, **(2) el destino se pisa** de vez en cuando, y
+**(3) hay bloqueo físico** (aldeanos, animales o el propio hueco) con la ruta buena delante.
+
+**Intento que NO valió, y se retiró**: preguntar **en el momento de rendirse** si la ruta viva alcanza y el cerebro va
+al puesto, y si sí **reiniciar el contador** (con tope de 3 reintentos) en vez de aparcar. **Medido: 2-3 → 3**, ninguna
+mejora — y el propio log dice por qué: **cuando se rinde, la ruta casi nunca alcanza**, así que el reintento apenas se
+dispara. El árbol quedó como estaba (compila y pasa el lint).
+
+**Lo que queda apuntado para cuando se retome**: las tres causas piden cosas distintas — (1) y (2) son de **quién manda
+en el `WALK_TARGET`** (el cerebro del aldeano escribe el suyo y `caminarHacia` no siempre gana: la solución sería
+reafirmarlo y, si el goal no puede, volver a la ronda **sin** contar atasco mientras el destino no sea el suyo), y (3)
+necesita que el puesto de entrenamiento **no esté en un paso estrecho**: se puede correr el puesto a una casilla del
+patio con más aire (el campo es ancho: `z 673..686`) y volver a medir.
+
 ### I120 · La barraca de UN PISO con sus 8 camas: qué hay que tocar (estudio, aún sin hacer)
 
 Lo pidió el jugador junto con lo del campo de entrenamiento: *"así haces las barracas de un solo nivel junto con sus
