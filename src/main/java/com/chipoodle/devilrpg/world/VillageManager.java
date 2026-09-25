@@ -4759,8 +4759,16 @@ public final class VillageManager {
         CompoundTag datos = villager.getPersistentData();
         datos.putLong(PUNTO_FALLIDO_TAG, p.asLong());
         datos.putLong(PUNTO_FALLIDO_HASTA_TAG, villager.level().getGameTime() + PUNTO_FALLIDO_TICKS);
-        DevilRpg.LOGGER.info("[Village] {} no consigue llegar a {}: lo deja por {} min y sigue con lo demas",
-                villager.getUUID(), p, PUNTO_FALLIDO_TICKS / (60 * 20));
+        // <b>¿POR QUÉ no llegó?</b> Se apunta <b>desde dónde</b> se rindió y si el planificador del juego le da
+        // <b>ruta</b> hasta ahí. Son dos problemas distintos y hasta ahora el log no los distinguía: con `ruta=NO` hay
+        // algo en el MUNDO que tapia el camino (una losa que falta, agua, un marco en medio), y con `ruta=SI` el
+        // aldeano se quedó a medio camino por otra cosa. Se preguntó midiendo I113: el log decía QUÉ sitio fallaba
+        // pero no POR QUÉ, y sin eso no se puede arreglar (ni saber si hay que construir un escalón).
+        BlockPos desde = villager.blockPosition();
+        boolean hayRuta = villager.getNavigation().createPath(p, 1) != null;
+        DevilRpg.LOGGER.info("[Village] {} no consigue llegar a {} desde {} (ruta={}): lo deja por {} min y sigue con lo"
+                        + " demas",
+                villager.getUUID(), p, desde.toShortString(), hayRuta ? "SI" : "NO", PUNTO_FALLIDO_TICKS / (60 * 20));
     }
 
     /** ¿Ese sitio está <b>aparcado</b> para ese aldeano? (no llegó a él hace poco: ver {@link #marcarPuntoFallido}) */

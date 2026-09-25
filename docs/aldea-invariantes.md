@@ -3281,6 +3281,28 @@ pero tampoco se queda media faena muerto.
 propósito (así se ve que hay algo real que arreglar en el mundo), pero ese trozo de mina **sigue sin cavarse** hasta que
 el mundo cambie. Ver `tools/arnes/medidas-minero.txt`, apartado 6.
 
+**Y PARA PODER ARREGLARLO HAY QUE SABER POR QUÉ** (lo pidió el jugador: *"¿cómo que no puede alcanzar una celda? ¿en
+qué casos no podría?"*). El log decía **qué** sitio fallaba pero no **por qué**, así que `marcarPuntoFallido` ahora apunta
+también **desde dónde** se rindió el aldeano y **si el planificador le da ruta** (`createPath`) hasta ese sitio. Es la
+distinción que hacía falta: con `ruta=NO` hay algo en el **mundo** que tapia el camino (una losa que falta, agua, un
+marco en medio: eso se arregla construyendo) y con `ruta=SI` la ruta **existe** y el problema es otro (el aldeano no
+consigue **caminarla**).
+
+**Medido en la corrida siguiente**: **26 rendiciones, las 26 con `ruta=SI` y ninguna con `ruta=NO`**. Es decir: hoy
+**no** hay ningún sitio del pueblo al que el juego no sepa ir; los aldeanos se quedan a medio camino. Casos concretos:
+
+```
+[Village] e9329a25-… no consigue llegar a BlockPos{x=499, y=53, z=619} desde 501, 55, 621 (ruta=SI)   x3  <- el minero
+[Village] d9c02179-… no consigue llegar a BlockPos{x=423, y=63, z=671} desde 451, 63, 669 (ruta=SI)       <- y OTROS TRES
+[Village] bbd17505-… desde 437, 63, 653 · 6fceef7a-… desde 469, 63, 677 · 40186f40-… desde 430, 63, 648    GUARDIAS
+[Village] 3209085d-… no consigue llegar a BlockPos{x=555, y=76, z=692} desde 553, 68, 690 (ruta=SI)       <- el leñador
+```
+
+Dos cosas que salen de ahí y quedan apuntadas: (1) el minero se rinde **a 3 bloques** de la celda, siempre en el mismo
+sitio (`501,55,621`), dentro de un túnel de **una celda de ancho** con marcos de madera y escalones de medio bloque —
+la ruta existe pero es difícil de **andar**; (2) **cuatro guardias distintos** se rinden en el **mismo** punto
+(`423,63,671`) viniendo de cuatro sitios distintos: ése es un sitio del pueblo que hay que mirar.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
