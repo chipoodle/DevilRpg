@@ -1957,9 +1957,68 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
                 asediadores == 0 ? "-" : Math.round(masCerca));
     }
 
+    /**
+     * <b>Planta al LEÑADOR en la plaza y le cuelga dos TRONCOS FLOTANTES</b> pegados a un árbol de la arboleda del
+     * pueblo: es para poder medir la limpieza de restos (ver {@code medirElLenador}). El traslado hace falta porque en
+     * su partida el leñador se queda pegado a la <b>muralla</b> (527,63,672, r=62) intentando llegar al almacén: con la
+     * madera en el zurrón no tala nada y la medida se queda sin faena.
+     */
+    private static void sembrarRestosDelLenador(ServerLevel level) {
+        int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+        for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(140))) {
+            if (v.isBaby() || v.getVillagerData().getProfession()
+                    != net.minecraft.world.entity.npc.VillagerProfession.FLETCHER) {
+                continue;
+            }
+            BlockPos plaza = com.chipoodle.devilrpg.world.VillageManager.casillaDeLaCalle(level, CENTRO);
+            v.getNavigation().stop();
+            v.teleportTo(plaza.getX() + 0.5D, plaza.getY(), plaza.getZ() + 0.5D);
+            DevilRpg.LOGGER.info("[Arnes] LENADOR: plantado en la plaza {} (venia pegado a la muralla y no llegaba al"
+                    + " almacen: con la madera en el zurron no talaba)", plaza.toShortString());
+        }
+        int puestos = 0;
+        for (int dx = -34; dx <= -4 && puestos < 2; dx++) {
+            for (int dz = -38; dz <= -4 && puestos < 2; dz++) {
+                BlockPos columna = new BlockPos(CENTRO.getX() + dx, cota, CENTRO.getZ() + dz);
+                if (!com.chipoodle.devilrpg.world.VillageGenerator.enLaArboleda(CENTRO, columna)) {
+                    continue;
+                }
+                boolean hayArbol = false;
+                for (int dy = 0; dy <= 4; dy++) {
+                    if (level.getBlockState(columna.above(dy)).is(net.minecraft.tags.BlockTags.LOGS)) {
+                        hayArbol = true;
+                    }
+                }
+                if (!hayArbol) {
+                    continue; // solo junto a un arbol de la arboleda
+                }
+                for (int dy = 5; dy <= 10 && puestos < 2; dy++) {
+                    BlockPos flotante = columna.offset(4, dy, 0);
+                    if (!level.getBlockState(flotante).isAir()) {
+                        continue;
+                    }
+                    level.setBlock(flotante, net.minecraft.world.level.block.Blocks.OAK_LOG.defaultBlockState(), 3);
+                    DevilRpg.LOGGER.info("[Arnes] LENADOR: tronco FLOTANTE de prueba en {} (junto al arbol de {})",
+                            flotante.toShortString(), columna.toShortString());
+                    puestos++;
+                }
+            }
+        }
+        DevilRpg.LOGGER.info("[Arnes] LENADOR: {} tronco(s) flotante(s) de prueba colgados", puestos);
+    }
+
     private static void medirElLenador(ServerLevel level, FakePlayer pega) {
         int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
         var despensa = com.chipoodle.devilrpg.world.VillagePantry.despensa(level, CENTRO);
+        // A LOS 10 s, DOS COSAS PARA PODER MEDIR LA LIMPIEZA DE RESTOS DEL LENADOR (lo ultimo que se anadio):
+        //  (1) al lenador se le planta EN LA PLAZA: venia de FUERA, pegado a la muralla (527,63,672, r=62), y desde ahi
+        //      no conseguia llegar al almacen, asi que se quedaba con la madera en el zurron y NO TALABA NADA (medido:
+        //      "no consigue llegar a 517,63,666" y el contador de restos del mundo sin moverse en toda la corrida);
+        //  (2) se le cuelgan DOS TRONCOS FLOTANTES pegados a un arbol de la arboleda: al talar ese arbol, la pasada
+        //      nueva (`limpiarAlrededorDelTocon`, radio 6 alrededor del tocon) tiene que rematarlos.
+        if (ticks == 200) {
+            sembrarRestosDelLenador(level);
+        }
         // A los 10 s (chunks cargados y el latido ya repartido): huesos y harina de huesos, que es justo lo que en la
         // partida del jugador NO hay (medido: 0 de harina en toda la aldea y 1 hueso guardado, con los tres
         // composteros a nivel 1, 1 y 5 de 8).

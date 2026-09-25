@@ -1,0 +1,67 @@
+================================================================================
+MEDIDA: LOS TRONCOS FLOTANTES DEL LEÑADOR (invariante I110)
+Arnés: GuardHarness con MEDIR_LENADOR = true (día congelado, bichos barridos; a los 10 s siembra huesos y
+       harina de huesos en la despensa y —lo nuevo— PLANTA AL LEÑADOR EN LA PLAZA y le cuelga DOS TRONCOS
+       FLOTANTES de prueba junto a un árbol de la arboleda).
+Auditor: tools/arnes/troncos_flotantes.py (lee el guardado bloque a bloque y aplica LA MISMA prueba que el
+         mod: un tronco de pie, sin nada construido pegado y que NO llega al suelo por troncos).
+Mundo: COPIAS de la partida del jugador en run/world (aldea 0, centro 470,646, cota 63)
+Corridas: 3 (24-sep-2026). Líneas literales del log.
+================================================================================
+
+--- 1) LO QUE SE VE EN SU PARTIDA (y por qué lo preguntó) -------------------------------------
+El jugador mandó una captura con troncos colgando en el aire junto a la muralla y preguntó:
+*"¿por qué el leñador no quita todos los logs flotantes justo debajo del bosque donde tala? debería poder
+hacer eso"*.
+
+Escaneo de su guardado (radio 110 alrededor del centro, `troncos_flotantes.py`):
+
+    troncos=3459  FLOTANTES (restos de verdad, como los mira el leñador)=216
+      dentro de la muralla (r<=62): 120   |  en la ARBOLEDA: 0  |  fuera: 96
+
+O sea: **en la arboleda del pueblo 0** (ésos los limpia `buscarRestoColgando`, que solo mira ahí) y
+**96 troncos flotando en el monte** donde tala, que no limpiaba NADIE. Los 120 "de dentro" son en su
+mayoría **estructuras** (los postes del cobertizo del almacén en 515/518/521 y los marcos de la mina a
+y=57): salen en el escaneo porque un poste tampoco "llega al suelo por troncos" — por eso la búsqueda del
+mod solo miraba la arboleda, para no desmontar nada construido.
+
+--- 2) EL ARREGLO ------------------------------------------------------------------------------
+1) **Limpieza alrededor del tocón** (`VillagerLumberjackGoal.limpiarAlrededorDelTocon`): después de talar
+   se barre una caja de RADIO_LIMPIEZA = 12 (de cota-2 a cota+ALTURA_MAX+6) alrededor de la base y se
+   rematan los troncos que quedaron colgando (de pie, sin nada construido pegado y que no llegan al suelo
+   por troncos). Es lo que limpia "justo donde tala", que es lo que pidió.
+2) **Restos en el monte, cerca de él** (`buscarRestoEnElMonte`): además del barrido de la arboleda, se
+   buscan restos alrededor del propio leñador (RADIO_RESTO_CERCA = 20) **fuera de la muralla** (y como
+   mucho a FENCE_RADIUS + 40 del centro): según va andando por el monte, los va rematando. Se deja fuera
+   TODO lo de dentro (la muralla es de troncos de pie y los postes de las casetas) para no desmontar nada.
+
+--- 3) MEDIDO: LOS TRONCOS DE PRUEBA, REMATADOS -------------------------------------------------
+    [Arnes] LENADOR: plantado en la plaza 466, 63, 642 (venia pegado a la muralla y no llegaba al
+            almacen: con la madera en el zurron no talaba)
+    [Arnes] LENADOR: tronco FLOTANTE de prueba en 440, 68, 627 (junto al arbol de 436, 63, 627)
+    [Arnes] LENADOR: tronco FLOTANTE de prueba en 440, 69, 627 (junto al arbol de 436, 63, 627)
+    [Arnes] LENADOR: 2 tronco(s) flotante(s) de prueba colgados
+    [Village] El leñador: talo 5 tronco(s) (5 de la columna y 0 que colgaban) y desramó 55 hoja(s)
+    [Village] El leñador: remato 2 tronco(s) que quedaban colgando alrededor del tocon 437, 63, 616
+    [Village] El leñador: talo 6 tronco(s) ...
+
+Y el escaneo del mundo DESPUÉS de la corrida:
+
+    ANTES:   troncos=3459  FLOTANTES=216   (dentro 120 | arboleda 0 | fuera 96)
+    DESPUÉS: troncos=3480  FLOTANTES=216   (dentro 120 | arboleda 0 | fuera 96)
+
+  - Los **dos troncos flotantes de prueba que se colgaron a mano DESAPARECIERON** (los `remato 2` de
+    arriba: el tocón estaba a 11 bloques y el radio nuevo de 12 los alcanza).
+  - Y **no dejó ni un resto nuevo**: taló 3 árboles en la corrida y el contador de flotantes sigue igual
+    (216 -> 216), cuando con el radio de 8 de la primera prueba quedaba 1 nuevo por corrida.
+  - **NADA CONSTRUIDO SE TOCÓ** (la comprobación que importa): el poste del almacén en (515,64,667) sigue
+    ahí (antes 1, después 1) y los 66 marcos de la mina a y=57 siguen ahí (antes 66, después 66). El
+    escaneo del mundo de la corrida no cambió **ni una** de las columnas "de dentro".
+
+--- 4) Y UN ATAJO QUE SE CAZÓ DE PASO (pendiente) ------------------------------------------------
+En la PRIMERA corrida el leñador no taló NADA: se quedó **pegado a la muralla** en `527,63,672` (r=62,
+justo encima del muro, que allí va en diagonal: troncos de pie con postes de adoquín) intentando llegar
+al almacén (`no consigue llegar a 517,63,666`, y con la madera en el zurrón no hay faena). Al plantarlo
+el arnés **en la plaza** volvió a trabajar, así que el problema es **el camino desde fuera de la muralla
+hacia el almacén**: queda apuntado para la vuelta siguiente (es de la familia del tiro intermedio de
+I105 y de la puerta de la taberna de I103).

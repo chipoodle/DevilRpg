@@ -403,6 +403,10 @@ public class VillagerLumberjackGoal extends Goal {
         // EL RESTO DEL ÁRBOL: lo que cuelga de la columna (la parte torcida y las ramas). Sin esto el árbol se
         // quedaba a medias —ver `rematarElArbol`— y esos troncos se quedaban FLOTANDO para siempre.
         int ramas = talados.isEmpty() ? 0 : rematarElArbol(level, talados, target);
+        // Y UNA PASADA ALREDEDOR DEL TOCÓN: los restos que quedaron colgando un poco más allá de las ramas (el jugador
+        // los veía en el monte: *"¿por qué el leñador no quita todos los logs flotantes justo debajo del bosque donde
+        // tala?"*). Va después de `rematarElArbol` porque aquél va pegado a la columna y éste barre más ancho.
+        ramas += limpiarAlrededorDelTocon(level, target);
         int troncos = talados.size() + ramas;
         int altura = 0;
         for (BlockPos t : talados) {
@@ -450,6 +454,61 @@ public class VillagerLumberjackGoal extends Goal {
     private static final int TRONCOS_MAX_POR_ARBOL = 32;
     /** Radio (en X/Z, desde el tronco que se está talando) por el que se siguen buscando SUS troncos. */
     private static final int RADIO_RAMAS = 3;
+    /** Radio (X/Z) de la limpieza que se hace ALREDEDOR DEL TOCÓN después de talar (ver {@link #limpiarAlrededorDelTocon}). */
+    private static final int RADIO_LIMPIEZA = 12;
+    /** Tope de restos que se rematan en esa pasada, para no pasarse la tarde limpiando el monte. */
+    private static final int RESTOS_POR_LIMPIEZA = 16;
+    /**
+     * Radio (X/Z, alrededor del propio leñador) por el que se buscan restos <b>FUERA de la muralla</b>. No se puede
+     * barrer todo el bosque (sería carísimo), así que se mira a su alrededor: según va andando por el monte, los va
+     * rematando. Ver {@link #buscarRestoColgando}.
+     */
+    private static final int RADIO_RESTO_CERCA = 20;
+
+    /**
+     * <b>LIMPIA ALREDEDOR DEL TOCÓN.</b> Lo pidió el jugador: *"¿por qué el leñador no quita todos los logs flotantes
+     * justo debajo del bosque donde tala? debería poder hacer eso"*.
+     * <p>
+     * Después de talar se mira una caja de {@link #RADIO_LIMPIEZA} alrededor de la base (desde un bloque por debajo
+     * hasta {@link #ALTURA_MAX} + 4 por encima) y se <b>rematan</b> los troncos que quedaron <b>colgando</b>: de pie y
+     * sin nada construido pegado ({@link VillageGenerator#esTroncoDeArbol}, que deja fuera el muro, los postes y las
+     * casetas) y que <b>no llegan al suelo por troncos</b> ({@link #tieneApoyo}, la prueba de un árbol de verdad).
+     * <p>
+     * Por qué hacía falta, medido en su guardado con `build/troncos_flotantes.py` (la misma prueba que usa el mod,
+     * celda a celda): en la <b>arboleda del pueblo 0 restos</b> —ésos los limpia {@code buscarRestoColgando}— pero en
+     * el <b>monte</b> había <b>96</b> troncos flotando donde tala, porque la búsqueda de restos solo miraba dentro de
+     * la arboleda (fuera no se podía distinguir un resto de un poste del pueblo). Aquí no hay que distinguirlo: la
+     * caja está alrededor de un árbol que <b>acaba de talar él</b>.
+     *
+     * @return cuántos troncos ha rematado (se suman a los del árbol y se llevan al zurrón como la demás madera)
+     */
+    private int limpiarAlrededorDelTocon(ServerLevel level, BlockPos base) {
+        // La Y se mide DESDE LA COTA del pueblo (I1), no desde la del tocón: la aldea está nivelada y los árboles que
+        // él tala están a esa altura, así que la caja cubre el árbol entero sin depender de dónde cayó el bloque.
+        int cota = VillageGenerator.cotaDeLaPlaza(level, center);
+        int rematados = 0;
+        for (int dx = -RADIO_LIMPIEZA; dx <= RADIO_LIMPIEZA && rematados < RESTOS_POR_LIMPIEZA; dx++) {
+            for (int dz = -RADIO_LIMPIEZA; dz <= RADIO_LIMPIEZA && rematados < RESTOS_POR_LIMPIEZA; dz++) {
+                for (int y = cota - 2;
+                        y <= cota + ALTURA_MAX + 6 && rematados < RESTOS_POR_LIMPIEZA; y++) {
+                    BlockPos p = new BlockPos(base.getX() + dx, y, base.getZ() + dz);
+                    if (!level.getBlockState(p).is(BlockTags.LOGS)) {
+                        continue;
+                    }
+                    if (!VillageGenerator.esTroncoDeArbol(level, p) || tieneApoyo(level, p)) {
+                        continue; // construido (o pegado a algo construido), o cuelga de un árbol de verdad
+                    }
+                    picarTronco(level, p);
+                    rematados++;
+                }
+            }
+        }
+        if (rematados > 0) {
+            DevilRpg.LOGGER.info("[Village] El lenador: remato {} tronco(s) que quedaban colgando alrededor del"
+                    + " tocon {}", rematados, base.toShortString());
+        }
+        return rematados;
+    }
 
     /**
      * <b>Remata el árbol</b>: pica los troncos que <b>cuelgan</b> de la columna que se acaba de talar.
@@ -1025,6 +1084,59 @@ public class VillagerLumberjackGoal extends Goal {
         }
         if (mejor != null) {
             DevilRpg.LOGGER.info("[Village] El lenador: resto colgando en {} (no llega al suelo): lo remata",
+                    mejor.toShortString());
+            return mejor;
+        }
+        // Y FUERA DE LA MURALLA, PERO SOLO CERCA DE ÉL: los restos que quedan en el MONTE donde tala. Lo pidió el
+        // jugador con una captura (troncos colgando junto al muro): *"¿por qué el leñador no quita todos los logs
+        // flotantes justo debajo del bosque donde tala? debería poder hacer eso"*.
+        // Aquí no se puede barrer el bosque entero (sería carísimo), así que se mira alrededor del propio leñador; y se
+        // deja fuera TODO lo que está dentro del recinto (muralla incluida, que es de TRONCOS de pie, y los postes de
+        // las casetas) para no desmontar nada construido. Medido en su guardado (`build/troncos_flotantes.py`): en la
+        // arboleda 0 restos (los limpia el barrido de arriba) y en el monte 96 troncos flotando.
+        return buscarRestoEnElMonte(level, cota);
+    }
+
+    /**
+     * Restos colgando <b>en el monte</b> (fuera de la muralla), alrededor del leñador ({@link #RADIO_RESTO_CERCA}). Se
+     * piden las mismas pruebas que dentro: tronco <b>de pie y sin nada construido pegado</b>
+     * ({@link VillageGenerator#esTroncoDeArbol}) y que <b>no llegue al suelo por troncos</b> ({@link #tieneApoyo}).
+     */
+    @Nullable
+    private BlockPos buscarRestoEnElMonte(ServerLevel level, int cota) {
+        BlockPos mejor = null;
+        double mejorDist = Double.MAX_VALUE;
+        BlockPos aqui = villager.blockPosition();
+        for (int dx = -RADIO_RESTO_CERCA; dx <= RADIO_RESTO_CERCA; dx++) {
+            for (int dz = -RADIO_RESTO_CERCA; dz <= RADIO_RESTO_CERCA; dz++) {
+                int x = aqui.getX() + dx;
+                int z = aqui.getZ() + dz;
+                double delCentro = Math.sqrt(Math.pow(x - center.getX(), 2) + Math.pow(z - center.getZ(), 2));
+                if (delCentro <= VillageGenerator.FENCE_RADIUS + 1.0D
+                        || delCentro > VillageGenerator.FENCE_RADIUS + 40.0D) {
+                    continue; // dentro del pueblo (el muro y las casas) o más allá de su monte: no se toca
+                }
+                BlockPos resto = null;
+                for (int y = cota - 2; y <= cota + ALTURA_MAX + 4 && resto == null; y++) {
+                    BlockPos p = new BlockPos(x, y, z);
+                    if (!level.getBlockState(p).is(BlockTags.LOGS) || !VillageGenerator.esTroncoDeArbol(level, p)
+                            || tieneApoyo(level, p)) {
+                        continue;
+                    }
+                    resto = p.immutable();
+                }
+                if (resto == null || VillageManager.esPuntoFallido(villager, resto)) {
+                    continue;
+                }
+                double dist = villager.distanceToSqr(resto.getX() + 0.5D, resto.getY() + 0.5D, resto.getZ() + 0.5D);
+                if (dist < mejorDist) {
+                    mejorDist = dist;
+                    mejor = resto;
+                }
+            }
+        }
+        if (mejor != null) {
+            DevilRpg.LOGGER.info("[Village] El lenador: resto colgando EN EL MONTE en {} (no llega al suelo): lo remata",
                     mejor.toShortString());
         }
         return mejor;

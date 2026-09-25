@@ -3135,6 +3135,39 @@ vegetal (para las antorchas)` **×2**, `hace 4 antorchas con un carbon y un palo
 `1x charcoal` → `8x torch`, y **vuelve a cavar** (`caracol paso 17` y `paso 18`). Ver
 `tools/arnes/medidas-minero.txt`, apartado 4.
 
+### I110 · El leñador remata los troncos que quedan COLGANDO (donde tala y en el monte cerca de él)
+
+Lo pidió el jugador con una captura de troncos en el aire junto a la muralla: *"¿por qué el leñador no quita todos los
+logs flotantes justo debajo del bosque donde tala? debería poder hacer eso"*.
+
+**Lo que había** (escaneado su guardado con `tools/arnes/troncos_flotantes.py`, que aplica la misma prueba que el mod:
+tronco de pie, sin nada construido pegado y que **no llega al suelo por troncos**): **216 restos**, de los cuales
+**0 en la arboleda del pueblo** (ésos ya los limpiaba `buscarRestoColgando`) y **96 en el monte**, donde tala, que no
+limpiaba **nadie**. Los "de dentro" que salen en ese escaneo son en su mayoría **estructuras** (los postes del
+cobertizo del almacén, los marcos de la mina) — y por eso la búsqueda de restos **solo** miraba la arboleda: fuera no se
+puede distinguir un resto de un poste del pueblo.
+
+**Regla:**
+- **Alrededor del tocón** (`limpiarAlrededorDelTocon`): después de cada tala se barre una caja de `RADIO_LIMPIEZA` (12)
+  de ancho y desde la cota − 2 hasta la cota + `ALTURA_MAX` + 6, y se rematan los troncos colgando que haya dentro. Es
+  lo que limpia "justo donde tala".
+- **En el monte, cerca de él** (`buscarRestoEnElMonte`): además del barrido de la arboleda, se buscan restos en un
+  radio de 20 alrededor del **propio leñador**, y **solo fuera de la muralla** (y como mucho a `FENCE_RADIUS` + 40 del
+  centro): según va andando por el monte los va rematando. Se deja fuera **todo** lo de dentro —la muralla es de
+  troncos de pie, y los postes de las casetas— para no desmontar nada construido.
+
+**Medido** (MEDIR_LENADOR, con dos troncos flotantes colgados a mano junto a un árbol de la arboleda): el leñador taló
+y `remató 2 tronco(s) que quedaban colgando alrededor del tocón 437,63,616`; el escaneo del mundo después de la corrida
+da **216 → 216 flotantes con 3 árboles talados** (con el radio de 8 de la primera prueba quedaba 1 nuevo por corrida,
+o sea que el de 12 sí alcanza lo que deja la tala) y **ni una** de las columnas de dentro cambió: el poste del almacén
+en `(515,64,667)` sigue (1 → 1) y los **66** marcos de la mina a y=57 siguen (66 → 66). Ver
+`tools/arnes/medidas-lenador.txt`.
+
+**Y SE CAZÓ DE PASO (pendiente)**: en la primera corrida el leñador **no taló nada** porque se quedó **pegado a la
+muralla** (`527,63,672`, r = 62, justo encima del muro) intentando llegar al almacén (`no consigue llegar a
+517,63,666`); con la madera en el zurrón no hay faena. El problema es **el camino desde fuera de la muralla al
+almacén** (familia de I103/I105) y queda apuntado para la vuelta siguiente.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
