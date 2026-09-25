@@ -1193,8 +1193,17 @@ public final class VillageGenerator {
 
     /** Radio de la barraca (huella de 9x9). */
     private static final int BARRACA_RADIO = 4;
-    /** Lo que sube el <b>suelo del dormitorio</b> sobre la cota de la aldea (el forjado va uno por debajo). */
-    private static final int BARRACA_PISO2 = 4;
+    /**
+     * Lo que sube el <b>suelo del dormitorio</b> sobre la cota de la aldea (el forjado va uno por debajo).
+     * <p>
+     * <b>EN 0: LA BARRACA ES DE UN SOLO NIVEL</b> (lo pidió el jugador: *"así haces las barracas de un solo nivel
+     * junto con sus camas"*). Todo el trazado está parametrizado por este número, así que con 0 salen solos: las
+     * {@link #BARRACA_CAMAS 8 camas} y las dos arcas <b>en la planta baja</b>, <b>sin escalera</b> (los escalones son
+     * {@link #BARRACA_ESCALONES} = este número), <b>sin forjado</b> y con el <b>tejado a {@code nivel + 3}</b> y los
+     * faroles colgando de él ({@link #BARRACA_FAROL_DY} = 2). La sala de armas (maniquíes y hogar) sigue abajo, en su
+     * sitio. Ver I120.
+     */
+    private static final int BARRACA_PISO2 = 0;
     /**
      * Lo que sube el <b>farol del dormitorio</b> sobre la cota: va pegado al <b>tejado</b> (que está un bloque más
      * arriba), así que <b>cuelga</b> de él. Colocado <b>posado</b> —como estaba— no tiene nada debajo y queda
@@ -1293,7 +1302,13 @@ public final class VillageGenerator {
      * cama es un <b>POI</b> y el pueblo no puede perder ninguna (en vanilla cada cría pide una <b>cama libre</b>).
      */
     private static final int[] BARRACA_CAMAS_NORTE = {-3, -1, 1, 3};
-    private static final int[] BARRACA_CAMAS_SUR = {-3, -1, 1, BARRACA_CAMA_CORRIDA_DX};
+    /**
+     * La fila del <b>sur</b>. Con la barraca de DOS pisos, la cama del rincón sureste se corría al oeste
+     * ({@code BARRACA_CAMA_CORRIDA_DX}) para no caer en la columna de la escalera. Con la barraca <b>de UN piso</b> no
+     * hay escalera, así que la fila vuelve a ser <b>simétrica</b> ({@code -3, -1, 1, 3}) y la del rincón queda al lado
+     * del maniquí sureste (que está en {@code +2,+2}), sin pisarlo.
+     */
+    private static final int[] BARRACA_CAMAS_SUR = {-3, -1, 1, 3};
     /**
      * La fila ({@code dz}) de las dos <b>arcas</b> del dormitorio: van <b>juntas</b> contra el muro oeste (cofre
      * doble). La del muro <b>este</b> estaba en la celda del <b>último escalón</b> —el que sube se la encontraba de
@@ -1662,9 +1677,15 @@ public final class VillageGenerator {
                 for (int dy = 0; dy <= 2; dy++) {
                     colocar(level, new BlockPos(bx + dx, nivel + dy, bz + dz), Blocks.AIR.defaultBlockState(), 3);
                 }
-                colocar(level, new BlockPos(bx + dx, yPiso2 - 1, bz + dz), Blocks.OAK_PLANKS.defaultBlockState(), 3);
-                for (int dy = 0; dy <= 2; dy++) {
-                    colocar(level, new BlockPos(bx + dx, yPiso2 + dy, bz + dz), Blocks.AIR.defaultBlockState(), 3);
+                // EL FORJADO SOLO SI HAY PISO ARRIBA: con la barraca de un solo nivel (BARRACA_PISO2 = 0) el forjado
+                // caería en `nivel - 1`, que es EL SUELO DE PIEDRA de la sala de armas, y lo cambiaría por tablones.
+                if (BARRACA_PISO2 > 0) {
+                    colocar(level, new BlockPos(bx + dx, yPiso2 - 1, bz + dz),
+                            Blocks.OAK_PLANKS.defaultBlockState(), 3);
+                    for (int dy = 0; dy <= 2; dy++) {
+                        colocar(level, new BlockPos(bx + dx, yPiso2 + dy, bz + dz),
+                                Blocks.AIR.defaultBlockState(), 3);
+                    }
                 }
             }
         }

@@ -3592,6 +3592,36 @@ bloques huérfanos del piso viejo.
 proyecto ya cambia sus edificios: testigo + reconstrucción) y medir con `MEDIR_NOCHE`; si el censo de camas sale mal,
 caer a (b).
 
+### I121 · La barraca de un piso, HECHA para aldeas nuevas (`BARRACA_PISO2 = 0`)
+
+El trazado de la barraca está **parametrizado** por `BARRACA_PISO2`, así que el un-piso salió con **tres cambios
+pequeños** (comprobado: compila y pasa el lint):
+
+1. **`BARRACA_PISO2 = 4 → 0`**: con eso salen solos las **8 camas y las dos arcas en la planta baja**, **sin escalera**
+   (los escalones son `BARRACA_ESCALONES = BARRACA_PISO2`), **sin forjado**, y el **tejado a `nivel + 3`** con los
+   faroles colgando de él (`BARRACA_FAROL_DY = BARRACA_PISO2 + 2 = 2`). La sala de armas (maniquíes y hogar) se queda
+   donde estaba, en la planta baja.
+2. **La fila de camas del sur vuelve a ser simétrica** (`-3, -1, 1, 3`): la cama del rincón sureste se había corrido al
+   oeste **sólo** para no caer en la columna de la **escalera**; sin escalera, su sitio natural es el rincón… y ahí está
+   el **maniquí sureste** (`+2,+2`), así que la cama va a `+3` (al lado, sin pisarlo). Sin este cambio, con un solo
+   nivel la cama y el maniquí caían en la misma celda.
+3. **El forjado sólo se coloca si hay piso arriba**: con `BARRACA_PISO2 = 0` el forjado caía en `nivel - 1`, que es el
+   **suelo de piedra** de la sala de armas, y lo habría cambiado por tablones.
+
+**Y PARA LA ALDEA QUE YA EXISTE** —que es la del jugador, con sus guardias durmiendo arriba— **lo dice el propio lint**
+al compilar: *"Si el mundo ya construido tiene que rehacerse, sube `CURRENT_LAYOUT`"*. Ésa es la vía del proyecto, y
+**no se ha hecho todavía** a propósito, porque es una migración grande sobre su partida y hay que decidirla con él:
+
+- al subir `CURRENT_LAYOUT` la barraca **se vuelve a levantar** (con los dos pisos viejos encima hay que **limpiar el
+  volumen de arriba**, o quedarían forjado y tejado **flotando**: I14) y hay que **vaciar antes las dos arcas** al
+  almacén (con `traspasarElArca`, que no tira nada);
+- y hay que **medirlo** con `MEDIR_NOCHE` (8 camas, ninguna compartida, nadie sin cama y todos durmiendo) más un
+  escaneo de bloques huérfanos.
+
+Así que el encargo queda: **el campo de entrenamiento y su migración, hechos y medidos** (7 → 2 rendiciones); **la
+barraca de un piso, hecha para aldeas nuevas y probada a compilar/lint**; y **pendiente** (a) subir `CURRENT_LAYOUT`
+con las arcas vaciadas y (b) cerrar las 2 rendiciones que quedan del entrenamiento.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
 1. **¿Quién más LEE lo que cambio?** Buscar todos los usos (`grep`) y revisarlos uno a uno. *(Fallo real: cambié el
