@@ -338,6 +338,9 @@ Corre sobre la **aldea del jugador** (aldea 0) y vuelca cada 10 s: el estado de 
 plantones y huecos de sus doce plazas), los **huesos y el polvo de hueso** de la despensa, y dónde está y **a dónde
 camina** el leñador (flechero) y los granjeros, diciendo si su destino cae **dentro** de la valla (62) o **fuera**.
 
+**DÓNDE SE LE PLANTA** lo decide `PLANTAR_AL_LENADOR_EN_LA_PLAZA`: en `true` se le lleva a la plaza (para medir sus
+**limpiezas** de restos, I110) y en `false` se le planta **EN EL ATASCO DEL MURO** (ver abajo).
+
 A los 10 s le siembra al pueblo **8 huesos y 16 de polvo de hueso**, y le va **reponiendo** el polvo de hueso cada
 10 s (el granjero se lo lleva para abonar la huerta en cuanto lo ve, así que sin reponerlo solo se mediría el caso "no
 hay"). **Lo que mide**:
@@ -351,5 +354,47 @@ hay"). **Lo que mide**:
 
 Con el código de antes, el **mismo** montaje daba `destinoDentro=false` (Hortensia se iba al monte a ~110 bloques del
 centro con su arboleda a 105 y 16 de harina esperando en la despensa).
+
+### Las dos herramientas de la MURALLA (I112), que son de lectura del guardado
+
+No levantan servidor: leen los bloques del guardado y contestan preguntas que si no se contestan a ojo se contestan mal.
+
+```powershell
+# ¿HAY RUTA de pie entre dos celdas? (la misma regla que el juego: aire a los pies y a la cabeza, suelo firme debajo)
+python tools\arnes\ruta_atasco.py 527 672 517 666 63          # -> "HAY RUTA: 68 pasos" y el camino entero
+python tools\arnes\ruta_atasco.py 527 672 517 666 63 "New World (1)"
+
+# Los CUATRO portones del muro: ¿se puede pisar la casilla de dentro y la de fuera?
+python tools\arnes\portones_del_muro.py
+```
+
+`ruta_atasco.py` es el que **decidió I112**: enseñó que del atasco del leñador al almacén **sí hay ruta**, pero de **68
+pasos y empezando hacia el lado contrario** — que es justo lo que rompía la cuenta de "no me acerco = atascado".
+`portones_del_muro.py` comprueba la otra mitad: que la casilla a la que manda la regla nueva **existe y se pisa** en los
+cuatro portones (medido en su partida: los cuatro, dentro y fuera, `pisable=SI` sobre `grass_block`).
+
+**Cuidado con el modelo** (nos mordió en la primera pasada): el recorrido en anchura **no** es el planificador del
+juego. Deja subir 1 bloque (y bajar), **no** modela nadar, y con `dy` de hasta 2 bloques decía que se podía **saltar la
+valla** de un corral y daba por buena una ruta que el juego no da. Si un resultado sorprende, sospecha primero del
+instrumento (regla de oro de este LEEME).
+
+#### `PLANTAR_AL_LENADOR_EN_LA_PLAZA = false` — EL ATASCO DEL MURO (I112)
+
+Se le planta en **`CENTRO.offset(57, 0, 26)` = `527,63,672`** (el sitio exacto donde se quedaba pegado a la muralla en
+la partida del jugador) con **16 troncos** en el zurrón y la mochila vacía: así arranca **en fase ENTREGAR** y lo que
+se mide es si **cruza el portón** y **descarga en el almacén** — el almacén queda a **11 bloques** pero con la muralla
+en medio. Lo que hay que buscar en el log:
+
+```
+[Arnes] LENADOR: plantado EN EL ATASCO DEL MURO 527, 63, 672 con 16 troncos (venia en …)
+[Village] Llevando la madera va al otro lado del muro (517, 63, 666): cruza por el porton 531, 63, 646
+[Arnes] LENADOR LENADOR … pos=… destino=531,63,646 zurron=[madera=16] etiqueta="… / Llevando la madera"   <- al PORTÓN
+[Arnes] LENADOR LENADOR … destino=517,63,666 zurron=[madera=0]  etiqueta="… / Guardo 16 de lo suyo"        <- ENTREGÓ
+[Village] el lenador guardo 16 cosa(s) de su oficio en el almacen
+```
+
+**El criterio**: `no consigue llegar a BlockPos{x=517, y=63, z=666}` **cero** veces (antes: 22), al menos una entrega y
+que después vuelva a su faena (`Yendo al arbol`, `Abono la arboleda`, `talo N tronco(s)`). Medida en
+`medidas-lenador.txt`, apartado 6.
 
 

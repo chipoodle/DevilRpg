@@ -109,6 +109,10 @@ public class VillagerPickupGoal extends Goal {
     private int restTicks;
     private int stuckTicks;
     private double mejorDistancia = Double.MAX_VALUE;
+    /** El punto por el que se va ahora mismo (el destino, el portón del muro o un paso intermedio): si cambia, el
+     * progreso se mide de cero (ver {@code VillageManager.pasoParaCruzarElMuro}). */
+    @Nullable
+    private BlockPos puntoDePaso;
 
     public VillagerPickupGoal(Villager villager, BlockPos center, int objectiveIndex) {
         this.villager = villager;
@@ -267,6 +271,7 @@ public class VillagerPickupGoal extends Goal {
     public void start() {
         stuckTicks = 0;
         mejorDistancia = Double.MAX_VALUE;
+        puntoDePaso = null;
         ir();
     }
 
@@ -340,12 +345,22 @@ public class VillagerPickupGoal extends Goal {
                 // AL ALMACÉN (al otro lado del pueblo) SE VA POR TIRONES: la ruta directa desde fuera de la muralla no
                 // le sale al planificador y, sin ruta, el aldeano empuja la pared y se queda con lo suyo en el zurrón
                 // para siempre (medido con el arnés: el leñador pegado al muro en 527,63,672 con destino 517,63,666).
-                // Ver `VillageManager.tironConMemoria` / I105.
-                VillageManager.caminarHacia(villager, destinoTipo() == Destino.ALMACEN
-                        ? VillageManager.tironConMemoria(level, villager, destino, null) : destino, VELOCIDAD);
+                // Ver `VillageManager.tironConMemoria` / `pasoParaCruzarElMuro` (I105/I112).
+                BlockPos paso = destinoTipo() == Destino.ALMACEN
+                        ? VillageManager.tironConMemoria(level, center, villager, destino, null) : destino;
+                // EL ATASCO SE MIDE CONTRA EL PASO, no contra el destino: el rodeo del muro empieza alejándose del
+                // almacén y con la cuenta vieja el aldeano se rendía a los 8 s (I112).
+                if (!paso.equals(puntoDePaso)) {
+                    puntoDePaso = paso;
+                    mejorDistancia = Double.MAX_VALUE;
+                    stuckTicks = 0;
+                }
+                double hastaElPaso = Math.sqrt(villager.distanceToSqr(paso.getX() + 0.5D, paso.getY() + 0.5D,
+                        paso.getZ() + 0.5D));
+                VillageManager.caminarHacia(villager, paso, VELOCIDAD);
                 VillageManager.ponerActividad(villager, "Guardando lo suyo");
-                if (distancia < mejorDistancia - 0.5D) {
-                    mejorDistancia = distancia;
+                if (hastaElPaso < mejorDistancia - 0.5D) {
+                    mejorDistancia = hastaElPaso;
                     stuckTicks = 0;
                 } else {
                     stuckTicks++;

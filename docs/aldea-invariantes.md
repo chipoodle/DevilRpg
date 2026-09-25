@@ -3166,7 +3166,7 @@ en `(515,64,667)` sigue (1 → 1) y los **66** marcos de la mina a y=57 siguen (
 **Y SE CAZÓ DE PASO (pendiente)**: en la primera corrida el leñador **no taló nada** porque se quedó **pegado a la
 muralla** (`527,63,672`, r = 62, justo encima del muro) intentando llegar al almacén (`no consigue llegar a
 517,63,666`); con la madera en el zurrón no hay faena. El problema es **el camino desde fuera de la muralla al
-almacén** (familia de I103/I105) y queda apuntado para la vuelta siguiente.
+almacén** (familia de I103/I105) y queda apuntado para la vuelta siguiente. → **Resuelto en I112.**
 
 ### I111 · El minero no se queda en bucle con el zurrón lleno de RECADOS
 
@@ -3192,7 +3192,50 @@ minero **baja a la mina** y `faena: Picando` (`caracol paso 17` y `paso 18`, `pa
 subida son para **entregar de verdad** (pedernal, carbón, antorchas y lo sacado: `2x` cada uno). El bucle de
 "entrando y saliendo" desapareció. Ver `tools/arnes/medidas-minero.txt`, apartado 5.
 
+### I112 · Para cruzar la muralla se va POR EL PORTÓN (y el atasco se mide contra el paso, no contra el destino)
+
+Venía apuntado de I110: el leñador se quedaba **pegado a la muralla** en `527,63,672` intentando llegar al almacén
+(`517,63,666`, a **11 bloques**) y, con la madera en el zurrón, no talaba nada. La ronda anterior le puso el tirón
+(I105/I103) y **no lo arregló**; medido, el log se llenaba de `no consigue llegar a BlockPos{x=517, y=63, z=666}`.
+
+**La causa, medida con los bloques del guardado** (`build/ruta_atasco.py`, la misma regla de *casilla de pie* que usa
+el juego, sobre su partida): **la ruta existe**, pero es un **rodeo de 68 pasos que empieza yendo al ESTE** —
+`527,672 → 533,672 → 533,646 → portón 532,646 → 531,646 → 519,647 → 517,651 → … → 517,666`. La muralla es un anillo
+de troncos de radio 62 con **cuatro portones cardinales y nada más** (`VillageGenerator.entrance`), así que el camino
+al almacén desde fuera pasa por el portón este. Y ahí estaba el fallo de verdad: **el goal mide el atasco con la
+distancia en LÍNEA RECTA al destino**, que durante el rodeo **crece** → a los 160 ticks (8 s) se rendía, apuntaba el
+almacén como punto fallido (I33) y volvía a empezar: **22 rendiciones y 0 entregas** en una corrida.
+
+**Regla:**
+- `VillageManager.pasoParaCruzarElMuro` (y `esDeDentroDelMuro`): si el aldeano y el destino están en **lados distintos**
+  del anillo (radio `FENCE_RADIUS` medido en X/Z), el punto al que se camina es **la casilla de paso del portón del lado
+  al que se va** (la de dentro o la de fuera). Se elige el portón que **menos rodeo** pide —distancia al aldeano +
+  distancia al destino— y se exige que esa casilla **se pueda pisar** (`esCeldaDePie`); si ninguno de los cuatro vale,
+  devuelve `null` y todo queda **como estaba** (la regla nunca empeora). Va **primero** en `tironHacia` y en
+  `tironConMemoria`, así que la usan las tres piernas de entrega (leñador, recolector y minero). Mientras la cruza se
+  apunta el portón en los datos del aldeano **solo para no repetir el aviso** en el log (`DevilRpgPorton`).
+- **El atasco se mide contra el paso, no contra el destino**: `VillagerLumberjackGoal` y `VillagerPickupGoal` guardan
+  `puntoDePaso`; cuando cambia (portón → almacén, al cruzar) la cuenta de progreso se **reinicia**, así que el rodeo
+  cuenta como avance y la llegada se sigue midiendo contra el destino (la faena no se adelanta).
+
+**Medido** (MEDIR_LENADOR, copia de su partida, 280 s de juego; el arnés ahora planta al leñador **en el atasco mismo**
+—`CENTRO.offset(57,0,26)` = `527,63,672`— con 16 troncos en el zurrón):
+
+| concepto | antes | ahora |
+|---|---|---|
+| `no consigue llegar` al almacén `517,63,666` | **22** | **0** |
+| entregas del leñador en el almacén | 0 | **1** (16 troncos) |
+| árboles talados en la corrida | 0 | **2** (7 y 6 troncos, con sus remates) |
+| arboleda al final (t=5600) | — | 6 árboles, 6 plantones, **0 huecos** |
+
+El log lo enseña paso a paso: `Llevando la madera va al otro lado del muro (517, 63, 666): cruza por el porton
+531, 63, 646` → `destino=531,63,646` (va al portón) → a los 200 ticks `destino=517,63,666` (ya cruzó) → `Guardo 16 de
+lo suyo` y `el lenador guardo 16 cosa(s) de su oficio en el almacen`. Los **6** atascos que quedan en la corrida son de
+**otros** aldeanos y en otros sitios (bancales y la mina), **ninguno** en el almacén. Ver
+`tools/arnes/medidas-lenador.txt`, apartado 6.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
+
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
 1. **¿Quién más LEE lo que cambio?** Buscar todos los usos (`grep`) y revisarlos uno a uno. *(Fallo real: cambié el
@@ -3245,6 +3288,8 @@ Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento 
 | `build/herreria.py`, `build/huecos_ore.py`, `build/solares*.py` | Herrería, huecos y minerales flotantes, solares libres. |
 | `build/plantillas*.py`, `build/paleta.py` | Plantillas del juego: tamaños, puertas y qué bloques traen. |
 | `tools/audita_aldea.py` (**versionada**) | **Auditoría de las aldeas enteras**: faroles y vallas flotando, cofres tapados, puertas incompletas, camas sueltas y **portones con el hueco tapado** (I54). Lee las PROPIEDADES de los bloques y saca las aldeas del guardado (índice, centro y cota): `--aldea N`, `--caidas`, `--resumen`, `--centro X Z --cota N`. |
+| `tools/arnes/ruta_atasco.py` (**versionada**) | **¿HAY RUTA de pie entre dos celdas?** Recorrido en anchura sobre los bloques del guardado con la regla de *casilla de pie* (aire a los pies y a la cabeza, suelo firme debajo), movimientos a los 4 lados y **±1 de altura**: dice `HAY RUTA: N pasos` con el camino entero, o hasta dónde llega. **Es la herramienta que decidió I112** (del atasco `527,63,672` al almacén `517,63,666` hay ruta, pero son 68 pasos y **empieza yendo al lado contrario**). |
+| `tools/arnes/portones_del_muro.py` (**versionada**) | **Los cuatro portones cardinales del muro**: aplica `esCeldaDePie` a la **casilla de paso de dentro y de fuera** de cada uno (a la cota del pueblo) y dice `pisable=SI/NO` con los bloques que hay. Es lo que comprueba que la regla de I112 tiene a dónde mandar al aldeano. |
 | `build/aldeanos_todos.py` (ignorado) | **TODAS las entidades "villager" de un radio del guardado**, con su id real (`villager` **y** `zombie_villager`), sus `CustomName` (la etiqueta de dos líneas), su oficio, su cama y su **UUID formateado**. Es lo que distinguió "aldeano sin cama" de "cría sin cama" y de "aldeano-zombi dentro del recinto" (3b.61). |
 | `build/plantilla_casa.py` (ignorado) | **La plantilla del juego, capa a capa**: lee los `.nbt` de `village/plains/houses/*` del jar del cliente (van comprimidos con gzip) y vuelca tamaño y vista de planta. Es lo que dice si un hueco de una casa "viene del juego" o lo perdió el mundo (3b.65/I50). |
 | `build/plano_celda.py` (ignorado) | **El PLANO de la aldea del `devilrpg_villages.dat`**: saca `Blueprints -> [Index, Palette, Pos(long[]), State(int[])]` y contesta si una celda está en el plano (y con qué bloque) y qué dicen sus vecinas. Es lo que demostró que el hueco de la pared **no estaba en el plano** y por eso el obrero no lo reponía (3b.65/I50). |

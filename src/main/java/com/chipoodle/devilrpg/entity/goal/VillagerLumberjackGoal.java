@@ -298,6 +298,7 @@ public class VillagerLumberjackGoal extends Goal {
         workTicks = 0;
         stuckTicks = 0;
         mejorDistancia = Double.MAX_VALUE;
+        puntoDePaso = null;
         irAlObjetivo();
     }
 
@@ -330,10 +331,22 @@ public class VillagerLumberjackGoal extends Goal {
         double distancia = Math.sqrt(villager.distanceToSqr(target.getX() + 0.5D, target.getY() + 0.5D,
                 target.getZ() + 0.5D));
         if (distancia > alcance) {
-            VillageManager.caminarHacia(villager, target, VELOCIDAD);
+            // SE CAMINA HACIA EL PASO, NO SIEMPRE HACIA EL DESTINO, y el atasco se mide contra ESE paso. Medido con el
+            // arnés: yendo directos al almacén desde fuera del muro la ruta existe pero EMPIEZA ALEJÁNDOSE (da la vuelta
+            // hasta el portón), así que "no me acerco al destino" marcaba atasco a los 8 s y el leñador se rendía una y
+            // otra vez con el almacén apuntado como punto fallido (ver `VillageManager.pasoParaCruzarElMuro` / I112).
+            BlockPos paso = pasoDeCamino(level);
+            if (!paso.equals(puntoDePaso)) {
+                puntoDePaso = paso; // paso nuevo: el progreso se mide de cero
+                mejorDistancia = Double.MAX_VALUE;
+                stuckTicks = 0;
+            }
+            double hastaElPaso = Math.sqrt(villager.distanceToSqr(paso.getX() + 0.5D, paso.getY() + 0.5D,
+                    paso.getZ() + 0.5D));
+            VillageManager.caminarHacia(villager, paso, VELOCIDAD);
             // Atascado = NO ACERCARSE (invariante I3).
-            if (distancia < mejorDistancia - 0.5D) {
-                mejorDistancia = distancia;
+            if (hastaElPaso < mejorDistancia - 0.5D) {
+                mejorDistancia = hastaElPaso;
                 stuckTicks = 0;
             } else {
                 stuckTicks++;
@@ -1382,22 +1395,30 @@ public class VillagerLumberjackGoal extends Goal {
         if (target == null || !(villager.level() instanceof ServerLevel level)) {
             return;
         }
-        // AL ALMACÉN SE VA POR TIRONES si queda lejos o si hay que salvar la muralla: medido con el arnés, el leñador se
-        // quedaba pegado al muro (527,63,672) sin conseguir llegar a 517,63,666 y, con la madera en el zurrón, no
-        // talaba nada (ver `VillageManager.tironConMemoria` / I105).
-        if (fase == Fase.ENTREGAR) {
-            if (plazaDelPueblo == null) {
-                plazaDelPueblo = VillageManager.casillaDeLaCalle(level, center);
-            }
-            BlockPos destino = target;
-            VillageManager.caminarHacia(villager,
-                    VillageManager.tironConMemoria(level, villager, destino, plazaDelPueblo), VELOCIDAD);
-            return;
+        VillageManager.caminarHacia(villager, pasoDeCamino(level), VELOCIDAD);
+    }
+
+    /**
+     * <b>A DÓNDE SE CAMINA AHORA</b>: al destino y, si hay que <b>salvar la muralla</b> o el destino queda fuera del
+     * alcance del planificador, al <b>portón</b> o al punto intermedio que toque
+     * ({@link VillageManager#tironConMemoria} / {@code pasoParaCruzarElMuro}). El que llama sigue midiendo su
+     * <b>llegada</b> contra el destino —la faena no se adelanta— pero el <b>atasco</b> lo mide contra este paso.
+     */
+    private BlockPos pasoDeCamino(ServerLevel level) {
+        if (fase != Fase.ENTREGAR) {
+            return target;
         }
-        VillageManager.caminarHacia(villager, target, VELOCIDAD);
+        if (plazaDelPueblo == null) {
+            plazaDelPueblo = VillageManager.casillaDeLaCalle(level, center);
+        }
+        return VillageManager.tironConMemoria(level, center, villager, target, plazaDelPueblo);
     }
 
     /** La plaza del pueblo (el último recurso del tirón): se busca UNA vez, no en cada tick. */
     @Nullable
     private BlockPos plazaDelPueblo;
+
+    /** El punto por el que se va ahora mismo ({@link #pasoDeCamino}); si cambia, el progreso se mide de cero. */
+    @Nullable
+    private BlockPos puntoDePaso;
 }

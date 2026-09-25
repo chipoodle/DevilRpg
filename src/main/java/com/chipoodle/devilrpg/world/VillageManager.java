@@ -4195,6 +4195,8 @@ public final class VillageManager {
     /** Etiquetas del <b>tirón en curso</b> de un aldeano (ver {@link #tironConMemoria}). */
     private static final String TIRON_TAG = "DevilRpgTiron";
     private static final String TIRON_DESTINO_TAG = "DevilRpgTironDestino";
+    /** El portón del muro que está cruzando ahora (solo para no repetir el aviso del log en cada tick). */
+    private static final String PORTON_TAG = "DevilRpgPorton";
 
     /**
      * <b>EL TIRÓN QUE LE TOCA AHORA</b> a ese aldeano hacia {@code destino}, con <b>memoria</b> en sus datos
@@ -4205,9 +4207,16 @@ public final class VillageManager {
      * Se usa para ir al <b>almacén</b> desde lejos o desde fuera de la muralla: medido con el arnés, el leñador se
      * quedaba pegado al muro en `527,63,672` intentando llegar a `517,63,666` (no le salía la ruta y empujaba la pared),
      * y con la madera en el zurrón no talaba nada. Con el tirón va por pasos y sí llega.
+     * <p>
+     * Lo <b>primero</b> que se mira es <b>la muralla</b>: si el destino está al otro lado, el tirón es <b>el portón</b>
+     * ({@link #pasoParaCruzarElMuro}), que no se memoriza porque es geometría pura de cuatro puertas.
      */
-    public static BlockPos tironConMemoria(ServerLevel level, Villager villager, BlockPos destino,
+    public static BlockPos tironConMemoria(ServerLevel level, BlockPos centro, Villager villager, BlockPos destino,
             @Nullable BlockPos plaza) {
+        BlockPos porton = pasoParaCruzarElMuro(level, centro, villager, destino);
+        if (porton != null) {
+            return porton; // el muro manda: primero se cruza por el portón
+        }
         var datos = villager.getPersistentData();
         long destinoAhora = destino.asLong();
         if (datos.contains(TIRON_TAG) && datos.getLong(TIRON_DESTINO_TAG) == destinoAhora) {
@@ -4217,7 +4226,7 @@ public final class VillageManager {
                 return guardado; // sigue el tirón que tenía: aún no ha llegado y va hacia el destino
             }
         }
-        BlockPos nuevo = tironHacia(level, villager, destino, plaza);
+        BlockPos nuevo = tironHacia(level, centro, villager, destino, plaza);
         datos.putLong(TIRON_TAG, nuevo.asLong());
         datos.putLong(TIRON_DESTINO_TAG, destinoAhora);
         return nuevo;
@@ -4239,10 +4248,16 @@ public final class VillageManager {
      * del leñador (a 100+ bloques).
      * <p>
      * <b>El que llama sigue midiendo su llegada contra {@code destino}</b>, no contra el tirón: la faena no se
-     * adelanta (importante para el almacén, cuyas cajas se abren por distancia).
+     * adelanta (importante para el almacén, cuyas cajas se abren por distancia). Pero el <b>atasco sí se mide contra
+     * el tirón</b>, porque el rodeo del muro empieza alejándose del destino (ver
+     * {@link #pasoParaCruzarElMuro}).
      */
-    public static BlockPos tironHacia(ServerLevel level, Villager villager, BlockPos destino,
+    public static BlockPos tironHacia(ServerLevel level, BlockPos centro, Villager villager, BlockPos destino,
             @Nullable BlockPos plaza) {
+        BlockPos porton = pasoParaCruzarElMuro(level, centro, villager, destino);
+        if (porton != null) {
+            return porton; // el muro manda: primero se cruza por el portón
+        }
         if (distanciaA(villager, destino) <= ALCANCE_DE_LA_RUTA) {
             return destino; // cabe en una ruta: directo
         }
@@ -4256,6 +4271,83 @@ public final class VillageManager {
             }
         }
         return plaza != null ? plaza : destino; // el hub del pueblo (o el destino, como antes)
+    }
+
+    // --- cruzar la muralla: los cuatro portones cardinales -------------------------------------------
+
+    /**
+     * <b>¿ESE SITIO ESTÁ DENTRO DEL MURO?</b> El recinto es el anillo de radio
+     * {@link VillageGenerator#FENCE_RADIUS} alrededor del centro de la aldea: lo de dentro es el pueblo y lo de fuera es
+     * el monte. Se mide en horizontal (X/Z), que es lo que separa el muro.
+     */
+    public static boolean esDeDentroDelMuro(BlockPos centro, BlockPos p) {
+        double dx = p.getX() + 0.5D - centro.getX();
+        double dz = p.getZ() + 0.5D - centro.getZ();
+        return Math.sqrt(dx * dx + dz * dz) < VillageGenerator.FENCE_RADIUS;
+    }
+
+    /** Los <b>4 portones cardinales</b> del muro (ver {@code VillageGenerator.fence/entrance}), como desplazamientos. */
+    private static final int[][] PORTONES_DEL_MURO = {
+            {VillageGenerator.FENCE_RADIUS, 0}, {-VillageGenerator.FENCE_RADIUS, 0},
+            {0, VillageGenerator.FENCE_RADIUS}, {0, -VillageGenerator.FENCE_RADIUS}};
+
+    /**
+     * <b>LA CASILLA POR LA QUE SE CRUZA EL MURO</b> para ir de donde está el aldeano a {@code destino}, o {@code null}
+     * si los dos están del mismo lado (entonces no hay nada que cruzar y todo sigue como siempre).
+     * <p>
+     * <b>Por qué hace falta</b> (medido, 23-sep-2026): la muralla es un anillo de troncos de radio
+     * {@link VillageGenerator#FENCE_RADIUS} con <b>cuatro portones cardinales y nada más</b>. Desde fuera, el destino
+     * puede estar a <b>11 bloques</b> y aun así no haber ruta directa: la que hay da la vuelta por el portón. Se
+     * comprobó con un recorrido en anchura sobre el guardado del jugador: de `527,63,672` (el sitio donde se atascaba
+     * el leñador) a `517,63,666` (el almacén) hay ruta, pero son <b>68 pasos y empieza yendo al este</b>, hasta el
+     * portón `532,63,646`. La cuenta de "no me acerco = atascado" de los goals lo daba por perdido a los 8 s y el
+     * almacén acababa apuntado como punto fallido (22 veces en una medida). Yendo <b>primero al portón</b> el aldeano
+     * siempre se acerca, y en cuanto lo cruza esta cuenta deja de mandar y sigue su ruta normal hacia el destino.
+     * <p>
+     * Se elige el portón que <b>menos rodeo</b> pide (distancia al aldeano + distancia al destino) y cuya casilla de
+     * paso —la de dentro o la de fuera, según el lado al que se va— se pueda <b>pisar</b>. Si ninguno vale, devuelve
+     * {@code null} y todo queda como estaba (nunca empeora).
+     */
+    @Nullable
+    public static BlockPos pasoParaCruzarElMuro(ServerLevel level, BlockPos centro, Villager villager,
+            BlockPos destino) {
+        boolean destinoDentro = esDeDentroDelMuro(centro, destino);
+        if (esDeDentroDelMuro(centro, villager.blockPosition()) == destinoDentro) {
+            // Mismo lado: no hay muro de por medio (y se olvida el portón, para que el próximo cruce vuelva al log).
+            var datos = villager.getPersistentData();
+            if (datos.contains(PORTON_TAG)) {
+                datos.remove(PORTON_TAG);
+            }
+            return null;
+        }
+        int cota = VillageGenerator.cotaDeLaPlaza(level, centro);
+        int lado = destinoDentro ? -1 : 1; // hacia dentro (al centro) o hacia fuera
+        BlockPos mejor = null;
+        double mejorRodeo = Double.MAX_VALUE;
+        for (int[] porton : PORTONES_DEL_MURO) {
+            int ux = Integer.signum(porton[0]);
+            int uz = Integer.signum(porton[1]);
+            BlockPos paso = new BlockPos(centro.getX() + porton[0] + ux * lado, cota,
+                    centro.getZ() + porton[1] + uz * lado);
+            if (!esCeldaDePie(level, paso)) {
+                continue; // ese lado del portón no se puede pisar (agua, cuesta...): se prueba otro portón
+            }
+            double rodeo = distanciaA(villager, paso) + Math.sqrt(paso.distSqr(destino));
+            if (rodeo < mejorRodeo) {
+                mejorRodeo = rodeo;
+                mejor = paso;
+            }
+        }
+        if (mejor != null) {
+            // El log, UNA vez por portón y aldeano: esto se llama en cada tick mientras cruza.
+            var datos = villager.getPersistentData();
+            if (!datos.contains(PORTON_TAG) || datos.getLong(PORTON_TAG) != mejor.asLong()) {
+                datos.putLong(PORTON_TAG, mejor.asLong());
+                DevilRpg.LOGGER.info("[Village] {} va al otro lado del muro ({}): cruza por el porton {}",
+                        villager.getName().getString(), destino.toShortString(), mejor.toShortString());
+            }
+        }
+        return mejor;
     }
 
     /**

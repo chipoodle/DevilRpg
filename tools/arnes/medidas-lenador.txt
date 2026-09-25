@@ -86,3 +86,53 @@ arreglo tiene que ser otro: llevar al aldeano **a lo largo del muro hasta la ent
 el portón). Es de la familia de I103 (la puerta de la taberna) y de I105, y queda para la vuelta siguiente;
 el tirón se queda puesto porque **sí sirve para los destinos LEJANOS** (el monte, a 60-100 bloques).
 
+--- 6) EL ATASCO DE LA MURALLA, RESUELTO: el portón (I112) ----------------------------------------
+Lo que faltaba no era un tirón más listo: era **saber dónde está la puerta**. La muralla es un anillo de
+troncos de radio 62 con **cuatro portones cardinales y nada más** (`VillageGenerator.entrance`), y desde
+fuera el camino al almacén **da la vuelta por el portón**: comprobado con un recorrido en anchura sobre su
+guardado (`build/ruta_atasco.py`, la misma regla de "casilla de pie" que el juego):
+
+    de 527,63,672 (el atasco) a 517,63,666 (el almacén): HAY RUTA, 68 pasos
+      527,672 -> 533,672 -> 533,646 -> PORTÓN 532,646 -> 531,646 -> 519,647 -> 517,651 -> ... -> 517,666
+
+O sea que la ruta **existe**, pero **empieza yendo al este** (alejándose del almacén) y el leñador la daba
+por perdida: el goal mide el atasco con la **distancia en línea recta al destino**, que durante el rodeo
+**crece**, así que a los 160 ticks (8 s) se rendía y apuntaba el almacén como punto fallido — de ahí las 22
+líneas `no consigue llegar a BlockPos{x=517, y=63, z=666}` de arriba y las 0 entregas.
+
+El arreglo (I112) son dos cosas:
+  - `VillageManager.pasoParaCruzarElMuro`: si el aldeano y el destino están en **lados distintos** del
+    anillo (radio 62 medido en X/Z), el punto al que se camina es **la casilla de paso del portón** del lado
+    al que se va (el que menos rodeo pide: distancia al aldeano + distancia al destino; se comprueban los
+    cuatro y se exige que la casilla se pueda pisar). En cuanto la cruza, el portón deja de mandar solo.
+  - el goal mide **el atasco contra ESE paso**, no contra el destino (y reinicia la cuenta cuando el paso
+    cambia): así el rodeo cuenta como avance.
+
+MEDIDO (MEDIR_LENADOR, copia de su partida, 280 s de juego, t=5600; el arnés ahora planta al leñador **en
+el atasco mismo** —`CENTRO.offset(57,0,26)`, o sea `527,63,672`— con 16 troncos en el zurrón):
+
+    [Arnes] LENADOR: plantado EN EL ATASCO DEL MURO 527, 63, 672 con 16 troncos (venia en 531, 63, 662)
+    [Village] Llevando la madera va al otro lado del muro (517, 63, 666): cruza por el porton 531, 63, 646
+    t=200  pos=527,63,672 dCentro=62 destino=531,63,646 zurron=[madera=16]  "Llevando la madera"   <- va al PORTÓN
+    t=400  pos=530,63,649 dCentro=60 destino=517,63,666 zurron=[madera=16]  "Llevando la madera"   <- ya cruzó
+    t=600  pos=515,63,657 dCentro=46 destino=437,69,629 zurron=[madera=0]   "Guardo 16 de lo suyo" <- ENTREGÓ
+    [Village] el lenador guardo 16 cosa(s) de su oficio en el almacen
+    [Village] El lenador: talo 7 tronco(s) (5 de la columna y 2 que colgaban) y desramo 55 hoja(s)
+    [Village] El lenador: remato 2 tronco(s) que quedaban colgando alrededor del tocon 437, 63, 629
+    [Village] El lenador: talo 6 tronco(s) (6 de la columna y 0 que colgaban) y desramo 54 hoja(s)
+
+Los números, antes y después:
+
+    concepto                                        antes (5)   ahora (6)
+    ----------------------------------------------------------------------
+    "no consigue llegar" al almacén 517,63,666         22           0
+    entregas del leñador en el almacén                  0           1 (16 troncos)
+    árboles talados en la corrida                       0           2 (7 y 6 troncos)
+    arboleda al final (t=5600)                          -      6 árboles y 6 plantones, 0 huecos
+    "no consigue llegar" TOTAL (otros aldeanos)         -           6 (granjeros, en sus bancales)
+
+Los 6 atascos que quedan son de **otros** aldeanos y en otros sitios (`447,62,666`, `484,63,658`,
+`423,63,671`, `448,63,664`, `499,54,623` y `436,63,623`): **ninguno** en el almacén. La etiqueta del
+leñador pasa por `Yendo al arbol` -> `Abono la arboleda` -> `Yendo por polvo de hueso` -> `Talo un arbol`,
+o sea que vuelve a su faena en vez de quedarse empujando la pared.
+

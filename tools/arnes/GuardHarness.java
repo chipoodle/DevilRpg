@@ -1959,8 +1959,9 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
 
     /**
      * ¿Se planta al LEÑADOR en la plaza al empezar (ver {@code sembrarRestosDelLenador})? En {@code true} sirve para
-     * medir sus limpiezas (si está atascado en la muralla no tala). En {@code false} se mide **el atasco en sí**: si
-     * con el tirón nuevo (`VillageManager.tironConMemoria`) consigue llegar al almacén desde donde esté.
+     * medir sus limpiezas (si está atascado en la muralla no tala). En {@code false} se le planta <b>EN EL ATASCO DEL
+     * MURO</b> (`CENTRO.offset(57, 0, 26)` = `527,63,672`) con 16 troncos en el zurrón: es la medida del <b>cruce del
+     * muro</b> (I112) — el almacén queda a 11 bloques pero con la muralla en medio.
      */
     private static final boolean PLANTAR_AL_LENADOR_EN_LA_PLAZA = false;
 
@@ -1978,8 +1979,19 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
                 continue;
             }
             if (!PLANTAR_AL_LENADOR_EN_LA_PLAZA) {
-                DevilRpg.LOGGER.info("[Arnes] LENADOR: NO se le planta en la plaza (se mide su atasco: pos={})",
-                        v.blockPosition().toShortString());
+                // PLANTADO EN EL ATASCO DEL MURO con la madera en el zurrón: es la medida del CRUCE DEL MURO (I112).
+                // Antes solo se dejaba donde estuviera y se medía el atasco; ahora, con `pasoParaCruzarElMuro`, lo que se
+                // mide es que **sí llega**: cruza el portón y descarga en el almacén.
+                BlockPos atasco = CENTRO.offset(57, 0, 26);
+                BlockPos venia = v.blockPosition();
+                v.getNavigation().stop();
+                v.teleportTo(atasco.getX() + 0.5D, atasco.getY(), atasco.getZ() + 0.5D);
+                v.getInventory().clearContent();
+                v.getInventory().addItem(new net.minecraft.world.item.ItemStack(
+                        net.minecraft.world.item.Items.OAK_LOG, 16));
+                DevilRpg.LOGGER.info("[Arnes] LENADOR: plantado EN EL ATASCO DEL MURO {} con 16 troncos (venia en {})"
+                                + " — se mide si cruza el porton y llega al almacen (el almacen esta a 11 bloques pero"
+                                + " con la muralla en medio)", atasco.toShortString(), venia.toShortString());
                 continue;
             }
             BlockPos plaza = com.chipoodle.devilrpg.world.VillageManager.casillaDeLaCalle(level, CENTRO);

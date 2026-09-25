@@ -1262,6 +1262,15 @@ public class VillagerMinerGoal extends Goal {
         if (destino == null) {
             return;
         }
+        // EL MURO MANDA: si el destino está al otro lado de la muralla, primero se cruza por el portón (ver
+        // `VillageManager.pasoParaCruzarElMuro` / I112). Va antes del atajo de "está cerca" porque cerca pero al otro
+        // lado del muro no hay ruta directa.
+        BlockPos porton = VillageManager.pasoParaCruzarElMuro(level, center, villager, destino);
+        if (porton != null) {
+            pasoDelViaje = null;
+            VillageManager.caminarHacia(villager, porton, VELOCIDAD);
+            return;
+        }
         if (VillageManager.distanciaA(villager, destino) <= VillageManager.ALCANCE_DE_LA_RUTA) {
             pasoDelViaje = null;
             VillageManager.caminarHacia(villager, destino, VELOCIDAD);
@@ -1271,7 +1280,7 @@ public class VillagerMinerGoal extends Goal {
             if (plazaDelPueblo == null) {
                 plazaDelPueblo = VillageManager.casillaDeLaCalle(level, center);
             }
-            pasoDelViaje = VillageManager.tironHacia(level, villager, destino, plazaDelPueblo);
+            pasoDelViaje = VillageManager.tironHacia(level, center, villager, destino, plazaDelPueblo);
         }
         VillageManager.caminarHacia(villager, pasoDelViaje, VELOCIDAD);
     }
