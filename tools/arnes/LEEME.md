@@ -1,5 +1,44 @@
 # Arnés de la aldea (servidor headless)
 
+## Apoyo local en paralelo (el modelo del jugador)
+
+El jugador tiene **Ollama** en `127.0.0.1:11434` con `deepseek-coder-v2:16b` y `deepseek-r1:14b`, y pidió usarlo como
+**soporte en paralelo**. La herramienta es `tools/arnes/consulta_local.ps1` (le manda una *ficha* —un fichero con el
+prompt— y devuelve la respuesta); varias fichas se pueden lanzar **a la vez** en segundo plano mientras sigo trabajando.
+
+```powershell
+.\tools\arnes\consulta_local.ps1 -Ficha build\ficha1.txt                        # coder 16b (por defecto)
+.\tools\arnes\consulta_local.ps1 -Ficha build\ficha2.txt -Modelo deepseek-r1:14b
+```
+
+**Para qué sirve de verdad** (medido): leer y resumir código, reseñar un método buscando casos raros, y **borrar**
+código acotado. En frío la primera llamada tarda **95 s** (carga 8,3 GB en VRAM); en caliente, **2,7 s** por reseña de
+161 tokens y **6,2 s** por un método de 375.
+
+**Para qué NO sirve, con el caso que lo demostró**: se le pidió un método para decidir si una casilla está dentro de
+una construcción; su borrador **no compilaba** (se inventó `properties.Open`) y su lógica **fallaba justo en el caso a
+resolver** (daba "calle" para el hueco de dentro de un edificio). Su valor fue **la pista** —*la puerta es la firma del
+recinto*—, que llevó a mirar el **plano** y a la invariante I116. Moraleja, y es la regla:
+
+> **El modelo local PROPONE; la verdad la dan COMPILAR + LINT + MEDIR.** Nada suyo entra sin pasar por el arnés, y las
+> **corridas del arnés son en serie** (un JVM, el `.jar` bloqueado y una sola copia de `run/world`): eso no se
+> paraleliza con nada.
+
+En esta sesión la vía nativa de DSH solo admite `ollama/deepseek-r1:14b` como subagente; el `coder-v2:16b` está en
+`settings.yaml` pero la sesión arrancó antes de que se añadiera, así que se usa por el script.
+
+**Calibrado el 25-sep con dos consultas lanzadas A LA VEZ** (5,2 s y 8,6 s), y el resultado dice dónde está el filo:
+
+| tipo de ficha | resultado |
+|---|---|
+| **pregunta abierta** ("¿por qué el planificador da una ruta de 1 nodo?") | **relleno**: habló de "muro con forma compleja", "bloat de datos en el mapa" y "usa un comando de debug". No hizo ni la cuenta de si el aldeano estaba dentro y el destino fuera. **No vale.** |
+| **reseña de código sin el contexto del proyecto** | **consejo genérico**: "el umbral 3 puede ser muy estricto", "una mejora sería algo más dinámico". Nada accionable. **No vale.** |
+| **encargo acotado con los datos exactos** (el caso de la puerta) | **útil**: dio la pista que llevó a I116. **Éste es el uso.** |
+
+Así que la ficha se escribe con los **datos exactos** (coordenadas del log, el código pegado, la regla del proyecto) y
+con un **encargo de una sola cosa** ("escribe este método con esta firma", "enumera los casos que rompen ESTA
+condición"). Las de ejemplo están en `build/ficha_*.txt`.
+
 ## ¿Qué es esto, en cristiano?
 
 Un **arnés** (*harness*, en inglés) es un **banco de pruebas**: un programa que se escribe **solo para medir**, no para
