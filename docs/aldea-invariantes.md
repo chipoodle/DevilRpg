@@ -3212,7 +3212,10 @@ almacén como punto fallido (I33) y volvía a empezar: **22 rendiciones y 0 entr
   al que se va** (la de dentro o la de fuera). Se elige el portón que **menos rodeo** pide —distancia al aldeano +
   distancia al destino— y se exige que esa casilla **se pueda pisar** (`esCeldaDePie`); si ninguno de los cuatro vale,
   devuelve `null` y todo queda **como estaba** (la regla nunca empeora). Va **primero** en `tironHacia` y en
-  `tironConMemoria`, así que la usan las tres piernas de entrega (leñador, recolector y minero). Mientras la cruza se
+  `tironConMemoria`, así que la usan **los tres goals que llevan cosas al almacén**: el leñador (fase ENTREGAR), el
+  recolector (`VillagerPickupGoal`, destino ALMACÉN) y el minero. *(Ojo con la palabra: "pierna" en estos apuntes
+  (I38) es un **tramo de un mismo viaje** —la ida y la vuelta, o la puerta y la mata—. Aquí no son tramos de un
+  viaje, son **tres aldeanos con su propio goal**: por eso no se llama pierna.)* Mientras cruza se
   apunta el portón en los datos del aldeano **solo para no repetir el aviso** en el log (`DevilRpgPorton`).
 - **El atasco se mide contra el paso, no contra el destino**: `VillagerLumberjackGoal` y `VillagerPickupGoal` guardan
   `puntoDePaso`; cuando cambia (portón → almacén, al cruzar) la cuenta de progreso se **reinicia**, así que el rodeo
