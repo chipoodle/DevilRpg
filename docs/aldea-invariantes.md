@@ -3551,8 +3551,48 @@ si no, **se vuelve a la ronda** (en vez de seguir 12 s empujando y aparcar la di
 `Yendo a entrenar` bajan de 7 a 2** (y el total de la corrida, de 13 a 9). Las 2 que quedan son del otro caso: ruta viva
 que **sí** alcanza y el guardia, aun así, no avanza hasta el límite; queda apuntado.
 
-## 2. Lista de consecuencias (obligatoria en cada cambio)
-Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
+### I120 · La barraca de UN PISO con sus 8 camas: qué hay que tocar (estudio, aún sin hacer)
+
+Lo pidió el jugador junto con lo del campo de entrenamiento: *"así haces las barracas de un solo nivel junto con sus
+camas"*. Es la parte del encargo que **queda pendiente**, y esto es lo que hay y lo que costaría.
+
+**Lo que hay hoy** (`VillageGenerator.barraca`, 9×9 con `BARRACA_RADIO = 4`):
+- planta baja: la **sala de armas** (dos maniquíes de paca, el **arca** doble, el **hogar** del patio que es el
+  **testigo** de `barracaConstruida`, y las dianas —ya movidas al patio, I119—);
+- **escalera** de `BARRACA_ESCALONES = BARRACA_PISO2 = 4` escalones de medio bloque pegada al muro este, con su hueco
+  en el forjado (el 4.º escalón lo borraba su propio hueco: migración 59);
+- **forjado** (suelo del piso de arriba) a `yPiso2 - 1`;
+- **dormitorio** a `yPiso2 = nivel + 4`: **8 camas** en dos filas de 4 contra las paredes largas, las **dos arcas**
+  contra el muro oeste y **2 faroles colgados** del tejado;
+- **tejado** a `yTejado` (con alero de un bloque) y dos faroles más en la puerta.
+
+**Lo que pide el jugador**: las camas **abajo** y la barraca **de un solo nivel** (sin escalera ni forjado). En la
+práctica:**`BARRACA_PISO2 = 0`** (o `1`, para que quepa un farol colgado del techo), las 8 camas en dos filas contra
+las paredes largas de la planta baja, las arcas abajo, el tejado a `nivel + 3`, y los faroles colgando de ese tejado
+(`BARRACA_FAROL_DY = 2`) en vez de a `nivel + 6`.
+
+**La trampa, que es lo que hay que decidir antes de tocar** (y por eso esto es un estudio y no un parche): las
+barracas que **ya existen** se reconocen por un **testigo** (el hogar). Cambiar el testigo hace que el mod **la vuelva
+a levantar entera**, y los propios comentarios del mod avisan de lo que eso significa: *"rehacerla tiraría las camas y
+lo de dentro de las arcas"* — y en la aldea del jugador esas arcas y esas 8 camas **ya están en uso** por los guardias.
+
+Las dos salidas, y lo que cuesta cada una:
+
+| salida | qué hace | riesgo |
+|---|---|---|
+| **(a) rehacer** (cambiar el testigo) | la pasada siguiente levanta la barraca de un piso | **pierde el contenido de las arcas** salvo que se vacíen antes; hay precedente para eso: `traspasarElArca` (mueve cofre a cofre sin tirar nada) y el almacén está al lado |
+| **(b) migrar celda a celda** | bajar las 8 camas, quitar escalera y forjado, bajar el tejado y los faroles, sin rehacer la casa | conserva todo, pero es el trabajo más fino: cada celda a mano, con su idempotencia, y hay que **no dejar bloques flotando** (I14) al bajar el tejado |
+
+**Lo que hay que medir cuando se haga** (con el arnés, sobre copia de su partida): que la barraca siga teniendo
+**8 camas** y **ninguna flotando**, que los guardias **duerman** (la prueba de `MEDIR_NOCHE`, con el censo de camas:
+*"aldeanos con cama, compartidas, sin cama, durmiendo"*), que no quede **forjado ni escalera** sueltos y que no haya
+bloques huérfanos del piso viejo.
+
+**Recomendación**: empezar por **(a) con las arcas vaciadas al almacén** (es la que respeta la forma en que este
+proyecto ya cambia sus edificios: testigo + reconstrucción) y medir con `MEDIR_NOCHE`; si el censo de camas sale mal,
+caer a (b).
+
+## 2. Lista de consecuencias (obligatoria en cada cambio)Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
 1. **¿Quién más LEE lo que cambio?** Buscar todos los usos (`grep`) y revisarlos uno a uno. *(Fallo real: cambié el
    sentido de `stuckTicks` y no miré los tres `canContinueToUse` que lo leen → granjero, recolector y obrero
