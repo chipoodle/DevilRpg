@@ -271,7 +271,27 @@ public class VillagerMinerGoal extends Goal {
                 libres++;
             }
         }
-        return libres <= HUECOS_LIBRES_MINIMOS;
+        // Y EL ZURRÓN LLENO SOLO CUENTA SI PUEDE VACIARLO. Antes bastaba con tener dos huecos libres, y el minero lleva
+        // SIEMPRE encima sus recados (pico, tablones, palos, carbón y leña: seis o siete huecos de los ocho), así que
+        // subía a "entregar" una y otra vez SIN ENTREGAR NADA —los recados no los suelta— y la mina no avanzaba ni una
+        // celda. Lo vio el jugador: *"el minero aparece como trabajando dentro de su choza pero realmente no hace
+        // nada... se queda sólo entrando y saliendo de su choza"*. Con esto, "lleno" solo sube si lleva algo que el
+        // almacén quiera (mineral, adoquín, pedernal, piedras...).
+        return libres <= HUECOS_LIBRES_MINIMOS && hayParaEntregar();
+    }
+
+    /**
+     * ¿Lleva algo que el almacén <b>quiera</b> (o sea, algo que no sea de los recados)? Es lo que decide si "tener el
+     * zurrón lleno" es motivo para subir: lleno de tablones y palos —que se queda para trabajar— no lo es.
+     */
+    private boolean hayParaEntregar() {
+        for (int i = 0; i < villager.getInventory().getContainerSize(); i++) {
+            ItemStack s = villager.getInventory().getItem(i);
+            if (!s.isEmpty() && s.getCount() > cuantoSeQueda(s)) {
+                return true; // lleva DE SOBRA de algo (aunque sea de los recados): eso se deja en el almacén
+            }
+        }
+        return false;
     }
 
     /**
@@ -1024,15 +1044,30 @@ public class VillagerMinerGoal extends Goal {
         return false;
     }
 
-    /** Deja en el almacén <b>todo lo sacado</b>, menos lo que necesita para seguir (pico, tablones y antorchas). */
+    /**
+     * Deja en el almacén <b>todo lo sacado</b> y <b>lo que lleva DE SOBRA de sus recados</b>: se queda con
+     * {@link #cuantoSeQueda} de cada cosa (el pico, unos tablones, unos palos, algo de carbón y algo de leña) y el
+     * resto lo suelta. Antes era "todo o nada": un hueco con 64 palos no se soltaba nunca y el zurrón se le quedaba
+     * sin sitio para el mineral (ver {@link #hayQueSubir}).
+     */
     private void entregar(ServerLevel level) {
         for (int i = 0; i < villager.getInventory().getContainerSize(); i++) {
             ItemStack s = villager.getInventory().getItem(i);
-            if (s.isEmpty() || seLoQueda(s)) {
+            if (s.isEmpty()) {
                 continue;
             }
-            ItemStack resto = VillageStorage.guardar(level, center, s.copy());
-            villager.getInventory().setItem(i, resto);
+            int seQueda = cuantoSeQueda(s);
+            int sobra = s.getCount() - seQueda;
+            if (sobra <= 0) {
+                continue; // no lleva de sobra de eso
+            }
+            ItemStack resto = VillageStorage.guardar(level, center, s.copyWithCount(sobra));
+            int devuelto = resto.getCount(); // lo que no le cupiera al almacén se queda en el zurrón (no se tira)
+            if (seQueda + devuelto <= 0) {
+                villager.getInventory().setItem(i, ItemStack.EMPTY);
+            } else {
+                s.setCount(seQueda + devuelto);
+            }
         }
         celdasCavadas = 0; // subida hecha: la cuenta de la vuelta empieza de cero
         VillageManager.ponerSuceso(villager, "Deja lo sacado");
@@ -1041,14 +1076,37 @@ public class VillagerMinerGoal extends Goal {
                 cuantosEnInventario(Items.TORCH));
     }
 
-    /** Lo que el minero <b>no</b> suelta al llegar al almacén: su herramienta y lo que va a gastar cavando. */
-    private boolean seLoQueda(ItemStack s) {
-        if (s.is(Items.IRON_PICKAXE) || s.is(Items.DIAMOND_PICKAXE) || s.is(Items.NETHERITE_PICKAXE)
-                || s.is(Items.STONE_PICKAXE) || s.is(Items.WOODEN_PICKAXE)) {
-            return true;
+    /**
+     * <b>Cuántas unidades de eso se queda</b> al llegar al almacén (el resto lo deja allí). Antes era "todo o nada" y
+     * el minero se quedaba con los recados <b>enteros para siempre</b>: un hueco con 64 palos que no suelta nunca es un
+     * hueco menos para el mineral, y con seis o siete huecos de recados el zurrón se le quedaba sin sitio (ver
+     * {@link #hayQueSubir}).
+     */
+    private int cuantoSeQueda(ItemStack s) {
+        if (esPico(s)) {
+            return 2; // su herramienta y un repuesto
         }
-        return s.is(Items.OAK_PLANKS) || s.is(Items.TORCH) || s.is(Items.STICK)
-                || VillageStorage.esCarbon(s) || VillageStorage.esLena(s);
+        if (s.is(Items.OAK_PLANKS)) {
+            return TABLONES_POR_VIAJE; // para los marcos de la galería
+        }
+        if (s.is(Items.STICK)) {
+            return PALOS_POR_VIAJE; // para las antorchas (un palo = cuatro)
+        }
+        if (s.is(Items.TORCH)) {
+            return ANTORCHAS_POR_VIAJE; // la luz de la mina
+        }
+        if (VillageStorage.esCarbon(s)) {
+            return CARBON_POR_VIAJE; // para las antorchas y el horno
+        }
+        if (VillageStorage.esLena(s)) {
+            return 2; // para el horno (fundir y hacer carbón vegetal)
+        }
+        return 0; // mineral, adoquín, pedernal, piedras...: al almacén
+    }
+
+    /** Lo que el minero <b>no</b> suelta al llegar al almacén (ver {@link #cuantoSeQueda}). */
+    private boolean seLoQueda(ItemStack s) {
+        return cuantoSeQueda(s) > 0;
     }
 
     // --- el pico (la herramienta, que gasta y le forja el herrero de herramientas) -------------------

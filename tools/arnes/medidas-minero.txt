@@ -165,5 +165,42 @@ O sea: sin un solo carbon en el almacen, el minero **se fabrica el carbon vegeta
 **antorchas** con el y **vuelve a bajar a cavar** (paso 17 y 18 en la corrida). El bucle de los 59 viajes
 desaparecio.
 
+--- 5) EL MINERO "TRABAJANDO" EN SU CHOZA SIN HACER NADA: el zurron lleno de recados -----------------
+Lo reporto el jugador con dos capturas: *"porque el minero aparece como trabajando dentro de su choza pero
+realmente no hace nada? baje a su cantera pero no ha terminado de hacer un hoyo ni nada, se quedo como con
+madera... en la segunda imagen aparece el minero solo entrando y saliendo de su choza pero no va a trabajar"*.
+
+**La causa (un livelock de verdad)**: `hayQueSubir()` daba por hecho que el zurron estaba lleno (dos huecos
+libres o menos) y subia a "entregar"; pero el minero lleva SIEMPRE encima sus recados —pico, tablones,
+palos, carbon y lena, que son **seis o siete huecos de los ocho**— y `entregar` era "todo o nada": de esos
+no soltaba NI UNO. Resultado: subia, no entregaba nada, volvia, y `hayQueSubir()` volvia a decir "lleno" →
+**entrando y saliendo de la caseta para siempre y sin cavar una celda** (y el zurron, lleno de madera: justo
+lo que se veia en la captura).
+
+**El arreglo** (`VillagerMinerGoal`):
+  - `hayQueSubir()`: el zurron lleno **solo cuenta si puede vaciarlo** (`hayParaEntregar()`: llevar de sobra
+    de algo, aunque sea de los recados).
+  - `entregar()`: ya no es todo o nada. Deja en el almacen **lo que lleva de sobra** de cada cosa, con
+    `cuantoSeQueda()`: pico 2, tablones 16, palos 8, antorchas 16, carbon 8 y lena 2. Lo que no le quepa al
+    almacen se queda en el zurron (no se tira).
+
+MEDIDO (copia de su partida, MEDIR_MINERO, ~14 min):
+
+    [Village] El minero: pico nuevo: minecraft:wooden_pickaxe     (del herrero, I106)
+    [Village] El minero: cuela 4 adoquines en la balsa y saca un pedernal       x2
+    [Village] El minero: quema un tronco en el horno y saca 1 de carbon vegetal x2
+    [Village] El minero: hace 4 antorchas con un carbon y un palo               x2
+    [Village] El minero: yendo: Bajando a la mina (Picando -> 499, 54, 621)
+    [Village] El minero: faena: Picando (Picando -> 499, 54, 621)
+    [Village] El minero: caracol paso 17 en 499, 53, 620 (y=53)
+    [Village] El minero: caracol paso 18 en 499, 53, 619 (y=53)
+    [Arnes] MINA ... pasos=16/240 -> pasos=19/240
+    [Arnes] MINERO ... zurron=[0:1xminecraft:stick]        <- el zurron VACIO (antes: 6-7 huecos de recados)
+
+O sea: el zurron pasa de **seis o siete huecos llenos de madera a UN palo**, el minero **baja a la mina**,
+**pica** (paso 17 y 18 del caracol, `pasos` de 16 a 19) y sus viajes de subida son para **entregar de
+verdad** (pedernal, carbon, antorchas y lo sacado). El bucle de "entrando y saliendo" desaparecio.
+
+
 
 

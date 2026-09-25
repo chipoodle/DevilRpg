@@ -3168,6 +3168,30 @@ muralla** (`527,63,672`, r = 62, justo encima del muro) intentando llegar al alm
 517,63,666`); con la madera en el zurrón no hay faena. El problema es **el camino desde fuera de la muralla al
 almacén** (familia de I103/I105) y queda apuntado para la vuelta siguiente.
 
+### I111 · El minero no se queda en bucle con el zurrón lleno de RECADOS
+
+Lo reportó el jugador con dos capturas: *"¿por qué el minero aparece como trabajando dentro de su choza pero realmente
+no hace nada? Bajé a su cantera pero no ha terminado de hacer un hoyo ni nada, se quedó como con madera... aparece el
+minero sólo entrando y saliendo de su choza pero no va a trabajar"*.
+
+**La causa (un livelock de verdad)**: `hayQueSubir()` daba por "zurrón lleno" tener **dos huecos libres o menos** y
+subía a entregar; pero el minero lleva **siempre** encima sus recados —pico, tablones, palos, carbón y leña: **seis o
+siete huecos de los ocho**— y `entregar` era **todo o nada**: de esos no soltaba ni uno. Así que subía, no entregaba
+nada, volvía, y volvía a estar "lleno": **entrando y saliendo de la caseta para siempre, sin cavar una celda** (y el
+zurrón lleno de madera, que es justo lo que se veía en la captura).
+
+**Regla:**
+- `hayQueSubir()`: el zurrón lleno **solo cuenta si puede vaciarlo** (`hayParaEntregar()` = llevar **de sobra** de
+  algo, aunque sea de los recados).
+- `entregar()`: ya no es todo o nada; deja en el almacén **lo que lleva de sobra** de cada cosa según
+  `cuantoSeQueda()` —pico **2**, tablones **16**, palos **8**, antorchas **16**, carbón **8**, leña **2**— y lo que no
+  le quepa al almacén se queda en el zurrón (no se tira).
+
+**Medido** (MEDIR_MINERO, copia de su partida, ~14 min): el zurrón pasa de **6-7 huecos de recados a `1x stick`**; el
+minero **baja a la mina** y `faena: Picando` (`caracol paso 17` y `paso 18`, `pasos` de **16 → 19**), y sus viajes de
+subida son para **entregar de verdad** (pedernal, carbón, antorchas y lo sacado: `2x` cada uno). El bucle de
+"entrando y saliendo" desapareció. Ver `tools/arnes/medidas-minero.txt`, apartado 5.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
