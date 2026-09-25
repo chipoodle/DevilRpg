@@ -1088,10 +1088,16 @@ public class VillagerLumberjackGoal extends Goal {
                 if (VillageManager.esPuntoFallido(villager, resto)) {
                     continue; // a ese resto colgando no llegó hace poco: se prueba con el siguiente (I33)
                 }
+                BlockPos sitio = celdaDePieParaAlcanzar(level, resto);
+                if (sitio == null) {
+                    continue; // no hay casilla de pie desde la que se alcance: no se le manda a caminar hacia el aire
+                }
                 double dist = villager.distanceToSqr(resto.getX() + 0.5D, resto.getY() + 0.5D, resto.getZ() + 0.5D);
                 if (dist < mejorDist) {
                     mejorDist = dist;
                     mejor = resto;
+                    sitioDelResto = sitio;
+                    sitioDelRestoDe = resto;
                 }
             }
         }
@@ -1141,10 +1147,16 @@ public class VillagerLumberjackGoal extends Goal {
                 if (resto == null || VillageManager.esPuntoFallido(villager, resto)) {
                     continue;
                 }
+                BlockPos sitio = celdaDePieParaAlcanzar(level, resto);
+                if (sitio == null) {
+                    continue; // colgando donde no se alcanza desde ninguna casilla de pie: no se toca
+                }
                 double dist = villager.distanceToSqr(resto.getX() + 0.5D, resto.getY() + 0.5D, resto.getZ() + 0.5D);
                 if (dist < mejorDist) {
                     mejorDist = dist;
                     mejor = resto;
+                    sitioDelResto = sitio;
+                    sitioDelRestoDe = resto;
                 }
             }
         }
@@ -1406,6 +1418,20 @@ public class VillagerLumberjackGoal extends Goal {
      */
     private BlockPos pasoDeCamino(ServerLevel level) {
         if (fase != Fase.ENTREGAR) {
+            // A UN BLOQUE NO SE CAMINA: SE CAMINA A UNA CASILLA DE PIE. Cuando el destino del goal es un bloque —un
+            // tronco, un resto colgando—, el planificador del juego devuelve una ruta de **1 nodo** (`alcanza=NO`) y el
+            // aldeano **no se mueve**: se queda donde estaba hasta rendirse. Medido (24-sep-2026) en el leñador:
+            // `no consigue llegar a 555,66,692 desde 523,63,676 (ruta=1 nodos ... alcanza=NO; destino=jungle_log)` — a
+            // 32 bloques y sin dar un paso. Así que se busca la **casilla de pie** desde la que se alcanza el tronco y
+            // se camina a ESA; el hachazo sigue apuntando al tronco. Se cachea por destino: buscarla son 100 celdas.
+            if (target != null && !target.equals(sitioDelRestoDe)) {
+                sitioDelRestoDe = target;
+                sitioDelResto = level.getBlockState(target).is(BlockTags.LOGS)
+                        ? celdaDePieParaAlcanzar(level, target) : null;
+            }
+            if (sitioDelResto != null) {
+                return sitioDelResto;
+            }
             return target;
         }
         if (plazaDelPueblo == null) {
@@ -1413,6 +1439,47 @@ public class VillagerLumberjackGoal extends Goal {
         }
         return VillageManager.tironConMemoria(level, center, villager, target, plazaDelPueblo);
     }
+
+    /**
+     * <b>¿DESDE DÓNDE SE ALCANZA ESE TRONCO?</b> La casilla de pie (aire a los pies y a la cabeza, suelo firme) desde
+     * la que el tronco queda a {@link #REACH} o menos, o {@code null} si no hay ninguna.
+     * <p>
+     * <b>Por qué</b> (medido, 24-sep-2026): al leñador se le mandaba a <b>caminar hacia el tronco</b>, y un resto
+     * colgando está <b>en el aire</b>: se rendía en `555,76,692` (un tronco de selva, con lianas, a 13 bloques del
+     * suelo) y en `545,69,691`, apuntaba el sitio como fallido y volvía a elegir el mismo (I33). Con esta prueba, un
+     * resto que no se alcanza desde ninguna casilla de pie <b>no se elige</b>, y el que sí se elige se camina a la
+     * casilla, que es donde el aldeano puede estar de verdad.
+     */
+    @Nullable
+    private BlockPos celdaDePieParaAlcanzar(ServerLevel level, BlockPos tronco) {
+        BlockPos mejor = null;
+        double mejorDist = Double.MAX_VALUE;
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dz = -2; dz <= 2; dz++) {
+                for (int dy = -2; dy <= 1; dy++) {
+                    BlockPos p = tronco.offset(dx, dy, dz);
+                    if (!VillageManager.esCeldaDePie(level, p)) {
+                        continue;
+                    }
+                    // Medio bloque de margen: el aldeano no se para siempre justo en el centro de la casilla.
+                    double d = Math.sqrt(p.distSqr(tronco));
+                    if (d <= REACH - 0.5D && d < mejorDist) {
+                        mejorDist = d;
+                        mejor = p.immutable();
+                    }
+                }
+            }
+        }
+        return mejor;
+    }
+
+    /** La casilla de pie desde la que se alcanza el resto que se está rematando ahora ({@link #sitioDelRestoDe}). */
+    @Nullable
+    private BlockPos sitioDelResto;
+
+    /** El resto colgando al que pertenece {@link #sitioDelResto}. */
+    @Nullable
+    private BlockPos sitioDelRestoDe;
 
     /** La plaza del pueblo (el último recurso del tirón): se busca UNA vez, no en cada tick. */
     @Nullable

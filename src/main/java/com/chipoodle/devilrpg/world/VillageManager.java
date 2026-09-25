@@ -4385,7 +4385,7 @@ public final class VillageManager {
     }
 
     /** ¿Se puede estar de pie ahí? Libre a los pies y a la cabeza, y con suelo firme debajo. */
-    private static boolean esCeldaDePie(ServerLevel level, BlockPos p) {
+    public static boolean esCeldaDePie(ServerLevel level, BlockPos p) {
         return level.getBlockState(p).isAir() && level.getBlockState(p.above()).isAir()
                 && level.getBlockState(p.below()).isSolid();
     }
@@ -4765,10 +4765,36 @@ public final class VillageManager {
         // aldeano se quedó a medio camino por otra cosa. Se preguntó midiendo I113: el log decía QUÉ sitio fallaba
         // pero no POR QUÉ, y sin eso no se puede arreglar (ni saber si hay que construir un escalón).
         BlockPos desde = villager.blockPosition();
-        boolean hayRuta = villager.getNavigation().createPath(p, 1) != null;
-        DevilRpg.LOGGER.info("[Village] {} no consigue llegar a {} desde {} (ruta={}): lo deja por {} min y sigue con lo"
-                        + " demas",
-                villager.getUUID(), p, desde.toShortString(), hayRuta ? "SI" : "NO", PUNTO_FALLIDO_TICKS / (60 * 20));
+        // OJO CON ESTA PREGUNTA: que `createPath` devuelva ruta **NO** significa que se llegue — el planificador
+        // devuelve una ruta que puede quedarse **corta**, acabando en el nodo más cercano al que sabe ir
+        // (`canReach()` = false). Medido (24-sep-2026): con solo `ruta=SI/NO` salían **26 de 26** con SI y parecía
+        // que todos los sitios del pueblo eran alcanzables; con `canReach` y el final de la ruta se ve lo de verdad.
+        // Y los BLOQUES de donde está y del destino: si tiene la CABEZA tapada no puede ni estar de pie ahí, y si el
+        // destino es macizo o tiene el techo a un bloque, ahí no cabe nadie.
+        ServerLevel nivel = villager.level() instanceof ServerLevel s ? s : null;
+        String ruta;
+        if (nivel == null) {
+            ruta = "?";
+        } else {
+            var camino = villager.getNavigation().createPath(p, 1);
+            ruta = camino == null ? "NINGUNA"
+                    : (camino.getNodeCount() + " nodos hasta " + camino.getEndNode().asBlockPos().toShortString()
+                            + " alcanza=" + (camino.canReach() ? "SI" : "NO"));
+        }
+        String donde = nivel == null ? "?"
+                : ("pies=" + nombreDelBloque(nivel, desde) + " cabeza=" + nombreDelBloque(nivel, desde.above())
+                        + " suelo=" + nombreDelBloque(nivel, desde.below())
+                        + " | destino=" + nombreDelBloque(nivel, p)
+                        + " encima=" + nombreDelBloque(nivel, p.above()));
+        DevilRpg.LOGGER.info("[Village] {} no consigue llegar a {} desde {} (ruta={}; {}): lo deja por {} min y sigue con"
+                        + " lo demas",
+                villager.getUUID(), p.toShortString(), desde.toShortString(), ruta, donde,
+                PUNTO_FALLIDO_TICKS / (60 * 20));
+    }
+
+    /** El nombre corto (sin {@code Block{minecraft:...}}) del bloque de una celda, para los avisos del log. */
+    private static String nombreDelBloque(ServerLevel level, BlockPos p) {
+        return level.getBlockState(p).getBlock().toString().replace("Block{minecraft:", "").replace("}", "");
     }
 
     /** ¿Ese sitio está <b>aparcado</b> para ese aldeano? (no llegó a él hace poco: ver {@link #marcarPuntoFallido}) */

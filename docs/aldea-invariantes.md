@@ -3303,6 +3303,56 @@ sitio (`501,55,621`), dentro de un túnel de **una celda de ancho** con marcos d
 la ruta existe pero es difícil de **andar**; (2) **cuatro guardias distintos** se rinden en el **mismo** punto
 (`423,63,671`) viniendo de cuatro sitios distintos: ése es un sitio del pueblo que hay que mirar.
 
+### I114 · A UN BLOQUE NO SE CAMINA: se camina a una CASILLA DE PIE
+
+Lo pidió el jugador: *"¿cómo que no puede alcanzar una celda? ¿en qué casos no podría? ¿no sería mejor que con el
+adoquín que ha juntado se haga un camino o escaleras?"* y luego *"sigue con el punto 1 y 2 y revisa por qué los guardias
+y el leñador se paran"*.
+
+**El mecanismo común, medido** (con el log de I113 mejorado: `canReach` + los bloques de alrededor): cuando el
+**destino de un goal es un BLOQUE** —un tronco, la pieza de una celda del caracol, la mata de trigo— el planificador
+devuelve una ruta de **1 nodo** (`ruta=1 nodos hasta <su propia casilla> alcanza=NO`) y el aldeano **no da un paso**:
+se queda donde estaba hasta rendirse. Medido: el leñador con `destino=jungle_log` se rindió a **32 bloques** sin
+moverse; el minero con `destino=cobblestone_slab` a **3 bloques** de su propia celda. Y al revés: con el destino en
+**aire con suelo firme** (`destino=air`) el planificador **sí** da ruta. (Cuando el bloque está cerca y en línea recta
+el fallo no se ve, porque el cerebro del aldeano empuja hacia el objetivo y llega; por eso esto llevaba tanto tiempo
+sin cazarse.)
+
+**Regla:**
+- **El que camina va a una casilla de pie; el que trabaja apunta al bloque.** En el leñador, `celdaDePieParaAlcanzar`
+  busca la casilla (aire a los pies y a la cabeza, suelo firme) desde la que el tronco queda a `REACH` o menos, y se
+  camina a **ésa** (cacheada por destino: buscarla son 100 celdas). Y un resto que **no se alcanza desde ninguna
+  casilla de pie** (un tronco a 13 bloques del suelo) **no se elige**, en vez de mandarlo a empujar el aire.
+- En el minero, la celda del caracol es la del **bloque de la pieza**; la de estar de pie es la de **encima**
+  (`celdaDePieDelCaracol`). Se camina a ésa y se pica la otra.
+- El **punto de la ronda de los guardias** no basta con que "quepa de pie": la ronda es un círculo de radio
+  `RADIO_RONDA` que **atraviesa los edificios**. Se medían guardias rindiéndose **dentro de un recinto amurallado**
+  (`423,63,671`, con `29 nodos hasta 423,63,673 alcanza=NO`) y en una casilla que era **`cave_air`** (un hueco de cueva
+  a la altura del pueblo, `509,63,650`). Ahora `puestoLibre` exige **llegar** (`createPath(...).canReach()`), prueba un
+  abanico más ancho (hasta 6 bloques) y, si no hay nada, manda al guardia a la **casilla de la calle** (la plaza).
+
+**Medido** (MEDIR_MINERO, misma partida, antes y después):
+
+| concepto | antes | ahora |
+|---|---|---|
+| rendiciones en la corrida | 26 | **16** |
+| rendiciones del **leñador** | 6 (troncos de selva/roble en el monte, a 30+ bloques) | **0** |
+| `destino` del minero | `cobblestone_slab` (un bloque) | `air` (casilla de pie) |
+| `pasos` de la mina | 19 congelado | **18 → 19** |
+| talas del leñador | — | `talo 5 tronco(s)` |
+
+**LO QUE QUEDA SIN ARREGLAR (medido, no supuesto):**
+1. **Guardias: 5 rendiciones** en el mismo recinto (`423,63,671`). La prueba de "llegar" **depende de dónde esté el
+   guardia** al elegir el punto: desde `442,63,658` da `alcanza=SI` (32 nodos) y desde `486,63,648` da `alcanza=NO`
+   (42 nodos que acaban en `445,64,664`, subido a un tejado). Siguiente paso: probar el punto **desde una referencia
+   fija** (la calle), no desde donde el guardia esté en ese momento.
+2. **El minero se rinde 3 veces** en `501,55/56,621`, ya con destino de aire: **no hay ruta desde ahí**
+   (`ruta=1 nodos ... alcanza=NO`). Está **encajado fuera del túnel** y no puede volver a entrar; le toca el mismo
+   patrón del tirón (I105/I112): si la ruta directa **no alcanza**, ir a un sitio del que sí haya ruta (la caseta o la
+   boca) y replanificar desde allí.
+3. **Granjeros**: `596e09a8` se rinde en `484,63,658` **desde `484,63,659`** (¡a UN bloque!) con `destino=wheat` y
+   `alcanza=SI` — es el mismo patrón (la mata es un bloque) y le toca el mismo arreglo.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 

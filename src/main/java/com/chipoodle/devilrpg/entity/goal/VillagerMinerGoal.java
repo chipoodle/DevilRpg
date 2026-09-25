@@ -361,13 +361,13 @@ public class VillagerMinerGoal extends Goal {
             // LA GALERÍA: se cava desde su celda del caracol, que YA está hecha (por ahí se entra y se sale).
             indiceDeGaleria = galeriaHecha + 1;
             celdaDeTrabajo = VillageGenerator.celdaDeLaGaleria(center, nivel, paso, indiceDeGaleria);
-            destino = indiceDeGaleria == 1 ? VillageGenerator.celdaDelCaracol(center, nivel, paso)
+            destino = indiceDeGaleria == 1 ? celdaDePieDelCaracol(center, nivel, paso)
                     : VillageGenerator.celdaDeLaGaleria(center, nivel, paso, indiceDeGaleria - 1);
         } else {
             indiceDeGaleria = 0;
             celdaDeTrabajo = VillageGenerator.celdaDelCaracol(center, nivel, paso);
-            destino = paso == 0 ? VillageGenerator.bocaDeLaMina(center, nivel)
-                    : VillageGenerator.celdaDelCaracol(center, nivel, paso - 1);
+            destino = paso == 0 ? celdaDePieDelCaracol(center, nivel, 0)
+                    : celdaDePieDelCaracol(center, nivel, paso - 1);
         }
         // SI LA MINA ESTÁ TAPADA POR ALGO DEL PUEBLO (una casa, la pared de su caseta, lo que puso el jugador), el
         // minero NO lo toca: para y lo deja anotado. Es la misma lección de I24/I27 (lo construido no se cava) y sin
@@ -380,6 +380,20 @@ public class VillagerMinerGoal extends Goal {
             return false;
         }
         return comprobarDestino();
+    }
+
+    /**
+     * <b>LA CASILLA DONDE SE ESTÁ DE PIE</b> encima de la pieza (losa o adoquín) del paso {@code paso} del caracol.
+     * <p>
+     * <b>Por qué no vale la celda de la pieza</b> (medido, 24-sep-2026, con el log de "no llegué" diciendo dónde y con
+     * qué bloques): el minero se rendía <b>a 3 bloques de su propia celda</b> con `pies=cobblestone_slab` y
+     * `destino=cobblestone_slab`: el destino que se le daba era la celda <b>del bloque de la pieza</b> —un bloque
+     * macizo— y el planificador del juego <b>no puede meterlo ahí</b>; le devolvía una ruta de <b>1 nodo que no
+     * alcanza</b> (`alcanza=NO`) y el aldeano se plantaba. La casilla de pie es la de <b>encima</b>, que es la que tiene
+     * aire a los pies y el suelo en la pieza.
+     */
+    private static BlockPos celdaDePieDelCaracol(BlockPos center, int nivel, int paso) {
+        return VillageGenerator.celdaDelCaracol(center, nivel, paso).above();
     }
 
     /**

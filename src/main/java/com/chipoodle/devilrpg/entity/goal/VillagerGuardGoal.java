@@ -1281,30 +1281,72 @@ public class VillagerGuardGoal extends Goal {
     }
 
     /**
-     * Corre el puesto a una casilla donde el guardia <b>quepa de pie</b>, si la ideal está ocupada (una valla, un
-     * poste, lo que haya puesto el jugador). Navegar hacia un bloque sólido es el fallo que el pueblo ya tiene
-     * documentado (ver {@code VillageStorage.puntoDeApoyo}): el aldeano se queda empujándolo. Se mira primero a los
-     * lados y luego hacia {@code haciaDonde} (el pueblo), <b>nunca</b> hacia el cercado.
+     * Corre el puesto a una casilla donde el guardia <b>quepa de pie</b> y <b>se pueda llegar</b>, si la ideal no vale
+     * (una valla, un poste, lo que haya puesto el jugador). Navegar hacia un bloque sólido es el fallo que el pueblo ya
+     * tiene documentado (ver {@code VillageStorage.puntoDeApoyo}): el aldeano se queda empujándolo. Se mira primero a
+     * los lados y luego hacia {@code haciaDonde} (el pueblo), <b>nunca</b> hacia el cercado.
+     * <p>
+     * <b>Y NO BASTA CON QUE QUEPA DE PIE</b> (medido, 24-sep-2026, con el log nuevo de "no llegué"): la ronda es un
+     * círculo de {@link #RADIO_RONDA} alrededor del centro y <b>atraviesa los edificios</b>. Dos guardias se rendían en
+     * `423,63,671` —una casilla con aire a los pies, aire encima y suelo firme, o sea "se puede estar"— pero <b>dentro
+     * de un recinto amurallado</b>: el planificador les daba una ruta que <b>no alcanza</b> (`29 nodos hasta 423,63,673
+     * alcanza=NO`, o sea que se quedaban en la pared de fuera). Y otro en `509,63,650`, que resultó ser
+     * <b>`cave_air`</b> (un hueco de cueva a la altura del pueblo). Por eso ahora, además de caber, se exige
+     * <b>llegar</b> (`createPath(...).canReach()`), que es la prueba del caminante del juego; y el abanico de casillas
+     * que se prueban es más ancho (hasta 6 bloques) para que el puesto acabe en la calle.
      */
     private BlockPos puestoLibre(ServerLevel level, BlockPos puesto, int haciaDonde) {
-        if (sePuedeEstar(level, puesto)) {
-            return puesto;
-        }
-        for (int salto = 1; salto <= 2; salto++) {
+        BlockPos primeroDePie = null;
+        for (int salto = 0; salto <= 6; salto++) {
+            if (salto == 0) {
+                if (sePuedeEstar(level, puesto)) {
+                    primeroDePie = puesto;
+                    if (seLlega(level, puesto)) {
+                        return puesto;
+                    }
+                }
+                continue;
+            }
             for (int dz : new int[]{salto, -salto}) {
                 BlockPos vecino = puesto.offset(0, 0, dz);
-                if (sePuedeEstar(level, vecino)) {
+                if (!sePuedeEstar(level, vecino)) {
+                    continue;
+                }
+                if (primeroDePie == null) {
+                    primeroDePie = vecino;
+                }
+                if (seLlega(level, vecino)) {
                     return vecino;
                 }
             }
             if (haciaDonde != 0) {
                 BlockPos vecino = puesto.offset(haciaDonde * salto, 0, 0);
                 if (sePuedeEstar(level, vecino)) {
-                    return vecino;
+                    if (primeroDePie == null) {
+                        primeroDePie = vecino;
+                    }
+                    if (seLlega(level, vecino)) {
+                        return vecino;
+                    }
                 }
             }
         }
-        return puesto; // sin hueco mejor: se devuelve el puesto pedido (no hay nada que inventar)
+        // Sin nada mejor: el puesto de la calle (plaza), que es lo único de lo que consta que se llega desde cualquier
+        // parte del pueblo, y si no la primera en la que quepa de pie (mejor eso que un punto inalcanzable: el guardia
+        // se quedaría empujando la pared del recinto hasta rendirse, que es lo que medía I114).
+        if (primeroDePie == null || !seLlega(level, primeroDePie)) {
+            BlockPos calle = VillageManager.casillaDeLaCalle(level, center);
+            if (sePuedeEstar(level, calle) && seLlega(level, calle)) {
+                return calle;
+            }
+        }
+        return primeroDePie != null ? primeroDePie : puesto;
+    }
+
+    /** ¿El caminante del juego <b>llega</b> a esa casilla? (ruta que la alcanza de verdad, no que se queda corta) */
+    private boolean seLlega(ServerLevel level, BlockPos destino) {
+        var camino = villager.getNavigation().createPath(destino, 1);
+        return camino != null && camino.canReach();
     }
 
     /** ¿Esa celda tiene sitio para pararse? (nada sólido en la celda ni encima, y suelo firme debajo) */
