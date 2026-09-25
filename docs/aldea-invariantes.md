@@ -3545,6 +3545,12 @@ alcanza**, ir primero a un sitio del que consta que se llega (la ronda/plaza) y 
 volviendo a su caseta (I115) — y, para el destino pisado, **reescribirlo también cuando el goal no está en su rama de
 caminar** (o dejar de caminar y volver a la ronda en vez de quedarse midiendo contra una diana a la que ya no va).
 
+**Y ARREGLADO, con la medida a favor**: en `entrenar`, a los `TICKS_PARA_COMPROBAR_SI_VA` (40) ticks de no acercarse se
+comprueba **una vez** si de verdad va hacia el puesto —**ruta viva que alcance** y **cerebro apuntando al puesto**— y,
+si no, **se vuelve a la ronda** (en vez de seguir 12 s empujando y aparcar la diana 5 min). **Medido: las rendiciones
+`Yendo a entrenar` bajan de 7 a 2** (y el total de la corrida, de 13 a 9). Las 2 que quedan son del otro caso: ruta viva
+que **sí** alcanza y el guardia, aun así, no avanza hasta el límite; queda apuntado.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 

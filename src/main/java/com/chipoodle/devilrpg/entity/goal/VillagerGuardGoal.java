@@ -111,6 +111,13 @@ public class VillagerGuardGoal extends Goal {
      * pregunta es cara (una búsqueda de ruta), así que no se hace en cada tick: se hace cuando ya parece atasco.
      */
     private static final int TICKS_PARA_PREGUNTAR_SI_HAY_RUTA = 60;
+    /**
+     * Ticks de "no me acerco" al puesto de entrenamiento antes de comprobar **si el guardia va de verdad hacia él**
+     * (ruta viva que alcance + cerebro apuntando al puesto). Medido (I119): se rendía 12 s con el destino pisado por
+     * otra faena o con la ruta viva quedándose corta. Es una comprobación cara (una consulta de ruta), de ahí que se
+     * haga una vez por episodio de atasco.
+     */
+    private static final int TICKS_PARA_COMPROBAR_SI_VA = 40;
     private static final int REST_TICKS = 10;
     /** Si se aleja más de esto del centro de la aldea, deja de hacer la ronda. */
     private static final double MAX_DISTANCE_FROM_CENTER = VillageGenerator.FENCE_RADIUS + 26.0D;
@@ -1195,7 +1202,23 @@ public class VillagerGuardGoal extends Goal {
             if (hastaElPuesto < mejorEntreno - 0.5D) {
                 mejorEntreno = hastaElPuesto;
                 stuckEntreno = 0;
-            } else if (++stuckEntreno >= STUCK_LIMIT) {
+            } else if (++stuckEntreno == TICKS_PARA_COMPROBAR_SI_VA) {
+                // NO SE EMPUJA LA PARED (I119, medido con el aviso de "no llegué"): si la navegación **no tiene ruta
+                // viva que alcance** el puesto, o si el **cerebro va a OTRA parte** (otra faena le ha pisado el
+                // `WALK_TARGET`: medido, un guardia "Yendo a entrenar" con el cerebro puesto en el almacén), se vuelve
+                // a la **ronda** y ya entrenará en otro turno. Antes seguía 12 s midiendo contra la diana y encima se
+                // aparcaba la diana 5 min.
+                var camino = villager.getNavigation().getPath();
+                boolean rutaViva = camino != null && camino.canReach();
+                boolean elCerebroVaAlPuesto = villager.getBrain()
+                        .getMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.WALK_TARGET)
+                        .map(t -> t.getTarget().currentBlockPosition().equals(puesto)).orElse(false);
+                if (!rutaViva || !elCerebroVaAlPuesto) {
+                    entrenoTicks = 0;
+                    stuckEntreno = 0;
+                    return false;
+                }
+            } else if (stuckEntreno >= STUCK_LIMIT) {
                 entrenoTicks = 0;
                 stuckEntreno = 0;
                 VillageManager.marcarPuntoFallido(villager, diana);
