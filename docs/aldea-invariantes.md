@@ -3488,6 +3488,39 @@ cuando la diana está techada/encerrada. Y para la prueba del plano, si se quier
 cambiar el criterio: en vez de "3 vecinas", "¿está la casilla **dentro de la huella** de un edificio?" (mirando el
 plano en un radio de 2-3), que es lo que distingue una plaza de un patio.
 
+### I119 · Las dianas de la barraca van al PATIO (y el entrenamiento se mide contra el paso, no contra la diana)
+
+Lo pidió el jugador: *"¿por qué no pones el puesto de entrenamiento en un campo abierto justo al lado de las
+barracas? así haces las barracas de un solo nivel junto con sus camas"*. Hecho **lo primero** (el campo); lo del
+un-piso queda pendiente y apuntado abajo.
+
+**Lo que se ha movido:**
+- `BARRACA_DIANA` y `BARRACA_DIANA_DOBLE` pasan del **interior** de la sala de armas (`422,671` y `426,666` en su
+  aldea) al **patio del sur**: `424,674` (suelta) y `425/426,674` (la doble, apilada). El campo está **verificado
+  libre** (`z 673..686` es tierra/ césped abierto, con el muro en la diagonal del oeste).
+- `puestoDeEntrenamiento` pasa a ser **la casilla de pie delante de la diana** (`424,675`), en el campo.
+- **Migración** `moverLasDianasAlPatioDeLaBarraca`: quita las dianas de dentro (**solo si ahí sigue habiendo un
+  `TARGET`**: lo que ponga el jugador no se toca) y las pone en el patio (**solo si la celda está vacía**).
+  **Idempotente** y **sin rehacer la barraca** (su testigo es el hogar, I15).
+- **DÓNDE SE ENGANCHA IMPORTA**: puesta en el bloque de migraciones **no se ejecutaba** para su aldea (medido: 0 líneas
+  y las dianas seguían dentro). Va **en la pasada que arregla la barraca ya construida en el sitio** —junto al barril y
+  los faroles—, y ahí sí: `Barraca de 470,63,646: dianas al patio (3 fuera, patio puesto)` y el destino de los guardias
+  cambia al patio (`424,63,675`).
+
+**Medido, y lo que AÚN no está arreglado** (MEDIR_MINERO, varias corridas): los guardias **siguen rindiéndose 7 veces**
+con `Yendo a entrenar`, ya **en el patio**. El log lo deja claro y descarta dos causas:
+
+```
+no consigue llegar a 424, 63, 675 desde 445, 63, 670 (ruta=23 nodos hasta 424, 63, 675 alcanza=SI;
+    pies=air cabeza=air suelo=grass_block | destino=air encima=air) etiqueta="… / Yendo a entrenar"
+```
+
+El destino **es una casilla de pie del patio** y la ruta **sí alcanza** (`alcanza=SI`), pero el guardia **no avanza**.
+Se le ha puesto el arreglo de I114 (caminar a la casilla, no al bloque) y el de I112/I115 (medir el atasco contra la
+casilla a la que se va, no contra la diana) — y **sigue igual**, así que queda una causa por medir que no es ninguna de
+esas dos: lo siguiente es registrar, en el momento de rendirse, **qué camino está siguiendo el cerebro** (su
+`WALK_TARGET` y si la navegación tiene ruta viva), porque `createPath` dice que hay camino y el aldeano se queda quieto.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 

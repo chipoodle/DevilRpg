@@ -1170,15 +1170,30 @@ public class VillagerGuardGoal extends Goal {
         double distancia = Math.sqrt(villager.distanceToSqr(diana.getX() + 0.5D, diana.getY() + 0.5D,
                 diana.getZ() + 0.5D));
         if (distancia > REACH) {
-            // SI NO LLEGA A LA DIANA, SE RINDE Y SIGUE CON LA RONDA (I3/I33). Lo reportó el jugador: *"se quedó ciclado
-            // un guardia al ir a entrenar"* — caminaba contra la pared de la barraca con la etiqueta "Yendo a
-            // entrenar" para siempre. Ahora, si no se acerca en STUCK_LIMIT, se aparca la diana (no se reintenta en
-            // bucle) y el guardia vuelve a su ronda: entrenará cuando la diana sea alcanzable.
+            // A LA DIANA NO SE CAMINA: ES UN BLOQUE (I114). Se camina a la casilla de pie que la tiene delante —el
+            // puesto del PATIO, ver `VillageGenerator.puestoDeEntrenamiento`—, que es la única que el planificador
+            // acepta; si no existe ninguna, no se entrena y el guardia vuelve a la ronda. La búsqueda se hace UNA vez
+            // (la diana no se mueve) y se cachea: hacerla por tick costaba 100 celdas.
+            BlockPos puesto = puestoDeEntrenamientoCacheado(level, diana);
+            if (puesto == null) {
+                entrenoTicks = 0;
+                stuckEntreno = 0;
+                return false;
+            }
+            // Y EL ATASCO SE MIDE CONTRA EL PASO, NO CONTRA LA DIANA (I112/I119): la ruta al puesto del patio da un
+            // RODEO alrededor de la barraca (medido: 23 y 39 nodos, `alcanza=SI`), así que la distancia a la diana
+            // empieza ALEJÁNDOSE y el guardia se rendía EN MITAD DEL RODEO — siete rendiciones `Yendo a entrenar` en
+            // una corrida, con el camino bueno delante—.
+            double hastaElPuesto = Math.sqrt(villager.distanceToSqr(puesto.getX() + 0.5D, puesto.getY() + 0.5D,
+                    puesto.getZ() + 0.5D));
+            // SI NO LLEGA, SE RINDE Y SIGUE CON LA RONDA (I3/I33). Lo reportó el jugador: *"se quedó ciclado un guardia
+            // al ir a entrenar"*. Ahora, si no se acerca en STUCK_LIMIT, se aparca la diana (no se reintenta en bucle)
+            // y el guardia vuelve a su ronda: entrenará cuando la diana sea alcanzable.
             if (entrenoTicks == 0) {
                 mejorEntreno = Double.MAX_VALUE; // medida nueva en cada sesión
             }
-            if (distancia < mejorEntreno - 0.5D) {
-                mejorEntreno = distancia;
+            if (hastaElPuesto < mejorEntreno - 0.5D) {
+                mejorEntreno = hastaElPuesto;
                 stuckEntreno = 0;
             } else if (++stuckEntreno >= STUCK_LIMIT) {
                 entrenoTicks = 0;
@@ -1188,7 +1203,7 @@ public class VillagerGuardGoal extends Goal {
                         villager.getUUID(), diana.toShortString(), objectiveIndex);
                 return false;
             }
-            VillageManager.caminarHacia(villager, diana, VELOCIDAD);
+            VillageManager.caminarHacia(villager, puesto, VELOCIDAD);
             VillageManager.ponerActividad(villager, "Yendo a entrenar");
             return true;
         }
@@ -1415,6 +1430,50 @@ public class VillagerGuardGoal extends Goal {
     private boolean seLlega(ServerLevel level, BlockPos destino) {
         var camino = villager.getNavigation().createPath(destino, 1);
         return camino != null && camino.canReach();
+    }
+
+    /** La diana para la que se calculó {@link #puestoDeEntrenamiento} (para no recalcularlo en cada tick). */
+    @Nullable
+    private BlockPos puestoDeEntrenamientoDe;
+    /** La casilla de pie delante de esa diana: a dónde se camina de verdad para entrenar. */
+    @Nullable
+    private BlockPos puestoDeEntrenamiento;
+
+    /**
+     * <b>La casilla de pie delante de la diana</b> (a {@link #REACH} o menos), o {@code null} si no hay ninguna. Se
+     * calcula <b>una vez por diana</b> y se cachea.
+     * <p>
+     * <b>Por qué</b> (medido, 25-sep-2026): la diana es un <b>bloque</b>, y caminar hacia un bloque da una ruta de
+     * <b>1 nodo</b> (I114): el guardia no da un paso y se rinde con la etiqueta `Yendo a entrenar` (seis guardias
+     * distintos, medido). Con el puesto movido al patio ({@code VillageGenerator.puestoDeEntrenamiento}) hay casilla de
+     * pie al lado y esto basta; y si algún día la diana queda encerrada devuelve {@code null} y el guardia se vuelve a
+     * la ronda, en vez de empujar la pared.
+     */
+    @Nullable
+    private BlockPos puestoDeEntrenamientoCacheado(ServerLevel level, BlockPos diana) {
+        if (diana.equals(puestoDeEntrenamientoDe)) {
+            return puestoDeEntrenamiento;
+        }
+        BlockPos mejor = null;
+        double mejorDist = Double.MAX_VALUE;
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dz = -2; dz <= 2; dz++) {
+                for (int dy = -2; dy <= 1; dy++) {
+                    BlockPos p = diana.offset(dx, dy, dz);
+                    if (!sePuedeEstar(level, p)) {
+                        continue;
+                    }
+                    double d = Math.sqrt(p.distSqr(diana));
+                    if (d <= REACH - 0.5D && d < mejorDist) {
+                        mejorDist = d;
+                        mejor = p.immutable();
+                    }
+                }
+            }
+        }
+        puestoDeEntrenamientoDe = diana;
+        puestoDeEntrenamiento = mejor;
+        return mejor;
     }
 
     /**

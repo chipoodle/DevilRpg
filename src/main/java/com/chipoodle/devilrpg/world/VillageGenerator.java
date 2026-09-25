@@ -1174,15 +1174,21 @@ public final class VillageGenerator {
     }
 
     /**
-     * <b>El puesto de ENTRENAMIENTO de la barraca</b>: la celda de delante de la <b>diana</b> suelta de los arqueros
-     * (el bloque `TARGET` del rincón suroeste, ver {@code BARRACA_DIANA}), que es donde se pone el guardia a entrenar
-     * en su turno (lo pidió el jugador: *"o entrenando en la sala de entrenamiento de sus barracas"*). Se devuelve la
-     * celda de al lado, no la diana, para que el guardia se coloque <b>frente</b> a ella y no dentro.
+     * El puesto de ENTRENAMIENTO de la milicia (lo pidió el jugador: *"¿por qué no pones el puesto de entrenamiento
+     * en un campo abierto justo al lado de las barracas?"*): <b>la casilla de delante de la diana, en el PATIO</b> —el
+     * campo abierto del sur de la barraca (ver {@link #BARRACA_DIANA})—, que es donde se pone el guardia a entrenar en
+     * su turno. Se devuelve la celda de al lado, no la diana, para que el guardia se coloque <b>frente</b> a ella.
+     * <p>
+     * <b>Por qué se sacó de dentro</b> (medido, 25-sep-2026): con la diana y el puesto <b>dentro</b> de la barraca
+     * (`422,671` y `423,671`), <b>seis guardias distintos</b> se rendían ahí con la etiqueta `Yendo a entrenar`: al
+     * <b>bloque</b> de la diana el planificador del juego devuelve una ruta que <b>no alcanza</b> (I114) y la celda de
+     * dentro de la barraca no se distingue de una calle por las pruebas locales (I118). En el patio está a la vista,
+     * en campo abierto y a un bloque de la diana.
      */
     public static BlockPos puestoDeEntrenamiento(BlockPos center, int nivel) {
         BlockPos base = baseDeBarraca(center);
         // La Y va con la COTA de la aldea que pasa quien llama (`cotaDeLaPlaza`), no con la del centro (I1/I12).
-        return new BlockPos(base.getX() + BARRACA_DIANA[0] + 1, nivel, base.getZ() + BARRACA_DIANA[1]);
+        return new BlockPos(base.getX() + BARRACA_DIANA[0], nivel, base.getZ() + BARRACA_DIANA[1] + 1);
     }
 
     /** Radio de la barraca (huella de 9x9). */
@@ -1234,16 +1240,23 @@ public final class VillageGenerator {
      * (una {@code TARGET} no es un POI de aldeano, invariante I31). La deja ahí el constructor y la devuelve a su
      * sitio el reparador {@link #moverLaDianaDeLaBarraca} en las barracas ya construidas.
      */
-    private static final int[] BARRACA_DIANA = {-BARRACA_RADIO + 1, BARRACA_RADIO - 1};
+    private static final int[] BARRACA_DIANA = {-1, BARRACA_RADIO + 2};
     /**
-     * La celda ({@code dx},{@code dz}) de la <b>diana doble</b> del rincón <b>noreste</b>: dos bloques de
-     * {@code TARGET} <b>apilados</b> (el de abajo y el de encima), que es la que da las otras dos dianas del
-     * constructor. Vive aquí, con la de arriba ({@link #BARRACA_DIANA}), porque las <b>tres</b> dianas son geometría
-     * fija de la sala de armas (I4): son las <b>tres celdas distintas</b> que comprueba
-     * {@code build/barraca_diana.py} —la doble ocupa <b>una</b> celda con dos bloques, así que la suelta no puede
-     * caer ahí—.
+     * La celda ({@code dx},{@code dz}) de la <b>diana doble</b>: dos bloques de {@code TARGET} <b>apilados</b>, que es
+     * la que da las otras dos dianas del constructor. Va <b>en el mismo patio</b>, a un bloque de la otra (las dos
+     * mirando al norte, a la barraca): son las tres dianas de la línea de tiro del patio. Como la suelta, se movió
+     * aquí al sacar el entrenamiento de dentro (ver {@link #BARRACA_DIANA}).
      */
-    private static final int[] BARRACA_DIANA_DOBLE = {BARRACA_RADIO - 2, -BARRACA_RADIO + 2};
+    private static final int[] BARRACA_DIANA_DOBLE = {1, BARRACA_RADIO + 2};
+    /**
+     * Las celdas donde el constructor ponía las dianas <b>ANTES</b> (dentro de la sala de armas): el rincón suroeste y
+     * el noreste. Viven aquí para que el reparador {@link #moverLasDianasAlPatioDeLaBarraca} sepa <b>qué</b> dianas
+     * hay que sacar de dentro en las barracas ya construidas —y solo si ahí sigue habiendo un {@code TARGET}: lo que
+     * haya puesto el jugador no se toca—.
+     */
+    private static final int[][] BARRACA_DIANAS_VIEJAS = {
+            {-BARRACA_RADIO + 1, BARRACA_RADIO - 1},
+            {BARRACA_RADIO - 2, -BARRACA_RADIO + 2}};
 
     /**
      * La columna ({@code dx} relativo a la base) por la que sube la <b>escalera del dormitorio</b>: la última celda
@@ -1306,6 +1319,11 @@ public final class VillageGenerator {
             // lint:ok I9 porque no se añade construcción: es un retrofit en el sitio de la pasada idempotente.
             colocar(level, barril, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.NORTH), 3);
         }
+        // Y LAS DIANAS AL PATIO, EN EL SITIO (migración 63, lo pidió el jugador). Va AQUÍ, en la pasada que arregla la
+        // barraca YA CONSTRUIDA en el sitio (como el barril y los faroles de arriba), y no en el bloque de migraciones:
+        // medido, desde allí NO se ejecutaba para la aldea del jugador (las dianas seguían dentro y los guardias
+        // rindiéndose "Yendo a entrenar"). Es idempotente y de tres celdas.
+        moverLasDianasAlPatioDeLaBarraca(level, center);
         // Y LOS FAROLES DEL DORMITORIO, COLGADOS DEL TEJADO (migración 55). Se colocaban POSADOS en la celda que va
         // pegada al tejado, y ahí no hay nada debajo (el dormitorio está al aire): quedaban flotando, sin cadena
         // (I14). Medido en el guardado del jugador: 2 en el dormitorio de cada barraca (aldeas 0 y 2). La celda es
@@ -1523,6 +1541,46 @@ public final class VillageGenerator {
         if (colocarSiEstaVacio(level, diana, Blocks.TARGET.defaultBlockState())) {
             DevilRpg.LOGGER.info("[Village] Barraca de {}: la diana que se comia el arca vuelve a la sala de armas,"
                     + " en {} (pegada a las paredes del rincon suroeste)", center, diana);
+        }
+    }
+
+    /**
+     * <b>Saca las dianas de dentro de la barraca y las pone en el PATIO</b> (migración 63, lo pidió el jugador:
+     * *"¿por qué no pones el puesto de entrenamiento en un campo abierto justo al lado de las barracas?"*).
+     * <p>
+     * <b>Lo que había</b> (medido, 25-sep-2026, con el arnés): la diana suelta y la doble estaban <b>dentro</b> de la
+     * sala de armas (`422,671` y `426,666` en la aldea del jugador) y el puesto de entrenamiento era la celda de al
+     * lado (`423,671`). Ahí <b>seis guardias distintos</b> se rendían con la etiqueta `Yendo a entrenar`: al bloque de
+     * la diana el planificador les da una ruta que <b>no alcanza</b>, y una celda de dentro de la barraca no se
+     * distingue de una calle por las pruebas locales (I114/I118).
+     * <p>
+     * <b>Lo que hace</b>: quita la diana de cada celda vieja <b>solo si ahí sigue habiendo un {@code TARGET}</b> (lo
+     * que haya puesto el jugador no se toca) y las pone en el patio ({@link #BARRACA_DIANA} y
+     * {@link #BARRACA_DIANA_DOBLE}) <b>solo si esas celdas están vacías</b>. Es <b>idempotente</b> (con las dianas ya
+     * en el patio no escribe ni una celda) y <b>no rehace la barraca</b> (su testigo es el hogar, I15: rehacerla
+     * tiraría las camas y lo de dentro de las arcas). Va <b>antes</b> de tirar el plano, para que el plano nuevo se
+     * capture ya con las dianas en el patio (I8).
+     */
+    public static void moverLasDianasAlPatioDeLaBarraca(ServerLevel level, BlockPos center) {
+        if (!barracaConstruida(level, center)) {
+            return; // sin barraca del trazado actual no hay dianas que sacar
+        }
+        int nivel = cotaDeLaPlaza(level, center);
+        BlockPos base = baseDeBarraca(center);
+        int quitadas = 0;
+        for (int[] vieja : BARRACA_DIANAS_VIEJAS) {
+            quitadas += quitarSiEs(level, base.getX() + vieja[0], nivel, base.getZ() + vieja[1], Blocks.TARGET);
+            // Y la doble tenía DOS bloques apilados: el de encima también se va.
+            quitadas += quitarSiEs(level, base.getX() + vieja[0], nivel + 1, base.getZ() + vieja[1], Blocks.TARGET);
+        }
+        boolean puesta = colocarSiEstaVacio(level, new BlockPos(base.getX() + BARRACA_DIANA[0], nivel,
+                base.getZ() + BARRACA_DIANA[1]), Blocks.TARGET.defaultBlockState());
+        BlockPos doble = new BlockPos(base.getX() + BARRACA_DIANA_DOBLE[0], nivel, base.getZ() + BARRACA_DIANA_DOBLE[1]);
+        puesta |= colocarSiEstaVacio(level, doble, Blocks.TARGET.defaultBlockState());
+        puesta |= colocarSiEstaVacio(level, doble.above(), Blocks.TARGET.defaultBlockState());
+        if (quitadas > 0 || puesta) {
+            DevilRpg.LOGGER.info("[Village] Barraca de {}: dianas al patio ({} fuera, patio {})", center, quitadas,
+                    puesta ? "puesto" : "ocupado");
         }
     }
 

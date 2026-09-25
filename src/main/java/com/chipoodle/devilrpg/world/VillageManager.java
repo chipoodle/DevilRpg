@@ -2286,6 +2286,12 @@ public final class VillageManager {
             // vacía: idempotente, de una celda, sin rehacer la barraca (su testigo es el hogar, I15) y antes de
             // tirar el plano, para que el plano nuevo se capture ya con las tres (I8).
             VillageGenerator.moverLaDianaDeLaBarraca(level, center);
+            // Y LAS DIANAS AL PATIO (migración 63, lo pidió el jugador: *"¿por qué no pones el puesto de entrenamiento
+            // en un campo abierto justo al lado de las barracas?"*): con la diana y el puesto DENTRO de la barraca,
+            // seis guardias distintos se rendían ahí con la etiqueta "Yendo a entrenar" (medido con el arnés,
+            // I114/I118). El reparador las saca de dentro —solo si siguen siendo dianas— y las pone en el campo del
+            // sur, que es donde está el puesto. Idempotente y sin rehacer la barraca (su testigo es el hogar, I15).
+            VillageGenerator.moverLasDianasAlPatioDeLaBarraca(level, center);
             // EL TALLER DEL LEÑADOR (etapa H, migración 62): el leñador deja de ser el recolector y pasa a ser un
             // oficio propio, así que necesita SU estación: un cobertizo abierto junto a la arboleda con la MESA DE
             // FLECHAS (el puesto del flechero) y su farol. Va aquí, con el resto de lo que construye el pueblo y antes
