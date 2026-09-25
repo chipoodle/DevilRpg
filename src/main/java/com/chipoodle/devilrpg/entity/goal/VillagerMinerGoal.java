@@ -134,6 +134,16 @@ public class VillagerMinerGoal extends Goal {
      * espera: se reintenta cada ~30 s, no en cada tick.
      */
     private static final int ESPERA_TRAS_APARCADO = 600;
+    /**
+     * Ticks de "no me acerco" antes de <b>volver a la caseta</b> y replanificar (ver el `tick`). Medido (24-sep-2026):
+     * el minero quedaba <b>encajado fuera del túnel</b> en `501,55,621` y desde ahí el planificador no le daba
+     * <b>ninguna</b> ruta a su celda (`ruta=1 nodos ... alcanza=NO`), así que se rendía tres veces en la misma corrida.
+     * La caseta está arriba y de ella <b>sí</b> se baja andando el caracol: volviendo arriba y replanificando, la faena
+     * sigue.
+     */
+    private static final int TICKS_PARA_VOLVER_A_LA_CASETA = 120;
+    /** true mientras el minero vuelve a la caseta porque se ha quedado encajado sin ruta hasta su celda. */
+    private boolean volviendoALaCaseta;
     /** Pedernal que quiere tener el pueblo en el almacén antes de ponerse a colar más. */
     private static final int OBJETIVO_PEDERNAL = 16;
     /** Lo que se lleva de una vez del almacén y lo que deja de reserva para el herrero de herramientas. */
@@ -419,6 +429,7 @@ public class VillagerMinerGoal extends Goal {
         workTicks = 0;
         stuckTicks = 0;
         mejorDistancia = Double.MAX_VALUE;
+        volviendoALaCaseta = false;
         irAlDestino();
     }
 
@@ -446,6 +457,29 @@ public class VillagerMinerGoal extends Goal {
         double distancia = Math.sqrt(villager.distanceToSqr(referencia.getX() + 0.5D, referencia.getY() + 0.5D,
                 referencia.getZ() + 0.5D));
         if (distancia > REACH) {
+            if (volviendoALaCaseta) {
+                // YA SE ESTÁ VOLVIENDO: se camina a la caseta (un sitio del que SIEMPRE hay ruta) y, al llegar, se
+                // vuelve a decidir la faena desde arriba, que es desde donde el túnel se anda.
+                BlockPos caseta = VillageGenerator.puntoDeApoyoDeLaCaseta(level, center);
+                double hasta = Math.sqrt(villager.distanceToSqr(caseta.getX() + 0.5D, caseta.getY() + 0.5D,
+                        caseta.getZ() + 0.5D));
+                if (hasta <= REACH) {
+                    volviendoALaCaseta = false;
+                    destino = null; // que se vuelva a decidir con el minero ya en la caseta
+                    restTicks = IDLE_REST_TICKS;
+                    return;
+                }
+                VillageManager.caminarHacia(villager, caseta, VELOCIDAD);
+                VillageManager.ponerActividad(villager, "Volviendo a la caseta");
+                anotar("yendo: Volviendo a la caseta (encajado)");
+                if (hasta < mejorDistancia - 0.5D) {
+                    mejorDistancia = hasta;
+                    stuckTicks = 0;
+                } else {
+                    stuckTicks++;
+                }
+                return;
+            }
             // EL TIRÓN INTERMEDIO: desde la mina el almacén queda a más de lo que alcanza el planificador (medido: 56
             // bloques de radio alrededor del aldeano), y sin ruta el aldeano empujaba en línea recta — el jugador lo
             // vio atorado en el segundo piso de la taberna con la etiqueta "Yendo al almacen".
@@ -457,6 +491,14 @@ public class VillagerMinerGoal extends Goal {
                 stuckTicks = 0;
             } else {
                 stuckTicks++;
+                // ENCAJADO FUERA DEL TÚNEL (I115): medido, el minero daba por perdida su celda 3 veces desde
+                // `501,55,621` con `ruta=1 nodos ... alcanza=NO` — desde ahí NO hay ruta ninguna. Antes de rendirse se
+                // vuelve a la CASETA (que está arriba y de la que sí se baja andando) y se replanifica desde allí.
+                if (stuckTicks == TICKS_PARA_VOLVER_A_LA_CASETA) {
+                    volviendoALaCaseta = true;
+                    mejorDistancia = Double.MAX_VALUE;
+                    stuckTicks = 0;
+                }
             }
             return;
         }

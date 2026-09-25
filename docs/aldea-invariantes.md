@@ -3353,6 +3353,48 @@ sin cazarse.)
 3. **Granjeros**: `596e09a8` se rinde en `484,63,658` **desde `484,63,659`** (¡a UN bloque!) con `destino=wheat` y
    `alcanza=SI` — es el mismo patrón (la mata es un bloque) y le toca el mismo arreglo.
 
+### I115 · El que se queda ENCAJADO sin ruta vuelve a un sitio del que SÍ haya ruta (y el punto de la ronda es de la aldea, no de cada guardia)
+
+Segunda vuelta de I114, con la misma medida (MEDIR_MINERO, `arnes`, 24-25-sep-2026):
+
+**Lo que se arregló y está medido:**
+
+- **El minero encajado**: se rendía 3 veces desde `501,55,621` con `ruta=1 nodos ... alcanza=NO` — desde ahí **no hay
+  ruta ninguna** (se había metido fuera del túnel). Ahora, cuando lleva `TICKS_PARA_VOLVER_A_LA_CASETA` (120) sin
+  acercarse, **vuelve a la caseta** (de la que consta que se baja andando el caracol) y replanifica desde arriba:
+  `El minero: yendo: Volviendo a la caseta (encajado)` → `pos=503,57,621 → 507,60,617 → 508,63,616` → y sigue picando.
+  **Medido: 3 → 0 rendiciones del minero**, y la mina sigue avanzando (`pasos` 18 → 19 y de ahí no se queda).
+- **La ronda no entra en un recinto**: el punto de la ronda se elige por geometría (un círculo de radio
+  `RADIO_RONDA`) y caía **dentro de un recinto amurallado** (`423,63,671`). Ahora `puestoLibre` exige, además de caber
+  de pie, **estar en LA CALLE** (un recorrido en anchura desde la plaza sobre casillas de pie: `calleDeLaPlaza`) y
+  **llegar** (`createPath(...).canReach()`).
+- **Un punto malo lo paga la ALDEA, no cada guardia**: medido, **seis guardias distintos** se rindieron en la misma
+  casilla (tres de ellos en el **mismo segundo**, porque ya iban de camino). El aparcado de I33 es por aldeano, así que
+  cada uno pagaba el fallo por su cuenta: ahora el primero que se rinde **avisa a los demás** (`PUNTOS_MALOS_DE_LA_RONDA`,
+  5 min, por aldea).
+- **No es atasco si hay ruta que llega**: en las rendiciones de guardias el log decía `alcanza=SI` **justo al
+  rendirse** — se rendían **en mitad del rodeo** (rutas de 30-44 nodos que empiezan alejándose del puesto), que es la
+  lección de I112 pero en el guardia. Ahora, a los `TICKS_PARA_PREGUNTAR_SI_HAY_RUTA` (60) ticks de "no me acerco" se
+  pregunta **una vez** si hay ruta que alcanza (`VillageManager.hayRutaQueAlcanza`) y, si la hay, **se sigue andando**.
+
+**Medido (misma partida, antes → ahora):**
+
+| concepto | antes | ahora |
+|---|---|---|
+| rendiciones en la corrida | 26 | **10-13** |
+| del **minero** | 3 | **0** |
+| del **leñador** | 6 | **0** |
+| de **guardias en `423,63,671`** | 6 | **6-7** (uno por guardia en la primera pasada; después, 5 min en paz) |
+
+**LO QUE SIGUE SIN ARREGLARSE, y por qué** (esto es lo importante de esta vuelta): el recinto de `423,63,671` **pasa
+todas mis pruebas** —cabe de pie, tiene cielo abierto, y mi recorrido en anchura **entra por la puerta** (una puerta
+ABIERTA tiene forma de colisión vacía, así que cuenta como casilla de pie)—, pero el **planificador del juego** unas
+veces le encuentra la puerta (`ruta=30 nodos hasta 423,63,671 alcanza=SI`) y otras no (`ruta=38 nodos hasta
+430,63,666 alcanza=NO`), y las que fallan se quedan **en la pared de fuera**. O sea: el criterio del juego es
+**inconsistente** para esa casilla y el mío no la distingue. Lo que queda por hacer es que la ronda **no elija puntos
+dentro de ninguna construcción** usando el **plano** de la aldea (`blueprintState`, que ya existe), en vez de pruebas
+locales: el plano sabe qué celdas son edificio y cuáles calle.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 

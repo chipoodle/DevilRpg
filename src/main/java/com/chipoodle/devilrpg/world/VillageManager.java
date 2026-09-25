@@ -4797,6 +4797,21 @@ public final class VillageManager {
         return level.getBlockState(p).getBlock().toString().replace("Block{minecraft:", "").replace("}", "");
     }
 
+    /**
+     * <b>¿El planificador del juego da una ruta que ALCANZA ese destino?</b> (no una que se queda corta).
+     * <p>
+     * Es la prueba que distingue "no hay camino" de "el camino es largo y da un rodeo": medido (24-sep-2026) los
+     * guardias se rendían en mitad de un rodeo de <b>32 nodos</b> y en el momento de rendirse el propio log decía
+     * {@code alcanza=SI} — o sea que <b>sí había camino</b>: lo que fallaba era la cuenta de "no me acerco" del goal
+     * (el rodeo empieza alejándose del puesto). Con esto, un goal puede preguntar si el atasco es de verdad.
+     * <p>
+     * <b>Caro</b> (una búsqueda de ruta): se pregunta cuando YA parece que hay atasco, no en cada tick.
+     */
+    public static boolean hayRutaQueAlcanza(Villager villager, BlockPos destino) {
+        var camino = villager.getNavigation().createPath(destino, 1);
+        return camino != null && camino.canReach();
+    }
+
     /** ¿Ese sitio está <b>aparcado</b> para ese aldeano? (no llegó a él hace poco: ver {@link #marcarPuntoFallido}) */
     public static boolean esPuntoFallido(Villager villager, @Nullable BlockPos punto) {
         if (punto == null) {

@@ -20,6 +20,11 @@ import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.projectile.Arrow;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.ItemStack;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.phys.AABB;
@@ -101,6 +106,11 @@ public class VillagerGuardGoal extends Goal {
     private static final int RELEVO_TICKS = 2 * 60 * 20;
     /** Si se queda atascado (no se acerca) deja el punto y prueba con el siguiente. */
     private static final int STUCK_LIMIT = 200;
+    /**
+     * Ticks de "no me acerco" que se aguantan <b>antes de preguntar si hay ruta que alcanza</b> (ver el `tick`). La
+     * pregunta es cara (una búsqueda de ruta), así que no se hace en cada tick: se hace cuando ya parece atasco.
+     */
+    private static final int TICKS_PARA_PREGUNTAR_SI_HAY_RUTA = 60;
     private static final int REST_TICKS = 10;
     /** Si se aleja más de esto del centro de la aldea, deja de hacer la ronda. */
     private static final double MAX_DISTANCE_FROM_CENTER = VillageGenerator.FENCE_RADIUS + 26.0D;
@@ -329,6 +339,7 @@ public class VillagerGuardGoal extends Goal {
             // con el MISMO `BlockPos{x=1354, y=120, z=1414}` y "atascado 200 ticks" por vuelta — de noche el puesto
             // sale del RELOJ (el relevo de puertas) y no de `paso`, así que saltárselo no cambiaba nada.
             VillageManager.marcarPuntoFallido(villager, destino);
+            apuntarPuntoMaloDeLaRonda(destino);
             paso++;
             return false;
         }
@@ -417,6 +428,14 @@ public class VillagerGuardGoal extends Goal {
                 stuckTicks = 0;
             } else {
                 stuckTicks++;
+                // PERO NO ES ATASCO SI HAY RUTA QUE LLEGA. La ronda es un círculo alrededor del pueblo y sus caminos
+                // dan RODEOS: el guardia se rendía en mitad de un rodeo de 32 nodos y el log, en ese mismo momento,
+                // decía `alcanza=SI` (había camino: lo que subía era la distancia en línea recta). Se pregunta UNA vez,
+                // cuando ya parece atasco, y si hay ruta que alcanza se sigue andando (medido, I115).
+                if (stuckTicks == TICKS_PARA_PREGUNTAR_SI_HAY_RUTA
+                        && VillageManager.hayRutaQueAlcanza(villager, destino)) {
+                    stuckTicks = 0;
+                }
             }
             VillageManager.ponerActividad(villager, equipando ? "Yendo al almacén"
                     : (marchando ? "Marchando a la guarida" : actividadDeGuardia(level)));
@@ -1281,6 +1300,35 @@ public class VillagerGuardGoal extends Goal {
     }
 
     /**
+     * Puntos de la ronda que <b>algún guardia de esa aldea</b> no consiguió alcanzar hace poco, y hasta cuándo no se
+     * vuelven a elegir. Es <b>por aldea</b> (no por guardia) a propósito: medido (24-sep-2026), <b>seis guardias
+     * distintos</b> se rindieron en el <b>mismo</b> punto (`423,63,671`, una casilla dentro de un recinto amurallado a
+     * la que el planificador del juego unas veces le encuentra la puerta y otras no). El aparcado de I33 es por aldeano,
+     * así que cada guardia pagaba el fallo por su cuenta: con esto, el primero que se rinde <b>avisa a los demás</b>.
+     * No se guarda con la partida (la ronda se recalcula): tras cargar, cada punto se paga una vez.
+     */
+    private static final Map<Long, Long> PUNTOS_MALOS_DE_LA_RONDA = new java.util.concurrent.ConcurrentHashMap<>();
+    /** Cuánto se deja un punto malo de la ronda (5 min, como el aparcado de I33). */
+    private static final long PUNTO_MALO_TICKS = 5L * 60L * 20L;
+
+    /** La clave del punto malo: la aldea y la casilla (la Y entra porque la ronda la lleva). */
+    private static long claveDelPuntoMalo(int objectiveIndex, BlockPos p) {
+        return ((long) objectiveIndex << 56) ^ p.asLong();
+    }
+
+    /** Apunta que ese punto de la ronda no se alcanza (lo llama el guardia que se rinde; ver {@link #esPuntoMalo}). */
+    private void apuntarPuntoMaloDeLaRonda(BlockPos p) {
+        PUNTOS_MALOS_DE_LA_RONDA.put(claveDelPuntoMalo(objectiveIndex, p),
+                villager.level().getGameTime() + PUNTO_MALO_TICKS);
+    }
+
+    /** ¿Ese punto de la ronda lo dio por inalcanzable algún guardia de esta aldea hace poco? */
+    private boolean esPuntoMalo(ServerLevel level, BlockPos p) {
+        Long hasta = PUNTOS_MALOS_DE_LA_RONDA.get(claveDelPuntoMalo(objectiveIndex, p));
+        return hasta != null && level.getGameTime() < hasta;
+    }
+
+    /**
      * Corre el puesto a una casilla donde el guardia <b>quepa de pie</b> y <b>se pueda llegar</b>, si la ideal no vale
      * (una valla, un poste, lo que haya puesto el jugador). Navegar hacia un bloque sólido es el fallo que el pueblo ya
      * tiene documentado (ver {@code VillageStorage.puntoDeApoyo}): el aldeano se queda empujándolo. Se mira primero a
@@ -1297,11 +1345,15 @@ public class VillagerGuardGoal extends Goal {
      */
     private BlockPos puestoLibre(ServerLevel level, BlockPos puesto, int haciaDonde) {
         BlockPos primeroDePie = null;
+        Set<Long> calle = null; // se calcula una vez por puesto (recorrido en anchura desde la plaza)
         for (int salto = 0; salto <= 6; salto++) {
             if (salto == 0) {
-                if (sePuedeEstar(level, puesto)) {
+                if (sePuedeEstar(level, puesto) && !esPuntoMalo(level, puesto)) {
                     primeroDePie = puesto;
-                    if (seLlega(level, puesto)) {
+                    if (calle == null) {
+                        calle = calleDeLaPlaza(level);
+                    }
+                    if (calle.contains(puesto.asLong()) && seLlega(level, puesto)) {
                         return puesto;
                     }
                 }
@@ -1309,23 +1361,29 @@ public class VillagerGuardGoal extends Goal {
             }
             for (int dz : new int[]{salto, -salto}) {
                 BlockPos vecino = puesto.offset(0, 0, dz);
-                if (!sePuedeEstar(level, vecino)) {
+                if (!sePuedeEstar(level, vecino) || esPuntoMalo(level, vecino)) {
                     continue;
                 }
                 if (primeroDePie == null) {
                     primeroDePie = vecino;
                 }
-                if (seLlega(level, vecino)) {
+                if (calle == null) {
+                    calle = calleDeLaPlaza(level);
+                }
+                if (calle.contains(vecino.asLong()) && seLlega(level, vecino)) {
                     return vecino;
                 }
             }
             if (haciaDonde != 0) {
                 BlockPos vecino = puesto.offset(haciaDonde * salto, 0, 0);
-                if (sePuedeEstar(level, vecino)) {
+                if (sePuedeEstar(level, vecino) && !esPuntoMalo(level, vecino)) {
                     if (primeroDePie == null) {
                         primeroDePie = vecino;
                     }
-                    if (seLlega(level, vecino)) {
+                    if (calle == null) {
+                        calle = calleDeLaPlaza(level);
+                    }
+                    if (calle.contains(vecino.asLong()) && seLlega(level, vecino)) {
                         return vecino;
                     }
                 }
@@ -1333,20 +1391,69 @@ public class VillagerGuardGoal extends Goal {
         }
         // Sin nada mejor: el puesto de la calle (plaza), que es lo único de lo que consta que se llega desde cualquier
         // parte del pueblo, y si no la primera en la que quepa de pie (mejor eso que un punto inalcanzable: el guardia
-        // se quedaría empujando la pared del recinto hasta rendirse, que es lo que medía I114).
+        // se quedaría empujando la pared del recinto hasta rendirse, que es lo que medía I114/I115).
         if (primeroDePie == null || !seLlega(level, primeroDePie)) {
-            BlockPos calle = VillageManager.casillaDeLaCalle(level, center);
-            if (sePuedeEstar(level, calle) && seLlega(level, calle)) {
-                return calle;
+            BlockPos calle2 = VillageManager.casillaDeLaCalle(level, center);
+            if (sePuedeEstar(level, calle2) && seLlega(level, calle2)) {
+                return calle2;
             }
         }
         return primeroDePie != null ? primeroDePie : puesto;
     }
 
-    /** ¿El caminante del juego <b>llega</b> a esa casilla? (ruta que la alcanza de verdad, no que se queda corta) */
+    /**
+     * <b>¿El caminante del juego <b>llega</b> a esa casilla?</b> (ruta que la alcanza de verdad, no que se queda corta)
+     */
     private boolean seLlega(ServerLevel level, BlockPos destino) {
         var camino = villager.getNavigation().createPath(destino, 1);
         return camino != null && camino.canReach();
+    }
+
+    /**
+     * <b>LA CALLE DEL PUEBLO</b>: las casillas de pie que están <b>conectadas andando con la plaza</b>, por un recorrido
+     * en anchura desde ella (la plaza es lo único de lo que consta que se llega desde cualquier parte).
+     * <p>
+     * <b>Por qué hace falta</b> (medido, 24-sep-2026): la ronda es un círculo y metía a los guardias <b>dentro de un
+     * recinto amurallado</b> (`423,63,671`). Esa casilla <b>pasa</b> las pruebas locales —aire a los pies, aire encima,
+     * suelo firme, y hasta cielo abierto—, y el planificador unas veces le encuentra la puerta y otras no
+     * (`ruta=30 nodos ... alcanza=SI` desde un sitio y `ruta=38 nodos hasta 430,63,666 alcanza=NO` desde otro), así que
+     * los guardias se rendían allí una y otra vez. El recorrido en anchura contesta la pregunta de verdad: <b>¿se llega
+     * andando desde la plaza?</b> Y de paso rechaza las casillas de una cueva y los rincones sin salida. No se pasa por
+     * las puertas (una puerta no es una casilla de pie): <b>la ronda va por la calle, no entra en las casas</b>.
+     */
+    private Set<Long> calleDeLaPlaza(ServerLevel level) {
+        Set<Long> calle = new HashSet<>();
+        BlockPos plaza = VillageManager.casillaDeLaCalle(level, center);
+        if (plaza == null) {
+            return calle;
+        }
+        Deque<BlockPos> cola = new ArrayDeque<>();
+        cola.add(plaza);
+        calle.add(plaza.asLong());
+        int maxCeldas = 4000;
+        int radio = 80;
+        while (!cola.isEmpty() && calle.size() < maxCeldas) {
+            BlockPos p = cola.poll();
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    if (Math.abs(dx) + Math.abs(dz) != 1) {
+                        continue; // sin diagonales: el aldeano anda en cruz
+                    }
+                    for (int dy = -1; dy <= 1; dy++) {
+                        BlockPos q = new BlockPos(p.getX() + dx, p.getY() + dy, p.getZ() + dz);
+                        if (Math.abs(q.getX() - plaza.getX()) > radio || Math.abs(q.getZ() - plaza.getZ()) > radio) {
+                            continue;
+                        }
+                        if (calle.contains(q.asLong()) || !sePuedeEstar(level, q)) {
+                            continue;
+                        }
+                        calle.add(q.asLong());
+                        cola.add(q);
+                    }
+                }
+            }
+        }
+        return calle;
     }
 
     /** ¿Esa celda tiene sitio para pararse? (nada sólido en la celda ni encima, y suelo firme debajo) */
