@@ -4815,10 +4815,21 @@ public final class VillageManager {
         String navegacion = caminoVivo == null ? "sin ruta"
                 : (caminoVivo.getNodeCount() + " nodos hasta " + caminoVivo.getEndNode().asBlockPos().toShortString()
                         + (caminoVivo.canReach() ? " alcanza" : " NO alcanza"));
+        // Y **QUÉ GOALS VAN CORRIENDO** (con `*`), que es lo que delata a dos faenas peleándose por el mismo aldeano:
+        // lo pidió el jugador viendo a Leocadia *"caminando erráticamente, como balanceándose… como si hubiese dos
+        // tareas en su cerebro en conflicto"*. Si aquí salen dos goals con MOVE a la vez, el culpable está claro; y si
+        // sólo sale uno, el que le mueve es el **cerebro** (sus paseos y su "andar hacia donde mira"), porque el
+        // `WALK_TARGET` lo escribe él y `caminarHacia` no siempre gana (ver I119/I122).
+        StringBuilder goalsCorriendo = new StringBuilder();
+        for (net.minecraft.world.entity.ai.goal.WrappedGoal w : villager.goalSelector.getAvailableGoals()) {
+            if (w.isRunning()) {
+                goalsCorriendo.append(w.getGoal().getClass().getSimpleName()).append(' ');
+            }
+        }
         DevilRpg.LOGGER.info("[Village] {} no consigue llegar a {} desde {} (ruta={}; {}) etiqueta=\"{}\" cerebro={}"
-                        + " nav=[{}]: lo deja por {} min y sigue con lo demas",
+                        + " nav=[{}] goals=[{}]: lo deja por {} min y sigue con lo demas",
                 villager.getUUID(), p.toShortString(), desde.toShortString(), ruta, donde, etiqueta, cerebro, navegacion,
-                PUNTO_FALLIDO_TICKS / (60 * 20));
+                goalsCorriendo.toString().trim(), PUNTO_FALLIDO_TICKS / (60 * 20));
     }
 
     /** El nombre corto (sin {@code Block{minecraft:...}}) del bloque de una celda, para los avisos del log. */
