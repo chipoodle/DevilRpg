@@ -754,9 +754,15 @@ public final class VillageManager {
      *       {@code abrirElPasoDeLaTabernaAlAlmacen}: una puerta de servicio en el muro este, una celda al sur del
      *       centro del cobertizo (la columna despejada de postes), a la cota y sin escalón. Idempotente, y va antes de
      *       tirar el plano (I8) para que el obrero la mantenga.</li>
+     *   <li><b>73:</b> la <b>BAR RACA de UN PISO</b> (lo pidió el jugador) y las <b>dianas al patio</b> del sur: las 8
+     *       camas y las dos arcas bajan a la planta baja, se va la escalera y el forjado, y el tejado baja a
+     *       {@code nivel + 3}. Las barracas ya construidas se vuelven a levantar (su <b>testigo</b> es el hogar del
+     *       patio <b>más</b> la ausencia del primer escalón, ver {@code VillageGenerator.barracaConstruida}), y
+     *       <b>antes</b> de rehacerlas se vacían sus dos arcas al almacén para no perder lo que tengan dentro
+     *       ({@code vaciarLasArcasDeLaBarraca}). Ver I119–I123.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 72;
+    public static final int CURRENT_LAYOUT = 73;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),

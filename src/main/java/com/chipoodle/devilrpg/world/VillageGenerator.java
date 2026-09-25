@@ -1205,6 +1205,12 @@ public final class VillageGenerator {
      */
     private static final int BARRACA_PISO2 = 0;
     /**
+     * La altura que tenía el <b>piso de arriba</b> en el trazado de DOS PISOS (el que se rehace). Vive aquí porque lo
+     * necesita la migración para saber <b>dónde estaban las arcas y las camas viejas</b> (ver
+     * {@link #vaciarLasArcasDeLaBarraca} y {@link #barracaConstruida}).
+     */
+    private static final int BARRACA_PISO2_VIEJO = 4;
+    /**
      * Lo que sube el <b>farol del dormitorio</b> sobre la cota: va pegado al <b>tejado</b> (que está un bloque más
      * arriba), así que <b>cuelga</b> de él. Colocado <b>posado</b> —como estaba— no tiene nada debajo y queda
      * flotando (I14). El número vive aquí porque lo usan el constructor y el retrofit de las barracas ya construidas.
@@ -1358,6 +1364,12 @@ public final class VillageGenerator {
         if (barracaConstruida(level, center)) {
             return; // la barraca ya está y con el trazado actual
         }
+        // ANTES DE REHACERLA, SE VACÍAN SUS ARCAS (I123): rehacer la barraca tira lo que haya dentro de los cofres
+        // (mecánica de vanilla), y en la aldea del jugador esas dos arcas están en uso. Se pasa todo al ALMACÉN con
+        // `VillageStorage.guardar`, que ya es lo que usa el pueblo para guardar lo suyo: si algo no cupiera, se avisa en
+        // el log, pero no se pierde por el camino. Las arcas VIEJAS están a la altura del piso de arriba de entonces
+        // ({@link #BARRACA_PISO2_VIEJO}), que es lo que ya no existe en el trazado de un piso.
+        vaciarLasArcasDeLaBarraca(level, center, base, nivel);
         BlockPos puerta = barraca(level, base, nivel);
         // Camino de la plaza a su puerta (si no, los guardias tienen que trepar por el césped).
         paths(level, center, doorApproach(level, puerta));
@@ -1374,8 +1386,49 @@ public final class VillageGenerator {
     public static boolean barracaConstruida(ServerLevel level, BlockPos center) {
         int nivel = cotaDeLaPlaza(level, center);
         BlockPos base = baseDeBarraca(center);
-        return level.getBlockState(new BlockPos(base.getX(), nivel - 1, base.getZ() + BARRACA_RADIO - 1))
-                .is(Blocks.CAMPFIRE);
+        // TESTIGO 1 (el de siempre): el hogar del patio de entrenamiento.
+        if (!level.getBlockState(new BlockPos(base.getX(), nivel - 1, base.getZ() + BARRACA_RADIO - 1))
+                .is(Blocks.CAMPFIRE)) {
+            return false;
+        }
+        // TESTIGO 2 (I123, la barraca de UN PISO): el PRIMER ESCALÓN de la escalera del dormitorio. En el trazado de
+        // dos pisos ahí hay un escalón; en el de un piso, esa celda es del INTERIOR (al aire). Sin esta prueba, la
+        // barraca vieja pasaba por buena y el jugador seguiría con las camas arriba. No vale mirar el forjado: en el
+        // trazado nuevo el tejado cae en la MISMA capa (nivel + 3) que el forjado viejo.
+        return !level.getBlockState(new BlockPos(base.getX() + BARRACA_ESCALERA_DX, nivel,
+                base.getZ() + BARRACA_ESCALERA_PIE_DZ)).is(Blocks.COBBLESTONE_STAIRS);
+    }
+
+    /**
+     * <b>Vacía las dos arcas VIEJAS de la barraca al almacén</b> antes de rehacerla (I123): rehacer una construcción
+     * tira lo que haya dentro de sus cofres, así que lo que el pueblo tenga guardado ahí se pasa primero al almacén con
+     * {@link VillageStorage#guardar}. Es <b>idempotente</b> (si las arcas ya no están, no hace nada) y no se lleva nada
+     * más: camas y maniquíes son bloques, no tienen contenido.
+     */
+    private static void vaciarLasArcasDeLaBarraca(ServerLevel level, BlockPos center, BlockPos base, int nivel) {
+        int y = nivel + BARRACA_PISO2_VIEJO;
+        for (int dz = BARRACA_ARCA_DZ; dz <= BARRACA_ARCA_DZ + 1; dz++) {
+            BlockPos arca = new BlockPos(base.getX() - BARRACA_RADIO + 1, y, base.getZ() + dz);
+            if (!(level.getBlockEntity(arca) instanceof Container cofre)) {
+                continue;
+            }
+            int pasados = 0;
+            for (int i = 0; i < cofre.getContainerSize(); i++) {
+                ItemStack dentro = cofre.getItem(i);
+                if (dentro.isEmpty()) {
+                    continue;
+                }
+                ItemStack resto = VillageStorage.guardar(level, center, dentro.copy());
+                if (resto.isEmpty()) {
+                    cofre.setItem(i, ItemStack.EMPTY);
+                    pasados++;
+                }
+            }
+            if (pasados > 0) {
+                DevilRpg.LOGGER.info("[Village] Barraca de {}: {} pila(s) del arca {} pasadas al almacen antes de"
+                        + " rehacerla (un piso, I123)", center, pasados, arca.toShortString());
+            }
+        }
     }
 
     /**
@@ -1669,6 +1722,16 @@ public final class VillageGenerator {
         //    en 12 columnas: sin esto, el suelo de la barraca quedaría flotando. `nivelarHuella` toma la ESQUINA
         //    (y solo mira su X/Z, pero se le da una Y que ya es la cota: invariante I1).
         nivelarHuella(level, new BlockPos(bx - r, nivel, bz - r), 2 * r + 1, 2 * r + 1, nivel);
+        // 1b) Y SE DESPEJA EL VOLUMEN DEL PISO DE ARRIBA, si lo hubiera: una barraca del trazado VIEJO (dos pisos) que
+        //     se rehace deja arriba su forjado, sus paredes y su tejado en `nivel + 3 .. nivel + 8`; si no se limpian,
+        //     quedan FLOTANDO sobre la barraca nueva (I14). Se limpia un bloque de más por lado, como el alero.
+        for (int dx = -r - 1; dx <= r + 1; dx++) {
+            for (int dz = -r - 1; dz <= r + 1; dz++) {
+                for (int dy = 3; dy <= BARRACA_PISO2_VIEJO + 4; dy++) {
+                    colocar(level, new BlockPos(bx + dx, nivel + dy, bz + dz), Blocks.AIR.defaultBlockState(), 3);
+                }
+            }
+        }
         // 2) SUELOS: piedra en la capa de superficie (nivel-1), el volumen de abajo al aire, el FORJADO del piso de
         //    arriba (tablones) y el volumen del dormitorio también al aire.
         for (int dx = -r; dx <= r; dx++) {
