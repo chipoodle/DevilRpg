@@ -3583,6 +3583,44 @@ reúne **todas** las casillas de pie que alcanzan la diana, las ordena por cerca
 número** (`indice`), como el pueblo reparte ya los puestos de la arboleda y del corral (I4). **Medido: las rendiciones
 `Yendo a entrenar` pasan de 2-7 a CERO** (y `no llego a la diana`, a cero también).
 
+### I123 · La barraca de un piso EN SU PARTIDA: la palanca, y el testigo que estaba mal por el MATERIAL del escalón
+
+Con el visto bueno del jugador se tiró de la palanca (`CURRENT_LAYOUT`, que además **exige el lint I9** al añadir
+construcción). Lo que se hizo, y **lo que costó**:
+
+- **`CURRENT_LAYOUT` 72 → 73**, con su entrada en la lista de versiones.
+- **`vaciarLasArcasDeLaBarraca`**: antes de rehacerla, lo de **las dos arcas viejas** (a `nivel + BARRACA_PISO2_VIEJO`) se
+  pasa al **almacén** con `VillageStorage.guardar`; rehacer una construcción **tira lo de dentro de sus cofres**.
+- **Se despeja el volumen del piso viejo** (`nivel + 3 .. nivel + 8`, un bloque de más por lado) al construir: si no,
+  quedan **flotando** el forjado, las paredes y el tejado viejos (I14).
+- **Testigo nuevo** en `barracaConstruida`: el hogar del patio **más** la **ausencia del primer escalón**. No vale
+  mirar el forjado: en el trazado de un piso **el tejado cae en la misma capa** (`nivel + 3`) que el forjado viejo.
+
+**Y EL PRIMER INTENTO NO REHIZO NADA** (medido con el arnés y comprobando el mundo de la corrida): la barraca seguía
+con las camas arriba (`y=67`) y la planta baja vacía. El motivo se cazó **leyendo su guardado**, sin gastar otra
+corrida:
+
+```
+(428,63,670)  oak_stairs  facing=north half=bottom      <- la celda que miraba el testigo…
+```
+
+**Las escaleras de la barraca son de ROBLE, no de adoquín**, y el testigo preguntaba por `COBBLESTONE_STAIRS`: daba
+"ya está" y no rehacía. Con **`instanceof StairBlock`** (cualquier escalera) sí. Es el fallo clásico de estas
+invarianes: *un testigo no puede preguntar por un MATERIAL que no es el de la pieza*.
+
+**MEDIDO, ya con el testigo bueno** (misma partida):
+
+| comprobación | resultado |
+|---|---|
+| el log | `barraca de la milicia construida en 425,63,668` |
+| **planta baja (`y=63`)** | **las 8 camas**, con el cofre al lado |
+| `y=66` (tejado nuevo) | tablones cubriendo la huella, con su alero |
+| `y=70` (donde estaba el piso viejo) | **completamente vacío** — nada flotando |
+| censo de camas (`MEDIR_NOCHE`) | 19 aldeanos, **19 con cama**, 19 distintas, **0 compartidas, 0 sin cama**, 12 durmiendo |
+
+**Detalle cosmético pendiente**: el aviso del log al construir sigue diciendo *"dos pisos: sala de armas abajo y 8
+camas arriba"*; con el trazado de un piso esa frase ya no es cierta (es solo texto).
+
 ### I120 · La barraca de UN PISO con sus 8 camas: qué hay que tocar (estudio, aún sin hacer)
 
 Lo pidió el jugador junto con lo del campo de entrenamiento: *"así haces las barracas de un solo nivel junto con sus

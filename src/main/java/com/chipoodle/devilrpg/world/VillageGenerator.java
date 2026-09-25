@@ -1393,10 +1393,14 @@ public final class VillageGenerator {
         }
         // TESTIGO 2 (I123, la barraca de UN PISO): el PRIMER ESCALÓN de la escalera del dormitorio. En el trazado de
         // dos pisos ahí hay un escalón; en el de un piso, esa celda es del INTERIOR (al aire). Sin esta prueba, la
-        // barraca vieja pasaba por buena y el jugador seguiría con las camas arriba. No vale mirar el forjado: en el
+        // barraca vieja pasaba por buena y el jugador seguía con las camas arriba. No vale mirar el forjado: en el
         // trazado nuevo el tejado cae en la MISMA capa (nivel + 3) que el forjado viejo.
-        return !level.getBlockState(new BlockPos(base.getX() + BARRACA_ESCALERA_DX, nivel,
-                base.getZ() + BARRACA_ESCALERA_PIE_DZ)).is(Blocks.COBBLESTONE_STAIRS);
+        // OJO CON EL MATERIAL: los escalones de la barraca son de ROBLE (`oak_stairs`), no de adoquín — medido en su
+        // guardado (`428,63,670` = `oak_stairs facing=north half=bottom`). Preguntando por `COBBLESTONE_STAIRS` el
+        // testigo daba "ya está" y la barraca NO se rehacía; con `instanceof StairBlock` vale cualquiera.
+        BlockState escalon = level.getBlockState(new BlockPos(base.getX() + BARRACA_ESCALERA_DX, nivel,
+                base.getZ() + BARRACA_ESCALERA_PIE_DZ));
+        return !(escalon.getBlock() instanceof net.minecraft.world.level.block.StairBlock);
     }
 
     /**
