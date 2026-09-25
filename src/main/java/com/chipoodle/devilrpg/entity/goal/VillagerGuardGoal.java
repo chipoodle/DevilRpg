@@ -1477,26 +1477,35 @@ public class VillagerGuardGoal extends Goal {
         if (diana.equals(puestoDeEntrenamientoDe)) {
             return puestoDeEntrenamiento;
         }
-        BlockPos mejor = null;
-        double mejorDist = Double.MAX_VALUE;
-        for (int dx = -2; dx <= 2; dx++) {
-            for (int dz = -2; dz <= 2; dz++) {
+        var candidatas = new java.util.ArrayList<BlockPos>();
+        for (int dx = -3; dx <= 3; dx++) {
+            for (int dz = -3; dz <= 3; dz++) {
                 for (int dy = -2; dy <= 1; dy++) {
                     BlockPos p = diana.offset(dx, dy, dz);
                     if (!sePuedeEstar(level, p)) {
                         continue;
                     }
                     double d = Math.sqrt(p.distSqr(diana));
-                    if (d <= REACH - 0.5D && d < mejorDist) {
-                        mejorDist = d;
-                        mejor = p.immutable();
+                    if (d > 0.5D && d <= REACH - 0.5D) {
+                        candidatas.add(p.immutable());
                     }
                 }
             }
         }
+        if (candidatas.isEmpty()) {
+            puestoDeEntrenamientoDe = diana;
+            puestoDeEntrenamiento = null;
+            return null;
+        }
+        // CADA GUARDIA, SU CASILLA (I122): el puesto era UNA celda para los seis, así que se estorbaban entre ellos
+        // —y con los animales y los que pasan por el patio— con la ruta buena delante. Se ordenan por cercanía a la
+        // diana y cada uno toma la suya por su número (`indice`), como el pueblo reparte ya los puestos de la arboleda
+        // y los del corral (I4: geometría fija, no aleatoria).
+        candidatas.sort(java.util.Comparator.comparingDouble(p -> p.distSqr(diana)));
+        BlockPos mia = candidatas.get(Math.floorMod(indice, candidatas.size()));
         puestoDeEntrenamientoDe = diana;
-        puestoDeEntrenamiento = mejor;
-        return mejor;
+        puestoDeEntrenamiento = mia;
+        return mia;
     }
 
     /**

@@ -3576,6 +3576,13 @@ reafirmarlo y, si el goal no puede, volver a la ronda **sin** contar atasco mien
 necesita que el puesto de entrenamiento **no esté en un paso estrecho**: se puede correr el puesto a una casilla del
 patio con más aire (el campo es ancho: `z 673..686`) y volver a medir.
 
+**Y (3) ERA ESO, pero por otra razón: LOS SEIS GUARDIAS IBAN A LA MISMA CASILLA.** El puesto de entrenamiento era
+**una sola celda** para todos, así que se estorbaban entre ellos (y con los animales y los que cruzan el patio) con la
+ruta buena delante — que es exactamente lo que decía el tercer sabor del log. Arreglado: `puestoDeEntrenamientoCacheado`
+reúne **todas** las casillas de pie que alcanzan la diana, las ordena por cercanía y **cada guardia toma la suya por su
+número** (`indice`), como el pueblo reparte ya los puestos de la arboleda y del corral (I4). **Medido: las rendiciones
+`Yendo a entrenar` pasan de 2-7 a CERO** (y `no llego a la diana`, a cero también).
+
 ### I120 · La barraca de UN PISO con sus 8 camas: qué hay que tocar (estudio, aún sin hacer)
 
 Lo pidió el jugador junto con lo del campo de entrenamiento: *"así haces las barracas de un solo nivel junto con sus
