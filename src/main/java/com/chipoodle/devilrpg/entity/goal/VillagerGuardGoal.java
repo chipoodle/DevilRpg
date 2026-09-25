@@ -1348,7 +1348,8 @@ public class VillagerGuardGoal extends Goal {
         Set<Long> calle = null; // se calcula una vez por puesto (recorrido en anchura desde la plaza)
         for (int salto = 0; salto <= 6; salto++) {
             if (salto == 0) {
-                if (sePuedeEstar(level, puesto) && !esPuntoMalo(level, puesto)) {
+                if (sePuedeEstar(level, puesto) && !esPuntoMalo(level, puesto)
+                        && !dentroDeUnaConstruccion(level, puesto)) {
                     primeroDePie = puesto;
                     if (calle == null) {
                         calle = calleDeLaPlaza(level);
@@ -1407,6 +1408,34 @@ public class VillagerGuardGoal extends Goal {
     private boolean seLlega(ServerLevel level, BlockPos destino) {
         var camino = villager.getNavigation().createPath(destino, 1);
         return camino != null && camino.canReach();
+    }
+
+    /**
+     * <b>¿Esa casilla está DENTRO de una construcción del pueblo?</b> Lo dice el <b>PLANO</b> de la aldea
+     * ({@code blueprintState}): si la casilla tiene <b>3 o más vecinas</b> (las 4 de al lado y la de encima) que el
+     * plano quiere ocupadas, entonces es un <b>hueco de dentro de un edificio</b> y no una casilla de la calle.
+     * <p>
+     * <b>Es el criterio que faltaba</b> (medido, 25-sep-2026): la ronda metía a los guardias en `423,63,671`, una
+     * casilla que <b>pasa</b> todas las pruebas locales —aire a los pies, aire encima, suelo firme, cielo abierto— y a
+     * la que el planificador del juego unas veces le encuentra la puerta y otras no (mi recorrido en anchura incluso
+     * entraba por la puerta). El plano no engaña: esa casilla tiene <b>cinco</b> vecinas suyas (un cofre, una diana y
+     * tres adoquines) — es el hueco de dentro de un edificio del pueblo. Una casilla de calle pegada a una pared tiene
+     * <b>una</b> vecina del plano: por eso el umbral es 3.
+     */
+    private boolean dentroDeUnaConstruccion(ServerLevel level, BlockPos p) {
+        if (VillageManager.blueprintState(level, objectiveIndex, p) != null) {
+            return true; // el plano quiere un bloque AQUÍ: no es una casilla de paso
+        }
+        int vecinas = 0;
+        for (int[] d : new int[][]{{1, 0}, {-1, 0}, {0, 1}, {0, -1}}) {
+            if (VillageManager.blueprintState(level, objectiveIndex, p.offset(d[0], 0, d[1])) != null) {
+                vecinas++;
+            }
+        }
+        if (VillageManager.blueprintState(level, objectiveIndex, p.above()) != null) {
+            vecinas++;
+        }
+        return vecinas >= 3;
     }
 
     /**

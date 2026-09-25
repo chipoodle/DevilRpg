@@ -3395,6 +3395,37 @@ veces le encuentra la puerta (`ruta=30 nodos hasta 423,63,671 alcanza=SI`) y otr
 dentro de ninguna construcción** usando el **plano** de la aldea (`blueprintState`, que ya existe), en vez de pruebas
 locales: el plano sabe qué celdas son edificio y cuáles calle.
 
+### I116 · El PLANO dice quién está dentro de un edificio (y a un tronco no se le busca la casilla: se descarta el árbol)
+
+Tercera vuelta de I114/I115, y **ésta sí está medida como arreglo**:
+
+- **La ronda no elige casillas de dentro de un edificio**: `VillagerGuardGoal.dentroDeUnaConstruccion` pregunta al
+  **plano** (`VillageManager.blueprintState`): si la casilla tiene **3 o más vecinas** —las 4 de al lado y la de
+  encima— que el plano quiere ocupadas, es un **hueco de dentro** y no calle. Medido con `build/plano_celda.py` sobre
+  su guardado: la casilla `423,63,671` tiene **cinco** vecinas del plano (un **cofre**, una **diana** y tres
+  **adoquines**) — es el hueco de dentro de un edificio del pueblo, y por eso el planificador del juego unas veces le
+  encontraba la puerta y otras no. Una casilla de calle pegada a una pared tiene **una** vecina del plano: de ahí el
+  umbral 3.
+- **Al árbol que no se alcanza no se le manda a nadie**: el filtro de I114 estaba en los **restos** y en el monte, pero
+  los árboles los elige `buscarArbol`; medido (3 rendiciones con `destino=jungle_log` en la corrida del 25-sep) volvían
+  a colarse. Ahora `buscarArbol` **descarta** cualquier tronco sin casilla de pie desde la que se alcance
+  (`celdaDePieParaAlcanzar`), y guarda esa casilla para caminar a ella.
+
+**Medido (MEDIR_MINERO, misma partida; las tres corridas del día):**
+
+| concepto | antes (I113) | tras I114 | **tras I116** |
+|---|---|---|---|
+| rendiciones en la corrida | 26 | 18 | **3** |
+| de guardias en `423,63,671` | 6-8 | 8 | **1** |
+| del leñador (troncos de selva) | 6 | 3 | **0** |
+| del minero | 3 | 0 | **0** |
+| `pasos` de la mina | 19 congelado | 18 → 19 | 18 → 19 |
+
+**Lo que queda** (de las 3): dos son de **otro** aldeano (`21e951c8`) en `560,64,587` y `552,63,585` —fuera del muro, a
+80+ bloques del centro— con `ruta=1 nodos ... alcanza=NO` (no hay ruta desde donde está: es el caso "el destino está
+fuera y no se llega", no el de esta invariante), y **una** de guardia en `423,63,671` (el día que ningún candidato del
+abanico pasa las pruebas y se cae al puesto pedido). Apuntadas, no arregladas.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 

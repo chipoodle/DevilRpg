@@ -899,12 +899,18 @@ public class VillagerLumberjackGoal extends Goal {
                 if (base == null || VillageManager.esPuntoFallido(villager, base)) {
                     continue;
                 }
+                BlockPos sitio = celdaDePieParaAlcanzar(level, base);
+                if (sitio == null) {
+                    continue; // a ese árbol no se llega: a un tronco no se camina (ver `celdaDePieParaAlcanzar` / I116)
+                }
                 // lint:ok I1 porque aqui `base` es el TRONCO de un arbol que existe (una posicion real del mundo, con
                 // su Y buena), no el centro ni la base de la aldea: la distancia al arbol SI es en 3D.
                 double dist = villager.distanceToSqr(base.getX() + 0.5D, base.getY() + 0.5D, base.getZ() + 0.5D);
                 if (dist < mejorDist) {
                     mejorDist = dist;
                     mejor = base;
+                    sitioDelResto = sitio;
+                    sitioDelRestoDe = base;
                 }
             }
         }
@@ -940,10 +946,21 @@ public class VillagerLumberjackGoal extends Goal {
                 }
                 // lint:ok I1 porque aqui `base` es el tronco de un arbol que existe, no el centro ni la base de la
                 // aldea: la distancia al arbol SI es en 3D (un tronco de la ladera esta mas abajo que el pueblo).
+                BlockPos sitio = celdaDePieParaAlcanzar(level, base);
+                if (sitio == null) {
+                    // A UN TRONCO NO SE CAMINA (I114/I116): medido, el leñador se rendía con `destino=jungle_log` y
+                    // `ruta=1 nodos ... alcanza=NO` — un tronco a 13 bloques del suelo, sin casilla de pie desde la que
+                    // se alcance. Antes de I114 esto pasaba con los RESTOS; con los ÁRBOLES que elige `buscarArbol`
+                    // seguía pasando (3 rendiciones medidas en la corrida del 25-sep), así que el filtro va aquí también.
+                    continue;
+                }
+                // lint:ok I1 porque `base` es el tronco de un arbol que existe (su Y es la del mundo, no la del spawn)
                 double dist = villager.distanceToSqr(base.getX() + 0.5D, base.getY() + 0.5D, base.getZ() + 0.5D);
                 if (dist < mejorDist) {
                     mejorDist = dist;
                     mejor = base;
+                    sitioDelResto = sitio;
+                    sitioDelRestoDe = base;
                 }
             }
         }
