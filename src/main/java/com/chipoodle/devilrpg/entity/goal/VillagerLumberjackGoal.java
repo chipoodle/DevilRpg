@@ -1379,8 +1379,25 @@ public class VillagerLumberjackGoal extends Goal {
     }
 
     private void irAlObjetivo() {
-        if (target != null) {
-            VillageManager.caminarHacia(villager, target, VELOCIDAD);
+        if (target == null || !(villager.level() instanceof ServerLevel level)) {
+            return;
         }
+        // AL ALMACÉN SE VA POR TIRONES si queda lejos o si hay que salvar la muralla: medido con el arnés, el leñador se
+        // quedaba pegado al muro (527,63,672) sin conseguir llegar a 517,63,666 y, con la madera en el zurrón, no
+        // talaba nada (ver `VillageManager.tironConMemoria` / I105).
+        if (fase == Fase.ENTREGAR) {
+            if (plazaDelPueblo == null) {
+                plazaDelPueblo = VillageManager.casillaDeLaCalle(level, center);
+            }
+            BlockPos destino = target;
+            VillageManager.caminarHacia(villager,
+                    VillageManager.tironConMemoria(level, villager, destino, plazaDelPueblo), VELOCIDAD);
+            return;
+        }
+        VillageManager.caminarHacia(villager, target, VELOCIDAD);
     }
+
+    /** La plaza del pueblo (el último recurso del tirón): se busca UNA vez, no en cada tick. */
+    @Nullable
+    private BlockPos plazaDelPueblo;
 }

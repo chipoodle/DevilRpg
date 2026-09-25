@@ -65,3 +65,24 @@ al almacén (`no consigue llegar a 517,63,666`, y con la madera en el zurrón no
 el arnés **en la plaza** volvió a trabajar, así que el problema es **el camino desde fuera de la muralla
 hacia el almacén**: queda apuntado para la vuelta siguiente (es de la familia del tiro intermedio de
 I105 y de la puerta de la taberna de I103).
+
+--- 5) EL ATASCO DE LA MURALLA: probado el tirón en las entregas y NO lo arregla ----------------------
+Siguiendo con lo apuntado arriba, se le puso a las **piernas de entrega** el **tirón** del minero
+(`VillageManager.tironConMemoria`: un punto intermedio CON ruta cuando el destino queda lejos), en el goal
+del leñador (fase ENTREGAR) y en el goal de guardar lo suyo (`VillagerPickupGoal`, destino ALMACÉN).
+
+MEDIDO (MEDIR_LENADOR con `PLANTAR_AL_LENADOR_EN_LA_PLAZA = false`, o sea midiendo SU atasco de verdad,
+~9 min):
+
+    [Arnes] LENADOR: NO se le planta en la plaza (se mide su atasco: pos=527, 63, 672)
+    [Village] 3209085d-... no consigue llegar a BlockPos{x=517, y=63, z=666}: lo deja por 5 min    x22
+    [Arnes] LENADOR 3209085d pos=527,63,672 destino=517,63,666 zurron=[madera=16 ...] | Llevando la madera
+    talas: 0 | entregas: 0
+
+**NO lo arregla, y se dice claro**: el destino está a **11 bloques** (dentro del alcance del planificador),
+así que el tirón ni se activa por distancia; lo que falla es que **la muralla está EN MEDIO**, y los puntos
+intermedios que se prueban (en línea recta hacia el almacén) caen todos del **lado malo del muro**. El
+arreglo tiene que ser otro: llevar al aldeano **a lo largo del muro hasta la entrada del pueblo** (o abrirle
+el portón). Es de la familia de I103 (la puerta de la taberna) y de I105, y queda para la vuelta siguiente;
+el tirón se queda puesto porque **sí sirve para los destinos LEJANOS** (el monte, a 60-100 bloques).
+

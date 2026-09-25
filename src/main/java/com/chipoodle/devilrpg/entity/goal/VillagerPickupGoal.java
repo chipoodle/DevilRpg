@@ -337,7 +337,12 @@ public class VillagerPickupGoal extends Goal {
             double distancia = Math.sqrt(villager.distanceToSqr(destino.getX() + 0.5D, destino.getY() + 0.5D,
                     destino.getZ() + 0.5D));
             if (distancia > alcanceDeGuardado()) {
-                VillageManager.caminarHacia(villager, destino, VELOCIDAD);
+                // AL ALMACÉN (al otro lado del pueblo) SE VA POR TIRONES: la ruta directa desde fuera de la muralla no
+                // le sale al planificador y, sin ruta, el aldeano empuja la pared y se queda con lo suyo en el zurrón
+                // para siempre (medido con el arnés: el leñador pegado al muro en 527,63,672 con destino 517,63,666).
+                // Ver `VillageManager.tironConMemoria` / I105.
+                VillageManager.caminarHacia(villager, destinoTipo() == Destino.ALMACEN
+                        ? VillageManager.tironConMemoria(level, villager, destino, null) : destino, VELOCIDAD);
                 VillageManager.ponerActividad(villager, "Guardando lo suyo");
                 if (distancia < mejorDistancia - 0.5D) {
                     mejorDistancia = distancia;

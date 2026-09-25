@@ -4192,6 +4192,37 @@ public final class VillageManager {
         return Math.sqrt(villager.distanceToSqr(pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D));
     }
 
+    /** Etiquetas del <b>tirón en curso</b> de un aldeano (ver {@link #tironConMemoria}). */
+    private static final String TIRON_TAG = "DevilRpgTiron";
+    private static final String TIRON_DESTINO_TAG = "DevilRpgTironDestino";
+
+    /**
+     * <b>EL TIRÓN QUE LE TOCA AHORA</b> a ese aldeano hacia {@code destino}, con <b>memoria</b> en sus datos
+     * persistentes: si el destino está al alcance del planificador se va directo y, si no, se guarda un punto intermedio
+     * ({@link #tironHacia}) que <b>no se recalcula hasta que llega a él</b> — el cálculo prueba rutas con
+     * {@code createPath}, así que no puede hacerse en cada tick.
+     * <p>
+     * Se usa para ir al <b>almacén</b> desde lejos o desde fuera de la muralla: medido con el arnés, el leñador se
+     * quedaba pegado al muro en `527,63,672` intentando llegar a `517,63,666` (no le salía la ruta y empujaba la pared),
+     * y con la madera en el zurrón no talaba nada. Con el tirón va por pasos y sí llega.
+     */
+    public static BlockPos tironConMemoria(ServerLevel level, Villager villager, BlockPos destino,
+            @Nullable BlockPos plaza) {
+        var datos = villager.getPersistentData();
+        long destinoAhora = destino.asLong();
+        if (datos.contains(TIRON_TAG) && datos.getLong(TIRON_DESTINO_TAG) == destinoAhora) {
+            BlockPos guardado = BlockPos.of(datos.getLong(TIRON_TAG));
+            if (distanciaA(villager, guardado) > 2.0D
+                    && Math.sqrt(guardado.distSqr(destino)) < distanciaA(villager, destino)) {
+                return guardado; // sigue el tirón que tenía: aún no ha llegado y va hacia el destino
+            }
+        }
+        BlockPos nuevo = tironHacia(level, villager, destino, plaza);
+        datos.putLong(TIRON_TAG, nuevo.asLong());
+        datos.putLong(TIRON_DESTINO_TAG, destinoAhora);
+        return nuevo;
+    }
+
     /**
      * <b>UN TIRÓN HACIA UN DESTINO LEJANO.</b> Devuelve a dónde tiene que <b>caminar ahora</b> ese aldeano para acabar
      * llegando a {@code destino}: el propio destino si está dentro del {@link #ALCANCE_DE_LA_RUTA alcance del

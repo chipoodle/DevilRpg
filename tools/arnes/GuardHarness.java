@@ -1958,6 +1958,13 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
     }
 
     /**
+     * ¿Se planta al LEÑADOR en la plaza al empezar (ver {@code sembrarRestosDelLenador})? En {@code true} sirve para
+     * medir sus limpiezas (si está atascado en la muralla no tala). En {@code false} se mide **el atasco en sí**: si
+     * con el tirón nuevo (`VillageManager.tironConMemoria`) consigue llegar al almacén desde donde esté.
+     */
+    private static final boolean PLANTAR_AL_LENADOR_EN_LA_PLAZA = false;
+
+    /**
      * <b>Planta al LEÑADOR en la plaza y le cuelga dos TRONCOS FLOTANTES</b> pegados a un árbol de la arboleda del
      * pueblo: es para poder medir la limpieza de restos (ver {@code medirElLenador}). El traslado hace falta porque en
      * su partida el leñador se queda pegado a la <b>muralla</b> (527,63,672, r=62) intentando llegar al almacén: con la
@@ -1968,6 +1975,11 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(140))) {
             if (v.isBaby() || v.getVillagerData().getProfession()
                     != net.minecraft.world.entity.npc.VillagerProfession.FLETCHER) {
+                continue;
+            }
+            if (!PLANTAR_AL_LENADOR_EN_LA_PLAZA) {
+                DevilRpg.LOGGER.info("[Arnes] LENADOR: NO se le planta en la plaza (se mide su atasco: pos={})",
+                        v.blockPosition().toShortString());
                 continue;
             }
             BlockPos plaza = com.chipoodle.devilrpg.world.VillageManager.casillaDeLaCalle(level, CENTRO);
