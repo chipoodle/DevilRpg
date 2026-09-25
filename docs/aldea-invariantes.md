@@ -3521,6 +3521,30 @@ casilla a la que se va, no contra la diana) — y **sigue igual**, así que qued
 esas dos: lo siguiente es registrar, en el momento de rendirse, **qué camino está siguiendo el cerebro** (su
 `WALK_TARGET` y si la navegación tiene ruta viva), porque `createPath` dice que hay camino y el aldeano se queda quieto.
 
+**Y ESO SE MIDIÓ, Y SON DOS CAUSAS DISTINTAS** (el aviso de `marcarPuntoFallido` lleva ya `cerebro=` y `nav=[…]`):
+
+```
+… no consigue llegar a 424,63,675 desde 513,63,657  (ruta=39 nodos hasta 476,63,661 alcanza=NO)
+    etiqueta="Jacinto (Guardia espadachín · nv 1) / Yendo a entrenar"
+    cerebro=517, 63, 666   nav=[10 nodos hasta 517, 63, 666 alcanza]      <- ¡va al ALMACÉN, no al patio!
+
+… desde 458,63,665  cerebro=424, 63, 675  nav=[38 nodos hasta 424,63,675 alcanza]   <- lo correcto… y se rinde igual
+… desde 459,63,649  cerebro=424, 63, 675  nav=[43 nodos hasta 427,63,675 NO alcanza] <- la ruta se queda 3 corta
+```
+
+1. **Alguien le pisa el destino al goal**: en el primer caso el cerebro del guardia apunta al **almacén**
+   (`517,63,666`) mientras su goal cree que va a entrenar — el `WALK_TARGET` lo escribe el **cerebro del aldeano**
+   (sus otras faenas, el paseo, la cama) y `caminarHacia` se lo pone cada tick, pero **no siempre gana**. Con el
+   destino pisado, el goal no se acerca a la diana y se rinde a los 12 s.
+2. **La ruta viva fluctúa**: cuando el cerebro sí apunta al puesto, la navegación unas veces trae una ruta que
+   **alcanza** (38 nodos) y otras una que **se queda 3 bloques corta** (`43 nodos hasta 427,63,675 NO alcanza`). En la
+   segunda, el aldeano empuja en línea recta y no avanza.
+
+Las dos quedan medidas y **sin arreglar**; el arreglo que toca es el de siempre en este pueblo: si la ruta viva **no
+alcanza**, ir primero a un sitio del que consta que se llega (la ronda/plaza) y replanificar — como hizo el minero
+volviendo a su caseta (I115) — y, para el destino pisado, **reescribirlo también cuando el goal no está en su rama de
+caminar** (o dejar de caminar y volver a la ronda en vez de quedarse midiendo contra una diana a la que ya no va).
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 

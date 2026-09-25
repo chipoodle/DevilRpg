@@ -4798,9 +4798,20 @@ public final class VillageManager {
         // falta para entender las 6 rendiciones de guardias en `423,63,671` (I117).
         String etiqueta = villager.getCustomName() == null ? "-"
                 : villager.getCustomName().getString().replace("\n", " / ");
-        DevilRpg.LOGGER.info("[Village] {} no consigue llegar a {} desde {} (ruta={}; {}) etiqueta=\"{}\": lo deja por {}"
-                        + " min y sigue con lo demas",
-                villager.getUUID(), p.toShortString(), desde.toShortString(), ruta, donde, etiqueta,
+        // Y **QUÉ ESTABA HACIENDO EL QUE CAMINA**: el destino que le ha puesto el cerebro (`WALK_TARGET`, que es como
+        // se mueven los aldeanos: ver `caminarHacia`) y si su navegación tiene una **ruta viva** y de cuántos nodos. Es
+        // la pregunta que quedaba sin contestar cuando `createPath` dice que hay camino y el aldeano no avanza
+        // (`Yendo a entrenar` al patio, I119): distingue "no le han dicho a dónde ir" de "le han dicho a dónde ir y la
+        // navegación no tiene camino" y de "tiene camino y aun así no se mueve".
+        var cerebro = villager.getBrain().getMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.WALK_TARGET)
+                .map(t -> t.getTarget().currentBlockPosition().toShortString()).orElse("-");
+        var caminoVivo = villager.getNavigation().getPath();
+        String navegacion = caminoVivo == null ? "sin ruta"
+                : (caminoVivo.getNodeCount() + " nodos hasta " + caminoVivo.getEndNode().asBlockPos().toShortString()
+                        + (caminoVivo.canReach() ? " alcanza" : " NO alcanza"));
+        DevilRpg.LOGGER.info("[Village] {} no consigue llegar a {} desde {} (ruta={}; {}) etiqueta=\"{}\" cerebro={}"
+                        + " nav=[{}]: lo deja por {} min y sigue con lo demas",
+                villager.getUUID(), p.toShortString(), desde.toShortString(), ruta, donde, etiqueta, cerebro, navegacion,
                 PUNTO_FALLIDO_TICKS / (60 * 20));
     }
 
