@@ -118,6 +118,22 @@ public class VillagerMinerGoal extends Goal {
      * (lo pidió el jugador), pero <b>no sin límite</b>: si la taberna no le da nada, vuelve a la mina.
      */
     private static final int ESPERA_DE_COMIDA_MAXIMA = 400;
+    /**
+     * Ticks que el minero espera <b>cuando el sitio al que tiene que ir le está aparcado</b> (I33) antes de volver a
+     * intentarlo. El aparcado son <b>5 minutos</b>, y el minero <b>no tiene otra cosa que hacer</b>: su destino sale del
+     * <b>plan de la mina</b> (una celda del caracol, que es una sola) o es el <b>almacén</b>, que es su única fuente de
+     * pico y de recados. Con el aparcado largo no "sigue con lo demás": se queda plantado en la caseta con la etiqueta
+     * "Trabajando" (que es lo que ve el jugador).
+     * <p>
+     * <b>Medido</b> (arnés, 24-sep-2026, su partida): (1) con el almacén aparcado desde el guardado
+     * (`aparcadoHasta=129790`) el minero se pasó <b>140 s parado</b> con `goals=[]` y `pico=SIN PICO` antes de ir a por
+     * un pico; con esta espera fue a por él en la mitad de tiempo y cogió un pico de madera. (2) Con una <b>celda de la
+     * mina</b> aparcada (`499,53,620`) la mina se quedó <b>220 s en `pasos=18`</b> sin cavar una celda.
+     * <p>
+     * Y no vuelve al bucle de empujar la pared (que es lo que el aparcado evita) porque entre intento e intento hay esta
+     * espera: se reintenta cada ~30 s, no en cada tick.
+     */
+    private static final int ESPERA_TRAS_APARCADO = 600;
     /** Pedernal que quiere tener el pueblo en el almacén antes de ponerse a colar más. */
     private static final int OBJETIVO_PEDERNAL = 16;
     /** Lo que se lleva de una vez del almacén y lo que deja de reserva para el herrero de herramientas. */
@@ -366,13 +382,20 @@ public class VillagerMinerGoal extends Goal {
         return comprobarDestino();
     }
 
-    /** Si al sitio donde va no llegó hace poco (I33), no se queda empujando la misma pared: lo deja por un rato. */
+    /**
+     * Si al sitio donde va <b>no llegó hace poco</b> (I33), el minero <b>no se queda 5 minutos parado</b>: el aparcado
+     * es para no empujar la misma pared en bucle, pero el minero <b>no tiene otra faena</b> a la que pasar —su destino
+     * sale del plan de la mina o es el almacén de los recados—, así que con el aparcado largo se queda plantado en la
+     * caseta sin cavar (medido: `goals=[]` y `aparcado=true` durante 140 s con el almacén, y `pasos` congelado 220 s con
+     * una celda). Se olvida el aparcado y se reintenta tras {@link #ESPERA_TRAS_APARCADO}.
+     */
     private boolean comprobarDestino() {
         if (destino != null && VillageManager.esPuntoFallido(villager, destino)) {
+            VillageManager.olvidarPuntoFallido(villager);
             destino = null;
             celdaDeTrabajo = null;
-            restTicks = IDLE_REST_TICKS;
-            return false;
+            restTicks = ESPERA_TRAS_APARCADO;
+            return false; // ahora no arranca: se reintenta dentro de ESPERA_TRAS_APARCADO
         }
         return destino != null;
     }

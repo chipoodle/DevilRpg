@@ -310,6 +310,14 @@ Cada 2 s vuelca:
 
 - **`pasos=N/240`** es `VillageGenerator.progresoDeLaMina`, o sea el avance **real medido en el mundo** (no un
   contador): el número tiene que **subir** con el tiempo (cada paso baja 0,5 y una vuelta son 32 pasos = 16 bloques).
+- **`TODOS=[…]`** es la lista **completa** de goals del aldeano, con un `*` en el que **está corriendo** (`goals=[…]` es
+  solo los que corren). Es la diferencia entre "no tiene el goal puesto" y "lo tiene pero no puede empezar".
+- **`MINERO-ESTADO`** vuelca **todo lo que mira el `canUse` del minero**: si está descansando, si tiene hambre, la
+  comida del pueblo, el punto de apoyo del almacén, si ese punto está **aparcado** (I33) **y con qué hora**, el
+  `gameTime` y si lleva pico en la mano. Se añadió midiendo I113: con `goals=[]` a secas no se sabía **por qué** el
+  minero estaba parado, y la respuesta estaba en `aparcado=true aparcadoHasta=<gameTime>` (el aparcado son **5 min**:
+  mientras dura, el `canUse` devuelve `false` y el aldeano se queda quieto con la etiqueta "Trabajando"). Regla que sale
+  de ahí: **si un goal dice "no puedo", el arnés tiene que poder decir POR QUÉ en la misma línea.**
 - **`bloqueDeLaCara`** es lo que hay en la celda que le toca: `grass_block`/`stone` (faena pendiente),
   `cobblestone_slab`/`cobblestone` (esa ya está hecha) o `stone_bricks` (**tope**: la mina se cerró).
 - **`TOPE=SI`** = la mina está terminada (el fondo `-58` o un mar de agua/lava sellado con su piedra labrada).

@@ -492,10 +492,17 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
                 com.chipoodle.devilrpg.world.VillageGenerator.balsaDelMinero(level, CENTRO),
                 com.chipoodle.devilrpg.world.VillageGenerator.hornoDelMinero(level, CENTRO));
         for (Villager v : mineros) {
+            // DIAGNOSTICO (por que el minero se queda SIN GOAL CORRIENDO): se vuelca TODO lo que mira su `canUse`
+            // —el turno y la comida, el sitio aparcado (I33) con su hora, y la lista COMPLETA de goals con cual
+            // corre—, porque "goals=[]" a secas no dice si el goal no está puesto, si no puede empezar o si está
+            // esperando a algo. Es lo que costó dos corridas entender en el atasco de la muralla (I112).
             StringBuilder goals = new StringBuilder();
+            StringBuilder todos = new StringBuilder();
             for (net.minecraft.world.entity.ai.goal.WrappedGoal w : v.goalSelector.getAvailableGoals()) {
+                String simple = w.getGoal().getClass().getSimpleName();
+                todos.append(simple).append(w.isRunning() ? "* " : " ");
                 if (w.isRunning()) {
-                    goals.append(w.getGoal().getClass().getSimpleName()).append(' ');
+                    goals.append(simple).append(' ');
                 }
             }
             var wt = v.getBrain().getMemory(MemoryModuleType.WALK_TARGET).orElse(null);
@@ -508,16 +515,27 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
                             .append(s.getItem().toString().replace("Item{minecraft:", "").replace("}", "")).append(' ');
                 }
             }
+            var datos = v.getPersistentData();
+            BlockPos apoyo = com.chipoodle.devilrpg.world.VillageStorage.puntoDeApoyo(level, CENTRO);
+            long gameTime = level.getGameTime();
             DevilRpg.LOGGER.info("[Arnes] MINERO t={} pos={} cara={} dCara={} destino={} pico={}({}/{}) zurron=[{}]"
-                            + " goals=[{}] etiqueta={}",
+                            + " goals=[{}] TODOS=[{}] etiqueta={}",
                     ticks, v.blockPosition().toShortString(), cara.toShortString(),
                     fmt(Math.sqrt(v.distanceToSqr(cara.getX() + 0.5D, cara.getY() + 0.5D, cara.getZ() + 0.5D))),
                     wt == null ? "SIN DESTINO" : wt.getTarget().currentBlockPosition().toShortString(),
                     pico.isEmpty() ? "SIN PICO"
                             : pico.getItem().toString().replace("Item{minecraft:", "").replace("}", ""),
                     pico.isEmpty() ? 0 : pico.getDamageValue(), pico.isEmpty() ? 0 : pico.getMaxDamage(),
-                    zurron.toString().trim(), goals.toString().trim(),
+                    zurron.toString().trim(), goals.toString().trim(), todos.toString().trim(),
                     v.getCustomName() == null ? "-" : v.getCustomName().getString().replace("\n", " | "));
+            DevilRpg.LOGGER.info("[Arnes] MINERO-ESTADO t={} descansando={} hambre={} comida={} apoyo={} aparcado={}"
+                            + " aparcadoHasta={} gameTime={} picoEnMano={}",
+                    ticks, com.chipoodle.devilrpg.world.VillageManager.estaDescansando(v),
+                    com.chipoodle.devilrpg.world.VillageManager.tieneHambre(level, v),
+                    com.chipoodle.devilrpg.world.VillagePantry.comida(level, CENTRO), apoyo,
+                    apoyo != null && com.chipoodle.devilrpg.world.VillageManager.esPuntoFallido(v, apoyo),
+                    datos.contains("DevilRpgPuntoFallidoHasta") ? datos.getLong("DevilRpgPuntoFallidoHasta") : -1L,
+                    gameTime, !v.getMainHandItem().isEmpty());
         }
         if (ticks % 200 != 0) {
             return;

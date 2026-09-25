@@ -3237,8 +3237,51 @@ lo suyo` y `el lenador guardo 16 cosa(s) de su oficio en el almacen`. Los **6** 
 **otros** aldeanos y en otros sitios (bancales y la mina), **ninguno** en el almacén. Ver
 `tools/arnes/medidas-lenador.txt`, apartado 6.
 
-## 2. Lista de consecuencias (obligatoria en cada cambio)
+### I113 · El APARCADO (I33) no puede dejar al minero sin pico ni a la mina sin cavar
 
+Lo preguntó el jugador después de I112: *"¿ya corregiste el problema del minero?"*. La respuesta medida ese mismo día:
+I111 había arreglado **un** livelock del minero, pero **quedaba otro**, y era el que se ve en juego.
+Ojo: el arnés ya lo decía en la primera corrida (`goals=[]`, `pico=SIN PICO`, `pasos` parado) y lo tomé por un efecto
+del arranque; **no lo era**.
+
+**La causa (medida)**: el **sitio aparcado** de I33. El minero **no tiene otra faena a la que pasar** —su destino sale
+del **plan de la mina** (una celda del caracol, que es una sola) o es el **almacén**, que es su **única fuente de pico y
+de recados**—, así que un aparcado de **5 minutos** no lo deja "seguir con lo demás": lo deja **plantado en la caseta**
+con la etiqueta `Trabajando` y `goals=[]`. Medido con el arnés volcando todo lo que mira su `canUse` (turno, comida,
+aparcado con su hora y la lista completa de goals):
+
+```
+[Arnes] MINERO-ESTADO t=40  descansando=false hambre=false comida=1258
+        apoyo=BlockPos{x=517, y=63, z=666} aparcado=true aparcadoHasta=129790 gameTime=127118 picoEnMano=false
+[Arnes] MINERO t=2400 pos=501,63,616 pico=SIN PICO(0/0) zurron=[0:2xstick] goals=[]     <- 120 s sin nada que hacer
+[Village] El minero: pico nuevo: minecraft:wooden_pickaxe                              <- al caducar el aparcado
+[Village] El minero: caracol paso 17 en 499, 53, 620
+[Village] e9329a25-... no consigue llegar a BlockPos{x=499, y=53, z=620}: lo deja por 5 min
+[Arnes] MINA t=2400..7920 pasos=18/240                                                 <- y 220 s congelada
+```
+
+**Regla** (`VillagerMinerGoal.comprobarDestino` + `VillageManager.olvidarPuntoFallido`): si el sitio al que tiene que ir
+el minero está aparcado, **se olvida el aparcado** y se reintenta tras `ESPERA_TRAS_APARCADO` (600 ticks = 30 s). No
+vuelve al bucle de empujar la pared —entre intento e intento está la espera, que es justo lo que el aparcado evitaba—
+pero tampoco se queda media faena muerto.
+
+**Medido** (MEDIR_MINERO, misma partida y mismo montaje, antes y después):
+
+| concepto | antes | ahora |
+|---|---|---|
+| pico en la mano | t=3200 (160 s) | **t=1620 (81 s)** |
+| caracol paso 17 / 18 | solo el 17 | **17 y 18** (en 3 s) |
+| `pasos` (progreso real en el mundo) | 17 → 18 | **16 → 19** |
+| seguido con `goals=[]` (almacén aparcado) | 140 s | 30 s (la espera) |
+| `pasos` congelado (celda aparcada) | 220 s | **0** |
+| después de entregar los 24 objetos | se quedaba | **vuelve a bajar a picar** |
+
+**Lo que NO queda arreglado, dicho claro**: si una celda del caracol es **de verdad** inalcanzable, el minero ahora
+**reintenta cada ~30 s** en vez de esperar 5 minutos, así que el log **repite** `no consigue llegar a <celda>`: eso es a
+propósito (así se ve que hay algo real que arreglar en el mundo), pero ese trozo de mina **sigue sin cavarse** hasta que
+el mundo cambie. Ver `tools/arnes/medidas-minero.txt`, apartado 6.
+
+## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
 1. **¿Quién más LEE lo que cambio?** Buscar todos los usos (`grep`) y revisarlos uno a uno. *(Fallo real: cambié el

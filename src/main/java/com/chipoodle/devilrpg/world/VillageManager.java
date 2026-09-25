@@ -4776,6 +4776,17 @@ public final class VillageManager {
                 && datos.getLong(PUNTO_FALLIDO_TAG) == punto.asLong();
     }
 
+    /**
+     * <b>Olvida el sitio aparcado</b> de ese aldeano (I33). Lo usa el minero cuando el aparcado le dejaría <b>sin
+     * pico</b>: el almacén no es un sitio al que no llegó, es su única fuente de herramienta, así que se le da otra
+     * oportunidad (con una espera por delante, para no volver al bucle de empujar la pared que el aparcado evita).
+     */
+    public static void olvidarPuntoFallido(Villager villager) {
+        CompoundTag datos = villager.getPersistentData();
+        datos.remove(PUNTO_FALLIDO_TAG);
+        datos.remove(PUNTO_FALLIDO_HASTA_TAG);
+    }
+
     /** Deja de caminar: se quita el destino del cerebro para que no siga yendo a un sitio ya resuelto. */    public static void parar(Villager villager) {
         villager.getBrain().eraseMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.WALK_TARGET);
         // Y TAMBIÉN el LOOK_TARGET: el cerebro del aldeano tiene "andar hacia donde mira"

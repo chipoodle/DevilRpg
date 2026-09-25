@@ -201,6 +201,56 @@ O sea: el zurron pasa de **seis o siete huecos llenos de madera a UN palo**, el 
 **pica** (paso 17 y 18 del caracol, `pasos` de 16 a 19) y sus viajes de subida son para **entregar de
 verdad** (pedernal, carbon, antorchas y lo sacado). El bucle de "entrando y saliendo" desaparecio.
 
+--- 6) EL MINERO PARADO EN LA CASETA: EL SITIO APARCADO (I33) QUE LO DEJA SIN PICO Y SIN FAENA ----------
+Lo pregunto el jugador: *"¿ya corregiste el problema del minero?"*. La respuesta, medida HOY (24-sep-2026)
+sobre una copia de su partida y con el codigo nuevo: **quedaba otro atasco, distinto del de arriba**, y era
+el que se veia en juego.
+
+**Como se caza** (el arnes volco TODO lo que mira el `canUse` del minero: turno, comida, el sitio aparcado
+con su hora, y la lista COMPLETA de goals con cual corre). Con el codigo de antes, lo primero que sale es:
+
+    [Arnes] MINERO-ESTADO t=40   descansando=false hambre=false comida=1258
+            apoyo=BlockPos{x=517, y=63, z=666} aparcado=true aparcadoHasta=129790 gameTime=127118 picoEnMano=false
+    [Arnes] MINERO t=40  pos=503,63,618 pico=SIN PICO(0/0) zurron=[0:2xstick] goals=[] TODOS=[VillagerMinerGoal ...]
+    [Arnes] MINERO t=2400 pos=501,63,616 pico=SIN PICO(0/0) zurron=[0:2xstick] goals=[] ...
+    [Village] El minero: pico nuevo: minecraft:wooden_pickaxe      <- a los 160 s, cuando CADUCO el aparcado
+    [Village] El minero: caracol paso 17 en 499, 53, 620
+    [Village] e9329a25-... no consigue llegar a BlockPos{x=499, y=53, z=620}: lo deja por 5 min
+    [Arnes] MINA t=2400..7920 pasos=18/240                        <- y la mina se queda 220 s congelada
+
+**La causa**: el **aparcado** de I33. El minero **no tiene otra faena a la que pasar**: su destino sale del
+**plan de la mina** (una celda, que es una sola) o es el **almacen**, que es su **unica fuente de pico y de
+recados**. Con el almacen aparcado (venia aparcado del guardado del jugador, `aparcadoHasta=129790`) su
+`canUse` devolvia `false` durante los **5 minutos** del aparcado → el aldeano se quedaba **parado en la
+caseta con la etiqueta "Trabajando"** y `goals=[]` (justo lo que ve el jugador), y **sin pico no puede
+cavar**. Y con una **celda del caracol** aparcada pasa lo mismo con la mina entera: `pasos` se quedo en 18
+durante **220 s**.
+
+**El arreglo** (`VillagerMinerGoal.comprobarDestino` + `VillageManager.olvidarPuntoFallido`): si el sitio
+esta aparcado, **se olvida el aparcado** y se reintenta tras `ESPERA_TRAS_APARCADO` (600 ticks = 30 s).
+Sigue sin haber bucle de empujar la pared (que es lo que el aparcado evita: entre intento e intento hay la
+espera), pero el minero **no se queda media faena muerto**.
+
+MEDIDO, antes y despues (misma partida, misma semilla, MEDIR_MINERO):
+
+    concepto                                              antes        ahora
+    ---------------------------------------------------------------------------------
+    pico en la mano                                     t=3200 (160 s)  t=1620 (81 s)
+    caracol paso 17 / 18                                solo el 17      17 y 18 en 3 s
+    pasos de la mina (progreso real en el mundo)         17 -> 18        16 -> 19
+    tiempo con goals=[] seguido (el almacen aparcado)     140 s           30 s (la espera)
+    tiempo con pasos congelado (celda aparcada)           220 s           0
+    tras entregar los 24 objetos                          se quedaba     vuelve a bajar a picar
+
+Y la corrida entera del arreglo, en orden: `pico nuevo: wooden_pickaxe` -> `caracol paso 17` -> `paso 18`
+-> `cuela 4 adoquines ... x2` -> `quema un tronco ... x2` -> `hace 4 antorchas ... x2` -> `deja lo sacado
+en el almacen (pico si, tablones 16, antorchas 8)` -> `el minero guardo 24 cosa(s)` -> `Bajando a la mina`.
+
+**Lo que NO esta arreglado** (y se dice): si una celda del caracol es **de verdad** inalcanzable, el minero
+ahora **lo reintenta cada ~30 s** en vez de esperar 5 min, asi que el log repite
+`no consigue llegar a <celda>` — es a proposito (asi se ve en el log que hay algo real que arreglar en el
+mundo), pero significa que ese trozo de mina sigue sin cavarse hasta que el mundo cambie.
+
 
 
 
