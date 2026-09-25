@@ -3453,6 +3453,41 @@ del mismo aldeano** —lo más probable, el de recoger cosas (`VillagerPickupGoa
 siguiente (una línea: la etiqueta del aldeano, que cada goal ya escribe con `ponerActividad`), y luego decidir si el de
 recoger debe perseguir objetos de dentro de las casas.
 
+### I118 · El log de "no llegué" dice QUÉ GOAL se rindió (y con eso se supo que era la DIANA, no la ronda)
+
+Quinta vuelta, y lo primero fue **poder preguntarlo**: `marcarPuntoFallido` ahora escribe también la **etiqueta** del
+aldeano (nombre, oficio y **actividad**, que cada goal pone con `ponerActividad`). Sin eso el aviso solo traía el uuid y
+no había forma de saber **qué** goal se rendía — que es lo que dejaba la duda de I117.
+
+**Medido en la corrida siguiente** (MEDIR_MINERO) — y la respuesta **no era la que yo suponía**:
+
+```
+6fceef7a  423, 63, 671   -> Ubaldo (Guardia arquero · nv 1) / Yendo a entrenar
+68287e43  423, 63, 671   -> Eufemia (Guardia espadachín · nv 1) / Yendo a entrenar
+40186f40  435, 63, 626   -> Bibiana (Guardia espadachín · nv 2) / Patrullando la arboleda
+689673d9  450, 63, 684   -> Saturnino (Granjero) / Entrando a la huerta
+8a02cad0  526, 63, 642   -> Vicenta (Ganadero) / Cuidando el ganado
+```
+
+**No era la ronda ni el de recoger: es `Yendo a entrenar`.** Los guardias van a **la diana**, y la diana del pueblo
+(`VillageGenerator.puestoDeEntrenamiento` → `423,63,671`) está **dentro de un edificio amurallado**: en el **plano** esa
+zona tiene un **`target`** (la diana) y un **cofre**, con las paredes de adoquín alrededor. El guardia camina hacia la
+diana —que es un **bloque**— y se queda en la pared de fuera.
+
+**Intento que NO valió (y se retiró)**: se le puso al entrenamiento el mismo arreglo de I114/I117 (caminar a una casilla
+de pie junto a la diana, descartando las que el plano marca dentro de un edificio). **Medido: no lo arregla** — siguen
+6-7 rendiciones y ahora además con la línea propia del entrenamiento (`no llego a la diana … me vuelvo a la ronda`). La
+razón es que la prueba del plano con umbral **3 vecinas** reconoce un rincón apretado, pero **no** el interior de un
+recinto grande y abierto por arriba: las casillas de dentro tienen solo una o dos vecinas del plano. Y encima la
+búsqueda de la casilla (100 candidatas × 6 consultas al plano, que es un recorrido lineal) corría **en cada tick**:
+se retiró y el árbol quedó como estaba (compila y pasa el lint).
+
+**Lo que queda por hacer, ya con el diagnóstico cerrado**: el problema **no es el caminante, es DÓNDE está la diana**.
+O se coloca el puesto de entrenamiento en la calle (`puestoDeEntrenamiento` / la barraca), o el entrenamiento se salta
+cuando la diana está techada/encerrada. Y para la prueba del plano, si se quiere usar en recintos grandes, hay que
+cambiar el criterio: en vez de "3 vecinas", "¿está la casilla **dentro de la huella** de un edificio?" (mirando el
+plano en un radio de 2-3), que es lo que distingue una plaza de un patio.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)
 Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 

@@ -4786,9 +4786,15 @@ public final class VillageManager {
                         + " suelo=" + nombreDelBloque(nivel, desde.below())
                         + " | destino=" + nombreDelBloque(nivel, p)
                         + " encima=" + nombreDelBloque(nivel, p.above()));
-        DevilRpg.LOGGER.info("[Village] {} no consigue llegar a {} desde {} (ruta={}; {}): lo deja por {} min y sigue con"
-                        + " lo demas",
-                villager.getUUID(), p.toShortString(), desde.toShortString(), ruta, donde,
+        // Y LA ETIQUETA, QUE ES LO QUE DICE **QUÉ GOAL** SE HA RENDIDO: cada goal escribe la suya con `ponerActividad`
+        // ("Yendo al almacen", "Patrullando la aldea", "Guardando lo suyo"...). Sin esto, el aviso solo trae el uuid y
+        // no se puede saber si el que se rindió fue la ronda, el de recoger o el de reparar — que es justo lo que hizo
+        // falta para entender las 6 rendiciones de guardias en `423,63,671` (I117).
+        String etiqueta = villager.getCustomName() == null ? "-"
+                : villager.getCustomName().getString().replace("\n", " / ");
+        DevilRpg.LOGGER.info("[Village] {} no consigue llegar a {} desde {} (ruta={}; {}) etiqueta=\"{}\": lo deja por {}"
+                        + " min y sigue con lo demas",
+                villager.getUUID(), p.toShortString(), desde.toShortString(), ruta, donde, etiqueta,
                 PUNTO_FALLIDO_TICKS / (60 * 20));
     }
 
