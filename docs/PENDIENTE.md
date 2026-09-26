@@ -75,6 +75,13 @@ da el juego es de **1 nodo** (su propia celda, porque el destino es un bloque de
 obrero esto ya está arreglado (se camina a una **casilla de pie**, I114): lo que falta es hacerlo en **la cosecha y la
 siembra del granjero** (y tener en cuenta que el aviso aparca **la mata**, no la entrada).
 
+**INTENTO MEDIDO Y RETIRADO** (26-sep-2026): sospeché del contador de "no me acerco" —se acumula mientras va de
+lejos y el vigilante `canContinueToUse` se evalúa antes del `tick`— y le perdoné el contador cuando ya está al
+alcance de su faena (más un reinicio en la pierna de la compuerta). **Medido: NO mejora** (5 de 12 rendiciones de
+huerta antes, **6 de 14** después), así que se ha **retirado** y el árbol queda como estaba. La pista que deja: **no
+es el contador**, es la **ruta al bloque** (I114 de verdad) o el acceso a la parcela; lo siguiente que hay que medir
+es la ruta viva del granjero en el momento de rendirse (`nav=[…]` sale `sin ruta` o apuntando a otro sitio).
+
 ### 3. El pico, cuando se rompe
 
 Medido que **suelta la faena** (no sigue "picando" en el sitio) y que en la corrida final **no rompió ninguno**
