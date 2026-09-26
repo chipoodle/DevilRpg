@@ -204,7 +204,7 @@ for p in range(SOPORTE_CADA, MAXIMO, SOPORTE_CADA):
         POSTES.add((x, y + 2, z))
 
 TERRENO = {'grass_block', 'dirt', 'coarse_dirt', 'rooted_dirt', 'podzol', 'mycelium', 'stone',
-           'cobblestone', 'gravel', 'andesite', 'granite', 'diorite', 'tuff', 'sand', 'red_sand',
+           'gravel', 'andesite', 'granite', 'diorite', 'tuff', 'sand', 'red_sand',
            'sandstone', 'clay', 'snow_block', 'dirt_path', 'cobbled_deepslate'}
 
 # --- la regla del juego para "se puede estar de pie aqui" ---------------------------------------
@@ -384,3 +384,4 @@ if SIMULAR:
     print('  total: %d celda(s)' % len(cambios))
     print(' DESPUES (con el reparador):')
     informar(buscar_ruta(inicio, meta), meta, inicio)
+

@@ -379,26 +379,36 @@ escalón; después, con el zurrón llenándose de **tierra y grava**, subía a v
 galería en once minutos). Y en la segunda vuelta midió **la mudanza**: la caseta vieja retirada (césped y aire, 0
 celdas en el plano) y la nueva en `503,617` con la cama **dentro** (181 celdas en el plano).
 
-**Y desde el 26-sep, además, el POZO ENTERO y una SONDA** (para el caso *"el minero no está bajando y está
-sellada la entrada"*): cada 2 s sale una línea `POZO` con **cada paso del caracol** —su pieza, la celda de los pies y
-la de la cabeza, con `*` delante del paso TAPADO— y otra `SONDA DEL POZO` que **le pregunta al planificador del
-juego** por la casilla de pie de cada paso, empezando por la boca, y **para en la primera que no alcanza**:
+**Y desde el 26-sep, además, el POZO ENTERO, la GALERÍA y una SONDA** (para el caso *"el minero no está bajando y
+está sellada la entrada"*): cada 2 s sale una línea `POZO` con **cada paso del caracol** —su pieza, la celda de los
+pies y la de la cabeza, con `*` delante del paso TAPADO— y otra `GALERIA` con **las primeras celdas de la galería del
+paso que la abre** y cuántas cuenta el mod como hechas (aire; el adoquín es **agua sellada** y la piedra labrada es
+el **tope**), y cada 10 s una `SONDA DEL POZO` que **le pregunta al planificador del juego** por la casilla de pie de
+cada paso, empezando por la boca, y **para en la primera que no alcanza**:
 
 ```
 [Arnes] POZO t=1520 faena=17 (hasta el paso 20) datos="paso:pieza/pies/cabeza"
         0:cobblestone_slab/air/air  1:cobblestone/air/air …  16:cobblestone_slab/air/air
         *17:stone/stone/stone *18:stone/stone/stone | galeria=paso 16=24/24
+[Arnes] GALERIA t=7880 paso=32 hechas=0/24 (1..8)
+        1:stone_bricks 2:water 3:stone 4:stone 5:stone 6:stone 7:stone 8:water
 [Arnes] SONDA DEL POZO t=1520 pos=499,63,621
-        0:507,62,613(air/air)=17n/SI fin=507,63,613  1:507,62,614(air/air)=15n/SI fin=507,62,615 …
-        5:507,60,618(air/air)=13n/NO fin=507,61,617
+        0:507,62,613(air/air)=17n/SI fin=507,63,613  …  5:507,60,618(air/air)=13n/NO fin=507,61,617
 ```
 
-**Las dos trampas de estos dos instrumentos, medidas** (por eso van juntos): (1) la **boca** puede estar ABIERTA y el
+**Las dos trampas de estos instrumentos, medidas** (por eso van juntos): (1) la **boca** puede estar ABIERTA y el
 paso cortado **más abajo, dentro del propio caracol** —mirar la boca no basta—; y (2) `createPath(celda, 1)` da por
 **alcanzada** una celda que esté **a 1 de distancia**, así que la sonda dice `SI` con el fin de la ruta en la celda
 **de al lado**: la sonda pregunta con **0** (la celda exacta) e imprime además **qué hay en los pies y en la cabeza**
 (el aldeano mide 1,95: el planificador mira dos celdas). El `MINERO` lleva en la misma línea su **ruta viva**
-(`nav=[…]`) y la **ruta a su faena** (`rutaFaena=[…]`).
+(`nav=[…]`) y la **ruta a su faena** (`rutaFaena=[…]`). Y **la sonda va cada 10 s, no cada 2**: cada una son ~20
+búsquedas de ruta del juego.
+
+> **OJO TAMBIÉN CON EL LOG: `latest.log` ROTA POR TAMAÑO.** Una corrida larga (127.680 ticks) quedó partida entre
+> `run/logs/<fecha>-N.log.gz` y `latest.log`; contar solo `latest.log` da números **falsos** (8 rendiciones y 71
+> portones en el trozo final, cuando la corrida tenía 159 y 868). Hay que juntar el `.gz` con `latest.log` (el
+> comando está en `docs/PENDIENTE.md`) **antes** de sacar conclusiones.
+
 
 ### `columna_mina.py` (versionada) — LA COLUMNA DEL POZO, celda a celda, SIN levantar servidor
 

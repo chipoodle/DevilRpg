@@ -162,8 +162,23 @@ public class VillagerMinerGoal extends Goal {
      * tapa con adoquín y el túnel sigue; un <b>mar</b> (un acuífero, el océano) no se tapa, y seguir cavando ahí
      * sería inundar la mina entera. Lo pidió el jugador: *"que selle las bolsas de agua o lava; si es un mar, que
      * pare"*.
+     * <p>
+     * <b>Y ESTE TOPE SOLO NO BASTABA (medido el 26-sep-2026)</b>: con un acuífero de verdad el contador <b>nunca
+     * llega a 13</b> porque se reinicia en cuanto el minero pica una celda de roca virgen, así que la mina no se
+     * cerraba nunca y el minero se quedaba en un ir y venir de sellos ({@code 1, 2, 3, 1, 2, 3…} medido en el log,
+     * 50 sellos y la galería siempre en {@code 0/24}). La señal que de verdad distingue la bolsa del mar es
+     * <b>si el agua VUELVE a la misma celda</b> (ver {@link #selloDelMar}): un manantial aislado, al picarlo, se
+     * queda seco; un acuífero conectado lo vuelve a llenar.
      */
     private static final int SELLOS_MAXIMOS = 12;
+
+    /**
+     * <b>La celda que ya pidió un sello y volvió a pedirlo</b>: la prueba de que el agua está <b>conectada</b> (un
+     * mar) y no es una bolsa. Se guarda la ÚLTIMA: si una celda se sella, se repica y el agua vuelve, eso es un mar
+     * y la mina se cierra ahí mismo con su piedra labrada. Un manantial aislado no vuelve.
+     */
+    @Nullable
+    private BlockPos selloDelMar;
 
     private enum Fase { RECOGER, CAVAR, TALLER, ENTREGAR }
 
@@ -450,6 +465,14 @@ public class VillagerMinerGoal extends Goal {
             // RENDIRSE = DEJARLO POR UN RATO (I33): el sitio al que no llegó se apunta para no volver a por él en
             // bucle (es lo que dejaba al aldeano empujando la misma pared para siempre).
             VillageManager.marcarPuntoFallido(villager, destino);
+            return false;
+        }
+        // SIN PICO NO SE CAVA (medido el 26-sep-2026): el `canUse` ya pregunta por el pico al empezar la vuelta,
+        // pero mientras el goal está corriendo no se vuelve a preguntar, así que con el pico roto el minero seguía
+        // "picando" en el sitio —gastando tiempo y mano— sin poder sacar nada. Lo que tiene que hacer es SOLTAR la
+        // faena para que `canUse` lo mande al almacén a por otro pico (o al taller). Medido: `pico=SIN PICO` con el
+        // zurrón lleno de adoquín y el minero clavado en la galería del paso 32.
+        if (fase == Fase.CAVAR && !tienePico()) {
             return false;
         }
         return destino != null && !villager.isBaby() && stuckTicks < STUCK_LIMIT
@@ -755,8 +778,16 @@ public class VillagerMinerGoal extends Goal {
     private void picarLaCeldaDelCaracol(ServerLevel level, int nivel) {
         BlockPos celda = VillageGenerator.celdaDelCaracol(center, nivel, paso);
         // 1) EL HUECO DE PASO (tres celdas encima de la pieza: es lo que pide el juego para subir un escalón, I26).
+        //    SI AHÍ HAY AGUA O LAVA, el túnel se ahoga: se sella y, si el agua vuelve (un mar), la mina se cierra.
         for (int dy = 1; dy <= 3; dy++) {
-            picarYRecoger(level, celda.above(dy), false);
+            BlockPos hueco = celda.above(dy);
+            if (!picarYRecoger(level, hueco, true)) {
+                selloPendiente = hueco;
+                if (elAguaEsUnMar(hueco)) {
+                    cerrarLaMina(level, celda);
+                }
+                return;
+            }
         }
         // 2) LA PIEZA, picando antes lo que hubiera en esa celda (piedra, una veta...) y SELLANDO si es agua o lava.
         boolean eraSello = celda.equals(selloPendiente);
@@ -789,18 +820,38 @@ public class VillagerMinerGoal extends Goal {
     }
 
     /**
+     * <b>¿El agua de esta celda es una BOLSA o un MAR?</b> Se llama justo después de sellarla. La respuesta es
+     * <b>MAR</b> si esa MISMA celda ya había pedido un sello (o sea: se selló, se repicó y el agua ha vuelto → el
+     * cuerpo de agua está conectado y el túnel no puede pasar de ahí) o si ya van más de {@link #SELLOS_MAXIMOS}
+     * sellos seguidos (el tope de siempre, que cubre el caso de un mar que va corriendo celda a celda).
+     */
+    private boolean elAguaEsUnMar(BlockPos hueco) {
+        if (hueco.equals(selloDelMar)) {
+            return true; // esta celda ya se había sellado y ha vuelto a pedirlo: el agua vuelve, es un mar
+        }
+        selloDelMar = hueco.immutable();
+        return ++sellosSeguidos > SELLOS_MAXIMOS;
+    }
+
+    /**
      * <b>Una celda de galería</b>: hueco de paso de dos celdas (el suelo es el terreno de debajo), relleno si está
      * hueco, veta de al lado, marco cada {@link VillageGenerator#MINA_GALERIA_SOPORTE_CADA} celdas y antorcha.
      */
     private void picarLaCeldaDeLaGaleria(ServerLevel level, int nivel, int indice) {
         BlockPos celda = VillageGenerator.celdaDeLaGaleria(center, nivel, paso, indice);
-        for (int dy = 0; dy <= 1; dy++) {
-            picarYRecoger(level, celda.above(dy), false);
-        }
+        // EL HUECO DE PASO QUE SE ABRE AQUÍ ES SOLO EL DE LA CABEZA (`celda.above()`). **LA CELDA DE LA GALERÍA NO
+        // SE TOCA EN ESTE BUCLE**: se pica abajo, con su cuenta de sellos. Y ESE ERA EL FALLO MEDIDO (26-sep-2026):
+        // el bucle empezaba en `dy = 0` —o sea que picaba la celda de la galería con `cuentaElSello = false`—, así
+        // que si ahí había AGUA se sellaba en esa llamada (en silencio) y la de abajo, que sí cuenta, se encontraba
+        // adoquín, lo picaba en el acto y devolvía el agua al túnel: el sello no duraba ni un tick, `sellosSeguidos`
+        // no subía, el contador de la galería se quedaba en cero y el minero repetía la misma celda PARA SIEMPRE
+        // (medido: 121 veces la celda 1 y 120 la 2 de la galería del paso 32, `pasos` congelado 110.000 ticks, 0
+        // líneas de `sella agua/lava` y 0 de `la mina se PARA`). El caracol ya lo hacía bien (`dy` desde 1).
+        picarYRecoger(level, celda.above(), false);
         boolean eraSello = celda.equals(selloPendiente);
         if (!picarYRecoger(level, celda, true)) {
             selloPendiente = celda;
-            if (++sellosSeguidos > SELLOS_MAXIMOS) {
+            if (elAguaEsUnMar(celda)) {
                 cerrarLaMina(level, celda);
             }
             return;
@@ -832,9 +883,17 @@ public class VillagerMinerGoal extends Goal {
      */
     private boolean picarYRecoger(ServerLevel level, BlockPos pos, boolean cuentaElSello) {
         BlockState estado = level.getBlockState(pos);
-        if (estado.isAir() || !VillageGenerator.elMineroPuedePicar(estado)) {
-            return true; // aire (ya está hecho) o algo del pueblo (no se toca)
+        if (estado.isAir()) {
+            return true; // ya está hecho: no hay nada que picar
         }
+        // EL AGUA Y LA LAVA VAN PRIMERO (medido el 26-sep-2026, y era el fallo que tenía la mina clavada): esta
+        // comprobación estaba DESPUÉS de la de "lo del pueblo", y `elMineroPuedePicar` dice que NO al agua —no es
+        // aire, ni terreno natural, ni una pieza de la mina—, así que una celda inundada salía por la guarda de "no
+        // se toca" y devolvía `true` **sin picar y sin sellar**. Consecuencia medida: la galería del paso 32 se topó
+        // con un acuífero y el contador de la galería se quedaba en cero (el agua no es aire), el minero volvía a
+        // por la MISMA celda 121 veces, el agua no se sellaba nunca (0 líneas de `sella agua/lava`), el tope no
+        // llegaba (0 líneas de `la mina se PARA`) y `pasos` se quedó 110.000 ticks en 32 — con el pico rompiéndose
+        // de tanto "picar" agua (1 vez `se le ha roto el pico`).
         if (!estado.getFluidState().isEmpty()) {
             // AGUA O LAVA: se sella. Si es una bolsa, en la vuelta siguiente se pica el adoquín y el túnel sigue.
             level.setBlock(pos, Blocks.COBBLESTONE.defaultBlockState(), Block.UPDATE_ALL);
@@ -844,6 +903,9 @@ public class VillagerMinerGoal extends Goal {
                 return false;
             }
             return true;
+        }
+        if (!VillageGenerator.elMineroPuedePicar(estado)) {
+            return true; // algo que ha puesto el pueblo o el jugador: no se toca
         }
         if (!esLaMina(estado)) {
             // Partículas y sonido de lo que se rompe: se ve que está picando de verdad. (Las piezas de la mina, si
@@ -873,6 +935,19 @@ public class VillagerMinerGoal extends Goal {
             level.setBlock(celda.above(dy), Blocks.COBBLESTONE.defaultBlockState(), Block.UPDATE_ALL);
         }
         level.setBlock(celda, Blocks.STONE_BRICKS.defaultBlockState(), Block.UPDATE_ALL);
+        // Y EL TOPE SE MARCA TAMBIÉN EN LA CELDA DEL CARACOL DE ESTE PASO, que es donde lo lee el pueblo
+        // (`VillageGenerator.laMinaLlegoAlTope` mira `celdaDelCaracol(paso)`). Si el que se topó con el mar fue una
+        // GALERÍA, marcar solo su celda dejaba a la mina SIN TOPE: el minero volvía a por la misma celda y, como
+        // ahora ya estaba sellada con piedra labrada (que `elMineroPuedePicar` no deja tocar), se quedaba en bucle
+        // para siempre. Medido el 26-sep-2026: 110.000 ticks alternando las celdas 1 y 2 de la galería del paso 32.
+        BlockPos caracol = VillageGenerator.celdaDelCaracol(center, VillageGenerator.cotaDeLaPlaza(level, center),
+                paso);
+        if (!caracol.equals(celda)) {
+            for (int dy = 1; dy <= 3; dy++) {
+                level.setBlock(caracol.above(dy), Blocks.COBBLESTONE.defaultBlockState(), Block.UPDATE_ALL);
+            }
+            level.setBlock(caracol, Blocks.STONE_BRICKS.defaultBlockState(), Block.UPDATE_ALL);
+        }
         DevilRpg.LOGGER.info("[Village] El minero: la mina se PARA en {} ({} celdas de agua/lava seguidas): piedra"
                 + " labrada de tope", celda.toShortString(), sellosSeguidos);
         VillageManager.ponerSuceso(villager, "La mina llego al tope");

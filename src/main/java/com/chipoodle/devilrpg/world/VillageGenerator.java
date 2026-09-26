@@ -3016,6 +3016,15 @@ public final class VillageGenerator {
     public static int progresoDeLaGaleria(ServerLevel level, BlockPos center, int nivel, int paso) {
         int hechas = 0;
         for (int i = 1; i <= MINA_GALERIA_LARGO; i++) {
+            // ABIERTA, y punto: una celda SELLADA (adoquín) NO cuenta como hecha **a propósito**. El sello es un
+            // tapón, y en la galería la celda sellada es justo la que se anda, así que un túnel "sellado y dado por
+            // hecho" queda **intransitable** (medido el 26-sep-2026: con los sellos contando como hechos el minero
+            // se quedó con `hechas=3/24` y la faena en la celda 4, sin ruta hasta ella porque las celdas 1 y 2
+            // estaban tapadas, oscilando "Bajando a la mina"/"Volviendo a la caseta"). Lo que hace el minero es
+            // **volver a picar el sello**: si era una BOLSA aislada, al picarlo el agua ya no vuelve y el túnel
+            // SIGUE (la celda queda de aire y el contador sube); si era un MAR, el agua vuelve, se vuelve a sellar y
+            // `sellosSeguidos` sube, que es lo que acaba cerrando la mina con su piedra labrada (`SELLOS_MAXIMOS`).
+            // Es exactamente lo que pidió el jugador: *"que selle las bolsas de agua o lava; si es un mar, que pare"*.
             if (level.getBlockState(celdaDeLaGaleria(center, nivel, paso, i)).isAir()) {
                 hechas++;
             } else {
@@ -3210,11 +3219,19 @@ public final class VillageGenerator {
         return false;
     }
 
-    /** ¿Ese bloque es <b>terreno del pueblo</b> (lo que el nivelado y el tapagujeros ponen al reparar el suelo)? */
+    /**
+     * ¿Ese bloque es <b>terreno del pueblo</b> (lo que el nivelado y el tapagujeros ponen al reparar el suelo)?
+     * <p>
+     * <b>OJO CON EL ADOQUÍN</b>: NO está en la lista a propósito (26-sep-2026). El nivelado y {@code sellarSuelo}
+     * rellenan con <b>césped y tierra</b> (y piedra en el pozo), nunca con adoquín; y desde que el minero
+     * <b>sella el agua con adoquín</b> (una celda por cada bolsa o mar que se topa en la galería), meterlo aquí
+     * hacía que este reparador <b>volviera a abrir los sellos del minero</b> —agua otra vez dentro del túnel— en la
+     * pasada siguiente del latido.
+     */
     private static boolean esTerrenoDelPueblo(BlockState estado) {
         return estado.is(Blocks.GRASS_BLOCK) || estado.is(Blocks.DIRT) || estado.is(Blocks.COARSE_DIRT)
                 || estado.is(Blocks.ROOTED_DIRT) || estado.is(Blocks.PODZOL) || estado.is(Blocks.MYCELIUM)
-                || estado.is(Blocks.STONE) || estado.is(Blocks.COBBLESTONE) || estado.is(Blocks.GRAVEL)
+                || estado.is(Blocks.STONE) || estado.is(Blocks.GRAVEL)
                 || estado.is(Blocks.ANDESITE) || estado.is(Blocks.GRANITE) || estado.is(Blocks.DIORITE)
                 || estado.is(Blocks.TUFF) || estado.is(Blocks.SAND) || estado.is(Blocks.RED_SAND)
                 || estado.is(Blocks.SANDSTONE) || estado.is(Blocks.CLAY) || estado.is(Blocks.SNOW_BLOCK)

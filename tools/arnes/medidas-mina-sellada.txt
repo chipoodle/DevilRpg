@@ -110,3 +110,44 @@ despues (26-sep, 127.680 ticks): 159 rendiciones (1,25 por 1.000 ticks) y 868 ap
 [Gate] 689673d9 Saturnino (Granjero) / Guardando lo suyo: abro el porton 444, 63, 669 · destino=443, 63, 686 rutaViva=4 nodos alcanzaba=NO -> se le borra el destino y se le para · goals=[VillagerFarmGoal VillagerGateGoal]
 [Gate] 6fceef7a Ubaldo (Guardia espadachín · nv 1) / Patrullando el corral: abro el porton 439, 63, 664 · destino=466, 63, 642 rutaViva=38 nodos alcanzaba=SI -> se le deja el camino (NO se le borra el destino) · goals=[VillagerGateGoal VillagerGuardGoal]
 [Gate] 689673d9 Saturnino (Granjero) / Guardando lo suyo: abro el porton 441, 63, 684 · destino=443, 63, 686 rutaViva=7 nodos alcanzaba=SI -> se le deja el camino (NO se le borra el destino) · goals=[VillagerFarmGoal VillagerGateGoal]
+
+=== 6) EL ACUIFERO DEL PASO 32 (I127) -- 26-sep-2026
+
+ANTES (el bucle): pasos=32 congelado 110.000 ticks; 282 lineas 'El minero: galeria' repartidas entre la
+celda 1 (121) y la 2 (120) del paso 32; 0 'sella agua/lava'; 0 'la mina se PARA'; 1 'se le ha roto el pico';
+GALERIA del paso 32 = 1:water 2:water ... hechas=0/24.
+
+Los TRES fallos, medidos uno a uno:
+  (a) el agua salia por la guarda de 'es del pueblo' (lMineroPuedePicar(agua) = false) -> se daba por
+      picada SIN sellar;
+  (b) la galeria picaba la MISMA celda dos veces (dy desde 0 con cuentaElSello=false) -> sellaba en
+      silencio y la llamada de abajo lo repicaba en el acto: el sello duraba un tick;
+  (c) '13 sellos seguidos' no llega nunca con un acuifero (el contador se reinicia al picar roca virgen:
+      medido 1,2,3,1,2,3... y 50 sellos) -> la senal del mar es que el agua VUELVA a la misma celda.
+
+DESPUES (corrida final): 4 sellos y cierra:
+  [Village] El minero: sella agua/lava en 507, 46, 612 (1 seguidas)
+  [Village] El minero: la mina se PARA en 507, 46, 612 (0 celdas de agua/lava seguidas): piedra labrada de tope
+  [Arnes] MINA t=14160 pasos=32/240 cara=507, 46, 613 (y=46) bloqueDeLaCara=stone_bricks TOPE=SI
+  [Arnes] GALERIA t=7880 paso=32 hechas=0/24 (1..8) 1:stone_bricks 2:water 3:stone 4:stone 5:stone 6:stone
+          7:stone 8:water
+  lineas 'El minero: galeria': 6 (antes 282) · caracol: 16 pasos · el minero acaba FUERA, en 515,63,662,
+  'Cargando material'.
+
+=== 7) EL RECOLECTOR (I128)
+
+ANTES (corrida de 127.680 ticks): 64 rendiciones de Filomena (21 'Yendo a la taberna', 19 'Recogiendo',
+18 'Volviendo a la plaza', 4 'Paseando', 2 'Cerrando la puerta'):
+  424,67,670 / 426,67,670 / 427,67,670  -> y=67 = cota+4 = ENCIMA DEL TEJADO (tablones en y=66, aire en 67)
+  553,63,595 y 542,63,583              -> FUERA del muro, ruta=1 nodos ... alcanza=NO
+Medido del muro: python tools\arnes\ruta_atasco.py 521 612 553 595 63 -> NO HAY RUTA (13208 casillas).
+
+DESPUES (corrida final, 14.160 ticks): 0 rendiciones de Filomena; 9 en total (0,64 por 1.000 ticks; el antes
+de la sesion: 1,37). Las que quedan son de granjeros 'Entrando a la huerta' (4).
+
+=== 8) LA CASETA DEL MINERO NO SE ALCANZA (pendiente, medido)
+
+  desde dentro de la mina (499,54,620):  rutaFaena=[a1=38n alcance=NO fin=503,63,613 dFin=4.00]
+  desde el almacen        (515,63,662):  rutaFaena=[a1=43n alcance=NO fin=502,63,622 dFin=7.07]
+  y el MODELO si encuentra ruta: uta_atasco.py 515 662 503 617 63 -> HAY RUTA: 57 pasos
+  (la caseta tiene su puerta 1x2 en 503,63..64,620 y el interior 502..505,615..619 es aire)

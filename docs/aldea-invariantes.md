@@ -3803,6 +3803,78 @@ para perder el rumbo. **Regla del proyecto: lo que no arregla, se retira y se di
 queda la **línea `[Gate]`**, que es la que lo midió (y que sigue sirviendo para ver, en cualquier corrida, en cuántas
 aperturas se le está borrando el destino a alguien que ya iba llegando).
 
+### I127 · EL ACUÍFERO DE LA GALERÍA: el agua se daba por "picada" y la mina no cerraba nunca (26-sep-2026)
+
+Lo siguiente que salió al abrir el pozo (I126): con el minero ya bajando, se quedó **clavado en el paso 32** —
+`pasos=32` durante **110.000 ticks**, **282 líneas** de `El minero: galeria` repartidas entre **la celda 1 (121
+veces) y la 2 (120)** de la misma galería, **0** líneas de `sella agua/lava`, **0** de `la mina se PARA`, el pico
+rompiéndose de tanto "picar" (1 vez `se le ha roto el pico`) y el zurrón lleno de adoquín. El mapa del sitio
+(`build/slice_mina.py 505 509 609 614 44 50 world`) enseñó el acuífero: la galería del paso 32 sale hacia el norte
+desde `507,46,613` y ahí hay **agua** (`W` en `505..507,611..612` a `y=45..46`).
+
+**Eran TRES fallos encadenados**, y los tres medidos:
+
+1. **EL AGUA SALÍA POR LA GUARDA DE "ES DEL PUEBLO"**. En `picarYRecoger` la comprobación de "no se toca"
+   (`!VillageGenerator.elMineroPuedePicar(estado)`) iba **antes** de la del agua, y `elMineroPuedePicar` dice que
+   **no** al agua (no es aire, ni terreno natural, ni una pieza de la mina). Resultado: una celda inundada devolvía
+   `true` —"hecho"— **sin picar y sin sellar**. Arreglado: **el agua y la lava van primero**.
+2. **LA GALERÍA PICABA LA MISMA CELDA DOS VECES**. Su bucle del hueco de paso empezaba en `dy = 0`, o sea que
+   picaba **la celda de la galería** con `cuentaElSello = false`, y la llamada de abajo (la que sí cuenta) se
+   encontraba **adoquín** —el sello que acababa de poner—, lo picaba en el acto y **devolvía el agua al túnel**.
+   Medido con el arreglo del punto 1 puesto: 2 sellos y `1:water 2:cobblestone`, o sea el sello durando un tick.
+   Arreglado: ese bucle solo abre **la celda de la cabeza** (el caracol ya lo hacía bien, `dy` desde 1).
+3. **"13 SELLOS SEGUIDOS" NO LLEGA NUNCA CON UN ACUÍFERO**. El contador se **reinicia** en cuanto el minero pica
+   una celda de roca virgen (`1, 2, 3, 1, 2, 3…` medido, 50 sellos y la galería siempre en `0/24`). Lo que de
+   verdad distingue la **bolsa** del **mar** es **si el agua VUELVE a la misma celda**: un manantial aislado, al
+   picarlo, se queda seco; un acuífero conectado lo vuelve a llenar. Arreglado con `selloDelMar`: **si la misma
+   celda pide un segundo sello, es un mar** y la mina se cierra ahí mismo (con el tope de siempre, 12, como
+   respaldo). Es lo que pidió el jugador: *"que selle las bolsas de agua o lava; si es un mar, que pare"*.
+4. **Y EL TOPE HAY QUE MARCARLO DONDE EL PUEBLO LO LEE**: `cerrarLaMina` marcaba con **piedra labrada** la celda
+   que se estaba picando, y `laMinaLlegoAlTope` mira **`celdaDelCaracol(paso)`**. Si el que se topaba con el mar era
+   una **galería**, la mina se quedaba **sin tope** y el minero volvía a por la misma celda. Arreglado: `cerrarLaMina`
+   marca **también** la celda del caracol de ese paso.
+
+**Y dos arreglos que salieron de la lista de consecuencias** (preguntar quién más lee lo que toco):
+
+- **`despejarElPozoDeLaMina` (I126) no puede tratar el adoquín como "terreno del pueblo"**: desde que el minero
+  sella el agua **con adoquín**, el reparador le **volvía a abrir los sellos** en la pasada siguiente del latido. El
+  nivelado y el tapagujeros rellenan con césped y tierra (y piedra), nunca con adoquín: fuera de la lista.
+- **Sin pico no se cava, y el goal tiene que soltar la faena**: el `canUse` ya preguntaba por el pico al empezar la
+  vuelta, pero **mientras el goal corre no se vuelve a preguntar**, así que con el pico roto el minero seguía
+  "picando" (gastando tiempo y mano) en el sitio. Ahora `canContinueToUse` lo suelta y `canUse` lo manda al almacén
+  a por otro.
+
+**MEDIDO, antes y después** (misma partida, misma copia, modo `MEDIR_MINERO`):
+
+| | antes | después |
+|---|---|---|
+| líneas `El minero: galeria` en el bucle | **282** (121 + 120 sobre las celdas 1 y 2) | **6** |
+| `sella agua/lava` | **0** | **4** (y para) |
+| `la mina se PARA … piedra labrada de tope` / `TOPE=` | **0** / `TOPE=NO` | **1** / **`TOPE=SI`** |
+| volcado `GALERIA` del paso 32 | `1:water 2:water …` y `hechas=0/24` para siempre | `1:stone_bricks 2:water …` y la mina **cerrada** |
+| el minero después | en bucle dentro de la mina, sin pico | **fuera**, en `515,63,662`, `Cargando material` |
+
+### I128 · EL RECOLECTOR: dos trampas que le costaban 64 rendiciones (26-sep-2026)
+
+El recolector (`VillagerCollectGoal`) era el que más se rendía de la aldea: **64 de las 159** rendiciones de una
+corrida larga, y **62** de ellas con solo dos patrones, los dos medidos:
+
+1. **COSAS ENCIMA DE UN TEJADO.** 20 rendiciones con destino `424/426/427, 67, 670`: `67` es **`cota + 4`** y el
+   techo de la barraca está en **`y=66`** (medido con `build/slice_mina.py 421 429 667 673 65 68 "New World (2)"`:
+   tablones en 66 y **aire en 67**), o sea que el objeto está **encima del tejado** y ahí no se sube. El filtro de
+   altura era `item.getY() > cota + ALTURA_MAXIMA` con **4**, que justo lo dejaba pasar. Bajado a **3** (la calle
+   es `cota`; con 4 se colaba el tejado).
+2. **COSAS FUERA DEL MURO.** 35 rendiciones con destinos como `553,63,595` o `542,63,583` (a ~97 del centro, con
+   la muralla en 62) y `ruta=1 nodos … alcanza=NO`. Medido con `tools/arnes/ruta_atasco.py 521 612 553 595 63`:
+   **NO HAY RUTA** desde dentro hasta ese objeto, y el planificador del juego dice lo mismo (una ruta de **1 nodo**
+   que no alcanza) porque **una puerta de valla cerrada no es navegable**. El recolector no usaba el paso por el
+   portón que sí usan los demás goals (I112). Arreglado: cuando el objeto (o el almacén, si se quedó fuera) está al
+   otro lado de la muralla, **primero se va al portón** (`VillageManager.pasoParaCruzarElMuro`) y al ponerse a su
+   lado el goal de los portones se lo abre.
+
+**MEDIDO**: **Filomena (la recolectora) pasa de 64 rendiciones a CERO** en la corrida con los dos arreglos, y las
+rendiciones totales del pueblo bajan a **0,64 por 1.000 ticks** (el antes de esta sesión: 1,37).
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
 1. **¿Quién más LEE lo que cambio?** Buscar todos los usos (`grep`) y revisarlos uno a uno. *(Fallo real: cambié el

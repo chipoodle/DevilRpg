@@ -513,6 +513,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         }
         DevilRpg.LOGGER.info("[Arnes] BOCA DE LA MINA t={} {} -> {}", ticks, boca.toShortString(), bocas.toString().trim());
         volcarElPozo(level, cota, paso, fondo);
+        volcarLaGaleria(level, cota, paso);
         for (Villager v : mineros) {
             // DIAGNOSTICO (por que el minero se queda SIN GOAL CORRIENDO): se vuelca TODO lo que mira su `canUse`
             // —el turno y la comida, el sitio aparcado (I33) con su hora, y la lista COMPLETA de goals con cual
@@ -559,25 +560,29 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             // celda que este a 1 de distancia, asi que decia `SI` con el fin de la ruta en la celda de AL LADO. Aqui
             // se pregunta con 0 (la celda EXACTA) y se imprime tambien lo que hay en los pies y en la cabeza, que es
             // lo que el planificador mira (el aldeano mide 1,95: dos celdas).
-            StringBuilder sonda = new StringBuilder();
-            for (int p = 0; p <= Math.min(fondo, Math.max(paso + 2, 12)); p++) {
-                BlockPos pie = com.chipoodle.devilrpg.world.VillageGenerator.celdaDelCaracol(CENTRO, cota, p)
-                        .above(com.chipoodle.devilrpg.world.VillageGenerator.esLosaDelCaracol(p) ? 0 : 1);
-                var caminoP = v.getNavigation().createPath(pie, 0);
-                boolean alcanzaP = caminoP != null && caminoP.canReach();
-                sonda.append(p).append(':').append(pie.toShortString()).append('(')
-                        .append(nombre(level, pie.getX(), pie.getY(), pie.getZ())).append('/')
-                        .append(nombre(level, pie.getX(), pie.getY() + 1, pie.getZ())).append(")=")
-                        .append(caminoP == null ? "NO(nula)"
-                                : caminoP.getNodeCount() + "n/" + (alcanzaP ? "SI" : "NO")
-                                        + " fin=" + caminoP.getEndNode().asBlockPos().toShortString())
-                        .append(' ');
-                if (!alcanzaP) {
-                    break;
+            // Y VA CADA 10 s, NO CADA 2 s: cada sonda son ~20 busquedas de ruta DEL JUEGO y con el servidor headless
+            // eso se nota (medido: "Can't keep up! ... 137 ticks behind").
+            if (ticks % 200 == 0) {
+                StringBuilder sonda = new StringBuilder();
+                for (int p = 0; p <= Math.min(fondo, Math.max(paso + 2, 12)); p++) {
+                    BlockPos pie = com.chipoodle.devilrpg.world.VillageGenerator.celdaDelCaracol(CENTRO, cota, p)
+                            .above(com.chipoodle.devilrpg.world.VillageGenerator.esLosaDelCaracol(p) ? 0 : 1);
+                    var caminoP = v.getNavigation().createPath(pie, 0);
+                    boolean alcanzaP = caminoP != null && caminoP.canReach();
+                    sonda.append(p).append(':').append(pie.toShortString()).append('(')
+                            .append(nombre(level, pie.getX(), pie.getY(), pie.getZ())).append('/')
+                            .append(nombre(level, pie.getX(), pie.getY() + 1, pie.getZ())).append(")=")
+                            .append(caminoP == null ? "NO(nula)"
+                                    : caminoP.getNodeCount() + "n/" + (alcanzaP ? "SI" : "NO")
+                                            + " fin=" + caminoP.getEndNode().asBlockPos().toShortString())
+                            .append(' ');
+                    if (!alcanzaP) {
+                        break;
+                    }
                 }
+                DevilRpg.LOGGER.info("[Arnes] SONDA DEL POZO t={} pos={} {}", ticks,
+                        v.blockPosition().toShortString(), sonda.toString().trim());
             }
-            DevilRpg.LOGGER.info("[Arnes] SONDA DEL POZO t={} pos={} {}", ticks, v.blockPosition().toShortString(),
-                    sonda.toString().trim());
             DevilRpg.LOGGER.info("[Arnes] MINERO t={} pos={} cara={} dCara={} destino={} pico={}({}/{}) zurron=[{}]"
                             + " goals=[{}] TODOS=[{}] nav=[{}] rutaFaena=[{}] etiqueta={}",
                     ticks, v.blockPosition().toShortString(), cara.toShortString(),
@@ -713,9 +718,28 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
                         + " | galeria={}", ticks, pasoActual, hasta, sb.toString(), galeria);
     }
 
+    /**
+     * <b>LA GALERIA DEL PASO QUE LA ABRE, celda a celda</b> (el instrumento del acuifero): imprime las primeras
+     * celdas de la galeria con lo que hay en cada una (aire, adoquin = agua SELLADA, piedra labrada = tope) y
+     * cuantas cuenta el mod como hechas (`progresoDeLaGaleria`). Es lo que distingue "la galeria avanza" de "el
+     * agua vuelve a entrar y el contador se queda en cero" — el bucle que tuvo al minero 110.000 ticks en el paso 32.
+     */
+    private static void volcarLaGaleria(ServerLevel level, int cota, int paso) {
+        if (!com.chipoodle.devilrpg.world.VillageGenerator.abreGaleria(paso)) {
+            return;
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int i = 1; i <= 8; i++) {
+            BlockPos g = com.chipoodle.devilrpg.world.VillageGenerator.celdaDeLaGaleria(CENTRO, cota, paso, i);
+            sb.append(i).append(':').append(nombre(level, g.getX(), g.getY(), g.getZ())).append(' ');
+        }
+        DevilRpg.LOGGER.info("[Arnes] GALERIA t={} paso={} hechas={}/{} (1..8) {}", ticks, paso,
+                com.chipoodle.devilrpg.world.VillageGenerator.progresoDeLaGaleria(level, CENTRO, cota, paso),
+                com.chipoodle.devilrpg.world.VillageGenerator.MINA_GALERIA_LARGO, sb.toString().trim());
+    }
+
     /** ¿Esa celda se puede pisar (o es la de la cabeza)? Todo lo que no choque: aire, hierba, agua, cultivos. */
-    private static boolean esLibre(String bloque) {
-        return bloque.equals("air") || bloque.equals("cave_air") || bloque.equals("water")
+    private static boolean esLibre(String bloque) {        return bloque.equals("air") || bloque.equals("cave_air") || bloque.equals("water")
                 || bloque.equals("short_grass") || bloque.equals("grass") || bloque.equals("tall_grass")
                 || bloque.equals("torch") || bloque.equals("wall_torch") || bloque.equals("wheat")
                 || bloque.equals("carrots") || bloque.equals("potatoes") || bloque.equals("beetroots")

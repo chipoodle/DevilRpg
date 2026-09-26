@@ -77,8 +77,13 @@ public class VillagerCollectGoal extends Goal {
      * ({@code 1441/1443/1444, 131, 1432-1434}; las camas están en su lista blanca) y desde ahí <b>no alcanzaba el
      * almacén</b> (ruta degenerada de 1 nodo) ni conseguía salir: se quedaba arriba en bucle —lo que el jugador vio
      * como *"de chala en el 3er piso sin hacer nada"*—. Los pisos son de quien vive ahí: lo que se tire arriba, suyo.
+     * <p>
+     * <b>BAJADO DE 4 A 3 (26-sep-2026)</b>: con 4 se colaba lo que está <b>encima de un TEJADO</b>. Medido en la
+     * corrida larga: 20 rendiciones del recolector con destino en {@code 424/426/427, 67, 670} —y {@code 67} es
+     * {@code cota + 4}—, que es el <b>techo de la barraca</b> (los tablones están en {@code y=66}; {@code y=67} es
+     * aire y encima descansa el objeto). Con 3 ({@code y <= 66}) ese objeto se descarta y el recolector no va.
      */
-    private static final int ALTURA_MAXIMA = 4;
+    private static final int ALTURA_MAXIMA = 3;
 
     private final Villager villager;
     private final BlockPos center;
@@ -217,9 +222,16 @@ public class VillagerCollectGoal extends Goal {
             villager.getLookControl().setLookAt(objetivo);
             double distancia = Math.sqrt(villager.distanceToSqr(objetivo));
             if (distancia > REACH) {
+                // EL MURO MANDA (I112): si el objeto está al OTRO LADO de la muralla, primero se cruza por el
+                // PORTÓN —una puerta de valla cerrada NO es navegable para el juego, así que la ruta directa no
+                // existe— y al ponerse a su lado el goal de los portones se la abre. Medido el 26-sep-2026: el
+                // recolector se rendía yendo a por objetos de FUERA del muro con `ruta=1 nodos … alcanza=NO` (y el
+                // modelo de `tools/arnes/ruta_atasco.py` tampoco encuentra ruta desde dentro hasta `553,63,595`):
+                // eran 35 de sus 64 rendiciones.
+                BlockPos porton = VillageManager.pasoParaCruzarElMuro(level, center, villager, p);
                 // Se le manda POR EL CEREBRO, en cada tick: si se navega a mano, el cerebro del aldeano lo manda a
                 // otra parte y se va sin recogerlo.
-                VillageManager.caminarHacia(villager, p, 0.6F);
+                VillageManager.caminarHacia(villager, porton != null ? porton : p, 0.6F);
                 // Solo cuenta como atasco NO ACERCARSE (contar cada tick lo mandaba a empezar de cero a los 6 s).
                 if (distancia < mejorDistancia - 0.5D) {
                     mejorDistancia = distancia;
@@ -254,7 +266,10 @@ public class VillagerCollectGoal extends Goal {
             double distancia = Math.sqrt(villager.distanceToSqr(destino.getX() + 0.5D, destino.getY() + 0.5D,
                     destino.getZ() + 0.5D));
             if (distancia > VillageStorage.ALCANCE_ALMACEN) {
-                VillageManager.caminarHacia(villager, destino, 0.6F);
+                // Y TAMBIÉN POR EL PORTÓN SI LE TOCA CRUZARLO (el almacén está dentro; si el recolector se quedó
+                // fuera, la vuelta es un cruce de muralla como cualquier otro: ver I112).
+                BlockPos porton = VillageManager.pasoParaCruzarElMuro(level, center, villager, destino);
+                VillageManager.caminarHacia(villager, porton != null ? porton : destino, 0.6F);
                 VillageManager.ponerActividad(villager, volviendoALaPlaza ? "Volviendo a la plaza"
                         : "Yendo al almacen");
                 if (distancia < mejorDistancia - 0.5D) {
