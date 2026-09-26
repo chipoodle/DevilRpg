@@ -1,0 +1,112 @@
+MEDIDAS DE LA MINA SELLADA (26-sep-2026) -- datos crudos de I126
+
+Partida del jugador 'New World (2)' (copiada a run\world para cada corrida). Aldea 0: centro 470,63,646,
+eje de la mina 503,617, cota 63, boca 507,62,613.
+
+=== 1) LA COLUMNA DEL POZO, CELDA A CELDA (tools\arnes\columna_mina.py "New World (2)" 503 617 63 simular)
+COLUMNA DE LA MINA � mundo=New World (2) � eje=503,617 � cota=63 � boca=(507, 62, 613)
+
+paso  celda pieza   pieza            pies             cabeza           +1               veredicto
+0     507,62,613    cobblestone_slab =pieza air              air              oak_planks       PISABLE
+1     507,61,614    cobblestone =pieza grass_block      air              air              TAPADO por pies (grass_block)
+2     507,61,615    cobblestone_slab =pieza grass_block      air              air              TAPADO por pies (grass_block)
+3     507,60,616    cobblestone =pieza air              grass_block      air              TAPADO por cabeza (grass_block)
+4     507,60,617    cobblestone_slab =pieza air              grass_block      air              TAPADO por cabeza (grass_block)
+5     507,59,618    cobblestone =pieza air              air              grass_block      PISABLE
+6     507,59,619    cobblestone_slab =pieza air              air              grass_block      PISABLE
+7     507,58,620    cobblestone =pieza air              air              air              PISABLE
+8     507,58,621    cobblestone_slab =pieza air              air              air              PISABLE
+9     506,57,621    cobblestone =pieza air              air              air              PISABLE
+10    505,57,621    cobblestone_slab =pieza air              air              air              PISABLE
+11    504,56,621    cobblestone =pieza air              air              air              PISABLE
+12    503,56,621    cobblestone_slab =pieza air              air              air              PISABLE
+13    502,55,621    cobblestone =pieza air              air              air              PISABLE
+14    501,55,621    cobblestone_slab =pieza air              air              air              PISABLE
+15    500,54,621    cobblestone =pieza oak_log          oak_log          air              TAPADO por pies (oak_log)
+16    499,54,621    cobblestone_slab =pieza air              air              oak_planks       PISABLE � ABRE GALERIA
+17    499,53,620    cobblestone <-- FALTA (hay stone) stone            stone            stone            TAPADO por pies (stone)
+
+GALERIA del paso 16 (direccion (0, 1), 24 celdas):
+  celda 1   499,54,622    suelo=air              pies=air            cabeza=stone          ABIERTA
+  celda 2   499,54,623    suelo=air              pies=air            cabeza=stone          ABIERTA
+  celda 3   499,54,624    suelo=stone            pies=stone          cabeza=stone          PENDIENTE
+  celda 4   499,54,625    suelo=stone            pies=stone          cabeza=stone          PENDIENTE
+  celda 5   499,54,626    suelo=stone            pies=stone          cabeza=stone          PENDIENTE
+  celda 6   499,54,627    suelo=stone            pies=stone          cabeza=stone          PENDIENTE
+  celda 7   499,54,628    suelo=stone            pies=stone          cabeza=stone          PENDIENTE
+  celda 8   499,54,629    suelo=stone            pies=stone          cabeza=stone          PENDIENTE
+  celda 9   499,54,630    suelo=stone            pies=stone          cabeza=stone          PENDIENTE
+  celda 10  499,54,631    suelo=stone            pies=stone          cabeza=stone          PENDIENTE
+  celda 11  499,54,632    suelo=stone            pies=stone          cabeza=stone          PENDIENTE
+  celda 12  499,54,633    suelo=stone            pies=stone          cabeza=stone          PENDIENTE
+  celda 13  499,54,634    suelo=stone            pies=stone          cabeza=stone          PENDIENTE
+  celda 14  499,54,635    suelo=stone            pies=stone          cabeza=stone          PENDIENTE
+  celda 15  499,54,636    suelo=stone            pies=stone          cabeza=stone          PENDIENTE
+  celda 16  499,54,637    suelo=stone            pies=stone          cabeza=stone          PENDIENTE
+  celda 17  499,54,638    suelo=stone            pies=stone          cabeza=stone          PENDIENTE
+  celda 18  499,54,639    suelo=stone            pies=stone          cabeza=stone          PENDIENTE
+  celda 19  499,54,640    suelo=stone            pies=stone          cabeza=stone          PENDIENTE
+  celda 20  499,54,641    suelo=stone            pies=stone          cabeza=stone          PENDIENTE
+  celda 21  499,54,642    suelo=stone            pies=stone          cabeza=stone          PENDIENTE
+  celda 22  499,54,643    suelo=stone            pies=stone          cabeza=stone          PENDIENTE
+  celda 23  499,54,644    suelo=stone            pies=stone          cabeza=stone          PENDIENTE
+  celda 24  499,54,645    suelo=stone            pies=stone          cabeza=stone          PENDIENTE
+  galeria hecha: 2 de 24
+
+MARCOS DE MADERA (cada 16 pasos): �cae algun poste en una celda de PASO de la mina?
+  paso 16  celda 499,54,621    -> postes EN EL PASO: [(500, 55, 621), (500, 56, 621)]  � paso vecino tapado: [(500, 56, 621), (500, 55, 621)]
+  paso 32  celda 507,46,613    -> postes EN EL PASO: [(506, 47, 613), (506, 48, 613)]  � paso vecino tapado: [(506, 47, 613), (506, 48, 613)]
+  paso 48  celda 499,38,621    -> postes EN EL PASO: [(500, 39, 621), (500, 40, 621)]  � paso vecino tapado: [(500, 40, 621), (500, 39, 621)]
+  paso 64  celda 507,30,613    -> postes EN EL PASO: [(506, 31, 613), (506, 32, 613)]  � paso vecino tapado: [(506, 31, 613), (506, 32, 613)]
+  paso 80  celda 499,22,621    -> postes EN EL PASO: [(500, 23, 621), (500, 24, 621)]  � paso vecino tapado: [(500, 23, 621), (500, 24, 621)]
+  paso 96  celda 507,14,613    -> postes EN EL PASO: [(506, 15, 613), (506, 16, 613)]  � paso vecino tapado: [(506, 15, 613), (506, 16, 613)]
+  paso 112 celda 499,6,621     -> postes EN EL PASO: [(500, 7, 621), (500, 8, 621)]  � paso vecino tapado: [(500, 7, 621), (500, 8, 621)]
+  paso 128 celda 507,-2,613    -> postes EN EL PASO: [(506, -1, 613), (506, 0, 613)]  � paso vecino tapado: [(506, -1, 613), (506, 0, 613)]
+  paso 144 celda 499,-10,621   -> postes EN EL PASO: [(500, -9, 621), (500, -8, 621)]  � paso vecino tapado: [(500, -9, 621), (500, -8, 621)]
+  paso 160 celda 507,-18,613   -> postes EN EL PASO: [(506, -17, 613), (506, -16, 613)]  � paso vecino tapado: [(506, -17, 613), (506, -16, 613)]
+  paso 176 celda 499,-26,621   -> postes EN EL PASO: [(500, -25, 621), (500, -24, 621)]  � paso vecino tapado: [(500, -25, 621), (500, -24, 621)]
+  paso 192 celda 507,-34,613   -> postes EN EL PASO: [(506, -33, 613), (506, -32, 613)]  � paso vecino tapado: [(506, -32, 613), (506, -33, 613)]
+  paso 208 celda 499,-42,621   -> postes EN EL PASO: [(500, -41, 621), (500, -40, 621)]  � paso vecino tapado: [(500, -41, 621), (500, -40, 621)]
+  paso 224 celda 507,-50,613   -> postes EN EL PASO: [(506, -49, 613), (506, -48, 613)]  � paso vecino tapado: [(506, -48, 613), (506, -49, 613)]
+  paso(s) con el marco dentro del paso: 14 de 15
+
+RUTA: de (499, 63, 621) a la casilla de pie del paso 16 (499, 55, 621)
+ ANTES (el mundo tal cual):
+  NO HAY RUTA (casillas visitadas: 14326) � cotas alcanzadas: 17..68 (la meta esta en y=55)
+
+REPARACION SIMULADA (`despejarElPozoDeLaMina`), celda a celda:
+  paso 1   terreno   507,62,614      quitado air
+  paso 2   terreno   507,62,615      quitado air
+  paso 3   terreno   507,62,616      quitado air
+  paso 4   terreno   507,62,617      quitado air
+  paso 5   terreno   507,62,618      quitado air
+  paso 6   terreno   507,62,619      quitado air
+  paso 15  marco     500,55,621      quitado air
+  paso 15  marco     500,56,621      quitado air
+  total: 8 celda(s)
+ DESPUES (con el reparador):
+  HAY RUTA: 26 pasos � por: [(499, 63, 621), (500, 63, 621), (501, 63, 621), (502, 63, 621), (503, 63, 621), (504, 63, 621), (505, 63, 621), (506, 63, 621), (507, 63, 621), (508, 63, 621)] ...
+
+=== 2) EL ARNES: EL POZO YA ABIERTO (volcado POZO y SONDA DEL POZO)
+[Village] Aldea en BlockPos{x=470, y=63, z=646}: abierto el pozo de la mina (6 celda(s) que el pueblo habia vuelto a tapar y 2 poste(s) del marco dentro del paso)
+[Arnes] POZO t=1200 faena=17 (hasta el paso 20) datos="paso:pieza/pies/cabeza"  0:cobblestone_slab/air/air  1:cobblestone/air/air  2:cobblestone_slab/air/air  3:cobblestone/air/air  4:cobblestone_slab/air/air  5:cobblestone/air/air  6:cobblestone_slab/air/air  7:cobblestone/air/air  8:cobblestone_slab/air/air  9:cobblestone/air/air  10:cobblestone_slab/air/air  11:cobblestone/air/air  12:cobblestone_slab/air/air  13:cobblestone/air/air  14:cobblestone_slab/air/air  15:cobblestone/air/air  16:cobblestone_slab/air/air *17:stone/stone/stone *18:stone/stone/stone *19:stone/stone/stone *20:stone/stone/stone | galeria=paso 16=24/24
+[Arnes] SONDA DEL POZO t=40 pos=501, 63, 621 0:507, 62, 613(cobblestone_slab/air)=15n/SI fin=507, 63, 613 1:507, 62, 614(grass_block/air)=14n/SI fin=507, 63, 614 2:507, 61, 615(cobblestone_slab/grass_block)=13n/SI fin=507, 63, 615 3:507, 61, 616(air/grass_block)=12n/NO fin=507, 63, 616
+[Arnes] MINA t=40 pasos=16/240 cara=499, 54, 621 (y=54 · 8 bloques por debajo del suelo) bloqueDeLaCara=cobblestone_slab TOPE=NO caseta=503, 63, 617 puesto=BlockPos{x=501, y=63, z=615} balsa=BlockPos{x=505, y=62, z=615} horno=BlockPos{x=501, y=63, z=619}
+[Arnes] MINA t=14480 pasos=32/240 cara=507, 46, 613 (y=46 · 16 bloques por debajo del suelo) bloqueDeLaCara=cobblestone_slab TOPE=NO caseta=503, 63, 617 puesto=BlockPos{x=501, y=63, z=615} balsa=BlockPos{x=505, y=62, z=615} horno=BlockPos{x=501, y=63, z=619}
+[Arnes] MINA t=127680 pasos=32/240 cara=507, 46, 613 (y=46 · 16 bloques por debajo del suelo) bloqueDeLaCara=cobblestone_slab TOPE=NO caseta=503, 63, 617 puesto=BlockPos{x=501, y=63, z=615} balsa=BlockPos{x=505, y=62, z=615} horno=BlockPos{x=501, y=63, z=619}
+
+=== 3) ANTES (la corrida del 25-sep, build\medida-antes-mina-y-portones.log)
+[Arnes] MINA t=40 pasos=16/240 cara=499, 54, 621 (y=54 · 8 bloques por debajo del suelo) bloqueDeLaCara=cobblestone_slab TOPE=NO caseta=503, 63, 617 puesto=BlockPos{x=501, y=63, z=615} balsa=BlockPos{x=505, y=62, z=615} horno=BlockPos{x=501, y=63, z=619}
+[Arnes] MINA t=18200 pasos=17/240 cara=499, 53, 620 (y=53 · 9 bloques por debajo del suelo) bloqueDeLaCara=stone TOPE=NO caseta=503, 63, 617 puesto=BlockPos{x=501, y=63, z=615} balsa=BlockPos{x=505, y=62, z=615} horno=BlockPos{x=501, y=63, z=619}
+[Arnes] BOCA DE LA MINA t=18200 507, 62, 613 -> 507, 61, 613=dirt(plano:-) 507, 62, 613=cobblestone_slab(plano:cobblestone_slab) 507, 63, 613=air(plano:-) 507, 64, 613=air(plano:-) 507, 65, 613=oak_planks(plano:oak_planks)
+
+=== 4) LA SONDA PARADA EN EL PASO 5 (la corrida del reparador de DOS celdas, build\medida-pozo-abierto-2.log)
+[Arnes] SONDA DEL POZO t=8560 pos=499, 63, 621 0:507, 62, 613=17n/SI fin=507, 63, 613 1:507, 62, 614=15n/SI fin=507, 62, 615 2:507, 61, 615=15n/SI fin=507, 62, 615 3:507, 61, 616=13n/SI fin=507, 61, 617 4:507, 60, 617=13n/SI fin=507, 61, 617 5:507, 60, 618=13n/NO fin=507, 61, 617
+
+=== 5) LOS PORTONES ([Gate]) Y LAS RENDICIONES -- antes y despues
+antes  (25-sep, 18.200 ticks): 25 rendiciones (1,37 por 1.000 ticks)
+despues (26-sep, 127.680 ticks): 159 rendiciones (1,25 por 1.000 ticks) y 868 aperturas de porton,
+        de ellas 499 (57%) con la ruta viva YA alcanzando el destino -> el arreglo se RETIRO
+[Gate] 689673d9 Saturnino (Granjero) / Guardando lo suyo: abro el porton 444, 63, 669 · destino=443, 63, 686 rutaViva=4 nodos alcanzaba=NO -> se le borra el destino y se le para · goals=[VillagerFarmGoal VillagerGateGoal]
+[Gate] 6fceef7a Ubaldo (Guardia espadachín · nv 1) / Patrullando el corral: abro el porton 439, 63, 664 · destino=466, 63, 642 rutaViva=38 nodos alcanzaba=SI -> se le deja el camino (NO se le borra el destino) · goals=[VillagerGateGoal VillagerGuardGoal]
+[Gate] 689673d9 Saturnino (Granjero) / Guardando lo suyo: abro el porton 441, 63, 684 · destino=443, 63, 686 rutaViva=7 nodos alcanzaba=SI -> se le deja el camino (NO se le borra el destino) · goals=[VillagerFarmGoal VillagerGateGoal]
