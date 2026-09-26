@@ -341,12 +341,44 @@ public class VillagerGateGoal extends Goal {
         loAbriYo = true;
         ladoAlAbrir = lado(estado, porton, villager.getX(), villager.getZ());
         abierto = 0;
+        // MEDIDA DEL "NO PELEES EL DESTINO" (26-sep-2026, lo pidió el jugador: *"caminando erráticamente, como
+        // balanceándose… dos tareas en su cerebro en conflicto"*). En cada apertura se mira SI SU RUTA VIVA YA
+        // LLEGABA al sitio al que iba, y queda en el log (`[Gate] … alcanzaba=SI/NO`), porque las dos cosas NO son
+        // lo mismo: con la ruta CORTADA, borrar y replanificar es el remedio documentado (I119, medido con Isidoro);
+        // con la ruta ya ALCANZANDO, el borrado no tiene nada que rehacer y le quita el destino a un aldeano que iba
+        // bien (el goal que se lo puso corre en paralelo: éste no ocupa ninguna bandera).
+        // <p>
+        // <b>Y ESTO ES LO QUE MIDIÓ, CON EL ARREGLO PUESTO Y RETIRADO DESPUÉS</b> (I126): en una corrida larga
+        // (127.680 ticks) el <b>57 %</b> de las aperturas tenía la ruta viva alcanzando ya —499 de 868—, pero
+        // <b>dejar de borrarle el destino en esos casos NO cambia nada medible</b>: las rendiciones del pueblo salen
+        // a <b>1,25 por 1.000 ticks</b> con el arreglo y a <b>1,37</b> sin él (el antes de esta sesión: 25 en 18.200
+        // ticks), o sea lo mismo. Así que el borrado <b>no era la causa</b> de que se rindieran: lo que les hace
+        // rendirse es el destino y la ruta que ya cuentan I119/I122/I125, y el par de goals corriendo a la vez —que
+        // es real y está medido— no basta para perder el rumbo. Se retira el arreglo (regla del proyecto: lo que no
+        // arregla, se quita y se dice) y se queda <b>esta línea</b>, que es la que lo midió.
+        var objetivo = villager.getBrain().getMemory(MemoryModuleType.WALK_TARGET).orElse(null);
+        var rutaViva = villager.getNavigation().getPath();
+        boolean yaLlegaba = rutaViva != null && rutaViva.canReach();
+        StringBuilder goalsCorriendo = new StringBuilder();
+        for (net.minecraft.world.entity.ai.goal.WrappedGoal w : villager.goalSelector.getAvailableGoals()) {
+            if (w.isRunning()) {
+                goalsCorriendo.append(w.getGoal().getClass().getSimpleName()).append(' ');
+            }
+        }
+        DevilRpg.LOGGER.info("[Gate] {} {}: abro el porton {} · destino={} rutaViva={} alcanzaba={} · goals=[{}]",
+                villager.getUUID().toString().substring(0, 8),
+                villager.getCustomName() == null ? "-" : villager.getCustomName().getString().replace("\n", " / "),
+                porton.toShortString(),
+                objetivo == null ? "SIN DESTINO" : objetivo.getTarget().currentBlockPosition().toShortString(),
+                rutaViva == null ? "sin ruta" : rutaViva.getNodeCount() + " nodos", yaLlegaba ? "SI" : "NO",
+                goalsCorriendo.toString().trim());
         // Y SE LE HACE REHACER EL CAMINO CON LA COMPUERTA YA ABIERTA. La ruta que traía el aldeano se calculó con ella
         // CERRADA —el juego no le deja planificar a través de una puerta de valla cerrada—, así que acaba en su propia
         // casilla: el aldeano se queda pegado a la valla, la compuerta se cierra a los 5 s sin que nadie la cruce y
         // vuelta a empezar. Borrándole el destino, el cerebro lo vuelve a pedir (y el goal del granjero también) y la
         // ruta nueva SÍ cruza. Medido con el arnés: Isidoro (bancal 2) se quedaba toda la noche en `1394,119,1452`,
         // la celda de dentro de su compuerta, con la cama reclamada al otro lado y las cuatro compuertas cerradas.
+        // (El arreglo de "no borrárselo cuando la ruta viva ya alcanza" se midió y se retiró: ver arriba y I126.)
         villager.getNavigation().stop();
         villager.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
         villager.getBrain().eraseMemory(MemoryModuleType.PATH);

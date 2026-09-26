@@ -379,6 +379,61 @@ escalón; después, con el zurrón llenándose de **tierra y grava**, subía a v
 galería en once minutos). Y en la segunda vuelta midió **la mudanza**: la caseta vieja retirada (césped y aire, 0
 celdas en el plano) y la nueva en `503,617` con la cama **dentro** (181 celdas en el plano).
 
+**Y desde el 26-sep, además, el POZO ENTERO y una SONDA** (para el caso *"el minero no está bajando y está
+sellada la entrada"*): cada 2 s sale una línea `POZO` con **cada paso del caracol** —su pieza, la celda de los pies y
+la de la cabeza, con `*` delante del paso TAPADO— y otra `SONDA DEL POZO` que **le pregunta al planificador del
+juego** por la casilla de pie de cada paso, empezando por la boca, y **para en la primera que no alcanza**:
+
+```
+[Arnes] POZO t=1520 faena=17 (hasta el paso 20) datos="paso:pieza/pies/cabeza"
+        0:cobblestone_slab/air/air  1:cobblestone/air/air …  16:cobblestone_slab/air/air
+        *17:stone/stone/stone *18:stone/stone/stone | galeria=paso 16=24/24
+[Arnes] SONDA DEL POZO t=1520 pos=499,63,621
+        0:507,62,613(air/air)=17n/SI fin=507,63,613  1:507,62,614(air/air)=15n/SI fin=507,62,615 …
+        5:507,60,618(air/air)=13n/NO fin=507,61,617
+```
+
+**Las dos trampas de estos dos instrumentos, medidas** (por eso van juntos): (1) la **boca** puede estar ABIERTA y el
+paso cortado **más abajo, dentro del propio caracol** —mirar la boca no basta—; y (2) `createPath(celda, 1)` da por
+**alcanzada** una celda que esté **a 1 de distancia**, así que la sonda dice `SI` con el fin de la ruta en la celda
+**de al lado**: la sonda pregunta con **0** (la celda exacta) e imprime además **qué hay en los pies y en la cabeza**
+(el aldeano mide 1,95: el planificador mira dos celdas). El `MINERO` lleva en la misma línea su **ruta viva**
+(`nav=[…]`) y la **ruta a su faena** (`rutaFaena=[…]`).
+
+### `columna_mina.py` (versionada) — LA COLUMNA DEL POZO, celda a celda, SIN levantar servidor
+
+```powershell
+python tools\arnes\columna_mina.py                       # su partida, el eje de la mina de la aldea 0 (503,617), cota 63
+python tools\arnes\columna_mina.py "New World (2)" 503 617 63 simular
+```
+
+Recorre el caracol entero desde la boca y dice, de cada paso, **qué hay en la celda de la pieza** (y si es la pieza
+que el plano espera ahí), **qué hay encima** (pies y cabeza) y si el paso queda **PISABLE** o **TAPADO** (y por qué
+bloque). Después hace la **prueba de verdad**: un recorrido en anchura (el mismo modelo que `ruta_atasco.py`) desde
+el suelo de al lado de la caseta hasta la casilla de pie del último paso hecho, y si no hay ruta dice **hasta dónde
+llega**. Y con `simular` añade las dos cosas que deciden la reparación sin gastar una corrida: **qué marcos del
+caracol caen dentro de un paso** (en las esquinas del anillo, una de las "paredes" es otra celda del caracol) y
+**qué haría `despejarElPozoDeLaMina`**, celda a celda, con la ruta **DESPUÉS**.
+
+Lo que midió en su partida (26-sep-2026): **17 piezas puestas** (pasos 0 a 16) y, sin embargo, **NO HAY RUTA** desde
+el suelo hasta la casilla de pie del paso 16; los cortes eran **césped del nivelado** en la capa del suelo sobre el
+pozo (`507,62,614` … `507,62,620`) y **dos troncos** del marco del paso 16 en el paso del 15 (`500,55,621`,
+`500,56,621`); quitando esas 8 celdas, `HAY RUTA: 26 pasos`.
+
+**La puerta de los portones, medida** (`[Gate]`, ver I126): el goal de las compuertas de valla —el único que corre
+**sin banderas**, así que va en paralelo con la faena— **borra el destino del cerebro** cada vez que abre una
+compuerta. La línea deja, en cada apertura, la ruta viva y si **ya alcanzaba** el destino:
+
+```
+[Gate] 689673d9 Saturnino (Granjero) / Guardando lo suyo: abro el porton 441,63,684 · destino=443,63,686
+        rutaViva=7 nodos alcanzaba=SI · goals=[VillagerFarmGoal VillagerGateGoal]
+```
+
+Medido en una corrida de 127.680 ticks: **499 de 868 aperturas (57 %)** tenían la ruta viva alcanzando ya, o sea que
+ahí se le estaba quitando el destino a un aldeano que iba llegando. **El arreglo (no borrárselo en ese caso) se
+probó y NO cambia nada medible** (las rendiciones salen a 1,25 por 1.000 ticks con él y a 1,37 sin él), así que se
+**retiró** según la regla del proyecto; la línea se queda porque es el instrumento que lo midió.
+
 ### `MEDIR_LENADOR = true` — el leñador, su arboleda y el polvo de hueso (I92/I93)
 
 Corre sobre la **aldea del jugador** (aldea 0) y vuelca cada 10 s: el estado de la **arboleda del pueblo** (árboles,

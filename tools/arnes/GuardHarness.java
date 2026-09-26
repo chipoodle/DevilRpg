@@ -222,6 +222,13 @@ public class GuardHarness {
      * goals, etiqueta y el desgaste de su pico), y cada 10 s el <b>almacén</b> (adoquín, carbón, lingotes, pedernal
      * y picos). Lo que se busca: que el caracol <b>suba de paso</b> con el tiempo, que salgan <b>lingotes</b> y
      * <b>pedernal</b> al almacén, y que el minero no se quede plantado con la etiqueta "Paving" o "Sin destino".
+     * <p>
+     * <b>Y SE VUELCA EL POZO ENTERO</b> ({@code POZO}): de cada paso del caracol, su <b>pieza</b> y sus <b>dos celdas
+     * de paso</b> (pies y cabeza), con {@code *} en la que esté TAPADA. Lo pidió el jugador para el caso *"el minero no
+     * está bajando y está sellada la entrada"*: la boca sola no lo dice —la boca está ABIERTA— y lo que corta el paso
+     * está <b>más abajo, en el propio caracol</b>. Y con la <b>ruta viva</b> ({@code nav=[…]}) y la <b>ruta a su
+     * faena</b> ({@code rutaFaena=[…]}) del minero en la misma línea se distingue "no hay camino hasta su celda" (el
+     * pozo está cortado) de "hay camino y no va".
      */
     private static final boolean MEDIR_MINERO = false;
     /** Dónde se planta el bicho (relativo a la plaza): dentro del recinto (radio 62) y a la altura del pueblo. */
@@ -505,6 +512,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             bocas.append(q.toShortString()).append('=').append(aqui).append("(plano:").append(plano).append(") ");
         }
         DevilRpg.LOGGER.info("[Arnes] BOCA DE LA MINA t={} {} -> {}", ticks, boca.toShortString(), bocas.toString().trim());
+        volcarElPozo(level, cota, paso, fondo);
         for (Villager v : mineros) {
             // DIAGNOSTICO (por que el minero se queda SIN GOAL CORRIENDO): se vuelca TODO lo que mira su `canUse`
             // —el turno y la comida, el sitio aparcado (I33) con su hora, y la lista COMPLETA de goals con cual
@@ -532,15 +540,53 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             var datos = v.getPersistentData();
             BlockPos apoyo = com.chipoodle.devilrpg.world.VillageStorage.puntoDeApoyo(level, CENTRO);
             long gameTime = level.getGameTime();
+            // LA RUTA VIVA (la que esta ejecutando el caminante AHORA) y la ruta a su FAENA (lo que dice el
+            // planificador del juego cuando se le pregunta por el destino de su cerebro): es lo que distingue "no hay
+            // camino hasta su celda" (el pozo esta cortado) de "hay camino y el aldeano no va".
+            var caminoVivo = v.getNavigation().getPath();
+            String nav = caminoVivo == null ? "sin ruta"
+                    : (caminoVivo.getNodeCount() + " nodos hasta "
+                            + caminoVivo.getEndNode().asBlockPos().toShortString()
+                            + (caminoVivo.canReach() ? " alcanza" : " NO alcanza"));
+            BlockPos destinoM = wt == null ? null : wt.getTarget().currentBlockPosition();
+            String rutaFaena = destinoM == null ? "-" : rutaDetallada(v, destinoM);
+            // LA SONDA DEL POZO, PASO A PASO: se le pregunta AL PLANIFICADOR DEL JUEGO por la casilla de pie de cada
+            // paso del caracol, empezando por la boca, y se PARA en el primero que NO alcanza. Es lo que distingue
+            // "el destino que le doy no es una casilla valida" de "el pozo esta cortado en tal celda": con
+            // `destino=SIN DESTINO` a secas, el log no lo decia (el cerebro del aldeano BORRA el WALK_TARGET cuando
+            // el planificador no llega, asi que el sintoma es el mismo en los dos casos).
+            // OJO CON LA PRECISION (nos mordio en la primera pasada): `createPath(celda, 1)` da por ALCANZADA una
+            // celda que este a 1 de distancia, asi que decia `SI` con el fin de la ruta en la celda de AL LADO. Aqui
+            // se pregunta con 0 (la celda EXACTA) y se imprime tambien lo que hay en los pies y en la cabeza, que es
+            // lo que el planificador mira (el aldeano mide 1,95: dos celdas).
+            StringBuilder sonda = new StringBuilder();
+            for (int p = 0; p <= Math.min(fondo, Math.max(paso + 2, 12)); p++) {
+                BlockPos pie = com.chipoodle.devilrpg.world.VillageGenerator.celdaDelCaracol(CENTRO, cota, p)
+                        .above(com.chipoodle.devilrpg.world.VillageGenerator.esLosaDelCaracol(p) ? 0 : 1);
+                var caminoP = v.getNavigation().createPath(pie, 0);
+                boolean alcanzaP = caminoP != null && caminoP.canReach();
+                sonda.append(p).append(':').append(pie.toShortString()).append('(')
+                        .append(nombre(level, pie.getX(), pie.getY(), pie.getZ())).append('/')
+                        .append(nombre(level, pie.getX(), pie.getY() + 1, pie.getZ())).append(")=")
+                        .append(caminoP == null ? "NO(nula)"
+                                : caminoP.getNodeCount() + "n/" + (alcanzaP ? "SI" : "NO")
+                                        + " fin=" + caminoP.getEndNode().asBlockPos().toShortString())
+                        .append(' ');
+                if (!alcanzaP) {
+                    break;
+                }
+            }
+            DevilRpg.LOGGER.info("[Arnes] SONDA DEL POZO t={} pos={} {}", ticks, v.blockPosition().toShortString(),
+                    sonda.toString().trim());
             DevilRpg.LOGGER.info("[Arnes] MINERO t={} pos={} cara={} dCara={} destino={} pico={}({}/{}) zurron=[{}]"
-                            + " goals=[{}] TODOS=[{}] etiqueta={}",
+                            + " goals=[{}] TODOS=[{}] nav=[{}] rutaFaena=[{}] etiqueta={}",
                     ticks, v.blockPosition().toShortString(), cara.toShortString(),
                     fmt(Math.sqrt(v.distanceToSqr(cara.getX() + 0.5D, cara.getY() + 0.5D, cara.getZ() + 0.5D))),
                     wt == null ? "SIN DESTINO" : wt.getTarget().currentBlockPosition().toShortString(),
                     pico.isEmpty() ? "SIN PICO"
                             : pico.getItem().toString().replace("Item{minecraft:", "").replace("}", ""),
                     pico.isEmpty() ? 0 : pico.getDamageValue(), pico.isEmpty() ? 0 : pico.getMaxDamage(),
-                    zurron.toString().trim(), goals.toString().trim(), todos.toString().trim(),
+                    zurron.toString().trim(), goals.toString().trim(), todos.toString().trim(), nav, rutaFaena,
                     v.getCustomName() == null ? "-" : v.getCustomName().getString().replace("\n", " | "));
             DevilRpg.LOGGER.info("[Arnes] MINERO-ESTADO t={} descansando={} hambre={} comida={} apoyo={} aparcado={}"
                             + " aparcadoHasta={} gameTime={} picoEnMano={}",
@@ -625,6 +671,55 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
     private static String nombre(ServerLevel level, int x, int y, int z) {
         return level.getBlockState(new BlockPos(x, y, z)).getBlock().toString()
                 .replace("Block{minecraft:", "").replace("}", "");
+    }
+
+    /**
+     * <b>EL POZO ENTERO, PASO A PASO</b> (el instrumento del "esta sellada la entrada"): de cada celda del caracol
+     * imprime su <b>pieza</b>, la celda de los <b>pies</b> y la de la <b>cabeza</b> (las dos que tienen que estar
+     * libres para poder andar por el túnel), con un <b>{@code *}</b> delante del paso que está TAPADO y el nombre del
+     * bloque que lo tapa. Y de la <b>galería</b> del primer paso que la abre, cuántas celdas están abiertas.
+     * <p>
+     * Se volcan los pasos hasta un poco más allá de la faena (y como mínimo los ocho primeros, que son los que cruzan
+     * la capa del suelo y por donde se <b>entra</b>): así se ve si el corte está arriba (el pueblo ha vuelto a poner
+     * el suelo encima del pozo) o abajo (el propio marco de madera del caracol).
+     */
+    private static void volcarElPozo(ServerLevel level, int cota, int pasoActual, int fondo) {
+        StringBuilder sb = new StringBuilder();
+        int hasta = Math.min(fondo, Math.max(pasoActual + 3, 8));
+        for (int p = 0; p <= hasta; p++) {
+            BlockPos celda = com.chipoodle.devilrpg.world.VillageGenerator.celdaDelCaracol(CENTRO, cota, p);
+            String pieza = nombre(level, celda.getX(), celda.getY(), celda.getZ());
+            String pies = nombre(level, celda.getX(), celda.getY() + 1, celda.getZ());
+            String cabeza = nombre(level, celda.getX(), celda.getY() + 2, celda.getZ());
+            boolean tapado = !esLibre(pies) || !esLibre(cabeza);
+            sb.append(tapado ? " *" : "  ").append(p).append(':').append(pieza).append('/').append(pies)
+                    .append('/').append(cabeza);
+        }
+        String galeria = "-";
+        int pasoGaleria = com.chipoodle.devilrpg.world.VillageGenerator.abreGaleria(pasoActual) ? pasoActual
+                : Math.max(0, (pasoActual / 16) * 16);
+        if (pasoGaleria > 0) {
+            int abiertas = 0;
+            for (int i = 1; i <= com.chipoodle.devilrpg.world.VillageGenerator.MINA_GALERIA_LARGO; i++) {
+                BlockPos g = com.chipoodle.devilrpg.world.VillageGenerator.celdaDeLaGaleria(CENTRO, cota, pasoGaleria, i);
+                if (level.getBlockState(g).isAir()) {
+                    abiertas++;
+                }
+            }
+            galeria = "paso " + pasoGaleria + "=" + abiertas + "/"
+                    + com.chipoodle.devilrpg.world.VillageGenerator.MINA_GALERIA_LARGO;
+        }
+        DevilRpg.LOGGER.info("[Arnes] POZO t={} faena={} (hasta el paso {}) datos=\"paso:pieza/pies/cabeza\"{}"
+                        + " | galeria={}", ticks, pasoActual, hasta, sb.toString(), galeria);
+    }
+
+    /** ¿Esa celda se puede pisar (o es la de la cabeza)? Todo lo que no choque: aire, hierba, agua, cultivos. */
+    private static boolean esLibre(String bloque) {
+        return bloque.equals("air") || bloque.equals("cave_air") || bloque.equals("water")
+                || bloque.equals("short_grass") || bloque.equals("grass") || bloque.equals("tall_grass")
+                || bloque.equals("torch") || bloque.equals("wall_torch") || bloque.equals("wheat")
+                || bloque.equals("carrots") || bloque.equals("potatoes") || bloque.equals("beetroots")
+                || bloque.equals("oak_sapling") || bloque.equals("dirt_path");
     }
 
     /** El bicho de la medida (el aldeano-zombi que se deja dentro de la aldea): se reutiliza, no se duplica. */

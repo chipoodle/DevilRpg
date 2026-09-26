@@ -2343,6 +2343,12 @@ public final class VillageManager {
         // Y LA CASETA DEL MINERO, igual de idempotente (su testigo es su suelo de piedra): así se le repone si
         // alguien se la llevó por delante. Lo que cava el minero (el pozo) es SUYO: no se toca (I102).
         VillageGenerator.asegurarLaMinaDelPueblo(level, center);
+        // Y EL POZO, ABIERTO: el nivelado de la aldea y el tapagujeros rellenaban con césped la capa que se pisa
+        // justo encima del caracol (que SALE a la superficie) y el pozo quedaba SELLADO —medido en la partida del
+        // jugador: `pasos=16` congelado y ni una ruta desde el suelo hasta la casilla de pie del paso 16—, así que
+        // aquí se le devuelve el paso a lo que el minero YA había cavado (`despejarElPozoDeLaMina`). Idempotente: si
+        // no hay nada tapado no escribe ni una celda.
+        VillageGenerator.despejarElPozoDeLaMina(level, center);
         // Y LA PUERTA DE LA TABERNA AL ALMACÉN (migración 72), por el mismo motivo: es idempotente y así la tienen
         // también las aldeas NUEVAS (que no migran) y se le repone a la que se quede sin ella. Sin ese paso el
         // cocinero no puede ir por leña desde su casa y se queda sin cocinar ni hornear (medido con el arnés).

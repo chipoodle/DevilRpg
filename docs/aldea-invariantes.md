@@ -3692,6 +3692,117 @@ Así que el encargo queda: **el campo de entrenamiento y su migración, hechos y
 barraca de un piso, hecha para aldeas nuevas y probada a compilar/lint**; y **pendiente** (a) subir `CURRENT_LAYOUT`
 con las arcas vaciadas y (b) cerrar las 2 rendiciones que quedan del entrenamiento.
 
+### I124 · El aviso de "no llegué" dice también QUÉ GOALS van corriendo (25-sep-2026)
+
+Lo pidió un jugador que vio a Leocadia *"caminando erráticamente, como balanceándose… como si hubiese dos tareas en
+su cerebro en conflicto"*, y antes le costó ir al entrenamiento *"como si quisiese atravesar la barraca"*. Es el
+mecanismo de **I119** (el `WALK_TARGET` lo escribe el **cerebro** y `caminarHacia` no siempre gana), así que lo
+primero es **poder ver quién le manda**: el aviso de `marcarPuntoFallido` lista ahora **los goals que están
+corriendo** (con la marca del que corre).
+
+La regla que sale de ahí: **si en el aviso salen dos goals a la vez, el conflicto está en el selectores**; si sale
+**uno solo**, el que le mueve es el **cerebro** (sus paseos y su "andar hacia donde mira"). Lo que en la primera
+pasada quedó "por medir" es I125.
+
+### I125 · No es atasco si el CEREBRO va a otra parte (y el conflicto, medido con los `goals=[...]`) (25-sep-2026)
+
+Confirmado con los `goals=[...]` que salen ya en el aviso: los aldeanos que se rinden llevan **dos goals corriendo a
+la vez** (`VillagerCollectGoal VillagerGateGoal`, `VillagerFarmGoal VillagerGateGoal`…) y **`VillagerGateGoal` es el
+único que corre SIN NINGÚN FLAG** (`EnumSet.noneOf(Goal.Flag.class)`), así que el selector no puede serializarlo y va
+**en paralelo** con la faena. Es literalmente lo que describió el jugador.
+
+Lo que se hizo: `VillageManager.elCerebroVaA(villager, destino)` pregunta si el `WALK_TARGET` del cerebro es el del
+goal, y `VillagerGuardGoal` —si no lo es— **reafirma el destino y no cuenta atasco** (con tope de **3
+reafirmaciones** por destino, para que un mundo que de verdad no deja acabe rindiéndose y volviendo a la ronda).
+**Medido**: no queda **ninguna** rendición de guardias; las que quedaban eran de una recolectora y un granjero, las
+dos con el par de goals de arriba. Y quedaba apuntado lo que cierra I126: **que el goal de los portones no pelee**.
+
+### I126 · LA MINA SELLADA: qué la tapaba (medido celda a celda) y las cuatro cosas que la abren (26-sep-2026)
+
+Lo pidió el jugador: *"el minero no está bajando y está sellada la entrada"*. Aquí está **medido**, con el
+instrumento nuevo (`tools/arnes/columna_mina.py`, que lee el guardado y no levanta servidor) y con el arnés.
+
+**El síntoma, medido**: `[Arnes] MINA … pasos=16/240` **congelado 18.200 ticks** (una corrida entera) en su partida,
+con el minero plantado en la superficie (`pos=499,63,621`, la faena a 8-9 bloques por debajo) alternando
+`Bajando a la mina` / `Volviendo a la caseta (encajado)`. La **boca** estaba **abierta** (`507,63,613=air`,
+`507,64,613=air`): el corte estaba **más abajo, en el propio caracol**.
+
+**Lo que la tapaba, celda a celda** (las 17 piezas de los pasos 0 a 16 puestas y, aun así, **NO HAY RUTA** de pie
+desde el suelo hasta la casilla de pie del paso 16 — el recorrido en anchura no pasaba de la superficie):
+
+| dónde | qué había | quién lo puso |
+|---|---|---|
+| `507,62,614` … `507,62,620` (**7 celdas**) | **césped** en la capa que se pisa, encima del pozo | el **nivelado de la aldea** (`nivelar`): rellena con césped hasta `nivel - 1` y esa capa es justo la que el caracol cruza al salir a la superficie. `esCeldaDeLaMina` **excluye la superficie a propósito** ("la caseta es del pueblo"), así que el pozo se sellaba por arriba. La firma que lo delata: en los pasos 3-7 el relleno quedó en la **tercera** celda del hueco y las de debajo seguían siendo aire — que es exactamente lo que hace el bucle de `nivelar` (`sellarSuelo`, que tapa hacia abajo, habría rellenado también las de debajo) |
+| `500,55,621` y `500,56,621` | **dos troncos** (`oak_log`) | el **marco de madera del paso 16**: sus postes van en las "paredes" (los dos lados del radio), pero el paso 16 es una **esquina del anillo** y una de esas paredes es **otra celda del caracol** (el paso 15), así que el marco **tapona el escalón de al lado**. Y no es un caso raro: **14 de los 15 marcos del caracol** caen en una esquina (los pasos 16, 32, 48… alternan la suroeste y la noreste) |
+
+**Las cuatro cosas que lo abren** (las tres primeras, para que no vuelva a pasar; la cuarta, para las aldeas que ya
+están así — la del jugador):
+
+1. **`ponerElMarco` descarta los lados que caen en un paso** de la mina (`VillageGenerator.esCeldaDePasoDeLaMina`) en
+   vez de renunciar al marco entero: queda el poste que sí tiene pared (el de fuera) y su viga. Renunciar al marco
+   entero dejaba la mina **sin ningún soporte** (14 de 15 caen en esquina). Los marcos de las **galerías** no
+   necesitan guarda: medido, **0 de sus postes** caen en un paso (van perpendiculares al avance).
+2. **`nivelar` no rellena el pozo**: `actual.isAir() && (esCeldaDeLaMina(...) || estaSobreElPozo(center, celda))`.
+   Sin la segunda condición, el relleno —que va **hasta `baseY - 1`**— le vuelve a poner césped encima.
+3. **`sellarSuelo` tampoco**: la mina **sale a la superficie**, así que su columna tiene la capa del suelo hueca **a
+   propósito** y este tapagujeros la rellenaba entera. Va en pareja con (2): arreglar solo `nivelar` no basta —
+   `sellarSuelo` correría después y sellaría igual—, y eso se ve en el orden del código (una llama a la otra).
+4. **`despejarElPozoDeLaMina`** (reparador idempotente, en el latido junto a `asegurarLaMinaDelPueblo`): devuelve el
+   paso a **lo que el minero YA había cavado** —solo los pasos con su pieza puesta y, de la galería, solo las celdas
+   ya abiertas— quitando de sus **tres celdas de hueco** (`above(1..3)`, las mismas que cava `picarLaCeldaDelCaracol`)
+   el **terreno del pueblo** y los **postes del marco** que cayeron dentro. No excava nada nuevo y no toca nada que
+   no sea del paso de la mina (la caseta queda como está).
+
+**Y una quinta, que salió al medir y NO era el sello** (queda dicho con lo que se midió y lo que no):
+`celdaDePieDelCaracol` devolvía **siempre `celda.above()`**, pero la huella de la **losa** (los pasos pares) está a
+`y + 0,5`, así que el aldeano que se para encima tiene los pies **dentro de la propia celda de la losa**; el
+`above()` sólo vale para el **adoquín** (los impares). Corregido, el destino del goal pasa de `499,55,621` a
+`499,54,621` (medido en el log)… **y el minero seguía sin bajar** (la corrida con ese arreglo y el reparador de dos
+celdas dio `pasos=16` otra vez y la sonda parada en el paso 5): o sea que **no** era la causa del sello. Se queda
+porque es la celda de pie **de verdad** (y medido: no estorba), pero el arreglo que **abre** la mina es el de las
+**tres** celdas del punto 4.
+
+**MEDIDO, el antes y el después** (la misma partida, la misma copia, el mismo modo `MEDIR_MINERO`):
+
+| | antes | después |
+|---|---|---|
+| ruta de pie al pozo (modelo de `ruta_atasco.py`) | **NO HAY RUTA** (14.326 casillas, no pasaba de la superficie) | **HAY RUTA: 26 pasos** |
+| el reparador en el latido | — | `abierto el pozo de la mina (6 celda(s) que el pueblo habia vuelto a tapar y 2 poste(s) del marco dentro del paso)` |
+| volcado `POZO` (los pasos 0..16) | `1:cobblestone/grass_block/air`, `15:cobblestone/oak_log/oak_log`… | **todos `air/air`** |
+| sonda del planificador (`createPath` exacto) | paraba en el **paso 5** (`507,60,618=NO`) | **pasos 0…32 todos `SI`** |
+| `[Arnes] MINA … pasos=N/240` | **16 congelado 18.200 ticks** | **16 → 32** (y subiendo), con el minero en `505,47,613` (**16 bloques bajo el suelo**) y la etiqueta `Abre galeria` |
+
+**Lo que queda apuntado** (no medido): el planificador del juego **no usa la misma celda de pie para la losa que
+para el adoquín** —en la sonda, el fin de la ruta de un paso de losa cae **una celda más arriba** que la de pie
+física—, y eso es lo que hacía que la tercera celda del hueco (el techo) fuese **crítica**: por eso el reparador
+tiene que despejar las **tres**, no dos.
+
+**Y la mina, después de abrirse, se topa con otro sitio** (medido, y es lo que queda pendiente): con `pasos` ya en
+32, el minero se queda **clavado 110.000 ticks** en la **galería del paso 32**, alternando **121 veces la celda 1 y
+120 la 2** de esa galería sin que `progresoDeLaGaleria` avance, con **una** rotura de pico y **0** líneas de
+`sella agua/lava` y de `la mina se PARA` (que es lo que el código dice que hace al topar con un mar: `cerrarLaMina`).
+El mapa del sitio (`build/slice_mina.py 505 509 609 614 44 50 world`) lo enseña: la galería sale hacia el norte
+desde `507,46,613` y ahí hay un **acuífero**. Queda por medir el mecanismo fino (si el agua vuelve a entrar entre la
+comprobación y el picado, y por qué `sellosSeguidos` no llega a `SELLOS_MAXIMOS`), y de paso que el minero se queda
+**sin pico** con el zurrón lleno de adoquín y con la ruta a su taller **2 corta**
+(`rutaFaena=[a1=38n alcance=NO fin=501,63,613 dFin=2.00]`).
+
+#### Los PORTONES: medido, y el arreglo RETIRADO (misma sesión)
+
+El goal de las compuertas de valla es el único que corre **sin banderas**, así que va **en paralelo** con la faena
+(medido con los `goals=[…]` de I124/I125), y al abrir una compuerta **borra el destino del cerebro**
+(`navigation.stop()` + `WALK_TARGET` + `PATH`). Se instrumentó esa apertura (`[Gate] … alcanzaba=SI/NO`) y en una
+corrida larga (**127.680 ticks**) resultó que **499 de 868 aperturas (57 %)** tenían la **ruta viva alcanzando ya**
+el destino: ahí no había camino que rehacer y sí se le quitaba el destino a un aldeano que iba bien.
+
+**Se probó el arreglo** (no borrar el destino cuando la ruta viva ya alcanza) **y NO arregla nada medible**: las
+rendiciones del pueblo salen a **1,25 por 1.000 ticks** con el arreglo y a **1,37** sin él (el antes de esta sesión:
+25 en 18.200 ticks). O sea: **el borrado no era la causa de que se rindieran** —lo que les hace rendirse es el
+destino y la ruta de I119/I122/I125— y el par de goals corriendo a la vez, que es **real y está medido**, no basta
+para perder el rumbo. **Regla del proyecto: lo que no arregla, se retira y se dice** → el arreglo se ha quitado y se
+queda la **línea `[Gate]`**, que es la que lo midió (y que sigue sirviendo para ver, en cualquier corrida, en cuántas
+aperturas se le está borrando el destino a alguien que ya iba llegando).
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
 1. **¿Quién más LEE lo que cambio?** Buscar todos los usos (`grep`) y revisarlos uno a uno. *(Fallo real: cambié el

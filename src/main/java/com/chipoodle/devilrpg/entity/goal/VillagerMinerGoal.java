@@ -399,11 +399,22 @@ public class VillagerMinerGoal extends Goal {
      * qué bloques): el minero se rendía <b>a 3 bloques de su propia celda</b> con `pies=cobblestone_slab` y
      * `destino=cobblestone_slab`: el destino que se le daba era la celda <b>del bloque de la pieza</b> —un bloque
      * macizo— y el planificador del juego <b>no puede meterlo ahí</b>; le devolvía una ruta de <b>1 nodo que no
-     * alcanza</b> (`alcanza=NO`) y el aldeano se plantaba. La casilla de pie es la de <b>encima</b>, que es la que tiene
-     * aire a los pies y el suelo en la pieza.
+     * alcanza</b> (`alcanza=NO`) y el aldeano se plantaba.
+     * <p>
+     * <b>PERO «ENCIMA» NO ES SIEMPRE {@code +1}, Y ESO COSTÓ OTRA CORRIDA</b> (26-sep-2026). La huella de la
+     * <b>losa</b> (los pasos pares) está a {@code y + 0,5}: el aldeano que se para encima tiene los pies a 0,5 del
+     * suelo de la celda, o sea <b>dentro de la propia celda de la losa</b> (su {@code blockPosition} es {@code y}),
+     * mientras que la del <b>adoquín</b> (los impares) está a {@code y + 1} y sí se para en la de arriba. Preguntando
+     * siempre {@code above()} se le mandaba a una celda con <b>el suelo a medio bloque</b> ({@code y + 1} sobre una
+     * losa): el planificador del juego no la da por buena, y entonces el <b>cerebro del aldeano</b> hace lo que hace
+     * vanilla cuando una ruta no llega —{@code MoveToTargetSink} <b>le borra el {@code WALK_TARGET}}</b>— mientras el
+     * goal se lo vuelve a poner cada tick. El resultado medido con el arnés: {@code destino=SIN DESTINO} y
+     * {@code nav=[sin ruta]} con el minero corriendo "Bajando a la mina", plantado en la superficie 8 bloques por
+     * encima de su faena y <b>sin cavar una celda</b> (`pasos=16` congelado)… con el pozo ya abierto.
      */
     private static BlockPos celdaDePieDelCaracol(BlockPos center, int nivel, int paso) {
-        return VillageGenerator.celdaDelCaracol(center, nivel, paso).above();
+        return VillageGenerator.celdaDelCaracol(center, nivel, paso)
+                .above(VillageGenerator.esLosaDelCaracol(paso) ? 0 : 1);
     }
 
     /**
@@ -969,22 +980,44 @@ public class VillagerMinerGoal extends Goal {
      * caracol y el minero no puede abrirle un boquete (por eso el marco tampoco entra en el plano, I102).
      */
     private void ponerElMarco(ServerLevel level, BlockPos celda) {
-        BlockPos[] lados = VillageGenerator.ladosDeLaCeldaDelCaracol(center,
-                VillageGenerator.cotaDeLaPlaza(level, center), paso);
+        int nivel = VillageGenerator.cotaDeLaPlaza(level, center);
+        BlockPos[] lados = VillageGenerator.ladosDeLaCeldaDelCaracol(center, nivel, paso);
         int tablones = cuantosEnInventario(Items.OAK_PLANKS);
         if (tablones < TABLONES_POR_MARCO) {
             return; // sin madera no hay marco (y no se inventa: la trae del almacén)
         }
+        // SE DESCARTAN LOS LADOS QUE NO VALEN, en vez de renunciar al marco entero:
+        //  · los que tienen algo del pueblo (o agua) — la pared de la caseta está pegada al caracol;
+        //  · y LOS QUE CAEN EN UNA CELDA DE PASO DE LA MINA (medido el 26-sep-2026 con el arnés y con
+        //    `tools/arnes/columna_mina.py`): los postes van en las paredes (los dos lados del radio), pero en las
+        //    ESQUINAS del anillo la "pared" de dentro es OTRA CELDA DEL CARACOL, así que el poste caía en el paso del
+        //    escalón de al lado y lo taponaba. Medido: el marco del paso 16 (esquina suroeste) dejaba sus dos troncos
+        //    en `500,55,621` y `500,56,621`, que son los pies y la cabeza del paso 15 — la mina se quedaba SIN SALIDA
+        //    por su propio soporte, el minero no tenía ruta a su faena y no bajaba ni una celda. Y no es un caso
+        //    raro: de los 15 marcos del caracol, 14 caen en una esquina (los pasos 16, 32, 48… alternan la esquina
+        //    suroeste y la noreste), así que renunciar al marco entero dejaba la mina sin ningún soporte. Con esto
+        //    queda el poste que sí tiene pared (el de fuera) y su viga, que es como se ve un marco de mina.
+        java.util.List<BlockPos> validos = new java.util.ArrayList<>();
         for (BlockPos lado : lados) {
-            for (int dy = 1; dy <= 2; dy++) {
+            boolean vale = true;
+            for (int dy = 1; dy <= 2 && vale; dy++) {
                 BlockPos poste = lado.above(dy);
                 if (!VillageGenerator.elMineroPuedePicar(level.getBlockState(poste))
                         || !level.getBlockState(poste).getFluidState().isEmpty()) {
-                    return; // ahí hay algo del pueblo (o agua): sin marco
+                    vale = false; // ahí hay algo del pueblo (o agua): ese poste no se pone
+                } else if (VillageGenerator.esCeldaDePasoDeLaMina(center, nivel, poste)) {
+                    vale = false; // ése es el paso del escalón de al lado (la esquina del anillo)
                 }
             }
+            if (vale) {
+                validos.add(lado);
+            }
         }
-        for (BlockPos lado : lados) {
+        if (validos.isEmpty()) {
+            anotar("sin marco en el paso " + paso + " (no hay pared libre: sus postes caen en el paso)");
+            return;
+        }
+        for (BlockPos lado : validos) {
             for (int dy = 1; dy <= 2; dy++) {
                 level.setBlock(lado.above(dy), Blocks.OAK_LOG.defaultBlockState(), Block.UPDATE_ALL);
             }

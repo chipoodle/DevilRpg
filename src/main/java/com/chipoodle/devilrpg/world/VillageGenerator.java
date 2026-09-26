@@ -3159,6 +3159,177 @@ public final class VillageGenerator {
                 || estado.is(Blocks.WALL_TORCH) || estado.is(Blocks.STONE_BRICKS);
     }
 
+    /** El índice del anillo del caracol de una columna (o {@code -1} si esa columna no es del anillo). */
+    private static int indiceDelAnillo(int dx, int dz) {
+        for (int i = 0; i < MINA_ANILLO.length; i++) {
+            if (MINA_ANILLO[i][0] == dx && MINA_ANILLO[i][1] == dz) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * <b>¿Esa celda es una de las que se ANDAN en la mina?</b> (la celda de paso del caracol —la de los pies o la de
+     * la cabeza, encima de su pieza— o una celda de una galería). Es la pregunta que necesita el <b>marco de madera</b>
+     * del caracol para no taparse a sí mismo el túnel: sus postes van en las <b>paredes</b> (las dos celdas del radio
+     * que hay a los lados de la celda), pero en las <b>esquinas del anillo</b> una de esas paredes es… <b>otra celda
+     * del caracol</b>, así que el poste caía en el paso del escalón de al lado y lo <b>taponaba</b>. Medido con
+     * {@code tools/arnes/columna_mina.py} y con el arnés (26-sep-2026): el marco del paso 16 (la esquina suroeste)
+     * dejaba sus dos troncos en {@code 500,55,621} y {@code 500,56,621}, que son los pies y la cabeza del paso 15 —
+     * o sea que la mina se quedaba <b>sin salida</b> por su propio soporte y el minero no bajaba.
+     */
+    public static boolean esCeldaDePasoDeLaMina(BlockPos center, int nivel, BlockPos pos) {
+        BlockPos eje = centroDeLaMina(center);
+        int dx = pos.getX() - eje.getX();
+        int dz = pos.getZ() - eje.getZ();
+        // 1) El CARACOL: la columna del anillo, y dentro de ella las dos celdas que van encima de su pieza.
+        if (Math.max(Math.abs(dx), Math.abs(dz)) == MINA_RADIO) {
+            int indice = indiceDelAnillo(dx, dz);
+            for (int p = Math.max(indice, 0); p < pasosHastaElFondo(nivel); p += MINA_ANILLO.length) {
+                int y = yDelCaracol(nivel, p);
+                if (pos.getY() == y + 1 || pos.getY() == y + 2) {
+                    return true;
+                }
+            }
+        }
+        // 2) Las GALERIAS: la cruz que sale de cada paso que abre galería, a la Y de su celda del caracol (la galería
+        //    se anda por su propia celda y por la de encima).
+        for (int p = MINA_GALERIA_CADA * 2; p < pasosHastaElFondo(nivel); p += MINA_GALERIA_CADA * 2) {
+            BlockPos c = celdaDelCaracolDesdeElEje(eje, nivel, p);
+            if (pos.getY() != c.getY() && pos.getY() != c.getY() + 1) {
+                continue;
+            }
+            Direction d = direccionDeLaGaleria(p);
+            int avance = (pos.getX() - c.getX()) * d.getStepX() + (pos.getZ() - c.getZ()) * d.getStepZ();
+            if (avance >= 1 && avance <= MINA_GALERIA_LARGO && pos.getX() == c.getX() + d.getStepX() * avance
+                    && pos.getZ() == c.getZ() + d.getStepZ() * avance) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** ¿Ese bloque es <b>terreno del pueblo</b> (lo que el nivelado y el tapagujeros ponen al reparar el suelo)? */
+    private static boolean esTerrenoDelPueblo(BlockState estado) {
+        return estado.is(Blocks.GRASS_BLOCK) || estado.is(Blocks.DIRT) || estado.is(Blocks.COARSE_DIRT)
+                || estado.is(Blocks.ROOTED_DIRT) || estado.is(Blocks.PODZOL) || estado.is(Blocks.MYCELIUM)
+                || estado.is(Blocks.STONE) || estado.is(Blocks.COBBLESTONE) || estado.is(Blocks.GRAVEL)
+                || estado.is(Blocks.ANDESITE) || estado.is(Blocks.GRANITE) || estado.is(Blocks.DIORITE)
+                || estado.is(Blocks.TUFF) || estado.is(Blocks.SAND) || estado.is(Blocks.RED_SAND)
+                || estado.is(Blocks.SANDSTONE) || estado.is(Blocks.CLAY) || estado.is(Blocks.SNOW_BLOCK)
+                || estado.is(Blocks.DIRT_PATH) || estado.is(Blocks.COBBLED_DEEPSLATE);
+    }
+
+    /**
+     * ¿Esa celda es donde va un <b>poste del marco de madera</b> del caracol (uno de los dos lados de la celda de un
+     * paso que lleva marco, a la altura del paso)? Es lo que usa el reparador del pozo para saber que un tronco
+     * dentro de un paso es SUYO (un marco que se tapó a sí mismo) y no algo del pueblo que no se toca.
+     */
+    public static boolean esPosteDelMarcoDelCaracol(BlockPos center, int nivel, BlockPos pos) {
+        BlockPos eje = centroDeLaMina(center);
+        for (int paso = MINA_SOPORTE_CADA; paso < pasosHastaElFondo(nivel); paso += MINA_SOPORTE_CADA) {
+            BlockPos celda = celdaDelCaracolDesdeElEje(eje, nivel, paso);
+            for (BlockPos lado : ladosDeLaCelda(celda, paso)) {
+                for (int dy = 1; dy <= 2; dy++) {
+                    if (lado.above(dy).equals(pos)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * <b>ABRE EL POZO DE LA MINA SI EL PUEBLO LO HA VUELTO A TAPAR</b> (26-sep-2026).
+     * <p>
+     * Lo pidió el jugador —*"el minero no está bajando y está sellada la entrada"*— y la medida está en
+     * {@code tools/arnes/columna_mina.py}: en su partida el caracol tenía sus <b>17 piezas puestas</b> (pasos 0 a 16)
+     * y, sin embargo, <b>no había ruta de pie</b> desde el suelo hasta la casilla de pie del paso 16 (ni una: el
+     * recorrido en anchura no pasaba de la cota del pueblo). Los cortes, medidos celda a celda:
+     * <ul>
+     *   <li>los pasos <b>1 y 2</b> tenían <b>césped</b> en su celda de paso y los <b>3 y 4</b> en la de la cabeza: es
+     *       el <b>nivelado de la aldea</b> ({@link #nivelar}), que rellena con césped hasta {@code nivel - 1} —y esa
+     *       capa es justo la que el caracol cruza al salir a la superficie—, más {@link #sellarSuelo}, que tapa
+     *       cualquier columna del recinto cuya capa de suelo esté hueca. Los dos protegían la mina <b>por debajo</b>
+     *       ({@link #esCeldaDeLaMina} excluye la superficie a propósito), así que el pozo se sellaba por arriba;</li>
+     *   <li>el paso <b>15</b> tenía dos <b>troncos</b> en su paso: el marco de madera del paso 16, que cae en la
+     *       esquina del anillo (ver {@link #esCeldaDePasoDeLaMina}).</li>
+     * </ul>
+     * Con el pozo cortado, el minero —que va a una casilla <b>de dentro</b>— no tiene ruta a su faena: se queda
+     * arriba, en la boca, alternando "Bajando a la mina" y "Volviendo a la caseta" y <b>sin cavar una celda</b>
+     * (medido con el arnés: {@code pasos=16} congelado 1.160 ticks, y sólo subió al 17 cuando el arnés cavó a mano la
+     * galería).
+     * <p>
+     * Esto es el <b>reparador</b> que le devuelve el paso a las aldeas que ya están así (la del jugador): recorre
+     * <b>solo lo que el minero ya ha hecho</b> (los pasos con su pieza puesta, y de la galería solo las celdas que ya
+     * estaban abiertas), y de sus <b>celdas de paso</b> quita:
+     * <ul>
+     *   <li>el <b>terreno del pueblo</b> que las volvió a tapar (césped, tierra, piedra, grava...);</li>
+     *   <li>los <b>postes del marco</b> que cayeron dentro de un paso ({@code oak_log}/{@code oak_planks}), que es el
+     *       fallo de la esquina.</li>
+     * </ul>
+     * NO excava nada nuevo: una celda sin su pieza no se toca. Es <b>idempotente</b> (si no hay nada que quitar, no
+     * escribe ni una celda) y no toca nada que no esté en el paso de la mina, así que la caseta y el pueblo quedan
+     * como están.
+     *
+     * @return cuántas celdas ha vuelto a abrir (el poste cuenta como una)
+     */
+    public static int despejarElPozoDeLaMina(ServerLevel level, BlockPos center) {
+        int nivel = cotaDeLaPlaza(level, center);
+        if (nivel <= level.getMinBuildHeight() + 1) {
+            return 0;
+        }
+        int abiertas = 0;
+        int postes = 0;
+        for (int paso = 0; paso < pasosHastaElFondo(nivel); paso++) {
+            BlockPos celda = celdaDelCaracol(center, nivel, paso);
+            if (!esPiezaDeLaMina(level.getBlockState(celda))) {
+                break; // aquí ya no hay mina: lo que venga no es del minero
+            }
+            // LAS TRES CELDAS DEL HUECO DE PASO, que son LAS MISMAS que cava el minero (`picarLaCeldaDelCaracol`,
+            // dy 1..3): no basta con las dos de los pies y la cabeza. Medido (26-sep-2026, con `build/slice_mina.py`
+            // sobre su partida): el nivelado había vuelto a poner césped en SIETE celdas de la capa del suelo sobre el
+            // pozo (`507,62,614` … `507,62,620`), y de ésas las de los pasos 1 y 2 caen en los pies/cabeza (se veían
+            // en el aviso del arnés) pero las de los pasos 3 a 7 caen en la TERCERA celda del hueco, que también hay
+            // que despejar: el planificador del juego mira la altura del aldeano (1,95: dos celdas) y con el techo
+            // puesto por el césped el túnel no se anda.
+            for (int dy = 1; dy <= 3; dy++) {
+                BlockPos p = celda.above(dy);
+                BlockState actual = level.getBlockState(p);
+                if (esTerrenoDelPueblo(actual)) {
+                    level.setBlock(p, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+                    abiertas++;
+                } else if ((actual.is(Blocks.OAK_LOG) || actual.is(Blocks.OAK_PLANKS))
+                        && esPosteDelMarcoDelCaracol(center, nivel, p)) {
+                    level.setBlock(p, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+                    postes++;
+                }
+            }
+            if (!abreGaleria(paso)) {
+                continue;
+            }
+            int hechas = progresoDeLaGaleria(level, center, nivel, paso);
+            for (int i = 1; i <= hechas; i++) {
+                BlockPos g = celdaDeLaGaleria(center, nivel, paso, i);
+                for (int dy = 0; dy <= 1; dy++) {
+                    BlockPos p = g.above(dy);
+                    BlockState actual = level.getBlockState(p);
+                    if (esTerrenoDelPueblo(actual)) {
+                        level.setBlock(p, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+                        abiertas++;
+                    }
+                }
+            }
+        }
+        if (abiertas > 0 || postes > 0) {
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: abierto el pozo de la mina ({} celda(s) que el pueblo"
+                    + " habia vuelto a tapar y {} poste(s) del marco dentro del paso)", center, abiertas, postes);
+        }
+        return abiertas + postes;
+    }
+
     /**
      * <b>¿Esa celda es de la MINA?</b> (o sea: del <b>minero</b>, no del pueblo). Es la <b>zona</b> de la mina (el
      * cilindro de {@link #MINA_EXCLUSION_RADIO} por debajo de la capa del suelo), y la usa el <b>nivelado</b> (que
@@ -5817,7 +5988,15 @@ public final class VillageGenerator {
                     // mina la enterraba entera y el minero volvía a cavarla. Solo se protege el AIRE: el terreno
                     // natural de esa zona se nivela como cualquier otro (si no, la mina dejaría un hoyo en la meseta
                     // de la aldea desde el día en que se genera, antes de que nadie cave).
-                    if (actual.isAir() && esCeldaDeLaMina(center, baseY, celda)) {
+                    // OJO CON LA CAPA QUE SE PISA (medido el 26-sep-2026): `esCeldaDeLaMina` excluye A PROPÓSITO la
+                    // superficie (`pos.getY() >= nivel - 1` es del pueblo: ahí está la caseta), pero el caracol
+                    // SALE a la superficie —sus primeros escalones cruzan justo esa capa—, así que este relleno,
+                    // que va hasta `baseY - 1`, le volvía a poner CÉSPED encima: medido en la partida del jugador,
+                    // los pasos 1 y 2 del caracol tenían césped en la celda de paso y los 3 y 4 en la de la cabeza,
+                    // y el pozo quedaba SIN RUTA (el minero no bajaba: `pasos=16` congelado). Por eso aquí también
+                    // se protege el pozo (`estaSobreElPozo`), que es la zona de la mina en horizontal.
+                    if (actual.isAir() && (esCeldaDeLaMina(center, baseY, celda)
+                            || estaSobreElPozo(center, celda))) {
                         continue;
                     }
                     if (!actual.isAir() && !esTerrenoRecortable(actual)) {
@@ -5876,6 +6055,15 @@ public final class VillageGenerator {
                 }
                 int px = center.getX() + x;
                 int pz = center.getZ() + z;
+                // EL POZO DE LA MINA NO SE TAPA (26-sep-2026): la mina SALE a la superficie —sus primeros escalones
+                // cruzan la capa que se pisa—, así que su columna tiene la capa del suelo hueca **a propósito** y
+                // este tapagujeros la rellenaba entera (césped arriba y tierra debajo hasta el primer bloque firme):
+                // el pozo quedaba sellado y el minero, que va a una casilla de dentro, sin ruta (medido: `pasos=16`
+                // congelado). `sellarSuelo` no miraba la mina en absoluto; `nivelar` la protege por `esCeldaDeLaMina`
+                // salvo la capa de arriba, así que las dos preguntas van juntas.
+                if (estaSobreElPozo(center, new BlockPos(px, baseY - 1, pz))) {
+                    continue;
+                }
                 if (!level.getBlockState(new BlockPos(px, baseY - 1, pz)).isAir()) {
                     continue; // el suelo está: no hay hueco que tapar
                 }
