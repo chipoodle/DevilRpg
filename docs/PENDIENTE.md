@@ -108,13 +108,30 @@ está dentro de un bancal, mandarla a la **celda de dentro de la compuerta más 
 **MEDIDO**: rendiciones del pueblo **27 → 9**; `Filomena / Volviendo a la plaza` **19 → 0**; y ahora **sale y
 entrega** (`abro el porton 484,63,659 · destino=470,63,646 rutaViva=24 nodos alcanzaba=SI`).
 
-### 4. El GANADERO y el LEÑADOR (lo que queda: 9 rendiciones en una corrida)
+### 4. El GANADERO y el LEÑADOR: los dos avisos YA leídos (y son dos causas distintas)
 
-Con los granjeros y la recolectora arreglados, lo que queda es: **`Vicenta (Ganadero) / Cuidando el ganado` 3**,
-**`Tomasa (Leñador) / Llevando la madera` 2**, **guardias 3** (patrullas/entrenar) y **1** de un granjero. El
-instrumento ya está hecho: el aviso de "no llegué" trae `cerebro=`, `nav=[…]` y `goals=[…]`, así que **lo primero es
-leer esos tres campos** en los avisos del ganadero y del leñador (¿destino a un bloque? ¿ruta que no alcanza por una
-compuerta cerrada, como la recolectora? ¿el cerebro apuntando a otra parte?) antes de tocar nada.
+**GANADERO — `Vicenta / Cuidando el ganado` (3 avisos)**: el destino es una **celda de aire a 4-6 bloques**
+(`525,63,651`, `526,63,648`, `524,63,642`, todas con `grass_block` debajo) y el planificador devuelve **`ruta=1 nodos
+… alcanza=NO`**, o sea **no se llega**. `cerebro=-` (sin destino en el cerebro) y `nav=[sin ruta]`:
+
+```
+no consigue llegar a 525,63,651 desde 525,63,656 (ruta=1 nodos … alcanza=NO; suelo=grass_block)
+    etiqueta="Vicenta (Ganadero) / Cuidando el ganado" cerebro=- nav=[sin ruta] goals=[VillagerAnimalFarmGoal]
+```
+
+Es **la misma clase que la recolectora (I130)**: su faena está **al otro lado de una cerca** (el corral: va a por un
+animal o a su punto de apoyo) y **la puerta de valla cerrada no es navegable** → no hay ruta. **El arreglo es el
+mismo**: en `VillagerAnimalFarmGoal`, si la celda a la que va está al otro lado del **portón del corral**, mandarla a
+la celda de dentro del portón con **`caminarHaciaExacto`** y **abrírselo** con
+`VillageManager.abrirLaCompuertaDeAlLado` (probando el del gallinero si el del corral está aparcado).
+
+**LEÑADOR — `Tomasa / Llevando la madera` (2 avisos)**: la ruta al almacén **SÍ alcanza**
+(`ruta=14 nodos hasta 517,63,666 alcanza=SI`, `cerebro=517,63,666`, `nav=[14 nodos … alcanza]`) y **aun así se
+rinde**: la clave está en sus pies — **`pies=dark_oak_fence`**: está **metida DENTRO de un bloque de valla** (con una
+placa de presión encima, `cabeza=oak_pressure_plate`), así que **no puede moverse** por mucho que tenga ruta. Es un
+caso físico (¿empujada por un animal, ¿encajada al cruzar?), no de tolerancia ni de puerta: **lo que toca es que el
+goal detecte que está encajada** (la celda de los pies no es una casilla de pie) y, en vez de rendirse y aparcar el
+almacén, **dé un paso de desatasco** (o se teletransporte 1 bloque si el juego no la deja salir).
 
 
 ### 5. El pico, cuando se rompe

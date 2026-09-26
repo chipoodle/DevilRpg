@@ -229,3 +229,19 @@ MEDIDO: rendiciones del pueblo 27 -> 9; Filomena 'Volviendo a la plaza' 19 -> 0;
 
 LO QUE QUEDA (9 en una corrida): Vicenta (Ganadero) 'Cuidando el ganado' 3, Tomasa (Lenador) 'Llevando la madera' 2,
 guardias 3 (patrullas/entrenar) y 1 de un granjero.
+
+=== 13) LO QUE QUEDA (9 rendiciones): los dos avisos leidos (26-sep-2026)
+
+GANADERO (3): destino = celda de AIRE a 4-6 bloques, ruta=1 nodos ... alcanza=NO, cerebro=- , nav=[sin ruta]
+  no consigue llegar a 525,63,651 desde 525,63,656 (ruta=1 nodos hasta 525,63,656 alcanza=NO; pies=air cabeza=air
+      suelo=grass_block | destino=air encima=air) etiqueta="Vicenta (Ganadero) / Cuidando el ganado" cerebro=-
+      nav=[sin ruta] goals=[VillagerAnimalFarmGoal]
+  -> misma clase que I130: su faena esta al otro lado de la cerca del corral y la puerta de valla cerrada no es
+     navegable. Arreglo: el mismo (buscar la salida/entrada y abrir la compuerta).
+
+LENADOR (2): la ruta SI alcanza y aun asi se rinde, porque esta METIDA DENTRO DE UNA VALLA:
+  no consigue llegar a 517,63,666 desde 504,63,670 (ruta=14 nodos hasta 517,63,666 alcanza=SI;
+      pies=dark_oak_fence cabeza=oak_pressure_plate suelo=dark_oak_planks | destino=air)
+      etiqueta="Tomasa (Lenador) / Llevando la madera" cerebro=517,63,666 nav=[14 nodos ... alcanza]
+  -> caso fisico (encajada en el bloque): el goal tiene que detectar que los pies NO son una casilla de pie y dar un
+     paso de desatasco, no contar atasco.
