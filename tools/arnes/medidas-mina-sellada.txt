@@ -273,3 +273,22 @@ asi que de esta corrida NO se puede afirmar que el total baje. Lo que si se afir
 se pisaban ya no se persiguen, y (b) la correccion es la regla I114, que es correcta por si misma (el planificador
 no puede meter al aldeano en una celda que no se pisa). Para afirmar una bajada del total hacen falta 3-4 corridas y
 comparar medias, no una.
+
+=== 16) EL DESATASCO DEL ENCAJADO: INTENTO MEDIDO Y RETIRADO (26-sep-2026)
+
+Lo que se queria arreglar (medido antes): un lenador se rendia con 'Llevando la madera' TENIENDO RUTA
+(nav=[14 nodos ... alcanza]) porque estaba metido en un bloque de valla (pies=dark_oak_fence).
+
+Lo que se hizo: VillageManager.desatascarSiEstaEncajado(villager) -- si sus pies no son una casilla de pie
+(esCeldaDePie), sacarlo con teleportTo a la casilla de pie mas cercana -- llamado desde el lenador.
+
+MEDIDO: DESASTRE. Salto 940 veces teleportando aldeanos que estaban BIEN ('estaba ENCAJADO en 510,64,669
+(pies=air): lo saco a 510,63,669'), y las rendiciones del pueblo subieron a 18 (con Filomena 'Volviendo a la
+plaza' otra vez 12). La causa del fallo del arreglo: un aldeano DE PIE SOBRE UNA VALLA o una placa de presion NO
+satisface esCeldaDePie (la valla no es un bloque solido "de suelo" para ese predicado), asi que el helper lo daba
+por encajado y lo bajaba un bloque, y volvia a subir: un bucle.
+
+RETIRADO (regla del proyecto): el arbol queda como estaba. Lo que deja apuntado para el proximo intento: el
+criterio de "encajado" NO puede ser esCeldaDePie (da falsos positivos con vallas, placas y losas); hay que
+comprobarlo con la CAJA DE COLISION de la entidad contra el bloque de los pies (o exigir que el aldeano NO se haya
+movido en N ticks), y nunca teleportar por sistema.

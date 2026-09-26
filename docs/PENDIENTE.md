@@ -134,6 +134,15 @@ goal detecte que está encajada** (la celda de los pies no es una casilla de pie
 almacén, **dé un paso de desatasco** (o se teletransporte 1 bloque si el juego no la deja salir).
 
 
+### 5. El LEÑADOR encajado: **intento MEDIDO y RETIRADO** (el criterio estaba mal)
+
+Se probó un desatasco automático (`desatascarSiEstaEncajado`: si los pies no son una casilla de pie, sacarlo a la
+más cercana) llamado desde el leñador. **Medido: 940 desatascos en una corrida** —teleportaba aldeanos que estaban
+**bien**, de pie sobre una **valla o una placa** (`estaba ENCAJADO en 510,64,669 (pies=air)`) porque
+`esCeldaDePie` no acepta una valla como suelo— y las rendiciones **subieron a 18**. **Retirado**; el árbol está como
+estaba. Lo que queda apuntado: el criterio de "encajado" **no puede ser `esCeldaDePie`** (falsos positivos con
+vallas, placas y losas): hay que mirarlo con la **caja de colisión** de la entidad contra el bloque de los pies, o
+exigiendo que **no se haya movido en N ticks**, y **nunca teleportar por sistema**.
 ### 5. El pico, cuando se rompe
 
 Medido que **suelta la faena** (no sigue "picando" en el sitio) y que en la corrida final **no rompió ninguno**
