@@ -108,9 +108,9 @@ está dentro de un bancal, mandarla a la **celda de dentro de la compuerta más 
 **MEDIDO**: rendiciones del pueblo **27 → 9**; `Filomena / Volviendo a la plaza` **19 → 0**; y ahora **sale y
 entrega** (`abro el porton 484,63,659 · destino=470,63,646 rutaViva=24 nodos alcanzaba=SI`).
 
-### 4. El GANADERO y el LEÑADOR: los dos avisos YA leídos (y son dos causas distintas)
+### 4. El GANADERO: **ARREGLADO y MEDIDO** (perseguía una celda que no se pisa)
 
-**GANADERO — `Vicenta / Cuidando el ganado` (3 avisos)**: el destino es una **celda de aire a 4-6 bloques**
+**Medido**: `Vicenta / Cuidando el ganado` **3 avisos**, destino a 4-6 bloques con `ruta=1 nodos … alcanza=NO`. Arreglado con `casillaDePieCercaDe` (la regla de I114: se camina a una **casilla de pie**, no a la celda cruda del animal): **`Cuidando el ganado` 3 → 0** y las rendiciones del pueblo **9 → 5**. Detalle en **I131**. Lo de abajo queda como el análisis original:: el destino es una **celda de aire a 4-6 bloques**
 (`525,63,651`, `526,63,648`, `524,63,642`, todas con `grass_block` debajo) y el planificador devuelve **`ruta=1 nodos
 … alcanza=NO`**, o sea **no se llega**. `cerebro=-` (sin destino en el cerebro) y `nav=[sin ruta]`:
 

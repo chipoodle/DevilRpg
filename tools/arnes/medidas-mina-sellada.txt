@@ -245,3 +245,13 @@ LENADOR (2): la ruta SI alcanza y aun asi se rinde, porque esta METIDA DENTRO DE
       etiqueta="Tomasa (Lenador) / Llevando la madera" cerebro=517,63,666 nav=[14 nodos ... alcanza]
   -> caso fisico (encajada en el bloque): el goal tiene que detectar que los pies NO son una casilla de pie y dar un
      paso de desatasco, no contar atasco.
+
+=== 14) EL GANADERO ARREGLADO (I131, 26-sep-2026)
+
+Aviso medido: destino a 4-6 bloques con ruta=1 nodos ... alcanza=NO (el goal caminaba a la celda CRUDA del animal
+o del punto del rebano, que no siempre es casilla de pie).
+Arreglo: casillaDePieCercaDe(level, faena) SOLO para caminar (el target no se toca: recoger() lo usa para el objeto).
+MEDIDO: rendiciones del pueblo 9 -> 5; 'Cuidando el ganado' 3 -> 0; 'Llevando la madera' 2 -> 0.
+QUEDAN 5 (una corrida): Eufemia (Guardia)/Yendo a entrenar, Onofre (Guardia)/Patrullando la arboleda,
+Saturnino (Granjero)/Abono la huerta, Tomasa (Lenador)/Yendo al arbol, Valeriano (Granjero)/Recogiendo lo que se cayo.
+REPASO DE LA SESION (misma partida y modo): 27 -> 9 (granjero I129 + recolectora I130) -> 5 (ganadero I131).

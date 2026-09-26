@@ -724,13 +724,45 @@ public class VillagerAnimalFarmGoal extends Goal {
                 villager.blockPosition(), target);
         if (porton == null) {
             enElPorton = false; // no hay puerta de por medio (o ya está abierta): se va al destino, y a cruzar
-            return target;
+            return casillaDePieCercaDe(level, target);
         }
         double d = Math.sqrt(villager.distanceToSqr(porton.getX() + 0.5D, porton.getY() + 0.5D, porton.getZ() + 0.5D));
         if (d <= ALCANCE_PORTON) {
             enElPorton = true;
         }
-        return enElPorton ? target : porton;
+        return enElPorton ? casillaDePieCercaDe(level, target) : porton;
+    }
+
+    /**
+     * <b>La casilla donde se camina hacia esa faena</b>: si la celda de la faena ya es una casilla de pie, ella misma;
+     * si no (el animal está <b>sobre una valla</b>, en la paja, en el agua…), la casilla de pie <b>más cercana</b> de
+     * alrededor. Es la regla de <b>I114</b> aplicada al ganadero, y sale de una medida (26-sep-2026): se rendía con
+     * `ruta=1 nodos … alcanza=NO` yendo a celdas de aire a 4-6 bloques (`525,63,651`, `526,63,648`, `524,63,642`) —
+     * el planificador no puede meterlo en una celda que no se pisa y devuelve una ruta de un solo punto—. El
+     * {@code target} del goal <b>no se toca</b>: {@code recoger} lo usa para saber qué objeto coger.
+     */
+    private BlockPos casillaDePieCercaDe(ServerLevel level, BlockPos faena) {
+        if (VillageManager.esCeldaDePie(level, faena)) {
+            return faena;
+        }
+        BlockPos mejor = null;
+        double mejorDist = Double.MAX_VALUE;
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dy = -2; dy <= 1; dy++) {
+                for (int dz = -2; dz <= 2; dz++) {
+                    BlockPos p = faena.offset(dx, dy, dz);
+                    if (!VillageManager.esCeldaDePie(level, p)) {
+                        continue;
+                    }
+                    double d = p.distSqr(faena);
+                    if (d < mejorDist) {
+                        mejorDist = d;
+                        mejor = p;
+                    }
+                }
+            }
+        }
+        return mejor != null ? mejor : faena;
     }
 
     private ItemStack guardarEnInventario(ItemStack stack) {

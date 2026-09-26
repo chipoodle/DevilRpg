@@ -3946,6 +3946,39 @@ no vale (aparcada, I33), prueba otra. Es el mismo camino que hace el granjero pa
 la madera` **2**, guardias **3** y `Valeriano (Granjero) / Guardando lo suyo` **1**. El siguiente por mirar es el
 **ganadero**, con el mismo instrumento (el aviso ya trae `cerebro=`, `nav=` y `goals=[…]`).
 
+### I131 · EL GANADERO PERSEGUÍA UNA CELDA QUE NO SE PISA (regla de I114, aplicada al ganado)
+
+Con el granjero y la recolectora arreglados (I129/I130), las que quedaban eran del **ganadero**: 3 avisos con
+`Cuidando el ganado` y el destino **a 4-6 bloques**, con **`ruta=1 nodos … alcanza=NO`**:
+
+```
+no consigue llegar a 525,63,651 desde 525,63,656 (ruta=1 nodos hasta 525,63,656 alcanza=NO;
+    pies=air cabeza=air suelo=grass_block | destino=air encima=air)
+    etiqueta="Vicenta (Ganadero) / Cuidando el ganado" cerebro=- nav=[sin ruta] goals=[VillagerAnimalFarmGoal]
+```
+
+**La causa**: el goal camina a la **celda cruda de la faena** —`presa.blockPosition()`, `pareja.blockPosition()`,
+`suelto.blockPosition()`, el punto del rebaño— y esa celda **no siempre se pisa** (el animal está sobre una valla, en
+la paja, en el abrevadero…). El planificador no puede meterlo en una celda que no es casilla de pie y devuelve una
+ruta de **un solo punto**: el aldeano empuja, no se acerca, y aparca la faena. Es la lección de **I114** ("a un bloque
+no se camina: se camina a una casilla de pie") **otra vez**, esta vez en el ganado.
+
+**El arreglo**: `casillaDePieCercaDe(level, faena)` —si la celda de la faena ya se pisa, ella misma; si no, la casilla
+de pie **más cercana** de su alrededor (radio 2)— usado **solo para caminar** (`destinoDelTramo`), porque el
+`target` del goal lo usa `recoger()` para saber **qué objeto** coger y no se puede tocar.
+
+**MEDIDO, antes y después** (misma partida, misma copia, modo `MEDIR_MINERO`):
+
+| | antes | después |
+|---|---|---|
+| rendiciones del pueblo | **9** | **5** |
+| `Cuidando el ganado` (ganadero) | **3** | **0** |
+| `Llevando la madera` (leñador) | **2** | **0** |
+
+**Y quedan 5, todas de una en una** (una corrida): `Eufemia (Guardia) / Yendo a entrenar`, `Onofre (Guardia) /
+Patrullando la arboleda`, `Saturnino (Granjero) / Abono la huerta`, `Tomasa (Leñador) / Yendo al arbol` y
+`Valeriano (Granjero) / Recogiendo lo que se cayo`. El repaso de la sesión, con la misma partida y el mismo modo:
+**27 → 9 (granjero + recolectora) → 5 (ganadero)**.
 ## 2. Lista de consecuencias (obligatoria en cada cambio)Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
 1. **¿Quién más LEE lo que cambio?** Buscar todos los usos (`grep`) y revisarlos uno a uno. *(Fallo real: cambié el
