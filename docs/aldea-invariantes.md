@@ -3875,6 +3875,43 @@ corrida larga, y **62** de ellas con solo dos patrones, los dos medidos:
 **MEDIDO**: **Filomena (la recolectora) pasa de 64 rendiciones a CERO** en la corrida con los dos arreglos, y las
 rendiciones totales del pueblo bajan a **0,64 por 1.000 ticks** (el antes de esta sesión: 1,37).
 
+### I129 · EL CAMINANTE DA POR LLEGADO LO QUE ESTÁ A UN BLOQUE (y el granjero se rendía en la puerta)
+
+Lo pidió el jugador de la forma más clara: *"no puedes reparar al granjero… quiero que funcione YA toda la mecánica,
+sin excusas; si algo del juego vanilla falla, reescríbelo con una versión propia que sí funcione"*.
+
+**El fallo, medido** (26-sep-2026): el granjero que va a entrar en su bancal se quedaba **pegado a la compuerta** y se
+rendía. Los avisos lo decían todo: **6 avisos `Entrando a la huerta`, TODOS a distancia 1** de la celda que
+perseguían, y **5** líneas `El granjero no consigue entrar al bancal 1 por 484,63,658: … probara otra compuerta` (o
+sea: aparcaba la entrada, probaba otra, y hasta las cuatro).
+
+**La causa**: `VillageManager.caminarHacia` pone el destino en el cerebro con `WalkTarget(..., 1)` — **tolerancia de un
+bloque**— y con esa tolerancia el planificador del juego da por **LLEGADO** un sitio que esté a **un paso**. Si el
+aldeano ya está pegado a la celda (el caso exacto: el granjero junto a la compuerta y la celda de dentro a un paso),
+la ruta que devuelve es de **un solo punto** —su propia celda—, así que **no da ni un paso**, su distancia no mejora
+y el vigilante de "no me acerco" acaba aparcando la entrada. Eso explica también por qué **dos arreglos anteriores
+fallaron** (están medidos y retirados en `medidas-mina-sellada.txt` §11): perdonar el contador de atasco no cambia que
+el aldeano **no se mueva**, y mandarlo "un paso más adentro" tampoco, porque la tolerancia de 1 se aplica igual a ese
+nuevo destino.
+
+**El arreglo**: `VillageManager.caminarHaciaExacto(villager, celda, velocidad)`, un caminar con **tolerancia 0**
+(`WalkTarget(..., 0)`) que **además le pide la ruta a la navegación a mano** (`getNavigation().moveTo(...)`), porque
+el cerebro del aldeano puede volver a escribir su propio destino en el mismo tick (I119/I125) y con la ruta ya pedida
+el caminante **no se queda quieto**. Se usa en los dos tramos del granjero que exigen **pisar** una celda: **entrar**
+por la compuerta y **salir** del bancal.
+
+**MEDIDO, antes y después** (misma partida, misma copia, modo `MEDIR_MINERO`):
+
+| | antes | después |
+|---|---|---|
+| `no consigue entrar al bancal …` | **5** | **0** |
+| avisos de `Entrando a la huerta` | **6** | **0** |
+| el granjero | se rendía en la puerta | **`Cosechando`** (medido en el volcado `[Gate]`) y entregas a la despensa de **73, 71, 45 y 14** |
+
+**Lo que deja apuntado** (mismo patrón, siguiente): **`Filomena (Recolector)`** con **19** rendiciones en
+`Volviendo a la plaza` — se la manda a la plaza con `caminarHacia` y **no se mueve** porque ya está a un bloque. El
+mismo `caminarHaciaExacto` vale para ese tramo y para los demás goals que mandan a una celda concreta.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
 1. **¿Quién más LEE lo que cambio?** Buscar todos los usos (`grep`) y revisarlos uno a uno. *(Fallo real: cambié el

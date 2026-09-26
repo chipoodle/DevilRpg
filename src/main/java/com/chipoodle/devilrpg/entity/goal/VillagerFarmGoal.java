@@ -477,7 +477,9 @@ public class VillagerFarmGoal extends Goal {
             if (parcelaDondeEsta(level) != parcelaDelObjetivo) {
                 return; // ya está fuera del bancal: a dormir (lo lleva el cerebro)
             }
-            VillageManager.caminarHacia(villager, target, 0.6F);
+            // Y TAMBIÉN A PASO EXACTO (es el mismo caso: al salir hay que pisar la celda de la compuerta, y con la
+            // tolerancia de 1 bloque se quedaba plantado dentro).
+            VillageManager.caminarHaciaExacto(villager, target, 0.6F);
             VillageManager.ponerActividad(villager, "Saliendo de la huerta");
             // La pierna de la compuerta se mide aparte de la del objetivo (I38: dos piernas, dos contadores).
             double hastaLaPuerta = Math.sqrt(villager.distanceToSqr(target.getX() + 0.5D, target.getY() + 0.5D,
@@ -512,7 +514,11 @@ public class VillagerFarmGoal extends Goal {
             // `VillagerGateGoal.abrirParaUnAldeano`). Sin esto la entrada depende del ciclo del goal de los portones,
             // y cuando el servidor va justo el granjero se queda pegado a la valla.
             abrirLaCompuertaDeAlLado(level, entrada);
-            VillageManager.caminarHacia(villager, entrada, 0.6F);
+            // PASO EXACTO, NO "A UN BLOQUE" (medido el 26-sep-2026): con la tolerancia de 1 bloque el planificador da
+            // por LLEGADO un destino que esté a un paso, devuelve una ruta de un solo punto (la celda donde el
+            // granjero ya está) y el granjero NO SE MUEVE: este tramo no avanza nunca, a los 120 ticks aparca esa
+            // entrada y prueba otra compuerta (hasta las cuatro). Ver `VillageManager.caminarHaciaExacto`.
+            VillageManager.caminarHaciaExacto(villager, entrada, 0.6F);
             VillageManager.ponerActividad(villager, "Entrando a la huerta");
             // La pierna de la PUERTA se mide aparte de la del objetivo (I38: dos piernas, dos contadores).
             double hastaLaPuerta = Math.sqrt(villager.distanceToSqr(entrada.getX() + 0.5D, entrada.getY() + 0.5D,

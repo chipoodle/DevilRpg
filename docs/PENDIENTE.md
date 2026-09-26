@@ -71,60 +71,47 @@ cerebro lo pisa con el del puesto → `mejorDistancia` no baja → `stuckTicks` 
 (la corrida del recuadro de arriba) **no sale ni una vez** y el minero cumple su ciclo entero. La conclusión medida es
 la del recuadro: **cosmético, cerrado**.
 
-### 2. Los GRANJEROS con la mata (ahora son los que más se rinden)
+### 2. Los GRANJEROS con la mata: **ARREGLADO y MEDIDO** (26-sep-2026)
 
-En la corrida final, **5 de las 11 rendiciones** son de granjeros (`Hipolito` 3 y `Saturnino` 2) y todas iguales —
-el patrón de **I114** ("a un bloque no se camina"), con el destino siendo **la mata**:
+**El fallo (medido, y no era la mata)**: cuando el granjero ya estaba pegado a la compuerta, el juego le daba el
+destino **con tolerancia de 1 bloque** (`caminarHacia` pone `WalkTarget(..., 1)`), así que el planificador **lo daba
+por llegado**, le devolvía una ruta de **un solo punto** (la celda donde él ya estaba) y **no daba ni un paso**: el
+tramo de la compuerta no avanzaba, a los 120 ticks **aparcaba esa entrada** y probaba otra puerta —hasta las cuatro—
+y se rendía. Medido: los **6 avisos de una corrida, todos a distancia 1**, y **5** `no consigue entrar al bancal`.
 
-```
-no consigue llegar a 448,63,664 desde 449,63,664 (ruta=1 nodos hasta 449,63,664 alcanza=SI;
-    pies=oak_fence_gate cabeza=air suelo=grass_block | destino=wheat encima=air)
-    etiqueta="Hipolito (Granjero) / Entrando a la huerta" cerebro=448,63,664 nav=[sin ruta]
-    goals=[VillagerFarmGoal VillagerGateGoal]
-```
+**El arreglo**: `VillageManager.caminarHaciaExacto(...)`, un caminar **con tolerancia 0** (y que además le pide la
+ruta a la navegación a mano, porque el cerebro puede escribir su propio destino en el mismo tick). Se usa en los dos
+tramos del granjero que exigen **pisar** una celda: **entrar** por la compuerta y **salir** del bancal.
 
-O sea: el granjero está **metido en la compuerta** (`pies=oak_fence_gate`) a **1 bloque de la mata**, la ruta que le
-da el juego es de **1 nodo** (su propia celda, porque el destino es un bloque de trigo) y se rinde. En el leñador y el
-obrero esto ya está arreglado (se camina a una **casilla de pie**, I114): lo que falta es hacerlo en **la cosecha y la
-siembra del granjero** (y tener en cuenta que el aviso aparca **la mata**, no la entrada).
+**MEDIDO, antes y después** (misma partida, misma copia, modo `MEDIR_MINERO`):
 
-**LO QUE SE HA MEDIDO DE VERDAD** (corrida con los avisos, `26-sep-2026`) — y **no es el contador ni la mata**, es
-**la pierna de la COMPUERTA**:
+| | antes | después |
+|---|---|---|
+| `no consigue entrar al bancal …` | **5** | **0** |
+| avisos de `Entrando a la huerta` | **6** | **0** |
+| el granjero trabajando | se rendía en la puerta | **`Valeriano (Granjero) / Cosechando`** y entregas a la despensa de **73, 71, 45 y 14** |
 
-```
-[Village] El granjero no consigue entrar al bancal 1 por 484, 63, 658: lo deja por un rato y probara otra compuerta
-[Village] <uuid> no consigue llegar a 484, 63, 658 desde 484, 63, 659 (ruta=1 nodos hasta 484, 63, 659 alcanza=SI;
-    pies=oak_fence_gate cabeza=air suelo=grass_block | destino=wheat encima=air)
-    etiqueta="Valeriano (Granjero) / Entrando a la huerta" cerebro=484,63,658 nav=[sin ruta]
-    goals=[VillagerFarmGoal VillagerGateGoal]
-```
+*(Lo que quedaba apuntado dos veces como "intento medido y retirado" —el contador de atasco y "un paso más adentro"—
+está en `tools/arnes/medidas-mina-sellada.txt` §11: los dos fallaron y se quitaron, y fue esa medida la que dejó a la
+vista que el problema era la tolerancia del caminante.)*
 
-- Los **6 avisos de la corrida están TODOS a distancia 1** de la celda que persiguen, y son de la **entrada** (no de
-  la mata): `mejorEntradaLibre` devuelve (bien) la **celda de dentro** de la compuerta, que es la primera fila de
-  cultivo — por eso el aviso dice `destino=wheat`: es el **trigo de dentro del portón**, no un fallo de elección.
-- El **mecanismo medido**: el `WalkTarget(..., 1)` de `VillageManager.caminarHacia` da por **LLEGADO** un destino que
-  tenga a **1** de distancia, así que el planificador devuelve una ruta de **1 nodo** (la propia celda del aldeano),
-  **no se mueve**, su distancia no mejora (`nav=[sin ruta]`, que es la ruta de 1 nodo ya consumida) y a los 120 ticks
-  **aparca la entrada** y prueba otra compuerta (hasta agotar las cuatro).
-- **Y por eso dos intentos han fallado, medidos los dos** (los dos RETIRADOS, el árbol como estaba):
-  1. **perdonar el contador de atasco** cuando ya está al alcance de su faena (`canContinueToUse`) → **5/12 → 6/14**
-     avisos: no mejora;
-  2. **mandarlo un paso más adentro** que la compuerta (para que la ruta tenga 2 nodos) → **6/17**: tampoco (el
-     `closeEnough = 1` se aplica también a ese destino, así que vuelve a haber un nodo a 1 de distancia y no se mueve).
+### 3. La RECOLECTORA, "Volviendo a la plaza" (ahora la que más se rinde)
 
-**Lo que toca (siguiente paso exacto)**: para esa pierna hace falta un **paso EXACTO** (`closeEnough = 0`), no el 1 de
-`caminarHacia`: añadir un `VillageManager.caminarHaciaExacto(...)` (mismo método con `WalkTarget(tracker, velocidad, 0)`)
-y usarlo en la pierna de la compuerta del granjero (y en el `abrirLaCompuertaDeAlLado`, que arrastra el mismo
-problema). Medir: que los `no consigue entrar al bancal` bajen de 5 a 0 y que el bancal se coseche (que es lo que el
-jugador pidió: *"revisa TODA la parcela y cosecha TODAS las que ya están maduras"*).
+Al arreglar a los granjeros, la que queda arriba es **Filomena**: **19 rendiciones** con la etiqueta
+`Volviendo a la plaza` (y 1 `Yendo al almacen`). Es el mismo patrón de "el caminante no la mueve": se la manda a la
+plaza (`VillageManager.caminarHacia`, tolerancia 1) cuando no tiene nada que recoger y **no se mueve** porque ya está
+a un bloque. **El arreglo es el mismo**: usar **`caminarHaciaExacto`** en el tramo de "volver a la plaza/almacén" de
+`VillagerCollectGoal` (y revisar los demás goals que mandan a una celda concreta: `VillagerPickupGoal`,
+`VillagerTavernGoal`, el taller del minero). Medir con el mismo criterio: que esas 19 bajen a 0.
 
-### 3. El pico, cuando se rompe
+
+### 4. El pico, cuando se rompe
 
 Medido que **suelta la faena** (no sigue "picando" en el sitio) y que en la corrida final **no rompió ninguno**
 (`se le ha roto el pico` = 0; y el almacén tenía **0 picos**, así que el herrero no los tiene hechos). Falta medir
 el caso completo: romperlo y ver que **vuelve con otro** (y que el herrero los forje).
 
-### 4. Atascos sueltos ya apuntados (cuando se pueda)
+### 5. Atascos sueltos ya apuntados (cuando se pueda)
 
 - El aldeano que se queda **sin ruta** fuera del muro (`560,64,587`, `552,63,585`).
 - La **recolectora** aún se rinde 1 vez por corrida (ya no 64): mirar el caso suelto que queda.

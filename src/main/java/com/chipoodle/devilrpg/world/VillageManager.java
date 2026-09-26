@@ -4749,6 +4749,31 @@ public final class VillageManager {
                 new net.minecraft.world.entity.ai.behavior.BlockPosTracker(objetivo));
     }
 
+    /**
+     * <b>Camina a la celda EXACTA</b> (sin la tolerancia de <b>1 bloque</b> de {@link #caminarHacia}), y además le
+     * pide la ruta a la navegación <b>a mano</b>.
+     * <p>
+     * <b>POR QUÉ EXISTE (medido el 26-sep-2026)</b>: `caminarHacia` pone el destino en el cerebro con
+     * {@code WalkTarget(..., 1)}, y con esa tolerancia el planificador da por <b>LLEGADO</b> cualquier sitio que
+     * tenga a <b>un bloque</b>. Si el aldeano ya está pegado a la celda —el caso exacto del <b>granjero en la
+     * compuerta</b>, con la celda de dentro a un paso— la ruta que devuelve es de <b>un solo punto</b> (su propia
+     * celda): <b>no da ni un paso</b>, su distancia no mejora y a los 120 ticks se rinde, aparca esa entrada y
+     * prueba otra compuerta (medido: los 6 avisos de una corrida, todos a distancia 1).
+     * <p>
+     * Aquí la tolerancia es <b>0</b>, así que el planificador tiene que meterlo <b>en</b> la celda; y como el cerebro
+     * del aldeano puede volver a escribir su propio destino en el mismo tick (I119/I125), se le pide también la ruta
+     * directamente a la navegación: con la ruta ya pedida, el caminante no se queda quieto aunque el cerebro escriba
+     * otra cosa.
+     */
+    public static void caminarHaciaExacto(Villager villager, BlockPos objetivo, float velocidad) {
+        villager.getBrain().setMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.WALK_TARGET,
+                new net.minecraft.world.entity.ai.memory.WalkTarget(
+                        new net.minecraft.world.entity.ai.behavior.BlockPosTracker(objetivo), velocidad, 0));
+        villager.getBrain().setMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.LOOK_TARGET,
+                new net.minecraft.world.entity.ai.behavior.BlockPosTracker(objetivo));
+        villager.getNavigation().moveTo(objetivo.getX() + 0.5D, objetivo.getY(), objetivo.getZ() + 0.5D, velocidad);
+    }
+
     // --- lo que no se alcanza, se deja por un rato (I33 para TODOS los goals del pueblo) ---------------
 
     /** Sitio (empaquetado con `asLong`) al que ese aldeano no llegó, y hasta cuándo no lo reintenta. */
