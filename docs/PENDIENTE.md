@@ -28,7 +28,24 @@ como `Exception stopping the server … serverlevel2 is null` y un log que no cu
 
 ## Lo que está PENDIENTE (en este orden, como pidió el jugador)
 
-### 1. La MINA ya funciona de punta a punta (medido) — y el fantasma de la "caseta inalcanzable" NO era eso
+### 1. El `JOB_SITE` del minero (el cortapiedras, un bloque): **medido, y no cuesta nada** (cerrado)
+
+Medido en la corrida en la que la mina ya funciona de punta a punta (297 muestras del minero, `t=11.720`):
+
+| qué | medida |
+|---|---|
+| muestras con `destino=SIN DESTINO` (el cerebro le borra el rumbo al pelear con el `WorkAtPoi`) | **48 / 297 (16 %)** |
+| muestras con `goals=[]` (el goal, entre ciclos) | 33 / 297 |
+| `Volviendo a la caseta (encajado)` | **0** (solo salía mientras la mina estaba clavada en el acuífero) |
+| ciclo del minero | 16 pasos de caracol, 6 celdas de galería, 4 sellos, **1 tope**, 31 entregas en el almacén, **0 picos rotos** |
+
+O sea: **la pelea del `JOB_SITE` es real pero NO bloquea nada** (ni un paso, ni una entrega); y el `rutaFaena` que me
+hizo pensar lo contrario medía **la ruta a un bloque**, no a la caseta. Queda **cerrado** como cosmético, con una
+**residuo** apuntado: con la mina ya en el **tope**, el minero se queda por el almacén (`516,63,663`) repitiendo
+`deja lo sacado` / `Guardo 18 de lo suyo` — no hace nada útil porque **su mina está acabada**; si se quiere, lo
+siguiente sería darle una faena de reserva (o que ayude en otra aldea/puesto), pero eso es una decisión de diseño,
+no un fallo medido.
+
 
 Estado medido en la última corrida (`TOPE=SI` incluido): el minero **baja, cava 16 pasos (16 → 32), se topa con el
 acuífero, sella, cierra la mina con su piedra labrada y SUBE a entregar** — acabó en `516,63,663` con la etiqueta
@@ -50,13 +67,9 @@ pasos). Lo que **nunca** se alcanza es la celda del **`JOB_SITE` = el CORTAPIEDR
 celda**, que no se puede pisar → el `rutaFaena` que yo medía era **la ruta a un bloque** (`fin=… dFin=4,00/7,07`) y de
 ahí salió el diagnóstico equivocado. Lo que sí provoca es una **pelea**: el goal escribe su destino cada tick y el
 cerebro lo pisa con el del puesto → `mejorDistancia` no baja → `stuckTicks` sube → **"Volviendo a la caseta
-(encajado)"** en bucle.
-
-**Lo que toca**: que el puesto de trabajo del cerebro (o el `JOB_SITE`) **sea una casilla que se pise** (la de al lado
-del cortapiedras), sin perder el ticket del POI (que es lo que le da la actividad de trabajar; ver el caso medido del
-herrero en `VillagerSmithGoal`), **o** que el goal no cuente atasco mientras el cerebro vaya a su puesto (el patrón de
-I125, `VillageManager.elCerebroVavaA`) — con cuidado de no quedarse sin el vigilante que hoy lo manda de vuelta a la
-caseta.
+(encajado)"** en bucle... **pero eso era mientras la mina estaba clavada en el acuífero**: con la mina funcionando
+(la corrida del recuadro de arriba) **no sale ni una vez** y el minero cumple su ciclo entero. La conclusión medida es
+la del recuadro: **cosmético, cerrado**.
 
 ### 2. Los GRANJEROS con la mata (ahora son los que más se rinden)
 
