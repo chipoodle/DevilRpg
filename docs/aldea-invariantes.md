@@ -3912,6 +3912,40 @@ por la compuerta y **salir** del bancal.
 `Volviendo a la plaza` — se la manda a la plaza con `caminarHacia` y **no se mueve** porque ya está a un bloque. El
 mismo `caminarHaciaExacto` vale para ese tramo y para los demás goals que mandan a una celda concreta.
 
+### I130 · LA RECOLECTORA SE QUEDABA ENCERRADA EN EL BANCAL (una puerta de valla cerrada no es navegable)
+
+Al arreglar al granjero (I129) salió la que quedaba arriba: **`Filomena (Recolector)`, 19 rendiciones** con la
+etiqueta `Volviendo a la plaza`, y el aviso decía exactamente qué pasaba:
+
+```
+no consigue llegar a 470,63,646 (la plaza) desde 450,62,680 (dentro de un bancal) (ruta=1 nodos hasta 450,63,680
+    alcanza=NO; pies=farmland cabeza=wheat suelo=dirt | destino=stone_bricks encima=bell)
+    etiqueta="Filomena (Recolector) / Volviendo a la plaza" cerebro=470,63,646 nav=[sin ruta]
+```
+
+**La causa**: entra a los bancales a por lo que se cae —eso es su faena, y el jugador quiere que lo recoja— y luego
+**no puede salir**, porque una **puerta de valla cerrada no es navegable** para el juego: el planificador le devuelve
+una ruta de **un solo nodo que no alcanza** y se rinde con la plaza a 39 bloques. No es la tolerancia de I129: es que
+**el mundo le cierra el paso** y **nadie le abre la compuerta** (el juego no deja que un aldeano abra una puerta de
+valla: la abre el pueblo).
+
+**El arreglo**: `VillageManager.abrirLaCompuertaDeAlLado(level, celda)` —la que tenía el granjero, ahora compartida— y
+en la recolectora: si está **dentro de un bancal**, se le busca la **celda de dentro de la compuerta más cercana** (la
+salida), se le manda ahí con `caminarHaciaExacto` y, en cuanto la tiene al lado, **se le abre** la compuerta; si esa
+no vale (aparcada, I33), prueba otra. Es el mismo camino que hace el granjero para **entrar**.
+
+**MEDIDO, antes y después** (misma partida, misma copia, modo `MEDIR_MINERO`):
+
+| | antes | después |
+|---|---|---|
+| rendiciones del pueblo | **27** | **9** |
+| `Filomena (Recolector) / Volviendo a la plaza` | **19** | **0** |
+| la recolectora | se rendía dentro del bancal | **sale por la compuerta** (`abro el porton 484,63,659 · destino=470,63,646 rutaViva=24 nodos alcanzaba=SI`) y **entrega** (`El recolector guardo 9 cosa(s) en el almacen`) |
+
+**Y con esto quedan 9** en una corrida: `Vicenta (Ganadero) / Cuidando el ganado` **3**, `Tomasa (Leñador) / Llevando
+la madera` **2**, guardias **3** y `Valeriano (Granjero) / Guardando lo suyo` **1**. El siguiente por mirar es el
+**ganadero**, con el mismo instrumento (el aviso ya trae `cerebro=`, `nav=` y `goals=[…]`).
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
 1. **¿Quién más LEE lo que cambio?** Buscar todos los usos (`grep`) y revisarlos uno a uno. *(Fallo real: cambié el

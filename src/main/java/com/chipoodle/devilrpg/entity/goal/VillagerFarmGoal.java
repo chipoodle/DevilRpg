@@ -778,24 +778,17 @@ public class VillagerFarmGoal extends Goal {
                 > ABRIR_DESDE * ABRIR_DESDE) {
             return;
         }
-        for (BlockPos p : new BlockPos[]{entrada, entrada.north(), entrada.south(), entrada.east(),
-                entrada.west(), entrada.below()}) {
-            if (!(level.getBlockState(p).getBlock() instanceof FenceGateBlock)) {
-                continue;
-            }
-            if (!VillagerGateGoal.abrirParaUnAldeano(level, p)) {
-                return; // ya estaba abierta (o ya no es un portón): no hay nada que rehacer
-            }
-            // Y SE LE HACE REHACER EL CAMINO CON LA COMPUERTA YA ABIERTA: la ruta que traía se calculó con ella
-            // CERRADA —el juego no deja planificar a través de una puerta de valla cerrada—, así que acaba en su
-            // propia casilla, pegado a la valla, y se queda ahí. Borrándole el destino, el `caminarHacia` de este
-            // mismo goal pide una ruta nueva que SÍ cruza (es el mismo remedio que usa `VillagerGateGoal.abrir`,
-            // medido allí con Isidoro: sin esto el aldeano se pasaba la noche en la celda de dentro del portón).
-            villager.getNavigation().stop();
-            villager.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
-            villager.getBrain().eraseMemory(MemoryModuleType.PATH);
-            return;
+        if (!VillageManager.abrirLaCompuertaDeAlLado(level, entrada)) {
+            return; // ya estaba abierta (o ya no es un portón): no hay nada que rehacer
         }
+        // Y SE LE HACE REHACER EL CAMINO CON LA COMPUERTA YA ABIERTA: la ruta que traía se calculó con ella
+        // CERRADA —el juego no deja planificar a través de una puerta de valla cerrada—, así que acaba en su
+        // propia casilla, pegado a la valla, y se queda ahí. Borrándole el destino, el `caminarHacia` de este
+        // mismo goal pide una ruta nueva que SÍ cruza (es el mismo remedio que usa `VillagerGateGoal.abrir`,
+        // medido allí con Isidoro: sin esto el aldeano se pasaba la noche en la celda de dentro del portón).
+        villager.getNavigation().stop();
+        villager.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
+        villager.getBrain().eraseMemory(MemoryModuleType.PATH);
     }
 
     /**

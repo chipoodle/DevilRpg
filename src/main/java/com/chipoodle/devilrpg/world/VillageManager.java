@@ -4774,6 +4774,26 @@ public final class VillageManager {
         villager.getNavigation().moveTo(objetivo.getX() + 0.5D, objetivo.getY(), objetivo.getZ() + 0.5D, velocidad);
     }
 
+    /**
+     * <b>Abre la puerta de valla que tenga al lado</b> (en la celda que se le pasa o en sus cuatro vecinas, o debajo).
+     * El juego <b>no deja</b> que un aldeano abra una puerta de valla —y una cerrada <b>no es navegable</b>—, así que
+     * el pueblo tiene que abrírsela (<b>la abre el goal de los portones</b>) o se queda encerrado.
+     * <p>
+     * Lo usan el <b>granjero</b> (para entrar y salir de su bancal) y la <b>recolectora</b> (que entra a los bancales a
+     * por lo que se cae y luego <b>no podía salir</b>: medido el 26-sep-2026, 19 rendiciones con `Volviendo a la
+     * plaza`, `ruta=1 nodos … alcanza=NO` desde dentro de un bancal).
+     */
+    public static boolean abrirLaCompuertaDeAlLado(ServerLevel level, BlockPos celda) {
+        for (BlockPos p : new BlockPos[]{celda, celda.north(), celda.south(), celda.east(), celda.west(),
+                celda.below()}) {
+            if (!(level.getBlockState(p).getBlock() instanceof net.minecraft.world.level.block.FenceGateBlock)) {
+                continue;
+            }
+            return com.chipoodle.devilrpg.entity.goal.VillagerGateGoal.abrirParaUnAldeano(level, p);
+        }
+        return false;
+    }
+
     // --- lo que no se alcanza, se deja por un rato (I33 para TODOS los goals del pueblo) ---------------
 
     /** Sitio (empaquetado con `asLong`) al que ese aldeano no llegó, y hasta cuándo no lo reintenta. */

@@ -208,3 +208,24 @@ INTENTO 2 (RETIRADO): mandarlo UN PASO MAS ADENTRO que la compuerta (para que la
 SIGUIENTE PASO EXACTO: un paso EXACTO (closeEnough=0) para esa pierna -> VillageManager.caminarHaciaExacto(...) con
 WalkTarget(tracker, velocidad, 0), usado en la pierna de la compuerta y en abrirLaCompuertaDeAlLado. Medir que los
 'no consigue entrar al bancal' bajen de 5 a 0.
+
+=== 12) LA RECOLECTORA ENCERRADA EN EL BANCAL (I130, 26-sep-2026)
+
+Aviso medido (19 veces en una corrida, todas iguales):
+  no consigue llegar a 470,63,646 (la plaza) desde 450,62,680 (dentro de un bancal)
+      (ruta=1 nodos hasta 450,63,680 alcanza=NO; pies=farmland cabeza=wheat suelo=dirt | destino=stone_bricks
+      encima=bell) etiqueta="Filomena (Recolector) / Volviendo a la plaza" cerebro=470,63,646 nav=[sin ruta]
+
+CAUSA: una puerta de valla CERRADA no es navegable para el juego -> entra al bancal a por lo que se cae (su faena) y
+no puede salir; nadie le abre la compuerta (el juego no deja que un aldeano lo haga).
+
+ARREGLO: VillageManager.abrirLaCompuertaDeAlLado (compartida con el granjero) + en la recolectora, si esta dentro de
+un bancal, mandarla con caminarHaciaExacto a la celda de DENTRO de la compuerta mas cercana y abrirsela al llegar.
+
+MEDIDO: rendiciones del pueblo 27 -> 9; Filomena 'Volviendo a la plaza' 19 -> 0; y sale y entrega:
+  [Gate] Filomena (Recolector) / Volviendo a la plaza: abro el porton 484,63,659 · destino=470,63,646
+         rutaViva=24 nodos alcanzaba=SI
+  [Village] El recolector guardo 9 cosa(s) en el almacen
+
+LO QUE QUEDA (9 en una corrida): Vicenta (Ganadero) 'Cuidando el ganado' 3, Tomasa (Lenador) 'Llevando la madera' 2,
+guardias 3 (patrullas/entrenar) y 1 de un granjero.

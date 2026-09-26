@@ -183,6 +183,48 @@ public class VillagerCollectGoal extends Goal {
         return distanciaHorizontalAlCentro() > RADIO_VUELTA * RADIO_VUELTA;
     }
 
+    /** La última celda de salida de bancal que se le dio (para no contar atasco al cambiar de compuerta). */
+    @Nullable
+    private BlockPos ultimaSalida;
+
+    /**
+     * <b>La celda de dentro de la compuerta más cercana del bancal en el que esté metido</b> (o {@code null} si no
+     * está en ninguno). Es la salida: la recolectora entra a los bancales a por lo que se cae y, con la compuerta
+     * <b>cerrada</b> —que no es navegable para el juego—, se quedaba <b>encerrada</b> (medido el 26-sep-2026: 19
+     * rendiciones volviendo a la plaza, `ruta=1 nodos … alcanza=NO` desde dentro de un bancal).
+     */
+    @Nullable
+    private BlockPos laSalidaDelBancal(ServerLevel level) {
+        int cota = VillageGenerator.cotaDeLaPlaza(level, center);
+        for (int i = 0; i < VillageGenerator.parcelasDeGranja(); i++) {
+            if (!VillageGenerator.estaDentroDeLaParcela(center, i, cota, villager.blockPosition())) {
+                continue;
+            }
+            BlockPos esquina = VillageGenerator.esquinaDeLaParcela(center, i, cota);
+            BlockPos centroDeLaParcela = esquina.offset(VillageGenerator.PLOT_WIDTH / 2, 0,
+                    VillageGenerator.PLOT_DEPTH / 2);
+            BlockPos mejor = null;
+            double mejorDist = Double.MAX_VALUE;
+            for (BlockPos porton : VillageGenerator.portonesDeLaParcela(center, i, cota)) {
+                BlockPos dentro = porton.offset(Integer.signum(centroDeLaParcela.getX() - porton.getX()), 0,
+                        Integer.signum(centroDeLaParcela.getZ() - porton.getZ()));
+                if (!VillageManager.esCeldaDePie(level, dentro)) {
+                    continue;
+                }
+                if (VillageManager.esPuntoFallido(villager, dentro)) {
+                    continue; // por esa ya no pudo salir hace poco (I33): se prueba otra
+                }
+                double d = villager.distanceToSqr(dentro.getX() + 0.5D, dentro.getY() + 0.5D, dentro.getZ() + 0.5D);
+                if (d < mejorDist) {
+                    mejorDist = d;
+                    mejor = dentro;
+                }
+            }
+            return mejor;
+        }
+        return null;
+    }
+
     @Override
     public void start() {
         stuckTicks = 0;
@@ -266,6 +308,39 @@ public class VillagerCollectGoal extends Goal {
             double distancia = Math.sqrt(villager.distanceToSqr(destino.getX() + 0.5D, destino.getY() + 0.5D,
                     destino.getZ() + 0.5D));
             if (distancia > VillageStorage.ALCANCE_ALMACEN) {
+                // SI ESTÁ METIDA EN UN BANCAL, PRIMERO SE SALE POR SU COMPUERTA (medido el 26-sep-2026): la
+                // recolectora entra a los bancales a por lo que se cae —eso es su faena— y luego NO PODÍA SALIR,
+                // porque una puerta de valla CERRADA **no es navegable** para el juego: se rendía volviendo a la
+                // plaza con `ruta=1 nodos … alcanza=NO` desde dentro del bancal (19 rendiciones en una corrida, con
+                // la plaza a 39 bloques). Se le busca la compuerta más cercana de su bancal, se le manda a la celda
+                // de DENTRO (que sí se pisa) y, en cuanto la tiene al lado, se le ABRE (el juego no deja que un
+                // aldeano abra una puerta de valla: la abre el pueblo).
+                BlockPos salida = laSalidaDelBancal(level);
+                if (salida != null) {
+                    VillageManager.abrirLaCompuertaDeAlLado(level, salida);
+                    VillageManager.caminarHaciaExacto(villager, salida, 0.6F);
+                    VillageManager.ponerActividad(villager, "Saliendo de la huerta");
+                    if (stuckTicks >= STUCK_LIMIT) {
+                        // No ha podido salir ni por aquí: se aparca ESA compuerta (no la plaza) para probar otra.
+                        VillageManager.marcarPuntoFallido(villager, salida);
+                        stuckTicks = 0;
+                        mejorDistancia = Double.MAX_VALUE;
+                    } else if (!salida.equals(ultimaSalida)) {
+                        ultimaSalida = salida;
+                        stuckTicks = 0;
+                        mejorDistancia = Double.MAX_VALUE;
+                    } else {
+                        double hastaLaSalida = Math.sqrt(villager.distanceToSqr(salida.getX() + 0.5D,
+                                salida.getY() + 0.5D, salida.getZ() + 0.5D));
+                        if (hastaLaSalida < mejorDistancia - 0.5D) {
+                            mejorDistancia = hastaLaSalida;
+                            stuckTicks = 0;
+                        } else {
+                            stuckTicks++;
+                        }
+                    }
+                    return;
+                }
                 // Y TAMBIÉN POR EL PORTÓN SI LE TOCA CRUZARLO (el almacén está dentro; si el recolector se quedó
                 // fuera, la vuelta es un cruce de muralla como cualquier otro: ver I112).
                 BlockPos porton = VillageManager.pasoParaCruzarElMuro(level, center, villager, destino);

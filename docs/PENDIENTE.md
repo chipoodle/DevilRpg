@@ -95,23 +95,35 @@ tramos del granjero que exigen **pisar** una celda: **entrar** por la compuerta 
 está en `tools/arnes/medidas-mina-sellada.txt` §11: los dos fallaron y se quitaron, y fue esa medida la que dejó a la
 vista que el problema era la tolerancia del caminante.)*
 
-### 3. La RECOLECTORA, "Volviendo a la plaza" (ahora la que más se rinde)
+### 3. La RECOLECTORA: **ARREGLADA y MEDIDA** (se quedaba encerrada en el bancal)
 
-Al arreglar a los granjeros, la que queda arriba es **Filomena**: **19 rendiciones** con la etiqueta
-`Volviendo a la plaza` (y 1 `Yendo al almacen`). Es el mismo patrón de "el caminante no la mueve": se la manda a la
-plaza (`VillageManager.caminarHacia`, tolerancia 1) cuando no tiene nada que recoger y **no se mueve** porque ya está
-a un bloque. **El arreglo es el mismo**: usar **`caminarHaciaExacto`** en el tramo de "volver a la plaza/almacén" de
-`VillagerCollectGoal` (y revisar los demás goals que mandan a una celda concreta: `VillagerPickupGoal`,
-`VillagerTavernGoal`, el taller del minero). Medir con el mismo criterio: que esas 19 bajen a 0.
+**Medido**: **19 rendiciones** en `Volviendo a la plaza` con `ruta=1 nodos … alcanza=NO` **desde dentro de un bancal**
+(`pies=farmland cabeza=wheat`): entra a los bancales a por lo que se cae —su faena— y **no puede salir**, porque una
+**puerta de valla cerrada no es navegable** para el juego y nadie se la abre.
+
+**El arreglo**: `VillageManager.abrirLaCompuertaDeAlLado(...)` (compartida con el granjero) + en la recolectora, si
+está dentro de un bancal, mandarla a la **celda de dentro de la compuerta más cercana** con `caminarHaciaExacto` y
+**abrírsela** en cuanto la tiene al lado (probando otra si esa está aparcada).
+
+**MEDIDO**: rendiciones del pueblo **27 → 9**; `Filomena / Volviendo a la plaza` **19 → 0**; y ahora **sale y
+entrega** (`abro el porton 484,63,659 · destino=470,63,646 rutaViva=24 nodos alcanzaba=SI`).
+
+### 4. El GANADERO y el LEÑADOR (lo que queda: 9 rendiciones en una corrida)
+
+Con los granjeros y la recolectora arreglados, lo que queda es: **`Vicenta (Ganadero) / Cuidando el ganado` 3**,
+**`Tomasa (Leñador) / Llevando la madera` 2**, **guardias 3** (patrullas/entrenar) y **1** de un granjero. El
+instrumento ya está hecho: el aviso de "no llegué" trae `cerebro=`, `nav=[…]` y `goals=[…]`, así que **lo primero es
+leer esos tres campos** en los avisos del ganadero y del leñador (¿destino a un bloque? ¿ruta que no alcanza por una
+compuerta cerrada, como la recolectora? ¿el cerebro apuntando a otra parte?) antes de tocar nada.
 
 
-### 4. El pico, cuando se rompe
+### 5. El pico, cuando se rompe
 
 Medido que **suelta la faena** (no sigue "picando" en el sitio) y que en la corrida final **no rompió ninguno**
 (`se le ha roto el pico` = 0; y el almacén tenía **0 picos**, así que el herrero no los tiene hechos). Falta medir
 el caso completo: romperlo y ver que **vuelve con otro** (y que el herrero los forje).
 
-### 5. Atascos sueltos ya apuntados (cuando se pueda)
+### 6. Atascos sueltos ya apuntados (cuando se pueda)
 
 - El aldeano que se queda **sin ruta** fuera del muro (`560,64,587`, `552,63,585`).
 - La **recolectora** aún se rinde 1 vez por corrida (ya no 64): mirar el caso suelto que queda.
