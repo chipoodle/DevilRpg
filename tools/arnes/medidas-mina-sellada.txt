@@ -184,3 +184,27 @@ las que mas quedan: 5 de granjeros "Entrando a la huerta", con el destino en la 
   no consigue llegar a 448,63,664 desde 449,63,664 (ruta=1 nodos ... alcanza=SI; pies=oak_fence_gate |
       destino=wheat) etiqueta="Hipolito (Granjero) / Entrando a la huerta" nav=[sin ruta]
   (el granjero esta METIDO en la compuerta a 1 bloque de la mata -> es el patron de I114)
+
+=== 11) LOS GRANJEROS Y LA COMPUERTA (26-sep-2026) -- dos intentos medidos y retirados
+
+Lo que se mide en el aviso (los 6 de la corrida, TODOS a distancia 1, y son de la ENTRADA, no de la mata):
+
+  El granjero no consigue entrar al bancal 1 por 484, 63, 658: lo deja por un rato y probara otra compuerta
+  no consigue llegar a 484,63,658 desde 484,63,659 (ruta=1 nodos ... alcanza=SI; pies=oak_fence_gate |
+      destino=wheat) etiqueta="Valeriano (Granjero) / Entrando a la huerta" cerebro=484,63,658 nav=[sin ruta]
+
+  
+av=[sin ruta] = la ruta de 1 nodo ya consumida: el planificador da por LLEGADO un destino a 1 de distancia
+  (el WalkTarget(...,1) de caminarHacia), devuelve la propia celda y el aldeano NO se mueve -> no mejora -> a los
+  120 ticks aparca la ENTRADA. destino=wheat es el trigo de la primera fila de dentro del porton (la celda que
+  devuelve mejorEntradaLibre, que esta bien elegida).
+
+INTENTO 1 (RETIRADO): perdonar el contador de atasco cuando ya esta al alcance de su faena (canContinueToUse)
+  antes: 5 avisos de huerta de 12 rendiciones -> despues: 6 de 14. NO mejora.
+INTENTO 2 (RETIRADO): mandarlo UN PASO MAS ADENTRO que la compuerta (para que la ruta tenga 2 nodos)
+  despues: 6 avisos de huerta de 17 y 5 'no consigue entrar'. NO mejora (el closeEnough=1 se aplica tambien a ese
+  destino: vuelve a haber un nodo a 1 y no se mueve).
+
+SIGUIENTE PASO EXACTO: un paso EXACTO (closeEnough=0) para esa pierna -> VillageManager.caminarHaciaExacto(...) con
+WalkTarget(tracker, velocidad, 0), usado en la pierna de la compuerta y en abrirLaCompuertaDeAlLado. Medir que los
+'no consigue entrar al bancal' bajen de 5 a 0.

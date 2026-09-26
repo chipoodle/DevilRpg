@@ -88,12 +88,35 @@ da el juego es de **1 nodo** (su propia celda, porque el destino es un bloque de
 obrero esto ya está arreglado (se camina a una **casilla de pie**, I114): lo que falta es hacerlo en **la cosecha y la
 siembra del granjero** (y tener en cuenta que el aviso aparca **la mata**, no la entrada).
 
-**INTENTO MEDIDO Y RETIRADO** (26-sep-2026): sospeché del contador de "no me acerco" —se acumula mientras va de
-lejos y el vigilante `canContinueToUse` se evalúa antes del `tick`— y le perdoné el contador cuando ya está al
-alcance de su faena (más un reinicio en la pierna de la compuerta). **Medido: NO mejora** (5 de 12 rendiciones de
-huerta antes, **6 de 14** después), así que se ha **retirado** y el árbol queda como estaba. La pista que deja: **no
-es el contador**, es la **ruta al bloque** (I114 de verdad) o el acceso a la parcela; lo siguiente que hay que medir
-es la ruta viva del granjero en el momento de rendirse (`nav=[…]` sale `sin ruta` o apuntando a otro sitio).
+**LO QUE SE HA MEDIDO DE VERDAD** (corrida con los avisos, `26-sep-2026`) — y **no es el contador ni la mata**, es
+**la pierna de la COMPUERTA**:
+
+```
+[Village] El granjero no consigue entrar al bancal 1 por 484, 63, 658: lo deja por un rato y probara otra compuerta
+[Village] <uuid> no consigue llegar a 484, 63, 658 desde 484, 63, 659 (ruta=1 nodos hasta 484, 63, 659 alcanza=SI;
+    pies=oak_fence_gate cabeza=air suelo=grass_block | destino=wheat encima=air)
+    etiqueta="Valeriano (Granjero) / Entrando a la huerta" cerebro=484,63,658 nav=[sin ruta]
+    goals=[VillagerFarmGoal VillagerGateGoal]
+```
+
+- Los **6 avisos de la corrida están TODOS a distancia 1** de la celda que persiguen, y son de la **entrada** (no de
+  la mata): `mejorEntradaLibre` devuelve (bien) la **celda de dentro** de la compuerta, que es la primera fila de
+  cultivo — por eso el aviso dice `destino=wheat`: es el **trigo de dentro del portón**, no un fallo de elección.
+- El **mecanismo medido**: el `WalkTarget(..., 1)` de `VillageManager.caminarHacia` da por **LLEGADO** un destino que
+  tenga a **1** de distancia, así que el planificador devuelve una ruta de **1 nodo** (la propia celda del aldeano),
+  **no se mueve**, su distancia no mejora (`nav=[sin ruta]`, que es la ruta de 1 nodo ya consumida) y a los 120 ticks
+  **aparca la entrada** y prueba otra compuerta (hasta agotar las cuatro).
+- **Y por eso dos intentos han fallado, medidos los dos** (los dos RETIRADOS, el árbol como estaba):
+  1. **perdonar el contador de atasco** cuando ya está al alcance de su faena (`canContinueToUse`) → **5/12 → 6/14**
+     avisos: no mejora;
+  2. **mandarlo un paso más adentro** que la compuerta (para que la ruta tenga 2 nodos) → **6/17**: tampoco (el
+     `closeEnough = 1` se aplica también a ese destino, así que vuelve a haber un nodo a 1 de distancia y no se mueve).
+
+**Lo que toca (siguiente paso exacto)**: para esa pierna hace falta un **paso EXACTO** (`closeEnough = 0`), no el 1 de
+`caminarHacia`: añadir un `VillageManager.caminarHaciaExacto(...)` (mismo método con `WalkTarget(tracker, velocidad, 0)`)
+y usarlo en la pierna de la compuerta del granjero (y en el `abrirLaCompuertaDeAlLado`, que arrastra el mismo
+problema). Medir: que los `no consigue entrar al bancal` bajen de 5 a 0 y que el bancal se coseche (que es lo que el
+jugador pidió: *"revisa TODA la parcela y cosecha TODAS las que ya están maduras"*).
 
 ### 3. El pico, cuando se rompe
 
