@@ -28,40 +28,64 @@ como `Exception stopping the server … serverlevel2 is null` y un log que no cu
 
 ## Lo que está PENDIENTE (en este orden, como pidió el jugador)
 
-### 1. La CASETA DEL MINERO no se alcanza desde fuera (y el minero se queda en "Volviendo a la caseta")
+### 1. La MINA ya funciona de punta a punta (medido) — y el fantasma de la "caseta inalcanzable" NO era eso
 
-Medido, con dos orígenes distintos:
+Estado medido en la última corrida (`TOPE=SI` incluido): el minero **baja, cava 16 pasos (16 → 32), se topa con el
+acuífero, sella, cierra la mina con su piedra labrada y SUBE a entregar** — acabó en `516,63,663` con la etiqueta
+`Guardo 18 de lo suyo` y **0 picos rotos** (el viaje al almacén funciona).
+
+**Y el "la caseta no se alcanza" era un fantasma de MI INSTRUMENTO**, cazado con la `SONDA DE LA CASETA` nueva (el
+arnés pregunta al planificador del juego, celda a celda, de fuera adentro):
 
 ```
-desde dentro de la mina (499,54,620):  rutaFaena=[a1=38n alcance=NO fin=503,63,613 dFin=4.00]
-desde el almacén        (515,63,662):  rutaFaena=[a1=43n alcance=NO fin=502,63,622 dFin=7.07]
+[Arnes] SONDA DE LA CASETA t=400 pos=499,54,621 apoyo=503,63,617 puesto=501,63,615
+  503,63,621(air/grass_block)=28n/SI   503,63,620(air/stone_bricks)=29n/SI
+  503,63,619=30n/SI   503,63,618=31n/SI   503,63,617(apoyo)=32n/SI
+  501,63,614(stone_bricks/stone_bricks)=34n/NO fin=501,64,615
 ```
 
-El destino es la **casilla de apoyo de la caseta** (`puntoDeApoyoDeLaCaseta` = el eje `503,63,617`, dentro) y el
-planificador **no llega**: acaba fuera (2 bloques al sur de la puerta en un caso, al norte de la caseta en el otro).
-La caseta **sí tiene** su hueco de puerta de 1x2 (`503,63..64,620`, medido con `slice_mina.py`: el interior
-`502..505,615..619` es aire y la puerta está abierta), y **el modelo SÍ encuentra ruta**:
-`python tools\arnes\ruta_atasco.py 515 662 503 617 63` → **HAY RUTA: 57 pasos**. O sea que el problema **no es el
-mundo** (la caseta y su puerta están bien) **sino el planificador del juego**, que se rinde por el camino: eso es lo
-que hay que medir (¿le falta alcance de búsqueda? ¿el rodeo del anillo del caracol?). Consecuencia: cuando al minero
-le toca el taller (`Fase.TALLER`) o volver, oscila `Bajando a la mina` / `Volviendo a la caseta (encajado)`.
+El **apoyo de la caseta SÍ se alcanza** (32 nodos, entrando por su puerta sur) y el modelo también lo encontraba (57
+pasos). Lo que **nunca** se alcanza es la celda del **`JOB_SITE` = el CORTAPIEDRAS** (`501,63,615`, **un bloque**):
+`reclamarElPuesto` se lo pone al cerebro en la celda del puesto, y el `WorkAtPoi` de vanilla manda al aldeano **a esa
+celda**, que no se puede pisar → el `rutaFaena` que yo medía era **la ruta a un bloque** (`fin=… dFin=4,00/7,07`) y de
+ahí salió el diagnóstico equivocado. Lo que sí provoca es una **pelea**: el goal escribe su destino cada tick y el
+cerebro lo pisa con el del puesto → `mejorDistancia` no baja → `stuckTicks` sube → **"Volviendo a la caseta
+(encajado)"** en bucle.
 
-**Lo que toca**: darle al goal una **casilla de pie a la que SÍ se llegue** para el taller (como se hizo con el
-almacén en I95 y con la ronda en I112/I115) y, si esa casilla no alcanza el horno y la balsa (alcance 3,5), **abrir
-un acceso** a la caseta por el lado que el planificador sí recorra.
+**Lo que toca**: que el puesto de trabajo del cerebro (o el `JOB_SITE`) **sea una casilla que se pise** (la de al lado
+del cortapiedras), sin perder el ticket del POI (que es lo que le da la actividad de trabajar; ver el caso medido del
+herrero en `VillagerSmithGoal`), **o** que el goal no cuente atasco mientras el cerebro vaya a su puesto (el patrón de
+I125, `VillageManager.elCerebroVavaA`) — con cuidado de no quedarse sin el vigilante que hoy lo manda de vuelta a la
+caseta.
 
-### 2. El minero y el pico: cuando se le rompe, ¿va a por otro?
+### 2. Los GRANJEROS con la mata (ahora son los que más se rinden)
 
-Se arregló que **suelte la faena** (`canContinueToUse` con `sin pico`), pero **no está medido** que el viaje al
-almacén termine con un pico en la mano (en la corrida del acuífero se le vio `Cargando material` en `515,63,662`).
-Medir: que el almacén tenga picos (los forja el herrero) y que el minero vuelva con uno.
+En la corrida final, **5 de las 11 rendiciones** son de granjeros (`Hipolito` 3 y `Saturnino` 2) y todas iguales —
+el patrón de **I114** ("a un bloque no se camina"), con el destino siendo **la mata**:
 
-### 3. Atascos sueltos ya apuntados (cuando se pueda)
+```
+no consigue llegar a 448,63,664 desde 449,63,664 (ruta=1 nodos hasta 449,63,664 alcanza=SI;
+    pies=oak_fence_gate cabeza=air suelo=grass_block | destino=wheat encima=air)
+    etiqueta="Hipolito (Granjero) / Entrando a la huerta" cerebro=448,63,664 nav=[sin ruta]
+    goals=[VillagerFarmGoal VillagerGateGoal]
+```
 
-- El **granjero** con la mata de trigo (la mata es un **bloque**: caminar hacia ella da ruta de 1 nodo) — el mismo
-  patrón de I114. Medido en la corrida final: **4 líneas** de `Entrando a la huerta` (3 de Hipolito y 1 de
-  Saturnino), y son **las que más quedan**.
+O sea: el granjero está **metido en la compuerta** (`pies=oak_fence_gate`) a **1 bloque de la mata**, la ruta que le
+da el juego es de **1 nodo** (su propia celda, porque el destino es un bloque de trigo) y se rinde. En el leñador y el
+obrero esto ya está arreglado (se camina a una **casilla de pie**, I114): lo que falta es hacerlo en **la cosecha y la
+siembra del granjero** (y tener en cuenta que el aviso aparca **la mata**, no la entrada).
+
+### 3. El pico, cuando se rompe
+
+Medido que **suelta la faena** (no sigue "picando" en el sitio) y que en la corrida final **no rompió ninguno**
+(`se le ha roto el pico` = 0; y el almacén tenía **0 picos**, así que el herrero no los tiene hechos). Falta medir
+el caso completo: romperlo y ver que **vuelve con otro** (y que el herrero los forje).
+
+### 4. Atascos sueltos ya apuntados (cuando se pueda)
+
 - El aldeano que se queda **sin ruta** fuera del muro (`560,64,587`, `552,63,585`).
+- La **recolectora** aún se rinde 1 vez por corrida (ya no 64): mirar el caso suelto que queda.
+
 
 ## Cómo se mide (comandos, tal cual)
 

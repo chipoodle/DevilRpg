@@ -583,6 +583,41 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
                 DevilRpg.LOGGER.info("[Arnes] SONDA DEL POZO t={} pos={} {}", ticks,
                         v.blockPosition().toShortString(), sonda.toString().trim());
             }
+            // LA SONDA DE LA CASETA (26-sep-2026): el modelo `ruta_atasco.py` SI encuentra ruta desde el almacen
+            // hasta el apoyo de la caseta (57 pasos, entrando por su puerta sur) y el planificador del JUEGO no
+            // (`rutaFaena … alcance=NO`). Esta sonda pregunta celda a celda, de fuera adentro, y para en la primera
+            // que el juego no alcanza: dice si el que se rinde es el mundo (algo tapia) o el planificador.
+            if (ticks % 200 == 0) {
+                BlockPos apoyoCaseta = com.chipoodle.devilrpg.world.VillageGenerator.puntoDeApoyoDeLaCaseta(level, CENTRO);
+                BlockPos puesto = com.chipoodle.devilrpg.world.VillageGenerator.puestoDelMinero(level, CENTRO);
+                StringBuilder sc = new StringBuilder();
+                java.util.List<BlockPos> escala = new java.util.ArrayList<>();
+                escala.add(apoyoCaseta.south(4));
+                escala.add(apoyoCaseta.south(3));
+                escala.add(apoyoCaseta.south(2));
+                escala.add(apoyoCaseta.south(1));
+                escala.add(apoyoCaseta);
+                if (puesto != null) {
+                    escala.add(puesto.north());
+                    escala.add(puesto.west());
+                }
+                for (BlockPos q : escala) {
+                    var cq = v.getNavigation().createPath(q, 0);
+                    boolean ok = cq != null && cq.canReach();
+                    sc.append(q.toShortString()).append('(').append(nombre(level, q.getX(), q.getY(), q.getZ()))
+                            .append('/').append(nombre(level, q.getX(), q.getY() - 1, q.getZ())).append(")=")
+                            .append(cq == null ? "NO(nula)"
+                                    : cq.getNodeCount() + "n/" + (ok ? "SI" : "NO") + " fin="
+                                            + cq.getEndNode().asBlockPos().toShortString())
+                            .append(' ');
+                    if (!ok) {
+                        break;
+                    }
+                }
+                DevilRpg.LOGGER.info("[Arnes] SONDA DE LA CASETA t={} pos={} apoyo={} puesto={} {}", ticks,
+                        v.blockPosition().toShortString(), apoyoCaseta.toShortString(),
+                        puesto == null ? "-" : puesto.toShortString(), sc.toString().trim());
+            }
             DevilRpg.LOGGER.info("[Arnes] MINERO t={} pos={} cara={} dCara={} destino={} pico={}({}/{}) zurron=[{}]"
                             + " goals=[{}] TODOS=[{}] nav=[{}] rutaFaena=[{}] etiqueta={}",
                     ticks, v.blockPosition().toShortString(), cara.toShortString(),

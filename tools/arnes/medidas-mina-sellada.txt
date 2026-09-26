@@ -151,3 +151,36 @@ de la sesion: 1,37). Las que quedan son de granjeros 'Entrando a la huerta' (4).
   desde el almacen        (515,63,662):  rutaFaena=[a1=43n alcance=NO fin=502,63,622 dFin=7.07]
   y el MODELO si encuentra ruta: uta_atasco.py 515 662 503 617 63 -> HAY RUTA: 57 pasos
   (la caseta tiene su puerta 1x2 en 503,63..64,620 y el interior 502..505,615..619 es aire)
+
+=== 9) LA SONDA DE LA CASETA (26-sep-2026) -- y el fantasma del "no se alcanza"
+
+El arnes pregunta al planificador del JUEGO, celda a celda desde fuera hasta el apoyo, y para en la primera que
+no alcanza:
+
+[Arnes] SONDA DE LA CASETA t=400 pos=499,54,621 apoyo=503,63,617 puesto=501,63,615
+  503,63,621(air/grass_block)=28n/SI fin=503,63,621
+  503,63,620(air/stone_bricks)=29n/SI fin=503,63,620        <- la puerta sur
+  503,63,619=30n/SI   503,63,618=31n/SI
+  503,63,617(apoyo)=32n/SI                                   <- EL APOYO SI SE ALCANZA
+  501,63,614(stone_bricks/stone_bricks)=34n/NO fin=501,64,615 <- esa celda es la PARED norte
+
+Y el modelo tambien lo encontraba: uta_atasco.py 515 662 503 617 63 -> HAY RUTA: 57 pasos, entrando por la
+puerta sur (503,63,620) y recto hasta (503,63,617).
+
+CONCLUSION MEDIDA: la caseta y su apoyo SI se alcanzan. Lo que nunca se alcanza es la celda del JOB_SITE = el
+CORTAPIEDRAS (501,63,615, un bloque), que es a donde manda el WorkAtPoi de vanilla; mis utaFaena con
+lcance=NO fin=503,63,613 dFin=4.00 / in=502,63,622 dFin=7.07 medían LA RUTA A UN BLOQUE (el destino que el
+cerebro tenia en ese momento), no a la caseta. Lo que si provoca es la PELEA (el goal escribe su destino cada
+tick y el cerebro lo pisa con el del puesto) -> mejorDistancia no baja -> stuckTicks sube -> "Volviendo a la
+caseta (encajado)".
+
+=== 10) LA MINA, DE PUNTA A PUNTA (corrida final, t=11.720) y lo que queda
+
+[Arnes] MINA t=11720 pasos=32/240 cara=507,46,613 (y=46) bloqueDeLaCara=stone_bricks TOPE=SI
+[Arnes] MINERO t=11720 pos=516,63,663 pico=minecraft:wooden_pickaxe(26/59) etiqueta="... | Guardo 18 de lo suyo"
+picos rotos: 0 · sellos: 4 · topes: 1 · picos en el almacen: 0
+rendiciones: 11 en 11.720 ticks (0,94 por 1.000) · Filomena: 1 (antes 64)
+las que mas quedan: 5 de granjeros "Entrando a la huerta", con el destino en la MATA:
+  no consigue llegar a 448,63,664 desde 449,63,664 (ruta=1 nodos ... alcanza=SI; pies=oak_fence_gate |
+      destino=wheat) etiqueta="Hipolito (Granjero) / Entrando a la huerta" nav=[sin ruta]
+  (el granjero esta METIDO en la compuerta a 1 bloque de la mata -> es el patron de I114)
