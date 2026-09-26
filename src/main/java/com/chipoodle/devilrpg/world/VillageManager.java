@@ -4775,7 +4775,38 @@ public final class VillageManager {
     }
 
     /**
-     * <b>Abre la puerta de valla que tenga al lado</b> (en la celda que se le pasa o en sus cuatro vecinas, o debajo).
+    /**
+     * La casilla donde se CAMINA hacia esa faena (regla de I114): si la celda de la faena ya es una casilla de pie,
+     * ella misma; si no (un tronco, una mata, un animal sobre una valla, la paja...), la casilla de pie mas cercana
+     * de su alrededor. Medido el 26-sep-2026: el planificador NO puede meter al aldeano en una celda que no se pisa
+     * (le devuelve una ruta de un solo punto que no alcanza) y el aldeano empuja hasta rendirse: salio en el ganadero
+     * (Cuidando el ganado) y en el granjero (Abono la huerta, Recogiendo lo que se cayo). Es para CAMINAR: el
+     * objetivo del goal no se toca (hay goals que lo usan para saber que objeto coger).
+     */
+    public static BlockPos casillaDePieCercaDe(ServerLevel level, BlockPos faena) {
+        if (esCeldaDePie(level, faena)) {
+            return faena;
+        }
+        BlockPos mejor = null;
+        double mejorDist = Double.MAX_VALUE;
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dy = -2; dy <= 1; dy++) {
+                for (int dz = -2; dz <= 2; dz++) {
+                    BlockPos p = faena.offset(dx, dy, dz);
+                    if (!esCeldaDePie(level, p)) {
+                        continue;
+                    }
+                    double d = p.distSqr(faena);
+                    if (d < mejorDist) {
+                        mejorDist = d;
+                        mejor = p;
+                    }
+                }
+            }
+        }
+        return mejor != null ? mejor : faena;
+    }
+    /**
      * El juego <b>no deja</b> que un aldeano abra una puerta de valla —y una cerrada <b>no es navegable</b>—, así que
      * el pueblo tiene que abrírsela (<b>la abre el goal de los portones</b>) o se queda encerrado.
      * <p>

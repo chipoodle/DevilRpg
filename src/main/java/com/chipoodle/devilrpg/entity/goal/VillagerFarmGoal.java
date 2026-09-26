@@ -548,7 +548,7 @@ public class VillagerFarmGoal extends Goal {
             // El rumbo se le da POR EL CEREBRO en cada tick (ver VillageManager.caminarHacia): navegando a mano, el
             // cerebro del aldeano lo manda a su puesto, a la plaza o a pasear y se va a otro lado a mitad de camino
             // ("primero da vueltas y se va a otro lado antes de recogerlos").
-            VillageManager.caminarHacia(villager, target, 0.6F);
+            VillageManager.caminarHacia(villager, VillageManager.casillaDePieCercaDe(level, target), 0.6F);
             // ATASCADO = NO ACERCARSE, no "estar andando": contar cada tick mandaba al granjero a empezar de cero cada
             // 6 s (120 ticks) aunque fuera avanzando, así que un viaje a la despensa no lo terminaba NUNCA y se quedaba
             // ciclado ("no sube al kiosco a poner la cosecha").

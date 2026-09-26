@@ -255,3 +255,21 @@ MEDIDO: rendiciones del pueblo 9 -> 5; 'Cuidando el ganado' 3 -> 0; 'Llevando la
 QUEDAN 5 (una corrida): Eufemia (Guardia)/Yendo a entrenar, Onofre (Guardia)/Patrullando la arboleda,
 Saturnino (Granjero)/Abono la huerta, Tomasa (Lenador)/Yendo al arbol, Valeriano (Granjero)/Recogiendo lo que se cayo.
 REPASO DE LA SESION (misma partida y modo): 27 -> 9 (granjero I129 + recolectora I130) -> 5 (ganadero I131).
+
+=== 15) LA CASILLA DE PIE EN EL GRANJERO (26-sep-2026) -- cambiado, y el TOTAL es RUIDO
+
+Los dos avisos del granjero que quedaban (Valeriano 'Recogiendo lo que se cayo' y Saturnino 'Abono la huerta') eran
+del mismo tipo: destino NO pisable y ruta de 1 nodo que no alcanza:
+  no consigue llegar a 497,63,662 desde 450,62,680 (ruta=1 nodos ... alcanza=NO; pies=farmland cabeza=wheat)
+  no consigue llegar a 439,63,679 desde 442,62,680 (ruta=1 nodos ... alcanza=NO; pies=farmland cabeza=wheat)
+Arreglo: el granjero camina con VillageManager.casillaDePieCercaDe (regla I114), igual que el ganadero.
+
+MEDIDO (una corrida): esos dos avisos YA NO SALEN (ni 'Abono la huerta' ni 'Recogiendo lo que se cayo'), pero el
+TOTAL no baja: 10 avisos, todos sueltos y de etiquetas distintas (Lenador 'Llevando la madera' 2, granjeros
+'Guardando lo suyo' 2, guardias 'Patrullando' 3, ganadero 'Recogiendo el corral' 1, 'Buscando recambios' 1).
+
+OJO, SIN DIFUMINAR: el total por corrida es RUIDO (5, 9, 10 en corridas comparables) con una muestra de ~10 avisos,
+asi que de esta corrida NO se puede afirmar que el total baje. Lo que si se afirma: (a) los destinos medidos que no
+se pisaban ya no se persiguen, y (b) la correccion es la regla I114, que es correcta por si misma (el planificador
+no puede meter al aldeano en una celda que no se pisa). Para afirmar una bajada del total hacen falta 3-4 corridas y
+comparar medias, no una.

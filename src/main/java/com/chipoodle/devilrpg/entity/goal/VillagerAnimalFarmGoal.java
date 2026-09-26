@@ -724,13 +724,13 @@ public class VillagerAnimalFarmGoal extends Goal {
                 villager.blockPosition(), target);
         if (porton == null) {
             enElPorton = false; // no hay puerta de por medio (o ya está abierta): se va al destino, y a cruzar
-            return casillaDePieCercaDe(level, target);
+            return VillageManager.casillaDePieCercaDe(level, target);
         }
         double d = Math.sqrt(villager.distanceToSqr(porton.getX() + 0.5D, porton.getY() + 0.5D, porton.getZ() + 0.5D));
         if (d <= ALCANCE_PORTON) {
             enElPorton = true;
         }
-        return enElPorton ? casillaDePieCercaDe(level, target) : porton;
+        return enElPorton ? VillageManager.casillaDePieCercaDe(level, target) : porton;
     }
 
     /**
