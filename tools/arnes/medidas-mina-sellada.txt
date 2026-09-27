@@ -309,3 +309,23 @@ av=[14 nodos ... alcanza] y pies=dark_oak_fence (su celda de los pies tiene una 
     corta: se puede mover).
   * para atacarlo hay que medir lo que NO se ha medido todavia: su VELOCIDAD y su posicion tick a tick mientras
     tiene la ruta buena (¿empuja contra la valla? ¿le tapa el camino un animal?).
+
+=== 18) EL DESATASCO, A LA TERCERA: SI FUNCIONA (26-sep-2026)
+
+Criterio bueno: si la FORMA DE COLISION de la celda de los pies sube POR ENCIMA de los pies del aldeano, esta
+METIDO dentro del bloque; se le saca a la casilla mas cercana donde se pueda estar de pie (pies y cabeza libres y
+el bloque de abajo con forma, sin exigir isSolid).
+
+MEDIDO (corrida):
+  [Village] 3209085d-... estaba METIDO en 510, 63, 667 (dentro de dark_oak_fence): lo saco a 509, 63, 666
+  [Village] 3209085d-... estaba METIDO en 512, 63, 666 (dentro de dark_oak_door):  lo saco a 511, 63, 666
+  -> DOS disparos, los dos REALES (una valla y una puerta del almacen: es exactamente el pies=dark_oak_fence que
+     se habia medido), sin ningun falso positivo y sin spam (freno de 200 ticks).
+  -> y las rendiciones del lenador con 'Llevando la madera' desaparecen de la lista.
+
+Los dos criterios que FALLARON antes, y por que (medido):
+  * esCeldaDePie: exige que el suelo de debajo sea isSolid() y el aldeano ENCIMA de una valla o una placa no lo
+    cumple -> 940 falsos positivos (lo daba por encajado y lo bajaba un bloque, y volvia a subir).
+  * la CAJA del aldeano contra la forma: 0 disparos (una valla es un poste fino en el centro: pegado al borde de la
+    celda, la caja no lo corta).
+La forma contra la ALTURA DE LOS PIES es lo que distingue "dentro" de "encima".

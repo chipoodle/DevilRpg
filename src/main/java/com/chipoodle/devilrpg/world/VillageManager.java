@@ -4775,6 +4775,85 @@ public final class VillageManager {
     }
 
     /**
+    /** Hasta cuando no se le vuelve a intentar un desatasco a ese aldeano. */
+    private static final String DESATASCO_TAG = "DevilRpgDesatascoHasta";
+
+    /**
+     * <b>Si el aldeano esta METIDO DENTRO de un bloque</b> (una valla, una losa, un poste: la forma de colision de la
+     * celda de sus pies sube POR ENCIMA de sus pies), lo saca a la casilla mas cercana donde se pueda estar de pie.
+     * Devuelve true si lo ha sacado.
+     * <p>
+     * <b>EL CRITERIO COSTO DOS INTENTOS MEDIDOS</b> (26-sep-2026):
+     * <ul>
+     *   <li>con {@link #esCeldaDePie} daba <b>940 falsos positivos</b>: ese predicado exige que el suelo de debajo sea
+     *       {@code isSolid()}, y el aldeano que esta <b>de pie ENCIMA de una valla o una placa</b> no lo cumple, asi
+     *       que lo daba por encajado y lo bajaba un bloque... y volvia a subir;</li>
+     *   <li>con la <b>caja</b> del aldeano contra la forma del bloque: <b>0 disparos</b>, porque una valla es un
+     *       <b>poste fino en el centro</b> de la celda y un aldeano pegado al borde no lo corta.</li>
+     * </ul>
+     * Con esto se mide lo que de verdad importa: <b>hasta donde llega la forma del bloque comparada con sus pies</b>.
+     * Y lleva <b>freno</b> (200 ticks por aldeano) para que un criterio equivocado no pueda repetirse en bucle.
+     */
+    public static boolean desatascarSiEstaEncajado(Villager villager) {
+        if (!(villager.level() instanceof ServerLevel level)) {
+            return false;
+        }
+        long ahora = level.getGameTime();
+        CompoundTag datos = villager.getPersistentData();
+        if (datos.getLong(DESATASCO_TAG) > ahora) {
+            return false; // acaba de salir de un desatasco: no se le vuelve a tocar
+        }
+        BlockPos pies = villager.blockPosition();
+        net.minecraft.world.phys.shapes.VoxelShape forma = level.getBlockState(pies).getCollisionShape(level, pies);
+        if (forma.isEmpty()) {
+            return false; // la celda de los pies esta libre: no esta dentro de nada
+        }
+        double sobreElSueloDeLaCelda = villager.getY() - pies.getY();
+        if (forma.max(net.minecraft.core.Direction.Axis.Y) <= sobreElSueloDeLaCelda + 0.05D) {
+            return false; // la forma se queda por debajo de sus pies: esta ENCIMA, no dentro
+        }
+        BlockPos salida = casillaPisableCercaDe(level, pies);
+        if (salida == null) {
+            return false; // no hay donde sacarlo: no se toca
+        }
+        villager.getNavigation().stop();
+        villager.getBrain().eraseMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.WALK_TARGET);
+        villager.getBrain().eraseMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.PATH);
+        villager.teleportTo(salida.getX() + 0.5D, salida.getY(), salida.getZ() + 0.5D);
+        datos.putLong(DESATASCO_TAG, ahora + 200);
+        DevilRpg.LOGGER.info("[Village] {} estaba METIDO en {} (dentro de {}): lo saco a {}", villager.getUUID(),
+                pies.toShortString(), nombreDelBloque(level, pies), salida.toShortString());
+        return true;
+    }
+
+    /**
+     * La casilla mas cercana donde se puede estar de pie: pies y cabeza <b>libres</b> y el bloque de debajo con
+     * <b>forma</b> (no se exige {@code isSolid}: encima de una losa o de tablones tambien se esta de pie).
+     */
+    @Nullable
+    private static BlockPos casillaPisableCercaDe(ServerLevel level, BlockPos desde) {
+        for (int radio = 1; radio <= 3; radio++) {
+            BlockPos mejor = null;
+            double mejorDist = Double.MAX_VALUE;
+            for (BlockPos p : BlockPos.betweenClosed(desde.offset(-radio, -2, -radio), desde.offset(radio, 2, radio))) {
+                if (!level.getBlockState(p).isAir() || !level.getBlockState(p.above()).isAir()) {
+                    continue;
+                }
+                if (level.getBlockState(p.below()).getCollisionShape(level, p.below()).isEmpty()) {
+                    continue;
+                }
+                double d = p.distSqr(desde);
+                if (d < mejorDist) {
+                    mejorDist = d;
+                    mejor = p.immutable();
+                }
+            }
+            if (mejor != null) {
+                return mejor;
+            }
+        }
+        return null;
+    }
     /**
      * La casilla donde se CAMINA hacia esa faena (regla de I114): si la celda de la faena ya es una casilla de pie,
      * ella misma; si no (un tronco, una mata, un animal sobre una valla, la paja...), la casilla de pie mas cercana

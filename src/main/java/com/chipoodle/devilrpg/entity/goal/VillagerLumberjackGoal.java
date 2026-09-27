@@ -344,6 +344,13 @@ public class VillagerLumberjackGoal extends Goal {
             double hastaElPaso = Math.sqrt(villager.distanceToSqr(paso.getX() + 0.5D, paso.getY() + 0.5D,
                     paso.getZ() + 0.5D));
             VillageManager.caminarHacia(villager, paso, VELOCIDAD);
+            // SI ESTA METIDO DENTRO DE UN BLOQUE (medido: un lenador con la ruta BUENA metido en una valla) no se
+            // cuenta atasco: se le saca. Ver `VillageManager.desatascarSiEstaEncajado`.
+            if (VillageManager.desatascarSiEstaEncajado(villager)) {
+                mejorDistancia = Double.MAX_VALUE;
+                stuckTicks = 0;
+                return;
+            }
             // Atascado = NO ACERCARSE (invariante I3).
             if (hastaElPaso < mejorDistancia - 0.5D) {
                 mejorDistancia = hastaElPaso;
