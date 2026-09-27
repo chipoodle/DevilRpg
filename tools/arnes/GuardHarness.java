@@ -231,6 +231,13 @@ public class GuardHarness {
      * pozo está cortado) de "hay camino y no va".
      */
     private static final boolean MEDIR_MINERO = false;
+    /**
+     * <b>MEDIR_PEPITAS = true</b> — LA CADENA DEL HIERRO DE LOS RAIDS (26-sep-2026). Lo pidio el jugador: *"los
+     * guardias, cuando maten zombis que vengan de algun raid del mundo, conseguiran hierro"*. Mide los cuatro
+     * eslabones: (1) que el zombi de raid SUELTE pepitas de hierro (1-2 por `dropCustomDeathLoot`), (2) que alguien
+     * las LEVANTE, (3) que lleguen al ALMACEN y (4) que el HERRERO las gaste en un pico de hierro (27 pepitas).
+     */
+    private static final boolean MEDIR_PEPITAS = false;
     /** Dónde se planta el bicho (relativo a la plaza): dentro del recinto (radio 62) y a la altura del pueblo. */
     private static final BlockPos BICHO_EN = new BlockPos(6, 0, 6);
     private static boolean listo = false;
@@ -332,6 +339,8 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             medirLasHordas(level, pega);
         } else if (MEDIR_ALMACEN_Y_HUEVOS) {
             medirElAlmacenYLosHuevos(level);
+        } else if (MEDIR_PEPITAS) {
+            medirLasPepitas(level, ticks);
         } else if (MEDIR_MINERO) {
             medirElMinero(level);
         } else if (MEDIR_EQUIPO) {
@@ -441,6 +450,94 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         }
         DevilRpg.LOGGER.info("[Arnes] CARBON: {} unidad(es) fuera del almacen (para medir el carbon vegetal del"
                 + " minero)", fuera);
+    }
+
+    /**
+     * <b>LA CADENA DEL HIERRO DE LOS RAIDS</b>, eslabon a eslabon (ver {@link #MEDIR_PEPITAS}). Cada 2.000 ticks:
+     * planta un <b>zombi de raid</b> ({@code AggressiveZombieEntity}, el mismo que trae el asedio) junto a la plaza,
+     * lo mata <b>atribuido a la guardia</b> (como `MEDIR_MILICIA`, para que cuente como matanza suya) y a los 40
+     * ticks cuenta: pepitas EN EL SUELO, pepitas que quedan 200 ticks despues (¿las levanto alguien?), pepitas en el
+     * ALMACEN y picos del almacen. Asi se ve donde se rompe la cadena.
+     */
+    private static void medirLasPepitas(ServerLevel level, long ticks) {
+        level.setDayTime(6000L);
+
+        if (ticks % 2000 == 20) {
+            BlockPos donde = new BlockPos(CENTRO.getX() + 6, com.chipoodle.devilrpg.world.VillageGenerator.spawnY(
+                    level, CENTRO.getX() + 6, CENTRO.getZ() + 6), CENTRO.getZ() + 6);
+            com.chipoodle.devilrpg.entity.AggressiveZombieEntity z =
+                    com.chipoodle.devilrpg.init.ModEntities.AGGRESSIVE_ZOMBIE.get().create(level);
+            if (z == null) {
+                return;
+            }
+            z.moveTo(donde.getX() + 0.5D, donde.getY(), donde.getZ() + 0.5D, 0.0F, 0.0F);
+            z.setVillageCenter(new BlockPos(CENTRO.getX(), donde.getY(), CENTRO.getZ()));
+            level.addFreshEntity(z);
+            pepitasPlantadas = z;
+            DevilRpg.LOGGER.info("[Arnes] PEPITAS t={} planto un zombi de raid en {}", ticks, donde.toShortString());
+            return;
+        }
+        if (ticks % 2000 == 60 && pepitasPlantadas != null && pepitasPlantadas.isAlive()) {
+            // LO MATA LA GUARDIA (atribuido, como en MEDIR_MILICIA): el botin de `dropCustomDeathLoot` sale igual,
+            // pero asi la muerte cuenta como suya, que es lo que pidio el jugador.
+            Villager guardia = aldeanoMasCercano(level, pepitasPlantadas.blockPosition());
+            pepitasPlantadas.hurt(guardia != null ? level.damageSources().mobAttack(guardia)
+                    : level.damageSources().generic(), 1000.0F);
+            return;
+        }
+        if (ticks % 2000 == 100) {
+            DevilRpg.LOGGER.info("[Arnes] PEPITAS t={} EN EL SUELO: {}{}", ticks, pepitasEnElSuelo(level),
+                    pepitasPlantadas != null && pepitasPlantadas.isAlive() ? " (el zombi SIGUE vivo)" : "");
+            return;
+        }
+        if (ticks % 2000 == 300) {
+            DevilRpg.LOGGER.info("[Arnes] PEPITAS t={} 200 ticks despues: en el suelo={} en el ALMACEN={} picos={}",
+                    ticks, pepitasEnElSuelo(level), pepitasEnElAlmacen(level), picosEnElAlmacen(level));
+            pepitasPlantadas = null;
+        }
+    }
+
+    private static com.chipoodle.devilrpg.entity.AggressiveZombieEntity pepitasPlantadas = null;
+
+    /** Cuantas pepitas de hierro hay tiradas por el suelo del pueblo. */
+    private static int pepitasEnElSuelo(ServerLevel level) {
+        int total = 0;
+        for (net.minecraft.world.entity.item.ItemEntity it : level.getEntitiesOfClass(
+                net.minecraft.world.entity.item.ItemEntity.class, new AABB(CENTRO).inflate(80))) {
+            if (it.getItem().is(net.minecraft.world.item.Items.IRON_NUGGET)) {
+                total += it.getItem().getCount();
+            }
+        }
+        return total;
+    }
+
+    /** Cuantas pepitas de hierro hay en el almacen del pueblo. */
+    private static int pepitasEnElAlmacen(ServerLevel level) {
+        net.minecraft.world.Container caja = com.chipoodle.devilrpg.world.VillageStorage.almacen(level, CENTRO);
+        return caja == null ? -1 : com.chipoodle.devilrpg.world.VillagePantry.contar(caja,
+                s -> s.is(net.minecraft.world.item.Items.IRON_NUGGET));
+    }
+
+    /** Cuantos picos hay en el almacen del pueblo (los forja el herrero de herramientas). */
+    private static int picosEnElAlmacen(ServerLevel level) {
+        net.minecraft.world.Container caja = com.chipoodle.devilrpg.world.VillageStorage.almacen(level, CENTRO);
+        return caja == null ? -1 : com.chipoodle.devilrpg.world.VillagePantry.contar(caja,
+                s -> s.getItem() instanceof net.minecraft.world.item.PickaxeItem
+                        || s.is(net.minecraft.world.item.Items.IRON_PICKAXE));
+    }
+
+    /** El aldeano mas cercano a un punto (la muerte se le atribuye a el, como hace `MEDIR_MILICIA`). */
+    private static Villager aldeanoMasCercano(ServerLevel level, BlockPos pos) {
+        Villager mejor = null;
+        double mejorD = Double.MAX_VALUE;
+        for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(pos).inflate(60))) {
+            double d = v.distanceToSqr(pos.getX(), pos.getY(), pos.getZ());
+            if (d < mejorD) {
+                mejorD = d;
+                mejor = v;
+            }
+        }
+        return mejor;
     }
 
     private static void medirElMinero(ServerLevel level) {        level.setDayTime(6000L); // de dia: de noche el minero descansa (estaDescansando)

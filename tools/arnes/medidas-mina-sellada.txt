@@ -349,3 +349,24 @@ Lo que se cambio para cerrar la cadena del pico:
 MEDIDA QUE FALTA (siguiente paso exacto): un modo del arnes que PLANTE un AggressiveZombieEntity y lo mate
 (atribuido a la guardia, como hace MEDIR_MILICIA), y cuente: (a) las pepitas que suelta, (b) que alguien las
 levante, (c) que lleguen al almacen y (d) que el herrero las gaste en un pico. Sin zombi de raid no hay pepitas.
+
+=== 20) LA CADENA DE LAS PEPITAS: MODO NUEVO EN EL ARNES (26-sep-2026)
+
+Modo MEDIR_PEPITAS = true: cada 2.000 ticks planta un AggressiveZombieEntity (el zombi del asedio) junto a la
+plaza, lo mata atribuido al aldeano mas cercano (como hace MEDIR_MILICIA) y cuenta pepitas: en el suelo, en el
+almacen y picos del almacen.
+
+MEDIDO:
+  [Arnes] PEPITAS t=20 planto un zombi de raid en 476, 63, 652
+  [Arnes] PEPITAS t=100 EN EL SUELO: 0
+  [Arnes] PEPITAS t=300 200 ticks despues: en el suelo=0 en el ALMACEN=1 picos=1
+  [Arnes] PEPITAS t=2020 planto un zombi de raid en 476, 63, 652
+  [Arnes] PEPITAS t=2300 200 ticks despues: en el suelo=0 en el ALMACEN=0 picos=1
+  ...
+  -> ESLABON 1 (el zombi suelta pepitas) y ESLABON 2 (alguien las levanta y llegan al ALMACEN) FUNCIONAN: en el
+     almacen aparece 1 pepita a los 200 ticks de la muerte (y n el suelo=0, o sea que YA la habia recogido).
+
+LO QUE FALTA PARA VER EL ESLABON 3 (el herrero gastandolas en un pico): el pico de hierro pide 27 pepitas y cada
+zombi suelta 1-2, asi que hay que ACUMULAR (>=27): para la proxima corrida, plantar uno cada 400 ticks (en vez de
+2.000) y contar pepitas en TODOS los cofres del almacen (hoy VillageStorage.almacen(...) devuelve UNO, y con
+varios cofres la cuenta puede saltar a 0 al moverse de cofre).
