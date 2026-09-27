@@ -275,6 +275,17 @@ muestras de `Picando` con la galería clavada en `hechas=3/24`**.
 caracol), y eso **no cuenta como avance** (`progresoDeLaGaleria` cuenta **solo aire**). Hipótesis a confirmar por
 medida: **la escalera del caracol y el trazado de la galería del paso 32 se pisan**.
 
+**DÓNDE ESTÁ EL CÓDIGO (localizado, para no volver a buscarlo)**:
+`VillagerMinerGoal` — el **destino** de cada paso lo decide `celdaDePieDelCaracol(center, nivel, paso)`
+(líneas **435-437**: usa `VillageGenerator.esLosaDelCaracol(paso)` para saber si se pisa la losa o la celda de
+encima), y la fase **`CAVAR`** (etiqueta `"Picando"`, línea **592**) es la que elige **qué celda se pica**. El marco
+de los postes ya usa la guarda `VillageGenerator.esCeldaDePasoDeLaMina` (línea **1116**).
+
+**EL ARREGLO QUE TOCA** (en la fase `CAVAR`, que es el corazón del minero — no se toca a ciegas): si la celda que va a
+picar **ya es una pieza protegida de la mina** (una losa del caracol, un poste del marco), **no se pica**: se **avanza
+el paso** (o se re-planifica el trazado), en vez de quedarse 17 muestras de `Picando` sobre su propia losa. Hay que
+**leer el bloque de `CAVAR` entero** (~líneas 470-600) antes de tocar: ahí están la secuencia de picado, el sello y el
+avance del paso.
 **Orden de trabajo (el jugador decidió la opción C)**: primero el choque caracol ↔ galería (es el 68 % de su
 tiempo); después **pasar el taller y la balsa al herrero de herramientas** para que el minero **solo mine**. Criterio:
 `hechas` sube de `3/24`, `pasos` sigue creciendo y no baja lo que produce el taller.
