@@ -3979,6 +3979,31 @@ de pie **más cercana** de su alrededor (radio 2)— usado **solo para caminar**
 Patrullando la arboleda`, `Saturnino (Granjero) / Abono la huerta`, `Tomasa (Leñador) / Yendo al arbol` y
 `Valeriano (Granjero) / Recogiendo lo que se cayo`. El repaso de la sesión, con la misma partida y el mismo modo:
 **27 → 9 (granjero + recolectora) → 5 (ganadero)**.
+### I134 · EL QUE MATA, LOOTEA (y así el hierro de los raids llega al herrero)
+
+Lo pidió el jugador: *"vamos por la 2, además así se siente más real el guardia, que es como un jugador que sube de
+experiencia y lootea"*.
+
+**El problema medido** (I133 y medidas 20-22): el zombi de raid **ya soltaba pepitas** y el recolector **ya las
+llevaba al almacén**, pero **no se acumulaban**: caían alrededor del zombi y las que el recolector no alcanzaba
+**desaparecían a los 5 minutos** (6000 ticks), así que el almacén se quedaba en `1` pepita y el herrero nunca llegaba
+a las **27** que pide un pico de hierro (forjaba picos de **madera**).
+
+**El arreglo** (`AggressiveZombieEntity.dropCustomDeathLoot`): **si quien lo mata es un aldeano del pueblo —la
+guardia—, las pepitas van a SU ZURRÓN en el acto**, como cuando un jugador recoge lo que mata. Si no le caben, se
+caen al suelo (nunca se borra nada del pueblo). Ya no hay desaparición por tiempo y el aldeano las baja al almacén en
+su siguiente viaje.
+
+**MEDIDO** (modo `MEDIR_PEPITAS` con un zombi de raid cada 400 ticks y la muerte atribuida al aldeano más cercano):
+
+```
+[Arnes] PEPITAS t=8300 200 ticks después: en el suelo=0 en el ALMACEN=0 picos=2
+[Village] El herrero de herramientas: Forjo un pico de madera
+[Village] El herrero de herramientas: Forjo un pico de hierro     <-- LA CADENA CIERRA
+```
+
+El pico de **hierro** se forja con las pepitas de los raids que la guardia lootea: **eslabones 1, 2 y 3 completos**.
+(Los `en el ALMACEN=0` de los últimos ciclos son porque el herrero **ya se las ha gastado**.)
 ### I133 · EL PICO: LO FORJA EL HERRERO, Y EL HIERRO SON **PEPITAS** DE LOS ZOMBIS DE RAID
 
 Lo pidió el jugador: *"si el pico lo debe construir el herrero"* y *"los guardias, cuando maten zombis que vengan de

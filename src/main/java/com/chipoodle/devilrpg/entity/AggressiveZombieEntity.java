@@ -712,7 +712,20 @@ public class AggressiveZombieEntity extends Zombie {
         super.dropCustomDeathLoot(level, source, hitByPlayer);
         // CHIPS DE METAL: de aquí salen los lingotes que forjan los herreros (9 pepitas = 1 lingote).
         int pepitas = 1 + level.random.nextInt(2);
-        spawnAtLocation(new ItemStack(Items.IRON_NUGGET, pepitas));
+        // EL QUE MATA, LOOTEA (lo pidió el jugador: *"así se siente más real el guardia, que es como un jugador que
+        // sube de experiencia y lootea"*). Si quien lo ha matado es un aldeano del pueblo —la guardia—, las pepitas
+        // van a SU ZURRÓN en el acto, como cuando un jugador recoge lo que mata. Medido el 26-sep-2026: dejándolas en
+        // el suelo, las que el recolector no alcanzaba **desaparecían a los 5 minutos** y el almacén no llegaba a
+        // juntar las 27 que pide un pico de hierro (`en el ALMACEN=1` corrida tras corrida). Si al aldeano no le
+        // caben, se caen al suelo como siempre (nunca se borra nada del pueblo).
+        if (source.getEntity() instanceof Villager asesino && !asesino.isBaby()) {
+            ItemStack sobra = asesino.getInventory().addItem(new ItemStack(Items.IRON_NUGGET, pepitas));
+            if (!sobra.isEmpty()) {
+                spawnAtLocation(sobra);
+            }
+        } else {
+            spawnAtLocation(new ItemStack(Items.IRON_NUGGET, pepitas));
+        }
         if (level.random.nextFloat() < 0.35F) {
             spawnAtLocation(new ItemStack(Items.ROTTEN_FLESH));
         }

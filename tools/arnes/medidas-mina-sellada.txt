@@ -411,3 +411,14 @@ recogida, y hay tres caminos:
   (a) que el zombi de raid suelte MAS pepitas (hoy 1-2);
   (b) que el que las recoja sea QUIEN MATA (la guardia, que esta al lado), no solo el recolector del pueblo;
   (c) bajar lo que pide el pico (hoy 27 pepitas = 3 lingotes, que es lo que dice vanilla).
+
+=== 23) EL QUE MATA, LOOTEA: LA CADENA CIERRA (26-sep-2026)
+
+Arreglo: en AggressiveZombieEntity.dropCustomDeathLoot, si el que mata es un aldeano del pueblo, las pepitas van a
+SU ZURRON (antes al suelo, donde DESAPARECIAN a los 5 min y el almacen no llegaba a 27).
+
+MEDIDO (MEDIR_PEPITAS, un zombi cada 400 ticks, muerte atribuida al aldeano mas cercano):
+  [Arnes] PEPITAS t=8300 200 ticks despues: en el suelo=0 en el ALMACEN=0 picos=2
+  [Village] El herrero de herramientas: Forjo un pico de madera
+  [Village] El herrero de herramientas: Forjo un pico de HIERRO    <-- LA CADENA CIERRA
+Los 'ALMACEN=0' finales son porque el herrero ya se ha gastado las pepitas en el pico.
