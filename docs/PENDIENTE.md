@@ -177,6 +177,30 @@ más cercana) llamado desde el leñador. **Medido: 940 desatascos en una corrida
 estaba. Lo que queda apuntado: el criterio de "encajado" **no puede ser `esCeldaDePie`** (falsos positivos con
 vallas, placas y losas): hay que mirarlo con la **caja de colisión** de la entidad contra el bloque de los pies, o
 exigiendo que **no se haya movido en N ticks**, y **nunca teleportar por sistema**.
+### 6. El PICO al romperse: **sin medir todavía** (receta lista)
+
+El minero ya **suelta la faena** al quedarse sin pico (`canContinueToUse`), pero **no está medido** que vuelva con
+otro: en las corridas de esta sesión **no rompió ninguno** (`se le ha roto el pico` = 0). Hay que **forzar el caso**
+desde el arnés, **dentro de `medirElMinero` y solo ahí** (el mismo ancla `var wt = v.getBrain()...` existe en **6**
+volcados: si se pega en todos, se daña el pico desde 6 sitios a la vez):
+
+```java
+var enMano = v.getMainHandItem();
+if (ticks % 2000 == 0 && !enMano.isEmpty() && (enMano.is(Items.WOODEN_PICKAXE)
+        || enMano.is(Items.STONE_PICKAXE) || enMano.is(Items.IRON_PICKAXE))) {
+    enMano.setDamageValue(Math.max(0, enMano.getMaxDamage() - 1));
+    DevilRpg.LOGGER.info("[Arnes] PICO t={} al borde de romperse ({}/{})", ticks,
+            enMano.getDamageValue(), enMano.getMaxDamage());
+}
+```
+
+**Qué se lee**: `se le ha roto el pico` → suelta la faena → `Yendo al almacen` / `Cargando material` → los **picos
+del almacén** (`ALMACEN DE LA MINA … pico(s)=N`, que los forja el herrero de herramientas) → y en las líneas
+`MINERO` vuelve a salir `pico=minecraft:…` en la mano. Si el almacén no tiene picos, el que hay que mirar es **el
+herrero**, no el minero.
+
+**Y OJO CON EL INSTRUMENTO**: en esta sesión lancé esa corrida con `MEDIR_MINERO = false` y la medida salió en blanco
+(`al borde: 0`): **comprobar que el modo está encendido en la copia del arnés** antes de lanzar.
 ### 7. Atascos sueltos ya apuntados (cuando se pueda)
 
 - El aldeano que se queda **sin ruta** fuera del muro (`560,64,587`, `552,63,585`).
