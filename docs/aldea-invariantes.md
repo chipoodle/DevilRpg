@@ -3979,6 +3979,32 @@ de pie **más cercana** de su alrededor (radio 2)— usado **solo para caminar**
 Patrullando la arboleda`, `Saturnino (Granjero) / Abono la huerta`, `Tomasa (Leñador) / Yendo al arbol` y
 `Valeriano (Granjero) / Recogiendo lo que se cayo`. El repaso de la sesión, con la misma partida y el mismo modo:
 **27 → 9 (granjero + recolectora) → 5 (ganadero)**.
+### I133 · EL PICO: LO FORJA EL HERRERO, Y EL HIERRO SON **PEPITAS** DE LOS ZOMBIS DE RAID
+
+Lo pidió el jugador: *"si el pico lo debe construir el herrero"* y *"los guardias, cuando maten zombis que vengan de
+algún raid del mundo, conseguirán hierro; y que los zombis de raid suelten **pepitas** de hierro, no lingotes"*.
+
+**Lo que ya estaba bien (medido)**: el zombi de raid **ya suelta pepitas**
+(`AggressiveZombieEntity.dropCustomDeathLoot`: 1-2 `IRON_NUGGET`), y el minero **detecta la rotura del pico y va a
+por otro** (`El minero: se le ha roto el pico (59 usos): va a por otro al almacen`). El eslabón roto era el
+**herrero**: `recetaDePico` pedía **3 `IRON_INGOT`** y el almacén tenía **0 lingotes** (y el recolector **no recogía
+las pepitas**: no estaban en su lista blanca), así que **no había pico nunca**.
+
+**Los dos cambios**:
+1. **`VillagerCollectGoal.esDelPueblo`**: se añade **`Items.IRON_NUGGET`** — el recolector recoge las pepitas del
+   suelo (antes se quedaban tiradas y el herrero no las veía nunca).
+2. **`VillagerSmithGoal.recetaDePico`**: si **no hay 3 lingotes** pero hay **27 pepitas** (vanilla: 9 pepitas = 1
+   lingote), forja el **pico de hierro con pepitas**. El pico se sigue pidiendo **de mejor a peor**
+   (diamante → hierro → piedra → madera) y con el **objetivo de 2 picos** ya existente (`OBJETIVO_PICOS`).
+
+**MEDIDO** (modo `MEDIR_MINERO`, con el pico forzado a romperse cada 2.000 ticks): el minero rompe el pico **5
+veces** y el herrero **forja picos** (`El herrero de herramientas: Forjo un pico de madera` ×3), que el minero se
+lleva (por eso el almacén marca `0 pico(s)`: el que los necesita es él).
+
+**Y lo que FALTA medir**: las **pepitas** salen solo de los **zombis de raid**, y en `MEDIR_MINERO` (que **barre los
+bichos**) **no muere ninguno**: hubo `0` pepitas. Hace falta un modo del arnés que **plante un
+`AggressiveZombieEntity`** y lo mate atribuido a la guardia (como `MEDIR_MILICIA`) para medir la cadena entera:
+pepitas → alguien las levanta → almacén → el herrero las gasta en un pico.
 ### I132 · LA MINA **ATRAVIESA** EL AGUA (aísla, seca y sigue bajando) — cambia I127
 
 El jugador corrigió el criterio que yo tenía: *"¿quién te dijo que debe cerrarse una mina cuando hay agua? Lo que debe

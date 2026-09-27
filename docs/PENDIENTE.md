@@ -224,11 +224,16 @@ herrero**, no el minero.
    (cáscara 3×3×3 de adoquín: sella también el agua de delante, así el túnel avanza por celdas secas), **seca** la
    celda (queda de aire, transitable) y **sigue bajando**. Medido: `1:air 2:air 3:air`, `hechas=3/24` (antes clavado
    en `0/24`) y **`TOPE=NO`** (antes `TOPE=SI`, la mina se cerraba).
-2. **Que el pico lo haga el HERRERO** — **pendiente**: hoy el almacén tiene `0 pico(s)` y `0 lingote(s)`; la rotura
-   del pico se detecta bien (medido: `se le ha roto el pico (59 usos): va a por otro al almacen`) pero **no hay de
-   dónde sacarlo**. Toca que el **herrero de herramientas** forje picos y que el almacén mantenga **uno de reserva**
-   para el minero (`VillageStorage.asegurarElPicoDelMinero` hoy le da **uno** al construir la mina, y nunca más).
-3. **Hierro de los zombis de los raids** — **pendiente**: el jugador dice que los guardias, al matar zombis que
+2. **Que el pico lo haga el HERRERO** — **HECHO y MEDIDO (el pico, sí; las pepitas, falta la medida)**:
+   el herrero de herramientas **forja picos** (medido: `Forjo un pico de madera` x3 y el minero los repone tras **5
+   roturas**). Y para que el eslabón del **hierro** no se quede en nada se han hecho dos cambios:
+   **(a)** el **recolector** recoge las **pepitas de hierro** del suelo (`esDelPueblo` no las tenía: se quedaban
+   tiradas); **(b)** el **pico de hierro se puede forjar con 27 pepitas** cuando no hay 3 lingotes (vanilla: 9 pepitas
+   = 1 lingote). Antes exigía 3 `IRON_INGOT` y con `0 lingote(s)` **no había pico nunca**.
+   **Lo que falta medir**: las **pepitas** no salen en el modo `MEDIR_MINERO` porque **no muere ningún zombi de raid**
+   (el arnés barre los bichos). Receta: un modo que **plante un `AggressiveZombieEntity`** y lo mate atribuido a la
+   guardia (como hace `MEDIR_MILICIA`) y cuente: (a) las pepitas que suelta, (b) que alguien las levante, (c) que
+   lleguen al almacén y (d) que el herrero las gaste en un pico.3. **Hierro de los zombis de los raids** — **pendiente**: el jugador dice que los guardias, al matar zombis que
    vengan de un **raid del mundo**, conseguirán **hierro**; ese hierro es el que tiene que llegar al herrero para los
    picos. Hay que medir: (a) que el zombi de raid **suelte hierro** (o que se le añada al botín), (b) que el
    **recolector/guardia lo levante**, (c) que acabe en el **almacén**, y (d) que el herrero lo use.
