@@ -263,6 +263,27 @@ ticks). Es el sitio por donde hay que empezar: leer su aviso con `cerebro=`, `na
 el patrón de "no puedo entrar/salir de un recinto" o "la celda no se pisa"), y **medir con
 `python tools/arnes/rendiciones.py --etiquetas`**: el criterio de éxito es que esas 16 bajen a 0.
 
+### 6d. La mina YA BAJA (medido); lo que falta es que el minero no se quede en el TALLER
+
+**MEDIDO** (corrida larga, `MEDIR_MINERO`): la mina **desciende** —la parte del encargo que faltaba—:
+
+| t | pasos | la cara | profundidad |
+|---|---|---|---|
+| 40 | 16/240 | 499,54,621 | 8 por debajo del suelo |
+| 1.320 | 17 | 499,53,620 | 9 |
+| 2.600 | 19 | 499,52,618 | 10 |
+| 3.880 | 21 | 499,51,616 | 11 |
+| 5.160 | 24 | 499,50,613 | 12 |
+| 6.440 | 32 | 507,46,613 | **16** |
+
+Con **`TOPE=NO`** y **0 cierres**: el agua ya no la para (I132) y la escalera del caracol funciona (**16 piezas** de
+caracol colocadas). Eso es lo que pediste: *"seguir minando para abajo … y construir escaleras para llegar al fondo"*.
+
+**Y lo que se ve después, que es el siguiente arreglo**: de t=6.440 a t=10.080 (unos **3.600 ticks**, 3 minutos) se
+queda en `pasos=32` con la galería en **`hechas=3/24`**, y **no está atascado**: está **en el taller**, midiendo
+`50` líneas de "deja lo sacado / guardo" y `cuela 4 adoquines en la balsa y saca un pedernal` repetido. O sea: **la
+faena del taller le come el tiempo de la galería**. Toca decidir el orden (la galería manda) o **ponerle un tope a los
+viajes al taller** — y medirlo con el mismo instrumento: que `hechas` suba de 3/24 y que `pasos` siga creciendo.
 ### 7. Atascos sueltos ya apuntados (cuando se pueda)
 
 - El aldeano que se queda **sin ruta** fuera del muro (`560,64,587`, `552,63,585`).

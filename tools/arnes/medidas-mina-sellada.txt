@@ -475,3 +475,22 @@ MEDIDO con tools/arnes/rendiciones.py --etiquetas:
   ANTES : Yendo a la taberna = 16 ; corrida 24 rend / 10800 ticks = 2.73 por 1.000
   DESPUES: Yendo a la taberna =  0 ; corrida  3 rend /  8400 ticks = 0.47 por 1.000
            (queda: Yendo al arbol 1, Cosechando 1, Patrullando el corral 1)
+
+=== 27) LA MINA BAJA (medido) Y EL MINERO SE QUEDA EN EL TALLER (26-sep-2026)
+
+Trayectoria medida (corrida larga, MEDIR_MINERO): la mina DESCIENDE, que era la parte que faltaba del encargo:
+  t=40    pasos=16/240  cara=499,54,621  (8 bloques por debajo del suelo)  TOPE=NO
+  t=1320  pasos=17      cara=499,53,620  (9)
+  t=2600  pasos=19      cara=499,52,618  (10)
+  t=3880  pasos=21      cara=499,51,616  (11)
+  t=5160  pasos=24      cara=499,50,613  (12)
+  t=6440  pasos=32      cara=507,46,613  (16)   <-- la galeria del paso 32
+  t=10080 pasos=32      cara=507,46,613  (16)   <-- 3.600 ticks SIN BAJAR MAS
+TOPE=0 · aisla agua=1 · galeria=6 · caracol=16 (la escalera del caracol funciona).
+
+Y el porque del estancamiento, medido: NO esta atascado, esta EN EL TALLER:
+  [Village] El minero: faena: En el taller (En el taller -> 503, 63, 617)
+  [Village] El minero: cuela 4 adoquines en la balsa y saca un pedernal   (x4 en el ultimo tramo)
+  50 lineas de 'deja lo sacado / guardo' en esa ventana, con GALERIA hechas=3/24 y 0 lineas de 'la mina esta tapada'.
+-> la faena del taller le come el tiempo de la galeria. Siguiente arreglo: que la galeria mande, o tope a los viajes
+   al taller; criterio de exito: hechas sube de 3/24 y pasos sigue creciendo.
