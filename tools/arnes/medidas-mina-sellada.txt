@@ -292,3 +292,20 @@ RETIRADO (regla del proyecto): el arbol queda como estaba. Lo que deja apuntado 
 criterio de "encajado" NO puede ser esCeldaDePie (da falsos positivos con vallas, placas y losas); hay que
 comprobarlo con la CAJA DE COLISION de la entidad contra el bloque de los pies (o exigir que el aldeano NO se haya
 movido en N ticks), y nunca teleportar por sistema.
+
+=== 17) EL DESATASCO CON CAJA DE COLISION: MEDIDO Y RETIRADO TAMBIEN (26-sep-2026)
+
+Segundo intento para el lenador encajado, con el criterio corregido: en vez de esCeldaDePie, se mira si la CAJA de
+colision del aldeano corta la forma de un bloque (que es lo que significa "metido dentro"), con freno de 200 ticks.
+
+MEDIDO: disparo **0 veces** en una corrida (ni un falso positivo: el criterio es BUENO) pero tampoco caza el caso:
+el lenador NO esta encajado de verdad -- su caja no corta la valla, solo pasa por su celda. Y las rendiciones
+salieron 12, con 'Tomasa (Lenador) / Llevando la madera' x4, o sea que el caso sigue ahi.
+
+RETIRADO (regla del proyecto: lo que no arregla, se quita). Lo que deja medido y apuntado:
+  * el caso del lenador NO es "encajado": es el de I119/I122 ("la ruta alcanza y el aldeano no se mueve"), con
+    
+av=[14 nodos ... alcanza] y pies=dark_oak_fence (su celda de los pies tiene una valla, pero su caja no la
+    corta: se puede mover).
+  * para atacarlo hay que medir lo que NO se ha medido todavia: su VELOCIDAD y su posicion tick a tick mientras
+    tiene la ruta buena (¿empuja contra la valla? ¿le tapa el camino un animal?).

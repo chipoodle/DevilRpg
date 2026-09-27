@@ -134,7 +134,19 @@ goal detecte que está encajada** (la celda de los pies no es una casilla de pie
 almacén, **dé un paso de desatasco** (o se teletransporte 1 bloque si el juego no la deja salir).
 
 
-### 5. El LEÑADOR encajado: **intento MEDIDO y RETIRADO** (el criterio estaba mal)
+### 5. El LEÑADOR: **dos intentos MEDIDOS y RETIRADOS** (y ya se sabe lo que NO es)
+
+1. **Con `esCeldaDePie`**: 940 falsos positivos (daba por encajado a quien estaba de pie **sobre una valla**) y las
+   rendiciones subieron a 18 → retirado.
+2. **Con la CAJA DE COLISIÓN** (el criterio correcto para "metido dentro", con freno de 200 ticks): disparó **0
+   veces** —ni un falso positivo— pero **tampoco caza el caso**, y las rendiciones quedaron en 12 con
+   `Tomasa (Leñador) / Llevando la madera` **x4** → retirado.
+
+**Lo que esto deja MEDIDO**: el leñador **no está encajado** (su caja no corta la valla, solo pasa por su celda) y
+tiene la ruta **buena** (`nav=[14 nodos … alcanza]`): es el caso de **I119/I122** ("la ruta alcanza y el aldeano no
+se mueve"). Para atacarlo hay que medir lo que **aún no se ha medido**: su **velocidad y posición tick a tick**
+mientras tiene esa ruta buena (¿empuja contra la valla? ¿le tapa el paso un animal?).
+
 
 Se probó un desatasco automático (`desatascarSiEstaEncajado`: si los pies no son una casilla de pie, sacarlo a la
 más cercana) llamado desde el leñador. **Medido: 940 desatascos en una corrida** —teleportaba aldeanos que estaban
