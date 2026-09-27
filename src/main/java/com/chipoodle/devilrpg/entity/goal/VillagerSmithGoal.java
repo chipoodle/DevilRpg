@@ -718,6 +718,18 @@ public class VillagerSmithGoal extends Goal {
             if (deEseNivelOMejor >= OBJETIVO_PICOS) {
                 continue; // ya hay picos de ese nivel (o mejores): no hace falta forjar más
             }
+            // EL HIERRO DE LOS RAIDS (26-sep-2026): los zombis de raid sueltan PEPITAS de hierro (1-2 cada uno), no
+            // lingotes, asi que el almacen se quedaba SIN lingotes y el minero sin pico (medido: `0 pico(s)` y
+            // `0 lingote(s)` con el pico roto 4 veces). Vanilla: 9 pepitas = 1 lingote, o sea que un pico de hierro
+            // (3 lingotes) tambien se puede forjar con 27 pepitas.
+            if (i == 1 && contar(almacen, Items.IRON_INGOT) < 3 && contar(almacen, Items.IRON_NUGGET) >= 9 * 3) {
+                if (palos < PALOS_POR_PICO) {
+                    continue;
+                }
+                return new Receta("Forjando", "Forjo un pico de hierro con pepitas",
+                        List.of(new ItemStack(Items.IRON_NUGGET, 27), new ItemStack(Items.STICK, PALOS_POR_PICO)),
+                        new ItemStack(Items.IRON_PICKAXE));
+            }
             if (palos < PALOS_POR_PICO || contar(almacen, materiales[i]) < 3) {
                 continue; // sin material para éste: se prueba el siguiente (más barato)
             }

@@ -483,7 +483,7 @@ public class VillagerCollectGoal extends Goal {
                 // guardado del jugador (aldea 0): el almacén con 355 troncos y 30 palos, **ni un pedernal, ni una
                 // pluma, ni una flecha**, y los tres arqueros de la milicia con **2, 0 y 0 flechas** en el zurrón.
                 || s.is(Items.FLINT) || s.is(Items.ARROW)
-                || s.is(Items.COAL) || s.is(Items.CHARCOAL) || s.is(Items.IRON_INGOT) || s.is(Items.COPPER_INGOT)
+                || s.is(Items.COAL) || s.is(Items.CHARCOAL) || s.is(Items.IRON_INGOT) || s.is(Items.IRON_NUGGET) || s.is(Items.COPPER_INGOT)
                 || s.is(Items.GOLD_INGOT) || s.is(Items.CARROT) || s.is(Items.POTATO)
                 // EL BETABEL TAMBIÉN: faltaba, y no es un descuido menor —el juego solo deja que un aldeano recoja
                 // BETABEL_SEMILLAS, no el betabel—, así que un betabel que caía al suelo no lo cogía NADIE: ni el

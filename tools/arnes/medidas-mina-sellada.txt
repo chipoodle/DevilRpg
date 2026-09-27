@@ -329,3 +329,23 @@ Los dos criterios que FALLARON antes, y por que (medido):
   * la CAJA del aldeano contra la forma: 0 disparos (una valla es un poste fino en el centro: pegado al borde de la
     celda, la caja no lo corta).
 La forma contra la ALTURA DE LOS PIES es lo que distingue "dentro" de "encima".
+
+=== 19) EL HERRERO Y LAS PEPITAS (26-sep-2026)
+
+MEDIDO en el arnes (modo MEDIR_MINERO, con el pico forzado a romperse cada 2.000 ticks):
+  * el minero rompio el pico 5 veces y el herrero de herramientas FORJO picos:
+      [Village] El herrero de herramientas: Forjo un pico de madera   (x3)
+  * el almacen: '2 adoquin, 0 carbon, 0 lingote(s), 0 crudo(s), 6 pedernal, 0 pico(s)' -> 0 picos porque el
+    minero se los lleva en cuanto se forjan (es el que los necesita).
+  * PEPITAS DE HIERRO: 0 en toda la corrida. NO es un fallo del arreglo: es que en ese modo del arnes (que BARRE
+    los bichos) no muere ningun zombi de raid, y las pepitas solo salen de ahi
+    (AggressiveZombieEntity.dropCustomDeathLoot -> 1-2 IRON_NUGGET).
+
+Lo que se cambio para cerrar la cadena del pico:
+  1. VillagerCollectGoal.esDelPueblo: + Items.IRON_NUGGET (el recolector recoge las pepitas del suelo).
+  2. VillagerSmithGoal.recetaDePico: si no hay 3 lingotes pero SI 27 pepitas (9 pepitas = 1 lingote, vanilla), el
+     pico de hierro se forja con pepitas. Antes exigia 3 IRON_INGOT y con 0 lingotes no habia pico nunca.
+
+MEDIDA QUE FALTA (siguiente paso exacto): un modo del arnes que PLANTE un AggressiveZombieEntity y lo mate
+(atribuido a la guardia, como hace MEDIR_MILICIA), y cuente: (a) las pepitas que suelta, (b) que alguien las
+levante, (c) que lleguen al almacen y (d) que el herrero las gaste en un pico. Sin zombi de raid no hay pepitas.
