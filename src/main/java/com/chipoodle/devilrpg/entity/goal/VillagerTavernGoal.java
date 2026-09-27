@@ -142,7 +142,13 @@ public class VillagerTavernGoal extends Goal {
         double distancia = Math.sqrt(villager.distanceToSqr(destino.getX() + 0.5D, destino.getY() + 0.5D,
                 destino.getZ() + 0.5D));
         if (distancia > REACH && espera == 0) {
-            VillageManager.caminarHacia(villager, destino, VELOCIDAD);
+            // SE CAMINA A UNA CASILLA DE PIE, no a la mesa (regla de I114, la que arregló al ganadero en I131): la
+            // celda de la mesa puede no ser pisable —o estar un nivel más arriba— y entonces el planificador devuelve
+            // una ruta de UN nodo que no alcanza y el aldeano empuja hasta rendirse. MEDIDO (26-sep-2026): con la
+            // recolectora ya libre de los bancales (I130), "Filomena / Yendo a la taberna" se rindió **16 veces en una
+            // corrida** —dos tercios del total de esa corrida— con `ruta=1 nodos … alcanza=NO` al destino `516,64,639`
+            // desde `516,63,641` (dos bloques y un nivel de diferencia).
+            VillageManager.caminarHacia(villager, VillageManager.casillaDePieCercaDe(level, destino), VELOCIDAD);
             VillageManager.ponerActividad(villager, "Yendo a la taberna");
             if (distancia < mejorDistancia - 0.5D) {
                 mejorDistancia = distancia;

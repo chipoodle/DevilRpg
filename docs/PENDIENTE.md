@@ -238,7 +238,23 @@ herrero**, no el minero.
    picos. Hay que medir: (a) que el zombi de raid **suelte hierro** (o que se le añada al botín), (b) que el
    **recolector/guardia lo levante**, (c) que acabe en el **almacén**, y (d) que el herrero lo use.
 
-### 6c. La RECOLECTORA en la TABERNA (16 rendiciones: el atasco más grande que queda, medido)
+### 6c. La RECOLECTORA en la TABERNA: **ARREGLADA y MEDIDA** (16 → 0)
+
+El atasco más grande que quedaba. **Causa medida**: `VillagerTavernGoal` caminaba a la **celda de la mesa** con el
+caminar de tolerancia 1, y esa celda **no es pisable / está un nivel más arriba**, así que el planificador devolvía
+`ruta=1 nodos … alcanza=NO` y el aldeano empujaba hasta rendirse (`destino 516,64,639 desde 516,63,641`). Es la regla
+de **I114/I131**: **se camina a una casilla de pie**.
+
+**Arreglo**: `VillagerManager.casillaDePieCercaDe(level, mesa)` en el caminar de `VillagerTavernGoal`.
+
+**MEDIDO** (con `python tools/arnes/rendiciones.py --etiquetas`):
+
+| | antes | después |
+|---|---|---|
+| `Yendo a la taberna` | **16** | **0** |
+| rendiciones de la corrida | 24 en 10.800 ticks (**2,73**/1.000) | **3** en 8.400 ticks (**0,47**/1.000) |
+| lo que queda | — | 3 casos sueltos: `Yendo al arbol` 1, `Cosechando` 1, `Patrullando el corral` 1 |
+
 
 Al medir por tasa y desglosar por etiqueta (I135) salió el atasco **más grande que queda**, y es **nuevo**: al dejar de
 quedarse encerrada en los bancales (I130), **Filomena llega a la taberna** y ahí se rinde:

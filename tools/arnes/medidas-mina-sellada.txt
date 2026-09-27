@@ -464,3 +464,14 @@ CONCLUSION: la corrida mas "mala" de la sesion NO era la mina: era la recolector
 atasco NUEVO que aparecio porque el arreglo de I130 dejo de encerrarla en los bancales y ahora llega a la taberna.
 El ruido escondia un efecto colateral real. Siguiente pendiente con nombre y numero (apartado 6c del traspaso):
 ese, y el criterio de exito es que esas 16 bajen a 0.
+
+=== 26) LA TABERNA, ARREGLADA Y MEDIDA (26-sep-2026)
+
+Causa: VillagerTavernGoal caminaba a la CELDA DE LA MESA con tolerancia 1 y esa celda no es pisable (o esta un nivel
+mas arriba) -> ruta=1 nodos ... alcanza=NO -> 16 rendiciones en una corrida.
+Arreglo: caminar a VillageManager.casillaDePieCercaDe(level, mesa)  (regla I114/I131).
+
+MEDIDO con tools/arnes/rendiciones.py --etiquetas:
+  ANTES : Yendo a la taberna = 16 ; corrida 24 rend / 10800 ticks = 2.73 por 1.000
+  DESPUES: Yendo a la taberna =  0 ; corrida  3 rend /  8400 ticks = 0.47 por 1.000
+           (queda: Yendo al arbol 1, Cosechando 1, Patrullando el corral 1)
