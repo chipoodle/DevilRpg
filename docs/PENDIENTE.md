@@ -134,7 +134,29 @@ goal detecte que está encajada** (la celda de los pies no es una casilla de pie
 almacén, **dé un paso de desatasco** (o se teletransporte 1 bloque si el juego no la deja salir).
 
 
-### 5. El LEÑADOR: **dos intentos MEDIDOS y RETIRADOS** (y ya se sabe lo que NO es)
+### 5. El LEÑADOR metido en un bloque: **ARREGLADO y MEDIDO** (a la tercera)
+
+El caso que se midió era: ruta **buena** al almacén (`nav=[14 nodos … alcanza]`) y aun así se rendía con
+`pies=dark_oak_fence`, o sea **con los pies dentro de una valla**. Dos criterios fallaron antes (los dos retirados):
+
+| criterio | medido |
+|---|---|
+| `esCeldaDePie` | **940 falsos positivos**: exige suelo `isSolid()` y quien está **de pie encima** de una valla o una placa no lo cumple → lo daba por encajado y lo bajaba un bloque (y volvía a subir) |
+| la **caja** del aldeano contra la forma | **0 disparos**: una valla es un **poste fino en el centro** de la celda y pegado al borde la caja no lo corta |
+
+**El criterio bueno**: comparar la **forma de colisión** de la celda de los pies con la **altura de los pies** del
+aldeano —si la forma sube por encima de sus pies, está **DENTRO** del bloque— y sacarlo a la casilla más cercana
+donde se pueda estar de pie (pies y cabeza libres y el bloque de abajo con forma, sin exigir `isSolid`), con **freno
+de 200 ticks** por aldeano. **MEDIDO**: 2 desatascos, los dos **reales**, sin un solo falso positivo:
+
+```
+estaba METIDO en 510,63,667 (dentro de dark_oak_fence): lo saco a 509,63,666
+estaba METIDO en 512,63,666 (dentro de dark_oak_door):  lo saco a 511,63,666
+```
+
+y **`Tomasa (Leñador) / Llevando la madera` desaparece** de los avisos. Está en `VillageManager.desatascarSiEstaEncajado`
+y se llama desde el leñador (los demás goals pueden usarlo igual: es un ayudante compartido).
+
 
 1. **Con `esCeldaDePie`**: 940 falsos positivos (daba por encajado a quien estaba de pie **sobre una valla**) y las
    rendiciones subieron a 18 → retirado.
