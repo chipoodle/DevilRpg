@@ -177,7 +177,24 @@ más cercana) llamado desde el leñador. **Medido: 940 desatascos en una corrida
 estaba. Lo que queda apuntado: el criterio de "encajado" **no puede ser `esCeldaDePie`** (falsos positivos con
 vallas, placas y losas): hay que mirarlo con la **caja de colisión** de la entidad contra el bloque de los pies, o
 exigiendo que **no se haya movido en N ticks**, y **nunca teleportar por sistema**.
-### 6. El PICO al romperse: **sin medir todavía** (receta lista)
+### 6. El PICO al romperse: **MEDIDO — el minero hace lo correcto; el que falla es el HERRERO**
+
+Con la receta del arnés (dejar el pico al borde cada 2.000 ticks) **medido** en una corrida: el pico se rompió
+**4 veces** y las cuatro el mod hizo lo que tiene que hacer:
+
+```
+[Arnes] PICO t=2000 al borde de romperse (58/59)
+[Village] El minero: se le ha roto el pico (59 usos): va a por otro al almacen
+```
+
+**Pero el almacén no tiene de dónde darlo**: `ALMACEN DE LA MINA t=9000: 2 adoquin, 0 carbon, 0 lingote(s),
+0 crudo(s), 6 pedernal, 0 pico(s)`. O sea que el eslabón roto es **el herrero de herramientas** (no forja picos) y,
+detrás, **el hierro**: no hay lingotes **ni mineral crudo**, porque la mina de esta partida **se cerró en el
+acuífero** (I127) y el hierro salía de ahí. Lo que toca medir ahora: si el herrero **tiene con qué** (hierro en el
+almacén) y, si no lo tiene, **de dónde debería salir** (¿la mina se cierra demasiado pronto? ¿falta reserva de
+picos?). Y una pieza de diseño que sale de aquí: **el almacén debería tener SIEMPRE un pico de reserva para el
+minero** (hoy `VillageStorage.asegurarElPicoDelMinero` le da **uno** al construir la mina y nunca más).
+
 
 El minero ya **suelta la faena** al quedarse sin pico (`canContinueToUse`), pero **no está medido** que vuelva con
 otro: en las corridas de esta sesión **no rompió ninguno** (`se le ha roto el pico` = 0). Hay que **forzar el caso**

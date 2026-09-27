@@ -618,7 +618,16 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
                         v.blockPosition().toShortString(), apoyoCaseta.toShortString(),
                         puesto == null ? "-" : puesto.toShortString(), sc.toString().trim());
             }
-            DevilRpg.LOGGER.info("[Arnes] MINERO t={} pos={} cara={} dCara={} destino={} pico={}({}/{}) zurron=[{}]"
+            // MEDIDA DEL PICO (26-sep-2026): se le deja al borde de romperse cada 2.000 ticks para medir que, al
+            // romperse, SUELTA la faena, va al almacen y VUELVE con otro (los forja el herrero de herramientas).
+            var enMano = v.getMainHandItem();
+            if (ticks % 2000 == 0 && !enMano.isEmpty() && (enMano.is(net.minecraft.world.item.Items.WOODEN_PICKAXE)
+                    || enMano.is(net.minecraft.world.item.Items.STONE_PICKAXE)
+                    || enMano.is(net.minecraft.world.item.Items.IRON_PICKAXE))) {
+                enMano.setDamageValue(Math.max(0, enMano.getMaxDamage() - 1));
+                DevilRpg.LOGGER.info("[Arnes] PICO t={} al borde de romperse ({}/{})", ticks,
+                        enMano.getDamageValue(), enMano.getMaxDamage());
+            }            DevilRpg.LOGGER.info("[Arnes] MINERO t={} pos={} cara={} dCara={} destino={} pico={}({}/{}) zurron=[{}]"
                             + " goals=[{}] TODOS=[{}] nav=[{}] rutaFaena=[{}] etiqueta={}",
                     ticks, v.blockPosition().toShortString(), cara.toShortString(),
                     fmt(Math.sqrt(v.distanceToSqr(cara.getX() + 0.5D, cara.getY() + 0.5D, cara.getZ() + 0.5D))),
