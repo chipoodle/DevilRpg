@@ -3979,6 +3979,44 @@ de pie **más cercana** de su alrededor (radio 2)— usado **solo para caminar**
 Patrullando la arboleda`, `Saturnino (Granjero) / Abono la huerta`, `Tomasa (Leñador) / Yendo al arbol` y
 `Valeriano (Granjero) / Recogiendo lo que se cayo`. El repaso de la sesión, con la misma partida y el mismo modo:
 **27 → 9 (granjero + recolectora) → 5 (ganadero)**.
+### I135 · EL TOTAL DE RENDICIONES ES RUIDO: SE MIDE POR 1.000 TICKS, EN VENTANA FIJA Y CON MEDIA DE VARIAS CORRIDAS
+
+**El problema.** Comparaba corridas por su **total** de `no consigue llegar` y salían 5, 9, 10, 12, 18… Eso **no es una
+medida**, por dos razones independientes:
+
+1. **Las corridas duran distinto.** Una de 4.000 ticks con 5 rendiciones va **peor** que una de 12.000 con 9: la
+   cuenta buena es **por 1.000 ticks**, no el total. (El reloj sale de la propia línea del arnés, `[Arnes] … t=<ticks>`,
+   que es la única marca fiable del log: ver la trampa de la rotación en `tools/arnes/LEEME.md`.)
+2. **La muestra es pequeña (~10 avisos por corrida).** Con esos números una corrida sola **no distingue una mejora del
+   azar**: hace falta la **media de varias corridas** y el **rango**, no un número suelto.
+
+**La resolución**: `tools/arnes/rendiciones.py`, que mide **rendiciones por 1.000 ticks dentro de una ventana fija**
+(`--desde`/`--hasta`, por defecto 2.000-12.000) y, con varias corridas, da **media, rango y desviación típica**.
+
+**MEDIDO con las corridas de esta sesión** (misma partida, misma copia, mismos modos; cada una es una corrida):
+
+| corrida (estado del código) | ventana | rendiciones | por 1.000 ticks |
+|---|---|---|---|
+| tras I129 (granjero) | 2.000-10.280 | 23 | **2,78** |
+| tras I130 (recolectora) | 2.000-10.080 | 8 | **0,99** |
+| tras I131 (ganadero) | 2.000-9.120 | 3 | **0,42** |
+| tras la casilla de pie del granjero | 2.000-9.280 | 8 | **1,10** |
+| tras el desatasco del aldeano metido | 2.000-4.120 | 2 | **0,94** |
+| tras el pico/pepitas | 2.000-11.160 | 4 | **0,44** |
+| tras I132 (la mina atraviesa el agua) | 2.000-10.800 | 24 | **2,73** |
+| con la sonda del pico | 2.000-9.720 | 7 | **0,91** |
+
+**TANDA de 8 corridas: media 1,29 · rango 0,42-2,78 · desviación típica 0,94.**
+
+**La consecuencia, dicha sin adornos**: la tasa **varía casi 7×** entre corridas comparables, así que **una corrida
+sola no prueba nada** salvo que el cambio sea grande; con 8 corridas, el intervalo de confianza al 95 % es de unas
+±0,7 rendiciones por 1.000 ticks. Por eso **la prueba de un arreglo no es el total**, sino el **criterio concreto**
+que baja a cero (`no consigue entrar al bancal` 5 → 0, `Volviendo a la plaza` 19 → 0, `Cuidando el ganado` 3 → 0,
+`TOPE` sí → no, `pico de hierro` forjado) y, cuando se quiera hablar del total, **la media de 3-4 corridas**.
+
+**Y deja una pregunta abierta, que es justo para lo que sirve la herramienta**: la corrida de I132 (la mina
+atravesando el agua) es **la más alta de la sesión (2,73)** — hay que **mirar sus etiquetas** (`--etiquetas`) para ver
+si el minero, ahora que trabaja mucho más rato, está arrastrando a más aldeanos a rendirse, o si fue una corrida mala.
 ### I134 · EL QUE MATA, LOOTEA (y así el hierro de los raids llega al herrero)
 
 Lo pidió el jugador: *"vamos por la 2, además así se siente más real el guardia, que es como un jugador que sube de

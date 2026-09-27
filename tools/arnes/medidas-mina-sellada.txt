@@ -422,3 +422,26 @@ MEDIDO (MEDIR_PEPITAS, un zombi cada 400 ticks, muerte atribuida al aldeano mas 
   [Village] El herrero de herramientas: Forjo un pico de madera
   [Village] El herrero de herramientas: Forjo un pico de HIERRO    <-- LA CADENA CIERRA
 Los 'ALMACEN=0' finales son porque el herrero ya se ha gastado las pepitas en el pico.
+
+=== 24) EL TOTAL DE RENDICIONES ES RUIDO: PROTOCOLO Y TANDA (26-sep-2026) -- ver I135
+
+Herramienta nueva: tools/arnes/rendiciones.py (rendiciones por 1.000 ticks en ventana fija, con media y rango).
+
+TANDA de 8 corridas de la sesion (misma partida, misma copia):
+  tras I129 granjero                      t=2000-10280  rend=23  por 1.000 ticks=2.78
+  tras I130 recolectora                   t=2000-10080  rend= 8  por 1.000 ticks=0.99
+  tras I131 ganadero                      t=2000- 9120  rend= 3  por 1.000 ticks=0.42
+  tras casilla de pie del granjero        t=2000- 9280  rend= 8  por 1.000 ticks=1.10
+  tras el desatasco del aldeano metido    t=2000- 4120  rend= 2  por 1.000 ticks=0.94
+  tras el pico/pepitas                    t=2000-11160  rend= 4  por 1.000 ticks=0.44
+  tras I132 la mina atraviesa el agua     t=2000-10800  rend=24  por 1.000 ticks=2.73   <-- LA MAS ALTA
+  con la sonda del pico                   t=2000- 9720  rend= 7  por 1.000 ticks=0.91
+  MEDIA 1.29 · RANGO 0.42-2.78 · DESVIACION TIPICA 0.94
+
+CONCLUSION: la tasa varia casi 7x entre corridas comparables -> una corrida sola NO prueba nada (salvo cambios
+grandes) y el total NO es la prueba de un arreglo: lo es el criterio concreto que baja a cero. Para hablar del
+total, media de 3-4 corridas.
+
+PREGUNTA ABIERTA que deja la tabla: la corrida de I132 es la mas alta de la sesion (2.73): mirar sus etiquetas
+(python tools/arnes/rendiciones.py --etiquetas build/medida-mina-atraviesa-agua.log) para ver si el minero, que
+ahora trabaja mucho mas rato, arrastra a mas aldeanos a rendirse o si fue una corrida mala.
