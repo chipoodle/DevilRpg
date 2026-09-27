@@ -462,7 +462,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
     private static void medirLasPepitas(ServerLevel level, long ticks) {
         level.setDayTime(6000L);
 
-        if (ticks % 2000 == 20) {
+        if (ticks % 400 == 20) {
             BlockPos donde = new BlockPos(CENTRO.getX() + 6, com.chipoodle.devilrpg.world.VillageGenerator.spawnY(
                     level, CENTRO.getX() + 6, CENTRO.getZ() + 6), CENTRO.getZ() + 6);
             com.chipoodle.devilrpg.entity.AggressiveZombieEntity z =
@@ -477,7 +477,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             DevilRpg.LOGGER.info("[Arnes] PEPITAS t={} planto un zombi de raid en {}", ticks, donde.toShortString());
             return;
         }
-        if (ticks % 2000 == 60 && pepitasPlantadas != null && pepitasPlantadas.isAlive()) {
+        if (ticks % 400 == 60 && pepitasPlantadas != null && pepitasPlantadas.isAlive()) {
             // LO MATA LA GUARDIA (atribuido, como en MEDIR_MILICIA): el botin de `dropCustomDeathLoot` sale igual,
             // pero asi la muerte cuenta como suya, que es lo que pidio el jugador.
             Villager guardia = aldeanoMasCercano(level, pepitasPlantadas.blockPosition());
@@ -485,12 +485,12 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
                     : level.damageSources().generic(), 1000.0F);
             return;
         }
-        if (ticks % 2000 == 100) {
+        if (ticks % 400 == 100) {
             DevilRpg.LOGGER.info("[Arnes] PEPITAS t={} EN EL SUELO: {}{}", ticks, pepitasEnElSuelo(level),
                     pepitasPlantadas != null && pepitasPlantadas.isAlive() ? " (el zombi SIGUE vivo)" : "");
             return;
         }
-        if (ticks % 2000 == 300) {
+        if (ticks % 400 == 300) {
             DevilRpg.LOGGER.info("[Arnes] PEPITAS t={} 200 ticks despues: en el suelo={} en el ALMACEN={} picos={}",
                     ticks, pepitasEnElSuelo(level), pepitasEnElAlmacen(level), picosEnElAlmacen(level));
             pepitasPlantadas = null;
@@ -506,6 +506,30 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
                 net.minecraft.world.entity.item.ItemEntity.class, new AABB(CENTRO).inflate(80))) {
             if (it.getItem().is(net.minecraft.world.item.Items.IRON_NUGGET)) {
                 total += it.getItem().getCount();
+            }
+        }
+        return total;
+    }
+
+    /** Pepitas de hierro en TODOS los cofres del pueblo (el almacen puede tener varios). */
+    private static int pepitasEnTodosLosCofres(ServerLevel level) {
+        int total = 0;
+        for (BlockPos p : BlockPos.betweenClosed(CENTRO.offset(-24, -5, -24), CENTRO.offset(24, 5, 24))) {
+            if (level.getBlockEntity(p) instanceof net.minecraft.world.Container c) {
+                total += com.chipoodle.devilrpg.world.VillagePantry.contar(c,
+                        s -> s.is(net.minecraft.world.item.Items.IRON_NUGGET));
+            }
+        }
+        return total;
+    }
+
+    /** Picos en TODOS los cofres del pueblo (los forja el herrero de herramientas). */
+    private static int picosEnTodosLosCofres(ServerLevel level) {
+        int total = 0;
+        for (BlockPos p : BlockPos.betweenClosed(CENTRO.offset(-24, -5, -24), CENTRO.offset(24, 5, 24))) {
+            if (level.getBlockEntity(p) instanceof net.minecraft.world.Container c) {
+                total += com.chipoodle.devilrpg.world.VillagePantry.contar(c,
+                        s -> s.getItem() instanceof net.minecraft.world.item.PickaxeItem);
             }
         }
         return total;

@@ -370,3 +370,20 @@ LO QUE FALTA PARA VER EL ESLABON 3 (el herrero gastandolas en un pico): el pico 
 zombi suelta 1-2, asi que hay que ACUMULAR (>=27): para la proxima corrida, plantar uno cada 400 ticks (en vez de
 2.000) y contar pepitas en TODOS los cofres del almacen (hoy VillageStorage.almacen(...) devuelve UNO, y con
 varios cofres la cuenta puede saltar a 0 al moverse de cofre).
+
+=== 21) PEPITAS, SEGUNDO INTENTO: EL INSTRUMENTO ME DEJO CIEGO (26-sep-2026)
+
+Cambios de esta corrida: un zombi de raid cada 400 ticks (en vez de 2.000, para acumular >=27 pepitas) y contar
+pepitas/picos en "todos los cofres".
+
+MEDIDO: TODO A CERO, ciclo tras ciclo:
+  [Arnes] PEPITAS t=10300 200 ticks despues: en el suelo=0 en el ALMACEN=0 picos=0
+  (y el herrero si forjo: 'Forjo un pico de madera', 'Forjo una espada de hierro' x2)
+
+CAUSA (medida, no supuesta): el almacen esta a ~47 bloques del centro de la plaza (plaza 470,63,646 · almacen
+517,63,666) y mi caja de barrido era CENTRO +-24, asi que NO VElA EL COFRE: el contador daba 0 aunque hubiera
+pepitas. En la corrida anterior, con el contador del almacen (VillageStorage.almacen), SI se veia: 'en el ALMACEN=1'.
+
+ARREGLO DEL INSTRUMENTO (hecho): se vuelve al contador del almacen (VillageStorage.almacen + VillagePantry.contar) y
+se deja el ciclo rapido de 400 ticks. Para contar "todos los cofres" hay que barrer alrededor del ALMACEN
+(VillageStorage.puntoDeApoyo), no alrededor de la plaza.
