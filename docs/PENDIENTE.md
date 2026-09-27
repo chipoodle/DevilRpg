@@ -263,7 +263,22 @@ ticks). Es el sitio por donde hay que empezar: leer su aviso con `cerebro=`, `na
 el patrón de "no puedo entrar/salir de un recinto" o "la celda no se pisa"), y **medir con
 `python tools/arnes/rendiciones.py --etiquetas`**: el criterio de éxito es que esas 16 bajen a 0.
 
-### 6d. La mina YA BAJA (medido); lo que falta es que el minero no se quede en el TALLER
+### 6d. La mina YA BAJA (medido). Y la medida del tiempo del minero **corrige el diagnóstico**
+
+**Medido** (del log de la corrida larga, sin gastar otra): de 25 muestras de faena, `Picando` **17 (68 %)**,
+`Cargando material` 5 (20 %), `En el taller` **2 (8 %)**, `Bajando lo sacado` 1. Y en toda la corrida el taller hizo
+**4 coladas** de 4 adoquines. **El taller no es el coste**: lo que pesa es el **acarreo** y, sobre todo, que hay **17
+muestras de `Picando` con la galería clavada en `hechas=3/24`**.
+
+**Y la pista ya estaba en los datos**: durante el estancamiento, `cara=507,46,613` con
+**`bloqueDeLaCara=cobblestone_slab`** — el minero estaba «picando» **una losa de su propia mina** (una pieza del
+caracol), y eso **no cuenta como avance** (`progresoDeLaGaleria` cuenta **solo aire**). Hipótesis a confirmar por
+medida: **la escalera del caracol y el trazado de la galería del paso 32 se pisan**.
+
+**Orden de trabajo (el jugador decidió la opción C)**: primero el choque caracol ↔ galería (es el 68 % de su
+tiempo); después **pasar el taller y la balsa al herrero de herramientas** para que el minero **solo mine**. Criterio:
+`hechas` sube de `3/24`, `pasos` sigue creciendo y no baja lo que produce el taller.
+
 
 **MEDIDO** (corrida larga, `MEDIR_MINERO`): la mina **desciende** —la parte del encargo que faltaba—:
 

@@ -494,3 +494,23 @@ Y el porque del estancamiento, medido: NO esta atascado, esta EN EL TALLER:
   50 lineas de 'deja lo sacado / guardo' en esa ventana, con GALERIA hechas=3/24 y 0 lineas de 'la mina esta tapada'.
 -> la faena del taller le come el tiempo de la galeria. Siguiente arreglo: que la galeria mande, o tope a los viajes
    al taller; criterio de exito: hechas sube de 3/24 y pasos sigue creciendo.
+
+=== 28) DONDE SE LE VA EL TIEMPO AL MINERO, MEDIDO (26-sep-2026) -- CORRIGE EL DIAGNOSTICO DE 6d
+
+Medido del log de la corrida larga (build/medida-mina-fondo.log), sin gastar otra corrida:
+  muestras de faena (25): Picando 17 (68%) · Cargando material 5 (20%) · En el taller 2 (8%) · Bajando lo sacado 1 (4%)
+  taller en TODA la corrida: 4 coladas ('cuela 4 adoquines en la balsa'), 4 pedernales.
+  -> EL TALLER NO ES EL COSTE: son 4 viajes de 4 adoquines. Lo que pesa es el ACARREO (Cargando+Bajando ~24%) y,
+     sobre todo, que hay 17 muestras de 'Picando' con la galeria clavada en hechas=3/24.
+
+LA PISTA QUE YA ESTABA EN LOS DATOS: en el estancamiento, cara=507,46,613 bloqueDeLaCara=cobblestone_slab: el
+minero estaba "picando" una LOSA DE SU PROPIA MINA (una pieza del caracol) y eso no cuenta como avance de la
+galeria (progresoDeLaGaleria cuenta SOLO aire). Hipotesis medida a confirmar: la escalera del caracol y el trazado
+de la galeria del paso 32 SE PISAN, y el minero se queda peleandose con su propia losa.
+
+ORDEN DE TRABAJO CORREGIDO (el jugador decidio la opcion C: el taller para el herrero de herramientas y el minero
+solo a minar):
+  1) MEDIR/ARREGLAR el choque caracol-galeria (es el que tiene el 68% del tiempo del minero).
+  2) DESPUES, la opcion C: pasar la balsa (colar adoquin -> pedernal) y el acarreo al herrero de herramientas, para
+     que el minero solo pique. Criterio de exito: hechas sube de 3/24 y pasos sigue creciendo, sin que baje lo que
+     produce el taller.
