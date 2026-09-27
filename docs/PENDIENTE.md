@@ -218,6 +218,21 @@ herrero**, no el minero.
 
 **Y OJO CON EL INSTRUMENTO**: en esta sesión lancé esa corrida con `MEDIR_MINERO = false` y la medida salió en blanco
 (`al borde: 0`): **comprobar que el modo está encendido en la copia del arnés** antes de lanzar.
+### 6b. LO QUE PIDIÓ EL JUGADOR PARA LA MINA (hecho lo primero; falta lo demás)
+
+1. **La mina atraviesa el agua** — **HECHO y MEDIDO** (I132): ya no se cierra cuando hay agua; **aísla** con paredes
+   (cáscara 3×3×3 de adoquín: sella también el agua de delante, así el túnel avanza por celdas secas), **seca** la
+   celda (queda de aire, transitable) y **sigue bajando**. Medido: `1:air 2:air 3:air`, `hechas=3/24` (antes clavado
+   en `0/24`) y **`TOPE=NO`** (antes `TOPE=SI`, la mina se cerraba).
+2. **Que el pico lo haga el HERRERO** — **pendiente**: hoy el almacén tiene `0 pico(s)` y `0 lingote(s)`; la rotura
+   del pico se detecta bien (medido: `se le ha roto el pico (59 usos): va a por otro al almacen`) pero **no hay de
+   dónde sacarlo**. Toca que el **herrero de herramientas** forje picos y que el almacén mantenga **uno de reserva**
+   para el minero (`VillageStorage.asegurarElPicoDelMinero` hoy le da **uno** al construir la mina, y nunca más).
+3. **Hierro de los zombis de los raids** — **pendiente**: el jugador dice que los guardias, al matar zombis que
+   vengan de un **raid del mundo**, conseguirán **hierro**; ese hierro es el que tiene que llegar al herrero para los
+   picos. Hay que medir: (a) que el zombi de raid **suelte hierro** (o que se le añada al botín), (b) que el
+   **recolector/guardia lo levante**, (c) que acabe en el **almacén**, y (d) que el herrero lo use.
+
 ### 7. Atascos sueltos ya apuntados (cuando se pueda)
 
 - El aldeano que se queda **sin ruta** fuera del muro (`560,64,587`, `552,63,585`).
