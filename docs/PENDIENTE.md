@@ -183,6 +183,31 @@ Medido que **suelta la faena** (no sigue "picando" en el sitio) y que en la corr
 (`se le ha roto el pico` = 0; y el almacén tenía **0 picos**, así que el herrero no los tiene hechos). Falta medir
 el caso completo: romperlo y ver que **vuelve con otro** (y que el herrero los forje).
 
+### 6. El PICO al romperse: **sin medir todavía** (receta lista)
+
+El minero ya **suelta la faena** cuando se queda sin pico (`canContinueToUse`), pero **no está medido** que vuelva
+con otro. En las corridas de esta sesión **no rompió ninguno** (`se le ha roto el pico` = 0) porque ya no "pica"
+agua en bucle, así que hay que **forzar el caso** desde el arnés:
+
+```java
+// dentro de `medirElMinero`, en el bucle de mineros (NO en los otros volcados: el mismo ancla existe 6 veces)
+var enMano = v.getMainHandItem();
+if (ticks % 2000 == 0 && !enMano.isEmpty() && (enMano.is(Items.WOODEN_PICKAXE)
+        || enMano.is(Items.STONE_PICKAXE) || enMano.is(Items.IRON_PICKAXE))) {
+    enMano.setDamageValue(Math.max(0, enMano.getMaxDamage() - 1));
+    DevilRpg.LOGGER.info("[Arnes] PICO t={} al borde de romperse ({}/{})", ticks,
+            enMano.getDamageValue(), enMano.getMaxDamage());
+}
+```
+
+**Qué se lee** (esa es la medida): `se le ha roto el pico` → el minero **suelta** la faena → `Yendo al almacen` /
+`Cargando material` → los **picos del almacén** (`ALMACEN DE LA MINA … pico(s)=N`, que los forja el herrero de
+herramientas) → y en las líneas `MINERO` vuelve a salir `pico=minecraft:…(0/…)`, o sea **con uno nuevo en la mano**.
+Si el almacén no tiene picos, el caso que hay que mirar es **el herrero** (que no los forja), no el minero.
+
+**Y OJO CON EL INSTRUMENTO** (me pasó en esta sesión): lancé la corrida con `MEDIR_MINERO = false` y la medida salió
+en blanco (`al borde: 0`) — **comprobar que el modo está encendido en la copia del arnés** antes de lanzar, que es la
+misma trampa que decía el LEEME.
 ### 6. Atascos sueltos ya apuntados (cuando se pueda)
 
 - El aldeano que se queda **sin ruta** fuera del muro (`560,64,587`, `552,63,585`).
