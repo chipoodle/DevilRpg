@@ -387,3 +387,27 @@ pepitas. En la corrida anterior, con el contador del almacen (VillageStorage.alm
 ARREGLO DEL INSTRUMENTO (hecho): se vuelve al contador del almacen (VillageStorage.almacen + VillagePantry.contar) y
 se deja el ciclo rapido de 400 ticks. Para contar "todos los cofres" hay que barrer alrededor del ALMACEN
 (VillageStorage.puntoDeApoyo), no alrededor de la plaza.
+
+=== 22) LA CADENA DE LAS PEPITAS, MEDIDA ENTERA (26-sep-2026) -- y donde se atasca
+
+Modo MEDIR_PEPITAS con el contador del almacen y un zombi de raid cada 400 ticks:
+
+  [Arnes] PEPITAS t=7900 200 ticks despues: en el suelo=0 en el ALMACEN=1 picos=0
+  [Arnes] PEPITAS t=9100 200 ticks despues: en el suelo=0 en el ALMACEN=1 picos=1
+  [Arnes] PEPITAS t=9900 200 ticks despues: en el suelo=0 en el ALMACEN=1 picos=2
+  [Village] El herrero de herramientas: Forjo un pico de madera
+
+ESLABON 1 (el zombi de raid suelta pepitas): OK -- 'en el suelo=0' porque ya las ha recogido alguien.
+ESLABON 2 (alguien las levanta y llegan al ALMACEN): OK -- 'en el ALMACEN=1' desde el primer ciclo.
+ESLABON 3 (el herrero las gasta en un PICO DE HIERRO): NO SE COMPLETA, y la causa esta medida:
+  * el herrero SI trabaja y SI repone picos: 'picos=0 -> 1 -> 2' (su objetivo, OBJETIVO_PICOS=2), pero los forja
+    de MADERA (el escalon mas barato de la cadena diamante->hierro->piedra->madera);
+  * el pico de hierro pide 27 pepitas (3 lingotes) y en el almacen NO SE ACUMULAN: se queda en 1. Las pepitas
+    caen junto al zombi (a 6 bloques del centro y por los alrededores) y el recolector no llega a todas: las que
+    no recoge DESAPARECEN a los 5 minutos (6000 ticks), que es menos de lo que tarda en acumular 27.
+
+LO QUE TOCA DECIDIR (esta es la pregunta, no el codigo): para que la cadena cierre hay que subir el ritmo de
+recogida, y hay tres caminos:
+  (a) que el zombi de raid suelte MAS pepitas (hoy 1-2);
+  (b) que el que las recoja sea QUIEN MATA (la guardia, que esta al lado), no solo el recolector del pueblo;
+  (c) bajar lo que pide el pico (hoy 27 pepitas = 3 lingotes, que es lo que dice vanilla).
