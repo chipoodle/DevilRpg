@@ -3979,6 +3979,34 @@ de pie **más cercana** de su alrededor (radio 2)— usado **solo para caminar**
 Patrullando la arboleda`, `Saturnino (Granjero) / Abono la huerta`, `Tomasa (Leñador) / Yendo al arbol` y
 `Valeriano (Granjero) / Recogiendo lo que se cayo`. El repaso de la sesión, con la misma partida y el mismo modo:
 **27 → 9 (granjero + recolectora) → 5 (ganadero)**.
+### I132 · LA MINA **ATRAVIESA** EL AGUA (aísla, seca y sigue bajando) — cambia I127
+
+El jugador corrigió el criterio que yo tenía: *"¿quién te dijo que debe cerrarse una mina cuando hay agua? Lo que debe
+hacer es **seguir minando para abajo** y **construir paredes que aíslen la mina del agua**, **sacar lo que está
+adentro** y **construir escaleras para llegar al fondo**"*. La instrucción vieja (*"si es un mar, que pare"*, que era
+la que yo había implementado en I127 con `SELLOS_MAXIMOS` y `cerrarLaMina`) queda **sustituida por ésta**.
+
+**Lo que se cambió** (dos cosas, y solo del minero):
+
+1. **`picarYRecoger`, rama de fluido**: antes **sellaba la propia celda del túnel** con adoquín —y eso la dejaba
+   **intransitable** (la mina acababa cerrándose)—. Ahora: **(a)** `aislarDelAgua` sella con adoquín **todo el fluido
+   de la cáscara 3×3×3** alrededor de la celda (es el muro que la aísla, y sella también el agua de DELANTE, así que
+   el túnel avanza por celdas ya secas); **(b)** la celda queda **de AIRE** (seca, transitable); **(c)** devuelve
+   `true`, o sea **el túnel SIGUE**.
+2. **La guarda de `prepararElPicado`**: `elMineroPuedePicar(agua)` dice que **no** y el goal **ni lo intentaba**
+   (se plantaba 5 s con "la mina está tapada"). Ahora una celda **con fluido no cuenta como tapada**: es faena suya.
+
+**MEDIDO** (misma partida y modo; antes: la mina se cerraba con `TOPE=SI` en el paso 32):
+
+| | antes (I127) | ahora (I132) |
+|---|---|---|
+| el agua | se sellaba la celda del túnel → **intransitable** → `la mina se PARA … piedra labrada de tope`, `TOPE=SI` | `El minero: aisla el agua de 507,46,612 y el tunel sigue` |
+| el túnel | `hechas=0/24` clavado en la celda 1 (agua) | **`1:air 2:air 3:air` y `hechas=3/24`**: atraviesa el acuífero |
+| la mina | **se cerraba** | **`TOPE=NO`**: sigue bajando |
+
+**Lo que queda de este encargo del jugador** (apuntado en `PENDIENTE.md`): **(a)** que **el herrero forje picos** (hoy
+el almacén tiene `0 pico(s)` y `0 lingote(s)`: la rotura del pico se detecta bien, pero no hay de dónde sacarlo) y
+**(b)** que **los guardias obtengan hierro de los zombis de los raids** para que ese hierro llegue al herrero.
 ## 2. Lista de consecuencias (obligatoria en cada cambio)Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
 1. **¿Quién más LEE lo que cambio?** Buscar todos los usos (`grep`) y revisarlos uno a uno. *(Fallo real: cambié el

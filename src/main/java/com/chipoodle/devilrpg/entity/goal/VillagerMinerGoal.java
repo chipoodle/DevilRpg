@@ -397,7 +397,12 @@ public class VillagerMinerGoal extends Goal {
         // SI LA MINA ESTÁ TAPADA POR ALGO DEL PUEBLO (una casa, la pared de su caseta, lo que puso el jugador), el
         // minero NO lo toca: para y lo deja anotado. Es la misma lección de I24/I27 (lo construido no se cava) y sin
         // esta guarda el minero le abriría un boquete a su propia caseta, que está pegada al anillo del caracol.
-        if (!VillageGenerator.elMineroPuedePicar(level.getBlockState(celdaDeTrabajo))) {
+        // EL AGUA SÍ SE TRABAJA (26-sep-2026): ahora el minero la AÍSLA con paredes y la SECA para seguir bajando
+        // (lo pidió el jugador), así que una celda con fluido NO es "la mina está tapada": es faena suya. Se sigue
+        // parando —y se anota— solo ante lo que ha puesto el pueblo (la pared de su caseta, una casa, algo del
+        // jugador), que es la lección de I24/I27.
+        if (!VillageGenerator.elMineroPuedePicar(level.getBlockState(celdaDeTrabajo))
+                && level.getBlockState(celdaDeTrabajo).getFluidState().isEmpty()) {
             anotar("la mina esta tapada en " + celdaDeTrabajo.toShortString());
             destino = null;
             celdaDeTrabajo = null;
@@ -895,12 +900,20 @@ public class VillagerMinerGoal extends Goal {
         // llegaba (0 líneas de `la mina se PARA`) y `pasos` se quedó 110.000 ticks en 32 — con el pico rompiéndose
         // de tanto "picar" agua (1 vez `se le ha roto el pico`).
         if (!estado.getFluidState().isEmpty()) {
-            // AGUA O LAVA: se sella. Si es una bolsa, en la vuelta siguiente se pica el adoquín y el túnel sigue.
-            level.setBlock(pos, Blocks.COBBLESTONE.defaultBlockState(), Block.UPDATE_ALL);
+            // AGUA O LAVA: **NO SE CIERRA LA MINA**. Lo pidio el jugador (26-sep-2026): "lo que debe hacer es seguir
+            // minando para abajo y construir paredes que aislen la mina del agua, sacar lo que esta adentro y
+            // construir escaleras para llegar al fondo". Asi que, en este orden:
+            //   1) SE AISLA: se sellan con adoquin las vecinas que tengan fluido (las cuatro de lado y el techo; el
+            //      suelo del tunel ya lo rellena el minero). La vecina de DELANTE tambien es una de las cuatro, asi
+            //      que el tunel avanza por celdas YA SECAS (y el minero las pica como adoquin normal);
+            //   2) SE SECA esta celda: queda de aire, o sea el tunel sigue siendo TRANSITABLE;
+            //   3) y el tunel SIGUE: no hay tope ni cierre por agua.
+            // Antes se sellaba la PROPIA celda del tunel: eso lo dejaba intransitable y la mina acababa cerrandose
+            // con su piedra labrada (I127, con la instruccion vieja de "si es un mar, que pare", ya cambiada).
+            aislarDelAgua(level, pos);
+            level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
             if (cuentaElSello) {
-                DevilRpg.LOGGER.info("[Village] El minero: sella agua/lava en {} ({} seguidas)", pos.toShortString(),
-                        sellosSeguidos + 1);
-                return false;
+                DevilRpg.LOGGER.info("[Village] El minero: aisla el agua de {} y el tunel sigue", pos.toShortString());
             }
             return true;
         }
@@ -951,6 +964,26 @@ public class VillagerMinerGoal extends Goal {
         DevilRpg.LOGGER.info("[Village] El minero: la mina se PARA en {} ({} celdas de agua/lava seguidas): piedra"
                 + " labrada de tope", celda.toShortString(), sellosSeguidos);
         VillageManager.ponerSuceso(villager, "La mina llego al tope");
+    }
+
+    /**
+     * <b>Aisla del agua (o de la lava) la celda del tunel</b>: sella con adoquin las <b>vecinas que tengan fluido</b>
+     * —las cuatro de lado y el techo— y deja el suelo como esta (el minero ya lo rellena). NO toca las vecinas de
+     * <b>aire</b>, que son el propio tunel ya cavado: si las sellara, taponaria el paso.
+     * <p>
+     * Es la mitad de lo que pidio el jugador: *"construir paredes que aislen la mina del agua"*. La otra mitad —secar
+     * lo de dentro y seguir bajando— la hace quien llama a esto ({@code picarYRecoger}: deja la celda de aire y
+     * devuelve {@code true}, asi que el tunel sigue).
+     */
+    private void aislarDelAgua(ServerLevel level, BlockPos celda) {
+        for (BlockPos vecina : BlockPos.betweenClosed(celda.offset(-1, -1, -1), celda.offset(1, 1, 1))) {
+            if (vecina.equals(celda)) {
+                continue; // la propia celda la seca quien llama
+            }
+            if (!level.getBlockState(vecina).getFluidState().isEmpty()) {
+                level.setBlock(vecina, Blocks.COBBLESTONE.defaultBlockState(), Block.UPDATE_ALL);
+            }
+        }
     }
 
     /** ¿Esa celda ya es de la mina (adoquín, losa, tronco del marco, antorcha)? */
