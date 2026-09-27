@@ -238,6 +238,15 @@ herrero**, no el minero.
    picos. Hay que medir: (a) que el zombi de raid **suelte hierro** (o que se le añada al botín), (b) que el
    **recolector/guardia lo levante**, (c) que acabe en el **almacén**, y (d) que el herrero lo use.
 
+### 6c. La RECOLECTORA en la TABERNA (16 rendiciones: el atasco más grande que queda, medido)
+
+Al medir por tasa y desglosar por etiqueta (I135) salió el atasco **más grande que queda**, y es **nuevo**: al dejar de
+quedarse encerrada en los bancales (I130), **Filomena llega a la taberna** y ahí se rinde:
+**`16x Filomena (Recolector) / Yendo a la taberna`** en una sola corrida (dos tercios de su total, 2,73 por 1.000
+ticks). Es el sitio por donde hay que empezar: leer su aviso con `cerebro=`, `nav=` y `pies=` (probablemente otra vez
+el patrón de "no puedo entrar/salir de un recinto" o "la celda no se pisa"), y **medir con
+`python tools/arnes/rendiciones.py --etiquetas`**: el criterio de éxito es que esas 16 bajen a 0.
+
 ### 7. Atascos sueltos ya apuntados (cuando se pueda)
 
 - El aldeano que se queda **sin ruta** fuera del muro (`560,64,587`, `552,63,585`).

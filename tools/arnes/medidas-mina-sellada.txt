@@ -445,3 +445,22 @@ total, media de 3-4 corridas.
 PREGUNTA ABIERTA que deja la tabla: la corrida de I132 es la mas alta de la sesion (2.73): mirar sus etiquetas
 (python tools/arnes/rendiciones.py --etiquetas build/medida-mina-atraviesa-agua.log) para ver si el minero, que
 ahora trabaja mucho mas rato, arrastra a mas aldeanos a rendirse o si fue una corrida mala.
+
+=== 25) LA HERRAMIENTA SE PAGO SOLA: EL "RUIDO" ESCONDIA UN ATASCO NUEVO (26-sep-2026)
+
+python tools/arnes/rendiciones.py --etiquetas build/medida-mina-atraviesa-agua.log
+  medida-mina-atraviesa-agua.log  t=2000-10800  rendiciones=24  por 1.000 ticks=2.73
+    16x Filomena (Recolector) / Yendo a la taberna      <-- DOS TERCIOS DEL TOTAL
+     1x Vicenta (Ganadero) / Cuidando el ganado
+     1x Vicenta (Ganadero) / Recogiendo el corral
+     1x Hipolito (Granjero) / Cosechando
+     1x Onofre (Guardia espadachin nv 1) / Patrullando el corral
+     1x Eufemia (Guardia espadachin nv 1) / Yendo a entrenar
+     1x Valeriano (Granjero) / Guardando lo suyo
+     1x Eufemia / Patrullando el corral
+     1x Fabricio / Patrullando la aldea
+
+CONCLUSION: la corrida mas "mala" de la sesion NO era la mina: era la recolectora atascada YENDO A LA TABERNA, un
+atasco NUEVO que aparecio porque el arreglo de I130 dejo de encerrarla en los bancales y ahora llega a la taberna.
+El ruido escondia un efecto colateral real. Siguiente pendiente con nombre y numero (apartado 6c del traspaso):
+ese, y el criterio de exito es que esas 16 bajen a 0.

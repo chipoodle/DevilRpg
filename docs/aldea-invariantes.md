@@ -4014,7 +4014,13 @@ sola no prueba nada** salvo que el cambio sea grande; con 8 corridas, el interva
 que baja a cero (`no consigue entrar al bancal` 5 → 0, `Volviendo a la plaza` 19 → 0, `Cuidando el ganado` 3 → 0,
 `TOPE` sí → no, `pico de hierro` forjado) y, cuando se quiera hablar del total, **la media de 3-4 corridas**.
 
-**Y deja una pregunta abierta, que es justo para lo que sirve la herramienta**: la corrida de I132 (la mina
+**Y la herramienta se pagó sola en el primer uso**: la corrida de I132 era la más alta de la sesión (2,73) y **no era
+la mina**: era **`16x Filomena (Recolector) / Yendo a la taberna`** — dos tercios del total de esa corrida, en un
+atasco **nuevo**. Y nuevo **por mi propio arreglo**: al dejar de quedarse encerrada en los bancales (I130), la
+recolectora **llega a la taberna**, y ahí se rinde. Es decir: el "ruido" escondía un **efecto colateral real**, que la
+cuenta normalizada y el desglose por etiquetas han sacado a la luz. **Siguiente pendiente, ya con nombre y número.**
+
+Lo que sigue es la nota original de la pregunta abierta:
 atravesando el agua) es **la más alta de la sesión (2,73)** — hay que **mirar sus etiquetas** (`--etiquetas`) para ver
 si el minero, ahora que trabaja mucho más rato, está arrastrando a más aldeanos a rendirse, o si fue una corrida mala.
 ### I134 · EL QUE MATA, LOOTEA (y así el hierro de los raids llega al herrero)
