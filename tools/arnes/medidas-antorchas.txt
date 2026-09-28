@@ -1,0 +1,72 @@
+# LA LUZ DE LA MINA (I142) — 28-sep-2026
+
+Lo reporto el jugador: *"el minero no esta poniendo antorchas en las paredes de las escaleras de caracol ni en las
+galerias y debe poner porque se ve muy oscuro y es un punto peligroso para que spawneen mobs"*.
+
+## La causa, medida
+
+La antorcha se pone **al cavar la celda**: en el caracol `if (floorMod(paso, 8) == 0) ponerLaAntorcha(celda.above(2))`
+y en la galeria `if (floorMod(indice, 8) == 0) ponerLaAntorcha(celda.above())`. Y `ponerLaAntorcha` **sale sin poner
+nada si el minero no lleva antorchas en ese momento**. El minero **cavaba antes de tenerlas** (el carbon sale de la
+mina y el taller las hace despues) y **nunca volvia a pasar** por esas celdas: se quedaban oscuras PARA SIEMPRE.
+
+Con los tiempos del log (`build/medida-plaza3.log`):
+  - 03:31:17  el minero cava la celda 8 de la galeria del paso 32
+  - 03:34:50  fabrica las primeras antorchas (¡3 minutos despues!)
+
+Y se veia con el censo del arnes: el caracol con sus pasos 0, 8, 16, 24 y 32 y la celda de la cabeza en `air` (ni una
+antorcha), la galeria con `+1=air` en sus celdas 8 y 16, y el minero con **8 antorchas en el zurron SIN GASTAR**
+(constantes en todas las muestras: las tenia y no las ponia).
+
+## El arreglo, en dos partes
+
+1. **LA FASE `ENCENDER`** (`buscarHuecoDeLuz`): repasa la mina **del frente hacia la boca** (lo mas cerca del minero
+   primero) —en el caracol los pasos multiplos de 8 YA CAVADOS, en las galerias abiertas las celdas 8, 16 y 24— y va
+   a poner la antorcha que falte **antes** de seguir cavando. Si no puede (sin pared o sin antorchas) el hueco se
+   apunta como fallido y sigue: no se queda en bucle con el.
+2. **NO SE BAJA SIN LUZ**: `hayQueSubir` pedia luz solo con `celdasCavadas > 0`, asi que la PRIMERA bajada se hacia a
+   oscuras y esas celdas dependian del repaso. Ahora la pide tambien en el primer viaje **si el pueblo puede darle
+   luz** (antorcha hecha, o carbon/carbon vegetal de un tronco —la leña del leñador— o leña, siempre con palos). El
+   carbon NO tiene por que salir de la mina: el taller hace CARBON VEGETAL quemando un tronco.
+
+## El antes → despues, con el censo del arnes
+
+| celda | antes (`medida-plaza3.log`) | despues (`medida-antorchas.log`) |
+|---|---|---|
+| caracol paso 0 | `air` | **`wall_torch`** |
+| caracol paso 8 | `air` | **`wall_torch`** |
+| caracol paso 16 | `air` | **`wall_torch`** |
+| caracol paso 24 | `air` | **`wall_torch`** |
+| caracol paso 32 | `air` | **`wall_torch`** |
+| galeria paso 32, celda 8 | `+1=air` | **`+1=wall_torch`** |
+| antorchas del minero | 8 **sin gastar** | las **gasta** |
+
+Y el log del minero: `El minero: encendio 499, 55, 629` con la etiqueta `Enciende la mina`; **8 antorchas** puestas en
+una corrida, en la boca, en el caracol y en TRES galerias distintas
+(`507,48,613` `499,52,613` `507,60,621` `507,64,613` `499,56,621` `507,47,605` `507,47,597` `499,55,629`).
+
+Las antorchas viejas de la partida del jugador (los 32 pasos del caracol, cavados antes de esta logica) quedan
+encendidas por el mismo repaso, **sin tocar el guardado**.
+
+## Y la segunda parte (no bajar sin luz): MEDIDA A MEDIAS, y se dice
+
+Corrida `build/medida-luz-1.log` (mundo restaurado DEL GUARDADO DEL JUGADOR, que tenia la mina a oscuras):
+
+| que | numero |
+|---|---|
+| `El minero: encendio ...` (el repaso) | **8** |
+| `El minero: quema un tronco en el horno` (CARBON VEGETAL de la leña) | **6** |
+| `El minero: hace 4 antorchas` | **2** |
+| pasos del caracol 0, 8, 16, 24 y 32 | **`wall_torch`** (los cinco) |
+
+O sea: **el repaso enciende la mina** (incluso la que ya estaba cavada en su partida) **y el carbon no sale de la
+mina**: sale de la LEÑA del leñador quemada en el horno (6 troncos) — como decia el jugador.
+
+**PERO "NO BAJAR SIN LUZ" NO SE CUMPLE TODAVIA**: en `medida-luz-2.log` (cortada a los 3 minutos, t=1.320) el minero
+ya habia cavado 8 celdas de la galeria **sin antorchas** (`zurron=[... 0:11x stick 1:3x planks 2:2x oak_log ...]`, sin
+una sola antorcha). **La causa medida**: al salir del almacen, el goal **fuerza `fase = CAVAR`**
+(`VillagerMinerGoal`, la rama `RECOGER`: *"CARGADO: ahora HAY que recalcular la faena"*) y **se salta el taller**
+aunque `hayQueSubir` siga pidiendo luz. **El arreglo que toca** (NO hecho: es un flujo medido y no es el bug que
+reporto el jugador): que esa rama **vuelva a decidir** (poner `destino = null` para que el siguiente `canUse` elija)
+en vez de forzar `CAVAR`. Mientras tanto la mina se cava a oscuras las primeras vueltas y **el repaso la enciende**,
+que es lo que arregla el problema reportado.

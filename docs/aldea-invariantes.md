@@ -4252,6 +4252,47 @@ O sea: el criterio del traspaso («que `hechas` suba y `pasos` siga creciendo si
 cumple `hechas` **24/24**, `pasos` **40** y el pedernal del almacén **subiendo a su objetivo**; y el minero, que antes
 se pasaba la corrida colando, **completa la misma galería en la mitad de ticks**.
 
+### I142 · LA MINA SE **ENCIENDE**: al cavar no basta, hay que **REPASAR** las antorchas que faltan (28-sep-2026)
+
+**Lo reportó el jugador**: *«el minero no está poniendo antorchas en las paredes de las escaleras de caracol ni en
+las galerías y debe poner porque se ve muy oscuro y es un punto peligroso para que spawneen mobs»*. Y era verdad.
+
+**La causa, medida**: la antorcha se pone **al cavar la celda** (`ponerLaAntorcha` solo se llama en la rama
+`if (floorMod(paso, CELDAS_POR_ANTORCHA) == 0)` del caracol y de la galería) y ese método **sale sin poner nada si en
+ese momento el minero no lleva antorchas**. Y el minero **cava antes de tenerlas**: el **carbón sale de la mina**, así
+que las primeras vueltas son a oscuras. Con los tiempos del log: cavó la celda 8 de la galería del paso 32 a las
+**03:31:17** y fabricó las antorchas a las **03:34:50**. Y como **nunca volvía a pasar por esas celdas**, se quedaban
+oscuras **para siempre**.
+
+**El «antes», medido con el censo del arnés** (`build/medida-plaza3.log`): el caracol con sus pasos **0, 8, 16, 24 y
+32** y la celda de la cabeza en `air` (ni una antorcha), la galería del paso 32 con sus celdas **8 y 16** en `+1=air`,
+y el minero con **8 antorchas en el zurrón SIN GASTAR** (constantes en todas las muestras) — las tenía y no las ponía.
+
+**El arreglo: la fase `ENCENDER`.** `buscarHuecoDeLuz` devuelve la primera celda de la mina **a la que le falta su
+antorcha**, buscando **del frente hacia la boca** (lo más cerca del minero primero): en el caracol los pasos múltiplos
+de `CELDAS_POR_ANTORCHA` **ya cavados**, y en las galerías abiertas las celdas **8, 16 y 24** ya cavadas. Si el minero
+**lleva antorchas** y hay hueco, el `canUse` le pone la fase `ENCENDER` **antes** de seguir cavando, camina a la
+casilla de pie de ese hueco y la pone (el alcance se mide a la antorcha, no a donde se para). Si no puede ponerla
+(sin pared o sin antorchas) el hueco se **apunta como fallido** y sigue: no se queda en bucle con él. Como va del
+frente hacia la boca, **enciende la mina entera en unas pocas vueltas** y sin desviarse apenas (el caracol se anda al
+subir y al bajar al taller).
+
+**MEDIDO** (`build/medida-antorchas.log` y `build/medida-luz-1.log`): los pasos del caracol **0, 8, 16, 24 y 32**
+pasan de `air` a **`wall_torch`** (los cinco), la **celda 8 de la galería** de `air` a **`wall_torch`**, y el zurrón del
+minero pasa de **8 antorchas sin gastar** a gastarlas (`El minero: encendio 499, 55, 629`, con la etiqueta `Enciende
+la mina`; **8 encendidos** en una corrida, en la boca, en el caracol y en **tres galerías**). Y en la corrida lanzada
+**sobre el guardado del jugador** (con su mina a oscuras) el repaso la enciende igual, **sin tocar el guardado**. De
+paso quedó medido lo que decía el jugador: **el carbón no sale de la mina**, sale de la **leña del leñador quemada en
+el horno** (`quema un tronco en el horno` **6 veces** en esa corrida).
+
+**Y UNA PARTE QUE NO SE CUMPLE TODAVÍA, dicha tal cual**: la idea de **no bajar sin luz** (que `hayQueSubir` pida
+antorchas también en la primera bajada, si el pueblo puede dárselas) **no llega a tiempo**: en `medida-luz-2.log` el
+minero ya había cavado 8 celdas **sin una sola antorcha**. La causa, medida: al salir del almacén la rama `RECOGER`
+**fuerza `fase = CAVAR`** (*«CARGADO: ahora HAY que recalcular la faena»*) y **se salta el taller**, aunque
+`hayQueSubir` siga pidiendo luz. **El arreglo que toca** (no hecho: es un flujo ya medido y **no** es el bug que
+reportó el jugador) es que esa rama **vuelva a decidir** en vez de forzar `CAVAR`. Mientras tanto la mina se cava a
+oscuras las primeras vueltas y **el repaso la enciende**, que es lo que resuelve lo reportado.
+
 ### I141 · EL PICO DEL MINERO: EL CICLO **CERRADO Y MEDIDO** (y no hizo falta código) (27-sep-2026)
 
 El §6 del traspaso llevaba desde el 26-sep abierto con la pregunta «el minero suelta la faena al romperse el pico,

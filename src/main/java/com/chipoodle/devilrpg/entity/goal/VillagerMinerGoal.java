@@ -178,8 +178,15 @@ public class VillagerMinerGoal extends Goal {
      */
     @Nullable
     private BlockPos selloDelMar;
+    /**
+     * <b>La celda de la mina a la que le falta la antorcha</b> y a la que va ahora (fase {@code ENCENDER}), o
+     * {@code null}. Ver {@link #buscarHuecoDeLuz}: la antorcha se pone al cavar, y como el minero <b>cava antes de
+     * tener antorchas</b> (el carbón sale de la mina), esas celdas se quedaban a oscuras <b>para siempre</b>.
+     */
+    @Nullable
+    private BlockPos huecoDeLuz;
 
-    private enum Fase { RECOGER, CAVAR, TALLER, ENTREGAR }
+    private enum Fase { RECOGER, CAVAR, TALLER, ENTREGAR, ENCENDER }
 
     private final Villager villager;
     private final BlockPos center;
@@ -265,7 +272,7 @@ public class VillagerMinerGoal extends Goal {
         // ¿HAY QUE SUBIR? Cuando lleva media vuelta cavada, cuando tiene mineral que fundir o colar, o cuando la
         // mina ya está cerrada (el tope). Así el viaje de subida se paga una vez cada media vuelta y no por celda.
         paso = VillageGenerator.progresoDeLaMina(level, center, nivel);
-        boolean procesa = hayQueSubir();
+        boolean procesa = hayQueSubir(level);
         boolean terminada = VillageGenerator.laMinaLlegoAlTope(level, center, nivel, paso);
         boolean tocaSubir = terminada || celdasCavadas >= CELDAS_POR_VIAJE || procesa;
         // EL ALMACÉN, SI HACE FALTA: sin pico no hay mina (y el que gasta lo forja el herrero de herramientas, que
@@ -284,8 +291,45 @@ public class VillagerMinerGoal extends Goal {
             celdaDeTrabajo = null;
             return comprobarDestino();
         }
+        // LA LUZ QUE FALTA, ANTES DE SEGUIR CAVANDO (28-sep-2026, lo pidió el jugador). Si lleva antorchas y hay una
+        // celda de la mina a la que le falta la suya (porque se cavó antes de tenerlas), va a ponerla: una mina a
+        // oscuras es un criadero de bichos DENTRO de la muralla. Va del frente hacia la boca, así que enciende la mina
+        // entera en unas pocas vueltas y sin desviarse apenas (el caracol se anda al subir y al bajar).
+        if (cuantosEnInventario(Items.TORCH) > 0) {
+            BlockPos hueco = buscarHuecoDeLuz(level, nivel);
+            if (hueco != null && !VillageManager.esPuntoFallido(villager, hueco)) {
+                fase = Fase.ENCENDER;
+                huecoDeLuz = hueco;
+                destino = VillageManager.casillaDePieCercaDe(level, hueco);
+                celdaDeTrabajo = hueco; // el alcance se mide a la antorcha, no a donde se para
+                return comprobarDestino();
+            }
+        }
         fase = Fase.CAVAR;
         return prepararElPicado(level, nivel);
+    }
+
+    /**
+     * ¿El pueblo <b>puede darle luz</b> a la mina ahora mismo? Vale la <b>antorcha hecha</b>, y también el
+     * <b>carbón</b> (o el <b>carbón vegetal</b>) y la <b>leña</b> —con un tronco, el taller hace el carbón vegetal en
+     * el horno de la caseta: la leña la trae el leñador—. Se piden también los <b>palos</b>: sin palo no hay antorcha
+     * (carbón + palo), y sin esta comprobación el minero subiría al taller una y otra vez sin poder hacer nada.
+     */
+    private boolean elPuebloPuedeDarLuz(ServerLevel level) {
+        if (VillageStorage.cuenta(level, center, s -> s.is(Items.TORCH)) > 0) {
+            return true;
+        }
+        // LOS PALOS Y LA LEÑA VALEN DEL ALMACÉN **O DEL ZURRÓN**: el minero lleva los suyos encima (medido:
+        // `0:16xminecraft:stick`, `2:2xminecraft:oak_log`) y con ellos hace el carbón vegetal y las antorchas en el
+        // taller. Mirando solo el almacén, un pueblo sin palos en el cofre dejaba al minero bajar a oscuras aunque
+        // pudiera hacerse la luz él mismo.
+        boolean hayPalos = cuantosEnInventario(Items.STICK) >= 1
+                || VillageStorage.cuenta(level, center, s -> s.is(Items.STICK)) >= 1;
+        boolean hayCarbon = cuantosEnInventario(VillageStorage::esCarbon) >= CARBON_POR_ANTORCHA
+                || VillageStorage.cuenta(level, center, VillageStorage::esCarbon) >= CARBON_POR_ANTORCHA;
+        boolean hayLena = cuantosEnInventario(VillageStorage::esLena) > 0
+                || VillageStorage.cuenta(level, center, VillageStorage::esLena) > 0;
+        return hayPalos && (hayCarbon || hayLena);
     }
 
     /**
@@ -297,12 +341,19 @@ public class VillagerMinerGoal extends Goal {
      * ({@link #ADOQUIN_PARA_SUBIR}), que se ha quedado <b>sin antorchas</b> (una mina a oscuras cría bichos dentro de
      * la muralla) y el <b>zurrón lleno</b> (si no, lo que saque se queda por el suelo del túnel).
      */
-    private boolean hayQueSubir() {
+    private boolean hayQueSubir(ServerLevel level) {
         if (cuantosEnInventario(VillagerMinerGoal::esMineralCrudo) >= MINERAL_PARA_SUBIR
                 || cuantosEnInventario(Items.COBBLESTONE) >= ADOQUIN_PARA_SUBIR) {
             return true;
         }
-        if (celdasCavadas > 0 && cuantosEnInventario(Items.TORCH) <= 0) {
+        // SIN LUZ NO SE BAJA (28-sep-2026, lo pidió el jugador: *"el minero no está poniendo antorchas … se ve muy
+        // oscuro"*). Antes esto era `celdasCavadas > 0 && TORCH <= 0`, así que la PRIMERA bajada se hacía a oscuras y
+        // esas celdas se quedaban así hasta que el repaso (`buscarHuecoDeLuz`) las encendiera. **El carbón no tiene
+        // por qué salir de la mina**: el taller hace CARBÓN VEGETAL quemando un tronco (la leña la trae el leñador al
+        // almacén), así que se puede bajar con luz desde el primer viaje. Se pide solo si el pueblo PUEDE dársela
+        // (antorchas hechas, o carbón/leña Y palos): si no puede, subir sería un bucle y cava a oscuras, que es lo
+        // único que le queda (y el repaso lo encenderá cuando haya).
+        if (cuantosEnInventario(Items.TORCH) <= 0 && elPuebloPuedeDarLuz(level)) {
             return true;
         }
         int libres = 0;
@@ -574,6 +625,19 @@ public class VillagerMinerGoal extends Goal {
                 entregar(level);
                 destino = null; // faena acabada: se vuelve a decidir en el siguiente `canUse`
             }
+            case ENCENDER -> {
+                // LA ANTORCHA QUE FALTABA: se pone (o se apunta el hueco para no quedarse en bucle con él).
+                if (huecoDeLuz != null) {
+                    if (ponerLaAntorcha(level, huecoDeLuz)) {
+                        VillageManager.ponerSuceso(villager, "Enciende la mina");
+                        anotar("encendio " + huecoDeLuz.toShortString());
+                    } else {
+                        VillageManager.marcarPuntoFallido(villager, huecoDeLuz);
+                    }
+                }
+                huecoDeLuz = null;
+                destino = null; // faena acabada: se vuelve a decidir en el siguiente `canUse`
+            }
         }
         stuckTicks = 0;
         mejorDistancia = Double.MAX_VALUE;
@@ -591,6 +655,7 @@ public class VillagerMinerGoal extends Goal {
             case CAVAR -> "Picando";
             case TALLER -> "En el taller";
             case ENTREGAR -> "Bajando lo sacado";
+            case ENCENDER -> "Encendiendo la mina";
         };
     }
 
@@ -599,6 +664,7 @@ public class VillagerMinerGoal extends Goal {
         return switch (fase) {
             case RECOGER -> "Yendo al almacen";
             case CAVAR -> "Bajando a la mina";
+            case ENCENDER -> "Con las antorchas";
             case TALLER -> "Subiendo al taller";
             case ENTREGAR -> "Subiendo al almacen";
         };
@@ -1238,10 +1304,12 @@ public class VillagerMinerGoal extends Goal {
     /**
      * Deja una <b>antorcha</b> en la pared del túnel (de las que lleva hechas). Una mina a oscuras es un criadero
      * de bichos, y estos nacen <b>dentro</b> de la muralla: la luz es parte del trabajo, no un adorno.
+     * <p>
+     * Devuelve {@code true} si la ha puesto (para que {@link #buscarHuecoDeLuz} sepa si el hueco está resuelto).
      */
-    private void ponerLaAntorcha(ServerLevel level, BlockPos celda) {
+    private boolean ponerLaAntorcha(ServerLevel level, BlockPos celda) {
         if (cuantosEnInventario(Items.TORCH) <= 0) {
-            return;
+            return false;
         }
         for (Direction lado : Direction.values()) {
             if (lado.getAxis().isVertical()) {
@@ -1251,9 +1319,61 @@ public class VillagerMinerGoal extends Goal {
                 level.setBlock(celda, Blocks.WALL_TORCH.defaultBlockState()
                         .setValue(WallTorchBlock.FACING, lado.getOpposite()), Block.UPDATE_ALL);
                 gastarDelInventario(Items.TORCH, 1);
-                return;
+                return true;
             }
         }
+        return false;
+    }
+
+    /** ¿Esa celda ya tiene una antorcha (de pie o de pared)? */
+    private static boolean esAntorcha(ServerLevel level, BlockPos p) {
+        return level.getBlockState(p).is(Blocks.TORCH) || level.getBlockState(p).is(Blocks.WALL_TORCH);
+    }
+
+    /**
+     * <b>LA PRIMERA CELDA DE LA MINA A LA QUE LE FALTA SU ANTORCHA</b>, buscando <b>del frente hacia la boca</b> (lo
+     * más cerca del minero primero), o {@code null} si no falta ninguna.
+     * <p>
+     * <b>Por qué existe</b> (medido el 28-sep-2026, y lo reportó el jugador: *"el minero no está poniendo antorchas
+     * en las paredes de las escaleras de caracol ni en las galerías … se ve muy oscuro y es un punto peligroso"*): la
+     * antorcha se pone <b>al cavar la celda</b> ({@code ponerLaAntorcha} sale sin poner nada si en ese momento no
+     * lleva), y el minero <b>cava antes de tener antorchas</b> —el carbón sale de la mina, así que las primeras
+     * vueltas son a oscuras— y <b>nunca volvía a pasar por esas celdas</b>. MEDIDO con el censo del arnés: el caracol
+     * tenía sus pasos <b>0, 8, 16, 24 y 32</b> con la celda de la cabeza en {@code air} (ni una antorcha) y la galería
+     * del paso 32 sus celdas 8 y 16 igual, mientras el minero llevaba <b>8 antorchas sin gastar</b> en el zurrón (las
+     * fabricó a las 03:34 y había cavado la celda 8 de la galería a las <b>03:31</b>).
+     */
+    @Nullable
+    private BlockPos buscarHuecoDeLuz(ServerLevel level, int nivel) {
+        // 1) EL CARACOL, del frente hacia la boca: los pasos que tocan antorcha (`CELDAS_POR_ANTORCHA`).
+        int p = paso - Math.floorMod(paso, CELDAS_POR_ANTORCHA);
+        for (; p >= 0; p -= CELDAS_POR_ANTORCHA) {
+            BlockPos celda = VillageGenerator.celdaDelCaracol(center, nivel, p);
+            if (!level.getBlockState(celda).is(VillageGenerator.piezaDelCaracol(p).getBlock())) {
+                continue; // ese paso todavía no está cavado: su luz toca cuando se cave
+            }
+            BlockPos antorcha = celda.above(2);
+            if (!esAntorcha(level, antorcha) && level.getBlockState(antorcha).isAir()) {
+                return antorcha;
+            }
+        }
+        // 2) LAS GALERÍAS ABIERTAS, de la más nueva hacia atrás (sus celdas 8, 16 y 24 son las que tocan).
+        for (int g = paso; g > 0; g--) {
+            if (!VillageGenerator.abreGaleria(g)) {
+                continue;
+            }
+            for (int i = CELDAS_POR_ANTORCHA; i <= VillageGenerator.MINA_GALERIA_LARGO; i += CELDAS_POR_ANTORCHA) {
+                BlockPos celda = VillageGenerator.celdaDeLaGaleria(center, nivel, g, i);
+                if (!level.getBlockState(celda).isAir()) {
+                    continue; // esa celda de la galería aún no está cavada
+                }
+                BlockPos antorcha = celda.above();
+                if (!esAntorcha(level, antorcha) && level.getBlockState(antorcha).isAir()) {
+                    return antorcha;
+                }
+            }
+        }
+        return null;
     }
 
     /**

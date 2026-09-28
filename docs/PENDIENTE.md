@@ -370,7 +370,7 @@ herrero**, no el minero.
 
 **Y OJO CON EL INSTRUMENTO**: en esta sesión lancé esa corrida con `MEDIR_MINERO = false` y la medida salió en blanco
 (`al borde: 0`): **comprobar que el modo está encendido en la copia del arnés** antes de lanzar.
-### 6b. LO QUE PIDIÓ EL JUGADOR PARA LA MINA (**los tres HECHOS y MEDIDOS**)
+### 6b. LO QUE PIDIÓ EL JUGADOR PARA LA MINA (**los cuatro HECHOS y MEDIDOS**)
 
 1. **La mina atraviesa el agua** — **HECHO y MEDIDO** (I132): ya no se cierra cuando hay agua; **aísla** con paredes
    (cáscara 3×3×3 de adoquín: sella también el agua de delante, así el túnel avanza por celdas secas), **seca** la
@@ -391,6 +391,19 @@ herrero**, no el minero.
    contaba pepitas **en el suelo** (el mod se las da **al que mata**), la **barredora** del arnés **descartaba** el
    zombi plantado (`discard()` no es morir: ni botín) y el escaneo de zurrones era de **140** bloques (el que las
    llevaba se iba al muelle). Todo en `tools/arnes/medidas-pepitas.txt`.
+4. **La LUZ de la mina** (28-sep-2026, **I142**) — *«el minero no está poniendo antorchas en las paredes de las
+   escaleras de caracol ni en las galerías … se ve muy oscuro y es un punto peligroso para que spawneen mobs»*.
+   **Era verdad y está medido**: la antorcha se pone **al cavar la celda**, y `ponerLaAntorcha` **sale sin poner nada
+   si en ese momento no lleva** — y el minero **cavaba antes de tenerlas** (el log: cavó la celda 8 de la galería a
+   las 03:31 y fabricó las antorchas a las 03:34) y **nunca repasaba**. Censo del arnés: el caracol con sus pasos
+   **0, 8, 16, 24 y 32** en `air` (ni una antorcha), la galería con sus celdas 8 y 16 en `+1=air`, y el minero con
+   **8 antorchas en el zurrón SIN GASTAR**. Arreglo, dos partes: **(a) la fase `ENCENDER`** (`buscarHuecoDeLuz`)
+   repasa **del frente hacia la boca** y pone la antorcha que falte antes de seguir cavando; **(b) no se baja sin
+   luz**: `hayQueSubir` pedía luz solo con `celdasCavadas > 0`, así que la **primera bajada** era a oscuras → ahora la
+   pide también en el primer viaje **si el pueblo puede dársela** (antorcha hecha, o **carbón/carbón vegetal de un
+   tronco** —la leña del leñador— o leña, siempre con palos; sin esa guarda, subir sería un bucle). MEDIDO: los 5
+   pasos del caracol y la celda 8 de la galería pasan de `air` a **`wall_torch`**, y el minero **gasta** las antorchas
+   (`El minero: encendio 499, 55, 629`, etiqueta `Enciende la mina`).
 
 ### 6c. La RECOLECTORA en la TABERNA: **ARREGLADA y MEDIDA** (16 → 0)
 
