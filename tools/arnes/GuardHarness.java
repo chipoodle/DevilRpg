@@ -717,7 +717,10 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         // frente, que es lo que lee `VillageGenerator.laMinaLlegoAlTope`. Es la forma de medir el SEGUNDO POZO sin
         // esperar 240 pasos: en cuanto el pozo 1 esta topado, el minero tiene que ELEGIR el 2 (el suroeste, eje
         // 470,646) y empezar su caracol desde el paso 0.
-        if (ticks == 400) {
+        // (EL TOPE DEL POZO 1 SE APAGA PARA MEDIR LA TASA DEL PUEBLO NORMAL, 28-sep-2026: era un apano para medir el
+        // segundo pozo sin esperar 240 pasos, pero deja al minero en el pozo 2 y eso ya no es el pueblo de siempre. La
+        // tasa tiene que ser comparable con las corridas de referencia.)
+        if (false && ticks == 400) {
             int nivelTope = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
             int pasoTope = com.chipoodle.devilrpg.world.VillageGenerator.progresoDeLaMina(level, CENTRO, nivelTope);
             BlockPos celdaTope = com.chipoodle.devilrpg.world.VillageGenerator.celdaDelCaracol(CENTRO, nivelTope,
