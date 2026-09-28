@@ -58,6 +58,7 @@ restaurado) y **todo commiteado**.
 | **la medida** (I135) | `tools/arnes/rendiciones.py`: rendiciones **por 1.000 ticks en ventana fija**, por etiqueta, con media y rango |
 | **la boca de la galería** (I136) | el aldeano va **de pie sobre la losa** (nodo `y+1`) y con **dos** celdas de hueco el vecino sale **BLOCKED**: no entra ni sale → **tres** celdas. `hechas` **3/24 congelado 3.600 ticks → 24/24** y `pasos` **32 → 44** (la cara de `y=46` a `y=40`); y **las paredes contra el agua** al abrir cada celda |
 | **la cadena del hierro de los raids** (I137) | el **guardia** mata, **lootea** (2 pepitas), **deja el hierro en el almacén** (13 depósitos, de 0 a **20** pepitas) y **el herrero forja el pico de HIERRO**; el eslabón que faltaba era que el guardia se lo quedaba en el zurrón |
+| **la balsa, al herrero de herramientas** (I138) | era la faena que le comía el tiempo al minero (**33-46 coladas** con el pedernal en su zurrón y el almacén clavado en 6) → ahora cuela el **herrero**: coladas del minero **0**, del herrero **10**, el pedernal **6 → 16**, y la misma galería en **t≈17.200** en vez de **t≈37.800** |
 
 **El aviso de método que salió de aquí**: al normalizar la medida, el "ruido" escondía **16 rendiciones de un solo
 aldeano en un solo sitio** (la taberna). La medida no era un trámite: **destapó el fallo**.
@@ -78,15 +79,19 @@ Lo ordenado era el **choque caracol ↔ galería** (el 68 % del tiempo del miner
 | el **agua** | las tres celdas abren el techo en el acuífero y el túnel se inundaba (`hechas` 6 → **0**, 223 muestras). Con el censo nuevo `AGUA`: el agua entra por la **celda de delante** → `aislarDelAgua` al **abrir** cualquier celda, saltando solo el paso del caracol. Al final: **31 celdas con fluido, ninguna dentro del túnel** |
 | el **muro** | con 21/24 el minero se iba al **portón norte** (243 muestras; el final de la galería cae «fuera del muro» a 17 bloques bajo el suelo): **bajo tierra no hay muro que cruzar** → la ruta a la celda 21 pasa a `22 nodos … alcanza=SI` |
 
-**Lo que toca ahora** (en este orden): **(1)** el **taller/balsa** (opción C del jugador: pasar la balsa y el acarreo
-al herrero de herramientas) — el primer número medido a mover es el de **coladas** (**33-46 en una corrida**, porque
-el pedernal se queda en el zurrón del minero y el objetivo mira el almacén); **(2)** los **atascos sueltos** del §7.
+**Lo que toca ahora**: **(1)** los **atascos sueltos** del §7; **(2)** volver a medir la **tasa de rendiciones**
+(`rendiciones.py --etiquetas`, media de 3-4 corridas) con la mina ya desbloqueada, que es lo que dice si el pueblo se
+rinde menos.
 
 **Y también CERRADO en esta sesión**: la **cadena del hierro de los raids** (§6b.2/§6b.3) — **I137**: el guardia mata,
 lootea, **deja el hierro en el almacén** (13 depósitos; el almacén de 0 a 20 pepitas) y **el herrero forja el pico de
 hierro**, que se lleva el minero. El eslabón que faltaba era el guardia (se quedaba el botín en el zurrón) y el
 instrumento tenía tres trampas (contaba pepitas en el suelo, la barredora descartaba el zombi y el escaneo era de 140
 bloques): está todo en `tools/arnes/medidas-pepitas.txt`.
+
+**Y la opción C** (la balsa y su acarreo, al herrero de herramientas) — **I138**: coladas del minero **33-46 → 0**, las
+hace el herrero (**10**, hasta el objetivo de 16 pedernales) y la misma galería se completa en **t≈17.200** en vez de
+**t≈37.800** (`tools/arnes/medidas-balsa.txt`).
 
 
 ### 1. El `JOB_SITE` del minero (el cortapiedras, un bloque): **medido, y no cuesta nada** (cerrado)
@@ -348,11 +353,12 @@ el patrón de "no puedo entrar/salir de un recinto" o "la celda no se pisa"), y 
 >   galería cae a 65 bloques del centro, «fuera del muro», **a 17 bloques bajo el suelo**). Arreglado: **por debajo de
 >   la capa del suelo no hay muro que cruzar**.
 >
-> **LO SIGUIENTE, ya medido**: el **taller/balsa**. En la corrida buena, el minero hizo **46 coladas de 4 adoquines**
-> (33 en otra) mientras el almacén seguía con `6 pedernal`: el **pedernal se lo queda él en el zurrón**
-> (`guardarEnInventario` en la rama de la balsa) y el objetivo que mira es `VillageStorage.cuenta(…, FLINT)`, o sea el
-> **almacén** → el umbral no se alcanza nunca y filtra hasta quedarse sin adoquín. Es la **opción C** del jugador
-> (pasar la balsa y el acarreo al herrero de herramientas), y el criterio de éxito es el número de coladas.
+> **Y EL TALLER/BALSA, HECHO Y MEDIDO EN LA MISMA SESIÓN** (I138, `tools/arnes/medidas-balsa.txt`): era la
+> **opción C** que quedaba (pasar la balsa y el acarreo al herrero de herramientas). El bucle estaba medido —el
+> minero **33-46 coladas** con el pedernal en su zurrón y el almacén **clavado en 6**— y el arreglo es el traspaso:
+> la receta «Colando» es del **herrero de herramientas** y su ciclo la deja en el almacén. MEDIDO: coladas del minero
+> **33-46 → 0**, las del herrero **10** (y para: el pedernal llega a su objetivo de **16**), y la galería del paso 32
+> se completa en **t≈17.200** en vez de **t≈37.800**.
 
 **El diagnóstico viejo, tal cual se escribió** (léase con lo de arriba en la mano):
 
@@ -377,11 +383,10 @@ picar **ya es una pieza protegida de la mina** (una losa del caracol, un poste d
 el paso** (o se re-planifica el trazado), en vez de quedarse 17 muestras de `Picando` sobre su propia losa. Hay que
 **leer el bloque de `CAVAR` entero** (~líneas 470-600) antes de tocar: ahí están la secuencia de picado, el sello y el
 avance del paso.
-**Orden de trabajo (el jugador decidió la opción C)**: el choque caracol ↔ galería **ya está hecho y medido** (I136);
-lo que queda de la opción C es **pasar el taller y la balsa al herrero de herramientas** para que el minero **solo
-mine**. Criterio: `hechas` sube de `3/24`, `pasos` sigue creciendo y no baja lo que produce el taller; y el primer
-número que hay que mover es el de **coladas de la balsa** (medido: **33 en dos minutos**, porque el pedernal se queda
-en el zurrón del minero y el objetivo mira el almacén).
+**Orden de trabajo (el jugador decidió la opción C)**: **hecho** — el choque caracol ↔ galería (I136) y el traspaso de
+la **balsa** al herrero de herramientas (I138, con la medida en `tools/arnes/medidas-balsa.txt`). El criterio que se
+pedía (`hechas` sube de `3/24`, `pasos` sigue creciendo y no baja lo que produce el taller) está medido: `hechas`
+**24/24**, `pasos` **40** y el pedernal del almacén **de 6 a 16**.
 
 
 **MEDIDO** (corrida larga, `MEDIR_MINERO`): la mina **desciende** —la parte del encargo que faltaba—:

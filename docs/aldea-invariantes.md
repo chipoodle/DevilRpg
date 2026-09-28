@@ -4205,6 +4205,39 @@ de la marcha —pelear manda— y antes de la ronda). Se deja **solo el hierro**
 y sus flechas no se tocan. **MEDIDO después**: 13 depósitos, el almacén de **0 a 20** pepitas, y con 27 el herrero
 **forjó el pico de hierro**.
 
+### I138 · LA BALSA ES DEL HERRERO DE HERRAMIENTAS (el minero solo pica) (27-sep-2026)
+
+Lo pidió el jugador (la «opción C» del traspaso): *"pasar la balsa (colar adoquín → pedernal) y el acarreo al herrero de
+herramientas para que el minero solo pique"*.
+
+**El bucle medido que había que quitar**: la colada vivía en `VillagerMinerGoal.trabajarEnElTaller` y guardaba el
+pedernal con `guardarEnInventario` —**al zurrón del minero**— mientras el umbral que miraba era el del **almacén**
+(`VillageStorage.cuenta(…, FLINT)`): nunca se alcanzaba, así que encadenaba coladas. Medido en
+`build/medida-galeria-final.log`: **33 coladas** seguidas (46 en otra corrida) con el almacén **clavado en 6 pedernal**,
+y las últimas celdas de la galería a **5-8 minutos cada una** (celdas 21-24 abiertas a las 19:26, 19:33, 19:38 y 19:46).
+
+**El traspaso**: la receta **«Colando»** (4 adoquines → 1 pedernal) vive ahora en `VillagerSmithGoal` y solo para el de
+**herramientas** —es él quien necesita el pedernal: las flechas las hace el de armas—, con objetivo
+`OBJETIVO_PEDERNAL = 16`. `Receta` gana el componente `enLaBalsa` y `puestoDeLaReceta(level)` manda al herrero a la
+**balsa** de la caseta del minero en vez de a su mesa (si no hay balsa, la receta se descarta). Y como el ciclo del
+herrero es **RECOGER → TRABAJAR → ENTREGAR**, el pedernal queda **en el almacén en cada faena**: eso es lo que hace que
+el objetivo se cumpla y que el bucle **no exista por diseño**. En el minero se quita la rama de la balsa (con el porqué
+medido en el sitio): el adoquín que saca lo **entrega** al almacén, de donde lo coge el herrero.
+
+**MEDIDO** (misma partida, misma copia; datos crudos en `tools/arnes/medidas-balsa.txt`):
+
+| | antes (`medida-galeria-final`) | después (`medida-balsa-final`) |
+|---|---|---|
+| coladas del **MINERO** | **33** (46 en otra corrida) | **0** |
+| coladas del **HERRERO** | 0 | **10** (y para: el objetivo se alcanza) |
+| pedernal del **ALMACÉN** | **6, clavado** (el objetivo no se alcanzaba nunca) | **6 → 16** (el objetivo, y ahí se queda) |
+| la galería del paso 32 a **24/24** | **t≈37.800** | **t≈17.200** (menos de la mitad) |
+| `pasos` (el caracol) | 40 en **t≈39.880** | **40 en t≈18.960**, con la cara en `y=42` |
+
+O sea: el criterio del traspaso («que `hechas` suba y `pasos` siga creciendo sin que baje lo que produce el taller») se
+cumple `hechas` **24/24**, `pasos` **40** y el pedernal del almacén **subiendo a su objetivo**; y el minero, que antes
+se pasaba la corrida colando, **completa la misma galería en la mitad de ticks**.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
 

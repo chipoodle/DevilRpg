@@ -58,13 +58,12 @@ import java.util.function.Predicate;
  *   <li><b>Funde en su horno</b> ({@link VillageGenerator#hornoDelMinero}) el hierro, el cobre y el oro crudos: un
  *       lingote por mineral, con <b>carbón</b> de lo que él mismo ha picado (o leña del almacén, con la reserva de
  *       {@link VillageStorage#RESERVA_LENA} como los herreros).</li>
- *   <li><b>Filtra el adoquín en su balsa</b> ({@link VillageGenerator#balsaDelMinero}): {@value #ADOQUIN_POR_PEDERNAL}
- *       adoquines por <b>pedernal</b>. Es la respuesta del jugador al cuello de botella de I101 (la aldea no producía
- *       pedernal y las flechas dependían de lo que trajera él).</li>
  *   <li><b>Hace antorchas</b> (carbón + palo) y las va dejando por el túnel: una mina a oscuras es un criadero de
  *       bichos, y el pueblo no puede permitirse tener monstruos naciendo <b>dentro</b> de la muralla.</li>
- *   <li><b>Sube y lo baja todo al almacén</b> (lingotes, pedernal, carbón, gemas y el adoquín que sobre), de donde el
- *       herrero de herramientas saca los picos y el flechero las flechas.</li>
+ *   <li><b>Sube y lo baja todo al almacén</b> (lingotes, carbón, gemas y el adoquín que saca), de donde el
+ *       herrero de herramientas saca los picos y el flechero las flechas. <b>La balsa ya no es suya</b> (27-sep-2026):
+ *       el adoquín → pedernal lo cuela el <b>herrero de herramientas</b> —era la faena que le comía el tiempo de la
+ *       mina, medido— y aquí solo queda el <b>horno</b> del taller.</li>
  * </ol>
  * <p>
  * <b>Su mina es SUYA</b> (I102): lo que cava no entra en el plano de la aldea (el obrero no lo repone) y el nivelado
@@ -101,9 +100,11 @@ public class VillagerMinerGoal extends Goal {
     private static final int CELDAS_POR_ANTORCHA = 8;
     /** Cuántas <b>vetas a la vista</b> pica como mucho por celda (lo que se ve en la pared del túnel). */
     private static final int VETAS_POR_CELDA = 2;
-    /** El jugador: **{@value #ADOQUIN_POR_PEDERNAL} adoquines por un pedernal**, en la balsa de su caseta. */
-    public static final int ADOQUIN_POR_PEDERNAL = 4;
-    /** Adoquín que junta antes de subir a colarlo: {@value} (una pila: {@value} / 4 = 16 pedernales por viaje). */
+    /**
+     * Adoquín que junta antes de subir a <b>entregarlo</b>: {@value} (una pila). Ya no sube a <b>colarlo</b> —la balsa
+     * es del herrero de herramientas desde el 27-sep-2026—, pero sí a dejarlo en el almacén: de ahí lo saca el herrero
+     * para colar el pedernal y el obrero para la obra.
+     */
     private static final int ADOQUIN_PARA_SUBIR = 64;
     /**
      * Mineral crudo que junta antes de subir a fundirlo. <b>No se sube por UNA veta</b>: el viaje de subida y bajada
@@ -144,8 +145,6 @@ public class VillagerMinerGoal extends Goal {
     private static final int TICKS_PARA_VOLVER_A_LA_CASETA = 120;
     /** true mientras el minero vuelve a la caseta porque se ha quedado encajado sin ruta hasta su celda. */
     private boolean volviendoALaCaseta;
-    /** Pedernal que quiere tener el pueblo en el almacén antes de ponerse a colar más. */
-    private static final int OBJETIVO_PEDERNAL = 16;
     /** Lo que se lleva de una vez del almacén y lo que deja de reserva para el herrero de herramientas. */
     private static final int TABLONES_POR_VIAJE = 16;
     private static final int TABLONES_RESERVA = 8;
@@ -1247,10 +1246,14 @@ public class VillagerMinerGoal extends Goal {
     }
 
     /**
-     * <b>El taller</b> de la caseta, una faena por vuelta: fundir un mineral crudo en el horno, colar
-     * {@value #ADOQUIN_POR_PEDERNAL} adoquines en la balsa por un pedernal, <b>hacer carbón vegetal</b> quemando un
-     * tronco, o hacer antorchas con el carbón (o el carbón vegetal) y los palos. Devuelve {@code false} cuando ya no
-     * hay nada que hacer y toca bajar lo sacado al almacén.
+     * <b>El taller</b> de la caseta, una faena por vuelta: fundir un mineral crudo en el horno, <b>hacer carbón
+     * vegetal</b> quemando un tronco, o hacer antorchas con el carbón (o el carbón vegetal) y los palos. Devuelve
+     * {@code false} cuando ya no hay nada que hacer y toca bajar lo sacado al almacén.
+     * <p>
+     * <b>La balsa ya no está aquí</b> (27-sep-2026): colar adoquín → pedernal lo hace el herrero de herramientas (ver
+     * {@link VillagerSmithGoal}), que era lo que pedía el jugador para que el minero solo picara. Medido: con la balsa
+     * aquí, el minero encadenaba <b>33 coladas</b> (46 en otra corrida) porque el pedernal se quedaba en su zurrón y el
+     * umbral miraba el almacén.
      */
     private boolean trabajarEnElTaller(ServerLevel level) {
         // 1) FUNDIR: hierro, cobre y oro crudos -> lingotes. Combustible: su carbón (que saca él) o la leña del
@@ -1278,20 +1281,14 @@ public class VillagerMinerGoal extends Goal {
                 return true;
             }
         }
-        // 2) COLAR: 4 adoquines por un pedernal, en la balsa del agua (lo pidió el jugador).
-        if (cuantosEnInventario(Items.COBBLESTONE) >= ADOQUIN_POR_PEDERNAL
-                && VillageStorage.cuenta(level, center, s -> s.is(Items.FLINT)) < OBJETIVO_PEDERNAL) {
-            gastarDelInventario(Items.COBBLESTONE, ADOQUIN_POR_PEDERNAL);
-            ItemStack resto = guardarEnInventario(new ItemStack(Items.FLINT));
-            if (!resto.isEmpty()) {
-                VillageStorage.guardar(level, center, resto);
-            }
-            level.playSound(null, villager.blockPosition(), SoundEvents.BUCKET_EMPTY, SoundSource.BLOCKS, 0.6F, 1.0F);
-            VillageManager.ponerSuceso(villager, "Saca pedernal");
-            DevilRpg.LOGGER.info("[Village] El minero: cuela {} adoquines en la balsa y saca un pedernal", 
-                    ADOQUIN_POR_PEDERNAL);
-            return true;
-        }
+        // 2) LA BALSA YA NO ES SUYA (27-sep-2026): la cuela el HERRERO DE HERRAMIENTAS. Era la faena que le comía el
+        //    tiempo de la mina, y estaba MEDIDA: el pedernal se lo quedaba él en el zurrón (esta rama guarda con
+        //    `guardarEnInventario`) mientras el umbral que miraba era el del ALMACÉN, así que no se alcanzaba nunca y
+        //    encadenaba coladas: 33 en una corrida y 46 en otra, con las últimas celdas de la galería a 5-8 minutos
+        //    cada una. Lo pidió el jugador: *"pasar la balsa (colar adoquín → pedernal) y el acarreo al herrero de
+        //    herramientas para que el minero solo pique"*. La receta está ahora en
+        //    `VillagerSmithGoal.recetaDeTransformacion` (faena "Colando", en la balsa) y su ciclo la deja en el
+        //    almacén en cada faena, que es lo que hace que el objetivo se cumpla.
         // 3) CARBÓN VEGETAL: un tronco al horno (la receta de vanilla) cuando no le queda carbón y va justo de
         //    antorchas. Es la única fuente de carbón del pueblo cuando no hay veta a mano, y la leña la trae el
         //    leñador. Lo pidió el jugador: *"el carbón para hacer antorchas se puede hacer quemando logs en el

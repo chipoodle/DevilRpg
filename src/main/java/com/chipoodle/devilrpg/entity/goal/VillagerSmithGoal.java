@@ -83,6 +83,19 @@ public class VillagerSmithGoal extends Goal {
      */
     private static final int OBJETIVO_TABLONES = 32;
     private static final int OBJETIVO_PALOS = 64;
+    /**
+     * <b>La balsa</b> (27-sep-2026): adoquines que se cuelan por un <b>pedernal</b> y pedernal que quiere tener el
+     * pueblo. Era la faena del <b>MINERO</b> y le comía el tiempo de la mina; lo pidió el jugador: *"pasar la balsa
+     * (colar adoquín → pedernal) y el acarreo al herrero de herramientas para que el minero solo pique"*.
+     * <p>
+     * <b>MEDIDO, y era un bucle</b>: el minero hacía la colada con `guardarEnInventario` (el pedernal se lo quedaba
+     * <b>en el zurrón</b>) y el umbral que miraba era el del <b>almacén</b>, así que no se alcanzaba nunca: en una
+     * corrida hizo <b>33 coladas seguidas</b> (46 en otra) y las últimas celdas de la galería le costaban <b>5-8
+     * minutos cada una</b>. Aquí el ciclo del herrero (RECOGER → TRABAJAR → ENTREGAR) deja el pedernal en el almacén
+     * <b>en cada faena</b>, que es lo que hace que el objetivo se cumpla y la faena se acabe.
+     */
+    private static final int ADOQUIN_POR_PEDERNAL = 4;
+    private static final int OBJETIVO_PEDERNAL = 16;
     /** Troncos que el herrero de herramientas sabe aserrar (los que trae el leñador y los del propio juego). */
     private static final List<ItemStack> TRONCOS = List.of(
             new ItemStack(Items.OAK_LOG), new ItemStack(Items.SPRUCE_LOG), new ItemStack(Items.BIRCH_LOG),
@@ -99,11 +112,18 @@ public class VillagerSmithGoal extends Goal {
      * {@link VillageStorage#quitarLena}). El fuego se paga: la <b>fragua no funciona sin leña</b> (lo pidió el
      * jugador). Las faenas que <b>no</b> queman son las de la mesa y el muelle: aserrar, hacer palos, forjar,
      * encorar, flechar, curtir cuero y fabricar armas.
+     * <p>
+     * {@code enLaBalsa} = la faena se hace <b>en la balsa de la caseta del minero</b> (colar adoquín en el agua
+     * para sacar pedernal), no en la mesa del herrero: es la única que tiene su propio sitio de trabajo (27-sep-2026).
      */
     private record Receta(String verbo, String suceso, List<ItemStack> ingredientes, ItemStack producto,
-                          boolean quema) {
+                          boolean quema, boolean enLaBalsa) {
         Receta(String verbo, String suceso, List<ItemStack> ingredientes, ItemStack producto) {
-            this(verbo, suceso, ingredientes, producto, false);
+            this(verbo, suceso, ingredientes, producto, false, false);
+        }
+
+        Receta(String verbo, String suceso, List<ItemStack> ingredientes, ItemStack producto, boolean quema) {
+            this(verbo, suceso, ingredientes, producto, quema, false);
         }
     }
 
@@ -173,7 +193,7 @@ public class VillagerSmithGoal extends Goal {
         Container almacen = VillageStorage.almacen(level, center);
         // Lo que QUEMA (las fundiciones) solo se elige si el almacén tiene leña por encima de la reserva: así el
         // herrero no se lleva pepitas que no puede fundir y, si no hay leña, se pone a lo que no gasta fuego.
-        receta = elegirReceta(almacen, VillageStorage.hayLenaParaQuemar(level, center));
+        receta = elegirReceta(level, almacen, VillageStorage.hayLenaParaQuemar(level, center));
         if (receta == null) {
             restTicks = IDLE_REST_TICKS; // no hay materiales (o ya está todo hecho): a esperar
             return false;
@@ -183,6 +203,13 @@ public class VillagerSmithGoal extends Goal {
             receta = null;
             restTicks = IDLE_REST_TICKS;
             return false; // todavía no hay taller en esta aldea
+        }
+        // Y LA BALSA, SI ES LA FAENA DE COLAR: sin balsa (agua a ras del suelo de la caseta del minero) no hay faena
+        // que hacer, así que se deja y se elige otra cosa al volver a arrancar.
+        if (receta.enLaBalsa() && VillageGenerator.balsaDelMinero(level, center) == null) {
+            receta = null;
+            restTicks = IDLE_REST_TICKS;
+            return false;
         }
         // El puesto es SUYO: se le pone en el cerebro y se toma su ticket del punto de interés (ver
         // `reclamarElPuesto`: sin `JOB_SITE` el juego no le registra la actividad de trabajar y el aldeano se queda
@@ -266,7 +293,7 @@ public class VillagerSmithGoal extends Goal {
             case RECOGER -> {
                 if (recoger(level)) {
                     fase = Fase.TRABAJAR;
-                    destino = VillageGenerator.puestoDeHerreria(level, center, armas());
+                    destino = puestoDeLaReceta(level);
                 } else {
                     receta = null; // se lo ha llevado otro: se elige otra cosa
                 }
@@ -306,7 +333,8 @@ public class VillagerSmithGoal extends Goal {
     private String verboDeCamino() {
         return switch (fase) {
             case RECOGER -> "Yendo al almacen";
-            case TRABAJAR -> armas() ? "Yendo al muelle" : "Yendo a la mesa";
+            case TRABAJAR -> receta != null && receta.enLaBalsa() ? "Yendo a la balsa"
+                    : (armas() ? "Yendo al muelle" : "Yendo a la mesa");
             case ENTREGAR -> "Volviendo al almacen";
         };
     }
@@ -424,9 +452,21 @@ public class VillagerSmithGoal extends Goal {
         return true;
     }
 
+    /**
+     * <b>Dónde se hace la faena</b>: la <b>balsa</b> de la caseta del minero si la faena es colar adoquín (27-sep-2026)
+     * y, si no, su puesto de herrería (la mesa del de herramientas o el muelle del de armas). Devuelve {@code null}
+     * solo si no hay puesto (y quien llama ya lo comprueba en el {@code canUse}).
+     */
+    @Nullable
+    private BlockPos puestoDeLaReceta(ServerLevel level) {
+        if (receta != null && receta.enLaBalsa()) {
+            return VillageGenerator.balsaDelMinero(level, center);
+        }
+        return VillageGenerator.puestoDeHerreria(level, center, armas());
+    }
+
     /** Trabaja la pieza en su puesto: gasta los ingredientes que traía y se queda con el producto. */
-    private void fabricar(ServerLevel level) {
-        if (receta == null) {
+    private void fabricar(ServerLevel level) {        if (receta == null) {
             return;
         }
         // ANTES DE FABRICAR, comprobar que de verdad TRAE los ingredientes: si los hubiera perdido por el camino
@@ -454,10 +494,13 @@ public class VillagerSmithGoal extends Goal {
         if (!resto.isEmpty()) {
             VillageStorage.guardar(level, center, resto); // sin sitio: se queda en el almacén directamente
         }
-        level.playSound(null, villager.blockPosition(), net.minecraft.sounds.SoundEvents.ANVIL_USE,
+        level.playSound(null, villager.blockPosition(), receta.enLaBalsa()
+                        ? net.minecraft.sounds.SoundEvents.BUCKET_EMPTY : net.minecraft.sounds.SoundEvents.ANVIL_USE,
                 SoundSource.NEUTRAL, 0.8F, 1.0F);
-        level.playSound(null, villager.blockPosition(), net.minecraft.sounds.SoundEvents.FIRE_AMBIENT,
-                SoundSource.BLOCKS, 0.5F, 1.0F);
+        if (!receta.enLaBalsa()) {
+            level.playSound(null, villager.blockPosition(), net.minecraft.sounds.SoundEvents.FIRE_AMBIENT,
+                    SoundSource.BLOCKS, 0.5F, 1.0F);
+        }
         VillageManager.ponerSuceso(villager, receta.suceso());
         DevilRpg.LOGGER.info("[Village] {}: {}{}", armas() ? "El herrero de armas" : "El herrero de herramientas",
                 receta.suceso(), receta.quema() ? " (quemo un tronco del almacen)" : "");
@@ -487,11 +530,11 @@ public class VillagerSmithGoal extends Goal {
      * forjar…): un pueblo sin madera no funde, pero no se queda quieto.
      */
     @Nullable
-    private Receta elegirReceta(@Nullable Container almacen, boolean hayLena) {
+    private Receta elegirReceta(ServerLevel level, @Nullable Container almacen, boolean hayLena) {
         if (almacen == null) {
             return null;
         }
-        Receta transformar = recetaDeTransformacion(almacen, hayLena);
+        Receta transformar = recetaDeTransformacion(level, almacen, hayLena);
         Receta fabricar = armas() ? recetaDeArmas(almacen) : recetaDeArmadura(almacen);
         // LAS DOS FAENAS ROTAN (I55). La fabricación —la espada, el escudo, el arco y, sobre todo, la ARMADURA— iba
         // SIEMPRE detrás de la transformación de materiales (fundir pepitas y chatarra, curtir cuero, aserrar troncos
@@ -518,7 +561,19 @@ public class VillagerSmithGoal extends Goal {
      * transformar.
      */
     @Nullable
-    private Receta recetaDeTransformacion(Container almacen, boolean hayLena) {
+    private Receta recetaDeTransformacion(ServerLevel level, Container almacen, boolean hayLena) {
+        // 0) LA BALSA: ADOQUÍN -> PEDERNAL (27-sep-2026). Era la faena del MINERO y le comía el tiempo de la mina
+        //    (medido: 33-46 coladas seguidas y una celda de galería cada 5-8 minutos). La pidió el jugador para el
+        //    herrero de HERRAMIENTAS: es él quien necesita el pedernal (las flechas las hace el de armas y el
+        //    pedernal solo sirve para eso) y es una faena de taller, no de mina. Va la primera de la transformación
+        //    porque su objetivo es corto (16) y, en cuanto el almacén los tiene, deja de competir con nada.
+        if (!armas() && contar(almacen, Items.FLINT) < OBJETIVO_PEDERNAL
+                && contar(almacen, Items.COBBLESTONE) >= ADOQUIN_POR_PEDERNAL
+                && VillageGenerator.balsaDelMinero(level, center) != null) {
+            return new Receta("Colando", "Cuela " + ADOQUIN_POR_PEDERNAL + " adoquines en la balsa y saca un pedernal",
+                    List.of(new ItemStack(Items.COBBLESTONE, ADOQUIN_POR_PEDERNAL)), new ItemStack(Items.FLINT),
+                    false, true);
+        }
         // 1) Pepitas de metal -> lingotes (la forja). Lo hacen los dos.
         if (hayLena && contar(almacen, Items.IRON_NUGGET) >= PEPITAS_POR_LINGOTE) {
             return new Receta("Fundiendo", "Fundio " + PEPITAS_POR_LINGOTE + " pepitas en un lingote",
