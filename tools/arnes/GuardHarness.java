@@ -264,6 +264,12 @@ public class GuardHarness {
 // fuera. MEDIR_EQUIPO no estaba y su medida salio inconclusa por esto: sembro el almacen a los 10 s y a los 30 s
 // (t=600) este bloque lo vacio, asi que el equipo desaparecio antes de que ningun guardia llegara a verlo.
 if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_EQUIPO && !MEDIR_LENADOR
+                && !MEDIR_HORDAS && !MEDIR_ALMACEN_Y_HUEVOS && !MEDIR_MINERO && ticks % 40 == 0) {
+            // EL ENTRENAMIENTO DE LA GUARDIA, cada 2 s (ver `vigilarElEntrenamientoDeLaGuardia`): es lo que mide que el
+            // arreglo del tiron (I145) no solo quite el aviso `Yendo a entrenar`, sino que el guardia LLEGUE y entrene.
+            vigilarElEntrenamientoDeLaGuardia(level);
+        }
+        if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_EQUIPO && !MEDIR_LENADOR
                 && !MEDIR_HORDAS && !MEDIR_ALMACEN_Y_HUEVOS && !MEDIR_MINERO && ticks == 600) {
             // --- TERCERA MEDIDA: LA REMESA INICIAL DE MADERA ---------------------------------------------------
             // Se VACIA el almacen entero (como el de una aldea recien fundada, que nace sin nada dentro): en la
@@ -974,6 +980,26 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
     private static String nombre(ServerLevel level, int x, int y, int z) {
         return level.getBlockState(new BlockPos(x, y, z)).getBlock().toString()
                 .replace("Block{minecraft:", "").replace("}", "");
+    }
+
+    /**
+     * <b>EL ENTRENAMIENTO DE LA GUARDIA, cada 2 s</b> (28-sep-2026): los ticks que lleva entrenado cada guardia —la
+     * marca que sube `VillageManager.sumarEntrenamiento` **solo cuando está delante de la diana**— y dónde está. Hace
+     * falta porque el arnés no imprimía **nada** del entrenamiento: el arreglo del tirón (I145) solo se podía medir por
+     * la **ausencia** del aviso `Yendo a entrenar`, y eso no distingue "llega y entrena" de "se rinde por otra vía".
+     * (El log del jugador sí lo dice —`sube al nivel N entrenando en la barraca`—, pero salta cada 15 min de diana.)
+     */
+    private static void vigilarElEntrenamientoDeLaGuardia(ServerLevel level) {
+        for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(96))) {
+            if (!com.chipoodle.devilrpg.entity.goal.VillagerGuardGoal.esGuardia(v)) {
+                continue;
+            }
+            // EL NUMERO VA ANTES DEL NOMBRE A PROPOSITO: el log corta la linea en el nombre del aldeano (lleva un `·`),
+            // asi que con `entrenado=` al final no se leia nunca (medido el 28-sep-2026).
+            DevilRpg.LOGGER.info("[Arnes] ENTRENO t={} entrenado={} pos={} {}", ticks,
+                    v.getPersistentData().getInt(com.chipoodle.devilrpg.world.VillageManager.GUARD_TRAINING_TAG),
+                    v.blockPosition().toShortString(), v.getName().getString());
+        }
     }
 
     /**

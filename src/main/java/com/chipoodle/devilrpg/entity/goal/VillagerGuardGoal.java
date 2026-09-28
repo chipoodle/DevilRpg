@@ -1308,8 +1308,26 @@ public class VillagerGuardGoal extends Goal {
             // RODEO alrededor de la barraca (medido: 23 y 39 nodos, `alcanza=SI`), así que la distancia a la diana
             // empieza ALEJÁNDOSE y el guardia se rendía EN MITAD DEL RODEO — siete rendiciones `Yendo a entrenar` en
             // una corrida, con el camino bueno delante—.
-            double hastaElPuesto = Math.sqrt(villager.distanceToSqr(puesto.getX() + 0.5D, puesto.getY() + 0.5D,
-                    puesto.getZ() + 0.5D));
+            // EL TIRÓN, PORQUE EL PUESTO ESTÁ MÁS LEJOS DE LO QUE ALCANZA EL PLANIFICADOR (28-sep-2026, I145; medido
+            // en los logs: `no consigue llegar a 424, 63, 675 desde 490, 63, 659`, o sea el guardia a **68 bloques**
+            // del puesto del patio, y la región de búsqueda del juego son **56** → `ruta=43-49 nodos … alcanza=NO`).
+            // Caminando directo NO HAY RUTA NINGUNA, así que el guardia se rendía (con razón) y **no entrenaba
+            // nunca**. Se va **por tramos**, como el leñador y el minero, y el atasco se mide **CONTRA EL PUNTO** (no
+            // contra el puesto: el tirón empieza alejándose en el rodeo, I112/I140).
+            // OJO CON LA PLAZA: `tironHacia` devuelve el PROPIO DESTINO cuando ningún tramo tiene ruta y no le das un
+            // hub al que caer (`plaza`), y entonces el guardia se queda sin ruta otra vez (medido: seguía rindiéndose
+            // a **71 bloques** del puesto). Con la plaza del pueblo —el hub del que SIEMPRE hay ruta (I140)— el tirón
+            // siempre tiene a dónde mandarlo y va acercándose.
+            BlockPos punto = VillageManager.elPuntoDeAhora(level, center, villager, puesto,
+                    VillageManager.casillaDePieCercaDe(level, new BlockPos(center.getX(),
+                            VillageGenerator.cotaDeLaPlaza(level, center), center.getZ())));
+            if (!punto.equals(pasoDelEntreno)) {
+                pasoDelEntreno = punto; // tramo nuevo: la paciencia se mide de cero
+                mejorEntreno = Double.MAX_VALUE;
+                stuckEntreno = 0;
+            }
+            double hastaElPuesto = Math.sqrt(villager.distanceToSqr(punto.getX() + 0.5D, punto.getY() + 0.5D,
+                    punto.getZ() + 0.5D));
             // SI NO LLEGA, SE RINDE Y SIGUE CON LA RONDA (I3/I33). Lo reportó el jugador: *"se quedó ciclado un guardia
             // al ir a entrenar"*. Ahora, si no se acerca en STUCK_LIMIT, se aparca la diana (no se reintenta en bucle)
             // y el guardia vuelve a su ronda: entrenará cuando la diana sea alcanzable.
@@ -1327,10 +1345,11 @@ public class VillagerGuardGoal extends Goal {
                 // aparcaba la diana 5 min.
                 var camino = villager.getNavigation().getPath();
                 boolean rutaViva = camino != null && camino.canReach();
-                boolean elCerebroVaAlPuesto = villager.getBrain()
+                // Y "EL CEREBRO VA AL PUESTO" SE MIDE CONTRA EL PUNTO DE AHORA, que es a donde le manda el tirón.
+                boolean elCerebroVaAlPaso = villager.getBrain()
                         .getMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.WALK_TARGET)
-                        .map(t -> t.getTarget().currentBlockPosition().equals(puesto)).orElse(false);
-                if (!rutaViva || !elCerebroVaAlPuesto) {
+                        .map(t -> t.getTarget().currentBlockPosition().equals(punto)).orElse(false);
+                if (!rutaViva || !elCerebroVaAlPaso) {
                     entrenoTicks = 0;
                     stuckEntreno = 0;
                     return false;
@@ -1343,7 +1362,7 @@ public class VillagerGuardGoal extends Goal {
                         villager.getUUID(), diana.toShortString(), objectiveIndex);
                 return false;
             }
-            VillageManager.caminarHacia(villager, puesto, VELOCIDAD);
+            VillageManager.caminarHacia(villager, punto, VELOCIDAD);
             VillageManager.ponerActividad(villager, "Yendo a entrenar");
             return true;
         }
@@ -1376,6 +1395,13 @@ public class VillagerGuardGoal extends Goal {
     private double mejorEntreno = Double.MAX_VALUE;
     private int stuckEntreno;
     private int entrenoTicks;
+    /**
+     * El <b>punto de ahora</b> ({@link VillageManager#elPuntoDeAhora}) al que va el guardia a entrenar: el puesto del
+     * patio si está al alcance del planificador y, si no, el <b>tramo</b> que toque. El atasco se mide contra él
+     * (ver {@code entrenar}): el tirón empieza alejándose en el rodeo.
+     */
+    @Nullable
+    private BlockPos pasoDelEntreno;
 
     private BlockPos puntoDeGuardia(ServerLevel level) {
         int nivel = VillageGenerator.cotaDeLaPlaza(level, center);

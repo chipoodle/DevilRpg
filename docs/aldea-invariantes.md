@@ -4252,7 +4252,54 @@ O sea: el criterio del traspaso («que `hechas` suba y `pasos` siga creciendo si
 cumple `hechas` **24/24**, `pasos` **40** y el pedernal del almacén **subiendo a su objetivo**; y el minero, que antes
 se pasaba la corrida colando, **completa la misma galería en la mitad de ticks**.
 
+### I145 · IR A ENTRENAR TAMBIÉN ES UN **VIAJE LARGO**: el tirón, no el camino directo (28-sep-2026)
+
+**El caso**: `Yendo a entrenar` era el único aviso con etiqueta que seguía saliendo (uno por guardia y sesión).
+**Diagnóstico con los logs que ya había** (sin gastar corrida): el destino es **siempre `424, 63, 675`** (el puesto del
+patio, `VillageGenerator.puestoDeEntrenamiento`) y el guardia sale desde `490,63,659` / `507,63,667` → **a 68 bloques**.
+La ruta que calcula **muere a 26-35 bloques** del destino (`ruta=43-49 nodos … alcanza=NO`) y su `cerebro` iba
+**directo** al puesto, sin pasar por el portón.
+
+**La causa**: la región de búsqueda del planificador son **56** bloques alrededor del aldeano, y esa rama caminaba con
+`caminarHacia` **directo** (`VillagerGuardGoal.entrenar`), **sin el tirón** que sí usan el leñador y el minero. A más
+de 56 bloques **no hay ruta ninguna**: el guardia se rendía (con razón) y **no entrenaba nunca**. Y su comprobación de
+`TICKS_PARA_COMPROBAR_SI_VA` exigía que la ruta viva **alcanzara el puesto** y que el cerebro fuera **al puesto**: con
+el tirón, las dos cosas apuntan al **punto de ahora**, así que también había que moverlas.
+
+**El arreglo** (el contrato de I140, el mismo que el recolector y el ganadero): caminar con
+`VillageManager.elPuntoDeAhora(level, center, villager, puesto, null)` —casilla de pie + **tramo** cuando el sitio está
+lejos— y medir **el atasco contra ese punto**, reiniciando la paciencia cuando el tramo cambia. La comprobación del
+cerebro compara contra el punto (que es a donde le manda el tirón).
+
+**MEDIDO** (`build/medida-entreno.log`, modo pueblo). **El entrenamiento ocurre**: la marca `entrenado=` **sube en los
+6 guardias** en la misma corrida (la marca solo sube **delante de la diana**):
+
+| guardia | al empezar | a t=14.520 | sumado |
+|---|---|---|---|
+| Dorotea | 11.107 | 14.456 | **+3.349** |
+| Ubaldo | 5.041 | 7.943 | **+2.902** |
+| Onofre | 656 | 3.408 | **+2.752** |
+| Jacinto | 3.240 | 5.761 | **+2.521** |
+| Eufemia | 3.845 | 6.297 | **+2.452** |
+| Leocadia | 3.022 | 5.308 | **+2.286** |
+
+Y el aviso `Yendo a entrenar` baja de **uno por guardia** a **2 en toda la corrida**, y los dos son **transitorios**:
+son de **Leocadia y Ubaldo**, que se rinden una vez a **6-7 bloques** del puesto (el último salto no tiene ruta) y en
+el turno siguiente **entran y entrenan** (sus marcas suben, en la tabla). O sea: ya no es "nunca entrena", es "en un
+turno no llega y en el siguiente sí".
+
+**Y una lección del instrumento**: el arnés no imprimía **nada** del entrenamiento, así que el arreglo se iba a medir
+solo por la **ausencia del aviso**, que no distingue "llega y entrena" de "se rinde por otra vía". Ahora
+`vigilarElEntrenamientoDeLaGuardia` (modo pueblo, cada 2 s) imprime la marca. Y **el número va antes del nombre del
+aldeano** a propósito: el log **corta la línea** en el nombre (lleva un `·`) y con `entrenado=` al final no se leía.
+
+**Y otro ajuste que hizo falta** (`plaza`): `elPuntoDeAhora` con el hub a `null` **devuelve el propio destino** cuando
+ningún tramo tiene ruta, y con el puesto a 71 bloques eso dejaba al guardia sin ruta otra vez (medido: seguía
+rindiéndose). Con **la plaza del pueblo** —el hub del que siempre hay ruta (I140)— el tirón siempre tiene a dónde
+mandarlo.
+
 ### I144 · EL SEGUNDO POZO DE LA MINA: se elige **solo** cuando el primero se topa (28-sep-2026)
+
 
 Lo pidió el jugador (*«estaría bien abrir un segundo pozo»*). **Implementado y medido.**
 

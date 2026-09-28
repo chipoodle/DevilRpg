@@ -650,6 +650,11 @@ $vivos = (Get-CimInstance Win32_Process -Filter "Name like 'java%'" |
 if ($vivos -gt 0) { "ABORTAR: hay $vivos servidor(es) vivo(s)" }
 New-Item -ItemType Directory -Force src\main\java\com\chipoodle\devilrpg\debug | Out-Null
 Copy-Item tools\arnes\GuardHarness.java src\main\java\com\chipoodle\devilrpg\debug\GuardHarness.java -Force
+#   *** Y COMPROBARLO ANTES DE LANZAR *** (28-sep-2026: preparé una corrida después de borrar el `debug/` y SIN
+#   volver a copiarlo → el servidor arrancó sin jugador de pega, el pueblo no se gestionó y el log no crecía:
+#   **20 minutos tirados**. Señal de alarma: `latest.log` se queda en unos pocos KB y termina en el arranque.)
+if (-not (Test-Path src\main\java\com\chipoodle\devilrpg\debug\GuardHarness.java)) { "ABORTAR: falta el arnes" }
+Select-String -Path src\main\java\com\chipoodle\devilrpg\debug\GuardHarness.java -Pattern 'MEDIR_[A-Z_]+ = true'
 #   (editar la copia: poner a true MEDIR_MINERO / MEDIR_LENADOR / MEDIR_NOCHE…)
 Remove-Item run\world -Recurse -Force; Copy-Item 'run\saves\New World (2)' run\world -Recurse
 Remove-Item run\logs\latest.log -Force            # SIN `-ErrorAction SilentlyContinue`: si está en uso, ABORTAR
