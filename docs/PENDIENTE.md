@@ -172,6 +172,23 @@ otros dos solo **8**. El offset elegido **era el correcto** (el eje que el juego
 **no hubo que tocar el código**.
 
 
+### 10. `Yendo a entrenar`: **DIAGNOSTICADO** (medido en los logs, sin gastar corrida) — falta el tirón
+
+El único caso con etiqueta que sigue saliendo (1 aviso por guardia y sesión). **Diagnóstico con los logs que ya
+había** (`medida-luz-pico.log`, `medida-pozo2b.log`, `medida-plaza3.log`): el destino es **siempre `424, 63, 675`**
+(el puesto del patio, ver `VillageGenerator.puestoDeEntrenamiento`) y el guardia sale desde `490,63,659` /
+`507,63,667` → **a 68 bloques** del puesto. La ruta que calcula **muere a 26-35 bloques** del destino
+(`ruta=43-49 nodos … alcanza=NO`) y su `cerebro` va **directo** al puesto, sin pasar por el portón.
+
+**La causa**: la región de búsqueda del planificador es de **56** bloques alrededor del aldeano, y la rama del
+entrenamiento (`VillagerGuardGoal.entrenar`) camina con **`caminarHacia` directo**, **sin el tirón** que sí usan el
+leñador y el minero (`tironConMemoria`) y que ya está montado en el pueblo como `elPuntoDeAhora` (I140). Con el
+aldeano a más de 56 del puesto **no hay ruta ninguna**, así que se rinde (correctamente) y **no entrena**.
+
+**El arreglo que toca** (pequeño y con mecanismo ya medido): caminar al puesto con `elPuntoDeAhora` (casilla de pie +
+tirón) y **medir el atasco contra ese punto**, como ya hacen el recolector y el ganadero. **Criterio**: `Yendo a
+entrenar` **1 → 0** y el guardia pegándole a la diana (sus líneas de entrenamiento) en su turno.
+
 ### 1. El `JOB_SITE` del minero (el cortapiedras, un bloque): **medido, y no cuesta nada** (cerrado)
 
 Medido en la corrida en la que la mina ya funciona de punta a punta (297 muestras del minero, `t=11.720`):
