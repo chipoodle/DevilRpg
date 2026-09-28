@@ -31,6 +31,52 @@ medir que el minero abre el segundo **sin esperar 240 pasos**.
 | su subsuelo | **0 celdas con agua** en el caracol (el pozo 1 tiene 2 y se le inundaron los pasos 35-44) |
 | el solar | **0** celdas construidas y las zonas de exclusion de los dos pozos **separadas 30 bloques** |
 
+## El constructor NO regenera el segundo pozo (el recordatorio del jugador)
+
+El jugador aviso: *"el constructor regenera el suelo si hay un hoyo, asegurate que el segundo pozo del minero se
+incluya en las exclusiones del constructor para que no regenere"*. **Auditoria de todo lo que rellena suelo**:
+
+| quien rellena | donde | por donde pasa |
+|---|---|---|
+| el **tapagujeros del obrero** | `VillageManager:5853` | `estaSobreElPozo` |
+| el **relleno del suelo** | `VillageGenerator:6125` | `esCeldaDeLaMina` / `estaSobreElPozo` |
+| el **sellado del suelo** | `VillageGenerator:6191` | `estaSobreElPozo` |
+| **EL PLANO del obrero** | `VillageGenerator:7266` | `estaSobreElPozo` (solo mira 2 bloques bajo la cota: las galerias estan a 8+ y no entran) |
+
+Los cuatro pasan por las **dos** funciones de exclusion, y las dos se cambiaron para mirar **TODOS** los pozos: el
+constructor **no** regenera el segundo pozo. Y se ve en la medida: sus **16 pasos de caracol intactos**.
+
+## Y dos trampas que SI habia que corregir: LA CASETA (que es una sola)
+
+La caseta —con su taller, su horno y el puesto de trabajo del minero— es **unica** y vive junto al **primer** pozo,
+pero se calculaba con el **eje activo**:
+
+* `ejeDeLaCaseta`: con el segundo pozo activo, la casilla de la caseta se iba al descampado del segundo.
+* `asegurarLaMinaDelPueblo` (la que la construye): comprobaba su **testigo** (piedra labrada) con el eje activo, asi
+  que con el pozo 2 activo no lo encontraba alli y **habria construido una segunda caseta** en mitad del descampado.
+
+Los dos arreglados a **`centroDeLaMina(center, 0)`** (siempre el primer pozo). Los **cuatro** usos que quedan del eje
+activo son los del caracol y sus galerias (`celdaDelCaracol`, `esCeldaDePasoDelCaracol`, `esCeldaDePasoDeLaMina`,
+`esPosteDelMarcoDelCaracol`): esos **si** deben seguir al pozo que se esta cavando (y si el jugador rompe el tope del
+pozo 1, `elegirElPozoActivo` vuelve a el solo).
+
+## La verificacion de la caseta, en el MUNDO (`build/medida-pozo2b.log` + mapa de capas)
+
+La corrida con el arreglo (el arnes topa el pozo 1 y el minero abre el 2):
+
+* la caseta sigue siendo la del **pozo 1**: `CASETA NUEVA (503,617): suelo=stone_bricks … cortapiedras=stonecutter
+  horno=furnace camaPie=red_bed` (y la vieja `461,658`, vacia).
+* el pozo 2 se sigue cavando: `caracol paso 14/15/16 en 435/434/433, 54, 679` y **0 celdas con agua** en su caracol.
+
+Y el **mapa de capas del terreno** del pozo 2 (`python build\slice_mina.py 425 450 665 685 58 63 "world"`), leyendo su
+leyenda (`S`=losa, `C`=adoquin, `P`=tablones, `W`=agua, `T`=antorcha):
+
+* **NO hay caseta**: en la capa `y=63` las columnas del eje (`x=433..441`) estan **todas en aire**, sin un solo
+  tablon (`P`) ni cortapiedras; y en `y=62` esta la **losa del caracol del paso 0** (`S` en `441,62,671`).
+* El **agua que hay esta FUERA** del caracol: `W` en `x=440+` con `z=665..669` y `680..685`, que es **la orilla y el
+  muelle** (y por eso el censo cuenta 0 celdas de agua en el caracol).
+
+
 ## Y UN ERROR DE MEDIDA MIO, que se dice y se corrige
 
 La primera tabla de candidatos la medi **desde el eje del pozo 1 (503,617) creyendo que era el centro de la aldea**.
