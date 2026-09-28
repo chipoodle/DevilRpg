@@ -4348,9 +4348,12 @@ portón**, **cae al hub del pueblo** si ninguno tiene ruta y **camina con `camin
 **a mano** a la navegación (por eso el cerebro no le quita el rumbo). Y encima se le pone la **casilla de pie** del
 destino. **MEDIDO: `Volviendo a la plaza` 15 → 1.**
 
-**EL ESTADO DEL PUEBLO, medido con el código final** (`build/medida-tiron-final.log`, 15.520 ticks): **8 avisos de
-rendición, TODOS SUELTOS** (el mayor, **2**), **ningún bucle**, la tasa **0,50** por 1.000 ticks, y el ciclo del pico
-**6 roturas → 6 picos nuevos**. Contra la referencia de la mañana: **18 avisos** con bucles de **16** y **19**.
+**EL ESTADO DEL PUEBLO, medido con el código final**: **7 avisos de rendición, TODOS SUELTOS** (el mayor, **2**),
+**ningún bucle** (`build/medida-clerigo2.log`, 15.400 ticks; y 2 avisos a mitad de corrida), y **LA TASA DEL PUEBLO
+0,30 por 1.000 ticks de media** en las tres corridas del código final (**0,10 · 0,30 · 0,50**), contra el **1,29** de
+la tanda anterior del proyecto y el **0,50-0,60** de la referencia de la mañana. El ciclo del pico, de paso, medido
+otra vez: **6 roturas → 5-6 picos nuevos**. Y **el clérigo 2 → 0** con dos reglas ya conocidas (casilla de pie +
+`desatascarSiEstaEncajado`: estaba **metido en la puerta** de la iglesia con `pies=oak_door`).
 
 **Y UNA CORRIDA TIRADA, que se apunta para no repetirla**: lancé una corrida **con la anterior todavía viva** (matar
 el `gradlew` no mata el servidor) y los **dos** servidores escribieron en el **mismo** `latest.log` y el **mismo**

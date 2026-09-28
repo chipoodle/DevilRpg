@@ -44,10 +44,11 @@ La prueba de un arreglo **no es el total**, es **el criterio concreto que baja a
 Todo **compila**, pasa `lint_aldea --strict`, el árbol está **limpio** (sin `debug/`, sin JVMs, `run/world`
 restaurado) y **todo commiteado**.
 
-**Y el titular de la sesión, medido**: la **tasa de rendiciones del pueblo** (I135, ventana fija 2.000-12.000)
-baja de la **media 1,29** de la tanda anterior a **0,30** en la última corrida (y 0,40-0,55 en las intermedias),
-**con ningún atasco repetido**: los gordos (`Yendo a la taberna` 16, `Volviendo a la plaza` 19, `Cuidando el
-ganado` 3, `no consigue entrar al bancal` 5) están **a cero**.
+**Y el titular de la sesión, medido**: la **tasa de rendiciones del pueblo** (I135, ventana fija 2.000-12.000) baja
+de la **media 1,29** de la tanda anterior a **0,30** con el código final (**media de 3 corridas: 0,10 · 0,30 · 0,50**),
+y el pueblo queda en **7 avisos, TODOS SUELTOS y ningún bucle** (contra 18 avisos con bucles de **16** y **19** de la
+referencia de la mañana): los gordos (`Yendo a la taberna` 16, `Volviendo a la plaza` 19, `Cuidando el ganado` 3,
+`no consigue entrar al bancal` 5) están **a cero**.
 
 **Cerrado y MEDIDO en esta sesión** (con el criterio que lo prueba):
 
@@ -114,20 +115,21 @@ hace el herrero (**10**, hasta el objetivo de 16 pedernales) y la misma galería
 
 ### 8. Lo que queda, con su nombre y su número (27-sep-2026)
 
-Con el código de hoy, la corrida limpia del tirón (`build/medida-tiron-final.log`, 15.520 ticks) deja **8 avisos de
-rendición, TODOS SUELTOS** (el mayor, **2**) y **NINGÚN BUCLE** — contra los **18** de la referencia de la mañana, con
-bucles de **16** y **19**. Y la tasa oscila (**0,30 · 0,50** con este código; 0,15 en una ventana parcial): eso es
-I135 — la prueba de cada arreglo es **su etiqueta**, no el total.
+Con el código de hoy, la última corrida (`build/medida-clerigo2.log`, 15.400 ticks) deja **7 avisos de rendición,
+TODOS SUELTOS** (el mayor, **2**) y **NINGÚN BUCLE** — contra los **18** de la referencia de la mañana, con bucles de
+**16** y **19**—. La **tasa del pueblo** con este código: **0,30** de media (**0,10 · 0,30 · 0,50**, n=3) contra el
+**1,29** de la tanda anterior. Eso es I135: la prueba de cada arreglo es **su etiqueta**, no el total.
 
 | lo que queda | medida y por qué NO es de las clases arregladas |
 |---|---|
-| **RESUELTO: los viajes largos sin tirón** | el recolector al **almacén** desde la huerta (`446,62,688` → `517,63,666`, **70+ bloques**, `alcanza=NO`) se rendía en **bucle de 5-8 avisos**: el planificador no da ruta a esa distancia. Arreglado con **`VillageManager.elPuntoDeAhora`** (casilla de pie + **tramo**) y **midiendo el atasco contra el tramo** (el patrón del leñador, I140). MEDIDO: `Saliendo de la huerta` **8 → 1** |
-| **RESUELTO: el bucle de la PLAZA** | el destino de «volver a la plaza» es **la campana del kiosco** (no se pisa) y el tramo calculado a mano **no comprobaba la ruta**: el aldeano se quedaba clavado con `cerebro=531,63,646` y `nav=[sin ruta]`, **10-15 avisos en bucle**. Arreglado con el **tirón del proyecto** (`tironConMemoria`: prueba la ruta de cada tramo, cruza el muro y camina con la ruta pedida a mano). MEDIDO: `Volviendo a la plaza` **15 → 1** |
-| **el clérigo** (2 avisos, sin bucle) | `Yendo a la iglesia` con el destino en el **puesto crudo** (`brewing_stand`): se le puede aplicar el mismo contrato, pero **no hay bucle que lo pida** |
-| **el ganadero y los granjeros** (2+2 sueltos) | `Recogiendo el corral` (algo sobre una **valla**), `Recogiendo lo que se cayó` y `Guardo 30 de lo suyo`: casos puntuales de mobiliario, **sin bucle** |
+| **RESUELTO: los viajes largos sin tirón** | el recolector al **almacén** desde la huerta (**70+ bloques**, `alcanza=NO`) se rendía en **bucle de 5-8 avisos**. Arreglado con **`VillageManager.elPuntoDeAhora`** (casilla de pie + **tramo**) midiendo el atasco **contra el tramo** (I140). MEDIDO: `Saliendo de la huerta` **8 → 1** |
+| **RESUELTO: el bucle de la PLAZA** | el destino de «volver a la plaza» es **la campana del kiosco** (no se pisa) y el tramo calculado a mano **no comprobaba la ruta**: **10-15 avisos en bucle** con `cerebro=531,63,646` y `nav=[sin ruta]`. Arreglado con el **tirón del proyecto** (`tironConMemoria`). MEDIDO: **15 → 1** |
+| **RESUELTO: el clérigo** | `Yendo a la iglesia` **2 → 0**: estaba **metido en la puerta** de la iglesia (`pies=oak_door`) con la ruta buena → casilla de pie + **`desatascarSiEstaEncajado`** (I122/I140) |
+| **el ganadero** (1-2 sueltos, sin bucle) | `Recogiendo el corral` con algo caído sobre **mobiliario** (una valla, la mesa): el punto de ahora ya está puesto (2 → 1); lo que queda son casos puntuales |
+| **el cerebRO y su POI** (clase **I125**, 2 avisos en el clérigo) | `cerebro=452,64,603` con `destino=453,64,603`: el cerebro va a **su POI** (al lado del soporte) mientras el goal mide contra el soporte → «no me acerco» y se rinde. Es la misma clase que en el guardia se arregló midiendo el **avance por la ruta**: **el siguiente si vuelve a molestar** |
 | **el hundimiento en la farmland** (0 avisos) | el bucle **desaparece** (46 desatascos reales en una corrida, 40 de **puertas**) y ya no se repite |
 | `Yendo a entrenar` (0-1) | clase **I119**: **rendirse ahí es correcto**; lo que falta es que el puesto sea alcanzable |
-| la **tasa** | con el código final **0,30 · 0,50** (y 0,15 en una ventana parcial): hacen falta **3-4 corridas** para la media (I135) |
+| **la tasa** | **HECHA**: media de 3 corridas con el código final = **0,30** (0,10 · 0,30 · 0,50) |
 
 **Y DOS LECCIONES DE MÉTODO de esta sesión**, las dos pagadas con su corrida:
 1. **Una regla del pueblo NO se mete en el método compartido si el que camina y el que cuenta no están de acuerdo.**

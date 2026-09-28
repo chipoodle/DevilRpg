@@ -306,6 +306,16 @@ public class VillagerClericGoal extends Goal {
                 soporte.getZ() + 0.5D));
         if (distancia > REACH) {
             irAlSoporte();
+            // SI ESTÁ METIDO DENTRO DE UN BLOQUE, NO SE CUENTA ATASCO: SE LE SACA. MEDIDO el 27-sep-2026: el clérigo
+            // se rindió yendo a su soporte con `pies=oak_door cabeza=oak_door` (¡dentro de la PUERTA de la iglesia!)
+            // y con la ruta BUENA (`ruta=4 nodos hasta 453,65,603 alcanza=SI`): desde una celda que no es una casilla
+            // de pie el planificador no da ruta. Es el mismo ayudante compartido desde I122 (el leñador), con su freno
+            // de 200 ticks por aldeano.
+            if (VillageManager.desatascarSiEstaEncajado(villager)) {
+                mejorDistancia = Double.MAX_VALUE;
+                stuckTicks = 0;
+                return;
+            }
             if (distancia < mejorDistancia - 0.5D) {
                 mejorDistancia = distancia;
                 stuckTicks = 0;
@@ -736,9 +746,14 @@ public class VillagerClericGoal extends Goal {
         return VillageStorage.quitar(level, center, filtro, cuantas);
     }
 
+    /**
+     * El rumbo inicial al soporte (lo llama el {@code start}): <b>EL SOPORTE NO SE PISA</b> —es un bloque en su propia
+     * celda— así que se camina a la <b>casilla de pie</b> de al lado (I140). El viaje lo lleva el {@code tick}, que
+     * además va por tramos si el sitio está lejos.
+     */
     private void irAlSoporte() {
-        if (soporte != null) {
-            VillageManager.caminarHacia(villager, soporte, VELOCIDAD);
+        if (soporte != null && villager.level() instanceof ServerLevel level) {
+            VillageManager.caminarHacia(villager, VillageManager.casillaDePieCercaDe(level, soporte), VELOCIDAD);
             VillageManager.ponerActividad(villager, "Yendo a la iglesia");
         }
     }
