@@ -4102,7 +4102,74 @@ la que yo había implementado en I127 con `SELLOS_MAXIMOS` y `cerrarLaMina`) que
 **Lo que queda de este encargo del jugador** (apuntado en `PENDIENTE.md`): **(a)** que **el herrero forje picos** (hoy
 el almacén tiene `0 pico(s)` y `0 lingote(s)`: la rotura del pico se detecta bien, pero no hay de dónde sacarlo) y
 **(b)** que **los guardias obtengan hierro de los zombis de los raids** para que ese hierro llegue al herrero.
+### I136 · LA BOCA DE LA GALERÍA SON **TRES** CELDAS (y el muro no se cruza por debajo del suelo) (27-sep-2026)
+
+**El atasco medido** (corrida larga del 26-sep, `build/medida-mina-fondo.log`): la galería del paso 32 se quedaba en
+`hechas=3/24` **3.600 ticks**, con el `destino` en `507,46,610`, `nav=[sin ruta]`, el destino **borrado del cerebro**
+(`destino=SIN DESTINO`) y `Volviendo a la caseta (encajado)` en bucle. El minero había abierto las celdas **1, 2 y 3
+desde el propio anillo** (están a 1, 2 y 3 bloques de la celda del caracol: dentro de su alcance de **3,5**) y la celda
+**4** está a **4,0**: fuera de alcance, así que **tenía que entrar** en la galería… y no podía.
+
+**La causa, leída en el código de vanilla** (no supuesta; las fuentes están en la caché de NeoForge,
+`WalkNodeEvaluator`/`PathFinder`):
+
+1. El aldeano baja el caracol **de pie ENCIMA de la losa** del paso par: pies a `y+0,5`. Su **nodo** de ruta es
+   `y+1` (lo fija `getStart()` con `floor(y+0.5)`) y su **caja** ocupa `y+0,5 … y+2,45`.
+2. La galería va **a la misma Y que la celda del caracol**, así que con **dos** celdas de hueco (`y`, `y+1`) la celda
+   `y+2` es **roca**. `getPathTypeWithinMobBB` mete en el tipo del nodo **todas** las celdas de la caja y una sola
+   **BLOCKED** (malus −1) tumba el nodo entero: el vecino de `y+1` sale **BLOCKED**.
+3. `findAcceptedNode` solo prueba el vecino **a la misma Y**, y el que sabe bajar medio bloque
+   (`tryFindFirstGroundNodeBelow`) **solo se llama si el tipo es OPEN** → **no hay entrada**. Y la salida tampoco:
+   `tryJumpOn` (el que sube medio bloque) exige que la celda **encima** de la de la galería sea pisable, que es justo
+   la tercera.
+
+**El arreglo**: `picarLaCeldaDeLaGaleria` abre **tres** celdas de hueco (`celda.above()` y `celda.above(2)`), las
+mismas que el caracol; y `esCeldaDePasoDeLaMina` cuenta la tercera (`+2`) para que el **marco** del caracol no ponga un
+poste dentro.
+
+**MEDIDO** (misma partida, `MEDIR_MINERO`; el arnés **ya no cava a mano** la galería del paso 16: se quitó ese atajo
+porque con el arreglo la cava el minero). Corrida buena: `build/medida-galeria-final.log`, 41.600 ticks:
+
+| | antes (26-sep) | después (27-sep) |
+|---|---|---|
+| el minero **dentro** de la galería | nunca | `pos=499,54,634` (celda 12 de 24, t=1.000) |
+| la galería del **paso 16** | la cavaba **el arnés a mano** | **la cava él: 2/24 → 24/24** |
+| `hechas` de la galería del **paso 32** | **3/24 congelado 3.600 ticks** | **3 → 4 → … → 24/24** |
+| `pasos` (el caracol) | **32 congelado** (la mina no bajaba más) | **32 durante la galería y luego 34 → … → 44**: la cara pasa de `y=46` a **`y=40`** |
+| `TOPE=SI` / `se PARA` | — | **0** (la mina no se cierra) |
+| `SONDA DE LA GALERÍA` (nueva) | no existía | `1:507,46,612=1n/SI` · `2=2n/SI` · `3=3n/SI` desde **dentro** de la boca |
+
+**La trampa del instrumento nuevo** (y por qué hay que leerla con cuidado): `GroundPathNavigation.createPath` **imanta
+el destino** —si la celda pedida es **aire**, baja hasta el primer bloque no-aire y devuelve la de encima; si es
+**sólida**, sube hasta el primer aire y apunta **a la superficie**—. Por eso una sonda de una celda que aún es roca da
+`SI fin=<la superficie>`: ahí `SI` **no** quiere decir nada. La lectura solo vale cuando `fin` es **la celda pedida**.
+
+**Y el agua, que es la mitad del encargo del jugador** (*"construir paredes que aíslen la mina del agua"*): las tres
+celdas de hueco abren el **techo** de la galería justo donde está el acuífero, y con el sello de antes (solo al **secar**
+una celda de agua) el túnel se inundaba al subir el minero al taller: `hechas` **6 → 0** y **223 muestras (~8.900
+ticks)** en cero. Se añadió el censo de agua del arnés (`AGUA`) y **dijo de dónde entraba**: las celdas mojadas eran
+**las del propio túnel** (`507,46,605 … 507,46,611`) y **la de DELANTE** (la galería que aún es acuífero), con la pared
+oeste ya sellada. La corrección: `aislarDelAgua` se llama **al abrir CUALQUIER celda** (no solo al secar una de agua) y
+sella las 26 vecinas con fluido, y la exclusión se estrecha a
+{@code VillageGenerator#esCeldaDePasoDelCaracol} — **solo el caracol** (un adoquín en un paso impar se leería como su
+**pieza** y el paso se daría por hecho sin suelo: la lección de I127) y la **capa del suelo** (el agua del pueblo no se
+tapia)—. Las celdas de **galería** sí se sellan: su contador cuenta **aire**, así que el adoquín no engaña a nadie y es
+el **muro** que corta el acuífero. MEDIDO: la galería pasó de `hechas=13/24` a **21/24** con el agua **fuera** del túnel
+(el censo se queda en `31 celdas con fluido`, todas en `x=505` y por debajo del suelo de la galería).
+
+**Y el último bloqueo de esta cadena, que también salió medido**: con la galería en **21/24** el minero se quedó **243
+muestras** en `Bajando a la mina` / `Volviendo a la caseta (encajado)`, con el destino del cerebro en **`470,63,583`** —
+¡**fuera del pueblo**, por el **portón norte**!—. La causa: `pasoParaCruzarElMuro` decide con `esDeDentroDelMuro`, que
+mira **solo X/Z**, y el final de la galería del paso 32 (que sale **hacia fuera** del anillo del caracol, 24 celdas)
+cae a **65 bloques del centro**, o sea fuera del muro de radio 62… **a 17 bloques bajo el suelo**. El muro es una valla
+**de la superficie**: por debajo de la capa del suelo no hay nada que cruzar (y el aldeano que está bajo tierra sale por
+su propio sitio, el caracol, que está **dentro** del pueblo). Arreglado con esa guarda en `pasoParaCruzarElMuro`
+(`villager.getBlockY() < cota-1 || destino.getY() < cota-1 → null`), y **medido**: la ruta del minero a la celda 21 de
+la galería pasa a ser `22 nodos … alcanza=SI` (antes se iba al portón), la galería **se termina (24/24)** y el caracol
+**sigue bajando** (pasos 34 → 44).
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
+
 
 1. **¿Quién más LEE lo que cambio?** Buscar todos los usos (`grep`) y revisarlos uno a uno. *(Fallo real: cambié el
    sentido de `stuckTicks` y no miré los tres `canContinueToUse` que lo leen → granjero, recolector y obrero

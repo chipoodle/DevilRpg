@@ -812,6 +812,9 @@ public class VillagerMinerGoal extends Goal {
         rellenarElSuelo(level, celda.below());
         // 4) LAS VETAS QUE SE VEN EN LA PARED (lo que hace que la mina saque minerales de verdad).
         minarLasVetasDeAlLado(level, celda);
+        // ...Y EL SUELO SE VUELVE A MIRAR DESPUÉS: si la veta estaba DEBAJO de la celda, picarla deja aire bajo la
+        // pieza y el escalón se queda flotando (y sin suelo por el que pisar). Misma regla que en la galería.
+        rellenarElSuelo(level, celda.below());
         // 5) EL MARCO DE MADERA (cada MINA_SOPORTE_CADA escalones) y la antorcha (cada CELDAS_POR_ANTORCHA).
         if (VillageGenerator.llevaSoporte(paso)) {
             ponerElMarco(level, celda);
@@ -839,20 +842,48 @@ public class VillagerMinerGoal extends Goal {
     }
 
     /**
-     * <b>Una celda de galería</b>: hueco de paso de dos celdas (el suelo es el terreno de debajo), relleno si está
-     * hueco, veta de al lado, marco cada {@link VillageGenerator#MINA_GALERIA_SOPORTE_CADA} celdas y antorcha.
+     * <b>Una celda de galería</b>: hueco de paso de <b>TRES celdas</b> (el suelo es el terreno de debajo), relleno si
+     * está hueco, veta de al lado, marco cada {@link VillageGenerator#MINA_GALERIA_SOPORTE_CADA} celdas y antorcha.
+     * <p>
+     * <b>POR QUÉ TRES Y NO DOS (medido el 27-sep-2026, con el código de vanilla delante)</b>: la galería va <b>a la
+     * misma Y que la celda del caracol</b>, y esa celda lleva su <b>losa</b> (los pasos pares): el aldeano que baja
+     * el caracol va <b>de pie ENCIMA de la losa</b>, o sea con los pies a {@code y + 0,5}. Su <b>nodo</b> de ruta es
+     * entonces {@code y + 1} y su <b>caja</b> ocupa {@code y + 0,5 … y + 2,45}.
+     * <ul>
+     *   <li>Con la galería de <b>dos</b> celdas ({@code y} y {@code y + 1}), la celda {@code y + 2} es <b>roca</b>:
+     *       la caja del aldeano <b>choca</b> con el techo (no puede ni entrar), y el planificador marca el vecino de
+     *       {@code y + 1} como <b>BLOCKED</b> ({@code WalkNodeEvaluator.getPathTypeWithinMobBB} mete en el tipo del
+     *       nodo <b>todas</b> las celdas de la caja, y una sola BLOCKED —malus −1— tumba el nodo entero). Como
+     *       {@code findAcceptedNode} solo prueba el vecino <b>a la misma Y</b> (y {@code tryFindFirstGroundNodeBelow}
+     *       —el que sabe bajar medio bloque— <b>solo se llama si el tipo es OPEN</b>), la galería queda
+     *       <b>inalcanzable</b> desde el caracol: ni se entra ni se sale.</li>
+     *   <li>Con <b>tres</b> celdas, el vecino de {@code y + 1} es OPEN (la caja cabe), y el planificador baja solo al
+     *       nodo <b>de la galería</b> ({@code y}, el que tiene el suelo debajo): la entrada funciona. Y la salida
+     *       también, porque {@code tryJumpOn} —el que sube medio bloque de vuelta a la losa— exige que la celda
+     *       <b>encima</b> de la de la galería sea pisable, que es justo la tercera.</li>
+     * </ul>
+     * <b>Lo que se midió con esto</b> (corrida larga {@code MEDIR_MINERO}, 27-sep-2026): el minero abrió las celdas
+     * <b>1, 2 y 3</b> de la galería del paso 32 <b>desde el propio anillo</b> (están a 1, 2 y 3 bloques de la celda
+     * del caracol: dentro de su {@link #REACH} de 3,5) y ahí se quedó <b>3.600 ticks</b> con {@code galeria
+     * hechas=3/24} congelado, {@code destino=507,46,610}, {@code nav=[sin ruta]}, el destino <b>borrado del cerebro</b>
+     * ({@code destino=SIN DESTINO}) y {@code Volviendo a la caseta (encajado)} en bucle. La celda <b>4</b> está a
+     * <b>4,0</b> del anillo: fuera de alcance, así que <b>tiene que entrar</b> a la galería… y no podía. El caracol
+     * nunca tuvo este problema porque su hueco de paso ya son <b>tres</b> celdas.
      */
     private void picarLaCeldaDeLaGaleria(ServerLevel level, int nivel, int indice) {
         BlockPos celda = VillageGenerator.celdaDeLaGaleria(center, nivel, paso, indice);
-        // EL HUECO DE PASO QUE SE ABRE AQUÍ ES SOLO EL DE LA CABEZA (`celda.above()`). **LA CELDA DE LA GALERÍA NO
-        // SE TOCA EN ESTE BUCLE**: se pica abajo, con su cuenta de sellos. Y ESE ERA EL FALLO MEDIDO (26-sep-2026):
-        // el bucle empezaba en `dy = 0` —o sea que picaba la celda de la galería con `cuentaElSello = false`—, así
-        // que si ahí había AGUA se sellaba en esa llamada (en silencio) y la de abajo, que sí cuenta, se encontraba
-        // adoquín, lo picaba en el acto y devolvía el agua al túnel: el sello no duraba ni un tick, `sellosSeguidos`
-        // no subía, el contador de la galería se quedaba en cero y el minero repetía la misma celda PARA SIEMPRE
-        // (medido: 121 veces la celda 1 y 120 la 2 de la galería del paso 32, `pasos` congelado 110.000 ticks, 0
-        // líneas de `sella agua/lava` y 0 de `la mina se PARA`). El caracol ya lo hacía bien (`dy` desde 1).
+        // EL HUECO DE PASO DE LA GALERÍA: `celda.above()` es la cabeza y `celda.above(2)` el tercer hueco (el que
+        // deja entrar y salir al aldeano que viene de la losa del caracol; ver el porqué arriba). **LA CELDA DE LA
+        // GALERÍA NO SE TOCA EN ESTE BUCLE**: se pica abajo, con su cuenta de sellos. Y ESE ERA EL FALLO MEDIDO
+        // (26-sep-2026): el bucle empezaba en `dy = 0` —o sea que picaba la celda de la galería con
+        // `cuentaElSello = false`—, así que si ahí había AGUA se sellaba en esa llamada (en silencio) y la de abajo,
+        // que sí cuenta, se encontraba adoquín, lo picaba en el acto y devolvía el agua al túnel: el sello no duraba
+        // ni un tick, `sellosSeguidos` no subía, el contador de la galería se quedaba en cero y el minero repetía la
+        // misma celda PARA SIEMPRE (medido: 121 veces la celda 1 y 120 la 2 de la galería del paso 32, `pasos`
+        // congelado 110.000 ticks, 0 líneas de `sella agua/lava` y 0 de `la mina se PARA`). El caracol ya lo hacía
+        // bien (`dy` desde 1) y por eso se le pide lo mismo: tres celdas de hueco.
         picarYRecoger(level, celda.above(), false);
+        picarYRecoger(level, celda.above(2), false);
         boolean eraSello = celda.equals(selloPendiente);
         if (!picarYRecoger(level, celda, true)) {
             selloPendiente = celda;
@@ -867,6 +898,11 @@ public class VillagerMinerGoal extends Goal {
         selloPendiente = null;
         rellenarElSuelo(level, celda.below());
         minarLasVetasDeAlLado(level, celda);
+        // Y EL SUELO SE VUELVE A MIRAR **DESPUÉS** DE LAS VETAS: `minarLasVetasDeAlLado` pica las SEIS de al lado —el
+        // SUELO incluido—, así que si debajo de la galería había una veta, se la lleva al zurrón y deja **aire**: el
+        // túnel se queda **sin suelo** y deja de ser un sitio por el que se anda (I114: se camina a una **casilla de
+        // pie**). Se rellena otra vez para que la galería que el minero acaba de abrir se pueda recorrer.
+        rellenarElSuelo(level, celda.below());
         if (Math.floorMod(indice, VillageGenerator.MINA_GALERIA_SOPORTE_CADA) == 0) {
             ponerElMarcoDeLaGaleria(level, celda, indice);
         }
@@ -935,6 +971,9 @@ public class VillagerMinerGoal extends Goal {
                 Block.popResource(level, pos, resto); // sin sitio en el zurrón: se queda en el suelo del túnel
             }
         }
+        // Y EL AGUJERO QUE ACABO DE ABRIR, CON PAREDES: si al lado hay agua (o lava), se sella AQUÍ. Sin esto el
+        // túnel se inunda por la primera veta que se pique en la pared (ver `aislarDelAgua` para la medida).
+        aislarDelAgua(level, pos);
         return true;
     }
 
@@ -967,22 +1006,48 @@ public class VillagerMinerGoal extends Goal {
     }
 
     /**
-     * <b>Aisla del agua (o de la lava) la celda del tunel</b>: sella con adoquin las <b>vecinas que tengan fluido</b>
-     * —las cuatro de lado y el techo— y deja el suelo como esta (el minero ya lo rellena). NO toca las vecinas de
-     * <b>aire</b>, que son el propio tunel ya cavado: si las sellara, taponaria el paso.
+     * <b>Aisla del agua (o de la lava) la celda que el minero acaba de abrir</b>: sella con adoquín las
+     * <b>vecinas que tengan fluido</b> (las 26 de alrededor) y deja el suelo como está (el minero ya lo rellena).
      * <p>
-     * Es la mitad de lo que pidio el jugador: *"construir paredes que aislen la mina del agua"*. La otra mitad —secar
-     * lo de dentro y seguir bajando— la hace quien llama a esto ({@code picarYRecoger}: deja la celda de aire y
-     * devuelve {@code true}, asi que el tunel sigue).
+     * <b>SE LLAMA AL ABRIR CUALQUIER CELDA, NO SOLO AL SECAR UNA DE AGUA</b> (medido el 27-sep-2026, y es lo que
+     * tenía la galería del paso 32 inundada): secar la celda de agua y sellar SUS vecinas no basta, porque el agua
+     * vuelve por una vecina que estaba <b>seca</b> en ese momento — una <b>veta picada en la pared</b>
+     * ({@link #minarLasVetasDeAlLado} deja el hueco de aire y no sella nada) o el <b>tercer hueco del techo</b> de
+     * la galería (el que hace falta para entrar desde la losa del caracol). Medido: con la galería secada celda a
+     * celda, `hechas` subió a 6/24 y **volvió a 0/24** en cuanto el minero se fue al taller, y se quedó en 0/24
+     * <b>223 muestras (~8.900 ticks)</b> con la celda 1 y la 3 re-secándose en bucle. Es lo que pidió el jugador:
+     * *"construir paredes que aislen la mina del agua"*.
+     * <p>
+     * <b>DOS COSAS NO SE TAPIAN NUNCA</b>:
+     * <ul>
+     *   <li>las celdas del <b>paso del CARACOL</b> ({@link VillageGenerator#esCeldaDePasoDelCaracol}): un adoquín en la
+     *       celda de un paso <b>impar</b> se leería como su <b>pieza</b> y el paso se daría por hecho sin suelo (la
+     *       lección de I127);</li>
+     *   <li>las de la <b>capa del suelo</b> (por encima de {@code cotaDeLaPlaza - 1}): ahí el agua es del pueblo
+     *       (la acequia, el estanque) y el minero no la tapia.</li>
+     * </ul>
+     * Y las celdas de la <b>galería</b> SÍ se sellan —su contador cuenta aire, así que el sello no engaña a nadie—,
+     * incluida la de <b>DELANTE</b>, que es la que de verdad corta el agua: medido el 27-sep-2026, con la celda de
+     * delante sin sellar (era acuífero todavía) el túnel se inundó de `hechas=7/24` a `0/24` en cuanto el minero subió
+     * al taller, y el censo de agua (`AGUA` del arnés) enseñó que el agua estaba **en las celdas del propio túnel** y
+     * en la de delante, con la pared oeste ya sellada.
      */
     private void aislarDelAgua(ServerLevel level, BlockPos celda) {
+        int nivel = VillageGenerator.cotaDeLaPlaza(level, center);
         for (BlockPos vecina : BlockPos.betweenClosed(celda.offset(-1, -1, -1), celda.offset(1, 1, 1))) {
             if (vecina.equals(celda)) {
                 continue; // la propia celda la seca quien llama
             }
-            if (!level.getBlockState(vecina).getFluidState().isEmpty()) {
-                level.setBlock(vecina, Blocks.COBBLESTONE.defaultBlockState(), Block.UPDATE_ALL);
+            if (level.getBlockState(vecina).getFluidState().isEmpty()) {
+                continue;
             }
+            if (vecina.getY() >= nivel - 1) {
+                continue; // en la superficie el agua es del pueblo: no se tapia
+            }
+            if (VillageGenerator.esCeldaDePasoDelCaracol(center, nivel, vecina)) {
+                continue; // el paso del CARACOL no se tapiar (un adoquín ahí se leería como la pieza del paso)
+            }
+            level.setBlock(vecina, Blocks.COBBLESTONE.defaultBlockState(), Block.UPDATE_ALL);
         }
     }
 

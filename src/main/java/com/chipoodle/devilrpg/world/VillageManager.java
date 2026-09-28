@@ -4329,6 +4329,17 @@ public final class VillageManager {
     @Nullable
     public static BlockPos pasoParaCruzarElMuro(ServerLevel level, BlockPos centro, Villager villager,
             BlockPos destino) {
+        // EL MURO ES DE LA SUPERFICIE (medido el 27-sep-2026): por debajo de la capa del suelo NO hay nada que
+        // cruzar —la muralla es una valla a la cota del pueblo y la mina pasa por debajo—, y el aldeano que esta
+        // bajo tierra sale a la superficie por su PROPIO sitio (el caracol de la mina sale dentro del pueblo).
+        // Sin esta guarda, al minero que iba a la galeria del paso 32 (a 17 bloques bajo el suelo, y en horizontal
+        // a 65 del centro, o sea "fuera del muro") se le mandaba al PORTON NORTE —`470,63,583`, fuera del pueblo— y
+        // se quedaba en `Bajando a la mina` / `Volviendo a la caseta (encajado)` en bucle, con la galeria clavada en
+        // `hechas=21/24` (243 muestras). El propio log lo decia: `va al otro lado del muro`.
+        int cota = VillageGenerator.cotaDeLaPlaza(level, centro);
+        if (villager.getBlockY() < cota - 1 || destino.getY() < cota - 1) {
+            return null; // uno de los dos esta bajo tierra: no hay muro de por medio
+        }
         boolean destinoDentro = esDeDentroDelMuro(centro, destino);
         if (esDeDentroDelMuro(centro, villager.blockPosition()) == destinoDentro) {
             // Mismo lado: no hay muro de por medio (y se olvida el portón, para que el próximo cruce vuelva al log).
@@ -4338,7 +4349,6 @@ public final class VillageManager {
             }
             return null;
         }
-        int cota = VillageGenerator.cotaDeLaPlaza(level, centro);
         int lado = destinoDentro ? -1 : 1; // hacia dentro (al centro) o hacia fuera
         BlockPos mejor = null;
         double mejorRodeo = Double.MAX_VALUE;

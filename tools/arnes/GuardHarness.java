@@ -481,23 +481,64 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             // LO MATA LA GUARDIA (atribuido, como en MEDIR_MILICIA): el botin de `dropCustomDeathLoot` sale igual,
             // pero asi la muerte cuenta como suya, que es lo que pidio el jugador.
             Villager guardia = aldeanoMasCercano(level, pepitasPlantadas.blockPosition());
+            pepitasQueLlevabaElAsesino = guardia == null ? -1 : pepitasEnElZurron(guardia);
+            pepitasAsesino = guardia;
             pepitasPlantadas.hurt(guardia != null ? level.damageSources().mobAttack(guardia)
                     : level.damageSources().generic(), 1000.0F);
             return;
         }
         if (ticks % 400 == 100) {
-            DevilRpg.LOGGER.info("[Arnes] PEPITAS t={} EN EL SUELO: {}{}", ticks, pepitasEnElSuelo(level),
+            // EL ESLABON (1) Y (2): el zombi suelta y ALGUIEN lo levanta. OJO: el mod NO tira las pepitas al suelo
+            // cuando las mata un aldeano del pueblo —las mete en el ZURRON DEL QUE MATA (`dropCustomDeathLoot`:
+            // "el que mata, lootea")—, asi que medir "en el suelo" daba 0 SIEMPRE y parecia que no soltaba nada
+            // (medido en las cuatro corridas de `medida-pepitas*.log`: `EN EL SUELO: 0` en todas). Lo que hay que
+            // mirar es el ZURRON del asesino.
+            DevilRpg.LOGGER.info("[Arnes] PEPITAS t={} TRAS LA MUERTE: en el suelo={} · el que mato ({}) lleva {}"
+                            + " pepitas (llevaba {} antes){}{}", ticks, pepitasEnElSuelo(level),
+                    pepitasAsesino == null ? "nadie" : pepitasAsesino.getCustomName() == null ? "aldeano"
+                            : pepitasAsesino.getCustomName().getString().replace("\n", " | "),
+                    pepitasAsesino == null ? 0 : pepitasEnElZurron(pepitasAsesino), pepitasQueLlevabaElAsesino,
                     pepitasPlantadas != null && pepitasPlantadas.isAlive() ? " (el zombi SIGUE vivo)" : "");
             return;
         }
         if (ticks % 400 == 300) {
-            DevilRpg.LOGGER.info("[Arnes] PEPITAS t={} 200 ticks despues: en el suelo={} en el ALMACEN={} picos={}",
-                    ticks, pepitasEnElSuelo(level), pepitasEnElAlmacen(level), picosEnElAlmacen(level));
+            // (3) ¿SALEN DE AHI? Se cuentan las pepitas de TODOS los zurrones del pueblo (y quien las lleva), las del
+            // almacen y los picos: es lo que dice en QUE ESLABON se rompe la cadena del hierro.
+            StringBuilder quien = new StringBuilder();
+            int enZurrones = 0;
+            for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(140))) {
+                int n = pepitasEnElZurron(v);
+                if (n > 0) {
+                    enZurrones += n;
+                    quien.append(v.getCustomName() == null ? "aldeano"
+                            : v.getCustomName().getString().replace("\n", " | ")).append('=').append(n).append(' ');
+                }
+            }
+            DevilRpg.LOGGER.info("[Arnes] PEPITAS t={} 200 ticks despues: en el suelo={} en zurrones={} [{}] en el"
+                            + " ALMACEN={} picos={}", ticks, pepitasEnElSuelo(level), enZurrones, quien.toString().trim(),
+                    pepitasEnElAlmacen(level), picosEnElAlmacen(level));
             pepitasPlantadas = null;
+            pepitasAsesino = null;
         }
     }
 
     private static com.chipoodle.devilrpg.entity.AggressiveZombieEntity pepitasPlantadas = null;
+    /** El aldeano al que se le atribuye la muerte (el que lootea, ver `dropCustomDeathLoot`). */
+    private static Villager pepitasAsesino = null;
+    /** Pepitas que llevaba el asesino ANTES de la muerte (para ver que el botin es NUEVO). */
+    private static int pepitasQueLlevabaElAsesino = -1;
+
+    /** Pepitas de hierro que lleva ESE aldeano en el zurron (donde el mod mete el botin del que mata). */
+    private static int pepitasEnElZurron(Villager v) {
+        int total = 0;
+        for (int i = 0; i < v.getInventory().getContainerSize(); i++) {
+            net.minecraft.world.item.ItemStack s = v.getInventory().getItem(i);
+            if (s.is(net.minecraft.world.item.Items.IRON_NUGGET)) {
+                total += s.getCount();
+            }
+        }
+        return total;
+    }
 
     /** Cuantas pepitas de hierro hay tiradas por el suelo del pueblo. */
     private static int pepitasEnElSuelo(ServerLevel level) {
@@ -590,17 +631,12 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         if (ticks == 200) {
             vaciarElCarbonDelAlmacen(level);
         }
-        if (ticks == 1200) {
-            int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
-            for (int i = 1; i <= com.chipoodle.devilrpg.world.VillageGenerator.MINA_GALERIA_LARGO; i++) {
-                BlockPos celda = com.chipoodle.devilrpg.world.VillageGenerator.celdaDeLaGaleria(CENTRO, cota, 16, i);
-                for (int dy = 0; dy <= 1; dy++) {
-                    level.setBlock(celda.above(dy), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
-                }
-            }
-            DevilRpg.LOGGER.info("[Arnes] MINERO: cavada a mano la galeria del paso 16 ({} celdas) para medir lo que"
-                    + " viene despues", com.chipoodle.devilrpg.world.VillageGenerator.MINA_GALERIA_LARGO);
-        }
+        // EL CAVADO A MANO DE LA GALERIA DEL PASO 16 YA NO HACE FALTA (27-sep-2026): se metio porque el caracol no
+        // avanza de paso hasta que su galeria esta ENTERA (I102) y el minero no podia ENTRAR en ella (la boca de dos
+        // celdas de hueco es inalcanzable desde la losa del caracol, medido). Con el hueco de paso de TRES celdas el
+        // minero la cava EL SOLO: medido en la corrida `medida-galeria-3alto.log`, 2/24 -> 18/24 entre t=160 y
+        // t=1.160 (~1.000 ticks, unas 8 celdas por minuto de servidor). Dejarlo cavado a mano ya solo tapaba lo que
+        // se quiere medir, asi que NO se toca la mina.
         if (ticks % 40 != 0) {
             return;
         }
@@ -635,6 +671,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         DevilRpg.LOGGER.info("[Arnes] BOCA DE LA MINA t={} {} -> {}", ticks, boca.toShortString(), bocas.toString().trim());
         volcarElPozo(level, cota, paso, fondo);
         volcarLaGaleria(level, cota, paso);
+        volcarElAguaDeLaGaleria(level, cota, paso);
         for (Villager v : mineros) {
             // DIAGNOSTICO (por que el minero se queda SIN GOAL CORRIENDO): se vuelca TODO lo que mira su `canUse`
             // —el turno y la comida, el sitio aparcado (I33) con su hora, y la lista COMPLETA de goals con cual
@@ -738,6 +775,12 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
                 DevilRpg.LOGGER.info("[Arnes] SONDA DE LA CASETA t={} pos={} apoyo={} puesto={} {}", ticks,
                         v.blockPosition().toShortString(), apoyoCaseta.toShortString(),
                         puesto == null ? "-" : puesto.toShortString(), sc.toString().trim());
+            }
+            // LA SONDA DE LA GALERIA (27-sep-2026): al planificador del juego, celda a celda de la galeria que toca,
+            // desde donde esta el minero. Es lo que decide si la boca de la galeria se puede ANDAR desde el caracol
+            // (el atasco que tenia al minero 3.600 ticks con `hechas=3/24`): ver `sondarLaGaleria`.
+            if (ticks % 200 == 0) {
+                sondarLaGaleria(level, v, cota, paso);
             }
             // MEDIDA DEL PICO (26-sep-2026): se le deja al borde de romperse cada 2.000 ticks para medir que, al
             // romperse, SUELTA la faena, va al almacen y VUELVE con otro (los forja el herrero de herramientas).
@@ -888,6 +931,12 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
      * celdas de la galeria con lo que hay en cada una (aire, adoquin = agua SELLADA, piedra labrada = tope) y
      * cuantas cuenta el mod como hechas (`progresoDeLaGaleria`). Es lo que distingue "la galeria avanza" de "el
      * agua vuelve a entrar y el contador se queda en cero" — el bucle que tuvo al minero 110.000 ticks en el paso 32.
+     * <p>
+     * <b>Y DESDE EL 27-sep-2026 SE VUELCA TAMBIEN EL SUELO Y EL TECHO</b> de cada celda
+     * ({@code celda/suelo/+1/+2}), que es lo que hacia falta para medir el atasco de la boca: con la galeria de DOS
+     * celdas de hueco el vecino de la Y de la losa del caracol sale BLOCKED y el tunel no se puede ni entrar (ver
+     * {@code VillagerMinerGoal.picarLaCeldaDeLaGaleria}). Con esto se ve de un vistazo si una celda tiene suelo
+     * (se anda), si le falta (agujero) y si tiene los tres huecos de paso.
      */
     private static void volcarLaGaleria(ServerLevel level, int cota, int paso) {
         if (!com.chipoodle.devilrpg.world.VillageGenerator.abreGaleria(paso)) {
@@ -896,12 +945,96 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         StringBuilder sb = new StringBuilder();
         for (int i = 1; i <= 8; i++) {
             BlockPos g = com.chipoodle.devilrpg.world.VillageGenerator.celdaDeLaGaleria(CENTRO, cota, paso, i);
-            sb.append(i).append(':').append(nombre(level, g.getX(), g.getY(), g.getZ())).append(' ');
+            sb.append(i).append(':').append(nombre(level, g.getX(), g.getY(), g.getZ()))
+                    .append("/suelo=").append(nombre(level, g.getX(), g.getY() - 1, g.getZ()))
+                    .append("/+1=").append(nombre(level, g.getX(), g.getY() + 1, g.getZ()))
+                    .append("/+2=").append(nombre(level, g.getX(), g.getY() + 2, g.getZ())).append(' ');
         }
         DevilRpg.LOGGER.info("[Arnes] GALERIA t={} paso={} hechas={}/{} (1..8) {}", ticks, paso,
                 com.chipoodle.devilrpg.world.VillageGenerator.progresoDeLaGaleria(level, CENTRO, cota, paso),
                 com.chipoodle.devilrpg.world.VillageGenerator.MINA_GALERIA_LARGO, sb.toString().trim());
     }
+
+    /**
+     * <b>LA SONDA DE LA GALERIA</b> (27-sep-2026): se le pregunta <b>AL PLANIFICADOR DEL JUEGO</b>, celda a celda de
+     * la galeria que toca, si hay ruta hasta ella <b>desde donde esta el minero ahora mismo</b>
+     * ({@code createPath(celda, 0)}: la celda EXACTA, sin tolerancia). Es la medida que decide el atasco de la boca:
+     * con la galeria de dos celdas el juego devolvia ruta <b>nula o que no alcanza</b> a las celdas de dentro, y el
+     * aldeano se quedaba en la celda del caracol con el destino borrado del cerebro.
+     * <p>
+     * Solo se pregunta cuando el minero esta <b>cerca</b> (a menos de {@value #SONDA_GALERIA_RADIO} bloques del
+     * centro de la mina): desde la superficie el planificador no llega ni con ruta buena (su region son 56 bloques y
+     * la heuristica no baja por un caracol), y eso ya se mide en `rutaFaena`.
+     */
+    private static void sondarLaGaleria(ServerLevel level, Villager v, int cota, int paso) {
+        if (!com.chipoodle.devilrpg.world.VillageGenerator.abreGaleria(paso)) {
+            return;
+        }
+        BlockPos boca = com.chipoodle.devilrpg.world.VillageGenerator.celdaDeLaGaleria(CENTRO, cota, paso, 1);
+        if (v.blockPosition().distSqr(boca) > SONDA_GALERIA_RADIO * SONDA_GALERIA_RADIO) {
+            return;
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int i = 1; i <= 6; i++) {
+            BlockPos g = com.chipoodle.devilrpg.world.VillageGenerator.celdaDeLaGaleria(CENTRO, cota, paso, i);
+            var camino = v.getNavigation().createPath(g, 0);
+            boolean ok = camino != null && camino.canReach();
+            sb.append(i).append(':').append(g.toShortString()).append('=')
+                    .append(camino == null ? "NO(nula)"
+                            : camino.getNodeCount() + "n/" + (ok ? "SI" : "NO") + " fin="
+                                    + camino.getEndNode().asBlockPos().toShortString())
+                    .append(' ');
+        }
+        DevilRpg.LOGGER.info("[Arnes] SONDA DE LA GALERIA t={} pos={} paso={} {}", ticks,
+                v.blockPosition().toShortString(), paso, sb.toString().trim());
+    }
+
+    /** Radio (bloques) dentro del cual se le pregunta al planificador por las celdas de la galeria. */
+    private static final int SONDA_GALERIA_RADIO = 24;
+
+    /**
+     * <b>EL AGUA QUE RODEA LA GALERIA</b> (27-sep-2026): lista las celdas <b>con fluido</b> de la caja que envuelve
+     * las primeras {@value #AGUA_CELDAS} celdas de la galeria que toca (2 de margen en horizontal y de {@code -2} a
+     * {@code +4} en vertical). Es el instrumento que dice <b>DE DONDE entra el agua</b> cuando el tunel se inunda, que
+     * es lo que hacia falta para el arreglo de las paredes: medido, con la galeria secada celda a celda el agua
+     * volvia por una vecina que estaba SECA al secarla (una veta picada en la pared o el tercer hueco del techo).
+     * Sin esto, "el agua vuelve" no dice ni por donde ni a que altura.
+     */
+    private static void volcarElAguaDeLaGaleria(ServerLevel level, int cota, int paso) {
+        if (!com.chipoodle.devilrpg.world.VillageGenerator.abreGaleria(paso)) {
+            return;
+        }
+        int minX = Integer.MAX_VALUE;
+        int maxX = Integer.MIN_VALUE;
+        int minZ = Integer.MAX_VALUE;
+        int maxZ = Integer.MIN_VALUE;
+        int y = 0;
+        for (int i = 1; i <= AGUA_CELDAS; i++) {
+            BlockPos g = com.chipoodle.devilrpg.world.VillageGenerator.celdaDeLaGaleria(CENTRO, cota, paso, i);
+            minX = Math.min(minX, g.getX());
+            maxX = Math.max(maxX, g.getX());
+            minZ = Math.min(minZ, g.getZ());
+            maxZ = Math.max(maxZ, g.getZ());
+            y = g.getY();
+        }
+        StringBuilder sb = new StringBuilder();
+        int n = 0;
+        for (BlockPos q : BlockPos.betweenClosed(new BlockPos(minX - 2, y - 2, minZ - 2),
+                new BlockPos(maxX + 2, y + 4, maxZ + 2))) {
+            if (!level.getFluidState(q).isEmpty()) {
+                n++;
+                if (n <= 30) {
+                    sb.append(q.toShortString()).append('=').append(nombre(level, q.getX(), q.getY(), q.getZ()))
+                            .append(' ');
+                }
+            }
+        }
+        DevilRpg.LOGGER.info("[Arnes] AGUA t={} paso={} celdas con fluido={}{}", ticks, paso, n,
+                n == 0 ? " (la galeria esta SECA)" : " -> " + sb.toString().trim());
+    }
+
+    /** Cuantas celdas de la galeria entran en la caja del volcado de agua. */
+    private static final int AGUA_CELDAS = 6;
 
     /** ¿Esa celda se puede pisar (o es la de la cabeza)? Todo lo que no choque: aire, hierba, agua, cultivos. */
     private static boolean esLibre(String bloque) {        return bloque.equals("air") || bloque.equals("cave_air") || bloque.equals("water")

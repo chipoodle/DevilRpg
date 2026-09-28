@@ -61,6 +61,28 @@ restaurado) y **todo commiteado**.
 aldeano en un solo sitio** (la taberna). La medida no era un trámite: **destapó el fallo**.
 ## Lo que está PENDIENTE (en este orden, como pidió el jugador)
 
+### 0. Sesión del 27-sep-2026: la **boca de la galería** (el choque caracol ↔ galería) — **CERRADO y MEDIDO**
+
+Lo ordenado era el **choque caracol ↔ galería** (el 68 % del tiempo del minero). **Medido y arreglado** — lo cuenta
+**I136** y los datos crudos están en `tools/arnes/medidas-boca-galeria.txt` (corridas
+`build/medida-galeria-3alto.log`, `medida-galeria-agua-1.log`, `medida-galeria-muro.log`):
+
+| qué | medida |
+|---|---|
+| la **boca** (el diagnóstico viejo: «pica su propia losa») | **era un fantasma del instrumento**: `cara` es la celda del caracol del paso, y ésa lleva su pieza por definición |
+| la **boca** (causa real) | el aldeano va **de pie sobre la losa** (nodo `y+1`, caja `y+0,5…y+2,45`) y con **dos** celdas de hueco el vecino sale **BLOCKED** → no entra ni sale. Arreglo: **tres** celdas (I136) |
+| **antes → después** | `hechas` de la galería del paso 32: **3/24 congelado 3.600 ticks** → **3 → … → 24/24**; y la galería del **paso 16** (que cavaba el arnés) ahora **la cava el minero: 2/24 → 24/24** |
+| el **caracol** | `pasos` **32 congelado** → la galería se cierra y **sigue bajando: 34 → … → 44** (la cara de `y=46` a **`y=40`**), con `TOPE=SI`/`se PARA` = **0** |
+| el **agua** | las tres celdas abren el techo en el acuífero y el túnel se inundaba (`hechas` 6 → **0**, 223 muestras). Con el censo nuevo `AGUA`: el agua entra por la **celda de delante** → `aislarDelAgua` al **abrir** cualquier celda, saltando solo el paso del caracol. Al final: **31 celdas con fluido, ninguna dentro del túnel** |
+| el **muro** | con 21/24 el minero se iba al **portón norte** (243 muestras; el final de la galería cae «fuera del muro» a 17 bloques bajo el suelo): **bajo tierra no hay muro que cruzar** → la ruta a la celda 21 pasa a `22 nodos … alcanza=SI` |
+
+**Lo que toca ahora** (en este orden): **(1)** el **taller/balsa** (opción C del jugador: pasar la balsa y el acarreo
+al herrero de herramientas) — el primer número medido a mover es el de **coladas** (**33 en dos minutos**, porque el
+pedernal se queda en el zurrón del minero y el objetivo mira el almacén); **(2)** la **cadena del hierro** de los
+raids (§6b/§6c), cuyo instrumento estaba mal (**contaba pepitas en el suelo, y el mod se las da al que mata**) y cuyo
+eslabón roto medido es que **el guardia no deja nunca lo que lootea** (no hay paso de "deja lo tuyo" en su goal).
+
+
 ### 1. El `JOB_SITE` del minero (el cortapiedras, un bloque): **medido, y no cuesta nada** (cerrado)
 
 Medido en la corrida en la que la mina ya funciona de punta a punta (297 muestras del minero, `t=11.720`):
@@ -296,7 +318,34 @@ ticks). Es el sitio por donde hay que empezar: leer su aviso con `cerebro=`, `na
 el patrón de "no puedo entrar/salir de un recinto" o "la celda no se pisa"), y **medir con
 `python tools/arnes/rendiciones.py --etiquetas`**: el criterio de éxito es que esas 16 bajen a 0.
 
-### 6d. La mina YA BAJA (medido). Y la medida del tiempo del minero **corrige el diagnóstico**
+### 6d. La mina YA BAJA (medido). Y el choque caracol ↔ galería: **ARREGLADO Y MEDIDO** (27-sep-2026)
+
+> **CERRADO en la sesión del 27-sep.** Lo de abajo queda como el diagnóstico viejo, y **una de sus hipótesis era un
+> fantasma del instrumento**: `cara=507,46,613` con `bloqueDeLaCara=cobblestone_slab` **no** era el minero «picando su
+> propia losa» —`cara` es siempre la celda del caracol del paso que toca, y ésa lleva su **pieza** por definición (es
+> una losa en los pasos pares)—. La causa de verdad, el arreglo y la medida están en **I136** y en
+> `tools/arnes/medidas-boca-galeria.txt`; en una línea:
+>
+> * **la boca de la galería**: el aldeano baja el caracol **de pie sobre la losa** (nodo `y+1`, caja `y+0,5…y+2,45`) y
+>   con **dos** celdas de hueco el vecino sale **BLOCKED** (la tercera celda es roca) → **no se puede ni entrar ni
+>   salir**. Arreglo: **tres** celdas de hueco, como el caracol. MEDIDO: la galería del paso 32 pasó de **3/24
+>   congelado 3.600 ticks** a **abrirse sola hasta 21/24**, y la del paso 16 (**que antes cavaba el arnés a mano**) la
+>   cava **el minero: 2/24 → 23/24**.
+> * **el agua** (el encargo del jugador): las tres celdas abren el techo justo en el acuífero → el túnel se inundaba
+>   (`hechas` 6 → **0** y 223 muestras en cero). Con el censo nuevo (`AGUA`) se midió que el agua entra por **la celda
+>   de DELANTE** → `aislarDelAgua` se llama **al abrir cualquier celda** y sella las vecinas con fluido, saltándose
+>   **solo** el paso del caracol (un adoquín en un paso impar se leería como su pieza) y la capa del suelo.
+> * **el muro**: con la galería en 21/24 el minero se quedaba **243 muestras** yendo al **portón norte** (el final de la
+>   galería cae a 65 bloques del centro, «fuera del muro», **a 17 bloques bajo el suelo**). Arreglado: **por debajo de
+>   la capa del suelo no hay muro que cruzar**.
+>
+> **LO SIGUIENTE, ya medido**: el **taller/balsa**. En la misma corrida, el minero hizo **33 coladas de 4 adoquines en
+> 2 minutos** mientras el almacén seguía con `6 pedernal`: el **pedernal se lo queda él en el zurrón**
+> (`guardarEnInventario` en la rama de la balsa) y el objetivo que mira es `VillageStorage.cuenta(…, FLINT)`, o sea el
+> **almacén** → el umbral no se alcanza nunca y filtra hasta quedarse sin adoquín. Es la **opción C** del jugador
+> (pasar la balsa y el acarreo al herrero de herramientas), y el criterio de éxito es el número de coladas.
+
+**El diagnóstico viejo, tal cual se escribió** (léase con lo de arriba en la mano):
 
 **Medido** (del log de la corrida larga, sin gastar otra): de 25 muestras de faena, `Picando` **17 (68 %)**,
 `Cargando material` 5 (20 %), `En el taller` **2 (8 %)**, `Bajando lo sacado` 1. Y en toda la corrida el taller hizo
@@ -319,9 +368,11 @@ picar **ya es una pieza protegida de la mina** (una losa del caracol, un poste d
 el paso** (o se re-planifica el trazado), en vez de quedarse 17 muestras de `Picando` sobre su propia losa. Hay que
 **leer el bloque de `CAVAR` entero** (~líneas 470-600) antes de tocar: ahí están la secuencia de picado, el sello y el
 avance del paso.
-**Orden de trabajo (el jugador decidió la opción C)**: primero el choque caracol ↔ galería (es el 68 % de su
-tiempo); después **pasar el taller y la balsa al herrero de herramientas** para que el minero **solo mine**. Criterio:
-`hechas` sube de `3/24`, `pasos` sigue creciendo y no baja lo que produce el taller.
+**Orden de trabajo (el jugador decidió la opción C)**: el choque caracol ↔ galería **ya está hecho y medido** (I136);
+lo que queda de la opción C es **pasar el taller y la balsa al herrero de herramientas** para que el minero **solo
+mine**. Criterio: `hechas` sube de `3/24`, `pasos` sigue creciendo y no baja lo que produce el taller; y el primer
+número que hay que mover es el de **coladas de la balsa** (medido: **33 en dos minutos**, porque el pedernal se queda
+en el zurrón del minero y el objetivo mira el almacén).
 
 
 **MEDIDO** (corrida larga, `MEDIR_MINERO`): la mina **desciende** —la parte del encargo que faltaba—:

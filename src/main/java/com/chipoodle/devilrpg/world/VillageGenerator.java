@@ -3179,6 +3179,40 @@ public final class VillageGenerator {
     }
 
     /**
+     * <b>¿Esa celda es una de las que se andan en el CARACOL?</b> (los pies o la cabeza de un paso del anillo). Es la
+     * parte de {@link #esCeldaDePasoDeLaMina} que <b>NO</b> se puede tapiar nunca: la <b>pieza</b> de un paso
+     * <b>impar</b> es adoquín, así que un adoquín puesto por el <b>sello del agua</b>
+     * ({@code VillagerMinerGoal.aislarDelAgua}) se leería como su pieza y el paso se daría por hecho <b>sin suelo</b>
+     * —el que baja detrás se cae al hueco—.
+     * <p>
+     * <b>Las GALERÍAS, en cambio, SÍ se pueden sellar</b>, y hay que hacerlo (medido el 27-sep-2026): su contador
+     * cuenta <b>aire</b> ({@link #progresoDeLaGaleria}), así que un adoquín de sello ahí no engaña a nadie, y la celda
+     * de <b>DELANTE</b> de la galería que se está cavando suele ser <b>acuífero todavía</b>: sin sellarla, el agua
+     * vuelve al túnel en cuanto el minero sube al taller (medido: la galería del paso 32 pasó de `hechas=7/24` a
+     * `0/24` con las siete celdas de agua, y el censo de agua lo dijo —las celdas mojadas eran **las del propio túnel**
+     * y la de delante, con la pared oeste ya sellada—).
+     */
+    public static boolean esCeldaDePasoDelCaracol(BlockPos center, int nivel, BlockPos pos) {
+        BlockPos eje = centroDeLaMina(center);
+        int dx = pos.getX() - eje.getX();
+        int dz = pos.getZ() - eje.getZ();
+        if (Math.max(Math.abs(dx), Math.abs(dz)) != MINA_RADIO) {
+            return false;
+        }
+        int indice = indiceDelAnillo(dx, dz);
+        if (indice < 0) {
+            return false;
+        }
+        for (int p = Math.max(indice, 0); p < pasosHastaElFondo(nivel); p += MINA_ANILLO.length) {
+            int y = yDelCaracol(nivel, p);
+            if (pos.getY() == y + 1 || pos.getY() == y + 2) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * <b>¿Esa celda es una de las que se ANDAN en la mina?</b> (la celda de paso del caracol —la de los pies o la de
      * la cabeza, encima de su pieza— o una celda de una galería). Es la pregunta que necesita el <b>marco de madera</b>
      * del caracol para no taparse a sí mismo el túnel: sus postes van en las <b>paredes</b> (las dos celdas del radio
@@ -3193,20 +3227,16 @@ public final class VillageGenerator {
         int dx = pos.getX() - eje.getX();
         int dz = pos.getZ() - eje.getZ();
         // 1) El CARACOL: la columna del anillo, y dentro de ella las dos celdas que van encima de su pieza.
-        if (Math.max(Math.abs(dx), Math.abs(dz)) == MINA_RADIO) {
-            int indice = indiceDelAnillo(dx, dz);
-            for (int p = Math.max(indice, 0); p < pasosHastaElFondo(nivel); p += MINA_ANILLO.length) {
-                int y = yDelCaracol(nivel, p);
-                if (pos.getY() == y + 1 || pos.getY() == y + 2) {
-                    return true;
-                }
-            }
+        if (esCeldaDePasoDelCaracol(center, nivel, pos)) {
+            return true;
         }
         // 2) Las GALERIAS: la cruz que sale de cada paso que abre galería, a la Y de su celda del caracol (la galería
-        //    se anda por su propia celda y por la de encima).
+        //    se anda por su propia celda y por las DOS de encima: desde el 27-sep-2026 el hueco de paso de la
+        //    galería son TRES celdas, las mismas que cava `VillagerMinerGoal.picarLaCeldaDeLaGaleria`, porque con
+        //    dos celdas el aldeano que viene de la losa del caracol no puede ni entrar ni salir).
         for (int p = MINA_GALERIA_CADA * 2; p < pasosHastaElFondo(nivel); p += MINA_GALERIA_CADA * 2) {
             BlockPos c = celdaDelCaracolDesdeElEje(eje, nivel, p);
-            if (pos.getY() != c.getY() && pos.getY() != c.getY() + 1) {
+            if (pos.getY() != c.getY() && pos.getY() != c.getY() + 1 && pos.getY() != c.getY() + 2) {
                 continue;
             }
             Direction d = direccionDeLaGaleria(p);
@@ -3330,7 +3360,11 @@ public final class VillageGenerator {
             int hechas = progresoDeLaGaleria(level, center, nivel, paso);
             for (int i = 1; i <= hechas; i++) {
                 BlockPos g = celdaDeLaGaleria(center, nivel, paso, i);
-                for (int dy = 0; dy <= 1; dy++) {
+                // LAS TRES CELDAS DEL HUECO DE PASO DE LA GALERIA, que son las mismas que cava el minero
+                // (`picarLaCeldaDeLaGaleria`, 27-sep-2026): las tres hacen falta para poder ENTRAR y SALIR desde la
+                // losa del caracol (el aldeano que baja va de pie encima de la losa y su caja necesita el tercer
+                // hueco). Reparar solo dos dejaria la galeria sin entrada y el tunel no se andaria.
+                for (int dy = 0; dy <= 2; dy++) {
                     BlockPos p = g.above(dy);
                     BlockState actual = level.getBlockState(p);
                     if (esTerrenoDelPueblo(actual)) {
