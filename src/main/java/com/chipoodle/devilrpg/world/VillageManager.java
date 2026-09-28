@@ -4412,9 +4412,34 @@ public final class VillageManager {
         return null;
     }
 
-    /** ¿Se puede estar de pie ahí? Libre a los pies y a la cabeza, y con suelo firme debajo. */
+    /**
+     * <b>Lo que se puede pisar a la altura de los pies</b> (27-sep-2026): aire y, además, <b>los cultivos y la
+     * hierba</b>. Un aldeano <b>anda y se queda de pie encima</b> de un trigo o unas zanahorias —es lo que hace al
+     * cosechar— pero la regla pedía {@code isAir()} y dejaba al bancal <b>sin ninguna casilla de pie</b>.
+     * <p>
+     * <b>MEDIDO</b> en los avisos de rendición: un granjero con los pies <b>DENTRO de la farmland</b>
+     * ({@code pies=farmland cabeza=wheat suelo=dirt}) rendido con {@code ruta=1 nodos … alcanza=NO} —no tenía <b>a
+     * dónde salir</b> y {@link #desatascarSiEstaEncajado} tampoco encontraba casilla—, y la recolectora yendo a por un
+     * objeto caído <b>sobre el trigo</b> ({@code destino=farmland encima=wheat}) sin casilla de pie cerca. El juego sí
+     * los deja pisar: el planificador da esos nodos por buenos.
+     */
+    private static boolean sePisaALosPies(net.minecraft.world.level.block.state.BlockState estado) {
+        return estado.isAir()
+                || estado.is(net.minecraft.world.level.block.Blocks.WHEAT)
+                || estado.is(net.minecraft.world.level.block.Blocks.CARROTS)
+                || estado.is(net.minecraft.world.level.block.Blocks.POTATOES)
+                || estado.is(net.minecraft.world.level.block.Blocks.BEETROOTS)
+                || estado.is(net.minecraft.world.level.block.Blocks.ATTACHED_MELON_STEM)
+                || estado.is(net.minecraft.world.level.block.Blocks.ATTACHED_PUMPKIN_STEM)
+                || estado.is(net.minecraft.world.level.block.Blocks.SHORT_GRASS)
+                || estado.is(net.minecraft.world.level.block.Blocks.FERN)
+                || estado.is(net.minecraft.world.level.block.Blocks.TALL_GRASS)
+                || estado.is(net.minecraft.world.level.block.Blocks.LARGE_FERN);
+    }
+
+    /** ¿Se puede estar de pie ahí? Libre a los pies y a la cabeza (ver {@link #sePisaALosPies}), y con suelo firme. */
     public static boolean esCeldaDePie(ServerLevel level, BlockPos p) {
-        return level.getBlockState(p).isAir() && level.getBlockState(p.above()).isAir()
+        return sePisaALosPies(level.getBlockState(p)) && sePisaALosPies(level.getBlockState(p.above()))
                 && level.getBlockState(p.below()).isSolid();
     }
 
@@ -4839,6 +4864,12 @@ public final class VillageManager {
     /**
      * La casilla mas cercana donde se puede estar de pie: pies y cabeza <b>libres</b> y el bloque de debajo con
      * <b>forma</b> (no se exige {@code isSolid}: encima de una losa o de tablones tambien se esta de pie).
+     * <p>
+     * <b>Y "LIBRE" ES LO MISMO QUE EN {@link #esCeldaDePie}</b> (27-sep-2026): aire <b>o un cultivo</b>, porque dentro de
+     * un bancal <b>no hay ni una celda de aire</b>. Medido: un granjero hundido en la farmland de su bancal
+     * ({@code pies=farmland cabeza=wheat}) no tenia <b>a donde salir</b> — el desatasco disparaba y
+     * {@code casillaPisableCercaDe} devolvia {@code null} por exigir aire— y se quedaba en bucle (7 avisos del mismo
+     * aldeano y la misma celda, cada ~13 s, justo por encima del freno de 200 ticks del desatasco).
      */
     @Nullable
     private static BlockPos casillaPisableCercaDe(ServerLevel level, BlockPos desde) {
@@ -4846,7 +4877,7 @@ public final class VillageManager {
             BlockPos mejor = null;
             double mejorDist = Double.MAX_VALUE;
             for (BlockPos p : BlockPos.betweenClosed(desde.offset(-radio, -2, -radio), desde.offset(radio, 2, radio))) {
-                if (!level.getBlockState(p).isAir() || !level.getBlockState(p.above()).isAir()) {
+                if (!sePisaALosPies(level.getBlockState(p)) || !sePisaALosPies(level.getBlockState(p.above()))) {
                     continue;
                 }
                 if (level.getBlockState(p.below()).getCollisionShape(level, p.below()).isEmpty()) {

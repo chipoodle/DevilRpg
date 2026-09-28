@@ -308,7 +308,19 @@ public class VillagerPickupGoal extends Goal {
             villager.getLookControl().setLookAt(objetivo);
             double distancia = Math.sqrt(villager.distanceToSqr(objetivo));
             if (distancia > REACH) {
-                VillageManager.caminarHacia(villager, objetivo.blockPosition(), VELOCIDAD);
+                // LA CASILLA DE PIE, NO LA CELDA CRUDA (I114/I131, medido el 27-sep-2026): lo que se cae puede quedar
+                // SOBRE algo que no se pisa —una valla, la mesa de la taberna— y ahí el planificador no da ruta: el
+                // aldeano se rendía con la etiqueta puesta y `ruta=1 nodos … alcanza=NO` (Valeriano, "Guardando lo
+                // suyo", con los pies DENTRO de la farmland).
+                VillageManager.caminarHacia(villager,
+                        VillageManager.casillaDePieCercaDe(level, objetivo.blockPosition()), VELOCIDAD);
+                // Y SI ESTÁ METIDO DENTRO DE UN BLOQUE, NO SE CUENTA ATASCO: SE LE SACA (el mismo ayudante del
+                // leñador, I122).
+                if (VillageManager.desatascarSiEstaEncajado(villager)) {
+                    mejorDistancia = Double.MAX_VALUE;
+                    stuckTicks = 0;
+                    return;
+                }
                 VillageManager.ponerActividad(villager, "Recogiendo lo suyo");
                 if (distancia < mejorDistancia - 0.5D) {
                     mejorDistancia = distancia;
@@ -453,7 +465,12 @@ public class VillagerPickupGoal extends Goal {
 
     private void ir() {
         if (objetivo != null) {
-            VillageManager.caminarHacia(villager, objetivo.blockPosition(), VELOCIDAD);
+            BlockPos celda = objetivo.blockPosition();
+            // La misma regla que en el `tick`: al objeto se va por una CASILLA DE PIE (ver allí el porqué medido).
+            if (villager.level() instanceof ServerLevel level) {
+                celda = VillageManager.casillaDePieCercaDe(level, celda);
+            }
+            VillageManager.caminarHacia(villager, celda, VELOCIDAD);
             return;
         }
         if (destino != null) {

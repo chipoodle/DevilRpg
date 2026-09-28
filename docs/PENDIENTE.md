@@ -408,7 +408,43 @@ queda en `pasos=32` con la galería en **`hechas=3/24`**, y **no está atascado*
 `50` líneas de "deja lo sacado / guardo" y `cuela 4 adoquines en la balsa y saca un pedernal` repetido. O sea: **la
 faena del taller le come el tiempo de la galería**. Toca decidir el orden (la galería manda) o **ponerle un tope a los
 viajes al taller** — y medirlo con el mismo instrumento: que `hechas` suba de 3/24 y que `pasos` siga creciendo.
-### 7. Atascos sueltos: **MEDIDOS con el desglose por etiquetas** (27-sep-2026)
+### 7. Atascos sueltos: **ARREGLADOS Y MEDIDOS** (I139, 27-sep-2026)
+
+Eran **dos clases**, las dos medidas con el desglose por etiquetas y las dos con su criterio:
+
+1. **La ronda del guardia no es un atasco** (pero se rendía): el contador medía **solo la distancia en línea recta** y
+   la ronda es un **círculo** —los avisos lo decían: `ruta=16-32 nodos … alcanza=SI`, `nav=[… alcanza]`, o sea **con
+   camino y andando**—. Arreglo: cuenta como progreso **consumir nodos de la ruta viva** (y **solo dentro de la misma
+   ruta**, para no desactivar el contador en el guardia que empuja una pared). MEDIDO: avisos de guardia patrullando
+   **9 → 0**.
+2. **Al objeto caído se va por una CASILLA DE PIE**: los goals que recogen (`CollectGoal`, `PickupGoal`,
+   `AnimalFarmGoal`, `FarmGoal`) caminaban a `objetivo.blockPosition()`, y lo que se cae puede quedar **encima de algo
+   que no se pisa** (la **mesa de la taberna** `516,64,639`, una **valla**, **dentro** de un bancal con
+   `pies=farmland`): el planificador no da ruta hasta ahí y el aldeano se rendía. Arreglo: `casillaDePieCercaDe`
+   (regla I114/I131) **y** `desatascarSiEstaEncajado` antes de contar atasco (el ayudante del leñador, I122).
+
+Lo que queda y **no es de esta clase**: `Filomena (Recolector) / Yendo al almacen` con `ruta=33 nodos … alcanza=NO`
+(el almacén inalcanzable desde la taberna/kiosco: la pierna ya documentada como rota en esta aldea) y `Yendo a
+entrenar` de los guardias (1 por guardia, con `nav` que no alcanza el puesto de entrenamiento: la clase de I119).
+
+**MEDIDO** (misma partida; datos crudos en `tools/arnes/medidas-atascos-sueltos.txt`). Corrida buena
+`build/medida-s7-final.log` (15.040 ticks): **5 avisos de rendición contra 18**, y la **tasa del pueblo en 0,30** por
+1.000 ticks (la mejor de la sesión; la referencia era 0,50-0,60 y la tanda anterior del proyecto 1,29):
+
+| criterio | antes | después |
+|---|---|---|
+| `Patrullando el corral` / `Patrullando la aldea` | **9** avisos | **2** |
+| `Recogiendo el corral` (el ganadero) | 4 | **0** |
+| `Guardando lo suyo` (los oficios que recogen) | 5 | **0** |
+| `Yendo a la taberna` | 1-2 | **0** |
+| el granjero hundido en la farmland, en bucle | **7** (el mismo aldeano) | **1** |
+| **la tasa del pueblo** (I135, ventana 2.000-12.000) | 0,50-0,60 | **0,30** |
+
+**Lo que NO queda a cero** (y por qué): **2** de guardia patrullando (hay destinos que no se alcanzan de verdad), **1**
+del granjero con los pies en la farmland (el bucle desaparece, el hundimiento se repite) y **1** de `Yendo a entrenar`
+(clase I119). Y de método: la corrida intermedia **pareció una regresión** (11 avisos) y era el instrumento diciendo
+la verdad —el desatasco disparaba (14 desatascos reales) pero **no tenía a dónde sacarlo** porque exigía aire, y
+dentro de un bancal no hay aire—.
 
 Lo que queda **ya no es un sitio concreto**: las **11 rendiciones** de las dos corridas de hoy son **todas de 1**, y
 **5 son guardias en su ronda** (la clase de I115, el rodeo del círculo de la ronda). Los atascos gordos están a cero

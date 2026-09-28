@@ -343,7 +343,22 @@ public class VillagerAnimalFarmGoal extends Goal {
         double distancia = Math.sqrt(villager.distanceToSqr(destino.getX() + 0.5D, destino.getY() + 0.5D,
                 destino.getZ() + 0.5D));
         if (distancia > alcance) {
-            VillageManager.caminarHacia(villager, destino, VELOCIDAD);
+            BlockPos aDonde = destino;
+            if (destino.equals(target)) {
+                // LA CASILLA DE PIE, NO LA CELDA CRUDA (I114/I131): lo que recoge puede estar sobre algo que no se
+                // pisa. Medido el 27-sep-2026: `Vicenta (Ganadero) / Recogiendo el corral` rendida con destino
+                // `516,64,639` (`air` con `oak_planks` encima, la mesa de la taberna) y `ruta=2 nodos … alcanza=NO`.
+                // El tramo del PORTÓN se deja tal cual: el portón ya es una celda de paso.
+                aDonde = VillageManager.casillaDePieCercaDe(level, destino);
+            }
+            VillageManager.caminarHacia(villager, aDonde, VELOCIDAD);
+            // Y SI ESTÁ METIDO DENTRO DE UN BLOQUE, NO SE CUENTA ATASCO: SE LE SACA. Es el mismo ayudante compartido
+            // que usa el leñador desde I122.
+            if (VillageManager.desatascarSiEstaEncajado(villager)) {
+                mejorDistancia = Double.MAX_VALUE;
+                stuckTicks = 0;
+                return;
+            }
             if (distancia < mejorDistancia - 0.5D) {
                 mejorDistancia = distancia;
                 stuckTicks = 0;

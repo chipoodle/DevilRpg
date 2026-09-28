@@ -1,0 +1,77 @@
+# LOS ATASCOS SUELTOS DEL §7 (27-sep-2026)
+
+Corridas: `build/medida-galeria-final.log` y `build/medida-balsa-final.log` (referencia, ANTES),
+`build/medida-guardia-ruta.log` (con el arreglo del guardia), `build/medida-guardia-ruta.log` +
+la corrida del §7 (despues). Ver el final del fichero para los numeros de cada corrida.
+
+## Como se encontro (el desglose por etiquetas, sin gastar corridas)
+
+`python tools/arnes/rendiciones.py --etiquetas` sobre los dos logs de la sesion: **11 rendiciones, TODAS de 1**, y
+ninguna de las gordas (`Yendo a la taberna` 16, `Volviendo a la plaza` 19, `Cuidando el ganado` 3, `no consigue
+entrar al bancal` 5: todas a **0**). Lo que quedaba eran **dos clases**, y los propios avisos dicen cual:
+
+### Clase 1: el guardia NO se rinde por falta de ruta (es el RODEO de la ronda)
+
+| aviso | ruta |
+|---|---|
+| `Ubaldo (Guardia arquero) / Patrullando el corral` | `ruta=30 nodos … alcanza=SI` (y `nav=[30 nodos … alcanza]`) |
+| `Ubaldo / Patrullando el corral` | `ruta=32 nodos … alcanza=SI` |
+| `Eufemia (Guardia espadachin) / Patrullando el corral` | `ruta=29 nodos … alcanza=SI` |
+| `Onofre (Guardia espadachin) / Patrullando la arboleda` | `ruta=20 nodos … alcanza=SI` |
+| `Dorotea (Guardia arquero) / Patrullando la arboleda` | `ruta=16 nodos … alcanza=SI` |
+
+Un destino a 20 bloques con una ruta de **30 nodos**: la ronda es un circulo y el contador de atasco media **solo la
+distancia en linea recta**, que en un rodeo **sube**. Arreglo: cuenta como progreso **consumir nodos de la ruta viva**
+(y solo dentro de la MISMA ruta: si el planificador la recalcula, no cuenta, para no desactivar el contador en el
+guardia que empuja una pared — el bucle de I3).
+
+### Clase 2: los que van a por un objeto caido caminan a la CELDA CRUDA
+
+| aviso | donde estaba el objeto |
+|---|---|
+| `Vicenta (Ganadero) / Recogiendo el corral` (x4) | la **mesa de la taberna** (`516,64,639`, `air` con `oak_planks` encima) y una **valla** (`513,63,640`, `destino=oak_fence`) |
+| `Valeriano / Hipolito (Granjero) / Guardando lo suyo` | **dentro** del bancal: `pies=farmland cabeza=wheat` (`ruta=1 nodos … alcanza=NO`) |
+| `Filomena (Recolector) / Yendo a la taberna` | la mesa otra vez (`ruta=41 nodos … alcanza=NO`) |
+
+Arreglo: `VillageManager.casillaDePieCercaDe` (regla I114/I131) en `VillagerCollectGoal`, `VillagerPickupGoal`,
+`VillagerAnimalFarmGoal` y `VillagerFarmGoal`, **y** `desatascarSiEstaEncajado` antes de contar atasco (el ayudante del
+lenador, I122).
+
+### Y la raiz de los dos ultimos: `esCeldaDePie` no dejaba pisar un CULTIVO
+
+`esCeldaDePie` pedia `isAir()` a los pies. Un bancal tiene trigo o zanahorias **en la celda de los pies**, asi que
+**no habia ni una casilla de pie dentro del bancal** — y un aldeano SI anda por encima de los cultivos (es lo que hace
+al cosechar; el planificador les da esos nodos por buenos). Consecuencia medida: el granjero hundido en la farmland no
+tenia **a donde salir** (`desatascarSiEstaEncajado` no encontraba casilla) y el que va a por un objeto sobre el trigo
+no tenia casilla cerca. Arreglo: `sePisaALosPies` = aire **+ los cultivos** (trigo, zanahorias, patatas, betabel, los
+tallos) **+ la hierba** (corta, alta, helecho). **NO** entra la farmland: es el SUELO (solido) y darla por pisable
+seria declarar bueno al aldeano hundido.
+
+## Los criterios (lo que tiene que bajar a cero)
+
+1. `Patrullando el corral` / `Patrullando la arboleda` (los guardias) -> **0**
+2. `Recogiendo el corral` (el ganadero) -> **0**
+3. `Guardando lo suyo` (los oficios que recogen lo suyo) -> **0**
+4. `Yendo a la taberna` (el recolector que va a por la mesa) -> **0**
+5. y la **tasa del pueblo** (I135) no puede subir: referencia de hoy **0,50-0,60** por 1.000 ticks.
+
+## Las corridas, una a una
+
+| corrida | que lleva | avisos | criterios |
+|---|---|---|---|
+| `build/medida-balsa-final.log` | **antes** | 18 (`Patrullando` **9**, `Recogiendo el corral` 4, `Guardando lo suyo` 5) | tasa **0,60** |
+| `build/medida-guardia-ruta.log` | + el avance por la ruta del guardia | `Patrullando` **0** | — (corrida sin marca de ticks: se cuenta a mano) |
+| `build/medida-s7-clases12.log` | + casilla de pie en los 4 goals + desatasco | 4 (`Yendo a la taberna` 1, `Guardando lo suyo` 1, `Yendo a la iglesia` 1, `Cerrando la puerta` 1) | **`Patrullando` 0, `Recogiendo el corral` 0, `Guardando lo suyo` 0**; tasa **0,40** |
+| `build/medida-s7-clase3.log` | + `esCeldaDePie` con cultivos (pero el desatasco seguia pidiendo aire) | 11 | **PEOR**: 7 avisos del MISMO granjero hundido en la farmland, en bucle cada ~13 s (el desatasco disparaba —14 desatascos reales en la corrida, de puertas y vallas— pero `casillaPisableCercaDe` devolvia `null` por exigir aire) |
+| `build/medida-s7-final.log` | + `casillaPisableCercaDe` con la misma regla | **5** (contra **18** de la referencia) | **tasa 0,30** (la mejor de la sesion; la referencia 0,50-0,60): `Patrullando` **9 → 2**, `pies=farmland` en bucle **7 → 1**, `Recogiendo el corral` **4 → 0**, `Guardando lo suyo` **5 → 0**, `Yendo a la taberna` **1 → 0** |
+
+**La leccion de metodo**: la corrida 4 parecia una regresion (11 avisos) y no lo era — era el **instrumento
+diciendo la verdad**: el desatasco no tenia a donde sacarlo. Sin el desglose por etiqueta y sin el aviso
+(`estaba METIDO en ... lo saco a ...`) no se habria visto.
+
+**Y lo que queda, dicho con su numero** (5 avisos en 15.040 ticks): 2 de guardia patrullando (la ronda: **9 → 2**, no
+a cero; el criterio de "avance por la ruta" corta el rodeo pero hay casos en los que el destino no se alcanza de
+verdad), 1 de un granjero con los pies en la farmland (el bucle desaparece pero el hundimiento se repite), 1 de
+`Yendo a entrenar` (la clase de I119: el puesto de entrenamiento con `nav` que no alcanza) y 1 de `Saliendo de la
+huerta`.
+

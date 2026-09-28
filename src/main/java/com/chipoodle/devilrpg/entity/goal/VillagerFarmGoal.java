@@ -549,6 +549,16 @@ public class VillagerFarmGoal extends Goal {
             // cerebro del aldeano lo manda a su puesto, a la plaza o a pasear y se va a otro lado a mitad de camino
             // ("primero da vueltas y se va a otro lado antes de recogerlos").
             VillageManager.caminarHacia(villager, VillageManager.casillaDePieCercaDe(level, target), 0.6F);
+            // SI ESTÁ METIDO DENTRO DE UN BLOQUE, NO SE CUENTA ATASCO: SE LE SACA. Medido el 27-sep-2026: un
+            // granjero con los pies DENTRO de la farmland (`pies=farmland cabeza=carrots suelo=dirt`) rendido con
+            // `ruta=3 nodos … alcanza=NO` — desde una celda que no es una casilla de pie el planificador **no da
+            // ruta**, y el aldeano acaba aparcando el sitio (I33) por un atasco que no es suyo. Es el mismo ayudante
+            // compartido que usa el leñador desde I122 (y lleva freno de 200 ticks por aldeano).
+            if (VillageManager.desatascarSiEstaEncajado(villager)) {
+                mejorDistancia = Double.MAX_VALUE;
+                stuckTicks = 0;
+                return;
+            }
             // ATASCADO = NO ACERCARSE, no "estar andando": contar cada tick mandaba al granjero a empezar de cero cada
             // 6 s (120 ticks) aunque fuera avanzando, así que un viaje a la despensa no lo terminaba NUNCA y se quedaba
             // ciclado ("no sube al kiosco a poner la cosecha").

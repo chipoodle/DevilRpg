@@ -4252,6 +4252,69 @@ O sea: el criterio del traspaso («que `hechas` suba y `pasos` siga creciendo si
 cumple `hechas` **24/24**, `pasos` **40** y el pedernal del almacén **subiendo a su objetivo**; y el minero, que antes
 se pasaba la corrida colando, **completa la misma galería en la mitad de ticks**.
 
+### I139 · EL ATASCO SE MIDE POR EL **AVANCE POR LA RUTA** (y el que va a por un objeto, por una CASILLA DE PIE) (27-sep-2026)
+
+Los dos atascos sueltos que quedaban en el pueblo, **medidos con el desglose por etiquetas** y arreglados los dos.
+
+**1) LA RONDA DEL GUARDIA NO ES UN ATASCO (pero se rendía).** El contador de atasco miraba **solo la distancia en
+línea recta** (`if (distancia < mejorDistancia - 0.5D)`), y la ronda es un **círculo**: en un rodeo la recta **sube**
+aunque el guardia vaya bien por su camino. MEDIDO el 27-sep-2026 en los dos logs de la sesión: cinco guardias rendidos
+con **`ruta=16-32 nodos … alcanza=SI`** y `nav=[… alcanza]`, o sea **con camino y andando** — un destino a 20 bloques
+con una ruta de **30 nodos** (`Ubaldo / Patrullando el corral`). El arreglo: además de acercarse, cuenta como progreso
+**consumir nodos de la ruta viva** (el nodo que persigue cambia), y **solo dentro de la MISMA ruta**: si el
+planificador la ha vuelto a calcular (objeto `Path` nuevo) **no** cuenta, porque si no un guardia empujando una pared
+—que recalcula cada pocos ticks— se resetearía el contador solo y no se rendiría nunca (el bucle de I3 que este
+contador evita). MEDIDO: avisos de guardia patrullando **9 → 0** (`build/medida-guardia-ruta.log` contra
+`build/medida-balsa-final.log`).
+
+**2) AL OBJETO CAÍDO SE VA POR UNA CASILLA DE PIE.** Los que se rendían eran los goals que van a **recoger objetos**
+(`VillagerCollectGoal` el recolector, `VillagerPickupGoal` los oficios, `VillagerAnimalFarmGoal` el ganadero,
+`VillagerFarmGoal` el granjero) caminando a **`objetivo.blockPosition()`**: la celda **cruda** donde está el objeto. Y
+lo que se cae puede quedar **encima de algo que no se pisa**, así que el planificador **no da ruta** hasta ahí. MEDIDO
+el 27-sep-2026 (avisos del log):
+
+| aviso | el objeto estaba sobre… |
+|---|---|
+| `Vicenta (Ganadero) / Recogiendo el corral` (x4) | la **mesa de la taberna** (`516,64,639`, `air` con `oak_planks` encima) y una **valla** (`513,63,640`, `destino=oak_fence`) |
+| `Valeriano / Hipolito (Granjero) / Guardando lo suyo` | **dentro** del bancal, con `pies=farmland cabeza=wheat` (`ruta=1 nodos … alcanza=NO`) |
+| `Filomena (Recolector) / Yendo a la taberna` | la mesa otra vez (`ruta=41 nodos … alcanza=NO`) |
+
+Es la **misma regla de I114/I131** (se camina a una **casilla de pie**), aplicada a los cuatro goals, y además se les
+llama a **`VillageManager.desatascarSiEstaEncajado`** antes de contar atasco (el ayudante que ya usaba el leñador desde
+I122: el granjero con los pies **dentro de la farmland** no tiene ruta y se rendía por un atasco que no era suyo).
+
+**3) Y LA RAÍZ DE LOS DOS ÚLTIMOS: `esCeldaDePie` NO DEJABA PISAR UN CULTIVO.** La regla pedía `isAir()` **a los pies**,
+y un bancal tiene trigo o zanahorias **en la celda de los pies**: o sea que **no había ni una casilla de pie dentro del
+bancal** — y un aldeano **sí anda por encima de los cultivos** (es lo que hace al cosechar; el planificador les da esos
+nodos por buenos). Consecuencia medida: el granjero hundido en la farmland **no tenía a dónde salir** (ni
+`desatascarSiEstaEncajado` encontraba casilla) y el que va a por un objeto caído **sobre el trigo**
+(`destino=farmland encima=wheat`) no tenía casilla de pie cerca. Arreglo: `sePisaALosPies` = **aire + los cultivos**
+(trigo, zanahorias, patatas, betabel, los tallos) **+ la hierba** (corta, alta, helecho). **NO** entra la **farmland**:
+es el SUELO (sólido) y darla por pisable sería declarar bueno justo al aldeano hundido que hay que sacar.
+Y la **misma regla** se le puso a `casillaPisableCercaDe` (la que usa el desatasco para elegir a dónde sacarlo): pedía
+`isAir()` y **devolvía `null` dentro de un bancal** — medido: 14 desatascos reales en una corrida (puertas y vallas) y,
+en cambio, un granjero hundido en la farmland en **bucle de 7 avisos**, el mismo aldeano y la misma celda cada ~13 s
+(justo por encima del freno de 200 ticks del desatasco). Con las dos reglas unificadas hay a dónde sacarlo.
+
+**MEDIDO** (misma partida; datos crudos en `tools/arnes/medidas-atascos-sueltos.txt`). Corrida buena:
+`build/medida-s7-final.log`, 15.040 ticks — **5 avisos de rendición contra 18** de la referencia:
+
+| criterio | antes (`medida-balsa-final`) | después (`medida-s7-final`) |
+|---|---|---|
+| `Patrullando el corral` / `Patrullando la aldea` | **9** avisos | **2** |
+| `Recogiendo el corral` (el ganadero) | 4 | **0** |
+| `Guardando lo suyo` (los oficios que recogen) | 5 | **0** |
+| `Yendo a la taberna` (el recolector yendo a la mesa) | 1-2 | **0** |
+| el granjero hundido en la farmland, en bucle | **7** avisos del mismo aldeano | **1** |
+| **la tasa del pueblo** (I135, ventana 2.000-12.000) | 0,50-0,60 | **0,30** |
+
+**Lo que NO queda a cero, y con su número**: **2** avisos de guardia patrullando (el rodeo se corta, pero hay
+destinos que de verdad no se alcanzan), **1** del granjero con los pies en la farmland (el bucle desaparece: el
+hundimiento se repite) y **1** de `Yendo a entrenar` (la clase de I119, el puesto de entrenamiento con `nav` que no
+alcanza). Y una lección de método: la corrida intermedia **pareció una regresión** (11 avisos) y era el instrumento
+diciendo la verdad —el desatasco disparaba (**14** desatascos reales) pero **no tenía a dónde sacarlo**—; sin el
+desglose por etiqueta y sin el aviso `estaba METIDO en … lo saco a …` no se habría visto.
+
 ## 2. Lista de consecuencias (obligatoria en cada cambio)Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 
 

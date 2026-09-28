@@ -271,9 +271,20 @@ public class VillagerCollectGoal extends Goal {
                 // modelo de `tools/arnes/ruta_atasco.py` tampoco encuentra ruta desde dentro hasta `553,63,595`):
                 // eran 35 de sus 64 rendiciones.
                 BlockPos porton = VillageManager.pasoParaCruzarElMuro(level, center, villager, p);
+                // LA CASILLA DE PIE, NO LA CELDA CRUDA DEL OBJETO (I114/I131, medido el 27-sep-2026): lo que se cae
+                // puede quedar SOBRE algo que no se pisa —la mesa de la taberna (`516,64,639`, `air` con `oak_planks`
+                // encima), una valla— y el planificador no da ruta hasta esa celda (`ruta=41 nodos … alcanza=NO`).
                 // Se le manda POR EL CEREBRO, en cada tick: si se navega a mano, el cerebro del aldeano lo manda a
                 // otra parte y se va sin recogerlo.
-                VillageManager.caminarHacia(villager, porton != null ? porton : p, 0.6F);
+                VillageManager.caminarHacia(villager,
+                        porton != null ? porton : VillageManager.casillaDePieCercaDe(level, p), 0.6F);
+                // Y SI ESTÁ METIDO DENTRO DE UN BLOQUE, NO SE CUENTA ATASCO: SE LE SACA (mismo ayudante que el
+                // leñador, I122).
+                if (VillageManager.desatascarSiEstaEncajado(villager)) {
+                    mejorDistancia = Double.MAX_VALUE;
+                    stuckTicks = 0;
+                    return;
+                }
                 // Solo cuenta como atasco NO ACERCARSE (contar cada tick lo mandaba a empezar de cero a los 6 s).
                 if (distancia < mejorDistancia - 0.5D) {
                     mejorDistancia = distancia;
@@ -401,7 +412,15 @@ public class VillagerCollectGoal extends Goal {
 
     private void ir() {
         if (objetivo != null) {
-            VillageManager.caminarHacia(villager, objetivo.blockPosition(), 0.6F);
+            BlockPos celda = objetivo.blockPosition();
+            // SE CAMINA A UNA CASILLA DE PIE, NO A LA CELDA CRUDA DEL OBJETO (I114/I131, medido el 27-sep-2026): lo que
+            // se cae puede quedar SOBRE algo que no se pisa —la mesa de la taberna (`516,64,639`, `air` con
+            // `oak_planks` encima), una valla— y el planificador no da ruta a esa celda: la recolectora se rendía con
+            // `ruta=41 nodos … alcanza=NO` a 40 bloques. Es el mismo arreglo que el de la taberna (I135/6c).
+            if (villager.level() instanceof ServerLevel level) {
+                celda = VillageManager.casillaDePieCercaDe(level, celda);
+            }
+            VillageManager.caminarHacia(villager, celda, 0.6F);
             return;
         }
         if (destino != null) {
