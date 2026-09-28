@@ -70,17 +70,15 @@ seria declarar bueno al aldeano hundido.
 | `build/medida-tiron-final.log` | + el tramo lo da el TIRON del proyecto (`tironConMemoria`: prueba la ruta de cada tramo, cruza el muro, camina con la ruta pedida a mano) | **8**, todos sueltos | **tasa 0,50** y **NINGUN BUCLE**: `Volviendo a la plaza` **15 -> 1**; el pico, 6 roturas -> 6 picos nuevos |
 | `build/medida-clerigo1.log` | + el punto de ahora en el GANADERO (**2 -> 1**) y en el CLERIGO (**2 -> 2: no arreglo, retirado**) | **6**, todos sueltos | **tasa 0,10** (la mejor de la sesion) |
 | `build/medida-clerigo2.log` | + el CLERIGO con casilla de pie y `desatascarSiEstaEncajado` (la puerta) | **7**, todos sueltos | **tasa 0,30**; el **CLERIGO 2 -> 0** (y 0 avisos con `oak_door`), el pico 6 roturas -> 5-6 picos nuevos |
+| `build/medida-avance1.log` | + el avance por la ruta (`VillageManager.avanzaPorLaRuta`) en el GUARDIA y en el CLERIGO | **11** (5 de ellos la plaza, en bucle) | **tasa 0,20**; `Patrullando` **0** y el **CLERIGO 0** (los dos criterios); el bucle de la plaza, de otra causa (ver abajo) |
+| `build/medida-plaza3.log` | + la llegada a la PLAZA medida contra el **punto de pie** (no contra la campana) | **8**, todos sueltos (el mayor, 2) | **tasa 0,60** y **NINGUN BUCLE**: `Volviendo a la plaza` **5 -> 0**, `iglesia` **0**, `Patrullando` **0**; el pico 7 roturas -> 6 picos nuevos |
 
 ## LA TASA DEL PUEBLO, con el codigo final (I135: ventana fija 2.000-12.000)
 
-| corrida | rendiciones en la ventana | por 1.000 ticks |
-|---|---|---|
-| `build/medida-clerigo1.log` | 1 | **0,10** |
-| `build/medida-clerigo2.log` | 3 | **0,30** |
-| `build/medida-tiron-final.log` | 5 | **0,50** |
-| **media (n=3)** | | **0,30** |
-
-Contra la **tanda anterior del proyecto: 1,29** de media (rango 0,42-2,78). Y la referencia de la manana, 0,50-0,60.
+Todas las corridas del codigo final, en orden: **0,10 · 0,20 · 0,30 · 0,50 · 0,60**. Media de las tres primeras
+(la tanda que se dio por buena): **0,30**. La **dispersion es grande** (0,10-0,60) y por eso lo que prueba un
+arreglo es **su etiqueta**: las clases gordas (la taberna 16, la plaza 19, la ronda 9, el bancal 5, el clerigo 2)
+estan **todas a cero**. Frente a la **tanda anterior del proyecto: 1,29** de media (rango 0,42-2,78).
 
 **La leccion de metodo**: la corrida 4 parecia una regresion (11 avisos) y no lo era — era el **instrumento
 diciendo la verdad**: el desatasco no tenia a donde sacarlo. Sin el desglose por etiqueta y sin el aviso

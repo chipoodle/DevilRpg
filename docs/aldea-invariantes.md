@@ -4348,12 +4348,26 @@ portón**, **cae al hub del pueblo** si ninguno tiene ruta y **camina con `camin
 **a mano** a la navegación (por eso el cerebro no le quita el rumbo). Y encima se le pone la **casilla de pie** del
 destino. **MEDIDO: `Volviendo a la plaza` 15 → 1.**
 
-**EL ESTADO DEL PUEBLO, medido con el código final**: **7 avisos de rendición, TODOS SUELTOS** (el mayor, **2**),
-**ningún bucle** (`build/medida-clerigo2.log`, 15.400 ticks; y 2 avisos a mitad de corrida), y **LA TASA DEL PUEBLO
-0,30 por 1.000 ticks de media** en las tres corridas del código final (**0,10 · 0,30 · 0,50**), contra el **1,29** de
-la tanda anterior del proyecto y el **0,50-0,60** de la referencia de la mañana. El ciclo del pico, de paso, medido
-otra vez: **6 roturas → 5-6 picos nuevos**. Y **el clérigo 2 → 0** con dos reglas ya conocidas (casilla de pie +
-`desatascarSiEstaEncajado`: estaba **metido en la puerta** de la iglesia con `pies=oak_door`).
+**EL ESTADO DEL PUEBLO, medido con el código final**: **8 avisos de rendición, TODOS SUELTOS** (el mayor, **2**), de
+**siete aldeanos distintos** y **NINGÚN BUCLE** (`build/medida-plaza3.log`, 17.880 ticks), con las **tres** clases que
+se han arreglado a **cero**: `Volviendo a la plaza` **5 → 0**, `Yendo a la iglesia` **0** y `Patrullando` **0**. La
+**tasa del pueblo** oscila (**0,10 · 0,20 · 0,30 · 0,50 · 0,60**; media **0,30**) contra el **1,29** de la tanda
+anterior del proyecto y el **0,50-0,60** de la referencia de la mañana. El ciclo del pico, medido otra vez:
+**7 roturas → 6 picos nuevos**.
+
+**Y DOS CIERRES MÁS DE ESTA MISMA NOCHE, los dos por la misma regla**:
+
+1. **EL AVANCE POR LA RUTA, EN EL PUEBLO** (`VillageManager.avanzaPorLaRuta`, invariantes I125/I139): el contador de
+   atasco mide **solo la distancia en línea recta** y hay dos casos en los que esa recta no representa nada —**un
+   rodeo** (la ronda del guardia) y **el cerebro yendo a su POI**—. La señal que dice la verdad es **el índice del
+   nodo** que persigue la ruta viva (guardado en los datos del aldeano, así lo usa cualquier goal con una llamada); un
+   **recálculo** del planificador reinicia el índice y **no** cuenta como avance (si contara, un aldeano empujando una
+   pared se resetearía el contador solo: el bucle de I3). MEDIDO: el **clérigo 2 → 0** (`cerebro=452,64,603` con
+   `destino=453,64,603`: iba a su POI mientras el goal medía contra el soporte) y el **guardia sigue en 0**.
+2. **A LA PLAZA SE LLEGA AL PUNTO DE PIE, NO A LA CAMPANA**: el destino de «volver a la plaza» es **la campana**
+   (`stone_bricks` con `bell` encima), que **no se pisa**: el aldeano que ya estaba en la plaza se quedaba a 3-4
+   bloques de ella, la distancia no bajaba del alcance y el goal lo aparcaba **cada 240 ticks en bucle** (MEDIDO:
+   **5 avisos**). Arreglo: si está a alcance del **punto de pie** de la plaza, la vuelta se acabó. MEDIDO: **5 → 0**.
 
 **Y UNA CORRIDA TIRADA, que se apunta para no repetirla**: lancé una corrida **con la anterior todavía viva** (matar
 el `gradlew` no mata el servidor) y los **dos** servidores escribieron en el **mismo** `latest.log` y el **mismo**

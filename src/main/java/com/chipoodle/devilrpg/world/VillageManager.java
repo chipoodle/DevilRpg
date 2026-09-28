@@ -4818,6 +4818,41 @@ public final class VillageManager {
         return tironConMemoria(level, centro, villager, pie, plaza);
     }
 
+    /** Clave del índice de nodo por el que iba la ruta viva (ver {@link #avanzaPorLaRuta}). */
+    private static final String AVANCE_TAG = "DevilRpgAvanceDeRuta";
+
+    /**
+     * <b>¿ESE ALDEANO ESTÁ AVANZANDO POR LA RUTA VIVA?</b> — lo que decide si su contador de atasco debe subir
+     * (invariantes I139 e I125).
+     * <p>
+     * <b>Por qué hace falta</b> (medido el 27-sep-2026): el contador de atasco de los goals mide <b>solo la distancia
+     * en línea recta</b>, y hay dos casos en los que esa recta no representa nada:
+     * <ul>
+     *   <li><b>un rodeo</b>: la ronda del guardia es un círculo, así que la recta <b>sube</b> aunque vaya bien (cinco
+     *       guardias rendidos con `ruta=16-32 nodos … alcanza=SI`);</li>
+     *   <li><b>el cerebro va a su POI</b>: el clérigo camina a su puesto (`cerebro=452,64,603`) mientras su goal mide
+     *       contra el soporte (`destino=453,64,603`) → «no me acerco» y se rendía con la ruta BUENA
+     *       (`ruta=4 nodos hasta 453,65,603 alcanza=SI`).</li>
+     * </ul>
+     * En los dos, lo que dice la verdad es <b>consumir nodos de la ruta</b>. La señal es el <b>índice del nodo</b> que
+     * persigue, guardado en los datos del aldeano (así lo usa cualquier goal con una llamada): si <b>sube</b>, va
+     * andando su camino. Un <b>recálculo</b> del planificador reinicia el índice y por eso <b>no</b> cuenta como
+     * avance — si contara, un aldeano empujando una pared (que recalcula cada pocos ticks) se resetearía el contador
+     * solo y no se rendiría nunca (el bucle que el contador evita, I3).
+     */
+    public static boolean avanzaPorLaRuta(Villager villager) {
+        CompoundTag datos = villager.getPersistentData();
+        var ruta = villager.getNavigation().getPath();
+        if (ruta == null || ruta.isDone()) {
+            datos.remove(AVANCE_TAG);
+            return false;
+        }
+        int indice = ruta.getNextNodeIndex();
+        boolean avanzo = datos.contains(AVANCE_TAG) && indice > datos.getInt(AVANCE_TAG);
+        datos.putInt(AVANCE_TAG, indice);
+        return avanzo;
+    }
+
     /**
      * <b>Camina a la celda EXACTA</b> (sin la tolerancia de <b>1 bloque</b> de {@link #caminarHacia}), y además le
      * pide la ruta a la navegación <b>a mano</b>.

@@ -316,8 +316,13 @@ public class VillagerClericGoal extends Goal {
                 stuckTicks = 0;
                 return;
             }
-            if (distancia < mejorDistancia - 0.5D) {
-                mejorDistancia = distancia;
+            // Y SI VA ANDANDO SU CAMINO, TAMPOCO ES UN ATASCO (I125/I139). MEDIDO el 27-sep-2026: el clérigo se
+            // rendía yendo a su soporte con `cerebro=452,64,603` (su POI, al lado del soporte) y `destino=453,64,603`:
+            // él iba a su puesto y este goal medía la recta contra el soporte, así que "no se acercaba" y a los 120
+            // ticks aparcaba su propio soporte. El avance por la ruta lo mide el pueblo y es el mismo mecanismo que
+            // usa el guardia en su ronda.
+            if (distancia < mejorDistancia - 0.5D || VillageManager.avanzaPorLaRuta(villager)) {
+                mejorDistancia = Math.min(mejorDistancia, distancia);
                 stuckTicks = 0;
             } else {
                 stuckTicks++;

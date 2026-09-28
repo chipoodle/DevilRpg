@@ -370,6 +370,20 @@ public class VillagerCollectGoal extends Goal {
                         : VillageManager.elPuntoDeAhora(level, center, villager, destino,
                                 VillageManager.casillaDePieCercaDe(level, new BlockPos(center.getX(),
                                         VillageGenerator.cotaDeLaPlaza(level, center), center.getZ())));
+                double hastaElPunto = Math.sqrt(villager.distanceToSqr(punto.getX() + 0.5D, punto.getY() + 0.5D,
+                        punto.getZ() + 0.5D));
+                // A LA PLAZA SE LLEGA AL PUNTO DE PIE, NO A LA CAMPANA (28-sep-2026). El destino de «volver a la
+                // plaza» es **la campana** (`stone_bricks` con `bell` encima), que NO se pisa: el aldeano que ya
+                // estaba en la plaza se quedaba a 3-4 bloques de ella, la distancia no bajaba del alcance y el goal lo
+                // aparcaba **cada 240 ticks en bucle** (MEDIDO: `Volviendo a la plaza`, 5 avisos en una corrida). Si
+                // ya está en el punto de pie de la plaza, la vuelta se acabó.
+                if (volviendoALaPlaza && hastaElPunto <= VillageStorage.ALCANCE_ALMACEN) {
+                    VillageManager.parar(villager);
+                    destino = null;
+                    volviendoALaPlaza = false; // a la plaza solo se va a eso: a estar donde tiene que estar
+                    restTicks = REST_TICKS;
+                    return;
+                }
                 if (!punto.equals(ultimoPunto)) {
                     ultimoPunto = punto; // tramo nuevo: el progreso se mide de cero
                     mejorDistancia = Double.MAX_VALUE;
@@ -378,8 +392,6 @@ public class VillagerCollectGoal extends Goal {
                 VillageManager.caminarHacia(villager, punto, 0.6F);
                 VillageManager.ponerActividad(villager, volviendoALaPlaza ? "Volviendo a la plaza"
                         : "Yendo al almacen");
-                double hastaElPunto = Math.sqrt(villager.distanceToSqr(punto.getX() + 0.5D, punto.getY() + 0.5D,
-                        punto.getZ() + 0.5D));
                 if (hastaElPunto < mejorDistancia - 0.5D) {
                     mejorDistancia = hastaElPunto;
                     stuckTicks = 0;

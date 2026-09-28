@@ -126,10 +126,12 @@ TODOS SUELTOS** (el mayor, **2**) y **NINGÚN BUCLE** — contra los **18** de l
 | **RESUELTO: el bucle de la PLAZA** | el destino de «volver a la plaza» es **la campana del kiosco** (no se pisa) y el tramo calculado a mano **no comprobaba la ruta**: **10-15 avisos en bucle** con `cerebro=531,63,646` y `nav=[sin ruta]`. Arreglado con el **tirón del proyecto** (`tironConMemoria`). MEDIDO: **15 → 1** |
 | **RESUELTO: el clérigo** | `Yendo a la iglesia` **2 → 0**: estaba **metido en la puerta** de la iglesia (`pies=oak_door`) con la ruta buena → casilla de pie + **`desatascarSiEstaEncajado`** (I122/I140) |
 | **el ganadero** (1-2 sueltos, sin bucle) | `Recogiendo el corral` con algo caído sobre **mobiliario** (una valla, la mesa): el punto de ahora ya está puesto (2 → 1); lo que queda son casos puntuales |
-| **el cerebRO y su POI** (clase **I125**, 2 avisos en el clérigo) | `cerebro=452,64,603` con `destino=453,64,603`: el cerebro va a **su POI** (al lado del soporte) mientras el goal mide contra el soporte → «no me acerco» y se rinde. Es la misma clase que en el guardia se arregló midiendo el **avance por la ruta**: **el siguiente si vuelve a molestar** |
+| **RESUELTO: el clérigo y su POI** (clase **I125**) | `Yendo a la iglesia` **2 → 0**: estaba metido en la **puerta** (`pies=oak_door` → desatasco) y además el cerebro iba a su **POI** (`cerebro=452,64,603` con `destino=453,64,603`). El avance por la ruta está ahora en **`VillageManager.avanzaPorLaRuta`** (el índice del nodo de la ruta viva), compartido con el guardia |
+| **RESUELTO: el bucle de la PLAZA (otra vez)** | el aldeano que **ya estaba** en la plaza se quedaba a 3-4 bloques de **la campana** (que no se pisa) y la vuelta se medía contra ella → **5 avisos en bucle**. Ahora la llegada se mide contra el **punto de pie**: **5 → 0** |
+| **lo que queda, y ya no es un bucle** | **8 avisos, todos sueltos** (el mayor, 2), de **siete aldeanos distintos**: tropiezos puntuales de cada oficio (un granjero buscando recambios, un leñador guardando lo suyo, un guardia yendo a entrenar…). No hay ninguno repetido: **cada aldeano, una vez** |
 | **el hundimiento en la farmland** (0 avisos) | el bucle **desaparece** (46 desatascos reales en una corrida, 40 de **puertas**) y ya no se repite |
 | `Yendo a entrenar` (0-1) | clase **I119**: **rendirse ahí es correcto**; lo que falta es que el puesto sea alcanzable |
-| **la tasa** | **HECHA**: media de 3 corridas con el código final = **0,30** (0,10 · 0,30 · 0,50) |
+| **la tasa** | **HECHA, con su dispersión**: las cinco corridas del código final dan **0,10 · 0,20 · 0,30 · 0,50 · 0,60** (media de la tanda buena, **0,30**) contra el **1,29** de la tanda anterior. La prueba de un arreglo es **su etiqueta** |
 
 **Y DOS LECCIONES DE MÉTODO de esta sesión**, las dos pagadas con su corrida:
 1. **Una regla del pueblo NO se mete en el método compartido si el que camina y el que cuenta no están de acuerdo.**

@@ -27,7 +27,6 @@ import java.util.Map;
 import java.util.Set;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
-import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.attachment.AttachmentType;
 import org.jetbrains.annotations.Nullable;
@@ -189,16 +188,6 @@ public class VillagerGuardGoal extends Goal {
     private int espera;
     private int stuckTicks;
     private double mejorDistancia = Double.MAX_VALUE;
-    /**
-     * El nodo de la <b>ruta viva</b> que el guardia perseguía en el tick anterior: es lo que mide el <b>avance por la
-     * ruta</b> (ver el {@code tick}), que en una ronda circular es la única señal buena de "voy bien" —la distancia en
-     * línea recta <b>sube</b> en un rodeo aunque el guardia esté andando su camino—.
-     */
-    @Nullable
-    private BlockPos nodoDeLaRuta;
-    /** La ruta de la que venía ese nodo: el avance solo cuenta <b>dentro de la misma ruta</b> (ver el {@code tick}). */
-    @Nullable
-    private Path rutaDeLaQueVengo;
     private int restTicks;
     /** Contador de puntos de ronda (para que no repita el mismo). */
     private int paso;
@@ -326,8 +315,6 @@ public class VillagerGuardGoal extends Goal {
         sinEquipo = false;
         hayEquipoEnAlmacen = false;
         mejorDistancia = Double.MAX_VALUE;
-        nodoDeLaRuta = null; // faena nueva: el avance por la ruta se mide desde cero
-        rutaDeLaQueVengo = null;
         irAlDestino();
         // SOLO SE CANTA CUANDO EL PUESTO CAMBIA. Con el aviso en cada `start()` el log se llenaba de "nuevo puesto"
         // repitiendo el MISMO sitio: de noche el relevo no depende de `paso`, y si el goal se reinicia (el cerebro
@@ -481,23 +468,9 @@ public class VillagerGuardGoal extends Goal {
             // línea recta, y la ronda es un CÍRCULO: en un rodeo la recta SUBE aunque el guardia vaya bien por su
             // camino, así que se rendía con el destino delante. MEDIDO en los dos logs del 27-sep: cinco guardias se
             // rindieron con `ruta=16-32 nodos … alcanza=SI` y `nav=[… alcanza]`, o sea **con camino y andando** (p. ej.
-            // `Ubaldo / Patrullando el corral`: destino a 20 bloques, ruta de **30 nodos**). Ahora también cuenta como
-            // progreso **consumir nodos** de la ruta viva: si el nodo que persigue cambia, va hacia allí.
-            boolean avanzoPorLaRuta = false;
-            var rutaViva = villager.getNavigation().getPath();
-            if (rutaViva != null && !rutaViva.isDone()) {
-                BlockPos nodo = rutaViva.getNextNodePos();
-                // AVANCE = consumir un nodo **de la MISMA ruta**. Si el planificador la ha vuelto a calcular (objeto
-                // `Path` nuevo), NO cuenta: si no, un guardia empujando una pared —que recalcula cada pocos ticks—
-                // se resetearía el contador solo y no se rendiría nunca (el bucle de I3 que este contador evita).
-                avanzoPorLaRuta = rutaViva == rutaDeLaQueVengo && nodoDeLaRuta != null
-                        && !nodo.equals(nodoDeLaRuta);
-                rutaDeLaQueVengo = rutaViva;
-                nodoDeLaRuta = nodo;
-            } else {
-                rutaDeLaQueVengo = null;
-                nodoDeLaRuta = null;
-            }
+            // `Ubaldo / Patrullando el corral`: destino a 20 bloques, ruta de **30 nodos**). El avance por la ruta lo
+            // mide el pueblo (`VillageManager.avanzaPorLaRuta`), que es el mismo mecanismo que usa el clérigo.
+            boolean avanzoPorLaRuta = VillageManager.avanzaPorLaRuta(villager);
             if (distancia < mejorDistancia - 0.5D || avanzoPorLaRuta) {
                 mejorDistancia = Math.min(mejorDistancia, distancia);
                 stuckTicks = 0;
@@ -574,8 +547,6 @@ public class VillagerGuardGoal extends Goal {
         }
         destino = null;
         enemigo = null;
-        nodoDeLaRuta = null;
-        rutaDeLaQueVengo = null;
         // OJO: **NO** se pone `espera` (el rato plantado en el puesto) a cero. Se ponía, y con el servicio cortándose
         // cada pocos ticks el contador NUNCA llegaba a `ESPERA_TICKS`: el guardia se quedaba en el **paso 1** para
         // siempre y no completaba una sola ronda (los `paso 1` del log del jugador). Al volver al mismo puesto el rato
