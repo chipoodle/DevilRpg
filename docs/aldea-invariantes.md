@@ -4289,6 +4289,18 @@ siempre) cuando no hay hierro — el «cebo del pico roto» que el proyecto ya d
 avanza, pero **más despacio**. Si se quiere afinar, el siguiente paso es que el minero **prefiera el mejor pico** del
 almacén; **no se toca ahora** porque no hay medida que lo pida (la mina avanza: `pasos` 32-44).
 
+**Y SE TOCÓ, CON LA PRUEBA DEL PROBLEMA PERO SIN LA DEL ARREGLO (28-sep-2026, dicho tal cual)**. El minero cogía el
+pico con **un filtro que aceptaba los cinco materiales** y `VillageStorage.quitar` devuelve **el primero que cumpla**
+→ con madera y piedra en el almacén, **se llevaba la madera**. El problema está **medido** (`medida-plaza3.log`: el
+herrero forjó **4 madera y 2 piedra** y el minero recibió **6 de madera**: los dos de piedra los **ignoró**). El
+arreglo es pedirlos **en orden de mejor a peor** (`netherite → diamante → hierro → piedra → madera`) y quedarse el
+primero que haya: es **idéntico** cuando solo hay un material (comprobado en la corrida del 28-sep, con el almacén a
+**0 adoquín** todo el rato: el herrero solo pudo forjar madera y el minero recibió **8 de madera**, lo mismo que
+antes) y **mejor** cuando hay varios. **Lo que NO está medido es la mejora**, porque en esa corrida no hubo ningún
+pico mejor que preferir. **CÓMO MEDIRLO**: desde el arnés, al empezar, **poner un pico de piedra en el almacén** (el
+mismo sitio donde ya se planta la remesa) y leer `pico nuevo:` — el criterio es que diga **`stone_pickaxe`** con la
+madera también en el almacén.
+
 ### I140 · EL «PUNTO DE AHORA»: LA CASILLA DE PIE Y EL TRAMO, CON **SU** CONTADOR (y el intento global que se retiró)
 
 **El problema de fondo, dicho sin adornos**: los «no consigue llegar» se estaban arreglando **goal a goal** (el

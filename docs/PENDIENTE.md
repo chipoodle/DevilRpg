@@ -318,9 +318,15 @@ exigiendo que **no se haya movido en N ticks**, y **nunca teleportar por sistema
 > el **pico de madera** cuando no hay hierro — el «cebo del pico roto». MEDIDO: **4 picos de madera y 2 de piedra**
 > forjados, **6 de madera** recibidos por el minero, con el almacén en `0 lingote(s), 0 crudo(s)`.
 >
-> **La pista que queda (medida, no arreglada)**: el minero coge **picos de madera** aunque el herrero forje también de
-> **piedra** → pica **más despacio** (el de madera sí pica piedra, así que la mina avanza: `pasos` 32-44). Si se
-> quiere afinar: que el minero **prefiera el mejor pico** del almacén. No se toca: no hay medida que lo pida.
+> **La pista que queda (el pico de madera)** — **el problema MEDIDO, el arreglo puesto, y la mejora SIN medir**
+> (28-sep-2026, y así se dice): el minero cogía el pico con un filtro que aceptaba los cinco materiales y
+> `VillageStorage.quitar` devuelve **el primero que cumpla**, así que **con madera y piedra en el almacén se llevaba
+> la madera**. MEDIDO (`build/medida-plaza3.log`): el herrero forjó **4 madera y 2 piedra** y el minero recibió **6 de
+> madera** — **ignoró los dos de piedra**. Arreglo: pedirlos **en orden de mejor a peor** y quedarse el primero que
+> haya (idéntico con un solo material; la corrida del 28-sep, con el almacén a **0 adoquín**, dio **8 de madera**,
+> igual que antes). **LO QUE FALTA ES LA MEDIDA DE LA MEJORA**: en esa corrida no había ningún pico mejor que
+> preferir. **Cómo medirlo**: desde el arnés, **poner un pico de piedra en el almacén** al empezar, y leer
+> `pico nuevo:` → el criterio es que diga **`stone_pickaxe`** con la madera también en el almacén.
 
 **El diagnóstico viejo, tal cual se escribió** (léase con lo de arriba en la mano):
 

@@ -688,9 +688,20 @@ public class VillagerMinerGoal extends Goal {
         boolean algo = false;
         // 1) EL PICO (al inventario, y a la mano el que va a usar).
         if (!tienePico()) {
-            ItemStack pico = VillageStorage.quitar(level, center, s -> s.is(Items.IRON_PICKAXE)
-                    || s.is(Items.DIAMOND_PICKAXE) || s.is(Items.NETHERITE_PICKAXE)
-                    || s.is(Items.STONE_PICKAXE) || s.is(Items.WOODEN_PICKAXE), 1);
+            // EL MEJOR PICO DEL ALMACÉN, NO EL PRIMERO QUE APAREZCA. MEDIDO el 27-sep-2026: el filtro aceptaba los
+            // cinco materiales y `VillageStorage.quitar` devuelve **el primero que cumpla**, así que el minero cogía el
+            // de **MADERA** aunque el herrero hubiera forjado de **PIEDRA** (4 picos de madera y 2 de piedra forjados,
+            // y **6 de madera** recibidos: `pico nuevo: minecraft:wooden_pickaxe`). El de madera pica piedra, así que
+            // la mina avanza, pero **más despacio**: se le pide en orden de mejor a peor y se coge el primero que haya.
+            ItemStack pico = null;
+            for (net.minecraft.world.item.Item material : new net.minecraft.world.item.Item[]{
+                    Items.NETHERITE_PICKAXE, Items.DIAMOND_PICKAXE, Items.IRON_PICKAXE, Items.STONE_PICKAXE,
+                    Items.WOODEN_PICKAXE}) {
+                pico = VillageStorage.quitar(level, center, s -> s.is(material), 1);
+                if (pico != null && !pico.isEmpty()) {
+                    break;
+                }
+            }
             if (pico == null || pico.isEmpty()) {
                 DevilRpg.LOGGER.info("[Village] El minero: no hay pico en el almacen (lo forja el herrero de"
                         + " herramientas: 3 lingotes de hierro y 2 palos): espera");
