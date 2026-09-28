@@ -4308,12 +4308,30 @@ en cambio, un granjero hundido en la farmland en **bucle de 7 avisos**, el mismo
 | el granjero hundido en la farmland, en bucle | **7** avisos del mismo aldeano | **1** |
 | **la tasa del pueblo** (I135, ventana 2.000-12.000) | 0,50-0,60 | **0,30** |
 
-**Lo que NO queda a cero, y con su número**: **2** avisos de guardia patrullando (el rodeo se corta, pero hay
-destinos que de verdad no se alcanzan), **1** del granjero con los pies en la farmland (el bucle desaparece: el
-hundimiento se repite) y **1** de `Yendo a entrenar` (la clase de I119, el puesto de entrenamiento con `nav` que no
-alcanza). Y una lección de método: la corrida intermedia **pareció una regresión** (11 avisos) y era el instrumento
-diciendo la verdad —el desatasco disparaba (**14** desatascos reales) pero **no tenía a dónde sacarlo**—; sin el
-desglose por etiqueta y sin el aviso `estaba METIDO en … lo saco a …` no se habría visto.
+**Lo que NO queda a cero, y con su número** (corrida buena `medida-s7-final.log`, 5 avisos en 15.040 ticks; y
+`medida-s8.log`, 10 avisos en 18.480):
+- **los viajes largos sin tirón** (el que más pesa: **5** avisos del mismo aldeano, `Filomena (Recolector) / Saliendo
+  de la huerta`): va al **almacén** desde la huerta —**70+ bloques**— y el planificador **no llega**
+  (`ruta=38 nodos hasta 481,63,676 alcanza=NO`). Arreglo que toca: el **tirón** intermedio que ya usan el leñador y el
+  minero (`VillageManager.tironHacia`), aplicado a los viajes del recolector al almacén;
+- **el destino que es mobiliario** (2 avisos): el ganadero a una **valla** (`513,63,640`) y el recolector a **la campana
+  del kiosco** (`470,63,646`, `stone_bricks` con `bell` encima): el punto de apoyo que devuelve el pueblo **no es una
+  celda que se pise** y hay goals que caminan a él **crudo** → la regla de I114/I131, pero en el **destino de la faena**;
+- **el hundimiento en la farmland** (1 aviso): el bucle desaparece (**46 desatascos reales** en una corrida, 40 de
+  ellos de **puertas**) pero el aldeano **vuelve a meterse**: falta registrar el Y exacto y el movimiento anterior.
+
+**Y EL AVISO DE RENDICIÓN, CUANDO EL CEREBRO VA A OTRA PARTE.** Los 2 avisos de guardia patrullando de la corrida
+buena tenían `cerebro=` apuntando a un sitio **distinto** del `destino=` (I125: el paseo o el goal de los portones le
+pisan el rumbo): el guardia **salta el puesto y sigue la ronda** —que es lo correcto— pero se contaba como
+«rendición», y eso **ensuciaba el instrumento** de la tasa (I135 cuenta rendiciones). Arreglo: solo se apunta el punto
+como fallido y se canta el aviso **si el cerebro va de verdad al destino** (`elCerebroVaA`). **MEDIDO**:
+`Patrullando` **9 → 0** (`medida-s8.log`).
+
+**Y DOS LECCIONES DE MÉTODO de esta cadena**: (1) una corrida intermedia **pareció una regresión** (11 avisos) y era el
+instrumento diciendo la verdad —el desatasco disparaba (**14** desatascos reales) pero **no tenía a dónde sacarlo**—;
+sin el desglose por etiqueta y sin el aviso `estaba METIDO en … lo saco a …` no se habría visto. Y (2) **la tasa
+oscila** (0,30 · 0,40 · 0,60 en corridas comparables), que es exactamente lo que dice I135: la prueba de un arreglo es
+**su etiqueta**, no el total.
 
 ## 2. Lista de consecuencias (obligatoria en cada cambio)Antes de escribir el commit, para CADA valor, bloque, contador o comportamiento que toco:
 

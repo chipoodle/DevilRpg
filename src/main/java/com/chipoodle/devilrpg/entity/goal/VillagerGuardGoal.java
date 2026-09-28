@@ -361,14 +361,22 @@ public class VillagerGuardGoal extends Goal {
         // manera errática" y con la etiqueta "Patrullando el corral" clavada. Ahora el puesto que no se alcanza se
         // salta y la ronda sigue (el siguiente paso puede volver a intentarlo: la aldea cambia sola).
         if (destino != null && stuckTicks >= STUCK_LIMIT) {
-            DevilRpg.LOGGER.info("[Village] Guardia {}: no llego a {} (aldea {}): me salto el puesto y sigo la ronda",
-                    villager.getUUID(), destino, objectiveIndex);
-            // Y SE APUNTA COMO FALLIDO (I33): sin esto, el puesto al que no llega se le vuelve a dar y el guardia
-            // se queda en bucle. Medido en el log del jugador (aldea 2, de noche): pasos 12, 13, 14, 15 y 16 seguidos
-            // con el MISMO `BlockPos{x=1354, y=120, z=1414}` y "atascado 200 ticks" por vuelta — de noche el puesto
-            // sale del RELOJ (el relevo de puertas) y no de `paso`, así que saltárselo no cambiaba nada.
-            VillageManager.marcarPuntoFallido(villager, destino);
-            apuntarPuntoMaloDeLaRonda(destino);
+            // PERO NO SIEMPRE ES UNA RENDICIÓN (27-sep-2026). Si el CEREBRO VA A OTRA PARTE (I125: el paseo, el goal
+            // de los portones), el guardia NO está atascado: le están mandando a otro sitio. Se salta el puesto igual
+            // —la ronda tiene que seguir— pero NO se apunta como fallido ni se canta "no llegué", porque eso es lo que
+            // ensuciaba el instrumento de la tasa de I135 (que cuenta rendiciones). MEDIDO en la corrida buena del §7:
+            // los DOS avisos de guardia patrullando tenían `cerebro=` apuntando a un sitio DISTINTO del `destino=`
+            // (`cerebro=419,63,621` con `destino=466,63,642`) y con la ruta alcanzando.
+            if (VillageManager.elCerebroVaA(villager, destino)) {
+                DevilRpg.LOGGER.info("[Village] Guardia {}: no llego a {} (aldea {}): me salto el puesto y sigo la"
+                        + " ronda", villager.getUUID(), destino, objectiveIndex);
+                // Y SE APUNTA COMO FALLIDO (I33): sin esto, el puesto al que no llega se le vuelve a dar y el guardia
+                // se queda en bucle. Medido en el log del jugador (aldea 2, de noche): pasos 12, 13, 14, 15 y 16
+                // seguidos con el MISMO `BlockPos{x=1354, y=120, z=1414}` y "atascado 200 ticks" por vuelta — de noche
+                // el puesto sale del RELOJ (el relevo de puertas) y no de `paso`, así que saltárselo no cambiaba nada.
+                VillageManager.marcarPuntoFallido(villager, destino);
+                apuntarPuntoMaloDeLaRonda(destino);
+            }
             paso++;
             return false;
         }

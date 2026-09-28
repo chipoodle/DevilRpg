@@ -39,10 +39,15 @@ La prueba de un arreglo **no es el total**, es **el criterio concreto que baja a
 16 → 0). Para hablar del total, **media de 3-4 corridas**. Tanda de referencia de la última sesión:
 **media 1,29 · rango 0,42-2,78 · desviación 0,94** por 1.000 ticks.
 
-## Estado (27-sep-2026 — sesión de los oficios: los 5 atascos, la mina y el hierro)
+## Estado (27-sep-2026 — sesión de los oficios: los 5 atascos, la mina, el hierro y la boca de la galería)
 
 Todo **compila**, pasa `lint_aldea --strict`, el árbol está **limpio** (sin `debug/`, sin JVMs, `run/world`
 restaurado) y **todo commiteado**.
+
+**Y el titular de la sesión, medido**: la **tasa de rendiciones del pueblo** (I135, ventana fija 2.000-12.000)
+baja de la **media 1,29** de la tanda anterior a **0,30** en la última corrida (y 0,40-0,55 en las intermedias),
+**con ningún atasco repetido**: los gordos (`Yendo a la taberna` 16, `Volviendo a la plaza` 19, `Cuidando el
+ganado` 3, `no consigue entrar al bancal` 5) están **a cero**.
 
 **Cerrado y MEDIDO en esta sesión** (con el criterio que lo prueba):
 
@@ -59,6 +64,7 @@ restaurado) y **todo commiteado**.
 | **la boca de la galería** (I136) | el aldeano va **de pie sobre la losa** (nodo `y+1`) y con **dos** celdas de hueco el vecino sale **BLOCKED**: no entra ni sale → **tres** celdas. `hechas` **3/24 congelado 3.600 ticks → 24/24** y `pasos` **32 → 44** (la cara de `y=46` a `y=40`); y **las paredes contra el agua** al abrir cada celda |
 | **la cadena del hierro de los raids** (I137) | el **guardia** mata, **lootea** (2 pepitas), **deja el hierro en el almacén** (13 depósitos, de 0 a **20** pepitas) y **el herrero forja el pico de HIERRO**; el eslabón que faltaba era que el guardia se lo quedaba en el zurrón |
 | **la balsa, al herrero de herramientas** (I138) | era la faena que le comía el tiempo al minero (**33-46 coladas** con el pedernal en su zurrón y el almacén clavado en 6) → ahora cuela el **herrero**: coladas del minero **0**, del herrero **10**, el pedernal **6 → 16**, y la misma galería en **t≈17.200** en vez de **t≈37.800** |
+| **los atascos sueltos** (I139) | (1) el guardia: el atasco se medía **solo por la recta** y la ronda es un círculo → cuenta el **avance por la ruta** (`Patrullando` **9 → 2**); (2) a por un objeto caído se iba a la **celda cruda** (la mesa, una valla) → `casillaDePieCercaDe` (`Recogiendo el corral` **4 → 0**, `Guardando lo suyo` **5 → 0**); (3) «pisable» no incluía **los cultivos** → el bancal no tenía ni una casilla de pie (el granjero hundido en bucle **7 → 1**) |
 
 **El aviso de método que salió de aquí**: al normalizar la medida, el "ruido" escondía **16 rendiciones de un solo
 aldeano en un solo sitio** (la taberna). La medida no era un trámite: **destapó el fallo**.
@@ -79,9 +85,9 @@ Lo ordenado era el **choque caracol ↔ galería** (el 68 % del tiempo del miner
 | el **agua** | las tres celdas abren el techo en el acuífero y el túnel se inundaba (`hechas` 6 → **0**, 223 muestras). Con el censo nuevo `AGUA`: el agua entra por la **celda de delante** → `aislarDelAgua` al **abrir** cualquier celda, saltando solo el paso del caracol. Al final: **31 celdas con fluido, ninguna dentro del túnel** |
 | el **muro** | con 21/24 el minero se iba al **portón norte** (243 muestras; el final de la galería cae «fuera del muro» a 17 bloques bajo el suelo): **bajo tierra no hay muro que cruzar** → la ruta a la celda 21 pasa a `22 nodos … alcanza=SI` |
 
-**Lo que toca ahora**: **(1)** los **atascos sueltos** del §7; **(2)** volver a medir la **tasa de rendiciones**
-(`rendiciones.py --etiquetas`, media de 3-4 corridas) con la mina ya desbloqueada, que es lo que dice si el pueblo se
-rinde menos.
+**Lo que toca ahora**: **(1)** los **atascos sueltos** del §7 (**hechos y medidos** en esta misma sesión: I139);
+**(2)** volver a medir la **tasa de rendiciones** (`rendiciones.py --etiquetas`, media de 3-4 corridas) con la mina ya
+desbloqueada — la primera corrida buena da **0,30** por 1.000 ticks (contra 1,29 de la tanda anterior).
 
 **Y también CERRADO en esta sesión**: la **cadena del hierro de los raids** (§6b.2/§6b.3) — **I137**: el guardia mata,
 lootea, **deja el hierro en el almacén** (13 depósitos; el almacén de 0 a 20 pepitas) y **el herrero forja el pico de
@@ -92,6 +98,38 @@ bloques): está todo en `tools/arnes/medidas-pepitas.txt`.
 **Y la opción C** (la balsa y su acarreo, al herrero de herramientas) — **I138**: coladas del minero **33-46 → 0**, las
 hace el herrero (**10**, hasta el objetivo de 16 pedernales) y la misma galería se completa en **t≈17.200** en vez de
 **t≈37.800** (`tools/arnes/medidas-balsa.txt`).
+
+**Y los atascos sueltos del §7** — **I139**, los dos que quedaban:
+
+* **el guardia no se rendía por falta de ruta**: sus avisos decían `ruta=16-32 nodos … alcanza=SI` y `nav=[… alcanza]`
+  —un destino a 20 bloques con una ruta de **30 nodos**—. El contador medía **solo la distancia en línea recta** y la
+  ronda es un **círculo**: en un rodeo la recta sube. Ahora cuenta también el **avance por la ruta viva**. MEDIDO:
+  `Patrullando` **9 → 2**.
+* **al objeto caído se iba a la celda CRUDA** (que puede ser la **mesa de la taberna**, una **valla** o el propio
+  bancal): `casillaDePieCercaDe` en los cuatro goals que recogen **+** `desatascarSiEstaEncajado` antes de contar
+  atasco. Y de raíz: **«pisable» no incluía los cultivos** (`esCeldaDePie` pedía aire y un bancal no tiene aire) →
+  el granjero hundido en la farmland **no tenía a dónde salir**. MEDIDO: `Recogiendo el corral` **4 → 0**,
+  `Guardando lo suyo` **5 → 0**, `Yendo a la taberna` **1-2 → 0**, el bucle del bancal **7 → 1**, y la **tasa del
+  pueblo 0,50-0,60 → 0,30** por 1.000 ticks (`tools/arnes/medidas-atascos-sueltos.txt`).
+
+### 8. Lo que queda, con su nombre y su número (27-sep-2026)
+
+Medido con el desglose por etiquetas, ya sin gastar corridas nuevas (`build/medida-s7-final.log` con **5** avisos y
+`build/medida-s8.log` con **10**; la referencia tenía **18**). La **tasa oscila** (0,30 · 0,40 · 0,60): eso es I135 —
+la prueba de cada arreglo es su etiqueta, no el total.
+
+| lo que queda | medida y por qué NO es de las clases arregladas |
+|---|---|
+| **los viajes largos sin tirón** (el que más pesa: **5** avisos) | `Filomena (Recolector) / Saliendo de la huerta`: va al **almacén** desde la huerta (`446,62,688` → `517,63,666`, **70+ bloques**) y el planificador **no llega** (`ruta=38 nodos hasta 481,63,676 alcanza=NO`). **Arreglo**: el **tirón** intermedio que ya usan el leñador y el minero (`VillageManager.tironHacia`), aplicado a los viajes del recolector al almacén |
+| **el destino que es MOBILIARIO** (2 avisos) | el ganadero a una **valla** (`513,63,640`) y el recolector a **la campana del kiosco** (`470,63,646`): el punto de apoyo que da el pueblo **no es una celda que se pise** y hay goals que caminan a él **crudo**. **Arreglo**: la regla de I114/I131 en el **destino de la faena** (no solo en el objeto caído) |
+| **el hundimiento en la farmland** (1 aviso) | el bucle **desaparece** (46 desatascos reales en una corrida, 40 de ellos de **puertas**) pero el aldeano **vuelve a meterse**: falta registrar el Y exacto y el movimiento anterior para saber *por qué* |
+| `Yendo a entrenar` (1 aviso) | clase **I119** (el puesto de entrenamiento con `nav=[47 nodos … NO alcanza]`): aquí **rendirse es correcto**; lo que falta es que el puesto sea alcanzable |
+| la **tasa** | una corrida sola no la afirma: hace falta la **media de 3-4** (hoy: 0,30 · 0,40 · 0,60) |
+
+**Y el aviso de rendición del guardia, cuando el cerebro va a otra parte** — **arreglado y medido** en esta misma
+sesión: los 2 avisos de guardia patrullando tenían `cerebro=` apuntando a **otro sitio** que el `destino=` (I125: el
+paseo o los portones le pisan el rumbo); el guardia salta el puesto (correcto) pero **se contaba como rendición** y
+ensuciaba la tasa. Ahora solo se apunta y se canta **si el cerebro va de verdad al destino**: `Patrullando` **9 → 0**.
 
 
 ### 1. El `JOB_SITE` del minero (el cortapiedras, un bloque): **medido, y no cuesta nada** (cerrado)

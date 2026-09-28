@@ -61,17 +61,33 @@ seria declarar bueno al aldeano hundido.
 |---|---|---|---|
 | `build/medida-balsa-final.log` | **antes** | 18 (`Patrullando` **9**, `Recogiendo el corral` 4, `Guardando lo suyo` 5) | tasa **0,60** |
 | `build/medida-guardia-ruta.log` | + el avance por la ruta del guardia | `Patrullando` **0** | — (corrida sin marca de ticks: se cuenta a mano) |
-| `build/medida-s7-clases12.log` | + casilla de pie en los 4 goals + desatasco | 4 (`Yendo a la taberna` 1, `Guardando lo suyo` 1, `Yendo a la iglesia` 1, `Cerrando la puerta` 1) | **`Patrullando` 0, `Recogiendo el corral` 0, `Guardando lo suyo` 0**; tasa **0,40** |
-| `build/medida-s7-clase3.log` | + `esCeldaDePie` con cultivos (pero el desatasco seguia pidiendo aire) | 11 | **PEOR**: 7 avisos del MISMO granjero hundido en la farmland, en bucle cada ~13 s (el desatasco disparaba —14 desatascos reales en la corrida, de puertas y vallas— pero `casillaPisableCercaDe` devolvia `null` por exigir aire) |
-| `build/medida-s7-final.log` | + `casillaPisableCercaDe` con la misma regla | **5** (contra **18** de la referencia) | **tasa 0,30** (la mejor de la sesion; la referencia 0,50-0,60): `Patrullando` **9 → 2**, `pies=farmland` en bucle **7 → 1**, `Recogiendo el corral` **4 → 0**, `Guardando lo suyo` **5 → 0**, `Yendo a la taberna` **1 → 0** |
+| `build/medida-s7-clases12.log` | + casilla de pie en los 4 goals + desatasco | 4 | **`Patrullando` 0, `Recogiendo el corral` 0, `Guardando lo suyo` 0**; tasa **0,40** |
+| `build/medida-s7-clase3.log` | + `esCeldaDePie` con cultivos (pero el desatasco seguia pidiendo aire) | 11 | **PEOR**: 7 avisos del MISMO granjero hundido en la farmland, en bucle cada ~13 s (el desatasco disparaba —14 desatascos reales, de puertas y vallas— pero `casillaPisableCercaDe` devolvia `null` por exigir aire) |
+| `build/medida-s7-final.log` | + `casillaPisableCercaDe` con la misma regla | **5** | **tasa 0,30**; `Patrullando` **2**, `pies=farmland` en bucle **7 → 1**, `Recogiendo el corral` **0**, `Guardando lo suyo` **0**, `Yendo a la taberna` **0** |
+| `build/medida-s8.log` | + el aviso de rendicion del guardia solo cuando el cerebro va al destino (I125) | 10 | **`Patrullando` 9 → 0** (el criterio del arreglo); tasa **0,60**, y el bucle que sube es de **otra clase** (ver abajo) |
 
 **La leccion de metodo**: la corrida 4 parecia una regresion (11 avisos) y no lo era — era el **instrumento
 diciendo la verdad**: el desatasco no tenia a donde sacarlo. Sin el desglose por etiqueta y sin el aviso
 (`estaba METIDO en ... lo saco a ...`) no se habria visto.
 
-**Y lo que queda, dicho con su numero** (5 avisos en 15.040 ticks): 2 de guardia patrullando (la ronda: **9 → 2**, no
-a cero; el criterio de "avance por la ruta" corta el rodeo pero hay casos en los que el destino no se alcanza de
-verdad), 1 de un granjero con los pies en la farmland (el bucle desaparece pero el hundimiento se repite), 1 de
-`Yendo a entrenar` (la clase de I119: el puesto de entrenamiento con `nav` que no alcanza) y 1 de `Saliendo de la
-huerta`.
+**Y LA TASA OSCILA** (0,30 · 0,40 · 0,60 en corridas comparables): es exactamente lo que dice I135 —una corrida sola
+no prueba nada— y por eso la prueba de cada arreglo es **su etiqueta**, no el total.
+
+## Lo que queda ABIERTO, con su numero (y su causa medida)
+
+Del log `medida-s8.log` (18.480 ticks, **10 avisos**) y del `medida-s7-final.log` (**5 avisos**):
+
+1. **LOS VIAJES LARGOS SIN TIRON** (el que mas pesa: **5** avisos del mismo aldeano, `Filomena (Recolector) /
+   Saliendo de la huerta`): va al **almacen** (`517,63,666`) desde la huerta (`446,62,688`) y el planificador **no
+   llega**: `ruta=38 nodos hasta 481,63,676 alcanza=NO`. Son **70+ bloques** para un planificador que busca en un radio
+   de 56 y con la heuristica de una recta. **Arreglo que toca**: el **tiron** intermedio que ya usan el lenador y el
+   minero (`VillageManager.tironHacia`) — no hay que inventar nada, hay que aplicarlo a los viajes del recolector (y
+   del ganadero) al almacen.
+2. **EL DESTINO QUE ES MOBILIARIO** (2 avisos): el ganadero a `513,63,640` (**`oak_fence`**) y el recolector a
+   `470,63,646` (**la campana del kiosco**, `stone_bricks` con `bell` encima) — el "punto de apoyo" que devuelve el
+   pueblo **no es una celda que se pise** y hay goals que caminan a el **crudo**. Es la misma regla de I114/I131, pero
+   en el **destino de la faena**, no solo en el objeto caido: extender `casillaDePieCercaDe` a esos destinos (o
+   corregir los puntos de apoyo).
+3. **El hundimiento en la farmland** (1 aviso): el bucle desaparece (46 desatascos reales, 40 de **puertas**), pero el
+   aldeano **vuelve a meterse**; hace falta registrar el Y exacto y el movimiento anterior para saber por que.
 
