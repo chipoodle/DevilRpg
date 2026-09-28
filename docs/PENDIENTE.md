@@ -421,9 +421,25 @@ entrar al bancal` 5 → **0**).
 | `Valeriano (Granjero) / Buscando recambios` | galería |
 | `Hipolito (Granjero) / Yendo a la taberna` · `Vicenta (Ganadero) / Cuidando el ganado` | balsa |
 
-O sea: lo apuntado antes (**el aldeano sin ruta fuera del muro**, **la recolectora**) **no aparece** en estas dos
-corridas; lo que queda es la **rendición de la ronda del guardia** (1 por corrida y por guardia, con la ruta alcanzando:
-la clase de I115, donde el contador de «no me acerco» se dispara en un rodeo que **sí** tiene camino).
+**Y el diagnóstico del patrón que queda, medido en los mismos dos logs** (los avisos traen `ruta`, `nav`, `pies` y
+`goals`, que es todo lo que hace falta). Ojo: esto son los **avisos sueltos** de los dos logs completos, así que
+aparecen más casos que las 11 del desglose (que cuenta en la ventana `t=2.000-12.000` y agrupa por aldeano + etiqueta):
+
+| quién / etiqueta | aviso |
+|---|---|
+| `Ubaldo (Guardia arquero) / Patrullando el corral` | `ruta=30 nodos … alcanza=SI` · `nav=[30 nodos … alcanza]` · `goals=[VillagerGateGoal VillagerGuardGoal]` |
+| `Ubaldo / Patrullando el corral` (otra vez) | `ruta=32 nodos … alcanza=SI` |
+| `Eufemia (Guardia espadachín) / Patrullando el corral` | `ruta=29 nodos … alcanza=SI` |
+| `Onofre (Guardia espadachín) / Patrullando la arboleda` | `ruta=20 nodos … alcanza=SI` |
+| `Dorotea (Guardia arquero) / Patrullando la arboleda` | `ruta=16 nodos … alcanza=SI` |
+| `Hipolito (Granjero) / Recogiendo lo que se cayó` | `ruta=3 nodos … alcanza=NO; pies=farmland` (un bancal) |
+| `Valeriano (Granjero) / Buscando recambios` | `ruta=11 nodos … alcanza=NO; cerebro=488,64,659` (el cerebro va **un bloque por encima**: la clase de I114/I131, `casillaDePieCercaDe`) |
+| `Vicenta (Ganadero) / Recogiendo el corral` | `ruta=2 nodos … alcanza=NO` |
+
+O sea: **el guardia NO se rinde por falta de ruta** —la tiene, y de 16 a 32 nodos— sino por el **contador de «no me
+acero»** mientras anda el **rodeo** de la ronda (I115: la ronda es un círculo y el camino da vueltas). El arreglo que
+toca es **medir el atasco contra el avance por la RUTA VIVA, no contra la distancia en línea recta** (que es lo que
+sube en un rodeo), y el criterio de éxito es que esas etiquetas bajen a 0 **sin subir las demás**.
 
 **Y la tasa del pueblo (I135) con la mina ya desbloqueada**: media **0,55** por 1.000 ticks (rango 0,50-0,60) contra la
 **1,29** de la tanda anterior, y **sin una sola corrida mala** (desviación 0,94 → 0,07). Con 2 corridas es orientación:
