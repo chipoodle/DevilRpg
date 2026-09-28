@@ -479,6 +479,11 @@ public class VillagerFarmGoal extends Goal {
             }
             // Y TAMBIÉN A PASO EXACTO (es el mismo caso: al salir hay que pisar la celda de la compuerta, y con la
             // tolerancia de 1 bloque se quedaba plantado dentro).
+            // OJO: la compuerta NO se abre desde aquí (28-sep-2026). Se probó y NO arregla nada: pegado a la valla, el
+            // `VillageGateGoal` está corriendo, le roba el flag `MOVE` y **este goal no llega ni a arrancar**, así que
+            // su `tick` no se ejecuta nunca (medido en modo NOCHE: 19 de 38 muestras con `destino=SIN DESTINO` y
+            // `goals=[VillageGateGoal]`). Quien la abre es **el latido del pueblo**: ver
+            // `VillageManager.dameUnaCamaQueAlcance`, que ya detecta al encerrado y le abre su compuerta.
             VillageManager.caminarHaciaExacto(villager, target, 0.6F);
             VillageManager.ponerActividad(villager, "Saliendo de la huerta");
             // La pierna de la compuerta se mide aparte de la del objetivo (I38: dos piernas, dos contadores).

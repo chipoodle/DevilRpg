@@ -3552,6 +3552,7 @@ public final class VillageManager {
         List<Villager> aldeanos = level.getEntitiesOfClass(Villager.class, new AABB(center).inflate(FALLEN_CHECK_RADIUS));
         reclamarCamasDelPueblo(level, aldeanos, center);
         acostarAlQueNoLlega(level, aldeanos);
+        abrirLaCompuertaAlQueEstaEncerrado(level, aldeanos, center);
         // Y SI ALGUIEN SE QUEDA SIN CAMA, SE DICE EN EL LOG CON NOMBRE Y MOTIVO (una vez por cambio, no cada latido):
         // es la queja del jugador y así se ve de un vistazo si es que no hay camas, si están todas cogidas o si la que
         // le toca no le sirve.
@@ -3574,6 +3575,38 @@ public final class VillageManager {
             } else {
                 DevilRpg.LOGGER.warn("[Village] Aldea {}: SIN CAMA {} de {} aldeanos (camas del pueblo: {})",
                         objectiveIndex, clave, censados, contarCamas(level, center));
+            }
+        }
+    }
+
+    /**
+     * <b>AL QUE ESTÁ ENCERRADO EN SU BANCAL, LE ABRE LA COMPUERTA</b> (28-sep-2026; lo reportó el jugador: *"hay un
+     * granjero que se atoró en una de las parcelas. dice que va a la cama, ya se hizo de noche pero no puede ir"*).
+     * <p>
+     * <b>POR QUÉ HACE FALTA, medido</b> (`tools/arnes/medidas-granjero-noche.txt`, arnés en modo NOCHE): al anochecer
+     * el granjero se queda dentro del bancal **de pie y sin destino** —**19 de 38 muestras** con
+     * {@code destino=SIN DESTINO} y {@code goals=[VillageGateGoal]}— porque su goal (el que tiene la tarea de SALIR)
+     * **no llega ni a arrancar**: pegado a la valla, el {@code VillageGateGoal} está corriendo, los dos piden el flag
+     * de movimiento {@code MOVE} y el del portón tiene más prioridad, así que le roba el control. Y el aviso que
+     * daba el latido —*"el goal del granjero lo saca por la compuerta al anochecer"*— **no se cumplía**: abrirla
+     * **desde el goal** no sirve (probado: no cambia ni una muestra, porque ese goal no corre).
+     * <p>
+     * El latido **sí** corre siempre: le abre la compuerta de SU bancal (el mismo mecanismo que usa el granjero al
+     * **entrar**, {@link #abrirLaCompuertaDeAlLado}) y el aldeano sale solo y se va a la cama. Y solo mientras está
+     * dentro y en su hora de descanso, así que la compuerta se queda abierta lo que tarda en cruzar.
+     */
+    private static void abrirLaCompuertaAlQueEstaEncerrado(ServerLevel level, List<Villager> aldeanos, BlockPos center) {
+        int cota = VillageGenerator.cotaDeLaPlaza(level, center);
+        for (Villager villager : aldeanos) {
+            if (villager.isBaby() || !estaDescansando(villager) || !estaEnUnBancal(level, villager, center)) {
+                continue;
+            }
+            for (int i = 0; i < VillageGenerator.parcelasDeGranja(); i++) {
+                if (VillageGenerator.estaDentroDeLaParcela(center, i, cota, villager.blockPosition())) {
+                    abrirLaCompuertaDeAlLado(level,
+                            VillageGenerator.salidaDeLaParcela(center, i, cota, villager.blockPosition()));
+                    break;
+                }
             }
         }
     }
@@ -3729,6 +3762,23 @@ public final class VillageManager {
             }
         }
         if (mejorSinLlegar != null) {
+            // Y LE ABRE LA COMPUERTA (28-sep-2026): lo reportó el jugador (*"hay un granjero que se atoró en una de las
+            // parcelas. dice que va a la cama, ya se hizo de noche pero no puede ir"*). El aviso de aquí abajo decía
+            // que «el goal del granjero lo saca por la compuerta al anochecer», y **no puede**: pegado a la valla, el
+            // `VillageGateGoal` está corriendo, los dos goals piden el flag de movimiento `MOVE` y el del portón tiene
+            // más prioridad, así que el goal del granjero **no llega ni a arrancar** y su tarea de SALIR no se ejecuta
+            // (MEDIDO con el arnés en modo NOCHE, `build/medida-noche-antes.log`: **19 de 38 muestras** de pie dentro
+            // del bancal con `destino=SIN DESTINO` y `goals=[VillageGateGoal]`, ~38 s hasta que el portón se abría por
+            // su cuenta). El latido SÍ corre siempre: abre la compuerta de su bancal y el aldeano sale solo.
+            int cota = VillageGenerator.cotaDeLaPlaza(level, center);
+            for (int i = 0; i < VillageGenerator.parcelasDeGranja(); i++) {
+                if (!VillageGenerator.estaDentroDeLaParcela(center, i, cota, villager.blockPosition())) {
+                    continue;
+                }
+                abrirLaCompuertaDeAlLado(level,
+                        VillageGenerator.salidaDeLaParcela(center, i, cota, villager.blockPosition()));
+                break;
+            }
             DevilRpg.LOGGER.info("[Village] {} esta encerrado en un bancal: ninguna cama libre esta a su alcance, se le"
                             + " da la que MAS se acerca, {} (a {} bloque(s) del final de su ruta): el goal del granjero"
                             + " lo saca por la compuerta al anochecer",

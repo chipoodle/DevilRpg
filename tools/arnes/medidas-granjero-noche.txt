@@ -1,0 +1,75 @@
+# EL GRANJERO ENCERRADO EN EL BANCAL AL ANOCHECER (I143) — 28-sep-2026
+
+Lo reporto el jugador: *"hay un granjero que se atoro en una de las parcelas. dice que va a la cama, ya se hizo de
+noche pero no puede ir"*. **Es el mismo caso que ya tenia arreglo en el mod** (la tarea SALIR del granjero, la linea
+241 de `VillagerFarmGoal`: *"el que se queda encerrado al anochecer con su cama fuera del bancal"*), pero **seguia
+pasando** y hasta ahora **no se habia medido con el instrumento correcto**.
+
+## Por que no se habia cazado: el instrumento
+
+**Todas las corridas del arnes de esta sesion son de DIA** (`level.setDayTime(6000L)`) y este bug es **de noche**.
+El arnes tiene el modo `MEDIR_NOCHE` (pone las 18.000) y **con el instrumento exacto**: `vigilarGranjerosEnElBancal`,
+que imprime el bancal, los goals que estan **corriendo**, el `WALK_TARGET` (el destino), el `HOME` (la cama) y
+**las cuatro compuertas con ABIERTA/cerrada**. Y ademas `volcarCamas` y `vigilarCamasCadaTick`.
+
+## El antes, medido (`build/medida-noche-antes.log`)
+
+```
+EN-BANCAL 596e09a8 farmer dentro=2 pos=(443.97,62.94,680.56) durmiendo=false REST=true
+          home=NINGUNA destino=SIN DESTINO goals=[VillagerGateGoal]
+          compuertas: 446,63,679=cerrada 446,63,689=cerrada 441,63,684=cerrada 451,63,684=cerrada
+...
+[Village] ... esta encerrado en un bancal: ninguna cama libre esta a su alcance, se le da la que MAS se acerca,
+          428, 63, 671 (a 17 bloque(s) del final de su ruta): el goal del granjero lo saca por la compuerta al anochecer
+```
+
+| que | medida |
+|---|---|
+| muestras del granjero dentro del bancal con **`destino=SIN DESTINO`** | **19 de 38** |
+| goals corriendo | **solo `VillagerGateGoal`** (su tarea de SALIR **no corre**) |
+| tiempo de pie en la huerta antes de salir | **~38 s** (hasta que el porton se abrio solo) |
+| al final | la compuerta `446,63,679=ABIERTA` y el granjero avanza y sale |
+
+**La causa**: la tarea de SALIR **no llega a correr** porque el `VillageGateGoal` (el goal de los portones) **le roba
+el control de movimiento**: los dos piden el flag `MOVE` y el del porton tiene **mas prioridad**. La rama de SALIR
+**confiaba** en que el porton se abriera solo (asi lo decia su comentario), asi que el granjero se quedaba **de pie y
+sin destino** hasta que el porton se abria por su cuenta.
+
+**Y no es una regresion de esta sesion**: el comentario del arreglo viejo (linea 473) ya decia *"a la compuerta, y en
+cuanto la pisa el porton se abre (`VillageGateGoal`, a 2,6)"* — o sea, **ya confiaba en el porton** y el conflicto de
+prioridades ya estaba. Lo que faltaba era **medirlo de noche**.
+
+## El arreglo (y un intento que NO funciono, medido)
+
+**PRIMER INTENTO (no funciona, y por que)**: abrir la compuerta **desde el goal del granjero** (en su rama de SALIR,
+igual que hace al entrar). **Medido: no cambia NADA** (`build/medida-noche-despues.log`: los mismos **19 de 38**
+muestras con `destino=SIN DESTINO`). La razon, que el censo deja ver: **ese goal no llega ni a arrancar** —pegado a la
+valla, el `VillageGateGoal` esta corriendo, los dos piden el flag `MOVE` y el del porton tiene mas prioridad— asi que
+su `tick` **no se ejecuta nunca**. (En las muestras del "despues" el `destino` es **la cama** —el `WALK_TARGET` que
+escribe el cerebro— o `SIN DESTINO`, **nunca la compuerta**, que es lo que pondria su tarea de SALIR.)
+
+**EL ARREGLO QUE TOCA**: abrirla desde **el latido del pueblo** (`VillageManager.dameUnaCamaQueAlcance`), que **si**
+corre siempre y **ya** detecta al encerrado (es el que escribe el aviso *"esta encerrado en un bancal"*): recorre los
+bancales, y al que contiene al aldeano **le abre su compuerta** (`abrirLaCompuertaDeAlLado` + `salidaDeLaParcela`, el
+mismo mecanismo que usa el granjero al **entrar**). Asi no depende de prioridades de goals.
+
+## El despues, medido
+
+| medida | ANTES | con la apertura **desde el goal** | con la apertura **desde el latido** |
+|---|---|---|---|
+| muestras del granjero dentro del bancal | **38** (≈76 s) | 38 | **4** (≈8 s) |
+| de ellas, `destino=SIN DESTINO` (de pie, sin ir a ningun sitio) | **19** | 14 | **1** |
+| compuerta ABIERTA | al final | — | **a los pocos segundos** |
+| `VillagerFarmGoal` corriendo | **nunca** | a veces | (sale antes de que haga falta) |
+
+`build/medida-noche-antes.log` (antes) · `build/medida-noche-despues1.log` (el intento del goal) ·
+`build/medida-noche-despues2.log` (el arreglo del latido).
+
+**En una linea**: el granjero pasa de quedarse **~76 s de pie en la huerta** (19 muestras sin destino) a **salir en
+~8 s**, porque el pueblo le abre la compuerta en cuanto lo ve encerrado y en su hora de descanso.
+
+## Y la leccion del instrumento (por que no se habia cazado)
+
+**Todas las corridas del arnes de esta sesion eran de DIA** (`level.setDayTime(6000L)`) y este bug es **de noche**.
+El modo `MEDIR_NOCHE` (18.000) ya tenia el vigilante exacto —`vigilarGranjerosEnElBancal`, que imprime el bancal, los
+goals que corren, el destino, la cama y las cuatro compuertas— y con el el diagnostico salio en **una corrida**.

@@ -4252,6 +4252,45 @@ O sea: el criterio del traspaso («que `hechas` suba y `pasos` siga creciendo si
 cumple `hechas` **24/24**, `pasos` **40** y el pedernal del almacén **subiendo a su objetivo**; y el minero, que antes
 se pasaba la corrida colando, **completa la misma galería en la mitad de ticks**.
 
+### I143 · EL GRANJERO ENCERRADO AL ANOCHECER: **LA COMPUERTA LA ABRE EL PUEBLO, NO SU GOAL** (28-sep-2026)
+
+**Lo reportó el jugador**: *«hay un granjero que se atoró en una de las parcelas. dice que va a la cama, ya se hizo de
+noche pero no puede ir»*. El mod **ya tenía** un arreglo para este caso (la tarea `SALIR` del granjero, que al
+anochecer lo manda a la compuerta), pero **seguía pasando** y **no estaba medido**.
+
+**Por qué no se había cazado**: **todas** las corridas del arnés de esta sesión son **de DÍA** (`setDayTime(6000)`) y
+este bug es **de noche**. Con el modo `MEDIR_NOCHE` (18.000) y su instrumento (`vigilarGranjerosEnElBancal`, que
+imprime el bancal, los goals **que están corriendo**, el destino, la cama y **las cuatro compuertas**), el
+diagnóstico salió en una corrida (`build/medida-noche-antes.log`):
+
+```
+EN-BANCAL 596e09a8 farmer dentro=2 … durmiendo=false REST=true home=428,63,671
+          destino=SIN DESTINO goals=[VillagerGateGoal]
+          compuertas: 446,63,679=cerrada 446,63,689=cerrada 441,63,684=cerrada 451,63,684=cerrada
+[Village] … esta encerrado en un bancal … el goal del granjero lo saca por la compuerta al anochecer
+```
+
+**La causa, medida**: el granjero se queda **de pie y sin destino** dentro del bancal —**19 de 38 muestras**— porque
+**su goal no llega ni a arrancar**: pegado a la valla, el `VillageGateGoal` está corriendo, los dos piden el flag de
+movimiento `MOVE` y **el del portón tiene más prioridad**, así que le **roba el control**. La rama de SALIR confiaba
+en que el portón se abriera solo (su comentario lo decía) y **el aviso del latido prometía algo que no podía pasar**
+(*«el goal del granjero lo saca por la compuerta»*).
+
+**Y el primer arreglo NO funcionó, medido**: abrir la compuerta **desde el goal** (en su rama de SALIR, como hace al
+entrar) **no cambia ni una muestra** (19 de 38 otra vez), porque **ese `tick` no se ejecuta nunca**: el goal no
+arranca. (En el «después» el destino era **la cama** —el `WALK_TARGET` del cerebro— o nada, **nunca la compuerta**,
+que es lo que pondría su tarea de SALIR.)
+
+**EL ARREGLO**: que la abra **el latido del pueblo**, que **sí** corre siempre y **ya** detectaba al encerrado —
+`VillageManager.abrirLaCompuertaAlQueEstaEncerrado`, llamado desde `atenderCamasDelPueblo`: al aldeano que está
+**dentro de un bancal y en su hora de descanso** se le abre la compuerta de **su** bancal (el mismo mecanismo que usa
+el granjero al **entrar**: `abrirLaCompuertaDeAlLado` + `salidaDeLaParcela`). Así no depende de prioridades de goals.
+Solo se abre mientras está dentro y descansando: lo que tarda en cruzar.
+
+**MEDIDO** (`build/medida-noche-despues2.log`): las muestras dentro del bancal pasan de **38 a 4** (de ≈76 s a ≈8 s) y
+las de `destino=SIN DESTINO` de **19 a 1**; la compuerta sale **ABIERTA** a los pocos segundos y el granjero se va a
+dormir. Datos crudos en `tools/arnes/medidas-granjero-noche.txt`.
+
 ### I142 · LA MINA SE **ENCIENDE**: al cavar no basta, hay que **REPASAR** las antorchas que faltan (28-sep-2026)
 
 **Lo reportó el jugador**: *«el minero no está poniendo antorchas en las paredes de las escaleras de caracol ni en
