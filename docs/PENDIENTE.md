@@ -291,7 +291,33 @@ más cercana) llamado desde el leñador. **Medido: 940 desatascos en una corrida
 estaba. Lo que queda apuntado: el criterio de "encajado" **no puede ser `esCeldaDePie`** (falsos positivos con
 vallas, placas y losas): hay que mirarlo con la **caja de colisión** de la entidad contra el bloque de los pies, o
 exigiendo que **no se haya movido en N ticks**, y **nunca teleportar por sistema**.
-### 6. El PICO al romperse: **MEDIDO — el minero hace lo correcto; el que falla es el HERRERO**
+### 6. El PICO al romperse: **CERRADO Y MEDIDO** (27-sep-2026) — el minero **vuelve con otro**
+
+> **CERRADO en la sesión del 27-sep, y sin tocar una línea del mod**: la pregunta que quedaba abierta («suelta la
+> faena, **¿pero vuelve con otro pico?**») **ya estaba medida en los logs de la sesión**, cuatro veces, porque el
+> arnés deja el pico al borde de romperse cada 2.000 ticks dentro de `medirElMinero` (invariante **I141**).
+>
+> | corrida | roturas | `pico nuevo` en su mano | forjados por el herrero |
+> |---|---|---|---|
+> | `medida-tramo.log` | 6 | **6** | 6 |
+> | `medida-s7-final.log` | 6 | 5 | 5 |
+> | `medida-balsa-final.log` | 6 | 5 | 5 |
+> | `medida-s8.log` | 8 | **8** | 7 |
+>
+> El ciclo, tal cual sale en el log: `se le ha roto el pico (59 usos): va a por otro al almacen` → `Yendo al almacen`
+> → espera (`pico=SIN PICO` con `Cargando material`) → **`El minero: pico nuevo: minecraft:wooden_pickaxe`**.
+>
+> **Y la reserva ya existía en el código** (por eso no hubo que añadir nada): el **pico va PRIMERO** en el herrero de
+> herramientas (`recetaDeArmadura` → `recetaDePico`, con `OBJETIVO_PICOS = 2`) y `recetaDePico` **baja de nivel** hasta
+> el **pico de madera** cuando no hay hierro — el «cebo del pico roto». MEDIDO: **4 picos de madera y 2 de piedra**
+> forjados, **6 de madera** recibidos por el minero, con el almacén en `0 lingote(s), 0 crudo(s)`.
+>
+> **La pista que queda (medida, no arreglada)**: el minero coge **picos de madera** aunque el herrero forje también de
+> **piedra** → pica **más despacio** (el de madera sí pica piedra, así que la mina avanza: `pasos` 32-44). Si se
+> quiere afinar: que el minero **prefiera el mejor pico** del almacén. No se toca: no hay medida que lo pida.
+
+**El diagnóstico viejo, tal cual se escribió** (léase con lo de arriba en la mano):
+
 
 Con la receta del arnés (dejar el pico al borde cada 2.000 ticks) **medido** en una corrida: el pico se rompió
 **4 veces** y las cuatro el mod hizo lo que tiene que hacer:
@@ -332,7 +358,7 @@ herrero**, no el minero.
 
 **Y OJO CON EL INSTRUMENTO**: en esta sesión lancé esa corrida con `MEDIR_MINERO = false` y la medida salió en blanco
 (`al borde: 0`): **comprobar que el modo está encendido en la copia del arnés** antes de lanzar.
-### 6b. LO QUE PIDIÓ EL JUGADOR PARA LA MINA (hecho lo primero; falta lo demás)
+### 6b. LO QUE PIDIÓ EL JUGADOR PARA LA MINA (**los tres HECHOS y MEDIDOS**)
 
 1. **La mina atraviesa el agua** — **HECHO y MEDIDO** (I132): ya no se cierra cuando hay agua; **aísla** con paredes
    (cáscara 3×3×3 de adoquín: sella también el agua de delante, así el túnel avanza por celdas secas), **seca** la

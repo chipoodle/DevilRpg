@@ -4252,7 +4252,45 @@ O sea: el criterio del traspaso («que `hechas` suba y `pasos` siga creciendo si
 cumple `hechas` **24/24**, `pasos` **40** y el pedernal del almacén **subiendo a su objetivo**; y el minero, que antes
 se pasaba la corrida colando, **completa la misma galería en la mitad de ticks**.
 
-### I140 · EL «PUNTO DE AHORA»: LA CASILLA DE PIE Y EL TRAMO, CON **SU** CONTADOR (y el intento global que se retiró) (27-sep-2026)
+### I141 · EL PICO DEL MINERO: EL CICLO **CERRADO Y MEDIDO** (y no hizo falta código) (27-sep-2026)
+
+El §6 del traspaso llevaba desde el 26-sep abierto con la pregunta «el minero suelta la faena al romperse el pico,
+pero **¿vuelve con otro?**». **La respuesta ya estaba en los logs de esta sesión**, y se ve **cuatro veces** (el
+arnés deja el pico al borde de romperse cada 2.000 ticks, dentro de `medirElMinero`):
+
+| corrida | roturas | `pico nuevo` en su mano | forjados por el herrero |
+|---|---|---|---|
+| `medida-tramo.log` | 6 | **6** | 6 |
+| `medida-s7-final.log` | 6 | 5 | 5 |
+| `medida-balsa-final.log` | 6 | 5 | 5 |
+| `medida-s8.log` | 8 | **8** | 7 |
+
+El ciclo, con las líneas del log (tal cual):
+
+```
+El minero: se le ha roto el pico (59 usos): va a por otro al almacen
+El minero: yendo: Yendo al almacen (Cargando material -> 517, 63, 666)
+MINERO t=3080 ... pico=SIN PICO(0/0) ... etiqueta=Wenceslao (Minero) | Cargando material
+El minero: pico nuevo: minecraft:wooden_pickaxe (Cargando material -> 517, 63, 666)
+```
+
+O sea: **detecta la rotura, suelta la faena, va al almacén, espera si no hay pico y vuelve con uno** — los
+5-8 picos nuevos por corrida son las 6-8 roturas forzadas menos las que pilló el final de la corrida.
+
+**Y LA RESERVA YA EXISTE EN EL CÓDIGO** (por eso no hubo que tocar el mod): el **pico del minero va PRIMERO** en el
+herrero de herramientas (`VillagerSmithGoal.recetaDeArmadura` → `recetaDePico` antes que la armadura, y con
+`OBJETIVO_PICOS = 2`), y `recetaDePico` **baja de nivel** hasta el **pico de madera** (3 tablones y 2 palos hay
+siempre) cuando no hay hierro — el «cebo del pico roto» que el proyecto ya documentó. MEDIDO aquí: el herrero forjó
+**4 picos de madera y 2 de piedra** y el minero recibió **6 picos de madera** con el almacén en
+`0 lingote(s), 0 crudo(s)`.
+
+**LA PISTA QUE QUEDA (medida, no arreglada)**: el minero coge **picos de madera** aunque el herrero forje también de
+**piedra** (`4 madera / 2 piedra` forjados, `6 madera` recibidos). El de madera pica **piedra**, así que la mina
+avanza, pero **más despacio**. Si se quiere afinar, el siguiente paso es que el minero **prefiera el mejor pico** del
+almacén; **no se toca ahora** porque no hay medida que lo pida (la mina avanza: `pasos` 32-44).
+
+### I140 · EL «PUNTO DE AHORA»: LA CASILLA DE PIE Y EL TRAMO, CON **SU** CONTADOR (y el intento global que se retiró)
+
 **El problema de fondo, dicho sin adornos**: los «no consigue llegar» se estaban arreglando **goal a goal** (el
 granjero, la recolectora, el ganadero, el leñador, el guardia…) y **cada arreglo dejaba a los demás igual de rotos**,
 así que siempre salía el caso siguiente. Mirando los avisos que quedaban, las causas eran **dos**, y las dos valían
