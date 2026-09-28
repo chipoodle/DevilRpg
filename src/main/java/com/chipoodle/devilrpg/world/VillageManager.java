@@ -4775,6 +4775,14 @@ public final class VillageManager {
      * en cada tick (ir a su puesto, a la plaza, a la cama, a pasear) y pisa el nuestro: el aldeano se iba a otro
      * lado a mitad de camino ("primero da vueltas y se va a otro lado antes de recogerlos"). Poniendo el destino en
      * el cerebro, el que camina es él y nadie le quita el rumbo.
+     * <p>
+     * <b>OJO: AQUÍ NO SE DECIDE A DÓNDE SE VA</b> (ni la casilla de pie ni el tramo del tirón). Eso lo da
+     * {@link #elPuntoDeAhora} y lo llama <b>el goal</b>, porque es el goal quien tiene que medir <b>su</b> atasco
+     * contra ese punto. <b>MEDIDO el 27-sep-2026, y costó una corrida</b>: metido aquí dentro (con el aldeano
+     * caminando a un tramo mientras su goal seguía midiendo contra el destino final) los avisos de rendición
+     * <b>subieron de 10 a 11</b> y la tasa <b>de 0,60 a 1,21</b> — el contador del goal se disparaba antes porque
+     * «no me acerco» se medía contra el sitio equivocado—. La regla buena es la del leñador (I112): <b>se va por
+     * tramos y cada tramo tiene su contador</b>.
      */
     public static void caminarHacia(Villager villager, BlockPos objetivo, float velocidad) {
         villager.getBrain().setMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.WALK_TARGET,
@@ -4782,6 +4790,34 @@ public final class VillageManager {
                         new net.minecraft.world.entity.ai.behavior.BlockPosTracker(objetivo), velocidad, 1));
         villager.getBrain().setMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.LOOK_TARGET,
                 new net.minecraft.world.entity.ai.behavior.BlockPosTracker(objetivo));
+    }
+
+    /**
+     * <b>EL PUNTO AL QUE HAY QUE CAMINAR AHORA</b> hacia {@code destino}, con las dos reglas del pueblo aplicadas en
+     * un solo sitio (27-sep-2026):
+     * <ol>
+     *   <li><b>una CASILLA DE PIE</b>: lo que se persigue muchas veces no se pisa (la celda de un objeto caído, un
+     *       cultivo, una valla, <b>la campana del kiosco</b>, una puerta, la celda de un animal) y el planificador
+     *       <b>no da ruta</b> hasta ahí. MEDIDO en los avisos: `Vicenta (Ganadero) / Recogiendo el corral` a una valla
+     *       (`513,63,640`) y `Filomena (Recolector)` a la campana (`470,63,646`).</li>
+     *   <li><b>y si está MÁS LEJOS de lo que alcanza el planificador</b> ({@link #ALCANCE_DE_LA_RUTA}, con margen
+     *       sobre los 56 bloques de su región de búsqueda), <b>un tramo intermedio</b> a
+     *       {@link #PASOS_DEL_TIRON} bloques — el tirón—. MEDIDO: el recolector yendo al <b>almacén</b> desde la
+     *       huerta (`446,62,688` → `517,63,666`, 70+ bloques) se rendía en <b>bucle de 5 avisos</b> con
+     *       `ruta=38 nodos … alcanza=NO`, porque a esa distancia el planificador no da ruta ninguna.</li>
+     * </ol>
+     * <b>EL CONTRATO, que es lo que hace que esto no rompa nada</b>: el goal camina a este punto <b>y mide su atasco
+     * contra ÉL</b> (y reinicia el contador cuando el punto cambia), no contra el destino final. Es lo que el leñador
+     * ya hacía a mano con su «paso» (I112/I38) y lo que hace que un viaje largo se pueda hacer <b>por tramos</b>
+     * aunque el destino esté al otro lado del pueblo.
+     */
+    public static BlockPos elPuntoDeAhora(ServerLevel level, Villager villager, BlockPos destino) {
+        BlockPos pie = casillaDePieCercaDe(level, destino);
+        if (distanciaA(villager, pie) <= ALCANCE_DE_LA_RUTA) {
+            return pie;
+        }
+        BlockPos tramo = celdaDePieHacia(level, villager, pie, PASOS_DEL_TIRON[0]);
+        return tramo != null ? tramo : pie;
     }
 
     /**

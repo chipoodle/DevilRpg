@@ -4252,7 +4252,55 @@ O sea: el criterio del traspaso («que `hechas` suba y `pasos` siga creciendo si
 cumple `hechas` **24/24**, `pasos` **40** y el pedernal del almacén **subiendo a su objetivo**; y el minero, que antes
 se pasaba la corrida colando, **completa la misma galería en la mitad de ticks**.
 
-### I139 · EL ATASCO SE MIDE POR EL **AVANCE POR LA RUTA** (y el que va a por un objeto, por una CASILLA DE PIE) (27-sep-2026)
+### I140 · EL «PUNTO DE AHORA»: LA CASILLA DE PIE Y EL TRAMO, CON **SU** CONTADOR (y el intento global que se retiró) (27-sep-2026)
+**El problema de fondo, dicho sin adornos**: los «no consigue llegar» se estaban arreglando **goal a goal** (el
+granjero, la recolectora, el ganadero, el leñador, el guardia…) y **cada arreglo dejaba a los demás igual de rotos**,
+así que siempre salía el caso siguiente. Mirando los avisos que quedaban, las causas eran **dos**, y las dos valían
+para **todo** el pueblo:
+
+1. **SE CAMINABA A LA CELDA CRUDA.** Lo que un aldeano persigue muchas veces **no se pisa**: la celda de un objeto
+   caído, un **cultivo**, una **valla**, **la campana del kiosco** (el punto de apoyo que devuelve el pueblo es
+   `stone_bricks` con `bell` encima), una puerta… y el planificador **no da ruta** hasta una celda que no se pisa.
+   MEDIDO en los avisos del arnés: `Vicenta (Ganadero) / Recogiendo el corral` a una valla (`513,63,640`),
+   `Filomena (Recolector)` a la campana (`470,63,646`) y los cuatro goals que iban a por un objeto caído a **la celda
+   del objeto**.
+2. **LOS DESTINOS A MÁS DE ~56 BLOQUES NO TIENEN RUTA NINGUNA.** La región de búsqueda del planificador son
+   `FOLLOW_RANGE + 8` = **56** bloques **alrededor del aldeano** y su heurística es una recta. MEDIDO: el recolector
+   yendo al **almacén** desde la huerta (`446,62,688` → `517,63,666`, **70+ bloques**) con
+   `ruta=38 nodos hasta 481,63,676 alcanza=NO`, en **bucle de 5-8 avisos** del mismo aldeano y la misma celda. El
+   leñador y el minero ya lo resolvían a mano con el **tirón** (`VillageManager.tironHacia`); el resto de los goals,
+   no.
+
+**EL INTENTO QUE SE RETIRÓ, y por qué (una corrida pagada)**. Lo primero que probé fue meter las dos reglas **dentro de
+`VillageManager.caminarHacia`** —el único sitio por el que pasan todos los caminos del pueblo— para que valieran para
+todos los goals sin tocarlos. **NO FUNCIONA, y está medido**: con el aldeano caminando a un **tramo** y su goal
+midiendo el atasco contra el **destino final** (`if (distancia < mejorDistancia - 0.5D)`, que es lo que hacen todos los
+goals), el contador se dispara **antes** —«no me acerco» se está midiendo contra el sitio equivocado— y los avisos de
+rendición **subieron de 10 a 11** y la tasa **de 0,60 a 1,21** (`build/medida-reglas-globales-fallida.log`). La regla
+global es una **trampa**: quien camina y quien cuenta tienen que estar de acuerdo en **contra qué** se mide.
+
+**EL ARREGLO BUENO, que es el patrón que el leñador ya tenía (I112/I38) y ahora está en un solo sitio**:
+`VillageManager.elPuntoDeAhora(level, villager, destino)` devuelve **el sitio al que hay que caminar AHORA**:
+
+* **una casilla de pie** (`casillaDePieCercaDe`, I114/I131) — idempotente: si el destino ya se pisa, no se toca nada;
+* y si está **más lejos** que `ALCANCE_DE_LA_RUTA` (**40**, con margen sobre los 56 del planificador), **un tramo** a
+  `PASOS_DEL_TIRON` (**28**) bloques en dirección al destino. Ese tramo **no pide ruta** (solo mira bloques), así que
+  se puede calcular **cada tick** (el coste que obligaba a `tironConMemoria` no aplica aquí).
+
+**Y EL CONTRATO, que es lo que hace que no rompa nada**: el goal camina a ese punto **y mide su atasco contra ÉL**
+(reiniciando el contador cuando el punto cambia), no contra el destino final. **Eso** es lo que permite un viaje
+largo: el aldeano va tramo a tramo y cada tramo tiene su propio contador, así que **nunca** se rinde «a mitad de
+camino» por una distancia que no puede bajar. Aplicado a la rama que fallaba (`VillagerCollectGoal`, el viaje al
+almacén desde la huerta). **MEDIDO** (`build/medida-tramo.log`, 15.440 ticks): el bucle `Saliendo de la huerta`
+**8 → 1**; los avisos de rendición del pueblo **18 → 7**; y la tasa **0,30** por 1.000 ticks (contra el **1,21** del
+intento global retirado).
+
+**Lo que queda** (avisos sueltos, 1-2 cada uno, **sin bucles**): 2 del ganadero recogiendo algo sobre **mobiliario**
+(una valla), 2 del **clérigo** yendo a su iglesia (su goal todavía camina al puesto crudo), 1 de `Patrullando la
+aldea` y 1 de `Yendo a entrenar` (clase I119). El patrón del «punto de ahora» se les puede aplicar igual (es el mismo
+contrato), pero **no hay medida que lo pida todavía**: no tienen bucle.
+
+### I139 · EL ATASCO SE MIDE POR EL **AVANCE POR LA RUTA** (y el que va a por un objeto, por una CASILLA DE PIE)
 
 Los dos atascos sueltos que quedaban en el pueblo, **medidos con el desglose por etiquetas** y arreglados los dos.
 

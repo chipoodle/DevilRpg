@@ -186,6 +186,12 @@ public class VillagerCollectGoal extends Goal {
     /** La última celda de salida de bancal que se le dio (para no contar atasco al cambiar de compuerta). */
     @Nullable
     private BlockPos ultimaSalida;
+    /**
+     * El último <b>punto de ahora</b> al que se le mandó ({@link VillageManager#elPuntoDeAhora}): si cambia —porque
+     * el destino está lejos y toca otro tramo— el contador de atasco se mide de cero. Es el «paso» del leñador (I112).
+     */
+    @Nullable
+    private BlockPos ultimoPunto;
 
     /**
      * <b>La celda de dentro de la compuerta más cercana del bancal en el que esté metido</b> (o {@code null} si no
@@ -355,11 +361,24 @@ public class VillagerCollectGoal extends Goal {
                 // Y TAMBIÉN POR EL PORTÓN SI LE TOCA CRUZARLO (el almacén está dentro; si el recolector se quedó
                 // fuera, la vuelta es un cruce de muralla como cualquier otro: ver I112).
                 BlockPos porton = VillageManager.pasoParaCruzarElMuro(level, center, villager, destino);
-                VillageManager.caminarHacia(villager, porton != null ? porton : destino, 0.6F);
+                // EL PUNTO DE AHORA (I140): una casilla de pie y, si el sitio está más lejos de lo que alcanza el
+                // planificador, un TRAMO intermedio. El contador mide contra ESE punto y se reinicia cuando el tramo
+                // cambia —el patrón del leñador (I112/I38)—: es lo que hace posible ir al ALMACÉN desde la huerta
+                // (70+ bloques, donde el planificador no da ruta NINGUNA y el aldeano se rendía aparcando el almacén:
+                // medido, 5-8 avisos del mismo aldeano y la misma celda, en bucle).
+                BlockPos punto = porton != null ? porton : VillageManager.elPuntoDeAhora(level, villager, destino);
+                if (!punto.equals(ultimoPunto)) {
+                    ultimoPunto = punto; // tramo nuevo: el progreso se mide de cero
+                    mejorDistancia = Double.MAX_VALUE;
+                    stuckTicks = 0;
+                }
+                VillageManager.caminarHacia(villager, punto, 0.6F);
                 VillageManager.ponerActividad(villager, volviendoALaPlaza ? "Volviendo a la plaza"
                         : "Yendo al almacen");
-                if (distancia < mejorDistancia - 0.5D) {
-                    mejorDistancia = distancia;
+                double hastaElPunto = Math.sqrt(villager.distanceToSqr(punto.getX() + 0.5D, punto.getY() + 0.5D,
+                        punto.getZ() + 0.5D));
+                if (hastaElPunto < mejorDistancia - 0.5D) {
+                    mejorDistancia = hastaElPunto;
                     stuckTicks = 0;
                 } else if (++stuckTicks >= STUCK_LIMIT) {
                     // NO LLEGA AL ALMACÉN: se apunta el sitio (I33) y se VUELVE A LA PLAZA. Medido con el arnés: desde

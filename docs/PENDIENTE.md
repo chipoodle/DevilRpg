@@ -120,11 +120,21 @@ la prueba de cada arreglo es su etiqueta, no el total.
 
 | lo que queda | medida y por qué NO es de las clases arregladas |
 |---|---|
-| **los viajes largos sin tirón** (el que más pesa: **5** avisos) | `Filomena (Recolector) / Saliendo de la huerta`: va al **almacén** desde la huerta (`446,62,688` → `517,63,666`, **70+ bloques**) y el planificador **no llega** (`ruta=38 nodos hasta 481,63,676 alcanza=NO`). **Arreglo**: el **tirón** intermedio que ya usan el leñador y el minero (`VillageManager.tironHacia`), aplicado a los viajes del recolector al almacén |
-| **el destino que es MOBILIARIO** (2 avisos) | el ganadero a una **valla** (`513,63,640`) y el recolector a **la campana del kiosco** (`470,63,646`): el punto de apoyo que da el pueblo **no es una celda que se pise** y hay goals que caminan a él **crudo**. **Arreglo**: la regla de I114/I131 en el **destino de la faena** (no solo en el objeto caído) |
-| **el hundimiento en la farmland** (1 aviso) | el bucle **desaparece** (46 desatascos reales en una corrida, 40 de ellos de **puertas**) pero el aldeano **vuelve a meterse**: falta registrar el Y exacto y el movimiento anterior para saber *por qué* |
-| `Yendo a entrenar` (1 aviso) | clase **I119** (el puesto de entrenamiento con `nav=[47 nodos … NO alcanza]`): aquí **rendirse es correcto**; lo que falta es que el puesto sea alcanzable |
-| la **tasa** | una corrida sola no la afirma: hace falta la **media de 3-4** (hoy: 0,30 · 0,40 · 0,60) |
+| **RESUELTO: los viajes largos sin tirón** | el recolector al **almacén** desde la huerta (`446,62,688` → `517,63,666`, **70+ bloques**, `alcanza=NO`) se rendía en **bucle de 5-8 avisos**: el planificador no da ruta a esa distancia. Arreglado con **`VillageManager.elPuntoDeAhora`** (casilla de pie + **tramo** si está lejos) y **midiendo el atasco contra el tramo** (el patrón del leñador, I140). MEDIDO: `Saliendo de la huerta` **8 → 1**, avisos del pueblo **18 → 7** y la tasa **0,30** |
+| **el destino que es MOBILIARIO** (2 avisos, sin bucle) | el ganadero recogiendo algo **sobre una valla** (`513,63,640`): el punto de apoyo no se pisa y su goal mide contra la celda cruda. Se le puede aplicar el mismo **contrato del punto de ahora**, pero **no hay medida que lo pida**: no hay bucle |
+| **el clérigo** (2 avisos, sin bucle) | `Yendo a la iglesia` con el destino en el **puesto crudo** (`brewing_stand`): la misma regla, el mismo contrato, y la misma cautela (no hay bucle) |
+| **el hundimiento en la farmland** (0-1 avisos) | el bucle **desaparece** (46 desatascos reales en una corrida, 40 de ellos de **puertas**) y ya no se repite; si vuelve, haría falta registrar el Y exacto y el movimiento anterior |
+| `Yendo a entrenar` / `Patrullando la aldea` (1+1) | clase **I119** y un caso suelto de ronda: **rendirse ahí es correcto**; lo que falta es que el puesto sea alcanzable |
+| la **tasa** | oscila entre corridas (0,15 · 0,30 · 0,60): es I135 — la prueba de cada arreglo es **su etiqueta**; para dar la tasa hacen falta **3-4 corridas** |
+
+**Y DOS LECCIONES DE MÉTODO de esta sesión**, las dos pagadas con su corrida:
+1. **Una regla del pueblo NO se mete en el método compartido si el que camina y el que cuenta no están de acuerdo.**
+   Meter la casilla de pie y el tirón dentro de `caminarHacia` «para que valiera para todos» **empeoró** las cosas
+   (avisos **10 → 11**, tasa **0,60 → 1,21**) porque los goals seguían midiendo el atasco contra el destino final. El
+   arreglo bueno es el **contrato**: `elPuntoDeAhora` + medir **contra ese punto** (I140).
+2. **La prueba de un arreglo es su etiqueta, no el total.** La corrida que pareció una regresión (11 avisos) estaba
+   diciendo la verdad, y la que dio tasa 0,15 tenía solo 1 rendición en la ventana: con esa varianza, el total no
+   distingue nada.
 
 **Y el aviso de rendición del guardia, cuando el cerebro va a otra parte** — **arreglado y medido** en esta misma
 sesión: los 2 avisos de guardia patrullando tenían `cerebro=` apuntando a **otro sitio** que el `destino=` (I125: el
