@@ -1,0 +1,53 @@
+# EL SEGUNDO POZO DE LA MINA (I144) — 28-sep-2026
+
+Lo pidio el jugador: *"estaria bien abrir un segundo pozo"*.
+
+## La implementacion (pequena, porque TODO depende de `centroDeLaMina`)
+
+* `MINA_OFFSETS = { (33,0,-29), (-33,0,29) }` (el pozo 1 y el 2) y `centroDeLaMina(center, pozo)`.
+* `centroDeLaMina(center)` lee **el pozo activo** de un cache por aldea (como el de `cotaDeLaPlaza`), asi que sus
+  **once** usos (caracol, galerias, progreso, `laMinaLlegoAlTope`, boca, despejar, marcos...) **no cambian de firma**.
+* `elegirElPozoActivo(level, center, nivel)`: el primero, dando la vuelta desde el activo, que **no este terminado**
+  (`laMinaLlegoAlTope` con su `progresoDeLaMina`). Lo llama **el minero** al empezar su vuelta: el segundo pozo **se
+  abre solo** cuando el primero llega a su tope, sin marcar nada a mano.
+* Las **dos comprobaciones de exclusion** (`esCeldaDeLaMina`, `estaSobreElPozo`) miran **todos** los pozos: si no, el
+  nivelado habria rellenado el caracol del segundo con tierra y el tapagujeros, su boca.
+* lint **I9 justificado** (`// lint:ok I9`): esto no construye nada, el pozo lo cava el minero.
+
+## El instrumento
+
+Al censo `POZO` del arnes se le anade **`eje=`** (para saber de que pozo habla) y el modo MINERO da **el pozo 1 por
+terminado a los 20 s** (le pone la piedra labrada del tope en su frente, que es lo que lee `laMinaLlegoAlTope`), para
+medir que el minero abre el segundo **sin esperar 240 pasos**.
+
+## La medida (`build/medida-pozo2.log`)
+
+| criterio | resultado |
+|---|---|
+| el arnes topa el pozo 1 | `TOPE t=400 ... piedra labrada en 507, 46, 613 (paso 32)` |
+| el minero **elige** el pozo 2 | el censo `POZO` pasa a medir `eje=437, 675` |
+| el pozo 2 **se cava** | `El minero: caracol paso 12 ... 16 en 437/436/435/434/433, 679` (**16 pasos**) |
+| su boca | `441, 62, 671` sobre `grass_block` (terreno natural) |
+| su subsuelo | **0 celdas con agua** en el caracol (el pozo 1 tiene 2 y se le inundaron los pasos 35-44) |
+| el solar | **0** celdas construidas y las zonas de exclusion de los dos pozos **separadas 30 bloques** |
+
+## Y UN ERROR DE MEDIDA MIO, que se dice y se corrige
+
+La primera tabla de candidatos la medi **desde el eje del pozo 1 (503,617) creyendo que era el centro de la aldea**.
+El centro es **470, 63, 646** (lo dice el `CENTRO` del arnes), y `503,617` es `centro + (33,-29)`: **el eje del pozo
+1**. Con ese error, el «SO» que elegi (470,646) era **la propia plaza** y «el acuifero del pozo 1» un artefacto (lo que
+medi con agua era `536,588` = `centro + 2*(33,-29)`, que no es el eje de nada).
+
+**Medido bien** (los cuatro candidatos desde el centro real, `columna_mina.py`):
+
+| candidato | eje | agua en la galeria del paso 16 | distancia al pozo 1 |
+|---|---|---|---|
+| **el elegido** `(-33,+29)` | **437,675** | 0 | **88** (zonas separadas 30) |
+| `(-33,-29)` | 437,617 | 0 | 66 (zonas a 8) |
+| `(+33,+29)` | 503,675 | 0 | 66 |
+| el pozo 1 `(+33,-29)` | 503,617 | 0 | — |
+
+O sea: el criterio que **si** decide es **la separacion** (el simetrico deja 30 bloques entre las dos zonas de
+exclusion; cualquiera de los otros dos solo 8, y sus cilindros se solaparian). El offset elegido, `(-33,+29)`, **es el
+correcto** y **no hubo que cambiar el codigo**: el eje que el juego calculo (**437,675**) es exactamente el medido, y
+su caracol **no tiene agua** (el del pozo 1 si, por debajo del paso 35).

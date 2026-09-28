@@ -692,6 +692,20 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         if (ticks == 200) {
             vaciarElCarbonDelAlmacen(level);
         }
+        // Y A LOS 20 s SE DA POR TERMINADO **EL POZO 1** (28-sep-2026): se le pone la PIEDRA LABRADA del tope en su
+        // frente, que es lo que lee `VillageGenerator.laMinaLlegoAlTope`. Es la forma de medir el SEGUNDO POZO sin
+        // esperar 240 pasos: en cuanto el pozo 1 esta topado, el minero tiene que ELEGIR el 2 (el suroeste, eje
+        // 470,646) y empezar su caracol desde el paso 0.
+        if (ticks == 400) {
+            int nivelTope = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+            int pasoTope = com.chipoodle.devilrpg.world.VillageGenerator.progresoDeLaMina(level, CENTRO, nivelTope);
+            BlockPos celdaTope = com.chipoodle.devilrpg.world.VillageGenerator.celdaDelCaracol(CENTRO, nivelTope,
+                    pasoTope);
+            level.setBlock(celdaTope, net.minecraft.world.level.block.Blocks.STONE_BRICKS.defaultBlockState(),
+                    net.minecraft.world.level.block.Block.UPDATE_ALL);
+            DevilRpg.LOGGER.info("[Arnes] TOPE t={} el pozo 1 se da por terminado: piedra labrada en {} (paso {})",
+                    ticks, celdaTope.toShortString(), pasoTope);
+        }
         // EL CAVADO A MANO DE LA GALERIA DEL PASO 16 YA NO HACE FALTA (27-sep-2026): se metio porque el caracol no
         // avanza de paso hasta que su galeria esta ENTERA (I102) y el minero no podia ENTRAR en ella (la boca de dos
         // celdas de hueco es inalcanzable desde la losa del caracol, medido). Con el hueco de paso de TRES celdas el
@@ -983,8 +997,10 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             galeria = "paso " + pasoGaleria + "=" + abiertas + "/"
                     + com.chipoodle.devilrpg.world.VillageGenerator.MINA_GALERIA_LARGO;
         }
-        DevilRpg.LOGGER.info("[Arnes] POZO t={} faena={} (hasta el paso {}) datos=\"paso:pieza/pies/cabeza\"{}"
-                        + " | galeria={}", ticks, pasoActual, hasta, sb.toString(), galeria);
+        DevilRpg.LOGGER.info("[Arnes] POZO t={} faena={} (hasta el paso {}) eje={} datos=\"paso:pieza/pies/cabeza\"{}"
+                        + " | galeria={}", ticks, pasoActual, hasta,
+                com.chipoodle.devilrpg.world.VillageGenerator.centroDeLaMina(CENTRO).toShortString(), sb.toString(),
+                galeria);
     }
 
     /**

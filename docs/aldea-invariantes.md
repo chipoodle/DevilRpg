@@ -4252,6 +4252,37 @@ O sea: el criterio del traspaso («que `hechas` suba y `pasos` siga creciendo si
 cumple `hechas` **24/24**, `pasos` **40** y el pedernal del almacén **subiendo a su objetivo**; y el minero, que antes
 se pasaba la corrida colando, **completa la misma galería en la mitad de ticks**.
 
+### I144 · EL SEGUNDO POZO DE LA MINA: se elige **solo** cuando el primero se topa (28-sep-2026)
+
+Lo pidió el jugador (*«estaría bien abrir un segundo pozo»*). **Implementado y medido.**
+
+**La implementación es pequeña porque TODO depende de `centroDeLaMina`** (11 usos, todos en `VillageGenerator`):
+`MINA_OFFSETS = {(33,0,-29), (-33,0,29)}` y `centroDeLaMina(center, pozo)`; `centroDeLaMina(center)` lee **el pozo
+activo** de un caché por aldea (como el de `cotaDeLaPlaza`), así que **ninguna firma cambia** y el minero solo tuvo que
+añadir **una línea** (`elegirElPozoActivo`, que devuelve el primer pozo, dando la vuelta desde el activo, que **no esté
+terminado**; si todos lo están, se queda donde estaba). Y las **dos comprobaciones de exclusión**
+(`esCeldaDeLaMina`, `estaSobreElPozo`) ahora miran **todos** los pozos: si no, el nivelado habría rellenado el caracol
+del segundo con tierra y el tapagujeros, su boca. (lint I9 justificado: el pozo lo cava el minero, no se construye.)
+
+**MEDIDO** (`build/medida-pozo2.log`; el arnés da el pozo 1 por terminado a los 20 s con su piedra labrada de tope):
+
+| criterio | resultado |
+|---|---|
+| el minero **elige** el pozo 2 | el censo `POZO` pasa a medir **`eje=437, 675`** |
+| el pozo 2 **se cava** | `caracol paso 12 … 16 en 437/436/…/433, 679` (**16 pasos**) |
+| su boca | `441, 62, 671` sobre hierba, **0 celdas construidas** |
+| su subsuelo | **0 celdas con agua** en el caracol (el pozo 1 tiene 2 y se le inundaron los pasos 35-44) |
+| la separación | las zonas de exclusión de los dos pozos quedan **separadas 30 bloques** |
+
+**Y UN ERROR DE MEDIDA MÍO, que queda escrito para que no se repita**: la primera tabla de candidatos la medí **desde
+el eje del pozo 1 (503,617) creyendo que era el centro de la aldea**. El centro es **470,63,646** (el `CENTRO` del
+arnés) y `503,617` es `centro + (33,-29)`, o sea **el eje del pozo 1**. Con ese error, el «suroeste» que elegí
+(470,646) era **la propia plaza** y «el acuífero del pozo 1» un artefacto (lo que di con agua era `536,588`, que no es
+el eje de nada). Medido bien, **los cuatro candidatos tienen 0 agua** en la galería del paso 16 y **el criterio que
+decide es la separación**: el simétrico deja **30** bloques entre las dos zonas de exclusión y los otros dos solo
+**8** (sus cilindros se solaparían). El offset elegido **era el correcto** y **no hubo que tocar el código**: el eje
+que el juego calculó (**437,675**) es exactamente el medido, y su caracol **no tiene agua**.
+
 ### I143 · EL GRANJERO ENCERRADO AL ANOCHECER: **LA COMPUERTA LA ABRE EL PUEBLO, NO SU GOAL** (28-sep-2026)
 
 **Lo reportó el jugador**: *«hay un granjero que se atoró en una de las parcelas. dice que va a la cama, ya se hizo de

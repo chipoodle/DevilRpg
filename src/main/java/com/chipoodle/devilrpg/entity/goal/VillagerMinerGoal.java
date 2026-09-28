@@ -269,6 +269,10 @@ public class VillagerMinerGoal extends Goal {
         }
         reclamarElPuesto(level, puesto);
         int nivel = VillageGenerator.cotaDeLaPlaza(level, center);
+        // Y EL POZO QUE TOCA (28-sep-2026, el segundo pozo): si el que estaba en faena ya llegó a su tope, se pasa al
+        // siguiente (el suroeste). Todo lo demás —caracol, galerías, progreso, el marco y las antorchas— sale del
+        // pozo activo, así que no hay que tocar nada más.
+        VillageGenerator.elegirElPozoActivo(level, center, nivel);
         // ¿HAY QUE SUBIR? Cuando lleva media vuelta cavada, cuando tiene mineral que fundir o colar, o cuando la
         // mina ya está cerrada (el tope). Así el viaje de subida se paga una vez cada media vuelta y no por celda.
         paso = VillageGenerator.progresoDeLaMina(level, center, nivel);

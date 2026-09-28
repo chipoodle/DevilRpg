@@ -2784,6 +2784,31 @@ public final class VillageGenerator {
     private static final BlockPos MINA_OFFSET = new BlockPos(33, 0, -29);
 
     /**
+     * <b>EL SEGUNDO POZO</b> (28-sep-2026, lo pidió el jugador: *«estaría bien abrir un segundo pozo»*): el descampado
+     * del <b>suroeste</b>, simétrico al primero. <b>MEDIDO</b> con `tools/arnes/columna_mina.py` sobre el guardado del
+     * jugador (galería del paso 16, 24 celdas): **sin agua** (el primero se cavó sobre un acuífero y sus galerías
+     * salen en `water`), **sin nada construido** y con su zona de exclusión **separada 30 bloques** de la del primero
+     * (el candidato del noroeste solo 8). Los otros dos candidatos: el NO sin agua pero pegados, y el SE con agua.
+     * <p>
+     * lint:ok I9 porque esto NO construye nada: el segundo pozo no lo pone el generador, lo **cava el minero** (es la
+     * misma faena de siempre, en otro eje), así que **no hay nada que rehacer** en las aldeas ya construidas.
+     */
+    private static final BlockPos MINA_OFFSET_2 = new BlockPos(-33, 0, 29);
+
+    /** <b>Los pozos de la mina</b>, en orden: el 0 es el de siempre (noreste) y el 1 el segundo (suroeste). */
+    private static final BlockPos[] MINA_OFFSETS = {MINA_OFFSET, MINA_OFFSET_2};
+    /** Cuántos pozos tiene una aldea (ver {@link #elegirElPozoActivo}). */
+    public static final int POZOS_DE_LA_MINA = MINA_OFFSETS.length;
+
+    /**
+     * <b>Qué pozo está cavando el minero AHORA</b>, por aldea. Es un caché (como el de {@link #cotaDeLaPlaza}) para
+     * que {@link #centroDeLaMina} no tenga que cambiar de firma en sus once usos: el minero llama a
+     * {@link #elegirElPozoActivo} al empezar su vuelta y todo lo demás (el caracol, las galerías, el progreso) sale
+     * del pozo que toque.
+     */
+    private static final java.util.Map<Long, Integer> POZO_ACTIVO = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
      * El solar de la mina <b>de antes</b> ({@code rel (-9,+12)}): la caseta se construyó ahí (el jugador la vio
      * pegada al centro y con la cama asomando por la puerta) y {@link #deshacerLaMinaVieja} la retira devolviendo el
      * terreno del pueblo. Es geometría <b>heredada</b>: no se usa para construir nada.
@@ -2827,7 +2852,43 @@ public final class VillageGenerator {
      * de {@link #cotaDeLaPlaza}—, así que no se toca.
      */
     public static BlockPos centroDeLaMina(BlockPos center) {
-        return center.offset(MINA_OFFSET);
+        return centroDeLaMina(center, pozoActivo(center));
+    }
+
+    /** El eje del pozo {@code pozo} de esa aldea (ver {@link #MINA_OFFSETS}). */
+    public static BlockPos centroDeLaMina(BlockPos center, int pozo) {
+        return center.offset(MINA_OFFSETS[Math.floorMod(pozo, MINA_OFFSETS.length)]);
+    }
+
+    /** El pozo que esa aldea está cavando (0 si no se ha elegido ninguno todavía). */
+    private static int pozoActivo(BlockPos center) {
+        return POZO_ACTIVO.getOrDefault(center.asLong(), 0);
+    }
+
+    private static void fijarElPozoActivo(BlockPos center, int pozo) {
+        POZO_ACTIVO.put(center.asLong(), pozo);
+    }
+
+    /**
+     * <b>EL POZO QUE TOCA CAVAR</b>: el primero, empezando por el que estaba activo y dando la vuelta, que <b>no esté
+     * terminado</b> ({@link #laMinaLlegoAlTope} con su {@link #progresoDeLaMina}). Si todos están topados se queda
+     * donde estaba (no hay faena: el minero se quedará esperando, como antes).
+     * <p>
+     * Lo llama el <b>minero</b> al empezar su vuelta (`VillagerMinerGoal.canUse`), que es quien tiene el mundo
+     * cargado: así el segundo pozo <b>se abre solo</b> en cuanto el primero llega a su tope, sin marcar nada a mano.
+     */
+    public static int elegirElPozoActivo(ServerLevel level, BlockPos center, int nivel) {
+        int activo = pozoActivo(center);
+        for (int intento = 0; intento < POZOS_DE_LA_MINA; intento++) {
+            int pozo = Math.floorMod(activo + intento, POZOS_DE_LA_MINA);
+            fijarElPozoActivo(center, pozo);
+            int paso = progresoDeLaMina(level, center, nivel);
+            if (!laMinaLlegoAlTope(level, center, nivel, paso)) {
+                return pozo; // este pozo tiene faena: es el que se cava
+            }
+        }
+        fijarElPozoActivo(center, activo); // todos topados: se deja como estaba
+        return activo;
     }
 
     /**
@@ -3395,20 +3456,35 @@ public final class VillageGenerator {
         if (pos.getY() >= nivel - 1) {
             return false; // la superficie (y la caseta) es del pueblo
         }
-        int dx = pos.getX() - centroDeLaMina(center).getX();
-        int dz = pos.getZ() - centroDeLaMina(center).getZ();
-        return dx * dx + dz * dz <= MINA_EXCLUSION_RADIO * MINA_EXCLUSION_RADIO;
+        // SE MIRAN **TODOS LOS POZOS** (28-sep-2026): con el segundo pozo, mirar solo el eje activo dejaba la zona
+        // del otro sin excluir, y el nivelado habria rellenado su caracol con tierra (y el tapagujeros, su boca).
+        for (BlockPos eje : MINA_OFFSETS) {
+            int dx = pos.getX() - center.getX() - eje.getX();
+            int dz = pos.getZ() - center.getZ() - eje.getZ();
+            if (dx * dx + dz * dz <= MINA_EXCLUSION_RADIO * MINA_EXCLUSION_RADIO) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
      * ¿Esa celda cae <b>sobre el pozo</b> de la mina (la boca y el caracol), mirando solo el plano horizontal? Es la
      * pregunta que hacen las reparaciones de la <b>capa del suelo</b> (el tapagujeros I90 y el plano), que solo
      * pueden ver lo que hay cerca de la superficie: alrededor del pozo está la aldea, y su suelo se repara igual.
+     * <p>
+     * Y mira <b>todos</b> los pozos, por lo mismo que {@link #esCeldaDeLaMina}: si no, el tapagujeros taparía la boca
+     * del segundo pozo.
      */
     public static boolean estaSobreElPozo(BlockPos center, BlockPos pos) {
-        int dx = pos.getX() - centroDeLaMina(center).getX();
-        int dz = pos.getZ() - centroDeLaMina(center).getZ();
-        return dx * dx + dz * dz <= MINA_POZO_RADIO * MINA_POZO_RADIO;
+        for (BlockPos eje : MINA_OFFSETS) {
+            int dx = pos.getX() - center.getX() - eje.getX();
+            int dz = pos.getZ() - center.getZ() - eje.getZ();
+            if (dx * dx + dz * dz <= MINA_POZO_RADIO * MINA_POZO_RADIO) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** La <b>boca de la mina</b> (el primer escalón del caracol), al lado de la caseta. */
