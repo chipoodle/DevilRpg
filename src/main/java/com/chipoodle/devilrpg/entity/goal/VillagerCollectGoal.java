@@ -366,7 +366,10 @@ public class VillagerCollectGoal extends Goal {
                 // cambia —el patrón del leñador (I112/I38)—: es lo que hace posible ir al ALMACÉN desde la huerta
                 // (70+ bloques, donde el planificador no da ruta NINGUNA y el aldeano se rendía aparcando el almacén:
                 // medido, 5-8 avisos del mismo aldeano y la misma celda, en bucle).
-                BlockPos punto = porton != null ? porton : VillageManager.elPuntoDeAhora(level, villager, destino);
+                BlockPos punto = porton != null ? porton
+                        : VillageManager.elPuntoDeAhora(level, center, villager, destino,
+                                VillageManager.casillaDePieCercaDe(level, new BlockPos(center.getX(),
+                                        VillageGenerator.cotaDeLaPlaza(level, center), center.getZ())));
                 if (!punto.equals(ultimoPunto)) {
                     ultimoPunto = punto; // tramo nuevo: el progreso se mide de cero
                     mejorDistancia = Double.MAX_VALUE;

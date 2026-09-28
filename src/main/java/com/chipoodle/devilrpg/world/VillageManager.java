@@ -4793,31 +4793,29 @@ public final class VillageManager {
     }
 
     /**
-     * <b>EL PUNTO AL QUE HAY QUE CAMINAR AHORA</b> hacia {@code destino}, con las dos reglas del pueblo aplicadas en
-     * un solo sitio (27-sep-2026):
-     * <ol>
-     *   <li><b>una CASILLA DE PIE</b>: lo que se persigue muchas veces no se pisa (la celda de un objeto caído, un
-     *       cultivo, una valla, <b>la campana del kiosco</b>, una puerta, la celda de un animal) y el planificador
-     *       <b>no da ruta</b> hasta ahí. MEDIDO en los avisos: `Vicenta (Ganadero) / Recogiendo el corral` a una valla
-     *       (`513,63,640`) y `Filomena (Recolector)` a la campana (`470,63,646`).</li>
-     *   <li><b>y si está MÁS LEJOS de lo que alcanza el planificador</b> ({@link #ALCANCE_DE_LA_RUTA}, con margen
-     *       sobre los 56 bloques de su región de búsqueda), <b>un tramo intermedio</b> a
-     *       {@link #PASOS_DEL_TIRON} bloques — el tirón—. MEDIDO: el recolector yendo al <b>almacén</b> desde la
-     *       huerta (`446,62,688` → `517,63,666`, 70+ bloques) se rendía en <b>bucle de 5 avisos</b> con
-     *       `ruta=38 nodos … alcanza=NO`, porque a esa distancia el planificador no da ruta ninguna.</li>
-     * </ol>
-     * <b>EL CONTRATO, que es lo que hace que esto no rompa nada</b>: el goal camina a este punto <b>y mide su atasco
-     * contra ÉL</b> (y reinicia el contador cuando el punto cambia), no contra el destino final. Es lo que el leñador
-     * ya hacía a mano con su «paso» (I112/I38) y lo que hace que un viaje largo se pueda hacer <b>por tramos</b>
-     * aunque el destino esté al otro lado del pueblo.
+     * <b>EL PUNTO AL QUE HAY QUE CAMINAR AHORA</b> hacia {@code destino}: <b>una CASILLA DE PIE</b> (lo que se persigue
+     * muchas veces no se pisa: la celda de un objeto caído, un cultivo, una valla, <b>la campana del kiosco</b> —el hub
+     * de la plaza es {@code stone_bricks} con {@code bell} encima—, una puerta, la celda de un animal) y, encima, el
+     * <b>tirón con memoria</b> de {@link #tironConMemoria} si el sitio está lejos (que además prueba la ruta de cada
+     * tramo, cruza el muro por el portón y cae al hub del pueblo si ningún tramo tiene ruta).
+     * <p>
+     * <b>EL CONTRATO, que es lo que hace que esto funcione</b>: el goal camina a este punto <b>y mide su atasco contra
+     * ÉL</b> (no contra el destino final: el tirón empieza alejándose en el rodeo del muro), aunque su <b>llegada</b> la
+     * siga midiendo contra {@code destino} para no adelantar la faena. Es el contrato que el leñador ya tenía a mano
+     * (I112/I38) y ahora está en un solo sitio.
+     * <p>
+     * <b>MEDIDO el 27-sep-2026</b> (y con dos correcciones que costaron su corrida): (1) meter estas reglas <b>dentro
+     * de {@link #caminarHacia}</b> —para que valieran para todos los goals sin tocarlos— <b>empeoró</b> las cosas
+     * (avisos 10 → 11, tasa 0,60 → 1,21) porque el goal seguía midiendo el atasco contra el destino final; y (2) un
+     * tramo calculado a mano que <b>no comprueba la ruta</b> deja al aldeano clavado con el cerebro pisándole el rumbo
+     * (medido: el recolector volviendo a la plaza, <b>10 avisos en bucle</b> con `cerebro=531,63,646` y
+     * `nav=[sin ruta]`). Por eso aquí se usa el tirón del proyecto, que <b>pide la ruta a mano</b>
+     * ({@code caminarHaciaExacto}) y por eso no se queda quieto.
      */
-    public static BlockPos elPuntoDeAhora(ServerLevel level, Villager villager, BlockPos destino) {
+    public static BlockPos elPuntoDeAhora(ServerLevel level, BlockPos centro, Villager villager, BlockPos destino,
+            @Nullable BlockPos plaza) {
         BlockPos pie = casillaDePieCercaDe(level, destino);
-        if (distanciaA(villager, pie) <= ALCANCE_DE_LA_RUTA) {
-            return pie;
-        }
-        BlockPos tramo = celdaDePieHacia(level, villager, pie, PASOS_DEL_TIRON[0]);
-        return tramo != null ? tramo : pie;
+        return tironConMemoria(level, centro, villager, pie, plaza);
     }
 
     /**

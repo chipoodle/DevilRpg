@@ -4338,6 +4338,26 @@ intento global retirado).
 aldea` y 1 de `Yendo a entrenar` (clase I119). El patrón del «punto de ahora» se les puede aplicar igual (es el mismo
 contrato), pero **no hay medida que lo pida todavía**: no tienen bucle.
 
+**LA SEGUNDA CORRECCIÓN, medida también** (`build/medida-tiron-final.log`): un tramo calculado a mano
+—`celdaDePieHacia`, que solo mira bloques— **no comprueba que haya ruta hasta él**, así que puede dejar al aldeano
+clavado con **el cerebro pisándole el rumbo**. MEDIDO: el recolector volviendo a la **plaza** (cuyo destino es **la
+campana del kiosco**, `stone_bricks` con `bell` encima) se rindió **10-15 veces en bucle**, cada 240 ticks, con
+`cerebro=531,63,646` y `nav=[sin ruta]`. Arreglo: **el tramo lo da el tirón del proyecto**
+(`tironConMemoria` → `tironHacia`), que **prueba la ruta de cada tramo** (`createPath`), **cruza el muro por el
+portón**, **cae al hub del pueblo** si ninguno tiene ruta y **camina con `caminarHaciaExacto`**, que le pide la ruta
+**a mano** a la navegación (por eso el cerebro no le quita el rumbo). Y encima se le pone la **casilla de pie** del
+destino. **MEDIDO: `Volviendo a la plaza` 15 → 1.**
+
+**EL ESTADO DEL PUEBLO, medido con el código final** (`build/medida-tiron-final.log`, 15.520 ticks): **8 avisos de
+rendición, TODOS SUELTOS** (el mayor, **2**), **ningún bucle**, la tasa **0,50** por 1.000 ticks, y el ciclo del pico
+**6 roturas → 6 picos nuevos**. Contra la referencia de la mañana: **18 avisos** con bucles de **16** y **19**.
+
+**Y UNA CORRIDA TIRADA, que se apunta para no repetirla**: lancé una corrida **con la anterior todavía viva** (matar
+el `gradlew` no mata el servidor) y los **dos** servidores escribieron en el **mismo** `latest.log` y el **mismo**
+`run/world`: la medida parecía buena (0,30) y **no valía nada** — de hecho los «15 avisos de la plaza» que me
+asustaron eran del **código viejo** de la otra corrida. El trámite de medida ya lleva el paso obligatorio: **cero
+servidores vivos antes de lanzar**, y borrar el `latest.log` **sin** silenciar el error.
+
 ### I139 · EL ATASCO SE MIDE POR EL **AVANCE POR LA RUTA** (y el que va a por un objeto, por una CASILLA DE PIE)
 
 Los dos atascos sueltos que quedaban en el pueblo, **medidos con el desglose por etiquetas** y arreglados los dos.

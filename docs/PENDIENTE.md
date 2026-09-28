@@ -114,18 +114,20 @@ hace el herrero (**10**, hasta el objetivo de 16 pedernales) y la misma galería
 
 ### 8. Lo que queda, con su nombre y su número (27-sep-2026)
 
-Medido con el desglose por etiquetas, ya sin gastar corridas nuevas (`build/medida-s7-final.log` con **5** avisos y
-`build/medida-s8.log` con **10**; la referencia tenía **18**). La **tasa oscila** (0,30 · 0,40 · 0,60): eso es I135 —
-la prueba de cada arreglo es su etiqueta, no el total.
+Con el código de hoy, la corrida limpia del tirón (`build/medida-tiron-final.log`, 15.520 ticks) deja **8 avisos de
+rendición, TODOS SUELTOS** (el mayor, **2**) y **NINGÚN BUCLE** — contra los **18** de la referencia de la mañana, con
+bucles de **16** y **19**. Y la tasa oscila (**0,30 · 0,50** con este código; 0,15 en una ventana parcial): eso es
+I135 — la prueba de cada arreglo es **su etiqueta**, no el total.
 
 | lo que queda | medida y por qué NO es de las clases arregladas |
 |---|---|
-| **RESUELTO: los viajes largos sin tirón** | el recolector al **almacén** desde la huerta (`446,62,688` → `517,63,666`, **70+ bloques**, `alcanza=NO`) se rendía en **bucle de 5-8 avisos**: el planificador no da ruta a esa distancia. Arreglado con **`VillageManager.elPuntoDeAhora`** (casilla de pie + **tramo** si está lejos) y **midiendo el atasco contra el tramo** (el patrón del leñador, I140). MEDIDO: `Saliendo de la huerta` **8 → 1**, avisos del pueblo **18 → 7** y la tasa **0,30** |
-| **el destino que es MOBILIARIO** (2 avisos, sin bucle) | el ganadero recogiendo algo **sobre una valla** (`513,63,640`): el punto de apoyo no se pisa y su goal mide contra la celda cruda. Se le puede aplicar el mismo **contrato del punto de ahora**, pero **no hay medida que lo pida**: no hay bucle |
-| **el clérigo** (2 avisos, sin bucle) | `Yendo a la iglesia` con el destino en el **puesto crudo** (`brewing_stand`): la misma regla, el mismo contrato, y la misma cautela (no hay bucle) |
-| **el hundimiento en la farmland** (0-1 avisos) | el bucle **desaparece** (46 desatascos reales en una corrida, 40 de ellos de **puertas**) y ya no se repite; si vuelve, haría falta registrar el Y exacto y el movimiento anterior |
-| `Yendo a entrenar` / `Patrullando la aldea` (1+1) | clase **I119** y un caso suelto de ronda: **rendirse ahí es correcto**; lo que falta es que el puesto sea alcanzable |
-| la **tasa** | oscila entre corridas (0,15 · 0,30 · 0,60): es I135 — la prueba de cada arreglo es **su etiqueta**; para dar la tasa hacen falta **3-4 corridas** |
+| **RESUELTO: los viajes largos sin tirón** | el recolector al **almacén** desde la huerta (`446,62,688` → `517,63,666`, **70+ bloques**, `alcanza=NO`) se rendía en **bucle de 5-8 avisos**: el planificador no da ruta a esa distancia. Arreglado con **`VillageManager.elPuntoDeAhora`** (casilla de pie + **tramo**) y **midiendo el atasco contra el tramo** (el patrón del leñador, I140). MEDIDO: `Saliendo de la huerta` **8 → 1** |
+| **RESUELTO: el bucle de la PLAZA** | el destino de «volver a la plaza» es **la campana del kiosco** (no se pisa) y el tramo calculado a mano **no comprobaba la ruta**: el aldeano se quedaba clavado con `cerebro=531,63,646` y `nav=[sin ruta]`, **10-15 avisos en bucle**. Arreglado con el **tirón del proyecto** (`tironConMemoria`: prueba la ruta de cada tramo, cruza el muro y camina con la ruta pedida a mano). MEDIDO: `Volviendo a la plaza` **15 → 1** |
+| **el clérigo** (2 avisos, sin bucle) | `Yendo a la iglesia` con el destino en el **puesto crudo** (`brewing_stand`): se le puede aplicar el mismo contrato, pero **no hay bucle que lo pida** |
+| **el ganadero y los granjeros** (2+2 sueltos) | `Recogiendo el corral` (algo sobre una **valla**), `Recogiendo lo que se cayó` y `Guardo 30 de lo suyo`: casos puntuales de mobiliario, **sin bucle** |
+| **el hundimiento en la farmland** (0 avisos) | el bucle **desaparece** (46 desatascos reales en una corrida, 40 de **puertas**) y ya no se repite |
+| `Yendo a entrenar` (0-1) | clase **I119**: **rendirse ahí es correcto**; lo que falta es que el puesto sea alcanzable |
+| la **tasa** | con el código final **0,30 · 0,50** (y 0,15 en una ventana parcial): hacen falta **3-4 corridas** para la media (I135) |
 
 **Y DOS LECCIONES DE MÉTODO de esta sesión**, las dos pagadas con su corrida:
 1. **Una regla del pueblo NO se mete en el método compartido si el que camina y el que cuenta no están de acuerdo.**
@@ -576,11 +578,17 @@ python build\slice_mina.py 497 509 611 623 44 67 "New World (2)"   # mapa por ca
 python tools\arnes\ruta_atasco.py 515 662 503 617 63 "New World (2)"   # ¿hay ruta de pie a la caseta?
 
 # 3) arnés: copiarlo, encender UN modo y correr sobre una COPIA del mundo
+#    *** ANTES DE LANZAR: CERO SERVIDORES VIVOS *** (27-sep-2026: lancé una corrida con la anterior todavía
+#    corriendo y los DOS servidores escribieron en el MISMO `latest.log` y el MISMO `run/world`: la corrida
+#    entera se tiró, y encima la medida parecía buena. Matar el `gradlew` NO mata el servidor.)
+$vivos = (Get-CimInstance Win32_Process -Filter "Name like 'java%'" |
+    Where-Object { $_.CommandLine -match 'fml.modFolders|forgeserverdev' }).Count
+if ($vivos -gt 0) { "ABORTAR: hay $vivos servidor(es) vivo(s)" }
 New-Item -ItemType Directory -Force src\main\java\com\chipoodle\devilrpg\debug | Out-Null
 Copy-Item tools\arnes\GuardHarness.java src\main\java\com\chipoodle\devilrpg\debug\GuardHarness.java -Force
 #   (editar la copia: poner a true MEDIR_MINERO / MEDIR_LENADOR / MEDIR_NOCHE…)
 Remove-Item run\world -Recurse -Force; Copy-Item 'run\saves\New World (2)' run\world -Recurse
-Remove-Item run\logs\latest.log -Force
+Remove-Item run\logs\latest.log -Force            # SIN `-ErrorAction SilentlyContinue`: si está en uso, ABORTAR
 .\gradlew.bat runServer --console=plain            # ~10-15 min de reloj para una corrida útil
 
 # 4) leer la medida  *** OJO: latest.log ROTA POR TAMAÑO (juntar el .gz) ***
