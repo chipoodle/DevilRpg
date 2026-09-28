@@ -288,7 +288,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         // OJO: en la medida de LA MILICIA **no se barre**, porque los bichos que hay dentro son los que se acaban de
         // sembrar para que la guardia pelee (medido: con el barrido, el zombi desaparecia en el mismo segundo, la
         // guardia se quedaba con la etiqueta "Atacando" un instante y volvia a su ronda, y no habia ni una muerte).
-        if (ticks % 20 == 0 && !MEDIR_MILICIA && !MEDIR_MURO && !MEDIR_HORDAS) {
+        if (ticks % 20 == 0 && !MEDIR_MILICIA && !MEDIR_MURO && !MEDIR_HORDAS && !MEDIR_PEPITAS) {
             if (BICHO_DENTRO) {
                 // ...pero para medir EL BUG DEL LATIDO CORTADO hay que dejar UNO dentro a proposito.
                 mantenerBichoDentro(level);
@@ -493,10 +493,11 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             // "el que mata, lootea")—, asi que medir "en el suelo" daba 0 SIEMPRE y parecia que no soltaba nada
             // (medido en las cuatro corridas de `medida-pepitas*.log`: `EN EL SUELO: 0` en todas). Lo que hay que
             // mirar es el ZURRON del asesino.
-            DevilRpg.LOGGER.info("[Arnes] PEPITAS t={} TRAS LA MUERTE: en el suelo={} · el que mato ({}) lleva {}"
+            DevilRpg.LOGGER.info("[Arnes] PEPITAS t={} TRAS LA MUERTE: en el suelo={} · el que mato ({}{}) lleva {}"
                             + " pepitas (llevaba {} antes){}{}", ticks, pepitasEnElSuelo(level),
                     pepitasAsesino == null ? "nadie" : pepitasAsesino.getCustomName() == null ? "aldeano"
                             : pepitasAsesino.getCustomName().getString().replace("\n", " | "),
+                    pepitasAsesino != null && esGuardia(pepitasAsesino) ? " (GUARDIA)" : "",
                     pepitasAsesino == null ? 0 : pepitasEnElZurron(pepitasAsesino), pepitasQueLlevabaElAsesino,
                     pepitasPlantadas != null && pepitasPlantadas.isAlive() ? " (el zombi SIGUE vivo)" : "");
             return;
@@ -506,20 +507,57 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             // almacen y los picos: es lo que dice en QUE ESLABON se rompe la cadena del hierro.
             StringBuilder quien = new StringBuilder();
             int enZurrones = 0;
-            for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(140))) {
+            // 300 bloques, no 140: el aldeano que lleva el botin se va al MUELLE o al monte y con 140 se salia de la
+            // cuenta (medido: `en zurrones=1 [Zacarias … Yendo al muelle]` y dos muestras despues `en zurrones=0`
+            // con la pepita todavia en su zurron: era el radio del escaneo, no que la hubiera dejado).
+            for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(300))) {
                 int n = pepitasEnElZurron(v);
                 if (n > 0) {
                     enZurrones += n;
                     quien.append(v.getCustomName() == null ? "aldeano"
-                            : v.getCustomName().getString().replace("\n", " | ")).append('=').append(n).append(' ');
+                            : v.getCustomName().getString().replace("\n", " | ")).append(esGuardia(v) ? " (GUARDIA)"
+                                    : "").append('=').append(n).append(' ');
                 }
             }
             DevilRpg.LOGGER.info("[Arnes] PEPITAS t={} 200 ticks despues: en el suelo={} en zurrones={} [{}] en el"
-                            + " ALMACEN={} picos={}", ticks, pepitasEnElSuelo(level), enZurrones, quien.toString().trim(),
-                    pepitasEnElAlmacen(level), picosEnElAlmacen(level));
+                            + " ALMACEN={} picos={} (por material: {})", ticks, pepitasEnElSuelo(level), enZurrones,
+                    quien.toString().trim(), pepitasEnElAlmacen(level), picosEnElAlmacen(level),
+                    picosPorMaterial(level));
             pepitasPlantadas = null;
             pepitasAsesino = null;
         }
+    }
+
+    /** Los picos del almacen POR MATERIAL: es lo que dice si el herrero ha gastado las pepitas en uno de HIERRO. */
+    private static String picosPorMaterial(ServerLevel level) {
+        net.minecraft.world.Container caja = com.chipoodle.devilrpg.world.VillageStorage.almacen(level, CENTRO);
+        if (caja == null) {
+            return "-";
+        }
+        int madera = 0;
+        int piedra = 0;
+        int hierro = 0;
+        int diamante = 0;
+        int otros = 0;
+        for (int i = 0; i < caja.getContainerSize(); i++) {
+            net.minecraft.world.item.ItemStack s = caja.getItem(i);
+            if (!(s.getItem() instanceof net.minecraft.world.item.PickaxeItem)) {
+                continue;
+            }
+            if (s.is(net.minecraft.world.item.Items.WOODEN_PICKAXE)) {
+                madera += s.getCount();
+            } else if (s.is(net.minecraft.world.item.Items.STONE_PICKAXE)) {
+                piedra += s.getCount();
+            } else if (s.is(net.minecraft.world.item.Items.IRON_PICKAXE)) {
+                hierro += s.getCount();
+            } else if (s.is(net.minecraft.world.item.Items.DIAMOND_PICKAXE)) {
+                diamante += s.getCount();
+            } else {
+                otros += s.getCount();
+            }
+        }
+        return "madera " + madera + ", piedra " + piedra + ", hierro " + hierro + ", diamante " + diamante
+                + ", otros " + otros;
     }
 
     private static com.chipoodle.devilrpg.entity.AggressiveZombieEntity pepitasPlantadas = null;
@@ -591,18 +629,41 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
                         || s.is(net.minecraft.world.item.Items.IRON_PICKAXE));
     }
 
-    /** El aldeano mas cercano a un punto (la muerte se le atribuye a el, como hace `MEDIR_MILICIA`). */
+    /**
+     * El aldeano mas cercano a un punto (la muerte se le atribuye a el, como hace `MEDIR_MILICIA`)…
+     * <b>PREFIRIENDO A UN GUARDIA</b> (27-sep-2026): el jugador pidio que *"los guardias, al matar zombis de un raid,
+     * consigan hierro"*, y midiendo con el aldeano mas cercano a secas el que mataba era un <b>herrero de armas</b>
+     * (cuyo goal SI tiene su "deja lo tuyo"), asi que la cadena parecia funcionar y no se medía lo que el jugador
+     * pedia. Aqui se busca primero entre los que llevan el `VillagerGuardGoal`.
+     */
     private static Villager aldeanoMasCercano(ServerLevel level, BlockPos pos) {
         Villager mejor = null;
         double mejorD = Double.MAX_VALUE;
+        Villager mejorGuardia = null;
+        double mejorDGuardia = Double.MAX_VALUE;
         for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(pos).inflate(60))) {
             double d = v.distanceToSqr(pos.getX(), pos.getY(), pos.getZ());
-            if (d < mejorD) {
+            if (esGuardia(v)) {
+                if (d < mejorDGuardia) {
+                    mejorDGuardia = d;
+                    mejorGuardia = v;
+                }
+            } else if (d < mejorD) {
                 mejorD = d;
                 mejor = v;
             }
         }
-        return mejor;
+        return mejorGuardia != null ? mejorGuardia : mejor;
+    }
+
+    /** ¿Ese aldeano lleva el goal de la guardia? (es lo que el jugador llama "un guardia"). */
+    private static boolean esGuardia(Villager v) {
+        for (net.minecraft.world.entity.ai.goal.WrappedGoal w : v.goalSelector.getAvailableGoals()) {
+            if (w.getGoal() instanceof VillagerGuardGoal) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static void medirElMinero(ServerLevel level) {        level.setDayTime(6000L); // de dia: de noche el minero descansa (estaDescansando)

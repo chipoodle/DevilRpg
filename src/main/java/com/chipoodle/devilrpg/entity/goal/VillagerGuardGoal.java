@@ -433,6 +433,24 @@ public class VillagerGuardGoal extends Goal {
             mejorDistancia = Double.MAX_VALUE;
             stuckTicks = 0;
         }
+        // 3.b) Y EL HIERRO QUE HA LOOTEADO, AL ALMACÉN (27-sep-2026, medido): el que mata el zombi de raid se queda
+        //      sus pepitas en el zurrón (`AggressiveZombieEntity.dropCustomDeathLoot`) y el herrero las necesita para
+        //      el pico de hierro. El guardia VA a dejarlas (no espera a pasar por delante: su ronda es un círculo
+        //      alrededor del pueblo y no pasa por el almacén). Va DESPUÉS del combate y de la marcha (pelear manda) y
+        //      antes de la ronda; si el sitio está aparcado (I33) se queda como estaba.
+        if (!marchando && !equipando && llevaHierro()) {
+            BlockPos almacen = VillageStorage.puntoDeApoyo(level, center);
+            if (almacen != null && !VillageManager.esPuntoFallido(villager, almacen)) {
+                if (VillageManager.distanciaA(villager, almacen) <= REACH) {
+                    dejarElHierroEnElAlmacen(level); // ha llegado: lo deja
+                } else if (!almacen.equals(destino)) {
+                    destino = almacen;
+                    mejorDistancia = Double.MAX_VALUE;
+                    stuckTicks = 0;
+                    VillageManager.ponerActividad(villager, "Llevando el hierro al almacen");
+                }
+            }
+        }
         villager.getLookControl().setLookAt(destino.getX() + 0.5D, destino.getY() + 0.5D, destino.getZ() + 0.5D);
         double distancia = Math.sqrt(villager.distanceToSqr(destino.getX() + 0.5D, destino.getY() + 0.5D,
                 destino.getZ() + 0.5D));
@@ -891,6 +909,70 @@ public class VillagerGuardGoal extends Goal {
     }
 
     // --- la revisión diaria del almacén ---------------------------------------------------------------
+
+    /**
+     * <b>DEJA EN EL ALMACÉN EL HIERRO QUE HA LOOTEADO</b> (27-sep-2026). Lo pidió el jugador: *"los guardias, al matar
+     * zombis que vengan de un raid del mundo, conseguirán hierro"*, y ese hierro tiene que llegar al <b>herrero</b>
+     * para los picos.
+     * <p>
+     * <b>MEDIDO, y era el eslabón que faltaba</b>: el zombi de raid suelta sus pepitas y <b>el que lo mata se las
+     * queda en el zurrón</b> ({@code AggressiveZombieEntity.dropCustomDeathLoot}: *"el que mata, lootea"*), pero el
+     * guardia <b>no tenía ningún paso que las dejara</b> en el almacén: en el arnés, el que mataba (un herrero de
+     * armas) llevaba su pepita <b>de t=300 a t=2.700</b> —y con etiquetas `Yendo al almacen` / `Volviendo al
+     * almacen` de por medio— mientras el almacén seguía a **0**; el que depositaba era el herrero por SU goal
+     * (que sí tiene su "deja lo tuyo"). Este paso es el que le faltaba al guardia: cuando lleva hierro y está en el
+     * almacén (o pasa a {@value #REACH} bloques de su casilla de apoyo, que es por donde ronda), lo deja.
+     * <p>
+     * Se deja <b>solo el hierro</b> (pepitas y lingotes): es la cadena que pidió el jugador y no toca nada de lo que
+     * el guardia necesita para pelear (su arma, su escudo y sus flechas no entran aquí).
+     */
+    private void dejarElHierroEnElAlmacen(ServerLevel level) {
+        if (!llevaHierro()) {
+            return; // lo normal: no lleva nada que dejar (y así no se toca el cofre por tick)
+        }
+        BlockPos apoyo = VillageStorage.puntoDeApoyo(level, center);
+        if (apoyo == null || VillageManager.distanciaA(villager, apoyo) > REACH) {
+            return; // todavía no está en el almacén
+        }
+        int pepitas = 0;
+        int lingotes = 0;
+        for (int i = 0; i < villager.getInventory().getContainerSize(); i++) {
+            ItemStack s = villager.getInventory().getItem(i);
+            if (s.isEmpty() || !(s.is(Items.IRON_NUGGET) || s.is(Items.IRON_INGOT))) {
+                continue;
+            }
+            ItemStack sobra = VillageStorage.guardar(level, center, s.copy());
+            int dejado = s.getCount() - sobra.getCount();
+            if (dejado <= 0) {
+                continue; // el almacén no tiene sitio: se lo queda (nunca se tira nada del pueblo)
+            }
+            if (s.is(Items.IRON_NUGGET)) {
+                pepitas += dejado;
+            } else {
+                lingotes += dejado;
+            }
+            s.shrink(dejado);
+            if (s.isEmpty()) {
+                villager.getInventory().setItem(i, ItemStack.EMPTY);
+            }
+        }
+        if (pepitas + lingotes > 0) {
+            VillageManager.ponerSuceso(villager, "Deja el hierro en el almacen");
+            DevilRpg.LOGGER.info("[Village] {} deja en el almacen el hierro que ha loteado: {} pepita(s) y {}"
+                    + " lingote(s)", villager.getName().getString(), pepitas, lingotes);
+        }
+    }
+
+    /** ¿Lleva hierro el guardia (pepitas o lingotes) que tenga que dejar en el almacén? */
+    private boolean llevaHierro() {
+        for (int i = 0; i < villager.getInventory().getContainerSize(); i++) {
+            ItemStack s = villager.getInventory().getItem(i);
+            if (s.is(Items.IRON_NUGGET) || s.is(Items.IRON_INGOT)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     /** Día de juego de la última revisión del almacén (marca del aldeano). */
     private static final String MARCA_REVISION = "DevilRpgEquipoRevisado";

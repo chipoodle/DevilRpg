@@ -1,0 +1,44 @@
+# LA CADENA DEL HIERRO DE LOS RAIDS (27-sep-2026)
+
+Corrida buena: `build/medida-pepitas8.log` (modo `MEDIR_PEPITAS`, copia de `New World (2)`).
+Corridas previas, todas con el instrumento ciego: `build/medida-pepitas{,2,3,4,5,6,7}.log`.
+
+## La cadena, eslabon a eslabon (lo que el jugador pidio)
+
+> *"los guardias, al matar zombis que vengan de un raid del mundo, conseguiran hierro"*, y ese hierro tiene
+> que llegar al **herrero** para los picos.
+
+| eslabon | medida |
+|---|---|
+| (1) el zombi de raid aparece y **lo mata un GUARDIA** | `TRAS LA MUERTE: … el que mato (Dorotea (Guardia espadachín · nv 1) … (GUARDIA)) lleva 2 pepitas (llevaba 0 antes)` |
+| (2) y **lo lootea** (a su zurron) | el mismo aviso: **2 pepitas nuevas**; y en las muestras, `en zurrones=4 [ … Ubaldo (GUARDIA)=1 … Onofre (GUARDIA)=6 ]` |
+| (3) **llegan al ALMACEN** | `en el ALMACEN=2` (t=1.100) → **20** de maximo, con **13 depositos** de guardias (`deja en el almacen el hierro que ha loteado: 2 pepita(s) y 0 lingote(s)`) |
+| (4) el herrero los **GASTA** en un pico | `[Village] El herrero de herramientas: Forjo un pico de hierro` (20:36:04) y `picos=1 (por material: madera 0, piedra 0, **hierro 1** …) ` |
+| (5) y el pico va al MINERO | el almacen acaba con `picos=0` (se lo llevo el minero: es de quien es) |
+
+## Las TRES trampas del instrumento (las tres daban "no funciona" en falso)
+
+1. **`EN EL SUELO: 0` SIEMPRE** (las cuatro corridas de `medida-pepitas*.log` del 26-sep): el mod **no tira**
+   las pepitas al suelo cuando las mata un aldeano del pueblo — se las da **al que mata**
+   (`AggressiveZombieEntity.dropCustomDeathLoot`: *"el que mata, lootea"*). Lo que hay que leer es
+   **el zurron del asesino**. Con eso, la cadena se ve en la primera muestra.
+2. **La BARREDORA DEL ARNES**: el barrido de monstruos (`ticks % 20`, `discard()` dentro de 140 bloques)
+   **descartaba el zombi plantado** 40 ticks despues de plantarlo, y `discard()` **no es morir**: ni muerte,
+   ni botin, ni pepitas. El modo `MEDIR_PEPITAS` queda **fuera de la barredora**, igual que `MEDIR_MILICIA`.
+3. **EL RADIO DEL ESCANEO (140)**: el que llevaba el botin se iba **al muelle** y salia de la cuenta
+   (`en zurrones=1 [… Yendo al muelle]` y dos muestras despues `0`, **con la pepita todavia en su zurron**).
+   Se sube a **300**.
+
+## El eslabon que FALTABA en el mod
+
+**El guardia no tenia ningun paso que dejara lo que looteaba.** Medido (corrida `medida-pepitas5/6`): el que
+mataba llevaba sus pepitas en el zurron **de t=300 a t=2.700** —con etiquetas `Yendo al almacen` y
+`Volviendo al almacen` de por medio— mientras el almacen seguia a **0**; lo unico que llegaba era cuando el
+que mataba era un **herrero de armas** (cuyo goal SI tiene su "deja lo tuyo": `VillageSmithGoal`).
+
+Arreglo: `VillagerGuardGoal.dejarElHierroEnElAlmacen` + el guardia **va** al almacen cuando lleva hierro
+(despues del combate y de la marcha, antes de la ronda). Se deja **solo el hierro** (pepitas y lingotes):
+su arma, su escudo y sus flechas no se tocan.
+
+Medido despues: **13 depositos** de guardias y el almacen de **0 a 20** pepitas; y con 27 pepitas el herrero
+**forjo el pico de hierro** (eslabon 4).

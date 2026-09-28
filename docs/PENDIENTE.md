@@ -77,10 +77,14 @@ Lo ordenado era el **choque caracol ↔ galería** (el 68 % del tiempo del miner
 | el **muro** | con 21/24 el minero se iba al **portón norte** (243 muestras; el final de la galería cae «fuera del muro» a 17 bloques bajo el suelo): **bajo tierra no hay muro que cruzar** → la ruta a la celda 21 pasa a `22 nodos … alcanza=SI` |
 
 **Lo que toca ahora** (en este orden): **(1)** el **taller/balsa** (opción C del jugador: pasar la balsa y el acarreo
-al herrero de herramientas) — el primer número medido a mover es el de **coladas** (**33 en dos minutos**, porque el
-pedernal se queda en el zurrón del minero y el objetivo mira el almacén); **(2)** la **cadena del hierro** de los
-raids (§6b/§6c), cuyo instrumento estaba mal (**contaba pepitas en el suelo, y el mod se las da al que mata**) y cuyo
-eslabón roto medido es que **el guardia no deja nunca lo que lootea** (no hay paso de "deja lo tuyo" en su goal).
+al herrero de herramientas) — el primer número medido a mover es el de **coladas** (**33-46 en una corrida**, porque
+el pedernal se queda en el zurrón del minero y el objetivo mira el almacén); **(2)** los **atascos sueltos** del §7.
+
+**Y también CERRADO en esta sesión**: la **cadena del hierro de los raids** (§6b.2/§6b.3) — **I137**: el guardia mata,
+lootea, **deja el hierro en el almacén** (13 depósitos; el almacén de 0 a 20 pepitas) y **el herrero forja el pico de
+hierro**, que se lleva el minero. El eslabón que faltaba era el guardia (se quedaba el botín en el zurrón) y el
+instrumento tenía tres trampas (contaba pepitas en el suelo, la barredora descartaba el zombi y el escaneo era de 140
+bloques): está todo en `tools/arnes/medidas-pepitas.txt`.
 
 
 ### 1. El `JOB_SITE` del minero (el cortapiedras, un bloque): **medido, y no cuesta nada** (cerrado)
@@ -279,19 +283,21 @@ herrero**, no el minero.
    (cáscara 3×3×3 de adoquín: sella también el agua de delante, así el túnel avanza por celdas secas), **seca** la
    celda (queda de aire, transitable) y **sigue bajando**. Medido: `1:air 2:air 3:air`, `hechas=3/24` (antes clavado
    en `0/24`) y **`TOPE=NO`** (antes `TOPE=SI`, la mina se cerraba).
-2. **Que el pico lo haga el HERRERO** — **HECHO y MEDIDO (el pico, sí; las pepitas, falta la medida)**:
-   el herrero de herramientas **forja picos** (medido: `Forjo un pico de madera` x3 y el minero los repone tras **5
-   roturas**). Y para que el eslabón del **hierro** no se quede en nada se han hecho dos cambios:
-   **(a)** el **recolector** recoge las **pepitas de hierro** del suelo (`esDelPueblo` no las tenía: se quedaban
-   tiradas); **(b)** el **pico de hierro se puede forjar con 27 pepitas** cuando no hay 3 lingotes (vanilla: 9 pepitas
-   = 1 lingote). Antes exigía 3 `IRON_INGOT` y con `0 lingote(s)` **no había pico nunca**.
-   **Lo que falta medir**: las **pepitas** no salen en el modo `MEDIR_MINERO` porque **no muere ningún zombi de raid**
-   (el arnés barre los bichos). Receta: un modo que **plante un `AggressiveZombieEntity`** y lo mate atribuido a la
-   guardia (como hace `MEDIR_MILICIA`) y cuente: (a) las pepitas que suelta, (b) que alguien las levante, (c) que
-   lleguen al almacén y (d) que el herrero las gaste en un pico.3. **Hierro de los zombis de los raids** — **pendiente**: el jugador dice que los guardias, al matar zombis que
-   vengan de un **raid del mundo**, conseguirán **hierro**; ese hierro es el que tiene que llegar al herrero para los
-   picos. Hay que medir: (a) que el zombi de raid **suelte hierro** (o que se le añada al botín), (b) que el
-   **recolector/guardia lo levante**, (c) que acabe en el **almacén**, y (d) que el herrero lo use.
+2. **Que el pico lo haga el HERRERO** — **HECHO y MEDIDO** (27-sep-2026, la cadena entera): ver **I137**. El herrero
+   de herramientas **forja picos** y el del **hierro** lo mide la cadena completa: **el guardia mata el zombi de raid,
+   lo lootea** (`Dorotea (Guardia espadachín · nv 1) … lleva 2 pepitas`), **lo deja en el almacén** (13 depósitos; el
+   almacén de **0 a 20** pepitas) y **el herrero forja el pico de HIERRO** (`Forjo un pico de hierro`, y el almacén con
+   `picos (por material: … hierro 1)`), que se lleva el minero. Y hacían falta dos cambios que ya estaban: **(a)** el
+   **recolector** recoge las **pepitas de hierro** del suelo (`esDelPueblo` no las tenía); **(b)** el **pico de hierro
+   se puede forjar con 27 pepitas** cuando no hay 3 lingotes (vanilla: 9 pepitas = 1 lingote).
+3. **Hierro de los zombis de los raids** — **HECHO y MEDIDO** (27-sep-2026, I137): la cadena que pidió el jugador
+   (raid → guardia → hierro → el herrero) está medida eslabón a eslabón. **El eslabón que faltaba en el mod era el
+   guardia**: looteaba y **se quedaba el hierro en el zurrón** (medido: de t=300 a t=2.700 con el almacén a 0, porque
+   su goal no tenía ningún paso que lo dejara) → arreglado con `VillagerGuardGoal.dejarElHierroEnElAlmacen` (el guardia
+   **va** al almacén cuando lleva hierro). Y el instrumento tenía **tres trampas** que daban un falso "no funciona":
+   contaba pepitas **en el suelo** (el mod se las da **al que mata**), la **barredora** del arnés **descartaba** el
+   zombi plantado (`discard()` no es morir: ni botín) y el escaneo de zurrones era de **140** bloques (el que las
+   llevaba se iba al muelle). Todo en `tools/arnes/medidas-pepitas.txt`.
 
 ### 6c. La RECOLECTORA en la TABERNA: **ARREGLADA y MEDIDA** (16 → 0)
 
@@ -329,8 +335,9 @@ el patrón de "no puedo entrar/salir de un recinto" o "la celda no se pisa"), y 
 > * **la boca de la galería**: el aldeano baja el caracol **de pie sobre la losa** (nodo `y+1`, caja `y+0,5…y+2,45`) y
 >   con **dos** celdas de hueco el vecino sale **BLOCKED** (la tercera celda es roca) → **no se puede ni entrar ni
 >   salir**. Arreglo: **tres** celdas de hueco, como el caracol. MEDIDO: la galería del paso 32 pasó de **3/24
->   congelado 3.600 ticks** a **abrirse sola hasta 21/24**, y la del paso 16 (**que antes cavaba el arnés a mano**) la
->   cava **el minero: 2/24 → 23/24**.
+>   congelado 3.600 ticks** a **abrirse sola hasta 24/24** (y el caracol, que estaba clavado en `pasos=32`, **sigue
+>   bajando: 34 → 44**, la cara de `y=46` a `y=40`), y la del paso 16 (**que antes cavaba el arnés a mano**) la
+>   cava **el minero: 2/24 → 24/24**.
 > * **el agua** (el encargo del jugador): las tres celdas abren el techo justo en el acuífero → el túnel se inundaba
 >   (`hechas` 6 → **0** y 223 muestras en cero). Con el censo nuevo (`AGUA`) se midió que el agua entra por **la celda
 >   de DELANTE** → `aislarDelAgua` se llama **al abrir cualquier celda** y sella las vecinas con fluido, saltándose
@@ -339,8 +346,8 @@ el patrón de "no puedo entrar/salir de un recinto" o "la celda no se pisa"), y 
 >   galería cae a 65 bloques del centro, «fuera del muro», **a 17 bloques bajo el suelo**). Arreglado: **por debajo de
 >   la capa del suelo no hay muro que cruzar**.
 >
-> **LO SIGUIENTE, ya medido**: el **taller/balsa**. En la misma corrida, el minero hizo **33 coladas de 4 adoquines en
-> 2 minutos** mientras el almacén seguía con `6 pedernal`: el **pedernal se lo queda él en el zurrón**
+> **LO SIGUIENTE, ya medido**: el **taller/balsa**. En la corrida buena, el minero hizo **46 coladas de 4 adoquines**
+> (33 en otra) mientras el almacén seguía con `6 pedernal`: el **pedernal se lo queda él en el zurrón**
 > (`guardarEnInventario` en la rama de la balsa) y el objetivo que mira es `VillageStorage.cuenta(…, FLINT)`, o sea el
 > **almacén** → el umbral no se alcanza nunca y filtra hasta quedarse sin adoquín. Es la **opción C** del jugador
 > (pasar la balsa y el acarreo al herrero de herramientas), y el criterio de éxito es el número de coladas.
