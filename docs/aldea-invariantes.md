@@ -4008,6 +4008,20 @@ medida**, por dos razones independientes:
 
 **TANDA de 8 corridas: media 1,29 · rango 0,42-2,78 · desviación típica 0,94.**
 
+**SEGUNDA TANDA (27-sep-2026, tras I136/I137/I138, misma ventana `t=2.000-12.000` y medidas de los logs que ya había
+—sin gastar corridas nuevas—)**: `medida-galeria-final.log` **0,50** (5 rendiciones) y `medida-balsa-final.log`
+**0,60** (6) → **media 0,55 · rango 0,50-0,60 · desviación 0,07**.
+<ul>
+  <li>la tasa **baja a menos de la mitad** (1,29 → 0,55) y, sobre todo, es **mucho más estable** (desviación 0,94 →
+      0,07): ya no hay corridas «malas» de 2,7;</li>
+  <li>y **no queda ni un solo atasco repetido**: las 11 rendiciones de las dos corridas son **todas de 1**, y **5 son
+      guardias en su ronda** (`Patrullando el corral` / `Patrullando la arboleda`, la clase de I115). Los atascos
+      gordos —`Yendo a la taberna` 16, `Volviendo a la plaza` 19, `Cuidando el ganado` 3, `no consigue entrar al
+      bancal` 5— están **a cero**.</li>
+</ul>
+(Con 2 corridas esto es **orientación**, no un valor exacto: para afirmarlo hacen falta 3-4. Lo que sí dice el
+desglose es que **ya no hay un sitio concreto** donde se rinda el pueblo.)
+
 **La consecuencia, dicha sin adornos**: la tasa **varía casi 7×** entre corridas comparables, así que **una corrida
 sola no prueba nada** salvo que el cambio sea grande; con 8 corridas, el intervalo de confianza al 95 % es de unas
 ±0,7 rendiciones por 1.000 ticks. Por eso **la prueba de un arreglo no es el total**, sino el **criterio concreto**

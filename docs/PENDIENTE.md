@@ -408,10 +408,26 @@ queda en `pasos=32` con la galería en **`hechas=3/24`**, y **no está atascado*
 `50` líneas de "deja lo sacado / guardo" y `cuela 4 adoquines en la balsa y saca un pedernal` repetido. O sea: **la
 faena del taller le come el tiempo de la galería**. Toca decidir el orden (la galería manda) o **ponerle un tope a los
 viajes al taller** — y medirlo con el mismo instrumento: que `hechas` suba de 3/24 y que `pasos` siga creciendo.
-### 7. Atascos sueltos ya apuntados (cuando se pueda)
+### 7. Atascos sueltos: **MEDIDOS con el desglose por etiquetas** (27-sep-2026)
 
-- El aldeano que se queda **sin ruta** fuera del muro (`560,64,587`, `552,63,585`).
-- La **recolectora** aún se rinde 1 vez por corrida (ya no 64): mirar el caso suelto que queda.
+Lo que queda **ya no es un sitio concreto**: las **11 rendiciones** de las dos corridas de hoy son **todas de 1**, y
+**5 son guardias en su ronda** (la clase de I115, el rodeo del círculo de la ronda). Los atascos gordos están a cero
+(`Yendo a la taberna` 16 → **0**, `Volviendo a la plaza` 19 → **0**, `Cuidando el ganado` 3 → **0**, `no consigue
+entrar al bancal` 5 → **0**).
+
+| etiqueta suelta (1x) | corrida |
+|---|---|
+| `X (Guardia …) / Patrullando el corral` · `Patrullando la arboleda` | **5 de 11** (las dos) |
+| `Valeriano (Granjero) / Buscando recambios` | galería |
+| `Hipolito (Granjero) / Yendo a la taberna` · `Vicenta (Ganadero) / Cuidando el ganado` | balsa |
+
+O sea: lo apuntado antes (**el aldeano sin ruta fuera del muro**, **la recolectora**) **no aparece** en estas dos
+corridas; lo que queda es la **rendición de la ronda del guardia** (1 por corrida y por guardia, con la ruta alcanzando:
+la clase de I115, donde el contador de «no me acerco» se dispara en un rodeo que **sí** tiene camino).
+
+**Y la tasa del pueblo (I135) con la mina ya desbloqueada**: media **0,55** por 1.000 ticks (rango 0,50-0,60) contra la
+**1,29** de la tanda anterior, y **sin una sola corrida mala** (desviación 0,94 → 0,07). Con 2 corridas es orientación:
+para afirmarlo, 3-4.
 
 
 ## Cómo se mide (comandos, tal cual)
