@@ -3126,10 +3126,18 @@ public final class VillageGenerator {
 
     // --- los puntos de la caseta del minero (lo que el goal necesita para trabajar) -----------------
 
-    /** El eje de la caseta y de la boca, a la cota del pueblo (la <b>capa que se pisa</b>, I1/I95). */
+    /**
+     * El eje de la caseta y de la boca, a la cota del pueblo (la <b>capa que se pisa</b>, I1/I95).
+     * <p>
+     * <b>SIEMPRE EL POZO 0</b> (28-sep-2026, al añadir el segundo pozo): la caseta —con su taller, su horno y su
+     * puesto de trabajo— es <b>una sola</b> y está junto al primer pozo. Con el eje <b>activo</b>, en cuanto el minero
+     * se pasaba al segundo pozo la caseta se calculaba <b>en el sitio del segundo</b> (y `asegurarLaMinaDelPueblo`
+     * llegaba a comprobar su testigo allí, con lo que habría construido una segunda caseta).
+     */
     private static BlockPos ejeDeLaCaseta(ServerLevel level, BlockPos center) {
         int nivel = cotaDeLaPlaza(level, center);
-        return new BlockPos(centroDeLaMina(center).getX(), nivel, centroDeLaMina(center).getZ());
+        BlockPos eje = centroDeLaMina(center, 0);
+        return new BlockPos(eje.getX(), nivel, eje.getZ());
     }
 
     /** La casilla <b>libre</b> de la caseta donde se para el minero (el centro, debajo del farol). */
@@ -3513,7 +3521,10 @@ public final class VillageGenerator {
         if (nivel <= level.getMinBuildHeight() + 1) {
             return;
         }
-        BlockPos c = centroDeLaMina(center);
+        // LA CASETA ES LA DEL POZO 0 (28-sep-2026): es única y vive junto al primer pozo. Con el eje ACTIVO, en cuanto
+        // el minero se pasaba al segundo pozo esta función miraba su testigo en el sitio del segundo y habría
+        // construido una caseta nueva allí (con su taller y su horno) en mitad del descampado.
+        BlockPos c = centroDeLaMina(center, 0);
         BlockPos testigo = new BlockPos(c.getX(), nivel - 1, c.getZ() + CASETA_MINERO_LADO / 2);
         if (level.getBlockState(testigo).is(Blocks.STONE_BRICKS)) {
             return; // la caseta ya está
