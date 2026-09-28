@@ -147,6 +147,40 @@ sesión: los 2 avisos de guardia patrullando tenían `cerebro=` apuntando a **ot
 paseo o los portones le pisan el rumbo); el guardia salta el puesto (correcto) pero **se contaba como rendición** y
 ensuciaba la tasa. Ahora solo se apunta y se canta **si el cerebro va de verdad al destino**: `Patrullando` **9 → 0**.
 
+### 9. El SEGUNDO POZO de la mina (lo pidió el jugador: *«estaría bien abrir un segundo pozo»*) — **solar MEDIDO y elegido**
+
+**Qué hay hoy**: la mina es **un** pozo y **todo se deriva de `centroDeLaMina(center)`** (`= center + MINA_OFFSET
+(33,0,-29)`): `celdaDelCaracol`, `celdaDeLaGaleria`, `progresoDeLaMina`, `laMinaLlegoAlTope`, `puntoDeApoyoDeLaCaseta`
+y `despejarElPozoDeLaMina`. Con **una lista de offsets** y que `centroDeLaMina` sepa **cuál está activo**, todo lo demás
+sale gratis: son **11 usos**, todos en `VillageGenerator`.
+
+**El solar del pozo 2, MEDIDO** con `tools/arnes/columna_mina.py` sobre el guardado del jugador (galería del paso 16,
+24 celdas, y la boca):
+
+| candidato | eje | agua en la galería | algo construido | distancia al pozo 1 |
+|---|---|---|---|---|
+| **SO (elegido)** `(-33,+29)` | 470,646 | **0** | **nada** | **88** (zonas separadas 30) |
+| NO `(-33,-29)` | 470,588 | 0 | nada | 66 (zonas casi pegadas: 8) |
+| SE `(+33,+29)` | 536,646 | 1 | nada | 66 |
+| NE (el pozo 1, `(33,-29)`) | 536,588 | **agua en muchas celdas** | — | — |
+
+O sea: **el pozo 1 se cavó sobre un acuífero** (sus galerías del paso 16 salen en `water`, y de ahí los pasos 35-44
+inundados del caracol) y el **SO sale macizo** (`stone`), con la boca sobre hierba, sin nada construido y con las
+zonas de exclusión bien separadas. **Elegido: `MINA_OFFSET_2 = (-33, 0, +29)`.**
+
+**El plan de implementación** (acotado, porque todo depende de `centroDeLaMina`):
+1. `MINA_OFFSETS = {(33,0,-29), (-33,0,29)}` y `centroDeLaMina(center, pozo)`.
+2. **El pozo activo**: el **primer pozo que no esté terminado** (`laMinaLlegoAlTope(level, center, nivel,
+   progresoDeLaMina(level, centroDeEsePozo, nivel))`, el mismo patrón que ya usa el minero en `canUse`). Se guarda en
+   un **caché estático por centro**, como el de `cotaDeLaPlaza`, para **no cambiar la firma** de las funciones ni al
+   minero: `centroDeLaMina(center)` lo consulta.
+3. **La exclusión** (las dos funciones que hoy comparan con `MINA_EXCLUSION_RADIO` y `MINA_POZO_RADIO`): que miren
+   **todos** los pozos (si no, el reparador taparía la boca del segundo y el nivelado lo allanaría).
+4. **El instrumento**: el censo del arnés (`POZO`, `BOCA DE LA MINA`) tiene que decir **de qué pozo** habla, y el modo
+   de medida: **marcar el tope del pozo 1** (la piedra labrada en su caracol, que es lo que lee `laMinaLlegoAlTope`) y
+   comprobar que el minero **empieza el pozo 2** (su caracol desde `paso=0`). **Criterio**: con el pozo 1 topado, el
+   `progresoDeLaMina` del pozo 2 sube de 0, el censo del pozo 2 sale con sus piezas y la tasa del pueblo **no sube**.
+
 
 ### 1. El `JOB_SITE` del minero (el cortapiedras, un bloque): **medido, y no cuesta nada** (cerrado)
 
