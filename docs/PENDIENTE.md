@@ -56,6 +56,8 @@ restaurado) y **todo commiteado**.
 | **el pico y el hierro de los raids** (I133/I134) | el zombi suelta **pepitas** y **el que mata las lootea** (antes **desaparecían a los 5 min**); el herrero forja el pico **con 27 pepitas** → medido: **`Forjo un pico de HIERRO`** |
 | **la taberna** | `VillagerTavernGoal` caminaba a la **celda de la mesa** (no pisable) → `casillaDePieCercaDe`: `Yendo a la taberna` **16 → 0** y la corrida **2,73 → 0,47** por 1.000 ticks |
 | **la medida** (I135) | `tools/arnes/rendiciones.py`: rendiciones **por 1.000 ticks en ventana fija**, por etiqueta, con media y rango |
+| **la boca de la galería** (I136) | el aldeano va **de pie sobre la losa** (nodo `y+1`) y con **dos** celdas de hueco el vecino sale **BLOCKED**: no entra ni sale → **tres** celdas. `hechas` **3/24 congelado 3.600 ticks → 24/24** y `pasos` **32 → 44** (la cara de `y=46` a `y=40`); y **las paredes contra el agua** al abrir cada celda |
+| **la cadena del hierro de los raids** (I137) | el **guardia** mata, **lootea** (2 pepitas), **deja el hierro en el almacén** (13 depósitos, de 0 a **20** pepitas) y **el herrero forja el pico de HIERRO**; el eslabón que faltaba era que el guardia se lo quedaba en el zurrón |
 
 **El aviso de método que salió de aquí**: al normalizar la medida, el "ruido" escondía **16 rendiciones de un solo
 aldeano en un solo sitio** (la taberna). La medida no era un trámite: **destapó el fallo**.
