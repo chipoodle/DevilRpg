@@ -129,6 +129,7 @@ TODOS SUELTOS** (el mayor, **2**) y **NINGÚN BUCLE** — contra los **18** de l
 | **RESUELTO: el clérigo y su POI** (clase **I125**) | `Yendo a la iglesia` **2 → 0**: estaba metido en la **puerta** (`pies=oak_door` → desatasco) y además el cerebro iba a su **POI** (`cerebro=452,64,603` con `destino=453,64,603`). El avance por la ruta está ahora en **`VillageManager.avanzaPorLaRuta`** (el índice del nodo de la ruta viva), compartido con el guardia |
 | **RESUELTO: el bucle de la PLAZA (otra vez)** | el aldeano que **ya estaba** en la plaza se quedaba a 3-4 bloques de **la campana** (que no se pisa) y la vuelta se medía contra ella → **5 avisos en bucle**. Ahora la llegada se mide contra el **punto de pie**: **5 → 0** |
 | **lo que queda, y ya no es un bucle** | **8 avisos, todos sueltos** (el mayor, 2), de **siete aldeanos distintos**: tropiezos puntuales de cada oficio (un granjero buscando recambios, un leñador guardando lo suyo, un guardia yendo a entrenar…). No hay ninguno repetido: **cada aldeano, una vez** |
+| **LA TASA CON EL CÓDIGO DE HOY (28-sep-2026)** | **`0,10`** con **UNA sola rendición** en la ventana 2.000-12.000 (`build/medida-tasa-hoy.log`, modo minero **sin** el apaño del tope = el pueblo normal): la única de la ventana es `Yendo a entrenar` (Eufemia). Y en **toda** la corrida, **7 avisos**: **3× la leñadora** (`Llevando la madera`, la MISMA aldeana y uno desde `y=68`: el segundo piso de la **taberna**, ya documentado), 2× la recolectora saliendo de la huerta, 1× abonar y 1× entrenar. Contra **1,29** de la tanda anterior y **0,30** de media del código de antes de hoy (0,10 · 0,20 · 0,30 · 0,50 · 0,60). **UNA corrida**: con esa varianza hace falta la media de 2-3 más |
 | **el hundimiento en la farmland** (0 avisos) | el bucle **desaparece** (46 desatascos reales en una corrida, 40 de **puertas**) y ya no se repite |
 | `Yendo a entrenar` (0-1) | clase **I119**: **rendirse ahí es correcto**; lo que falta es que el puesto sea alcanzable |
 | **la tasa** | **HECHA, con su dispersión**: las cinco corridas del código final dan **0,10 · 0,20 · 0,30 · 0,50 · 0,60** (media de la tanda buena, **0,30**) contra el **1,29** de la tanda anterior. La prueba de un arreglo es **su etiqueta** |
@@ -172,22 +173,21 @@ otros dos solo **8**. El offset elegido **era el correcto** (el eje que el juego
 **no hubo que tocar el código**.
 
 
-### 10. `Yendo a entrenar`: **DIAGNOSTICADO** (medido en los logs, sin gastar corrida) — falta el tirón
+### 10. `Yendo a entrenar`: **ARREGLADO Y MEDIDO** (I145, 28-sep-2026) — los guardias entrenan
 
-El único caso con etiqueta que sigue saliendo (1 aviso por guardia y sesión). **Diagnóstico con los logs que ya
-había** (`medida-luz-pico.log`, `medida-pozo2b.log`, `medida-plaza3.log`): el destino es **siempre `424, 63, 675`**
-(el puesto del patio, ver `VillageGenerator.puestoDeEntrenamiento`) y el guardia sale desde `490,63,659` /
-`507,63,667` → **a 68 bloques** del puesto. La ruta que calcula **muere a 26-35 bloques** del destino
-(`ruta=43-49 nodos … alcanza=NO`) y su `cerebro` va **directo** al puesto, sin pasar por el portón.
+Era el único caso con etiqueta que seguía saliendo. **La causa**, medida en los logs: el puesto del patio
+(`424,63,675`) queda a **68 bloques** del guardia y la región de búsqueda del planificador son **56** → caminando
+**directo** (como hacía esa rama) **no hay ruta ninguna**; se rendía (con razón) y **no entrenaba**. **El arreglo**:
+caminar con el **tirón** (`elPuntoDeAhora`, el contrato I140, con **la plaza** como hub —sin ella el tirón devuelve el
+propio destino—) y medir el atasco **contra el punto**.
 
-**La causa**: la región de búsqueda del planificador es de **56** bloques alrededor del aldeano, y la rama del
-entrenamiento (`VillagerGuardGoal.entrenar`) camina con **`caminarHacia` directo**, **sin el tirón** que sí usan el
-leñador y el minero (`tironConMemoria`) y que ya está montado en el pueblo como `elPuntoDeAhora` (I140). Con el
-aldeano a más de 56 del puesto **no hay ruta ninguna**, así que se rinde (correctamente) y **no entrena**.
+**MEDIDO** (`build/medida-entreno.log`): la marca `entrenado=` **sube en los 6 guardias** en la misma corrida
+(+2.286 a +3.349 ticks cada uno, y esa marca solo sube **delante de la diana**), y el aviso baja de **uno por guardia**
+a **2 en total**, los dos **transitorios** (se rinden una vez a 6-7 bloques del puesto y **en el turno siguiente
+entran**). Detalle en `tools/arnes/medidas-entreno.txt` / la invariante **I145**.
 
-**El arreglo que toca** (pequeño y con mecanismo ya medido): caminar al puesto con `elPuntoDeAhora` (casilla de pie +
-tirón) y **medir el atasco contra ese punto**, como ya hacen el recolector y el ganadero. **Criterio**: `Yendo a
-entrenar` **1 → 0** y el guardia pegándole a la diana (sus líneas de entrenamiento) en su turno.
+**Lo que queda de este caso**: el último salto al puesto (los 6-7 bloques) no tiene ruta desde el tramo; es un tropiezo
+puntual, no un bucle.
 
 ### 1. El `JOB_SITE` del minero (el cortapiedras, un bloque): **medido, y no cuesta nada** (cerrado)
 

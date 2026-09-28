@@ -1,0 +1,54 @@
+# EL ENTRENAMIENTO DE LA GUARDIA (I145) — 28-sep-2026
+
+`Yendo a entrenar` era el unico aviso con etiqueta que seguia saliendo (uno por guardia y sesion).
+
+## El diagnostico (con los logs que ya habia, sin gastar corrida)
+
+El destino es **siempre `424, 63, 675`** (el puesto del patio, `VillageGenerator.puestoDeEntrenamiento`) y el guardia
+salia desde `490,63,659` / `507,63,667`: **a 68 bloques**. La ruta que calcula **muere a 26-35 bloques** del destino
+(`ruta=43-49 nodos … alcanza=NO`) y su `cerebro` iba **directo**, sin pasar por el porton.
+
+**La causa**: la region de busqueda del planificador son **56** bloques alrededor del aldeano, y esa rama caminaba con
+`caminarHacia` **directo**, sin el tiron que si usan el leñador y el minero. A mas de 56 **no hay ruta ninguna**: se
+rendia (con razon) y **no entrenaba**. Su comprobacion de `TICKS_PARA_COMPROBAR_SI_VA` tambien exigia que la ruta viva
+alcanzara **el puesto** y que el cerebro fuera **al puesto**: con el tiron las dos cosas apuntan al **punto de ahora**.
+
+## El arreglo
+
+El contrato de I140: caminar con `elPuntoDeAhora(level, center, villager, puesto, plaza)` (casilla de pie + **tramo**) y
+medir **el atasco contra ese punto**, reiniciando la paciencia cuando el tramo cambia.
+
+**Y con la plaza, no con `null`**: con `null`, `tironHacia` **devuelve el propio destino** cuando ningun tramo tiene
+ruta, y el guardia se quedaba sin ruta otra vez (medido: seguia rindiendose, a **71 bloques**).
+
+## La medida (`build/medida-entreno.log`, modo pueblo)
+
+**El entrenamiento OCURRE**: la marca `entrenado=` **sube en los 6 guardias** en la misma corrida (y esa marca solo
+sube **delante de la diana**):
+
+| guardia | al empezar | a t=14.520 | sumado |
+|---|---|---|---|
+| Dorotea | 11.107 | 14.456 | **+3.349** |
+| Ubaldo | 5.041 | 7.943 | **+2.902** |
+| Onofre | 656 | 3.408 | **+2.752** |
+| Jacinto | 3.240 | 5.761 | **+2.521** |
+| Eufemia | 3.845 | 6.297 | **+2.452** |
+| Leocadia | 3.022 | 5.308 | **+2.286** |
+
+Y el aviso baja de **uno por guardia** a **2 en toda la corrida**, los dos **transitorios**: son de Leocadia y Ubaldo,
+que se rinden una vez a **6-7 bloques** del puesto (el ultimo salto no tiene ruta) y en el turno siguiente **entran y
+entrenan** (sus marcas, arriba). Ya no es "nunca entrena", es "en un turno no llega y en el siguiente si".
+
+## Dos lecciones de instrumento
+
+1. **El arnes no imprimia NADA del entrenamiento**: el arreglo se iba a medir solo por la **ausencia** del aviso, y eso
+   no distingue "llega y entrena" de "se rinde por otra via". Ahora `vigilarElEntrenamientoDeLaGuardia` (modo pueblo,
+   cada 2 s) imprime la marca.
+2. **El numero va ANTES del nombre del aldeano**: el log **corta la linea** en el nombre (lleva un `·`) y con
+   `entrenado=` al final no se leia nunca.
+
+## Y una corrida perdida (apuntada en el tramite)
+
+Prepare una corrida **despues de borrar el `debug/`** y **sin volver a copiar el arnes**: el servidor arranco sin
+jugador de pega, el pueblo no se gestiono y el log no crecia (**20 minutos tirados**). La señal de alarma es justo esa:
+`latest.log` en unos pocos KB y terminando en el arranque.
