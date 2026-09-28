@@ -4355,13 +4355,14 @@ la mina`; **8 encendidos** en una corrida, en la boca, en el caracol y en **tres
 paso quedó medido lo que decía el jugador: **el carbón no sale de la mina**, sale de la **leña del leñador quemada en
 el horno** (`quema un tronco en el horno` **6 veces** en esa corrida).
 
-**Y UNA PARTE QUE NO SE CUMPLE TODAVÍA, dicha tal cual**: la idea de **no bajar sin luz** (que `hayQueSubir` pida
-antorchas también en la primera bajada, si el pueblo puede dárselas) **no llega a tiempo**: en `medida-luz-2.log` el
-minero ya había cavado 8 celdas **sin una sola antorcha**. La causa, medida: al salir del almacén la rama `RECOGER`
-**fuerza `fase = CAVAR`** (*«CARGADO: ahora HAY que recalcular la faena»*) y **se salta el taller**, aunque
-`hayQueSubir` siga pidiendo luz. **El arreglo que toca** (no hecho: es un flujo ya medido y **no** es el bug que
-reportó el jugador) es que esa rama **vuelva a decidir** en vez de forzar `CAVAR`. Mientras tanto la mina se cava a
-oscuras las primeras vueltas y **el repaso la enciende**, que es lo que resuelve lo reportado.
+**Y UNA PARTE QUE NO SE CUMPLÍA AL PRINCIPIO, ya corregida y medida**: la idea de **no bajar sin luz** (que
+`hayQueSubir` pida antorchas también en la primera bajada, si el pueblo puede dárselas) **no llegaba a tiempo**: en
+`medida-luz-2.log` el minero ya había cavado 8 celdas **sin una sola antorcha**. La causa, medida: al salir del
+almacén la rama `RECOGER` **forzaba `fase = CAVAR`** (*«CARGADO: ahora HAY que recalcular la faena»*) y **se saltaba el
+taller**, aunque `hayQueSubir` siguiera pidiendo luz. **Arreglo**: en esa rama, si le falta luz y **el pueblo puede
+dársela** (antorchas hechas, o carbón/leña del almacén **o del zurrón**, siempre con palos), va al **taller** en vez de
+a cavar. **MEDIDO** (`build/medida-luz-pico.log`), el orden es ahora: `quema un tronco en el horno` → `hace 4
+antorchas` (dos veces) → **y solo después** `caracol paso 0`. O sea: **se hace la luz antes de bajar**.
 
 ### I141 · EL PICO DEL MINERO: EL CICLO **CERRADO Y MEDIDO** (y no hizo falta código) (27-sep-2026)
 
@@ -4400,17 +4401,10 @@ siempre) cuando no hay hierro — el «cebo del pico roto» que el proyecto ya d
 avanza, pero **más despacio**. Si se quiere afinar, el siguiente paso es que el minero **prefiera el mejor pico** del
 almacén; **no se toca ahora** porque no hay medida que lo pida (la mina avanza: `pasos` 32-44).
 
-**Y SE TOCÓ, CON LA PRUEBA DEL PROBLEMA PERO SIN LA DEL ARREGLO (28-sep-2026, dicho tal cual)**. El minero cogía el
-pico con **un filtro que aceptaba los cinco materiales** y `VillageStorage.quitar` devuelve **el primero que cumpla**
-→ con madera y piedra en el almacén, **se llevaba la madera**. El problema está **medido** (`medida-plaza3.log`: el
-herrero forjó **4 madera y 2 piedra** y el minero recibió **6 de madera**: los dos de piedra los **ignoró**). El
-arreglo es pedirlos **en orden de mejor a peor** (`netherite → diamante → hierro → piedra → madera`) y quedarse el
-primero que haya: es **idéntico** cuando solo hay un material (comprobado en la corrida del 28-sep, con el almacén a
-**0 adoquín** todo el rato: el herrero solo pudo forjar madera y el minero recibió **8 de madera**, lo mismo que
-antes) y **mejor** cuando hay varios. **Lo que NO está medido es la mejora**, porque en esa corrida no hubo ningún
-pico mejor que preferir. **CÓMO MEDIRLO**: desde el arnés, al empezar, **poner un pico de piedra en el almacén** (el
-mismo sitio donde ya se planta la remesa) y leer `pico nuevo:` — el criterio es que diga **`stone_pickaxe`** con la
-madera también en el almacén.
+**Y LA MEJORA YA ESTÁ MEDIDA (28-sep-2026)**. Con el arnés poniendo en el almacén **madera primero y piedra después**
+—que es justo lo que el comportamiento viejo cogía—, el minero recibió **`minecraft:stone_pickaxe` las 6 veces** y
+**ninguna de madera** (`build/medida-luz-pico.log`). Así que el arreglo (pedirlos en orden de mejor a peor) está
+**medido en los dos sentidos**: idéntico cuando solo hay un material, y **mejor** cuando hay varios.
 
 ### I140 · EL «PUNTO DE AHORA»: LA CASILLA DE PIE Y EL TRAMO, CON **SU** CONTADOR (y el intento global que se retiró)
 

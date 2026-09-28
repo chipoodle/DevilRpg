@@ -612,9 +612,27 @@ public class VillagerMinerGoal extends Goal {
                     // CARGADO: ahora HAY que recalcular la faena. Sin esto el `destino` se quedaba en el almacén y el
                     // minero se pasaba la vida "Picando" de pie en el cofre (medido con el arnés: la etiqueta decía
                     // `Picando -> 517, 63, 666` y no se movía ni cavaba una celda).
-                    fase = Fase.CAVAR;
-                    if (!prepararElPicado(level, VillageGenerator.cotaDeLaPlaza(level, center))) {
-                        destino = null;
+                    //
+                    // Y SI LE FALTA LUZ, AL TALLER EN VEZ DE A CAVAR (28-sep-2026; lo reportó el jugador: *"el minero
+                    // no está poniendo antorchas … se ve muy oscuro"*). Aquí se forzaba `CAVAR` y eso **se saltaba el
+                    // taller**, así que la primera bajada se hacía a oscuras y esas celdas dependían del repaso
+                    // (`buscarHuecoDeLuz`). MEDIDO: en `build/medida-luz-2.log` el minero ya había cavado 8 celdas sin
+                    // una sola antorcha. Se pide el taller **solo si el pueblo puede darle luz** (antorchas hechas, o
+                    // carbón/leña del almacén O del zurrón, siempre con palos): si no puede, cava a oscuras, que es lo
+                    // único que le queda, y el repaso la encenderá cuando haya. Sin esa guarda, subir sería un bucle.
+                    int nivel = VillageGenerator.cotaDeLaPlaza(level, center);
+                    boolean faltaLuz = cuantosEnInventario(Items.TORCH) <= 0 && elPuebloPuedeDarLuz(level);
+                    if (faltaLuz || hayQueSubir(level)) {
+                        fase = Fase.TALLER;
+                        destino = VillageGenerator.puntoDeApoyoDeLaCaseta(level, center);
+                        if (!comprobarDestino()) {
+                            destino = null;
+                        }
+                    } else {
+                        fase = Fase.CAVAR;
+                        if (!prepararElPicado(level, nivel)) {
+                            destino = null;
+                        }
                     }
                 }
             }

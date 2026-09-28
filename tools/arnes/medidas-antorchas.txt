@@ -62,11 +62,23 @@ Corrida `build/medida-luz-1.log` (mundo restaurado DEL GUARDADO DEL JUGADOR, que
 O sea: **el repaso enciende la mina** (incluso la que ya estaba cavada en su partida) **y el carbon no sale de la
 mina**: sale de la LEÑA del leñador quemada en el horno (6 troncos) — como decia el jugador.
 
-**PERO "NO BAJAR SIN LUZ" NO SE CUMPLE TODAVIA**: en `medida-luz-2.log` (cortada a los 3 minutos, t=1.320) el minero
-ya habia cavado 8 celdas de la galeria **sin antorchas** (`zurron=[... 0:11x stick 1:3x planks 2:2x oak_log ...]`, sin
-una sola antorcha). **La causa medida**: al salir del almacen, el goal **fuerza `fase = CAVAR`**
-(`VillagerMinerGoal`, la rama `RECOGER`: *"CARGADO: ahora HAY que recalcular la faena"*) y **se salta el taller**
-aunque `hayQueSubir` siga pidiendo luz. **El arreglo que toca** (NO hecho: es un flujo medido y no es el bug que
-reporto el jugador): que esa rama **vuelva a decidir** (poner `destino = null` para que el siguiente `canUse` elija)
-en vez de forzar `CAVAR`. Mientras tanto la mina se cava a oscuras las primeras vueltas y **el repaso la enciende**,
-que es lo que arregla el problema reportado.
+**PERO "NO BAJAR SIN LUZ" NO SE CUMPLIA TODAVIA** (primera version del arreglo): en `medida-luz-2.log` (cortada a los
+3 minutos, t=1.320) el minero ya habia cavado 8 celdas de la galeria **sin antorchas**. **La causa medida**: al salir
+del almacen, el goal **forzaba `fase = CAVAR`** (`RECOGER`: *"CARGADO: ahora HAY que recalcular la faena"*) y **se
+saltaba el taller** aunque `hayQueSubir` siguiera pidiendo luz.
+
+**EL ARREGLO**: en esa rama, si **le falta luz y el pueblo puede darsela** (antorchas hechas, o carbon/leña del
+almacen **o del zurron**, siempre con palos), va al **TALLER** en vez de a cavar. Sin esa guarda subir seria un bucle.
+
+**MEDIDO ahora** (`build/medida-luz-pico.log`): el orden de lo que hace el minero es
+
+```
+quema un tronco en el horno y saca 1 de carbon vegetal
+hace 4 antorchas con un carbon y un palo
+quema un tronco en el horno y saca 1 de carbon vegetal
+hace 4 antorchas con un carbon y un palo
+caracol paso 0 en 441, 62, 671      <-- y SOLO DESPUES empieza a cavar
+```
+
+O sea: **se hace la luz antes de bajar** (6 troncos quemados en la corrida). Y de paso se ve que esta cavando el
+**pozo 2** desde su paso 0 (`441,62,671`), con **0 celdas de agua** en su caracol.

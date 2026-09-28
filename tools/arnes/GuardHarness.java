@@ -692,6 +692,21 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         if (ticks == 200) {
             vaciarElCarbonDelAlmacen(level);
         }
+        // Y DOS PICOS DISTINTOS EN EL ALMACEN (28-sep-2026): uno de MADERA **primero** y otro de PIEDRA despues, para
+        // medir que el minero coge EL MEJOR (el arreglo pide los materiales de mejor a peor; sin los dos no se puede
+        // distinguir, porque con uno solo coge ese igual). Escrito en ese orden, el comportamiento viejo —el
+        // `quitar` que devuelve el PRIMERO que cumpla— cogia la madera.
+        if (ticks == 300) {
+            var cajaPicos = com.chipoodle.devilrpg.world.VillageStorage.almacen(level, CENTRO);
+            if (cajaPicos != null) {
+                com.chipoodle.devilrpg.world.VillagePantry.guardar(cajaPicos,
+                        new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.WOODEN_PICKAXE));
+                com.chipoodle.devilrpg.world.VillagePantry.guardar(cajaPicos,
+                        new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE_PICKAXE));
+                DevilRpg.LOGGER.info("[Arnes] PICOS t={} en el almacen: madera (primero) y piedra (despues): el minero"
+                        + " tiene que coger LA PIEDRA", ticks);
+            }
+        }
         // Y A LOS 20 s SE DA POR TERMINADO **EL POZO 1** (28-sep-2026): se le pone la PIEDRA LABRADA del tope en su
         // frente, que es lo que lee `VillageGenerator.laMinaLlegoAlTope`. Es la forma de medir el SEGUNDO POZO sin
         // esperar 240 pasos: en cuanto el pozo 1 esta topado, el minero tiene que ELEGIR el 2 (el suroeste, eje
