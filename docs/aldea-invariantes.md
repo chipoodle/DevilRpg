@@ -4252,7 +4252,42 @@ O sea: el criterio del traspaso («que `hechas` suba y `pasos` siga creciendo si
 cumple `hechas` **24/24**, `pasos` **40** y el pedernal del almacén **subiendo a su objetivo**; y el minero, que antes
 se pasaba la corrida colando, **completa la misma galería en la mitad de ticks**.
 
-### I148 · LA REGLA DEL CIELO: **UN AGUJERO CON TECHO ENCIMA NO ES UN CRÁTER** (28-sep-2026)
+### I149 · **NO SE TOCAN LOS RELLENOS DEL TERRENO A OJO**: LA COTA PUEDE NO CONVERGER Y EL PUEBLO SE RECONSTRUYE EN BUCLE (29-sep-2026)
+
+**Lo que pasó, y lo pagó el jugador**: *«la taberna está duplicada una arriba de otra, casas duplicadas, casas flotando, parcelas en otro nivel»*. Su log lo enseñó entero:
+
+```
+01:16:04  Aldea en {566, 92, 566}:  ... taberna construida en {590, 92, 580}
+01:16:12  Aldea en {566, 118, 566}: ... taberna construida en {590, 118, 580}
+01:17:28  kiosco de la plaza colocado a la cota 124
+01:17:52  ... a la cota 125     01:18:02 ... a la cota 126     01:18:12 ... a la cota 127
+```
+
+**La aldea se reconstruía sola cada pocos segundos y la cota SUBÍA en cada pasada** (92 → 118 → 124 → 125 → 126 → 127): el
+pueblo **modela el terreno** («despejados 2560 bloques», «picos de las esquinas quitados»), **la cota se calcula de ese
+terreno** (`cotaDeLaPlaza`), y con la cota nueva la aldea anterior queda «sin construir» → **vuelve a levantar otra
+encima**. Todo duplicado y flotando.
+
+**La causa fue una «regla del cielo»** que se metió el día antes en los **tres rellenos de terreno** (el nivelado, el
+sellado de la capa que se pisa y el tapagujeros del obrero): `if (!level.canSeeSky(pos)) return false;` —«un agujero
+con techo encima no es un cráter»—. La idea era buena para el hueco de la escalera y el tiro de la chimenea, pero
+**tocaba justo lo que decide la cota**, y el terreno dejó de estabilizarse.
+
+**REVERTIDA entera**, y **medido**: en una corrida del arnés de 22.560 ticks sobre el guardado del jugador, **0
+reconstrucciones** (ni una línea `pre-generada`, ni un `kiosco colocado`), cota quieta y **0 avisos** de rendición.
+Antes: una reconstrucción cada 8-10 s.
+
+**Y LA LECCIÓN, que es de método**: los rellenos del terreno **no se tocan a ojo**. Cualquier regla que los cambie
+tiene que **medir que la cota converge** (mirar que la aldea se construye **una** vez y que `kiosco de la plaza
+colocado a la cota N` sale **una** vez con la misma N), porque si la cota se mueve, el pueblo se reconstruye **encima**
+de lo que ya hay. Y **subir `CURRENT_LAYOUT`** es la otra mitad del mismo peligro: dispara la migración y el
+constructor **no retira lo viejo si está a otra cota** (un testigo nuevo que falle provoca exactamente el mismo
+duplicado). Las dos cosas se han retirado.
+
+### I148 · LA REGLA DEL CIELO: **RETIRADA** (28-sep-2026) — ver **I149**, que es por qué se quitó
+
+
+
 
 **Lo pidió el jugador**: *«haz una escalera contigua externa si es necesario… y también haz la chimenea más grande de
 tal manera que en el centro haya un hueco donde pueda estar una fogata hasta abajo y tenga salida el humo hasta
