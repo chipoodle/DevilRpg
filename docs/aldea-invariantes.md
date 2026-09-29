@@ -4252,37 +4252,31 @@ O sea: el criterio del traspaso («que `hechas` suba y `pasos` siga creciendo si
 cumple `hechas` **24/24**, `pasos` **40** y el pedernal del almacén **subiendo a su objetivo**; y el minero, que antes
 se pasaba la corrida colando, **completa la misma galería en la mitad de ticks**.
 
-### I149 · **NO SE TOCAN LOS RELLENOS DEL TERRENO A OJO**: LA COTA PUEDE NO CONVERGER Y EL PUEBLO SE RECONSTRUYE EN BUCLE (29-sep-2026)
+### I149 · LA COTA DE LA ALDEA **NO PUEDE MEDIRSE DOS VECES**: el pueblo modela el terreno del que sale (29-sep-2026)
 
-**Lo que pasó, y lo pagó el jugador**: *«la taberna está duplicada una arriba de otra, casas duplicadas, casas flotando, parcelas en otro nivel»*. Su log lo enseñó entero:
+**Lo que pasó, y lo pagó el jugador**: *«la taberna está duplicada una arriba de otra, casas duplicadas, casas flotando,
+parcelas en otro nivel»*. Su log lo enseñó entero, y **en tres vueltas**:
 
-```
-01:16:04  Aldea en {566, 92, 566}:  ... taberna construida en {590, 92, 580}
-01:16:12  Aldea en {566, 118, 566}: ... taberna construida en {590, 118, 580}
-01:17:28  kiosco de la plaza colocado a la cota 124
-01:17:52  ... a la cota 125     01:18:02 ... a la cota 126     01:18:12 ... a la cota 127
-```
+1. **Primera lectura**: la aldea se reconstruía sola y la cota **subía en cada pasada** (`92 → 118 → 124 → 125 → 126 →
+   127`), porque el pueblo **modela el terreno** («despejados 19602 bloques», «picos de las esquinas quitados») y
+   **`cotaDeLaPlaza` medía ese mismo terreno cada vez** que se le preguntaba (143 sitios). Con la cota nueva, todo lo
+   construido quedaba «sin construir» → **volvía a levantar la aldea encima**.
+2. **Segunda lectura (un error mío)**: se culpó a una «regla del cielo» que se había metido el día antes en los
+   **rellenos de terreno**. Se revirtió entera y **el bucle siguió** (el log del mundo nuevo: la aldea construida a la
+   cota **66** y en la pasada siguiente la **78**). O sea: **no era eso**.
+3. **La causa de verdad**: `cotaDeLaPlaza` **no tenía caché**. Y el primer caché que se puso **tampoco valía**, porque
+   usaba el **`BlockPos` completo como clave**… y **el centro de la aldea se pasa CON LA COTA DENTRO**
+   (`new BlockPos(x, cota, z)`): al moverse la cota **cambiaba la clave**, se volvía a medir y el caché no servía de
+   nada. El log lo delata a la vista: **`614, 70, 598`** y luego **`614, 94, 598`** — mismo X y Z, **distinta Y**.
 
-**La aldea se reconstruía sola cada pocos segundos y la cota SUBÍA en cada pasada** (92 → 118 → 124 → 125 → 126 → 127): el
-pueblo **modela el terreno** («despejados 2560 bloques», «picos de las esquinas quitados»), **la cota se calcula de ese
-terreno** (`cotaDeLaPlaza`), y con la cota nueva la aldea anterior queda «sin construir» → **vuelve a levantar otra
-encima**. Todo duplicado y flotando.
+**EL ARREGLO**: la cota es un **dato de la fundación**. Se mide **una vez** y se recuerda, con la clave en **mundo + X +
+Z** (nunca la Y).
 
-**La causa fue una «regla del cielo»** que se metió el día antes en los **tres rellenos de terreno** (el nivelado, el
-sellado de la capa que se pisa y el tapagujeros del obrero): `if (!level.canSeeSky(pos)) return false;` —«un agujero
-con techo encima no es un cráter»—. La idea era buena para el hueco de la escalera y el tiro de la chimenea, pero
-**tocaba justo lo que decide la cota**, y el terreno dejó de estabilizarse.
+**LA LECCIÓN**: **un caché con la clave mal elegida es peor que no tenerlo** (da falsa confianza), y el síntoma estaba
+en el log a la vista (la misma aldea, misma X/Z, cota distinta). Y de la primera vuelta queda lo bueno: **los rellenos
+del terreno no se tocan sin medir que la cota converge**, y **subir `CURRENT_LAYOUT`** dispara la migración, que
+construye **encima** de lo que ya hay si no lo retira.
 
-**REVERTIDA entera**, y **medido**: en una corrida del arnés de 22.560 ticks sobre el guardado del jugador, **0
-reconstrucciones** (ni una línea `pre-generada`, ni un `kiosco colocado`), cota quieta y **0 avisos** de rendición.
-Antes: una reconstrucción cada 8-10 s.
-
-**Y LA LECCIÓN, que es de método**: los rellenos del terreno **no se tocan a ojo**. Cualquier regla que los cambie
-tiene que **medir que la cota converge** (mirar que la aldea se construye **una** vez y que `kiosco de la plaza
-colocado a la cota N` sale **una** vez con la misma N), porque si la cota se mueve, el pueblo se reconstruye **encima**
-de lo que ya hay. Y **subir `CURRENT_LAYOUT`** es la otra mitad del mismo peligro: dispara la migración y el
-constructor **no retira lo viejo si está a otra cota** (un testigo nuevo que falle provoca exactamente el mismo
-duplicado). Las dos cosas se han retirado.
 
 ### I148 · LA REGLA DEL CIELO: **RETIRADA** (28-sep-2026) — ver **I149**, que es por qué se quitó
 
