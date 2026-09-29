@@ -18,6 +18,27 @@ segundo pozo): así el pueblo es el de siempre y la tasa es comparable con las d
 Y en **toda** la corrida, **7 avisos**: 3× la leñadora (`Llevando la madera`), 2× la recolectora saliendo de la
 huerta, 1× abonar y 1× entrenar.
 
+## La varianza es ENORME (y por eso la prueba es la ETIQUETA, no la tasa)
+
+Con el **mismo** código y el **mismo** arnés (modo minero, sin el tope), dos corridas del mismo día:
+
+| corrida | tasa (ventana 2.000-12.000) | avisos en la ventana | avisos en toda la corrida |
+|---|---|---|---|
+| `medida-tasa-hoy.log` (17:31) | **0,10** | **1** (entrenar) | 7 |
+| `medida-tanda1.log` (19:38) | **1,50** | **15** (7× `Recogiendo el corral`, 6× `Saliendo de la huerta`, 2× entrenar) | 29 |
+
+El guardado del jugador **no cambió** entre las dos (`level.dat` del 28-sep 10:57). Y **la etiqueta** sí distingue:
+en la primera hay **una** rendición; en la segunda hay **bucles** de dos etiquetas que estaban a 0-1.
+
+**Descartado con números** (lo primero que se sospechó, el segundo pozo): las posiciones de esos avisos están a
+**44-87** bloques del eje del pozo 2 (`437,675`), **fuera** de su zona de exclusión (radio 29); y el bancal del
+granjero, que sí está a **8**, queda **por encima de la cota**, y las exclusiones de suelo excluyen la superficie
+(`esCeldaDeLaMina` devuelve `false` para `y >= nivel - 1`), así que **no** le afectan.
+
+**Y el instrumento tiene su propio fallo, ya corregido**: el arnés **no para el servidor** (todas las corridas de
+antes acababan porque se mataban a mano), así que una tanda en serie se queda esperando para siempre: `tanda-tasa.ps1`
+ahora **corta por tiempo** (20 min de reloj ≈ 20.000 ticks, con la ventana en 2.000-12.000).
+
 ## La leñadora: dos cosas distintas (y una era un falso positivo)
 
 Los 3 avisos son de **la misma aldeana** (Tomasa) y el log dice exactamente qué pasa en cada uno:
