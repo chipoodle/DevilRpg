@@ -8196,12 +8196,14 @@ public final class VillageGenerator {
                         base.getZ() + TABERNA_ESCALERA_MESETA_Z)).is(Blocks.DARK_OAK_STAIRS)
                         && level.getBlockState(new BlockPos(base.getX() + TABERNA_ESCALERA_X, nivel + 4,
                         base.getZ() + TABERNA_ESCALERA_TOPE_Z)).is(Blocks.DARK_OAK_STAIRS);
-                // Y LA CHIMENEA CON TIRO (28-sep-2026; lo pidió el jugador): el CENTRO del caño tiene que ser AIRE.
-                // Una taberna con el pilar macizo (la de antes) falla esta prueba —a propósito, como la de la escalera
-                // vieja— y el pueblo la rehace entera: el solar se despeja y lo de sus cofres se guarda en el almacén.
-                boolean chimeneaConTiro = level.getBlockState(new BlockPos(base.getX() + TABERNA_HOGAR[0], nivel + 1,
-                        base.getZ() + TABERNA_HOGAR[1] - 1)).isAir();
-                return aPlomo && escaleraEnL && chimeneaConTiro;
+                // OJO: AQUÍ HUBO UN TESTIGO DEL TIRO DE LA CHIMENEA Y SE HA QUITADO (29-sep-2026). Subir
+                // `CURRENT_LAYOUT` para meter una construcción nueva **dispara la migración entera de la aldea ENCIMA
+                // de la que ya hay**: la migración despeja el solar de lo viejo **a la cota del plano**, y si la
+                // aldea vieja quedó a otra cota (o el despeje no la encuentra) se queda debajo y sale TODO DUPLICADO
+                // (lo reportó el jugador: *"la taberna está duplicada una arriba de otra, casas duplicadas, casas
+                // flotando, parcelas en otro nivel"*). Un testigo nuevo **no** es la forma de introducir un cambio de
+                // este tipo: hay que migrarlo con su propio paso, que retire lo viejo.
+                return aPlomo && escaleraEnL;
             }
         }
         return false;
