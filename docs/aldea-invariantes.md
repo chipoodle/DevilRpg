@@ -4301,9 +4301,32 @@ medias: el latido está detrás de `isUnderAttack`, `hayEnemigosDentro` y `vivos
 `aldeanos=0`**) no corría nunca. Corre al entrar al pueblo (`manageNearby`), que es donde los chunks están cargados.
 
 **MEDIDO** (`build/medida-tanda15.log`, sobre el guardado destrozado del jugador): `REPARADA (quitados **2473** bloques
-de restos por encima de la cota **62** y terreno nivelado)`, **kiosco a la cota 62**, y **una sola vez** cada cosa
-—taberna, almacén, corral con sus 13 faroles y 10 animales, herrería, pesquera, taller del leñador, barraca de la
+de restos por encima de la cota **62** y terreno nivelado)`, **kiosco a la cota 62**, y **una sola vez** cada
+cosa —taberna, almacén, corral con sus 13 faroles y 10 animales, herrería, pesquera, taller del leñador, barraca de la
 milicia, casas, iglesia y muro—, todas a la **misma cota 62** y con **0 reconstrucciones**.
+
+**Y DOS FALLOS MÁS, LOS DOS MÍOS, QUE SALIERON AL MEDIR** (trazado **76**):
+
+1. **El caché de la cota congelaba la medida tomada ANTES del trabajo de terreno.** La primera llamada la hace el
+   **guardia del bancal**, al principio de `generate`, cuando el terreno todavía es el natural (en una ladera, la
+   montaña cruda); el generador luego **despeja y nivela** y construye con **su** medida. Medido en el guardado del
+   jugador: la aldea 1 se construyó a la **74** y el latido levantó después el **kiosco, el almacén y el corral a la
+   103** — dos cotas en el mismo pueblo (eso era *«la segunda aldea está peor que antes»*). **El arreglo**: el generador
+   **FIJA** la cota en cuanto la conoce (`fijarLaCotaDeLaAldea`) y esa es la única para todos.
+2. **`sueloNatural` devolvía el bloque de suelo, no el nivel a los pies.** `groundY` (el heightmap) da el nivel al que
+   **se anda**, así que mezclar las dos convenciones hacía que **cada reparación bajara el pueblo un bloque** (medido:
+   aldea a 62 → la reparación midió 61 → la niveló a 61, con **12 avisos** de rutas rotas por el desnivel). **El
+   arreglo**: devolver `y + 1`.
+
+**Y una cosa que se probó y NO vale** (queda dicho para no repetirla): saltarse la reparación cuando los testigos
+«parecen» estar a la cota. La aldea 1 tenía **su huerta y su kiosco a la 97** (la plaza) y aun así el **almacén y el
+corral a la 103** y la **taberna y la mina a la 74**: pasó el testigo y se quedó partida. La reparación corre **una vez
+por aldea** al subir el trazado; el precio es demoler y volver a levantar un pueblo sano esa única vez.
+
+**MEDIDO, con el trazado 76, sobre la aldea 1 partida del jugador** (`build/medida-tanda20.log`): `REPARADA (quitados
+**20450** bloques de restos por encima de la cota **97**)`, y **kiosco, taberna, almacén, corral, herrería, pesquera y
+muro todos a la cota 97, una vez cada uno**, con **0 reconstrucciones y 0 avisos**. La aldea 0, que ya estaba sana a la
+62, solo se pone al día (`medida-tanda18.log`).
 
 
 ### I148 · LA REGLA DEL CIELO: **RETIRADA** (28-sep-2026) — ver **I149**, que es por qué se quitó
