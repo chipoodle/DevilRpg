@@ -6079,7 +6079,10 @@ public final class VillageGenerator {
         List<Integer> heights = new ArrayList<>();
         for (int x = -radius; x <= radius; x++) {
             for (int z = -radius; z <= radius; z++) {
-                heights.add(groundY(level, center.getX() + x, center.getZ() + z));
+                // EL SUELO NATURAL, NO EL BLOQUE MÁS ALTO (29-sep-2026): con `groundY` esta medida también contaba
+                // los tejados de la aldea anterior, así que la cota subía sola en cada reconstrucción («las
+                // construcciones salen elevadas»). Ver `sueloNatural`.
+                heights.add(sueloNatural(level, center.getX() + x, center.getZ() + z));
             }
         }
         Collections.sort(heights);
@@ -6109,7 +6112,8 @@ public final class VillageGenerator {
         for (int x = -radius; x <= radius; x++) {
             for (int z = -radius; z <= radius; z++) {
                 BlockPos columna = new BlockPos(center.getX() + x, 0, center.getZ() + z);
-                int g = groundY(level, center.getX() + x, center.getZ() + z);
+                // El suelo natural de la columna (no el tejado que haya encima): es desde donde hay que rellenar.
+                int g = sueloNatural(level, center.getX() + x, center.getZ() + z);
                 // Rellenar las columnas que estén por debajo del nivel base (sin tapar lo construido). La capa que
                 // se pisa va con césped, para que un relleno no se vea como un parche de tierra.
                 for (int y = g; y < baseY; y++) {
@@ -6283,11 +6287,39 @@ public final class VillageGenerator {
                 if (x * x + z * z > radio * radio) {
                     continue;
                 }
-                alturas.add(groundY(level, center.getX() + x, center.getZ() + z));
+                alturas.add(sueloNatural(level, center.getX() + x, center.getZ() + z));
             }
         }
         Collections.sort(alturas);
         return alturas.get(alturas.size() / 2);
+    }
+
+    /**
+     * EL SUELO DE VERDAD DE LA COLUMNA: el bloque natural más alto, <b>ignorando lo que el pueblo haya construido
+     * encima</b> (29-sep-2026).
+     * <p>
+     * Esto era <b>la raíz del bucle de reconstrucción y de que las construcciones salieran «elevadas»</b>: se medía
+     * con {@link #groundY} (el bloque MÁS ALTO de la columna, tejados incluidos), así que en cuanto la aldea tenía
+     * una pasada construida encima, la medida devolvía <b>su propio tejado</b> en vez del terreno. Medido en el log
+     * del jugador: el testigo «¿ya está construida?» buscaba el bancal a la cota <b>74</b> (el tejado de la pasada
+     * anterior) mientras la aldea se construía a la <b>51</b> (el terreno pelado) → no se reconocía nunca, y cada
+     * reconstrucción dejaba escombros más altos que volvían a subir la medida. La cota se estaba midiendo a sí misma.
+     * <p>
+     * Ahora baja desde {@link #groundY} hasta el primer bloque que sea terreno natural: césped, tierra, piedra, arena,
+     * agua (y su hielo). Un tejado de tablones, un muro de piedra labrada o un camino no cuentan como suelo.
+     */
+    static int sueloNatural(ServerLevel level, int x, int z) {
+        int alta = groundY(level, x, z);
+        int fondo = Math.max(level.getMinBuildHeight(), alta - 64); // un pueblo no entierra más de 64 bloques de escombro
+        for (int y = alta; y >= fondo; y--) {
+            BlockState state = level.getBlockState(new BlockPos(x, y, z));
+            // OJO: `esTerrenoNatural` da por buenos los troncos, las hojas y los cultivos (los respeta al despejar),
+            // así que aquí NO valen como suelo: si no, la copa de un árbol de la arboleda sería «el suelo».
+            if (esTerrenoNatural(state) && !isVegetation(state)) {
+                return y;
+            }
+        }
+        return alta; // sin terreno natural debajo (isla flotante de la aldea de mar): vale la medida de arriba
     }
 
     /** Cota ya medida de cada aldea (ver {@link #cotaDeLaPlaza}): su clave es el mundo y el centro. */
@@ -6743,6 +6775,54 @@ public final class VillageGenerator {
      * Solo se usa al <b>generar</b> una aldea (todavía no hay nada construido): en la migración de una aldea ya
      * construida, el despeje lo hacen las rutinas que solo quitan lo que no es terreno, para no derribar el pueblo.
      */
+    /**
+     * REPARA UNA ALDEA QUE QUEDÓ APILADA (29-sep-2026, migración 75): quita <b>todo</b> lo que hay por encima de la
+     * cota dentro del recinto y deja el terreno liso a esa cota, para que el pueblo se vuelva a levantar una sola vez.
+     * <p>
+     * <b>Por qué hizo falta</b>: la cota se medía con {@link #groundY} (el bloque más alto, tejados incluidos), así que
+     * la aldea se medía a sí misma y cada pasada la construía a otra altura. El destrozo que reportó el jugador
+     * (*«solo muros, un hoyo enorme en medio de la aldea y la taberna hundida»*) se explica con dos detalles:
+     * <ul>
+     *   <li>El <b>despeje normal respeta los TRONCOS</b> ({@link #esTerrenoNatural} los da por buenos, para no talar
+     *       los árboles del mundo), y el <b>muro de la aldea es de troncos</b>: sobrevivía a todas las limpiezas.</li>
+     *   <li>El <b>recorte</b> del nivelado bajaba el terreno a la cota nueva, así que el muro viejo quedaba
+     *       <b>flotando</b> sobre el hueco. De ahí «solo muros» y «el hoyo enorme».</li>
+     * </ul>
+     * Aquí sí se quitan troncos, hojas y cultivos, porque es una reparación explícita y de una sola vez: después, el
+     * pueblo entero se reconstruye (casas, muro, huerta y lo que repone el latido) a la cota de la plaza.
+     */
+    public static void repararLaAldeaApilada(ServerLevel level, BlockPos center) {
+        int cota = cotaDeLaPlaza(level, center);
+        int radius = LEVEL_RADIUS; // el recinto: el muro va a FENCE_RADIUS y entra en el barrido
+        int quitados = 0;
+        for (int x = -radius; x <= radius; x++) {
+            for (int z = -radius; z <= radius; z++) {
+                if (x * x + z * z > radius * radius) {
+                    continue;
+                }
+                int x0 = center.getX() + x;
+                int z0 = center.getZ() + z;
+                int alta = groundY(level, x0, z0);
+                // De la cota hacia ARRIBA: todo lo que no sea aire se va (troncos, hojas y cultivos incluidos). Hacia
+                // abajo no se toca NADA: la mina, la pesquera y el relleno del terreno viven por debajo.
+                for (int y = cota + 1; y <= alta; y++) {
+                    BlockPos pos = new BlockPos(x0, y, z0);
+                    if (level.getBlockState(pos).isAir()) {
+                        continue;
+                    }
+                    colocar(level, pos, Blocks.AIR.defaultBlockState(), 3);
+                    quitados++;
+                }
+            }
+        }
+        // El terreno, liso a la cota (y con su talud): ahora `nivelar` mide el suelo natural, no los tejados.
+        nivelar(level, center, LEVEL_RADIUS, cota);
+        DevilRpg.LOGGER.info(
+                "[Village] Aldea en {}: REPARADA (quitados {} bloques de restos por encima de la cota {} y terreno "
+                        + "nivelado); el pueblo se levanta de nuevo a esa cota",
+                center, quitados, cota);
+    }
+
     private static void despejarVolumen(ServerLevel level, BlockPos center, int radius) {
         int quitados = 0;
         for (int x = center.getX() - radius; x <= center.getX() + radius; x++) {

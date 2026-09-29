@@ -768,9 +768,19 @@ public final class VillageManager {
      *       encima —el <b>hueco de la escalera</b> de la taberna, el tiro de la chimenea, un patio interior— <b>no</b> es
      *       un cráter y no se rellena. La taberna vieja se rehace (su testigo nuevo es el tiro:
      *       {@code VillageGenerator.tabernaConstruida}).</li>
+     *   <li><b>75:</b> <b>LA COTA YA NO SE MIDE A SÍ MISMA</b>. La medida del suelo era {@code groundY} (el bloque
+     *       <b>más alto</b> de la columna, <b>tejados incluidos</b>), así que en cuanto había una pasada construida
+     *       encima, la aldea medía <b>su propio tejado</b>: el testigo «¿ya está construida?» buscaba el bancal a la
+     *       cota <b>74</b> mientras la construcción iba a la <b>51</b> (el terreno pelado) → no se reconocía nunca y
+     *       volvía a levantar la aldea ENCIMA, cada vez más arriba. De ahí *«las construcciones salen elevadas»* y la
+     *       aldea apilada. Ahora se mide el <b>suelo natural</b> ({@code VillageGenerator.sueloNatural}: baja hasta el
+     *       primer bloque de terreno, ignorando lo construido y la vegetación). Y como las aldeas ya destrozadas
+     *       tenían el <b>muro de troncos</b> flotando —el despeje respeta los troncos para no talar árboles—, esta
+     *       versión las <b>repara de una vez</b>: quita todo lo que hay por encima de la cota dentro del recinto,
+     *       nivela y reconstruye ({@code repararLaAldeaApilada}). Ver I149.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 74;
+    public static final int CURRENT_LAYOUT = 75;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -917,6 +927,15 @@ public final class VillageManager {
             }
             noticeIfNear(level, player, i, target);
             if (distSqr <= (double) ARRIVE_RADIUS * ARRIVE_RADIUS) {
+                // REPARACIÓN DE UNA ALDEA APILADA (versión 75, una sola vez): va AQUÍ, y no dentro del latido del
+                // pueblo, a propósito. El latido está detrás de `isUnderAttack`, de `hayEnemigosDentro` y de
+                // `vivos > 0`, así que en una aldea con un asedio en pausa, un bicho dentro o sin aldeanos cerca la
+                // migración NO se ejecutaba nunca (medido en el arnés: `aldeanos=0` y asedio en pausa → 0 líneas del
+                // pueblo, 0 reparaciones). Esto tiene que correr con el pueblo cargado y el jugador dentro, pase lo
+                // que pase. Ver I149.
+                if (saved.isGenerated(i) && saved.getLayout(i) < CURRENT_LAYOUT && level.hasChunkAt(target)) {
+                    repararLaAldeaApilada(level, saved, i, target);
+                }
                 // DESCUBRIMIENTO (lo pidió el jugador): al ENTRAR en la aldea queda apuntada como descubierta, y eso
                 // le pone su NOMBRE en la barra de aldea y la guarda en el Diario del Invocado con sus coordenadas.
                 // Solo cuenta si ha entrado de verdad (no vale verla de lejos, que para eso está el aviso de
@@ -2091,6 +2110,52 @@ public final class VillageManager {
      * bloque debería haber en cada sitio) y nombra un <b>obrero</b> si no lo hay. Al de partidas viejas se le
      * pone antes la granja, para que el plano la incluya.
      */
+    /**
+     * REPARA DE UNA VEZ UNA ALDEA QUE QUEDÓ APILADA (29-sep-2026, versión de trazado 75).
+     * <p>
+     * Quita los restos que dejaron las pasadas anteriores —el <b>muro de troncos</b> sobre todo, que el despeje
+     * normal respeta para no talar árboles—, nivela el terreno a la cota de verdad y vuelve a levantar lo que el
+     * despeje se llevó. Lo demás (kiosco, taberna, almacén, corral, pesquera, taller, caseta del minero, arboleda) lo
+     * repone el latido, que va viendo que faltan sus testigos. Se marca el trazado como al día al terminar, así que
+     * corre una sola vez.
+     */
+    public static void repararLaAldeaApilada(ServerLevel level, VillageSavedData saved, int objectiveIndex,
+            BlockPos center) {
+        int antes = saved.getLayout(objectiveIndex);
+        VillageGenerator.repararLaAldeaApilada(level, center);
+        VillageGenerator.actualizarCasas(level, center);
+        VillageGenerator.actualizarTemplo(level, center);
+        VillageGenerator.rehacerMuro(level, center);
+        VillageGenerator.farm(level, center);
+        // Y SE LEVANTA TODO LO DEMÁS AQUÍ MISMO, con las mismas funciones que usa el latido para reponer lo que
+        // falta. Si se dejara al latido, la reparación quedaría a medias mientras haya un asedio en pausa, un bicho
+        // dentro o ningún aldeano cerca (el latido está detrás de esos tres guardias): medido en el arnés, el pueblo
+        // se quedaba sin kiosco, sin almacén y sin taberna. Son todas "asegurar" (cada una mira su testigo), así que
+        // llamarlas de más no hace nada.
+        VillageGenerator.asegurarKiosco(level, center);
+        VillageGenerator.asegurarAlmacen(level, center);
+        VillageGenerator.asegurarTaberna(level, center);
+        VillageGenerator.asegurarCocina(level, center);
+        VillageGenerator.asegurarHerreria(level, center);
+        VillageGenerator.asegurarGranjaAnexa(level, center);
+        VillageGenerator.asegurarGallinero(level, center);
+        VillageGenerator.asegurarCercaDelAnexo(level, center);
+        VillageGenerator.asegurarBarraca(level, center);
+        VillageGenerator.asegurarElTallerDelLenador(level, center);
+        VillageGenerator.asegurarLaMinaDelPueblo(level, center);
+        VillageGenerator.asegurarPesquera(level, center);
+        VillageGenerator.asegurarArboleda(level, center);
+        VillageGenerator.asegurarOrilla(level, center);
+        VillageGenerator.asegurarTalud(level, center);
+        VillageGenerator.criarRebanoInicial(level, center);
+        VillageGenerator.reponerPecesDelLago(level, center);
+        VillageGenerator.captureBlueprint(level, center); // el plano vuelve a ser lo que el pueblo es ahora
+        saved.setCasasVersion(objectiveIndex, CURRENT_HOUSES);
+        saved.setLayout(objectiveIndex, CURRENT_LAYOUT);
+        DevilRpg.LOGGER.info("[Village] Aldea {}: REPARADA la aldea apilada (trazado {} -> {}, centro {})",
+                objectiveIndex, antes, CURRENT_LAYOUT, center);
+    }
+
     private static void prepareRepairs(ServerLevel level, VillageSavedData saved, int objectiveIndex, BlockPos center, List<Villager> aldeanos) {
         // Cambios de TRAZADO que hay que aplicar también a las aldeas ya construidas:
         //  1-2: granja (cultivos, acequia, compostero) y su nivelado a un solo nivel.
@@ -2100,6 +2165,18 @@ public final class VillageManager {
         //  6:   las cabañas procedurales se sustituyen por CASAS DEL JUEGO (con la marca `hasNewHouses`, para no
         //       reconstruir las que ya son nuevas: rehacer una casa borra lo que haya dentro).
         if (saved.getLayout(objectiveIndex) < CURRENT_LAYOUT) {
+            // REPARACIÓN (75, 29-sep-2026): las aldeas que quedaron APILADAS porque la cota se medía a sí misma
+            // (ver I149) se limpian de una vez: fuera todo lo que hay por encima de la cota —incluido el muro de
+            // TRONCOS, que el despeje normal respeta por no talar árboles— y el terreno queda liso a la cota. Como
+            // eso se lleva por delante las casas, se vuelven a levantar aquí mismo; el resto (kiosco, taberna,
+            // almacén, corral, pesquera, taller, caseta del minero, arboleda) lo repone el latido, que va viendo
+            // que faltan sus testigos. Es de una sola vez: después la cota ya no se mueve.
+            if (saved.getLayout(objectiveIndex) < 75) {
+                VillageGenerator.repararLaAldeaApilada(level, center);
+                VillageGenerator.actualizarCasas(level, center);
+                VillageGenerator.actualizarTemplo(level, center);
+                saved.setCasasVersion(objectiveIndex, CURRENT_HOUSES);
+            }
             int casas = saved.getCasasVersion(objectiveIndex);
             // DESPEJE DEL RECINTO: los árboles que quedaron DENTRO de la muralla se quitan (el pueblo se funda en un
             // claro). Va lo PRIMERO, antes de rehacer nada, y se distingue un árbol del muro por su FORMA (el muro son
