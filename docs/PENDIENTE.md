@@ -234,8 +234,14 @@ no consigue llegar a 514, 63, 640 desde 514, 63, 641
 **La causa**: el destino que se calcula para «recoger el corral» cae en una celda **ocupada por la valla** (y encima
 tiene otra): **no es pisable**, así que la ruta es **de un nodo** y el aldeano **se rinde siempre**, en bucle.
 
-**El arreglo que toca**: que el destino del corral sea una **casilla de pie de verdad** (la que ya sabe calcular
-`VillageManager`), no la celda de la valla. **Criterio**: `Recogiendo el corral` **7 → 0** en la ventana.
+**Y el mapa del corral lo confirma** (`build/slice_mina.py 508 520 634 646 62 64`, sobre el guardado): el corral tiene
+**vallas dobles** (`O` en `y=63` **y** en `y=64`, el muro del corral) y dentro hay **fardos de heno** (`H`). El destino
+`513,63,640` **es la valla sur**: o sea que hay un **ítem dentro de la valla** —un **huevo**—, inalcanzable.
+
+**Y por eso es un bucle aunque haya «punto fallido»**: cada huevo que pone la gallina es un **ítem NUEVO**, así que el
+punto apartado no cubre al siguiente. **El arreglo que toca**: al elegir el ítem suelto, **descartar los que están
+dentro de un bloque** (su celda no es aire): no se pueden recoger y solo sirven para que el ganadero se rinda.
+**Criterio**: `Recogiendo el corral` **7 → 0** en la ventana.
 
 **Y EL RECOLECTOR EN EL BANCAL** (mismo log, 6 en la ventana): se rinde desde `484,62,658` con **`pies=farmland`** y
 `cabeza=wheat` —o sea **encajada dentro del cultivo**, un bloque POR DEBAJO de la cota—, y ahí mismo tiene una ruta a la
