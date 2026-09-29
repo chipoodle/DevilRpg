@@ -4281,6 +4281,30 @@ en el log a la vista (la misma aldea, misma X/Z, cota distinta). Y de la primera
 del terreno no se tocan sin medir que la cota converge**, y **subir `CURRENT_LAYOUT`** dispara la migración, que
 construye **encima** de lo que ya hay si no lo retira.
 
+**Y LA CAUSA DE VERDAD, que apareció después**: `groundY` devuelve **el bloque más alto de la columna, tejados
+incluidos**, así que la aldea **medía su propio tejado**. El testigo «¿ya está construida?» buscaba el bancal a la cota
+**74** (el tejado de la pasada anterior) mientras la construcción iba a la **51** (el suelo pelado) → no se reconocía
+nunca → reconstruía encima, cada vez más arriba (eso era *«las construcciones salen elevadas»* del principio, y el
+`92 → 118 → 124 → 125 → 126 → 127` de la primera vuelta). El caché no podía arreglarlo: cacheaba una medida que
+**cambiaba sola**. Y el destrozo *«solo muros, un hoyo enorme y la taberna hundida»*: el **muro es de TRONCOS** y el
+despeje **respeta los troncos** (para no talar árboles), así que sobrevivía a todas las limpiezas mientras el nivelado
+**recortaba el terreno** a la cota nueva → el muro quedaba **flotando sobre el hueco**.
+
+**EL ARREGLO DE VERDAD**: `VillageGenerator.sueloNatural(level, x, z)` — el suelo **natural** de la columna (baja desde
+`groundY` hasta el primer bloque de terreno, ignorando lo construido **y la vegetación**, que `esTerrenoNatural` da por
+buena), usado en las **dos** medidas: `levelTerrain` (la que construye) y `cotaDeLaPlaza` (la del testigo).
+
+**Y LA REPARACIÓN DE LAS ALDEAS YA APILADAS** (trazado **75**, `repararLaAldeaApilada`): quita **todo** lo que hay por
+encima de la cota dentro del recinto (**troncos incluidos**), nivela el terreno y **vuelve a levantar el pueblo entero**
+—casas, templo, muro, huerta y **todos** los `asegurar*` del latido—, porque dejar el resto al latido lo dejaba a
+medias: el latido está detrás de `isUnderAttack`, `hayEnemigosDentro` y `vivos > 0`, y en el arnés (**asedio en pausa,
+`aldeanos=0`**) no corría nunca. Corre al entrar al pueblo (`manageNearby`), que es donde los chunks están cargados.
+
+**MEDIDO** (`build/medida-tanda15.log`, sobre el guardado destrozado del jugador): `REPARADA (quitados **2473** bloques
+de restos por encima de la cota **62** y terreno nivelado)`, **kiosco a la cota 62**, y **una sola vez** cada cosa
+—taberna, almacén, corral con sus 13 faroles y 10 animales, herrería, pesquera, taller del leñador, barraca de la
+milicia, casas, iglesia y muro—, todas a la **misma cota 62** y con **0 reconstrucciones**.
+
 
 ### I148 · LA REGLA DEL CIELO: **RETIRADA** (28-sep-2026) — ver **I149**, que es por qué se quitó
 
