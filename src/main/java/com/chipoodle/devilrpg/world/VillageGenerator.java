@@ -6137,6 +6137,13 @@ public final class VillageGenerator {
                             || estaSobreElPozo(center, celda))) {
                         continue;
                     }
+                    // Y LO QUE TIENE TECHO ENCIMA TAMPOCO ES UN HUECO (28-sep-2026; LA REGLA DEL CIELO): el nivelado
+                    // rellena los hoyos del patio a cielo abierto, no el interior de un edificio. Sin esto, la celda
+                    // del HOGAR de la taberna (a la cota, bajo el forjado de la posada) se rellenaba de césped y la
+                    // fogata desaparecía de su propio hogar.
+                    if (actual.isAir() && !level.canSeeSky(celda)) {
+                        continue;
+                    }
                     if (!actual.isAir() && !esTerrenoRecortable(actual)) {
                         continue; // ni lo construido ni los troncos (muro, casas) se tapan
                     }
@@ -6200,6 +6207,15 @@ public final class VillageGenerator {
                 // congelado). `sellarSuelo` no miraba la mina en absoluto; `nivelar` la protege por `esCeldaDeLaMina`
                 // salvo la capa de arriba, así que las dos preguntas van juntas.
                 if (estaSobreElPozo(center, new BlockPos(px, baseY - 1, pz))) {
+                    continue;
+                }
+                // Y LO QUE TIENE TECHO ENCIMA NO ES UN HUECO DEL SUELO (28-sep-2026; LA REGLA DEL CIELO, la misma que en
+                // el tapagujeros del obrero): este tapado es para los hoyos del patio, **a cielo abierto**, no para el
+                // interior de un edificio. MEDIDO con el mapa de capas: la FOGATA del hogar de la taberna —que está a
+                // la cota y justo debajo del forjado de la posada— aparecía convertida en TIERRA (su celda salía con
+                // `D`), así que el comedor se quedaba sin fuego. Lo pidió el jugador: *"en el centro haya un hueco donde
+                // pueda estar una fogata"*.
+                if (!level.canSeeSky(new BlockPos(px, baseY - 1, pz))) {
                     continue;
                 }
                 if (!level.getBlockState(new BlockPos(px, baseY - 1, pz)).isAir()) {
