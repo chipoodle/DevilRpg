@@ -4252,7 +4252,45 @@ O sea: el criterio del traspaso («que `hechas` suba y `pasos` siga creciendo si
 cumple `hechas` **24/24**, `pasos` **40** y el pedernal del almacén **subiendo a su objetivo**; y el minero, que antes
 se pasaba la corrida colando, **completa la misma galería en la mitad de ticks**.
 
+### I148 · LA REGLA DEL CIELO: **UN AGUJERO CON TECHO ENCIMA NO ES UN CRÁTER** (28-sep-2026)
+
+**Lo pidió el jugador**: *«haz una escalera contigua externa si es necesario… y también haz la chimenea más grande de
+tal manera que en el centro haya un hueco donde pueda estar una fogata hasta abajo y tenga salida el humo hasta
+arriba… si encuentras una regla que solucione este rollo y no conflictúe con ninguna otra, esa la implementamos»*.
+
+**Lo que había, medido** (`build/slice_mina.py` sobre el guardado del jugador):
+
+1. **La taberna SÍ tiene escalera** (en L, doble, `escaleraDeLaTaberna`) — **no hacía falta una escalera nueva**—,
+   pero su **hueco en el forjado de la posada** (`y=67`) estaba **RELLENO DE TIERRA** (`D` en toda la planta): la
+   escalera no llevaba a ninguna parte y los aldeanos que el latido sube a las camas de arriba se quedaban
+   **sin ruta** (`nav=[sin ruta]`, la ruta de un solo nodo: ellos mismos).
+2. **La chimenea era un PILAR MACIZO** de ladrillo (`B`) de la cota a cinco bloques sobre el techo: **sin tiro**, el
+   humo no podía salir y en el centro no cabía nada.
+
+**Quién cegaba el hueco**: el **tapagujeros del pueblo** (`VillageManager.esAgujeroDelSuelo`), que por bloques ve un
+hueco interior igual que un cráter de creeper (aire con suelo de aldea debajo, a ≤4 de profundidad).
+
+**LA REGLA** (una línea, y arregla los dos casos):
+
+```java
+// Un cráter está A CIELO ABIERTO; el aire bajo un forjado, un techo o un tejado es DEL EDIFICIO.
+if (!level.canSeeSky(pos)) {
+    return false;
+}
+```
+
+**Y no conflictúa con ninguna otra**: un hoyo debajo de un **árbol** sí ve el cielo (las hojas lo dejan pasar) y se
+tapa como siempre; la **mina** ya está excluida justo antes (`estaSobreElPozo`), así que su pozo y sus galerías siguen
+protegidos; y las reparaciones del **plano** no cambian (el plano solo mira dos bloques bajo la cota).
+
+**Y la chimenea**: el caño pasa de pilar macizo a **tubo de 3×3 con el centro de aire** desde la cota hasta el remate
+(el remate es de losas **alrededor**, con el centro abierto), y **la cara que da al hogar se deja sin tocar** —el hogar
+está justo al otro lado del muro—, así que el aire del hogar y el tiro quedan **conectados** y el humo de la fogata
+sube por dentro y sale arriba. La taberna vieja **se rehace sola**: su testigo nuevo es el tiro
+(`tabernaConstruida`) y `CURRENT_LAYOUT` sube a **74**.
+
 ### I147 · EL GANADERO Y EL HUECO **DENTRO** DE LA VALLA: un ítem inalcanzable, y **nuevo** cada vez (28-sep-2026)
+
 
 **El caso, medido** (`build/medida-tanda1.log`): **7 rendiciones en la ventana** (12 en toda la corrida), todas de la
 misma ganadera, y el aviso lo dice entero:
