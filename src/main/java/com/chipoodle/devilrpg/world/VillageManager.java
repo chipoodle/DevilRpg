@@ -760,9 +760,17 @@ public final class VillageManager {
      *       patio <b>más</b> la ausencia del primer escalón, ver {@code VillageGenerator.barracaConstruida}), y
      *       <b>antes</b> de rehacerlas se vacían sus dos arcas al almacén para no perder lo que tengan dentro
      *       ({@code vaciarLasArcasDeLaBarraca}). Ver I119–I123.</li>
+     *   <li><b>74:</b> la <b>CHIMENEA DE LA TABERNA CON TIRO</b> (lo pidió el jugador: *"haz la chimenea mas grande de
+     *       tal manera que en el centro haya un hueco donde pueda estar una fogata hasta abajo y tenga salida el humo
+     *       hasta arriba"*). Era un <b>pilar macizo</b> de ladrillo de la cota al remate: sin tiro y sin hueco. Ahora es
+     *       un caño de 3×3 con el <b>centro de aire</b> y la cara del hogar abierta, así que el humo sale. Y con ella,
+     *       la <b>REGLA DEL CIELO</b> en el tapagujeros ({@code VillageManager.esAgujeroDelSuelo}): un agujero con techo
+     *       encima —el <b>hueco de la escalera</b> de la taberna, el tiro de la chimenea, un patio interior— <b>no</b> es
+     *       un cráter y no se rellena. La taberna vieja se rehace (su testigo nuevo es el tiro:
+     *       {@code VillageGenerator.tabernaConstruida}).</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 73;
+    public static final int CURRENT_LAYOUT = 74;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -5851,6 +5859,19 @@ public final class VillageManager {
         // regenerar ningún otro trabajador, ya que se taladraría seguido; quien puede regenerar lo que construya es
         // el propio minero"*.
         if (VillageGenerator.estaSobreElPozo(centro, pos)) {
+            return false;
+        }
+        // Y **LO QUE TIENE TECHO ENCIMA NO ES UN CRÁTER** (28-sep-2026). Es UNA REGLA y arregla dos cosas de golpe: un
+        // cráter de creeper está **a cielo abierto**, mientras que el aire que está debajo de un forjado, un techo o un
+        // tejado es **del edificio**: el **hueco de la escalera** (para que la planta de arriba tenga salida) y el
+        // **tiro de la chimenea** (para que el humo salga), además de cualquier patio interior.
+        // MEDIDO con el mapa de capas (`build/slice_mina.py`) sobre el guardado: el forjado de la posada de la taberna
+        // (`y=67`), el hueco por el que sube su escalera, estaba **RELLENO DE TIERRA** — lo había tapado este mismo
+        // tapagujeros—, así que la escalera no llevaba a ninguna parte y los aldeanos que el latido sube a las camas
+        // de arriba se quedaban **sin ruta** (`nav=[sin ruta]`, la ruta de un solo nodo: ellos mismos).
+        // Y no choca con lo demás: un hoyo debajo de un ÁRBOL **sí** ve el cielo (las hojas lo dejan pasar) y se tapa
+        // como siempre, y la mina ya está excluida justo arriba.
+        if (!level.canSeeSky(pos)) {
             return false;
         }
         return esSueloDeLaAldea(level.getBlockState(pos.below()));

@@ -8180,7 +8180,12 @@ public final class VillageGenerator {
                         base.getZ() + TABERNA_ESCALERA_MESETA_Z)).is(Blocks.DARK_OAK_STAIRS)
                         && level.getBlockState(new BlockPos(base.getX() + TABERNA_ESCALERA_X, nivel + 4,
                         base.getZ() + TABERNA_ESCALERA_TOPE_Z)).is(Blocks.DARK_OAK_STAIRS);
-                return aPlomo && escaleraEnL;
+                // Y LA CHIMENEA CON TIRO (28-sep-2026; lo pidió el jugador): el CENTRO del caño tiene que ser AIRE.
+                // Una taberna con el pilar macizo (la de antes) falla esta prueba —a propósito, como la de la escalera
+                // vieja— y el pueblo la rehace entera: el solar se despeja y lo de sus cofres se guarda en el almacén.
+                boolean chimeneaConTiro = level.getBlockState(new BlockPos(base.getX() + TABERNA_HOGAR[0], nivel + 1,
+                        base.getZ() + TABERNA_HOGAR[1] - 1)).isAir();
+                return aPlomo && escaleraEnL && chimeneaConTiro;
             }
         }
         return false;
@@ -8547,10 +8552,35 @@ public final class VillageGenerator {
     private static void chimeneaDeLaTaberna(ServerLevel level, int bx, int bz, int nivel, int yTecho) {
         int hx = TABERNA_HOGAR[0];
         int hz = TABERNA_HOGAR[1] - 1;   // un bloque por FUERA del muro: tapa la boca del hogar
+        // UN CAÑO HUECO, CON SU TIRO (28-sep-2026; lo pidió el jugador: *"haz la chimenea mas grande de tal manera que
+        // en el centro haya un hueco donde pueda estar una fogata hasta abajo y tenga salida el humo hasta arriba"*).
+        // ANTES esto era un PILAR MACIZO de ladrillo de la cota al remate: no había tiro, el humo no podía salir y en el
+        // centro no cabía nada (medido en el guardado, `build/slice_mina.py`: una columna de `B` de arriba abajo).
+        // Ahora es un tubo de 3x3 con el CENTRO DE AIRE desde la cota hasta el remate, y **la cara que da al hogar se
+        // deja SIN tocar**: el hogar está justo al otro lado del muro, así que su aire y el tiro quedan conectados y el
+        // humo de la fogata sube por dentro y sale por arriba. (Y ya no puede cegarlo el tapagujeros: ver la regla del
+        // cielo en `VillageManager.esAgujeroDelSuelo`.)
         for (int y = nivel; y <= yTecho + 5; y++) {
-            colocar(level, new BlockPos(bx + hx, y, bz + hz), Blocks.BRICKS.defaultBlockState(), 3);
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    if (dx == 0 && dz == 0) {
+                        colocar(level, new BlockPos(bx + hx, y, bz + hz), Blocks.AIR.defaultBlockState(), 3);
+                    } else if (dz != 1) { // la cara sur es la del hogar: se deja como está (ahí está la boca)
+                        colocar(level, new BlockPos(bx + hx + dx, y, bz + hz + dz),
+                                Blocks.BRICKS.defaultBlockState(), 3);
+                    }
+                }
+            }
         }
-        colocar(level, new BlockPos(bx + hx, yTecho + 6, bz + hz), Blocks.BRICK_SLAB.defaultBlockState(), 3);
+        // El remate, ALREDEDOR del tiro (el centro se queda abierto para que el humo salga).
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                if (dx != 0 || dz != 0) {
+                    colocar(level, new BlockPos(bx + hx + dx, yTecho + 6, bz + hz + dz),
+                            Blocks.BRICK_SLAB.defaultBlockState(), 3);
+                }
+            }
+        }
     }
 
     /**
