@@ -189,6 +189,34 @@ entran**). Detalle en `tools/arnes/medidas-entreno.txt` / la invariante **I145**
 **Lo que queda de este caso**: el último salto al puesto (los 6-7 bloques) no tiene ruta desde el tramo; es un tropiezo
 puntual, no un bucle.
 
+### 11. LA POSADA SIN ESCALERA: el latido sube aldeanos a una planta de la que NO SE PUEDE BAJAR (28-sep-2026)
+
+**El caso, medido** (`build/medida-tasa-hoy.log`): la leñadora daba **dos avisos** de rendición con
+`nav=[sin ruta]`, **`cerebro=-`**, `suelo=dark_oak_planks` y su posición en **`511,68,667`** — y la ruta que tenía era
+**de un solo nodo: ella misma**.
+
+**La causa raíz, medida con el mapa de capas** (`build/slice_mina.py`, sobre el guardado del jugador):
+
+* En **`y=68`** está la planta de arriba de la posada: sus **camas** (`R` = `red_bed`) y sus muros, **cerrada** por
+  muros de tierra en todo el perímetro.
+* En **`y=67`** —el suelo de esa planta— **es tierra maciza (`D`) en TODA la planta**, con troncos (`L`) en los
+  bordes: **no hay un solo hueco de escalera**. Esa planta **no tiene salida**.
+
+**Y el aldeano llegó ahí por el propio pueblo**: el latido (`VillageManager.acostarAlQueNoLlega` / la celda de espera
+de I43) **mueve** al aldeano hasta su cama cuando no llega andando — y si la cama libre que le toca está **arriba**,
+lo deja **arriba**, en una planta de la que el planificador **no encuentra salida** (`nav=[sin ruta]`, la ruta de un
+nodo). Después de los avisos **acaba saliendo** (en esa corrida siguió con su oficio: `Guardando lo suyo`), así que no
+es un bucle de los de antes, pero **el agujero está ahí**.
+
+**Y NO se arregla con lo que ya se probó**: el doc de I43 ya dejó medido que exigir «misma planta y ≤3 bloques» para
+la celda de espera **empeora** las cosas (`CAMAS RESUMEN: … SIN CAMA` porque las únicas libres eran las de la posada).
+
+**Lo que toca** (elegir uno, ninguno hecho): **(a)** que el latido, si el aldeano está en una celda **sin ruta viva**
+(el mismo caso que él creó al subirlo), lo **baje** a una celda con ruta —el mecanismo de mover los últimos bloques ya
+existe y ya se usa para subirlo, así que es el arreglo coherente—; **(b)** que las camas de una planta **inaccesible**
+no entren en el reparto (midiendo antes que no deja `SIN CAMA`); o **(c)** dar **escalera** a esa planta en el
+generador (es construcción: obliga a migración del mundo ya construido).
+
 ### 1. El `JOB_SITE` del minero (el cortapiedras, un bloque): **medido, y no cuesta nada** (cerrado)
 
 Medido en la corrida en la que la mina ya funciona de punta a punta (297 muestras del minero, `t=11.720`):
