@@ -6256,6 +6256,20 @@ public final class VillageGenerator {
      * (colocar cosas a la Y del centro del objetivo es un error: puede caer en otra capa y quedar flotando).
      */
     public static int cotaDeLaPlaza(ServerLevel level, BlockPos center) {
+        // LA COTA SE MIDE **UNA VEZ** Y NO CAMBIA (29-sep-2026). Antes se medía **cada vez** que se preguntaba (143
+        // llamadas), y como el pueblo **modela ese mismo terreno** (despeja el volumen de la aldea, quita los picos de
+        // las esquinas, añade el talud, tapa barrancas), la medida **se movía sola**: en el log del jugador, la aldea
+        // se construía a la cota **66** y en la pasada siguiente ya era la **78** (una ladera: 19.602 bloques
+        // despejados). Con la cota nueva, todo lo que se había construido a la 66 quedaba «sin construir»… y el pueblo
+        // **volvía a levantar la aldea ENCIMA**: la taberna duplicada, las casas flotando y las parcelas a otro nivel
+        // que reportó el jugador. La cota de una aldea es un **dato de su fundación**: se mide la primera vez (terreno
+        // natural) y se recuerda.
+        return COTA_DE_LA_ALDEA.computeIfAbsent(level.dimension().location() + "@" + center.asLong(),
+                k -> medirLaCotaDeLaPlaza(level, center));
+    }
+
+    /** La medida de la cota (solo la primera vez por aldea; ver {@link #cotaDeLaPlaza}). */
+    private static int medirLaCotaDeLaPlaza(ServerLevel level, BlockPos center) {
         List<Integer> alturas = new ArrayList<>();
         int radio = 6;
         for (int x = -radio; x <= radio; x++) {
@@ -6269,6 +6283,9 @@ public final class VillageGenerator {
         Collections.sort(alturas);
         return alturas.get(alturas.size() / 2);
     }
+
+    /** Cota ya medida de cada aldea (ver {@link #cotaDeLaPlaza}): su clave es el mundo y el centro. */
+    private static final java.util.Map<String, Integer> COTA_DE_LA_ALDEA = new java.util.concurrent.ConcurrentHashMap<>();
 
     /**
      * Añade un talud (pendiente escalonada) alrededor del área plana de la aldea: cuanto más lejos del
