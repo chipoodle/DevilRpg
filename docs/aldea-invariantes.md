@@ -4272,6 +4272,10 @@ parcelas en otro nivel»*. Su log lo enseñó entero, y **en tres vueltas**:
 **EL ARREGLO**: la cota es un **dato de la fundación**. Se mide **una vez** y se recuerda, con la clave en **mundo + X +
 Z** (nunca la Y).
 
+**MEDIDO, ya con el arreglo** (`build/medida-tanda12.log`, 22.000+ ticks sobre el guardado del jugador): **0 aldeas
+pre-generadas**, **0 kioscos colocados** (o sea, la cota quieta) y **una sola** taberna construida, con **0 avisos** de
+rendición. Contra el bucle anterior (una reconstrucción cada pocos segundos y la cota subiendo en cada pasada).
+
 **LA LECCIÓN**: **un caché con la clave mal elegida es peor que no tenerlo** (da falsa confianza), y el síntoma estaba
 en el log a la vista (la misma aldea, misma X/Z, cota distinta). Y de la primera vuelta queda lo bueno: **los rellenos
 del terreno no se tocan sin medir que la cota converge**, y **subir `CURRENT_LAYOUT`** dispara la migración, que
