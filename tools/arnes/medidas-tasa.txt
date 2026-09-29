@@ -65,18 +65,26 @@ doble**, que como es un ítem **nuevo** cada vez no lo cubre el punto fallido.
 
 ## El «después» de los dos arreglos
 
-**Corrida 4** (`build/medida-tanda4.log`): **tasa 0,30** (3 rendiciones en la ventana) y, por etiquetas:
+| | tasa (ventana 2.000-12.000) | `Saliendo de la huerta` | `Recogiendo el corral` |
+|---|---|---|---|
+| **ANTES** (4 corridas) | 0,10 · 1,50 · 1,00 · 0,70 → **media 0,83** | **las 4** (2 · 6 · 4 · 8) | **3** (7 · 5 · 2) |
+| **con el falso positivo del recolector** (I146) | 0,30 · 0,20 → **media 0,25** | **0** ✅ | 6 · 1 |
+| **y con el filtro del ganadero** (I147) | **0,40** | **0** ✅ | **0** ✅ |
 
-| etiqueta | antes (4 corridas) | después (corrida 4) |
-|---|---|---|
-| **`Saliendo de la huerta`** (el recolector) | **las 4** (2 · 6 · 4 · 8) | **0** ✅ el arreglo del falso positivo funciona |
-| `Recogiendo el corral` (el ganadero) | 3 (7 · 5 · 2) | **6** ❌ sigue |
+O sea: las **dos etiquetas de bucle desaparecen** y la tasa baja de **0,83** a **0,25-0,40** (contra el **0,30** de
+media del código de antes de hoy y el **1,29** de la tanda anterior). Las que quedan en la última corrida son **sueltas**
+(`Yendo a entrenar` ×3 —el último salto al puesto, transitorio—, `Cosechando`, `Guardando lo suyo`, `Llevando la
+madera` y `Yendo al almacen`, una vez cada una).
 
-**Y el ganadero, mirado otra vez, es OTRO caso del mismo tipo** (y mi filtro era corto): ahora el aviso dice
-`destino=air encima=oak_planks` — el ítem está **debajo de la mesa** (la celda es **aire**, así que `isAir()` lo deja
-pasar, pero **tiene tablones en la cabeza** y **no es una casilla de pie**). **El filtro bueno** no es «la celda es
-aire» sino **«la celda es una casilla de pie»** (`VillageManager`): un ítem bajo la mesa o dentro de una valla **no se
-puede recoger** y solo sirve para que el ganadero se rinda.
+Y **el ganadero necesitó dos intentos**: el primer filtro (`isAir`, la celda no es un bloque) **no** bastaba, porque el
+ítem de debajo de la mesa está en una celda **de aire** con **tablones en la cabeza**; el bueno es exigir **casilla de
+pie** (`VillageManager.esCeldaDePie`). Los dos quedan en el código con su comentario y su medida.
+
+## Y LA LECCIÓN DE LA TANDA
+
+El §8 daba los dos bucles por «tropiezos puntuales» **porque se miró una corrida**. Con cuatro, las etiquetas se
+repiten y **la media (0,83) es peor que la del código anterior (0,30)**. **Una corrida no distingue un tropiezo de un
+bucle**: para eso está la media de 2-4.
 
 ## La leñadora: dos cosas distintas (y una era un falso positivo)
 
