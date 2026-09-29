@@ -4252,7 +4252,23 @@ O sea: el criterio del traspaso («que `hechas` suba y `pasos` siga creciendo si
 cumple `hechas` **24/24**, `pasos` **40** y el pedernal del almacén **subiendo a su objetivo**; y el minero, que antes
 se pasaba la corrida colando, **completa la misma galería en la mitad de ticks**.
 
+### I146 · UNA RENDICIÓN CON EL **CEREBRO EN OTRA PARTE** NO ES UNA RENDICIÓN (el leñador) (28-sep-2026)
+
+**El caso, medido** (`build/medida-tasa-hoy.log`, la corrida de la tasa): la leñadora daba **3 avisos**
+`Llevando la madera` y, leídos enteros, eran **dos cosas distintas**:
+
+* **Dos reales**: en el **piso de la taberna** (`suelo=dark_oak_planks`, `y=68`), con **`nav=[sin ruta]`** y la ruta
+  **de un solo nodo: ella misma** (`cerebro=-`). Encerrada arriba. **Acaba saliendo** (después sigue con su oficio:
+  `Guardando lo suyo`), así que es un tropiezo, no un bucle. **Sin arreglar.**
+* **Uno falso**: ya a la cota, `ruta=11 nodos hasta 517,63,666 alcanza=SI` —la ruta al almacén **era buena**— pero su
+  **`cerebro=507,68,662`** apuntaba al **piso** (su POI), así que no la seguía y el aviso lo cantaba como rendición.
+
+**El arreglo** (el mismo que ya se hizo en el guardia, I125/I119): en el `canContinueToUse` del leñador, si el cerebro
+**no** va al destino, **no** se apunta el punto como fallido ni se canta la rendición: se le da otra oportunidad
+(`stuckTicks = 0`). Así la tasa no se ensucia con atascos que no existen.
+
 ### I145 · IR A ENTRENAR TAMBIÉN ES UN **VIAJE LARGO**: el tirón, no el camino directo (28-sep-2026)
+
 
 **El caso**: `Yendo a entrenar` era el único aviso con etiqueta que seguía saliendo (uno por guardia y sesión).
 **Diagnóstico con los logs que ya había** (sin gastar corrida): el destino es **siempre `424, 63, 675`** (el puesto del

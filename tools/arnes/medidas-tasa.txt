@@ -1,0 +1,37 @@
+# LA TASA DEL PUEBLO CON EL CÓDIGO DE HOY (28-sep-2026)
+
+## Cómo se mide
+
+`python tools/arnes/rendiciones.py --etiquetas build\medida-tasa-hoy.log` — rendiciones por 1.000 ticks en la ventana
+fija **2.000-12.000**. La corrida va en modo minero (**sin** el apaño del tope del pozo 1, que era solo para medir el
+segundo pozo): así el pueblo es el de siempre y la tasa es comparable con las de referencia.
+
+## La primera corrida: **0,10**
+
+| | tasa |
+|---|---|
+| la tanda anterior (antes de esta sesión) | **1,29** |
+| el código de antes de los arreglos de hoy | **0,30** de media (0,10 · 0,20 · 0,30 · 0,50 · 0,60) |
+| **hoy, primera corrida** | **0,10** |
+
+**UNA sola rendición en la ventana**: `Eufemia / Yendo a entrenar` (el caso del último salto al puesto, I145).
+Y en **toda** la corrida, **7 avisos**: 3× la leñadora (`Llevando la madera`), 2× la recolectora saliendo de la
+huerta, 1× abonar y 1× entrenar.
+
+## La leñadora: dos cosas distintas (y una era un falso positivo)
+
+Los 3 avisos son de **la misma aldeana** (Tomasa) y el log dice exactamente qué pasa en cada uno:
+
+```
+desde 511, 68, 667  ruta=1 nodos hasta 511, 68, 667 alcanza=NO; suelo=dark_oak_planks | cerebro=- nav=[sin ruta]
+desde 511, 68, 667  (igual)
+desde 510, 63, 659  ruta=11 nodos hasta 517, 63, 666 alcanza=SI; suelo=stone_bricks | cerebro=507, 68, 662 nav=[sin ruta]
+```
+
+1. **Dos son reales**: está en el **piso de la taberna** (suelo de `dark_oak_planks`, `y=68`), **sin ruta** (la que
+   tiene es de **un nodo: ella misma**) y **sin cerebro** (`cerebro=-`). Encerrada arriba, sin salida.
+   **Y acaba saliendo**: después de los avisos sigue con su oficio (`Guardando lo suyo`), así que es un tropiezo de 3,
+   **no** un bucle de 16. **Sin arreglar** (no hay un arreglo seguro y medido para "encerrado en un piso").
+2. **Uno es un falso positivo**: ya a la cota, su **ruta al almacén es BUENA** (`alcanza=SI`) pero su
+   `cerebro=507,68,662` apunta al **piso** (su POI), así que no la sigue y se cantaba como rendición. **Arreglado**
+   (I146): el leñador ya no canta rendición si el cerebro va a otra parte, el mismo arreglo que se hizo en el guardia.
