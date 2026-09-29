@@ -4289,9 +4289,11 @@ está justo al otro lado del muro—, así que el aire del hogar y el tiro queda
 centro**— de `y=63` al remate. **La taberna vieja se rehace sola**: su testigo nuevo es el tiro
 (`tabernaConstruida`) y `CURRENT_LAYOUT` sube a **74** (medido en el log: `taberna construida en 494,63,660`).
 
-**Y LO QUE QUEDA DE ESTA REGLA (apuntado, no hecho)**: la **fogata del hogar NO está** —en el mapa su celda sale con
-`D` (tierra)—: la rellena el **nivelado/sellado del suelo**, que **no** pasa por `esAgujeroDelSuelo`. La misma regla
-hay que llevarla ahí.
+**Y LO QUE QUEDA DE ESTA REGLA (medido y localizado)**: la **fogata del hogar** la pisa **un repaso posterior** de la
+taberna —el log lo nombra: `Taberna de …: muros y frontones repasados (la cal que se comía el nivelado)`—, que rehace
+el muro norte (donde está el hogar) después de que `hogarDeLaTaberna` haya puesto su fogata. La regla del cielo ya está
+en los **tres** rellenos que tocan el suelo (`esAgujeroDelSuelo` del obrero, `nivelar` y `sellarSuelo`), así que el
+siguiente paso es ese **repaso de muros**, no el relleno.
 
 ### I147 · EL GANADERO Y EL HUECO **DENTRO** DE LA VALLA: un ítem inalcanzable, y **nuevo** cada vez (28-sep-2026)
 
