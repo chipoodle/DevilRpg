@@ -4289,11 +4289,20 @@ está justo al otro lado del muro—, así que el aire del hogar y el tiro queda
 centro**— de `y=63` al remate. **La taberna vieja se rehace sola**: su testigo nuevo es el tiro
 (`tabernaConstruida`) y `CURRENT_LAYOUT` sube a **74** (medido en el log: `taberna construida en 494,63,660`).
 
-**Y LO QUE QUEDA DE ESTA REGLA (medido y localizado)**: la **fogata del hogar** la pisa **un repaso posterior** de la
-taberna —el log lo nombra: `Taberna de …: muros y frontones repasados (la cal que se comía el nivelado)`—, que rehace
-el muro norte (donde está el hogar) después de que `hogarDeLaTaberna` haya puesto su fogata. La regla del cielo ya está
-en los **tres** rellenos que tocan el suelo (`esAgujeroDelSuelo` del obrero, `nivelar` y `sellarSuelo`), así que el
-siguiente paso es ese **repaso de muros**, no el relleno.
+**MEDIDO, y ya está entero** (`build/medida-tanda9.log` + mapa de capas sobre `run/world`):
+
+* **La fogata está en su hogar**: `y=63, z=660` sale `B B B C B B D B B B D` —el `C` (`campfire`) justo en `x=503`, la
+  celda del hogar— y **encima suyo es aire**, así que el humo sube.
+* **El tiro, hueco y con paredes**: en `z=659` el caño sale `. B . B .` de la cota al remate — **aire en el centro** y
+  **ladrillo a los dos lados**—, y la cara que da al hogar está abierta, así que el aire del hogar y el tiro están
+  **conectados**.
+* **Y los tres rellenos** (tapagujeros del obrero, `nivelar` y `sellarSuelo`) respetan la regla del cielo.
+
+**Y LO QUE HACÍA FALTA, que era el repaso de muros**: `rehacerMurosDeLaTaberna` (la migración 49) volvía a pasar los
+muros **y el tejado** de una taberna ya construida, y su propio comentario decía que «no borra nada»… pero **el hogar
+está EN el muro norte** y la chimenea **atraviesa el tejado**: el repaso se comía la fogata y el caño. Ahora, **al
+final del repaso**, se vuelven a poner **el hogar y la chimenea** en el mismo orden que en la construcción (el hogar
+primero y la chimenea después). Coste: dos llamadas.
 
 ### I147 · EL GANADERO Y EL HUECO **DENTRO** DE LA VALLA: un ítem inalcanzable, y **nuevo** cada vez (28-sep-2026)
 
