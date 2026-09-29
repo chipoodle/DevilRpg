@@ -39,6 +39,45 @@ granjero, que sí está a **8**, queda **por encima de la cota**, y las exclusio
 antes acababan porque se mataban a mano), así que una tanda en serie se queda esperando para siempre: `tanda-tasa.ps1`
 ahora **corta por tiempo** (20 min de reloj ≈ 20.000 ticks, con la ventana en 2.000-12.000).
 
+## La media de hoy: **0,83** (y NO es solo varianza)
+
+Cuatro corridas del **mismo** código (modo minero, sin el tope), con el guardado del jugador sin tocar:
+
+| corrida | tasa (ventana 2.000-12.000) | rendiciones en la ventana |
+|---|---|---|
+| `medida-tasa-hoy` (17:31) | **0,10** | 1 |
+| `medida-tanda1` (19:38) | **1,50** | 15 |
+| `medida-tanda2` (20:06) | **1,00** | 10 |
+| `medida-tanda3` (20:26) | **0,70** | 7 |
+| **media** | **0,83** | — |
+
+Contra el **1,29** de la tanda anterior y el **0,30** de media del código de antes de hoy. Y **no es solo varianza**:
+**dos etiquetas se repiten en casi todas** las corridas, así que hay bucles de verdad:
+
+| etiqueta | en cuántas corridas | cuántas |
+|---|---|---|
+| **`Saliendo de la huerta`** (el recolector) | **las 4** | 2 · 6 · 4 · 8 |
+| **`Recogiendo el corral`** (el ganadero) | **3** | 7 · 5 · 2 |
+
+**Y las dos causas están medidas** (los detalles, arriba): el recolector es el **mismo falso positivo** que el leñador
+(su ruta al destino **alcanza**, `alcanza=SI`, y el cerebro va a su POI) y el ganadero es el **huevo dentro de la valla
+doble**, que como es un ítem **nuevo** cada vez no lo cubre el punto fallido.
+
+## El «después» de los dos arreglos
+
+**Corrida 4** (`build/medida-tanda4.log`): **tasa 0,30** (3 rendiciones en la ventana) y, por etiquetas:
+
+| etiqueta | antes (4 corridas) | después (corrida 4) |
+|---|---|---|
+| **`Saliendo de la huerta`** (el recolector) | **las 4** (2 · 6 · 4 · 8) | **0** ✅ el arreglo del falso positivo funciona |
+| `Recogiendo el corral` (el ganadero) | 3 (7 · 5 · 2) | **6** ❌ sigue |
+
+**Y el ganadero, mirado otra vez, es OTRO caso del mismo tipo** (y mi filtro era corto): ahora el aviso dice
+`destino=air encima=oak_planks` — el ítem está **debajo de la mesa** (la celda es **aire**, así que `isAir()` lo deja
+pasar, pero **tiene tablones en la cabeza** y **no es una casilla de pie**). **El filtro bueno** no es «la celda es
+aire» sino **«la celda es una casilla de pie»** (`VillageManager`): un ítem bajo la mesa o dentro de una valla **no se
+puede recoger** y solo sirve para que el ganadero se rinda.
+
 ## La leñadora: dos cosas distintas (y una era un falso positivo)
 
 Los 3 avisos son de **la misma aldeana** (Tomasa) y el log dice exactamente qué pasa en cada uno:

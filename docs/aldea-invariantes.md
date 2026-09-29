@@ -4252,7 +4252,34 @@ O sea: el criterio del traspaso («que `hechas` suba y `pasos` siga creciendo si
 cumple `hechas` **24/24**, `pasos` **40** y el pedernal del almacén **subiendo a su objetivo**; y el minero, que antes
 se pasaba la corrida colando, **completa la misma galería en la mitad de ticks**.
 
-### I146 · UNA RENDICIÓN CON EL **CEREBRO EN OTRA PARTE** NO ES UNA RENDICIÓN (el leñador) (28-sep-2026)
+### I147 · EL GANADERO Y EL HUECO **DENTRO** DE LA VALLA: un ítem inalcanzable, y **nuevo** cada vez (28-sep-2026)
+
+**El caso, medido** (`build/medida-tanda1.log`): **7 rendiciones en la ventana** (12 en toda la corrida), todas de la
+misma ganadera, y el aviso lo dice entero:
+
+```
+no consigue llegar a 513, 63, 640 desde 513, 63, 641
+   (ruta=1 nodos hasta 513, 63, 641 alcanza=NO; pies=air cabeza=air suelo=grass_block
+    | destino=oak_fence encima=oak_fence)
+no consigue llegar a 514, 63, 640 desde 514, 63, 641   (... | destino=oak_fence_gate encima=oak_fence)
+```
+
+La ruta es **de un nodo** porque el destino **es una valla** con **otra valla encima**. **Y el mapa del corral lo
+confirma** (`build/slice_mina.py 508 520 634 646 62 64`, sobre el guardado): el corral tiene **vallas dobles** (`O` en
+`y=63` **y** en `y=64`) y dentro hay fardos de heno (`H`); el destino `513,63,640` es la **valla sur**. O sea: hay un
+**ítem dentro de la valla** (un **huevo**), que **no se puede recoger**.
+
+**Y por eso el «punto fallido» no lo arregla**: cada huevo que pone la gallina es un **ítem NUEVO**, así que apartar el
+punto no cubre al siguiente.
+
+**El arreglo**: al elegir el ítem suelto del corral (`buscarDropEnElCorral`), **descartar los que están dentro de un
+bloque** (su celda no es aire): no se pueden recoger y solo sirven para que el ganadero se rinda en bucle.
+
+**Y LA LECCIÓN DE LA TANDA**: el §8 daba esto por «tropiezo puntual» porque se miró **una** corrida. Con **cuatro** la
+etiqueta se repite en **tres** (2 · 5 · 7) — y la media de hoy (**0,83**: 0,10 · 1,50 · 1,00 · 0,70) es peor que el
+0,30 del código de antes, justo por estos dos bucles. **Una corrida no distingue un tropiezo de un bucle.**
+
+### I146 · UNA RENDICIÓN CON EL **CEREBRO EN OTRA PARTE** NO ES UNA RENDICIÓN (el leñador y el recolector) (28-sep-2026)
 
 **El caso, medido** (`build/medida-tasa-hoy.log`, la corrida de la tasa): la leñadora daba **3 avisos**
 `Llevando la madera` y, leídos enteros, eran **dos cosas distintas**:

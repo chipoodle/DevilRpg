@@ -660,12 +660,14 @@ public class VillagerAnimalFarmGoal extends Goal {
             if (VillageManager.esPuntoFallido(villager, item.blockPosition())) {
                 continue; // a ese objeto no llegó hace poco: se prueba con el siguiente (I33)
             }
-            // Y NI LOS QUE ESTÁN DENTRO DE UN BLOQUE (28-sep-2026). MEDIDO en `build/medida-tanda1.log`: el destino del
-            // ganadero caía **en la valla del corral** (`destino=oak_fence encima=oak_fence`, `ruta=1 nodos … alcanza=NO`)
-            // —un huevo que cayó dentro de la valla doble (el mapa del corral lo enseña: `O` en `y=63` y en `y=64`)—, y
-            // como **cada huevo es un ítem NUEVO**, el punto fallido no cubre al siguiente: bucle de 12 rendiciones. Un
-            // ítem dentro de un bloque no se puede recoger: no se elige.
-            if (!level.getBlockState(item.blockPosition()).isAir()) {
+            // Y NI LOS QUE NO ESTÁN EN UNA CASILLA DE PIE (28-sep-2026). MEDIDO en `build/medida-tanda1.log` y otra vez
+            // en la 4: el destino del ganadero caía **en la valla del corral** (`destino=oak_fence encima=oak_fence`,
+            // `ruta=1 nodos … alcanza=NO`) —un huevo dentro de la valla doble, el mapa del corral lo enseña— y, ya con
+            // el primer filtro, **debajo de la mesa** (`destino=air encima=oak_planks`): la celda es aire, así que
+            // `isAir()` lo dejaba pasar, pero tiene **tablones en la cabeza**. Y como **cada huevo es un ítem NUEVO**,
+            // el punto fallido no cubre al siguiente: bucle. Un ítem al que no se puede **estar de pie** no se puede
+            // recoger: no se elige.
+            if (!VillageManager.esCeldaDePie(level, item.blockPosition())) {
                 continue;
             }
             double d = villager.distanceToSqr(item);
