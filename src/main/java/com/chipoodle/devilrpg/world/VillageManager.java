@@ -778,9 +778,17 @@ public final class VillageManager {
      *       tenían el <b>muro de troncos</b> flotando —el despeje respeta los troncos para no talar árboles—, esta
      *       versión las <b>repara de una vez</b>: quita todo lo que hay por encima de la cota dentro del recinto,
      *       nivela y reconstruye ({@code repararLaAldeaApilada}). Ver I149.</li>
+     *   <li><b>76:</b> <b>UNA SOLA COTA, LA DEL CONSTRUCTOR</b>. El arreglo anterior (caché de la cota) tenía un fallo
+     *       grave: la primera medida la tomaba el <b>guardia del bancal</b>, <b>antes</b> de despejar y nivelar el
+     *       terreno, y esa medida quedaba congelada. En llano daba igual, pero en una <b>ladera</b> no: medido en el
+     *       guardado del jugador, la aldea 1 se construyó a la cota <b>74</b> (terreno ya despejado) y el latido
+     *       levantó después el <b>kiosco, el almacén y el corral a la 103</b> (la montaña cruda). Dos cotas en el mismo
+     *       pueblo. Ahora el generador <b>fija</b> la cota en cuanto la conoce ({@code fijarLaCotaDeLaAldea}) y esa es
+     *       la única. Esta versión <b>repara también las aldeas partidas así</b>: pasan otra vez por
+     *       {@code repararLaAldeaApilada}, que las deja enteras a su cota.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 75;
+    public static final int CURRENT_LAYOUT = 76;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -2122,6 +2130,11 @@ public final class VillageManager {
     public static void repararLaAldeaApilada(ServerLevel level, VillageSavedData saved, int objectiveIndex,
             BlockPos center) {
         int antes = saved.getLayout(objectiveIndex);
+        // NO SE MIRA SI LA ALDEA PARECE SANA (29-sep-2026): se probó a saltarse la reparación cuando los testigos de
+        // la huerta y el kiosco estaban a la cota, y NO vale: la aldea 1 del jugador tenía sus dos testigos a la 97
+        // (la plaza) y sin embargo el almacén y el corral estaban a la 103 y la taberna y la mina a la 74 — pasó el
+        // testigo y se quedó partida. La reparación corre UNA vez por aldea (al subir el trazado) y la deja entera a
+        // su cota; el precio es que un pueblo sano se demuele y se vuelve a levantar esa única vez.
         VillageGenerator.repararLaAldeaApilada(level, center);
         VillageGenerator.actualizarCasas(level, center);
         VillageGenerator.actualizarTemplo(level, center);
@@ -2171,7 +2184,7 @@ public final class VillageManager {
             // eso se lleva por delante las casas, se vuelven a levantar aquí mismo; el resto (kiosco, taberna,
             // almacén, corral, pesquera, taller, caseta del minero, arboleda) lo repone el latido, que va viendo
             // que faltan sus testigos. Es de una sola vez: después la cota ya no se mueve.
-            if (saved.getLayout(objectiveIndex) < 75) {
+            if (saved.getLayout(objectiveIndex) < 76) {
                 VillageGenerator.repararLaAldeaApilada(level, center);
                 VillageGenerator.actualizarCasas(level, center);
                 VillageGenerator.actualizarTemplo(level, center);

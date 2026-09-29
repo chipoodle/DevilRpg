@@ -291,6 +291,13 @@ public final class VillageGenerator {
         } else {
             nivelVilla = levelTerrain(level, center, LEVEL_RADIUS);
         }
+        // LA COTA DE LA ALDEA QUEDA FIJADA AQUÍ, y esta es la buena (29-sep-2026). Es la que acaba de usar el
+        // generador para nivelar el terreno, así que TIENE que ser la que usen después el latido y los goals. Sin
+        // esto, `cotaDeLaPlaza` devolvía la medida que se hubiera tomado ANTES del despeje y del nivelado (la del
+        // guardia del bancal, al principio de este mismo método), que en una ladera NO es la misma: medido en el
+        // guardado del jugador, la aldea 1 se construyó a la 74 y el latido levantó el kiosco, el almacén y el
+        // corral a la 103. En llano coinciden; en pendiente, no.
+        fijarLaCotaDeLaAldea(level, center, nivelVilla);
 
         // --- A partir de aquí se GRABA el plano canónico (solo estructuras, no terreno) ---
         // La cota va con el centro: la grabadora la necesita para dejar el LAGO de la pesquera fuera del plano
@@ -6274,8 +6281,21 @@ public final class VillageGenerator {
         // o sea MISMO x/z y distinta Y). Con la clave en dos dimensiones, la cota de una aldea es de verdad un dato de
         // su fundación.
         return COTA_DE_LA_ALDEA.computeIfAbsent(
-                level.dimension().location() + "@" + center.getX() + "," + center.getZ(),
+                claveDeLaCota(level, center),
                 k -> medirLaCotaDeLaPlaza(level, center));
+    }
+
+    /** La clave con la que se recuerda la cota de una aldea: el mundo y **solo** la X y la Z. */
+    private static String claveDeLaCota(ServerLevel level, BlockPos center) {
+        return level.dimension().location() + "@" + center.getX() + "," + center.getZ();
+    }
+
+    /**
+     * FIJA LA COTA DE LA ALDEA (29-sep-2026): la llama el generador en cuanto sabe a qué nivel va a construir, y pasa
+     * a ser la que valen para todos los demás (el latido, los goals, los testigos). Ver el porqué en {@link #generate}.
+     */
+    public static void fijarLaCotaDeLaAldea(ServerLevel level, BlockPos center, int cota) {
+        COTA_DE_LA_ALDEA.put(claveDeLaCota(level, center), cota);
     }
 
     /** La medida de la cota (solo la primera vez por aldea; ver {@link #cotaDeLaPlaza}). */
@@ -6316,7 +6336,11 @@ public final class VillageGenerator {
             // OJO: `esTerrenoNatural` da por buenos los troncos, las hojas y los cultivos (los respeta al despejar),
             // así que aquí NO valen como suelo: si no, la copa de un árbol de la arboleda sería «el suelo».
             if (esTerrenoNatural(state) && !isVegetation(state)) {
-                return y;
+                // SE DEVUELVE `y + 1`, EL NIVEL A LOS PIES, no el bloque de suelo: `groundY` (el heightmap) ya
+                // devuelve el nivel al que se anda, y mezclar las dos convenciones hacía que cada reparación bajara
+                // el pueblo UN BLOQUE (medido: aldea a 62, la reparación midió 61 y la volvió a nivelar a 61, con 12
+                // aldeanos de rutas rotas por el desnivel). La cota de la aldea es el nivel al que se anda.
+                return y + 1;
             }
         }
         return alta; // sin terreno natural debajo (isla flotante de la aldea de mar): vale la medida de arriba
@@ -6791,6 +6815,26 @@ public final class VillageGenerator {
      * Aquí sí se quitan troncos, hojas y cultivos, porque es una reparación explícita y de una sola vez: después, el
      * pueblo entero se reconstruye (casas, muro, huerta y lo que repone el latido) a la cota de la plaza.
      */
+    /**
+     * ¿ESTÁ LA ALDEA A SU COTA? Mira los <b>dos testigos</b> que usa el propio pueblo —la <b>huerta</b> (el bancal) y el
+     * <b>kiosco</b> (su plataforma de ladrillo a {@code KIOSCO_RADIO} del centro)— y contesta si los dos están donde
+     * toca.
+     * <p>
+     * Existe para <b>no reparar un pueblo que ya está bien</b> (29-sep-2026): la reparación de las aldeas apiladas
+     * demuele lo que hay por encima de la cota y lo vuelve a levantar, y hacerle eso a una aldea sana deja a los
+     * aldeanos descolocados (medido: 30 avisos de ruta en 22.000 ticks, contra 0 cuando la aldea ya estaba destrozada).
+     * Con este testigo, la reparación solo corre en las aldeas de verdad partidas: la aldea 1 del jugador tenía el
+     * kiosco, el almacén y el corral a la 103 y el resto a la 74 → partida; una aldea recién reparada tiene los dos
+     * testigos a su cota → sana.
+     */
+    public static boolean estaLaAldeaALaCota(ServerLevel level, BlockPos center) {
+        int cota = cotaDeLaPlaza(level, center);
+        boolean huerta = bancalHecho(level, center.offset(FARM_PLOTS[0][0], 0, FARM_PLOTS[0][1]), cota);
+        boolean kiosco = level.getBlockState(new BlockPos(center.getX() + KIOSCO_RADIO, cota, center.getZ()))
+                .is(Blocks.STONE_BRICKS);
+        return huerta && kiosco;
+    }
+
     public static void repararLaAldeaApilada(ServerLevel level, BlockPos center) {
         int cota = cotaDeLaPlaza(level, center);
         int radius = LEVEL_RADIUS; // el recinto: el muro va a FENCE_RADIUS y entra en el barrido
@@ -6803,9 +6847,10 @@ public final class VillageGenerator {
                 int x0 = center.getX() + x;
                 int z0 = center.getZ() + z;
                 int alta = groundY(level, x0, z0);
-                // De la cota hacia ARRIBA: todo lo que no sea aire se va (troncos, hojas y cultivos incluidos). Hacia
-                // abajo no se toca NADA: la mina, la pesquera y el relleno del terreno viven por debajo.
-                for (int y = cota + 1; y <= alta; y++) {
+                // De la cota hacia ARRIBA: todo lo que no sea aire se va (troncos, hojas, cultivos incluidos). La cota
+                // es el nivel A LOS PIES, así que el bloque de suelo (el que se pisa) está en `cota - 1` y no se toca:
+                // a `cota` ya están los objetos que se apoyan en él (la base del muro, las antorchas, los cultivos).
+                for (int y = cota; y <= alta; y++) {
                     BlockPos pos = new BlockPos(x0, y, z0);
                     if (level.getBlockState(pos).isAir()) {
                         continue;
