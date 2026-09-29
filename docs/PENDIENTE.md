@@ -217,6 +217,31 @@ existe y ya se usa para subirlo, así que es el arreglo coherente—; **(b)** qu
 no entren en el reparto (midiendo antes que no deja `SIN CAMA`); o **(c)** dar **escalera** a esa planta en el
 generador (es construcción: obliga a migración del mundo ya construido).
 
+### 12. EL GANADERO Y SU VALLA: el destino del corral es una celda que NO SE PISA (28-sep-2026) — **bucle medido**
+
+El §8 daba esto por «tropiezo puntual» («`Recogiendo el corral` con algo caído sobre mobiliario»). **NO es puntual: es
+un bucle**, y está medido en `build/medida-tanda1.log` (**7 rendiciones en la ventana**, 12 en toda la corrida, todas
+de la misma ganadera):
+
+```
+no consigue llegar a 513, 63, 640 desde 513, 63, 641
+   (ruta=1 nodos hasta 513, 63, 641 alcanza=NO; pies=air cabeza=air suelo=grass_block
+    | destino=oak_fence encima=oak_fence)            <- el destino es una VALLA, con OTRA valla encima
+no consigue llegar a 514, 63, 640 desde 514, 63, 641
+   (... | destino=oak_fence_gate encima=oak_fence)
+```
+
+**La causa**: el destino que se calcula para «recoger el corral» cae en una celda **ocupada por la valla** (y encima
+tiene otra): **no es pisable**, así que la ruta es **de un nodo** y el aldeano **se rinde siempre**, en bucle.
+
+**El arreglo que toca**: que el destino del corral sea una **casilla de pie de verdad** (la que ya sabe calcular
+`VillageManager`), no la celda de la valla. **Criterio**: `Recogiendo el corral` **7 → 0** en la ventana.
+
+**Y EL RECOLECTOR EN EL BANCAL** (mismo log, 6 en la ventana): se rinde desde `484,62,658` con **`pies=farmland`** y
+`cabeza=wheat` —o sea **encajada dentro del cultivo**, un bloque POR DEBAJO de la cota—, y ahí mismo tiene una ruta a la
+campana que **SÍ alcanza** (`ruta=23 nodos … alcanza=SI`). Hay que ver si es el mismo falso positivo de I146 (el
+cerebro en otra parte) o el desatasco del bancal.
+
 ### 1. El `JOB_SITE` del minero (el cortapiedras, un bloque): **medido, y no cuesta nada** (cerrado)
 
 Medido en la corrida en la que la mina ya funciona de punta a punta (297 muestras del minero, `t=11.720`):
