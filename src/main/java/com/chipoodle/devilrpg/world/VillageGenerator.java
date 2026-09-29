@@ -8708,8 +8708,16 @@ public final class VillageGenerator {
                 -1, Direction.WEST, false);
         // 3) El tejado (y con él la cal de los frontones): solo tablones, escaleras, cristales y cal.
         tejadoDeLaTaberna(level, bx, bz, fondo, yTecho);
-        DevilRpg.LOGGER.info("[Village] Taberna de {}: muros y frontones repasados (la cal que se comia el nivelado)",
-                center);
+        // Y EL HOGAR CON SU CHIMENEA, QUE VIVEN **EN EL MURO NORTE** (28-sep-2026). Este repaso decía que «no borra
+        // nada», pero el hogar está EN uno de los muros que vuelve a pasar, así que se comía su fogata: MEDIDO con el
+        // mapa de capas (`build/slice_mina.py`), la celda del hogar salía con ladrillo en vez de `campfire` y el
+        // comedor se quedaba sin fuego (lo pidió el jugador: *"en el centro haya un hueco donde pueda estar una
+        // fogata"*). Se vuelven a poner los dos, en el MISMO orden que en la construcción: el hogar primero y la
+        // chimenea después, que es la que atraviesa el forjado, el techo y el tejado.
+        hogarDeLaTaberna(level, bx, bz, nivel);
+        chimeneaDeLaTaberna(level, bx, bz, nivel, yTecho);
+        DevilRpg.LOGGER.info("[Village] Taberna de {}: muros y frontones repasados (la cal que se comia el nivelado)"
+                        + " y el hogar con su chimenea vueltos a poner", center);
     }
 
     /**
