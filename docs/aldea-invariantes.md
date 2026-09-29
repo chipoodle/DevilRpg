@@ -4260,17 +4260,16 @@ arriba… si encuentras una regla que solucione este rollo y no conflictúe con 
 
 **Lo que había, medido** (`build/slice_mina.py` sobre el guardado del jugador):
 
-1. **La taberna SÍ tiene escalera** (en L, doble, `escaleraDeLaTaberna`) — **no hacía falta una escalera nueva**—,
-   pero su **hueco en el forjado de la posada** (`y=67`) estaba **RELLENO DE TIERRA** (`D` en toda la planta): la
-   escalera no llevaba a ninguna parte y los aldeanos que el latido sube a las camas de arriba se quedaban
-   **sin ruta** (`nav=[sin ruta]`, la ruta de un solo nodo: ellos mismos).
-2. **La chimenea era un PILAR MACIZO** de ladrillo (`B`) de la cota a cinco bloques sobre el techo: **sin tiro**, el
-   humo no podía salir y en el centro no cabía nada.
+1. **La chimenea era un PILAR MACIZO** de ladrillo (`B`) de la cota a cinco bloques sobre el techo: **sin tiro**, el
+   humo no podía salir y en el centro no cabía nada. **Eso sí era el caso.**
+2. **Y OJO — AQUÍ ME EQUIVOQUÉ Y QUEDA ESCRITO**: creí que el **hueco de la escalera** de la posada estaba
+   **relleno de tierra** (leí el forjado **normal**, `z=661`, como si fuera el hueco). En el mapa de la taberna
+   **rehecha** se ve que **el hueco está abierto** (`x=495-496`, `z=669-671`, todo **aire** en `y=67` y en `y=68`): la
+   **escalera de la taberna siempre funcionó**. O sea: **la escalera externa que pidió el jugador «si es necesario»
+   NO es necesaria**, y el aldeano atrapado de la posada (§11) **necesita otro diagnóstico** (en la corrida con la
+   taberna nueva no se reprodujo). Lo que **sí** queda de la regla es el **tiro de la chimenea**.
 
-**Quién cegaba el hueco**: el **tapagujeros del pueblo** (`VillageManager.esAgujeroDelSuelo`), que por bloques ve un
-hueco interior igual que un cráter de creeper (aire con suelo de aldea debajo, a ≤4 de profundidad).
-
-**LA REGLA** (una línea, y arregla los dos casos):
+**LA REGLA** (una línea, y protege el tiro —y cualquier hueco interior— de que lo ciegue el relleno):
 
 ```java
 // Un cráter está A CIELO ABIERTO; el aire bajo un forjado, un techo o un tejado es DEL EDIFICIO.
@@ -4285,9 +4284,14 @@ protegidos; y las reparaciones del **plano** no cambian (el plano solo mira dos 
 
 **Y la chimenea**: el caño pasa de pilar macizo a **tubo de 3×3 con el centro de aire** desde la cota hasta el remate
 (el remate es de losas **alrededor**, con el centro abierto), y **la cara que da al hogar se deja sin tocar** —el hogar
-está justo al otro lado del muro—, así que el aire del hogar y el tiro quedan **conectados** y el humo de la fogata
-sube por dentro y sale arriba. La taberna vieja **se rehace sola**: su testigo nuevo es el tiro
-(`tabernaConstruida`) y `CURRENT_LAYOUT` sube a **74**.
+está justo al otro lado del muro—, así que el aire del hogar y el tiro quedan **conectados**. **MEDIDO** en el mundo
+(`build/slice_mina.py 503 513 656 662 63 70 world`): el caño es `B B` / `. B` —ladrillo alrededor y **aire en el
+centro**— de `y=63` al remate. **La taberna vieja se rehace sola**: su testigo nuevo es el tiro
+(`tabernaConstruida`) y `CURRENT_LAYOUT` sube a **74** (medido en el log: `taberna construida en 494,63,660`).
+
+**Y LO QUE QUEDA DE ESTA REGLA (apuntado, no hecho)**: la **fogata del hogar NO está** —en el mapa su celda sale con
+`D` (tierra)—: la rellena el **nivelado/sellado del suelo**, que **no** pasa por `esAgujeroDelSuelo`. La misma regla
+hay que llevarla ahí.
 
 ### I147 · EL GANADERO Y EL HUECO **DENTRO** DE LA VALLA: un ítem inalcanzable, y **nuevo** cada vez (28-sep-2026)
 
