@@ -37,3 +37,7 @@ mcmodsrepo
 # Caches de Python (se colaron al ejecutar las herramientas de tools/)
 __pycache__/
 *.pyc
+
+# Copia de trabajo del arnes de medida (tools/arnes/GuardHarness.java): se borra al acabar cada tanda
+src/main/java/com/chipoodle/devilrpg/debug/
+
