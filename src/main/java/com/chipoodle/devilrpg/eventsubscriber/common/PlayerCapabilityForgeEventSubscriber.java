@@ -80,6 +80,46 @@ public class PlayerCapabilityForgeEventSubscriber {
     private static final double XP_KEPT = 0.95;
 
     /**
+     * La XP del jugador que acaba de morir, apartada un instante para que <b>NO se dropee</b>.
+     * <p>
+     * <b>Por qué hace falta</b> (28-sep-2026; lo reportó el jugador: *"cuando muere el personaje tira las orbes de
+     * experiencia y cuando regresa a recoger su loot sube mas experiencia de la que tenia"*): en <b>vanilla</b> el
+     * jugador <b>SÍ</b> suelta su experiencia al morir —{@code LivingEntity.dropAllDeathLoot} llama a
+     * {@code dropExperience}, que hace {@code ExperienceOrb.award} (verificado en las fuentes decompiladas,
+     * {@code build/moddev/artifacts/neoforge-...-sources.jar})—, y este mod <b>además</b> conserva el nivel y el 95% de
+     * la barra en {@code PlayerEvent.Clone}: las dos cosas juntas <b>duplicaban</b> la experiencia (se tiraba entera y
+     * se conservaba el 95%: al recoger las orbes, ~195%).
+     * <p>
+     * El arreglo respeta la intención del diseño —conservar el 95%— y quita la otra mitad: se aparta la XP en
+     * {@code LivingDeathEvent} (que va <b>antes</b> del drop) y se deja al jugador a cero, así que
+     * {@code dropExperience} no suelta <b>nada</b>; el respawn la recupera de aquí con su 5% menos.
+     */
+    private static final Map<UUID, double[]> XP_AL_MORIR = new HashMap<>();
+
+    /**
+     * <b>LA XP NO SE DROPEA AL MORIR</b> (28-sep-2026; lo reportó el jugador: *"tira las orbes de experiencia y
+     * cuando regresa a recoger su loot sube mas experiencia de la que tenia"*).
+     * <p>
+     * {@code LivingDeathEvent} va <b>antes</b> del {@code dropAllDeathLoot} de vanilla (verificado en las fuentes:
+     * {@code ServerPlayer.die} llama a {@code CommonHooks.onLivingDeath} y, si no se cancela, sigue con el drop), así
+     * que aquí se <b>aparta</b> la XP del jugador y se le deja a cero: su {@code dropExperience} suelta <b>cero orbes</b>.
+     * El respawn la recupera en {@code applyDeathXpPenalty} con su 5% menos, que es la regla del diseño.
+     */
+    @SubscribeEvent
+    public static void onLivingDeathXpNoSeDropea(net.neoforged.neoforge.event.entity.living.LivingDeathEvent event) {
+        if (!(event.getEntity() instanceof Player jugador)) {
+            return;
+        }
+        XP_AL_MORIR.put(jugador.getUUID(), new double[]{
+                jugador.experienceLevel, jugador.experienceProgress, jugador.totalExperience});
+        // A CERO, con los campos (los mismos que el mod toca en el respawn): así `dropExperience` de vanilla no tiene
+        // nada que soltar y no aparecen orbes.
+        jugador.experienceLevel = 0;
+        jugador.experienceProgress = 0.0F;
+        jugador.totalExperience = 0;
+    }
+
+    /**
      * Aviso de la XP perdida al morir, pendiente de mostrar al reaparecer.
      * <p>
      * Se guarda aquí y no se manda desde {@code PlayerEvent.Clone} porque en ese momento la entidad clonada
@@ -132,13 +172,19 @@ public class PlayerCapabilityForgeEventSubscriber {
         Player original = e.getOriginal();
         Player clone = e.getEntity();
 
+        // LA XP SE LEE DE LO APARTADO AL MORIR (ver `XP_AL_MORIR`): en el momento de la muerte se deja al jugador a
+        // cero para que vanilla no suelte orbes (si no, se duplicaba: las orbes en el suelo MÁS el 95% conservado).
+        double[] apartada = XP_AL_MORIR.remove(clone.getUUID());
+        int nivelAntes = apartada != null ? (int) apartada[0] : original.experienceLevel;
+        float progressBefore = apartada != null ? (float) apartada[1] : original.experienceProgress;
+        int totalAntes = apartada != null ? (int) apartada[2] : original.totalExperience;
+
         // El NIVEL no se toca: se recupera el que tenía antes de morir.
-        clone.experienceLevel = original.experienceLevel;
-        // La experiencia del nivel sí: se conserva el 90% de la barra.
-        float progressBefore = original.experienceProgress;
+        clone.experienceLevel = nivelAntes;
+        // La experiencia del nivel sí: se conserva el 95% de la barra.
         clone.experienceProgress = progressBefore * (float) XP_KEPT;
         // Contador de XP acumulada (solo estadística: no decide el nivel ni la barra).
-        clone.totalExperience = (int) Math.floor(original.totalExperience * XP_KEPT);
+        clone.totalExperience = (int) Math.floor(totalAntes * XP_KEPT);
 
         int xpNeeded = Math.max(1, original.getXpNeededForNextLevel());
         int lostPoints = Math.max(0, Math.round((progressBefore - clone.experienceProgress) * xpNeeded));

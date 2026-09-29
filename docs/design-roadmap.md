@@ -4141,6 +4141,16 @@ el tiempo y se gasta en una lista de planos, más un `Goal` de "ir a construir" 
   puntos de habilidad. Al reaparecer, el jugador recibe un aviso en el chat con el porcentaje y cuánto:
   *"Has muerto: pierdes el 5% de la experiencia de tu nivel (2 de 45 puntos). Conservas el nivel 42: vuelve a
   ganar esa experiencia para seguir subiendo."* (si no había experiencia acumulada en el nivel, no se avisa).
+  <br>
+  **Y LAS ORBES NO SE DROPEAN** (28-sep-2026; lo reportó el jugador: *«cuando muere el personaje tira las orbes de
+  experiencia y cuando regresa a recoger su loot sube más experiencia de la que tenía originalmente porque solo pierde
+  el 5%, eso no sería correcto»*). **TENÍA RAZÓN, y era una duplicación real**: en **vanilla** el jugador **sí** suelta
+  su experiencia al morir —`LivingEntity.dropAllDeathLoot` → `dropExperience` → `ExperienceOrb.award`, comprobado en las
+  fuentes decompiladas (`build/moddev/artifacts/neoforge-…-sources.jar`, líneas 1425/1434/1452)— y este mod **además**
+  conservaba el 95%, así que al recoger las orbes el jugador acababa con **~195%**. El arreglo respeta la intención del
+  diseño y quita la otra mitad: en `LivingDeathEvent` —que va **antes** del drop (`ServerPlayer.die` llama primero a
+  `CommonHooks.onLivingDeath`)— se **aparta** la XP del jugador y se le deja a cero, así que no suelta **nada**; el
+  respawn la recupera de ahí con su 5% menos.
 
 - **Primera lectura de la piedra de lore (`LoreStoneBlock`)**: la piedra del centro del círculo ritual regala
   **la experiencia justa para subir un nivel** (`getXpNeededForNextLevel()`, o sea el tamaño de la barra del
