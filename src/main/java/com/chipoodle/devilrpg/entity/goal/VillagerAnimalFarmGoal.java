@@ -660,6 +660,14 @@ public class VillagerAnimalFarmGoal extends Goal {
             if (VillageManager.esPuntoFallido(villager, item.blockPosition())) {
                 continue; // a ese objeto no llegó hace poco: se prueba con el siguiente (I33)
             }
+            // Y NI LOS QUE ESTÁN DENTRO DE UN BLOQUE (28-sep-2026). MEDIDO en `build/medida-tanda1.log`: el destino del
+            // ganadero caía **en la valla del corral** (`destino=oak_fence encima=oak_fence`, `ruta=1 nodos … alcanza=NO`)
+            // —un huevo que cayó dentro de la valla doble (el mapa del corral lo enseña: `O` en `y=63` y en `y=64`)—, y
+            // como **cada huevo es un ítem NUEVO**, el punto fallido no cubre al siguiente: bucle de 12 rendiciones. Un
+            // ítem dentro de un bloque no se puede recoger: no se elige.
+            if (!level.getBlockState(item.blockPosition()).isAir()) {
+                continue;
+            }
             double d = villager.distanceToSqr(item);
             if (d < mejorDist) {
                 mejorDist = d;

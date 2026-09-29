@@ -244,10 +244,20 @@ public class VillagerCollectGoal extends Goal {
             return false;
         }
         if (stuckTicks >= STUCK_LIMIT) {
+            // NO ES UNA RENDICIÓN SI EL CEREBRO VA A OTRA PARTE (28-sep-2026, el mismo arreglo que en el guardia y el
+            // leñador: I125/I146). MEDIDO en `build/medida-tanda3.log`: el recolector, encajado en la huerta
+            // (`484,62,658`, `pies=farmland cabeza=wheat`), tenía `ruta=23 nodos hasta 470,65,646 alcanza=SI` —la ruta
+            // a la campana ERA BUENA— y aun así se cantaba como rendición: su POI le pisa el rumbo. Es la etiqueta que
+            // más se repite en las corridas de hoy (`Saliendo de la huerta`, en las cuatro).
+            BlockPos dondeIba = objetivo != null ? objetivo.blockPosition() : destino;
+            if (dondeIba != null && !VillageManager.elCerebroVaA(villager, dondeIba)) {
+                stuckTicks = 0; // no está atascado: se le da otra oportunidad en vez de aparcar el sitio
+                return true;
+            }
             // RENDIRSE = DEJARLO POR UN RATO (I33): el sitio al que no llegó (lo que iba a recoger, o el almacén) se
             // apunta para no volver a elegir EL MISMO en bucle, que es lo que dejaba al aldeano empujando el mismo
             // obstáculo para siempre.
-            VillageManager.marcarPuntoFallido(villager, objetivo != null ? objetivo.blockPosition() : destino);
+            VillageManager.marcarPuntoFallido(villager, dondeIba);
             return false;
         }
         if (objetivo != null) {
