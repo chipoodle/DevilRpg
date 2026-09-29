@@ -5861,19 +5861,12 @@ public final class VillageManager {
         if (VillageGenerator.estaSobreElPozo(centro, pos)) {
             return false;
         }
-        // Y **LO QUE TIENE TECHO ENCIMA NO ES UN CRÁTER** (28-sep-2026). Es UNA REGLA y arregla dos cosas de golpe: un
-        // cráter de creeper está **a cielo abierto**, mientras que el aire que está debajo de un forjado, un techo o un
-        // tejado es **del edificio**: el **hueco de la escalera** (para que la planta de arriba tenga salida) y el
-        // **tiro de la chimenea** (para que el humo salga), además de cualquier patio interior.
-        // MEDIDO con el mapa de capas (`build/slice_mina.py`) sobre el guardado: el forjado de la posada de la taberna
-        // (`y=67`), el hueco por el que sube su escalera, estaba **RELLENO DE TIERRA** — lo había tapado este mismo
-        // tapagujeros—, así que la escalera no llevaba a ninguna parte y los aldeanos que el latido sube a las camas
-        // de arriba se quedaban **sin ruta** (`nav=[sin ruta]`, la ruta de un solo nodo: ellos mismos).
-        // Y no choca con lo demás: un hoyo debajo de un ÁRBOL **sí** ve el cielo (las hojas lo dejan pasar) y se tapa
-        // como siempre, y la mina ya está excluida justo arriba.
-        if (!level.canSeeSky(pos)) {
-            return false;
-        }
+        // OJO: AQUÍ HUBO UNA "REGLA DEL CIELO" (`!level.canSeeSky(pos)`) Y SE HA RETIRADO (29-sep-2026). La idea era
+        // que un agujero con techo encima (hueco de escalera, tiro de chimenea) no es un cráter, pero tocar los
+        // RELLENOS DEL TERRENO rompió el pueblo: el log del jugador enseña la aldea **reconstruyéndose sola** y la
+        // cota **subiendo en cada pasada** (`Aldea en 566,92,566` -> `566,118,566` -> kiosco a la cota 124, 125, 126,
+        // 127…), porque la cota se calcula del terreno y el terreno ya no se estabiliza: todo duplicado y flotando.
+        // Si algún día se quiere meter, hay que hacerlo **midiendo** que la cota converge, no a ojo.
         return esSueloDeLaAldea(level.getBlockState(pos.below()));
     }
 
