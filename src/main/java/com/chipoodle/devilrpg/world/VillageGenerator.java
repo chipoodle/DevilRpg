@@ -6264,7 +6264,13 @@ public final class VillageGenerator {
         // **volvía a levantar la aldea ENCIMA**: la taberna duplicada, las casas flotando y las parcelas a otro nivel
         // que reportó el jugador. La cota de una aldea es un **dato de su fundación**: se mide la primera vez (terreno
         // natural) y se recuerda.
-        return COTA_DE_LA_ALDEA.computeIfAbsent(level.dimension().location() + "@" + center.asLong(),
+        // LA CLAVE ES EL MUNDO Y **SOLO LA X Y LA Z** (29-sep-2026). El centro de la aldea se pasa **con la cota dentro**
+        // —`new BlockPos(x, cota, z)`—, así que usar su `asLong()` completo no valía: al moverse la cota, la clave
+        // cambiaba y se volvía a medir (el log del jugador: la misma aldea en `614, 70, 598` y luego en `614, 94, 598`,
+        // o sea MISMO x/z y distinta Y). Con la clave en dos dimensiones, la cota de una aldea es de verdad un dato de
+        // su fundación.
+        return COTA_DE_LA_ALDEA.computeIfAbsent(
+                level.dimension().location() + "@" + center.getX() + "," + center.getZ(),
                 k -> medirLaCotaDeLaPlaza(level, center));
     }
 
