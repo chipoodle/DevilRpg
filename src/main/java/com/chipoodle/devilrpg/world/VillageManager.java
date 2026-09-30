@@ -2633,6 +2633,17 @@ public final class VillageManager {
         // se pierde (lo pidió el jugador al ver uno dentro de una parcela). Es la red de seguridad del corte del
         // reparto de spawn, que lo hace `CommonForgeGolemEventSubscriber` en el momento de nacer.
         sacarLosGolemsDeLaHuerta(level, center);
+        // I154 · EL DESATASCO, PARA TODOS (29-sep-2026). La clase «el aldeano está METIDO en un bloque» la sufrían
+        // TODOS los oficios, pero solo el obrero, el leñador y el recolector la comprobaban en su goal. Medido en las
+        // corridas con el despachador: `pies=dark_oak_fence cabeza=oak_pressure_plate` (metido en una MESA de la
+        // taberna, el recolector yendo al almacén), `pies=chest` (el cocinero), `pies=oak_stairs` (el leñador),
+        // `suelo=furnace`… y con la ruta viva `alcanza=SI`, así que se rendían sin ser culpa del camino. Se comprueba
+        // aquí, para TODOS los aldeanos del pueblo: el ayudante es barato (una forma de colisión) y no toca nada si la
+        // celda está libre; y trae su propio freno de 200 ticks y su traza en el registro (`estaba METIDO en …`).
+        for (Villager villager : level.getEntitiesOfClass(Villager.class,
+                new AABB(center).inflate(VillageGenerator.FENCE_RADIUS + 16))) {
+            desatascarSiEstaEncajado(villager);
+        }
         // M1 (EL DESPACHADOR) SE PROBÓ AQUÍ Y SE RETIRÓ (29-sep-2026): ganaba la pelea del rumbo —el cerebro se lo
         // pisaba en 33.000-45.000 de 50.000-65.000 recados por corrida— y eso **hundió el pueblo**: 110 · 238 · 150 ·
         // 192 rendiciones (media 172,5) contra 13 · 72 · 19 · 40 de referencia (media 36). El motivo está medido: los
@@ -4953,6 +4964,22 @@ public final class VillageManager {
      * y {@link #apuntarElRecado}) se queda sin cablear como base del nivel 3.
      */
     public static void caminarHacia(Villager villager, BlockPos objetivo, float velocidad) {
+        // I154 · A UNA CELDA QUE NO SE PISA, NO SE CAMINA (29-sep-2026). Es la clase de fallo MÁS repetida de todas
+        // las que quedaban: el goal pide caminar a la celda de su faena y esa celda no es una casilla de pie —los
+        // CULTIVOS (`destino=farmland encima=wheat`), el soporte del clérigo (`destino=brewing_stand`), la mesa de la
+        // taberna (`destino=dark_oak_fence encima=oak_pressure_plate`), el plantón de la arboleda (`destino=oak_sapling`)
+        // o un objeto dentro de un bloque—. El planificador devuelve entonces `ruta=1 nodos … alcanza=NO` y el aldeano
+        // empuja el obstáculo hasta rendirse (medido en una docena de etiquetas distintas). Aquí se corrige EN UN SOLO
+        // SITIO, para todos los goals: si el destino no es una casilla de pie, se camina a la casilla de pie MÁS
+        // CERCANA. El goal sigue midiendo contra SU destino (que es lo correcto: casi todos miden «dentro de alcance»,
+        // y a la casilla de al lado se llega igual).
+        if (villager.level() instanceof ServerLevel nivel && !esCeldaDePie(nivel, objetivo)) {
+            BlockPos pie = com.chipoodle.devilrpg.world.VillageErrands.casillaPosible(nivel, objetivo);
+            if (pie != null) {
+                ponerRumbo(villager, pie, velocidad);
+                return;
+            }
+        }
         ponerRumbo(villager, objetivo, velocidad);
     }
 

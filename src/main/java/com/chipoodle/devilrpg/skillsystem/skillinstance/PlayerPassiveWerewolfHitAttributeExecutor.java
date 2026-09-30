@@ -61,7 +61,7 @@ public class PlayerPassiveWerewolfHitAttributeExecutor extends AbstractPlayerPas
             HashMap<String, String> capAttModifiersHashMap = parentCapability.getAttributeModifiers();
             addAttributeToCapability(capAttModifiersHashMap, Attributes.ATTACK_DAMAGE, hitAttributeModifier.id());
             parentCapability.setAttributeModifiers(capAttModifiersHashMap, playerIn);
-            DevilRpg.LOGGER.info("----------------------->Add {}", hitAttributeModifier.id());
+            DevilRpg.LOGGER.debug("----------------------->Add {}", hitAttributeModifier.id());
         }
     }
 
@@ -75,7 +75,7 @@ public class PlayerPassiveWerewolfHitAttributeExecutor extends AbstractPlayerPas
                 Double.valueOf(parentCapability.getSkillsPoints(SkillEnum.WEREWOLF_HIT)) * HIT_FACTOR
         );
         //DevilRpg.LOGGER.info("||----------------------->createNewAttributeModifiers SKIN_ARMOR: {}", parentCapability.getSkillsPoints().get(SkillEnum.SKIN_ARMOR));
-        DevilRpg.LOGGER.info("----------------------->createNewAttributeModifiers(): {}", newAttributeModifier);
+        DevilRpg.LOGGER.debug("----------------------->createNewAttributeModifiers(): {}", newAttributeModifier);
         return newAttributeModifier;
     }
 
@@ -85,7 +85,7 @@ public class PlayerPassiveWerewolfHitAttributeExecutor extends AbstractPlayerPas
         //UUID uuid = removeAttributeFromCapability(attributeModifiers, Attributes.ARMOR);
         //parentCapability.setAttributeModifiers(attributeModifiers, playerIn);
         //DevilRpg.LOGGER.info("----------------------->Remove {}",uuid);
-        DevilRpg.LOGGER.info("----------------------->removeCurrentModifiers(): {}", hitAttributeModifier);
+        DevilRpg.LOGGER.debug("----------------------->removeCurrentModifiers(): {}", hitAttributeModifier);
     }
 
     private void addCurrentModifiers() {
@@ -93,8 +93,8 @@ public class PlayerPassiveWerewolfHitAttributeExecutor extends AbstractPlayerPas
         //addAttributeToCapability(attributeModifiers, Attributes.ARMOR, skinArmorAttributeModifier.id());
         addCurrentModifierTransiently(playerIn, Attributes.ATTACK_DAMAGE, hitAttributeModifier);
         //parentCapability.setAttributeModifiers(attributeModifiers, playerIn);
-        //DevilRpg.LOGGER.info("----------------------->Add {}",skinArmorAttributeModifier.id());
-        DevilRpg.LOGGER.info("----------------------->addCurrentModifierTransiently(): {}", hitAttributeModifier);
+        //DevilRpg.LOGGER.debug("----------------------->Add {}",skinArmorAttributeModifier.id());
+        DevilRpg.LOGGER.debug("----------------------->addCurrentModifierTransiently(): {}", hitAttributeModifier);
     }
 
     public void add() {
@@ -107,3 +107,4 @@ public class PlayerPassiveWerewolfHitAttributeExecutor extends AbstractPlayerPas
         removeCurrentWerewolfHitModifiers();
     }
 }
+

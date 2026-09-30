@@ -69,8 +69,8 @@ public class PlayerPassiveSkillSkinArmorAttributeExecutor extends AbstractPlayer
                 remove();
             }
             //DevilRpg.LOGGER.info("Player armorValue {}", playerIn.getArmorValue());
-            DevilRpg.LOGGER.info("Player Att armor {}",playerIn.getAttributeValue(Attributes.ARMOR));
-            DevilRpg.LOGGER.info("Player Att toughness {}", playerIn.getAttributeValue(Attributes.ARMOR_TOUGHNESS));
+            DevilRpg.LOGGER.debug("Player Att armor {}", playerIn.getAttributeValue(Attributes.ARMOR));
+            DevilRpg.LOGGER.debug("Player Att toughness {}", playerIn.getAttributeValue(Attributes.ARMOR_TOUGHNESS));
 
 
         }
@@ -84,7 +84,7 @@ public class PlayerPassiveSkillSkinArmorAttributeExecutor extends AbstractPlayer
             HashMap<String, String> capAttModifiersHashMap = parentCapability.getAttributeModifiers();
             addAttributeToCapability(capAttModifiersHashMap, Attributes.ARMOR, skinArmorAttributeModifier.id());
             parentCapability.setAttributeModifiers(capAttModifiersHashMap, playerIn);
-            DevilRpg.LOGGER.info("----------------------->Add {}", skinArmorAttributeModifier.id());
+            DevilRpg.LOGGER.debug("----------------------->Add {}", skinArmorAttributeModifier.id());
         }
     }
 
@@ -96,7 +96,7 @@ public class PlayerPassiveSkillSkinArmorAttributeExecutor extends AbstractPlayer
             HashMap<String, String> capAttModifiersHashMap = parentCapability.getAttributeModifiers();
             addAttributeToCapability(capAttModifiersHashMap, Attributes.ARMOR_TOUGHNESS, skinToughnessAttributeModifier.id());
             parentCapability.setAttributeModifiers(capAttModifiersHashMap, playerIn);
-            DevilRpg.LOGGER.info("----------------------->Add {}", skinToughnessAttributeModifier.id());
+            DevilRpg.LOGGER.debug("----------------------->Add {}", skinToughnessAttributeModifier.id());
         }
     }
 
@@ -110,7 +110,7 @@ public class PlayerPassiveSkillSkinArmorAttributeExecutor extends AbstractPlayer
                 Double.valueOf(parentCapability.getSkillsPoints(SkillEnum.SKIN_ARMOR)) * factor
         );
         //DevilRpg.LOGGER.info("||----------------------->createNewAttributeModifiers SKIN_ARMOR: {}", parentCapability.getSkillsPoints().get(SkillEnum.SKIN_ARMOR));
-        DevilRpg.LOGGER.info("----------------------->createNewAttributeModifiers(): {}", newAttributeModifier);
+        DevilRpg.LOGGER.debug("----------------------->createNewAttributeModifiers(): {}", newAttributeModifier);
         return newAttributeModifier;
     }
 
@@ -120,7 +120,7 @@ public class PlayerPassiveSkillSkinArmorAttributeExecutor extends AbstractPlayer
         //UUID uuid = removeAttributeFromCapability(attributeModifiers, Attributes.ARMOR);
         //parentCapability.setAttributeModifiers(attributeModifiers, playerIn);
         //DevilRpg.LOGGER.info("----------------------->Remove {}",uuid);
-        DevilRpg.LOGGER.info("----------------------->removeCurrentModifiers(): {}", skinArmorAttributeModifier);
+        DevilRpg.LOGGER.debug("----------------------->removeCurrentModifiers(): {}", skinArmorAttributeModifier);
     }
 
     private void removeCurrentSkinToughnessModifiers() {
@@ -129,7 +129,7 @@ public class PlayerPassiveSkillSkinArmorAttributeExecutor extends AbstractPlayer
         //UUID uuid = removeAttributeFromCapability(attributeModifiers, Attributes.ARMOR);
         //parentCapability.setAttributeModifiers(attributeModifiers, playerIn);
         //DevilRpg.LOGGER.info("----------------------->Remove {}",uuid);
-        DevilRpg.LOGGER.info("----------------------->removeCurrentModifiers(): {}", skinToughnessAttributeModifier);
+        DevilRpg.LOGGER.debug("----------------------->removeCurrentModifiers(): {}", skinToughnessAttributeModifier);
     }
 
     private void addCurrentModifiers() {
@@ -138,9 +138,9 @@ public class PlayerPassiveSkillSkinArmorAttributeExecutor extends AbstractPlayer
         addCurrentModifierTransiently(playerIn, Attributes.ARMOR, skinArmorAttributeModifier);
         addCurrentModifierTransiently(playerIn, Attributes.ARMOR_TOUGHNESS, skinToughnessAttributeModifier);
         //parentCapability.setAttributeModifiers(attributeModifiers, playerIn);
-        //DevilRpg.LOGGER.info("----------------------->Add {}",skinArmorAttributeModifier.id());
-        DevilRpg.LOGGER.info("----------------------->addCurrentModifierTransiently(): {}", skinArmorAttributeModifier);
-        DevilRpg.LOGGER.info("----------------------->addCurrentModifierTransiently(): {}", skinToughnessAttributeModifier);
+        //DevilRpg.LOGGER.debug("----------------------->Add {}",skinArmorAttributeModifier.id());
+        DevilRpg.LOGGER.debug("----------------------->addCurrentModifierTransiently(): {}", skinArmorAttributeModifier);
+        DevilRpg.LOGGER.debug("----------------------->addCurrentModifierTransiently(): {}", skinToughnessAttributeModifier);
     }
 
     public void add() {
@@ -189,3 +189,4 @@ public class PlayerPassiveSkillSkinArmorAttributeExecutor extends AbstractPlayer
 
     }
 }
+

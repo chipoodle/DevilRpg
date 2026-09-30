@@ -62,7 +62,7 @@ public class PlayerPassiveWerewolfVitalityAttributeExecutor extends AbstractPlay
             HashMap<String, String> capAttModifiersHashMap = parentCapability.getAttributeModifiers();
             addAttributeToCapability(capAttModifiersHashMap, Attributes.MAX_HEALTH, hitAttributeModifier.id());
             parentCapability.setAttributeModifiers(capAttModifiersHashMap, playerIn);
-            DevilRpg.LOGGER.info("----------------------->Add {}", hitAttributeModifier.id());
+            DevilRpg.LOGGER.debug("----------------------->Add {}", hitAttributeModifier.id());
         }
     }
 
@@ -76,7 +76,7 @@ public class PlayerPassiveWerewolfVitalityAttributeExecutor extends AbstractPlay
                 Double.valueOf(parentCapability.getSkillsPoints(SkillEnum.WEREWOLF_VITALITY)) * HEALTH_FACTOR
         );
         //DevilRpg.LOGGER.info("||----------------------->createNewAttributeModifiers SKIN_ARMOR: {}", parentCapability.getSkillsPoints().get(SkillEnum.SKIN_ARMOR));
-        DevilRpg.LOGGER.info("----------------------->createNewAttributeModifiers(): {}", newAttributeModifier);
+        DevilRpg.LOGGER.debug("----------------------->createNewAttributeModifiers(): {}", newAttributeModifier);
         return newAttributeModifier;
     }
 
@@ -89,7 +89,7 @@ public class PlayerPassiveWerewolfVitalityAttributeExecutor extends AbstractPlay
         // Solo clampamos la vida al QUITAR el bono (de-transformar), no al re-estructurar (para no perder salud).
         if (clampHealth && playerIn.getHealth() > playerIn.getMaxHealth())
             playerIn.setHealth(playerIn.getMaxHealth());
-        DevilRpg.LOGGER.info("----------------------->removeCurrentModifiers(): {}", hitAttributeModifier);
+        DevilRpg.LOGGER.debug("----------------------->removeCurrentModifiers(): {}", hitAttributeModifier);
     }
 
     private void addCurrentModifiers() {
@@ -97,8 +97,8 @@ public class PlayerPassiveWerewolfVitalityAttributeExecutor extends AbstractPlay
         //addAttributeToCapability(attributeModifiers, Attributes.ARMOR, skinArmorAttributeModifier.id());
         addCurrentModifierTransiently(playerIn, Attributes.MAX_HEALTH, hitAttributeModifier);
         //parentCapability.setAttributeModifiers(attributeModifiers, playerIn);
-        //DevilRpg.LOGGER.info("----------------------->Add {}",skinArmorAttributeModifier.id());
-        DevilRpg.LOGGER.info("----------------------->addCurrentModifierTransiently(): {}", hitAttributeModifier);
+        //DevilRpg.LOGGER.debug("----------------------->Add {}",skinArmorAttributeModifier.id());
+        DevilRpg.LOGGER.debug("----------------------->addCurrentModifierTransiently(): {}", hitAttributeModifier);
     }
 
     public void add() {
@@ -111,3 +111,4 @@ public class PlayerPassiveWerewolfVitalityAttributeExecutor extends AbstractPlay
         removeCurrentWerwolfVitalityModifiers(true);
     }
 }
+
