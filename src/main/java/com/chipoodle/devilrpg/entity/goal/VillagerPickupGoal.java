@@ -3,7 +3,6 @@ package com.chipoodle.devilrpg.entity.goal;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.world.VillageGenerator;
 import com.chipoodle.devilrpg.world.VillageManager;
-import com.chipoodle.devilrpg.world.VillageErrands;
 import com.chipoodle.devilrpg.world.VillagePantry;
 import com.chipoodle.devilrpg.world.VillageStorage;
 import net.minecraft.core.BlockPos;
@@ -412,13 +411,6 @@ public class VillagerPickupGoal extends Goal {
             }
             if (esFallido(item.blockPosition())) {
                 continue; // ya se intentó y no se llegó: se deja por un rato (ver `marcarFallido`)
-            }
-            // M2 · LA AUTORIDAD DE RECADOS (I151): un objeto al que NO HAY DÓNDE PONERSE de pie no se elige. Es el
-            // mismo criterio que ya usa el ganadero con sus huevos, puesto donde se eligen los recados del recojo
-            // (clase A de `docs/aldea-cerebro.md`). MEDIDO: «Recogiendo lo suyo» aparecía hasta 8 veces en la ventana
-            // de una corrida, siempre con el aldeano empujando una valla o un mueble.
-            if (VillageErrands.casillaPosible(level, item.blockPosition()) == null) {
-                continue;
             }
             double dx = item.getX() - center.getX();
             double dz = item.getZ() - center.getZ();

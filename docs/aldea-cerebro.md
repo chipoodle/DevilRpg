@@ -79,6 +79,33 @@ proponen.** Cuatro piezas, todas nuestras:
 
 ## 3. Fases (cada una, medida con **medias de 4 corridas**)
 
+> **FASE 1 · PROBADA Y RETIRADA (29-sep-2026).** M2 (autoridad de recados) se cableó en el ganadero, la taberna y el
+> recojo, y M3 (abrir el portón antes de pedir la ruta) en el ganadero. **4 corridas contra 4 de referencia**, contando
+> **rendiciones por etiqueta en toda la corrida** (más muestra que la ventana de 2.000-12.000):
+>
+> | etiqueta | referencia | con M2+M3 |
+> |---|---|---|
+> | `Recogiendo el corral` | 3 | **0** |
+> | `Recogiendo lo suyo` | 28 | 27 |
+> | `Bajando lo del corral` | 24 | **28** |
+> | `Yendo a la taberna` | 14 | **32** |
+> | `Sembrando` | 21 | 13 |
+> | **total por corrida** | 13 · 72 · 19 · 40 (**36**) | 24 · 42 · 49 · 42 (**39,25**) |
+>
+> **NO PAGA**: el ganadero no mejora (`Bajando lo del corral` incluso sube) y la taberna **empeora** —`casillaPosible`
+> es más estricto que el `casillaDePieCercaDe` viejo (que caía a la propia faena) y **aparca mesas que sí se podían
+> atender**, con lo que el aldeano salta de mesa en mesa rindiéndose en cada una. **Cableado RETIRADO**; el módulo
+> (`VillageErrands`) y este plan se quedan, porque son la base de las fases siguientes.
+>
+> **Y DOS LECCIONES DE MEDIDA, que valen para todo lo que venga**:
+> 1. **El total no distingue**: 36 contra 39,25 con dispersión 13-72 **no es una diferencia concluyente** (harían falta
+>    ~15 corridas por configuración). Lo que sí informa es **la etiqueta concreta** que ataca el arreglo (I135).
+> 2. **Y hay que mirar la corrida entera**, no una ventana corta: la mayoría de las rendiciones de estas corridas caen
+>    **después** del tick 12.000 (la ventana de 2.000-12.000 veía 3 de las 14 de la taberna).
+>
+> Próximo intento, por tanto: **etiqueta concreta + corrida entera + más de 4 corridas**, y **M1 (el despachador)**
+> antes de volver a tocar M2, porque el problema de la taberna no es «no hay casilla» sino «dos jefes».
+
 | fase | qué entra | criterio de la medida |
 |---|---|---|
 | **1** | **M2** (autoridad de recados) y su uso en el ganadero y la taberna | `Bajando lo del corral`, `Recogiendo lo suyo` y `Yendo a la taberna` a **0**, sin subir ninguna otra etiqueta |

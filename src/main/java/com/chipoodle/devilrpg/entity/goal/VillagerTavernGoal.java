@@ -3,7 +3,6 @@ package com.chipoodle.devilrpg.entity.goal;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.world.VillageGenerator;
 import com.chipoodle.devilrpg.world.VillageManager;
-import com.chipoodle.devilrpg.world.VillageErrands;
 import com.chipoodle.devilrpg.world.VillagePantry;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -149,17 +148,7 @@ public class VillagerTavernGoal extends Goal {
             // recolectora ya libre de los bancales (I130), "Filomena / Yendo a la taberna" se rindió **16 veces en una
             // corrida** —dos tercios del total de esa corrida— con `ruta=1 nodos … alcanza=NO` al destino `516,64,639`
             // desde `516,63,641` (dos bloques y un nivel de diferencia).
-            BlockPos casilla = VillageErrands.casillaPosible(level, destino);
-            // M2 (I151): si no hay dónde ponerse (el rincón está lleno de mesas y sillas), la mesa se aparca y el
-            // aldeano se va a lo suyo: no se empuja el mueble hasta rendirse (clase A de docs/aldea-cerebro.md).
-            if (casilla == null) {
-                // SE CORTA EL GOAL, no se deja mirando: el que se queda con el objetivo puesto RONDA, y eso es lo que
-                // las medidas dicen que empeora (medido en el ganadero: media 23,0 con el objetivo puesto frente a
-                // 10,25 de referencia). `STUCK_LIMIT` es el mismo camino que su propio rendirse (I33).
-                stuckTicks = STUCK_LIMIT;
-                return;
-            }
-            VillageManager.caminarHacia(villager, casilla, VELOCIDAD);
+            VillageManager.caminarHacia(villager, VillageManager.casillaDePieCercaDe(level, destino), VELOCIDAD);
             VillageManager.ponerActividad(villager, "Yendo a la taberna");
             if (distancia < mejorDistancia - 0.5D) {
                 mejorDistancia = distancia;
