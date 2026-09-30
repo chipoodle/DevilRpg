@@ -123,3 +123,32 @@ la Opción A: **17,5** con el rumbo sostenido contra **10,25** sin él).
   es el problema. La clase de fallo nunca ha sido «no encuentra el camino», sino «le mandan a un sitio imposible, o dos
   jefes le mandan a sitios distintos, o nadie abre la puerta».
 - Dormir, huir, el pánico, la cría y las animaciones: vanilla.
+
+## 5. Si M1 tampoco paga: la escalada (lo avisó el jugador)
+
+*«Si aun así sigue evaluando pobremente vamos a tener que cambiar de arquitectura y hacer todo el comportamiento
+personalizado de los aldeanos para evitar fallos y bloqueos.»* Queda escrito el orden, para no improvisarlo:
+
+1. **Nivel 1 (hecho y retirado)**: M2 (autoridad de recados) y M3 (puertas). Medido: **no paga** —
+   `Bajando lo del corral` 24 → 28 y `Yendo a la taberna` 14 → 32—, así que el cableado se quitó.
+2. **Nivel 2 (implementado, en medida)**: **M1**, el despachador. `VillageDispatcherGoal` corre **sin flags** a
+   prioridad 0 —con `MOVE` bloquearía a los oficios, que también lo usan, y el pueblo dejaría de trabajar— y en cada
+   tick **escribe y defiende** el rumbo del recado, con **supervisión** (si no consume nodos de la ruta en 200 ticks,
+   **abandona** el recado y aparca el punto: nunca ronda). **Criterio**: las etiquetas del ganadero
+   (`Bajando lo del corral` 24, `Recogiendo lo suyo` 28) y de la taberna (`Yendo a la taberna` 14) **por debajo** de la
+   referencia en 4 corridas, y el instrumento `DESPACHADOR: … rumbos defendidos` diciendo cuántas veces el cerebro
+   pisaba el rumbo.
+3. **Nivel 3 — comportamiento 100 % propio** (solo si el nivel 2 no baja las etiquetas):
+   - **entidad propia** para los aldeanos de la aldea (`VillageVillager extends Villager`) con **cerebro propio**: sin
+     los `Behavior` de paseo (`SetWalkTargetFromLookTarget`) ni los de trabajo vanilla que compiten, y con **una sola**
+     actividad: «cumplir mi tarea», gobernada por las tareas del mod;
+   - **navegación con evaluador propio** (`PathNavigation` + `NodeEvaluator` propios): nuestros portones siempre
+     franqueables, la llegada sin la tolerancia de 1 bloque, y **nunca** una ruta que termine en una celda que no se
+     pisa (el contrato de M2, **dentro del buscador** en vez de en cada goal);
+   - **sin rondar por diseño**: el estado del aldeano es siempre «voy a X» o «trabajo en X»; **no existe** «no sé qué
+     hacer», que es lo que produce el 19 % de robos de rumbo y los avisos sueltos;
+   - **coste y riesgo**: altos (hay que conservar lo que vanilla garantiza: ahogarse, caer, dormir, huir, criar y
+     comerciar), pero es la única forma de que un fallo sea **imposible por construcción** en vez de improbable.
+   - **Condición para entrar**: solo si el nivel 2 no baja las etiquetas, y con el juez de siempre: **etiqueta concreta
+     + corrida entera + varias corridas**.
+
