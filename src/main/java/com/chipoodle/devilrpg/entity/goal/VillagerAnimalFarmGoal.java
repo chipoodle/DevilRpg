@@ -1,7 +1,6 @@
 package com.chipoodle.devilrpg.entity.goal;
 
 import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.world.VillageErrands;
 import com.chipoodle.devilrpg.world.VillageGenerator;
 import com.chipoodle.devilrpg.world.VillageManager;
 import com.chipoodle.devilrpg.world.VillagePantry;
@@ -730,21 +729,6 @@ public class VillagerAnimalFarmGoal extends Goal {
 
     private void irAlObjetivo() {
         if (target != null && villager.level() instanceof ServerLevel level) {
-            // I155 · LA AUTORIDAD DEL PORTÓN (29-sep-2026). El ganadero ya sabe ir «por tramos» hasta el portón, pero
-            // eso exige que la ruta EXISTA. Medido en las corridas del despachador: el ganadero se rendía DENTRO del
-            // corral con `ruta=1 nodos … alcanza=NO` hacia el almacén (y la faena del corral), porque el planificador
-            // del juego **no cruza un portón cerrado**: si no hay ruta hasta el portón, no llega a pedirlo —círculo
-            // cerrado—, y el portón solo se abría con el aldeano ya pegado a él (2,6 bloques).
-            // Así que cuando se queda SIN RUTA, la aldea le ABRE SU PORTÓN antes de insistir, y solo si el recado
-            // CRUZA la cerca (si los dos están dentro, se queda cerrado: así no se escapan las gallinas).
-            // OJO CON LA COTA: `nivel` vale Integer.MIN_VALUE hasta que lo resuelve `destinoDelTramo`, que va después;
-            // buscando el portón con una altura falsa no se abría nada (ese fue el fallo del primer intento).
-            if (nivel == Integer.MIN_VALUE) {
-                nivel = VillageGenerator.cotaDeLaPlaza(level, center);
-            }
-            if (villager.getNavigation().getPath() == null && level.getGameTime() % 10L == 0L) {
-                VillageErrands.abrirLaPuertaSiHaceFalta(level, villager, center, nivel, target);
-            }
             VillageManager.caminarHacia(villager, destinoDelTramo(level), VELOCIDAD);
         } else if (target != null) {
             VillageManager.caminarHacia(villager, target, VELOCIDAD);
