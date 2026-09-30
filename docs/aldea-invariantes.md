@@ -4715,6 +4715,54 @@ el `gradlew` no mata el servidor) y los **dos** servidores escribieron en el **m
 asustaron eran del **código viejo** de la otra corrida. El trámite de medida ya lleva el paso obligatorio: **cero
 servidores vivos antes de lanzar**, y borrar el `latest.log` **sin** silenciar el error.
 
+### I155 · EL PORTÓN DEL CORRAL LO ABRE **LA ALDEA**, ANTES DE PEDIR LA RUTA (29-sep-2026)
+
+**El círculo cerrado, medido** (corridas del despachador): el ganadero se rendía **dentro** del corral —
+
+```
+no consigue llegar a 613, 62, 574 desde … (ruta=1 nodos … alcanza=NO)   etiqueta="Eufemia (Ganadero) / Bajando lo del corral"
+```
+
+El planificador del juego **no cruza un portón de valla CERRADO**, y el portón solo se abría con el aldeano **ya pegado**
+a él (2,6 bloques): si no hay ruta hasta el portón, **no llega a pedirlo**. Círculo cerrado: no sale porque está
+cerrado, y no se abre porque no llega. Es la clase D del plan (`docs/aldea-cerebro.md`).
+
+**EL ARREGLO**: cuando el ganadero **se queda sin ruta**, la aldea **le abre SU portón** antes de insistir
+(`VillageErrands.abrirLaPuertaSiHaceFalta`), y **solo si el recado CRUZA la cerca**: si el aldeano y su recado están los
+dos dentro, el portón se queda **cerrado** — así **no se escapan las gallinas**.
+**Y OJO CON LA COTA**: `nivel` vale `Integer.MIN_VALUE` hasta que lo resuelve `destinoDelTramo`, que va **después**, así
+que hay que resolverla **antes** de buscar el portón (fue el fallo del primer intento: se buscaba con una altura falsa
+y no se abría nada).
+
+### I154 · LAS TRES CLASES DE FALLO, ARREGLADAS **EN UN SOLO SITIO** (29-sep-2026)
+
+Clasificando **todas** las rendiciones que el despachador destapó (I150) salieron **tres clases**, no doce problemas:
+
+**(A) El destino de la faena NO ES UNA CASILLA DE PIE** — y es la más repetida:
+`destino=farmland encima=wheat` (los **cultivos**), `destino=brewing_stand` (el soporte del clérigo),
+`destino=dark_oak_fence encima=oak_pressure_plate` (una **mesa** de la taberna), `destino=oak_sapling` (el plantón de la
+arboleda). El planificador devuelve `ruta=1 nodos … alcanza=NO` y el aldeano **empuja el obstáculo** hasta rendirse.
+→ **ARREGLO CENTRAL**: en `VillageManager.caminarHacia` (por donde pasan **todos** los goals), si el destino no es
+casilla de pie, se camina a la **casilla de pie más cercana**. El goal sigue midiendo contra **su** destino.
+
+**(D) El aldeano METIDO dentro de un bloque**: `pies=dark_oak_fence cabeza=oak_pressure_plate` (metido en una mesa),
+`pies=chest`, `pies=oak_stairs`, `suelo=furnace`… y con la **ruta viva** (`alcanza=SI`), así que se rendían sin culpa del
+camino. Lo comprobaban solo el obrero, el leñador y el recolector.
+→ **ARREGLO CENTRAL**: el **latido del pueblo** comprueba el encajamiento de **todos** los aldeanos
+(`desatascarSiEstaEncajado`, con su freno de 200 ticks y su traza `estaba METIDO en …`). En las 4 corridas de medida
+saltó **8, 14, 15 y 10 veces**.
+
+**(B) La ruta SÍ alcanza y el goal se rinde igual** (`ruta=9/31/40 nodos … alcanza=SI`): el goal mide el atasco por
+distancia **en línea recta** y con un bloque de altura no baja.
+→ **ARREGLO**: el avance se mide **también por la ruta** (`avanzaPorLaRuta`, I139). Hecho en el obrero (I153); en los
+demás, la clase (A) ya les quita la causa.
+
+**MEDIDO (4 corridas contra 4, modo aldea, corrida entera)**: **41,5 → 30,25** de media;
+`Bajando lo del corral` **35 → 16**, `Recogiendo lo suyo` **40 → 18**, `Yendo a la taberna` **35 → 29**,
+`Yendo a la cocina` **14 → 12**, `Labro la huerta` **4 → 2**;
+**y el pueblo trabaja igual**: pescador **9,5**, granja **797 → 759**, herrería **74,5 → 75**.
+**Lo que subió**: `Sacrificando un animal` **6 → 15** (el ganadero; es I155) y `A por leña al almacén` **0 → 3**.
+
 ### I153 · **A UN HUECO NO SE CAMINA**: el obrero no persigue lo que no tiene casilla de pie (29-sep-2026)
 
 **El fallo, medido** (corridas con el despachador encendido, `build/medida-tanda42.log`):

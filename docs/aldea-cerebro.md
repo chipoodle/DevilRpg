@@ -117,6 +117,32 @@ proponen.** Cuatro piezas, todas nuestras:
 **Nada de esto entra sin su media.** Y todo lo que no mejore la media, se retira y se apunta (como se ha hecho hoy con
 la Opción A: **17,5** con el rumbo sostenido contra **10,25** sin él).
 
+## 3.bis · EL NIVEL 3, HECHO Y MEDIDO (29-sep-2026)
+
+Lo que M1 enseñó (que los goals **no sirven para un aldeano que obedece**) se arregló quitándoles los fallos **de
+clase**, no de uno en uno. Tres reglas **centrales** (I152–I155):
+
+| regla | dónde | qué clase de fallo mata |
+|---|---|---|
+| **A · A UNA CELDA QUE NO SE PISA NO SE CAMINA** | `VillageManager.caminarHacia` (**un solo sitio**, para los ~20 goals) | el destino de la faena no es casilla de pie: **cultivos** (`destino=farmland encima=wheat`), el soporte del clérigo (`brewing_stand`), la mesa de la taberna (`dark_oak_fence encima=oak_pressure_plate`), el plantón (`oak_sapling`) → `ruta=1 nodos alcanza=NO` y el aldeano empujando el obstáculo |
+| **D · EL DESATASCO POR ENCAJAMIENTO, PARA TODOS** | el latido del pueblo (una comprobación, todos los aldeanos) | el aldeano **metido dentro** de un bloque: `pies=dark_oak_fence cabeza=oak_pressure_plate` (una mesa), `pies=chest`, `pies=oak_stairs`, `suelo=furnace`, con la ruta viva `alcanza=SI` |
+| **C · LA CASILLA DEL ENTRENAMIENTO, CON CONTRATO Y RUTA** | `VillagerGuardGoal` (I152) | la casilla estaba **2 bloques por encima** de la cota, aislada: ruta de un nodo. Ahora: **a la cota** + **ruta validada** + **si ninguna vale, no entrena** (y el «no» **caduca a los 5 s**: cacheado para siempre dejaba al guardia sin entrenar **jamás**, medido) |
+| **O · EL PORTÓN DEL CORRAL, ABIERTO POR LA ALDEA** | `VillagerErrands.abrirLaPuertaSiHaceFalta` (I155) | el ganadero **encerrado** con el portón cerrado: el planificador no cruza una valla cerrada y el portón solo se abría con el aldeano ya pegado a él → **círculo cerrado** |
+
+**MEDIDO, 4 corridas contra 4 del mismo modo** (modo aldea del arnés, la corrida **entera**):
+
+| | referencia (51-54) | con I154 (59-62) |
+|---|---|---|
+| rendiciones | 50 · 20 · 48 · 48 → **41,5** | 25 · 29 · 31 · 36 → **30,25** |
+| `Bajando lo del corral` | 35 | **16** |
+| `Recogiendo lo suyo` | 40 | **18** |
+| `Yendo a la taberna` | 35 | 29 |
+| `Yendo a la cocina` | 14 | 12 |
+| **y el pueblo TRABAJA** | pescador 9,5 · granja 797 · herrería 74,5 | pescador 9,5 · granja 759 · herrería 75 |
+
+Y los jueces propios de cada pieza: **guardias** `Yendo a entrenar` **0** y `entrenado` subiendo de 0 a **914-1.800**
+(sin entrenar en una corrida antes del arreglo del rechazo); **obrero** `Repuso*` **0** en las cuatro.
+
 ## 4. Lo que NO se toca
 
 - El **movimiento** lo sigue haciendo el juego (`PathNavigation` + `MoveToTargetSink`): no se reescribe el A\*, que no
