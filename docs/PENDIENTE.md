@@ -113,6 +113,50 @@ hace el herrero (**10**, hasta el objetivo de 16 pedernales) y la misma galería
   `Guardando lo suyo` **5 → 0**, `Yendo a la taberna` **1-2 → 0**, el bucle del bancal **7 → 1**, y la **tasa del
   pueblo 0,50-0,60 → 0,30** por 1.000 ticks (`tools/arnes/medidas-atascos-sueltos.txt`).
 
+### 8.bis. SESIÓN DEL 29-sep-2026 (tarde): **el nivel 3, medido y cerrado por clases** — ACTA
+
+El jugador mandó **reescribir el cerebro de los aldeanos** («si es necesario hay que cambiar toda la arquitectura…
+que sean propios con un diseño que permita resolver todos nuestros problemas»). Se hizo **por niveles**, midiendo cada
+uno con **4 corridas y por etiqueta** (la lección de la mañana: el total no distingue), y está en `docs/aldea-cerebro.md`:
+
+1. **Nivel 1 · M2+M3 (autoridad de recados y puertas)** — **PROBADO Y RETIRADO**: la media **subió** a 23 (con un fallo
+   mío: aparcaba el recado **dejando el objetivo puesto** y el aldeano **rondaba**). Se quedó el módulo `VillageErrands`.
+2. **Nivel 2 · M1 el despachador** — **PROBADO Y RETIRADO, y fue el hallazgo del día**: ganó la pelea del rumbo
+   (el cerebro se lo pisaba en **33.000-45.000 de 50.000-65.000 recados por corrida**) y eso **hundió el pueblo**
+   (**110 · 238 · 150 · 192**, media **172,5**, contra **13 · 72 · 19 · 40**, media **36**): los goals **contaban con
+   que el paseo se llevara al aldeano**, y al llegar de verdad a sus destinos quedó al descubierto **la lista real de
+   lo que está roto**. Esa lista es el trabajo del nivel 3.
+3. **Nivel 3 · arreglar las CLASES, no las etiquetas** (I152–I155):
+   - **I152 guardias** — la casilla del entrenamiento estaba **2 bloques por encima** de la cota (encima de la diana),
+     pasaba la prueba local y estaba **aislada** (ruta de un nodo). Ahora: **a la cota** + **ruta validada** + **si
+     ninguna vale, no entrena**, y **el «no» caduca a los 5 s** (cacheado para siempre, un guardia se quedó **sin
+     entrenar en toda una corrida**: 267 censos con `entrenado` máximo **0**). **MEDIDO**: `Yendo a entrenar` **0** en
+     todas y `entrenado` subiendo de 0 a **914-1.800** en las cuatro.
+   - **I153 obrero** — caminaba **al propio hueco** (`destino=stone_bricks encima=air`, ruta de un nodo). Ahora sin
+     casilla de pie **no persigue** (aparca el hueco) y el avance se mide **por la ruta**. **MEDIDO**: `Repuso*` **0**
+     en las cuatro y la media **41,5 → 41,5** (mismo modo) con el trabajo igual.
+   - **I154 las tres clases, en un solo sitio** — (A) **a una celda que no se pisa no se camina**: en `caminarHacia`,
+     para **todos** los goals (cultivos, el soporte del clérigo, la mesa de la taberna, el plantón de la arboleda);
+     (D) **el encajamiento se comprueba para todos** los aldeanos (metido en una **mesa**, en un **cofre**, en unas
+     **escaleras**, sobre un **horno**: saltó **8, 14, 15 y 10 veces** por corrida); (B) avance por ruta.
+     **MEDIDO (4 contra 4, modo aldea, corrida entera)**: **41,5 → 30,25**; `Bajando lo del corral` **35 → 16**,
+     `Recogiendo lo suyo` **40 → 18**, `Yendo a la taberna` **35 → 29**, `Yendo a la cocina` **14 → 12**; **y el pueblo
+     trabaja igual** (pescador 9,5, granja 797 → 759, herrería 74,5 → 75).
+   - **I155 el portón del corral lo abre la aldea** cuando el ganadero se queda **sin ruta**, y solo si el recado
+     **cruza** la cerca (si los dos están dentro, cerrado: **las gallinas no se escapan**). En medida al cerrar la
+     sesión (2 corridas), porque `Sacrificando un animal` **subió 6 → 15**.
+   - **Ruido del registro**: los `removeCurrentModifiers()/Add/createNewAttributeModifiers` y `Player Att armor|toughness`
+     pasan a **DEBUG** (ensuciaban las medidas).
+4. **LO QUE QUEDA PENDIENTE, con nombre y número** (medido en el lote 59-62):
+   - `Yendo a la taberna` **29** en 4 corridas (la clase es «dos jefes»: el goal pide una mesa y el cerebro se lo lleva;
+     **M1 lo arreglaba y hundía el resto** → hay que hacerlo **por oficio**, no para todos a la vez);
+   - `Sacrificando un animal` **15** (el ganadero: **I155 en medida**);
+   - `A por leña al almacén` **3** y `Yendo a la cocina` **12** (cocinero: el segundo es **escalera en la cabeza**,
+     `encima=deepslate_tile_stairs`, y el primero la ruta de un nodo desde el interior de la taberna);
+   - `Sembrando` **13** (granjeros: `destino=farmland encima=wheat`, ya cubierto por I154; si sigue, mirar el conteo
+     del goal, que mide contra el bancal);
+   - y los dos ruidos del §8 de siempre: el **aldeano fresco con hambre 0** y los avisos sueltos del arranque.
+
 ### 8. Lo que queda, con su nombre y su número (27-sep-2026)
 
 Con el código de hoy, la última corrida (`build/medida-clerigo2.log`, 15.400 ticks) deja **7 avisos de rendición,
