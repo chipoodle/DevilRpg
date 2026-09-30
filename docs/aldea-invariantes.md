@@ -4749,6 +4749,24 @@ corrida, como hice, **no distingue un tropiezo de un bucle ni de ruido**: hace f
 configuración, que es lo que ya está escrito en `PENDIENTE` §8 y lo que la comparación de medias (tandas 27-32) está
 midiendo.
 
+**Y LA COMPARACIÓN DE MEDIAS, HECHA** (4 corridas por configuración, misma copia del mundo, mismos ajustes del arnés,
+misma ventana 2.000–12.000):
+
+| configuración | corridas | **media** |
+|---|---|---|
+| **A · con el rumbo sostenido** (solo la taberna) | 15 · 21 · 7 · 27 | **17,5** |
+| **B · sin sostenerlo** (el código de antes) | 7 · 10 · 6 · 18 | **10,25** |
+
+**Con la media, el veredicto es claro y es el contrario del que quería: sostener el rumbo es un 70 % PEOR.** Y fíjate en
+un detalle que la media destapa y que las corridas sueltas escondían: en la tanda 29 la etiqueta de la **propia
+taberna** volvió con **6** — el arreglo ni siquiera arreglaba de forma consistente lo suyo. **RETIRADO** (los dos
+ficheros vuelven al estado anterior), y el instrumento (`RUMBO: N recados, M sostenidos`) queda documentado porque fue
+lo que dio el dato que faltaba: **el cerebro le pisa el rumbo al goal en el 19 % de los recados**.
+
+**LO QUE ESTO ENSEÑA PARA EL SIGUIENTE INTENTO**: el ladrón del rumbo **no es el culpable**; el culpable es **elegir
+recados que no se pueden terminar** (el ganadero yendo a por cosas dentro/detrás de la valla doble del corral). Por ahí
+va el siguiente paso, y esta vez **con medias de 4 corridas y no con una**.
+
 ### I139 · EL ATASCO SE MIDE POR EL **AVANCE POR LA RUTA** (y el que va a por un objeto, por una CASILLA DE PIE)
 
 Los dos atascos sueltos que quedaban en el pueblo, **medidos con el desglose por etiquetas** y arreglados los dos.
