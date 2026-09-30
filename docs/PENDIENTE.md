@@ -125,7 +125,7 @@ TODOS SUELTOS** (el mayor, **2**) y **NINGÚN BUCLE** — contra los **18** de l
 | **RESUELTO: los viajes largos sin tirón** | el recolector al **almacén** desde la huerta (**70+ bloques**, `alcanza=NO`) se rendía en **bucle de 5-8 avisos**. Arreglado con **`VillageManager.elPuntoDeAhora`** (casilla de pie + **tramo**) midiendo el atasco **contra el tramo** (I140). MEDIDO: `Saliendo de la huerta` **8 → 1** |
 | **RESUELTO: el bucle de la PLAZA** | el destino de «volver a la plaza» es **la campana del kiosco** (no se pisa) y el tramo calculado a mano **no comprobaba la ruta**: **10-15 avisos en bucle** con `cerebro=531,63,646` y `nav=[sin ruta]`. Arreglado con el **tirón del proyecto** (`tironConMemoria`). MEDIDO: **15 → 1** |
 | **RESUELTO: el clérigo** | `Yendo a la iglesia` **2 → 0**: estaba **metido en la puerta** de la iglesia (`pies=oak_door`) con la ruta buena → casilla de pie + **`desatascarSiEstaEncajado`** (I122/I140) |
-| **el ganadero** (1-2 sueltos, sin bucle) | `Recogiendo el corral` con algo caído sobre **mobiliario** (una valla, la mesa): el punto de ahora ya está puesto (2 → 1); lo que queda son casos puntuales |
+| **el ganadero** → **RESUELTO Y MEDIDO** (29-sep-2026, ver §12) | `Recogiendo el corral` con algo caído sobre **mobiliario** (una valla, la mesa): el punto de ahora se puso (2 → 1) y el filtro de celdas no pisables del §12 lo dejó en **0 en la ventana** (medido con `rendiciones.py --etiquetas`). Del ganadero quedan **otras** ramas (`Bajando lo del corral` 2 en la ventana), que son la clase de I119/I122 |
 | **RESUELTO: el clérigo y su POI** (clase **I125**) | `Yendo a la iglesia` **2 → 0**: estaba metido en la **puerta** (`pies=oak_door` → desatasco) y además el cerebro iba a su **POI** (`cerebro=452,64,603` con `destino=453,64,603`). El avance por la ruta está ahora en **`VillageManager.avanzaPorLaRuta`** (el índice del nodo de la ruta viva), compartido con el guardia |
 | **RESUELTO: el bucle de la PLAZA (otra vez)** | el aldeano que **ya estaba** en la plaza se quedaba a 3-4 bloques de **la campana** (que no se pisa) y la vuelta se medía contra ella → **5 avisos en bucle**. Ahora la llegada se mide contra el **punto de pie**: **5 → 0** |
 | **lo que queda, y ya no es un bucle** | **8 avisos, todos sueltos** (el mayor, 2), de **siete aldeanos distintos**: tropiezos puntuales de cada oficio (un granjero buscando recambios, un leñador guardando lo suyo, un guardia yendo a entrenar…). No hay ninguno repetido: **cada aldeano, una vez** |
@@ -190,7 +190,30 @@ entran**). Detalle en `tools/arnes/medidas-entreno.txt` / la invariante **I145**
 **Lo que queda de este caso**: el último salto al puesto (los 6-7 bloques) no tiene ruta desde el tramo; es un tropiezo
 puntual, no un bucle.
 
-### 11. LA POSADA SIN ESCALERA: el latido sube aldeanos a una planta de la que NO SE PUEDE BAJAR (28-sep-2026)
+### 11. LA POSADA SIN ESCALERA: el latido sube aldeanos a una planta de la que NO SE PUEDE BAJAR (28-sep-2026) — **REVISADO el 29-sep-2026: la premisa no se sostiene y lo que queda es OTRA cosa**
+
+> **AUDITORÍA DEL 29-sep-2026 (lo pidió el jugador: «¿cómo que pendientes documentados?»).** Tres cosas, medidas:
+>
+> 1. **La premisa (una planta SIN salida) no se sostiene en la aldea actual**: la taberna se construye **abriendo su
+>    hueco de subida** —el propio log lo canta al levantarla: *«desván vaciado (833 teja(s) de relleno) y hueco de
+>    subida abierto (6 celda(s)); se pisa en y=…»*—, así que su planta de arriba **tiene escalera**. El diagnóstico
+>    original era de la **posada vieja** del mundo anterior (`511,68,667`) y se leyó mal el mapa de capas.
+> 2. **Lo que queda medido hoy NO es eso**: en la ventana de `build/medida-tanda18.log` hay **3 rendiciones con la
+>    etiqueta `Yendo a la taberna`** (2 granjeros y 1 pescador), y el aviso trae **`cerebro=566,64,566`** (¡la plaza!)
+>    o **`cerebro=-`**: el aldeano **no iba a la taberna**, le ganaba el `WALK_TARGET` que escribe su propio cerebro
+>    (I119/I122). El «destino» que imprime el aviso (`dark_oak_fence` + `oak_pressure_plate`) es **el mobiliario de la
+>    mesa**, que por diseño no se pisa: el goal ya camina a `casillaDePieCercaDe` (I114/I131), así que ese dato no es
+>    el fallo.
+> 3. **Y EL ARREGLO OBVIO SE PROBÓ Y SE RETIRÓ** (disciplina: lo que no mejora, fuera). Se aplicó el guardián de I146
+>    («si el cerebro va a otra parte, no cuentes el atasco») a la taberna, al recojo (`VillagerPickupGoal`, con el
+>    filtro de celdas no pisables en `buscarObjeto`) y al ganadero. Medido (`build/medida-tanda21.log`, misma ventana):
+>    las 3 de la taberna, las 2 del recojo y las 2 del ganadero **desaparecen**, pero la ventana **sube de 7 a 19
+>    rendiciones** —aparecen **12 de granjeros** (`Abono la huerta` 5, `Labrando la huerta` 4, `Sembrando` 3…)—: el
+>    aldeano que antes se rendía y se iba ahora se queda rondando y estorbando en la huerta. **Revertido entero**, y
+>    queda aquí el número para no repetirlo.
+>
+> **Lo que queda pendiente de verdad, pues**: que el `WALK_TARGET` del cerebro no le gane a `caminarHacia` **sin** que
+> el goal se quede pegado (el mismo problema de I119/I122, ahora con nombre y con su cifra: **3 en la ventana**).
 
 **El caso, medido** (`build/medida-tasa-hoy.log`): la leñadora daba **dos avisos** de rendición con
 `nav=[sin ruta]`, **`cerebro=-`**, `suelo=dark_oak_planks` y su posición en **`511,68,667`** — y la ruta que tenía era
@@ -243,6 +266,13 @@ tiene otra): **no es pisable**, así que la ruta es **de un nodo** y el aldeano 
 punto apartado no cubre al siguiente. **El arreglo que toca**: al elegir el ítem suelto, **descartar los que están
 dentro de un bloque** (su celda no es aire): no se pueden recoger y solo sirven para que el ganadero se rinda.
 **Criterio**: `Recogiendo el corral` **7 → 0** en la ventana.
+
+> **RESUELTO Y MEDIDO (29-sep-2026).** El arreglo está en `VillagerAnimalFarmGoal.buscarDropEnElCorral` (descarta el
+> ítem si su celda **no es una casilla de pie**, `VillageManager.esCeldaDePie`, I147), y el criterio **se cumple**:
+> medido con el instrumento de siempre, `python tools/arnes/rendiciones.py --etiquetas build/medida-tanda18.log`,
+> **`Recogiendo el corral` ya NO aparece en la ventana (2.000–12.000)** y en la corrida entera (22.000+ ticks) queda
+> **1**, contra las **7 en la ventana / 12 en la corrida** de la medida original. La ventana de esa corrida suma **7
+> rendiciones** y ninguna es esta: `Bajando lo del corral` 2, `Recogiendo lo suyo` 2, `Yendo a la taberna` 3 (ver §11).
 
 **Y EL RECOLECTOR EN EL BANCAL** (mismo log, 6 en la ventana): se rinde desde `484,62,658` con **`pies=farmland`** y
 `cabeza=wheat` —o sea **encajada dentro del cultivo**, un bloque POR DEBAJO de la cota—, y ahí mismo tiene una ruta a la
