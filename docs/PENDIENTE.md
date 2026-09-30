@@ -143,8 +143,14 @@ uno con **4 corridas y por etiqueta** (la lección de la mañana: el total no di
      `Recogiendo lo suyo` **40 → 18**, `Yendo a la taberna` **35 → 29**, `Yendo a la cocina` **14 → 12**; **y el pueblo
      trabaja igual** (pescador 9,5, granja 797 → 759, herrería 74,5 → 75).
    - **I155 el portón del corral lo abre la aldea** cuando el ganadero se queda **sin ruta**, y solo si el recado
-     **cruza** la cerca (si los dos están dentro, cerrado: **las gallinas no se escapan**). En medida al cerrar la
-     sesión (2 corridas), porque `Sacrificando un animal` **subió 6 → 15**.
+     **cruza** la cerca (si los dos están dentro, cerrado: **las gallinas no se escapan**).
+     **MEDIDO Y RETIRADO**: 2 corridas dan **35 y 42** (media **38,5**) frente a **30,25** (4 corridas) sin él. Mejora
+     `Sacrificando un animal` (**2 y 2** frente a 3,75) y la taberna (**3** frente a 7,25), pero **empeora las dos
+     etiquetas del ganadero** (`Bajando lo del corral` **8 y 6** frente a 4; `Recogiendo lo suyo` **8 y 6** frente a
+     4,5): abrirle el portón lo deja **más activo** (más recados intentados, más avisos). Queda el módulo
+     (`VillageErrands.abrirLaPuertaSiHaceFalta`) y la invariante, y **el pendiente de rehacerlo POR OFICIO**: el
+     círculo cerrado del ganadero encerrado es **real** (`ruta=1 nodos … alcanza=NO`), lo que no está medido es que
+     abrirle el portón a **todos** mejore nada.
    - **Ruido del registro**: los `removeCurrentModifiers()/Add/createNewAttributeModifiers` y `Player Att armor|toughness`
      pasan a **DEBUG** (ensuciaban las medidas).
 4. **LO QUE QUEDA PENDIENTE, con nombre y número** (medido en el lote 59-62):

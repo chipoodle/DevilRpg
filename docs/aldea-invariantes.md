@@ -4734,6 +4734,15 @@ dos dentro, el portón se queda **cerrado** — así **no se escapan las gallina
 que hay que resolverla **antes** de buscar el portón (fue el fallo del primer intento: se buscaba con una altura falsa
 y no se abría nada).
 
+**MEDIDO Y RETIRADO (29-sep-2026, la misma tarde)**: 2 corridas dan **35 y 42** (media **38,5**) frente a **30,25**
+(4 corridas) sin él. Mejora `Sacrificando un animal` (**2 y 2** frente a 3,75 de media) y `Yendo a la taberna` (**3**
+frente a 7,25), pero **empeora las dos etiquetas del ganadero**: `Bajando lo del corral` **8 y 6** frente a **4**, y
+`Recogiendo lo suyo` **8 y 6** frente a **4,5**. Explicación medida: abrirle el portón deja al ganadero **más activo**
+(más recados intentados, más avisos). **Con 2 corridas no es concluyente**, pero la regla del proyecto manda: **lo que
+no mejora la media se retira y se apunta**. El módulo y esta invariante se quedan; **el pendiente es rehacerlo POR
+OFICIO** —el círculo cerrado del ganadero encerrado (`ruta=1 nodos … alcanza=NO`) es **real**; lo que no está medido es
+que abrirle el portón a **todos** mejore nada.
+
 ### I154 · LAS TRES CLASES DE FALLO, ARREGLADAS **EN UN SOLO SITIO** (29-sep-2026)
 
 Clasificando **todas** las rendiciones que el despachador destapó (I150) salieron **tres clases**, no doce problemas:
